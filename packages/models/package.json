@@ -1,0 +1,34 @@
+{
+  "name": "@looprun/models",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "looprun model story: validated local models (Qwen3.5-4B / Qwen3.6-35B-A3B on llama.cpp, measured flags) behind a ModelRuntimePort, plus the cloud validation model (gemini flash-lite thinking-off with the numeric thinkingBudget:0 trap encoded). localModel('qwen3.5-4b') → AI-SDK model for LoopRunAgent.",
+  "license": "MIT",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@ai-sdk/google": "^3.0.0",
+    "@ai-sdk/openai": "^3.0.0",
+    "@looprun/core": "workspace:^"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0",
+    "vitest": "^2.0.0"
+  }
+}
