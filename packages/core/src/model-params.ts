@@ -20,7 +20,9 @@ export function geminiThinkingOff(): Record<string, unknown> {
 /** Pinned decoding for reproducible runs (temperature 0 + optional seed — llama.cpp honors seed). */
 export function pinnedDecoding(opts: { seed?: number } = {}): Record<string, unknown> {
   return {
-    temperature: 0,
-    ...(opts.seed != null ? { seed: opts.seed } : {}),
+    modelSettings: {
+      temperature: 0,
+      ...(opts.seed != null ? { seed: opts.seed } : {}),
+    },
   };
 }

@@ -1,0 +1,30 @@
+{
+  "name": "@looprun/vercel",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "looprun on the Vercel AI SDK — RESERVED (not implemented). The backend seam contract lives in @looprun/core; @looprun/mastra is the v0 backend.",
+  "license": "MIT",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@looprun/core": "workspace:^"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0"
+  }
+}
