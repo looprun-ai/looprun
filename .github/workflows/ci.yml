@@ -1,0 +1,26 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -r --if-present build
+      - run: pnpm -r --if-present typecheck
+      # The law tests (guards purity, S-1 firewall, trunk stability, zero-business-strings,
+      # no-bench-drift) are ordinary vitest files — they RUN on every push/PR, not just exist.
+      - run: pnpm -r --if-present test
+      - run: node tests/no-bench-drift.test.mjs

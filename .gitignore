@@ -1,0 +1,18 @@
+# deps / build
+node_modules/
+dist/
+*.tgz
+
+# env / local
+.env
+.env.local
+.DS_Store
+
+# eval scratch (committed artifacts are *.judged.json, cert.json, CERT.md only)
+eval-results/**/*.dump.json
+eval-results/**/*.tasks.jsonl
+eval-results/**/*.autofail.json
+eval-results/**/*.verdicts.jsonl
+
+# logs
+*.log
