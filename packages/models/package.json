@@ -14,7 +14,7 @@
     "local-llm",
     "gguf"
   ],
-  "license": "MIT",
+  "license": "Apache-2.0",
   "author": "LoopRun Team",
   "homepage": "https://looprun.ai",
   "repository": {

@@ -103,4 +103,4 @@ iterated against a measured bar — is based on **BARRED: Synthetic Training of 
 via Asymmetric Debate** (arXiv:2604.25203v1, https://arxiv.org/abs/2604.25203; reference implementation:
 https://github.com/plurai-ai/BARRED).
 
-MIT © looprun
+Apache-2.0 © LoopRun Team
