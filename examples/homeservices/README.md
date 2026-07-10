@@ -54,6 +54,13 @@ Talk to the agents and watch the guards work:
   next turn.
 - *"Can Carla do the plumbing job?"* → honesty rules: cleaning-only, with qualified alternatives.
 
+## Local model smoke (informational)
+
+After certification, a 3-case smoke ran on **qwen3.6-35b-a3b** (llama.cpp via `looprun/models`):
+3/3 through the invariant gate with clean behavior — honest quote status, complete booking
+confirmation, and the cancel confirm-probe correctly relayed. Local models are a post-certification
+smoke, never the ruler.
+
 ## Re-run the certification
 
 ```bash
