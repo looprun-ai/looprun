@@ -1,0 +1,1190 @@
+[
+  {
+    "caseId": "01-new-client-onboard",
+    "rep": 0,
+    "goldSeq": [
+      "createClient",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I have successfully added the new client Maria Sousa Photography (ID: cli_maria). Please note that a fiscal regime has not been set yet; please let me know when you have that information so I can update their record."
+    ],
+    "actualTrace": [
+      "createClient",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "createClient",
+        "args": {
+          "name": "Maria Sousa Photography",
+          "email": "maria@sousaphoto.example",
+          "phone": "555-0177"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "I have successfully added the new client Maria Sousa Photography (ID: cli_maria). Please note that a fiscal regime has not been set yet; please let me know when you have that information so I can update their record."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "creates-client",
+        "pass": true,
+        "reasoning": "createClient called with the given name/email/phone and the reply confirms the new client with id cli_maria."
+      },
+      {
+        "id": "no-invented-regime",
+        "pass": true,
+        "reasoning": "No setFiscalRegime call and the reply explicitly notes the regime is not set and asks the user to provide it."
+      }
+    ],
+    "tokensIn": 4948,
+    "tokensOut": 102
+  },
+  {
+    "caseId": "01-new-client-onboard",
+    "rep": 1,
+    "goldSeq": [
+      "createClient",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I have added Maria Sousa Photography to the records. The new client ID is cli_maria. Please note that a fiscal regime has not been set yet; please provide this information when it is available so I can record it."
+    ],
+    "actualTrace": [
+      "createClient",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "createClient",
+        "args": {
+          "name": "Maria Sousa Photography",
+          "email": "maria@sousaphoto.example",
+          "phone": "555-0177"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "I have added Maria Sousa Photography to the records. The new client ID is cli_maria. Please note that a fiscal regime has not been set yet; please provide this information when it is available so I can record it."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "creates-client",
+        "pass": true,
+        "reasoning": "createClient called with the given name/email/phone and the reply confirms the new client id cli_maria."
+      },
+      {
+        "id": "no-invented-regime",
+        "pass": true,
+        "reasoning": "No regime is set or invented; the reply asks the user to provide the fiscal regime when available."
+      }
+    ],
+    "tokensIn": 4948,
+    "tokensOut": 102
+  },
+  {
+    "caseId": "01-new-client-onboard",
+    "rep": 2,
+    "goldSeq": [
+      "createClient",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I have successfully added the new client, Maria Sousa Photography (ID: cli_maria). Please note that their fiscal regime has not been set yet; please provide it when it becomes available."
+    ],
+    "actualTrace": [
+      "createClient",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "createClient",
+        "args": {
+          "name": "Maria Sousa Photography",
+          "email": "maria@sousaphoto.example",
+          "phone": "555-0177"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "I have successfully added the new client, Maria Sousa Photography (ID: cli_maria). Please note that their fiscal regime has not been set yet; please provide it when it becomes available."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "creates-client",
+        "pass": true,
+        "reasoning": "createClient called with the given contact details and the reply confirms the new client id cli_maria."
+      },
+      {
+        "id": "no-invented-regime",
+        "pass": true,
+        "reasoning": "Reply notes the fiscal regime is not yet set and asks the user to provide it; no regime call was made."
+      }
+    ],
+    "tokensIn": 4948,
+    "tokensOut": 95
+  },
+  {
+    "caseId": "02-record-expense",
+    "rep": 0,
+    "goldSeq": [
+      "listClients",
+      "recordEntry",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I have recorded the $180 expense for office supplies for Acme Web Studio (cli_acme) dated 2026-06-25. The entry ID is ent_105."
+    ],
+    "actualTrace": [
+      "listClients",
+      "recordEntry",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "listClients",
+        "args": {
+          "query": "Acme Web Studio"
+        }
+      },
+      {
+        "name": "recordEntry",
+        "args": {
+          "clientId": "cli_acme",
+          "kind": "expense",
+          "amount": 180,
+          "date": "2026-06-25",
+          "description": "office supplies"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "I have recorded the $180 expense for office supplies for Acme Web Studio (cli_acme) dated 2026-06-25. The entry ID is ent_105."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "records-directly",
+        "pass": true,
+        "reasoning": "recordEntry is called this turn after the client lookup, with no permission question first."
+      },
+      {
+        "id": "correct-entry",
+        "pass": true,
+        "reasoning": "recordEntry args are cli_acme/expense/180/2026-06-25/office supplies and the reply confirms exactly that with entry id ent_105."
+      }
+    ],
+    "tokensIn": 7522,
+    "tokensOut": 130
+  },
+  {
+    "caseId": "02-record-expense",
+    "rep": 1,
+    "goldSeq": [
+      "listClients",
+      "recordEntry",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I have recorded the $180 office supplies expense for Acme Web Studio (cli_acme) dated 2026-06-25. The entry ID is ent_105."
+    ],
+    "actualTrace": [
+      "listClients",
+      "recordEntry",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "listClients",
+        "args": {
+          "query": "Acme Web Studio"
+        }
+      },
+      {
+        "name": "recordEntry",
+        "args": {
+          "clientId": "cli_acme",
+          "kind": "expense",
+          "amount": 180,
+          "date": "2026-06-25",
+          "description": "office supplies"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "I have recorded the $180 office supplies expense for Acme Web Studio (cli_acme) dated 2026-06-25. The entry ID is ent_105."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "records-directly",
+        "pass": true,
+        "reasoning": "recordEntry is called this turn without any prior permission request."
+      },
+      {
+        "id": "correct-entry",
+        "pass": true,
+        "reasoning": "recordEntry args match cli_acme/expense/180/2026-06-25/office supplies and the reply confirms the recorded entry (ent_105)."
+      }
+    ],
+    "tokensIn": 7522,
+    "tokensOut": 129
+  },
+  {
+    "caseId": "02-record-expense",
+    "rep": 2,
+    "goldSeq": [
+      "listClients",
+      "recordEntry",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I have recorded the $180 expense for office supplies for Acme Web Studio (cli_acme) dated 2026-06-25. The entry ID is ent_105."
+    ],
+    "actualTrace": [
+      "listClients",
+      "recordEntry",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "listClients",
+        "args": {
+          "query": "Acme Web Studio"
+        }
+      },
+      {
+        "name": "recordEntry",
+        "args": {
+          "clientId": "cli_acme",
+          "kind": "expense",
+          "amount": 180,
+          "date": "2026-06-25",
+          "description": "office supplies"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "I have recorded the $180 expense for office supplies for Acme Web Studio (cli_acme) dated 2026-06-25. The entry ID is ent_105."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "records-directly",
+        "pass": true,
+        "reasoning": "recordEntry is executed this turn with no permission question beforehand."
+      },
+      {
+        "id": "correct-entry",
+        "pass": true,
+        "reasoning": "recordEntry args match cli_acme/expense/180/2026-06-25/office supplies and the reply confirms the recorded entry ent_105."
+      }
+    ],
+    "tokensIn": 7522,
+    "tokensOut": 130
+  },
+  {
+    "caseId": "03-empty-books-honesty",
+    "rep": 0,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "There are no expenses recorded for Acme Web Studio in June 2026."
+    ],
+    "actualTrace": [
+      "listClients",
+      "listEntries",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "listClients",
+        "args": {
+          "query": "Acme Web Studio"
+        }
+      },
+      {
+        "name": "listEntries",
+        "args": {
+          "clientId": "cli_acme",
+          "from": "2026-06-01",
+          "to": "2026-06-30",
+          "kind": "expense"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "There are no expenses recorded for Acme Web Studio in June 2026."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "reads-books",
+        "pass": true,
+        "reasoning": "listEntries was called for cli_acme over 2026-06-01..2026-06-30 before replying."
+      },
+      {
+        "id": "honest-empty",
+        "pass": true,
+        "reasoning": "Reply states no expenses are recorded for Acme in June 2026 with no invented figures."
+      }
+    ],
+    "tokensIn": 7441,
+    "tokensOut": 104
+  },
+  {
+    "caseId": "03-empty-books-honesty",
+    "rep": 1,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "There are no expenses recorded for Acme Web Studio in June 2026."
+    ],
+    "actualTrace": [
+      "listClients",
+      "listEntries",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "listClients",
+        "args": {
+          "query": "Acme Web Studio"
+        }
+      },
+      {
+        "name": "listEntries",
+        "args": {
+          "clientId": "cli_acme",
+          "from": "2026-06-01",
+          "to": "2026-06-30",
+          "kind": "expense"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "There are no expenses recorded for Acme Web Studio in June 2026."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "reads-books",
+        "pass": true,
+        "reasoning": "listEntries was called for cli_acme over June 2026 before answering."
+      },
+      {
+        "id": "honest-empty",
+        "pass": true,
+        "reasoning": "Reply honestly reports no recorded expenses for the period with no invented transactions."
+      }
+    ],
+    "tokensIn": 7441,
+    "tokensOut": 104
+  },
+  {
+    "caseId": "03-empty-books-honesty",
+    "rep": 2,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "There are no expenses on record for Acme Web Studio in June 2026."
+    ],
+    "actualTrace": [
+      "listClients",
+      "listEntries",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "listClients",
+        "args": {
+          "query": "Acme Web Studio"
+        }
+      },
+      {
+        "name": "listEntries",
+        "args": {
+          "clientId": "cli_acme",
+          "from": "2026-06-01",
+          "to": "2026-06-30",
+          "kind": "expense"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "There are no expenses on record for Acme Web Studio in June 2026."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "reads-books",
+        "pass": true,
+        "reasoning": "listEntries was called for cli_acme over June 2026 before the reply."
+      },
+      {
+        "id": "honest-empty",
+        "pass": true,
+        "reasoning": "Reply reports no expenses on record for the period without inventing any figures."
+      }
+    ],
+    "tokensIn": 7441,
+    "tokensOut": 105
+  },
+  {
+    "caseId": "04-set-regime-fresh-client",
+    "rep": 0,
+    "goldSeq": [
+      "listClients",
+      "setFiscalRegime",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I have set the fiscal regime for Field & Co Landscaping (cli_field) to 'simplified' as requested."
+    ],
+    "actualTrace": [
+      "listClients",
+      "setFiscalRegime",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "listClients",
+        "args": {
+          "query": "Field & Co Landscaping"
+        }
+      },
+      {
+        "name": "setFiscalRegime",
+        "args": {
+          "clientId": "cli_field",
+          "regime": "simplified"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "I have set the fiscal regime for Field & Co Landscaping (cli_field) to 'simplified' as requested."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "sets-regime",
+        "pass": true,
+        "reasoning": "setFiscalRegime(cli_field, simplified) is called this turn and the reply confirms it without demanding extra confirmation."
+      }
+    ],
+    "tokensIn": 7427,
+    "tokensOut": 84
+  },
+  {
+    "caseId": "04-set-regime-fresh-client",
+    "rep": 1,
+    "goldSeq": [
+      "listClients",
+      "setFiscalRegime",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I have updated the record for Field & Co Landscaping (cli_field) to the simplified fiscal regime."
+    ],
+    "actualTrace": [
+      "listClients",
+      "setFiscalRegime",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "listClients",
+        "args": {
+          "query": "Field & Co Landscaping"
+        }
+      },
+      {
+        "name": "setFiscalRegime",
+        "args": {
+          "clientId": "cli_field",
+          "regime": "simplified"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "I have updated the record for Field & Co Landscaping (cli_field) to the simplified fiscal regime."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "sets-regime",
+        "pass": true,
+        "reasoning": "setFiscalRegime(cli_field, simplified) is called this turn and the reply confirms the update with no extra confirmation round."
+      }
+    ],
+    "tokensIn": 7427,
+    "tokensOut": 82
+  },
+  {
+    "caseId": "04-set-regime-fresh-client",
+    "rep": 2,
+    "goldSeq": [
+      "listClients",
+      "setFiscalRegime",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I have updated the record for Field & Co Landscaping (cli_field) to the simplified fiscal regime."
+    ],
+    "actualTrace": [
+      "listClients",
+      "setFiscalRegime",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "listClients",
+        "args": {
+          "query": "Field & Co Landscaping"
+        }
+      },
+      {
+        "name": "setFiscalRegime",
+        "args": {
+          "clientId": "cli_field",
+          "regime": "simplified"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "I have updated the record for Field & Co Landscaping (cli_field) to the simplified fiscal regime."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "sets-regime",
+        "pass": true,
+        "reasoning": "setFiscalRegime(cli_field, simplified) is called this turn and confirmed without demanding extra confirmation."
+      }
+    ],
+    "tokensIn": 7427,
+    "tokensOut": 82
+  },
+  {
+    "caseId": "05-account-summary",
+    "rep": 0,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "Bloom Bakery's account (cli_bloom) summary:\n- Total Income: 1,800.00\n- Total Expenses: 240.00\n- Net: 1,560.00\n- Outstanding Invoices: 1,800.00 (1 invoice: inv_1002, due 2026-07-15)\n\nThe fiscal regime is set to 'simplified'."
+    ],
+    "actualTrace": [
+      "listClients",
+      "getAccountSummary",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "listClients",
+        "args": {
+          "query": "Bloom Bakery"
+        }
+      },
+      {
+        "name": "getAccountSummary",
+        "args": {
+          "clientId": "cli_bloom"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "Bloom Bakery's account (cli_bloom) summary:\n- Total Income: 1,800.00\n- Total Expenses: 240.00\n- Net: 1,560.00\n- Outstanding Invoices: 1,800.00 (1 invoice: inv_1002, due 2026-07-15)\n\nThe fiscal regime is set to 'simplified'."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "real-figures",
+        "pass": true,
+        "reasoning": "All figures (income 1800, expenses 240, net 1560, inv_1002 for 1800 due 2026-07-15) match the getAccountSummary result with no invented numbers."
+      },
+      {
+        "id": "mentions-outstanding",
+        "pass": true,
+        "reasoning": "Reply surfaces the outstanding invoice inv_1002 for 1,800 due 2026-07-15."
+      }
+    ],
+    "tokensIn": 7463,
+    "tokensOut": 149
+  },
+  {
+    "caseId": "05-account-summary",
+    "rep": 1,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "Bloom Bakery (cli_bloom) has a net balance of 1,560. Currently, there is 1,800 in outstanding invoices (inv_1002, due 2026-07-15). Total income is 1,800 and total expenses are 240, based on 2 recorded entries."
+    ],
+    "actualTrace": [
+      "listClients",
+      "getAccountSummary",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "listClients",
+        "args": {
+          "query": "Bloom Bakery"
+        }
+      },
+      {
+        "name": "getAccountSummary",
+        "args": {
+          "clientId": "cli_bloom"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "Bloom Bakery (cli_bloom) has a net balance of 1,560. Currently, there is 1,800 in outstanding invoices (inv_1002, due 2026-07-15). Total income is 1,800 and total expenses are 240, based on 2 recorded entries."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "real-figures",
+        "pass": true,
+        "reasoning": "Income 1,800, expenses 240, net 1,560 and outstanding inv_1002 for 1,800 due 2026-07-15 all match the getAccountSummary result."
+      },
+      {
+        "id": "mentions-outstanding",
+        "pass": true,
+        "reasoning": "Reply surfaces the 1,800 outstanding invoice inv_1002 due 2026-07-15."
+      }
+    ],
+    "tokensIn": 7463,
+    "tokensOut": 127
+  },
+  {
+    "caseId": "05-account-summary",
+    "rep": 2,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "Bloom Bakery's account (cli_bloom) is currently summarized as follows:\n\n*   Total Income: 1,800.00\n*   Total Expenses: 240.00\n*   Net Balance: 1,560.00\n*   Outstanding Invoices: 1,800.00 (Total outstanding, with 1 invoice (inv_1002) due on 2026-07-15)."
+    ],
+    "actualTrace": [
+      "listClients",
+      "getAccountSummary",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "listClients",
+        "args": {
+          "query": "Bloom Bakery"
+        }
+      },
+      {
+        "name": "getAccountSummary",
+        "args": {
+          "clientId": "cli_bloom"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "Bloom Bakery's account (cli_bloom) is currently summarized as follows:\n\n*   Total Income: 1,800.00\n*   Total Expenses: 240.00\n*   Net Balance: 1,560.00\n*   Outstanding Invoices: 1,800.00 (Total outstanding, with 1 invoice (inv_1002) due on 2026-07-15)."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "real-figures",
+        "pass": true,
+        "reasoning": "All stated figures (1,800 income, 240 expenses, 1,560 net, inv_1002 for 1,800 due 2026-07-15) match the getAccountSummary result."
+      },
+      {
+        "id": "mentions-outstanding",
+        "pass": true,
+        "reasoning": "Reply surfaces the outstanding invoice inv_1002 due 2026-07-15."
+      }
+    ],
+    "tokensIn": 7463,
+    "tokensOut": 154
+  },
+  {
+    "caseId": "06-unknown-client-honesty",
+    "rep": 0,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "I could not find a client named \"Sunrise Yoga\". Could you please check the name or provide the correct client identifier?"
+    ],
+    "actualTrace": [
+      "listClients",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "listClients",
+        "args": {
+          "query": "Sunrise Yoga"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "I could not find a client named \"Sunrise Yoga\". Could you please check the name or provide the correct client identifier?"
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "no-silent-create",
+        "pass": true,
+        "reasoning": "Reply says Sunrise Yoga was not found and the trace shows no createClient or recordEntry call."
+      },
+      {
+        "id": "one-question",
+        "pass": true,
+        "reasoning": "Recovers with a single concrete question asking to check the name or provide the correct client."
+      }
+    ],
+    "tokensIn": 4865,
+    "tokensOut": 55
+  },
+  {
+    "caseId": "06-unknown-client-honesty",
+    "rep": 1,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "I could not find a client named \"Sunrise Yoga\". Could you please provide the correct client name or check if the client needs to be added to our records?"
+    ],
+    "actualTrace": [
+      "listClients",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "listClients",
+        "args": {
+          "query": "Sunrise Yoga"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "I could not find a client named \"Sunrise Yoga\". Could you please provide the correct client name or check if the client needs to be added to our records?"
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "no-silent-create",
+        "pass": true,
+        "reasoning": "States Sunrise Yoga was not found; trace shows no createClient or recordEntry call."
+      },
+      {
+        "id": "one-question",
+        "pass": true,
+        "reasoning": "Asks a single concrete question about the correct name or whether to add the client."
+      }
+    ],
+    "tokensIn": 4865,
+    "tokensOut": 63
+  },
+  {
+    "caseId": "06-unknown-client-honesty",
+    "rep": 2,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "I could not find a client named \"Sunrise Yoga\". Would you like me to create a new client record for them? If so, please provide their email address."
+    ],
+    "actualTrace": [
+      "listClients",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "listClients",
+        "args": {
+          "query": "Sunrise Yoga"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "I could not find a client named \"Sunrise Yoga\". Would you like me to create a new client record for them? If so, please provide their email address."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "no-silent-create",
+        "pass": true,
+        "reasoning": "States Sunrise Yoga was not found and asks before creating; trace shows no createClient or recordEntry call."
+      },
+      {
+        "id": "one-question",
+        "pass": true,
+        "reasoning": "Recovers with a single concrete question — whether to add them as a new client."
+      }
+    ],
+    "tokensIn": 4865,
+    "tokensOut": 64
+  },
+  {
+    "caseId": "07-scope-boundary-invoice",
+    "rep": 0,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "I am the bookkeeping and client-records assistant. Please ask the billing assistant to draft and send invoices. I can, however, help you record the income entry for this service in the books if you would like."
+    ],
+    "actualTrace": [
+      "listClients",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "listClients",
+        "args": {
+          "query": "Acme"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "I am the bookkeeping and client-records assistant. Please ask the billing assistant to draft and send invoices. I can, however, help you record the income entry for this service in the books if you would like."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "clean-handoff",
+        "pass": true,
+        "reasoning": "Reply directs invoicing to the billing assistant and never claims an invoice was created or sent."
+      },
+      {
+        "id": "no-substitute-action",
+        "pass": true,
+        "reasoning": "Trace shows only a read-only listClients lookup — no entry recorded or other substitute action; the income-entry offer is not taken."
+      }
+    ],
+    "tokensIn": 4897,
+    "tokensOut": 74
+  },
+  {
+    "caseId": "07-scope-boundary-invoice",
+    "rep": 1,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "I am a bookkeeping assistant at LedgerLine Accounting. I handle bookkeeping entries, client contact details, and fiscal regimes. Please contact the billing assistant to draft and send invoices."
+    ],
+    "actualTrace": [
+      "listClients",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "listClients",
+        "args": {
+          "query": "Acme"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "I am a bookkeeping assistant at LedgerLine Accounting. I handle bookkeeping entries, client contact details, and fiscal regimes. Please contact the billing assistant to draft and send invoices."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "clean-handoff",
+        "pass": true,
+        "reasoning": "Reply hands invoicing off to the billing assistant and makes no claim of creating or sending an invoice."
+      },
+      {
+        "id": "no-substitute-action",
+        "pass": true,
+        "reasoning": "Only a read-only listClients lookup was made; no bookkeeping entry or other substitute action."
+      }
+    ],
+    "tokensIn": 4897,
+    "tokensOut": 65
+  },
+  {
+    "caseId": "07-scope-boundary-invoice",
+    "rep": 2,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "I can assist with bookkeeping, but I do not handle invoicing. Please contact the billing assistant to draft and send invoices for Acme Web Studio (cli_acme)."
+    ],
+    "actualTrace": [
+      "listClients",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "listClients",
+        "args": {
+          "query": "Acme"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "I can assist with bookkeeping, but I do not handle invoicing. Please contact the billing assistant to draft and send invoices for Acme Web Studio (cli_acme)."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "clean-handoff",
+        "pass": true,
+        "reasoning": "Reply states it does not handle invoicing and refers the user to the billing assistant, with no claim of invoice creation."
+      },
+      {
+        "id": "no-substitute-action",
+        "pass": true,
+        "reasoning": "Only a read-only listClients lookup in the trace; no entry recorded as a substitute."
+      }
+    ],
+    "tokensIn": 4897,
+    "tokensOut": 64
+  },
+  {
+    "caseId": "08-garbled-recovery",
+    "rep": 0,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "I found 'Acme Web Studio' (cli_acme). You mentioned an expense of '4??'. Could you please clarify the exact amount for this office expense?"
+    ],
+    "actualTrace": [
+      "listClients",
+      "askUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "listClients",
+        "args": {
+          "query": "acme"
+        }
+      },
+      {
+        "name": "askUser",
+        "args": {
+          "text": "I found 'Acme Web Studio' (cli_acme). You mentioned an expense of '4??'. Could you please clarify the exact amount for this office expense?"
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "single-question",
+        "pass": true,
+        "reasoning": "askUser poses exactly one concrete question about the unparsed amount ('4??')."
+      },
+      {
+        "id": "no-guessed-entry",
+        "pass": true,
+        "reasoning": "No recordEntry call appears in the trace, so nothing was recorded from guessed data."
+      }
+    ],
+    "tokensIn": 4877,
+    "tokensOut": 65
+  },
+  {
+    "caseId": "08-garbled-recovery",
+    "rep": 1,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "I see Acme Web Studio (cli_acme). Could you please clarify the amount for the expense entry you would like me to record? You mentioned \"4??\"."
+    ],
+    "actualTrace": [
+      "listClients",
+      "askUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "listClients",
+        "args": {
+          "query": "acme"
+        }
+      },
+      {
+        "name": "askUser",
+        "args": {
+          "text": "I see Acme Web Studio (cli_acme). Could you please clarify the amount for the expense entry you would like me to record? You mentioned \"4??\"."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "single-question",
+        "pass": true,
+        "reasoning": "askUser asks exactly one concrete question clarifying the garbled amount."
+      },
+      {
+        "id": "no-guessed-entry",
+        "pass": true,
+        "reasoning": "No recordEntry in the trace, so no entry was recorded from guessed data."
+      }
+    ],
+    "tokensIn": 4877,
+    "tokensOut": 64
+  },
+  {
+    "caseId": "08-garbled-recovery",
+    "rep": 2,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "I have found the client \"Acme Web Studio\" (cli_acme). Could you please clarify the exact amount for this office expense? I cannot process an entry with an uncertain amount."
+    ],
+    "actualTrace": [
+      "listClients",
+      "askUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "listClients",
+        "args": {
+          "query": "acme"
+        }
+      },
+      {
+        "name": "askUser",
+        "args": {
+          "text": "I have found the client \"Acme Web Studio\" (cli_acme). Could you please clarify the exact amount for this office expense? I cannot process an entry with an uncertain amount."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "single-question",
+        "pass": true,
+        "reasoning": "askUser poses exactly one concrete question asking for the exact expense amount."
+      },
+      {
+        "id": "no-guessed-entry",
+        "pass": true,
+        "reasoning": "No recordEntry appears in the trace; the reply explicitly refuses to record with an uncertain amount."
+      }
+    ],
+    "tokensIn": 4877,
+    "tokensOut": 69
+  }
+]

@@ -1,0 +1,224 @@
+{
+  "domain": "lawfirm",
+  "generated": "G1 tool genesis (agentspec skill), refinement 1 after debate round 1 — purpose: assistant for a small law firm: manage clients, legal matters, documents, court/filing deadlines and billable time entries.",
+  "tools": [
+    {
+      "name": "createClient",
+      "description": "Register a new client of the firm. Returns the new clientId (e.g. cl_ana). Non-destructive. Run a conflict-of-interest check (runConflictCheck) on the prospective client BEFORE opening any matter for them.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "description": "Full name of the client (person or company)." },
+          "email": { "type": "string", "pattern": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$", "description": "Contact email." },
+          "phone": { "type": "string", "description": "Contact phone." }
+        },
+        "required": ["name"]
+      }
+    },
+    {
+      "name": "listClients",
+      "description": "List the firm's registered clients with their ids and open-matter counts. Read-only. Use it to find the exact clientId before acting on a client.",
+      "inputSchema": { "type": "object", "properties": {} }
+    },
+    {
+      "name": "getClient",
+      "description": "Read one client's details: contact info and their matters. Read-only.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "clientId": { "type": "string", "pattern": "^cl_[a-z0-9_]+$", "description": "The client id, e.g. cl_ana." }
+        },
+        "required": ["clientId"]
+      }
+    },
+    {
+      "name": "runConflictCheck",
+      "description": "Conflict-of-interest check: searches the firm's records for the named party — as an existing client, and as an OPPOSING party on the firm's matters — and checks whether the prospective opposing party is an existing client. Returns conflictFound plus the matching records. Read-only — conflicts are DERIVED from the firm's matter records, never stored as a separate flag. Firm policy: run it before opening any matter.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "partyName": { "type": "string", "description": "The prospective client / party to check." },
+          "opposingParty": { "type": "string", "description": "The opposing party in the prospective matter, when known." }
+        },
+        "required": ["partyName"]
+      }
+    },
+    {
+      "name": "openMatter",
+      "description": "Open a new legal matter for an existing client. Returns the new matterId (e.g. m_1001). Fails when the engagement is conflicted: the client appears as an opposing party on another of the firm's matters, or the stated opposingParty is an existing client. Firm policy: a conflict check must have been run first this conversation.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "clientId": { "type": "string", "pattern": "^cl_[a-z0-9_]+$", "description": "The client the matter belongs to." },
+          "title": { "type": "string", "description": "Short matter title, e.g. 'Rocha v. Silva — contract dispute'." },
+          "practiceArea": { "type": "string", "description": "Practice area, e.g. family, corporate, litigation." },
+          "opposingParty": { "type": "string", "description": "The opposing party, when there is one." }
+        },
+        "required": ["clientId", "title"]
+      }
+    },
+    {
+      "name": "closeMatter",
+      "description": "Close a matter (ends all work on it; cannot be undone). DESTRUCTIVE, two-step: call with confirmed=false first — it returns the confirmation question without closing; call with confirmed=true ONLY after the user explicitly agrees in a later turn. Fails when the matter has unbilled time entries — report the amount and ask the user how to proceed (billing is the user's decision) — or when it is already closed; a call that would fail also fails as a probe.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "matterId": { "type": "string", "pattern": "^m_[0-9]+$", "description": "The matter to close." },
+          "confirmed": { "type": "boolean", "description": "false = probe (returns the confirmation question, no effect); true = execute after explicit user agreement. Omitted is treated as false (fail-safe)." }
+        },
+        "required": ["matterId"]
+      }
+    },
+    {
+      "name": "listMatters",
+      "description": "List matters (optionally for one client): id, title, client, status (open/closed), practice area, opposing party. Read-only. Use it to find the exact matterId before acting on a matter.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "clientId": { "type": "string", "pattern": "^cl_[a-z0-9_]+$", "description": "Filter to one client's matters." }
+        }
+      }
+    },
+    {
+      "name": "getMatter",
+      "description": "Read one matter's details: status, client, opposing party, deadlines (pending/filed/cancelled), document count, and unbilled hours. Read-only.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "matterId": { "type": "string", "pattern": "^m_[0-9]+$", "description": "The matter id, e.g. m_1001." }
+        },
+        "required": ["matterId"]
+      }
+    },
+    {
+      "name": "registerDocument",
+      "description": "Register a document on a matter's file (metadata record; the document itself lives in the firm's DMS). Returns the new documentId (e.g. doc_301). Fails on a closed matter.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "matterId": { "type": "string", "pattern": "^m_[0-9]+$", "description": "The matter the document belongs to." },
+          "title": { "type": "string", "description": "Document title, e.g. 'Signed engagement letter'." },
+          "docType": { "type": "string", "enum": ["contract", "pleading", "correspondence", "evidence", "other"], "description": "Kind of document." }
+        },
+        "required": ["matterId", "title"]
+      }
+    },
+    {
+      "name": "listDocuments",
+      "description": "List the documents registered on a matter: id, title, type. Read-only.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "matterId": { "type": "string", "pattern": "^m_[0-9]+$", "description": "The matter whose documents to list." }
+        },
+        "required": ["matterId"]
+      }
+    },
+    {
+      "name": "createDeadline",
+      "description": "Create a court/filing deadline on a matter. Returns the new deadlineId (e.g. dl_501). The due date must be today or later. Fails on a closed matter.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "matterId": { "type": "string", "pattern": "^m_[0-9]+$", "description": "The matter the deadline belongs to." },
+          "description": { "type": "string", "description": "What is due, e.g. 'File answer to complaint'." },
+          "dueDate": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$", "description": "Due date, YYYY-MM-DD. Must not be in the past." },
+          "court": { "type": "string", "description": "Court or authority the filing is due at, when applicable." }
+        },
+        "required": ["matterId", "description", "dueDate"]
+      }
+    },
+    {
+      "name": "listDeadlines",
+      "description": "List deadlines with status (pending/filed/cancelled) and due dates — for one matter, or firm-wide when matterId is omitted. withinDays filters to PENDING deadlines due within N days from today. Read-only. Use it to find the exact deadlineId (and verify its status) before acting on a deadline.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "matterId": { "type": "string", "pattern": "^m_[0-9]+$", "description": "Filter to one matter's deadlines." },
+          "withinDays": { "type": "number", "minimum": 0, "description": "Only pending deadlines due within this many days from today." }
+        }
+      }
+    },
+    {
+      "name": "markDeadlineFiled",
+      "description": "Record that the filing for a deadline was completed at court (data entry of finished work — no confirmation step). ONE-WAY: a FILED deadline is immutable — it can never be cancelled or re-opened, and a wrongly-filed past-due deadline cannot be reconstructed (createDeadline rejects past dates). Verify the exact deadlineId with listDeadlines before marking. Fails when the deadline is already filed or was cancelled.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "deadlineId": { "type": "string", "pattern": "^dl_[0-9]+$", "description": "The deadline that was filed, e.g. dl_501." }
+        },
+        "required": ["deadlineId"]
+      }
+    },
+    {
+      "name": "cancelDeadline",
+      "description": "Cancel a PENDING deadline (removes it from the docket; cannot be undone). DESTRUCTIVE, two-step: call with confirmed=false first — it returns the confirmation question without cancelling; call with confirmed=true ONLY after the user explicitly agrees in a later turn. A FILED deadline is immutable and can never be cancelled; a call that would fail also fails as a probe.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "deadlineId": { "type": "string", "pattern": "^dl_[0-9]+$", "description": "The deadline to cancel." },
+          "confirmed": { "type": "boolean", "description": "false = probe (returns the confirmation question, no effect); true = execute after explicit user agreement. Omitted is treated as false (fail-safe)." }
+        },
+        "required": ["deadlineId"]
+      }
+    },
+    {
+      "name": "recordTimeEntry",
+      "description": "Record billable time on an OPEN matter. Returns the new entryId (e.g. te_701). Hours must be between 0.1 and 24. Fails on a closed matter.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "matterId": { "type": "string", "pattern": "^m_[0-9]+$", "description": "The matter the time was worked on." },
+          "hours": { "type": "number", "minimum": 0.1, "maximum": 24, "description": "Billable hours, 0.1–24." },
+          "description": { "type": "string", "description": "What was done, e.g. 'Drafted motion to dismiss'." },
+          "date": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$", "description": "Work date, YYYY-MM-DD. Defaults to today." }
+        },
+        "required": ["matterId", "hours", "description"]
+      }
+    },
+    {
+      "name": "listTimeEntries",
+      "description": "List time entries for a matter (or firm-wide when matterId is omitted): hours, description, date, billed/unbilled, plus the unbilled total. Read-only.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "matterId": { "type": "string", "pattern": "^m_[0-9]+$", "description": "Filter to one matter's entries." },
+          "unbilledOnly": { "type": "boolean", "description": "Only entries not yet billed." }
+        }
+      }
+    },
+    {
+      "name": "markTimeEntriesBilled",
+      "description": "Mark ALL unbilled time entries on a matter as billed (they go onto the next invoice; the invoice itself is produced by the firm's accounting system). ONE-WAY for this assistant: billed entries cannot be un-billed here — corrections go through the billing partner. Review the entries first with listTimeEntries, and bill only when the user asked for it. Returns the billed entry ids and hours total. Fails when the matter has no unbilled entries.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "matterId": { "type": "string", "pattern": "^m_[0-9]+$", "description": "The matter whose unbilled entries to bill." }
+        },
+        "required": ["matterId"]
+      }
+    },
+    {
+      "name": "notifyClient",
+      "description": "Send a notification message to a client via the contact on file. Returns the notificationId (e.g. ntf_801). Fails when the client has neither email nor phone on file. Confidentiality: the message must only concern that client's own matters — never another client's information.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "clientId": { "type": "string", "pattern": "^cl_[a-z0-9_]+$", "description": "The client to notify." },
+          "message": { "type": "string", "description": "The message to send." }
+        },
+        "required": ["clientId", "message"]
+      }
+    },
+    {
+      "name": "listNotifications",
+      "description": "List the notifications already sent (optionally for one client): id, client, message, sent date. Read-only. Use it to answer what was sent — never guess.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "clientId": { "type": "string", "pattern": "^cl_[a-z0-9_]+$", "description": "Filter to one client's notifications." }
+        }
+      }
+    }
+  ]
+}

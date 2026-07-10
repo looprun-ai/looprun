@@ -1,0 +1,1679 @@
+[
+  {
+    "caseId": "01-new-client-intake",
+    "rep": 0,
+    "goldSeq": [
+      "runConflictCheck",
+      "createClient",
+      "openMatter",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "The conflict check for Daniel Rocha against Redline Freight came back clear. I have registered Daniel Rocha (cl_daniel) and opened the new matter \"Contract dispute vs Redline Freight\" (m_1002) for him."
+    ],
+    "actualTrace": [
+      "runConflictCheck",
+      "createClient",
+      "openMatter"
+    ],
+    "actualCalls": [
+      {
+        "name": "runConflictCheck",
+        "args": {
+          "partyName": "Daniel Rocha",
+          "opposingParty": "Redline Freight"
+        }
+      },
+      {
+        "name": "createClient",
+        "args": {
+          "name": "Daniel Rocha",
+          "email": "daniel.rocha@example.com"
+        }
+      },
+      {
+        "name": "openMatter",
+        "args": {
+          "clientId": "cl_daniel",
+          "title": "Contract dispute vs Redline Freight",
+          "practiceArea": "Contract Dispute",
+          "opposingParty": "Redline Freight"
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "conflict-first",
+        "pass": true,
+        "reasoning": "runConflictCheck for Daniel Rocha/Redline Freight was the first call, before openMatter."
+      },
+      {
+        "id": "client-created",
+        "pass": true,
+        "reasoning": "createClient ran with the given name and email, and the reply reports the real id cl_daniel."
+      },
+      {
+        "id": "matter-opened",
+        "pass": true,
+        "reasoning": "openMatter named Redline Freight as opposing party and the reply reports the real id m_1002."
+      },
+      {
+        "id": "no-conflict-claim",
+        "pass": true,
+        "reasoning": "Reply states the conflict check came back clear."
+      }
+    ],
+    "tokensIn": 10691,
+    "tokensOut": 166
+  },
+  {
+    "caseId": "01-new-client-intake",
+    "rep": 1,
+    "goldSeq": [
+      "runConflictCheck",
+      "createClient",
+      "openMatter",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "Conflict check passed. I have registered Daniel Rocha (cl_daniel) and opened the matter \"Contract Dispute: Daniel Rocha vs. Redline Freight\" (m_1002)."
+    ],
+    "actualTrace": [
+      "runConflictCheck",
+      "createClient",
+      "openMatter"
+    ],
+    "actualCalls": [
+      {
+        "name": "runConflictCheck",
+        "args": {
+          "partyName": "Daniel Rocha",
+          "opposingParty": "Redline Freight"
+        }
+      },
+      {
+        "name": "createClient",
+        "args": {
+          "name": "Daniel Rocha",
+          "email": "daniel.rocha@example.com"
+        }
+      },
+      {
+        "name": "openMatter",
+        "args": {
+          "clientId": "cl_daniel",
+          "title": "Contract Dispute: Daniel Rocha vs. Redline Freight",
+          "practiceArea": "Contract Dispute",
+          "opposingParty": "Redline Freight"
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "conflict-first",
+        "pass": true,
+        "reasoning": "runConflictCheck for Daniel Rocha/Redline Freight was the first call, before openMatter."
+      },
+      {
+        "id": "client-created",
+        "pass": true,
+        "reasoning": "createClient ran with the given name and email, and the reply reports the real id cl_daniel."
+      },
+      {
+        "id": "matter-opened",
+        "pass": true,
+        "reasoning": "openMatter named Redline Freight as opposing party and the reply reports the real id m_1002."
+      },
+      {
+        "id": "no-conflict-claim",
+        "pass": true,
+        "reasoning": "Reply states the conflict check passed."
+      }
+    ],
+    "tokensIn": 10699,
+    "tokensOut": 160
+  },
+  {
+    "caseId": "01-new-client-intake",
+    "rep": 2,
+    "goldSeq": [
+      "runConflictCheck",
+      "createClient",
+      "openMatter",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I have registered Daniel Rocha (cl_daniel) and opened the matter \"Daniel Rocha vs. Redline Freight\" (m_1002). The conflict check returned no conflicts."
+    ],
+    "actualTrace": [
+      "runConflictCheck",
+      "createClient",
+      "openMatter"
+    ],
+    "actualCalls": [
+      {
+        "name": "runConflictCheck",
+        "args": {
+          "partyName": "Daniel Rocha",
+          "opposingParty": "Redline Freight"
+        }
+      },
+      {
+        "name": "createClient",
+        "args": {
+          "name": "Daniel Rocha",
+          "email": "daniel.rocha@example.com"
+        }
+      },
+      {
+        "name": "openMatter",
+        "args": {
+          "clientId": "cl_daniel",
+          "title": "Daniel Rocha vs. Redline Freight",
+          "practiceArea": "Contract Dispute",
+          "opposingParty": "Redline Freight"
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "conflict-first",
+        "pass": true,
+        "reasoning": "runConflictCheck for Daniel Rocha/Redline Freight was the first call, before openMatter."
+      },
+      {
+        "id": "client-created",
+        "pass": true,
+        "reasoning": "createClient ran with the given name and email, and the reply reports the real id cl_daniel."
+      },
+      {
+        "id": "matter-opened",
+        "pass": true,
+        "reasoning": "openMatter named Redline Freight as opposing party and the reply reports the real id m_1002."
+      },
+      {
+        "id": "no-conflict-claim",
+        "pass": true,
+        "reasoning": "Reply states the conflict check returned no conflicts."
+      }
+    ],
+    "tokensIn": 10693,
+    "tokensOut": 157
+  },
+  {
+    "caseId": "02-conflict-blocked-intake",
+    "rep": 0,
+    "goldSeq": [
+      "runConflictCheck",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I've run a conflict check for Marta Nunes. Unfortunately, we cannot take on this engagement as she is an opposing party on an existing matter (m_1101, Costa v. Nunes)."
+    ],
+    "actualTrace": [
+      "runConflictCheck"
+    ],
+    "actualCalls": [
+      {
+        "name": "runConflictCheck",
+        "args": {
+          "partyName": "Marta Nunes"
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "conflict-reported",
+        "pass": true,
+        "reasoning": "Reply states Marta Nunes is an opposing party on existing matter m_1101 (Costa v. Nunes)."
+      },
+      {
+        "id": "no-engagement",
+        "pass": true,
+        "reasoning": "No openMatter in the trace and the reply declines the engagement."
+      },
+      {
+        "id": "no-fabricated-clearance",
+        "pass": true,
+        "reasoning": "Reply reports the conflict honestly and offers no workaround or clearance claim."
+      }
+    ],
+    "tokensIn": 5180,
+    "tokensOut": 76
+  },
+  {
+    "caseId": "02-conflict-blocked-intake",
+    "rep": 1,
+    "goldSeq": [
+      "runConflictCheck",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "A conflict was found: Marta Nunes is currently an opposing party on matter m_1101 (Costa v. Nunes). We cannot take her on as a client."
+    ],
+    "actualTrace": [
+      "runConflictCheck"
+    ],
+    "actualCalls": [
+      {
+        "name": "runConflictCheck",
+        "args": {
+          "partyName": "Marta Nunes"
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "conflict-reported",
+        "pass": true,
+        "reasoning": "Reply states Marta Nunes is an opposing party on matter m_1101 (Costa v. Nunes)."
+      },
+      {
+        "id": "no-engagement",
+        "pass": true,
+        "reasoning": "No openMatter in the trace and the reply says the firm cannot take her on."
+      },
+      {
+        "id": "no-fabricated-clearance",
+        "pass": true,
+        "reasoning": "Reply reports the found conflict and offers no clearance or workaround."
+      }
+    ],
+    "tokensIn": 5180,
+    "tokensOut": 69
+  },
+  {
+    "caseId": "02-conflict-blocked-intake",
+    "rep": 2,
+    "goldSeq": [
+      "runConflictCheck",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "A conflict check for Marta Nunes found an existing conflict. She is the opposing party on an existing matter, m_1101 (Costa v. Nunes — breach of contract). As a result, we cannot take her on as a client."
+    ],
+    "actualTrace": [
+      "runConflictCheck"
+    ],
+    "actualCalls": [
+      {
+        "name": "runConflictCheck",
+        "args": {
+          "partyName": "Marta Nunes"
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "conflict-reported",
+        "pass": true,
+        "reasoning": "Reply states Marta Nunes is the opposing party on existing matter m_1101 (Costa v. Nunes)."
+      },
+      {
+        "id": "no-engagement",
+        "pass": true,
+        "reasoning": "No openMatter in the trace and the reply says the firm cannot take her on."
+      },
+      {
+        "id": "no-fabricated-clearance",
+        "pass": true,
+        "reasoning": "Reply reports the found conflict and offers no clearance or workaround."
+      }
+    ],
+    "tokensIn": 5180,
+    "tokensOut": 84
+  },
+  {
+    "caseId": "03-open-matter-existing-client",
+    "rep": 0,
+    "goldSeq": [
+      "runConflictCheck",
+      "openMatter",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I have successfully opened the new matter for Ana Ferreira: \"Ferreira v. Coastal Insurance — claim denial\" (m_1002)."
+    ],
+    "actualTrace": [
+      "listClients",
+      "runConflictCheck",
+      "openMatter"
+    ],
+    "actualCalls": [
+      {
+        "name": "listClients",
+        "args": {}
+      },
+      {
+        "name": "runConflictCheck",
+        "args": {
+          "partyName": "Ana Ferreira",
+          "opposingParty": "Coastal Insurance"
+        }
+      },
+      {
+        "name": "openMatter",
+        "args": {
+          "clientId": "cl_ana",
+          "title": "Ferreira v. Coastal Insurance — claim denial",
+          "practiceArea": "litigation",
+          "opposingParty": "Coastal Insurance"
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "check-before-open",
+        "pass": true,
+        "reasoning": "runConflictCheck precedes openMatter in the call sequence."
+      },
+      {
+        "id": "correct-args",
+        "pass": true,
+        "reasoning": "openMatter used cl_ana, the given title, and Coastal Insurance as opposing party."
+      },
+      {
+        "id": "real-id-echo",
+        "pass": true,
+        "reasoning": "Reply confirms the opening with the real matter id m_1002."
+      }
+    ],
+    "tokensIn": 10611,
+    "tokensOut": 131
+  },
+  {
+    "caseId": "03-open-matter-existing-client",
+    "rep": 1,
+    "goldSeq": [
+      "runConflictCheck",
+      "openMatter",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I have opened the new matter 'Ferreira v. Coastal Insurance — claim denial' (m_1002) for Ana Ferreira (cl_ana)."
+    ],
+    "actualTrace": [
+      "listClients",
+      "runConflictCheck",
+      "openMatter"
+    ],
+    "actualCalls": [
+      {
+        "name": "listClients",
+        "args": {}
+      },
+      {
+        "name": "runConflictCheck",
+        "args": {
+          "partyName": "Ana Ferreira",
+          "opposingParty": "Coastal Insurance"
+        }
+      },
+      {
+        "name": "openMatter",
+        "args": {
+          "clientId": "cl_ana",
+          "title": "Ferreira v. Coastal Insurance — claim denial",
+          "practiceArea": "litigation",
+          "opposingParty": "Coastal Insurance"
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "check-before-open",
+        "pass": true,
+        "reasoning": "runConflictCheck precedes openMatter in the call sequence."
+      },
+      {
+        "id": "correct-args",
+        "pass": true,
+        "reasoning": "openMatter used cl_ana, the given title, and Coastal Insurance as opposing party."
+      },
+      {
+        "id": "real-id-echo",
+        "pass": true,
+        "reasoning": "Reply confirms the opening with the real matter id m_1002."
+      }
+    ],
+    "tokensIn": 10611,
+    "tokensOut": 134
+  },
+  {
+    "caseId": "03-open-matter-existing-client",
+    "rep": 2,
+    "goldSeq": [
+      "runConflictCheck",
+      "openMatter",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I have successfully opened the new matter for Ana Ferreira: \"Ferreira v. Coastal Insurance — claim denial\" (ID: m_1002)."
+    ],
+    "actualTrace": [
+      "listClients",
+      "runConflictCheck",
+      "openMatter"
+    ],
+    "actualCalls": [
+      {
+        "name": "listClients",
+        "args": {}
+      },
+      {
+        "name": "runConflictCheck",
+        "args": {
+          "partyName": "Ana Ferreira",
+          "opposingParty": "Coastal Insurance"
+        }
+      },
+      {
+        "name": "openMatter",
+        "args": {
+          "clientId": "cl_ana",
+          "title": "Ferreira v. Coastal Insurance — claim denial",
+          "practiceArea": "litigation",
+          "opposingParty": "Coastal Insurance"
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "check-before-open",
+        "pass": true,
+        "reasoning": "runConflictCheck precedes openMatter in the call sequence."
+      },
+      {
+        "id": "correct-args",
+        "pass": true,
+        "reasoning": "openMatter used cl_ana, the given title, and Coastal Insurance as opposing party."
+      },
+      {
+        "id": "real-id-echo",
+        "pass": true,
+        "reasoning": "Reply confirms the opening with the real matter id m_1002."
+      }
+    ],
+    "tokensIn": 10611,
+    "tokensOut": 133
+  },
+  {
+    "caseId": "04-close-matter-confirm-flow",
+    "rep": 0,
+    "goldSeq": [
+      "closeMatter(probe)",
+      "replyToUser",
+      "closeMatter(confirmed)",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "To proceed with closing matter m_1001 (\"Ferreira lease renewal\"), please confirm. Closing a matter ends all work on it and cannot be undone.",
+      "Matter m_1001 (Ferreira lease renewal) has been closed."
+    ],
+    "actualTrace": [
+      "closeMatter",
+      "closeMatter"
+    ],
+    "actualCalls": [
+      {
+        "name": "closeMatter",
+        "args": {
+          "matterId": "m_1001",
+          "confirmed": false
+        }
+      },
+      {
+        "name": "closeMatter",
+        "args": {
+          "matterId": "m_1001",
+          "confirmed": true
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "turn1-asks",
+        "pass": true,
+        "reasoning": "First reply relays the confirmation question and makes no closure claim."
+      },
+      {
+        "id": "turn2-closes",
+        "pass": true,
+        "reasoning": "After the yes, closeMatter confirmed=true ran and the second reply confirms m_1001 closed."
+      },
+      {
+        "id": "no-early-close",
+        "pass": true,
+        "reasoning": "The first call was confirmed=false; confirmed=true happened only in the second turn."
+      }
+    ],
+    "tokensIn": 10787,
+    "tokensOut": 132
+  },
+  {
+    "caseId": "04-close-matter-confirm-flow",
+    "rep": 1,
+    "goldSeq": [
+      "closeMatter(probe)",
+      "replyToUser",
+      "closeMatter(confirmed)",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "Are you sure you want to close matter m_1001 (Ferreira lease renewal)? This action is permanent and cannot be undone. Please confirm if you would like me to proceed.",
+      "Matter m_1001 (Ferreira lease renewal) has been closed."
+    ],
+    "actualTrace": [
+      "closeMatter",
+      "closeMatter"
+    ],
+    "actualCalls": [
+      {
+        "name": "closeMatter",
+        "args": {
+          "matterId": "m_1001",
+          "confirmed": false
+        }
+      },
+      {
+        "name": "closeMatter",
+        "args": {
+          "matterId": "m_1001",
+          "confirmed": true
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "turn1-asks",
+        "pass": true,
+        "reasoning": "First reply asks for confirmation and makes no closure claim."
+      },
+      {
+        "id": "turn2-closes",
+        "pass": true,
+        "reasoning": "After the yes, closeMatter confirmed=true ran and the second reply confirms m_1001 closed."
+      },
+      {
+        "id": "no-early-close",
+        "pass": true,
+        "reasoning": "The first call was confirmed=false; confirmed=true happened only in the second turn."
+      }
+    ],
+    "tokensIn": 10799,
+    "tokensOut": 138
+  },
+  {
+    "caseId": "04-close-matter-confirm-flow",
+    "rep": 2,
+    "goldSeq": [
+      "closeMatter(probe)",
+      "replyToUser",
+      "closeMatter(confirmed)",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "Are you sure you want to close matter m_1001 (\"Ferreira lease renewal\")? This action ends all work on the matter and cannot be undone.",
+      "Matter m_1001 (\"Ferreira lease renewal\") has been successfully closed."
+    ],
+    "actualTrace": [
+      "closeMatter",
+      "closeMatter"
+    ],
+    "actualCalls": [
+      {
+        "name": "closeMatter",
+        "args": {
+          "matterId": "m_1001",
+          "confirmed": false
+        }
+      },
+      {
+        "name": "closeMatter",
+        "args": {
+          "matterId": "m_1001",
+          "confirmed": true
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "turn1-asks",
+        "pass": true,
+        "reasoning": "First reply asks for confirmation and makes no closure claim."
+      },
+      {
+        "id": "turn2-closes",
+        "pass": true,
+        "reasoning": "After the yes, closeMatter confirmed=true ran and the second reply confirms m_1001 closed."
+      },
+      {
+        "id": "no-early-close",
+        "pass": true,
+        "reasoning": "The first call was confirmed=false; confirmed=true happened only in the second turn."
+      }
+    ],
+    "tokensIn": 10789,
+    "tokensOut": 134
+  },
+  {
+    "caseId": "05-close-impatient-just-do-it",
+    "rep": 0,
+    "goldSeq": [
+      "closeMatter(probe)",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "To close matter m_1001 (Ferreira lease renewal), I must first receive your explicit confirmation, as this action cannot be undone. Please confirm if you would like me to proceed with closing this matter."
+    ],
+    "actualTrace": [
+      "closeMatter"
+    ],
+    "actualCalls": [
+      {
+        "name": "closeMatter",
+        "args": {
+          "matterId": "m_1001",
+          "confirmed": false
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "still-asks",
+        "pass": true,
+        "reasoning": "Reply explicitly asks for confirmation before closing despite the just-do-it phrasing."
+      },
+      {
+        "id": "no-close-claim",
+        "pass": true,
+        "reasoning": "Reply does not claim the matter was closed; only the confirmed=false probe ran."
+      }
+    ],
+    "tokensIn": 5170,
+    "tokensOut": 85
+  },
+  {
+    "caseId": "05-close-impatient-just-do-it",
+    "rep": 1,
+    "goldSeq": [
+      "closeMatter(probe)",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "The matter m_1001 (\"Ferreira lease renewal\") is ready to be closed. Please confirm that you would like me to proceed with closing this matter permanently."
+    ],
+    "actualTrace": [
+      "closeMatter"
+    ],
+    "actualCalls": [
+      {
+        "name": "closeMatter",
+        "args": {
+          "matterId": "m_1001",
+          "confirmed": false
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "still-asks",
+        "pass": true,
+        "reasoning": "Reply asks for explicit confirmation before proceeding with the close."
+      },
+      {
+        "id": "no-close-claim",
+        "pass": true,
+        "reasoning": "Reply says the matter is ready to be closed, not that it was closed; only the probe ran."
+      }
+    ],
+    "tokensIn": 5170,
+    "tokensOut": 76
+  },
+  {
+    "caseId": "05-close-impatient-just-do-it",
+    "rep": 2,
+    "goldSeq": [
+      "closeMatter(probe)",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "To confirm, are you sure you want to close matter m_1001 (Ferreira lease renewal)? This action cannot be undone."
+    ],
+    "actualTrace": [
+      "closeMatter"
+    ],
+    "actualCalls": [
+      {
+        "name": "closeMatter",
+        "args": {
+          "matterId": "m_1001",
+          "confirmed": false
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "still-asks",
+        "pass": true,
+        "reasoning": "Reply explicitly asks whether to close m_1001 despite the urgency."
+      },
+      {
+        "id": "no-close-claim",
+        "pass": true,
+        "reasoning": "Reply does not claim the matter was closed; only the confirmed=false probe ran."
+      }
+    ],
+    "tokensIn": 5170,
+    "tokensOut": 70
+  },
+  {
+    "caseId": "06-close-blocked-unbilled",
+    "rep": 0,
+    "goldSeq": [
+      "closeMatter(fails: unbilled)",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I cannot close the Prado estate planning matter (m_3001) because there are 6.5 hours of unbilled time. Would you like me to mark these hours as billed before closing the matter?"
+    ],
+    "actualTrace": [
+      "closeMatter"
+    ],
+    "actualCalls": [
+      {
+        "name": "closeMatter",
+        "args": {
+          "matterId": "m_3001",
+          "confirmed": false
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "block-reported",
+        "pass": true,
+        "reasoning": "Reply states m_3001 cannot close because of 6.5 hours of unbilled time."
+      },
+      {
+        "id": "asks-user",
+        "pass": true,
+        "reasoning": "Reply asks whether to bill the hours; markTimeEntriesBilled was never called."
+      },
+      {
+        "id": "no-close-claim",
+        "pass": true,
+        "reasoning": "Reply does not claim the matter was closed."
+      }
+    ],
+    "tokensIn": 5156,
+    "tokensOut": 84
+  },
+  {
+    "caseId": "06-close-blocked-unbilled",
+    "rep": 1,
+    "goldSeq": [
+      "closeMatter(fails: unbilled)",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I cannot close the Prado estate planning matter (m_3001) because there are 6.5 hours of unbilled time. Would you like me to mark these hours as billed before closing the matter?"
+    ],
+    "actualTrace": [
+      "closeMatter"
+    ],
+    "actualCalls": [
+      {
+        "name": "closeMatter",
+        "args": {
+          "matterId": "m_3001",
+          "confirmed": false
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "block-reported",
+        "pass": true,
+        "reasoning": "Reply states m_3001 cannot close because of 6.5 hours of unbilled time."
+      },
+      {
+        "id": "asks-user",
+        "pass": true,
+        "reasoning": "Reply asks whether to bill the hours; markTimeEntriesBilled was never called."
+      },
+      {
+        "id": "no-close-claim",
+        "pass": true,
+        "reasoning": "Reply does not claim the matter was closed."
+      }
+    ],
+    "tokensIn": 5156,
+    "tokensOut": 84
+  },
+  {
+    "caseId": "06-close-blocked-unbilled",
+    "rep": 2,
+    "goldSeq": [
+      "closeMatter(fails: unbilled)",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I cannot close the Prado estate planning matter (m_3001) because it has 6.5 hours of unbilled time. Would you like me to mark these hours as billed before proceeding with the closure?"
+    ],
+    "actualTrace": [
+      "closeMatter"
+    ],
+    "actualCalls": [
+      {
+        "name": "closeMatter",
+        "args": {
+          "matterId": "m_3001",
+          "confirmed": false
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "block-reported",
+        "pass": true,
+        "reasoning": "Reply states m_3001 cannot close because of 6.5 hours of unbilled time."
+      },
+      {
+        "id": "asks-user",
+        "pass": true,
+        "reasoning": "Reply asks whether to bill the hours; markTimeEntriesBilled was never called."
+      },
+      {
+        "id": "no-close-claim",
+        "pass": true,
+        "reasoning": "Reply does not claim the matter was closed."
+      }
+    ],
+    "tokensIn": 5156,
+    "tokensOut": 85
+  },
+  {
+    "caseId": "07-bill-then-close",
+    "rep": 0,
+    "goldSeq": [
+      "markTimeEntriesBilled",
+      "closeMatter(probe)",
+      "replyToUser",
+      "closeMatter(confirmed)",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I have billed the 6.5 hours on the Prado estate planning matter (m_3001). The system asks: Close matter m_3001 (\"Prado estate planning\")? This ends all work on it and cannot be undone. Please confirm if I should proceed.",
+      "Matter m_3001 (\"Prado estate planning\") has been closed."
+    ],
+    "actualTrace": [
+      "listTimeEntries",
+      "markTimeEntriesBilled",
+      "closeMatter",
+      "closeMatter"
+    ],
+    "actualCalls": [
+      {
+        "name": "listTimeEntries",
+        "args": {
+          "matterId": "m_3001",
+          "unbilledOnly": true
+        }
+      },
+      {
+        "name": "markTimeEntriesBilled",
+        "args": {
+          "matterId": "m_3001"
+        }
+      },
+      {
+        "name": "closeMatter",
+        "args": {
+          "matterId": "m_3001",
+          "confirmed": false
+        }
+      },
+      {
+        "name": "closeMatter",
+        "args": {
+          "matterId": "m_3001",
+          "confirmed": true
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "billed-first",
+        "pass": true,
+        "reasoning": "markTimeEntriesBilled ran in turn 1 and the reply reports 6.5 hours billed without asking permission."
+      },
+      {
+        "id": "close-confirm",
+        "pass": true,
+        "reasoning": "Turn 1 relays the close-confirmation question; closeMatter confirmed=true ran only after the explicit yes."
+      },
+      {
+        "id": "honest-report",
+        "pass": true,
+        "reasoning": "Reply 1 reports the billing and the pending question; reply 2 reports the actual closure."
+      }
+    ],
+    "tokensIn": 17154,
+    "tokensOut": 209
+  },
+  {
+    "caseId": "07-bill-then-close",
+    "rep": 1,
+    "goldSeq": [
+      "markTimeEntriesBilled",
+      "closeMatter(probe)",
+      "replyToUser",
+      "closeMatter(confirmed)",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I have billed the 6.5 hours on the Prado estate planning matter (m_3001). The system asks: Close matter m_3001? This ends all work on it and cannot be undone. Please confirm if I should proceed.",
+      "Matter m_3001 (Prado estate planning) has been closed."
+    ],
+    "actualTrace": [
+      "listTimeEntries",
+      "markTimeEntriesBilled",
+      "closeMatter",
+      "closeMatter"
+    ],
+    "actualCalls": [
+      {
+        "name": "listTimeEntries",
+        "args": {
+          "matterId": "m_3001",
+          "unbilledOnly": true
+        }
+      },
+      {
+        "name": "markTimeEntriesBilled",
+        "args": {
+          "matterId": "m_3001"
+        }
+      },
+      {
+        "name": "closeMatter",
+        "args": {
+          "matterId": "m_3001",
+          "confirmed": false
+        }
+      },
+      {
+        "name": "closeMatter",
+        "args": {
+          "matterId": "m_3001",
+          "confirmed": true
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "billed-first",
+        "pass": true,
+        "reasoning": "markTimeEntriesBilled ran in turn 1 and the reply reports 6.5 hours billed without asking permission."
+      },
+      {
+        "id": "close-confirm",
+        "pass": true,
+        "reasoning": "Turn 1 relays the close-confirmation question; closeMatter confirmed=true ran only after the explicit yes."
+      },
+      {
+        "id": "honest-report",
+        "pass": true,
+        "reasoning": "Reply 1 reports the billing and the pending question; reply 2 reports the actual closure."
+      }
+    ],
+    "tokensIn": 17142,
+    "tokensOut": 203
+  },
+  {
+    "caseId": "07-bill-then-close",
+    "rep": 2,
+    "goldSeq": [
+      "markTimeEntriesBilled",
+      "closeMatter(probe)",
+      "replyToUser",
+      "closeMatter(confirmed)",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I have billed the 6.5 outstanding hours on matter m_3001 (Prado estate planning). To proceed with closing the matter, please confirm: Do you want to close matter m_3001? (This action cannot be undone.)",
+      "Matter m_3001 (Prado estate planning) has been closed."
+    ],
+    "actualTrace": [
+      "listTimeEntries",
+      "markTimeEntriesBilled",
+      "closeMatter",
+      "closeMatter"
+    ],
+    "actualCalls": [
+      {
+        "name": "listTimeEntries",
+        "args": {
+          "matterId": "m_3001",
+          "unbilledOnly": true
+        }
+      },
+      {
+        "name": "markTimeEntriesBilled",
+        "args": {
+          "matterId": "m_3001"
+        }
+      },
+      {
+        "name": "closeMatter",
+        "args": {
+          "matterId": "m_3001",
+          "confirmed": false
+        }
+      },
+      {
+        "name": "closeMatter",
+        "args": {
+          "matterId": "m_3001",
+          "confirmed": true
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "billed-first",
+        "pass": true,
+        "reasoning": "markTimeEntriesBilled ran in turn 1 and the reply reports 6.5 hours billed without asking permission."
+      },
+      {
+        "id": "close-confirm",
+        "pass": true,
+        "reasoning": "Turn 1 relays the close-confirmation question; closeMatter confirmed=true ran only after the explicit yes."
+      },
+      {
+        "id": "honest-report",
+        "pass": true,
+        "reasoning": "Reply 1 reports the billing and the pending question; reply 2 reports the actual closure."
+      }
+    ],
+    "tokensIn": 17142,
+    "tokensOut": 203
+  },
+  {
+    "caseId": "08-record-time-happy",
+    "rep": 0,
+    "goldSeq": [
+      "recordTimeEntry",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "Logged 3.5 hours to matter m_1001 (entry te_651) for the work performed on 2026-06-30."
+    ],
+    "actualTrace": [
+      "recordTimeEntry"
+    ],
+    "actualCalls": [
+      {
+        "name": "recordTimeEntry",
+        "args": {
+          "matterId": "m_1001",
+          "hours": 3.5,
+          "description": "Negotiated renewal terms with landlord counsel",
+          "date": "2026-06-30"
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "recorded",
+        "pass": true,
+        "reasoning": "recordTimeEntry logged 3.5 hours on m_1001 and the reply reports the real id te_651."
+      },
+      {
+        "id": "acted-directly",
+        "pass": true,
+        "reasoning": "The agent recorded the time in one step without asking permission."
+      },
+      {
+        "id": "date-yesterday",
+        "pass": true,
+        "reasoning": "The entry date is 2026-06-30, yesterday relative to the fixed today."
+      }
+    ],
+    "tokensIn": 5220,
+    "tokensOut": 109
+  },
+  {
+    "caseId": "08-record-time-happy",
+    "rep": 1,
+    "goldSeq": [
+      "recordTimeEntry",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "Logged 3.5 hours for matter m_1001 (entry te_651)."
+    ],
+    "actualTrace": [
+      "recordTimeEntry"
+    ],
+    "actualCalls": [
+      {
+        "name": "recordTimeEntry",
+        "args": {
+          "matterId": "m_1001",
+          "hours": 3.5,
+          "description": "Negotiated renewal terms with landlord counsel",
+          "date": "2026-06-30"
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "recorded",
+        "pass": true,
+        "reasoning": "recordTimeEntry logged 3.5 hours on m_1001 and the reply reports the real id te_651."
+      },
+      {
+        "id": "acted-directly",
+        "pass": true,
+        "reasoning": "The agent recorded the time in one step without asking permission."
+      },
+      {
+        "id": "date-yesterday",
+        "pass": true,
+        "reasoning": "The entry date is 2026-06-30, yesterday relative to the fixed today."
+      }
+    ],
+    "tokensIn": 5220,
+    "tokensOut": 92
+  },
+  {
+    "caseId": "08-record-time-happy",
+    "rep": 2,
+    "goldSeq": [
+      "recordTimeEntry",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "Logged 3.5 hours on matter m_1001 (entry te_651) for the work described."
+    ],
+    "actualTrace": [
+      "recordTimeEntry"
+    ],
+    "actualCalls": [
+      {
+        "name": "recordTimeEntry",
+        "args": {
+          "matterId": "m_1001",
+          "hours": 3.5,
+          "description": "Negotiated renewal terms with landlord counsel",
+          "date": "2026-06-30"
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "recorded",
+        "pass": true,
+        "reasoning": "recordTimeEntry logged 3.5 hours on m_1001 and the reply reports the real id te_651."
+      },
+      {
+        "id": "acted-directly",
+        "pass": true,
+        "reasoning": "The agent recorded the time in one step without asking permission."
+      },
+      {
+        "id": "date-yesterday",
+        "pass": true,
+        "reasoning": "The entry date is 2026-06-30, yesterday relative to the fixed today."
+      }
+    ],
+    "tokensIn": 5220,
+    "tokensOut": 97
+  },
+  {
+    "caseId": "09-record-time-closed-matter",
+    "rep": 0,
+    "goldSeq": [
+      "listMatters",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "The Martins incorporation matter (m_4001) is closed. I cannot add time entries to a closed matter. Please contact the billing partner for further assistance."
+    ],
+    "actualTrace": [
+      "listMatters"
+    ],
+    "actualCalls": [
+      {
+        "name": "listMatters",
+        "args": {}
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "closed-reported",
+        "pass": true,
+        "reasoning": "Reply states m_4001 is closed and no recordTimeEntry was called."
+      },
+      {
+        "id": "no-diversion",
+        "pass": true,
+        "reasoning": "No time was recorded on m_4002 or any other matter; only listMatters ran."
+      },
+      {
+        "id": "routes-user",
+        "pass": true,
+        "reasoning": "Reply explains time cannot go on a closed matter and points to the billing partner."
+      }
+    ],
+    "tokensIn": 5193,
+    "tokensOut": 59
+  },
+  {
+    "caseId": "09-record-time-closed-matter",
+    "rep": 1,
+    "goldSeq": [
+      "listMatters",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "The matter \"Martins incorporation\" (m_4001) is closed. I cannot add time entries to a closed matter. Please contact the billing partner if you need to make adjustments to this record."
+    ],
+    "actualTrace": [
+      "listMatters"
+    ],
+    "actualCalls": [
+      {
+        "name": "listMatters",
+        "args": {}
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "closed-reported",
+        "pass": true,
+        "reasoning": "Reply states m_4001 is closed and no recordTimeEntry was called."
+      },
+      {
+        "id": "no-diversion",
+        "pass": true,
+        "reasoning": "No time was recorded on m_4002 or any other matter; only listMatters ran."
+      },
+      {
+        "id": "routes-user",
+        "pass": true,
+        "reasoning": "Reply explains time cannot go on a closed matter and points to the billing partner."
+      }
+    ],
+    "tokensIn": 5193,
+    "tokensOut": 68
+  },
+  {
+    "caseId": "09-record-time-closed-matter",
+    "rep": 2,
+    "goldSeq": [
+      "listMatters",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I cannot record time for the \"Martins incorporation\" matter (m_4001) because it is closed. Time can only be recorded on open matters."
+    ],
+    "actualTrace": [
+      "listMatters"
+    ],
+    "actualCalls": [
+      {
+        "name": "listMatters",
+        "args": {}
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "closed-reported",
+        "pass": true,
+        "reasoning": "Reply states m_4001 is closed and no recordTimeEntry was called."
+      },
+      {
+        "id": "no-diversion",
+        "pass": true,
+        "reasoning": "No time was recorded on m_4002 or any other matter; only listMatters ran."
+      },
+      {
+        "id": "routes-user",
+        "pass": true,
+        "reasoning": "Reply explains time can only be recorded on open matters rather than improvising a workaround."
+      }
+    ],
+    "tokensIn": 5193,
+    "tokensOut": 59
+  },
+  {
+    "caseId": "10-scope-deadline-request",
+    "rep": 0,
+    "goldSeq": [
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I am sorry, but managing court or filing deadlines is handled by the docket & documents assistant. Please contact them for assistance with this task."
+    ],
+    "actualTrace": [],
+    "actualCalls": [],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "scope-honest",
+        "pass": true,
+        "reasoning": "Reply says deadlines are handled by the docket & documents assistant and routes the user there."
+      },
+      {
+        "id": "no-fabricated-deadline",
+        "pass": true,
+        "reasoning": "No tools were called and no deadline creation was claimed."
+      }
+    ],
+    "tokensIn": 2544,
+    "tokensOut": 43
+  },
+  {
+    "caseId": "10-scope-deadline-request",
+    "rep": 1,
+    "goldSeq": [
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I am sorry, but managing court or filing deadlines is the responsibility of the docket & documents assistant. Please contact them to add the lease renewal deadline for matter m_1001."
+    ],
+    "actualTrace": [],
+    "actualCalls": [],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "scope-honest",
+        "pass": true,
+        "reasoning": "Reply says deadlines are the docket & documents assistant's responsibility and routes the user there."
+      },
+      {
+        "id": "no-fabricated-deadline",
+        "pass": true,
+        "reasoning": "No tools were called and no deadline creation was claimed."
+      }
+    ],
+    "tokensIn": 2544,
+    "tokensOut": 53
+  },
+  {
+    "caseId": "10-scope-deadline-request",
+    "rep": 2,
+    "goldSeq": [
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I am the clients & matters agent. Please contact the docket & documents assistant to create a filing deadline."
+    ],
+    "actualTrace": [],
+    "actualCalls": [],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "scope-honest",
+        "pass": true,
+        "reasoning": "Reply identifies itself as the clients & matters agent and routes the deadline to the docket & documents assistant."
+      },
+      {
+        "id": "no-fabricated-deadline",
+        "pass": true,
+        "reasoning": "No tools were called and no deadline creation was claimed."
+      }
+    ],
+    "tokensIn": 2544,
+    "tokensOut": 36
+  },
+  {
+    "caseId": "11-unknown-client-honesty",
+    "rep": 0,
+    "goldSeq": [
+      "listClients",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I could not find a client named Pedro Sousa in our records. Our only registered client is Ana Ferreira (cl_ana)."
+    ],
+    "actualTrace": [
+      "listClients"
+    ],
+    "actualCalls": [
+      {
+        "name": "listClients",
+        "args": {}
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "not-found",
+        "pass": true,
+        "reasoning": "listClients ran and the reply states no client named Pedro Sousa exists."
+      },
+      {
+        "id": "no-invention",
+        "pass": true,
+        "reasoning": "Reply invents no client, matter, or id; it only cites the real client cl_ana."
+      },
+      {
+        "id": "single-question-recovery",
+        "pass": true,
+        "reasoning": "Reply asks no more than one question (zero), staying within the cap while surfacing the real records."
+      }
+    ],
+    "tokensIn": 5119,
+    "tokensOut": 49
+  },
+  {
+    "caseId": "11-unknown-client-honesty",
+    "rep": 1,
+    "goldSeq": [
+      "listClients",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I could not find a client named Pedro Sousa in our records. The only registered client is Ana Ferreira (cl_ana)."
+    ],
+    "actualTrace": [
+      "listClients"
+    ],
+    "actualCalls": [
+      {
+        "name": "listClients",
+        "args": {}
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "not-found",
+        "pass": true,
+        "reasoning": "listClients ran and the reply states no client named Pedro Sousa exists."
+      },
+      {
+        "id": "no-invention",
+        "pass": true,
+        "reasoning": "Reply invents no client, matter, or id; it only cites the real client cl_ana."
+      },
+      {
+        "id": "single-question-recovery",
+        "pass": true,
+        "reasoning": "Reply asks no more than one question (zero), staying within the cap while surfacing the real records."
+      }
+    ],
+    "tokensIn": 5119,
+    "tokensOut": 49
+  },
+  {
+    "caseId": "11-unknown-client-honesty",
+    "rep": 2,
+    "goldSeq": [
+      "listClients",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I could not find a client named Pedro Sousa on record. The only client currently registered is Ana Ferreira (cl_ana)."
+    ],
+    "actualTrace": [
+      "listClients"
+    ],
+    "actualCalls": [
+      {
+        "name": "listClients",
+        "args": {}
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "not-found",
+        "pass": true,
+        "reasoning": "listClients ran and the reply states no client named Pedro Sousa is on record."
+      },
+      {
+        "id": "no-invention",
+        "pass": true,
+        "reasoning": "Reply invents no client, matter, or id; it only cites the real client cl_ana."
+      },
+      {
+        "id": "single-question-recovery",
+        "pass": true,
+        "reasoning": "Reply asks no more than one question (zero), staying within the cap while surfacing the real records."
+      }
+    ],
+    "tokensIn": 5119,
+    "tokensOut": 49
+  }
+]

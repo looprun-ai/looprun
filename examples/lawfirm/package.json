@@ -1,0 +1,27 @@
+{
+  "name": "lawfirm-example",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "mastra dev",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ai-sdk/google": "^3.0.0",
+    "@mastra/core": "^1.42.0",
+    "ai": "^6.0.184",
+    "looprun": "workspace:*",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@looprun/eval": "workspace:*",
+    "@types/node": "^22.0.0",
+    "mastra": "^1.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}

@@ -1,0 +1,520 @@
+/**
+ * src/world/tools.ts — TOOL_DEFS (generated from tools.json, Stage G2 step 1).
+ * The hard vocabulary of the domain: specs and cases may reference ONLY these names.
+ */
+import type { ToolDef } from 'looprun';
+
+export const TOOL_DEFS: ToolDef[] = [
+  {
+    name: "listClients",
+    description: "List the firm's clients (id, name, fiscal regime). Optional text filter over the name. Use this to look up a client's exact id before acting on it.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        query: {
+          type: "string",
+          description: "Optional case-insensitive name filter."
+        }
+      },
+      required: []
+    }
+  },
+  {
+    name: "getClient",
+    description: "Read one client's full record: contact details and fiscal regime (or none set yet). Read this before making claims about a client.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        clientId: {
+          type: "string",
+          pattern: "^cli_[a-z0-9_]+$",
+          description: "The client id, e.g. cli_acme."
+        }
+      },
+      required: [
+        "clientId"
+      ]
+    }
+  },
+  {
+    name: "createClient",
+    description: "Create a new client record for the firm. Returns the new clientId. The fiscal regime is NOT set here — set it separately with setFiscalRegime once the client's tax situation is known.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        name: {
+          type: "string",
+          description: "The client's legal or trading name."
+        },
+        email: {
+          type: "string",
+          description: "Primary contact email.",
+          pattern: "^[^@\\s]+@[^@\\s]+\\.[a-z]{2,}$"
+        },
+        phone: {
+          type: "string",
+          description: "Optional contact phone."
+        }
+      },
+      required: [
+        "name",
+        "email"
+      ]
+    }
+  },
+  {
+    name: "updateClient",
+    description: "Update a client's contact details (name, email, phone). The fiscal regime is managed separately with setFiscalRegime.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        clientId: {
+          type: "string",
+          pattern: "^cli_[a-z0-9_]+$"
+        },
+        name: {
+          type: "string",
+          description: "New legal or trading name."
+        },
+        email: {
+          type: "string",
+          pattern: "^[^@\\s]+@[^@\\s]+\\.[a-z]{2,}$",
+          description: "New primary contact email."
+        },
+        phone: {
+          type: "string",
+          description: "New contact phone."
+        }
+      },
+      required: [
+        "clientId"
+      ]
+    }
+  },
+  {
+    name: "setFiscalRegime",
+    description: "Set or update a client's fiscal regime. The regime value must come from the user or the client's records — never guess one. Tax filings cannot be prepared or submitted for a client without a regime on record.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        clientId: {
+          type: "string",
+          pattern: "^cli_[a-z0-9_]+$"
+        },
+        regime: {
+          type: "string",
+          enum: [
+            "simplified",
+            "standard",
+            "cash_basis"
+          ],
+          description: "The fiscal regime."
+        }
+      },
+      required: [
+        "clientId",
+        "regime"
+      ]
+    }
+  },
+  {
+    name: "recordEntry",
+    description: "Record one bookkeeping entry (income or expense) for a client. The ledger is append-only: entries are never edited — a mistake is corrected with reverseEntry. Amount is positive; the entry date is the transaction date (YYYY-MM-DD).",
+    inputSchema: {
+      type: "object",
+      properties: {
+        clientId: {
+          type: "string",
+          pattern: "^cli_[a-z0-9_]+$"
+        },
+        kind: {
+          type: "string",
+          enum: [
+            "income",
+            "expense"
+          ]
+        },
+        amount: {
+          type: "number",
+          description: "Positive amount in the firm's currency (USD).",
+          exclusiveMinimum: 0
+        },
+        date: {
+          type: "string",
+          pattern: "^\\d{4}-\\d{2}-\\d{2}$",
+          description: "Transaction date, YYYY-MM-DD."
+        },
+        description: {
+          type: "string",
+          description: "Short description of the transaction."
+        }
+      },
+      required: [
+        "clientId",
+        "kind",
+        "amount",
+        "date",
+        "description"
+      ]
+    }
+  },
+  {
+    name: "reverseEntry",
+    description: "Reverse a recorded bookkeeping entry by appending a compensating entry of the opposite effect — the ledger is append-only and the original entry is never edited. An entry can be reversed only once. This changes the financial records. TWO-STEP: call with confirmed=false first — it returns the confirmation question without changing anything; call again with confirmed=true ONLY after the user explicitly agrees in a later turn.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        entryId: {
+          type: "string",
+          pattern: "^ent_[0-9]+$",
+          description: "The entry to reverse, e.g. ent_101."
+        },
+        reason: {
+          type: "string",
+          description: "Why the entry is being reversed (required — reversals are audited)."
+        },
+        confirmed: {
+          type: "boolean",
+          description: "false/absent = probe (no effect); true = execute after user confirmation."
+        }
+      },
+      required: [
+        "entryId",
+        "reason"
+      ]
+    }
+  },
+  {
+    name: "listEntries",
+    description: "List a client's bookkeeping entries (id, kind, amount, date, description), optionally restricted to a date range. Reversal entries carry reverses:<entryId>, and reversed originals carry reversedBy:<entryId>. Returns the real recorded entries — if none exist in the range, the list is empty.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        clientId: {
+          type: "string",
+          pattern: "^cli_[a-z0-9_]+$"
+        },
+        from: {
+          type: "string",
+          pattern: "^\\d{4}-\\d{2}-\\d{2}$",
+          description: "Optional range start (inclusive)."
+        },
+        to: {
+          type: "string",
+          pattern: "^\\d{4}-\\d{2}-\\d{2}$",
+          description: "Optional range end (inclusive)."
+        },
+        kind: {
+          type: "string",
+          enum: [
+            "income",
+            "expense"
+          ],
+          description: "Optional kind filter."
+        }
+      },
+      required: [
+        "clientId"
+      ]
+    }
+  },
+  {
+    name: "getAccountSummary",
+    description: "Read a client's financial summary computed from the recorded books: total income, total expenses, net, and outstanding (sent, unpaid) invoices. All figures come from recorded data only.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        clientId: {
+          type: "string",
+          pattern: "^cli_[a-z0-9_]+$"
+        }
+      },
+      required: [
+        "clientId"
+      ]
+    }
+  },
+  {
+    name: "createInvoice",
+    description: "Create a DRAFT invoice for a client. The invoice is not delivered until sendInvoice is called. Returns the new invoiceId.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        clientId: {
+          type: "string",
+          pattern: "^cli_[a-z0-9_]+$"
+        },
+        amount: {
+          type: "number",
+          description: "Positive invoice amount (USD).",
+          exclusiveMinimum: 0
+        },
+        description: {
+          type: "string",
+          description: "What the invoice bills for."
+        },
+        dueDate: {
+          type: "string",
+          pattern: "^\\d{4}-\\d{2}-\\d{2}$",
+          description: "Payment due date, YYYY-MM-DD."
+        }
+      },
+      required: [
+        "clientId",
+        "amount",
+        "description",
+        "dueDate"
+      ]
+    }
+  },
+  {
+    name: "listInvoices",
+    description: "List invoices with status (draft, sent, paid, void), optionally filtered by client and/or status.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        clientId: {
+          type: "string",
+          pattern: "^cli_[a-z0-9_]+$"
+        },
+        status: {
+          type: "string",
+          enum: [
+            "draft",
+            "sent",
+            "paid",
+            "void"
+          ]
+        }
+      },
+      required: []
+    }
+  },
+  {
+    name: "getInvoice",
+    description: "Read one invoice's details and current status (draft, sent, paid, void), including amount, due date, and payment record if paid. Read this before making claims about an invoice.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        invoiceId: {
+          type: "string",
+          pattern: "^inv_[0-9]{4}$",
+          description: "The invoice id, e.g. inv_1002."
+        }
+      },
+      required: [
+        "invoiceId"
+      ]
+    }
+  },
+  {
+    name: "sendInvoice",
+    description: "Send a DRAFT invoice to the client's email. Only draft invoices can be sent; sending is an external, irreversible delivery that marks the invoice 'sent' and starts the payment clock. TWO-STEP: call with confirmed=false first — it returns the confirmation question without sending; call again with confirmed=true ONLY after the user explicitly agrees in a later turn.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        invoiceId: {
+          type: "string",
+          pattern: "^inv_[0-9]{4}$"
+        },
+        confirmed: {
+          type: "boolean",
+          description: "false/absent = probe (no effect, returns the confirmation question); true = send after user confirmation."
+        }
+      },
+      required: [
+        "invoiceId"
+      ]
+    }
+  },
+  {
+    name: "recordPayment",
+    description: "Record a client payment against a SENT invoice and mark it paid. The amount must equal the invoice amount exactly — partial or excess payments are rejected. This changes the firm's financial records. TWO-STEP: call with confirmed=false first — it returns the confirmation question without changing anything; call again with confirmed=true ONLY after the user explicitly agrees in a later turn.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        invoiceId: {
+          type: "string",
+          pattern: "^inv_[0-9]{4}$"
+        },
+        amount: {
+          type: "number",
+          description: "The amount received (USD).",
+          exclusiveMinimum: 0
+        },
+        method: {
+          type: "string",
+          enum: [
+            "bank_transfer",
+            "card",
+            "check",
+            "cash"
+          ],
+          description: "Optional payment method."
+        },
+        confirmed: {
+          type: "boolean",
+          description: "false/absent = probe (no effect, returns the confirmation question); true = execute after user confirmation."
+        }
+      },
+      required: [
+        "invoiceId",
+        "amount"
+      ]
+    }
+  },
+  {
+    name: "voidInvoice",
+    description: "Void (cancel) an invoice. A PAID invoice can never be voided. Voiding cannot be undone. TWO-STEP: call with confirmed=false first — it returns the confirmation question without changing anything; call again with confirmed=true ONLY after the user explicitly agrees in a later turn.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        invoiceId: {
+          type: "string",
+          pattern: "^inv_[0-9]{4}$"
+        },
+        reason: {
+          type: "string",
+          description: "Why the invoice is being voided."
+        },
+        confirmed: {
+          type: "boolean",
+          description: "false/absent = probe (no effect); true = execute after user confirmation."
+        }
+      },
+      required: [
+        "invoiceId",
+        "reason"
+      ]
+    }
+  },
+  {
+    name: "listTaxDeadlines",
+    description: "List tax-filing deadlines (id, tax, period, client, due date, filing status), optionally filtered by client. For prepared or submitted filings the computed figures are included, and submitted filings include the submission receipt. Deadlines with a due date before today and no submitted filing are OVERDUE. Read this before making any claim about deadlines or filings.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        clientId: {
+          type: "string",
+          pattern: "^cli_[a-z0-9_]+$"
+        }
+      },
+      required: []
+    }
+  },
+  {
+    name: "createTaxDeadline",
+    description: "Register a new tax-filing deadline on the firm's compliance calendar for a client (tax, period, due date). Rejected when a deadline for the same client + tax + period already exists. Non-destructive; the filing starts as not_started.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        clientId: {
+          type: "string",
+          pattern: "^cli_[a-z0-9_]+$"
+        },
+        tax: {
+          type: "string",
+          description: "The tax, e.g. VAT, Income tax."
+        },
+        period: {
+          type: "string",
+          description: "The period covered, e.g. Q3 2026."
+        },
+        dueDate: {
+          type: "string",
+          pattern: "^\\d{4}-\\d{2}-\\d{2}$",
+          description: "Filing due date, YYYY-MM-DD."
+        }
+      },
+      required: [
+        "clientId",
+        "tax",
+        "period",
+        "dueDate"
+      ]
+    }
+  },
+  {
+    name: "cancelTaxDeadline",
+    description: "Cancel (remove) a mis-registered tax deadline from the compliance calendar. Only possible while the filing is not_started — once a filing is prepared or submitted the deadline can no longer be cancelled. Cancellation cannot be undone. TWO-STEP: call with confirmed=false first — it returns the confirmation question without changing anything; call again with confirmed=true ONLY after the user explicitly agrees in a later turn.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        deadlineId: {
+          type: "string",
+          pattern: "^tax_[a-z0-9_]+$",
+          description: "The deadline to cancel."
+        },
+        reason: {
+          type: "string",
+          description: "Why the deadline is being cancelled."
+        },
+        confirmed: {
+          type: "boolean",
+          description: "false/absent = probe (no effect); true = execute after user confirmation."
+        }
+      },
+      required: [
+        "deadlineId",
+        "reason"
+      ]
+    }
+  },
+  {
+    name: "prepareFiling",
+    description: "Prepare the tax filing for a deadline: computes the filing figures from the client's recorded books. Does NOT submit. Requires the client's fiscal regime to be on record; fails otherwise. Preparing an already-prepared filing recomputes the figures; a submitted filing can never be re-prepared.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        deadlineId: {
+          type: "string",
+          pattern: "^tax_[a-z0-9_]+$"
+        }
+      },
+      required: [
+        "deadlineId"
+      ]
+    }
+  },
+  {
+    name: "submitFiling",
+    description: "Submit a PREPARED tax filing to the tax authority. Submission is final and cannot be undone. Only prepared filings can be submitted. TWO-STEP: call with confirmed=false first — it returns the confirmation question without submitting; call again with confirmed=true ONLY after the user explicitly agrees in a later turn.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        deadlineId: {
+          type: "string",
+          pattern: "^tax_[a-z0-9_]+$"
+        },
+        confirmed: {
+          type: "boolean",
+          description: "false/absent = probe (no effect); true = submit after user confirmation."
+        }
+      },
+      required: [
+        "deadlineId"
+      ]
+    }
+  },
+  {
+    name: "sendClientNotification",
+    description: "Send a short notification email to a client (e.g. an invoice payment reminder or a tax-deadline reminder). Fire-and-forget: returns a notification id, and there is NO way to read past notifications — never claim a reminder was sent unless you sent it this conversation. Deliberately single-step (exemption rationale: a reminder changes no financial records and its full content is visible in the call arguments).",
+    inputSchema: {
+      type: "object",
+      properties: {
+        clientId: {
+          type: "string",
+          pattern: "^cli_[a-z0-9_]+$"
+        },
+        message: {
+          type: "string",
+          description: "The notification text to send."
+        }
+      },
+      required: [
+        "clientId",
+        "message"
+      ]
+    }
+  }
+];
