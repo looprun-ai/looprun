@@ -1,5 +1,5 @@
 /**
- * @looprun/eval — the case runner (Stage T/S of the measured loop).
+ * @looprun-ai/eval — the case runner (Stage T/S of the measured loop).
  *
  * For each case in scope: world = worldFactory(preset, rep) → runSpecConversation → dump record
  * + deterministic invariant gate + Claude-judge task. The streamed `→ pass/fail` lines are the
@@ -7,7 +7,7 @@
  */
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { runSpecConversation } from '@looprun/mastra';
+import { runSpecConversation } from '@looprun-ai/mastra';
 import { toolCallFailures } from './invariants.js';
 import type { ObsCall } from './invariants.js';
 import { caseById } from './config.js';

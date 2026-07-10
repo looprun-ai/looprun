@@ -1,5 +1,5 @@
 /**
- * @looprun/eval — certification: fold every *.judged.json in a results dir into cert.json + CERT.md.
+ * @looprun-ai/eval — certification: fold every *.judged.json in a results dir into cert.json + CERT.md.
  * Certified = judged pass-rate ≥ bar (default 0.90) across ALL reps (screen N=1, certify N=3).
  */
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs';

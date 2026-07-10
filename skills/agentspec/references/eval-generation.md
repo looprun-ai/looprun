@@ -37,10 +37,10 @@ Balance: each dimension gets both target labels where meaningful (should-act / s
 
 ## G3.2 — case generation (boundary-biased)
 
-Each case = an `EvalCase` (the `@looprun/eval` shape):
+Each case = an `EvalCase` (the `@looprun-ai/eval` shape):
 
 ```ts
-import type { EvalCase } from '@looprun/eval';
+import type { EvalCase } from '@looprun-ai/eval';
 
 export const CASE: EvalCase = {
   id: 'NN-slug',                       // /^\d{2}-[a-z0-9-]+$/

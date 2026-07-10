@@ -2,11 +2,11 @@
 name: agentspec
 description: 'Use when a business wants governed agents generated from its tool surface and docs (near-zero DX) — producing AgentSpec TypeScript files plus an auto-generated eval set, iterated against a measured bar. Triggers — "generate agents for my business", "day-0 AgentSpec", "auto-author guards/evals", a new tools.json/MCP surface with no hand-written agents.'
 license: MIT
-compatibility: 'Designed for Claude Code (or any agentskills.io-compatible agent). Authoring is portable; running the measured loop requires a looprun project (`looprun` dependency + `@looprun/eval` devDependency) and a GOOGLE_GENERATIVE_AI_API_KEY for the gemini-flash-lite subject model. Set LOOPRUN_ROOT if the project root is not discoverable from cwd.'
+compatibility: 'Designed for Claude Code (or any agentskills.io-compatible agent). Authoring is portable; running the measured loop requires a looprun project (`looprun` dependency + `@looprun-ai/eval` devDependency) and a GOOGLE_GENERATIVE_AI_API_KEY for the gemini-flash-lite subject model. Set LOOPRUN_ROOT if the project root is not discoverable from cwd.'
 metadata:
   author: looprun
   version: "1.0"
-  homepage: "https://github.com/looprun/looprun"
+  homepage: "https://github.com/looprun-ai/looprun"
 ---
 
 # AgentSpec — day-0 governed agents from tools + docs
@@ -17,10 +17,8 @@ One line (agentskills.io / `npx skills` — installs into `.claude/skills/`, scr
 included):
 
 ```bash
-npx skills add looprun --skill agentspec
-# once the repo is public, the explicit owner form also works:
-#   npx skills add <owner>/looprun --skill agentspec
-# list what the repo offers first:  npx skills add looprun --list
+npx skills add looprun-ai/looprun --skill agentspec
+# list what the repo offers first:  npx skills add looprun-ai/looprun --list
 ```
 
 Already in the `looprun` repo? It's live at `skills/agentspec/` — nothing to install.
@@ -29,12 +27,12 @@ Already in the `looprun` repo? It's live at `skills/agentspec/` — nothing to i
 ## Project detection / scaffold (preflight — run before Stage A)
 
 A project is **looprun-enabled** iff walking up from cwd finds `looprun.eval.config.{ts,js}` AND its
-`package.json` carries `looprun` (dependency) + `@looprun/eval` (devDependency). Env override:
+`package.json` carries `looprun` (dependency) + `@looprun-ai/eval` (devDependency). Env override:
 `LOOPRUN_ROOT=/path/to/project`. If the sentinel is absent, scaffold first:
 
 ```bash
 pnpm add looprun @mastra/core ai zod
-pnpm add -D @looprun/eval
+pnpm add -D @looprun-ai/eval
 npx looprun-eval init --domain <d>   # looprun.eval.config.ts + evals/judge-prompt.md + gitignore lines
 ```
 
@@ -110,7 +108,7 @@ artifacts ALWAYS flow to the engineers; never withhold WORLD-MODEL.md.
 | Tool surface (names + JSON schemas + descriptions) | `tools.json` / MCP listing / `src/world/tools.ts` — or ask A1 (send-or-skip); **absent ⇒ G1 generates it** (`references/tool-genesis.md`) | the hard vocabulary — specs may reference ONLY these |
 | Product docs / persona / policies | runbooks, help center, README — or ask A2 (send a doc, or a few words, or 'default') | source of behavior prose, protocol rules, theme invariants, persona register |
 | World/state accessors | the project's world class (`src/world/world.ts`: `projection()`, quota getters, …) — generated for a new domain (G2) | the ONLY keys a deterministic check may read |
-| The guard-kind catalog | `references/guard-catalog.md` (bundled — ships with the skill) | preferred vocabulary + when/how-much-to-guard math; `custom()` only when no kind fits. Source of truth: the @looprun/core guards (the package source) |
+| The guard-kind catalog | `references/guard-catalog.md` (bundled — ships with the skill) | preferred vocabulary + when/how-much-to-guard math; `custom()` only when no kind fits. Source of truth: the @looprun-ai/core guards (the package source) |
 | Format template | `references/spec-template.ts` (fictional domain) | the output shape — never read real/gold specs |
 | Existing eval set (optional) | `evals/cases.ts` | if present, it is the ruler; if absent, G3 generates one |
 
@@ -178,7 +176,7 @@ Local smoke AFTER certification: `npx looprun-eval run --model qwen3.5-4b`. Full
   possible. Prompt layout is a measured variable — any layout change needs a factorial A/B with a
   replication control.
 - **The runtime trunk holds ZERO business strings.** Never edit looprun's trunk renderer
-  (`renderScopedSpecTrunk` in @looprun/core, or any host equivalent) with domain content — every
+  (`renderScopedSpecTrunk` in @looprun-ai/core, or any host equivalent) with domain content — every
   business string belongs to a generated artifact (spec or theme). Enforced by the library's own
   CI lint.
 

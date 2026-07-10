@@ -1,5 +1,5 @@
 /**
- * @looprun/models — the llama.cpp ModelRuntimePort (the v0 local runtime).
+ * @looprun-ai/models — the llama.cpp ModelRuntimePort (the v0 local runtime).
  *
  * Launch profile = the measured recipe (NON-MTP):
  *   llama-server -m <gguf> --port <port> --jinja -fa on -ngl 99 --mlock --no-mmap -np 1

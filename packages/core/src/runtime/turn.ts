@@ -1,7 +1,7 @@
 /**
- * @looprun/core runtime — the governed-TURN state machine (framework-free).
+ * @looprun-ai/core runtime — the governed-TURN state machine (framework-free).
  *
- * Everything deterministic about one turn lives here; a backend (e.g. @looprun/mastra) supplies only
+ * Everything deterministic about one turn lives here; a backend (e.g. @looprun-ai/mastra) supplies only
  * the framework glue: how tools are wired, how the LLM is called, and ONE async `redrive` callback
  * that re-generates text with tools disabled.
  *

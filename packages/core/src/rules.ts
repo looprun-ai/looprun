@@ -1,5 +1,5 @@
 /**
- * @looprun/core — guard TYPES (framework-free).
+ * @looprun-ai/core — guard TYPES (framework-free).
  *
  * The governance primitives the agentspec skill authors: a deterministic `check` paired with an
  * LLM-facing `prose`, keyed only on tool args / world state / observed calls — NEVER the user

@@ -1,7 +1,7 @@
 /** Offline e2e of the governed turn: veto, redrive, forced-terminal, exhaustion, sessions. */
 import { describe, expect, it } from 'vitest';
-import { AgentSpecMinimal, requiresBefore, replyMustMention } from '@looprun/core';
-import type { AgentWorld, TrunkTheme } from '@looprun/core';
+import { AgentSpecMinimal, requiresBefore, replyMustMention } from '@looprun-ai/core';
+import type { AgentWorld, TrunkTheme } from '@looprun-ai/core';
 import { LoopRunAgent } from '../src/index.js';
 import { scriptedModel } from './scripted-model.js';
 import type { ScriptStep } from './scripted-model.js';

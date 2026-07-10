@@ -52,7 +52,7 @@ function positionals() {
 }
 
 async function main() {
-  const api = await import('@looprun/eval');
+  const api = await import('@looprun-ai/eval');
   const [cmd, ...rest] = positionals();
 
   if (!cmd || cmd === 'help' || has('help')) {

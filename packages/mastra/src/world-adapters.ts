@@ -1,5 +1,5 @@
 /**
- * @looprun/mastra — world adapters for NATIVE-TOOLS mode (including MCP).
+ * @looprun-ai/mastra — world adapters for NATIVE-TOOLS mode (including MCP).
  *
  * In native-tools mode the tools execute themselves (Mastra assigned tools, toolsets, or
  * `@mastra/mcp` MCPClient tools) and guards are enforced through the agent hooks; the world seam
@@ -10,7 +10,7 @@
  * Ledger-based guards (requiresBefore, noDuplicateCall, confirmFirst, maxCallsPerTurn, …) need
  * NO state view — they read the observed ledger the hooks feed.
  */
-import type { AgentWorld } from '@looprun/core';
+import type { AgentWorld } from '@looprun-ai/core';
 
 /** Domain state reads for guards + theme.stateBlock (backed by your API / MCP resources / cache). */
 export interface StateView {

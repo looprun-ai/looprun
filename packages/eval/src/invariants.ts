@@ -1,5 +1,5 @@
 /**
- * @looprun/eval — the deterministic TOOL-CALL invariant gate (auto-fail, no LLM).
+ * @looprun-ai/eval — the deterministic TOOL-CALL invariant gate (auto-fail, no LLM).
  *
  * Semantics mirror the certified pipeline exactly: `anyArgs` is a shallow subset match
  * (`obs.args[k] !== expected` fails); a forbidden call fires only if it `tookEffect`.

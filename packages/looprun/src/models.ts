@@ -1,1 +1,1 @@
-export * from '@looprun/models';
+export * from '@looprun-ai/models';

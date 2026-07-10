@@ -1,5 +1,5 @@
 /**
- * @looprun/mastra — scripted multi-turn conversation runner (the eval/batch surface).
+ * @looprun-ai/mastra — scripted multi-turn conversation runner (the eval/batch surface).
  *
  * Governance → idiomatic Mastra primitives:
  *   preTool guards   → `hooks.beforeToolCall` → { proceed:false, output } veto
@@ -26,8 +26,8 @@ import {
   isTerminal,
   renderScopedSpecTrunk,
   terminalProtocol,
-} from '@looprun/core';
-import type { AgentSpec, AgentWorld, TokenUsage, ToolDef, TrunkTheme, TurnInput, TurnRecord, RunResult } from '@looprun/core';
+} from '@looprun-ai/core';
+import type { AgentSpec, AgentWorld, TokenUsage, ToolDef, TrunkTheme, TurnInput, TurnRecord, RunResult } from '@looprun-ai/core';
 import { buildWorldTools } from './tools.js';
 import { makeGuardHooks, makeInputProcessors } from './hooks.js';
 import type { LoopRunSession } from './session.js';

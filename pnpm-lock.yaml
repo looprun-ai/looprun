@@ -39,7 +39,7 @@ importers:
         specifier: ^3.24.0
         version: 3.25.76
     devDependencies:
-      '@looprun/eval':
+      '@looprun-ai/eval':
         specifier: workspace:*
         version: link:../../packages/eval
       '@types/node':
@@ -73,7 +73,7 @@ importers:
         specifier: ^3.24.0
         version: 3.25.76
     devDependencies:
-      '@looprun/eval':
+      '@looprun-ai/eval':
         specifier: workspace:*
         version: link:../../packages/eval
       '@types/node':
@@ -107,7 +107,7 @@ importers:
         specifier: ^3.24.0
         version: 3.25.76
     devDependencies:
-      '@looprun/eval':
+      '@looprun-ai/eval':
         specifier: workspace:*
         version: link:../../packages/eval
       '@types/node':
@@ -137,13 +137,13 @@ importers:
 
   packages/eval:
     dependencies:
-      '@looprun/core':
+      '@looprun-ai/core':
         specifier: workspace:^
         version: link:../core
-      '@looprun/mastra':
+      '@looprun-ai/mastra':
         specifier: workspace:^
         version: link:../mastra
-      '@looprun/models':
+      '@looprun-ai/models':
         specifier: workspace:^
         version: link:../models
       jiti:
@@ -171,16 +171,16 @@ importers:
 
   packages/looprun:
     dependencies:
-      '@looprun/core':
+      '@looprun-ai/core':
         specifier: workspace:^
         version: link:../core
-      '@looprun/mastra':
+      '@looprun-ai/mastra':
         specifier: workspace:^
         version: link:../mastra
-      '@looprun/models':
+      '@looprun-ai/models':
         specifier: workspace:^
         version: link:../models
-      '@looprun/vercel':
+      '@looprun-ai/vercel':
         specifier: workspace:^
         version: link:../vercel
     devDependencies:
@@ -202,7 +202,7 @@ importers:
 
   packages/mastra:
     dependencies:
-      '@looprun/core':
+      '@looprun-ai/core':
         specifier: workspace:^
         version: link:../core
     devDependencies:
@@ -233,7 +233,7 @@ importers:
       '@ai-sdk/openai':
         specifier: ^3.0.0
         version: 3.0.83(zod@4.4.3)
-      '@looprun/core':
+      '@looprun-ai/core':
         specifier: workspace:^
         version: link:../core
     devDependencies:
@@ -249,7 +249,7 @@ importers:
 
   packages/vercel:
     dependencies:
-      '@looprun/core':
+      '@looprun-ai/core':
         specifier: workspace:^
         version: link:../core
     devDependencies:

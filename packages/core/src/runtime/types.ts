@@ -1,5 +1,5 @@
 /**
- * @looprun/core runtime — shared types of the governed-turn machine (framework-free).
+ * @looprun-ai/core runtime — shared types of the governed-turn machine (framework-free).
  */
 
 /** A tool definition (name / description / JSON schema) executed through the world seam. */

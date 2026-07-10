@@ -1,9 +1,29 @@
 {
-  "name": "@looprun/mastra",
+  "name": "@looprun-ai/mastra",
   "version": "0.1.0",
   "type": "module",
   "description": "looprun on Mastra: LoopRunAgent — a genuine @mastra/core Agent compiled from an AgentSpec, with deterministic guard enforcement (beforeToolCall veto), the terminal protocol, bounded no-tools redrive and honest-abstain exhaustion. Studio-compatible.",
+  "keywords": [
+    "ai",
+    "agents",
+    "llm",
+    "governance",
+    "guardrails",
+    "agentspec",
+    "mastra",
+    "agent"
+  ],
   "license": "MIT",
+  "author": "LoopRun Team",
+  "homepage": "https://looprun.ai",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/looprun-ai/looprun.git",
+    "directory": "packages/mastra"
+  },
+  "bugs": {
+    "url": "https://github.com/looprun-ai/looprun/issues"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -22,7 +42,7 @@
     "node": ">=22"
   },
   "dependencies": {
-    "@looprun/core": "workspace:^"
+    "@looprun-ai/core": "workspace:^"
   },
   "peerDependencies": {
     "@mastra/core": "^1.42.0",

@@ -4,7 +4,7 @@
  * install (pure node, no looprun import). Use it in Stage N5 when a spec is drafted OUTSIDE a
  * looprun project (a `npx skills add` install). Inside a project, `npx looprun-eval lint
  * [--spec-laws]` is the full gate; this script mirrors it — the SAME four file-local rule sets —
- * so a lone spec/theme file can still be checked. Parity with `@looprun/eval` lint is tested in
+ * so a lone spec/theme file can still be checked. Parity with `@looprun-ai/eval` lint is tested in
  * the looprun repo.
  *
  *   node lint-guards.mjs <file-or-dir> [<file-or-dir> …]
@@ -13,7 +13,7 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
-// ── the four rule sets (mirror the @looprun/eval lint) ────────────────────────────────────────────
+// ── the four rule sets (mirror the @looprun-ai/eval lint) ────────────────────────────────────────────
 // (1) banned tokens — a check()/prose()/mutator must be a PURE function of its GuardCtx.
 const BANNED = [
   'Date.now(', 'new Date(', 'performance.now(', 'process.hrtime', // wall-clock

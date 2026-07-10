@@ -1,9 +1,9 @@
 /**
- * @looprun/core — public API.
+ * @looprun-ai/core — public API.
  *
  * AgentSpec (the map) + typed deterministic guards (the safety kit) + the scoped trunk renderer +
  * the backend-agnostic governed-turn machine (the GPS). Framework backends live in sibling
- * packages (@looprun/mastra, …).
+ * packages (@looprun-ai/mastra, …).
  */
 export * from './rules.js';
 export * from './guards.js';

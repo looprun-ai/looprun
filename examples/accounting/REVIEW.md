@@ -8,7 +8,7 @@ this pass). Executor: Claude (agentspec skill).
 - **Skill install method:** repo copy — the skill ships at `.claude/skills/agentspec/`
   (SKILL.md + references/ + scripts/) inside this project; followed as the sole instructions.
 - **Inputs (complete list):** (1) the purpose sentence below; (2) the questionnaire defaults
-  below; (3) the import surfaces of the installed packages (`looprun`, `@looprun/eval` — public
+  below; (3) the import surfaces of the installed packages (`looprun`, `@looprun-ai/eval` — public
   .d.ts only). **No external material** was read: no gold/certified specs, no other domain's
   bundles, no research-repo artifacts. Every business string here was derived fresh from the
   purpose sentence.

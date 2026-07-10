@@ -46,7 +46,7 @@ async function statusFor(models, alias) {
 }
 
 async function main() {
-  const models = await import('@looprun/models');
+  const models = await import('@looprun-ai/models');
   const [cmd, sub, ...rest] = process.argv.slice(2).filter((a) => !a.startsWith('--'));
 
   if (!cmd || cmd === 'help' || process.argv.includes('--help')) {
@@ -71,7 +71,7 @@ async function main() {
         console.log(`skipped — run: looprun models pull ${spec.alias}`);
       }
     }
-    console.log('\nNext: npm i looprun && npx skills add looprun --skill agentspec');
+    console.log('\nNext: npm i looprun && npx skills add looprun-ai/looprun --skill agentspec');
     return;
   }
 

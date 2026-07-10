@@ -1,9 +1,30 @@
 {
-  "name": "@looprun/eval",
+  "name": "@looprun-ai/eval",
   "version": "0.1.0",
   "type": "module",
   "description": "looprun eval harness: run a generated agent bundle against its generated eval set (invariant gate + Claude-judge protocol + certification), inside any user project. The measured loop of the agentspec skill: screen N=1 → judge → fix → certify N=3 at the bar.",
+  "keywords": [
+    "ai",
+    "agents",
+    "llm",
+    "governance",
+    "guardrails",
+    "agentspec",
+    "evals",
+    "certification",
+    "judge"
+  ],
   "license": "MIT",
+  "author": "LoopRun Team",
+  "homepage": "https://looprun.ai",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/looprun-ai/looprun.git",
+    "directory": "packages/eval"
+  },
+  "bugs": {
+    "url": "https://github.com/looprun-ai/looprun/issues"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -27,9 +48,9 @@
     "node": ">=22"
   },
   "dependencies": {
-    "@looprun/core": "workspace:^",
-    "@looprun/mastra": "workspace:^",
-    "@looprun/models": "workspace:^",
+    "@looprun-ai/core": "workspace:^",
+    "@looprun-ai/mastra": "workspace:^",
+    "@looprun-ai/models": "workspace:^",
     "jiti": "^2.4.0"
   },
   "peerDependencies": {

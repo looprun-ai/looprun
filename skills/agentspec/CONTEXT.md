@@ -22,10 +22,10 @@ research-harness surface was replaced with its looprun-native equivalent:
 | `CASE-MAP.tsv` (duplicated per runtime) | `caseMap` in the config (single copy) |
 | `pnpm -C bench test` (registry/purity suites) | `npx looprun-eval lint [--spec-laws]` + `npx looprun-eval check` |
 | `scripts/{run-subject,screen,certify,judge-merge}.sh`, `s15-run-set.sh` | `npx looprun-eval run / certify / judge-merge / cert` (no shell scripts ship with the skill) |
-| `ScenarioSpec` (`setup.brandPreset`, `conversationMode`, `clearConversation`) | `EvalCase` from `@looprun/eval` (`setup.preset`; the other two fields are gone) |
-| `@neurono-bench/agentspec-runtime` imports | `'looprun'` (@looprun/core re-exported); backend `'looprun/mastra'` (`LoopRunAgent`) |
+| `ScenarioSpec` (`setup.brandPreset`, `conversationMode`, `clearConversation`) | `EvalCase` from `@looprun-ai/eval` (`setup.preset`; the other two fields are gone) |
+| `@neurono-bench/agentspec-runtime` imports | `'looprun'` (@looprun-ai/core re-exported); backend `'looprun/mastra'` (`LoopRunAgent`) |
 | three execution surfaces (bench s14 loop, s15/Mastra, `@neurono/engine` via `run-engine.sh`) | exactly ONE: `LoopRunAgent` on Mastra |
-| guard source of truth: `bench/adapters/s14/GUARDS.md` + `guards.ts` | @looprun/core guards (the package source) |
+| guard source of truth: `bench/adapters/s14/GUARDS.md` + `guards.ts` | @looprun-ai/core guards (the package source) |
 | `bench/results/…` | `eval-results/…` |
 | BARRED paper PDF in `docs/analysis/` | canonical citation: arXiv:2604.25203v1 (https://arxiv.org/abs/2604.25203; https://github.com/plurai-ai/BARRED) |
 | `NB_ROOT` / `NB_AGENT` env | `LOOPRUN_ROOT` / `--agent` CLI flag |
@@ -78,8 +78,8 @@ send-or-skip asks, 2 human gates.
 6. **2026-07-08/09**: theme/persona refactor (skill owns 100% of business content; runtime = zero
    business strings), the trunk-static law was measured, the full input-scenario matrix was run on
    criaty, and the fully-generated path BEAT the hand-certified bundle (§5).
-7. **2026-07 (this repo)**: the runtime became **looprun** (`@looprun/core` + `looprun/mastra` +
-   `@looprun/eval`), and the skill was ported as `agentspec` (§0).
+7. **2026-07 (this repo)**: the runtime became **looprun** (`@looprun-ai/core` + `looprun/mastra` +
+   `@looprun-ai/eval`), and the skill was ported as `agentspec` (§0).
 
 ## 3. The AGENTS pipeline (v1.1 names; legacy map in §0)
 
@@ -154,11 +154,11 @@ harness-agnostic method. → All ported.
 
 **Required a host equivalent (now = looprun):**
 - **Runtime**: was `packages/agentspec-runtime` / the s14 in-bench runtime / `@neurono/engine`
-  via an adapter → now `@looprun/core` (guards, AgentSpec hierarchy, trunk renderer) +
+  via an adapter → now `@looprun-ai/core` (guards, AgentSpec hierarchy, trunk renderer) +
   `looprun/mastra` (`LoopRunAgent`: preTool veto, onReply redrive-as-no-tools-regenerate,
   onInput tripwire, terminal force-tools).
 - **Measurement harness**: was the bench scripts + CASE-MAP.tsv + ExamplePack worlds → now
-  `@looprun/eval` (`looprun-eval run/certify/judge-merge/cert`, the `EvalConfig` contract, the
+  `@looprun-ai/eval` (`looprun-eval run/certify/judge-merge/cert`, the `EvalConfig` contract, the
   packaged generic Claude-judge prompt).
 - **CI laws**: was `bench/test/s15-registry.test.ts` (zero-business-strings, theme-no-persona,
   persona-at-head-of-Behavior, ≤15 tools, case-map resolution) → now `looprun-eval lint
@@ -205,7 +205,7 @@ the provider offers one, and ALWAYS run a replication control before comparing t
 10. **Engine surface**: was proven per-case on the real `@neurono/engine` loop (5 case classes) —
     that surface was NOT ported; looprun has exactly one execution surface (LoopRunAgent/Mastra).
 11. **`llmReplyCheck`** existed in the old catalog but costs the determinism certificate;
-    @looprun/core deliberately omits it — reply-checks must use pre-baked trusted rubrics (never
+    @looprun-ai/core deliberately omits it — reply-checks must use pre-baked trusted rubrics (never
     user text — prompt-injection law).
 12. **CASE-MAP duplication (RESOLVED by the looprun design)**: the old s14/s15 twin CASE-MAP.tsv
     files are gone — `caseMap` lives once, in `looprun.eval.config.ts`, and `looprun-eval lint

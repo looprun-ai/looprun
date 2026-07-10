@@ -7,7 +7,7 @@
  *
  * Reference clock: today = 2026-07-01.
  */
-import type { EvalCase } from '@looprun/eval';
+import type { EvalCase } from '@looprun-ai/eval';
 
 export const CASES: EvalCase[] = [
   // ── client-matters bucket ──────────────────────────────────────────────────────────────────

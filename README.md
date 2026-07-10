@@ -58,8 +58,8 @@ npx looprun models status               # binary / model file / server health
 
 ```bash
 npm i looprun @mastra/core ai zod        # the library
-npx skills add looprun --skill agentspec # the generator skill (Claude Code / compatible agents)
-npm i -D @looprun/eval                   # the eval harness (certification)
+npx skills add looprun-ai/looprun --skill agentspec # the generator skill (Claude Code / compatible agents)
+npm i -D @looprun-ai/eval                   # the eval harness (certification)
 npx looprun init                         # environment check + optional local-model download
 ```
 
@@ -82,11 +82,11 @@ npx looprun init                         # environment check + optional local-mo
 | package | what |
 |---|---|
 | `looprun` | umbrella — `looprun/core`, `looprun/mastra`, `looprun/models` (+ the `looprun` CLI) |
-| `@looprun/core` | AgentSpec + guards + trunk renderer + the framework-free governed-turn machine |
-| `@looprun/mastra` | `LoopRunAgent` (a real Mastra Agent), `compileSpec` primitives, the conversation runner |
-| `@looprun/models` | validated local models (llama.cpp `ModelRuntimePort`) + the cloud validation model |
-| `@looprun/eval` | the `looprun-eval` CLI: run / judge / certify / lint |
-| `@looprun/vercel` | reserved — the Vercel AI SDK backend seam |
+| `@looprun-ai/core` | AgentSpec + guards + trunk renderer + the framework-free governed-turn machine |
+| `@looprun-ai/mastra` | `LoopRunAgent` (a real Mastra Agent), `compileSpec` primitives, the conversation runner |
+| `@looprun-ai/models` | validated local models (llama.cpp `ModelRuntimePort`) + the cloud validation model |
+| `@looprun-ai/eval` | the `looprun-eval` CLI: run / judge / certify / lint |
+| `@looprun-ai/vercel` | reserved — the Vercel AI SDK backend seam |
 
 ## Docs
 

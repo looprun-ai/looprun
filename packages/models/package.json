@@ -1,9 +1,30 @@
 {
-  "name": "@looprun/models",
+  "name": "@looprun-ai/models",
   "version": "0.1.0",
   "type": "module",
   "description": "looprun model story: validated local models (Qwen3.5-4B / Qwen3.6-35B-A3B on llama.cpp, measured flags) behind a ModelRuntimePort, plus the cloud validation model (gemini flash-lite thinking-off with the numeric thinkingBudget:0 trap encoded). localModel('qwen3.5-4b') → AI-SDK model for LoopRunAgent.",
+  "keywords": [
+    "ai",
+    "agents",
+    "llm",
+    "governance",
+    "guardrails",
+    "agentspec",
+    "llama.cpp",
+    "local-llm",
+    "gguf"
+  ],
   "license": "MIT",
+  "author": "LoopRun Team",
+  "homepage": "https://looprun.ai",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/looprun-ai/looprun.git",
+    "directory": "packages/models"
+  },
+  "bugs": {
+    "url": "https://github.com/looprun-ai/looprun/issues"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -24,7 +45,7 @@
   "dependencies": {
     "@ai-sdk/google": "^3.0.0",
     "@ai-sdk/openai": "^3.0.0",
-    "@looprun/core": "workspace:^"
+    "@looprun-ai/core": "workspace:^"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

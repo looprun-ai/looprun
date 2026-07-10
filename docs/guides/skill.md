@@ -3,7 +3,7 @@
 The map generator: from **one purpose sentence** to governed agents with a certification.
 
 ```bash
-npx skills add looprun --skill agentspec
+npx skills add looprun-ai/looprun --skill agentspec
 ```
 
 (Installs into `.claude/skills/agentspec/` for Claude Code and agentskills-compatible agents. The
@@ -38,7 +38,7 @@ Judges, per [BARRED](https://arxiv.org/abs/2604.25203)) — never self-review.
 
 ## Requirements
 
-- A project with `looprun` (dependency) and `@looprun/eval` (devDependency) — the skill scaffolds both
+- A project with `looprun` (dependency) and `@looprun-ai/eval` (devDependency) — the skill scaffolds both
   when missing (`npx looprun-eval init`).
 - `GOOGLE_GENERATIVE_AI_API_KEY` for the validation subject model.
 - The judge is the Claude agent running the skill — no extra key.

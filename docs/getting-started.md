@@ -4,8 +4,8 @@
 
 ```bash
 npm i looprun @mastra/core ai zod
-npm i -D @looprun/eval mastra typescript tsx
-npx skills add looprun --skill agentspec   # the generator skill (Claude Code / compatible)
+npm i -D @looprun-ai/eval mastra typescript tsx
+npx skills add looprun-ai/looprun --skill agentspec   # the generator skill (Claude Code / compatible)
 ```
 
 Environment check (+ optional local model download):

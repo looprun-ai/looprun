@@ -1,1 +1,1 @@
-export * from '@looprun/mastra';
+export * from '@looprun-ai/mastra';

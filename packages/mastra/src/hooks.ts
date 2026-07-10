@@ -1,13 +1,13 @@
 /**
- * @looprun/mastra — governance → Mastra primitives.
+ * @looprun-ai/mastra — governance → Mastra primitives.
  *
  * preTool guards ride `hooks.beforeToolCall` ({ proceed:false, output } veto — the model sees the
  * correction and retries within the SAME generation, no extra round-trip). The observed ledger is
  * fed by `hooks.afterToolCall`. Mastra applies hooks to ALL tool sources (assigned, toolsets,
  * client, MCP), so guards also govern native/MCP tools with zero extra wiring.
  */
-import { evaluatePreTool, evaluateOnInput, isTerminal, recordToolResult } from '@looprun/core';
-import type { AgentSpec } from '@looprun/core';
+import { evaluatePreTool, evaluateOnInput, isTerminal, recordToolResult } from '@looprun-ai/core';
+import type { AgentSpec } from '@looprun-ai/core';
 import type { LoopRunSession } from './session.js';
 import type { SessionAccessor } from './tools.js';
 

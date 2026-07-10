@@ -1,5 +1,5 @@
 /**
- * @looprun/models — HuggingFace GGUF download with resume.
+ * @looprun-ai/models — HuggingFace GGUF download with resume.
  *
  * Downloads never start implicitly: callers (the CLI, or `localModel` with `autoDownload:true`)
  * opt in explicitly — a 3–21 GB surprise download on an agent's first turn is a footgun, not DX.

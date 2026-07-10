@@ -7,7 +7,7 @@ authoring + adversarial review only.
 ## Install method / inputs (anti-contamination statement)
 
 - Skill install: repo copy at `.claude/skills/agentspec/` (SKILL.md + references/ + scripts/).
-- Inputs used: (1) the skill's own reference files, (2) the `looprun` / `@looprun/eval`
+- Inputs used: (1) the skill's own reference files, (2) the `looprun` / `@looprun-ai/eval`
   node_modules import surfaces (type declarations + CLI + guard implementations), (3) the
   simulated user's answers below.
 - NO external material: no gold/certified specs, themes, or eval sets were read; every business

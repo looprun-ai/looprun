@@ -1,5 +1,5 @@
 /**
- * @looprun/eval — public API (the CLI `looprun-eval` wraps these).
+ * @looprun-ai/eval — public API (the CLI `looprun-eval` wraps these).
  */
 export type {
   EvalCase,

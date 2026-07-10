@@ -1,12 +1,12 @@
 /**
- * @looprun/mastra — per-conversation session state.
+ * @looprun-ai/mastra — per-conversation session state.
  *
  * One LoopRunAgent is registered ONCE (Mastra instance / Studio) while each conversation gets its
  * own world + ledger + message history, keyed by sessionId. A per-session promise-chain mutex
  * serializes concurrent turns of the same conversation.
  */
-import { createLedger } from '@looprun/core';
-import type { AgentWorld, TurnLedger } from '@looprun/core';
+import { createLedger } from '@looprun-ai/core';
+import type { AgentWorld, TurnLedger } from '@looprun-ai/core';
 
 export type WorldFactory<W extends AgentWorld = AgentWorld> = (sessionId: string) => W;
 

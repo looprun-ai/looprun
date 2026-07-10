@@ -1,12 +1,12 @@
-# @looprun/vercel — reserved
+# @looprun-ai/vercel — reserved
 
 The Vercel AI SDK backend for looprun is **not implemented yet**; the v0 backend is
-[`@looprun/mastra`](../mastra).
+[`@looprun-ai/mastra`](../mastra).
 
 ## The backend seam contract
 
 A looprun backend is thin by design — every deterministic mechanic lives framework-free in
-[`@looprun/core`](../core) (`runtime/`). A new backend implements exactly three glue points:
+[`@looprun-ai/core`](../core) (`runtime/`). A new backend implements exactly three glue points:
 
 1. **Tool wiring with a pre-call veto** — before a tool executes, run `evaluatePreTool(spec,
    ledger, world, tool, args)`; on deny, short-circuit the call and hand the model the correction

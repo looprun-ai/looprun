@@ -1,10 +1,10 @@
 /**
- * @looprun/eval — the eval contract of a looprun project.
+ * @looprun-ai/eval — the eval contract of a looprun project.
  *
  * A project exposes ONE `looprun.eval.config.ts` at its root (also the agentspec skill's
  * project sentinel): the generated agent bundle + the generated eval set + the world factory.
  */
-import type { AgentSpec, AgentWorld, ToolDef, TrunkTheme } from '@looprun/core';
+import type { AgentSpec, AgentWorld, ToolDef, TrunkTheme } from '@looprun-ai/core';
 
 export interface ReqCall {
   name: string;

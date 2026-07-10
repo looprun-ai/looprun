@@ -1,10 +1,10 @@
 /**
- * @looprun/eval — `looprun-eval init`: scaffold the eval contract in a user project.
+ * @looprun-ai/eval — `looprun-eval init`: scaffold the eval contract in a user project.
  */
 import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-const CONFIG_STUB = (domain: string) => `import type { EvalConfig } from '@looprun/eval';
+const CONFIG_STUB = (domain: string) => `import type { EvalConfig } from '@looprun-ai/eval';
 // Wire the GENERATED bundle here (the agentspec skill fills these in):
 //   src/agents/${domain}/index.ts   → SPECS + THEME
 //   src/world/                      → world.ts (worldFactory) + tools.ts (TOOL_DEFS)

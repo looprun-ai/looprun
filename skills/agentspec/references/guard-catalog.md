@@ -6,7 +6,7 @@ deterministic `check(ctx): string | null` (a string = deny + correction; `null` 
 **kind** below; reach for `custom()` only when no kind fits.
 
 > This file is the portable copy that ships with the skill. The authoritative source of truth is
-> the **@looprun/core guards** (the package source: the guard factory implementations + the
+> the **@looprun-ai/core guards** (the package source: the guard factory implementations + the
 > `Guard`/`GuardCtx` types); a parity check in the looprun repo fails if this list diverges.
 
 ## The five hooks
@@ -93,7 +93,7 @@ sequence is enforced on the tools **before** the reply.
 | `replySingleQuestion(reason)` | behavior | agent | at most one question per reply (recovery turns) |
 | `replyNoProductionClaim(claimRe, reason)` | behavior | agent | reply may not claim it produced media when none was produced |
 
-> There is deliberately **NO LLM reply-check kind** in @looprun/core — an impure in-guard judge
+> There is deliberately **NO LLM reply-check kind** in @looprun-ai/core — an impure in-guard judge
 > forfeits the determinism certificate. A rule no deterministic check can express is
 > language-layer: conditioned prose + an eval dimension. Any future reply-rubric must be
 > pre-baked and trusted, never derived from user text (prompt-injection law).

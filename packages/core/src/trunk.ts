@@ -1,5 +1,5 @@
 /**
- * @looprun/core — the DOMAIN-NEUTRAL trunk renderer + the `TrunkTheme` interface.
+ * @looprun-ai/core — the DOMAIN-NEUTRAL trunk renderer + the `TrunkTheme` interface.
  *
  * This file contains ZERO business content — it is pure assembly machinery. Every business string
  * comes from a GENERATED artifact with exactly one owner: the AgentSpec (persona / Flow / Tool rules /

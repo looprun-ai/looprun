@@ -18,5 +18,5 @@ looprun distills a research benchmark that measured ~28 agent-loop architectures
 production eval, asking: can a free-form loop + declarative governance match a hand-built classifier
 loop? The winning architecture (free-form loop + typed deterministic guards + scoped per-agent
 prompts, certified at 92–94% on the reference subject and ≥90% across five generated domains) is what
-`@looprun/core` + `@looprun/mastra` package. The design laws in [overview.md](overview.md) are that
+`@looprun-ai/core` + `@looprun-ai/mastra` package. The design laws in [overview.md](overview.md) are that
 benchmark's measured conclusions, and the skill's `CONTEXT.md` carries the full honesty record.

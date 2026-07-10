@@ -1,7 +1,7 @@
 /**
- * @looprun/core — the AgentSpec INTERFACE + class hierarchy (framework-free).
+ * @looprun-ai/core — the AgentSpec INTERFACE + class hierarchy (framework-free).
  *
- * The ruleset IS the spec (no compile step). A backend (e.g. @looprun/mastra) consumes this
+ * The ruleset IS the spec (no compile step). A backend (e.g. @looprun-ai/mastra) consumes this
  * interface directly, mapping each hook to a framework primitive:
  *   onInput  → an input processor (abort ⇒ turn refused, no LLM call)
  *   preTool  → a `beforeToolCall` veto ({ proceed:false, output: correction })

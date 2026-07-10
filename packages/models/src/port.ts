@@ -1,5 +1,5 @@
 /**
- * @looprun/models — the ModelRuntimePort: the seam between looprun and a LOCAL model runtime.
+ * @looprun-ai/models — the ModelRuntimePort: the seam between looprun and a LOCAL model runtime.
  *
  * v0 ships one implementation (llama.cpp — `LlamaCppRuntime`); future runtimes (MLX servers,
  * ollama, vllm, …) implement the same port and plug into `localModel()` unchanged.

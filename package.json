@@ -1,7 +1,16 @@
 {
-  "name": "looprun",
+  "name": "looprun-monorepo",
   "version": "0.0.0",
+  "private": true,
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/looprun-ai/looprun.git"
+  },
+  "homepage": "https://looprun.ai",
+  "bugs": {
+    "url": "https://github.com/looprun-ai/looprun/issues"
+  },
   "packageManager": "pnpm@10.33.0",
   "engines": {
     "node": ">=22"

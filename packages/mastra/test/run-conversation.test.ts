@@ -1,7 +1,7 @@
 /** Scripted multi-turn runner: record shape + cross-turn guard state. */
 import { describe, expect, it } from 'vitest';
-import { AgentSpecMinimal, confirmFirst } from '@looprun/core';
-import type { AgentWorld, TrunkTheme } from '@looprun/core';
+import { AgentSpecMinimal, confirmFirst } from '@looprun-ai/core';
+import type { AgentWorld, TrunkTheme } from '@looprun-ai/core';
 import { runSpecConversation } from '../src/index.js';
 import { scriptedModel } from './scripted-model.js';
 

@@ -22,7 +22,7 @@ artifacts; nothing in the looprun library/runtime is hand-edited with business c
 4. **Theme** — `src/agents/<domain>/theme.ts` per `references/theme-generation.md` (E3) — the
    business-common skin (invariants / language / stateBlock over projection() / exhaustion).
    NO persona in the theme (persona is per-agent, on each spec — the persona-on-spec law).
-5. **Config wiring** — `looprun.eval.config.ts` (the `EvalConfig` contract from `@looprun/eval`):
+5. **Config wiring** — `looprun.eval.config.ts` (the `EvalConfig` contract from `@looprun-ai/eval`):
    `domain`, `specs` (the generated `SPECS` map from `src/agents/<domain>/index.ts`), optional
    top-level `theme` (each spec already carries `theme: THEME`), `worldFactory`, `toolDefs`,
    `cases` + `caseMap` (from `evals/cases.ts` once G3 runs), `judgePromptPath`, `bar`. The runner

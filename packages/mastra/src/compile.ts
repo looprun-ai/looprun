@@ -1,5 +1,5 @@
 /**
- * @looprun/mastra — compileSpec: the low-level kit for devs assembling their OWN `new Agent({...})`.
+ * @looprun-ai/mastra — compileSpec: the low-level kit for devs assembling their OWN `new Agent({...})`.
  *
  * Single-conversation by design (one world, one ledger). For multi-session hosts use LoopRunAgent.
  *
@@ -14,8 +14,8 @@ import {
   finalizeReply as coreFinalizeReply,
   renderScopedSpecTrunk,
   terminalProtocol,
-} from '@looprun/core';
-import type { AgentSpec, AgentWorld, FinalizedReply, ToolDef, TrunkTheme, TurnLedger } from '@looprun/core';
+} from '@looprun-ai/core';
+import type { AgentSpec, AgentWorld, FinalizedReply, ToolDef, TrunkTheme, TurnLedger } from '@looprun-ai/core';
 import { buildWorldTools } from './tools.js';
 import { makeGuardHooks, makeInputProcessors } from './hooks.js';
 import type { GuardHooks } from './hooks.js';

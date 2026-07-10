@@ -1,5 +1,5 @@
 /**
- * @looprun/eval — Claude-verdict merge (the certified math, ported verbatim):
+ * @looprun-ai/eval — Claude-verdict merge (the certified math, ported verbatim):
  * autofail wins → missing verdict = fail, LOUDLY → status/judgeVerdict/judgeReasoning folded in.
  * The judge itself is the Claude Code agent (ruler discipline: Claude only, never the subject
  * model's family) — this module only folds its verdict lines back.

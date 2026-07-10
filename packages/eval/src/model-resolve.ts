@@ -1,13 +1,13 @@
 /**
- * @looprun/eval — subject-model resolution.
+ * @looprun-ai/eval — subject-model resolution.
  *
  * Default subject = 'gemini-3.1-flash-lite-thinkoff' (the validation ruler; numeric
- * thinkingBudget:0). Local aliases route through @looprun/models (llama.cpp, measured flags).
+ * thinkingBudget:0). Local aliases route through @looprun-ai/models (llama.cpp, measured flags).
  * RULER DISCIPLINE: an unpinned alias can drift across days — never compare cross-day runs
  * without a same-day replication control.
  */
-import { geminiFlashLiteThinkOff, localModel, resolveAlias, MODEL_ALIASES } from '@looprun/models';
-import { pinnedDecoding } from '@looprun/core';
+import { geminiFlashLiteThinkOff, localModel, resolveAlias, MODEL_ALIASES } from '@looprun-ai/models';
+import { pinnedDecoding } from '@looprun-ai/core';
 import type { ModelRef } from './types.js';
 
 export interface ResolvedModel {

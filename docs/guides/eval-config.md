@@ -1,10 +1,10 @@
 # Eval config reference
 
 `looprun.eval.config.ts` at the project root — the eval contract AND the agentspec skill's project
-sentinel. Default-export an `EvalConfig` (from `@looprun/eval`):
+sentinel. Default-export an `EvalConfig` (from `@looprun-ai/eval`):
 
 ```ts
-import type { EvalConfig } from '@looprun/eval'
+import type { EvalConfig } from '@looprun-ai/eval'
 import { SPECS, THEME } from './src/agents/accounting/index.js'
 import { TOOL_DEFS } from './src/world/tools.js'
 import { worldFactory } from './src/world/world.js'
@@ -51,7 +51,7 @@ only if it **took effect** (guard-vetoed calls never reach the world, so they ne
 - Default subject: `gemini-3.1-flash-lite-thinkoff` — thinking is disabled with the **numeric**
   `thinkingBudget: 0` (a `thinkingLevel` value does NOT turn thinking off; looprun encodes this).
   Needs `GOOGLE_GENERATIVE_AI_API_KEY`.
-- Local: `--model qwen3.5-4b` / `--model qwen3.6-35b-a3b` (llama.cpp via `@looprun/models`, pinned
+- Local: `--model qwen3.5-4b` / `--model qwen3.6-35b-a3b` (llama.cpp via `@looprun-ai/models`, pinned
   decoding temperature 0).
 - Custom: `model: { model: myAiSdkModel, modelParams: {...}, label: 'mine' }` in the config.
 

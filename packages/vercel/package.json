@@ -1,9 +1,29 @@
 {
-  "name": "@looprun/vercel",
+  "name": "@looprun-ai/vercel",
   "version": "0.1.0",
   "type": "module",
-  "description": "looprun on the Vercel AI SDK — RESERVED (not implemented). The backend seam contract lives in @looprun/core; @looprun/mastra is the v0 backend.",
+  "description": "looprun on the Vercel AI SDK — RESERVED (not implemented). The backend seam contract lives in @looprun-ai/core; @looprun-ai/mastra is the v0 backend.",
+  "keywords": [
+    "ai",
+    "agents",
+    "llm",
+    "governance",
+    "guardrails",
+    "agentspec",
+    "vercel",
+    "ai-sdk"
+  ],
   "license": "MIT",
+  "author": "LoopRun Team",
+  "homepage": "https://looprun.ai",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/looprun-ai/looprun.git",
+    "directory": "packages/vercel"
+  },
+  "bugs": {
+    "url": "https://github.com/looprun-ai/looprun/issues"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -21,7 +41,7 @@
     "node": ">=22"
   },
   "dependencies": {
-    "@looprun/core": "workspace:^"
+    "@looprun-ai/core": "workspace:^"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

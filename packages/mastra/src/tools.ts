@@ -1,12 +1,12 @@
 /**
- * @looprun/mastra — tool wiring: JSON-schema ToolDefs → Mastra tools executed through the world seam.
+ * @looprun-ai/mastra — tool wiring: JSON-schema ToolDefs → Mastra tools executed through the world seam.
  *
  * Terminal tools (replyToUser/askUser) are runtime-owned: their execute captures the user-facing
  * text into the ACTIVE session's ledger. Domain tools route to `world.exec(name, args)`.
  */
 import { createTool } from '@mastra/core/tools';
-import { isTerminal, recordTerminal, terminalToolDefs } from '@looprun/core';
-import type { ToolDef } from '@looprun/core';
+import { isTerminal, recordTerminal, terminalToolDefs } from '@looprun-ai/core';
+import type { ToolDef } from '@looprun-ai/core';
 import type { LoopRunSession } from './session.js';
 import { jsonSchemaToZodObject } from './json-schema-zod.js';
 

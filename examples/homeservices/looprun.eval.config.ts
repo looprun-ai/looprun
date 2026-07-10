@@ -1,4 +1,4 @@
-import type { EvalConfig } from '@looprun/eval';
+import type { EvalConfig } from '@looprun-ai/eval';
 import { SPECS, THEME } from './src/agents/homeservices/index.js';
 import { TOOL_DEFS } from './src/world/tools.js';
 import { worldFactory } from './src/world/world.js';

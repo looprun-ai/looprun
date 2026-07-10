@@ -1,5 +1,5 @@
 /**
- * @looprun/models — the validated local-model registry.
+ * @looprun-ai/models — the validated local-model registry.
  *
  * Both entries were validated on the certified benchmark lineage (llama.cpp, Metal + CUDA):
  *  - KV precision is measured, not a guess: q8_0 for the 4B tier; f16 for the 35B-A3B

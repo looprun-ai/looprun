@@ -1,5 +1,5 @@
 /**
- * @looprun/core — the typed guard-KIND library (framework-free).
+ * @looprun-ai/core — the typed guard-KIND library (framework-free).
  *
  * The guard vocabulary the agentspec skill authors. Each factory returns a {@link Guard}:
  * a deterministic `check()` (the machine gate) + an LLM-facing `prose()` (rendered into the trunk,

@@ -3,7 +3,7 @@
  * Wires the generated bundle: SPECS + THEME, the deterministic world, the tool surface, and the
  * debate-validated eval set with its caseMap (every case exactly once).
  */
-import type { EvalConfig } from '@looprun/eval';
+import type { EvalConfig } from '@looprun-ai/eval';
 import { SPECS, THEME } from './src/agents/accounting/index.js';
 import { TOOL_DEFS } from './src/world/tools.js';
 import { worldFactory } from './src/world/world.js';

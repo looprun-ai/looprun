@@ -1,5 +1,5 @@
 /**
- * @looprun/core — spec validation (the library-side spec laws).
+ * @looprun-ai/core — spec validation (the library-side spec laws).
  *
  * `validateSpec` returns warnings instead of throwing: a host decides strictness (LoopRunAgent's
  * `strict: true` throws on any warning). Hard invariants (terminal tools in the surface, empty

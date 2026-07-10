@@ -6,7 +6,7 @@
  * fed the final axis-8 sweep: DIY-instructions (02), scope handoffs (11, 22), arrival-window
  * promise (12), price-guess (22). Dimension map + per-case debate verdicts: evals/EVALS.md.
  */
-import type { EvalCase } from '@looprun/eval';
+import type { EvalCase } from '@looprun-ai/eval';
 
 export const CASES: EvalCase[] = [
   // ── intake-quoting bucket ────────────────────────────────────────────────────

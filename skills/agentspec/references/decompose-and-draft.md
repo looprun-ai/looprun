@@ -44,7 +44,7 @@ guard catalog (`references/guard-catalog.md`) are the only style inputs.
    maxCallsPerConversation, noFabricatedSuccess, replyMustMention, replyMaxOccurrences,
    replySingleQuestion, replyNoProductionClaim, replyConfirmsLabels, pendingConfirmMustAsk,
    destructiveClaimRequiresSuccess, noFalseFailureClaim, resultInvariant, jargonScrub (mutator).
-   There is deliberately NO LLM reply-check kind in @looprun/core (it would forfeit the
+   There is deliberately NO LLM reply-check kind in @looprun-ai/core (it would forfeit the
    determinism certificate) — a rule no deterministic check can express is language-layer:
    conditioned prose + an eval dimension. `custom()` ONLY when no kind fits; reviewers read the
    code.
@@ -87,7 +87,7 @@ primary non-destructive action" into behavior prose; (c) keep a full end-to-end 
 agent (register-on-interest + book together).
 
 ### Wiring
-- Imports come from `'looprun'` (the umbrella re-export of @looprun/core); set `theme: THEME`
+- Imports come from `'looprun'` (the umbrella re-export of @looprun-ai/core); set `theme: THEME`
   (imported from `./theme.js`) in the `super()` config so a host can construct the agent from the
   spec alone — still ONE shared theme object per domain.
 - `export default new AgentSpecX()`; register in the domain bundle —

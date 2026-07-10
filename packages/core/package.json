@@ -1,9 +1,29 @@
 {
-  "name": "@looprun/core",
+  "name": "@looprun-ai/core",
   "version": "0.1.0",
   "type": "module",
-  "description": "looprun core: the AgentSpec governance layer for LLM agents — typed deterministic guards (prose+check pairing), the byte-stable scoped trunk renderer, and the backend-agnostic governed-turn machine. Framework-free: zero runtime dependencies; backends (@looprun/mastra, …) supply the loop.",
+  "description": "looprun core: the AgentSpec governance layer for LLM agents — typed deterministic guards (prose+check pairing), the byte-stable scoped trunk renderer, and the backend-agnostic governed-turn machine. Framework-free: zero runtime dependencies; backends (@looprun-ai/mastra, …) supply the loop.",
+  "keywords": [
+    "ai",
+    "agents",
+    "llm",
+    "governance",
+    "guardrails",
+    "agentspec",
+    "deterministic",
+    "guards"
+  ],
   "license": "MIT",
+  "author": "LoopRun Team",
+  "homepage": "https://looprun.ai",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/looprun-ai/looprun.git",
+    "directory": "packages/core"
+  },
+  "bugs": {
+    "url": "https://github.com/looprun-ai/looprun/issues"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",

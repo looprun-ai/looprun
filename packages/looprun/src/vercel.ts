@@ -1,1 +1,1 @@
-export * from '@looprun/vercel';
+export * from '@looprun-ai/vercel';

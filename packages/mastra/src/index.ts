@@ -1,5 +1,5 @@
 /**
- * @looprun/mastra — public API.
+ * @looprun-ai/mastra — public API.
  *
  *   new LoopRunAgent({ spec, world, model })  → a genuine Mastra Agent, governed.
  *   runSpecConversation(spec, turns, deps)    → scripted multi-turn runs (evals/batch).
@@ -20,5 +20,5 @@ export { makeGuardHooks, makeInputProcessors } from './hooks.js';
 export type { GuardHooks } from './hooks.js';
 export { jsonSchemaToZodObject, jsonTypeToZod } from './json-schema-zod.js';
 
-// Re-exports so `import { AgentSpecBase, precondition, … } from '@looprun/mastra'` works too.
-export * from '@looprun/core';
+// Re-exports so `import { AgentSpecBase, precondition, … } from '@looprun-ai/mastra'` works too.
+export * from '@looprun-ai/core';

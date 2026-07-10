@@ -1,5 +1,5 @@
 /**
- * @looprun/core runtime — the TERMINAL protocol (framework-free).
+ * @looprun-ai/core runtime — the TERMINAL protocol (framework-free).
  *
  * The certified turn shape: the model speaks to the user ONLY through the runtime-owned terminal
  * tools (`replyToUser` / `askUser`) — combined with `toolChoice:'required'` this forces action

@@ -1,5 +1,5 @@
 /**
- * @looprun/eval — project config resolution + structural validation (`looprun-eval check`).
+ * @looprun-ai/eval — project config resolution + structural validation (`looprun-eval check`).
  *
  * `looprun.eval.config.{ts,mts,js,mjs}` at the project root is BOTH the eval contract and the
  * agentspec skill's "am I in a looprun project" sentinel. Resolution walks up from cwd

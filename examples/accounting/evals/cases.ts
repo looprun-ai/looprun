@@ -6,7 +6,7 @@
  * gate boundary, destructive protocol, honesty/fabrication, state visibility, scope boundary,
  * language/format, UNCHECKABLE-rule sweep).
  */
-import type { EvalCase } from '@looprun/eval';
+import type { EvalCase } from '@looprun-ai/eval';
 
 export const CASES: EvalCase[] = [
   // ── client-books bucket ─────────────────────────────────────────────────────────────────────

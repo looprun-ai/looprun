@@ -1,5 +1,5 @@
 /**
- * @looprun/mastra — JSON Schema → Zod (shallow; sufficient for Mastra createTool inputSchema).
+ * @looprun-ai/mastra — JSON Schema → Zod (shallow; sufficient for Mastra createTool inputSchema).
  */
 import { z } from 'zod';
 

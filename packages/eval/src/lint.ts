@@ -1,5 +1,5 @@
 /**
- * @looprun/eval — the guard-purity lint over USER project files (`looprun-eval lint`).
+ * @looprun-ai/eval — the guard-purity lint over USER project files (`looprun-eval lint`).
  *
  * The four file-local rule sets that keep generated specs deterministic by construction:
  *   1. BANNED tokens — clock / entropy / network / runtime-LLM calls inside spec/theme files.
@@ -10,7 +10,7 @@
  */
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { validateSpec } from '@looprun/core';
+import { validateSpec } from '@looprun-ai/core';
 import { checkConfig } from './config.js';
 import type { EvalConfig } from './types.js';
 

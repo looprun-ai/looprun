@@ -1,5 +1,5 @@
 /**
- * @looprun/core runtime — the per-conversation observation LEDGER (framework-free).
+ * @looprun-ai/core runtime — the per-conversation observation LEDGER (framework-free).
  *
  * The ledger is what guards read (`ctx.observed`, `producedThisTurn`, …): the model's own verified
  * tool activity — never the user text (magnet firewall). `observed` accumulates for the whole

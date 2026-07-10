@@ -1,12 +1,12 @@
 /**
- * @looprun/models — public API.
+ * @looprun-ai/models — public API.
  *
  *   model: await localModel('qwen3.5-4b')          // llama.cpp, measured flags, health-checked
  *   const { model, modelParams } = geminiFlashLiteThinkOff()   // the cloud validation model
  */
 import { createOpenAI } from '@ai-sdk/openai';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
-import { geminiThinkingOff } from '@looprun/core';
+import { geminiThinkingOff } from '@looprun-ai/core';
 import { resolveAlias, modelPath } from './aliases.js';
 import { LlamaCppRuntime, serverBaseURL } from './llamacpp.js';
 import type { LocalModelSpec, ModelRuntimePort } from './port.js';

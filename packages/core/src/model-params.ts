@@ -1,5 +1,5 @@
 /**
- * @looprun/core — pure model-parameter presets (zero deps, no provider SDK imports).
+ * @looprun-ai/core — pure model-parameter presets (zero deps, no provider SDK imports).
  *
  * These are plain option objects spread into a backend's generate calls. They encode measured
  * provider footguns so hosts don't re-discover them.

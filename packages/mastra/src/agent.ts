@@ -1,5 +1,5 @@
 /**
- * @looprun/mastra — LoopRunAgent: a GENUINE @mastra/core Agent compiled from an AgentSpec.
+ * @looprun-ai/mastra — LoopRunAgent: a GENUINE @mastra/core Agent compiled from an AgentSpec.
  *
  * DX mirrors `new Agent({...})`:
  *
@@ -33,8 +33,8 @@ import {
   renderScopedSpecTrunk,
   terminalProtocol,
   validateSpec,
-} from '@looprun/core';
-import type { AgentSpec, AgentWorld, ObservedCall, ToolDef, TrunkTheme } from '@looprun/core';
+} from '@looprun-ai/core';
+import type { AgentSpec, AgentWorld, ObservedCall, ToolDef, TrunkTheme } from '@looprun-ai/core';
 import { SessionStore } from './session.js';
 import type { LoopRunSession, WorldFactory } from './session.js';
 import { buildWorldTools, buildTerminalTools } from './tools.js';
