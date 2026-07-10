@@ -133,6 +133,16 @@ export class LlamaCppRuntime implements ModelRuntimePort {
       stdio: ['ignore', 'ignore', 'ignore'],
       detached: false,
     });
+    // A server WE spawned must not outlive the process that asked for it (a leaked llama-server
+    // can hold gigabytes mlock'd). stop() removes the hook.
+    const onExit = () => {
+      try {
+        child.kill('SIGTERM');
+      } catch {
+        /* already gone */
+      }
+    };
+    process.once('exit', onExit);
     const timeoutMs = opts.timeoutMs ?? 240_000; // the 35B mlock load can take minutes
     const t0 = Date.now();
     for (;;) {
@@ -141,6 +151,7 @@ export class LlamaCppRuntime implements ModelRuntimePort {
       }
       if (await healthy(spec)) break;
       if (Date.now() - t0 > timeoutMs) {
+        process.removeListener('exit', onExit);
         child.kill('SIGKILL');
         throw new Error(`looprun: llama-server did not become healthy within ${timeoutMs / 1000}s`);
       }
@@ -150,6 +161,7 @@ export class LlamaCppRuntime implements ModelRuntimePort {
       baseURL,
       alreadyRunning: false,
       stop: async () => {
+        process.removeListener('exit', onExit);
         child.kill('SIGTERM');
       },
     };

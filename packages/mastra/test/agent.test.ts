@@ -217,6 +217,103 @@ describe('LoopRunAgent — sessions', () => {
   });
 });
 
+describe('LoopRunAgent — review regressions', () => {
+  it('#1 native-tools mode: native tools are actually reachable from generate()', async () => {
+    const { createTool } = await import('@mastra/core/tools');
+    const { z } = await import('zod');
+    let executed = false;
+    const search = createTool({
+      id: 'search',
+      description: 'Search.',
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      inputSchema: z.object({ q: z.string().optional() }) as any,
+      execute: async () => {
+        executed = true;
+        return { success: true, hits: 1 };
+      },
+    });
+    const scripted = scriptedModel([
+      [{ tool: 'search', args: { q: 'x' } }],
+      [{ tool: 'replyToUser', args: { text: 'Found it.' } }],
+    ]);
+    const spec = new AgentSpecMinimal({
+      id: 'searcher', mode: 'M', persona: 'You are the search agent.', tools: ['search'], theme: THEME,
+    });
+    const agent = new LoopRunAgent({ spec, tools: { search }, model: scripted.model });
+    const res = await agent.generate('find x');
+    expect(executed).toBe(true);
+    expect(res.text).toBe('Found it.');
+  });
+
+  it('#2 history holds the reply the user received — never a rejected draft', async () => {
+    const spec = makeSpec();
+    spec.addReplyCheck(replyMustMention(['impossible-token-xyz'], 'nope'), { id: 'agent:impossible' });
+    const scripted = scriptedModel([
+      [{ tool: 'listPlants', args: {} }],
+      [{ tool: 'replyToUser', args: { text: 'A.' } }],
+      [{ text: 'B-rejected-draft.' }], // redrive candidate, still violating
+    ]);
+    const agent = new LoopRunAgent({ spec, world: plantsWorld(), toolDefs: TOOL_DEFS, model: scripted.model });
+    const res = await agent.generate('Hi');
+    const msgs = agent.getSession().messages;
+    const texts = msgs.filter((m) => m.role === 'assistant' && typeof m.content === 'string').map((m) => m.content);
+    expect(texts).not.toContain('B-rejected-draft.');
+    expect(texts[texts.length - 1]).toBe(res.text); // the exhaustion closure the user actually got
+  });
+
+  it('#3 concurrent turns on different sessions never cross-execute (AsyncLocalStorage context)', async () => {
+    const worlds = new Map<string, PlantsWorld>();
+    const counts = new Map<string, number>();
+    const { MockLanguageModelV3 } = await import('ai/test');
+    const model = new MockLanguageModelV3({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      doGenerate: (async (options: any) => {
+        const text = JSON.stringify(options.prompt);
+        const tag = text.includes('mark A') ? 'A' : 'B';
+        const n = (counts.get(tag) ?? 0) + 1;
+        counts.set(tag, n);
+        await new Promise((r) => setTimeout(r, tag === 'A' ? 40 : 5)); // A resolves LATE
+        const content = n === 1
+          ? [{ type: 'tool-call', toolCallId: `${tag}${n}`, toolName: 'waterPlant', input: JSON.stringify({ plant: tag }) }]
+          : [{ type: 'tool-call', toolCallId: `${tag}${n}`, toolName: 'replyToUser', input: JSON.stringify({ text: tag }) }];
+        return { content, finishReason: 'tool-calls', usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 }, warnings: [] };
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      }) as any,
+    });
+    const spec = new AgentSpecMinimal({
+      id: 'plants', mode: 'M', persona: 'You are the plant agent.', tools: ['waterPlant'], theme: THEME,
+    });
+    const agent = new LoopRunAgent({
+      spec,
+      world: (id: string) => {
+        const w = plantsWorld();
+        worlds.set(id, w);
+        return w;
+      },
+      toolDefs: TOOL_DEFS,
+      model,
+    });
+    await Promise.all([
+      agent.generate('mark A', { loopRun: { sessionId: 'A' } }),
+      agent.generate('mark B', { loopRun: { sessionId: 'B' } }),
+    ]);
+    const argsOf = (id: string) => worlds.get(id)!.toolCalls.map((c) => (c.args as { plant: string }).plant);
+    expect(argsOf('A')).toEqual(['A']); // A's call landed in A's world, despite resolving after B
+    expect(argsOf('B')).toEqual(['B']);
+  });
+
+  it('#4 terminalProtocol:false still honors a terminal-tool reply', async () => {
+    const { agent } = makeAgent(
+      [[{ tool: 'replyToUser', args: { text: 'Hello from the tool call.' } }]],
+      plantsWorld(),
+      { terminalProtocol: false },
+    );
+    const res = await agent.generate('hi');
+    expect(res.text).toBe('Hello from the tool call.');
+    expect(res.looprun.exhausted).toBe(false);
+  });
+});
+
 describe('LoopRunAgent — construction laws', () => {
   it('requires a theme (config or spec)', () => {
     const spec = new AgentSpecMinimal({ id: 'x', mode: 'M', persona: 'You are x.', tools: [] });

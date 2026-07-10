@@ -22,6 +22,7 @@
  * stream(): tool-level governance only (guard hooks + terminal protocol + activeTools). Reply
  * finalization (mutators/redrive/exhaustion) requires generate() — documented degraded mode.
  */
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { stepCountIs } from 'ai';
 import { Agent } from '@mastra/core/agent';
 import {
@@ -115,6 +116,7 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
   readonly terminalProtocolOn: boolean;
   private readonly sessions: SessionStore<W>;
   private readonly nativeToolsMode: boolean;
+  private readonly nativeToolNames: string[];
   private readonly surface: Set<string>;
   private readonly modelParams: Record<string, unknown>;
   private readonly maxStepsResolved: number;
@@ -122,7 +124,9 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
   private readonly guardHooks: ReturnType<typeof makeGuardHooks>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private readonly inputProcessorsResolved: any[] | undefined;
-  private active: LoopRunSession<W> | null = null;
+  /** Per-turn session context: tools/hooks resolve the CURRENT turn's session through this —
+   *  AsyncLocalStorage, so concurrent turns on different sessions can never cross-execute. */
+  private readonly turnContext = new AsyncLocalStorage<LoopRunSession<W>>();
   private readonly renderPrompt: (world: AgentWorld, uploads: string[]) => string;
 
   constructor(config: LoopRunAgentConfig<W>) {
@@ -149,8 +153,9 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
       : (config.world as W | WorldFactory<W>);
     const sessions = new SessionStore<W>(world);
     const getSession = () => {
-      if (!this.active) throw new Error('looprun: tool executed outside a governed turn');
-      return this.active;
+      const s = this.turnContext.getStore();
+      if (!s) throw new Error('looprun: tool executed outside a governed turn');
+      return s;
     };
 
     const surface = new Set(spec.surface.tools);
@@ -197,6 +202,7 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
     this.terminalProtocolOn = terminalOn;
     this.sessions = sessions;
     this.nativeToolsMode = nativeToolsMode;
+    this.nativeToolNames = Object.keys(config.tools ?? {});
     this.surface = surface;
     this.modelParams = config.modelParams ?? {};
     this.maxStepsResolved = spec.controls.maxSteps ?? config.maxSteps ?? DEFAULT_MAX_STEPS;
@@ -233,15 +239,9 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   override async generate(messages: any, options?: LoopRunOptions): Promise<any> {
     const session = this.sessions.get(this.resolveSessionId(options));
-    return this.sessions.run(session, async () => {
-      const prevActive = this.active;
-      this.active = session;
-      try {
-        return await this.governedTurn(session, messages, options);
-      } finally {
-        this.active = prevActive;
-      }
-    });
+    return this.sessions.run(session, () =>
+      this.turnContext.run(session, () => this.governedTurn(session, messages, options)),
+    );
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -268,7 +268,7 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
 
     const replyOnly = spec.controls.terminal ? spec.controls.terminal(world) === true : false;
     const activeTools = this.nativeToolsMode
-      ? [...Object.keys((this as unknown as { tools: Record<string, unknown> }).tools ?? {}), ...(replyOnly ? ['replyToUser'] : ['replyToUser', 'askUser'])]
+      ? [...this.nativeToolNames, ...(replyOnly ? ['replyToUser'] : ['replyToUser', 'askUser'])]
       : (replyOnly ? [...this.surface, 'replyToUser'] : [...this.surface, 'replyToUser', 'askUser']);
 
     const instructions = this.renderPrompt(world, attLabels) + (this.terminalProtocolOn ? terminalProtocol(replyOnly) : '');
@@ -342,9 +342,11 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
       ledger.turnCorrections.push('forced-terminal');
     }
 
+    // The terminal reply wins even with the protocol OFF — the terminal tools stay registered, and
+    // a model that used one produced a real answer that `full.text` won't carry.
     const initialText: string = full?.tripwire
       ? String(full.tripwireReason ?? full.reason ?? '')
-      : (this.terminalProtocolOn ? (ledger.terminalReply || full.text || '') : (full.text || ''));
+      : (ledger.terminalReply || full.text || '');
 
     const finalized = await finalizeReply(
       spec,
@@ -364,11 +366,18 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
           ...this.modelParams,
           ...(useMemory ? { memory: passOpts.memory } : {}),
         });
-        if (!useMemory && userText !== null && re.text) session.messages.push({ role: 'assistant', content: re.text });
+        // Candidates are NOT persisted here — a rejected draft must never enter the history.
         return re.text ?? '';
       },
       this.redrivesResolved,
     );
+
+    // History reconciliation: when the pipeline changed the outgoing text (mutator / redrive /
+    // exhaustion), append the reply the user ACTUALLY received — the model must never see a draft
+    // it "said" but the user never got.
+    if (!useMemory && userText !== null && finalized.text && finalized.text !== initialText) {
+      session.messages.push({ role: 'assistant', content: finalized.text });
+    }
 
     const meta: LoopRunResultMeta = {
       sessionId: session.id,
@@ -395,9 +404,10 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   override async stream(messages: any, options?: LoopRunOptions): Promise<any> {
     const session = this.sessions.get(this.resolveSessionId(options));
-    const prevActive = this.active;
-    this.active = session;
-    try {
+    // The whole stream (including tool executions that happen while the consumer iterates) runs
+    // inside the session's AsyncLocalStorage context — no shared mutable pointer, no cross-session
+    // execution.
+    return this.turnContext.run(session, async () => {
       const { world, ledger } = session;
       if (session.turnIndex > 0) world.advanceTurn();
       beginTurn(ledger, session.turnIndex);
@@ -411,7 +421,7 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
       const passOpts: Record<string, any> = {};
       for (const [k, v] of Object.entries(options ?? {})) if (k !== 'loopRun') passOpts[k] = v;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return await (Agent.prototype.stream as any).call(this, messages, {
+      return (Agent.prototype.stream as any).call(this, messages, {
         instructions,
         ...(activeTools ? { activeTools } : {}),
         hooks: this.guardHooks,
@@ -419,11 +429,7 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
         ...this.modelParams,
         ...passOpts,
       });
-    } finally {
-      // Streaming continues after return; the active pointer must survive for tool execution.
-      // It is reset on the next generate()/stream() call. (Single-session Studio usage is safe.)
-      if (prevActive) this.active = prevActive;
-    }
+    });
   }
 }
 

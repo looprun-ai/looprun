@@ -61,8 +61,9 @@ async function main() {
   }
 
   if (cmd === 'init') {
-    const domain = flag('domain', 'my-domain');
-    const created = api.initProject(process.cwd(), domain);
+    const domain = flag('domain', 'my-domain') ?? 'my-domain';
+    const { resolve } = await import('node:path');
+    const created = api.initProject(resolve(process.env.LOOPRUN_ROOT ?? process.cwd()), domain);
     console.log(created.length ? `created:\n  ${created.join('\n  ')}` : 'nothing to do (config already present)');
     return;
   }
@@ -126,7 +127,7 @@ async function main() {
       for (const i of issues) console.error(`ERROR: ${i.message}`);
       throw new Error('config check failed — fix the errors above (looprun-eval check)');
     }
-    const casesArg = flag('cases', 'full');
+    const casesArg = flag('cases', 'full') ?? 'full';
     const summary = await api.runEval(config, {
       agent: flag('agent', undefined),
       cases: casesArg === 'full' ? ['full'] : casesArg.split(',').map((s) => s.trim()).filter(Boolean),

@@ -185,12 +185,15 @@ export async function runSpecConversation(spec: AgentSpec, turns: TurnInput[], d
             [...messages, { role: 'user', content: message }],
             { toolChoice: 'none', activeTools: [], ...genParams },
           );
-          if (re.text) messages.push({ role: 'assistant', content: re.text });
+          // Candidates are NOT persisted — a rejected draft must never enter the history.
           return re.text ?? '';
         },
         redrives,
       );
       const answerText = finalized.text;
+      // History reconciliation: persist the reply the user ACTUALLY received when the pipeline
+      // changed it (mutator / redrive / exhaustion).
+      if (answerText && answerText !== initialText) messages.push({ role: 'assistant', content: answerText });
 
       const durationMs = Date.now() - t0;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
