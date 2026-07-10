@@ -56,10 +56,25 @@ Talk to the agents and watch the guards work:
 
 ## Local model smoke (informational)
 
-After certification, a 3-case smoke ran on **qwen3.6-35b-a3b** (llama.cpp via `looprun/models`):
-3/3 through the invariant gate with clean behavior — honest quote status, complete booking
-confirmation, and the cancel confirm-probe correctly relayed. Local models are a post-certification
-smoke, never the ruler.
+After certification, a 3-case smoke ran on **qwen3.6-35b-a3b** (llama.cpp via `looprun/models`,
+f16 KV, 64k ctx, single slot): **3/3 pass, Claude-judged**
+([`judged.json`](eval-results/2026-07-10-qwen-smoke)) — zero invariant auto-fails, all rubric
+items pass. Honest quote status, complete booking confirmation, and the cancel confirm-probe
+correctly relayed. Local models are a post-certification smoke, never the ruler.
+
+| case (agent) | LLM steps | tokens in / out | new prefill | wall |
+|---|---|---|---|---|
+| `05-quote-status-honesty` (intake-quoting) | 2 | 6,404 / 206 | 3,367 | ~9.4 s |
+| `12-schedule-happy-path` (scheduling) | 4 (5 tool calls) | 14,889 / 818 | 4,295 | ~25.3 s |
+| `15-cancel-probe-first` (scheduling) | 2 | 7,067 / 489 | 353 | ~11.9 s |
+| **total** | 8 | **28,360 / 1,513** | **8,015** | **~47 s** |
+
+Measured by the server (M-series Metal): decode **45.0–46.9 tok/s** steady across all 8 requests;
+bulk prefill (each agent's ~3.4k-token trunk) **645–714 tok/s**; small incremental chunks
+325–400 tok/s. "New prefill" is what the server actually processed — the prompt-cache served the
+rest (case 15 reused the scheduling trunk left resident by case 12 and prefilled only 353 tokens
+for the whole case). The eval runner records tokens, not time; timings come from the llama-server
+log for the same run, matched token-for-token to the dumps.
 
 ## Re-run the certification
 

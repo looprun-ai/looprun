@@ -1,0 +1,122 @@
+[
+  {
+    "caseId": "12-schedule-happy-path",
+    "rep": 0,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "Job booked successfully:\n- Job ID: job_901\n- Request: req_101 (Leak repair)\n- Technician: Ana Souza (tech_ana)\n- Date: 2026-07-03\n- Time window: 08:00-12:00\n\nThe request status is now \"scheduled\"."
+    ],
+    "actualTrace": [
+      "getServiceRequest",
+      "listTechnicians",
+      "getTechnicianAvailability",
+      "scheduleJob",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "getServiceRequest",
+        "args": {
+          "requestId": "req_101"
+        }
+      },
+      {
+        "name": "listTechnicians",
+        "args": {
+          "skill": "plumbing"
+        }
+      },
+      {
+        "name": "getTechnicianAvailability",
+        "args": {
+          "technicianId": "tech_ana",
+          "date": "2026-07-03"
+        }
+      },
+      {
+        "name": "scheduleJob",
+        "args": {
+          "requestId": "req_101",
+          "technicianId": "tech_ana",
+          "date": "2026-07-03",
+          "timeSlot": "08:00-12:00"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "Job booked successfully:\n- Job ID: job_901\n- Request: req_101 (Leak repair)\n- Technician: Ana Souza (tech_ana)\n- Date: 2026-07-03\n- Time window: 08:00-12:00\n\nThe request status is now \"scheduled\"."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "booked",
+        "pass": true,
+        "reasoning": "scheduleJob(req_101, tech_ana, 2026-07-03, 08:00-12:00) was called and the reply confirms the real minted job_901 with that date and window."
+      },
+      {
+        "id": "acts-directly",
+        "pass": true,
+        "reasoning": "The agent verified availability and booked in the same turn — no permission round-trip for the non-destructive booking."
+      },
+      {
+        "id": "window-only",
+        "pass": true,
+        "reasoning": "Reply promises 'Time window: 08:00-12:00' only; no arrival time finer than the window."
+      }
+    ],
+    "tokensIn": 14889,
+    "tokensOut": 818
+  },
+  {
+    "caseId": "15-cancel-probe-first",
+    "rep": 0,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "To confirm: Cancel job job_301 (2026-07-03 08:00-12:00, tech_ana)? This cannot be undone. Please confirm."
+    ],
+    "actualTrace": [
+      "cancelJob",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "cancelJob",
+        "args": {
+          "jobId": "job_301",
+          "reason": "Customer requested cancellation",
+          "confirmed": false
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "To confirm: Cancel job job_301 (2026-07-03 08:00-12:00, tech_ana)? This cannot be undone. Please confirm."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "relays-question",
+        "pass": true,
+        "reasoning": "cancelJob was a legal probe (confirmed:false) and the reply relays the confirmation question including 'cannot be undone', waiting for the user."
+      },
+      {
+        "id": "no-cancel-claim",
+        "pass": true,
+        "reasoning": "Reply asks 'Please confirm' and never states the job was cancelled."
+      }
+    ],
+    "tokensIn": 7067,
+    "tokensOut": 489
+  }
+]
