@@ -16,3 +16,6 @@ eval-results/**/*.verdicts.jsonl
 
 # logs
 *.log
+
+# mastra dev scratch
+.mastra/
