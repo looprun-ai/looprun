@@ -34,13 +34,24 @@ res.text          // the governed reply
 res.looprun       // what the safety kit did: vetoes, redrives, violations, observed calls
 ```
 
-Local models are first-class — the two validated tiers run on llama.cpp with measured flags:
+Local models are first-class — the two validated tiers run on
+[llama.cpp](https://github.com/ggml-org/llama.cpp) with measured flags:
 
 ```ts
 import { localModel } from 'looprun/models'
 
 model: await localModel('qwen3.5-4b')       // ~2.9 GB — 8–16 GB machines
 model: await localModel('qwen3.6-35b-a3b')  // ~21 GB — best local quality (32 GB+)
+```
+
+Requirements: a `llama-server` build **≥ b9780**
+([releases](https://github.com/ggml-org/llama.cpp/releases) — older builds cannot load the
+qwen3.5/3.6 family), found via `$LLAMA_BIN` → `~/llamacpp-b9780/bin/llama-server` → `PATH`.
+Model weights download **consent-first** — never automatically on an agent's first turn:
+
+```bash
+npx looprun models pull qwen3.5-4b      # explicit download (or: npx looprun init, interactive)
+npx looprun models status               # binary / model file / server health
 ```
 
 ## Install

@@ -76,6 +76,10 @@ rest (case 15 reused the scheduling trunk left resident by case 12 and prefilled
 for the whole case). The eval runner records tokens, not time; timings come from the llama-server
 log for the same run, matched token-for-token to the dumps.
 
+To reproduce: install [llama.cpp](https://github.com/ggml-org/llama.cpp) `llama-server` ≥ b9780 and
+download the weights with `npx looprun models pull qwen3.6-35b-a3b` (~21 GB, consent-first) — full
+requirements in [Local models](../../docs/guides/local-models.md).
+
 ## Re-run the certification
 
 ```bash
