@@ -50,7 +50,8 @@ only if it **took effect** (guard-vetoed calls never reach the world, so they ne
 
 - Default subject: `gemini-3.1-flash-lite-thinkoff` — thinking is disabled with the **numeric**
   `thinkingBudget: 0` (a `thinkingLevel` value does NOT turn thinking off; looprun encodes this).
-  Needs `GOOGLE_GENERATIVE_AI_API_KEY`.
+  Needs `GOOGLE_GENERATIVE_AI_API_KEY` — the only cloud key looprun ever asks for, and only when
+  this default subject is used; the library itself is model-agnostic.
 - Local: `--model qwen3.5-4b` / `--model qwen3.6-35b-a3b` (llama.cpp via `@looprun-ai/models`, pinned
   decoding temperature 0).
 - Custom: `model: { model: myAiSdkModel, modelParams: {...}, label: 'mine' }` in the config.

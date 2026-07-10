@@ -15,7 +15,13 @@ npx looprun init                       # shows what's missing
 npx looprun models pull qwen3.5-4b     # optional: the ~2.9 GB local tier
 ```
 
-For the cloud validation model set `GOOGLE_GENERATIVE_AI_API_KEY` in `.env`.
+looprun itself is **model-agnostic** — `LoopRunAgent` takes any Mastra router string or AI-SDK
+model, and no API key is required to use the library. One optional key exists: the certification
+CLI's **default subject model** is `gemini-3.1-flash-lite-thinkoff` (a pinned, cheap ruler so
+certified scores are comparable across projects), which needs `GOOGLE_GENERATIVE_AI_API_KEY` in
+`.env`. To certify without any cloud key, point the eval at a local alias
+(`npx looprun-eval run --model qwen3.5-4b`) or at any AI-SDK model via `model: {...}` in
+`looprun.eval.config.ts` — see [models in the eval config](guides/eval-config.md#models).
 
 ## 2. Generate your agents (recommended path)
 
