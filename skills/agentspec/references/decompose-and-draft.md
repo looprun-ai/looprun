@@ -29,10 +29,13 @@ DERIVED from this business's docs, schemas, and questionnaire answers. The templ
 guard catalog (`references/guard-catalog.md`) are the only style inputs.
 
 ### Layer choice
-- `AgentSpecBase` iff the agent's surface contains ≥1 confirmed-flag destructive tool
-  (`destructiveTools` = the gate-#1-approved subset). Otherwise `AgentSpecMinimal`.
-- Never hand-add what a layer installs (noDuplicateCall, emptyReply, confirmFirst,
-  destructiveThrottle) — inheritance owns those.
+- Extend the ONE `AgentSpecBase` class (the former Minimal/Base/Full ladder is collapsed — a spec is a
+  spec). List the agent's confirmed-flag destructive tools in `destructiveTools` (the
+  gate-#1-approved subset): the constructor installs the confirm-first + throttle protocol on exactly
+  those; an empty/omitted list is a no-op (a clean non-destructive agent).
+- Never hand-add what the constructor installs — always `noDuplicateCall` + `emptyReply`, and iff
+  `destructiveTools` is non-empty `confirmFirst` + `destructiveThrottle`. There is NO auto-schema
+  layer: author `argRequired` / `argFormat` explicitly per tool.
 
 ### Guard selection recipe (per rule found in docs/answers)
 1. State the rule as: WHEN <observable condition> THE AGENT MUST/MUST-NOT <action/claim>.
@@ -41,9 +44,10 @@ guard catalog (`references/guard-catalog.md`) are the only style inputs.
 3. Pick the catalog kind (`references/guard-catalog.md` — the reference-of-record, with signatures,
    hooks, auto-layers, and the when/how-much-to-guard math): requiresBefore, forbidThisTurn,
    argRequired, argAbsent, argFormat, labelExists, labelProvenance, precondition, maxCallsPerTurn,
-   maxCallsPerConversation, noFabricatedSuccess, replyMustMention, replyMaxOccurrences,
-   replySingleQuestion, replyNoProductionClaim, replyConfirmsLabels, pendingConfirmMustAsk,
-   destructiveClaimRequiresSuccess, noFalseFailureClaim, resultInvariant, jargonScrub (mutator).
+   maxCallsPerConversation, noActAfterAskSameTurn, noFabricatedSuccess, replyMustMention,
+   replyMaxOccurrences, replySingleQuestion, replyNoProductionClaim, replyConfirmsLabels,
+   pendingConfirmMustAsk, destructiveClaimRequiresSuccess, noFalseFailureClaim, resultInvariant,
+   jargonScrub (mutator).
    There is deliberately NO LLM reply-check kind in @looprun-ai/core (it would forfeit the
    determinism certificate) — a rule no deterministic check can express is language-layer:
    conditioned prose + an eval dimension. `custom()` ONLY when no kind fits; reviewers read the
@@ -77,6 +81,12 @@ guard catalog (`references/guard-catalog.md`) are the only style inputs.
 - `terminal`: reply()-only when the state says the turn is an action turn (example shape:
   `(w) => w.hasVisualStyle()`); leave unset when askUser must stay legal.
 - `directives`: state-keyed "IF cond → directive" for positive forcing.
+- `chains`: declarative flowChain completion — force a missing follow-up `call` after `after` ran OK
+  this turn (`mode:'direct'` = world.exec, no LLM; `'llm'` = one forced micro-generate), on the same
+  guard-checked path. Use when a required follow-up must EXIST, not merely be blocked-when-wrong.
+- `sampling`: per-agent `{ temperature?, topP?, maxOutputTokens?, seed? }`, merged OVER the
+  conversation modelParams (agent wins) — e.g. a creative agent at temperature 0.7 beside a temp-0
+  admin agent in the same domain.
 - `maxSteps`/`redrives`: keep defaults unless a measured fail says otherwise.
 
 ### Anticipate the recurring measured fails (draft them out up front)
