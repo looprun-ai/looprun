@@ -16,6 +16,7 @@
  *   pnpm release                 # needs pending changesets (`pnpm changeset` during dev)
  *   pnpm release --bump minor    # no pending changesets: ad-hoc uniform bump of all packages
  *   pnpm release --otp=123456    # pass the npm 2FA code non-interactively
+ *   pnpm release --resume --otp=… # resume a run that failed at publish (commit+tag already local)
  *   pnpm release:dry             # preflight + gates only, no mutation
  */
 import { execSync, spawnSync } from 'node:child_process';
@@ -30,6 +31,7 @@ const value = (name) => args.find((a) => a.startsWith(`--${name}=`))?.split('=')
 const DRY = flag('dry-run');
 const BUMP = value('bump');
 const OTP = value('otp');
+const RESUME = flag('resume'); // resume a run that failed at publish (version commit+tag already local)
 
 const sh = (cmd, opts = {}) =>
   execSync(cmd, { cwd: ROOT, encoding: 'utf8', stdio: opts.quiet ? 'pipe' : ['inherit', 'pipe', 'inherit'], ...opts }).trim();
@@ -56,8 +58,8 @@ sh('gh auth status', { quiet: true });
 const pendingChangesets = readdirSync(join(ROOT, '.changeset')).filter(
   (f) => f.endsWith('.md') && f !== 'README.md',
 );
-if (!pendingChangesets.length && !BUMP && !DRY)
-  die('no pending changesets. Either run `pnpm changeset` during dev, or pass --bump patch|minor|major.');
+if (!pendingChangesets.length && !BUMP && !DRY && !RESUME)
+  die('no pending changesets. Either run `pnpm changeset` during dev, pass --bump patch|minor|major, or --resume a publish-failed run.');
 console.log(`  npm: ${npmUser} · branch: ${branch} · changesets pending: ${pendingChangesets.length || (BUMP ? `none (--bump ${BUMP})` : 'none')}`);
 
 // ---------- 3 (early in dry-run). gates ----------
@@ -81,31 +83,42 @@ if (DRY) {
 
 // ---------- 2. version ----------
 step('version');
-if (!pendingChangesets.length && BUMP) {
+if (RESUME) {
+  // The version/gates/commit/tag steps already ran in the failed attempt — verify and jump to publish.
+  const u = readJson('packages/looprun/package.json');
+  const t = `v${u.version}`;
+  if (!sh(`git tag -l ${t}`, { quiet: true })) die(`--resume: tag ${t} not found — nothing to resume.`);
+  const head = sh('git log -1 --format=%s', { quiet: true });
+  if (head !== `chore(release): ${t}`) die(`--resume: HEAD is "${head}", expected "chore(release): ${t}".`);
+  console.log(`  resuming ${t} at publish`);
+}
+if (!RESUME && !pendingChangesets.length && BUMP) {
   if (!['patch', 'minor', 'major'].includes(BUMP)) die(`--bump must be patch|minor|major, got "${BUMP}"`);
   const names = publishableDirs().map((d) => readJson(`${d}/package.json`).name);
   const front = names.map((n) => `'${n}': ${BUMP}`).join('\n');
   writeFileSync(join(ROOT, '.changeset', 'release-adhoc.md'), `---\n${front}\n---\n\nRelease (${BUMP}).\n`);
 }
-run('pnpm exec changeset version');
+if (!RESUME) run('pnpm exec changeset version');
 const umbrella = readJson('packages/looprun/package.json');
 const VERSION = umbrella.version;
 const TAG = `v${VERSION}`;
-const rootPkg = readJson('package.json');
-rootPkg.version = VERSION;
-writeFileSync(join(ROOT, 'package.json'), JSON.stringify(rootPkg, null, 2) + '\n');
-run('pnpm install --lockfile-only');
-if (sh(`git tag -l ${TAG}`, { quiet: true })) die(`tag ${TAG} already exists.`);
-console.log(`  releasing ${TAG}`);
+if (!RESUME) {
+  const rootPkg = readJson('package.json');
+  rootPkg.version = VERSION;
+  writeFileSync(join(ROOT, 'package.json'), JSON.stringify(rootPkg, null, 2) + '\n');
+  run('pnpm install --lockfile-only');
+  if (sh(`git tag -l ${TAG}`, { quiet: true })) die(`tag ${TAG} already exists.`);
+  console.log(`  releasing ${TAG}`);
 
-// ---------- 3. gates ----------
-gates();
+  // ---------- 3. gates ----------
+  gates();
 
-// ---------- 4. commit + tag ----------
-step(`commit + tag ${TAG}`);
-run('git add -A');
-run(`git commit -m "chore(release): ${TAG}"`);
-run(`git tag ${TAG}`);
+  // ---------- 4. commit + tag ----------
+  step(`commit + tag ${TAG}`);
+  run('git add -A');
+  run(`git commit -m "chore(release): ${TAG}"`);
+  run(`git tag ${TAG}`);
+}
 
 // ---------- 5. publish (re-runnable: pnpm skips versions already on the registry) ----------
 step('publish to npm');
@@ -114,7 +127,7 @@ const publish = spawnSync('pnpm', ['-r', 'publish', '--access', 'public', ...(OT
   stdio: 'inherit',
 });
 if (publish.status !== 0)
-  die(`publish failed (2FA code expired?). Fix and re-run: pnpm release --otp=<code> — already-published packages are skipped, the commit/tag are local until push.`);
+  die(`publish failed (2FA code expired?). Fix and re-run: pnpm release --resume --otp=<code> — already-published packages are skipped, the commit/tag are local until push.`);
 
 // ---------- 6. push ----------
 step('push main + tag');
