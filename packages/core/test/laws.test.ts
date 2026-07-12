@@ -9,7 +9,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync, readdirSync, existsSync, statSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { AgentSpecMinimal, validateSpec } from '../src/index.js';
+import { AgentSpecBase, validateSpec } from '../src/index.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const CORE_SRC = join(HERE, '..', 'src');
@@ -53,14 +53,14 @@ describe('core stays framework-free', () => {
 describe('≤15-tools law', () => {
   it('validateSpec warns past 15 tools', () => {
     const tools = Array.from({ length: 16 }, (_, i) => `tool${i}`);
-    const spec = new AgentSpecMinimal({ id: 't', mode: 'M', persona: 'You are the test agent.', tools, behavior: ['x'] });
+    const spec = new AgentSpecBase({ id: 't', mode: 'M', persona: 'You are the test agent.', tools, behavior: ['x'] });
     const warnings = validateSpec(spec);
     expect(warnings.map((w) => w.code)).toContain('tool-surface-over-15');
   });
 
   it('validateSpec is quiet at 15', () => {
     const tools = Array.from({ length: 15 }, (_, i) => `tool${i}`);
-    const spec = new AgentSpecMinimal({ id: 't', mode: 'M', persona: 'You are the test agent.', tools, behavior: ['x'] });
+    const spec = new AgentSpecBase({ id: 't', mode: 'M', persona: 'You are the test agent.', tools, behavior: ['x'] });
     expect(validateSpec(spec).filter((w) => w.code === 'tool-surface-over-15')).toEqual([]);
   });
 });

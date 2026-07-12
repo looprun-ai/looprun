@@ -5,7 +5,14 @@
  * tool activity — never the user text (magnet firewall). `observed` accumulates for the whole
  * conversation; the other fields reset per turn via `beginTurn`.
  */
-import type { ObservedCall } from '../rules.js';
+import type { Guard, ObservedCall } from '../rules.js';
+
+/** An OUTPUT-dim (postTool) result-invariant failure OR a flowChain restate — carried on the ledger
+ *  and JOINED into the onReply violation set so the same bounded no-tools redrive relays its text. */
+export interface PostToolViolation {
+  guard: Guard;
+  reason: string;
+}
 
 export interface TurnLedger {
   observed: ObservedCall[];
@@ -16,6 +23,9 @@ export interface TurnLedger {
   terminalReply: string;
   /** Consecutive guard-vetoed rounds this turn (reset when a call passes guards and executes). */
   vetoStreak: number;
+  /** OUTPUT-dim (postTool) result-invariant violations + flowChain restates accrued this turn — joined
+   *  into the onReply violation set before the redrive loop (see finalizeReply). Reset per turn. */
+  postToolViolations: PostToolViolation[];
 }
 
 /**
@@ -32,7 +42,7 @@ export function vetoStormHit(ledger: TurnLedger): boolean {
 }
 
 export function createLedger(): TurnLedger {
-  return { observed: [], turnIndex: 0, producedThisTurn: [], turnCorrections: [], attachments: [], terminalReply: '', vetoStreak: 0 };
+  return { observed: [], turnIndex: 0, producedThisTurn: [], turnCorrections: [], attachments: [], terminalReply: '', vetoStreak: 0, postToolViolations: [] };
 }
 
 /** Reset the per-turn fields (the conversation-scoped `observed` is kept). */
@@ -43,6 +53,7 @@ export function beginTurn(ledger: TurnLedger, turnIndex: number): void {
   ledger.attachments = [];
   ledger.terminalReply = '';
   ledger.vetoStreak = 0;
+  ledger.postToolViolations = [];
 }
 
 /** Structural success check on a tool result ({success:false} / {error} / {PREREQ_NOT_MET} ⇒ failed). */

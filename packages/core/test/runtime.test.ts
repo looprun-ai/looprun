@@ -1,7 +1,7 @@
 /** The governed-turn machine: ledger, preTool evaluation, and the finalizeReply pipeline. */
 import { describe, expect, it } from 'vitest';
 import {
-  AgentSpecMinimal,
+  AgentSpecBase,
   createLedger,
   beginTurn,
   resultOk,
@@ -76,7 +76,7 @@ describe('ledger', () => {
 
 describe('evaluatePreTool', () => {
   it('denies on a failing precondition and records the veto', async () => {
-    const spec = new AgentSpecMinimal({ id: 'a', mode: 'M', persona, tools: ['repot'] });
+    const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: ['repot'] });
     spec.addGuard('preTool', ['repot'], precondition((w) => w.plan === 'pro', 'Needs pro plan.'), { id: 'agent:pro' });
     const ledger = createLedger();
     const verdict = await evaluatePreTool(spec, ledger, fixtureWorld({ plan: 'starter' }), 'repot', {});
@@ -87,7 +87,7 @@ describe('evaluatePreTool', () => {
   });
 
   it('allows when guards pass, and noDuplicateCall vetoes an exact same-turn repeat', async () => {
-    const spec = new AgentSpecMinimal({ id: 'a', mode: 'M', persona, tools: ['water'] });
+    const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: ['water'] });
     const ledger = createLedger();
     const world = fixtureWorld();
     expect((await evaluatePreTool(spec, ledger, world, 'water', { id: 7 })).verdict).toBe('allow');
@@ -99,7 +99,7 @@ describe('evaluatePreTool', () => {
 
 describe('evaluateOnInput', () => {
   it('refuses the turn before any LLM call', async () => {
-    const spec = new AgentSpecMinimal({ id: 'a', mode: 'M', persona, tools: [] });
+    const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: [] });
     spec.addGuard('onInput', 'any', custom({ kind: 'gate', dim: 'run', check: () => 'refused', prose: () => 'g' }), {
       id: 'agent:gate',
     });
@@ -111,7 +111,7 @@ describe('evaluateOnInput', () => {
 
 describe('finalizeReply pipeline', () => {
   it('applies mutators before checks', async () => {
-    const spec = new AgentSpecMinimal({ id: 'a', mode: 'M', persona, tools: [] });
+    const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: [] });
     spec.addMutator(jargonScrub({ Jargon: 'plain words' }), { id: 'agent:scrub' });
     const ledger = createLedger();
     const out = await finalizeReply(spec, THEME, fixtureWorld(), ledger, 'Some Jargon here.', async () => '', 1);
@@ -121,7 +121,7 @@ describe('finalizeReply pipeline', () => {
   });
 
   it('redrives once with the correction message and accepts the fixed text', async () => {
-    const spec = new AgentSpecMinimal({ id: 'a', mode: 'M', persona, tools: [] });
+    const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: [] });
     spec.addReplyCheck(replyMustMention(['price'], 'Mention the price.'), { id: 'agent:price' });
     const ledger = createLedger();
     const seen: string[] = [];
@@ -144,7 +144,7 @@ describe('finalizeReply pipeline', () => {
   });
 
   it('commits the deterministic closure after redrives exhaust (theme closure)', async () => {
-    const spec = new AgentSpecMinimal({ id: 'a', mode: 'M', persona, tools: ['water'] });
+    const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: ['water'] });
     spec.addReplyCheck(replyMustMention(['impossible-token-xyz'], 'nope'), { id: 'agent:impossible' });
     const ledger = createLedger();
     recordToolResult(ledger, 'water', {}, { success: true });
@@ -156,7 +156,7 @@ describe('finalizeReply pipeline', () => {
   });
 
   it('prefers the spec-level exhaustionReply over the theme closure', async () => {
-    const spec = new AgentSpecMinimal({
+    const spec = new AgentSpecBase({
       id: 'a',
       mode: 'M',
       persona,
@@ -169,7 +169,7 @@ describe('finalizeReply pipeline', () => {
   });
 
   it('emptyReply (minimal layer) forces content', async () => {
-    const spec = new AgentSpecMinimal({ id: 'a', mode: 'M', persona, tools: [] });
+    const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: [] });
     const out = await finalizeReply(spec, THEME, fixtureWorld(), createLedger(), '   ', async () => 'Real reply.', 1);
     expect(out.text).toBe('Real reply.');
   });

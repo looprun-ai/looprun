@@ -8,19 +8,24 @@
  *   postTool → recorded via `afterToolCall`
  *   onReply  → runtime finalization (bounded no-tools redrive; exhaustion ⇒ a deterministic
  *              guard-authored closure)
- *   controls → maxSteps (stop condition) · terminal (reply-only policy) · directives · escalate ·
- *              exhaustionReply
+ *   controls → maxSteps (stop condition) · terminal (reply-only policy) · directives · chains ·
+ *              escalate · sampling · exhaustionReply
  *
- * Layer hierarchy (guards installed by the constructor, layer-tagged and addressable):
- *   AgentSpecMinimal — invariants EVERY agent carries: noDuplicateCall (preTool) + emptyReply (onReply).
- *   AgentSpecBase    — Minimal + the destructive-safety protocol on `destructiveTools`:
- *                      confirmFirst + destructiveThrottle.
- *   AgentSpecFull    — Base + the schema-auto layer (argRequired/argFormat from tool JSON schemas).
- * resolveBindings sorts each hook agent → full → base → minimal so an agent correction wins.
+ * ONE class, `AgentSpecBase` (the former Minimal/Base/Full ladder is collapsed — a spec is a spec).
+ * Its constructor auto-installs, layer-tagged and addressable, exactly:
+ *   - ALWAYS the invariants EVERY agent carries: noDuplicateCall (preTool, id `minimal:noDuplicateCall`)
+ *     + emptyReply (onReply, id `minimal:emptyReply`);
+ *   - IFF `destructiveTools` is non-empty, the destructive-safety protocol on those tools:
+ *     confirmFirst (id `base:confirmFirst`) + destructiveThrottle (id `base:destructiveThrottle`).
+ * Per-tool schema guards (argRequired/argFormat) are now AUTHORED explicitly by the spec — there is no
+ * auto-schema layer. The `minimal:`/`base:` id namespaces are retained (load-bearing for resolveBindings
+ * layer ordering + trunk prose order). resolveBindings sorts each hook agent → full → base → minimal so
+ * an agent correction always wins.
  */
-import { argFormat, argRequired, confirmFirst, destructiveThrottle, emptyReply, noDuplicateCall } from './guards.js';
-import type { AgentWorld, Dim, Guard, GuardCtx, ReplyMutator, SpatialEdge } from './rules.js';
+import { confirmFirst, destructiveThrottle, emptyReply, noDuplicateCall } from './guards.js';
+import type { AgentWorld, Dim, Guard, GuardCtx, ObservedCall, ReplyMutator, SpatialEdge } from './rules.js';
 import type { TrunkTheme } from './trunk.js';
+import type { SamplingSettings } from './model-params.js';
 
 export type Hook = 'onInput' | 'preTool' | 'postTool' | 'onReply';
 export type ToolTarget = 'any' | string[];
@@ -58,12 +63,49 @@ export interface GuardBinding {
   disabled: boolean;
 }
 
+/**
+ * A declared FOLLOW-UP completion (a "flowChain"). Veto guards can only BLOCK a wrong call; they
+ * cannot CREATE a missing one. A flowChain deterministically COMPLETES a required follow-up: iff `after`
+ * ran OK this turn and `call` did NOT, the runtime forces `call` (the LLM keeps ownership of args; a
+ * zero-arg / spec-derivable call skips the LLM entirely). preTool guards still gate the forced call — a
+ * chain cannot bypass governance.
+ *
+ * FIREWALL: `when`/`args` are spec-authored business code (like `exhaustionReply`) — pure functions of
+ * (world, observed) ONLY. They NEVER receive the user's text or the reply (the magnet firewall bars
+ * deterministic trigger/derive code from reading user text). Only the `mode:'llm'` micro-generate may
+ * see the user text — that is the model filling args, not guard/trigger code.
+ */
+export interface ChainSpec {
+  /** Fires only if this tool was observed OK THIS turn. */
+  after: string;
+  /** The follow-up tool that must exist this turn; forced when missing. */
+  call: string;
+  /** Deterministic trigger — a PURE function of (world, observed) [full-conversation ledger; each
+   *  ObservedCall carries `turnIndex`, so scope to this turn yourself if needed]. NO user text. Absent ⇒
+   *  always fire (when `after` ran OK this turn and `call` is missing). */
+  when?: (world: AgentWorld, observed: ObservedCall[]) => boolean;
+  /** 'direct' = execute `world.exec(call, args ?? {})` with NO LLM (zero-arg or spec-derived args), on the
+   *  same guard-checked path a model call takes. 'llm' = ONE forced micro-generate where the model fills
+   *  args (it may read the user text — the firewall bars only deterministic guard/trigger code). */
+  mode: 'direct' | 'llm';
+  /** For 'direct': static args, or a PURE derive function of (world, observed) [same firewall as `when`].
+   *  Ignored for 'llm' (the model fills args). Default `{}`. */
+  args?: Record<string, unknown> | ((world: AgentWorld, observed: ObservedCall[]) => Record<string, unknown>);
+}
+
 export interface AgentControls {
   maxSteps?: number;
   redrives?: number;
   terminal?: TerminalPolicy;
   directives?: StateDirective[];
+  /** Declared follow-up completions — see {@link ChainSpec}. Absent/empty ⇒ the runtime adds not a
+   *  single new code effect on the turn (zero-diff). */
+  chains?: ChainSpec[];
   escalate?: { model: AgentModelRef; maxAttempts?: number };
+  /** Per-agent AI-SDK call settings, merged OVER the conversation-level modelParams (agent wins) by the
+   *  backend — so a creative content agent can run at temperature 0.7 beside a temp-0 admin agent in the
+   *  same domain. Absent ⇒ the conversation-level modelParams apply unchanged. */
+  sampling?: SamplingSettings;
   /** Committed when the reply still violates its checks after all redrives — MUST be a pure function
    *  of verified observations (structurally unable to fabricate). Omitted ⇒ the theme/default closure. */
   exhaustionReply?: (world: AgentWorld, okTools: string[], produced: string[], violations: string[]) => string;
@@ -139,13 +181,25 @@ export interface AgentSpecConfig {
   redrives?: number;
   escalate?: { model: AgentModelRef; maxAttempts?: number };
   exhaustionReply?: (world: AgentWorld, okTools: string[], produced: string[], violations: string[]) => string;
+  /** Per-agent AI-SDK call settings (see {@link AgentControls.sampling}) — merged over the
+   *  conversation-level modelParams by the backend. */
+  sampling?: SamplingSettings;
+  /** Declared follow-up completions (see {@link ChainSpec}). Absent ⇒ controls.chains stays unset. */
+  chains?: ChainSpec[];
   destructiveTools?: string[];
   toolSchemas?: Record<string, ToolSchemaLike>;
   /** Optional domain-theme reference (see {@link AgentSpec.theme}). */
   theme?: TrunkTheme;
 }
 
-export class AgentSpecMinimal implements AgentSpec {
+/**
+ * The ONE AgentSpec class (no Minimal/Base/Full ladder). Its constructor always installs the universal
+ * invariants (noDuplicateCall + emptyReply) and, iff `destructiveTools` is non-empty, the
+ * destructive-safety protocol (confirmFirst + destructiveThrottle) on those tools. Ids and install order
+ * are byte-stable (`minimal:*` then `base:*`) so the layer-sorted trunk prose and resolveBindings order
+ * are unchanged from the former ladder.
+ */
+export class AgentSpecBase implements AgentSpec {
   readonly id: string;
   readonly mode: string;
   readonly persona: string;
@@ -192,17 +246,35 @@ export class AgentSpecMinimal implements AgentSpec {
       ...(cfg.directives?.length ? { directives: [...cfg.directives] } : {}),
       ...(cfg.escalate ? { escalate: cfg.escalate } : {}),
       ...(cfg.exhaustionReply ? { exhaustionReply: cfg.exhaustionReply } : {}),
+      ...(cfg.sampling ? { sampling: cfg.sampling } : {}),
+      ...(cfg.chains?.length ? { chains: [...cfg.chains] } : {}),
     };
     this.behavior = [...(cfg.behavior ?? [])];
     if (cfg.theme) this.theme = cfg.theme;
     this.destructiveTools = [...(cfg.destructiveTools ?? [])];
     this.toolSchemas = cfg.toolSchemas ?? {};
+    // Install order is load-bearing (byte-stable trunk): universal invariants first, destructive layer
+    // second — same as the former AgentSpecMinimal → AgentSpecBase super()/installBase() flow.
     this.installMinimal();
+    this.installBase();
   }
 
   protected installMinimal(): void {
     this.addGuard('preTool', 'any', noDuplicateCall(), { layer: 'minimal', id: 'minimal:noDuplicateCall' });
     this.addGuard('onReply', 'any', emptyReply(), { layer: 'minimal', id: 'minimal:emptyReply' });
+  }
+
+  /** Iff the spec declares destructiveTools: the confirm-first + throttle protocol on exactly those
+   *  tools (validated ⊆ surface). A no-op when the list is empty — every non-destructive spec is clean. */
+  protected installBase(): void {
+    const destructive = this.destructiveTools;
+    if (!destructive.length) return;
+    const missing = destructive.filter((t) => !this.surface.tools.includes(t));
+    if (missing.length) {
+      throw new Error(`AgentSpec "${this.id}": destructiveTools not in the tool surface: ${missing.join(', ')}.`);
+    }
+    this.addGuard('preTool', destructive, confirmFirst(), { layer: 'base', id: 'base:confirmFirst' });
+    this.addGuard('preTool', destructive, destructiveThrottle(destructive), { layer: 'base', id: 'base:destructiveThrottle' });
   }
 
   addGuard(hook: Hook, target: ToolTarget, guard: Guard, opts?: { id?: string; layer?: Layer }): string {
@@ -241,46 +313,5 @@ export class AgentSpecMinimal implements AgentSpec {
   addFlow(edge: SpatialEdge): this {
     this.flow.push(edge);
     return this;
-  }
-}
-
-export class AgentSpecBase extends AgentSpecMinimal {
-  constructor(cfg: AgentSpecConfig) {
-    super(cfg);
-    this.installBase();
-  }
-
-  protected installBase(): void {
-    const destructive = this.destructiveTools;
-    if (!destructive.length) return;
-    const missing = destructive.filter((t) => !this.surface.tools.includes(t));
-    if (missing.length) {
-      throw new Error(`AgentSpec "${this.id}": destructiveTools not in the tool surface: ${missing.join(', ')}.`);
-    }
-    this.addGuard('preTool', destructive, confirmFirst(), { layer: 'base', id: 'base:confirmFirst' });
-    this.addGuard('preTool', destructive, destructiveThrottle(destructive), { layer: 'base', id: 'base:destructiveThrottle' });
-  }
-}
-
-export class AgentSpecFull extends AgentSpecBase {
-  constructor(cfg: AgentSpecConfig) {
-    super(cfg);
-    this.installFull();
-  }
-
-  protected installFull(): void {
-    for (const tool of this.surface.tools) {
-      const s = this.toolSchemas[tool];
-      if (!s) continue;
-      for (const field of s.required ?? []) {
-        this.addGuard('preTool', [tool], argRequired(field), { layer: 'full', id: `full:argRequired:${tool}.${field}` });
-      }
-      for (const [field, prop] of Object.entries(s.properties ?? {})) {
-        if (!prop.pattern) continue;
-        try {
-          this.addGuard('preTool', [tool], argFormat(field, prop.pattern), { layer: 'full', id: `full:argFormat:${tool}.${field}` });
-        } catch { /* a malformed pattern degrades one guard, not the import */ }
-      }
-    }
   }
 }

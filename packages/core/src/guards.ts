@@ -6,6 +6,15 @@
  * never read by the checker) — the prose+check pairing. Every predicate reads tool args / world
  * state / observed calls, NEVER the user text (the magnet firewall). The pure set is deterministic
  * by construction: no clock, no entropy, no network, no LLM call inside a check.
+ *
+ * DOMAIN-NEUTRALITY LAW (P8a): this package is truly language- and label-scheme-neutral. No generic
+ * guard carries a linguistic regex (claim verbs, confirm-language) or a label scheme by default —
+ * those STRINGS/REGEXES live in the business bundle's own lexicon and are passed back in as REQUIRED
+ * params (`labelProvenance(field, expect, scheme)`, `noFabricatedSuccess(tool, { claimRe, labelRe,
+ * verbClaimRe, reason })`, `pendingConfirmMustAsk({ askRe })`, `destructiveClaimRequiresSuccess(tools,
+ * { claimRe, askRe, offerRe, exemptRe? })`, `noFalseFailureClaim({ claimRe })`). The runtime holds
+ * only the MECHANISM and the generic English prose. A domain-neutrality lint scans this package for
+ * accented letters / language stems, so a re-introduced default fails CI.
  */
 import type { Guard, GuardCtx, ObservedCall, Dim, ReplyMutator, AgentWorld } from './rules.js';
 
@@ -119,16 +128,22 @@ export function argFormat(field: string, pattern: string, flags?: string, reason
   };
 }
 
-/** Upload-range labels: i900+ (the attachment-sequence convention of media worlds). */
-export function isUploadLabel(label: string): boolean {
-  return /^i(9\d\d|\d{4,})$/i.test(label);
-}
-
-/** A label-typed arg must come from the expected provenance class (upload = i900+). */
-export function labelProvenance(field: string, expect: 'uploaded' | 'generated', reason?: string): Guard {
-  const msg = reason ?? (expect === 'uploaded'
-    ? `"${field}" must be an UPLOADED image label (i900+) — for generated images use the matching tool instead.`
-    : `"${field}" must be a GENERATED image label — uploads (i900+) are not valid here.`);
+/**
+ * A label-typed arg must come from the expected provenance class. The label SCHEME is business-owned
+ * and injected — never hardcoded here: `scheme.uploadRe` is the predicate that decides whether a label
+ * is an "uploaded" label; `scheme.labelNoun` (optional) names the scheme in the default deny/prose
+ * message; `scheme.reason` overrides that message outright. The runtime carries ONLY the mechanism and
+ * the generic English wording — the label regex + its noun live in the domain bundle's lexicon.
+ */
+export function labelProvenance(
+  field: string,
+  expect: 'uploaded' | 'generated',
+  scheme: { uploadRe: RegExp; labelNoun?: string; reason?: string },
+): Guard {
+  const noun = scheme.labelNoun;
+  const msg = scheme.reason ?? (expect === 'uploaded'
+    ? `"${field}" must be an UPLOADED image label${noun ? ` (${noun})` : ''} — for generated images use the matching tool instead.`
+    : `"${field}" must be a GENERATED image label — uploads${noun ? ` (${noun})` : ''} are not valid here.`);
   return {
     kind: 'labelProvenance',
     dim: 'input',
@@ -137,7 +152,7 @@ export function labelProvenance(field: string, expect: 'uploaded' | 'generated',
       const label = typeof v === 'string' ? v.trim()
         : (v && typeof v === 'object' && 'label' in (v as object)) ? String((v as { label?: unknown }).label ?? '').trim() : '';
       if (!label) return null;
-      const isUp = isUploadLabel(label);
+      const isUp = scheme.uploadRe.test(label);
       return (expect === 'uploaded' ? isUp : !isUp) ? null : msg;
     },
     prose: () => msg,
@@ -233,6 +248,29 @@ export function confirmFirst(argFlag = 'confirmed'): Guard {
   };
 }
 
+/** Deny `tools` when an `askUser` call already succeeded THIS turn — ask, wait, act only in a LATER
+ *  turn; a model must never confirm-and-execute in the same turn as its own question (a multi-tool
+ *  step can call askUser and a destructive tool back-to-back, which reads as "asked" to a human but
+ *  never gave the user a chance to answer). Reads observed/turnIndex only; magnet-safe. */
+export function noActAfterAskSameTurn(tools: string[]): Guard {
+  const set = new Set(tools);
+  return {
+    kind: 'noActAfterAskSameTurn',
+    dim: 'run',
+    check(ctx) {
+      if (!ctx.tool || !set.has(ctx.tool)) return null;
+      const askedThisTurn = ctx.observed.some(
+        (o) => o.name === 'askUser' && o.ok && o.turnIndex === ctx.turnIndex,
+      );
+      return askedThisTurn
+        ? 'You already asked the user a question this turn — wait for their answer; do not execute this action in the same turn as the question.'
+        : null;
+    },
+    prose: () =>
+      `never call ${tools.join(', ')} in the same turn as an askUser question — wait for the user's answer and act only in a LATER turn`,
+  };
+}
+
 /** At most ONE successful destructive action per turn. */
 export function destructiveThrottle(destructiveTools: string[]): Guard {
   const set = new Set(destructiveTools);
@@ -266,21 +304,27 @@ export function resultInvariant<W extends AgentWorld = AgentWorld>(pred: (result
 
 // ── BEHAVIOR (reply-checks) ──────────────────────────────────────────────────
 
-const VERB_FIRST_CLAIM_RE = /(gerando|criando|preparando|gerei|criei|generating|creating)\s+(\w+\s+){0,2}(imagem|image)/i;
-
-/** If `tool` did NOT succeed this turn, the reply must not claim/imply it did (existence-keyed). */
-export function noFabricatedSuccess(tool: string, opts: { claimRe: RegExp; reason: string }): Guard {
+/**
+ * If `tool` did NOT succeed this turn, the reply must not claim/imply it did (existence-keyed). Both
+ * the label SCHEME (`labelRe` — which tokens are media labels) and the verb-first claim regex
+ * (`verbClaimRe` — the "generating an image" phrasing) are business-owned and injected; the runtime
+ * carries NO linguistic pattern of its own.
+ */
+export function noFabricatedSuccess(
+  tool: string,
+  opts: { claimRe: RegExp; labelRe: RegExp; verbClaimRe: RegExp; reason: string },
+): Guard {
   return {
     kind: 'noFabricatedSuccess',
     dim: 'behavior',
     check(ctx) {
       if (ranThisTurn(ctx, tool)) return null;
       const reply = ctx.reply ?? '';
-      const labels = reply.match(/\bi\d{3,}\b/gi) ?? [];
+      const labels = reply.match(opts.labelRe) ?? [];
       const produced = ctx.producedThisTurn ?? [];
       const invented = labels.filter((l) => !produced.includes(l) && !ctx.world.hasMediaLabel(l));
       if (invented.length) return opts.reason;
-      const claims = opts.claimRe.test(reply) || VERB_FIRST_CLAIM_RE.test(reply);
+      const claims = opts.claimRe.test(reply) || opts.verbClaimRe.test(reply);
       if (claims && labels.length === 0) return opts.reason;
       return null;
     },
@@ -368,19 +412,17 @@ export function emptyReply(): Guard {
   };
 }
 
-// A reply "seeks confirmation" if it asks a question OR carries confirm-language (EN + pt/es).
-const CONFIRM_ASK_RE =
-  /\?|\b(confirm|are you sure|do you want|would you like|shall i|proceed\??|go ahead|confirma|confirmar|tem certeza|deseja|quer(?:es)?|gostaria|posso prosseguir|autoriz)/i;
-
-/** A destructive PROBE returned requiresConfirmation this turn — the reply MUST relay the question. */
-export function pendingConfirmMustAsk(): Guard {
+/** A destructive PROBE returned requiresConfirmation this turn — the reply MUST relay the question.
+ *  `askRe` (the "does this reply seek confirmation?" regex — a business-owned, language-specific
+ *  pattern) is injected; the runtime holds no confirm-language of its own. */
+export function pendingConfirmMustAsk(opts: { askRe: RegExp }): Guard {
   return {
     kind: 'pendingConfirmMustAsk',
     dim: 'behavior',
     check(ctx) {
       const pending = ctx.observed.some((o) => o.turnIndex === ctx.turnIndex && o.resultFlags?.requiresConfirmation);
       if (!pending) return null;
-      return CONFIRM_ASK_RE.test(ctx.reply ?? '')
+      return opts.askRe.test(ctx.reply ?? '')
         ? null
         : 'A confirmation is PENDING — relay the confirmation question to the user (your reply must ask it), and do not summarize the action as done.';
     },
@@ -388,10 +430,26 @@ export function pendingConfirmMustAsk(): Guard {
   };
 }
 
-/** The reply claims a deletion/removal, but no destructive tool SUCCEEDED this turn (with exemptions
- *  for the confirm-probe two-step and honest failure/negation reports). */
-export function destructiveClaimRequiresSuccess(destructiveTools: string[], claimRe?: RegExp, exemptRe?: RegExp): Guard {
-  const re = claimRe ?? /(exclu[íi]d?[oa]?|apagad[oa]|apaguei|removid[oa]|removi|deletad[oa]|deleted|removed)/i;
+/** Split a reply into sentences on ./!/? boundaries — pure, LANGUAGE-NEUTRAL (punctuation only; no
+ *  stateful regex — split() takes no g/y flag, so there is no lastIndex to leak between calls). */
+function splitSentences(text: string): string[] {
+  return text.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean);
+}
+
+/**
+ * The reply claims a deletion/removal, but no destructive tool SUCCEEDED this turn (with exemptions for
+ * the confirm-probe two-step and honest failure/negation reports). Sentence-scoped: a `claimRe` match is
+ * ignored when its OWN sentence is a question, or carries an offer/conditional marker (`offerRe` — the
+ * destructive verb is being OFFERED, not reported as done), so an offer earlier in the reply can never
+ * mask a genuine declarative claim later. Every linguistic pattern — the destructive-claim regex, the
+ * confirm-seeking `askRe`, the offer/conditional `offerRe`, and the optional `exemptRe` — is injected by
+ * the domain bundle; the runtime supplies only the sentence-splitting mechanism and the English prose.
+ */
+export function destructiveClaimRequiresSuccess(
+  destructiveTools: string[],
+  opts: { claimRe: RegExp; askRe: RegExp; offerRe: RegExp; exemptRe?: RegExp },
+): Guard {
+  const { claimRe: re, askRe, offerRe, exemptRe } = opts;
   const set = new Set(destructiveTools);
   return {
     kind: 'destructiveClaimRequiresSuccess',
@@ -401,9 +459,12 @@ export function destructiveClaimRequiresSuccess(destructiveTools: string[], clai
       if (destructiveOk) return null;
       const reply = ctx.reply ?? '';
       const probedThisTurn = ctx.observed.some((o) => o.turnIndex === ctx.turnIndex && o.ok && set.has(o.name) && o.args?.confirmed !== true);
-      if (probedThisTurn && CONFIRM_ASK_RE.test(reply)) return null;
+      if (probedThisTurn && askRe.test(reply)) return null;
       if (exemptRe && exemptRe.test(reply)) return null;
-      return re.test(reply)
+      const declarativeClaim = splitSentences(reply).some(
+        (sentence) => re.test(sentence) && !sentence.endsWith('?') && !offerRe.test(sentence),
+      );
+      return declarativeClaim
         ? 'Nothing destructive succeeded this turn — do not claim a deletion/removal happened. Report the actual state.'
         : null;
     },
@@ -411,9 +472,11 @@ export function destructiveClaimRequiresSuccess(destructiveTools: string[], clai
   };
 }
 
-/** If every tool call this turn SUCCEEDED (and at least one ran), the reply may not claim inability. */
-export function noFalseFailureClaim(): Guard {
-  const claimRe = /(n[ãa]o (consigo|foi poss[íi]vel|posso)|infelizmente n[ãa]o|cannot|can'?t|unable to|falh(ou|a)|failed)[^.!?\n]{0,40}(atualiz|update|alter|salv|sav|configur|aplic|apply|cri(ar|ei)|creat|gerar|generat|aprend|learn)/i;
+/** If every tool call this turn SUCCEEDED (and at least one ran), the reply may not claim inability.
+ *  `claimRe` (the false-failure claim regex — a business-owned, language-specific pattern) is injected;
+ *  the runtime holds no failure-language of its own. */
+export function noFalseFailureClaim(opts: { claimRe: RegExp }): Guard {
+  const claimRe = opts.claimRe;
   return {
     kind: 'noFalseFailureClaim',
     dim: 'behavior',

@@ -1,6 +1,6 @@
 /** Model-parameter presets + the Mastra modelSettings normalization seam. */
 import { describe, expect, it } from 'vitest';
-import { geminiThinkingOff, pinnedDecoding, normalizeModelParams } from '../src/index.js';
+import { geminiThinkingOff, pinnedDecoding, normalizeModelParams, resolveModelSettings } from '../src/index.js';
 
 describe('pinnedDecoding', () => {
   it('nests temperature (and optional seed / maxOutputTokens) under modelSettings', () => {
@@ -40,5 +40,32 @@ describe('normalizeModelParams (Mastra drops flat call settings — measured 202
   it('returns no modelSettings key when nothing needs nesting', () => {
     expect(normalizeModelParams({ providerOptions: { a: 1 } })).toEqual({ providerOptions: { a: 1 } });
     expect(normalizeModelParams({})).toEqual({});
+  });
+});
+
+describe('resolveModelSettings (per-agent sampling merged OVER conversation modelParams)', () => {
+  it('folds sampling into modelSettings, the AGENT winning on any key it sets', () => {
+    const normalized = normalizeModelParams({ temperature: 0, maxOutputTokens: 2048 });
+    const out = resolveModelSettings(normalized, { temperature: 0.7 });
+    expect(out).toEqual({ modelSettings: { temperature: 0.7, maxOutputTokens: 2048 } });
+  });
+
+  it('preserves top-level keys (providerOptions) while merging sampling', () => {
+    const normalized = normalizeModelParams({ temperature: 0, providerOptions: { google: { x: 1 } } });
+    const out = resolveModelSettings(normalized, { seed: 9, topP: 0.9 });
+    expect(out).toEqual({ providerOptions: { google: { x: 1 } }, modelSettings: { temperature: 0, seed: 9, topP: 0.9 } });
+  });
+
+  it('creates modelSettings when the base params had none', () => {
+    expect(resolveModelSettings({ providerOptions: { a: 1 } }, { temperature: 0.3 })).toEqual({
+      providerOptions: { a: 1 },
+      modelSettings: { temperature: 0.3 },
+    });
+  });
+
+  it('is a strict no-op (zero-diff) when sampling is absent or empty', () => {
+    const normalized = normalizeModelParams({ temperature: 0 });
+    expect(resolveModelSettings(normalized)).toBe(normalized);
+    expect(resolveModelSettings(normalized, {})).toBe(normalized);
   });
 });

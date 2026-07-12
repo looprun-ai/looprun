@@ -18,7 +18,7 @@ const CORE_SRC = join(HERE, '..', 'src');
 const MASTRA_SRC = join(HERE, '..', '..', 'mastra', 'src');
 
 /** Files that legitimately DRIVE the loop (clock for latency, the LLM via the framework). */
-const RUNNER_ONLY = new Set(['agent.ts', 'run-conversation.ts', 'session.ts', 'compile.ts']);
+const RUNNER_ONLY = new Set(['agent.ts', 'run-conversation.ts', 'session.ts', 'compile.ts', 'microloop.ts']);
 
 const BANNED = [
   'Date.now(',

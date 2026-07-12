@@ -60,3 +60,28 @@ export function normalizeModelParams(params: Record<string, unknown>): Record<st
   const settings = { ...flat, ...(params.modelSettings as Record<string, unknown> | undefined) };
   return Object.keys(settings).length ? { ...rest, modelSettings: settings } : rest;
 }
+
+/** Per-agent AI-SDK call settings (spec.controls.sampling) — the keys an agent may override. */
+export interface SamplingSettings {
+  temperature?: number;
+  topP?: number;
+  maxOutputTokens?: number;
+  seed?: number;
+}
+
+/**
+ * Fold a spec's per-agent `sampling` OVER an already-normalized modelParams object (agent wins on any
+ * key it sets), preserving providerOptions and every other top-level key. The one merged object is
+ * spread into EVERY generate() call of the turn (main generation, forced-terminal, redrive), so a
+ * creative agent can run at temperature 0.7 beside a temp-0 admin agent in the same domain. Absent /
+ * empty sampling ⇒ the input returned unchanged (the zero-diff guarantee). Pure + exported so the merge
+ * is unit-testable without a live model.
+ */
+export function resolveModelSettings(
+  normalized: Record<string, unknown>,
+  sampling?: SamplingSettings,
+): Record<string, unknown> {
+  if (!sampling || Object.keys(sampling).length === 0) return normalized;
+  const modelSettings = { ...(normalized.modelSettings as Record<string, unknown> | undefined), ...sampling };
+  return { ...normalized, modelSettings };
+}
