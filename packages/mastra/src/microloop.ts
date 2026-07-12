@@ -16,13 +16,19 @@
  * (imported, never mutated). Guard hooks, ledger, chain-completion, mutators, onReply checks and the
  * honest-abstain exhaustion are the certified machinery; only the GENERATION strategy differs.
  *
- * FORCING FORM. Every forcing site uses single-`activeTools` + `toolChoice:'required'` — llama-server
- * IGNORES the named `{ type:'tool', toolName }` form and degrades to free text.
+ * TERMINAL FORCING (v6). The forced close and the onReply redrive do NOT go through the Mastra tool loop:
+ * llama-server's TOOL grammar is LAZY, so `toolChoice:'required'` degraded to free text and no terminal
+ * ever landed. They call `generateObject` directly with the replyStructured schema as
+ * `response_format: json_schema` — a NON-lazy whole-output grammar the model cannot escape. The remaining
+ * forcing sites (the micro-steps, flowChain completion) still use single-`activeTools` + `toolChoice:'required'`
+ * (llama-server IGNORES the named `{ type:'tool', toolName }` form). (v7) The close sees a MINIMAL context —
+ * the turn's user tail + this turn's fresh tool-result digest + the steering line — not the whole transcript
+ * (the probe-proven short-context regime; a tiny model fills the schema with meta-junk at long context).
  *
  * DOMAIN-NEUTRAL. Holds ZERO business strings and NO language-specific wording: the renderer supplies
  * only separators/newlines; the model supplies every natural-language token in the user's own language.
  */
-import { stepCountIs } from 'ai';
+import { stepCountIs, generateObject } from 'ai';
 import { Agent } from '@mastra/core/agent';
 import { createTool } from '@mastra/core/tools';
 import {
@@ -49,6 +55,10 @@ const DEFAULT_REDRIVES = 1;
 const MICRO_STEP_TOKENS = 320;
 /** Slightly larger cap for a forced closing/redrive replyStructured step. */
 const FORCE_TOKENS = 256;
+/** Total char budget for the this-turn tool-result digest spliced into the MINIMAL force-close context. */
+const MICRO_DIGEST_CHARS = 2400;
+/** Per-tool-result char cap inside that digest (a fresh result summary, never the whole transcript). */
+const MICRO_DIGEST_ITEM_CHARS = 600;
 
 /** Free-text terminals (a capable model may still use them). */
 const FREE_TERMINAL = new Set(['replyToUser', 'askUser']);
@@ -76,6 +86,17 @@ const REPLY_STRUCTURED_SCHEMA: Record<string, unknown> = {
   },
   required: ['kind'],
 };
+
+/**
+ * The replyStructured schema as a Zod object — built ONCE from {@link REPLY_STRUCTURED_SCHEMA} (a pure
+ * computation, no I/O and no global mutation, so importing this module stays side-effect-free). Shared by
+ * BOTH terminal-close paths so they enforce an identical shape: (a) the replyStructured tool's `inputSchema`
+ * (a capable model that DOES land the tool call), and (b) the grammar-forced `generateObject` close/redrive —
+ * where it becomes the openai-compatible provider's `response_format: json_schema`, a NON-lazy whole-output
+ * grammar (llama-server's TOOL grammar is LAZY, so `toolChoice:'required'` degraded to free text and no
+ * terminal ever landed).
+ */
+const REPLY_STRUCTURED_ZOD = jsonSchemaToZodObject(REPLY_STRUCTURED_SCHEMA);
 
 /**
  * Strips model `<think>…</think>` leakage from a raw text field — PURE, domain-neutral. Two passes:
@@ -174,6 +195,19 @@ export function scrubSteeringEcho(text: string): string {
 }
 
 /**
+ * Ingest a grammar-guaranteed structured-reply OBJECT (from the {@link generateObject} close/redrive, whose
+ * `response_format: json_schema` the provider enforces) into a candidate reply string — PURE, and the EXACT
+ * same candidate path the replyStructured tool `execute` uses: render via {@link renderStructuredReply} (which
+ * strips `<think>` per field) then {@link scrubSteeringEcho}. Returns '' for an empty / echo-only object — an
+ * empty-after-scrub is a SOFT fail: the caller records the attempt but does NOT set the terminal reply, so the
+ * driver falls through to the next attempt / the deterministic exhaustion closure. Exported for the unit test.
+ */
+export function ingestStructuredObject(obj: unknown): string {
+  const args = (obj ?? {}) as Record<string, unknown>;
+  return scrubSteeringEcho(renderStructuredReply(args));
+}
+
+/**
  * Commit the SINGLE winning reply to the world — micro-loop mode ONLY. Every terminal ATTEMPT runs DRY
  * (records its candidate into the ledger, never touches the world). Once the driver has the FINAL text it
  * calls this EXACTLY ONCE through the SAME `replyToUser` seam the certified terminals use, so the world
@@ -181,6 +215,79 @@ export function scrubSteeringEcho(text: string): string {
  */
 export async function commitFinalReply(world: AgentWorld, finalText: string): Promise<void> {
   if (finalText.trim()) await world.exec('replyToUser', { text: finalText });
+}
+
+/**
+ * Compact digest of THIS TURN's successful tool-call RESULTS — PURE and DOMAIN-NEUTRAL. WHY (v7): feeding the
+ * grammar-forced close the WHOLE conversation made a tiny model fill the schema with meta-junk ("this turn is
+ * closed", generic bullets); the split-step probe proved the SAME model composes clean text at a SHORT context.
+ * So the forced close now sees only (user text + this turn's FRESH results + steering), and this function
+ * produces the middle section from the ONLY source the driver already holds: the response messages the
+ * micro-step loop pushed into `messages` (`gen.response.messages`, sliced from the turn start).
+ *
+ * It walks every message's `content` array for `type:'tool-result'` parts — AI-SDK v6 emits them inside
+ * role:'tool' messages (`ToolResultPart` = `{ type:'tool-result', toolName, output }`), but we scan all roles
+ * defensively — unwrapping each `output` (`{type:'json'|'text', value}` → value; else the raw output). Runtime
+ * terminals (replyStructured / replyToUser / askUser, i.e. their DRY-record echoes) are skipped, and only
+ * results passing {@link resultOk} survive (the "successful calls" the model should restate). Each is
+ * `JSON.stringify`'d + clipped to {@link MICRO_DIGEST_ITEM_CHARS}; the whole body is clipped to `maxChars`
+ * with a truncation marker. No non-terminal successful result ⇒ '' (the caller omits the digest section).
+ * Exported for the unit test.
+ */
+export function digestTurnToolResults(turnMessages: unknown[], maxChars: number = MICRO_DIGEST_CHARS): string {
+  const safeStringify = (value: unknown): string => {
+    try { const s = JSON.stringify(value); return typeof s === 'string' ? s : String(value); } catch { return String(value); }
+  };
+  const unwrap = (output: unknown): unknown => {
+    if (output && typeof output === 'object') {
+      const o = output as Record<string, unknown>;
+      if ((o.type === 'json' || o.type === 'text') && 'value' in o) return o.value;
+    }
+    return output;
+  };
+  const lines: string[] = [];
+  for (const msg of Array.isArray(turnMessages) ? turnMessages : []) {
+    const content = (msg as { content?: unknown } | null)?.content;
+    if (!Array.isArray(content)) continue;
+    for (const part of content) {
+      const p = part as { type?: unknown; toolName?: unknown; output?: unknown } | null;
+      if (!p || p.type !== 'tool-result') continue;
+      const name = typeof p.toolName === 'string' ? p.toolName : 'tool';
+      if (MICRO_TERMINAL.has(name)) continue; // skip runtime terminals (their dry-record echoes / steering)
+      const value = unwrap(p.output);
+      if (!resultOk(value)) continue; // successful results only (the calls the model should restate)
+      lines.push(`- ${name}: ${safeStringify(value).slice(0, MICRO_DIGEST_ITEM_CHARS)}`);
+    }
+  }
+  if (!lines.length) return '';
+  const body = lines.join('\n');
+  return body.length > maxChars
+    ? `### Tool results this turn\n${body.slice(0, maxChars)}\n… (truncated)`
+    : `### Tool results this turn\n${body}`;
+}
+
+/**
+ * Build the MINIMAL message array for a grammar-forced structured close/redrive — PURE, exported for test.
+ * Replaces the whole-transcript context (on which a tiny model produced meta-junk) with ONE user message,
+ * composed in order: (a) the CURRENT turn's user content — the certified D8 tail EXACTLY as it rode the turn's
+ * user message (`## Account state` block + uploads + user text), so the state survives; (b) the compact
+ * this-turn tool-result digest ({@link digestTurnToolResults}); (c) the ephemeral steering line — the
+ * forced-close instruction OR the onReply redrive correction (either carrying {@link STEERING_SENTINEL}). The
+ * system prompt (the scoped trunk carrying the voice/language law) is passed SEPARATELY by the caller and
+ * deliberately NOT slimmed. Blank sections are omitted; present sections join with a blank line.
+ */
+export function buildForceCloseMessages(args: {
+  userContent: string;
+  turnMessages: unknown[];
+  steering: string;
+  maxDigestChars?: number;
+}): Array<{ role: 'user'; content: string }> {
+  const digest = digestTurnToolResults(args.turnMessages, args.maxDigestChars ?? MICRO_DIGEST_CHARS);
+  const parts: string[] = [];
+  if (args.userContent && args.userContent.trim()) parts.push(args.userContent);
+  if (digest) parts.push(digest);
+  if (args.steering && args.steering.trim()) parts.push(args.steering);
+  return [{ role: 'user', content: parts.join('\n\n') }];
 }
 
 // ── Micro-loop turn protocol (appended to the SAME scoped trunk the certified path renders) ──
@@ -270,15 +377,17 @@ export async function runSpecConversationMicroLoop(spec: AgentSpec, turns: TurnI
       execute: async (input: unknown) => world.exec(def.name, (input ?? {}) as Record<string, unknown>),
     });
   }
+  // The structured terminal — runtime-owned. Its execute feeds the model's object through the SAME dry
+  // candidate path the grammar-forced generateObject close uses (ingestStructuredObject = scrub ∘ render) and
+  // records it DRY; it does NOT touch the world (the single reply is committed once via commitFinalReply).
   mastraTools[STRUCTURED_TERMINAL] = createTool({
     id: STRUCTURED_TERMINAL,
     description: 'Send the final user-facing message as STRUCTURED fields; the system renders the text.',
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    inputSchema: jsonSchemaToZodObject(REPLY_STRUCTURED_SCHEMA) as any,
+    inputSchema: REPLY_STRUCTURED_ZOD as any,
     execute: async (input: unknown) => {
       const args = (input ?? {}) as Record<string, unknown>;
-      const rendered = scrubSteeringEcho(renderStructuredReply(args));
-      return recordDryTerminal(rendered, STRUCTURED_TERMINAL, args);
+      return recordDryTerminal(ingestStructuredObject(args), STRUCTURED_TERMINAL, args);
     },
   });
 
@@ -386,7 +495,13 @@ export async function runSpecConversationMicroLoop(spec: AgentSpec, turns: TurnI
     if (stateBlock && stateBlock.trim()) tailParts.push(`## Account state\n${stateBlock}`);
     if (attLabels.length) tailParts.push(`[Uploads this turn: ${attDisplay.join(', ')}]`);
     tailParts.push(userText);
-    messages.push({ role: 'user', content: tailParts.join('\n\n') });
+    // The certified D8 tail (account state + uploads + user text). Captured so the MINIMAL force-close
+    // context (buildForceCloseMessages) can carry it verbatim — the Account-state block MUST ride along.
+    const userContent = tailParts.join('\n\n');
+    messages.push({ role: 'user', content: userContent });
+    // Slice point for this turn's response messages: everything the micro-step loop pushes AFTER the user
+    // message (assistant tool-call + role:'tool' result messages) → the source for the force-close digest.
+    const turnStartIndex = messages.length;
     const t0 = Date.now();
 
     try {
@@ -396,6 +511,46 @@ export async function runSpecConversationMicroLoop(spec: AgentSpec, turns: TurnI
       let tripwireReason = '';
       let lastReasoning: string | null = null;
       const usageAcc: TokenUsage = { input: null, output: null, reasoning: null, cacheRead: null, cacheWrite: null, total: null };
+
+      // Grammar-guaranteed structured CLOSE (v6) — the terminal-forcing seam, shared by the forced close and
+      // the onReply redrive. It does NOT go through the Mastra tool loop: llama-server's TOOL grammar is LAZY
+      // for this template, so `toolChoice:'required'` let the model return FREE TEXT with no tool_calls — no
+      // terminal candidate ever landed. A DIRECT generateObject call sets `response_format: json_schema` on the
+      // openai-compatible provider, a NON-lazy whole-output grammar the model cannot escape. The system is
+      // RECONSTRUCTED from `currentSystemPrompt` (generateObject bypasses the Agent's `instructions`), and (v7)
+      // the context is MINIMAL: buildForceCloseMessages composes ONE user message = the current turn's user
+      // content (D8 tail incl. the Account-state block) + this turn's FRESH successful tool-result digest + the
+      // `ephemeral` steering line. That message is a throwaway (built fresh here, never pushed to the persistent
+      // `messages`), so a parroted steering line cannot compound into later context — only the SIDE EFFECT
+      // (ledger.terminalReply, via the SAME dry candidate path recordDryTerminal ∘ ingestStructuredObject that
+      // the replyStructured tool execute uses) carries forward. A throw (invalid/unrepairable JSON or a
+      // schema-validation failure) OR an empty-after-scrub object is a SOFT fail: terminalReply is left as-is
+      // and the driver falls through to the next attempt / the deterministic exhaustion closure. Shared by BOTH
+      // the forced close and the redrive — the redrive just passes its correction lines as `ephemeral`.
+      const forceStructuredClose = async (ephemeral: string): Promise<void> => {
+        const objOpts: Record<string, unknown> = {
+          model,
+          system: currentSystemPrompt,
+          messages: buildForceCloseMessages({ userContent, turnMessages: messages.slice(turnStartIndex), steering: ephemeral }),
+          schema: REPLY_STRUCTURED_ZOD,
+          ...(genParams.providerOptions !== undefined ? { providerOptions: genParams.providerOptions } : {}),
+          // generateObject is the RAW AI-SDK call (not a Mastra agent.generate), so it honors FLAT call
+          // settings top-level — spread baseSettings directly, not nested under `modelSettings`.
+          ...baseSettings,
+          maxOutputTokens: forceTokens, // the per-close cap wins over any baseSettings.maxOutputTokens
+        };
+        try {
+          // Options are a runtime-shaped settings bag; the load-bearing args (model, schema, system) are explicit.
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const res = await generateObject(objOpts as any);
+          accUsage(usageAcc, res.usage);
+          const obj = (res.object ?? {}) as Record<string, unknown>;
+          recordDryTerminal(ingestStructuredObject(obj), STRUCTURED_TERMINAL, obj);
+        } catch (e) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          if (process.env.DEBUG_ERR) console.error('\n[looprun-micro force-close ERR]', (e as any)?.message ?? String(e));
+        }
+      };
 
       // ── Micro-step loop: ONE forced tool call per generate (the anti-ramble constraint) ──
       for (let step = 0; step < maxSteps; step++) {
@@ -418,23 +573,16 @@ export async function runSpecConversationMicroLoop(spec: AgentSpec, turns: TurnI
         if (gen.tripwire) { tripwire = true; tripwireReason = String(gen.tripwireReason ?? gen.reason ?? ''); break; }
       }
 
-      // ── Terminal forcing: if no terminal landed, ONE grammar-forced replyStructured close ──
-      // EPHEMERAL steering call: `forcePrompt` is spliced into THIS generate's message array only (never
-      // pushed to the persistent `messages`), and the response is not pushed either — the tool call's SIDE
-      // EFFECT (ledger.terminalReply) already survives regardless.
+      // ── Terminal forcing: if no terminal landed, ONE grammar-forced structured close (v6) ──
+      // See forceStructuredClose above: a DIRECT generateObject call (response_format: json_schema) — NOT the
+      // Mastra tool loop, whose LAZY tool grammar let the model free-write past `toolChoice:'required'` so no
+      // terminal ever landed. Its object feeds the SAME dry candidate path; the ephemeral steering prompt is
+      // spliced into a MINIMAL message context only (never persisted). A soft fail ⇒ exhaustion closure below.
       if (!tripwire && !ledger.terminalReply.trim()) {
         const forcePrompt = replyOnly
-          ? `${STEERING_SENTINEL} Close the turn now: call replyStructured. Set \`kind\` and put what you did in \`intro\`/\`items\`. Do NOT ask a question.`
-          : `${STEERING_SENTINEL} Close the turn now: call replyStructured. Set \`kind\` and put the complete user-facing message in \`intro\`/\`items\` (or \`question\` to ask one thing).`;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const fb: any = await (agent.generate as any)([...messages, { role: 'user', content: forcePrompt }], {
-          activeTools: [STRUCTURED_TERMINAL],
-          toolChoice: 'required', // single active tool + required = effective forcing (llama-server ignores the named form)
-          stopWhen: [stepCountIs(1)],
-          hooks: { beforeToolCall, afterToolCall },
-          ...withCap(forceTokens),
-        });
-        accUsage(usageAcc, fb.totalUsage);
+          ? `${STEERING_SENTINEL} Close the turn now. Set \`kind\` and put what you did in \`intro\`/\`items\`. Do NOT ask a question.`
+          : `${STEERING_SENTINEL} Close the turn now. Set \`kind\` and put the complete user-facing message in \`intro\`/\`items\` (or \`question\` to ask one thing).`;
+        await forceStructuredClose(forcePrompt);
         extraCalls++;
         ledger.turnCorrections.push('microloop:forced-terminal');
       }
@@ -473,7 +621,7 @@ export async function runSpecConversationMicroLoop(spec: AgentSpec, turns: TurnI
         if (out !== answerText) { ledger.turnCorrections.push(`mutate:${m.kind}`); answerText = out; }
       }
 
-      // onReply checks — a redrive here is ONE MORE forced replyStructured step (not free text).
+      // onReply checks — a redrive here is ONE MORE grammar-forced structured close (generateObject, not free text).
       const replyChecks = resolveGuards(spec.guards.onReply);
       const checkReply = async (text: string): Promise<ReplyViolation[]> => {
         const rctx: GuardCtx = { args: {}, world, observed: ledger.observed, turnIndex: i, reply: text, producedThisTurn: ledger.producedThisTurn, attachmentsThisTurn: ledger.attachments, notes: ledger.turnCorrections };
@@ -483,20 +631,13 @@ export async function runSpecConversationMicroLoop(spec: AgentSpec, turns: TurnI
       };
       let violations = await checkReply(answerText);
       if (ledger.postToolViolations.length) violations = [...ledger.postToolViolations, ...violations];
+      // The correction rides as the ephemeral steering on the SAME minimal context as the forced close.
+      // Grammar-forced via generateObject — a soft fail leaves the prior terminalReply standing, so a redrive
+      // can only IMPROVE the reply, never blank it.
       for (let r = 0; r < redrives && violations.length; r++) {
         const correction = violations.map((v) => `- ${v.reason}`).join('\n');
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const re: any = await (agent.generate as any)(
-          [...messages, { role: 'user', content: `${STEERING_SENTINEL} Your last reply needs fixing:\n${correction}\n${STEERING_SENTINEL} Call replyStructured now with the corrected message in the user's language.` }],
-          {
-            activeTools: [STRUCTURED_TERMINAL],
-            toolChoice: 'required', // single active tool + required = effective forcing (llama-server ignores the named form)
-            stopWhen: [stepCountIs(1)],
-            hooks: { beforeToolCall, afterToolCall },
-            ...withCap(forceTokens),
-          },
-        );
-        accUsage(usageAcc, re.totalUsage);
+        const redrivePrompt = `${STEERING_SENTINEL} Your last reply needs fixing:\n${correction}\n${STEERING_SENTINEL} Provide the corrected reply as structured fields, in the user's language.`;
+        await forceStructuredClose(redrivePrompt);
         extraCalls++;
         for (const v of violations) ledger.turnCorrections.push(`redrive:${v.guard.kind}`);
         ledger.turnCorrections.push('microloop:redrive');

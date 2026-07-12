@@ -24,7 +24,8 @@ export { jsonSchemaToZodObject, jsonTypeToZod } from './json-schema-zod.js';
 // runSpecConversation / LoopRunAgent are unchanged.
 export {
   runSpecConversationMicroLoop, renderStructuredReply, stripThinkBlocks, recordTerminalReply,
-  assembleAnswerText, scrubSteeringEcho, commitFinalReply, STEERING_SENTINEL,
+  assembleAnswerText, scrubSteeringEcho, ingestStructuredObject, commitFinalReply,
+  digestTurnToolResults, buildForceCloseMessages, STEERING_SENTINEL,
 } from './microloop.js';
 
 // Re-exports so `import { AgentSpecBase, precondition, … } from '@looprun-ai/mastra'` works too.

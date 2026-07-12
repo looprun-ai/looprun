@@ -34,7 +34,20 @@ Domain-neutrality, a single spec class, and three new governed-turn mechanisms.
 - postTool (OUTPUT-dim) enforcement is now live: failing `resultInvariant` guards are relayed
   through the bounded no-tools redrive (a report/repair, never a veto).
 - Experimental micro-loop backend for tiny local models (`runSpecConversationMicroLoop`) — not a
-  default anywhere.
+  default anywhere. It decomposes a turn into forced single-tool micro-steps and closes it with a
+  **grammar-guaranteed structured close**: the forced terminal and the onReply redrive call
+  `generateObject` with the `replyStructured` schema as `response_format: json_schema` — a NON-lazy
+  whole-output grammar llama-server enforces (its TOOL grammar is LAZY even under
+  `toolChoice:'required'`, so the model free-wrote past it and no terminal ever landed). The system
+  prompt is reconstructed for the bypass, and BOTH the tool execute and the object close route
+  through one shared candidate path (`ingestStructuredObject` = scrub ∘ render). That close runs on a
+  **minimal context** (`buildForceCloseMessages`) — the turn's user tail (incl. the account-state
+  block) + a compact digest of THIS turn's fresh successful tool results (`digestTurnToolResults`,
+  resultOk-filtered, terminals skipped, capped 600/2400 chars) + the steering line — not the whole
+  transcript, the probe-proven short-context regime for a tiny model. New pure exports:
+  `ingestStructuredObject`, `digestTurnToolResults`, `buildForceCloseMessages`.
 
-Forcing note: every forced-tool site uses single-`activeTools` + `toolChoice:'required'`, since
-`llama-server` ignores the named `{ type:'tool', toolName }` form and degrades to free text.
+Forcing note: the terminal close/redrive now use `generateObject` (`response_format: json_schema`);
+the remaining forced-tool sites (the micro-steps, flowChain completion) use single-`activeTools` +
+`toolChoice:'required'`, since `llama-server` ignores the named `{ type:'tool', toolName }` form and
+degrades to free text.
