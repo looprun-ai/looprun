@@ -31,6 +31,8 @@ import {
   forcedTerminalPrompt,
   isTerminal,
   normalizeModelParams,
+  resolveModelSettings,
+  runChainCompletionPass,
   vetoStormHit,
   renderScopedSpecTrunk,
   terminalProtocol,
@@ -213,7 +215,8 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
     // Normalize once at the seam: flat AI-SDK call settings (temperature, maxOutputTokens, …) are
     // folded into `modelSettings` — Mastra silently drops them when spread top-level (measured
     // 2026-07-11: a flat spread ran local models with the GGUF sampler — temp 1.0, no token cap).
-    this.modelParams = normalizeModelParams(config.modelParams ?? {});
+    // Then the spec's per-agent sampling merged OVER them (agent wins) — constant for this agent.
+    this.modelParams = resolveModelSettings(normalizeModelParams(config.modelParams ?? {}), spec.controls.sampling);
     this.stopOnRepeatedToolCall = config.stopOnRepeatedToolCall ?? false;
     this.maxStepsResolved = spec.controls.maxSteps ?? config.maxSteps ?? DEFAULT_MAX_STEPS;
     this.redrivesResolved = spec.controls.redrives ?? config.redrives ?? DEFAULT_REDRIVES;
@@ -351,6 +354,34 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
       });
       if (!useMemory && userText !== null && fb.response?.messages) session.messages.push(...fb.response.messages);
       ledger.turnCorrections.push('forced-terminal');
+    }
+
+    // flowChain completion — AFTER main + forced-terminal, BEFORE the onReply checks. ZERO-DIFF: gated
+    // on `spec.controls.chains?.length`, so a chain-free turn builds nothing.
+    if (spec.controls.chains?.length) {
+      const chainPass = await runChainCompletionPass(spec.controls.chains, {
+        world,
+        observed: ledger.observed,
+        turnIndex: session.turnIndex,
+        terminalReplyPresent: ledger.terminalReply.trim().length > 0,
+        beforeToolCall: this.guardHooks.beforeToolCall,
+        afterToolCall: this.guardHooks.afterToolCall,
+        forceLlmCall: async (call: string) => {
+          const ccMsgs = useMemory || userText === null
+            ? `Complete the required follow-up now: call ${call} with the correct arguments for what the user asked. Do not reply in text.`
+            : [...session.messages, { role: 'user', content: `Complete the required follow-up now: call ${call} with the correct arguments for what the user asked. Do not reply in text.` }];
+          // FORCING: single active tool + toolChoice:'required' — llama-server ignores the named
+          // `{ type:'tool', toolName }` form and degrades to free text; this is the portable form.
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const cc: any = await (Agent.prototype.generate as any).call(this, ccMsgs, {
+            instructions, activeTools: [call], toolChoice: 'required', stopWhen: [stepCountIs(2)],
+            hooks: this.guardHooks, ...this.modelParams, ...(useMemory ? { memory: passOpts.memory } : {}),
+          });
+          if (!useMemory && userText !== null && cc.response?.messages) session.messages.push(...cc.response.messages);
+        },
+      });
+      if (chainPass.corrections.length) ledger.turnCorrections.push(...chainPass.corrections);
+      if (chainPass.replyViolations.length) ledger.postToolViolations.push(...chainPass.replyViolations);
     }
 
     // The terminal reply wins even with the protocol OFF — the terminal tools stay registered, and

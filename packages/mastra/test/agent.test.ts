@@ -1,6 +1,6 @@
 /** Offline e2e of the governed turn: veto, redrive, forced-terminal, exhaustion, sessions. */
 import { describe, expect, it } from 'vitest';
-import { AgentSpecMinimal, requiresBefore, replyMustMention } from '@looprun-ai/core';
+import { AgentSpecBase, requiresBefore, replyMustMention } from '@looprun-ai/core';
 import type { AgentWorld, TrunkTheme } from '@looprun-ai/core';
 import { LoopRunAgent } from '../src/index.js';
 import { scriptedModel } from './scripted-model.js';
@@ -59,7 +59,7 @@ const TOOL_DEFS = [
 ];
 
 function makeSpec() {
-  const spec = new AgentSpecMinimal({
+  const spec = new AgentSpecBase({
     id: 'plants',
     mode: 'CARE',
     persona: 'You are the plant-care agent.',
@@ -236,7 +236,7 @@ describe('LoopRunAgent — review regressions', () => {
       [{ tool: 'search', args: { q: 'x' } }],
       [{ tool: 'replyToUser', args: { text: 'Found it.' } }],
     ]);
-    const spec = new AgentSpecMinimal({
+    const spec = new AgentSpecBase({
       id: 'searcher', mode: 'M', persona: 'You are the search agent.', tools: ['search'], theme: THEME,
     });
     const agent = new LoopRunAgent({ spec, tools: { search }, model: scripted.model });
@@ -280,7 +280,7 @@ describe('LoopRunAgent — review regressions', () => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       }) as any,
     });
-    const spec = new AgentSpecMinimal({
+    const spec = new AgentSpecBase({
       id: 'plants', mode: 'M', persona: 'You are the plant agent.', tools: ['waterPlant'], theme: THEME,
     });
     const agent = new LoopRunAgent({
@@ -316,12 +316,12 @@ describe('LoopRunAgent — review regressions', () => {
 
 describe('LoopRunAgent — construction laws', () => {
   it('requires a theme (config or spec)', () => {
-    const spec = new AgentSpecMinimal({ id: 'x', mode: 'M', persona: 'You are x.', tools: [] });
+    const spec = new AgentSpecBase({ id: 'x', mode: 'M', persona: 'You are x.', tools: [] });
     expect(() => new LoopRunAgent({ spec, world: plantsWorld(), model: scriptedModel([]).model })).toThrow(/theme/);
   });
 
   it('strict mode throws on validateSpec warnings', () => {
-    const spec = new AgentSpecMinimal({
+    const spec = new AgentSpecBase({
       id: 'x',
       mode: 'M',
       persona: 'You are x.',

@@ -6,14 +6,14 @@
  * fed by `hooks.afterToolCall`. Mastra applies hooks to ALL tool sources (assigned, toolsets,
  * client, MCP), so guards also govern native/MCP tools with zero extra wiring.
  */
-import { evaluatePreTool, evaluateOnInput, isTerminal, recordToolResult } from '@looprun-ai/core';
-import type { AgentSpec } from '@looprun-ai/core';
+import { evaluatePreTool, evaluateOnInput, enforcePostTool, isTerminal, recordToolResult, resolveGuards } from '@looprun-ai/core';
+import type { AgentSpec, GuardCtx } from '@looprun-ai/core';
 import type { LoopRunSession } from './session.js';
 import type { SessionAccessor } from './tools.js';
 
 export interface GuardHooks {
   beforeToolCall(ctx: { toolName: string; input: unknown }): Promise<void | { proceed: false; output: unknown }>;
-  afterToolCall(ctx: { toolName: string; input: unknown; output?: unknown; error?: unknown }): void;
+  afterToolCall(ctx: { toolName: string; input: unknown; output?: unknown; error?: unknown }): Promise<void> | void;
 }
 
 export function makeGuardHooks(spec: AgentSpec, getSession: SessionAccessor): GuardHooks {
@@ -28,10 +28,27 @@ export function makeGuardHooks(spec: AgentSpec, getSession: SessionAccessor): Gu
       }
       return undefined;
     },
-    afterToolCall({ toolName, input, output }) {
+    async afterToolCall({ toolName, input, output }) {
       if (isTerminal(toolName)) return;
       const session = getSession();
-      recordToolResult(session.ledger, toolName, (input ?? {}) as Record<string, unknown>, output);
+      const { ledger, world } = session;
+      const args = (input ?? {}) as Record<string, unknown>;
+      recordToolResult(ledger, toolName, args, output);
+      // OUTPUT-dim (postTool) result invariants — enforce the previously-dead hook. ZERO-DIFF: a spec
+      // with no postTool guards short-circuits here (no ctx built, no ledger writes). The tool already
+      // executed — enforcement records an `output:…` correction + joins the reply-violation set so the
+      // bounded no-tools redrive relays it (a report/repair, never a veto). Mastra AWAITS afterToolCall
+      // but DISCARDS its return, so the guard cannot rewrite the model-visible result mid-generate.
+      if (!spec.guards.postTool?.length) return;
+      const postGuards = resolveGuards(spec.guards.postTool, toolName);
+      if (!postGuards.length) return;
+      const gctx: GuardCtx = {
+        args, tool: toolName, world, observed: ledger.observed, turnIndex: ledger.turnIndex,
+        attachmentsThisTurn: ledger.attachments, result: output,
+      };
+      const { corrections, violations } = await enforcePostTool(postGuards, gctx);
+      if (corrections.length) ledger.turnCorrections.push(...corrections);
+      if (violations.length) ledger.postToolViolations.push(...violations);
     },
   };
 }

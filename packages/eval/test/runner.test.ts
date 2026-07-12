@@ -4,7 +4,7 @@ import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { MockLanguageModelV3 } from 'ai/test';
-import { AgentSpecMinimal } from '@looprun-ai/core';
+import { AgentSpecBase } from '@looprun-ai/core';
 import type { AgentWorld, TrunkTheme } from '@looprun-ai/core';
 import { runEval, buildCert, mergeVerdictFiles } from '../src/index.js';
 import type { EvalConfig } from '../src/index.js';
@@ -52,7 +52,7 @@ function scripted(): MockLanguageModelV3 {
 }
 
 function toyConfig(outDir: string): EvalConfig {
-  const spec = new AgentSpecMinimal({ id: 'toy', mode: 'TOY', persona: 'You are the toy agent.', tools: ['ping'], theme: THEME });
+  const spec = new AgentSpecBase({ id: 'toy', mode: 'TOY', persona: 'You are the toy agent.', tools: ['ping'], theme: THEME });
   return {
     domain: 'toy',
     specs: { toy: spec },

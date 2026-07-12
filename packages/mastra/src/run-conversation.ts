@@ -25,6 +25,8 @@ import {
   forcedTerminalPrompt,
   isTerminal,
   normalizeModelParams,
+  resolveModelSettings,
+  runChainCompletionPass,
   vetoStormHit,
   renderScopedSpecTrunk,
   terminalProtocol,
@@ -72,7 +74,9 @@ export async function runSpecConversation(spec: AgentSpec, turns: TurnInput[], d
   if (!theme && !spec.surface.systemPrompt) {
     throw new Error(`runSpecConversation: spec "${spec.id}" has no theme — pass deps.theme or set spec.theme.`);
   }
-  const genParams = normalizeModelParams(deps.modelParams ?? {}); // flat call settings → modelSettings (Mastra drops them top-level)
+  // flat call settings → modelSettings (Mastra drops them top-level), then the spec's per-agent
+  // sampling merged OVER them (agent wins). One object, spread into EVERY generate() call of the turn.
+  const genParams = resolveModelSettings(normalizeModelParams(deps.modelParams ?? {}), spec.controls.sampling);
   const maxSteps = spec.controls.maxSteps ?? deps.maxSteps ?? DEFAULT_MAX_STEPS;
   const redrives = spec.controls.redrives ?? deps.redrives ?? DEFAULT_REDRIVES;
   const surface = new Set(spec.surface.tools);
@@ -174,6 +178,35 @@ export async function runSpecConversation(spec: AgentSpec, turns: TurnInput[], d
         if (fb.response?.messages) messages.push(...fb.response.messages);
         extraCalls++;
         ledger.turnCorrections.push('forced-terminal');
+      }
+
+      // flowChain completion — AFTER main + forced-terminal fallback (a terminal reply already exists →
+      // the restate reply-accounting flows through the redrive below), BEFORE the onReply checks. Veto
+      // guards only BLOCK a wrong call; a chain deterministically COMPLETES a required missing follow-up.
+      // ZERO-DIFF: gated on `spec.controls.chains?.length`, so a chain-free turn builds nothing.
+      if (spec.controls.chains?.length) {
+        const chainPass = await runChainCompletionPass(spec.controls.chains, {
+          world,
+          observed: ledger.observed,
+          turnIndex: i,
+          terminalReplyPresent: ledger.terminalReply.trim().length > 0,
+          beforeToolCall: guardHooks.beforeToolCall,
+          afterToolCall: guardHooks.afterToolCall,
+          forceLlmCall: async (call: string) => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const cc: any = await (agent.generate as any)(
+              [...messages, { role: 'user', content: `Complete the required follow-up now: call ${call} with the correct arguments for what the user asked. Do not reply in text.` }],
+              // FORCING: single active tool + toolChoice:'required' — llama-server IGNORES the named
+              // `{ type:'tool', toolName }` form and degrades to free text; this is the portable form.
+              { activeTools: [call], toolChoice: 'required', stopWhen: [stepCountIs(2)], hooks: guardHooks, ...genParams },
+            );
+            if (cc.response?.messages) messages.push(...cc.response.messages);
+          },
+        });
+        if (chainPass.corrections.length) ledger.turnCorrections.push(...chainPass.corrections);
+        // Restate reply-accounting joins the ledger's postToolViolations — finalizeReply relays it.
+        if (chainPass.replyViolations.length) ledger.postToolViolations.push(...chainPass.replyViolations);
+        extraCalls += chainPass.llmCalls;
       }
 
       const initialText: string = full?.tripwire ? String(full.tripwireReason ?? full.reason ?? '') : (ledger.terminalReply || full.text || '');

@@ -1,6 +1,6 @@
 /** Scripted multi-turn runner: record shape + cross-turn guard state. */
 import { describe, expect, it } from 'vitest';
-import { AgentSpecMinimal, confirmFirst } from '@looprun-ai/core';
+import { AgentSpecBase, confirmFirst } from '@looprun-ai/core';
 import type { AgentWorld, TrunkTheme } from '@looprun-ai/core';
 import { repeatedToolCallStop, runSpecConversation } from '../src/index.js';
 import { scriptedModel } from './scripted-model.js';
@@ -40,7 +40,7 @@ const TOOL_DEFS = [
 
 describe('runSpecConversation', () => {
   it('runs a multi-turn conversation with the confirm-first two-step across turns', async () => {
-    const spec = new AgentSpecMinimal({
+    const spec = new AgentSpecBase({
       id: 'cleaner',
       mode: 'CLEAN',
       persona: 'You are the cleanup agent.',
@@ -75,7 +75,7 @@ describe('runSpecConversation', () => {
   });
 
   it('throws without any theme', async () => {
-    const spec = new AgentSpecMinimal({ id: 'x', mode: 'M', persona: 'You are x.', tools: [] });
+    const spec = new AgentSpecBase({ id: 'x', mode: 'M', persona: 'You are x.', tools: [] });
     await expect(
       runSpecConversation(spec, [{ userText: 'hi' }], { model: scriptedModel([]).model, world: world(), toolDefs: [] }),
     ).rejects.toThrow(/theme/);
