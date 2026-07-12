@@ -36,6 +36,25 @@ export function makeGuardHooks(spec: AgentSpec, getSession: SessionAccessor): Gu
   };
 }
 
+/**
+ * Stop condition (verbatim from the certified benchmark lineage): end the generation the moment
+ * ANY tool call repeats (same tool + same args) within this turn's steps — guard-denied calls
+ * included, since they appear in steps too. Apply it for LOCAL models (small models loop; the
+ * repeat is either a loop or a retry-without-change — both deserve the forced close).
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function repeatedToolCallStop({ steps }: any): boolean {
+  const seen = new Set<string>();
+  for (const s of (steps ?? [])) {
+    for (const tc of (s.toolCalls ?? [])) {
+      const key = (tc.toolName ?? tc.name ?? '') + ':' + JSON.stringify(tc.input ?? tc.args ?? {});
+      if (seen.has(key)) return true;
+      seen.add(key);
+    }
+  }
+  return false;
+}
+
 /** onInput guards as a Mastra input processor: abort ⇒ the turn is refused with no LLM call. */
 export function makeInputProcessors(
   spec: AgentSpec,

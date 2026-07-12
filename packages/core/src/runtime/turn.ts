@@ -46,7 +46,11 @@ export async function evaluatePreTool(
     const reason = await g.check(gctx);
     if (reason) {
       recordVeto(ledger, tool, args, `${g.dim}:${g.kind}:${tool}`);
-      return { verdict: 'deny', reason, guard: g };
+      // 2nd+ consecutive veto: the model is looping — tell it to close, in unmissable terms.
+      const escalated = ledger.vetoStreak >= 2
+        ? `${reason} STOP: do not call any more domain tools this turn. Close NOW with replyToUser (or askUser), reporting only what actually succeeded.`
+        : reason;
+      return { verdict: 'deny', reason: escalated, guard: g };
     }
   }
   return { verdict: 'allow' };

@@ -14,10 +14,25 @@ export interface TurnLedger {
   turnCorrections: string[];
   attachments: string[];
   terminalReply: string;
+  /** Consecutive guard-vetoed rounds this turn (reset when a call passes guards and executes). */
+  vetoStreak: number;
+}
+
+/**
+ * Veto-storm limit: with the terminal protocol (toolChoice 'required') a model that cannot
+ * satisfy a guard has no way to stop — it flails, and every vetoed round is a full LLM call
+ * (measured 2026-07-11: a 4B burned 15 consecutive vetoed rounds — 17 calls for 2 effective).
+ * At this many consecutive vetoes the loop stops and the forced-terminal close runs.
+ */
+export const VETO_STORM_LIMIT = 3;
+
+/** True when the turn is in a veto storm (see VETO_STORM_LIMIT). */
+export function vetoStormHit(ledger: TurnLedger): boolean {
+  return ledger.vetoStreak >= VETO_STORM_LIMIT;
 }
 
 export function createLedger(): TurnLedger {
-  return { observed: [], turnIndex: 0, producedThisTurn: [], turnCorrections: [], attachments: [], terminalReply: '' };
+  return { observed: [], turnIndex: 0, producedThisTurn: [], turnCorrections: [], attachments: [], terminalReply: '', vetoStreak: 0 };
 }
 
 /** Reset the per-turn fields (the conversation-scoped `observed` is kept). */
@@ -27,6 +42,7 @@ export function beginTurn(ledger: TurnLedger, turnIndex: number): void {
   ledger.turnCorrections = [];
   ledger.attachments = [];
   ledger.terminalReply = '';
+  ledger.vetoStreak = 0;
 }
 
 /** Structural success check on a tool result ({success:false} / {error} / {PREREQ_NOT_MET} ⇒ failed). */
@@ -42,10 +58,12 @@ export function resultOk(r: unknown): boolean {
 export function recordVeto(ledger: TurnLedger, name: string, args: Record<string, unknown>, correction: string): void {
   ledger.observed.push({ name, args, ok: false, turnIndex: ledger.turnIndex });
   ledger.turnCorrections.push(correction);
+  ledger.vetoStreak++;
 }
 
 /** Record an EXECUTED tool call's outcome (afterToolCall): ok flag, confirmation flag, produced label. */
 export function recordToolResult(ledger: TurnLedger, name: string, args: Record<string, unknown>, output: unknown): void {
+  ledger.vetoStreak = 0; // an executed call passed guards — the model is not looping
   const ok = output !== undefined && resultOk(output);
   const requiresConfirmation = (output as { requiresConfirmation?: unknown } | null | undefined)?.requiresConfirmation === true;
   ledger.observed.push({

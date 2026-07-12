@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { AgentSpecMinimal, confirmFirst } from '@looprun-ai/core';
 import type { AgentWorld, TrunkTheme } from '@looprun-ai/core';
-import { runSpecConversation } from '../src/index.js';
+import { repeatedToolCallStop, runSpecConversation } from '../src/index.js';
 import { scriptedModel } from './scripted-model.js';
 
 const THEME: TrunkTheme = {
@@ -79,5 +79,15 @@ describe('runSpecConversation', () => {
     await expect(
       runSpecConversation(spec, [{ userText: 'hi' }], { model: scriptedModel([]).model, world: world(), toolDefs: [] }),
     ).rejects.toThrow(/theme/);
+  });
+});
+
+describe('repeatedToolCallStop (lineage-exact anti-loop stop for local models)', () => {
+  const step = (calls: Array<[string, unknown]>) => ({ toolCalls: calls.map(([toolName, input]) => ({ toolName, input })) });
+  it('fires only when the same tool+args pair appears twice', () => {
+    expect(repeatedToolCallStop({ steps: [step([['a', { x: 1 }]]), step([['a', { x: 2 }]])] })).toBe(false);
+    expect(repeatedToolCallStop({ steps: [step([['a', { x: 1 }]]), step([['b', { x: 1 }]])] })).toBe(false);
+    expect(repeatedToolCallStop({ steps: [step([['a', { x: 1 }]]), step([['a', { x: 1 }]])] })).toBe(true);
+    expect(repeatedToolCallStop({ steps: [] })).toBe(false);
   });
 });

@@ -3,16 +3,29 @@
 looprun ships two **validated** local tiers behind a `ModelRuntimePort` (llama.cpp today; other
 runtimes plug into the same port later):
 
-| alias | size | tier | KV | ctx |
-|---|---|---|---|---|
-| `qwen3.5-4b` | ~2.9 GB | 8–16 GB machines, simple/few-tool agents | `q8_0` | 32k |
-| `qwen3.6-35b-a3b` | ~21 GB | 32 GB+, best local quality (MoE 35B-A3B) | `f16` | 64k |
+| alias | size | tier | KV | ctx | `--cache-ram` |
+|---|---|---|---|---|---|
+| `qwen3.5-4b` | ~2.9 GB | 8–16 GB machines, simple/few-tool agents | `f16` | 32k | 3072 MiB |
+| `qwen3.6-35b-a3b` | ~21 GB | 32 GB+, best local quality (MoE 35B-A3B) | `f16` | 64k | 16384 MiB |
 
 The launch profile is the **measured** recipe — not defaults:
-`--jinja -fa on -ngl 99 --mlock --no-mmap -np 1 -c <ctx> -ctk <kv> -ctv <kv>` on port 8081.
-`-np 1` keeps the shared prompt prefix permanently resident (the long-running-agent law); KV precision
-is per-model (f16 decodes ~1.7× faster than q8_0 for the 35B on Metal); MTP is never enabled (measured
-~0% speedup).
+`--jinja -fa on -ngl 99 --mlock --no-mmap -np 1 -c <ctx> -ctk <kv> -ctv <kv> -ctxcp 64
+--cache-ram <MiB> --slot-save-path <dir>` on port 8081. The same flags apply on Mac (Metal) and
+Windows/Linux (CUDA) — only the tier (model alias) changes per machine.
+
+- `-np 1` keeps the shared prompt prefix permanently resident (the long-running-agent law).
+- `-ctxcp` (context checkpoints) + `--cache-ram` (idle-slot RAM prompt cache) are **both
+  load-bearing** for the qwen3.5/3.6 hybrid family: checkpoints make any continuation warm (even
+  same-agent multi-turn), and the RAM cache keeps N distinct **agent trunks** warm across agent
+  switches — measured warm-switch TTFT 0.5–0.6 s vs 11–22 s cold. Never disable either.
+- KV precision is `f16` on every tier (measured: +23% decode vs q8_0 on the 4B, ~1.7× on the 35B —
+  weights dominate decode bandwidth; q8_0's per-token dequant is pure overhead). `q8_0` remains a
+  RAM escape hatch via `$LLAMA_KV=q8_0` (halves KV bytes + state-file sizes).
+- `--slot-save-path` (default `~/.cache/looprun/slot-states`; `$LLAMA_SLOT_SAVE_PATH`, empty
+  disables) enables per-agent trunk **state files**: bake a slot once at the trunk boundary, then
+  after any server restart a restore takes ≈20–30 ms (≈400× faster than the cold prefill) — zero
+  cold prefill across restarts. Zero cost when unused.
+- MTP is never enabled (measured ~0% speedup on Metal).
 
 ## Requirements
 
@@ -55,7 +68,10 @@ Opt-in auto-download (dev convenience, sensible for the 4B only):
 `await localModel('qwen3.5-4b', { autoDownload: true })`.
 
 Overrides: `$QWEN35_4B_GGUF` / `$QWEN36_35B_GGUF` (file paths), `$LLAMA_BIN`, `$LLAMA_PORT`,
-`$LLAMA_KV`, `$LLAMA_CTX`.
+`$LLAMA_KV`, `$LLAMA_CTX`, `$LLAMA_CACHE_RAM`, `$LLAMA_SLOT_SAVE_PATH`.
+
+Windows/CUDA notes: identical flags. On a 16 GB-VRAM box that wants the 35B tier, add `-ncmoe N`
+(offload the first N layers' MoE experts to CPU; raise N until it fits — needs ≥16 GB system RAM).
 
 ## Other runtimes
 

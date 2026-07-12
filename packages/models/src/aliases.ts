@@ -2,8 +2,12 @@
  * @looprun-ai/models — the validated local-model registry.
  *
  * Both entries were validated on the certified benchmark lineage (llama.cpp, Metal + CUDA):
- *  - KV precision is measured, not a guess: q8_0 for the 4B tier; f16 for the 35B-A3B
- *    (~1.7× faster decode than q8_0 on Metal — the GPU dequantizes q8_0 every token).
+ *  - KV precision is measured, not a guess: f16 on BOTH tiers (2026-07-11: +23% decode vs q8_0
+ *    on the 4B too; ~1.7× on the 35B-A3B — the GPU dequantizes q8_0 every token while the byte
+ *    saving buys nothing, since weights dominate decode bandwidth). q8_0 = RAM escape hatch only.
+ *  - cacheRamMiB (`--cache-ram`) is tiered: it is the idle-slot RAM prompt cache that keeps N
+ *    distinct agent trunks warm across agent switches (measured 2026-07-11: warm switch TTFT
+ *    0.5–0.6 s vs 11–22 s cold without it).
  *  - NON-MTP: multi-token prediction measured at ~0% speedup on Metal — never enabled.
  *  - Requires a llama.cpp build ≥ b9780 (older builds cannot load the qwen3.5/3.6 family).
  */
@@ -23,8 +27,9 @@ export const QWEN35_4B: LocalModelSpec = {
   envVar: 'QWEN35_4B_GGUF',
   hfRepo: 'unsloth/Qwen3.5-4B-GGUF',
   approxSizeGB: 2.9,
-  kv: 'q8_0',
+  kv: 'f16',
   ctx: 32768,
+  cacheRamMiB: 3072,
   port: 8081,
   servedId: 'qwen3.5-4b-gguf',
 };
@@ -39,6 +44,7 @@ export const QWEN36_35B_A3B: LocalModelSpec = {
   approxSizeGB: 21,
   kv: 'f16',
   ctx: 65536,
+  cacheRamMiB: 16384,
   port: 8081,
   servedId: 'qwen3.6-35b-gguf',
 };

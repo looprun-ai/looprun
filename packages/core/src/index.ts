@@ -33,11 +33,11 @@ export { renderScopedSpecTrunk, chainOrder } from './trunk.js';
 export type { TrunkTheme } from './trunk.js';
 export { validateSpec, MAX_TOOL_SURFACE } from './validate.js';
 export type { SpecWarning } from './validate.js';
-export { geminiThinkingOff, pinnedDecoding } from './model-params.js';
+export { geminiThinkingOff, pinnedDecoding, normalizeModelParams } from './model-params.js';
 
 // The governed-turn machine (framework-free) — consumed by backends.
 export type { ToolDef, TokenUsage, TurnInput, TurnRecord, RunResult, RuntimeTurnInput, RuntimeTurnRecord } from './runtime/types.js';
-export { createLedger, beginTurn, resultOk, recordVeto, recordToolResult, recordTerminal } from './runtime/ledger.js';
+export { createLedger, beginTurn, resultOk, recordVeto, recordToolResult, recordTerminal, vetoStormHit, VETO_STORM_LIMIT } from './runtime/ledger.js';
 export type { TurnLedger } from './runtime/ledger.js';
 export {
   TERMINAL_TOOLS,

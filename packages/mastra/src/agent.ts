@@ -30,6 +30,8 @@ import {
   finalizeReply,
   forcedTerminalPrompt,
   isTerminal,
+  normalizeModelParams,
+  vetoStormHit,
   renderScopedSpecTrunk,
   terminalProtocol,
   validateSpec,
@@ -38,7 +40,7 @@ import type { AgentSpec, AgentWorld, ObservedCall, ToolDef, TrunkTheme } from '@
 import { SessionStore } from './session.js';
 import type { LoopRunSession, WorldFactory } from './session.js';
 import { buildWorldTools, buildTerminalTools } from './tools.js';
-import { makeGuardHooks, makeInputProcessors } from './hooks.js';
+import { makeGuardHooks, makeInputProcessors, repeatedToolCallStop } from './hooks.js';
 import { worldFromTools } from './world-adapters.js';
 import type { StateView } from './world-adapters.js';
 import { DEFAULT_MAX_STEPS, DEFAULT_REDRIVES } from './run-conversation.js';
@@ -69,6 +71,9 @@ export interface LoopRunAgentConfig<W extends AgentWorld = AgentWorld> {
   model: any;
   /** Options spread into every internal generate (providerOptions / modelSettings / …). */
   modelParams?: Record<string, unknown>;
+  /** Stop the generation on the first repeated (tool+args) call — enable for LOCAL models
+   *  (mirrors the certified lineage, which gated it exactly this way). Default false. */
+  stopOnRepeatedToolCall?: boolean;
   /** The certified turn shape (terminal tools + toolChoice:'required'). Default true. */
   terminalProtocol?: boolean;
   maxSteps?: number;
@@ -119,6 +124,7 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
   private readonly nativeToolNames: string[];
   private readonly surface: Set<string>;
   private readonly modelParams: Record<string, unknown>;
+  private readonly stopOnRepeatedToolCall: boolean;
   private readonly maxStepsResolved: number;
   private readonly redrivesResolved: number;
   private readonly guardHooks: ReturnType<typeof makeGuardHooks>;
@@ -204,7 +210,11 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
     this.nativeToolsMode = nativeToolsMode;
     this.nativeToolNames = Object.keys(config.tools ?? {});
     this.surface = surface;
-    this.modelParams = config.modelParams ?? {};
+    // Normalize once at the seam: flat AI-SDK call settings (temperature, maxOutputTokens, …) are
+    // folded into `modelSettings` — Mastra silently drops them when spread top-level (measured
+    // 2026-07-11: a flat spread ran local models with the GGUF sampler — temp 1.0, no token cap).
+    this.modelParams = normalizeModelParams(config.modelParams ?? {});
+    this.stopOnRepeatedToolCall = config.stopOnRepeatedToolCall ?? false;
     this.maxStepsResolved = spec.controls.maxSteps ?? config.maxSteps ?? DEFAULT_MAX_STEPS;
     this.redrivesResolved = spec.controls.redrives ?? config.redrives ?? DEFAULT_REDRIVES;
     this.guardHooks = guardHooks;
@@ -306,9 +316,10 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
       return false;
     };
 
+    const repeatStop = this.stopOnRepeatedToolCall ? [repeatedToolCallStop] : [];
     const protocolOpts = this.terminalProtocolOn
-      ? { toolChoice: 'required', stopWhen: [stepCountIs(this.maxStepsResolved), terminalCalled] }
-      : { stopWhen: [stepCountIs(this.maxStepsResolved)] };
+      ? { toolChoice: 'required', stopWhen: [stepCountIs(this.maxStepsResolved), terminalCalled, () => vetoStormHit(session.ledger), ...repeatStop] }
+      : { stopWhen: [stepCountIs(this.maxStepsResolved), () => vetoStormHit(session.ledger), ...repeatStop] };
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const full: any = await (Agent.prototype.generate as any).call(this, msgs, {

@@ -21,10 +21,20 @@ export interface LocalModelSpec {
   hfRepo: string;
   /** Approximate download size, for consent prompts. */
   approxSizeGB: number;
-  /** KV cache precision (measured per model — q8_0 for the 4B tier, f16 for the 35B). */
+  /**
+   * KV cache precision — f16 on every tier (measured 2026-07-11: +23% decode vs q8_0 even on the
+   * 4B; weights dominate decode bandwidth, q8_0's per-token dequant is pure overhead). q8_0 is a
+   * RAM escape hatch only ($LLAMA_KV=q8_0).
+   */
   kv: 'q8_0' | 'f16';
   /** Context window. */
   ctx: number;
+  /**
+   * `--cache-ram` MiB — the idle-slot RAM prompt cache that keeps N distinct agent trunks warm
+   * on `-np 1` (one agent state ≈ 140–210 MB). NEVER 0 for the qwen3.5/3.6 hybrid family:
+   * without it every agent switch is a full re-prefill (11–22 s measured).
+   */
+  cacheRamMiB: number;
   /** Default server port. */
   port: number;
   /** The model id the OpenAI-compatible client sends (a label for llama-server). */

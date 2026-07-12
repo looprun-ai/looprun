@@ -16,7 +16,7 @@ export type { LoopRunSession, WorldFactory } from './session.js';
 export { worldFromTools } from './world-adapters.js';
 export type { StateView } from './world-adapters.js';
 export { buildWorldTools, buildTerminalTools } from './tools.js';
-export { makeGuardHooks, makeInputProcessors } from './hooks.js';
+export { makeGuardHooks, makeInputProcessors, repeatedToolCallStop } from './hooks.js';
 export type { GuardHooks } from './hooks.js';
 export { jsonSchemaToZodObject, jsonTypeToZod } from './json-schema-zod.js';
 

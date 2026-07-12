@@ -85,7 +85,7 @@ export async function runEval(config: EvalConfig, opts: RunOptions = {}): Promis
       for (const id of ids) {
         const c = byId.get(id);
         if (!c) throw new Error(`looprun-eval: unknown case "${id}".`);
-        const record = await runCase(config, spec, c, rep, resolved.model, resolved.modelParams);
+        const record = await runCase(config, spec, c, rep, resolved.model, resolved.modelParams, resolved.isLocal);
         dump.push(record);
         totCases++;
         tokensIn += record.tokensIn ?? 0;
@@ -147,6 +147,7 @@ async function runCase(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   model: any,
   modelParams: Record<string, unknown>,
+  isLocal = false,
 ): Promise<DumpRecordWithTokens> {
   const world = config.worldFactory(c.setup.preset, rep);
   const res = await runSpecConversation(spec, c.turns, {
@@ -157,6 +158,7 @@ async function runCase(
     ...(config.theme ? { theme: config.theme } : {}),
     ...(config.maxSteps != null ? { maxSteps: config.maxSteps } : {}),
     ...(config.redrives != null ? { redrives: config.redrives } : {}),
+    ...(isLocal ? { stopOnRepeatedToolCall: true } : {}),
   });
 
   // Observed EXECUTED calls (guard-denied calls never reach the world → absent here).

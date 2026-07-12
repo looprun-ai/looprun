@@ -1,16 +1,23 @@
 /**
  * @looprun-ai/models — the llama.cpp ModelRuntimePort (the v0 local runtime).
  *
- * Launch profile = the measured recipe (NON-MTP):
+ * Launch profile = the measured recipe (NON-MTP; trunk-warm law measured 2026-07-11):
  *   llama-server -m <gguf> --port <port> --jinja -fa on -ngl 99 --mlock --no-mmap -np 1
- *                -c <ctx> -ctk <kv> -ctv <kv>
+ *                -c <ctx> -ctk <kv> -ctv <kv> -ctxcp 64 --cache-ram <MiB> --slot-save-path <dir>
  *  - `-np 1` keeps the shared prompt prefix permanently resident (the long-running-agent law).
+ *  - `-ctxcp` (context checkpoints) + `--cache-ram` (idle-slot RAM prompt cache) are BOTH
+ *    load-bearing for the qwen3.5/3.6 hybrid family: checkpoints make ANY continuation warm
+ *    (even same-agent multi-turn), the RAM cache keeps N distinct agent trunks warm across
+ *    agent switches (warm switch TTFT 0.5–0.6 s vs 11–22 s cold). Never disable either.
+ *  - `--slot-save-path` enables per-agent trunk STATE FILES (bake once at the trunk boundary,
+ *    restore ≈20–30 ms after any restart via POST /slots/{i}?action=save|restore). Zero cost
+ *    when the /slots endpoints are unused.
  *  - NO `--spec-type` (MTP measured ~0% speedup on Metal — rejected).
  *  - Binary must be ≥ b9780 (older builds cannot load the qwen3.5/3.6 family) — resolved via
  *    $LLAMA_BIN, then ~/llamacpp-b9780/bin/llama-server, then `llama-server` on PATH.
  */
 import { spawn, spawnSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, mkdirSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { modelPath } from './aliases.js';
@@ -56,10 +63,19 @@ async function healthy(spec: LocalModelSpec): Promise<boolean> {
   }
 }
 
+/** The slot-state dir (`--slot-save-path`); $LLAMA_SLOT_SAVE_PATH overrides, '' disables. */
+export function slotStateDir(): string {
+  const fromEnv = process.env.LLAMA_SLOT_SAVE_PATH;
+  if (fromEnv !== undefined) return fromEnv.trim();
+  return join(homedir(), '.cache', 'looprun', 'slot-states');
+}
+
 export function launchFlags(spec: LocalModelSpec, model: string): string[] {
   const port = Number(process.env.LLAMA_PORT ?? spec.port);
   const kv = process.env.LLAMA_KV ?? spec.kv;
   const ctx = Number(process.env.LLAMA_CTX ?? spec.ctx);
+  const cacheRam = Number(process.env.LLAMA_CACHE_RAM ?? spec.cacheRamMiB);
+  const slotDir = slotStateDir();
   return [
     '-m', model,
     '--port', String(port),
@@ -71,6 +87,9 @@ export function launchFlags(spec: LocalModelSpec, model: string): string[] {
     '-c', String(ctx),
     '-ctk', kv,
     '-ctv', kv,
+    '-ctxcp', '64',
+    '--cache-ram', String(cacheRam),
+    ...(slotDir ? ['--slot-save-path', slotDir] : []),
   ];
 }
 
@@ -129,6 +148,8 @@ export class LlamaCppRuntime implements ModelRuntimePort {
     if (!binary.path) throw new Error(`looprun: ${binary.note}`);
     const model = await this.ensureModel(spec); // fails fast with the pull hint when missing
 
+    const slotDir = slotStateDir();
+    if (slotDir) mkdirSync(slotDir, { recursive: true }); // llama-server won't create it
     const child = spawn(binary.path, launchFlags(spec, model), {
       stdio: ['ignore', 'ignore', 'ignore'],
       detached: false,

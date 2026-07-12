@@ -13,7 +13,7 @@ import type { LocalModelSpec, ModelRuntimePort } from './port.js';
 
 export type { LocalModelSpec, ModelRuntimePort, RuntimeStatus, EnsureServerResult } from './port.js';
 export { MODEL_ALIASES, QWEN35_4B, QWEN36_35B_A3B, resolveAlias, modelPath } from './aliases.js';
-export { LlamaCppRuntime, launchFlags, serverBaseURL } from './llamacpp.js';
+export { LlamaCppRuntime, launchFlags, serverBaseURL, slotStateDir } from './llamacpp.js';
 export { downloadModel, downloadUrl } from './download.js';
 
 export interface LocalModelOptions {

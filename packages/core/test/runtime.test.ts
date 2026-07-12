@@ -7,6 +7,9 @@ import {
   resultOk,
   recordToolResult,
   recordTerminal,
+  recordVeto,
+  vetoStormHit,
+  VETO_STORM_LIMIT,
   evaluatePreTool,
   evaluateOnInput,
   finalizeReply,
@@ -179,5 +182,20 @@ describe('finalizeReply pipeline', () => {
     expect(msg).toContain('- r1');
     expect(msg).toContain('- r2');
     expect(msg).toContain('Do NOT call a tool');
+  });
+});
+
+describe('veto-storm breaker (a vetoed model with toolChoice required cannot stop on its own)', () => {
+  it('trips after VETO_STORM_LIMIT consecutive vetoes and resets on an executed call or new turn', () => {
+    const ledger = createLedger();
+    for (let i = 0; i < VETO_STORM_LIMIT - 1; i++) recordVeto(ledger, 't', {}, 'run:noDuplicateCall:t');
+    expect(vetoStormHit(ledger)).toBe(false);
+    recordVeto(ledger, 't', {}, 'run:noDuplicateCall:t');
+    expect(vetoStormHit(ledger)).toBe(true);
+    recordToolResult(ledger, 't', {}, { success: true }); // an executed call passed guards
+    expect(vetoStormHit(ledger)).toBe(false);
+    recordVeto(ledger, 't', {}, 'run:noDuplicateCall:t');
+    beginTurn(ledger, 1); // new turn resets the streak
+    expect(ledger.vetoStreak).toBe(0);
   });
 });

@@ -24,12 +24,14 @@ import {
   finalizeReply,
   forcedTerminalPrompt,
   isTerminal,
+  normalizeModelParams,
+  vetoStormHit,
   renderScopedSpecTrunk,
   terminalProtocol,
 } from '@looprun-ai/core';
 import type { AgentSpec, AgentWorld, TokenUsage, ToolDef, TrunkTheme, TurnInput, TurnRecord, RunResult } from '@looprun-ai/core';
 import { buildWorldTools } from './tools.js';
-import { makeGuardHooks, makeInputProcessors } from './hooks.js';
+import { makeGuardHooks, makeInputProcessors, repeatedToolCallStop } from './hooks.js';
 import type { LoopRunSession } from './session.js';
 
 export const DEFAULT_MAX_STEPS = 16;
@@ -42,6 +44,9 @@ export interface RuntimeDeps {
   model: any;
   /** Options spread into every generate() call (providerOptions / modelSettings / …). */
   modelParams?: Record<string, unknown>;
+  /** Stop the generation on the first repeated (tool+args) call — enable for LOCAL models
+   *  (mirrors the certified lineage, which gated it exactly this way). Default false. */
+  stopOnRepeatedToolCall?: boolean;
   /** The domain world seam (read + exec). */
   world: AgentWorld;
   /** Tool defs (name/description/JSON-schema) for the surface + terminal tools. */
@@ -67,7 +72,7 @@ export async function runSpecConversation(spec: AgentSpec, turns: TurnInput[], d
   if (!theme && !spec.surface.systemPrompt) {
     throw new Error(`runSpecConversation: spec "${spec.id}" has no theme — pass deps.theme or set spec.theme.`);
   }
-  const genParams = deps.modelParams ?? {};
+  const genParams = normalizeModelParams(deps.modelParams ?? {}); // flat call settings → modelSettings (Mastra drops them top-level)
   const maxSteps = spec.controls.maxSteps ?? deps.maxSteps ?? DEFAULT_MAX_STEPS;
   const redrives = spec.controls.redrives ?? deps.redrives ?? DEFAULT_REDRIVES;
   const surface = new Set(spec.surface.tools);
@@ -148,7 +153,8 @@ export async function runSpecConversation(spec: AgentSpec, turns: TurnInput[], d
       const full: any = await (agent.generate as any)(messages, {
         activeTools,
         toolChoice: 'required',
-        stopWhen: [stepCountIs(maxSteps), terminalCalled],
+        stopWhen: [stepCountIs(maxSteps), terminalCalled, () => vetoStormHit(session.ledger),
+          ...(deps.stopOnRepeatedToolCall ? [repeatedToolCallStop] : [])],
         hooks: guardHooks,
         ...(inputProcessors ? { inputProcessors } : {}),
         ...genParams,
