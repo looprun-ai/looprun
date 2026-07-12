@@ -4,16 +4,18 @@
  *
  * Bucket (by TOOL-NEED, never intent): the request→quote lifecycle end-to-end — catalog reads,
  * find/create customer, open request, create+send quote, record the customer's decision, notify.
- * 11 tools ≤ 15. Layer: AgentSpecMinimal — NO confirmed-flag destructive tool in this surface
- * (cancelJob lives with the scheduling agent, the lifecycle owner of jobs).
+ * 11 tools ≤ 15. NO confirmed-flag destructive tool in this surface (cancelJob lives with the
+ * scheduling agent, the lifecycle owner of jobs) — so AgentSpecBase installs only the universal
+ * invariants (no destructive layer).
  *
  * // UNCHECKABLE: never give DIY repair/hazard instructions (office assistant, not a licensed
  * //              technician) — no observable state key; conditioned prose + eval dimension only.
  * // UNCHECKABLE: scheduling/rescheduling/cancelling belongs to the scheduling agent — say so
  * //              rather than improvise; no state key — conditioned prose + eval dimension only.
  */
-import { AgentSpecMinimal, custom, jargonScrub, maxCallsPerTurn, noFalseFailureClaim, replyNoProductionClaim } from 'looprun';
+import { AgentSpecBase, custom, jargonScrub, maxCallsPerTurn, noFalseFailureClaim, replyNoProductionClaim } from 'looprun';
 import { HOMESERVICES_THEME } from './theme.js';
+import { FALSE_FAILURE_CLAIM_RE } from './lexicon.js';
 
 type IntakeWorld = {
   hasCustomer(id: string): boolean;
@@ -21,7 +23,7 @@ type IntakeWorld = {
   hasQuote(id: string): boolean;
 };
 
-export class AgentSpecIntakeQuoting extends AgentSpecMinimal {
+export class AgentSpecIntakeQuoting extends AgentSpecBase {
   constructor() {
     super({
       id: 'intake-quoting',
@@ -120,7 +122,7 @@ export class AgentSpecIntakeQuoting extends AgentSpecMinimal {
     );
 
     // Behavior gates.
-    this.addReplyCheck(noFalseFailureClaim(), { id: 'agent:noFalseFailureClaim' });
+    this.addReplyCheck(noFalseFailureClaim({ claimRe: FALSE_FAILURE_CLAIM_RE }), { id: 'agent:noFalseFailureClaim' });
     // Measured iteration 2 (case 11): this agent has NO cancellation/booking tool, so ANY
     // commitment-to-cancel phrasing is out of scope by construction (commitment/completion forms
     // only — "the scheduling agent handles cancellations" does not match).

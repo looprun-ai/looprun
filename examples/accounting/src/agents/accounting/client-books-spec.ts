@@ -15,7 +15,7 @@
  * //              residual gap (REVIEW.md).
  */
 import { AgentSpecBase, custom, jargonScrub, noFalseFailureClaim } from 'looprun';
-import { destructiveClaimRequiresAttemptedSuccess, pendingConfirmUnlessResolved } from './guards.js';
+import { FALSE_FAILURE_CLAIM_RE, destructiveClaimRequiresAttemptedSuccess, pendingConfirmUnlessResolved } from './guards.js';
 import { ACCOUNTING_THEME } from './theme.js';
 
 /** The per-id state reads the reversal gate needs (world accessors via the ctx closure). */
@@ -90,7 +90,7 @@ export class AgentSpecClientBooks extends AgentSpecBase {
       ),
       { id: 'agent:destructiveClaimRequiresAttemptedSuccess' },
     );
-    this.addReplyCheck(noFalseFailureClaim(), { id: 'agent:noFalseFailureClaim' });
+    this.addReplyCheck(noFalseFailureClaim({ claimRe: FALSE_FAILURE_CLAIM_RE }), { id: 'agent:noFalseFailureClaim' });
 
     // Deterministic egress rewrite of internal enum spellings.
     this.addMutator(jargonScrub({ cash_basis: 'cash basis' }), { id: 'agent:jargonScrub' });

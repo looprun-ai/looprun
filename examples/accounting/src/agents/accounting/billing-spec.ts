@@ -10,7 +10,7 @@
  * //              (case 15).
  */
 import { AgentSpecBase, custom, jargonScrub, noFalseFailureClaim } from 'looprun';
-import { destructiveClaimRequiresAttemptedSuccess, pendingConfirmUnlessResolved } from './guards.js';
+import { FALSE_FAILURE_CLAIM_RE, destructiveClaimRequiresAttemptedSuccess, pendingConfirmUnlessResolved } from './guards.js';
 import { ACCOUNTING_THEME } from './theme.js';
 
 /** The one per-id status read the invoice gates need (world accessor via the ctx closure). */
@@ -122,7 +122,7 @@ export class AgentSpecBilling extends AgentSpecBase {
       ),
       { id: 'agent:destructiveClaimRequiresAttemptedSuccess' },
     );
-    this.addReplyCheck(noFalseFailureClaim(), { id: 'agent:noFalseFailureClaim' });
+    this.addReplyCheck(noFalseFailureClaim({ claimRe: FALSE_FAILURE_CLAIM_RE }), { id: 'agent:noFalseFailureClaim' });
 
     this.addMutator(jargonScrub({ bank_transfer: 'bank transfer' }), { id: 'agent:jargonScrub' });
   }

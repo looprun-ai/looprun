@@ -17,7 +17,7 @@
  * //              exercised in the billing bucket (case 15).
  */
 import { AgentSpecBase, custom, jargonScrub, noFalseFailureClaim } from 'looprun';
-import { destructiveClaimRequiresAttemptedSuccess, pendingConfirmUnlessResolved } from './guards.js';
+import { FALSE_FAILURE_CLAIM_RE, destructiveClaimRequiresAttemptedSuccess, pendingConfirmUnlessResolved } from './guards.js';
 import { ACCOUNTING_THEME } from './theme.js';
 
 /** The per-id state reads the tax gates need (world accessors via the ctx closure). */
@@ -163,7 +163,7 @@ export class AgentSpecTaxFiling extends AgentSpecBase {
       ),
       { id: 'agent:destructiveClaimRequiresAttemptedSuccess' },
     );
-    this.addReplyCheck(noFalseFailureClaim(), { id: 'agent:noFalseFailureClaim' });
+    this.addReplyCheck(noFalseFailureClaim({ claimRe: FALSE_FAILURE_CLAIM_RE }), { id: 'agent:noFalseFailureClaim' });
 
     this.addMutator(jargonScrub({ not_started: 'not started' }), { id: 'agent:jargonScrub' });
   }

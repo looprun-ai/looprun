@@ -25,6 +25,7 @@ import {
   requiresBefore,
 } from 'looprun';
 import { HOMESERVICES_THEME } from './theme.js';
+import { CONFIRM_ASK_RE, FALSE_FAILURE_CLAIM_RE, OFFER_OR_CONDITIONAL_RE } from './lexicon.js';
 
 type SchedulingWorld = {
   hasJob(id: string): boolean;
@@ -137,16 +138,17 @@ export class AgentSpecScheduling extends AgentSpecBase {
     );
 
     // Behavior gates — the shared kinds carry the confirm-probe + honest-failure exemptions.
-    this.addReplyCheck(pendingConfirmMustAsk(), { id: 'agent:pendingConfirmMustAsk' });
+    this.addReplyCheck(pendingConfirmMustAsk({ askRe: CONFIRM_ASK_RE }), { id: 'agent:pendingConfirmMustAsk' });
     this.addReplyCheck(
-      destructiveClaimRequiresSuccess(
-        ['cancelJob'],
-        /\b(cancell?ed|called off|deleted|removed)\b/i,
-        /\b(already|cannot|can'?t|could not|couldn'?t|won'?t|unable|not)\b/i,
-      ),
+      destructiveClaimRequiresSuccess(['cancelJob'], {
+        claimRe: /\b(cancell?ed|called off|deleted|removed)\b/i,
+        askRe: CONFIRM_ASK_RE,
+        offerRe: OFFER_OR_CONDITIONAL_RE,
+        exemptRe: /\b(already|cannot|can'?t|could not|couldn'?t|won'?t|unable|not)\b/i,
+      }),
       { id: 'agent:destructiveClaimRequiresSuccess' },
     );
-    this.addReplyCheck(noFalseFailureClaim(), { id: 'agent:noFalseFailureClaim' });
+    this.addReplyCheck(noFalseFailureClaim({ claimRe: FALSE_FAILURE_CLAIM_RE }), { id: 'agent:noFalseFailureClaim' });
 
     // Egress scrub: internal field jargon → user words.
     this.addMutator(

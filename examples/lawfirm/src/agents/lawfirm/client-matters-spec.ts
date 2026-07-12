@@ -17,6 +17,7 @@
 import { AgentSpecBase, custom, destructiveClaimRequiresSuccess, jargonScrub, noFalseFailureClaim, pendingConfirmMustAsk, requiresBefore } from 'looprun';
 import type { GuardCtx } from 'looprun';
 import { LAWFIRM_THEME } from './theme.js';
+import { CONFIRM_ASK_RE, FALSE_FAILURE_CLAIM_RE, OFFER_OR_CONDITIONAL_RE } from './lexicon.js';
 
 export class AgentSpecClientMatters extends AgentSpecBase {
   constructor() {
@@ -132,18 +133,19 @@ export class AgentSpecClientMatters extends AgentSpecBase {
 
     // Reply honesty: a pending confirmation must be relayed; "closed" claims need a confirmed
     // success this turn (confirm-probe and honest-failure phrasings exempt).
-    this.addReplyCheck(pendingConfirmMustAsk(), { id: 'agent:pendingConfirmMustAsk' });
+    this.addReplyCheck(pendingConfirmMustAsk({ askRe: CONFIRM_ASK_RE }), { id: 'agent:pendingConfirmMustAsk' });
     this.addReplyCheck(
-      destructiveClaimRequiresSuccess(
-        ['closeMatter'],
-        /\bmatter\b[^.!?\n]{0,60}\bclosed\b|\bclosed\b[^.!?\n]{0,60}\bmatter\b/i,
+      destructiveClaimRequiresSuccess(['closeMatter'], {
+        claimRe: /\bmatter\b[^.!?\n]{0,60}\bclosed\b|\bclosed\b[^.!?\n]{0,60}\bmatter\b/i,
+        askRe: CONFIRM_ASK_RE,
+        offerRe: OFFER_OR_CONDITIONAL_RE,
         // Exempt honest failures/negations AND truthful STATUS reports ("m_4001 is closed") —
         // fresh-action claims ("is now closed", "has been closed") stay guarded.
-        /\b(cannot|can't|could not|couldn't|not|no|already|unable|blocked|before|must)\b|\b(is|was|remains)\s+(already\s+)?closed\b|\?/i,
-      ),
+        exemptRe: /\b(cannot|can't|could not|couldn't|not|no|already|unable|blocked|before|must)\b|\b(is|was|remains)\s+(already\s+)?closed\b|\?/i,
+      }),
       { id: 'agent:destructiveClaimRequiresSuccess' },
     );
-    this.addReplyCheck(noFalseFailureClaim(), { id: 'agent:noFalseFailureClaim' });
+    this.addReplyCheck(noFalseFailureClaim({ claimRe: FALSE_FAILURE_CLAIM_RE }), { id: 'agent:noFalseFailureClaim' });
 
     // Egress scrub: internal result vocabulary never reaches the user verbatim.
     this.addMutator(jargonScrub({ requiresConfirmation: 'awaiting your confirmation' }), {

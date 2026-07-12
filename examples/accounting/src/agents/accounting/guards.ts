@@ -24,6 +24,14 @@ const CONFIRM_ASK = /\?|\b(?:confirm|are you sure|do you want|would you like|sha
 /** Confirm-LANGUAGE only (no bare `?`) — the claim check's probe-relay exemption (N3 round-2 b). */
 const CONFIRM_LANG = /\b(?:confirm|are you sure|do you want|would you like|shall i|proceed|go ahead)\b/i;
 
+/**
+ * en-US LEXICON for the runtime's domain-neutral `noFalseFailureClaim({ claimRe })` guard — the STRINGS
+ * live in the business bundle (the domain-neutrality law: @looprun-ai/core carries no linguistic pattern).
+ * A false "I couldn't do X" claim about an action that actually succeeded (inability phrase + action verb).
+ */
+export const FALSE_FAILURE_CLAIM_RE =
+  /(cannot|can'?t|could ?not|couldn'?t|unable to|not able to|failed to|failed)[^.!?\n]{0,40}(updat|sav|creat|send|sent|record|regist|void|draft|invoic|payment|remind|file|fil|reconcil|appli|apply|mark|clos|open)/i;
+
 /** The record id an accounting tool call acts on (first domain-id-shaped string arg), or null. */
 function recordId(args: Record<string, unknown>): string | null {
   for (const v of Object.values(args)) {

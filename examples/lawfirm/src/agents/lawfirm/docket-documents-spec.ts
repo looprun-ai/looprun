@@ -17,6 +17,7 @@
 import { AgentSpecBase, custom, destructiveClaimRequiresSuccess, jargonScrub, maxCallsPerTurn, noFalseFailureClaim, pendingConfirmMustAsk, requiresBefore } from 'looprun';
 import type { GuardCtx } from 'looprun';
 import { LAWFIRM_THEME } from './theme.js';
+import { CONFIRM_ASK_RE, FALSE_FAILURE_CLAIM_RE, OFFER_OR_CONDITIONAL_RE } from './lexicon.js';
 
 export class AgentSpecDocketDocuments extends AgentSpecBase {
   constructor() {
@@ -200,15 +201,16 @@ export class AgentSpecDocketDocuments extends AgentSpecBase {
 
     // Reply honesty: relay pending confirmations; "cancelled" claims need a confirmed success
     // (confirm-probe + honest-failure exemptions); no phantom "sent" on a failed notification.
-    this.addReplyCheck(pendingConfirmMustAsk(), { id: 'agent:pendingConfirmMustAsk' });
+    this.addReplyCheck(pendingConfirmMustAsk({ askRe: CONFIRM_ASK_RE }), { id: 'agent:pendingConfirmMustAsk' });
     this.addReplyCheck(
-      destructiveClaimRequiresSuccess(
-        ['cancelDeadline'],
-        /\bcancel(?:led|ed)\b/i,
+      destructiveClaimRequiresSuccess(['cancelDeadline'], {
+        claimRe: /\bcancel(?:led|ed)\b/i,
+        askRe: CONFIRM_ASK_RE,
+        offerRe: OFFER_OR_CONDITIONAL_RE,
         // Exempt honest failures/negations AND truthful STATUS reports ("dl_602 is cancelled") —
         // fresh-action claims ("has been cancelled", "I cancelled") stay guarded.
-        /\b(cannot|can't|could not|couldn't|not|no|already|unable|immutable|filed)\b|\b(is|was|remains)\s+(already\s+)?cancelled\b|\?/i,
-      ),
+        exemptRe: /\b(cannot|can't|could not|couldn't|not|no|already|unable|immutable|filed)\b|\b(is|was|remains)\s+(already\s+)?cancelled\b|\?/i,
+      }),
       { id: 'agent:destructiveClaimRequiresSuccess' },
     );
     this.addReplyCheck(
@@ -236,7 +238,7 @@ export class AgentSpecDocketDocuments extends AgentSpecBase {
       }),
       { id: 'agent:noPhantomNotification' },
     );
-    this.addReplyCheck(noFalseFailureClaim(), { id: 'agent:noFalseFailureClaim' });
+    this.addReplyCheck(noFalseFailureClaim({ claimRe: FALSE_FAILURE_CLAIM_RE }), { id: 'agent:noFalseFailureClaim' });
 
     // Egress scrub: internal result vocabulary never reaches the user verbatim.
     this.addMutator(jargonScrub({ requiresConfirmation: 'awaiting your confirmation' }), {
