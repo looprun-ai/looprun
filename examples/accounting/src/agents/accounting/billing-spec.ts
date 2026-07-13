@@ -9,8 +9,8 @@
  * //              reply must say it cannot verify them — conditioned prose + eval dimension only
  * //              (case 15).
  */
-import { AgentSpecBase, custom, jargonScrub, noFalseFailureClaim } from 'looprun';
-import { FALSE_FAILURE_CLAIM_RE, destructiveClaimRequiresAttemptedSuccess, pendingConfirmUnlessResolved } from './guards.js';
+import { AgentSpecBase, custom, destructiveClaimRequiresSuccess, jargonScrub, pendingConfirmMustAsk } from 'looprun';
+import { CONFIRM_ASK_RE, CONFIRM_LANG_RE, FALSE_FAILURE_CLAIM_RE, OFFER_OR_CONDITIONAL_RE } from './lexicon.js';
 import { ACCOUNTING_THEME } from './theme.js';
 
 /** The one per-id status read the invoice gates need (world accessor via the ctx closure). */
@@ -41,6 +41,8 @@ export class AgentSpecBilling extends AgentSpecBase {
         'sendClientNotification',
       ],
       destructiveTools: ['sendInvoice', 'recordPayment', 'voidInvoice'],
+      // Reply-honesty invariant auto-installed as minimal:noFalseFailureClaim (see installMinimal).
+      lexicon: { falseFailureClaimRe: FALSE_FAILURE_CLAIM_RE },
       theme: ACCOUNTING_THEME,
       behavior: [
         'When the user asks for an invoice and gives client, amount, and purpose, create the DRAFT directly this turn (creation needs no confirmation); sending it is the two-step part — relay the send-confirmation question and stop.',
@@ -112,17 +114,20 @@ export class AgentSpecBilling extends AgentSpecBase {
       { id: 'agent:payableOnlySent' },
     );
 
-    // Reply honesty — attempt-keyed + resolution-aware local factories (see ./guards.ts).
-    this.addReplyCheck(pendingConfirmUnlessResolved(), { id: 'agent:pendingConfirmUnlessResolved' });
+    // Reply honesty — the shared kinds are now attempt-keyed (destructiveClaimRequiresSuccess) and
+    // resolution-aware (pendingConfirmMustAsk), subsuming the former local variants. The claim-check's
+    // probe-relay exemption uses CONFIRM_LANG_RE (no bare `?`) so a trailing "…paid! Anything else?"
+    // cannot mask a declarative claim (N3 round-2 b); the must-ask relay uses CONFIRM_ASK_RE (with `?`).
+    this.addReplyCheck(pendingConfirmMustAsk({ askRe: CONFIRM_ASK_RE }), { id: 'agent:pendingConfirmMustAsk' });
     this.addReplyCheck(
-      destructiveClaimRequiresAttemptedSuccess(
-        ['sendInvoice', 'recordPayment', 'voidInvoice'],
-        /\b(?:invoice[^.!?\n]{0,40}\b(?:sent|voided|paid)|(?:sent|voided)[^.!?\n]{0,40}\binvoice|marked (?:it |the invoice )?(?:as )?paid|payment[^.!?\n]{0,30}\brecorded|recorded[^.!?\n]{0,30}\bpayment)\b/i,
-        /\b(?:already|cannot|can['’]?t|could not|couldn['’]?t|not|unable|hasn['’]?t|haven['’]?t|isn['’]?t|wasn['’]?t|yet|pending|overdue|reminder|notification|notice)\b/i,
-      ),
-      { id: 'agent:destructiveClaimRequiresAttemptedSuccess' },
+      destructiveClaimRequiresSuccess(['sendInvoice', 'recordPayment', 'voidInvoice'], {
+        claimRe: /\b(?:invoice[^.!?\n]{0,40}\b(?:sent|voided|paid)|(?:sent|voided)[^.!?\n]{0,40}\binvoice|marked (?:it |the invoice )?(?:as )?paid|payment[^.!?\n]{0,30}\brecorded|recorded[^.!?\n]{0,30}\bpayment)\b/i,
+        askRe: CONFIRM_LANG_RE,
+        offerRe: OFFER_OR_CONDITIONAL_RE,
+        exemptRe: /\b(?:already|cannot|can['’]?t|could not|couldn['’]?t|not|unable|hasn['’]?t|haven['’]?t|isn['’]?t|wasn['’]?t|yet|pending|overdue|reminder|notification|notice)\b/i,
+      }),
+      { id: 'agent:destructiveClaimRequiresSuccess' },
     );
-    this.addReplyCheck(noFalseFailureClaim({ claimRe: FALSE_FAILURE_CLAIM_RE }), { id: 'agent:noFalseFailureClaim' });
 
     this.addMutator(jargonScrub({ bank_transfer: 'bank transfer' }), { id: 'agent:jargonScrub' });
   }

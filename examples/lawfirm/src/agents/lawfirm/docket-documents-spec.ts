@@ -14,7 +14,7 @@
  * //              rescheduling a deadline in place (the legal path is cancel-with-confirm +
  * //              create-new) → honest refusal/explanation (intent-keyed; conditioned prose + eval).
  */
-import { AgentSpecBase, custom, destructiveClaimRequiresSuccess, jargonScrub, maxCallsPerTurn, noFalseFailureClaim, pendingConfirmMustAsk, requiresBefore } from 'looprun';
+import { AgentSpecBase, custom, destructiveClaimRequiresSuccess, jargonScrub, maxCallsPerTurn, pendingConfirmMustAsk, requiresBefore } from 'looprun';
 import type { GuardCtx } from 'looprun';
 import { LAWFIRM_THEME } from './theme.js';
 import { CONFIRM_ASK_RE, FALSE_FAILURE_CLAIM_RE, OFFER_OR_CONDITIONAL_RE } from './lexicon.js';
@@ -44,6 +44,8 @@ export class AgentSpecDocketDocuments extends AgentSpecBase {
       ],
       destructiveTools: ['cancelDeadline'],
       flow: [{ from: 'listDeadlines', to: 'cancelDeadline' }],
+      // Reply-honesty invariant auto-installed as minimal:noFalseFailureClaim (see installMinimal).
+      lexicon: { falseFailureClaimRe: FALSE_FAILURE_CLAIM_RE },
       theme: LAWFIRM_THEME,
       behavior: [
         // NO persona line here — the runtime prepends the persona field above.
@@ -238,7 +240,6 @@ export class AgentSpecDocketDocuments extends AgentSpecBase {
       }),
       { id: 'agent:noPhantomNotification' },
     );
-    this.addReplyCheck(noFalseFailureClaim({ claimRe: FALSE_FAILURE_CLAIM_RE }), { id: 'agent:noFalseFailureClaim' });
 
     // Egress scrub: internal result vocabulary never reaches the user verbatim.
     this.addMutator(jargonScrub({ requiresConfirmation: 'awaiting your confirmation' }), {

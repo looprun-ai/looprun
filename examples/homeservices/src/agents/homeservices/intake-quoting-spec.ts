@@ -13,7 +13,7 @@
  * // UNCHECKABLE: scheduling/rescheduling/cancelling belongs to the scheduling agent — say so
  * //              rather than improvise; no state key — conditioned prose + eval dimension only.
  */
-import { AgentSpecBase, custom, jargonScrub, maxCallsPerTurn, noFalseFailureClaim, replyNoProductionClaim } from 'looprun';
+import { AgentSpecBase, custom, jargonScrub, maxCallsPerTurn, replyNoProductionClaim } from 'looprun';
 import { HOMESERVICES_THEME } from './theme.js';
 import { FALSE_FAILURE_CLAIM_RE } from './lexicon.js';
 
@@ -44,6 +44,8 @@ export class AgentSpecIntakeQuoting extends AgentSpecBase {
         'sendNotification',
         'listNotifications',
       ],
+      // Reply-honesty invariant auto-installed as minimal:noFalseFailureClaim (see installMinimal).
+      lexicon: { falseFailureClaimRe: FALSE_FAILURE_CLAIM_RE },
       theme: HOMESERVICES_THEME,
       behavior: [
         // Every line CONDITIONED (Bucket-A): "when X, do Y" — never a bare state assertion.
@@ -121,8 +123,7 @@ export class AgentSpecIntakeQuoting extends AgentSpecBase {
       { id: 'agent:notificationCap' },
     );
 
-    // Behavior gates.
-    this.addReplyCheck(noFalseFailureClaim({ claimRe: FALSE_FAILURE_CLAIM_RE }), { id: 'agent:noFalseFailureClaim' });
+    // Behavior gates. (noFalseFailureClaim now auto-installs as minimal:noFalseFailureClaim via lexicon.)
     // Measured iteration 2 (case 11): this agent has NO cancellation/booking tool, so ANY
     // commitment-to-cancel phrasing is out of scope by construction (commitment/completion forms
     // only — "the scheduling agent handles cancellations" does not match).

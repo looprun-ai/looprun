@@ -16,8 +16,8 @@
  * //              reply must say it cannot verify them — conditioned prose; the eval dimension is
  * //              exercised in the billing bucket (case 15).
  */
-import { AgentSpecBase, custom, jargonScrub, noFalseFailureClaim } from 'looprun';
-import { FALSE_FAILURE_CLAIM_RE, destructiveClaimRequiresAttemptedSuccess, pendingConfirmUnlessResolved } from './guards.js';
+import { AgentSpecBase, custom, destructiveClaimRequiresSuccess, jargonScrub, pendingConfirmMustAsk } from 'looprun';
+import { CONFIRM_ASK_RE, CONFIRM_LANG_RE, FALSE_FAILURE_CLAIM_RE, OFFER_OR_CONDITIONAL_RE } from './lexicon.js';
 import { ACCOUNTING_THEME } from './theme.js';
 
 /** The per-id state reads the tax gates need (world accessors via the ctx closure). */
@@ -46,6 +46,8 @@ export class AgentSpecTaxFiling extends AgentSpecBase {
         'sendClientNotification',
       ],
       destructiveTools: ['submitFiling', 'cancelTaxDeadline'],
+      // Reply-honesty invariant auto-installed as minimal:noFalseFailureClaim (see installMinimal).
+      lexicon: { falseFailureClaimRe: FALSE_FAILURE_CLAIM_RE },
       theme: ACCOUNTING_THEME,
       behavior: [
         'When asked about deadlines or filing status, read listTaxDeadlines first and report exactly what it returns — flag overdue deadlines plainly; never soften or invent a status.',
@@ -153,17 +155,19 @@ export class AgentSpecTaxFiling extends AgentSpecBase {
       { id: 'agent:filingMustBePrepared' },
     );
 
-    // Reply honesty — attempt-keyed + resolution-aware local factories (see ./guards.ts).
-    this.addReplyCheck(pendingConfirmUnlessResolved(), { id: 'agent:pendingConfirmUnlessResolved' });
+    // Reply honesty — the shared kinds are now attempt-keyed (destructiveClaimRequiresSuccess) and
+    // resolution-aware (pendingConfirmMustAsk), subsuming the former local variants. Claim-check
+    // probe-relay uses CONFIRM_LANG_RE (no bare `?`); must-ask uses CONFIRM_ASK_RE.
+    this.addReplyCheck(pendingConfirmMustAsk({ askRe: CONFIRM_ASK_RE }), { id: 'agent:pendingConfirmMustAsk' });
     this.addReplyCheck(
-      destructiveClaimRequiresAttemptedSuccess(
-        ['submitFiling', 'cancelTaxDeadline'],
-        /\b(?:submitted|filed|cancell?ed)\b/i,
-        /\b(?:already|cannot|can['’]?t|could not|couldn['’]?t|not|unable|hasn['’]?t|haven['’]?t|isn['’]?t|wasn['’]?t|yet|pending|overdue)\b/i,
-      ),
-      { id: 'agent:destructiveClaimRequiresAttemptedSuccess' },
+      destructiveClaimRequiresSuccess(['submitFiling', 'cancelTaxDeadline'], {
+        claimRe: /\b(?:submitted|filed|cancell?ed)\b/i,
+        askRe: CONFIRM_LANG_RE,
+        offerRe: OFFER_OR_CONDITIONAL_RE,
+        exemptRe: /\b(?:already|cannot|can['’]?t|could not|couldn['’]?t|not|unable|hasn['’]?t|haven['’]?t|isn['’]?t|wasn['’]?t|yet|pending|overdue)\b/i,
+      }),
+      { id: 'agent:destructiveClaimRequiresSuccess' },
     );
-    this.addReplyCheck(noFalseFailureClaim({ claimRe: FALSE_FAILURE_CLAIM_RE }), { id: 'agent:noFalseFailureClaim' });
 
     this.addMutator(jargonScrub({ not_started: 'not started' }), { id: 'agent:jargonScrub' });
   }

@@ -14,8 +14,8 @@
  * //              covers the advice side (case 22); the execution-side probe is a logged
  * //              residual gap (REVIEW.md).
  */
-import { AgentSpecBase, custom, jargonScrub, noFalseFailureClaim } from 'looprun';
-import { FALSE_FAILURE_CLAIM_RE, destructiveClaimRequiresAttemptedSuccess, pendingConfirmUnlessResolved } from './guards.js';
+import { AgentSpecBase, custom, destructiveClaimRequiresSuccess, jargonScrub, pendingConfirmMustAsk } from 'looprun';
+import { CONFIRM_ASK_RE, CONFIRM_LANG_RE, FALSE_FAILURE_CLAIM_RE, OFFER_OR_CONDITIONAL_RE } from './lexicon.js';
 import { ACCOUNTING_THEME } from './theme.js';
 
 /** The per-id state reads the reversal gate needs (world accessors via the ctx closure). */
@@ -42,6 +42,8 @@ export class AgentSpecClientBooks extends AgentSpecBase {
         'getAccountSummary',
       ],
       destructiveTools: ['reverseEntry'],
+      // Reply-honesty invariant auto-installed as minimal:noFalseFailureClaim (see installMinimal).
+      lexicon: { falseFailureClaimRe: FALSE_FAILURE_CLAIM_RE },
       theme: ACCOUNTING_THEME,
       behavior: [
         // Every line CONDITIONED (Bucket-A): "when X, do Y" — never a bare state assertion.
@@ -79,18 +81,19 @@ export class AgentSpecClientBooks extends AgentSpecBase {
       { id: 'agent:entryReversedOnce' },
     );
 
-    // Reply honesty (behavior dim) — attempt-keyed + resolution-aware local factories (see
-    // ./guards.ts; they keep the confirm-probe and honest-failure exemptions).
-    this.addReplyCheck(pendingConfirmUnlessResolved(), { id: 'agent:pendingConfirmUnlessResolved' });
+    // Reply honesty (behavior dim) — the shared kinds are now attempt-keyed
+    // (destructiveClaimRequiresSuccess) and resolution-aware (pendingConfirmMustAsk), subsuming the former
+    // local variants. Claim-check probe-relay uses CONFIRM_LANG_RE (no bare `?`); must-ask uses CONFIRM_ASK_RE.
+    this.addReplyCheck(pendingConfirmMustAsk({ askRe: CONFIRM_ASK_RE }), { id: 'agent:pendingConfirmMustAsk' });
     this.addReplyCheck(
-      destructiveClaimRequiresAttemptedSuccess(
-        ['reverseEntry'],
-        /\brevers(?:ed|al (?:was |has been )?(?:made|posted|recorded))\b/i,
-        /\b(?:already|cannot|can['’]?t|could not|couldn['’]?t|not|unable|hasn['’]?t|haven['’]?t|isn['’]?t|wasn['’]?t|yet|pending)\b/i,
-      ),
-      { id: 'agent:destructiveClaimRequiresAttemptedSuccess' },
+      destructiveClaimRequiresSuccess(['reverseEntry'], {
+        claimRe: /\brevers(?:ed|al (?:was |has been )?(?:made|posted|recorded))\b/i,
+        askRe: CONFIRM_LANG_RE,
+        offerRe: OFFER_OR_CONDITIONAL_RE,
+        exemptRe: /\b(?:already|cannot|can['’]?t|could not|couldn['’]?t|not|unable|hasn['’]?t|haven['’]?t|isn['’]?t|wasn['’]?t|yet|pending)\b/i,
+      }),
+      { id: 'agent:destructiveClaimRequiresSuccess' },
     );
-    this.addReplyCheck(noFalseFailureClaim({ claimRe: FALSE_FAILURE_CLAIM_RE }), { id: 'agent:noFalseFailureClaim' });
 
     // Deterministic egress rewrite of internal enum spellings.
     this.addMutator(jargonScrub({ cash_basis: 'cash basis' }), { id: 'agent:jargonScrub' });

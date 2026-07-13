@@ -20,7 +20,6 @@ import {
   custom,
   destructiveClaimRequiresSuccess,
   jargonScrub,
-  noFalseFailureClaim,
   pendingConfirmMustAsk,
   requiresBefore,
 } from 'looprun';
@@ -54,6 +53,8 @@ export class AgentSpecScheduling extends AgentSpecBase {
         'sendNotification',
       ],
       destructiveTools: ['cancelJob'],
+      // Reply-honesty invariant auto-installed as minimal:noFalseFailureClaim (see installMinimal).
+      lexicon: { falseFailureClaimRe: FALSE_FAILURE_CLAIM_RE },
       theme: HOMESERVICES_THEME,
       behavior: [
         // Every line CONDITIONED (Bucket-A): "when X, do Y" — never a bare state assertion.
@@ -148,7 +149,6 @@ export class AgentSpecScheduling extends AgentSpecBase {
       }),
       { id: 'agent:destructiveClaimRequiresSuccess' },
     );
-    this.addReplyCheck(noFalseFailureClaim({ claimRe: FALSE_FAILURE_CLAIM_RE }), { id: 'agent:noFalseFailureClaim' });
 
     // Egress scrub: internal field jargon → user words.
     this.addMutator(

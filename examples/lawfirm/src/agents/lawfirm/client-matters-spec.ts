@@ -14,7 +14,7 @@
  * //              deleting/correcting time entries (billing partner) → honest refusal + routing
  * //              (intent-keyed; conditioned prose + eval dimension, cases 09/18 rubric items).
  */
-import { AgentSpecBase, custom, destructiveClaimRequiresSuccess, jargonScrub, noFalseFailureClaim, pendingConfirmMustAsk, requiresBefore } from 'looprun';
+import { AgentSpecBase, custom, destructiveClaimRequiresSuccess, jargonScrub, pendingConfirmMustAsk, requiresBefore } from 'looprun';
 import type { GuardCtx } from 'looprun';
 import { LAWFIRM_THEME } from './theme.js';
 import { CONFIRM_ASK_RE, FALSE_FAILURE_CLAIM_RE, OFFER_OR_CONDITIONAL_RE } from './lexicon.js';
@@ -43,6 +43,8 @@ export class AgentSpecClientMatters extends AgentSpecBase {
       ],
       destructiveTools: ['closeMatter'],
       flow: [{ from: 'runConflictCheck', to: 'openMatter' }],
+      // Reply-honesty invariant auto-installed as minimal:noFalseFailureClaim (see installMinimal).
+      lexicon: { falseFailureClaimRe: FALSE_FAILURE_CLAIM_RE },
       theme: LAWFIRM_THEME,
       behavior: [
         // NO persona line here — the runtime prepends the persona field above.
@@ -145,7 +147,6 @@ export class AgentSpecClientMatters extends AgentSpecBase {
       }),
       { id: 'agent:destructiveClaimRequiresSuccess' },
     );
-    this.addReplyCheck(noFalseFailureClaim({ claimRe: FALSE_FAILURE_CLAIM_RE }), { id: 'agent:noFalseFailureClaim' });
 
     // Egress scrub: internal result vocabulary never reaches the user verbatim.
     this.addMutator(jargonScrub({ requiresConfirmation: 'awaiting your confirmation' }), {
