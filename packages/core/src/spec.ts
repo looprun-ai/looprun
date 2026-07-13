@@ -22,7 +22,7 @@
  * layer ordering + trunk prose order). resolveBindings sorts each hook agent → full → base → minimal so
  * an agent correction always wins.
  */
-import { confirmFirst, destructiveThrottle, emptyReply, noDuplicateCall } from './guards.js';
+import { confirmFirst, destructiveThrottle, emptyReply, noDuplicateCall, noFalseFailureClaim } from './guards.js';
 import type { AgentWorld, Dim, Guard, GuardCtx, ObservedCall, ReplyMutator, SpatialEdge } from './rules.js';
 import type { TrunkTheme } from './trunk.js';
 import type { SamplingSettings } from './model-params.js';
@@ -187,6 +187,17 @@ export interface AgentSpecConfig {
   /** Declared follow-up completions (see {@link ChainSpec}). Absent ⇒ controls.chains stays unset. */
   chains?: ChainSpec[];
   destructiveTools?: string[];
+  /** Per destructive tool, the confirm MECHANISM the auto destructive-safety layer installs (P8a-clean —
+   *  no linguistic content). `'arg'` (default for any unlisted destructive tool) = a `confirmed:true`
+   *  flag gated on a prior-turn probe; `'prior-ask'` = a flag-less action gated on a prior-turn `askUser`.
+   *  Absent ⇒ every destructive tool uses `'arg'` (byte-stable with the pre-mechanism layer). */
+  confirmMechanism?: Record<string, 'arg' | 'prior-ask'>;
+  /** Business-owned lexicon injected for the ALWAYS-ON reply layer. When `falseFailureClaimRe` is
+   *  provided, `installMinimal` auto-installs `noFalseFailureClaim({ claimRe })` under
+   *  `minimal:noFalseFailureClaim` (a reply-honesty invariant every agent should carry). Auto-iff-provided
+   *  — an absent lexicon leaves the minimal layer exactly as before (non-breaking). Extensible: future
+   *  always-on language-keyed guards add their own key here, keeping the runtime language-neutral (P8a). */
+  lexicon?: { falseFailureClaimRe?: RegExp };
   toolSchemas?: Record<string, ToolSchemaLike>;
   /** Optional domain-theme reference (see {@link AgentSpec.theme}). */
   theme?: TrunkTheme;
@@ -194,10 +205,11 @@ export interface AgentSpecConfig {
 
 /**
  * The ONE AgentSpec class (no Minimal/Base/Full ladder). Its constructor always installs the universal
- * invariants (noDuplicateCall + emptyReply) and, iff `destructiveTools` is non-empty, the
- * destructive-safety protocol (confirmFirst + destructiveThrottle) on those tools. Ids and install order
- * are byte-stable (`minimal:*` then `base:*`) so the layer-sorted trunk prose and resolveBindings order
- * are unchanged from the former ladder.
+ * invariants (noDuplicateCall + emptyReply, + noFalseFailureClaim iff `cfg.lexicon` provides its regex)
+ * and, iff `destructiveTools` is non-empty, the destructive-safety protocol (confirmFirst +
+ * destructiveThrottle) on those tools — confirmFirst keyed per-tool by `cfg.confirmMechanism`. Ids and
+ * install order are byte-stable (`minimal:*` then `base:*`) so the layer-sorted trunk prose and
+ * resolveBindings order are unchanged from the former ladder.
  */
 export class AgentSpecBase implements AgentSpec {
   readonly id: string;
@@ -210,6 +222,8 @@ export class AgentSpecBase implements AgentSpec {
   readonly behavior: string[];
   readonly theme?: TrunkTheme;
   protected readonly destructiveTools: string[];
+  protected readonly confirmMechanism: Record<string, 'arg' | 'prior-ask'>;
+  protected readonly lexicon: { falseFailureClaimRe?: RegExp };
   protected readonly toolSchemas: Record<string, ToolSchemaLike>;
   private seq = 0;
 
@@ -252,6 +266,8 @@ export class AgentSpecBase implements AgentSpec {
     this.behavior = [...(cfg.behavior ?? [])];
     if (cfg.theme) this.theme = cfg.theme;
     this.destructiveTools = [...(cfg.destructiveTools ?? [])];
+    this.confirmMechanism = { ...(cfg.confirmMechanism ?? {}) };
+    this.lexicon = { ...(cfg.lexicon ?? {}) };
     this.toolSchemas = cfg.toolSchemas ?? {};
     // Install order is load-bearing (byte-stable trunk): universal invariants first, destructive layer
     // second — same as the former AgentSpecMinimal → AgentSpecBase super()/installBase() flow.
@@ -261,11 +277,21 @@ export class AgentSpecBase implements AgentSpec {
 
   protected installMinimal(): void {
     this.addGuard('preTool', 'any', noDuplicateCall(), { layer: 'minimal', id: 'minimal:noDuplicateCall' });
+    // ALWAYS-ON reply-honesty invariant — auto-installed IFF the bundle injects its false-failure lexicon
+    // (auto-iff-provided keeps a spec that ships no lexicon byte-stable). Ordered BEFORE emptyReply so the
+    // resolved onReply tail is `… , minimal:noFalseFailureClaim, minimal:emptyReply` (the same relative
+    // position the agent-layer install formerly held, just under a stable minimal id).
+    if (this.lexicon.falseFailureClaimRe) {
+      this.addGuard('onReply', 'any', noFalseFailureClaim({ claimRe: this.lexicon.falseFailureClaimRe }), { layer: 'minimal', id: 'minimal:noFalseFailureClaim' });
+    }
     this.addGuard('onReply', 'any', emptyReply(), { layer: 'minimal', id: 'minimal:emptyReply' });
   }
 
-  /** Iff the spec declares destructiveTools: the confirm-first + throttle protocol on exactly those
-   *  tools (validated ⊆ surface). A no-op when the list is empty — every non-destructive spec is clean. */
+  /** Iff the spec declares destructiveTools: the confirm-first + throttle protocol on exactly those tools
+   *  (validated ⊆ surface). The confirm MECHANISM is per-tool (`cfg.confirmMechanism`, default `'arg'`):
+   *  the tools are partitioned so each mechanism renders its OWN prose under its own base id — arg-flag
+   *  tools → `base:confirmFirst`, prior-ask tools → `base:confirmFirstPriorAsk` — while `destructiveThrottle`
+   *  covers ALL of them. A no-op when the list is empty — every non-destructive spec is clean. */
   protected installBase(): void {
     const destructive = this.destructiveTools;
     if (!destructive.length) return;
@@ -273,7 +299,15 @@ export class AgentSpecBase implements AgentSpec {
     if (missing.length) {
       throw new Error(`AgentSpec "${this.id}": destructiveTools not in the tool surface: ${missing.join(', ')}.`);
     }
-    this.addGuard('preTool', destructive, confirmFirst(), { layer: 'base', id: 'base:confirmFirst' });
+    const mechOf = (t: string): 'arg' | 'prior-ask' => this.confirmMechanism[t] ?? 'arg';
+    const argTools = destructive.filter((t) => mechOf(t) === 'arg');
+    const priorAskTools = destructive.filter((t) => mechOf(t) === 'prior-ask');
+    if (argTools.length) {
+      this.addGuard('preTool', argTools, confirmFirst(), { layer: 'base', id: 'base:confirmFirst' });
+    }
+    if (priorAskTools.length) {
+      this.addGuard('preTool', priorAskTools, confirmFirst({ mechanism: 'prior-ask' }), { layer: 'base', id: 'base:confirmFirstPriorAsk' });
+    }
     this.addGuard('preTool', destructive, destructiveThrottle(destructive), { layer: 'base', id: 'base:destructiveThrottle' });
   }
 

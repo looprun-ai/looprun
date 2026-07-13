@@ -47,6 +47,30 @@ Domain-neutrality, a single spec class, and three new governed-turn mechanisms.
   transcript, the probe-proven short-context regime for a tiny model. New pure exports:
   `ingestStructuredObject`, `digestTurnToolResults`, `buildForceCloseMessages`.
 
+**Governed-turn hardening (guards-v2)** — four refinements to the reply/confirm guards; all
+non-breaking (signatures extended backward-compatibly, new cfg fields optional, a lexicon-less spec
+stays byte-stable):
+
+- `destructiveClaimRequiresSuccess` is now **attempt-keyed** — it fires only when a listed destructive
+  tool was actually ATTEMPTED this turn (executed OR vetoed). With no attempt, a destructive verb in
+  the reply is read-backed STATUS talk, not an action claim, and is left alone (kills the #1
+  false-positive class). The offer/question sentence-scoping is unchanged.
+- `pendingConfirmMustAsk` is now **resolution-aware** and takes an optional `{ confirmArg }` (default
+  `confirmed`) — a pending `requiresConfirmation` need not be re-asked when the SAME tool ran OK with
+  the confirm flag set on the SAME record (canonical args minus that flag) later in the turn (the legal
+  probe→approved-execute tail). Record identity is domain-neutral (canonical args, no id regex).
+- `confirmFirst` gains a per-tool **mechanism**: `confirmFirst(opts?: string | { argFlag?, mechanism? })`.
+  `'arg'` (default) is today's confirm-flag gate; `'prior-ask'` gates a flag-less destructive tool on a
+  prior-turn `askUser` (ask, wait, act only in a LATER turn). `AgentSpecConfig.confirmMechanism?:
+  Record<tool, 'arg' | 'prior-ask'>` selects it; `AgentSpecBase` partitions the destructive tools so
+  arg-flag tools install `base:confirmFirst` and prior-ask tools `base:confirmFirstPriorAsk`, with
+  `destructiveThrottle` over all.
+- `noFalseFailureClaim` gets an **auto-layer**: `AgentSpecConfig.lexicon?: { falseFailureClaimRe? }`.
+  When provided, `AgentSpecBase` auto-installs it as `minimal:noFalseFailureClaim` (the always-on
+  reply-honesty invariant, ordered before `minimal:emptyReply`). Auto-iff-provided keeps a lexicon-less
+  spec byte-stable; a spec may still add its own tighter agent-layer instance. The example bundles now
+  pass `cfg.lexicon` and drop their manual installs.
+
 Forcing note: the terminal close/redrive now use `generateObject` (`response_format: json_schema`);
 the remaining forced-tool sites (the micro-steps, flowChain completion) use single-`activeTools` +
 `toolChoice:'required'`, since `llama-server` ignores the named `{ type:'tool', toolName }` form and

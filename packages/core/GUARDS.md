@@ -56,9 +56,17 @@ addressable:
 
 - **ALWAYS** (every agent): `noDuplicateCall()` on `preTool` (id `minimal:noDuplicateCall`) + `emptyReply()`
   on `onReply` (id `minimal:emptyReply`).
-- **IFF `cfg.destructiveTools` is non-empty**: `confirmFirst()` + `destructiveThrottle(destructiveTools)` on
-  `preTool`, scoped to exactly those tools (ids `base:confirmFirst`, `base:destructiveThrottle`; validated ⊆
-  surface, else the constructor throws). Empty list ⇒ a no-op, so every non-destructive spec stays clean.
+- **IFF `cfg.lexicon.falseFailureClaimRe` is provided**: `noFalseFailureClaim({ claimRe })` on `onReply`
+  (id `minimal:noFalseFailureClaim`) — the always-on reply-honesty invariant, ordered BEFORE `emptyReply`
+  (resolved onReply tail `…, minimal:noFalseFailureClaim, minimal:emptyReply`). **Auto-iff-provided**: a
+  lexicon-less spec is byte-stable (its minimal layer is exactly `noDuplicateCall` + `emptyReply`). A spec
+  may still add its own tighter agent-layer instance.
+- **IFF `cfg.destructiveTools` is non-empty**: `destructiveThrottle(destructiveTools)` + `confirmFirst` on
+  `preTool`, scoped to exactly those tools (validated ⊆ surface, else the constructor throws). The confirm
+  MECHANISM is per-tool (`cfg.confirmMechanism[tool]`, default `'arg'`) and selects the id — arg-flag tools
+  → `base:confirmFirst`, `'prior-ask'` (flag-less, gated on a prior-turn `askUser`) tools →
+  `base:confirmFirstPriorAsk`; `destructiveThrottle` (id `base:destructiveThrottle`) covers all of them.
+  Empty list ⇒ a no-op, so every non-destructive spec stays clean.
 
 There is **no auto-schema layer** — per-tool `argRequired` / `argFormat` are AUTHORED explicitly by the
 spec. The `minimal:` / `base:` id namespaces are retained: `resolveBindings` sorts each hook **agent → full
@@ -68,8 +76,10 @@ order unchanged). Terminal tools (`replyToUser` / `askUser`) are runtime-owned a
 
 ## The primitives
 
-Signatures are the **exact current** ones. `auto` marks a kind the constructor installs; everything else is
-agent-layer (you add it explicitly). `custom()` is the escape hatch — reach for it only when no kind fits.
+Signatures are the **exact current** ones. `auto` marks a kind the constructor installs (`minimal` = always ·
+`base` = iff `destructiveTools` non-empty · `minimal*` = iff `cfg.lexicon.falseFailureClaimRe` is provided);
+everything else is agent-layer (you add it explicitly). `custom()` is the escape hatch — reach for it only
+when no kind fits.
 
 ### preTool — SPATIAL (dim `spatial`)
 
@@ -96,7 +106,7 @@ agent-layer (you add it explicitly). `custom()` is the escape hatch — reach fo
 | `maxCallsPerTurn(tool: string, n: number, reason: string): Guard` | — | at most `n` of the model's OWN successful `tool` calls this turn. |
 | `maxCallsPerConversation(tool: string, n: number, reason: string): Guard` | — | the same budget ACROSS turns (no turnIndex filter). |
 | `noDuplicateCall(): Guard` | **minimal** | deny a call whose (tool, canonical args) already SUCCEEDED this turn (keyed on `canonArgs`). |
-| `confirmFirst(argFlag = 'confirmed'): Guard` | **base** | `confirmed:true` is legal only when a `confirmed:false` PROBE of the same tool succeeded in an EARLIER turn — never confirm your own same-turn probe. |
+| `confirmFirst(opts?: string \| { argFlag?: string; mechanism?: 'arg' \| 'prior-ask' }): Guard` | **base** | destructive-confirm gate, keyed by MECHANISM. `'arg'` (default; a bare string sets `argFlag`): `argFlag:true` (default `confirmed`) is legal only when an `argFlag:false`/absent PROBE of the same tool ran OK in an EARLIER turn — never confirm your own same-turn probe. `'prior-ask'` (flag-less tools): legal only after an `askUser` succeeded in an EARLIER turn — ask, wait, act in a LATER turn (a same-turn `askUser` does NOT unlock it — compose with `noActAfterAskSameTurn`). Auto-installed per tool via `cfg.confirmMechanism`. |
 | `noActAfterAskSameTurn(tools: string[]): Guard` | — | deny any of `tools` when an `askUser` already succeeded THIS turn — ask, wait, act only in a LATER turn (never confirm-and-execute in the same turn as the question). |
 | `destructiveThrottle(destructiveTools: string[]): Guard` | **base** | at most ONE successful destructive action per turn. |
 
@@ -112,9 +122,9 @@ agent-layer (you add it explicitly). `custom()` is the escape hatch — reach fo
 |---|---|---|
 | `emptyReply(): Guard` | **minimal** | the terminal reply may not be empty / whitespace. |
 | `noFabricatedSuccess(tool: string, opts: { claimRe: RegExp; labelRe: RegExp; verbClaimRe: RegExp; reason: string }): Guard` | — | if `tool` did NOT succeed this turn, the reply may not claim/imply it did (existence-keyed on invented labels OR a verb-first claim with no label). Both the label scheme (`labelRe`) and the claim regexes are business-owned (P8a). |
-| `noFalseFailureClaim(opts: { claimRe: RegExp }): Guard` | — | if every tool this turn SUCCEEDED (and ≥1 ran), the reply may not claim inability. `claimRe` is injected (P8a). |
-| `destructiveClaimRequiresSuccess(destructiveTools: string[], opts: { claimRe: RegExp; askRe: RegExp; offerRe: RegExp; exemptRe?: RegExp }): Guard` | — | the reply may not DECLARE a deletion/removal unless a `confirmed:true` destructive call succeeded this turn. Sentence-scoped: a `claimRe` hit is ignored when its own sentence is a question or carries an `offerRe` (offered, not reported). Exempts the confirm-probe two-step (`probed + askRe`) and honest failure/negation (`exemptRe`). All patterns injected (P8a). |
-| `pendingConfirmMustAsk(opts: { askRe: RegExp }): Guard` | — | if a tool returned `requiresConfirmation` this turn, the reply MUST relay the question (`askRe` matches "does this reply seek confirmation?"; injected, P8a). |
+| `noFalseFailureClaim(opts: { claimRe: RegExp }): Guard` | **minimal\*** | if every tool this turn SUCCEEDED (and ≥1 ran), the reply may not claim inability. `claimRe` is injected (P8a). **minimal\*** = auto-installed as `minimal:noFalseFailureClaim` iff `cfg.lexicon.falseFailureClaimRe` is provided; a spec may still add a tighter agent-layer instance. |
+| `destructiveClaimRequiresSuccess(destructiveTools: string[], opts: { claimRe: RegExp; askRe: RegExp; offerRe: RegExp; exemptRe?: RegExp }): Guard` | — | **ATTEMPT-KEYED**: fires ONLY when a listed destructive tool was ATTEMPTED this turn (executed OR vetoed) — with no attempt, a destructive verb is read-backed STATUS talk, left alone (the P1-FP fix). Given an attempt, the reply may not DECLARE a deletion/removal unless a `confirmed:true` destructive call succeeded this turn. Sentence-scoped: a `claimRe` hit is ignored when its own sentence is a question or carries an `offerRe` (offered, not reported). Exempts the confirm-probe two-step (`probed + askRe`) and honest failure/negation (`exemptRe`). All patterns injected (P8a). |
+| `pendingConfirmMustAsk(opts: { askRe: RegExp; confirmArg?: string }): Guard` | — | **RESOLUTION-AWARE**: if a tool returned `requiresConfirmation` this turn, the reply MUST relay the question (`askRe` matches "does this reply seek confirmation?") — UNLESS that probe was RESOLVED this turn (the same tool ran OK with the confirm flag `confirmArg` (default `confirmed`) set on the SAME record, i.e. matching args minus that flag). `askRe` injected (P8a). |
 | `replyMustMention(keywords: string[], reason: string): Guard` | — | the reply must contain ≥1 of `keywords` (case-insensitive) — coverage. |
 | `replyConfirmsLabels(labels: string[], reason: string): Guard` | — | the reply must be non-empty and name ALL `labels`. |
 | `replyMaxOccurrences(ctas: string[], n: number, reason: string): Guard` | — | at most `n` distinct CTA lemmas from `ctas` may appear (anti-nag). |

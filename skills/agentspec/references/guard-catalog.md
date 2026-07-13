@@ -38,17 +38,19 @@ is a spec). Its constructor auto-installs, layer-tagged:
 | always / conditional | auto-installs | from |
 |---|---|---|
 | **ALWAYS** (every agent) | `noDuplicateCall` (preTool), `emptyReply` (onReply) | nothing (universal invariants) |
-| **IFF `cfg.destructiveTools` non-empty** | `confirmFirst`, `destructiveThrottle` (preTool, scoped to those tools) | `cfg.destructiveTools` (no-op when empty) |
+| **IFF `cfg.lexicon.falseFailureClaimRe` provided** | `noFalseFailureClaim({ claimRe })` (onReply, `minimal:noFalseFailureClaim`, before `emptyReply`) | `cfg.lexicon` (auto-iff-provided — a lexicon-less spec is byte-stable) |
+| **IFF `cfg.destructiveTools` non-empty** | `destructiveThrottle` + `confirmFirst` (preTool, scoped to those tools); `cfg.confirmMechanism[tool]` picks the confirmFirst id — arg-flag → `base:confirmFirst`, `'prior-ask'` → `base:confirmFirstPriorAsk` | `cfg.destructiveTools` (no-op when empty) |
 
-So **2 kinds install for free always, +2 iff the agent holds a destructive tool** (up to 4). There is **no
-auto-schema layer** — per-tool `argRequired` / `argFormat` are AUTHORED explicitly. Every other kind is
-**agent-layer** (you add it). Resolution order per hook: **agent → full → base → minimal** (first deny
-wins), and the `minimal:` / `base:` id namespaces keep the trunk prose order byte-stable.
+So **2 kinds install for free always, +1 iff the bundle injects `cfg.lexicon.falseFailureClaimRe`, +2 more
+when the agent holds a destructive tool**. There is **no auto-schema layer** — per-tool `argRequired` /
+`argFormat` are AUTHORED explicitly. Every other kind is **agent-layer** (you add it). Resolution order per
+hook: **agent → full → base → minimal** (first deny wins), and the `minimal:` / `base:` id namespaces keep
+the trunk prose order byte-stable.
 
 ## The 26 guard kinds
 
-`auto` marks a kind the constructor installs (`minimal` = always, `base` = iff `destructiveTools`);
-everything else is agent-layer.
+`auto` marks a kind the constructor installs (`minimal` = always, `base` = iff `destructiveTools`,
+`minimal*` = iff `cfg.lexicon.falseFailureClaimRe` is provided); everything else is agent-layer.
 
 ### preTool — ordering / preconditions / call-shape (dims: spatial · run · input)
 
@@ -60,7 +62,7 @@ everything else is agent-layer.
 | `maxCallsPerTurn(tool, n, reason)` | run | agent | at most `n` successful calls of `tool` per turn |
 | `maxCallsPerConversation(tool, n, reason)` | run | agent | at most `n` ok-calls of `tool` across the whole conversation |
 | `noDuplicateCall()` | run | **minimal** | block a byte-identical repeat call that already succeeded this turn (canonicalized args) |
-| `confirmFirst(argFlag='confirmed')` | run | **base** | a destructive tool needs `confirmed:true`, and only after a `confirmed:false` PROBE succeeded in an EARLIER turn |
+| `confirmFirst(opts?: string \| { argFlag?, mechanism? })` | run | **base** | destructive-confirm gate keyed by MECHANISM. `'arg'` (default; a bare string sets `argFlag`): `confirmed:true` needs a prior-turn `confirmed:false` PROBE. `'prior-ask'` (flag-less tools): legal only after an `askUser` in an EARLIER turn (compose with `noActAfterAskSameTurn` for the same-turn edge). Auto-installed per `cfg.confirmMechanism` |
 | `noActAfterAskSameTurn(tools)` | run | agent | deny any of `tools` when `askUser` already succeeded this turn — ask, wait, act in a LATER turn |
 | `destructiveThrottle(destructiveTools)` | run | **base** | at most one successful destructive action per turn |
 | `argRequired(field)` | input | agent | deny if `field` is missing/empty in args |
@@ -100,9 +102,9 @@ runtime carries no linguistic pattern of its own (the P8a lexicon doctrine below
 |---|---|---|---|
 | `emptyReply()` | behavior | **minimal** | a terminal reply may not be empty/whitespace |
 | `noFabricatedSuccess(tool, { claimRe, labelRe, verbClaimRe, reason })` | behavior | agent | reply may not claim `tool` succeeded (invented label, or a verb-first claim with no label) unless it actually ran+succeeded this turn |
-| `noFalseFailureClaim({ claimRe })` | behavior | agent | reply may not claim inability when every tool this turn succeeded |
-| `destructiveClaimRequiresSuccess(destructiveTools, { claimRe, askRe, offerRe, exemptRe? })` | behavior | agent | reply may not DECLARE a destructive action happened unless a confirmed call succeeded this turn — sentence-scoped, offer-aware; exempts confirm-probes (`askRe`) and honest failures (`exemptRe`) |
-| `pendingConfirmMustAsk({ askRe })` | behavior | agent | if a tool returned `requiresConfirmation` this turn, the reply MUST relay the confirmation question |
+| `noFalseFailureClaim({ claimRe })` | behavior | **minimal\*** | reply may not claim inability when every tool this turn succeeded. **minimal\*** = auto-installed as `minimal:noFalseFailureClaim` when the bundle passes `cfg.lexicon.falseFailureClaimRe`; a spec may still add a tighter agent-layer instance |
+| `destructiveClaimRequiresSuccess(destructiveTools, { claimRe, askRe, offerRe, exemptRe? })` | behavior | agent | **attempt-keyed**: fires only when a listed destructive tool was ATTEMPTED this turn (executed or vetoed) — with no attempt a destructive verb is read-backed STATUS talk, left alone. Given an attempt, the reply may not DECLARE the action happened unless a confirmed call succeeded — sentence-scoped, offer-aware; exempts confirm-probes (`askRe`) and honest failures (`exemptRe`) |
+| `pendingConfirmMustAsk({ askRe, confirmArg? })` | behavior | agent | if a tool returned `requiresConfirmation` this turn, the reply MUST relay the confirmation question — UNLESS the probe was RESOLVED this turn (same tool ran OK with the confirm flag `confirmArg` (default `confirmed`) set on the SAME record) |
 | `replyMustMention(keywords, reason)` | behavior | agent | reply must mention ≥1 keyword (coverage) |
 | `replyConfirmsLabels(labels, reason)` | behavior | agent | reply must be non-empty and name every acted-on label |
 | `replyMaxOccurrences(ctas, n, reason)` | behavior | agent | at most `n` distinct CTA lemmas (anti-nag) |
@@ -145,9 +147,12 @@ export const FALSE_FAILURE_CLAIM_RE = /(cannot|can'?t|could ?not|unable to|faile
 wired as:
 
 ```ts
+// noFalseFailureClaim is the always-on reply-honesty invariant — inject its regex through cfg.lexicon and
+// AgentSpecBase auto-installs it as minimal:noFalseFailureClaim (no manual addReplyCheck needed):
+super({ /* … */, lexicon: { falseFailureClaimRe: FALSE_FAILURE_CLAIM_RE } });
+
 pendingConfirmMustAsk({ askRe: CONFIRM_ASK_RE });
 destructiveClaimRequiresSuccess(['closeMatter'], { claimRe: /…/i, askRe: CONFIRM_ASK_RE, offerRe: OFFER_OR_CONDITIONAL_RE, exemptRe: /…/i });
-noFalseFailureClaim({ claimRe: FALSE_FAILURE_CLAIM_RE });
 ```
 
 The runtime holds only the MECHANISM + generic English prose; a domain-neutrality lint

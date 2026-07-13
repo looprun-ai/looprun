@@ -228,23 +228,48 @@ export function noDuplicateCall(): Guard {
   };
 }
 
-/** A destructive tool's `confirmed:true` is legal ONLY when its probe (confirmed absent/false) ran and
- *  took effect in an EARLIER turn — never confirm your own same-turn probe, never skip it. */
-export function confirmFirst(argFlag = 'confirmed'): Guard {
+/**
+ * A destructive tool needs the user's go-ahead before it runs — via one of two MECHANISMS (the
+ * `mechanism` option, default `'arg'`):
+ *  - `'arg'`: the tool carries a confirm FLAG (`argFlag`, default `confirmed`). `confirmed:true` is legal
+ *    ONLY when a `confirmed:false`/absent PROBE of the SAME tool ran OK in an EARLIER turn — never confirm
+ *    your own same-turn probe, never skip it.
+ *  - `'prior-ask'`: the tool has NO confirm flag (e.g. a zero-arg action). It is legal ONLY when an
+ *    `askUser` succeeded in an EARLIER turn — the model must ASK, wait for the user's answer, and act only
+ *    in a LATER turn. A same-turn `askUser` does NOT unlock it (that is `noActAfterAskSameTurn`'s edge —
+ *    the two compose: prior-ask = cross-turn REQUIRE, noActAfterAskSameTurn = same-turn DENY).
+ * Reads observed / args only — never the user text (magnet-safe). Auto-installed by `AgentSpecBase` per
+ * destructive tool according to `cfg.confirmMechanism`.
+ */
+export function confirmFirst(opts?: string | { argFlag?: string; mechanism?: 'arg' | 'prior-ask' }): Guard {
+  const o = typeof opts === 'string' ? { argFlag: opts } : (opts ?? {});
+  const argFlag = o.argFlag ?? 'confirmed';
+  const mechanism = o.mechanism ?? 'arg';
   return {
     kind: 'confirmFirst',
     dim: 'run',
     check(ctx) {
       if (!ctx.tool) return null;
+      if (mechanism === 'prior-ask') {
+        const askedEarlier = ctx.observed.some(
+          (obs) => obs.name === 'askUser' && obs.ok && obs.turnIndex < ctx.turnIndex,
+        );
+        return askedEarlier
+          ? null
+          : `Do NOT run ${ctx.tool} yet — first ask the user to confirm and STOP; run it only in a LATER turn after they agree.`;
+      }
       if (ctx.args[argFlag] !== true) return null;
       const probe = ctx.observed.find(
-        (o) => o.name === ctx.tool && o.ok && o.args?.[argFlag] !== true && o.turnIndex < ctx.turnIndex,
+        (obs) => obs.name === ctx.tool && obs.ok && obs.args?.[argFlag] !== true && obs.turnIndex < ctx.turnIndex,
       );
       return probe
         ? null
         : `Do NOT pass ${argFlag}:true — first call ${ctx.tool} WITHOUT it, relay the confirmation question to the user, and only confirm in a LATER turn after the user agrees.`;
     },
-    prose: () => `destructive actions need ${argFlag}:false first + the USER's explicit confirmation in a later turn`,
+    prose: () =>
+      mechanism === 'prior-ask'
+        ? 'this destructive action requires asking the user to confirm first and running it only in a LATER turn after they agree — never on the opening turn or in the same turn as the question'
+        : `destructive actions need ${argFlag}:false first + the USER's explicit confirmation in a later turn`,
   };
 }
 
@@ -412,16 +437,36 @@ export function emptyReply(): Guard {
   };
 }
 
-/** A destructive PROBE returned requiresConfirmation this turn — the reply MUST relay the question.
- *  `askRe` (the "does this reply seek confirmation?" regex — a business-owned, language-specific
- *  pattern) is injected; the runtime holds no confirm-language of its own. */
-export function pendingConfirmMustAsk(opts: { askRe: RegExp }): Guard {
+/**
+ * A destructive PROBE returned requiresConfirmation this turn — the reply MUST relay the question, UNLESS
+ * that pending confirmation was already RESOLVED this turn: the SAME tool ran OK with the confirm flag set
+ * on the SAME record (its args minus the confirm flag) later in the turn — a legal probe→approved-execute
+ * tail of a two-step flow, where the reply correctly reports the DONE action instead of re-asking. Keys
+ * only the UNRESOLVED probes: if every requiresConfirmation was resolved, the guard is silent. `askRe` (the
+ * "does this reply seek confirmation?" regex — a business-owned, language-specific pattern) is injected;
+ * `confirmArg` (default `confirmed`) is the confirm flag a resolving call carries. Reads observed / reply
+ * only — the runtime holds no confirm-language of its own.
+ */
+export function pendingConfirmMustAsk(opts: { askRe: RegExp; confirmArg?: string }): Guard {
+  const confirmArg = opts.confirmArg ?? 'confirmed';
+  // The "record" a call acts on = its canonical args with the confirm flag stripped (a probe and its
+  // approved re-run differ ONLY in that flag, so matching the rest pins them to the same record).
+  const record = (args: Record<string, unknown> | undefined): string => {
+    const rest: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(args ?? {})) if (k !== confirmArg) rest[k] = v;
+    return canonArgs(rest);
+  };
   return {
     kind: 'pendingConfirmMustAsk',
     dim: 'behavior',
     check(ctx) {
-      const pending = ctx.observed.some((o) => o.turnIndex === ctx.turnIndex && o.resultFlags?.requiresConfirmation);
-      if (!pending) return null;
+      const thisTurn = ctx.observed.filter((o) => o.turnIndex === ctx.turnIndex);
+      const unresolved = thisTurn
+        .filter((o) => o.resultFlags?.requiresConfirmation)
+        .filter((probe) => !thisTurn.some(
+          (o) => o.name === probe.name && o.ok && o.args?.[confirmArg] === true && record(o.args) === record(probe.args),
+        ));
+      if (!unresolved.length) return null;
       return opts.askRe.test(ctx.reply ?? '')
         ? null
         : 'A confirmation is PENDING — relay the confirmation question to the user (your reply must ask it), and do not summarize the action as done.';
@@ -437,13 +482,18 @@ function splitSentences(text: string): string[] {
 }
 
 /**
- * The reply claims a deletion/removal, but no destructive tool SUCCEEDED this turn (with exemptions for
- * the confirm-probe two-step and honest failure/negation reports). Sentence-scoped: a `claimRe` match is
- * ignored when its OWN sentence is a question, or carries an offer/conditional marker (`offerRe` — the
- * destructive verb is being OFFERED, not reported as done), so an offer earlier in the reply can never
- * mask a genuine declarative claim later. Every linguistic pattern — the destructive-claim regex, the
- * confirm-seeking `askRe`, the offer/conditional `offerRe`, and the optional `exemptRe` — is injected by
- * the domain bundle; the runtime supplies only the sentence-splitting mechanism and the English prose.
+ * The reply claims a deletion/removal, but no destructive tool SUCCEEDED this turn. ATTEMPT-KEYED (the
+ * P1-FP fix): the check may fire ONLY when a listed destructive tool was actually ATTEMPTED this turn (an
+ * observed call, executed OR vetoed). With NO attempt, a destructive verb in the reply is read-backed
+ * STATUS talk (relaying prior world state), never an action claim — so it is left alone, killing the false
+ * positive where a status readback tripped the claim regex. Once an attempt exists, the legal cases are
+ * exempted in order: the action truly took effect (a `confirmed:true` success this turn); a probe ran and
+ * the reply seeks confirmation (`askRe`); an honest failure/negation report (`exemptRe`). What remains is
+ * caught SENTENCE-SCOPED: a `claimRe` match fires only when its OWN sentence is neither a question nor an
+ * offer/conditional (`offerRe`), so an offer earlier in the reply can never mask a genuine declarative
+ * claim later. Every linguistic pattern — the destructive-claim regex, the confirm-seeking `askRe`, the
+ * offer/conditional `offerRe`, and the optional `exemptRe` — is injected by the domain bundle; the runtime
+ * supplies only the attempt-keying + sentence mechanisms and the English prose.
  */
 export function destructiveClaimRequiresSuccess(
   destructiveTools: string[],
@@ -455,10 +505,14 @@ export function destructiveClaimRequiresSuccess(
     kind: 'destructiveClaimRequiresSuccess',
     dim: 'behavior',
     check(ctx) {
-      const destructiveOk = ctx.observed.some((o) => o.turnIndex === ctx.turnIndex && o.ok && set.has(o.name) && o.args?.confirmed === true);
-      if (destructiveOk) return null;
+      // ATTEMPT-KEYING: no listed destructive tool touched this turn ⇒ any destructive verb is read-backed
+      // status, not an action claim — do not fire.
+      const attempts = ctx.observed.filter((o) => o.turnIndex === ctx.turnIndex && set.has(o.name));
+      if (!attempts.length) return null;
+      const tookEffect = attempts.some((o) => o.ok && o.args?.confirmed === true);
+      if (tookEffect) return null;
       const reply = ctx.reply ?? '';
-      const probedThisTurn = ctx.observed.some((o) => o.turnIndex === ctx.turnIndex && o.ok && set.has(o.name) && o.args?.confirmed !== true);
+      const probedThisTurn = attempts.some((o) => o.ok && o.args?.confirmed !== true);
       if (probedThisTurn && askRe.test(reply)) return null;
       if (exemptRe && exemptRe.test(reply)) return null;
       const declarativeClaim = splitSentences(reply).some(

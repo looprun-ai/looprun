@@ -6,9 +6,11 @@ import {
   resolveGuards,
   custom,
   precondition,
+  confirmFirst,
   destructiveClaimRequiresSuccess,
+  pendingConfirmMustAsk,
 } from '../src/index.js';
-import type { AgentWorld, GuardCtx, TrunkTheme } from '../src/index.js';
+import type { AgentWorld, GuardCtx, ObservedCall, TrunkTheme } from '../src/index.js';
 
 const persona = 'You are the plant-care agent: watering and repotting.';
 
@@ -88,6 +90,40 @@ describe('AgentSpecBase — destructive protocol (iff destructiveTools)', () => 
       () => new AgentSpecBase({ id: 'b', mode: 'M', persona, tools: ['water'], destructiveTools: ['deleteItem'] }),
     ).toThrow(/not in the tool surface/);
   });
+
+  it('installs base:confirmFirstPriorAsk for a prior-ask mechanism tool', () => {
+    const spec = new AgentSpecBase({
+      id: 'b', mode: 'M', persona, tools: ['disconnect'],
+      destructiveTools: ['disconnect'], confirmMechanism: { disconnect: 'prior-ask' },
+    });
+    expect(spec.guards.preTool.map((b) => b.id)).toEqual([
+      'minimal:noDuplicateCall', 'base:confirmFirstPriorAsk', 'base:destructiveThrottle',
+    ]);
+  });
+
+  it('partitions mixed mechanisms (arg → confirmFirst, prior-ask → confirmFirstPriorAsk, throttle over all)', () => {
+    const spec = new AgentSpecBase({
+      id: 'b', mode: 'M', persona, tools: ['del', 'disc'],
+      destructiveTools: ['del', 'disc'], confirmMechanism: { disc: 'prior-ask' },
+    });
+    expect(spec.guards.preTool.map((b) => b.id)).toEqual([
+      'minimal:noDuplicateCall', 'base:confirmFirst', 'base:confirmFirstPriorAsk', 'base:destructiveThrottle',
+    ]);
+  });
+});
+
+describe('AgentSpecBase — noFalseFailureClaim auto-layer (cfg.lexicon)', () => {
+  const FALSE_FAILURE = /\b(cannot|unable|failed)\b/i;
+
+  it('auto-installs minimal:noFalseFailureClaim BEFORE minimal:emptyReply when lexicon provides the regex', () => {
+    const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: ['x'], lexicon: { falseFailureClaimRe: FALSE_FAILURE } });
+    expect(spec.guards.onReply.map((b) => b.id)).toEqual(['minimal:noFalseFailureClaim', 'minimal:emptyReply']);
+  });
+
+  it('is byte-stable (NOT installed) when no lexicon is provided', () => {
+    const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: ['x'] });
+    expect(spec.guards.onReply.map((b) => b.id)).toEqual(['minimal:emptyReply']);
+  });
 });
 
 describe('layer resolution (agent wins)', () => {
@@ -107,35 +143,114 @@ describe('layer resolution (agent wins)', () => {
   });
 });
 
-describe('destructiveClaimRequiresSuccess — offer-aware, sentence-scoped (P8a)', () => {
-  // English lexicon injected by the caller (the runtime carries none).
+describe('destructiveClaimRequiresSuccess — attempt-keyed, offer-aware, sentence-scoped (P8a)', () => {
+  // English lexicon injected by the caller (the runtime carries none). The claim-check probe-relay
+  // exemption uses confirm-LANGUAGE only (no bare `?`) so a trailing question cannot mask a claim.
   const CLAIM = /\b(deleted|removed|cancelled)\b/i;
-  const ASK = /\?|\b(confirm|are you sure|do you want|shall i|proceed|go ahead)\b/i;
+  const ASK = /\b(confirm|are you sure|do you want|shall i|proceed|go ahead)\b/i;
   const OFFER = /\b(want me to|shall i|i can|would you like me to|if you(?:'d| would) like)\b/i;
   const guard = destructiveClaimRequiresSuccess(['deleteItem'], { claimRe: CLAIM, askRe: ASK, offerRe: OFFER });
 
-  const ctx = (reply: string): GuardCtx => ({
-    args: {}, world: fixtureWorld(), observed: [], turnIndex: 0, reply, producedThisTurn: [],
+  // The realistic fabrication footprint under toolChoice:'required' — a confirmed:true call the
+  // confirmFirst gate vetoed: an ATTEMPT with no effect.
+  const vetoedAttempt: ObservedCall = { name: 'deleteItem', args: { confirmed: true }, ok: false, turnIndex: 0 };
+  // A legal PROBE (confirmed absent, ok) — the two-step first leg.
+  const probe: ObservedCall = { name: 'deleteItem', args: { itemId: 'x1' }, ok: true, turnIndex: 0 };
+
+  const ctx = (reply: string, observed: ObservedCall[] = []): GuardCtx => ({
+    args: {}, world: fixtureWorld(), observed, turnIndex: 0, reply, producedThisTurn: [],
   });
 
-  it('fires on a bare declarative deletion claim with no successful destructive call', () => {
-    expect(guard.check(ctx('The item was deleted.'))).not.toBeNull();
+  it('does NOT fire on a status readback when no destructive tool was ATTEMPTED this turn (P1-FP fix)', () => {
+    expect(guard.check(ctx('The item was deleted.'))).toBeNull();
   });
 
-  it('does NOT fire when the destructive verb is only OFFERED (same sentence)', () => {
-    expect(guard.check(ctx('I can delete it — want me to remove the record?'))).toBeNull();
+  it('fires on a declarative deletion claim when the destructive tool was attempted-but-vetoed', () => {
+    expect(guard.check(ctx('The item was deleted.', [vetoedAttempt]))).not.toBeNull();
+  });
+
+  it('does NOT fire when the destructive verb is only OFFERED (same sentence), even given an attempt', () => {
+    expect(guard.check(ctx('I can delete it — want me to remove the record?', [vetoedAttempt]))).toBeNull();
   });
 
   it('an earlier offer sentence cannot mask a later declarative claim', () => {
-    // Sentence-scoped: the offer sentence is exempt, but the standalone declarative claim still fires.
-    expect(guard.check(ctx('Want me to help? The record was deleted.'))).not.toBeNull();
+    expect(guard.check(ctx('Want me to help? The record was deleted.', [vetoedAttempt]))).not.toBeNull();
+  });
+
+  it('exempts a confirm-seeking relay after a probe, but still fires on a declarative claim after only a probe', () => {
+    expect(guard.check(ctx('Are you sure you want to proceed?', [probe]))).toBeNull();
+    expect(guard.check(ctx('The record was deleted.', [probe]))).not.toBeNull();
   });
 
   it('does not fire when the destructive tool succeeded with confirmed:true this turn', () => {
-    const withOk: GuardCtx = {
-      ...ctx('The item was deleted.'),
-      observed: [{ name: 'deleteItem', args: { confirmed: true }, ok: true, turnIndex: 0 }],
-    };
-    expect(guard.check(withOk)).toBeNull();
+    const ok: ObservedCall = { name: 'deleteItem', args: { confirmed: true }, ok: true, turnIndex: 0 };
+    expect(guard.check(ctx('The item was deleted.', [ok]))).toBeNull();
+  });
+});
+
+describe('pendingConfirmMustAsk — resolution-aware (P8a)', () => {
+  const ASK = /\?|\b(confirm|are you sure|do you want|shall i|proceed|go ahead)\b/i;
+  const guard = pendingConfirmMustAsk({ askRe: ASK });
+  const pendingProbe: ObservedCall = {
+    name: 'deleteItem', args: { itemId: 'x1' }, ok: true, turnIndex: 0, resultFlags: { requiresConfirmation: true },
+  };
+  const ctx = (reply: string, observed: ObservedCall[]): GuardCtx => ({
+    args: {}, world: fixtureWorld(), observed, turnIndex: 0, reply, producedThisTurn: [],
+  });
+
+  it('fires when the pending confirm is unresolved and the reply does not ask', () => {
+    expect(guard.check(ctx('Item x1 removed.', [pendingProbe]))).not.toBeNull();
+  });
+
+  it('does not fire when the reply relays the confirmation question', () => {
+    expect(guard.check(ctx('Are you sure you want to delete x1?', [pendingProbe]))).toBeNull();
+  });
+
+  it('does NOT fire once a same-record confirmed:true call resolves the probe (probe→approved-execute tail)', () => {
+    const resolve: ObservedCall = { name: 'deleteItem', args: { itemId: 'x1', confirmed: true }, ok: true, turnIndex: 0 };
+    expect(guard.check(ctx('Done — x1 removed.', [pendingProbe, resolve]))).toBeNull();
+  });
+
+  it('STILL fires when the confirmed:true call was on a DIFFERENT record', () => {
+    const other: ObservedCall = { name: 'deleteItem', args: { itemId: 'x7', confirmed: true }, ok: true, turnIndex: 0 };
+    expect(guard.check(ctx('Removed.', [pendingProbe, other]))).not.toBeNull();
+  });
+});
+
+describe('confirmFirst — arg + prior-ask mechanisms', () => {
+  const ctx = (over: Partial<GuardCtx>): GuardCtx => ({
+    args: {}, tool: 'act', world: fixtureWorld(), observed: [], turnIndex: 0, reply: '', producedThisTurn: [], ...over,
+  });
+
+  describe("'arg' (default)", () => {
+    const guard = confirmFirst();
+    it('allows a call without the confirm flag (the probe)', () => {
+      expect(guard.check(ctx({ args: {} }))).toBeNull();
+    });
+    it('denies confirmed:true with no prior-turn probe', () => {
+      expect(guard.check(ctx({ args: { confirmed: true }, turnIndex: 0 }))).not.toBeNull();
+    });
+    it('allows confirmed:true after a prior-turn probe', () => {
+      const probe: ObservedCall = { name: 'act', args: {}, ok: true, turnIndex: 0 };
+      expect(guard.check(ctx({ args: { confirmed: true }, turnIndex: 1, observed: [probe] }))).toBeNull();
+    });
+  });
+
+  describe("'prior-ask' (flag-less tools)", () => {
+    const guard = confirmFirst({ mechanism: 'prior-ask' });
+    it('denies on the opening turn (no prior askUser)', () => {
+      expect(guard.check(ctx({ turnIndex: 0, observed: [] }))).not.toBeNull();
+    });
+    it('denies a later turn when the model never asked', () => {
+      expect(guard.check(ctx({ turnIndex: 2, observed: [] }))).not.toBeNull();
+    });
+    it('allows the act after a prior-turn askUser', () => {
+      const ask: ObservedCall = { name: 'askUser', args: {}, ok: true, turnIndex: 0 };
+      expect(guard.check(ctx({ turnIndex: 1, observed: [ask] }))).toBeNull();
+    });
+    it('denies when the only askUser is THIS turn (composes with noActAfterAskSameTurn)', () => {
+      const ask: ObservedCall = { name: 'askUser', args: {}, ok: true, turnIndex: 1 };
+      expect(guard.check(ctx({ turnIndex: 1, observed: [ask] }))).not.toBeNull();
+    });
   });
 });
