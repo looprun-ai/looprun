@@ -251,10 +251,15 @@ export function confirmFirst(opts?: string | { argFlag?: string; mechanism?: 'ar
     check(ctx) {
       if (!ctx.tool) return null;
       if (mechanism === 'prior-ask') {
-        const askedEarlier = ctx.observed.some(
-          (obs) => obs.name === 'askUser' && obs.ok && obs.turnIndex < ctx.turnIndex,
+        // The probe is EITHER an earlier-turn askUser OR an earlier-turn ATTEMPT of this same tool
+        // (executed or vetoed — vetoed attempts land in observed with ok:false). The attempt disjunct is
+        // load-bearing: models often relay the confirmation question via replyToUser instead of askUser,
+        // and the ask-only form dead-locks the legitimate later-turn action. A prior attempt proves the
+        // confirm flow started and the user has since answered.
+        const probedEarlier = ctx.observed.some(
+          (obs) => obs.turnIndex < ctx.turnIndex && (obs.name === ctx.tool || (obs.name === 'askUser' && obs.ok)),
         );
-        return askedEarlier
+        return probedEarlier
           ? null
           : `Do NOT run ${ctx.tool} yet — first ask the user to confirm and STOP; run it only in a LATER turn after they agree.`;
       }
