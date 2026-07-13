@@ -178,6 +178,27 @@ named `toolChoice: { type:'tool', toolName }` form is **ignored by `llama-server
 micro-loop backend closes the terminal with `generateObject` + `response_format: json_schema` (a non-lazy
 whole-output grammar) because `llama-server`'s tool grammar is lazy even under `toolChoice:'required'`.
 
+## Composition patterns (recipes over the kinds above)
+
+**Choose-gate — resolving an OPEN offer without reading user text.** When world state records an open
+offer/pitch and the correct next action forks on user intent (engage / dismiss / pivot-that-must-dismiss-
+first), neither a reply guard nor a `chains` auto-call can ship: the firewall bars user-text triggers, and
+an auto-dismiss chain is unshippable when its `(world, observed)` footprint is identical across the
+engage / dismiss / persist cases. Compose two levers instead:
+
+1. A `custom` preTool veto (`run` dim): while the offer is open AND this turn has neither an ok
+   engage-tool call nor the dismiss, DENY the unrelated-work toolset. The MODEL (which does read the
+   user text) is forced to resolve the offer first; deterministic code only narrows *when* the choice
+   is due. Reads world+ledger only — firewall-clean, magnet-safe (nothing is scoped by intent).
+2. Terminal tools bypass preTool vetoes — pair the gate with a state-gated `theme.stateBlock` tail
+   block (`## <Offer> (OPEN)`): pivot ⇒ dismiss first; hesitation ⇒ re-invite; NEVER invent
+   identifiers from a description (anti-fabrication caveat — required in practice).
+
+**Census obligation:** before shipping, enumerate every eval case with the offer open and confirm none
+needs a vetoed tool for its gold flow. Validated: bench target case 0/3 → 3/3 (N=3, no regression),
+then a live production eval 10/10 with the port unchanged. Full mechanics: `packages/core/GUARDS.md`
+→ "The choose-gate pattern".
+
 ## When / how much to guard (the usage math, distilled)
 
 Full treatment: the determinism proof in the lineage (see CONTEXT.md). The operational

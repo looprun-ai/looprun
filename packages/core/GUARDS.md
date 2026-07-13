@@ -190,6 +190,40 @@ the one tool instead. Separately, the experimental micro-loop backend closes the
 TOOL grammar is LAZY even under `toolChoice:'required'`, so a plain tool-forced close let tiny models
 free-write past the terminal.
 
+### The choose-gate pattern (a `custom` preTool composition)
+
+For the case `chains` cannot ship: world state records an **open offer/pitch** (e.g. `offerState ===
+null`/`'open'`) and the correct next action forks on **user intent** — engage, dismiss, or an unrelated
+pivot that must dismiss FIRST. A guard cannot read the user text (firewall), and an auto-dismiss
+`ChainSpec` is unshippable when its `(world, observed)` footprint is byte-identical across the
+engage / dismiss / persist cases (adversarially provable: the trigger cannot tell them apart).
+
+The pattern uses two levers, neither of which reads user text:
+
+```ts
+// 1. the gate: while the offer is OPEN and unresolved THIS turn, veto unrelated work
+custom('agent:offerChooseGate', 'preTool', 'run', (ctx) => {
+  if (ctx.world.projection().offerState !== 'open') return null;   // gate OFF once resolved
+  const resolved = ctx.observed.some(
+    (o) => o.turnIndex === ctx.turnIndex && o.ok && (ENGAGE_TOOLS.has(o.name) || o.name === 'dismissOffer'),
+  );
+  if (resolved || !OTHER_WORK.has(ctx.tool)) return null;
+  return { code: 'offer-open-choose-first', message: 'An offer is open: engage it or dismiss it before other work.' };
+})
+```
+
+2. Terminal tools bypass preTool vetoes, so pair the gate with a state-gated `theme.stateBlock`
+   tail block (`## <Offer> (OPEN)`, rendered only while the offer is open) telling the model:
+   pivot ⇒ dismiss first; hesitation ⇒ re-invite; NEVER invent identifiers from a description
+   (the anti-fabrication caveat — without it the block induced one fabricated-handle rep).
+
+The deny makes the MODEL — which legitimately reads the user text — choose engage-vs-dismiss; the
+deterministic code only narrows *when* the choice is due. **Census obligation before shipping:** enumerate
+every eval case where the offer is open and confirm none needs a vetoed tool for its gold flow (a
+choose-gate over a tool some open-state case requires is a deterministic autofail). Validated end-to-end:
+bench target case 0/3 → 3/3 (N=3, bucket 71/72, zero regression), then a live production eval 10/10 with
+the port unchanged.
+
 ## The P8a domain-neutrality law
 
 `@looprun-ai/core` (and the mastra runtime `src`) carry **zero** language-specific content. No generic guard
