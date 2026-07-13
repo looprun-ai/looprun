@@ -155,9 +155,8 @@ pendingConfirmMustAsk({ askRe: CONFIRM_ASK_RE });
 destructiveClaimRequiresSuccess(['closeMatter'], { claimRe: /…/i, askRe: CONFIRM_ASK_RE, offerRe: OFFER_OR_CONDITIONAL_RE, exemptRe: /…/i });
 ```
 
-The runtime holds only the MECHANISM + generic English prose; a domain-neutrality lint
-(`packages/core/test/runtime-neutrality.test.ts`) fails if a language stem or accented letter is
-reintroduced into the runtime source. **A different-language business authors its own lexicon** and
+The runtime holds only the MECHANISM + generic English prose — a language stem or accented letter
+never belongs in the runtime source. **A different-language business authors its own lexicon** and
 injects it — the same kinds, no fork.
 
 ## Controls (not guards) — on the spec's `controls`

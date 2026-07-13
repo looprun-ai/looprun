@@ -47,6 +47,10 @@ function collect(path) {
 
 const isComment = (l) => { const t = l.trim(); return t.startsWith('*') || t.startsWith('//') || t.startsWith('/*'); };
 const stripTrailingComment = (l) => l.replace(/\/\/.*$/, '');
+// Blank string/template CONTENTS before the g/y-regex scan — a slash inside a prose string
+// ("name/segment/audience/goal") is not a regex delimiter and must not be read as one.
+const stripStrings = (l) =>
+  l.replace(/'(?:[^'\\]|\\.)*'/g, "''").replace(/"(?:[^"\\]|\\.)*"/g, '""').replace(/`(?:[^`\\]|\\.)*`/g, '``');
 
 function lintFile(file, out) {
   const text = readFileSync(file, 'utf8');
@@ -69,7 +73,8 @@ function lintFile(file, out) {
     // (2) stateful g/y regex
     if (!isComment(line)) {
       const code = stripTrailingComment(line);
-      if ((G_LITERAL.test(code) || G_NEWREGEXP.test(code)) &&
+      const scan = stripStrings(code); // prose slashes inside strings are not regex delimiters
+      if ((G_LITERAL.test(scan) || G_NEWREGEXP.test(scan)) &&
           !code.includes('.match(') && !code.includes('.replace(') && !code.includes(G_ALLOW)) {
         out.push(`${file}:${n} — stateful /g or /y regex flag (lastIndex alternates verdicts); use .match/.replace or build per-call`);
       }

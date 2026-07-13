@@ -50,9 +50,12 @@ plus a measured improvement loop that stops only at the certification bar (defau
 Claude judge, N=3**).
 
 **The skill is the single source of truth for business content**: every business string lives in a
-GENERATED artifact — an AgentSpec (per-agent) or the domain theme (business-common). The looprun
-trunk renderer is domain-neutral assembly machinery and holds ZERO business strings (enforced by
-the library's own CI — never patch it with domain content).
+GENERATED artifact — an AgentSpec (per-agent) or the domain theme (business-common); the looprun
+trunk renderer is domain-neutral assembly machinery that holds ZERO business strings. **The skill
+VERIFIES this itself**: `npx looprun-eval lint --spec-laws` (or the portable
+`scripts/lint-guards.mjs`) runs over every emitted spec/theme at authoring time (Stage N5) and MUST
+pass before anything is offered or measured. The `@looprun-ai/core` package you install is already
+domain-neutral — you never edit it, so there is nothing to re-check there.
 
 Core principle: **author both halves of every rule from the same source** — once as LLM-facing
 conditioned prose, once as a deterministic check — then **measure, never trust**. Generated rulesets
@@ -177,8 +180,8 @@ Local smoke AFTER certification: `npx looprun-eval run --model qwen3.5-4b`. Full
   replication control.
 - **The runtime trunk holds ZERO business strings.** Never edit looprun's trunk renderer
   (`renderScopedSpecTrunk` in @looprun-ai/core, or any host equivalent) with domain content — every
-  business string belongs to a generated artifact (spec or theme). Enforced by the library's own
-  CI lint.
+  business string belongs to a generated artifact (spec or theme). You install `@looprun-ai/core`
+  as-is; it stays domain-neutral precisely because domain content never goes into it.
 
 ## Common mistakes
 

@@ -359,7 +359,10 @@ export function noFabricatedSuccess(
     check(ctx) {
       if (ranThisTurn(ctx, tool)) return null;
       const reply = ctx.reply ?? '';
-      const labels = reply.match(opts.labelRe) ?? [];
+      // Collect ALL label tokens. Build the global variant locally so a shared /g regex (whose
+      // lastIndex would persist across turns) is never required on opts.labelRe.
+      const labelRe = opts.labelRe.global ? opts.labelRe : new RegExp(opts.labelRe.source, opts.labelRe.flags + 'g');
+      const labels = reply.match(labelRe) ?? [];
       const produced = ctx.producedThisTurn ?? [];
       const invented = labels.filter((l) => !produced.includes(l) && !ctx.world.hasMediaLabel(l));
       if (invented.length) return opts.reason;

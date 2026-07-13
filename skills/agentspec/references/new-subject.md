@@ -28,8 +28,8 @@ artifacts; nothing in the looprun library/runtime is hand-edited with business c
    `cases` + `caseMap` (from `evals/cases.ts` once G3 runs), `judgePromptPath`, `bar`. The runner
    is looprun's ONE execution surface (`LoopRunAgent` on Mastra) — the CLI drives it; there is no
    adapter to write. Guards read the world through closures — keep the new world's accessor names
-   domain-honest. Never edit the looprun trunk renderer with business content (the library's CI
-   lint fails the build).
+   domain-honest. Never edit the looprun trunk renderer with business content — install
+   `@looprun-ai/core` as-is; every business string belongs in a generated spec or theme.
 6. **Judge rules** — `evals/judge-prompt.md`: the domain's business-specific pass/fail RULES
    ONLY. The packaged generic Claude-judge prompt (`npx looprun-eval judge-prompt` prints its
    path) already owns the output format and the universal rules (meaning not language,

@@ -3,8 +3,8 @@
 The theme is the business-COMMON layer: the strings shared by every agent of a domain. It is a
 **generated artifact with one owner — the skill** — exactly like the specs. The looprun trunk
 renderer (`renderScopedSpecTrunk` in @looprun-ai/core, or any host equivalent) is pure assembly
-machinery and holds ZERO business strings (SKILL.md hard rule; the library's own CI lint fails
-otherwise).
+machinery and holds ZERO business strings (SKILL.md hard rule) — a generated spec or theme owns
+every business string; you install the runtime as-is.
 
 Run E3 from the same inputs as E2 (docs + A2 answer + tool schemas + the world's projection
 keys) — it can run in parallel with the spec drafters.
