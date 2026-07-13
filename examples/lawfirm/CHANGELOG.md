@@ -1,5 +1,12 @@
 # lawfirm-example
 
+## 0.0.3
+
+### Patch Changes
+
+- Updated dependencies [1f46c90]
+  - looprun@0.2.1
+
 ## 0.0.2
 
 ### Patch Changes
