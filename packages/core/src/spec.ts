@@ -197,7 +197,7 @@ export interface AgentSpecConfig {
    *  `minimal:noFalseFailureClaim` (a reply-honesty invariant every agent should carry). Auto-iff-provided
    *  — an absent lexicon leaves the minimal layer exactly as before (non-breaking). Extensible: future
    *  always-on language-keyed guards add their own key here, keeping the runtime language-neutral (P8a). */
-  lexicon?: { falseFailureClaimRe?: RegExp };
+  lexicon?: { falseFailureClaimRe?: RegExp; confirmAskRe?: RegExp };
   toolSchemas?: Record<string, ToolSchemaLike>;
   /** Optional domain-theme reference (see {@link AgentSpec.theme}). */
   theme?: TrunkTheme;
@@ -223,7 +223,7 @@ export class AgentSpecBase implements AgentSpec {
   readonly theme?: TrunkTheme;
   protected readonly destructiveTools: string[];
   protected readonly confirmMechanism: Record<string, 'arg' | 'prior-ask'>;
-  protected readonly lexicon: { falseFailureClaimRe?: RegExp };
+  protected readonly lexicon: { falseFailureClaimRe?: RegExp; confirmAskRe?: RegExp };
   protected readonly toolSchemas: Record<string, ToolSchemaLike>;
   private seq = 0;
 
@@ -306,7 +306,7 @@ export class AgentSpecBase implements AgentSpec {
       this.addGuard('preTool', argTools, confirmFirst(), { layer: 'base', id: 'base:confirmFirst' });
     }
     if (priorAskTools.length) {
-      this.addGuard('preTool', priorAskTools, confirmFirst({ mechanism: 'prior-ask' }), { layer: 'base', id: 'base:confirmFirstPriorAsk' });
+      this.addGuard('preTool', priorAskTools, confirmFirst({ mechanism: 'prior-ask', askRe: this.lexicon.confirmAskRe }), { layer: 'base', id: 'base:confirmFirstPriorAsk' });
     }
     this.addGuard('preTool', destructive, destructiveThrottle(destructive), { layer: 'base', id: 'base:destructiveThrottle' });
   }

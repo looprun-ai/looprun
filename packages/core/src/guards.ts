@@ -241,7 +241,7 @@ export function noDuplicateCall(): Guard {
  * Reads observed / args only — never the user text (magnet-safe). Auto-installed by `AgentSpecBase` per
  * destructive tool according to `cfg.confirmMechanism`.
  */
-export function confirmFirst(opts?: string | { argFlag?: string; mechanism?: 'arg' | 'prior-ask' }): Guard {
+export function confirmFirst(opts?: string | { argFlag?: string; mechanism?: 'arg' | 'prior-ask'; askRe?: RegExp }): Guard {
   const o = typeof opts === 'string' ? { argFlag: opts } : (opts ?? {});
   const argFlag = o.argFlag ?? 'confirmed';
   const mechanism = o.mechanism ?? 'arg';
@@ -256,8 +256,17 @@ export function confirmFirst(opts?: string | { argFlag?: string; mechanism?: 'ar
         // load-bearing: models often relay the confirmation question via replyToUser instead of askUser,
         // and the ask-only form dead-locks the legitimate later-turn action. A prior attempt proves the
         // confirm flow started and the user has since answered.
+        // Third disjunct: a prior-turn replyToUser whose TEXT matches the injected confirm-question
+        // regex (the bundle lexicon). Models often ask politely via replyToUser without touching the
+        // tool at all; ask-or-attempt alone dead-locks the legitimate later-turn action. The text read
+        // is the MODEL'S OWN prior output — firewall-clean.
+        const askRe = o.askRe;
         const probedEarlier = ctx.observed.some(
-          (obs) => obs.turnIndex < ctx.turnIndex && (obs.name === ctx.tool || (obs.name === 'askUser' && obs.ok)),
+          (obs) =>
+            obs.turnIndex < ctx.turnIndex &&
+            (obs.name === ctx.tool ||
+              (obs.name === 'askUser' && obs.ok) ||
+              (askRe != null && obs.name === 'replyToUser' && obs.ok && askRe.test(String(obs.args?.text ?? '')))),
         );
         return probedEarlier
           ? null
