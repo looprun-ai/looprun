@@ -33,6 +33,12 @@ Windows/Linux (CUDA) — only the tier (model alias) changes per machine.
   builds (e.g. brew's b9740) cannot load the qwen3.5/3.6 family. Grab a prebuilt binary from the
   [releases page](https://github.com/ggml-org/llama.cpp/releases) (macOS arm64/Metal, Linux/Windows
   CUDA and CPU) or [build from source](https://github.com/ggml-org/llama.cpp/blob/master/docs/build.md).
+  - **Source builds (dynamic `@rpath`)**: a from-source `llama-server` often links its `libggml-*`/
+    `libllama-*` dylibs by an `@rpath` pointing at the build dir (e.g. under `/tmp`), which the OS can
+    clear on reboot → `dyld: Library not loaded` (Abort trap 6). The dylibs ship beside the binary, so
+    `looprun models serve` **automatically sets `DYLD_FALLBACK_LIBRARY_PATH` to the binary's own
+    directory** (macOS). If you launch `llama-server` yourself, do the same — and never via `nohup`
+    (a SIP-protected binary that strips `DYLD_*`); use a wrapper that `export`s then `exec`s.
 - **Binary resolution order**: `$LLAMA_BIN` → `~/llamacpp-b9780/bin/llama-server` → `llama-server`
   on `PATH` (a PATH hit warns about the version requirement). `npx looprun models status` reports
   which binary was found; every error names the fix (`install llama.cpp (≥ b9780) and/or set $LLAMA_BIN`).
