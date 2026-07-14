@@ -170,6 +170,13 @@ Local smoke AFTER certification: `npx looprun-eval run --model qwen3.5-4b`. Full
   systemPrompt, caseMap sane) BEFORE it is offered or measured. No looprun project yet? Run the
   portable `node scripts/lint-guards.mjs <spec-or-theme>` (same banned-token + firewall +
   theme-persona rules, pure node).
+- **Every generated spec SHOULD also pass `node scripts/lint-spec-quality.mjs <gen-dir>`** —
+  the deterministic QUALITY lint (2026-07-14, born from the alien-A/B): Q1 prose-parity (a checkable
+  ordering stated in prose MUST have its requiresBefore/precondition guard — prose is the OPTIONAL
+  half), Q2 guard-target existence, Q3 call-ish tool-name hallucination, Q4 ordering cycles,
+  Q5 destructive-without-confirm (destructiveTools-aware), Q6 UNCHECKABLE hygiene, Q7 unnameable-flow
+  (name pipeline tools LITERALLY in prose so the ordering is gateable). Findings are fixed or
+  explicitly `// lint-quality-exempt: <reason>`-ed — never ignored.
 - Own scoped prompt per agent, never a shared/global persona (the persona-on-spec law). The
   per-agent role line is the spec's REQUIRED `persona` field, rendered as the FIRST Behavior
   bullet; the shared business VOICE is the theme's `voice`, opening the trunk — **a theme NEVER
