@@ -19,7 +19,7 @@ bucket (writes `eval-results/<date>-<domain>/<agent>.dump.json` + `.autofail.jso
 
 1. `npx looprun-eval run --agent <agent-id> --cases <case-ids-csv|full> [--reps 1]` — runs the
    bucket (no judging) and preps the judge tasks.
-2. Judge the dump: Claude subagents over `<agent>.tasks.jsonl` using the packaged generic judge
+2. Judge the dump (packaged prompt = ruler v2, 2026-07-15 — turn-boundary + 3-way content matching + delivered-vs-internal rules; numbers from the old v1 prompt are not comparable, re-measure bars once): Claude subagents over `<agent>.tasks.jsonl` using the packaged generic judge
    prompt (`npx looprun-eval judge-prompt` prints its path) + the domain rules
    (`evals/judge-prompt.md`) → `<agent>.verdicts.jsonl`; then fold verdicts + auto-fails back with
    `npx looprun-eval judge-merge <agent>.dump.json <agent>.verdicts.jsonl` (autofail wins; a
