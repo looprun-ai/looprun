@@ -1,5 +1,16 @@
 # @looprun-ai/models
 
+## 0.3.0
+
+### Minor Changes
+
+- Release (minor).
+
+### Patch Changes
+
+- Updated dependencies
+  - @looprun-ai/core@0.3.0
+
 ## 0.2.0
 
 ### Minor Changes

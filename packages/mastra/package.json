@@ -1,6 +1,6 @@
 {
   "name": "@looprun-ai/mastra",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "type": "module",
   "description": "looprun on Mastra: LoopRunAgent — a genuine @mastra/core Agent compiled from an AgentSpec, with deterministic guard enforcement (beforeToolCall veto), the terminal protocol, bounded no-tools redrive and honest-abstain exhaustion. Studio-compatible.",
   "keywords": [

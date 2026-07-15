@@ -1,6 +1,6 @@
 {
   "name": "@looprun-ai/models",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "type": "module",
   "description": "looprun model story: validated local models (Qwen3.5-4B / Qwen3.6-35B-A3B on llama.cpp, measured flags) behind a ModelRuntimePort, plus the cloud validation model (gemini flash-lite thinking-off with the numeric thinkingBudget:0 trap encoded). localModel('qwen3.5-4b') → AI-SDK model for LoopRunAgent.",
   "keywords": [

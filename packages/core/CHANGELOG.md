@@ -1,5 +1,11 @@
 # @looprun-ai/core
 
+## 0.3.0
+
+### Minor Changes
+
+- Release (minor).
+
 ## 0.2.1
 
 ### Patch Changes
