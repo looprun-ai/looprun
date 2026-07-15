@@ -19,7 +19,7 @@
 import { spawn, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { modelPath } from './aliases.js';
 import { downloadModel } from './download.js';
 import type { EnsureServerResult, LocalModelSpec, ModelRuntimePort, RuntimeStatus } from './port.js';
@@ -150,9 +150,16 @@ export class LlamaCppRuntime implements ModelRuntimePort {
 
     const slotDir = slotStateDir();
     if (slotDir) mkdirSync(slotDir, { recursive: true }); // llama-server won't create it
+    // A llama.cpp SOURCE build's @rpath points at its (often /tmp) build dir, which the OS may clear
+    // on reboot → `dyld: Library not loaded: @rpath/lib…dylib` (Abort trap 6). The dylibs ship NEXT
+    // to the binary, so point the loader there. macOS-only var (ignored on Linux); we set it directly
+    // in the child env (NOT via `nohup`, which is SIP-protected and strips DYLD_*). Existing value wins.
+    const libDir = dirname(binary.path);
+    const dyld = process.env.DYLD_FALLBACK_LIBRARY_PATH;
     const child = spawn(binary.path, launchFlags(spec, model), {
       stdio: ['ignore', 'ignore', 'ignore'],
       detached: false,
+      env: { ...process.env, DYLD_FALLBACK_LIBRARY_PATH: dyld ? `${libDir}:${dyld}` : `${libDir}:/usr/local/lib:/usr/lib` },
     });
     // A server WE spawned must not outlive the process that asked for it (a leaked llama-server
     // can hold gigabytes mlock'd). stop() removes the hook.
