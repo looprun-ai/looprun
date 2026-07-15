@@ -16,7 +16,7 @@ domain-neutrality law, completed). Pre-1.0 breaking API.
   ```ts
   custom({
     kind: 'labelExists', dim: 'input',
-    check: (ctx) => world.hasMediaLabel(String(ctx.args.label ?? '')) ? null : 'Unknown label — use a real one.',
+    check: (ctx) => ctx.world.hasMediaLabel(String(ctx.args.label ?? '')) ? null : 'Unknown label — use a real one.',
     prose: () => 'the label must be a real one (do not invent it)',
   });
   ```
@@ -41,4 +41,9 @@ domain-neutrality law, completed). Pre-1.0 breaking API.
   fires only when the bundle injects `cfg.lexicon.selfNarrationRe` (`degenerationGuard({ selfNarrationRe })`);
   absent ⇒ that branch is OFF and the runtime carries no narration language. The auto-installed
   `minimal:degenerationGuard` id and onReply order are unchanged, so a spec that ships no lexicon is
-  byte-stable.
+  byte-stable. To restore the pre-0.4.0 built-in behavior verbatim, pass the former regex back in:
+  ```ts
+  degenerationGuard({
+    lexicon: { selfNarrationRe: /\b(?:I closed the turn|by calling replyToUser|The assistant (?:confirmed|called|then))\b/i },
+  });
+  ```
