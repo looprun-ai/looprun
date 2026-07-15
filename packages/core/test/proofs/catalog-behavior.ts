@@ -9,7 +9,6 @@ import {
   replyConfirmsLabels,
   replyMaxOccurrences,
   replyMustMention,
-  replyNoProductionClaim,
   replySingleQuestion,
 } from '../../src/guards.js';
 import { FIXTURE_LABEL_SCHEME, FIXTURE_LEXICON } from '../../src/testing/fixture-world.js';
@@ -22,18 +21,23 @@ export const BEHAVIOR_PROOFS: GuardProof[] = [
   // ── noFabricatedSuccess ─────────────────────────────────────────────────────
   {
     guard: 'noFabricatedSuccess',
+    // Two injected seams beyond the claim/label scheme: `refExists` (the world-backed existence predicate
+    // that replaced the removed MediaWorld coupling — the runtime carries no media concept) and `banRe`
+    // (the unconditional-ban mode that absorbed the removed replyNoProductionClaim kind).
     make: () =>
       noFabricatedSuccess('createMedia', {
         claimRe: FIXTURE_LEXICON.fabricated.claimRe,
         labelRe: FIXTURE_LABEL_SCHEME.labelRe,
         verbClaimRe: FIXTURE_LEXICON.fabricated.verbClaimRe,
+        banRe: FIXTURE_LEXICON.productionClaimRe,
+        refExists: (world, label) => (world as unknown as { hasMediaLabel(l: string): boolean }).hasMediaLabel(label),
         reason: 'Do not claim media was produced — no media tool succeeded this turn; report the real state.',
       }),
     hook: 'onReply',
     target: 'any',
     cases: [
       {
-        name: 'invented label cited with no attempt this turn',
+        name: 'invented label cited with no attempt this turn (refExists says unknown)',
         polarity: 'negative',
         ctx: { reply: 'Your media g999 is ready.', observed: [], turnIndex: 0, producedThisTurn: [] },
         l1: 'fires',
@@ -43,6 +47,21 @@ export const BEHAVIOR_PROOFS: GuardProof[] = [
           script: [
             [{ tool: 'replyToUser', args: { text: 'Your media g999 is ready.' } }],
             [{ text: 'No media has been produced yet.' }],
+          ],
+          expect: 'redrive',
+        },
+      },
+      {
+        name: 'banRe: an always-banned phrase fires regardless of attempts',
+        polarity: 'negative',
+        ctx: { reply: 'Your changes have been published to production.', observed: [], turnIndex: 0 },
+        l1: 'fires',
+        l3: {
+          preset: 'empty',
+          turns: [turn('did my change go out?')],
+          script: [
+            [{ tool: 'replyToUser', args: { text: 'Your changes have been published to production.' } }],
+            [{ text: 'Your changes have been saved.' }],
           ],
           expect: 'redrive',
         },
@@ -81,15 +100,22 @@ export const BEHAVIOR_PROOFS: GuardProof[] = [
         },
       },
       {
-        name: 'reply cites an existing seeded label with no attempt this turn',
+        name: 'reply cites an existing seeded label with no attempt this turn (refExists says known)',
         polarity: 'neutral',
-        // world omitted — craftCtx defaults to FixtureWorld('seeded-media'), which already has g001.
+        // world omitted — craftCtx defaults to FixtureWorld('seeded-media'), whose hasMediaLabel backs
+        // refExists and already knows g001, so the citation is not invented.
         ctx: {
           reply: 'Your media g001 is ready.',
           observed: [],
           turnIndex: 0,
           producedThisTurn: [],
         },
+        l1: 'silent',
+      },
+      {
+        name: 'a benign phrase near the banned one is left alone (banRe is exact)',
+        polarity: 'neutral',
+        ctx: { reply: 'This will go live once approved.', observed: [], turnIndex: 0 },
         l1: 'silent',
       },
     ],
@@ -270,53 +296,6 @@ export const BEHAVIOR_PROOFS: GuardProof[] = [
     ],
   },
 
-  // ── replyNoProductionClaim ────────────────────────────────────────────────────
-  {
-    guard: 'replyNoProductionClaim',
-    make: () =>
-      replyNoProductionClaim(
-        FIXTURE_LEXICON.productionClaimRe,
-        'Do not claim the change was published to production — report the actual state.',
-      ),
-    hook: 'onReply',
-    target: 'any',
-    cases: [
-      {
-        name: 'reply claims a production publish',
-        polarity: 'negative',
-        ctx: { reply: 'Your changes have been published to production.', observed: [], turnIndex: 0 },
-        l1: 'fires',
-        l3: {
-          preset: 'empty',
-          turns: [turn('did my change go out?')],
-          script: [
-            [{ tool: 'replyToUser', args: { text: 'Your changes have been published to production.' } }],
-            [{ text: 'Your changes have been saved.' }],
-          ],
-          expect: 'redrive',
-        },
-      },
-      {
-        name: 'reply just reports saved',
-        polarity: 'positive',
-        ctx: { reply: 'Your changes have been saved.', observed: [], turnIndex: 0 },
-        l1: 'silent',
-        l3: {
-          preset: 'empty',
-          turns: [turn('did my change go out?')],
-          script: [[{ tool: 'replyToUser', args: { text: 'Your changes have been saved.' } }]],
-          expect: 'pass',
-        },
-      },
-      {
-        name: 'reply mentions going live without the exact claim phrase',
-        polarity: 'neutral',
-        ctx: { reply: 'This will go live once approved.', observed: [], turnIndex: 0 },
-        l1: 'silent',
-      },
-    ],
-  },
-
   // ── emptyReply (auto minimal) ────────────────────────────────────────────────
   {
     guard: 'emptyReply',
@@ -398,13 +377,15 @@ export const BEHAVIOR_PROOFS: GuardProof[] = [
         },
       },
       {
-        name: 'third-person self-narration',
+        name: 'third-person self-narration is OFF when no selfNarrationRe is injected',
         polarity: 'neutral',
+        // make() is opts-less → the narration branch is disabled; the ON-when-provided direction is
+        // proven at the check level in proofs-l1.test.ts (bespoke describe).
         ctx: { reply: 'The assistant confirmed the update.', observed: [], turnIndex: 0 },
-        l1: 'fires',
+        l1: 'silent',
       },
       {
-        name: 'run-away repeated line',
+        name: 'run-away repeated line (always-on branch, no lexicon needed)',
         polarity: 'neutral',
         ctx: {
           reply: 'This is a repeated line.\nThis is a repeated line.\nThis is a repeated line.',

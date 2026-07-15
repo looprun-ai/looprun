@@ -41,7 +41,7 @@ const ALWAYS_FIRE_KINDS = new Set(['forbidThisTurn']);
 
 describe('coverage ratchet', () => {
   it('extractor self-test (non-vacuous): finds the known kinds', () => {
-    expect(guardKinds.length).toBeGreaterThanOrEqual(25);
+    expect(guardKinds.length).toBeGreaterThanOrEqual(22);
     expect(guardKinds).toContain('requiresBefore');
     expect(guardKinds).toContain('noFabricatedSuccess');
     expect(guardKinds).toContain('custom');

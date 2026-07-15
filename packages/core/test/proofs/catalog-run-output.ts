@@ -3,8 +3,7 @@ import {
   confirmFirst,
   custom,
   destructiveThrottle,
-  maxCallsPerConversation,
-  maxCallsPerTurn,
+  maxCalls,
   noActAfterAskSameTurn,
   noDuplicateCall,
   precondition,
@@ -65,16 +64,17 @@ const preconditionProof: GuardProof = {
   ],
 };
 
-// ── maxCallsPerTurn (createItem — at most 2 per turn) ─────────────────────────
-const maxCallsPerTurnProof: GuardProof = {
-  guard: 'maxCallsPerTurn',
+// ── maxCalls (createItem — at most 2 per turn; the canonical proof pins the DEFAULT 'turn' scope.
+//    The 'conversation' scope is proven at the check level in proofs-l1.test.ts) ─────────────────────
+const maxCallsProof: GuardProof = {
+  guard: 'maxCalls',
   make: () =>
-    maxCallsPerTurn('createItem', 2, 'You already created 2 items this turn — that is the limit; reply to the user instead of creating another.'),
+    maxCalls('createItem', 2, 'You already created 2 items this turn — that is the limit; reply to the user instead of creating another.'),
   hook: 'preTool',
   target: ['createItem'],
   cases: [
     {
-      name: 'one prior call this turn stays under the limit',
+      name: 'turn scope: one prior call this turn stays under the limit',
       polarity: 'positive',
       ctx: {
         tool: 'createItem',
@@ -96,7 +96,7 @@ const maxCallsPerTurnProof: GuardProof = {
       },
     },
     {
-      name: 'two prior calls this turn hit the limit',
+      name: 'turn scope: two prior calls this turn hit the limit',
       polarity: 'negative',
       ctx: {
         tool: 'createItem',
@@ -123,97 +123,16 @@ const maxCallsPerTurnProof: GuardProof = {
       },
     },
     {
-      name: 'unrelated prior call history does not count toward the limit',
+      name: 'turn scope: two prior calls in an EARLIER turn do NOT count (the turnIndex filter)',
       polarity: 'neutral',
       ctx: {
         tool: 'createItem',
-        args: { title: 'Alpha' },
-        observed: [{ name: 'searchItem', args: { query: 'items' }, ok: true, turnIndex: 0 }],
-        turnIndex: 0,
-      },
-      l1: 'silent',
-    },
-  ],
-};
-
-// ── maxCallsPerConversation (createMedia — at most 3 across the conversation) ─
-const maxCallsPerConversationProof: GuardProof = {
-  guard: 'maxCallsPerConversation',
-  make: () =>
-    maxCallsPerConversation(
-      'createMedia',
-      3,
-      'You already generated 3 media assets this conversation — that is the limit; explain it instead of generating another.',
-    ),
-  hook: 'preTool',
-  target: ['createMedia'],
-  cases: [
-    {
-      name: 'two prior successes across turns stay under the limit',
-      polarity: 'positive',
-      ctx: {
-        tool: 'createMedia',
-        args: { prompt: 'a river' },
+        args: { title: 'Gamma' },
         observed: [
-          { name: 'createMedia', args: { prompt: 'a cat' }, ok: true, turnIndex: 0 },
-          { name: 'createMedia', args: { prompt: 'a dog' }, ok: true, turnIndex: 1 },
+          { name: 'createItem', args: { title: 'Alpha' }, ok: true, turnIndex: 0 },
+          { name: 'createItem', args: { title: 'Beta' }, ok: true, turnIndex: 0 },
         ],
-        turnIndex: 2,
-      },
-      l1: 'silent',
-    },
-    {
-      name: 'three prior successes across turns hit the conversation limit',
-      polarity: 'negative',
-      ctx: {
-        tool: 'createMedia',
-        args: { prompt: 'a fish' },
-        observed: [
-          { name: 'createMedia', args: { prompt: 'a cat' }, ok: true, turnIndex: 0 },
-          { name: 'createMedia', args: { prompt: 'a dog' }, ok: true, turnIndex: 1 },
-          { name: 'createMedia', args: { prompt: 'a bird' }, ok: true, turnIndex: 2 },
-        ],
-        turnIndex: 3,
-      },
-      l1: 'fires',
-      l3: {
-        preset: 'empty',
-        turns: [
-          { userText: 'make an image of a cat' },
-          { userText: 'make an image of a dog' },
-          { userText: 'make an image of a bird' },
-          { userText: 'make an image of a fish' },
-        ],
-        script: [
-          [{ tool: 'createMedia', args: { prompt: 'a cat' } }],
-          [{ tool: 'replyToUser', args: { text: 'A cat image was generated.' } }],
-          [{ tool: 'createMedia', args: { prompt: 'a dog' } }],
-          [{ tool: 'replyToUser', args: { text: 'A dog image was generated.' } }],
-          [{ tool: 'createMedia', args: { prompt: 'a bird' } }],
-          [{ tool: 'replyToUser', args: { text: 'A bird image was generated.' } }],
-          [{ tool: 'createMedia', args: { prompt: 'a fish' } }],
-          [
-            {
-              tool: 'replyToUser',
-              args: { text: 'That reaches the conversation limit for media — no further media generation is possible right now.' },
-            },
-          ],
-        ],
-        expect: 'veto',
-        tool: 'createMedia',
-      },
-    },
-    {
-      name: 'unrelated observed history does not count toward the conversation limit',
-      polarity: 'neutral',
-      ctx: {
-        tool: 'createMedia',
-        args: { prompt: 'a river' },
-        observed: [
-          { name: 'searchItem', args: { query: 'items' }, ok: true, turnIndex: 0 },
-          { name: 'listItems', args: {}, ok: true, turnIndex: 1 },
-        ],
-        turnIndex: 2,
+        turnIndex: 1,
       },
       l1: 'silent',
     },
@@ -621,8 +540,7 @@ const customProof: GuardProof = {
 
 export const RUN_OUTPUT_PROOFS: GuardProof[] = [
   preconditionProof,
-  maxCallsPerTurnProof,
-  maxCallsPerConversationProof,
+  maxCallsProof,
   noDuplicateCallProof,
   confirmFirstProof,
   noActAfterAskSameTurnProof,

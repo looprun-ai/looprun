@@ -37,7 +37,7 @@ is a spec). Its constructor auto-installs, layer-tagged:
 
 | always / conditional | auto-installs | from |
 |---|---|---|
-| **ALWAYS** (every agent) | `noDuplicateCall` (preTool), `emptyReply` (onReply) | nothing (universal invariants) |
+| **ALWAYS** (every agent) | `noDuplicateCall` (preTool), `degenerationGuard`, `emptyReply` (onReply, `minimal:*`) | nothing (universal invariants). `degenerationGuard`'s markup+repetition branches are always-on; its third-person self-narration branch fires only when the lexicon injects `cfg.lexicon.selfNarrationRe` (else that branch is OFF — the runtime holds no narration language) |
 | **IFF `cfg.lexicon.falseFailureClaimRe` provided** | `noFalseFailureClaim({ claimRe })` (onReply, `minimal:noFalseFailureClaim`, before `emptyReply`) | `cfg.lexicon` (auto-iff-provided — a lexicon-less spec is byte-stable) |
 | **IFF `cfg.destructiveTools` non-empty** | `destructiveThrottle` + `confirmFirst` (preTool, scoped to those tools); `cfg.confirmMechanism[tool]` picks the confirmFirst id — arg-flag → `base:confirmFirst`, `'prior-ask'` → `base:confirmFirstPriorAsk` | `cfg.destructiveTools` (no-op when empty) |
 
@@ -47,7 +47,7 @@ when the agent holds a destructive tool**. There is **no auto-schema layer** —
 hook: **agent → full → base → minimal** (first deny wins), and the `minimal:` / `base:` id namespaces keep
 the trunk prose order byte-stable.
 
-## The 27 guard kinds
+## The 23 guard kinds
 
 `auto` marks a kind the constructor installs (`minimal` = always, `base` = iff `destructiveTools`,
 `minimal*` = iff `cfg.lexicon.falseFailureClaimRe` is provided); everything else is agent-layer.
@@ -59,8 +59,7 @@ the trunk prose order byte-stable.
 | `requiresBefore(deps)` | spatial | agent | this tool may run only after every `deps` tool ran OK this conversation |
 | `forbidThisTurn(reason)` | spatial | agent | this tool may not run this turn (unconditional deny) |
 | `precondition(ok, reason, prose?)` | run | agent | deny unless `ok(world)` holds (the general world-state gate) |
-| `maxCallsPerTurn(tool, n, reason)` | run | agent | at most `n` successful calls of `tool` per turn |
-| `maxCallsPerConversation(tool, n, reason)` | run | agent | at most `n` ok-calls of `tool` across the whole conversation |
+| `maxCalls(tool, n, reason, {scope?})` | run | agent | at most `n` OK calls of `tool` in the budget window — `scope:'turn'` (default) = per-turn bulk cap, `scope:'conversation'` = across the whole conversation |
 | `noDuplicateCall()` | run | **minimal** | block a byte-identical repeat call that already succeeded this turn (canonicalized args) |
 | `confirmFirst(opts?: string \| { argFlag?, mechanism? })` | run | **base** | destructive-confirm gate keyed by MECHANISM. `'arg'` (default; a bare string sets `argFlag`): `confirmed:true` needs a prior-turn `confirmed:false` PROBE. `'prior-ask'` (flag-less tools): legal only after an `askUser` in an EARLIER turn (compose with `noActAfterAskSameTurn` for the same-turn edge). Auto-installed per `cfg.confirmMechanism` |
 | `noActAfterAskSameTurn(tools)` | run | agent | deny any of `tools` when `askUser` already succeeded this turn — ask, wait, act in a LATER turn |
@@ -68,8 +67,6 @@ the trunk prose order byte-stable.
 | `argRequired(field)` | input | agent | deny if `field` is missing/empty in args |
 | `argAbsent(field)` | input | agent | deny if `field` IS present (mutually-exclusive args) |
 | `argFormat(field, pattern, flags?, reason?)` | input | agent | deny if a present non-empty `args[field]` fails the regex (absent/empty deferred to `argRequired`) |
-| `labelExists(field)` | input | agent | deny if the referenced label isn't in the world's known media set |
-| `labelProvenance(field, 'uploaded'\|'generated', { uploadRe, labelNoun?, reason? })` | input | agent | deny if the label's provenance mismatches — the `uploadRe` scheme is injected (P8a) |
 
 **Worked example — tool sequencing (spatial).** To enforce an ordered flow
 `createPost → saveContent → generateImage`, add one `requiresBefore` gate per downstream tool naming
@@ -100,9 +97,9 @@ runtime carries no linguistic pattern of its own (the P8a lexicon doctrine below
 
 | kind | dim | auto | one-line semantics |
 |---|---|---|---|
-| `degenerationGuard()` | behavior | **minimal** | output-channel degeneration lint (first in the onReply tail): leaked think/tool-call/template markup, third-person self-narration, run-away line repetition (>=3x) — routes into the redrive battery; zero firings on clean subjects |
+| `degenerationGuard({selfNarrationRe?})` | behavior | **minimal** | output-channel degeneration lint (first in the onReply tail). Built-in always-on: leaked think/tool-call/template markup + run-away line repetition (>=3x). The third-person self-narration branch is OPT-IN — fires only when `selfNarrationRe` is injected (from `cfg.lexicon.selfNarrationRe`); absent ⇒ OFF. Routes into the redrive battery; zero firings on clean subjects |
 | `emptyReply()` | behavior | **minimal** | a terminal reply may not be empty/whitespace |
-| `noFabricatedSuccess(tool, { claimRe, labelRe, verbClaimRe, reason })` | behavior | agent | reply may not claim `tool` succeeded (invented label, or a verb-first claim with no label) unless it actually ran+succeeded this turn |
+| `noFabricatedSuccess(tool, { reason, claimRe?, labelRe?, verbClaimRe?, banRe?, refExists? })` | behavior | agent | reply may not claim `tool` succeeded unless it ran+succeeded this turn. Three injected seams: invented LABELS (`labelRe` + `refExists(world,label)` existence predicate — attempt-independent); claim LANGUAGE (`claimRe`/`verbClaimRe` — attempt-keyed); and `banRe`, an UNCONDITIONAL ban phrase (absorbs the former `replyNoProductionClaim` kind). All **business-owned** (from the domain lexicon); `refExists` reads the domain world's accessors |
 | `noFalseFailureClaim({ claimRe })` | behavior | **minimal\*** | reply may not claim inability when every tool this turn succeeded. **minimal\*** = auto-installed as `minimal:noFalseFailureClaim` when the bundle passes `cfg.lexicon.falseFailureClaimRe`; a spec may still add a tighter agent-layer instance |
 | `destructiveClaimRequiresSuccess(destructiveTools, { claimRe, askRe, offerRe, exemptRe? })` | behavior | agent | **attempt-keyed**: fires only when a listed destructive tool was ATTEMPTED this turn (executed or vetoed) — with no attempt a destructive verb is read-backed STATUS talk, left alone. Given an attempt, the reply may not DECLARE the action happened unless a confirmed call succeeded — sentence-scoped, offer-aware; exempts confirm-probes (`askRe`) and honest failures (`exemptRe`) |
 | `pendingConfirmMustAsk({ askRe, confirmArg? })` | behavior | agent | if a tool returned `requiresConfirmation` this turn, the reply MUST relay the confirmation question — UNLESS the probe was RESOLVED this turn (same tool ran OK with the confirm flag `confirmArg` (default `confirmed`) set on the SAME record) |
@@ -110,7 +107,6 @@ runtime carries no linguistic pattern of its own (the P8a lexicon doctrine below
 | `replyConfirmsLabels(labels, reason)` | behavior | agent | reply must be non-empty and name every acted-on label |
 | `replyMaxOccurrences(ctas, n, reason)` | behavior | agent | at most `n` distinct CTA lemmas (anti-nag) |
 | `replySingleQuestion(reason)` | behavior | agent | exactly one `?` per reply (recovery turns) |
-| `replyNoProductionClaim(claimRe, reason)` | behavior | agent | deny if the reply matches a production-claim regex |
 
 > There is deliberately **NO LLM reply-check kind** in @looprun-ai/core — an impure in-guard judge
 > forfeits the determinism certificate. A rule no deterministic check can express is
@@ -134,10 +130,16 @@ is a **helper**, not a guard kind.
 
 ## The P8a lexicon doctrine — language lives in the business bundle, injected as params
 
-`@looprun-ai/core` is **language- and label-scheme-neutral**: no generic guard carries a claim-verb regex,
-a confirm-language pattern, or a label scheme. Every such STRING/REGEX lives in the **business bundle's own
-lexicon** (`src/agents/<domain>/lexicon.ts`, en-US or any language) and is passed back into the factory as a
-**required** param. A single-file lexicon typically exports:
+`@looprun-ai/core` is **language- and label-scheme-neutral — and carries no MEDIA concept and no narration
+language either**: no generic guard carries a claim-verb regex, a confirm-language pattern, or a label
+scheme. Every such STRING/REGEX lives in the **business bundle's own lexicon** (`src/agents/<domain>/
+lexicon.ts`, en-US or any language) and is passed back into the factory as a **required** param —
+`noFabricatedSuccess(tool, { claimRe, labelRe, verbClaimRe, banRe, refExists, reason })`,
+`degenerationGuard({ selfNarrationRe })`, `pendingConfirmMustAsk({ askRe })`,
+`destructiveClaimRequiresSuccess(tools, { claimRe, askRe, offerRe, exemptRe? })`,
+`noFalseFailureClaim({ claimRe })`. Media LABEL input guards are the domain's job — authored as
+`custom({ dim:'input' })` over the world's accessors (see "Domain guards via custom()"), never runtime
+kinds. A single-file lexicon typically exports:
 
 ```ts
 export const CONFIRM_ASK_RE = /\?|\b(confirm|are you sure|do you want|shall i|proceed|go ahead)\b/i;
@@ -198,6 +200,16 @@ engage / dismiss / persist cases. Compose two levers instead:
 needs a vetoed tool for its gold flow. Validated: bench target case 0/3 → 3/3 (N=3, no regression),
 then a live production eval 10/10 with the port unchanged. Full mechanics: `packages/core/GUARDS.md`
 → "The choose-gate pattern".
+
+**Domain guards via custom() — the label pattern.** The runtime holds NO media concept: `labelExists` and
+`labelProvenance` are NOT kinds. When a domain has media/labels, the drafter authors them as
+`custom({ kind: 'labelExists' | 'labelProvenance', dim: 'input', check, prose })` whose `check` reads the
+domain WORLD's own accessors (`world.hasMediaLabel(label)` / `world.mediaLabels()`) and, for provenance, a
+business-owned `uploadRe` scheme — never a runtime default. `dim:'input'` makes it a legal preTool gate,
+identical enforcement to a first-class kind. On the reply side, pass `refExists` into `noFabricatedSuccess`
+so the invented-label branch reads the same world. A production deployment can replace the upload-range
+regex with a DB-backed provenance state key without touching the runtime. Measured: with the trimmed
+catalog, an unmodified E2 drafter derived these world-backed `custom()` label guards on its own.
 
 ## When / how much to guard (the usage math, distilled)
 

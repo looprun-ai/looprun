@@ -14,7 +14,7 @@
  * //              rescheduling a deadline in place (the legal path is cancel-with-confirm +
  * //              create-new) → honest refusal/explanation (intent-keyed; conditioned prose + eval).
  */
-import { AgentSpecBase, custom, destructiveClaimRequiresSuccess, jargonScrub, maxCallsPerTurn, pendingConfirmMustAsk, requiresBefore } from 'looprun';
+import { AgentSpecBase, custom, destructiveClaimRequiresSuccess, jargonScrub, maxCalls, pendingConfirmMustAsk, requiresBefore } from 'looprun';
 import type { GuardCtx } from 'looprun';
 import { LAWFIRM_THEME } from './theme.js';
 import { CONFIRM_ASK_RE, FALSE_FAILURE_CLAIM_RE, OFFER_OR_CONDITIONAL_RE } from './lexicon.js';
@@ -197,7 +197,7 @@ export class AgentSpecDocketDocuments extends AgentSpecBase {
     this.addGuard(
       'preTool',
       ['notifyClient'],
-      maxCallsPerTurn('notifyClient', 1, 'send at most one notification per turn — batch the content for a client into ONE message'),
+      maxCalls('notifyClient', 1, 'send at most one notification per turn — batch the content for a client into ONE message'),
       { id: 'agent:oneNotificationPerTurn' },
     );
 

@@ -43,15 +43,16 @@ guard catalog (`references/guard-catalog.md`) are the only style inputs.
    tool result → output · reply text → behavior. (User text is NOT a surface — firewalled.)
 3. Pick the catalog kind (`references/guard-catalog.md` — the reference-of-record, with signatures,
    hooks, auto-layers, and the when/how-much-to-guard math): requiresBefore, forbidThisTurn,
-   argRequired, argAbsent, argFormat, labelExists, labelProvenance, precondition, maxCallsPerTurn,
-   maxCallsPerConversation, noActAfterAskSameTurn, noFabricatedSuccess, replyMustMention,
-   replyMaxOccurrences, replySingleQuestion, replyNoProductionClaim, replyConfirmsLabels,
+   argRequired, argAbsent, argFormat, precondition, maxCalls (scope 'turn' default | 'conversation'),
+   noActAfterAskSameTurn, noFabricatedSuccess, replyMustMention,
+   replyMaxOccurrences, replySingleQuestion, replyConfirmsLabels,
    pendingConfirmMustAsk, destructiveClaimRequiresSuccess, noFalseFailureClaim, resultInvariant,
    jargonScrub (mutator).
    There is deliberately NO LLM reply-check kind in @looprun-ai/core (it would forfeit the
    determinism certificate) — a rule no deterministic check can express is language-layer:
-   conditioned prose + an eval dimension. `custom()` ONLY when no kind fits; reviewers read the
-   code.
+   conditioned prose + an eval dimension. `custom()` ONLY when no kind fits (e.g. media/label input
+   guards `labelExists`/`labelProvenance` — the runtime carries no media concept, so a domain authors
+   them as `custom({ dim:'input' })` over its world); reviewers read the code.
    For an ordered flow (call order → spatial), one `requiresBefore` gate per downstream tool names
    its predecessors — e.g. `createPost → saveContent → generateImage`:
    `addGuard('preTool',['saveContent'],requiresBefore(['createPost']))` +

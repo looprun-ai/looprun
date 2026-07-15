@@ -7,14 +7,16 @@
  * state / observed calls, NEVER the user text (the magnet firewall). The pure set is deterministic
  * by construction: no clock, no entropy, no network, no LLM call inside a check.
  *
- * DOMAIN-NEUTRALITY LAW (P8a): this package is truly language- and label-scheme-neutral. No generic
- * guard carries a linguistic regex (claim verbs, confirm-language) or a label scheme by default —
- * those STRINGS/REGEXES live in the business bundle's own lexicon and are passed back in as REQUIRED
- * params (`labelProvenance(field, expect, scheme)`, `noFabricatedSuccess(tool, { claimRe, labelRe,
- * verbClaimRe, reason })`, `pendingConfirmMustAsk({ askRe })`, `destructiveClaimRequiresSuccess(tools,
- * { claimRe, askRe, offerRe, exemptRe? })`, `noFalseFailureClaim({ claimRe })`). The runtime holds
- * only the MECHANISM and the generic English prose. A domain-neutrality lint scans this package for
- * accented letters / language stems, so a re-introduced default fails CI.
+ * DOMAIN-NEUTRALITY LAW (P8a, completed by P8b): this package is truly language- and label-scheme-neutral
+ * — and carries no MEDIA concept and no narration language either. No generic guard carries a linguistic
+ * regex (claim verbs, confirm-language) or a label scheme by default — those STRINGS/REGEXES live in the
+ * business bundle's own lexicon and are passed back in as REQUIRED params (`noFabricatedSuccess(tool, {
+ * claimRe, labelRe, verbClaimRe, banRe, refExists, reason })`, `degenerationGuard({ selfNarrationRe })`,
+ * `pendingConfirmMustAsk({ askRe })`, `destructiveClaimRequiresSuccess(tools, { claimRe, askRe, offerRe,
+ * exemptRe? })`, `noFalseFailureClaim({ claimRe })`). Media/label INPUT guards are a DOMAIN concern —
+ * a domain authors them as `custom({ dim:'input' })` over its world's own accessors, never a runtime kind.
+ * The runtime holds only the MECHANISM and the generic English prose. A domain-neutrality lint scans this
+ * package for accented letters / language stems, so a re-introduced default fails CI.
  */
 import type { Guard, GuardCtx, ObservedCall, Dim, ReplyMutator, AgentWorld } from './rules.js';
 
@@ -33,17 +35,6 @@ const lc = (s: unknown): string => String(s ?? '').toLowerCase();
 const ran = (observed: ObservedCall[], tool: string): boolean => observed.some((o) => o.name === tool && o.ok);
 const ranThisTurn = (ctx: GuardCtx, tool: string): boolean =>
   ctx.observed.some((o) => o.name === tool && o.ok && o.turnIndex === ctx.turnIndex);
-
-function resolveLabel(args: Record<string, unknown>, field: string): string | null {
-  const v = args[field];
-  if (v == null) return null;
-  if (typeof v === 'string') return v.trim() || null;
-  if (typeof v === 'object' && 'label' in (v as object)) {
-    const l = (v as { label?: unknown }).label;
-    return l == null ? null : String(l).trim() || null;
-  }
-  return null;
-}
 
 // ── SPATIAL (graph / sequencing) ─────────────────────────────────────────────
 
@@ -93,25 +84,6 @@ export function argAbsent(field: string): Guard {
   };
 }
 
-/** A label-typed arg must resolve to an EXISTING media label. */
-export function labelExists(field: string): Guard {
-  return {
-    kind: 'labelExists',
-    dim: 'input',
-    check(ctx) {
-      const w = ctx.world;
-      const label = resolveLabel(ctx.args, field);
-      if (label == null) return `Missing media label in "${field}".`;
-      if (!w.hasMediaLabel(label)) {
-        const known = w.mediaLabels();
-        return `Label "${label}" does not exist in Recent Media. Use one the user referenced — available: ${known.join(', ') || '(none)'}. Do NOT invent a label.`;
-      }
-      return null;
-    },
-    prose: () => `"${field}" must be a real label from Recent Media (do not invent one)`,
-  };
-}
-
 /** A PRESENT non-empty string arg must match `pattern`; absent/empty is left to argRequired. */
 export function argFormat(field: string, pattern: string, flags?: string, reason?: string): Guard {
   const re = new RegExp(pattern, flags ?? '');
@@ -128,37 +100,6 @@ export function argFormat(field: string, pattern: string, flags?: string, reason
   };
 }
 
-/**
- * A label-typed arg must come from the expected provenance class. The label SCHEME is business-owned
- * and injected — never hardcoded here: `scheme.uploadRe` is the predicate that decides whether a label
- * is an "uploaded" label; `scheme.labelNoun` (optional) names the scheme in the default deny/prose
- * message; `scheme.reason` overrides that message outright. The runtime carries ONLY the mechanism and
- * the generic English wording — the label regex + its noun live in the domain bundle's lexicon.
- */
-export function labelProvenance(
-  field: string,
-  expect: 'uploaded' | 'generated',
-  scheme: { uploadRe: RegExp; labelNoun?: string; reason?: string },
-): Guard {
-  const noun = scheme.labelNoun;
-  const msg = scheme.reason ?? (expect === 'uploaded'
-    ? `"${field}" must be an UPLOADED image label${noun ? ` (${noun})` : ''} — for generated images use the matching tool instead.`
-    : `"${field}" must be a GENERATED image label — uploads${noun ? ` (${noun})` : ''} are not valid here.`);
-  return {
-    kind: 'labelProvenance',
-    dim: 'input',
-    check(ctx) {
-      const v = ctx.args[field];
-      const label = typeof v === 'string' ? v.trim()
-        : (v && typeof v === 'object' && 'label' in (v as object)) ? String((v as { label?: unknown }).label ?? '').trim() : '';
-      if (!label) return null;
-      const isUp = scheme.uploadRe.test(label);
-      return (expect === 'uploaded' ? isUp : !isUp) ? null : msg;
-    },
-    prose: () => msg,
-  };
-}
-
 // ── RUN (execution preconditions) ────────────────────────────────────────────
 
 /** Generic state precondition: the call is allowed only while `ok(world)` holds. `prose` states the
@@ -172,26 +113,21 @@ export function precondition<W extends AgentWorld = AgentWorld>(ok: (world: W) =
   };
 }
 
-/** `tool` may run at most `n` times per turn (counts the model's OWN successful calls). */
-export function maxCallsPerTurn(tool: string, n: number, reason: string): Guard {
+/**
+ * `tool` may run at most `n` successful times within a budget WINDOW (counts the model's OWN OK calls):
+ *  - `scope: 'turn'` (default) — the per-turn budget (bulk cap): counts only OK calls of THIS turn.
+ *  - `scope: 'conversation'` — the cross-turn budget: counts OK calls across all turns.
+ * The two scopes share one deny message + prose (the caller-supplied `reason`).
+ */
+export function maxCalls(tool: string, n: number, reason: string, opts?: { scope?: 'turn' | 'conversation' }): Guard {
+  const scope = opts?.scope ?? 'turn';
   return {
-    kind: 'maxCallsPerTurn',
+    kind: 'maxCalls',
     dim: 'run',
     check(ctx) {
-      const count = ctx.observed.filter((o) => o.name === tool && o.ok && o.turnIndex === ctx.turnIndex).length;
-      return count >= n ? reason : null;
-    },
-    prose: () => reason,
-  };
-}
-
-/** Side-effect budget ACROSS turns (maxCallsPerTurn minus the turnIndex filter). */
-export function maxCallsPerConversation(tool: string, n: number, reason: string): Guard {
-  return {
-    kind: 'maxCallsPerConversation',
-    dim: 'run',
-    check(ctx) {
-      const count = ctx.observed.filter((o) => o.name === tool && o.ok).length;
+      const count = ctx.observed.filter(
+        (o) => o.name === tool && o.ok && (scope === 'conversation' || o.turnIndex === ctx.turnIndex),
+      ).length;
       return count >= n ? reason : null;
     },
     prose: () => reason,
@@ -344,37 +280,54 @@ export function resultInvariant<W extends AgentWorld = AgentWorld>(pred: (result
 // ── BEHAVIOR (reply-checks) ──────────────────────────────────────────────────
 
 /**
- * If `tool` did NOT succeed this turn, the reply must not claim/imply it did (existence-keyed). Both
- * the label SCHEME (`labelRe` — which tokens are media labels) and the verb-first claim regex
- * (`verbClaimRe` — the "generating an image" phrasing) are business-owned and injected; the runtime
- * carries NO linguistic pattern of its own.
+ * If `tool` did NOT succeed this turn, the reply must not claim/imply it did (existence-keyed). Every
+ * seam is business-owned and injected — the runtime carries NO linguistic pattern of its own:
+ *  - `labelRe` (which tokens are artifact labels) + `refExists` (does a cited label exist in the world?
+ *    the injected existence predicate that replaced the former hardcoded media coupling — absent ⇒ only
+ *    labels produced THIS turn are known) → the invented-LABEL branch (attempt-independent: citing a
+ *    nonexistent artifact is always fabrication).
+ *  - `claimRe` / `verbClaimRe` (the "created/generating an image" phrasing) → the claim-LANGUAGE branch,
+ *    ATTEMPT-KEYED (the destructiveClaimRequiresSuccess precedent): with no attempt on `tool` this turn
+ *    (executed or vetoed), production vocabulary is descriptive/status talk (a fixed-duration explainer, a
+ *    quota explanation) — left alone. The measured false-positives (fixed-duration + zero-quota cells)
+ *    rejected CORRECT informational replies and forced the exhaustion fallback.
+ *  - `banRe` (optional) → the UNCONDITIONAL ban: a phrase the reply may never carry, denied regardless of
+ *    attempts (absorbs the former replyNoProductionClaim kind). Given ONLY `banRe` the guard is a pure
+ *    ban; the other seams are absent and silent.
  */
 export function noFabricatedSuccess(
   tool: string,
-  opts: { claimRe: RegExp; labelRe: RegExp; verbClaimRe: RegExp; reason: string },
+  opts: {
+    reason: string;
+    claimRe?: RegExp;
+    labelRe?: RegExp;
+    verbClaimRe?: RegExp;
+    banRe?: RegExp;
+    refExists?: (world: AgentWorld, label: string) => boolean;
+  },
 ): Guard {
   return {
     kind: 'noFabricatedSuccess',
     dim: 'behavior',
     check(ctx) {
-      if (ranThisTurn(ctx, tool)) return null;
       const reply = ctx.reply ?? '';
-      // Collect ALL label tokens. Build the global variant locally so a shared /g regex (whose
-      // lastIndex would persist across turns) is never required on opts.labelRe.
-      const labelRe = opts.labelRe.global ? opts.labelRe : new RegExp(opts.labelRe.source, opts.labelRe.flags + 'g');
-      const labels = reply.match(labelRe) ?? [];
-      const produced = ctx.producedThisTurn ?? [];
-      const invented = labels.filter((l) => !produced.includes(l) && !ctx.world.hasMediaLabel(l));
-      if (invented.length) return opts.reason;
-      // Claim-LANGUAGE branch is ATTEMPT-KEYED (2026-07-15, the destructiveClaimRequiresSuccess
-      // precedent): with no attempt on `tool` this turn (executed or vetoed), production vocabulary is
-      // descriptive/status talk (a fixed-duration explainer, a quota explanation) — left alone. The
-      // measured false-positives (eight-second-limit + zero-quota cells) rejected CORRECT informational
-      // replies and forced the exhaustion fallback. Invented LABELS (above) remain attempt-independent —
-      // citing a nonexistent artifact is fabrication regardless of attempts.
+      // Unconditional ban — checked BEFORE the attempt short-circuit so it fires regardless of attempts.
+      if (opts.banRe?.test(reply)) return opts.reason;
+      if (ranThisTurn(ctx, tool)) return null;
+      let labelsFound = 0;
+      if (opts.labelRe) {
+        // Collect ALL label tokens. Build the global variant locally so a shared /g regex (whose
+        // lastIndex would persist across turns) is never required on opts.labelRe.
+        const labelRe = opts.labelRe.global ? opts.labelRe : new RegExp(opts.labelRe.source, opts.labelRe.flags + 'g');
+        const labels = reply.match(labelRe) ?? [];
+        labelsFound = labels.length;
+        const produced = ctx.producedThisTurn ?? [];
+        const invented = labels.filter((l) => !produced.includes(l) && !(opts.refExists?.(ctx.world, l) ?? false));
+        if (invented.length) return opts.reason;
+      }
       const attempted = ctx.observed.some((o) => o.turnIndex === ctx.turnIndex && o.name === tool);
-      const claims = opts.claimRe.test(reply) || opts.verbClaimRe.test(reply);
-      if (attempted && claims && labels.length === 0) return opts.reason;
+      const claims = (opts.claimRe?.test(reply) ?? false) || (opts.verbClaimRe?.test(reply) ?? false);
+      if (attempted && claims && labelsFound === 0) return opts.reason;
       return null;
     },
     prose: () => opts.reason,
@@ -421,18 +374,6 @@ export function replySingleQuestion(reason: string): Guard {
   };
 }
 
-/** The reply must not match a production-claim regex. */
-export function replyNoProductionClaim(claimRe: RegExp, reason: string): Guard {
-  return {
-    kind: 'replyNoProductionClaim',
-    dim: 'behavior',
-    check(ctx) {
-      return claimRe.test(ctx.reply ?? '') ? reason : null;
-    },
-    prose: () => reason,
-  };
-}
-
 /** The reply must be non-empty and name ALL `labels`. */
 export function replyConfirmsLabels(labels: string[], reason: string): Guard {
   return {
@@ -463,14 +404,17 @@ export function emptyReply(): Guard {
 
 /**
  * Output-channel DEGENERATION lint — domain-neutral, always-on (Minimal layer). Catches the weak-model
- * failure class measured 2026-07-14/15 (bench aw35b-Q3 full-117: 5/23 fails): leaked reasoning/tool markup
- * (`<think>`, `<tool_call>`, `<tool_response>`, chat-template tokens, raw `replyToUser{`), third-person
- * self-narration, and run-away repetition. A hit routes into the existing redrive → exhaustion battery
- * (redrives are reply-only regenerations, which is exactly what this class needs). Promoted after targeted
- * validation (+3 recoveries, 9/9 clean replies, 0 regressions) and a flash N=3 recert with ZERO firings on
- * the clean subject (the zero-diff path). Pure check: no clock/RNG/IO/user-text; fresh regexes per call.
+ * failure class (leaked reasoning/tool markup — `<think>`, `<tool_call>`, `<tool_response>`, chat-template
+ * tokens, raw `replyToUser{` — and run-away repetition), the always-on, model-layer branches. The
+ * third-person SELF-NARRATION branch is language-specific, so its pattern is INJECTED
+ * (`opts.selfNarrationRe`, threaded from `cfg.lexicon.selfNarrationRe` at auto-install — the same shape as
+ * `noFalseFailureClaim`'s `falseFailureClaimRe`); absent ⇒ that branch is OFF and the runtime carries no
+ * narration language. A hit routes into the existing redrive → exhaustion battery (redrives are reply-only
+ * regenerations, which is exactly what this class needs). Promoted after targeted validation (+3 recoveries,
+ * 9/9 clean replies, 0 regressions) and a flash N=3 recert with ZERO firings on the clean subject (the
+ * zero-diff path). Pure check: no clock/RNG/IO/user-text; fresh regexes per call.
  */
-export function degenerationGuard(): Guard {
+export function degenerationGuard(opts?: { selfNarrationRe?: RegExp }): Guard {
   return {
     kind: 'degenerationGuard',
     dim: 'behavior',
@@ -480,7 +424,7 @@ export function degenerationGuard(): Guard {
       if (/<think|<\/think|<tool_call|<tool_response|<\|im_(?:start|end)\|>|\[end of turn\]|<\|assistant\|>|replyToUser\s*\{/i.test(r)) {
         return 'the reply leaks internal scaffolding (think blocks / tool-call markup / chat-template tokens) — rewrite it as ONE short, clean user-facing message with none of that.';
       }
-      if (/\b(?:I closed the turn|by calling replyToUser|The assistant (?:confirmed|called|then))\b/i.test(r)) {
+      if (opts?.selfNarrationRe?.test(r)) {
         return 'the reply narrates your own tool calls in third person instead of speaking TO the user — rewrite it addressing the user directly.';
       }
       // run-away repetition: any non-trivial line repeated 3+ times
@@ -492,7 +436,10 @@ export function degenerationGuard(): Guard {
       }
       return null;
     },
-    prose: () => 'reply in ONE clean user-facing message — never leak internal reasoning, template tokens, self-narration, or repeated lines',
+    prose: () =>
+      opts?.selfNarrationRe
+        ? 'reply in ONE clean user-facing message — never leak internal reasoning, template tokens, self-narration, or repeated lines'
+        : 'reply in ONE clean user-facing message — never leak internal reasoning, template tokens, or repeated lines',
   };
 }
 

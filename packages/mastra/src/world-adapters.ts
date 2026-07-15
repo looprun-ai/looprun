@@ -7,7 +7,7 @@
  * `theme.stateBlock`. A `StateView` supplies those reads; `refresh` (if given) runs at each
  * turn boundary so remote state can be re-fetched.
  *
- * Ledger-based guards (requiresBefore, noDuplicateCall, confirmFirst, maxCallsPerTurn, …) need
+ * Ledger-based guards (requiresBefore, noDuplicateCall, confirmFirst, maxCalls, …) need
  * NO state view — they read the observed ledger the hooks feed.
  */
 import type { AgentWorld } from '@looprun-ai/core';

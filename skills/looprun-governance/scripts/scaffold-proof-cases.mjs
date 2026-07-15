@@ -29,11 +29,8 @@ const KINDS = {
   argRequired: { hook: 'preTool', dim: 'input', family: 'spatialInput' },
   argAbsent: { hook: 'preTool', dim: 'input', family: 'spatialInput' },
   argFormat: { hook: 'preTool', dim: 'input', family: 'spatialInput' },
-  labelExists: { hook: 'preTool', dim: 'input', family: 'spatialInput' },
-  labelProvenance: { hook: 'preTool', dim: 'input', family: 'spatialInput' },
   precondition: { hook: 'preTool', dim: 'run', family: 'runOutput' },
-  maxCallsPerTurn: { hook: 'preTool', dim: 'run', family: 'runOutput' },
-  maxCallsPerConversation: { hook: 'preTool', dim: 'run', family: 'runOutput' },
+  maxCalls: { hook: 'preTool', dim: 'run', family: 'runOutput' },
   noDuplicateCall: { hook: 'preTool', dim: 'run', auto: 'minimal', family: 'runOutput' },
   confirmFirst: { hook: 'preTool', dim: 'run', auto: 'base', family: 'runOutput' },
   noActAfterAskSameTurn: { hook: 'preTool', dim: 'run', family: 'runOutput' },
@@ -50,7 +47,6 @@ const KINDS = {
   replyConfirmsLabels: { hook: 'onReply', dim: 'behavior', skip: true, family: 'behavior' },
   replyMaxOccurrences: { hook: 'onReply', dim: 'behavior', skip: true, family: 'behavior' },
   replySingleQuestion: { hook: 'onReply', dim: 'behavior', skip: true, family: 'behavior' },
-  replyNoProductionClaim: { hook: 'onReply', dim: 'behavior', family: 'behavior' },
 };
 
 /** The signal tag the L3 loop surfaces for a NEGATIVE case at this hook. */

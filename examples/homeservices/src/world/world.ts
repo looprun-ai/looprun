@@ -120,11 +120,6 @@ export class HomeServicesWorld implements AgentWorld {
     return this.state.jobs.filter((j) => j.status === 'scheduled' && j.date < TODAY).map((j) => j.id);
   }
 
-  /** Defensive seam for media-convention guards — this domain has no media labels. */
-  hasMediaLabel(_label: string): boolean {
-    return false;
-  }
-
   // ── internals ────────────────────────────────────────────────────────────────
 
   private mint(prefix: string): string {

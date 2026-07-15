@@ -1,6 +1,6 @@
 /** Guard proofs — SPATIAL + INPUT dims (see catalog.ts for the collective ruleset + script conventions). */
-import { argAbsent, argFormat, argRequired, forbidThisTurn, labelExists, labelProvenance, requiresBefore } from '../../src/guards.js';
-import { FIXTURE_LABEL_SCHEME, FixtureWorld, type GuardProof } from '../../src/testing/index.js';
+import { argAbsent, argFormat, argRequired, forbidThisTurn, requiresBefore } from '../../src/guards.js';
+import { type GuardProof } from '../../src/testing/index.js';
 
 const turn = (userText: string) => ({ userText });
 
@@ -200,53 +200,6 @@ export const SPATIAL_INPUT_PROOFS: GuardProof[] = [
     ],
   },
 
-  // ── labelExists (input) — useMedia label must be a real Recent Media label ───────────────────────────
-  {
-    guard: 'labelExists',
-    make: () => labelExists('label'),
-    hook: 'preTool',
-    target: ['useMedia'],
-    cases: [
-      {
-        name: 'label is a seeded generated label',
-        polarity: 'positive',
-        ctx: { args: { label: 'g001' } },
-        l1: 'silent',
-        l3: {
-          preset: 'seeded-media',
-          turns: [turn('use that image')],
-          script: [
-            [{ tool: 'useMedia', args: { label: 'g001' } }],
-            [{ tool: 'replyToUser', args: { text: 'The media was attached.' } }],
-          ],
-          expect: 'pass',
-        },
-      },
-      {
-        name: 'label does not exist in Recent Media',
-        polarity: 'negative',
-        ctx: { args: { label: 'g999' } },
-        l1: 'fires',
-        l3: {
-          preset: 'seeded-media',
-          turns: [turn('use that image')],
-          script: [
-            [{ tool: 'useMedia', args: { label: 'g999' } }],
-            [{ tool: 'replyToUser', args: { text: 'The media request was noted.' } }],
-          ],
-          expect: 'veto',
-          tool: 'useMedia',
-        },
-      },
-      {
-        name: 'label given in object form ({label: "..."}) still resolves to a seeded upload',
-        polarity: 'neutral',
-        ctx: { args: { label: { label: 'u900' } } },
-        l1: 'silent',
-      },
-    ],
-  },
-
   // ── argFormat (input) — setPrimary id must match ^itm-\d+$ ───────────────────────────────────────────
   {
     guard: 'argFormat',
@@ -289,53 +242,6 @@ export const SPATIAL_INPUT_PROOFS: GuardProof[] = [
         name: 'id is absent — left to argRequired, not this guard',
         polarity: 'neutral',
         ctx: { args: {} },
-        l1: 'silent',
-      },
-    ],
-  },
-
-  // ── labelProvenance (input) — editMedia label must be GENERATED, never an uploaded label ────────────
-  {
-    guard: 'labelProvenance',
-    make: () => labelProvenance('label', 'generated', { uploadRe: FIXTURE_LABEL_SCHEME.uploadRe, labelNoun: FIXTURE_LABEL_SCHEME.labelNoun }),
-    hook: 'preTool',
-    target: ['editMedia'],
-    cases: [
-      {
-        name: 'label is a generated label',
-        polarity: 'positive',
-        ctx: { args: { label: 'g001' } },
-        l1: 'silent',
-        l3: {
-          preset: 'seeded-media',
-          turns: [turn('edit that image')],
-          script: [
-            [{ tool: 'editMedia', args: { label: 'g001', instruction: 'Add a border.' } }],
-            [{ tool: 'replyToUser', args: { text: 'The media was edited.' } }],
-          ],
-          expect: 'pass',
-        },
-      },
-      {
-        name: 'label is an uploaded label, not generated',
-        polarity: 'negative',
-        ctx: { args: { label: 'u900' } },
-        l1: 'fires',
-        l3: {
-          preset: 'seeded-media',
-          turns: [turn('edit that image')],
-          script: [
-            [{ tool: 'editMedia', args: { label: 'u900', instruction: 'Brighten it slightly.' } }],
-            [{ tool: 'replyToUser', args: { text: 'The media edit request was noted.' } }],
-          ],
-          expect: 'veto',
-          tool: 'editMedia',
-        },
-      },
-      {
-        name: 'label given in object form ({label: "..."}) still resolves to a generated label',
-        polarity: 'neutral',
-        ctx: { args: { label: { label: 'g005' } } },
         l1: 'silent',
       },
     ],

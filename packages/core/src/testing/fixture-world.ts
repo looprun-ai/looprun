@@ -1,24 +1,26 @@
 /**
  * A deterministic, domain-NEUTRAL fixture world for the @looprun-ai/core testing kit.
  *
- * `FixtureWorld` implements `AgentWorld` + `MediaWorld` with NO clock, NO RNG, and NO I/O — every id and
+ * `FixtureWorld` implements `AgentWorld` with NO clock, NO RNG, and NO I/O — every id and
  * label is produced by a monotonic in-memory counter, so an identical exec sequence yields identical
  * `toolCalls` (the purity discipline). The strings are generic English ("Fixture Co.", "item",
  * "media") — no business vocabulary — so the kit stays shippable and reusable.
  *
  * The label scheme is business-free: generated media labels are `g\d{3}` (g001, g002, …) produced by
  * `createMedia`/`editMedia`; uploads are `u9\d{2}` (u900, u901, …) produced by `ingestAttachment`. The
- * scheme regexes are exported as {@link FIXTURE_LABEL_SCHEME} for labelProvenance / noFabricatedSuccess
- * proofs. The 11 domain tools are exported as {@link FIXTURE_TOOL_DEFS}; the generic theme + lexicon are
- * {@link FIXTURE_THEME} / {@link FIXTURE_LEXICON}.
+ * scheme regexes are exported as {@link FIXTURE_LABEL_SCHEME} for the noFabricatedSuccess proofs. The
+ * `hasMediaLabel` method below backs the noFabricatedSuccess `refExists` proof — it is a fixture accessor,
+ * no longer a typed `MediaWorld` contract (the runtime carries no media concept). The 11 domain tools are
+ * exported as {@link FIXTURE_TOOL_DEFS}; the generic theme + lexicon are {@link FIXTURE_THEME} /
+ * {@link FIXTURE_LEXICON}.
  */
-import type { AgentWorld, MediaWorld } from '../rules.js';
+import type { AgentWorld } from '../rules.js';
 import type { TrunkTheme } from '../trunk.js';
 import type { ToolDef } from '../runtime/types.js';
 
 export type FixturePreset = 'empty' | 'seeded-media' | 'quota-exhausted' | 'has-primary';
 
-/** The business-free label scheme (injected into labelProvenance / noFabricatedSuccess proofs). */
+/** The business-free label scheme (injected into the noFabricatedSuccess proofs). */
 export const FIXTURE_LABEL_SCHEME = {
   /** Uploaded labels: u900, u901, … */
   uploadRe: /^u9\d{2}$/,
@@ -33,10 +35,10 @@ export const FIXTURE_LABEL_SCHEME = {
 const DEFAULT_QUOTA = 100;
 
 /**
- * A deterministic in-memory `AgentWorld` + `MediaWorld`. Pure: all ids/labels come from monotonic
+ * A deterministic in-memory `AgentWorld`. Pure: all ids/labels come from monotonic
  * counters; there is no clock, RNG, or I/O anywhere.
  */
-export class FixtureWorld implements AgentWorld, MediaWorld {
+export class FixtureWorld implements AgentWorld {
   // The AgentWorld index seam (host-injected accessors flow through here). ES #private fields below are
   // excluded from this signature, so internal state stays truly private.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -85,13 +87,9 @@ export class FixtureWorld implements AgentWorld, MediaWorld {
     return result;
   }
 
-  // ── MediaWorld ───────────────────────────────────────────────────────────────
+  // ── media-label accessor (backs the noFabricatedSuccess refExists proof) ──
   hasMediaLabel(label: string): boolean {
     return this.#labels.has(label);
-  }
-
-  mediaLabels(): string[] {
-    return [...this.#labels];
   }
 
   // ── domain accessors the guards / theme read ─────────────────────────────────
@@ -251,6 +249,10 @@ export const FIXTURE_LEXICON = {
     claimRe: /\b(?:created|generated) (?:the|a|your) (?:image|media)\b/i,
     verbClaimRe: /\bgenerating\b/i,
   },
-  /** replyNoProductionClaim — a production-publish claim. */
+  /** noFabricatedSuccess `banRe` — a phrase the assistant may NEVER say (the unconditional-ban mode
+   *  that absorbed the former replyNoProductionClaim kind). */
   productionClaimRe: /\bpublished to production\b/i,
+  /** degenerationGuard `selfNarrationRe` — the third-person self-narration branch, now lexicon-injected
+   *  (generic English; no /g lastIndex to leak). Absent ⇒ the narration branch is OFF. */
+  selfNarrationRe: /\b(?:I closed the turn|by calling replyToUser|The assistant (?:confirmed|called|then))\b/i,
 } as const;

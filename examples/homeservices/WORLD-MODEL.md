@@ -44,7 +44,7 @@ Static roster: `tech_ana` (plumbing) · `tech_bruno` (plumbing, electrical) · `
 
 Accessor methods for guards: `hasCustomer(id)` · `hasRequest(id)` · `hasQuote(id)` · `hasJob(id)` ·
 `requestHasAcceptedQuote(requestId)` · `jobStatus(jobId)` · `quoteStatus(quoteId)` ·
-`overdueJobIds()` · `hasMediaLabel(label)` (defensive, always false — no media in this domain).
+`overdueJobIds()`.
 
 ## Presets (every eval state must exist here — G3 is blocked on this list)
 

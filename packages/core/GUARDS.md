@@ -54,8 +54,13 @@ into the prompt by the spec's `behavior[]` bullets, not by an onReply guard's `p
 There is exactly **one** spec class, `AgentSpecBase`. Its constructor auto-installs, layer-tagged and
 addressable:
 
-- **ALWAYS** (every agent): `noDuplicateCall()` on `preTool` (id `minimal:noDuplicateCall`) + `emptyReply()`
-  on `onReply` (id `minimal:emptyReply`).
+- **ALWAYS** (every agent): `noDuplicateCall()` on `preTool` (id `minimal:noDuplicateCall`) +
+  `degenerationGuard({ selfNarrationRe: cfg.lexicon.selfNarrationRe })` on `onReply` (id
+  `minimal:degenerationGuard` — FIRST in the onReply tail) + `emptyReply()` on `onReply` (id
+  `minimal:emptyReply`). `degenerationGuard`'s markup + line-repetition branches are always-on; its
+  third-person self-narration branch fires only when the lexicon injects `selfNarrationRe` (same shape as
+  `noFalseFailureClaim`'s `falseFailureClaimRe`) — absent ⇒ that branch is OFF and the runtime carries no
+  narration language.
 - **IFF `cfg.lexicon.falseFailureClaimRe` is provided**: `noFalseFailureClaim({ claimRe })` on `onReply`
   (id `minimal:noFalseFailureClaim`) — the always-on reply-honesty invariant, ordered BEFORE `emptyReply`
   (resolved onReply tail `…, minimal:noFalseFailureClaim, minimal:emptyReply`). **Auto-iff-provided**: a
@@ -95,16 +100,18 @@ when no kind fits.
 | `argRequired(field: string): Guard` | — | deny if `args[field]` is missing / empty-string. |
 | `argAbsent(field: string): Guard` | — | deny if `args[field]` IS present (mutually-exclusive args). |
 | `argFormat(field, pattern, flags?, reason?): Guard` | — | deny if a PRESENT non-empty string arg fails `new RegExp(pattern, flags)` (absent/empty deferred to `argRequired`). |
-| `labelExists(field: string): Guard` | — | deny if the resolved media label isn't in `world.hasMediaLabel` (needs a `MediaWorld`). Prevents invented labels. |
-| `labelProvenance(field, expect: 'uploaded' \| 'generated', scheme: { uploadRe: RegExp; labelNoun?: string; reason?: string }): Guard` | — | deny if a label's provenance class mismatches. The label SCHEME (`uploadRe`) is business-owned and injected (P8a). |
+
+> **Media/label input guards are a DOMAIN concern, not runtime kinds** (removed 2026-07-15): the neutral
+> runtime carries no notion of a "media label". A media-ish domain authors its own `labelExists`/
+> `labelProvenance` as `custom({ dim:'input', … })` checks over the world's accessors — see "Domain label
+> guards via custom()" below.
 
 ### preTool — RUN (dim `run`)
 
 | signature | auto | mechanism / when to use |
 |---|---|---|
 | `precondition<W extends AgentWorld = AgentWorld>(ok: (world: W) => boolean, reason: string, prose?: string): Guard` | — | the general world-state gate: allow only while `ok(world)` holds. `prose` states the CONDITION (always rendered); `reason` is the deny (fires only when false). |
-| `maxCallsPerTurn(tool: string, n: number, reason: string): Guard` | — | at most `n` of the model's OWN successful `tool` calls this turn. |
-| `maxCallsPerConversation(tool: string, n: number, reason: string): Guard` | — | the same budget ACROSS turns (no turnIndex filter). |
+| `maxCalls(tool: string, n: number, reason: string, opts?: { scope?: 'turn' \| 'conversation' }): Guard` | — | deny once `tool` has `n` OK calls within the budget WINDOW. `scope:'turn'` (default) = per-turn bulk cap (counts only this turn's OK calls); `scope:'conversation'` = cross-turn budget (counts OK calls across all turns). One kind, one deny message + prose. |
 | `noDuplicateCall(): Guard` | **minimal** | deny a call whose (tool, canonical args) already SUCCEEDED this turn (keyed on `canonArgs`). |
 | `confirmFirst(opts?: string \| { argFlag?: string; mechanism?: 'arg' \| 'prior-ask' }): Guard` | **base** | destructive-confirm gate, keyed by MECHANISM. `'arg'` (default; a bare string sets `argFlag`): `argFlag:true` (default `confirmed`) is legal only when an `argFlag:false`/absent PROBE of the same tool ran OK in an EARLIER turn — never confirm your own same-turn probe. `'prior-ask'` (flag-less tools): legal only after an `askUser` succeeded in an EARLIER turn — ask, wait, act in a LATER turn (a same-turn `askUser` does NOT unlock it — compose with `noActAfterAskSameTurn`). Auto-installed per tool via `cfg.confirmMechanism`. |
 | `noActAfterAskSameTurn(tools: string[]): Guard` | — | deny any of `tools` when an `askUser` already succeeded THIS turn — ask, wait, act only in a LATER turn (never confirm-and-execute in the same turn as the question). |
@@ -121,7 +128,8 @@ when no kind fits.
 | signature | auto | mechanism / when to use |
 |---|---|---|
 | `emptyReply(): Guard` | **minimal** | the terminal reply may not be empty / whitespace. |
-| `noFabricatedSuccess(tool: string, opts: { claimRe: RegExp; labelRe: RegExp; verbClaimRe: RegExp; reason: string })` | agent | reply may not claim/imply `tool` succeeded unless it ran OK this turn. Two branches: invented LABELS (attempt-independent — citing a nonexistent artifact is always fabrication) and claim LANGUAGE, which is **ATTEMPT-KEYED** (2026-07-15, same semantics as `destructiveClaimRequiresSuccess`): with no attempt on `tool` this turn, production vocabulary is descriptive/status talk and is left alone (measured FPs: fixed-duration explainers, quota explanations). `labelRe`/`claimRe`/`verbClaimRe` are **business-owned**. |
+| `degenerationGuard(opts?: { selfNarrationRe?: RegExp }): Guard` | **minimal** | output-channel DEGENERATION lint (`minimal:degenerationGuard`, FIRST among the onReply minimal guards). **Built-in, always-on** (model-layer, zero business strings): leaked reasoning/tool markup (`<think>`, `<tool_call>`, `<tool_response>`, chat-template tokens, raw `replyToUser{`) + run-away line repetition (≥3×). The third-person **self-narration** branch is language-specific, so it is **OPT-IN**: it fires only when `opts.selfNarrationRe` is injected (threaded from `cfg.lexicon.selfNarrationRe` at auto-install, same shape as `noFalseFailureClaim`'s `falseFailureClaimRe`) — absent ⇒ that branch is OFF and the runtime carries no narration language. Routes into the redrive battery. |
+| `noFabricatedSuccess(tool: string, opts: { reason: string; claimRe?: RegExp; labelRe?: RegExp; verbClaimRe?: RegExp; banRe?: RegExp; refExists?: (world, label) => boolean })` | agent | reply may not claim/imply `tool` succeeded unless it ran OK this turn. THREE seams, all business-owned/injected: (1) invented LABELS — `labelRe` collects cited labels, and a label is fabrication unless it was `producedThisTurn` OR the injected **`refExists(world,label)`** existence predicate returns true (the seam that replaced the former hardcoded media coupling; absent ⇒ only THIS-turn labels are known); attempt-independent. (2) claim LANGUAGE — `claimRe`/`verbClaimRe`, **ATTEMPT-KEYED** (same semantics as `destructiveClaimRequiresSuccess`): with no attempt on `tool` this turn, production vocabulary is descriptive/status talk and is left alone (measured FPs: fixed-duration explainers, quota explanations). (3) **`banRe`** (optional) — the UNCONDITIONAL ban, checked BEFORE the attempt short-circuit so it fires regardless of attempts (absorbs the former `replyNoProductionClaim` kind); given ONLY `banRe` the guard is a pure ban. |
 | `noFalseFailureClaim(opts: { claimRe: RegExp }): Guard` | **minimal\*** | if every tool this turn SUCCEEDED (and ≥1 ran), the reply may not claim inability. `claimRe` is injected (P8a). **minimal\*** = auto-installed as `minimal:noFalseFailureClaim` iff `cfg.lexicon.falseFailureClaimRe` is provided; a spec may still add a tighter agent-layer instance. |
 | `destructiveClaimRequiresSuccess(destructiveTools: string[], opts: { claimRe: RegExp; askRe: RegExp; offerRe: RegExp; exemptRe?: RegExp }): Guard` | — | **ATTEMPT-KEYED**: fires ONLY when a listed destructive tool was ATTEMPTED this turn (executed OR vetoed) — with no attempt, a destructive verb is read-backed STATUS talk, left alone (the P1-FP fix). Given an attempt, the reply may not DECLARE a deletion/removal unless a `confirmed:true` destructive call succeeded this turn. Sentence-scoped: a `claimRe` hit is ignored when its own sentence is a question or carries an `offerRe` (offered, not reported). Exempts the confirm-probe two-step (`probed + askRe`) and honest failure/negation (`exemptRe`). All patterns injected (P8a). |
 | `pendingConfirmMustAsk(opts: { askRe: RegExp; confirmArg?: string }): Guard` | — | **RESOLUTION-AWARE**: if a tool returned `requiresConfirmation` this turn, the reply MUST relay the question (`askRe` matches "does this reply seek confirmation?") — UNLESS that probe was RESOLVED this turn (the same tool ran OK with the confirm flag `confirmArg` (default `confirmed`) set on the SAME record, i.e. matching args minus that flag). `askRe` injected (P8a). |
@@ -129,7 +137,6 @@ when no kind fits.
 | `replyConfirmsLabels(labels: string[], reason: string): Guard` | — | the reply must be non-empty and name ALL `labels`. |
 | `replyMaxOccurrences(ctas: string[], n: number, reason: string): Guard` | — | at most `n` distinct CTA lemmas from `ctas` may appear (anti-nag). |
 | `replySingleQuestion(reason: string): Guard` | — | the reply must have exactly one `?` (recovery turns). |
-| `replyNoProductionClaim(claimRe: RegExp, reason: string): Guard` | — | deny if the reply matches a production-claim regex. |
 
 ### any hook
 
@@ -224,15 +231,30 @@ choose-gate over a tool some open-state case requires is a deterministic autofai
 bench target case 0/3 → 3/3 (N=3, bucket 71/72, zero regression), then a live production eval 10/10 with
 the port unchanged.
 
+## Domain label guards via custom()
+
+The runtime holds **no media concept** — a media-ish domain owns its own label rules. The pattern: a
+`custom({ kind: 'labelExists' | 'labelProvenance', dim: 'input', check, prose })` whose `check` reads the
+WORLD's own accessors (e.g. `world.hasMediaLabel(label)` / `world.mediaLabels()`), never a runtime default;
+provenance is decided by a domain-injected `uploadRe` scheme (or a world state key). Because `dim:'input'`,
+it is a legal preTool gate — identical enforcement to a first-class kind, just authored in the bundle. A
+production deployment can replace the upload-range regex with a DB-backed provenance state key without
+touching the runtime. Reply-side existence keys the same way: pass `refExists` into `noFabricatedSuccess`.
+
 ## The P8a domain-neutrality law
 
-`@looprun-ai/core` (and the mastra runtime `src`) carry **zero** language-specific content. No generic guard
-hardcodes a linguistic regex (claim verbs, confirm-language) or a label scheme — those STRINGS/REGEXES live
-in the business bundle's OWN lexicon (see `examples/*/src/agents/*/lexicon.ts`) and are passed back in as
-**required** params: `labelProvenance(…, { uploadRe })`, `noFabricatedSuccess(tool, { claimRe, labelRe,
-verbClaimRe, reason })`, `pendingConfirmMustAsk({ askRe })`, `destructiveClaimRequiresSuccess(tools, {
-claimRe, askRe, offerRe, exemptRe? })`, `noFalseFailureClaim({ claimRe })`. The runtime holds only the
-MECHANISM and the generic English prose. This is **enforced by
+`@looprun-ai/core` (and the mastra runtime `src`) carry **zero** language-specific content — **and (P8b,
+2026-07-15) no MEDIA concept and no natural-language narration pattern either.** No generic guard hardcodes a
+linguistic regex (claim verbs, confirm-language) or a label scheme — those STRINGS/REGEXES live in the
+business bundle's OWN lexicon (see `examples/*/src/agents/*/lexicon.ts`) and are passed back in as
+**required** params: `noFabricatedSuccess(tool, { claimRe, labelRe, verbClaimRe, banRe, refExists, reason })`,
+`degenerationGuard({ selfNarrationRe })`, `pendingConfirmMustAsk({ askRe })`,
+`destructiveClaimRequiresSuccess(tools, { claimRe, askRe, offerRe, exemptRe? })`,
+`noFalseFailureClaim({ claimRe })`. **Label guards are the DOMAIN's job**: the former runtime `labelExists`/
+`labelProvenance` kinds (which coupled the runtime to a media label scheme) are gone — a media domain authors
+them as `custom()` input guards over its world (see "Domain label guards via custom()" above), and the
+reply-honesty existence check reads the domain's injected `refExists` predicate, never a hardcoded
+`mediaLabels()`. The runtime holds only the MECHANISM and the generic English prose. This is **enforced by
 `packages/core/test/runtime-neutrality.test.ts`**, which scans both runtime packages for accented letters /
 language stems and fails on a re-introduced default.
 

@@ -13,7 +13,7 @@
  * // UNCHECKABLE: scheduling/rescheduling/cancelling belongs to the scheduling agent — say so
  * //              rather than improvise; no state key — conditioned prose + eval dimension only.
  */
-import { AgentSpecBase, custom, jargonScrub, maxCallsPerTurn, replyNoProductionClaim } from 'looprun';
+import { AgentSpecBase, custom, jargonScrub, maxCalls, noFabricatedSuccess } from 'looprun';
 import { HOMESERVICES_THEME } from './theme.js';
 import { FALSE_FAILURE_CLAIM_RE } from './lexicon.js';
 
@@ -119,19 +119,23 @@ export class AgentSpecIntakeQuoting extends AgentSpecBase {
     this.addGuard(
       'preTool',
       ['sendNotification'],
-      maxCallsPerTurn('sendNotification', 2, 'At most two notifications per turn — batch updates into one clear message instead of spamming the customer.'),
+      maxCalls('sendNotification', 2, 'At most two notifications per turn — batch updates into one clear message instead of spamming the customer.'),
       { id: 'agent:notificationCap' },
     );
 
     // Behavior gates. (noFalseFailureClaim now auto-installs as minimal:noFalseFailureClaim via lexicon.)
     // Measured iteration 2 (case 11): this agent has NO cancellation/booking tool, so ANY
     // commitment-to-cancel phrasing is out of scope by construction (commitment/completion forms
-    // only — "the scheduling agent handles cancellations" does not match).
+    // only — "the scheduling agent handles cancellations" does not match). The unconditional-ban
+    // mode of noFabricatedSuccess (banRe, fired regardless of attempts) is the successor to the
+    // former standalone replyNoProductionClaim kind.
     this.addReplyCheck(
-      replyNoProductionClaim(
-        /\b(I (?:will|can|'ll) (?:now )?(?:proceed with|process|handle) (?:the |this |that )?cancell?ation|cancell?ation (?:is )?(?:confirmed|completed|done|processed)|(?:job|visit|booking) (?:has been|was|is now) cancell?ed)\b/i,
-        'You cannot cancel or promise to cancel anything — cancellations belong to the scheduling agent. Route the user there with the ids you know.',
-      ),
+      noFabricatedSuccess('cancelJob', {
+        banRe:
+          /\b(I (?:will|can|'ll) (?:now )?(?:proceed with|process|handle) (?:the |this |that )?cancell?ation|cancell?ation (?:is )?(?:confirmed|completed|done|processed)|(?:job|visit|booking) (?:has been|was|is now) cancell?ed)\b/i,
+        reason:
+          'You cannot cancel or promise to cancel anything — cancellations belong to the scheduling agent. Route the user there with the ids you know.',
+      }),
       { id: 'agent:noCancelCommitment' },
     );
 

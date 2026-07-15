@@ -119,7 +119,7 @@ Stage S: `npx looprun-eval certify` (N=3, bar ≥ 0.90).
   `recordQuoteDecision` from scheduling (only case 09 — intake — requires it), rewrote the deny
   reason + behavior line to route out-of-band acceptances to intake. Re-screen: 13 PASS.
 - **Iteration 2 — classes 4+5 (prose + claim gate):** case 11 — the scope prose existed but did not
-  hold; strengthened it AND added a deterministic `replyNoProductionClaim` cancellation-commitment
+  hold; strengthened it AND added a deterministic `noFabricatedSuccess({ banRe })` cancellation-commitment
   gate (safe here by construction: intake has no cancel tool, so ANY commitment form is out of
   scope; negation/handoff phrasings do not match). Case 20 — added the conditioned skill-filter
   prose (empty skill-filtered roster ≠ person does not exist; read the full roster first).

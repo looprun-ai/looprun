@@ -44,7 +44,7 @@ bucket (writes `eval-results/<date>-<domain>/<agent>.dump.json` + `.autofail.jso
 
 Rules:
 - One fix-class batch per iteration; never shotgun unrelated prose edits (prose is non-local —
-  the maxCallsPerTurn lesson).
+  the maxCalls per-turn-cap lesson).
 - Every fix = both halves updated (check + prose) where applicable.
 - Class-6 residuals are ACCEPTED, not masked with brittle regexes.
 - After any spec edit: `npx looprun-eval lint --spec-laws` must stay clean before re-running.

@@ -197,7 +197,7 @@ export interface AgentSpecConfig {
    *  `minimal:noFalseFailureClaim` (a reply-honesty invariant every agent should carry). Auto-iff-provided
    *  — an absent lexicon leaves the minimal layer exactly as before (non-breaking). Extensible: future
    *  always-on language-keyed guards add their own key here, keeping the runtime language-neutral (P8a). */
-  lexicon?: { falseFailureClaimRe?: RegExp; confirmAskRe?: RegExp };
+  lexicon?: { falseFailureClaimRe?: RegExp; confirmAskRe?: RegExp; selfNarrationRe?: RegExp };
   toolSchemas?: Record<string, ToolSchemaLike>;
   /** Optional domain-theme reference (see {@link AgentSpec.theme}). */
   theme?: TrunkTheme;
@@ -223,7 +223,7 @@ export class AgentSpecBase implements AgentSpec {
   readonly theme?: TrunkTheme;
   protected readonly destructiveTools: string[];
   protected readonly confirmMechanism: Record<string, 'arg' | 'prior-ask'>;
-  protected readonly lexicon: { falseFailureClaimRe?: RegExp; confirmAskRe?: RegExp };
+  protected readonly lexicon: { falseFailureClaimRe?: RegExp; confirmAskRe?: RegExp; selfNarrationRe?: RegExp };
   protected readonly toolSchemas: Record<string, ToolSchemaLike>;
   private seq = 0;
 
@@ -280,7 +280,7 @@ export class AgentSpecBase implements AgentSpec {
     // Output-channel degeneration lint (promoted 2026-07-15 after targeted validation + flash N=3
     // zero-firing recert). FIRST among the onReply minimal guards: a degenerate reply must be re-driven
     // before any content-level check reasons about it. onReply prose does NOT render into the trunk.
-    this.addGuard('onReply', 'any', degenerationGuard(), { layer: 'minimal', id: 'minimal:degenerationGuard' });
+    this.addGuard('onReply', 'any', degenerationGuard({ selfNarrationRe: this.lexicon.selfNarrationRe }), { layer: 'minimal', id: 'minimal:degenerationGuard' });
     // ALWAYS-ON reply-honesty invariant — auto-installed IFF the bundle injects its false-failure lexicon
     // (auto-iff-provided keeps a spec that ships no lexicon byte-stable). Ordered BEFORE emptyReply so the
     // resolved onReply tail is `… , minimal:noFalseFailureClaim, minimal:emptyReply` (the same relative
