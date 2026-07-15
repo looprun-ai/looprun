@@ -1,6 +1,6 @@
 /** Alias registry, flags and fail-fast behavior of the local-model story. */
 import { afterEach, describe, expect, it } from 'vitest';
-import { launchFlags, modelPath, resolveAlias, QWEN35_4B, QWEN36_35B_A3B, QWEN36_NORMAL, QWEN36_MINIMAL, QWEN36_PRO, LlamaCppRuntime, downloadUrl } from '../src/index.js';
+import { launchFlags, modelPath, resolveAlias, QWEN35_4B, QWEN35_MICRO, QWEN36_35B_A3B, QWEN36_NORMAL, QWEN36_MINIMAL, QWEN36_PRO, LlamaCppRuntime, downloadUrl } from '../src/index.js';
 
 const ENV_KEYS = ['QWEN35_4B_GGUF', 'QWEN36_35B_GGUF', 'LLAMA_KV', 'LLAMA_CTX', 'LLAMA_PORT', 'LLAMA_CACHE_RAM', 'LLAMA_SLOT_SAVE_PATH', 'LLAMA_SPEC_TYPE'];
 const saved = new Map(ENV_KEYS.map((k) => [k, process.env[k]]));
@@ -20,20 +20,24 @@ describe('alias registry', () => {
     expect(QWEN36_35B_A3B).toBe(QWEN36_NORMAL);
   });
 
-  it('resolves the three run tiers (normal is the default alias)', () => {
+  it('resolves the four run tiers (normal is the default alias)', () => {
     expect(resolveAlias('normal')).toBe(QWEN36_NORMAL);
     expect(resolveAlias('minimal')).toBe(QWEN36_MINIMAL);
     expect(resolveAlias('pro')).toBe(QWEN36_PRO);
-    // one served id across tiers — the client-side model label never changes
+    expect(resolveAlias('micro')).toBe(QWEN35_MICRO);
+    // one served id across the 35B tiers — the client-side model label never changes
     for (const s of [QWEN36_NORMAL, QWEN36_MINIMAL, QWEN36_PRO]) {
       expect(s.servedId).toBe('qwen3.6-35b-gguf');
       expect(s.hfRepo).toBe('unsloth/Qwen3.6-35B-A3B-MTP-GGUF');
       expect(s.specType).toBe('draft-mtp');
     }
+    // micro = the 4B family with its own baked MTP head
+    expect(QWEN35_MICRO.hfRepo).toBe('unsloth/Qwen3.5-4B-MTP-GGUF');
+    expect(QWEN35_MICRO.specType).toBe('draft-mtp');
   });
 
   it('throws with the known list on an unknown alias', () => {
-    expect(() => resolveAlias('gpt-9')).toThrow(/Known: qwen3\.5-4b, qwen3\.6-35b-a3b/);
+    expect(() => resolveAlias('gpt-9')).toThrow(/Known: qwen3\.5-4b, qwen3\.5-4b-micro, qwen3\.6-35b-a3b/);
   });
 
   it('modelPath honors the env override', () => {
@@ -75,7 +79,12 @@ describe('llama.cpp launch flags (the measured recipe — MTP on the 35B tiers s
     expect(fPro).toContain('-ctk f16 -ctv f16');
     expect(fPro).toContain('-c 65536');
     expect(fPro).toContain('--spec-type draft-mtp');
-    for (const f of [f4, fNormal, fMin, fPro]) {
+    const fMicro = launchFlags(QWEN35_MICRO, '/m/4b.gguf').join(' ');
+    expect(fMicro).toContain('-ctk f16 -ctv f16'); // 4B KV is small; f16 keeps the +23% decode edge
+    expect(fMicro).toContain('-c 16384'); // measured 4.67 GB RSS on the 8 GB budget
+    expect(fMicro).toContain('--cache-ram 384');
+    expect(fMicro).toContain('--spec-type draft-mtp'); // baked head: +20% measured on the 4B @ Q4
+    for (const f of [f4, fNormal, fMin, fPro, fMicro]) {
       expect(f).toContain('--jinja');
       expect(f).toContain('-fa on');
       expect(f).toContain('-ngl 99');

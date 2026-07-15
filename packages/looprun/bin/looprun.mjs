@@ -16,7 +16,8 @@ const HELP = `looprun <command>
   models pull <alias> [--yes]      Download the model GGUF (asks consent — sizes are 3–21 GB).
   models serve <alias>             Start llama-server with the validated flags (Ctrl-C stops).
 
-Local model aliases: qwen3.5-4b (~2.9 GB) · qwen3.6-35b-a3b (~21 GB)
+Local model tiers: normal (default, ~11.8 GB) · minimal (16 GB machines) ·
+pro (~17.2 GB) · micro (8 GB machines, ~2.5 GB) · qwen3.5-4b (plain fallback, ~2.9 GB)
 `;
 
 async function confirm(question) {

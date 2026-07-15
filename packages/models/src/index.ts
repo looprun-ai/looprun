@@ -12,7 +12,7 @@ import { LlamaCppRuntime, serverBaseURL } from './llamacpp.js';
 import type { LocalModelSpec, ModelRuntimePort } from './port.js';
 
 export type { LocalModelSpec, ModelRuntimePort, RuntimeStatus, EnsureServerResult } from './port.js';
-export { MODEL_ALIASES, QWEN35_4B, QWEN36_35B_A3B, QWEN36_NORMAL, QWEN36_MINIMAL, QWEN36_PRO, resolveAlias, modelPath } from './aliases.js';
+export { MODEL_ALIASES, QWEN35_4B, QWEN35_MICRO, QWEN36_35B_A3B, QWEN36_NORMAL, QWEN36_MINIMAL, QWEN36_PRO, resolveAlias, modelPath } from './aliases.js';
 export { LlamaCppRuntime, launchFlags, serverBaseURL, slotStateDir } from './llamacpp.js';
 export { downloadModel, downloadUrl } from './download.js';
 

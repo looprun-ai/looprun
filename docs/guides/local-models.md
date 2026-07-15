@@ -9,7 +9,8 @@ today; other runtimes plug into the same port later):
 | **`normal`** (= `qwen3.6-35b-a3b`, the DEFAULT) | UD-IQ2_XXS+MTP · 11.8 GB | daily driver, 24 GB+ machines | `f16` | 64k | 16384 MiB | 88.9% certified eval (ties the 21 GB Q4 record) · ~56 tok/s · peak RSS ~20.7 GB |
 | **`minimal`** | UD-IQ2_XXS+MTP · 11.8 GB | 16 GB machines | `q8_0` | 24k | 512 MiB | **13.4–13.5 GB RSS** · ~44 tok/s |
 | **`pro`** | UD-Q3_K_XL+MTP · 17.2 GB | quality-max, 32 GB+ | `f16` | 64k | 16384 MiB | ~58 tok/s |
-| `qwen3.5-4b` | UD-Q4_K_XL · 2.9 GB | 8–16 GB fallback, simple/few-tool agents | `f16` | 32k | 3072 MiB | — |
+| **`micro`** | Qwen3.5-**4B** UD-Q3_K_XL+MTP · 2.5 GB | 8 GB machines, simple/few-tool agents (trunks ≤ ~12k) | `f16` | 16k | 384 MiB | **4.67 GB RSS** (~3.3 GB left for OS+apps) · ~44 tok/s — eval quality is far below the 35B tiers |
+| `qwen3.5-4b` | UD-Q4_K_XL · 2.9 GB | plain-4B fallback (no MTP) | `f16` | 32k | 3072 MiB | — |
 
 The launch profile is the **measured** recipe — not defaults:
 `--jinja -fa on -ngl 99 --mlock --no-mmap -np 1 -c <ctx> -ctk <kv> -ctv <kv> -ctxcp 64

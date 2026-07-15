@@ -44,7 +44,7 @@ import { localModel } from 'looprun/models'
 model: await localModel('normal')      // DEFAULT — 11.8 GB, 88.9% certified eval, ~56 tok/s
 model: await localModel('minimal')     // 16 GB machines — 13.4–13.5 GB RSS measured, ~44 tok/s
 model: await localModel('pro')         // quality-max — 17.2 GB, ~58 tok/s
-model: await localModel('qwen3.5-4b')  // ~2.9 GB — 8–16 GB fallback
+model: await localModel('micro')       // 8 GB machines — 4.67 GB RSS measured, ~44 tok/s (4B)
 ```
 
 Requirements: a `llama-server` build **≥ b9780**
