@@ -15,7 +15,7 @@ import { fileURLToPath } from 'node:url';
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 // Surfaces that must be bench-free.
-const SCOPES = ['skills', 'docs', 'examples', 'packages/eval/src', 'packages/eval/bin', 'packages/eval/assets', 'README.md'];
+const SCOPES = ['skills', 'docs', 'examples', 'packages/eval/src', 'packages/eval/bin', 'packages/eval/assets', 'README.md', 'governance', 'scripts/proofs', 'CONTRIBUTING.md', '.github'];
 
 // One regex, case-insensitive where it matters.
 const DRIFT = new RegExp(

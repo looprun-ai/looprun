@@ -14,6 +14,10 @@ eval-results/**/*.tasks.jsonl
 eval-results/**/*.autofail.json
 eval-results/**/*.verdicts.jsonl
 
+# governance proof scratch (raw vitest JSON + run summary)
+governance/.artifacts/*
+!governance/.artifacts/.gitkeep
+
 # logs
 *.log
 

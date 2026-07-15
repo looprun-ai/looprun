@@ -1,0 +1,6 @@
+# Code owners — review is required from these owners on the matching paths (branch protection).
+# The guard behavior contract and the governance process are the sensitive surfaces.
+
+/packages/core/src/guards.ts   @marcosluizfp
+/packages/core/GUARDS.md       @marcosluizfp
+/governance/                   @marcosluizfp
