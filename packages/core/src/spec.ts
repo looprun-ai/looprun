@@ -22,7 +22,7 @@
  * layer ordering + trunk prose order). resolveBindings sorts each hook agent → full → base → minimal so
  * an agent correction always wins.
  */
-import { confirmFirst, destructiveThrottle, emptyReply, noDuplicateCall, noFalseFailureClaim } from './guards.js';
+import { confirmFirst, degenerationGuard, destructiveThrottle, emptyReply, noDuplicateCall, noFalseFailureClaim } from './guards.js';
 import type { AgentWorld, Dim, Guard, GuardCtx, ObservedCall, ReplyMutator, SpatialEdge } from './rules.js';
 import type { TrunkTheme } from './trunk.js';
 import type { SamplingSettings } from './model-params.js';
@@ -277,6 +277,10 @@ export class AgentSpecBase implements AgentSpec {
 
   protected installMinimal(): void {
     this.addGuard('preTool', 'any', noDuplicateCall(), { layer: 'minimal', id: 'minimal:noDuplicateCall' });
+    // Output-channel degeneration lint (promoted 2026-07-15 after targeted validation + flash N=3
+    // zero-firing recert). FIRST among the onReply minimal guards: a degenerate reply must be re-driven
+    // before any content-level check reasons about it. onReply prose does NOT render into the trunk.
+    this.addGuard('onReply', 'any', degenerationGuard(), { layer: 'minimal', id: 'minimal:degenerationGuard' });
     // ALWAYS-ON reply-honesty invariant — auto-installed IFF the bundle injects its false-failure lexicon
     // (auto-iff-provided keeps a spec that ships no lexicon byte-stable). Ordered BEFORE emptyReply so the
     // resolved onReply tail is `… , minimal:noFalseFailureClaim, minimal:emptyReply` (the same relative

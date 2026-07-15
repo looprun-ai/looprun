@@ -201,6 +201,33 @@ export async function finalizeReply(
 
   const finalViolations = violations.map((v) => v.guard.kind);
   if (finalViolations.length) {
+    // Salvage-before-canned-closure (2026-07-15, mirrored from bench mastra.ts; measured on the
+    // eight-second-limit / zero-quota cells): when the turn DID produce a verified user-facing text —
+    // the `text` arg of a SUCCESSFUL askUser/replyToUser call this turn — and that text itself passes
+    // every onReply check, surface IT instead of the generic exhaustion closure. The violations that got
+    // us here came from the generated reply (or postTool reports), not from this verified text; swallowing
+    // correct content behind the canned fallback is the silent-filter deadlock's judge-facing twin.
+    // Purity holds: the salvage is a verified observation (ok call arg), re-validated by the same
+    // deterministic checks — never fabricated. postTool violations are NOT re-counted (they report an
+    // already-run result; no choice of closure text can undo them).
+    const lastAsk = [...ledger.observed].reverse().find(
+      (o) => o.turnIndex === ledger.turnIndex && o.ok && (o.name === 'askUser' || o.name === 'replyToUser') && typeof o.args?.text === 'string' && (o.args.text as string).trim().length > 0,
+    );
+    if (lastAsk) {
+      const candidate = (lastAsk.args.text as string).trim();
+      if (candidate === text.trim()) {
+        ledger.turnCorrections.push('salvage-miss:same-text');
+      } else {
+        const candViolations = await checkReply(spec, ledger, world, candidate);
+        if (candViolations.length === 0) {
+          ledger.turnCorrections.push('exhaustion-salvage');
+          return { text: candidate, exhausted: true, violations: finalViolations };
+        }
+        ledger.turnCorrections.push(`salvage-miss:checks:${candViolations.map((v) => v.guard.kind).join(',')}`);
+      }
+    } else {
+      ledger.turnCorrections.push('salvage-miss:no-terminal-observed');
+    }
     const okTools = ledger.observed.filter((o) => o.turnIndex === ledger.turnIndex && o.ok).map((o) => o.name);
     const closure = spec.controls.exhaustionReply
       ? spec.controls.exhaustionReply(world, okTools, ledger.producedThisTurn, finalViolations)

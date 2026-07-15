@@ -366,8 +366,15 @@ export function noFabricatedSuccess(
       const produced = ctx.producedThisTurn ?? [];
       const invented = labels.filter((l) => !produced.includes(l) && !ctx.world.hasMediaLabel(l));
       if (invented.length) return opts.reason;
+      // Claim-LANGUAGE branch is ATTEMPT-KEYED (2026-07-15, the destructiveClaimRequiresSuccess
+      // precedent): with no attempt on `tool` this turn (executed or vetoed), production vocabulary is
+      // descriptive/status talk (a fixed-duration explainer, a quota explanation) — left alone. The
+      // measured false-positives (eight-second-limit + zero-quota cells) rejected CORRECT informational
+      // replies and forced the exhaustion fallback. Invented LABELS (above) remain attempt-independent —
+      // citing a nonexistent artifact is fabrication regardless of attempts.
+      const attempted = ctx.observed.some((o) => o.turnIndex === ctx.turnIndex && o.name === tool);
       const claims = opts.claimRe.test(reply) || opts.verbClaimRe.test(reply);
-      if (claims && labels.length === 0) return opts.reason;
+      if (attempted && claims && labels.length === 0) return opts.reason;
       return null;
     },
     prose: () => opts.reason,
@@ -451,6 +458,41 @@ export function emptyReply(): Guard {
         : null;
     },
     prose: () => 'never end a turn with an empty reply',
+  };
+}
+
+/**
+ * Output-channel DEGENERATION lint — domain-neutral, always-on (Minimal layer). Catches the weak-model
+ * failure class measured 2026-07-14/15 (bench aw35b-Q3 full-117: 5/23 fails): leaked reasoning/tool markup
+ * (`<think>`, `<tool_call>`, `<tool_response>`, chat-template tokens, raw `replyToUser{`), third-person
+ * self-narration, and run-away repetition. A hit routes into the existing redrive → exhaustion battery
+ * (redrives are reply-only regenerations, which is exactly what this class needs). Promoted after targeted
+ * validation (+3 recoveries, 9/9 clean replies, 0 regressions) and a flash N=3 recert with ZERO firings on
+ * the clean subject (the zero-diff path). Pure check: no clock/RNG/IO/user-text; fresh regexes per call.
+ */
+export function degenerationGuard(): Guard {
+  return {
+    kind: 'degenerationGuard',
+    dim: 'behavior',
+    check(ctx) {
+      const r = String(ctx.reply ?? '');
+      if (!r) return null;
+      if (/<think|<\/think|<tool_call|<tool_response|<\|im_(?:start|end)\|>|\[end of turn\]|<\|assistant\|>|replyToUser\s*\{/i.test(r)) {
+        return 'the reply leaks internal scaffolding (think blocks / tool-call markup / chat-template tokens) — rewrite it as ONE short, clean user-facing message with none of that.';
+      }
+      if (/\b(?:I closed the turn|by calling replyToUser|The assistant (?:confirmed|called|then))\b/i.test(r)) {
+        return 'the reply narrates your own tool calls in third person instead of speaking TO the user — rewrite it addressing the user directly.';
+      }
+      // run-away repetition: any non-trivial line repeated 3+ times
+      const counts = new Map<string, number>();
+      for (const line of r.split('\n').map((l) => l.trim()).filter((l) => l.length >= 12)) {
+        const n = (counts.get(line) ?? 0) + 1;
+        counts.set(line, n);
+        if (n >= 3) return 'the reply repeats the same line over and over — rewrite it as ONE short message that says it once.';
+      }
+      return null;
+    },
+    prose: () => 'reply in ONE clean user-facing message — never leak internal reasoning, template tokens, self-narration, or repeated lines',
   };
 }
 
