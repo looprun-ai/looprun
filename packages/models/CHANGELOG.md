@@ -1,6 +1,14 @@
 # @looprun-ai/models
 
+## 0.4.0
+
+### Patch Changes
+
+- Updated dependencies [a9357d3]
+  - @looprun-ai/core@0.4.0
+
 ## Unreleased
+
 - **BREAKING — tier aliases re-keyed to machine RAM class**: `micro`→`ram8`, `minimal`→`ram16`,
   `normal`→`ram24` (the DEFAULT), `pro`→`ram32` (long forms `qwen3.5-4b-ram8`,
   `qwen3.6-35b-ram{16,24,32}`). The pre-ram spellings and the old const exports (`QWEN35_MICRO`,
