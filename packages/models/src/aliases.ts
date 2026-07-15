@@ -23,9 +23,9 @@
  *    with the full 16 GB prompt cache (cap it via $LLAMA_CACHE_RAM to shrink).
  *  - minimal — same model tuned for 16 GB machines: ctx 24576 (fits a ~21k agent trunk),
  *    q8_0 KV, 512 MiB cache. MEASURED: 13.4–13.5 GB RSS, ~44 tok/s decode.
- *  - micro   — 8 GB machines: Qwen3.5-4B UD-Q3_K_XL + MTP (2.53 GB), ctx 16384 (agent trunks
- *    ≤ ~12k), f16 KV, 384 MiB cache. MEASURED: 4.67 GB RSS, ~44 tok/s decode — leaves ~3.3 GB
- *    for the OS + apps. Perf-validated; the 4B's eval quality is far below the 35B tiers.
+ *  - micro   — 8 GB machines: Qwen3.5-4B UD-Q3_K_XL + MTP (2.53 GB), ctx 24576 (fits ~21k
+ *    agent trunks), q8_0 KV, 384 MiB cache. MEASURED: 4.62 GB RSS, ~43 tok/s decode — leaves
+ *    ~3.4 GB for the OS + apps. Perf-validated; the 4B's eval quality is far below the 35B tiers.
  */
 import { homedir } from 'node:os';
 import { join } from 'node:path';
@@ -101,17 +101,17 @@ export const QWEN36_PRO: LocalModelSpec = {
   specType: 'draft-mtp',
 };
 
-/** MICRO — 8 GB machines: measured 4.67 GB RSS, ~44 tok/s (Qwen3.5-4B + baked MTP head). */
+/** MICRO — 8 GB machines: measured 4.62 GB RSS, ~43 tok/s (Qwen3.5-4B + baked MTP head). */
 export const QWEN35_MICRO: LocalModelSpec = {
   alias: 'qwen3.5-4b-micro',
-  note: '8 GB-machine tier: Qwen3.5-4B UD-Q3_K_XL + baked MTP head (2.53 GB), ctx 16384 (agent trunks ≤ ~12k), 384 MiB cache. Measured 4.67 GB RSS, ~44 tok/s — leaves ~3.3 GB for OS + apps.',
+  note: '8 GB-machine tier: Qwen3.5-4B UD-Q3_K_XL + baked MTP head (2.53 GB), ctx 24576 (fits ~21k agent trunks), q8_0 KV, 384 MiB cache. Measured 4.62 GB RSS, ~43 tok/s — leaves ~3.4 GB for OS + apps. Deep-context-heavy agents can trade back: $LLAMA_KV=f16 $LLAMA_CTX=16384.',
   file: 'Qwen3.5-4B-UD-Q3_K_XL.gguf',
   defaultDir: home('models', 'qwen35-mtp-gguf'),
   envVar: 'QWEN35_MICRO_GGUF',
   hfRepo: 'unsloth/Qwen3.5-4B-MTP-GGUF',
   approxSizeGB: 2.5,
-  kv: 'f16',
-  ctx: 16384,
+  kv: 'q8_0',
+  ctx: 24576,
   cacheRamMiB: 384,
   port: 8081,
   servedId: 'qwen3.5-4b-gguf',

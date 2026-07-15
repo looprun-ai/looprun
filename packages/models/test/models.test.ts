@@ -80,8 +80,8 @@ describe('llama.cpp launch flags (the measured recipe — MTP on the 35B tiers s
     expect(fPro).toContain('-c 65536');
     expect(fPro).toContain('--spec-type draft-mtp');
     const fMicro = launchFlags(QWEN35_MICRO, '/m/4b.gguf').join(' ');
-    expect(fMicro).toContain('-ctk f16 -ctv f16'); // 4B KV is small; f16 keeps the +23% decode edge
-    expect(fMicro).toContain('-c 16384'); // measured 4.67 GB RSS on the 8 GB budget
+    expect(fMicro).toContain('-ctk q8_0 -ctv q8_0'); // 8 GB budget; ctx 24k fits ~21k trunks
+    expect(fMicro).toContain('-c 24576'); // measured 4.62 GB RSS / ~43 tok/s
     expect(fMicro).toContain('--cache-ram 384');
     expect(fMicro).toContain('--spec-type draft-mtp'); // baked head: +20% measured on the 4B @ Q4
     for (const f of [f4, fNormal, fMin, fPro, fMicro]) {
