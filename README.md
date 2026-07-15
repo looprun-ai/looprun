@@ -34,14 +34,17 @@ res.text          // the governed reply
 res.looprun       // what the safety kit did: vetoes, redrives, violations, observed calls
 ```
 
-Local models are first-class — the two validated tiers run on
-[llama.cpp](https://github.com/ggml-org/llama.cpp) with measured flags:
+Local models are first-class — three run tiers of one validated model (plus a small-RAM fallback)
+run on [llama.cpp](https://github.com/ggml-org/llama.cpp) with measured flags, including lossless
+multi-token-prediction speculative decoding (~1.4× decode, byte-identical output at temp 0):
 
 ```ts
 import { localModel } from 'looprun/models'
 
-model: await localModel('qwen3.5-4b')       // ~2.9 GB — 8–16 GB machines
-model: await localModel('qwen3.6-35b-a3b')  // ~21 GB — best local quality (32 GB+)
+model: await localModel('normal')      // DEFAULT — 11.8 GB, 88.9% certified eval, ~56 tok/s
+model: await localModel('minimal')     // 16 GB machines — 13.4–13.5 GB RSS measured, ~44 tok/s
+model: await localModel('pro')         // quality-max — 17.2 GB, ~58 tok/s
+model: await localModel('qwen3.5-4b')  // ~2.9 GB — 8–16 GB fallback
 ```
 
 Requirements: a `llama-server` build **≥ b9780**

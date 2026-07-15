@@ -1,9 +1,10 @@
 /**
  * @looprun-ai/models — the llama.cpp ModelRuntimePort (the v0 local runtime).
  *
- * Launch profile = the measured recipe (NON-MTP; trunk-warm law measured 2026-07-11):
+ * Launch profile = the measured recipe (trunk-warm law measured 2026-07-11; MTP added 2026-07-15):
  *   llama-server -m <gguf> --port <port> --jinja -fa on -ngl 99 --mlock --no-mmap -np 1
  *                -c <ctx> -ctk <kv> -ctv <kv> -ctxcp 64 --cache-ram <MiB> --slot-save-path <dir>
+ *                [--spec-type draft-mtp]
  *  - `-np 1` keeps the shared prompt prefix permanently resident (the long-running-agent law).
  *  - `-ctxcp` (context checkpoints) + `--cache-ram` (idle-slot RAM prompt cache) are BOTH
  *    load-bearing for the qwen3.5/3.6 hybrid family: checkpoints make ANY continuation warm
@@ -12,7 +13,10 @@
  *  - `--slot-save-path` enables per-agent trunk STATE FILES (bake once at the trunk boundary,
  *    restore ≈20–30 ms after any restart via POST /slots/{i}?action=save|restore). Zero cost
  *    when the /slots endpoints are unused.
- *  - NO `--spec-type` (MTP measured ~0% speedup on Metal — rejected).
+ *  - `--spec-type draft-mtp` on specs with `specType` set (2026-07-15): checkpoints with a baked
+ *    TRAINED MTP head (unsloth *-MTP-GGUF) decode 1.4× faster, lossless (exact-verified,
+ *    byte-identical at temp 0; measured on b9780 AND b10016). Headless checkpoints and the dense
+ *    4B stay non-MTP (~0% there). $LLAMA_SPEC_TYPE='' disables.
  *  - Binary must be ≥ b9780 (older builds cannot load the qwen3.5/3.6 family) — resolved via
  *    $LLAMA_BIN, then ~/llamacpp-b9780/bin/llama-server, then `llama-server` on PATH.
  */
@@ -76,6 +80,12 @@ export function launchFlags(spec: LocalModelSpec, model: string): string[] {
   const ctx = Number(process.env.LLAMA_CTX ?? spec.ctx);
   const cacheRam = Number(process.env.LLAMA_CACHE_RAM ?? spec.cacheRamMiB);
   const slotDir = slotStateDir();
+  // Speculative decoding (D4b, 2026-07-15): '--spec-type draft-mtp' for checkpoints with a baked
+  // trained MTP head — lossless (exact-verified, byte-identical at temp 0), 1.4× decode on the
+  // 35B-A3B. $LLAMA_SPEC_TYPE overrides the spec's mode; set it to '' to disable.
+  const specType = process.env.LLAMA_SPEC_TYPE !== undefined
+    ? process.env.LLAMA_SPEC_TYPE.trim()
+    : (spec.specType ?? '');
   return [
     '-m', model,
     '--port', String(port),
@@ -90,6 +100,7 @@ export function launchFlags(spec: LocalModelSpec, model: string): string[] {
     '-ctxcp', '64',
     '--cache-ram', String(cacheRam),
     ...(slotDir ? ['--slot-save-path', slotDir] : []),
+    ...(specType ? ['--spec-type', specType] : []),
   ];
 }
 

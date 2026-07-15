@@ -1,31 +1,41 @@
 # Local models
 
-looprun ships two **validated** local tiers behind a `ModelRuntimePort` (llama.cpp today; other
-runtimes plug into the same port later):
+looprun ships **three run tiers of one validated model** (Qwen3.6-35B-A3B with a baked
+multi-token-prediction head) plus a small-RAM fallback, behind a `ModelRuntimePort` (llama.cpp
+today; other runtimes plug into the same port later):
 
-| alias | size | tier | KV | ctx | `--cache-ram` |
-|---|---|---|---|---|---|
-| `qwen3.5-4b` | ~2.9 GB | 8–16 GB machines, simple/few-tool agents | `f16` | 32k | 3072 MiB |
-| `qwen3.6-35b-a3b` | ~21 GB | 32 GB+, best local quality (MoE 35B-A3B) | `f16` | 64k | 16384 MiB |
+| alias | quant · size | tier | KV | ctx | `--cache-ram` | measured |
+|---|---|---|---|---|---|---|
+| **`normal`** (= `qwen3.6-35b-a3b`, the DEFAULT) | UD-IQ2_XXS+MTP · 11.8 GB | daily driver, 24 GB+ machines | `f16` | 64k | 16384 MiB | 88.9% certified eval (ties the 21 GB Q4 record) · ~56 tok/s · peak RSS ~20.7 GB |
+| **`minimal`** | UD-IQ2_XXS+MTP · 11.8 GB | 16 GB machines | `q8_0` | 24k | 512 MiB | **13.4–13.5 GB RSS** · ~44 tok/s |
+| **`pro`** | UD-Q3_K_XL+MTP · 17.2 GB | quality-max, 32 GB+ | `f16` | 64k | 16384 MiB | ~58 tok/s |
+| `qwen3.5-4b` | UD-Q4_K_XL · 2.9 GB | 8–16 GB fallback, simple/few-tool agents | `f16` | 32k | 3072 MiB | — |
 
 The launch profile is the **measured** recipe — not defaults:
 `--jinja -fa on -ngl 99 --mlock --no-mmap -np 1 -c <ctx> -ctk <kv> -ctv <kv> -ctxcp 64
---cache-ram <MiB> --slot-save-path <dir>` on port 8081. The same flags apply on Mac (Metal) and
-Windows/Linux (CUDA) — only the tier (model alias) changes per machine.
+--cache-ram <MiB> --slot-save-path <dir> [--spec-type draft-mtp]` on port 8081. The same flags
+apply on Mac (Metal) and Windows/Linux (CUDA) — only the tier changes per machine.
 
 - `-np 1` keeps the shared prompt prefix permanently resident (the long-running-agent law).
 - `-ctxcp` (context checkpoints) + `--cache-ram` (idle-slot RAM prompt cache) are **both
   load-bearing** for the qwen3.5/3.6 hybrid family: checkpoints make any continuation warm (even
   same-agent multi-turn), and the RAM cache keeps N distinct **agent trunks** warm across agent
   switches — measured warm-switch TTFT 0.5–0.6 s vs 11–22 s cold. Never disable either.
-- KV precision is `f16` on every tier (measured: +23% decode vs q8_0 on the 4B, ~1.7× on the 35B —
-  weights dominate decode bandwidth; q8_0's per-token dequant is pure overhead). `q8_0` remains a
-  RAM escape hatch via `$LLAMA_KV=q8_0` (halves KV bytes + state-file sizes).
+- KV precision is `f16` unless the tier's RAM budget forces `q8_0` (measured: f16 = +23% decode vs
+  q8_0 on the 4B, ~1.7× on the 35B — weights dominate decode bandwidth; q8_0's per-token dequant is
+  pure overhead). `minimal` accepts that tax deliberately: q8_0 + 24k ctx is what fits 16 GB.
 - `--slot-save-path` (default `~/.cache/looprun/slot-states`; `$LLAMA_SLOT_SAVE_PATH`, empty
   disables) enables per-agent trunk **state files**: bake a slot once at the trunk boundary, then
   after any server restart a restore takes ≈20–30 ms (≈400× faster than the cold prefill) — zero
   cold prefill across restarts. Zero cost when unused.
-- MTP is never enabled (measured ~0% speedup on Metal).
+- **MTP (`--spec-type draft-mtp`) is ON for the 35B tiers** (2026-07-15): the `*-MTP-GGUF`
+  checkpoints bake a **trained** multi-token-prediction head into the file; the server drafts with
+  it and exact-verifies, so output is **byte-identical at temp 0** (lossless) at ~1.4× decode
+  (acceptance 0.75–0.80, measured on b9780 and b10016). Do not raise `--spec-draft-n-max` past its
+  default 3 — acceptance collapses beyond the single trained head's horizon. `$LLAMA_SPEC_TYPE=''`
+  disables. The dense 4B stays non-MTP (measured ~0% there — the draft forward costs a token).
+- `minimal`'s ctx 24576 fits agent trunks up to ~21k tokens; if your agents' trunks exceed that,
+  use `normal` (or raise `$LLAMA_CTX` and accept the extra KV RAM).
 
 ## Requirements
 
@@ -65,16 +75,17 @@ agent's first turn (surprise bandwidth/disk, long first-latency, CI hazards). Ge
 
 ```bash
 npx looprun init                        # env check + interactive pull
-npx looprun models pull qwen3.5-4b      # scripted (--yes to skip the prompt)
+npx looprun models pull normal          # tiers: normal (default) · minimal · pro
 npx looprun models status               # binary / file / server health
-npx looprun models serve qwen3.6-35b-a3b
+npx looprun models serve minimal        # the 16 GB profile (13.4–13.5 GB measured)
 ```
 
 Opt-in auto-download (dev convenience, sensible for the 4B only):
 `await localModel('qwen3.5-4b', { autoDownload: true })`.
 
-Overrides: `$QWEN35_4B_GGUF` / `$QWEN36_35B_GGUF` (file paths), `$LLAMA_BIN`, `$LLAMA_PORT`,
-`$LLAMA_KV`, `$LLAMA_CTX`, `$LLAMA_CACHE_RAM`, `$LLAMA_SLOT_SAVE_PATH`.
+Overrides: `$QWEN35_4B_GGUF` / `$QWEN36_35B_GGUF` / `$QWEN36_35B_PRO_GGUF` (file paths),
+`$LLAMA_BIN`, `$LLAMA_PORT`, `$LLAMA_KV`, `$LLAMA_CTX`, `$LLAMA_CACHE_RAM`,
+`$LLAMA_SLOT_SAVE_PATH`, `$LLAMA_SPEC_TYPE` ('' disables MTP).
 
 Windows/CUDA notes: identical flags. On a 16 GB-VRAM box that wants the 35B tier, add `-ncmoe N`
 (offload the first N layers' MoE experts to CPU; raise N until it fits — needs ≥16 GB system RAM).

@@ -39,6 +39,13 @@ export interface LocalModelSpec {
   port: number;
   /** The model id the OpenAI-compatible client sends (a label for llama-server). */
   servedId: string;
+  /**
+   * Speculative-decoding mode (`--spec-type`), e.g. 'draft-mtp' for checkpoints that ship a
+   * trained MTP head baked into the GGUF (measured 2026-07-15: accept 0.75–0.80, decode
+   * 39.6 → 53–58 tok/s on the 35B-A3B, output byte-identical at temp 0 — lossless).
+   * Omit for models without a usable head ($LLAMA_SPEC_TYPE overrides; '' disables).
+   */
+  specType?: string;
 }
 
 export interface RuntimeStatus {
