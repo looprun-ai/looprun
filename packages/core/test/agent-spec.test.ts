@@ -117,12 +117,12 @@ describe('AgentSpecBase — noFalseFailureClaim auto-layer (cfg.lexicon)', () =>
 
   it('auto-installs minimal:noFalseFailureClaim BEFORE minimal:emptyReply when lexicon provides the regex', () => {
     const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: ['x'], lexicon: { falseFailureClaimRe: FALSE_FAILURE } });
-    expect(spec.guards.onReply.map((b) => b.id)).toEqual(['minimal:noFalseFailureClaim', 'minimal:emptyReply']);
+    expect(spec.guards.onReply.map((b) => b.id)).toEqual(['minimal:degenerationGuard', 'minimal:noFalseFailureClaim', 'minimal:emptyReply']);
   });
 
   it('is byte-stable (NOT installed) when no lexicon is provided', () => {
     const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: ['x'] });
-    expect(spec.guards.onReply.map((b) => b.id)).toEqual(['minimal:emptyReply']);
+    expect(spec.guards.onReply.map((b) => b.id)).toEqual(['minimal:degenerationGuard', 'minimal:emptyReply']);
   });
 });
 

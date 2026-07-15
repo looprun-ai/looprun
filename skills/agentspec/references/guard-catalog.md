@@ -100,6 +100,7 @@ runtime carries no linguistic pattern of its own (the P8a lexicon doctrine below
 
 | kind | dim | auto | one-line semantics |
 |---|---|---|---|
+| `degenerationGuard()` | behavior | **minimal** | output-channel degeneration lint (first in the onReply tail): leaked think/tool-call/template markup, third-person self-narration, run-away line repetition (>=3x) — routes into the redrive battery; zero firings on clean subjects |
 | `emptyReply()` | behavior | **minimal** | a terminal reply may not be empty/whitespace |
 | `noFabricatedSuccess(tool, { claimRe, labelRe, verbClaimRe, reason })` | behavior | agent | reply may not claim `tool` succeeded (invented label, or a verb-first claim with no label) unless it actually ran+succeeded this turn |
 | `noFalseFailureClaim({ claimRe })` | behavior | **minimal\*** | reply may not claim inability when every tool this turn succeeded. **minimal\*** = auto-installed as `minimal:noFalseFailureClaim` when the bundle passes `cfg.lexicon.falseFailureClaimRe`; a spec may still add a tighter agent-layer instance |
