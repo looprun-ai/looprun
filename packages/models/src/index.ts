@@ -19,12 +19,6 @@ export {
   QWEN36_RAM16,
   QWEN36_RAM24,
   QWEN36_RAM32,
-  // deprecated aliases kept for backward compat (RAM-class re-key 2026-07-15)
-  QWEN35_MICRO,
-  QWEN36_35B_A3B,
-  QWEN36_NORMAL,
-  QWEN36_MINIMAL,
-  QWEN36_PRO,
   resolveAlias,
   modelPath,
 } from './aliases.js';

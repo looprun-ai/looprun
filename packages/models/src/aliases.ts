@@ -51,7 +51,7 @@ export const QWEN35_4B: LocalModelSpec = {
   servedId: 'qwen3.5-4b-gguf',
 };
 
-/** RAM24 — the 24 GB-machine tier; the default when nothing is specified (was "normal"). */
+/** RAM24 — the 24 GB-machine tier; the default when nothing is specified. */
 export const QWEN36_RAM24: LocalModelSpec = {
   alias: 'qwen3.6-35b-ram24',
   note: '24 GB-machine tier (DEFAULT): UD-IQ2_XXS + baked MTP head (11.8 GB), peak RSS ~20.7 GB. 88.9% certified eval — ties the 21 GB Q4 record — at ~56 tok/s decode.',
@@ -68,7 +68,7 @@ export const QWEN36_RAM24: LocalModelSpec = {
   specType: 'draft-mtp',
 };
 
-/** RAM16 — 16 GB machines: measured 13.4–13.5 GB RSS, ~44 tok/s (q8_0 KV tax) (was "minimal"). */
+/** RAM16 — 16 GB machines: measured 13.4–13.5 GB RSS, ~44 tok/s (q8_0 KV tax). */
 export const QWEN36_RAM16: LocalModelSpec = {
   alias: 'qwen3.6-35b-ram16',
   note: '16 GB-machine tier: same IQ2_XXS+MTP model, ctx 24576 (fits a ~21k agent trunk), q8_0 KV, 512 MiB cache. Measured 13.4–13.5 GB RSS, ~44 tok/s.',
@@ -85,13 +85,13 @@ export const QWEN36_RAM16: LocalModelSpec = {
   specType: 'draft-mtp',
 };
 
-/** RAM32 — quality-max local profile (was "pro"). */
+/** RAM32 — quality-max local profile. */
 export const QWEN36_RAM32: LocalModelSpec = {
   alias: 'qwen3.6-35b-ram32',
   note: '32 GB-machine quality-max tier: UD-Q3_K_XL + baked MTP head (17.2 GB), ~58 tok/s decode, f16 KV + 64k ctx.',
   file: 'Qwen3.6-35B-A3B-UD-Q3_K_XL.gguf',
   defaultDir: home('models', 'qwen36-mtp-gguf'),
-  envVar: 'QWEN36_35B_PRO_GGUF',
+  envVar: 'QWEN36_RAM32_GGUF',
   hfRepo: 'unsloth/Qwen3.6-35B-A3B-MTP-GGUF',
   approxSizeGB: 17.2,
   kv: 'f16',
@@ -102,13 +102,13 @@ export const QWEN36_RAM32: LocalModelSpec = {
   specType: 'draft-mtp',
 };
 
-/** RAM8 — 8 GB machines: measured 4.62 GB RSS, ~43 tok/s (Qwen3.5-4B + baked MTP head) (was "micro"). */
+/** RAM8 — 8 GB machines: measured 4.62 GB RSS, ~43 tok/s (Qwen3.5-4B + baked MTP head). */
 export const QWEN35_RAM8: LocalModelSpec = {
   alias: 'qwen3.5-4b-ram8',
   note: '8 GB-machine tier: Qwen3.5-4B UD-Q3_K_XL + baked MTP head (2.53 GB), ctx 24576 (fits ~21k agent trunks), q8_0 KV, 384 MiB cache. Measured 4.62 GB RSS, ~43 tok/s — leaves ~3.4 GB for OS + apps. Deep-context-heavy agents can trade back: $LLAMA_KV=f16 $LLAMA_CTX=16384.',
   file: 'Qwen3.5-4B-UD-Q3_K_XL.gguf',
   defaultDir: home('models', 'qwen35-mtp-gguf'),
-  envVar: 'QWEN35_MICRO_GGUF',
+  envVar: 'QWEN35_RAM8_GGUF',
   hfRepo: 'unsloth/Qwen3.5-4B-MTP-GGUF',
   approxSizeGB: 2.5,
   kv: 'q8_0',
@@ -118,18 +118,6 @@ export const QWEN35_RAM8: LocalModelSpec = {
   servedId: 'qwen3.5-4b-gguf',
   specType: 'draft-mtp',
 };
-
-/** @deprecated renamed QWEN36_NORMAL → QWEN36_RAM24 (RAM-class re-key 2026-07-15). */
-export const QWEN36_NORMAL = QWEN36_RAM24;
-/** @deprecated renamed QWEN36_MINIMAL → QWEN36_RAM16 (RAM-class re-key 2026-07-15). */
-export const QWEN36_MINIMAL = QWEN36_RAM16;
-/** @deprecated renamed QWEN36_PRO → QWEN36_RAM32 (RAM-class re-key 2026-07-15). */
-export const QWEN36_PRO = QWEN36_RAM32;
-/** @deprecated renamed QWEN35_MICRO → QWEN35_RAM8 (RAM-class re-key 2026-07-15). */
-export const QWEN35_MICRO = QWEN35_RAM8;
-
-/** @deprecated pre-2026-07-15 default (plain UD-Q4_K_XL, no MTP). Kept for path compatibility. */
-export const QWEN36_35B_A3B: LocalModelSpec = QWEN36_RAM24;
 
 export const MODEL_ALIASES: Record<string, LocalModelSpec> = {
   [QWEN35_4B.alias]: QWEN35_4B,
@@ -142,16 +130,6 @@ export const MODEL_ALIASES: Record<string, LocalModelSpec> = {
   ram16: QWEN36_RAM16,
   ram24: QWEN36_RAM24,
   ram32: QWEN36_RAM32,
-  // deprecated spellings (pre-ram rename + pre-2026-07-15)
-  micro: QWEN35_RAM8,
-  minimal: QWEN36_RAM16,
-  normal: QWEN36_RAM24,
-  pro: QWEN36_RAM32,
-  'qwen3.5-4b-micro': QWEN35_RAM8,
-  'qwen3.6-35b-minimal': QWEN36_RAM16,
-  'qwen3.6-35b-pro': QWEN36_RAM32,
-  'qwen3.6-35b-a3b': QWEN36_RAM24,
-  'qwen3.6-35b-3b': QWEN36_RAM24,
 };
 
 export function resolveAlias(alias: string): LocalModelSpec {

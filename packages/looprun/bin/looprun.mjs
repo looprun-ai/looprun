@@ -60,7 +60,7 @@ async function main() {
     console.log('looprun init — environment check\n');
     const hasGoogle = !!process.env.GOOGLE_GENERATIVE_AI_API_KEY;
     console.log(`  GOOGLE_GENERATIVE_AI_API_KEY : ${hasGoogle ? 'set' : 'NOT SET (needed for the gemini validation model)'}`);
-    for (const alias of ['qwen3.5-4b', 'qwen3.6-35b-a3b']) await statusFor(models, alias);
+    for (const alias of ['qwen3.5-4b', 'ram24']) await statusFor(models, alias);
     const localIdx = process.argv.indexOf('--local');
     if (localIdx > -1) {
       const alias = process.argv[localIdx + 1];
@@ -79,7 +79,7 @@ async function main() {
 
   if (cmd === 'models') {
     if (sub === 'status') {
-      const aliases = rest.length ? rest : ['qwen3.5-4b', 'qwen3.6-35b-a3b'];
+      const aliases = rest.length ? rest : ['qwen3.5-4b', 'ram24'];
       for (const alias of aliases) await statusFor(models, alias);
       return;
     }

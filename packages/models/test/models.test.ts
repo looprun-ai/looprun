@@ -1,6 +1,6 @@
 /** Alias registry, flags and fail-fast behavior of the local-model story. */
 import { afterEach, describe, expect, it } from 'vitest';
-import { launchFlags, modelPath, resolveAlias, QWEN35_4B, QWEN35_RAM8, QWEN36_RAM16, QWEN36_RAM24, QWEN36_RAM32, QWEN35_MICRO, QWEN36_35B_A3B, QWEN36_NORMAL, QWEN36_MINIMAL, QWEN36_PRO, LlamaCppRuntime, downloadUrl } from '../src/index.js';
+import { launchFlags, modelPath, resolveAlias, QWEN35_4B, QWEN35_RAM8, QWEN36_RAM16, QWEN36_RAM24, QWEN36_RAM32, LlamaCppRuntime, downloadUrl } from '../src/index.js';
 
 const ENV_KEYS = ['QWEN35_4B_GGUF', 'QWEN36_35B_GGUF', 'LLAMA_KV', 'LLAMA_CTX', 'LLAMA_PORT', 'LLAMA_CACHE_RAM', 'LLAMA_SLOT_SAVE_PATH', 'LLAMA_SPEC_TYPE'];
 const saved = new Map(ENV_KEYS.map((k) => [k, process.env[k]]));
@@ -12,12 +12,8 @@ afterEach(() => {
 });
 
 describe('alias registry', () => {
-  it('resolves canonical aliases and accepted spellings', () => {
+  it('resolves the plain 4B model alias', () => {
     expect(resolveAlias('qwen3.5-4b')).toBe(QWEN35_4B);
-    expect(resolveAlias('qwen3.6-35b-a3b')).toBe(QWEN36_RAM24);
-    expect(resolveAlias('qwen3.6-35b-3b')).toBe(QWEN36_RAM24);
-    // the deprecated export stays pointed at the current default
-    expect(QWEN36_35B_A3B).toBe(QWEN36_RAM24);
   });
 
   it('resolves the four run tiers (ram24 is the default alias)', () => {
@@ -40,21 +36,10 @@ describe('alias registry', () => {
     expect(QWEN35_RAM8.specType).toBe('draft-mtp');
   });
 
-  it('keeps every legacy tier spelling resolving to its ram* replacement (compat proof)', () => {
-    // short legacy names
-    expect(resolveAlias('normal')).toBe(QWEN36_RAM24);
-    expect(resolveAlias('minimal')).toBe(QWEN36_RAM16);
-    expect(resolveAlias('pro')).toBe(QWEN36_RAM32);
-    expect(resolveAlias('micro')).toBe(QWEN35_RAM8);
-    // long legacy names
-    expect(resolveAlias('qwen3.6-35b-minimal')).toBe(QWEN36_RAM16);
-    expect(resolveAlias('qwen3.6-35b-pro')).toBe(QWEN36_RAM32);
-    expect(resolveAlias('qwen3.5-4b-micro')).toBe(QWEN35_RAM8);
-    // deprecated const exports still point at the ram* specs
-    expect(QWEN36_NORMAL).toBe(QWEN36_RAM24);
-    expect(QWEN36_MINIMAL).toBe(QWEN36_RAM16);
-    expect(QWEN36_PRO).toBe(QWEN36_RAM32);
-    expect(QWEN35_MICRO).toBe(QWEN35_RAM8);
+  it('rejects the pre-ram tier spellings (removed, not aliased)', () => {
+    for (const legacy of ['micro', 'minimal', 'normal', 'pro', 'qwen3.5-4b-micro', 'qwen3.6-35b-minimal', 'qwen3.6-35b-pro', 'qwen3.6-35b-a3b', 'qwen3.6-35b-3b']) {
+      expect(() => resolveAlias(legacy), legacy).toThrow(/Unknown|Known:/);
+    }
   });
 
   it('throws with the known list on an unknown alias', () => {
