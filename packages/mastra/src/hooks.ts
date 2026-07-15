@@ -6,7 +6,7 @@
  * fed by `hooks.afterToolCall`. Mastra applies hooks to ALL tool sources (assigned, toolsets,
  * client, MCP), so guards also govern native/MCP tools with zero extra wiring.
  */
-import { evaluatePreTool, evaluateOnInput, enforcePostTool, isTerminal, recordToolResult, resolveGuards } from '@looprun-ai/core';
+import { evaluatePreTool, evaluateOnInput, enforcePostTool, isTerminal, recordTerminalCall, recordToolResult, resolveGuards } from '@looprun-ai/core';
 import type { AgentSpec, GuardCtx } from '@looprun-ai/core';
 import type { LoopRunSession } from './session.js';
 import type { SessionAccessor } from './tools.js';
@@ -19,7 +19,13 @@ export interface GuardHooks {
 export function makeGuardHooks(spec: AgentSpec, getSession: SessionAccessor): GuardHooks {
   return {
     async beforeToolCall({ toolName, input }) {
-      if (isTerminal(toolName)) return undefined;
+      if (isTerminal(toolName)) {
+        // SYNCHRONOUS segment (no await above): record the terminal call at HOOK time so a same-step
+        // sibling call's preTool checks can see it — see recordTerminalCall's doc for the concurrency
+        // rationale. The terminal tool's execute captures the reply text and does NOT push again.
+        recordTerminalCall(getSession().ledger, toolName, (input ?? {}) as Record<string, unknown>);
+        return undefined;
+      }
       const session = getSession();
       const args = (input ?? {}) as Record<string, unknown>;
       const verdict = await evaluatePreTool(spec, session.ledger, session.world, toolName, args);

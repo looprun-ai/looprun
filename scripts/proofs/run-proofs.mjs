@@ -82,6 +82,14 @@ function runPackage(pkg) {
 function main() {
   mkdirSync(ARTIFACTS, { recursive: true });
 
+  // The mastra proof lane exercises core's BUILT dist (the package `exports` map points at dist/),
+  // so a stale build makes source-level changes invisible — build core first, always.
+  const build = spawnSync('pnpm', ['-C', 'packages/core', 'build'], { cwd: ROOT, stdio: 'inherit' });
+  if (build.status !== 0) {
+    console.error('run-proofs: packages/core build failed — fix the build before running proofs.');
+    process.exit(1);
+  }
+
   const packages = {};
   const all = [];
   let anyError = false;

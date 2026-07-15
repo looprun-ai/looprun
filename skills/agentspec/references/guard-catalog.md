@@ -47,7 +47,7 @@ when the agent holds a destructive tool**. There is **no auto-schema layer** —
 hook: **agent → full → base → minimal** (first deny wins), and the `minimal:` / `base:` id namespaces keep
 the trunk prose order byte-stable.
 
-## The 26 guard kinds
+## The 27 guard kinds
 
 `auto` marks a kind the constructor installs (`minimal` = always, `base` = iff `destructiveTools`,
 `minimal*` = iff `cfg.lexicon.falseFailureClaimRe` is provided); everything else is agent-layer.

@@ -37,7 +37,7 @@ export type { SamplingSettings } from './model-params.js';
 
 // The governed-turn machine (framework-free) — consumed by backends.
 export type { ToolDef, TokenUsage, TurnInput, TurnRecord, RunResult, RuntimeTurnInput, RuntimeTurnRecord } from './runtime/types.js';
-export { createLedger, beginTurn, resultOk, recordVeto, recordToolResult, recordTerminal, vetoStormHit, VETO_STORM_LIMIT } from './runtime/ledger.js';
+export { createLedger, beginTurn, resultOk, recordVeto, recordToolResult, recordTerminal, recordTerminalCall, vetoStormHit, VETO_STORM_LIMIT } from './runtime/ledger.js';
 export type { TurnLedger, PostToolViolation } from './runtime/ledger.js';
 export {
   TERMINAL_TOOLS,

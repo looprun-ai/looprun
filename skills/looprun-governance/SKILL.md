@@ -1,5 +1,5 @@
 ---
-name: governance
+name: looprun-governance
 description: 'Use when a change touches a looprun guard, the guard runtime, or the agentspec skill and needs its deterministic proof record before merge. Triggers — "I added/changed a guard", "prepare the proof record for my PR", "why did the proof gate fail", "add a proof for <kind>", a red `check-record-required` gate, a stale MATRIX.md.'
 license: Apache-2.0
 metadata:
@@ -30,8 +30,8 @@ examples, tests-only, the governance tooling, CI — does not. The full policy i
 Emit a `GuardProof` stub for the kind you are adding or changing:
 
 ```bash
-node skills/governance/scripts/scaffold-proof-cases.mjs <guardKind>          # print to stdout
-node skills/governance/scripts/scaffold-proof-cases.mjs <guardKind> --write   # append into the core catalog if present
+node skills/looprun-governance/scripts/scaffold-proof-cases.mjs <guardKind>          # print to stdout
+node skills/looprun-governance/scripts/scaffold-proof-cases.mjs <guardKind> --write   # append into the core catalog if present
 ```
 
 The stub carries **positive / negative / neutral** L1 slots + an **L3 loop** slot + a **collective**
@@ -63,6 +63,10 @@ Writes `governance/proofs/YYYY-MM-DD-<slug>.md` (`verdict: PASS` iff every proof
 - `pnpm test:proofs` green.
 - Drift lint clean: `node tests/no-bench-drift.test.mjs`.
 - `governance/MATRIX.md` regenerated and committed with the record.
+- **Optional (maintainers, real model on hand):** `pnpm proofs:canary` — the report-only real-small-
+  model lane. It NEVER gates; it just prefills the record's advisory `slm_canary` field, and skips
+  cleanly (exit 0) when the model weights are not present. See
+  [`governance/GOVERNANCE.md`](../../governance/GOVERNANCE.md).
 
 ## Hard rules
 

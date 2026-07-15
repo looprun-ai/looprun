@@ -206,6 +206,9 @@ importers:
         specifier: workspace:^
         version: link:../core
     devDependencies:
+      '@looprun-ai/models':
+        specifier: workspace:^
+        version: link:../models
       '@mastra/core':
         specifier: ^1.42.0
         version: 1.50.1(ai@6.0.222(zod@3.25.76))(express@5.2.1)(zod@3.25.76)

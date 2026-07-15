@@ -91,8 +91,17 @@ export function recordToolResult(ledger: TurnLedger, name: string, args: Record<
 }
 
 /** Record a TERMINAL tool call (replyToUser/askUser): capture the user-facing text. */
+/** Record a terminal CALL in the observed ledger. Called from the guard hooks' SYNCHRONOUS segment
+ *  (before any await): the model runtime dispatches a step's tool calls concurrently (Promise.all)
+ *  but STARTS them in emission order, so a synchronous hook-time push makes a same-step `askUser`
+ *  visible to a sibling destructive call's preTool checks — closing the noActAfterAskSameTurn
+ *  same-step bypass (proof-suite finding, fixed 2026-07-15). */
+export function recordTerminalCall(ledger: TurnLedger, name: string, args: Record<string, unknown>): void {
+  ledger.observed.push({ name, args, ok: true, turnIndex: ledger.turnIndex });
+}
+
+/** Capture the terminal REPLY text (the observed push happens at hook time via recordTerminalCall). */
 export function recordTerminal(ledger: TurnLedger, name: string, args: Record<string, unknown>): void {
   const text = typeof args.text === 'string' ? args.text : '';
   if (text.trim()) ledger.terminalReply = text;
-  ledger.observed.push({ name, args, ok: true, turnIndex: ledger.turnIndex });
 }

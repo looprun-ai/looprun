@@ -382,7 +382,12 @@ const noActAfterAskSameTurnProof: GuardProof = {
       // the ask recorded only afterwards). The guard's deny logic is therefore proven at L1 (pure,
       // deterministic); the concurrent-dispatch ordering gap is a runtime hardening follow-up, not
       // a guard defect.
-      name: 'asking then acting in the very same turn is denied (L1 — see concurrency note)',
+      // HISTORY (2026-07-15, this proof suite's first catch): a step's tool calls are dispatched
+      // CONCURRENTLY, so the destructive call's preTool check used to run BEFORE the same-step
+      // askUser landed in the observed ledger — this deny was unreachable at L3. FIXED same day:
+      // the runtime records terminal calls in the guard hook's SYNCHRONOUS segment (emission
+      // order), so the sibling check sees the ask. The L3 deny below is the regression proof.
+      name: 'asking then acting in the very same turn is denied',
       polarity: 'negative',
       ctx: {
         tool: 'deleteItem',
@@ -390,6 +395,18 @@ const noActAfterAskSameTurnProof: GuardProof = {
         turnIndex: 0,
       },
       l1: 'fires',
+      l3: {
+        preset: 'empty',
+        turns: [{ userText: 'delete item itm-1' }],
+        script: [
+          [
+            { tool: 'askUser', args: { text: 'Delete item itm-1 — are you sure?' } },
+            { tool: 'deleteItem', args: { id: 'itm-1' } },
+          ],
+        ],
+        expect: 'veto',
+        tool: 'deleteItem',
+      },
     },
     {
       name: 'asking in one turn and acting in a later turn is allowed',

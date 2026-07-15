@@ -47,4 +47,4 @@ The gate (`scripts/proofs/check-record-required.mjs`) accepts a governed change 
 or modifies a record here whose frontmatter parses and reads `verdict: PASS`.
 
 The same contract, with a filled example, lives in
-[`../../skills/governance/references/record-format.md`](../../skills/governance/references/record-format.md).
+[`../../skills/looprun-governance/references/record-format.md`](../../skills/looprun-governance/references/record-format.md).

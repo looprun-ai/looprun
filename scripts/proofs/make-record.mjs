@@ -18,7 +18,21 @@ import { today } from './_lib.mjs';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..', '..');
 const ARTIFACTS = join(ROOT, 'governance', '.artifacts', 'proofs.json');
+const CANARY = join(ROOT, 'governance', '.artifacts', 'canary.json');
 const PROOFS = join(ROOT, 'governance', 'proofs');
+
+/** The advisory SLM-canary prefill: `"<passRate> (model <alias>, advisory)"` when a real-model run
+ *  exists and was not skipped, else null. An explicit `--slm` always overrides this. */
+function canaryPrefill() {
+  if (!existsSync(CANARY)) return null;
+  try {
+    const c = JSON.parse(readFileSync(CANARY, 'utf8'));
+    if (c && !c.skipped && c.passRate) return `${c.passRate} (model ${c.model}, advisory)`;
+  } catch {
+    /* ignore a malformed artifact — fall back to n/a */
+  }
+  return null;
+}
 
 function argv() {
   const a = process.argv.slice(2);
@@ -63,7 +77,7 @@ const verdict = t.all.total > 0 && t.all.pass === t.all.total ? 'PASS' : 'FAIL';
 const isolated = `${t.isolated.pass}/${t.isolated.total}`;
 const collective = `${t.collective.pass}/${t.collective.total}`;
 const coverage = `${s.coverage.covered}/${s.coverage.kinds}`;
-const slm = o.slm || 'n/a';
+const slm = o.slm || canaryPrefill() || 'n/a';
 const date = o.date || today();
 
 const file = join(PROOFS, `${date}-${o.slug}.md`);
@@ -97,7 +111,7 @@ ${o.change}
 
 ## Proof cases
 Author positive / negative / neutral cases for the affected guard(s), plus ≥1 L3 loop case and the
-collective non-interference check. See \`skills/governance/references/proof-case-authoring.md\`.
+collective non-interference check. See \`skills/looprun-governance/references/proof-case-authoring.md\`.
 
 ## Results
 Recorded from \`${ARTIFACTS.replace(ROOT + '/', '')}\` (\`${s.generatedBy}\`):

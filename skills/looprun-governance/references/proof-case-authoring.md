@@ -138,4 +138,4 @@ Every guard export needs a proof with **all three polarities**, **both L1 verdic
 `fires` and a ctx'd `silent` — always-fire kinds like `forbidThisTurn` instead prove ctx-independence
 with ≥2 fires + an L3 pass), and **≥1 L3 loop case**. The ratchet (`proof completeness · <kind>`)
 computes this from the proofs themselves — see [`ratchet.md`](ratchet.md). Scaffold a fresh stub with
-`node skills/governance/scripts/scaffold-proof-cases.mjs <kind>`.
+`node skills/looprun-governance/scripts/scaffold-proof-cases.mjs <kind>`.

@@ -3,8 +3,8 @@
  * Scaffold a GuardProof stub for one guard kind: positive / negative / neutral case slots (L1 verdicts
  * + an L3 loop slot), matching the REAL GuardProof type in packages/core/src/testing/proof.ts.
  *
- *   node skills/governance/scripts/scaffold-proof-cases.mjs <guardKind>            # print to stdout
- *   node skills/governance/scripts/scaffold-proof-cases.mjs <guardKind> --write    # append the stub
+ *   node skills/looprun-governance/scripts/scaffold-proof-cases.mjs <guardKind>            # print to stdout
+ *   node skills/looprun-governance/scripts/scaffold-proof-cases.mjs <guardKind> --write    # append the stub
  *       # (as a comment block) to the matching catalog family file, ready to paste into its array
  *
  * See references/proof-case-authoring.md for how to fill the stub.
@@ -125,7 +125,7 @@ function main() {
   const kind = args.find((a) => !a.startsWith('--'));
 
   if (!kind) {
-    console.error('usage: node skills/governance/scripts/scaffold-proof-cases.mjs <guardKind> [--write]');
+    console.error('usage: node skills/looprun-governance/scripts/scaffold-proof-cases.mjs <guardKind> [--write]');
     console.error('kinds: ' + Object.keys(KINDS).join(', '));
     console.error('(a NEW kind not listed here: pick the family by dim and follow the same stub shape)');
     process.exit(1);

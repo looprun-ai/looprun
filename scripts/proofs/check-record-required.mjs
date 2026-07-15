@@ -29,7 +29,7 @@ export const TRIGGERS = [
 // … unless the path is excluded. Exclusions are checked FIRST (they always win).
 export function isExcluded(path) {
   if (path.includes('/test/')) return true;
-  const prefixes = ['docs/', 'examples/', '.changeset/', 'skills/governance/', 'scripts/', '.github/', 'governance/'];
+  const prefixes = ['docs/', 'examples/', '.changeset/', 'skills/looprun-governance/', 'scripts/', '.github/', 'governance/'];
   if (prefixes.some((p) => path.startsWith(p))) return true;
   if (path === 'README.md' || path.endsWith('/README.md')) return true;
   if (path.endsWith('package.json')) return true;
@@ -106,7 +106,7 @@ function main() {
   }
 
   console.error('\ncheck-record-required: a governed change needs a passing proof record, and none was found.\n');
-  console.error('Do this (the `governance` skill automates it):');
+  console.error('Do this (the `looprun-governance` skill automates it):');
   console.error('  1. pnpm proofs:run');
   console.error('  2. pnpm proofs:record -- --slug <kebab> --change "<one-liner>" --scope guard:<kind>');
   console.error('  3. commit the record + governance/MATRIX.md');

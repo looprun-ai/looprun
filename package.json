@@ -26,6 +26,7 @@
     "proofs:record": "node scripts/proofs/make-record.mjs",
     "proofs:matrix": "node scripts/proofs/gen-matrix.mjs",
     "proofs:check": "node scripts/proofs/check-record-required.mjs",
+    "proofs:canary": "node scripts/proofs/run-canary.mjs",
     "changeset": "changeset",
     "release": "node scripts/release.mjs",
     "release:dry": "node scripts/release.mjs --dry-run"

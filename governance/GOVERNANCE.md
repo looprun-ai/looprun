@@ -67,7 +67,7 @@ It is **not** required for changes that cannot alter guard behavior:
 
 - docs (`docs/**`, `README.md`, any `README.md`), examples (`examples/**`)
 - tests only (any path under a `/test/` directory)
-- the governance tooling itself (`governance/**`, `scripts/**`, `skills/governance/**`), CI (`.github/**`)
+- the governance tooling itself (`governance/**`, `scripts/**`, `skills/looprun-governance/**`), CI (`.github/**`)
 - changeset entries (`.changeset/**`), lockfiles, `package.json` manifests
 
 The gate (`scripts/proofs/check-record-required.mjs`) encodes exactly these rules — exclusions are
@@ -86,7 +86,7 @@ Then commit the new `governance/proofs/*.md` **and** the regenerated `governance
 in the record is `PASS` iff every proof passed; a `FAIL` record does not satisfy the gate.
 
 The record frontmatter is a flat `key: value` contract (documented in `governance/proofs/README.md` and
-`skills/governance/references/record-format.md`) so it parses without a YAML library and never merge-
+`skills/looprun-governance/references/record-format.md`) so it parses without a YAML library and never merge-
 conflicts (one file per change).
 
 ## The `no-proof-needed` escape hatch
@@ -96,23 +96,71 @@ docstring in a `src` file). A **maintainer** may apply the `no-proof-needed` lab
 step is skipped when the label is present. The label is restricted to maintainers (see Branch
 protection) precisely so it is a deliberate, auditable act — never the default path.
 
-## SLM canary lane (DESIGNED — not yet implemented, a follow-up)
+## SLM canary lane (IMPLEMENTED — report-only, never gates)
 
-The proofs run against a **scripted fake LLM** for determinism. A planned, additive lane will replay the
-same proof scenarios against a **real small local model** to catch cases where a guard's prose reads
-cleanly to a deterministic check but confuses a live small model:
+The proofs run against a **scripted fake LLM** for determinism. The canary is the additive lane that
+replays the SAME governed scenarios against a **real small local model** — no script, the model decides
+— to catch cases where a guard's prose reads cleanly to a deterministic check but confuses a live small
+model. It answers: *with a real small model behaving naturally, do governed turns still end compliant?*
 
-- **report-only** — it NEVER gates a PR; a red canary is a signal, not a failure;
-- **manual** — triggered via `workflow_dispatch` (or a maintainer command), never on every push;
-- **recorded** — a run's outcome is written into the proof record's `slm_canary` field (e.g. `3/3`,
-  `2/3`, or `n/a` when not run).
+It is **NON-DETERMINISTIC by nature and NEVER gates a PR** — a red canary is a signal, not a failure.
 
-This section is the design of record; the lane is a follow-up and is not part of the current gate.
+### How to run
+
+```bash
+pnpm proofs:canary                 # default model: micro (Qwen3.5-4B, ~2.5 GB, 8 GB machines)
+pnpm proofs:canary --model minimal # 35B tuned for 16 GB machines
+pnpm proofs:canary --model normal  # 35B default tier
+pnpm proofs:canary --model pro     # 35B quality-max
+```
+
+The wrapper checks **model availability first**. On a machine WITHOUT the weights (e.g. a contributor's
+laptop, or CI) it prints `canary skipped (model <alias> not available locally)`, writes a
+`{ skipped: true }` artifact, and **exits 0** — a skipped canary is never a failure. When the model IS
+available it builds one collective spec, replays every governed scenario through the real
+`runSpecConversation` loop (single-threaded, sequential — one shared server), and writes
+`governance/.artifacts/canary.json` (gitignored). The scenarios live in the isolated
+`packages/mastra/canary/*.canary.ts` lane behind its own `vitest.canary.config.ts`, so they never run in
+`pnpm test` or `pnpm test:proofs`.
+
+### Outcome taxonomy & pass rate
+
+Each scenario lands in exactly one bucket:
+
+| outcome | meaning |
+|---|---|
+| **caught** | the runtime intervened (a guard veto/redrive/refusal/report, a forced-terminal, or a reply mutator) and the governed turn still closed |
+| **clean** | zero recovery events — the model behaved on its own |
+| **exhausted** | the guards caught it but the model never produced a compliant reply, so honest-abstain fired (`exhaustion-terminal` / `exhaustion-salvage`) |
+| **error** | the run threw / set `errorMsg` |
+
+**Pass rate = `(caught + clean + exhausted) / total`.** All three are COMPLIANT outcomes — the governed
+turn ended safely — so only **`error`** counts as a failure. Each scenario is a vitest `it` that asserts
+only `outcome !== 'error'`; everything else is data.
+
+### Recorded in the proof record
+
+When a `governance/.artifacts/canary.json` exists and was not skipped, `pnpm proofs:record` prefills the
+record's `slm_canary` field with `"<passRate> (model <alias>, advisory)"` (an explicit `--slm` flag
+overrides it); otherwise the field stays `n/a`.
+
+### Hardware & scheduling
+
+The canary runs **only where the model weights exist** — typically a maintainer's machine, not a hosted
+CI runner (local models do not fit hosted runners, which is why there is deliberately **no GitHub
+workflow** for it). Scheduled canary runs are a future option via a **self-hosted runner** with the
+weights present; until then it is a manual, maintainer-run command.
 
 ## Branch protection (repo settings — not committable here)
 
-These live in GitHub repo settings (Settings → Branches → `main`) and cannot be set from the tree; they
-are documented here so the process is complete and auditable:
+These live in GitHub repo settings (Settings → Branches → `main`) and cannot be set from the tree.
+A maintainer applies them with ONE command (idempotent, needs `gh` auth with repo admin):
+
+```bash
+bash scripts/proofs/setup-branch-protection.sh
+```
+
+What it configures (documented here so the process is complete and auditable):
 
 - **Require the `ci` status check** to pass before merge (it runs the proof suite, the matrix `--check`,
   and the proof-record gate).
@@ -122,11 +170,13 @@ are documented here so the process is complete and auditable:
 - **Restrict the `no-proof-needed` label** to maintainers (Settings → labels / repository roles) so the
   escape hatch cannot be self-applied by a contributor.
 - **No force-push to `main`** and no branch deletion.
+- `enforce_admins` stays **false** on purpose: admins keep direct-push for day-to-day maintainer work;
+  the law binds contributors. Flip it in the script when the maintainer team grows.
 
 ## Reference
 
 - The matrix of every record: [`MATRIX.md`](MATRIX.md) (generated)
 - The record format: [`proofs/README.md`](proofs/README.md)
-- How to author a proof + run the loop: the `governance` skill (`skills/governance/SKILL.md`)
+- How to author a proof + run the loop: the `looprun-governance` skill (`skills/looprun-governance/SKILL.md`)
 - The guard contract every proof is written against: [`../packages/core/GUARDS.md`](../packages/core/GUARDS.md)
 - Contributor workflow: [`../CONTRIBUTING.md`](../CONTRIBUTING.md)

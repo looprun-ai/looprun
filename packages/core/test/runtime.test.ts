@@ -6,7 +6,7 @@ import {
   beginTurn,
   resultOk,
   recordToolResult,
-  recordTerminal,
+  recordTerminal, recordTerminalCall,
   recordVeto,
   vetoStormHit,
   VETO_STORM_LIMIT,
@@ -65,7 +65,11 @@ describe('ledger', () => {
   it('beginTurn resets per-turn state but keeps observed', () => {
     const ledger = createLedger();
     recordToolResult(ledger, 'gen', {}, { label: 'i101' });
+    // Terminal recording is a PAIR since the same-step concurrency fix: recordTerminalCall pushes
+    // the observed entry (hook time, synchronous), recordTerminal captures the reply (execute time).
+    recordTerminalCall(ledger, 'replyToUser', { text: 'hi' });
     recordTerminal(ledger, 'replyToUser', { text: 'hi' });
+    expect(ledger.terminalReply).toBe('hi');
     beginTurn(ledger, 1);
     expect(ledger.observed.length).toBe(2);
     expect(ledger.producedThisTurn).toEqual([]);

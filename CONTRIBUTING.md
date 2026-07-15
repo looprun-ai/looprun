@@ -25,12 +25,12 @@ To keep them trustworthy, **a change to a governed surface ships with a passing 
 - **Governed** (needs a record): `packages/core/src/**`, `packages/core/GUARDS.md`,
   `packages/mastra/src/**`, `skills/agentspec/**`.
 - **Not governed** (no record): docs, examples, tests-only (any `/test/` path), the governance tooling
-  (`governance/**`, `scripts/**`, `skills/governance/**`), CI (`.github/**`), changesets, lockfiles,
+  (`governance/**`, `scripts/**`, `skills/looprun-governance/**`), CI (`.github/**`), changesets, lockfiles,
   manifests.
 
 A record is one file at `governance/proofs/YYYY-MM-DD-<slug>.md`, indexed in `governance/MATRIX.md`.
 Full policy: [`governance/GOVERNANCE.md`](governance/GOVERNANCE.md). The `governance` skill automates the
-scaffold → run → record loop (`skills/governance/SKILL.md`).
+scaffold → run → record loop (`skills/looprun-governance/SKILL.md`).
 
 ## Add a guard (TDD order)
 
@@ -39,7 +39,7 @@ Author the proof **before** the implementation — the proof cases are the spec.
 1. **Author proof cases FIRST** in `packages/core/test/proofs/` — a `GuardProof` catalog entry for the
    new kind with **positive / negative / neutral** L1 cases plus at least one **L3 loop** case (and the
    collective non-interference expectation). See
-   [`skills/governance/references/proof-case-authoring.md`](skills/governance/references/proof-case-authoring.md).
+   [`skills/looprun-governance/references/proof-case-authoring.md`](skills/looprun-governance/references/proof-case-authoring.md).
 2. **Implement** the guard in `packages/core/src/guards.ts` until the cases pass.
 3. **Update the docs that mirror the kind**: `packages/core/GUARDS.md` **and**
    `skills/agentspec/references/guard-catalog.md`. A parity test fails if they diverge.
@@ -61,6 +61,15 @@ Proofs run against a **deterministic scripted fake LLM** and a **fixture world**
 network**. That is what makes a proof a durable statement about behavior rather than a flaky snapshot.
 `pnpm proofs:run` writes a summary to `governance/.artifacts/proofs.json` (gitignored) and fails if any
 proof is red or the coverage ratchet dropped.
+
+## The SLM canary (optional, maintainers)
+
+`pnpm proofs:canary` is an **optional, report-only** lane that replays the same scenarios against a
+**real small local model** — it NEVER gates a PR. **Contributors do not need it**: it requires local
+model weights, so on a machine without them it prints `canary skipped …` and exits 0. Maintainers with
+the weights run it to sanity-check that guard prose holds up in front of a live small model; the result
+lands in the proof record's advisory `slm_canary` field. See
+[`governance/GOVERNANCE.md`](governance/GOVERNANCE.md#slm-canary-lane-implemented--report-only-never-gates).
 
 ## The `no-proof-needed` escape hatch
 
