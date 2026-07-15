@@ -30,7 +30,7 @@ import { localModel } from '@looprun-ai/models';
 import { GUARD_PROOFS } from '../../core/test/proofs/catalog.js';
 import { runSpecConversation } from '../src/run-conversation.js';
 
-const MODEL_ALIAS = process.env.CANARY_MODEL ?? 'micro';
+const MODEL_ALIAS = process.env.CANARY_MODEL ?? 'ram24';
 
 // ONE collective spec carries every non-skipped guard (built once, reused across scenarios).
 const SPEC = buildCollectiveSpec(GUARD_PROOFS);

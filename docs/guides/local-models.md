@@ -4,12 +4,15 @@ looprun ships **three run tiers of one validated model** (Qwen3.6-35B-A3B with a
 multi-token-prediction head) plus a small-RAM fallback, behind a `ModelRuntimePort` (llama.cpp
 today; other runtimes plug into the same port later):
 
+Tier names re-keyed to RAM class 2026-07-15 (`micro`/`minimal`/`normal`/`pro` →
+`ram8`/`ram16`/`ram24`/`ram32`); the old spellings stay accepted.
+
 | alias | quant · size | tier | KV | ctx | `--cache-ram` | measured |
 |---|---|---|---|---|---|---|
-| **`normal`** (= `qwen3.6-35b-a3b`, the DEFAULT) | UD-IQ2_XXS+MTP · 11.8 GB | daily driver, 24 GB+ machines | `f16` | 64k | 16384 MiB | 88.9% certified eval (ties the 21 GB Q4 record) · ~56 tok/s · peak RSS ~20.7 GB |
-| **`minimal`** | UD-IQ2_XXS+MTP · 11.8 GB | 16 GB machines | `q8_0` | 24k | 512 MiB | **13.4–13.5 GB RSS** · ~44 tok/s |
-| **`pro`** | UD-Q3_K_XL+MTP · 17.2 GB | quality-max, 32 GB+ | `f16` | 64k | 16384 MiB | ~58 tok/s |
-| **`micro`** | Qwen3.5-**4B** UD-Q3_K_XL+MTP · 2.5 GB | 8 GB machines, simple/few-tool agents | `q8_0` | 24k | 384 MiB | **4.62 GB RSS** (~3.4 GB left for OS+apps) · ~43 tok/s — eval quality is far below the 35B tiers |
+| **`ram24`** (= `qwen3.6-35b-a3b`, the DEFAULT) | UD-IQ2_XXS+MTP · 11.8 GB | daily driver, 24 GB machines | `f16` | 64k | 16384 MiB | 88.9% certified eval (ties the 21 GB Q4 record) · ~56 tok/s · peak RSS ~20.7 GB |
+| **`ram16`** | UD-IQ2_XXS+MTP · 11.8 GB | 16 GB machines | `q8_0` | 24k | 512 MiB | **13.4–13.5 GB RSS** · ~44 tok/s |
+| **`ram32`** | UD-Q3_K_XL+MTP · 17.2 GB | quality-max, 32 GB machines | `f16` | 64k | 16384 MiB | ~58 tok/s |
+| **`ram8`** | Qwen3.5-**4B** UD-Q3_K_XL+MTP · 2.5 GB | 8 GB machines, simple/few-tool agents | `q8_0` | 24k | 384 MiB | **4.62 GB RSS** (~3.4 GB left for OS+apps) · ~43 tok/s — eval quality is far below the 35B tiers |
 | `qwen3.5-4b` | UD-Q4_K_XL · 2.9 GB | plain-4B fallback (no MTP) | `f16` | 32k | 3072 MiB | — |
 
 The launch profile is the **measured** recipe — not defaults:
@@ -24,7 +27,7 @@ apply on Mac (Metal) and Windows/Linux (CUDA) — only the tier changes per mach
   switches — measured warm-switch TTFT 0.5–0.6 s vs 11–22 s cold. Never disable either.
 - KV precision is `f16` unless the tier's RAM budget forces `q8_0` (measured: f16 = +23% decode vs
   q8_0 on the 4B, ~1.7× on the 35B — weights dominate decode bandwidth; q8_0's per-token dequant is
-  pure overhead). `minimal` accepts that tax deliberately: q8_0 + 24k ctx is what fits 16 GB.
+  pure overhead). `ram16` accepts that tax deliberately: q8_0 + 24k ctx is what fits 16 GB.
 - `--slot-save-path` (default `~/.cache/looprun/slot-states`; `$LLAMA_SLOT_SAVE_PATH`, empty
   disables) enables per-agent trunk **state files**: bake a slot once at the trunk boundary, then
   after any server restart a restore takes ≈20–30 ms (≈400× faster than the cold prefill) — zero
@@ -35,8 +38,8 @@ apply on Mac (Metal) and Windows/Linux (CUDA) — only the tier changes per mach
   (acceptance 0.75–0.80, measured on b9780 and b10016). Do not raise `--spec-draft-n-max` past its
   default 3 — acceptance collapses beyond the single trained head's horizon. `$LLAMA_SPEC_TYPE=''`
   disables. The dense 4B stays non-MTP (measured ~0% there — the draft forward costs a token).
-- `minimal`'s ctx 24576 fits agent trunks up to ~21k tokens; if your agents' trunks exceed that,
-  use `normal` (or raise `$LLAMA_CTX` and accept the extra KV RAM).
+- `ram16`'s ctx 24576 fits agent trunks up to ~21k tokens; if your agents' trunks exceed that,
+  use `ram24` (or raise `$LLAMA_CTX` and accept the extra KV RAM).
 
 ## Requirements
 
@@ -76,9 +79,9 @@ agent's first turn (surprise bandwidth/disk, long first-latency, CI hazards). Ge
 
 ```bash
 npx looprun init                        # env check + interactive pull
-npx looprun models pull normal          # tiers: normal (default) · minimal · pro
+npx looprun models pull ram24           # tiers: ram24 (default) · ram16 · ram32 · ram8
 npx looprun models status               # binary / file / server health
-npx looprun models serve minimal        # the 16 GB profile (13.4–13.5 GB measured)
+npx looprun models serve ram16          # the 16 GB profile (13.4–13.5 GB measured)
 ```
 
 Opt-in auto-download (dev convenience, sensible for the 4B only):

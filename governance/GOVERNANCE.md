@@ -108,10 +108,11 @@ It is **NON-DETERMINISTIC by nature and NEVER gates a PR** — a red canary is a
 ### How to run
 
 ```bash
-pnpm proofs:canary                 # default model: micro (Qwen3.5-4B, ~2.5 GB, 8 GB machines)
-pnpm proofs:canary --model minimal # 35B tuned for 16 GB machines
-pnpm proofs:canary --model normal  # 35B default tier
-pnpm proofs:canary --model pro     # 35B quality-max
+pnpm proofs:canary                 # default model: ram24 (35B default tier, 24 GB machines)
+pnpm proofs:canary --model ram8    # Qwen3.5-4B, ~2.5 GB, 8 GB machines
+pnpm proofs:canary --model ram16   # 35B tuned for 16 GB machines
+pnpm proofs:canary --model ram32   # 35B quality-max, 32 GB machines
+# tier names re-keyed to RAM class 2026-07-15 (old micro/minimal/normal/pro still accepted)
 ```
 
 The wrapper checks **model availability first**. On a machine WITHOUT the weights (e.g. a contributor's

@@ -7,7 +7,7 @@ summary: Runtime hardening: terminal calls recorded in the guard hook's synchron
 isolated: 166/166
 collective: 48/48
 coverage: 27/27
-slm_canary: 46/46 (model micro, advisory)
+slm_canary: 46/46 (model ram8, advisory)
 verdict: PASS
 suite_cmd: pnpm proofs:run
 ---
@@ -44,7 +44,7 @@ Recorded from `governance/.artifacts/proofs.json` (`scripts/proofs/run-proofs.mj
 | **all** | **285/285** |
 
 ## SLM canary (advisory)
-Run post-fix on the `micro` tier (Qwen3.5-4B + MTP, real model, no script): **46/46 governed turns
+Run post-fix on the `ram8` tier (named `micro` at run time) (Qwen3.5-4B + MTP, real model, no script): **46/46 governed turns
 ended compliant** — 23 clean, 10 caught-and-recovered by a guard, 13 exhausted to the honest-abstain
 closure, 0 errors. Report-only; never gates the PR.
 

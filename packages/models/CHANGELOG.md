@@ -1,5 +1,21 @@
 # @looprun-ai/models
 
+## Unreleased
+
+### Changed
+
+- Run tiers re-keyed to the machine's RAM class (2026-07-15): `micro` → `ram8`, `minimal` →
+  `ram16`, `normal` → `ram24` (the DEFAULT; peak RSS ~20.7 GB fits 24 GB machines), `pro` →
+  `ram32`. Exported consts follow: `QWEN35_MICRO` → `QWEN35_RAM8`, `QWEN36_MINIMAL` →
+  `QWEN36_RAM16`, `QWEN36_NORMAL` → `QWEN36_RAM24`, `QWEN36_PRO` → `QWEN36_RAM32`.
+  Primary alias fields become `qwen3.5-4b-ram8`, `qwen3.6-35b-ram16`, `qwen3.6-35b-ram24`,
+  `qwen3.6-35b-ram32`.
+- Backward compatible: the old spellings (`micro`/`minimal`/`normal`/`pro`,
+  `qwen3.5-4b-micro`/`qwen3.6-35b-minimal`/`qwen3.6-35b-pro`/`qwen3.6-35b-a3b`/`qwen3.6-35b-3b`)
+  all still resolve to the same specs, and the deprecated const exports (`QWEN35_MICRO`,
+  `QWEN36_MINIMAL`, `QWEN36_NORMAL`, `QWEN36_PRO`, `QWEN36_35B_A3B`) are retained. Env vars, GGUF
+  file names, HF repos and ports are unchanged.
+
 ## 0.3.0
 
 ### Minor Changes

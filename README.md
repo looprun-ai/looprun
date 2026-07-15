@@ -41,10 +41,11 @@ multi-token-prediction speculative decoding (~1.4× decode, byte-identical outpu
 ```ts
 import { localModel } from 'looprun/models'
 
-model: await localModel('normal')      // DEFAULT — 11.8 GB, 88.9% certified eval, ~56 tok/s
-model: await localModel('minimal')     // 16 GB machines — 13.4–13.5 GB RSS measured, ~44 tok/s
-model: await localModel('pro')         // quality-max — 17.2 GB, ~58 tok/s
-model: await localModel('micro')       // 8 GB machines — 4.62 GB RSS measured, ~43 tok/s (4B)
+model: await localModel('ram24')       // DEFAULT — 24 GB machines, 11.8 GB, 88.9% certified eval, ~56 tok/s
+model: await localModel('ram16')       // 16 GB machines — 13.4–13.5 GB RSS measured, ~44 tok/s
+model: await localModel('ram32')       // 32 GB machines, quality-max — 17.2 GB, ~58 tok/s
+model: await localModel('ram8')        // 8 GB machines — 4.62 GB RSS measured, ~43 tok/s (4B)
+// tier names re-keyed to RAM class 2026-07-15 (old micro/minimal/normal/pro still accepted)
 ```
 
 Requirements: a `llama-server` build **≥ b9780**

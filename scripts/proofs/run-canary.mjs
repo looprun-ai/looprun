@@ -8,7 +8,7 @@
  * `{ skipped: true }` artifact, prints a friendly note, and exits 0 — a skipped canary is not a
  * failure. When the model IS available it spawns the isolated canary vitest lane and prints the tally.
  *
- * Usage: node scripts/proofs/run-canary.mjs [--model micro|minimal|normal|pro]
+ * Usage: node scripts/proofs/run-canary.mjs [--model ram8|ram16|ram24|ram32]
  */
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -24,7 +24,7 @@ function argValue(flag, fallback) {
   const i = process.argv.indexOf(flag);
   return i >= 0 && i + 1 < process.argv.length ? process.argv[i + 1] : fallback;
 }
-const model = argValue('--model', 'micro');
+const model = argValue('--model', 'ram24');
 
 /** Load the models package — via the workspace specifier, falling back to its built dist. */
 async function loadModels() {

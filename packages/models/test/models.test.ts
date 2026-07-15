@@ -1,6 +1,6 @@
 /** Alias registry, flags and fail-fast behavior of the local-model story. */
 import { afterEach, describe, expect, it } from 'vitest';
-import { launchFlags, modelPath, resolveAlias, QWEN35_4B, QWEN35_MICRO, QWEN36_35B_A3B, QWEN36_NORMAL, QWEN36_MINIMAL, QWEN36_PRO, LlamaCppRuntime, downloadUrl } from '../src/index.js';
+import { launchFlags, modelPath, resolveAlias, QWEN35_4B, QWEN35_RAM8, QWEN36_RAM16, QWEN36_RAM24, QWEN36_RAM32, QWEN35_MICRO, QWEN36_35B_A3B, QWEN36_NORMAL, QWEN36_MINIMAL, QWEN36_PRO, LlamaCppRuntime, downloadUrl } from '../src/index.js';
 
 const ENV_KEYS = ['QWEN35_4B_GGUF', 'QWEN36_35B_GGUF', 'LLAMA_KV', 'LLAMA_CTX', 'LLAMA_PORT', 'LLAMA_CACHE_RAM', 'LLAMA_SLOT_SAVE_PATH', 'LLAMA_SPEC_TYPE'];
 const saved = new Map(ENV_KEYS.map((k) => [k, process.env[k]]));
@@ -14,30 +14,51 @@ afterEach(() => {
 describe('alias registry', () => {
   it('resolves canonical aliases and accepted spellings', () => {
     expect(resolveAlias('qwen3.5-4b')).toBe(QWEN35_4B);
-    expect(resolveAlias('qwen3.6-35b-a3b')).toBe(QWEN36_NORMAL);
-    expect(resolveAlias('qwen3.6-35b-3b')).toBe(QWEN36_NORMAL);
+    expect(resolveAlias('qwen3.6-35b-a3b')).toBe(QWEN36_RAM24);
+    expect(resolveAlias('qwen3.6-35b-3b')).toBe(QWEN36_RAM24);
     // the deprecated export stays pointed at the current default
-    expect(QWEN36_35B_A3B).toBe(QWEN36_NORMAL);
+    expect(QWEN36_35B_A3B).toBe(QWEN36_RAM24);
   });
 
-  it('resolves the four run tiers (normal is the default alias)', () => {
-    expect(resolveAlias('normal')).toBe(QWEN36_NORMAL);
-    expect(resolveAlias('minimal')).toBe(QWEN36_MINIMAL);
-    expect(resolveAlias('pro')).toBe(QWEN36_PRO);
-    expect(resolveAlias('micro')).toBe(QWEN35_MICRO);
+  it('resolves the four run tiers (ram24 is the default alias)', () => {
+    expect(resolveAlias('ram24')).toBe(QWEN36_RAM24);
+    expect(resolveAlias('ram16')).toBe(QWEN36_RAM16);
+    expect(resolveAlias('ram32')).toBe(QWEN36_RAM32);
+    expect(resolveAlias('ram8')).toBe(QWEN35_RAM8);
+    expect(resolveAlias('qwen3.6-35b-ram24')).toBe(QWEN36_RAM24);
+    expect(resolveAlias('qwen3.6-35b-ram16')).toBe(QWEN36_RAM16);
+    expect(resolveAlias('qwen3.6-35b-ram32')).toBe(QWEN36_RAM32);
+    expect(resolveAlias('qwen3.5-4b-ram8')).toBe(QWEN35_RAM8);
     // one served id across the 35B tiers — the client-side model label never changes
-    for (const s of [QWEN36_NORMAL, QWEN36_MINIMAL, QWEN36_PRO]) {
+    for (const s of [QWEN36_RAM24, QWEN36_RAM16, QWEN36_RAM32]) {
       expect(s.servedId).toBe('qwen3.6-35b-gguf');
       expect(s.hfRepo).toBe('unsloth/Qwen3.6-35B-A3B-MTP-GGUF');
       expect(s.specType).toBe('draft-mtp');
     }
-    // micro = the 4B family with its own baked MTP head
-    expect(QWEN35_MICRO.hfRepo).toBe('unsloth/Qwen3.5-4B-MTP-GGUF');
-    expect(QWEN35_MICRO.specType).toBe('draft-mtp');
+    // ram8 = the 4B family with its own baked MTP head
+    expect(QWEN35_RAM8.hfRepo).toBe('unsloth/Qwen3.5-4B-MTP-GGUF');
+    expect(QWEN35_RAM8.specType).toBe('draft-mtp');
+  });
+
+  it('keeps every legacy tier spelling resolving to its ram* replacement (compat proof)', () => {
+    // short legacy names
+    expect(resolveAlias('normal')).toBe(QWEN36_RAM24);
+    expect(resolveAlias('minimal')).toBe(QWEN36_RAM16);
+    expect(resolveAlias('pro')).toBe(QWEN36_RAM32);
+    expect(resolveAlias('micro')).toBe(QWEN35_RAM8);
+    // long legacy names
+    expect(resolveAlias('qwen3.6-35b-minimal')).toBe(QWEN36_RAM16);
+    expect(resolveAlias('qwen3.6-35b-pro')).toBe(QWEN36_RAM32);
+    expect(resolveAlias('qwen3.5-4b-micro')).toBe(QWEN35_RAM8);
+    // deprecated const exports still point at the ram* specs
+    expect(QWEN36_NORMAL).toBe(QWEN36_RAM24);
+    expect(QWEN36_MINIMAL).toBe(QWEN36_RAM16);
+    expect(QWEN36_PRO).toBe(QWEN36_RAM32);
+    expect(QWEN35_MICRO).toBe(QWEN35_RAM8);
   });
 
   it('throws with the known list on an unknown alias', () => {
-    expect(() => resolveAlias('gpt-9')).toThrow(/Known: qwen3\.5-4b, qwen3\.5-4b-micro, qwen3\.6-35b-a3b/);
+    expect(() => resolveAlias('gpt-9')).toThrow(/Known: qwen3\.5-4b, qwen3\.5-4b-ram8, qwen3\.6-35b-ram24/);
   });
 
   it('modelPath honors the env override', () => {
@@ -65,26 +86,26 @@ describe('llama.cpp launch flags (the measured recipe — MTP on the 35B tiers s
     expect(f4).toContain('-c 32768');
     expect(f4).toContain('--cache-ram 3072');
     expect(f4).not.toContain('--spec-type'); // dense 4B stays NON-MTP (~0% measured)
-    const fNormal = launchFlags(QWEN36_NORMAL, '/m/35b.gguf').join(' ');
-    expect(fNormal).toContain('-ctk f16 -ctv f16');
-    expect(fNormal).toContain('-c 65536');
-    expect(fNormal).toContain('--cache-ram 16384');
-    expect(fNormal).toContain('--spec-type draft-mtp'); // D4b: baked trained head = 1.4× lossless
-    const fMin = launchFlags(QWEN36_MINIMAL, '/m/35b.gguf').join(' ');
-    expect(fMin).toContain('-ctk q8_0 -ctv q8_0'); // 16 GB budget: measured 13.4–13.5 GB RSS
-    expect(fMin).toContain('-c 24576');
-    expect(fMin).toContain('--cache-ram 512');
-    expect(fMin).toContain('--spec-type draft-mtp');
-    const fPro = launchFlags(QWEN36_PRO, '/m/35b.gguf').join(' ');
-    expect(fPro).toContain('-ctk f16 -ctv f16');
-    expect(fPro).toContain('-c 65536');
-    expect(fPro).toContain('--spec-type draft-mtp');
-    const fMicro = launchFlags(QWEN35_MICRO, '/m/4b.gguf').join(' ');
-    expect(fMicro).toContain('-ctk q8_0 -ctv q8_0'); // 8 GB budget; ctx 24k fits ~21k trunks
-    expect(fMicro).toContain('-c 24576'); // measured 4.62 GB RSS / ~43 tok/s
-    expect(fMicro).toContain('--cache-ram 384');
-    expect(fMicro).toContain('--spec-type draft-mtp'); // baked head: +20% measured on the 4B @ Q4
-    for (const f of [f4, fNormal, fMin, fPro, fMicro]) {
+    const fRam24 = launchFlags(QWEN36_RAM24, '/m/35b.gguf').join(' ');
+    expect(fRam24).toContain('-ctk f16 -ctv f16');
+    expect(fRam24).toContain('-c 65536');
+    expect(fRam24).toContain('--cache-ram 16384');
+    expect(fRam24).toContain('--spec-type draft-mtp'); // D4b: baked trained head = 1.4× lossless
+    const fRam16 = launchFlags(QWEN36_RAM16, '/m/35b.gguf').join(' ');
+    expect(fRam16).toContain('-ctk q8_0 -ctv q8_0'); // 16 GB budget: measured 13.4–13.5 GB RSS
+    expect(fRam16).toContain('-c 24576');
+    expect(fRam16).toContain('--cache-ram 512');
+    expect(fRam16).toContain('--spec-type draft-mtp');
+    const fRam32 = launchFlags(QWEN36_RAM32, '/m/35b.gguf').join(' ');
+    expect(fRam32).toContain('-ctk f16 -ctv f16');
+    expect(fRam32).toContain('-c 65536');
+    expect(fRam32).toContain('--spec-type draft-mtp');
+    const fRam8 = launchFlags(QWEN35_RAM8, '/m/4b.gguf').join(' ');
+    expect(fRam8).toContain('-ctk q8_0 -ctv q8_0'); // 8 GB budget; ctx 24k fits ~21k trunks
+    expect(fRam8).toContain('-c 24576'); // measured 4.62 GB RSS / ~43 tok/s
+    expect(fRam8).toContain('--cache-ram 384');
+    expect(fRam8).toContain('--spec-type draft-mtp'); // baked head: +20% measured on the 4B @ Q4
+    for (const f of [f4, fRam24, fRam16, fRam32, fRam8]) {
       expect(f).toContain('--jinja');
       expect(f).toContain('-fa on');
       expect(f).toContain('-ngl 99');
@@ -97,9 +118,9 @@ describe('llama.cpp launch flags (the measured recipe — MTP on the 35B tiers s
 
   it('LLAMA_SPEC_TYPE="" disables MTP; a value overrides the spec mode', () => {
     process.env.LLAMA_SPEC_TYPE = '';
-    expect(launchFlags(QWEN36_NORMAL, '/m/35b.gguf').join(' ')).not.toContain('--spec-type');
+    expect(launchFlags(QWEN36_RAM24, '/m/35b.gguf').join(' ')).not.toContain('--spec-type');
     process.env.LLAMA_SPEC_TYPE = 'ngram-mod';
-    expect(launchFlags(QWEN36_NORMAL, '/m/35b.gguf').join(' ')).toContain('--spec-type ngram-mod');
+    expect(launchFlags(QWEN36_RAM24, '/m/35b.gguf').join(' ')).toContain('--spec-type ngram-mod');
   });
 
   it('honors LLAMA_KV / LLAMA_CTX / LLAMA_PORT / LLAMA_CACHE_RAM overrides', () => {
