@@ -1,5 +1,12 @@
 # homeservices-example
 
+## 0.0.7
+
+### Patch Changes
+
+- Updated dependencies
+  - looprun@0.6.0
+
 ## Unreleased
 
 ### Regenerated agents (2026-07-17)

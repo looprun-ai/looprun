@@ -1,5 +1,12 @@
 # lawfirm-example
 
+## 0.0.7
+
+### Patch Changes
+
+- Updated dependencies
+  - looprun@0.6.0
+
 ## Unreleased
 
 ### 2026-07-17 — agents regenerated FROM SCRATCH (corrected agentspec skill)

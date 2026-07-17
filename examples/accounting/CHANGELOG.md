@@ -4,6 +4,13 @@
 
 ### Patch Changes
 
+- Updated dependencies
+  - looprun@0.6.0
+
+## 0.0.7
+
+### Patch Changes
+
 - Agents regenerated FROM SCRATCH (2026-07-17) with the corrected agentspec skill. The
   three specs (client-books, billing, tax-filing) and the domain theme were re-authored fresh:
   iron-rule blunt conditioned prose with the anti-pattern named as a failure; prompt-budget dedup
