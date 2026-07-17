@@ -78,6 +78,13 @@ Rules this forces on the loop:
    | cloud API (no logprobs) | full-run discipline: N=1 directional per iteration, replication control (lesson #11), majority-of-3 judging on borderline rubrics | classic N=3 |
    | baseline "+1" (the Claude subagent) | full-run; ALSO supplies the correct trajectories that local fork extraction needs (`extract-fork.mjs` pass-arm) | per its role (quality floor) |
 
+   **The perturbed band is a FLOOR, not a variance estimate around N=1.** A single unperturbed decode
+   can catch *several* near-tie coins in their pass state at once, so an N=1 read over-states the true
+   pass-rate by ~one case per coin; only a K-perturbed band (one distinct inert byte per replicate)
+   exposes the floor. Measured on a local 35B run: N=1 read one case ABOVE its K=3 band because two
+   near-tie coins both landed up in the single decode — the band rate held while the *identity* of the
+   marginal fail flipped between them. Certify at the band floor, not the lucky N=1 point.
+
    **Margin screen (post-E2, local targets, minutes):** the world is deterministic and replayable
    without an LLM, so every case's first-decision context renders offline; one `margin-probe`
    completion per case flags the coin cases (top-2 gap < ~1 nat) BEFORE any judged run. From-scratch
