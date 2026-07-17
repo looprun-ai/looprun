@@ -84,6 +84,34 @@ Rules this forces on the loop:
    generations therefore need no banked history: evals' invariants + the baseline run supply the
    correct branches, T-iteration-1 supplies the failing ones.
 
+   **Autonomous margin-probe (no prior runs) — `scripts/synth-fork.mjs`.** `extract-fork.mjs` needs a
+   banked PASS run AND a banked FAIL run to find the divergence; on a from-scratch generation neither
+   exists yet. `synth-fork.mjs` closes that gap: it builds the SAME fork-context JSON `margin-probe.py`
+   consumes, but from a SYNTHESIZED context — a case + its deterministic world — with zero prior runs.
+   It leverages the project's world seam (the `worldFactory` + `world.exec` from
+   `looprun.eval.config.ts`, no model in the loop) to replay a case's world byte-faithfully through an
+   AUTHORED trajectory, so the tool results the model sees at the fork are exactly what the runtime
+   would return. You declare the decision fork (the correct tool vs the tempting/forbidden twin — the
+   anti-magnet, read straight off the eval's `forbiddenToolCalls` + rubric) from the case + eval intent;
+   the world supplies the rest.
+
+   ```bash
+   # spec.json: { "caseId","agent",
+   #              "forkTurn": 0, "priorCalls": [ { "turn":0,"name":"listClients","args":{} } ],
+   #              "expect": { "kind":"tool-name","correct":"setFiscalRegime","wrong":"createClient" } }
+   node skills/agentspec/scripts/synth-fork.mjs spec.json fork.json
+   # then feed fork.json to margin-probe exactly like an extract-fork context:
+   python3 skills/agentspec/scripts/margin-probe.py battery fork.json --dump <dir> --agent <id>
+   ```
+
+   `priorCalls` is the authored setup trajectory (empty = a first-decision screen; add the calls that
+   precede the fork for a mid-turn/multi-step decision — the world executes them so the fork sees
+   faithful results). This is authoring-only and ADDITIVE: nothing on the runtime/measurement path
+   imports it, so it cannot move a measured number. The project is resolved the same way as the rest of
+   the toolkit (`$LOOPRUN_ROOT`, else the nearest `looprun.eval.config.{ts,js}`); the world-stepper runs
+   on the project's own tsx so it sees the project's harness + agent bundle. Use it to margin-screen a
+   from-scratch domain before it has ever been run.
+
 ## Stage T — screening iterations (N=1)
 
 Whole domain at once: `npx looprun-eval run` reads the config's `caseMap` and screens every agent
