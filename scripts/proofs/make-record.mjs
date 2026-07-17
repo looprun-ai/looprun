@@ -39,7 +39,12 @@ function argv() {
   const o = { force: false };
   for (let i = 0; i < a.length; i++) {
     const k = a[i];
+    // Skip a bare `--` passthrough separator: `pnpm proofs:record -- --slug ...` can forward the
+    // literal `--` into argv depending on the package manager. It carries no value of its own.
+    if (k === '--') continue;
     if (k === '--force') o.force = true;
+    // Boolean flag (no value): suppress the guard proof-case boilerplate for a docs/skill-only record.
+    else if (k === '--no-proof-cases') o.noProofCases = true;
     else if (k.startsWith('--')) o[k.slice(2)] = a[++i];
   }
   return o;
@@ -92,6 +97,15 @@ if (existsSync(file) && !o.force) {
 const scopeLabel = change_kind === 'guard' ? `guard:${target}` : change_kind;
 const notes = o.notes ? `\n${o.notes}\n` : '\n_None._\n';
 
+// A docs/skill-only record (or an explicit `--no-proof-cases`) touches no guard/runtime source, so the
+// guard proof-case authoring boilerplate is inapplicable. Emit an n/a line pinned to the (unchanged)
+// suite tally instead.
+const docsOnly = change_kind === 'skill' || change_kind === 'docs' || o.noProofCases;
+const proofCases = docsOnly
+  ? `n/a (docs/skill-only change; guard runtime unchanged; \`pnpm proofs:run\` ${t.all.pass}/${t.all.total} unchanged).`
+  : `Author positive / negative / neutral cases for the affected guard(s), plus ≥1 L3 loop case and the
+collective non-interference check. See \`skills/looprun-governance/references/proof-case-authoring.md\`.`;
+
 const body = `---
 date: ${date}
 slug: ${o.slug}
@@ -115,8 +129,7 @@ suite_cmd: pnpm proofs:run
 ${o.change}
 
 ## Proof cases
-Author positive / negative / neutral cases for the affected guard(s), plus ≥1 L3 loop case and the
-collective non-interference check. See \`skills/looprun-governance/references/proof-case-authoring.md\`.
+${proofCases}
 
 ## Results
 Recorded from \`${ARTIFACTS.replace(ROOT + '/', '')}\` (\`${s.generatedBy}\`):

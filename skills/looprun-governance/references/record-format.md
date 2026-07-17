@@ -101,3 +101,12 @@ pnpm proofs:record -- --slug arg-format-handle-shape \
 
 `--certified` is optional (defaults to `n/a`); pass it only for a change that ships or re-certifies a
 measured deployment bundle. Skill/docs/runtime changes that touch no certified artifact leave it `n/a`.
+
+The documented `pnpm proofs:record -- …` idiom is safe: a bare `--` passthrough separator is ignored by
+the generator, so args parse the same whether or not the package manager forwards it.
+
+**Proof cases section.** For a `skill`/`docs` scope (or any change flagged `--no-proof-cases`) the
+generator emits `Proof cases: n/a (docs/skill-only change; guard runtime unchanged; `pnpm proofs:run`
+N/N unchanged).` instead of the guard proof-case authoring boilerplate — a docs-only change touches no
+guard/runtime source, so authoring positive/negative/neutral guard cases does not apply. `guard`/`runtime`
+scopes keep the authoring boilerplate.

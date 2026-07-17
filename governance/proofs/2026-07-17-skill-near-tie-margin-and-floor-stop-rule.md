@@ -21,8 +21,7 @@ suite_cmd: pnpm proofs:run
 agentspec skill: near-tie margin discipline (fork-pair loop + margin-probe) + revised STOP rule (bar is a FLOOR) + optimized-for prose law (natural-prose default, telegraphic opt-in) + A3 model-aware deployment targets
 
 ## Proof cases
-Author positive / negative / neutral cases for the affected guard(s), plus ≥1 L3 loop case and the
-collective non-interference check. See `skills/looprun-governance/references/proof-case-authoring.md`.
+n/a (docs/skill-only change; guard runtime unchanged; `pnpm proofs:run` 259/259 unchanged).
 
 ## Results
 Recorded from `governance/.artifacts/proofs.json` (`scripts/proofs/run-proofs.mjs`):
