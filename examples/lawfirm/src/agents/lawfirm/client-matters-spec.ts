@@ -2,17 +2,20 @@
  * client-matters — clients, conflict checks, matter lifecycle (open/close) and billable time.
  *
  * Bucket: intake (conflict check → register → open), matter reads, record/bill time, and the
- * destructive close-matter flow (bill → close stays whole inside THIS agent — flow-in-one-agent).
- * Layer: AgentSpecBase because closeMatter carries the confirmed-flag protocol (confirmFirst +
- * destructiveThrottle install from `destructiveTools`).
+ * destructive close-matter flow. The full close flow (review → bill → close) stays whole inside THIS
+ * agent (flow-in-one-agent), so a gate is never split across agents.
+ * Layer: the one AgentSpecBase — closeMatter is listed in `destructiveTools`, so the constructor
+ * auto-installs confirmFirst + destructiveThrottle on it (and, from `lexicon`, noFalseFailureClaim).
  *
- * // UNCHECKABLE: legal-advice/strategy requests → decline & defer to the responsible attorney
- * //              (no observable key; theme invariant + conditioned prose + eval dimension).
- * // UNCHECKABLE: deadline/notification requests belong to the docket-documents agent → say so
- * //              (routing keys on user intent, firewalled; conditioned prose + eval case 10).
- * // UNCHECKABLE: out-of-scope asks — editing client contact records (office manager) and
- * //              deleting/correcting time entries (billing partner) → honest refusal + routing
- * //              (intent-keyed; conditioned prose + eval dimension, cases 09/18 rubric items).
+ * PROFILES (convention): RULES + GUARDS are the single source of truth and never fork per model. The
+ * DEFAULT profile is this certified natural-prose render; a declared target that needs a different
+ * FORM (lexicon phrasing, sampling) gets its own bundle from THIS source — never a spec change.
+ *
+ * // UNCHECKABLE (eval dimension only — no observable key; firewall bars user-text triggers):
+ * //   legal-advice/strategy → decline & defer to the responsible attorney (theme invariant + prose).
+ * //   deadline/document/notification requests → route to the docket-documents agent (intent-keyed).
+ * //   editing client contacts (office manager) / deleting-correcting time entries (billing partner)
+ * //   → honest refusal + routing (intent-keyed; conditioned prose + eval rubric).
  */
 import { AgentSpecBase, custom, destructiveClaimRequiresSuccess, jargonScrub, pendingConfirmMustAsk, requiresBefore } from 'looprun';
 import type { GuardCtx } from 'looprun';
@@ -42,47 +45,47 @@ export class AgentSpecClientMatters extends AgentSpecBase {
         'markTimeEntriesBilled',
       ],
       destructiveTools: ['closeMatter'],
+      // Renders the ordered "## Flow" hint; the requiresBefore guard below enforces it.
       flow: [{ from: 'runConflictCheck', to: 'openMatter' }],
-      // Reply-honesty invariant auto-installed as minimal:noFalseFailureClaim (see installMinimal).
+      // Auto-installs noFalseFailureClaim({ claimRe }) as minimal:noFalseFailureClaim.
       lexicon: { falseFailureClaimRe: FALSE_FAILURE_CLAIM_RE },
       theme: LAWFIRM_THEME,
+      // SPECIALIZES the theme — the domain-common floor (anti-fabrication, id/name→id, two-step,
+      // act-directly, confidentiality, walls, state-wins, honesty) is NOT re-stated here. Load-bearing
+      // protocol lines first; iron-rule blunt, each anti-pattern named as a failure.
       behavior: [
-        // NO persona line here — the runtime prepends the persona field above.
-        'Act directly on the requested non-destructive action (register a client, open a matter ' +
-          'after the conflict check, record time, bill hours the user asked to bill) — never ask ' +
-          'permission for what the user already requested.',
-        'Before opening any matter, run runConflictCheck for the parties involved; when it finds ' +
-          'adversity, decline the engagement honestly, name the conflicting record, and open nothing.',
-        'To close a matter: when the exact matterId is not given, locate it first (listMatters or ' +
-          'getMatter); when the close tool returns a confirmation question, relay it to the user ' +
-          'and STOP until they explicitly agree in a later turn.',
-        'When closing is blocked by unbilled hours, report the exact unbilled amount and ASK the ' +
-          'user whether to bill the entries first — never mark time billed unless the user asked for it.',
-        'When asked to bill a matter, review its entries first (listTimeEntries), then mark them ' +
-          'billed and report the exact hours total.',
-        'When a client or matter the user names does not exist or is closed, read the records, say ' +
-          'so plainly, and never act on a DIFFERENT record than the one the user named.',
-        'When a read comes back empty (no clients, matters or time entries match), say "none ' +
-          'found" honestly — never pad the answer with invented records.',
-        "Court/filing deadlines, documents and client notifications are the docket & documents " +
-          "assistant's job — when asked for those, say so and point the user there instead of improvising.",
-        'This assistant cannot edit client contact records or delete/correct time entries — when ' +
-          'asked, say so and route the user to the office manager (contacts) or the billing ' +
-          'partner (time entries).',
-        'When a message is garbled or a name matches nothing on record, recover with ONE concrete ' +
-          'clarifying question.',
-        'If an action fails, report the REAL error briefly — never claim success that did not happen.',
+        'Before opening ANY matter, run runConflictCheck for the parties FIRST — firm policy, every ' +
+          'time. When it reports adversity, decline the engagement, name the conflicting matter or ' +
+          'client, and open nothing; opening anyway is a failure. A clear check is what unlocks openMatter.',
+        'To close a matter: resolve the exact matterId first (listMatters / getMatter) when it was ' +
+          'named loosely, then call closeMatter confirmed=false and relay the question it returns — ' +
+          'do not report the matter closed until a confirmed=true call succeeds.',
+        'When a close is blocked by unbilled hours, report the exact unbilled amount and ASK whether ' +
+          'to bill first — billing is the user’s decision. Billing time yourself just to clear your ' +
+          'own close gate is a failure; bill only when the user asked, and only then re-attempt the close.',
+        'When the user asks to bill a matter, review its entries first (listTimeEntries), then ' +
+          'markTimeEntriesBilled and report the exact hours total.',
+        'Lifecycle law: a matter is OPEN or CLOSED — a CLOSED matter is terminal here (no new time, ' +
+          'and it cannot be re-opened); a time entry goes recorded → billed, and billing is ONE-WAY ' +
+          '(un-billing and corrections go through the billing partner).',
+        'Deadlines, documents and client notifications belong to the docket & documents assistant; ' +
+          'editing client contact records is the office manager’s job and deleting/correcting time ' +
+          'entries is the billing partner’s — when asked for any of these, say so plainly and point ' +
+          'the user there instead of improvising.',
+        'When a named client or matter matches nothing on record, or a message is garbled, recover ' +
+          'with ONE concrete clarifying question — never act on a DIFFERENT record than the one named.',
       ],
     });
 
-    // Spatial gate (firm policy the world does not enforce): every matter opening is preceded by
-    // a conflict check THIS conversation.
+    // Spatial gate (firm policy the world does not enforce): a matter opening is preceded by a
+    // conflict check THIS conversation. Paired with the rendered Flow hint above.
     this.addGuard('preTool', ['openMatter'], requiresBefore(['runConflictCheck']));
 
     // Spatial gate: billing reviews the entries first (the tool description's protocol).
     this.addGuard('preTool', ['markTimeEntriesBilled'], requiresBefore(['listTimeEntries']));
 
-    // Input gate: hours must be inside the world's valid range (mirrors the schema bounds).
+    // Input gate (args-keyed): hours must be inside the world's valid range — pre-empt with ONE
+    // question rather than round-trip a rejected write.
     this.addGuard(
       'preTool',
       ['recordTimeEntry'],
@@ -96,15 +99,16 @@ export class AgentSpecClientMatters extends AgentSpecBase {
             ? `hours must be between 0.1 and 24 (got ${hours}) — ask the user for the correct amount; record nothing yet`
             : null;
         },
-        prose: () => 'a time entry needs hours between 0.1 and 24 — when the amount is outside that range, ask for the correct one',
+        prose: () =>
+          'a time entry needs hours between 0.1 and 24 — when the amount is outside that range, ask for the correct one',
       }),
       { id: 'agent:hoursInRange' },
     );
 
-    // Anti-laundering gate (run dim): when a close of THIS matter was just blocked (failed
-    // closeMatter this turn, same matterId), billing is a USER decision — deny the same-turn
-    // self-service billing and route the question to the user. An explicit "bill then close"
-    // request bills FIRST (no failed close yet this turn), so the legal sibling flow is untouched.
+    // Run gate (args + observed accessor): when a close of THIS matter was just blocked (failed
+    // closeMatter this turn, same matterId), billing is a USER decision — deny same-turn self-service
+    // billing and route the question to the user. An explicit "bill then close" bills FIRST (no failed
+    // close yet this turn), so the legitimate sibling flow is untouched.
     this.addGuard(
       'preTool',
       ['markTimeEntriesBilled'],
@@ -121,29 +125,31 @@ export class AgentSpecClientMatters extends AgentSpecBase {
               (o.args as { matterId?: unknown } | undefined)?.matterId === matterId,
           );
           return closeBlockedThisTurn
-            ? "A close attempt for this matter was just denied this turn — billing is the user's " +
-                'decision. Report why the close did not go through and ASK before billing; once ' +
-                'the user approves billing, bill FIRST and only then re-attempt the close. Do ' +
-                'not bill on your own to clear the close gate.'
+            ? 'A close attempt for this matter was just denied this turn — billing is the user’s ' +
+                'decision. Report why the close did not go through and ASK before billing; once the ' +
+                'user approves, bill FIRST and only then re-attempt the close. Do not bill on your own ' +
+                'to clear the close gate.'
             : null;
         },
         prose: () =>
-          'when a close attempt was blocked by unbilled hours this turn, ask the user before billing — never bill just to clear the gate',
+          'when a close was just blocked by unbilled hours this turn, ask the user before billing — never bill only to clear the gate',
       }),
       { id: 'agent:billingIsUserDecision' },
     );
 
-    // Reply honesty: a pending confirmation must be relayed; "closed" claims need a confirmed
-    // success this turn (confirm-probe and honest-failure phrasings exempt).
+    // Reply honesty: relay any pending confirmation; a "closed" claim needs a confirmed success this
+    // turn (confirm-probe + honest-failure/status phrasings exempt). noFalseFailureClaim auto-installs
+    // from the lexicon above.
     this.addReplyCheck(pendingConfirmMustAsk({ askRe: CONFIRM_ASK_RE }), { id: 'agent:pendingConfirmMustAsk' });
     this.addReplyCheck(
       destructiveClaimRequiresSuccess(['closeMatter'], {
         claimRe: /\bmatter\b[^.!?\n]{0,60}\bclosed\b|\bclosed\b[^.!?\n]{0,60}\bmatter\b/i,
         askRe: CONFIRM_ASK_RE,
         offerRe: OFFER_OR_CONDITIONAL_RE,
-        // Exempt honest failures/negations AND truthful STATUS reports ("m_4001 is closed") —
-        // fresh-action claims ("is now closed", "has been closed") stay guarded.
-        exemptRe: /\b(cannot|can't|could not|couldn't|not|no|already|unable|blocked|before|must)\b|\b(is|was|remains)\s+(already\s+)?closed\b|\?/i,
+        // Exempt honest failures/negations AND truthful STATUS reports ("m_4001 is closed"); fresh
+        // action claims ("is now closed", "has been closed") stay guarded.
+        exemptRe:
+          /\b(cannot|can't|could not|couldn't|not|no|already|unable|blocked|before|must)\b|\b(is|was|remains)\s+(already\s+)?closed\b|\?/i,
       }),
       { id: 'agent:destructiveClaimRequiresSuccess' },
     );

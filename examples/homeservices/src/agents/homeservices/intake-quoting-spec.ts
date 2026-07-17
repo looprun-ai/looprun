@@ -6,22 +6,27 @@
  * find/create customer, open request, create+send quote, record the customer's decision, notify.
  * 11 tools ≤ 15. NO confirmed-flag destructive tool in this surface (cancelJob lives with the
  * scheduling agent, the lifecycle owner of jobs) — so AgentSpecBase installs only the universal
- * invariants (no destructive layer).
+ * invariants (noDuplicateCall + degeneration + emptyReply) plus minimal:noFalseFailureClaim from
+ * the injected lexicon; no destructive layer.
  *
- * // UNCHECKABLE: never give DIY repair/hazard instructions (office assistant, not a licensed
- * //              technician) — no observable state key; conditioned prose + eval dimension only.
- * // UNCHECKABLE: scheduling/rescheduling/cancelling belongs to the scheduling agent — say so
- * //              rather than improvise; no state key — conditioned prose + eval dimension only.
+ * name→id (E1 rule): every id this agent's writes CONSUME has a resolving read in the same surface —
+ * customerId ← findCustomer, requestId/quoteId ← listServiceRequests / getServiceRequest.
+ *
+ * // UNCHECKABLE (conditioned prose + eval dimension only — no observable state key):
+ * //   · never give DIY repair/hazard instructions (office assistant, not a licensed technician).
+ * //   · scheduling/rescheduling/cancelling belongs to the scheduling agent — hand over, do not improvise.
  */
 import { AgentSpecBase, custom, jargonScrub, maxCalls, noFabricatedSuccess } from 'looprun';
+import type { AgentWorld } from 'looprun';
 import { HOMESERVICES_THEME } from './theme.js';
 import { FALSE_FAILURE_CLAIM_RE } from './lexicon.js';
 
-type IntakeWorld = {
+// Domain world seam — the accessors THIS agent's RUN gates read (typed, no cast at the call site).
+interface IntakeWorld extends AgentWorld {
   hasCustomer(id: string): boolean;
   hasRequest(id: string): boolean;
   hasQuote(id: string): boolean;
-};
+}
 
 export class AgentSpecIntakeQuoting extends AgentSpecBase {
   constructor() {
@@ -44,24 +49,24 @@ export class AgentSpecIntakeQuoting extends AgentSpecBase {
         'sendNotification',
         'listNotifications',
       ],
-      // Reply-honesty invariant auto-installed as minimal:noFalseFailureClaim (see installMinimal).
+      // Injected lexicon → AgentSpecBase auto-installs minimal:noFalseFailureClaim (no manual add).
       lexicon: { falseFailureClaimRe: FALSE_FAILURE_CLAIM_RE },
       theme: HOMESERVICES_THEME,
       behavior: [
+        // Load-bearing lines FIRST (iron-rule style: blunt, name the anti-pattern, deduped vs theme).
         // Every line CONDITIONED (Bucket-A): "when X, do Y" — never a bare state assertion.
-        'When asked about services or prices, read listServices and answer only from its results — when something is not in the catalog, say so plainly.',
-        'When a request names a customer, look them up with findCustomer first; create a record with createCustomer only when no match exists — never duplicate a customer.',
-        'When the user asks to open a request, create a quote, or send it, act directly with the tools — these steps are not destructive and need no permission-asking; afterwards confirm the outcome with the real ids (req_…, qt_…).',
-        'To get a quote in front of the customer: createQuote first (a draft), then sendQuote — when a send fails because the quote was already sent or decided, report that state instead of claiming a new send.',
-        'When the customer communicates a decision on a sent quote (phone, email), record it with recordQuoteDecision before anything else.',
-        'When the user asks to schedule, move or cancel a visit, say the scheduling agent handles that and hand over what you know (ids, status) — you have NO booking or cancellation tools: never ask a cancellation-confirmation question yourself and never say you will proceed with one.',
-        'When a tool returns success:false, relay the real reason in one short sentence — never claim the action happened.',
-        'When a message is too garbled or incomplete to act on, recover with ONE concrete clarifying question.',
+        'Open requests, create quotes, send quotes and record decisions DIRECTLY with the tools — these are non-destructive. Asking "shall I go ahead?" for a clearly requested non-destructive action is a failure: do it, then confirm the outcome with the real ids the tools returned (req_…, qt_…).',
+        'Before any write, resolve the name to its REAL id from a read: findCustomer for a customer, listServiceRequests or getServiceRequest for a request or its quote. A write with a guessed id is a failure.',
+        'When a message names a customer, findCustomer FIRST; call createCustomer only when no match exists — creating a duplicate customer is a failure.',
+        'Quote lifecycle: draft → sent → accepted | declined. createQuote makes a DRAFT (invisible to the customer); sendQuote then puts it in front of them; only a SENT quote takes a decision via recordQuoteDecision — a draft cannot, and a decided quote cannot be re-decided. One active quote per request: a new quote is legal only after the previous was declined. When sendQuote or recordQuoteDecision fails on this state, report the state — never claim a fresh send or decision.',
+        'Answer service and price questions ONLY from listServices; when something is not in the catalog, say so plainly — never invent a service, price or discount.',
+        'Booking, moving and cancelling visits belong to the scheduling agent — you have NO booking or cancellation tools. Hand over the ids and status you know; never ask a cancellation-confirmation question yourself, and never say you will cancel or "proceed with" a cancellation.',
+        'When a message is too garbled or incomplete to act on, recover with exactly ONE concrete clarifying question.',
         "Keep replies short, professional and warm, in the user's language.",
       ],
     });
 
-    // Input/run gates — EXISTENCE-keyed on world state (never on user text).
+    // ── RUN gates: existence-keyed on world state (never on user text), each paired with its prose. ──
     this.addGuard(
       'preTool',
       ['createServiceRequest'],
@@ -69,9 +74,8 @@ export class AgentSpecIntakeQuoting extends AgentSpecBase {
         kind: 'customerMustExist',
         dim: 'run',
         check: (ctx) => {
-          const w = ctx.world as unknown as IntakeWorld;
           const id = String(ctx.args.customerId ?? '');
-          return w.hasCustomer(id)
+          return (ctx.world as IntakeWorld).hasCustomer(id)
             ? null
             : `Unknown customerId "${id}" — find the customer with findCustomer, or create one with createCustomer, and use the REAL cust_ id it returns.`;
         },
@@ -87,9 +91,8 @@ export class AgentSpecIntakeQuoting extends AgentSpecBase {
         kind: 'requestMustExist',
         dim: 'run',
         check: (ctx) => {
-          const w = ctx.world as unknown as IntakeWorld;
           const id = String(ctx.args.requestId ?? '');
-          return w.hasRequest(id)
+          return (ctx.world as IntakeWorld).hasRequest(id)
             ? null
             : `Unknown requestId "${id}" — read getServiceRequest or listServiceRequests and use the REAL req_ id.`;
         },
@@ -105,9 +108,8 @@ export class AgentSpecIntakeQuoting extends AgentSpecBase {
         kind: 'quoteMustExist',
         dim: 'run',
         check: (ctx) => {
-          const w = ctx.world as unknown as IntakeWorld;
           const id = String(ctx.args.quoteId ?? '');
-          return w.hasQuote(id)
+          return (ctx.world as IntakeWorld).hasQuote(id)
             ? null
             : `Unknown quoteId "${id}" — read getServiceRequest for the request's real qt_ id.`;
         },
@@ -116,19 +118,19 @@ export class AgentSpecIntakeQuoting extends AgentSpecBase {
       { id: 'agent:quoteMustExist' },
     );
 
+    // Bulk cap: don't spam the customer with notifications in one turn.
     this.addGuard(
       'preTool',
       ['sendNotification'],
-      maxCalls('sendNotification', 2, 'At most two notifications per turn — batch updates into one clear message instead of spamming the customer.'),
+      maxCalls('sendNotification', 2, 'At most two notifications per turn — batch updates into one clear message instead of spamming the customer.', { scope: 'turn' }),
       { id: 'agent:notificationCap' },
     );
 
-    // Behavior gates. (noFalseFailureClaim now auto-installs as minimal:noFalseFailureClaim via lexicon.)
-    // Measured iteration 2 (case 11): this agent has NO cancellation/booking tool, so ANY
-    // commitment-to-cancel phrasing is out of scope by construction (commitment/completion forms
-    // only — "the scheduling agent handles cancellations" does not match). The unconditional-ban
-    // mode of noFabricatedSuccess (banRe, fired regardless of attempts) is the successor to the
-    // former standalone replyNoProductionClaim kind.
+    // Reply-honesty. noFalseFailureClaim auto-installs from the injected lexicon (above). This agent
+    // has NO cancellation/booking tool, so ANY commitment-to-cancel phrasing is out of scope by
+    // construction — the unconditional banRe of noFabricatedSuccess (fires regardless of attempts)
+    // is the successor to the former standalone replyNoProductionClaim kind. Commitment/completion
+    // forms ONLY ("the scheduling agent handles cancellations" must not match).
     this.addReplyCheck(
       noFabricatedSuccess('cancelJob', {
         banRe:

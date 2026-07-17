@@ -3,16 +3,19 @@
  *
  * Bucket: the docket lifecycle (create → file / cancel), document register/list, the reminder job
  * (read the window → notify the right client), and notification reads. Shared read-only tools
- * (listClients, listMatters, getMatter, getClient) repeat from the client-matters agent by design.
- * Layer: AgentSpecBase because cancelDeadline carries the confirmed-flag protocol.
+ * (listClients, listMatters, getMatter, getClient) repeat from the client-matters agent by design —
+ * every id this agent's tools consume (matterId, deadlineId, clientId) has a name→id read here.
+ * Layer: the one AgentSpecBase — cancelDeadline is in `destructiveTools` (auto confirmFirst +
+ * destructiveThrottle); noFalseFailureClaim auto-installs from `lexicon`.
  *
- * // UNCHECKABLE: client intake / matter opening / time & billing requests belong to the
- * //              client-matters agent → say so (intent routing is firewalled; prose + eval).
- * // UNCHECKABLE: the notification's WORDING must stay factual and professional (language layer;
- * //              the cross-client leak itself IS checked deterministically below).
- * // UNCHECKABLE: out-of-scope asks — editing client contact records (office manager) and
- * //              rescheduling a deadline in place (the legal path is cancel-with-confirm +
- * //              create-new) → honest refusal/explanation (intent-keyed; conditioned prose + eval).
+ * PROFILES (convention): RULES + GUARDS are the single source of truth and never fork per model. The
+ * DEFAULT profile is this certified natural-prose render; a declared target that needs a different
+ * FORM (lexicon phrasing, sampling) gets its own bundle from THIS source — never a spec change.
+ *
+ * // UNCHECKABLE (eval dimension only — no observable key; firewall bars user-text triggers):
+ * //   client intake / opening-closing matters / billable time → route to the client-matters agent.
+ * //   editing client contact records (office manager) / in-place reschedule → honest explanation.
+ * //   the notification's WORDING staying factual/professional (the cross-client LEAK is checked below).
  */
 import { AgentSpecBase, custom, destructiveClaimRequiresSuccess, jargonScrub, maxCalls, pendingConfirmMustAsk, requiresBefore } from 'looprun';
 import type { GuardCtx } from 'looprun';
@@ -43,48 +46,44 @@ export class AgentSpecDocketDocuments extends AgentSpecBase {
         'getClient',
       ],
       destructiveTools: ['cancelDeadline'],
+      // Renders the ordered "## Flow" hint; the requiresBefore guard below enforces it.
       flow: [{ from: 'listDeadlines', to: 'cancelDeadline' }],
-      // Reply-honesty invariant auto-installed as minimal:noFalseFailureClaim (see installMinimal).
+      // Auto-installs noFalseFailureClaim({ claimRe }) as minimal:noFalseFailureClaim.
       lexicon: { falseFailureClaimRe: FALSE_FAILURE_CLAIM_RE },
       theme: LAWFIRM_THEME,
+      // SPECIALIZES the theme — the domain-common floor is NOT re-stated here. Load-bearing protocol
+      // lines first; iron-rule blunt, each anti-pattern named as a failure.
       behavior: [
-        // NO persona line here — the runtime prepends the persona field above.
-        'Act directly on the requested non-destructive action (create a valid deadline, register a ' +
-          'document, mark a completed filing, send a requested compliant notification) — never ask ' +
-          'permission for what the user already requested.',
-        'To cancel a deadline: read the docket first (listDeadlines) to verify the exact id and its ' +
-          'status; when the cancel tool returns a confirmation question, relay it to the user and ' +
-          'STOP until they explicitly agree in a later turn; cancel at most one deadline per turn.',
-        'When a deadline is FILED, it is immutable — refuse the cancellation, explain why, and ' +
-          'leave every other deadline untouched.',
-        'There is no in-place reschedule: when asked to move a deadline\'s date, explain that the ' +
-          'pending deadline must be cancelled (two-step confirmation) and a new one created with ' +
-          'the new date — and proceed only with the user\'s agreement.',
-        'When a requested due date is before today, create nothing — tell the user the date is in ' +
-          'the past and ask for a today-or-later date.',
-        'When the matter a write names is CLOSED or unknown, say so after reading the records and ' +
-          'never divert the write to a different matter.',
-        "A notification may contain ONLY the recipient's own matter information — when the user's " +
-          'draft includes another client or their case, flag the confidentiality problem and send ' +
-          "at most a version limited to the recipient's own matters.",
-        'When a read comes back empty (no deadlines, documents or notifications), say "none found" ' +
-          'honestly — never pad the answer with invented records.',
-        'Client intake, opening/closing matters, and billable time are the clients & matters ' +
-          "assistant's job — when asked for those, say so and point the user there.",
-        'This assistant cannot edit client contact records — when contact info is missing or ' +
-          'wrong (e.g. a notification fails for lack of contact), say so and route the user to ' +
-          'the office manager.',
-        'If an action fails (e.g. no contact on file), report the REAL error briefly — never claim ' +
-          'a notification was sent or a record was created when it was not.',
+        'To cancel a deadline: read the docket first (listDeadlines) to confirm the exact id AND its ' +
+          'status, then call cancelDeadline confirmed=false and relay the question it returns. Cancel ' +
+          'at most ONE deadline per turn; reporting a cancellation before a confirmed=true call ' +
+          'succeeds is a failure.',
+        'Lifecycle law: a deadline is pending → filed (markDeadlineFiled, ONE-WAY) OR pending → ' +
+          'cancelled (two-step). FILED is terminal: refuse to cancel or re-file a filed deadline, ' +
+          'explain why, and leave every other deadline untouched. Only a PENDING deadline can be filed.',
+        'There is no in-place reschedule: to move a deadline’s date, cancel the pending one (two-step ' +
+          'confirmation) and create a new one with the new date — proceed only with the user’s agreement.',
+        'A notification carries ONLY the recipient’s own matters. When the draft names another client ' +
+          'or another client’s matter, flag the confidentiality problem and send at most a version ' +
+          'limited to the recipient. When the client has no contact on file the send fails — report ' +
+          'that honestly and route contact fixes to the office manager; claiming a notification was ' +
+          'sent when it was not is a failure.',
+        'Documents and deadlines only attach to an OPEN matter — a closed or unknown matter takes ' +
+          'neither; say so after reading the records and never divert the write to a different matter.',
+        'Client intake, opening/closing matters and billable time belong to the clients & matters ' +
+          'assistant — when asked for those, say so and point the user there.',
+        'When a read comes back empty (no deadlines, documents or notifications), say so plainly — do ' +
+          'not pad with invented records. When an id or name matches nothing, recover with ONE concrete question.',
       ],
     });
 
-    // Spatial gates: locate-and-verify before acting on a deadline id (both one-way ops).
+    // Spatial gates: locate-and-verify before acting on a deadline id (both one-way / destructive ops).
     this.addGuard('preTool', ['cancelDeadline'], requiresBefore(['listDeadlines']));
     this.addGuard('preTool', ['markDeadlineFiled'], requiresBefore(['listDeadlines']));
 
-    // Run gate: filed/cancelled deadlines are immutable — deny BEFORE the destructive attempt
-    // executes (the world would reject it too; the gate keeps the attempt out of the trace).
+    // Run gate (args + world accessor): a FILED (or already-cancelled) deadline is immutable — deny
+    // BEFORE the destructive attempt executes (the world would reject it too; the gate keeps the
+    // doomed attempt out of the trace and returns the honest correction).
     this.addGuard(
       'preTool',
       ['cancelDeadline'],
@@ -109,7 +108,8 @@ export class AgentSpecDocketDocuments extends AgentSpecBase {
       { id: 'agent:filedIsImmutable' },
     );
 
-    // Run gate: marking filed is one-way — deny re-filing or filing a cancelled deadline.
+    // Run gate (args + world accessor): marking filed is one-way — deny re-filing or filing a
+    // cancelled deadline.
     this.addGuard(
       'preTool',
       ['markDeadlineFiled'],
@@ -132,7 +132,8 @@ export class AgentSpecDocketDocuments extends AgentSpecBase {
       { id: 'agent:fileOnlyPending' },
     );
 
-    // Input gate: past due dates are invalid — deny before execution and route to ONE question.
+    // Input gate (args + world accessor): past due dates are invalid — deny before execution and
+    // route to ONE question.
     this.addGuard(
       'preTool',
       ['createDeadline'],
@@ -153,8 +154,8 @@ export class AgentSpecDocketDocuments extends AgentSpecBase {
       { id: 'agent:noPastDueDate' },
     );
 
-    // Input gate (confidentiality, deterministic half): a notification naming ANOTHER client —
-    // or referencing a matter the recipient does not own — is denied before it sends.
+    // Input gate (args + world accessor — the confidentiality deterministic half): a notification
+    // naming ANOTHER client, or referencing a matter the recipient does not own, is denied before it sends.
     this.addGuard(
       'preTool',
       ['notifyClient'],
@@ -193,25 +194,28 @@ export class AgentSpecDocketDocuments extends AgentSpecBase {
       { id: 'agent:confidentialNotification' },
     );
 
-    // Run gate: one notification per turn (anti-spam; batch content into one message).
+    // Run gate: one notification per turn (anti-spam; batch a client's content into ONE message).
     this.addGuard(
       'preTool',
       ['notifyClient'],
-      maxCalls('notifyClient', 1, 'send at most one notification per turn — batch the content for a client into ONE message'),
+      maxCalls('notifyClient', 1, 'send at most one notification per turn — batch the content for a client into ONE message', { scope: 'turn' }),
       { id: 'agent:oneNotificationPerTurn' },
     );
 
-    // Reply honesty: relay pending confirmations; "cancelled" claims need a confirmed success
-    // (confirm-probe + honest-failure exemptions); no phantom "sent" on a failed notification.
+    // Reply honesty: relay pending confirmations; a "cancelled" claim needs a confirmed success this
+    // turn (confirm-probe + honest-failure/status exemptions); no phantom "sent" on a failed
+    // notification (existence-keyed custom — it also exempts an honest listNotifications read-back,
+    // which the shared kind cannot express).
     this.addReplyCheck(pendingConfirmMustAsk({ askRe: CONFIRM_ASK_RE }), { id: 'agent:pendingConfirmMustAsk' });
     this.addReplyCheck(
       destructiveClaimRequiresSuccess(['cancelDeadline'], {
         claimRe: /\bcancel(?:led|ed)\b/i,
         askRe: CONFIRM_ASK_RE,
         offerRe: OFFER_OR_CONDITIONAL_RE,
-        // Exempt honest failures/negations AND truthful STATUS reports ("dl_602 is cancelled") —
-        // fresh-action claims ("has been cancelled", "I cancelled") stay guarded.
-        exemptRe: /\b(cannot|can't|could not|couldn't|not|no|already|unable|immutable|filed)\b|\b(is|was|remains)\s+(already\s+)?cancelled\b|\?/i,
+        // Exempt honest failures/negations AND truthful STATUS reports ("dl_602 is cancelled"); fresh
+        // action claims ("has been cancelled", "I cancelled") stay guarded.
+        exemptRe:
+          /\b(cannot|can't|could not|couldn't|not|no|already|unable|immutable|filed)\b|\b(is|was|remains)\s+(already\s+)?cancelled\b|\?/i,
       }),
       { id: 'agent:destructiveClaimRequiresSuccess' },
     );
@@ -220,14 +224,10 @@ export class AgentSpecDocketDocuments extends AgentSpecBase {
         kind: 'noPhantomNotification',
         dim: 'behavior',
         check: (ctx: GuardCtx) => {
-          const sentOk = ctx.observed.some(
-            (o) => o.turnIndex === ctx.turnIndex && o.ok && o.name === 'notifyClient',
-          );
+          const sentOk = ctx.observed.some((o) => o.turnIndex === ctx.turnIndex && o.ok && o.name === 'notifyClient');
           if (sentOk) return null;
-          // Reporting notification HISTORY read this turn is honest past-tense, not a claim.
-          const readHistory = ctx.observed.some(
-            (o) => o.turnIndex === ctx.turnIndex && o.ok && o.name === 'listNotifications',
-          );
+          // Reporting notification HISTORY read this turn is honest past-tense, not a fresh claim.
+          const readHistory = ctx.observed.some((o) => o.turnIndex === ctx.turnIndex && o.ok && o.name === 'listNotifications');
           if (readHistory) return null;
           const reply = ctx.reply ?? '';
           // Honest failure/negation exemption BEFORE the affirmative claim regex.

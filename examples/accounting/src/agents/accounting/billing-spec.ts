@@ -2,15 +2,14 @@
  * billing — invoices, payments, and payment reminders.
  *
  * Bucket: draft/send invoices, record payments, void invoices, reminder notifications, invoice
- * reads. Layer: AgentSpecBase — sendInvoice, recordPayment, and voidInvoice carry the
- * confirmed-flag two-step protocol (confirmFirst + destructiveThrottle install from the layer).
+ * reads. AgentSpecBase installs the confirm-first + throttle protocol on sendInvoice, recordPayment,
+ * and voidInvoice; the always-on noFalseFailureClaim installs from cfg.lexicon.falseFailureClaimRe.
  *
- * // UNCHECKABLE: claims about PAST reminders are unverifiable (there is no reminder log) — the
- * //              reply must say it cannot verify them — conditioned prose + eval dimension only
- * //              (case 15).
+ * // UNCHECKABLE: claims about reminders sent BEFORE this conversation are unverifiable (there is no
+ * //              reminder log) — the reply must say it cannot verify them (case 15).
  */
 import { AgentSpecBase, custom, destructiveClaimRequiresSuccess, jargonScrub, pendingConfirmMustAsk } from 'looprun';
-import { CONFIRM_ASK_RE, CONFIRM_LANG_RE, FALSE_FAILURE_CLAIM_RE, OFFER_OR_CONDITIONAL_RE } from './lexicon.js';
+import { CONFIRM_ASK_RE, CONFIRM_LANG_RE, FALSE_FAILURE_CLAIM_RE, HONEST_FAILURE_RE, OFFER_OR_CONDITIONAL_RE } from './lexicon.js';
 import { ACCOUNTING_THEME } from './theme.js';
 
 /** The one per-id status read the invoice gates need (world accessor via the ctx closure). */
@@ -41,25 +40,23 @@ export class AgentSpecBilling extends AgentSpecBase {
         'sendClientNotification',
       ],
       destructiveTools: ['sendInvoice', 'recordPayment', 'voidInvoice'],
-      // Reply-honesty invariant auto-installed as minimal:noFalseFailureClaim (see installMinimal).
       lexicon: { falseFailureClaimRe: FALSE_FAILURE_CLAIM_RE },
       theme: ACCOUNTING_THEME,
       behavior: [
-        'When the user asks for an invoice and gives client, amount, and purpose, create the DRAFT directly this turn (creation needs no confirmation); sending it is the two-step part — relay the send-confirmation question and stop.',
-        'When recording a payment, use the invoice amount from the records (getInvoice/listInvoices) — a payment must equal the invoice amount exactly; when the user names a different figure, point at the mismatch instead of forcing it.',
-        'When the user tells you to skip the confirmation of a payment, void, or send, still relay the confirmation question — financial-record changes always get the explicit yes in a separate turn; say so briefly.',
-        'When an invoice cannot be acted on (paid invoices can never be voided; only drafts can be sent; only sent invoices can be paid), report the real status and why the action is not possible — never claim it happened.',
-        'When sending a payment reminder, read the invoice first and quote only the real invoice id, amount, and due date in the message.',
-        'When asked whether a reminder was already sent before this conversation, say that past reminders cannot be verified (there is no reminder log) — never claim one was or was not sent.',
+        // Load-bearing lines first. Each SPECIALIZES a theme invariant — none re-declares one.
+        'An invoice moves from draft to sent to paid, or from draft to void: only a DRAFT can be sent, only a SENT invoice can be paid, and a PAID invoice can NEVER be voided. When an action does not fit the invoice\'s real status, report that status and why — never force it or claim it happened.',
+        'A recorded payment must EQUAL the invoice amount from the records (getInvoice / listInvoices). When the user names a different figure, point at the mismatch — recording a payment that does not match the invoice is a failure.',
+        'When the user gives client, amount, and purpose, create the DRAFT with createInvoice this turn; sending it is the two-step part — probe sendInvoice, relay the send-confirmation question, and stop.',
+        'When the user tells you to skip the confirmation on a send, payment, or void, still relay the confirmation question — a financial-record change always gets its explicit yes in a separate turn.',
+        'When sending a payment reminder, read the invoice first and quote only the real inv_ id, amount, and due date; a reminder is single-step and needs no confirmation.',
         'When a request needs bookkeeping entries, client onboarding, or tax filings, say the client-records or tax-filing assistant handles it.',
-        'If a tool fails, report the real error briefly — never claim success that did not happen.',
-        'When a message is garbled or missing a needed detail, recover with ONE concrete clarifying question.',
+        'When a required detail is missing or garbled, ask ONE concrete question before calling any write.',
       ],
     });
 
     // Run gates (deterministic, state-keyed): the invoice lifecycle is decidable from the status
-    // accessor BEFORE execution — deny with a routing correction instead of executing into a
-    // world error. Unknown ids fall through to the world's own honest error.
+    // accessor BEFORE execution — deny with a routing correction instead of executing into a world
+    // error. Unknown ids fall through to the world's own honest error.
     this.addGuard(
       'preTool',
       ['voidInvoice'],
@@ -114,17 +111,15 @@ export class AgentSpecBilling extends AgentSpecBase {
       { id: 'agent:payableOnlySent' },
     );
 
-    // Reply honesty — the shared kinds are now attempt-keyed (destructiveClaimRequiresSuccess) and
-    // resolution-aware (pendingConfirmMustAsk), subsuming the former local variants. The claim-check's
-    // probe-relay exemption uses CONFIRM_LANG_RE (no bare `?`) so a trailing "…paid! Anything else?"
-    // cannot mask a declarative claim (N3 round-2 b); the must-ask relay uses CONFIRM_ASK_RE (with `?`).
+    // Reply honesty — attempt-keyed (fires only when a listed destructive tool was tried this turn and
+    // did not take effect), confirm-probe / offer / honest-failure aware. noFalseFailureClaim via cfg.lexicon.
     this.addReplyCheck(pendingConfirmMustAsk({ askRe: CONFIRM_ASK_RE }), { id: 'agent:pendingConfirmMustAsk' });
     this.addReplyCheck(
       destructiveClaimRequiresSuccess(['sendInvoice', 'recordPayment', 'voidInvoice'], {
         claimRe: /\b(?:invoice[^.!?\n]{0,40}\b(?:sent|voided|paid)|(?:sent|voided)[^.!?\n]{0,40}\binvoice|marked (?:it |the invoice )?(?:as )?paid|payment[^.!?\n]{0,30}\brecorded|recorded[^.!?\n]{0,30}\bpayment)\b/i,
         askRe: CONFIRM_LANG_RE,
         offerRe: OFFER_OR_CONDITIONAL_RE,
-        exemptRe: /\b(?:already|cannot|can['’]?t|could not|couldn['’]?t|not|unable|hasn['’]?t|haven['’]?t|isn['’]?t|wasn['’]?t|yet|pending|overdue|reminder|notification|notice)\b/i,
+        exemptRe: HONEST_FAILURE_RE,
       }),
       { id: 'agent:destructiveClaimRequiresSuccess' },
     );
