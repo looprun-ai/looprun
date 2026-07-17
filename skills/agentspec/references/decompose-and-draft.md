@@ -15,6 +15,12 @@ Rules (all measured):
 - Terminal tools (`replyToUser`/`askUser`-like) are NEVER in `tools` (constructor throws).
 - Destructive tools stay WITH the job that owns them (deletion lives with the lifecycle owner).
 - Name agents by job (`scheduling`, `billing`), not by audience or mood.
+- **Name→id resolution per bucket (measured 2026-07-16, equipment-rental subject):** for EVERY
+  entity id an agent's tools CONSUME (assetId, bookingId, memberId, …), the same surface must hold
+  a READ that RESOLVES it from a user-facing name (listX / getX searchable by name) — or the
+  decomposition table must justify why not. Absence makes the model flail through unrelated reads
+  or fabricate a well-shaped id (a billing agent asked to quote "the CAT 320" with no asset lookup
+  looped through unrelated list reads and never produced the quote).
 - If evals exist, also emit the case→agent map — the config's `caseMap` entries (tool-need
   decides; document reassignments — the remap precedent from the lineage, see CONTEXT.md).
 
@@ -77,6 +83,56 @@ guard catalog (`references/guard-catalog.md`) are the only style inputs.
 - Encode the docs' protocols (confirmation flows, honesty on empty results, error reporting,
   recovery with ONE concrete question, reply language, brevity).
 - NO persona line here — persona lives in the `persona` field (above).
+- **Iron-rule STYLE for load-bearing lines (measured 2026-07-16, equipment-rental subject A/B:
+  a blunt restyle of the same rules gained +13pt on a lite cloud model, closing exactly the
+  garbled-value-guessing, double-destructive, scope-defer, and false-claim-sycophancy fail
+  classes).** Within each conditioned line: (a) state the rule BLUNTLY, no hedging; (b) NAME the
+  anti-pattern as a failure ("asking 'shall I proceed?' for a non-destructive action is a
+  failure"); (c) inline the adversarial case ("pre-authorization in the same message does NOT
+  count — the confirmation must answer YOUR stated preview"); (d) order the load-bearing protocol
+  lines FIRST within `behavior[]` (after the runtime-prepended persona). This is a CONTENT style
+  rule — it does not move layout (the trunk-static law, measured-loop lesson #7, still owns
+  positions). **Blunt ≠ verbose** — the measured gain came from bluntness and placement, and the
+  same experiment's next revision ADDED rules while SHRINKING the prompt; the prompt-budget rule
+  below bounds the token cost.
+- **PROMPT BUDGET & COMPRESSION (measured 2026-07-16 — equipment-rental subject, local regression:
+  +25% prompt tokens held 100% on the cloud tier but cost −8pt on a 35B-class local model; verbose
+  prose is a TIER RISK).** Draft every rule at MINIMUM token cost without touching semantics:
+  (a) **Dedup against the theme** — a rule the theme's coreInvariants already state is NEVER
+  re-declared in `behavior[]`; a spec line may only SPECIALIZE it (this agent's tools, ids,
+  amounts). Re-stating a theme rule per agent is a defect, not emphasis.
+  (b) **The adversarial example appears ONCE per bundle** (theme or a single spec line) — never
+  repeated per line or per agent.
+  (c) **Budget:** `behavior[]` ≤ the certified-baseline envelope (~600 tokens/agent for a
+  15-tool agent); exceeding it requires a measured justification in the spec header. The budget is
+  met by (a)+(b) — dedup and no repetition — NEVER by rewriting rule wording.
+  Compression rewrites FORM only — the Bucket-A reviewer re-audits that no condition or rule was
+  dropped.
+  **Telegraphic restyle is NOT a drafting rule (user decision 2026-07-16 — nice-to-have, end of
+  loop only):** rewriting rules into compact law form was measured NET-NEGATIVE as a default on the
+  local tier (82.0 → 80.3; ladder churn within noise) — draft in the certified natural-prose form.
+  It may be evaluated at the END of the measured loop as an OPT-IN per-target experiment, accepted
+  only by the margin instrument (fork-pair worst-case) + the full-run bar for that target.
+- **Per-model PROFILES (convention, measured 2026-07-16 — one spec, N renders).** The RULES and the
+  GUARDS/CHECKS are a single source of truth and NEVER fork per model. What may vary per declared
+  deployment target (questionnaire A3) is FORM only: prose render (the DEFAULT is the certified
+  natural-prose form — telegraphic/compact is an opt-in END-OF-LOOP experiment per target, never
+  the default: measured 2026-07-16, the non-telegraphic render held 90.2 on the local tier vs
+  80–82 telegraphic), reply-guard lexicon phrasing, `sampling`, `redrives`. Until the runtime
+  carries a native `profiles` field, emit one bundle per profile FROM THE SAME SPEC SOURCE and
+  record which target each bundle serves. A model with no profile runs the DEFAULT — guards work
+  day-0 on any model; quality seals exist only for measured targets.
+- **Lifecycle-law block (measured 2026-07-16):** for every entity whose lifecycle the agent's
+  tools mutate, emit ONE compact behavior line of state-machine law derived from the world model —
+  terminal states and irreversible edges stated as absolutes ("a VOID invoice is terminal — never
+  payable, never refundable, never un-voided"; "a booking that is OUT cannot cancel — check-in
+  first"). Weak models honor a stated law; they re-derive it wrongly.
+- **State-wins truthfulness line (measured 2026-07-16 — a false user assertion was confirmed 3/3
+  by both a governed and an ungoverned arm until this was stated):** include a line of the form
+  "when the user asserts a state change the tools contradict, CORRECT the user with the read
+  state — never perform calls that make the false claim true, and never present a permission
+  denial as a technical glitch or retry/work around it (role escalation to satisfy a blocked
+  request is forbidden)."
 
 ### Controls
 - `terminal`: reply()-only when the state says the turn is an action turn (example shape:

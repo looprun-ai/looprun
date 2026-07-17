@@ -9,7 +9,80 @@
 - Live `→ pass/fail` lines during a run are the INVARIANT gate, not quality. Only the judged
   aggregate counts.
 
+## Deployment targets — measure EVERY declared model, every iteration (measured 2026-07-16)
+
+The A3 answer (questionnaire) declares the deployment models. The rule that prevents the measured
+regression of 2026-07-16 (one bundle: 100% on the tuned tier, 82% on the untuned one):
+
+- **Each T iteration runs ALL targets** (N=1 each) — the A3 selection **plus the always-on
+  BASELINE** (the model running the skill, as a Claude subagent playing the generated agent against
+  the world; zero external dependency). A fix that helps one tier and hurts another is caught at
+  the NEXT iteration, not at certification.
+- **The bar holds PER TARGET** — the STOP rule fires only when every target (and the baseline) is
+  at/above the bar.
+- **Classify each fix as RULE vs FORM**: a missing/wrong rule lands in the SPEC (applies to all
+  targets); a verbosity/phrasing/lexicon miss lands in that target's **profile** (prose render,
+  lexicon, sampling — never the checks; see the profile convention in decompose-and-draft.md).
+  Guards/checks NEVER fork per model.
+- **Certification (S) is per target and bound to the artifact hash**: emit `model:score×reps` for
+  every measured target into the cert/provenance record; any spec change afterwards invalidates
+  ALL seals. N=1 mid-loop is directional only — nothing gets a seal below N=3.
+
 Full walkthrough: `docs/guides/measured-loop.md` in the looprun repo.
+
+## Near-tie flips — margin discipline for prose iteration (measured 2026-07-16)
+
+Root cause of "fix one case, break another" on small/local tiers, measured on a minimal repro
+(a read-vs-create decision fork):
+
+- The action decision a case grades rides **one greedy token**. On flippy cases its margin
+  (~0.25–0.5 nat) is the **residual of a prose equilibrium** — no single rule owns the decision
+  (removing an unrelated section flips it).
+- **Noise ≥ margin, twice over**: (a) ANY byte edit — however inert — shifts every margin by up to
+  ±0.35 nat (one article swap did); (b) the KV-cache state shifts it ±0.2 nat — temp-0 determinism
+  is real but **state-scoped**: same bytes reproduce only under the same cache history, which is why
+  rep-vs-rep is byte-identical while a different run SHAPE (other cases before it) diverges. Judge
+  noise on borderline rubrics stacks on top.
+
+Rules this forces on the loop:
+
+1. **An N=1 full-run A/B cannot evaluate a prose edit on a local tier** — a ±2–3-case delta is
+   noise. (The STOP rule's "prose trades one fail for another" is measured mechanics, not folklore.)
+2. **A case that flips across reps/arms/re-runs is class-8, not a prose bug.** Don't write prose at
+   it blindly — run the fork-pair margin loop, or pin the decision with a deterministic gate
+   (class 2) when it resists widening.
+3. **The fork-pair margin loop** (the instrument that turns prose iteration into process):
+   extract the decision fork from the failing transcript (the exact step context where the wrong
+   tool won) with `scripts/extract-fork.mjs`, build the **mirrored-intent twin** (the context where
+   the OTHER tool is correct — the anti-magnet guard), and measure the top-k logprob margin directly
+   on the engine (a local `llama-server`: `/apply-template` + `/completion` with `n_probs`,
+   speculative decoding off — what `scripts/margin-probe.py` does). Iterate the ONE rule that should
+   own the decision; **accept an edit iff the WORST-CASE margin across a noise battery (inert byte
+   edits + cache states) improves on BOTH forks**; target ≥3× the noise band (≥ ~2 nat). Ownership
+   check: leave-one-out the largest prompt section — the decision must survive on its rule alone.
+   Proven 2026-07-16: 3 iterations, 1 accepted (worst-case 0.32→0.87, zero flips), 2
+   plausible-looking edits REJECTED that a score-based N=1 would have shipped. Reference
+   implementation: `scripts/margin-probe.py` (offline top-k margin probe over the byte-exact prompt
+   render) + `scripts/extract-fork.mjs` (build the fork context from a passing + a failing run).
+4. **When a full run IS needed** (bar checks, certification): fix the cache discipline (always-cold
+   or always-self-primed server), keep the run SHAPE constant (same case-set composition — never
+   compare a full-set run against a subset run), and judge borderline rubrics majority-of-3.
+   Stable fails (0/N on every arm and quant) are NOT this class — they are genuine spec/model gaps;
+   send them through the fail taxonomy (usually class 2/3).
+5. **Per-target instrumentation** — the A3 targets pick the INSTRUMENT, never a fork of the spec
+   (margin-loop outputs are universal rule edits and guards; guards/checks never vary per model):
+
+   | declared target class | iteration instrument | certification |
+   |---|---|---|
+   | local / self-hosted (engine exposes logprobs) | **margin screen post-E2** + fork-pair margin loop for class-8 / near-ties | median of K PERTURBED runs + band (byte-identical reps = ONE sample) |
+   | cloud API (no logprobs) | full-run discipline: N=1 directional per iteration, replication control (lesson #11), majority-of-3 judging on borderline rubrics | classic N=3 |
+   | baseline "+1" (the Claude subagent) | full-run; ALSO supplies the correct trajectories that local fork extraction needs (`extract-fork.mjs` pass-arm) | per its role (quality floor) |
+
+   **Margin screen (post-E2, local targets, minutes):** the world is deterministic and replayable
+   without an LLM, so every case's first-decision context renders offline; one `margin-probe`
+   completion per case flags the coin cases (top-2 gap < ~1 nat) BEFORE any judged run. From-scratch
+   generations therefore need no banked history: evals' invariants + the baseline run supply the
+   correct branches, T-iteration-1 supplies the failing ones.
 
 ## Stage T — screening iterations (N=1)
 
@@ -36,6 +109,7 @@ bucket (writes `eval-results/<date>-<domain>/<agent>.dump.json` + `.autofail.jso
 | 5 | fabrication pattern | claims work not done this turn | anti-fabrication reply-gate (existence-keyed) |
 | 6 | language coin | tone/wording judgment call, trace correct | ACCEPT as residual (language-layer territory) — human gate #2 |
 | 7 | **eval defect** | rubric unsatisfiable on preset / wrong label | fix the EVAL, re-run debate validation on it, log in EVALS.md — never bend the spec |
+| 8 | **near-tie action coin** | same config flips across reps/arms/re-runs; trace-level tool choice changes with no spec change | fork-pair margin loop (§ Near-tie flips above); pin with a gate (class 2) if it resists widening — NEVER blind prose |
 
 4. Re-screen ONLY the failed cases after each fix round (`--cases <failed-ids-csv>`). ≤3
    iterations (the measured convergence bound). Not converged after 3 → STOP, escalate to the user
@@ -49,14 +123,32 @@ Rules:
 - Class-6 residuals are ACCEPTED, not masked with brittle regexes.
 - After any spec edit: `npx looprun-eval lint --spec-laws` must stay clean before re-running.
 
-**STOP RULE (measured 2026-07-03, on the lineage's first generation run — do not skip).** Once the
-aggregate is at/above the bar, STOP. Do not chase individual language-layer cases with more prose.
-Measured evidence: after hitting 91.5% (> the 90% bar, > the gold's 91.2%), two targeted prose
-edits each fixed their target case but REGRESSED two sibling cases apiece (net −2). Prose is
-non-local (the magnet's chronic mild form); past the bar, the marginal case is almost always the
-language layer, and prose tuning there trades one fail for another. Re-measure the FULL affected
-bucket after any prose edit — a per-target re-check hides the sibling regressions. If an edit
-doesn't net-improve the bucket, REVERT it.
+**STOP RULE (revised 2026-07-17 — the bar is a FLOOR, not a finish line).** The bar (≥90% or the
+caller's) is the MINIMUM to ship, not where you stop. Once above the floor, KEEP ITERATING while
+each round NET-improves, up to the 3-iteration cap — BUT past the floor the ONLY admissible fixes
+are **margin-validated prose or deterministic gates**, never blind prose. Concretely, above the
+floor:
+- A marginal fail is almost always the near-tie / language-layer class. Route it (fail class 8):
+  measure the decision margin (fork-pair, per the near-tie section) and accept a prose edit ONLY if
+  the WORST-CASE margin improves on BOTH forks under the noise battery; or pin it with a gate; or
+  declare it a model-tier ceiling. On a STRONG target (cloud tier), a TARGETED emphatic/iron-rule
+  prose edit for the specific case is admissible and transfers cleanly (measured: the iron-rule
+  style cracked exactly the residual language-layer cases on a lite cloud model, +13pt) — but on a
+  LOCAL/weak target the SAME edit must pass the margin filter first or it re-triggers the
+  whack-a-mole.
+- **Re-measure the FULL affected bucket after ANY edit** (a per-target re-check hides sibling
+  regressions). If a round nets ≤0, or any edit regresses a sibling, REVERT that edit.
+- **STOP when:** a full round yields no net gain, OR the 3-iteration cap is hit, OR every remaining
+  fail is a declared ceiling. Never stop merely because you touched the floor.
+
+**Why the old "stop AT the bar" rule was too conservative (measured 2026-07-03 vs 2026-07-17).** The
+2026-07-03 evidence (2 prose edits past 91.5% each regressed 2 siblings, net −2) was real — but the
+cause was *blind* prose, not iterating per se. The margin instrument (the near-tie section) removes
+that noise: past-the-floor fixes that are margin-validated or gated do NOT trade siblings. So the
+discipline flipped from "stop at the bar" to "keep going with the margin filter on." A from-scratch
+skill run reached the floor at iteration 2 and STOPPED under the OLD rule — leaving a handful of
+residual near-tie cases on both the cloud and local tiers on the table that this rule now says to
+pursue via margin/gate.
 
 **Measured fix-effectiveness ranking (same run).** Highest-yield, most durable fixes first:
 1. **Case→agent REMAP** (class 3) — moving a catch-all/triage case to the agent whose tools its job
@@ -105,6 +197,9 @@ loop converges in one iteration instead of chasing them per-domain.
 2. **Negation/failure-aware claim checks.** The same guards must not fire on a truthful negated
    report (`"não gerei"`, "already redeemed", "cannot void a paid invoice"). Key on
    existence/success in `observed`/`world`, and exempt failure-phrasing before the affirmative regex.
+   For `falseFailureClaimRe` specifically, START from the default lexicon template in
+   `guard-catalog.md` (attempt-context failure verbs only; never `cannot/unable/could not
+   process|complete` — measured 2026-07-16, screen-rung wipeout + cloud-matrix delivery-stub).
 3. **Book/act directly — don't ask permission for the primary non-destructive action.** The action
    the user requested (book, generate, record) is the goal; only genuinely destructive tools
    (cancel/pay/delete/submit) get a confirm step. An agent that asks "shall I book?" fails the
@@ -154,6 +249,7 @@ loop converges in one iteration instead of chasing them per-domain.
 ## Cost guard
 
 Screening is per-bucket N=1; never run full-set N=3 until every bucket screens ≥ the bar − ~5pt.
-The loop runs cloud-only (flash-lite). A local smoke run
-(`npx looprun-eval run --model qwen3.5-4b`) comes only AFTER certification — never inside the
-loop, and never as the ruler.
+Full runs go to the A3-declared targets (cloud + local) per the deployment-targets section; for
+LOCAL tiers, prose iteration on flippy cases uses the fork-pair margin probe (near-tie section) —
+a margin measurement costs ~1 min and zero judge calls vs a full run + judge round. The judged
+ruler is ALWAYS the Claude judge; a local model is a measured TARGET, never the ruler.

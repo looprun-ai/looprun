@@ -17,6 +17,7 @@ summary: One line.
 isolated: 125/125
 collective: 34/34
 coverage: 27/27
+certified_models: n/a
 slm_canary: n/a
 verdict: PASS
 suite_cmd: pnpm proofs:run
@@ -33,6 +34,7 @@ suite_cmd: pnpm proofs:run
 | `isolated` | `pass/total` across L1 + L3 lanes |
 | `collective` | `pass/total` across the collective non-interference lane |
 | `coverage` | `covered/kinds` — guard kinds whose completeness describe fully passed |
+| `certified_models` | the per-model certification data for the artifact this change ships: `;`-joined `model:score×reps` entries (e.g. `flash-lite:61/61×3; local-35b:57/61×1+band`), or `n/a` when the change ships no certified bundle (most runtime/guard/skill changes). Always emitted by `--certified`; defaults to `n/a`. Legacy records without the key render `n/a` in the matrix |
 | `slm_canary` | `n/a` or `n/n` from the report-only SLM lane (advisory, never a gate) |
 | `verdict` | `PASS` iff every proof passed; otherwise `FAIL` |
 | `suite_cmd` | the command that produced the tallies (`pnpm proofs:run`) |
@@ -52,6 +54,7 @@ summary: argFormat rejects malformed @handles before schedulePost runs
 isolated: 128/128
 collective: 35/35
 coverage: 27/27
+certified_models: n/a
 slm_canary: 3/3
 verdict: PASS
 suite_cmd: pnpm proofs:run
@@ -93,5 +96,8 @@ Generate a real one with:
 pnpm proofs:run
 pnpm proofs:record -- --slug arg-format-handle-shape \
   --change "argFormat rejects malformed @handles before schedulePost runs" \
-  --scope guard:argFormat --slm "3/3"
+  --scope guard:argFormat --slm "3/3" --certified "flash-lite:61/61×3; local-35b:57/61×1+band"
 ```
+
+`--certified` is optional (defaults to `n/a`); pass it only for a change that ships or re-certifies a
+measured deployment bundle. Skill/docs/runtime changes that touch no certified artifact leave it `n/a`.

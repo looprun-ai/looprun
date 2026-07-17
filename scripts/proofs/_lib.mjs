@@ -95,8 +95,8 @@ const MATRIX_HEADER =
   'Regenerate with `pnpm proofs:matrix`; CI runs `--check` to keep it in sync.\n\n';
 
 const TABLE_HEAD =
-  '| Date | Record | Change | Scope | Isolated | Collective | Coverage | SLM canary | Verdict |\n' +
-  '|---|---|---|---|---|---|---|---|---|\n';
+  '| Date | Record | Change | Scope | Isolated | Collective | Coverage | Certified models | SLM canary | Verdict |\n' +
+  '|---|---|---|---|---|---|---|---|---|---|\n';
 
 /** Render the full MATRIX.md content deterministically from a record list. */
 export function renderMatrix(records) {
@@ -110,7 +110,7 @@ export function renderMatrix(records) {
     out +=
       `| ${cell(d.date)} | ${rec} | ${cell(d.summary)} | ${cell(scopeLabel(d))} | ` +
       `${cell(d.isolated)} | ${cell(d.collective)} | ${cell(d.coverage)} | ` +
-      `${cell(d.slm_canary)} | ${cell(d.verdict)} |\n`;
+      `${cell(d.certified_models ?? 'n/a')} | ${cell(d.slm_canary)} | ${cell(d.verdict)} |\n`;
   }
   return out;
 }

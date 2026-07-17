@@ -78,6 +78,10 @@ const isolated = `${t.isolated.pass}/${t.isolated.total}`;
 const collective = `${t.collective.pass}/${t.collective.total}`;
 const coverage = `${s.coverage.covered}/${s.coverage.kinds}`;
 const slm = o.slm || canaryPrefill() || 'n/a';
+// Per-artifact certification data: `model:score×reps` entries, `;`-joined
+// (e.g. "flash-lite:61/61×3; local-35b:57/61×1+band"). `n/a` for a change with no measured
+// deployment target (a runtime/guard/skill change that ships no certified bundle).
+const certified = o.certified || 'n/a';
 const date = o.date || today();
 
 const file = join(PROOFS, `${date}-${o.slug}.md`);
@@ -97,6 +101,7 @@ summary: ${o.change}
 isolated: ${isolated}
 collective: ${collective}
 coverage: ${coverage}
+certified_models: ${certified}
 slm_canary: ${slm}
 verdict: ${verdict}
 suite_cmd: pnpm proofs:run

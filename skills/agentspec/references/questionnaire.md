@@ -21,6 +21,22 @@ purpose in their opening message, do NOT re-ask — record it and move on.
 |---|---|---|
 | A1 — tool surface | "Send the `tools.json` / tools directory / MCP endpoint (a path, or paste it here) — or reply **'none'**." | 'none' ⇒ run **G1 tool genesis** (`references/tool-genesis.md`) |
 | A2 — docs + persona/policy | "Send product/policy/persona docs (paths or paste) — or **describe the tone and the key rules in a few words** — or reply **'default'**." | 'default' ⇒ derive persona register, locale and invariants from the purpose sentence + G1 output; log the derivations |
+| A3 — deployment models (MULTI-select) | "Which models will this agent RUN on in production? **[1]** none specific / not sure · **[2]** a cloud model (needs its API key) · **[3]** a local model (needs the local server up) · **[4]** other — type the id/endpoint. Multiple selections welcome." | '[1]'/skip ⇒ targets = ∅; the T-loop still measures the **always-on BASELINE** (below) |
+
+**A3 semantics (measured 2026-07-16 — the subject model steers agent quality BOTH ways: the same
+bundle scored 100% on the declared tier and 82% on the undeclared one):**
+- **Baseline (+1, always measured):** besides the selected targets, the T-loop ALWAYS measures the
+  model running the skill (a Claude subagent playing the generated agent against the world — zero
+  external dependency). Every generation ships with at least one measured number; the baseline also
+  owns the **default profile**.
+- **Default profile = the certified natural-prose render** (default lexicon/sampling) — an
+  UNDECLARED model that shows up later runs with it (guards work day-0 on any model; quality is
+  certified only for measured targets). Telegraphic/compact restyles are an opt-in end-of-loop
+  experiment per target, never the default (measured 2026-07-16: net-negative on the local tier).
+- **Onboarding a model later**: run the existing eval N=1 with the default profile → bar passed ⇒
+  certify N=3; failed ⇒ ONE T-round calibrating a profile (FORM/lexicon only — the spec does not
+  regenerate). Certification is bound to the ARTIFACT hash: any spec change after certification
+  invalidates every model's seal and requires re-certifying.
 
 Rules for any ask you are tempted to add: it must be answerable with a **path, a paste, ≤10 words,
 or a skip word**. If answering would require the user to reason about decomposition, guards, flows,

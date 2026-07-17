@@ -100,7 +100,7 @@ runtime carries no linguistic pattern of its own (the P8a lexicon doctrine below
 | `degenerationGuard({selfNarrationRe?})` | behavior | **minimal** | output-channel degeneration lint (first in the onReply tail). Built-in always-on: leaked think/tool-call/template markup + run-away line repetition (>=3x). The third-person self-narration branch is OPT-IN — fires only when `selfNarrationRe` is injected (from `cfg.lexicon.selfNarrationRe`); absent ⇒ OFF. Routes into the redrive battery; zero firings on clean subjects |
 | `emptyReply()` | behavior | **minimal** | a terminal reply may not be empty/whitespace |
 | `noFabricatedSuccess(tool, { reason, claimRe?, labelRe?, verbClaimRe?, banRe?, refExists? })` | behavior | agent | reply may not claim `tool` succeeded unless it ran+succeeded this turn. Three injected seams: invented LABELS (`labelRe` + `refExists(world,label)` existence predicate — attempt-independent); claim LANGUAGE (`claimRe`/`verbClaimRe` — attempt-keyed); and `banRe`, an UNCONDITIONAL ban phrase (absorbs the former `replyNoProductionClaim` kind). All **business-owned** (from the domain lexicon); `refExists` reads the domain world's accessors |
-| `noFalseFailureClaim({ claimRe })` | behavior | **minimal\*** | reply may not claim inability when every tool this turn succeeded. **minimal\*** = auto-installed as `minimal:noFalseFailureClaim` when the bundle passes `cfg.lexicon.falseFailureClaimRe`; a spec may still add a tighter agent-layer instance |
+| `noFalseFailureClaim({ claimRe })` | behavior | **minimal\*** | reply may not claim inability when every tool this turn succeeded. **minimal\*** = auto-installed as `minimal:noFalseFailureClaim` when the bundle passes `cfg.lexicon.falseFailureClaimRe`; a spec may still add a tighter agent-layer instance. **Start from the default lexicon template (P8a section below) — a broad `cannot/unable` regex destroys honest policy refusals (measured 2026-07-16)** |
 | `destructiveClaimRequiresSuccess(destructiveTools, { claimRe, askRe, offerRe, exemptRe? })` | behavior | agent | **attempt-keyed**: fires only when a listed destructive tool was ATTEMPTED this turn (executed or vetoed) — with no attempt a destructive verb is read-backed STATUS talk, left alone. Given an attempt, the reply may not DECLARE the action happened unless a confirmed call succeeded — sentence-scoped, offer-aware; exempts confirm-probes (`askRe`) and honest failures (`exemptRe`) |
 | `pendingConfirmMustAsk({ askRe, confirmArg? })` | behavior | agent | if a tool returned `requiresConfirmation` this turn, the reply MUST relay the confirmation question — UNLESS the probe was RESOLVED this turn (same tool ran OK with the confirm flag `confirmArg` (default `confirmed`) set on the SAME record) |
 | `replyMustMention(keywords, reason)` | behavior | agent | reply must mention ≥1 keyword (coverage) |
@@ -144,8 +144,24 @@ kinds. A single-file lexicon typically exports:
 ```ts
 export const CONFIRM_ASK_RE = /\?|\b(confirm|are you sure|do you want|shall i|proceed|go ahead)\b/i;
 export const OFFER_OR_CONDITIONAL_RE = /\b(if you(?:'d| would)? (?:want|like)|would you like me to|i can|shall i|let me know)\b/i;
-export const FALSE_FAILURE_CLAIM_RE = /(cannot|can'?t|could ?not|unable to|failed)[^.!?\n]{0,40}(updat|sav|creat|schedul|book|cancel|send|record)/i;
+// attempt-context failure verbs ONLY — see the default template rule below this block
+export const FALSE_FAILURE_CLAIM_RE =
+  /\b(failed to|error(?:ed)? (?:out|occurred)|ran into (?:an )?error|something went wrong|tried (?:to|but) [^.!?\n]{0,32}(?:failed|didn'?t work))\b/i;
 ```
+
+> **Default template rule for `falseFailureClaimRe` (measured 2026-07-16 — a screen-rung wipeout
+> on an equipment-rental subject, then reproduced as "delivery-stub" fails across a cloud-model
+> matrix):** `claimRe` must match ATTEMPTED-WORK-FAILURE phrasing only — never generic
+> inability/refusal words. A policy REFUSAL after successful reads ("cannot release — open claim",
+> "could not process the release — open claim") is HONEST and must not match; the guard fires on
+> all-calls-succeeded turns, which is exactly the refusal shape, and the redrive exhausts into the
+> fallback stub, destroying the delivered reply.
+> ```ts
+> // DON'T: /cannot|can'?t|unable to|not possible/  (policy refusals)
+> // DON'T: /could not (process|complete)/          (refusal phrasing too — measured on cloud models)
+> ```
+> Five independent drafters wrote the broad DON'T regex unprompted — treat the DO template above as
+> the drafting starting point, then narrow further per domain if measured.
 
 wired as:
 
@@ -257,7 +273,9 @@ distillation:
    the arbiter, not the owner's stated ideal. Keep an end-to-end flow's tools in ONE agent so a gate
    isn't split across agents.
 
-6. **STOP at the bar.** Guards are deterministic and composable; prose is non-local. Once the judged
-   aggregate clears the bar, stop adding reply prose — past the bar the marginal case is almost always
-   language-layer, and tuning it trades one fail for a sibling (measured net-negative). Re-measure the
-   FULL bucket after any reply-prose edit; revert if it doesn't net-improve.
+6. **The bar is a FLOOR, not a finish line.** Guards are deterministic and composable; prose is
+   non-local. Clearing the judged aggregate bar is the MINIMUM to ship, not where you stop — keep
+   iterating while each round net-improves, up to the 3-iteration cap. PAST the floor the ONLY
+   admissible fixes are **margin-validated prose or deterministic gates**, never blind prose (a blind
+   past-floor edit trades one fail for a sibling — measured net-negative). Re-measure the FULL bucket
+   after ANY edit and REVERT on any sibling regression. See the revised STOP RULE in `measured-loop.md`.
