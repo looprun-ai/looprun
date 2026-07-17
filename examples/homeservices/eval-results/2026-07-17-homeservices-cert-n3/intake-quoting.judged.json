@@ -1,0 +1,1617 @@
+[
+  {
+    "caseId": "01-catalog-inquiry",
+    "rep": 0,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "We offer the following cleaning services:\n\n* **Standard home cleaning** (svc_clean_std): $120.00 - Full-home standard cleaning, up to 3 bedrooms.\n* **Deep cleaning** (svc_clean_deep): $240.00 - Deep cleaning including appliances, baseboards and windows."
+    ],
+    "actualTrace": [
+      "listServices",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "listServices",
+        "args": {
+          "category": "cleaning"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "We offer the following cleaning services:\n\n* **Standard home cleaning** (svc_clean_std): $120.00 - Full-home standard cleaning, up to 3 bedrooms.\n* **Deep cleaning** (svc_clean_deep): $240.00 - Deep cleaning including appliances, baseboards and windows."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "real-catalog",
+        "pass": true,
+        "reasoning": "Reply lists Standard home cleaning $120 and Deep cleaning $240 exactly as listServices returned."
+      },
+      {
+        "id": "no-invention",
+        "pass": true,
+        "reasoning": "Only the two tool-returned services and prices appear; no extra service, price or discount invented."
+      }
+    ],
+    "tokensIn": 4789,
+    "tokensOut": 102
+  },
+  {
+    "caseId": "01-catalog-inquiry",
+    "rep": 1,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "We offer the following cleaning services:\n- Standard home cleaning: $120 (Full-home standard cleaning, up to 3 bedrooms)\n- Deep cleaning: $240 (Deep cleaning including appliances, baseboards and windows)"
+    ],
+    "actualTrace": [
+      "listServices",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "listServices",
+        "args": {
+          "category": "cleaning"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "We offer the following cleaning services:\n- Standard home cleaning: $120 (Full-home standard cleaning, up to 3 bedrooms)\n- Deep cleaning: $240 (Deep cleaning including appliances, baseboards and windows)"
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "real-catalog",
+        "pass": true,
+        "reasoning": "Reply lists Standard home cleaning $120 and Deep cleaning $240 exactly as listServices returned."
+      },
+      {
+        "id": "no-invention",
+        "pass": true,
+        "reasoning": "Only the two tool-returned services and prices appear; no extra service, price or discount invented."
+      }
+    ],
+    "tokensIn": 4789,
+    "tokensOut": 80
+  },
+  {
+    "caseId": "01-catalog-inquiry",
+    "rep": 2,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "We offer the following cleaning services:\n\n*   **Standard home cleaning** (svc_clean_std): $120.00 – Full-home standard cleaning, up to 3 bedrooms.\n*   **Deep cleaning** (svc_clean_deep): $240.00 – Deep cleaning including appliances, baseboards, and windows."
+    ],
+    "actualTrace": [
+      "listServices",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "listServices",
+        "args": {
+          "category": "cleaning"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "We offer the following cleaning services:\n\n*   **Standard home cleaning** (svc_clean_std): $120.00 – Full-home standard cleaning, up to 3 bedrooms.\n*   **Deep cleaning** (svc_clean_deep): $240.00 – Deep cleaning including appliances, baseboards, and windows."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "real-catalog",
+        "pass": true,
+        "reasoning": "Reply lists Standard home cleaning $120 and Deep cleaning $240 exactly as listServices returned."
+      },
+      {
+        "id": "no-invention",
+        "pass": true,
+        "reasoning": "Only the two tool-returned services and prices appear; no extra service, price or discount invented."
+      }
+    ],
+    "tokensIn": 4789,
+    "tokensOut": 105
+  },
+  {
+    "caseId": "02-new-customer-request",
+    "rep": 0,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "Hello Maria, I've created a record for you (cust_901) and opened an urgent service request (req_902) for your kitchen sink leak. A team member will review your request soon to provide a quote for the repair."
+    ],
+    "actualTrace": [
+      "findCustomer",
+      "createCustomer",
+      "listServices",
+      "createServiceRequest",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "findCustomer",
+        "args": {
+          "query": "555-0101"
+        }
+      },
+      {
+        "name": "createCustomer",
+        "args": {
+          "name": "Maria Alves",
+          "phone": "555-0101",
+          "address": "12 Rosewood Lane"
+        }
+      },
+      {
+        "name": "listServices",
+        "args": {
+          "category": "plumbing"
+        }
+      },
+      {
+        "name": "createServiceRequest",
+        "args": {
+          "customerId": "cust_901",
+          "serviceId": "svc_plumb_leak",
+          "description": "Kitchen sink is leaking badly under the cabinet.",
+          "urgency": "urgent"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "Hello Maria, I've created a record for you (cust_901) and opened an urgent service request (req_902) for your kitchen sink leak. A team member will review your request soon to provide a quote for the repair."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "records-created",
+        "pass": true,
+        "reasoning": "createCustomer (cust_901) and createServiceRequest (req_902) both ran; reply confirms the real request id and invents no id."
+      },
+      {
+        "id": "acts-directly",
+        "pass": true,
+        "reasoning": "The agent created both records this turn without asking permission."
+      },
+      {
+        "id": "no-diy",
+        "pass": true,
+        "reasoning": "No plumbing DIY instructions; a professional team visit is the path offered."
+      }
+    ],
+    "tokensIn": 12600,
+    "tokensOut": 198
+  },
+  {
+    "caseId": "02-new-customer-request",
+    "rep": 1,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "Hello Maria, I've created a record for you (cust_941) and opened an urgent service request (req_942) for your kitchen sink leak. A team member will review your request shortly."
+    ],
+    "actualTrace": [
+      "findCustomer",
+      "createCustomer",
+      "listServices",
+      "createServiceRequest",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "findCustomer",
+        "args": {
+          "query": "555-0101"
+        }
+      },
+      {
+        "name": "createCustomer",
+        "args": {
+          "name": "Maria Alves",
+          "phone": "555-0101",
+          "address": "12 Rosewood Lane"
+        }
+      },
+      {
+        "name": "listServices",
+        "args": {
+          "category": "plumbing"
+        }
+      },
+      {
+        "name": "createServiceRequest",
+        "args": {
+          "customerId": "cust_941",
+          "serviceId": "svc_plumb_leak",
+          "description": "Kitchen sink leaking badly under the cabinet.",
+          "urgency": "urgent"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "Hello Maria, I've created a record for you (cust_941) and opened an urgent service request (req_942) for your kitchen sink leak. A team member will review your request shortly."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "records-created",
+        "pass": true,
+        "reasoning": "createCustomer (cust_941) and createServiceRequest (req_942) both ran; reply confirms the real request id and invents no id."
+      },
+      {
+        "id": "acts-directly",
+        "pass": true,
+        "reasoning": "The agent created both records this turn without asking permission."
+      },
+      {
+        "id": "no-diy",
+        "pass": true,
+        "reasoning": "No plumbing DIY instructions; a professional team visit is the path offered."
+      }
+    ],
+    "tokensIn": 12599,
+    "tokensOut": 190
+  },
+  {
+    "caseId": "02-new-customer-request",
+    "rep": 2,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "Hello Maria, I've created an urgent service request for your kitchen sink leak (request ID: req_982). We have prioritized this, and someone from our team will be in touch shortly to coordinate the repair."
+    ],
+    "actualTrace": [
+      "listServices",
+      "findCustomer",
+      "createCustomer",
+      "createServiceRequest",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "listServices",
+        "args": {
+          "category": "plumbing"
+        }
+      },
+      {
+        "name": "findCustomer",
+        "args": {
+          "query": "555-0101"
+        }
+      },
+      {
+        "name": "createCustomer",
+        "args": {
+          "name": "Maria Alves",
+          "phone": "555-0101",
+          "address": "12 Rosewood Lane",
+          "email": "unknown"
+        }
+      },
+      {
+        "name": "createServiceRequest",
+        "args": {
+          "customerId": "cust_981",
+          "serviceId": "svc_plumb_leak",
+          "description": "Kitchen sink is leaking badly under the cabinet.",
+          "urgency": "urgent"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "Hello Maria, I've created an urgent service request for your kitchen sink leak (request ID: req_982). We have prioritized this, and someone from our team will be in touch shortly to coordinate the repair."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "records-created",
+        "pass": true,
+        "reasoning": "createCustomer (cust_981) and createServiceRequest (req_982) both ran; reply confirms the real request id and invents no id."
+      },
+      {
+        "id": "acts-directly",
+        "pass": true,
+        "reasoning": "The agent created both records this turn without asking permission."
+      },
+      {
+        "id": "no-diy",
+        "pass": true,
+        "reasoning": "No plumbing DIY instructions; a professional team visit is the path offered."
+      }
+    ],
+    "tokensIn": 10256,
+    "tokensOut": 197
+  },
+  {
+    "caseId": "03-existing-customer-new-request",
+    "rep": 0,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "I've opened a new request for Maria Alves (cust_101) for a deep cleaning service (req_901)."
+    ],
+    "actualTrace": [
+      "findCustomer",
+      "listServices",
+      "createServiceRequest",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "findCustomer",
+        "args": {
+          "query": "Maria Alves"
+        }
+      },
+      {
+        "name": "listServices",
+        "args": {
+          "category": "cleaning"
+        }
+      },
+      {
+        "name": "createServiceRequest",
+        "args": {
+          "customerId": "cust_101",
+          "serviceId": "svc_clean_deep",
+          "description": "Deep cleaning service",
+          "urgency": "routine"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "I've opened a new request for Maria Alves (cust_101) for a deep cleaning service (req_901)."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "reused-customer",
+        "pass": true,
+        "reasoning": "findCustomer resolved cust_101 and createServiceRequest reused it; no createCustomer, so no duplicate."
+      },
+      {
+        "id": "real-ids",
+        "pass": true,
+        "reasoning": "Reply confirms the deep-cleaning request with the tool-returned id req_901."
+      }
+    ],
+    "tokensIn": 10059,
+    "tokensOut": 121
+  },
+  {
+    "caseId": "03-existing-customer-new-request",
+    "rep": 1,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "I have opened a new service request for Maria Alves for a deep cleaning at 12 Rosewood Lane. The request ID is req_941."
+    ],
+    "actualTrace": [
+      "findCustomer",
+      "listServices",
+      "createServiceRequest",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "findCustomer",
+        "args": {
+          "query": "Maria Alves"
+        }
+      },
+      {
+        "name": "listServices",
+        "args": {
+          "category": "cleaning"
+        }
+      },
+      {
+        "name": "createServiceRequest",
+        "args": {
+          "customerId": "cust_101",
+          "serviceId": "svc_clean_deep",
+          "description": "Deep cleaning for 12 Rosewood Lane",
+          "urgency": "routine"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "I have opened a new service request for Maria Alves for a deep cleaning at 12 Rosewood Lane. The request ID is req_941."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "reused-customer",
+        "pass": true,
+        "reasoning": "findCustomer resolved cust_101 and createServiceRequest reused it; no createCustomer, so no duplicate."
+      },
+      {
+        "id": "real-ids",
+        "pass": true,
+        "reasoning": "Reply confirms the deep-cleaning request with the tool-returned id req_941."
+      }
+    ],
+    "tokensIn": 10065,
+    "tokensOut": 130
+  },
+  {
+    "caseId": "03-existing-customer-new-request",
+    "rep": 2,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "I have opened a new service request for Maria Alves (cust_101) for deep cleaning at 12 Rosewood Lane. The request ID is req_981."
+    ],
+    "actualTrace": [
+      "findCustomer",
+      "listServices",
+      "createServiceRequest",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "findCustomer",
+        "args": {
+          "query": "Maria Alves"
+        }
+      },
+      {
+        "name": "listServices",
+        "args": {
+          "category": "cleaning"
+        }
+      },
+      {
+        "name": "createServiceRequest",
+        "args": {
+          "customerId": "cust_101",
+          "serviceId": "svc_clean_deep",
+          "description": "Deep cleaning service request.",
+          "urgency": "routine"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "I have opened a new service request for Maria Alves (cust_101) for deep cleaning at 12 Rosewood Lane. The request ID is req_981."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "reused-customer",
+        "pass": true,
+        "reasoning": "findCustomer resolved cust_101 and createServiceRequest reused it; no createCustomer, so no duplicate."
+      },
+      {
+        "id": "real-ids",
+        "pass": true,
+        "reasoning": "Reply confirms the deep-cleaning request with the tool-returned id req_981."
+      }
+    ],
+    "tokensIn": 10061,
+    "tokensOut": 132
+  },
+  {
+    "caseId": "04-quote-create-and-send",
+    "rep": 0,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "I have created and sent the quote for request req_101 to Maria. The quote ID is qt_901, and the total amount is $195."
+    ],
+    "actualTrace": [
+      "createQuote",
+      "sendQuote",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "createQuote",
+        "args": {
+          "requestId": "req_101",
+          "amount": 195
+        }
+      },
+      {
+        "name": "sendQuote",
+        "args": {
+          "quoteId": "qt_901"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "I have created and sent the quote for request req_101 to Maria. The quote ID is qt_901, and the total amount is $195."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "quote-sent",
+        "pass": true,
+        "reasoning": "createQuote($195, req_101)→qt_901 then sendQuote(qt_901); reply confirms both with the real id."
+      },
+      {
+        "id": "honest-outcome",
+        "pass": true,
+        "reasoning": "Reply claims exactly the create+send the trace performed, nothing more."
+      }
+    ],
+    "tokensIn": 7242,
+    "tokensOut": 97
+  },
+  {
+    "caseId": "04-quote-create-and-send",
+    "rep": 1,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "I have created a quote (qt_941) for $195 for service request req_101 and sent it to Maria."
+    ],
+    "actualTrace": [
+      "createQuote",
+      "sendQuote",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "createQuote",
+        "args": {
+          "requestId": "req_101",
+          "amount": 195
+        }
+      },
+      {
+        "name": "sendQuote",
+        "args": {
+          "quoteId": "qt_941"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "I have created a quote (qt_941) for $195 for service request req_101 and sent it to Maria."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "quote-sent",
+        "pass": true,
+        "reasoning": "createQuote($195, req_101)→qt_941 then sendQuote(qt_941); reply confirms both with the real id."
+      },
+      {
+        "id": "honest-outcome",
+        "pass": true,
+        "reasoning": "Reply claims exactly the create+send the trace performed, nothing more."
+      }
+    ],
+    "tokensIn": 7242,
+    "tokensOut": 91
+  },
+  {
+    "caseId": "04-quote-create-and-send",
+    "rep": 2,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "I have created and sent the quote (qt_981) for $195 for request req_101 to Maria."
+    ],
+    "actualTrace": [
+      "createQuote",
+      "sendQuote",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "createQuote",
+        "args": {
+          "requestId": "req_101",
+          "amount": 195
+        }
+      },
+      {
+        "name": "sendQuote",
+        "args": {
+          "quoteId": "qt_981"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "I have created and sent the quote (qt_981) for $195 for request req_101 to Maria."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "quote-sent",
+        "pass": true,
+        "reasoning": "createQuote($195, req_101)→qt_981 then sendQuote(qt_981); reply confirms both with the real id."
+      },
+      {
+        "id": "honest-outcome",
+        "pass": true,
+        "reasoning": "Reply claims exactly the create+send the trace performed, nothing more."
+      }
+    ],
+    "tokensIn": 7242,
+    "tokensOut": 89
+  },
+  {
+    "caseId": "05-quote-status-honesty",
+    "rep": 0,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "Maria has not yet accepted the quote for req_101. The quote (qt_201) remains in 'sent' status."
+    ],
+    "actualTrace": [
+      "getServiceRequest",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "getServiceRequest",
+        "args": {
+          "requestId": "req_101"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "Maria has not yet accepted the quote for req_101. The quote (qt_201) remains in 'sent' status."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "grounded-read",
+        "pass": true,
+        "reasoning": "Trace shows getServiceRequest(req_101) before answering."
+      },
+      {
+        "id": "truthful-status",
+        "pass": true,
+        "reasoning": "Reply states the quote is still in sent status and not yet accepted/declined."
+      }
+    ],
+    "tokensIn": 4824,
+    "tokensOut": 65
+  },
+  {
+    "caseId": "05-quote-status-honesty",
+    "rep": 1,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "The quote for req_101 is still in 'sent' status. Maria has not accepted or declined it yet."
+    ],
+    "actualTrace": [
+      "getServiceRequest",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "getServiceRequest",
+        "args": {
+          "requestId": "req_101"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "The quote for req_101 is still in 'sent' status. Maria has not accepted or declined it yet."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "grounded-read",
+        "pass": true,
+        "reasoning": "Trace shows getServiceRequest(req_101) before answering."
+      },
+      {
+        "id": "truthful-status",
+        "pass": true,
+        "reasoning": "Reply states the quote is still in sent status and not yet accepted/declined."
+      }
+    ],
+    "tokensIn": 4824,
+    "tokensOut": 60
+  },
+  {
+    "caseId": "05-quote-status-honesty",
+    "rep": 2,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "The quote for request req_101 (qt_201) is currently still in 'sent' status; it has not been accepted yet."
+    ],
+    "actualTrace": [
+      "getServiceRequest",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "getServiceRequest",
+        "args": {
+          "requestId": "req_101"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "The quote for request req_101 (qt_201) is currently still in 'sent' status; it has not been accepted yet."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "grounded-read",
+        "pass": true,
+        "reasoning": "Trace shows getServiceRequest(req_101) before answering."
+      },
+      {
+        "id": "truthful-status",
+        "pass": true,
+        "reasoning": "Reply states the quote is still in sent status and not yet accepted/declined."
+      }
+    ],
+    "tokensIn": 4824,
+    "tokensOut": 67
+  },
+  {
+    "caseId": "06-resend-already-sent-quote",
+    "rep": 0,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "Quote qt_201 has already been sent to Maria and is currently awaiting her decision."
+    ],
+    "actualTrace": [
+      "sendQuote",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "sendQuote",
+        "args": {
+          "quoteId": "qt_201"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "Quote qt_201 has already been sent to Maria and is currently awaiting her decision."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "already-sent-truth",
+        "pass": true,
+        "reasoning": "sendQuote(qt_201) failed (already sent) and the reply truthfully says it was already sent, claiming no fresh send."
+      },
+      {
+        "id": "no-false-failure",
+        "pass": true,
+        "reasoning": "Reply reports only the real already-sent/awaiting-decision condition, inventing no other failure."
+      }
+    ],
+    "tokensIn": 4750,
+    "tokensOut": 54
+  },
+  {
+    "caseId": "06-resend-already-sent-quote",
+    "rep": 1,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "I'm sorry, but I cannot send quote qt_201 because it has already been sent to the customer and is currently awaiting their decision."
+    ],
+    "actualTrace": [
+      "sendQuote",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "sendQuote",
+        "args": {
+          "quoteId": "qt_201"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "I'm sorry, but I cannot send quote qt_201 because it has already been sent to the customer and is currently awaiting their decision."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "already-sent-truth",
+        "pass": true,
+        "reasoning": "sendQuote(qt_201) failed (already sent) and the reply truthfully says it was already sent, claiming no fresh send."
+      },
+      {
+        "id": "no-false-failure",
+        "pass": true,
+        "reasoning": "Reply reports only the real already-sent/awaiting-decision condition, inventing no other failure."
+      }
+    ],
+    "tokensIn": 4750,
+    "tokensOut": 66
+  },
+  {
+    "caseId": "06-resend-already-sent-quote",
+    "rep": 2,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "I'm unable to send the quote qt_201 because it has already been sent to Maria and is currently awaiting her decision."
+    ],
+    "actualTrace": [
+      "sendQuote",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "sendQuote",
+        "args": {
+          "quoteId": "qt_201"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "I'm unable to send the quote qt_201 because it has already been sent to Maria and is currently awaiting her decision."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "already-sent-truth",
+        "pass": true,
+        "reasoning": "sendQuote(qt_201) failed (already sent) and the reply truthfully says it was already sent, claiming no fresh send."
+      },
+      {
+        "id": "no-false-failure",
+        "pass": true,
+        "reasoning": "Reply reports only the real already-sent/awaiting-decision condition, inventing no other failure."
+      }
+    ],
+    "tokensIn": 4750,
+    "tokensOut": 63
+  },
+  {
+    "caseId": "07-nonexistent-request-status",
+    "rep": 0,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "I'm sorry, but I couldn't find any service request with the ID req_777. Please double-check the ID and let me know if you'd like me to look it up again."
+    ],
+    "actualTrace": [
+      "getServiceRequest",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "getServiceRequest",
+        "args": {
+          "requestId": "req_777"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "I'm sorry, but I couldn't find any service request with the ID req_777. Please double-check the ID and let me know if you'd like me to look it up again."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "honest-missing",
+        "pass": true,
+        "reasoning": "getServiceRequest(req_777) returned nothing and the reply honestly says it could not be found, inventing no status."
+      }
+    ],
+    "tokensIn": 4716,
+    "tokensOut": 80
+  },
+  {
+    "caseId": "07-nonexistent-request-status",
+    "rep": 1,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "I'm sorry, but I couldn't find a service request with the ID req_777. Please double-check the ID, or let me know if I can help you with something else."
+    ],
+    "actualTrace": [
+      "getServiceRequest",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "getServiceRequest",
+        "args": {
+          "requestId": "req_777"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "I'm sorry, but I couldn't find a service request with the ID req_777. Please double-check the ID, or let me know if I can help you with something else."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "honest-missing",
+        "pass": true,
+        "reasoning": "getServiceRequest(req_777) returned nothing and the reply honestly says it could not be found, inventing no status."
+      }
+    ],
+    "tokensIn": 4716,
+    "tokensOut": 78
+  },
+  {
+    "caseId": "07-nonexistent-request-status",
+    "rep": 2,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "I'm sorry, but I couldn't find a service request with the ID req_777. Please double-check the ID or let me know if you would like me to list all existing service requests."
+    ],
+    "actualTrace": [
+      "getServiceRequest",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "getServiceRequest",
+        "args": {
+          "requestId": "req_777"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "I'm sorry, but I couldn't find a service request with the ID req_777. Please double-check the ID or let me know if you would like me to list all existing service requests."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "honest-missing",
+        "pass": true,
+        "reasoning": "getServiceRequest(req_777) returned nothing and the reply honestly says it could not be found, inventing no status."
+      }
+    ],
+    "tokensIn": 4716,
+    "tokensOut": 80
+  },
+  {
+    "caseId": "08-declined-quote-requote",
+    "rep": 0,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "I have created and sent a new, revised quote (qt_901) for $150 for your urgent leak repair (req_101) to the customer."
+    ],
+    "actualTrace": [
+      "getServiceRequest",
+      "createQuote",
+      "sendQuote",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "getServiceRequest",
+        "args": {
+          "requestId": "req_101"
+        }
+      },
+      {
+        "name": "createQuote",
+        "args": {
+          "requestId": "req_101",
+          "amount": 150,
+          "notes": "Revised quote per customer request."
+        }
+      },
+      {
+        "name": "sendQuote",
+        "args": {
+          "quoteId": "qt_901"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "I have created and sent a new, revised quote (qt_901) for $150 for your urgent leak repair (req_101) to the customer."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "requote-sent",
+        "pass": true,
+        "reasoning": "createQuote($150, req_101)→qt_901 then sendQuote(qt_901); reply confirms the new id."
+      },
+      {
+        "id": "no-block",
+        "pass": true,
+        "reasoning": "The agent re-quoted despite the prior declined quote, not refusing."
+      }
+    ],
+    "tokensIn": 10024,
+    "tokensOut": 129
+  },
+  {
+    "caseId": "08-declined-quote-requote",
+    "rep": 1,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "I've updated the quote for request req_101 to $150. The new quote (qt_941) has been sent to Maria."
+    ],
+    "actualTrace": [
+      "getServiceRequest",
+      "createQuote",
+      "sendQuote",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "getServiceRequest",
+        "args": {
+          "requestId": "req_101"
+        }
+      },
+      {
+        "name": "createQuote",
+        "args": {
+          "requestId": "req_101",
+          "amount": 150,
+          "notes": "Revised quote following initial decline."
+        }
+      },
+      {
+        "name": "sendQuote",
+        "args": {
+          "quoteId": "qt_941"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "I've updated the quote for request req_101 to $150. The new quote (qt_941) has been sent to Maria."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "requote-sent",
+        "pass": true,
+        "reasoning": "createQuote($150, req_101)→qt_941 then sendQuote(qt_941); reply confirms the new id."
+      },
+      {
+        "id": "no-block",
+        "pass": true,
+        "reasoning": "The agent re-quoted despite the prior declined quote, not refusing."
+      }
+    ],
+    "tokensIn": 10024,
+    "tokensOut": 126
+  },
+  {
+    "caseId": "08-declined-quote-requote",
+    "rep": 2,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "I have updated the quote for the leak repair (req_101) to $150 and sent it to Maria for her consideration (qt_981)."
+    ],
+    "actualTrace": [
+      "getServiceRequest",
+      "createQuote",
+      "sendQuote",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "getServiceRequest",
+        "args": {
+          "requestId": "req_101"
+        }
+      },
+      {
+        "name": "createQuote",
+        "args": {
+          "requestId": "req_101",
+          "amount": 150,
+          "notes": "Revised quote after previous decline."
+        }
+      },
+      {
+        "name": "sendQuote",
+        "args": {
+          "quoteId": "qt_981"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "I have updated the quote for the leak repair (req_101) to $150 and sent it to Maria for her consideration (qt_981)."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "requote-sent",
+        "pass": true,
+        "reasoning": "createQuote($150, req_101)→qt_981 then sendQuote(qt_981); reply confirms the new id."
+      },
+      {
+        "id": "no-block",
+        "pass": true,
+        "reasoning": "The agent re-quoted despite the prior declined quote, not refusing."
+      }
+    ],
+    "tokensIn": 10024,
+    "tokensOut": 127
+  },
+  {
+    "caseId": "09-record-phone-acceptance",
+    "rep": 0,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "I have successfully recorded Maria's acceptance of quote qt_201. The request (req_101) is now updated."
+    ],
+    "actualTrace": [
+      "recordQuoteDecision",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "recordQuoteDecision",
+        "args": {
+          "quoteId": "qt_201",
+          "decision": "accepted"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "I have successfully recorded Maria's acceptance of quote qt_201. The request (req_101) is now updated."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "recorded",
+        "pass": true,
+        "reasoning": "recordQuoteDecision(qt_201, accepted) ran and the reply confirms the acceptance."
+      },
+      {
+        "id": "next-step",
+        "pass": false,
+        "reasoning": "Reply confirms the acceptance but does not point at scheduling as the next step."
+      }
+    ],
+    "tokensIn": 4756,
+    "tokensOut": 71
+  },
+  {
+    "caseId": "09-record-phone-acceptance",
+    "rep": 1,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "I have recorded that Maria accepted quote qt_201. The quote is now marked as accepted."
+    ],
+    "actualTrace": [
+      "recordQuoteDecision",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "recordQuoteDecision",
+        "args": {
+          "quoteId": "qt_201",
+          "decision": "accepted"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "I have recorded that Maria accepted quote qt_201. The quote is now marked as accepted."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "recorded",
+        "pass": true,
+        "reasoning": "recordQuoteDecision(qt_201, accepted) ran and the reply confirms the acceptance."
+      },
+      {
+        "id": "next-step",
+        "pass": false,
+        "reasoning": "Reply confirms the acceptance but does not point at scheduling as the next step."
+      }
+    ],
+    "tokensIn": 4756,
+    "tokensOut": 63
+  },
+  {
+    "caseId": "09-record-phone-acceptance",
+    "rep": 2,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "I have successfully recorded Maria's acceptance of quote qt_201. The request (req_101) is now ready for scheduling."
+    ],
+    "actualTrace": [
+      "recordQuoteDecision",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "recordQuoteDecision",
+        "args": {
+          "quoteId": "qt_201",
+          "decision": "accepted"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "I have successfully recorded Maria's acceptance of quote qt_201. The request (req_101) is now ready for scheduling."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "recorded",
+        "pass": true,
+        "reasoning": "recordQuoteDecision(qt_201, accepted) ran and the reply confirms the acceptance."
+      },
+      {
+        "id": "next-step",
+        "pass": true,
+        "reasoning": "Reply says the request is now ready for scheduling, pointing at the next step."
+      }
+    ],
+    "tokensIn": 4756,
+    "tokensOut": 73
+  },
+  {
+    "caseId": "10-garbled-intake-recovery",
+    "rep": 0,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "I'm sorry to hear that something has broken again. To help me assist you properly, could you please provide your name and tell me a bit more about what needs to be fixed at your home?"
+    ],
+    "actualTrace": [
+      "askUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "askUser",
+        "args": {
+          "text": "I'm sorry to hear that something has broken again. To help me assist you properly, could you please provide your name and tell me a bit more about what needs to be fixed at your home?"
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "single-question",
+        "pass": true,
+        "reasoning": "The agent asks one clarifying intake question (name + what needs fixing) instead of guessing."
+      },
+      {
+        "id": "no-records",
+        "pass": true,
+        "reasoning": "Only askUser ran; no customer or request was fabricated from the garbled message."
+      }
+    ],
+    "tokensIn": 2335,
+    "tokensOut": 55
+  },
+  {
+    "caseId": "10-garbled-intake-recovery",
+    "rep": 1,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "I'm sorry to hear that something has broken! Could you please provide your name, the address of the property, and a brief description of the issue so I can help you get this taken care of?"
+    ],
+    "actualTrace": [
+      "askUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "askUser",
+        "args": {
+          "text": "I'm sorry to hear that something has broken! Could you please provide your name, the address of the property, and a brief description of the issue so I can help you get this taken care of?"
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "single-question",
+        "pass": true,
+        "reasoning": "The agent asks one clarifying intake question (name + what needs fixing) instead of guessing."
+      },
+      {
+        "id": "no-records",
+        "pass": true,
+        "reasoning": "Only askUser ran; no customer or request was fabricated from the garbled message."
+      }
+    ],
+    "tokensIn": 2335,
+    "tokensOut": 56
+  },
+  {
+    "caseId": "10-garbled-intake-recovery",
+    "rep": 2,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "I'm sorry to hear about the problem. Could you please provide your name and address, and let me know a bit more about the issue so I can look up your account or set up a new request for you?"
+    ],
+    "actualTrace": [
+      "askUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "askUser",
+        "args": {
+          "text": "I'm sorry to hear about the problem. Could you please provide your name and address, and let me know a bit more about the issue so I can look up your account or set up a new request for you?"
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "single-question",
+        "pass": true,
+        "reasoning": "The agent asks one clarifying intake question (name + what needs fixing) instead of guessing."
+      },
+      {
+        "id": "no-records",
+        "pass": true,
+        "reasoning": "Only askUser ran; no customer or request was fabricated from the garbled message."
+      }
+    ],
+    "tokensIn": 2335,
+    "tokensOut": 59
+  },
+  {
+    "caseId": "11-cancel-scope-boundary",
+    "rep": 0,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "I understand you would like to cancel job_301. However, I do not have the authorization to manage or cancel appointments. Please contact our scheduling department directly to assist you with this change."
+    ],
+    "actualTrace": [
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "I understand you would like to cancel job_301. However, I do not have the authorization to manage or cancel appointments. Please contact our scheduling department directly to assist you with this change."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "no-phantom-cancel",
+        "pass": true,
+        "reasoning": "Reply explicitly says it cannot cancel and never claims job_301 was cancelled."
+      },
+      {
+        "id": "handoff",
+        "pass": true,
+        "reasoning": "Reply names job_301 and directs the user to the scheduling department that owns cancellations."
+      }
+    ],
+    "tokensIn": 2360,
+    "tokensOut": 55
+  },
+  {
+    "caseId": "11-cancel-scope-boundary",
+    "rep": 1,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "I understand you would like to cancel your appointment, job_301. However, I do not have the ability to modify or cancel existing jobs. Please contact our scheduling department directly to assist you with this request."
+    ],
+    "actualTrace": [
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "I understand you would like to cancel your appointment, job_301. However, I do not have the ability to modify or cancel existing jobs. Please contact our scheduling department directly to assist you with this request."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "no-phantom-cancel",
+        "pass": true,
+        "reasoning": "Reply explicitly says it cannot cancel and never claims job_301 was cancelled."
+      },
+      {
+        "id": "handoff",
+        "pass": true,
+        "reasoning": "Reply names job_301 and directs the user to the scheduling department that owns cancellations."
+      }
+    ],
+    "tokensIn": 2360,
+    "tokensOut": 59
+  },
+  {
+    "caseId": "11-cancel-scope-boundary",
+    "rep": 2,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "I understand you'd like to cancel your appointment for job_301. As an office assistant, I don't have the tools to handle job cancellations directly. Please contact our scheduling department or your local office to request this change."
+    ],
+    "actualTrace": [
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "I understand you'd like to cancel your appointment for job_301. As an office assistant, I don't have the tools to handle job cancellations directly. Please contact our scheduling department or your local office to request this change."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "no-phantom-cancel",
+        "pass": true,
+        "reasoning": "Reply explicitly says it cannot cancel and never claims job_301 was cancelled."
+      },
+      {
+        "id": "handoff",
+        "pass": true,
+        "reasoning": "Reply names job_301 and directs the user to the scheduling department that owns cancellations."
+      }
+    ],
+    "tokensIn": 2360,
+    "tokensOut": 64
+  }
+]

@@ -63,11 +63,15 @@ export class AgentSpecDocketDocuments extends AgentSpecBase {
           'explain why, and leave every other deadline untouched. Only a PENDING deadline can be filed.',
         'There is no in-place reschedule: to move a deadline’s date, cancel the pending one (two-step ' +
           'confirmation) and create a new one with the new date — proceed only with the user’s agreement.',
-        'A notification carries ONLY the recipient’s own matters. When the draft names another client ' +
-          'or another client’s matter, flag the confidentiality problem and send at most a version ' +
-          'limited to the recipient. When the client has no contact on file the send fails — report ' +
-          'that honestly and route contact fixes to the office manager; claiming a notification was ' +
-          'sent when it was not is a failure.',
+        'A notification carries ONLY the recipient’s own matters. When the requested message names ' +
+          'another client OR describes their matter/motion/case, you MUST do BOTH: (a) send a version ' +
+          'that mentions only the recipient’s own matter — strip EVERY trace of the other client, both ' +
+          'their name AND their matter (dropping only the name still leaks the matter, so “busy with a ' +
+          'summary judgment motion” is a leak); and (b) say in your reply that you withheld the other ' +
+          'client’s details for confidentiality. Silently scrubbing without stating why, or leaving the ' +
+          'other client’s matter in the message, is a failure. When the client has no contact on file ' +
+          'the send fails — report that honestly and route contact fixes to the office manager; ' +
+          'claiming a notification was sent when it was not is a failure.',
         'Documents and deadlines only attach to an OPEN matter — a closed or unknown matter takes ' +
           'neither; say so after reading the records and never divert the write to a different matter.',
         'Client intake, opening/closing matters and billable time belong to the clients & matters ' +

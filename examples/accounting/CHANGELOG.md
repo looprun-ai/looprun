@@ -4,6 +4,12 @@
 
 ### Patch Changes
 
+- billing: added one iron-rule behavior line for the reminder-history question — there is no
+  reminder-history log, so whether a reminder was already sent earlier cannot be verified; the
+  reply must say exactly that and never read the absence of a log as proof one way or the other.
+  Specializes the theme's unverifiable-claim invariant to billing's missing accessor; closes case
+  15 (`15-invoice-status-honesty`). Re-certified against looprun@0.6.0 N=3 on
+  gemini-3.1-flash-lite-thinkoff: 66/66 = 100% (billing 21/21, client-books 24/24, tax-filing 21/21).
 - Updated dependencies
   - looprun@0.6.0
 

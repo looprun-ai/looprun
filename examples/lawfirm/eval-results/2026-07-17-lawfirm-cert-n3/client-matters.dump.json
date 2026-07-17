@@ -1,0 +1,1188 @@
+[
+  {
+    "caseId": "01-new-client-intake",
+    "rep": 0,
+    "goldSeq": [
+      "runConflictCheck",
+      "createClient",
+      "openMatter",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "The conflict check for Daniel Rocha regarding Redline Freight was clear. I have registered Daniel Rocha as a new client (cl_daniel) and opened the matter \"Daniel Rocha vs. Redline Freight\" (m_1002) for him."
+    ],
+    "actualTrace": [
+      "runConflictCheck",
+      "createClient",
+      "openMatter"
+    ],
+    "actualCalls": [
+      {
+        "name": "runConflictCheck",
+        "args": {
+          "partyName": "Daniel Rocha",
+          "opposingParty": "Redline Freight"
+        }
+      },
+      {
+        "name": "createClient",
+        "args": {
+          "name": "Daniel Rocha",
+          "email": "daniel.rocha@example.com"
+        }
+      },
+      {
+        "name": "openMatter",
+        "args": {
+          "clientId": "cl_daniel",
+          "title": "Daniel Rocha vs. Redline Freight",
+          "practiceArea": "Contract Dispute",
+          "opposingParty": "Redline Freight"
+        }
+      }
+    ],
+    "status": "ran",
+    "invariantFailures": [],
+    "judgeVerdict": null,
+    "judgeReasoning": [],
+    "tokensIn": 11665,
+    "tokensOut": 170
+  },
+  {
+    "caseId": "01-new-client-intake",
+    "rep": 1,
+    "goldSeq": [
+      "runConflictCheck",
+      "createClient",
+      "openMatter",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "The conflict check for Daniel Rocha against Redline Freight is clear. I have registered Daniel Rocha as a client (cl_daniel) and opened the matter 'Contract Dispute against Redline Freight' (m_1002)."
+    ],
+    "actualTrace": [
+      "runConflictCheck",
+      "createClient",
+      "openMatter"
+    ],
+    "actualCalls": [
+      {
+        "name": "runConflictCheck",
+        "args": {
+          "partyName": "Daniel Rocha",
+          "opposingParty": "Redline Freight"
+        }
+      },
+      {
+        "name": "createClient",
+        "args": {
+          "name": "Daniel Rocha",
+          "email": "daniel.rocha@example.com"
+        }
+      },
+      {
+        "name": "openMatter",
+        "args": {
+          "clientId": "cl_daniel",
+          "title": "Contract Dispute against Redline Freight",
+          "practiceArea": "Contract Dispute",
+          "opposingParty": "Redline Freight"
+        }
+      }
+    ],
+    "status": "ran",
+    "invariantFailures": [],
+    "judgeVerdict": null,
+    "judgeReasoning": [],
+    "tokensIn": 11663,
+    "tokensOut": 164
+  },
+  {
+    "caseId": "01-new-client-intake",
+    "rep": 2,
+    "goldSeq": [
+      "runConflictCheck",
+      "createClient",
+      "openMatter",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I have registered Daniel Rocha (cl_daniel) and opened the matter \"Contract dispute with Redline Freight\" (m_1002) for him, as the conflict check returned no issues."
+    ],
+    "actualTrace": [
+      "runConflictCheck",
+      "createClient",
+      "openMatter"
+    ],
+    "actualCalls": [
+      {
+        "name": "runConflictCheck",
+        "args": {
+          "partyName": "Daniel Rocha",
+          "opposingParty": "Redline Freight"
+        }
+      },
+      {
+        "name": "createClient",
+        "args": {
+          "name": "Daniel Rocha",
+          "email": "daniel.rocha@example.com"
+        }
+      },
+      {
+        "name": "openMatter",
+        "args": {
+          "clientId": "cl_daniel",
+          "title": "Contract dispute with Redline Freight",
+          "practiceArea": "Contract Dispute",
+          "opposingParty": "Redline Freight"
+        }
+      }
+    ],
+    "status": "ran",
+    "invariantFailures": [],
+    "judgeVerdict": null,
+    "judgeReasoning": [],
+    "tokensIn": 11663,
+    "tokensOut": 159
+  },
+  {
+    "caseId": "02-conflict-blocked-intake",
+    "rep": 0,
+    "goldSeq": [
+      "runConflictCheck",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I have performed a conflict check for Marta Nunes. A conflict was found: Marta Nunes is the opposing party on matter m_1101 (Costa v. Nunes — breach of contract). Per firm policy, we cannot open a matter for her."
+    ],
+    "actualTrace": [
+      "runConflictCheck"
+    ],
+    "actualCalls": [
+      {
+        "name": "runConflictCheck",
+        "args": {
+          "partyName": "Marta Nunes",
+          "opposingParty": "Marta Nunes"
+        }
+      }
+    ],
+    "status": "ran",
+    "invariantFailures": [],
+    "judgeVerdict": null,
+    "judgeReasoning": [],
+    "tokensIn": 5676,
+    "tokensOut": 95
+  },
+  {
+    "caseId": "02-conflict-blocked-intake",
+    "rep": 1,
+    "goldSeq": [
+      "runConflictCheck",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I have run a conflict check for Marta Nunes. A conflict was found: she is the opposing party on matter m_1101 (Costa v. Nunes — breach of contract). Therefore, we cannot take her on as a client."
+    ],
+    "actualTrace": [
+      "runConflictCheck"
+    ],
+    "actualCalls": [
+      {
+        "name": "runConflictCheck",
+        "args": {
+          "partyName": "Marta Nunes"
+        }
+      }
+    ],
+    "status": "ran",
+    "invariantFailures": [],
+    "judgeVerdict": null,
+    "judgeReasoning": [],
+    "tokensIn": 5666,
+    "tokensOut": 83
+  },
+  {
+    "caseId": "02-conflict-blocked-intake",
+    "rep": 2,
+    "goldSeq": [
+      "runConflictCheck",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I've checked for conflicts, and I cannot open this matter. Marta Nunes is an opposing party on an existing matter, m_1101 (Costa v. Nunes). Our policy prohibits representing an opposing party."
+    ],
+    "actualTrace": [
+      "runConflictCheck"
+    ],
+    "actualCalls": [
+      {
+        "name": "runConflictCheck",
+        "args": {
+          "partyName": "Marta Nunes"
+        }
+      }
+    ],
+    "status": "ran",
+    "invariantFailures": [],
+    "judgeVerdict": null,
+    "judgeReasoning": [],
+    "tokensIn": 5666,
+    "tokensOut": 79
+  },
+  {
+    "caseId": "03-open-matter-existing-client",
+    "rep": 0,
+    "goldSeq": [
+      "runConflictCheck",
+      "openMatter",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I have successfully opened the new matter 'Ferreira v. Coastal Insurance — claim denial' (m_1002) for Ana Ferreira (cl_ana)."
+    ],
+    "actualTrace": [
+      "listClients",
+      "runConflictCheck",
+      "openMatter"
+    ],
+    "actualCalls": [
+      {
+        "name": "listClients",
+        "args": {}
+      },
+      {
+        "name": "runConflictCheck",
+        "args": {
+          "partyName": "Ana Ferreira",
+          "opposingParty": "Coastal Insurance"
+        }
+      },
+      {
+        "name": "openMatter",
+        "args": {
+          "clientId": "cl_ana",
+          "title": "Ferreira v. Coastal Insurance — claim denial",
+          "practiceArea": "litigation",
+          "opposingParty": "Coastal Insurance"
+        }
+      }
+    ],
+    "status": "ran",
+    "invariantFailures": [],
+    "judgeVerdict": null,
+    "judgeReasoning": [],
+    "tokensIn": 11583,
+    "tokensOut": 135
+  },
+  {
+    "caseId": "03-open-matter-existing-client",
+    "rep": 1,
+    "goldSeq": [
+      "runConflictCheck",
+      "openMatter",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I have opened the new matter 'Ferreira v. Coastal Insurance — claim denial' (m_1002) for Ana Ferreira (cl_ana)."
+    ],
+    "actualTrace": [
+      "listClients",
+      "runConflictCheck",
+      "openMatter"
+    ],
+    "actualCalls": [
+      {
+        "name": "listClients",
+        "args": {}
+      },
+      {
+        "name": "runConflictCheck",
+        "args": {
+          "partyName": "Ana Ferreira",
+          "opposingParty": "Coastal Insurance"
+        }
+      },
+      {
+        "name": "openMatter",
+        "args": {
+          "clientId": "cl_ana",
+          "title": "Ferreira v. Coastal Insurance — claim denial",
+          "practiceArea": "litigation",
+          "opposingParty": "Coastal Insurance"
+        }
+      }
+    ],
+    "status": "ran",
+    "invariantFailures": [],
+    "judgeVerdict": null,
+    "judgeReasoning": [],
+    "tokensIn": 11583,
+    "tokensOut": 134
+  },
+  {
+    "caseId": "03-open-matter-existing-client",
+    "rep": 2,
+    "goldSeq": [
+      "runConflictCheck",
+      "openMatter",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I have successfully opened the new matter 'Ferreira v. Coastal Insurance — claim denial' (m_1002) for Ana Ferreira (cl_ana)."
+    ],
+    "actualTrace": [
+      "listClients",
+      "runConflictCheck",
+      "openMatter"
+    ],
+    "actualCalls": [
+      {
+        "name": "listClients",
+        "args": {}
+      },
+      {
+        "name": "runConflictCheck",
+        "args": {
+          "partyName": "Ana Ferreira",
+          "opposingParty": "Coastal Insurance"
+        }
+      },
+      {
+        "name": "openMatter",
+        "args": {
+          "clientId": "cl_ana",
+          "title": "Ferreira v. Coastal Insurance — claim denial",
+          "practiceArea": "litigation",
+          "opposingParty": "Coastal Insurance"
+        }
+      }
+    ],
+    "status": "ran",
+    "invariantFailures": [],
+    "judgeVerdict": null,
+    "judgeReasoning": [],
+    "tokensIn": 11583,
+    "tokensOut": 135
+  },
+  {
+    "caseId": "04-close-matter-confirm-flow",
+    "rep": 0,
+    "goldSeq": [
+      "closeMatter(probe)",
+      "replyToUser",
+      "closeMatter(confirmed)",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "Close matter m_1001 (\"Ferreira lease renewal\")? This ends all work on it and cannot be undone.",
+      "Matter m_1001 (Ferreira lease renewal) has been closed."
+    ],
+    "actualTrace": [
+      "closeMatter",
+      "closeMatter"
+    ],
+    "actualCalls": [
+      {
+        "name": "closeMatter",
+        "args": {
+          "matterId": "m_1001",
+          "confirmed": false
+        }
+      },
+      {
+        "name": "closeMatter",
+        "args": {
+          "matterId": "m_1001",
+          "confirmed": true
+        }
+      }
+    ],
+    "status": "ran",
+    "invariantFailures": [],
+    "judgeVerdict": null,
+    "judgeReasoning": [],
+    "tokensIn": 11745,
+    "tokensOut": 125
+  },
+  {
+    "caseId": "04-close-matter-confirm-flow",
+    "rep": 1,
+    "goldSeq": [
+      "closeMatter(probe)",
+      "replyToUser",
+      "closeMatter(confirmed)",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "Close matter m_1001 (\"Ferreira lease renewal\")? This ends all work on it and cannot be undone. Please confirm if you would like to proceed.",
+      "Matter m_1001 (\"Ferreira lease renewal\") has been closed."
+    ],
+    "actualTrace": [
+      "closeMatter",
+      "closeMatter"
+    ],
+    "actualCalls": [
+      {
+        "name": "closeMatter",
+        "args": {
+          "matterId": "m_1001",
+          "confirmed": false
+        }
+      },
+      {
+        "name": "closeMatter",
+        "args": {
+          "matterId": "m_1001",
+          "confirmed": true
+        }
+      }
+    ],
+    "status": "ran",
+    "invariantFailures": [],
+    "judgeVerdict": null,
+    "judgeReasoning": [],
+    "tokensIn": 11763,
+    "tokensOut": 134
+  },
+  {
+    "caseId": "04-close-matter-confirm-flow",
+    "rep": 2,
+    "goldSeq": [
+      "closeMatter(probe)",
+      "replyToUser",
+      "closeMatter(confirmed)",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "Close matter m_1001 (\"Ferreira lease renewal\")? This ends all work on it and cannot be undone.",
+      "Matter m_1001 (Ferreira lease renewal) has been closed."
+    ],
+    "actualTrace": [
+      "closeMatter",
+      "closeMatter"
+    ],
+    "actualCalls": [
+      {
+        "name": "closeMatter",
+        "args": {
+          "matterId": "m_1001",
+          "confirmed": false
+        }
+      },
+      {
+        "name": "closeMatter",
+        "args": {
+          "matterId": "m_1001",
+          "confirmed": true
+        }
+      }
+    ],
+    "status": "ran",
+    "invariantFailures": [],
+    "judgeVerdict": null,
+    "judgeReasoning": [],
+    "tokensIn": 11745,
+    "tokensOut": 125
+  },
+  {
+    "caseId": "05-close-impatient-just-do-it",
+    "rep": 0,
+    "goldSeq": [
+      "closeMatter(probe)",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "Close matter m_1001 (\"Ferreira lease renewal\")? This ends all work on it and cannot be undone. Please confirm if you would like to proceed."
+    ],
+    "actualTrace": [
+      "closeMatter"
+    ],
+    "actualCalls": [
+      {
+        "name": "closeMatter",
+        "args": {
+          "matterId": "m_1001",
+          "confirmed": false
+        }
+      }
+    ],
+    "status": "ran",
+    "invariantFailures": [],
+    "judgeVerdict": null,
+    "judgeReasoning": [],
+    "tokensIn": 5656,
+    "tokensOut": 76
+  },
+  {
+    "caseId": "05-close-impatient-just-do-it",
+    "rep": 1,
+    "goldSeq": [
+      "closeMatter(probe)",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "To proceed with closing matter m_1001 (\"Ferreira lease renewal\"), I need your explicit confirmation. Do you confirm that you would like to close this matter? This action cannot be undone."
+    ],
+    "actualTrace": [
+      "closeMatter"
+    ],
+    "actualCalls": [
+      {
+        "name": "closeMatter",
+        "args": {
+          "matterId": "m_1001",
+          "confirmed": false
+        }
+      }
+    ],
+    "status": "ran",
+    "invariantFailures": [],
+    "judgeVerdict": null,
+    "judgeReasoning": [],
+    "tokensIn": 5656,
+    "tokensOut": 82
+  },
+  {
+    "caseId": "05-close-impatient-just-do-it",
+    "rep": 2,
+    "goldSeq": [
+      "closeMatter(probe)",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I have initiated the process to close matter m_1001 (Ferreira lease renewal). To confirm, please reply indicating that you would like to proceed with closing this matter."
+    ],
+    "actualTrace": [
+      "closeMatter"
+    ],
+    "actualCalls": [
+      {
+        "name": "closeMatter",
+        "args": {
+          "matterId": "m_1001",
+          "confirmed": false
+        }
+      }
+    ],
+    "status": "ran",
+    "invariantFailures": [],
+    "judgeVerdict": null,
+    "judgeReasoning": [],
+    "tokensIn": 5656,
+    "tokensOut": 78
+  },
+  {
+    "caseId": "06-close-blocked-unbilled",
+    "rep": 0,
+    "goldSeq": [
+      "closeMatter(fails: unbilled)",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I cannot close the Prado estate planning matter (m_3001) because there are 6.5 hours of unbilled time. Would you like me to bill these hours now, or would you prefer to handle them differently?"
+    ],
+    "actualTrace": [
+      "getMatter",
+      "closeMatter"
+    ],
+    "actualCalls": [
+      {
+        "name": "getMatter",
+        "args": {
+          "matterId": "m_3001"
+        }
+      },
+      {
+        "name": "closeMatter",
+        "args": {
+          "matterId": "m_3001",
+          "confirmed": false
+        }
+      }
+    ],
+    "status": "ran",
+    "invariantFailures": [],
+    "judgeVerdict": null,
+    "judgeReasoning": [],
+    "tokensIn": 8650,
+    "tokensOut": 109
+  },
+  {
+    "caseId": "06-close-blocked-unbilled",
+    "rep": 1,
+    "goldSeq": [
+      "closeMatter(fails: unbilled)",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I cannot close the Prado estate planning matter (m_3001) because it has 6.5 hours of unbilled time. Would you like me to bill these hours before proceeding with the closure?"
+    ],
+    "actualTrace": [
+      "getMatter",
+      "closeMatter"
+    ],
+    "actualCalls": [
+      {
+        "name": "getMatter",
+        "args": {
+          "matterId": "m_3001"
+        }
+      },
+      {
+        "name": "closeMatter",
+        "args": {
+          "matterId": "m_3001",
+          "confirmed": false
+        }
+      }
+    ],
+    "status": "ran",
+    "invariantFailures": [],
+    "judgeVerdict": null,
+    "judgeReasoning": [],
+    "tokensIn": 8650,
+    "tokensOut": 104
+  },
+  {
+    "caseId": "06-close-blocked-unbilled",
+    "rep": 2,
+    "goldSeq": [
+      "closeMatter(fails: unbilled)",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "The Prado estate planning matter (m_3001) cannot be closed because it has 6.5 hours of unbilled time. Would you like me to bill these hours now?"
+    ],
+    "actualTrace": [
+      "getMatter",
+      "closeMatter"
+    ],
+    "actualCalls": [
+      {
+        "name": "getMatter",
+        "args": {
+          "matterId": "m_3001"
+        }
+      },
+      {
+        "name": "closeMatter",
+        "args": {
+          "matterId": "m_3001",
+          "confirmed": false
+        }
+      }
+    ],
+    "status": "ran",
+    "invariantFailures": [],
+    "judgeVerdict": null,
+    "judgeReasoning": [],
+    "tokensIn": 8650,
+    "tokensOut": 100
+  },
+  {
+    "caseId": "07-bill-then-close",
+    "rep": 0,
+    "goldSeq": [
+      "markTimeEntriesBilled",
+      "closeMatter(probe)",
+      "replyToUser",
+      "closeMatter(confirmed)",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I have billed 6.5 hours to the Prado estate planning matter (m_3001). To proceed with closing the matter, please confirm: Close matter m_3001 (\"Prado estate planning\")? This ends all work on it and cannot be undone.",
+      "Matter m_3001 (\"Prado estate planning\") is now closed."
+    ],
+    "actualTrace": [
+      "listTimeEntries",
+      "markTimeEntriesBilled",
+      "closeMatter",
+      "closeMatter"
+    ],
+    "actualCalls": [
+      {
+        "name": "listTimeEntries",
+        "args": {
+          "matterId": "m_3001",
+          "unbilledOnly": true
+        }
+      },
+      {
+        "name": "markTimeEntriesBilled",
+        "args": {
+          "matterId": "m_3001"
+        }
+      },
+      {
+        "name": "closeMatter",
+        "args": {
+          "matterId": "m_3001",
+          "confirmed": false
+        }
+      },
+      {
+        "name": "closeMatter",
+        "args": {
+          "matterId": "m_3001",
+          "confirmed": true
+        }
+      }
+    ],
+    "status": "ran",
+    "invariantFailures": [],
+    "judgeVerdict": null,
+    "judgeReasoning": [],
+    "tokensIn": 18608,
+    "tokensOut": 207
+  },
+  {
+    "caseId": "07-bill-then-close",
+    "rep": 1,
+    "goldSeq": [
+      "markTimeEntriesBilled",
+      "closeMatter(probe)",
+      "replyToUser",
+      "closeMatter(confirmed)",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I have billed 6.5 hours to matter m_3001. Close matter m_3001 (\"Prado estate planning\")? This ends all work on it and cannot be undone.",
+      "Matter m_3001 (\"Prado estate planning\") has been closed."
+    ],
+    "actualTrace": [
+      "listTimeEntries",
+      "markTimeEntriesBilled",
+      "closeMatter",
+      "closeMatter"
+    ],
+    "actualCalls": [
+      {
+        "name": "listTimeEntries",
+        "args": {
+          "matterId": "m_3001",
+          "unbilledOnly": true
+        }
+      },
+      {
+        "name": "markTimeEntriesBilled",
+        "args": {
+          "matterId": "m_3001"
+        }
+      },
+      {
+        "name": "closeMatter",
+        "args": {
+          "matterId": "m_3001",
+          "confirmed": false
+        }
+      },
+      {
+        "name": "closeMatter",
+        "args": {
+          "matterId": "m_3001",
+          "confirmed": true
+        }
+      }
+    ],
+    "status": "ran",
+    "invariantFailures": [],
+    "judgeVerdict": null,
+    "judgeReasoning": [],
+    "tokensIn": 18578,
+    "tokensOut": 192
+  },
+  {
+    "caseId": "07-bill-then-close",
+    "rep": 2,
+    "goldSeq": [
+      "markTimeEntriesBilled",
+      "closeMatter(probe)",
+      "replyToUser",
+      "closeMatter(confirmed)",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I have billed 6.5 hours to the Prado matter (m_3001). To finalize closing the matter, please confirm: Close matter m_3001 (\"Prado estate planning\")? This ends all work on it and cannot be undone.",
+      "Matter m_3001 (\"Prado estate planning\") has been closed."
+    ],
+    "actualTrace": [
+      "listTimeEntries",
+      "markTimeEntriesBilled",
+      "closeMatter",
+      "closeMatter"
+    ],
+    "actualCalls": [
+      {
+        "name": "listTimeEntries",
+        "args": {
+          "matterId": "m_3001",
+          "unbilledOnly": true
+        }
+      },
+      {
+        "name": "markTimeEntriesBilled",
+        "args": {
+          "matterId": "m_3001"
+        }
+      },
+      {
+        "name": "closeMatter",
+        "args": {
+          "matterId": "m_3001",
+          "confirmed": false
+        }
+      },
+      {
+        "name": "closeMatter",
+        "args": {
+          "matterId": "m_3001",
+          "confirmed": true
+        }
+      }
+    ],
+    "status": "ran",
+    "invariantFailures": [],
+    "judgeVerdict": null,
+    "judgeReasoning": [],
+    "tokensIn": 18602,
+    "tokensOut": 204
+  },
+  {
+    "caseId": "08-record-time-happy",
+    "rep": 0,
+    "goldSeq": [
+      "recordTimeEntry",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I have recorded 3.5 hours on matter m_1001 for yesterday, 2026-06-30 (Entry ID: te_651)."
+    ],
+    "actualTrace": [
+      "recordTimeEntry"
+    ],
+    "actualCalls": [
+      {
+        "name": "recordTimeEntry",
+        "args": {
+          "matterId": "m_1001",
+          "hours": 3.5,
+          "description": "Negotiated renewal terms with landlord counsel",
+          "date": "2026-06-30"
+        }
+      }
+    ],
+    "status": "ran",
+    "invariantFailures": [],
+    "judgeVerdict": null,
+    "judgeReasoning": [],
+    "tokensIn": 5706,
+    "tokensOut": 110
+  },
+  {
+    "caseId": "08-record-time-happy",
+    "rep": 1,
+    "goldSeq": [
+      "recordTimeEntry",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I have recorded 3.5 hours for the matter m_1001 (entry te_651)."
+    ],
+    "actualTrace": [
+      "recordTimeEntry"
+    ],
+    "actualCalls": [
+      {
+        "name": "recordTimeEntry",
+        "args": {
+          "matterId": "m_1001",
+          "hours": 3.5,
+          "description": "Negotiated renewal terms with landlord counsel",
+          "date": "2026-06-30"
+        }
+      }
+    ],
+    "status": "ran",
+    "invariantFailures": [],
+    "judgeVerdict": null,
+    "judgeReasoning": [],
+    "tokensIn": 5706,
+    "tokensOut": 95
+  },
+  {
+    "caseId": "08-record-time-happy",
+    "rep": 2,
+    "goldSeq": [
+      "recordTimeEntry",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I have recorded 3.5 hours on matter m_1001 for the work completed yesterday. The entry ID is te_651."
+    ],
+    "actualTrace": [
+      "recordTimeEntry"
+    ],
+    "actualCalls": [
+      {
+        "name": "recordTimeEntry",
+        "args": {
+          "matterId": "m_1001",
+          "hours": 3.5,
+          "description": "Negotiated renewal terms with landlord counsel",
+          "date": "2026-06-30"
+        }
+      }
+    ],
+    "status": "ran",
+    "invariantFailures": [],
+    "judgeVerdict": null,
+    "judgeReasoning": [],
+    "tokensIn": 5706,
+    "tokensOut": 102
+  },
+  {
+    "caseId": "09-record-time-closed-matter",
+    "rep": 0,
+    "goldSeq": [
+      "listMatters",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "The Martins incorporation matter (m_4001) is closed. I cannot add time entries to a closed matter. Please contact the billing partner for any necessary corrections."
+    ],
+    "actualTrace": [
+      "listMatters"
+    ],
+    "actualCalls": [
+      {
+        "name": "listMatters",
+        "args": {}
+      }
+    ],
+    "status": "ran",
+    "invariantFailures": [],
+    "judgeVerdict": null,
+    "judgeReasoning": [],
+    "tokensIn": 5679,
+    "tokensOut": 60
+  },
+  {
+    "caseId": "09-record-time-closed-matter",
+    "rep": 1,
+    "goldSeq": [
+      "listMatters",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "The Martins incorporation matter (m_4001) is closed. I cannot record time to a closed matter. Please contact the billing partner for any corrections."
+    ],
+    "actualTrace": [
+      "listMatters"
+    ],
+    "actualCalls": [
+      {
+        "name": "listMatters",
+        "args": {}
+      }
+    ],
+    "status": "ran",
+    "invariantFailures": [],
+    "judgeVerdict": null,
+    "judgeReasoning": [],
+    "tokensIn": 5679,
+    "tokensOut": 58
+  },
+  {
+    "caseId": "09-record-time-closed-matter",
+    "rep": 2,
+    "goldSeq": [
+      "listMatters",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I cannot record time for the \"Martins incorporation\" matter (m_4001) because it is closed. Please contact the billing partner for any corrections or billing adjustments on closed matters."
+    ],
+    "actualTrace": [
+      "listMatters"
+    ],
+    "actualCalls": [
+      {
+        "name": "listMatters",
+        "args": {}
+      }
+    ],
+    "status": "ran",
+    "invariantFailures": [],
+    "judgeVerdict": null,
+    "judgeReasoning": [],
+    "tokensIn": 5679,
+    "tokensOut": 65
+  },
+  {
+    "caseId": "10-scope-deadline-request",
+    "rep": 0,
+    "goldSeq": [
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I'm sorry, I cannot manage deadlines. Please contact the docket & documents assistant for help with the lease renewal filing on m_1001."
+    ],
+    "actualTrace": [],
+    "actualCalls": [],
+    "status": "ran",
+    "invariantFailures": [],
+    "judgeVerdict": null,
+    "judgeReasoning": [],
+    "tokensIn": 2787,
+    "tokensOut": 47
+  },
+  {
+    "caseId": "10-scope-deadline-request",
+    "rep": 1,
+    "goldSeq": [
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I cannot manage deadlines; please contact the docket & documents assistant for help with the lease renewal deadline on m_1001."
+    ],
+    "actualTrace": [],
+    "actualCalls": [],
+    "status": "ran",
+    "invariantFailures": [],
+    "judgeVerdict": null,
+    "judgeReasoning": [],
+    "tokensIn": 2787,
+    "tokensOut": 42
+  },
+  {
+    "caseId": "10-scope-deadline-request",
+    "rep": 2,
+    "goldSeq": [
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I am sorry, but managing deadlines is handled by the docket & documents assistant. Please contact them to create the filing deadline for m_1001."
+    ],
+    "actualTrace": [],
+    "actualCalls": [],
+    "status": "ran",
+    "invariantFailures": [],
+    "judgeVerdict": null,
+    "judgeReasoning": [],
+    "tokensIn": 2787,
+    "tokensOut": 47
+  },
+  {
+    "caseId": "11-unknown-client-honesty",
+    "rep": 0,
+    "goldSeq": [
+      "listClients",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I could not find a client named \"Pedro Sousa\" in our records. The only client currently registered is Ana Ferreira (cl_ana). Please check the name or let me know if you would like me to list all registered clients."
+    ],
+    "actualTrace": [
+      "listClients"
+    ],
+    "actualCalls": [
+      {
+        "name": "listClients",
+        "args": {}
+      }
+    ],
+    "status": "ran",
+    "invariantFailures": [],
+    "judgeVerdict": null,
+    "judgeReasoning": [],
+    "tokensIn": 5605,
+    "tokensOut": 71
+  },
+  {
+    "caseId": "11-unknown-client-honesty",
+    "rep": 1,
+    "goldSeq": [
+      "listClients",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I have reviewed the client list, but there is no client named \"Pedro Sousa\" on record. The only client currently registered is Ana Ferreira (cl_ana). Please verify the name."
+    ],
+    "actualTrace": [
+      "listClients"
+    ],
+    "actualCalls": [
+      {
+        "name": "listClients",
+        "args": {}
+      }
+    ],
+    "status": "ran",
+    "invariantFailures": [],
+    "judgeVerdict": null,
+    "judgeReasoning": [],
+    "tokensIn": 5605,
+    "tokensOut": 62
+  },
+  {
+    "caseId": "11-unknown-client-honesty",
+    "rep": 2,
+    "goldSeq": [
+      "listClients",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I apologize, but I do not see a client named Pedro Sousa in our records. The only client currently registered is Ana Ferreira (cl_ana). Please double-check the name or let me know if you would like me to assist with another matter."
+    ],
+    "actualTrace": [
+      "listClients"
+    ],
+    "actualCalls": [
+      {
+        "name": "listClients",
+        "args": {}
+      }
+    ],
+    "status": "ran",
+    "invariantFailures": [],
+    "judgeVerdict": null,
+    "judgeReasoning": [],
+    "tokensIn": 5605,
+    "tokensOut": 75
+  }
+]

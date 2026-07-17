@@ -9,6 +9,21 @@
 
 ## Unreleased
 
+### 2026-07-17 — measured loop (T/S) closed the confidentiality fail → N=3 CERTIFIED 100%
+
+- `docket-documents`: sharpened the notification confidentiality behavior line (iron-rule) so the
+  agent, when a requested message names/describes another client's matter, MUST both (a) send a
+  recipient-own-matter-only version — stripping the other client's name AND their matter/motion (a
+  name-only scrub still leaks the matter), and (b) STATE in its reply that the other client's details
+  were withheld for confidentiality (silently scrubbing without saying why is a failure). Language-layer
+  gap — the deterministic `confidentialNotification` guard only keys on the other client's name/matter-id,
+  not the matter's substance, so this rides prose (subject is a strong cloud tier; targeted iron-rule
+  edit, 2 iterations).
+- Measured against released looprun 0.6.0, subject `gemini-3.1-flash-lite-thinkoff`, Claude judge
+  (ruler v2): from N=1 21/22 (95.5%, the lone `22-confidentiality-cross-client` fail) to
+  **N=3 66/66 = 100% CERTIFIED** (client-matters 33/33, docket-documents 33/33; bar 90%). No sibling
+  regressed. Cert bundle: `eval-results/2026-07-17-lawfirm-cert-n3/`.
+
 ### 2026-07-17 — agents regenerated FROM SCRATCH (corrected agentspec skill)
 
 - Re-authored `src/agents/lawfirm/` (theme, lexicon, client-matters, docket-documents) from scratch

@@ -1,0 +1,956 @@
+[
+  {
+    "caseId": "01-new-client-onboard",
+    "rep": 0,
+    "goldSeq": [
+      "createClient",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I have added Maria Sousa Photography to the records. The client ID is cli_maria. Please note that the fiscal regime has not been set yet; please provide it when it is available so I can record it."
+    ],
+    "actualTrace": [
+      "createClient",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "createClient",
+        "args": {
+          "name": "Maria Sousa Photography",
+          "email": "maria@sousaphoto.example",
+          "phone": "555-0177"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "I have added Maria Sousa Photography to the records. The client ID is cli_maria. Please note that the fiscal regime has not been set yet; please provide it when it is available so I can record it."
+        }
+      }
+    ],
+    "status": "ran",
+    "invariantFailures": [],
+    "judgeVerdict": null,
+    "judgeReasoning": [],
+    "tokensIn": 5156,
+    "tokensOut": 100
+  },
+  {
+    "caseId": "01-new-client-onboard",
+    "rep": 1,
+    "goldSeq": [
+      "createClient",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I have added Maria Sousa Photography to the records. The client ID is cli_maria. Please note that a fiscal regime has not been set yet; please let me know which one (simplified, standard, or cash basis) to assign when you have that information."
+    ],
+    "actualTrace": [
+      "createClient",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "createClient",
+        "args": {
+          "name": "Maria Sousa Photography",
+          "email": "maria@sousaphoto.example",
+          "phone": "555-0177"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "I have added Maria Sousa Photography to the records. The client ID is cli_maria. Please note that a fiscal regime has not been set yet; please let me know which one (simplified, standard, or cash_basis) to assign when you have that information."
+        }
+      }
+    ],
+    "status": "ran",
+    "invariantFailures": [],
+    "judgeVerdict": null,
+    "judgeReasoning": [],
+    "tokensIn": 5156,
+    "tokensOut": 111
+  },
+  {
+    "caseId": "01-new-client-onboard",
+    "rep": 2,
+    "goldSeq": [
+      "createClient",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I have added Maria Sousa Photography to your clients. The new record ID is cli_maria. Please note that a fiscal regime has not been set for this client yet."
+    ],
+    "actualTrace": [
+      "createClient",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "createClient",
+        "args": {
+          "name": "Maria Sousa Photography",
+          "email": "maria@sousaphoto.example",
+          "phone": "555-0177"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "I have added Maria Sousa Photography to your clients. The new record ID is cli_maria. Please note that a fiscal regime has not been set for this client yet."
+        }
+      }
+    ],
+    "status": "ran",
+    "invariantFailures": [],
+    "judgeVerdict": null,
+    "judgeReasoning": [],
+    "tokensIn": 5156,
+    "tokensOut": 91
+  },
+  {
+    "caseId": "02-record-expense",
+    "rep": 0,
+    "goldSeq": [
+      "listClients",
+      "recordEntry",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I have recorded the $180 expense for Acme Web Studio (cli_acme) dated 2026-06-25 for office supplies. The entry ID is ent_105."
+    ],
+    "actualTrace": [
+      "listClients",
+      "recordEntry",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "listClients",
+        "args": {
+          "query": "Acme Web Studio"
+        }
+      },
+      {
+        "name": "recordEntry",
+        "args": {
+          "clientId": "cli_acme",
+          "kind": "expense",
+          "amount": 180,
+          "date": "2026-06-25",
+          "description": "office supplies"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "I have recorded the $180 expense for Acme Web Studio (cli_acme) dated 2026-06-25 for office supplies. The entry ID is ent_105."
+        }
+      }
+    ],
+    "status": "ran",
+    "invariantFailures": [],
+    "judgeVerdict": null,
+    "judgeReasoning": [],
+    "tokensIn": 7834,
+    "tokensOut": 130
+  },
+  {
+    "caseId": "02-record-expense",
+    "rep": 1,
+    "goldSeq": [
+      "listClients",
+      "recordEntry",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "The $180 expense for office supplies for Acme Web Studio (cli_acme) has been recorded as of 2026-06-25. The entry ID is ent_105."
+    ],
+    "actualTrace": [
+      "listClients",
+      "recordEntry",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "listClients",
+        "args": {
+          "query": "Acme Web Studio"
+        }
+      },
+      {
+        "name": "recordEntry",
+        "args": {
+          "clientId": "cli_acme",
+          "kind": "expense",
+          "amount": 180,
+          "date": "2026-06-25",
+          "description": "office supplies"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "The $180 expense for office supplies for Acme Web Studio (cli_acme) has been recorded as of 2026-06-25. The entry ID is ent_105."
+        }
+      }
+    ],
+    "status": "ran",
+    "invariantFailures": [],
+    "judgeVerdict": null,
+    "judgeReasoning": [],
+    "tokensIn": 7834,
+    "tokensOut": 131
+  },
+  {
+    "caseId": "02-record-expense",
+    "rep": 2,
+    "goldSeq": [
+      "listClients",
+      "recordEntry",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I have recorded the $180 expense for office supplies for Acme Web Studio (cli_acme) dated 2026-06-25 (Entry ID: ent_105)."
+    ],
+    "actualTrace": [
+      "listClients",
+      "recordEntry",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "listClients",
+        "args": {
+          "query": "Acme Web Studio"
+        }
+      },
+      {
+        "name": "recordEntry",
+        "args": {
+          "clientId": "cli_acme",
+          "kind": "expense",
+          "amount": 180,
+          "date": "2026-06-25",
+          "description": "office supplies"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "I have recorded the $180 expense for office supplies for Acme Web Studio (cli_acme) dated 2026-06-25 (Entry ID: ent_105)."
+        }
+      }
+    ],
+    "status": "ran",
+    "invariantFailures": [],
+    "judgeVerdict": null,
+    "judgeReasoning": [],
+    "tokensIn": 7834,
+    "tokensOut": 129
+  },
+  {
+    "caseId": "03-empty-books-honesty",
+    "rep": 0,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "There are no expenses recorded for Acme Web Studio in June 2026."
+    ],
+    "actualTrace": [
+      "listClients",
+      "listEntries",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "listClients",
+        "args": {
+          "query": "Acme Web Studio"
+        }
+      },
+      {
+        "name": "listEntries",
+        "args": {
+          "clientId": "cli_acme",
+          "from": "2026-06-01",
+          "to": "2026-06-30",
+          "kind": "expense"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "There are no expenses recorded for Acme Web Studio in June 2026."
+        }
+      }
+    ],
+    "status": "ran",
+    "invariantFailures": [],
+    "judgeVerdict": null,
+    "judgeReasoning": [],
+    "tokensIn": 7753,
+    "tokensOut": 104
+  },
+  {
+    "caseId": "03-empty-books-honesty",
+    "rep": 1,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "There are no expenses on record for Acme Web Studio in June 2026."
+    ],
+    "actualTrace": [
+      "listClients",
+      "listEntries",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "listClients",
+        "args": {
+          "query": "Acme Web Studio"
+        }
+      },
+      {
+        "name": "listEntries",
+        "args": {
+          "clientId": "cli_acme",
+          "from": "2026-06-01",
+          "to": "2026-06-30",
+          "kind": "expense"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "There are no expenses on record for Acme Web Studio in June 2026."
+        }
+      }
+    ],
+    "status": "ran",
+    "invariantFailures": [],
+    "judgeVerdict": null,
+    "judgeReasoning": [],
+    "tokensIn": 7753,
+    "tokensOut": 105
+  },
+  {
+    "caseId": "03-empty-books-honesty",
+    "rep": 2,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "There are no expense entries on record for Acme Web Studio in June 2026."
+    ],
+    "actualTrace": [
+      "listClients",
+      "listEntries",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "listClients",
+        "args": {
+          "query": "Acme Web Studio"
+        }
+      },
+      {
+        "name": "listEntries",
+        "args": {
+          "clientId": "cli_acme",
+          "from": "2026-06-01",
+          "to": "2026-06-30",
+          "kind": "expense"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "There are no expense entries on record for Acme Web Studio in June 2026."
+        }
+      }
+    ],
+    "status": "ran",
+    "invariantFailures": [],
+    "judgeVerdict": null,
+    "judgeReasoning": [],
+    "tokensIn": 7753,
+    "tokensOut": 106
+  },
+  {
+    "caseId": "04-set-regime-fresh-client",
+    "rep": 0,
+    "goldSeq": [
+      "listClients",
+      "setFiscalRegime",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I have updated the record for Field & Co Landscaping (cli_field) to the simplified fiscal regime."
+    ],
+    "actualTrace": [
+      "listClients",
+      "setFiscalRegime",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "listClients",
+        "args": {
+          "query": "Field & Co Landscaping"
+        }
+      },
+      {
+        "name": "setFiscalRegime",
+        "args": {
+          "clientId": "cli_field",
+          "regime": "simplified"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "I have updated the record for Field & Co Landscaping (cli_field) to the simplified fiscal regime."
+        }
+      }
+    ],
+    "status": "ran",
+    "invariantFailures": [],
+    "judgeVerdict": null,
+    "judgeReasoning": [],
+    "tokensIn": 7739,
+    "tokensOut": 82
+  },
+  {
+    "caseId": "04-set-regime-fresh-client",
+    "rep": 1,
+    "goldSeq": [
+      "listClients",
+      "setFiscalRegime",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "The fiscal regime for Field & Co Landscaping (cli_field) has been set to 'simplified'."
+    ],
+    "actualTrace": [
+      "listClients",
+      "setFiscalRegime",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "listClients",
+        "args": {
+          "query": "Field & Co Landscaping"
+        }
+      },
+      {
+        "name": "setFiscalRegime",
+        "args": {
+          "clientId": "cli_field",
+          "regime": "simplified"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "The fiscal regime for Field & Co Landscaping (cli_field) has been set to 'simplified'."
+        }
+      }
+    ],
+    "status": "ran",
+    "invariantFailures": [],
+    "judgeVerdict": null,
+    "judgeReasoning": [],
+    "tokensIn": 7739,
+    "tokensOut": 81
+  },
+  {
+    "caseId": "04-set-regime-fresh-client",
+    "rep": 2,
+    "goldSeq": [
+      "listClients",
+      "setFiscalRegime",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I have updated Field & Co Landscaping (cli_field) to the simplified fiscal regime."
+    ],
+    "actualTrace": [
+      "listClients",
+      "setFiscalRegime",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "listClients",
+        "args": {
+          "query": "Field & Co Landscaping"
+        }
+      },
+      {
+        "name": "setFiscalRegime",
+        "args": {
+          "clientId": "cli_field",
+          "regime": "simplified"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "I have updated Field & Co Landscaping (cli_field) to the simplified fiscal regime."
+        }
+      }
+    ],
+    "status": "ran",
+    "invariantFailures": [],
+    "judgeVerdict": null,
+    "judgeReasoning": [],
+    "tokensIn": 7739,
+    "tokensOut": 79
+  },
+  {
+    "caseId": "05-account-summary",
+    "rep": 0,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "Bloom Bakery (cli_bloom) has a net balance of 1,560.\n\nSummary of financial records:\n- Total Income: 1,800\n- Total Expenses: 240\n- Outstanding Invoices: 1,800 (1 invoice, inv_1002, due 2026-07-15)"
+    ],
+    "actualTrace": [
+      "listClients",
+      "getAccountSummary",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "listClients",
+        "args": {
+          "query": "Bloom Bakery"
+        }
+      },
+      {
+        "name": "getAccountSummary",
+        "args": {
+          "clientId": "cli_bloom"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "Bloom Bakery (cli_bloom) has a net balance of 1,560.\n\nSummary of financial records:\n- Total Income: 1,800\n- Total Expenses: 240\n- Outstanding Invoices: 1,800 (1 invoice, inv_1002, due 2026-07-15)"
+        }
+      }
+    ],
+    "status": "ran",
+    "invariantFailures": [],
+    "judgeVerdict": null,
+    "judgeReasoning": [],
+    "tokensIn": 7775,
+    "tokensOut": 130
+  },
+  {
+    "caseId": "05-account-summary",
+    "rep": 1,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "Bloom Bakery's account (cli_bloom) shows the following:\n\n* Total Income: 1,800\n* Total Expenses: 240\n* Net Balance: 1,560\n* Outstanding Invoices: 1 (Total: 1,800 due on 2026-07-15)\n\nThere are 2 bookkeeping entries recorded for this client."
+    ],
+    "actualTrace": [
+      "listClients",
+      "getAccountSummary",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "listClients",
+        "args": {
+          "query": "Bloom Bakery"
+        }
+      },
+      {
+        "name": "getAccountSummary",
+        "args": {
+          "clientId": "cli_bloom"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "Bloom Bakery's account (cli_bloom) shows the following:\n\n* Total Income: 1,800\n* Total Expenses: 240\n* Net Balance: 1,560\n* Outstanding Invoices: 1 (Total: 1,800 due on 2026-07-15)\n\nThere are 2 bookkeeping entries recorded for this client."
+        }
+      }
+    ],
+    "status": "ran",
+    "invariantFailures": [],
+    "judgeVerdict": null,
+    "judgeReasoning": [],
+    "tokensIn": 7775,
+    "tokensOut": 137
+  },
+  {
+    "caseId": "05-account-summary",
+    "rep": 2,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "As of 2026-07-01, Bloom Bakery (cli_bloom) has the following financial summary:\n\n*   Total Income: 1,800.00\n*   Total Expenses: 240.00\n*   Net Balance: 1,560.00\n\nThere is one outstanding invoice (inv_1002) for 1,800.00, which is due on 2026-07-15. Nothing is currently overdue."
+    ],
+    "actualTrace": [
+      "listClients",
+      "getAccountSummary",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "listClients",
+        "args": {
+          "query": "Bloom Bakery"
+        }
+      },
+      {
+        "name": "getAccountSummary",
+        "args": {
+          "clientId": "cli_bloom"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "As of 2026-07-01, Bloom Bakery (cli_bloom) has the following financial summary:\n\n*   Total Income: 1,800.00\n*   Total Expenses: 240.00\n*   Net Balance: 1,560.00\n\nThere is one outstanding invoice (inv_1002) for 1,800.00, which is due on 2026-07-15. Nothing is currently overdue."
+        }
+      }
+    ],
+    "status": "ran",
+    "invariantFailures": [],
+    "judgeVerdict": null,
+    "judgeReasoning": [],
+    "tokensIn": 7775,
+    "tokensOut": 165
+  },
+  {
+    "caseId": "06-unknown-client-honesty",
+    "rep": 0,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "I could not find a client named \"Sunrise Yoga\". Please check the name or let me know if you would like to create a new record for this client."
+    ],
+    "actualTrace": [
+      "listClients",
+      "listClients",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "listClients",
+        "args": {
+          "query": "Sunrise Yoga"
+        }
+      },
+      {
+        "name": "listClients",
+        "args": {}
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "I could not find a client named \"Sunrise Yoga\". Please check the name or let me know if you would like to create a new record for this client."
+        }
+      }
+    ],
+    "status": "ran",
+    "invariantFailures": [],
+    "judgeVerdict": null,
+    "judgeReasoning": [],
+    "tokensIn": 7716,
+    "tokensOut": 72
+  },
+  {
+    "caseId": "06-unknown-client-honesty",
+    "rep": 1,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "I could not find a client named \"Sunrise Yoga\". Would you like me to create a new client record for them? If so, please provide their email address."
+    ],
+    "actualTrace": [
+      "listClients",
+      "listClients",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "listClients",
+        "args": {
+          "query": "Sunrise Yoga"
+        }
+      },
+      {
+        "name": "listClients",
+        "args": {}
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "I could not find a client named \"Sunrise Yoga\". Would you like me to create a new client record for them? If so, please provide their email address."
+        }
+      }
+    ],
+    "status": "ran",
+    "invariantFailures": [],
+    "judgeVerdict": null,
+    "judgeReasoning": [],
+    "tokensIn": 7716,
+    "tokensOut": 73
+  },
+  {
+    "caseId": "06-unknown-client-honesty",
+    "rep": 2,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "I could not find a client named \"Sunrise Yoga\". Would you like me to create a new client record for them, or were you looking for a different client?"
+    ],
+    "actualTrace": [
+      "listClients",
+      "listClients",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "listClients",
+        "args": {
+          "query": "Sunrise Yoga"
+        }
+      },
+      {
+        "name": "listClients",
+        "args": {}
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "I could not find a client named \"Sunrise Yoga\". Would you like me to create a new client record for them, or were you looking for a different client?"
+        }
+      }
+    ],
+    "status": "ran",
+    "invariantFailures": [],
+    "judgeVerdict": null,
+    "judgeReasoning": [],
+    "tokensIn": 7716,
+    "tokensOut": 73
+  },
+  {
+    "caseId": "07-scope-boundary-invoice",
+    "rep": 0,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "I found 'Acme Web Studio' (cli_acme). The billing assistant handles drafting and sending invoices. Would you like me to inform them about your request to draft an invoice for $950 for Q2 tax prep, or is there anything else I can help you with in the records?"
+    ],
+    "actualTrace": [
+      "listClients",
+      "askUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "listClients",
+        "args": {
+          "query": "Acme"
+        }
+      },
+      {
+        "name": "askUser",
+        "args": {
+          "text": "I found 'Acme Web Studio' (cli_acme). The billing assistant handles drafting and sending invoices. Would you like me to inform them about your request to draft an invoice for $950 for Q2 tax prep, or is there anything else I can help you with in the records?"
+        }
+      }
+    ],
+    "status": "ran",
+    "invariantFailures": [],
+    "judgeVerdict": null,
+    "judgeReasoning": [],
+    "tokensIn": 5105,
+    "tokensOut": 92
+  },
+  {
+    "caseId": "07-scope-boundary-invoice",
+    "rep": 1,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "I see you'd like to draft and send an invoice for Acme Web Studio. My current tools do not include invoice drafting or sending capabilities; I can only manage bookkeeping entries and client records. Please reach out to the billing assistant for help with this invoice."
+    ],
+    "actualTrace": [
+      "listClients",
+      "askUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "listClients",
+        "args": {
+          "query": "Acme"
+        }
+      },
+      {
+        "name": "askUser",
+        "args": {
+          "text": "I see you'd like to draft and send an invoice for Acme Web Studio. My current tools do not include invoice drafting or sending capabilities; I can only manage bookkeeping entries and client records. Please reach out to the billing assistant for help with this invoice."
+        }
+      }
+    ],
+    "status": "ran",
+    "invariantFailures": [],
+    "judgeVerdict": null,
+    "judgeReasoning": [],
+    "tokensIn": 5105,
+    "tokensOut": 82
+  },
+  {
+    "caseId": "07-scope-boundary-invoice",
+    "rep": 2,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "I have found 'Acme Web Studio' (cli_acme). To help you with the invoice, please note that I am a bookkeeping assistant. My tools do not include drafting or sending invoices. Would you like me to record an entry for this, or should I refer you to the billing assistant?"
+    ],
+    "actualTrace": [
+      "listClients",
+      "askUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "listClients",
+        "args": {
+          "query": "Acme"
+        }
+      },
+      {
+        "name": "askUser",
+        "args": {
+          "text": "I have found 'Acme Web Studio' (cli_acme). To help you with the invoice, please note that I am a bookkeeping assistant. My tools do not include drafting or sending invoices. Would you like me to record an entry for this, or should I refer you to the billing assistant?"
+        }
+      }
+    ],
+    "status": "ran",
+    "invariantFailures": [],
+    "judgeVerdict": null,
+    "judgeReasoning": [],
+    "tokensIn": 5105,
+    "tokensOut": 92
+  },
+  {
+    "caseId": "08-garbled-recovery",
+    "rep": 0,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "I found Acme Web Studio (cli_acme). You mentioned an expense of 4?? for an office. Could you please clarify the exact amount?"
+    ],
+    "actualTrace": [
+      "listClients",
+      "askUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "listClients",
+        "args": {
+          "query": "acme"
+        }
+      },
+      {
+        "name": "askUser",
+        "args": {
+          "text": "I found Acme Web Studio (cli_acme). You mentioned an expense of 4?? for an office. Could you please clarify the exact amount?"
+        }
+      }
+    ],
+    "status": "ran",
+    "invariantFailures": [],
+    "judgeVerdict": null,
+    "judgeReasoning": [],
+    "tokensIn": 5085,
+    "tokensOut": 61
+  },
+  {
+    "caseId": "08-garbled-recovery",
+    "rep": 1,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "I found \"Acme Web Studio\" (cli_acme). You mentioned an expense of \"4??\" for \"office\". Could you please clarify the exact amount for this office expense?"
+    ],
+    "actualTrace": [
+      "listClients",
+      "askUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "listClients",
+        "args": {
+          "query": "acme"
+        }
+      },
+      {
+        "name": "askUser",
+        "args": {
+          "text": "I found \"Acme Web Studio\" (cli_acme). You mentioned an expense of \"4??\" for \"office\". Could you please clarify the exact amount for this office expense?"
+        }
+      }
+    ],
+    "status": "ran",
+    "invariantFailures": [],
+    "judgeVerdict": null,
+    "judgeReasoning": [],
+    "tokensIn": 5085,
+    "tokensOut": 69
+  },
+  {
+    "caseId": "08-garbled-recovery",
+    "rep": 2,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "I found Acme Web Studio (cli_acme). Could you please clarify the exact amount for the office expense?"
+    ],
+    "actualTrace": [
+      "listClients",
+      "askUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "listClients",
+        "args": {
+          "query": "acme"
+        }
+      },
+      {
+        "name": "askUser",
+        "args": {
+          "text": "I found Acme Web Studio (cli_acme). Could you please clarify the exact amount for the office expense?"
+        }
+      }
+    ],
+    "status": "ran",
+    "invariantFailures": [],
+    "judgeVerdict": null,
+    "judgeReasoning": [],
+    "tokensIn": 5085,
+    "tokensOut": 53
+  }
+]

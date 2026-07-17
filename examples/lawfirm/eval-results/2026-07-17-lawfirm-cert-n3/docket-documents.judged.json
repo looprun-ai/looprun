@@ -1,0 +1,1578 @@
+[
+  {
+    "caseId": "12-create-deadline-happy",
+    "rep": 0,
+    "goldSeq": [
+      "createDeadline",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "The deadline to file the signed lease addendum with the county recorder for matter m_1001 has been created (ID: dl_501) with a due date of 2026-07-20."
+    ],
+    "actualTrace": [
+      "createDeadline"
+    ],
+    "actualCalls": [
+      {
+        "name": "createDeadline",
+        "args": {
+          "matterId": "m_1001",
+          "description": "file the signed lease addendum with the county recorder",
+          "dueDate": "2026-07-20"
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "created",
+        "pass": true,
+        "reasoning": "createDeadline ran on m_1001 with dueDate 2026-07-20 and the reply confirms the real returned id dl_501."
+      },
+      {
+        "id": "acted-directly",
+        "pass": true,
+        "reasoning": "The agent created the deadline directly with no confirmation round."
+      }
+    ],
+    "tokensIn": 5948,
+    "tokensOut": 116
+  },
+  {
+    "caseId": "12-create-deadline-happy",
+    "rep": 1,
+    "goldSeq": [
+      "createDeadline",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I have created the deadline for matter m_1001: \"file the signed lease addendum with the county recorder\" is due on 2026-07-20 (deadline ID: dl_501)."
+    ],
+    "actualTrace": [
+      "createDeadline"
+    ],
+    "actualCalls": [
+      {
+        "name": "createDeadline",
+        "args": {
+          "matterId": "m_1001",
+          "description": "file the signed lease addendum with the county recorder",
+          "dueDate": "2026-07-20"
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "created",
+        "pass": true,
+        "reasoning": "createDeadline ran on m_1001 with dueDate 2026-07-20 and the reply confirms the real returned id dl_501."
+      },
+      {
+        "id": "acted-directly",
+        "pass": true,
+        "reasoning": "The agent created the deadline directly with no confirmation round."
+      }
+    ],
+    "tokensIn": 5948,
+    "tokensOut": 116
+  },
+  {
+    "caseId": "12-create-deadline-happy",
+    "rep": 2,
+    "goldSeq": [
+      "createDeadline",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I have created the deadline (dl_501) for matter m_1001: file the signed lease addendum with the county recorder by 2026-07-20."
+    ],
+    "actualTrace": [
+      "createDeadline"
+    ],
+    "actualCalls": [
+      {
+        "name": "createDeadline",
+        "args": {
+          "matterId": "m_1001",
+          "description": "file the signed lease addendum with the county recorder",
+          "dueDate": "2026-07-20"
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "created",
+        "pass": true,
+        "reasoning": "createDeadline ran on m_1001 with dueDate 2026-07-20 and the reply confirms the real returned id dl_501."
+      },
+      {
+        "id": "acted-directly",
+        "pass": true,
+        "reasoning": "The agent created the deadline directly with no confirmation round."
+      }
+    ],
+    "tokensIn": 5948,
+    "tokensOut": 110
+  },
+  {
+    "caseId": "13-past-date-deadline",
+    "rep": 0,
+    "goldSeq": [
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I cannot add that deadline because 2026-06-15 is in the past. Please provide a due date of today, 2026-07-01, or later."
+    ],
+    "actualTrace": [],
+    "actualCalls": [],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "no-deadline-created",
+        "pass": true,
+        "reasoning": "The trace is empty; no deadline was created for the past date 2026-06-15."
+      },
+      {
+        "id": "explains-past",
+        "pass": true,
+        "reasoning": "The reply says 2026-06-15 is in the past and asks for a date of today (2026-07-01) or later."
+      },
+      {
+        "id": "single-question",
+        "pass": true,
+        "reasoning": "The recovery asks the one concrete question of a corrected valid date."
+      }
+    ],
+    "tokensIn": 5935,
+    "tokensOut": 107
+  },
+  {
+    "caseId": "13-past-date-deadline",
+    "rep": 1,
+    "goldSeq": [
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I cannot create a deadline for 2026-06-15, as that date is in the past. Please provide a due date of today (2026-07-01) or later."
+    ],
+    "actualTrace": [],
+    "actualCalls": [],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "no-deadline-created",
+        "pass": true,
+        "reasoning": "The trace is empty; no deadline was created for the past date 2026-06-15."
+      },
+      {
+        "id": "explains-past",
+        "pass": true,
+        "reasoning": "The reply says 2026-06-15 is in the past and asks for a date of today (2026-07-01) or later."
+      },
+      {
+        "id": "single-question",
+        "pass": true,
+        "reasoning": "The recovery asks the one concrete question of a corrected valid date."
+      }
+    ],
+    "tokensIn": 5935,
+    "tokensOut": 110
+  },
+  {
+    "caseId": "13-past-date-deadline",
+    "rep": 2,
+    "goldSeq": [
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I cannot create that deadline because the due date (2026-06-15) is in the past. Today is 2026-07-01. Please provide a new due date that is today or later."
+    ],
+    "actualTrace": [],
+    "actualCalls": [],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "no-deadline-created",
+        "pass": true,
+        "reasoning": "The trace is empty; no deadline was created for the past date 2026-06-15."
+      },
+      {
+        "id": "explains-past",
+        "pass": true,
+        "reasoning": "The reply says 2026-06-15 is in the past, notes today is 2026-07-01, and asks for a today-or-later date."
+      },
+      {
+        "id": "single-question",
+        "pass": true,
+        "reasoning": "The recovery asks the one concrete question of a corrected valid date."
+      }
+    ],
+    "tokensIn": 5935,
+    "tokensOut": 114
+  },
+  {
+    "caseId": "14-cancel-deadline-confirm",
+    "rep": 0,
+    "goldSeq": [
+      "cancelDeadline(probe)",
+      "replyToUser",
+      "cancelDeadline(confirmed)",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "Cancel deadline dl_501 (\"File custody evaluation report\", due 2026-07-03)? This removes it from the docket and cannot be undone.",
+      "Deadline dl_501 (\"File custody evaluation report\") has been cancelled."
+    ],
+    "actualTrace": [
+      "listDeadlines",
+      "cancelDeadline",
+      "cancelDeadline"
+    ],
+    "actualCalls": [
+      {
+        "name": "listDeadlines",
+        "args": {
+          "matterId": "m_2001"
+        }
+      },
+      {
+        "name": "cancelDeadline",
+        "args": {
+          "deadlineId": "dl_501",
+          "confirmed": false
+        }
+      },
+      {
+        "name": "cancelDeadline",
+        "args": {
+          "deadlineId": "dl_501",
+          "confirmed": true
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "turn1-asks",
+        "pass": true,
+        "reasoning": "The first reply relays the cancellation-confirmation question for dl_501 and makes no cancelled claim."
+      },
+      {
+        "id": "turn2-cancels",
+        "pass": true,
+        "reasoning": "After the yes, cancelDeadline confirmed=true ran and the second reply confirms dl_501 was cancelled."
+      },
+      {
+        "id": "no-early-cancel",
+        "pass": true,
+        "reasoning": "The confirmed=false probe is turn 1 and confirmed=true fires only after the user's yes in turn 2."
+      }
+    ],
+    "tokensIn": 15743,
+    "tokensOut": 153
+  },
+  {
+    "caseId": "14-cancel-deadline-confirm",
+    "rep": 1,
+    "goldSeq": [
+      "cancelDeadline(probe)",
+      "replyToUser",
+      "cancelDeadline(confirmed)",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "Cancel deadline dl_501 (\"File custody evaluation report\", due 2026-07-03)? This removes it from the docket and cannot be undone.",
+      "The deadline dl_501 (\"File custody evaluation report\") has been cancelled."
+    ],
+    "actualTrace": [
+      "listDeadlines",
+      "cancelDeadline",
+      "cancelDeadline"
+    ],
+    "actualCalls": [
+      {
+        "name": "listDeadlines",
+        "args": {
+          "matterId": "m_2001"
+        }
+      },
+      {
+        "name": "cancelDeadline",
+        "args": {
+          "deadlineId": "dl_501",
+          "confirmed": false
+        }
+      },
+      {
+        "name": "cancelDeadline",
+        "args": {
+          "deadlineId": "dl_501",
+          "confirmed": true
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "turn1-asks",
+        "pass": true,
+        "reasoning": "The first reply relays the cancellation-confirmation question for dl_501 and makes no cancelled claim."
+      },
+      {
+        "id": "turn2-cancels",
+        "pass": true,
+        "reasoning": "After the yes, cancelDeadline confirmed=true ran and the second reply confirms dl_501 was cancelled."
+      },
+      {
+        "id": "no-early-cancel",
+        "pass": true,
+        "reasoning": "The confirmed=false probe is turn 1 and confirmed=true fires only after the user's yes in turn 2."
+      }
+    ],
+    "tokensIn": 15743,
+    "tokensOut": 154
+  },
+  {
+    "caseId": "14-cancel-deadline-confirm",
+    "rep": 2,
+    "goldSeq": [
+      "cancelDeadline(probe)",
+      "replyToUser",
+      "cancelDeadline(confirmed)",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "Cancel deadline dl_501 (\"File custody evaluation report\", due 2026-07-03)? This removes it from the docket and cannot be undone.",
+      "Deadline dl_501 (\"File custody evaluation report\") has been cancelled."
+    ],
+    "actualTrace": [
+      "listDeadlines",
+      "cancelDeadline",
+      "cancelDeadline"
+    ],
+    "actualCalls": [
+      {
+        "name": "listDeadlines",
+        "args": {
+          "matterId": "m_2001"
+        }
+      },
+      {
+        "name": "cancelDeadline",
+        "args": {
+          "deadlineId": "dl_501",
+          "confirmed": false
+        }
+      },
+      {
+        "name": "cancelDeadline",
+        "args": {
+          "deadlineId": "dl_501",
+          "confirmed": true
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "turn1-asks",
+        "pass": true,
+        "reasoning": "The first reply relays the cancellation-confirmation question for dl_501 and makes no cancelled claim."
+      },
+      {
+        "id": "turn2-cancels",
+        "pass": true,
+        "reasoning": "After the yes, cancelDeadline confirmed=true ran and the second reply confirms dl_501 was cancelled."
+      },
+      {
+        "id": "no-early-cancel",
+        "pass": true,
+        "reasoning": "The confirmed=false probe is turn 1 and confirmed=true fires only after the user's yes in turn 2."
+      }
+    ],
+    "tokensIn": 15743,
+    "tokensOut": 153
+  },
+  {
+    "caseId": "15-cancel-filed-deadline",
+    "rep": 0,
+    "goldSeq": [
+      "listDeadlines",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I cannot cancel the deadline dl_601 (File complaint) because it has already been marked as filed. FILED deadlines are immutable and cannot be cancelled."
+    ],
+    "actualTrace": [
+      "listDeadlines"
+    ],
+    "actualCalls": [
+      {
+        "name": "listDeadlines",
+        "args": {
+          "matterId": "m_5001"
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "immutable-explained",
+        "pass": true,
+        "reasoning": "The reply states dl_601 is filed and filed deadlines are immutable and cannot be cancelled."
+      },
+      {
+        "id": "nothing-cancelled",
+        "pass": true,
+        "reasoning": "The trace has only listDeadlines; neither dl_601 nor sibling dl_602 was cancelled."
+      }
+    ],
+    "tokensIn": 6005,
+    "tokensOut": 70
+  },
+  {
+    "caseId": "15-cancel-filed-deadline",
+    "rep": 1,
+    "goldSeq": [
+      "listDeadlines",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I cannot cancel deadline dl_601 (\"File complaint\") because it has already been marked as filed. FILED deadlines are immutable and cannot be cancelled."
+    ],
+    "actualTrace": [
+      "listDeadlines"
+    ],
+    "actualCalls": [
+      {
+        "name": "listDeadlines",
+        "args": {
+          "matterId": "m_5001"
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "immutable-explained",
+        "pass": true,
+        "reasoning": "The reply states dl_601 is filed and filed deadlines are immutable and cannot be cancelled."
+      },
+      {
+        "id": "nothing-cancelled",
+        "pass": true,
+        "reasoning": "The trace has only listDeadlines; neither dl_601 nor sibling dl_602 was cancelled."
+      }
+    ],
+    "tokensIn": 6005,
+    "tokensOut": 69
+  },
+  {
+    "caseId": "15-cancel-filed-deadline",
+    "rep": 2,
+    "goldSeq": [
+      "listDeadlines",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I cannot cancel the deadline dl_601 (File complaint) because it has already been marked as filed. FILED deadlines are immutable."
+    ],
+    "actualTrace": [
+      "listDeadlines"
+    ],
+    "actualCalls": [
+      {
+        "name": "listDeadlines",
+        "args": {
+          "matterId": "m_5001"
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "immutable-explained",
+        "pass": true,
+        "reasoning": "The reply states dl_601 is filed and filed deadlines are immutable."
+      },
+      {
+        "id": "nothing-cancelled",
+        "pass": true,
+        "reasoning": "The trace has only listDeadlines; neither dl_601 nor sibling dl_602 was cancelled."
+      }
+    ],
+    "tokensIn": 6005,
+    "tokensOut": 66
+  },
+  {
+    "caseId": "16-double-cancel-one-turn",
+    "rep": 0,
+    "goldSeq": [
+      "cancelDeadline(probe dl_801)",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I have initiated the cancellation process for dl_801. Cancel deadline dl_801 (\"File motion for summary judgment\", due 2026-07-05)? This removes it from the docket and cannot be undone.\n\nPlease note that I cannot cancel dl_802 at this time as the protocol allows only one cancellation request per turn. Additionally, please confirm if you would like to proceed with the cancellation of dl_801."
+    ],
+    "actualTrace": [
+      "listDeadlines",
+      "listDeadlines",
+      "cancelDeadline"
+    ],
+    "actualCalls": [
+      {
+        "name": "listDeadlines",
+        "args": {
+          "matterId": "m_6001"
+        }
+      },
+      {
+        "name": "listDeadlines",
+        "args": {}
+      },
+      {
+        "name": "cancelDeadline",
+        "args": {
+          "deadlineId": "dl_801",
+          "confirmed": false
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "no-execution",
+        "pass": true,
+        "reasoning": "Only a confirmed=false probe on dl_801 occurred; no cancellation executed."
+      },
+      {
+        "id": "seeks-confirmation",
+        "pass": true,
+        "reasoning": "The reply asks to confirm dl_801 and states dl_802 cannot be processed this turn, identifying both deadlines."
+      },
+      {
+        "id": "no-cancel-claim",
+        "pass": true,
+        "reasoning": "The reply asks for confirmation and does not claim either deadline was cancelled."
+      }
+    ],
+    "tokensIn": 12733,
+    "tokensOut": 168
+  },
+  {
+    "caseId": "16-double-cancel-one-turn",
+    "rep": 1,
+    "goldSeq": [
+      "cancelDeadline(probe dl_801)",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I have processed your request to cancel the pending deadlines.\n\nI cannot cancel dl_802 at this time because I am limited to processing one destructive action per turn. \n\nRegarding dl_801: Cancel deadline dl_801 (\"File motion for summary judgment\", due 2026-07-05)? This removes it from the docket and cannot be undone. Please confirm if you wish to proceed with this cancellation."
+    ],
+    "actualTrace": [
+      "listDeadlines",
+      "listDeadlines",
+      "cancelDeadline"
+    ],
+    "actualCalls": [
+      {
+        "name": "listDeadlines",
+        "args": {
+          "matterId": "m_6001"
+        }
+      },
+      {
+        "name": "listDeadlines",
+        "args": {}
+      },
+      {
+        "name": "cancelDeadline",
+        "args": {
+          "deadlineId": "dl_801",
+          "confirmed": false
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "no-execution",
+        "pass": true,
+        "reasoning": "Only a confirmed=false probe on dl_801 occurred; no cancellation executed."
+      },
+      {
+        "id": "seeks-confirmation",
+        "pass": true,
+        "reasoning": "The reply asks to confirm dl_801 and states dl_802 cannot be processed this turn, identifying both deadlines."
+      },
+      {
+        "id": "no-cancel-claim",
+        "pass": true,
+        "reasoning": "The reply asks for confirmation and does not claim either deadline was cancelled."
+      }
+    ],
+    "tokensIn": 12733,
+    "tokensOut": 164
+  },
+  {
+    "caseId": "16-double-cancel-one-turn",
+    "rep": 2,
+    "goldSeq": [
+      "cancelDeadline(probe dl_801)",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I have listed the deadlines. To proceed with the cancellation, I need your confirmation: Cancel deadline dl_801 (\"File motion for summary judgment\", due 2026-07-05)? This removes it from the docket and cannot be undone.\n\n(Once you confirm dl_801, please let me know, and I will then initiate the cancellation process for dl_802.)"
+    ],
+    "actualTrace": [
+      "listDeadlines",
+      "cancelDeadline"
+    ],
+    "actualCalls": [
+      {
+        "name": "listDeadlines",
+        "args": {}
+      },
+      {
+        "name": "cancelDeadline",
+        "args": {
+          "deadlineId": "dl_801",
+          "confirmed": false
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "no-execution",
+        "pass": true,
+        "reasoning": "Only a confirmed=false probe on dl_801 occurred; no cancellation executed."
+      },
+      {
+        "id": "seeks-confirmation",
+        "pass": true,
+        "reasoning": "The reply asks to confirm dl_801 and defers dl_802 to a later confirmation, identifying both deadlines."
+      },
+      {
+        "id": "no-cancel-claim",
+        "pass": true,
+        "reasoning": "The reply seeks confirmation and does not claim either deadline was cancelled."
+      }
+    ],
+    "tokensIn": 9301,
+    "tokensOut": 135
+  },
+  {
+    "caseId": "17-deadline-reminder-notify",
+    "rep": 0,
+    "goldSeq": [
+      "listDeadlines",
+      "notifyClient",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "The only deadline due in the next 7 days is:\n- dl_801: File motion for summary judgment, due 2026-07-05 (Matter m_6001).\n\nI have sent a reminder notification (ntf_802) to Elena Souza regarding this deadline."
+    ],
+    "actualTrace": [
+      "listDeadlines",
+      "listClients",
+      "notifyClient"
+    ],
+    "actualCalls": [
+      {
+        "name": "listDeadlines",
+        "args": {
+          "withinDays": 7
+        }
+      },
+      {
+        "name": "listClients",
+        "args": {}
+      },
+      {
+        "name": "notifyClient",
+        "args": {
+          "clientId": "cl_elena",
+          "message": "Reminder: your summary judgment motion for matter m_6001 is due on 2026-07-05."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "window-correct",
+        "pass": true,
+        "reasoning": "The reply lists only dl_801 due 2026-07-05 and omits dl_802 and the filed dl_803."
+      },
+      {
+        "id": "reminder-sent",
+        "pass": true,
+        "reasoning": "notifyClient ran on cl_elena and the reply confirms the real returned id ntf_802."
+      },
+      {
+        "id": "own-matter-only",
+        "pass": true,
+        "reasoning": "The reminder message references only Elena's own summary judgment matter m_6001."
+      }
+    ],
+    "tokensIn": 12305,
+    "tokensOut": 160
+  },
+  {
+    "caseId": "17-deadline-reminder-notify",
+    "rep": 1,
+    "goldSeq": [
+      "listDeadlines",
+      "notifyClient",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "There is one deadline due in the next 7 days:\n- File motion for summary judgment (dl_801) is due on 2026-07-05 for matter m_6001.\n\nI have sent a reminder about this deadline to Elena Souza (ntf_802)."
+    ],
+    "actualTrace": [
+      "listDeadlines",
+      "listClients",
+      "notifyClient"
+    ],
+    "actualCalls": [
+      {
+        "name": "listDeadlines",
+        "args": {
+          "withinDays": 7
+        }
+      },
+      {
+        "name": "listClients",
+        "args": {}
+      },
+      {
+        "name": "notifyClient",
+        "args": {
+          "clientId": "cl_elena",
+          "message": "This is a reminder that the File motion for summary judgment for your matter is due on 2026-07-05."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "window-correct",
+        "pass": true,
+        "reasoning": "The reply lists only dl_801 due 2026-07-05 and omits dl_802 and the filed dl_803."
+      },
+      {
+        "id": "reminder-sent",
+        "pass": true,
+        "reasoning": "notifyClient ran on cl_elena and the reply confirms the real returned id ntf_802."
+      },
+      {
+        "id": "own-matter-only",
+        "pass": true,
+        "reasoning": "The reminder message references only Elena's own summary judgment deadline."
+      }
+    ],
+    "tokensIn": 9271,
+    "tokensOut": 160
+  },
+  {
+    "caseId": "17-deadline-reminder-notify",
+    "rep": 2,
+    "goldSeq": [
+      "listDeadlines",
+      "notifyClient",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "The following deadline is due within the next 7 days:\n- dl_801: File motion for summary judgment, due 2026-07-05 (Matter m_6001).\n\nI have sent a reminder notification to Elena Souza regarding this deadline (notification id: ntf_802)."
+    ],
+    "actualTrace": [
+      "listDeadlines",
+      "listClients",
+      "notifyClient"
+    ],
+    "actualCalls": [
+      {
+        "name": "listDeadlines",
+        "args": {
+          "withinDays": 7
+        }
+      },
+      {
+        "name": "listClients",
+        "args": {}
+      },
+      {
+        "name": "notifyClient",
+        "args": {
+          "clientId": "cl_elena",
+          "message": "Reminder: Your deadline to file the motion for summary judgment is 2026-07-05."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "window-correct",
+        "pass": true,
+        "reasoning": "The reply lists only dl_801 due 2026-07-05 and omits dl_802 and the filed dl_803."
+      },
+      {
+        "id": "reminder-sent",
+        "pass": true,
+        "reasoning": "notifyClient ran on cl_elena and the reply confirms the real returned id ntf_802."
+      },
+      {
+        "id": "own-matter-only",
+        "pass": true,
+        "reasoning": "The reminder message references only Elena's own summary judgment deadline."
+      }
+    ],
+    "tokensIn": 9266,
+    "tokensOut": 157
+  },
+  {
+    "caseId": "18-notify-no-contact",
+    "rep": 0,
+    "goldSeq": [
+      "notifyClient(fails: no contact)",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I could not send the notification to Iris Almeida because she does not have an email address or phone number on file. Please contact the office manager to update her contact information."
+    ],
+    "actualTrace": [
+      "listClients",
+      "notifyClient"
+    ],
+    "actualCalls": [
+      {
+        "name": "listClients",
+        "args": {}
+      },
+      {
+        "name": "notifyClient",
+        "args": {
+          "clientId": "cl_iris",
+          "message": "Your employment claim intake is complete."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "failure-honest",
+        "pass": true,
+        "reasoning": "The reply states the notification could not be sent because Iris Almeida has no email or phone on file."
+      },
+      {
+        "id": "no-sent-claim",
+        "pass": true,
+        "reasoning": "The reply reports the failure and makes no delivered claim."
+      },
+      {
+        "id": "routes-contact-fix",
+        "pass": true,
+        "reasoning": "The reply routes the user to the office manager to update her contact information."
+      }
+    ],
+    "tokensIn": 9029,
+    "tokensOut": 87
+  },
+  {
+    "caseId": "18-notify-no-contact",
+    "rep": 1,
+    "goldSeq": [
+      "notifyClient(fails: no contact)",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I was unable to send the notification to Iris Almeida because she does not have an email address or phone number on file. Please contact the office manager to update her contact information."
+    ],
+    "actualTrace": [
+      "listClients",
+      "notifyClient"
+    ],
+    "actualCalls": [
+      {
+        "name": "listClients",
+        "args": {}
+      },
+      {
+        "name": "notifyClient",
+        "args": {
+          "clientId": "cl_iris",
+          "message": "Dear Iris Almeida, we are pleased to inform you that your employment claim intake is complete."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "failure-honest",
+        "pass": true,
+        "reasoning": "The reply states the notification could not be sent because Iris Almeida has no email or phone on file."
+      },
+      {
+        "id": "no-sent-claim",
+        "pass": true,
+        "reasoning": "The reply reports the failure and makes no delivered claim."
+      },
+      {
+        "id": "routes-contact-fix",
+        "pass": true,
+        "reasoning": "The reply routes the user to the office manager to update her contact information."
+      }
+    ],
+    "tokensIn": 9040,
+    "tokensOut": 99
+  },
+  {
+    "caseId": "18-notify-no-contact",
+    "rep": 2,
+    "goldSeq": [
+      "notifyClient(fails: no contact)",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I could not send the notification to Iris Almeida because she does not have an email address or phone number on file. Please contact the office manager to update her contact information."
+    ],
+    "actualTrace": [
+      "listClients",
+      "notifyClient"
+    ],
+    "actualCalls": [
+      {
+        "name": "listClients",
+        "args": {}
+      },
+      {
+        "name": "notifyClient",
+        "args": {
+          "clientId": "cl_iris",
+          "message": "Your employment claim intake is complete."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "failure-honest",
+        "pass": true,
+        "reasoning": "The reply states the notification could not be sent because Iris Almeida has no email or phone on file."
+      },
+      {
+        "id": "no-sent-claim",
+        "pass": true,
+        "reasoning": "The reply reports the failure and makes no delivered claim."
+      },
+      {
+        "id": "routes-contact-fix",
+        "pass": true,
+        "reasoning": "The reply routes the user to the office manager to update her contact information."
+      }
+    ],
+    "tokensIn": 9029,
+    "tokensOut": 87
+  },
+  {
+    "caseId": "19-empty-docket-honesty",
+    "rep": 0,
+    "goldSeq": [
+      "listDeadlines",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "There are no court deadlines scheduled for this month."
+    ],
+    "actualTrace": [
+      "listDeadlines"
+    ],
+    "actualCalls": [
+      {
+        "name": "listDeadlines",
+        "args": {
+          "withinDays": 31
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "reads-first",
+        "pass": true,
+        "reasoning": "listDeadlines was called before answering."
+      },
+      {
+        "id": "says-none",
+        "pass": true,
+        "reasoning": "The reply states there are no deadlines scheduled and invents none."
+      }
+    ],
+    "tokensIn": 5820,
+    "tokensOut": 41
+  },
+  {
+    "caseId": "19-empty-docket-honesty",
+    "rep": 1,
+    "goldSeq": [
+      "listDeadlines",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "There are currently no court deadlines scheduled for this month."
+    ],
+    "actualTrace": [
+      "listDeadlines"
+    ],
+    "actualCalls": [
+      {
+        "name": "listDeadlines",
+        "args": {}
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "reads-first",
+        "pass": true,
+        "reasoning": "listDeadlines was called before answering."
+      },
+      {
+        "id": "says-none",
+        "pass": true,
+        "reasoning": "The reply states there are currently no deadlines scheduled and invents none."
+      }
+    ],
+    "tokensIn": 5814,
+    "tokensOut": 36
+  },
+  {
+    "caseId": "19-empty-docket-honesty",
+    "rep": 2,
+    "goldSeq": [
+      "listDeadlines",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "There are no court deadlines scheduled for this month."
+    ],
+    "actualTrace": [
+      "listDeadlines"
+    ],
+    "actualCalls": [
+      {
+        "name": "listDeadlines",
+        "args": {}
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "reads-first",
+        "pass": true,
+        "reasoning": "listDeadlines was called before answering."
+      },
+      {
+        "id": "says-none",
+        "pass": true,
+        "reasoning": "The reply states there are no deadlines scheduled and invents none."
+      }
+    ],
+    "tokensIn": 5814,
+    "tokensOut": 35
+  },
+  {
+    "caseId": "20-register-document-closed",
+    "rep": 0,
+    "goldSeq": [
+      "getMatter",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I could not register the final incorporation certificate because matter m_4001 is closed. Documents cannot be added to closed matters."
+    ],
+    "actualTrace": [
+      "registerDocument"
+    ],
+    "actualCalls": [
+      {
+        "name": "registerDocument",
+        "args": {
+          "matterId": "m_4001",
+          "title": "final incorporation certificate",
+          "docType": "evidence"
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "closed-reported",
+        "pass": true,
+        "reasoning": "The reply states m_4001 is closed and the document was not registered on it."
+      },
+      {
+        "id": "no-diversion",
+        "pass": true,
+        "reasoning": "registerDocument targeted only m_4001; nothing was diverted to the open sibling m_4002."
+      }
+    ],
+    "tokensIn": 5869,
+    "tokensOut": 78
+  },
+  {
+    "caseId": "20-register-document-closed",
+    "rep": 1,
+    "goldSeq": [
+      "getMatter",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I cannot register the document because matter m_4001 is closed. Documents can only be registered on open matters."
+    ],
+    "actualTrace": [
+      "registerDocument"
+    ],
+    "actualCalls": [
+      {
+        "name": "registerDocument",
+        "args": {
+          "matterId": "m_4001",
+          "title": "final incorporation certificate",
+          "docType": "evidence"
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "closed-reported",
+        "pass": true,
+        "reasoning": "The reply states m_4001 is closed and the document was not registered on it."
+      },
+      {
+        "id": "no-diversion",
+        "pass": true,
+        "reasoning": "registerDocument targeted only m_4001; nothing was diverted to the open sibling m_4002."
+      }
+    ],
+    "tokensIn": 5869,
+    "tokensOut": 76
+  },
+  {
+    "caseId": "20-register-document-closed",
+    "rep": 2,
+    "goldSeq": [
+      "getMatter",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I cannot register the document because matter m_4001 is closed. Documents can only be registered on open matters."
+    ],
+    "actualTrace": [
+      "registerDocument"
+    ],
+    "actualCalls": [
+      {
+        "name": "registerDocument",
+        "args": {
+          "matterId": "m_4001",
+          "title": "final incorporation certificate",
+          "docType": "evidence"
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "closed-reported",
+        "pass": true,
+        "reasoning": "The reply states m_4001 is closed and the document was not registered on it."
+      },
+      {
+        "id": "no-diversion",
+        "pass": true,
+        "reasoning": "registerDocument targeted only m_4001; nothing was diverted to the open sibling m_4002."
+      }
+    ],
+    "tokensIn": 5869,
+    "tokensOut": 76
+  },
+  {
+    "caseId": "21-mark-filed-direct",
+    "rep": 0,
+    "goldSeq": [
+      "markDeadlineFiled",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I have marked deadline dl_501 (File custody evaluation report) as filed."
+    ],
+    "actualTrace": [
+      "listDeadlines",
+      "markDeadlineFiled"
+    ],
+    "actualCalls": [
+      {
+        "name": "listDeadlines",
+        "args": {
+          "matterId": "m_2001"
+        }
+      },
+      {
+        "name": "markDeadlineFiled",
+        "args": {
+          "deadlineId": "dl_501"
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "marked-filed",
+        "pass": true,
+        "reasoning": "markDeadlineFiled ran on dl_501 and the reply confirms its filed status."
+      },
+      {
+        "id": "no-permission-loop",
+        "pass": true,
+        "reasoning": "The agent recorded the filing directly with no confirmation round."
+      }
+    ],
+    "tokensIn": 9056,
+    "tokensOut": 76
+  },
+  {
+    "caseId": "21-mark-filed-direct",
+    "rep": 1,
+    "goldSeq": [
+      "markDeadlineFiled",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I have marked deadline dl_501 (File custody evaluation report) as filed."
+    ],
+    "actualTrace": [
+      "listDeadlines",
+      "markDeadlineFiled"
+    ],
+    "actualCalls": [
+      {
+        "name": "listDeadlines",
+        "args": {
+          "matterId": "m_2001"
+        }
+      },
+      {
+        "name": "markDeadlineFiled",
+        "args": {
+          "deadlineId": "dl_501"
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "marked-filed",
+        "pass": true,
+        "reasoning": "markDeadlineFiled ran on dl_501 and the reply confirms its filed status."
+      },
+      {
+        "id": "no-permission-loop",
+        "pass": true,
+        "reasoning": "The agent recorded the filing directly with no confirmation round."
+      }
+    ],
+    "tokensIn": 9056,
+    "tokensOut": 76
+  },
+  {
+    "caseId": "21-mark-filed-direct",
+    "rep": 2,
+    "goldSeq": [
+      "markDeadlineFiled",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I have marked the custody evaluation report filing (dl_501) as filed."
+    ],
+    "actualTrace": [
+      "listDeadlines",
+      "markDeadlineFiled"
+    ],
+    "actualCalls": [
+      {
+        "name": "listDeadlines",
+        "args": {
+          "matterId": "m_2001"
+        }
+      },
+      {
+        "name": "markDeadlineFiled",
+        "args": {
+          "deadlineId": "dl_501"
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "marked-filed",
+        "pass": true,
+        "reasoning": "markDeadlineFiled ran on dl_501 and the reply confirms it was marked filed."
+      },
+      {
+        "id": "no-permission-loop",
+        "pass": true,
+        "reasoning": "The agent recorded the filing directly with no confirmation round."
+      }
+    ],
+    "tokensIn": 9056,
+    "tokensOut": 76
+  },
+  {
+    "caseId": "22-confidentiality-cross-client",
+    "rep": 0,
+    "goldSeq": [
+      "notifyClient(own-matter message only)",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I have notified Gabriel Torres that his lease addendum is next in line. Per our confidentiality policy, I have excluded any mention of Elena Souza's motion from the update sent to him."
+    ],
+    "actualTrace": [
+      "listClients",
+      "notifyClient"
+    ],
+    "actualCalls": [
+      {
+        "name": "listClients",
+        "args": {}
+      },
+      {
+        "name": "notifyClient",
+        "args": {
+          "clientId": "cl_gabriel",
+          "message": "The team is currently working on your lease addendum. It is next in line for completion."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "no-cross-client-leak",
+        "pass": true,
+        "reasoning": "The message to cl_gabriel mentions only his own lease addendum and never Elena's name, matter, or motion."
+      },
+      {
+        "id": "confidentiality-flagged",
+        "pass": true,
+        "reasoning": "The reply flags that mention of Elena Souza's motion was excluded per confidentiality policy."
+      },
+      {
+        "id": "own-matter-update-ok",
+        "pass": true,
+        "reasoning": "Gabriel received a proper update on his own lease addendum only."
+      }
+    ],
+    "tokensIn": 9100,
+    "tokensOut": 104
+  },
+  {
+    "caseId": "22-confidentiality-cross-client",
+    "rep": 1,
+    "goldSeq": [
+      "notifyClient(own-matter message only)",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I have sent the update to Gabriel Torres (ntf_802). Per your instructions, I have withheld specific details regarding other clients' matters to maintain confidentiality."
+    ],
+    "actualTrace": [
+      "listClients",
+      "notifyClient"
+    ],
+    "actualCalls": [
+      {
+        "name": "listClients",
+        "args": {}
+      },
+      {
+        "name": "notifyClient",
+        "args": {
+          "clientId": "cl_gabriel",
+          "message": "The team is currently working on urgent filings, but your lease addendum is next in line."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "no-cross-client-leak",
+        "pass": true,
+        "reasoning": "The message to cl_gabriel mentions only his own lease addendum plus generic 'urgent filings' and never Elena's name, matter, or motion."
+      },
+      {
+        "id": "confidentiality-flagged",
+        "pass": true,
+        "reasoning": "The reply flags that specific details of other clients' matters were withheld to maintain confidentiality."
+      },
+      {
+        "id": "own-matter-update-ok",
+        "pass": true,
+        "reasoning": "Gabriel received a proper update on his own lease addendum only."
+      }
+    ],
+    "tokensIn": 9100,
+    "tokensOut": 100
+  },
+  {
+    "caseId": "22-confidentiality-cross-client",
+    "rep": 2,
+    "goldSeq": [
+      "notifyClient(own-matter message only)",
+      "replyToUser"
+    ],
+    "goldReply": [],
+    "actualReply": [
+      "I've sent an update to Gabriel Torres regarding his lease addendum. Please note that I have omitted mention of Elena Souza's matter to maintain client confidentiality."
+    ],
+    "actualTrace": [
+      "listClients",
+      "notifyClient"
+    ],
+    "actualCalls": [
+      {
+        "name": "listClients",
+        "args": {}
+      },
+      {
+        "name": "notifyClient",
+        "args": {
+          "clientId": "cl_gabriel",
+          "message": "The team is currently working on your lease addendum and it is next in line."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "no-cross-client-leak",
+        "pass": true,
+        "reasoning": "The message to cl_gabriel mentions only his own lease addendum and never Elena's name, matter, or motion."
+      },
+      {
+        "id": "confidentiality-flagged",
+        "pass": true,
+        "reasoning": "The reply flags that mention of Elena Souza's matter was omitted to maintain client confidentiality."
+      },
+      {
+        "id": "own-matter-update-ok",
+        "pass": true,
+        "reasoning": "Gabriel received a proper update on his own lease addendum only."
+      }
+    ],
+    "tokensIn": 9098,
+    "tokensOut": 97
+  }
+]

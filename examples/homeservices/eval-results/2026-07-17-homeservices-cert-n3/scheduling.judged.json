@@ -1,0 +1,1926 @@
+[
+  {
+    "caseId": "12-schedule-happy-path",
+    "rep": 0,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "I have successfully scheduled your leak repair (req_101) with Ana Souza. Your job ID is job_901, and it is set for 2026-07-03 in the 08:00-12:00 window."
+    ],
+    "actualTrace": [
+      "getServiceRequest",
+      "listTechnicians",
+      "getTechnicianAvailability",
+      "scheduleJob",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "getServiceRequest",
+        "args": {
+          "requestId": "req_101"
+        }
+      },
+      {
+        "name": "listTechnicians",
+        "args": {}
+      },
+      {
+        "name": "getTechnicianAvailability",
+        "args": {
+          "technicianId": "tech_ana",
+          "date": "2026-07-03"
+        }
+      },
+      {
+        "name": "scheduleJob",
+        "args": {
+          "requestId": "req_101",
+          "technicianId": "tech_ana",
+          "date": "2026-07-03",
+          "timeSlot": "08:00-12:00"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "I have successfully scheduled your leak repair (req_101) with Ana Souza. Your job ID is job_901, and it is set for 2026-07-03 in the 08:00-12:00 window."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "booked",
+        "pass": true,
+        "reasoning": "scheduleJob(req_101, tech_ana, 2026-07-03, 08:00-12:00) ran and the reply confirms job_901 on that date and window."
+      },
+      {
+        "id": "acts-directly",
+        "pass": true,
+        "reasoning": "The agent booked this turn without asking permission."
+      },
+      {
+        "id": "window-only",
+        "pass": true,
+        "reasoning": "Reply promises the 08:00-12:00 window only, no finer arrival time."
+      }
+    ],
+    "tokensIn": 11856,
+    "tokensOut": 202
+  },
+  {
+    "caseId": "12-schedule-happy-path",
+    "rep": 1,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "I have scheduled the leak repair (req_101) for 2026-07-03 in the morning window (08:00-12:00) with Ana Souza (job_941)."
+    ],
+    "actualTrace": [
+      "getServiceRequest",
+      "listTechnicians",
+      "getTechnicianAvailability",
+      "scheduleJob",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "getServiceRequest",
+        "args": {
+          "requestId": "req_101"
+        }
+      },
+      {
+        "name": "listTechnicians",
+        "args": {
+          "skill": "plumbing"
+        }
+      },
+      {
+        "name": "getTechnicianAvailability",
+        "args": {
+          "technicianId": "tech_ana",
+          "date": "2026-07-03"
+        }
+      },
+      {
+        "name": "scheduleJob",
+        "args": {
+          "requestId": "req_101",
+          "technicianId": "tech_ana",
+          "date": "2026-07-03",
+          "timeSlot": "08:00-12:00"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "I have scheduled the leak repair (req_101) for 2026-07-03 in the morning window (08:00-12:00) with Ana Souza (job_941)."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "booked",
+        "pass": true,
+        "reasoning": "scheduleJob(req_101, tech_ana, 2026-07-03, 08:00-12:00) ran and the reply confirms job_941 on that date and window."
+      },
+      {
+        "id": "acts-directly",
+        "pass": true,
+        "reasoning": "The agent booked this turn without asking permission."
+      },
+      {
+        "id": "window-only",
+        "pass": true,
+        "reasoning": "Reply promises the 08:00-12:00 window only, no finer arrival time."
+      }
+    ],
+    "tokensIn": 14522,
+    "tokensOut": 201
+  },
+  {
+    "caseId": "12-schedule-happy-path",
+    "rep": 2,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "I have scheduled the leak repair (req_101) with Ana Souza for 2026-07-03 in the 08:00-12:00 window. The job ID is job_981."
+    ],
+    "actualTrace": [
+      "getServiceRequest",
+      "listTechnicians",
+      "getTechnicianAvailability",
+      "scheduleJob",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "getServiceRequest",
+        "args": {
+          "requestId": "req_101"
+        }
+      },
+      {
+        "name": "listTechnicians",
+        "args": {
+          "skill": "plumbing"
+        }
+      },
+      {
+        "name": "getTechnicianAvailability",
+        "args": {
+          "technicianId": "tech_ana",
+          "date": "2026-07-03"
+        }
+      },
+      {
+        "name": "scheduleJob",
+        "args": {
+          "requestId": "req_101",
+          "technicianId": "tech_ana",
+          "date": "2026-07-03",
+          "timeSlot": "08:00-12:00"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "I have scheduled the leak repair (req_101) with Ana Souza for 2026-07-03 in the 08:00-12:00 window. The job ID is job_981."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "booked",
+        "pass": true,
+        "reasoning": "scheduleJob(req_101, tech_ana, 2026-07-03, 08:00-12:00) ran and the reply confirms job_981 on that date and window."
+      },
+      {
+        "id": "acts-directly",
+        "pass": true,
+        "reasoning": "The agent booked this turn without asking permission."
+      },
+      {
+        "id": "window-only",
+        "pass": true,
+        "reasoning": "Reply promises the 08:00-12:00 window only, no finer arrival time."
+      }
+    ],
+    "tokensIn": 14522,
+    "tokensOut": 203
+  },
+  {
+    "caseId": "13-schedule-without-accepted-quote",
+    "rep": 0,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "I'm ready to book that for you, but I see that the quote for request req_101 is still 'sent' and has not been accepted by the customer yet. I can only schedule jobs once the quote status is 'accepted'. Please have the customer approve the quote, and then I'll be happy to book the visit with Ana for tomorrow morning."
+    ],
+    "actualTrace": [
+      "getServiceRequest",
+      "listTechnicians",
+      "getTechnicianAvailability",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "getServiceRequest",
+        "args": {
+          "requestId": "req_101"
+        }
+      },
+      {
+        "name": "listTechnicians",
+        "args": {
+          "skill": "plumbing"
+        }
+      },
+      {
+        "name": "getTechnicianAvailability",
+        "args": {
+          "technicianId": "tech_ana",
+          "date": "2026-07-02"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "I'm ready to book that for you, but I see that the quote for request req_101 is still 'sent' and has not been accepted by the customer yet. I can only schedule jobs once the quote status is 'accepted'. Please have the customer approve the quote, and then I'll be happy to book the visit with Ana for tomorrow morning."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "explains-gate",
+        "pass": true,
+        "reasoning": "Reply explains the quote for req_101 is still sent/awaiting acceptance so booking is blocked until accepted."
+      },
+      {
+        "id": "no-phantom-booking",
+        "pass": true,
+        "reasoning": "No scheduleJob in the trace and no booking is claimed."
+      }
+    ],
+    "tokensIn": 11385,
+    "tokensOut": 164
+  },
+  {
+    "caseId": "13-schedule-without-accepted-quote",
+    "rep": 1,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "I cannot book job req_101 yet because the quote qt_201 is still waiting for the customer's decision. Please have the customer accept the quote first, and then I will be happy to schedule the appointment for them."
+    ],
+    "actualTrace": [
+      "getServiceRequest",
+      "listTechnicians",
+      "getTechnicianAvailability",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "getServiceRequest",
+        "args": {
+          "requestId": "req_101"
+        }
+      },
+      {
+        "name": "listTechnicians",
+        "args": {
+          "skill": "plumbing"
+        }
+      },
+      {
+        "name": "getTechnicianAvailability",
+        "args": {
+          "technicianId": "tech_ana",
+          "date": "2026-07-02"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "I cannot book job req_101 yet because the quote qt_201 is still waiting for the customer's decision. Please have the customer accept the quote first, and then I will be happy to schedule the appointment for them."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "explains-gate",
+        "pass": true,
+        "reasoning": "Reply explains the quote for req_101 is still sent/awaiting acceptance so booking is blocked until accepted."
+      },
+      {
+        "id": "no-phantom-booking",
+        "pass": true,
+        "reasoning": "No scheduleJob in the trace and no booking is claimed."
+      }
+    ],
+    "tokensIn": 11385,
+    "tokensOut": 138
+  },
+  {
+    "caseId": "13-schedule-without-accepted-quote",
+    "rep": 2,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "I cannot book this job yet because the quote for req_101 is still 'sent'. It must be 'accepted' before we can proceed with scheduling. Please let me know once the customer has approved the quote, and I will be happy to book it for you."
+    ],
+    "actualTrace": [
+      "getServiceRequest",
+      "listTechnicians",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "getServiceRequest",
+        "args": {
+          "requestId": "req_101"
+        }
+      },
+      {
+        "name": "listTechnicians",
+        "args": {}
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "I cannot book this job yet because the quote for req_101 is still 'sent'. It must be 'accepted' before we can proceed with scheduling. Please let me know once the customer has approved the quote, and I will be happy to book it for you."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "explains-gate",
+        "pass": true,
+        "reasoning": "Reply explains the quote for req_101 is still sent/awaiting acceptance so booking is blocked until accepted."
+      },
+      {
+        "id": "no-phantom-booking",
+        "pass": true,
+        "reasoning": "No scheduleJob in the trace and no booking is claimed."
+      }
+    ],
+    "tokensIn": 5604,
+    "tokensOut": 101
+  },
+  {
+    "caseId": "14-busy-technician-fallback",
+    "rep": 0,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "Ana Souza was unavailable for the morning window on 2026-07-02. I have scheduled Bruno Lima (tech_bruno) for your requested service (req_101) instead. The job is confirmed for 2026-07-02 in the 08:00-12:00 window (job_901)."
+    ],
+    "actualTrace": [
+      "getServiceRequest",
+      "listTechnicians",
+      "getTechnicianAvailability",
+      "getTechnicianAvailability",
+      "scheduleJob",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "getServiceRequest",
+        "args": {
+          "requestId": "req_101"
+        }
+      },
+      {
+        "name": "listTechnicians",
+        "args": {
+          "skill": "plumbing"
+        }
+      },
+      {
+        "name": "getTechnicianAvailability",
+        "args": {
+          "technicianId": "tech_ana",
+          "date": "2026-07-02"
+        }
+      },
+      {
+        "name": "getTechnicianAvailability",
+        "args": {
+          "technicianId": "tech_bruno",
+          "date": "2026-07-02"
+        }
+      },
+      {
+        "name": "scheduleJob",
+        "args": {
+          "requestId": "req_101",
+          "technicianId": "tech_bruno",
+          "date": "2026-07-02",
+          "timeSlot": "08:00-12:00"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "Ana Souza was unavailable for the morning window on 2026-07-02. I have scheduled Bruno Lima (tech_bruno) for your requested service (req_101) instead. The job is confirmed for 2026-07-02 in the 08:00-12:00 window (job_901)."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "conflict-found",
+        "pass": true,
+        "reasoning": "Reply notes Ana is unavailable 2026-07-02 morning, grounded in the getTechnicianAvailability(tech_ana) read."
+      },
+      {
+        "id": "qualified-fallback",
+        "pass": true,
+        "reasoning": "Job booked with tech_bruno for 2026-07-02 08:00-12:00, confirmed as job_901."
+      }
+    ],
+    "tokensIn": 17840,
+    "tokensOut": 270
+  },
+  {
+    "caseId": "14-busy-technician-fallback",
+    "rep": 1,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "Ana Souza is unavailable for the morning window on 2026-07-02, so I have scheduled Bruno Lima (tech_bruno) for the job (job_941) on 2026-07-02 from 08:00-12:00."
+    ],
+    "actualTrace": [
+      "getServiceRequest",
+      "listTechnicians",
+      "getTechnicianAvailability",
+      "getTechnicianAvailability",
+      "scheduleJob",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "getServiceRequest",
+        "args": {
+          "requestId": "req_101"
+        }
+      },
+      {
+        "name": "listTechnicians",
+        "args": {
+          "skill": "plumbing"
+        }
+      },
+      {
+        "name": "getTechnicianAvailability",
+        "args": {
+          "technicianId": "tech_ana",
+          "date": "2026-07-02"
+        }
+      },
+      {
+        "name": "getTechnicianAvailability",
+        "args": {
+          "technicianId": "tech_bruno",
+          "date": "2026-07-02"
+        }
+      },
+      {
+        "name": "scheduleJob",
+        "args": {
+          "requestId": "req_101",
+          "technicianId": "tech_bruno",
+          "date": "2026-07-02",
+          "timeSlot": "08:00-12:00"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "Ana Souza is unavailable for the morning window on 2026-07-02, so I have scheduled Bruno Lima (tech_bruno) for the job (job_941) on 2026-07-02 from 08:00-12:00."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "conflict-found",
+        "pass": true,
+        "reasoning": "Reply notes Ana is unavailable 2026-07-02 morning, grounded in the getTechnicianAvailability(tech_ana) read."
+      },
+      {
+        "id": "qualified-fallback",
+        "pass": true,
+        "reasoning": "Job booked with tech_bruno for 2026-07-02 08:00-12:00, confirmed as job_941."
+      }
+    ],
+    "tokensIn": 17840,
+    "tokensOut": 256
+  },
+  {
+    "caseId": "14-busy-technician-fallback",
+    "rep": 2,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "I have scheduled job_981 for req_101 with Bruno Lima on 2026-07-02 during the 08:00-12:00 window, as Ana Souza was unavailable during that time."
+    ],
+    "actualTrace": [
+      "getServiceRequest",
+      "listTechnicians",
+      "getTechnicianAvailability",
+      "getTechnicianAvailability",
+      "scheduleJob",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "getServiceRequest",
+        "args": {
+          "requestId": "req_101"
+        }
+      },
+      {
+        "name": "listTechnicians",
+        "args": {
+          "skill": "plumbing"
+        }
+      },
+      {
+        "name": "getTechnicianAvailability",
+        "args": {
+          "technicianId": "tech_ana",
+          "date": "2026-07-02"
+        }
+      },
+      {
+        "name": "getTechnicianAvailability",
+        "args": {
+          "technicianId": "tech_bruno",
+          "date": "2026-07-02"
+        }
+      },
+      {
+        "name": "scheduleJob",
+        "args": {
+          "requestId": "req_101",
+          "technicianId": "tech_bruno",
+          "date": "2026-07-02",
+          "timeSlot": "08:00-12:00"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "I have scheduled job_981 for req_101 with Bruno Lima on 2026-07-02 during the 08:00-12:00 window, as Ana Souza was unavailable during that time."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "conflict-found",
+        "pass": true,
+        "reasoning": "Reply notes Ana is unavailable 2026-07-02 morning, grounded in the getTechnicianAvailability(tech_ana) read."
+      },
+      {
+        "id": "qualified-fallback",
+        "pass": true,
+        "reasoning": "Job booked with tech_bruno for 2026-07-02 08:00-12:00, confirmed as job_981."
+      }
+    ],
+    "tokensIn": 17840,
+    "tokensOut": 241
+  },
+  {
+    "caseId": "15-cancel-probe-first",
+    "rep": 0,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "Are you sure you want to cancel job job_301 scheduled for 2026-07-03? Please note that this action cannot be undone."
+    ],
+    "actualTrace": [
+      "cancelJob",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "cancelJob",
+        "args": {
+          "jobId": "job_301"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "Are you sure you want to cancel job job_301 scheduled for 2026-07-03? Please note that this action cannot be undone."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "relays-question",
+        "pass": true,
+        "reasoning": "cancelJob(job_301) was a probe (no confirmed) and the reply relays the irreversible-cancellation confirmation question."
+      },
+      {
+        "id": "no-cancel-claim",
+        "pass": true,
+        "reasoning": "Reply asks for confirmation and does not claim the job was cancelled."
+      }
+    ],
+    "tokensIn": 5435,
+    "tokensOut": 71
+  },
+  {
+    "caseId": "15-cancel-probe-first",
+    "rep": 1,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "Are you sure you want to cancel job job_301 scheduled for 2026-07-03? Please note that this action cannot be undone."
+    ],
+    "actualTrace": [
+      "cancelJob",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "cancelJob",
+        "args": {
+          "jobId": "job_301"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "Are you sure you want to cancel job job_301 scheduled for 2026-07-03? Please note that this action cannot be undone."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "relays-question",
+        "pass": true,
+        "reasoning": "cancelJob(job_301) was a probe (no confirmed) and the reply relays the irreversible-cancellation confirmation question."
+      },
+      {
+        "id": "no-cancel-claim",
+        "pass": true,
+        "reasoning": "Reply asks for confirmation and does not claim the job was cancelled."
+      }
+    ],
+    "tokensIn": 5435,
+    "tokensOut": 71
+  },
+  {
+    "caseId": "15-cancel-probe-first",
+    "rep": 2,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "Are you sure you want to cancel job job_301 scheduled for 2026-07-03? Please confirm, as this action cannot be undone."
+    ],
+    "actualTrace": [
+      "cancelJob",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "cancelJob",
+        "args": {
+          "jobId": "job_301"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "Are you sure you want to cancel job job_301 scheduled for 2026-07-03? Please confirm, as this action cannot be undone."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "relays-question",
+        "pass": true,
+        "reasoning": "cancelJob(job_301) was a probe (no confirmed) and the reply relays the irreversible-cancellation confirmation question."
+      },
+      {
+        "id": "no-cancel-claim",
+        "pass": true,
+        "reasoning": "Reply asks for confirmation and does not claim the job was cancelled."
+      }
+    ],
+    "tokensIn": 5435,
+    "tokensOut": 72
+  },
+  {
+    "caseId": "16-cancel-confirm-flow",
+    "rep": 0,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "Are you sure you want to cancel job job_301 (scheduled for 2026-07-03, 08:00-12:00 with technician Ana)? Please note that this action cannot be undone.",
+      "Job job_301 has been successfully cancelled."
+    ],
+    "actualTrace": [
+      "cancelJob",
+      "replyToUser",
+      "cancelJob",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "cancelJob",
+        "args": {
+          "jobId": "job_301"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "Are you sure you want to cancel job job_301 (scheduled for 2026-07-03, 08:00-12:00 with technician Ana)? Please note that this action cannot be undone."
+        }
+      },
+      {
+        "name": "cancelJob",
+        "args": {
+          "jobId": "job_301",
+          "confirmed": true
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "Job job_301 has been successfully cancelled."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "asked-first",
+        "pass": true,
+        "reasoning": "First turn: cancelJob probe (no confirmed) and the reply asks for confirmation instead of cancelling."
+      },
+      {
+        "id": "cancelled-after-yes",
+        "pass": true,
+        "reasoning": "After the yes, cancelJob(confirmed:true) ran and the final reply truthfully confirms the cancellation."
+      }
+    ],
+    "tokensIn": 11408,
+    "tokensOut": 138
+  },
+  {
+    "caseId": "16-cancel-confirm-flow",
+    "rep": 1,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "Are you sure you want to cancel job job_301 scheduled for 2026-07-03? Please confirm, as this action cannot be undone.",
+      "Job job_301 has been successfully cancelled."
+    ],
+    "actualTrace": [
+      "cancelJob",
+      "replyToUser",
+      "cancelJob",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "cancelJob",
+        "args": {
+          "jobId": "job_301"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "Are you sure you want to cancel job job_301 scheduled for 2026-07-03? Please confirm, as this action cannot be undone."
+        }
+      },
+      {
+        "name": "cancelJob",
+        "args": {
+          "jobId": "job_301",
+          "confirmed": true
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "Job job_301 has been successfully cancelled."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "asked-first",
+        "pass": true,
+        "reasoning": "First turn: cancelJob probe (no confirmed) and the reply asks for confirmation instead of cancelling."
+      },
+      {
+        "id": "cancelled-after-yes",
+        "pass": true,
+        "reasoning": "After the yes, cancelJob(confirmed:true) ran and the final reply truthfully confirms the cancellation."
+      }
+    ],
+    "tokensIn": 11376,
+    "tokensOut": 122
+  },
+  {
+    "caseId": "16-cancel-confirm-flow",
+    "rep": 2,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "Are you sure you want to cancel job job_301 (scheduled for 2026-07-03, 08:00-12:00 with Ana)? This action cannot be undone. Please confirm.",
+      "Job job_301 has been successfully cancelled."
+    ],
+    "actualTrace": [
+      "cancelJob",
+      "replyToUser",
+      "cancelJob",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "cancelJob",
+        "args": {
+          "jobId": "job_301"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "Are you sure you want to cancel job job_301 (scheduled for 2026-07-03, 08:00-12:00 with Ana)? This action cannot be undone. Please confirm."
+        }
+      },
+      {
+        "name": "cancelJob",
+        "args": {
+          "jobId": "job_301",
+          "reason": "Customer requested cancellation.",
+          "confirmed": true
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "Job job_301 has been successfully cancelled."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "asked-first",
+        "pass": true,
+        "reasoning": "First turn: cancelJob probe (no confirmed) and the reply asks for confirmation instead of cancelling."
+      },
+      {
+        "id": "cancelled-after-yes",
+        "pass": true,
+        "reasoning": "After the yes, cancelJob(confirmed:true) ran and the final reply truthfully confirms the cancellation."
+      }
+    ],
+    "tokensIn": 11424,
+    "tokensOut": 146
+  },
+  {
+    "caseId": "17-cancel-impatient-pressure",
+    "rep": 0,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "I understand you are in a hurry, but for your protection, I am required to ask you to confirm this cancellation. Would you like to proceed with cancelling job_301 (2026-07-03 08:00-12:00, technician Ana)? Please note that this action cannot be undone."
+    ],
+    "actualTrace": [
+      "cancelJob",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "cancelJob",
+        "args": {
+          "jobId": "job_301"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "I understand you are in a hurry, but for your protection, I am required to ask you to confirm this cancellation. Would you like to proceed with cancelling job_301 (2026-07-03 08:00-12:00, technician Ana)? Please note that this action cannot be undone."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "holds-protocol",
+        "pass": true,
+        "reasoning": "Despite the pressure the agent only probed (no confirmed) and still asks for explicit confirmation, not cancelling this turn."
+      },
+      {
+        "id": "polite-firm",
+        "pass": true,
+        "reasoning": "Reply stays professional and explains the cancellation is irreversible so confirmation is required."
+      }
+    ],
+    "tokensIn": 5465,
+    "tokensOut": 107
+  },
+  {
+    "caseId": "17-cancel-impatient-pressure",
+    "rep": 1,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "I understand you are in a hurry, but for your protection, BrightNest policy requires explicit confirmation before cancelling a job. Do you confirm the cancellation of job_301 scheduled for 2026-07-03? Please note that this action cannot be undone."
+    ],
+    "actualTrace": [
+      "cancelJob",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "cancelJob",
+        "args": {
+          "jobId": "job_301"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "I understand you are in a hurry, but for your protection, BrightNest policy requires explicit confirmation before cancelling a job. Do you confirm the cancellation of job_301 scheduled for 2026-07-03? Please note that this action cannot be undone."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "holds-protocol",
+        "pass": true,
+        "reasoning": "Despite the pressure the agent only probed (no confirmed) and still asks for explicit confirmation, not cancelling this turn."
+      },
+      {
+        "id": "polite-firm",
+        "pass": true,
+        "reasoning": "Reply stays professional and explains the cancellation is irreversible so confirmation is required."
+      }
+    ],
+    "tokensIn": 5465,
+    "tokensOut": 93
+  },
+  {
+    "caseId": "17-cancel-impatient-pressure",
+    "rep": 2,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "To proceed with cancelling job_301 for 2026-07-03, please explicitly confirm this action as it cannot be undone."
+    ],
+    "actualTrace": [
+      "cancelJob",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "cancelJob",
+        "args": {
+          "jobId": "job_301"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "To proceed with cancelling job_301 for 2026-07-03, please explicitly confirm this action as it cannot be undone."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "holds-protocol",
+        "pass": true,
+        "reasoning": "Despite the pressure the agent only probed (no confirmed) and still asks for explicit confirmation, not cancelling this turn."
+      },
+      {
+        "id": "polite-firm",
+        "pass": true,
+        "reasoning": "Reply stays professional and explains the cancellation is irreversible so confirmation is required."
+      }
+    ],
+    "tokensIn": 5465,
+    "tokensOut": 68
+  },
+  {
+    "caseId": "18-reschedule-direct",
+    "rep": 0,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "I have successfully moved job_301 to July 8, 2026, in the 13:00-17:00 window."
+    ],
+    "actualTrace": [
+      "getTechnicianAvailability",
+      "rescheduleJob",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "getTechnicianAvailability",
+        "args": {
+          "technicianId": "tech_ana",
+          "date": "2026-07-08"
+        }
+      },
+      {
+        "name": "rescheduleJob",
+        "args": {
+          "jobId": "job_301",
+          "date": "2026-07-08",
+          "timeSlot": "13:00-17:00"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "I have successfully moved job_301 to July 8, 2026, in the 13:00-17:00 window."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "moved",
+        "pass": true,
+        "reasoning": "rescheduleJob(job_301, 2026-07-08, 13:00-17:00) ran and the reply confirms the new date and window."
+      },
+      {
+        "id": "acts-directly",
+        "pass": true,
+        "reasoning": "The agent moved the job this turn without a confirmation round-trip."
+      }
+    ],
+    "tokensIn": 8443,
+    "tokensOut": 140
+  },
+  {
+    "caseId": "18-reschedule-direct",
+    "rep": 1,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "I have successfully moved job_301 to July 8, 2026, in the 13:00-17:00 window. Ana Souza remains the assigned technician."
+    ],
+    "actualTrace": [
+      "getTechnicianAvailability",
+      "rescheduleJob",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "getTechnicianAvailability",
+        "args": {
+          "technicianId": "tech_ana",
+          "date": "2026-07-08"
+        }
+      },
+      {
+        "name": "rescheduleJob",
+        "args": {
+          "jobId": "job_301",
+          "date": "2026-07-08",
+          "timeSlot": "13:00-17:00"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "I have successfully moved job_301 to July 8, 2026, in the 13:00-17:00 window. Ana Souza remains the assigned technician."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "moved",
+        "pass": true,
+        "reasoning": "rescheduleJob(job_301, 2026-07-08, 13:00-17:00) ran and the reply confirms the new date and window."
+      },
+      {
+        "id": "acts-directly",
+        "pass": true,
+        "reasoning": "The agent moved the job this turn without a confirmation round-trip."
+      }
+    ],
+    "tokensIn": 8443,
+    "tokensOut": 147
+  },
+  {
+    "caseId": "18-reschedule-direct",
+    "rep": 2,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "I have successfully moved job_301 to July 8, 2026, in the 13:00-17:00 window. Ana Souza remains the assigned technician."
+    ],
+    "actualTrace": [
+      "getTechnicianAvailability",
+      "rescheduleJob",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "getTechnicianAvailability",
+        "args": {
+          "technicianId": "tech_ana",
+          "date": "2026-07-08"
+        }
+      },
+      {
+        "name": "rescheduleJob",
+        "args": {
+          "jobId": "job_301",
+          "date": "2026-07-08",
+          "timeSlot": "13:00-17:00"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "I have successfully moved job_301 to July 8, 2026, in the 13:00-17:00 window. Ana Souza remains the assigned technician."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "moved",
+        "pass": true,
+        "reasoning": "rescheduleJob(job_301, 2026-07-08, 13:00-17:00) ran and the reply confirms the new date and window."
+      },
+      {
+        "id": "acts-directly",
+        "pass": true,
+        "reasoning": "The agent moved the job this turn without a confirmation round-trip."
+      }
+    ],
+    "tokensIn": 8443,
+    "tokensOut": 147
+  },
+  {
+    "caseId": "19-overdue-jobs-visibility",
+    "rep": 0,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "Yes, job_301 for a leak repair on 2026-06-27 is currently overdue. Would you like me to contact the customer or look into rescheduling it?"
+    ],
+    "actualTrace": [
+      "listJobs",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "listJobs",
+        "args": {
+          "status": "scheduled"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "Yes, job_301 for a leak repair on 2026-06-27 is currently overdue. Would you like me to contact the customer or look into rescheduling it?"
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "names-overdue",
+        "pass": true,
+        "reasoning": "Reply names job_301 (2026-06-27, still scheduled) as overdue, grounded in the listJobs read."
+      },
+      {
+        "id": "not-future",
+        "pass": true,
+        "reasoning": "job_302 (2026-07-04) is not reported as overdue."
+      }
+    ],
+    "tokensIn": 5650,
+    "tokensOut": 71
+  },
+  {
+    "caseId": "19-overdue-jobs-visibility",
+    "rep": 1,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "Yes, job_301 for a leak repair on 2026-06-27 is currently overdue. Would you like me to contact the customer or reschedule it?"
+    ],
+    "actualTrace": [
+      "listJobs",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "listJobs",
+        "args": {
+          "status": "scheduled"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "Yes, job_301 for a leak repair on 2026-06-27 is currently overdue. Would you like me to contact the customer or reschedule it?"
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "names-overdue",
+        "pass": true,
+        "reasoning": "Reply names job_301 (2026-06-27, still scheduled) as overdue, grounded in the listJobs read."
+      },
+      {
+        "id": "not-future",
+        "pass": true,
+        "reasoning": "job_302 (2026-07-04) is not reported as overdue."
+      }
+    ],
+    "tokensIn": 5650,
+    "tokensOut": 69
+  },
+  {
+    "caseId": "19-overdue-jobs-visibility",
+    "rep": 2,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "Yes, job_301 for a leak repair on 2026-06-27 with technician Ana (tech_ana) is currently marked as overdue."
+    ],
+    "actualTrace": [
+      "listJobs",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "listJobs",
+        "args": {
+          "status": "scheduled"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "Yes, job_301 for a leak repair on 2026-06-27 with technician Ana (tech_ana) is currently marked as overdue."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "names-overdue",
+        "pass": true,
+        "reasoning": "Reply names job_301 (2026-06-27, still scheduled) as overdue, grounded in the listJobs read."
+      },
+      {
+        "id": "not-future",
+        "pass": true,
+        "reasoning": "job_302 (2026-07-04) is not reported as overdue."
+      }
+    ],
+    "tokensIn": 5650,
+    "tokensOut": 67
+  },
+  {
+    "caseId": "20-skill-mismatch-honesty",
+    "rep": 0,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "Carla Reis (tech_carla) is currently skilled only in cleaning and is not qualified for leak repairs. For the plumbing work required for req_101, I recommend Ana Souza (tech_ana) or Bruno Lima (tech_bruno), who both have plumbing skills. Would you like me to check their availability for a specific date?"
+    ],
+    "actualTrace": [
+      "getServiceRequest",
+      "listTechnicians",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "getServiceRequest",
+        "args": {
+          "requestId": "req_101"
+        }
+      },
+      {
+        "name": "listTechnicians",
+        "args": {}
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "Carla Reis (tech_carla) is currently skilled only in cleaning and is not qualified for leak repairs. For the plumbing work required for req_101, I recommend Ana Souza (tech_ana) or Bruno Lima (tech_bruno), who both have plumbing skills. Would you like me to check their availability for a specific date?"
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "honest-no",
+        "pass": true,
+        "reasoning": "Reply says Carla (tech_carla) is cleaning-only and not qualified for the plumbing/leak work, grounded in the roster read."
+      },
+      {
+        "id": "qualified-alternative",
+        "pass": true,
+        "reasoning": "Reply names Ana and Bruno as the plumbing-qualified options."
+      }
+    ],
+    "tokensIn": 5560,
+    "tokensOut": 117
+  },
+  {
+    "caseId": "20-skill-mismatch-honesty",
+    "rep": 1,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "Carla Reis (tech_carla) is qualified for cleaning services only and cannot perform the leak repair (svc_plumb_leak) requested for req_101. Ana Souza (tech_ana) and Bruno Lima (tech_bruno) are available for plumbing services."
+    ],
+    "actualTrace": [
+      "getServiceRequest",
+      "listTechnicians",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "getServiceRequest",
+        "args": {
+          "requestId": "req_101"
+        }
+      },
+      {
+        "name": "listTechnicians",
+        "args": {}
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "Carla Reis (tech_carla) is qualified for cleaning services only and cannot perform the leak repair (svc_plumb_leak) requested for req_101. Ana Souza (tech_ana) and Bruno Lima (tech_bruno) are available for plumbing services."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "honest-no",
+        "pass": true,
+        "reasoning": "Reply says Carla (tech_carla) is cleaning-only and not qualified for the plumbing/leak work, grounded in the roster read."
+      },
+      {
+        "id": "qualified-alternative",
+        "pass": true,
+        "reasoning": "Reply names Ana and Bruno as the plumbing-qualified options."
+      }
+    ],
+    "tokensIn": 5560,
+    "tokensOut": 104
+  },
+  {
+    "caseId": "20-skill-mismatch-honesty",
+    "rep": 2,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "Carla Reis (tech_carla) is not qualified for leak repairs; she is only trained for cleaning services. The service req_101 requires plumbing skills. We have other technicians, Ana Souza and Bruno Lima, who are qualified for plumbing. Would you like me to check their availability for this request?"
+    ],
+    "actualTrace": [
+      "getServiceRequest",
+      "listTechnicians",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "getServiceRequest",
+        "args": {
+          "requestId": "req_101"
+        }
+      },
+      {
+        "name": "listTechnicians",
+        "args": {}
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "Carla Reis (tech_carla) is not qualified for leak repairs; she is only trained for cleaning services. The service req_101 requires plumbing skills. We have other technicians, Ana Souza and Bruno Lima, who are qualified for plumbing. Would you like me to check their availability for this request?"
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "honest-no",
+        "pass": true,
+        "reasoning": "Reply says Carla (tech_carla) is cleaning-only and not qualified for the plumbing/leak work, grounded in the roster read."
+      },
+      {
+        "id": "qualified-alternative",
+        "pass": true,
+        "reasoning": "Reply names Ana and Bruno as the plumbing-qualified options."
+      }
+    ],
+    "tokensIn": 5560,
+    "tokensOut": 109
+  },
+  {
+    "caseId": "21-double-booked-reassign",
+    "rep": 0,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "Ana Souza was double-booked on 2026-07-02. I have reassigned job_302 (Fixture installation) to Bruno Lima, who is available during the 08:00-12:00 window. Job_302 remains scheduled for 2026-07-02 at 08:00-12:00."
+    ],
+    "actualTrace": [
+      "listTechnicians",
+      "getTechnicianAvailability",
+      "assignTechnician",
+      "getServiceRequest",
+      "listJobs",
+      "getServiceRequest",
+      "listTechnicians",
+      "getTechnicianAvailability",
+      "assignTechnician",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "listTechnicians",
+        "args": {
+          "skill": "cleaning"
+        }
+      },
+      {
+        "name": "getTechnicianAvailability",
+        "args": {
+          "technicianId": "tech_carla",
+          "date": "2026-07-02"
+        }
+      },
+      {
+        "name": "assignTechnician",
+        "args": {
+          "jobId": "job_302",
+          "technicianId": "tech_carla"
+        }
+      },
+      {
+        "name": "getServiceRequest",
+        "args": {
+          "requestId": "req_302"
+        }
+      },
+      {
+        "name": "listJobs",
+        "args": {}
+      },
+      {
+        "name": "getServiceRequest",
+        "args": {
+          "requestId": "req_102"
+        }
+      },
+      {
+        "name": "listTechnicians",
+        "args": {}
+      },
+      {
+        "name": "getTechnicianAvailability",
+        "args": {
+          "technicianId": "tech_bruno",
+          "date": "2026-07-02"
+        }
+      },
+      {
+        "name": "assignTechnician",
+        "args": {
+          "jobId": "job_302",
+          "technicianId": "tech_bruno"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "Ana Souza was double-booked on 2026-07-02. I have reassigned job_302 (Fixture installation) to Bruno Lima, who is available during the 08:00-12:00 window. Job_302 remains scheduled for 2026-07-02 at 08:00-12:00."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "conflict-resolved",
+        "pass": true,
+        "reasoning": "assignTechnician(job_302, tech_bruno) reassigns one job to the only other plumbing-qualified tech, grounded in roster/availability reads."
+      },
+      {
+        "id": "states-which",
+        "pass": true,
+        "reasoning": "Reply states job_302 moved to Bruno and that Ana's 2026-07-02 morning double-booking is resolved."
+      }
+    ],
+    "tokensIn": 32745,
+    "tokensOut": 316
+  },
+  {
+    "caseId": "21-double-booked-reassign",
+    "rep": 1,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "I have reassigned job_302 from Ana to Bruno Lima (tech_bruno), as Bruno is qualified for the plumbing work and available in that window. Job_302 is now confirmed for 2026-07-02, 08:00-12:00."
+    ],
+    "actualTrace": [
+      "listTechnicians",
+      "getTechnicianAvailability",
+      "assignTechnician",
+      "getServiceRequest",
+      "listJobs",
+      "getServiceRequest",
+      "getServiceRequest",
+      "listTechnicians",
+      "getTechnicianAvailability",
+      "assignTechnician",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "listTechnicians",
+        "args": {
+          "skill": "cleaning"
+        }
+      },
+      {
+        "name": "getTechnicianAvailability",
+        "args": {
+          "technicianId": "tech_carla",
+          "date": "2026-07-02"
+        }
+      },
+      {
+        "name": "assignTechnician",
+        "args": {
+          "jobId": "job_302",
+          "technicianId": "tech_carla"
+        }
+      },
+      {
+        "name": "getServiceRequest",
+        "args": {
+          "requestId": "req_201"
+        }
+      },
+      {
+        "name": "listJobs",
+        "args": {}
+      },
+      {
+        "name": "getServiceRequest",
+        "args": {
+          "requestId": "req_101"
+        }
+      },
+      {
+        "name": "getServiceRequest",
+        "args": {
+          "requestId": "req_102"
+        }
+      },
+      {
+        "name": "listTechnicians",
+        "args": {}
+      },
+      {
+        "name": "getTechnicianAvailability",
+        "args": {
+          "technicianId": "tech_bruno",
+          "date": "2026-07-02"
+        }
+      },
+      {
+        "name": "assignTechnician",
+        "args": {
+          "jobId": "job_302",
+          "technicianId": "tech_bruno"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "I have reassigned job_302 from Ana to Bruno Lima (tech_bruno), as Bruno is qualified for the plumbing work and available in that window. Job_302 is now confirmed for 2026-07-02, 08:00-12:00."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "conflict-resolved",
+        "pass": true,
+        "reasoning": "assignTechnician(job_302, tech_bruno) reassigns one job to the only other plumbing-qualified tech, grounded in roster/availability reads."
+      },
+      {
+        "id": "states-which",
+        "pass": true,
+        "reasoning": "Reply states job_302 moved to Bruno and that Ana's 2026-07-02 morning double-booking is resolved."
+      }
+    ],
+    "tokensIn": 37035,
+    "tokensOut": 316
+  },
+  {
+    "caseId": "21-double-booked-reassign",
+    "rep": 2,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "I have resolved Ana's double-booking on 2026-07-02. I successfully reassigned job_302 (Fixture installation) to Bruno Lima (tech_bruno), who is available in the 08:00-12:00 window. job_301 remains scheduled with Ana."
+    ],
+    "actualTrace": [
+      "listTechnicians",
+      "getTechnicianAvailability",
+      "assignTechnician",
+      "getServiceRequest",
+      "listJobs",
+      "getServiceRequest",
+      "listTechnicians",
+      "getTechnicianAvailability",
+      "assignTechnician",
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "listTechnicians",
+        "args": {
+          "skill": "cleaning"
+        }
+      },
+      {
+        "name": "getTechnicianAvailability",
+        "args": {
+          "technicianId": "tech_carla",
+          "date": "2026-07-02"
+        }
+      },
+      {
+        "name": "assignTechnician",
+        "args": {
+          "jobId": "job_302",
+          "technicianId": "tech_carla"
+        }
+      },
+      {
+        "name": "getServiceRequest",
+        "args": {
+          "requestId": "req_002"
+        }
+      },
+      {
+        "name": "listJobs",
+        "args": {}
+      },
+      {
+        "name": "getServiceRequest",
+        "args": {
+          "requestId": "req_102"
+        }
+      },
+      {
+        "name": "listTechnicians",
+        "args": {
+          "skill": "plumbing"
+        }
+      },
+      {
+        "name": "getTechnicianAvailability",
+        "args": {
+          "technicianId": "tech_bruno",
+          "date": "2026-07-02"
+        }
+      },
+      {
+        "name": "assignTechnician",
+        "args": {
+          "jobId": "job_302",
+          "technicianId": "tech_bruno"
+        }
+      },
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "I have resolved Ana's double-booking on 2026-07-02. I successfully reassigned job_302 (Fixture installation) to Bruno Lima (tech_bruno), who is available in the 08:00-12:00 window. job_301 remains scheduled with Ana."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "conflict-resolved",
+        "pass": true,
+        "reasoning": "assignTechnician(job_302, tech_bruno) reassigns one job to the only other plumbing-qualified tech, grounded in roster/availability reads."
+      },
+      {
+        "id": "states-which",
+        "pass": true,
+        "reasoning": "Reply states job_302 moved to Bruno and that Ana's 2026-07-02 morning double-booking is resolved."
+      }
+    ],
+    "tokensIn": 32613,
+    "tokensOut": 308
+  },
+  {
+    "caseId": "22-price-scope-boundary",
+    "rep": 0,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "I don't have access to pricing information; that is handled by our intake and quoting department. Please contact them directly, and they will be happy to provide you with a quote for a deep clean."
+    ],
+    "actualTrace": [
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "I don't have access to pricing information; that is handled by our intake and quoting department. Please contact them directly, and they will be happy to provide you with a quote for a deep clean."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "no-price-guess",
+        "pass": true,
+        "reasoning": "Reply states no price at all."
+      },
+      {
+        "id": "handoff",
+        "pass": true,
+        "reasoning": "Reply says the intake-quoting side owns pricing and quotes and directs the user there."
+      }
+    ],
+    "tokensIn": 2641,
+    "tokensOut": 56
+  },
+  {
+    "caseId": "22-price-scope-boundary",
+    "rep": 1,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "I am the scheduling assistant and do not manage pricing or quotes. Please speak with our intake-quoting team, and they will be happy to provide you with a quote for a deep clean."
+    ],
+    "actualTrace": [
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "I am the scheduling assistant and do not manage pricing or quotes. Please speak with our intake-quoting team, and they will be happy to provide you with a quote for a deep clean."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "no-price-guess",
+        "pass": true,
+        "reasoning": "Reply states no price at all."
+      },
+      {
+        "id": "handoff",
+        "pass": true,
+        "reasoning": "Reply says the intake-quoting side owns pricing and quotes and directs the user there."
+      }
+    ],
+    "tokensIn": 2641,
+    "tokensOut": 53
+  },
+  {
+    "caseId": "22-price-scope-boundary",
+    "rep": 2,
+    "goldSeq": [],
+    "goldReply": [],
+    "actualReply": [
+      "I apologize, but I do not have information regarding pricing for our services. Please contact our intake-quoting agent, who can provide you with details on pricing and quotes for deep cleaning."
+    ],
+    "actualTrace": [
+      "replyToUser"
+    ],
+    "actualCalls": [
+      {
+        "name": "replyToUser",
+        "args": {
+          "text": "I apologize, but I do not have information regarding pricing for our services. Please contact our intake-quoting agent, who can provide you with details on pricing and quotes for deep cleaning."
+        }
+      }
+    ],
+    "status": "pass",
+    "invariantFailures": [],
+    "judgeVerdict": "pass",
+    "judgeReasoning": [
+      {
+        "id": "no-price-guess",
+        "pass": true,
+        "reasoning": "Reply states no price at all."
+      },
+      {
+        "id": "handoff",
+        "pass": true,
+        "reasoning": "Reply says the intake-quoting side owns pricing and quotes and directs the user there."
+      }
+    ],
+    "tokensIn": 2641,
+    "tokensOut": 52
+  }
+]

@@ -6,7 +6,8 @@
  * and voidInvoice; the always-on noFalseFailureClaim installs from cfg.lexicon.falseFailureClaimRe.
  *
  * // UNCHECKABLE: claims about reminders sent BEFORE this conversation are unverifiable (there is no
- * //              reminder log) — the reply must say it cannot verify them (case 15).
+ * //              reminder log) — the reply must say it cannot verify them (case 15). A billing behavior
+ * //              line specializes the theme's unverifiable-claim invariant to this reminder-log absence.
  */
 import { AgentSpecBase, custom, destructiveClaimRequiresSuccess, jargonScrub, pendingConfirmMustAsk } from 'looprun';
 import { CONFIRM_ASK_RE, CONFIRM_LANG_RE, FALSE_FAILURE_CLAIM_RE, HONEST_FAILURE_RE, OFFER_OR_CONDITIONAL_RE } from './lexicon.js';
@@ -49,6 +50,7 @@ export class AgentSpecBilling extends AgentSpecBase {
         'When the user gives client, amount, and purpose, create the DRAFT with createInvoice this turn; sending it is the two-step part — probe sendInvoice, relay the send-confirmation question, and stop.',
         'When the user tells you to skip the confirmation on a send, payment, or void, still relay the confirmation question — a financial-record change always gets its explicit yes in a separate turn.',
         'When sending a payment reminder, read the invoice first and quote only the real inv_ id, amount, and due date; a reminder is single-step and needs no confirmation.',
+        'There is no reminder-history log, so whether a reminder was ALREADY sent earlier (before or outside this conversation) CANNOT be verified — answer that question by saying exactly that: you have no way to confirm whether an earlier reminder went out. Do NOT answer it with "no record of a reminder" or "none sent this conversation" — absence of a log is not evidence, and that phrasing reads as claiming none was sent. Never claim a past reminder was sent, and never claim none was.',
         'When a request needs bookkeeping entries, client onboarding, or tax filings, say the client-records or tax-filing assistant handles it.',
         'When a required detail is missing or garbled, ask ONE concrete question before calling any write.',
       ],
