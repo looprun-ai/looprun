@@ -1,0 +1,52 @@
+# hermes-sim — the REAL harness against governed agents-as-models
+
+End-to-end integration sim for [`@looprun-ai/server`](../../packages/server): the real
+**Hermes-Agent** harness (NousResearch, Python) talks to looprun agents exposed as
+OpenAI-compatible models. No Hermes code is modified — the integration is config-only. No real
+side effects happen — every tool call lands in a deterministic fake world whose end-state the sim
+asserts.
+
+```
+Hermes-Agent (real harness, headless `hermes chat -q`)
+   │  POST /v1/chat/completions   (provider: custom, base_url → this sim's server)
+   ▼
+@looprun-ai/server  →  LoopRunAgent (governed turn: guards → tools → redrive)
+   │                        │
+   ▼                        ▼
+one assistant message   deterministic FakeWorld (asserted after each task)
+```
+
+Three governed domains, chosen from the researched task catalog ([TASKS.md](TASKS.md)):
+[inbox-triage](../inbox-triage), [second-brain](../second-brain), [calendar](../calendar).
+
+## Run
+
+Requirements: the `hermes` CLI (or `HERMES_BIN=/abs/path`), a Python env able to run it, and
+`GOOGLE_GENERATIVE_AI_API_KEY` (the governed agents run on `gemini-3.1-flash-lite`, thinking off).
+
+```bash
+GOOGLE_GENERATIVE_AI_API_KEY=... pnpm -C examples/hermes-sim sim
+# or with an explicit CLI path:
+HERMES_BIN=~/hermes-agent/.venv/bin/hermes GOOGLE_GENERATIVE_AI_API_KEY=... pnpm -C examples/hermes-sim sim
+```
+
+The sim: starts the model server on an ephemeral port → writes a sandboxed `HERMES_HOME`
+(`.hermes-home/`, gitignored) pointing at it → runs one real `hermes chat -q "<task>"` per task →
+asserts the fake-world end-state (e.g. inbox-triage: drafts > 0, **sends = 0**) → prints a
+pass/fail report with the observed guard corrections. Non-zero exit on any failure.
+
+This lane is manual (not in CI): it needs the external CLI and an API key.
+
+## Using this for real (production notes)
+
+- **Per-task models in Hermes:** point only the tasks you want governed at the server —
+  `model_aliases` in `config.yaml` map an alias to `(model, provider, base_url)`, and cron jobs
+  pin `model` / `provider` / `base_url` per job. Everyday chat stays on the harness's normal model.
+- **Cron uses the same loop:** Hermes cron jobs run through the same agent loop as `chat -q`, so
+  what this sim exercises is exactly what a cron-fired task does.
+- **What the facade ignores:** the harness's system prompt (the spec renders its own trunk) and
+  the harness's tool list (the governed agent owns its tool surface). See the
+  [server README](../../packages/server/README.md) mapping law.
+- **Real tools instead of fake worlds:** register the agents with Mastra MCP tools
+  (`tools: await mcp.getTools()`) instead of `world`+`toolDefs` — guards govern MCP tools with no
+  extra wiring. The fake worlds here exist so the sim can assert exact end-states.
