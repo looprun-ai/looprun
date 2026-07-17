@@ -1,0 +1,61 @@
+{
+  "name": "@looprun-ai/server",
+  "version": "0.6.0",
+  "type": "module",
+  "description": "looprun model server: expose governed LoopRunAgents behind an OpenAI-compatible /v1/chat/completions endpoint, so any harness that speaks the OpenAI protocol can call a governed agent as if it were a model. The full governed turn (guards, tools, redrive) runs inside each request and returns one final assistant message.",
+  "keywords": [
+    "ai",
+    "agents",
+    "llm",
+    "governance",
+    "guardrails",
+    "agentspec",
+    "openai-compatible",
+    "model-server"
+  ],
+  "license": "Apache-2.0",
+  "author": "LoopRun Team",
+  "homepage": "https://looprun.ai",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/looprun-ai/looprun.git",
+    "directory": "packages/server"
+  },
+  "bugs": {
+    "url": "https://github.com/looprun-ai/looprun/issues"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@looprun-ai/core": "workspace:^",
+    "@looprun-ai/mastra": "workspace:^"
+  },
+  "peerDependencies": {
+    "@mastra/core": "^1.42.0",
+    "ai": "^6.0.0",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@mastra/core": "^1.42.0",
+    "@types/node": "^22.0.0",
+    "ai": "^6.0.184",
+    "typescript": "^5.7.0",
+    "vitest": "^2.0.0",
+    "zod": "^3.24.0"
+  }
+}
