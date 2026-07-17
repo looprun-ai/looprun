@@ -1,0 +1,165 @@
+/**
+ * src/world/tools.ts — TOOL_DEFS (generated from tools.json, Stage G2 step 1).
+ * The hard vocabulary of the domain: specs and cases may reference ONLY these names.
+ */
+import type { ToolDef } from 'looprun';
+
+export const TOOL_DEFS: ToolDef[] = [
+  {
+    name: "inboxList",
+    description: "List the captured items waiting in the capture queue (bookmarks, quick notes, voice transcripts): id, kind, title, url for bookmarks, and capture timestamp. Use this to look up an item's exact id before reading or filing it. Returns the real queue — if nothing is pending, the list is empty.",
+    inputSchema: {
+      type: "object",
+      properties: {},
+      required: []
+    }
+  },
+  {
+    name: "itemRead",
+    description: "Read one captured item's full content (the note text, the bookmark's saved excerpt, or the voice transcript). Read this before summarizing or filing an item — the summary comes from the content, never from the title alone.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        itemId: {
+          type: "string",
+          pattern: "^itm_[0-9]{2}$",
+          description: "The captured item id, e.g. itm_02."
+        }
+      },
+      required: [
+        "itemId"
+      ]
+    }
+  },
+  {
+    name: "fetchPage",
+    description: "Fetch the readable content of a bookmarked page from the vault's offline page cache. Only pages captured with a bookmark are cached; any other URL is not reachable. Use it when a bookmark's saved excerpt is too thin to summarize from.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        url: {
+          type: "string",
+          description: "The bookmarked page URL, exactly as the captured item lists it."
+        }
+      },
+      required: [
+        "url"
+      ]
+    }
+  },
+  {
+    name: "noteCreate",
+    description: "Create a new note in the vault: folder, title, body, tags. The folder must be inside the vault — inbox, areas, resources, or archive, optionally with ONE subfolder segment (e.g. resources/cooking). Destinations outside the vault (desktop paths, cloud drives, email) are rejected. Returns the new noteId.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        folder: {
+          type: "string",
+          pattern: "^(inbox|areas|resources|archive)(/[a-z0-9][a-z0-9-]*)?$",
+          description: "Vault folder: inbox | areas | resources | archive, optionally one subfolder (resources/cooking)."
+        },
+        title: {
+          type: "string",
+          description: "The note title."
+        },
+        body: {
+          type: "string",
+          description: "The note body — a summary written from the read content."
+        },
+        tags: {
+          type: "array",
+          items: { type: "string" },
+          description: "Lowercase topic tags, e.g. [\"pricing\", \"saas\"]."
+        }
+      },
+      required: [
+        "folder",
+        "title",
+        "body"
+      ]
+    }
+  },
+  {
+    name: "noteMove",
+    description: "Move an existing vault note into another vault folder. The destination must be inside the vault (inbox, areas, resources, archive, optionally one subfolder); anything outside is rejected. Look the noteId up first (vaultSearch).",
+    inputSchema: {
+      type: "object",
+      properties: {
+        noteId: {
+          type: "string",
+          pattern: "^note_[0-9]+$",
+          description: "The note to move, e.g. note_102."
+        },
+        folder: {
+          type: "string",
+          pattern: "^(inbox|areas|resources|archive)(/[a-z0-9][a-z0-9-]*)?$",
+          description: "Destination vault folder."
+        }
+      },
+      required: [
+        "noteId",
+        "folder"
+      ]
+    }
+  },
+  {
+    name: "noteTag",
+    description: "Add tags to an existing vault note (existing tags are kept; duplicates are ignored). Look the noteId up first (vaultSearch).",
+    inputSchema: {
+      type: "object",
+      properties: {
+        noteId: {
+          type: "string",
+          pattern: "^note_[0-9]+$"
+        },
+        tags: {
+          type: "array",
+          items: { type: "string" },
+          minItems: 1,
+          description: "Lowercase tags to add."
+        }
+      },
+      required: [
+        "noteId",
+        "tags"
+      ]
+    }
+  },
+  {
+    name: "vaultSearch",
+    description: "Search the vault's notes by text (case-insensitive, over title, body, and tags). Returns matching notes with id, folder, title, and tags. Use this to check whether something is already filed BEFORE creating a new note, and to resolve a note's exact id when the user names it in words. If nothing matches, the result is empty.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        query: {
+          type: "string",
+          description: "The search text."
+        }
+      },
+      required: [
+        "query"
+      ]
+    }
+  },
+  {
+    name: "noteDelete",
+    description: "Delete a note from the vault. Deletion is permanent and cannot be undone. TWO-STEP: call with confirmed=false first — it returns the confirmation question without deleting anything; call again with confirmed=true ONLY after the user explicitly agrees in a later turn.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        noteId: {
+          type: "string",
+          pattern: "^note_[0-9]+$",
+          description: "The note to delete."
+        },
+        confirmed: {
+          type: "boolean",
+          description: "false/absent = probe (no effect, returns the confirmation question); true = delete after user confirmation."
+        }
+      },
+      required: [
+        "noteId"
+      ]
+    }
+  }
+];
