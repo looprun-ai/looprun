@@ -3,7 +3,8 @@
 # the repo). Branch protection is a GitHub setting, not committable code — this script IS the
 # documented way to apply what governance/GOVERNANCE.md recommends:
 #   - PRs to main require the `ci` check (build + typecheck + tests + proof suite + matrix sync +
-#     proof-record gate) and 1 approving review incl. CODE OWNERS (guards.ts / GUARDS.md / governance/).
+#     proof-record gate) and 1 approving review incl. CODE OWNERS (the governed surfaces + the
+#     gate machinery itself — see .github/CODEOWNERS).
 #   - enforce_admins stays FALSE on purpose: admins/maintainers keep direct-push for day-to-day work;
 #     the law binds contributors. Flip to true when the maintainer team grows.
 #   - Also creates the maintainer-only `no-proof-needed` escape-hatch label.

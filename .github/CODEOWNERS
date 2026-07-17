@@ -1,6 +1,18 @@
 # Code owners — review is required from these owners on the matching paths (branch protection).
-# The guard behavior contract and the governance process are the sensitive surfaces.
+# Two sensitive classes: (a) the GOVERNED surfaces (same set the proof-record gate triggers on —
+# scripts/proofs/check-record-required.mjs TRIGGERS), (b) the LAW-MAKING MACHINERY itself (the gate
+# scripts, the CI that runs them, the drift lint, the governance skill) — record-exempt tooling, but
+# a change there can weaken the gate, so it cannot merge on a single non-owner approval.
 
-/packages/core/src/guards.ts   @marcosluizfp
+# (a) governed surfaces — keep in sync with check-record-required.mjs TRIGGERS
+/packages/core/src/            @marcosluizfp
 /packages/core/GUARDS.md       @marcosluizfp
+/packages/mastra/src/          @marcosluizfp
+/skills/agentspec/             @marcosluizfp
+
+# (b) the law-making machinery
 /governance/                   @marcosluizfp
+/scripts/proofs/               @marcosluizfp
+/skills/looprun-governance/    @marcosluizfp
+/tests/no-bench-drift.test.mjs @marcosluizfp
+/.github/                      @marcosluizfp

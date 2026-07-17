@@ -166,8 +166,11 @@ What it configures (documented here so the process is complete and auditable):
 - **Require the `ci` status check** to pass before merge (it runs the proof suite, the matrix `--check`,
   and the proof-record gate).
 - **Require ≥1 approving review**.
-- **Require review from Code Owners** (`.github/CODEOWNERS` routes `packages/core/src/guards.ts`,
-  `packages/core/GUARDS.md`, and `governance/**` to `@marcosluizfp`).
+- **Require review from Code Owners** (`.github/CODEOWNERS` routes the governed surfaces —
+  `packages/core/src/`, `packages/core/GUARDS.md`, `packages/mastra/src/`, `skills/agentspec/` —
+  AND the law-making machinery — `governance/`, `scripts/proofs/`, `skills/looprun-governance/`,
+  the drift lint, `.github/` — to `@marcosluizfp`, so neither a guard change nor a change to the
+  gate itself merges on a single non-owner approval).
 - **Restrict the `no-proof-needed` label** to maintainers (Settings → labels / repository roles) so the
   escape hatch cannot be self-applied by a contributor.
 - **No force-push to `main`** and no branch deletion.
