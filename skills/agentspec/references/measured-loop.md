@@ -63,7 +63,9 @@ Rules this forces on the loop:
    Proven 2026-07-16: 3 iterations, 1 accepted (worst-case 0.32→0.87, zero flips), 2
    plausible-looking edits REJECTED that a score-based N=1 would have shipped. Reference
    implementation: `scripts/margin-probe.py` (offline top-k margin probe over the byte-exact prompt
-   render) + `scripts/extract-fork.mjs` (build the fork context from a passing + a failing run).
+   render) + `scripts/extract-fork.mjs` (build the fork context from a passing + a failing run) +
+   `scripts/dump-prompt.mjs` (the `--dump <dir>` producer — renders each agent's byte-exact
+   `<agent>.system.txt` + `<agent>.tools.json` offline, exactly what `margin-probe.py` opens).
 4. **When a full run IS needed** (bar checks, certification): fix the cache discipline (always-cold
    or always-self-primed server), keep the run SHAPE constant (same case-set composition — never
    compare a full-set run against a subset run), and judge borderline rubrics majority-of-3.
@@ -107,6 +109,8 @@ Rules this forces on the loop:
    #              "forkTurn": 0, "priorCalls": [ { "turn":0,"name":"listClients","args":{} } ],
    #              "expect": { "kind":"tool-name","correct":"setFiscalRegime","wrong":"createClient" } }
    node skills/agentspec/scripts/synth-fork.mjs spec.json fork.json
+   # render the byte-exact system prompt + tool defs per agent into <dir> (the --dump producer):
+   node skills/agentspec/scripts/dump-prompt.mjs <dir>          # writes <dir>/<agent>.{system.txt,tools.json}
    # then feed fork.json to margin-probe exactly like an extract-fork context:
    python3 skills/agentspec/scripts/margin-probe.py battery fork.json --dump <dir> --agent <id>
    ```

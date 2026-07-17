@@ -60,7 +60,7 @@ export function makeGuardHooks(spec: AgentSpec, getSession: SessionAccessor): Gu
 }
 
 /**
- * Stop condition (verbatim from the certified benchmark lineage): end the generation the moment
+ * Stop condition (verbatim from the certified reference lineage): end the generation the moment
  * ANY tool call repeats (same tool + same args) within this turn's steps — guard-denied calls
  * included, since they appear in steps too. Apply it for LOCAL models (small models loop; the
  * repeat is either a loop or a retry-without-change — both deserve the forced close).

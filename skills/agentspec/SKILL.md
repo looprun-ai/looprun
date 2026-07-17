@@ -209,6 +209,7 @@ Local smoke AFTER certification: `npx looprun-eval run --model qwen3.5-4b`. Full
 - **Over-specifying the owner's ideal past what the product/eval does**: a confirm-first or
   precondition that blocks a REQUIRED single-turn call fails the eval. The measured eval is the
   arbiter, not the questionnaire answer.
-- **Tuning prose past the bar**: once the aggregate clears the bar, STOP — prose is non-local and
-  fixing one language-layer case regresses siblings (measured net-negative). See the measured-loop
-  STOP RULE.
+- **Blind prose past the floor**: the bar is a FLOOR, not a stop sign — you MAY iterate past it (≤3×,
+  while each pass is net-positive), but ONLY with margin-validated or gated fixes, never blind prose:
+  prose is non-local and an unvalidated fix regresses siblings (measured net-negative). Re-measure the
+  whole bucket every pass. See the measured-loop STOP RULE.

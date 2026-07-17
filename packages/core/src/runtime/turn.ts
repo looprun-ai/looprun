@@ -201,7 +201,7 @@ export async function finalizeReply(
 
   const finalViolations = violations.map((v) => v.guard.kind);
   if (finalViolations.length) {
-    // Salvage-before-canned-closure (2026-07-15, mirrored from bench mastra.ts; measured on the
+    // Salvage-before-canned-closure (2026-07-15, mirrored from the reference runtime; measured on the
     // eight-second-limit / zero-quota cells): when the turn DID produce a verified user-facing text —
     // the `text` arg of a SUCCESSFUL askUser/replyToUser call this turn — and that text itself passes
     // every onReply check, surface IT instead of the generic exhaustion closure. The violations that got

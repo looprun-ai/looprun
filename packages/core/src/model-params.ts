@@ -19,7 +19,7 @@ export function geminiThinkingOff(): Record<string, unknown> {
 
 /**
  * Pinned decoding for reproducible runs (temperature 0 + optional seed — llama.cpp honors seed).
- * `maxOutputTokens` caps a runaway generation: measured 2026-07-11 on the bench lineage, an
+ * `maxOutputTokens` caps a runaway generation: measured 2026-07-11 on the reference lineage, an
  * uncapped local qwen decoded ~8.7k tokens for 302 s on one call before the client timed out.
  */
 export function pinnedDecoding(opts: { seed?: number; maxOutputTokens?: number } = {}): Record<string, unknown> {
@@ -34,7 +34,7 @@ export function pinnedDecoding(opts: { seed?: number; maxOutputTokens?: number }
 
 /**
  * AI-SDK call-settings keys that Mastra honors ONLY inside `modelSettings` — a flat copy of any
- * of these on the generate() options object is silently dropped (measured 2026-07-11 on the bench
+ * of these on the generate() options object is silently dropped (measured 2026-07-11 on the reference
  * lineage: a flat spread ran local models with the GGUF-embedded sampler — temp 1.0, top_k 20,
  * NO token cap — instead of the pinned greedy config).
  */
