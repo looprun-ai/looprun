@@ -12,9 +12,14 @@
  *   6. push        git push --atomic origin main vX.Y.Z
  *   7. release     gh release create vX.Y.Z (package/version table + auto-generated notes)
  *
+ * Versioning discipline: PATCH is the default. A plain `pnpm release` (no pending
+ * changesets, no --bump) cuts a PATCH release. MINOR/MAJOR must be requested explicitly
+ * (--bump minor|major or a `pnpm changeset` declaring them). 1.0.0 is a deliberate
+ * stability decision, never an automatic milestone — jump to it when the API is stable.
+ *
  * Usage:
- *   pnpm release                 # needs pending changesets (`pnpm changeset` during dev)
- *   pnpm release --bump minor    # no pending changesets: ad-hoc uniform bump of all packages
+ *   pnpm release                 # PATCH release (uses pending changesets if any exist)
+ *   pnpm release --bump minor    # explicit uniform MINOR (or major) bump of all packages
  *   pnpm release --otp=123456    # pass the npm 2FA code non-interactively
  *   pnpm release --resume --otp=… # resume a run that failed at publish (commit+tag already local)
  *   pnpm release:dry             # preflight + gates only, no mutation
@@ -29,7 +34,7 @@ const args = process.argv.slice(2);
 const flag = (name) => args.includes(`--${name}`);
 const value = (name) => args.find((a) => a.startsWith(`--${name}=`))?.split('=')[1];
 const DRY = flag('dry-run');
-const BUMP = value('bump');
+const BUMP = value('bump') ?? (args.includes('--bump') ? 'patch' : undefined); // bare --bump = patch
 const OTP = value('otp');
 const RESUME = flag('resume'); // resume a run that failed at publish (version commit+tag already local)
 
@@ -58,8 +63,10 @@ sh('gh auth status', { quiet: true });
 const pendingChangesets = readdirSync(join(ROOT, '.changeset')).filter(
   (f) => f.endsWith('.md') && f !== 'README.md',
 );
-if (!pendingChangesets.length && !BUMP && !DRY && !RESUME)
-  die('no pending changesets. Either run `pnpm changeset` during dev, pass --bump patch|minor|major, or --resume a publish-failed run.');
+// No pending changesets and no explicit --bump → default to a PATCH release.
+// MINOR/MAJOR are opt-in (--bump minor|major or a changeset) so the easy path never over-bumps.
+if (!pendingChangesets.length && !RESUME)
+  console.log(`  no pending changesets → ${BUMP ?? 'patch'} release (use --bump minor|major to override)`);
 console.log(`  npm: ${npmUser} · branch: ${branch} · changesets pending: ${pendingChangesets.length || (BUMP ? `none (--bump ${BUMP})` : 'none')}`);
 
 // ---------- 3 (early in dry-run). gates ----------
@@ -92,11 +99,12 @@ if (RESUME) {
   if (head !== `chore(release): ${t}`) die(`--resume: HEAD is "${head}", expected "chore(release): ${t}".`);
   console.log(`  resuming ${t} at publish`);
 }
-if (!RESUME && !pendingChangesets.length && BUMP) {
-  if (!['patch', 'minor', 'major'].includes(BUMP)) die(`--bump must be patch|minor|major, got "${BUMP}"`);
+if (!RESUME && !pendingChangesets.length) {
+  const bump = BUMP ?? 'patch'; // default release bump — MINOR/MAJOR are opt-in
+  if (!['patch', 'minor', 'major'].includes(bump)) die(`--bump must be patch|minor|major, got "${bump}"`);
   const names = publishableDirs().map((d) => readJson(`${d}/package.json`).name);
-  const front = names.map((n) => `'${n}': ${BUMP}`).join('\n');
-  writeFileSync(join(ROOT, '.changeset', 'release-adhoc.md'), `---\n${front}\n---\n\nRelease (${BUMP}).\n`);
+  const front = names.map((n) => `'${n}': ${bump}`).join('\n');
+  writeFileSync(join(ROOT, '.changeset', 'release-adhoc.md'), `---\n${front}\n---\n\nRelease (${bump}).\n`);
 }
 if (!RESUME) run('pnpm exec changeset version');
 const umbrella = readJson('packages/looprun/package.json');

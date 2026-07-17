@@ -5,7 +5,7 @@ license: Apache-2.0
 compatibility: 'Designed for Claude Code (or any agentskills.io-compatible agent). Authoring is portable; running the measured loop requires a looprun project (`looprun` dependency + `@looprun-ai/eval` devDependency) and a GOOGLE_GENERATIVE_AI_API_KEY for the gemini-flash-lite subject model. Set LOOPRUN_ROOT if the project root is not discoverable from cwd.'
 metadata:
   author: looprun
-  version: "1.0"
+  version: "0.6.0"
   homepage: "https://github.com/looprun-ai/looprun"
 ---
 
