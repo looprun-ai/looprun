@@ -133,6 +133,25 @@ guard catalog (`references/guard-catalog.md`) are the only style inputs.
   state — never perform calls that make the false claim true, and never present a permission
   denial as a technical glitch or retry/work around it (role escalation to satisfy a blocked
   request is forbidden)."
+- **Confirm FOLLOW-THROUGH line (measured 2026-07-17 — the largest deterministic two-step fail
+  cluster, hit even frontier-tier models):** wherever the spec covers an arg-flag destructive tool,
+  the two-step prose MUST state the SECOND half of the protocol, not just the probe: "after the
+  user's go-ahead in a LATER turn, CALL the tool AGAIN with confirmed:true — re-sending the
+  confirmed:false probe (or only replying) after the user has already agreed is a failure." Models
+  that probe correctly then never flip the flag are the dominant two-step defect; this phrasing
+  fixed it via FORM alone in the measured models. The check (`confirmFirst`) gates the premature
+  confirm; only the prose prevents the opposite defect (re-probing forever after the user agreed,
+  which `pendingConfirmMustAsk` then turns into a politeness loop).
+- **Out-of-scope DEFER line (measured 2026-07-17 — the most prose-fixable scope cluster):** when the
+  subject has sibling agents, state the boundary as an ACT rule: "when the request needs a tool this
+  agent does not have, SAY which agent/desk owns it and hand it off — doing the neighbor's job with
+  your own tools is a failure, even when the user insists." Name the concrete neighboring capability
+  in the line; a vague "stay in scope" does not transfer.
+- **Garbled-input ONE-QUESTION line (measured 2026-07-17):** state as law: "when a load-bearing
+  value (amount, id, date) is garbled, contradictory, or unparseable, ask ONE clarifying question
+  naming the exact value you need — inventing or rounding a figure the user did not give is
+  fabrication, not helpfulness." Anti-sycophancy on user-asserted state is already covered by the
+  state-wins line above — do not duplicate it.
 
 ### Controls
 - `terminal`: reply()-only when the state says the turn is an action turn (example shape:
