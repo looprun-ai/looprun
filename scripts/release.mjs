@@ -14,9 +14,11 @@
  *
  * Versioning discipline: `pnpm release` cuts a PATCH, directly — no changeset required
  * (package.json bakes --bump=patch). MINOR is `pnpm release-minor`; MAJOR is explicit
- * (--bump=major). An explicit --bump always applies, even with pending changesets
- * (changeset semantics: the highest bump wins). 1.0.0 is a deliberate stability
- * decision, never an automatic milestone — jump to it when the API is stable.
+ * (--bump=major). ANTI-ESCALATION LAW (2026-07-18, after an accidental 0.7.0): the packages
+ * are a LINKED changeset group, so `changeset version` applies the HIGHEST bump across all
+ * pending changesets — therefore a pending changeset may NEVER escalate past the requested
+ * bump: the release ABORTS and makes you choose (release-minor, or delete/downgrade the
+ * changeset). 1.0.0 is a deliberate stability decision, never an automatic milestone.
  *
  * Usage:
  *   pnpm release                 # PATCH release, directly
@@ -65,7 +67,33 @@ const pendingChangesets = readdirSync(join(ROOT, '.changeset')).filter(
   (f) => f.endsWith('.md') && f !== 'README.md',
 );
 // PATCH is the baked default (package.json passes --bump=patch); release-minor bakes minor.
-// An explicit --bump always applies — with pending changesets, the highest bump wins.
+// ── ANTI-ESCALATION GATE (2026-07-18, after the accidental 0.7.0) ─────────────────────────────
+// The packages are a LINKED group: `changeset version` applies the HIGHEST bump across ALL
+// pending changesets, so a stray pending `minor` silently escalated an explicit `pnpm release`
+// (patch) into a minor. A pending changeset may never escalate past the requested bump —
+// abort (before ANY mutation; also on --dry-run) and make the human choose explicitly.
+if (!RESUME && pendingChangesets.length) {
+  const RANK = { patch: 0, minor: 1, major: 2 };
+  const requested = BUMP ?? 'patch';
+  const escalating = pendingChangesets
+    .map((f) => {
+      const src = readFileSync(join(ROOT, '.changeset', f), 'utf8');
+      const fm = src.split('---')[1] ?? '';
+      const levels = [...fm.matchAll(/:\s*['"]?(patch|minor|major)['"]?\s*$/gm)].map((m) => m[1]);
+      const max = levels.reduce((a, b) => (RANK[b] > RANK[a] ? b : a), 'patch');
+      return { f, max };
+    })
+    .filter((c) => RANK[c.max] > RANK[requested]);
+  if (escalating.length) {
+    die(
+      `pending changeset(s) would ESCALATE this ${requested} release beyond ${requested}:\n` +
+        escalating.map((c) => `    .changeset/${c.f} → ${c.max}`).join('\n') +
+        `\n  The linked group takes the HIGHEST bump — choose explicitly:\n` +
+        `    pnpm release-minor                       # accept the higher bump\n` +
+        `    (or delete/downgrade the changeset, then re-run pnpm release)`,
+    );
+  }
+}
 if (!RESUME)
   console.log(
     `  → ${BUMP ?? 'patch'} release${pendingChangesets.length ? ` + ${pendingChangesets.length} pending changeset(s) (highest bump wins)` : ''}`,
@@ -103,7 +131,7 @@ if (RESUME) {
   console.log(`  resuming ${t} at publish`);
 }
 if (!RESUME && (BUMP || !pendingChangesets.length)) {
-  const bump = BUMP ?? 'patch'; // baked default is patch; explicit --bump applies even with pendings (highest wins)
+  const bump = BUMP ?? 'patch'; // baked default is patch; the gate above forbids silent escalation
   if (!['patch', 'minor', 'major'].includes(bump)) die(`--bump must be patch|minor|major, got "${bump}"`);
   const names = publishableDirs().map((d) => readJson(`${d}/package.json`).name);
   const front = names.map((n) => `'${n}': ${bump}`).join('\n');
