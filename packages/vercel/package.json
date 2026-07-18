@@ -1,6 +1,6 @@
 {
   "name": "@looprun-ai/vercel",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "type": "module",
   "description": "looprun on the Vercel AI SDK — RESERVED (not implemented). The backend seam contract lives in @looprun-ai/core; @looprun-ai/mastra is the v0 backend.",
   "keywords": [
