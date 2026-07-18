@@ -1,6 +1,6 @@
 # looprun
 
-**A governance layer for LLM agents, on top of the framework you already use.**
+**A governance layer for AI agents, on top of the framework you already use.**
 
 Your agent framework is the car — the engine that runs the *think → call tool → reply* loop.
 looprun adds everything that makes it safe to hand the keys to an agent:
