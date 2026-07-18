@@ -1,7 +1,7 @@
 /**
- * @looprun-ai/eval — Claude-verdict merge (the certified math, ported verbatim):
+ * @looprun-ai/eval — judge-verdict merge (the certified math, ported verbatim):
  * autofail wins → missing verdict = fail, LOUDLY → status/judgeVerdict/judgeReasoning folded in.
- * The judge itself is the Claude Code agent (ruler discipline: Claude only, never the subject
+ * The judge itself is the coding agent running the loop (ruler discipline: a frontier LLM judge, never the subject
  * model's family) — this module only folds its verdict lines back.
  */
 import { readFileSync, writeFileSync } from 'node:fs';

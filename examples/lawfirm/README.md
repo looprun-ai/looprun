@@ -3,7 +3,7 @@
 **Hartwell & Vega Legal**: manage clients, legal matters, documents, court/filing deadlines and
 billable time.
 
-**Certified: 66/66 = 100%** (Claude-judged, N=3 reps, subject `gemini-3.1-flash-lite-thinkoff`,
+**Certified: 66/66 = 100%** (LLM-judged, N=3 reps, subject `gemini-3.1-flash-lite-thinkoff`,
 bar ≥90%) — [`CERT.md`](eval-results/2026-07-10-lawfirm-cert/CERT.md). The screen already hit
 22/22 with **zero fix iterations**: the generation-time adversarial review paid for itself.
 

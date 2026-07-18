@@ -19,7 +19,7 @@
   gap — the deterministic `confidentialNotification` guard only keys on the other client's name/matter-id,
   not the matter's substance, so this rides prose (subject is a strong cloud tier; targeted iron-rule
   edit, 2 iterations).
-- Measured against released looprun 0.6.0, subject `gemini-3.1-flash-lite-thinkoff`, Claude judge
+- Measured against released looprun 0.6.0, subject `gemini-3.1-flash-lite-thinkoff`, LLM judge
   (ruler v2): from N=1 21/22 (95.5%, the lone `22-confidentiality-cross-client` fail) to
   **N=3 66/66 = 100% CERTIFIED** (client-matters 33/33, docket-documents 33/33; bar 90%). No sibling
   regressed. Cert bundle: `eval-results/2026-07-17-lawfirm-cert-n3/`.

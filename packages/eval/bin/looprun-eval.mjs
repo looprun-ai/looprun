@@ -18,12 +18,12 @@ const HELP = `looprun-eval <command>
   run [flags]                Run the eval set → dump/autofail/tasks per agent bucket.
                              --agent <id> --cases <csv|full> --reps <N=1> --model <alias> --out <dir>
   certify [flags]            = run --reps 3 into a '-cert' results dir.
-  judge-prompt               Print the packaged generic Claude-judge prompt path.
-  judge-merge <dump> <verdicts> [autofail] [out]   Fold Claude verdicts → .judged.json.
+  judge-prompt               Print the packaged generic judge prompt path.
+  judge-merge <dump> <verdicts> [autofail] [out]   Fold judge verdicts → .judged.json.
   cert <dir> [--bar 0.9]     Fold *.judged.json → cert.json + CERT.md.
   lint [paths…] [--spec-laws]  Purity/firewall/theme lint (+ config spec laws).
 
-Quality verdicts come ONLY from the Claude judge — the run's streamed pass/fail lines are the
+Quality verdicts come ONLY from the LLM judge — the run's streamed pass/fail lines are the
 deterministic invariant gate.
 `;
 

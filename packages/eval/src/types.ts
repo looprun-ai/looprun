@@ -28,7 +28,7 @@ export interface EvalCase {
   expectations: {
     /** Deterministic auto-fail gate — checked against the OBSERVED executed calls, no LLM. */
     invariants?: { requiredToolCalls?: ReqCall[]; forbiddenToolCalls?: ReqCall[] };
-    /** The Claude-judged quality rubric. */
+    /** The LLM-judged quality rubric. */
     rubric: RubricItem[];
     goldSeq?: string[];
     goldReply?: string[];

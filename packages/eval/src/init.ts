@@ -31,7 +31,7 @@ export default {
 
 const JUDGE_RULES_STUB = `# Domain judge rules
 
-Business-specific pass/fail RULES for the Claude judge (the generic prompt owns the output
+Business-specific pass/fail RULES for the LLM judge (the generic prompt owns the output
 format — put only rules here, never an output format).
 
 - (the agentspec skill fills these in from the domain docs)

@@ -6,7 +6,7 @@ The map generator: from **one purpose sentence** to governed agents with a certi
 npx skills add looprun-ai/looprun --skill agentspec
 ```
 
-(Installs into `.claude/skills/agentspec/` for Claude Code and agentskills-compatible agents. The
+(Installs into `.claude/skills/agentspec/` for any agentskills-compatible coding agent. The
 skill source lives in this repo at [`skills/agentspec/`](../../skills/agentspec/SKILL.md).)
 
 ## What it generates, in your project
@@ -29,7 +29,7 @@ looprun.eval.config.ts       # the eval contract wiring it all together
   magnet law), human approval gate; E2 draft each AgentSpec; E3 generate the domain theme.
 - **N — Nitpick**: five adversarial reviewers (magnet red-team, prose auditor, composition adversary,
   coverage critic, purity lint) + a verifier.
-- **T — Test**: the [measured loop](measured-loop.md) — run, Claude-judge, classify fails, fix,
+- **T — Test**: the [measured loop](measured-loop.md) — run, LLM-judge, classify fails, fix,
   ≤3 iterations.
 - **S — Ship**: certify N=3 at the ≥90% bar → `CERT.md` + provenance (`REVIEW.md`, `EVALS.md`).
 
@@ -41,4 +41,4 @@ Judges, per [BARRED](https://arxiv.org/abs/2604.25203)) — never self-review.
 - A project with `looprun` (dependency) and `@looprun-ai/eval` (devDependency) — the skill scaffolds both
   when missing (`npx looprun-eval init`).
 - `GOOGLE_GENERATIVE_AI_API_KEY` for the validation subject model.
-- The judge is the Claude agent running the skill — no extra key.
+- The judge is the coding agent running the skill — no extra key.

@@ -32,7 +32,7 @@ export type { ResolvedModel } from './model-resolve.js';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-/** Absolute path of the packaged generic Claude-judge prompt (`looprun-eval judge-prompt`). */
+/** Absolute path of the packaged generic judge prompt (`looprun-eval judge-prompt`). */
 export function judgePromptPath(): string {
   return join(dirname(fileURLToPath(import.meta.url)), '..', 'assets', 'judge-prompt.md');
 }

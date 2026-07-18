@@ -3,7 +3,7 @@
 **LedgerLine Accounting**: manage clients, bookkeeping entries (income/expenses), invoices and
 payments, and tax-filing deadlines.
 
-**Certified: 66/66 = 100%** (Claude-judged, N=3 reps, subject `gemini-3.1-flash-lite-thinkoff`,
+**Certified: 66/66 = 100%** (LLM-judged, N=3 reps, subject `gemini-3.1-flash-lite-thinkoff`,
 bar ≥90%) — [`CERT.md`](eval-results/2026-07-10-accounting-cert/CERT.md). Zero invariant auto-fails
 across all 66 certification runs.
 

@@ -48,7 +48,7 @@ Two properties fall out of this wiring:
 8. **Zero business strings in the library** — every domain string lives in a generated artifact owned
    by the user project. (CI: scan.)
 9. **The eval is the arbiter** — a change ships when the measured pass-rate says so, at the ≥90%
-   Claude-judged bar, N=3 to certify. Once at the bar, STOP (prose edits are non-local; chasing single
+   LLM-judged bar, N=3 to certify. Once at the bar, STOP (prose edits are non-local; chasing single
    cases regresses siblings).
 
 ## What `.looprun` tells you per turn

@@ -1,6 +1,6 @@
 # The measured loop
 
-The certification protocol of a looprun project. **Quality has exactly one ruler: the Claude judge.**
+The certification protocol of a looprun project. **Quality has exactly one ruler: the LLM judge — the frontier coding agent running the loop (any vendor).**
 The runner's streamed `pass/fail` lines are the deterministic *invariant gate* — auto-fails, never the
 quality verdict.
 
@@ -16,12 +16,12 @@ Outputs per agent bucket in `eval-results/<date>-<domain>/`:
 `<agent>.dump.json` (full transcripts) · `<agent>.autofail.json` (invariant auto-fails) ·
 `<agent>.tasks.jsonl` (the judge's work items).
 
-## Judge (Claude only — never the subject model's family)
+## Judge (the coding agent running the loop — never the subject model's family)
 
 1. `npx looprun-eval judge-prompt` prints the packaged generic prompt. Apply it (plus the domain
    rules in `evals/judge-prompt.md` — RULES only, the generic prompt owns the output format) to each
    `<agent>.tasks.jsonl`, one verdict JSONL line per case, into `<agent>.verdicts.jsonl`.
-   In Claude Code: dispatch one judge subagent per tasks file.
+   If your coding agent supports subagents: dispatch one judge subagent per tasks file.
 2. `npx looprun-eval judge-merge eval-results/<dir>/<agent>.dump.json eval-results/<dir>/<agent>.verdicts.jsonl`
    → `<agent>.judged.json` + `pass=n/total`. Autofail wins; a missing verdict counts as FAIL, loudly.
 

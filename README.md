@@ -62,7 +62,7 @@ npx looprun models status               # binary / model file / server health
 
 ```bash
 npm i looprun @mastra/core ai zod        # the library
-npx skills add looprun-ai/looprun --skill agentspec # the generator skill (Claude Code / compatible agents)
+npx skills add looprun-ai/looprun --skill agentspec # the generator skill (any skills-compatible coding agent)
 npm i -D @looprun-ai/eval                   # the eval harness (certification)
 npx looprun init                         # environment check + optional local-model download
 ```
@@ -74,7 +74,7 @@ npx looprun init                         # environment check + optional local-mo
    theme, and generates an eval set — every artifact validated by adversarial debate
    ([BARRED](https://arxiv.org/abs/2604.25203)-style), never by self-review.
 2. **Measure** — `npx looprun-eval run` executes the eval set against the real loop
-   (invariant gate: deterministic auto-fails), then the Claude judge grades the rubric.
+   (invariant gate: deterministic auto-fails), then the LLM judge grades the rubric.
    Fix, re-screen, iterate (≤3 rounds).
 3. **Certify** — `npx looprun-eval certify` (N=3) at the ≥90% bar → `CERT.md`. Your agents ship with a
    birth certificate, not vibes.
@@ -94,6 +94,7 @@ npx looprun init                         # environment check + optional local-mo
 
 ## Docs
 
+- [The illustrated guide](docs/illustrated-guide.md) — the visual front-door: the whole picture in one sitting
 - [Overview](docs/overview.md) — the concepts and the design laws
 - [Getting started](docs/getting-started.md)
 - [The agentspec skill](docs/guides/skill.md) · [The measured loop](docs/guides/measured-loop.md)

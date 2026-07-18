@@ -2,7 +2,7 @@
 name: agentspec
 description: 'Use when a business wants governed agents generated from its tool surface and docs (near-zero DX) — producing AgentSpec TypeScript files plus an auto-generated eval set, iterated against a measured bar. Triggers — "generate agents for my business", "day-0 AgentSpec", "auto-author guards/evals", a new tools.json/MCP surface with no hand-written agents.'
 license: Apache-2.0
-compatibility: 'Designed for Claude Code (or any agentskills.io-compatible agent). Authoring is portable; running the measured loop requires a looprun project (`looprun` dependency + `@looprun-ai/eval` devDependency) and a GOOGLE_GENERATIVE_AI_API_KEY for the gemini-flash-lite subject model. Set LOOPRUN_ROOT if the project root is not discoverable from cwd.'
+compatibility: 'Designed for any agentskills.io-compatible coding agent. Authoring is portable; running the measured loop requires a looprun project (`looprun` dependency + `@looprun-ai/eval` devDependency) and a GOOGLE_GENERATIVE_AI_API_KEY for the gemini-flash-lite subject model. Set LOOPRUN_ROOT if the project root is not discoverable from cwd.'
 metadata:
   author: looprun
   version: "0.6.0"
@@ -47,7 +47,7 @@ guards) with its own scoped prompt and its OWN persona, plus a generated domain 
 business-common invariants / language / state-render mapping), plus (for a new domain) a generated
 world + presets + tool surface, plus an auto-generated eval set validated by asymmetric debate,
 plus a measured improvement loop that stops only at the certification bar (default: **≥90% pass,
-Claude judge, N=3**).
+LLM judge, N=3**).
 
 **The skill is the single source of truth for business content**: every business string lives in a
 GENERATED artifact — an AgentSpec (per-agent) or the domain theme (business-common); the looprun
@@ -72,7 +72,7 @@ Six stages, run in order; the acronym is the order. Full recipes live in `refere
 | **G** | **GENERATE** | generate whatever input is MISSING: **G1** tools (tool genesis) → **G2** world/presets/config wiring → **G3** evals | only what's absent | `tool-genesis.md`, `new-subject.md`, `eval-generation.md` |
 | **E** | **ENGINEER** | **E1** decompose tools into ≤15-tool agents (human gate #1: ONE approval table) → **E2** one drafter per spec ∥ **E3** the domain theme | always | `decompose-and-draft.md`, `theme-generation.md` |
 | **N** | **NITPICK** | 5 independent adversarial reviewers (N1 magnet, N2 Bucket-A, N3 composition, N4 coverage, N5 purity lint) + verifier; ≤2 rounds | always | `adversarial-review.md` |
-| **T** | **TEST** | the measured loop: run N=1 vs the subject model, Claude-judge, classify fails, fix in preference order, ≤3 iterations, STOP at the bar | always | `measured-loop.md` |
+| **T** | **TEST** | the measured loop: run N=1 vs the subject model, LLM-judge, classify fails, fix in preference order, ≤3 iterations, STOP at the bar | always | `measured-loop.md` |
 | **S** | **SHIP** | certify N=3 at the bar; human gate #2 (residual acceptance); emit provenance (`REVIEW.md`, `EVALS.md`, cert bundle pointer) | always | `measured-loop.md` |
 
 Ordering notes:
@@ -129,14 +129,14 @@ npx looprun-eval run
 npx looprun-eval run --agent <id> --cases <csv|full>
 # N=3 certification (= run --reps 3 into a '-cert' results dir):
 npx looprun-eval certify
-# after Claude-judging <agent>.tasks.jsonl → <agent>.verdicts.jsonl, fold verdicts back:
+# after LLM-judging <agent>.tasks.jsonl → <agent>.verdicts.jsonl, fold verdicts back:
 npx looprun-eval judge-merge eval-results/<date>-<domain>/<agent>.dump.json <agent>.verdicts.jsonl
 # fold all *.judged.json into the certificate (bar default ≥90%):
 npx looprun-eval cert eval-results/<date>-<domain>-cert
 ```
 
 `run` writes `eval-results/<date>-<domain>/<agent>.dump.json` + `.autofail.json` + `.tasks.jsonl`.
-The streamed `→ pass/fail` lines are the **invariant gate, NOT quality** — only the Claude judge
+The streamed `→ pass/fail` lines are the **invariant gate, NOT quality** — only the LLM judge
 gives the verdict (`npx looprun-eval judge-prompt` prints the packaged generic judge prompt path;
 `evals/judge-prompt.md` adds the domain RULES only). Subject model default:
 `gemini-3.1-flash-lite-thinkoff` (the numeric thinking-off trap is already encoded in looprun).
@@ -196,7 +196,7 @@ Local smoke AFTER certification: `npx looprun-eval run --model qwen3.5-4b`. Full
   instruments — believe them over your sense of completeness.
 - Bending the SPEC to pass a defective EVAL: when a fail traces to an unsatisfiable rubric/preset,
   fix the eval (with debate re-validation) and log it — never contort the spec.
-- Reading live `→ pass/fail` run lines as quality: they are the invariant gate only; the Claude
+- Reading live `→ pass/fail` run lines as quality: they are the invariant gate only; the LLM
   judge is the only verdict.
 - Asking the user things the inputs already answer (kills the DX contract).
 - **A catch-all/triage agent that lumps cases needing other agents' tools** (the triage lesson from

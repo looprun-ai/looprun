@@ -106,7 +106,7 @@ malformed dates abstain to the world's own validation). **Review closed after ro
 
 ## Next (not run here — cost control)
 
-Stage T: `npx looprun-eval run` (N=1 screen) → Claude-judge → classify → fix (≤3 iterations) →
+Stage T: `npx looprun-eval run` (N=1 screen) → LLM-judge → classify → fix (≤3 iterations) →
 Stage S: `npx looprun-eval certify` (N=3, bar ≥ 0.90).
 
 ## Measured loop (Stage T) — iteration log

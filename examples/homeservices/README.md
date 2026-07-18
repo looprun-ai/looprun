@@ -3,7 +3,7 @@
 **BrightNest Home Services** (cleaning · plumbing · electrical): manage service requests, quotes,
 job scheduling, technicians and customer notifications.
 
-**Certified: 65/66 = 98.5%** (Claude-judged, N=3 reps, subject `gemini-3.1-flash-lite-thinkoff`,
+**Certified: 65/66 = 98.5%** (LLM-judged, N=3 reps, subject `gemini-3.1-flash-lite-thinkoff`,
 bar ≥90%) — [`CERT.md`](eval-results/2026-07-10-homeservices-cert/CERT.md). Zero invariant
 auto-fails across all 66 runs.
 
@@ -57,7 +57,7 @@ Talk to the agents and watch the guards work:
 ## Local model smoke (informational)
 
 After certification, a 3-case smoke ran on **qwen3.6-35b-a3b** (llama.cpp via `looprun/models`,
-f16 KV, 64k ctx, single slot): **3/3 pass, Claude-judged**
+f16 KV, 64k ctx, single slot): **3/3 pass, LLM-judged**
 ([`judged.json`](eval-results/2026-07-10-qwen-smoke)) — zero invariant auto-fails, all rubric
 items pass. Honest quote status, complete booking confirmation, and the cancel confirm-probe
 correctly relayed. Local models are a post-certification smoke, never the ruler.
@@ -84,7 +84,7 @@ requirements in [Local models](../../docs/guides/local-models.md).
 
 ```bash
 npx looprun-eval check                  # config + world seams (no LLM)
-npx looprun-eval run                    # N=1 screen → judge with Claude → judge-merge
+npx looprun-eval run                    # N=1 screen → LLM-judge → judge-merge
 npx looprun-eval certify                # N=3 → looprun-eval cert → CERT.md
 ```
 

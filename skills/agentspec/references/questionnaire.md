@@ -26,7 +26,7 @@ purpose in their opening message, do NOT re-ask — record it and move on.
 **A3 semantics (measured 2026-07-16 — the subject model steers agent quality BOTH ways: the same
 bundle scored 100% on the declared tier and 82% on the undeclared one):**
 - **Baseline (+1, always measured):** besides the selected targets, the T-loop ALWAYS measures the
-  model running the skill (a Claude subagent playing the generated agent against the world — zero
+  model running the skill (a subagent of the skill-running agent playing the generated agent against the world — zero
   external dependency). Every generation ships with at least one measured number; the baseline also
   owns the **default profile**.
 - **Default profile = the certified natural-prose render** (default lexicon/sampling) — an

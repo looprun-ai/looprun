@@ -5,7 +5,7 @@
 ```bash
 npm i looprun @mastra/core ai zod
 npm i -D @looprun-ai/eval mastra typescript tsx
-npx skills add looprun-ai/looprun --skill agentspec   # the generator skill (Claude Code / compatible)
+npx skills add looprun-ai/looprun --skill agentspec   # the generator skill (any skills-compatible coding agent)
 ```
 
 Environment check (+ optional local model download):
@@ -84,7 +84,7 @@ npx mastra dev     # → Mastra Studio: chat with the agent, watch the guards ve
 
 ```bash
 npx looprun-eval check      # config + world seams, no LLM
-npx looprun-eval run        # N=1 screen (invariant gate) → judge with Claude → merge
+npx looprun-eval run        # N=1 screen (invariant gate) → LLM-judge → merge
 npx looprun-eval certify    # N=3 at the ≥90% bar → eval-results/…-cert/CERT.md
 ```
 

@@ -2,7 +2,7 @@
 
 - date: 2026-07-10
 - subject model: gemini-3.1-flash-lite-thinkoff
-- bar: ≥90.0% (Claude-judged pass-rate; invariant auto-fails count as fails)
+- bar: ≥90.0% (LLM-judged pass-rate; invariant auto-fails count as fails)
 - reps: 3
 - **overall: 66/66 = 100.0% → CERTIFIED ✅**
 

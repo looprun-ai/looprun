@@ -3,7 +3,7 @@
 ## Ruler discipline (non-negotiable)
 
 - Subject model default: `gemini-3.1-flash-lite-thinkoff` (needs `GOOGLE_GENERATIVE_AI_API_KEY`;
-  the numeric thinking-off trap is already encoded in looprun). Judge: **Claude judge only**
+  the numeric thinking-off trap is already encoded in looprun). Judge: **the LLM judge only** — the frontier coding agent running the skill
   (never gemini, never mixed — measured ~4pt lenient). N≥3 to certify. Bar: **≥90%** unless the
   caller sets another.
 - Live `→ pass/fail` lines during a run are the INVARIANT gate, not quality. Only the judged
@@ -15,7 +15,7 @@ The A3 answer (questionnaire) declares the deployment models. The rule that prev
 regression of 2026-07-16 (one bundle: 100% on the tuned tier, 82% on the untuned one):
 
 - **Each T iteration runs ALL targets** (N=1 each) — the A3 selection **plus the always-on
-  BASELINE** (the model running the skill, as a Claude subagent playing the generated agent against
+  BASELINE** (the model running the skill, as a subagent playing the generated agent against
   the world; zero external dependency). A fix that helps one tier and hurts another is caught at
   the NEXT iteration, not at certification.
 - **The bar holds PER TARGET** — the STOP rule fires only when every target (and the baseline) is
@@ -78,7 +78,7 @@ Rules this forces on the loop:
    |---|---|---|
    | local / self-hosted (engine exposes logprobs) | **margin screen post-E2** + fork-pair margin loop for class-8 / near-ties | median of K PERTURBED runs + band (byte-identical reps = ONE sample) |
    | cloud API (no logprobs) | full-run discipline: N=1 directional per iteration, replication control (lesson #11), majority-of-3 judging on borderline rubrics | classic N=3 |
-   | baseline "+1" (the Claude subagent) | full-run; ALSO supplies the correct trajectories that local fork extraction needs (`extract-fork.mjs` pass-arm) | per its role (quality floor) |
+   | baseline "+1" (the skill-runner subagent) | full-run; ALSO supplies the correct trajectories that local fork extraction needs (`extract-fork.mjs` pass-arm) | per its role (quality floor) |
 
    **The perturbed band is a FLOOR, not a variance estimate around N=1.** A single unperturbed decode
    can catch *several* near-tie coins in their pass state at once, so an N=1 read over-states the true
@@ -131,7 +131,7 @@ bucket (writes `eval-results/<date>-<domain>/<agent>.dump.json` + `.autofail.jso
 
 1. `npx looprun-eval run --agent <agent-id> --cases <case-ids-csv|full> [--reps 1]` — runs the
    bucket (no judging) and preps the judge tasks.
-2. Judge the dump (packaged prompt = ruler v2, 2026-07-15 — turn-boundary + 3-way content matching + delivered-vs-internal rules; numbers from the old v1 prompt are not comparable, re-measure bars once): Claude subagents over `<agent>.tasks.jsonl` using the packaged generic judge
+2. Judge the dump (packaged prompt = ruler v2, 2026-07-15 — turn-boundary + 3-way content matching + delivered-vs-internal rules; numbers from the old v1 prompt are not comparable, re-measure bars once): judge subagents over `<agent>.tasks.jsonl` using the packaged generic judge
    prompt (`npx looprun-eval judge-prompt` prints its path) + the domain rules
    (`evals/judge-prompt.md`) → `<agent>.verdicts.jsonl`; then fold verdicts + auto-fails back with
    `npx looprun-eval judge-merge <agent>.dump.json <agent>.verdicts.jsonl` (autofail wins; a
@@ -291,4 +291,4 @@ Screening is per-bucket N=1; never run full-set N=3 until every bucket screens �
 Full runs go to the A3-declared targets (cloud + local) per the deployment-targets section; for
 LOCAL tiers, prose iteration on flippy cases uses the fork-pair margin probe (near-tie section) —
 a margin measurement costs ~1 min and zero judge calls vs a full run + judge round. The judged
-ruler is ALWAYS the Claude judge; a local model is a measured TARGET, never the ruler.
+ruler is ALWAYS the LLM judge; a local model is a measured TARGET, never the ruler.

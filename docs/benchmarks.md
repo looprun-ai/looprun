@@ -18,7 +18,7 @@ looprun is a **governance layer that wraps a subject model** (see [README](../RE
 for the model. It enforces deterministic guards on tool calls, forces **honest abstention**
 instead of fabrication, resists prompt injection (guards read tool args, world state and the
 agent's own verified actions — **never the user's text**), and certifies agents with a
-Claude-judged pass-rate.
+LLM-judged pass-rate.
 
 Two consequences fix the whole method:
 

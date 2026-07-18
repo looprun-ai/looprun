@@ -32,6 +32,7 @@ research-harness surface was replaced with its looprun-native equivalent:
 | decision labels D3 / D8 / D9-D10-D11 / 283b4ed | law names: magnet law / state-in-tail law / ruler discipline / persona-on-spec law |
 | skill name `agentspec-generator`, version 1.1 | skill name `agentspec`, version 1.0 (looprun) |
 | NEW in looprun (no old equivalent) | `AgentSpecConfig.theme` — each generated spec references its domain THEME object (`theme: THEME`), still ONE shared object per domain |
+| "Claude judge / Claude-judged / Claude Code / Opus" (the research repo's ruler + tooling vocabulary, D9) | **vendor-neutral terminology law (2026-07-18)**: "the LLM judge" (= the frontier coding agent running the skill, any vendor) / "any skills-compatible coding agent". looprun is coding-agent-agnostic; when mirroring from the research repo, ALWAYS translate. Lint-enforced (`tests/no-bench-drift.test.mjs`, vendor-neutrality law; this file + `docs/benchmarks.md` leaderboard rows are the only allowlisted surfaces) |
 
 **Scores below are from the ORIGINAL harness.** The certified numbers in §5 were measured on the
 research bench (its worlds, its judge pipeline, its subject endpoint). looprun examples are

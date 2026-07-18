@@ -1,7 +1,7 @@
 # REVIEW — accounting (agentspec pipeline provenance)
 
 Run date: 2026-07-10. Pipeline: A → G1 → G2 → G3 → E1/E2/E3 → N (measured loop T/S not run in
-this pass). Executor: Claude (agentspec skill).
+this pass). Executor: the coding agent running the agentspec skill.
 
 ## Provenance / anti-contamination
 

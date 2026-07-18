@@ -73,7 +73,7 @@ function renderCertMd(s: CertSummary): string {
     '',
     `- date: ${s.date}`,
     `- subject model: ${s.model}`,
-    `- bar: ≥${pct(s.bar)} (Claude-judged pass-rate; invariant auto-fails count as fails)`,
+    `- bar: ≥${pct(s.bar)} (LLM-judged pass-rate; invariant auto-fails count as fails)`,
     `- reps: ${s.reps}`,
     `- **overall: ${s.overall.pass}/${s.overall.total} = ${pct(s.overall.rate)} → ${s.certified ? 'CERTIFIED ✅' : 'BELOW BAR ❌'}**`,
     '',

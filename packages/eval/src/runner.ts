@@ -2,8 +2,8 @@
  * @looprun-ai/eval — the case runner (Stage T/S of the measured loop).
  *
  * For each case in scope: world = worldFactory(preset, rep) → runSpecConversation → dump record
- * + deterministic invariant gate + Claude-judge task. The streamed `→ pass/fail` lines are the
- * INVARIANT GATE ONLY, never the quality verdict — quality comes from the Claude judge.
+ * + deterministic invariant gate + LLM-judge task. The streamed `→ pass/fail` lines are the
+ * INVARIANT GATE ONLY, never the quality verdict — quality comes from the LLM judge.
  */
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -59,7 +59,7 @@ export async function runEval(config: EvalConfig, opts: RunOptions = {}): Promis
 
   const resolved = await resolveModel(opts.model ?? config.model);
   log(`subject model: ${resolved.label}`);
-  log('NOTE: streamed pass/fail = the deterministic INVARIANT GATE, not quality — quality is the Claude judge.');
+  log('NOTE: streamed pass/fail = the deterministic INVARIANT GATE, not quality — quality is the LLM judge.');
   if (typeof (opts.model ?? config.model ?? 'gemini-3.1-flash-lite-thinkoff') === 'string') {
     log('ruler discipline: unpinned model aliases can drift across days — replicate a control before cross-day comparisons.');
   }

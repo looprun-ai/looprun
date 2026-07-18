@@ -31,7 +31,7 @@ artifacts; nothing in the looprun library/runtime is hand-edited with business c
    domain-honest. Never edit the looprun trunk renderer with business content — install
    `@looprun-ai/core` as-is; every business string belongs in a generated spec or theme.
 6. **Judge rules** — `evals/judge-prompt.md`: the domain's business-specific pass/fail RULES
-   ONLY. The packaged generic Claude-judge prompt (`npx looprun-eval judge-prompt` prints its
+   ONLY. The packaged generic judge prompt (`npx looprun-eval judge-prompt` prints its
    path) already owns the output format and the universal rules (meaning not language,
    ambiguous → FAIL, critical items gate) — never restate or override them here.
 

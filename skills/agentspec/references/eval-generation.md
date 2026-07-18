@@ -84,7 +84,7 @@ failing after 2 refinements → DISCARD (log it). Never weaken a judge to pass a
   checks it). Keep dimension → case-id mapping + debate verdicts in `EVALS.md` (provenance;
   rejected cases + why).
 - **Domain judge prompts are RULES-ONLY.** `evals/judge-prompt.md` carries the business-specific
-  pass/fail rules and nothing else — the packaged generic Claude-judge prompt owns the output
+  pass/fail rules and nothing else — the packaged generic judge prompt owns the output
   format and the universal judging rules. Never emit an output-format section in a domain judge
   prompt.
 - Sizing default: 12–15 cases per agent (the certified bucket size from the lineage), ≥1 per

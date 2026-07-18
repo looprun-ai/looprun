@@ -1,6 +1,6 @@
 # REVIEW — provenance of the lawfirm bundle (agentspec skill, stages A→G→E→N)
 
-Run date: 2026-07-10. Executor: Claude (agentspec skill, single-pass — the G1 artifacts flowed to
+Run date: 2026-07-10. Executor: the coding agent running the agentspec skill (single-pass — the G1 artifacts flowed to
 the engineers per the measured default). The measured loop (T/S) has NOT run yet; this file covers
 authoring + adversarial review only.
 
@@ -182,7 +182,7 @@ It does not block `check`, and `looprun-eval run` was NOT executed per the run s
 
 ## What remains (Stage T/S — not in this run's scope)
 
-`npx looprun-eval run` (N=1 screen) → Claude-judge → classify/fix per the taxonomy → ≤3
+`npx looprun-eval run` (N=1 screen) → LLM-judge → classify/fix per the taxonomy → ≤3
 iterations → `certify` (N=3, bar ≥0.9) → human gate #2 on the residuals above.
 
 ## Measured loop (Stages T+S)
