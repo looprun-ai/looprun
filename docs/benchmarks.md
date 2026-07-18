@@ -178,3 +178,28 @@ honest-abstention axis), **Harvey LAB-AA** (agentic legal deliverables).
   54.7. See §2 for the full roster.
 - **GPQA-Diamond band** (deferred no-harm baseline) —
   <https://artificialanalysis.ai/evaluations/gpqa-diamond>
+
+---
+
+## 6. Atlas — the governance-vs-traditional benchmark (measured, 2026-07-18)
+
+Complementing τ² (looprun vs the market), **Atlas** answers the second question: *what does the
+governance layer add over a traditional hand-built agent on the same framework?* Atlas Equipment
+Rentals & Field Ops — 5 agents / 61 cases / 54 tools — was generated end-to-end by the
+[`agentspec` skill](../skills/agentspec/SKILL.md) from one purpose sentence; the control arm is a
+plain Mastra agent blind-authored by a frontier coding agent (no looprun exposure, ≤3 measured
+iterations of parity budget). Both arms, same evals, same LLM judge, N=3.
+
+| tier | looprun-governed | traditional (vanilla) | Δ |
+|---|---|---|---|
+| reference model (gemini flash-lite) | **100%** (61/61 ×3) | 98.4% | +1.6 |
+| cloud aggregate (13 models, OpenRouter) | **96.5** | 92.6 | **+3.9** (11 wins / 1 tie / 1 loss) |
+| local 24 GB (Qwen3.6-35B quant) | **91.8** (honest band) | 86.9 | +4.9 |
+
+Every fabrication, unconfirmed destructive execution, empty-reply delivery stub, privilege and
+tenant-isolation incident in the matrix occurred in the **ungoverned** arm; the governed arm was
+also rep-stable (ungoverned replicates swing up to ±6.6 pt) and ~30–37% cheaper per case.
+
+Data, specs, both arms' bundles and the full reports:
+[`looprun-bench`](https://github.com/looprun-ai/looprun-bench) → `atlas/`. Version measured:
+**looprun 0.6.0**.

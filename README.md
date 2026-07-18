@@ -100,6 +100,7 @@ npx looprun init                         # environment check + optional local-mo
 - [The agentspec skill](docs/guides/skill.md) · [The measured loop](docs/guides/measured-loop.md)
 - [Eval config reference](docs/guides/eval-config.md) · [Local models](docs/guides/local-models.md) · [MCP & native tools](docs/guides/mcp-tools.md)
 - [Examples](docs/examples.md)
+- [Benchmarks](docs/benchmarks.md) — τ²-bench + **Atlas** (governed 96.5 vs traditional 92.6 over 13 cloud models, N=3 — data in [looprun-bench](https://github.com/looprun-ai/looprun-bench))
 
 ## Credits
 
