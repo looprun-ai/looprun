@@ -1,6 +1,6 @@
 {
   "name": "looprun",
-  "version": "0.7.0",
+  "version": "0.6.0",
   "type": "module",
   "description": "looprun — a governance layer for LLM agents on top of agent frameworks (Mastra first). AgentSpec (the map) + deterministic typed guards (the safety kit) + redrive/honest-abstain (the GPS) + a generator skill. `import { LoopRunAgent } from 'looprun/mastra'`.",
   "keywords": [

@@ -1,6 +1,6 @@
 {
   "name": "@looprun-ai/eval",
-  "version": "0.7.0",
+  "version": "0.6.0",
   "type": "module",
   "description": "looprun eval harness: run a generated agent bundle against its generated eval set (invariant gate + LLM-judge protocol + certification), inside any user project. The measured loop of the agentspec skill: screen N=1 → judge → fix → certify N=3 at the bar.",
   "keywords": [
