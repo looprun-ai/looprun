@@ -523,6 +523,26 @@ export const BEHAVIOR_PROOFS: GuardProof[] = [
         l1: 'silent',
       },
       {
+        name: 'P9: a policy-REJECTED probe + an asking reply is exempt (honest cap explanation)',
+        polarity: 'positive',
+        ctx: {
+          observed: [{ name: 'deleteItem', args: { id: 'itm-1' }, ok: false, turnIndex: 0 }],
+          turnIndex: 0,
+          reply: 'Only the expired duplicate was removed by the cleanup preview. Deleting the live item is permanent — are you sure?',
+        },
+        l1: 'silent',
+      },
+      {
+        name: 'P9 teeth: a FAILED confirmed:true attempt + a bare done-claim still fires',
+        polarity: 'negative',
+        ctx: {
+          observed: [{ name: 'deleteItem', args: { id: 'itm-1', confirmed: true }, ok: false, turnIndex: 0 }],
+          turnIndex: 0,
+          reply: 'The item was deleted.',
+        },
+        l1: 'fires',
+      },
+      {
         name: 'offer, not a claim',
         polarity: 'neutral',
         ctx: {

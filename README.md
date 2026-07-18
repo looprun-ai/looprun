@@ -92,6 +92,16 @@ npx looprun init                         # environment check + optional local-mo
 | `@looprun-ai/eval` | the `looprun-eval` CLI: run / judge / certify / lint |
 | `@looprun-ai/vercel` | reserved — the Vercel AI SDK backend seam |
 
+## Benchmarks
+
+| Benchmark | Question it answers | Scale | Headline (governed vs ungoverned) | Where |
+|---|---|---|---|---|
+| **Atlas** | Do declarative guards beat a raw ReAct loop on a business agent generated from one sentence? | 61 cases × 5 agents (generated from a single sentence); 13 cloud models, N=3 | governed **96.5** vs ungoverned **92.6** — every fabrication / one-shot-destructive incident was in the ungoverned arm | [looprun-bench](https://github.com/looprun-ai/looprun-bench) |
+| **τ²-Bench Telecom** | Does adding the looprun protocol lift a raw model on a public agent benchmark? | paired: raw model vs model + looprun protocol | in progress | [looprun-bench](https://github.com/looprun-ai/looprun-bench) |
+
+Benchmark editions are pinned to looprun releases (current edition: **v0.6.0**; the next patch **v0.6.1**
+re-certifies the anchors without re-running the matrix).
+
 ## Docs
 
 - [The illustrated guide](docs/illustrated-guide.md) — the visual front-door: the whole picture in one sitting
@@ -100,7 +110,7 @@ npx looprun init                         # environment check + optional local-mo
 - [The agentspec skill](docs/guides/skill.md) · [The measured loop](docs/guides/measured-loop.md)
 - [Eval config reference](docs/guides/eval-config.md) · [Local models](docs/guides/local-models.md) · [MCP & native tools](docs/guides/mcp-tools.md)
 - [Examples](docs/examples.md)
-- [Benchmarks](docs/benchmarks.md) — τ²-bench + **Atlas** (governed 96.5 vs traditional 92.6 over 13 cloud models, N=3 — data in [looprun-bench](https://github.com/looprun-ai/looprun-bench))
+- [Benchmarks](docs/benchmarks.md) — τ²-bench + **Atlas** (governed 96.5 vs ungoverned 92.6 over 13 cloud models, N=3 — data in [looprun-bench](https://github.com/looprun-ai/looprun-bench))
 
 ## Credits
 

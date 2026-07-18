@@ -212,7 +212,20 @@ export function confirmFirst(opts?: string | { argFlag?: string; mechanism?: 'ar
       const probe = ctx.observed.find(
         (obs) => obs.name === ctx.tool && obs.ok && obs.args?.[argFlag] !== true && obs.turnIndex < ctx.turnIndex,
       );
-      return probe
+      // P9 guard-tune (2026-07-18): accept a prior-turn prose/askUser confirmation surface as the
+      // probe — mirrors the prior-ask mechanism's disjuncts; measured: the tool-probe-only form
+      // dead-locked legitimate later-turn confirmations. Firewall-clean: reads only observed prior
+      // MODEL output, never user text. Same-turn confirmed:true stays vetoed (every disjunct
+      // requires turnIndex < current).
+      const proseProbe =
+        !probe &&
+        ctx.observed.some(
+          (obs) =>
+            obs.turnIndex < ctx.turnIndex &&
+            ((obs.name === 'askUser' && obs.ok) ||
+              (o.askRe != null && obs.name === 'replyToUser' && obs.ok && o.askRe.test(String(obs.args?.text ?? '')))),
+        );
+      return probe || proseProbe
         ? null
         : `Do NOT pass ${argFlag}:true — first call ${ctx.tool} WITHOUT it, relay the confirmation question to the user, and only confirm in a LATER turn after the user agrees.`;
     },
@@ -518,7 +531,11 @@ export function destructiveClaimRequiresSuccess(
       const tookEffect = attempts.some((o) => o.ok && o.args?.confirmed === true);
       if (tookEffect) return null;
       const reply = ctx.reply ?? '';
-      const probedThisTurn = attempts.some((o) => o.ok && o.args?.confirmed !== true);
+      // P9 guard-tune (2026-07-18): a destructive tool attempted with confirmed!==true is a probe
+      // whether it succeeded or was policy-rejected — restores the ask exemption for honest limit
+      // explanations. tookEffect===false already holds here, so counting a failed probe only
+      // restores the askRe whole-reply exemption.
+      const probedThisTurn = attempts.some((o) => o.args?.confirmed !== true);
       if (probedThisTurn && askRe.test(reply)) return null;
       if (exemptRe && exemptRe.test(reply)) return null;
       const declarativeClaim = splitSentences(reply).some(

@@ -307,7 +307,9 @@ export class AgentSpecBase implements AgentSpec {
     const argTools = destructive.filter((t) => mechOf(t) === 'arg');
     const priorAskTools = destructive.filter((t) => mechOf(t) === 'prior-ask');
     if (argTools.length) {
-      this.addGuard('preTool', argTools, confirmFirst(), { layer: 'base', id: 'base:confirmFirst' });
+      // P9: askRe wired so the arg mechanism's prose-probe disjunct can accept a prior-turn
+      // replyToUser confirmation-ask as the probe (guards.ts confirmFirst).
+      this.addGuard('preTool', argTools, confirmFirst({ askRe: this.lexicon.confirmAskRe }), { layer: 'base', id: 'base:confirmFirst' });
     }
     if (priorAskTools.length) {
       this.addGuard('preTool', priorAskTools, confirmFirst({ mechanism: 'prior-ask', askRe: this.lexicon.confirmAskRe }), { layer: 'base', id: 'base:confirmFirstPriorAsk' });

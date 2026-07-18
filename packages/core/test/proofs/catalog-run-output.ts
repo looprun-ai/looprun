@@ -198,7 +198,9 @@ const noDuplicateCallProof: GuardProof = {
 // ── confirmFirst (auto:'base' — arg mechanism on deleteItem, prior-ask on purgeAll) ──
 const confirmFirstProof: GuardProof = {
   guard: 'confirmFirst',
-  make: () => confirmFirst(),
+  // P9 (2026-07-18): askRe wired — the arg mechanism accepts a prior-turn PROSE confirmation-ask
+  // (or askUser) as the probe, mirroring prior-ask's disjuncts.
+  make: () => confirmFirst({ askRe: FIXTURE_LEXICON.confirmAskRe }),
   hook: 'preTool',
   target: ['deleteItem'],
   auto: 'base',
@@ -245,6 +247,68 @@ const confirmFirstProof: GuardProof = {
         ],
         expect: 'pass',
       },
+    },
+    {
+      name: 'arg mechanism (P9): a prior-turn prose confirmation-ask unlocks confirmed execution',
+      polarity: 'positive',
+      ctx: {
+        tool: 'deleteItem',
+        args: { confirmed: true },
+        observed: [
+          { name: 'replyToUser', args: { text: 'Deleting item itm-1 is permanent — are you sure?' }, ok: true, turnIndex: 0 },
+        ],
+        turnIndex: 1,
+      },
+      l1: 'silent',
+      l3: {
+        preset: 'empty',
+        turns: [{ userText: 'delete item itm-1' }, { userText: 'yes, I confirm' }],
+        script: [
+          [{ tool: 'replyToUser', args: { text: 'Deleting item itm-1 is permanent — are you sure?' } }],
+          [{ tool: 'deleteItem', args: { id: 'itm-1', confirmed: true } }],
+          [{ tool: 'replyToUser', args: { text: 'The item was deleted as requested.' } }],
+        ],
+        expect: 'pass',
+      },
+    },
+    {
+      name: 'arg mechanism (P9): a prior-turn askUser also counts as the probe',
+      polarity: 'positive',
+      ctx: {
+        tool: 'deleteItem',
+        args: { confirmed: true },
+        observed: [
+          { name: 'askUser', args: { question: 'Delete item itm-1 — are you sure?' }, ok: true, turnIndex: 0 },
+        ],
+        turnIndex: 1,
+      },
+      l1: 'silent',
+    },
+    {
+      name: 'arg mechanism (P9): a SAME-turn ask does not unlock — the one-shot stays vetoed',
+      polarity: 'negative',
+      ctx: {
+        tool: 'deleteItem',
+        args: { confirmed: true },
+        observed: [
+          { name: 'replyToUser', args: { text: 'Are you sure?' }, ok: true, turnIndex: 1 },
+        ],
+        turnIndex: 1,
+      },
+      l1: 'fires',
+    },
+    {
+      name: 'arg mechanism (P9): a prior-turn reply that is NOT a confirmation-ask does not unlock',
+      polarity: 'negative',
+      ctx: {
+        tool: 'deleteItem',
+        args: { confirmed: true },
+        observed: [
+          { name: 'replyToUser', args: { text: 'Here is the item detail you asked for.' }, ok: true, turnIndex: 0 },
+        ],
+        turnIndex: 1,
+      },
+      l1: 'fires',
     },
     {
       name: 'prior-ask mechanism: acting with no earlier ask is denied',
