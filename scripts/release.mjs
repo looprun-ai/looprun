@@ -12,15 +12,16 @@
  *   6. push        git push --atomic origin main vX.Y.Z
  *   7. release     gh release create vX.Y.Z (package/version table + auto-generated notes)
  *
- * Versioning discipline: PATCH is the default. A plain `pnpm release` (no pending
- * changesets, no --bump) cuts a PATCH release. MINOR/MAJOR must be requested explicitly
- * (--bump minor|major or a `pnpm changeset` declaring them). 1.0.0 is a deliberate
- * stability decision, never an automatic milestone — jump to it when the API is stable.
+ * Versioning discipline: `pnpm release` cuts a PATCH, directly — no changeset required
+ * (package.json bakes --bump=patch). MINOR is `pnpm release-minor`; MAJOR is explicit
+ * (--bump=major). An explicit --bump always applies, even with pending changesets
+ * (changeset semantics: the highest bump wins). 1.0.0 is a deliberate stability
+ * decision, never an automatic milestone — jump to it when the API is stable.
  *
  * Usage:
- *   pnpm release                 # PATCH release (uses pending changesets if any exist)
- *   pnpm release --bump minor    # explicit uniform MINOR (or major) bump of all packages
- *   pnpm release --otp=123456    # pass the npm 2FA code non-interactively
+ *   pnpm release                 # PATCH release, directly
+ *   pnpm release-minor           # uniform MINOR bump of all packages
+ *   pnpm release --otp=123456    # extra flags append: npm 2FA code non-interactively
  *   pnpm release --resume --otp=… # resume a run that failed at publish (commit+tag already local)
  *   pnpm release:dry             # preflight + gates only, no mutation
  */
@@ -32,7 +33,7 @@ import { fileURLToPath } from 'node:url';
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2);
 const flag = (name) => args.includes(`--${name}`);
-const value = (name) => args.find((a) => a.startsWith(`--${name}=`))?.split('=')[1];
+const value = (name) => args.filter((a) => a.startsWith(`--${name}=`)).pop()?.split('=')[1]; // last wins — CLI flags override the baked package.json default
 const DRY = flag('dry-run');
 const BUMP = value('bump') ?? (args.includes('--bump') ? 'patch' : undefined); // bare --bump = patch
 const OTP = value('otp');
@@ -63,11 +64,13 @@ sh('gh auth status', { quiet: true });
 const pendingChangesets = readdirSync(join(ROOT, '.changeset')).filter(
   (f) => f.endsWith('.md') && f !== 'README.md',
 );
-// No pending changesets and no explicit --bump → default to a PATCH release.
-// MINOR/MAJOR are opt-in (--bump minor|major or a changeset) so the easy path never over-bumps.
-if (!pendingChangesets.length && !RESUME)
-  console.log(`  no pending changesets → ${BUMP ?? 'patch'} release (use --bump minor|major to override)`);
-console.log(`  npm: ${npmUser} · branch: ${branch} · changesets pending: ${pendingChangesets.length || (BUMP ? `none (--bump ${BUMP})` : 'none')}`);
+// PATCH is the baked default (package.json passes --bump=patch); release-minor bakes minor.
+// An explicit --bump always applies — with pending changesets, the highest bump wins.
+if (!RESUME)
+  console.log(
+    `  → ${BUMP ?? 'patch'} release${pendingChangesets.length ? ` + ${pendingChangesets.length} pending changeset(s) (highest bump wins)` : ''}`,
+  );
+console.log(`  npm: ${npmUser} · branch: ${branch}`);
 
 // ---------- 3 (early in dry-run). gates ----------
 const gates = () => {
@@ -99,8 +102,8 @@ if (RESUME) {
   if (head !== `chore(release): ${t}`) die(`--resume: HEAD is "${head}", expected "chore(release): ${t}".`);
   console.log(`  resuming ${t} at publish`);
 }
-if (!RESUME && !pendingChangesets.length) {
-  const bump = BUMP ?? 'patch'; // default release bump — MINOR/MAJOR are opt-in
+if (!RESUME && (BUMP || !pendingChangesets.length)) {
+  const bump = BUMP ?? 'patch'; // baked default is patch; explicit --bump applies even with pendings (highest wins)
   if (!['patch', 'minor', 'major'].includes(bump)) die(`--bump must be patch|minor|major, got "${bump}"`);
   const names = publishableDirs().map((d) => readJson(`${d}/package.json`).name);
   const front = names.map((n) => `'${n}': ${bump}`).join('\n');

@@ -28,7 +28,8 @@
     "proofs:check": "node scripts/proofs/check-record-required.mjs",
     "proofs:canary": "node scripts/proofs/run-canary.mjs",
     "changeset": "changeset",
-    "release": "node scripts/release.mjs",
+    "release": "node scripts/release.mjs --bump=patch",
+    "release-minor": "node scripts/release.mjs --bump=minor",
     "release:dry": "node scripts/release.mjs --dry-run"
   },
   "devDependencies": {
