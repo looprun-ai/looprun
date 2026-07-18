@@ -9,15 +9,18 @@ looprun adds everything that makes it safe to hand the keys to an agent:
 - **The safety kit** — typed **deterministic guards** (seatbelt, airbag, speed limiter): every rule is a
   machine-checked `check()` paired with the LLM-facing `prose()` rendered into the prompt. Guards read
   tool args, world state and the agent's own verified actions — **never the user's text**, so a clever
-  prompt can't steer them.
+  prompt can't steer them. 
+  [REV: Why **never the user's text**? Doesn't this limit the guards?]
 - **The GPS with course-correction** — when the reply violates its checks, a bounded no-tools *redrive*
   corrects it; when correction fails, a **deterministic honest-abstain closure** (a pure function of what
   verifiably happened) goes out instead of a fabrication.
 - **The map generator** — the [`agentspec` skill](skills/agentspec/SKILL.md) interviews you (one
   question), then generates the specs, the theme, the tool world **and the eval set that certifies them**.
+  [REV: think there are more than one question]
 
 The governed agent is still a **genuine Mastra `Agent`** — it registers in your Mastra instance and shows
 up in Mastra Studio with the guards enforcing live.
+[REV: Mastra is junt one possible framework — looprun is framework-agnostic, and the same governance layer can be applied to any agent framework. For isntance, the Vercel AI SDK backend is in progress.]
 
 ```ts
 import { LoopRunAgent } from 'looprun/mastra'
@@ -41,31 +44,33 @@ multi-token-prediction speculative decoding (~1.4× decode, byte-identical outpu
 ```ts
 import { localModel } from 'looprun/models'
 
-model: await localModel('ram24')       // DEFAULT — 24 GB machines, 11.8 GB, 88.9% certified eval, ~56 tok/s
-model: await localModel('ram16')       // 16 GB machines — 13.4–13.5 GB RSS measured, ~44 tok/s
+model: await localModel('ram24')       // DEFAULT — 24 GB machines, 11.8 GB, ~56 tok/s
+model: await localModel('ram8')        // 8 GB machines — 4.62 GB, ~43 tok/s 
+model: await localModel('ram16')       // 16 GB machines — 13.5 GB, ~44 tok/s
 model: await localModel('ram32')       // 32 GB machines, quality-max — 17.2 GB, ~58 tok/s
-model: await localModel('ram8')        // 8 GB machines — 4.62 GB RSS measured, ~43 tok/s (4B)
-// tier names re-keyed to RAM class 2026-07-15 (old micro/minimal/normal/pro still accepted)
+[REV: review the memory of ram32 — 17.2 GB seems low for a 32 GB machine]
 ```
 
 Requirements: a `llama-server` build **≥ b9780**
-([releases](https://github.com/ggml-org/llama.cpp/releases) — older builds cannot load the
-qwen3.5/3.6 family), found via `$LLAMA_BIN` → `~/llamacpp-b9780/bin/llama-server` → `PATH`.
+([releases](https://github.com/ggml-org/llama.cpp/releases), found via `$LLAMA_BIN` → `~/llamacpp-b9780/bin/llama-server` → `PATH`.[REV: don't use specific path - change all ocurrences in the repo]
 Model weights download **consent-first** — never automatically on an agent's first turn:
 
 ```bash
 npx looprun models pull qwen3.5-4b      # explicit download (or: npx looprun init, interactive)
 npx looprun models status               # binary / model file / server health
 ```
+[REV: this section is very confusing, it should be re-written to be more clear. What does looprun models pull qwen3.5-4b do? Does it download the model weights? Why it is necessary? Why qwen3.5-4b? ]
 
 ## Install
-
+[REV: shouldn't be only npm i looprun? npm i -D @looprun-ai/eval is not automatically installed? VERY CONFUSED SECTION - Best to move to how to sections below]
 ```bash
 npm i looprun @mastra/core ai zod        # the library
 npx skills add looprun-ai/looprun --skill agentspec # the generator skill (any skills-compatible coding agent)
 npm i -D @looprun-ai/eval                   # the eval harness (certification)
 npx looprun init                         # environment check + optional local-model download
 ```
+
+[REV: Instead of "The Workflow" section, I would add a "How to use" section with a step by step guide on how to use looprun. The workflow section is too abstract and not very useful for a new user. It should be more practical and show how to use the library in a real scenario. How-tos: Generate an agent, run it, evaluate it, certify it, etc. The workflow section is more of a high-level overview of the process, but it doesn't give enough details on how to actually use the library. It should be more practical and show how to use the library in a real scenario. How-tos: Generate an agent, run it, evaluate it, certify it, etc.]
 
 ## The workflow
 
@@ -91,6 +96,7 @@ npx looprun init                         # environment check + optional local-mo
 | `@looprun-ai/models` | validated local models (llama.cpp `ModelRuntimePort`) + the cloud validation model |
 | `@looprun-ai/eval` | the `looprun-eval` CLI: run / judge / certify / lint |
 | `@looprun-ai/vercel` | reserved — the Vercel AI SDK backend seam |
+[REV: review the above list]
 
 ## Benchmarks
 
