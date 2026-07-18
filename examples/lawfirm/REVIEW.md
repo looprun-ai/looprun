@@ -168,7 +168,7 @@ lint: clean
 exit=0
 === GATE 2: looprun-eval check ===
 WARN: GOOGLE_GENERATIVE_AI_API_KEY is not set — `looprun-eval run` with the default gemini subject will fail.
-check: green — /Users/marcos/Dev/js/looprun/lawfirm/looprun.eval.config.ts
+check: green — lawfirm/looprun.eval.config.ts
 exit=0
 === GATE 3: tsc --noEmit ===
 exit=0

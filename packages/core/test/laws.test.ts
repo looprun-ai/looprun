@@ -27,7 +27,8 @@ function listTs(dir: string): string[] {
 }
 
 // Business/brand tokens that must never appear in library source (they belong to generated bundles).
-const BUSINESS_TOKENS = /\b(Theo|Criaty|criaty|Instagram|Brand Pulse|pt-BR|neurono|beleza|homeservices|lawfirm|accounting-firm)\b/;
+// Sampled from the shipped example domains — a representative denylist, not exhaustive.
+const BUSINESS_TOKENS = /\b(Acme|Northwind|Instagram|homeservices|home-services|lawfirm|accounting-firm|second-brain|inbox-triage)\b/;
 
 describe('zero-business-strings (library packages)', () => {
   for (const file of [...listTs(CORE_SRC), ...listTs(MASTRA_SRC)]) {

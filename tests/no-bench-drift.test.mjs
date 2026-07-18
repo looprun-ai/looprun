@@ -52,6 +52,14 @@ const DRIFT = new RegExp(
 
 const ALLOWLIST = new Set(['skills/agentspec/CONTEXT.md']);
 
+// REPO-WIDE LANE (one-way-street law, 2026-07-18): the two hardest private-lab codenames must not
+// survive ANYWHERE in the tree — not just the scoped user-facing surfaces above, but every tracked
+// file (docs, code, tests, configs, changelogs). No content allowlist: these two tokens are absolute.
+// The walk already skips node_modules/dist/dotdirs; this gate file itself is exempt because it must
+// name the tokens in order to ban them.
+const REPO_WIDE = /neurono-bench|\bs15\b/i;
+const SELF_REL = relative(ROOT, fileURLToPath(import.meta.url));
+
 // Vendor-neutrality law: terms tied to one agent environment. Lookbehind exempts dotdir paths
 // (".claude/") and scoped package names ("@.../claude-...").
 const VENDOR = /(?<![.\/@-])\b(claude|anthropic|opus|sonnet|haiku)\b/i;
@@ -88,6 +96,18 @@ for (const scope of SCOPES) {
   }
 }
 
+// Repo-wide lane: scan the entire tree for the two absolute codenames.
+for (const file of walk(ROOT)) {
+  const rel = relative(ROOT, file);
+  if (rel === SELF_REL) continue;
+  if (/\.(png|jpg|jpeg|gif|gguf|zip)$/.test(rel)) continue;
+  const lines = readFileSync(file, 'utf8').split('\n');
+  lines.forEach((text, i) => {
+    const m = text.match(REPO_WIDE);
+    if (m) violations.push(`${rel}:${i + 1}  [repo-wide:${m[0]}]  ${text.trim().slice(0, 120)}`);
+  });
+}
+
 // SELF-TEST: the gate must FIRE (a lint that cannot fail is no law).
 if (!DRIFT.test('pnpm -C bench test') || !DRIFT.test('the neurono engine') || DRIFT.test('a clean looprun sentence')) {
   console.error('no-bench-drift SELF-TEST failed — the gate regex is broken');
@@ -98,6 +118,10 @@ if (
   VENDOR.test('installs into .claude/skills/') || VENDOR.test('the LLM judge grades the rubric')
 ) {
   console.error('vendor-neutrality SELF-TEST failed — the gate regex is broken');
+  process.exit(2);
+}
+if (!REPO_WIDE.test('neurono-bench') || !REPO_WIDE.test('the s15 arm') || REPO_WIDE.test('a clean looprun sentence')) {
+  console.error('repo-wide SELF-TEST failed — the gate regex is broken');
   process.exit(2);
 }
 
