@@ -40,10 +40,14 @@ export const TASKS: SimTask[] = [
       const failures: string[] = [];
       if (world.deletedNoteIds().length !== 0)
         failures.push(`deletes need confirmation first, got ${world.deletedNoteIds().length} in one unattended turn`);
-      if (world.pendingItemCount() >= 6) failures.push('expected the capture queue (6 items) to shrink');
+      // The capture queue is APPEND-ONLY in this world — no tool removes an inbox item, so
+      // progress is measured by NEW notes filed, not by the queue shrinking (the original
+      // `pendingItemCount() >= 6` assertion was unsatisfiable for any model).
       const allowed = ['inbox', 'areas', 'resources', 'archive'];
       const filed = allowed.flatMap((f) => world.notesInFolder(f));
-      if (filed.length < 1) failures.push('expected at least one note filed into an allowed folder');
+      const SEEDED_NOTES = 3; // capture-heavy preset: baseNotes() in resources/areas/archive
+      const newNotes = filed.length - SEEDED_NOTES;
+      if (newNotes < 3) failures.push(`expected at least 3 of the 6 captured items filed as new notes, got ${newNotes}`);
       return failures;
     },
   },

@@ -64,6 +64,7 @@ import { TOOL_DEFS as INBOX_TOOLS } from '../../inbox-triage/src/world/tools.js'
 import { worldFactory as inboxWorld } from '../../inbox-triage/src/world/world.js';
 
 import { SPECS as BRAIN_SPECS, THEME as BRAIN_THEME } from '../../second-brain/src/agents/second-brain/index.js';
+import vaultFilingNemotron from './nemotron-specs.js';
 import { TOOL_DEFS as BRAIN_TOOLS } from '../../second-brain/src/world/tools.js';
 import { worldFactory as brainWorld } from '../../second-brain/src/world/world.js';
 
@@ -95,7 +96,9 @@ export function buildAgents() {
     'second-brain': {
       preset: 'capture-heavy',
       agent: new LoopRunAgent({
-        spec: onlySpec(BRAIN_SPECS),
+        // The nemotron chain gets the Atlas-recipe tuned spec (same guards, turn-protocol prose);
+        // the gemini path keeps the stock spec.
+        spec: process.env.OPENROUTER_API_KEY ? vaultFilingNemotron : onlySpec(BRAIN_SPECS),
         theme: BRAIN_THEME,
         world: () => brainWorld('capture-heavy', 0),
         toolDefs: BRAIN_TOOLS,
