@@ -9,6 +9,7 @@
   },
   "scripts": {
     "sim": "tsx src/run-sim.ts",
+    "bench-ab": "tsx src/bench-ab.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
