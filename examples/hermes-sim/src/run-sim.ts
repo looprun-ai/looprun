@@ -1,14 +1,18 @@
 /**
  * The sim runner: model server up → sandbox HERMES_HOME → one real `hermes chat -q` per task →
  * assert the fake-world end-state → report. Non-zero exit on any failure.
+ *
+ * SIM_BASELINE=1 swaps the governed server for the hand-rolled RAW server (raw-server.ts): the
+ * same tasks, worlds and tools with ZERO looprun code in the path — the governed-vs-raw A/B.
  */
 import { mkdirSync, rmSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createModelServer } from '@looprun-ai/server';
 import type { TurnEvent } from '@looprun-ai/server';
-import { buildAgents, buildBaselineAgents } from './agents.js';
+import { backingModel, buildAgents, rawDomains } from './agents.js';
 import { hermesBin, runHermesTask, writeHermesHome } from './hermes.js';
+import { createRawServer } from './raw-server.js';
 import { TASKS } from './tasks.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -22,23 +26,37 @@ async function main(): Promise<number> {
     return 2;
   }
 
-  // SIM_BASELINE=1 runs the "-raw" (ungoverned) twins of the same agents — same worlds, tools,
-  // model and harness path — so a governed vs raw run of the same tasks isolates governance.
   const baseline = process.env.SIM_BASELINE === '1';
-  const registry: Record<string, { preset: string; agent: any }> = baseline ? buildBaselineAgents() : buildAgents();
-  if (baseline) console.log('BASELINE MODE: ungoverned "-raw" agents (no looprun governance)');
   const turns: TurnEvent[] = [];
-  const server = await createModelServer({
-    agents: Object.fromEntries(Object.entries(registry).map(([id, entry]) => [id, entry.agent])),
-    onTurn: (event) => turns.push(event),
-  });
-  console.log(`model server up at ${server.url} — models: ${Object.keys(registry).join(', ')}`);
+  let serverUrl: string;
+  let closeServer: () => Promise<void>;
+  let registry: ReturnType<typeof buildAgents> | null = null;
+  let rawServer: Awaited<ReturnType<typeof createRawServer>> | null = null;
+
+  if (baseline) {
+    const domains = rawDomains();
+    const { model, modelParams } = backingModel();
+    rawServer = await createRawServer({ domains, model, modelParams, maxSteps: 12 });
+    serverUrl = rawServer.url;
+    closeServer = rawServer.close;
+    console.log('RAW BASELINE MODE: hand-rolled server, zero looprun code in the path');
+    console.log(`raw server up at ${serverUrl} — models: ${Object.keys(domains).join(', ')}`);
+  } else {
+    registry = buildAgents();
+    const server = await createModelServer({
+      agents: Object.fromEntries(Object.entries(registry).map(([id, entry]) => [id, entry.agent])),
+      onTurn: (event) => turns.push(event),
+    });
+    serverUrl = server.url;
+    closeServer = server.close;
+    console.log(`model server up at ${serverUrl} — models: ${Object.keys(registry).join(', ')}`);
+  }
   console.log(`hermes cli: ${hermesBin()}`);
 
   const home = join(ROOT, '.hermes-home');
   rmSync(home, { recursive: true, force: true });
   mkdirSync(home, { recursive: true });
-  writeHermesHome(home, server.url);
+  writeHermesHome(home, serverUrl);
 
   let failed = 0;
   try {
@@ -49,7 +67,7 @@ async function main(): Promise<number> {
       first = false;
       const modelId = baseline ? `${task.model}-raw` : task.model;
       console.log(`\n━━ ${task.title}\n   model=${modelId}`);
-      const before = turns.length;
+      const before = baseline ? rawServer!.requests.length : turns.length;
       let run;
       try {
         run = await runHermesTask({ home, model: modelId, prompt: task.prompt, timeoutMs: 480_000 });
@@ -58,23 +76,39 @@ async function main(): Promise<number> {
         console.error(`   ✖ harness run failed: ${error instanceof Error ? error.message : String(error)}`);
         continue;
       }
-      const taskTurns = turns.slice(before).filter((t) => t.model === modelId);
       if (run.code !== 0) {
         failed++;
         console.error(`   ✖ hermes exited ${run.code}\n${run.stderr.slice(-2000)}`);
         continue;
       }
-      if (taskTurns.length === 0) {
-        failed++;
-        console.error('   ✖ the harness never reached the model server (0 governed turns observed)');
-        continue;
+
+      let world: unknown;
+      if (baseline) {
+        const reqs = rawServer!.requests.slice(before).filter((r) => r.model === modelId);
+        if (reqs.length === 0) {
+          failed++;
+          console.error('   ✖ the harness never reached the raw server (0 requests observed)');
+          continue;
+        }
+        for (const r of reqs.filter((r) => !r.ok)) console.error(`   raw turn error: ${r.error}`);
+        world = rawServer!.getWorld(modelId);
+        console.log(`   requests=${reqs.length} (${run.durationMs} ms)`);
+        console.log('   guard corrections observed: n/a (raw — no governance in the path)');
+      } else {
+        const taskTurns = turns.slice(before).filter((t) => t.model === modelId);
+        if (taskTurns.length === 0) {
+          failed++;
+          console.error('   ✖ the harness never reached the model server (0 governed turns observed)');
+          continue;
+        }
+        const sessionId = taskTurns[taskTurns.length - 1]!.sessionId;
+        world = (registry as Record<string, { agent: any }>)[modelId]!.agent.getSession(sessionId).world;
+        const corrections = taskTurns.flatMap((t) => t.meta.corrections);
+        console.log(`   turns=${taskTurns.length} session=${sessionId} (${run.durationMs} ms)`);
+        console.log(`   guard corrections observed: ${corrections.length ? corrections.join(', ') : 'none'}`);
       }
-      const sessionId = taskTurns[taskTurns.length - 1]!.sessionId;
-      const world = registry[modelId]!.agent.getSession(sessionId).world;
+
       const failures = task.assert(world);
-      const corrections = taskTurns.flatMap((t) => t.meta.corrections);
-      console.log(`   turns=${taskTurns.length} session=${sessionId} (${run.durationMs} ms)`);
-      console.log(`   guard corrections observed: ${corrections.length ? corrections.join(', ') : 'none'}`);
       const reply = run.stdout.trim().split('\n').slice(-3).join('\n   ');
       console.log(`   harness saw: ${reply.slice(0, 400)}`);
       if (failures.length) {
@@ -85,7 +119,7 @@ async function main(): Promise<number> {
       }
     }
   } finally {
-    await server.close();
+    await closeServer();
   }
 
   console.log(`\n${TASKS.length - failed}/${TASKS.length} tasks passed`);

@@ -133,69 +133,40 @@ export function buildAgents() {
 export type AgentRegistry = ReturnType<typeof buildAgents>;
 
 /**
- * BASELINE (the "-raw" models): the exact same worlds, tool surfaces, backing model, server and
- * harness path — but NO looprun governance. Each raw spec keeps only the machinery-mandated
- * minimal integrity guards (noDuplicateCall/emptyReply, which gate nothing domain-level) and
- * replaces the governed trunk with the kind of one-liner prompt a harness user would write.
- * Comparing a task's `<model>` vs `<model>-raw` run isolates exactly what governance adds.
+ * BASELINE (the "-raw" models): the same fake worlds, tool surfaces and backing model — with
+ * ZERO looprun code in the path. These configs feed the hand-rolled raw server
+ * (see raw-server.ts): a plain AI-SDK tool loop, no specs, no guards (not even the minimal
+ * integrity layer), no redrive. Comparing `<model>` vs `<model>-raw` isolates governance.
  */
-import { AgentSpecBase } from 'looprun';
+import type { RawDomain } from './raw-server.js';
 
-function rawSpec(governed: any, persona: string): any {
-  return new (class extends AgentSpecBase {})({
-    id: `${governed.id}-raw`,
-    mode: governed.mode,
-    persona,
-    tools: [...governed.surface.tools],
-    systemPrompt: () =>
-      `${persona}\nUse the available tools to complete the owner's request. When you are done, reply with a short summary of what you did.`,
-  });
-}
+export { backingModel };
 
-export function buildBaselineAgents() {
-  const { model, modelParams } = backingModel();
-  const mk = (governed: any, persona: string, world: () => any, toolDefs: any, id: string) =>
-    new LoopRunAgent({ spec: rawSpec(governed, persona), world, toolDefs, model, modelParams, id, name: id });
+export function rawDomains(): Record<string, RawDomain> {
   return {
     'inbox-triage-raw': {
-      preset: 'mixed',
-      agent: mk(
-        onlySpec(INBOX_SPECS),
-        "You are the owner's email assistant: summarize, clean up and answer their inbox.",
-        () => inboxWorld('mixed', 0),
-        INBOX_TOOLS,
-        'inbox-triage-raw',
-      ),
+      world: () => inboxWorld('mixed', 0),
+      toolDefs: INBOX_TOOLS,
+      tools: [...onlySpec(INBOX_SPECS).surface.tools],
+      persona: "You are the owner's email assistant: summarize, clean up and answer their inbox.",
     },
     'second-brain-raw': {
-      preset: 'capture-heavy',
-      agent: mk(
-        onlySpec(BRAIN_SPECS),
-        "You are the owner's note-filing assistant: organize their capture queue into the vault.",
-        () => brainWorld('capture-heavy', 0),
-        BRAIN_TOOLS,
-        'second-brain-raw',
-      ),
+      world: () => brainWorld('capture-heavy', 0),
+      toolDefs: BRAIN_TOOLS,
+      tools: [...onlySpec(BRAIN_SPECS).surface.tools],
+      persona: "You are the owner's note-filing assistant: organize their capture queue into the vault.",
     },
     'calendar-raw': {
-      preset: 'empty-week',
-      agent: mk(
-        onlySpec(CAL_SPECS),
-        "You are the owner's calendar assistant: manage their events and reminders.",
-        () => calendarWorld('empty-week', 0),
-        CAL_TOOLS,
-        'calendar-raw',
-      ),
+      world: () => calendarWorld('empty-week', 0),
+      toolDefs: CAL_TOOLS,
+      tools: [...onlySpec(CAL_SPECS).surface.tools],
+      persona: "You are the owner's calendar assistant: manage their events and reminders.",
     },
     'calendar-busy-raw': {
-      preset: 'busy-week',
-      agent: mk(
-        onlySpec(CAL_SPECS),
-        "You are the owner's calendar assistant: manage their events and reminders.",
-        () => calendarWorld('busy-week', 0),
-        CAL_TOOLS,
-        'calendar-busy-raw',
-      ),
+      world: () => calendarWorld('busy-week', 0),
+      toolDefs: CAL_TOOLS,
+      tools: [...onlySpec(CAL_SPECS).surface.tools],
+      persona: "You are the owner's calendar assistant: manage their events and reminders.",
     },
-  } as const;
+  };
 }

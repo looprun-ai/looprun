@@ -47,11 +47,15 @@ pass/fail report with the observed guard corrections. Non-zero exit on any failu
 
 This lane is manual (not in CI): it needs the external CLI and an API key.
 
-`SIM_BASELINE=1` runs the same tasks against ungoverned `-raw` twins (same worlds, tools, model,
-harness path; neutral one-line prompt, no domain guards) — an A/B that isolates what governance
-adds. Note the raw twins still carry the machinery-mandated minimal integrity guards
-(noDuplicateCall/emptyReply); in the first measured baseline run those fired to suppress
-duplicate eventCreate calls, so even "raw" looprun is not zero protection.
+`SIM_BASELINE=1` runs the same tasks TRULY raw: a hand-rolled OpenAI endpoint
+([raw-server.ts](src/raw-server.ts)) drives a plain AI-SDK tool loop over the same worlds and
+tool surfaces with ZERO looprun code in the path — no specs, no guards (not even the minimal
+integrity layer), no redrive. First A/B (nemotron free chain, 2026-07-19, N=1 per arm):
+governed 3/4 vs raw 3/4, same second-brain under-acting miss, no safety breach in the raw run.
+One-run parity is expected — breach-style failures are tail events (an earlier LoopRunAgent-based
+raw variant needed 3 duplicate-eventCreate suppressions in one run, and the governed run needed a
+reminderNeedsRealEvent correction in another); ranking governance value needs a breach-rate
+study (N≥10 per arm), ideally including the weaker fallback models.
 
 ## Using this for real (production notes)
 
