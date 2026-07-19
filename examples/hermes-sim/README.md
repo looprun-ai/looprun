@@ -47,6 +47,12 @@ pass/fail report with the observed guard corrections. Non-zero exit on any failu
 
 This lane is manual (not in CI): it needs the external CLI and an API key.
 
+`SIM_BASELINE=1` runs the same tasks against ungoverned `-raw` twins (same worlds, tools, model,
+harness path; neutral one-line prompt, no domain guards) — an A/B that isolates what governance
+adds. Note the raw twins still carry the machinery-mandated minimal integrity guards
+(noDuplicateCall/emptyReply); in the first measured baseline run those fired to suppress
+duplicate eventCreate calls, so even "raw" looprun is not zero protection.
+
 ## Using this for real (production notes)
 
 - **Per-task models in Hermes:** point only the tasks you want governed at the server —
