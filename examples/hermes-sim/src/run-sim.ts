@@ -14,8 +14,11 @@ import { TASKS } from './tasks.js';
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 async function main(): Promise<number> {
-  if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
-    console.error('GOOGLE_GENERATIVE_AI_API_KEY is required (the governed agents run on gemini-3.1-flash-lite).');
+  if (!process.env.OPENROUTER_API_KEY && !process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
+    console.error(
+      'A backing-model key is required: OPENROUTER_API_KEY (SIM_MODEL, default nemotron-3-ultra free) ' +
+        'or GOOGLE_GENERATIVE_AI_API_KEY (gemini-3.1-flash-lite).',
+    );
     return 2;
   }
 
@@ -35,12 +38,16 @@ async function main(): Promise<number> {
 
   let failed = 0;
   try {
+    let first = true;
     for (const task of TASKS) {
+      // Free-tier pacing: let the per-minute rate-limit window reset between tasks.
+      if (!first && process.env.OPENROUTER_API_KEY) await new Promise((r) => setTimeout(r, 60_000));
+      first = false;
       console.log(`\n━━ ${task.title}\n   model=${task.model}`);
       const before = turns.length;
       let run;
       try {
-        run = await runHermesTask({ home, model: task.model, prompt: task.prompt });
+        run = await runHermesTask({ home, model: task.model, prompt: task.prompt, timeoutMs: 480_000 });
       } catch (error) {
         failed++;
         console.error(`   ✖ harness run failed: ${error instanceof Error ? error.message : String(error)}`);

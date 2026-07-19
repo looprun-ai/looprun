@@ -94,6 +94,9 @@ importers:
       '@ai-sdk/google':
         specifier: ^3.0.0
         version: 3.0.91(zod@3.25.76)
+      '@ai-sdk/openai':
+        specifier: ^3.0.0
+        version: 3.0.83(zod@3.25.76)
       '@looprun-ai/server':
         specifier: workspace:*
         version: link:../../packages/server
@@ -3364,6 +3367,12 @@ snapshots:
       '@ai-sdk/provider': 3.0.14
       '@ai-sdk/provider-utils': 4.0.38(zod@4.4.3)
       zod: 4.4.3
+
+  '@ai-sdk/openai@3.0.83(zod@3.25.76)':
+    dependencies:
+      '@ai-sdk/provider': 3.0.14
+      '@ai-sdk/provider-utils': 4.0.38(zod@3.25.76)
+      zod: 3.25.76
 
   '@ai-sdk/openai@3.0.83(zod@4.4.3)':
     dependencies:

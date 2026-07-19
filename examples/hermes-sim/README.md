@@ -21,14 +21,24 @@ Three governed domains, chosen from the researched task catalog ([TASKS.md](TASK
 
 ## Run
 
-Requirements: the `hermes` CLI (or `HERMES_BIN=/abs/path`), a Python env able to run it, and
-`GOOGLE_GENERATIVE_AI_API_KEY` (the governed agents run on `gemini-3.1-flash-lite`, thinking off).
+Requirements: the `hermes` CLI (or `HERMES_BIN=/abs/path`), a Python env able to run it, and a
+backing-model key — either `OPENROUTER_API_KEY` (default chain: `nemotron-3-ultra:free` →
+`qwen3-coder:free` → `llama-3.3-70b:free`, override with `SIM_MODEL=a,b,c`) or
+`GOOGLE_GENERATIVE_AI_API_KEY` (`gemini-3.1-flash-lite`, thinking off).
 
 ```bash
-GOOGLE_GENERATIVE_AI_API_KEY=... pnpm -C examples/hermes-sim sim
-# or with an explicit CLI path:
+OPENROUTER_API_KEY=... pnpm -C examples/hermes-sim sim
+# or with an explicit CLI path and the gemini backing model:
 HERMES_BIN=~/hermes-agent/.venv/bin/hermes GOOGLE_GENERATIVE_AI_API_KEY=... pnpm -C examples/hermes-sim sim
 ```
+
+Free-tier reality (measured 2026-07-19, 3/4 tasks green on the free chain): OpenRouter free
+models fail in three shapes — provider capacity 502s, 200s whose body is keep-alive whitespace
+with no JSON, and `free-models-per-min` 429s. The sim mitigates all three (server-side model
+fallback via OpenRouter's `models` array — hard limit 3 entries — plus client-side retry with a
+65 s window for 429) and paces one task per minute. Expect residual model-quality variance:
+weaker fallback models sometimes under-act (reply without calling tools), which fails progress
+assertions but never breaches a guard.
 
 The sim: starts the model server on an ephemeral port → writes a sandboxed `HERMES_HOME`
 (`.hermes-home/`, gitignored) pointing at it → runs one real `hermes chat -q "<task>"` per task →
