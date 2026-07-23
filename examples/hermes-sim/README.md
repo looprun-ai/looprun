@@ -32,13 +32,23 @@ OPENROUTER_API_KEY=... pnpm -C examples/hermes-sim sim
 HERMES_BIN=~/hermes-agent/.venv/bin/hermes GOOGLE_GENERATIVE_AI_API_KEY=... pnpm -C examples/hermes-sim sim
 ```
 
-Free-tier reality (measured 2026-07-19, 3/4 tasks green on the free chain): OpenRouter free
-models fail in three shapes — provider capacity 502s, 200s whose body is keep-alive whitespace
-with no JSON, and `free-models-per-min` 429s. The sim mitigates all three (server-side model
-fallback via OpenRouter's `models` array — hard limit 3 entries — plus client-side retry with a
-65 s window for 429) and paces one task per minute. Expect residual model-quality variance:
-weaker fallback models sometimes under-act (reply without calling tools), which fails progress
-assertions but never breaches a guard.
+Free-tier reality (measured 2026-07-19, final state **4/4 green** on the free chain): OpenRouter
+free models fail in three shapes — provider capacity 502s, 200s whose body is keep-alive
+whitespace with no JSON, and `free-models-per-min` 429s. The sim mitigates all three
+(server-side model fallback via OpenRouter's `models` array — hard limit 3 entries — plus
+client-side retry with a 65 s window for 429) and paces one task per minute.
+
+On the OpenRouter chain the vault-filing agent swaps in a **model-tuned spec**
+([nemotron-specs.ts](src/nemotron-specs.ts)): a subclass changing ONLY behavior prose (guards
+untouched) per the Atlas small-model recipe — turn protocol at the top ("act, then write; TEXT
+IS NOT ACTION"), non-destructive work never asks permission, the filing pass as a numbered
+checklist. The gemini path keeps the stock spec.
+
+Two diagnosis traps this sim taught us (so you don't relearn them): the report's "0 tool calls"
+line is HERMES' own counter — always 0 by design, the governed agent's tool calls happen behind
+the facade; and the vault task originally asserted the capture queue shrinks, but that world's
+queue is append-only (no tool removes an inbox item), so the assertion was unsatisfiable for any
+model — it now measures new notes filed.
 
 The sim: starts the model server on an ephemeral port → writes a sandboxed `HERMES_HOME`
 (`.hermes-home/`, gitignored) pointing at it → runs one real `hermes chat -q "<task>"` per task →
@@ -68,12 +78,8 @@ which is precisely what structural guards eliminate (50% → 0%).
 `SIM_BASELINE=1` runs the same tasks TRULY raw: a hand-rolled OpenAI endpoint
 ([raw-server.ts](src/raw-server.ts)) drives a plain AI-SDK tool loop over the same worlds and
 tool surfaces with ZERO looprun code in the path — no specs, no guards (not even the minimal
-integrity layer), no redrive. First A/B (nemotron free chain, 2026-07-19, N=1 per arm):
-governed 3/4 vs raw 3/4, same second-brain under-acting miss, no safety breach in the raw run.
-One-run parity is expected — breach-style failures are tail events (an earlier LoopRunAgent-based
-raw variant needed 3 duplicate-eventCreate suppressions in one run, and the governed run needed a
-reminderNeedsRealEvent correction in another); ranking governance value needs a breach-rate
-study (N≥10 per arm), ideally including the weaker fallback models.
+integrity layer), no redrive. Single raw runs often score the same as governed ones — breach-style
+failures are tail events, which is why the N=10 table above is the measurement that matters.
 
 ## Using this for real (production notes)
 

@@ -18,6 +18,18 @@ Every example README documents: the business problem → how the skill generated
 (questionnaire answer, approval gate, iteration log) → running it in Mastra Studio with
 guard-exercising prompts → re-running the certification.
 
+## Personal-agent domains + the harness integration sim
+
+Beyond the three businesses, three governed personal-agent domains —
+[`examples/inbox-triage`](../examples/inbox-triage) (draft-never-send),
+[`examples/second-brain`](../examples/second-brain) (folder scope + confirm-first delete),
+[`examples/calendar`](../examples/calendar) (availability preconditions) — back
+[`examples/hermes-sim`](../examples/hermes-sim/README.md): an end-to-end sim where the REAL
+Hermes-Agent harness drives these agents as OpenAI-compatible "models" via
+[`@looprun-ai/server`](../packages/server). Its measured N=10 governed-vs-raw A/B (real CLI,
+nemotron free chain): the ungoverned arm double-books an occupied calendar slot **5/10** times;
+the governed arm **0/10** — details and the raw-baseline methodology in the sim README.
+
 ## What the measured loops caught (the looprun thesis, live)
 
 - **homeservices** — *zero iterations*: the anti-launder scope held on the first shot. `scheduleJob`
