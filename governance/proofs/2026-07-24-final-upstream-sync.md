@@ -1,9 +1,9 @@
 ---
 date: 2026-07-24
-slug: final-s15-sync
+slug: final-upstream-sync
 change_kind: runtime
 target: —
-summary: Final engine sync from frozen bench s15: B1/B4/N1/N5 guard fixes, risk-family kinds, trunk provenance/coherence, same-step sibling ledger
+summary: Final engine sync from the frozen upstream benchmark: B1/B4/N1/N5 guard fixes, risk-family kinds, trunk provenance/coherence, same-step sibling ledger
 isolated: 154/154
 collective: 42/42
 coverage: 23/23
@@ -13,12 +13,12 @@ verdict: PASS
 suite_cmd: pnpm proofs:run
 ---
 
-# Proof record — Final engine sync from frozen bench s15: B1/B4/N1/N5 guard fixes, risk-family kinds, trunk provenance/coherence, same-step sibling ledger
+# Proof record — Final engine sync from the frozen upstream benchmark: B1/B4/N1/N5 guard fixes, risk-family kinds, trunk provenance/coherence, same-step sibling ledger
 
 **Scope:** `runtime` · **Date:** 2026-07-24 · **Verdict:** PASS
 
 ## What changed
-Final engine sync from frozen bench s15: B1/B4/N1/N5 guard fixes, risk-family kinds, trunk provenance/coherence, same-step sibling ledger
+Final engine sync from the frozen upstream benchmark: B1/B4/N1/N5 guard fixes, risk-family kinds, trunk provenance/coherence, same-step sibling ledger
 
 ## Proof cases
 Author positive / negative / neutral cases for the affected guard(s), plus ≥1 L3 loop case and the

@@ -1,6 +1,6 @@
 {
   "name": "hermes-sim-example",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "private": true,
   "type": "module",
   "description": "End-to-end integration sim: the REAL Hermes-Agent harness talks to looprun agents exposed as OpenAI-compatible models (@looprun-ai/server); every tool call lands in deterministic fake worlds and the end-state is asserted.",
