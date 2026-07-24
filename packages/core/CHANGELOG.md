@@ -1,5 +1,11 @@
 # @looprun-ai/core
 
+## 0.7.2
+
+### Patch Changes
+
+- Release (patch).
+
 ## 0.7.1
 
 ### Patch Changes

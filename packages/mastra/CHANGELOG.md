@@ -1,5 +1,13 @@
 # @looprun-ai/mastra
 
+## 0.7.2
+
+### Patch Changes
+
+- Release (patch).
+- Updated dependencies
+  - @looprun-ai/core@0.7.2
+
 ## 0.7.1
 
 ### Patch Changes

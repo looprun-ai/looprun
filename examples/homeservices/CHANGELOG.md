@@ -1,5 +1,12 @@
 # homeservices-example
 
+## 0.0.13
+
+### Patch Changes
+
+- Updated dependencies
+  - looprun@0.7.2
+
 ## 0.0.12
 
 ### Patch Changes
