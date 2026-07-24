@@ -31,7 +31,7 @@ export async function resolveModel(ref: ModelRef | undefined): Promise<ResolvedM
   if (r in MODEL_ALIASES) {
     const spec = resolveAlias(r);
     const model = await localModel(spec.alias);
-    // maxOutputTokens caps runaway generations on local models (measured 2026-07-11: one uncapped
+    // maxOutputTokens caps runaway generations on local models (an uncapped
     // call decoded ~8.7k tokens for 302 s before the HTTP client timed out and failed the case).
     return { model, modelParams: pinnedDecoding({ maxOutputTokens: 2048 }), label: spec.alias, isLocal: true };
   }

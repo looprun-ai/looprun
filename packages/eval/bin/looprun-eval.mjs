@@ -21,7 +21,7 @@ const HELP = `looprun-eval <command>
   judge-prompt               Print the packaged generic judge prompt path.
   judge-merge <dump> <verdicts> [autofail] [out]   Fold judge verdicts → .judged.json.
   cert <dir> [--bar 0.9]     Fold *.judged.json → cert.json + CERT.md.
-  lint [paths…] [--spec-laws]  Purity/firewall/theme lint (+ config spec laws).
+  lint [paths…] [--spec-laws]  Purity/firewall/contract lint (+ config spec laws).
 
 Quality verdicts come ONLY from the LLM judge — the run's streamed pass/fail lines are the
 deterministic invariant gate.
