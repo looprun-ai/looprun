@@ -111,7 +111,7 @@ allowed by the ≤15 law. **Pitfall guard (by design):** `setFiscalRegime` (the 
 regime-gate) lives in `client-books`, NOT in `tax-filing` — the tax agent cannot satisfy its own
 gate, and the gate's deny prose routes the USER to the client-records workflow.
 
-**Theme summary (rides this gate):** locale English · voice = LedgerLine staff assistant,
+**Contract summary (rides this gate):** locale English · voice = LedgerLine staff assistant,
 professional/precise/plain, honest-to-a-fault · 7 core invariants (anti-fabrication first,
 id discipline, two-step destructive protocol, append-only books, no-tax-advice boundary,
 regime-is-user-knowledge, honesty-on-failure last) · personas: one role line per agent (above).
@@ -121,7 +121,7 @@ free-text row ("any hard rule missing?") = "ok".
 
 ## Stage E2/E3 — drafted artifacts
 
-- `src/agents/accounting/theme.ts` — ACCOUNTING_THEME (no persona key; stateBlock reads
+- `src/agents/accounting/contract.ts` — ACCOUNTING_CONTRACT (no persona key; stateBlock reads
   `projection()` defensively; deterministic exhaustionReply).
 - `src/agents/accounting/{client-books,billing,tax-filing}-spec.ts` — AgentSpecBase each
   (destructive tools present on all three); per-agent persona field; conditioned behavior prose;

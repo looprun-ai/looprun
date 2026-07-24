@@ -4,7 +4,7 @@
  * In native-tools mode the tools execute themselves (Mastra assigned tools, toolsets, or
  * `@mastra/mcp` MCPClient tools) and guards are enforced through the agent hooks; the world seam
  * is needed only for STATE: stateful guards (`precondition`, custom world reads) and
- * `theme.stateBlock`. A `StateView` supplies those reads; `refresh` (if given) runs at each
+ * `contract.stateBlock`. A `StateView` supplies those reads; `refresh` (if given) runs at each
  * turn boundary so remote state can be re-fetched.
  *
  * Ledger-based guards (requiresBefore, noDuplicateCall, confirmFirst, maxCalls, …) need
@@ -12,7 +12,7 @@
  */
 import type { AgentWorld } from '@looprun-ai/core';
 
-/** Domain state reads for guards + theme.stateBlock (backed by your API / MCP resources / cache). */
+/** Domain state reads for guards + contract.stateBlock (backed by your API / MCP resources / cache). */
 export interface StateView {
   /** Called at each turn boundary (advanceTurn) — re-fetch remote state here if needed. */
   refresh?(): void | Promise<void>;

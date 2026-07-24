@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { AgentSpecBase, renderScopedSpecTrunk, precondition, requiresBefore } from '../src/index.js';
-import type { AgentWorld, TrunkTheme } from '../src/index.js';
+import type { AgentWorld, TrunkContract } from '../src/index.js';
 
 function fixtureWorld(state: Record<string, unknown> = {}): AgentWorld {
   return {
@@ -17,7 +17,7 @@ function fixtureWorld(state: Record<string, unknown> = {}): AgentWorld {
   };
 }
 
-const THEME: TrunkTheme = {
+const CONTRACT: TrunkContract = {
   voice: 'You are the assistant of Fixture Plants, a small plant nursery.',
   stateBlock: (w) => `plan=${String(w.plan ?? 'starter')}`,
   coreInvariants: ['Never invent data — read it from a tool result.', 'Report failures honestly.'],
@@ -45,32 +45,32 @@ function fixtureSpec() {
 describe('trunk byte-stability', () => {
   it('is byte-identical across renders and world mutations', () => {
     const spec = fixtureSpec();
-    const a = renderScopedSpecTrunk(fixtureWorld({ plan: 'starter' }), spec, [], THEME);
-    const b = renderScopedSpecTrunk(fixtureWorld({ plan: 'pro', extra: 42 }), spec, ['i901'], THEME);
+    const a = renderScopedSpecTrunk(fixtureWorld({ plan: 'starter' }), spec, [], CONTRACT);
+    const b = renderScopedSpecTrunk(fixtureWorld({ plan: 'pro', extra: 42 }), spec, ['i901'], CONTRACT);
     expect(a).toBe(b);
   });
 
-  it('resolves the theme from spec.theme when none is passed', () => {
+  it('resolves the contract from spec.contract when none is passed', () => {
     const spec = new AgentSpecBase({
       id: 'fixture-care',
       mode: 'CARE',
       persona: 'You are the plant-care agent.',
       tools: ['listPlants'],
-      theme: THEME,
+      contract: CONTRACT,
     });
     const viaSpec = renderScopedSpecTrunk(fixtureWorld(), spec);
-    const viaArg = renderScopedSpecTrunk(fixtureWorld(), spec, [], THEME);
+    const viaArg = renderScopedSpecTrunk(fixtureWorld(), spec, [], CONTRACT);
     expect(viaSpec).toBe(viaArg);
   });
 
-  it('throws without any theme', () => {
+  it('throws without any contract', () => {
     const spec = fixtureSpec();
     expect(() => renderScopedSpecTrunk(fixtureWorld(), spec)).toThrow(/DomainContract/);
   });
 
   // The FROZEN baseline: any renderer change must be a conscious decision (this snapshot changes).
   it('matches the frozen baseline', () => {
-    const trunk = renderScopedSpecTrunk(fixtureWorld(), fixtureSpec(), [], THEME);
+    const trunk = renderScopedSpecTrunk(fixtureWorld(), fixtureSpec(), [], CONTRACT);
     expect(trunk).toMatchInlineSnapshot(`
       "You are the assistant of Fixture Plants, a small plant nursery.
 

@@ -6,7 +6,7 @@
  */
 import { Mastra } from '@mastra/core';
 import { LoopRunAgent } from 'looprun/mastra';
-import { SPECS, THEME } from '../agents/lawfirm/index.js';
+import { SPECS, CONTRACT } from '../agents/lawfirm/index.js';
 import { worldFactory } from '../world/world.js';
 import { TOOL_DEFS } from '../world/tools.js';
 
@@ -19,7 +19,7 @@ try {
   for (const [id, spec] of Object.entries(SPECS)) {
     agents[id] = new LoopRunAgent({
       spec,
-      theme: THEME,
+      contract: CONTRACT,
       world: () => worldFactory('busy-docket', 0),
       toolDefs: TOOL_DEFS,
       model: subject.model,

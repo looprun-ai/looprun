@@ -155,7 +155,7 @@ async function runCase(
     modelParams,
     world,
     toolDefs: config.toolDefs,
-    ...(config.theme ? { theme: config.theme } : {}),
+    ...(config.contract ? { contract: config.contract } : {}),
     ...(config.maxSteps != null ? { maxSteps: config.maxSteps } : {}),
     ...(config.redrives != null ? { redrives: config.redrives } : {}),
     ...(isLocal ? { stopOnRepeatedToolCall: true } : {}),

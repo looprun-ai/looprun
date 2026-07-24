@@ -12,14 +12,14 @@
  * FORM (lexicon phrasing, sampling) gets its own bundle from THIS source — never a spec change.
  *
  * // UNCHECKABLE (eval dimension only — no observable key; firewall bars user-text triggers):
- * //   legal-advice/strategy → decline & defer to the responsible attorney (theme invariant + prose).
+ * //   legal-advice/strategy → decline & defer to the responsible attorney (contract invariant + prose).
  * //   deadline/document/notification requests → route to the docket-documents agent (intent-keyed).
  * //   editing client contacts (office manager) / deleting-correcting time entries (billing partner)
  * //   → honest refusal + routing (intent-keyed; conditioned prose + eval rubric).
  */
 import { AgentSpecBase, custom, destructiveClaimRequiresSuccess, jargonScrub, pendingConfirmMustAsk, requiresBefore } from 'looprun';
 import type { GuardCtx } from 'looprun';
-import { LAWFIRM_THEME } from './theme.js';
+import { LAWFIRM_CONTRACT } from './contract.js';
 import { CONFIRM_ASK_RE, FALSE_FAILURE_CLAIM_RE, OFFER_OR_CONDITIONAL_RE } from './lexicon.js';
 
 export class AgentSpecClientMatters extends AgentSpecBase {
@@ -49,8 +49,8 @@ export class AgentSpecClientMatters extends AgentSpecBase {
       flow: [{ from: 'runConflictCheck', to: 'openMatter' }],
       // Auto-installs noFalseFailureClaim({ claimRe }) as minimal:noFalseFailureClaim.
       lexicon: { falseFailureClaimRe: FALSE_FAILURE_CLAIM_RE },
-      theme: LAWFIRM_THEME,
-      // SPECIALIZES the theme — the domain-common floor (anti-fabrication, id/name→id, two-step,
+      contract: LAWFIRM_CONTRACT,
+      // SPECIALIZES the contract — the domain-common floor (anti-fabrication, id/name→id, two-step,
       // act-directly, confidentiality, walls, state-wins, honesty) is NOT re-stated here. Load-bearing
       // protocol lines first; iron-rule blunt, each anti-pattern named as a failure.
       behavior: [

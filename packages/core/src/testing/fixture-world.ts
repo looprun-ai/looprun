@@ -257,5 +257,5 @@ export const FIXTURE_LEXICON = {
   selfNarrationRe: /\b(?:I closed the turn|by calling replyToUser|The assistant (?:confirmed|called|then))\b/i,
 } as const;
 
-/** @deprecated Use {@link FIXTURE_DOMAIN}. Compatibility alias from the theme->domain rename. */
-export const FIXTURE_THEME = FIXTURE_DOMAIN;
+/** @deprecated Use {@link FIXTURE_DOMAIN}. Compatibility alias from the contract->domain rename. */
+export const FIXTURE_CONTRACT = FIXTURE_DOMAIN;

@@ -2,10 +2,10 @@
  * @looprun-ai/eval — the guard-purity lint over USER project files (`looprun-eval lint`).
  *
  * The four file-local rule sets that keep generated specs deterministic by construction:
- *   1. BANNED tokens — clock / entropy / network / runtime-LLM calls inside spec/theme files.
+ *   1. BANNED tokens — clock / entropy / network / runtime-LLM calls inside spec/contract files.
  *   2. Stateful regex — /g|/y flags used with .test()/.exec() (lastIndex leaks across calls).
  *   3. S-1 firewall — guard code must never read user text (ctx.userText / messages / …).
- *   4. Theme-persona law — a theme file may not carry a `persona:` key (persona lives on the spec).
+ *   4. Contract-persona law — a contract file may not carry a `persona:` key (persona lives on the spec).
  * Plus `--spec-laws` (config-level): persona present, ≤15 tools, no own systemPrompt, caseMap sane.
  */
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
@@ -43,7 +43,7 @@ const PERSONA_KEY_RE = /^\s*persona\s*:/;
 export function lintSource(file: string, source: string): LintViolation[] {
   const out: LintViolation[] = [];
   const lines = source.split('\n');
-  const isTheme = /theme[^/]*\.(ts|js|mts|mjs)$/.test(file);
+  const isContract = /contract[^/]*\.(ts|js|mts|mjs)$/.test(file);
 
   lines.forEach((text, i) => {
     const line = i + 1;
@@ -58,8 +58,8 @@ export function lintSource(file: string, source: string): LintViolation[] {
     if (FIREWALL_RE.test(text)) {
       out.push({ file, line, rule: 's1-firewall', message: 'guards must never read user text (the magnet firewall)' });
     }
-    if (isTheme && PERSONA_KEY_RE.test(text)) {
-      out.push({ file, line, rule: 'theme-persona', message: 'a theme carries no persona — persona lives on each spec (persona-on-spec law)' });
+    if (isContract && PERSONA_KEY_RE.test(text)) {
+      out.push({ file, line, rule: 'contract-persona', message: 'a contract carries no persona — persona lives on each spec (persona-on-spec law)' });
     }
   });
   return out;
@@ -88,7 +88,7 @@ export function lintSpecLaws(config: EvalConfig): string[] {
   for (const [id, spec] of Object.entries(config.specs ?? {})) {
     for (const w of validateSpec(spec)) out.push(`spec "${id}": ${w.message}`);
     if (spec.surface.systemPrompt) {
-      out.push(`spec "${id}": carries its own systemPrompt — generated specs must use the trunk renderer (theme + spec only)`);
+      out.push(`spec "${id}": carries its own systemPrompt — generated specs must use the trunk renderer (contract + spec only)`);
     }
   }
   for (const issue of checkConfig(config)) {

@@ -14,13 +14,13 @@
  * // UNCHECKABLE: whether mail was archived, answered, or otherwise handled BEFORE this
  * //             conversation is unverifiable (there is no history/sent-log tool) — the reply must
  * //             say it cannot verify that, never assert it either way (cases 07, 14). A behavior
- * //             line specializes the theme's honesty invariant to this missing accessor.
+ * //             line specializes the contract's honesty invariant to this missing accessor.
  * // UNCHECKABLE: whether a draft's wording faithfully carries the owner's instruction (and only
  * //             facts from the read body) is language-layer — eval dimension only (cases 03, 10).
  */
 import { AgentSpecBase, custom, forbidThisTurn, jargonScrub, maxCalls, noFabricatedSuccess, requiresBefore } from 'looprun';
 import { ARCHIVE_CLAIM_RE, FALSE_FAILURE_CLAIM_RE, SENT_CLAIM_RE } from './lexicon.js';
-import { INBOX_TRIAGE_THEME } from './theme.js';
+import { INBOX_TRIAGE_CONTRACT } from './contract.js';
 
 /** The per-id reads the archive gate needs (world accessors via the ctx closure). */
 type MailboxReader = {
@@ -38,9 +38,9 @@ export class AgentSpecInboxTriage extends AgentSpecBase {
         'label what needs attention, and draft replies that the owner reviews and sends personally.',
       tools: ['emailsList', 'emailRead', 'emailArchive', 'emailLabel', 'emailDraftCreate', 'emailSend'],
       lexicon: { falseFailureClaimRe: FALSE_FAILURE_CLAIM_RE },
-      theme: INBOX_TRIAGE_THEME,
+      contract: INBOX_TRIAGE_CONTRACT,
       behavior: [
-        // Load-bearing lines first. Each SPECIALIZES a theme invariant — none re-declares one.
+        // Load-bearing lines first. Each SPECIALIZES a contract invariant — none re-declares one.
         'A triage pass runs emailsList → emailRead → emailDraftCreate: list first, read the full body of anything you summarize in detail or answer, then draft. Acting on an inbox you have not listed this conversation is a failure.',
         'When the owner asks you to reply or to "just send it": read the message, create the draft with emailDraftCreate, and state plainly that the draft is saved for their review because sending is disabled for this assistant. That policy line is the real answer — do not dress it up as a technical error, and do not claim the reply went out.',
         'At most 10 emails can be archived per turn. When more qualify, archive up to the cap, then report the REAL counts — how many were archived and how many remain — and continue in the next turn if the owner wants. Claiming everything was archived while some remain is a failure.',

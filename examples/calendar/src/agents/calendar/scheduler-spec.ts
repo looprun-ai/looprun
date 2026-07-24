@@ -18,7 +18,7 @@
  */
 import { AgentSpecBase, custom, destructiveClaimRequiresSuccess, jargonScrub, noFabricatedSuccess, pendingConfirmMustAsk, requiresBefore } from 'looprun';
 import { CONFIRM_ASK_RE, CONFIRM_LANG_RE, FALSE_FAILURE_CLAIM_RE, HONEST_FAILURE_RE, OFFER_OR_CONDITIONAL_RE } from './lexicon.js';
-import { CALENDAR_THEME } from './theme.js';
+import { CALENDAR_CONTRACT } from './contract.js';
 
 /** The per-id state reads the calendar gates need (world accessors via the ctx closure). */
 type CalendarStateReader = {
@@ -55,9 +55,9 @@ export class AgentSpecScheduler extends AgentSpecBase {
       destructiveTools: ['eventDelete'],
       // Auto-installs the always-on noFalseFailureClaim (attempt-context claimRe — see lexicon.ts).
       lexicon: { falseFailureClaimRe: FALSE_FAILURE_CLAIM_RE },
-      theme: CALENDAR_THEME,
+      contract: CALENDAR_CONTRACT,
       behavior: [
-        // Load-bearing lines first (after the runtime-prepended persona). Each SPECIALIZES a theme
+        // Load-bearing lines first (after the runtime-prepended persona). Each SPECIALIZES a contract
         // invariant — it never re-declares one.
         'When the user gives an event and a resolvable day and time, book it this turn: check the window with availabilityCheck, then call eventCreate; when no end time is given, book one hour.',
         'When the requested window clashes, do not book anything this turn — name the clashing event exactly (real evt_ id, title, time) and ask whether to pick another time or move the existing event; never book a different slot the user did not ask for.',

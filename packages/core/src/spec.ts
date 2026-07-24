@@ -186,7 +186,7 @@ export interface AgentSpec {
    *  (1 domain : N agents, byte-identical shared trunk head — trunk-static law); this field lets a
    *  generated bundle point every spec at the SAME domain object so a host can construct an agent
    *  from the spec alone. A host-provided domain always overrides it. */
-  theme?: DomainContract;
+  contract?: DomainContract;
   /** B4 — optional runtime cross-check (implemented by AgentSpecBase): assert every `'arg'`-mechanism
    *  destructiveTool actually carries its confirm flag in the injected tool schema. Optional so an alien
    *  AgentSpec need not implement it; the backend calls it when present. */
@@ -344,8 +344,8 @@ export interface AgentSpecConfig {
    *  schemas installs no `argRequired`/`argFormat`. Author those guards explicitly. Kept only so a
    *  spec can read its own schemas when authoring them; never read it as coverage. */
   toolSchemas?: Record<string, ToolSchemaLike>;
-  /** Optional domain-contract reference (see {@link AgentSpec.theme}). */
-  theme?: DomainContract;
+  /** Optional domain-contract reference (see {@link AgentSpec.contract}). */
+  contract?: DomainContract;
 }
 
 /**
@@ -366,7 +366,7 @@ export class AgentSpecBase implements AgentSpec {
   readonly guards: Required<AgentSpec['guards']>;
   readonly controls: AgentControls;
   readonly behavior: string[];
-  readonly theme?: DomainContract;
+  readonly contract?: DomainContract;
   protected readonly destructiveTools: string[];
   protected readonly confirmMechanism: Record<string, 'arg' | 'prior-ask'>;
   protected readonly lexicon: { falseFailureClaimRe?: RegExp; confirmAskRe?: RegExp; selfNarrationRe?: RegExp; honestNegationRe?: RegExp };
@@ -411,7 +411,7 @@ export class AgentSpecBase implements AgentSpec {
       ...(cfg.chains?.length ? { chains: [...cfg.chains] } : {}),
     };
     this.behavior = [...(cfg.behavior ?? [])];
-    if (cfg.theme) this.theme = cfg.theme;
+    if (cfg.contract) this.contract = cfg.contract;
     this.destructiveTools = [...(cfg.destructiveTools ?? [])];
     this.confirmMechanism = { ...(cfg.confirmMechanism ?? {}) };
     this.lexicon = { ...(cfg.lexicon ?? {}) };

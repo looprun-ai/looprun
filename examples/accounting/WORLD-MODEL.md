@@ -33,7 +33,7 @@ runtime's confirmFirst guard additionally requires the probe to have run in an E
 (books, figures) · `listInvoices` / `getInvoice` (invoice status, payment record) ·
 `listTaxDeadlines` (deadlines, filing state, prepared/submitted figures, receipt).
 
-## `projection()` keys (the ONLY state deterministic checks + the theme stateBlock may read)
+## `projection()` keys (the ONLY state deterministic checks + the contract stateBlock may read)
 
 | key | type | meaning |
 |---|---|---|

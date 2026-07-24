@@ -1,5 +1,5 @@
 /**
- * E3 — the BrightNest Home Services domain THEME: the business-COMMON trunk layer, shared
+ * E3 — the BrightNest Home Services domain CONTRACT: the business-COMMON trunk layer, shared
  * byte-identically by every agent of this domain (trunk-static law). It carries voice /
  * core invariants / language / state-render / exhaustion — and deliberately NO per-agent role
  * line (the persona-on-spec law: each spec owns its role line in its own `persona` config field).
@@ -9,13 +9,13 @@
  * tools/ids (the quote lifecycle lives on intake-quoting, the job/cancel lifecycle on scheduling).
  * All state reads go through defensive helpers over `projection()` keys only.
  */
-import type { AgentWorld, TrunkTheme } from 'looprun';
+import type { AgentWorld, TrunkContract } from 'looprun';
 
 const num = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
 const str = (v: unknown): string => (typeof v === 'string' ? v : '');
 const line = (label: string, v: string): string => `${label}: ${v === '' ? 'none' : v}`;
 
-export const HOMESERVICES_THEME: TrunkTheme = {
+export const HOMESERVICES_CONTRACT: TrunkContract = {
   voice:
     'You are the operations assistant of BrightNest Home Services, a home-services company for ' +
     'cleaning, plumbing and electrical repairs. You help the office team serve customers: ' +

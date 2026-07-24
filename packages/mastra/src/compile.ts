@@ -15,7 +15,7 @@ import {
   renderScopedSpecTrunk,
   terminalProtocol,
 } from '@looprun-ai/core';
-import type { AgentSpec, AgentWorld, FinalizedReply, ToolDef, TrunkTheme, TurnLedger } from '@looprun-ai/core';
+import type { AgentSpec, AgentWorld, FinalizedReply, ToolDef, TrunkContract, TurnLedger } from '@looprun-ai/core';
 import { buildWorldTools } from './tools.js';
 import { makeGuardHooks, makeInputProcessors } from './hooks.js';
 import type { GuardHooks } from './hooks.js';
@@ -41,11 +41,11 @@ export interface CompiledSpec {
 
 export function compileSpec(
   spec: AgentSpec,
-  opts: { theme?: TrunkTheme; world: AgentWorld; toolDefs?: ToolDef[]; terminalProtocol?: boolean; redrives?: number },
+  opts: { contract?: TrunkContract; world: AgentWorld; toolDefs?: ToolDef[]; terminalProtocol?: boolean; redrives?: number },
 ): CompiledSpec {
-  const theme = opts.theme ?? spec.theme;
-  if (!theme && !spec.surface.systemPrompt) {
-    throw new Error(`compileSpec "${spec.id}": no theme — pass opts.theme or set spec.theme.`);
+  const contract = opts.contract ?? spec.contract;
+  if (!contract && !spec.surface.systemPrompt) {
+    throw new Error(`compileSpec "${spec.id}": no contract — pass opts.contract or set spec.contract.`);
   }
   const world = opts.world;
   const terminalOn = opts.terminalProtocol !== false;
@@ -63,7 +63,7 @@ export function compileSpec(
 
   const renderPrompt = spec.surface.systemPrompt
     ? (w: AgentWorld, u: string[]) => spec.surface.systemPrompt!(w, u)
-    : (w: AgentWorld, u: string[]) => renderScopedSpecTrunk(w, spec, u, theme);
+    : (w: AgentWorld, u: string[]) => renderScopedSpecTrunk(w, spec, u, contract);
 
   const replyOnly = () => (spec.controls.terminal ? spec.controls.terminal(world) === true : false);
 
@@ -83,14 +83,14 @@ export function compileSpec(
       ledgerBeginTurn(session.ledger, session.turnIndex);
       const attLabels = (input?.attachments ?? []).map((u) => world.ingestAttachment(u));
       session.ledger.attachments = attLabels;
-      const stateBlock = theme ? theme.stateBlock(world) : '';
+      const stateBlock = contract ? contract.stateBlock(world) : '';
       const tailParts: string[] = [];
       if (stateBlock && stateBlock.trim()) tailParts.push(`## Account state\n${stateBlock}`);
       if (attLabels.length) tailParts.push(`[Uploads this turn: ${attLabels.join(', ')}]`);
       return { userMessageTail: tailParts.join('\n\n') };
     },
     finalizeReply(text, redrive) {
-      return coreFinalizeReply(spec, theme, world, session.ledger, text, redrive, spec.controls.redrives ?? opts.redrives ?? DEFAULT_REDRIVES);
+      return coreFinalizeReply(spec, contract, world, session.ledger, text, redrive, spec.controls.redrives ?? opts.redrives ?? DEFAULT_REDRIVES);
     },
   };
 }

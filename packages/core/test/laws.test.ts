@@ -1,7 +1,7 @@
 /**
  * Repo laws on the library packages:
  *  - zero-business-strings: @looprun-ai/core and @looprun-ai/mastra src carry NO domain/business content —
- *    every business string lives in a generated artifact (spec/theme) owned by the user project.
+ *    every business string lives in a generated artifact (spec/contract) owned by the user project.
  *  - no framework imports in core: @looprun-ai/core stays framework-free (the backend seam).
  *  - the ≤15-tools law surfaces through validateSpec.
  */

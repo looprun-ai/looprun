@@ -123,7 +123,7 @@ the unified τ³-bench repo, backward-compatible, domains
 1. **Generate the governed agent with the `agentspec` skill.** Feed the telecom domain's
    **policy + tool schemas** (from τ²-bench) into the skill so it produces the AgentSpec — the
    deterministic guards that encode the telecom policy, per hook, over the telecom tool names.
-   Use the skill for the **spec / guards / theme only**; the **tasks and scoring come from
+   Use the skill for the **spec / guards / contract only**; the **tasks and scoring come from
    τ²-bench**, not the skill's own generated eval set. (If telecom exceeds the ≤15-tool budget
    the skill decomposes into >1 agent — route them behind one endpoint.)
 2. **Wrap & serve.** `LoopRunAgent({ spec, tools: <telecom tools>, model: <subject> })`,

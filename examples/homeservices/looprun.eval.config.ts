@@ -1,5 +1,5 @@
 import type { EvalConfig } from '@looprun-ai/eval';
-import { SPECS, THEME } from './src/agents/homeservices/index.js';
+import { SPECS, CONTRACT } from './src/agents/homeservices/index.js';
 import { TOOL_DEFS } from './src/world/tools.js';
 import { worldFactory } from './src/world/world.js';
 import { CASES, CASE_MAP } from './evals/cases.js';
@@ -7,7 +7,7 @@ import { CASES, CASE_MAP } from './evals/cases.js';
 export default {
   domain: 'homeservices',
   specs: SPECS,
-  theme: THEME, // every spec also carries spec.theme (same object)
+  contract: CONTRACT, // every spec also carries spec.contract (same object)
   worldFactory,
   toolDefs: TOOL_DEFS,
   cases: CASES,

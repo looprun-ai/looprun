@@ -9,11 +9,11 @@
  *   3. Reply finalization via `finalizeReply` with a bounded NO-TOOLS re-generate callback —
  *      never a framework-level retry that re-runs side-effecting tools.
  */
-import type { AgentSpec, AgentWorld, ToolDef, TrunkTheme } from '@looprun-ai/core';
+import type { AgentSpec, AgentWorld, ToolDef, TrunkContract } from '@looprun-ai/core';
 
 export interface VercelBackendConfig {
   spec: AgentSpec;
-  theme?: TrunkTheme;
+  contract?: TrunkContract;
   world: AgentWorld;
   toolDefs?: ToolDef[];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

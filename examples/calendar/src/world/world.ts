@@ -161,7 +161,7 @@ export class CalendarWorld implements AgentWorld {
     return this.deletedEvents.map((e) => e.id);
   }
 
-  /** The flat state snapshot deterministic checks + the theme stateBlock may read. */
+  /** The flat state snapshot deterministic checks + the contract stateBlock may read. */
   projection(): Record<string, unknown> {
     return {
       referenceNow: REFERENCE_NOW,

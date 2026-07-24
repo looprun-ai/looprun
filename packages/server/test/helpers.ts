@@ -1,6 +1,6 @@
 /** Shared offline fixtures: a governed agent over the FixtureWorld driven by a scripted model. */
 import { AgentSpecBase, requiresBefore } from '@looprun-ai/core';
-import { FIXTURE_THEME, FIXTURE_TOOL_DEFS, FixtureWorld } from '@looprun-ai/core/testing';
+import { FIXTURE_CONTRACT, FIXTURE_TOOL_DEFS, FixtureWorld } from '@looprun-ai/core/testing';
 import { LoopRunAgent } from '@looprun-ai/mastra';
 import { scriptedModel } from '@looprun-ai/mastra/testing';
 import type { ScriptStep } from '@looprun-ai/mastra/testing';
@@ -12,7 +12,7 @@ export function makeSpec() {
     persona: 'You are the fixture agent.',
     tools: ['searchItem', 'updateItem', 'createItem', 'listItems'],
     behavior: ['Operate only on items the tools return.'],
-    theme: FIXTURE_THEME,
+    contract: FIXTURE_CONTRACT,
   });
   spec.addGuard('preTool', ['updateItem'], requiresBefore(['searchItem']), { id: 'agent:updateAfterSearch' });
   return spec;

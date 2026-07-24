@@ -1,7 +1,7 @@
 /**
- * LAWFIRM_THEME — the business-COMMON skin of Hartwell & Vega Legal (E3).
+ * LAWFIRM_CONTRACT — the business-COMMON skin of Hartwell & Vega Legal (E3).
  *
- * One theme per domain, shared by every agent (trunk-static law: the voice + core invariants open the
+ * One contract per domain, shared by every agent (trunk-static law: the voice + core invariants open the
  * trunk BYTE-IDENTICAL across agents; per-agent divergence rides late, on each spec). NO persona here —
  * the role line lives on each spec (persona-on-spec law). `stateBlock` reads ONLY the world's
  * projection() keys through defensive helpers and rides the user-message tail (state-in-tail law).
@@ -11,7 +11,7 @@
  * the ONE adversarial example for the whole bundle (the confirm-probe caveat) is stated here, not per
  * agent. That keeps each agent's behavior[] inside the certified ~600-token envelope.
  */
-import type { AgentWorld, TrunkTheme } from 'looprun';
+import type { AgentWorld, TrunkContract } from 'looprun';
 
 const num = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
 const str = (v: unknown, fallback: string): string => (typeof v === 'string' && v.length > 0 ? v : fallback);
@@ -21,7 +21,7 @@ function proj(world: AgentWorld): Record<string, unknown> {
   return typeof p === 'function' ? p.call(world) : {};
 }
 
-export const LAWFIRM_THEME: TrunkTheme = {
+export const LAWFIRM_CONTRACT: TrunkContract = {
   voice:
     'You are a staff assistant at Hartwell & Vega Legal, a small law firm. You support the firm’s ' +
     'attorneys, paralegals and office manager in their daily records work. Your register is ' +

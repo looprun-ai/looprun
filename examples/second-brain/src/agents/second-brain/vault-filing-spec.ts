@@ -28,7 +28,7 @@ import {
   NOTE_LABEL_RE,
   OFFER_OR_CONDITIONAL_RE,
 } from './lexicon.js';
-import { SECOND_BRAIN_THEME } from './theme.js';
+import { SECOND_BRAIN_CONTRACT } from './contract.js';
 
 /** The per-id state the reply-honesty label seam reads (world accessors via the ctx closure). */
 type VaultReader = { hasNote?: (noteId: string) => boolean };
@@ -59,9 +59,9 @@ export class AgentSpecVaultFiling extends AgentSpecBase {
       destructiveTools: ['noteDelete'],
       // Auto-installs the always-on noFalseFailureClaim (attempt-context claimRe — see lexicon.ts).
       lexicon: { falseFailureClaimRe: FALSE_FAILURE_CLAIM_RE },
-      theme: SECOND_BRAIN_THEME,
+      contract: SECOND_BRAIN_CONTRACT,
       behavior: [
-        // Load-bearing lines first (after the runtime-prepended persona). Each SPECIALIZES a theme
+        // Load-bearing lines first (after the runtime-prepended persona). Each SPECIALIZES a contract
         // invariant — it never re-declares one.
         'To file a captured item: look it up (inboxList), read it (itemRead — and fetchPage when a ' +
           "bookmark's saved excerpt is too thin), then create ONE note in the fitting vault folder " +

@@ -46,7 +46,7 @@ import {
   runChainCompletionPass,
   VETO_STORM_LIMIT,
 } from '@looprun-ai/core';
-import type { AgentSpec, AgentWorld, Guard, GuardCtx, ObservedCall, ReplyViolation, TokenUsage, TrunkTheme, TurnInput, TurnRecord, RunResult } from '@looprun-ai/core';
+import type { AgentSpec, AgentWorld, Guard, GuardCtx, ObservedCall, ReplyViolation, TokenUsage, TrunkContract, TurnInput, TurnRecord, RunResult } from '@looprun-ai/core';
 import { jsonSchemaToZodObject } from './json-schema-zod.js';
 import type { RuntimeDeps } from './run-conversation.js';
 
@@ -323,9 +323,9 @@ function accUsage(acc: TokenUsage, u: any): void {
  */
 export async function runSpecConversationMicroLoop(spec: AgentSpec, turns: TurnInput[], deps: RuntimeDeps): Promise<RunResult> {
   const { world, model } = deps;
-  const theme: TrunkTheme | undefined = deps.theme ?? spec.theme;
-  if (!theme && !spec.surface.systemPrompt) {
-    throw new Error(`runSpecConversationMicroLoop: spec "${spec.id}" has no theme — pass deps.theme or set spec.theme.`);
+  const contract: TrunkContract | undefined = deps.contract ?? spec.contract;
+  if (!contract && !spec.surface.systemPrompt) {
+    throw new Error(`runSpecConversationMicroLoop: spec "${spec.id}" has no contract — pass deps.contract or set spec.contract.`);
   }
   const genParams = resolveModelSettings(normalizeModelParams(deps.modelParams ?? {}), spec.controls.sampling);
   const baseSettings = (genParams.modelSettings ?? {}) as Record<string, unknown>;
@@ -401,7 +401,7 @@ export async function runSpecConversationMicroLoop(spec: AgentSpec, turns: TurnI
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } as any);
 
-  const renderPrompt = spec.surface.systemPrompt ?? ((w: AgentWorld, u: string[]) => renderScopedSpecTrunk(w, spec, u, theme));
+  const renderPrompt = spec.surface.systemPrompt ?? ((w: AgentWorld, u: string[]) => renderScopedSpecTrunk(w, spec, u, contract));
 
   // preTool veto hook — IDENTICAL contract to the certified path (terminals skip guards).
   const beforeToolCall = async ({ toolName, input }: { toolName: string; input: unknown }) => {
@@ -501,7 +501,7 @@ export async function runSpecConversationMicroLoop(spec: AgentSpec, turns: TurnI
     const before = world.toolCalls.length;
     const sseBefore = world.sseActions.length;
 
-    const stateBlock = theme ? theme.stateBlock(world) : '';
+    const stateBlock = contract ? contract.stateBlock(world) : '';
     const tailParts: string[] = [];
     if (stateBlock && stateBlock.trim()) tailParts.push(`## Account state\n${stateBlock}`);
     if (attLabels.length) tailParts.push(`[Uploads this turn: ${attDisplay.join(', ')}]`);
@@ -660,7 +660,7 @@ export async function runSpecConversationMicroLoop(spec: AgentSpec, turns: TurnI
         const okTools = ledger.observed.filter((o) => o.turnIndex === i && o.ok).map((o) => o.name);
         const closure = spec.controls.exhaustionReply
           ? spec.controls.exhaustionReply(world, okTools, ledger.producedThisTurn, finalViolations)
-          : defaultExhaustionReply(theme, world, okTools, ledger.producedThisTurn, finalViolations);
+          : defaultExhaustionReply(contract, world, okTools, ledger.producedThisTurn, finalViolations);
         ledger.turnCorrections.push('exhaustion-terminal');
         answerText = closure;
       }

@@ -60,7 +60,7 @@ describe('merge math (certified semantics)', () => {
 });
 
 describe('lint rules', () => {
-  it('flags banned tokens, stateful regex, firewall reads and theme persona', () => {
+  it('flags banned tokens, stateful regex, firewall reads and contract persona', () => {
     const spec = lintSource('src/agents/x/gen-spec.ts', [
       'const t = Date.now();',
       'if (/abc/g.test(x)) {}',
@@ -69,10 +69,10 @@ describe('lint rules', () => {
     expect(spec.map((s) => s.rule)).toEqual(['purity', 'stateful-regex', 's1-firewall']);
     expect(spec[0].line).toBe(1);
 
-    const theme = lintSource('src/agents/x/theme.ts', "  persona: 'never here',\n  voice: 'ok',");
-    expect(theme.map((s) => s.rule)).toEqual(['theme-persona']);
+    const contract = lintSource('src/agents/x/contract.ts', "  persona: 'never here',\n  voice: 'ok',");
+    expect(contract.map((s) => s.rule)).toEqual(['contract-persona']);
 
-    // persona in a NON-theme file is fine (it belongs on specs)
+    // persona in a NON-contract file is fine (it belongs on specs)
     expect(lintSource('src/agents/x/gen-spec.ts', "  persona: 'You are…',")).toEqual([]);
   });
 
@@ -86,7 +86,7 @@ describe('lint rules', () => {
 describe('checkConfig', () => {
   it('catches caseMap gaps, double-mapping and world-seam holes', () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const spec: any = { id: 'a1', surface: { tools: ['t1'] }, theme: { voice: 'v', stateBlock: () => '', coreInvariants: ['x'], languageClause: 'l' } };
+    const spec: any = { id: 'a1', surface: { tools: ['t1'] }, contract: { voice: 'v', stateBlock: () => '', coreInvariants: ['x'], languageClause: 'l' } };
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const config: any = {
       domain: 'd',

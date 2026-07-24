@@ -59,16 +59,16 @@ function backingModel(): { model: any; modelParams: Record<string, unknown> } {
   return { model: openrouter.chat(chain[0]!), modelParams: {} };
 }
 
-import { SPECS as INBOX_SPECS, THEME as INBOX_THEME } from '../../inbox-triage/src/agents/inbox-triage/index.js';
+import { SPECS as INBOX_SPECS, CONTRACT as INBOX_CONTRACT } from '../../inbox-triage/src/agents/inbox-triage/index.js';
 import { TOOL_DEFS as INBOX_TOOLS } from '../../inbox-triage/src/world/tools.js';
 import { worldFactory as inboxWorld } from '../../inbox-triage/src/world/world.js';
 
-import { SPECS as BRAIN_SPECS, THEME as BRAIN_THEME } from '../../second-brain/src/agents/second-brain/index.js';
+import { SPECS as BRAIN_SPECS, CONTRACT as BRAIN_CONTRACT } from '../../second-brain/src/agents/second-brain/index.js';
 import vaultFilingNemotron from './nemotron-specs.js';
 import { TOOL_DEFS as BRAIN_TOOLS } from '../../second-brain/src/world/tools.js';
 import { worldFactory as brainWorld } from '../../second-brain/src/world/world.js';
 
-import { SPECS as CAL_SPECS, THEME as CAL_THEME } from '../../calendar/src/agents/calendar/index.js';
+import { SPECS as CAL_SPECS, CONTRACT as CAL_CONTRACT } from '../../calendar/src/agents/calendar/index.js';
 import { TOOL_DEFS as CAL_TOOLS } from '../../calendar/src/world/tools.js';
 import { worldFactory as calendarWorld } from '../../calendar/src/world/world.js';
 
@@ -86,7 +86,7 @@ export function buildAgents() {
       preset: 'mixed',
       agent: new LoopRunAgent({
         spec: onlySpec(INBOX_SPECS),
-        theme: INBOX_THEME,
+        contract: INBOX_CONTRACT,
         world: () => inboxWorld('mixed', 0),
         toolDefs: INBOX_TOOLS,
         model,
@@ -99,7 +99,7 @@ export function buildAgents() {
         // The nemotron chain gets the Atlas-recipe tuned spec (same guards, turn-protocol prose);
         // the gemini path keeps the stock spec.
         spec: process.env.OPENROUTER_API_KEY ? vaultFilingNemotron : onlySpec(BRAIN_SPECS),
-        theme: BRAIN_THEME,
+        contract: BRAIN_CONTRACT,
         world: () => brainWorld('capture-heavy', 0),
         toolDefs: BRAIN_TOOLS,
         model,
@@ -110,7 +110,7 @@ export function buildAgents() {
       preset: 'empty-week',
       agent: new LoopRunAgent({
         spec: onlySpec(CAL_SPECS),
-        theme: CAL_THEME,
+        contract: CAL_CONTRACT,
         world: () => calendarWorld('empty-week', 0),
         toolDefs: CAL_TOOLS,
         model,
@@ -121,7 +121,7 @@ export function buildAgents() {
       preset: 'busy-week',
       agent: new LoopRunAgent({
         spec: onlySpec(CAL_SPECS),
-        theme: CAL_THEME,
+        contract: CAL_CONTRACT,
         world: () => calendarWorld('busy-week', 0),
         toolDefs: CAL_TOOLS,
         model,

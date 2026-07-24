@@ -11,7 +11,7 @@ and **proves it with a measured eval**.
 | `AgentSpec` | the map | one agent's contract: tools (≤15), flow edges, guards per hook, controls, persona, behavior |
 | Guards | the safety kit | typed deterministic rules — `check()` (machine gate) + `prose()` (the same rule, rendered into the prompt) |
 | Redrive + honest-abstain | the GPS | reply violations trigger a bounded no-tools re-generation; if still violating, a deterministic closure built ONLY from verified observations goes out |
-| The `agentspec` skill | the map generator | generates specs + theme + tool world + eval set from one purpose sentence, debate-validated (BARRED) |
+| The `agentspec` skill | the map generator | generates specs + contract + tool world + eval set from one purpose sentence, debate-validated (BARRED) |
 
 ## How governance maps onto the framework
 
@@ -41,10 +41,10 @@ Two properties fall out of this wiring:
    The checker never reads the prose.
 4. **Guard purity** — no clock, no entropy, no network, no LLM call inside a `check()`. Deterministic
    by construction. (CI: purity lint + a self-test that proves the lint fires.)
-5. **Trunk-static law** — one domain theme opens every agent's prompt byte-identically; per-agent
+5. **Trunk-static law** — one domain contract opens every agent's prompt byte-identically; per-agent
    divergence renders as late as possible → maximal shared, cacheable prefix. (CI: byte-stability test.)
 6. **State-in-tail** — volatile account state rides the user-message tail, never the system prompt.
-7. **Persona-on-spec** — the per-agent role line lives on the spec; the theme carries none. (CI: lint.)
+7. **Persona-on-spec** — the per-agent role line lives on the spec; the contract carries none. (CI: lint.)
 8. **Zero business strings in the library** — every domain string lives in a generated artifact owned
    by the user project. (CI: scan.)
 9. **The eval is the arbiter** — a change ships when the measured pass-rate says so, at the ≥90%

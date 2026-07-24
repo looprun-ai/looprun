@@ -108,7 +108,7 @@ export class AccountingWorld implements AgentWorld {
     return this.data.deadlines.find((d) => d.id === deadlineId)?.filing ?? null;
   }
 
-  /** The flat state snapshot deterministic checks + the theme stateBlock may read. */
+  /** The flat state snapshot deterministic checks + the contract stateBlock may read. */
   projection(): Record<string, unknown> {
     const sentUnpaid = this.data.invoices.filter((i) => i.status === 'sent');
     return {

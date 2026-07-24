@@ -14,10 +14,10 @@ import {
   finalizeReply,
   custom,
 } from '../src/index.js';
-import type { AgentWorld, ChainSpec, GuardCtx, TrunkTheme, ObservedCall } from '../src/index.js';
+import type { AgentWorld, ChainSpec, GuardCtx, TrunkContract, ObservedCall } from '../src/index.js';
 
 const persona = 'You are the test agent.';
-const THEME: TrunkTheme = {
+const CONTRACT: TrunkContract = {
   voice: 'v', stateBlock: () => '', coreInvariants: ['x'], languageClause: 'lang',
 };
 
@@ -48,14 +48,14 @@ describe('enforcePostTool (OUTPUT-dim result invariants)', () => {
   });
 
   it('postToolViolations on the ledger join the finalizeReply violation set (relayed once via redrive)', async () => {
-    const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: ['save'], theme: THEME });
+    const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: ['save'], contract: CONTRACT });
     const ledger = createLedger();
     ledger.postToolViolations.push({
       guard: custom({ kind: 'resultInvariant', dim: 'output', check: () => null, prose: () => '' }),
       reason: 'Report the real saved state.',
     });
     const seen: string[] = [];
-    const out = await finalizeReply(spec, THEME, fixtureWorld(), ledger, 'All good.', async (m) => { seen.push(m); return 'Saved with the real state.'; }, 1);
+    const out = await finalizeReply(spec, CONTRACT, fixtureWorld(), ledger, 'All good.', async (m) => { seen.push(m); return 'Saved with the real state.'; }, 1);
     expect(seen[0]).toContain('Report the real saved state.');
     expect(out.text).toBe('Saved with the real state.');
     expect(ledger.turnCorrections).toContain('redrive:resultInvariant');

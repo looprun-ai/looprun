@@ -16,6 +16,6 @@ A looprun backend is thin by design — every deterministic mechanic lives frame
 2. **A generate loop honoring the terminal protocol** — `toolChoice: 'required'`, a stop condition
    when a terminal tool (`isTerminal`) is called, and the forced-terminal fallback
    (`forcedTerminalPrompt`) when the model ends without one.
-3. **Reply finalization** — `finalizeReply(spec, theme, world, ledger, text, redrive, redrives)`
+3. **Reply finalization** — `finalizeReply(spec, contract, world, ledger, text, redrive, redrives)`
    with `redrive` = one bounded NO-TOOLS text re-generation. Never a framework retry that re-runs
    the whole generation (it re-executes side-effecting tools; measured ~100× slower).

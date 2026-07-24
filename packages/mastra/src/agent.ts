@@ -4,7 +4,7 @@
  * DX mirrors `new Agent({...})`:
  *
  *   export const booksAgent = new LoopRunAgent({
- *     spec: bookkeepingSpec,          // carries its domain theme reference
+ *     spec: bookkeepingSpec,          // carries its domain contract reference
  *     world,                          // instance (single conversation) or factory (sessionId) => world
  *     model: 'openai/gpt-5.5',        // Mastra router string OR AI-SDK model object
  *   })
@@ -38,7 +38,7 @@ import {
   terminalProtocol,
   validateSpec,
 } from '@looprun-ai/core';
-import type { AgentSpec, AgentWorld, ObservedCall, ToolDef, TrunkTheme } from '@looprun-ai/core';
+import type { AgentSpec, AgentWorld, ObservedCall, ToolDef, TrunkContract } from '@looprun-ai/core';
 import { SessionStore } from './session.js';
 import type { LoopRunSession, WorldFactory } from './session.js';
 import { buildWorldTools, buildTerminalTools } from './tools.js';
@@ -50,8 +50,8 @@ import { DEFAULT_MAX_STEPS, DEFAULT_REDRIVES } from './run-conversation.js';
 export interface LoopRunAgentConfig<W extends AgentWorld = AgentWorld> {
   /** The governed AgentSpec (id/persona/tools/guards/controls/behavior). */
   spec: AgentSpec;
-  /** Domain theme override; defaults to `spec.theme`. */
-  theme?: TrunkTheme;
+  /** Domain contract override; defaults to `spec.contract`. */
+  contract?: TrunkContract;
   /**
    * The world seam — a deterministic instance (single conversation) or a factory
    * `(sessionId) => world` for multi-session hosts. Omit it in native-tools mode (`tools`).
@@ -60,7 +60,7 @@ export interface LoopRunAgentConfig<W extends AgentWorld = AgentWorld> {
   /**
    * NATIVE-TOOLS mode (Path B, incl. MCP): pass Mastra tools (e.g. `await mcp.getTools()`).
    * They execute themselves; guards still enforce through the agent hooks. Mutually exclusive
-   * with `world`+`toolDefs`. Stateful guards + theme.stateBlock read `stateView`.
+   * with `world`+`toolDefs`. Stateful guards + contract.stateBlock read `stateView`.
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   tools?: Record<string, any>;
@@ -113,13 +113,13 @@ export interface LoopRunOptions {
 }
 
 const LOOPRUN_KEYS = new Set([
-  'spec', 'theme', 'world', 'tools', 'stateView', 'toolDefs', 'model', 'modelParams',
+  'spec', 'contract', 'world', 'tools', 'stateView', 'toolDefs', 'model', 'modelParams',
   'terminalProtocol', 'maxSteps', 'redrives', 'strict', 'id', 'name',
 ]);
 
 export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
   readonly spec: AgentSpec;
-  readonly theme?: TrunkTheme;
+  readonly contract?: TrunkContract;
   readonly terminalProtocolOn: boolean;
   private readonly sessions: SessionStore<W>;
   private readonly nativeToolsMode: boolean;
@@ -139,9 +139,9 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
 
   constructor(config: LoopRunAgentConfig<W>) {
     const { spec } = config;
-    const theme = config.theme ?? spec.theme;
-    if (!theme && !spec.surface.systemPrompt) {
-      throw new Error(`LoopRunAgent "${spec.id}": no theme — pass config.theme or set spec.theme.`);
+    const contract = config.contract ?? spec.contract;
+    if (!contract && !spec.surface.systemPrompt) {
+      throw new Error(`LoopRunAgent "${spec.id}": no contract — pass config.contract or set spec.contract.`);
     }
     if (config.tools && (config.world || config.toolDefs)) {
       throw new Error(`LoopRunAgent "${spec.id}": pass EITHER native tools (tools[+stateView]) OR world+toolDefs — not both.`);
@@ -183,7 +183,7 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
     };
     const renderPrompt = spec.surface.systemPrompt
       ? (w: AgentWorld, u: string[]) => spec.surface.systemPrompt!(w, u)
-      : (w: AgentWorld, u: string[]) => renderScopedSpecTrunk(w, spec, u, theme);
+      : (w: AgentWorld, u: string[]) => renderScopedSpecTrunk(w, spec, u, contract);
     const terminalOn = config.terminalProtocol !== false;
     const staticInstructions = renderPrompt(staticWorld, []) + (terminalOn ? terminalProtocol(false) : '');
 
@@ -206,7 +206,7 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
     } as any);
 
     this.spec = spec;
-    this.theme = theme;
+    this.contract = contract;
     this.terminalProtocolOn = terminalOn;
     this.sessions = sessions;
     this.nativeToolsMode = nativeToolsMode;
@@ -259,7 +259,7 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private async governedTurn(session: LoopRunSession<W>, input: any, options?: LoopRunOptions): Promise<any> {
-    const { spec, theme } = this;
+    const { spec, contract } = this;
     const { world, ledger } = session;
     const useMemory = !!options?.memory;
 
@@ -287,7 +287,7 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
     const instructions = this.renderPrompt(world, attLabels) + (this.terminalProtocolOn ? terminalProtocol(replyOnly) : '');
 
     // State-in-tail: volatile state + uploads ride the user message, after the stable prefix.
-    const stateBlock = theme ? theme.stateBlock(world) : '';
+    const stateBlock = contract ? contract.stateBlock(world) : '';
     const tailParts: string[] = [];
     if (stateBlock && stateBlock.trim()) tailParts.push(`## Account state\n${stateBlock}`);
     if (attLabels.length) tailParts.push(`[Uploads this turn: ${attDisplay.join(', ')}]`);
@@ -392,7 +392,7 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
 
     const finalized = await finalizeReply(
       spec,
-      theme,
+      contract,
       world,
       ledger,
       initialText,

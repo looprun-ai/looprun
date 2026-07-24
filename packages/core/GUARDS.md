@@ -222,7 +222,7 @@ So **2 kinds always install, +1 iff the bundle injects `cfg.lexicon.falseFailure
 agent holds a destructive tool.** There is **NO auto-schema layer** — `argRequired`/`argFormat`/every other
 kind is authored explicitly by the spec at the agent layer.
 Terminal tools (`replyToUser`/`askUser`) are runtime-owned; they may never appear in `cfg.tools`
-(constructor throws) and are never guarded. A non-empty per-agent `persona` is required (persona-on-spec law: persona is per-agent, on the spec's `persona` field; a theme owns only invariants/language/stateBlock/exhaustion). The `minimal:`/`base:` id namespaces + install order are
+(constructor throws) and are never guarded. A non-empty per-agent `persona` is required (persona-on-spec law: persona is per-agent, on the spec's `persona` field; a contract owns only invariants/language/stateBlock/exhaustion). The `minimal:`/`base:` id namespaces + install order are
 byte-stable so the layer-sorted trunk prose is unchanged.
 
 ## 4. The 29 guard kinds (exact signatures)
@@ -384,7 +384,7 @@ Populated from `AgentSpecConfig`; wired by the Mastra backend unless noted.
 | `chains` | `ChainSpec[]` | — | declared follow-up completions (see below). Absent/empty ⇒ zero added effect. |
 | `escalate` | `{ model: AgentModelRef; maxAttempts? }` | — | **TYPED but currently NOT consumed by the Mastra backend** — the field exists on `AgentControls`, but `mastra.ts` never reads it (no model-tier escalation on the shipping path). Present for forward-compat; treat as inert today. |
 | `sampling` | `{ temperature?, topP?, maxOutputTokens?, seed? }` | — | per-agent AI-SDK call settings, merged OVER the conversation-level `modelParams` (agent wins) by `resolveModelSettings` — a creative agent at temp 0.7 beside a temp-0 admin agent in the same domain. |
-| `exhaustionReply` | `(world, okTools: string[], produced: string[], violations: string[]) => string` | theme/`defaultExhaustionReply` | committed when the reply STILL violates a check after all redrives — a PURE function of verified observations (structurally unable to fabricate, never empty). Precedence: spec → theme → default. |
+| `exhaustionReply` | `(world, okTools: string[], produced: string[], violations: string[]) => string` | contract/`defaultExhaustionReply` | committed when the reply STILL violates a check after all redrives — a PURE function of verified observations (structurally unable to fabricate, never empty). Precedence: spec → contract → default. |
 
 **`ChainSpec`** (`chains[]`): `{ after: string; call: string; when?: (world, observed) => boolean;
 mode: 'direct' | 'llm'; args?: Record<string, unknown> | ((world, observed) => Record<string, unknown>) }`.
@@ -408,7 +408,7 @@ when its `(world, observed)` footprint is byte-identical across the engage / dis
    engage-tool call nor the dismiss, DENY the unrelated-work toolset. The MODEL (which legitimately reads
    the user text) is forced to resolve the offer first; deterministic code only narrows *when* the choice
    is due. Reads world+ledger only — firewall-clean, magnet-safe (nothing is scoped by intent).
-2. Terminal tools bypass preTool vetoes — pair the gate with a state-gated `theme.stateBlock` tail block
+2. Terminal tools bypass preTool vetoes — pair the gate with a state-gated `contract.stateBlock` tail block
    (`## <Offer> (OPEN)`): pivot ⇒ dismiss first; hesitation ⇒ re-invite; NEVER invent identifiers from a
    description (the anti-fabrication caveat — required in practice: a stateBlock without it invites the
    model to fabricate a handle from a description).
@@ -416,7 +416,7 @@ when its `(world, observed)` footprint is byte-identical across the engage / dis
 **Census obligation before shipping:** enumerate every eval case where the offer is open and confirm none
 needs a vetoed tool for its gold flow (a choose-gate over a tool some open-state case requires is a
 deterministic autofail). Reference implementation: a generated example bundle's choose-gate spec
-(`agent:pulsePitchChooseGate`) + its `theme.ts` (the OPEN tail block).
+(`agent:pulsePitchChooseGate`) + its `contract.ts` (the OPEN tail block).
 
 ### Domain label guards via custom()
 

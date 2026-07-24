@@ -10,14 +10,14 @@
  * prose routes the USER instead of inviting the model to fabricate a regime.
  *
  * // UNCHECKABLE: no tax-planning/evasion advice (never recommend shifting/re-dating recorded
- * //              transactions); defer to a qualified accountant — theme invariant + eval dimension
+ * //              transactions); defer to a qualified accountant — contract invariant + eval dimension
  * //              only (case 22).
  * // UNCHECKABLE: claims about reminders sent before this conversation are unverifiable (no reminder
- * //              log) — theme invariant + eval dimension (exercised in the billing bucket, case 15).
+ * //              log) — contract invariant + eval dimension (exercised in the billing bucket, case 15).
  */
 import { AgentSpecBase, custom, destructiveClaimRequiresSuccess, jargonScrub, pendingConfirmMustAsk } from 'looprun';
 import { CONFIRM_ASK_RE, CONFIRM_LANG_RE, FALSE_FAILURE_CLAIM_RE, HONEST_FAILURE_RE, OFFER_OR_CONDITIONAL_RE } from './lexicon.js';
-import { ACCOUNTING_THEME } from './theme.js';
+import { ACCOUNTING_CONTRACT } from './contract.js';
 
 /** The per-id state reads the tax gates need (world accessors via the ctx closure). */
 type TaxStateReader = {
@@ -46,9 +46,9 @@ export class AgentSpecTaxFiling extends AgentSpecBase {
       ],
       destructiveTools: ['submitFiling', 'cancelTaxDeadline'],
       lexicon: { falseFailureClaimRe: FALSE_FAILURE_CLAIM_RE },
-      theme: ACCOUNTING_THEME,
+      contract: ACCOUNTING_CONTRACT,
       behavior: [
-        // Load-bearing lifecycle-law lines first. Each SPECIALIZES a theme invariant — none re-declares one.
+        // Load-bearing lifecycle-law lines first. Each SPECIALIZES a contract invariant — none re-declares one.
         'A filing moves from not started, to prepared, to submitted, and submission is FINAL: a submitted filing can never be re-prepared or submitted again — cite its receipt instead.',
         'A registered deadline can be cancelled ONLY while its filing is not started; once the filing is prepared or submitted, say the deadline can no longer be cancelled.',
         "When tax work is blocked because the client's fiscal regime is not on record, tell the user the regime must be provided and put on record through the client-records workflow first — never guess one, and never present the filing as prepared or submitted.",

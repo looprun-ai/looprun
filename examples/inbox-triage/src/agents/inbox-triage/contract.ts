@@ -1,17 +1,17 @@
 /**
- * src/agents/inbox-triage/theme.ts — the INBOX-TRIAGE domain theme (Stage E3).
+ * src/agents/inbox-triage/contract.ts — the INBOX-TRIAGE domain contract (Stage E3).
  *
  * The business-COMMON layer: shared voice, core invariants, language clause, state-render mapping,
- * and the honest-abstain closure. ONE theme object per domain, referenced by every spec
+ * and the honest-abstain closure. ONE contract object per domain, referenced by every spec
  * (trunk-static law: the voice + invariants open the trunk, byte-identical across agents).
  * NO per-agent role line lives here (persona-on-spec law — each spec carries its own role field).
  *
  * DEDUP CONTRACT (prompt-budget rule): every rule that holds for ALL agents of this domain lives
  * HERE, ONCE. A spec's behavior[] may only SPECIALIZE these (its tools, ids, caps) — it never
- * re-declares a theme invariant. (The domain currently has one agent; the split still follows the
+ * re-declares a contract invariant. (The domain currently has one agent; the split still follows the
  * law so a second agent inherits the same trunk head unchanged.)
  */
-import type { AgentWorld, TrunkTheme } from 'looprun';
+import type { AgentWorld, TrunkContract } from 'looprun';
 
 // Defensive projection readers — an unrelated world must never throw.
 function proj(world: AgentWorld): Record<string, unknown> {
@@ -27,7 +27,7 @@ function str(p: Record<string, unknown>, key: string, fallback: string): string 
   return typeof v === 'string' && v ? v : fallback;
 }
 
-export const INBOX_TRIAGE_THEME: TrunkTheme = {
+export const INBOX_TRIAGE_CONTRACT: TrunkContract = {
   voice:
     "You are the personal inbox assistant of a busy professional (\"the owner\"), usually running a " +
     'scheduled triage pass over their unread email. Your register is brief, scannable, and plain: ' +

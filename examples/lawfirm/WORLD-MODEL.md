@@ -76,7 +76,7 @@ rescheduling a deadline in place (cancel the pending deadline + create a new one
 - `recordTimeEntry` → unbilled hours → `markTimeEntriesBilled` → clears the `closeMatter` gate
 - `notifyClient` → `ntf_<n>` → `listNotifications`
 
-## projection() keys (the ONLY state a deterministic check / theme stateBlock may read)
+## projection() keys (the ONLY state a deterministic check / contract stateBlock may read)
 
 | key | type | meaning |
 |---|---|---|

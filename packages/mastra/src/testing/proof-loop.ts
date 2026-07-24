@@ -3,7 +3,7 @@
  *
  * Each runner drives a real {@link runSpecConversation} loop: the {@link fakeLLM} scripted model against a
  * fresh {@link FixtureWorld}, on a spec built by the core kit ({@link buildIsolatedSpec} /
- * {@link buildCollectiveSpec}, which set the fixture theme). It then asserts the expected `recoveryEvents`
+ * {@link buildCollectiveSpec}, which set the fixture contract). It then asserts the expected `recoveryEvents`
  * SIGNAL — the tag the runtime emits when a guard fires.
  *
  * recoveryEvents tag formats (from the @looprun-ai/core runtime): preTool veto `${dim}:${kind}:${tool}`,
@@ -17,7 +17,7 @@ import type { AgentSpec, RunResult, RuntimeTurnRecord } from '@looprun-ai/core';
 import { runSpecConversation } from '../run-conversation.js';
 import { fakeLLM } from './fake-llm.js';
 
-/** L3 — drive the full runSpecConversation loop for a proof's loop case. The fixture theme rides on the
+/** L3 — drive the full runSpecConversation loop for a proof's loop case. The fixture contract rides on the
  *  spec (set by the core spec builders); `redrives` is overridable (default 1). The runtime's fixed
  *  veto-storm limit never trips these single-veto scripts. */
 export function runProofLoop(spec: AgentSpec, l3: ProofLoopCase, redrives = 1): Promise<RunResult> {
@@ -26,7 +26,7 @@ export function runProofLoop(spec: AgentSpec, l3: ProofLoopCase, redrives = 1): 
     modelParams: {},
     world: new FixtureWorld(l3.preset),
     toolDefs: FIXTURE_TOOL_DEFS,
-    theme: FIXTURE_DOMAIN,
+    contract: FIXTURE_DOMAIN,
     redrives,
   });
 }

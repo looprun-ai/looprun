@@ -15,7 +15,7 @@ looprun adds everything that makes it safe to hand the keys to an agent:
   corrects it; when correction fails, a **deterministic honest-abstain closure** (a pure function of what
   verifiably happened) goes out instead of a fabrication.
 - **The map generator** — the **agentspec** skill (developed in its own private repo) interviews you (one
-  question), then generates the specs, the theme, the tool world **and the eval set that certifies them**.
+  question), then generates the specs, the contract, the tool world **and the eval set that certifies them**.
   [REV: think there are more than one question]
 
 The governed agent is still a **genuine Mastra `Agent`** — it registers in your Mastra instance and shows
@@ -27,7 +27,7 @@ import { LoopRunAgent } from 'looprun/mastra'
 import { bookkeepingSpec } from './src/agents/accounting/ac-books-spec.js'
 
 export const booksAgent = new LoopRunAgent({
-  spec: bookkeepingSpec,        // generated — carries its guards, persona and domain theme
+  spec: bookkeepingSpec,        // generated — carries its guards, persona and domain contract
   world,                        // your tool world (or pass native/MCP `tools` + a `stateView`)
   model: 'openai/gpt-5.5',      // any Mastra router string or AI-SDK model — trivial swap
 })
@@ -76,7 +76,7 @@ npx looprun init                         # environment check + optional local-mo
 
 1. **Generate** — invoke the `agentspec` skill with one sentence (“*assistant for a small accounting
    firm*”). It decomposes the tool surface into ≤15-tool agents, drafts each `AgentSpec` + the domain
-   theme, and generates an eval set — every artifact validated by adversarial debate
+   contract, and generates an eval set — every artifact validated by adversarial debate
    ([BARRED](https://arxiv.org/abs/2604.25203)-style), never by self-review.
 2. **Measure** — `npx looprun-eval run` executes the eval set against the real loop
    (invariant gate: deterministic auto-fails), then the LLM judge grades the rubric.

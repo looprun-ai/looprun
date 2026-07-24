@@ -4,7 +4,7 @@
  * A project exposes ONE `looprun.eval.config.ts` at its root (also the agentspec skill's
  * project sentinel): the generated agent bundle + the generated eval set + the world factory.
  */
-import type { AgentSpec, AgentWorld, ToolDef, TrunkTheme } from '@looprun-ai/core';
+import type { AgentSpec, AgentWorld, ToolDef, TrunkContract } from '@looprun-ai/core';
 
 export interface ReqCall {
   name: string;
@@ -46,8 +46,8 @@ export interface EvalConfig {
   domain: string;
   /** The generated bundle: agent-id → AgentSpec. */
   specs: Record<string, AgentSpec>;
-  /** The domain theme (optional when every spec carries `spec.theme`). */
-  theme?: TrunkTheme;
+  /** The domain contract (optional when every spec carries `spec.contract`). */
+  contract?: TrunkContract;
   /** Deterministic world per case run. `seed` = the rep index. */
   worldFactory: (preset: string, seed: number) => AgentWorld;
   /** The tool surface (JSON-schema defs) executed via `world.exec`. */

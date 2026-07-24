@@ -110,7 +110,7 @@ export class InboxWorld implements AgentWorld {
     return this.data.emails.filter((e) => !this.archived.has(e.id));
   }
 
-  /** The flat state snapshot deterministic checks + the theme stateBlock may read. */
+  /** The flat state snapshot deterministic checks + the contract stateBlock may read. */
   projection(): Record<string, unknown> {
     const unread = this.unread();
     const by = (c: EmailCategory) => unread.filter((e) => e.category === c).length;

@@ -19,7 +19,7 @@ import {
   jargonScrub,
   custom,
 } from '../src/index.js';
-import type { AgentWorld, TrunkTheme } from '../src/index.js';
+import type { AgentWorld, TrunkContract } from '../src/index.js';
 
 function fixtureWorld(state: Record<string, unknown> = {}): AgentWorld {
   return {
@@ -34,12 +34,12 @@ function fixtureWorld(state: Record<string, unknown> = {}): AgentWorld {
 
 const persona = 'You are the plant-care agent.';
 
-const THEME: TrunkTheme = {
+const CONTRACT: TrunkContract = {
   voice: 'v',
   stateBlock: () => '',
   coreInvariants: ['x'],
   languageClause: 'lang',
-  exhaustionReply: (_w, okTools) => `theme-closure:${okTools.join(',')}`,
+  exhaustionReply: (_w, okTools) => `contract-closure:${okTools.join(',')}`,
 };
 
 describe('ledger', () => {
@@ -118,7 +118,7 @@ describe('finalizeReply pipeline', () => {
     const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: [] });
     spec.addMutator(jargonScrub({ Jargon: 'plain words' }), { id: 'agent:scrub' });
     const ledger = createLedger();
-    const out = await finalizeReply(spec, THEME, fixtureWorld(), ledger, 'Some Jargon here.', async () => '', 1);
+    const out = await finalizeReply(spec, CONTRACT, fixtureWorld(), ledger, 'Some Jargon here.', async () => '', 1);
     expect(out.text).toBe('Some plain words here.');
     expect(out.exhausted).toBe(false);
     expect(ledger.turnCorrections).toContain('mutate:jargonScrub');
@@ -131,7 +131,7 @@ describe('finalizeReply pipeline', () => {
     const seen: string[] = [];
     const out = await finalizeReply(
       spec,
-      THEME,
+      CONTRACT,
       fixtureWorld(),
       ledger,
       'No mention.',
@@ -147,19 +147,19 @@ describe('finalizeReply pipeline', () => {
     expect(ledger.turnCorrections).toContain('redrive:replyMustMention');
   });
 
-  it('commits the deterministic closure after redrives exhaust (theme closure)', async () => {
+  it('commits the deterministic closure after redrives exhaust (contract closure)', async () => {
     const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: ['water'] });
     spec.addReplyCheck(replyMustMention(['impossible-token-xyz'], 'nope'), { id: 'agent:impossible' });
     const ledger = createLedger();
     recordToolResult(ledger, 'water', {}, { success: true });
-    const out = await finalizeReply(spec, THEME, fixtureWorld(), ledger, 'text', async () => 'still wrong', 1);
+    const out = await finalizeReply(spec, CONTRACT, fixtureWorld(), ledger, 'text', async () => 'still wrong', 1);
     expect(out.exhausted).toBe(true);
     expect(out.violations).toContain('replyMustMention');
-    expect(out.text).toBe('theme-closure:water');
+    expect(out.text).toBe('contract-closure:water');
     expect(ledger.turnCorrections).toContain('exhaustion-terminal');
   });
 
-  it('prefers the spec-level exhaustionReply over the theme closure', async () => {
+  it('prefers the spec-level exhaustionReply over the contract closure', async () => {
     const spec = new AgentSpecBase({
       id: 'a',
       mode: 'M',
@@ -168,13 +168,13 @@ describe('finalizeReply pipeline', () => {
       exhaustionReply: () => 'spec-closure',
     });
     spec.addReplyCheck(replyMustMention(['impossible-token-xyz'], 'nope'), { id: 'agent:impossible' });
-    const out = await finalizeReply(spec, THEME, fixtureWorld(), createLedger(), 'text', async () => 'still wrong', 0);
+    const out = await finalizeReply(spec, CONTRACT, fixtureWorld(), createLedger(), 'text', async () => 'still wrong', 0);
     expect(out.text).toBe('spec-closure');
   });
 
   it('emptyReply (minimal layer) forces content', async () => {
     const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: [] });
-    const out = await finalizeReply(spec, THEME, fixtureWorld(), createLedger(), '   ', async () => 'Real reply.', 1);
+    const out = await finalizeReply(spec, CONTRACT, fixtureWorld(), createLedger(), '   ', async () => 'Real reply.', 1);
     expect(out.text).toBe('Real reply.');
   });
 

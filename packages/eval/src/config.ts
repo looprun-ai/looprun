@@ -67,10 +67,10 @@ export function checkConfig(config: EvalConfig): CheckIssue[] {
   if (!config.toolDefs?.length) err('toolDefs: empty.');
   if (typeof config.worldFactory !== 'function') err('worldFactory: missing.');
 
-  // Theme resolution per spec.
+  // Contract resolution per spec.
   for (const [id, spec] of Object.entries(config.specs ?? {})) {
-    if (!config.theme && !spec.theme && !spec.surface.systemPrompt) {
-      err(`spec "${id}": no theme (config.theme or spec.theme).`);
+    if (!config.contract && !spec.contract && !spec.surface.systemPrompt) {
+      err(`spec "${id}": no contract (config.contract or spec.contract).`);
     }
     if (spec.id !== id) warn(`spec key "${id}" differs from spec.id "${spec.id}".`);
   }

@@ -18,7 +18,7 @@
  */
 import { AgentSpecBase, custom, jargonScrub, maxCalls, noFabricatedSuccess } from 'looprun';
 import type { AgentWorld } from 'looprun';
-import { HOMESERVICES_THEME } from './theme.js';
+import { HOMESERVICES_CONTRACT } from './contract.js';
 import { FALSE_FAILURE_CLAIM_RE } from './lexicon.js';
 
 // Domain world seam — the accessors THIS agent's RUN gates read (typed, no cast at the call site).
@@ -51,9 +51,9 @@ export class AgentSpecIntakeQuoting extends AgentSpecBase {
       ],
       // Injected lexicon → AgentSpecBase auto-installs minimal:noFalseFailureClaim (no manual add).
       lexicon: { falseFailureClaimRe: FALSE_FAILURE_CLAIM_RE },
-      theme: HOMESERVICES_THEME,
+      contract: HOMESERVICES_CONTRACT,
       behavior: [
-        // Load-bearing lines FIRST (iron-rule style: blunt, name the anti-pattern, deduped vs theme).
+        // Load-bearing lines FIRST (iron-rule style: blunt, name the anti-pattern, deduped vs contract).
         // Every line CONDITIONED (Bucket-A): "when X, do Y" — never a bare state assertion.
         'Open requests, create quotes, send quotes and record decisions DIRECTLY with the tools — these are non-destructive. Asking "shall I go ahead?" for a clearly requested non-destructive action is a failure: do it, then confirm the outcome with the real ids the tools returned (req_…, qt_…).',
         'Before any write, resolve the name to its REAL id from a read: findCustomer for a customer, listServiceRequests or getServiceRequest for a request or its quote. A write with a guessed id is a failure.',

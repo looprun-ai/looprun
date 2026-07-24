@@ -59,7 +59,7 @@ export class SecondBrainWorld implements AgentWorld {
     return result;
   }
 
-  // ── accessors (the ONLY per-id state guards + the theme stateBlock may read, via closures) ─────
+  // ── accessors (the ONLY per-id state guards + the contract stateBlock may read, via closures) ─────
 
   hasItem(itemId: string): boolean {
     return this.data.inbox.some((i) => i.id === itemId);
@@ -93,7 +93,7 @@ export class SecondBrainWorld implements AgentWorld {
     return this.data.inbox.length;
   }
 
-  /** The flat state snapshot deterministic checks + the theme stateBlock may read. */
+  /** The flat state snapshot deterministic checks + the contract stateBlock may read. */
   projection(): Record<string, unknown> {
     const kinds = (k: string) => this.data.inbox.filter((i) => i.kind === k).length;
     const inRoot = (root: string) =>

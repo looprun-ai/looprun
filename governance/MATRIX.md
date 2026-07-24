@@ -6,6 +6,7 @@ Regenerate with `pnpm proofs:matrix`; CI runs `--check` to keep it in sync.
 
 | Date | Record | Change | Scope | Isolated | Collective | Coverage | Certified models | SLM canary | Verdict |
 |---|---|---|---|---|---|---|---|---|---|
+| 2026-07-24 | [contract-rename](proofs/2026-07-24-contract-rename.md) | Public API rename: spec.theme -> spec.contract (DomainContract); legacy naming sweep | runtime | 154/154 | 42/42 | 23/23 | n/a | n/a | PASS |
 | 2026-07-24 | [final-upstream-sync](proofs/2026-07-24-final-upstream-sync.md) | Final engine sync from the frozen upstream benchmark: B1/B4/N1/N5 guard fixes, risk-family kinds, trunk provenance/coherence, same-step sibling ledger | runtime | 154/154 | 42/42 | 23/23 | n/a | n/a | PASS |
 | 2026-07-24 | [guards-doc-history-scrub](proofs/2026-07-24-guards-doc-history-scrub.md) | GUARDS.md rewritten to present-tense reference; change-history framing moved to git log | docs | 154/154 | 42/42 | 23/23 | n/a | n/a | PASS |
 | 2026-07-18 | [confirm-prose-probe-and-failed-probe-exemption](proofs/2026-07-18-confirm-prose-probe-and-failed-probe-exemption.md) | Two P9 guard-tunes — confirmFirst arg mechanism accepts a prior-turn prose/askUser confirmation surface as the probe; destructiveClaimRequiresSuccess counts a policy-rejected probe (not only a successful one), restoring the honest-limit ask exemption | runtime | 161/161 | 43/43 | 23/23 | n/a | n/a | PASS |

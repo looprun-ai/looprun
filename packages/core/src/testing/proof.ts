@@ -11,7 +11,7 @@
 import { AgentSpecBase } from '../spec.js';
 import type { AgentSpecConfig, Hook, ToolTarget } from '../spec.js';
 import type { Guard, GuardCtx } from '../rules.js';
-import { FixtureWorld, FIXTURE_TOOL_NAMES, FIXTURE_THEME, FIXTURE_LEXICON } from './fixture-world.js';
+import { FixtureWorld, FIXTURE_TOOL_NAMES, FIXTURE_CONTRACT, FIXTURE_LEXICON } from './fixture-world.js';
 import type { FixturePreset } from './fixture-world.js';
 
 export type ProofPolarity = 'positive' | 'negative' | 'neutral';
@@ -109,7 +109,7 @@ export function buildIsolatedSpec(proof: GuardProof): AgentSpecBase {
     mode: 'PROOF',
     persona: 'You are the proof agent.',
     tools: [...FIXTURE_TOOL_NAMES],
-    theme: FIXTURE_THEME,
+    contract: FIXTURE_CONTRACT,
     ...(proof.specTweaks ?? {}),
   };
   const spec = new AgentSpecBase(cfg);
@@ -128,7 +128,7 @@ export function buildCollectiveSpec(proofs: GuardProof[]): AgentSpecBase {
     mode: 'PROOF',
     persona: 'You are the proof agent.',
     tools: [...FIXTURE_TOOL_NAMES],
-    theme: FIXTURE_THEME,
+    contract: FIXTURE_CONTRACT,
     destructiveTools: ['deleteItem', 'purgeAll'],
     confirmMechanism: { purgeAll: 'prior-ask' },
     lexicon: {

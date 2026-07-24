@@ -16,7 +16,7 @@
  */
 import { AgentSpecBase, custom, destructiveClaimRequiresSuccess, jargonScrub, pendingConfirmMustAsk } from 'looprun';
 import { CONFIRM_ASK_RE, CONFIRM_LANG_RE, FALSE_FAILURE_CLAIM_RE, HONEST_FAILURE_RE, OFFER_OR_CONDITIONAL_RE } from './lexicon.js';
-import { ACCOUNTING_THEME } from './theme.js';
+import { ACCOUNTING_CONTRACT } from './contract.js';
 
 /** The per-id state reads the reversal gate needs (world accessors via the ctx closure). */
 type EntryStateReader = { hasEntry?: (entryId: string) => boolean; entryReversed?: (entryId: string) => boolean };
@@ -44,9 +44,9 @@ export class AgentSpecClientBooks extends AgentSpecBase {
       destructiveTools: ['reverseEntry'],
       // Auto-installs the always-on noFalseFailureClaim (attempt-context claimRe — see lexicon.ts).
       lexicon: { falseFailureClaimRe: FALSE_FAILURE_CLAIM_RE },
-      theme: ACCOUNTING_THEME,
+      contract: ACCOUNTING_CONTRACT,
       behavior: [
-        // Load-bearing lines first (after the runtime-prepended persona). Each SPECIALIZES a theme
+        // Load-bearing lines first (after the runtime-prepended persona). Each SPECIALIZES a contract
         // invariant — it never re-declares one.
         'To fix a wrong entry the only tool is reverseEntry, and it needs the reason the user gives (reversals are audited); if the entry was already reversed, say so and stop — an entry reverses at most once.',
         'When a write is missing or has a garbled required field, ask ONE concrete question first — never infer an amount, date, or description from unreadable characters ("4??" is a question to ask, not an amount). Calling a write with a guessed field is a failure.',

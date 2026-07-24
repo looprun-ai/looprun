@@ -1,12 +1,12 @@
 /** Offline e2e of the governed turn: veto, redrive, forced-terminal, exhaustion, sessions. */
 import { describe, expect, it } from 'vitest';
 import { AgentSpecBase, requiresBefore, replyMustMention } from '@looprun-ai/core';
-import type { AgentWorld, TrunkTheme } from '@looprun-ai/core';
+import type { AgentWorld, TrunkContract } from '@looprun-ai/core';
 import { LoopRunAgent } from '../src/index.js';
 import { scriptedModel } from './scripted-model.js';
 import type { ScriptStep } from './scripted-model.js';
 
-const THEME: TrunkTheme = {
+const CONTRACT: TrunkContract = {
   voice: 'You are the assistant of Fixture Plants.',
   stateBlock: (w) => `plan=${String(w.plan ?? 'starter')}`,
   coreInvariants: ['Never invent data.'],
@@ -65,7 +65,7 @@ function makeSpec() {
     persona: 'You are the plant-care agent.',
     tools: ['listPlants', 'waterPlant'],
     behavior: ['Water only listed plants.'],
-    theme: THEME,
+    contract: CONTRACT,
   });
   spec.addGuard('preTool', ['waterPlant'], requiresBefore(['listPlants']), { id: 'agent:waterAfterList' });
   return spec;
@@ -179,7 +179,7 @@ describe('LoopRunAgent — one governed turn', () => {
     const res = await agent.generate('Hi');
     expect(res.looprun.exhausted).toBe(true);
     expect(res.looprun.violations).toContain('replyMustMention');
-    expect(res.text).toBe('closure:listPlants,replyToUser'); // THEME closure over verified ok tools
+    expect(res.text).toBe('closure:listPlants,replyToUser'); // CONTRACT closure over verified ok tools
   });
 });
 
@@ -237,7 +237,7 @@ describe('LoopRunAgent — review regressions', () => {
       [{ tool: 'replyToUser', args: { text: 'Found it.' } }],
     ]);
     const spec = new AgentSpecBase({
-      id: 'searcher', mode: 'M', persona: 'You are the search agent.', tools: ['search'], theme: THEME,
+      id: 'searcher', mode: 'M', persona: 'You are the search agent.', tools: ['search'], contract: CONTRACT,
     });
     const agent = new LoopRunAgent({ spec, tools: { search }, model: scripted.model });
     const res = await agent.generate('find x');
@@ -281,7 +281,7 @@ describe('LoopRunAgent — review regressions', () => {
       }) as any,
     });
     const spec = new AgentSpecBase({
-      id: 'plants', mode: 'M', persona: 'You are the plant agent.', tools: ['waterPlant'], theme: THEME,
+      id: 'plants', mode: 'M', persona: 'You are the plant agent.', tools: ['waterPlant'], contract: CONTRACT,
     });
     const agent = new LoopRunAgent({
       spec,
@@ -315,9 +315,9 @@ describe('LoopRunAgent — review regressions', () => {
 });
 
 describe('LoopRunAgent — construction laws', () => {
-  it('requires a theme (config or spec)', () => {
+  it('requires a contract (config or spec)', () => {
     const spec = new AgentSpecBase({ id: 'x', mode: 'M', persona: 'You are x.', tools: [] });
-    expect(() => new LoopRunAgent({ spec, world: plantsWorld(), model: scriptedModel([]).model })).toThrow(/theme/);
+    expect(() => new LoopRunAgent({ spec, world: plantsWorld(), model: scriptedModel([]).model })).toThrow(/contract/);
   });
 
   it('strict mode throws on validateSpec warnings', () => {
@@ -326,7 +326,7 @@ describe('LoopRunAgent — construction laws', () => {
       mode: 'M',
       persona: 'You are x.',
       tools: Array.from({ length: 16 }, (_, i) => `t${i}`),
-      theme: THEME,
+      contract: CONTRACT,
     });
     expect(
       () => new LoopRunAgent({ spec, world: plantsWorld(), model: scriptedModel([]).model, strict: true }),

@@ -14,7 +14,7 @@
  *                      ~100× slower).
  *
  * State-in-tail: the system prompt is the case-invariant scoped trunk (cacheable prefix); the
- * volatile account/brand STATE (`theme.stateBlock`) rides the USER MESSAGE tail.
+ * volatile account/brand STATE (`contract.stateBlock`) rides the USER MESSAGE tail.
  */
 import { stepCountIs } from 'ai';
 import { Agent } from '@mastra/core/agent';
@@ -31,7 +31,7 @@ import {
   renderScopedSpecTrunk,
   terminalProtocol,
 } from '@looprun-ai/core';
-import type { AgentSpec, AgentWorld, TokenUsage, ToolDef, TrunkTheme, TurnInput, TurnRecord, RunResult } from '@looprun-ai/core';
+import type { AgentSpec, AgentWorld, TokenUsage, ToolDef, TrunkContract, TurnInput, TurnRecord, RunResult } from '@looprun-ai/core';
 import { buildWorldTools } from './tools.js';
 import { makeGuardHooks, makeInputProcessors, repeatedToolCallStop } from './hooks.js';
 import type { LoopRunSession } from './session.js';
@@ -53,8 +53,8 @@ export interface RuntimeDeps {
   world: AgentWorld;
   /** Tool defs (name/description/JSON-schema) for the surface + terminal tools. */
   toolDefs: ToolDef[];
-  /** The domain skin. Optional when the spec carries its own theme reference. */
-  theme?: TrunkTheme;
+  /** The domain skin. Optional when the spec carries its own contract reference. */
+  contract?: TrunkContract;
   maxSteps?: number;
   redrives?: number;
 }
@@ -70,9 +70,9 @@ function mapUsage(u: any): TokenUsage {
 /** Run one case (all turns) for `spec` on Mastra, with the host-injected deps. */
 export async function runSpecConversation(spec: AgentSpec, turns: TurnInput[], deps: RuntimeDeps): Promise<RunResult> {
   const { world, model } = deps;
-  const theme = deps.theme ?? spec.theme;
-  if (!theme && !spec.surface.systemPrompt) {
-    throw new Error(`runSpecConversation: spec "${spec.id}" has no theme — pass deps.theme or set spec.theme.`);
+  const contract = deps.contract ?? spec.contract;
+  if (!contract && !spec.surface.systemPrompt) {
+    throw new Error(`runSpecConversation: spec "${spec.id}" has no contract — pass deps.contract or set spec.contract.`);
   }
   // flat call settings → modelSettings (Mastra drops them top-level), then the spec's per-agent
   // sampling merged OVER them (agent wins). One object, spread into EVERY generate() call of the turn.
@@ -110,7 +110,7 @@ export async function runSpecConversation(spec: AgentSpec, turns: TurnInput[], d
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } as any);
 
-  const renderPrompt = spec.surface.systemPrompt ?? ((w: AgentWorld, u: string[]) => renderScopedSpecTrunk(w, spec, u, theme));
+  const renderPrompt = spec.surface.systemPrompt ?? ((w: AgentWorld, u: string[]) => renderScopedSpecTrunk(w, spec, u, contract));
 
   const turnRecords: TurnRecord[] = [];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -142,7 +142,7 @@ export async function runSpecConversation(spec: AgentSpec, turns: TurnInput[], d
 
     // State-in-tail: the volatile account/brand STATE rides the user message (after the stable
     // prefix), with uploads, then the user text. Refreshed each turn.
-    const stateBlock = theme ? theme.stateBlock(world) : '';
+    const stateBlock = contract ? contract.stateBlock(world) : '';
     const tailParts: string[] = [];
     if (stateBlock && stateBlock.trim()) tailParts.push(`## Account state\n${stateBlock}`);
     if (attLabels.length) tailParts.push(`[Uploads this turn: ${attDisplay.join(', ')}]`);
@@ -219,7 +219,7 @@ export async function runSpecConversation(spec: AgentSpec, turns: TurnInput[], d
       // Mutators → onReply checks → bounded NO-TOOLS redrive → deterministic honest-abstain.
       const finalized = await finalizeReply(
         spec,
-        theme,
+        contract,
         world,
         ledger,
         initialText,

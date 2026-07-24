@@ -27,7 +27,7 @@ import {
   requiresBefore,
 } from 'looprun';
 import type { AgentWorld } from 'looprun';
-import { HOMESERVICES_THEME } from './theme.js';
+import { HOMESERVICES_CONTRACT } from './contract.js';
 import { CONFIRM_ASK_RE, FALSE_FAILURE_CLAIM_RE, OFFER_OR_CONDITIONAL_RE } from './lexicon.js';
 
 // Domain world seam — the accessors THIS agent's RUN gates read (typed, no cast at the call site).
@@ -60,9 +60,9 @@ export class AgentSpecScheduling extends AgentSpecBase {
       destructiveTools: ['cancelJob'],
       // Injected lexicon → AgentSpecBase auto-installs minimal:noFalseFailureClaim (no manual add).
       lexicon: { falseFailureClaimRe: FALSE_FAILURE_CLAIM_RE },
-      theme: HOMESERVICES_THEME,
+      contract: HOMESERVICES_CONTRACT,
       behavior: [
-        // Load-bearing lines FIRST (iron-rule style: blunt, name the anti-pattern, deduped vs theme).
+        // Load-bearing lines FIRST (iron-rule style: blunt, name the anti-pattern, deduped vs contract).
         // Every line CONDITIONED (Bucket-A): "when X, do Y" — never a bare state assertion.
         'Book, reschedule and reassign DIRECTLY when asked — these are not destructive. Asking "shall I book?" for a clearly requested booking is a failure. Afterwards confirm the real job id, date and window; never promise an arrival time finer than the booked window.',
         'Before committing a technician to a window (scheduleJob, assignTechnician), read getTechnicianAvailability for that date. When the requested technician is busy, offer their nearest free window or a QUALIFIED free alternative — never book over a conflict, never fail silently.',

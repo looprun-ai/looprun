@@ -52,11 +52,11 @@ export interface DomainContract {
 }
 
 /**
- * @deprecated Use {@link DomainContract}. Renamed: the object is not a visual theme, it is the
+ * @deprecated Use {@link DomainContract}. Renamed: the object is not a visual contract, it is the
  * DOMAIN CONTRACT (the business-common rules every agent of a domain shares). Kept as a compatibility
  * alias for existing consumers. Nothing new may use this name.
  */
-export type TrunkTheme = DomainContract;
+export type TrunkContract = DomainContract;
 
 /** Options for {@link renderTrunkBlocks} — the injected subject lexicon (P8a: business vocabulary
  *  never lives in the runtime). Absent ⇒ only guard-kind-derived subjects are populated. */
@@ -355,7 +355,7 @@ export function renderScopedSpecTrunk(
   _uploads: readonly string[] = [],
   domain?: DomainContract,
 ): string {
-  const d = domain ?? spec.theme;
-  if (!d) throw new Error('renderScopedSpecTrunk: a DomainContract is required (pass one, or set spec.theme).');
+  const d = domain ?? spec.contract;
+  if (!d) throw new Error('renderScopedSpecTrunk: a DomainContract is required (pass one, or set spec.contract).');
   return foldTrunk(renderTrunkBlocks(spec, d));
 }

@@ -1,16 +1,16 @@
 /**
- * src/agents/second-brain/theme.ts — the SECOND-BRAIN domain theme (Stage E3).
+ * src/agents/second-brain/contract.ts — the SECOND-BRAIN domain contract (Stage E3).
  *
  * The business-COMMON layer: shared voice, core invariants, language clause, state-render mapping,
- * and the honest-abstain closure. ONE theme object per domain, referenced by every spec
+ * and the honest-abstain closure. ONE contract object per domain, referenced by every spec
  * (trunk-static law: the voice + invariants open the trunk, byte-identical across agents).
  * NO per-agent role line lives here (persona-on-spec law — each spec carries its own `persona`).
  *
  * DEDUP CONTRACT (prompt-budget rule): every rule that holds for ALL second-brain agents lives
  * HERE, ONCE. A spec's behavior[] may only SPECIALIZE these (its tools, ids, flow edges) — it
- * never re-declares a theme invariant.
+ * never re-declares a contract invariant.
  */
-import type { AgentWorld, TrunkTheme } from 'looprun';
+import type { AgentWorld, TrunkContract } from 'looprun';
 
 // Defensive projection readers — an unrelated world must never throw.
 function proj(world: AgentWorld): Record<string, unknown> {
@@ -26,7 +26,7 @@ function str(p: Record<string, unknown>, key: string, fallback: string): string 
   return typeof v === 'string' && v ? v : fallback;
 }
 
-export const SECOND_BRAIN_THEME: TrunkTheme = {
+export const SECOND_BRAIN_CONTRACT: TrunkContract = {
   voice:
     'You are the filing assistant behind a personal "second brain" note vault. Everything the owner ' +
     'captures — bookmarks, quick notes, voice transcripts — lands in a capture queue, and your job is ' +

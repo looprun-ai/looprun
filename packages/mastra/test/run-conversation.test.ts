@@ -1,11 +1,11 @@
 /** Scripted multi-turn runner: record shape + cross-turn guard state. */
 import { describe, expect, it } from 'vitest';
 import { AgentSpecBase, confirmFirst } from '@looprun-ai/core';
-import type { AgentWorld, TrunkTheme } from '@looprun-ai/core';
+import type { AgentWorld, TrunkContract } from '@looprun-ai/core';
 import { repeatedToolCallStop, runSpecConversation } from '../src/index.js';
 import { scriptedModel } from './scripted-model.js';
 
-const THEME: TrunkTheme = {
+const CONTRACT: TrunkContract = {
   voice: 'You are the assistant of Fixture Plants.',
   stateBlock: () => 'plan=starter',
   coreInvariants: ['Never invent data.'],
@@ -45,7 +45,7 @@ describe('runSpecConversation', () => {
       mode: 'CLEAN',
       persona: 'You are the cleanup agent.',
       tools: ['listItems', 'deleteItem'],
-      theme: THEME,
+      contract: CONTRACT,
     });
     spec.addGuard('preTool', ['deleteItem'], confirmFirst(), { id: 'agent:confirmFirst' });
 
@@ -74,11 +74,11 @@ describe('runSpecConversation', () => {
     expect(res.turnRecords[1].toolCalls.map((c) => c.name)).toEqual(['deleteItem']);
   });
 
-  it('throws without any theme', async () => {
+  it('throws without any contract', async () => {
     const spec = new AgentSpecBase({ id: 'x', mode: 'M', persona: 'You are x.', tools: [] });
     await expect(
       runSpecConversation(spec, [{ userText: 'hi' }], { model: scriptedModel([]).model, world: world(), toolDefs: [] }),
-    ).rejects.toThrow(/theme/);
+    ).rejects.toThrow(/contract/);
   });
 });
 

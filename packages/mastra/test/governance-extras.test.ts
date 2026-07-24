@@ -4,11 +4,11 @@
  */
 import { describe, expect, it } from 'vitest';
 import { AgentSpecBase, resultInvariant } from '@looprun-ai/core';
-import type { AgentWorld, TrunkTheme } from '@looprun-ai/core';
+import type { AgentWorld, TrunkContract } from '@looprun-ai/core';
 import { LoopRunAgent } from '../src/index.js';
 import { scriptedModel } from './scripted-model.js';
 
-const THEME: TrunkTheme = {
+const CONTRACT: TrunkContract = {
   voice: 'You are the assistant of Fixture Co.',
   stateBlock: () => '',
   coreInvariants: ['Never invent data.'],
@@ -45,7 +45,7 @@ const TOOL_DEFS = [
 describe('per-agent sampling (controls.sampling merged over conversation modelParams)', () => {
   it('the agent temperature wins on the value the model actually receives', async () => {
     const spec = new AgentSpecBase({
-      id: 'creative', mode: 'M', persona: 'You are the creative agent.', tools: [], theme: THEME,
+      id: 'creative', mode: 'M', persona: 'You are the creative agent.', tools: [], contract: CONTRACT,
       sampling: { temperature: 0.7 },
     });
     const scripted = scriptedModel([[{ tool: 'replyToUser', args: { text: 'hi' } }]]);
@@ -58,7 +58,7 @@ describe('per-agent sampling (controls.sampling merged over conversation modelPa
 describe('postTool (OUTPUT-dim) enforcement joins the redrive', () => {
   it('relays the failing result invariant through the bounded no-tools redrive', async () => {
     const spec = new AgentSpecBase({
-      id: 'admin', mode: 'M', persona: 'You are the admin agent.', tools: ['saveConfig'], theme: THEME,
+      id: 'admin', mode: 'M', persona: 'You are the admin agent.', tools: ['saveConfig'], contract: CONTRACT,
       behavior: ['Save config and report honestly.'],
     });
     spec.addGuard('postTool', ['saveConfig'], resultInvariant((r) => (r as { applied?: boolean }).applied === true, 'The change was NOT fully applied — report the real state.'), { id: 'agent:appliedInvariant' });
@@ -78,7 +78,7 @@ describe('postTool (OUTPUT-dim) enforcement joins the redrive', () => {
 describe('flowChain completion (controls.chains)', () => {
   it('fires a missing direct follow-up and restates the outcome via the redrive', async () => {
     const spec = new AgentSpecBase({
-      id: 'flow', mode: 'M', persona: 'You are the flow agent.', tools: ['listItems', 'logAction'], theme: THEME,
+      id: 'flow', mode: 'M', persona: 'You are the flow agent.', tools: ['listItems', 'logAction'], contract: CONTRACT,
       behavior: ['List, then log.'],
       chains: [{ after: 'listItems', call: 'logAction', mode: 'direct', args: { note: 'audit' } }],
     });
@@ -98,7 +98,7 @@ describe('flowChain completion (controls.chains)', () => {
 
   it('does not fire when the follow-up already ran', async () => {
     const spec = new AgentSpecBase({
-      id: 'flow', mode: 'M', persona: 'You are the flow agent.', tools: ['listItems', 'logAction'], theme: THEME,
+      id: 'flow', mode: 'M', persona: 'You are the flow agent.', tools: ['listItems', 'logAction'], contract: CONTRACT,
       behavior: ['List, then log.'],
       chains: [{ after: 'listItems', call: 'logAction', mode: 'direct', args: { note: 'audit' } }],
     });
@@ -117,7 +117,7 @@ describe('flowChain completion (controls.chains)', () => {
 
   it('records chain-vetoed and never calls the world when a preTool guard denies the forced call', async () => {
     const spec = new AgentSpecBase({
-      id: 'flow', mode: 'M', persona: 'You are the flow agent.', tools: ['listItems', 'logAction'], theme: THEME,
+      id: 'flow', mode: 'M', persona: 'You are the flow agent.', tools: ['listItems', 'logAction'], contract: CONTRACT,
       behavior: ['List, then log.'],
       chains: [{ after: 'listItems', call: 'logAction', mode: 'direct', args: { note: 'audit' } }],
     });

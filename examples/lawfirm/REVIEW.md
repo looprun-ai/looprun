@@ -10,7 +10,7 @@ authoring + adversarial review only.
 - Inputs used: (1) the skill's own reference files, (2) the `looprun` / `@looprun-ai/eval`
   node_modules import surfaces (type declarations + CLI + guard implementations), (3) the
   simulated user's answers below.
-- NO external material: no gold/certified specs, themes, or eval sets were read; every business
+- NO external material: no gold/certified specs, contracts, or eval sets were read; every business
   string in this repo was derived fresh from the purpose sentence. (The skill's
   `references/spec-template.ts` is a fictional plant-nursery domain — format only.)
 
@@ -29,7 +29,7 @@ topology from E1 clustering (below).
 ## Preflight
 
 `npx looprun-eval init --domain lawfirm` scaffolded `looprun.eval.config.ts` + `evals/` — the stub
-was then REPLACED with the real wiring (SPECS/THEME/worldFactory/TOOL_DEFS/CASES/CASE_MAP).
+was then REPLACED with the real wiring (SPECS/CONTRACT/worldFactory/TOOL_DEFS/CASES/CASE_MAP).
 
 ## G1 — tool genesis (isolated draft → BARRED debate, 2 independent judges, T=2)
 
@@ -95,7 +95,7 @@ Shared read-only tools (listClients, listMatters, getMatter, getClient) repeat a
 design (listClients added to docket per N4 — the notify-by-name flow needs the same locate read
 the eval's own goldSeq implies); every write has ONE owner. Both agents ≤15; clustering by
 TOOL-NEED (both G1 judges' cluster dry-runs converged on this split). Destructive list:
-closeMatter, cancelDeadline (two-step `confirmed`). Theme summary: locale English; invariants =
+closeMatter, cancelDeadline (two-step `confirmed`). Contract summary: locale English; invariants =
 anti-fabrication, id discipline, two-step destructive, professional boundary, confidentiality,
 validity walls, honesty-on-failure; personas = one role line per agent (on the spec).
 Free-text row ("any hard rule missing?"): simulated default — 'ok'.
@@ -133,7 +133,7 @@ Free-text row ("any hard rule missing?"): simulated default — 'ok'.
 | reviewer | verdict | resolutions |
 |---|---|---|
 | N1 magnet red-team | **CLEAN, FINDINGS: 0** (all checks/scopes read args/world/observed/reply only; reply regexes are claim-proxies; decomposition is tool-need). 4 precision asides | 2 asides fixed (noPhantomNotification history-read exemption; billingIsUserDecision same-matter keying); 2 logged (full-name substring match OK on shipped presets; `\?` exemption intentional per catalog) |
-| N2 Bucket-A auditor | **FINDINGS: 4** (F1/F2 "the tool returns a confirmation question" asserted unconditionally in both specs; F3 phantom example ids inside the theme's id invariant; F4 invariant 3 presupposed a question exists) | ALL FIXED: both bullets + invariant 3 now conditioned ("when it returns a confirmation question…"); invariant 2 rewritten to id PREFIXES only |
+| N2 Bucket-A auditor | **FINDINGS: 4** (F1/F2 "the tool returns a confirmation question" asserted unconditionally in both specs; F3 phantom example ids inside the contract's id invariant; F4 invariant 3 presupposed a question exists) | ALL FIXED: both bullets + invariant 3 now conditioned ("when it returns a confirmation question…"); invariant 2 rewritten to id PREFIXES only |
 | N3 composition adversary | **FINDINGS: 4** + 5 advisories | F1 (billingIsUserDecision aliasing + under-steering) FIXED: same-matterId keying + aliasing-safe deny text + bill-first-then-reattempt ordering hint; F3 (noPhantomNotification vs truthful history reads) FIXED: listNotifications exemption; F4 (status reports vs claim regex) FIXED: is/was/remains-status exemptions both specs; F2 (library destructiveThrottle counts probes — consented re-probe-then-confirm costs +1 turn) ACCEPTED residual (library-owned, rare path, safe direction). Advisories A1–A5 logged below |
 | N4 coverage critic | **FINDINGS: 9** (recall gaps) | ALL ADDRESSED: hours-range input gate; requiresBefore(listTimeEntries) on billing; fileOnlyPending status gate; out-of-scope conditioned prose in both specs (+UNCHECKABLE notes); reschedule-in-place prose (docket); matter-id ownership added to the confidentiality gate (+ world.matterClient); listClients added to docket surface; empty-read honesty prose (client-matters) |
 | N5 purity/firewall lint | `npx looprun-eval lint src evals --spec-laws` clean; portable `lint-guards.mjs` 5 files clean (re-run after every fix round) | none needed |
@@ -157,7 +157,7 @@ round (the measured loop is the backstop).
 - One-notification-per-turn paces multi-recipient jobs across turns. (N3 A4)
 - Base guards run before filedIsImmutable on a doomed filed-cancel → extra intra-turn steps only.
   (N3 A5)
-- Theme coreInvariant 1 names read tools of both agents (trunk-static by design — byte-identical
+- Contract coreInvariant 1 names read tools of both agents (trunk-static by design — byte-identical
   head across the domain's agents; not a state snapshot). (N2 note)
 
 ## Acceptance gates (final run, all green — outputs verbatim)
@@ -173,7 +173,7 @@ exit=0
 === GATE 3: tsc --noEmit ===
 exit=0
 === GATE 4: lint-guards.mjs ===
-✓ guard purity lint: 5 file(s) clean (banned-token + stateful-regex + S-1 firewall + theme-persona)
+✓ guard purity lint: 5 file(s) clean (banned-token + stateful-regex + S-1 firewall + contract-persona)
 exit=0
 ```
 

@@ -8,7 +8,7 @@
  * vault-filing task nemotron completes the turn with ZERO tool calls — it narrates/asks instead
  * of filing (the fake world's capture queue never shrinks). The guards never fired; this is a
  * prompt-pedagogy gap, not a governance gap. So the subclass changes ONLY the behavior prose —
- * the guard set, tool surface, lexicon and theme are inherited unchanged: governance identical,
+ * the guard set, tool surface, lexicon and contract are inherited unchanged: governance identical,
  * pedagogy tuned.
  */
 import { AgentSpecVaultFiling } from '../../second-brain/src/agents/second-brain/vault-filing-spec.js';

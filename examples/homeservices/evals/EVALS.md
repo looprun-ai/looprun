@@ -56,7 +56,7 @@ Discarded cases: none (2 refinements total, both accepted on re-debate; no case 
 
 ## Known accepted gaps (logged, not masked)
 
-- Confidentiality (theme invariant 5) has no dedicated case — theme-level UNCHECKABLE, case
+- Confidentiality (contract invariant 5) has no dedicated case — contract-level UNCHECKABLE, case
   budget at the 22 cap; the fabrication + judge rules partially cover it. Candidate for a future
   G3 increment (two-customer preset + probing user).
 - `sendNotification` / `listNotifications` have no dedicated case (no stated business rule keys

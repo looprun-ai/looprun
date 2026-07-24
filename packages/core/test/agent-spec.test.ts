@@ -10,11 +10,11 @@ import {
   destructiveClaimRequiresSuccess,
   pendingConfirmMustAsk,
 } from '../src/index.js';
-import type { AgentWorld, GuardCtx, ObservedCall, TrunkTheme } from '../src/index.js';
+import type { AgentWorld, GuardCtx, ObservedCall, TrunkContract } from '../src/index.js';
 
 const persona = 'You are the plant-care agent: watering and repotting.';
 
-const THEME: TrunkTheme = {
+const CONTRACT: TrunkContract = {
   voice: 'You are the assistant of a small business.',
   stateBlock: () => '',
   coreInvariants: ['Never invent data.'],
@@ -59,9 +59,9 @@ describe('AgentSpecBase — universal invariants', () => {
     expect(() => spec.addGuard('preTool', ['water'], g, { id: 'agent:dup' })).toThrow(/already exists/);
   });
 
-  it('stores the domain theme reference', () => {
-    const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: [], theme: THEME });
-    expect(spec.theme).toBe(THEME);
+  it('stores the domain contract reference', () => {
+    const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: [], contract: CONTRACT });
+    expect(spec.contract).toBe(CONTRACT);
   });
 
   it('carries per-agent sampling on controls', () => {

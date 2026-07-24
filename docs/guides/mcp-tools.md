@@ -6,7 +6,7 @@ tool source, so the veto works on MCP tools with zero extra wiring.
 ## Path A — a deterministic world (`world` + `toolDefs`)
 
 The certified path (and what the agentspec skill generates): JSON-schema `toolDefs` executed through
-`world.exec(name, args)`. The world is also the STATE source for stateful guards and the theme's
+`world.exec(name, args)`. The world is also the STATE source for stateful guards and the contract's
 `stateBlock`. Use a factory for multi-conversation hosts:
 
 ```ts
@@ -26,7 +26,7 @@ const mcp = new MCPClient({ servers: { crm: { url: new URL('https://crm.example/
 new LoopRunAgent({
   spec,
   tools: await mcp.getTools(),   // native tools — mutually exclusive with world+toolDefs
-  stateView,                     // optional: state reads for stateful guards + theme.stateBlock
+  stateView,                     // optional: state reads for stateful guards + contract.stateBlock
   model: 'openai/gpt-5.5',
 })
 ```
@@ -41,7 +41,7 @@ verified outcome in the observed ledger → the result returns to the model.
 - **Nothing**, for ledger-based guards: `requiresBefore`, `noDuplicateCall`, `confirmFirst`,
   `destructiveThrottle`, `maxCallsPerTurn/Conversation`, arg guards, reply checks over observed
   activity — they read the ledger the hooks feed.
-- **A `stateView`**, for `precondition`/custom guards that read domain state, and for the theme's
+- **A `stateView`**, for `precondition`/custom guards that read domain state, and for the contract's
   `stateBlock`: an object exposing those accessor methods (backed by your API / MCP resources / a
   cache), with an optional `refresh()` looprun calls at each turn boundary:
 

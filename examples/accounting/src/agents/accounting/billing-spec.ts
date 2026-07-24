@@ -7,11 +7,11 @@
  *
  * // UNCHECKABLE: claims about reminders sent BEFORE this conversation are unverifiable (there is no
  * //              reminder log) — the reply must say it cannot verify them (case 15). A billing behavior
- * //              line specializes the theme's unverifiable-claim invariant to this reminder-log absence.
+ * //              line specializes the contract's unverifiable-claim invariant to this reminder-log absence.
  */
 import { AgentSpecBase, custom, destructiveClaimRequiresSuccess, jargonScrub, pendingConfirmMustAsk } from 'looprun';
 import { CONFIRM_ASK_RE, CONFIRM_LANG_RE, FALSE_FAILURE_CLAIM_RE, HONEST_FAILURE_RE, OFFER_OR_CONDITIONAL_RE } from './lexicon.js';
-import { ACCOUNTING_THEME } from './theme.js';
+import { ACCOUNTING_CONTRACT } from './contract.js';
 
 /** The one per-id status read the invoice gates need (world accessor via the ctx closure). */
 type InvoiceStatusReader = { invoiceStatus?: (invoiceId: string) => string | null };
@@ -42,9 +42,9 @@ export class AgentSpecBilling extends AgentSpecBase {
       ],
       destructiveTools: ['sendInvoice', 'recordPayment', 'voidInvoice'],
       lexicon: { falseFailureClaimRe: FALSE_FAILURE_CLAIM_RE },
-      theme: ACCOUNTING_THEME,
+      contract: ACCOUNTING_CONTRACT,
       behavior: [
-        // Load-bearing lines first. Each SPECIALIZES a theme invariant — none re-declares one.
+        // Load-bearing lines first. Each SPECIALIZES a contract invariant — none re-declares one.
         'An invoice moves from draft to sent to paid, or from draft to void: only a DRAFT can be sent, only a SENT invoice can be paid, and a PAID invoice can NEVER be voided. When an action does not fit the invoice\'s real status, report that status and why — never force it or claim it happened.',
         'A recorded payment must EQUAL the invoice amount from the records (getInvoice / listInvoices). When the user names a different figure, point at the mismatch — recording a payment that does not match the invoice is a failure.',
         'When the user gives client, amount, and purpose, create the DRAFT with createInvoice this turn; sending it is the two-step part — probe sendInvoice, relay the send-confirmation question, and stop.',

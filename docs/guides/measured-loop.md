@@ -29,7 +29,7 @@ Outputs per agent bucket in `eval-results/<date>-<domain>/`:
 
 Classify EVERY fail, fix ONE class per iteration, re-screen only the failed cases, ≤3 iterations:
 
-1. **State-visibility gap** → render the missing state (theme `stateBlock` / a directive).
+1. **State-visibility gap** → render the missing state (contract `stateBlock` / a directive).
 2. **Missing hard gate** → add a guard from the catalog at the right hook.
 3. **Scope gap** → add the missing tool to the agent, or remap the case to the right agent
    (historically the highest-yield single fix).
@@ -38,7 +38,7 @@ Classify EVERY fail, fix ONE class per iteration, re-screen only the failed case
 6. **Language coin** → ACCEPT as residual (human gate) — do not chase with prose.
 7. **Eval defect** → fix the EVAL (+ re-debate it), never bend the spec to a broken case.
 
-After ANY spec/theme edit: `npx looprun-eval lint src evals --spec-laws` must stay clean.
+After ANY spec/contract edit: `npx looprun-eval lint src evals --spec-laws` must stay clean.
 
 ## Certify (Stage S)
 

@@ -26,7 +26,7 @@ certified scores are comparable across projects), which needs `GOOGLE_GENERATIVE
 ## 2. Generate your agents (recommended path)
 
 In your project, invoke the **agentspec** skill and answer one question — the agent's purpose, one
-sentence. The skill generates `src/agents/<domain>/` (specs + theme), `src/world/` (tool world),
+sentence. The skill generates `src/agents/<domain>/` (specs + contract), `src/world/` (tool world),
 `evals/` (the eval set) and wires `looprun.eval.config.ts`. See
 [the skill guide](guides/skill.md).
 
@@ -35,7 +35,7 @@ sentence. The skill generates `src/agents/<domain>/` (specs + theme), `src/world
 ```ts
 // src/agents/nursery/care-spec.ts
 import { AgentSpecBase, precondition, requiresBefore } from 'looprun'
-import { NURSERY_THEME } from './theme.js'
+import { NURSERY_CONTRACT } from './contract.js'
 
 export class CareSpec extends AgentSpecBase {
   constructor() {
@@ -46,7 +46,7 @@ export class CareSpec extends AgentSpecBase {
       tools: ['listPlants', 'waterPlant', 'repotPlant'],
       destructiveTools: ['repotPlant'],       // auto-installs confirm-first + throttle
       behavior: ['Water before repotting when both are requested.'],
-      theme: NURSERY_THEME,                   // the shared domain theme (one object per domain)
+      contract: NURSERY_CONTRACT,                   // the shared domain contract (one object per domain)
     })
     this.addGuard('preTool', ['waterPlant'], requiresBefore(['listPlants']), { id: 'agent:waterAfterList' })
     this.addGuard('preTool', ['repotPlant'],

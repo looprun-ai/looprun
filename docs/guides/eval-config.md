@@ -5,7 +5,7 @@ sentinel. Default-export an `EvalConfig` (from `@looprun-ai/eval`):
 
 ```ts
 import type { EvalConfig } from '@looprun-ai/eval'
-import { SPECS, THEME } from './src/agents/accounting/index.js'
+import { SPECS, CONTRACT } from './src/agents/accounting/index.js'
 import { TOOL_DEFS } from './src/world/tools.js'
 import { worldFactory } from './src/world/world.js'
 import { CASES, CASE_MAP } from './evals/cases.js'
@@ -13,7 +13,7 @@ import { CASES, CASE_MAP } from './evals/cases.js'
 export default {
   domain: 'accounting',
   specs: SPECS,                 // agent-id → AgentSpec
-  theme: THEME,                 // optional when every spec sets spec.theme
+  contract: CONTRACT,                 // optional when every spec sets spec.contract
   worldFactory,                 // (preset, seed) => AgentWorld — deterministic per (preset, rep)
   toolDefs: TOOL_DEFS,          // JSON-schema tool defs, executed via world.exec
   cases: CASES,

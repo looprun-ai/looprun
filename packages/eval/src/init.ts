@@ -6,10 +6,10 @@ import { join } from 'node:path';
 
 const CONFIG_STUB = (domain: string) => `import type { EvalConfig } from '@looprun-ai/eval';
 // Wire the GENERATED bundle here (the agentspec skill fills these in):
-//   src/agents/${domain}/index.ts   → SPECS + THEME
+//   src/agents/${domain}/index.ts   → SPECS + CONTRACT
 //   src/world/                      → world.ts (worldFactory) + tools.ts (TOOL_DEFS)
 //   evals/cases.ts                  → CASES (the generated eval set)
-// import { SPECS, THEME } from './src/agents/${domain}/index.js';
+// import { SPECS, CONTRACT } from './src/agents/${domain}/index.js';
 // import { TOOL_DEFS } from './src/world/tools.js';
 // import { worldFactory } from './src/world/world.js';
 // import { CASES, CASE_MAP } from './evals/cases.js';
@@ -17,7 +17,7 @@ const CONFIG_STUB = (domain: string) => `import type { EvalConfig } from '@loopr
 export default {
   domain: '${domain}',
   specs: {},            // SPECS
-  // theme: THEME,      // optional when every spec sets spec.theme
+  // contract: CONTRACT,      // optional when every spec sets spec.contract
   worldFactory: () => {
     throw new Error('wire src/world/world.ts');
   },

@@ -26,7 +26,7 @@ The pipeline (full provenance in [`REVIEW.md`](REVIEW.md) and [`evals/EVALS.md`]
    world model — never from the specs (independence rule), each debate-validated.
 4. **Agents** — decomposed by TOOL-NEED into `intake-quoting` (11 tools) and `scheduling`
    (11 tools, destructive `cancelJob` under the confirm-first protocol)
-   ([`src/agents/homeservices/`](src/agents/homeservices)) + the domain theme.
+   ([`src/agents/homeservices/`](src/agents/homeservices)) + the domain contract.
 5. **Adversarial review** — 5 reviewer passes; one CONFIRMED finding fixed pre-measurement
    (a missing no-past-date gate).
 6. **The measured loop** — screen N=1: 86.4% → two fix iterations → certify N=3: **98.5%**.

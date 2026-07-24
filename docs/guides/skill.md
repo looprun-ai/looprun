@@ -13,7 +13,7 @@ npx skills add looprun-ai/looprun --skill agentspec
 ## What it generates, in your project
 
 ```
-src/agents/<domain>/         # one <agent>-spec.ts per agent (≤15 tools each) + theme.ts + index.ts
+src/agents/<domain>/         # one <agent>-spec.ts per agent (≤15 tools each) + contract.ts + index.ts
 src/world/                   # world.ts (deterministic tool world + factory), tools.ts, presets.ts
 evals/                       # cases.ts (the generated eval set + caseMap) + judge-prompt.md (rules)
 looprun.eval.config.ts       # the eval contract wiring it all together
@@ -27,7 +27,7 @@ looprun.eval.config.ts       # the eval contract wiring it all together
   validated), G2 the world (deterministic, in-memory, preset-seeded), G3 the eval set (authored from
   docs/answers/schemas — NEVER from the drafted specs; independence is the point).
 - **E — Engineer**: E1 decompose the surface into ≤15-tool agents by TOOL-NEED (never by intent — the
-  magnet law), human approval gate; E2 draft each AgentSpec; E3 generate the domain theme.
+  magnet law), human approval gate; E2 draft each AgentSpec; E3 generate the domain contract.
 - **N — Nitpick**: five adversarial reviewers (magnet red-team, prose auditor, composition adversary,
   coverage critic, purity lint) + a verifier.
 - **T — Test**: the [measured loop](measured-loop.md) — run, LLM-judge, classify fails, fix,

@@ -5,12 +5,12 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { MockLanguageModelV3 } from 'ai/test';
 import { AgentSpecBase } from '@looprun-ai/core';
-import type { AgentWorld, TrunkTheme } from '@looprun-ai/core';
+import type { AgentWorld, TrunkContract } from '@looprun-ai/core';
 import { runEval, buildCert, mergeVerdictFiles } from '../src/index.js';
 import type { EvalConfig } from '../src/index.js';
 import { writeFileSync } from 'node:fs';
 
-const THEME: TrunkTheme = {
+const CONTRACT: TrunkContract = {
   voice: 'You are the assistant of Toy Co.',
   stateBlock: () => '',
   coreInvariants: ['Never invent data.'],
@@ -52,7 +52,7 @@ function scripted(): MockLanguageModelV3 {
 }
 
 function toyConfig(outDir: string): EvalConfig {
-  const spec = new AgentSpecBase({ id: 'toy', mode: 'TOY', persona: 'You are the toy agent.', tools: ['ping'], theme: THEME });
+  const spec = new AgentSpecBase({ id: 'toy', mode: 'TOY', persona: 'You are the toy agent.', tools: ['ping'], contract: CONTRACT });
   return {
     domain: 'toy',
     specs: { toy: spec },

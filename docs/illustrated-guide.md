@@ -56,7 +56,7 @@ What lands in your project when the generator runs:
    your-project/
    ├─ src/agents/<domain>/          ◄── the maps                      [generated]
    │    ├─ <agent>-spec.ts              one AgentSpec per agent (≤15 tools each)
-   │    ├─ theme.ts                     the domain theme: voice, invariants, state block
+   │    ├─ contract.ts                     the domain contract: voice, invariants, state block
    │    └─ lexicon.ts, index.ts         the domain's regexes + wiring
    ├─ src/world/                    ◄── the test track                [generated]
    │    ├─ tools.ts                     TOOL_DEFS — the tool contract (JSON schema)
@@ -157,7 +157,7 @@ measured certificate** — a birth certificate, not vibes.
     tools.json or MCP          ┌──────────────────┐            ┌──────────────────┐
     surface (optional),  ────► │  agentspec skill │ ─────────► │   looprun-eval   │
     docs (optional),           │   A·G·E·N·T·S    │  specs     │ check → run →    │
-    ONE purpose sentence       └──────────────────┘  theme     │ judge → certify  │
+    ONE purpose sentence       └──────────────────┘  contract     │ judge → certify  │
                                                      world     │ (FakeWorld — no  │
                                                      evals     │  I/O, no keys)   │
                                                                └────────┬─────────┘
@@ -179,7 +179,7 @@ measured certificate** — a birth certificate, not vibes.
 
 Read the legend carefully — it is a promise about scope:
 
-- **`[generated]`** — specs, theme, deterministic world, eval set, config. The skill writes them,
+- **`[generated]`** — specs, contract, deterministic world, eval set, config. The skill writes them,
   the debate gate validates them, the measured loop certifies them.
 - **`[you own]`** — everything that touches the real world. looprun certifies the *governance*
   against a deterministic replica; wiring the replica's tool contract to production systems, and
@@ -240,9 +240,9 @@ firewall lint.) Companion law, **guard purity**: no clock, no entropy, no networ
 inside a `check()` — deterministic by construction (CI: purity lint, plus a self-test proving the
 lint fires).
 
-### 3.4 One trunk, one theme, persona on the spec
+### 3.4 One trunk, one contract, persona on the spec
 
-One `TrunkTheme` per domain opens every agent's prompt **byte-identically** (voice + invariants +
+One `TrunkContract` per domain opens every agent's prompt **byte-identically** (voice + invariants +
 a state block computed from the world); each agent's persona lives on its own spec and renders as
 late as possible. Result: a maximal shared, cacheable prompt prefix — and volatile state rides the
 user-message tail, never the system prompt. (CI: byte-stability test.)
@@ -250,7 +250,7 @@ user-message tail, never the system prompt. (CI: byte-stability test.)
 ### 3.5 Zero business strings in the library
 
 The runtime carries no domain language of its own — every claim-regex, every label scheme, every
-line of business prose lives in a **generated artifact owned by your project** (specs, theme,
+line of business prose lives in a **generated artifact owned by your project** (specs, contract,
 lexicon). The library is a neutral machine. (CI: scan.)
 
 ### 3.6 Nothing generative ships self-reviewed — the debate gate
@@ -296,7 +296,7 @@ purpose, one sentence (*"assistant for a small accounting firm"*). Everything el
    ▼
    E ── ENGINEER    E1 decompose the surface into ≤15-tool agents by TOOL-NEED
    │                   └─ 🧑 human gate #1: ONE approval table
-   │                E2 draft each AgentSpec   ∥   E3 generate the domain theme
+   │                E2 draft each AgentSpec   ∥   E3 generate the domain contract
    ▼
    N ── NITPICK     five independent adversarial reviewers + a verifier (≤2 rounds):
    │                N1 magnet red-team · N2 prose-condition auditor · N3 composition
@@ -330,7 +330,7 @@ any vendor — and never the subject model's own family: the model being examine
 
 Every eval case runs against it — so a fail is *reproducible*, a fix is *verifiable*, and the whole
 certification needs **no API keys and no live systems**. It is also the state source the guards and
-the theme's state block read during the eval.
+the contract's state block read during the eval.
 
 **The debate primitive** *(gates G1, G3, and N)* — how generated artifacts earn validity:
 
@@ -383,7 +383,7 @@ in seconds.
 
 | # | class | the fix |
 |---|---|---|
-| 1 | state-visibility gap | render the missing state (theme `stateBlock` / a directive) |
+| 1 | state-visibility gap | render the missing state (contract `stateBlock` / a directive) |
 | 2 | missing hard gate | add a guard from the catalog at the right hook |
 | 3 | scope gap | add the tool to the agent, or remap the case (highest-yield single fix) |
 | 4 | unconditioned prose | add the state condition to the behavior line |
@@ -414,7 +414,7 @@ import { makeWorld } from '../world/world.js'
 import { TOOL_DEFS } from '../world/tools.js'
 
 export const careAgent = new LoopRunAgent({
-  spec: careSpec,                               // generated — carries guards, persona, theme
+  spec: careSpec,                               // generated — carries guards, persona, contract
   world: (sessionId) => makeWorld('default'),   // factory ⇒ multi-conversation
   toolDefs: TOOL_DEFS,
   model: 'openai/gpt-5.5',                      // any Mastra router string or AI-SDK model
@@ -438,7 +438,7 @@ npx looprun-eval certify    # N=3 at the ≥90% bar → eval-results/…-cert/CE
 ```
 
 The generated cases don't retire after certification — they are your **regression suite**. Any spec
-or theme edit: re-screen, and `npx looprun-eval lint src evals --spec-laws` must stay clean.
+or contract edit: re-screen, and `npx looprun-eval lint src evals --spec-laws` must stay clean.
 
 ### 5.4 RealWorld — implement `tools.ts` against your real systems
 

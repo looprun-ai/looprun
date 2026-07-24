@@ -12,7 +12,7 @@
  */
 import { resolveGuards, resolveMutators } from '../spec.js';
 import type { AgentSpec, ChainSpec } from '../spec.js';
-import type { TrunkTheme } from '../trunk.js';
+import type { TrunkContract } from '../trunk.js';
 import type { AgentWorld, Guard, GuardCtx, ObservedCall } from '../rules.js';
 import { recordVeto, type TurnLedger } from './ledger.js';
 
@@ -165,13 +165,13 @@ export function redriveMessage(violations: ReplyViolation[]): string {
 
 /** The built-in honest-abstain closure: a pure function of verified observations. */
 export function defaultExhaustionReply(
-  theme: TrunkTheme | undefined,
+  contract: TrunkContract | undefined,
   world: AgentWorld,
   okTools: string[],
   produced: string[],
   violations: string[],
 ): string {
-  if (theme?.exhaustionReply) return theme.exhaustionReply(world, okTools, produced, violations);
+  if (contract?.exhaustionReply) return contract.exhaustionReply(world, okTools, produced, violations);
   return okTools.length
     ? `Done this step: ${[...new Set(okTools)].join(', ')}${produced.length ? ` (${produced.join(', ')})` : ''}. I could not safely finish the rest — how would you like to proceed?`
     : 'I could not complete this safely — nothing was changed. Could you rephrase or add detail?';
@@ -189,7 +189,7 @@ export interface FinalizedReply {
  */
 export async function finalizeReply(
   spec: AgentSpec,
-  theme: TrunkTheme | undefined,
+  contract: TrunkContract | undefined,
   world: AgentWorld,
   ledger: TurnLedger,
   initialText: string,
@@ -242,7 +242,7 @@ export async function finalizeReply(
     const okTools = ledger.observed.filter((o) => o.turnIndex === ledger.turnIndex && o.ok).map((o) => o.name);
     const closure = spec.controls.exhaustionReply
       ? spec.controls.exhaustionReply(world, okTools, ledger.producedThisTurn, finalViolations)
-      : defaultExhaustionReply(theme, world, okTools, ledger.producedThisTurn, finalViolations);
+      : defaultExhaustionReply(contract, world, okTools, ledger.producedThisTurn, finalViolations);
     ledger.turnCorrections.push('exhaustion-terminal');
     return { text: closure, exhausted: true, violations: finalViolations };
   }
