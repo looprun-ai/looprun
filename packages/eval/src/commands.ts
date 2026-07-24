@@ -7,7 +7,7 @@ import { join, dirname, resolve } from 'node:path';
 import process from 'node:process';
 import { checkTrunkStatic, loadSubject, readDeclaredTarget, validateSubject } from './subject.js';
 import { runCase, type CaseDump } from './run.js';
-import { selectModel } from './provider.js';
+import { PROVIDER_ENDPOINTS, selectModel } from './provider.js';
 import { foldVerdicts, readJsonl, renderResultsMd, type VerdictLine } from './fold.js';
 import { buildCert, type CertSummary } from './cert.js';
 
@@ -40,7 +40,8 @@ export async function runCommand(opts: RunCommandOptions): Promise<string> {
   const modelId = opts.model ?? process.env.MODEL ?? target.model;
   if (!modelId) throw new Error('run: no target — pass --model or record ask/targets.json');
   const explicitBaseUrl = opts.baseUrl;
-  const baseUrl = explicitBaseUrl ?? target.baseUrl ?? process.env.MODEL_BASE_URL ?? 'http://localhost:8081/v1';
+  const providerDefault = target.provider ? PROVIDER_ENDPOINTS[target.provider] ?? undefined : undefined;
+  const baseUrl = explicitBaseUrl ?? target.baseUrl ?? providerDefault ?? process.env.MODEL_BASE_URL ?? 'http://localhost:8081/v1';
   const apiKeyEnv = opts.apiKeyEnv ?? target.apiKeyEnv;
   const apiKey = (apiKeyEnv ? process.env[apiKeyEnv] : process.env.MODEL_API_KEY) ?? 'local';
   const ungoverned = opts.ungoverned === true;

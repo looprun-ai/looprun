@@ -28,6 +28,17 @@ export interface SelectedModel {
   isLocal: boolean;
 }
 
+/** Known provider → OpenAI-compatible endpoint (google routes native, no endpoint needed).
+ *  Lets ask/targets.json carry ONLY { provider, model, apiKeyEnv } — zero flags to run. */
+export const PROVIDER_ENDPOINTS: Record<string, string | null> = {
+  google: null,
+  openrouter: 'https://openrouter.ai/api/v1',
+  openai: 'https://api.openai.com/v1',
+  deepseek: 'https://api.deepseek.com',
+  xai: 'https://api.x.ai/v1',
+  local: 'http://localhost:8081/v1',
+};
+
 export function selectModel(t: TargetSelection): SelectedModel {
   const isGemini = /^gemini/i.test(t.modelId) && !t.explicitBaseUrl;
   const isLocal = !isGemini && /^https?:\/\/(localhost|127\.0\.0\.1)[:/]/.test(t.baseUrl);
