@@ -1,5 +1,12 @@
 # accounting-example
 
+## 0.0.10
+
+### Patch Changes
+
+- Updated dependencies
+  - looprun@0.6.3
+
 ## 0.0.9
 
 ### Patch Changes

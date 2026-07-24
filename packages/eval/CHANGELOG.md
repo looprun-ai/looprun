@@ -1,5 +1,15 @@
 # @looprun-ai/eval
 
+## 0.6.3
+
+### Patch Changes
+
+- Release (patch).
+- Updated dependencies
+  - @looprun-ai/core@0.6.3
+  - @looprun-ai/mastra@0.6.3
+  - @looprun-ai/models@0.6.3
+
 ## 0.6.2
 
 ### Patch Changes
