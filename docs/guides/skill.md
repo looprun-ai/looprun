@@ -16,8 +16,11 @@ npx skills add looprun-ai/looprun --skill agentspec
 src/agents/<domain>/         # one <agent>-spec.ts per agent (≤15 tools each) + contract.ts + index.ts
 src/world/                   # world.ts (deterministic tool world + factory), tools.ts, presets.ts
 evals/                       # cases.ts (the generated eval set + caseMap) + judge-prompt.md (rules)
-looprun.eval.config.ts       # the eval contract wiring it all together
+ask/targets.json             # the declared model target the eval CLI reads
 ```
+
+The generated bundle is the **subject directory** the eval CLI runs — see
+[the eval reference](eval-config.md) for the layout it reads.
 
 ## The pipeline (AGENTS)
 
@@ -32,14 +35,15 @@ looprun.eval.config.ts       # the eval contract wiring it all together
   coverage critic, purity lint) + a verifier.
 - **T — Test**: the [measured loop](measured-loop.md) — run, LLM-judge, classify fails, fix,
   ≤3 iterations.
-- **S — Ship**: certify N=3 at the ≥90% bar → `CERT.md` + provenance (`REVIEW.md`, `EVALS.md`).
+- **S — Ship**: certify at the ≥90% bar → `cert.json` + `CERT.md` + provenance (`REVIEW.md`,
+  `EVALS.md`).
 
 Every generative step is gated by the **debate primitive** (one rigid Advocate vs two independent
 Judges, per [BARRED](https://arxiv.org/abs/2604.25203)) — never self-review.
 
 ## Requirements
 
-- A project with `looprun` (dependency) and `@looprun-ai/eval` (devDependency) — the skill scaffolds both
-  when missing (`npx looprun-eval init`).
+- A project with `looprun` (dependency) and `@looprun-ai/eval` (devDependency) — the skill
+  scaffolds both when missing.
 - `GOOGLE_GENERATIVE_AI_API_KEY` for the validation subject model.
 - The judge is the coding agent running the skill — no extra key.

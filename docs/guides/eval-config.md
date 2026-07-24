@@ -1,27 +1,26 @@
-# Eval config reference
+# Eval reference
 
-`looprun.eval.config.ts` at the project root — the eval contract AND the agentspec skill's project
-sentinel. Default-export an `EvalConfig` (from `@looprun-ai/eval`):
+The eval CLI is a **subject runner**: it reads a self-contained subject directory, not a project
+config file.
 
-```ts
-import type { EvalConfig } from '@looprun-ai/eval'
-import { SPECS, CONTRACT } from './src/agents/accounting/index.js'
-import { TOOL_DEFS } from './src/world/tools.js'
-import { worldFactory } from './src/world/world.js'
-import { CASES, CASE_MAP } from './evals/cases.js'
+> **Deprecated:** the old `looprun.eval.config.ts` walk-up flow — and the `init`, `check`,
+> `certify` and `judge-merge` verbs that served it — was replaced by the subject-dir flow below
+> (`run` / `fold` / `cert`). Some examples in this repo still carry the deprecated config type
+> imports; treat those as legacy.
 
-export default {
-  domain: 'accounting',
-  specs: SPECS,                 // agent-id → AgentSpec
-  contract: CONTRACT,                 // optional when every spec sets spec.contract
-  worldFactory,                 // (preset, seed) => AgentWorld — deterministic per (preset, rep)
-  toolDefs: TOOL_DEFS,          // JSON-schema tool defs, executed via world.exec
-  cases: CASES,
-  caseMap: CASE_MAP,            // agent-id → case ids; every case exactly once
-  judgePromptPath: 'evals/judge-prompt.md',   // domain RULES only
-  bar: 0.9,
-} satisfies EvalConfig
+## Subject layout
+
 ```
+subject/
+├── norms/index.ts     SPECS (agent-id → AgentSpec) + CONTRACT (+ optional CASE_AGENT routing)
+├── gen/world.ts       deterministic world: `worldFactory` export, or a class with exec()
+├── gen/tools.json     tool defs (`parameters` or `inputSchema`; array or { tools: [] })
+├── evals/cases.ts     the case pack (default export or `cases`)
+└── ask/targets.json   declared model target — the transparent default; flags/env override
+```
+
+Subject modules may be `.ts`/`.mts` (needs a Node version with type stripping) or plain
+`.js`/`.mjs`.
 
 ## `EvalCase`
 
@@ -43,29 +42,39 @@ export default {
 }
 ```
 
-Invariant semantics: `anyArgs` is a shallow subset match with strict equality; a forbidden call fails
-only if it **took effect** (guard-vetoed calls never reach the world, so they never trip a forbidden).
+Invariant semantics: `anyArgs` is a shallow subset match with strict equality. `requiredToolCalls`
+must succeed; a `forbiddenToolCalls` entry fails on the ATTEMPT, even when the world refuses.
+Invariants are the deterministic gate only — never the quality verdict.
 
 ## Models
 
-- Default subject: `gemini-3.1-flash-lite-thinkoff` — thinking is disabled with the **numeric**
-  `thinkingBudget: 0` (a `thinkingLevel` value does NOT turn thinking off; looprun encodes this).
-  Needs `GOOGLE_GENERATIVE_AI_API_KEY` — the only cloud key looprun ever asks for, and only when
-  this default subject is used; the library itself is model-agnostic.
-- Local: `--model qwen3.5-4b` / `--model qwen3.6-35b-a3b` (llama.cpp via `@looprun-ai/models`, pinned
-  decoding temperature 0).
-- Custom: `model: { model: myAiSdkModel, modelParams: {...}, label: 'mine' }` in the config.
+- The subject's declared target lives in `ask/targets.json` — the transparent default; CLI flags
+  and env override it.
+- `gemini*` targets (no `--base-url`) use the native Google provider with thinking OFF by default
+  (`--thinking` re-enables; thinking is disabled with the **numeric** `thinkingBudget: 0` — a
+  `thinkingLevel` value does NOT turn thinking off; looprun encodes this). Needs
+  `GOOGLE_GENERATIVE_AI_API_KEY` — the only cloud key looprun ever asks for, and only for gemini
+  targets; the library itself is model-agnostic.
+- Anything else is OpenAI-compatible: `--model <id> --base-url <url> --api-key-env <ENV>`
+  (or `MODEL_API_KEY`; fallback `"local"`), temperature 0. A localhost base-url adds runaway
+  brakes: pinned decoding + 2048-token cap + repeated-tool-call stop.
+- `--ungoverned` runs the same bundle with the governance surface emptied.
 
 ## Results layout
 
 ```
-eval-results/<date>-<domain>[-cert]/
-  <agent>.dump.json / .autofail.json / .tasks.jsonl      # scratch (gitignored)
-  <agent>.verdicts.jsonl / .judged.json                  # judge output (commit judged)
-  cert.json  CERT.md                                     # commit
+<subject>/test/<date>-<model>-<arm>/     # override with --out
+  cases.jsonl                            # one CaseDump per line (the judge's input)
+  SUMMARY.md
+  verdicts.jsonl                         # written by the LLM judge
+  RESULTS.md                             # looprun-eval fold
+  cert.json  CERT.md                     # looprun-eval cert (commit these)
 ```
+
+The cert is N=1-honest: it states `reps: 1` explicitly; multi-rep aggregation is a later,
+separate artifact.
 
 ## CLI
 
-`looprun-eval init | check | run | certify | judge-prompt | judge-merge | cert | lint` — see
-`npx looprun-eval help`.
+`looprun-eval run | fold | cert | judge-prompt | lint` — see `npx looprun-eval help` and
+[`packages/eval/README.md`](../../packages/eval/README.md) (source of truth).

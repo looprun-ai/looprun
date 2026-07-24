@@ -49,9 +49,15 @@ on Tuesday 15:00–16:00):
 ## Run the eval
 
 ```bash
-npx looprun-eval check && npx looprun-eval run      # screen (N=1)
-npx looprun-eval certify                            # N=3 → looprun-eval cert
+npx looprun-eval run --subject <subject-dir>        # dump → test/<date>-<model>-<arm>/
+# LLM-judge cases.jsonl → verdicts.jsonl, then:
+npx looprun-eval fold --dump <run>/cases.jsonl --verdicts <run>/verdicts.jsonl
+npx looprun-eval cert <run>                         # → cert.json + CERT.md
 ```
+
+> This example predates the subject runner and still carries the deprecated eval-config type
+> imports; see [`packages/eval/README.md`](../../packages/eval/README.md) for the subject layout
+> the CLI reads.
 
 13 cases, one `scheduler` bucket ([`evals/cases.ts`](evals/cases.ts)); domain judge rules in
 [`evals/judge-prompt.md`](evals/judge-prompt.md). Screening/certification against the measured

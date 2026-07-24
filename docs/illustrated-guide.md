@@ -65,7 +65,7 @@ What lands in your project when the generator runs:
    ├─ evals/                        ◄── the driving exam              [generated]
    │    ├─ cases.ts                     the eval set + case→agent map
    │    └─ judge-prompt.md              the domain grading rules
-   └─ looprun.eval.config.ts        ◄── the contract wiring it all    [generated]
+   └─ ask/targets.json              ◄── the declared model target     [generated]
 ```
 
 Three real example businesses generated exactly this way ship in the repo
@@ -106,7 +106,7 @@ theorem — **walk out of its territory through a door**. looprun walks through 
                                      subject model, a fixed eval set:
                                      inside that region behavior is
                                      reproducible enough to MEASURE and
-                                     CERTIFY (N=3), not just hope about.
+                                     CERTIFY, not just hope about.
 
    door 2 — WEAKEN the goal          "always correct"  →  "correct OR
                                      honestly abstains". when a reply
@@ -129,7 +129,7 @@ Door 3 is the load-bearing one — the **two-layer law**:
    ├─────────────────────────────────────────────────────────────────────┤
    │  LANGUAGE LAYER — the wording of the reply                          │
    │  open-ended · judgment-dependent · no complete rulebook exists      │
-   │  → NEVER gated. measured instead: a judged eval, certified N=3      │
+   │  → NEVER gated. measured instead: a judged eval, then certified     │
    └─────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -156,13 +156,13 @@ measured certificate** — a birth certificate, not vibes.
 
     tools.json or MCP          ┌──────────────────┐            ┌──────────────────┐
     surface (optional),  ────► │  agentspec skill │ ─────────► │   looprun-eval   │
-    docs (optional),           │   A·G·E·N·T·S    │  specs     │ check → run →    │
-    ONE purpose sentence       └──────────────────┘  contract     │ judge → certify  │
+    docs (optional),           │   A·G·E·N·T·S    │  specs     │ run → judge →    │
+    ONE purpose sentence       └──────────────────┘  contract     │ fold → cert      │
                                                      world     │ (FakeWorld — no  │
                                                      evals     │  I/O, no keys)   │
                                                                └────────┬─────────┘
                                                                         │
-                                                          CERT.md — N=3, ≥90%, LLM judge
+                                                     cert.json + CERT.md — ≥90%, LLM judge
                                                                         │
                                                                         ▼
     ┌───────────────────────────────────────────────────────┐  ┌──────────────────┐
@@ -262,7 +262,8 @@ raw generations carry heavy noise, and *self*-refinement is **worse than no veri
 
 ### 3.7 The eval is the arbiter — and the bar is a floor
 
-A change ships when the measured pass-rate says so: **≥90%, LLM-judged, N=3 to certify.** Once at
+A change ships when the measured pass-rate says so: **≥90%, LLM-judged, with the cert stating its
+own rep count.** Once at
 the bar you may keep improving — but past the floor only *margin-validated* prose or deterministic
 gates are accepted (§4.4), never blind wording tweaks. Blind prose is non-local: it trades sibling
 cases invisibly.
@@ -305,7 +306,7 @@ purpose, one sentence (*"assistant for a small accounting firm"*). Everything el
    T ── TEST        the measured loop: run the eval → LLM-judge → classify every
    │                fail → fix ONE class → re-screen (≤3 iterations)
    ▼
-   S ── SHIP        certify N=3 at the ≥90% bar → CERT.md + provenance
+   S ── SHIP        certify at the ≥90% bar → cert.json + CERT.md + provenance
                     └─ 🧑 human gate #2: accept (or not) the residual fails
 ```
 
@@ -432,9 +433,10 @@ res.looprun    // the audit trail: vetoes, redrives, violations, observed calls
 ### 5.3 Test in the fake, certify in the fake
 
 ```bash
-npx looprun-eval check      # config + world seams — no LLM, catches wiring bugs
-npx looprun-eval run        # N=1 screen: invariant gate → LLM judge → merge
-npx looprun-eval certify    # N=3 at the ≥90% bar → eval-results/…-cert/CERT.md
+npx looprun-eval run --subject <dir>   # invariant gate + per-case dumps → test/<date>-<model>-<arm>/
+# LLM-judge cases.jsonl → verdicts.jsonl, then:
+npx looprun-eval fold --dump <run>/cases.jsonl --verdicts <run>/verdicts.jsonl
+npx looprun-eval cert <run>            # ≥90% bar → cert.json + CERT.md
 ```
 
 The generated cases don't retire after certification — they are your **regression suite**. Any spec

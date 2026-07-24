@@ -99,7 +99,8 @@ malformed dates abstain to the world's own validation). **Review closed after ro
 ## Gates (all green at review close)
 
 - `npx looprun-eval lint src evals --spec-laws` → clean
-- `npx looprun-eval check` → green (WARN: GOOGLE_GENERATIVE_AI_API_KEY not exported in the lint
+- the eval CLI config/world-seam check (a legacy verb since replaced by the subject runner) →
+  green (WARN: GOOGLE_GENERATIVE_AI_API_KEY not exported in the lint
   shell — the key lives in `.env` for the run stage; not a config defect)
 - `npx tsc --noEmit` → clean
 - `node .claude/skills/agentspec/scripts/lint-guards.mjs src/agents/homeservices evals` → clean
@@ -107,7 +108,7 @@ malformed dates abstain to the world's own validation). **Review closed after ro
 ## Next (not run here — cost control)
 
 Stage T: `npx looprun-eval run` (N=1 screen) → LLM-judge → classify → fix (≤3 iterations) →
-Stage S: `npx looprun-eval certify` (N=3, bar ≥ 0.90).
+Stage S: certification (the legacy verb was since replaced by `looprun-eval cert`; bar ≥ 0.90).
 
 ## Measured loop (Stage T) — iteration log
 

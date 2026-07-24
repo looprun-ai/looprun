@@ -28,7 +28,7 @@ topology from E1 clustering (below).
 
 ## Preflight
 
-`npx looprun-eval init --domain lawfirm` scaffolded `looprun.eval.config.ts` + `evals/` — the stub
+The eval CLI's legacy scaffold verb (since removed) generated `looprun.eval.config.ts` + `evals/` — the stub
 was then REPLACED with the real wiring (SPECS/CONTRACT/worldFactory/TOOL_DEFS/CASES/CASE_MAP).
 
 ## G1 — tool genesis (isolated draft → BARRED debate, 2 independent judges, T=2)
@@ -166,7 +166,7 @@ round (the measured loop is the backstop).
 === GATE 1: looprun-eval lint --spec-laws ===
 lint: clean
 exit=0
-=== GATE 2: looprun-eval check ===
+=== GATE 2: eval config check (legacy verb, since replaced by the subject runner) ===
 WARN: GOOGLE_GENERATIVE_AI_API_KEY is not set — `looprun-eval run` with the default gemini subject will fail.
 check: green — lawfirm/looprun.eval.config.ts
 exit=0

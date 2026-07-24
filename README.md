@@ -78,11 +78,11 @@ npx looprun init                         # environment check + optional local-mo
    firm*”). It decomposes the tool surface into ≤15-tool agents, drafts each `AgentSpec` + the domain
    contract, and generates an eval set — every artifact validated by adversarial debate
    ([BARRED](https://arxiv.org/abs/2604.25203)-style), never by self-review.
-2. **Measure** — `npx looprun-eval run` executes the eval set against the real loop
-   (invariant gate: deterministic auto-fails), then the LLM judge grades the rubric.
-   Fix, re-screen, iterate (≤3 rounds).
-3. **Certify** — `npx looprun-eval certify` (N=3) at the ≥90% bar → `CERT.md`. Your agents ship with a
-   birth certificate, not vibes.
+2. **Measure** — `npx looprun-eval run --subject <dir>` executes the subject's cases against the
+   real loop (invariant gate: deterministic auto-fails) and dumps per-case traces; the LLM judge
+   grades them, and `looprun-eval fold` merges the verdicts. Fix, re-screen, iterate (≤3 rounds).
+3. **Certify** — `npx looprun-eval cert <run-dir>` at the ≥90% bar → `cert.json` + `CERT.md`. Your
+   agents ship with a birth certificate, not vibes.
 4. **Run** — register the `LoopRunAgent`s in your Mastra instance; `mastra dev` opens Studio with the
    guards live.
 
@@ -94,7 +94,7 @@ npx looprun init                         # environment check + optional local-mo
 | `@looprun-ai/core` | AgentSpec + guards + trunk renderer + the framework-free governed-turn machine |
 | `@looprun-ai/mastra` | `LoopRunAgent` (a real Mastra Agent), `compileSpec` primitives, the conversation runner |
 | `@looprun-ai/models` | validated local models (llama.cpp `ModelRuntimePort`) + the cloud validation model |
-| `@looprun-ai/eval` | the `looprun-eval` CLI: run / judge / certify / lint |
+| `@looprun-ai/eval` | the `looprun-eval` CLI: run / fold / cert / judge-prompt / lint |
 | `@looprun-ai/vercel` | reserved — the Vercel AI SDK backend seam |
 [REV: review the above list]
 

@@ -19,16 +19,15 @@ looprun itself is **model-agnostic** — `LoopRunAgent` takes any Mastra router 
 model, and no API key is required to use the library. One optional key exists: the certification
 CLI's **default subject model** is `gemini-3.1-flash-lite-thinkoff` (a pinned, cheap ruler so
 certified scores are comparable across projects), which needs `GOOGLE_GENERATIVE_AI_API_KEY` in
-`.env`. To certify without any cloud key, point the eval at a local alias
-(`npx looprun-eval run --model qwen3.5-4b`) or at any AI-SDK model via `model: {...}` in
-`looprun.eval.config.ts` — see [models in the eval config](guides/eval-config.md#models).
+`.env`. To certify without any cloud key, point the eval at any OpenAI-compatible endpoint —
+including a local one — with `npx looprun-eval run --subject <dir> --model <id> --base-url <url>
+--api-key-env <ENV>`; see [the eval reference](guides/eval-config.md#models).
 
 ## 2. Generate your agents (recommended path)
 
 In your project, invoke the **agentspec** skill and answer one question — the agent's purpose, one
-sentence. The skill generates `src/agents/<domain>/` (specs + contract), `src/world/` (tool world),
-`evals/` (the eval set) and wires `looprun.eval.config.ts`. See
-[the skill guide](guides/skill.md).
+sentence. The skill generates the specs + domain contract, the deterministic tool world, and the
+eval set — the subject bundle the eval CLI reads. See [the skill guide](guides/skill.md).
 
 ## 3. Or write a spec by hand
 
@@ -83,9 +82,10 @@ npx mastra dev     # → Mastra Studio: chat with the agent, watch the guards ve
 ## 5. Certify
 
 ```bash
-npx looprun-eval check      # config + world seams, no LLM
-npx looprun-eval run        # N=1 screen (invariant gate) → LLM-judge → merge
-npx looprun-eval certify    # N=3 at the ≥90% bar → eval-results/…-cert/CERT.md
+npx looprun-eval run --subject <dir>   # execute the cases → <subject>/test/<date>-<model>-<arm>/
+# LLM-judge cases.jsonl → verdicts.jsonl, then:
+npx looprun-eval fold --dump <run>/cases.jsonl --verdicts <run>/verdicts.jsonl   # → RESULTS.md
+npx looprun-eval cert <run>            # ≥90% bar → cert.json + CERT.md
 ```
 
 The full protocol: [the measured loop](guides/measured-loop.md).

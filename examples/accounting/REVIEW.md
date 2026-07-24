@@ -85,7 +85,7 @@ sendClientNotification = the documented single-step exemption.
   with `requiresConfirmation:true` on destructive probes; terminal tools handled in `exec`.
 - `src/world/presets.ts` — 8 boundary presets (steady-books, fresh-client-no-regime, empty-books,
   unpaid-invoice-overdue, invoice-paid, overdue-tax-deadline, filing-prepared, filing-submitted).
-- `npx looprun-eval check` — green (config + world seams validated, no LLM).
+- the eval CLI config/world-seam check — green (no LLM; a legacy verb since replaced by the subject runner).
 
 ## Stage G3 — eval generation
 
