@@ -6,13 +6,12 @@
  *   2. Stateful regex — /g|/y flags used with .test()/.exec() (lastIndex leaks across calls).
  *   3. S-1 firewall — guard code must never read user text (ctx.userText / messages / …).
  *   4. Contract-persona law — a contract file may not carry a `persona:` key (persona lives on the spec).
- * Plus `--spec-laws` (config-level): persona present, ≤15 tools, no own systemPrompt, caseMap sane.
+ * Plus `--spec-laws` (subject-level): validateSpec warnings + no own systemPrompt.
  */
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { validateSpec } from '@looprun-ai/core';
-import { checkConfig } from './config.js';
-import type { EvalConfig } from './types.js';
+import type { AgentSpec } from '@looprun-ai/core';
 
 export interface LintViolation {
   file: string;
@@ -82,17 +81,14 @@ export function lintPaths(paths: string[]): LintViolation[] {
   return files.flatMap((f) => lintSource(f, readFileSync(f, 'utf8')));
 }
 
-/** The config-level spec laws (`--spec-laws`). */
-export function lintSpecLaws(config: EvalConfig): string[] {
+/** The subject-level spec laws (`--spec-laws`). */
+export function lintSpecLaws(specs: Record<string, AgentSpec>): string[] {
   const out: string[] = [];
-  for (const [id, spec] of Object.entries(config.specs ?? {})) {
+  for (const [id, spec] of Object.entries(specs ?? {})) {
     for (const w of validateSpec(spec)) out.push(`spec "${id}": ${w.message}`);
     if (spec.surface.systemPrompt) {
       out.push(`spec "${id}": carries its own systemPrompt — generated specs must use the trunk renderer (contract + spec only)`);
     }
-  }
-  for (const issue of checkConfig(config)) {
-    if (issue.level === 'error') out.push(issue.message);
   }
   return out;
 }

@@ -1,0 +1,233 @@
+/**
+ * @looprun-ai/eval — subject loader. Resolves a generated subject directory into the pieces
+ * the runner needs: the SPECS map + domain CONTRACT (+ optional CASE_AGENT routing) from
+ * `norms/index`, the deterministic world factory from `gen/world`, the case pack from
+ * `evals/cases`, the agent-facing tool defs from `gen/tools.json`, and the declared model
+ * target from `ask/targets.json` (a transparent default — flags/env only override it).
+ */
+import { existsSync, readFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { renderScopedSpecTrunk } from '@looprun-ai/core';
+import type { AgentSpec, AgentWorld, DomainContract, ToolDef } from '@looprun-ai/core';
+
+export interface CaseTurn {
+  userText: string;
+}
+
+export interface ReqCall {
+  name: string;
+  /** Shallow subset match: every key/value here must strictly equal the observed call's arg. */
+  anyArgs?: Record<string, unknown>;
+}
+
+export interface CaseInvariants {
+  requiredToolCalls?: ReqCall[];
+  forbiddenToolCalls?: ReqCall[];
+}
+
+export interface RubricItem {
+  id: string;
+  description: string;
+  critical?: boolean;
+}
+
+export interface SubjectCase {
+  id: string;
+  title?: string;
+  setup?: { preset?: string; clearConversation?: boolean };
+  turns: CaseTurn[];
+  expectations?: { invariants?: CaseInvariants; rubric?: RubricItem[] };
+  targets?: string[];
+}
+
+export interface Subject {
+  dir: string;
+  specs: Record<string, AgentSpec>;
+  contract: DomainContract;
+  caseAgent: Record<string, string>;
+  cases: SubjectCase[];
+  toolDefs: ToolDef[];
+  makeWorld: (preset?: string) => AgentWorld;
+}
+
+/** The declared model target recorded by the subject's ASK phase (`ask/targets.json`). */
+export interface DeclaredTarget {
+  model?: string;
+  provider?: string;
+  apiKeyEnv?: string;
+  baseUrl?: string;
+  thinking?: boolean;
+}
+
+/** Read the first declared target from `ask/targets.json` (missing file = empty target). */
+export function readDeclaredTarget(subjectDir: string): DeclaredTarget {
+  try {
+    const t = JSON.parse(readFileSync(join(subjectDir, 'ask', 'targets.json'), 'utf8'));
+    return (Array.isArray(t.targets) ? t.targets[0] : t.targets) ?? {};
+  } catch {
+    return {};
+  }
+}
+
+/** Pick the world constructor from the gen/world module: an explicit `worldFactory`
+ *  export wins; otherwise the first exported class whose prototype carries `exec`. */
+function resolveWorldFactory(mod: Record<string, unknown>): (preset?: string) => AgentWorld {
+  const factory = mod.worldFactory;
+  if (typeof factory === 'function' && !factory.prototype?.exec) {
+    return (preset?: string) => (factory as (p?: string) => AgentWorld)(preset);
+  }
+  for (const value of Object.values(mod)) {
+    if (typeof value === 'function' && typeof value.prototype?.exec === 'function') {
+      const Ctor = value as new (preset?: string) => AgentWorld;
+      return (preset?: string) => new Ctor(preset);
+    }
+  }
+  throw new Error('gen/world exports no world factory (no class with an exec method)');
+}
+
+/** Tool defs come from gen/tools.json; the file uses `parameters`, the engine wants `inputSchema`. */
+function readToolDefs(dir: string): ToolDef[] {
+  const raw = JSON.parse(readFileSync(join(dir, 'gen', 'tools.json'), 'utf8')) as
+    | Array<Record<string, unknown>>
+    | { tools: Array<Record<string, unknown>> };
+  const list = Array.isArray(raw) ? raw : raw.tools;
+  if (!Array.isArray(list)) throw new Error('gen/tools.json: expected an array or a { tools: [] } object');
+  return list.map((t) => ({
+    name: String(t.name),
+    description: String(t.description ?? ''),
+    inputSchema: (t.inputSchema ?? t.parameters ?? { type: 'object', properties: {} }) as Record<string, unknown>,
+  }));
+}
+
+const MODULE_EXTS = ['.ts', '.mts', '.js', '.mjs'];
+
+/** Resolve a subject module by base path, trying .ts/.mts/.js/.mjs (TS subjects need a Node
+ *  version with type stripping; plain-JS subjects run everywhere). */
+function moduleUrl(dir: string, base: string): string {
+  for (const ext of MODULE_EXTS) {
+    const p = join(dir, base + ext);
+    if (existsSync(p)) return pathToFileURL(p).href;
+  }
+  throw new Error(`${dir}/${base}.{ts,mts,js,mjs} not found`);
+}
+
+export async function loadSubject(subjectDir: string): Promise<Subject> {
+  const dir = resolve(subjectDir);
+  const load = (base: string) => import(moduleUrl(dir, base));
+
+  const [norms, worldMod, casesMod] = await Promise.all([
+    load('norms/index'),
+    load('gen/world'),
+    load('evals/cases'),
+  ]);
+
+  const specs = norms.SPECS as Record<string, AgentSpec> | undefined;
+  const contract = norms.CONTRACT as DomainContract | undefined;
+  if (!specs || !Object.keys(specs).length) throw new Error(`${dir}/norms/index exports no SPECS map`);
+  if (!contract) throw new Error(`${dir}/norms/index exports no CONTRACT`);
+
+  const cases = (casesMod.default ?? casesMod.cases) as SubjectCase[] | undefined;
+  if (!Array.isArray(cases) || !cases.length) throw new Error(`${dir}/evals/cases exports no case array`);
+
+  return {
+    dir,
+    specs,
+    contract,
+    caseAgent: (norms.CASE_AGENT ?? {}) as Record<string, string>,
+    cases,
+    toolDefs: readToolDefs(dir),
+    makeWorld: resolveWorldFactory(worldMod as Record<string, unknown>),
+  };
+}
+
+const WORLD_SEAMS = ['exec', 'advanceTurn', 'ingestAttachment'] as const;
+
+/**
+ * Structural preflight — no LLM calls. Returns issue strings (empty = clean): duplicate case
+ * ids, cases with no turns or no expectations, spec-surface or invariant tool names with no
+ * toolDef, CASE_AGENT routes to unknown specs/cases, and world-seam holes (one world probed
+ * per distinct preset). Reported as warnings by the CLI; a broken reference would otherwise
+ * surface only mid-run as a confusing model/world error.
+ */
+export function validateSubject(subject: Subject): string[] {
+  const issues: string[] = [];
+  const defNames = new Set(subject.toolDefs.map((d) => d.name));
+
+  const seen = new Set<string>();
+  for (const c of subject.cases) {
+    if (seen.has(c.id)) issues.push(`case "${c.id}": duplicate id`);
+    seen.add(c.id);
+    if (!c.turns?.length) issues.push(`case "${c.id}": no turns`);
+    if (!c.expectations?.invariants && !c.expectations?.rubric?.length) {
+      issues.push(`case "${c.id}": no invariants and no rubric — nothing to evaluate`);
+    }
+    const inv = c.expectations?.invariants;
+    for (const r of [...(inv?.requiredToolCalls ?? []), ...(inv?.forbiddenToolCalls ?? [])]) {
+      if (!defNames.has(r.name)) issues.push(`case "${c.id}": invariant tool "${r.name}" has no toolDef`);
+    }
+  }
+
+  for (const [id, spec] of Object.entries(subject.specs)) {
+    if (spec.id !== id) issues.push(`spec key "${id}" differs from spec.id "${spec.id}"`);
+    for (const t of spec.surface.tools) {
+      if (!defNames.has(t)) issues.push(`spec "${id}": tool "${t}" has no toolDef`);
+    }
+  }
+
+  for (const [caseId, agent] of Object.entries(subject.caseAgent)) {
+    if (!subject.specs[agent]) issues.push(`CASE_AGENT: case "${caseId}" routes to unknown spec "${agent}"`);
+    if (!seen.has(caseId)) issues.push(`CASE_AGENT: "${caseId}" is not a known case`);
+  }
+
+  // World seams: one world per distinct preset, probed structurally.
+  const presets = [...new Set(subject.cases.map((c) => c.setup?.preset ?? 'default'))];
+  for (const preset of presets) {
+    try {
+      const world = subject.makeWorld(preset);
+      for (const m of WORLD_SEAMS) {
+        if (typeof (world as Record<string, unknown>)[m] !== 'function') {
+          issues.push(`world(preset "${preset}"): missing seam method ${m}()`);
+        }
+      }
+      if (!Array.isArray(world.toolCalls)) issues.push(`world(preset "${preset}"): toolCalls must be an array`);
+      if (!Array.isArray(world.sseActions)) issues.push(`world(preset "${preset}"): sseActions must be an array`);
+    } catch (e) {
+      issues.push(`makeWorld("${preset}") threw: ${String((e as Error).message ?? e)}`);
+    }
+  }
+  return issues;
+}
+
+/** CASE_AGENT routing, with the single-spec fallback. */
+export function agentForCase(subject: Subject, caseId: string): string {
+  const routed = subject.caseAgent[caseId];
+  if (routed && subject.specs[routed]) return routed;
+  const ids = Object.keys(subject.specs);
+  if (ids.length === 1) return ids[0];
+  throw new Error(`case "${caseId}" has no CASE_AGENT route and the subject has ${ids.length} specs`);
+}
+
+/**
+ * TRUNK-STATIC gate (fundamental for local serving: byte-identical trunks are what the
+ * llama.cpp prefix cache reuses). The engine renders the trunk world-independently BY
+ * CONSTRUCTION, so: (a) each agent's trunk must be BYTE-IDENTICAL under different presets;
+ * (b) all agents of the domain must share an identical HEAD (the contract's voice opens
+ * every trunk — per-agent divergence as late as possible). Returns human-readable failures.
+ */
+export function checkTrunkStatic(subject: Subject, presets: [string, string]): string[] {
+  const fails: string[] = [];
+  const trunks: string[] = [];
+  for (const [id, spec] of Object.entries(subject.specs)) {
+    const a = renderScopedSpecTrunk(subject.makeWorld(presets[0]), spec, [], subject.contract);
+    const b = renderScopedSpecTrunk(subject.makeWorld(presets[1]), spec, [], subject.contract);
+    if (a !== b) fails.push(`${id}: trunk differs across presets ${presets[0]} vs ${presets[1]} (volatile state leaked into the trunk)`);
+    trunks.push(a);
+  }
+  if (trunks.length > 1) {
+    const head = (x: string, y: string) => { let i = 0; while (i < x.length && x[i] === y[i]) i++; return i; };
+    const shared = trunks.reduce((n, t) => Math.min(n, head(trunks[0], t)), trunks[0].length);
+    if (shared < 200) fails.push(`shared trunk head across agents is only ${shared} bytes — the contract voice must open every trunk identically`);
+  }
+  return fails;
+}

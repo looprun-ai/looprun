@@ -1,0 +1,5 @@
+{
+  "targets": [
+    { "model": "toy-local", "baseUrl": "http://localhost:8081/v1" }
+  ]
+}

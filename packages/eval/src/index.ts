@@ -1,33 +1,37 @@
 /**
  * @looprun-ai/eval — public API (the CLI `looprun-eval` wraps these).
  */
+export {
+  loadSubject,
+  validateSubject,
+  agentForCase,
+  checkTrunkStatic,
+  readDeclaredTarget,
+} from './subject.js';
 export type {
-  EvalCase,
-  EvalConfig,
-  ModelRef,
+  Subject,
+  SubjectCase,
+  CaseTurn,
+  CaseInvariants,
   ReqCall,
   RubricItem,
-  DumpRecord,
-  AutoFail,
-  JudgeTask,
-  Verdict,
-} from './types.js';
-export { CASE_ID_RE } from './types.js';
-export { findConfigPath, loadConfig, checkConfig, caseById } from './config.js';
-export type { LoadedConfig, CheckIssue } from './config.js';
-export { toolCallMatches, toolCallFailures } from './invariants.js';
-export type { ObsCall } from './invariants.js';
-export { runEval } from './runner.js';
-export type { RunOptions, RunSummary } from './runner.js';
-export { mergeVerdicts, mergeVerdictFiles } from './judge.js';
-export type { MergeResult } from './judge.js';
+  DeclaredTarget,
+} from './subject.js';
+export { runCase, toolCallMatches, evaluateInvariants } from './run.js';
+export type { CaseDump, DumpTurn, DumpToolCall, InvariantVerdict, RunCaseOptions } from './run.js';
+export { stripGovernance } from './ungoverned.js';
+export type { UngovernedBundle } from './ungoverned.js';
+export { selectModel } from './provider.js';
+export type { SelectedModel, TargetSelection } from './provider.js';
+export { foldVerdicts, renderResultsMd, readJsonl } from './fold.js';
+export type { FoldResult, FoldRow, VerdictLine } from './fold.js';
 export { buildCert } from './cert.js';
-export type { CertSummary } from './cert.js';
+export type { CertOptions, CertSummary } from './cert.js';
+export { runCommand, foldCommand, certCommand } from './commands.js';
+export type { RunCommandOptions, FoldCommandOptions, CertCommandOptions } from './commands.js';
+export type { EvalCase, EvalConfig } from './legacy-types.js';
 export { lintSource, lintPaths, lintSpecLaws, BANNED_TOKENS } from './lint.js';
 export type { LintViolation } from './lint.js';
-export { initProject } from './init.js';
-export { resolveModel } from './model-resolve.js';
-export type { ResolvedModel } from './model-resolve.js';
 
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';

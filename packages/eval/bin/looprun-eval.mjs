@@ -1,27 +1,26 @@
 #!/usr/bin/env node
 /**
- * looprun-eval — the measured loop of a looprun project.
+ * looprun-eval — the subject runner + measured loop of a looprun project.
  *
- *   looprun-eval init [--domain <d>]
- *   looprun-eval check
- *   looprun-eval run [--agent id] [--cases csv|full] [--reps N] [--model alias] [--out dir]
- *   looprun-eval certify [...same flags]           (= run --reps 3, '-cert' tagged dir)
+ *   looprun-eval run  --subject <dir> [--model <id>] [--base-url <url>] [--api-key-env <ENV>]
+ *                     [--case id[,id]] [--ungoverned] [--thinking] [--out <dir>]
+ *   looprun-eval fold --dump <cases.jsonl> --verdicts <verdicts.jsonl> [--out <RESULTS.md>]
+ *   looprun-eval cert <run-dir> [--bar 0.9] [--model <label>] [--date <iso>] [--note <text>]
  *   looprun-eval judge-prompt
- *   looprun-eval judge-merge <dump.json> <verdicts.jsonl> [autofail.json] [judged.json]
- *   looprun-eval cert <results-dir> [--bar 0.9] [--model label]
- *   looprun-eval lint [paths…] [--spec-laws]
+ *   looprun-eval lint [paths…] [--spec-laws --subject <dir>]
  */
 const HELP = `looprun-eval <command>
 
-  init [--domain <d>]        Scaffold looprun.eval.config.ts + evals/ in this project.
-  check                      Validate the config + world seams (no LLM calls).
-  run [flags]                Run the eval set → dump/autofail/tasks per agent bucket.
-                             --agent <id> --cases <csv|full> --reps <N=1> --model <alias> --out <dir>
-  certify [flags]            = run --reps 3 into a '-cert' results dir.
-  judge-prompt               Print the packaged generic judge prompt path.
-  judge-merge <dump> <verdicts> [autofail] [out]   Fold judge verdicts → .judged.json.
-  cert <dir> [--bar 0.9]     Fold *.judged.json → cert.json + CERT.md.
-  lint [paths…] [--spec-laws]  Purity/firewall/contract lint (+ config spec laws).
+  run [flags]        Run the subject's cases N=1 → cases.jsonl + SUMMARY.md.
+                     --subject <dir> (required) --model <id> --base-url <url>
+                     --api-key-env <ENV> --case id[,id] --ungoverned --thinking --out <dir>
+                     Target default: the subject's ask/targets.json (flags/env override).
+  fold [flags]       Merge judge verdicts into RESULTS.md (final pass = invariants AND judge).
+                     --dump <cases.jsonl> --verdicts <verdicts.jsonl> [--out <RESULTS.md>]
+  cert <run-dir>     Fold cases.jsonl + verdicts.jsonl → cert.json + CERT.md (reps=1, stated).
+                     [--bar 0.9] [--model <label>] [--date <iso>] [--note <text>]
+  judge-prompt       Print the packaged generic judge prompt path.
+  lint [paths…]      Purity/firewall/contract lint. [--spec-laws --subject <dir>]
 
 Quality verdicts come ONLY from the LLM judge — the run's streamed pass/fail lines are the
 deterministic invariant gate.
@@ -35,7 +34,7 @@ function has(name) {
   return process.argv.includes(`--${name}`);
 }
 
-const VALUE_FLAGS = new Set(['--domain', '--agent', '--cases', '--reps', '--model', '--out', '--bar']);
+const VALUE_FLAGS = new Set(['--subject', '--model', '--base-url', '--api-key-env', '--case', '--out', '--dump', '--verdicts', '--bar', '--date', '--note']);
 
 function positionals() {
   const argv = process.argv.slice(2);
@@ -60,36 +59,50 @@ async function main() {
     return;
   }
 
-  if (cmd === 'init') {
-    const domain = flag('domain', 'my-domain') ?? 'my-domain';
-    const { resolve } = await import('node:path');
-    const created = api.initProject(resolve(process.env.LOOPRUN_ROOT ?? process.cwd()), domain);
-    console.log(created.length ? `created:\n  ${created.join('\n  ')}` : 'nothing to do (config already present)');
-    return;
-  }
-
   if (cmd === 'judge-prompt') {
     console.log(api.judgePromptPath());
     return;
   }
 
-  if (cmd === 'judge-merge') {
-    const [dump, verdicts, autofail, out] = rest;
-    if (!dump || !verdicts) throw new Error('usage: looprun-eval judge-merge <dump.json> <verdicts.jsonl> [autofail.json] [judged.json]');
-    api.mergeVerdictFiles(dump, verdicts, autofail, out);
+  if (cmd === 'run') {
+    const subject = flag('subject');
+    if (!subject) throw new Error('run: --subject <dir> is required');
+    const outDir = await api.runCommand({
+      subject,
+      model: flag('model', undefined),
+      baseUrl: flag('base-url', undefined),
+      apiKeyEnv: flag('api-key-env', undefined),
+      cases: flag('case', undefined)?.split(',').map((s) => s.trim()).filter(Boolean),
+      ungoverned: has('ungoverned'),
+      thinking: has('thinking'),
+      out: flag('out', undefined),
+    });
+    console.log(outDir);
+    return;
+  }
+
+  if (cmd === 'fold') {
+    const dump = flag('dump');
+    const verdicts = flag('verdicts');
+    if (!dump || !verdicts) throw new Error('fold: --dump and --verdicts are required');
+    console.log(api.foldCommand({ dump, verdicts, out: flag('out', undefined) }));
     return;
   }
 
   if (cmd === 'cert') {
     const [dir] = rest;
-    if (!dir) throw new Error('usage: looprun-eval cert <results-dir>');
-    const { config } = await api.loadConfig();
-    const summary = api.buildCert(dir, {
-      domain: config.domain,
-      model: flag('model', typeof config.model === 'string' ? config.model : 'gemini-3.1-flash-lite-thinkoff'),
-      bar: Number(flag('bar', String(config.bar ?? 0.9))),
+    if (!dir) throw new Error('usage: looprun-eval cert <run-dir>');
+    const summary = api.certCommand({
+      dir,
+      model: flag('model', undefined),
+      bar: has('bar') ? Number(flag('bar')) : undefined,
+      date: flag('date', undefined),
+      note: flag('note', undefined),
     });
-    console.log(`overall ${summary.overall.pass}/${summary.overall.total} = ${(summary.overall.rate * 100).toFixed(1)}% → ${summary.certified ? 'CERTIFIED' : 'BELOW BAR'} (bar ${(summary.bar * 100).toFixed(0)}%) → ${dir}/CERT.md`);
+    console.log(
+      `overall ${(summary.passRate * 100).toFixed(1)}% over ${summary.cases} case(s) → ` +
+        `${summary.certified ? 'CERTIFIED' : 'BELOW BAR'} (bar ${(summary.bar * 100).toFixed(0)}%, reps=1) → ${dir}/CERT.md`,
+    );
     if (!summary.certified) process.exitCode = 1;
     return;
   }
@@ -100,43 +113,15 @@ async function main() {
     for (const v of violations) console.error(`${v.file}:${v.line} [${v.rule}] ${v.message}`);
     let specLawFails = [];
     if (has('spec-laws')) {
-      const { config } = await api.loadConfig();
-      specLawFails = api.lintSpecLaws(config);
+      const subjectDir = flag('subject');
+      if (!subjectDir) throw new Error('lint --spec-laws: --subject <dir> is required');
+      const subject = await api.loadSubject(subjectDir);
+      specLawFails = api.lintSpecLaws(subject.specs);
       for (const m of specLawFails) console.error(`[spec-laws] ${m}`);
     }
     const total = violations.length + specLawFails.length;
     console.log(total ? `lint: ${total} violation(s)` : 'lint: clean');
     if (total) process.exitCode = 1;
-    return;
-  }
-
-  if (cmd === 'check') {
-    const { config, configPath } = await api.loadConfig();
-    const issues = api.checkConfig(config);
-    for (const i of issues) console[i.level === 'error' ? 'error' : 'warn'](`${i.level.toUpperCase()}: ${i.message}`);
-    const errors = issues.filter((i) => i.level === 'error').length;
-    console.log(errors ? `check: ${errors} error(s) — ${configPath}` : `check: green — ${configPath}`);
-    if (errors) process.exitCode = 1;
-    return;
-  }
-
-  if (cmd === 'run' || cmd === 'certify') {
-    const { config } = await api.loadConfig();
-    const issues = api.checkConfig(config).filter((i) => i.level === 'error');
-    if (issues.length) {
-      for (const i of issues) console.error(`ERROR: ${i.message}`);
-      throw new Error('config check failed — fix the errors above (looprun-eval check)');
-    }
-    const casesArg = flag('cases', 'full') ?? 'full';
-    const summary = await api.runEval(config, {
-      agent: flag('agent', undefined),
-      cases: casesArg === 'full' ? ['full'] : casesArg.split(',').map((s) => s.trim()).filter(Boolean),
-      reps: Number(flag('reps', cmd === 'certify' ? '3' : '1')),
-      model: flag('model', undefined),
-      out: flag('out', undefined),
-      certTag: cmd === 'certify',
-    });
-    console.log(`\nwrote ${summary.perAgent.length} agent bucket(s) → ${summary.outDir}`);
     return;
   }
 

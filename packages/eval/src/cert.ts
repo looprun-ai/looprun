@@ -1,90 +1,87 @@
 /**
- * @looprun-ai/eval — certification: fold every *.judged.json in a results dir into cert.json + CERT.md.
- * Certified = judged pass-rate ≥ bar (default 0.90) across ALL reps (screen N=1, certify N=3).
+ * @looprun-ai/eval — certification over ONE run dir's artifacts: `cases.jsonl` (the dumps)
+ * + `verdicts.jsonl` (the judge's folded verdicts). Emits `cert.json` + `CERT.md`.
+ *
+ * N=1-honest: a run dir is one rep, and the cert says so explicitly (`reps: 1` + the
+ * artifact note). Multi-rep aggregation is a separate, later concern — never faked here.
+ * `generatedAt` is a caller-supplied parameter (no wall-clock default).
  */
-import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
-import { basename, join } from 'node:path';
-import type { DumpRecord } from './types.js';
+import { readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { foldVerdicts, readJsonl } from './fold.js';
+import type { VerdictLine } from './fold.js';
+import type { CaseDump } from './run.js';
 
-export interface CertSummary {
-  domain: string;
-  date: string;
-  model: string;
-  bar: number;
-  reps: number;
-  perAgent: Array<{ agent: string; pass: number; total: number; rate: number }>;
-  perRep: Array<{ rep: number; pass: number; total: number; rate: number }>;
-  overall: { pass: number; total: number; rate: number };
-  certified: boolean;
+export interface CertOptions {
+  /** Model label. Default: the model recorded in the dumps. */
+  model?: string;
+  /** Certification bar over the final (invariants AND judge) pass-rate. Default 0.9. */
+  bar?: number;
+  /** ISO date stamped into the cert — caller-supplied (`--date`); omitted when absent. */
+  generatedAt?: string;
+  /** Free-form provenance note appended to the default artifact note. */
+  artifactNote?: string;
 }
 
-export function buildCert(dir: string, opts: { domain: string; model: string; bar?: number; date?: string }): CertSummary {
-  const bar = opts.bar ?? 0.9;
-  const files = readdirSync(dir).filter((f) => f.endsWith('.judged.json'));
-  if (!files.length) throw new Error(`looprun-eval cert: no *.judged.json in ${dir} — run judge-merge first.`);
-
-  const perAgent: CertSummary['perAgent'] = [];
-  const byRep = new Map<number, { pass: number; total: number }>();
-  let pass = 0;
-  let total = 0;
-  for (const f of files) {
-    const records = JSON.parse(readFileSync(join(dir, f), 'utf8')) as DumpRecord[];
-    const agent = basename(f, '.judged.json');
-    let aPass = 0;
-    for (const r of records) {
-      total++;
-      const rep = byRep.get(r.rep) ?? { pass: 0, total: 0 };
-      rep.total++;
-      if (r.status === 'pass') {
-        pass++;
-        aPass++;
-        rep.pass++;
-      }
-      byRep.set(r.rep, rep);
-    }
-    perAgent.push({ agent, pass: aPass, total: records.length, rate: records.length ? aPass / records.length : 0 });
-  }
-  const perRep = [...byRep.entries()]
-    .sort((a, b) => a[0] - b[0])
-    .map(([rep, v]) => ({ rep, pass: v.pass, total: v.total, rate: v.total ? v.pass / v.total : 0 }));
-
-  const summary: CertSummary = {
-    domain: opts.domain,
-    date: opts.date ?? new Date().toISOString().slice(0, 10),
-    model: opts.model,
-    bar,
-    reps: perRep.length,
-    perAgent,
-    perRep,
-    overall: { pass, total, rate: total ? pass / total : 0 },
-    certified: total > 0 && pass / total >= bar,
-  };
-
-  writeFileSync(join(dir, 'cert.json'), JSON.stringify(summary, null, 2));
-  writeFileSync(join(dir, 'CERT.md'), renderCertMd(summary));
-  return summary;
+export interface CertSummary {
+  model: string;
+  cases: number;
+  passRate: number;
+  bar: number;
+  certified: boolean;
+  /** Always 1 — one run dir is one rep (stated, never aggregated away). */
+  reps: 1;
+  generatedAt?: string;
+  artifactNote: string;
+  perCase: Array<{ caseId: string; final: 'pass' | 'FAIL' }>;
 }
 
 const pct = (r: number) => `${(r * 100).toFixed(1)}%`;
 
+export function buildCert(runDir: string, opts: CertOptions = {}): CertSummary {
+  const dumps = readJsonl<CaseDump>(readFileSync(join(runDir, 'cases.jsonl'), 'utf8'));
+  if (!dumps.length) throw new Error(`cert: ${runDir}/cases.jsonl is empty`);
+  const verdicts = readJsonl<VerdictLine>(readFileSync(join(runDir, 'verdicts.jsonl'), 'utf8'));
+  const fold = foldVerdicts(dumps, verdicts);
+  if (fold.missing) {
+    process.stderr.write(`[looprun-eval] WARN ${fold.missing} case(s) had NO verdict (counted FAIL) — re-judge those caseIds\n`);
+  }
+
+  const bar = opts.bar ?? 0.9;
+  const passRate = fold.total ? fold.passes / fold.total : 0;
+  const baseNote =
+    'reps=1: this certificate covers a single run of the case set (final pass = invariants AND judge). ' +
+    'Multi-rep aggregation is out of scope for this artifact.';
+  const summary: CertSummary = {
+    model: opts.model ?? dumps[0].model,
+    cases: fold.total,
+    passRate,
+    bar,
+    certified: fold.total > 0 && passRate >= bar,
+    reps: 1,
+    ...(opts.generatedAt ? { generatedAt: opts.generatedAt } : {}),
+    artifactNote: opts.artifactNote ? `${baseNote} ${opts.artifactNote}` : baseNote,
+    perCase: fold.rows.map((r) => ({ caseId: r.caseId, final: r.final })),
+  };
+
+  writeFileSync(join(runDir, 'cert.json'), JSON.stringify(summary, null, 2) + '\n');
+  writeFileSync(join(runDir, 'CERT.md'), renderCertMd(summary) + '\n');
+  return summary;
+}
+
 function renderCertMd(s: CertSummary): string {
-  const lines = [
-    `# Certification — ${s.domain}`,
+  return [
+    `# Certification — ${s.model}`,
     '',
-    `- date: ${s.date}`,
-    `- subject model: ${s.model}`,
-    `- bar: ≥${pct(s.bar)} (LLM-judged pass-rate; invariant auto-fails count as fails)`,
-    `- reps: ${s.reps}`,
-    `- **overall: ${s.overall.pass}/${s.overall.total} = ${pct(s.overall.rate)} → ${s.certified ? 'CERTIFIED ✅' : 'BELOW BAR ❌'}**`,
+    ...(s.generatedAt ? [`- generated: ${s.generatedAt}`] : []),
+    `- reps: 1 (single run — stated, not aggregated)`,
+    `- bar: ≥${pct(s.bar)} (final pass-rate; final = invariants AND judge)`,
+    `- **overall: ${s.perCase.filter((c) => c.final === 'pass').length}/${s.cases} = ${pct(s.passRate)} → ${s.certified ? 'CERTIFIED' : 'BELOW BAR'}**`,
     '',
-    '| agent | pass | total | rate |',
-    '|---|---|---|---|',
-    ...s.perAgent.map((a) => `| ${a.agent} | ${a.pass} | ${a.total} | ${pct(a.rate)} |`),
+    '| case | final |',
+    '|---|---|',
+    ...s.perCase.map((c) => `| ${c.caseId} | ${c.final} |`),
     '',
-    '| rep | pass | total | rate |',
-    '|---|---|---|---|',
-    ...s.perRep.map((r) => `| r${r.rep} | ${r.pass} | ${r.total} | ${pct(r.rate)} |`),
-    '',
-  ];
-  return lines.join('\n');
+    `> ${s.artifactNote}`,
+  ].join('\n');
 }
