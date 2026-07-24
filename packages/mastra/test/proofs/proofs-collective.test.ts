@@ -17,7 +17,11 @@ const META = new Set(['forced-terminal', 'exhaustion-terminal', 'exhaustion-salv
 
 /** The guard KIND a recoveryEvents tag attributes, or null for meta/bookkeeping tags. */
 function eventKind(tag: string): string | null {
-  if (META.has(tag) || tag.startsWith('salvage-miss:') || tag.startsWith('mutate:')) return null;
+  // `salvage:form-only:<kinds>` is BOOKKEEPING, not an attribution: it records that the finalizer
+  // delivered the best candidate despite FORM-class violations (already attributed by the same turn's
+  // `redrive:<kind>` tags). `premature-terminal:<tools>` is a RUNTIME TURN-MECHANISM tag of the same
+  // class as `forced-terminal` — attributing either to a guard would read as interference.
+  if (META.has(tag) || tag.startsWith('premature-terminal') || tag.startsWith('salvage:') || tag.startsWith('salvage-miss:') || tag.startsWith('mutate:')) return null;
   const parts = tag.split(':');
   if (parts[0] === 'redrive' || parts[0] === 'onInput') return parts[1] ?? null;
   if (parts.length === 3) return parts[1]; // `${dim}:${kind}:${tool}` veto or `output:${kind}:${tool}`

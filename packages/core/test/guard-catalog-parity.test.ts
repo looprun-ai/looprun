@@ -1,6 +1,6 @@
 /**
  * CATALOG ↔ CORE PARITY (the anti-drift gate) — the skill's portable guard catalog
- * (`skills/agentspec/references/guard-catalog.md`) must list EXACTLY the factory vocabulary the core
+ * (`packages/core/GUARDS.md`) must list EXACTLY the factory vocabulary the core
  * actually exports. This is the root-cause fix for silent drift: a guard added to / removed from
  * `packages/core/src/guards.ts` fails this test until the catalog is reconciled, and a catalog entry
  * with no backing factory (a "ghost") fails too. Anchored to THIS core, not any external harness.
@@ -15,7 +15,7 @@ import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const GUARDS_TS = join(HERE, '..', 'src', 'guards.ts');
-const CATALOG_MD = join(HERE, '..', '..', '..', 'skills', 'agentspec', 'references', 'guard-catalog.md');
+const CATALOG_MD = join(HERE, '..', 'GUARDS.md');
 
 /**
  * The exported factory names in guards.ts that produce a Guard or a ReplyMutator — i.e. the catalog
@@ -39,7 +39,7 @@ function exportedGuardFactories(source: string): string[] {
 function catalogFactoryNames(md: string): string[] {
   const names = new Set<string>();
   for (const line of md.split('\n')) {
-    const m = line.match(/^\s*\|\s*`([A-Za-z]\w*)\(/);
+    const m = line.match(/^\s*\|\s*`([A-Za-z]\w*)(?:<[^>]*>)?\(/);
     if (m) names.add(m[1]);
   }
   return [...names];
@@ -57,7 +57,7 @@ describe('guard-catalog ↔ core parity', () => {
   });
 
   it('every exported guard/mutator factory is documented in the catalog', () => {
-    const undocumented = factories.filter((name) => !catalogMd.includes(`${name}(`));
+    const undocumented = factories.filter((name) => !new RegExp(name + String.raw`(?:<[^>]*>)?\(`).test(catalogMd));
     expect(
       undocumented,
       `guards.ts exports these factories but guard-catalog.md does not list them — add a table row:\n${undocumented.join(', ')}`,

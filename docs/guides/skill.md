@@ -6,8 +6,9 @@ The map generator: from **one purpose sentence** to governed agents with a certi
 npx skills add looprun-ai/looprun --skill agentspec
 ```
 
-(Installs into `.claude/skills/agentspec/` for any agentskills-compatible coding agent. The
-skill source lives in this repo at [`skills/agentspec/`](../../skills/agentspec/SKILL.md).)
+> **Moved (2026-07-24):** the `agentspec` skill now lives in its own private repo and no longer
+> ships with looprun. This guide is kept as a description of what the skill does; the install
+> command above refers to the last public release.
 
 ## What it generates, in your project
 

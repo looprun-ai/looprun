@@ -9,13 +9,13 @@
  * The label scheme is business-free: generated media labels are `g\d{3}` (g001, g002, …) produced by
  * `createMedia`/`editMedia`; uploads are `u9\d{2}` (u900, u901, …) produced by `ingestAttachment`. The
  * scheme regexes are exported as {@link FIXTURE_LABEL_SCHEME} for the noFabricatedSuccess proofs. The
- * `hasMediaLabel` method below backs the noFabricatedSuccess `refExists` proof — it is a fixture accessor,
- * no longer a typed `MediaWorld` contract (the runtime carries no media concept). The 11 domain tools are
- * exported as {@link FIXTURE_TOOL_DEFS}; the generic theme + lexicon are {@link FIXTURE_THEME} /
+ * `hasMediaLabel` method below backs the noFabricatedSuccess `refExists` proof — it is a fixture
+ * accessor, no longer a typed `MediaWorld` contract (the runtime carries no media concept). The 11 domain tools + the two runtime terminals are
+ * exported as {@link FIXTURE_TOOL_DEFS}; the generic domain + lexicon are {@link FIXTURE_DOMAIN} /
  * {@link FIXTURE_LEXICON}.
  */
 import type { AgentWorld } from '../rules.js';
-import type { TrunkTheme } from '../trunk.js';
+import type { DomainContract } from '../trunk.js';
 import type { ToolDef } from '../runtime/types.js';
 
 export type FixturePreset = 'empty' | 'seeded-media' | 'quota-exhausted' | 'has-primary';
@@ -92,7 +92,7 @@ export class FixtureWorld implements AgentWorld {
     return this.#labels.has(label);
   }
 
-  // ── domain accessors the guards / theme read ─────────────────────────────────
+  // ── domain accessors the guards / domain read ─────────────────────────────────
   quotaRemaining(): number {
     return this.#quota;
   }
@@ -221,7 +221,7 @@ export const FIXTURE_TOOL_DEFS: ToolDef[] = [
 ];
 
 /** A generic domain skin — no business vocabulary. The stateBlock reads the world accessors. */
-export const FIXTURE_THEME: TrunkTheme = {
+export const FIXTURE_DOMAIN: DomainContract = {
   voice: 'You are the assistant of Fixture Co.',
   stateBlock: (world: AgentWorld) =>
     `items=${world.itemCount()} primary=${world.hasPrimary()} mediaQuota=${world.quotaRemaining()}`,
@@ -256,3 +256,6 @@ export const FIXTURE_LEXICON = {
    *  (generic English; no /g lastIndex to leak). Absent ⇒ the narration branch is OFF. */
   selfNarrationRe: /\b(?:I closed the turn|by calling replyToUser|The assistant (?:confirmed|called|then))\b/i,
 } as const;
+
+/** @deprecated Use {@link FIXTURE_DOMAIN}. Compatibility alias from the theme->domain rename. */
+export const FIXTURE_THEME = FIXTURE_DOMAIN;

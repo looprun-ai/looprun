@@ -5,7 +5,8 @@
  * tool activity — never the user text (magnet firewall). `observed` accumulates for the whole
  * conversation; the other fields reset per turn via `beginTurn`.
  */
-import type { Guard, ObservedCall } from '../rules.js';
+import type { AgentWorld, Guard, ObservedCall } from '../rules.js';
+import { canonArgs } from '../guards.js';
 
 /** An OUTPUT-dim (postTool) result-invariant failure OR a flowChain restate — carried on the ledger
  *  and JOINED into the onReply violation set so the same bounded no-tools redrive relays its text. */
@@ -26,6 +27,13 @@ export interface TurnLedger {
   /** OUTPUT-dim (postTool) result-invariant violations + flowChain restates accrued this turn — joined
    *  into the onReply violation set before the redrive loop (see finalizeReply). Reset per turn. */
   postToolViolations: PostToolViolation[];
+  /** Domain calls ADMITTED (passed preTool guards) this step but not yet reconciled into `observed`
+   *  (a domain tool lands in `observed` only after execute). The model runtime dispatches a step's
+   *  calls concurrently, so a same-step sibling is invisible to the next call's guards via `observed`
+   *  alone; this synchronous list closes that gap. Each entry is pushed before the guard await,
+   *  removed on veto (never ran) or reconciled out when the result is recorded, and cleared at turn
+   *  start. Passed to preTool guards as `siblingCallsThisStep`; only the throttle reads it. */
+  inFlightCalls: ObservedCall[];
 }
 
 /**
@@ -42,7 +50,7 @@ export function vetoStormHit(ledger: TurnLedger): boolean {
 }
 
 export function createLedger(): TurnLedger {
-  return { observed: [], turnIndex: 0, producedThisTurn: [], turnCorrections: [], attachments: [], terminalReply: '', vetoStreak: 0, postToolViolations: [] };
+  return { observed: [], turnIndex: 0, producedThisTurn: [], turnCorrections: [], attachments: [], terminalReply: '', vetoStreak: 0, postToolViolations: [], inFlightCalls: [] };
 }
 
 /** Reset the per-turn fields (the conversation-scoped `observed` is kept). */
@@ -54,6 +62,7 @@ export function beginTurn(ledger: TurnLedger, turnIndex: number): void {
   ledger.terminalReply = '';
   ledger.vetoStreak = 0;
   ledger.postToolViolations = [];
+  ledger.inFlightCalls = [];
 }
 
 /** Structural success check on a tool result ({success:false} / {error} / {PREREQ_NOT_MET} ⇒ failed). */
@@ -73,15 +82,27 @@ export function recordVeto(ledger: TurnLedger, name: string, args: Record<string
 }
 
 /** Record an EXECUTED tool call's outcome (afterToolCall): ok flag, confirmation flag, produced label. */
-export function recordToolResult(ledger: TurnLedger, name: string, args: Record<string, unknown>, output: unknown): void {
+export function recordToolResult(ledger: TurnLedger, name: string, args: Record<string, unknown>, output: unknown, world?: AgentWorld): void {
   ledger.vetoStreak = 0; // an executed call passed guards — the model is not looping
   const ok = output !== undefined && resultOk(output);
   const requiresConfirmation = (output as { requiresConfirmation?: unknown } | null | undefined)?.requiresConfirmation === true;
+  // Same-step reconcile: this call is now in `observed` — drop its provisional in-flight sibling
+  // record to avoid double-counting it against a later same-step call.
+  const inFlightIx = ledger.inFlightCalls.findIndex((o) => o.name === name && canonArgs(o.args) === canonArgs(args));
+  if (inFlightIx >= 0) ledger.inFlightCalls.splice(inFlightIx, 1);
+  // tookEffect (B1): match this call against the world's ledger (by name+args, like the in-flight
+  // reconcile above) to learn whether it MUTATED the world — so noFalseFailureClaim can distinguish an
+  // action-success from a read-success and NOT veto an honest "cannot do X / no record found" reply on
+  // a read-only turn.
+  const wtc = world
+    ? [...world.toolCalls].reverse().find((t) => t.name === name && canonArgs((t.args ?? {}) as Record<string, unknown>) === canonArgs(args))
+    : undefined;
   ledger.observed.push({
     name,
     args,
     ok,
     turnIndex: ledger.turnIndex,
+    ...(world ? { tookEffect: wtc?.tookEffect === true } : {}),
     ...(requiresConfirmation ? { resultFlags: { requiresConfirmation: true } } : {}),
   });
   if (ok) {

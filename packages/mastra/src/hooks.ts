@@ -39,7 +39,7 @@ export function makeGuardHooks(spec: AgentSpec, getSession: SessionAccessor): Gu
       const session = getSession();
       const { ledger, world } = session;
       const args = (input ?? {}) as Record<string, unknown>;
-      recordToolResult(ledger, toolName, args, output);
+      recordToolResult(ledger, toolName, args, output, world);
       // OUTPUT-dim (postTool) result invariants — enforce the previously-dead hook. ZERO-DIFF: a spec
       // with no postTool guards short-circuits here (no ctx built, no ledger writes). The tool already
       // executed — enforcement records an `output:…` correction + joins the reply-violation set so the

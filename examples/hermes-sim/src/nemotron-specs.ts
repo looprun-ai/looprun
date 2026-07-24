@@ -1,6 +1,6 @@
 /**
- * Model-tuned spec variants for the nemotron free chain — the Atlas recipe from neurono-bench
- * (agents-generated fix2-nano / v3): a TURN PROTOCOL at the very top of the behavior block,
+ * Model-tuned spec variants for the nemotron free chain — the recipe measured in the research
+ * lab (fix2-nano / v3): a TURN PROTOCOL at the very top of the behavior block,
  * "text is not action" named explicitly, non-destructive work done without permission-asking,
  * and the flow as a numbered per-turn checklist.
  *

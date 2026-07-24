@@ -198,8 +198,8 @@ const noDuplicateCallProof: GuardProof = {
 // ── confirmFirst (auto:'base' — arg mechanism on deleteItem, prior-ask on purgeAll) ──
 const confirmFirstProof: GuardProof = {
   guard: 'confirmFirst',
-  // P9 (2026-07-18): askRe wired — the arg mechanism accepts a prior-turn PROSE confirmation-ask
-  // (or askUser) as the probe, mirroring prior-ask's disjuncts.
+  // P9 (bloodtest 2026-07-18): askRe wired — the arg mechanism accepts a prior-turn PROSE
+  // confirmation-ask (or askUser) as the probe, mirroring prior-ask's disjuncts.
   make: () => confirmFirst({ askRe: FIXTURE_LEXICON.confirmAskRe }),
   hook: 'preTool',
   target: ['deleteItem'],
@@ -357,19 +357,13 @@ const noActAfterAskSameTurnProof: GuardProof = {
   target: ['deleteItem', 'purgeAll'],
   cases: [
     {
-      // MEASURED FINDING (2026-07-15, this proof suite's first catch): the deny path CANNOT be
-      // scripted at L3 — a same-turn ask→act sequence only exists inside ONE multi-tool step
-      // (askUser is a terminal, so the generation stops at that step), and the Mastra backend
-      // dispatches a step's tool calls CONCURRENTLY: the destructive call's preTool check can run
-      // BEFORE the askUser lands in the observed ledger (probe: deleteItem executed un-vetoed with
-      // the ask recorded only afterwards). The guard's deny logic is therefore proven at L1 (pure,
-      // deterministic); the concurrent-dispatch ordering gap is a runtime hardening follow-up, not
-      // a guard defect.
-      // HISTORY (2026-07-15, this proof suite's first catch): a step's tool calls are dispatched
-      // CONCURRENTLY, so the destructive call's preTool check used to run BEFORE the same-step
-      // askUser landed in the observed ledger — this deny was unreachable at L3. FIXED same day:
-      // the runtime records terminal calls in the guard hook's SYNCHRONOUS segment (emission
-      // order), so the sibling check sees the ask. The L3 deny below is the regression proof.
+      // HISTORY (2026-07-15, this proof suite's first catch): the same-turn ask→act sequence only
+      // exists inside ONE multi-tool step (askUser is a terminal), and the AI SDK dispatches a
+      // step's tool calls CONCURRENTLY (Promise.all) — the destructive call's preTool check used to
+      // run BEFORE the askUser landed in the observed ledger, so this deny was unreachable at L3.
+      // FIXED same day: the runtime now records terminal calls in beforeToolCall's SYNCHRONOUS
+      // segment (emission order), so the sibling check sees the ask. The L3 deny below is the
+      // regression proof for that fix.
       name: 'asking then acting in the very same turn is denied',
       polarity: 'negative',
       ctx: {

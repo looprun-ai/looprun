@@ -186,7 +186,7 @@ honest-abstention axis), **Harvey LAB-AA** (agentic legal deliverables).
 Complementing τ² (looprun vs the market), **Atlas** answers the second question: *what does the
 governance layer add over a traditional hand-built agent on the same framework?* Atlas Equipment
 Rentals & Field Ops — 5 agents / 61 cases / 54 tools — was generated end-to-end by the
-[`agentspec` skill](../skills/agentspec/SKILL.md) from one purpose sentence; the control arm is a
+`agentspec` skill (developed in its own private repo) from one purpose sentence; the control arm is a
 plain Mastra agent blind-authored by a frontier coding agent (no looprun exposure, ≤3 measured
 iterations of parity budget). Both arms, same evals, same LLM judge, N=3.
 

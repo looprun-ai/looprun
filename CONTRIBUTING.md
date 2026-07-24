@@ -23,7 +23,7 @@ looprun's guards are deterministic (`check()` = machine gate, `prose()` = the sa
 To keep them trustworthy, **a change to a governed surface ships with a passing proof record**:
 
 - **Governed** (needs a record): `packages/core/src/**`, `packages/core/GUARDS.md`,
-  `packages/mastra/src/**`, `skills/agentspec/**`.
+  `packages/mastra/src/**`.
 - **Not governed** (no record): docs, examples, tests-only (any `/test/` path), the governance tooling
   (`governance/**`, `scripts/**`, `skills/looprun-governance/**`), CI (`.github/**`), changesets, lockfiles,
   manifests.
@@ -41,8 +41,7 @@ Author the proof **before** the implementation — the proof cases are the spec.
    collective non-interference expectation). See
    [`skills/looprun-governance/references/proof-case-authoring.md`](skills/looprun-governance/references/proof-case-authoring.md).
 2. **Implement** the guard in `packages/core/src/guards.ts` until the cases pass.
-3. **Update the docs that mirror the kind**: `packages/core/GUARDS.md` **and**
-   `skills/agentspec/references/guard-catalog.md`. A parity test fails if they diverge.
+3. **Update the catalog doc**: `packages/core/GUARDS.md`.
 4. **Run the suite**: `pnpm test:proofs` (green, ratchet not lowered).
 5. **Generate the record**:
    ```bash

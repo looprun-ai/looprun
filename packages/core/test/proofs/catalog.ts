@@ -30,6 +30,12 @@
  * | emptyReply                     | any (auto minimal)         | —                                                  |
  * | degenerationGuard              | any (auto minimal)         | — (selfNarrationRe not injected → narration branch OFF) |
  * | replyMustMention / replyMaxOccurrences / replySingleQuestion / replyConfirmsLabels | collective:'skip' (content-contract guards, proven isolated only) |
+ * | minimalDisclosure              | any (onReply)              | piiFields ['contactPhone','homeAddress'], entityIdRe /p\d{3}/ |
+ * | noInstructionFromData          | deleteItem, purgeAll       | instructionRe /(delete|remove|purge) (all|every)/  |
+ * | noCompetitorClaim              | any (onReply)              | competitorRe /RivalCo/, comparativeRe /… than/     |
+ * | noOutOfSurfaceActionClaim      | any (onReply)              | refund claims → 'issueRefund' (off-surface); surface = FIXTURE_TOOL_NAMES |
+ * | noUngroundedRegulatedFigure    | any (onReply)              | regulatedRe /\d+ ?mg/                              |
+ * | consentRequired                | useMedia                   | consentOk = world.hasPrimary()                     |
  *
  * ## SCRIPT CONVENTIONS (verified in signal-mechanics.test.ts)
  *  1. Every turn's script ends with a NON-empty replyToUser (or askUser when asking) — an empty text
@@ -47,9 +53,14 @@
  *     g###/u### label that was not produced or known to refExists; no scaffolding markup; no "published
  *     to production" (noFabricatedSuccess banRe); no repeated lines; no "created/generated the media"
  *     claims without a real label.
+ *  6. RISK-FAMILY params (catalog-risk-families.ts) are chosen to be inert everywhere else: no reply
+ *     may name `RivalCo`, carry `contactPhone`/`homeAddress`, claim a refund, or state `\d+ mg`; no
+ *     createItem title may carry a bulk `delete/remove/purge all|every` imperative; `useMedia` is the
+ *     consent-gated tool and no other script calls it.
  */
 import type { GuardProof } from '../../src/testing/index.js';
 import { BEHAVIOR_PROOFS } from './catalog-behavior.js';
+import { RISK_FAMILY_PROOFS } from './catalog-risk-families.js';
 import { RUN_OUTPUT_PROOFS } from './catalog-run-output.js';
 import { SPATIAL_INPUT_PROOFS } from './catalog-spatial-input.js';
 
@@ -57,6 +68,7 @@ export const GUARD_PROOFS: GuardProof[] = [
   ...SPATIAL_INPUT_PROOFS,
   ...RUN_OUTPUT_PROOFS,
   ...BEHAVIOR_PROOFS,
+  ...RISK_FAMILY_PROOFS,
 ];
 
 /** ReplyMutator kinds proven by a dedicated describe in proofs-l1.test.ts. A NEW mutator export in

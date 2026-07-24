@@ -65,6 +65,30 @@ describe('coverage ratchet', () => {
     expect(dups).toEqual([]);
   });
 
+  for (const proof of GUARD_PROOFS) {
+    describe(`proof completeness · ${proof.guard}`, () => {
+      it('has ≥1 positive, ≥1 negative, ≥1 neutral case', () => {
+        for (const pol of ['positive', 'negative', 'neutral'] as const) {
+          expect(
+            proof.cases.some((c) => c.polarity === pol),
+            `missing a ${pol} case`,
+          ).toBe(true);
+        }
+      });
+      it('has both L1 verdict classes (a fires case and a silent case with a crafted ctx)', () => {
+        expect(proof.cases.some((c) => c.ctx !== undefined && c.l1 === 'fires')).toBe(true);
+        if (ALWAYS_FIRE_KINDS.has(proof.guard)) {
+          // No honest silent ctx exists — require ctx-independence (≥2 fires) + an L3 pass case
+          // proving the target scoping is the real off switch.
+          expect(proof.cases.filter((c) => c.ctx !== undefined && c.l1 === 'fires').length).toBeGreaterThanOrEqual(2);
+          expect(proof.cases.some((c) => c.l3?.expect === 'pass')).toBe(true);
+        } else {
+          expect(proof.cases.some((c) => c.ctx !== undefined && c.l1 === 'silent')).toBe(true);
+        }
+      });
+    });
+  }
+
   it('every ReplyMutator export is proven (listed in PROVEN_MUTATORS)', () => {
     const missing = mutatorKinds.filter((k) => !PROVEN_MUTATORS.includes(k));
     expect(missing, `unproven mutator(s): [${missing.join(', ')}] — prove them in proofs-l1 and list them`).toEqual([]);
@@ -72,30 +96,3 @@ describe('coverage ratchet', () => {
     expect(ghosts).toEqual([]);
   });
 });
-
-// Per-kind completeness as TOP-LEVEL `proof completeness · <kind>` describes (not nested under
-// `coverage ratchet`) so each test's full name STARTS with the `proof completeness ·` prefix the
-// governance proof runner (scripts/proofs/run-proofs.mjs) tallies coverage by.
-for (const proof of GUARD_PROOFS) {
-  describe(`proof completeness · ${proof.guard}`, () => {
-    it('has ≥1 positive, ≥1 negative, ≥1 neutral case', () => {
-      for (const pol of ['positive', 'negative', 'neutral'] as const) {
-        expect(
-          proof.cases.some((c) => c.polarity === pol),
-          `missing a ${pol} case`,
-        ).toBe(true);
-      }
-    });
-    it('has both L1 verdict classes (a fires case and a silent case with a crafted ctx)', () => {
-      expect(proof.cases.some((c) => c.ctx !== undefined && c.l1 === 'fires')).toBe(true);
-      if (ALWAYS_FIRE_KINDS.has(proof.guard)) {
-        // No honest silent ctx exists — require ctx-independence (≥2 fires) + an L3 pass case
-        // proving the target scoping is the real off switch.
-        expect(proof.cases.filter((c) => c.ctx !== undefined && c.l1 === 'fires').length).toBeGreaterThanOrEqual(2);
-        expect(proof.cases.some((c) => c.l3?.expect === 'pass')).toBe(true);
-      } else {
-        expect(proof.cases.some((c) => c.ctx !== undefined && c.l1 === 'silent')).toBe(true);
-      }
-    });
-  });
-}

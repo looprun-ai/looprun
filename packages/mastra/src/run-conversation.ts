@@ -92,6 +92,11 @@ export async function runSpecConversation(spec: AgentSpec, turns: TurnInput[], d
   const getSession = () => session;
   const ledger = session.ledger;
 
+  // B4: a destructiveTool on the 'arg' confirm mechanism whose schema lacks the confirm flag renders a
+  // two-step ritual it can never honour (the model asks forever). The schema is only known HERE, where
+  // toolDefs are injected — so the cross-check runs at run start. Throws (author bug) if mis-authored.
+  spec.assertDestructiveConfirmable?.(deps.toolDefs);
+
   const mastraTools = buildWorldTools(deps.toolDefs, surface, getSession);
   const guardHooks = makeGuardHooks(spec, getSession);
   const inputProcessors = makeInputProcessors(spec, getSession);

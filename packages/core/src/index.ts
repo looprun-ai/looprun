@@ -17,6 +17,7 @@ export type {
   AgentSpec,
   AgentSpecConfig,
   AgentControls,
+  AgentScope,
   AgentModelRef,
   ChainSpec,
   GuardBinding,
@@ -28,8 +29,22 @@ export type {
   ToolTarget,
   Layer,
 } from './spec.js';
-export { renderScopedSpecTrunk, chainOrder } from './trunk.js';
+export { renderScopedSpecTrunk, renderTrunkBlocks, chainOrder } from './trunk.js';
+export type { DomainContract, TrunkRenderOptions } from './trunk.js';
+/** @deprecated compat alias for the pre-rename name — see trunk.ts. */
 export type { TrunkTheme } from './trunk.js';
+// Trunk PROVENANCE + the coherence queries (the trunk is a fold over an attributed table, not a join).
+export {
+  GUARD_KIND_SUBJECT, derivePolarity, deriveSubject, foldRow, foldTrunk, trunkLines,
+  findContradictions, findDuplications, findMultiOwnerSubjects, findSubjectlessLines,
+  findUnassessableLines, isSingleClause,
+  DEFAULT_POLARITY_LEXICON, withPolarityLexicon, mutatorLines,
+} from './coherence.js';
+export type {
+  TrunkLine, TrunkRow, TrunkBlock, TrunkPolarity, SubjectRule, NormativeLine,
+  ContradictionFinding, DuplicationFinding, SingleOwnerFinding,
+  PolarityLexicon, MutatorBindingLike,
+} from './coherence.js';
 export { validateSpec, MAX_TOOL_SURFACE } from './validate.js';
 export type { SpecWarning } from './validate.js';
 export { geminiThinkingOff, pinnedDecoding, normalizeModelParams, resolveModelSettings } from './model-params.js';

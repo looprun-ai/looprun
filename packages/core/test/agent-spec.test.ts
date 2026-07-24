@@ -49,7 +49,7 @@ describe('AgentSpecBase — universal invariants', () => {
   it('rejects a behavior-dim guard as a preTool gate', () => {
     const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: ['water'] });
     const g = custom({ kind: 'x', dim: 'behavior', check: () => null, prose: () => 'x' });
-    expect(() => spec.addGuard('preTool', ['water'], g)).toThrow(/cannot be a preTool gate/);
+    expect(() => spec.addGuard('preTool', ['water'], g)).toThrow(/cannot be installed on 'preTool'/);
   });
 
   it('rejects duplicate guard ids', () => {

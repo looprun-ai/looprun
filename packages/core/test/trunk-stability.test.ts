@@ -65,7 +65,7 @@ describe('trunk byte-stability', () => {
 
   it('throws without any theme', () => {
     const spec = fixtureSpec();
-    expect(() => renderScopedSpecTrunk(fixtureWorld(), spec)).toThrow(/TrunkTheme/);
+    expect(() => renderScopedSpecTrunk(fixtureWorld(), spec)).toThrow(/DomainContract/);
   });
 
   // The FROZEN baseline: any renderer change must be a conscious decision (this snapshot changes).
@@ -82,11 +82,15 @@ describe('trunk byte-stability', () => {
       listPlants → waterPlant
 
       ## Global tool rules
-      - never repeat a tool call that already succeeded with the same arguments.
+      - never repeat, within the same turn, a tool call that already succeeded with the same arguments.
 
       ## Tool rules
       - **waterPlant**: only after listPlants has run.
-      - **repotPlant**: Repotting needs the pro plan.; destructive actions need confirmed:false first + the USER's explicit confirmation in a later turn; at most one destructive action per turn.
+      - **repotPlant**: Repotting needs the pro plan; destructive actions need confirmed:false first + the USER's explicit confirmation in a later turn; at most one destructive action per turn (a confirmation probe that changed nothing does not count).
+
+      ## Reply rules (govern the message you send — checked on every reply)
+      - reply in ONE clean user-facing message — never leak internal reasoning, template tokens, or repeated lines.
+      - never end a turn with an empty reply.
 
       ## Governance (deterministic — evaluate against the account state below)
       - IF plan=starter → suggest the care plan upgrade once

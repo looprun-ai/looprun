@@ -54,10 +54,11 @@ export const SPATIAL_INPUT_PROOFS: GuardProof[] = [
   },
 
   // ── forbidThisTurn (spatial) — updateItem is disabled outright ──────────────────────────────────────
-  // NOTE: forbidThisTurn.check ignores ctx entirely (`check: () => reason`) and unconditionally fires —
-  // there is NO ctx that can honestly produce l1:'silent'. The 'positive' case below is therefore
-  // l3-only (no ctx craft to fabricate a fake silent verdict); the ratchet treats always-fire kinds
-  // specially (ctx-independence via ≥2 fires cases + an L3 pass case proving target scoping).
+  // NOTE (conflict, reported per task instructions): forbidThisTurn.check ignores ctx entirely
+  // (`check: () => reason`) and unconditionally fires — there is NO ctx that can honestly produce
+  // l1:'silent'. The 'positive' case below is therefore l3-only (no ctx craft to fabricate a fake silent
+  // verdict); the ratchet's "has both L1 verdict classes" check will stay red for this one kind until the
+  // orchestrator adjusts it for always-fire guards (per the task brief).
   {
     guard: 'forbidThisTurn',
     make: () => forbidThisTurn('updateItem is disabled this turn — use createItem or ask the user for the change instead.'),

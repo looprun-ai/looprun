@@ -11,7 +11,7 @@
  * `redrive:${kind}`, exhaustion `exhaustion-terminal`.
  */
 import { requireMake } from '@looprun-ai/core/testing';
-import { FixtureWorld, FIXTURE_TOOL_DEFS } from '@looprun-ai/core/testing';
+import { FixtureWorld, FIXTURE_TOOL_DEFS, FIXTURE_DOMAIN } from '@looprun-ai/core/testing';
 import type { GuardProof, ProofLoopCase } from '@looprun-ai/core/testing';
 import type { AgentSpec, RunResult, RuntimeTurnRecord } from '@looprun-ai/core';
 import { runSpecConversation } from '../run-conversation.js';
@@ -26,6 +26,7 @@ export function runProofLoop(spec: AgentSpec, l3: ProofLoopCase, redrives = 1): 
     modelParams: {},
     world: new FixtureWorld(l3.preset),
     toolDefs: FIXTURE_TOOL_DEFS,
+    theme: FIXTURE_DOMAIN,
     redrives,
   });
 }

@@ -34,6 +34,14 @@ export async function evaluatePreTool(
   args: Record<string, unknown>,
 ): Promise<PreToolVerdict> {
   const guards = resolveGuards(spec.guards.preTool, tool);
+  // SAME-STEP visibility (before the guard await, synchronously): snapshot the siblings admitted
+  // EARLIER in this step, then register self so a LATER same-step sibling sees this call. The model
+  // runtime dispatches a step's calls concurrently but starts them in emission order up to the first
+  // await, so this ordering is deterministic. `selfEntry` is reconciled out when the result is
+  // recorded (now in `observed`) or removed on the veto path just below (it never ran).
+  const siblingCallsThisStep = [...ledger.inFlightCalls];
+  const selfEntry: ObservedCall = { name: tool, args, ok: true, turnIndex: ledger.turnIndex };
+  ledger.inFlightCalls.push(selfEntry);
   const gctx: GuardCtx = {
     args,
     tool,
@@ -41,10 +49,13 @@ export async function evaluatePreTool(
     observed: ledger.observed,
     turnIndex: ledger.turnIndex,
     attachmentsThisTurn: ledger.attachments,
+    siblingCallsThisStep,
   };
   for (const g of guards) {
     const reason = await g.check(gctx);
     if (reason) {
+      const selfIx = ledger.inFlightCalls.indexOf(selfEntry);
+      if (selfIx >= 0) ledger.inFlightCalls.splice(selfIx, 1);
       recordVeto(ledger, tool, args, `${g.dim}:${g.kind}:${tool}`);
       // 2nd+ consecutive veto: the model is looping — tell it to close, in unmissable terms.
       const escalated = ledger.vetoStreak >= 2

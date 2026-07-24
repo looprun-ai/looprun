@@ -4,7 +4,15 @@
  * this is the per-kind bulk of the proof suite.
  */
 import { describe, expect, it } from 'vitest';
-import { degenerationGuard, jargonScrub, maxCalls } from '../../src/guards.js';
+import {
+  consentRequired,
+  degenerationGuard,
+  jargonScrub,
+  maxCalls,
+  minimalDisclosure,
+  noInstructionFromData,
+  noOutOfSurfaceActionClaim,
+} from '../../src/guards.js';
 import { AgentSpecBase } from '../../src/spec.js';
 import { craftCtx, FIXTURE_LEXICON, FIXTURE_TOOL_NAMES, runL1 } from '../../src/testing/index.js';
 import { GUARD_PROOFS } from './catalog.js';
@@ -88,6 +96,47 @@ describe('L1 · degenerationGuard — lexicon-injected self-narration branch (be
     const without = new AgentSpecBase({ id: 's', mode: 'PROOF', persona: 'p', tools: [...FIXTURE_TOOL_NAMES] });
     expect(find(withLex).check(craftCtx({ reply: narration }))).toBe(NARRATION_DENY);
     expect(find(without).check(craftCtx({ reply: narration }))).toBeNull();
+  });
+});
+
+/**
+ * FAIL-FAST CONSTRUCTION (bespoke — a GuardProof case can only assert on check(), and these kinds never
+ * reach check()). A safety guard whose configuration makes it INERT must break the build, never pass
+ * unnoticed: an inert kind still reads as coverage in a spec header, which is strictly worse than an
+ * absent one. Every risk-family kind either has a safe, active default or throws here.
+ */
+describe('L1 · risk-family kinds — misconfiguration throws at CONSTRUCTION', () => {
+  it('minimalDisclosure: no PII vocabulary at all', () => {
+    expect(() => minimalDisclosure({ entityIdRe: /p\d{3}/ })).toThrow(/no PII vocabulary/);
+    expect(() => minimalDisclosure({ piiFields: [], entityIdRe: /p\d{3}/ })).toThrow(/no PII vocabulary/);
+  });
+  it('minimalDisclosure: either PII vocabulary form constructs fine', () => {
+    expect(() => minimalDisclosure({ piiFields: ['contactPhone'], entityIdRe: /p\d{3}/ })).not.toThrow();
+    expect(() => minimalDisclosure({ piiFieldRe: /contactPhone/i, entityIdRe: /p\d{3}/ })).not.toThrow();
+  });
+  it('noInstructionFromData: an empty tool set gates nothing', () => {
+    expect(() => noInstructionFromData({ tools: [], instructionRe: /purge all/i })).toThrow(/gate nothing/);
+  });
+  it('noOutOfSurfaceActionClaim: empty claims, or every claim already ON the surface', () => {
+    expect(() => noOutOfSurfaceActionClaim({ actionClaims: [], surface: [...FIXTURE_TOOL_NAMES] })).toThrow(
+      /check nothing/,
+    );
+    expect(() =>
+      noOutOfSurfaceActionClaim({
+        actionClaims: [{ claimRe: /created/i, tool: 'createItem' }], // ON the fixture surface → skipped
+        surface: [...FIXTURE_TOOL_NAMES],
+      }),
+    ).toThrow(/inert/);
+    expect(() =>
+      noOutOfSurfaceActionClaim({
+        actionClaims: [{ claimRe: /refunded/i, tool: 'issueRefund' }],
+        surface: [...FIXTURE_TOOL_NAMES],
+      }),
+    ).not.toThrow();
+  });
+  it('consentRequired: an empty tool set, or a blank reason (a falsy deny value reads as "allowed")', () => {
+    expect(() => consentRequired({ tools: [], consentOk: () => true, reason: 'r' })).toThrow(/gate nothing/);
+    expect(() => consentRequired({ tools: ['useMedia'], consentOk: () => true, reason: '  ' })).toThrow(/blank/);
   });
 });
 

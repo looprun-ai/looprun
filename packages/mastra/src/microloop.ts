@@ -33,6 +33,7 @@ import { Agent } from '@mastra/core/agent';
 import { createTool } from '@mastra/core/tools';
 import {
   beginTurn,
+  canonArgs,
   createLedger,
   defaultExhaustionReply,
   enforcePostTool,
@@ -45,7 +46,7 @@ import {
   runChainCompletionPass,
   VETO_STORM_LIMIT,
 } from '@looprun-ai/core';
-import type { AgentSpec, AgentWorld, Guard, GuardCtx, ReplyViolation, TokenUsage, TrunkTheme, TurnInput, TurnRecord, RunResult } from '@looprun-ai/core';
+import type { AgentSpec, AgentWorld, Guard, GuardCtx, ObservedCall, ReplyViolation, TokenUsage, TrunkTheme, TurnInput, TurnRecord, RunResult } from '@looprun-ai/core';
 import { jsonSchemaToZodObject } from './json-schema-zod.js';
 import type { RuntimeDeps } from './run-conversation.js';
 
@@ -407,10 +408,18 @@ export async function runSpecConversationMicroLoop(spec: AgentSpec, turns: TurnI
     if (MICRO_TERMINAL.has(toolName)) return undefined;
     const args = (input ?? {}) as Record<string, unknown>;
     const guards = resolveGuards(spec.guards.preTool, toolName);
-    const gctx: GuardCtx = { args, tool: toolName, world, observed: ledger.observed, turnIndex: ledger.turnIndex, attachmentsThisTurn: ledger.attachments };
+    // Same-step visibility (mirror of the certified backend): snapshot siblings admitted earlier this
+    // step, register self for later siblings, reconcile out in afterToolCall / on veto. A micro-step can
+    // still emit >1 tool call, so this closes the same concurrency gap for the throttle.
+    const siblingCallsThisStep = [...ledger.inFlightCalls];
+    const selfEntry: ObservedCall = { name: toolName, args, ok: true, turnIndex: ledger.turnIndex };
+    ledger.inFlightCalls.push(selfEntry);
+    const gctx: GuardCtx = { args, tool: toolName, world, observed: ledger.observed, turnIndex: ledger.turnIndex, attachmentsThisTurn: ledger.attachments, siblingCallsThisStep };
     for (const g of guards) {
       const reason = await g.check(gctx);
       if (reason) {
+        const selfIx = ledger.inFlightCalls.indexOf(selfEntry);
+        if (selfIx >= 0) ledger.inFlightCalls.splice(selfIx, 1);
         ledger.observed.push({ name: toolName, args, ok: false, turnIndex: ledger.turnIndex });
         ledger.turnCorrections.push(`${g.dim}:${g.kind}:${toolName}`);
         ledger.vetoStreak++;
@@ -430,6 +439,8 @@ export async function runSpecConversationMicroLoop(spec: AgentSpec, turns: TurnI
     const ok = output !== undefined && resultOk(output);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const requiresConfirmation = (output as any)?.requiresConfirmation === true;
+    const inFlightIx = ledger.inFlightCalls.findIndex((o) => o.name === toolName && canonArgs(o.args) === canonArgs(args));
+    if (inFlightIx >= 0) ledger.inFlightCalls.splice(inFlightIx, 1);
     ledger.observed.push({ name: toolName, args, ok, turnIndex: ledger.turnIndex, ...(requiresConfirmation ? { resultFlags: { requiresConfirmation: true } } : {}) });
     if (ok) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any

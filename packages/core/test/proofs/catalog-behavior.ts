@@ -565,24 +565,40 @@ export const BEHAVIOR_PROOFS: GuardProof[] = [
     specTweaks: { lexicon: { falseFailureClaimRe: FIXTURE_LEXICON.falseFailureClaimRe } },
     cases: [
       {
-        name: 'all calls succeeded, reply claims inability',
+        // B1 (bankdesk 2026-07-23): the false-failure claim now requires an ACTION that TOOK EFFECT
+        // (a mutation), not merely a successful read — else an honest "I cannot / no record" on a
+        // read-only turn is wrongly vetoed. Here updateItem MUTATES (tookEffect:true) → firing is right.
+        name: 'an action TOOK EFFECT, reply claims inability',
         polarity: 'negative',
         ctx: {
-          observed: [{ name: 'searchItem', args: { query: 'plants' }, ok: true, turnIndex: 0 }],
+          observed: [{ name: 'setPrimary', args: { id: 'itm-7' }, ok: true, turnIndex: 0, tookEffect: true }],
           turnIndex: 0,
-          reply: 'I was unable to search for that.',
+          reply: 'I was unable to set that as primary.',
         },
         l1: 'fires',
         l3: {
           preset: 'empty',
-          turns: [turn('search for plants')],
+          turns: [turn('set item itm-7 as primary')],
           script: [
-            [{ tool: 'searchItem', args: { query: 'plants' } }],
-            [{ tool: 'replyToUser', args: { text: 'I was unable to search for that.' } }],
-            [{ text: 'I found the matching items in the search results.' }],
+            [{ tool: 'setPrimary', args: { id: 'itm-7' } }],
+            [{ tool: 'replyToUser', args: { text: 'I was unable to set that as primary.' } }],
+            [{ text: 'The item was set as primary successfully.' }],
           ],
           expect: 'redrive',
         },
+      },
+      {
+        // B1 · the exact bankdesk 17/19 shape: only a READ succeeded this turn (tookEffect:false), and the
+        // model HONESTLY says it cannot act / found nothing. This is NOT a false-failure claim → SILENT.
+        // (Mutation-provable: revert the guards.ts `tookEffect` condition and this goes silent→fires.)
+        name: 'B1 · only a READ succeeded, honest "cannot" reply → silent',
+        polarity: 'neutral',
+        ctx: {
+          observed: [{ name: 'searchItem', args: { query: 'plants' }, ok: true, turnIndex: 0, tookEffect: false }],
+          turnIndex: 0,
+          reply: 'I was unable to find any matching items for that.',
+        },
+        l1: 'silent',
       },
       {
         name: 'all calls succeeded, clean reply',

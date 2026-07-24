@@ -114,11 +114,11 @@ describe('S-1 firewall (GuardCtx exposes no user text)', () => {
   });
 });
 
-describe('theme-persona law (persona lives on the spec, never the theme)', () => {
-  it('TrunkTheme has no persona key', () => {
+describe('domain-persona law (persona lives on the spec, never the domain contract)', () => {
+  it('DomainContract has no persona key', () => {
     const trunk = readFileSync(join(CORE_SRC, 'trunk.ts'), 'utf8');
-    const block = trunk.match(/export interface TrunkTheme \{[\s\S]*?\n\}/)?.[0];
-    expect(block, 'TrunkTheme interface not found').toBeTruthy();
+    const block = trunk.match(/export interface DomainContract \{[\s\S]*?\n\}/)?.[0];
+    expect(block, 'DomainContract interface not found').toBeTruthy();
     expect(block!).not.toMatch(/\bpersona\??:/);
   });
 });

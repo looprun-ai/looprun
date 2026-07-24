@@ -14,7 +14,7 @@ looprun adds everything that makes it safe to hand the keys to an agent:
 - **The GPS with course-correction** — when the reply violates its checks, a bounded no-tools *redrive*
   corrects it; when correction fails, a **deterministic honest-abstain closure** (a pure function of what
   verifiably happened) goes out instead of a fabrication.
-- **The map generator** — the [`agentspec` skill](skills/agentspec/SKILL.md) interviews you (one
+- **The map generator** — the **agentspec** skill (developed in its own private repo) interviews you (one
   question), then generates the specs, the theme, the tool world **and the eval set that certifies them**.
   [REV: think there are more than one question]
 

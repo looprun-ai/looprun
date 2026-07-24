@@ -525,9 +525,7 @@ and a change to a governed surface ships with a passing proof record, or it does
    ▼
    2. implement until green        packages/core/src/guards.ts
    ▼
-   3. update the two mirrors       packages/core/GUARDS.md ↔
-   │                               skills/agentspec/references/guard-catalog.md
-   │                               (a parity test fails if they diverge)
+   3. update the two mirrors       packages/core/GUARDS.md (the catalog)
    ▼
    4. pnpm proofs:run              the deterministic suite: L1 pure-check +
    │                               L3 full-loop (scripted fake LLM + fixture
