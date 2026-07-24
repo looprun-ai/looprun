@@ -78,7 +78,7 @@ export async function runCommand(opts: RunCommandOptions): Promise<string> {
     try {
       const dump = await runCase(subject, c, { model, modelId, ungoverned, modelParams, stopOnRepeatedToolCall: isLocal });
       dumps.push(dump);
-      log(`${arm} ${c.id} ... invariants ${dump.invariantVerdict.pass ? 'pass' : 'FAIL'}`);
+      log(`${arm} ${c.id} ... ${dump.invariantVerdict.pass ? 'unjudged (invariants clean)' : 'invariant-FAIL'}`);
     } catch (e) {
       dumps.push({
         caseId: c.id,
@@ -101,17 +101,18 @@ export async function runCommand(opts: RunCommandOptions): Promise<string> {
 
   const rows = dumps.map((d) => {
     const needsJudge = d.rubric.length > 0 ? 'yes' : 'no';
-    const inv = d.invariantVerdict.pass ? 'pass' : `FAIL (${d.invariantVerdict.violations.join('; ')})`;
+    const inv = d.invariantVerdict.pass ? 'unjudged' : `invariant-FAIL (${d.invariantVerdict.violations.join('; ')})`;
     return `| ${d.caseId} | ${inv} | ${needsJudge} |`;
   });
   const summary = [
     `# Run summary — ${modelId} · ${arm} · ${date}`,
     '',
     `Subject: ${subject.dir}`,
-    `Cases: ${dumps.length} · invariant pass: ${dumps.filter((d) => d.invariantVerdict.pass).length}`,
+    `Cases: ${dumps.length} · unjudged (invariants clean): ${dumps.filter((d) => d.invariantVerdict.pass).length} · invariant-FAIL: ${dumps.filter((d) => !d.invariantVerdict.pass).length}`,
+    `STATUS TAXONOMY: 'unjudged' is NOT 'pass' — the judge decides quality (fold); invariant-FAIL is deterministic.`,
     `Tokens: in ${dumps.reduce((n, d) => n + (d.tokensIn ?? 0), 0)} · out ${dumps.reduce((n, d) => n + (d.tokensOut ?? 0), 0)}`,
     '',
-    '| case | invariants | needs-judge |',
+    '| case | status | needs-judge |',
     '|---|---|---|',
     ...rows,
     '',
