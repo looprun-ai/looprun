@@ -304,7 +304,7 @@ provided · `agent` = you add it explicitly.
 
 ### The SIX RISK-FAMILY kinds — index + rendered prose
 
-Six kinds are the shipped decidable PROXIES for the six risk families the generator's E2b sweep must walk
+Six kinds are the shipped decidable PROXIES for the six risk families the generator's decidable-proxy sweep must walk
 (the family table lives in the skill's `references/guard-catalog.md`). All six are **agent-installed** — none
 auto-installs — and every linguistic pattern is a required param (P8a). Proofs:
 [`test/proofs/catalog-risk-families.ts`](./test/proofs/catalog-risk-families.ts) (L1 isolated + L3 scripted,
@@ -381,7 +381,7 @@ Populated from `AgentSpecConfig`; wired by the Mastra backend unless noted.
 | `redrives` | `number` | 1 | bounded no-tools onReply re-generate count before the exhaustion terminal. |
 | `terminal` | `(world: AgentWorld) => boolean` | — | **reply-only policy**: `true` ⇒ drop `askUser` this turn (reply-only protocol). This is a per-turn terminal-surface policy, DISTINCT from `exhaustionReply` (the honest-closure text). |
 | `directives` | `StateDirective[]` `{id, cond, directive, when?}` | — | rendered statically into the trunk `## Governance` section as `IF <cond> → <directive>`. Render-only: the `when` runtime predicate is **reserved, not consumed** by the backend. |
-| `chains` | `ChainSpec[]` | — | P5' declared follow-up completions (see below). Absent/empty ⇒ zero added effect. |
+| `chains` | `ChainSpec[]` | — | declared follow-up completions (see below). Absent/empty ⇒ zero added effect. |
 | `escalate` | `{ model: AgentModelRef; maxAttempts? }` | — | **TYPED but currently NOT consumed by the Mastra backend** — the field exists on `AgentControls`, but `mastra.ts` never reads it (no model-tier escalation on the shipping path). Present for forward-compat; treat as inert today. |
 | `sampling` | `{ temperature?, topP?, maxOutputTokens?, seed? }` | — | per-agent AI-SDK call settings, merged OVER the conversation-level `modelParams` (agent wins) by `resolveModelSettings` — a creative agent at temp 0.7 beside a temp-0 admin agent in the same domain. |
 | `exhaustionReply` | `(world, okTools: string[], produced: string[], violations: string[]) => string` | theme/`defaultExhaustionReply` | committed when the reply STILL violates a check after all redrives — a PURE function of verified observations (structurally unable to fabricate, never empty). Precedence: spec → theme → default. |
@@ -470,7 +470,7 @@ from the guard's own `prose()`. That leaves one honest job for `spec.behavior[]`
 
 > **`behavior[]` is the LANGUAGE / JUDGEMENT layer — the prose whose rules have NO possible check.**
 
-It is the **declared residue of the proxy sweep** (the generator's E2b step): every candidate rule is
+It is the **declared residue of the proxy sweep** (the generator's decidable-proxy sweep): every candidate rule is
 pushed at a decidable proxy; whatever survives as **UNCHECKABLE + PROXY-ATTEMPTED** is what belongs in
 `behavior[]`. Tone, ordering of explanation, warmth, how much context to give, when a summary reads as
 condescending — things a `check(ctx)` cannot decide because they are matters of judgement, not of state.
