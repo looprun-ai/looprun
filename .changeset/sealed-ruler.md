@@ -1,6 +1,10 @@
 ---
-'@looprun-ai/eval': major
+'@looprun-ai/eval': minor
 ---
+
+**BREAKING.** Shipped as a minor: the packages are pre-1.0, where the minor slot is the
+breaking-change signal and 1.0.0 is a deliberate stability decision, not a milestone reached by
+accumulating removals. The version number will not warn anyone — this line has to.
 
 The seal covers the subject's judge prompt, and the generic ruler leaves the package.
 
