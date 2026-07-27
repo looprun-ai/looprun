@@ -6,7 +6,7 @@
  * fed by `hooks.afterToolCall`. Mastra applies hooks to ALL tool sources (assigned, toolsets,
  * client, MCP), so guards also govern native/MCP tools with zero extra wiring.
  */
-import { evaluatePreTool, evaluateOnInput, enforcePostTool, isTerminal, recordTerminalCall, recordToolResult, resolveGuards } from '@looprun-ai/core';
+import { evaluatePreTool, evaluateOnInput, enforcePostTool, governanceVeto, isTerminal, recordTerminalCall, recordToolResult, resolveGuards } from '@looprun-ai/core';
 import type { AgentSpec, GuardCtx } from '@looprun-ai/core';
 import type { LoopRunSession } from './session.js';
 import type { SessionAccessor } from './tools.js';
@@ -30,7 +30,10 @@ export function makeGuardHooks(spec: AgentSpec, getSession: SessionAccessor): Gu
       const args = (input ?? {}) as Record<string, unknown>;
       const verdict = await evaluatePreTool(spec, session.ledger, session.world, toolName, args);
       if (verdict.verdict === 'deny') {
-        return { proceed: false as const, output: { success: false, error: verdict.reason } };
+        // The envelope, not a bare `{success:false,error}`: the model must be able to tell a GUARD
+        // correction (fix and retry — the world was never called) from a WORLD refusal (a business
+        // fact to report to the user).
+        return { proceed: false as const, output: governanceVeto(verdict.guard.kind, verdict.reason, verdict.mustCloseTurn) };
       }
       return undefined;
     },

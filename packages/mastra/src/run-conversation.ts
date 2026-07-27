@@ -25,8 +25,11 @@ import {
   forcedTerminalPrompt,
   isTerminal,
   normalizeModelParams,
+  prematureTerminalTools,
+  pruneSupersededTerminals,
   resolveModelSettings,
   runChainCompletionPass,
+  supersededTerminalCalls,
   vetoStormHit,
   renderScopedSpecTrunk,
   terminalProtocol,
@@ -171,6 +174,19 @@ export async function runSpecConversation(spec: AgentSpec, turns: TurnInput[], d
       if (full.response?.messages) messages.push(...full.response.messages);
       const steps = (full.steps ?? []) as unknown[];
       let extraCalls = 0;
+
+      // The closing step must be TERMINAL-ONLY. A terminal that shared its step with a domain call was
+      // composed BEFORE that call's result existed, so its text cannot be reporting it. Invalidate it;
+      // the forced-terminal fallback right below re-closes the turn on a history that now carries the
+      // tool RESULTS.
+      const premature = prematureTerminalTools(full.steps);
+      if (premature.length && ledger.terminalReply.trim()) {
+        ledger.terminalReply = '';
+        ledger.turnCorrections.push(`premature-terminal:${[...new Set(premature)].join(',')}`);
+      }
+      // Terminals that lost the delivery contest are not evidence of anything the user saw.
+      const pruned = pruneSupersededTerminals(ledger, supersededTerminalCalls(full.steps));
+      if (pruned.length) ledger.turnCorrections.push(`superseded-terminal:${[...new Set(pruned)].join(',')}`);
 
       // Forced-terminal fallback: if the model ended without a terminal call, force one (no domain tools).
       if (!ledger.terminalReply.trim()) {

@@ -121,6 +121,30 @@ export function recordTerminalCall(ledger: TurnLedger, name: string, args: Recor
   ledger.observed.push({ name, args, ok: true, turnIndex: ledger.turnIndex });
 }
 
+/**
+ * Drop terminal calls that were emitted but never DELIVERED (see `supersededTerminalCalls`). Runs
+ * once the generation has resolved, so the hook-time record that gave a same-step sibling's preTool
+ * checks visibility of an `askUser` has already done its job; what is corrected here is the
+ * cross-turn evidence, where an undelivered question must not read as consent obtained.
+ * Returns the names actually pruned, for the turn's recovery log.
+ */
+export function pruneSupersededTerminals(
+  ledger: TurnLedger,
+  superseded: Array<{ name: string; args: Record<string, unknown> }>,
+): string[] {
+  const pruned: string[] = [];
+  for (const s of superseded) {
+    const ix = ledger.observed.findIndex(
+      (o) => o.turnIndex === ledger.turnIndex && o.name === s.name && canonArgs(o.args) === canonArgs(s.args),
+    );
+    if (ix >= 0) {
+      ledger.observed.splice(ix, 1);
+      pruned.push(s.name);
+    }
+  }
+  return pruned;
+}
+
 /** Capture the terminal REPLY text (the observed push happens at hook time via recordTerminalCall). */
 export function recordTerminal(ledger: TurnLedger, name: string, args: Record<string, unknown>): void {
   const text = typeof args.text === 'string' ? args.text : '';

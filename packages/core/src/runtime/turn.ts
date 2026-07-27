@@ -15,6 +15,7 @@ import type { AgentSpec, ChainSpec } from '../spec.js';
 import type { TrunkContract } from '../trunk.js';
 import type { AgentWorld, Guard, GuardCtx, ObservedCall } from '../rules.js';
 import { recordVeto, type TurnLedger } from './ledger.js';
+import { isTerminal } from './terminal.js';
 
 export interface ReplyViolation {
   guard: Guard;
@@ -23,7 +24,53 @@ export interface ReplyViolation {
 
 export type PreToolVerdict =
   | { verdict: 'allow' }
-  | { verdict: 'deny'; reason: string; guard: Guard };
+  | { verdict: 'deny'; reason: string; guard: Guard; mustCloseTurn: boolean };
+
+/**
+ * The result a VETOED call returns to the model.
+ *
+ * A tool result the model reads can mean two very different things: the WORLD refused (a fact about
+ * the business, which the model should report to the user) or a GUARD corrected it (the call never
+ * reached the world, and the model should fix and retry). An untagged `{success:false, error}` is
+ * the same shape for both, so harness coaching text reads as if the business had said it — and is
+ * one quote away from the user.
+ *
+ * The envelope carries the discriminator, the guard `kind` that produced it, the correction under
+ * its own key, and a STRUCTURAL `mustCloseTurn` flag instead of a silently-escalating prose suffix.
+ * `success:false` + `error` are preserved so {@link resultOk} and any host reading `error` keep
+ * working.
+ */
+export interface GovernanceVeto {
+  success: false;
+  /** THE discriminator: this result was produced by the guard layer; the world was never called. */
+  source: 'governance';
+  /** The guard kind that vetoed — attribution for logs and tests without parsing prose. */
+  guard: string;
+  /** What the model must fix, verbatim from the guard. */
+  correction: string;
+  /** Same text as `correction`, for hosts and models that read `error`. */
+  error: string;
+  /** Set once the model is looping on vetoes: stop calling domain tools and close the turn. */
+  mustCloseTurn?: true;
+}
+
+/** Build the veto result the model sees. Pure, so the envelope is unit-testable. */
+export function governanceVeto(guardKind: string, reason: string, mustCloseTurn: boolean): GovernanceVeto {
+  // The escalation names NO terminal tool: how to close a turn is the protocol's job, and a raw
+  // tool name inside a tool result is one copy-paste away from the user.
+  const correction = mustCloseTurn
+    ? `${reason} STOP: do not call any more domain tools this turn. Close the turn NOW with your final ` +
+      'user-facing message, reporting only what actually succeeded.'
+    : reason;
+  return {
+    success: false,
+    source: 'governance',
+    guard: guardKind,
+    correction,
+    error: correction,
+    ...(mustCloseTurn ? { mustCloseTurn: true as const } : {}),
+  };
+}
 
 /** Run the preTool guards for one candidate call. On deny, the veto is recorded in the ledger. */
 export async function evaluatePreTool(
@@ -57,11 +104,9 @@ export async function evaluatePreTool(
       const selfIx = ledger.inFlightCalls.indexOf(selfEntry);
       if (selfIx >= 0) ledger.inFlightCalls.splice(selfIx, 1);
       recordVeto(ledger, tool, args, `${g.dim}:${g.kind}:${tool}`);
-      // 2nd+ consecutive veto: the model is looping — tell it to close, in unmissable terms.
-      const escalated = ledger.vetoStreak >= 2
-        ? `${reason} STOP: do not call any more domain tools this turn. Close NOW with replyToUser (or askUser), reporting only what actually succeeded.`
-        : reason;
-      return { verdict: 'deny', reason: escalated, guard: g };
+      // 2nd+ consecutive veto: the model is looping. The backend wraps `reason` in the veto
+      // envelope, which carries the escalation both as prose and as a structural flag.
+      return { verdict: 'deny', reason, guard: g, mustCloseTurn: ledger.vetoStreak >= 2 };
     }
   }
   return { verdict: 'allow' };
@@ -163,7 +208,15 @@ export function redriveMessage(violations: ReplyViolation[]): string {
   return `Revise your last reply to the user:\n${correction}\nReply now in the user's language. Do NOT call a tool.`;
 }
 
-/** The built-in honest-abstain closure: a pure function of verified observations. */
+/**
+ * The built-in honest-abstain closure: a pure function of verified observations.
+ *
+ * `okTools` is read as a BOOLEAN — "did anything actually land this turn?" — and never interpolated.
+ * A tool identifier is internal vocabulary: the user did not ask for `listItems`, they asked for
+ * their items, and a runtime terminal (`replyToUser`) named in a delivered sentence is pure leakage.
+ * The only nouns that reach the text are `produced`: labels the world itself issued for what it
+ * created. Callers pass a DOMAIN-only `okTools` (see finalizeReply).
+ */
 export function defaultExhaustionReply(
   contract: TrunkContract | undefined,
   world: AgentWorld,
@@ -173,8 +226,54 @@ export function defaultExhaustionReply(
 ): string {
   if (contract?.exhaustionReply) return contract.exhaustionReply(world, okTools, produced, violations);
   return okTools.length
-    ? `Done this step: ${[...new Set(okTools)].join(', ')}${produced.length ? ` (${produced.join(', ')})` : ''}. I could not safely finish the rest — how would you like to proceed?`
+    ? `I completed part of this request${produced.length ? ` (${produced.join(', ')})` : ''}, but I could not safely finish the rest — how would you like to proceed?`
     : 'I could not complete this safely — nothing was changed. Could you rephrase or add detail?';
+}
+
+/**
+ * ── The TRUTH/SAFETY ↔ FORM frontier ──────────────────────────────────────────────────────────────
+ *
+ * The model composes the CORRECT answer inside a terminal's `text` arg, one onReply guard vetoes it —
+ * often on FORM, not on truth — the bounded redrive fails to repair it, and the finalizer throws the
+ * whole answer away for a generic stub that says nothing. Delivering a true answer that breaks a
+ * presentational contract is strictly better for the user than that stub.
+ *
+ * This frontier is the ONLY thing that relaxes. A candidate that trips a TRUTH/SAFETY guard is NEVER
+ * delivered — no exception, no scoring, no "fewest violations wins".
+ *
+ * FORM (salvageable): purely stylistic contracts — a shape rule about the reply, not about the world.
+ * An omission or an awkward register misstates nothing; the mutators and the redrive already had
+ * their chance at the polish.
+ *
+ * TRUTH/SAFETY (never delivered over): anything that can make the user believe something false about
+ * what happened, or that bypasses a destructive-action protocol. That includes every guard whose
+ * `dim` is an action/state dim (spatial | input | run | output) — those bind what the agent DID, not
+ * how it phrased it — and every unknown kind: the frontier is an ALLOW-list, so a business-authored
+ * guard the runtime has never seen defaults to TRUTH. Opting a new kind in is a deliberate edit here.
+ */
+const FORM_GUARD_KINDS: ReadonlySet<string> = new Set([
+  'replySingleQuestion',
+  'replyMaxOccurrences',
+  'replyMustMention',
+  'replyConfirmsLabels',
+  'degenerationGuard',
+]);
+
+/** Behaviour-dim kinds that are TRUTH/SAFETY — listed explicitly so the allow-list above can never
+ *  accidentally grow over one of them (belt-and-braces: they are not in FORM_GUARD_KINDS either). */
+const TRUTH_GUARD_KINDS: ReadonlySet<string> = new Set([
+  'noFabricatedSuccess',
+  'destructiveClaimRequiresSuccess',
+  'noFalseFailureClaim',
+  'pendingConfirmMustAsk',
+  'emptyReply',
+]);
+
+/** True when this violation is purely a FORM contract, so the candidate may still be delivered. */
+function isFormViolation(g: Guard): boolean {
+  if (g.dim !== 'behavior') return false; // action/state dims are TRUTH by construction
+  if (TRUTH_GUARD_KINDS.has(g.kind)) return false;
+  return FORM_GUARD_KINDS.has(g.kind); // allow-list: unknown kinds default to TRUTH (deny)
 }
 
 export interface FinalizedReply {
@@ -234,12 +333,23 @@ export async function finalizeReply(
           ledger.turnCorrections.push('exhaustion-salvage');
           return { text: candidate, exhausted: true, violations: finalViolations };
         }
+        if (candViolations.every((v) => isFormViolation(v.guard))) {
+          ledger.turnCorrections.push(`salvage:form-only:${candViolations.map((v) => v.guard.kind).join(',')}`);
+          return { text: candidate, exhausted: true, violations: finalViolations };
+        }
         ledger.turnCorrections.push(`salvage-miss:checks:${candViolations.map((v) => v.guard.kind).join(',')}`);
       }
     } else {
       ledger.turnCorrections.push('salvage-miss:no-terminal-observed');
     }
-    const okTools = ledger.observed.filter((o) => o.turnIndex === ledger.turnIndex && o.ok).map((o) => o.name);
+    // DOMAIN-only evidence. This list is the closure's answer to "what actually landed this turn",
+    // and a turn-closing terminal is not that — it is the runtime's own delivery mechanism. The hooks
+    // record every terminal in `observed` with ok:true (they must, so a same-step sibling's preTool
+    // checks can see an askUser), so the filter belongs here, at the one place the ledger is read as
+    // evidence for user-facing prose.
+    const okTools = ledger.observed
+      .filter((o) => o.turnIndex === ledger.turnIndex && o.ok && !isTerminal(o.name))
+      .map((o) => o.name);
     const closure = spec.controls.exhaustionReply
       ? spec.controls.exhaustionReply(world, okTools, ledger.producedThisTurn, finalViolations)
       : defaultExhaustionReply(contract, world, okTools, ledger.producedThisTurn, finalViolations);

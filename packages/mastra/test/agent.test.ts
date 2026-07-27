@@ -1,6 +1,6 @@
 /** Offline e2e of the governed turn: veto, redrive, forced-terminal, exhaustion, sessions. */
 import { describe, expect, it } from 'vitest';
-import { AgentSpecBase, requiresBefore, replyMustMention } from '@looprun-ai/core';
+import { AgentSpecBase, custom, requiresBefore, replyMustMention } from '@looprun-ai/core';
 import type { AgentWorld, TrunkContract } from '@looprun-ai/core';
 import { LoopRunAgent } from '../src/index.js';
 import { scriptedModel } from './scripted-model.js';
@@ -57,6 +57,10 @@ const TOOL_DEFS = [
     inputSchema: { type: 'object', properties: { plant: { type: 'string' } }, required: ['plant'] },
   },
 ];
+
+/** A reply check no text can satisfy, of the TRUTH class — the salvage may never deliver over it. */
+const unsatisfiableTruthCheck = () =>
+  custom({ kind: 'proofTruthGate', dim: 'behavior', check: () => 'never deliverable', prose: () => '' });
 
 function makeSpec() {
   const spec = new AgentSpecBase({
@@ -169,7 +173,9 @@ describe('LoopRunAgent — one governed turn', () => {
 
   it('commits the deterministic closure when redrives exhaust', async () => {
     const spec = makeSpec();
-    spec.addReplyCheck(replyMustMention(['impossible-token-xyz'], 'nope'), { id: 'agent:impossible' });
+    // A TRUTH-class check (an unknown kind is TRUTH by the frontier's allow-list): the salvage may
+    // not deliver the candidate, so the closure is what the user gets.
+    spec.addReplyCheck(unsatisfiableTruthCheck(), { id: 'agent:impossible' });
     const scripted = scriptedModel([
       [{ tool: 'listPlants', args: {} }],
       [{ tool: 'replyToUser', args: { text: 'A.' } }],
@@ -178,8 +184,10 @@ describe('LoopRunAgent — one governed turn', () => {
     const agent = new LoopRunAgent({ spec, world: plantsWorld(), toolDefs: TOOL_DEFS, model: scripted.model });
     const res = await agent.generate('Hi');
     expect(res.looprun.exhausted).toBe(true);
-    expect(res.looprun.violations).toContain('replyMustMention');
-    expect(res.text).toBe('closure:listPlants,replyToUser'); // CONTRACT closure over verified ok tools
+    expect(res.looprun.violations).toContain('proofTruthGate');
+    // The contract closure runs over verified DOMAIN work only: a terminal is the runtime's own
+    // delivery mechanism, not evidence of anything done for the user.
+    expect(res.text).toBe('closure:listPlants');
   });
 });
 
@@ -247,7 +255,7 @@ describe('LoopRunAgent — review regressions', () => {
 
   it('#2 history holds the reply the user received — never a rejected draft', async () => {
     const spec = makeSpec();
-    spec.addReplyCheck(replyMustMention(['impossible-token-xyz'], 'nope'), { id: 'agent:impossible' });
+    spec.addReplyCheck(unsatisfiableTruthCheck(), { id: 'agent:impossible' });
     const scripted = scriptedModel([
       [{ tool: 'listPlants', args: {} }],
       [{ tool: 'replyToUser', args: { text: 'A.' } }],
