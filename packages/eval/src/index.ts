@@ -33,11 +33,4 @@ export type { EvalCase, EvalConfig } from './legacy-types.js';
 export { lintSource, lintPaths, lintSpecLaws, lintSpecExecution, BANNED_TOKENS } from './lint.js';
 export type { LintViolation } from './lint.js';
 
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-/** Absolute path of the packaged generic judge prompt (`looprun-eval judge-prompt`). */
-export function judgePromptPath(): string {
-  return join(dirname(fileURLToPath(import.meta.url)), '..', 'assets', 'judge-prompt.md');
-}
 export { computeArtifactHash, mintSeal, verifySeal, sealedFiles } from './seal.js';

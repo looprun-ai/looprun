@@ -2,7 +2,8 @@
  * @looprun-ai/eval — the SHIP seal: a certification record bound to the artifact hash.
  *
  * The hash covers the governed artifacts of a subject (norms/**, gen/tools.json,
- * gen/world.ts, evals/cases.*): sha256 over the sorted list of `sha256(content)  relpath`
+ * gen/world.ts, evals/cases.*, evals/judge-prompt.md): sha256 over the sorted list of
+ * `sha256(content)  relpath`
  * lines. ANY change to a hashed artifact after certification voids the seal — verification
  * recomputes and compares; a mismatch is VOID, never re-stamped.
  */
@@ -39,7 +40,9 @@ export function sealedFiles(subjectDir: string): string[] {
   const evalsDir = join(subjectDir, 'evals');
   if (existsSync(evalsDir)) {
     for (const name of readdirSync(evalsDir).sort()) {
-      if (/^cases\./.test(name)) files.push(join(evalsDir, name));
+      // The cases AND the ruler: a certification is a claim about a score, and swapping the judge's
+      // domain rules changes that score without touching a single case. Both are under seal.
+      if (/^cases\./.test(name) || name === 'judge-prompt.md') files.push(join(evalsDir, name));
     }
   }
   return files.map((p) => relative(subjectDir, p)).sort();

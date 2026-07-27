@@ -19,10 +19,9 @@ deterministic gate only — never the quality verdict.
 
 ## Judge (the coding agent running the loop — never the subject model's family)
 
-1. `npx looprun-eval judge-prompt` prints the packaged generic prompt. Apply it (plus the domain
-   rules in `evals/judge-prompt.md` — RULES only, the generic prompt owns the output format) to
-   `cases.jsonl`, one verdict JSONL line per case (`{caseId, verdict: "pass"|"fail", reasons: []}`),
-   into `verdicts.jsonl`.
+1. Judge `cases.jsonl` against the subject's domain rules in `evals/judge-prompt.md`. Emit one
+   verdict JSONL line per case (`{caseId, verdict: "pass"|"fail", reasons: []}`) into
+   `verdicts.jsonl`. Judge meaning, not phrasing; ambiguous or insufficient evidence is a FAIL.
 2. `npx looprun-eval fold --dump <run>/cases.jsonl --verdicts <run>/verdicts.jsonl`
    → `RESULTS.md`. Final pass = invariants AND judge; a missing verdict counts as FAIL, loudly.
 

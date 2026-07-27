@@ -94,7 +94,7 @@ npx looprun init                         # environment check + optional local-mo
 | `@looprun-ai/core` | AgentSpec + guards + trunk renderer + the framework-free governed-turn machine |
 | `@looprun-ai/mastra` | `LoopRunAgent` (a real Mastra Agent), `compileSpec` primitives, the conversation runner |
 | `@looprun-ai/models` | validated local models (llama.cpp `ModelRuntimePort`) + the cloud validation model |
-| `@looprun-ai/eval` | the `looprun-eval` CLI: run / fold / cert / judge-prompt / lint |
+| `@looprun-ai/eval` | the `looprun-eval` CLI: run / fold / cert / lint |
 | `@looprun-ai/vercel` | reserved — the Vercel AI SDK backend seam |
 [REV: review the above list]
 

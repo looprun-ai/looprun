@@ -76,5 +76,5 @@ separate artifact.
 
 ## CLI
 
-`looprun-eval run | fold | cert | judge-prompt | lint` — see `npx looprun-eval help` and
+`looprun-eval run | fold | cert | lint` — see `npx looprun-eval help` and
 [`packages/eval/README.md`](../../packages/eval/README.md) (source of truth).

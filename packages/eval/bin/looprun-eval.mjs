@@ -7,7 +7,6 @@
  *   looprun-eval fold --dump <cases.jsonl> --verdicts <verdicts.jsonl> [--out <RESULTS.md>]
  *   looprun-eval cert <run-dir> [--bar 0.9] [--model <label>] [--date <iso>] [--note <text>]
  *   looprun-eval seal <subject-dir> [--verify] [--target model:rate:reps ...] [--bar 0.9] [--date <iso>]
- *   looprun-eval judge-prompt
  *   looprun-eval lint [paths…] [--spec-laws --subject <dir>]
  */
 const HELP = `looprun-eval <command>
@@ -21,7 +20,6 @@ const HELP = `looprun-eval <command>
   cert <run-dir>     Fold cases.jsonl + verdicts.jsonl → cert.json + CERT.md (reps=1, stated).
   seal <subject>     Mint ship/seal.json (hash-bound) — or --verify an existing one.
                      [--bar 0.9] [--model <label>] [--date <iso>] [--note <text>]
-  judge-prompt       Print the packaged generic judge prompt path.
   lint [paths…]      Purity/firewall/contract lint. [--spec-laws --subject <dir>]
 
 Quality verdicts come ONLY from the LLM judge — the run's streamed pass/fail lines are the
@@ -58,11 +56,6 @@ async function main() {
 
   if (!cmd || cmd === 'help' || has('help')) {
     console.log(HELP);
-    return;
-  }
-
-  if (cmd === 'judge-prompt') {
-    console.log(api.judgePromptPath());
     return;
   }
 

@@ -14,16 +14,35 @@ function toySubject(): string {
   writeFileSync(join(dir, 'gen', 'tools.json'), '{"tools":[]}\n');
   writeFileSync(join(dir, 'gen', 'world.ts'), 'export class W {}\n');
   writeFileSync(join(dir, 'evals', 'cases.ts'), 'export default []\n');
+  writeFileSync(join(dir, 'evals', 'judge-prompt.md'), '- An honest empty result passes.\n');
   return dir;
 }
 
 test('seal: mint covers the governed surface, verify passes, tamper voids', () => {
   const dir = toySubject();
-  assert.deepEqual(sealedFiles(dir), ['evals/cases.ts', 'gen/tools.json', 'gen/world.ts', 'norms/contract.ts']);
+  assert.deepEqual(sealedFiles(dir), [
+    'evals/cases.ts',
+    'evals/judge-prompt.md',
+    'gen/tools.json',
+    'gen/world.ts',
+    'norms/contract.ts',
+  ]);
   const seal = mintSeal(dir, { targets: [{ model: 'm', rate: 1, reps: 3 }], bar: 0.9, date: '2026-01-01' });
   assert.equal(seal.bar, 0.9);
   assert.equal(verifySeal(dir).ok, true);
   appendFileSync(join(dir, 'norms', 'contract.ts'), '// changed\n');
+  const v = verifySeal(dir);
+  assert.equal(v.ok, false);
+  assert.notEqual(v.actual, v.expected);
+});
+
+test('seal: swapping the ruler voids the seal', () => {
+  const dir = toySubject();
+  mintSeal(dir, { targets: [{ model: 'm', rate: 1, reps: 3 }], bar: 0.9, date: '2026-01-01' });
+  assert.equal(verifySeal(dir).ok, true);
+  // A certification is a claim about a score. Rewrite the judge's rules and the score is no longer
+  // the one that was certified, even though every case is untouched.
+  writeFileSync(join(dir, 'evals', 'judge-prompt.md'), '- An honest empty result fails.\n');
   const v = verifySeal(dir);
   assert.equal(v.ok, false);
   assert.notEqual(v.actual, v.expected);
