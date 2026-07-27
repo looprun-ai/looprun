@@ -79,7 +79,7 @@ describe('noFalseFailureClaim reasons over DOMAIN calls only', () => {
   });
 
   it('REGRESSION FLOOR: a real domain ACTION that took effect + an inability claim still fires', async () => {
-    // B1: the domain success must be a MUTATION that took effect (createItem), not a bare read —
+    // The domain success must be a MUTATION that took effect (createItem), not a bare read —
     // a read success is an honest lookup and the "I was unable to" reply over it is honest negation.
     const ctx = craftCtx({
       observed: [call('createItem', { tookEffect: true }), call('replyToUser', { args: { text: 'x' } })],
@@ -88,7 +88,7 @@ describe('noFalseFailureClaim reasons over DOMAIN calls only', () => {
     expect(await guard().check(ctx)).toBeTruthy();
   });
 
-  it('B1: a READ-ONLY success (no mutation) exempts the honest "cannot" claim', async () => {
+  it('a READ-ONLY success (no mutation) exempts the honest "cannot" claim', async () => {
     const ctx = craftCtx({
       observed: [call('searchItem'), call('replyToUser', { args: { text: 'x' } })],
       reply: 'I was unable to look that up — no record matches.',
@@ -116,18 +116,18 @@ describe('noFalseFailureClaim reasons over DOMAIN calls only', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// N5 (library-desk 2026-07-24) — noFalseFailureClaim exempts an HONEST MIXED-turn partial. B1 made the
-// guard require a mutation (so a read-only "no record" is not vetoed); N1 fixed the same class on the
-// sibling destructiveClaimRequiresSuccess. N5 closes B1's remaining hole: a turn that MIXES a real
-// mutation with an honest can't-do about a DIFFERENT entity, cited with a legitimate reason, must not be
-// vetoed. The domain's honest-negation pattern (wired from cfg.lexicon.honestNegationRe) is the exempt.
-// Mutation-provable: drop the `exemptRe && matches(...)` line in guards.ts and N5-a goes null→truthy.
+// noFalseFailureClaim exempts an HONEST MIXED-turn partial. The guard requires a mutation, so a
+// read-only "no record" is never vetoed; its sibling destructiveClaimRequiresSuccess makes the same
+// discrimination. The remaining hole this closes: a turn that MIXES a real mutation with an honest
+// can't-do about a DIFFERENT entity, cited with a legitimate reason, must not be vetoed. The domain's
+// honest-negation pattern (wired from cfg.lexicon.honestNegationRe) is the exempt. Mutation-provable:
+// drop the `exemptRe && matches(...)` line in guards.ts and the first case here goes null→truthy.
 // ─────────────────────────────────────────────────────────────────────────────
 describe('noFalseFailureClaim exempts an honest MIXED-turn partial', () => {
   const claimRe = /\b(?:could\s?not|couldn't|unable to)\b/i;
   const exemptRe = /\b(?:already|at its (?:cap|limit)|renewal limit|no such)\b/i;
 
-  it('N5-a · a mutation took effect + an honest "could not (already/at its limit) [OTHER entity]" → EXEMPT, no fire', async () => {
+  it('a mutation took effect + an honest "could not (already/at its limit) [OTHER entity]" → EXEMPT, no fire', async () => {
     const g = noFalseFailureClaim({ claimRe, exemptRe });
     const ctx = craftCtx({
       observed: [call('updateItem', { tookEffect: true }), call('replyToUser')],
@@ -136,7 +136,7 @@ describe('noFalseFailureClaim exempts an honest MIXED-turn partial', () => {
     expect(await g.check(ctx)).toBeNull();
   });
 
-  it('N5-b · a BARE false-failure (no honest reason) STILL FIRES even with exemptRe present', async () => {
+  it('a BARE false-failure (no honest reason) STILL FIRES even with exemptRe present', async () => {
     const g = noFalseFailureClaim({ claimRe, exemptRe });
     const ctx = craftCtx({
       observed: [call('updateItem', { tookEffect: true }), call('replyToUser')],
@@ -145,7 +145,7 @@ describe('noFalseFailureClaim exempts an honest MIXED-turn partial', () => {
     expect(await g.check(ctx)).toBeTruthy();
   });
 
-  it('N5-c · WITHOUT exemptRe (pre-N5 fallback) the honest partial still fires — byte-identical to old behaviour', async () => {
+  it('WITHOUT exemptRe the honest partial still fires — the exemption is opt-in', async () => {
     const g = noFalseFailureClaim({ claimRe });
     const ctx = craftCtx({
       observed: [call('updateItem', { tookEffect: true }), call('replyToUser')],
