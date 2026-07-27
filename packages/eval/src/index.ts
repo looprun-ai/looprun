@@ -31,5 +31,7 @@ export { runCommand, foldCommand, certCommand } from './commands.js';
 export type { RunCommandOptions, FoldCommandOptions, CertCommandOptions } from './commands.js';
 export { lintSource, lintPaths, lintSpecLaws, lintSpecExecution, BANNED_TOKENS } from './lint.js';
 export type { LintViolation } from './lint.js';
+export { lintSpecQuality } from './lint-spec-quality.js';
+export { lintSubject } from './lint-subject.js';
 
 export { computeArtifactHash, mintSeal, verifySeal, sealedFiles } from './seal.js';

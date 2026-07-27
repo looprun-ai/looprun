@@ -1,0 +1,169 @@
+/**
+ * @looprun-ai/eval — subject-level laws: does the EXAM cover what shipped, and does the WORLD tell
+ * the runtime the truth.
+ *
+ * These two families catch the same species of defect and it is the worst species there is: a
+ * failure with no symptom. A guard no case targets passes in both arms of a discrimination run —
+ * it is not an alarm, not a failure, not anything; it is certified as coverage and never fired. A
+ * world that returns its refusals as successful-looking results disarms the entire honesty layer
+ * behind a green board: the guards are installed, the inventory shows them, the suite passes, and
+ * not one of them can fire because nothing ever reports a failure.
+ *
+ * Both are decidable offline, against the deterministic world and the assembled specs.
+ */
+import type { AgentSpec, AgentWorld } from '@looprun-ai/core';
+import type { Subject, SubjectCase } from './subject.js';
+
+/** A name the lint is confident no real world declares. */
+const IMPOSSIBLE_PRESET = '__looprun_lint_no_such_preset__';
+
+/** Tools whose name asserts a write. Narrow on purpose — a false accusation here costs trust. */
+const WRITE_NAME_RE = /^(create|update|delete|remove|set|add|send|issue|void|cancel|charge|release|pay|refund|resolve|place|transfer|retire|book|schedule|assign|close|open|apply|record)/;
+
+/** Fields a world uses to explain a refusal it chose to RETURN instead of throw. */
+const REFUSAL_FIELD_RE = /^(reason|error|refused|denied|blocked|rejected|failure|violation)$/i;
+
+const guardIds = (spec: AgentSpec): string[] => [
+  ...(spec.guards.onInput ?? []), ...(spec.guards.preTool ?? []),
+  ...(spec.guards.postTool ?? []), ...(spec.guards.onReply ?? []),
+].filter((b) => !b.disabled).map((b) => b.id);
+
+/**
+ * The guards a case is expected to target: the ones this BUNDLE chose.
+ *
+ * The `minimal:` layer is excluded — those are the invariants the constructor installs on every spec
+ * in every domain, and the engine proves them in its own suite. Demanding a per-subject case for
+ * each would file the same three findings against every bundle ever generated, which is how a
+ * census stops being read. `base:` stays in: the destructive protocol is installed FROM this
+ * bundle's own configuration, so it is this bundle's job to exercise it.
+ */
+const authoredGuardIds = (spec: AgentSpec): string[] => [
+  ...(spec.guards.onInput ?? []), ...(spec.guards.preTool ?? []),
+  ...(spec.guards.postTool ?? []), ...(spec.guards.onReply ?? []),
+].filter((b) => !b.disabled && b.layer !== 'minimal').map((b) => b.id);
+
+/** Which agent serves a case: the explicit routing map, else the single agent of a one-agent bundle. */
+function routedAgent(subject: Subject, c: SubjectCase): string | undefined {
+  const explicit = subject.caseAgent?.[c.id];
+  if (explicit) return explicit;
+  const ids = Object.keys(subject.specs ?? {});
+  return ids.length === 1 ? ids[0] : undefined;
+}
+
+/** Every string a rubric item puts in front of the judge. */
+const rubricText = (c: SubjectCase): string =>
+  (c.expectations?.rubric ?? []).map((r) => `${r.id} ${r.description}`).join(' ');
+
+/**
+ * EXAM COVERAGE. `targets` is how a case says which rule it exists to prove; without it the question
+ * "does this suite exercise the governance we ship?" has no answer at all.
+ */
+function coverageFindings(subject: Subject): string[] {
+  const out: string[] = [];
+  const inventory = new Set<string>();   // everything installed — what a target may legally name
+  const authored = new Set<string>();    // what this bundle chose — what a case is expected to cover
+  for (const spec of Object.values(subject.specs ?? {})) {
+    for (const id of guardIds(spec)) inventory.add(id);
+    for (const id of authoredGuardIds(spec)) authored.add(id);
+  }
+
+  const targeted = new Set<string>();
+  for (const c of subject.cases ?? []) {
+    const agent = routedAgent(subject, c);
+    const spec = agent ? subject.specs[agent] : undefined;
+
+    if (!c.targets?.length) {
+      out.push(`case "${c.id}": CASE-WITHOUT-TARGET: names no rule it tests — without it, "does the suite exercise what we ship" is unanswerable`);
+    }
+    for (const t of c.targets ?? []) {
+      targeted.add(t);
+      if (!inventory.has(t)) {
+        out.push(`case "${c.id}": PHANTOM-TARGET: targets '${t}', which matches no guard in the assembled inventory — remap it at the wire, or the case is proving nothing`);
+      } else if (spec && !guardIds(spec).includes(t)) {
+        out.push(`case "${c.id}": TARGET-ON-ANOTHER-AGENT: targets '${t}', installed on a different agent than the one this case routes to (${agent}) — the case can never reach it`);
+      }
+    }
+
+    if (spec) {
+      const surface = new Set(spec.surface.tools);
+      const text = rubricText(c);
+      for (const tok of new Set(text.match(/\b[a-z][A-Za-z0-9_]*[A-Z][A-Za-z0-9_]*\b/g) ?? [])) {
+        const known = Object.values(subject.specs).some((s) => s.surface.tools.includes(tok));
+        if (known && !surface.has(tok)) {
+          out.push(`case "${c.id}": RUBRIC-TOOL-OFF-SURFACE: a rubric item names '${tok}', which agent ${agent} does not have — the case cannot be passed as written`);
+        }
+      }
+    }
+  }
+
+  for (const id of authored) {
+    if (!targeted.has(id)) {
+      out.push(`GUARD-NEVER-TARGETED: '${id}' shipped and no case targets it — a guard the exam never exercises passes in BOTH arms of a discrimination run, so it reads as coverage while never having fired`);
+    }
+  }
+  return out;
+}
+
+/** Construct a preset, reporting how it failed rather than letting the lint die. */
+function tryPreset(make: (p?: string) => AgentWorld, preset: string): { world?: AgentWorld; error?: string } {
+  try {
+    return { world: make(preset) };
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+}
+
+/**
+ * WORLD LAWS. Two questions, both answerable without a model: does a mis-typed preset fail loudly,
+ * and does a refused write read as a failure to the runtime.
+ */
+function worldFindings(subject: Subject): string[] {
+  const out: string[] = [];
+  if (typeof subject.makeWorld !== 'function') return out;
+
+  // Every preset the cases actually declare has to construct. A case whose preset throws is an exam
+  // defect that only surfaces mid-run, after the spend.
+  const declared = new Set<string>();
+  for (const c of subject.cases ?? []) if (c.setup?.preset) declared.add(c.setup.preset);
+  for (const p of declared) {
+    const r = tryPreset(subject.makeWorld, p);
+    if (r.error) out.push(`world: DECLARED-PRESET-THROWS: a case declares preset '${p}' and constructing it throws: ${r.error}`);
+  }
+
+  // A mis-typed preset name must not fall back in silence — that puts the case in the wrong state
+  // and every assertion after it grades the wrong world.
+  const unknown = tryPreset(subject.makeWorld, IMPOSSIBLE_PRESET);
+  if (!unknown.error) {
+    out.push('world: ACCEPTS-ANY-PRESET: the factory took an unknown preset name without throwing — a mis-typed setup.preset silently becomes the default, and the case then grades a state nobody chose');
+  }
+
+  // THE REFUSAL-AS-RESULT TRAP. The honesty kinds default to "the call executed", not "the action
+  // took effect". A world that RETURNS its refusal instead of failing leaves `ok` true, and every
+  // one of them short-circuits to null. Nothing else in the battery can see this.
+  const probe = tryPreset(subject.makeWorld, 'default');
+  const world = probe.world;
+  if (world) {
+    const writes = (subject.toolDefs ?? []).map((t) => t.name).filter((n) => WRITE_NAME_RE.test(n));
+    for (const name of writes) {
+      let result: unknown;
+      try {
+        result = world.exec(name, {});
+      } catch {
+        continue; // A throw is an honest failure — exactly what the runtime expects.
+      }
+      if (!result || typeof result !== 'object') continue;
+      const r = result as Record<string, unknown>;
+      if (r.ok === false || r.success === false) continue; // reported as a failure — correct.
+      const refusalField = Object.keys(r).find((k) => REFUSAL_FIELD_RE.test(k) && r[k]);
+      if (refusalField) {
+        out.push(`world: REFUSED-WRITE-READS-OK: '${name}' returned a refusal ({${refusalField}: …}) with no ok:false — the runtime records that call as a SUCCESS, which disarms every honesty guard on this tool silently. Report a refused write as a failure, or pass the kind's own success predicate`);
+      }
+    }
+  }
+  return out;
+}
+
+/** The subject-level battery: exam coverage + the world's ok/failed contract. */
+export function lintSubject(subject: Subject): string[] {
+  return [...coverageFindings(subject), ...worldFindings(subject)];
+}

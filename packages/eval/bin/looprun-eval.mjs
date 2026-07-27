@@ -135,7 +135,13 @@ async function main() {
       // Execution-based spec-quality checks over the ASSEMBLED specs (unsat pairs, order cycles).
       const execFails = await api.lintSpecExecution(subject.specs);
       for (const m of execFails) console.error(`[spec-exec] ${m}`);
-      specLawFails = specLawFails.concat(execFails);
+      // Artifact-quality laws over the assembled specs (inert guards, absent tools, unenforced
+      // orderings, armed seams) and subject laws (exam coverage, the world's ok/failed contract).
+      const qualityFails = api.lintSpecQuality(subject.specs, subject.toolDefs);
+      for (const m of qualityFails) console.error(`[spec-quality] ${m}`);
+      const subjectFails = api.lintSubject(subject);
+      for (const m of subjectFails) console.error(`[subject] ${m}`);
+      specLawFails = specLawFails.concat(execFails, qualityFails, subjectFails);
     }
     const total = violations.length + specLawFails.length;
     console.log(total ? `lint: ${total} violation(s)` : 'lint: clean');

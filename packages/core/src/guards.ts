@@ -542,6 +542,12 @@ export function noFabricatedSuccess(
   return {
     kind: 'noFabricatedSuccess',
     dim: 'behavior',
+    // WHICH SEAMS ARE ARMED, recorded on the guard itself. A seam whose forbidden thing is an
+    // arbitrary domain regex has no derivable sentence, so arming it without its companion prose
+    // corrects the model for a rule it was never given (the ARMED_SEAMS law). A lint can only check
+    // that by READING the runtime — reconstructing it from the call site's source text is the
+    // re-encoding this codebase refuses. Values are booleans, never the patterns themselves.
+    meta: { armed: { banRe: opts.banRe != null, banProse: opts.banProse != null } },
     check(ctx) {
       const reply = ctx.reply ?? '';
       // Unconditional ban — checked BEFORE the attempt short-circuit so it fires regardless of attempts.
