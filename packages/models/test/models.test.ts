@@ -58,7 +58,7 @@ describe('alias registry', () => {
   });
 });
 
-describe('llama.cpp launch flags (the measured recipe — MTP on the 35B tiers since 2026-07-15)', () => {
+describe('llama.cpp launch flags (the measured recipe — MTP on the 35B tiers)', () => {
   it('encodes the validated per-model KV + ctx + cache-ram tier', () => {
     delete process.env.LLAMA_KV;
     delete process.env.LLAMA_CTX;

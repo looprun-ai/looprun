@@ -1,16 +1,15 @@
 /**
- * Trunk PROVENANCE + the coherence queries — the MECHANISM proofs (2026-07-20).
+ * Trunk PROVENANCE + the coherence queries — the MECHANISM proofs.
  *
  * WHERE THIS LIVES AND WHY. The mechanism (render → attributed table → fold; the three queries) is
  * runtime code and is proven HERE, on the domain-neutral fixture domain/specs, exactly like every other
- * guard-proof: it must hold for any bundle, not for atlas. The CENSUS of a real bundle (atlas-r2, plus
- * the tool descriptions in `bench/bench-core/**` and `bench/bench-core/fixtures/tools.json`) is a
- * bench-side fact about business content and lives in `bench/test/trunk-coherence.test.ts`, on the
- * `test:invariants` lane. Putting the census here would import business strings into a package whose
- * neutrality is CI-backstopped.
+ * guard-proof: it must hold for ANY bundle. Auditing the prose of a REAL bundle is a different job —
+ * a fact about that business's content, belonging to that bundle's own test lane. Running such a
+ * census here would import business strings into a package whose neutrality is CI-backstopped.
  *
  * THE INVARIANT THAT GATES EVERYTHING ELSE: the fold is byte-identical to the pre-refactor join. The
- * trunk-static law / D8 cacheable prefix and every certified number measured against it depend on it.
+ * trunk-static law, the cacheable prefix, and every certified number measured against them depend
+ * on it.
  */
 import { describe, expect, it } from 'vitest';
 import { AgentSpecBase } from '../../src/spec.js';
@@ -121,7 +120,7 @@ describe('subject + polarity derivation is deterministic', () => {
 
   it('a prohibition QUALIFIED by an exception connective is a requirement, not its opposite', () => {
     // "never X without Y" and "always Y before X" are ONE rule — the shape that made the first cut of
-    // query (a) report ~200 fabricated contradictions on atlas-r2.
+    // query (a) report hundreds of fabricated contradictions on a real bundle.
     expect(derivePolarity('never move money without an explicit user confirmation')).toBe('require');
     expect(derivePolarity('do not act until the user has answered')).toBe('require');
   });

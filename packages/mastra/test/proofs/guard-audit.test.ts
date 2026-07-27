@@ -1,14 +1,12 @@
 /**
- * THE 2026-07-20 GUARD AUDIT — one proof per finding.
+ * GUARD AUDIT — one proof per hole a guard must not reopen.
  *
- * Nine findings against `src/guards.ts`, ordered by severity (HIGH → MEDIUM). Every test in this file
- * FAILS against the pre-audit guards and PASSES after the fix; each block names the finding it pins so a
- * future edit that reopens the hole is attributed immediately.
+ * Each block pins a way the guard layer can drift from what the BACKEND actually records, so an edit
+ * that reopens the hole is attributed immediately.
  *
- * The three HIGH findings share one root cause worth stating once: the guard layer had drifted from what
- * the BACKEND actually records. `observed` carries runtime-owned terminal calls (HIGH 1), a vetoed
- * attempt is still an `observed` entry (HIGH 2), and a destructive tool need not carry a confirm flag at
- * all (HIGH 3) — each drift turned a safety gate into a gate that vetoes HONEST replies.
+ * Three of them share one root cause worth stating once: `observed` carries runtime-owned terminal
+ * calls, a vetoed attempt is still an `observed` entry, and a destructive tool need not carry a
+ * confirm flag at all. Each drift turns a safety gate into a gate that vetoes HONEST replies.
  */
 import { describe, expect, it } from 'vitest';
 import {
@@ -56,9 +54,9 @@ const call = (name: string, over: Partial<ObservedCall> = {}): ObservedCall => (
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// HIGH 1 — noFalseFailureClaim's precondition was vacuous (terminals in `observed`)
+// noFalseFailureClaim's precondition must not be vacuous (terminals sit in `observed`)
 // ─────────────────────────────────────────────────────────────────────────────
-describe('HIGH 1 · noFalseFailureClaim reasons over DOMAIN calls only', () => {
+describe('noFalseFailureClaim reasons over DOMAIN calls only', () => {
   const guard = (): Guard => noFalseFailureClaim({ claimRe: FIXTURE_LEXICON.falseFailureClaimRe });
 
   it('THE BUG: a turn with only terminal calls must NOT veto the honest "I cannot" reply', async () => {
@@ -125,7 +123,7 @@ describe('HIGH 1 · noFalseFailureClaim reasons over DOMAIN calls only', () => {
 // vetoed. The domain's honest-negation pattern (wired from cfg.lexicon.honestNegationRe) is the exempt.
 // Mutation-provable: drop the `exemptRe && matches(...)` line in guards.ts and N5-a goes null→truthy.
 // ─────────────────────────────────────────────────────────────────────────────
-describe('N5 · noFalseFailureClaim exempts an honest MIXED-turn partial', () => {
+describe('noFalseFailureClaim exempts an honest MIXED-turn partial', () => {
   const claimRe = /\b(?:could\s?not|couldn't|unable to)\b/i;
   const exemptRe = /\b(?:already|at its (?:cap|limit)|renewal limit|no such)\b/i;
 
@@ -157,7 +155,7 @@ describe('N5 · noFalseFailureClaim exempts an honest MIXED-turn partial', () =>
   });
 });
 
-describe('HIGH 1 (sweep) · grounding readers exclude terminals', () => {
+describe('grounding readers exclude terminals', () => {
   // Same root cause, different consumer: `toolResultText('turn')` intersected the ledger with the
   // observed NAMES of the turn — which included replyToUser, whose ledger entry holds the MODEL'S OWN
   // reply. A reply could ground its own fabricated figure just by containing it.
@@ -186,9 +184,9 @@ describe('HIGH 1 (sweep) · grounding readers exclude terminals', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// HIGH 2 — confirmFirst 'prior-ask': a VETOED attempt unlocked the next turn
+// confirmFirst 'prior-ask': a VETOED attempt must not unlock the next turn
 // ─────────────────────────────────────────────────────────────────────────────
-describe("HIGH 2 · confirmFirst('prior-ask') is SUCCESS-KEYED", () => {
+describe("confirmFirst('prior-ask') is SUCCESS-KEYED", () => {
   const guard = (): Guard => confirmFirst({ mechanism: 'prior-ask', askRe: FIXTURE_LEXICON.confirmAskRe });
 
   it('THE NEGATIVE PROOF: a turn-1 attempt VETOED BY THIS GUARD does not unlock turn 2', async () => {
@@ -247,9 +245,9 @@ describe("HIGH 2 · confirmFirst('prior-ask') is SUCCESS-KEYED", () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// HIGH 3 — destructiveClaimRequiresSuccess hardcoded `confirmed === true`
+// destructiveClaimRequiresSuccess takes the confirm flag as a param, never hardcoded
 // ─────────────────────────────────────────────────────────────────────────────
-describe('HIGH 3 · destructiveClaimRequiresSuccess takes the confirm flag as a param', () => {
+describe('destructiveClaimRequiresSuccess takes the confirm flag as a param', () => {
   const opts = {
     claimRe: /\b(deleted|removed|purged)\b/i,
     askRe: FIXTURE_LEXICON.confirmAskRe,
@@ -319,9 +317,9 @@ describe('HIGH 3 · destructiveClaimRequiresSuccess takes the confirm flag as a 
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// HIGH 4 — DETERMINISM: a caller's /g regex must never alternate the verdict
+// DETERMINISM: a caller's /g regex must never alternate the verdict
 // ─────────────────────────────────────────────────────────────────────────────
-describe('HIGH 4 · a /g regex from the bundle gives the SAME verdict on every call', () => {
+describe('a /g regex from the bundle gives the SAME verdict on every call', () => {
   // GUARDS.md §1 forbids a stateful regex on a closure-held pattern: `.test()` advances `lastIndex`, so
   // the same guard on the same reply flips verdict between turns. Every linguistic pattern here is
   // INJECTED by a bundle, so the runtime cannot assume the flags it is handed — it must be immune.
@@ -449,9 +447,9 @@ describe('HIGH 4 · a /g regex from the bundle gives the SAME verdict on every c
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// MEDIUM-HIGH 5 — confirmFirst's string overload swallowed a mechanism name
+// confirmFirst's string overload must reject a mechanism name
 // ─────────────────────────────────────────────────────────────────────────────
-describe('MEDIUM-HIGH 5 · confirmFirst rejects a mechanism NAME passed as the string overload', () => {
+describe('confirmFirst rejects a mechanism NAME passed as the string overload', () => {
   it("confirmFirst('prior-ask') throws instead of building a permanently inert guard", () => {
     expect(() => confirmFirst('prior-ask')).toThrow(/mechanism/i);
   });
@@ -485,9 +483,9 @@ describe('MEDIUM-HIGH 5 · confirmFirst rejects a mechanism NAME passed as the s
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// MEDIUM 6 — destructiveThrottle counted the PROBE, making an exemption dead code
+// destructiveThrottle must not count the PROBE, which would make an exemption dead code
 // ─────────────────────────────────────────────────────────────────────────────
-describe('MEDIUM 6 · destructiveThrottle does not count confirmation probes', () => {
+describe('destructiveThrottle does not count confirmation probes', () => {
   it('THE BUG: a probe (requiresConfirmation, ok:true) must not block the approved execute', async () => {
     const g = destructiveThrottle(['deleteItem']);
     const ctx = craftCtx({
@@ -568,9 +566,9 @@ describe('MEDIUM 6 · destructiveThrottle does not count confirmation probes', (
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// MEDIUM 7 — jargonScrub built an unescaped RegExp from arbitrary domain keys
+// jargonScrub must escape its keys — they are arbitrary domain strings
 // ─────────────────────────────────────────────────────────────────────────────
-describe('MEDIUM 7 · jargonScrub escapes its keys', () => {
+describe('jargonScrub escapes its keys', () => {
   it('THE BUG: a key with regex metacharacters must not throw at construction', () => {
     expect(() => jargonScrub({ 'C++': 'C plus plus' })).not.toThrow();
     expect(() => jargonScrub({ '(beta)': 'preview' })).not.toThrow();
@@ -591,9 +589,9 @@ describe('MEDIUM 7 · jargonScrub escapes its keys', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// MEDIUM 8 — prose≠reason residue
+// prose≠reason residue
 // ─────────────────────────────────────────────────────────────────────────────
-describe('MEDIUM 8 · resultInvariant and consentRequired no longer render `reason` as prose', () => {
+describe('resultInvariant and consentRequired no longer render `reason` as prose', () => {
   const accusation = 'You reported the summary, but the report came back empty — say what actually happened.';
 
   it('resultInvariant: prose is a RULE, not the deny text', () => {
@@ -635,9 +633,9 @@ describe('MEDIUM 8 · resultInvariant and consentRequired no longer render `reas
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// MEDIUM 9 — proven prose↔check divergences
+// proven prose↔check divergences
 // ─────────────────────────────────────────────────────────────────────────────
-describe('MEDIUM 9 · prose states what the check actually enforces', () => {
+describe('prose states what the check actually enforces', () => {
   it('(a) noDuplicateCall prose carries the TURN scope the check applies', async () => {
     const g = noDuplicateCall();
     expect(g.prose()).toMatch(/turn/i);

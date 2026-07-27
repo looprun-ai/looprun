@@ -35,7 +35,7 @@ a **pure function of its GuardCtx** — one impurity voids the determinism guara
 > path). `allMatches` keeps the same discipline for match collection.
 > **Author rule for the runtime's own regexes stands; runtime obligation on top:** a new kind must call
 > `matches()`/`allMatches()`, never `re.test()`, on any regex it did not build itself. Proof:
-> `audit-2026-07-20.test.ts` in the backend package's `test/proofs/` ("a /g regex from the bundle gives
+> `guard-audit.test.ts` in the backend package's `test/proofs/` ("a /g regex from the bundle gives
 > the SAME verdict on every call" — 11 kinds × 3 consecutive calls).
 
 ### `observed` contains RUNTIME-OWNED TERMINAL calls (the reader-of-record trap)

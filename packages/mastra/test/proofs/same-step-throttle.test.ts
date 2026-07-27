@@ -1,5 +1,5 @@
 /**
- * M1 — destructiveThrottle was BLIND to a same-STEP sibling (measured 2026-07-22, moving-desk run).
+ * destructiveThrottle must see a same-STEP sibling, not only earlier turns.
  *
  * THE BUG: the throttle reads `ctx.observed`, but a domain tool lands in `observed` only in
  * afterToolCall (AFTER execute). The AI SDK dispatches a step's tool calls concurrently (Promise.all),

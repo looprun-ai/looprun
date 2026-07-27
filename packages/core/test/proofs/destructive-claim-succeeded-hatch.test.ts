@@ -1,5 +1,5 @@
 /**
- * destructiveClaimRequiresSuccess — the `succeeded` escape hatch (added 2026-07-23, pharmacy run).
+ * destructiveClaimRequiresSuccess — the `succeeded` escape hatch.
  *
  * THE TRAP (the same one noFabricatedSuccess already documents): the default `tookEffect` reads
  * `ObservedCall.ok`, and `ok` means "the call EXECUTED", never "the action SUCCEEDED". A world that
@@ -63,8 +63,7 @@ describe('destructiveClaimRequiresSuccess · the succeeded hatch', () => {
 });
 
 /**
- * N1 (airline-irops 2026-07-24) — the guard now prefers the WORLD's `ObservedCall.tookEffect` (the B1
- * signal) over the confirm-flag heuristic. This closes two classes the heuristic got wrong: (i) a
+ * The guard prefers the WORLD's `ObservedCall.tookEffect` over the confirm-flag heuristic. This closes two classes the heuristic got wrong: (i) a
  * below-threshold two-step tool the WORLD one-steps (commits with confirmed:false) and (ii) a MIXED
  * success+refusal turn (one write took effect, a sibling was refused) — both previously vetoed an HONEST
  * "I did it" reply into an exhaustion stub. The fallback keeps every hand-crafted (tookEffect-less) proof

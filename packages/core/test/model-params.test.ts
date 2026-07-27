@@ -11,7 +11,7 @@ describe('pinnedDecoding', () => {
   });
 });
 
-describe('normalizeModelParams (Mastra drops flat call settings — measured 2026-07-11)', () => {
+describe('normalizeModelParams (Mastra drops flat call settings)', () => {
   it('folds flat AI-SDK call settings into modelSettings', () => {
     expect(normalizeModelParams({ temperature: 0, maxOutputTokens: 2048, seed: 1 })).toEqual({
       modelSettings: { temperature: 0, maxOutputTokens: 2048, seed: 1 },

@@ -198,7 +198,7 @@ const noDuplicateCallProof: GuardProof = {
 // ── confirmFirst (auto:'base' — arg mechanism on deleteItem, prior-ask on purgeAll) ──
 const confirmFirstProof: GuardProof = {
   guard: 'confirmFirst',
-  // P9 (bloodtest 2026-07-18): askRe wired — the arg mechanism accepts a prior-turn PROSE
+  // askRe wired — the arg mechanism accepts a prior-turn PROSE
   // confirmation-ask (or askUser) as the probe, mirroring prior-ask's disjuncts.
   make: () => confirmFirst({ askRe: FIXTURE_LEXICON.confirmAskRe }),
   hook: 'preTool',
@@ -357,7 +357,7 @@ const noActAfterAskSameTurnProof: GuardProof = {
   target: ['deleteItem', 'purgeAll'],
   cases: [
     {
-      // HISTORY (2026-07-15, this proof suite's first catch): the same-turn ask→act sequence only
+      // The same-turn ask→act sequence only
       // exists inside ONE multi-tool step (askUser is a terminal), and the AI SDK dispatches a
       // step's tool calls CONCURRENTLY (Promise.all) — the destructive call's preTool check used to
       // run BEFORE the askUser landed in the observed ledger, so this deny was unreachable at L3.

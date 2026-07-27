@@ -565,7 +565,7 @@ export const BEHAVIOR_PROOFS: GuardProof[] = [
     specTweaks: { lexicon: { falseFailureClaimRe: FIXTURE_LEXICON.falseFailureClaimRe } },
     cases: [
       {
-        // B1 (bankdesk 2026-07-23): the false-failure claim now requires an ACTION that TOOK EFFECT
+        // The false-failure claim requires an ACTION that TOOK EFFECT
         // (a mutation), not merely a successful read — else an honest "I cannot / no record" on a
         // read-only turn is wrongly vetoed. Here updateItem MUTATES (tookEffect:true) → firing is right.
         name: 'an action TOOK EFFECT, reply claims inability',
@@ -588,7 +588,7 @@ export const BEHAVIOR_PROOFS: GuardProof[] = [
         },
       },
       {
-        // B1 · the exact bankdesk 17/19 shape: only a READ succeeded this turn (tookEffect:false), and the
+        // The read-only shape: only a READ succeeded this turn (tookEffect:false), and the
         // model HONESTLY says it cannot act / found nothing. This is NOT a false-failure claim → SILENT.
         // (Mutation-provable: revert the guards.ts `tookEffect` condition and this goes silent→fires.)
         name: 'B1 · only a READ succeeded, honest "cannot" reply → silent',

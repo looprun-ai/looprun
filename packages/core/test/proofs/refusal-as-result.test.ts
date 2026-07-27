@@ -1,5 +1,5 @@
 /**
- * `ok` MEANS "THE CALL EXECUTED", NEVER "THE ACTION SUCCEEDED" (audit 2026-07-21).
+ * `ok` MEANS "THE CALL EXECUTED", NEVER "THE ACTION SUCCEEDED".
  *
  * `noFabricatedSuccess` short-circuits on `ranThisTurn`, which reads `ObservedCall.ok`. That is a
  * silent assumption about how the world reports refusals:
