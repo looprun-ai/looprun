@@ -270,7 +270,7 @@ export function digestTurnToolResults(turnMessages: unknown[], maxChars: number 
 /**
  * Build the MINIMAL message array for a grammar-forced structured close/redrive — PURE, exported for test.
  * Replaces the whole-transcript context (on which a tiny model produced meta-junk) with ONE user message,
- * composed in order: (a) the CURRENT turn's user content — the certified D8 tail EXACTLY as it rode the turn's
+ * composed in order: (a) the CURRENT turn's user content — the certified tail EXACTLY as it rode the turn's
  * user message (`## Account state` block + uploads + user text), so the state survives; (b) the compact
  * this-turn tool-result digest ({@link digestTurnToolResults}); (c) the ephemeral steering line — the
  * forced-close instruction OR the onReply redrive correction (either carrying {@link STEERING_SENTINEL}). The
@@ -506,7 +506,7 @@ export async function runSpecConversationMicroLoop(spec: AgentSpec, turns: TurnI
     if (stateBlock && stateBlock.trim()) tailParts.push(`## Account state\n${stateBlock}`);
     if (attLabels.length) tailParts.push(`[Uploads this turn: ${attDisplay.join(', ')}]`);
     tailParts.push(userText);
-    // The certified D8 tail (account state + uploads + user text). Captured so the MINIMAL force-close
+    // The certified tail (account state + uploads + user text). Captured so the MINIMAL force-close
     // context (buildForceCloseMessages) can carry it verbatim — the Account-state block MUST ride along.
     const userContent = tailParts.join('\n\n');
     messages.push({ role: 'user', content: userContent });
@@ -530,7 +530,7 @@ export async function runSpecConversationMicroLoop(spec: AgentSpec, turns: TurnI
       // openai-compatible provider, a NON-lazy whole-output grammar the model cannot escape. The system is
       // RECONSTRUCTED from `currentSystemPrompt` (generateObject bypasses the Agent's `instructions`), and (v7)
       // the context is MINIMAL: buildForceCloseMessages composes ONE user message = the current turn's user
-      // content (D8 tail incl. the Account-state block) + this turn's FRESH successful tool-result digest + the
+      // content (the tail incl. the Account-state block) + this turn's FRESH successful tool-result digest + the
       // `ephemeral` steering line. That message is a throwaway (built fresh here, never pushed to the persistent
       // `messages`), so a parroted steering line cannot compound into later context — only the SIDE EFFECT
       // (ledger.terminalReply, via the SAME dry candidate path recordDryTerminal ∘ ingestStructuredObject that

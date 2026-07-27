@@ -37,7 +37,7 @@ export interface ObservedCall {
   /** Did this call MUTATE the world (a write that took effect), vs a pure read / a refused write? Threaded
    *  from the world's `toolCalls[].tookEffect` by the backend. Lets a guard tell "an ACTION succeeded" from
    *  "a READ succeeded" — noFalseFailureClaim keys on it so it does NOT veto an honest "I cannot do X /
-   *  no record found" reply on a read-only turn (bankdesk B1: it over-fired → redrive → exhaustion). */
+   *  no record found" reply on a read-only turn (over-firing there costs a redrive and then the exhaustion closure). */
   tookEffect?: boolean;
 }
 
@@ -91,7 +91,7 @@ export interface SpatialEdge {
 /**
  * A guard's `check()` / `prose()` (or a mutator's `apply()`) THREW.
  *
- * THE POLICY (2026-07-20, runtime-consistency audit — "a guard that throws is an AUTHOR BUG"):
+ * THE POLICY ("a guard that throws is an AUTHOR BUG"):
  * a throwing guard is neither a deny nor an allow; it is broken code. The runtime therefore
  *   (a) NEVER swallows it — catching it and returning `null` would silently delete a safety gate
  *       (the no-op-guard class this audit exists to close), and returning the message as a `reason`

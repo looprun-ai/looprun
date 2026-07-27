@@ -1,7 +1,7 @@
 /**
  * @looprun-ai/mastra — LoopRunAgent: a GENUINE @mastra/core Agent compiled from an AgentSpec.
  *
- * DX mirrors `new Agent({...})`:
+ * The shape mirrors `new Agent({...})`:
  *
  *   export const booksAgent = new LoopRunAgent({
  *     spec: bookkeepingSpec,          // carries its domain contract reference
@@ -78,7 +78,7 @@ export interface LoopRunAgentConfig<W extends AgentWorld = AgentWorld> {
   /** Options spread into every internal generate (providerOptions / modelSettings / …). */
   modelParams?: Record<string, unknown>;
   /** Stop the generation on the first repeated (tool+args) call — enable for LOCAL models
-   *  (mirrors the certified lineage, which gated it exactly this way). Default false. */
+   *  — a small model that loops is either stuck or retrying unchanged. Default false. */
   stopOnRepeatedToolCall?: boolean;
   /** The certified turn shape (terminal tools + toolChoice:'required'). Default true. */
   terminalProtocol?: boolean;
@@ -269,7 +269,7 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
     this.surface = surface;
     // Normalize once at the seam: flat AI-SDK call settings (temperature, maxOutputTokens, …) are
     // folded into `modelSettings` — Mastra silently drops them when spread top-level (measured
-    // 2026-07-11: a flat spread ran local models with the GGUF sampler — temp 1.0, no token cap).
+    // a flat spread ran local models with the GGUF sampler — temp 1.0, no token cap).
     // Then the spec's per-agent sampling merged OVER them (agent wins) — constant for this agent.
     this.modelParams = resolveModelSettings(normalizeModelParams(config.modelParams ?? {}), spec.controls.sampling);
     this.stopOnRepeatedToolCall = config.stopOnRepeatedToolCall ?? false;

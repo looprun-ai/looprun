@@ -66,7 +66,7 @@ export function localModelClient(alias: string): any {
 
 /**
  * The cloud VALIDATION model: gemini flash-lite with thinking OFF.
- * TRAP (measured): 'off' needs the NUMERIC `thinkingBudget: 0` — `thinkingLevel` does not turn
+ * TRAP: 'off' needs the NUMERIC `thinkingBudget: 0` — `thinkingLevel` does not turn
  * thinking off. `modelParams` carries it; spread into LoopRunAgent's `modelParams`.
  * Needs $GOOGLE_GENERATIVE_AI_API_KEY.
  */

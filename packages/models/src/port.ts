@@ -22,7 +22,7 @@ export interface LocalModelSpec {
   /** Approximate download size, for consent prompts. */
   approxSizeGB: number;
   /**
-   * KV cache precision — f16 on every tier (measured 2026-07-11: +23% decode vs q8_0 even on the
+   * KV cache precision — f16 on every tier (measured: +23% decode vs q8_0 even on the
    * 4B; weights dominate decode bandwidth, q8_0's per-token dequant is pure overhead). q8_0 is a
    * RAM escape hatch only ($LLAMA_KV=q8_0).
    */
@@ -41,7 +41,7 @@ export interface LocalModelSpec {
   servedId: string;
   /**
    * Speculative-decoding mode (`--spec-type`), e.g. 'draft-mtp' for checkpoints that ship a
-   * trained MTP head baked into the GGUF (measured 2026-07-15: accept 0.75–0.80, decode
+   * trained MTP head baked into the GGUF (measured: accept 0.75–0.80, decode
    * 39.6 → 53–58 tok/s on the 35B-A3B, output byte-identical at temp 0 — lossless).
    * Omit for models without a usable head ($LLAMA_SPEC_TYPE overrides; '' disables).
    */

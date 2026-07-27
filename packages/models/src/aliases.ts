@@ -1,15 +1,15 @@
 /**
  * @looprun-ai/models — the validated local-model registry.
  *
- * All entries were validated on the certified benchmark lineage (llama.cpp, Metal + CUDA):
+ * Every entry is measured on llama.cpp (Metal and CUDA):
  *  - KV precision is measured, not a guess: f16 unless the tier's RAM budget forces q8_0
- *    (2026-07-11: f16 = +23% decode vs q8_0 on the 4B, ~1.7× on the 35B-A3B — the GPU
+ *    (f16 = +23% decode vs q8_0 on the 4B, ~1.7× on the 35B-A3B — the GPU
  *    dequantizes q8_0 every token while the byte saving buys nothing, since weights dominate
  *    decode bandwidth).
  *  - cacheRamMiB (`--cache-ram`) is tiered: it is the idle-slot RAM prompt cache that keeps N
- *    distinct agent trunks warm across agent switches (measured 2026-07-11: warm switch TTFT
+ *    distinct agent trunks warm across agent switches (measured: warm switch TTFT
  *    0.5–0.6 s vs 11–22 s cold without it).
- *  - MTP (multi-token prediction): ON for the 35B-A3B tiers since 2026-07-15 — trained MTP
+ *  - MTP (multi-token prediction): ON for the 35B-A3B tiers — trained MTP
  *    heads shipped (`unsloth/Qwen3.6-35B-A3B-MTP-GGUF` bakes the head into every UD quant):
  *    acceptance 0.75–0.80, decode 39.6 → 53–58 tok/s, output byte-identical at temp 0
  *    (exact-verified = lossless). Works on b9780 AND newer builds (measured on both).

@@ -53,7 +53,7 @@ export interface StateDirective {
  * ownership map): scope is an agent-level fact, so the domain contract stays free of anything
  * agent-specific and the runtime stays a pure renderer (no set intersection, no derivation).
  *
- * WORDING CONSTRAINT (measured 2026-07-20, FL case-21): `others[].label` must name the OWNING TEAM,
+ * WORDING CONSTRAINT: `others[].label` must name the OWNING TEAM,
  * never this agent's own role — first-person role text collides with self-narration lexicons, which
  * redrives the honest reply into an exhaustion stub.
  */
@@ -75,7 +75,7 @@ export interface GuardBinding {
   id: string;
   /**
    * onInput/onReply: ignored by the CHECK, but NOT by the RENDER — the old one-line comment here said
-   * only the first half and was therefore a lie by omission (found 2026-07-20).
+   * only the first half and was therefore a lie by omission (found).
    *
    * CHECK: the backend resolves onInput/onReply with no tool, and `resolveBindings` short-circuits on
    * `tool === undefined`, so target is never consulted to decide whether the guard RUNS.
@@ -162,7 +162,7 @@ export interface AgentSpec {
   };
   controls: AgentControls;
   /** The LANGUAGE / JUDGEMENT layer: prose whose rules have NO possible `check()` (redefined
-   *  2026-07-20). Every rule that HAS a guard states itself in the trunk from that guard's own
+   *  ). Every rule that HAS a guard states itself in the trunk from that guard's own
    *  `prose()` — the PROSE-RENDERING RULE renders EVERY hook now, `onInput`/`onReply` included
    *  (`## Reply rules`). So `behavior[]` is the declared residue of the proxy sweep: what stays
    *  UNCHECKABLE after a decidable proxy was attempted (tone, how much context to give, what reads
@@ -175,7 +175,7 @@ export interface AgentSpec {
    *  generated bundle point every spec at the SAME domain object so a host can construct an agent
    *  from the spec alone. A host-provided domain always overrides it. */
   contract?: DomainContract;
-  /** B4 — optional runtime cross-check (implemented by AgentSpecBase): assert every `'arg'`-mechanism
+  /** Optional runtime cross-check (implemented by AgentSpecBase): assert every `'arg'`-mechanism
    *  destructiveTool actually carries its confirm flag in the injected tool schema. Optional so an alien
    *  AgentSpec need not implement it; the backend calls it when present. */
   assertDestructiveConfirmable?(toolDefs: ReadonlyArray<{ name: string; inputSchema?: { properties?: Record<string, unknown> } }>): void;
@@ -185,7 +185,7 @@ const TERMINAL_TOOLS = ['replyToUser', 'askUser'];
 const LAYER_ORDER: Record<Layer, number> = { agent: 0, full: 1, base: 2, minimal: 3 };
 
 /**
- * THE HOOK×DIM MATRIX (2026-07-20, runtime-consistency audit) — which hook may carry which `dim`.
+ * THE HOOK×DIM MATRIX — which hook may carry which `dim`.
  *
  * The constructor used to validate ONE direction only ("a behavior/output guard may not be a preTool
  * gate"). The other direction was unchecked and SILENTLY INERT, because the hook decides which
@@ -373,7 +373,7 @@ export class AgentSpecBase implements AgentSpec {
       // Domain-agnostic: a spec never bakes a domain. If it ships no own renderer, the RUNTIME renders
       // the scoped trunk with the host-injected domain (renderScopedSpecTrunk) — so the trunk carries
       // ONLY what the spec/domain declare, and the domain skin stays outside the AgentSpec.
-      // `domain` on the spec is a REFERENCE for DX, not content.
+      // `domain` on the spec is a REFERENCE, not content.
       systemPrompt: cfg.systemPrompt,
     };
     this.flow = [...(cfg.flow ?? [])];
@@ -400,9 +400,9 @@ export class AgentSpecBase implements AgentSpec {
 
   protected installMinimal(): void {
     this.addGuard('preTool', 'any', noDuplicateCall(), { layer: 'minimal', id: 'minimal:noDuplicateCall' });
-    // Output-channel degeneration lint (promoted 2026-07-15 after targeted validation + flash N=3
+    // Output-channel degeneration lint (promoted after targeted validation + flash N=3
     // zero-firing recert). FIRST among the onReply minimal guards: a degenerate reply must be re-driven
-    // before any content-level check reasons about it. (Its prose DOES render — since 2026-07-20 every
+    // before any content-level check reasons about it. (Its prose DOES render —  every
     // hook's prose lands in the trunk; `target:'any'` onReply prose renders under `## Reply rules`. The
     // previous "onReply prose does NOT render" note here was stale, and contradicted trunk.ts's own
     // PROSE-RENDERING RULE + AgentSpec.behavior's doc — see GUARDS.md §2.)
@@ -412,9 +412,9 @@ export class AgentSpecBase implements AgentSpec {
     // resolved onReply tail is `… , minimal:noFalseFailureClaim, minimal:emptyReply` (the same relative
     // position the agent-layer install formerly held, just under a stable minimal id).
     if (this.lexicon.falseFailureClaimRe) {
-      // N5: wire the domain's honest-negation pattern as the exemptRe so a MIXED-turn honest partial
+      // Wire the domain's honest-negation pattern as the exemptRe so a MIXED-turn honest partial
       // ("renewed A; B could not be renewed — at its limit") is not vetoed. Symmetric with
-      // destructiveClaimRequiresSuccess's exemptRe. Absent ⇒ byte-identical to the pre-N5 behaviour.
+      // destructiveClaimRequiresSuccess's exemptRe. Absent ⇒ the exemption is simply not installed.
       this.addGuard('onReply', 'any', noFalseFailureClaim({ claimRe: this.lexicon.falseFailureClaimRe, ...(this.lexicon.honestNegationRe ? { exemptRe: this.lexicon.honestNegationRe } : {}) }), { layer: 'minimal', id: 'minimal:noFalseFailureClaim' });
     }
     this.addGuard('onReply', 'any', emptyReply(), { layer: 'minimal', id: 'minimal:emptyReply' });
@@ -449,7 +449,7 @@ export class AgentSpecBase implements AgentSpec {
     const argTools = destructive.filter((t) => mechOf(t) === 'arg');
     const priorAskTools = destructive.filter((t) => mechOf(t) === 'prior-ask');
     if (argTools.length) {
-      // P9: askRe wired so the arg mechanism's prose-probe disjunct can accept a prior-turn
+      // askRe is wired so the arg mechanism's prose-probe disjunct can accept a prior-turn
       // replyToUser confirmation-ask as the probe (guards.ts confirmFirst).
       this.addGuard('preTool', argTools, confirmFirst({ askRe: this.lexicon.confirmAskRe }), { layer: 'base', id: 'base:confirmFirst' });
     }
@@ -460,12 +460,12 @@ export class AgentSpecBase implements AgentSpec {
   }
 
   /**
-   * B4 (bankdesk 2026-07-23) — a destructiveTool on the DEFAULT `'arg'` confirm mechanism must actually
+   * A destructiveTool on the DEFAULT `'arg'` confirm mechanism must actually
    * carry the confirm FLAG in its tool schema. `installBase` auto-installs `confirmFirst` with the
    * default argFlag `'confirmed'`, and its prose says "call it WITHOUT confirmed first, then confirm in a
    * LATER turn" — but if the tool's schema has no `confirmed` param, the model can NEVER pass it, so the
    * check is a permanent no-op AND the prose is a two-step ritual the tool cannot honour → the model asks
-   * forever (measured: `freezeAccount` in destructiveTools with a one-step schema; N6-1 caught it only by
+   * forever (a destructive tool listed with a one-step schema; an eval catches it only by
    * READING). `installBase` runs at construction where no schema exists; this runs where the toolDefs are
    * injected (the backend, at run start). A `'prior-ask'` tool is a zero-arg confirm — exempt by design.
    * Throws (an author bug, same class as the ⊆-surface / stray-mechanism throws) naming the fix.

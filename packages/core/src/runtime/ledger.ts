@@ -39,7 +39,7 @@ export interface TurnLedger {
 /**
  * Veto-storm limit: with the terminal protocol (toolChoice 'required') a model that cannot
  * satisfy a guard has no way to stop — it flails, and every vetoed round is a full LLM call
- * (measured 2026-07-11: a 4B burned 15 consecutive vetoed rounds — 17 calls for 2 effective).
+ * (measured: a 4B burned 15 consecutive vetoed rounds — 17 calls for 2 effective).
  * At this many consecutive vetoes the loop stops and the forced-terminal close runs.
  */
 export const VETO_STORM_LIMIT = 3;
@@ -90,7 +90,7 @@ export function recordToolResult(ledger: TurnLedger, name: string, args: Record<
   // record to avoid double-counting it against a later same-step call.
   const inFlightIx = ledger.inFlightCalls.findIndex((o) => o.name === name && canonArgs(o.args) === canonArgs(args));
   if (inFlightIx >= 0) ledger.inFlightCalls.splice(inFlightIx, 1);
-  // tookEffect (B1): match this call against the world's ledger (by name+args, like the in-flight
+  // tookEffect: match this call against the world's ledger (by name+args, like the in-flight
   // reconcile above) to learn whether it MUTATED the world — so noFalseFailureClaim can distinguish an
   // action-success from a read-success and NOT veto an honest "cannot do X / no record found" reply on
   // a read-only turn.
@@ -111,12 +111,11 @@ export function recordToolResult(ledger: TurnLedger, name: string, args: Record<
   }
 }
 
-/** Record a TERMINAL tool call (replyToUser/askUser): capture the user-facing text. */
 /** Record a terminal CALL in the observed ledger. Called from the guard hooks' SYNCHRONOUS segment
  *  (before any await): the model runtime dispatches a step's tool calls concurrently (Promise.all)
  *  but STARTS them in emission order, so a synchronous hook-time push makes a same-step `askUser`
  *  visible to a sibling destructive call's preTool checks — closing the noActAfterAskSameTurn
- *  same-step bypass (proof-suite finding, fixed 2026-07-15). */
+ *  same-step bypass. */
 export function recordTerminalCall(ledger: TurnLedger, name: string, args: Record<string, unknown>): void {
   ledger.observed.push({ name, args, ok: true, turnIndex: ledger.turnIndex });
 }

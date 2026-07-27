@@ -50,7 +50,7 @@ export interface RuntimeDeps {
   /** Options spread into every generate() call (providerOptions / modelSettings / …). */
   modelParams?: Record<string, unknown>;
   /** Stop the generation on the first repeated (tool+args) call — enable for LOCAL models
-   *  (mirrors the certified lineage, which gated it exactly this way). Default false. */
+   *  — a small model that loops is either stuck or retrying unchanged. Default false. */
   stopOnRepeatedToolCall?: boolean;
   /** The domain world seam (read + exec). */
   world: AgentWorld;
@@ -95,7 +95,7 @@ export async function runSpecConversation(spec: AgentSpec, turns: TurnInput[], d
   const getSession = () => session;
   const ledger = session.ledger;
 
-  // B4: a destructiveTool on the 'arg' confirm mechanism whose schema lacks the confirm flag renders a
+  // A destructiveTool on the 'arg' confirm mechanism whose schema lacks the confirm flag renders a
   // two-step ritual it can never honour (the model asks forever). The schema is only known HERE, where
   // toolDefs are injected — so the cross-check runs at run start. Throws (author bug) if mis-authored.
   spec.assertDestructiveConfirmable?.(deps.toolDefs);
