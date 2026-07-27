@@ -1,5 +1,88 @@
 # @looprun-ai/core
 
+## 0.8.0
+
+### Minor Changes
+
+- 5cd50cc: `looprun-eval lint --spec-laws` gains the artifact-quality and subject laws.
+
+  Nine checks over the assembled specs — a tool the model is offered and nothing executes, a guard
+  bound where it can never fire, prose naming an absent or off-surface tool, an ordering the trunk
+  asserts and no gate enforces, a flow edge rendered as "do not skip a step" with nothing behind it,
+  an irreversible-looking tool nobody declared destructive, prose written as a post-hoc accusation,
+  and a seam armed with no sentence to go with it.
+
+  Two subject laws, both for defects with no symptom. A guard no case targets passes in BOTH arms of
+  a discrimination run, so it is neither an alarm nor a failure — it reads as coverage and has never
+  fired. A world that returns its refusals as successful-looking results leaves `ok` true, and every
+  honesty kind short-circuits to null: guards installed, inventory green, suite passing, nothing able
+  to fire. Plus a declared preset that throws, and a factory that accepts an unknown preset in
+  silence.
+
+  Every check reads the assembled objects — bindings, targets, `guard.meta`, the rendered `prose()`
+  — rather than pattern-matching call sites. A source-text lint goes blind the moment a spec builds
+  its surface through a constant, and stays green while the bundle rots.
+
+  In core, `noFabricatedSuccess` now records `meta.armed` (which seams are armed, as booleans, never
+  the patterns). This is what lets the armed-seam law be checked by reading the runtime instead of
+  re-encoding it. `ARMED_SEAMS`, `DENY_ONLY_PROSE_KINDS` and `CONFIRM_CLASS_KINDS` — exported for
+  lints that did not exist — now have consumers.
+
+- 39b5436: **BREAKING.** Shipped as a minor: the packages are pre-1.0, where the minor slot is the
+  breaking-change signal and 1.0.0 is a deliberate stability decision, not a milestone reached by
+  accumulating removals. The version number will not warn anyone — this line has to.
+
+  The legacy compatibility layer is removed.
+
+  - `TrunkContract` (alias of `DomainContract`) and `FIXTURE_CONTRACT` (alias of `FIXTURE_DOMAIN`) no
+    longer exist. Use the canonical names.
+  - `AgentControls.escalate` and `AgentSpecConfig.toolSchemas` are removed, with the `AgentModelRef`
+    and `ToolSchemaLike` types that supported them. Neither was ever read at runtime.
+  - `EvalCase` and `EvalConfig` are removed. Subjects are directories consumed by
+    `looprun-eval run --subject <dir>`; type cases as `SubjectCase`. The `goldSeq` / `goldReply`
+    fields go with them — no code path read either.
+
+- ed3513d: One owner for the bytes a turn sends: `renderTurnPrompt`.
+
+  The assembly was duplicated across the two drivers — each folded `trunk + terminal protocol` into
+  the instructions and `state block + uploads + user text` into the message tail. Two copies of one
+  law is a drift hazard, and this one is worse than ordinary duplication because the drift is
+  invisible: a wrong prompt does not crash, it answers.
+
+  New in core: `renderTurnPrompt(input) => { instructions, userContent, replyOnly, uploadDisplay }`,
+  plus `uploadDisplayLabels` and `isReplyOnly`. Pure — no clock, no entropy, no I/O, no model.
+  Attachment ingestion stays in the caller because it mutates the world. `replyOnly` accepts an
+  override for the two callers that are not governed turns: the static instructions a host shows in a
+  studio (rendered against a stub world the terminal policy must never be asked about), and an offline
+  replay pinning the decision a recorded run took.
+
+  The backend now renders through it in all four places (`generate`, `stream`, the static constructor
+  prompt, and the conversation driver). Byte-identical output — `prompt-identity.test.ts` runs a real
+  governed turn and compares both halves against what the function returns, so a driver that
+  reassembles the prompt again fails the suite.
+
+  This exists for the offline instruments as much as for the drivers. The previous generation of the
+  margin probe carried its own replica of this assembly; a refactor moved the runtime, the replica
+  diverged silently, and the instrument kept reporting — about a prompt nothing ran. There is now
+  nothing to replicate.
+
+- Release (minor).
+- c55d784: **BREAKING.** Shipped as a minor: the packages are pre-1.0, where the minor slot is the
+  breaking-change signal and 1.0.0 is a deliberate stability decision, not a milestone reached by
+  accumulating removals. The version number will not warn anyone — this line has to.
+
+  The three residuals on the governed runtime are closed.
+
+  - A terminal tool's definition is now the PROTOCOL's, never the host's: `normalizeTerminalToolDef`
+    rewrites a host-supplied `replyToUser` / `askUser` to the runtime contract (single `text`
+    argument, no brand-language pin, no unread required fields) and returns domain defs by identity.
+  - The experimental micro-loop driver is REMOVED, with its exports
+    (`runSpecConversationMicroLoop`, `renderStructuredReply`, `stripThinkBlocks`,
+    `recordTerminalReply`, `assembleAnswerText`, `scrubSteeringEcho`, `ingestStructuredObject`,
+    `commitFinalReply`, `digestTurnToolResults`, `buildForceCloseMessages`, `STEERING_SENTINEL`).
+    It was never a default, never certified, and carried none of the turn-safety mechanics.
+  - The proof runner counts its own coverage ratchet again (see the repo's governance tooling).
+
 ## 0.7.2
 
 ### Patch Changes
