@@ -120,6 +120,34 @@ describe('prompt identity — the runtime sends what renderTurnPrompt returns', 
     expect(rendered.userContent.endsWith('hi')).toBe(true);
   });
 
+  it('constructing an agent never asks the contract about a stub world', () => {
+    // THE REGRESSION. The constructor renders static instructions against a stub world, and the
+    // state block is business code reading business state — a domain accessor the stub does not
+    // have. The first version of the producer rendered both halves unconditionally and threw here,
+    // at construction, for every contract whose state block reads anything real.
+    //
+    // The fixture above survives a stub because it reads `plan` defensively, which is exactly why
+    // it did not catch this. So this contract reads like a real one does: it calls a method.
+    const strictContract: DomainContract = {
+      ...CONTRACT,
+      stateBlock: (w) => `items=${(w as unknown as { itemCount(): number }).itemCount()}`,
+    };
+    const world = fixtureWorld();
+    const scripted = scriptedModel([[{ tool: 'replyToUser', args: { text: 'ok' } }]]);
+
+    expect(() => new LoopRunAgent({
+      spec: new FixtureSpec(), contract: strictContract, world, toolDefs: TOOL_DEFS,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      model: scripted.model as any,
+    })).not.toThrow();
+
+    // And a REAL turn still gets the real state block — skipping it is scoped to the stub path,
+    // not a licence to drop state from the prompt the model actually reads.
+    const live = { ...world, itemCount: () => 7 } as unknown as AgentWorld;
+    expect(renderTurnPrompt({ spec: new FixtureSpec(), contract: strictContract, world: live, userText: 'hi' }).userContent)
+      .toContain('items=7');
+  });
+
   it('uploads render between the state block and the request', () => {
     const spec = new FixtureSpec();
     const world = fixtureWorld();

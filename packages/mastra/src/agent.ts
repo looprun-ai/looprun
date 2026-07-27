@@ -236,9 +236,12 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
     const terminalOn = config.terminalProtocol !== false;
     const staticInstructions = renderTurnPrompt({
       spec, contract, world: staticWorld, userText: null, terminalProtocol: terminalOn,
-      // The stub world must never be handed to the spec's terminal policy — the static prompt has
-      // always rendered the full protocol (replyOnly false), and that byte identity is load-bearing.
+      // NOTHING here may interrogate the stub world. The terminal policy is pinned (the static
+      // prompt has always rendered the full protocol, and that byte identity is load-bearing), and
+      // the state block is skipped outright — it is business code reading business state, and this
+      // world has none. Asking it anyway throws at construction for every real contract.
       replyOnly: false,
+      instructionsOnly: true,
     }).instructions;
 
     // Pass through any further Agent option (memory, description, processors, …).
@@ -518,6 +521,10 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
       const { instructions, replyOnly } = renderTurnPrompt({
         spec: this.spec, contract: this.contract, world, userText: null,
         terminalProtocol: this.terminalProtocolOn,
+        // The stream path consumes only the instructions — Mastra owns the message array here, so
+        // the tail this would build is discarded. Not computing it keeps the state block off a
+        // path that never renders it.
+        instructionsOnly: true,
       });
       const activeTools = this.nativeToolsMode
         ? [...this.nativeActiveNames, ...(replyOnly ? ['replyToUser'] : ['replyToUser', 'askUser'])]

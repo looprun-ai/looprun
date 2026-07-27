@@ -42,6 +42,16 @@ export interface TurnPromptInput {
    * replay pinning the decision the recorded run actually took.
    */
   replyOnly?: boolean;
+  /**
+   * Render the INSTRUCTIONS only and leave `userContent` empty.
+   *
+   * The state block is business code reading business state. A caller that renders against a STUB
+   * world — the static instructions a host shows in a studio — has no state to ask about, and asking
+   * anyway runs a domain accessor against an object that does not have it. That is not a defensive
+   * concern: it throws, and it throws at construction, on every contract whose state block reads
+   * anything real. Callers that consume only `instructions` say so here.
+   */
+  instructionsOnly?: boolean;
 }
 
 export interface TurnPrompt {
@@ -85,6 +95,10 @@ export function renderTurnPrompt(input: TurnPromptInput): TurnPrompt {
     ? spec.surface.systemPrompt(world, labels)
     : renderScopedSpecTrunk(world, spec, labels, contract);
   const instructions = trunk + (input.terminalProtocol === false ? '' : terminalProtocol(replyOnly));
+
+  if (input.instructionsOnly) {
+    return { instructions, userContent: '', replyOnly, uploadDisplay: display };
+  }
 
   const stateBlock = contract ? contract.stateBlock(world) : '';
   const tailParts: string[] = [];
