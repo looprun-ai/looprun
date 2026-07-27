@@ -10,11 +10,11 @@ import {
   destructiveClaimRequiresSuccess,
   pendingConfirmMustAsk,
 } from '../src/index.js';
-import type { AgentWorld, GuardCtx, ObservedCall, TrunkContract } from '../src/index.js';
+import type { AgentWorld, GuardCtx, ObservedCall, DomainContract } from '../src/index.js';
 
 const persona = 'You are the plant-care agent: watering and repotting.';
 
-const CONTRACT: TrunkContract = {
+const CONTRACT: DomainContract = {
   voice: 'You are the assistant of a small business.',
   stateBlock: () => '',
   coreInvariants: ['Never invent data.'],

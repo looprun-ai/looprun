@@ -29,7 +29,6 @@ export { buildCert } from './cert.js';
 export type { CertOptions, CertSummary } from './cert.js';
 export { runCommand, foldCommand, certCommand } from './commands.js';
 export type { RunCommandOptions, FoldCommandOptions, CertCommandOptions } from './commands.js';
-export type { EvalCase, EvalConfig } from './legacy-types.js';
 export { lintSource, lintPaths, lintSpecLaws, lintSpecExecution, BANNED_TOKENS } from './lint.js';
 export type { LintViolation } from './lint.js';
 

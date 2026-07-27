@@ -56,7 +56,6 @@ export interface DomainContract {
  * DOMAIN CONTRACT (the business-common rules every agent of a domain shares). Kept as a compatibility
  * alias for existing consumers. Nothing new may use this name.
  */
-export type TrunkContract = DomainContract;
 
 /** Options for {@link renderTrunkBlocks} — the injected subject lexicon (P8a: business vocabulary
  *  never lives in the runtime). Absent ⇒ only guard-kind-derived subjects are populated. */

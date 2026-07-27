@@ -18,21 +18,17 @@ export type {
   AgentSpecConfig,
   AgentControls,
   AgentScope,
-  AgentModelRef,
   ChainSpec,
   GuardBinding,
   MutatorBinding,
   StateDirective,
   TerminalPolicy,
-  ToolSchemaLike,
   Hook,
   ToolTarget,
   Layer,
 } from './spec.js';
 export { renderScopedSpecTrunk, renderTrunkBlocks, chainOrder } from './trunk.js';
 export type { DomainContract, TrunkRenderOptions } from './trunk.js';
-/** @deprecated compat alias for the pre-rename name — see trunk.ts. */
-export type { TrunkContract } from './trunk.js';
 // Trunk PROVENANCE + the coherence queries (the trunk is a fold over an attributed table, not a join).
 export {
   GUARD_KIND_SUBJECT, derivePolarity, deriveSubject, foldRow, foldTrunk, trunkLines,

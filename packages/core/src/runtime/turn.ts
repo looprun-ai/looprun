@@ -12,7 +12,7 @@
  */
 import { resolveGuards, resolveMutators } from '../spec.js';
 import type { AgentSpec, ChainSpec } from '../spec.js';
-import type { TrunkContract } from '../trunk.js';
+import type { DomainContract } from '../trunk.js';
 import type { AgentWorld, Guard, GuardCtx, ObservedCall } from '../rules.js';
 import { recordVeto, type TurnLedger } from './ledger.js';
 import { isTerminal } from './terminal.js';
@@ -218,7 +218,7 @@ export function redriveMessage(violations: ReplyViolation[]): string {
  * created. Callers pass a DOMAIN-only `okTools` (see finalizeReply).
  */
 export function defaultExhaustionReply(
-  contract: TrunkContract | undefined,
+  contract: DomainContract | undefined,
   world: AgentWorld,
   okTools: string[],
   produced: string[],
@@ -288,7 +288,7 @@ export interface FinalizedReply {
  */
 export async function finalizeReply(
   spec: AgentSpec,
-  contract: TrunkContract | undefined,
+  contract: DomainContract | undefined,
   world: AgentWorld,
   ledger: TurnLedger,
   initialText: string,

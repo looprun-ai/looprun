@@ -19,7 +19,7 @@ import {
   jargonScrub,
   custom,
 } from '../src/index.js';
-import type { AgentWorld, TrunkContract } from '../src/index.js';
+import type { AgentWorld, DomainContract } from '../src/index.js';
 
 function fixtureWorld(state: Record<string, unknown> = {}): AgentWorld {
   return {
@@ -34,7 +34,7 @@ function fixtureWorld(state: Record<string, unknown> = {}): AgentWorld {
 
 const persona = 'You are the plant-care agent.';
 
-const CONTRACT: TrunkContract = {
+const CONTRACT: DomainContract = {
   voice: 'v',
   stateBlock: () => '',
   coreInvariants: ['x'],

@@ -1,11 +1,10 @@
 #!/usr/bin/env node
 /**
- * THE NO-BENCH-DRIFT GATE — looprun is a standalone framework: no reference to its research
- * lineage (the neurono bench harness, its env vars, paths, adapters or subjects) may survive in
- * user-facing surfaces. The ONLY allowlisted file is skills/agentspec/CONTEXT.md (the honesty
- * record of where the skill came from).
+ * THE NO-BENCH-DRIFT GATE — looprun is a standalone framework: no reference to the research
+ * harness it came from (its env vars, paths, adapters or subjects) may survive in user-facing
+ * surfaces.
  *
- * SECOND LAW (vendor neutrality, 2026-07-18): looprun is coding-agent-agnostic — no term tied to
+ * SECOND LAW (vendor neutrality): looprun is coding-agent-agnostic — no term tied to
  * one specific agent environment (a vendor's agent product, model names as tooling: "X judge",
  * "X Code", model-tier names) may appear in user-facing surfaces. The neutral vocabulary is
  * "the LLM judge" / "the coding agent running the skill". Allowlisted: CONTEXT.md (research
@@ -50,7 +49,6 @@ const DRIFT = new RegExp(
   'i',
 );
 
-const ALLOWLIST = new Set(['skills/agentspec/CONTEXT.md']);
 
 // REPO-WIDE LANE (one-way-street law, 2026-07-18): the two hardest private-lab codenames must not
 // survive ANYWHERE in the tree — not just the scoped user-facing surfaces above, but every tracked
@@ -63,7 +61,7 @@ const SELF_REL = relative(ROOT, fileURLToPath(import.meta.url));
 // Vendor-neutrality law: terms tied to one agent environment. Lookbehind exempts dotdir paths
 // (".claude/") and scoped package names ("@.../claude-...").
 const VENDOR = /(?<![.\/@-])\b(claude|anthropic|opus|sonnet|haiku)\b/i;
-const VENDOR_ALLOWLIST = new Set(['skills/agentspec/CONTEXT.md', 'docs/benchmarks.md']);
+const VENDOR_ALLOWLIST = new Set(['docs/benchmarks.md']);
 
 function* walk(path) {
   if (!existsSync(path)) return;
@@ -82,7 +80,6 @@ const violations = [];
 for (const scope of SCOPES) {
   for (const file of walk(join(ROOT, scope))) {
     const rel = relative(ROOT, file);
-    if (ALLOWLIST.has(rel)) continue;
     if (/\.(png|jpg|jpeg|gif|gguf|zip)$/.test(rel)) continue;
     const lines = readFileSync(file, 'utf8').split('\n');
     lines.forEach((text, i) => {

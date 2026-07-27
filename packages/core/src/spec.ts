@@ -8,9 +8,7 @@
  *   postTool → recorded via `hooks.afterToolCall`
  *   onReply  → an output processor (processOutputResult → abort({retry:true}) ⇒ redrive; exhaustion ⇒
  *              a deterministic guard-authored closure)
- *   controls → maxSteps (stop condition) · terminal (reply-only policy) · directives ·
- *              exhaustionReply   [`escalate` is TYPED BUT NOT CONSUMED by the backend — see
- *              AgentControls.escalate; it is forward-compat surface, inert today]
+ *   controls → maxSteps (stop condition) · terminal (reply-only policy) · directives · exhaustionReply
  *
  * ONE class, `AgentSpecBase` (the former Minimal/Base/Full ladder is collapsed — a spec is a spec).
  * Its constructor auto-installs, layer-tagged and addressable, exactly:
@@ -64,12 +62,6 @@ export interface AgentScope {
   lane: string;
   /** The teams owning the other lanes — `label` = the team to name, `covers` = what it handles. */
   others: Array<{ label: string; covers: string }>;
-}
-
-export interface AgentModelRef {
-  provider?: string;
-  model?: string;
-  id?: string;
 }
 
 export interface MutatorBinding {
@@ -136,10 +128,6 @@ export interface AgentControls {
   /** Declared follow-up completions — see {@link ChainSpec}. Absent/empty ⇒ the runtime adds not a
    *  single new code effect on the turn (zero-diff). */
   chains?: ChainSpec[];
-  /** TYPED BUT NOT CONSUMED by the Mastra backend (`backends/mastra.ts` never reads it) — no model-tier
-   *  escalation exists on the shipping path. Forward-compat surface only; setting it changes NOTHING at
-   *  runtime, so do not read it as coverage. */
-  escalate?: { model: AgentModelRef; maxAttempts?: number };
   /** Per-agent AI-SDK call settings, merged OVER the conversation-level modelParams (agent wins) by the
    *  backend — so a creative content agent can run at temperature 0.7 beside a temp-0 admin agent in the
    *  same domain. Absent ⇒ the conversation-level modelParams apply unchanged. */
@@ -298,11 +286,6 @@ export function resolveMutators(bindings: MutatorBinding[] | undefined): ReplyMu
     .map((b) => b.mutator);
 }
 
-export interface ToolSchemaLike {
-  required?: string[];
-  properties?: Record<string, { pattern?: string; type?: string }>;
-}
-
 export interface AgentSpecConfig {
   id: string;
   mode: string;
@@ -322,7 +305,6 @@ export interface AgentSpecConfig {
   directives?: StateDirective[];
   maxSteps?: number;
   redrives?: number;
-  escalate?: { model: AgentModelRef; maxAttempts?: number };
   exhaustionReply?: (world: AgentWorld, okTools: string[], produced: string[], violations: string[]) => string;
   /** Per-agent AI-SDK call settings (see {@link AgentControls.sampling}) — merged over the
    *  conversation-level modelParams by the backend. */
@@ -341,10 +323,6 @@ export interface AgentSpecConfig {
    *  — an absent lexicon leaves the minimal layer exactly as before (non-breaking). Extensible: future
    *  always-on language-keyed guards add their own key here, keeping the runtime language-neutral (P8a). */
   lexicon?: { falseFailureClaimRe?: RegExp; confirmAskRe?: RegExp; selfNarrationRe?: RegExp; honestNegationRe?: RegExp };
-  /** STORED BUT NOT CONSUMED — there is NO auto-schema layer in this runtime (GUARDS.md §3): passing
-   *  schemas installs no `argRequired`/`argFormat`. Author those guards explicitly. Kept only so a
-   *  spec can read its own schemas when authoring them; never read it as coverage. */
-  toolSchemas?: Record<string, ToolSchemaLike>;
   /** Optional domain-contract reference (see {@link AgentSpec.contract}). */
   contract?: DomainContract;
 }
@@ -371,7 +349,6 @@ export class AgentSpecBase implements AgentSpec {
   protected readonly destructiveTools: string[];
   protected readonly confirmMechanism: Record<string, 'arg' | 'prior-ask'>;
   protected readonly lexicon: { falseFailureClaimRe?: RegExp; confirmAskRe?: RegExp; selfNarrationRe?: RegExp; honestNegationRe?: RegExp };
-  protected readonly toolSchemas: Record<string, ToolSchemaLike>;
   private seq = 0;
 
   constructor(cfg: AgentSpecConfig) {
@@ -406,7 +383,6 @@ export class AgentSpecBase implements AgentSpec {
       ...(cfg.redrives != null ? { redrives: cfg.redrives } : {}),
       ...(cfg.terminal ? { terminal: cfg.terminal } : {}),
       ...(cfg.directives?.length ? { directives: [...cfg.directives] } : {}),
-      ...(cfg.escalate ? { escalate: cfg.escalate } : {}),
       ...(cfg.exhaustionReply ? { exhaustionReply: cfg.exhaustionReply } : {}),
       ...(cfg.sampling ? { sampling: cfg.sampling } : {}),
       ...(cfg.chains?.length ? { chains: [...cfg.chains] } : {}),
@@ -416,7 +392,6 @@ export class AgentSpecBase implements AgentSpec {
     this.destructiveTools = [...(cfg.destructiveTools ?? [])];
     this.confirmMechanism = { ...(cfg.confirmMechanism ?? {}) };
     this.lexicon = { ...(cfg.lexicon ?? {}) };
-    this.toolSchemas = cfg.toolSchemas ?? {};
     // Install order is load-bearing (byte-stable trunk): universal invariants first, destructive layer
     // second — same as the former AgentSpecMinimal → AgentSpecBase super()/installBase() flow.
     this.installMinimal();

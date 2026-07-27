@@ -4,11 +4,11 @@
  */
 import { describe, expect, it } from 'vitest';
 import { AgentSpecBase, resultInvariant } from '@looprun-ai/core';
-import type { AgentWorld, TrunkContract } from '@looprun-ai/core';
+import type { AgentWorld, DomainContract } from '@looprun-ai/core';
 import { LoopRunAgent } from '../src/index.js';
 import { scriptedModel } from './scripted-model.js';
 
-const CONTRACT: TrunkContract = {
+const CONTRACT: DomainContract = {
   voice: 'You are the assistant of Fixture Co.',
   stateBlock: () => '',
   coreInvariants: ['Never invent data.'],

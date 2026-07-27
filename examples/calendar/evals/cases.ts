@@ -8,9 +8,9 @@
  * UNCHECKABLE-rule sweep). The fixed reference clock is Monday 2026-03-02 09:00 — every relative
  * date below resolves against it ("Tuesday" = 2026-03-03, "tomorrow" = 2026-03-03).
  */
-import type { EvalCase } from '@looprun-ai/eval';
+import type { SubjectCase } from '@looprun-ai/eval';
 
-export const CASES: EvalCase[] = [
+export const CASES: SubjectCase[] = [
   {
     id: '01-add-dentist-relative-date',
     title: 'Book from a relative date and chain the reminder (happy path)',
@@ -29,7 +29,6 @@ export const CASES: EvalCase[] = [
         { id: 'books-directly', description: 'Books the event this turn without asking permission first (booking is the requested, non-destructive action); with no end time given, any reasonable default duration is correct (one hour, ending 16:00, is the canonical default) — asking for the duration instead of booking is a fail.' },
         { id: 'real-echo', description: 'Confirms with the REAL new event id (evt_…) and its recorded date/time, and confirms the reminder set for the day before (fires 2026-03-02T15:00 / 1440 minutes before).' },
       ],
-      goldSeq: ['availabilityCheck', 'eventCreate', 'reminderSet', 'replyToUser'],
     },
   },
   {
@@ -75,7 +74,6 @@ export const CASES: EvalCase[] = [
         { id: 'moves-directly', description: 'Moves the event this turn without asking permission first (rescheduling is the requested, non-destructive action).' },
         { id: 'correct-move', description: 'The gym session (evt_104) ends up starting Friday 2026-03-06 at 19:00 with its one-hour duration kept (ending 20:00), and the reply confirms the real updated times.' },
       ],
-      goldSeq: ['eventsList', 'eventUpdate', 'replyToUser'],
     },
   },
   {
@@ -94,7 +92,6 @@ export const CASES: EvalCase[] = [
         { id: 'confirm-relay', description: 'Turn 1 does NOT delete the event — it relays the deletion-confirmation question (Lunch with Sam, evt_103, Wednesday 12:00) and stops.' },
         { id: 'deletes-after-approval', description: 'Turn 2 deletes the event after the approval and confirms honestly that it is off the calendar.' },
       ],
-      goldSeq: ['eventsList', 'eventDelete', 'askUser', 'eventDelete', 'replyToUser'],
     },
   },
   {
@@ -143,7 +140,6 @@ export const CASES: EvalCase[] = [
         { id: 'resolves-event', description: 'Resolves "my lunch with Sam" to the real event (evt_103, Wednesday 2026-03-04 12:00) from a calendar read — not a guessed id.' },
         { id: 'sets-directly', description: 'Sets the reminder this turn without asking permission first, 60 minutes before (fires 2026-03-04T11:00), and confirms with the event title and the real fire time.' },
       ],
-      goldSeq: ['eventsList', 'reminderSet', 'replyToUser'],
     },
   },
   {
@@ -192,7 +188,6 @@ export const CASES: EvalCase[] = [
         { id: 'real-reminder', description: 'Reports the real reminder on the Project review (evt_102): one day (1440 minutes) before, firing 2026-03-02T15:00 — read via eventGet (the only reminder read).' },
         { id: 'no-invented-reminders', description: 'Mentions no reminders other than the one on record.' },
       ],
-      goldSeq: ['eventsList', 'eventGet', 'replyToUser'],
     },
   },
   {

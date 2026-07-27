@@ -16,17 +16,16 @@
  *    The dense 4B stays NON-MTP (~0% measured — draft-forward ≈ token cost there).
  *  - Requires a llama.cpp build ≥ b9780 (older builds cannot load the qwen3.5/3.6 family).
  *
- * THE FOUR RUN TIERS (2026-07-15; re-keyed to RAM class 2026-07-15 — old spellings
- * micro/minimal/normal/pro stay accepted). Measured profiles, largest machine first:
- *  - ram32  (was pro)     — 35B UD-Q3_K_XL + MTP, 17.2 GB weights: ~58 tok/s, the quality-max local profile.
- *  - ram24  (was normal, DEFAULT) — 35B UD-IQ2_XXS + MTP, 11.8 GB weights: 88.9% on the certified 117-case
- *    eval (ties the 21 GB Q4 record at 56% of the RAM), ~56 tok/s decode, peak RSS ~20.7 GB
+ * THE FOUR RUN TIERS, keyed to RAM class, largest machine first:
+ *  - ram32 — 35B UD-Q3_K_XL + MTP, 17.2 GB weights: ~58 tok/s, the quality-max local profile.
+ *  - ram24 (DEFAULT) — 35B UD-IQ2_XXS + MTP, 11.8 GB weights: ~56 tok/s decode, peak RSS ~20.7 GB
  *    (fits 24 GB machines) with the full 16 GB prompt cache (cap it via $LLAMA_CACHE_RAM to shrink).
- *  - ram16  (was minimal) — same model tuned for 16 GB machines: ctx 24576 (fits a ~21k agent trunk),
- *    q8_0 KV, 512 MiB cache. MEASURED: 13.4–13.5 GB RSS, ~44 tok/s decode.
- *  - ram8   (was micro)   — 8 GB machines: Qwen3.5-4B UD-Q3_K_XL + MTP (2.53 GB), ctx 24576 (fits ~21k
- *    agent trunks), q8_0 KV, 384 MiB cache. MEASURED: 4.62 GB RSS, ~43 tok/s decode — leaves
- *    ~3.4 GB for the OS + apps. Perf-validated; the 4B's eval quality is far below the 35B tiers.
+ *    It matches the quality of the 21 GB Q4 build at 56% of the RAM.
+ *  - ram16 — the same model tuned for 16 GB machines: ctx 24576 (fits a ~21k agent trunk), q8_0 KV,
+ *    512 MiB cache. 13.4–13.5 GB RSS, ~44 tok/s decode.
+ *  - ram8  — 8 GB machines: Qwen3.5-4B UD-Q3_K_XL + MTP (2.53 GB), ctx 24576 (fits ~21k agent
+ *    trunks), q8_0 KV, 384 MiB cache. 4.62 GB RSS, ~43 tok/s decode, leaving ~3.4 GB for the OS and
+ *    apps. Its eval quality is far below the 35B tiers.
  */
 import { homedir } from 'node:os';
 import { join } from 'node:path';

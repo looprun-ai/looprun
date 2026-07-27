@@ -1,11 +1,11 @@
 /** Scripted multi-turn runner: record shape + cross-turn guard state. */
 import { describe, expect, it } from 'vitest';
 import { AgentSpecBase, confirmFirst } from '@looprun-ai/core';
-import type { AgentWorld, TrunkContract } from '@looprun-ai/core';
+import type { AgentWorld, DomainContract } from '@looprun-ai/core';
 import { repeatedToolCallStop, runSpecConversation } from '../src/index.js';
 import { scriptedModel } from './scripted-model.js';
 
-const CONTRACT: TrunkContract = {
+const CONTRACT: DomainContract = {
   voice: 'You are the assistant of Fixture Plants.',
   stateBlock: () => 'plan=starter',
   coreInvariants: ['Never invent data.'],

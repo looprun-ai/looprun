@@ -12,12 +12,12 @@ import {
   FixtureWorld,
   FIXTURE_TOOL_NAMES,
   FIXTURE_LABEL_SCHEME,
-  FIXTURE_CONTRACT,
+  FIXTURE_DOMAIN,
 } from '@looprun-ai/core/testing';
 import { fakeLLM, runProofLoop } from '../../src/testing/index.js';
 
 const trivialSpec = () =>
-  new AgentSpecBase({ id: 'smoke', mode: 'PROOF', persona: 'You are the proof agent.', tools: [...FIXTURE_TOOL_NAMES], contract: FIXTURE_CONTRACT });
+  new AgentSpecBase({ id: 'smoke', mode: 'PROOF', persona: 'You are the proof agent.', tools: [...FIXTURE_TOOL_NAMES], contract: FIXTURE_DOMAIN });
 
 describe('FixtureWorld — deterministic', () => {
   const drive = (w: FixtureWorld) => {

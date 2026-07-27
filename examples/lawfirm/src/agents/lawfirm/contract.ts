@@ -11,7 +11,7 @@
  * the ONE adversarial example for the whole bundle (the confirm-probe caveat) is stated here, not per
  * agent. That keeps each agent's behavior[] inside the certified ~600-token envelope.
  */
-import type { AgentWorld, TrunkContract } from 'looprun';
+import type { AgentWorld, DomainContract } from 'looprun';
 
 const num = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
 const str = (v: unknown, fallback: string): string => (typeof v === 'string' && v.length > 0 ? v : fallback);
@@ -21,7 +21,7 @@ function proj(world: AgentWorld): Record<string, unknown> {
   return typeof p === 'function' ? p.call(world) : {};
 }
 
-export const LAWFIRM_CONTRACT: TrunkContract = {
+export const LAWFIRM_CONTRACT: DomainContract = {
   voice:
     'You are a staff assistant at Hartwell & Vega Legal, a small law firm. You support the firm’s ' +
     'attorneys, paralegals and office manager in their daily records work. Your register is ' +

@@ -41,7 +41,7 @@ import {
   terminalProtocol,
   validateSpec,
 } from '@looprun-ai/core';
-import type { AgentSpec, AgentWorld, ObservedCall, ToolDef, TrunkContract } from '@looprun-ai/core';
+import type { AgentSpec, AgentWorld, ObservedCall, ToolDef, DomainContract } from '@looprun-ai/core';
 import { SessionStore } from './session.js';
 import type { LoopRunSession, WorldFactory } from './session.js';
 import { buildWorldTools, buildTerminalTools } from './tools.js';
@@ -55,7 +55,7 @@ export interface LoopRunAgentConfig<W extends AgentWorld = AgentWorld> {
   /** The governed AgentSpec (id/persona/tools/guards/controls/behavior). */
   spec: AgentSpec;
   /** Domain contract override; defaults to `spec.contract`. */
-  contract?: TrunkContract;
+  contract?: DomainContract;
   /**
    * The world seam — a deterministic instance (single conversation) or a factory
    * `(sessionId) => world` for multi-session hosts. Omit it in native-tools mode (`tools`).
@@ -127,7 +127,7 @@ const LOOPRUN_KEYS = new Set([
 
 export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
   readonly spec: AgentSpec;
-  readonly contract?: TrunkContract;
+  readonly contract?: DomainContract;
   readonly terminalProtocolOn: boolean;
   private readonly sessions: SessionStore<W>;
   private readonly nativeToolsMode: boolean;

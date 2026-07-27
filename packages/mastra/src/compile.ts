@@ -15,7 +15,7 @@ import {
   renderScopedSpecTrunk,
   terminalProtocol,
 } from '@looprun-ai/core';
-import type { AgentSpec, AgentWorld, FinalizedReply, ToolDef, TrunkContract, TurnLedger } from '@looprun-ai/core';
+import type { AgentSpec, AgentWorld, FinalizedReply, ToolDef, DomainContract, TurnLedger } from '@looprun-ai/core';
 import { buildWorldTools } from './tools.js';
 import { makeGuardHooks, makeInputProcessors } from './hooks.js';
 import type { GuardHooks } from './hooks.js';
@@ -41,7 +41,7 @@ export interface CompiledSpec {
 
 export function compileSpec(
   spec: AgentSpec,
-  opts: { contract?: TrunkContract; world: AgentWorld; toolDefs?: ToolDef[]; terminalProtocol?: boolean; redrives?: number },
+  opts: { contract?: DomainContract; world: AgentWorld; toolDefs?: ToolDef[]; terminalProtocol?: boolean; redrives?: number },
 ): CompiledSpec {
   const contract = opts.contract ?? spec.contract;
   if (!contract && !spec.surface.systemPrompt) {

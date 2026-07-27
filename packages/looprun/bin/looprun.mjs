@@ -18,7 +18,6 @@ const HELP = `looprun <command>
 
 Local model tiers: ram24 (default, ~11.8 GB) · ram16 (16 GB machines) ·
 ram32 (~17.2 GB) · ram8 (8 GB machines, ~2.5 GB) · qwen3.5-4b (plain fallback, ~2.9 GB)
-  (tiers re-keyed to RAM class 2026-07-15; old micro/minimal/normal/pro still accepted)
 `;
 
 async function confirm(question) {

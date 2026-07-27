@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { AgentSpecBase, renderScopedSpecTrunk, precondition, requiresBefore } from '../src/index.js';
-import type { AgentWorld, TrunkContract } from '../src/index.js';
+import type { AgentWorld, DomainContract } from '../src/index.js';
 
 function fixtureWorld(state: Record<string, unknown> = {}): AgentWorld {
   return {
@@ -17,7 +17,7 @@ function fixtureWorld(state: Record<string, unknown> = {}): AgentWorld {
   };
 }
 
-const CONTRACT: TrunkContract = {
+const CONTRACT: DomainContract = {
   voice: 'You are the assistant of Fixture Plants, a small plant nursery.',
   stateBlock: (w) => `plan=${String(w.plan ?? 'starter')}`,
   coreInvariants: ['Never invent data — read it from a tool result.', 'Report failures honestly.'],

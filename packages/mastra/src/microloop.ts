@@ -46,7 +46,7 @@ import {
   runChainCompletionPass,
   VETO_STORM_LIMIT,
 } from '@looprun-ai/core';
-import type { AgentSpec, AgentWorld, Guard, GuardCtx, ObservedCall, ReplyViolation, TokenUsage, TrunkContract, TurnInput, TurnRecord, RunResult } from '@looprun-ai/core';
+import type { AgentSpec, AgentWorld, Guard, GuardCtx, ObservedCall, ReplyViolation, TokenUsage, DomainContract, TurnInput, TurnRecord, RunResult } from '@looprun-ai/core';
 import { jsonSchemaToZodObject } from './json-schema-zod.js';
 import type { RuntimeDeps } from './run-conversation.js';
 
@@ -323,7 +323,7 @@ function accUsage(acc: TokenUsage, u: any): void {
  */
 export async function runSpecConversationMicroLoop(spec: AgentSpec, turns: TurnInput[], deps: RuntimeDeps): Promise<RunResult> {
   const { world, model } = deps;
-  const contract: TrunkContract | undefined = deps.contract ?? spec.contract;
+  const contract: DomainContract | undefined = deps.contract ?? spec.contract;
   if (!contract && !spec.surface.systemPrompt) {
     throw new Error(`runSpecConversationMicroLoop: spec "${spec.id}" has no contract — pass deps.contract or set spec.contract.`);
   }

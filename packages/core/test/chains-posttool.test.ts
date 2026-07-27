@@ -14,10 +14,10 @@ import {
   finalizeReply,
   custom,
 } from '../src/index.js';
-import type { AgentWorld, ChainSpec, GuardCtx, TrunkContract, ObservedCall } from '../src/index.js';
+import type { AgentWorld, ChainSpec, GuardCtx, DomainContract, ObservedCall } from '../src/index.js';
 
 const persona = 'You are the test agent.';
-const CONTRACT: TrunkContract = {
+const CONTRACT: DomainContract = {
   voice: 'v', stateBlock: () => '', coreInvariants: ['x'], languageClause: 'lang',
 };
 

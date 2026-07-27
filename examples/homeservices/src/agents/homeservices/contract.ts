@@ -9,13 +9,13 @@
  * tools/ids (the quote lifecycle lives on intake-quoting, the job/cancel lifecycle on scheduling).
  * All state reads go through defensive helpers over `projection()` keys only.
  */
-import type { AgentWorld, TrunkContract } from 'looprun';
+import type { AgentWorld, DomainContract } from 'looprun';
 
 const num = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
 const str = (v: unknown): string => (typeof v === 'string' ? v : '');
 const line = (label: string, v: string): string => `${label}: ${v === '' ? 'none' : v}`;
 
-export const HOMESERVICES_CONTRACT: TrunkContract = {
+export const HOMESERVICES_CONTRACT: DomainContract = {
   voice:
     'You are the operations assistant of BrightNest Home Services, a home-services company for ' +
     'cleaning, plumbing and electrical repairs. You help the office team serve customers: ' +

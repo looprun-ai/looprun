@@ -34,7 +34,7 @@ import {
   renderScopedSpecTrunk,
   terminalProtocol,
 } from '@looprun-ai/core';
-import type { AgentSpec, AgentWorld, TokenUsage, ToolDef, TrunkContract, TurnInput, TurnRecord, RunResult } from '@looprun-ai/core';
+import type { AgentSpec, AgentWorld, TokenUsage, ToolDef, DomainContract, TurnInput, TurnRecord, RunResult } from '@looprun-ai/core';
 import { buildWorldTools } from './tools.js';
 import { makeGuardHooks, makeInputProcessors, repeatedToolCallStop } from './hooks.js';
 import type { LoopRunSession } from './session.js';
@@ -57,7 +57,7 @@ export interface RuntimeDeps {
   /** Tool defs (name/description/JSON-schema) for the surface + terminal tools. */
   toolDefs: ToolDef[];
   /** The domain skin. Optional when the spec carries its own contract reference. */
-  contract?: TrunkContract;
+  contract?: DomainContract;
   maxSteps?: number;
   redrives?: number;
 }

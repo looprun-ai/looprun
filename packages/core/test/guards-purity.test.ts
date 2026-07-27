@@ -6,7 +6,7 @@
  * S-1 firewall: GuardCtx exposes NO user text — guards key on args/world/observed only (the magnet
  * firewall).
  * Statefulness: no /g|/y regex used with .test()/.exec() (lastIndex leaks across calls).
- * Contract law: TrunkContract carries no persona (persona-on-spec law).
+ * Contract law: DomainContract carries no persona (persona-on-spec law).
  */
 import { describe, expect, it } from 'vitest';
 import { readFileSync, readdirSync, existsSync, statSync } from 'node:fs';

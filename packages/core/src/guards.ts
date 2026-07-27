@@ -1377,9 +1377,9 @@ export function jargonScrub(map: Record<string, string>): ReplyMutator {
 // ── GUARD-KIND CLASSIFICATION REGISTRIES (the single source of truth for the spec-quality lint) ────
 //
 // These three constants are the RUNTIME's OWN classification of its guard kinds — a property of how
-// each factory above renders its prose / arms its seams. The agentspec skill's `lint-spec-quality.mjs`
-// gate used to RE-ENCODE equivalent lists with no binding to this file, so a kind
-// renamed here drifted silently: the gate kept classifying a name the runtime no longer produces.
+// each factory above renders its prose / arms its seams. A spec-quality gate that re-encodes an
+// equivalent list with no binding to this file drifts silently: rename a kind here and the gate keeps
+// classifying a name the runtime does not produce.
 //
 // They live HERE, beside the factories they describe, so a change to a kind's prose/seam contract updates
 // its classification in the SAME edit; the lint reads them out of the instantiated runtime (via the

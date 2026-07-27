@@ -1,12 +1,12 @@
 /** Offline e2e of the governed turn: veto, redrive, forced-terminal, exhaustion, sessions. */
 import { describe, expect, it } from 'vitest';
 import { AgentSpecBase, custom, requiresBefore, replyMustMention } from '@looprun-ai/core';
-import type { AgentWorld, TrunkContract } from '@looprun-ai/core';
+import type { AgentWorld, DomainContract } from '@looprun-ai/core';
 import { LoopRunAgent } from '../src/index.js';
 import { scriptedModel } from './scripted-model.js';
 import type { ScriptStep } from './scripted-model.js';
 
-const CONTRACT: TrunkContract = {
+const CONTRACT: DomainContract = {
   voice: 'You are the assistant of Fixture Plants.',
   stateBlock: (w) => `plan=${String(w.plan ?? 'starter')}`,
   coreInvariants: ['Never invent data.'],

@@ -3,11 +3,11 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 import { AgentSpecBase } from '@looprun-ai/core';
-import type { TrunkContract } from '@looprun-ai/core';
+import type { DomainContract } from '@looprun-ai/core';
 import { LoopRunAgent, surfaceFingerprint } from '../src/index.js';
 import { scriptedModel } from './scripted-model.js';
 
-const CONTRACT: TrunkContract = {
+const CONTRACT: DomainContract = {
   voice: 'You are the assistant of Fixture Search.',
   stateBlock: () => '',
   coreInvariants: ['Never invent data.'],

@@ -2,13 +2,8 @@
 
 The map generator: from **one purpose sentence** to governed agents with a certification.
 
-```bash
-npx skills add looprun-ai/looprun --skill agentspec
-```
-
-> **Moved (2026-07-24):** the `agentspec` skill now lives in its own private repo and no longer
-> ships with looprun. This guide is kept as a description of what the skill does; the install
-> command above refers to the last public release.
+The skill ships separately from this repository. This guide describes the bundle it produces —
+the layout `@looprun-ai/eval` runs, judges and seals.
 
 ## What it generates, in your project
 

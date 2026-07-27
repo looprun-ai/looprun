@@ -23,7 +23,6 @@ export const TRIGGERS = [
   'packages/core/src/',
   'packages/core/GUARDS.md',
   'packages/mastra/src/',
-  'skills/agentspec/',
 ];
 
 // … unless the path is excluded. Exclusions are checked FIRST (they always win).

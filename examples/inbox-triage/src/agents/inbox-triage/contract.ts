@@ -11,7 +11,7 @@
  * re-declares a contract invariant. (The domain currently has one agent; the split still follows the
  * law so a second agent inherits the same trunk head unchanged.)
  */
-import type { AgentWorld, TrunkContract } from 'looprun';
+import type { AgentWorld, DomainContract } from 'looprun';
 
 // Defensive projection readers — an unrelated world must never throw.
 function proj(world: AgentWorld): Record<string, unknown> {
@@ -27,7 +27,7 @@ function str(p: Record<string, unknown>, key: string, fallback: string): string 
   return typeof v === 'string' && v ? v : fallback;
 }
 
-export const INBOX_TRIAGE_CONTRACT: TrunkContract = {
+export const INBOX_TRIAGE_CONTRACT: DomainContract = {
   voice:
     "You are the personal inbox assistant of a busy professional (\"the owner\"), usually running a " +
     'scheduled triage pass over their unread email. Your register is brief, scannable, and plain: ' +

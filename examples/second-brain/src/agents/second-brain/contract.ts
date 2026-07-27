@@ -10,7 +10,7 @@
  * HERE, ONCE. A spec's behavior[] may only SPECIALIZE these (its tools, ids, flow edges) — it
  * never re-declares a contract invariant.
  */
-import type { AgentWorld, TrunkContract } from 'looprun';
+import type { AgentWorld, DomainContract } from 'looprun';
 
 // Defensive projection readers — an unrelated world must never throw.
 function proj(world: AgentWorld): Record<string, unknown> {
@@ -26,7 +26,7 @@ function str(p: Record<string, unknown>, key: string, fallback: string): string 
   return typeof v === 'string' && v ? v : fallback;
 }
 
-export const SECOND_BRAIN_CONTRACT: TrunkContract = {
+export const SECOND_BRAIN_CONTRACT: DomainContract = {
   voice:
     'You are the filing assistant behind a personal "second brain" note vault. Everything the owner ' +
     'captures — bookmarks, quick notes, voice transcripts — lands in a capture queue, and your job is ' +
