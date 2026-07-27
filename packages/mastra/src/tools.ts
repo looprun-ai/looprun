@@ -5,7 +5,7 @@
  * text into the ACTIVE session's ledger. Domain tools route to `world.exec(name, args)`.
  */
 import { createTool } from '@mastra/core/tools';
-import { isTerminal, recordTerminal, terminalToolDefs } from '@looprun-ai/core';
+import { isTerminal, normalizeTerminalToolDef, recordTerminal, terminalToolDefs } from '@looprun-ai/core';
 import type { ToolDef } from '@looprun-ai/core';
 import type { LoopRunSession } from './session.js';
 import { jsonSchemaToZodObject } from './json-schema-zod.js';
@@ -19,8 +19,9 @@ export function buildWorldTools(
   getSession: SessionAccessor,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): Record<string, any> {
-  const byName = new Map(toolDefs.map((d) => [d.name, d]));
-  // Backfill terminal defs when the host's toolDefs omit them.
+  // A terminal def belongs to the PROTOCOL, never to the host: normalize whatever was declared
+  // (identity for domain tools), then backfill the terminals the host omitted entirely.
+  const byName = new Map(toolDefs.map((d) => [d.name, normalizeTerminalToolDef(d)]));
   for (const def of terminalToolDefs()) if (!byName.has(def.name)) byName.set(def.name, def);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

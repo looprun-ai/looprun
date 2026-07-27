@@ -123,26 +123,60 @@ export function forcedTerminalPrompt(replyOnly: boolean): string {
     : 'Close the turn now: call replyToUser to answer / summarize what you did, or askUser to ask ONE clarifying question. Put the COMPLETE user-facing message in `text`.';
 }
 
-/** Default JSON-schema defs for the terminal tools (used when the host's toolDefs omit them). */
+/**
+ * The terminal tools' contract — authored by the RUNTIME, never by the host.
+ *
+ * A terminal is not a domain tool: it is how the turn ends, and the protocol owns what it means. A
+ * host-supplied definition can carry business prose in its description, pin the reply to one brand
+ * language, or make extra arguments required — each of which the runtime would then have to satisfy
+ * or silently ignore. The runtime reads exactly one argument, `text`; anything else costs tokens,
+ * invites a wrong value and has no consumer.
+ */
+const TERMINAL_TOOL_CONTRACT: Record<string, { description: string; textDoc: string }> = {
+  replyToUser: {
+    description:
+      'END the turn with the final user-facing message. Every turn ends with exactly one replyToUser ' +
+      'or askUser. Call it only AFTER the domain tools you need have returned their results — never in ' +
+      'the same step as a domain tool, because their results are not available to you yet.',
+    textDoc: "The COMPLETE user-facing message, written ENTIRELY in the USER'S language.",
+  },
+  askUser: {
+    description:
+      'END the turn by asking the user exactly ONE clarifying question, when you cannot proceed without ' +
+      'information only the user has. This closes the turn: do not call it in the same step as a domain ' +
+      'tool, and do not act on the answer until the user has given it.',
+    textDoc: "The single clarifying question, written ENTIRELY in the USER'S language.",
+  },
+};
+
+function terminalDef(name: string, contract: { description: string; textDoc: string }): ToolDef {
+  return {
+    name,
+    description: contract.description,
+    inputSchema: {
+      type: 'object',
+      properties: { text: { type: 'string', minLength: 1, description: contract.textDoc } },
+      required: ['text'],
+      additionalProperties: false,
+    },
+  };
+}
+
+/** The JSON-schema defs for the terminal tools. */
 export function terminalToolDefs(): ToolDef[] {
-  return [
-    {
-      name: 'replyToUser',
-      description: 'Deliver the COMPLETE user-facing reply for this turn. Call exactly once, at the end of the turn.',
-      inputSchema: {
-        type: 'object',
-        properties: { text: { type: 'string', description: "The complete user-facing message, in the user's language." } },
-        required: ['text'],
-      },
-    },
-    {
-      name: 'askUser',
-      description: 'Ask the user ONE clarifying question and end the turn. Use only when you cannot proceed.',
-      inputSchema: {
-        type: 'object',
-        properties: { text: { type: 'string', description: "The single clarifying question, in the user's language." } },
-        required: ['text'],
-      },
-    },
-  ];
+  return Object.entries(TERMINAL_TOOL_CONTRACT).map(([name, contract]) => terminalDef(name, contract));
+}
+
+/**
+ * Rewrite a TERMINAL tool def to the runtime's own contract; a domain def is returned UNCHANGED —
+ * by identity, so passing a tool list through this is provably a no-op for everything else.
+ *
+ * This is what makes the protocol independent of how a host happens to declare its terminals: a
+ * description written for a different runtime, an extra required argument, or a differently-named
+ * text field (which this runtime would silently ignore, since the terminal execute and the salvage
+ * both key on `args.text`) are all replaced by the contract above.
+ */
+export function normalizeTerminalToolDef(def: ToolDef): ToolDef {
+  const contract = TERMINAL_TOOL_CONTRACT[def.name];
+  return contract ? terminalDef(def.name, contract) : def;
 }

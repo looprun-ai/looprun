@@ -29,10 +29,15 @@ const OUT = join(ARTIFACTS, 'proofs.json');
 const PACKAGES = ['packages/core', 'packages/mastra'];
 const allowEmpty = process.argv.includes('--allow-empty');
 
+/** The ratchet's per-kind describes are NESTED under an outer describe, so the marker sits mid-name.
+ *  Matching it only at the start silently files every ratchet assertion under `other` and reports
+ *  coverage 0/0 while the lane is in fact green — the counter must find the marker anywhere. */
+const RATCHET_MARKER = 'proof completeness · ';
+
 function classify(fullName) {
   if (fullName.startsWith('L1 ·') || fullName.startsWith('L3 ·')) return 'isolated';
   if (fullName.startsWith('collective')) return 'collective';
-  if (fullName.startsWith('proof completeness ·')) return 'ratchet';
+  if (fullName.includes(RATCHET_MARKER)) return 'ratchet';
   return 'other';
 }
 
@@ -120,8 +125,9 @@ function main() {
   // Coverage: distinct `proof completeness · <kind>` describes that fully passed.
   const perKind = new Map(); // kind -> { pass, total }
   for (const a of all) {
-    if (!a.fullName.startsWith('proof completeness ·')) continue;
-    const m = a.fullName.match(/^proof completeness · (\S+)/);
+    const at = a.fullName.indexOf(RATCHET_MARKER);
+    if (at < 0) continue;
+    const m = a.fullName.slice(at + RATCHET_MARKER.length).match(/^(\S+)/);
     if (!m) continue;
     const k = m[1];
     const c = perKind.get(k) ?? { pass: 0, total: 0 };

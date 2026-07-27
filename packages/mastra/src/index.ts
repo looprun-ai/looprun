@@ -21,13 +21,5 @@ export type { GuardHooks } from './hooks.js';
 export { jsonSchemaToZodObject, jsonTypeToZod } from './json-schema-zod.js';
 export { surfaceFingerprint } from './surface.js';
 
-// EXPERIMENTAL — the micro-loop turn driver for tiny models (additive; NOT a default). The certified
-// runSpecConversation / LoopRunAgent are unchanged.
-export {
-  runSpecConversationMicroLoop, renderStructuredReply, stripThinkBlocks, recordTerminalReply,
-  assembleAnswerText, scrubSteeringEcho, ingestStructuredObject, commitFinalReply,
-  digestTurnToolResults, buildForceCloseMessages, STEERING_SENTINEL,
-} from './microloop.js';
-
 // Re-exports so `import { AgentSpecBase, precondition, … } from '@looprun-ai/mastra'` works too.
 export * from '@looprun-ai/core';

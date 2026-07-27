@@ -58,6 +58,7 @@ export {
   TERMINAL_PROTOCOL_REPLY_ONLY,
   forcedTerminalPrompt,
   terminalToolDefs,
+  normalizeTerminalToolDef,
   prematureTerminalTools,
   supersededTerminalCalls,
 } from './runtime/terminal.js';

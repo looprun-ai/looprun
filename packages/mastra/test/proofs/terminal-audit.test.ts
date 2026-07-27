@@ -10,7 +10,7 @@
  *     composed before that call's result existed, so its text cannot be reporting it.
  */
 import { describe, expect, it } from 'vitest';
-import { AgentSpecBase, custom, defaultExhaustionReply, governanceVeto, prematureTerminalTools } from '@looprun-ai/core';
+import { AgentSpecBase, custom, defaultExhaustionReply, governanceVeto, normalizeTerminalToolDef, prematureTerminalTools } from '@looprun-ai/core';
 import type { DomainContract, RunResult, ToolDef } from '@looprun-ai/core';
 import { FIXTURE_DOMAIN, FIXTURE_TOOL_DEFS, FIXTURE_TOOL_NAMES, FixtureWorld } from '@looprun-ai/core/testing';
 import { fakeLLM } from '../../src/testing/fake-llm.js';
@@ -131,7 +131,59 @@ describe('governance veto envelope', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 3 — the closing step is TERMINAL-ONLY
+// 3 — a terminal's definition belongs to the protocol, not to the host
+// ─────────────────────────────────────────────────────────────────────────────
+describe('terminal tool definitions', () => {
+  /** A host declaring its own terminal: business prose, a brand-language pin, an extra required arg. */
+  const hostReplyToUser: ToolDef = {
+    name: 'replyToUser',
+    description: 'Send a user-facing reply when no domain tool is needed.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        reflects: { type: 'string', enum: ['stepHistory', 'none'], description: 'What the reply reflects.' },
+        text: { type: 'string', description: 'User-facing message in the brand language.' },
+      },
+      required: ['reflects', 'text'],
+    },
+  };
+
+  it('replaces a host terminal def with the runtime contract, and passes domain defs through', () => {
+    const d = normalizeTerminalToolDef(hostReplyToUser);
+    expect(d.description).not.toContain('when no domain tool is needed');
+    expect(d.description).toContain('END the turn');
+    // No brand-language pin reaches the model, and no argument the runtime never reads.
+    expect(JSON.stringify(d.inputSchema)).not.toContain('brand language');
+    expect(JSON.stringify(d.inputSchema)).not.toContain('stepHistory');
+    const props = (d.inputSchema as { properties: Record<string, { description?: string }> }).properties;
+    expect(props.reflects).toBeUndefined();
+    expect(props.text.description).toContain("USER'S language");
+    expect((d.inputSchema as { required: string[] }).required).toEqual(['text']);
+
+    // askUser's argument is `text` too — a differently-named field would be silently ignored.
+    const ask = normalizeTerminalToolDef({ name: 'askUser', description: 'x', inputSchema: { type: 'object', properties: { question: { type: 'string' } }, required: ['question'] } });
+    expect((ask.inputSchema as { required: string[] }).required).toEqual(['text']);
+
+    // A domain def is returned BY IDENTITY — provably untouched.
+    const domain = FIXTURE_TOOL_DEFS.find((t) => t.name === 'createItem')!;
+    expect(normalizeTerminalToolDef(domain)).toBe(domain);
+  });
+
+  it('puts the runtime contract on the wire, not the host wording', async () => {
+    const toolDefs = [...FIXTURE_TOOL_DEFS.filter((d) => d.name !== 'replyToUser'), hostReplyToUser];
+    const { llm } = await runWith(new AgentSpecBase(baseCfg() as never), [[{ tool: 'replyToUser', args: { text: 'done' } }]], { toolDefs });
+
+    const tools = (llm.received[0] as { tools?: Array<Record<string, unknown>> }).tools ?? [];
+    const reply = tools.find((t) => (t.name ?? t.toolName) === 'replyToUser');
+    expect(reply).toBeDefined();
+    expect(JSON.stringify(reply)).not.toContain('when no domain tool is needed');
+    expect(JSON.stringify(reply)).not.toContain('brand language');
+    expect(JSON.stringify(reply)).not.toContain('reflects');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 4 — the closing step is TERMINAL-ONLY
 // ─────────────────────────────────────────────────────────────────────────────
 describe('premature terminal', () => {
   it('detects the premature shape and only that shape', () => {
