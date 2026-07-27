@@ -96,7 +96,7 @@ export function buildAgents() {
     'second-brain': {
       preset: 'capture-heavy',
       agent: new LoopRunAgent({
-        // The nemotron chain gets the Atlas-recipe tuned spec (same guards, turn-protocol prose);
+        // The nemotron chain gets the small-model tuned spec (same guards, turn-protocol prose);
         // the gemini path keeps the stock spec.
         spec: process.env.OPENROUTER_API_KEY ? vaultFilingNemotron : onlySpec(BRAIN_SPECS),
         contract: BRAIN_CONTRACT,

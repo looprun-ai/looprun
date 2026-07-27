@@ -55,7 +55,7 @@ probe is a logged residual (REVIEW.md).
 ## Sizing
 
 22 cases / 3 agents (8 client-books, 7 billing, 7 tax-filing) — within the 12–15-per-agent
-default band's floor for a 3-agent day-0 domain; every preset is exercised by ≥1 case.
+default band's floor for a 3-agent domain; every preset is exercised by ≥1 case.
 
 ## Post-debate surface changes (G1 round 3)
 

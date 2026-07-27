@@ -16,7 +16,7 @@ import { AgentSpecVaultFiling } from '../../second-brain/src/agents/second-brain
 export class AgentSpecVaultFilingNemotron extends AgentSpecVaultFiling {
   constructor() {
     super();
-    // Atlas v3 rule: the turn protocol lives at the VERY TOP — priority must survive on the
+    // The turn protocol lives at the VERY TOP — priority must survive on the
     // smaller model. The runtime renders persona first, then these lines.
     this.behavior.unshift(
       'START EVERY TURN HERE — act, then write. A filing/triage request means TOOL CALLS THIS ' +

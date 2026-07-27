@@ -40,7 +40,7 @@ client-side retry with a 65 s window for 429) and paces one task per minute.
 
 On the OpenRouter chain the vault-filing agent swaps in a **model-tuned spec**
 ([nemotron-specs.ts](src/nemotron-specs.ts)): a subclass changing ONLY behavior prose (guards
-untouched) per the Atlas small-model recipe — turn protocol at the top ("act, then write; TEXT
+untouched) per the small-model recipe — turn protocol at the top ("act, then write; TEXT
 IS NOT ACTION"), non-destructive work never asks permission, the filing pass as a numbered
 checklist. The gemini path keeps the stock spec.
 
