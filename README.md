@@ -113,7 +113,7 @@ re-certifies the anchors without re-running the matrix).
 - [The illustrated guide](docs/illustrated-guide.md) — the visual front-door: the whole picture in one sitting
 - [Overview](docs/overview.md) — the concepts and the design laws
 - [Getting started](docs/getting-started.md)
-- [The agentspec skill](docs/guides/skill.md) · [The measured loop](docs/guides/measured-loop.md)
+- [The measured loop](docs/guides/measured-loop.md)
 - [Eval config reference](docs/guides/eval-config.md) · [Local models](docs/guides/local-models.md) · [MCP & native tools](docs/guides/mcp-tools.md)
 - [Examples](docs/examples.md)
 - [Benchmarks](docs/benchmarks.md) — τ²-bench + **Atlas** (governed 96.5 vs ungoverned 92.6 over 13 cloud models, N=3 — data in [looprun-bench](https://github.com/looprun-ai/looprun-bench))

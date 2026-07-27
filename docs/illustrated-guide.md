@@ -564,7 +564,6 @@ The parts worth knowing before your first PR:
 |---|---|
 | the concepts + the nine design laws, compact | [`docs/overview.md`](overview.md) |
 | install → generate → certify, step by step | [`docs/getting-started.md`](getting-started.md) |
-| the generator skill in detail | [`docs/guides/skill.md`](guides/skill.md) |
 | the certification protocol + fail taxonomy | [`docs/guides/measured-loop.md`](guides/measured-loop.md) |
 | every guard kind, exact signatures | [`packages/core/GUARDS.md`](../packages/core/GUARDS.md) |
 | eval config reference | [`docs/guides/eval-config.md`](guides/eval-config.md) |

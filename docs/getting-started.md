@@ -27,7 +27,7 @@ including a local one — with `npx looprun-eval run --subject <dir> --model <id
 
 In your project, invoke the **agentspec** skill and answer one question — the agent's purpose, one
 sentence. The skill generates the specs + domain contract, the deterministic tool world, and the
-eval set — the subject bundle the eval CLI reads. See [the skill guide](guides/skill.md).
+eval set — the subject bundle the eval CLI reads.
 
 ## 3. Or write a spec by hand
 
