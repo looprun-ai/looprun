@@ -6,6 +6,7 @@
  *                     [--case id[,id]] [--ungoverned] [--thinking] [--out <dir>]
  *   looprun-eval fold --dump <cases.jsonl> --verdicts <verdicts.jsonl> [--out <RESULTS.md>]
  *   looprun-eval cert <run-dir> [--bar 0.9] [--model <label>] [--date <iso>] [--note <text>]
+ *   looprun-eval seal <subject-dir> [--verify] [--target model:rate:reps ...] [--bar 0.9] [--date <iso>]
  *   looprun-eval judge-prompt
  *   looprun-eval lint [paths…] [--spec-laws --subject <dir>]
  */
@@ -18,6 +19,7 @@ const HELP = `looprun-eval <command>
   fold [flags]       Merge judge verdicts into RESULTS.md (final pass = invariants AND judge).
                      --dump <cases.jsonl> --verdicts <verdicts.jsonl> [--out <RESULTS.md>]
   cert <run-dir>     Fold cases.jsonl + verdicts.jsonl → cert.json + CERT.md (reps=1, stated).
+  seal <subject>     Mint ship/seal.json (hash-bound) — or --verify an existing one.
                      [--bar 0.9] [--model <label>] [--date <iso>] [--note <text>]
   judge-prompt       Print the packaged generic judge prompt path.
   lint [paths…]      Purity/firewall/contract lint. [--spec-laws --subject <dir>]
@@ -34,7 +36,7 @@ function has(name) {
   return process.argv.includes(`--${name}`);
 }
 
-const VALUE_FLAGS = new Set(['--subject', '--model', '--base-url', '--api-key-env', '--case', '--out', '--dump', '--verdicts', '--bar', '--date', '--note']);
+const VALUE_FLAGS = new Set(['--subject', '--model', '--base-url', '--api-key-env', '--case', '--out', '--dump', '--verdicts', '--bar', '--date', '--note', '--target']);
 
 function positionals() {
   const argv = process.argv.slice(2);
@@ -104,6 +106,25 @@ async function main() {
         `${summary.certified ? 'CERTIFIED' : 'BELOW BAR'} (bar ${(summary.bar * 100).toFixed(0)}%, reps=1) → ${dir}/CERT.md`,
     );
     if (!summary.certified) process.exitCode = 1;
+    return;
+  }
+
+  if (cmd === 'seal') {
+    const dir = args.find((a) => !a.startsWith('--')) ?? flag('subject', undefined);
+    if (!dir) { console.error('seal: <subject-dir> required'); process.exit(2); }
+    if (has('verify')) {
+      const v = api.verifySeal(dir);
+      if (v.ok) { console.log(`seal VALID — artifactHash matches (${v.actual.slice(0, 16)}…)`); return; }
+      console.error(`seal VOID — artifacts changed after certification.\n  sealed:  ${v.expected}\n  on disk: ${v.actual}\nRe-certify or re-open the pipeline; never re-stamp.`);
+      process.exit(1);
+    }
+    const targets = (flag('target', '') || '').split(',').filter(Boolean).map((t) => {
+      const [model, rate, reps] = t.split(':');
+      return { model, rate: Number(rate), reps: Number(reps ?? 1) };
+    });
+    if (!targets.length) { console.error('seal: --target model:rate:reps[,…] required to mint'); process.exit(2); }
+    const seal = api.mintSeal(dir, { targets, bar: has('bar') ? Number(flag('bar')) : 0.9, date: flag('date', undefined), note: flag('note', undefined) });
+    console.log(`seal minted → ${dir}/ship/seal.json (hash ${seal.artifactHash.slice(0, 16)}…)`);
     return;
   }
 

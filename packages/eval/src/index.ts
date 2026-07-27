@@ -40,3 +40,4 @@ import { fileURLToPath } from 'node:url';
 export function judgePromptPath(): string {
   return join(dirname(fileURLToPath(import.meta.url)), '..', 'assets', 'judge-prompt.md');
 }
+export { computeArtifactHash, mintSeal, verifySeal, sealedFiles } from './seal.js';
