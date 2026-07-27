@@ -244,6 +244,7 @@ function attributeGuard(guard: Guard, hook: Hook, bindingId: string): Guard {
   return {
     kind: guard.kind,
     dim: guard.dim,
+    ...(guard.meta ? { meta: guard.meta } : {}),
     check(ctx: GuardCtx) {
       try {
         const out = guard.check(ctx);

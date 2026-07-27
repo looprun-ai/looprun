@@ -70,6 +70,10 @@ export interface Guard {
   dim: Dim;
   check(ctx: GuardCtx): string | null | Promise<string | null>;
   prose(): string;
+  /** Optional STRUCTURAL introspection a kind may attach for static analyzers (e.g. the eval lint):
+   *  `before` (requiresBefore's dep list), `requiredStrings` (strings a reply guard demands).
+   *  Purely additive metadata — never read by the runtime's enforcement path. */
+  meta?: { before?: string[]; requiredStrings?: string[] } & Record<string, unknown>;
 }
 
 /** A deterministic egress TRANSFORM on the final reply (no LLM call), applied before the onReply checks. */

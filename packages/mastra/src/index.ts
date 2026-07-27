@@ -19,6 +19,7 @@ export { buildWorldTools, buildTerminalTools } from './tools.js';
 export { makeGuardHooks, makeInputProcessors, repeatedToolCallStop } from './hooks.js';
 export type { GuardHooks } from './hooks.js';
 export { jsonSchemaToZodObject, jsonTypeToZod } from './json-schema-zod.js';
+export { surfaceFingerprint } from './surface.js';
 
 // EXPERIMENTAL — the micro-loop turn driver for tiny models (additive; NOT a default). The certified
 // runSpecConversation / LoopRunAgent are unchanged.

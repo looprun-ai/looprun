@@ -81,6 +81,7 @@ export function requiresBefore(deps: string[]): Guard {
   return {
     kind: 'requiresBefore',
     dim: 'spatial',
+    meta: { before: [...deps] },
     check(ctx) {
       const missing = deps.filter((d) => !ran(ctx.observed, d));
       return missing.length ? `Do ${missing.join(' then ')} FIRST — it must run before this tool.` : null;
@@ -613,6 +614,7 @@ export function replyMustMention(keywords: string[], reason: string, prose?: str
   return {
     kind: 'replyMustMention',
     dim: 'behavior',
+    meta: { requiredStrings: [...keywords] },
     check(ctx) {
       const r = lc(ctx.reply);
       return keywords.some((k) => r.includes(lc(k))) ? null : reason;
@@ -667,6 +669,7 @@ export function replyConfirmsLabels(labels: string[], reason: string, prose?: st
   return {
     kind: 'replyConfirmsLabels',
     dim: 'behavior',
+    meta: { requiredStrings: [...labels] },
     check(ctx) {
       const r = ctx.reply ?? '';
       if (r.trim() === '') return reason;

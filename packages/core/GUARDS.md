@@ -231,6 +231,8 @@ byte-stable so the layer-sorted trunk prose is unchanged.
 iff `cfg.destructiveTools` is non-empty · `auto**` = installed iff `cfg.lexicon.falseFailureClaimRe` is
 provided · `agent` = you add it explicitly.
 
+Introspection: `requiresBefore` attaches `meta.before` (its dep list) and `replyMustMention` / `replyConfirmsLabels` attach `meta.requiredStrings` — additive structural metadata for static analyzers (the eval lint's order-cycle and unsat-pair checks); never read by the enforcement path.
+
 ### spatial — ordering (hook: preTool)
 
 | signature | auto | mechanism / when to reach for it |

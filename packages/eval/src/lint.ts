@@ -11,7 +11,7 @@
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { validateSpec } from '@looprun-ai/core';
-import type { AgentSpec } from '@looprun-ai/core';
+import type { AgentSpec, AgentWorld, GuardBinding, GuardCtx } from '@looprun-ai/core';
 
 export interface LintViolation {
   file: string;
@@ -89,6 +89,117 @@ export function lintSpecLaws(specs: Record<string, AgentSpec>): string[] {
     if (spec.surface.systemPrompt) {
       out.push(`spec "${id}": carries its own systemPrompt — generated specs must use the trunk renderer (contract + spec only)`);
     }
+  }
+  return out;
+}
+
+// ── Spec-quality by EXECUTION (anti-drift law: read the runtime, never re-encode it) ─────────────
+//
+// These checks run against the ASSEMBLED spec objects. The unsat check EXECUTES the spec's own
+// onReply check() functions over synthetic replies — no knowledge of any kind's internals, so it
+// works for custom() guards too. The cycle check reads the structural metadata the kinds attach
+// (`meta.before` on requiresBefore) plus `controls.chains` — never the guard source text.
+
+/** Minimal inert world for synthetic guard execution (mirrors the runtime's static-instructions stub). */
+function syntheticWorld(): AgentWorld {
+  return { exec: () => ({}), advanceTurn: () => {}, ingestAttachment: (u: string) => u, toolCalls: [], sseActions: [] };
+}
+
+/** Worst-case minimal GuardCtx: empty observed ledger, current turn, only the reply populated. */
+function syntheticReplyCtx(reply: string): GuardCtx {
+  return { args: {}, world: syntheticWorld(), observed: [], turnIndex: 0, reply, producedThisTurn: [], attachmentsThisTurn: [] };
+}
+
+/** Neutral baseline reply — the differential control: a veto must be TRIGGERED BY the required
+ *  string itself (fires with it, silent without it), not by the synthetic reply shape. */
+const BASELINE_REPLY = 'Here is the update you asked for.';
+
+async function runCheck(b: GuardBinding, reply: string): Promise<{ violation: string | null; threw?: string }> {
+  try {
+    const v = await b.guard.check(syntheticReplyCtx(reply));
+    return { violation: v ?? null };
+  } catch (e) {
+    return { violation: null, threw: (e as Error).message };
+  }
+}
+
+/**
+ * UNSAT-RISK: a reply requirement no reply can satisfy — guard X REQUIRES a string (labels from
+ * replyConfirmsLabels, terms from replyMustMention, via `meta.requiredStrings`) that another
+ * onReply guard Y VETOES. Every required string is embedded in a synthetic worst-case reply and
+ * every OTHER onReply check() of the same spec is EXECUTED over it; a check that throws on the
+ * synthetic ctx is its own finding.
+ */
+async function unsatReplyFindings(id: string, spec: AgentSpec): Promise<string[]> {
+  const out: string[] = [];
+  const bindings = (spec.guards.onReply ?? []).filter((b) => !b.disabled);
+  const requirers = bindings.filter((b) => b.guard.meta?.requiredStrings?.length);
+  const reportedThrows = new Set<string>();
+  for (const x of requirers) {
+    for (const s of x.guard.meta!.requiredStrings!) {
+      const withString = `${BASELINE_REPLY} ${s}`;
+      for (const y of bindings) {
+        if (y.id === x.id) continue;
+        const base = await runCheck(y, BASELINE_REPLY);
+        const probe = await runCheck(y, withString);
+        if (probe.threw && !reportedThrows.has(y.id)) {
+          reportedThrows.add(y.id);
+          out.push(`spec "${id}": UNSAT-RISK: guard ${y.id} check() THREW while probing "${s}" (required by ${x.id}): ${probe.threw}`);
+          continue;
+        }
+        if (probe.violation && !base.violation) {
+          out.push(`spec "${id}": UNSAT-RISK: guard ${x.id} requires "${s}" while guard ${y.id} vetoes it (${probe.violation})`);
+        }
+      }
+    }
+  }
+  return out;
+}
+
+/**
+ * ORDER-CYCLE: a deadlock by construction in the requires-graph — `requiresBefore` bindings
+ * (tool T must come after every dep, via `meta.before`) plus `controls.chains` follow-ups
+ * (`call` comes after `after`). A cycle means no permitted call order exists.
+ */
+function orderCycleFindings(id: string, spec: AgentSpec): string[] {
+  const edges = new Map<string, Set<string>>(); // T → tools that must run BEFORE T
+  const addEdge = (later: string, earlier: string): void => {
+    if (!edges.has(later)) edges.set(later, new Set());
+    edges.get(later)!.add(earlier);
+  };
+  for (const b of (spec.guards.preTool ?? []).filter((x) => !x.disabled)) {
+    const before = b.guard.meta?.before;
+    if (!before?.length || b.target === 'any') continue;
+    for (const tool of b.target) for (const dep of before) addEdge(tool, dep);
+  }
+  for (const chain of spec.controls.chains ?? []) addEdge(chain.call, chain.after);
+
+  const out: string[] = [];
+  const done = new Set<string>();
+  const visiting: string[] = [];
+  const visit = (node: string): void => {
+    const at = visiting.indexOf(node);
+    if (at !== -1) {
+      const cycle = [...visiting.slice(at), node];
+      out.push(`spec "${id}": ORDER-CYCLE: ${cycle.join(' → ')} — each requires the next to run first; no permitted order exists (deadlock by construction)`);
+      return;
+    }
+    if (done.has(node)) return;
+    visiting.push(node);
+    for (const dep of edges.get(node) ?? []) visit(dep);
+    visiting.pop();
+    done.add(node);
+  };
+  for (const node of edges.keys()) visit(node);
+  return out;
+}
+
+/** The execution-based spec-quality checks (`--spec-laws` runs these alongside lintSpecLaws). */
+export async function lintSpecExecution(specs: Record<string, AgentSpec>): Promise<string[]> {
+  const out: string[] = [];
+  for (const [id, spec] of Object.entries(specs ?? {})) {
+    out.push(...(await unsatReplyFindings(id, spec)));
+    out.push(...orderCycleFindings(id, spec));
   }
   return out;
 }

@@ -139,6 +139,10 @@ async function main() {
       const subject = await api.loadSubject(subjectDir);
       specLawFails = api.lintSpecLaws(subject.specs);
       for (const m of specLawFails) console.error(`[spec-laws] ${m}`);
+      // Execution-based spec-quality checks over the ASSEMBLED specs (unsat pairs, order cycles).
+      const execFails = await api.lintSpecExecution(subject.specs);
+      for (const m of execFails) console.error(`[spec-exec] ${m}`);
+      specLawFails = specLawFails.concat(execFails);
     }
     const total = violations.length + specLawFails.length;
     console.log(total ? `lint: ${total} violation(s)` : 'lint: clean');

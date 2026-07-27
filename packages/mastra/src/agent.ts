@@ -44,6 +44,7 @@ import type { LoopRunSession, WorldFactory } from './session.js';
 import { buildWorldTools, buildTerminalTools } from './tools.js';
 import { makeGuardHooks, makeInputProcessors, repeatedToolCallStop } from './hooks.js';
 import { worldFromTools } from './world-adapters.js';
+import { surfaceFingerprint } from './surface.js';
 import type { StateView } from './world-adapters.js';
 import { DEFAULT_MAX_STEPS, DEFAULT_REDRIVES } from './run-conversation.js';
 
@@ -78,6 +79,10 @@ export interface LoopRunAgentConfig<W extends AgentWorld = AgentWorld> {
   stopOnRepeatedToolCall?: boolean;
   /** The certified turn shape (terminal tools + toolChoice:'required'). Default true. */
   terminalProtocol?: boolean;
+  /** Certification drift gate: the expected {@link surfaceFingerprint} of the RESOLVED active
+   *  surface (post spec∩host intersection, with schemas when available). When set, a mismatch at
+   *  construction THROWS — the surface drifted since certification, so the seal is void. */
+  expectedSurfaceHash?: string;
   maxSteps?: number;
   redrives?: number;
   /** Throw on validateSpec warnings instead of console.warn. */
@@ -114,7 +119,7 @@ export interface LoopRunOptions {
 
 const LOOPRUN_KEYS = new Set([
   'spec', 'contract', 'world', 'tools', 'stateView', 'toolDefs', 'model', 'modelParams',
-  'terminalProtocol', 'maxSteps', 'redrives', 'strict', 'id', 'name',
+  'terminalProtocol', 'maxSteps', 'redrives', 'strict', 'id', 'name', 'expectedSurfaceHash',
 ]);
 
 export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
@@ -124,6 +129,8 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
   private readonly sessions: SessionStore<W>;
   private readonly nativeToolsMode: boolean;
   private readonly nativeToolNames: string[];
+  /** Native mode: the RESOLVED active surface = host tools ∩ spec.surface.tools (deny-by-default). */
+  private readonly nativeActiveNames: string[];
   private readonly surface: Set<string>;
   private readonly modelParams: Record<string, unknown>;
   private readonly stopOnRepeatedToolCall: boolean;
@@ -168,12 +175,56 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
 
     const surface = new Set(spec.surface.tools);
     const guardHooks = makeGuardHooks(spec, getSession as () => LoopRunSession);
+    const nativeToolNames = Object.keys(config.tools ?? {});
+    // Native/MCP mode enforces the spec's RATIFIED surface, deny-by-default:
+    //  · a host/MCP tool the surface does not list is NEVER registered or active (one loud
+    //    console.error names the exclusions — governance must be visible, not silent);
+    //  · a surface tool the host does NOT provide throws — the spec promises a capability the
+    //    host lacks, and a broken bundle must not run quiet.
+    const nativeActiveNames = nativeToolNames.filter((t) => surface.has(t));
+    if (nativeToolsMode) {
+      const unprovided = spec.surface.tools.filter((t) => !nativeToolNames.includes(t));
+      if (unprovided.length) {
+        throw new Error(
+          `LoopRunAgent "${spec.id}": spec.surface.tools promise capabilities the host does not provide: ` +
+            `${unprovided.join(', ')}. Register those tools or remove them from the spec's surface.`,
+        );
+      }
+      const excluded = nativeToolNames.filter((t) => !surface.has(t));
+      if (excluded.length) {
+        console.error(
+          `[looprun] LoopRunAgent "${spec.id}": ${excluded.length} host-registered tool(s) are NOT in ` +
+            `spec.surface.tools and will never be active (deny-by-default): ${excluded.join(', ')}. ` +
+            `Add them to the spec's surface (and re-certify) if the agent should have them.`,
+        );
+      }
+    }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let tools: Record<string, any>;
     if (nativeToolsMode) {
-      tools = { ...config.tools, ...buildTerminalTools(getSession as () => LoopRunSession) };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const admitted: Record<string, any> = {};
+      for (const t of nativeActiveNames) admitted[t] = config.tools![t];
+      tools = { ...admitted, ...buildTerminalTools(getSession as () => LoopRunSession) };
     } else {
       tools = buildWorldTools(config.toolDefs ?? [], surface, getSession as () => LoopRunSession);
+    }
+
+    // Certification drift gate: fingerprint the RESOLVED active surface (post-intersection, with
+    // schemas when available) and compare against the certified hash — a mismatch voids the seal.
+    if (config.expectedSurfaceHash) {
+      const resolvedNames = nativeToolsMode ? nativeActiveNames : spec.surface.tools;
+      const schemaOf = (name: string): unknown =>
+        nativeToolsMode
+          ? config.tools![name]?.inputSchema
+          : (config.toolDefs ?? []).find((d) => d.name === name)?.inputSchema;
+      const actual = surfaceFingerprint(resolvedNames, resolvedNames.map(schemaOf));
+      if (actual !== config.expectedSurfaceHash) {
+        throw new Error(
+          `LoopRunAgent "${spec.id}": surface drifted since certification — seal void; re-certify. ` +
+            `expected ${config.expectedSurfaceHash}, resolved surface fingerprints to ${actual}.`,
+        );
+      }
     }
 
     // Static default instructions (Studio/introspection); each governed turn passes the exact
@@ -210,7 +261,8 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
     this.terminalProtocolOn = terminalOn;
     this.sessions = sessions;
     this.nativeToolsMode = nativeToolsMode;
-    this.nativeToolNames = Object.keys(config.tools ?? {});
+    this.nativeToolNames = nativeToolNames;
+    this.nativeActiveNames = nativeActiveNames;
     this.surface = surface;
     // Normalize once at the seam: flat AI-SDK call settings (temperature, maxOutputTokens, …) are
     // folded into `modelSettings` — Mastra silently drops them when spread top-level (measured
@@ -281,7 +333,7 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
 
     const replyOnly = spec.controls.terminal ? spec.controls.terminal(world) === true : false;
     const activeTools = this.nativeToolsMode
-      ? [...this.nativeToolNames, ...(replyOnly ? ['replyToUser'] : ['replyToUser', 'askUser'])]
+      ? [...this.nativeActiveNames, ...(replyOnly ? ['replyToUser'] : ['replyToUser', 'askUser'])]
       : (replyOnly ? [...this.surface, 'replyToUser'] : [...this.surface, 'replyToUser', 'askUser']);
 
     const instructions = this.renderPrompt(world, attLabels) + (this.terminalProtocolOn ? terminalProtocol(replyOnly) : '');
@@ -457,7 +509,7 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
       const replyOnly = this.spec.controls.terminal ? this.spec.controls.terminal(world) === true : false;
       const instructions = this.renderPrompt(world, []) + (this.terminalProtocolOn ? terminalProtocol(replyOnly) : '');
       const activeTools = this.nativeToolsMode
-        ? undefined
+        ? [...this.nativeActiveNames, ...(replyOnly ? ['replyToUser'] : ['replyToUser', 'askUser'])]
         : (replyOnly ? [...this.surface, 'replyToUser'] : [...this.surface, 'replyToUser', 'askUser']);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const passOpts: Record<string, any> = {};
