@@ -6,6 +6,7 @@ Regenerate with `pnpm proofs:matrix`; CI runs `--check` to keep it in sync.
 
 | Date | Record | Change | Scope | Isolated | Collective | Coverage | Certified models | SLM canary | Verdict |
 |---|---|---|---|---|---|---|---|---|---|
+| 2026-07-27 | [legacy-layer-removal](proofs/2026-07-27-legacy-layer-removal.md) | remove the legacy compatibility layer: pre-rename type aliases, typed-but-unread spec fields, the legacy eval-config types, and gate config pointing at absent paths | runtime | 212/212 | 55/55 | 0/0 | n/a | n/a | PASS |
 | 2026-07-27 | [native-surface-enforcement](proofs/2026-07-27-native-surface-enforcement.md) | native/MCP mode enforces spec.surface (deny-by-default + fingerprint drift check); eval lint gains execution-based unsat-pair + order-cycle checks | runtime | 212/212 | 55/55 | 0/0 | n/a | n/a | PASS |
 | 2026-07-27 | [terminal-mechanics-port](proofs/2026-07-27-terminal-mechanics-port.md) | exhaustion evidence excludes terminals; veto envelope source:governance; terminal-only closing step + superseded-terminal pruning; salvage FORM/TRUTH frontier; seal covers the subject judge prompt | runtime | 212/212 | 55/55 | 0/0 | n/a | n/a | PASS |
 | 2026-07-24 | [contract-rename](proofs/2026-07-24-contract-rename.md) | Public API rename: spec.theme -> spec.contract (DomainContract); legacy naming sweep | runtime | 154/154 | 42/42 | 23/23 | n/a | n/a | PASS |
