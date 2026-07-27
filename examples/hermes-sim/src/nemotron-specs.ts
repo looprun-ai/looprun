@@ -11,7 +11,7 @@
  * the guard set, tool surface, lexicon and contract are inherited unchanged: governance identical,
  * pedagogy tuned.
  */
-import { AgentSpecVaultFiling } from '../../second-brain/src/agents/second-brain/vault-filing-spec.js';
+import { AgentSpecVaultFiling } from './domains/second-brain/agents/second-brain/vault-filing-spec.js';
 
 export class AgentSpecVaultFilingNemotron extends AgentSpecVaultFiling {
   constructor() {

@@ -1,47 +1,49 @@
-# Examples
+# Example seeds
 
-Three real businesses, each generated end-to-end by the `agentspec` skill in a fresh simulation
-project, certified with the measured loop, and only then ported here. Each example is a runnable
-Mastra app (`pnpm dev` → Studio) with its eval set and certification bundle committed.
+`examples/` holds SEEDS, not generated bundles: each directory carries what the `agentspec` skill
+needs to generate a domain — the purpose sentence, and where one was declared, the tool surface.
+Point the skill at a seed and it produces the agents, the deterministic world and the eval set in
+your own project; nothing the skill would write itself is committed here.
 
-| example | agents | cases | certified (LLM judge, N=3, bar ≥90%) |
-|---|---|---|---|
-| [`examples/homeservices`](../examples/homeservices/README.md) | intake-quoting · scheduling | 22 | **66/66 = 100%** ✅ |
-| [`examples/accounting`](../examples/accounting/README.md) | client-books · billing · tax-filing | 22 | **66/66 = 100%** ✅ |
-| [`examples/lawfirm`](../examples/lawfirm/README.md) | client-matters · docket-documents | 22 | **66/66 = 100%** ✅ |
+| seed | agents it generates | tool surface |
+|---|---|---|
+| [`examples/homeservices`](../examples/homeservices/README.md) | intake-quoting · scheduling | [`tools.json`](../examples/homeservices/tools.json) |
+| [`examples/accounting`](../examples/accounting/README.md) | client-books · billing · tax-filing | [`tools.json`](../examples/accounting/tools.json) |
+| [`examples/lawfirm`](../examples/lawfirm/README.md) | client-matters · docket-documents | [`tools.json`](../examples/lawfirm/tools.json) |
+| [`examples/inbox-triage`](../examples/inbox-triage/README.md) | triage | [`tools.json`](../examples/inbox-triage/tools.json) |
+| [`examples/second-brain`](../examples/second-brain/README.md) | vault-filing | [`tools.json`](../examples/second-brain/tools.json) |
+| [`examples/calendar`](../examples/calendar/README.md) | scheduler | derived from the purpose sentence |
 
-> Each bundle is generated end to end by the `agentspec` skill and certified N=3 against the
-> reference model, thinking off. All three hold the bar at **100%**.
+A generated domain is not finished when it runs — it is finished when it holds a bar. See
+[the measured loop](guides/measured-loop.md) for the certification protocol a fresh generation goes
+through, and [the eval config reference](guides/eval-config.md) for the subject layout the eval CLI
+consumes.
 
-Every example README documents: the business problem → how the skill generated the agents
-(questionnaire answer, approval gate, iteration log) → running it in Mastra Studio with
-guard-exercising prompts → re-running the certification.
+## The harness integration sim
 
-## Personal-agent domains + the harness integration sim
+[`examples/hermes-sim`](../examples/hermes-sim/README.md) is not a seed: it is a live end-to-end sim
+where the REAL Hermes-Agent harness drives governed agents as OpenAI-compatible "models" through
+[`@looprun-ai/server`](../packages/server), against a deterministic fake world whose end state the
+sim asserts. Its governed-vs-raw A/B (real CLI, N=10, nemotron free chain): the ungoverned arm
+double-books an occupied calendar slot **5/10** times; the governed arm **0/10**. Methodology and
+the raw baseline are in the sim's README.
 
-Beyond the three businesses, three governed personal-agent domains —
-[`examples/inbox-triage`](../examples/inbox-triage) (draft-never-send),
-[`examples/second-brain`](../examples/second-brain) (folder scope + confirm-first delete),
-[`examples/calendar`](../examples/calendar) (availability preconditions) — back
-[`examples/hermes-sim`](../examples/hermes-sim/README.md): an end-to-end sim where the REAL
-Hermes-Agent harness drives these agents as OpenAI-compatible "models" via
-[`@looprun-ai/server`](../packages/server). Its measured N=10 governed-vs-raw A/B (real CLI,
-nemotron free chain): the ungoverned arm double-books an occupied calendar slot **5/10** times;
-the governed arm **0/10** — details and the raw-baseline methodology in the sim README.
+## What a measured loop catches
 
-## What the measured loops caught (the looprun thesis, live)
+These are the failures the loop surfaced while these domains were being certified — the reason a
+generated agent is not trusted until it holds a bar.
 
-- **homeservices** — *zero iterations*: the anti-launder scope held on the first shot. `scheduleJob`
-  requires an accepted quote, and `recordQuoteDecision` (the tool a model would use to *fabricate*
-  that acceptance and then book) is kept off the scheduling agent by design — so the trap never
-  opens. The only wobble was a non-critical follow-up phrasing on one case, never a gated failure.
+- **home services** — *zero iterations*: the anti-launder scope held on the first shot.
+  `scheduleJob` requires an accepted quote, and `recordQuoteDecision` (the tool a model would use to
+  *fabricate* that acceptance and then book) is kept off the scheduling agent by design — so the
+  trap never opens. The only wobble was a non-critical follow-up phrasing, never a gated failure.
 - **accounting** — *2 iterations*: asked "was a payment reminder already sent?", the model read the
   **absence of a reminder log as evidence** and answered "no record of one sent" — fabricating a
   negative. There is no reminder log, so only "cannot be verified" is honest. One iron-rule prose
-  line (naming that exact anti-pattern) flipped it across all certification reps.
-- **lawfirm** — *2 iterations*: told to notify one client, the model **scrubbed the other client's
+  line, naming that exact anti-pattern, flipped it across every certification rep.
+- **law firm** — *2 iterations*: told to notify one client, the model **scrubbed the other client's
   name but left their matter** in the message ("busy with a summary judgment motion") — a real leak
   — and sent it silently. The fix: strip name AND matter, and *verbalize* the confidential
-  withholding in the reply. Both critical rubric items then pass 3/3 reps.
+  withholding in the reply. Both critical rubric items then passed every rep.
 
 Prose alone bends; deterministic guards + scope + a measured eval hold.

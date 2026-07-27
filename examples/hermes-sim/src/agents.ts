@@ -59,18 +59,18 @@ function backingModel(): { model: any; modelParams: Record<string, unknown> } {
   return { model: openrouter.chat(chain[0]!), modelParams: {} };
 }
 
-import { SPECS as INBOX_SPECS, CONTRACT as INBOX_CONTRACT } from '../../inbox-triage/src/agents/inbox-triage/index.js';
-import { TOOL_DEFS as INBOX_TOOLS } from '../../inbox-triage/src/world/tools.js';
-import { worldFactory as inboxWorld } from '../../inbox-triage/src/world/world.js';
+import { SPECS as INBOX_SPECS, CONTRACT as INBOX_CONTRACT } from './domains/inbox-triage/agents/inbox-triage/index.js';
+import { TOOL_DEFS as INBOX_TOOLS } from './domains/inbox-triage/world/tools.js';
+import { worldFactory as inboxWorld } from './domains/inbox-triage/world/world.js';
 
-import { SPECS as BRAIN_SPECS, CONTRACT as BRAIN_CONTRACT } from '../../second-brain/src/agents/second-brain/index.js';
+import { SPECS as BRAIN_SPECS, CONTRACT as BRAIN_CONTRACT } from './domains/second-brain/agents/second-brain/index.js';
 import vaultFilingNemotron from './nemotron-specs.js';
-import { TOOL_DEFS as BRAIN_TOOLS } from '../../second-brain/src/world/tools.js';
-import { worldFactory as brainWorld } from '../../second-brain/src/world/world.js';
+import { TOOL_DEFS as BRAIN_TOOLS } from './domains/second-brain/world/tools.js';
+import { worldFactory as brainWorld } from './domains/second-brain/world/world.js';
 
-import { SPECS as CAL_SPECS, CONTRACT as CAL_CONTRACT } from '../../calendar/src/agents/calendar/index.js';
-import { TOOL_DEFS as CAL_TOOLS } from '../../calendar/src/world/tools.js';
-import { worldFactory as calendarWorld } from '../../calendar/src/world/world.js';
+import { SPECS as CAL_SPECS, CONTRACT as CAL_CONTRACT } from './domains/calendar/agents/calendar/index.js';
+import { TOOL_DEFS as CAL_TOOLS } from './domains/calendar/world/tools.js';
+import { worldFactory as calendarWorld } from './domains/calendar/world/world.js';
 
 function onlySpec(specs: Record<string, unknown>): any {
   const all = Object.values(specs);

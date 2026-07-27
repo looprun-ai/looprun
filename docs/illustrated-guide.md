@@ -67,9 +67,10 @@ What lands in your project when the generator runs:
    └─ ask/targets.json              ◄── the declared model target     [generated]
 ```
 
-Three real example businesses generated exactly this way ship in the repo
-([`examples/`](examples.md)) — home services, accounting, a law firm — each certified
-**66/66 = 100%** (LLM judge, N=3, bar ≥90%).
+Seeds for six domains generated exactly this way ship in the repo
+([`examples/`](examples.md)) — home services, accounting, a law firm, inbox triage, a note vault, a
+calendar. Each is a purpose sentence plus, where one was declared, its tool surface: point the skill
+at one and it writes the bundle above into your project.
 
 ---
 
