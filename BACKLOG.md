@@ -35,7 +35,6 @@ Shipped in `looprun-eval lint --spec-laws`. What is NOT in it, and why:
 | item | state |
 |---|---|
 | **`@looprun-ai/vercel`** | The factory throws. The seam contract is documented in its source; nothing implements it. Until it does, the runtime is Mastra-only in practice, whatever the package list suggests. |
-| **`controls.escalate`** | Typed on `AgentControls`, read by no backend. Setting it changes nothing. Either wire it or drop the field — a typed option that does nothing reads as a feature. |
 
 ## Cross-repo
 

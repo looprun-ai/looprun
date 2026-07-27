@@ -103,7 +103,7 @@ async function main() {
   }
 
   if (cmd === 'seal') {
-    const dir = args.find((a) => !a.startsWith('--')) ?? flag('subject', undefined);
+    const dir = rest[0] ?? flag('subject', undefined);
     if (!dir) { console.error('seal: <subject-dir> required'); process.exit(2); }
     if (has('verify')) {
       const v = api.verifySeal(dir);
