@@ -62,6 +62,10 @@ export {
   prematureTerminalTools,
   supersededTerminalCalls,
 } from './runtime/terminal.js';
+// The single owner of the bytes a turn sends — the drivers AND the offline instruments render
+// through this one function, so an instrument can never report on a prompt nothing runs.
+export { renderTurnPrompt, uploadDisplayLabels, isReplyOnly } from './runtime/prompt.js';
+export type { TurnPrompt, TurnPromptInput } from './runtime/prompt.js';
 export {
   evaluatePreTool,
   evaluateOnInput,

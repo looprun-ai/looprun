@@ -37,8 +37,7 @@ import {
   runChainCompletionPass,
   supersededTerminalCalls,
   vetoStormHit,
-  renderScopedSpecTrunk,
-  terminalProtocol,
+  renderTurnPrompt,
   validateSpec,
 } from '@looprun-ai/core';
 import type { AgentSpec, AgentWorld, ObservedCall, ToolDef, DomainContract } from '@looprun-ai/core';
@@ -145,7 +144,6 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
   /** Per-turn session context: tools/hooks resolve the CURRENT turn's session through this —
    *  AsyncLocalStorage, so concurrent turns on different sessions can never cross-execute. */
   private readonly turnContext = new AsyncLocalStorage<LoopRunSession<W>>();
-  private readonly renderPrompt: (world: AgentWorld, uploads: string[]) => string;
 
   constructor(config: LoopRunAgentConfig<W>) {
     const { spec } = config;
@@ -235,11 +233,13 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
     const staticWorld: AgentWorld = {
       exec: () => ({}), advanceTurn: () => {}, ingestAttachment: (u: string) => u, toolCalls: [], sseActions: [],
     };
-    const renderPrompt = spec.surface.systemPrompt
-      ? (w: AgentWorld, u: string[]) => spec.surface.systemPrompt!(w, u)
-      : (w: AgentWorld, u: string[]) => renderScopedSpecTrunk(w, spec, u, contract);
     const terminalOn = config.terminalProtocol !== false;
-    const staticInstructions = renderPrompt(staticWorld, []) + (terminalOn ? terminalProtocol(false) : '');
+    const staticInstructions = renderTurnPrompt({
+      spec, contract, world: staticWorld, userText: null, terminalProtocol: terminalOn,
+      // The stub world must never be handed to the spec's terminal policy — the static prompt has
+      // always rendered the full protocol (replyOnly false), and that byte identity is load-bearing.
+      replyOnly: false,
+    }).instructions;
 
     // Pass through any further Agent option (memory, description, processors, …).
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -277,7 +277,6 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
     this.redrivesResolved = spec.controls.redrives ?? config.redrives ?? DEFAULT_REDRIVES;
     this.guardHooks = guardHooks;
     this.inputProcessorsResolved = makeInputProcessors(spec, getSession as () => LoopRunSession);
-    this.renderPrompt = renderPrompt;
   }
 
   /** Read a session's state (world/ledger/turnIndex) — hosts and tests. */
@@ -324,30 +323,22 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
     const attUrls = options?.loopRun?.attachments ?? [];
     const attLabels = attUrls.map((u) => world.ingestAttachment(u));
     ledger.attachments = attLabels;
-    const attDisplay = attLabels.map((l, k) => {
-      const base = attUrls[k]?.split('/').pop();
-      return base ? `${l} (${base})` : l;
-    });
 
     const userText = typeof input === 'string' ? input : null;
     if (userText === null && !Array.isArray(input)) {
       throw new Error('LoopRunAgent.generate: pass the user message as a string (or a messages array).');
     }
 
-    const replyOnly = spec.controls.terminal ? spec.controls.terminal(world) === true : false;
+    // ONE producer for the bytes this turn sends (core/runtime/prompt.ts) — the same function the
+    // offline margin instruments render through, so a replay can never feed on a prompt nothing runs.
+    const { instructions, userContent, replyOnly } = renderTurnPrompt({
+      spec, contract, world, userText, uploadLabels: attLabels, uploadUrls: attUrls,
+      terminalProtocol: this.terminalProtocolOn,
+    });
+
     const activeTools = this.nativeToolsMode
       ? [...this.nativeActiveNames, ...(replyOnly ? ['replyToUser'] : ['replyToUser', 'askUser'])]
       : (replyOnly ? [...this.surface, 'replyToUser'] : [...this.surface, 'replyToUser', 'askUser']);
-
-    const instructions = this.renderPrompt(world, attLabels) + (this.terminalProtocolOn ? terminalProtocol(replyOnly) : '');
-
-    // State-in-tail: volatile state + uploads ride the user message, after the stable prefix.
-    const stateBlock = contract ? contract.stateBlock(world) : '';
-    const tailParts: string[] = [];
-    if (stateBlock && stateBlock.trim()) tailParts.push(`## Account state\n${stateBlock}`);
-    if (attLabels.length) tailParts.push(`[Uploads this turn: ${attDisplay.join(', ')}]`);
-    if (userText !== null) tailParts.push(userText);
-    const userContent = tailParts.join('\n\n');
 
     // Conversation history: Mastra memory owns it when configured; otherwise the session keeps it.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -524,8 +515,10 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
       if (session.turnIndex > 0) world.advanceTurn();
       beginTurn(ledger, session.turnIndex);
       session.turnIndex += 1;
-      const replyOnly = this.spec.controls.terminal ? this.spec.controls.terminal(world) === true : false;
-      const instructions = this.renderPrompt(world, []) + (this.terminalProtocolOn ? terminalProtocol(replyOnly) : '');
+      const { instructions, replyOnly } = renderTurnPrompt({
+        spec: this.spec, contract: this.contract, world, userText: null,
+        terminalProtocol: this.terminalProtocolOn,
+      });
       const activeTools = this.nativeToolsMode
         ? [...this.nativeActiveNames, ...(replyOnly ? ['replyToUser'] : ['replyToUser', 'askUser'])]
         : (replyOnly ? [...this.surface, 'replyToUser'] : [...this.surface, 'replyToUser', 'askUser']);

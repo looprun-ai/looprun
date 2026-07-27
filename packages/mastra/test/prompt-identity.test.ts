@@ -1,0 +1,137 @@
+/**
+ * THE IDENTITY GATE: a real governed turn sends EXACTLY what `renderTurnPrompt` returns.
+ *
+ * This test exists because of a repeated, expensive failure: the offline instruments (the margin
+ * probe and its fork replays) used to carry their own REPLICA of the prompt assembly. A refactor
+ * moved the runtime and the replica silently diverged — and the instruments kept producing numbers,
+ * now about a prompt nothing ran. A wrong prompt does not crash; it answers.
+ *
+ * So the runtime and the instruments render through one function, and this pins that the function is
+ * telling the truth. If someone reassembles the prompt inside a driver again, this test fails.
+ *
+ * Byte-exact, both halves: the SYSTEM message (trunk + terminal protocol) and the USER message
+ * (state block → uploads → request). A near-match is a failure — the margin instrument measures a
+ * single token's logprob, so one byte of drift is the whole error budget.
+ */
+import { describe, expect, it } from 'vitest';
+import { AgentSpecBase, renderTurnPrompt } from '@looprun-ai/core';
+import type { AgentWorld, DomainContract } from '@looprun-ai/core';
+import { LoopRunAgent } from '../src/index.js';
+import { scriptedModel } from './scripted-model.js';
+
+const CONTRACT: DomainContract = {
+  voice: 'You are the assistant of Fixture Plants.',
+  stateBlock: (w) => `plan=${String((w as { plan?: unknown }).plan ?? 'starter')}`,
+  coreInvariants: ['Never invent data.'],
+  languageClause: "## Output language (ABSOLUTE)\nReply in the user's language.",
+  exhaustionReply: (_w, okTools) => `closure:${okTools.join(',')}`,
+};
+
+function fixtureWorld(): AgentWorld & { plan: string } {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const calls: any[] = [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sse: any[] = [];
+  return {
+    plan: 'pro',
+    exec(name: string, args: Record<string, unknown>) {
+      if (name === 'replyToUser' || name === 'askUser') {
+        sse.push({ name, args });
+        return { success: true };
+      }
+      const result = { success: true, plants: ['fern'] };
+      calls.push({ name, args, result, tookEffect: true });
+      return result;
+    },
+    advanceTurn() {},
+    ingestAttachment: () => 'i901',
+    toolCalls: calls,
+    sseActions: sse,
+  };
+}
+
+const TOOL_DEFS = [
+  { name: 'listPlants', description: 'List plants.', inputSchema: { type: 'object', properties: {} } },
+];
+
+class FixtureSpec extends AgentSpecBase {
+  constructor() {
+    super({
+      id: 'fx-plants',
+      mode: 'FIXTURE',
+      persona: 'You are the plants desk.',
+      tools: ['listPlants'],
+      behavior: ['When asked about a plant, read it before you answer.'],
+    });
+  }
+}
+
+/** The system text the model was actually handed on its first call. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function systemSent(received: any[]): string {
+  const first = received[0];
+  const fromPrompt = (first?.prompt ?? []).find((m: { role?: string }) => m?.role === 'system');
+  const raw = fromPrompt?.content ?? first?.system ?? '';
+  return typeof raw === 'string' ? raw : String(raw?.[0]?.text ?? '');
+}
+
+/** The LAST user message text the model was actually handed on its first call. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function lastUserSent(received: any[]): string {
+  const msgs = (received[0]?.prompt ?? []).filter((m: { role?: string }) => m?.role === 'user');
+  const content = msgs[msgs.length - 1]?.content;
+  if (typeof content === 'string') return content;
+  return (content ?? []).map((p: { text?: string }) => p?.text ?? '').join('');
+}
+
+describe('prompt identity — the runtime sends what renderTurnPrompt returns', () => {
+  it('system and user halves match byte for byte', async () => {
+    const spec = new FixtureSpec();
+    const world = fixtureWorld();
+    const userText = 'Is the fern ok?';
+
+    // Render BEFORE the turn: nothing in this fixture mutates the state the prompt reads, so the
+    // expectation is the same bytes the turn will assemble.
+    const expected = renderTurnPrompt({ spec, contract: CONTRACT, world, userText });
+
+    const scripted = scriptedModel([[{ tool: 'replyToUser', args: { text: 'The fern is fine.' } }]]);
+    const agent = new LoopRunAgent({
+      spec, contract: CONTRACT, world, toolDefs: TOOL_DEFS,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      model: scripted.model as any,
+    });
+    await agent.generate(userText);
+
+    expect(scripted.received.length).toBeGreaterThan(0);
+    expect(systemSent(scripted.received)).toBe(expected.instructions);
+    expect(lastUserSent(scripted.received)).toBe(expected.userContent);
+  });
+
+  it('the state block rides the USER half, never the system half', () => {
+    const spec = new FixtureSpec();
+    const world = fixtureWorld();
+    const rendered = renderTurnPrompt({ spec, contract: CONTRACT, world, userText: 'hi' });
+
+    // State-in-tail is what makes the system prefix cacheable across turns. If volatile state leaks
+    // into the system half, every turn busts the prefix cache and the margin battery's cache-state
+    // arm stops meaning anything.
+    expect(rendered.userContent).toContain('plan=pro');
+    expect(rendered.instructions).not.toContain('plan=pro');
+    expect(rendered.userContent.endsWith('hi')).toBe(true);
+  });
+
+  it('uploads render between the state block and the request', () => {
+    const spec = new FixtureSpec();
+    const world = fixtureWorld();
+    const rendered = renderTurnPrompt({
+      spec, contract: CONTRACT, world, userText: 'what is this?',
+      uploadLabels: ['i901'], uploadUrls: ['https://x.test/scan.png'],
+    });
+    const stateAt = rendered.userContent.indexOf('plan=pro');
+    const uploadAt = rendered.userContent.indexOf('[Uploads this turn: i901 (scan.png)]');
+    const askAt = rendered.userContent.indexOf('what is this?');
+    expect(stateAt).toBeGreaterThanOrEqual(0);
+    expect(uploadAt).toBeGreaterThan(stateAt);
+    expect(askAt).toBeGreaterThan(uploadAt);
+  });
+});

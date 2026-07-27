@@ -31,8 +31,7 @@ import {
   runChainCompletionPass,
   supersededTerminalCalls,
   vetoStormHit,
-  renderScopedSpecTrunk,
-  terminalProtocol,
+  renderTurnPrompt,
 } from '@looprun-ai/core';
 import type { AgentSpec, AgentWorld, TokenUsage, ToolDef, DomainContract, TurnInput, TurnRecord, RunResult } from '@looprun-ai/core';
 import { buildWorldTools } from './tools.js';
@@ -113,8 +112,6 @@ export async function runSpecConversation(spec: AgentSpec, turns: TurnInput[], d
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } as any);
 
-  const renderPrompt = spec.surface.systemPrompt ?? ((w: AgentWorld, u: string[]) => renderScopedSpecTrunk(w, spec, u, contract));
-
   const turnRecords: TurnRecord[] = [];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const messages: any[] = session.messages;
@@ -127,30 +124,21 @@ export async function runSpecConversation(spec: AgentSpec, turns: TurnInput[], d
     const attUrls = (turns[i].attachments ?? []) as string[];
     const attLabels = attUrls.map((u) => world.ingestAttachment(u));
     ledger.attachments = attLabels;
-    const attDisplay = attLabels.map((l, k) => {
-      const base = attUrls[k]?.split('/').pop();
-      return base ? `${l} (${base})` : l;
-    });
     const userText = turns[i].userText;
 
-    const replyOnly = spec.controls.terminal ? spec.controls.terminal(world) === true : false;
-    const protocol = terminalProtocol(replyOnly);
+    // ONE producer for the bytes this turn sends (core/runtime/prompt.ts): the BYTE-STABLE system
+    // prefix (scoped trunk + terminal protocol) and the state-in-tail user message (volatile account
+    // state, then uploads, then the request). The offline margin instruments render through the same
+    // function, so a replay can never feed on a prompt the runtime does not send.
+    const { instructions, userContent, replyOnly } = renderTurnPrompt({
+      spec, contract, world, userText, uploadLabels: attLabels, uploadUrls: attUrls,
+    });
+    currentSystemPrompt = instructions;
     const activeTools = replyOnly ? [...surface, 'replyToUser'] : [...surface, 'replyToUser', 'askUser'];
-
-    // BYTE-STABLE system prompt (scoped trunk + protocol) — no volatile state (state-in-tail).
-    currentSystemPrompt = renderPrompt(world, attLabels) + protocol;
 
     const before = world.toolCalls.length;
     const sseBefore = world.sseActions.length;
 
-    // State-in-tail: the volatile account/brand STATE rides the user message (after the stable
-    // prefix), with uploads, then the user text. Refreshed each turn.
-    const stateBlock = contract ? contract.stateBlock(world) : '';
-    const tailParts: string[] = [];
-    if (stateBlock && stateBlock.trim()) tailParts.push(`## Account state\n${stateBlock}`);
-    if (attLabels.length) tailParts.push(`[Uploads this turn: ${attDisplay.join(', ')}]`);
-    tailParts.push(userText);
-    const userContent = tailParts.join('\n\n');
     messages.push({ role: 'user', content: userContent });
     const t0 = Date.now();
 
