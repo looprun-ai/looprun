@@ -4,8 +4,7 @@ looprun ships **three run tiers of one validated model** (Qwen3.6-35B-A3B with a
 multi-token-prediction head) plus a small-RAM fallback, behind a `ModelRuntimePort` (llama.cpp
 today; other runtimes plug into the same port later):
 
-Tier names re-keyed to RAM class 2026-07-15 (`micro`/`minimal`/`normal`/`pro` →
-`ram8`/`ram16`/`ram24`/`ram32`); the old spellings stay accepted.
+Tiers are keyed to RAM class: `ram8` / `ram16` / `ram24` / `ram32`.
 
 | alias | quant · size | tier | KV | ctx | `--cache-ram` | measured |
 |---|---|---|---|---|---|---|
@@ -32,7 +31,7 @@ apply on Mac (Metal) and Windows/Linux (CUDA) — only the tier changes per mach
   disables) enables per-agent trunk **state files**: bake a slot once at the trunk boundary, then
   after any server restart a restore takes ≈20–30 ms (≈400× faster than the cold prefill) — zero
   cold prefill across restarts. Zero cost when unused.
-- **MTP (`--spec-type draft-mtp`) is ON for the 35B tiers** (2026-07-15): the `*-MTP-GGUF`
+- **MTP (`--spec-type draft-mtp`) is ON for the 35B tiers**: the `*-MTP-GGUF`
   checkpoints bake a **trained** multi-token-prediction head into the file; the server drafts with
   it and exact-verifies, so output is **byte-identical at temp 0** (lossless) at ~1.4× decode
   (acceptance 0.75–0.80, measured on b9780 and b10016). Do not raise `--spec-draft-n-max` past its

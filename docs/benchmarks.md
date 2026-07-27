@@ -45,9 +45,8 @@ reference numbers actually exist to compare against.
 
 **Source: [Artificial Analysis](https://artificialanalysis.ai/evaluations/tau2-bench)** —
 independent, same-harness τ²-Bench Telecom scores, read off the leaderboard configured for our
-23 models of interest on 2026-07-11. One independent ruler avoids the vendor-card
-cross-contamination that produced earlier bogus figures. All 2026 figures are
-post-training-cutoff — verify at source.
+23 models of interest. One independent ruler avoids the vendor-card cross-contamination that
+scoring from each vendor's own card produces. Figures are post-training-cutoff — verify at source.
 
 **We benchmark three subjects, all in `non-thinking` config** — the configs looprun runs in
 production: `qwen3.5-4b` and `qwen3.6-35b-a3b`
@@ -181,14 +180,14 @@ honest-abstention axis), **Harvey LAB-AA** (agentic legal deliverables).
 
 ---
 
-## 6. Atlas — the governance-vs-traditional benchmark (measured, 2026-07-18)
+## 6. Atlas — the governance-vs-traditional benchmark
 
 Complementing τ² (looprun vs the market), **Atlas** answers the second question: *what does the
-governance layer add over a traditional hand-built agent on the same framework?* Atlas Equipment
-Rentals & Field Ops — 5 agents / 61 cases / 54 tools — was generated end-to-end by the
-`agentspec` skill (developed in its own private repo) from one purpose sentence; the control arm is a
-plain Mastra agent blind-authored by a frontier coding agent (no looprun exposure, ≤3 measured
-iterations of parity budget). Both arms, same evals, same LLM judge, N=3.
+governance layer add over a traditional hand-built agent on the same framework?* The subject — an
+equipment-rental and field-operations business, 5 agents / 61 cases / 54 tools — is generated end to
+end by the `agentspec` skill from one purpose sentence; the control arm is a plain Mastra agent
+blind-authored by a frontier coding agent (no looprun exposure, up to 3 iterations of parity
+budget). Both arms: same evals, same LLM judge, N=3.
 
 | tier | looprun-governed | traditional (vanilla) | Δ |
 |---|---|---|---|

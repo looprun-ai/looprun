@@ -1,7 +1,6 @@
 ---
 title: looprun — the illustrated guide
 status: living — the visual front-door: what looprun is, why it works, how to use it end to end
-updated: 2026-07-17
 audience: anyone building an agent who wants the whole picture in one sitting
 ---
 
@@ -70,7 +69,7 @@ What lands in your project when the generator runs:
 
 Three real example businesses generated exactly this way ship in the repo
 ([`examples/`](examples.md)) — home services, accounting, a law firm — each certified
-**66/66 = 100%** (LLM judge, N=3, bar ≥90%, regenerated 2026-07-17).
+**66/66 = 100%** (LLM judge, N=3, bar ≥90%).
 
 ---
 

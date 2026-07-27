@@ -10,9 +10,8 @@ Mastra app (`pnpm dev` → Studio) with its eval set and certification bundle co
 | [`examples/accounting`](../examples/accounting/README.md) | client-books · billing · tax-filing | 22 | **66/66 = 100%** ✅ |
 | [`examples/lawfirm`](../examples/lawfirm/README.md) | client-matters · docket-documents | 22 | **66/66 = 100%** ✅ |
 
-> Regenerated from scratch on 2026-07-17 with the current `agentspec` skill against looprun 0.6.0,
-> then re-certified N=3 (`gemini-3.1-flash-lite-thinkoff`, ruler-v2 judge prompt). All three hold the
-> bar at **100%**.
+> Each bundle is generated end to end by the `agentspec` skill and certified N=3 against the
+> reference model, thinking off. All three hold the bar at **100%**.
 
 Every example README documents: the business problem → how the skill generated the agents
 (questionnaire answer, approval gate, iteration log) → running it in Mastra Studio with
