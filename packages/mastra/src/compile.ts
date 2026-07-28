@@ -65,7 +65,13 @@ export function compileSpec(
     ? (w: AgentWorld, u: string[]) => spec.surface.systemPrompt!(w, u)
     : (w: AgentWorld, u: string[]) => renderScopedSpecTrunk(w, spec, u, contract);
 
-  const replyOnly = () => (spec.controls.terminal ? spec.controls.terminal(world) === true : false);
+  // Frozen at beginTurn (and at creation, for reads before the first turn): instructions() and
+  // activeTools() both derive from it, and the host reads them at times the runtime does not
+  // control. A per-read evaluation lets a mid-turn world mutation make prompt and tools disagree —
+  // the prompt offers askUser while the list has dropped it. Per-turn is the documented contract.
+  const evalReplyOnly = () => (spec.controls.terminal ? spec.controls.terminal(world) === true : false);
+  let replyOnlyThisTurn = evalReplyOnly();
+  const replyOnly = () => replyOnlyThisTurn;
 
   return {
     ledger: session.ledger,
@@ -80,6 +86,7 @@ export function compileSpec(
         session.turnIndex += 1;
       }
       started = true;
+      replyOnlyThisTurn = evalReplyOnly();
       ledgerBeginTurn(session.ledger, session.turnIndex);
       const attLabels = (input?.attachments ?? []).map((u) => world.ingestAttachment(u));
       session.ledger.attachments = attLabels;
