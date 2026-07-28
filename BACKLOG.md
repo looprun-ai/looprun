@@ -30,6 +30,12 @@ Shipped in `looprun-eval lint --spec-laws`. What is NOT in it, and why:
 | **The new lint modules have no tests** | `lintSpecQuality` and `lintSubject` ship untested. They were proved non-vacuous by hand against a bundle, which is evidence, not a regression net: nothing stops the next edit from silently disarming a rule. Each rule wants a plant-the-defect / watch-it-fire test. |
 | **Non-vacuity was proved on a STALE bundle** | The run that produced findings used a pre-rename bundle (`theme.ts`, before `spec.theme -> spec.contract`). It shows the rules fire; it does not show they fire on a bundle shaped the way this engine ships today. Re-run once a current bundle exists. |
 
+## Runtime
+
+| item | state |
+|---|---|
+| **`compile.ts` evaluates `activeTools` lazily — askUser can vanish mid-turn** | `packages/mastra/src/compile.ts:76` computes `activeTools` as a function of `controls.terminal(world)`, re-evaluated whenever the host asks. The batch and live runners freeze the list once per turn (`run-conversation.ts:137`, `agent.ts:342`); compiled mode is the one path where a world mutation mid-turn can flip `replyOnly` and drop `askUser` between steps — the residue of suspect (a) from the UNKNOWN_TOOL deny-loop investigation (fixed in `7772c61`; the ask-channel proof does not cover compiled mode). Align it to per-turn freezing, or prove the lazy form is required and pin it. |
+
 ## Reserved / inert surface
 
 | item | state |
