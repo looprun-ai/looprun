@@ -18,15 +18,32 @@
  *    byte-identical at temp 0; measured on b9780 AND b10016). Headless checkpoints and the dense
  *    4B stay non-MTP (~0% there). $LLAMA_SPEC_TYPE='' disables.
  *  - Binary must be ≥ b9780 (older builds cannot load the qwen3.5/3.6 family) — resolved via
- *    $LLAMA_BIN, then ~/llamacpp-b9780/bin/llama-server, then `llama-server` on PATH.
+ *    $LLAMA_BIN, then a `llamacpp-*` build directory in $HOME (highest build number first),
+ *    then `llama-server` on PATH.
  */
 import { spawn, spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { modelPath } from './aliases.js';
 import { downloadModel } from './download.js';
 import type { EnsureServerResult, LocalModelSpec, ModelRuntimePort, RuntimeStatus } from './port.js';
+
+/** `llama-server` candidates under `$HOME/llamacpp-<build>/bin`, highest build number first. */
+function homeBuilds(): string[] {
+  try {
+    return readdirSync(homedir())
+      .filter((dir) => dir.startsWith('llamacpp-'))
+      .sort((a, b) => buildNumber(b) - buildNumber(a))
+      .map((dir) => join(homedir(), dir, 'bin', 'llama-server'));
+  } catch {
+    return [];
+  }
+}
+
+function buildNumber(dir: string): number {
+  return Number(dir.match(/\d+/)?.[0] ?? 0);
+}
 
 function resolveBinary(): { path: string | null; note?: string } {
   const fromEnv = process.env.LLAMA_BIN;
@@ -34,8 +51,8 @@ function resolveBinary(): { path: string | null; note?: string } {
     const p = fromEnv.trim();
     return existsSync(p) ? { path: p } : { path: null, note: `$LLAMA_BIN points to a missing file: ${p}` };
   }
-  const pinned = join(homedir(), 'llamacpp-b9780', 'bin', 'llama-server');
-  if (existsSync(pinned)) return { path: pinned };
+  const fromHome = homeBuilds().find((p) => existsSync(p));
+  if (fromHome) return { path: fromHome };
   const which = spawnSync('which', ['llama-server'], { encoding: 'utf8' });
   const onPath = which.status === 0 ? which.stdout.trim() : '';
   if (onPath) {
