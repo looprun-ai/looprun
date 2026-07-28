@@ -24,6 +24,10 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 // Surfaces that must be bench-free.
 const SCOPES = ['skills', 'docs', 'examples', 'packages/eval/src', 'packages/eval/bin', 'packages/eval/assets', 'packages/core/src', 'packages/mastra/src', 'packages/models/src', 'packages/looprun/src', 'packages/server/src', 'README.md', 'governance', 'scripts/proofs', 'CONTRIBUTING.md', '.github'];
 
+// Session design specs are internal working notes, not a user-facing surface — exempt from the
+// scoped lanes. The repo-wide lane below still applies to them: the absolute codenames stay banned.
+const SCOPE_EXCLUDE = /^docs\/superpowers\/specs\//;
+
 // One regex, case-insensitive where it matters.
 const DRIFT = new RegExp(
   [
@@ -81,6 +85,7 @@ for (const scope of SCOPES) {
   for (const file of walk(join(ROOT, scope))) {
     const rel = relative(ROOT, file);
     if (/\.(png|jpg|jpeg|gif|gguf|zip)$/.test(rel)) continue;
+    if (SCOPE_EXCLUDE.test(rel)) continue;
     const lines = readFileSync(file, 'utf8').split('\n');
     lines.forEach((text, i) => {
       const m = text.match(DRIFT);
