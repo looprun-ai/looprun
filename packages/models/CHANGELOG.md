@@ -1,5 +1,15 @@
 # @looprun-ai/models
 
+## 0.8.2
+
+### Patch Changes
+
+- e9965c1: Resolve `llama-server` from any `llamacpp-*` build directory in `$HOME` (highest build number first)
+  instead of a single pinned build path. `$LLAMA_BIN` still wins, `PATH` is still the last resort.
+- Release (patch).
+- Updated dependencies
+  - @looprun-ai/core@0.8.2
+
 ## 0.8.1
 
 ### Patch Changes
