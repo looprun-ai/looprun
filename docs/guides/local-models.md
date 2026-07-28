@@ -6,7 +6,12 @@ today; other runtimes plug into the same port later):
 
 Tiers are keyed to RAM class: `ram8` / `ram16` / `ram24` / `ram32`.
 
-| alias | quant · size | tier | KV | ctx | `--cache-ram` | measured |
+The size column is the **weights file**, not the machine's RAM budget: the real footprint is
+weights + KV cache + the `--cache-ram` trunk cache (measured on `ram24`: 11.8 GB of weights →
+~20.7 GB peak RSS). That is why the 32 GB tier's file is "only" 17.2 GB — the remaining headroom
+buys the 64k f16 KV window and the 16 GB trunk cache.
+
+| alias | quant · weights | tier | KV | ctx | `--cache-ram` | measured |
 |---|---|---|---|---|---|---|
 | **`ram24`** (the DEFAULT) | UD-IQ2_XXS+MTP · 11.8 GB | daily driver, 24 GB machines | `f16` | 64k | 16384 MiB | 88.9% certified eval (ties the 21 GB Q4 record) · ~56 tok/s · peak RSS ~20.7 GB |
 | **`ram16`** | UD-IQ2_XXS+MTP · 11.8 GB | 16 GB machines | `q8_0` | 24k | 512 MiB | **13.4–13.5 GB RSS** · ~44 tok/s |
@@ -52,12 +57,13 @@ apply on Mac (Metal) and Windows/Linux (CUDA) — only the tier changes per mach
     `looprun models serve` **automatically sets `DYLD_FALLBACK_LIBRARY_PATH` to the binary's own
     directory** (macOS). If you launch `llama-server` yourself, do the same — and never via `nohup`
     (a SIP-protected binary that strips `DYLD_*`); use a wrapper that `export`s then `exec`s.
-- **Binary resolution order**: `$LLAMA_BIN` → `~/llamacpp-b9780/bin/llama-server` → `llama-server`
-  on `PATH` (a PATH hit warns about the version requirement). `npx looprun models status` reports
+- **Binary resolution order**: `$LLAMA_BIN` → a `llamacpp-*` build directory in your home
+  (`~/llamacpp-<build>/bin/llama-server`, highest build number first) → `llama-server` on `PATH`
+  (a PATH hit warns about the version requirement). `npx looprun models status` reports
   which binary was found; every error names the fix (`install llama.cpp (≥ b9780) and/or set $LLAMA_BIN`).
 - **Hardware**: a GPU the build can offload to (`-ngl 99`) — Metal on Apple Silicon, CUDA elsewhere.
-  Disk/RAM per tier: ~2.9 GB weights for `qwen3.5-4b` (8–16 GB machines), ~21 GB for
-  `ram24` (24 GB+).
+  Disk/RAM per tier: ~2.9 GB weights for `qwen3.5-4b` (8–16 GB machines); 11.8 GB weights →
+  ~20.7 GB peak RSS for `ram24` (24 GB machines).
 
 ## Use in an agent
 

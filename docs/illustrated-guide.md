@@ -277,9 +277,12 @@ cases invisibly.
 ```bash
 npm i looprun @mastra/core ai zod                     # the library
 npm i -D @looprun-ai/eval mastra typescript tsx       # the eval harness + dev tooling
-npx skills add looprun-ai/looprun --skill agentspec   # the generator skill (any skills-compatible coding agent)
+npx skills add looprun-ai/agentspec                   # the generator skill (any skills-compatible coding agent)
 npx looprun init                                      # environment check (+ optional local model)
 ```
+
+The `agentspec` skill is in **private beta** — its repo is not public yet, so `skills add` needs access
+(request it at [looprun.ai](https://looprun.ai)).
 
 Then, in your project, invoke the **agentspec** skill and answer one question — the agent's
 purpose, one sentence (*"assistant for a small accounting firm"*). Everything else is the pipeline:

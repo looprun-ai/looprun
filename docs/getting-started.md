@@ -3,10 +3,17 @@
 ## 1. Install
 
 ```bash
-npm i looprun @mastra/core ai zod
-npm i -D @looprun-ai/eval mastra typescript tsx
-npx skills add looprun-ai/looprun --skill agentspec   # the generator skill (any skills-compatible coding agent)
+npm i looprun @mastra/core ai zod                     # the library — enough to RUN a governed agent
+npm i -D @looprun-ai/eval mastra typescript tsx       # the dev toolchain — needed to GENERATE and CERTIFY
+npx skills add looprun-ai/agentspec                   # the generator skill (any skills-compatible coding agent)
 ```
+
+The `agentspec` skill is in **private beta** — its repo is not public yet, so `skills add` needs access
+(request it at [looprun.ai](https://looprun.ai)). Section 3 below is the hand-written path, fully supported.
+
+`@looprun-ai/eval` is not a dependency of `looprun`: the certification harness is dev-only, and nothing
+imports it at runtime. The skill also checks both for you — the engine before its first phase, the eval CLI
+before the TEST phase — and offers to install whatever is missing.
 
 Environment check (+ optional local model download):
 
