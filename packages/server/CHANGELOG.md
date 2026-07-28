@@ -1,5 +1,14 @@
 # @looprun-ai/server
 
+## 0.8.1
+
+### Patch Changes
+
+- Release (patch).
+- Updated dependencies
+  - @looprun-ai/core@0.8.1
+  - @looprun-ai/mastra@0.8.1
+
 ## 0.8.0
 
 ### Minor Changes
