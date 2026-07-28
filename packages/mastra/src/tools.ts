@@ -36,9 +36,11 @@ export function buildWorldTools(
         inputSchema: jsonSchemaToZodObject(def.inputSchema) as any,
         execute: async (input: unknown) => {
           const args = (input ?? {}) as Record<string, unknown>;
-          const session = getSession();
-          recordTerminal(session.ledger, def.name, args);
-          return session.world.exec(def.name, args);
+          recordTerminal(getSession().ledger, def.name, args);
+          // Protocol-owned result: the world seam never answers for a terminal. A world that
+          // does not dispatch these names would return UNKNOWN_TOOL — a failure on the only
+          // action that closes the turn, which turns every guard deny into a retry loop.
+          return { success: true };
         },
       });
       continue;
