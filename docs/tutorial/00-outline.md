@@ -517,6 +517,32 @@ For `core` the rider is 11 types: `SpecWarning` `AgentControls` `ChainSpec` `Sta
 Tasks 4–7 derive their own package's rider the same way; a symbol appearing there is not a promotion
 and must not be read as one.
 
+**The per-package rider lists** (`mastra` needs none — it re-exports core's whole barrel, and its
+own three taught types are already public). Each is derived from that package's own value
+signatures and locked by its `surface-lock.test.ts`:
+
+| package | rider | forced by |
+|---|---|---|
+| `models` (2) | `RuntimeStatus` `EnsureServerResult` | `localModelStatus` returns `Promise<RuntimeStatus>`; `ModelRuntimePort.ensureServer` / `LlamaCppRuntime#ensureServer` return `EnsureServerResult` |
+| `eval` (9) | `RunCommandOptions` `FoldCommandOptions` `CertCommandOptions` `CertSummary` `LintViolation` `UngovernedBundle` `Seal` `SealTarget` `SealVerification` | the parameter/return types of the taught `looprun-eval` verbs — §5 keeps all of them out of the *taught* contract by the annotation rule, which is a statement about teaching, not about nameability |
+| `server` (3) | `LoopRunResultMeta` `CompletionRequestBody` `WireMessage` | `TurnEvent.meta` is a `LoopRunResultMeta`; `ModelServerConfig.resolveSession` is `(body: CompletionRequestBody, headers: Headers) => string`, and `CompletionRequestBody.messages` is `WireMessage[]` |
+
+#### `TurnEvent.meta` — decided by Task 7b: the mirror keeps its name
+
+Task 7's review left one question open: `TurnEvent` is public, and its `meta` field's type is
+`LoopRunResultMeta` — a copy the server declares because the original is internal to
+`@looprun-ai/mastra`, which has no `/internal` subpath. Either export the copy as a rider, or type
+the field with an inline structural type.
+
+**Decision: export it as a rider** (the row above), for three reasons — an inline structural type
+would (a) give the shape a *second*, anonymous definition in the same package, so
+`packages/server/test/meta-mirror.test.ts`, which pins the mirror against mastra's declaration at
+compile time, would no longer be pinning the thing `TurnEvent` actually uses; (b) hand the reader an
+unnameable 6-field object every time they write `function onTurn(e: TurnEvent) { … e.meta … }` and
+hoist it; and (c) invent a mechanism where the rider mechanism already covers exactly this case.
+Being a rider, `LoopRunResultMeta` is **not** taught, gets no chapter, and does not change server's
+count of 4.
+
 ---
 
 ## 8. What the two reviews found, and what changed

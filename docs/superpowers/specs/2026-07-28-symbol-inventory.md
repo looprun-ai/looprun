@@ -704,3 +704,22 @@ separate, listed categories.
 **Method note for Tasks 4–7.** A name-level usage scan cannot see either category. Before cutting a
 barrel, derive its type closure mechanically (TypeScript compiler API over the entry file) and check
 for classes the package throws at consumers — both are invisible to `grep` and to `pnpm -r build`.
+
+### Round 6 — what Task 7b found while trimming `models` / `eval` / `server`
+
+No verdict changed: the three barrels were converged onto the §7.3 / §7.4 / §7.5 verdicts exactly as
+written, and the §1 chart stays at 89 / 38 / 138. Two things are recorded here because they are not
+verdicts.
+
+| # | category | what |
+|---|---|---|
+| 16 | **type-closure riders** (2 + 9 + 3) | `models`: `RuntimeStatus` `EnsureServerResult`. `eval`: `RunCommandOptions` `FoldCommandOptions` `CertCommandOptions` `CertSummary` `LintViolation` `UngovernedBundle` `Seal` `SealTarget` `SealVerification`. `server`: `LoopRunResultMeta` `CompletionRequestBody` `WireMessage`. Same category as #14: `export type` only, **not taught, not counted in the 89**, derived from each package's own signatures. Note the eval nine include the exact types §2's annotation-rule note and the outline's §5 list call "not promoted" — that stays true: they are a compilation obligation, not surface anybody chose. Full lists and the forcing signatures in the outline's §7 |
+| 17 | **`TurnEvent.meta` nameability** (decision) | `server.LoopRunResultMeta` — this package's pinned MIRROR of a type internal to `@looprun-ai/mastra` — is exported as a rider rather than inlined as a structural type in `TurnEvent.meta`, so the mirror keeps exactly one name and `packages/server/test/meta-mirror.test.ts` keeps pinning the type `TurnEvent` really uses. Rationale in the outline's §7; server's taught count stays 4 |
+
+**One implementation erased** (not a verdict change, recorded for the audit trail):
+`models.localModelClient` — verdict `delete`, and unlike most `delete` rows it had **zero**
+references anywhere: not in `packages/*/src`, not in any test, not in `examples/`, `scripts/`,
+`skills/` or `governance/`, and not in `looprun-bench`, `agentspec` or `yntelli` (grep, 2026-07-29).
+It was declared in `packages/models/src/index.ts` itself, so leaving it module-local would have left
+dead code inside the barrel file. §2's "stop exporting, never erase" protects implementations with
+live callers; this one had none.
