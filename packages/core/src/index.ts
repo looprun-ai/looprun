@@ -14,8 +14,9 @@
  *   · everything else (`renderTrunkBlocks`, `chainOrder`, `resolveBindings`, `TERMINAL_TOOLS`, the
  *     trunk's attributed table in `trunk-fold.ts`, …) is now MODULE-LOCAL: reachable from no entry
  *     point at all. What survives there is only what the exported entry points transitively need —
- *     the coherence QUERIES that once ran over the trunk table were erased in Task 5. Do not read
- *     their absence here as a promise that the rest still works.
+ *     the coherence query layer that once ran over the trunk table was removed, and the fold that
+ *     produces the trunk's bytes lives on in `trunk-fold.ts`. Do not read a symbol's absence here as
+ *     a promise that it still works elsewhere.
  */
 
 // ── Chapter 03 · agent anatomy ───────────────────────────────────────────────

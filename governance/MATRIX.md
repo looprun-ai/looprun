@@ -6,6 +6,8 @@ Regenerate with `pnpm proofs:matrix`; CI runs `--check` to keep it in sync.
 
 | Date | Record | Change | Scope | Isolated | Collective | Coverage | Certified models | SLM canary | Verdict |
 |---|---|---|---|---|---|---|---|---|---|
+| 2026-07-29 | [core-internal-subpath](proofs/2026-07-29-core-internal-subpath.md) | core: public barrel cut to the 51-symbol tutorial contract; the internal seam moves to @looprun-ai/core/internal | runtime | 212/212 | 55/55 | 29/29 | n/a | n/a | PASS |
+| 2026-07-29 | [guards-split-catalog](proofs/2026-07-29-guards-split-catalog.md) | core: guards.ts split byte-exactly into guards/ per category; GUARD_CATALOG ships on /internal | runtime | 212/212 | 55/55 | 29/29 | n/a | n/a | PASS |
 | 2026-07-29 | [trunk-fold-coherence-cut](proofs/2026-07-29-trunk-fold-coherence-cut.md) | core: coherence queries erased; the trunk table + fold survive as trunk-fold.ts (module-local) | runtime | 212/212 | 55/55 | 29/29 | n/a | n/a | PASS |
 | 2026-07-28 | [ask-channel-survives-deny](proofs/2026-07-28-ask-channel-survives-deny.md) | terminal tools are protocol-owned: never routed to world.exec, ask channel survives any preTool deny | runtime | 212/212 | 55/55 | 29/29 | n/a | n/a | PASS |
 | 2026-07-28 | [compile-freeze-reply-only](proofs/2026-07-28-compile-freeze-reply-only.md) | compileSpec freezes replyOnly at beginTurn: prompt and activeTools can never disagree mid-turn | runtime | 212/212 | 55/55 | 29/29 | n/a | n/a | PASS |
