@@ -1,14 +1,18 @@
 #!/usr/bin/env node
 /**
- * GENERATE the catalog half of `docs/tutorial/04-guards.md` from `GUARD_CATALOG`.
+ * GENERATE, from `GUARD_CATALOG`, the two artifacts that must stay in lockstep with it:
  *
- * The chapter is half hand-written and half generated. Everything OUTSIDE the two markers
- * (the vocabulary section, the `canonArgs` prose, the custom-guard authoring section, the recap)
- * is the author's and is copied through untouched; everything BETWEEN them is rendered from the
- * catalog data and must never be edited by hand.
+ *   1. the catalog half of `docs/tutorial/04-guards.md` — the chapter is half hand-written and half
+ *      generated. Everything OUTSIDE the two markers (the vocabulary section, the `canonArgs` prose,
+ *      the custom-guard authoring section, the recap) is the author's and is copied through
+ *      untouched; everything BETWEEN them is rendered here and must never be edited by hand.
+ *   2. `docs/tutorial/snippets/04-guards-examples.generated.ts` — every catalog `example`, compiled.
+ *      The chapter fences those strings verbatim, so this module is what makes "the examples in this
+ *      chapter typecheck" a fact: `pnpm -C docs/tutorial/snippets typecheck` compiles all 30 against
+ *      the published `looprun` facade. Committed and drift-checked exactly like the chapter.
  *
- *   node scripts/gen-guards-chapter.mjs            write the generated region
- *   node scripts/gen-guards-chapter.mjs --check    exit 1 if the file on disk differs (drift gate)
+ *   node scripts/gen-guards-chapter.mjs            write both
+ *   node scripts/gen-guards-chapter.mjs --check    exit 1 if either differs (drift gate)
  *
  * BUILD DEPENDENCY: `GUARD_CATALOG` is read from the BUILT package
  * (`packages/core/dist/internal.js` — it ships on `@looprun-ai/core/internal`, outline §6 decision 4),
@@ -26,6 +30,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = join(HERE, '..');
 const CHAPTER = join(REPO, 'docs', 'tutorial', '04-guards.md');
+const EXAMPLES = join(REPO, 'docs', 'tutorial', 'snippets', '04-guards-examples.generated.ts');
 const CORE_DIST = join(REPO, 'packages', 'core', 'dist', 'internal.js');
 
 const START = '<!-- BEGIN GENERATED: guard catalog — `node scripts/gen-guards-chapter.mjs` -->';
@@ -126,6 +131,11 @@ function render(catalog) {
     `Grouped by the hook each one is installed on, because the hook decides what a rule can see and`,
     `therefore what it can enforce (chapter 03 §8). ${counts} · 1 escape hatch.`,
     '',
+    'A fourth hook exists and has no section here: `onInput` fires before the model runs, and §1\'s',
+    'matrix makes it legal for every `spatial`/`input`/`run` guard — but no shipped kind is installed',
+    'there, because a rule that can refuse the whole turn before a call is even proposed is a domain',
+    'decision, not a default. `custom` is how you reach it.',
+    '',
   ];
 
   let n = 1;
@@ -148,21 +158,58 @@ function splice(file, generated) {
   return `${file.slice(0, startAt + START.length)}\n\n${generated}\n\n${file.slice(endAt)}`;
 }
 
+/**
+ * Every catalog `example`, as one compiled module. Each entry is an expression over the public
+ * contract plus its own factory (the parity test asserts that), so the whole set collects into one
+ * array of `Guard | ReplyMutator` — no per-row type annotation, and no runtime behaviour: the module
+ * exists to be TYPECHECKED.
+ */
+function renderExamples(catalog) {
+  const names = catalog.map((e) => e.name).sort();
+  const widest = Math.max(...catalog.map((e) => e.name.length));
+  return [
+    '/**',
+    ' * GENERATED — do not edit. `pnpm docs:guards` renders this from `GUARD_CATALOG`',
+    ' * (`packages/core/src/guards/catalog.ts`); `--check` fails on drift.',
+    ' *',
+    ' * WHY IT EXISTS: chapter 04 §5 fences every one of these strings verbatim. Compiling them here',
+    ' * is what makes the chapter\'s claim true — a catalog example that does not typecheck against the',
+    ' * published `looprun` facade fails `pnpm -C docs/tutorial/snippets typecheck`, and therefore CI.',
+    ' *',
+    ' * Nothing imports this module. It is a compile-time assertion, not a runtime artifact.',
+    ' */',
+    `import {\n${names.map((n) => `  ${n},`).join('\n')}\n} from 'looprun';`,
+    "import type { Guard, ReplyMutator } from 'looprun';",
+    '',
+    `/** The ${catalog.length} examples of chapter 04 §5, in catalog order. */`,
+    'export const CATALOG_EXAMPLES: ReadonlyArray<Guard | ReplyMutator> = [',
+    ...catalog.map((e) => `  /* ${e.name.padEnd(widest)} */ ${e.example},`),
+    '];',
+    '',
+  ].join('\n');
+}
+
 const check = process.argv.includes('--check');
 const catalog = await loadCatalog();
-const onDisk = readFileSync(CHAPTER, 'utf8');
-const next = splice(onDisk, render(catalog));
 
-if (next === onDisk) {
-  console.log(`docs:guards · ${relative(REPO, CHAPTER)} is up to date (${catalog.length} catalog rows).`);
-  process.exit(0);
+const artifacts = [
+  { path: CHAPTER, next: splice(readFileSync(CHAPTER, 'utf8'), render(catalog)) },
+  { path: EXAMPLES, next: renderExamples(catalog) },
+];
+
+let wrote = 0;
+for (const { path, next } of artifacts) {
+  const onDisk = readFileSync(path, 'utf8');
+  if (next === onDisk) continue;
+  if (check) {
+    console.error(
+      `docs:guards · DRIFT — ${relative(REPO, path)} does not match GUARD_CATALOG.\n` +
+        'Run `pnpm -r build && pnpm docs:guards` and commit the result.',
+    );
+    process.exit(1);
+  }
+  writeFileSync(path, next);
+  console.log(`docs:guards · wrote ${relative(REPO, path)}.`);
+  wrote += 1;
 }
-if (check) {
-  console.error(
-    `docs:guards · DRIFT — ${relative(REPO, CHAPTER)} does not match GUARD_CATALOG.\n` +
-      'Run `pnpm -r build && pnpm docs:guards` and commit the result.',
-  );
-  process.exit(1);
-}
-writeFileSync(CHAPTER, next);
-console.log(`docs:guards · wrote ${relative(REPO, CHAPTER)} (${catalog.length} catalog rows).`);
+if (wrote === 0) console.log(`docs:guards · both artifacts are up to date (${catalog.length} catalog rows).`);

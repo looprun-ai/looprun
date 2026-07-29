@@ -1,10 +1,10 @@
 /**
  * Chapter 04 · guards — the code from the hand-written half of the chapter.
  *
- * The catalog's own 30 examples are generated from `GUARD_CATALOG` and are compile-checked by
- * `packages/core/test/guard-catalog-parity.test.ts`. What lives here is the part no catalog row can
- * carry: writing a `custom` guard for a domain concept the runtime has no vocabulary for, and the
- * `canonArgs` fingerprint the repetition kinds are built on.
+ * The catalog's own 30 examples are compiled next door, in the generated
+ * `04-guards-examples.generated.ts`. What lives here is the part no catalog row can carry: writing a
+ * `custom` guard for a domain concept the runtime has no vocabulary for, and the `canonArgs`
+ * fingerprint `noDuplicateCall` is built on.
  */
 import { canonArgs, custom } from 'looprun';
 import type { AgentWorld, Guard, GuardCtx } from 'looprun';
@@ -55,8 +55,10 @@ export class LateCancelSchedulerSpec extends SchedulerSpec {
 
 export const lateCancelSchedulerSpec = new LateCancelSchedulerSpec();
 
-// ── 2 · canonArgs: the fingerprint the repetition kinds compare ──────────────────────────────
-/** Key order is not identity: both calls are the SAME call to `noDuplicateCall` and `maxCalls`. */
+// ── 2 · canonArgs: the fingerprint `noDuplicateCall` compares ────────────────────────────────
+// `maxCalls` deliberately does NOT use it: it counts successful calls by TOOL NAME and ignores the
+// arguments, so a rephrased retry escapes `noDuplicateCall` and still burns `maxCalls` budget.
+/** Key order is not identity: to `noDuplicateCall`, both of these are the SAME call. */
 export const sameCallFingerprint =
   canonArgs({ start: '2026-03-02T10:00', title: 'Standup' }) === canonArgs({ title: 'Standup', start: '2026-03-02T10:00' });
 

@@ -7,10 +7,11 @@ own when nothing fits. Everything here is from `looprun` (≡ `looprun/core`).
 > **Code source.** §5 is **generated** from `GUARD_CATALOG` (`packages/core/src/guards/catalog.ts`)
 > by `scripts/gen-guards-chapter.mjs`; a parity test keeps that array in bijection with the factories
 > `src/guards/` actually exports, and `pnpm docs:guards --check` runs in CI, so a row here cannot
-> describe a kind that does not ship. The hand-written sections quote
-> [`docs/tutorial/snippets/04-guards.ts`](snippets/04-guards.ts) and `snippets/scheduler/`, which CI
-> typechecks against the published package. **Signature blocks** are quoted from the library source
-> and are not compiled here.
+> describe a kind that does not ship. Every §5 example is **compiled**: the same generator emits
+> [`snippets/04-guards-examples.generated.ts`](snippets/04-guards-examples.generated.ts), which the
+> snippets package typechecks against the published `looprun` facade. The hand-written sections quote
+> [`snippets/04-guards.ts`](snippets/04-guards.ts) and `snippets/scheduler/`, typechecked the same
+> way. **Signature blocks** are quoted from the library source and are not compiled here.
 
 Chapter 03 left the scheduler with one hand-written rule and two obligations already met:
 
@@ -20,7 +21,18 @@ Chapter 03 left the scheduler with one hand-written rule and two obligations alr
                                ⇒ AgentSpecBase installs confirmFirst + destructiveThrottle
 ```
 
-This chapter is the rest of the vocabulary. Read §1–§4 once; §5 is a reference you come back to.
+This chapter is the rest of the vocabulary:
+
+```
+   §1  the four types a guard is written in     Guard · GuardCtx · ObservedCall · Dim
+   §2  binding one to a moment                  addGuard — the chapter 03 socket, in one line
+   §3  the ones you already have                what AgentSpecBase installs before your code runs
+   §4  finding the right one                    symptom → kind, the confusable pairs, canonArgs
+   §5  THE CATALOG                              30 factories, grouped by hook — generated
+   §6  writing your own                         custom, and the five rules a reviewer looks for
+```
+
+Read §1–§4 once; §5 is a reference you come back to.
 
 ---
 
@@ -133,25 +145,32 @@ spec.addMutator(mutator, opts?)                // for a ReplyMutator — §5's o
 ```
 <sub>signatures — methods of `AgentSpecBase`</sub>
 
-Every example in §5 is the third argument. The hook you pass it on is the section it is listed
-under, and `addGuard` enforces the dim×hook matrix above.
+Every example in §5 is the third argument, and the section it is listed under is the hook it is
+**normally** installed on — a convention, not the rule. The rule is §1's dim×hook matrix, which
+`addGuard` enforces at construction.
+
+Reach for `addReplyCheck` when you are binding a reply kind and `'any'` is what you want anyway: it
+is the same call with the two constant arguments removed, and it keeps a spec's reply block from
+being a column of repeated `'onReply', 'any'`.
 
 Give every binding an `id`. It is what a `GuardExecutionError` names when a check throws, what the
 eval output attributes a veto to, and what makes a spec diff readable.
 
 ---
 
-## 3. Five of them are already installed
+## 3. Five are already installed — plus a conditional sixth
 
 `AgentSpecBase`'s constructor installs the universal invariants before your code runs, and the
 destructive-safety protocol iff you declared `destructiveTools` (chapter 03 §2):
 
 ```
-   ALWAYS                        noDuplicateCall   (preTool)
+   ALWAYS (3)                    noDuplicateCall   (preTool)
                                  degenerationGuard (onReply)
                                  emptyReply        (onReply)
-   IFF destructiveTools is set   confirmFirst + destructiveThrottle, on exactly those tools
-   IFF lexicon.falseFailureClaimRe is set   noFalseFailureClaim (onReply)
+   IFF destructiveTools (2)      confirmFirst + destructiveThrottle, on exactly those tools
+   ───────────────────────────   the five a spec like the scheduler's gets
+   IFF lexicon.falseFail… (1)    noFalseFailureClaim (onReply) — the conditional sixth, and the
+                                 tutorial teaches no lexicon, so the scheduler does not get it
 ```
 
 They have catalog rows in §5 because they are real kinds you must be able to read — **not** because
@@ -160,28 +179,72 @@ sources that will drift.
 
 ---
 
-## 4. Two things to know before the table
+## 4. Finding the right one
 
-**Choosing between neighbours is the hard part.** Every row's *when to reach for it* is written
-against its neighbours, and the pairs that get confused are worth reading even when you need
-neither: `requiresBefore` vs `precondition` (call order vs world state) · `forbidThisTurn` vs
-`noDuplicateCall` (the first call vs the repeat) · `confirmFirst` vs `consentRequired` vs
-`pendingConfirmMustAsk` (the conversation, a standing world flag, the reply) · `replyMustMention` vs
-`replyConfirmsLabels` (any one keyword vs every label).
+### Start from the symptom
 
-**`canonArgs` — the fingerprint the repetition kinds compare.** It is exported and public, but it is
-a helper, not a factory: it returns a `string`, not a `Guard`, so it has no catalog row.
+You almost never shop the catalog top to bottom. You have a trace where the model did something, and
+you want the kind that makes that impossible. Read this column as "the model …":
+
+| the model … | reach for | which is on |
+|---|---|---|
+| acts destructively without ever having asked | [`confirmFirst`](#10-confirmfirst) (auto-installed by `destructiveTools`) | preTool |
+| asks and acts in the same breath, or chains two destructive calls in one turn | [`noActAfterAskSameTurn`](#11-noactafterasksameturn) · [`destructiveThrottle`](#12-destructivethrottle) | preTool |
+| makes the same call again, hoping for a different answer | [`noDuplicateCall`](#4-noduplicatecall) | preTool |
+| calls a legitimate tool too many times — sweeps, repeat contact | [`maxCalls`](#3-maxcalls) | preTool |
+| runs a step before the one it depends on | [`requiresBefore`](#1-requiresbefore) | preTool |
+| acts while the world says it must not (closed account, no consent on record) | [`precondition`](#8-precondition) · [`consentRequired`](#9-consentrequired) | preTool |
+| does as it is told by text that came back INSIDE a tool result | [`noInstructionFromData`](#13-noinstructionfromdata) | preTool |
+| summarises an empty or partial result as if it satisfied the request | [`resultInvariant`](#14-resultinvariant) | postTool |
+| says a tool's work is done when it is not | [`noFabricatedSuccess`](#16-nofabricatedsuccess) · [`destructiveClaimRequiresSuccess`](#17-destructiveclaimrequiressuccess) | onReply |
+| apologises for failing on a turn where the work went through | [`noFalseFailureClaim`](#18-nofalsefailureclaim) | onReply |
+| promises a handoff — billing, legal, dispatch — as if it had done it | [`noOutOfSurfaceActionClaim`](#19-nooutofsurfaceactionclaim) | onReply |
+| pours other people's personal fields into one reply | [`minimalDisclosure`](#28-minimaldisclosure) — the PII cap: it counts personal FIELD names per record and demands each one came from a tool result this turn | onReply |
+| answers with nothing, leaked think-blocks, or the same line five times | [`emptyReply`](#26-emptyreply) · [`degenerationGuard`](#27-degenerationguard) (both auto-installed) | onReply |
+| writes internal status codes and field names at the user | [`jargonScrub`](#29-jargonscrub) — rewrites, never vetoes | onReplyMutate |
+| breaks a rule that is about YOUR domain and nothing in this table fits | [`custom`](#30-custom) (§6) | you choose |
+
+### The four confusable clusters
+
+Every row's *when to reach for it* is written against its neighbours. These are the four groups where
+reading only one row will pick the wrong kind:
+
+| cluster | the axis that separates them |
+|---|---|
+| `requiresBefore` · `precondition` | which call came first, vs what state the world is in |
+| `forbidThisTurn` · `noDuplicateCall` | the first call is illegitimate, vs only the repeat is |
+| `confirmFirst` · `consentRequired` · `pendingConfirmMustAsk` | evidence in the CONVERSATION (an earlier turn) · a standing flag in the WORLD · gating the REPLY rather than the call |
+| `replyMustMention` · `replyConfirmsLabels` | any one keyword suffices, vs every label is required |
+
+And the honesty cluster — four kinds that all mean "the reply lied", separated by **what** it lied
+about:
+
+```
+   noFabricatedSuccess              a tool YOU own did not succeed this turn      → do not claim its effect
+   destructiveClaimRequiresSuccess  …and the effect was DESTRUCTIVE               → attempt-keyed, sentence-scoped
+   noOutOfSurfaceActionClaim        the tool is not on this agent's surface       → it was never yours to do
+   noFalseFailureClaim              the work SUCCEEDED and the reply claims it failed  ← the mirror image
+```
+
+The first three catch invented success; the fourth catches invented failure. They are written not to
+double-fire: `noOutOfSurfaceActionClaim` stops at the surface boundary the owned-action kinds start
+at, and `noFalseFailureClaim` only adjudicates a turn that mutated the world.
+
+### `canonArgs` — the fingerprint `noDuplicateCall` compares
+
+It is exported and public, but it is a helper, not a factory: it returns a `string`, not a `Guard`,
+so it has no catalog row.
 
 ```ts
 function canonArgs(v: unknown): string      // key-order-independent canonical fingerprint
 ```
 <sub>signature, from `looprun`</sub>
 
-`noDuplicateCall` and `maxCalls` do not compare argument objects — they compare
-`canonArgs(args)`, so key order is not identity and a re-ordered retry is still the same call:
+`noDuplicateCall` does not compare argument objects — it compares `canonArgs(args)`, so key order is
+not identity and a re-ordered retry is still the same call:
 
 ```ts
-/** Key order is not identity: both calls are the SAME call to `noDuplicateCall` and `maxCalls`. */
+/** Key order is not identity: to `noDuplicateCall`, both of these are the SAME call. */
 export const sameCallFingerprint =
   canonArgs({ start: '2026-03-02T10:00', title: 'Standup' }) === canonArgs({ title: 'Standup', start: '2026-03-02T10:00' });
 
@@ -191,8 +254,18 @@ export const differentCallFingerprint =
 ```
 <sub>excerpt · `snippets/04-guards.ts`</sub>
 
-Reach for it directly when you write a `custom` guard that counts calls: use the same fingerprint the
-built-in kinds use, or your rule and theirs will disagree about what "the same call" means.
+**`maxCalls` deliberately does not use it.** It counts successful calls by TOOL NAME within its
+scope, arguments ignored — which is what you want from a budget:
+
+```
+   noDuplicateCall   keyed on (tool, canonArgs(args))   a rephrased retry is a DIFFERENT call → allowed
+   maxCalls          keyed on (tool)                    a rephrased retry is the same tool    → still burns budget
+```
+
+So the two are complementary rather than redundant: the escape hatch out of one is closed by the
+other. Reach for `canonArgs` directly when a `custom` guard of yours needs to decide whether two
+calls are "the same" — using the same fingerprint means your rule and `noDuplicateCall` cannot
+disagree about it.
 
 ---
 
@@ -205,6 +278,11 @@ built-in kinds use, or your rule and theirs will disagree about what "the same c
 
 Grouped by the hook each one is installed on, because the hook decides what a rule can see and
 therefore what it can enforce (chapter 03 §8). 13 preTool · 1 postTool · 14 onReply · 1 onReplyMutate · 1 escape hatch.
+
+A fourth hook exists and has no section here: `onInput` fires before the model runs, and §1's
+matrix makes it legal for every `spatial`/`input`/`run` guard — but no shipped kind is installed
+there, because a rule that can refuse the whole turn before a call is even proposed is a domain
+decision, not a default. `custom` is how you reach it.
 
 ### `preTool` — before the call runs
 
@@ -220,11 +298,11 @@ A call has been proposed and not yet executed. A deny returns to the model AS th
 | [`argAbsent`](#6-argabsent) | `args.ts` | The named argument must not be passed at all. |
 | [`argFormat`](#7-argformat) | `args.ts` | A present, non-empty string argument must match the given pattern; absent or empty is left to argRequired. |
 | [`precondition`](#8-precondition) | `world.ts` | The call is allowed only while a predicate over the host world holds. |
-| [`consentRequired`](#9-consentrequired) | `world.ts` | Risk family 6 — a set of writes may run only while the world says this person's consent is on record. |
+| [`consentRequired`](#9-consentrequired) | `world.ts` | A set of writes may run only while the world says this person's consent is on record. |
 | [`confirmFirst`](#10-confirmfirst) | `confirmation.ts` | A destructive tool needs the user's go-ahead from an EARLIER turn — via a confirm flag probe or a prior ask. Passing a mechanism NAME to the string overload throws at construction. |
 | [`noActAfterAskSameTurn`](#11-noactafterasksameturn) | `confirmation.ts` | Denies the listed tools on a turn in which the model already asked the user a question. |
 | [`destructiveThrottle`](#12-destructivethrottle) | `confirmation.ts` | At most one destructive action that TOOK EFFECT per turn (a confirmation probe does not count). |
-| [`noInstructionFromData`](#13-noinstructionfromdata) | `reply.ts` | Risk family 2 — denies the listed destructive tools while an imperative sits in the conversation's tool results and no earlier turn exposed the action to the user. |
+| [`noInstructionFromData`](#13-noinstructionfromdata) | `reply.ts` | Denies the listed destructive tools while an imperative sits in the conversation's tool results and no earlier turn exposed the action to the user. |
 
 #### 1. `requiresBefore`
 
@@ -240,7 +318,7 @@ requiresBefore(['findBooking'])
 
 An unconditional deny of the bound tool while the binding is installed — the first call is denied too.
 
-**When to reach for it.** A tool must be off for this turn or this layer, no matter what. It is not a repeat detector: reach for noDuplicateCall when the FIRST call is legitimate and only the repeat is not.
+**When to reach for it.** A tool must be off, no matter what. Its scope is the BINDING'S LIFETIME — the check is `() => reason`, with no turn logic in it at all, so the ban holds for as long as the binding is installed (the name is historical). It is not a repeat detector: reach for noDuplicateCall when the FIRST call is legitimate and only the repeat is not.
 
 ```ts
 forbidThisTurn('Do not reschedule while a cancellation is pending — resolve that first.')
@@ -308,7 +386,7 @@ precondition((world) => world.accountActive === true, 'This account is closed �
 
 #### 9. `consentRequired`
 
-Risk family 6 — a set of writes may run only while the world says this person's consent is on record.
+A set of writes may run only while the world says this person's consent is on record.
 
 **When to reach for it.** Storing, sharing or transmitting personal data. It is precondition specialised to a TOOL SET, which is what makes the consent posture auditable in a spec header; pair it with a conversation-scoped maxCalls for repeat contact.
 
@@ -348,7 +426,7 @@ destructiveThrottle(['cancelBooking', 'refundOrder'])
 
 #### 13. `noInstructionFromData`
 
-Risk family 2 — denies the listed destructive tools while an imperative sits in the conversation's tool results and no earlier turn exposed the action to the user.
+Denies the listed destructive tools while an imperative sits in the conversation's tool results and no earlier turn exposed the action to the user.
 
 **When to reach for it.** Tool results can carry attacker-controlled text (notes, messages, tickets). The proxy is deliberately conservative — it converts a poisoned same-turn request into the legal ask-then-act two-turn flow.
 
@@ -384,16 +462,16 @@ The reply text is in `ctx.reply` and no tool can run any more. A deny costs a bo
 | [`noFabricatedSuccess`](#16-nofabricatedsuccess) | `honesty.ts` | The reply may not claim a tool's effect, cite an invented artifact label, or use a banned phrase when the tool did not succeed this turn. |
 | [`destructiveClaimRequiresSuccess`](#17-destructiveclaimrequiressuccess) | `honesty.ts` | A declarative claim that a destructive action happened is denied unless one actually took effect this turn. |
 | [`noFalseFailureClaim`](#18-nofalsefailureclaim) | `honesty.ts` | When every domain call this turn succeeded and one of them mutated the world, the reply may not claim inability. |
-| [`noOutOfSurfaceActionClaim`](#19-nooutofsurfaceactionclaim) | `honesty.ts` | Risk family 4 — a declarative claim of an action whose tool is not on this agent's surface is denied. |
-| [`noUngroundedRegulatedFigure`](#20-noungroundedregulatedfigure) | `honesty.ts` | Risk family 5 — a figure or conclusion of a regulated class may appear only when a tool returned it this turn. |
-| [`noCompetitorClaim`](#21-nocompetitorclaim) | `honesty.ts` | Risk family 3 — within one sentence, a named third party plus comparative phrasing or a comparative figure is denied. |
+| [`noOutOfSurfaceActionClaim`](#19-nooutofsurfaceactionclaim) | `honesty.ts` | A declarative claim of an action whose tool is not on this agent's surface is denied. |
+| [`noUngroundedRegulatedFigure`](#20-noungroundedregulatedfigure) | `honesty.ts` | A figure or conclusion of a regulated class may appear only when a tool returned it this turn. |
+| [`noCompetitorClaim`](#21-nocompetitorclaim) | `honesty.ts` | Within one sentence, a named third party plus comparative phrasing or a comparative figure is denied. |
 | [`replyMustMention`](#22-replymustmention) | `reply.ts` | The reply must contain at least one of the given keywords (case-insensitive). |
 | [`replyMaxOccurrences`](#23-replymaxoccurrences) | `reply.ts` | At most n DISTINCT calls-to-action from the list may appear in one reply. |
 | [`replySingleQuestion`](#24-replysinglequestion) | `reply.ts` | The reply must carry exactly one question mark. |
 | [`replyConfirmsLabels`](#25-replyconfirmslabels) | `reply.ts` | The reply must be non-empty and name every one of the given labels. |
 | [`emptyReply`](#26-emptyreply) | `reply.ts` | The final reply must not be blank. |
 | [`degenerationGuard`](#27-degenerationguard) | `reply.ts` | Catches leaked reasoning or tool markup, chat-template tokens and run-away line repetition in the reply. |
-| [`minimalDisclosure`](#28-minimaldisclosure) | `reply.ts` | Risk family 1 — caps how many records' personal FIELDS one reply may carry, and requires each named field to have been returned by a tool this turn. |
+| [`minimalDisclosure`](#28-minimaldisclosure) | `reply.ts` | Caps how many records' personal FIELDS one reply may carry, and requires each named field to have been returned by a tool this turn. |
 
 #### 15. `pendingConfirmMustAsk`
 
@@ -437,7 +515,7 @@ noFalseFailureClaim({ claimRe: /failed to|something went wrong/i })
 
 #### 19. `noOutOfSurfaceActionClaim`
 
-Risk family 4 — a declarative claim of an action whose tool is not on this agent's surface is denied.
+A declarative claim of an action whose tool is not on this agent's surface is denied.
 
 **When to reach for it.** The agent is expected to hand off (billing, legal, dispatch) and the model promises the handoff as done. It deliberately stops at the surface boundary, so it never double-fires with the owned-action honesty kinds.
 
@@ -447,7 +525,7 @@ noOutOfSurfaceActionClaim({ actionClaims: [{ claimRe: /refund (?:has been )?issu
 
 #### 20. `noUngroundedRegulatedFigure`
 
-Risk family 5 — a figure or conclusion of a regulated class may appear only when a tool returned it this turn.
+A figure or conclusion of a regulated class may appear only when a tool returned it this turn.
 
 **When to reach for it.** Legal, medical or financial surfaces. Keep allowFromToolResults true when a tool is authoritative for the class; set it false to ban the class outright where nothing in the world can license it.
 
@@ -457,7 +535,7 @@ noUngroundedRegulatedFigure({ regulatedRe: /\b\d+\s?mg\b/i, allowFromToolResults
 
 #### 21. `noCompetitorClaim`
 
-Risk family 3 — within one sentence, a named third party plus comparative phrasing or a comparative figure is denied.
+Within one sentence, a named third party plus comparative phrasing or a comparative figure is denied.
 
 **When to reach for it.** Any user-facing sales or support surface. The figure branch is sound by construction: no tool returns a competitor's numbers, so any such number is invented.
 
@@ -527,7 +605,7 @@ degenerationGuard({ selfNarrationRe: /the assistant (?:then )?(?:called|checked)
 
 #### 28. `minimalDisclosure`
 
-Risk family 1 — caps how many records' personal FIELDS one reply may carry, and requires each named field to have been returned by a tool this turn.
+Caps how many records' personal FIELDS one reply may carry, and requires each named field to have been returned by a tool this turn.
 
 **When to reach for it.** Any surface that reads personal records. It keys on field-name tokens, never on entity mentions, so a correct multi-record summary that lists only ids and dates stays legal.
 
@@ -565,7 +643,7 @@ One factory, and it is the only one whose hook you choose: `custom` follows the 
 
 The escape hatch: a guard whose kind, dim, check and prose the spec author writes by hand.
 
-**When to reach for it.** Only when no kind fits — typically a domain concept the runtime carries no vocabulary for (media, labels, provenance) read through the world's own accessors. Its hook follows the `dim` you pass (the row says preTool because the example is a `run` guard); replicate the shared kinds' exemptions, since reviewers read this code.
+**When to reach for it.** Only when no kind fits — typically a domain concept the runtime carries no vocabulary for (media, labels, provenance) read through the world's own accessors. It is the one factory whose hook YOU choose, by the `dim` you pass: it is classified under preTool here only because this example is a `run` guard. Replicate the shared kinds' exemptions, since reviewers read this code.
 
 ```ts
 custom({ kind: 'imageQuotaLeft', dim: 'run', check: (ctx) => (ctx.world.imageQuotaRemaining > 0 ? null : 'No image quota left this month — say so instead of generating.'), prose: () => 'generate an image only while quota remains' })

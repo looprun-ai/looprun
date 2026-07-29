@@ -231,9 +231,9 @@ the lint requires to exist.
 `string` fingerprint, not a `Guard`, and every existing gate already says so: the parity extractor
 asserts `canonArgs` is not a factory, `GUARDS.md` calls it "the `canonArgs` helper", and the agentspec
 reference gives it no catalog row. So `GUARD_CATALOG` carries **30 entries** — 29 guard kinds + the
-`jargonScrub` mutator — and the chapter teaches `canonArgs` **in prose**, inside the argument-shape
-section, as the fingerprint the repetition kinds are built on. Chapter 04's taught count is unchanged
-at 35 (§4): 4 vocabulary types + 30 catalog rows + `canonArgs`.
+`jargonScrub` mutator — and the chapter teaches `canonArgs` **in prose** (see the Task 10 amendment
+below for where it landed), as the fingerprint `noDuplicateCall` is built on. Chapter 04's taught
+count is unchanged at 35 (§4): 4 vocabulary types + 30 catalog rows + `canonArgs`.
 
 **`GUARD_CATALOG` and `GuardCatalogEntry` are NOT in this contract.** They ship on
 `@looprun-ai/core/internal` and the generator imports them from there (§6, decision 4). They are
@@ -267,10 +267,20 @@ the grouping axis.
 | `onReplyMutate` (1) | `jargonScrub` |
 | escape hatch (1) | `custom` |
 
-**Example used.** Each catalog row renders a two-to-six-line snippet against the scheduler world,
-bound with `spec.addGuard(...)`. The chapter opens with the two guards the purpose sentence demands
-(`confirmFirst` on `cancelEvent`, `precondition` for "never double-book") and closes with `custom`
-written against `GuardCtx` and `Dim`.
+**Example used.** Each catalog row renders its own minimal call site, and the chapter closes with a
+`custom` guard written against `GuardCtx` and `Dim` (see the amendment below).
+
+#### Amendment (Task 10): three corrections this section could not have foreseen
+
+Writing the chapter against the real catalog moved three things. Recorded here so nobody reads the
+chapter as having drifted from its contract — the **taught set is unchanged** (35 symbols; §4 is
+untouched), and all three are placement or accuracy, not surface.
+
+| # | this section said | what shipped, and why |
+|---|---|---|
+| 1 | `canonArgs` is taught "inside the argument-shape section" | there is no argument-shape section: the ruled grouping is by `hook`, and `argRequired`/`argAbsent`/`argFormat` are three rows inside `preTool`. `canonArgs` is taught in **§4**, the last hand-written page before the catalog, next to the confusable-pairs guidance it belongs with |
+| 2 | each row renders a snippet "**against the scheduler world**" | catalog examples are **domain-neutral by construction** (P8a) and self-contained — `requiresBefore(['findBooking'])`, not a calendar call. Rewriting 30 of them into scheduler vocabulary would have made the catalog a second, drifting copy of the domain. The scheduler carries the hand-written half instead: §4's `canonArgs` block and §6's `custom` guard, both from `snippets/04-guards.ts` |
+| 3 | the chapter "opens with `confirmFirst` on `cancelEvent`, `precondition` for never double-book" | the scheduler as Task 9 actually authored it uses `destructiveTools` (which *installs* `confirmFirst` — naming it again would render the rule twice) and a `custom` clash gate, because `precondition`'s predicate never sees the acting call's arguments and therefore cannot express a clash. The chapter opens by restating what chapter 03 really built |
 
 ---
 

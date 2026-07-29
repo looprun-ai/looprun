@@ -7,6 +7,7 @@ Regenerate with `pnpm proofs:matrix`; CI runs `--check` to keep it in sync.
 | Date | Record | Change | Scope | Isolated | Collective | Coverage | Certified models | SLM canary | Verdict |
 |---|---|---|---|---|---|---|---|---|---|
 | 2026-07-29 | [core-internal-subpath](proofs/2026-07-29-core-internal-subpath.md) | core: public barrel cut to the 51-symbol tutorial contract; the internal seam moves to @looprun-ai/core/internal | runtime | 212/212 | 55/55 | 29/29 | n/a | n/a | PASS |
+| 2026-07-29 | [guard-catalog-summaries-detaxonomized](proofs/2026-07-29-guard-catalog-summaries-detaxonomized.md) | core: guard catalog summaries drop the risk-family prefixes; two whenToUse rows corrected (forbidThisTurn scope, custom hook) | docs | 212/212 | 55/55 | 29/29 | n/a | n/a | PASS |
 | 2026-07-29 | [guards-split-catalog](proofs/2026-07-29-guards-split-catalog.md) | core: guards.ts split byte-exactly into guards/ per category; GUARD_CATALOG ships on /internal | runtime | 212/212 | 55/55 | 29/29 | n/a | n/a | PASS |
 | 2026-07-29 | [mastra-facade-trim](proofs/2026-07-29-mastra-facade-trim.md) | mastra: barrel trimmed to the 7-symbol LoopRunAgent facade; agent.ts construction split out | runtime | 212/212 | 55/55 | 29/29 | n/a | n/a | PASS |
 | 2026-07-29 | [runtime-dead-export-cut](proofs/2026-07-29-runtime-dead-export-cut.md) | core: dead runtime exports go module-local (7 symbols un-exported, RuntimeTurnInput erased) | runtime | 212/212 | 55/55 | 29/29 | n/a | n/a | PASS |

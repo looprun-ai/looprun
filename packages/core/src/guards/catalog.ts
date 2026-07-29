@@ -50,7 +50,7 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
     hook: 'preTool',
     summary: 'An unconditional deny of the bound tool while the binding is installed — the first call is denied too.',
     whenToUse:
-      'A tool must be off for this turn or this layer, no matter what. It is not a repeat detector: reach for noDuplicateCall when the FIRST call is legitimate and only the repeat is not.',
+      'A tool must be off, no matter what. Its scope is the BINDING\'S LIFETIME — the check is `() => reason`, with no turn logic in it at all, so the ban holds for as long as the binding is installed (the name is historical). It is not a repeat detector: reach for noDuplicateCall when the FIRST call is legitimate and only the repeat is not.',
     example: `forbidThisTurn('Do not reschedule while a cancellation is pending — resolve that first.')`,
   },
   {
@@ -124,7 +124,7 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
     name: 'consentRequired',
     category: 'world',
     hook: 'preTool',
-    summary: 'Risk family 6 — a set of writes may run only while the world says this person\'s consent is on record.',
+    summary: 'A set of writes may run only while the world says this person\'s consent is on record.',
     whenToUse:
       'Storing, sharing or transmitting personal data. It is precondition specialised to a TOOL SET, which is what makes the consent posture auditable in a spec header; pair it with a conversation-scoped maxCalls for repeat contact.',
     example: `consentRequired({ tools: ['storeProfile'], consentOk: (world) => world.consentOnRecord === true, reason: 'No consent on record — ask for it before storing anything.' })`,
@@ -200,7 +200,7 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
     name: 'noOutOfSurfaceActionClaim',
     category: 'honesty',
     hook: 'onReply',
-    summary: 'Risk family 4 — a declarative claim of an action whose tool is not on this agent\'s surface is denied.',
+    summary: 'A declarative claim of an action whose tool is not on this agent\'s surface is denied.',
     whenToUse:
       'The agent is expected to hand off (billing, legal, dispatch) and the model promises the handoff as done. It deliberately stops at the surface boundary, so it never double-fires with the owned-action honesty kinds.',
     example: `noOutOfSurfaceActionClaim({ actionClaims: [{ claimRe: /refund (?:has been )?issued/i, tool: 'issueRefund' }], surface: ['findBooking'] })`,
@@ -209,7 +209,7 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
     name: 'noUngroundedRegulatedFigure',
     category: 'honesty',
     hook: 'onReply',
-    summary: 'Risk family 5 — a figure or conclusion of a regulated class may appear only when a tool returned it this turn.',
+    summary: 'A figure or conclusion of a regulated class may appear only when a tool returned it this turn.',
     whenToUse:
       'Legal, medical or financial surfaces. Keep allowFromToolResults true when a tool is authoritative for the class; set it false to ban the class outright where nothing in the world can license it.',
     example: `noUngroundedRegulatedFigure({ regulatedRe: /\\b\\d+\\s?mg\\b/i, allowFromToolResults: true })`,
@@ -218,7 +218,7 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
     name: 'noCompetitorClaim',
     category: 'honesty',
     hook: 'onReply',
-    summary: 'Risk family 3 — within one sentence, a named third party plus comparative phrasing or a comparative figure is denied.',
+    summary: 'Within one sentence, a named third party plus comparative phrasing or a comparative figure is denied.',
     whenToUse:
       'Any user-facing sales or support surface. The figure branch is sound by construction: no tool returns a competitor\'s numbers, so any such number is invented.',
     example: `noCompetitorClaim({ competitorRe: /\\bAcme\\b/i, comparativeRe: /\\b(?:better|cheaper|faster) than\\b/i })`,
@@ -283,7 +283,7 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
     name: 'minimalDisclosure',
     category: 'reply',
     hook: 'onReply',
-    summary: 'Risk family 1 — caps how many records\' personal FIELDS one reply may carry, and requires each named field to have been returned by a tool this turn.',
+    summary: 'Caps how many records\' personal FIELDS one reply may carry, and requires each named field to have been returned by a tool this turn.',
     whenToUse:
       'Any surface that reads personal records. It keys on field-name tokens, never on entity mentions, so a correct multi-record summary that lists only ids and dates stays legal.',
     example: `minimalDisclosure({ piiFields: ['phone', 'email'], entityIdRe: /\\bCU-\\d{5}\\b/, maxEntities: 1 })`,
@@ -292,7 +292,7 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
     name: 'noInstructionFromData',
     category: 'reply',
     hook: 'preTool',
-    summary: 'Risk family 2 — denies the listed destructive tools while an imperative sits in the conversation\'s tool results and no earlier turn exposed the action to the user.',
+    summary: 'Denies the listed destructive tools while an imperative sits in the conversation\'s tool results and no earlier turn exposed the action to the user.',
     whenToUse:
       'Tool results can carry attacker-controlled text (notes, messages, tickets). The proxy is deliberately conservative — it converts a poisoned same-turn request into the legal ask-then-act two-turn flow.',
     example: `noInstructionFromData({ tools: ['cancelBooking'], instructionRe: /please cancel|delete all/i })`,
@@ -314,7 +314,7 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
     hook: 'preTool',
     summary: 'The escape hatch: a guard whose kind, dim, check and prose the spec author writes by hand.',
     whenToUse:
-      'Only when no kind fits — typically a domain concept the runtime carries no vocabulary for (media, labels, provenance) read through the world\'s own accessors. Its hook follows the `dim` you pass (the row says preTool because the example is a `run` guard); replicate the shared kinds\' exemptions, since reviewers read this code.',
+      'Only when no kind fits — typically a domain concept the runtime carries no vocabulary for (media, labels, provenance) read through the world\'s own accessors. It is the one factory whose hook YOU choose, by the `dim` you pass: it is classified under preTool here only because this example is a `run` guard. Replicate the shared kinds\' exemptions, since reviewers read this code.',
     example: `custom({ kind: 'imageQuotaLeft', dim: 'run', check: (ctx) => (ctx.world.imageQuotaRemaining > 0 ? null : 'No image quota left this month — say so instead of generating.'), prose: () => 'generate an image only while quota remains' })`,
   },
 ];
