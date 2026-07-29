@@ -10,7 +10,8 @@
  *     composed before that call's result existed, so its text cannot be reporting it.
  */
 import { describe, expect, it } from 'vitest';
-import { AgentSpecBase, custom, defaultExhaustionReply, governanceVeto, normalizeTerminalToolDef, prematureTerminalTools } from '@looprun-ai/core';
+import { AgentSpecBase, custom } from '@looprun-ai/core';
+import { defaultExhaustionReply, governanceVeto, normalizeTerminalToolDef, prematureTerminalTools } from '@looprun-ai/core/internal';
 import type { DomainContract, RunResult, ToolDef } from '@looprun-ai/core';
 import { FIXTURE_DOMAIN, FIXTURE_TOOL_DEFS, FIXTURE_TOOL_NAMES, FixtureWorld } from '@looprun-ai/core/testing';
 import { fakeLLM } from '../../src/testing/fake-llm.js';

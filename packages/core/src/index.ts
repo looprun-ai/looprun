@@ -1,90 +1,69 @@
 /**
- * @looprun-ai/core — public API.
+ * @looprun-ai/core — the PUBLIC API.
  *
- * AgentSpec (the map) + typed deterministic guards (the safety kit) + the scoped trunk renderer +
- * the backend-agnostic governed-turn machine (the GPS). Framework backends live in sibling
- * packages (@looprun-ai/mastra, …).
+ * This barrel is the tutorial contract, nothing more: every symbol below is taught by a chapter of
+ * `docs/tutorial/` (chapters 03, 04 and 05 own the core rows of the placement table in
+ * `docs/tutorial/00-outline.md` §4). A concept the tutorial does not teach is not exported here.
+ *
+ * Everything else that used to live on this barrel is still available, unchanged, from
+ * `@looprun-ai/core/internal` — the sibling-package and fork-author seam (spec binding resolution,
+ * the trunk renderer, the ledger, the terminal protocol, the prompt renderer, the governed-turn
+ * machine). That subpath carries no compatibility promise.
  */
-export * from './rules.js';
-export * from './guards.js';
-export {
-  AgentSpecBase,
-  resolveBindings,
-  resolveGuards,
-  resolveMutators,
-} from './spec.js';
+
+// ── Chapter 03 · agent anatomy ───────────────────────────────────────────────
+export { AgentSpecBase } from './spec.js';
 export type {
   AgentSpec,
   AgentSpecConfig,
-  AgentControls,
   AgentScope,
-  ChainSpec,
-  GuardBinding,
-  MutatorBinding,
-  StateDirective,
   TerminalPolicy,
   Hook,
   ToolTarget,
-  Layer,
 } from './spec.js';
-export { renderScopedSpecTrunk, renderTrunkBlocks, chainOrder } from './trunk.js';
-export type { DomainContract, TrunkRenderOptions } from './trunk.js';
-// Trunk PROVENANCE + the coherence queries (the trunk is a fold over an attributed table, not a join).
-export {
-  GUARD_KIND_SUBJECT, derivePolarity, deriveSubject, foldRow, foldTrunk, trunkLines,
-  findContradictions, findDuplications, findMultiOwnerSubjects, findSubjectlessLines,
-  findUnassessableLines, isSingleClause,
-  DEFAULT_POLARITY_LEXICON, withPolarityLexicon, mutatorLines,
-} from './coherence.js';
-export type {
-  TrunkLine, TrunkRow, TrunkBlock, TrunkPolarity, SubjectRule, NormativeLine,
-  ContradictionFinding, DuplicationFinding, SingleOwnerFinding,
-  PolarityLexicon, MutatorBindingLike,
-} from './coherence.js';
-export { validateSpec, MAX_TOOL_SURFACE } from './validate.js';
-export type { SpecWarning } from './validate.js';
-export { geminiThinkingOff, pinnedDecoding, normalizeModelParams, resolveModelSettings } from './model-params.js';
-export type { SamplingSettings } from './model-params.js';
+export type { AgentWorld } from './rules.js';
+export type { DomainContract } from './trunk.js';
+export type { ToolDef } from './runtime/types.js';
+export { validateSpec } from './validate.js';
 
-// The governed-turn machine (framework-free) — consumed by backends.
-export type { ToolDef, TokenUsage, TurnInput, TurnRecord, RunResult, RuntimeTurnInput, RuntimeTurnRecord } from './runtime/types.js';
-export { createLedger, beginTurn, resultOk, recordVeto, recordToolResult, recordTerminal, recordTerminalCall, pruneSupersededTerminals, vetoStormHit, VETO_STORM_LIMIT } from './runtime/ledger.js';
-export type { TurnLedger, PostToolViolation } from './runtime/ledger.js';
+// ── Chapter 04 · guards ──────────────────────────────────────────────────────
+// The vocabulary…
+export type { Guard, GuardCtx, ObservedCall, Dim } from './rules.js';
+// …and the catalog.
 export {
-  TERMINAL_TOOLS,
-  isTerminal,
-  terminalProtocol,
-  TERMINAL_PROTOCOL,
-  TERMINAL_PROTOCOL_REPLY_ONLY,
-  forcedTerminalPrompt,
-  terminalToolDefs,
-  normalizeTerminalToolDef,
-  prematureTerminalTools,
-  supersededTerminalCalls,
-} from './runtime/terminal.js';
-// The single owner of the bytes a turn sends — the drivers AND the offline instruments render
-// through this one function, so an instrument can never report on a prompt nothing runs.
-export { renderTurnPrompt, uploadDisplayLabels, isReplyOnly } from './runtime/prompt.js';
-export type { TurnPrompt, TurnPromptInput } from './runtime/prompt.js';
-export {
-  evaluatePreTool,
-  evaluateOnInput,
-  applyMutators,
-  checkReply,
-  enforcePostTool,
-  redriveMessage,
-  defaultExhaustionReply,
-  finalizeReply,
-  governanceVeto,
-  shouldFireChain,
-  runChainCompletionPass,
-} from './runtime/turn.js';
-export type {
-  PreToolVerdict,
-  GovernanceVeto,
-  ReplyViolation,
-  FinalizedReply,
-  PostToolEnforcement,
-  ChainPassCtx,
-  ChainPassResult,
-} from './runtime/turn.js';
+  custom,
+  requiresBefore,
+  forbidThisTurn,
+  argRequired,
+  argAbsent,
+  argFormat,
+  precondition,
+  maxCalls,
+  canonArgs,
+  noDuplicateCall,
+  confirmFirst,
+  noActAfterAskSameTurn,
+  destructiveThrottle,
+  resultInvariant,
+  noFabricatedSuccess,
+  replyMustMention,
+  replyMaxOccurrences,
+  replySingleQuestion,
+  replyConfirmsLabels,
+  emptyReply,
+  degenerationGuard,
+  pendingConfirmMustAsk,
+  destructiveClaimRequiresSuccess,
+  noFalseFailureClaim,
+  minimalDisclosure,
+  noInstructionFromData,
+  noCompetitorClaim,
+  noOutOfSurfaceActionClaim,
+  noUngroundedRegulatedFigure,
+  consentRequired,
+  jargonScrub,
+} from './guards.js';
+
+// ── Chapter 05 · running and eval ────────────────────────────────────────────
+export type { TurnInput, TurnRecord, RunResult } from './runtime/types.js';
+export { geminiThinkingOff, pinnedDecoding } from './model-params.js';

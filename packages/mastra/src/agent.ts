@@ -25,6 +25,8 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { stepCountIs } from 'ai';
 import { Agent } from '@mastra/core/agent';
+import { validateSpec } from '@looprun-ai/core';
+import type { AgentSpec, AgentWorld, ObservedCall, ToolDef, DomainContract } from '@looprun-ai/core';
 import {
   beginTurn,
   finalizeReply,
@@ -38,9 +40,7 @@ import {
   supersededTerminalCalls,
   vetoStormHit,
   renderTurnPrompt,
-  validateSpec,
-} from '@looprun-ai/core';
-import type { AgentSpec, AgentWorld, ObservedCall, ToolDef, DomainContract } from '@looprun-ai/core';
+} from '@looprun-ai/core/internal';
 import { SessionStore } from './session.js';
 import type { LoopRunSession, WorldFactory } from './session.js';
 import { buildWorldTools, buildTerminalTools } from './tools.js';

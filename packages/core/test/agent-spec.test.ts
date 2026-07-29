@@ -2,14 +2,13 @@
 import { describe, expect, it } from 'vitest';
 import {
   AgentSpecBase,
-  resolveBindings,
-  resolveGuards,
   custom,
   precondition,
   confirmFirst,
   destructiveClaimRequiresSuccess,
   pendingConfirmMustAsk,
 } from '../src/index.js';
+import { resolveBindings, resolveGuards } from '../src/spec.js';
 import type { AgentWorld, GuardCtx, ObservedCall, DomainContract } from '../src/index.js';
 
 const persona = 'You are the plant-care agent: watering and repotting.';

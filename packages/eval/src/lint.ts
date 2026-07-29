@@ -11,7 +11,8 @@
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { validateSpec } from '@looprun-ai/core';
-import type { AgentSpec, AgentWorld, GuardBinding, GuardCtx } from '@looprun-ai/core';
+import type { AgentSpec, AgentWorld, GuardCtx } from '@looprun-ai/core';
+import type { GuardBinding } from '@looprun-ai/core/internal';
 
 export interface LintViolation {
   file: string;

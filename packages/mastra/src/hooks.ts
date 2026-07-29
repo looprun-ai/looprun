@@ -6,7 +6,7 @@
  * fed by `hooks.afterToolCall`. Mastra applies hooks to ALL tool sources (assigned, toolsets,
  * client, MCP), so guards also govern native/MCP tools with zero extra wiring.
  */
-import { evaluatePreTool, evaluateOnInput, enforcePostTool, governanceVeto, isTerminal, recordTerminalCall, recordToolResult, resolveGuards } from '@looprun-ai/core';
+import { evaluatePreTool, evaluateOnInput, enforcePostTool, governanceVeto, isTerminal, recordTerminalCall, recordToolResult, resolveGuards } from '@looprun-ai/core/internal';
 import type { AgentSpec, GuardCtx } from '@looprun-ai/core';
 import type { LoopRunSession } from './session.js';
 import type { SessionAccessor } from './tools.js';

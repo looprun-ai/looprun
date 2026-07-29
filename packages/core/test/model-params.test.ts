@@ -1,6 +1,7 @@
 /** Model-parameter presets + the Mastra modelSettings normalization seam. */
 import { describe, expect, it } from 'vitest';
-import { geminiThinkingOff, pinnedDecoding, normalizeModelParams, resolveModelSettings } from '../src/index.js';
+import { geminiThinkingOff, pinnedDecoding } from '../src/index.js';
+import { normalizeModelParams, resolveModelSettings } from '../src/model-params.js';
 
 describe('pinnedDecoding', () => {
   it('nests temperature (and optional seed / maxOutputTokens) under modelSettings', () => {

@@ -7,7 +7,8 @@
  *  - a full runProofLoop preTool veto (recoveryEvents carries the `${dim}:${kind}:${tool}` tag).
  */
 import { describe, expect, it } from 'vitest';
-import { AgentSpecBase, requiresBefore, resultOk } from '@looprun-ai/core';
+import { AgentSpecBase, requiresBefore } from '@looprun-ai/core';
+import { resultOk } from '@looprun-ai/core/internal';
 import {
   FixtureWorld,
   FIXTURE_TOOL_NAMES,

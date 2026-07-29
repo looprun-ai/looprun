@@ -3,7 +3,8 @@
  * across world-state mutations — volatile state never leaks into the system prompt.
  */
 import { describe, expect, it } from 'vitest';
-import { AgentSpecBase, renderScopedSpecTrunk, precondition, requiresBefore } from '../src/index.js';
+import { AgentSpecBase, precondition, requiresBefore } from '../src/index.js';
+import { renderScopedSpecTrunk } from '../src/trunk.js';
 import type { AgentWorld, DomainContract } from '../src/index.js';
 
 function fixtureWorld(state: Record<string, unknown> = {}): AgentWorld {

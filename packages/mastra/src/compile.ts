@@ -8,14 +8,15 @@
  *                             tools: g.tools, hooks: g.hooks, inputProcessors: g.inputProcessors })
  *   // per turn: const { userMessageTail } = g.beginTurn(); …generate…; await g.finalizeReply(text, redrive)
  */
+import type { AgentSpec, AgentWorld, ToolDef, DomainContract } from '@looprun-ai/core';
 import {
   beginTurn as ledgerBeginTurn,
   createLedger,
   finalizeReply as coreFinalizeReply,
   renderScopedSpecTrunk,
   terminalProtocol,
-} from '@looprun-ai/core';
-import type { AgentSpec, AgentWorld, FinalizedReply, ToolDef, DomainContract, TurnLedger } from '@looprun-ai/core';
+} from '@looprun-ai/core/internal';
+import type { FinalizedReply, TurnLedger } from '@looprun-ai/core/internal';
 import { buildWorldTools } from './tools.js';
 import { makeGuardHooks, makeInputProcessors } from './hooks.js';
 import type { GuardHooks } from './hooks.js';

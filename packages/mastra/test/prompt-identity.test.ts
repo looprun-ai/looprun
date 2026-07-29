@@ -14,7 +14,8 @@
  * single token's logprob, so one byte of drift is the whole error budget.
  */
 import { describe, expect, it } from 'vitest';
-import { AgentSpecBase, renderTurnPrompt } from '@looprun-ai/core';
+import { AgentSpecBase } from '@looprun-ai/core';
+import { renderTurnPrompt } from '@looprun-ai/core/internal';
 import type { AgentWorld, DomainContract } from '@looprun-ai/core';
 import { LoopRunAgent } from '../src/index.js';
 import { scriptedModel } from './scripted-model.js';
