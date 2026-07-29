@@ -4,7 +4,7 @@
  * "Messaging-driven calendar management: add events, check the schedule, cancel — never
  * double-book, never delete without asking." The two obligations land differently:
  *
- *   never double-book        → three guards installed below on `addEvent`: `argRequired('title')`,
+ *   never double-book        → four guards installed below on `addEvent`: `argRequired('title')`,
  *                              `argFormat` on each date-time, then the `custom` run-dim clash gate
  *                              (shape first, because the clash check compares strings)
  *   never delete without ask → NOT written here. Naming `cancelEvent` in `destructiveTools` makes

@@ -253,14 +253,18 @@ build input for the chapter, not API the chapter teaches.
 *The catalog — 30 factories, referenced collectively by `GUARD_CATALOG`, grouped as the generated
 chapter groups them (plus `canonArgs`, taught in prose — see above):*
 
-| group | factories |
+**Grouped by `hook`, the enforcement PHASE** (controller ruling, Task 10) — the axis the authoritative
+agentspec reference organizes by, and the one that decides what a rule can see and therefore enforce.
+`custom` is listed apart because its hook follows the `dim` its author passes, so it belongs to no
+single phase; `category` (the FILE a factory lives in) is shown per row inside the chapter but is not
+the grouping axis.
+
+| group (hook) | factories |
 |---|---|
-| argument shape (3 + `canonArgs` in prose) | `argRequired` `argAbsent` `argFormat` |
-| sequencing & pre-tool (8) | `requiresBefore` `forbidThisTurn` `precondition` `maxCalls` `noDuplicateCall` `confirmFirst` `noActAfterAskSameTurn` `destructiveThrottle` |
-| tool result (1) | `resultInvariant` |
-| reply honesty (6) | `noFabricatedSuccess` `destructiveClaimRequiresSuccess` `noFalseFailureClaim` `pendingConfirmMustAsk` `noOutOfSurfaceActionClaim` `noUngroundedRegulatedFigure` |
-| reply shape & content (8) | `replyMustMention` `replyMaxOccurrences` `replySingleQuestion` `replyConfirmsLabels` `emptyReply` `degenerationGuard` `jargonScrub` `minimalDisclosure` |
-| policy & safety (3) | `noInstructionFromData` `noCompetitorClaim` `consentRequired` |
+| `preTool` (13) | `requiresBefore` `forbidThisTurn` `maxCalls` `noDuplicateCall` · `argRequired` `argAbsent` `argFormat` (+ `canonArgs` in prose) · `precondition` `consentRequired` · `confirmFirst` `noActAfterAskSameTurn` `destructiveThrottle` · `noInstructionFromData` |
+| `postTool` (1) | `resultInvariant` |
+| `onReply` (14) | `pendingConfirmMustAsk` `noFabricatedSuccess` `destructiveClaimRequiresSuccess` `noFalseFailureClaim` `noOutOfSurfaceActionClaim` `noUngroundedRegulatedFigure` `noCompetitorClaim` `replyMustMention` `replyMaxOccurrences` `replySingleQuestion` `replyConfirmsLabels` `emptyReply` `degenerationGuard` `minimalDisclosure` |
+| `onReplyMutate` (1) | `jargonScrub` |
 | escape hatch (1) | `custom` |
 
 **Example used.** Each catalog row renders a two-to-six-line snippet against the scheduler world,
@@ -469,7 +473,7 @@ Stated so Tasks 3–7 do not have to re-derive it, and so nobody reads a gap as 
 | 5 | **Import specifiers:** 02 `looprun/mastra` · 03 `looprun` · 04 `looprun` · 05 `looprun/mastra` + `looprun` + `looprun/models` + **`@looprun-ai/eval`** · 06 **`@looprun-ai/server`** + `looprun/models` + `looprun/mastra`. The facade publishes only `.` `./core` `./mastra` `./models` `./vercel`. **Open: add `looprun/eval` + `looprun/server` facades** so the tutorial uses one package name throughout? | Task 12 |
 | 6 | **`@looprun-ai/vercel` is excluded from the tutorial** (non-functional stub). Package fate — ship, fix or drop — is a Task 12 decision to surface to the user | Task 12 |
 | 7 | The nine superseded docs are deleted only after their absorbing chapter exists (local-models → 06, eval-config + measured-loop → 05, **mcp-tools → 06** — moved from 03 by the §7 amendment) | Task 12 |
-| 8 | **`GuardExecutionError` ships on `@looprun-ai/core/internal`** (Task 3, controller ruling). It is a class the runtime *throws at the consumer* when a guard's `check()`/`prose()` throws, so it must be reachable from some entry point or `catch (e) { if (e instanceof GuardExecutionError) … }` is unwritable outside this package. **Deferred:** Task 10 decides whether chapter 04's custom-guard section teaches it — if it does, it promotes to public and leaves `/internal` | Task 10 |
+| 8 | **`GuardExecutionError` ships on `@looprun-ai/core/internal`** (Task 3, controller ruling). It is a class the runtime *throws at the consumer* when a guard's `check()`/`prose()` throws, so it must be reachable from some entry point or `catch (e) { if (e instanceof GuardExecutionError) … }` is unwritable outside this package. **Resolved (Task 10): it stays on `/internal`.** Chapter 04 §6 **mentions** it — "a guard that throws is an author bug; the runtime re-throws a `GuardExecutionError` naming the hook, the binding id, the kind and the tool" — but does not teach its API, because the intended reaction is to *fix the guard*, not to catch the error by class. Under §0's teach-vs-mention terms a mention is not teaching, so it is not one of the 89 and does not move. Counts unchanged: 04 teaches 35, core 51 | Task 10 |
 
 ---
 

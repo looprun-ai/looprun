@@ -1,0 +1,678 @@
+# 04 · Guards
+
+**What you get from this chapter:** the complete rule vocabulary — 30 factories, what each one
+prevents, one minimal example each — plus the four types they are written in and how to write your
+own when nothing fits. Everything here is from `looprun` (≡ `looprun/core`).
+
+> **Code source.** §5 is **generated** from `GUARD_CATALOG` (`packages/core/src/guards/catalog.ts`)
+> by `scripts/gen-guards-chapter.mjs`; a parity test keeps that array in bijection with the factories
+> `src/guards/` actually exports, and `pnpm docs:guards --check` runs in CI, so a row here cannot
+> describe a kind that does not ship. The hand-written sections quote
+> [`docs/tutorial/snippets/04-guards.ts`](snippets/04-guards.ts) and `snippets/scheduler/`, which CI
+> typechecks against the published package. **Signature blocks** are quoted from the library source
+> and are not compiled here.
+
+Chapter 03 left the scheduler with one hand-written rule and two obligations already met:
+
+```
+   never double-book         → argRequired + argFormat×2 + a custom clash gate   (§8 of chapter 03)
+   never delete without ask  → destructiveTools: ['cancelEvent']
+                               ⇒ AgentSpecBase installs confirmFirst + destructiveThrottle
+```
+
+This chapter is the rest of the vocabulary. Read §1–§4 once; §5 is a reference you come back to.
+
+---
+
+## 1. What a guard is — the four types
+
+Every factory in §5 returns one object of the same shape: a deterministic **check** and an
+LLM-facing **prose** (chapter 01 §3).
+
+```ts
+interface Guard {
+  kind: string;                                             // the runtime name, e.g. 'confirmFirst'
+  dim: Dim;                                                 // which hooks it is legal on
+  check(ctx: GuardCtx): string | null | Promise<string | null>;   // deny text, or null to allow
+  prose(): string;                                          // the same rule, for the system prompt
+  meta?: { before?: string[]; requiredStrings?: string[] } & Record<string, unknown>;
+}
+```
+<sub>signature, from `looprun`</sub>
+
+Two renderings of one rule, and **the checker never reads the prose**. A guard whose prose says
+something its check does not enforce is a rule the model is told about and nothing verifies — the
+failure this whole design exists to make impossible.
+
+`check` returns the **correction**, not a log line: that string is what the model reads, so write it
+as an instruction ("do not book it — name the clash and ask what to do"). Returning `null` allows.
+
+### `GuardCtx` — everything a check may read
+
+```ts
+interface GuardCtx {
+  args: Record<string, unknown>;      // the proposed call's arguments      (tool hooks)
+  tool?: string;                      // the proposed call's name           (tool hooks)
+  world: AgentWorld;                  // your world — read it through a type, never bare
+  observed: ObservedCall[];           // every call THIS CONVERSATION, oldest first
+  turnIndex: number;                  // which turn is being adjudicated
+  reply?: string;                     // the reply text                     (onReply only)
+  result?: unknown;                   // the tool's result                  (postTool only)
+  producedThisTurn?: string[];
+  attachmentsThisTurn?: string[];
+  notes?: string[];
+  siblingCallsThisStep?: ObservedCall[];   // same-step calls still in flight — destructiveThrottle only
+}
+```
+<sub>signature, from `looprun` — abridged; the JSDoc on each field is worth reading</sub>
+
+**What is not there is the point: the user's text.** No field carries the message. That is the
+*magnet firewall* — a rule that could be scoped by what the user said would be a rule the user can
+talk their way past. Guards key on arguments, world state and observed calls; nothing else.
+
+`world` is typed as `AgentWorld`, whose index signature makes a typo compile (chapter 03 §7), so read
+your accessors through a named type — §6 shows the pattern.
+
+### `ObservedCall` — one recorded call
+
+```ts
+interface ObservedCall {
+  name: string;
+  args: Record<string, unknown>;
+  ok: boolean;                                          // did the call succeed
+  turnIndex: number;                                    // which turn it happened on
+  resultFlags?: { requiresConfirmation?: boolean };     // the two-step protocol's probe
+  tookEffect?: boolean;                                 // did it MUTATE the world (vs a read)
+}
+```
+<sub>signature, from `looprun`</sub>
+
+Three fields do the heavy lifting across the catalog. `turnIndex` is what makes "in an **earlier**
+turn" expressible, which is the whole of `confirmFirst`. `ok` separates a call that happened from one
+that succeeded. `tookEffect` separates a write that landed from a pure read or a refused write — it
+is why `noFalseFailureClaim` does not veto an honest "I could not find it" on a read-only turn.
+
+Two names in `observed` are runtime-owned rather than yours: `replyToUser` and `askUser` are pushed
+in with `ok: true`, so a check that means "did the model do any work" must filter them out.
+
+### `Dim` — the five enforcement dims, and why they exist
+
+```ts
+type Dim = 'spatial' | 'input' | 'run' | 'output' | 'behavior';
+```
+<sub>signature, from `looprun`</sub>
+
+A dim is a claim about **which `GuardCtx` fields the check reads**, and it is the only thing that
+decides which hooks the guard may be installed on:
+
+```
+   dim        reads                          legal hooks
+   ────────   ────────────────────────────   ──────────────────────────────
+   spatial    ctx.tool / ctx.args            onInput · preTool · postTool
+   input      ctx.tool / ctx.args            onInput · preTool · postTool
+   run        ctx.tool / ctx.args + world    onInput · preTool · postTool
+   output     ctx.result                     postTool                        ← only hook that has it
+   behavior   ctx.reply                      onReply                         ← only hook that has it
+```
+
+You never pass a `dim` for a catalog factory — each one carries its own. You pass one exactly once:
+to `custom` (§6). Get it wrong and `addGuard` **throws at construction**, which is the point: a
+`behavior` guard installed on `preTool` would read `ctx.reply === undefined`, never fire, and still
+print its prose into the prompt — coverage that does not exist.
+
+---
+
+## 2. Binding one: `addGuard`
+
+Chapter 03 §8 teaches the socket; this is the one-line reminder.
+
+```ts
+spec.addGuard(hook, target, guard, opts?)      // hook: Hook, target: ToolTarget, guard: Guard
+spec.addReplyCheck(guard, opts?)               // ≡ addGuard('onReply', 'any', guard)
+spec.addMutator(mutator, opts?)                // for a ReplyMutator — §5's onReplyMutate row
+```
+<sub>signatures — methods of `AgentSpecBase`</sub>
+
+Every example in §5 is the third argument. The hook you pass it on is the section it is listed
+under, and `addGuard` enforces the dim×hook matrix above.
+
+Give every binding an `id`. It is what a `GuardExecutionError` names when a check throws, what the
+eval output attributes a veto to, and what makes a spec diff readable.
+
+---
+
+## 3. Five of them are already installed
+
+`AgentSpecBase`'s constructor installs the universal invariants before your code runs, and the
+destructive-safety protocol iff you declared `destructiveTools` (chapter 03 §2):
+
+```
+   ALWAYS                        noDuplicateCall   (preTool)
+                                 degenerationGuard (onReply)
+                                 emptyReply        (onReply)
+   IFF destructiveTools is set   confirmFirst + destructiveThrottle, on exactly those tools
+   IFF lexicon.falseFailureClaimRe is set   noFalseFailureClaim (onReply)
+```
+
+They have catalog rows in §5 because they are real kinds you must be able to read — **not** because
+you should call them. Re-adding one by hand renders the same rule twice in the prompt, from two
+sources that will drift.
+
+---
+
+## 4. Two things to know before the table
+
+**Choosing between neighbours is the hard part.** Every row's *when to reach for it* is written
+against its neighbours, and the pairs that get confused are worth reading even when you need
+neither: `requiresBefore` vs `precondition` (call order vs world state) · `forbidThisTurn` vs
+`noDuplicateCall` (the first call vs the repeat) · `confirmFirst` vs `consentRequired` vs
+`pendingConfirmMustAsk` (the conversation, a standing world flag, the reply) · `replyMustMention` vs
+`replyConfirmsLabels` (any one keyword vs every label).
+
+**`canonArgs` — the fingerprint the repetition kinds compare.** It is exported and public, but it is
+a helper, not a factory: it returns a `string`, not a `Guard`, so it has no catalog row.
+
+```ts
+function canonArgs(v: unknown): string      // key-order-independent canonical fingerprint
+```
+<sub>signature, from `looprun`</sub>
+
+`noDuplicateCall` and `maxCalls` do not compare argument objects — they compare
+`canonArgs(args)`, so key order is not identity and a re-ordered retry is still the same call:
+
+```ts
+/** Key order is not identity: both calls are the SAME call to `noDuplicateCall` and `maxCalls`. */
+export const sameCallFingerprint =
+  canonArgs({ start: '2026-03-02T10:00', title: 'Standup' }) === canonArgs({ title: 'Standup', start: '2026-03-02T10:00' });
+
+/** …and a different VALUE is a different call, so a corrected retry is never denied as a repeat. */
+export const differentCallFingerprint =
+  canonArgs({ title: 'Standup' }) !== canonArgs({ title: 'Stand-up' });
+```
+<sub>excerpt · `snippets/04-guards.ts`</sub>
+
+Reach for it directly when you write a `custom` guard that counts calls: use the same fingerprint the
+built-in kinds use, or your rule and theirs will disagree about what "the same call" means.
+
+---
+
+<!-- BEGIN GENERATED: guard catalog — `node scripts/gen-guards-chapter.mjs` -->
+
+<!-- Rendered from `packages/core/src/guards/catalog.ts`. Do NOT edit between the markers: run
+     `pnpm docs:guards` (it needs a built core), and fix wording in the catalog itself. -->
+
+## 5. The catalog — 30 factories
+
+Grouped by the hook each one is installed on, because the hook decides what a rule can see and
+therefore what it can enforce (chapter 03 §8). 13 preTool · 1 postTool · 14 onReply · 1 onReplyMutate · 1 escape hatch.
+
+### `preTool` — before the call runs
+
+A call has been proposed and not yet executed. A deny returns to the model AS the tool result, in the governance envelope, and the model retries inside the same generation — so the correction text is written as an instruction. Nothing has happened to the world yet, which is why every gate that must PREVENT something lives here.
+
+| factory | file | what it enforces |
+|---|---|---|
+| [`requiresBefore`](#1-requiresbefore) | `flow.ts` | A tool may run only after every named dependency has already run successfully this conversation. |
+| [`forbidThisTurn`](#2-forbidthisturn) | `flow.ts` | An unconditional deny of the bound tool while the binding is installed — the first call is denied too. |
+| [`maxCalls`](#3-maxcalls) | `flow.ts` | A tool may succeed at most n times per turn (default) or per conversation. |
+| [`noDuplicateCall`](#4-noduplicatecall) | `flow.ts` | Denies a call whose tool and canonical arguments already succeeded earlier in the same turn. |
+| [`argRequired`](#5-argrequired) | `args.ts` | The named argument must be present and non-empty (a blank string counts as missing). |
+| [`argAbsent`](#6-argabsent) | `args.ts` | The named argument must not be passed at all. |
+| [`argFormat`](#7-argformat) | `args.ts` | A present, non-empty string argument must match the given pattern; absent or empty is left to argRequired. |
+| [`precondition`](#8-precondition) | `world.ts` | The call is allowed only while a predicate over the host world holds. |
+| [`consentRequired`](#9-consentrequired) | `world.ts` | Risk family 6 — a set of writes may run only while the world says this person's consent is on record. |
+| [`confirmFirst`](#10-confirmfirst) | `confirmation.ts` | A destructive tool needs the user's go-ahead from an EARLIER turn — via a confirm flag probe or a prior ask. Passing a mechanism NAME to the string overload throws at construction. |
+| [`noActAfterAskSameTurn`](#11-noactafterasksameturn) | `confirmation.ts` | Denies the listed tools on a turn in which the model already asked the user a question. |
+| [`destructiveThrottle`](#12-destructivethrottle) | `confirmation.ts` | At most one destructive action that TOOK EFFECT per turn (a confirmation probe does not count). |
+| [`noInstructionFromData`](#13-noinstructionfromdata) | `reply.ts` | Risk family 2 — denies the listed destructive tools while an imperative sits in the conversation's tool results and no earlier turn exposed the action to the user. |
+
+#### 1. `requiresBefore`
+
+A tool may run only after every named dependency has already run successfully this conversation.
+
+**When to reach for it.** An ordered flow where a step is meaningless without its predecessors — bind one gate per downstream tool naming all of them. Use this for "which call came first", not for "what state is the world in" (that is precondition).
+
+```ts
+requiresBefore(['findBooking'])
+```
+
+#### 2. `forbidThisTurn`
+
+An unconditional deny of the bound tool while the binding is installed — the first call is denied too.
+
+**When to reach for it.** A tool must be off for this turn or this layer, no matter what. It is not a repeat detector: reach for noDuplicateCall when the FIRST call is legitimate and only the repeat is not.
+
+```ts
+forbidThisTurn('Do not reschedule while a cancellation is pending — resolve that first.')
+```
+
+#### 3. `maxCalls`
+
+A tool may succeed at most n times per turn (default) or per conversation.
+
+**When to reach for it.** A bulk cap on a tool that is legitimate but expensive or nagging — sweeps, notifications, repeat contact. Pick scope:"conversation" for retention-style limits, scope:"turn" for per-answer budgets.
+
+```ts
+maxCalls('sendEmail', 1, 'You already emailed this person.', { scope: 'conversation' })
+```
+
+#### 4. `noDuplicateCall`
+
+Denies a call whose tool and canonical arguments already succeeded earlier in the same turn.
+
+**When to reach for it.** Always on (the spec class auto-installs it): it stops the same-turn retry loop where a model re-reads an identical query hoping for a different answer. Cross-turn repeats stay legal — a later turn is a genuine refresh.
+
+```ts
+noDuplicateCall()
+```
+
+#### 5. `argRequired`
+
+The named argument must be present and non-empty (a blank string counts as missing).
+
+**When to reach for it.** A field the tool cannot do its job without, and the model tends to omit or fill with whitespace. For a field that must be well-FORMED rather than merely present, add argFormat.
+
+```ts
+argRequired('bookingId')
+```
+
+#### 6. `argAbsent`
+
+The named argument must not be passed at all.
+
+**When to reach for it.** A parameter the model keeps inventing for this tool, or the excluded half of a mutually exclusive pair — bind argAbsent on each side of the pair.
+
+```ts
+argAbsent('customerEmail')
+```
+
+#### 7. `argFormat`
+
+A present, non-empty string argument must match the given pattern; absent or empty is left to argRequired.
+
+**When to reach for it.** The value has a shape the model can plausibly fabricate — an id, a date, a code. Compose it with argRequired when the field is also mandatory; alone it only polices the values that are actually sent.
+
+```ts
+argFormat('bookingId', '^BK-\\d{6}$')
+```
+
+#### 8. `precondition`
+
+The call is allowed only while a predicate over the host world holds.
+
+**When to reach for it.** A gate whose discriminator lives in WORLD state, not in this call — the predicate never sees the acting call's arguments. If the discriminator is in the args, use custom instead.
+
+```ts
+precondition((world) => world.accountActive === true, 'This account is closed — you cannot act on it.', 'act on an account only while it is open')
+```
+
+#### 9. `consentRequired`
+
+Risk family 6 — a set of writes may run only while the world says this person's consent is on record.
+
+**When to reach for it.** Storing, sharing or transmitting personal data. It is precondition specialised to a TOOL SET, which is what makes the consent posture auditable in a spec header; pair it with a conversation-scoped maxCalls for repeat contact.
+
+```ts
+consentRequired({ tools: ['storeProfile'], consentOk: (world) => world.consentOnRecord === true, reason: 'No consent on record — ask for it before storing anything.' })
+```
+
+#### 10. `confirmFirst`
+
+A destructive tool needs the user's go-ahead from an EARLIER turn — via a confirm flag probe or a prior ask. Passing a mechanism NAME to the string overload throws at construction.
+
+**When to reach for it.** The user must have agreed before this call runs, and the evidence has to be cross-turn — this is the consent gate itself. Its neighbours answer different questions: destructiveThrottle caps the blast radius of a turn that IS approved, consentRequired reads a standing world flag rather than the conversation, and pendingConfirmMustAsk gates the REPLY rather than the call. Mechanism: "arg" when the tool carries a confirm flag, "prior-ask" when it has none and an earlier question is the only possible evidence; the string overload sets the FLAG NAME, so confirmFirst('prior-ask') throws rather than silently building a guard that can never fire.
+
+```ts
+confirmFirst('confirmed')
+```
+
+#### 11. `noActAfterAskSameTurn`
+
+Denies the listed tools on a turn in which the model already asked the user a question.
+
+**When to reach for it.** The mirror image of confirmFirst's cross-turn requirement: it closes the multi-tool step that asks and executes back to back, which reads as "asked" but never gave the user a chance to answer.
+
+```ts
+noActAfterAskSameTurn(['cancelBooking'])
+```
+
+#### 12. `destructiveThrottle`
+
+At most one destructive action that TOOK EFFECT per turn (a confirmation probe does not count).
+
+**When to reach for it.** Auto-installed alongside confirmFirst. It is the blast-radius cap, not a consent gate: it stops chained destructive calls in one turn even when each one is individually confirmed.
+
+```ts
+destructiveThrottle(['cancelBooking', 'refundOrder'])
+```
+
+#### 13. `noInstructionFromData`
+
+Risk family 2 — denies the listed destructive tools while an imperative sits in the conversation's tool results and no earlier turn exposed the action to the user.
+
+**When to reach for it.** Tool results can carry attacker-controlled text (notes, messages, tickets). The proxy is deliberately conservative — it converts a poisoned same-turn request into the legal ask-then-act two-turn flow.
+
+```ts
+noInstructionFromData({ tools: ['cancelBooking'], instructionRe: /please cancel|delete all/i })
+```
+
+### `postTool` — the call has run
+
+The only hook that sees `ctx.result`. It cannot veto anything — the effect already happened — so its job is to stop the RESULT from being reported as something it was not: a violation here joins the reply redrive set.
+
+| factory | file | what it enforces |
+|---|---|---|
+| [`resultInvariant`](#14-resultinvariant) | `world.ts` | A post-execution check on the tool RESULT: when the predicate fails, the violation joins the reply redrive set. |
+
+#### 14. `resultInvariant`
+
+A post-execution check on the tool RESULT: when the predicate fails, the violation joins the reply redrive set.
+
+**When to reach for it.** The call already ran and cannot be undone, but its result must not be reported as if it satisfied the request — an empty report, a partial write. It never vetoes the call; it corrects the reply.
+
+```ts
+resultInvariant((result) => Array.isArray(result) && result.length > 0, 'The search returned nothing — say so instead of summarising it.', 'report an empty result as empty')
+```
+
+### `onReply` — the reply exists, and has not been sent
+
+The reply text is in `ctx.reply` and no tool can run any more. A deny costs a bounded no-tools re-generation and, if that still violates, the deterministic honest closure — so these kinds are written to fire on what was ASSERTED, never on what was merely mentioned.
+
+| factory | file | what it enforces |
+|---|---|---|
+| [`pendingConfirmMustAsk`](#15-pendingconfirmmustask) | `confirmation.ts` | When a probe returned requiresConfirmation this turn and nothing resolved it, the reply must relay that question. |
+| [`noFabricatedSuccess`](#16-nofabricatedsuccess) | `honesty.ts` | The reply may not claim a tool's effect, cite an invented artifact label, or use a banned phrase when the tool did not succeed this turn. |
+| [`destructiveClaimRequiresSuccess`](#17-destructiveclaimrequiressuccess) | `honesty.ts` | A declarative claim that a destructive action happened is denied unless one actually took effect this turn. |
+| [`noFalseFailureClaim`](#18-nofalsefailureclaim) | `honesty.ts` | When every domain call this turn succeeded and one of them mutated the world, the reply may not claim inability. |
+| [`noOutOfSurfaceActionClaim`](#19-nooutofsurfaceactionclaim) | `honesty.ts` | Risk family 4 — a declarative claim of an action whose tool is not on this agent's surface is denied. |
+| [`noUngroundedRegulatedFigure`](#20-noungroundedregulatedfigure) | `honesty.ts` | Risk family 5 — a figure or conclusion of a regulated class may appear only when a tool returned it this turn. |
+| [`noCompetitorClaim`](#21-nocompetitorclaim) | `honesty.ts` | Risk family 3 — within one sentence, a named third party plus comparative phrasing or a comparative figure is denied. |
+| [`replyMustMention`](#22-replymustmention) | `reply.ts` | The reply must contain at least one of the given keywords (case-insensitive). |
+| [`replyMaxOccurrences`](#23-replymaxoccurrences) | `reply.ts` | At most n DISTINCT calls-to-action from the list may appear in one reply. |
+| [`replySingleQuestion`](#24-replysinglequestion) | `reply.ts` | The reply must carry exactly one question mark. |
+| [`replyConfirmsLabels`](#25-replyconfirmslabels) | `reply.ts` | The reply must be non-empty and name every one of the given labels. |
+| [`emptyReply`](#26-emptyreply) | `reply.ts` | The final reply must not be blank. |
+| [`degenerationGuard`](#27-degenerationguard) | `reply.ts` | Catches leaked reasoning or tool markup, chat-template tokens and run-away line repetition in the reply. |
+| [`minimalDisclosure`](#28-minimaldisclosure) | `reply.ts` | Risk family 1 — caps how many records' personal FIELDS one reply may carry, and requires each named field to have been returned by a tool this turn. |
+
+#### 15. `pendingConfirmMustAsk`
+
+When a probe returned requiresConfirmation this turn and nothing resolved it, the reply must relay that question.
+
+**When to reach for it.** The world runs the two-step protocol itself: the tool answers "I need confirmation" and the risk is a reply that summarises the action as done. It gates the REPLY; confirmFirst gates the call.
+
+```ts
+pendingConfirmMustAsk({ askRe: /shall I|do you want me to/i })
+```
+
+#### 16. `noFabricatedSuccess`
+
+The reply may not claim a tool's effect, cite an invented artifact label, or use a banned phrase when the tool did not succeed this turn.
+
+**When to reach for it.** A tool whose output the model likes to announce before it exists. Arm only the seams you need — claim language, label existence, or an unconditional ban — and ship banProse with every banRe.
+
+```ts
+noFabricatedSuccess('generateReport', { reason: 'No report was generated this turn — do not say one was.', claimRe: /report is ready/i })
+```
+
+#### 17. `destructiveClaimRequiresSuccess`
+
+A declarative claim that a destructive action happened is denied unless one actually took effect this turn.
+
+**When to reach for it.** The destructive counterpart of noFabricatedSuccess, attempt-keyed and sentence-scoped: with no attempt this turn a destructive verb is read-back status and is left alone, and questions or offers never count as claims.
+
+```ts
+destructiveClaimRequiresSuccess(['cancelBooking'], { claimRe: /cancelled/i, askRe: /shall I cancel/i, offerRe: /would you like/i })
+```
+
+#### 18. `noFalseFailureClaim`
+
+When every domain call this turn succeeded and one of them mutated the world, the reply may not claim inability.
+
+**When to reach for it.** The work actually went through and the model still apologises for failing — the mirror image of the fabricated-success kinds, which catch the opposite lie. It only adjudicates a turn that MUTATED the world, so an honest "I could not find it" on a read-only turn is never touched. Auto-installed when the lexicon supplies the pattern; keep that pattern to attempted-work-failure phrasing ("failed to", "went wrong"), since a broad inability regex would veto honest policy refusals.
+
+```ts
+noFalseFailureClaim({ claimRe: /failed to|something went wrong/i })
+```
+
+#### 19. `noOutOfSurfaceActionClaim`
+
+Risk family 4 — a declarative claim of an action whose tool is not on this agent's surface is denied.
+
+**When to reach for it.** The agent is expected to hand off (billing, legal, dispatch) and the model promises the handoff as done. It deliberately stops at the surface boundary, so it never double-fires with the owned-action honesty kinds.
+
+```ts
+noOutOfSurfaceActionClaim({ actionClaims: [{ claimRe: /refund (?:has been )?issued/i, tool: 'issueRefund' }], surface: ['findBooking'] })
+```
+
+#### 20. `noUngroundedRegulatedFigure`
+
+Risk family 5 — a figure or conclusion of a regulated class may appear only when a tool returned it this turn.
+
+**When to reach for it.** Legal, medical or financial surfaces. Keep allowFromToolResults true when a tool is authoritative for the class; set it false to ban the class outright where nothing in the world can license it.
+
+```ts
+noUngroundedRegulatedFigure({ regulatedRe: /\b\d+\s?mg\b/i, allowFromToolResults: true })
+```
+
+#### 21. `noCompetitorClaim`
+
+Risk family 3 — within one sentence, a named third party plus comparative phrasing or a comparative figure is denied.
+
+**When to reach for it.** Any user-facing sales or support surface. The figure branch is sound by construction: no tool returns a competitor's numbers, so any such number is invented.
+
+```ts
+noCompetitorClaim({ competitorRe: /\bAcme\b/i, comparativeRe: /\b(?:better|cheaper|faster) than\b/i })
+```
+
+#### 22. `replyMustMention`
+
+The reply must contain at least one of the given keywords (case-insensitive).
+
+**When to reach for it.** A mandatory element of coverage that is the same on every turn — a referral phrase, a required disclaimer. For "name the records you just acted on", use replyConfirmsLabels instead.
+
+```ts
+replyMustMention(['support@example.com'], 'Give the support address so the person can follow up.')
+```
+
+#### 23. `replyMaxOccurrences`
+
+At most n DISTINCT calls-to-action from the list may appear in one reply.
+
+**When to reach for it.** Anti-nag: the model stacks several different asks onto one message. It counts distinct entries, not repetitions, so one CTA restated inside a single ask still passes.
+
+```ts
+replyMaxOccurrences(['book now', 'call us', 'subscribe'], 1, 'One ask per reply — drop the extra calls-to-action.')
+```
+
+#### 24. `replySingleQuestion`
+
+The reply must carry exactly one question mark.
+
+**When to reach for it.** Recovery and clarification turns, where a pile of questions at once is what stalls the conversation. Bind it to the layer that handles those turns, not to every reply.
+
+```ts
+replySingleQuestion('Ask exactly one question so the person can answer it.')
+```
+
+#### 25. `replyConfirmsLabels`
+
+The reply must be non-empty and name every one of the given labels.
+
+**When to reach for it.** The model just acted on identified records and the user needs to see WHICH ones. Unlike replyMustMention (any one keyword), every label is required.
+
+```ts
+replyConfirmsLabels(['BK-100234'], 'Name the booking you acted on so the person can check it.')
+```
+
+#### 26. `emptyReply`
+
+The final reply must not be blank.
+
+**When to reach for it.** Always on (auto-installed). It is the floor under every other reply kind: a turn that ends with nothing said is a failure no other guard would catch.
+
+```ts
+emptyReply()
+```
+
+#### 27. `degenerationGuard`
+
+Catches leaked reasoning or tool markup, chat-template tokens and run-away line repetition in the reply.
+
+**When to reach for it.** The reply is broken as an ARTIFACT rather than wrong as a claim — think blocks, tool-call markup or the same line five times over. No honesty kind fires on that, because nothing was asserted; this one catches the weak-model failure class every domain shares. Always on (auto-installed); pass selfNarrationRe to add the language-specific third-person self-narration branch.
+
+```ts
+degenerationGuard({ selfNarrationRe: /the assistant (?:then )?(?:called|checked)/i })
+```
+
+#### 28. `minimalDisclosure`
+
+Risk family 1 — caps how many records' personal FIELDS one reply may carry, and requires each named field to have been returned by a tool this turn.
+
+**When to reach for it.** Any surface that reads personal records. It keys on field-name tokens, never on entity mentions, so a correct multi-record summary that lists only ids and dates stays legal.
+
+```ts
+minimalDisclosure({ piiFields: ['phone', 'email'], entityIdRe: /\bCU-\d{5}\b/, maxEntities: 1 })
+```
+
+### `onReplyMutate` — rewrite the reply, never veto it
+
+A `ReplyMutator`, not a `Guard`: it is applied to the reply before the `onReply` checks run and it has no pass/fail. Bind it with `spec.addMutator(...)`, not `addGuard`.
+
+| factory | file | what it enforces |
+|---|---|---|
+| [`jargonScrub`](#29-jargonscrub) | `reply.ts` | A deterministic egress rewrite of internal vocabulary into user words (word-boundary, case-insensitive). |
+
+#### 29. `jargonScrub`
+
+A deterministic egress rewrite of internal vocabulary into user words (word-boundary, case-insensitive).
+
+**When to reach for it.** Internal status codes and field names leak into replies and no gate can sensibly deny them. It is a MUTATOR, not a guard: it rewrites and never vetoes, so it has no pass/fail behaviour to prove.
+
+```ts
+jargonScrub({ CANC_PEND: 'waiting to be cancelled' })
+```
+
+### The escape hatch — when no kind fits
+
+One factory, and it is the only one whose hook you choose: `custom` follows the `dim` you pass it (`spatial`/`input`/`run` → the tool hooks, `output` → `postTool`, `behavior` → `onReply`), which is why it is listed apart from the phase sections rather than under one of them. Section 6 walks through writing one.
+
+| factory | file | what it enforces |
+|---|---|---|
+| [`custom`](#30-custom) | `custom.ts` | The escape hatch: a guard whose kind, dim, check and prose the spec author writes by hand. |
+
+#### 30. `custom`
+
+The escape hatch: a guard whose kind, dim, check and prose the spec author writes by hand.
+
+**When to reach for it.** Only when no kind fits — typically a domain concept the runtime carries no vocabulary for (media, labels, provenance) read through the world's own accessors. Its hook follows the `dim` you pass (the row says preTool because the example is a `run` guard); replicate the shared kinds' exemptions, since reviewers read this code.
+
+```ts
+custom({ kind: 'imageQuotaLeft', dim: 'run', check: (ctx) => (ctx.world.imageQuotaRemaining > 0 ? null : 'No image quota left this month — say so instead of generating.'), prose: () => 'generate an image only while quota remains' })
+```
+
+<!-- END GENERATED: guard catalog -->
+
+---
+
+## 6. When nothing fits: `custom`
+
+```ts
+function custom(opts: {
+  kind: string;
+  dim: Dim;
+  check: (ctx: GuardCtx) => string | null | Promise<string | null>;
+  prose: () => string;
+}): Guard
+```
+<sub>signature, from `looprun`</sub>
+
+`custom` is not a lesser path — chapter 03's "never double-book" gate is one, because no runtime kind
+knows what a calendar clash is. Reach for it when the discriminator is a **domain concept the runtime
+carries no vocabulary for**, read through your world's own accessors.
+
+Here is the second one the scheduler wants: *an event that has already started is not cancelled*. No
+catalog kind covers it — the discriminator is in the args (**which** event) *and* in the world (its
+start time), which is exactly what rules out `precondition`, whose predicate never sees the args.
+
+```ts
+/**
+ * The accessor this guard needs, named once. `AgentWorld`'s index signature would let the typo
+ * `snapshto()` compile (chapter 03 §7), so the read goes through a type either way.
+ */
+type CalendarReader = AgentWorld & { snapshot(): CalendarEvent[] };
+
+/** The event `ctx.args.eventId` names, or `undefined`. Total: a guard's `check()` must never throw —
+ *  the runtime does not swallow it, it attributes it and rethrows at the caller. */
+function targetEvent(ctx: GuardCtx): CalendarEvent | undefined {
+  const eventId = typeof ctx.args.eventId === 'string' ? ctx.args.eventId : '';
+  return (ctx.world as CalendarReader).snapshot().find((e) => e.id === eventId);
+}
+
+export function noCancelAfterStart(now: string): Guard {
+  return custom({
+    kind: 'noCancelAfterStart',
+    dim: 'run',
+    check: (ctx) => {
+      const event = targetEvent(ctx);
+      if (!event || event.start > now) return null;
+      return `"${event.title}" (${event.id}) started at ${event.start} — it is too late to cancel it. Say so and offer to remove the remaining time instead.`;
+    },
+    prose: () => 'an event that has already started is never cancelled — say it is too late and offer what can still be done',
+  });
+}
+```
+<sub>excerpt · `snippets/04-guards.ts`</sub>
+
+```ts
+/** Binding it: a subclass, so the shared `schedulerSpec` of chapters 02–03 keeps its own surface. */
+export class LateCancelSchedulerSpec extends SchedulerSpec {
+  constructor() {
+    super();
+    this.addGuard('preTool', ['cancelEvent'], noCancelAfterStart(REFERENCE_NOW), { id: 'agent:noCancelAfterStart' });
+  }
+}
+```
+<sub>excerpt · `snippets/04-guards.ts`</sub>
+
+Five rules, learned from the shipped kinds, that a reviewer will look for:
+
+| rule | why |
+|---|---|
+| **`dim` must match what `check` reads** | it is a claim, and `addGuard` holds you to it. This one reads `ctx.args` + `ctx.world` ⇒ `run` |
+| **`check` must be pure and total** | no clock, no randomness, no network, no LLM call — and no throw. Same inputs, same verdict, forever, or a failing eval case is not reproducible |
+| **`check` must not read the user's text** | it is not in `GuardCtx` at all, and reaching for it through `world` re-opens the magnet firewall by hand |
+| **`prose()` states the RULE, not the incident** | present tense, no accusation: it renders into every prompt, including turns where nothing went wrong |
+| **replicate the exemptions the shared kinds have** | e.g. a reply-side rule that fires on questions and offers as if they were claims is a rule that punishes good behaviour |
+
+**A guard that throws is an author bug, and the runtime treats it as one.** It is neither a deny nor
+an allow, so nothing is guessed: `AgentSpecBase` wraps every binding, and a `check()`/`prose()` that
+throws is re-thrown as a `GuardExecutionError` naming the hook, the binding `id`, the kind and the
+tool — out of `runSpecConversation`, loud and addressed, instead of being buried as a model failure.
+You are not expected to catch it; you are expected to fix the guard, which is why the class ships on
+`@looprun-ai/core/internal` rather than the public barrel. Write the total function instead: the
+`typeof … === 'string' ? … : ''` read above is what "total" costs.
+
+---
+
+## 7. Recap
+
+```
+   Guard         kind · dim · check(ctx) → deny string | null · prose() → the prompt line
+   GuardCtx      args · tool · world · observed · turnIndex · reply · result   (never the user text)
+   ObservedCall  name · args · ok · turnIndex · resultFlags · tookEffect
+   Dim           spatial | input | run | output | behavior  → which hooks are legal
+   canonArgs     the key-order-independent call fingerprint the repetition kinds compare
+
+   30 factories, grouped by the hook they run on:
+     preTool        13   prevent it — the deny returns as the tool result, the model retries
+     postTool        1   the result is in; correct the REPLY, not the call
+     onReply        14   the reply exists; a deny costs a re-generation, then the honest closure
+     onReplyMutate   1   rewrite, never veto
+     custom          1   the escape hatch — you pass the dim
+```
+
+You now have the map, the machine and the rules. Chapter 05 runs all three over a scripted
+conversation and turns "it seemed fine" into a number you can re-run.
+
+→ **[05 · Running and eval](05-running-and-eval.md)**

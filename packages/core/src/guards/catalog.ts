@@ -18,10 +18,12 @@ export interface GuardCatalogEntry {
   name: string;            // factory name, e.g. 'confirmFirst'
   category: 'flow' | 'args' | 'world' | 'confirmation' | 'honesty' | 'reply' | 'custom';
   /**
-   * The enforcement PHASE the kind is installed on — the axis the agentspec reference catalog is
-   * organized by, and the one the generated chapter groups by. It follows the factory's `dim` through
-   * the hook×dim matrix (`spec.ts#DIM_HOOKS`): `spatial`/`input`/`run` → `preTool`, `output` →
-   * `postTool`, `behavior` → `onReply`, and a `ReplyMutator` → `onReplyMutate`. It is NOT derivable
+   * The hook the runtime INSTALLS the kind on — the axis the agentspec reference catalog is
+   * organized by, and the one the generated chapter groups by. It is not computed from the factory's
+   * `dim`: `spec.ts#DIM_HOOKS` maps a dim to the SET of hooks that are legal for it (`run` is legal on
+   * onInput/preTool/postTool alike), so the dim narrows the choice without making it. This field
+   * records the choice — in practice `spatial`/`input`/`run` → `preTool`, `output` → `postTool`,
+   * `behavior` → `onReply`, and a `ReplyMutator` → `onReplyMutate`. It is NOT derivable
    * from `category`, which is the FILE the factory lives in: `noInstructionFromData` sits in
    * `reply.ts` (it is about reply-borne data) but gates a call, so its hook is `preTool`.
    */

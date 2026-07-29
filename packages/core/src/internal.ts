@@ -84,8 +84,10 @@ export type { ReplyViolation, FinalizedReply } from './runtime/turn.js';
  * The ATTRIBUTED guard failure — thrown at the consumer when a guard's `check()`/`prose()` throws
  * (an author bug, never swallowed and never converted into a deny; see `spec.ts#attributeGuard`).
  * The runtime throws it across the package boundary, so it must be reachable from some entry point
- * to be caught by class. Placed here by controller ruling; whether chapter 04's custom-guard section
- * should teach it — which would promote it public — is deferred to Task 10 (outline §6).
+ * to be caught by class. Placed here by controller ruling, and it STAYS here: Task 10 decided that
+ * chapter 04's custom-guard section MENTIONS it (the diagnostic naming the broken binding) without
+ * teaching it as API — the intended reaction to a throwing guard is to fix the guard, not to catch
+ * the error — so it is not a taught symbol and does not go on the public barrel (outline §6, #8).
  */
 export { GuardExecutionError } from './rules.js';
 

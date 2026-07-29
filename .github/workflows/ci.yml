@@ -27,6 +27,9 @@ jobs:
       # no-bench-drift) are ordinary vitest files — they RUN on every push/PR, not just exist.
       - run: pnpm -r --if-present test
       - run: node tests/no-bench-drift.test.mjs
+      # Tutorial chapter 04 is GENERATED from GUARD_CATALOG (needs the build above): a kind whose
+      # catalog entry changed without the chapter being re-rendered fails here.
+      - run: node scripts/gen-guards-chapter.mjs --check
       # Governance: the deterministic guard-proof suite + the generated matrix must be in sync.
       - run: pnpm test:proofs
       - run: node scripts/proofs/gen-matrix.mjs --check
