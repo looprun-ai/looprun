@@ -30,12 +30,12 @@ const CORE_INDEX = join(HERE, '..', '..', 'core', 'src', 'index.ts');
 
 // ── Chapter 02 (3) ───────────────────────────────────────────────────────────
 const TAUGHT_02 = ['LoopRunAgent', 'LoopRunAgentConfig', 'LoopRunOptions'];
-// ── Chapter 03 (2) ───────────────────────────────────────────────────────────
-const TAUGHT_03 = ['StateView', 'worldFromTools'];
 // ── Chapter 05 (2) ───────────────────────────────────────────────────────────
 const TAUGHT_05 = ['RuntimeDeps', 'runSpecConversation'];
+// ── Chapter 06 (2) — moved from 03 by the outline §7 amendment ───────────────
+const TAUGHT_06 = ['StateView', 'worldFromTools'];
 
-const TAUGHT = [...TAUGHT_02, ...TAUGHT_03, ...TAUGHT_05].sort();
+const TAUGHT = [...TAUGHT_02, ...TAUGHT_05, ...TAUGHT_06].sort();
 
 /** Inventory §7.2, verdict `internal` or `delete` — module-local, never on the barrel. */
 const NOT_EXPORTED = [
@@ -71,8 +71,8 @@ describe('mastra surface lock — the barrel is the tutorial contract', () => {
   it('the taught mastra surface is exactly the outline §4 mastra rows (7)', () => {
     expect(TAUGHT.length).toBe(7);
     expect(TAUGHT_02.length).toBe(3);
-    expect(TAUGHT_03.length).toBe(2);
     expect(TAUGHT_05.length).toBe(2);
+    expect(TAUGHT_06.length).toBe(2);
     expect(own).toEqual(TAUGHT);
   });
 

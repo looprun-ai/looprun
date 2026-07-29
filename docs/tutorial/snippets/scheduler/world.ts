@@ -6,7 +6,7 @@
  * accessors (`clashesWith`, `hasEvent`) are what stateful guards read through `ctx.world`.
  */
 import type { AgentWorld } from 'looprun';
-import { DATETIME_PATTERN, REFERENCE_NOW } from './contract.js';
+import { DATETIME_PATTERN, REFERENCE_NOW } from './contract.ts';
 
 /** Defence in depth: the guards reject a malformed date-time, and so does the world. */
 const DATETIME_RE = new RegExp(DATETIME_PATTERN);

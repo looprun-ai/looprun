@@ -13,8 +13,8 @@
  */
 import { AgentSpecBase, argFormat, argRequired, custom } from 'looprun';
 import type { TerminalPolicy } from 'looprun';
-import { DATETIME_PATTERN, SCHEDULER_CONTRACT, SCHEDULER_SCOPE } from './contract.js';
-import type { SchedulerWorld } from './world.js';
+import { DATETIME_PATTERN, SCHEDULER_CONTRACT, SCHEDULER_SCOPE } from './contract.ts';
+import type { SchedulerWorld } from './world.ts';
 
 /**
  * `askUser` here always disambiguates or confirms an EXISTING event, so on an empty calendar it has

@@ -2,9 +2,13 @@
  * What every scheduler agent shares: the reference clock, the scope declaration, and the
  * domain contract (tutorial 03). Kept in one module so the full spec and the chapter-02
  * one-tool spec cannot drift apart.
+ *
+ * Relative imports across `scheduler/` carry the `.ts` extension: these modules are also loaded by
+ * NODE, through `looprun-eval` → `loadSubject` (chapter 05's eval subject imports them), and there
+ * a `.js` specifier does not resolve to a `.ts` file.
  */
 import type { AgentScope, DomainContract } from 'looprun';
-import type { SchedulerWorld } from './world.js';
+import type { SchedulerWorld } from './world.ts';
 
 /** The fixed world clock — a Monday, 09:00. A tutorial world never reads a real clock. */
 export const REFERENCE_NOW = '2026-03-02T09:00';

@@ -6,7 +6,7 @@
  * call. Everything else (scope, contract) is shared with the full spec in `spec.ts`.
  */
 import { AgentSpecBase } from 'looprun';
-import { SCHEDULER_CONTRACT, SCHEDULER_SCOPE } from './contract.js';
+import { SCHEDULER_CONTRACT, SCHEDULER_SCOPE } from './contract.ts';
 
 export class HelloSchedulerSpec extends AgentSpecBase {
   constructor() {
