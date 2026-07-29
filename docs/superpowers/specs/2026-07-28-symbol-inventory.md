@@ -476,3 +476,29 @@ Rows are grouped by package, in `index.ts` declaration order. `—` = no hits in
 ---
 
 **Row count check:** 149 + 25 + 24 + 52 + 13 + 2 = **265** — every symbol exported by the six `index.ts` files appears exactly once.
+
+---
+
+## 8. Out of scope for this table — the `./testing` subpaths
+
+`core` and `mastra` each publish a **second** entry point that this inventory does not cover,
+because the brief scoped it to the six `src/index.ts` barrels:
+
+```
+package.json "exports"
+  @looprun-ai/core     "."  "./testing"   ← 19 more symbols
+  @looprun-ai/mastra   "."  "./testing"   ← 9 more symbols
+  @looprun-ai/models   "."
+  @looprun-ai/eval     "."
+  @looprun-ai/server   "."
+  @looprun-ai/vercel   "."
+  looprun              "."  "./core"  "./mastra"  "./models"  "./vercel"   (pure `export *` facades)
+```
+
+| subpath | symbols | consumers found |
+|---|---|---|
+| `@looprun-ai/core/testing` | `FixtureWorld`, `FIXTURE_DOMAIN`, `FIXTURE_LABEL_SCHEME`, `FIXTURE_LEXICON`, `FIXTURE_TOOL_DEFS`, `FIXTURE_TOOL_NAMES`, `FixturePreset`, `runL1`, `AUTO_LAYER_KINDS`, `buildCollectiveSpec`, `buildIsolatedSpec`, `craftCtx`, `requireMake`, `GuardProof`, `ProofCase`, `ProofLoopCase`, `PartialGuardCtx`, `ProofExpect`, `ProofPolarity` | only `packages/core/test/**` and `packages/mastra/test/**`, plus one **documentation string** in `skills/looprun-governance/scripts/scaffold-proof-cases.mjs` that tells users to `import type { GuardProof } from '@looprun-ai/core/testing'` |
+| `@looprun-ai/mastra/testing` | `fakeLLM`, `scriptedModel`, `ScriptedModel`, `ScriptPart`, `ScriptStep`, `assertSignal`, `expectedSignal`, `pickRecord`, `runProofLoop` | only `packages/mastra/test/**` and `packages/server/test/**` |
+
+These are *deliberately* test-only surfaces and the governance skill points users at `GuardProof`,
+so they should not be swept up by a later "delete unused exports" pass without a separate decision.
