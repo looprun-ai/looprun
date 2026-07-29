@@ -46,7 +46,6 @@ export function schedulerServerConfig(model: unknown, onTurn: (event: TurnEvent)
 export async function serveScheduler(model: unknown): Promise<ModelServer> {
   const server = await createModelServer(
     schedulerServerConfig(model, (event) => {
-      // eslint-disable-next-line no-console
       console.log(`${event.model} · turn ${event.meta.turnIndex} · corrections`, event.meta.corrections);
     }),
   );

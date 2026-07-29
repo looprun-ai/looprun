@@ -71,10 +71,14 @@ export const LOCAL_DECODING = pinnedDecoding({ seed: 7, maxOutputTokens: 2048 })
 /** Gemini: 'off' is the NUMERIC `thinkingBudget: 0` — a `thinkingLevel` value does not disable it. */
 export const GEMINI_PINNED = { temperature: 0, ...geminiThinkingOff() };
 
-/** The cloud validation model, thinking off — both halves in one call. Needs the Google key. */
+/**
+ * The cloud validation model, thinking off. `modelParams` here is ONLY the thinking-off provider
+ * options, so the decoding must still be pinned explicitly — spreading it over `pinnedDecoding()`
+ * is what the eval CLI does too (`provider.ts`: `{ temperature: 0, ...geminiThinkingOff() }`).
+ */
 export function cloudValidationDeps(): RuntimeDeps {
   const { model, modelParams } = geminiFlashLiteThinkOff();
-  return { ...schedulerDeps(model), modelParams };
+  return { ...schedulerDeps(model), modelParams: { ...pinnedDecoding(), ...modelParams } };
 }
 
 // ── 3 · the subject directory ─────────────────────────────────────────────────────────────────

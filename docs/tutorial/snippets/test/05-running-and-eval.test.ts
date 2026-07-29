@@ -8,6 +8,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { scriptedModel } from '@looprun-ai/mastra/testing';
+import { createModelServer } from '@looprun-ai/server';
 import {
   SCHEDULER_TURNS,
   SUBJECT_DIR,
@@ -19,7 +20,7 @@ import {
   runScheduler,
   ungovernedArm,
 } from '../05-running-and-eval.ts';
-import { calendarStateView, nativeWorld } from '../06-advanced.ts';
+import { calendarStateView, nativeWorld, schedulerServerConfig } from '../06-advanced.ts';
 import { SCHEDULER_TOOLS } from '../scheduler/tools.ts';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -82,6 +83,32 @@ describe('05 · the scheduler eval subject', () => {
     // …while the tool surface, the persona and the voice stay: only governance is removed.
     expect(spec.surface.tools).toEqual(subject.specs.scheduler!.surface.tools);
     expect(subject.specs.scheduler!.guards.preTool.length).toBeGreaterThan(0); // never mutated
+  });
+});
+
+describe('06 · the served agent', () => {
+  it('answers a governed turn over the OpenAI-compatible route, with the looprun envelope', async () => {
+    const scripted = scriptedModel([
+      [{ tool: 'listEvents', args: {} }],
+      [{ tool: 'replyToUser', args: { text: 'Standup on Monday 10:00 and the dentist on Wednesday 15:00.' } }],
+    ]);
+    // Port 0 (ephemeral) so the suite never fights the chapter's 8099 or a parallel run.
+    const server = await createModelServer({ ...schedulerServerConfig(scripted.model, () => {}), port: 0 });
+    try {
+      const res = await fetch(`${server.url}/chat/completions`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-looprun-session': 'demo' },
+        body: JSON.stringify({ model: 'scheduler', messages: [{ role: 'user', content: 'What is on my calendar this week?' }] }),
+      });
+      const body = (await res.json()) as { choices: Array<{ message: { content: string } }>; looprun: Record<string, unknown> };
+
+      expect(body.choices[0]!.message.content).toContain('Standup');
+      // The wire envelope carries the governance metadata MINUS the observed ledger (server-side only).
+      expect(Object.keys(body.looprun).sort()).toEqual(['corrections', 'exhausted', 'sessionId', 'turnIndex', 'violations']);
+      expect(body.looprun.sessionId).toBe('demo');
+    } finally {
+      await server.close();
+    }
   });
 });
 

@@ -73,6 +73,29 @@ export function schedulerServerConfig(model: unknown, onTurn: (event: TurnEvent)
 <sub>excerpt · `snippets/06-advanced.ts` — `schedulerAgent` is chapter 02's `LoopRunAgent`, built with
 a world **factory**, because a server is multi-session by definition</sub>
 
+Call it with anything that speaks the protocol — here, `curl`:
+
+```
+$ curl -s http://127.0.0.1:8099/v1/chat/completions \
+    -H 'content-type: application/json' -H 'x-looprun-session: demo' \
+    -d '{"model":"scheduler","messages":[{"role":"user","content":"What is on my calendar this week?"}]}'
+{"id":"chatcmpl-looprun-ms6njwsf1","object":"chat.completion","created":1785363872,"model":"scheduler",
+ "choices":[{"index":0,"message":{"role":"assistant","content":"Standup on Monday 10:00 and the dentist on Wednesday 15:00."},
+ "finish_reason":"stop","logprobs":null}],
+ "usage":{"prompt_tokens":9,"completion_tokens":15,"total_tokens":24},
+ "looprun":{"sessionId":"demo","turnIndex":0,"corrections":[],"exhausted":false,"violations":[]}}
+```
+<sub>**real** — `serveScheduler` was started with a **scripted** model (`@looprun-ai/mastra/testing`),
+so no live model was called and the reply text is the scripted one; the request, the routing, the
+governed turn and the envelope are real, and the JSON is unedited apart from line wrapping. The
+server also answers `GET /v1/models` with
+`{"id":"scheduler","object":"model","owned_by":"looprun","context_length":128000}`</sub>
+
+Three things in that response are the whole pattern: the reply came out of a **governed turn** (the
+model called `listEvents` and closed with `replyToUser`, both gated); the `model` field routed to the
+agent registered under that key; and the non-standard `looprun` field reports what governance did —
+here, nothing to correct.
+
 ### `ModelServerConfig` — the factory argument
 
 | field | what it does |
@@ -118,9 +141,19 @@ interface TurnEvent {
 ```
 <sub>signature, from `@looprun-ai/server`</sub>
 
-The same metadata rides on every response as a non-standard `looprun` field — OpenAI SDKs ignore it,
-and an integration test can assert on it. `corrections` is the same vocabulary as chapter 05's
-`TurnRecord.recoveryEvents`: this is how you see, in production, that a rule fired.
+**Most** of that metadata also rides on every response, as a non-standard `looprun` field that OpenAI
+SDKs ignore and an integration test can assert on — but not all of it:
+
+```
+   onTurn(event)          sessionId · turnIndex · corrections · exhausted · violations · observed
+   response.looprun       sessionId · turnIndex · corrections · exhausted · violations
+                          └─ `observed`, the turn's slice of the call ledger, is NOT on the wire
+```
+
+The ledger stays server-side on purpose: it carries every tool call with its arguments, which is
+domain data the caller of a *model* endpoint has no business receiving. If you need it, take it in
+`onTurn`. `corrections` is the same vocabulary as chapter 05's `TurnRecord.recoveryEvents`: this is
+how you see, in production, that a rule fired.
 
 ### The mapping law — what the facade does *not* honor
 
@@ -204,8 +237,9 @@ family. Binary resolution order: `$LLAMA_BIN` → a `llamacpp-*` build directory
 build number first) → `llama-server` on `PATH`. A from-source build often links its dylibs by an
 `@rpath` into the build directory, so `looprun models serve` sets `DYLD_FALLBACK_LIBRARY_PATH` to the
 binary's own directory on macOS; if you launch the server yourself, do the same — and never through
-`nohup`, which strips `DYLD_*`. You also need a GPU the build can offload to (`-ngl 99`) — Metal on
-Apple Silicon, CUDA elsewhere.
+`nohup`, which strips `DYLD_*`. The measured numbers in the table above assume a GPU the build can
+offload to (`-ngl 99`) — Metal on Apple Silicon, CUDA elsewhere. llama.cpp will run CPU-only, and
+these tiers will be far slower than anything quoted here.
 
 **Overrides, when a machine disagrees with the profile:** `$LLAMA_BIN` (the binary), `$LLAMA_PORT`,
 `$LLAMA_KV`, `$LLAMA_CTX`, `$LLAMA_CACHE_RAM`, `$LLAMA_SLOT_SAVE_PATH` (empty disables the per-agent
@@ -312,7 +346,7 @@ export async function whyIsLocalNotWorking(alias = 'qwen3.5-4b'): Promise<string
 export const RAM24: LocalModelSpec = resolveAlias('ram24');
 export const llamaCpp: ModelRuntimePort = new LlamaCppRuntime();
 ```
-<sub>excerpt · `snippets/06-advanced.ts`</sub>
+<sub>excerpt · `snippets/06-advanced.ts` — the two declarations, with their doc comments elided</sub>
 
 ```ts
 function resolveAlias(alias: string): LocalModelSpec        // throws, naming the known aliases
@@ -433,9 +467,10 @@ interface StateView {
   [k: string]: any;                   // your accessors and values
 }
 
-function worldFromTools(opts?: { stateView?: StateView }): AgentWorld
+function worldFromTools(opts: { stateView?: StateView } = {}): AgentWorld
 ```
-<sub>signatures, from `looprun/mastra`</sub>
+<sub>signatures, from `looprun/mastra`. Both the argument and the `stateView` are optional — a world
+with no state view still supplies the seam, and every state read on it is then `undefined`</sub>
 
 **`worldFromTools` does not build a world from plain functions.** It synthesizes a world whose `exec`
 **throws** if anything calls it:
@@ -460,10 +495,11 @@ What needs a `stateView`, and what does not:
 
 > **`refresh()` is fire-and-forget.** `advanceTurn()` calls it as `void view.refresh?.()` — it does
 > not await. An **async** `refresh` is therefore still in flight while `contract.stateBlock` renders,
-> so the turn can be prompted with the *previous* turn's state. If your state must be current at
-> render time, either keep `refresh` synchronous over an already-warm cache, or refresh outside the
-> agent before calling `generate()`. This is a real seam, not a rounding error, on any remote-backed
-> `StateView`.
+> so the turn can be prompted with the *previous* turn's state. And `advanceTurn()` fires *between*
+> turns, so **turn 0 renders on a view that was never refreshed at all** — whatever the view held at
+> construction is what the first prompt sees. If your state must be current at render time, either
+> keep `refresh` synchronous over an already-warm cache, or refresh outside the agent before calling
+> `generate()`. This is a real seam, not a rounding error, on any remote-backed `StateView`.
 
 ---
 

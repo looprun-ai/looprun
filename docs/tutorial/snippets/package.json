@@ -9,9 +9,9 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "looprun": "workspace:*",
     "@looprun-ai/eval": "workspace:*",
-    "@looprun-ai/server": "workspace:*"
+    "@looprun-ai/server": "workspace:*",
+    "looprun": "workspace:*"
   },
   "devDependencies": {
     "@looprun-ai/mastra": "workspace:*",

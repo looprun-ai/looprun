@@ -106,7 +106,7 @@ in a strictly *earlier* turn, which a single `generate()` call can never demonst
 | `model` | an AI-SDK `LanguageModel`, or a Mastra router string | required. looprun never picks one |
 | `world` | the `AgentWorld` instance | required, and it is **one instance for all turns** — not a factory. `LoopRunAgent` takes the factory; this runner is one conversation by definition |
 | `toolDefs` | the `ToolDef[]` of the surface | required |
-| `contract` | a `DomainContract` override | optional — defaults to `spec.contract`. With neither, the call **throws** at once rather than rendering a prompt with no voice |
+| `contract` | a `DomainContract` override | optional — defaults to `spec.contract`. With neither, the call **throws** at once rather than rendering a prompt with no voice. The one exception is a spec carrying its own `surface.systemPrompt`, which bypasses the trunk renderer entirely — an escape hatch the spec lint rejects for generated specs, and which no chapter teaches |
 | `modelParams` | spread into every `generate()` of the turn | §3 — this is where pinning goes |
 | `stopOnRepeatedToolCall` | abort the turn on an identical repeated call | default false; turn it **on for local models** (chapter 06) |
 | `maxSteps` / `redrives` | loop budgets | `spec.controls` wins over both when it sets them |
@@ -186,19 +186,29 @@ export const LOCAL_DECODING = pinnedDecoding({ seed: 7, maxOutputTokens: 2048 })
 /** Gemini: 'off' is the NUMERIC `thinkingBudget: 0` — a `thinkingLevel` value does not disable it. */
 export const GEMINI_PINNED = { temperature: 0, ...geminiThinkingOff() };
 
-/** The cloud validation model, thinking off — both halves in one call. Needs the Google key. */
+/**
+ * The cloud validation model, thinking off. `modelParams` here is ONLY the thinking-off provider
+ * options, so the decoding must still be pinned explicitly — spreading it over `pinnedDecoding()`
+ * is what the eval CLI does too (`provider.ts`: `{ temperature: 0, ...geminiThinkingOff() }`).
+ */
 export function cloudValidationDeps(): RuntimeDeps {
   const { model, modelParams } = geminiFlashLiteThinkOff();
-  return { ...schedulerDeps(model), modelParams };
+  return { ...schedulerDeps(model), modelParams: { ...pinnedDecoding(), ...modelParams } };
 }
 ```
 <sub>excerpt · `snippets/05-running-and-eval.ts`</sub>
+
+**Read that last one closely, because it is the easy mistake.** `geminiFlashLiteThinkOff()` hands back
+the *thinking-off provider options and nothing else* — no temperature. Assigning its `modelParams`
+straight onto your deps therefore **replaces** whatever pinning was there and leaves the sampler on
+the provider's default. The two halves are independent: thinking off is one setting, greedy decoding
+is another, and a reproducible run needs both.
 
 | helper | package | what it returns, and why |
 |---|---|---|
 | `pinnedDecoding({ seed?, maxOutputTokens? })` | core | `{ modelSettings: { temperature: 0, … } }`. The nesting is load-bearing: Mastra honors these keys **only** inside `modelSettings`, and a flat `temperature: 0` is silently dropped — measured, a local run then decodes on the GGUF's own sampler (temp 1.0, no cap) while the config claims greedy. `maxOutputTokens` is the runaway brake: one uncapped local call decoded ~8.7k tokens over 302 s before the client gave up |
 | `geminiThinkingOff()` | core | `{ providerOptions: { google: { thinkingConfig: { thinkingBudget: 0, includeThoughts: false } } } }`. The trap it encodes: **off is the numeric `thinkingBudget: 0`** — a `thinkingLevel` value does not turn thinking off |
-| `geminiFlashLiteThinkOff({ apiKey?, id? })` | models | `{ model, modelParams }` — the provider client for `gemini-3.1-flash-lite` plus the params above. Throws if `$GOOGLE_GENERATIVE_AI_API_KEY` is missing, at construction rather than mid-run |
+| `geminiFlashLiteThinkOff({ apiKey?, id? })` | models | `{ model, modelParams }` — the provider client for `gemini-3.1-flash-lite`, plus **only** the thinking-off provider options above. It does **not** pin temperature: spread `pinnedDecoding()` under it yourself. Throws if `$GOOGLE_GENERATIVE_AI_API_KEY` is missing, at construction rather than mid-run |
 
 This is the configuration chapter 02 pointed at: same model family as the published numbers, **the
 thinking-off variant**, which is what the certification harness pins. Thinking on or off changes
@@ -315,17 +325,26 @@ un-annotated `export default [...]` is checked against nothing, and a misspelled
 The two halves of an expectation are not the same kind of claim:
 
 ```
-   invariants   DETERMINISTIC, decided by the runner, no LLM involved
-                requiredToolCalls   a matching call must have SUCCEEDED
-                forbiddenToolCalls  a matching call must never have been ATTEMPTED
-                                    — stricter on purpose: a fabrication attempt the world
-                                      happens to refuse is still a violation, and that is
-                                      exactly what discriminates the governed arm from the
-                                      ungoverned one
+   invariants   DETERMINISTIC, decided by the runner over the WORLD's call ledger, no LLM
+                requiredToolCalls   a matching call must have REACHED THE WORLD and succeeded
+                forbiddenToolCalls  a matching call must never have REACHED THE WORLD —
+                                    executed, even if the world then refused it. Stricter than
+                                    "took effect" on purpose: a fabrication attempt the world
+                                    happens to reject is still a violation
 
    rubric       the QUALITY claim, graded by the judge (§5), never by the runner
-                `critical: true` marks an item the case cannot pass without
+                `critical: true` is a HINT for your judge prompt — nothing in fold or cert
+                reads it
 ```
+
+Note where the invariants are read from: the **world's** ledger of executed calls. A call a guard
+vetoed never got there, so it is not a `forbiddenToolCalls` violation — it is the guard doing its job,
+and the case above is written exactly that way. What the two arms then differ on is whether the write
+was *attempted through to execution* at all.
+
+`critical: true` deserves the same precision. It is metadata that rides into `cases.jsonl` for the
+judge to read; **no code branches on it** — `fold` and `cert` see one verdict per case and nothing
+finer. If a critical item must be able to fail a case on its own, say so in `evals/judge-prompt.md`.
 
 `ReqCall.anyArgs` is a **shallow subset match with strict equality**: every key you list must equal
 the observed argument, and arguments you do not list are ignored. `{ name: 'addEvent', anyArgs: {
@@ -334,7 +353,12 @@ start: '2026-03-02T10:15' } }` therefore says "no `addEvent` starting at 10:15",
 `targets` names the guard ids the case exercises — `agent:noDoubleBook`, `base:confirmFirst`,
 `minimal:noDuplicateCall`. It is not decoration: a guard no case targets passes in **both** arms of a
 discrimination run, so it reads as coverage while never having fired. §5's `lintSubject` refuses a
-case without targets, and refuses a bundle with a guard nobody targets.
+case without targets, and refuses a bundle with an **authored** guard nobody targets — where
+"authored" excludes the `minimal:` layer, the invariants `AgentSpecBase` installs on every spec in
+every domain and the engine proves in its own suite. So `minimal:noDuplicateCall` is a legal target
+(the tutorial's third case uses it, because a read-only turn is where that gate earns its keep), but
+leaving it untargeted would not have been a finding; `base:` and `agent:` ids are the ones the census
+demands.
 
 ### `Subject` and `loadSubject`
 
@@ -484,9 +508,17 @@ How the runner turns that target into a client, because it changes the numbers:
 | a `localhost` base-url | OpenAI-compatible | `pinnedDecoding({ maxOutputTokens: 2048 })` **and** the repeated-tool-call stop — the local runaway brakes, applied for you |
 | anything else | OpenAI-compatible (`--model` · `--base-url` · `--api-key-env`, else `MODEL_API_KEY`, else the literal `"local"`) | `temperature: 0` |
 
-Before any of that, `run` refuses to start on a **trunk-static** failure: it renders each spec's trunk
-under two different presets and fails loudly if they differ, because a trunk that moves with world
-state is a prompt prefix no cache can reuse — and a warm local run depends on exactly that reuse.
+Before any of that, `run` may refuse to start on a **trunk-static** failure: it renders each spec's
+trunk under two different presets and fails loudly if they differ, because a trunk that moves with
+world state is a prompt prefix no cache can reuse — and a warm local run depends on exactly that
+reuse. Two limits worth knowing, because the gate is quieter than it looks:
+
+- **It only runs when the case pack declares at least two distinct presets.** A single-preset subject
+  has nothing to compare, so it is not gated at all — the tutorial's subject earns the check by
+  declaring `default` and `empty-calendar`.
+- With **two or more specs**, it also fails when their shared trunk *head* is under 200 bytes: every
+  agent of a domain must open with the same contract voice, or the cacheable prefix is per-agent
+  instead of per-domain.
 
 ```
 $ npx looprun-eval run --subject docs/tutorial/snippets/scheduler-subject
@@ -506,7 +538,8 @@ What lands on disk:
 
 ```
    <subject>/test/<date>-<model>-<arm>/        (override with --out)
-   ├── cases.jsonl      one CaseDump per line — the judge's INPUT (gitignored: it is bulky)
+   ├── cases.jsonl      one CaseDump per line — the judge's INPUT (bulky: gitignore it yourself;
+   │                    nothing in the tool does)
    ├── SUMMARY.md       per-case status + token totals
    ├── verdicts.jsonl   ← the judge writes this
    ├── RESULTS.md       ← looprun-eval fold
@@ -563,12 +596,20 @@ $ echo '<!-- tamper -->' >> docs/tutorial/snippets/scheduler-subject/evals/judge
 $ npx looprun-eval seal docs/tutorial/snippets/scheduler-subject --verify
 seal VOID — artifacts changed after certification.
   sealed:  a2c96e1fe2a3832ca4c4d678d83d07b6da5bfa9c5c1d8422c281c4f70ee690c1
-  on disk: be8997ddbf63045b5214de80aaaacbb26baf835a9214e10a8b53f7c507506003
+  on disk: 6ab73afa531a73fa9d0dacf1b132ec0330dcd6688ce964489d805b2815277523
 Re-certify or re-open the pipeline; never re-stamp.
 ```
-<sub>**real** — all three commands were run on this subject, unedited output (the mint used a
-placeholder rate, since no certified run stands behind it). The resulting `ship/seal.json` is **not
-committed**, for the same reason: mint yours after your own `cert`</sub>
+<sub>**real** — the four commands above were run in this order on this subject and the output is
+unedited; in the repo the bin is invoked as `node packages/eval/bin/looprun-eval.mjs`. Both hashes are
+reproducible: restoring the file byte-for-byte returns `seal VALID` with the same
+`a2c96e1f…`, and re-appending that exact line reproduces `6ab73afa…`. The mint used a placeholder
+rate, since no certified run stands behind it, so the resulting `ship/seal.json` is **not
+committed** — mint yours after your own `cert`</sub>
+
+`--target` is required to mint, and it is a `model:rate:reps` triple — the model label, the final
+pass-rate it scored (`0.667`, not `66.7`), and how many repetitions stand behind that rate. Repeat it
+comma-separated for several models. It is the *claim*; the hash below is what binds the claim to the
+bytes it was made about.
 
 `mintSeal` hashes the **governed artifacts** — `norms/**`, `gen/tools.json`, `gen/world.ts`,
 `evals/cases.*` and `evals/judge-prompt.md` — as sha256 over the sorted `sha256(content)  relpath`
@@ -592,9 +633,10 @@ export function ungovernedArm(subject: Subject, caseId: string) {
 
 ```
    EMPTIED   guards (all four hooks + mutators) · controls.directives · controls.chains ·
-             scope · behavior[] · contract.coreInvariants · the destructive cross-check
+             controls.exhaustionReply · scope · behavior[] · contract.coreInvariants ·
+             the destructive cross-check (assertDestructiveConfirmable)
    KEPT      persona · contract.voice + stateBlock + languageClause · the tool surface ·
-             loop mechanics (terminal policy, maxSteps, sampling)
+             flow · the remaining loop mechanics (terminal policy, maxSteps, redrives, sampling)
 ```
 
 It returns fresh objects and never mutates the source spec, so both arms can run in one process. What
