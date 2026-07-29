@@ -39,7 +39,7 @@ export interface LocalModelOptions {
   /** Spawn the server when it is not up (default true). */
   autoStart?: boolean;
   /**
-   * Download the GGUF when missing (default FALSE — a 3–21 GB surprise download on first turn
+   * Download the GGUF when missing (default FALSE — a 2.5–17 GB surprise download on first turn
    * is a footgun; prefer `npx looprun models pull <alias>` or `npx looprun init`).
    */
   autoDownload?: boolean;

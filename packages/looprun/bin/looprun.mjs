@@ -13,7 +13,7 @@ const HELP = `looprun <command>
 
   init [--local <alias>] [--yes]   Check the environment; optionally pull a local model.
   models status [alias]            Binary / model file / server health per alias.
-  models pull <alias> [--yes]      Download the model GGUF (asks consent — sizes are 3–21 GB).
+  models pull <alias> [--yes]      Download the model GGUF (asks consent — sizes are 2.5–17 GB).
   models serve <alias>             Start llama-server with the validated flags (Ctrl-C stops).
 
 Local model tiers: ram24 (default, ~11.8 GB) · ram16 (16 GB machines) ·

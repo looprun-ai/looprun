@@ -1,5 +1,6 @@
 packages:
   - 'packages/*'
   - 'examples/*'
-  # Every tutorial code block lives here as a compiled file (docs/tutorial/00-outline.md §2).
+  # Every tutorial code block lives here as a compiled file
+  # (docs/superpowers/specs/2026-07-28-tutorial-outline-final.md §2).
   - 'docs/tutorial/snippets'

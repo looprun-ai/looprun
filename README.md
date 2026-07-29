@@ -129,13 +129,13 @@ Cloud models need none of this: pass a router string as `model` and skip this se
 
 | package | what |
 |---|---|
-| `looprun` | umbrella — `looprun/core`, `looprun/mastra`, `looprun/models` (+ the `looprun` CLI) |
-| `@looprun-ai/core` | `AgentSpec` + guards + trunk renderer + the framework-free governed-turn machine |
+| `looprun` | umbrella — `looprun/core`, `looprun/mastra`, `looprun/models`, `looprun/vercel` (+ the `looprun` CLI) |
+| `@looprun-ai/core` | `AgentSpec` + the 30 guard factories — the teaching surface. The trunk renderer and the governed-turn machine ship too, but on `@looprun-ai/core/internal` (no compatibility promise) |
 | `@looprun-ai/mastra` | `LoopRunAgent` (a real Mastra Agent), `runSpecConversation`, `worldFromTools` |
 | `@looprun-ai/models` | validated local models (llama.cpp `ModelRuntimePort`) + the cloud validation model |
-| `@looprun-ai/eval` | the `looprun-eval` CLI: run / fold / cert / lint (dev dependency) |
+| `@looprun-ai/eval` | the `looprun-eval` CLI: run / fold / cert / lint / seal (dev dependency) |
 | `@looprun-ai/server` | OpenAI-compatible `/v1/chat/completions` server for governed agents |
-| `@looprun-ai/vercel` | reserved — the Vercel AI SDK backend seam: contract documented, factory still throws |
+| `@looprun-ai/vercel` | reserved (also `looprun/vercel`) — the Vercel AI SDK backend seam. The contract is documented in its README; the primitives it names live on `@looprun-ai/core/internal`. Factory still throws |
 
 ## Benchmarks
 

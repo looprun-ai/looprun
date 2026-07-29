@@ -23,6 +23,12 @@ pinned by a surface-lock test, so it cannot drift back.
 | `@looprun-ai/eval` | 19 (+9 riders) | 52 |
 | `@looprun-ai/server` | 4 (+3 riders) | 13 |
 
+**Why `looprun` and `@looprun-ai/vercel` are also major.** The `looprun` umbrella re-exports core, so
+its root and `./core` barrels narrow exactly as core does — the break reaches consumers through the
+facade, not only through the scoped package. `@looprun-ai/vercel` has no API change at all (its
+factory still throws); it is major because the changeset config links `looprun` and `@looprun-ai/*`
+into one version group, so the whole set moves together.
+
 **What moved rather than vanished.** `@looprun-ai/core/internal` is a new, explicitly unstable
 subpath carrying the runtime primitives (ledger, turn machine, trunk internals, `GUARD_CATALOG`,
 `GuardExecutionError`). It exists so in-repo tooling and forks keep working; it carries no

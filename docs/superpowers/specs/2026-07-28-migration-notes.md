@@ -35,32 +35,87 @@ There is **no** `looprun/internal` facade subpath — the umbrella publishes `.`
 
 | symbol | before | after | action |
 |---|---|---|---|
-| `renderTurnPrompt` | `@looprun-ai/core` | `@looprun-ai/core/internal` | change the specifier |
+| `renderTurnPrompt` | `@looprun-ai/core` | `@looprun-ai/core/internal` | change the specifier in **TWO** scripts — see below |
 | `loadSubject`, `agentForCase`, `stripGovernance` | `@looprun-ai/eval` | **unchanged** | none — `synth-fork.mjs`'s computed import still resolves |
 | `mintSeal`, `verifySeal` | `@looprun-ai/eval` | **unchanged** | none |
 | `validateSpec` | `@looprun-ai/core` | **unchanged** | none |
 
-Three **reference-catalog corrections** are owed in that repo, independent of the specifier change:
+**`renderTurnPrompt` has two call sites, in two different scripts.** A maintainer who follows only
+the row above will fix one and leave the other broken:
+
+| script | import | calls |
+|---|---|---|
+| `skill/scripts/synth-fork.mjs` | `:105` `await importFromCwd('@looprun-ai/core')` | `:178`, `:190` |
+| `skill/scripts/extract-fork.mjs` | `:184` `await importFromCwd('@looprun-ai/core')` | `:210`, `:222` |
+
+Both resolve the package **at runtime from the user's cwd**, so neither fails at build time — they
+fail on the user's machine, mid-phase. `skill/scripts/margin-probe.mjs:35` and
+`skill/references/test.md:236` cite the name in prose and want the same edit for accuracy.
+
+Two further **reference corrections** are owed in that repo, independent of the specifier change:
 
 1. **`forbidThisTurn` semantics.** The agentspec reference describes it as a repeat detector. It is
    not: its check is `() => reason` with no turn logic, so the ban holds for the **binding's
    lifetime** and the *first* call is denied too. The name is historical. `noDuplicateCall` is the
    kind for "the first call is legitimate, the repeat is not." `packages/core/src/guards/catalog.ts`
    carries the corrected wording — copy it.
-2. **`lint-guard-catalog.mjs` path.** It scans `packages/core/src/guards.ts`, which no longer exists.
-   The factories now live in `packages/core/src/guards/` (per-category files). Point the lint at the
-   directory. **Today it SKIPs silently** on the missing path rather than failing, so this will not
-   announce itself.
-3. **Stale `dist/guards.d.ts`.** Any vendored or cached copy of the old single-file declaration will
-   still resolve and mask the change.
+2. **`lint-guard-catalog.mjs` reads a built declaration file, not repo sources.** The mechanism, from
+   the script itself:
+
+   ```js
+   const entry = req.resolve('@looprun-ai/core');          // …/dist/index.js
+   dts = readFileSync(join(dirname(entry), 'guards.d.ts'), 'utf8');
+   } catch {
+     console.log('guard-catalog parity: SKIPPED (engine not installed in this repo)');
+   ```
+
+   It resolves the **installed** package from `node_modules` and reads `guards.d.ts` sitting next to
+   the built barrel. It never scans `packages/core/src/`. Since the split, the build emits
+   `dist/guards/index.d.ts` and no `dist/guards.d.ts`, so the `readFileSync` throws and the catch
+   prints **`engine not installed`** — a *false diagnosis*: the engine is installed, only the file
+   moved. Parity silently stops being checked.
+
+   The fix is three-part: read the built **`guards/index.d.ts`** (or, better, drop the `.d.ts`
+   text-scraping entirely and `import { GUARD_CATALOG } from '@looprun-ai/core/internal'`, which is
+   the array the parity test in this repo already uses); **narrow the catch** so a missing package and
+   a moved file report differently; and treat a resolvable-but-unreadable engine as a **failure**, not
+   a skip.
 
 ### `looprun-bench`
+
+**The seam file is `benchmarks/tau2-telecom/harness/shim/src/step-handler.ts`** — one import block,
+verified against the repo rather than inferred:
 
 | symbol | before | after | action |
 |---|---|---|---|
 | `runSpecConversation` | `@looprun-ai/mastra` | **unchanged** | none — the main entry point is intact |
-| `createLedger`, `beginTurn`, `renderTurnPrompt`, `evaluatePreTool`, `recordToolResult`, `isTerminal`, `terminalProtocol`, `forcedTerminalPrompt`, `finalizeReply` | `@looprun-ai/core` | `@looprun-ai/core/internal` | change the specifier — these nine are the "bring your own loop" seam |
-| `TrunkTheme`, `EvalCase`, `EvalConfig` | *(never existed)* | — | the bench's shim imports these **phantom** names; it does not typecheck against the current engine and did not before this release either. Fix or drop the shim |
+| `createLedger`, `beginTurn`, `evaluatePreTool`, `enforcePostTool`, `redriveMessage`, `finalizeReply`, `resolveGuards`, `renderScopedSpecTrunk`, `ReplyViolation` | `@looprun-ai/core` | `@looprun-ai/core/internal` | **change the specifier** — these nine are the whole "bring your own loop" seam the shim drives |
+| `Guard`, `GuardCtx`, `ObservedCall` | `@looprun-ai/core` | **unchanged — public** | none. They are taught by chapter 04 and stay on the barrel (`ObservedCall` is used by `shim/src/transcript.ts`) |
+
+The nine and the three above are the *complete* set: splitting `step-handler.ts`'s import block gives
+exactly `createLedger`, `beginTurn`, `enforcePostTool`, `evaluatePreTool`, `finalizeReply`,
+`redriveMessage`, `renderScopedSpecTrunk`, `resolveGuards`, `Guard`, `GuardCtx`, `ReplyViolation`. The
+bench does **not** import `renderTurnPrompt`, `recordToolResult`, `isTerminal`, `terminalProtocol` or
+`forcedTerminalPrompt` — zero occurrences repo-wide — so those need no action there.
+
+#### The three names that never existed
+
+`TrunkTheme`, `EvalConfig` and `EvalCase` have **never** been on any looprun barrel, before or after
+this release. They are not a shim problem — **the shim is clean** — and the affected sites are more
+consequential than that:
+
+| name | imported from | real sites |
+|---|---|---|
+| `TrunkTheme` | `looprun` / `@looprun-ai/core` | **the whole Atlas v0.6.0 spec set** — `benchmarks/atlas/v0.6.0/specs/*/theme.ts` + `*/index.ts` across ~20 preset directories, plus `v0.6.1/specs/atlas-r2/`, `atlas/*/harness/src/load.ts`, and `tau2-telecom/harness/telecom/src/agents/telecom/theme.ts` (94 occurrences in 40 files) |
+| `EvalConfig` | `@looprun-ai/eval` | `tau2-telecom/harness/telecom/looprun.eval.config.ts:9` (used at `:14`) |
+| `EvalCase` | `@looprun-ai/eval` | `tau2-telecom/harness/telecom/evals/cases.ts:19` (used at `:21`) |
+
+Stated plainly: **the Atlas v0.6.0 spec set — the code behind this README's `governed 96.5` headline —
+does not typecheck against any published looprun, and did not before this release either.** Every
+`theme.ts` needs `TrunkTheme` defined locally (it is a structural type; declare the shape the theme
+object already satisfies), and the two τ²-telecom files need the same for `EvalConfig`/`EvalCase`.
+This is pre-existing and **not caused by the simplification** — but a maintainer reading this table
+during the migration is exactly the right person to learn it.
 
 Also: the bench carries a **vendored copy of the guard catalog** that predates the split. Re-vendor
 from `packages/core/src/guards/catalog.ts` or drop it in favour of importing `GUARD_CATALOG` from
@@ -90,10 +145,26 @@ surface that survived.
 | `uploadDisplayLabels`, `isReplyOnly` | **module-local** helpers inside `renderTurnPrompt`. They were exported but never documented or imported |
 | `GUARD_CATALOG`, `GuardCatalogEntry`, `GuardExecutionError` | `@looprun-ai/core/internal` — documentation/diagnostic infrastructure, deliberately not taught |
 | `MCPClient.getTools()` | **`listTools()`** in Mastra v1 (`getTools` is deprecated; codemod `v1/mcp-get-tools`). Affects native-tools mode call sites, not looprun's own API |
-| `docs/tutorial/00-outline.md` | moved to `docs/superpowers/specs/2026-07-28-tutorial-outline-final.md`. It is cited by path from all six `src/index.ts` barrels and their surface-lock tests |
+| `docs/tutorial/00-outline.md` | moved to `docs/superpowers/specs/2026-07-28-tutorial-outline-final.md`. It is cited by path from **five** of the six `src/index.ts` barrels (all but `vercel`, which has no taught surface), their surface-lock tests, and `pnpm-workspace.yaml` |
 
 Package `CHANGELOG.md` entries that announced now-removed symbols are **left unedited**: they are an
 accurate record of what those versions shipped, not live documentation.
+
+### The inventory's §7.1 is NOT fully discharged
+
+Three names carry a `delete` verdict in the symbol inventory that was **deliberately not realized**:
+
+| symbol | where it still lives |
+|---|---|
+| `VETO_STORM_LIMIT` | `packages/core/src/runtime/ledger.ts:45` |
+| `recordVeto` | `packages/core/src/runtime/ledger.ts:78` |
+| `shouldFireChain` | `packages/core/src/runtime/turn.ts:382` |
+
+They remain **module-level `export`s consumed only by tests** — off every public barrel and off
+`/internal`, so no external consumer can reach them and none is affected. They are exported *by
+design*, so the runtime's veto-storm and chain-firing logic can be asserted directly rather than only
+through a full governed turn. Anyone auditing §7.1 against the shipped source will find these three
+and should read the verdict as **intentionally unrealized**, not as missed work.
 
 ---
 

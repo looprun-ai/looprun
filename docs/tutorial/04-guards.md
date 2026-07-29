@@ -204,10 +204,11 @@ you want the kind that makes that impossible. Read this column as "the model …
 | writes internal status codes and field names at the user | [`jargonScrub`](#29-jargonscrub) — rewrites, never vetoes | onReplyMutate |
 | breaks a rule that is about YOUR domain and nothing in this table fits | [`custom`](#30-custom) (§6) | you choose |
 
-### The four confusable clusters
+### The five confusable clusters
 
-Every row's *when to reach for it* is written against its neighbours. These are the four groups where
-reading only one row will pick the wrong kind:
+Every row's *when to reach for it* is written against its neighbours. These are the five groups where
+reading only one row will pick the wrong kind — the four in the table below, plus the honesty cluster
+that follows it:
 
 | cluster | the axis that separates them |
 |---|---|

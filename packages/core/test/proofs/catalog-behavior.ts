@@ -14,7 +14,7 @@ import {
 import { FIXTURE_LABEL_SCHEME, FIXTURE_LEXICON } from '../../src/testing/fixture-world.js';
 import type { GuardProof } from '../../src/testing/index.js';
 
-/** RuntimeTurnInput shorthand (channel-agnostic — just the user text). */
+/** TurnInput shorthand (channel-agnostic — just the user text). */
 const turn = (userText: string) => ({ userText });
 
 export const BEHAVIOR_PROOFS: GuardProof[] = [

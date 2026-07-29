@@ -369,8 +369,8 @@ types are not in this contract (annotation rule, §0).
 
 **Example used.** The scheduler subject with three cases (happy path, cancel-without-confirm, double
 booking): author `evals/cases.ts`, then `looprun-eval run` → `fold` → `cert` → `mintSeal` /
-`verifySeal`, then the same three cases governed and ungoverned via `stripGovernance`. Absorbs
-`docs/guides/eval-config.md` and `docs/guides/measured-loop.md`.
+`verifySeal`, then the same three cases governed and ungoverned via `stripGovernance`.
+Absorbed `docs/guides/eval-config.md` and `docs/guides/measured-loop.md`, both deleted by Task 12.
 
 ---
 
@@ -406,7 +406,7 @@ on a local model with no cloud key.
 | `localModelStatus` | models | is the binary / file / server actually there |
 
 Taught in the order the CLI does it: `npx looprun models pull` → `status` → then the library path.
-Absorbs `docs/guides/local-models.md`.
+Absorbed `docs/guides/local-models.md`, which Task 12 deleted once this chapter shipped.
 
 *6.3 Native tools and MCP — the other execution model (2)*
 
@@ -423,7 +423,7 @@ carry, because together they are the likeliest first-run failure: Mastra v1's `M
 namespaces every tool as `serverName_toolName`, and the spec surface is **deny-by-default**
 (`agent-construction.ts:80-97` throws on a surface tool the host does not provide, and logs a loud
 `console.error` for a host tool the surface does not list). So the spec must declare the namespaced
-name. Absorbs `docs/guides/mcp-tools.md`.
+name. Absorbed `docs/guides/mcp-tools.md`, which Task 12 deleted once this chapter shipped.
 
 **Not here: "bring your own loop."** The round-3 outline had a fourth section teaching the governance
 primitives (`createLedger`, `evaluatePreTool`, `finalizeReply`, …) for enforcing a spec inside a

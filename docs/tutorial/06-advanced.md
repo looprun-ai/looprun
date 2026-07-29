@@ -199,7 +199,7 @@ looprun <command>
 
   init [--local <alias>] [--yes]   Check the environment; optionally pull a local model.
   models status [alias]            Binary / model file / server health per alias.
-  models pull <alias> [--yes]      Download the model GGUF (asks consent — sizes are 3–21 GB).
+  models pull <alias> [--yes]      Download the model GGUF (asks consent — sizes are 2.5–17 GB).
   models serve <alias>             Start llama-server with the validated flags (Ctrl-C stops).
 
 Local model tiers: ram24 (default, ~11.8 GB) · ram16 (16 GB machines) ·
@@ -254,7 +254,7 @@ box that wants a 35B tier, add `-ncmoe N` to offload the first N layers' MoE exp
 
 ```bash
 npx looprun init                  # env check + interactive pull
-npx looprun models pull ram24     # 3–21 GB, so it asks
+npx looprun models pull ram24     # 2.5–17 GB, so it asks
 npx looprun models status         # binary / file / server health
 npx looprun models serve ram16    # the validated flags, in the foreground
 ```
