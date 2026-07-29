@@ -88,8 +88,8 @@ $ curl -s http://127.0.0.1:8099/v1/chat/completions \
 <sub>**real** — `serveScheduler` was started with a **scripted** model (`@looprun-ai/mastra/testing`),
 so no live model was called and the reply text is the scripted one; the request, the routing, the
 governed turn and the envelope are real, and the JSON is unedited apart from line wrapping. The
-server also answers `GET /v1/models` with
-`{"id":"scheduler","object":"model","owned_by":"looprun","context_length":128000}`</sub>
+server also answers `GET /v1/models` with `{"object":"list","data":[…]}` — a list whose single entry
+is `{"id":"scheduler","object":"model","owned_by":"looprun","context_length":128000}`</sub>
 
 Three things in that response are the whole pattern: the reply came out of a **governed turn** (the
 model called `listEvents` and closed with `replyToUser`, both gated); the `model` field routed to the

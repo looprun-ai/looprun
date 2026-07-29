@@ -73,8 +73,8 @@ export const GEMINI_PINNED = { temperature: 0, ...geminiThinkingOff() };
 
 /**
  * The cloud validation model, thinking off. `modelParams` here is ONLY the thinking-off provider
- * options, so the decoding must still be pinned explicitly — spreading it over `pinnedDecoding()`
- * is what the eval CLI does too (`provider.ts`: `{ temperature: 0, ...geminiThinkingOff() }`).
+ * options — no temperature — so assigning it alone would drop the pinning above. Spread it over
+ * `pinnedDecoding()`: thinking-off and greedy decoding are two independent settings.
  */
 export function cloudValidationDeps(): RuntimeDeps {
   const { model, modelParams } = geminiFlashLiteThinkOff();

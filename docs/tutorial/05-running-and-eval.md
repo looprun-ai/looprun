@@ -188,8 +188,8 @@ export const GEMINI_PINNED = { temperature: 0, ...geminiThinkingOff() };
 
 /**
  * The cloud validation model, thinking off. `modelParams` here is ONLY the thinking-off provider
- * options, so the decoding must still be pinned explicitly — spreading it over `pinnedDecoding()`
- * is what the eval CLI does too (`provider.ts`: `{ temperature: 0, ...geminiThinkingOff() }`).
+ * options — no temperature — so assigning it alone would drop the pinning above. Spread it over
+ * `pinnedDecoding()`: thinking-off and greedy decoding are two independent settings.
  */
 export function cloudValidationDeps(): RuntimeDeps {
   const { model, modelParams } = geminiFlashLiteThinkOff();
@@ -206,7 +206,7 @@ is another, and a reproducible run needs both.
 
 | helper | package | what it returns, and why |
 |---|---|---|
-| `pinnedDecoding({ seed?, maxOutputTokens? })` | core | `{ modelSettings: { temperature: 0, … } }`. The nesting is load-bearing: Mastra honors these keys **only** inside `modelSettings`, and a flat `temperature: 0` is silently dropped — measured, a local run then decodes on the GGUF's own sampler (temp 1.0, no cap) while the config claims greedy. `maxOutputTokens` is the runaway brake: one uncapped local call decoded ~8.7k tokens over 302 s before the client gave up |
+| `pinnedDecoding({ seed?, maxOutputTokens? })` | core | `{ modelSettings: { temperature: 0, … } }` — already in the shape Mastra wants. That nesting is why the helper exists: hand **Mastra's own** `generate()` a flat `temperature: 0` and it is silently dropped, and the measured consequence is a local run decoding on the GGUF's embedded sampler (temp 1.0, no cap) while the config claims greedy. Through looprun you are covered either way — both the runner and `LoopRunAgent` normalize flat call settings into `modelSettings` before they call Mastra — but the preset is the form that survives being passed anywhere. `maxOutputTokens` is the runaway brake: one uncapped local call decoded ~8.7k tokens over 302 s before the client gave up |
 | `geminiThinkingOff()` | core | `{ providerOptions: { google: { thinkingConfig: { thinkingBudget: 0, includeThoughts: false } } } }`. The trap it encodes: **off is the numeric `thinkingBudget: 0`** — a `thinkingLevel` value does not turn thinking off |
 | `geminiFlashLiteThinkOff({ apiKey?, id? })` | models | `{ model, modelParams }` — the provider client for `gemini-3.1-flash-lite`, plus **only** the thinking-off provider options above. It does **not** pin temperature: spread `pinnedDecoding()` under it yourself. Throws if `$GOOGLE_GENERATIVE_AI_API_KEY` is missing, at construction rather than mid-run |
 
@@ -643,8 +643,10 @@ It returns fresh objects and never mutates the source spec, so both arms can run
 is kept is what makes the comparison fair: the ungoverned arm is the *same agent with the same tools
 and the same job*, minus the rules. A difference in the invariant gate between the arms is then
 attributable to governance and to nothing else — which is precisely why `forbiddenToolCalls` fails on
-the **attempt**: the governed arm's guard prevents the call, the ungoverned arm's world may refuse it,
-and only the attempt distinguishes them.
+the call **reaching the world**, executed, even if the world then refuses it: in the governed arm the
+guard stops it before it gets there, while in the ungoverned arm it arrives and the world's own
+refusal is the only thing left standing between the model and the write. Same intent, two very
+different distances from the damage — and that gap is what the two arms measure.
 
 ### 5.7 Fix — the closed taxonomy
 
