@@ -46,3 +46,16 @@ Tracked here because the engine is the half that has to move first.
 |---|---|
 | **The margin probe is ported, not validated** | Lives in the skill repo (`skill/scripts/margin-probe.mjs`) and renders through this engine's `renderTurnPrompt`. It has never been run against a served model on a case known to oscillate. Until that round happens it is code nobody has confronted with reality — and the skill's STOP rule cites it as one of three conditions for leaving the improve loop. |
 | **The skill's own lint battery** | `lint-authoring.mjs` covers the skill's authoring conventions. The split is recorded in the skill's T-phase recipe: artifact laws here, authoring conventions there. If a rule moves, both sides need updating. |
+
+## Validation-campaign findings (engine/tooling)
+
+Defects found while validating generated bundles against served models; each is an engine or
+tooling fix, recorded here because the fix lands in this repo.
+
+| item | state |
+|---|---|
+| **`noUngroundedRegulatedFigure` prose carries domain wording** | The guard is generic (blocks unsourced regulated figures) but its rendered prose speaks the vocabulary of one domain — a business-string leak in the neutral runtime. Re-word the prose domain-neutral (the check is untouched). |
+| **`custom()` guards cannot read tool-result text** | The custom-guard hook sees the calls made (name + args) but not what the tool RETURNED, so a check like "the reply must cite the price the tool returned" is unwritable. Expose the result payload to the hook. |
+| **Release script silently skips an existing version** | Publishing a version that already exists on the registry is a silent no-op: the tag lands, npm does not change — a ghost release (it happened). The script must abort loudly when the target version already exists. |
+| **Fold verdict-sync is a hand step** | Byte-identical transcripts must receive the same verdict; today that sync is a recipe step done by hand after judging. Belongs inside `looprun-eval fold` (mechanical, no judge). |
+| **Cert has no native multi-rep** | `cert.json` honestly states `reps: 1`; the K-rep band and its FLOOR are a hand-written table beside it. `looprun-eval cert` should fold multiple rep certs into the band/floor/majority verdict natively. |
