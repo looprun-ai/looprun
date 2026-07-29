@@ -43,9 +43,18 @@ cp -r looprun/docs/tutorial/snippets/scheduler ./scheduler
 cp looprun/docs/tutorial/snippets/02-hello-world.ts ./hello.ts
 ```
 
-Four files land in `./scheduler/`: `contract.ts`, `hello-spec.ts`, `tools.ts`, `world.ts`. Chapter 03
-writes all four from scratch — this chapter borrows them so the first turn is about the *agent*, not
-about a calendar.
+Five files land in `./scheduler/`. This chapter uses three of them:
+
+| file | used here | what it is |
+|---|---|---|
+| `hello-spec.ts` | ✅ | this chapter's one-tool spec |
+| `tools.ts` | ✅ | the `ToolDef` declarations |
+| `world.ts` | ✅ | the calendar state and tool execution |
+| `contract.ts` | indirectly | the shared scope and voice `hello-spec.ts` imports |
+| `spec.ts` | — | chapter 03's full three-tool spec; unused here, and it comes along with the copy |
+
+Chapter 03 writes `spec.ts`, `world.ts`, `tools.ts` and `contract.ts` from scratch — this chapter
+borrows them so the first turn is about the *agent*, not about a calendar.
 
 Two things about running TypeScript directly, so the first attempt works:
 

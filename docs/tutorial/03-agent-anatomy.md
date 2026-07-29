@@ -541,13 +541,12 @@ construction: it warns by default, and its `strict` option turns those warnings 
 
 ## 10. The other path, in one paragraph
 
-Everything above is **Path A**: JSON-schema `toolDefs` executed through a world you hand-write. It is
-the certified path and what you should reach for. A second path exists — tools that execute
-*themselves* (Mastra assigned tools, toolsets, MCP servers), where there is no world to write and
-`worldFromTools({ stateView })` supplies the state reads instead. The guards enforce identically
-either way. **[Chapter 06](06-advanced.md) teaches it**, alongside the other "take this spec
-somewhere else" moves — it needs a host that owns its own state, which is a deployment question, not
-an anatomy one.
+Everything above is **Path A**: JSON-schema `toolDefs` executed through a world you hand-write — the
+certified path, and the one to reach for. A second path exists for tools that execute *themselves*
+(Mastra assigned tools, toolsets, MCP servers): there is no world to write, and
+`worldFromTools({ stateView })` supplies the state reads instead. Guards enforce identically either
+way. **[Chapter 06](06-advanced.md) teaches it**, because it is a deployment question — it presumes a
+host that already owns its state.
 
 ---
 
