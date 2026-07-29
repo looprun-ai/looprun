@@ -1,14 +1,14 @@
 /**
- * CATALOG ↔ CORE PARITY (the anti-drift gate) — TWO catalogs must list EXACTLY the factory vocabulary
- * `src/guards/` actually exports:
- *   · `packages/core/GUARDS.md` — the human reference;
- *   · `GUARD_CATALOG` (`src/guards/catalog.ts`) — the DATA the tutorial's guard chapter is generated
- *     from, so an undocumented kind cannot reach the docs by omission.
- * A guard added to / removed from `src/guards/` fails this test until both are reconciled, and an entry
- * with no backing factory (a "ghost") fails too. Anchored to THIS core, not any external harness.
+ * CATALOG ↔ CORE PARITY (the anti-drift gate) — `GUARD_CATALOG` (`src/guards/catalog.ts`) must list
+ * EXACTLY the factory vocabulary `src/guards/` actually exports. It is the DATA the tutorial's guard
+ * chapter is generated from, so an undocumented kind cannot reach the docs by omission, and a
+ * documented kind cannot outlive its factory. Anchored to THIS core, not any external harness.
  *
- * The markdown lane checks NAMES, not signatures (signatures are prose the human keeps honest); the
- * point is that the SET of documented kinds equals the SET of exported factories.
+ * There is no second, markdown lane. `packages/core/GUARDS.md` used to carry a hand-maintained kind
+ * table and was gated here; it drifted anyway (it still read "29 kinds" after the split shipped 30),
+ * because a name list a human retypes is exactly the artifact a name-only gate cannot keep honest.
+ * GUARDS.md is now maintainer internals and points at the catalog instead — one vocabulary of record,
+ * and this gate is the whole of it.
  */
 import { describe, expect, it } from 'vitest';
 import { readdirSync, readFileSync } from 'node:fs';
@@ -18,7 +18,6 @@ import { GUARD_CATALOG } from '../src/guards/catalog.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const GUARDS_DIR = join(HERE, '..', 'src', 'guards');
-const CATALOG_MD = join(HERE, '..', 'GUARDS.md');
 
 /** The whole `src/guards/` directory as one blob — EVERY file, including `shared.ts`. The extractor
  *  below discriminates by return type, so the helpers are excluded on their signatures, not on their
@@ -47,50 +46,17 @@ function exportedGuardFactories(source: string): string[] {
     .filter((n): n is string => n !== null);
 }
 
-/** The factory names the catalog documents = the leading backtick-code-call in each markdown table row
- *  (`| \`name(...)\` | … |`). Prose, code blocks and non-factory table cells (no `name(`) are ignored. */
-function catalogFactoryNames(md: string): string[] {
-  const names = new Set<string>();
-  for (const line of md.split('\n')) {
-    const m = line.match(/^\s*\|\s*`([A-Za-z]\w*)(?:<[^>]*>)?\(/);
-    if (m) names.add(m[1]);
-  }
-  return [...names];
-}
+describe('the factory extractor', () => {
+  const factories = exportedGuardFactories(guardSources());
 
-describe('guard-catalog ↔ core parity', () => {
-  const guardsSrc = guardSources();
-  const catalogMd = readFileSync(CATALOG_MD, 'utf8');
-  const factories = exportedGuardFactories(guardsSrc);
-  const catalogNames = catalogFactoryNames(catalogMd);
-
-  it('extracts a non-empty vocabulary from both sides', () => {
+  it('extracts a non-empty vocabulary from src/guards/', () => {
     expect(factories.length).toBeGreaterThan(20);
-    expect(catalogNames.length).toBeGreaterThan(20);
-  });
-
-  it('every exported guard/mutator factory is documented in the catalog', () => {
-    const undocumented = factories.filter((name) => !new RegExp(name + String.raw`(?:<[^>]*>)?\(`).test(catalogMd));
-    expect(
-      undocumented,
-      `src/guards/ exports these factories but GUARDS.md does not list them — add a table row:\n${undocumented.join(', ')}`,
-    ).toEqual([]);
-  });
-
-  it('every catalog factory row is backed by a real exported factory (no ghosts)', () => {
-    const set = new Set(factories);
-    const ghosts = catalogNames.filter((name) => !set.has(name));
-    expect(
-      ghosts,
-      `GUARDS.md lists these factory kinds but src/guards/ exports no such factory — remove or rename:\n${ghosts.join(', ')}`,
-    ).toEqual([]);
   });
 
   it('includes the known anchors (canary that the extractor really works)', () => {
     // A guard added in the P8a/single-class port, the escape hatch, and the mutator must all be present.
     for (const anchor of ['noActAfterAskSameTurn', 'custom', 'jargonScrub', 'destructiveClaimRequiresSuccess']) {
       expect(factories, `extractor missed ${anchor}`).toContain(anchor);
-      expect(catalogNames, `catalog missing ${anchor}`).toContain(anchor);
     }
     // The pure helper is NOT a guard kind — it must NOT be counted as a factory.
     expect(factories, 'canonArgs is a helper, not a guard factory').not.toContain('canonArgs');
@@ -114,9 +80,9 @@ describe('guard-catalog ↔ core parity', () => {
 });
 
 /**
- * GUARD_CATALOG ↔ core parity — the SAME bijection, against the data the chapter generator reads.
- * The markdown lane above keeps the human reference honest; this one keeps the generated chapter
- * honest, and it is the harder gate: an entry must carry a usable example, not merely a name.
+ * GUARD_CATALOG ↔ core parity — the bijection itself, against the data the chapter generator reads.
+ * It is a stronger gate than a name list: an entry must carry a summary, a when-to-use and an example
+ * that actually CALLS its own factory, and must sit in the category file that exports it.
  */
 describe('GUARD_CATALOG ↔ core parity', () => {
   const factories = exportedGuardFactories(guardSources());

@@ -52,6 +52,13 @@ interface Guard {
 ```
 <sub>signature, from `looprun`</sub>
 
+**Three names, one rule, and they line up.** The **factory** is what you call (`confirmFirst(…)`);
+it returns a **`Guard`** object; that object's **`kind`** is the runtime name (`'confirmFirst'`), and
+it is what you read back in a guard id (`base:confirmFirst`) and in a `recoveryEvents` entry
+(`run:noDoubleBook:addEvent`). The catalog below is indexed by factory name, so the name you call is
+the name you will see in the audit trail — with one deliberate exception, `custom`, whose `kind` you
+choose yourself (§6).
+
 Two renderings of one rule, and **the checker never reads the prose**. A guard whose prose says
 something its check does not enforce is a rule the model is told about and nothing verifies — the
 failure this whole design exists to make impossible.
@@ -297,7 +304,7 @@ A call has been proposed and not yet executed. A deny returns to the model AS th
 | [`noDuplicateCall`](#4-noduplicatecall) | `flow.ts` | Denies a call whose tool and canonical arguments already succeeded earlier in the same turn. |
 | [`argRequired`](#5-argrequired) | `args.ts` | The named argument must be present and non-empty (a blank string counts as missing). |
 | [`argAbsent`](#6-argabsent) | `args.ts` | The named argument must not be passed at all. |
-| [`argFormat`](#7-argformat) | `args.ts` | A present, non-empty string argument must match the given pattern; absent or empty is left to argRequired. |
+| [`argFormat`](#7-argformat) | `args.ts` | A present, non-empty string argument must match the given pattern; absent or empty is left to `argRequired`. |
 | [`precondition`](#8-precondition) | `world.ts` | The call is allowed only while a predicate over the host world holds. |
 | [`consentRequired`](#9-consentrequired) | `world.ts` | A set of writes may run only while the world says this person's consent is on record. |
 | [`confirmFirst`](#10-confirmfirst) | `confirmation.ts` | A destructive tool needs the user's go-ahead from an EARLIER turn — via a confirm flag probe or a prior ask. Passing a mechanism NAME to the string overload throws at construction. |
@@ -309,7 +316,7 @@ A call has been proposed and not yet executed. A deny returns to the model AS th
 
 A tool may run only after every named dependency has already run successfully this conversation.
 
-**When to reach for it.** An ordered flow where a step is meaningless without its predecessors — bind one gate per downstream tool naming all of them. Use this for "which call came first", not for "what state is the world in" (that is precondition).
+**When to reach for it.** An ordered flow where a step is meaningless without its predecessors — bind one gate per downstream tool naming all of them. Use this for "which call came first", not for "what state is the world in" (that is `precondition`).
 
 ```ts
 requiresBefore(['findBooking'])
@@ -319,7 +326,7 @@ requiresBefore(['findBooking'])
 
 An unconditional deny of the bound tool while the binding is installed — the first call is denied too.
 
-**When to reach for it.** A tool must be off, no matter what. Its scope is the BINDING'S LIFETIME — the check is `() => reason`, with no turn logic in it at all, so the ban holds for as long as the binding is installed (the name is historical). It is not a repeat detector: reach for noDuplicateCall when the FIRST call is legitimate and only the repeat is not.
+**When to reach for it.** A tool must be off, no matter what. Its scope is the BINDING'S LIFETIME — the check is `() => reason`, with no turn logic in it at all, so the ban holds for as long as the binding is installed (the name is historical). It is not a repeat detector: reach for `noDuplicateCall` when the FIRST call is legitimate and only the repeat is not.
 
 ```ts
 forbidThisTurn('Do not reschedule while a cancellation is pending — resolve that first.')
@@ -329,7 +336,7 @@ forbidThisTurn('Do not reschedule while a cancellation is pending — resolve th
 
 A tool may succeed at most n times per turn (default) or per conversation.
 
-**When to reach for it.** A bulk cap on a tool that is legitimate but expensive or nagging — sweeps, notifications, repeat contact. Pick scope:"conversation" for retention-style limits, scope:"turn" for per-answer budgets.
+**When to reach for it.** A bulk cap on a tool that is legitimate but expensive or nagging — sweeps, notifications, repeat contact. Pick `scope: 'conversation'` for retention-style limits, `scope: 'turn'` for per-answer budgets.
 
 ```ts
 maxCalls('sendEmail', 1, 'You already emailed this person.', { scope: 'conversation' })
@@ -349,7 +356,7 @@ noDuplicateCall()
 
 The named argument must be present and non-empty (a blank string counts as missing).
 
-**When to reach for it.** A field the tool cannot do its job without, and the model tends to omit or fill with whitespace. For a field that must be well-FORMED rather than merely present, add argFormat.
+**When to reach for it.** A field the tool cannot do its job without, and the model tends to omit or fill with whitespace. For a field that must be well-FORMED rather than merely present, add `argFormat`.
 
 ```ts
 argRequired('bookingId')
@@ -359,7 +366,7 @@ argRequired('bookingId')
 
 The named argument must not be passed at all.
 
-**When to reach for it.** A parameter the model keeps inventing for this tool, or the excluded half of a mutually exclusive pair — bind argAbsent on each side of the pair.
+**When to reach for it.** A parameter the model keeps inventing for this tool, or the excluded half of a mutually exclusive pair — bind `argAbsent` on each side of the pair.
 
 ```ts
 argAbsent('customerEmail')
@@ -367,9 +374,9 @@ argAbsent('customerEmail')
 
 #### 7. `argFormat`
 
-A present, non-empty string argument must match the given pattern; absent or empty is left to argRequired.
+A present, non-empty string argument must match the given pattern; absent or empty is left to `argRequired`.
 
-**When to reach for it.** The value has a shape the model can plausibly fabricate — an id, a date, a code. Compose it with argRequired when the field is also mandatory; alone it only polices the values that are actually sent.
+**When to reach for it.** The value has a shape the model can plausibly fabricate — an id, a date, a code. Compose it with `argRequired` when the field is also mandatory; alone it only polices the values that are actually sent.
 
 ```ts
 argFormat('bookingId', '^BK-\\d{6}$')
@@ -379,7 +386,7 @@ argFormat('bookingId', '^BK-\\d{6}$')
 
 The call is allowed only while a predicate over the host world holds.
 
-**When to reach for it.** A gate whose discriminator lives in WORLD state, not in this call — the predicate never sees the acting call's arguments. If the discriminator is in the args, use custom instead.
+**When to reach for it.** A gate whose discriminator lives in WORLD state, not in this call — the predicate never sees the acting call's arguments. If the discriminator is in the args, use `custom` instead.
 
 ```ts
 precondition((world) => world.accountActive === true, 'This account is closed — you cannot act on it.', 'act on an account only while it is open')
@@ -389,7 +396,7 @@ precondition((world) => world.accountActive === true, 'This account is closed �
 
 A set of writes may run only while the world says this person's consent is on record.
 
-**When to reach for it.** Storing, sharing or transmitting personal data. It is precondition specialised to a TOOL SET, which is what makes the consent posture auditable in a spec header; pair it with a conversation-scoped maxCalls for repeat contact.
+**When to reach for it.** Storing, sharing or transmitting personal data. It is `precondition` specialised to a TOOL SET, which is what makes the consent posture auditable in a spec header; pair it with a conversation-scoped `maxCalls` for repeat contact.
 
 ```ts
 consentRequired({ tools: ['storeProfile'], consentOk: (world) => world.consentOnRecord === true, reason: 'No consent on record — ask for it before storing anything.' })
@@ -399,7 +406,7 @@ consentRequired({ tools: ['storeProfile'], consentOk: (world) => world.consentOn
 
 A destructive tool needs the user's go-ahead from an EARLIER turn — via a confirm flag probe or a prior ask. Passing a mechanism NAME to the string overload throws at construction.
 
-**When to reach for it.** The user must have agreed before this call runs, and the evidence has to be cross-turn — this is the consent gate itself. Its neighbours answer different questions: destructiveThrottle caps the blast radius of a turn that IS approved, consentRequired reads a standing world flag rather than the conversation, and pendingConfirmMustAsk gates the REPLY rather than the call. Mechanism: "arg" when the tool carries a confirm flag, "prior-ask" when it has none and an earlier question is the only possible evidence; the string overload sets the FLAG NAME, so confirmFirst('prior-ask') throws rather than silently building a guard that can never fire.
+**When to reach for it.** The user must have agreed before this call runs, and the evidence has to be cross-turn — this is the consent gate itself. Its neighbours answer different questions: `destructiveThrottle` caps the blast radius of a turn that IS approved, `consentRequired` reads a standing world flag rather than the conversation, and `pendingConfirmMustAsk` gates the REPLY rather than the call. Mechanism: `'arg'` when the tool carries a confirm flag, `'prior-ask'` when it has none and an earlier question is the only possible evidence; the string overload sets the FLAG NAME, so `confirmFirst('prior-ask')` throws rather than silently building a guard that can never fire.
 
 ```ts
 confirmFirst('confirmed')
@@ -409,7 +416,7 @@ confirmFirst('confirmed')
 
 Denies the listed tools on a turn in which the model already asked the user a question.
 
-**When to reach for it.** The mirror image of confirmFirst's cross-turn requirement: it closes the multi-tool step that asks and executes back to back, which reads as "asked" but never gave the user a chance to answer.
+**When to reach for it.** The mirror image of `confirmFirst`'s cross-turn requirement: it closes the multi-tool step that asks and executes back to back, which reads as "asked" but never gave the user a chance to answer.
 
 ```ts
 noActAfterAskSameTurn(['cancelBooking'])
@@ -419,7 +426,7 @@ noActAfterAskSameTurn(['cancelBooking'])
 
 At most one destructive action that TOOK EFFECT per turn (a confirmation probe does not count).
 
-**When to reach for it.** Auto-installed alongside confirmFirst. It is the blast-radius cap, not a consent gate: it stops chained destructive calls in one turn even when each one is individually confirmed.
+**When to reach for it.** Auto-installed alongside `confirmFirst`. It is the blast-radius cap, not a consent gate: it stops chained destructive calls in one turn even when each one is individually confirmed.
 
 ```ts
 destructiveThrottle(['cancelBooking', 'refundOrder'])
@@ -459,7 +466,7 @@ The reply text is in `ctx.reply` and no tool can run any more. A deny costs a bo
 
 | factory | file | what it enforces |
 |---|---|---|
-| [`pendingConfirmMustAsk`](#15-pendingconfirmmustask) | `confirmation.ts` | When a probe returned requiresConfirmation this turn and nothing resolved it, the reply must relay that question. |
+| [`pendingConfirmMustAsk`](#15-pendingconfirmmustask) | `confirmation.ts` | When a probe returned `requiresConfirmation` this turn and nothing resolved it, the reply must relay that question. |
 | [`noFabricatedSuccess`](#16-nofabricatedsuccess) | `honesty.ts` | The reply may not claim a tool's effect, cite an invented artifact label, or use a banned phrase when the tool did not succeed this turn. |
 | [`destructiveClaimRequiresSuccess`](#17-destructiveclaimrequiressuccess) | `honesty.ts` | A declarative claim that a destructive action happened is denied unless one actually took effect this turn. |
 | [`noFalseFailureClaim`](#18-nofalsefailureclaim) | `honesty.ts` | When every domain call this turn succeeded and one of them mutated the world, the reply may not claim inability. |
@@ -476,9 +483,9 @@ The reply text is in `ctx.reply` and no tool can run any more. A deny costs a bo
 
 #### 15. `pendingConfirmMustAsk`
 
-When a probe returned requiresConfirmation this turn and nothing resolved it, the reply must relay that question.
+When a probe returned `requiresConfirmation` this turn and nothing resolved it, the reply must relay that question.
 
-**When to reach for it.** The world runs the two-step protocol itself: the tool answers "I need confirmation" and the risk is a reply that summarises the action as done. It gates the REPLY; confirmFirst gates the call.
+**When to reach for it.** The world runs the two-step protocol itself: the tool answers "I need confirmation" and the risk is a reply that summarises the action as done. It gates the REPLY; `confirmFirst` gates the call.
 
 ```ts
 pendingConfirmMustAsk({ askRe: /shall I|do you want me to/i })
@@ -488,7 +495,7 @@ pendingConfirmMustAsk({ askRe: /shall I|do you want me to/i })
 
 The reply may not claim a tool's effect, cite an invented artifact label, or use a banned phrase when the tool did not succeed this turn.
 
-**When to reach for it.** A tool whose output the model likes to announce before it exists. Arm only the seams you need — claim language, label existence, or an unconditional ban — and ship banProse with every banRe.
+**When to reach for it.** A tool whose output the model likes to announce before it exists. Arm only the seams you need — claim language, label existence, or an unconditional ban — and ship `banProse` with every `banRe`.
 
 ```ts
 noFabricatedSuccess('generateReport', { reason: 'No report was generated this turn — do not say one was.', claimRe: /report is ready/i })
@@ -498,7 +505,7 @@ noFabricatedSuccess('generateReport', { reason: 'No report was generated this tu
 
 A declarative claim that a destructive action happened is denied unless one actually took effect this turn.
 
-**When to reach for it.** The destructive counterpart of noFabricatedSuccess, attempt-keyed and sentence-scoped: with no attempt this turn a destructive verb is read-back status and is left alone, and questions or offers never count as claims.
+**When to reach for it.** The destructive counterpart of `noFabricatedSuccess`, attempt-keyed and sentence-scoped: with no attempt this turn a destructive verb is read-back status and is left alone, and questions or offers never count as claims.
 
 ```ts
 destructiveClaimRequiresSuccess(['cancelBooking'], { claimRe: /cancelled/i, askRe: /shall I cancel/i, offerRe: /would you like/i })
@@ -528,7 +535,7 @@ noOutOfSurfaceActionClaim({ actionClaims: [{ claimRe: /refund (?:has been )?issu
 
 A figure or conclusion of a regulated class may appear only when a tool returned it this turn.
 
-**When to reach for it.** Legal, medical or financial surfaces. Keep allowFromToolResults true when a tool is authoritative for the class; set it false to ban the class outright where nothing in the world can license it.
+**When to reach for it.** Legal, medical or financial surfaces. Keep `allowFromToolResults` true when a tool is authoritative for the class; set it false to ban the class outright where nothing in the world can license it.
 
 ```ts
 noUngroundedRegulatedFigure({ regulatedRe: /\b\d+\s?mg\b/i, allowFromToolResults: true })
@@ -548,7 +555,7 @@ noCompetitorClaim({ competitorRe: /\bAcme\b/i, comparativeRe: /\b(?:better|cheap
 
 The reply must contain at least one of the given keywords (case-insensitive).
 
-**When to reach for it.** A mandatory element of coverage that is the same on every turn — a referral phrase, a required disclaimer. For "name the records you just acted on", use replyConfirmsLabels instead.
+**When to reach for it.** A mandatory element of coverage that is the same on every turn — a referral phrase, a required disclaimer. For "name the records you just acted on", use `replyConfirmsLabels` instead.
 
 ```ts
 replyMustMention(['support@example.com'], 'Give the support address so the person can follow up.')
@@ -578,7 +585,7 @@ replySingleQuestion('Ask exactly one question so the person can answer it.')
 
 The reply must be non-empty and name every one of the given labels.
 
-**When to reach for it.** The model just acted on identified records and the user needs to see WHICH ones. Unlike replyMustMention (any one keyword), every label is required.
+**When to reach for it.** The model just acted on identified records and the user needs to see WHICH ones. Unlike `replyMustMention` (any one keyword), every label is required.
 
 ```ts
 replyConfirmsLabels(['BK-100234'], 'Name the booking you acted on so the person can check it.')
@@ -598,7 +605,7 @@ emptyReply()
 
 Catches leaked reasoning or tool markup, chat-template tokens and run-away line repetition in the reply.
 
-**When to reach for it.** The reply is broken as an ARTIFACT rather than wrong as a claim — think blocks, tool-call markup or the same line five times over. No honesty kind fires on that, because nothing was asserted; this one catches the weak-model failure class every domain shares. Always on (auto-installed); pass selfNarrationRe to add the language-specific third-person self-narration branch.
+**When to reach for it.** The reply is broken as an ARTIFACT rather than wrong as a claim — think blocks, tool-call markup or the same line five times over. No honesty kind fires on that, because nothing was asserted; this one catches the weak-model failure class every domain shares. Always on (auto-installed); pass `selfNarrationRe` to add the language-specific third-person self-narration branch.
 
 ```ts
 degenerationGuard({ selfNarrationRe: /the assistant (?:then )?(?:called|checked)/i })
@@ -644,7 +651,7 @@ One factory, and it is the only one whose hook you choose: `custom` follows the 
 
 The escape hatch: a guard whose kind, dim, check and prose the spec author writes by hand.
 
-**When to reach for it.** Only when no kind fits — typically a domain concept the runtime carries no vocabulary for (media, labels, provenance) read through the world's own accessors. It is the one factory whose hook YOU choose, by the `dim` you pass: it is classified under preTool here only because this example is a `run` guard. Replicate the shared kinds' exemptions, since reviewers read this code.
+**When to reach for it.** Only when no kind fits — typically a domain concept the runtime carries no vocabulary for (media, labels, provenance) read through the world's own accessors. It is the one factory whose hook YOU choose, by the `dim` you pass: it is classified under `preTool` here only because this example is a `run` guard. Replicate the shared kinds' exemptions, since reviewers read this code.
 
 ```ts
 custom({ kind: 'imageQuotaLeft', dim: 'run', check: (ctx) => (ctx.world.imageQuotaRemaining > 0 ? null : 'No image quota left this month — say so instead of generating.'), prose: () => 'generate an image only while quota remains' })

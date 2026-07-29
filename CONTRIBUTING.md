@@ -41,7 +41,10 @@ Author the proof **before** the implementation — the proof cases are the spec.
    collective non-interference expectation). See
    [`skills/looprun-governance/references/proof-case-authoring.md`](skills/looprun-governance/references/proof-case-authoring.md).
 2. **Implement** the guard in the matching `packages/core/src/guards/<category>.ts` until the cases pass.
-3. **Update the catalog doc**: `packages/core/GUARDS.md`.
+3. **Add the catalog entry**: a `GUARD_CATALOG` row in `packages/core/src/guards/catalog.ts` (name,
+   category, hook, summary, when-to-use, a compilable example), then `pnpm docs:guards` to regenerate
+   the tutorial's guard chapter and its compiled examples. The catalog is the vocabulary of record;
+   `packages/core/GUARDS.md` is maintainer internals and carries no kind list.
 4. **Run the suite**: `pnpm test:proofs` (green, ratchet not lowered).
 5. **Generate the record**:
    ```bash
