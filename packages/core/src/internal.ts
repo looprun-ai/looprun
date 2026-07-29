@@ -18,7 +18,16 @@
  */
 
 // Guard-catalog classification tables (consumed by @looprun-ai/eval's linters).
-export { DENY_ONLY_PROSE_KINDS, CONFIRM_CLASS_KINDS, ARMED_SEAMS } from './guards.js';
+export { DENY_ONLY_PROSE_KINDS, CONFIRM_CLASS_KINDS, ARMED_SEAMS } from './guards/catalog.js';
+
+/**
+ * The guard vocabulary as DATA — one entry per exported factory (summary / when-to-use / example).
+ * Documentation infrastructure, not agent-authoring vocabulary: the tutorial's guard chapter is
+ * GENERATED from it, so it sits on the seam rather than on the public barrel (outline §6, decision 4).
+ * `test/guard-catalog-parity.test.ts` keeps it in bijection with `src/guards/`.
+ */
+export { GUARD_CATALOG } from './guards/catalog.js';
+export type { GuardCatalogEntry } from './guards/catalog.js';
 
 // Spec binding resolution — how a backend turns a spec's guard bindings into runnable guards.
 export { resolveGuards } from './spec.js';

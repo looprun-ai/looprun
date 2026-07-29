@@ -40,7 +40,7 @@ Author the proof **before** the implementation — the proof cases are the spec.
    new kind with **positive / negative / neutral** L1 cases plus at least one **L3 loop** case (and the
    collective non-interference expectation). See
    [`skills/looprun-governance/references/proof-case-authoring.md`](skills/looprun-governance/references/proof-case-authoring.md).
-2. **Implement** the guard in `packages/core/src/guards.ts` until the cases pass.
+2. **Implement** the guard in the matching `packages/core/src/guards/<category>.ts` until the cases pass.
 3. **Update the catalog doc**: `packages/core/GUARDS.md`.
 4. **Run the suite**: `pnpm test:proofs` (green, ratchet not lowered).
 5. **Generate the record**:

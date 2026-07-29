@@ -528,7 +528,7 @@ and a change to a governed surface ships with a passing proof record, or it does
    │                               positive (must allow) · negative (must
    │                               catch) · neutral (look-alike: leave alone)
    ▼
-   2. implement until green        packages/core/src/guards.ts
+   2. implement until green        packages/core/src/guards/
    ▼
    3. update the two mirrors       packages/core/GUARDS.md (the catalog)
    ▼

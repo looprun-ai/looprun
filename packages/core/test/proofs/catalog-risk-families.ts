@@ -18,7 +18,7 @@ import {
   noInstructionFromData,
   noOutOfSurfaceActionClaim,
   noUngroundedRegulatedFigure,
-} from '../../src/guards.js';
+} from '../../src/guards/index.js';
 import { FixtureWorld, FIXTURE_TOOL_NAMES } from '../../src/testing/index.js';
 import type { GuardProof } from '../../src/testing/index.js';
 

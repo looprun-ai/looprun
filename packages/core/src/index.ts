@@ -69,7 +69,7 @@ export {
   noUngroundedRegulatedFigure,
   consentRequired,
   jargonScrub,
-} from './guards.js';
+} from './guards/index.js';
 
 // ── Chapter 05 · running and eval ────────────────────────────────────────────
 export type { TurnInput, TurnRecord, RunResult } from './runtime/types.js';

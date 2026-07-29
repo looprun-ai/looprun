@@ -1,7 +1,7 @@
 # @looprun-ai/core — the guard reference (source of truth)
 
 The AgentSpec runtime's OWN guard vocabulary. Ground truth is the code in this package —
-[`src/guards.ts`](./src/guards.ts) (the guard-kind library, **29 kinds** + the `canonArgs` helper +
+[`src/guards/`](./src/guards/) (the guard-kind library, one file per category, **29 kinds** + the `canonArgs` helper +
 the `jargonScrub` mutator), [`src/rules.ts`](./src/rules.ts) (the `Guard` / `GuardCtx` types),
 [`src/spec.ts`](./src/spec.ts) (the `AgentSpecBase` class + `AgentControls`), and
 the framework-free `src/runtime/` turn machine plus the backend package (`@looprun-ai/mastra`) that enforces the hooks.
@@ -48,7 +48,7 @@ sibling destructive call's preTool checks). Two consequences a guard author must
 2. **it never carries an `ok:false` entry merely because the domain work failed.**
 
 A guard that reasons about "did the model DO anything / did everything succeed" must filter terminals
-first — `guards.ts` provides `TERMINAL_TOOLS` / `domainCallsThisTurn(ctx)` for exactly this. Getting it
+first — `src/guards/shared.ts` provides `TERMINAL_TOOLS` / `domainCallsThisTurn(ctx)` for exactly this. Getting it
 wrong is not a subtle bug: it makes the precondition **vacuously true**, and the guard then fires on the
 turn where the model legitimately could not act and said so — vetoing the honest reply into a redrive and
 out as an exhaustion stub. That is the highest-severity failure class this trap produces

@@ -1,20 +1,25 @@
 /**
  * THE COVERAGE RATCHET — a computed 100% floor with no stored counter (nothing to merge-conflict):
- * every Guard-returning export in src/guards.ts must carry a GuardProof with ≥1 positive, ≥1 negative
+ * every Guard-returning export in src/guards/ must carry a GuardProof with ≥1 positive, ≥1 negative
  * and ≥1 neutral case (and both L1 verdict classes); every ReplyMutator export must be listed in
  * PROVEN_MUTATORS (and proven in proofs-l1.test.ts). A new guard kind shipped without a proof turns
  * this red — that is the point.
  */
-import { readFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { readdirSync, readFileSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { GUARD_PROOFS, PROVEN_MUTATORS } from './catalog.js';
 
-const GUARDS_TS = resolve(dirname(fileURLToPath(import.meta.url)), '../../src/guards.ts');
-const src = readFileSync(GUARDS_TS, 'utf8');
+/** The per-category guard files, read as ONE blob — the vocabulary is the directory, not a file. */
+const GUARDS_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '../../src/guards');
+const src = readdirSync(GUARDS_DIR)
+  // `shared.ts` holds the module-local helpers, not vocabulary — it exports no factory to prove.
+  .filter((f) => f.endsWith('.ts') && f !== 'shared.ts')
+  .map((f) => readFileSync(join(GUARDS_DIR, f), 'utf8'))
+  .join('\n');
 
-/** Every `export function` in guards.ts, classified by its signature's return type (the FIRST
+/** Every `export function` in src/guards/, classified by its signature's return type (the FIRST
  *  `): Guard|ReplyMutator|string {` after the name — the same discriminator the guard-catalog parity
  *  lane uses). */
 function exportedFactories(): { name: string; returns: string }[] {

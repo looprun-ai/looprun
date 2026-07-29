@@ -10,7 +10,7 @@ import {
   replyMaxOccurrences,
   replyMustMention,
   replySingleQuestion,
-} from '../../src/guards.js';
+} from '../../src/guards/index.js';
 import { FIXTURE_LABEL_SCHEME, FIXTURE_LEXICON } from '../../src/testing/fixture-world.js';
 import type { GuardProof } from '../../src/testing/index.js';
 

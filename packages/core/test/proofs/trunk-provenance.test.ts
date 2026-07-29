@@ -13,7 +13,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { AgentSpecBase } from '../../src/spec.js';
-import { argRequired, custom, forbidThisTurn, jargonScrub, maxCalls, replySingleQuestion } from '../../src/guards.js';
+import { argRequired, custom, forbidThisTurn, jargonScrub, maxCalls, replySingleQuestion } from '../../src/guards/index.js';
 import { renderScopedSpecTrunk, renderTrunkBlocks } from '../../src/trunk.js';
 import {
   GUARD_KIND_SUBJECT, derivePolarity, deriveSubject, findContradictions, findDuplications,

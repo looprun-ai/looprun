@@ -16,7 +16,7 @@
  * (the hatch is ignored, `o.ok` wins, tookEffect becomes true, the guard returns null).
  */
 import { describe, it, expect } from 'vitest';
-import { destructiveClaimRequiresSuccess } from '../../src/guards.js';
+import { destructiveClaimRequiresSuccess } from '../../src/guards/index.js';
 import type { ObservedCall } from '../../src/rules.js';
 import { craftCtx } from '../../src/testing/index.js';
 

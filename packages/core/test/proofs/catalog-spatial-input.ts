@@ -1,5 +1,5 @@
 /** Guard proofs — SPATIAL + INPUT dims (see catalog.ts for the collective ruleset + script conventions). */
-import { argAbsent, argFormat, argRequired, forbidThisTurn, requiresBefore } from '../../src/guards.js';
+import { argAbsent, argFormat, argRequired, forbidThisTurn, requiresBefore } from '../../src/guards/index.js';
 import { type GuardProof } from '../../src/testing/index.js';
 
 const turn = (userText: string) => ({ userText });

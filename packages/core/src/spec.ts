@@ -25,7 +25,7 @@
  * layer ordering + trunk prose order). resolveBindings sorts each hook agent → full → base → minimal so
  * an agent correction always wins.
  */
-import { confirmFirst, degenerationGuard, destructiveThrottle, emptyReply, noDuplicateCall, noFalseFailureClaim } from './guards.js';
+import { confirmFirst, degenerationGuard, destructiveThrottle, emptyReply, noDuplicateCall, noFalseFailureClaim } from './guards/index.js';
 import { GuardExecutionError } from './rules.js';
 import type { AgentWorld, Dim, Guard, GuardCtx, ObservedCall, ReplyMutator, SpatialEdge } from './rules.js';
 import type { DomainContract } from './trunk.js';

@@ -59,6 +59,9 @@ const RIDERS = [
 const INTERNAL = [
   // inventory §7.1, verdict `internal` (37)
   'ARMED_SEAMS', 'CONFIRM_CLASS_KINDS', 'DENY_ONLY_PROSE_KINDS',
+  // Task 4 — the guard vocabulary as DATA, read by the chapter generator (outline §6, decision 4).
+  // Documentation infrastructure, deliberately NOT on the taught surface.
+  'GUARD_CATALOG', 'GuardCatalogEntry',
   'GuardBinding', 'resolveGuards', 'renderScopedSpecTrunk',
   'normalizeModelParams', 'resolveModelSettings',
   'TokenUsage', 'RuntimeTurnRecord',
