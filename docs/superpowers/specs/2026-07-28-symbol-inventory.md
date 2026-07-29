@@ -14,20 +14,20 @@ every symbol exactly once. It is a **barrel-only** enumeration; §8 lists what t
 ```
 package    public   internal   delete    total
 --------   ------   --------   ------    -----
-core          53        30        66       149
-mastra         5         1        19        25
+core          51        37        61       149
+mastra         7         1        17        25
 models         8         0        16        24
-eval          13         0        39        52
+eval          19         0        33        52
 server         4         0         9        13
 vercel         0         0         2         2
 --------   ------   --------   ------    -----
-TOTAL         83        31       151       265
+TOTAL         89        38       138       265
 ```
 
 ```
-public   ████████████████████████████                  83  (31.3%)
-internal ██████████                                    31  (11.7%)
-delete   ███████████████████████████████████████████  151  (57.0%)
+public   ██████████████████████████████                89  (33.6%)
+internal ████████████                                  38  (14.3%)
+delete   ███████████████████████████████████████      138  (52.1%)
 ```
 
 **Well over half** of the exported surface has no consumer outside the package that defines it.
@@ -40,7 +40,16 @@ delete   ███████████████████████�
 |---|---|---|
 | **public** | referenced from `examples/`, `skills/`, `scripts/`, `governance/`, `looprun-bench`, `agentspec`, `yntelli` | stays on the package's public `index.ts` |
 | **internal** | referenced only from another `packages/*` (mastra / eval / server / models / vercel / the `looprun` CLI facade) | moves behind an `/internal` subpath export |
-| *(override)* | **`docs/tutorial/00-outline.md` teaches it** — the design's contract principle | **public**, whatever this scan measured. Applied once so far: the four `models` local-model symbols (§9 round 3) |
+| *(override, promote)* | **`docs/tutorial/00-outline.md` teaches it** — the design's contract principle | **public**, whatever this scan measured (§9 rounds 3–4) |
+| *(override, demote)* | **no tutorial chapter teaches it** — the same principle, read the other way | **internal**, whatever this scan measured. Applied to the ten bring-your-own-loop symbols in §9 round 4 |
+
+> **The annotation rule** (round 4, the test the outline applies to types). A type is public iff the
+> tutorial shows the reader **writing a value of it in a position TypeScript will not infer** — an
+> authored case pack, a named `deps` object, a guard-binding helper's parameter. A type that only ever
+> appears as the *inferred* result of a taught call stays internal: `const r = await
+> runSpecConversation(…)` needs no name, so `FoldResult`, `LintViolation`, `UngovernedBundle`,
+> `CertSummary` and the three `*CommandOptions` are **not** promoted — the eleven `looprun-eval`
+> entry points are taught CLI-first and take object literals, which need no annotation either.
 | **delete** | zero references outside the defining package's own `src/` and its own `test/` | drops off `index.ts` |
 
 > ### `delete` means *stop exporting*, never *erase*
@@ -160,6 +169,7 @@ resolution.
 > under the design's contract principle ("a concept that does not appear in the tutorial becomes
 > internal or is deleted" — and its converse: what the tutorial teaches *is* the public API). The
 > outline's §7 records the decision and the rejected alternative. See §9 round 3.
+
 `localModelStatus` and `geminiFlashLiteThinkOff` keep `public` on real code evidence
 (`scripts/proofs/run-canary.mjs` and `examples/` respectively).
 
@@ -248,8 +258,8 @@ the rest are used only within `coherence.ts` itself, only by `trunk-provenance.t
 
 | # | finding | impact |
 |---|---|---|
-| 1 | 151 / 265 exports (57%) have no consumer outside their own package; another 31 (12%) are consumed only by sibling packages. **Only 83 (31%) are user-facing.** | the headline number the plan is built on — confirmed |
-| 2 | `packages/eval` exports 52; **39** are used only inside `eval/src` + `eval/test`. The real contract is the 13 the `looprun-eval` bin and the agentspec fork scripts call | eval's barrel can shrink ~75% |
+| 1 | 138 / 265 exports (52%) never reach the tutorial and have no consumer outside their own package; another 38 (14%) are sibling-only or seam-only. **89 (34%) are user-facing** — the usage scan said 79, the tutorial contract settled it at 89 | the headline number the plan is built on — confirmed in shape, refined in round 4 |
+| 2 | `packages/eval` exports 52; **33** are used only inside `eval/src` + `eval/test`. The contract is the 13 the `looprun-eval` bin and the agentspec fork scripts call, **plus the 6 types the reader authors** in a subject directory (round 4) | eval's barrel can shrink ~64% |
 | 3 | `packages/server` exports 13; only `createModelServer` + `TurnEvent` (+2 companion types) are consumed | same |
 | 4 | `packages/models` exports 24; 8 are public — `localModelStatus` and `geminiFlashLiteThinkOff` (consumer roots), `resolveAlias` and `LlamaCppRuntime` (the published `looprun` bin), and `localModel` + `LocalModelOptions` + `LocalModelSpec` + `ModelRuntimePort` (tutorial chapter 06, round 3). The five `QWEN*` alias constants and `MODEL_ALIASES` have **no consumer at all** | **RESOLVED in round 3**: the docs were right and the usage scan was measuring the wrong thing. Task 12 moves the local-models story into chapter 06 instead of retracting it |
 | 5 | **`coherence.ts`, `surface.ts`, `session.ts` contain raw control bytes** (`\x00`, `\x01`) in string literals, so `file(1)` calls them `data` and plain `grep` skips them without warning | any future repo-wide grep audit is silently blind to 3 files. Fix: write the separators as escape sequences instead of raw bytes. Until then, use `grep -a` |
@@ -264,11 +274,11 @@ the rest are used only within `coherence.ts` itself, only by `trunk-provenance.t
 Rows are grouped by package, in `index.ts` declaration order. `—` = no hits in that bucket.
 Read the §3 column caveat before using the third column for anything.
 
-### 7.1 `@looprun-ai/core` — 149 symbols (53 public · 30 internal · 66 delete)
+### 7.1 `@looprun-ai/core` — 149 symbols (51 public · 37 internal · 61 delete)
 
 | symbol | used by (consumers) | used by (sibling packages) | same-pkg cross-file imports | doc hits | verdict | note |
 |---|---|---|---|---|---|---|
-| `Dim` | — | — | core, core#test | 1 | ~~delete~~ | TASK 12: still referenced in published docs — packages/core/GUARDS.md |
+| `Dim` | — | — | core, core#test | 1 | **public** | ROUND 4: `custom({ dim })` cannot be called without it — tutorial 04 vocabulary block — (was: TASK 12: still referenced in published docs — packages/core/GUARDS.md) |
 | `AgentWorld` | bench, examples, yntelli | eval, eval#test, mastra, mastra#test, vercel | core, core#test | 9 | **public** |  |
 | `ObservedCall` | bench | mastra, mastra#test | core, core#test | 1 | **public** |  |
 | `GuardCtx` | bench | eval, mastra | core, core#test | 8 | **public** |  |
@@ -312,21 +322,21 @@ Read the §3 column caveat before using the third column for anything.
 | `ARMED_SEAMS` | — | eval | — | 2 | internal |  |
 | `AgentSpecBase` | agentspec, bench, examples, yntelli | eval#test, mastra#test, server#test | core, core#test | 13 | **public** |  |
 | `resolveBindings` | — | — | core, core#test | 0 | ~~delete~~ |  |
-| `resolveGuards` | bench | mastra | core, core#test | 0 | **public** |  |
+| `resolveGuards` | bench | mastra | core, core#test | 0 | internal | ROUND 4: NO TUTORIAL HOME — the bring-your-own-loop seam (outline §6.4, dropped: closing the loop needs recordToolResult/resultOk/isTerminal, all internal, so a taught version would silently never fire history-keyed guards). Stays available to bench/fork authors via `@looprun-ai/core/internal` |
 | `resolveMutators` | — | — | core | 0 | ~~delete~~ |  |
 | `AgentSpec` | bench, examples, yntelli | eval, eval#test, mastra, vercel | core | 17 | **public** |  |
 | `AgentSpecConfig` | — | — | core | 8 | **public** | companion type of `AgentSpecBase` (public) — no standalone import |
 | `AgentControls` | — | — | — | 3 | ~~delete~~ | TASK 12: still referenced in published docs — packages/core/GUARDS.md |
-| `AgentScope` | — | — | — | 0 | ~~delete~~ |  |
+| `AgentScope` | — | — | — | 0 | **public** | ROUND 4: the authored shape of `AgentSpecConfig.scope`; tutorial 03 teaches the scope block |
 | `ChainSpec` | — | — | core, core#test | 3 | ~~delete~~ | TASK 12: still referenced in published docs — packages/core/GUARDS.md |
 | `GuardBinding` | — | eval | core | 0 | internal |  |
 | `MutatorBinding` | — | — | — | 0 | ~~delete~~ |  |
 | `StateDirective` | — | — | — | 2 | ~~delete~~ | TASK 12: still referenced in published docs — packages/core/GUARDS.md |
-| `TerminalPolicy` | — | — | — | 0 | ~~delete~~ |  |
-| `Hook` | — | — | core | 2 | ~~delete~~ | TASK 12: still referenced in published docs — packages/core/GUARDS.md |
-| `ToolTarget` | — | — | core | 0 | ~~delete~~ |  |
+| `TerminalPolicy` | — | — | — | 0 | **public** | ROUND 4: the authored shape of `AgentSpecConfig.terminal`; tutorial 03 teaches the terminal declaration |
+| `Hook` | — | — | core | 2 | **public** | ROUND 4: first parameter of `AgentSpecBase#addGuard`, the guard-binding surface taught in tutorial 03 — (was: TASK 12: still referenced in published docs — packages/core/GUARDS.md) |
+| `ToolTarget` | — | — | core | 0 | **public** | ROUND 4: second parameter of `AgentSpecBase#addGuard` — tutorial 03 |
 | `Layer` | — | — | — | 0 | ~~delete~~ |  |
-| `renderScopedSpecTrunk` | bench, yntelli | eval, mastra | core, core#test | 1 | **public** |  |
+| `renderScopedSpecTrunk` | bench, yntelli | eval, mastra | core, core#test | 1 | internal | ROUND 4: NO TUTORIAL HOME — the bring-your-own-loop seam (outline §6.4, dropped: closing the loop needs recordToolResult/resultOk/isTerminal, all internal, so a taught version would silently never fire history-keyed guards). Stays available to bench/fork authors via `@looprun-ai/core/internal` |
 | `renderTrunkBlocks` | — | — | core#test | 0 | ~~delete~~ |  |
 | `chainOrder` | — | — | — | 0 | ~~delete~~ |  |
 | `DomainContract` | examples | eval, eval#test, mastra, mastra#test, vercel | core, core#test | 6 | **public** |  |
@@ -367,13 +377,13 @@ Read the §3 column caveat before using the third column for anything.
 | `SamplingSettings` | — | — | core | 0 | ~~delete~~ |  |
 | `ToolDef` | bench, examples | eval, mastra, mastra#test, vercel | core | 3 | **public** |  |
 | `TokenUsage` | — | mastra | — | 0 | internal |  |
-| `TurnInput` | — | mastra | — | 0 | internal |  |
-| `TurnRecord` | — | eval, mastra | — | 0 | internal |  |
-| `RunResult` | — | mastra, mastra#test | — | 0 | internal |  |
+| `TurnInput` | — | mastra | — | 0 | **public** | ROUND 4: `runSpecConversation(spec, turns: TurnInput[], deps)` — the reader authors the turns array in tutorial 05 |
+| `TurnRecord` | — | eval, mastra | — | 0 | **public** | ROUND 4: the element type of `RunResult.turnRecords` — tutorial 05 asserts on records |
+| `RunResult` | — | mastra, mastra#test | — | 0 | **public** | ROUND 4: `runSpecConversation` return type — tutorial 05 |
 | `RuntimeTurnInput` | — | — | — | 0 | ~~delete~~ |  |
 | `RuntimeTurnRecord` | — | mastra | — | 0 | internal |  |
-| `createLedger` | bench | mastra | core#test | 0 | **public** |  |
-| `beginTurn` | bench | mastra | core#test | 2 | **public** |  |
+| `createLedger` | bench | mastra | core#test | 0 | internal | ROUND 4: NO TUTORIAL HOME — the bring-your-own-loop seam (outline §6.4, dropped: closing the loop needs recordToolResult/resultOk/isTerminal, all internal, so a taught version would silently never fire history-keyed guards). Stays available to bench/fork authors via `@looprun-ai/core/internal` |
+| `beginTurn` | bench | mastra | core#test | 2 | internal | ROUND 4: NO TUTORIAL HOME — the bring-your-own-loop seam (outline §6.4, dropped: closing the loop needs recordToolResult/resultOk/isTerminal, all internal, so a taught version would silently never fire history-keyed guards). Stays available to bench/fork authors via `@looprun-ai/core/internal` |
 | `resultOk` | — | mastra#test | core#test | 6 | internal |  |
 | `recordVeto` | — | — | core, core#test | 0 | ~~delete~~ |  |
 | `recordToolResult` | — | mastra | core#test | 1 | internal | TASK 12: still referenced in published docs — packages/vercel/README.md |
@@ -394,31 +404,31 @@ Read the §3 column caveat before using the third column for anything.
 | `normalizeTerminalToolDef` | — | mastra, mastra#test | — | 2 | internal |  |
 | `prematureTerminalTools` | — | mastra, mastra#test | core#test | 0 | internal |  |
 | `supersededTerminalCalls` | — | mastra | core#test | 0 | internal |  |
-| `renderTurnPrompt` | — | mastra, mastra#test | — | 6 | **public** | FOUND IN RE-CHECK: agentspec skill/scripts/synth-fork.mjs:178,190 and extract-fork.mjs:210,222 via computed `importFromCwd('@looprun-ai/core')` → `core.renderTurnPrompt(...)` |
+| `renderTurnPrompt` | — | mastra, mastra#test | — | 6 | internal | ROUND 4: NO TUTORIAL HOME — the bring-your-own-loop seam (outline §6.4, dropped: closing the loop needs recordToolResult/resultOk/isTerminal, all internal, so a taught version would silently never fire history-keyed guards). Stays available to bench/fork authors via `@looprun-ai/core/internal` — (was: FOUND IN RE-CHECK: agentspec skill/scripts/synth-fork.mjs:178,190 and extract-fork.mjs:210,222 via computed `importFromCwd('@looprun-ai/core')` → `core.renderTurnPrompt(...)`) |
 | `uploadDisplayLabels` | — | — | — | 2 | ~~delete~~ |  |
 | `isReplyOnly` | — | — | — | 2 | ~~delete~~ |  |
 | `TurnPrompt` | — | — | — | 0 | ~~delete~~ |  |
 | `TurnPromptInput` | — | — | — | 0 | ~~delete~~ |  |
-| `evaluatePreTool` | bench | mastra | core#test | 1 | **public** |  |
+| `evaluatePreTool` | bench | mastra | core#test | 1 | internal | ROUND 4: NO TUTORIAL HOME — the bring-your-own-loop seam (outline §6.4, dropped: closing the loop needs recordToolResult/resultOk/isTerminal, all internal, so a taught version would silently never fire history-keyed guards). Stays available to bench/fork authors via `@looprun-ai/core/internal` |
 | `evaluateOnInput` | — | mastra | core#test | 0 | internal |  |
 | `applyMutators` | — | — | — | 0 | ~~delete~~ |  |
 | `checkReply` | — | — | — | 0 | ~~delete~~ |  |
-| `enforcePostTool` | bench | mastra | core#test | 1 | **public** |  |
-| `redriveMessage` | bench | — | core#test | 0 | **public** |  |
+| `enforcePostTool` | bench | mastra | core#test | 1 | internal | ROUND 4: NO TUTORIAL HOME — the bring-your-own-loop seam (outline §6.4, dropped: closing the loop needs recordToolResult/resultOk/isTerminal, all internal, so a taught version would silently never fire history-keyed guards). Stays available to bench/fork authors via `@looprun-ai/core/internal` |
+| `redriveMessage` | bench | — | core#test | 0 | internal | ROUND 4: NO TUTORIAL HOME — the bring-your-own-loop seam (outline §6.4, dropped: closing the loop needs recordToolResult/resultOk/isTerminal, all internal, so a taught version would silently never fire history-keyed guards). Stays available to bench/fork authors via `@looprun-ai/core/internal` |
 | `defaultExhaustionReply` | — | mastra#test | — | 1 | internal | TASK 12: still referenced in published docs — packages/core/GUARDS.md |
-| `finalizeReply` | bench | mastra | core#test | 1 | **public** |  |
+| `finalizeReply` | bench | mastra | core#test | 1 | internal | ROUND 4: NO TUTORIAL HOME — the bring-your-own-loop seam (outline §6.4, dropped: closing the loop needs recordToolResult/resultOk/isTerminal, all internal, so a taught version would silently never fire history-keyed guards). Stays available to bench/fork authors via `@looprun-ai/core/internal` |
 | `governanceVeto` | — | mastra, mastra#test | — | 0 | internal |  |
 | `shouldFireChain` | — | — | core#test | 0 | ~~delete~~ |  |
 | `runChainCompletionPass` | — | mastra | core#test | 0 | internal |  |
 | `PreToolVerdict` | — | — | — | 0 | ~~delete~~ |  |
 | `GovernanceVeto` | — | — | — | 0 | ~~delete~~ |  |
-| `ReplyViolation` | bench | — | — | 0 | **public** |  |
+| `ReplyViolation` | bench | — | — | 0 | internal | ROUND 4: NO TUTORIAL HOME — the bring-your-own-loop seam (outline §6.4, dropped: closing the loop needs recordToolResult/resultOk/isTerminal, all internal, so a taught version would silently never fire history-keyed guards). Stays available to bench/fork authors via `@looprun-ai/core/internal` |
 | `FinalizedReply` | — | mastra | — | 0 | internal |  |
 | `PostToolEnforcement` | — | — | — | 0 | ~~delete~~ |  |
 | `ChainPassCtx` | — | — | — | 0 | ~~delete~~ |  |
 | `ChainPassResult` | — | — | — | 0 | ~~delete~~ |  |
 
-### 7.2 `@looprun-ai/mastra` — 25 symbols (5 public · 1 internal · 19 delete)
+### 7.2 `@looprun-ai/mastra` — 25 symbols (7 public · 1 internal · 17 delete)
 
 `mastra/src/index.ts` also ends with `export * from '@looprun-ai/core'`; those symbols are rows in §7.1. That line is exactly the blind spot described in §3.
 
@@ -432,14 +442,14 @@ Read the §3 column caveat before using the third column for anything.
 | `runSpecConversation` | bench | eval | mastra, mastra#test | 1 | **public** |  |
 | `DEFAULT_MAX_STEPS` | — | — | mastra | 0 | ~~delete~~ |  |
 | `DEFAULT_REDRIVES` | — | — | mastra | 0 | ~~delete~~ |  |
-| `RuntimeDeps` | — | — | — | 0 | ~~delete~~ |  |
+| `RuntimeDeps` | — | — | — | 0 | **public** | ROUND 4: third parameter of `runSpecConversation` — the reader authors it in tutorial 05 |
 | `compileSpec` | — | — | mastra#test | 3 | ~~delete~~ | TASK 12: still referenced in published docs — governance/MATRIX.md, governance/proofs/2026-07-28-compile-freeze-reply-only.md, README.md |
 | `CompiledSpec` | — | — | — | 0 | ~~delete~~ |  |
 | `SessionStore` | — | — | mastra | 0 | ~~delete~~ |  |
 | `LoopRunSession` | — | — | mastra | 0 | ~~delete~~ |  |
 | `WorldFactory` | — | — | mastra | 0 | ~~delete~~ |  |
 | `worldFromTools` | yntelli | — | mastra | 1 | **public** |  |
-| `StateView` | — | — | mastra | 0 | ~~delete~~ |  |
+| `StateView` | — | — | mastra | 0 | **public** | ROUND 4: the authored parameter of `worldFromTools({ stateView })` — tutorial 03 |
 | `buildWorldTools` | — | — | mastra | 0 | ~~delete~~ |  |
 | `buildTerminalTools` | — | — | mastra | 0 | ~~delete~~ |  |
 | `makeGuardHooks` | — | — | mastra | 0 | ~~delete~~ |  |
@@ -479,7 +489,7 @@ Read the §3 column caveat before using the third column for anything.
 | `localModelStatus` | — | — | — | 0 | **public** | scripts/proofs/run-canary.mjs + `looprun` bin (dynamic import) |
 | `LooprunLocalModelSpec` | — | — | — | 0 | ~~delete~~ |  |
 
-### 7.4 `@looprun-ai/eval` — 52 symbols (13 public · 0 internal · 39 delete)
+### 7.4 `@looprun-ai/eval` — 52 symbols (19 public · 0 internal · 33 delete)
 
 | symbol | used by (consumers) | used by (sibling packages) | same-pkg cross-file imports | doc hits | verdict | note |
 |---|---|---|---|---|---|---|
@@ -488,12 +498,12 @@ Read the §3 column caveat before using the third column for anything.
 | `agentForCase` | — | — | eval | 1 | **public** | agentspec skill/scripts/synth-fork.mjs:113 via computed `importFromCwd('@looprun-ai/eval')` → `evalPkg.agentForCase(...)` |
 | `checkTrunkStatic` | — | — | eval, eval#test | 0 | ~~delete~~ |  |
 | `readDeclaredTarget` | — | — | eval, eval#test | 0 | ~~delete~~ |  |
-| `Subject` | — | — | eval, eval#test | 3 | ~~delete~~ | TASK 12: still referenced in published docs — packages/eval/README.md |
-| `SubjectCase` | — | — | eval | 2 | ~~delete~~ |  |
-| `CaseTurn` | — | — | — | 0 | ~~delete~~ |  |
-| `CaseInvariants` | — | — | eval | 0 | ~~delete~~ |  |
-| `ReqCall` | — | — | — | 0 | ~~delete~~ |  |
-| `RubricItem` | — | — | — | 0 | ~~delete~~ |  |
+| `Subject` | — | — | eval, eval#test | 3 | **public** | ROUND 4: return of `loadSubject`, parameter of `agentForCase` and `lintSubject` — tutorial 05 — (was: TASK 12: still referenced in published docs — packages/eval/README.md) |
+| `SubjectCase` | — | — | eval | 2 | **public** | ROUND 4: the reader authors `evals/cases` as `SubjectCase[]` — tutorial 05 subject-directory contract |
+| `CaseTurn` | — | — | — | 0 | **public** | ROUND 4: `SubjectCase.turns` — authored |
+| `CaseInvariants` | — | — | eval | 0 | **public** | ROUND 4: `SubjectCase.expectations.invariants` — authored |
+| `ReqCall` | — | — | — | 0 | **public** | ROUND 4: `CaseInvariants.requiredToolCalls` / `forbiddenToolCalls` — authored |
+| `RubricItem` | — | — | — | 0 | **public** | ROUND 4: `SubjectCase.expectations.rubric` — authored |
 | `DeclaredTarget` | — | — | — | 0 | ~~delete~~ |  |
 | `runCase` | — | — | eval, eval#test | 0 | ~~delete~~ |  |
 | `toolCallMatches` | — | — | eval#test | 0 | ~~delete~~ |  |
@@ -649,8 +659,28 @@ non-typechecking consumer imports recorded as finding 6.
 |---|---|---|
 | 6 | `models.localModel` + `LocalModelOptions` + `LocalModelSpec` + `ModelRuntimePort` — internal → **public** | tutorial chapter 06 ("Run it locally") teaches `localModel` as the local-model entry point; the three types are structurally reachable from the taught signatures. Reverses round 1's change #4, on a different and stronger authority: #4 correctly refused a promotion based on a *doc mention*; this one is based on the *tutorial contract*. Rationale and the rejected alternative (hand-assembling `resolveAlias` → `LlamaCppRuntime` → `createOpenAI` in the docs) are in the outline's §7. Resolves finding 4 |
 
-**No downgrades.** All 79 round-2 public symbols found a chapter, so no symbol was demoted for
-"no tutorial home".
+**No downgrades in round 3.** All 79 round-2 public symbols found a chapter. Round 4 reopened that.
+
+### Round 4 — two independent reviews of the outline
+
+The round-3 outline placed all 83 symbols, but three chapters could not actually be *written* from
+the surface they claimed: the types the reader must author were not exported. Round 4 fixes the
+contract in both directions.
+
+| # | change | evidence |
+|---|---|---|
+| 7 | **10 core symbols public → internal**: `createLedger` `beginTurn` `resolveGuards` `evaluatePreTool` `enforcePostTool` `redriveMessage` `finalizeReply` `ReplyViolation` `renderScopedSpecTrunk` `renderTurnPrompt` | reason: **no tutorial home**. Outline §6.4 ("bring your own loop") was dropped as unteachable — closing that loop needs `recordToolResult`, `resultOk`, `isTerminal`, `terminalProtocol`, `TurnLedger`, all internal. Without `recordToolResult` the ledger's `observed` stays empty and every history-keyed guard (`confirmFirst`, `noDuplicateCall`, `requiresBefore`, `destructiveThrottle`) silently never fires — a chapter that ships a governance hole. The seam stays whole behind `@looprun-ai/core/internal` for the bench shim and the agentspec fork scripts, which is what they already are: integrators, not the tutorial's audience |
+| 8 | `core.Dim` delete → **public** | `custom({ kind, dim, check, prose })` (`guards.ts:24`) requires `dim: Dim`. Chapter 04 teaches `custom` as the escape hatch, so the vocabulary block is `Guard` `GuardCtx` `ObservedCall` `Dim` |
+| 9 | `core.Hook`, `core.ToolTarget` delete → **public** | `AgentSpecBase#addGuard(hook: Hook, target: ToolTarget, guard: Guard, opts?)` (`spec.ts:494`) is the mechanism that binds any factory to a spec — and it throws on an illegal dim×hook pairing. Chapter 03 teaches it. **`Layer` deliberately NOT promoted**: it appears only as `opts.layer`, and layers (`minimal`/`base`/`agent`) are the framework's own auto-install tiers, which the tutorial does not teach the reader to set |
+| 10 | `core.AgentScope`, `core.TerminalPolicy` delete → **public** | the design assigns "scope, tools, terminal" to chapter 03; `AgentScope` is an authored `{ lane, others }` object and `TerminalPolicy` an authored `(world) => boolean`. **The other `AgentSpecConfig` field types stay non-public** (`SpatialEdge`, `StateDirective`, `ChainSpec`, `SamplingSettings`, `MutatorBinding`) because chapter 03 does not teach `flow` / `directives` / `chains` / `sampling`. The rule is stated in the outline: *a config field the tutorial teaches has its authored type public; a field it does not teach keeps its type off the barrel* |
+| 11 | `core.TurnInput`, `core.RunResult`, `core.TurnRecord` internal → **public**; `mastra.RuntimeDeps` delete → **public** | `runSpecConversation(spec: AgentSpec, turns: TurnInput[], deps: RuntimeDeps): Promise<RunResult>` (`run-conversation.ts:73`) is chapter 05's headline call and every name in it was unexported. `TurnRecord` rides along as `RunResult.turnRecords`' element — the shape 05 asserts on |
+| 12 | `mastra.StateView` delete → **public** | `worldFromTools(opts: { stateView?: StateView })` (`world-adapters.ts:24`) — the reader authors the state view. Also corrects the outline's description of that function: it synthesizes a **native-tools-mode** world whose `exec` **throws**; it supplies state only |
+| 13 | `eval.Subject`, `SubjectCase`, `CaseTurn`, `CaseInvariants`, `ReqCall`, `RubricItem` delete → **public** | chapter 05 teaches the **subject directory contract** (`norms/index` → SPECS + CONTRACT, `gen/world`, `evals/cases`, `gen/tools.json`, `ask/targets.json`). The reader authors `evals/cases` as `SubjectCase[]`; `Subject` is `loadSubject`'s return and the parameter of `agentForCase` and `lintSubject` |
+
+**Also decided in round 4** (recorded in the outline, no verdict change here): `GUARD_CATALOG` +
+`GuardCatalogEntry` ship on `@looprun-ai/core/internal`, not the public barrel — Task 10's generator
+imports from `/internal`. This amends the plan's Task 4 wording ("exported publicly") to match the
+contract principle: the catalog is build input for the chapter, not API the chapter teaches.
 
 Totals: 77 / 35 / 153 (initial) → 77 / 37 / 151 (round 1) → 79 / 35 / 151 (round 2) →
-**83 / 31 / 151** (round 3).
+83 / 31 / 151 (round 3) → **89 / 38 / 138** (round 4).
