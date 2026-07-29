@@ -6,7 +6,26 @@
  * `tools`, `tool_choice` and sampling params are therefore ignored by design — the AgentSpec owns
  * the trunk, the tool surface and the sampling (see README).
  */
-import type { LoopRunAgent, LoopRunResultMeta } from '@looprun-ai/mastra';
+import type { ObservedCall } from '@looprun-ai/core';
+import type { LoopRunAgent } from '@looprun-ai/mastra';
+
+/**
+ * The governed-turn metadata a LoopRunAgent attaches to its result as `result.looprun`.
+ *
+ * Declared here rather than imported: it is INTERNAL to `@looprun-ai/mastra` (symbol inventory
+ * §7.2) and that package has no `/internal` subpath, while this server's own `TurnEvent` is
+ * public and must be nameable in the emitted declarations.
+ */
+export interface LoopRunResultMeta {
+  sessionId: string;
+  turnIndex: number;
+  /** Guard activity this turn: veto kinds, 'forced-terminal', 'redrive:*', 'exhaustion-terminal'. */
+  corrections: string[];
+  exhausted: boolean;
+  violations: string[];
+  /** This turn's slice of the observed ledger. */
+  observed: ObservedCall[];
+}
 
 /** One incoming OpenAI message. Content may be a string or an array of typed parts. */
 export interface WireMessage {

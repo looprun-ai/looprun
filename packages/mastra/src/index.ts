@@ -1,25 +1,23 @@
 /**
- * @looprun-ai/mastra — public API.
+ * @looprun-ai/mastra — the public API: ONE facade plus the scripted runner.
  *
- *   new LoopRunAgent({ spec, world, model })  → a genuine Mastra Agent, governed.
- *   runSpecConversation(spec, turns, deps)    → scripted multi-turn runs (evals/batch).
- *   compileSpec(spec, opts)                   → DIY primitives for your own `new Agent({...})`.
+ *   new LoopRunAgent({ spec, world, model })  → a genuine Mastra Agent, governed (tutorial 02).
+ *   worldFromTools({ stateView })             → native-tools/MCP mode's world seam (tutorial 03).
+ *   runSpecConversation(spec, turns, deps)    → scripted multi-turn runs, evals/batch (tutorial 05).
+ *
+ * These 7 names are the mastra rows of `docs/tutorial/00-outline.md` §4 — the contract, locked by
+ * `test/proofs/surface-lock.test.ts`. Everything else in this package (the session store, the tool
+ * and hook builders, the JSON-schema→Zod shim, `surfaceFingerprint`, `compileSpec`) is module-local:
+ * mastra has NO `/internal` subpath, so in-package code imports those module files directly.
  */
-export { LoopRunAgent, createLoopRunAgent } from './agent.js';
-export type { LoopRunAgentConfig, LoopRunOptions, LoopRunResultMeta } from './agent.js';
-export { runSpecConversation, DEFAULT_MAX_STEPS, DEFAULT_REDRIVES } from './run-conversation.js';
+export { LoopRunAgent } from './agent.js';
+export type { LoopRunAgentConfig, LoopRunOptions } from './agent.js';
+export { runSpecConversation } from './run-conversation.js';
 export type { RuntimeDeps } from './run-conversation.js';
-export { compileSpec } from './compile.js';
-export type { CompiledSpec } from './compile.js';
-export { SessionStore } from './session.js';
-export type { LoopRunSession, WorldFactory } from './session.js';
 export { worldFromTools } from './world-adapters.js';
 export type { StateView } from './world-adapters.js';
-export { buildWorldTools, buildTerminalTools } from './tools.js';
-export { makeGuardHooks, makeInputProcessors, repeatedToolCallStop } from './hooks.js';
-export type { GuardHooks } from './hooks.js';
-export { jsonSchemaToZodObject, jsonTypeToZod } from './json-schema-zod.js';
-export { surfaceFingerprint } from './surface.js';
 
-// Re-exports so `import { AgentSpecBase, precondition, … } from '@looprun-ai/mastra'` works too.
+// Re-exports so `import { AgentSpecBase, precondition, … } from '@looprun-ai/mastra'` works too:
+// the tutorial's chapters 02–04 import through the `looprun/mastra` specifier, so core's public
+// contract must flow through this barrel (outline §3).
 export * from '@looprun-ai/core';

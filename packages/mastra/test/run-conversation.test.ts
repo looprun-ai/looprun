@@ -2,7 +2,8 @@
 import { describe, expect, it } from 'vitest';
 import { AgentSpecBase, confirmFirst } from '@looprun-ai/core';
 import type { AgentWorld, DomainContract } from '@looprun-ai/core';
-import { repeatedToolCallStop, runSpecConversation } from '../src/index.js';
+import { runSpecConversation } from '../src/index.js';
+import { repeatedToolCallStop } from '../src/hooks.js';
 import { scriptedModel } from './scripted-model.js';
 
 const CONTRACT: DomainContract = {

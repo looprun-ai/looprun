@@ -4,7 +4,8 @@ import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 import { AgentSpecBase } from '@looprun-ai/core';
 import type { DomainContract } from '@looprun-ai/core';
-import { LoopRunAgent, surfaceFingerprint } from '../src/index.js';
+import { LoopRunAgent } from '../src/index.js';
+import { surfaceFingerprint } from '../src/surface.js';
 import { scriptedModel } from './scripted-model.js';
 
 const CONTRACT: DomainContract = {
