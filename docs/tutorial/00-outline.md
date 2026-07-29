@@ -57,10 +57,10 @@ chapter                    symbols taught
 ------------------------   --------------
 01-concepts                 0   (concept-only)
 02-hello-world              3   ███
-03-agent-anatomy           13   █████████████
+03-agent-anatomy           11   ███████████
 04-guards                  35   ███████████████████████████████████
 05-running-and-eval        27   ███████████████████████████
-06-advanced                11   ███████████
+06-advanced                13   █████████████
 ------------------------   --------------
 TOTAL                      89
 ```
@@ -179,9 +179,9 @@ shared snippet module, plus one `await agent.generate(...)`.
 **Goal.** Show how the pieces relate — what a spec declares, what a world provides, where the tool
 surface comes from, and how a guard gets bound to a hook.
 
-**Imports.** `looprun` (≡ `looprun/core`) for the core symbols; `looprun/mastra` for the two adapters.
+**Imports.** `looprun` (≡ `looprun/core`) — the two `looprun/mastra` adapters moved to 06 (§7 amendment).
 
-**Symbols taught (13).**
+**Symbols taught (11).** *(was 13 — see the §7 amendment: `worldFromTools` and `StateView` moved to 06.)*
 
 | symbol | package | role |
 |---|---|---|
@@ -196,8 +196,6 @@ surface comes from, and how a guard gets bound to a hook.
 | `Hook` | core | `'onInput' \| 'preTool' \| 'postTool' \| 'onReply'` — `addGuard`'s first argument |
 | `ToolTarget` | core | `'any' \| string[]` — `addGuard`'s second argument |
 | `validateSpec` | core | fail fast on an incoherent spec |
-| `worldFromTools` | mastra | **native-tools mode only** — see below |
-| `StateView` | mastra | the state reads `worldFromTools` is given |
 
 **`addGuard` is named here, and it is not a new row.** `AgentSpecBase#addGuard(hook, target, guard,
 opts?)` is the mechanism that binds any factory from chapter 04 to a spec, and it *throws* on an
@@ -205,12 +203,10 @@ illegal dim×hook pairing (`spec.ts:494`) — so the reader meets it with the an
 cross-references it instead of re-teaching it. It is a method of an already-taught class, which is
 why `Hook` and `ToolTarget` are rows and `addGuard` is not.
 
-**`worldFromTools` is not "an AgentWorld from plain functions".** It synthesizes a world for
-**native-tools mode**, where Mastra assigned tools / toolsets / MCP tools execute *themselves*; the
-returned world's `exec` **throws** if anything calls it, and its only job is to supply state reads
-(from the `StateView`) for stateful guards and `contract.stateBlock`. The chapter teaches
-hand-writing `AgentWorld` as the default and certified path, and `worldFromTools` as the adapter for
-the case where the tools already execute elsewhere. Absorbs `docs/guides/mcp-tools.md`.
+**`worldFromTools` moved to chapter 06** (§7 amendment). Chapter 03 teaches hand-writing
+`AgentWorld` as the default and certified path, and leaves a three-line forward reference that a
+second path exists. The native-tools story — and `docs/guides/mcp-tools.md`, which it absorbs — now
+belongs to 06.
 
 **Example used.** The full scheduler spec — three tools, scope, terminal, `DomainContract` — plus its
 hand-written world, with a `validateSpec` assertion in a test.
@@ -362,9 +358,10 @@ booking): author `evals/cases.ts`, then `looprun-eval run` → `fold` → `cert`
 **Goal.** Take the same spec somewhere else: serve it over an OpenAI-compatible endpoint, or run it
 on a local model with no cloud key.
 
-**Imports.** **`@looprun-ai/server`** (no `looprun/server` subpath — §6, decision 5) · `looprun/models`.
+**Imports.** **`@looprun-ai/server`** (no `looprun/server` subpath — §6, decision 5) · `looprun/models`
+· `looprun/mastra` (the native-tools world seam).
 
-**Symbols taught (11), in two sections.**
+**Symbols taught (13), in three sections.** *(was 11 — see the §7 amendment.)*
 
 *6.1 Serve it — an OpenAI-compatible endpoint (4)*
 
@@ -390,6 +387,23 @@ on a local model with no cloud key.
 Taught in the order the CLI does it: `npx looprun models pull` → `status` → then the library path.
 Absorbs `docs/guides/local-models.md`.
 
+*6.3 Native tools and MCP — the other execution model (2)*
+
+| symbol | package | role |
+|---|---|---|
+| `worldFromTools` | mastra | **native-tools mode only** — see below |
+| `StateView` | mastra | the state reads `worldFromTools` is given |
+
+**`worldFromTools` is not "an AgentWorld from plain functions".** It synthesizes a world for
+**native-tools mode**, where Mastra assigned tools / toolsets / MCP tools execute *themselves*; the
+returned world's `exec` **throws** if anything calls it, and its only job is to supply state reads
+(from the `StateView`) for stateful guards and `contract.stateBlock`. Two facts the section must
+carry, because together they are the likeliest first-run failure: Mastra v1's `MCPClient.listTools()`
+namespaces every tool as `serverName_toolName`, and the spec surface is **deny-by-default**
+(`agent-construction.ts:80-97` throws on a surface tool the host does not provide, and logs a loud
+`console.error` for a host tool the surface does not list). So the spec must declare the namespaced
+name. Absorbs `docs/guides/mcp-tools.md`.
+
 **Not here: "bring your own loop."** The round-3 outline had a fourth section teaching the governance
 primitives (`createLedger`, `evaluatePreTool`, `finalizeReply`, …) for enforcing a spec inside a
 foreign runtime. It was **dropped as unteachable** — see §8. Those ten symbols are demoted to
@@ -413,7 +427,6 @@ All 89 symbols, and the chapter that claims each. `↑` = promoted into public b
 |---|---|---|
 | mastra | **02** (3) | `LoopRunAgent` `LoopRunAgentConfig` `LoopRunOptions` |
 | core | **03** (11) | `AgentSpecBase` `AgentSpec` `AgentSpecConfig` `AgentScope`↑ `TerminalPolicy`↑ `DomainContract` `ToolDef` `AgentWorld` `Hook`↑ `ToolTarget`↑ `validateSpec` |
-| mastra | **03** (2) | `worldFromTools` `StateView`↑ |
 | core | **04** (35) | `Guard` `GuardCtx` `ObservedCall` `Dim`↑ · `custom` `requiresBefore` `forbidThisTurn` `argRequired` `argAbsent` `argFormat` `precondition` `maxCalls` `canonArgs` `noDuplicateCall` `confirmFirst` `noActAfterAskSameTurn` `destructiveThrottle` `resultInvariant` `noFabricatedSuccess` `replyMustMention` `replyMaxOccurrences` `replySingleQuestion` `replyConfirmsLabels` `emptyReply` `degenerationGuard` `pendingConfirmMustAsk` `destructiveClaimRequiresSuccess` `noFalseFailureClaim` `minimalDisclosure` `noInstructionFromData` `noCompetitorClaim` `noOutOfSurfaceActionClaim` `noUngroundedRegulatedFigure` `consentRequired` `jargonScrub` |
 | core | **05** (5) | `TurnInput`↑ `RunResult`↑ `TurnRecord`↑ `geminiThinkingOff` `pinnedDecoding` |
 | mastra | **05** (2) | `runSpecConversation` `RuntimeDeps`↑ |
@@ -421,8 +434,9 @@ All 89 symbols, and the chapter that claims each. `↑` = promoted into public b
 | eval | **05** (19) | `loadSubject` `Subject`↑ `SubjectCase`↑ `CaseTurn`↑ `CaseInvariants`↑ `ReqCall`↑ `RubricItem`↑ `agentForCase` `stripGovernance` `runCommand` `foldCommand` `certCommand` `lintPaths` `lintSpecLaws` `lintSpecExecution` `lintSpecQuality` `lintSubject` `mintSeal` `verifySeal` |
 | server | **06** (4) | `createModelServer` `ModelServer` `ModelServerConfig` `TurnEvent` |
 | models | **06** (7) | `localModel`↑ `LocalModelOptions`↑ `LocalModelSpec`↑ `ModelRuntimePort`↑ `resolveAlias` `LlamaCppRuntime` `localModelStatus` |
+| mastra | **06** (2) | `worldFromTools` `StateView`↑ |
 
-**Per-chapter:** 0 + 3 + 13 + 35 + 27 + 11 = **89**.
+**Per-chapter:** 0 + 3 + 11 + 35 + 27 + 13 = **89**.
 **Per-package:** core 51 · mastra 7 · models 8 · eval 19 · server 4 · vercel 0 = **89**, matching the
 inventory's round-4 §1 chart exactly. No symbol appears twice; no inventory-public symbol is missing.
 
@@ -452,9 +466,9 @@ Stated so Tasks 3–7 do not have to re-derive it, and so nobody reads a gap as 
 | 2 | **Chapter 04 is generated** from `GUARD_CATALOG`; the generator and the agentspec `guard-catalog.md` lint must agree on the same **30 rows** (Task 4 adjudication: `canonArgs` returns a `string`, so it is a helper taught in prose, not a catalog row — see §3's chapter-04 note) | Tasks 4 + 10 |
 | 3 | **Section 6.4 is dropped**; its ten symbols move to `@looprun-ai/core/internal`. Task 7 must keep the bench shim and the agentspec fork scripts working against that subpath | Task 7 |
 | 4 | **`GUARD_CATALOG` + `GuardCatalogEntry` export from `@looprun-ai/core/internal`, not the public barrel**; Task 10's generator imports from `/internal`. This **amends the plan's Task 4 wording** ("exported publicly") to match the contract principle. Note both names have **no inventory rows** — they do not exist until Task 4 creates them — so this decision is their only record, and Task 4's reviewer must check the resulting exports against it. **Amended (controller ruling, Task 4):** `GuardCatalogEntry` gained a `hook` field (`'preTool' \| 'postTool' \| 'onReply' \| 'onReplyMutate'`) so the generated chapter can group by enforcement phase the way the agentspec reference does — `category` stays file-derived; both names remain `/internal`-only | Task 4 |
-| 5 | **Import specifiers:** 02 `looprun/mastra` · 03 `looprun` + `looprun/mastra` · 04 `looprun` · 05 `looprun/mastra` + `looprun` + `looprun/models` + **`@looprun-ai/eval`** · 06 **`@looprun-ai/server`** + `looprun/models`. The facade publishes only `.` `./core` `./mastra` `./models` `./vercel`. **Open: add `looprun/eval` + `looprun/server` facades** so the tutorial uses one package name throughout? | Task 12 |
+| 5 | **Import specifiers:** 02 `looprun/mastra` · 03 `looprun` · 04 `looprun` · 05 `looprun/mastra` + `looprun` + `looprun/models` + **`@looprun-ai/eval`** · 06 **`@looprun-ai/server`** + `looprun/models` + `looprun/mastra`. The facade publishes only `.` `./core` `./mastra` `./models` `./vercel`. **Open: add `looprun/eval` + `looprun/server` facades** so the tutorial uses one package name throughout? | Task 12 |
 | 6 | **`@looprun-ai/vercel` is excluded from the tutorial** (non-functional stub). Package fate — ship, fix or drop — is a Task 12 decision to surface to the user | Task 12 |
-| 7 | The nine superseded docs are deleted only after their absorbing chapter exists (local-models → 06, eval-config + measured-loop → 05, mcp-tools → 03) | Task 12 |
+| 7 | The nine superseded docs are deleted only after their absorbing chapter exists (local-models → 06, eval-config + measured-loop → 05, **mcp-tools → 06** — moved from 03 by the §7 amendment) | Task 12 |
 | 8 | **`GuardExecutionError` ships on `@looprun-ai/core/internal`** (Task 3, controller ruling). It is a class the runtime *throws at the consumer* when a guard's `check()`/`prose()` throws, so it must be reachable from some entry point or `catch (e) { if (e instanceof GuardExecutionError) … }` is unwritable outside this package. **Deferred:** Task 10 decides whether chapter 04's custom-guard section teaches it — if it does, it promotes to public and leaves `/internal` | Task 10 |
 
 ---
@@ -491,6 +505,26 @@ public symbol that fits no chapter. Promotion is the same principle read the oth
 teaches, which cannot be satisfied if a taught symbol may not be promoted. The controller ruled on
 each promotion in this revision; every one is recorded in the inventory's §9 rounds 3–4 with the
 signature or authored shape that forces it.
+
+### Amendment (Task 9): `worldFromTools` + `StateView` move 03 → 06
+
+Writing chapter 03 showed the native-tools path is a **deployment** topic, not an anatomy one. It
+presupposes a second execution model (tools that execute themselves, including MCP), a host that
+owns the state, and the deny-by-default surface intersection in `agent-construction.ts:80-97` —
+none of which a reader meeting `AgentWorld` for the first time can evaluate. Teaching it inside 03
+also forced the chapter to describe an `AgentWorld` whose `exec` throws two sections after teaching
+that `exec` is the world's whole job.
+
+```
+   before   03 (13) = 11 core + worldFromTools + StateView      06 (11)
+   after    03 (11) = 11 core                                   06 (13) = 11 + the two
+```
+
+**Counts:** per-chapter 0 + 3 + 11 + 35 + 27 + 13 = **89**, unchanged. Per-package unchanged
+(`mastra` still 7). No verdict changed — this is placement only, and it is recorded as the
+inventory's §9 round 7. Chapter 03 keeps a three-line forward reference so a reader who needs the
+path knows it exists and where it lives; `docs/guides/mcp-tools.md` is now absorbed by 06, which
+moves its Task 12 deletion behind Task 11 instead of Task 9.
 
 ### The type-closure rider (added by Task 3)
 

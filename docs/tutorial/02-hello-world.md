@@ -1,7 +1,7 @@
 # 02 · Hello world
 
-**What you get from this chapter:** `npm i` to a governed agent answering a real turn, in about
-twenty lines. Three symbols, all from `looprun/mastra`.
+**What you get from this chapter:** a governed agent answering a real turn, in an agent file of
+about twenty lines. Three symbols, all from `looprun/mastra`.
 
 > **Code source.** Every block below is
 > [`docs/tutorial/snippets/02-hello-world.ts`](snippets/02-hello-world.ts), which compiles in CI
@@ -31,7 +31,32 @@ library looks for a key, and swapping the model swaps which variable matters.
 
 ---
 
-## 2. Twenty lines
+## 2. Get the scheduler modules
+
+The agent file below is about twenty lines, but it is not self-contained: it imports the spec, the
+tool declaration and the world from `./scheduler/`. Those are the tutorial's shared modules, and you
+need them on disk before anything runs. Copy them out of this repo:
+
+```bash
+git clone https://github.com/looprun-ai/looprun.git
+cp -r looprun/docs/tutorial/snippets/scheduler ./scheduler
+cp looprun/docs/tutorial/snippets/02-hello-world.ts ./hello.ts
+```
+
+Four files land in `./scheduler/`: `contract.ts`, `hello-spec.ts`, `tools.ts`, `world.ts`. Chapter 03
+writes all four from scratch — this chapter borrows them so the first turn is about the *agent*, not
+about a calendar.
+
+Two things about running TypeScript directly, so the first attempt works:
+
+```bash
+npm pkg set type=module     # the file uses top-level await
+npx tsx hello.ts            # npx fetches tsx on demand; `npm i -D tsx` to pin it
+```
+
+---
+
+## 3. The agent, in twenty lines
 
 ```ts
 /** Chapter 02 · hello world — a governed agent answering a real turn, in about twenty lines. */
@@ -55,19 +80,20 @@ console.log(result.text);
 ```
 
 ```
-$ npx tsx 02-hello-world.ts
+$ npx tsx hello.ts
 You have two things this week: Standup on Monday at 10:00, and Dentist on Wednesday at 15:00.
 ```
 
 <sub>Illustrative: the seed calendar holds exactly those two events, but a model reply is not
 byte-stable — yours will differ in wording. Chapter 05 is where "it seemed fine" becomes a number.</sub>
 
-That reply is governed. The agent read the calendar with the one tool it owns, and the wording is
-constrained by rules that also exist as machine checks — nothing in it was free-form.
+That reply is **governed at the action layer**: the agent could call exactly one tool, and it could
+not have written to the calendar if it tried. The *wording* is not gated — chapter 01 §2 is explicit
+that the language layer never is. It is measured instead, which is chapter 05.
 
 ---
 
-## 3. What each line is
+## 4. What each line is
 
 ### `LoopRunAgent` — the class you construct
 
@@ -93,8 +119,8 @@ The four fields this chapter uses, and what each one is:
 ```
 <sub>excerpt · `snippets/02-hello-world.ts`</sub>
 
-`helloSchedulerSpec` is a two-line subclass of `AgentSpecBase` — one tool (`listEvents`), one persona,
-one behavior line. **Chapter 03 teaches it**; here it is furniture. One detail matters even now: it
+`helloSchedulerSpec` is a one-tool subclass of `AgentSpecBase` — `tools: ['listEvents']`, one persona,
+one behavior line, and no guards written by hand. **Chapter 03 teaches it**; here it is furniture. One detail matters even now: it
 declares `tools: ['listEvents']` and nothing else, so the agent has no way to write to the calendar.
 The tool surface is the boundary, and it is declared, not inferred.
 
@@ -135,9 +161,11 @@ factory; the factory receives the `sessionId`, so it can load that user's state.
 <sub>excerpt · `snippets/02-hello-world.ts`</sub>
 
 A Mastra router string is `provider/model-id`. This particular id is the repo's **pinned cheap
-ruler**: it is what the certification harness defaults to, so a hello world costs almost nothing and
-behaves the same way as the benchmark numbers you will read later. Comparable results need a pinned
-model — an unpinned "latest" alias makes today's score and last month's score two different
+ruler**: a hello world costs almost nothing, and it is the same model family the certification
+harness defaults to. Not the identical configuration — the harness pins the *thinking-off* variant
+(chapter 05), and thinking on or off changes behavior — so read this as "the same family as the
+published numbers", not "the setup they were measured on". What matters either way is that the id is
+**pinned**: an unpinned "latest" alias makes today's score and last month's score two different
 experiments.
 
 `model` also accepts an **AI-SDK model object**, and that is the door to the rest of the tutorial:
@@ -146,7 +174,7 @@ local llama.cpp model that needs no cloud key at all. Both are the same field.
 
 ---
 
-## 4. `LoopRunOptions` — the per-call argument
+## 5. `LoopRunOptions` — the per-call argument
 
 ```ts
 // LoopRunOptions: `loopRun.sessionId` keys the conversation — one world per session.
@@ -189,7 +217,7 @@ tutorial is a substitute for reading it once, on a real turn.
 
 ---
 
-## 5. Borrowed, not taught
+## 6. Borrowed, not taught
 
 To keep this chapter honest about its own size, here is everything it *used* without explaining, and
 where each one is explained:

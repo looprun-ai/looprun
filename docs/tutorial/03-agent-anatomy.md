@@ -1,13 +1,15 @@
 # 03 · Agent anatomy
 
 **What you get from this chapter:** what a spec declares, what a world provides, where the tool
-surface comes from, and how a rule gets bound to a moment in the turn. Thirteen symbols, from
-`looprun` (≡ `looprun/core`) and `looprun/mastra`.
+surface comes from, and how a rule gets bound to a moment in the turn. Eleven symbols, all from
+`looprun` (≡ `looprun/core`).
 
-> **Code source.** Every block is quoted from
-> [`docs/tutorial/snippets/`](snippets/) — `scheduler/contract.ts`, `scheduler/spec.ts`,
-> `scheduler/tools.ts`, `scheduler/world.ts` and `03-agent-anatomy.ts`, all compiled in CI against
-> the published `looprun` package. Excerpts carry the file they came from.
+> **Code source.** Blocks come in two kinds, and each carries a caption saying which. **Excerpts**
+> are verbatim from [`docs/tutorial/snippets/`](snippets/) — `scheduler/contract.ts`,
+> `scheduler/spec.ts`, `scheduler/tools.ts`, `scheduler/world.ts`, `03-agent-anatomy.ts` — which CI
+> typechecks against the published `looprun` package. **Signature blocks** are type declarations
+> quoted from the library source so you can see a shape without a worked example; they are not
+> compiled here.
 
 Chapter 02 ran the scheduler with one read-only tool. This chapter builds the whole thing: three
 tools, a scope, a terminal policy, a domain contract, and the two obligations from the purpose
@@ -35,28 +37,29 @@ contract, so they enforce identically on both sides.
 ```
                      ┌──────────────────────────────┐
                      │  interface AgentSpec         │  the structural type a spec satisfies:
-                     │  id · persona · scope        │  id, persona, scope, surface, flow,
-                     │  surface · guards · controls │  guards, controls, behavior, contract
-                     │  behavior · contract         │
+                     │  id · mode · persona · scope │  what any consumer of a spec may rely on
+                     │  surface · flow · guards     │
+                     │  controls · behavior         │
+                     │  contract                    │
                      └──────────────┬───────────────┘
                                     │ implements
                      ┌──────────────┴───────────────┐
                      │  class AgentSpecBase         │  ◄── new AgentSpecBase(cfg: AgentSpecConfig)
                      │  + addGuard(hook, target, …) │      auto-installs the universal invariants
-                     │  + addReplyCheck(…)          │      and, iff destructiveTools is set,
-                     │  + addMutator(…)             │      the destructive-safety protocol
+                     │                              │      and, iff destructiveTools is set,
+                     │                              │      the destructive-safety protocol
                      └──────────────┬───────────────┘
                                     │ extends
               ┌─────────────────────┴─────────────────────┐
               │                                           │
-   ┌──────────┴───────────┐                   ┌───────────┴──────────┐
-   │ class SchedulerSpec  │                   │ class                │
-   │ 3 tools · scope ·    │                   │ HelloSchedulerSpec   │
-   │ terminal · 4 guards  │                   │ 1 tool (chapter 02)  │
-   └──────────┬───────────┘                   └───────────┬──────────┘
+   ┌──────────┴────────────┐                  ┌───────────┴───────────┐
+   │ class SchedulerSpec   │                  │ class                 │
+   │ 3 tools · scope ·     │                  │ HelloSchedulerSpec    │
+   │ terminal · 4 guards   │                  │ 1 tool (chapter 02)   │
+   └──────────┬────────────┘                  └───────────┬───────────┘
               │                                           │
-              └────────────────┐         ┌────────────────┘
-                               ▼         ▼
+              └─────────────────┐        ┌────────────────┘
+                                ▼        ▼
                      ┌──────────────────────────────┐
                      │  class LoopRunAgent          │  (chapter 02)
                      │  new LoopRunAgent({          │  extends Mastra's Agent
@@ -65,20 +68,23 @@ contract, so they enforce identically on both sides.
                      └───────┬──────────────┬───────┘
                              │              │
              world seam ─────┘              └───── tool surface
-                     │                                    │
-   ┌─────────────────┴──────────────┐      ┌──────────────┴──────────────┐
-   │  interface AgentWorld          │      │  interface ToolDef          │
-   │  exec · advanceTurn ·          │      │  name · description ·       │
-   │  ingestAttachment · toolCalls  │      │  inputSchema (JSON schema)  │
-   └──────┬──────────────────┬──────┘      └─────────────────────────────┘
-          │ implements       │ synthesized by
-   ┌──────┴────────────┐  ┌──┴────────────────────────────────┐
-   │ class             │  │ worldFromTools({ stateView })     │
-   │ SchedulerWorld    │  │ native-tools mode — exec() THROWS │
-   │ (hand-written —   │  │ state reads come from a StateView │
-   │  the default)     │  └───────────────────────────────────┘
-   └───────────────────┘
+                             │              │
+   ┌─────────────────────────┴────┐  ┌──────┴──────────────────────┐
+   │  interface AgentWorld        │  │  interface ToolDef          │
+   │  exec · advanceTurn ·        │  │  name · description ·       │
+   │  ingestAttachment ·          │  │  inputSchema (JSON schema)  │
+   │  toolCalls · sseActions      │  └──────────────┬──────────────┘
+   └─────────────┬────────────────┘                 │
+                 │ implements                       │ authored as
+   ┌─────────────┴────────────────┐  ┌──────────────┴──────────────┐
+   │ class SchedulerWorld         │  │ listEventsTool · addEvent-  │
+   │ hand-written — the default   │  │ Tool · cancelEventTool      │
+   │ and certified path           │  │ (scheduler/tools.ts)        │
+   └──────────────────────────────┘  └─────────────────────────────┘
 ```
+
+`AgentSpecBase` also carries `addReplyCheck` and `addMutator`; both are conveniences over the same
+binding machinery, and chapter 04 is where a reason to reach for them appears.
 
 Read it top to bottom: **the spec is a type before it is a class**, the class is a convenience that
 installs safety defaults, your agent subclasses it, and the agent object binds that spec to a world
@@ -107,9 +113,16 @@ Three names for what feels like one thing, so be precise about which is which:
                                      destructiveThrottle ┘
 ```
 
-Those five are chapter 04 rows; you never name them here. **Never re-add them by hand** — the same
-rule would render twice in the prompt, and the reader would be told the same thing twice by two
-sources that can drift.
+Those five are what a spec like the scheduler's gets — chapter 04 rows, none of which you name here.
+**Never re-add them by hand**: the same rule would render twice in the prompt, from two sources that
+can drift.
+
+The box is scoped to a spec with no lexicon and no confirm-mechanism override. Two config fields
+change it, and this tutorial teaches neither: `lexicon.falseFailureClaimRe` adds a sixth guard
+(`noFalseFailureClaim`, on `onReply`) if you supply the domain's regex, and `confirmMechanism`
+selects, per tool, between the default `'arg'` confirm (the `confirmed` flag) and `'prior-ask'` (a
+flag-less action gated on an `askUser` in an earlier turn). Both are domain-language plumbing that no
+chapter claims — reach for the source when you need them.
 
 Here is the scheduler's whole declaration:
 
@@ -137,6 +150,7 @@ Field by field, the ones that carry a rule:
 
 | field | law it obeys |
 |---|---|
+| `id` / `mode` | both **required**. `id` names the agent; `mode` is a free-form label echoed into eval records and case routing. It is near-vestigial today — nothing in the runtime branches on it — but it is not optional, so pick something stable and move on |
 | `persona` | lives on the **spec**, never on the shared domain contract — one line, per agent, rendered as late as possible so agents of the same domain share a maximal cacheable prompt prefix |
 | `tools` | the surface, declared. ≤15, and the terminal tools (`replyToUser`, `askUser`) are runtime-owned — naming one **throws** at construction |
 | `destructiveTools` | a declaration, not a comment: it *installs* the confirm-first protocol |
@@ -174,7 +188,9 @@ redirected by name instead of attempted badly. Two constraints, both learned the
 - **Scope is declared on the spec, at design time.** It is not derived at run time from a guess
   about the message — see chapter 01 §5.
 
-`scope` is optional. Omit it and the block is not rendered at all.
+`scope` is optional, and it is all-or-nothing: omit it and no `## Scope precedence` block is
+rendered — including the `lane` sentence. If you want the lane but have no other teams to name, pass
+`others: []`; the block still renders.
 
 ---
 
@@ -183,7 +199,7 @@ redirected by name instead of attempted badly. Two constraints, both learned the
 ```ts
 const TERMINAL: TerminalPolicy = (world) => (world as SchedulerWorld).snapshot().length === 0;
 ```
-<sub>excerpt · `snippets/scheduler/spec.ts`</sub>
+<sub>excerpt · `snippets/scheduler/spec.ts` — the `as SchedulerWorld` cast is explained in §7</sub>
 
 ```ts
 type TerminalPolicy = (world: AgentWorld) => boolean;   // true ⇒ force reply-only this turn
@@ -218,20 +234,32 @@ export const SCHEDULER_CONTRACT: DomainContract = {
 One contract, N agents. It opens every agent's prompt **byte-identically**, which is the point:
 
 ```
-   ┌──────────────────────── SYSTEM PROMPT ────────────────────────┐
-   │  voice            ┐                                            │
-   │  coreInvariants   ├─ byte-identical across every agent of the  │
-   │  languageClause   ┘  domain ⇒ a maximal cacheable prefix       │
-   │  ── then ──                                                    │
-   │  scope · tool rules (guard prose) · persona · behavior         │
-   └────────────────────────────────────────────────────────────────┘
+   ┌───────────────────────── SYSTEM PROMPT ──────────────────────────┐
+   │  domain.voice                        ┐ from the DOMAIN CONTRACT  │
+   │  ## Scope precedence                 │ (spec.scope)              │
+   │  ## Core rules (NEVER violate)       ┘ domain.coreInvariants     │
+   │  ## Flow                               spec.flow, if declared    │
+   │  ## Tool rules / ## Reply rules …      every guard's prose()     │
+   │  ## Governance                                                    │
+   │  ## Behavior                           persona FIRST, then       │
+   │                                        spec.behavior            │
+   │  domain.languageClause                 the LAST line            │
+   └───────────────────────────────────────────────────────────────────┘
+        ▲                          ▲
+        │ byte-identical across    │ where this agent starts to differ —
+        │ every agent of the       │ as LATE as possible, so the shared
+        │ domain                   │ prefix stays maximal and cacheable
 
-   ┌──────────────────── USER MESSAGE (the tail) ───────────────────┐
-   │  stateBlock(world)   ← volatile. NEVER in the system prompt,    │
-   │                        or the cacheable prefix changes every    │
-   │                        turn and the cache never hits            │
-   └────────────────────────────────────────────────────────────────┘
+   ┌───────────────────── USER MESSAGE (the tail) ─────────────────────┐
+   │  stateBlock(world)   ← volatile. NEVER in the system prompt, or   │
+   │                        the cacheable prefix changes every turn    │
+   │                        and the cache never hits                   │
+   └───────────────────────────────────────────────────────────────────┘
 ```
+
+Two positions are load-bearing and easy to get backwards: **`## Scope precedence` renders *above*
+`## Core rules`** (position is the measured lever — §3), and **`languageClause` is last**, after the
+behavior list.
 
 | field | note |
 |---|---|
@@ -287,10 +315,16 @@ export const cancelEventTool: ToolDef = {
 ```
 <sub>excerpt · `snippets/scheduler/tools.ts`</sub>
 
-Declaring `destructiveTools: ['cancelEvent']` in the spec makes the constructor demand that flag. Omit
-`confirmed` from the schema and construction **throws** with a message that names the fix — because
-the installed protocol would otherwise render a rule the tool cannot honour ("confirm first, act in a
-later turn" with no argument to pass), and the model would ask forever.
+Declaring `destructiveTools: ['cancelEvent']` installs a protocol the tool must be able to honour:
+"confirm first, act in a **later** turn, with `confirmed: true`". A tool with no `confirmed` in its
+schema cannot — so the model asks forever.
+
+**Where that is caught, precisely.** The spec exposes the cross-check as
+`assertDestructiveConfirmable(toolDefs)`, and today exactly one caller runs it: chapter 05's scripted
+runner, `runSpecConversation`, which throws at run start naming the tool and the three ways out.
+`new LoopRunAgent({…})` does **not** call it — so a flag-less destructive tool constructs happily and
+fails as an ask-forever loop at run time instead. Until that changes, treat "the eval runs" as the
+gate for this particular mistake, and put the flag in the schema when you declare the tool.
 
 Keep the schema and the rules in one source. The scheduler's date-time pattern lives once, in
 `contract.ts`, and is read by three consumers: the tool schema the model sees, the argument guards,
@@ -329,7 +363,7 @@ export class SchedulerWorld implements AgentWorld {
 
 | member | what it owes you |
 |---|---|
-| `exec(name, args)` | run the tool, return a result object. The scheduler's shape is `{ success, … }` — an honest failure is a returned `{ success: false, error }`, not a thrown exception |
+| `exec(name, args)` | run the tool, return a result object. The scheduler's shape is `{ success, … }` — an honest failure is a returned `{ success: false, error }`, not a thrown exception. A guard's veto is a *different*, tagged envelope (chapter 01 §4) precisely so the model can tell your refusal from looprun's |
 | `advanceTurn()` | roll any per-turn state at the turn boundary. The scheduler has none, so it is empty — and says so |
 | `ingestAttachment(url)` | hand back whatever identifier the tools should see. No attachment store here, so the url passes through |
 | `toolCalls` | the record the runtime reads. `tookEffect` distinguishes a write that landed from a pure read or a refused write |
@@ -339,12 +373,11 @@ The world is also where determinism is bought: no clock, no randomness, no netwo
 same case against the same world gives the same tool results on every replay, forever — which is
 what makes a failing eval case reproducible and a fix verifiable.
 
-### The `[k: string]: any` index signature is forced — and it costs you
+### ⚠ The `[k: string]: any` index signature — forced, and it costs you
 
-That line is part of the `AgentWorld` interface, not a shortcut in the scheduler. It has to be: the
-world is *your* domain object, and the runtime cannot know the names of accessors it has never seen.
-
-Know the price. **A typo typechecks.**
+That line is part of the `AgentWorld` **interface**, not a shortcut in the scheduler: the world is
+*your* domain object, and the runtime cannot know accessor names it has never seen. The price is that
+**a typo typechecks**, so read world state through a type, never off the bare `AgentWorld`:
 
 ```ts
 /** The cost of `AgentWorld`'s `[k: string]: any`, demonstrated: BOTH of these typecheck. */
@@ -352,29 +385,18 @@ export function indexSignatureCost(world: AgentWorld): void {
   world.clashesWith('2026-03-02T10:00', '2026-03-02T11:00'); // CalendarEvent[]
   world.clashesWiht('2026-03-02T10:00', '2026-03-02T11:00'); // any — compiles, then crashes at run time
 }
-```
-<sub>excerpt · `snippets/03-agent-anatomy.ts` — it is in the CI-typechecked file, typo and all</sub>
 
-Treat it as a known seam, not an accident, and close it where it matters: read world state through a
-**type**, never off the bare `AgentWorld`. There are two ways to write that type.
-
-**Nominal** — you own the class, so name it:
-
-```ts
-/** Nominal: you own the class, so name it. Strongest types, hardest coupling. */
+/** Nominal — you own the class, so name it. Strongest types, hardest coupling. */
 export const clashesNominal = (world: AgentWorld, start: string, end: string): CalendarEvent[] =>
   (world as SchedulerWorld).clashesWith(start, end);
 ```
-<sub>excerpt · `snippets/03-agent-anatomy.ts`</sub>
+<sub>excerpt · `snippets/03-agent-anatomy.ts` — in the CI-typechecked file, typo and all</sub>
 
-**Structural** — name only the accessor you actually read:
+When the reader must work across several world implementations, name only the accessor instead — and
+write it as an **intersection**, because a bare `{ clashesWith… }` is not a legal cast target from
+`AgentWorld` (TS2352, the two types do not overlap enough):
 
 ```ts
-/**
- * Structural: name only the accessor you actually read, so the world may be any implementation.
- * It must be written as an INTERSECTION with `AgentWorld` — a bare `{ clashesWith… }` is not a
- * legal cast target from `AgentWorld` (TS2352: the two types do not overlap enough).
- */
 type ClashReader = AgentWorld & { clashesWith(start: string, end: string): readonly CalendarEvent[] };
 
 export const clashesStructural = (world: AgentWorld, start: string, end: string): readonly CalendarEvent[] =>
@@ -382,16 +404,8 @@ export const clashesStructural = (world: AgentWorld, start: string, end: string)
 ```
 <sub>excerpt · `snippets/03-agent-anatomy.ts`</sub>
 
-Which one:
-
-| | nominal `world as SchedulerWorld` | structural `world as ClashReader` |
-|---|---|---|
-| **use when** | one owned world class; a fake and a real world that share a base | the reader must work across several world implementations — and always in native-tools mode (§10), where there is no class to name |
-| **buys you** | the full API, one name, refactors follow the class | a written-down statement of exactly which state a rule depends on |
-| **costs you** | the reader is welded to one implementation | you maintain the narrow type by hand |
-
 Neither cast is *checked* — the index signature makes both compile. What they buy is that the
-accessor name and its shape are stated once, in a place a refactor will visit.
+accessor name and its shape are written down once, somewhere a refactor will visit.
 
 ---
 
@@ -403,7 +417,9 @@ teaches. This is the socket all of them plug into:
 ```ts
 addGuard(hook: Hook, target: ToolTarget, guard: Guard, opts?: { id?: string }): string
 ```
-<sub>signature — a method of `AgentSpecBase`. `Guard` is a chapter 04 symbol</sub>
+<sub>signature — a method of `AgentSpecBase`. `Guard` is a chapter 04 symbol. `opts` also accepts a
+`layer` field, elided here: it selects the framework's own install tiers, and authored guards always
+want the default</sub>
 
 ```ts
 type Hook       = 'onInput' | 'preTool' | 'postTool' | 'onReply';
@@ -415,8 +431,10 @@ type ToolTarget = 'any' | string[];
 
 ```
    onInput    before the model runs        deny ⇒ the turn is refused, no LLM call at all
-   preTool    a call has been proposed     deny ⇒ the correction returns AS the tool result;
-              and not yet executed               the model retries in the SAME generation
+   preTool    a call has been proposed     deny ⇒ the correction returns AS the tool result, in
+              and not yet executed               the governance envelope { success:false,
+                                                 source:'governance', guard, correction, error };
+                                                 the model retries in the SAME generation
    postTool   the call has executed        sees the result; feeds the verified ledger
    onReply    the reply exists             deny ⇒ bounded no-tools re-generation, then the
                                                   deterministic honest closure
@@ -471,8 +489,9 @@ Three things to take from that even before chapter 04 explains the API:
 
 1. **Order matters.** The shape guards run first, because the clash check compares date-time
    *strings* lexicographically. Hand it `"next Tuesday"` and it compares garbage and admits the call.
-2. **The `check()` returns the correction text**, or `null` to allow. That string is what the model
-   receives as its tool result — so it is written as an instruction, not as a log line.
+2. **The `check()` returns the correction text**, or `null` to allow. That string reaches the model
+   inside the **governance veto envelope**, which is deliberately *not* the same shape as a world
+   refusal (chapter 01 §4) — so it is written as an instruction, not as a log line.
 3. **`prose()` is the same rule for the prompt**, and it is what appears under `## Tool rules` for
    `addEvent`. Two renderings, one object (chapter 01 §3).
 
@@ -520,82 +539,15 @@ construction: it warns by default, and its `strict` option turns those warnings 
 
 ---
 
-## 10. `worldFromTools` + `StateView` — when the tools execute themselves
+## 10. The other path, in one paragraph
 
-Everything above is **Path A**: JSON-schema `toolDefs` executed through your world. It is the
-certified path and what you should reach for.
-
-**Path B** is for tools that execute themselves — Mastra assigned tools, toolsets, or an MCP server:
-
-```ts
-import { MCPClient } from '@mastra/mcp'
-import { LoopRunAgent } from 'looprun/mastra'
-
-const mcp = new MCPClient({ servers: { crm: { url: new URL('https://crm.example/mcp') } } })
-
-new LoopRunAgent({
-  spec,
-  tools: await mcp.getTools(),   // native tools — mutually exclusive with world + toolDefs
-  stateView,                     // optional: state reads for stateful guards + contract.stateBlock
-  model: 'google/gemini-3.1-flash-lite',
-})
-```
-<sub>illustrative — requires `@mastra/mcp` and a live server, so it is not in the compiled snippets</sub>
-
-The governance does not change. Mastra applies agent hooks to every tool source, so the veto binds to
-an MCP tool with zero extra wiring: the model emits the call → the `preTool` guards run → a denial
-returns as the tool result and the model retries → otherwise the MCP tool's own `execute` performs
-the remote request → `postTool` records the verified outcome.
-
-What *is* missing is a world — and two things still want state: rules that read domain state, and
-`contract.stateBlock`. That is `worldFromTools`'s only job.
-
-```ts
-export const calendarStateView: StateView = {
-  snapshot: () => cachedEvents,
-  clashesWith: (start: string, end: string) => cachedEvents.filter((e) => e.start < end && start < e.end),
-  async refresh() {
-    cachedEvents = await fetchCalendar();
-  },
-};
-
-/** The synthesized world: state reads work, `exec` throws — the tools already execute themselves. */
-export const nativeWorld: AgentWorld = worldFromTools({ stateView: calendarStateView });
-```
-<sub>excerpt · `snippets/03-agent-anatomy.ts`</sub>
-
-```ts
-interface StateView {
-  refresh?(): void | Promise<void>;   // called at every turn boundary
-  [k: string]: any;                   // your accessors and values
-}
-
-function worldFromTools(opts?: { stateView?: StateView }): AgentWorld
-```
-<sub>signatures, from `looprun/mastra`</sub>
-
-Be clear about what comes back. **`worldFromTools` does not build a world from plain functions.** It
-synthesizes a world whose `exec` **throws** if anything calls it:
-
-```
-looprun: world.exec("addEvent") called in native-tools mode — domain tools execute
-themselves; only the runtime-owned terminal tools should reach the world.
-```
-
-That throw is the design, not a gap: in Path B the tools already execute elsewhere, so a call
-reaching the world means the wiring is wrong. Every property of the `StateView` (except `refresh`) is
-copied onto the world with functions bound, so `contract.stateBlock` and stateful rules read it
-exactly as they would read a hand-written world — which is also why the **structural** cast from §7
-is the right one here: there is no class to name.
-
-What needs a `stateView`, and what does not:
-
-| rules | need a `stateView`? |
-|---|---|
-| everything that keys on the ledger of recorded calls — required-before, no-duplicate, confirm-first, throttles, per-turn call caps, argument checks, reply checks over observed activity | **no.** The hooks feed the ledger; it is there either way |
-| rules that read *domain* state, and `contract.stateBlock` | **yes** — those accessors have to come from somewhere |
-
-`refresh()` runs at each turn boundary, which is where you re-fetch remote state.
+Everything above is **Path A**: JSON-schema `toolDefs` executed through a world you hand-write. It is
+the certified path and what you should reach for. A second path exists — tools that execute
+*themselves* (Mastra assigned tools, toolsets, MCP servers), where there is no world to write and
+`worldFromTools({ stateView })` supplies the state reads instead. The guards enforce identically
+either way. **[Chapter 06](06-advanced.md) teaches it**, alongside the other "take this spec
+somewhere else" moves — it needs a host that owns its own state, which is a deployment question, not
+an anatomy one.
 
 ---
 
@@ -613,8 +565,6 @@ What needs a `stateView`, and what does not:
    Hook             onInput | preTool | postTool | onReply    ─┐ addGuard's
    ToolTarget       'any' | string[]                          ─┘ first two arguments
    validateSpec     warnings, made fatal where they should be
-   worldFromTools   native-tools mode: state without execution
-   StateView        the reads it is given
 ```
 
 You now have a spec, a world and a surface — and exactly one hand-written rule. Chapter 04 is the

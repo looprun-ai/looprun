@@ -27,8 +27,7 @@ export function indexSignatureCost(world: AgentWorld): void {
   world.clashesWiht('2026-03-02T10:00', '2026-03-02T11:00'); // any — compiles, then crashes at run time
 }
 
-
-/** Nominal: you own the class, so name it. Strongest types, hardest coupling. */
+/** Nominal — you own the class, so name it. Strongest types, hardest coupling. */
 export const clashesNominal = (world: AgentWorld, start: string, end: string): CalendarEvent[] =>
   (world as SchedulerWorld).clashesWith(start, end);
 
@@ -43,6 +42,9 @@ export const clashesStructural = (world: AgentWorld, start: string, end: string)
   (world as ClashReader).clashesWith(start, end);
 
 // ── 3 · native-tools mode: state without execution ───────────────────────────
+// PARKED: chapter 03 no longer quotes this section — worldFromTools/StateView moved to chapter 06
+// (outline §7 amendment, inventory §9 round 7). Task 11 lifts it; the prose is parked alongside, in
+// .superpowers/sdd/2026-07-28-looprun-simplification-plan/task-9-parked-06-native-tools.md.
 /**
  * When the tools execute themselves (Mastra assigned tools, toolsets, MCP), there is no world to
  * hand-write — but stateful rules and `contract.stateBlock` still need state reads. A `StateView`

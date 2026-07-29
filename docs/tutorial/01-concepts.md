@@ -149,8 +149,8 @@ type you can bind to, and `confirmFirst` is one row of chapter 04's catalog:
    │        │                                                            │
    │        └──► VETO ─────────────────────────────────────────────┐     │
    │                                                               │     │
-   │   the tool result the model receives is the CORRECTION:       │     │
-   │   { success: false, error: "ask first, act in a later turn" } │     │
+   │   the tool result the model receives is the CORRECTION,       │     │
+   │   in the governance envelope (below)                          │     │
    │        │                                                      │     │
    │        └──► the model recovers INSIDE the same generation ◄────┘     │
    │             — no extra round-trip, no thrown exception               │
@@ -175,12 +175,35 @@ type you can bind to, and `confirmFirst` is one row of chapter 04's catalog:
    └─────────────────────────────────────────────────────────────────────┘
 ```
 
-Four properties of that picture are worth stating out loud, because they are choices:
+### The veto is a *tagged* result, not a generic failure
+
+A tool result can mean two very different things, and confusing them is how governance text ends up
+quoted to the user as if the business had said it:
+
+```
+   the WORLD refused                     a GUARD corrected
+   the tool ran and said no —            the call never reached the world —
+   a fact about the business             the model should fix it and retry
+   → REPORT it to the user               → do NOT report it; try again
+
+   { success: false,                     { success: false,
+     error: 'no such event' }              source: 'governance',   ◄── THE discriminator
+                                           guard: 'confirmFirst',  ◄── which rule fired
+                                           correction: 'ask first, act in a later turn',
+                                           error: '…same text…',   ◄── for hosts reading `error`
+                                           mustCloseTurn?: true }  ◄── set once it is looping
+```
+
+`source: 'governance'` is what makes the two distinguishable without parsing prose — for the model,
+for your logs, and for tests. `success: false` and `error` are kept identical in both so anything
+that already reads them keeps working.
+
+Four more properties of that picture are worth stating out loud, because they are choices:
 
 | property | why |
 |---|---|
 | **The veto costs no extra round-trip.** | A denied call returns the correction *as the tool result*. The model sees it and retries inside the same generation loop, exactly as it would after any tool failure. |
-| **The reply correction never re-runs tools.** | Fixing a reply is a pure text re-generation with tools switched off. A framework-level retry would re-execute side-effecting tools — measured at roughly 100× the cost, with real writes duplicated. |
+| **The reply correction never re-runs tools.** | Fixing a reply is a pure text re-generation with tools switched off. A framework-level retry would re-execute side-effecting tools — measured at roughly 100× slower, with real writes duplicated. |
 | **A blocked action is never a silent one.** | Every veto, every re-generation and every forced abstention is recorded on the result, so "why did it do that?" has an answer that is not a guess. |
 | **Nothing here reads the user's message.** | ①–④ operate on tool names, arguments, world state and recorded calls. That is what makes the gates injection-proof. |
 

@@ -723,3 +723,12 @@ references anywhere: not in `packages/*/src`, not in any test, not in `examples/
 It was declared in `packages/models/src/index.ts` itself, so leaving it module-local would have left
 dead code inside the barrel file. §2's "stop exporting, never erase" protects implementations with
 live callers; this one had none.
+
+### Round 7 — a PLACEMENT move found while writing chapter 03 (Task 9)
+
+**No verdict changed and no count moved: §1 stays 89 / 38 / 138.** This round records a
+chapter-placement correction only, so that the outline's §4 table and this inventory keep agreeing.
+
+| # | category | what |
+|---|---|---|
+| 18 | **placement move** (`mastra`, 2) | `worldFromTools` and `StateView` move from chapter **03** to chapter **06**. Both stay public and taught; only the chapter changes. Writing 03 showed the native-tools path is a *deployment* topic, not an anatomy one: it presupposes a second execution model (tools that execute themselves, incl. MCP), a host that owns state, and the deny-by-default surface intersection in `agent-construction.ts:80-97` — none of which a reader meeting `AgentWorld` for the first time can evaluate. It sits beside 06's other "take the same spec somewhere else" sections. **Per-chapter counts: 03 13 → 11, 06 11 → 13.** Per-package (mastra 7) and the total (89) are unchanged. Chapter 03 keeps a three-line forward reference so the reader learns the path exists. Recorded in the outline's §7 as an amendment |
