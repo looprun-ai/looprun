@@ -1,0 +1,623 @@
+# 03 · Agent anatomy
+
+**What you get from this chapter:** what a spec declares, what a world provides, where the tool
+surface comes from, and how a rule gets bound to a moment in the turn. Thirteen symbols, from
+`looprun` (≡ `looprun/core`) and `looprun/mastra`.
+
+> **Code source.** Every block is quoted from
+> [`docs/tutorial/snippets/`](snippets/) — `scheduler/contract.ts`, `scheduler/spec.ts`,
+> `scheduler/tools.ts`, `scheduler/world.ts` and `03-agent-anatomy.ts`, all compiled in CI against
+> the published `looprun` package. Excerpts carry the file they came from.
+
+Chapter 02 ran the scheduler with one read-only tool. This chapter builds the whole thing: three
+tools, a scope, a terminal policy, a domain contract, and the two obligations from the purpose
+sentence — *never double-book, never delete without asking* — turned into mechanisms.
+
+---
+
+## 1. Four artifacts, four jobs
+
+```
+   docs/tutorial/snippets/scheduler/
+   ├── contract.ts   the shared domain facts: scope, voice, invariants, the clock
+   ├── spec.ts       THE MAP        — SchedulerSpec extends AgentSpecBase
+   ├── tools.ts      THE SURFACE    — ToolDef[]: what the model may call, in JSON schema
+   └── world.ts      THE MACHINE    — SchedulerWorld implements AgentWorld: state + execution
+```
+
+The split is deliberate and it is the reason a certified agent can be moved to production
+unchanged: the **contract** of the tool surface (names, schemas) is fixed, while its **execution**
+is swapped — an in-memory world for evals, your real APIs in production. Guards bind to the
+contract, so they enforce identically on both sides.
+
+### How the classes relate
+
+```
+                     ┌──────────────────────────────┐
+                     │  interface AgentSpec         │  the structural type a spec satisfies:
+                     │  id · persona · scope        │  id, persona, scope, surface, flow,
+                     │  surface · guards · controls │  guards, controls, behavior, contract
+                     │  behavior · contract         │
+                     └──────────────┬───────────────┘
+                                    │ implements
+                     ┌──────────────┴───────────────┐
+                     │  class AgentSpecBase         │  ◄── new AgentSpecBase(cfg: AgentSpecConfig)
+                     │  + addGuard(hook, target, …) │      auto-installs the universal invariants
+                     │  + addReplyCheck(…)          │      and, iff destructiveTools is set,
+                     │  + addMutator(…)             │      the destructive-safety protocol
+                     └──────────────┬───────────────┘
+                                    │ extends
+              ┌─────────────────────┴─────────────────────┐
+              │                                           │
+   ┌──────────┴───────────┐                   ┌───────────┴──────────┐
+   │ class SchedulerSpec  │                   │ class                │
+   │ 3 tools · scope ·    │                   │ HelloSchedulerSpec   │
+   │ terminal · 4 guards  │                   │ 1 tool (chapter 02)  │
+   └──────────┬───────────┘                   └───────────┬──────────┘
+              │                                           │
+              └────────────────┐         ┌────────────────┘
+                               ▼         ▼
+                     ┌──────────────────────────────┐
+                     │  class LoopRunAgent          │  (chapter 02)
+                     │  new LoopRunAgent({          │  extends Mastra's Agent
+                     │    spec, world, toolDefs,    │
+                     │    model })                  │
+                     └───────┬──────────────┬───────┘
+                             │              │
+             world seam ─────┘              └───── tool surface
+                     │                                    │
+   ┌─────────────────┴──────────────┐      ┌──────────────┴──────────────┐
+   │  interface AgentWorld          │      │  interface ToolDef          │
+   │  exec · advanceTurn ·          │      │  name · description ·       │
+   │  ingestAttachment · toolCalls  │      │  inputSchema (JSON schema)  │
+   └──────┬──────────────────┬──────┘      └─────────────────────────────┘
+          │ implements       │ synthesized by
+   ┌──────┴────────────┐  ┌──┴────────────────────────────────┐
+   │ class             │  │ worldFromTools({ stateView })     │
+   │ SchedulerWorld    │  │ native-tools mode — exec() THROWS │
+   │ (hand-written —   │  │ state reads come from a StateView │
+   │  the default)     │  └───────────────────────────────────┘
+   └───────────────────┘
+```
+
+Read it top to bottom: **the spec is a type before it is a class**, the class is a convenience that
+installs safety defaults, your agent subclasses it, and the agent object binds that spec to a world
+and a tool surface.
+
+---
+
+## 2. `AgentSpec`, `AgentSpecBase`, `AgentSpecConfig`
+
+Three names for what feels like one thing, so be precise about which is which:
+
+| symbol | kind | you use it when |
+|---|---|---|
+| `AgentSpec` | **interface** — the structural type | you write a function that *accepts* a spec, or you build one without extending the class |
+| `AgentSpecBase` | **class** — the certified implementation | you *author* an agent. Extend it. This is the normal path |
+| `AgentSpecConfig` | **interface** — the constructor argument | you `super({...})`, or you build the config object separately and want it type-checked |
+
+`AgentSpecBase`'s constructor is not a passive assignment. It installs, before your code runs:
+
+```
+   ALWAYS                            noDuplicateCall   (preTool)
+                                     degenerationGuard (onReply)
+                                     emptyReply        (onReply)
+
+   IFF destructiveTools is set       confirmFirst        ┐ on exactly those tools
+                                     destructiveThrottle ┘
+```
+
+Those five are chapter 04 rows; you never name them here. **Never re-add them by hand** — the same
+rule would render twice in the prompt, and the reader would be told the same thing twice by two
+sources that can drift.
+
+Here is the scheduler's whole declaration:
+
+```ts
+export class SchedulerSpec extends AgentSpecBase {
+  constructor() {
+    super({
+      id: 'scheduler',
+      mode: 'CALENDAR',
+      persona: 'You are the scheduling agent: you keep this person’s calendar — checking it, adding to it, and cancelling from it.',
+      scope: SCHEDULER_SCOPE,
+      tools: ['listEvents', 'addEvent', 'cancelEvent'],
+      destructiveTools: ['cancelEvent'], // ⇒ confirmFirst + destructiveThrottle, installed for you
+      terminal: TERMINAL,
+      contract: SCHEDULER_CONTRACT,
+      behavior: [
+        // UNCHECKABLE residue only — every rule with a guard states itself from that guard's prose.
+        'When more than one event could match a vague description, list the candidates and ask which one — never pick for the user.',
+      ],
+    });
+```
+<sub>excerpt · `snippets/scheduler/spec.ts`</sub>
+
+Field by field, the ones that carry a rule:
+
+| field | law it obeys |
+|---|---|
+| `persona` | lives on the **spec**, never on the shared domain contract — one line, per agent, rendered as late as possible so agents of the same domain share a maximal cacheable prompt prefix |
+| `tools` | the surface, declared. ≤15, and the terminal tools (`replyToUser`, `askUser`) are runtime-owned — naming one **throws** at construction |
+| `destructiveTools` | a declaration, not a comment: it *installs* the confirm-first protocol |
+| `behavior` | the **uncheckable residue only**. A line here that restates a rule some guard already enforces is two copies of one rule with only one wired to a check — guaranteed drift, and the spec lint flags it |
+
+That last row is the discipline the whole design rests on. The behavior bullet above survives the
+test because no `check()` can decide "more than one event *could* match a vague description" —
+vagueness is language-layer.
+
+---
+
+## 3. `AgentScope` — the lane, and who owns the rest
+
+```ts
+export const SCHEDULER_SCOPE: AgentScope = {
+  lane: 'the user’s own calendar: what is on it, adding to it, cancelling from it',
+  others: [{ label: 'the travel desk', covers: 'flights, hotels and anything that costs money' }],
+};
+```
+<sub>excerpt · `snippets/scheduler/contract.ts`</sub>
+
+```ts
+export interface AgentScope {
+  lane: string;                                        // what THIS agent covers
+  others: Array<{ label: string; covers: string }>;    // who owns the other lanes
+}
+```
+<sub>signature, from `looprun`</sub>
+
+`scope` renders a `## Scope precedence` block above the core rules — an out-of-lane request gets
+redirected by name instead of attempted badly. Two constraints, both learned the hard way:
+
+- **`others[].label` names the owning team, never this agent's own role.** First-person role text
+  there collides with the self-narration checks and turns an honest redirect into an abstention stub.
+- **Scope is declared on the spec, at design time.** It is not derived at run time from a guess
+  about the message — see chapter 01 §5.
+
+`scope` is optional. Omit it and the block is not rendered at all.
+
+---
+
+## 4. `TerminalPolicy` — when asking is not an option
+
+```ts
+const TERMINAL: TerminalPolicy = (world) => (world as SchedulerWorld).snapshot().length === 0;
+```
+<sub>excerpt · `snippets/scheduler/spec.ts`</sub>
+
+```ts
+type TerminalPolicy = (world: AgentWorld) => boolean;   // true ⇒ force reply-only this turn
+```
+<sub>signature, from `looprun`</sub>
+
+Returning `true` drops `askUser` from the turn: the agent must answer, not ask. It is evaluated per
+turn, from state — which is what makes it a *policy* and not a flag.
+
+Why this one? In this domain `askUser` only ever disambiguates or confirms an **existing** event. On
+an empty calendar it has nothing to bite on, so asking would be a stall. The behavior bullet in §2
+and this policy therefore say the same thing from two directions — a spec where the prose and the
+policy contradict each other is a spec that will fail an eval case you cannot debug.
+
+---
+
+## 5. `DomainContract` — what every agent of the domain shares
+
+```ts
+export const SCHEDULER_CONTRACT: DomainContract = {
+  voice: 'You keep one person’s calendar. Be brief, concrete, and name events by their title and time.',
+  stateBlock: (world) => `Calendar: ${(world as SchedulerWorld).snapshot().length} event(s). Now: ${REFERENCE_NOW} (Monday).`,
+  coreInvariants: [
+    'Only report what the calendar tools actually returned — never an event, time or id you did not read.',
+    'Times are written as `YYYY-MM-DDTHH:mm`; a day without a resolvable time is a question, not a booking.',
+  ],
+  languageClause: 'Always reply in the language the user wrote in.',
+};
+```
+<sub>excerpt · `snippets/scheduler/contract.ts`</sub>
+
+One contract, N agents. It opens every agent's prompt **byte-identically**, which is the point:
+
+```
+   ┌──────────────────────── SYSTEM PROMPT ────────────────────────┐
+   │  voice            ┐                                            │
+   │  coreInvariants   ├─ byte-identical across every agent of the  │
+   │  languageClause   ┘  domain ⇒ a maximal cacheable prefix       │
+   │  ── then ──                                                    │
+   │  scope · tool rules (guard prose) · persona · behavior         │
+   └────────────────────────────────────────────────────────────────┘
+
+   ┌──────────────────── USER MESSAGE (the tail) ───────────────────┐
+   │  stateBlock(world)   ← volatile. NEVER in the system prompt,    │
+   │                        or the cacheable prefix changes every    │
+   │                        turn and the cache never hits            │
+   └────────────────────────────────────────────────────────────────┘
+```
+
+| field | note |
+|---|---|
+| `voice` | the domain's tone. Case-invariant — no world state, or the prefix stops being stable |
+| `stateBlock(world)` | the volatile block, rendered onto the **user-message tail**. This is where the model learns what is currently true |
+| `coreInvariants` | domain-wide rules rendered verbatim into every agent. Nothing agent-specific belongs here — that is what `scope` and the guards' own prose are for |
+| `languageClause` | the absolute output-language rule |
+| `exhaustionReply?` | optional: the deterministic closure committed when a reply still violates its checks after every correction. It must be a pure function of verified observations — structurally unable to fabricate |
+
+`stateBlock` is also the first place you will meet the cast in §7. Note the seed: `REFERENCE_NOW` is
+a fixed clock constant, because a tutorial world that reads `Date.now()` cannot be replayed.
+
+---
+
+## 6. `ToolDef` — the surface the model sees
+
+```ts
+export interface ToolDef {
+  name: string;
+  description: string;
+  inputSchema: Record<string, unknown>;   // JSON schema
+}
+```
+<sub>signature, from `looprun`</sub>
+
+```ts
+/** Read-only — chapter 02's one-tool cut of the scheduler. */
+export const listEventsTool: ToolDef = {
+  name: 'listEvents',
+  description: 'List the events on the calendar, soonest first.',
+  inputSchema: { type: 'object', properties: {}, required: [] },
+};
+```
+<sub>excerpt · `snippets/scheduler/tools.ts`</sub>
+
+A `ToolDef` is *declaration only*. It never executes anything: the runtime hands these schemas to the
+model and routes every accepted call to `world.exec(name, args)`. That separation is what lets the
+identical spec run against a fake world in an eval and a real one in production.
+
+The destructive one is worth reading closely:
+
+```ts
+/** Destructive: `confirmed` is the flag the auto-installed `confirmFirst` gate waits for. */
+export const cancelEventTool: ToolDef = {
+  name: 'cancelEvent',
+  description: 'Cancel an event. Call it without `confirmed` first to ask the user; then again in a LATER turn, after the user answers, with `confirmed: true`.',
+  inputSchema: {
+    type: 'object',
+    properties: { eventId: { type: 'string' }, confirmed: { type: 'boolean' } },
+    required: ['eventId'],
+  },
+};
+```
+<sub>excerpt · `snippets/scheduler/tools.ts`</sub>
+
+Declaring `destructiveTools: ['cancelEvent']` in the spec makes the constructor demand that flag. Omit
+`confirmed` from the schema and construction **throws** with a message that names the fix — because
+the installed protocol would otherwise render a rule the tool cannot honour ("confirm first, act in a
+later turn" with no argument to pass), and the model would ask forever.
+
+Keep the schema and the rules in one source. The scheduler's date-time pattern lives once, in
+`contract.ts`, and is read by three consumers: the tool schema the model sees, the argument guards,
+and the world's own validation.
+
+---
+
+## 7. `AgentWorld` — state, plus the code that runs a tool
+
+```ts
+export interface AgentWorld {
+  exec(name: string, args: Record<string, unknown>): Promise<unknown> | unknown;
+  advanceTurn(): void;
+  ingestAttachment(url: string): string;
+  toolCalls: Array<{ name: string; args: unknown; result?: unknown; tookEffect?: boolean }>;
+  sseActions: unknown[];
+  [k: string]: any;
+}
+```
+<sub>signature, from `looprun`</sub>
+
+**Hand-writing one is the default and the certified path.** It is a plain class; there is no base to
+extend and no framework to satisfy:
+
+```ts
+export class SchedulerWorld implements AgentWorld {
+  toolCalls: Array<{ name: string; args: unknown; result?: unknown; tookEffect?: boolean }> = [];
+  sseActions: unknown[] = [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  [k: string]: any;
+
+  private events: CalendarEvent[];
+  private nextId = 103;
+```
+<sub>excerpt · `snippets/scheduler/world.ts`</sub>
+
+| member | what it owes you |
+|---|---|
+| `exec(name, args)` | run the tool, return a result object. The scheduler's shape is `{ success, … }` — an honest failure is a returned `{ success: false, error }`, not a thrown exception |
+| `advanceTurn()` | roll any per-turn state at the turn boundary. The scheduler has none, so it is empty — and says so |
+| `ingestAttachment(url)` | hand back whatever identifier the tools should see. No attachment store here, so the url passes through |
+| `toolCalls` | the record the runtime reads. `tookEffect` distinguishes a write that landed from a pure read or a refused write |
+| your own accessors | `snapshot()`, `hasEvent()`, `clashesWith()` — the state reads a stateful rule needs. Add them here rather than declaring a second world per chapter |
+
+The world is also where determinism is bought: no clock, no randomness, no network, no I/O. The
+same case against the same world gives the same tool results on every replay, forever — which is
+what makes a failing eval case reproducible and a fix verifiable.
+
+### The `[k: string]: any` index signature is forced — and it costs you
+
+That line is part of the `AgentWorld` interface, not a shortcut in the scheduler. It has to be: the
+world is *your* domain object, and the runtime cannot know the names of accessors it has never seen.
+
+Know the price. **A typo typechecks.**
+
+```ts
+/** The cost of `AgentWorld`'s `[k: string]: any`, demonstrated: BOTH of these typecheck. */
+export function indexSignatureCost(world: AgentWorld): void {
+  world.clashesWith('2026-03-02T10:00', '2026-03-02T11:00'); // CalendarEvent[]
+  world.clashesWiht('2026-03-02T10:00', '2026-03-02T11:00'); // any — compiles, then crashes at run time
+}
+```
+<sub>excerpt · `snippets/03-agent-anatomy.ts` — it is in the CI-typechecked file, typo and all</sub>
+
+Treat it as a known seam, not an accident, and close it where it matters: read world state through a
+**type**, never off the bare `AgentWorld`. There are two ways to write that type.
+
+**Nominal** — you own the class, so name it:
+
+```ts
+/** Nominal: you own the class, so name it. Strongest types, hardest coupling. */
+export const clashesNominal = (world: AgentWorld, start: string, end: string): CalendarEvent[] =>
+  (world as SchedulerWorld).clashesWith(start, end);
+```
+<sub>excerpt · `snippets/03-agent-anatomy.ts`</sub>
+
+**Structural** — name only the accessor you actually read:
+
+```ts
+/**
+ * Structural: name only the accessor you actually read, so the world may be any implementation.
+ * It must be written as an INTERSECTION with `AgentWorld` — a bare `{ clashesWith… }` is not a
+ * legal cast target from `AgentWorld` (TS2352: the two types do not overlap enough).
+ */
+type ClashReader = AgentWorld & { clashesWith(start: string, end: string): readonly CalendarEvent[] };
+
+export const clashesStructural = (world: AgentWorld, start: string, end: string): readonly CalendarEvent[] =>
+  (world as ClashReader).clashesWith(start, end);
+```
+<sub>excerpt · `snippets/03-agent-anatomy.ts`</sub>
+
+Which one:
+
+| | nominal `world as SchedulerWorld` | structural `world as ClashReader` |
+|---|---|---|
+| **use when** | one owned world class; a fake and a real world that share a base | the reader must work across several world implementations — and always in native-tools mode (§10), where there is no class to name |
+| **buys you** | the full API, one name, refactors follow the class | a written-down statement of exactly which state a rule depends on |
+| **costs you** | the reader is welded to one implementation | you maintain the narrow type by hand |
+
+Neither cast is *checked* — the index signature makes both compile. What they buy is that the
+accessor name and its shape are stated once, in a place a refactor will visit.
+
+---
+
+## 8. Binding a rule to a moment: `Hook`, `ToolTarget`, `addGuard`
+
+Chapter 04 is the catalog of rules — every factory there returns a `Guard`, which chapter 04 also
+teaches. This is the socket all of them plug into:
+
+```ts
+addGuard(hook: Hook, target: ToolTarget, guard: Guard, opts?: { id?: string }): string
+```
+<sub>signature — a method of `AgentSpecBase`. `Guard` is a chapter 04 symbol</sub>
+
+```ts
+type Hook       = 'onInput' | 'preTool' | 'postTool' | 'onReply';
+type ToolTarget = 'any' | string[];
+```
+<sub>signatures, from `looprun`</sub>
+
+**`Hook` — when it fires, and therefore what it can see:**
+
+```
+   onInput    before the model runs        deny ⇒ the turn is refused, no LLM call at all
+   preTool    a call has been proposed     deny ⇒ the correction returns AS the tool result;
+              and not yet executed               the model retries in the SAME generation
+   postTool   the call has executed        sees the result; feeds the verified ledger
+   onReply    the reply exists             deny ⇒ bounded no-tools re-generation, then the
+                                                  deterministic honest closure
+```
+
+The hook decides which fields a rule can read, so it also decides which rules are *legal* there.
+`addGuard` enforces the matrix at construction and **throws** on a mismatch — a reply-honesty rule
+installed on `preTool` would read an undefined reply and silently never fire, which is worse than
+having no rule at all, because it still reads as coverage in the spec and in the prompt.
+
+**`ToolTarget` — which tools it applies to:** an array of tool names, or `'any'`. It has a second
+job most people meet by accident: it decides where the rule's prose is *printed*. Naming tools files
+the prose under `## Tool rules`, grouped per tool; `'any'` files it under `## Global tool rules`,
+`## Input rules` or `## Reply rules` depending on the hook. On `onInput`/`onReply` the target is
+ignored by the check but not by the renderer — so use `'any'` there unless that section is genuinely
+where you want the text.
+
+Here is "never double-book", bound:
+
+```ts
+    // Shape first: the clash check below compares date-time STRINGS, so it is only meaningful on
+    // well-formed input — "next Tuesday" would compare as garbage and slip straight past it.
+    this.addGuard('preTool', ['addEvent'], argRequired('title'), { id: 'agent:titleRequired' });
+    this.addGuard('preTool', ['addEvent'], argFormat('start', DATETIME_PATTERN), { id: 'agent:startFormat' });
+    this.addGuard('preTool', ['addEvent'], argFormat('end', DATETIME_PATTERN), { id: 'agent:endFormat' });
+```
+<sub>excerpt · `snippets/scheduler/spec.ts` — `argRequired` and `argFormat` are chapter 04 rows</sub>
+
+Then the state gate, written by hand because no catalog row knows what a calendar clash is:
+
+```ts
+    this.addGuard(
+      'preTool',
+      ['addEvent'],
+      custom({
+        kind: 'noDoubleBook',
+        dim: 'run',
+        check: (ctx) => {
+          const clashes = (ctx.world as SchedulerWorld).clashesWith(String(ctx.args.start ?? ''), String(ctx.args.end ?? ''));
+          return clashes.length
+            ? `That window clashes with "${clashes[0]!.title}" (${clashes[0]!.id}) — do not book it. Name the clash and ask what to do.`
+            : null;
+        },
+        prose: () => 'a window that clashes with an existing event is never booked — name the clashing event and ask how to proceed',
+      }),
+      { id: 'agent:noDoubleBook' },
+    );
+```
+<sub>excerpt · `snippets/scheduler/spec.ts` — `custom` is chapter 04's escape hatch</sub>
+
+Three things to take from that even before chapter 04 explains the API:
+
+1. **Order matters.** The shape guards run first, because the clash check compares date-time
+   *strings* lexicographically. Hand it `"next Tuesday"` and it compares garbage and admits the call.
+2. **The `check()` returns the correction text**, or `null` to allow. That string is what the model
+   receives as its tool result — so it is written as an instruction, not as a log line.
+3. **`prose()` is the same rule for the prompt**, and it is what appears under `## Tool rules` for
+   `addEvent`. Two renderings, one object (chapter 01 §3).
+
+And the other obligation, *never delete without asking*, appears nowhere in the constructor:
+
+```
+   never double-book         → the three argument guards + the custom clash gate, above
+   never delete without ask  → destructiveTools: ['cancelEvent']
+                               ⇒ AgentSpecBase installs confirmFirst + destructiveThrottle
+```
+
+The scheduler's smoke test exercises the **world's** half of that protocol — the unconfirmed call is
+a side-effect-free probe, the confirmed one deletes. It does **not** exercise the `confirmFirst`
+guard: the guard's real requirement is that the probe landed in a strictly *earlier* turn, and that
+lives in the runtime's ledger across turns. Proving the guard needs a run, which is chapter 05.
+
+---
+
+## 9. `validateSpec` — fail fast on an incoherent spec
+
+```ts
+function validateSpec(spec: AgentSpec): SpecWarning[]
+```
+<sub>signature, from `looprun`</sub>
+
+Each warning is a `{ code, message }` pair; the codes are `tool-surface-over-15`, `empty-behavior`,
+`duplicate-tools` and `flow-tool-missing`. It returns them rather than throwing, because a warning is advisory in a dev loop and fatal in a
+deployment — and only you know which one you are in. Make it fatal where it should be:
+
+```ts
+/** Warnings are advisory by default — make them fatal wherever a broken spec must not start. */
+export function assertSchedulerCoherent(): void {
+  const warnings = validateSpec(schedulerSpec);
+  if (warnings.length) {
+    throw new Error(`spec "${schedulerSpec.id}" is incoherent:\n${warnings.map((w) => `  ${w.code}: ${w.message}`).join('\n')}`);
+  }
+}
+```
+<sub>excerpt · `snippets/03-agent-anatomy.ts`</sub>
+
+The cheapest place to run it is a test — the scheduler's own asserts `validateSpec(schedulerSpec)` is
+empty *and* that the `ToolDef[]` names match `spec.surface.tools` exactly, which catches the drift
+where a tool is declared in one file and forgotten in the other. `LoopRunAgent` also runs it at
+construction: it warns by default, and its `strict` option turns those warnings into a throw.
+
+---
+
+## 10. `worldFromTools` + `StateView` — when the tools execute themselves
+
+Everything above is **Path A**: JSON-schema `toolDefs` executed through your world. It is the
+certified path and what you should reach for.
+
+**Path B** is for tools that execute themselves — Mastra assigned tools, toolsets, or an MCP server:
+
+```ts
+import { MCPClient } from '@mastra/mcp'
+import { LoopRunAgent } from 'looprun/mastra'
+
+const mcp = new MCPClient({ servers: { crm: { url: new URL('https://crm.example/mcp') } } })
+
+new LoopRunAgent({
+  spec,
+  tools: await mcp.getTools(),   // native tools — mutually exclusive with world + toolDefs
+  stateView,                     // optional: state reads for stateful guards + contract.stateBlock
+  model: 'google/gemini-3.1-flash-lite',
+})
+```
+<sub>illustrative — requires `@mastra/mcp` and a live server, so it is not in the compiled snippets</sub>
+
+The governance does not change. Mastra applies agent hooks to every tool source, so the veto binds to
+an MCP tool with zero extra wiring: the model emits the call → the `preTool` guards run → a denial
+returns as the tool result and the model retries → otherwise the MCP tool's own `execute` performs
+the remote request → `postTool` records the verified outcome.
+
+What *is* missing is a world — and two things still want state: rules that read domain state, and
+`contract.stateBlock`. That is `worldFromTools`'s only job.
+
+```ts
+export const calendarStateView: StateView = {
+  snapshot: () => cachedEvents,
+  clashesWith: (start: string, end: string) => cachedEvents.filter((e) => e.start < end && start < e.end),
+  async refresh() {
+    cachedEvents = await fetchCalendar();
+  },
+};
+
+/** The synthesized world: state reads work, `exec` throws — the tools already execute themselves. */
+export const nativeWorld: AgentWorld = worldFromTools({ stateView: calendarStateView });
+```
+<sub>excerpt · `snippets/03-agent-anatomy.ts`</sub>
+
+```ts
+interface StateView {
+  refresh?(): void | Promise<void>;   // called at every turn boundary
+  [k: string]: any;                   // your accessors and values
+}
+
+function worldFromTools(opts?: { stateView?: StateView }): AgentWorld
+```
+<sub>signatures, from `looprun/mastra`</sub>
+
+Be clear about what comes back. **`worldFromTools` does not build a world from plain functions.** It
+synthesizes a world whose `exec` **throws** if anything calls it:
+
+```
+looprun: world.exec("addEvent") called in native-tools mode — domain tools execute
+themselves; only the runtime-owned terminal tools should reach the world.
+```
+
+That throw is the design, not a gap: in Path B the tools already execute elsewhere, so a call
+reaching the world means the wiring is wrong. Every property of the `StateView` (except `refresh`) is
+copied onto the world with functions bound, so `contract.stateBlock` and stateful rules read it
+exactly as they would read a hand-written world — which is also why the **structural** cast from §7
+is the right one here: there is no class to name.
+
+What needs a `stateView`, and what does not:
+
+| rules | need a `stateView`? |
+|---|---|
+| everything that keys on the ledger of recorded calls — required-before, no-duplicate, confirm-first, throttles, per-turn call caps, argument checks, reply checks over observed activity | **no.** The hooks feed the ledger; it is there either way |
+| rules that read *domain* state, and `contract.stateBlock` | **yes** — those accessors have to come from somewhere |
+
+`refresh()` runs at each turn boundary, which is where you re-fetch remote state.
+
+---
+
+## 11. Recap
+
+```
+   AgentSpec        the structural type            ─┐
+   AgentSpecBase    the class you extend            ├─ the MAP
+   AgentSpecConfig  its constructor argument       ─┘
+   AgentScope       the lane, and who owns the rest
+   TerminalPolicy   (world) => boolean — reply-only this turn
+   DomainContract   voice · stateBlock · coreInvariants · languageClause
+   ToolDef          the JSON-schema surface the model sees
+   AgentWorld       state + execution — hand-write it (mind the index signature)
+   Hook             onInput | preTool | postTool | onReply    ─┐ addGuard's
+   ToolTarget       'any' | string[]                          ─┘ first two arguments
+   validateSpec     warnings, made fatal where they should be
+   worldFromTools   native-tools mode: state without execution
+   StateView        the reads it is given
+```
+
+You now have a spec, a world and a surface — and exactly one hand-written rule. Chapter 04 is the
+catalog of the rest: every guard, what it prevents, one minimal example each.
+
+→ **[04 · Guards](04-guards.md)**
