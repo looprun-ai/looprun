@@ -33,10 +33,20 @@ Only `createLoopRunAgent` is DELETED outright — inventory: zero callers anywhe
 
 **2 · `agent.ts` 551 → 448.** The construction half moved verbatim to `src/agent-construction.ts`
 (151 lines): config validation → world resolution → native-surface intersection → tool build →
-certification drift gate → static instructions → Agent pass-through. Every check, message string and
-its ORDER is preserved; the only sequencing change is that `makeGuardHooks` is now called after the
-native-surface checks instead of before (it is a pure closure factory, so nothing observes it).
-`agent.ts` keeps exactly one responsibility: the governed turn.
+certification drift gate → static instructions → Agent pass-through. Every check, message string and its ORDER
+is preserved. `agent.ts` keeps exactly one responsibility: the governed turn.
+
+TWO construction statements move relative to that resolved block; both are inert, and both are stated
+here rather than left to a reader's diff:
+
+| statement | before | after | why it cannot change behavior |
+|---|---|---|---|
+| `makeGuardHooks(spec, getSession)` | between the surface `Set` and the native-surface checks | after the whole resolve | a pure closure factory: it reads `spec` and stores a lazily-called `getSession`, executes no guard and touches no world |
+| `new SessionStore(world)` | right after the world was resolved | after the whole resolve | the constructor is a `typeof world === 'function'` test plus field assignments — an empty `Map`, `factory`, `singleton` (`session.ts`) — no world call, no throw path |
+
+Both still run before `super()`, so the Agent sees the identical arguments. The consequence of the
+move is strictly ordering of THROWS: a config that fails the native-surface or drift-gate check now
+throws before those two objects are built, never after — the same error, the same message.
 
 **3 · The lock.** New `packages/mastra/test/surface-lock.test.ts` (compiler-API, same mechanism as
 core's): the barrel = the 7 taught names + core's public barrel, the §7.2 verdicts are absent, and no

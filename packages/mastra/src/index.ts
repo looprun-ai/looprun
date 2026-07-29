@@ -6,7 +6,7 @@
  *   runSpecConversation(spec, turns, deps)    → scripted multi-turn runs, evals/batch (tutorial 05).
  *
  * These 7 names are the mastra rows of `docs/tutorial/00-outline.md` §4 — the contract, locked by
- * `test/proofs/surface-lock.test.ts`. Everything else in this package (the session store, the tool
+ * `packages/mastra/test/surface-lock.test.ts`. Everything else in this package (the session store, the tool
  * and hook builders, the JSON-schema→Zod shim, `surfaceFingerprint`, `compileSpec`) is module-local:
  * mastra has NO `/internal` subpath, so in-package code imports those module files directly.
  */

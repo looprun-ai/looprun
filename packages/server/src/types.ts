@@ -15,6 +15,9 @@ import type { LoopRunAgent } from '@looprun-ai/mastra';
  * Declared here rather than imported: it is INTERNAL to `@looprun-ai/mastra` (symbol inventory
  * §7.2) and that package has no `/internal` subpath, while this server's own `TurnEvent` is
  * public and must be nameable in the emitted declarations.
+ *
+ * MIRROR — the source of truth is `LoopRunResultMeta` in `packages/mastra/src/agent.ts`; keep the
+ * two identical. `packages/server/test/meta-mirror.test.ts` pins them at compile time.
  */
 export interface LoopRunResultMeta {
   sessionId: string;

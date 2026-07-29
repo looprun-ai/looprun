@@ -94,6 +94,14 @@ export interface LoopRunAgentConfig<W extends AgentWorld = AgentWorld> {
   [agentOption: string]: any;
 }
 
+/**
+ * The governed-turn metadata attached to every result as `result.looprun`. Module-local: an
+ * `internal` verdict (inventory §7.2) on a package with no `/internal` subpath.
+ *
+ * MIRRORED by `LoopRunResultMeta` in `packages/server/src/types.ts` (the one cross-package reader,
+ * which cannot import this). Change a field here and change it there;
+ * `packages/server/test/meta-mirror.test.ts` fails the typecheck if the two drift apart.
+ */
 export interface LoopRunResultMeta {
   sessionId: string;
   turnIndex: number;
