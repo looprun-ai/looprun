@@ -17,6 +17,7 @@
     "node": ">=22"
   },
   "scripts": {
+    "clean": "pnpm -r --if-present clean",
     "build": "pnpm -r --if-present build",
     "typecheck": "pnpm -r --if-present typecheck",
     "test": "pnpm -r --if-present test && node scripts/gen-guards-chapter.mjs --check",

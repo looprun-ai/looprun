@@ -102,7 +102,12 @@ console.log(`  npm: ${npmUser} · branch: ${branch}`);
 
 // ---------- 3 (early in dry-run). gates ----------
 const gates = () => {
-  step('gates: build + typecheck + test + drift');
+  step('gates: clean + build + typecheck + test + drift');
+  // CLEAN FIRST, ALWAYS. `tsc` only ever ADDS to `dist/` — it never removes an output whose source
+  // is gone, so a `dist/` carried over from an earlier layout keeps shipping orphans (measured: a
+  // pre-split `dist/guards.js`, 80.8 kB, plus `coherence.*` maps, all listed by `npm pack`). The
+  // published tarball is built from whatever sits in `dist/`, so the clean is part of the gate.
+  run('pnpm -r --if-present clean');
   run('pnpm -r --if-present build');
   run('pnpm -r --if-present typecheck');
   run('pnpm -r --if-present test');
