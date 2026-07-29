@@ -7,7 +7,7 @@
  */
 import type { ToolDef } from './types.js';
 
-export const TERMINAL_TOOLS = ['replyToUser', 'askUser'] as const;
+const TERMINAL_TOOLS = ['replyToUser', 'askUser'] as const;
 const TERMINAL_SET: ReadonlySet<string> = new Set(TERMINAL_TOOLS);
 
 export function isTerminal(name: string): boolean {
@@ -96,7 +96,7 @@ function toolCallArgs(tc: any): Record<string, unknown> {
   return (tc?.args ?? tc?.input ?? tc?.payload?.args ?? tc?.payload?.input ?? {}) as Record<string, unknown>;
 }
 
-export const TERMINAL_PROTOCOL =
+const TERMINAL_PROTOCOL =
   '\n\n## Turn protocol (ABSOLUTE)\n' +
   '- You speak to the user ONLY by calling **replyToUser** (to answer or summarize what you did) or **askUser** ' +
   '(to ask ONE clarifying question). NEVER write a free-text reply — text outside these tools is not delivered.\n' +
@@ -104,7 +104,7 @@ export const TERMINAL_PROTOCOL =
   '`text` carries the COMPLETE user-facing message in the user\'s language.\n' +
   '- Do the domain tools first; then close the turn with the single terminal call.';
 
-export const TERMINAL_PROTOCOL_REPLY_ONLY =
+const TERMINAL_PROTOCOL_REPLY_ONLY =
   '\n\n## Turn protocol (ABSOLUTE)\n' +
   '- You speak to the user ONLY by calling **replyToUser**. NEVER write a free-text reply and NEVER ask the ' +
   'user a question — there is no ask tool.\n' +

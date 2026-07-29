@@ -127,7 +127,7 @@ export async function evaluateOnInput(spec: AgentSpec, ledger: TurnLedger, world
 }
 
 /** Apply the deterministic egress mutators (e.g. jargonScrub) to the reply text. */
-export function applyMutators(spec: AgentSpec, ledger: TurnLedger, world: AgentWorld, text: string): string {
+function applyMutators(spec: AgentSpec, ledger: TurnLedger, world: AgentWorld, text: string): string {
   let out = text;
   for (const m of resolveMutators(spec.guards.onReplyMutate)) {
     const mctx: GuardCtx = {
@@ -148,7 +148,7 @@ export function applyMutators(spec: AgentSpec, ledger: TurnLedger, world: AgentW
 }
 
 /** Run the onReply guard checks against a candidate reply. */
-export async function checkReply(
+async function checkReply(
   spec: AgentSpec,
   ledger: TurnLedger,
   world: AgentWorld,
