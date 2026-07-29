@@ -126,6 +126,10 @@ specifier and reach members off the namespace object — invisible to any static
 > `agentForCase` `stripGovernance` `renderTurnPrompt` `resolveAlias` `LlamaCppRuntime` all become
 > **public**. (The `scripts/proofs/run-canary.mjs` route is a consumer root and reaches only
 > `localModelStatus`, already public.)
+>
+> **Superseded for one of them:** `renderTurnPrompt` → **internal in round 4** (no tutorial home; the
+> fork scripts reach it through `@looprun-ai/core/internal`). The published-bin rule still holds for
+> the other four.
 
 **3 · Machine-enforced guard parity.** `agentspec/skill/scripts/lint-guard-catalog.mjs` reads the
 **built** `guards.d.ts` and **fails CI** if any `declare function` there is absent from
@@ -242,7 +246,7 @@ the rest are used only within `coherence.ts` itself, only by `trunk-provenance.t
 | symbol | verdict | independent `grep -ra -w` result | agrees |
 |---|---|---|---|
 | `surfaceFingerprint` (mastra) | delete | `mastra/src/{agent,surface,index}.ts` + `mastra/test/native-surface.test.ts` — nothing else | yes |
-| `redriveMessage` (core) | public | core src/test **+** `looprun-bench/.../shim/src/step-handler.ts` (real import) | yes |
+| `redriveMessage` (core) | public *(→ internal in round 4)* | core src/test **+** `looprun-bench/.../shim/src/step-handler.ts` (real import) | yes — the usage is real; §9 #7 moved it to `/internal` for lack of a tutorial home, seam preserved |
 | `pruneSupersededTerminals` (core) | internal | core src **+** `mastra/src/agent.ts` + `mastra/src/run-conversation.ts`; no consumer root | yes |
 | `Layer` (core) | delete | only `core/src/spec.ts` + barrel. All 8 bench/yntelli hits are the English word in prose ("Layer rationale: …") — **spurious** | yes |
 | `worldFromTools` (mastra) | public | `mastra/src/agent.ts` **+** `yntelli/.../specs/index.test.ts` → `from 'looprun/mastra'` | yes |
@@ -250,7 +254,7 @@ the rest are used only within `coherence.ts` itself, only by `trunk-provenance.t
 | `validateSpec` (core) | **public** *(corrected)* | `yntelli/.../marketing/specs/index.test.ts:7` and `.../super-admin/specs/index.test.ts:4`, both `import { validateSpec } from 'looprun/mastra'` | corrected |
 | `agentForCase` (eval) | **public** *(corrected)* | `agentspec/skill/scripts/synth-fork.mjs:113` → `evalPkg.agentForCase(subject, caseId)` | corrected |
 | `stripGovernance` (eval) | **public** *(corrected)* | `agentspec/skill/scripts/synth-fork.mjs:116` → `evalPkg.stripGovernance(spec, contract)` | corrected |
-| `renderTurnPrompt` (core) | **public** *(corrected)* | `synth-fork.mjs:178,190` + `extract-fork.mjs:210,222` → `core.renderTurnPrompt({…})` | corrected |
+| `renderTurnPrompt` (core) | **public** *(corrected — then → internal in round 4)* | `synth-fork.mjs:178,190` + `extract-fork.mjs:210,222` → `core.renderTurnPrompt({…})` | corrected; §9 #7 then moved it to `/internal` (no tutorial home) — the fork scripts import it from there |
 
 ---
 
@@ -671,7 +675,7 @@ contract in both directions.
 |---|---|---|
 | 7 | **10 core symbols public → internal**: `createLedger` `beginTurn` `resolveGuards` `evaluatePreTool` `enforcePostTool` `redriveMessage` `finalizeReply` `ReplyViolation` `renderScopedSpecTrunk` `renderTurnPrompt` | reason: **no tutorial home**. Outline §6.4 ("bring your own loop") was dropped as unteachable — closing that loop needs `recordToolResult`, `resultOk`, `isTerminal`, `terminalProtocol`, `TurnLedger`, all internal. Without `recordToolResult` the ledger's `observed` stays empty and every history-keyed guard (`confirmFirst`, `noDuplicateCall`, `requiresBefore`, `destructiveThrottle`) silently never fires — a chapter that ships a governance hole. The seam stays whole behind `@looprun-ai/core/internal` for the bench shim and the agentspec fork scripts, which is what they already are: integrators, not the tutorial's audience |
 | 8 | `core.Dim` delete → **public** | `custom({ kind, dim, check, prose })` (`guards.ts:24`) requires `dim: Dim`. Chapter 04 teaches `custom` as the escape hatch, so the vocabulary block is `Guard` `GuardCtx` `ObservedCall` `Dim` |
-| 9 | `core.Hook`, `core.ToolTarget` delete → **public** | `AgentSpecBase#addGuard(hook: Hook, target: ToolTarget, guard: Guard, opts?)` (`spec.ts:494`) is the mechanism that binds any factory to a spec — and it throws on an illegal dim×hook pairing. Chapter 03 teaches it. **`Layer` deliberately NOT promoted**: it appears only as `opts.layer`, and layers (`minimal`/`base`/`agent`) are the framework's own auto-install tiers, which the tutorial does not teach the reader to set |
+| 9 | `core.Hook`, `core.ToolTarget` delete → **public** | `AgentSpecBase#addGuard(hook: Hook, target: ToolTarget, guard: Guard, opts?)` (`spec.ts:494`) is the mechanism that binds any factory to a spec — and it throws on an illegal dim×hook pairing. Chapter 03 teaches it. **`Layer` deliberately NOT promoted**: it appears only as `opts.layer`, and layers (`'minimal' | 'base' | 'full' | 'agent'`, `spec.ts:36`) are the framework's own auto-install tiers, which the tutorial does not teach the reader to set |
 | 10 | `core.AgentScope`, `core.TerminalPolicy` delete → **public** | the design assigns "scope, tools, terminal" to chapter 03; `AgentScope` is an authored `{ lane, others }` object and `TerminalPolicy` an authored `(world) => boolean`. **The other `AgentSpecConfig` field types stay non-public** (`SpatialEdge`, `StateDirective`, `ChainSpec`, `SamplingSettings`, `MutatorBinding`) because chapter 03 does not teach `flow` / `directives` / `chains` / `sampling`. The rule is stated in the outline: *a config field the tutorial teaches has its authored type public; a field it does not teach keeps its type off the barrel* |
 | 11 | `core.TurnInput`, `core.RunResult`, `core.TurnRecord` internal → **public**; `mastra.RuntimeDeps` delete → **public** | `runSpecConversation(spec: AgentSpec, turns: TurnInput[], deps: RuntimeDeps): Promise<RunResult>` (`run-conversation.ts:73`) is chapter 05's headline call and every name in it was unexported. `TurnRecord` rides along as `RunResult.turnRecords`' element — the shape 05 asserts on |
 | 12 | `mastra.StateView` delete → **public** | `worldFromTools(opts: { stateView?: StateView })` (`world-adapters.ts:24`) — the reader authors the state view. Also corrects the outline's description of that function: it synthesizes a **native-tools-mode** world whose `exec` **throws**; it supplies state only |
