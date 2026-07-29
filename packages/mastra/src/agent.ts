@@ -58,7 +58,7 @@ export interface LoopRunAgentConfig<W extends AgentWorld = AgentWorld> {
    */
   world?: W | WorldFactory<W>;
   /**
-   * NATIVE-TOOLS mode (Path B, incl. MCP): pass Mastra tools (e.g. `await mcp.getTools()`).
+   * NATIVE-TOOLS mode (Path B, incl. MCP): pass Mastra tools (e.g. `await mcp.listTools()`).
    * They execute themselves; guards still enforce through the agent hooks. Mutually exclusive
    * with `world`+`toolDefs`. Stateful guards + contract.stateBlock read `stateView`.
    */

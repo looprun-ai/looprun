@@ -9,7 +9,10 @@
  *
  * This file restores the tripwire. Tests are exempt from the surface contract, so it may deep-import
  * mastra's declaration; the assertion is MUTUAL assignability, which fails on a renamed field, a
- * changed field type, or a field added on either side. It is enforced by `pnpm typecheck`
+ * changed field type, or a REQUIRED field added on either side. An *optional* field added to one
+ * side only still passes both directions — that is the one drift this pin does not catch, and the
+ * key-set assertion below does not close it either (the sample literal simply omits the optional
+ * field). It is enforced by `pnpm typecheck`
  * (`tsc --noEmit` covers `test/**`), not by the runtime run — the `it()` below only proves the
  * sample used for the check is total.
  *
@@ -28,8 +31,9 @@ void _serverIsAMastraMeta;
 
 describe('LoopRunResultMeta mirror (server ↔ mastra)', () => {
   it('the two declarations agree field-for-field', () => {
-    // Typed as the INTERSECTION: a field added on either side makes this literal incomplete and
-    // `tsc --noEmit` fails; excess-property checking catches a field removed from both.
+    // Typed as the INTERSECTION: a REQUIRED field added on either side makes this literal
+    // incomplete and `tsc --noEmit` fails; excess-property checking catches a field removed from
+    // both. Optional additions are invisible here — see the header.
     const sample: MastraMeta & ServerMeta = {
       sessionId: 's', turnIndex: 0, corrections: [], exhausted: false, violations: [], observed: [],
     };

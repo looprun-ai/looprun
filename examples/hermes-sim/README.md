@@ -92,5 +92,5 @@ failures are tail events, which is why the N=10 table above is the measurement t
   the harness's tool list (the governed agent owns its tool surface). See the
   [server README](../../packages/server/README.md) mapping law.
 - **Real tools instead of fake worlds:** register the agents with Mastra MCP tools
-  (`tools: await mcp.getTools()`) instead of `world`+`toolDefs` — guards govern MCP tools with no
+  (`tools: await mcp.listTools()`) instead of `world`+`toolDefs` — guards govern MCP tools with no
   extra wiring. The fake worlds here exist so the sim can assert exact end-states.

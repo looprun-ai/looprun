@@ -27,7 +27,7 @@ looprun-eval run --subject <dir> --ungoverned    # same bundle, governance surfa
 ```
 
 `run` writes `<subject>/test/<date>-<model>-<arm>/` (override `--out`): `cases.jsonl`
-(one CaseDump per line) + `SUMMARY.md`. Invariants (`requiredToolCalls` must succeed;
+(one case dump per line) + `SUMMARY.md`. Invariants (`requiredToolCalls` must succeed;
 `forbiddenToolCalls` fail on the ATTEMPT, even when the world refuses) are the
 deterministic gate only — never the quality verdict.
 

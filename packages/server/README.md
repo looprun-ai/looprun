@@ -68,8 +68,9 @@ Every response carries a non-standard `looprun` field (`sessionId`, `turnIndex`,
 ## API
 
 - `createModelServer(config) → { url, port, handler, close() }` — node:http server, ephemeral
-  port by default.
-- `createOpenAiHandler(config) → (req: Request) => Promise<Response>` — the bare fetch-style
-  handler (embed it in any web server).
+  port by default. The returned `handler` is the bare fetch-style
+  `(req: Request) => Promise<Response>`, so you can embed the governed endpoint in any web
+  server without taking the node:http listener: build one with `port: 0`, use `.handler`, and
+  `close()` when done.
 - `config`: `agents` (model id → `LoopRunAgent`), `port`, `hostname`, `contextLength`,
   `apiKey` (optional bearer check), `resolveSession`, `sessionTtlMs`, `onTurn`.

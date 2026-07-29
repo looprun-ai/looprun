@@ -16,33 +16,89 @@ looprun adds everything that makes it safe to hand the keys to an agent:
 - **The GPS with course-correction** — when the reply violates its checks, a bounded no-tools *redrive*
   corrects it; when correction fails, a **deterministic honest-abstain closure** (a pure function of what
   verifiably happened) goes out instead of a fabrication.
-- **The map generator** — the **agentspec** skill (developed in its own private repo) interviews you:
-  **one mandatory question** — the purpose, in one sentence — and everything else (tool surface, docs,
-  provider, model, key) is a send-or-skip ask batched into two rounds. It then generates the specs, the
-  contract, the tool world **and the eval set that certifies them**.
+- **The map generator** — the **agentspec** skill (private beta, developed in its own repo) interviews you:
+  **one mandatory question** — the purpose, in one sentence — and generates the specs, the domain
+  contract, the tool world **and the eval set that certifies them**. Writing a spec by hand is a fully
+  supported path, and it is the path the tutorial teaches.
 
 looprun is **framework-agnostic by construction**: the spec, the guards and the governed-turn machine are
 framework-free in `@looprun-ai/core`, and a thin *backend* binds them to a host framework. Mastra is the
 backend that ships today — the governed agent is a **genuine Mastra `Agent`**, registers in your Mastra
 instance and shows up in Mastra Studio with the guards enforcing live. The Vercel AI SDK backend is the
-next seam (`@looprun-ai/vercel` — contract documented, implementation pending). Anything else can already
-call a governed agent over HTTP: `@looprun-ai/server` exposes it behind an OpenAI-compatible
+next seam (`@looprun-ai/vercel` — reserved, factory still throws). Anything else can already call a
+governed agent over HTTP: `@looprun-ai/server` exposes it behind an OpenAI-compatible
 `/v1/chat/completions` endpoint.
+
+## Install
+
+```bash
+npm i looprun @mastra/core ai zod        # the library + the Mastra backend's peers
+```
+
+That is everything needed to *run* a governed agent. To **certify** one, add the dev toolchain:
+
+```bash
+npm i -D @looprun-ai/eval mastra typescript tsx      # the certification CLI + the dev runtime
+npx looprun init                                     # environment check (+ optional local-model download)
+```
+
+`looprun` is the umbrella: it bundles core + mastra + models and installs the `looprun` CLI.
+`@looprun-ai/eval` is deliberately **outside** it — the certification harness is a dev tool, nothing
+imports it at runtime, and shipping it into production dependencies buys nothing.
+
+## Hello world
+
+A governed agent answering a real turn, in about twenty lines
+([chapter 02](docs/tutorial/02-hello-world.md) builds it line by line):
 
 ```ts
 import { LoopRunAgent } from 'looprun/mastra'
-import { bookkeepingSpec } from './src/agents/accounting/ac-books-spec.js'
+import { helloSchedulerSpec } from './scheduler/hello-spec.js'
+import { listEventsTool } from './scheduler/tools.js'
+import { SchedulerWorld } from './scheduler/world.js'
 
-export const booksAgent = new LoopRunAgent({
-  spec: bookkeepingSpec,        // generated — carries its guards, persona and domain contract
-  world,                        // your tool world (or pass native/MCP `tools` + a `stateView`)
-  model: 'openai/gpt-5.5',      // any Mastra router string or AI-SDK model — trivial swap
+const agent = new LoopRunAgent({
+  spec: helloSchedulerSpec,             // the spec carries its guards, persona and domain contract
+  world: () => new SchedulerWorld(),    // a factory: one world per session
+  toolDefs: [listEventsTool],
+  model: 'google/gemini-3.1-flash-lite',// any Mastra router string or AI-SDK model — trivial swap
 })
 
-const res = await booksAgent.generate('Close the Q2 books')
-res.text          // the governed reply
-res.looprun       // what the safety kit did: vetoes, redrives, violations, observed calls
+const result = await agent.generate('What is on my calendar this week?', {
+  loopRun: { sessionId: 'demo' },
+})
+console.log(result.text)                // the governed reply
 ```
+
+`result.looprun` carries what the safety kit did on that turn: vetoes, redrives, violations and the
+tool calls the agent actually made.
+
+## The tutorial
+
+Six chapters, one running example — a calendar assistant grown from a single purpose sentence into a
+certified agent. Every code block is compiled in CI against the published packages, so nothing here
+can drift from what ships.
+
+| # | chapter | what you get |
+|---|---|---|
+| 01 | [Concepts](docs/tutorial/01-concepts.md) | the mental model — the three nouns every later chapter hangs off, and why the architecture is shaped this way. No code |
+| 02 | [Hello world](docs/tutorial/02-hello-world.md) | a governed agent answering a real turn, in about twenty lines. Three symbols |
+| 03 | [Agent anatomy](docs/tutorial/03-agent-anatomy.md) | what a spec declares, what a world provides, where the tool surface comes from, and how a rule binds to a moment in the turn |
+| 04 | [Guards](docs/tutorial/04-guards.md) | the complete rule vocabulary — 30 factories, what each prevents, one example each — and how to write your own |
+| 05 | [Running and eval](docs/tutorial/05-running-and-eval.md) | running a spec over a scripted conversation, and turning "it seemed fine" into a number you can re-run |
+| 06 | [Advanced](docs/tutorial/06-advanced.md) | the same agent served over HTTP, run on a local model with no cloud key, and driven by a host whose tools execute themselves |
+
+## Certify
+
+```bash
+npx looprun-eval run  --subject <dir>     # runs the cases against the real loop → <subject>/test/<run>/
+npx looprun-eval fold --dump <run>/cases.jsonl --verdicts <run>/verdicts.jsonl   # → RESULTS.md
+npx looprun-eval cert <run>               # ≥90% bar → cert.json + CERT.md
+```
+
+The invariant gate auto-fails deterministic violations and every case dumps a trace; the LLM judge
+grades them and `fold` merges the verdicts. Your agents ship with a birth certificate, not vibes —
+the full protocol is [chapter 05](docs/tutorial/05-running-and-eval.md).
 
 ## Local models
 
@@ -57,123 +113,25 @@ multi-token-prediction speculative decoding (~1.4× decode, byte-identical outpu
 | `ram16` | Qwen3.6-35B-A3B UD-IQ2_XXS + MTP | 11.8 GB | ~44 tok/s · **peak RSS 13.4–13.5 GB** (q8_0 KV, 24k ctx) |
 | `ram8` | Qwen3.5-4B UD-Q3_K_XL + MTP | 2.5 GB | ~43 tok/s · **peak RSS 4.62 GB** — quality far below the 35B tiers |
 
-The weights column is the **model file**, not the machine's RAM budget: a tier's real footprint is
-weights + KV cache + the prompt cache that keeps agent trunks warm across agent switches (measured on
-`ram24`: 11.8 GB of weights → ~20.7 GB peak). That is why the 32 GB tier's file is "only" 17.2 GB — the
-rest of the headroom buys a 64k f16 KV window and a 16 GB trunk cache.
-
 ```ts
 import { localModel } from 'looprun/models'
 
 model: await localModel('ram24')       // ram8 · ram16 · ram24 (default) · ram32
 ```
 
-**Requirements** — a `llama-server` build **≥ b9780** (older builds cannot load the Qwen3.5/3.6 family):
-grab a [release](https://github.com/ggml-org/llama.cpp/releases) or build from source. looprun resolves the
-binary via `$LLAMA_BIN` → a `llamacpp-*` build directory in your home → `llama-server` on `PATH`.
-
-**The weights are a separate, explicit download.** GGUF files are 2.5–17 GB, so they are not in the npm
-package and looprun never fetches them behind your back: `localModel()` fails fast when the file is
-missing rather than starting a multi-GB download on an agent's first turn. You pull a tier once, by name:
-
-```bash
-npx looprun models pull ram24     # downloads that tier's weights (asks for consent, prints the size)
-npx looprun models status         # binary / weights file / server health
-npx looprun models serve ram24    # starts llama-server with the measured flags
-```
-
-Any alias works — `qwen3.5-4b` is the plain 4B fallback (~2.9 GB, no MTP) for a quick local smoke test.
+The weights are a separate, explicit download (`npx looprun models pull ram24`) — GGUF files are
+2.5–17 GB, so they are not in the npm package and looprun never fetches them behind your back.
 Cloud models need none of this: pass a router string as `model` and skip this section entirely.
-
-## Install
-
-```bash
-npm i looprun @mastra/core ai zod        # the library + the Mastra backend's peers
-```
-
-That is everything needed to *run* a governed agent. To **generate and certify** agents with the skill —
-the path in "How to use" below — add the dev toolchain:
-
-```bash
-npm i -D @looprun-ai/eval mastra typescript tsx      # the certification CLI + the dev runtime
-npx skills add looprun-ai/agentspec                  # the generator skill (any skills-compatible coding agent)
-npx looprun init                                     # environment check (+ optional local-model download)
-```
-
-The `agentspec` skill is in **private beta** — its repo is not public yet, so `skills add` needs access
-(request it at [looprun.ai](https://looprun.ai)). Everything else here is public, and writing specs by hand
-is a fully supported path.
-
-`looprun` is the umbrella: it bundles core + mastra + models and installs the `looprun` CLI.
-`@looprun-ai/eval` is deliberately **outside** it — the certification harness is a dev tool, nothing imports
-it at runtime, and shipping it into production dependencies buys nothing. You can also start with
-`npm i looprun` alone: the skill checks for the engine before it runs a single phase, and for the eval CLI
-before the TEST phase, offering to install whatever is missing.
-
-## How to use
-
-### 1 · Generate the agents
-
-Invoke the `agentspec` skill in your project and answer the one mandatory question (“*an assistant for a
-small accounting firm*”). It decomposes the tool surface into ≤15-tool agents, drafts each `AgentSpec` +
-the shared domain contract, builds the deterministic tool world, and generates the eval set — every
-artifact validated by adversarial debate ([BARRED](https://arxiv.org/abs/2604.25203)-style), never by
-self-review. Output: a subject bundle the eval CLI reads.
-
-Writing a spec by hand is a supported path too — see
-[getting started](docs/getting-started.md#3-or-write-a-spec-by-hand).
-
-### 2 · Run it
-
-```ts
-// src/mastra/index.ts
-import { Mastra } from '@mastra/core'
-import { LoopRunAgent } from 'looprun/mastra'
-import booksSpec from '../agents/accounting/ac-books-spec.js'
-
-export const booksAgent = new LoopRunAgent({ spec: booksSpec, world, model: 'openai/gpt-5.5' })
-export const mastra = new Mastra({ agents: { booksAgent } })
-```
-
-```bash
-npx mastra dev     # Mastra Studio: chat with the agent and watch the guards veto live
-```
-
-### 3 · Measure
-
-```bash
-npx looprun-eval run --subject <dir>      # runs the cases against the real loop → <subject>/test/<run>/
-```
-
-The invariant gate auto-fails deterministic violations, and every case dumps a trace; the LLM judge grades
-them and `looprun-eval fold` merges the verdicts into `RESULTS.md`. Fix, re-screen, iterate (≤3 rounds).
-
-```bash
-npx looprun-eval fold --dump <run>/cases.jsonl --verdicts <run>/verdicts.jsonl
-```
-
-### 4 · Certify
-
-```bash
-npx looprun-eval cert <run>               # ≥90% bar → cert.json + CERT.md
-```
-
-Your agents ship with a birth certificate, not vibes. The full protocol:
-[the measured loop](docs/guides/measured-loop.md).
-
-### 5 · Serve it elsewhere (optional)
-
-`@looprun-ai/server` puts a governed agent behind an OpenAI-compatible `/v1/chat/completions` endpoint, so
-any harness that speaks the OpenAI protocol can call it as if it were a model — the whole governed turn
-(guards, tools, redrive) runs inside the request.
+[Chapter 06](docs/tutorial/06-advanced.md) has the tiers, the `llama-server` requirement (build
+**≥ b9780**) and the CLI in full.
 
 ## Packages
 
 | package | what |
 |---|---|
 | `looprun` | umbrella — `looprun/core`, `looprun/mastra`, `looprun/models` (+ the `looprun` CLI) |
-| `@looprun-ai/core` | AgentSpec + guards + trunk renderer + the framework-free governed-turn machine |
-| `@looprun-ai/mastra` | `LoopRunAgent` (a real Mastra Agent), `compileSpec` primitives, the conversation runner |
+| `@looprun-ai/core` | `AgentSpec` + guards + trunk renderer + the framework-free governed-turn machine |
+| `@looprun-ai/mastra` | `LoopRunAgent` (a real Mastra Agent), `runSpecConversation`, `worldFromTools` |
 | `@looprun-ai/models` | validated local models (llama.cpp `ModelRuntimePort`) + the cloud validation model |
 | `@looprun-ai/eval` | the `looprun-eval` CLI: run / fold / cert / lint (dev dependency) |
 | `@looprun-ai/server` | OpenAI-compatible `/v1/chat/completions` server for governed agents |
@@ -187,17 +145,8 @@ any harness that speaks the OpenAI protocol can call it as if it were a model �
 | **τ²-Bench Telecom** | Does adding the looprun protocol lift a raw model on a public agent benchmark? | paired: raw model vs model + looprun protocol | in progress | [looprun-bench](https://github.com/looprun-ai/looprun-bench) |
 
 Benchmark editions are pinned to looprun releases (current edition: **v0.6.0**; the next patch **v0.6.1**
-re-certifies the anchors without re-running the matrix).
-
-## Docs
-
-- [The illustrated guide](docs/illustrated-guide.md) — the visual front-door: the whole picture in one sitting
-- [Overview](docs/overview.md) — the concepts and the design laws
-- [Getting started](docs/getting-started.md)
-- [The measured loop](docs/guides/measured-loop.md)
-- [Eval config reference](docs/guides/eval-config.md) · [Local models](docs/guides/local-models.md) · [MCP & native tools](docs/guides/mcp-tools.md)
-- [Examples](docs/examples.md)
-- [Benchmarks](docs/benchmarks.md) — τ²-bench + **Atlas** (governed 96.5 vs ungoverned 92.6 over 13 cloud models, N=3 — data in [looprun-bench](https://github.com/looprun-ai/looprun-bench))
+re-certifies the anchors without re-running the matrix). Method and full results:
+[docs/benchmarks.md](docs/benchmarks.md).
 
 ## Credits
 
