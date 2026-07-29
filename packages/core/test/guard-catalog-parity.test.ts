@@ -20,11 +20,12 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const GUARDS_DIR = join(HERE, '..', 'src', 'guards');
 const CATALOG_MD = join(HERE, '..', 'GUARDS.md');
 
-/** The per-category guard sources as one blob. `shared.ts` is excluded: it holds the module-local
- *  helpers (`matches`, `toolResultText`, …), not vocabulary a spec author can bind. */
+/** The whole `src/guards/` directory as one blob — EVERY file, including `shared.ts`. The extractor
+ *  below discriminates by return type, so the helpers are excluded on their signatures, not on their
+ *  filename: a Guard-returning factory dropped into `shared.ts` must fail this gate, not escape it. */
 function guardSources(): string {
   return readdirSync(GUARDS_DIR)
-    .filter((f) => f.endsWith('.ts') && f !== 'shared.ts')
+    .filter((f) => f.endsWith('.ts'))
     .map((f) => readFileSync(join(GUARDS_DIR, f), 'utf8'))
     .join('\n');
 }
@@ -149,6 +150,23 @@ describe('GUARD_CATALOG ↔ core parity', () => {
         `${entry.name}(`,
       );
     }
+  });
+
+  it('every entry declares one of the four real enforcement hooks', () => {
+    const HOOKS = ['preTool', 'postTool', 'onReply', 'onReplyMutate'];
+    const bad = GUARD_CATALOG.filter((e) => !HOOKS.includes(e.hook)).map((e) => `${e.name}=${e.hook}`);
+    expect(bad, `not a hook the runtime installs on:\n${bad.join(', ')}`).toEqual([]);
+  });
+
+  it('the hook axis is the PHASE, not the file (the tricky rows)', () => {
+    // `category` is file-derived; `hook` follows the factory's dim through spec.ts#DIM_HOOKS. These two
+    // are where the axes disagree, which is exactly why the field exists.
+    const byName = new Map(GUARD_CATALOG.map((e) => [e.name, e]));
+    expect(byName.get('noInstructionFromData')?.category).toBe('reply');
+    expect(byName.get('noInstructionFromData')?.hook, 'it gates a CALL, despite living in reply.ts').toBe('preTool');
+    expect(byName.get('jargonScrub')?.hook, 'a ReplyMutator rewrites, it never gates').toBe('onReplyMutate');
+    expect(byName.get('resultInvariant')?.hook, 'the only postTool kind').toBe('postTool');
+    expect(byName.get('pendingConfirmMustAsk')?.hook, 'it gates the REPLY, not the call').toBe('onReply');
   });
 
   it('every entry sits in the category file that actually exports it', () => {

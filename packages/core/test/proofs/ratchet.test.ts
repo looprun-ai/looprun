@@ -14,8 +14,9 @@ import { GUARD_PROOFS, PROVEN_MUTATORS } from './catalog.js';
 /** The per-category guard files, read as ONE blob — the vocabulary is the directory, not a file. */
 const GUARDS_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '../../src/guards');
 const src = readdirSync(GUARDS_DIR)
-  // `shared.ts` holds the module-local helpers, not vocabulary — it exports no factory to prove.
-  .filter((f) => f.endsWith('.ts') && f !== 'shared.ts')
+  // EVERY file, helpers included: the classifier below discriminates by return type, so a
+  // Guard-returning factory hidden in `shared.ts` still needs a proof instead of escaping the ratchet.
+  .filter((f) => f.endsWith('.ts'))
   .map((f) => readFileSync(join(GUARDS_DIR, f), 'utf8'))
   .join('\n');
 
@@ -58,7 +59,7 @@ describe('coverage ratchet', () => {
     expect(missing, `unproven guard kind(s): [${missing.join(', ')}] — add a GuardProof to the catalog`).toEqual([]);
   });
 
-  it('no ghost proofs (every proof maps to a real guards.ts export)', () => {
+  it('no ghost proofs (every proof maps to a real src/guards/ export)', () => {
     const kinds = new Set(guardKinds);
     const ghosts = GUARD_PROOFS.map((p) => p.guard).filter((g) => !kinds.has(g));
     expect(ghosts).toEqual([]);

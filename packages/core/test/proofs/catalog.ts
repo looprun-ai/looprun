@@ -1,5 +1,5 @@
 /**
- * THE GUARD-PROOF CATALOG — every guard kind exported by src/guards.ts carries one {@link GuardProof}
+ * THE GUARD-PROOF CATALOG — every guard kind exported by src/guards/ carries one {@link GuardProof}
  * here (≥1 positive, ≥1 negative, ≥1 neutral case; L1 fires/silent obligations plus L3 loop cases).
  * The ratchet (ratchet.test.ts) fails CI when a new guard kind ships without a proof.
  *
@@ -72,5 +72,5 @@ export const GUARD_PROOFS: GuardProof[] = [
 ];
 
 /** ReplyMutator kinds proven by a dedicated describe in proofs-l1.test.ts. A NEW mutator export in
- *  guards.ts must be added here (the ratchet goes red until it is) AND get its own proof block. */
+ *  src/guards/ must be added here (the ratchet goes red until it is) AND get its own proof block. */
 export const PROVEN_MUTATORS = ['jargonScrub'];

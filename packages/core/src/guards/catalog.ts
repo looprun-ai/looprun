@@ -17,6 +17,15 @@
 export interface GuardCatalogEntry {
   name: string;            // factory name, e.g. 'confirmFirst'
   category: 'flow' | 'args' | 'world' | 'confirmation' | 'honesty' | 'reply' | 'custom';
+  /**
+   * The enforcement PHASE the kind is installed on — the axis the agentspec reference catalog is
+   * organized by, and the one the generated chapter groups by. It follows the factory's `dim` through
+   * the hook×dim matrix (`spec.ts#DIM_HOOKS`): `spatial`/`input`/`run` → `preTool`, `output` →
+   * `postTool`, `behavior` → `onReply`, and a `ReplyMutator` → `onReplyMutate`. It is NOT derivable
+   * from `category`, which is the FILE the factory lives in: `noInstructionFromData` sits in
+   * `reply.ts` (it is about reply-borne data) but gates a call, so its hook is `preTool`.
+   */
+  hook: 'preTool' | 'postTool' | 'onReply' | 'onReplyMutate';
   summary: string;         // one line: what it enforces
   whenToUse: string;       // one or two lines: the situation that calls for it
   example: string;         // minimal TS snippet, compilable in isolation
@@ -27,6 +36,7 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
   {
     name: 'requiresBefore',
     category: 'flow',
+    hook: 'preTool',
     summary: 'A tool may run only after every named dependency has already run successfully this conversation.',
     whenToUse:
       'An ordered flow where a step is meaningless without its predecessors — bind one gate per downstream tool naming all of them. Use this for "which call came first", not for "what state is the world in" (that is precondition).',
@@ -35,6 +45,7 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
   {
     name: 'forbidThisTurn',
     category: 'flow',
+    hook: 'preTool',
     summary: 'An unconditional deny of the bound tool while the binding is installed — the first call is denied too.',
     whenToUse:
       'A tool must be off for this turn or this layer, no matter what. It is not a repeat detector: reach for noDuplicateCall when the FIRST call is legitimate and only the repeat is not.',
@@ -43,6 +54,7 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
   {
     name: 'maxCalls',
     category: 'flow',
+    hook: 'preTool',
     summary: 'A tool may succeed at most n times per turn (default) or per conversation.',
     whenToUse:
       'A bulk cap on a tool that is legitimate but expensive or nagging — sweeps, notifications, repeat contact. Pick scope:"conversation" for retention-style limits, scope:"turn" for per-answer budgets.',
@@ -51,6 +63,7 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
   {
     name: 'noDuplicateCall',
     category: 'flow',
+    hook: 'preTool',
     summary: 'Denies a call whose tool and canonical arguments already succeeded earlier in the same turn.',
     whenToUse:
       'Always on (the spec class auto-installs it): it stops the same-turn retry loop where a model re-reads an identical query hoping for a different answer. Cross-turn repeats stay legal — a later turn is a genuine refresh.',
@@ -61,6 +74,7 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
   {
     name: 'argRequired',
     category: 'args',
+    hook: 'preTool',
     summary: 'The named argument must be present and non-empty (a blank string counts as missing).',
     whenToUse:
       'A field the tool cannot do its job without, and the model tends to omit or fill with whitespace. For a field that must be well-FORMED rather than merely present, add argFormat.',
@@ -69,6 +83,7 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
   {
     name: 'argAbsent',
     category: 'args',
+    hook: 'preTool',
     summary: 'The named argument must not be passed at all.',
     whenToUse:
       'A parameter the model keeps inventing for this tool, or the excluded half of a mutually exclusive pair — bind argAbsent on each side of the pair.',
@@ -77,6 +92,7 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
   {
     name: 'argFormat',
     category: 'args',
+    hook: 'preTool',
     summary: 'A present, non-empty string argument must match the given pattern; absent or empty is left to argRequired.',
     whenToUse:
       'The value has a shape the model can plausibly fabricate — an id, a date, a code. Compose it with argRequired when the field is also mandatory; alone it only polices the values that are actually sent.',
@@ -87,6 +103,7 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
   {
     name: 'precondition',
     category: 'world',
+    hook: 'preTool',
     summary: 'The call is allowed only while a predicate over the host world holds.',
     whenToUse:
       'A gate whose discriminator lives in WORLD state, not in this call — the predicate never sees the acting call\'s arguments. If the discriminator is in the args, use custom instead.',
@@ -95,6 +112,7 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
   {
     name: 'resultInvariant',
     category: 'world',
+    hook: 'postTool',
     summary: 'A post-execution check on the tool RESULT: when the predicate fails, the violation joins the reply redrive set.',
     whenToUse:
       'The call already ran and cannot be undone, but its result must not be reported as if it satisfied the request — an empty report, a partial write. It never vetoes the call; it corrects the reply.',
@@ -103,6 +121,7 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
   {
     name: 'consentRequired',
     category: 'world',
+    hook: 'preTool',
     summary: 'Risk family 6 — a set of writes may run only while the world says this person\'s consent is on record.',
     whenToUse:
       'Storing, sharing or transmitting personal data. It is precondition specialised to a TOOL SET, which is what makes the consent posture auditable in a spec header; pair it with a conversation-scoped maxCalls for repeat contact.',
@@ -113,14 +132,16 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
   {
     name: 'confirmFirst',
     category: 'confirmation',
-    summary: 'A destructive tool needs the user\'s go-ahead from an EARLIER turn — via a confirm flag probe or a prior ask.',
+    hook: 'preTool',
+    summary: 'A destructive tool needs the user\'s go-ahead from an EARLIER turn — via a confirm flag probe or a prior ask. Passing a mechanism NAME to the string overload throws at construction.',
     whenToUse:
-      'Auto-installed for every declared destructive tool. Choose mechanism:"arg" when the tool carries a confirm flag, mechanism:"prior-ask" when it has none and the only possible evidence is an earlier question.',
-    example: `confirmFirst({ argFlag: 'confirmed', mechanism: 'arg' })`,
+      'The user must have agreed before this call runs, and the evidence has to be cross-turn — this is the consent gate itself. Its neighbours answer different questions: destructiveThrottle caps the blast radius of a turn that IS approved, consentRequired reads a standing world flag rather than the conversation, and pendingConfirmMustAsk gates the REPLY rather than the call. Mechanism: "arg" when the tool carries a confirm flag, "prior-ask" when it has none and an earlier question is the only possible evidence; the string overload sets the FLAG NAME, so confirmFirst(\'prior-ask\') throws rather than silently building a guard that can never fire.',
+    example: `confirmFirst('confirmed')`,
   },
   {
     name: 'noActAfterAskSameTurn',
     category: 'confirmation',
+    hook: 'preTool',
     summary: 'Denies the listed tools on a turn in which the model already asked the user a question.',
     whenToUse:
       'The mirror image of confirmFirst\'s cross-turn requirement: it closes the multi-tool step that asks and executes back to back, which reads as "asked" but never gave the user a chance to answer.',
@@ -129,6 +150,7 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
   {
     name: 'destructiveThrottle',
     category: 'confirmation',
+    hook: 'preTool',
     summary: 'At most one destructive action that TOOK EFFECT per turn (a confirmation probe does not count).',
     whenToUse:
       'Auto-installed alongside confirmFirst. It is the blast-radius cap, not a consent gate: it stops chained destructive calls in one turn even when each one is individually confirmed.',
@@ -137,6 +159,7 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
   {
     name: 'pendingConfirmMustAsk',
     category: 'confirmation',
+    hook: 'onReply',
     summary: 'When a probe returned requiresConfirmation this turn and nothing resolved it, the reply must relay that question.',
     whenToUse:
       'The world runs the two-step protocol itself: the tool answers "I need confirmation" and the risk is a reply that summarises the action as done. It gates the REPLY; confirmFirst gates the call.',
@@ -147,6 +170,7 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
   {
     name: 'noFabricatedSuccess',
     category: 'honesty',
+    hook: 'onReply',
     summary: 'The reply may not claim a tool\'s effect, cite an invented artifact label, or use a banned phrase when the tool did not succeed this turn.',
     whenToUse:
       'A tool whose output the model likes to announce before it exists. Arm only the seams you need — claim language, label existence, or an unconditional ban — and ship banProse with every banRe.',
@@ -155,6 +179,7 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
   {
     name: 'destructiveClaimRequiresSuccess',
     category: 'honesty',
+    hook: 'onReply',
     summary: 'A declarative claim that a destructive action happened is denied unless one actually took effect this turn.',
     whenToUse:
       'The destructive counterpart of noFabricatedSuccess, attempt-keyed and sentence-scoped: with no attempt this turn a destructive verb is read-back status and is left alone, and questions or offers never count as claims.',
@@ -163,14 +188,16 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
   {
     name: 'noFalseFailureClaim',
     category: 'honesty',
+    hook: 'onReply',
     summary: 'When every domain call this turn succeeded and one of them mutated the world, the reply may not claim inability.',
     whenToUse:
-      'Auto-installed when the lexicon supplies its pattern. Keep the pattern to attempted-work-failure phrasing ("failed to", "went wrong") — a broad inability regex would veto honest policy refusals.',
+      'The work actually went through and the model still apologises for failing — the mirror image of the fabricated-success kinds, which catch the opposite lie. It only adjudicates a turn that MUTATED the world, so an honest "I could not find it" on a read-only turn is never touched. Auto-installed when the lexicon supplies the pattern; keep that pattern to attempted-work-failure phrasing ("failed to", "went wrong"), since a broad inability regex would veto honest policy refusals.',
     example: `noFalseFailureClaim({ claimRe: /failed to|something went wrong/i })`,
   },
   {
     name: 'noOutOfSurfaceActionClaim',
     category: 'honesty',
+    hook: 'onReply',
     summary: 'Risk family 4 — a declarative claim of an action whose tool is not on this agent\'s surface is denied.',
     whenToUse:
       'The agent is expected to hand off (billing, legal, dispatch) and the model promises the handoff as done. It deliberately stops at the surface boundary, so it never double-fires with the owned-action honesty kinds.',
@@ -179,6 +206,7 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
   {
     name: 'noUngroundedRegulatedFigure',
     category: 'honesty',
+    hook: 'onReply',
     summary: 'Risk family 5 — a figure or conclusion of a regulated class may appear only when a tool returned it this turn.',
     whenToUse:
       'Legal, medical or financial surfaces. Keep allowFromToolResults true when a tool is authoritative for the class; set it false to ban the class outright where nothing in the world can license it.',
@@ -187,6 +215,7 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
   {
     name: 'noCompetitorClaim',
     category: 'honesty',
+    hook: 'onReply',
     summary: 'Risk family 3 — within one sentence, a named third party plus comparative phrasing or a comparative figure is denied.',
     whenToUse:
       'Any user-facing sales or support surface. The figure branch is sound by construction: no tool returns a competitor\'s numbers, so any such number is invented.',
@@ -197,6 +226,7 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
   {
     name: 'replyMustMention',
     category: 'reply',
+    hook: 'onReply',
     summary: 'The reply must contain at least one of the given keywords (case-insensitive).',
     whenToUse:
       'A mandatory element of coverage that is the same on every turn — a referral phrase, a required disclaimer. For "name the records you just acted on", use replyConfirmsLabels instead.',
@@ -205,6 +235,7 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
   {
     name: 'replyMaxOccurrences',
     category: 'reply',
+    hook: 'onReply',
     summary: 'At most n DISTINCT calls-to-action from the list may appear in one reply.',
     whenToUse:
       'Anti-nag: the model stacks several different asks onto one message. It counts distinct entries, not repetitions, so one CTA restated inside a single ask still passes.',
@@ -213,6 +244,7 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
   {
     name: 'replySingleQuestion',
     category: 'reply',
+    hook: 'onReply',
     summary: 'The reply must carry exactly one question mark.',
     whenToUse:
       'Recovery and clarification turns, where a pile of questions at once is what stalls the conversation. Bind it to the layer that handles those turns, not to every reply.',
@@ -221,6 +253,7 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
   {
     name: 'replyConfirmsLabels',
     category: 'reply',
+    hook: 'onReply',
     summary: 'The reply must be non-empty and name every one of the given labels.',
     whenToUse:
       'The model just acted on identified records and the user needs to see WHICH ones. Unlike replyMustMention (any one keyword), every label is required.',
@@ -229,6 +262,7 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
   {
     name: 'emptyReply',
     category: 'reply',
+    hook: 'onReply',
     summary: 'The final reply must not be blank.',
     whenToUse:
       'Always on (auto-installed). It is the floor under every other reply kind: a turn that ends with nothing said is a failure no other guard would catch.',
@@ -237,14 +271,16 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
   {
     name: 'degenerationGuard',
     category: 'reply',
+    hook: 'onReply',
     summary: 'Catches leaked reasoning or tool markup, chat-template tokens and run-away line repetition in the reply.',
     whenToUse:
-      'Always on (auto-installed) — it is the weak-model failure class, not a domain rule. Pass selfNarrationRe to add the language-specific third-person self-narration branch.',
+      'The reply is broken as an ARTIFACT rather than wrong as a claim — think blocks, tool-call markup or the same line five times over. No honesty kind fires on that, because nothing was asserted; this one catches the weak-model failure class every domain shares. Always on (auto-installed); pass selfNarrationRe to add the language-specific third-person self-narration branch.',
     example: `degenerationGuard({ selfNarrationRe: /the assistant (?:then )?(?:called|checked)/i })`,
   },
   {
     name: 'minimalDisclosure',
     category: 'reply',
+    hook: 'onReply',
     summary: 'Risk family 1 — caps how many records\' personal FIELDS one reply may carry, and requires each named field to have been returned by a tool this turn.',
     whenToUse:
       'Any surface that reads personal records. It keys on field-name tokens, never on entity mentions, so a correct multi-record summary that lists only ids and dates stays legal.',
@@ -253,6 +289,7 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
   {
     name: 'noInstructionFromData',
     category: 'reply',
+    hook: 'preTool',
     summary: 'Risk family 2 — denies the listed destructive tools while an imperative sits in the conversation\'s tool results and no earlier turn exposed the action to the user.',
     whenToUse:
       'Tool results can carry attacker-controlled text (notes, messages, tickets). The proxy is deliberately conservative — it converts a poisoned same-turn request into the legal ask-then-act two-turn flow.',
@@ -261,6 +298,7 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
   {
     name: 'jargonScrub',
     category: 'reply',
+    hook: 'onReplyMutate',
     summary: 'A deterministic egress rewrite of internal vocabulary into user words (word-boundary, case-insensitive).',
     whenToUse:
       'Internal status codes and field names leak into replies and no gate can sensibly deny them. It is a MUTATOR, not a guard: it rewrites and never vetoes, so it has no pass/fail behaviour to prove.',
@@ -271,9 +309,10 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
   {
     name: 'custom',
     category: 'custom',
+    hook: 'preTool',
     summary: 'The escape hatch: a guard whose kind, dim, check and prose the spec author writes by hand.',
     whenToUse:
-      'Only when no kind fits — typically a domain concept the runtime carries no vocabulary for (media, labels, provenance) read through the world\'s own accessors. Replicate the shared kinds\' exemptions; reviewers read this code.',
+      'Only when no kind fits — typically a domain concept the runtime carries no vocabulary for (media, labels, provenance) read through the world\'s own accessors. Its hook follows the `dim` you pass (the row says preTool because the example is a `run` guard); replicate the shared kinds\' exemptions, since reviewers read this code.',
     example: `custom({ kind: 'imageQuotaLeft', dim: 'run', check: (ctx) => (ctx.world.imageQuotaRemaining > 0 ? null : 'No image quota left this month — say so instead of generating.'), prose: () => 'generate an image only while quota remains' })`,
   },
 ];
