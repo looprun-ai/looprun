@@ -19,7 +19,7 @@
  * package for accented letters / language stems, so a re-introduced default fails CI.
  *
  * ONE KIND PER CATEGORY FILE, one import site. The categories are the tutorial's own sections
- * (`docs/tutorial/00-outline.md` §4): flow · args · world · confirmation · honesty · reply · custom.
+ * (`docs/superpowers/specs/2026-07-28-tutorial-outline-final.md` §4): flow · args · world · confirmation · honesty · reply · custom.
  * `catalog.ts` holds the same vocabulary as DATA (`GUARD_CATALOG`) plus the runtime's kind
  * classification registries; `shared.ts` holds the module-local helpers and is exported by nobody.
  */

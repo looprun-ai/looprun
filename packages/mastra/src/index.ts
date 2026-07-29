@@ -5,7 +5,7 @@
  *   worldFromTools({ stateView })             → native-tools/MCP mode's world seam (tutorial 03).
  *   runSpecConversation(spec, turns, deps)    → scripted multi-turn runs, evals/batch (tutorial 05).
  *
- * These 7 names are the mastra rows of `docs/tutorial/00-outline.md` §4 — the contract, locked by
+ * These 7 names are the mastra rows of `docs/superpowers/specs/2026-07-28-tutorial-outline-final.md` §4 — the contract, locked by
  * `packages/mastra/test/surface-lock.test.ts`. Everything else in this package (the session store, the tool
  * and hook builders, the JSON-schema→Zod shim, `surfaceFingerprint`, `compileSpec`) is module-local:
  * mastra has NO `/internal` subpath, so in-package code imports those module files directly.

@@ -740,7 +740,8 @@ You are not expected to catch it; you are expected to fix the guard, which is wh
    GuardCtx      args · tool · world · observed · turnIndex · reply · result   (never the user text)
    ObservedCall  name · args · ok · turnIndex · resultFlags · tookEffect
    Dim           spatial | input | run | output | behavior  → which hooks are legal
-   canonArgs     the key-order-independent call fingerprint the repetition kinds compare
+   canonArgs     the key-order-independent call fingerprint — `noDuplicateCall` keys on it, and
+                 `pendingConfirmMustAsk` keys on it with the confirm flag stripped
 
    30 factories, grouped by the hook they run on:
      preTool        13   prevent it — the deny returns as the tool result, the model retries

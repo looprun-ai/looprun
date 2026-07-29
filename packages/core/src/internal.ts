@@ -4,7 +4,7 @@
  * Every symbol here carries the `internal` verdict in
  * `docs/superpowers/specs/2026-07-28-symbol-inventory.md` §7.1: it has a consumer, but no tutorial
  * chapter teaches it, so by the contract principle it may not sit on the public barrel
- * (`docs/tutorial/00-outline.md` §0).
+ * (`docs/superpowers/specs/2026-07-28-tutorial-outline-final.md` §0).
  *
  * Two audiences:
  *   1. the sibling packages (`@looprun-ai/mastra`, `/eval`, `/server`, `/models`) that implement the
@@ -84,7 +84,7 @@ export type { ReplyViolation, FinalizedReply } from './runtime/turn.js';
  * The ATTRIBUTED guard failure — thrown at the consumer when a guard's `check()`/`prose()` throws
  * (an author bug, never swallowed and never converted into a deny; see `spec.ts#attributeGuard`).
  * The runtime throws it across the package boundary, so it must be reachable from some entry point
- * to be caught by class. Placed here by controller ruling, and it STAYS here: Task 10 decided that
+ * to be caught by class. Placed here by controller ruling, and it STAYS here:
  * chapter 04's custom-guard section MENTIONS it (the diagnostic naming the broken binding) without
  * teaching it as API — the intended reaction to a throwing guard is to fix the guard, not to catch
  * the error — so it is not a taught symbol and does not go on the public barrel (outline §6, #8).

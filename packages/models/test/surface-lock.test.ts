@@ -2,7 +2,7 @@
  * THE MODELS SURFACE LOCK — the sibling of `packages/core/test/proofs/surface-lock.test.ts` and
  * `packages/mastra/test/surface-lock.test.ts`.
  *
- * `@looprun-ai/models` promises exactly the 8 models rows of `docs/tutorial/00-outline.md` §4:
+ * `@looprun-ai/models` promises exactly the 8 models rows of `docs/superpowers/specs/2026-07-28-tutorial-outline-final.md` §4:
  * chapter 05 teaches `geminiFlashLiteThinkOff`, chapter 06 the local-model seven. Changing this
  * list changes what looprun promises and must move the outline in the same commit.
  *

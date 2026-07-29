@@ -6,7 +6,7 @@
  * SHAPE of the barrel. That is precisely how a contract rots.
  *
  * So the three lists below are the contract, transcribed:
- *   · TAUGHT      — the 51 core rows of the placement table in `docs/tutorial/00-outline.md` §4,
+ *   · TAUGHT      — the 51 core rows of the placement table in `docs/superpowers/specs/2026-07-28-tutorial-outline-final.md` §4,
  *                   chapters 03 (11) + 04 (35) + 05 (5). Changing this list changes what looprun
  *                   promises, and must move the outline in the same commit.
  *   · RIDERS      — the type-closure rider (outline §7): pure types reachable from a taught

@@ -4,7 +4,7 @@
  * `@looprun-ai/mastra` is the package the tutorial imports from first (`looprun/mastra`), and its
  * barrel is TWO things at once:
  *
- *   · its OWN contract — the 7 mastra rows of the placement table in `docs/tutorial/00-outline.md`
+ *   · its OWN contract — the 7 mastra rows of the placement table in `docs/superpowers/specs/2026-07-28-tutorial-outline-final.md`
  *     §4: chapter 02 (3) + chapter 03 (2) + chapter 05 (2). Changing this list changes what looprun
  *     promises and must move the outline in the same commit;
  *   · plus `export * from '@looprun-ai/core'`, because chapters 02–04 teach core symbols through the

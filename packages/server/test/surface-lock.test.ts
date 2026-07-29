@@ -2,7 +2,7 @@
  * THE SERVER SURFACE LOCK — the sibling of `packages/core/test/proofs/surface-lock.test.ts`,
  * `packages/mastra/test/surface-lock.test.ts` and `packages/models/test/surface-lock.test.ts`.
  *
- * `@looprun-ai/server` promises exactly the 4 server rows of `docs/tutorial/00-outline.md` §4
+ * `@looprun-ai/server` promises exactly the 4 server rows of `docs/superpowers/specs/2026-07-28-tutorial-outline-final.md` §4
  * (chapter 06, "Serve it"): the factory, its two companion types, and the streamed turn event.
  * Changing this list changes what looprun promises and must move the outline in the same commit.
  *

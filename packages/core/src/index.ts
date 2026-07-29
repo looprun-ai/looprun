@@ -2,7 +2,7 @@
  * @looprun-ai/core — the PUBLIC API.
  *
  * THE CONTRACT. Every taught symbol below is claimed by a chapter of `docs/tutorial/` — chapters 03,
- * 04 and 05 own the core rows of the placement table in `docs/tutorial/00-outline.md` §4. A concept
+ * 04 and 05 own the core rows of the placement table in `docs/superpowers/specs/2026-07-28-tutorial-outline-final.md` §4. A concept
  * the tutorial does not teach is not taught here.
  *
  * WHERE THE REST WENT — three destinations, not one:
@@ -84,7 +84,7 @@ export { geminiThinkingOff, pinnedDecoding } from './model-params.js';
 // type-only exports. Riders are NOT part of the 89 taught symbols, get no tutorial chapter, and are
 // not a licence to widen the surface — the list below is mechanically derived (see
 // `test/proofs/surface-lock.test.ts`), and it shrinks as Tasks 5–6 shrink what the signatures touch.
-// Recorded in `docs/tutorial/00-outline.md` §7 and the inventory §9.
+// Recorded in `docs/superpowers/specs/2026-07-28-tutorial-outline-final.md` §7 and the inventory §9.
 export type { SpecWarning } from './validate.js';
 export type { SamplingSettings } from './model-params.js';
 export type { ReplyMutator, SpatialEdge } from './rules.js';

@@ -4,6 +4,13 @@
 **Consumes:** `docs/superpowers/specs/2026-07-28-symbol-inventory.md` (Task 1 — the usage authority)
 **Binds:** Tasks 3–7 converge every `src/index.ts` onto the union below; Tasks 8–11 write the chapters.
 
+> **Moved (Task 12).** This file was authored as `docs/tutorial/00-outline.md`. Task 12 removed the
+> superseded `docs/` set, but this outline is **not** superseded: it is the standing record of the
+> public-API contract, and the six `src/index.ts` barrels plus their surface-lock tests cite it by
+> path. It moved here — alongside the inventory and the design — rather than being deleted. Two of
+> its §6 decisions (5 and 6) are still **open user decisions**; they are carried, verbatim, into
+> `2026-07-28-migration-notes.md`.
+
 ---
 
 ## 0. What this document is

@@ -40,7 +40,7 @@ delete   ███████████████████████�
 |---|---|---|
 | **public** | referenced from `examples/`, `skills/`, `scripts/`, `governance/`, `looprun-bench`, `agentspec`, `yntelli` | stays on the package's public `index.ts` |
 | **internal** | referenced only from another `packages/*` (mastra / eval / server / models / vercel / the `looprun` CLI facade) | moves behind an `/internal` subpath export |
-| *(override, promote)* | **`docs/tutorial/00-outline.md` teaches it** — the design's contract principle | **public**, whatever this scan measured (§9 rounds 3–4) |
+| *(override, promote)* | **`docs/superpowers/specs/2026-07-28-tutorial-outline-final.md` teaches it** — the design's contract principle | **public**, whatever this scan measured (§9 rounds 3–4) |
 | *(override, demote)* | **no tutorial chapter teaches it** — the same principle, read the other way | **internal**, whatever this scan measured. Applied to the ten bring-your-own-loop symbols in §9 round 4 |
 
 > **The annotation rule** (round 4, the test the outline applies to types). A type is public iff the
@@ -169,7 +169,7 @@ resolution.
 
 > **Resolved in round 3 — by the tutorial, not by a doc mention.** The doc-mention policy above is
 > still intact: no symbol here was ever promoted because a README named it. `localModel` and its
-> three companion types are public because **`docs/tutorial/00-outline.md` chapter 06 teaches them**,
+> three companion types are public because **`docs/superpowers/specs/2026-07-28-tutorial-outline-final.md` chapter 06 teaches them**,
 > under the design's contract principle ("a concept that does not appear in the tutorial becomes
 > internal or is deleted" — and its converse: what the tutorial teaches *is* the public API). The
 > outline's §7 records the decision and the rejected alternative. See §9 round 3.
@@ -487,7 +487,7 @@ Read the §3 column caveat before using the third column for anything.
 | `downloadModel` | — | — | models | 0 | ~~delete~~ |  |
 | `downloadUrl` | — | — | models#test | 0 | ~~delete~~ |  |
 | `LocalModelOptions` | — | — | — | 0 | **public** | ROUND 3: companion type of `localModel` (its options parameter) |
-| `localModel` | — | mastra | — | 3 | **public** | ROUND 3 — TUTORIAL CONTRACT, not a doc mention. Code usage is only `packages/mastra/canary/guard-canary.canary.ts` (sibling → would be internal), but `docs/tutorial/00-outline.md` chapter 06 teaches it as the local-model entry point; see that outline's §7 for the decision and the rejected alternative. Reinstates what README:66, docs/illustrated-guide.md:485 and docs/guides/local-models.md:71 already promise |
+| `localModel` | — | mastra | — | 3 | **public** | ROUND 3 — TUTORIAL CONTRACT, not a doc mention. Code usage is only `packages/mastra/canary/guard-canary.canary.ts` (sibling → would be internal), but `docs/superpowers/specs/2026-07-28-tutorial-outline-final.md` chapter 06 teaches it as the local-model entry point; see that outline's §7 for the decision and the rejected alternative. Reinstates what README:66, docs/illustrated-guide.md:485 and docs/guides/local-models.md:71 already promise |
 | `localModelClient` | — | — | — | 0 | ~~delete~~ |  |
 | `geminiFlashLiteThinkOff` | examples | — | — | 5 | **public** |  |
 | `localModelStatus` | — | — | — | 0 | **public** | scripts/proofs/run-canary.mjs + `looprun` bin (dynamic import) |
@@ -656,7 +656,7 @@ non-typechecking consumer imports recorded as finding 6.
 
 ### Round 3 — the tutorial outline (Task 2)
 
-`docs/tutorial/00-outline.md` places every public symbol in exactly one chapter. Under the design's
+`docs/superpowers/specs/2026-07-28-tutorial-outline-final.md` places every public symbol in exactly one chapter. Under the design's
 **contract principle**, that outline — not this scan — has the final word on what is public.
 
 | # | change | evidence |

@@ -2,7 +2,7 @@
  * THE EVAL SURFACE LOCK — the sibling of `packages/core/test/proofs/surface-lock.test.ts`,
  * `packages/mastra/test/surface-lock.test.ts` and `packages/models/test/surface-lock.test.ts`.
  *
- * `@looprun-ai/eval` promises exactly the 19 eval rows of `docs/tutorial/00-outline.md` §4
+ * `@looprun-ai/eval` promises exactly the 19 eval rows of `docs/superpowers/specs/2026-07-28-tutorial-outline-final.md` §4
  * (chapter 05): the subject-directory contract (7) plus the measured loop (12). Changing this list
  * changes what looprun promises and must move the outline in the same commit.
  *

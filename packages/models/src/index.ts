@@ -1,5 +1,5 @@
 /**
- * @looprun-ai/models — the public API: exactly the 8 models rows of `docs/tutorial/00-outline.md`
+ * @looprun-ai/models — the public API: exactly the 8 models rows of `docs/superpowers/specs/2026-07-28-tutorial-outline-final.md`
  * §4 (chapter 05: `geminiFlashLiteThinkOff` · chapter 06: the local-model seven).
  *
  *   model: await localModel('qwen3.5-4b')          // llama.cpp, measured flags, health-checked

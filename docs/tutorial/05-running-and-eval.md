@@ -538,7 +538,7 @@ What lands on disk:
 
 ```
    <subject>/test/<date>-<model>-<arm>/        (override with --out)
-   ├── cases.jsonl      one CaseDump per line — the judge's INPUT (bulky: gitignore it yourself;
+   ├── cases.jsonl      one case dump per line — the judge's INPUT (bulky: gitignore it yourself;
    │                    nothing in the tool does)
    ├── SUMMARY.md       per-case status + token totals
    ├── verdicts.jsonl   ← the judge writes this
@@ -662,6 +662,7 @@ iterations. Cheapest and most deterministic first:
 | 5 | fabrication pattern | an existence-keyed anti-fabrication reply gate |
 | 6 | language coin | **accept as residual** — a human gate. Do not chase it with prose |
 | 7 | eval defect | fix the **eval**, and re-argue it. Never bend the spec to a broken case |
+| 8 | near-tie action coin | the graded decision rides one greedy token whose margin sits inside the noise band. Pin it with a **deterministic gate** — a guard that decides the branch — rather than editing prose blindly |
 
 After any spec or contract edit, §5.1 must stay clean before you spend on another run.
 

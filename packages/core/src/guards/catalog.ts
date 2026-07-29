@@ -3,7 +3,7 @@
  *
  * One entry per exported guard/mutator factory: what it enforces, the situation that calls for THIS
  * kind rather than its neighbours, and a minimal call site. The tutorial's guard chapter is GENERATED
- * from this array (Task 10), so a kind added to `guards/` without an entry — or an entry with no
+ * from this array by `scripts/gen-guards-chapter.mjs`, so a kind added to `guards/` without an entry — or an entry with no
  * backing factory — fails `test/guard-catalog-parity.test.ts` instead of silently shipping an
  * undocumented kind.
  *
