@@ -6,6 +6,10 @@ the "agent-as-model" pattern. Any harness that can point a custom provider at a 
 as if it were a model: the full governed turn (guards → tools → redrive) runs inside each
 `/v1/chat/completions` request and returns one final assistant message.
 
+New to looprun? Start with the tutorial:
+[01 · Concepts](https://github.com/looprun-ai/looprun/blob/main/docs/tutorial/01-concepts.md) — six
+chapters, one running example; chapter 06 serves this agent over HTTP.
+
 ```ts
 import { createModelServer } from '@looprun-ai/server';
 import { LoopRunAgent } from '@looprun-ai/mastra';

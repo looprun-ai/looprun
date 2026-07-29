@@ -4,6 +4,10 @@ The subject runner: executes a generated subject's cases against a model target
 (governed or ungoverned arm), dumps per-case traces for the LLM judge, folds
 verdicts, and certifies against the bar.
 
+The protocol is taught in the tutorial:
+[01 · Concepts](https://github.com/looprun-ai/looprun/blob/main/docs/tutorial/01-concepts.md) — six
+chapters, one running example; chapter 05 owns run → judge → fold → cert.
+
 ## Subject layout
 
 ```

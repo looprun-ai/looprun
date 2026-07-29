@@ -3,6 +3,10 @@
 The Vercel AI SDK backend for looprun is **not implemented yet**; the v0 backend is
 [`@looprun-ai/mastra`](../mastra).
 
+For what looprun is and how to use the v0 backend, start with the tutorial:
+[01 · Concepts](https://github.com/looprun-ai/looprun/blob/main/docs/tutorial/01-concepts.md) — six
+chapters, one running example.
+
 ## The backend seam contract
 
 A looprun backend is thin by design — every deterministic mechanic lives framework-free in

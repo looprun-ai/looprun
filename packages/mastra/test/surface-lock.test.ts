@@ -77,8 +77,9 @@ describe('mastra surface lock — the barrel is the tutorial contract', () => {
   });
 
   it('re-exports the whole @looprun-ai/core public barrel, unrenamed', () => {
-    // Resolved through the package specifier (dist .d.ts) — this also proves the built core barrel
-    // and its source agree. A stale/absent build shows up here as a missing-name diff.
+    // `CORE_INDEX` is core's `src/index.ts` — resolved by PATH, not through the package specifier,
+    // so this lane needs no build and says nothing about `dist`. It asserts the source barrels agree;
+    // the built core barrel is core's own surface lock's business.
     expect(coreExports.length).toBeGreaterThan(0);
     expect(mastraExports.filter((n) => coreExports.includes(n))).toEqual(coreExports);
   });

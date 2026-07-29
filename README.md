@@ -75,6 +75,11 @@ tool calls the agent actually made.
 
 ## The tutorial
 
+> **Coming back after a while?** The old doc set under `docs/` — `overview.md`,
+> `getting-started.md`, `illustrated-guide.md`, `examples.md`, `references.md` and the four
+> `guides/` pages — was retired. The six chapters below absorbed all of it; `docs/tutorial/` is
+> now the only guide.
+
 Six chapters, one running example — a calendar assistant grown from a single purpose sentence into a
 certified agent. Every code block is compiled in CI against the published packages, so nothing here
 can drift from what ships.
@@ -97,12 +102,13 @@ npx looprun-eval cert <run>               # ≥90% bar → cert.json + CERT.md
 ```
 
 The invariant gate auto-fails deterministic violations and every case dumps a trace; the LLM judge
-grades them and `fold` merges the verdicts. Your agents ship with a birth certificate, not vibes —
+grades them and `fold` merges the verdicts. `cert.json` and `CERT.md` are the artifact: the model,
+the case count, the final pass rate, the bar it was measured against and `reps: 1` stated explicitly —
 the full protocol is [chapter 05](docs/tutorial/05-running-and-eval.md).
 
 ## Local models
 
-Local models are first-class — three run tiers of one validated model (plus a small-RAM fallback) run on
+Local models are a supported target — three run tiers of one validated model (plus a small-RAM fallback) run on
 [llama.cpp](https://github.com/ggml-org/llama.cpp) with measured flags, including lossless
 multi-token-prediction speculative decoding (~1.4× decode, byte-identical output at temp 0):
 

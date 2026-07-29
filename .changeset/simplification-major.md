@@ -13,7 +13,10 @@
 Every package barrel was converged onto a single contract — the symbols taught by
 `docs/tutorial/01`–`06`. Names that no package documented and no consumer imported were deleted;
 names that only the runtime needs moved behind `@looprun-ai/core/internal`. Each barrel is now
-pinned by a surface-lock test, so it cannot drift back.
+pinned by a surface-lock test, so it cannot drift back — with one gap: the published `./testing`
+subpaths of `@looprun-ai/core` and `@looprun-ai/mastra` re-export by wildcard (~27 symbols) and
+carry no lock yet, so those two are the one surface that can still drift. Locking them is a
+follow-up.
 
 | package | public exports | before |
 |---|---|---|

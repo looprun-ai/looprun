@@ -106,7 +106,7 @@ consequential than that:
 
 | name | imported from | real sites |
 |---|---|---|
-| `TrunkTheme` | `looprun` / `@looprun-ai/core` | **the whole Atlas v0.6.0 spec set** — `benchmarks/atlas/v0.6.0/specs/*/theme.ts` + `*/index.ts` across ~20 preset directories, plus `v0.6.1/specs/atlas-r2/`, `atlas/*/harness/src/load.ts`, and `tau2-telecom/harness/telecom/src/agents/telecom/theme.ts` (94 occurrences in 40 files) |
+| `TrunkTheme` | `looprun` / `@looprun-ai/core` | **the whole Atlas v0.6.0 spec set** — `benchmarks/atlas/v0.6.0/specs/*/theme.ts` + `*/index.ts` across ~20 preset directories, plus `v0.6.1/specs/atlas-r2/`, `atlas/*/harness/src/load.ts`, and `tau2-telecom/harness/telecom/src/agents/telecom/theme.ts` (94 occurrences in 39 files) |
 | `EvalConfig` | `@looprun-ai/eval` | `tau2-telecom/harness/telecom/looprun.eval.config.ts:9` (used at `:14`) |
 | `EvalCase` | `@looprun-ai/eval` | `tau2-telecom/harness/telecom/evals/cases.ts:19` (used at `:21`) |
 
