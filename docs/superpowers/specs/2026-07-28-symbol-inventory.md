@@ -1,6 +1,7 @@
 # Symbol usage inventory — looprun simplification (Phase 0)
 
-**Scan date:** 2026-07-28 · **Revised:** 2026-07-29 after two independent reviews (see §9) · **Branch:** `worktree-simplification`
+**Scan date:** 2026-07-28 · **Revised:** 2026-07-29 after two independent reviews **and the Task 2
+tutorial outline** (see §9) · **Branch:** `worktree-simplification`
 
 This is the **authority** every later refactor task cites for cuts. One row per symbol exported from
 the `src/index.ts` **barrel** of `core`, `mastra`, `models`, `eval`, `server`, `vercel` — 265 rows,
@@ -15,17 +16,17 @@ package    public   internal   delete    total
 --------   ------   --------   ------    -----
 core          53        30        66       149
 mastra         5         1        19        25
-models         4         4        16        24
+models         8         0        16        24
 eval          13         0        39        52
 server         4         0         9        13
 vercel         0         0         2         2
 --------   ------   --------   ------    -----
-TOTAL         79        35       151       265
+TOTAL         83        31       151       265
 ```
 
 ```
-public   ███████████████████████████                   79  (29.8%)
-internal ███████████                                   35  (13.2%)
+public   ████████████████████████████                  83  (31.3%)
+internal ██████████                                    31  (11.7%)
 delete   ███████████████████████████████████████████  151  (57.0%)
 ```
 
@@ -39,6 +40,7 @@ delete   ███████████████████████�
 |---|---|---|
 | **public** | referenced from `examples/`, `skills/`, `scripts/`, `governance/`, `looprun-bench`, `agentspec`, `yntelli` | stays on the package's public `index.ts` |
 | **internal** | referenced only from another `packages/*` (mastra / eval / server / models / vercel / the `looprun` CLI facade) | moves behind an `/internal` subpath export |
+| *(override)* | **`docs/tutorial/00-outline.md` teaches it** — the design's contract principle | **public**, whatever this scan measured. Applied once so far: the four `models` local-model symbols (§9 round 3) |
 | **delete** | zero references outside the defining package's own `src/` and its own `test/` | drops off `index.ts` |
 
 > ### `delete` means *stop exporting*, never *erase*
@@ -147,10 +149,17 @@ entry is not documented API. Notes cite only README / `GUARDS.md` / `governance/
 
 Applying this policy consistently cost one earlier call: the first revision promoted `localModel` and
 its three companion types to public on README evidence. Its **real** code usage is
-`packages/mastra/canary/guard-canary.canary.ts` — a sibling package — so it is now **internal**, with a
-loud note that `README.md:66`, `docs/illustrated-guide.md:485` and `docs/guides/local-models.md:71`
-present it as the headline API. **That conflict is real and Task 12 must resolve it**: either the docs
-overstate what is exported, or `models` needs a genuine public entry point.
+`packages/mastra/canary/guard-canary.canary.ts` — a sibling package — so round 1 made it **internal**,
+with a loud note that `README.md:66`, `docs/illustrated-guide.md:485` and
+`docs/guides/local-models.md:71` present it as the headline API, and flagged the conflict for
+resolution.
+
+> **Resolved in round 3 — by the tutorial, not by a doc mention.** The doc-mention policy above is
+> still intact: no symbol here was ever promoted because a README named it. `localModel` and its
+> three companion types are public because **`docs/tutorial/00-outline.md` chapter 06 teaches them**,
+> under the design's contract principle ("a concept that does not appear in the tutorial becomes
+> internal or is deleted" — and its converse: what the tutorial teaches *is* the public API). The
+> outline's §7 records the decision and the rejected alternative. See §9 round 3.
 `localModelStatus` and `geminiFlashLiteThinkOff` keep `public` on real code evidence
 (`scripts/proofs/run-canary.mjs` and `examples/` respectively).
 
@@ -239,10 +248,10 @@ the rest are used only within `coherence.ts` itself, only by `trunk-provenance.t
 
 | # | finding | impact |
 |---|---|---|
-| 1 | 151 / 265 exports (57%) have no consumer outside their own package; another 35 (13%) are consumed only by sibling packages. **Only 79 (30%) are user-facing.** | the headline number the plan is built on — confirmed |
+| 1 | 151 / 265 exports (57%) have no consumer outside their own package; another 31 (12%) are consumed only by sibling packages. **Only 83 (31%) are user-facing.** | the headline number the plan is built on — confirmed |
 | 2 | `packages/eval` exports 52; **39** are used only inside `eval/src` + `eval/test`. The real contract is the 13 the `looprun-eval` bin and the agentspec fork scripts call | eval's barrel can shrink ~75% |
 | 3 | `packages/server` exports 13; only `createModelServer` + `TurnEvent` (+2 companion types) are consumed | same |
-| 4 | `packages/models` exports 24; only 4 are public — `localModelStatus` and `geminiFlashLiteThinkOff` (consumer roots) plus `resolveAlias` and `LlamaCppRuntime` (the published `looprun` bin). The five `QWEN*` alias constants and `MODEL_ALIASES` have **no consumer at all**, and the README's headline `localModel` has no consumer either | **the models docs and the models exports disagree — Task 12 must reconcile** |
+| 4 | `packages/models` exports 24; 8 are public — `localModelStatus` and `geminiFlashLiteThinkOff` (consumer roots), `resolveAlias` and `LlamaCppRuntime` (the published `looprun` bin), and `localModel` + `LocalModelOptions` + `LocalModelSpec` + `ModelRuntimePort` (tutorial chapter 06, round 3). The five `QWEN*` alias constants and `MODEL_ALIASES` have **no consumer at all** | **RESOLVED in round 3**: the docs were right and the usage scan was measuring the wrong thing. Task 12 moves the local-models story into chapter 06 instead of retracting it |
 | 5 | **`coherence.ts`, `surface.ts`, `session.ts` contain raw control bytes** (`\x00`, `\x01`) in string literals, so `file(1)` calls them `data` and plain `grep` skips them without warning | any future repo-wide grep audit is silently blind to 3 files. Fix: write the separators as escape sequences instead of raw bytes. Until then, use `grep -a` |
 | 6 | **Three consumer imports name symbols that do not exist in any barrel:** `TrunkTheme` (`looprun-bench` atlas `index.ts` + `theme.ts` across several spec sets, and yntelli), `EvalCase` (`looprun-bench/.../evals/cases.ts`), `EvalConfig` (`looprun-bench/.../telecom/looprun.eval.config.ts`) — all imported from `@looprun-ai/core` / `@looprun-ai/eval` | **those consumer files cannot currently typecheck.** Any "no consumer uses X" claim drawn from `looprun-bench` is weakened accordingly: that repo is not in a compiling state against the current engine |
 | 7 | `packages/vercel` is a 25-line reserved stub whose only two exports are unused; its `createLoopRunAgent` always throws and shadows the (also unused) mastra export of the same name | worth deciding whether the package ships at all |
@@ -441,12 +450,12 @@ Read the §3 column caveat before using the third column for anything.
 | `jsonTypeToZod` | — | — | — | 0 | ~~delete~~ |  |
 | `surfaceFingerprint` | — | — | mastra, mastra#test | 0 | ~~delete~~ |  |
 
-### 7.3 `@looprun-ai/models` — 24 symbols (4 public · 4 internal · 16 delete)
+### 7.3 `@looprun-ai/models` — 24 symbols (8 public · 0 internal · 16 delete)
 
 | symbol | used by (consumers) | used by (sibling packages) | same-pkg cross-file imports | doc hits | verdict | note |
 |---|---|---|---|---|---|---|
-| `LocalModelSpec` | — | — | models | 0 | internal | companion type of `localModel` / `ModelRuntimePort` (internal) |
-| `ModelRuntimePort` | — | — | models | 2 | internal | companion type of `localModel` (internal); the documented runtime seam in docs/guides/local-models.md:105. Also documented in README.md — Task 12 sweep |
+| `LocalModelSpec` | — | — | models | 0 | **public** | ROUND 3: companion type of `localModel` / `resolveAlias` / `LlamaCppRuntime`, all taught in tutorial 06 |
+| `ModelRuntimePort` | — | — | models | 2 | **public** | ROUND 3: companion type of `localModel` (the `runtime` option); the documented runtime seam in docs/guides/local-models.md:105, absorbed by tutorial 06 |
 | `RuntimeStatus` | — | — | models | 0 | ~~delete~~ |  |
 | `EnsureServerResult` | — | — | models | 0 | ~~delete~~ |  |
 | `MODEL_ALIASES` | — | — | — | 0 | ~~delete~~ |  |
@@ -463,8 +472,8 @@ Read the §3 column caveat before using the third column for anything.
 | `slotStateDir` | — | — | — | 0 | ~~delete~~ |  |
 | `downloadModel` | — | — | models | 0 | ~~delete~~ |  |
 | `downloadUrl` | — | — | models#test | 0 | ~~delete~~ |  |
-| `LocalModelOptions` | — | — | — | 0 | internal | companion type of `localModel` (internal) |
-| `localModel` | — | mastra | — | 3 | internal | DOC-ONLY PROMOTION WITHDRAWN. Real code usage is `packages/mastra/canary/guard-canary.canary.ts` (sibling package) → internal. README:66, docs/illustrated-guide.md:485, docs/guides/local-models.md:71 document it as the headline API — Task 12 must reconcile. Also documented in README.md — Task 12 sweep |
+| `LocalModelOptions` | — | — | — | 0 | **public** | ROUND 3: companion type of `localModel` (its options parameter) |
+| `localModel` | — | mastra | — | 3 | **public** | ROUND 3 — TUTORIAL CONTRACT, not a doc mention. Code usage is only `packages/mastra/canary/guard-canary.canary.ts` (sibling → would be internal), but `docs/tutorial/00-outline.md` chapter 06 teaches it as the local-model entry point; see that outline's §7 for the decision and the rejected alternative. Reinstates what README:66, docs/illustrated-guide.md:485 and docs/guides/local-models.md:71 already promise |
 | `localModelClient` | — | — | — | 0 | ~~delete~~ |  |
 | `geminiFlashLiteThinkOff` | examples | — | — | 5 | **public** |  |
 | `localModelStatus` | — | — | — | 0 | **public** | scripts/proofs/run-canary.mjs + `looprun` bin (dynamic import) |
@@ -631,4 +640,17 @@ non-typechecking consumer imports recorded as finding 6.
 |---|---|---|
 | 5 | `models.resolveAlias`, `models.LlamaCppRuntime` — internal → **public** | the published-bin rule was applied unevenly: `packages/eval/bin/looprun-eval.mjs` promoted 11 eval symbols, but the equally-published `packages/looprun/bin/looprun.mjs` did not promote the models symbols it calls the same way. `bin/looprun.mjs:42,66,88,102` → `models.resolveAlias`; `:68,94,103` → `new models.LlamaCppRuntime()`. Both packages declare the file in `"bin"` and ship it via `"files": ["dist","bin"]` |
 
-Totals: 77 / 35 / 153 (initial) → 77 / 37 / 151 (round 1) → **79 / 35 / 151** (round 2).
+### Round 3 — the tutorial outline (Task 2)
+
+`docs/tutorial/00-outline.md` places every public symbol in exactly one chapter. Under the design's
+**contract principle**, that outline — not this scan — has the final word on what is public.
+
+| # | change | evidence |
+|---|---|---|
+| 6 | `models.localModel` + `LocalModelOptions` + `LocalModelSpec` + `ModelRuntimePort` — internal → **public** | tutorial chapter 06 ("Run it locally") teaches `localModel` as the local-model entry point; the three types are structurally reachable from the taught signatures. Reverses round 1's change #4, on a different and stronger authority: #4 correctly refused a promotion based on a *doc mention*; this one is based on the *tutorial contract*. Rationale and the rejected alternative (hand-assembling `resolveAlias` → `LlamaCppRuntime` → `createOpenAI` in the docs) are in the outline's §7. Resolves finding 4 |
+
+**No downgrades.** All 79 round-2 public symbols found a chapter, so no symbol was demoted for
+"no tutorial home".
+
+Totals: 77 / 35 / 153 (initial) → 77 / 37 / 151 (round 1) → 79 / 35 / 151 (round 2) →
+**83 / 31 / 151** (round 3).
