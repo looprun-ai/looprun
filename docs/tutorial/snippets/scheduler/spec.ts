@@ -2,10 +2,14 @@
  * The scheduler spec — the map the agent is driven by (tutorial 03).
  *
  * "Messaging-driven calendar management: add events, check the schedule, cancel — never
- * double-book, never delete without asking." The two obligations in that sentence are the two
- * guards below: a `custom` run-dim gate for the clash, and the confirm-first protocol that
- * `AgentSpecBase` auto-installs for every tool named in `destructiveTools` (never re-add it by
- * hand — that would render the same rule twice).
+ * double-book, never delete without asking." The two obligations land differently:
+ *
+ *   never double-book        → three guards installed below on `addEvent`: `argRequired('title')`,
+ *                              `argFormat` on each date-time, then the `custom` run-dim clash gate
+ *                              (shape first, because the clash check compares strings)
+ *   never delete without ask → NOT written here. Naming `cancelEvent` in `destructiveTools` makes
+ *                              `AgentSpecBase` install `confirmFirst` + `destructiveThrottle` on it.
+ *                              Never re-add those by hand — the same rule would render twice.
  */
 import { AgentSpecBase, argFormat, argRequired, custom } from 'looprun';
 import type { TerminalPolicy } from 'looprun';

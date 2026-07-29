@@ -5,8 +5,10 @@
  * and routes every call to `SchedulerWorld.exec`.
  */
 import type { ToolDef } from 'looprun';
+import { DATETIME_PATTERN } from './contract.js';
 
-const DATE_TIME = { type: 'string', description: 'local date-time, `YYYY-MM-DDTHH:mm`' };
+/** The same pattern the `argFormat` guards enforce — the model sees the constraint too. */
+const DATE_TIME = { type: 'string', pattern: DATETIME_PATTERN, description: 'local date-time, `YYYY-MM-DDTHH:mm`' };
 
 /** Read-only — chapter 02's one-tool cut of the scheduler. */
 export const listEventsTool: ToolDef = {

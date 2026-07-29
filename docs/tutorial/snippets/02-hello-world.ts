@@ -6,7 +6,7 @@ import { SchedulerWorld } from './scheduler/world.js';
 
 const agent = new LoopRunAgent({
   spec: helloSchedulerSpec, // the one-tool cut of the scheduler: listEvents, nothing else
-  world: new SchedulerWorld(),
+  world: () => new SchedulerWorld(), // a factory: one world per session
   toolDefs: [listEventsTool],
   model: 'google/gemini-3.1-flash-lite', // Mastra router string; needs GOOGLE_GENERATIVE_AI_API_KEY
 });
