@@ -44,7 +44,7 @@ Tracked here because the engine is the half that has to move first.
 
 | item | state |
 |---|---|
-| **The margin probe is ported, not validated** | Lives in the skill repo (`skill/scripts/margin-probe.mjs`) and renders through this engine's `renderTurnPrompt`. It has never been run against a served model on a case known to oscillate. Until that round happens it is code nobody has confronted with reality — and the skill's STOP rule cites it as one of three conditions for leaving the improve loop. |
+| **The margin probe is ported, not validated** | RETIRED 2026-07-29: validated in the field — run against a served local model on a genuinely oscillating case across three probe rounds (continuation forks + anchor), where it located the root cause (a world reception defect) that the subsequent fix and re-certification confirmed. |
 | **The skill's own lint battery** | `lint-authoring.mjs` covers the skill's authoring conventions. The split is recorded in the skill's T-phase recipe: artifact laws here, authoring conventions there. If a rule moves, both sides need updating. |
 
 ## Validation-campaign findings (engine/tooling)
