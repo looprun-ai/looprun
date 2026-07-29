@@ -688,3 +688,19 @@ contract principle: the catalog is build input for the chapter, not API the chap
 
 Totals: 77 / 35 / 153 (initial) → 77 / 37 / 151 (round 1) → 79 / 35 / 151 (round 2) →
 83 / 31 / 151 (round 3) → **89 / 38 / 138** (round 4).
+
+### Round 5 — what Task 3 found while applying round 4
+
+Converging `core/src/index.ts` on the contract surfaced two things this scan, being a name-level
+enumeration, could not: a **compilation** obligation and a **catchability** one. Neither is a usage
+finding, so **the §1 chart stays at its round-4 values (89 / 38 / 138)** — both are recorded here as
+separate, listed categories.
+
+| # | category | what | why it is not a verdict change |
+|---|---|---|---|
+| 14 | **type-closure riders** (11 in `core`) | `SpecWarning` `AgentControls` `ChainSpec` `StateDirective` `GuardBinding` `MutatorBinding` `Layer` `SpatialEdge` `ReplyMutator` `SamplingSettings` `TokenUsage` are exported from `@looprun-ai/core` as **type-only** riders; `PreToolVerdict` `GovernanceVeto` `PostToolEnforcement` `PostToolViolation` `ChainPassCtx` `ChainPassResult` `TurnPrompt` `TurnPromptInput` likewise from `/internal` | A consumer building with `declaration: true` cannot NAME these, so it fails with `TS4023`/`TS2742` on any signature that reaches them (`validateSpec` → `SpecWarning`, `AgentSpec.controls` → `AgentControls`, subclassing `AgentSpecBase` → `GuardBinding`+`Layer`). They are **not taught, not public API, and not counted in the 89** — a compilation obligation, derived mechanically from the signatures and shrinking as Tasks 5–6 shrink them. Full statement in the outline's §7; held by `core/test/proofs/declaration-emit.test.ts` (sufficiency) and `surface-lock.test.ts` (no growth). Note `GuardBinding` and `TokenUsage` are BOTH a `.` rider and a first-class `/internal` export — their internal verdict is unchanged |
+| 15 | **catchable-by-class** (1) | `core.GuardExecutionError` (verdict `delete`) is exported from `/internal` by controller ruling | It is a class the runtime **throws across the package boundary** at guard authors (`spec.ts#attributeGuard`; "never swallowed, never converted into a deny"). Reachable from no entry point, `catch (e) { e instanceof GuardExecutionError }` is unwritable outside this package — a barrel-only scan sees an unused export, not a thrown type. Whether chapter 04 should teach it (which would promote it public) is deferred to Task 10; recorded as outline §6 decision 8 |
+
+**Method note for Tasks 4–7.** A name-level usage scan cannot see either category. Before cutting a
+barrel, derive its type closure mechanically (TypeScript compiler API over the entry file) and check
+for classes the package throws at consumers — both are invisible to `grep` and to `pnpm -r build`.

@@ -447,6 +447,7 @@ Stated so Tasks 3–7 do not have to re-derive it, and so nobody reads a gap as 
 | 5 | **Import specifiers:** 02 `looprun/mastra` · 03 `looprun` + `looprun/mastra` · 04 `looprun` · 05 `looprun/mastra` + `looprun` + `looprun/models` + **`@looprun-ai/eval`** · 06 **`@looprun-ai/server`** + `looprun/models`. The facade publishes only `.` `./core` `./mastra` `./models` `./vercel`. **Open: add `looprun/eval` + `looprun/server` facades** so the tutorial uses one package name throughout? | Task 12 |
 | 6 | **`@looprun-ai/vercel` is excluded from the tutorial** (non-functional stub). Package fate — ship, fix or drop — is a Task 12 decision to surface to the user | Task 12 |
 | 7 | The nine superseded docs are deleted only after their absorbing chapter exists (local-models → 06, eval-config + measured-loop → 05, mcp-tools → 03) | Task 12 |
+| 8 | **`GuardExecutionError` ships on `@looprun-ai/core/internal`** (Task 3, controller ruling). It is a class the runtime *throws at the consumer* when a guard's `check()`/`prose()` throws, so it must be reachable from some entry point or `catch (e) { if (e instanceof GuardExecutionError) … }` is unwritable outside this package. **Deferred:** Task 10 decides whether chapter 04's custom-guard section teaches it — if it does, it promotes to public and leaves `/internal` | Task 10 |
 
 ---
 
@@ -482,6 +483,31 @@ public symbol that fits no chapter. Promotion is the same principle read the oth
 teaches, which cannot be satisfied if a taught symbol may not be promoted. The controller ruled on
 each promotion in this revision; every one is recorded in the inventory's §9 rounds 3–4 with the
 signature or authored shape that forces it.
+
+### The type-closure rider (added by Task 3)
+
+A contract of exactly the taught symbols is not compilable on its own. A downstream library that
+builds with `declaration: true` — as `@looprun-ai/mastra` does — must be able to **name** every type
+its emitted `.d.ts` mentions, and a taught signature drags untaught types behind it: `validateSpec`
+returns `SpecWarning[]`, `AgentSpec.controls` is an `AgentControls` reaching `ChainSpec` /
+`StateDirective` / `SamplingSettings`, `AgentSpec.guards` is `GuardBinding` / `MutatorBinding`
+reaching `Layer`, `jargonScrub` returns a `ReplyMutator`. With those off the barrel the consumer
+gets `TS4023`/`TS2742` ("cannot be named without a reference to …") — a break no `pnpm -r build` in
+this repo can see, because each package emits declarations only for its own sources.
+
+**The rider:** each barrel additionally exports, as `export type` and nothing more, the transitive
+type closure of its own value signatures. These are **not taught**, get no chapter, and are **not
+counted in the 89** — they are a compilation obligation, listed separately so nobody mistakes them
+for surface anybody chose. The closure is derived mechanically, never hand-picked, and it shrinks
+automatically as Tasks 5–6 shrink what the signatures touch. Two tests hold the line:
+`packages/core/test/proofs/declaration-emit.test.ts` proves the list is **sufficient** (it compiles a
+real consumer against the published `exports` map), and `surface-lock.test.ts` proves it has not
+quietly **grown**.
+
+For `core` the rider is 11 types: `SpecWarning` `AgentControls` `ChainSpec` `StateDirective`
+`GuardBinding` `MutatorBinding` `Layer` `SpatialEdge` `ReplyMutator` `SamplingSettings` `TokenUsage`.
+Tasks 4–7 derive their own package's rider the same way; a symbol appearing there is not a promotion
+and must not be read as one.
 
 ---
 
