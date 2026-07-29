@@ -1,0 +1,22 @@
+{
+  "name": "@looprun-internal/tutorial-snippets",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Every code block in docs/tutorial/ lives here as a compiled file: the snippets compile against the published `looprun` facade, or CI fails.",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "looprun": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0",
+    "vitest": "^2.0.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
