@@ -35,6 +35,7 @@ Shipped in `looprun-eval lint --spec-laws`. What is NOT in it, and why:
 | item | state |
 |---|---|
 | **`@looprun-ai/vercel`** | The factory throws. The seam contract is documented in its source; nothing implements it. Until it does, the runtime is Mastra-only in practice, whatever the package list suggests. |
+| **Agent-as-tool bridge (MCP server)** | Does not exist — the runtime consumes MCP tools but never serves agents as tools. It is the natural bridge for free-agent orchestrators: specialists exposed as MCP tools, the governance verdict (`violations`/`corrections`/`exhausted`) as structured result data instead of the OpenAI extension field standard SDKs drop, and the free agent's own tool selection acting as the router. Decision 2026-07-29: the OpenAI endpoint is documented as the works-today composition path; this bridge is roadmap. |
 
 ## Cross-repo
 
