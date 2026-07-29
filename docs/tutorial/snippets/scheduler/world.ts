@@ -6,6 +6,10 @@
  * accessors (`clashesWith`, `hasEvent`) are what stateful guards read through `ctx.world`.
  */
 import type { AgentWorld } from 'looprun';
+import { DATETIME_PATTERN, REFERENCE_NOW } from './contract.js';
+
+/** Defence in depth: the guards reject a malformed date-time, and so does the world. */
+const DATETIME_RE = new RegExp(DATETIME_PATTERN);
 
 export interface CalendarEvent {
   id: string;
@@ -16,7 +20,7 @@ export interface CalendarEvent {
 
 type ToolResult = { success: boolean; [k: string]: unknown };
 
-/** A fixed seed calendar — the reference "now" is Monday 2026-03-02T09:00. */
+/** A fixed seed calendar, positioned around {@link REFERENCE_NOW}. */
 export const SEED_EVENTS: CalendarEvent[] = [
   { id: 'evt_101', title: 'Standup', start: '2026-03-02T10:00', end: '2026-03-02T10:30' },
   { id: 'evt_102', title: 'Dentist', start: '2026-03-04T15:00', end: '2026-03-04T16:00' },
@@ -38,7 +42,7 @@ export class SchedulerWorld implements AgentWorld {
   // ── runtime seams ────────────────────────────────────────────────────────────
   advanceTurn(): void {} // no per-turn state to roll
   ingestAttachment(url: string): string {
-    return `att_${url.length}`; // the calendar takes no attachments
+    return url; // the calendar has no attachment store: hand the url straight back
   }
 
   exec(name: string, args: Record<string, unknown>): ToolResult {
@@ -71,7 +75,10 @@ export class SchedulerWorld implements AgentWorld {
 
       case 'addEvent': {
         const [title, start, end] = [str('title'), str('start'), str('end')];
-        if (!title || !start || !end) return { success: false, error: 'title, start and end are required' };
+        if (!title) return { success: false, error: 'title is required' };
+        if (!DATETIME_RE.test(start) || !DATETIME_RE.test(end)) return { success: false, error: 'start and end must be YYYY-MM-DDTHH:mm' };
+        if (!(start < end)) return { success: false, error: 'end must be after start' };
+        if (start < REFERENCE_NOW) return { success: false, error: `start ${start} is in the past (now is ${REFERENCE_NOW})` };
         const clashes = this.clashesWith(start, end);
         if (clashes.length) return { success: false, error: 'the window clashes with an existing event — not booked', clashes };
         const event: CalendarEvent = { id: `evt_${this.nextId++}`, title, start, end };

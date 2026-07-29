@@ -28,7 +28,7 @@ export const addEventTool: ToolDef = {
 /** Destructive: `confirmed` is the flag the auto-installed `confirmFirst` gate waits for. */
 export const cancelEventTool: ToolDef = {
   name: 'cancelEvent',
-  description: 'Cancel an event. Call it without `confirmed` first to ask the user; then again with `confirmed: true`.',
+  description: 'Cancel an event. Call it without `confirmed` first to ask the user; then again in a LATER turn, after the user answers, with `confirmed: true`.',
   inputSchema: {
     type: 'object',
     properties: { eventId: { type: 'string' }, confirmed: { type: 'boolean' } },

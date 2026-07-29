@@ -1,5 +1,5 @@
 /**
- * The scheduler spec — the map the agent is driven by (tutorial 02–03).
+ * The scheduler spec — the map the agent is driven by (tutorial 03).
  *
  * "Messaging-driven calendar management: add events, check the schedule, cancel — never
  * double-book, never delete without asking." The two obligations in that sentence are the two
@@ -7,27 +7,16 @@
  * `AgentSpecBase` auto-installs for every tool named in `destructiveTools` (never re-add it by
  * hand — that would render the same rule twice).
  */
-import { AgentSpecBase, argRequired, custom } from 'looprun';
-import type { AgentScope, DomainContract, TerminalPolicy } from 'looprun';
+import { AgentSpecBase, argFormat, argRequired, custom } from 'looprun';
+import type { TerminalPolicy } from 'looprun';
+import { DATETIME_PATTERN, SCHEDULER_CONTRACT, SCHEDULER_SCOPE } from './contract.js';
 import type { SchedulerWorld } from './world.js';
 
-const SCOPE: AgentScope = {
-  lane: 'the user’s own calendar: what is on it, adding to it, cancelling from it',
-  others: [{ label: 'the travel desk', covers: 'flights, hotels and anything that costs money' }],
-};
-
-/** Nothing to ask about on an empty calendar — reply, never `askUser`. */
+/**
+ * `askUser` here always disambiguates or confirms an EXISTING event, so on an empty calendar it has
+ * nothing to bite on: reply plainly instead of asking. `terminal` decides that per turn, from state.
+ */
 const TERMINAL: TerminalPolicy = (world) => (world as SchedulerWorld).snapshot().length === 0;
-
-const CONTRACT: DomainContract = {
-  voice: 'You keep one person’s calendar. Be brief, concrete, and name events by their title and time.',
-  stateBlock: (world) => `Calendar: ${(world as SchedulerWorld).snapshot().length} event(s). Now: 2026-03-02T09:00 (Monday).`,
-  coreInvariants: [
-    'Only report what the calendar tools actually returned — never an event, time or id you did not read.',
-    'Times are written as `YYYY-MM-DDTHH:mm`; a day without a resolvable time is a question, not a booking.',
-  ],
-  languageClause: 'Always reply in the language the user wrote in.',
-};
 
 export class SchedulerSpec extends AgentSpecBase {
   constructor() {
@@ -35,18 +24,24 @@ export class SchedulerSpec extends AgentSpecBase {
       id: 'scheduler',
       mode: 'CALENDAR',
       persona: 'You are the scheduling agent: you keep this person’s calendar — checking it, adding to it, and cancelling from it.',
-      scope: SCOPE,
+      scope: SCHEDULER_SCOPE,
       tools: ['listEvents', 'addEvent', 'cancelEvent'],
       destructiveTools: ['cancelEvent'], // ⇒ confirmFirst + destructiveThrottle, installed for you
       terminal: TERMINAL,
-      contract: CONTRACT,
+      contract: SCHEDULER_CONTRACT,
       behavior: [
         // UNCHECKABLE residue only — every rule with a guard states itself from that guard's prose.
-        'When the user names a day but no time, ask one concrete question instead of picking a time for them.',
+        'When more than one event could match a vague description, list the candidates and ask which one — never pick for the user.',
       ],
     });
 
-    // Never book a window that clashes — decidable from the world before the tool runs.
+    // Shape first: the clash check below compares date-time STRINGS, so it is only meaningful on
+    // well-formed input — "next Tuesday" would compare as garbage and slip straight past it.
+    this.addGuard('preTool', ['addEvent'], argRequired('title'), { id: 'agent:titleRequired' });
+    this.addGuard('preTool', ['addEvent'], argFormat('start', DATETIME_PATTERN), { id: 'agent:startFormat' });
+    this.addGuard('preTool', ['addEvent'], argFormat('end', DATETIME_PATTERN), { id: 'agent:endFormat' });
+
+    // Then the state gate: never book a window that clashes — decidable before the tool runs.
     this.addGuard(
       'preTool',
       ['addEvent'],
@@ -63,9 +58,6 @@ export class SchedulerSpec extends AgentSpecBase {
       }),
       { id: 'agent:noDoubleBook' },
     );
-
-    // An event without a title is not an event.
-    this.addGuard('preTool', ['addEvent'], argRequired('title'), { id: 'agent:titleRequired' });
   }
 }
 

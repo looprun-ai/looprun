@@ -170,7 +170,7 @@ Task 9 must not expand this list. If hello world needs a fourth concept, that is
 is too big, not that the contract should grow.
 
 **Example used.** The scheduler reduced to a single read-only tool (`listEvents`), imported from the
-shared snippet module, plus one `await agent.run(...)`.
+shared snippet module, plus one `await agent.generate(...)`.
 
 ---
 
