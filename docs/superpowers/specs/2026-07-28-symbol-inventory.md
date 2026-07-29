@@ -15,17 +15,17 @@ package    public   internal   delete    total
 --------   ------   --------   ------    -----
 core          53        30        66       149
 mastra         5         1        19        25
-models         2         6        16        24
+models         4         4        16        24
 eval          13         0        39        52
 server         4         0         9        13
 vercel         0         0         2         2
 --------   ------   --------   ------    -----
-TOTAL         77        37       151       265
+TOTAL         79        35       151       265
 ```
 
 ```
-public   ██████████████████████████                    77  (29.1%)
-internal ████████████                                  37  (14.0%)
+public   ███████████████████████████                   79  (29.8%)
+internal ███████████                                   35  (13.2%)
 delete   ███████████████████████████████████████████  151  (57.0%)
 ```
 
@@ -99,7 +99,7 @@ specifier and reach members off the namespace object — invisible to any static
 | file | how | members reached |
 |---|---|---|
 | `packages/eval/bin/looprun-eval.mjs:54` | `const api = await import('@looprun-ai/eval')` | `runCommand foldCommand certCommand lintPaths lintSpecLaws lintSpecExecution lintSpecQuality lintSubject loadSubject mintSeal verifySeal` |
-| `packages/looprun/bin/looprun.mjs:50` | `await import('@looprun-ai/models')` | `LlamaCppRuntime resolveAlias localModelStatus` |
+| `packages/looprun/bin/looprun.mjs:50` | `await import('@looprun-ai/models')` | `resolveAlias` (42, 66, 88, 102) · `LlamaCppRuntime` (68, 94, 103) · `localModelStatus` (41) |
 | `scripts/proofs/run-canary.mjs:32` | `await import('@looprun-ai/models')` | `localModelStatus` |
 | `agentspec/skill/scripts/synth-fork.mjs:105-106` | `importFromCwd('@looprun-ai/core' \| '@looprun-ai/eval')` | `core.renderTurnPrompt`, `evalPkg.loadSubject`, **`evalPkg.agentForCase`**, **`evalPkg.stripGovernance`** |
 | `agentspec/skill/scripts/extract-fork.mjs:184-185` | `importFromCwd(...)` | `core.renderTurnPrompt`, `evalPkg.loadSubject` |
@@ -107,8 +107,14 @@ specifier and reach members off the namespace object — invisible to any static
 
 > **Closure check.** A namespace-member-access grep (`(core\|evalPkg\|models\|api)\.[A-Za-z0-9_]+`)
 > over every dynamic-import site in every root yields exactly the 17 members above and nothing else.
-> Effect on verdicts: `agentForCase` and `stripGovernance` → **public**; `renderTurnPrompt` →
-> **public** (this one was missed by both reviews and found in re-verification).
+>
+> **The published-bin rule.** `packages/eval/bin/looprun-eval.mjs` and `packages/looprun/bin/looprun.mjs`
+> are both declared in their package's `"bin"` and shipped by its `"files"` (`["dist","bin"]`). A symbol
+> a published bin calls is part of a user-facing contract, so it is **public** regardless of which
+> package the bin lives in. Applied to every member in the table above:
+> `agentForCase` `stripGovernance` `renderTurnPrompt` `resolveAlias` `LlamaCppRuntime` all become
+> **public**. (The `scripts/proofs/run-canary.mjs` route is a consumer root and reaches only
+> `localModelStatus`, already public.)
 
 **3 · Machine-enforced guard parity.** `agentspec/skill/scripts/lint-guard-catalog.mjs` reads the
 **built** `guards.d.ts` and **fails CI** if any `declare function` there is absent from
@@ -233,10 +239,10 @@ the rest are used only within `coherence.ts` itself, only by `trunk-provenance.t
 
 | # | finding | impact |
 |---|---|---|
-| 1 | 151 / 265 exports (57%) have no consumer outside their own package; another 37 (14%) are consumed only by sibling packages. **Only 77 (29%) are user-facing.** | the headline number the plan is built on — confirmed |
+| 1 | 151 / 265 exports (57%) have no consumer outside their own package; another 35 (13%) are consumed only by sibling packages. **Only 79 (30%) are user-facing.** | the headline number the plan is built on — confirmed |
 | 2 | `packages/eval` exports 52; **39** are used only inside `eval/src` + `eval/test`. The real contract is the 13 the `looprun-eval` bin and the agentspec fork scripts call | eval's barrel can shrink ~75% |
 | 3 | `packages/server` exports 13; only `createModelServer` + `TurnEvent` (+2 companion types) are consumed | same |
-| 4 | `packages/models` exports 24; only `localModelStatus` and `geminiFlashLiteThinkOff` have consumer-root usage. The five `QWEN*` alias constants and `MODEL_ALIASES` have **no consumer at all**, and the README's headline `localModel` has none either | **the models docs and the models exports disagree — Task 12 must reconcile** |
+| 4 | `packages/models` exports 24; only 4 are public — `localModelStatus` and `geminiFlashLiteThinkOff` (consumer roots) plus `resolveAlias` and `LlamaCppRuntime` (the published `looprun` bin). The five `QWEN*` alias constants and `MODEL_ALIASES` have **no consumer at all**, and the README's headline `localModel` has no consumer either | **the models docs and the models exports disagree — Task 12 must reconcile** |
 | 5 | **`coherence.ts`, `surface.ts`, `session.ts` contain raw control bytes** (`\x00`, `\x01`) in string literals, so `file(1)` calls them `data` and plain `grep` skips them without warning | any future repo-wide grep audit is silently blind to 3 files. Fix: write the separators as escape sequences instead of raw bytes. Until then, use `grep -a` |
 | 6 | **Three consumer imports name symbols that do not exist in any barrel:** `TrunkTheme` (`looprun-bench` atlas `index.ts` + `theme.ts` across several spec sets, and yntelli), `EvalCase` (`looprun-bench/.../evals/cases.ts`), `EvalConfig` (`looprun-bench/.../telecom/looprun.eval.config.ts`) — all imported from `@looprun-ai/core` / `@looprun-ai/eval` | **those consumer files cannot currently typecheck.** Any "no consumer uses X" claim drawn from `looprun-bench` is weakened accordingly: that repo is not in a compiling state against the current engine |
 | 7 | `packages/vercel` is a 25-line reserved stub whose only two exports are unused; its `createLoopRunAgent` always throws and shadows the (also unused) mastra export of the same name | worth deciding whether the package ships at all |
@@ -435,7 +441,7 @@ Read the §3 column caveat before using the third column for anything.
 | `jsonTypeToZod` | — | — | — | 0 | ~~delete~~ |  |
 | `surfaceFingerprint` | — | — | mastra, mastra#test | 0 | ~~delete~~ |  |
 
-### 7.3 `@looprun-ai/models` — 24 symbols (2 public · 6 internal · 16 delete)
+### 7.3 `@looprun-ai/models` — 24 symbols (4 public · 4 internal · 16 delete)
 
 | symbol | used by (consumers) | used by (sibling packages) | same-pkg cross-file imports | doc hits | verdict | note |
 |---|---|---|---|---|---|---|
@@ -449,9 +455,9 @@ Read the §3 column caveat before using the third column for anything.
 | `QWEN36_RAM16` | — | — | models#test | 0 | ~~delete~~ |  |
 | `QWEN36_RAM24` | — | — | models#test | 0 | ~~delete~~ |  |
 | `QWEN36_RAM32` | — | — | models#test | 0 | ~~delete~~ |  |
-| `resolveAlias` | — | — | models#test | 1 | internal | reached by `looprun` bin via dynamic `await import()` (namespace access) |
+| `resolveAlias` | — | — | models#test | 1 | **public** | published `looprun` bin — `bin/looprun.mjs:42,66,88,102` → `models.resolveAlias(alias)` via `await import('@looprun-ai/models')` |
 | `modelPath` | — | — | models, models#test | 0 | ~~delete~~ |  |
-| `LlamaCppRuntime` | — | — | models#test | 0 | internal | reached by `looprun` bin via dynamic `await import()` (namespace access) |
+| `LlamaCppRuntime` | — | — | models#test | 0 | **public** | published `looprun` bin — `bin/looprun.mjs:68,94,103` → `new models.LlamaCppRuntime()` via `await import('@looprun-ai/models')` |
 | `launchFlags` | — | — | models#test | 0 | ~~delete~~ |  |
 | `serverBaseURL` | — | — | — | 0 | ~~delete~~ |  |
 | `slotStateDir` | — | — | — | 0 | ~~delete~~ |  |
@@ -619,4 +625,10 @@ caveat; the doc-hit sweep widened to READMEs / `GUARDS.md` / `governance/` / CHA
 doc-reference notes for Task 12; §8.2 added; the stale vendored guard-catalog copies flagged; the
 non-typechecking consumer imports recorded as finding 6.
 
-Totals moved from 77 / 35 / 153 to **77 / 37 / 151**.
+### Round 2
+
+| # | change | evidence |
+|---|---|---|
+| 5 | `models.resolveAlias`, `models.LlamaCppRuntime` — internal → **public** | the published-bin rule was applied unevenly: `packages/eval/bin/looprun-eval.mjs` promoted 11 eval symbols, but the equally-published `packages/looprun/bin/looprun.mjs` did not promote the models symbols it calls the same way. `bin/looprun.mjs:42,66,88,102` → `models.resolveAlias`; `:68,94,103` → `new models.LlamaCppRuntime()`. Both packages declare the file in `"bin"` and ship it via `"files": ["dist","bin"]` |
+
+Totals: 77 / 35 / 153 (initial) → 77 / 37 / 151 (round 1) → **79 / 35 / 151** (round 2).
