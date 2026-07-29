@@ -12,10 +12,10 @@
  *     fork authors drive the loop through it. NO compatibility promise.
  *   · the type-closure riders at the bottom of this file — see the note there.
  *   · everything else (`renderTrunkBlocks`, `chainOrder`, `resolveBindings`, `TERMINAL_TOOLS`, the
- *     whole `coherence.ts` set, …) is now MODULE-LOCAL: reachable from no entry point at all. Those
- *     implementations were deliberately left in place — a barrel-only scan is not a liveness
- *     analysis — and Tasks 5 and 6 decide each one's fate. Do not read their absence here as a
- *     promise that they still work, or as a decision that they do not.
+ *     trunk's attributed table in `trunk-fold.ts`, …) is now MODULE-LOCAL: reachable from no entry
+ *     point at all. What survives there is only what the exported entry points transitively need —
+ *     the coherence QUERIES that once ran over the trunk table were erased in Task 5. Do not read
+ *     their absence here as a promise that the rest still works.
  */
 
 // ── Chapter 03 · agent anatomy ───────────────────────────────────────────────
