@@ -37,13 +37,20 @@ the CLI verbs).
 
 > **`@looprun-ai/eval` is a scoped package name, and that is deliberate — for now.** The `looprun`
 > facade publishes `.`, `./core`, `./mastra`, `./models` and `./vercel`, and **no `looprun/eval`
-> subpath exists**. So this chapter's eval imports name the package directly. Whether to add
-> `looprun/eval` (and `looprun/server`, chapter 06) so the tutorial uses one package name throughout
-> is an open decision, recorded in the outline as decision 5. Nothing about the code changes if it
-> lands — only the specifier.
+> subpath exists**. So this chapter's eval imports name the package directly. Whether a
+> `looprun/eval` subpath (and a `looprun/server` one, chapter 06) lands is not decided; if it does,
+> only the specifier changes, nothing about the code.
 >
 > ```bash
 > npm i -D @looprun-ai/eval    # dev-only: nothing in the runtime imports it
+> ```
+>
+> The smoke test in §2 also needs `scriptedModel`, which lives on **no `looprun/*` subpath** — it is
+> a test-only entry point of the Mastra backend, so running that one test means one more dev
+> dependency:
+>
+> ```bash
+> npm i -D @looprun-ai/mastra    # only to import scriptedModel from '@looprun-ai/mastra/testing'
 > ```
 
 ---
@@ -227,8 +234,19 @@ A conversation you can assert on is a test. A **subject** is the whole exam: the
 the deterministic world, the cases, and the model target it was written for. It is a directory with
 a fixed layout, and `loadSubject` reads the layout — there is no config file, and no walk-up search.
 
+Copy it out of the repo, next to the `./scheduler` modules chapter 02 §2 copied out:
+
+```bash
+cp -r looprun/docs/tutorial/snippets/scheduler-subject ./scheduler-subject
 ```
-   docs/tutorial/snippets/scheduler-subject/
+
+The two directories must sit **side by side**: the subject's `norms/index.ts` imports
+`../../scheduler/…` rather than re-declaring the spec, so a subject without `./scheduler` beside it
+does not load. If you skipped chapter 02, take `./scheduler` from its §2 first. Every command in this
+chapter is written for that layout.
+
+```
+   ./scheduler-subject/
    ├── norms/index.ts        SPECS (id → AgentSpec) · CONTRACT · optional CASE_AGENT routing
    ├── gen/world.ts          the deterministic world factory  (preset → AgentWorld)
    ├── gen/tools.json        the agent-facing tool defs (`inputSchema` or `parameters`)
@@ -429,11 +447,11 @@ deterministic invariant gate.
 ### 5.1 Preflight: five lints, no model, no spend
 
 ```
-$ npx looprun-eval lint docs/tutorial/snippets/scheduler-subject docs/tutorial/snippets/scheduler \
-    --spec-laws --subject docs/tutorial/snippets/scheduler-subject
+$ npx looprun-eval lint ./scheduler-subject ./scheduler --spec-laws --subject ./scheduler-subject
 lint: clean
 ```
-<sub>**real** — run on this repo (as `node packages/eval/bin/looprun-eval.mjs …`), exit code 0</sub>
+<sub>**real** — run from a directory holding `./scheduler` + `./scheduler-subject` copied out of the
+repo (in the repo the bin is invoked as `node packages/eval/bin/looprun-eval.mjs …`), exit code 0</sub>
 
 Five checks hide behind that one line, and they answer five different questions:
 
@@ -448,7 +466,7 @@ Five checks hide behind that one line, and they answer five different questions:
 `lintSubject` is the one people meet first, because it is the one with an opinion about your cases:
 
 ```
-$ npx looprun-eval lint . --spec-laws --subject .
+$ npx looprun-eval lint ./scheduler-subject --spec-laws --subject ./scheduler-subject
 [subject] case "03-empty-day-is-read-once": CASE-WITHOUT-TARGET: names no rule it tests — without it, "does the suite exercise what we ship" is unanswerable
 lint: 1 violation(s)
 ```
@@ -490,7 +508,7 @@ Note `lintSpecExecution` is the only `async` one: it runs the guards.
 ### 5.2 Run — screen the cases
 
 ```bash
-npx looprun-eval run --subject docs/tutorial/snippets/scheduler-subject
+npx looprun-eval run --subject ./scheduler-subject
 npx looprun-eval run --subject <dir> --model <id> --base-url <url> --api-key-env <ENV>
 npx looprun-eval run --subject <dir> --case 01-double-book-refused    # one case, while iterating
 npx looprun-eval run --subject <dir> --ungoverned                     # the control arm
@@ -521,11 +539,11 @@ reuse. Two limits worth knowing, because the gate is quieter than it looks:
   instead of per-domain.
 
 ```
-$ npx looprun-eval run --subject docs/tutorial/snippets/scheduler-subject
+$ npx looprun-eval run --subject ./scheduler-subject
 governed 01-double-book-refused ... unjudged (invariants clean)
 governed 02-cancel-asks-first ... unjudged (invariants clean)
 governed 03-empty-day-is-read-once ... unjudged (invariants clean)
-docs/tutorial/snippets/scheduler-subject/test/2026-07-29-gemini-3.1-flash-lite-governed
+./scheduler-subject/test/2026-07-29-gemini-3.1-flash-lite-governed
 ```
 <sub>**illustrative shape** — this command needs a live model, so the transcript above is the shape
 the runner prints (one line per case, the run directory on stdout), not a run that happened. The
@@ -585,22 +603,24 @@ wall-clock default, so a re-generated cert is byte-comparable.
 ### 5.5 Seal — bind the claim to the artifacts
 
 ```
-$ npx looprun-eval seal docs/tutorial/snippets/scheduler-subject \
+$ npx looprun-eval seal ./scheduler-subject \
     --target gemini-3.1-flash-lite:0.667:1 --bar 0.9 --date 2026-07-29 --note "tutorial demo"
-seal minted → docs/tutorial/snippets/scheduler-subject/ship/seal.json (hash a2c96e1fe2a3832c…)
+seal minted → ./scheduler-subject/ship/seal.json (hash a2c96e1fe2a3832c…)
 
-$ npx looprun-eval seal docs/tutorial/snippets/scheduler-subject --verify
+$ npx looprun-eval seal ./scheduler-subject --verify
 seal VALID — artifactHash matches (a2c96e1fe2a3832c…)
 
-$ echo '<!-- tamper -->' >> docs/tutorial/snippets/scheduler-subject/evals/judge-prompt.md
-$ npx looprun-eval seal docs/tutorial/snippets/scheduler-subject --verify
+$ echo '<!-- tamper -->' >> ./scheduler-subject/evals/judge-prompt.md
+$ npx looprun-eval seal ./scheduler-subject --verify
 seal VOID — artifacts changed after certification.
   sealed:  a2c96e1fe2a3832ca4c4d678d83d07b6da5bfa9c5c1d8422c281c4f70ee690c1
   on disk: 6ab73afa531a73fa9d0dacf1b132ec0330dcd6688ce964489d805b2815277523
 Re-certify or re-open the pipeline; never re-stamp.
 ```
-<sub>**real** — the four commands above were run in this order on this subject and the output is
-unedited; in the repo the bin is invoked as `node packages/eval/bin/looprun-eval.mjs`. Both hashes are
+<sub>**real** — the four commands above were run in this order, from a directory holding `./scheduler` +
+`./scheduler-subject` copied out of the repo, and the output is unedited; in the repo the bin is
+invoked as `node packages/eval/bin/looprun-eval.mjs`. The hash is computed over subject-**relative**
+paths, so the layout does not change it. Both hashes are
 reproducible: restoring the file byte-for-byte returns `seal VALID` with the same
 `a2c96e1f…`, and re-appending that exact line reproduces `6ab73afa…`. The mint used a placeholder
 rate, since no certified run stands behind it, so the resulting `ship/seal.json` is **not

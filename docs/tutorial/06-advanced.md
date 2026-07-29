@@ -14,8 +14,8 @@ whose tools execute themselves. Thirteen symbols, from three specifiers.
 
 > Like `@looprun-ai/eval` in chapter 05, the server package is named directly: the `looprun` facade
 > publishes `.`, `./core`, `./mastra`, `./models` and `./vercel`, and there is **no `looprun/server`
-> subpath**. Adding one is an open decision (outline decision 5), and it would change the specifier
-> and nothing else.
+> subpath**. Whether a `looprun/server` subpath lands is not decided; if it does, only the specifier
+> changes, nothing else.
 >
 > ```bash
 > npm i @looprun-ai/server
@@ -185,6 +185,11 @@ one session serialize; different sessions run concurrently.
 governance cannot be applied to a token stream — and then emits a valid SSE stream: a role delta,
 `: keepalive` comments while the turn runs, one content delta with the full governed text, a finish
 chunk, `[DONE]`. The client sees a stream; the reply was checked before the first content byte left.
+
+A worked end-to-end example of exactly this path lives in
+[`examples/hermes-sim`](../../examples/hermes-sim): the real Hermes-Agent CLI, unmodified and
+config-only, driving three governed agents served as OpenAI-compatible models over deterministic
+fake worlds whose end-state the sim asserts.
 
 ---
 
@@ -526,5 +531,12 @@ What needs a `stateView`, and what does not:
 That is the tutorial: the concepts (01), a governed turn (02), the anatomy (03), the catalog (04),
 the measured loop (05), and the three places the same spec goes next. Everything looprun exports in
 public is taught in one of those six chapters — and anything that is not taught is not public.
+
+**Where next.** [`docs/benchmarks.md`](../benchmarks.md) has the measured numbers and the harness
+they came from. [`examples/hermes-sim`](../../examples/hermes-sim) is the served path against a real
+external harness. [`CONTRIBUTING.md`](../../CONTRIBUTING.md) is where a new guard goes, catalog entry
+and all. And writing the bundle by hand is not the only path: the **agentspec** skill (private beta)
+generates the specs, the contract, the tool world and the eval set from one purpose sentence — see
+the [root README](../../README.md).
 
 ← **[05 · Running and eval](05-running-and-eval.md)** · **[Back to 01 · Concepts](01-concepts.md)**

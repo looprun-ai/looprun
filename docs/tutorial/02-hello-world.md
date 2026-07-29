@@ -29,6 +29,15 @@ export GOOGLE_GENERATIVE_AI_API_KEY=...    # or put it in .env
 Read that carefully: **the Google provider reads that variable, not looprun.** Nothing in this
 library looks for a key, and swapping the model swaps which variable matters.
 
+Optionally, confirm the environment — `npx looprun init` prints whether
+`GOOGLE_GENERATIVE_AI_API_KEY` is set and reports the local-model status (`llama-server` binary, GGUF
+file, server health) for two aliases. It changes nothing unless you pass `--local <alias>`, which
+offers to download that model's weights:
+
+```bash
+npx looprun init      # read-only environment check; nothing here needs a local model
+```
+
 ---
 
 ## 2. Get the scheduler modules
