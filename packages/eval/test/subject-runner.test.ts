@@ -7,6 +7,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { fakeLLM } from '@looprun-ai/mastra/testing';
+import { renderScopedSpecTrunk } from '@looprun-ai/core/internal';
 import { checkTrunkStatic, loadSubject, readDeclaredTarget, validateSubject } from '../src/subject.js';
 import type { Subject } from '../src/subject.js';
 import { runCase, toolCallMatches, evaluateInvariants } from '../src/run.js';
@@ -124,21 +125,30 @@ describe('subject runner (fixture subject, scripted model)', () => {
     ).toBe(true);
   });
 
-  it('ungoverned arm strips the whole governance surface (guard count 0)', async () => {
+  it('ungoverned arm: prompt byte-identical to governed, enforcement disarmed', async () => {
     const spec = subject.specs['front-desk'];
     const stripped = stripGovernance(spec, subject.contract);
+
+    // PROMPT VIEW — the arm's system prompt is the governed trunk, byte for byte.
+    const world = subject.makeWorld('default');
+    const governedPrompt = renderScopedSpecTrunk(world, spec, [], subject.contract);
+    expect(stripped.spec.surface.systemPrompt).toBeDefined();
+    expect(stripped.spec.surface.systemPrompt!(world, [])).toBe(governedPrompt);
+    // the prose survived: rule sections present in the arm's prompt
+    expect(governedPrompt).toContain('## Core rules (NEVER violate)');
+
+    // LOOP VIEW — the enforcement layer is disarmed (the cut table of the design spec).
     const g = stripped.spec.guards;
     expect(
       (g.onInput?.length ?? 0) + g.preTool.length + (g.postTool?.length ?? 0) + g.onReply.length + (g.onReplyMutate?.length ?? 0),
     ).toBe(0);
-    expect(stripped.spec.behavior).toHaveLength(0);
-    expect(stripped.spec.scope).toBeUndefined();
-    expect(stripped.spec.controls.directives).toBeUndefined();
     expect(stripped.spec.controls.chains).toBeUndefined();
-    expect(stripped.contract.coreInvariants).toHaveLength(0);
+    expect(stripped.spec.controls.exhaustionReply).toBeUndefined();
+    expect(stripped.spec.assertDestructiveConfirmable).toBeUndefined();
     // the source spec is untouched
     expect(spec.guards.preTool.length + spec.guards.onReply.length).toBeGreaterThan(0);
 
+    // The loop still runs clean end-to-end with zero guard events.
     const dump = await runCase(subject, findCase('01-reserve-room-happy'), {
       model: fakeLLM(happyScript).model,
       modelId: 'scripted',

@@ -1,10 +1,17 @@
 /**
- * The ungoverned-arm strip. Same bundle minus the FULL governance surface:
- * `guards` ∪ `controls.directives` ∪ `controls.chains` ∪ `scope` ∪ `behavior[]` ∪ the
- * contract's `coreInvariants` are EMPTIED. What stays shared is only persona, the domain
- * voice, the tool surface, and pure loop mechanics (terminal policy, maxSteps, sampling).
- * Never mutates the source spec/contract — returns fresh plain objects.
+ * The ungoverned-arm strip — PROSE-ONLY baseline: the SAME agent with the SAME system
+ * prompt (byte-identical to the governed arm — every rule rendered as prose), run with the
+ * enforcement layer disarmed. What is removed is only the CHECKS: guard hooks (veto /
+ * redrive / deny), egress mutators, `controls.chains`, `controls.exhaustionReply`, and the
+ * destructive cross-check. `governed − ungoverned` therefore measures the deterministic-
+ * enforcement premium over a well-prompted agent — not "rules exist vs. rules don't".
+ *
+ * Mechanically: the stripped spec's `surface.systemPrompt` is a closure over the FULL
+ * original spec + contract (`renderScopedSpecTrunk`), which the runtime honors as the
+ * prompt override; the spec fields that drive the loop are emptied. Never mutates the
+ * source spec/contract — returns fresh plain objects.
  */
+import { renderScopedSpecTrunk } from '@looprun-ai/core/internal';
 import type { AgentSpec, DomainContract } from '@looprun-ai/core';
 
 export interface UngovernedBundle {
@@ -13,24 +20,33 @@ export interface UngovernedBundle {
 }
 
 export function stripGovernance(spec: AgentSpec, contract: DomainContract): UngovernedBundle {
-  const { directives: _d, chains: _c, exhaustionReply: _e, ...loopControls } = spec.controls;
+  const { chains: _c, exhaustionReply: _e, ...loopControls } = spec.controls;
+  const strippedContract: DomainContract = {
+    voice: contract.voice,
+    stateBlock: contract.stateBlock.bind(contract),
+    coreInvariants: [...contract.coreInvariants],
+    languageClause: contract.languageClause,
+    // exhaustionReply: omitted — fallback of the redrive mechanism; without redrive it does not exist
+  };
   const strippedSpec: AgentSpec = {
     id: spec.id,
     mode: spec.mode,
     persona: spec.persona,
-    // scope: omitted (emptied)
-    surface: { tools: [...spec.surface.tools], systemPrompt: spec.surface.systemPrompt },
+    ...(spec.scope ? { scope: spec.scope } : {}),
+    surface: {
+      tools: [...spec.surface.tools],
+      // PROMPT VIEW: the governed trunk, byte for byte. A pre-existing override is the
+      // governed arm's own prompt already — reuse it; otherwise close over the FULL spec.
+      systemPrompt:
+        spec.surface.systemPrompt ??
+        ((w, u = []) => renderScopedSpecTrunk(w, spec, u, contract)),
+    },
     flow: [...spec.flow],
+    // LOOP VIEW: enforcement disarmed.
     guards: { onInput: [], preTool: [], postTool: [], onReply: [], onReplyMutate: [] },
     controls: { ...loopControls },
-    behavior: [],
-    // assertDestructiveConfirmable: omitted — the destructive-confirm cross-check is governance
-  };
-  const strippedContract: DomainContract = {
-    voice: contract.voice,
-    stateBlock: contract.stateBlock.bind(contract),
-    coreInvariants: [],
-    languageClause: contract.languageClause,
+    behavior: [...spec.behavior],
+    // assertDestructiveConfirmable: omitted — the destructive-confirm cross-check is a check
   };
   strippedSpec.contract = strippedContract;
   return { spec: strippedSpec, contract: strippedContract };
