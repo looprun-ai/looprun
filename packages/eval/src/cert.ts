@@ -79,10 +79,16 @@ export interface CertBand {
   cases: number;
   reps: number;
   bar: number;
-  /** Per-rep final pass-rates, in the order the run dirs were given. */
+  /** The rep run dirs, as given — index i everywhere below refers to runDirs[i]. */
+  runDirs: string[];
+  /** Per-rep final pass-rates, same order as runDirs. */
   rates: number[];
   floor: number;
+  /** Index into runDirs of the floor rep (first one at the minimum). */
+  floorRep: number;
   ceil: number;
+  /** Index into runDirs of the ceil rep (first one at the maximum). */
+  ceilRep: number;
   mean: number;
   /** Pass-rate of the per-case majority verdicts (evidence, never the certification basis). */
   majorityRate: number;
@@ -125,9 +131,12 @@ export function buildCertBand(runDirs: string[], opts: CertBandOptions = {}): Ce
     cases: caseIds.length,
     reps: reps.length,
     bar,
+    runDirs: [...runDirs],
     rates,
     floor: Math.min(...rates),
+    floorRep: rates.indexOf(Math.min(...rates)),
     ceil: Math.max(...rates),
+    ceilRep: rates.indexOf(Math.max(...rates)),
     mean: rates.reduce((a, b) => a + b, 0) / rates.length,
     majorityRate,
     certified: caseIds.length > 0 && Math.min(...rates) >= bar,
@@ -138,17 +147,17 @@ export function buildCertBand(runDirs: string[], opts: CertBandOptions = {}): Ce
 
   const outDir = opts.out ?? join(runDirs[0], '..');
   writeFileSync(join(outDir, 'cert-band.json'), JSON.stringify(band, null, 2) + '\n');
-  writeFileSync(join(outDir, 'CERT-BAND.md'), renderCertBandMd(band, runDirs) + '\n');
+  writeFileSync(join(outDir, 'CERT-BAND.md'), renderCertBandMd(band) + '\n');
   return band;
 }
 
-function renderCertBandMd(b: CertBand, runDirs: string[]): string {
+function renderCertBandMd(b: CertBand): string {
   return [
     `# Certification band — ${b.model} · K=${b.reps}`,
     '',
     ...(b.generatedAt ? [`- generated: ${b.generatedAt}`] : []),
-    `- reps: ${b.reps} — ${runDirs.map((d) => `\`${d}\``).join(' · ')}`,
-    `- rates: ${b.rates.map(pct).join(' / ')} → band ${pct(b.floor)}–${pct(b.ceil)} · mean ${pct(b.mean)} · majority ${pct(b.majorityRate)}`,
+    ...b.runDirs.map((d, i) => `- r${i}: \`${d}\` → ${pct(b.rates[i])}${i === b.floorRep ? ' ← floor' : i === b.ceilRep ? ' ← ceil' : ''}`),
+    `- band ${pct(b.floor)}–${pct(b.ceil)} · mean ${pct(b.mean)} · majority ${pct(b.majorityRate)}`,
     `- bar: ≥${pct(b.bar)} as a FLOOR over reps`,
     `- **verdict: floor ${pct(b.floor)} ${b.certified ? '≥' : '<'} bar → ${b.certified ? 'CERTIFIED' : 'BELOW BAR'}**`,
     '',

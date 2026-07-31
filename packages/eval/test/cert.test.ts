@@ -113,7 +113,8 @@ describe('multi-rep band (floor law)', () => {
     const out = mkdtempSync(join(tmpdir(), 'looprun-band-out-'));
 
     const band = certCommand({ dir: r0, dirs: [r1, r2], bar: 0.9, out }) as CertBand;
-    expect(band).toMatchObject({ reps: 3, cases: 2, floor: 0.5, ceil: 1, majorityRate: 1, certified: false });
+    expect(band).toMatchObject({ reps: 3, cases: 2, floor: 0.5, floorRep: 2, ceil: 1, ceilRep: 0, majorityRate: 1, certified: false });
+    expect(band.runDirs).toEqual([r0, r1, r2]);
     expect(band.mean).toBeCloseTo(2.5 / 3);
     expect(band.perCase[1]).toEqual({ caseId: '02-b', finals: ['pass', 'pass', 'FAIL'], majority: 'pass' });
 
