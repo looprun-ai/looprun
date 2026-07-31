@@ -29,7 +29,7 @@ import {
   stripGovernance,
   verifySeal,
 } from '@looprun-ai/eval';
-import type { Subject } from '@looprun-ai/eval';
+import type { Subject, CertSummary } from '@looprun-ai/eval';
 import { schedulerSpec } from './scheduler/spec.ts';
 import { SCHEDULER_TOOLS } from './scheduler/tools.ts';
 import { SchedulerWorld } from './scheduler/world.ts';
@@ -119,7 +119,7 @@ export async function measureScheduler(model: string, date: string): Promise<str
   const runDir = await runCommand({ subject: SUBJECT_DIR, model, date });
   // …the judge writes <runDir>/verdicts.jsonl here…
   foldCommand({ dump: `${runDir}/cases.jsonl`, verdicts: `${runDir}/verdicts.jsonl` });
-  const cert = certCommand({ dir: runDir, bar: 0.9, date });
+  const cert = certCommand({ dir: runDir, bar: 0.9, date }) as CertSummary;
   if (!cert.certified) return `BELOW BAR: ${(cert.passRate * 100).toFixed(1)}% over ${cert.cases} case(s)`;
 
   // The seal binds the certificate to the hash of the governed artifacts. Any later edit voids it.
