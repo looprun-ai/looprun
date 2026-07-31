@@ -1,11 +1,11 @@
 ---
-'@looprun-ai/core': major
-'@looprun-ai/mastra': major
-'@looprun-ai/models': major
-'@looprun-ai/eval': major
-'@looprun-ai/server': major
-'@looprun-ai/vercel': major
-'looprun': major
+'@looprun-ai/core': minor
+'@looprun-ai/mastra': minor
+'@looprun-ai/models': minor
+'@looprun-ai/eval': minor
+'@looprun-ai/server': minor
+'@looprun-ai/vercel': minor
+'looprun': minor
 ---
 
 **Breaking: the public API is now exactly what the tutorial teaches.**
