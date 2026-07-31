@@ -643,7 +643,7 @@ single case.** That is also why the tamper above voided the seal — the file ed
 A number on its own says how good the model is. The comparison says what the **governance** did.
 
 ```ts
-/** The ungoverned control arm: the same bundle with the whole governance surface emptied. */
+/** The ungoverned control arm: the same prompt with the enforcement layer disarmed. */
 export function ungovernedArm(subject: Subject, caseId: string) {
   const spec = subject.specs[routedAgent(subject, caseId)]!;
   return stripGovernance(spec, subject.contract);
@@ -652,21 +652,25 @@ export function ungovernedArm(subject: Subject, caseId: string) {
 <sub>excerpt · `snippets/05-running-and-eval.ts` — `--ungoverned` is this function, applied per case</sub>
 
 ```
-   EMPTIED   guards (all four hooks + mutators) · controls.directives · controls.chains ·
-             controls.exhaustionReply · scope · behavior[] · contract.coreInvariants ·
-             the destructive cross-check (assertDestructiveConfirmable)
-   KEPT      persona · contract.voice + stateBlock + languageClause · the tool surface ·
-             flow · the remaining loop mechanics (terminal policy, maxSteps, redrives, sampling)
+   DISARMED  guard hooks (veto / redrive / deny) · egress mutators (`onReplyMutate`) ·
+             `controls.chains` · `controls.exhaustionReply` · the destructive cross-check
+             (`assertDestructiveConfirmable`)
+   KEPT      the ENTIRE system prompt, byte-identical to the governed arm — voice, scope,
+             core rules, flow, tool/reply rules, governance directives, behavior, language —
+             plus the tool surface, the state tail, and the remaining loop mechanics
+             (terminal policy, maxSteps, sampling)
 ```
 
-It returns fresh objects and never mutates the source spec, so both arms can run in one process. What
-is kept is what makes the comparison fair: the ungoverned arm is the *same agent with the same tools
-and the same job*, minus the rules. A difference in the invariant gate between the arms is then
-attributable to governance and to nothing else — which is precisely why `forbiddenToolCalls` fails on
-the call **reaching the world**, executed, even if the world then refuses it: in the governed arm the
-guard stops it before it gets there, while in the ungoverned arm it arrives and the world's own
-refusal is the only thing left standing between the model and the write. Same intent, two very
-different distances from the damage — and that gap is what the two arms measure.
+It returns fresh objects and never mutates the source spec, so both arms can run in one
+process. The ungoverned arm is the *same agent with the same prompt* — a well-prompted
+traditional agent that knows every rule — minus the deterministic checks. A difference in
+the invariant gate between the arms is then attributable to ENFORCEMENT and to nothing
+else: both models read the same "never reserve for an unknown member" prose; in the
+governed arm the guard stops the violating call before it reaches the world, while in the
+ungoverned arm it arrives and the world's own refusal is the only thing left standing
+between the model and the write. Same rules, same intent, two very different distances
+from the damage — and that gap, the price of relying on prose alone, is what the two arms
+measure.
 
 ### 5.7 Fix — the closed taxonomy
 
