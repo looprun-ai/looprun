@@ -22,6 +22,7 @@ a pending item that quietly disappears is the failure this file exists to preven
 | **`custom()` guards cannot read tool-result text** | Hook sees calls (name + args) but not what the tool returned; "reply must cite the returned price" is unwritable. | Expose the result payload to the hook. |
 | **Release script silently skips an existing version** | Publishing an already-registered version is a silent no-op — a ghost release (it happened). | Abort loudly when the target version exists. |
 | **Fold verdict-sync is a hand step** | Byte-identical transcripts must get the same verdict; today synced by hand after judging. | Build into `looprun-eval fold` (mechanical, no judge). |
+| **Attestation service (design approved, nothing built)** | Design at `docs/superpowers/specs/2026-07-31-attestation-service-design.md`: ed25519 layer-2 attestation over the seal, free-for-telemetry service, hashed client identifiers, transparency log. Zero code exists — no `attest` command, no service, no keys. | When prioritized: implementation plan for (1) `looprun-eval attest` + telemetry builder, (2) the service repo, (3) `verify` layer-2 extension. |
 | **Cert has no native multi-rep** | `cert.json` states `reps: 1`; K-rep band/floor is a hand-written table beside it. | Fold multi-rep certs into band/floor/majority natively. |
 
 Retired: *margin probe is ported, not validated* — 2026-07-29, validated in the field against a
