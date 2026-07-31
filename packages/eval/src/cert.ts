@@ -69,6 +69,97 @@ export function buildCert(runDir: string, opts: CertOptions = {}): CertSummary {
   return summary;
 }
 
+/**
+ * Multi-rep certification: K run dirs of the SAME case set → one band. The law is the FLOOR:
+ * `certified` means every rep clears the bar (floor ≥ bar), never the mean or the majority —
+ * a coin-flip rep below the bar voids the band. Majority is reported per case as evidence.
+ */
+export interface CertBand {
+  model: string;
+  cases: number;
+  reps: number;
+  bar: number;
+  /** Per-rep final pass-rates, in the order the run dirs were given. */
+  rates: number[];
+  floor: number;
+  ceil: number;
+  mean: number;
+  /** Pass-rate of the per-case majority verdicts (evidence, never the certification basis). */
+  majorityRate: number;
+  /** floor ≥ bar — the bar is a FLOOR over reps, not a target for the mean. */
+  certified: boolean;
+  generatedAt?: string;
+  artifactNote: string;
+  perCase: Array<{ caseId: string; finals: Array<'pass' | 'FAIL'>; majority: 'pass' | 'FAIL' }>;
+}
+
+export interface CertBandOptions extends CertOptions {
+  /** Where cert-band.json + CERT-BAND.md land. Default: the parent of the first run dir. */
+  out?: string;
+}
+
+export function buildCertBand(runDirs: string[], opts: CertBandOptions = {}): CertBand {
+  if (runDirs.length < 2) throw new Error('cert band: needs at least 2 run dirs (one dir = plain cert)');
+  const reps = runDirs.map((dir) => buildCert(dir, opts)); // each rep keeps its own N=1-honest cert
+  const caseIds = reps[0].perCase.map((c) => c.caseId);
+  for (const [i, rep] of reps.entries()) {
+    const ids = rep.perCase.map((c) => c.caseId);
+    if (ids.length !== caseIds.length || ids.some((id, j) => id !== caseIds[j])) {
+      throw new Error(`cert band: rep ${i} (${runDirs[i]}) covers a different case set — reps must run the SAME cases`);
+    }
+  }
+
+  const bar = opts.bar ?? 0.9;
+  const rates = reps.map((r) => r.passRate);
+  const perCase = caseIds.map((caseId, j) => {
+    const finals = reps.map((r) => r.perCase[j].final);
+    const passes = finals.filter((f) => f === 'pass').length;
+    return { caseId, finals, majority: (passes * 2 > finals.length ? 'pass' : 'FAIL') as 'pass' | 'FAIL' };
+  });
+  const majorityRate = perCase.length ? perCase.filter((c) => c.majority === 'pass').length / perCase.length : 0;
+  const baseNote =
+    `reps=${reps.length}: certification law is the FLOOR — every rep must clear the bar. ` +
+    'Majority verdicts are reported as evidence, never as the certification basis.';
+  const band: CertBand = {
+    model: opts.model ?? reps[0].model,
+    cases: caseIds.length,
+    reps: reps.length,
+    bar,
+    rates,
+    floor: Math.min(...rates),
+    ceil: Math.max(...rates),
+    mean: rates.reduce((a, b) => a + b, 0) / rates.length,
+    majorityRate,
+    certified: caseIds.length > 0 && Math.min(...rates) >= bar,
+    ...(opts.generatedAt ? { generatedAt: opts.generatedAt } : {}),
+    artifactNote: opts.artifactNote ? `${baseNote} ${opts.artifactNote}` : baseNote,
+    perCase,
+  };
+
+  const outDir = opts.out ?? join(runDirs[0], '..');
+  writeFileSync(join(outDir, 'cert-band.json'), JSON.stringify(band, null, 2) + '\n');
+  writeFileSync(join(outDir, 'CERT-BAND.md'), renderCertBandMd(band, runDirs) + '\n');
+  return band;
+}
+
+function renderCertBandMd(b: CertBand, runDirs: string[]): string {
+  return [
+    `# Certification band — ${b.model} · K=${b.reps}`,
+    '',
+    ...(b.generatedAt ? [`- generated: ${b.generatedAt}`] : []),
+    `- reps: ${b.reps} — ${runDirs.map((d) => `\`${d}\``).join(' · ')}`,
+    `- rates: ${b.rates.map(pct).join(' / ')} → band ${pct(b.floor)}–${pct(b.ceil)} · mean ${pct(b.mean)} · majority ${pct(b.majorityRate)}`,
+    `- bar: ≥${pct(b.bar)} as a FLOOR over reps`,
+    `- **verdict: floor ${pct(b.floor)} ${b.certified ? '≥' : '<'} bar → ${b.certified ? 'CERTIFIED' : 'BELOW BAR'}**`,
+    '',
+    `| case | ${b.rates.map((_, i) => `r${i}`).join(' | ')} | majority |`,
+    `|---|${b.rates.map(() => '---|').join('')}---|`,
+    ...b.perCase.map((c) => `| ${c.caseId} | ${c.finals.join(' | ')} | ${c.majority} |`),
+    '',
+    `> ${b.artifactNote}`,
+  ].join('\n');
+}
+
 function renderCertMd(s: CertSummary): string {
   return [
     `# Certification — ${s.model}`,

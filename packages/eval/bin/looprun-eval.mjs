@@ -17,7 +17,9 @@ const HELP = `looprun-eval <command>
                      Target default: the subject's ask/targets.json (flags/env override).
   fold [flags]       Merge judge verdicts into RESULTS.md (final pass = invariants AND judge).
                      --dump <cases.jsonl> --verdicts <verdicts.jsonl> [--out <RESULTS.md>]
-  cert <run-dir>     Fold cases.jsonl + verdicts.jsonl → cert.json + CERT.md (reps=1, stated).
+  cert <dir> [dir…]  Fold cases.jsonl + verdicts.jsonl → cert.json + CERT.md (reps=1, stated).
+                     2+ dirs = multi-rep BAND → cert-band.json + CERT-BAND.md; certified only
+                     if the FLOOR over reps clears the bar. [--out <dir>] for the band files.
   seal <subject>     Mint ship/seal.json (hash-bound) — or --verify an existing one.
                      [--bar 0.9] [--model <label>] [--date <iso>] [--note <text>]
   lint [paths…]      Purity/firewall/contract lint. [--spec-laws --subject <dir>]
@@ -85,19 +87,28 @@ async function main() {
   }
 
   if (cmd === 'cert') {
-    const [dir] = rest;
-    if (!dir) throw new Error('usage: looprun-eval cert <run-dir>');
+    const [dir, ...moreDirs] = rest;
+    if (!dir) throw new Error('usage: looprun-eval cert <run-dir> [<run-dir> ...]');
     const summary = api.certCommand({
       dir,
+      dirs: moreDirs,
       model: flag('model', undefined),
       bar: has('bar') ? Number(flag('bar')) : undefined,
       date: flag('date', undefined),
       note: flag('note', undefined),
+      out: flag('out', undefined),
     });
-    console.log(
-      `overall ${(summary.passRate * 100).toFixed(1)}% over ${summary.cases} case(s) → ` +
-        `${summary.certified ? 'CERTIFIED' : 'BELOW BAR'} (bar ${(summary.bar * 100).toFixed(0)}%, reps=1) → ${dir}/CERT.md`,
-    );
+    if (moreDirs.length) {
+      console.log(
+        `band ${(summary.floor * 100).toFixed(1)}%–${(summary.ceil * 100).toFixed(1)}% over ${summary.cases} case(s) × ${summary.reps} reps → ` +
+          `${summary.certified ? 'CERTIFIED' : 'BELOW BAR'} (bar ${(summary.bar * 100).toFixed(0)}% as FLOOR) → CERT-BAND.md`,
+      );
+    } else {
+      console.log(
+        `overall ${(summary.passRate * 100).toFixed(1)}% over ${summary.cases} case(s) → ` +
+          `${summary.certified ? 'CERTIFIED' : 'BELOW BAR'} (bar ${(summary.bar * 100).toFixed(0)}%, reps=1) → ${dir}/CERT.md`,
+      );
+    }
     if (!summary.certified) process.exitCode = 1;
     return;
   }

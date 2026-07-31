@@ -48,7 +48,7 @@ const TAUGHT = [...TAUGHT_SUBJECT, ...TAUGHT_CLI].sort();
  * must still be able to NAME them.
  */
 const RIDERS = [
-  'RunCommandOptions', 'FoldCommandOptions', 'CertCommandOptions', 'CertSummary', 'LintViolation',
+  'RunCommandOptions', 'FoldCommandOptions', 'CertCommandOptions', 'CertSummary', 'CertBand', 'LintViolation',
   'UngovernedBundle', 'Seal', 'SealTarget', 'SealVerification',
 ];
 

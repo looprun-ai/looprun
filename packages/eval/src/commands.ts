@@ -9,7 +9,7 @@ import { checkTrunkStatic, loadSubject, readDeclaredTarget, validateSubject } fr
 import { runCase, type CaseDump } from './run.js';
 import { PROVIDER_ENDPOINTS, selectModel } from './provider.js';
 import { foldVerdicts, readJsonl, renderResultsMd, type VerdictLine } from './fold.js';
-import { buildCert, type CertSummary } from './cert.js';
+import { buildCert, buildCertBand, type CertBand, type CertSummary } from './cert.js';
 
 function today(): string {
   return new Date().toISOString().slice(0, 10);
@@ -144,18 +144,23 @@ export function foldCommand(opts: FoldCommandOptions): string {
 
 export interface CertCommandOptions {
   dir: string;
+  /** Additional run dirs — 2+ total dirs certify as a multi-rep BAND (floor law). */
+  dirs?: string[];
   model?: string;
   bar?: number;
   date?: string;
   note?: string;
+  /** Band only: where cert-band.json + CERT-BAND.md land (default: parent of the first dir). */
+  out?: string;
 }
 
-/** Fold + certify one run dir (`cases.jsonl` + `verdicts.jsonl`) → `cert.json` + `CERT.md`. */
-export function certCommand(opts: CertCommandOptions): CertSummary {
-  return buildCert(opts.dir, {
-    model: opts.model,
-    bar: opts.bar,
-    generatedAt: opts.date,
-    artifactNote: opts.note,
-  });
+/**
+ * Fold + certify. One run dir → `cert.json` + `CERT.md` (reps=1, stated). Multiple dirs →
+ * per-rep certs PLUS `cert-band.json` + `CERT-BAND.md`, certified only if the FLOOR clears the bar.
+ */
+export function certCommand(opts: CertCommandOptions): CertSummary | CertBand {
+  const shared = { model: opts.model, bar: opts.bar, generatedAt: opts.date, artifactNote: opts.note };
+  const dirs = [opts.dir, ...(opts.dirs ?? [])];
+  if (dirs.length > 1) return buildCertBand(dirs, { ...shared, out: opts.out });
+  return buildCert(opts.dir, shared);
 }
