@@ -1,5 +1,13 @@
 # hermes-sim-example
 
+## 0.0.12
+
+### Patch Changes
+
+- Updated dependencies
+  - looprun@0.9.1
+  - @looprun-ai/server@0.9.1
+
 ## 0.0.11
 
 ### Patch Changes
