@@ -33,6 +33,9 @@ importers:
         specifier: workspace:*
         version: link:../../../packages/looprun
     devDependencies:
+      '@looprun-ai/core':
+        specifier: workspace:*
+        version: link:../../../packages/core
       '@looprun-ai/mastra':
         specifier: workspace:*
         version: link:../../../packages/mastra

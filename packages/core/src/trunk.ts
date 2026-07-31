@@ -299,9 +299,8 @@ export function renderTrunkBlocks(spec: AgentSpec, domain: DomainContract, opts?
   const scope = scopeBlock(spec, opts);
   if (scope) blocks.push(scope);
 
-  // Guard the heading on non-empty content , matching scopeBlock: an EMPTY invariant list
-  // must not render a bare `## Core rules (NEVER violate)` heading with nothing under it. Load-bearing
-  // for the ungoverned arm (Root-2 strip empties coreInvariants), and correct in general.
+  // Guard the heading on non-empty content, matching scopeBlock: an EMPTY invariant list
+  // must not render a bare `## Core rules (NEVER violate)` heading with nothing under it.
   const coreHeading = '## Core rules (NEVER violate)';
   if (domain.coreInvariants.length) {
     blocks.push({

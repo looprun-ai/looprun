@@ -1,7 +1,7 @@
 /**
  * Plumbing proof WITHOUT any API: a scripted fake model drives fixture cases end-to-end
  * through the real governed loop — one invariant-pass, one forbidden-call violation detected,
- * one ungoverned-arm run showing the governance surface emptied.
+ * one ungoverned-arm run showing the prompt kept byte-identical while enforcement is disarmed.
  */
 import { beforeAll, describe, expect, it } from 'vitest';
 import { dirname, resolve } from 'node:path';

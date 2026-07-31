@@ -14,6 +14,7 @@
     "looprun": "workspace:*"
   },
   "devDependencies": {
+    "@looprun-ai/core": "workspace:*",
     "@looprun-ai/mastra": "workspace:*",
     "@mastra/core": "^1.42.0",
     "@types/node": "^22.0.0",

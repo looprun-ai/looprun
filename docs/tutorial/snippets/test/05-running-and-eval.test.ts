@@ -5,10 +5,13 @@
  *
  * `scriptedModel` comes from `@looprun-ai/mastra/testing`, the test-only entry point. It is not one
  * of the 89 taught symbols and no chapter teaches it; it is here so the run costs nothing.
+ * `renderScopedSpecTrunk` (from `@looprun-ai/core/internal`) is likewise test-only plumbing, used
+ * here only to prove the ungoverned arm's prompt byte-identity — no chapter teaches it either.
  */
 import { describe, expect, it } from 'vitest';
 import { scriptedModel } from '@looprun-ai/mastra/testing';
 import { createModelServer } from '@looprun-ai/server';
+import { renderScopedSpecTrunk } from '@looprun-ai/core/internal';
 import {
   SCHEDULER_TURNS,
   SUBJECT_DIR,
@@ -72,17 +75,27 @@ describe('05 · the scheduler eval subject', () => {
     expect(await preflight(subject)).toEqual([]);
   });
 
-  it('strips the whole governance surface for the ungoverned arm', async () => {
+  it('ungoverned arm: prompt byte-identical, enforcement disarmed', async () => {
     const subject = await loadSchedulerSubject();
+    const original = subject.specs.scheduler!;
     const { spec, contract } = ungovernedArm(subject, '01-double-book-refused');
 
+    // enforcement disarmed: every guard hook empty, no chains/exhaustion reply, no destructive cross-check
     expect(spec.guards.preTool).toEqual([]);
     expect(spec.guards.onReply).toEqual([]);
-    expect(spec.behavior).toEqual([]);
-    expect(contract.coreInvariants).toEqual([]);
-    // …while the tool surface, the persona and the voice stay: only governance is removed.
-    expect(spec.surface.tools).toEqual(subject.specs.scheduler!.surface.tools);
-    expect(subject.specs.scheduler!.guards.preTool.length).toBeGreaterThan(0); // never mutated
+    expect(spec.controls.chains).toBeUndefined();
+    expect(spec.controls.exhaustionReply).toBeUndefined();
+    expect(spec.assertDestructiveConfirmable).toBeUndefined();
+
+    // prompt kept byte-identical to the governed trunk: prose (rules, invariants) survives
+    const world = subject.makeWorld('default');
+    const governedPrompt = renderScopedSpecTrunk(world, original, [], subject.contract);
+    expect(spec.surface.systemPrompt).toBeDefined();
+    expect(spec.surface.systemPrompt!(world, [])).toBe(governedPrompt);
+
+    // …while the tool surface stays: only enforcement is removed.
+    expect(spec.surface.tools).toEqual(original.surface.tools);
+    expect(original.guards.preTool.length).toBeGreaterThan(0); // never mutated
   });
 });
 

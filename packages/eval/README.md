@@ -27,7 +27,7 @@ Subject modules may be `.ts`/`.mts` (needs a Node version with type stripping) o
 ```sh
 looprun-eval run --subject <dir>                 # target from ask/targets.json
 looprun-eval run --subject <dir> --model <id> --base-url <url> --api-key-env <ENV>
-looprun-eval run --subject <dir> --ungoverned    # same bundle, governance surface emptied
+looprun-eval run --subject <dir> --ungoverned    # same prompt, enforcement disarmed (prose-only baseline)
 ```
 
 `run` writes `<subject>/test/<date>-<model>-<arm>/` (override `--out`): `cases.jsonl`
