@@ -66,7 +66,7 @@ export interface TurnPrompt {
 }
 
 /** `label (basename)` when the URL has a basename, else the bare label. */
-export function uploadDisplayLabels(labels: string[], urls: string[] = []): string[] {
+function uploadDisplayLabels(labels: string[], urls: string[] = []): string[] {
   return labels.map((l, k) => {
     const base = urls[k]?.split('/').pop();
     return base ? `${l} (${base})` : l;
@@ -74,7 +74,7 @@ export function uploadDisplayLabels(labels: string[], urls: string[] = []): stri
 }
 
 /** True when the spec's terminal policy forces reply-only in this world state. */
-export function isReplyOnly(spec: AgentSpec, world: AgentWorld): boolean {
+function isReplyOnly(spec: AgentSpec, world: AgentWorld): boolean {
   return spec.controls.terminal ? spec.controls.terminal(world) === true : false;
 }
 

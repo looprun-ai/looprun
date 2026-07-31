@@ -50,6 +50,5 @@ export interface RunResult {
   errorMsg?: string;
 }
 
-/** Continuity aliases (the pre-extraction runtime names). */
-export type RuntimeTurnInput = TurnInput;
+/** Continuity alias (the pre-extraction runtime name), still named by `/internal`. */
 export type RuntimeTurnRecord = TurnRecord;

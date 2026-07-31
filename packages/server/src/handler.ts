@@ -6,7 +6,6 @@
  * incoming `tools`/`tool_choice`/sampling are IGNORED (the spec governs), and only the LAST
  * `user` message enters the governed turn — the agent's own session is the canonical memory.
  */
-import type { LoopRunResultMeta } from '@looprun-ai/mastra';
 import {
   buildCompletion,
   buildModelList,
@@ -16,7 +15,7 @@ import {
 } from './openai.js';
 import { SessionLocks, SessionTtl, lastUserText, resolveSessionId } from './session.js';
 import { streamCompletion } from './sse.js';
-import type { CompletionRequestBody, LoopRunEnvelopeMeta, ModelServerConfig } from './types.js';
+import type { CompletionRequestBody, LoopRunEnvelopeMeta, LoopRunResultMeta, ModelServerConfig } from './types.js';
 
 export const DEFAULT_CONTEXT_LENGTH = 128_000;
 

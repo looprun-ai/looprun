@@ -1,6 +1,6 @@
 /** SSE contract: role delta → keepalive-safe stream → one content delta → finish → [DONE]. */
 import { describe, expect, it } from 'vitest';
-import { createOpenAiHandler } from '../src/index.js';
+import { createOpenAiHandler } from '../src/handler.js';
 import { HAPPY_SCRIPT, makeAgent } from './helpers.js';
 
 function parseSse(raw: string): { chunks: Array<Record<string, any>>; done: boolean; comments: number } {

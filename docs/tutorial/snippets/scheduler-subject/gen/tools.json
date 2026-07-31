@@ -1,0 +1,29 @@
+[
+  {
+    "name": "listEvents",
+    "description": "List the events on the calendar, soonest first.",
+    "inputSchema": { "type": "object", "properties": {}, "required": [] }
+  },
+  {
+    "name": "addEvent",
+    "description": "Add an event to the calendar. Fails if the window clashes with an existing event.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "start": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}$", "description": "local date-time, `YYYY-MM-DDTHH:mm`" },
+        "end": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}$", "description": "local date-time, `YYYY-MM-DDTHH:mm`" }
+      },
+      "required": ["title", "start", "end"]
+    }
+  },
+  {
+    "name": "cancelEvent",
+    "description": "Cancel an event. Call it without `confirmed` first to ask the user; then again in a LATER turn, after the user answers, with `confirmed: true`.",
+    "inputSchema": {
+      "type": "object",
+      "properties": { "eventId": { "type": "string" }, "confirmed": { "type": "boolean" } },
+      "required": ["eventId"]
+    }
+  }
+]

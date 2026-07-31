@@ -3,18 +3,11 @@
  * governed-turn mechanisms, driven without a live model.
  */
 import { describe, expect, it } from 'vitest';
-import {
-  AgentSpecBase,
-  createLedger,
-  recordToolResult,
-  enforcePostTool,
-  shouldFireChain,
-  runChainCompletionPass,
-  resultInvariant,
-  finalizeReply,
-  custom,
-} from '../src/index.js';
-import type { AgentWorld, ChainSpec, GuardCtx, DomainContract, ObservedCall } from '../src/index.js';
+import { AgentSpecBase, custom, resultInvariant } from '../src/index.js';
+import type { AgentWorld, GuardCtx, DomainContract, ObservedCall } from '../src/index.js';
+import type { ChainSpec } from '../src/spec.js';
+import { createLedger, recordToolResult } from '../src/runtime/ledger.js';
+import { enforcePostTool, shouldFireChain, runChainCompletionPass, finalizeReply } from '../src/runtime/turn.js';
 
 const persona = 'You are the test agent.';
 const CONTRACT: DomainContract = {

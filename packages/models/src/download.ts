@@ -2,7 +2,7 @@
  * @looprun-ai/models — HuggingFace GGUF download with resume.
  *
  * Downloads never start implicitly: callers (the CLI, or `localModel` with `autoDownload:true`)
- * opt in explicitly — a 3–21 GB surprise download on an agent's first turn is a footgun.
+ * opt in explicitly — a 2.5–17 GB surprise download on an agent's first turn is a footgun.
  */
 import { createWriteStream, existsSync, mkdirSync, statSync, renameSync } from 'node:fs';
 import { dirname } from 'node:path';

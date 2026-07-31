@@ -11,7 +11,10 @@
  *    the kind and the hook — never swallowed, never converted into a deny.
  */
 import { describe, expect, it } from 'vitest';
-import { AgentSpecBase, GuardExecutionError, custom, emptyReply, precondition, renderScopedSpecTrunk, resolveGuards, resultInvariant } from '../../src/index.js';
+import { AgentSpecBase, custom, emptyReply, precondition, resultInvariant } from '../../src/index.js';
+import { GuardExecutionError } from '../../src/rules.js';
+import { renderScopedSpecTrunk } from '../../src/trunk.js';
+import { resolveGuards } from '../../src/spec.js';
 import type { Dim, Guard } from '../../src/index.js';
 import { craftCtx, FIXTURE_DOMAIN, FIXTURE_TOOL_NAMES, FixtureWorld } from '../../src/testing/index.js';
 

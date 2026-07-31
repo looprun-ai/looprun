@@ -13,7 +13,8 @@
 import { requireMake } from '@looprun-ai/core/testing';
 import { FixtureWorld, FIXTURE_TOOL_DEFS, FIXTURE_DOMAIN } from '@looprun-ai/core/testing';
 import type { GuardProof, ProofLoopCase } from '@looprun-ai/core/testing';
-import type { AgentSpec, RunResult, RuntimeTurnRecord } from '@looprun-ai/core';
+import type { AgentSpec, RunResult } from '@looprun-ai/core';
+import type { RuntimeTurnRecord } from '@looprun-ai/core/internal';
 import { runSpecConversation } from '../run-conversation.js';
 import { fakeLLM } from './fake-llm.js';
 

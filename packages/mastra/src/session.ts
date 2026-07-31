@@ -5,8 +5,9 @@
  * own world + ledger + message history, keyed by sessionId. A per-session promise-chain mutex
  * serializes concurrent turns of the same conversation.
  */
-import { createLedger } from '@looprun-ai/core';
-import type { AgentWorld, TurnLedger } from '@looprun-ai/core';
+import { createLedger } from '@looprun-ai/core/internal';
+import type { TurnLedger } from '@looprun-ai/core/internal';
+import type { AgentWorld } from '@looprun-ai/core';
 
 export type WorldFactory<W extends AgentWorld = AgentWorld> = (sessionId: string) => W;
 

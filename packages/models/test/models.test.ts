@@ -1,6 +1,10 @@
 /** Alias registry, flags and fail-fast behavior of the local-model story. */
 import { afterEach, describe, expect, it } from 'vitest';
-import { launchFlags, modelPath, resolveAlias, QWEN35_4B, QWEN35_RAM8, QWEN36_RAM16, QWEN36_RAM24, QWEN36_RAM32, LlamaCppRuntime, downloadUrl } from '../src/index.js';
+import { resolveAlias, LlamaCppRuntime } from '../src/index.js';
+// Module-local (off the barrel — outline §4): this package's own tests reach them by module file.
+import { modelPath, QWEN35_4B, QWEN35_RAM8, QWEN36_RAM16, QWEN36_RAM24, QWEN36_RAM32 } from '../src/aliases.js';
+import { launchFlags } from '../src/llamacpp.js';
+import { downloadUrl } from '../src/download.js';
 
 const ENV_KEYS = ['QWEN35_4B_GGUF', 'QWEN36_35B_GGUF', 'LLAMA_KV', 'LLAMA_CTX', 'LLAMA_PORT', 'LLAMA_CACHE_RAM', 'LLAMA_SLOT_SAVE_PATH', 'LLAMA_SPEC_TYPE'];
 const saved = new Map(ENV_KEYS.map((k) => [k, process.env[k]]));

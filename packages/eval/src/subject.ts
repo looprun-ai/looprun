@@ -8,7 +8,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { renderScopedSpecTrunk } from '@looprun-ai/core';
+import { renderScopedSpecTrunk } from '@looprun-ai/core/internal';
 import type { AgentSpec, AgentWorld, DomainContract, ToolDef } from '@looprun-ai/core';
 
 export interface CaseTurn {

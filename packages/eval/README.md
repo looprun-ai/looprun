@@ -4,6 +4,10 @@ The subject runner: executes a generated subject's cases against a model target
 (governed or ungoverned arm), dumps per-case traces for the LLM judge, folds
 verdicts, and certifies against the bar.
 
+The protocol is taught in the tutorial:
+[01 · Concepts](https://github.com/looprun-ai/looprun/blob/main/docs/tutorial/01-concepts.md) — six
+chapters, one running example; chapter 05 owns run → judge → fold → cert.
+
 ## Subject layout
 
 ```
@@ -27,7 +31,7 @@ looprun-eval run --subject <dir> --ungoverned    # same bundle, governance surfa
 ```
 
 `run` writes `<subject>/test/<date>-<model>-<arm>/` (override `--out`): `cases.jsonl`
-(one CaseDump per line) + `SUMMARY.md`. Invariants (`requiredToolCalls` must succeed;
+(one case dump per line) + `SUMMARY.md`. Invariants (`requiredToolCalls` must succeed;
 `forbiddenToolCalls` fail on the ATTEMPT, even when the world refuses) are the
 deterministic gate only — never the quality verdict.
 

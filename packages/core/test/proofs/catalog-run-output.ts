@@ -8,7 +8,7 @@ import {
   noDuplicateCall,
   precondition,
   resultInvariant,
-} from '../../src/guards.js';
+} from '../../src/guards/index.js';
 import { FIXTURE_LEXICON, FixtureWorld } from '../../src/testing/index.js';
 import type { GuardProof } from '../../src/testing/index.js';
 

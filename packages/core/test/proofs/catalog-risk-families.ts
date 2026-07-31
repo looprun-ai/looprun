@@ -18,11 +18,11 @@ import {
   noInstructionFromData,
   noOutOfSurfaceActionClaim,
   noUngroundedRegulatedFigure,
-} from '../../src/guards.js';
+} from '../../src/guards/index.js';
 import { FixtureWorld, FIXTURE_TOOL_NAMES } from '../../src/testing/index.js';
 import type { GuardProof } from '../../src/testing/index.js';
 
-/** RuntimeTurnInput shorthand (channel-agnostic — just the user text). */
+/** TurnInput shorthand (channel-agnostic — just the user text). */
 const turn = (userText: string) => ({ userText });
 
 /** A world whose LEDGER already carries a tool result — the only firewall-legal source of "what the

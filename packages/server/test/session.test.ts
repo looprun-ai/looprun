@@ -1,7 +1,6 @@
 /** Session resolution chain, fingerprint stability and per-session serialization — pure units. */
 import { describe, expect, it } from 'vitest';
-import { fingerprintSession, lastUserText, resolveSessionId } from '../src/index.js';
-import { SessionLocks, SessionTtl } from '../src/session.js';
+import { fingerprintSession, lastUserText, resolveSessionId, SessionLocks, SessionTtl } from '../src/session.js';
 import type { WireMessage } from '../src/index.js';
 
 const MSGS: WireMessage[] = [

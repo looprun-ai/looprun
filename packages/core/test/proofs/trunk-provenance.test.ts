@@ -1,11 +1,10 @@
 /**
- * Trunk PROVENANCE + the coherence queries — the MECHANISM proofs.
+ * Trunk PROVENANCE — the MECHANISM proof.
  *
- * WHERE THIS LIVES AND WHY. The mechanism (render → attributed table → fold; the three queries) is
- * runtime code and is proven HERE, on the domain-neutral fixture domain/specs, exactly like every other
- * guard-proof: it must hold for ANY bundle. Auditing the prose of a REAL bundle is a different job —
- * a fact about that business's content, belonging to that bundle's own test lane. Running such a
- * census here would import business strings into a package whose neutrality is CI-backstopped.
+ * WHERE THIS LIVES AND WHY. The mechanism (render → attributed table → fold) is runtime code and is
+ * proven HERE, on the domain-neutral fixture domain/specs, exactly like every other guard-proof: it
+ * must hold for ANY bundle. Auditing the prose of a REAL bundle is a different job — a fact about that
+ * business's content, belonging to that bundle's own test lane.
  *
  * THE INVARIANT THAT GATES EVERYTHING ELSE: the fold is byte-identical to the pre-refactor join. The
  * trunk-static law, the cacheable prefix, and every certified number measured against them depend
@@ -13,17 +12,16 @@
  */
 import { describe, expect, it } from 'vitest';
 import { AgentSpecBase } from '../../src/spec.js';
-import { argRequired, custom, forbidThisTurn, jargonScrub, maxCalls, replySingleQuestion } from '../../src/guards.js';
+import { argRequired, custom, forbidThisTurn, jargonScrub, maxCalls, replySingleQuestion } from '../../src/guards/index.js';
 import { renderScopedSpecTrunk, renderTrunkBlocks } from '../../src/trunk.js';
-import {
-  GUARD_KIND_SUBJECT, derivePolarity, deriveSubject, findContradictions, findDuplications,
-  findMultiOwnerSubjects, findSubjectlessLines, foldTrunk, trunkLines,
-  mutatorLines, withPolarityLexicon,
-} from '../../src/coherence.js';
-import type { NormativeLine, PolarityLexicon } from '../../src/coherence.js';
+import { GUARD_KIND_SUBJECT, derivePolarity, deriveSubject, foldTrunk } from '../../src/trunk-fold.js';
+import type { TrunkBlock, TrunkLine } from '../../src/trunk-fold.js';
 import { FIXTURE_LEXICON, FIXTURE_DOMAIN, FIXTURE_TOOL_NAMES, FixtureWorld } from '../../src/testing/index.js';
 
 const world = new FixtureWorld('seeded-media');
+
+/** Flatten the attributed table to its lines — the view every provenance assertion reads. */
+const trunkLines = (blocks: readonly TrunkBlock[]): TrunkLine[] => blocks.flatMap((b) => b.rows.flatMap((r) => r.lines));
 
 function spec(): AgentSpecBase {
   return new AgentSpecBase({
@@ -129,6 +127,12 @@ describe('subject + polarity derivation is deterministic', () => {
     expect(derivePolarity('you must read the record first; never estimate a figure')).toBe('inform');
   });
 
+  it('the markers are ENGLISH-only by design — non-English prose derives `inform`', () => {
+    // The trunk is always rendered in English (the language clause tells the model which language to
+    // REPLY in; it does not translate the prompt), so a pt-BR line has no marker to match.
+    expect(derivePolarity('nunca invente um id')).toBe('inform');
+  });
+
   it('a custom() guard has a free-form kind and therefore NO subject — a lint signal, not a gap', () => {
     const s = spec();
     s.addGuard('preTool', ['createItem'], custom({
@@ -137,7 +141,6 @@ describe('subject + polarity derivation is deterministic', () => {
     const l = trunkLines(renderTrunkBlocks(s, FIXTURE_DOMAIN)).find((x) => x.owner === 'guard:houseStyleRule')!;
     expect(l.subject).toBeNull();
     expect(GUARD_KIND_SUBJECT.houseStyleRule).toBeUndefined();
-    expect(findSubjectlessLines([l])).toHaveLength(1);
   });
 
   it('every guard kind installed by AgentSpecBase itself has a subject (the always-on layer is covered)', () => {
@@ -149,139 +152,13 @@ describe('subject + polarity derivation is deterministic', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-describe('B4 — reply MUTATORS are visible to the census (they were invisible: no prose)', () => {
-  it('an installed jargonScrub surfaces as an `inform` line with a subject, NOT into the rendered trunk', () => {
+describe('a reply MUTATOR carries no prose and therefore no bytes', () => {
+  it('installing a jargonScrub leaves the rendered trunk byte-identical', () => {
     const s = spec();
     const before = renderScopedSpecTrunk(world, s, [], FIXTURE_DOMAIN);
     s.addMutator(jargonScrub({ SKU: 'item code' }), { id: 'agent:jargonScrub' });
-    // A mutator has no prose → the RENDERED trunk is byte-identical (it never enters trunk.ts's fold).
+    // A `ReplyMutator` is `{ kind, apply }` — no `prose()`, so it never enters trunk.ts's fold.
     expect(renderScopedSpecTrunk(world, s, [], FIXTURE_DOMAIN)).toBe(before);
-    // …but it is now on the CENSUS surface.
-    const lines = mutatorLines(s.guards.onReplyMutate);
-    expect(lines).toHaveLength(1);
-    expect(lines[0].subject).toBe('term-substitution');
-    expect(lines[0].polarity).toBe('inform');
-    expect(lines[0].owner).toBe('spec.mutator:jargonScrub');
-    expect(GUARD_KIND_SUBJECT.jargonScrub).toBe('term-substitution');
-  });
-
-  it('a DISABLED mutator is not surfaced (it governs nothing)', () => {
-    const s = spec();
-    const id = s.addMutator(jargonScrub({ SKU: 'item code' }), { id: 'agent:jargonScrub' });
-    const b = s.guards.onReplyMutate!.find((x) => x.id === id)!;
-    b.disabled = true;
-    expect(mutatorLines(s.guards.onReplyMutate)).toEqual([]);
-  });
-
-  it('a surfaced mutator PARTICIPATES in a census query (findMultiOwnerSubjects sees it as an owner)', () => {
-    const s = spec();
-    s.addMutator(jargonScrub({ SKU: 'item code' }), { id: 'agent:jargonScrub' });
-    const other: NormativeLine = { owner: 'tool:x.description', subject: 'term-substitution', polarity: 'inform', text: 'uses the term SKU' };
-    const surface = [...mutatorLines(s.guards.onReplyMutate), other];
-    const finding = findMultiOwnerSubjects(surface, ['term-substitution'])[0];
-    expect(finding.owners).toContain('spec.mutator:jargonScrub');
-  });
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
-describe('I7 — polarity markers are an injectable lexicon (a non-English subject is no longer degraded)', () => {
-  const PT: PolarityLexicon = {
-    forbid: /\b(?:nunca|não)\b/i,
-    require: /\b(?:sempre|deve|precisa)\b/i,
-    negativeRequirement: /\b(?:nunca|não)\b[^.;]{0,160}?\b(?:sem|antes de|até que|a menos que)\b/i,
-    forbidSrc: 'nunca|não',
-  };
-
-  it('the English default MIS-reads pt-BR prohibition prose as `inform` — the degradation I7 names', () => {
-    expect(derivePolarity('nunca invente um id')).toBe('inform');
-  });
-
-  it('the injected lexicon reads the same pt-BR line correctly', () => {
-    expect(derivePolarity('nunca invente um id', PT)).toBe('forbid');
-    expect(derivePolarity('sempre confirme antes de cancelar', PT)).toBe('require');
-    // pt-BR negative-requirement: "nunca … sem …" is a requirement, not its opposite (mirrors the EN rule).
-    expect(derivePolarity('nunca mova dinheiro sem uma confirmação explícita', PT)).toBe('require');
-  });
-
-  it('withPolarityLexicon re-derives a whole surface without mutating it (the census entry point)', () => {
-    const lines: NormativeLine[] = [{ owner: 'spec.behavior', subject: 'no-fabrication', polarity: 'inform', text: 'nunca invente um id' }];
-    const remapped = withPolarityLexicon(lines, PT);
-    expect(remapped[0].polarity).toBe('forbid');
-    expect(lines[0].polarity).toBe('inform'); // original untouched (pure)
-  });
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
-describe('query (a) CONTRADICTION — same subject, opposite polarity, different owners', () => {
-  const L = (owner: string, subject: string, polarity: NormativeLine['polarity'], text = 't'): NormativeLine =>
-    ({ owner, subject, polarity, text });
-
-  it('fires across owners', () => {
-    const f = findContradictions([L('domain.languageClause', 'output-language', 'require'), L('tool:replyToUser.text', 'output-language', 'forbid')]);
-    expect(f).toHaveLength(1);
-    expect(f[0].subject).toBe('output-language');
-  });
-
-  it('does NOT fire within ONE owner (a rule may state both halves)', () => {
-    expect(findContradictions([L('spec.behavior', 'x', 'require'), L('spec.behavior', 'x', 'forbid')])).toEqual([]);
-  });
-
-  it('`inform` is nobody\'s opposite', () => {
-    expect(findContradictions([L('a', 'x', 'inform'), L('b', 'x', 'forbid')])).toEqual([]);
-  });
-
-  it('a subjectless line can never contradict (there is nothing to compare)', () => {
-    expect(findContradictions([{ owner: 'a', subject: null, polarity: 'require', text: 't' }, L('b', 'x', 'forbid')])).toEqual([]);
-  });
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
-describe('query (b) DUPLICATION — same subject+polarity from different owners, with a census', () => {
-  it('counts the lines and attributes them per owner', () => {
-    const f = findDuplications([
-      { owner: 'guard:confirmFirst', subject: 'confirm-before-destructive', polarity: 'require', text: 'A' },
-      { owner: 'guard:confirmFirst', subject: 'confirm-before-destructive', polarity: 'require', text: 'A' },
-      { owner: 'domain.coreInvariants', subject: 'confirm-before-destructive', polarity: 'require', text: 'B' },
-    ]);
-    expect(f).toHaveLength(1);
-    expect(f[0].count).toBe(3);
-    expect(f[0].verbatimRepeats).toBe(1);
-    expect(f[0].owners).toEqual([
-      { owner: 'guard:confirmFirst', count: 2 },
-      { owner: 'domain.coreInvariants', count: 1 },
-    ]);
-  });
-
-  it('one owner repeating itself is NOT a duplication finding (that is the per-tool render, query (d))', () => {
-    expect(findDuplications([
-      { owner: 'guard:destructiveThrottle', subject: 'two-step-order', polarity: 'require', text: 'A' },
-      { owner: 'guard:destructiveThrottle', subject: 'two-step-order', polarity: 'require', text: 'A' },
-    ])).toEqual([]);
-  });
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
-describe('query (c) SINGLE OWNER — reaches beyond the trunk into the tool surface', () => {
-  it('a subject emitted by BOTH the trunk and a tool param doc is a finding', () => {
-    const f = findMultiOwnerSubjects(
-      [
-        { owner: 'domain.languageClause', subject: 'output-language', polarity: 'require', text: "reply in the USER'S language" },
-        { owner: 'tool:replyToUser.text', subject: 'output-language', polarity: 'inform', text: 'User-facing message in the brand language.' },
-      ],
-      ['output-language'],
-    );
-    expect(f).toHaveLength(1);
-    expect(f[0].owners).toEqual(['domain.languageClause', 'tool:replyToUser.text']);
-  });
-
-  it('one owner, however many lines, is clean', () => {
-    expect(findMultiOwnerSubjects(
-      [
-        { owner: 'domain.languageClause', subject: 'output-language', polarity: 'require', text: 'a' },
-        { owner: 'domain.languageClause', subject: 'output-language', polarity: 'forbid', text: 'b' },
-      ],
-      ['output-language'],
-    )).toEqual([]);
   });
 });
 
@@ -310,7 +187,7 @@ describe('audit finding (i): an onInput rule does NOT render under a "reply" hea
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-describe('audit finding (d): the ruleSections dedup is NOT global — and the census proves it', () => {
+describe('audit finding (d): the ruleSections dedup is NOT global — and the table proves it', () => {
   it('a prose bound to N tools renders N times, once per tool row', () => {
     const s = spec();
     s.addGuard('preTool', ['createItem', 'updateItem', 'setPrimary'], argRequired('id'));

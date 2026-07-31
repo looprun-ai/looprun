@@ -32,8 +32,9 @@ import {
   supersededTerminalCalls,
   vetoStormHit,
   renderTurnPrompt,
-} from '@looprun-ai/core';
-import type { AgentSpec, AgentWorld, TokenUsage, ToolDef, DomainContract, TurnInput, TurnRecord, RunResult } from '@looprun-ai/core';
+} from '@looprun-ai/core/internal';
+import type { TokenUsage } from '@looprun-ai/core/internal';
+import type { AgentSpec, AgentWorld, ToolDef, DomainContract, TurnInput, TurnRecord, RunResult } from '@looprun-ai/core';
 import { buildWorldTools } from './tools.js';
 import { makeGuardHooks, makeInputProcessors, repeatedToolCallStop } from './hooks.js';
 import type { LoopRunSession } from './session.js';

@@ -21,6 +21,40 @@ importers:
         specifier: ^2.0.0
         version: 2.1.9(@types/node@22.20.1)
 
+  docs/tutorial/snippets:
+    dependencies:
+      '@looprun-ai/eval':
+        specifier: workspace:*
+        version: link:../../../packages/eval
+      '@looprun-ai/server':
+        specifier: workspace:*
+        version: link:../../../packages/server
+      looprun:
+        specifier: workspace:*
+        version: link:../../../packages/looprun
+    devDependencies:
+      '@looprun-ai/mastra':
+        specifier: workspace:*
+        version: link:../../../packages/mastra
+      '@mastra/core':
+        specifier: ^1.42.0
+        version: 1.50.1(ai@6.0.222(zod@3.25.76))(express@5.2.1)(zod@3.25.76)
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.20.1
+      ai:
+        specifier: ^6.0.184
+        version: 6.0.222(zod@3.25.76)
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^2.0.0
+        version: 2.1.9(@types/node@22.20.1)
+      zod:
+        specifier: ^3.24.0
+        version: 3.25.76
+
   examples/hermes-sim:
     dependencies:
       '@ai-sdk/google':

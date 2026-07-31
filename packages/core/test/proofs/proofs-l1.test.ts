@@ -12,7 +12,7 @@ import {
   minimalDisclosure,
   noInstructionFromData,
   noOutOfSurfaceActionClaim,
-} from '../../src/guards.js';
+} from '../../src/guards/index.js';
 import { AgentSpecBase } from '../../src/spec.js';
 import { craftCtx, FIXTURE_LEXICON, FIXTURE_TOOL_NAMES, runL1 } from '../../src/testing/index.js';
 import { GUARD_PROOFS } from './catalog.js';

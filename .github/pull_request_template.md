@@ -20,7 +20,7 @@
 - [ ] The coverage ratchet was **not lowered** (`proof completeness · <kind>` still complete)
 - [ ] Proof record committed via `pnpm proofs:record` (`governance/proofs/*.md`, `verdict: PASS`)
 - [ ] `governance/MATRIX.md` regenerated (`pnpm proofs:matrix`) and committed
-- [ ] If a guard kind changed: `packages/core/GUARDS.md` **and** `skills/agentspec/references/guard-catalog.md` updated (the parity test enforces it)
+- [ ] If a guard kind changed: its `GUARD_CATALOG` entry in `packages/core/src/guards/catalog.ts` added/updated and `pnpm docs:guards` re-run (the parity test enforces the entry; the drift gate enforces the regeneration)
 - [ ] Drift lint clean (`node tests/no-bench-drift.test.mjs`)
 - [ ] Docs-tooling-only change — no proof record needed
 

@@ -1,29 +1,37 @@
 /**
- * @looprun-ai/models — public API.
+ * @looprun-ai/models — the public API: exactly the 8 models rows of `docs/superpowers/specs/2026-07-28-tutorial-outline-final.md`
+ * §4 (chapter 05: `geminiFlashLiteThinkOff` · chapter 06: the local-model seven).
  *
  *   model: await localModel('qwen3.5-4b')          // llama.cpp, measured flags, health-checked
  *   const { model, modelParams } = geminiFlashLiteThinkOff()   // the cloud validation model
+ *
+ * Three of them are also called by the published `looprun` bin through a dynamic package import
+ * (`bin/looprun.mjs` → `resolveAlias`, `LlamaCppRuntime`, `localModelStatus`), so the bin is a
+ * second, independent reason they must stay here.
+ *
+ * Models has NO `/internal` subpath: the alias registry, the launch flags, the download helpers and
+ * the path utilities stay module-local — in-package code imports `./aliases.js`, `./llamacpp.js` and
+ * `./download.js` directly, and so do this package's tests. Locked by
+ * `packages/models/test/surface-lock.test.ts`.
  */
 import { createOpenAI } from '@ai-sdk/openai';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { geminiThinkingOff } from '@looprun-ai/core';
-import { resolveAlias, modelPath } from './aliases.js';
-import { LlamaCppRuntime, serverBaseURL } from './llamacpp.js';
-import type { LocalModelSpec, ModelRuntimePort } from './port.js';
+import { resolveAlias } from './aliases.js';
+import { LlamaCppRuntime } from './llamacpp.js';
+import type { ModelRuntimePort } from './port.js';
 
-export type { LocalModelSpec, ModelRuntimePort, RuntimeStatus, EnsureServerResult } from './port.js';
-export {
-  MODEL_ALIASES,
-  QWEN35_4B,
-  QWEN35_RAM8,
-  QWEN36_RAM16,
-  QWEN36_RAM24,
-  QWEN36_RAM32,
-  resolveAlias,
-  modelPath,
-} from './aliases.js';
-export { LlamaCppRuntime, launchFlags, serverBaseURL, slotStateDir } from './llamacpp.js';
-export { downloadModel, downloadUrl } from './download.js';
+export type { LocalModelSpec, ModelRuntimePort } from './port.js';
+export { resolveAlias } from './aliases.js';
+export { LlamaCppRuntime } from './llamacpp.js';
+
+/**
+ * TYPE-CLOSURE RIDERS (outline §7) — not taught, not part of the 8, not API anybody chose. They are
+ * the transitive type closure of the signatures above: `localModelStatus` returns a
+ * `Promise<RuntimeStatus>` and `ModelRuntimePort.ensureServer` an `EnsureServerResult`, so a
+ * consumer building with `declaration: true` cannot NAME either without these (`TS4023`/`TS2742`).
+ */
+export type { RuntimeStatus, EnsureServerResult } from './port.js';
 
 export interface LocalModelOptions {
   /** The runtime port; defaults to llama.cpp. */
@@ -31,7 +39,7 @@ export interface LocalModelOptions {
   /** Spawn the server when it is not up (default true). */
   autoStart?: boolean;
   /**
-   * Download the GGUF when missing (default FALSE — a 3–21 GB surprise download on first turn
+   * Download the GGUF when missing (default FALSE — a 2.5–17 GB surprise download on first turn
    * is a footgun; prefer `npx looprun models pull <alias>` or `npx looprun init`).
    */
   autoDownload?: boolean;
@@ -57,13 +65,6 @@ export async function localModel(alias: string, opts: LocalModelOptions = {}): P
   return createOpenAI({ baseURL, apiKey: 'local' }).chat(spec.servedId);
 }
 
-/** The client WITHOUT any runtime management (assumes a server is already up). */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function localModelClient(alias: string): any {
-  const spec = resolveAlias(alias);
-  return createOpenAI({ baseURL: serverBaseURL(spec), apiKey: 'local' }).chat(spec.servedId);
-}
-
 /**
  * The cloud VALIDATION model: gemini flash-lite with thinking OFF.
  * TRAP: 'off' needs the NUMERIC `thinkingBudget: 0` — `thinkingLevel` does not turn
@@ -85,5 +86,3 @@ export function geminiFlashLiteThinkOff(opts: { apiKey?: string; id?: string } =
 export async function localModelStatus(alias: string, runtime: ModelRuntimePort = new LlamaCppRuntime()) {
   return runtime.status(resolveAlias(alias));
 }
-
-export type { LocalModelSpec as LooprunLocalModelSpec };

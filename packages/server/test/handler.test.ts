@@ -1,6 +1,6 @@
 /** Bare fetch-style handler: routing, validation and error mapping — no socket, no agent turn. */
 import { describe, expect, it } from 'vitest';
-import { createOpenAiHandler, DEFAULT_CONTEXT_LENGTH } from '../src/index.js';
+import { createOpenAiHandler, DEFAULT_CONTEXT_LENGTH } from '../src/handler.js';
 import { HAPPY_SCRIPT, makeAgent } from './helpers.js';
 
 const BASE = 'http://server.test';

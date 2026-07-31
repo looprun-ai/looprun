@@ -3,10 +3,21 @@
 The Vercel AI SDK backend for looprun is **not implemented yet**; the v0 backend is
 [`@looprun-ai/mastra`](../mastra).
 
+For what looprun is and how to use the v0 backend, start with the tutorial:
+[01 · Concepts](https://github.com/looprun-ai/looprun/blob/main/docs/tutorial/01-concepts.md) — six
+chapters, one running example.
+
 ## The backend seam contract
 
 A looprun backend is thin by design — every deterministic mechanic lives framework-free in
-[`@looprun-ai/core`](../core) (`runtime/`). A new backend implements exactly three glue points:
+[`@looprun-ai/core`](../core) (`runtime/`). A new backend implements exactly three glue points.
+
+> **Where these symbols live.** The primitives named below (`evaluatePreTool`, `recordToolResult`,
+> `isTerminal`, `forcedTerminalPrompt`, `finalizeReply`, …) are **not** on the public
+> `@looprun-ai/core` barrel — writing a backend is not a taught path. They are imported from
+> `@looprun-ai/core/internal`, which carries **no compatibility promise** and moves with the
+> implementation. There is no `looprun/internal` facade subpath; depend on `@looprun-ai/core`
+> directly.
 
 1. **Tool wiring with a pre-call veto** — before a tool executes, run `evaluatePreTool(spec,
    ledger, world, tool, args)`; on deny, short-circuit the call and hand the model the correction

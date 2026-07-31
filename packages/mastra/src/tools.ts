@@ -5,7 +5,7 @@
  * text into the ACTIVE session's ledger. Domain tools route to `world.exec(name, args)`.
  */
 import { createTool } from '@mastra/core/tools';
-import { isTerminal, normalizeTerminalToolDef, recordTerminal, terminalToolDefs } from '@looprun-ai/core';
+import { isTerminal, normalizeTerminalToolDef, recordTerminal, terminalToolDefs } from '@looprun-ai/core/internal';
 import type { ToolDef } from '@looprun-ai/core';
 import type { LoopRunSession } from './session.js';
 import { jsonSchemaToZodObject } from './json-schema-zod.js';

@@ -6,7 +6,7 @@
  * conversation; the other fields reset per turn via `beginTurn`.
  */
 import type { AgentWorld, Guard, ObservedCall } from '../rules.js';
-import { canonArgs } from '../guards.js';
+import { canonArgs } from '../guards/index.js';
 
 /** An OUTPUT-dim (postTool) result-invariant failure OR a flowChain restate — carried on the ledger
  *  and JOINED into the onReply violation set so the same bounded no-tools redrive relays its text. */

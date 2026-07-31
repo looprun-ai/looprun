@@ -1,7 +1,8 @@
 /** The governed-turn machine: ledger, preTool evaluation, and the finalizeReply pipeline. */
 import { describe, expect, it } from 'vitest';
+import { AgentSpecBase, precondition, replyMustMention, jargonScrub, custom } from '../src/index.js';
+import type { AgentWorld, DomainContract } from '../src/index.js';
 import {
-  AgentSpecBase,
   createLedger,
   beginTurn,
   resultOk,
@@ -10,16 +11,8 @@ import {
   recordVeto,
   vetoStormHit,
   VETO_STORM_LIMIT,
-  evaluatePreTool,
-  evaluateOnInput,
-  finalizeReply,
-  redriveMessage,
-  precondition,
-  replyMustMention,
-  jargonScrub,
-  custom,
-} from '../src/index.js';
-import type { AgentWorld, DomainContract } from '../src/index.js';
+} from '../src/runtime/ledger.js';
+import { evaluatePreTool, evaluateOnInput, finalizeReply, redriveMessage } from '../src/runtime/turn.js';
 
 function fixtureWorld(state: Record<string, unknown> = {}): AgentWorld {
   return {

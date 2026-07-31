@@ -17,7 +17,7 @@
  * both the trap and the closure — and pin that the default stayed byte-stable.
  */
 import { describe, it, expect } from 'vitest';
-import { noFabricatedSuccess } from '../../src/guards.js';
+import { noFabricatedSuccess } from '../../src/guards/index.js';
 import type { GuardCtx, ObservedCall } from '../../src/rules.js';
 
 const ctxWith = (observed: ObservedCall[], reply: string): GuardCtx =>

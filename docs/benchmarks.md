@@ -14,7 +14,8 @@ listed as later work, not surveyed.
 ## 1. What we measure — and why τ²-bench
 
 looprun is a **governance layer that wraps a subject model** (see [README](../README.md),
-[overview](./overview.md), [the measured loop](./guides/measured-loop.md)). It does not reason
+[the concepts](./tutorial/01-concepts.md), [the measured loop](./tutorial/05-running-and-eval.md)).
+It does not reason
 for the model. It enforces deterministic guards on tool calls, forces **honest abstention**
 instead of fabrication, resists prompt injection (guards read tool args, world state and the
 agent's own verified actions — **never the user's text**), and certifies agents with a

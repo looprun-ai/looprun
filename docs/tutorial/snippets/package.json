@@ -1,0 +1,28 @@
+{
+  "name": "@looprun-internal/tutorial-snippets",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Every code block in docs/tutorial/ lives here as a compiled file: the snippets compile against the published `looprun` facade, or CI fails.",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@looprun-ai/eval": "workspace:*",
+    "@looprun-ai/server": "workspace:*",
+    "looprun": "workspace:*"
+  },
+  "devDependencies": {
+    "@looprun-ai/mastra": "workspace:*",
+    "@mastra/core": "^1.42.0",
+    "@types/node": "^22.0.0",
+    "ai": "^6.0.184",
+    "typescript": "^5.7.0",
+    "vitest": "^2.0.0",
+    "zod": "^3.24.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

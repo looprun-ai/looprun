@@ -58,8 +58,8 @@ Writes `governance/proofs/YYYY-MM-DD-<slug>.md` (`verdict: PASS` iff every proof
 
 ### 4. GATE (pre-PR checklist)
 
-- Parity docs updated if a kind changed: `packages/core/GUARDS.md` **and**
-  `skills/agentspec/references/guard-catalog.md` (a parity test enforces it).
+- Catalog updated if a kind changed: its `GUARD_CATALOG` entry in
+  `packages/core/src/guards/catalog.ts` (a parity test enforces it), then `pnpm docs:guards`.
 - `pnpm test:proofs` green.
 - Drift lint clean: `node tests/no-bench-drift.test.mjs`.
 - `governance/MATRIX.md` regenerated and committed with the record.

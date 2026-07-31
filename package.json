@@ -17,9 +17,11 @@
     "node": ">=22"
   },
   "scripts": {
+    "clean": "pnpm -r --if-present clean",
     "build": "pnpm -r --if-present build",
     "typecheck": "pnpm -r --if-present typecheck",
-    "test": "pnpm -r --if-present test",
+    "test": "pnpm -r --if-present test && node scripts/gen-guards-chapter.mjs --check",
+    "docs:guards": "node scripts/gen-guards-chapter.mjs",
     "test:proofs": "pnpm -r --if-present test:proofs",
     "test:laws": "pnpm -C packages/core test && node tests/no-bench-drift.test.mjs",
     "proofs:run": "node scripts/proofs/run-proofs.mjs",

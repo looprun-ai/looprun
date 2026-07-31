@@ -12,8 +12,9 @@
  * distinction is load-bearing — a source-text lint goes blind the moment a spec builds its surface
  * through a constant, and it stays silently green while the bundle rots.
  */
-import { ARMED_SEAMS, CONFIRM_CLASS_KINDS, DENY_ONLY_PROSE_KINDS } from '@looprun-ai/core';
-import type { AgentSpec, GuardBinding, ToolDef } from '@looprun-ai/core';
+import { ARMED_SEAMS, CONFIRM_CLASS_KINDS, DENY_ONLY_PROSE_KINDS } from '@looprun-ai/core/internal';
+import type { GuardBinding } from '@looprun-ai/core/internal';
+import type { AgentSpec, ToolDef } from '@looprun-ai/core';
 
 /** Tool names look like identifiers; ordinary English words do not. camelCase or snake_case only. */
 const identifierShaped = (t: string): boolean => /[A-Z]/.test(t) || t.includes('_');
