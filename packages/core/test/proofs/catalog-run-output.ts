@@ -1,6 +1,8 @@
 /** Guard proofs — RUN + OUTPUT dims + custom (see catalog.ts for the collective ruleset + conventions). */
 import {
+  askedEarlier,
   confirmFirst,
+  confirmedNeedsEarlierProbe,
   custom,
   destructiveThrottle,
   maxCalls,
@@ -596,6 +598,71 @@ const customProof: GuardProof = {
   ],
 };
 
+// ── askedEarlier (structural — a value recorded only after an earlier-turn ask) ──────────────
+const askedEarlierProof: GuardProof = {
+  guard: 'askedEarlier',
+  make: () => askedEarlier({ tool: 'createItem', arg: 'condition' }),
+  hook: 'preTool',
+  target: ['createItem'],
+  cases: [
+    {
+      name: 'the gated value is present and an askUser succeeded in an EARLIER turn',
+      polarity: 'positive',
+      ctx: {
+        args: { condition: 'good' },
+        observed: [{ name: 'askUser', args: { text: 'q?' }, ok: true, turnIndex: 0 }],
+        turnIndex: 2,
+      },
+      l1: 'silent',
+    },
+    {
+      name: 'the gated value is present but no earlier-turn askUser exists',
+      polarity: 'negative',
+      ctx: { args: { condition: 'good' }, observed: [], turnIndex: 2 },
+      l1: 'fires',
+    },
+    {
+      name: "the gated value is absent — not this guard's business",
+      polarity: 'neutral',
+      ctx: { args: {}, observed: [], turnIndex: 2 },
+      l1: 'silent',
+    },
+  ],
+};
+
+// ── confirmedNeedsEarlierProbe (structural — confirmed:true needs its own earlier-turn preview) ──
+const confirmedNeedsEarlierProbeProof: GuardProof = {
+  guard: 'confirmedNeedsEarlierProbe',
+  make: () => confirmedNeedsEarlierProbe({ tools: ['deleteItem'] }),
+  hook: 'preTool',
+  target: ['deleteItem'],
+  cases: [
+    {
+      name: 'an earlier-turn probe of the same tool with matching args exists',
+      polarity: 'positive',
+      ctx: {
+        tool: 'deleteItem',
+        args: { id: 'itm-1', confirmed: true },
+        observed: [{ name: 'deleteItem', args: { id: 'itm-1', confirmed: false }, ok: true, turnIndex: 0 }],
+        turnIndex: 1,
+      },
+      l1: 'silent',
+    },
+    {
+      name: 'confirmed:true with no earlier probe of this act',
+      polarity: 'negative',
+      ctx: { tool: 'deleteItem', args: { id: 'itm-1', confirmed: true }, observed: [], turnIndex: 1 },
+      l1: 'fires',
+    },
+    {
+      name: 'confirmed flag not set — nothing to gate',
+      polarity: 'neutral',
+      ctx: { tool: 'deleteItem', args: { id: 'itm-1' }, observed: [], turnIndex: 1 },
+      l1: 'silent',
+    },
+  ],
+};
+
 export const RUN_OUTPUT_PROOFS: GuardProof[] = [
   preconditionProof,
   maxCallsProof,
@@ -605,4 +672,6 @@ export const RUN_OUTPUT_PROOFS: GuardProof[] = [
   destructiveThrottleProof,
   resultInvariantProof,
   customProof,
+  askedEarlierProof,
+  confirmedNeedsEarlierProbeProof,
 ];

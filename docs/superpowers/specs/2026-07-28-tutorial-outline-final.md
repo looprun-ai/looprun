@@ -65,16 +65,16 @@ chapter                    symbols taught
 01-concepts                 0   (concept-only)
 02-hello-world              3   ███
 03-agent-anatomy           11   ███████████
-04-guards                  35   ███████████████████████████████████
+04-guards                  37   █████████████████████████████████████
 05-running-and-eval        27   ███████████████████████████
 06-advanced                13   █████████████
 ------------------------   --------------
-TOTAL                      89
+TOTAL                      91
 ```
 
 | package | round-2 baseline | taught here | delta |
 |---|---|---|---|
-| `core` | 53 | 51 | −10 demoted, +8 promoted |
+| `core` | 53 | 53 | −10 demoted, +8 promoted, +2 structural (increment 1) |
 | `mastra` | 5 | 7 | +2 promoted |
 | `models` | 4 | 8 | +4 promoted |
 | `eval` | 13 | 19 | +6 promoted |
@@ -230,17 +230,18 @@ how to write your own when nothing fits.
 **Generated, not hand-written.** Task 4 turns `guards.ts` into per-category files with a
 `GUARD_CATALOG` data structure; Task 10's generator renders this chapter from it. That is also what
 keeps it in sync with `agentspec/skill/references/guard-catalog.md`, which `lint-guard-catalog.mjs`
-enforces in CI against the built `guards.d.ts`. **All 30 public guard factories therefore belong
+enforces in CI against the built `guards.d.ts`. **All 32 public guard factories therefore belong
 here** — including the ones `AgentSpecBase` auto-installs, which no consumer imports by name but which
-the lint requires to exist.
+the lint requires to exist. (The config-only-generation increment 1 added the two STRUCTURAL kinds
+`askedEarlier` + `confirmedNeedsEarlierProbe`, lifting 30 → 32.)
 
-**30, not 31 — `canonArgs` is a helper, not a factory** (Task 4 finding, adjudicated). It returns a
+**32, not 33 — `canonArgs` is a helper, not a factory** (Task 4 finding, adjudicated). It returns a
 `string` fingerprint, not a `Guard`, and every existing gate already says so: the parity extractor
 asserts `canonArgs` is not a factory, `GUARDS.md` calls it "the `canonArgs` helper", and the agentspec
-reference gives it no catalog row. So `GUARD_CATALOG` carries **30 entries** — 29 guard kinds + the
+reference gives it no catalog row. So `GUARD_CATALOG` carries **32 entries** — 31 guard kinds + the
 `jargonScrub` mutator — and the chapter teaches `canonArgs` **in prose** (see the Task 10 amendment
 below for where it landed), as the fingerprint `noDuplicateCall` is built on. Chapter 04's taught
-count is unchanged at 35 (§4): 4 vocabulary types + 30 catalog rows + `canonArgs`.
+count is now 37 (§4): 4 vocabulary types + 32 catalog rows + `canonArgs`.
 
 **`GUARD_CATALOG` and `GuardCatalogEntry` are NOT in this contract.** They ship on
 `@looprun-ai/core/internal` and the generator imports them from there (§6, decision 4). They are
@@ -280,8 +281,8 @@ the grouping axis.
 #### Amendment (Task 10): three corrections this section could not have foreseen
 
 Writing the chapter against the real catalog moved three things. Recorded here so nobody reads the
-chapter as having drifted from its contract — the **taught set is unchanged** (35 symbols; §4 is
-untouched), and all three are placement or accuracy, not surface.
+chapter as having drifted from its contract — the **taught set** (37 symbols after increment 1's two
+structural kinds; §4 is otherwise untouched), and all three are placement or accuracy, not surface.
 
 | # | this section said | what shipped, and why |
 |---|---|---|
@@ -484,7 +485,7 @@ Stated so Tasks 3–7 do not have to re-derive it, and so nobody reads a gap as 
 | # | decision | owner |
 |---|---|---|
 | 1 | **The scheduler artifacts are authored in `docs/tutorial/snippets/`** as shared modules (spec, world, tool defs, eval subject). `examples/` stays seeds-only — it is the agentspec skill's input, not the tutorial's | Tasks 8–9 |
-| 2 | **Chapter 04 is generated** from `GUARD_CATALOG`; the generator and the agentspec `guard-catalog.md` lint must agree on the same **30 rows** (Task 4 adjudication: `canonArgs` returns a `string`, so it is a helper taught in prose, not a catalog row — see §3's chapter-04 note) | Tasks 4 + 10 |
+| 2 | **Chapter 04 is generated** from `GUARD_CATALOG`; the generator and the agentspec `guard-catalog.md` lint must agree on the same **32 rows** (30 + increment 1's two structural kinds; Task 4 adjudication: `canonArgs` returns a `string`, so it is a helper taught in prose, not a catalog row — see §3's chapter-04 note) | Tasks 4 + 10 |
 | 3 | **Section 6.4 is dropped**; its ten symbols move to `@looprun-ai/core/internal`. Task 7 must keep the bench shim and the agentspec fork scripts working against that subpath | Task 7 |
 | 4 | **`GUARD_CATALOG` + `GuardCatalogEntry` export from `@looprun-ai/core/internal`, not the public barrel**; Task 10's generator imports from `/internal`. This **amends the plan's Task 4 wording** ("exported publicly") to match the contract principle. Note both names have **no inventory rows** — they do not exist until Task 4 creates them — so this decision is their only record, and Task 4's reviewer must check the resulting exports against it. **Amended (controller ruling, Task 4):** `GuardCatalogEntry` gained a `hook` field (`'preTool' \| 'postTool' \| 'onReply' \| 'onReplyMutate'`) so the generated chapter can group by enforcement phase the way the agentspec reference does — `category` stays file-derived; both names remain `/internal`-only | Task 4 |
 | 5 | **Import specifiers:** 02 `looprun/mastra` · 03 `looprun` · 04 `looprun` · 05 `looprun/mastra` + `looprun` + `looprun/models` + **`@looprun-ai/eval`** · 06 **`@looprun-ai/server`** + `looprun/models` + `looprun/mastra`. The facade publishes only `.` `./core` `./mastra` `./models` `./vercel`. **Open: add `looprun/eval` + `looprun/server` facades** so the tutorial uses one package name throughout? | Task 12 |

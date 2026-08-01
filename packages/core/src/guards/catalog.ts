@@ -16,7 +16,7 @@
 
 export interface GuardCatalogEntry {
   name: string;            // factory name, e.g. 'confirmFirst'
-  category: 'flow' | 'args' | 'world' | 'confirmation' | 'honesty' | 'reply' | 'custom';
+  category: 'flow' | 'args' | 'world' | 'confirmation' | 'honesty' | 'reply' | 'structural' | 'custom';
   /**
    * The hook the runtime INSTALLS the kind on — the axis the agentspec reference catalog is
    * organized by, and the one the generated chapter groups by. It is not computed from the factory's
@@ -305,6 +305,26 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
     whenToUse:
       'Internal status codes and field names leak into replies and no gate can sensibly deny them. It is a MUTATOR, not a guard: it rewrites and never vetoes, so it has no pass/fail behaviour to prove.',
     example: `jargonScrub({ CANC_PEND: 'waiting to be cancelled' })`,
+  },
+
+  // ── structural ───────────────────────────────────────────────────────────────
+  {
+    name: 'askedEarlier',
+    category: 'structural',
+    hook: 'preTool',
+    summary: 'A gated argument may be recorded only when an askUser succeeded in an EARLIER turn; a same-turn ask does not count.',
+    whenToUse:
+      'A value the agent must not write until it has asked the operator for it and they answered in a later message — the structural replacement for a hand-written regex over "did we ask?". It keys on the presence of the gated arg plus an earlier-turn `askUser`, never on any text.',
+    example: `askedEarlier({ tool: 'completeMaintenance', arg: 'condition' })`,
+  },
+  {
+    name: 'confirmedNeedsEarlierProbe',
+    category: 'structural',
+    hook: 'preTool',
+    summary: 'A confirmed:true call is denied unless the SAME tool ran as a probe (confirmed!=true, matching args) in an EARLIER turn.',
+    whenToUse:
+      'A destructive tool that carries its own confirm flag and must be previewed before it is confirmed — the preview and the go-ahead have to live in different messages. Pins the probe to the same act by args equality, all structural: no text is matched.',
+    example: `confirmedNeedsEarlierProbe({ tools: ['chargeDeposit'] })`,
   },
 
   // ── custom ─────────────────────────────────────────────────────────────────

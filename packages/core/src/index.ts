@@ -40,6 +40,8 @@ export type { Guard, GuardCtx, ObservedCall, Dim } from './rules.js';
 // …and the catalog.
 export {
   custom,
+  askedEarlier,
+  confirmedNeedsEarlierProbe,
   requiresBefore,
   forbidThisTurn,
   argRequired,
