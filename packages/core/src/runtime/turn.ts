@@ -231,6 +231,26 @@ export function defaultExhaustionReply(
 }
 
 /**
+ * The ENGINE-OWNED honest-abstain string — derived from the world ledger, so a no-effect probe is
+ * NEVER announced as a done action. `okTools` is the set of tool names the turn touched; `writeTools`
+ * are the ones that MUTATE. A name is announceable iff it is not a write, or some ledger entry under
+ * it actually `tookEffect === true` — the exact defect this fixes: a hand-written closure announced a
+ * probe (a write with `tookEffect: false`, which changed nothing) as a completed action.
+ *
+ * `loadNormsConfig` (in @looprun-ai/eval) uses this as the default contract exhaustionReply when the
+ * domain config does not provide one, closing the closure over the domain's `writeTools`.
+ */
+export function buildHonestAbstain(world: AgentWorld, okTools: string[], writeTools: readonly string[]): string {
+  const writes = new Set(writeTools);
+  const announceable = okTools.filter(
+    (name) => !writes.has(name) || world.toolCalls.some((t) => t.name === name && t.tookEffect === true),
+  );
+  return announceable.length
+    ? `I completed part of this request (${announceable.join(', ')}), but I could not safely finish the rest — how would you like to proceed?`
+    : 'I could not complete this safely — nothing was changed. Could you rephrase or add detail?';
+}
+
+/**
  * ── The TRUTH/SAFETY ↔ FORM frontier ──────────────────────────────────────────────────────────────
  *
  * The model composes the CORRECT answer inside a terminal's `text` arg, one onReply guard vetoes it —

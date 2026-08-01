@@ -446,7 +446,10 @@ working" step.
 ## 4. Completeness check — inventory → outline
 
 All 90 symbols, and the chapter that claims each. `↑` = promoted into public by this outline.
-(`loadNormsConfig` is a net-new eval export added by the config-only increment, post-inventory.)
+(`loadNormsConfig` is a net-new eval export added by the config-only increment, post-inventory.
+`buildHonestAbstain` — the engine-owned honest-abstain closure — is a net-new
+`@looprun-ai/core/internal` export from the same increment, sitting beside `defaultExhaustionReply`
+in the "bring your own loop" seam; internal, not taught.)
 
 | package | chapter | symbols |
 |---|---|---|

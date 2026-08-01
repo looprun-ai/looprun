@@ -58,7 +58,7 @@ const RIDERS = [
 ].sort();
 
 const INTERNAL = [
-  // inventory §7.1, verdict `internal` (37)
+  // inventory §7.1, verdict `internal` (37) + buildHonestAbstain (config-only increment, post-inventory)
   'ARMED_SEAMS', 'CONFIRM_CLASS_KINDS', 'DENY_ONLY_PROSE_KINDS',
   // Task 4 — the guard vocabulary as DATA, read by the chapter generator (outline §6, decision 4).
   // Documentation infrastructure, deliberately NOT on the taught surface.
@@ -71,7 +71,8 @@ const INTERNAL = [
   'forcedTerminalPrompt', 'isTerminal', 'normalizeTerminalToolDef', 'prematureTerminalTools',
   'supersededTerminalCalls', 'terminalProtocol', 'terminalToolDefs',
   'renderTurnPrompt',
-  'defaultExhaustionReply', 'enforcePostTool', 'evaluateOnInput', 'evaluatePreTool',
+  // buildHonestAbstain — the engine-owned honest-abstain closure (config-only increment, post-inventory).
+  'buildHonestAbstain', 'defaultExhaustionReply', 'enforcePostTool', 'evaluateOnInput', 'evaluatePreTool',
   'finalizeReply', 'FinalizedReply', 'governanceVeto', 'redriveMessage', 'ReplyViolation',
   'runChainCompletionPass',
   // controller ruling — catchable by class across the package boundary

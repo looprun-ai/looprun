@@ -74,6 +74,7 @@ export {
   enforcePostTool,
   redriveMessage,
   defaultExhaustionReply,
+  buildHonestAbstain,
   finalizeReply,
   governanceVeto,
   runChainCompletionPass,
