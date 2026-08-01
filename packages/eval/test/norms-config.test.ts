@@ -9,7 +9,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { AgentSpec, AgentWorld, GuardCtx, ObservedCall } from '@looprun-ai/core';
-import { loadNormsConfig, NormsConfigError } from '../src/norms-config.js';
+import { loadNormsConfig, NormsConfigError, renderDeny } from '../src/norms-config.js';
 
 const guardIds = (spec: AgentSpec): string[] => spec.guards.preTool.map((b) => b.id);
 
@@ -133,5 +133,50 @@ describe('loadNormsConfig — guards from data', () => {
     expect(typeof binding.guard.check(ctx)).toBe('string');
     // control: an unconfirmed call (no probe requirement triggered) is allowed
     expect(binding.guard.check({ ...ctx, args: { amount: 10 } })).toBeNull();
+  });
+
+  // ── DENY POLICY: catalog denies name the read, never the figures ────────────────────────────────
+
+  it('DENY POLICY — a requiresBefore deny NAMES the read and leaks NO figure from the world', () => {
+    const spec = loadNormsConfig(fixtureValid, { predicates: { seatFree: () => true } });
+    const binding = spec.guards.preTool.find((b) => b.id === 'agent:planChangeReadsUsageFirst')!;
+    // A world FULL of figures the model must not be handed: seats, a dollar price, a role.
+    const ctx: GuardCtx = {
+      args: {},
+      tool: 'changePlan',
+      world: { seats: 2, plan: { price: 4900 }, owner: { role: 'admin' } } as unknown as AgentWorld,
+      observed: [] as ObservedCall[],
+      turnIndex: 0,
+    };
+    const deny = binding.guard.check(ctx);
+    expect(typeof deny).toBe('string');
+    // the policy: names the read, and carries NOT ONE digit from the figure-laden world
+    expect(deny).toMatch(/getPlanUsage/);
+    expect(deny).not.toMatch(/\d/);
+  });
+
+  it('renderDeny names each read, points at the result, and interpolates no figure', () => {
+    const deny = renderDeny(['getPlanUsage', 'getSeatCount'], 'actual values');
+    expect(deny).toBe('Read getPlanUsage or getSeatCount first and report the actual values from that result.');
+    expect(deny).not.toMatch(/\d/);
+  });
+
+  it('the schema REJECTS a free `reason` on a guard — configs cannot override the deny policy', () => {
+    const cfg = {
+      id: 'x',
+      persona: 'p',
+      tools: ['inviteMember'],
+      guards: [
+        {
+          kind: 'precondition',
+          id: 'a',
+          tool: 'inviteMember',
+          predicate: { op: 'absent', left: { field: 'x' } },
+          prose: 'invite only while a seat is free',
+          reason: 'only 2 seats left on the Pro plan', // a figure-carrying free string — must be refused
+        },
+      ],
+    };
+    expect(() => loadNormsConfig(cfg)).toThrow(NormsConfigError);
   });
 });

@@ -64,8 +64,10 @@ const guardSchema = z.discriminatedUnion('kind', [
       predicate: predicateSchema,
       // PROSE PLACEMENT LAW: precondition's own prose has no derivable default (its predicate is
       // opaque to the trunk renderer), so it is REQUIRED here — a proseless entry fails by name.
+      // NO `reason` field: the DENY POLICY owns every deny message (see renderDeny + installGuard).
+      // A config that carried a free `reason` could hand the model a figure or a role to repeat
+      // without reading — the measured leak this loader forbids. `.strict()` rejects it by name.
       prose: z.string(),
-      reason: z.string().optional(),
     })
     .strict(),
 ]);
@@ -212,6 +214,36 @@ function normalizeConfirmed(guard: Guard): Guard {
   };
 }
 
+// ── The DENY POLICY — one renderer for every catalog deny, names the read, never a figure ────────
+
+/**
+ * THE ONE DENY RENDERER for catalog guards that gate on a READ. It NAMES the read(s) to run and points
+ * the model at "that result" — it NEVER interpolates a world figure (a count, a limit, a dollar amount)
+ * or a role. A guard fires post-hoc, so a deny that carried a number or a name handed the model a fact it
+ * then repeated WITHOUT reading — the measured leak (five cases) this policy kills. Configs cannot
+ * override it: there is no `reason` field on any guard entry, so this renderer is the sole source of the
+ * text a denied catalog guard emits.
+ */
+export function renderDeny(readNames: string[], subjectNoun: string): string {
+  return `Read ${readNames.join(' or ')} first and report the ${subjectNoun} from that result.`;
+}
+
+/** The neutral noun the deny points at — a figure-free placeholder, never the value itself. */
+const DENY_SUBJECT = 'actual values';
+
+/** Wrap a catalog guard so its deny text is the policy-rendered string, not the primitive's own message.
+ *  The check's DECISION (null vs non-null) is preserved verbatim; only the emitted text is replaced —
+ *  so no core primitive can leak a figure through a deny a config author never gets to write. */
+function withPolicyDeny(guard: Guard, deny: string): Guard {
+  return {
+    kind: guard.kind,
+    dim: guard.dim,
+    ...(guard.meta ? { meta: guard.meta } : {}),
+    check: (ctx: GuardCtx) => (guard.check(ctx) == null ? null : deny),
+    prose: () => guard.prose(),
+  };
+}
+
 // ── The loader ───────────────────────────────────────────────────────────────────────────────────
 
 export interface NormsDeps {
@@ -224,17 +256,28 @@ function installGuard(spec: AgentSpecBase, g: GuardConfig, deps: NormsDeps): voi
   const id = `agent:${g.id}`;
   switch (g.kind) {
     case 'requiresBefore':
-      spec.addGuard('preTool', [g.tool], requiresBefore(g.reads), { layer: 'agent', id });
+      // DENY POLICY: this is the one catalog kind that gates on a READ, so its deny is the rendered
+      // "read X first" text — it names the read and never a figure (the leak the policy kills).
+      spec.addGuard('preTool', [g.tool], withPolicyDeny(requiresBefore(g.reads), renderDeny(g.reads, DENY_SUBJECT)), {
+        layer: 'agent',
+        id,
+      });
       return;
     case 'consentToken':
+      // DENY-POLICY AUDIT: confirmedNeedsEarlierProbe's deny names only the gated TOOL (structural) and
+      // never a world figure or a role, so there is nothing for renderDeny (which is reads-shaped) to
+      // replace — it stays on its own figure-free primitive text.
       spec.addGuard('preTool', g.tools, normalizeConfirmed(confirmedNeedsEarlierProbe({ tools: g.tools })), { layer: 'agent', id });
       return;
     case 'askedEarlier':
+      // DENY-POLICY AUDIT: askedEarlier's deny names only the gated ARG (structural), no figure/role.
       spec.addGuard('preTool', [g.tool], askedEarlier({ tool: g.tool, ...(g.arg ? { arg: g.arg } : {}) }), { layer: 'agent', id });
       return;
     case 'precondition': {
+      // DENY POLICY: no `reason` field exists on the config, so the deny is the author's followable
+      // `prose` (the condition), never a free post-hoc string that could carry the value being gated.
       const ok = compilePredicate(g, deps);
-      spec.addGuard('preTool', [g.tool], precondition(ok, g.reason ?? g.prose, g.prose), { layer: 'agent', id });
+      spec.addGuard('preTool', [g.tool], precondition(ok, g.prose, g.prose), { layer: 'agent', id });
       return;
     }
   }
