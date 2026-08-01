@@ -46,7 +46,7 @@ it is authoring surface the engine should not offer to generation.
 | primitive | replaces (measured defect) |
 |---|---|
 | `askedEarlier` — a terminal `askUser` (or an ask-classified reply, see §4) occurred in an EARLIER turn, optionally about `arg` | CONDITION_ASK_RE (case 72, two failed rounds) |
-| `consentToken` — probe mints a token bound to (tool,args-hash); the confirmed call must carry it, minted in an EARLIER turn | the case-35 class ("one yes spent on another act") — closes it structurally |
+| `consentToken` (config kind) — SHIPPED as structural earlier-probe inference: the confirmed call is admitted only when an EARLIER-turn probe over the SAME (tool, args-hash) is found in the ledger. No literal token is minted or carried; the (tool, args-hash) match over prior turns IS the consent signal. Closes the case-35 class ("one yes spent on another act"). A future strengthening could mint and carry an actual token bound to (tool, args-hash) — that variant requires a tool-contract change (the tool must accept and echo the token) and is NOT shipped. | the case-35 class ("one yes spent on another act") — closes it structurally |
 | `attemptedEarlier`, `succeededEarlier`, `tookEffect` lookups over the ledger | per-spec `TERMINALS`/`agreedEarlier` copies (drift) |
 | `siblingCallsThisStep` staleness helper documented for all gates | case-72 same-step staleness |
 
@@ -65,7 +65,10 @@ Where a rule genuinely needs "is this reply an ask / a claim", the engine offers
 - structural signals first (`askUser` terminal, probe presence, ledger effects);
 - if a reply-text judgment is unavoidable, it is a JUDGE matter (`uncheckable` + rubric) — the
   deterministic layer never string-matches. `pendingConfirmMustAsk`'s replyToUser-regex branch is
-  removed; the `askUser` branch remains.
+  slated for removal; the `askUser` branch remains. **DEFERRED (not removed in increment 1):**
+  removing the regex branch now would void coworking's measured numbers mid-increment, so it lands
+  with the bundle migration (increments 2–3). See BACKLOG: "`pendingConfirmMustAsk` regex branch
+  removal (spec §4)".
 
 ### 5. E1 — invariants see ATTEMPTS
 

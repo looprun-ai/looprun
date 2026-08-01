@@ -237,8 +237,11 @@ export function defaultExhaustionReply(
  * it actually `tookEffect === true` — the exact defect this fixes: a hand-written closure announced a
  * probe (a write with `tookEffect: false`, which changed nothing) as a completed action.
  *
- * `loadNormsConfig` (in @looprun-ai/eval) uses this as the default contract exhaustionReply when the
- * domain config does not provide one, closing the closure over the domain's `writeTools`.
+ * WIRING IS PENDING — the loader (`loadNormsConfig` in @looprun-ai/eval) does NOT yet wire this in as
+ * the default contract exhaustionReply; the intent is that it will, closing the closure over the
+ * domain's `writeTools`. Before that wiring lands there is a LEAK GATE to clear: this function
+ * interpolates RAW tool names into the reply, so wiring must first map names → produced labels
+ * (BACKLOG: "Abstain tool-name leak").
  */
 export function buildHonestAbstain(world: AgentWorld, okTools: string[], writeTools: readonly string[]): string {
   const writes = new Set(writeTools);
