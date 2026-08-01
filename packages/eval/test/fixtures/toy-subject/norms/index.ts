@@ -1,5 +1,5 @@
 /** Toy fixture subject — a small member library front desk. Self-contained: no external data. */
-import { AgentSpecBase } from '@looprun-ai/core';
+import { AgentSpecBase, requiresBefore } from '@looprun-ai/core';
 import type { AgentSpec, AgentWorld, DomainContract } from '@looprun-ai/core';
 
 export const CONTRACT: DomainContract = {
@@ -16,12 +16,19 @@ export const CONTRACT: DomainContract = {
   languageClause: '## Output language (ABSOLUTE)\nReply in the language the user wrote in.',
 };
 
-const frontDesk: AgentSpec = new AgentSpecBase({
+const frontDesk = new AgentSpecBase({
   id: 'front-desk',
   mode: 'FRONT_DESK',
   persona: 'You are the front-desk agent: room reservations and visitor registration.',
   tools: ['lookupMember', 'listRooms', 'reserveRoom', 'registerVisitor'],
   contract: CONTRACT,
+});
+
+// A member must be looked up before a room can be reserved (the domain's "never reserve for a member
+// you could not find" invariant, as a spatial preTool guard). A bare reserveRoom is guard-VETOED
+// before the world sees it — the seam the E1 attempt-basis test exercises.
+frontDesk.addGuard('preTool', ['reserveRoom'], requiresBefore(['lookupMember']), {
+  id: 'agent:reserveRequiresLookup',
 });
 
 const billing: AgentSpec = new AgentSpecBase({

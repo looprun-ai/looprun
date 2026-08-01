@@ -256,6 +256,7 @@ export async function runSpecConversation(spec: AgentSpec, turns: TurnInput[], d
         iters: stepCount, llmCalls: stepCount, toolCalls: newCalls, thoughts: full.reasoningText ?? null,
         tokens: mapUsage(full.totalUsage), llmCallLatenciesMs: [durationMs], durationMs, maxIterHit: stepCount >= maxSteps,
         recoveryEvents: ledger.turnCorrections.length ? ledger.turnCorrections.slice() : [],
+        ...(ledger.attemptedCalls.length ? { attemptedCalls: ledger.attemptedCalls.slice() } : {}),
         sseActions: world.sseActions.slice(sseBefore), attachments: attLabels,
       });
     } catch (e) {

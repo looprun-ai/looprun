@@ -33,6 +33,9 @@ export interface TurnRecord {
   iters: number;
   llmCalls: number;
   toolCalls: Array<{ name: string; args: unknown; resultSummary: string; tookEffect?: boolean; latencyMs: number }>;
+  /** Calls a guard VETOED before execution (the world never saw them). A FORBIDDEN eval invariant
+   *  matches over executed ∪ attempted, so the governed arm's blocked attempts are scored, not lost. */
+  attemptedCalls?: Array<{ name: string; args: unknown }>;
   thoughts: string | null;
   tokens: TokenUsage;
   llmCallLatenciesMs: number[];

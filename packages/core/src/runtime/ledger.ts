@@ -34,6 +34,10 @@ export interface TurnLedger {
    *  removed on veto (never ran) or reconciled out when the result is recorded, and cleared at turn
    *  start. Passed to preTool guards as `siblingCallsThisStep`; only the throttle reads it. */
   inFlightCalls: ObservedCall[];
+  /** Calls VETOED before execution this turn (guard denied them — the world never saw them). Reset per
+   *  turn; surfaced on the TurnRecord as `attemptedCalls` so a FORBIDDEN invariant can fail on the
+   *  ATTEMPT the guard blocked, not only on a world-ledger entry (which, for a veto, never exists). */
+  attemptedCalls: Array<{ name: string; args: unknown }>;
 }
 
 /**
@@ -50,7 +54,7 @@ export function vetoStormHit(ledger: TurnLedger): boolean {
 }
 
 export function createLedger(): TurnLedger {
-  return { observed: [], turnIndex: 0, producedThisTurn: [], turnCorrections: [], attachments: [], terminalReply: '', vetoStreak: 0, postToolViolations: [], inFlightCalls: [] };
+  return { observed: [], turnIndex: 0, producedThisTurn: [], turnCorrections: [], attachments: [], terminalReply: '', vetoStreak: 0, postToolViolations: [], inFlightCalls: [], attemptedCalls: [] };
 }
 
 /** Reset the per-turn fields (the conversation-scoped `observed` is kept). */
@@ -63,6 +67,7 @@ export function beginTurn(ledger: TurnLedger, turnIndex: number): void {
   ledger.vetoStreak = 0;
   ledger.postToolViolations = [];
   ledger.inFlightCalls = [];
+  ledger.attemptedCalls = [];
 }
 
 /** Structural success check on a tool result ({success:false} / {error} / {PREREQ_NOT_MET} ⇒ failed). */
@@ -77,6 +82,9 @@ export function resultOk(r: unknown): boolean {
 /** Record a guard VETO of a tool call (the call did not run). */
 export function recordVeto(ledger: TurnLedger, name: string, args: Record<string, unknown>, correction: string): void {
   ledger.observed.push({ name, args, ok: false, turnIndex: ledger.turnIndex });
+  // The blocked ATTEMPT — surfaced to the eval layer so a FORBIDDEN invariant can fire on it (the call
+  // never reached the world, so it is invisible on the world ledger by construction).
+  ledger.attemptedCalls.push({ name, args });
   ledger.turnCorrections.push(correction);
   ledger.vetoStreak++;
 }

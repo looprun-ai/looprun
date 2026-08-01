@@ -343,22 +343,27 @@ un-annotated `export default [...]` is checked against nothing, and a misspelled
 The two halves of an expectation are not the same kind of claim:
 
 ```
-   invariants   DETERMINISTIC, decided by the runner over the WORLD's call ledger, no LLM
+   invariants   DETERMINISTIC, decided by the runner, no LLM
                 requiredToolCalls   a matching call must have REACHED THE WORLD and succeeded
-                forbiddenToolCalls  a matching call must never have REACHED THE WORLD —
-                                    executed, even if the world then refused it. Stricter than
-                                    "took effect" on purpose: a fabrication attempt the world
-                                    happens to reject is still a violation
+                                    (a guard-vetoed attempt never ran, so it cannot satisfy a
+                                    requirement)
+                forbiddenToolCalls  a matching call must never have been ATTEMPTED — scored over
+                                    EXECUTED ∪ guard-vetoed attempts. Stricter than "took effect"
+                                    on purpose: a fabrication the world rejected OR one a guard
+                                    blocked before execution is still a violation
 
    rubric       the QUALITY claim, graded by the judge (§5), never by the runner
                 `critical: true` is a HINT for your judge prompt — nothing in fold or cert
                 reads it
 ```
 
-Note where the invariants are read from: the **world's** ledger of executed calls. A call a guard
-vetoed never got there, so it is not a `forbiddenToolCalls` violation — it is the guard doing its job,
-and the case above is written exactly that way. What the two arms then differ on is whether the write
-was *attempted through to execution* at all.
+Note where the invariants are read from: the **world's** ledger of executed calls, PLUS the
+guard-vetoed attempts the runtime records the moment a guard denies a call. A call a guard vetoed
+never reached the world — but the *attempt* is still evidence of what the model tried to do, so a
+`forbiddenToolCalls` invariant fails on it too (the violation reads `forbidden call attempted
+(guard-vetoed): …`). This is deliberate: the governed arm's deterministic premium IS the attempts it
+blocks, so those attempts must be scored, not lost with the call that never executed. What the two
+arms then differ on is only whether the write *reached the world*; both are charged for attempting it.
 
 `critical: true` deserves the same precision. It is metadata that rides into `cases.jsonl` for the
 judge to read; **no code branches on it** — `fold` and `cert` see one verdict per case and nothing
