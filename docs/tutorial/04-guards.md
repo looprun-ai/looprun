@@ -282,10 +282,10 @@ disagree about it.
 <!-- Rendered from `packages/core/src/guards/catalog.ts`. Do NOT edit between the markers: run
      `pnpm docs:guards` (it needs a built core), and fix wording in the catalog itself. -->
 
-## 5. The catalog — 30 factories
+## 5. The catalog — 32 factories
 
 Grouped by the hook each one is installed on, because the hook decides what a rule can see and
-therefore what it can enforce (chapter 03 §8). 13 preTool · 1 postTool · 14 onReply · 1 onReplyMutate · 1 escape hatch.
+therefore what it can enforce (chapter 03 §8). 15 preTool · 1 postTool · 14 onReply · 1 onReplyMutate · 1 escape hatch.
 
 A fourth hook exists and has no section here: `onInput` fires before the model runs, and §1's
 matrix makes it legal for every `spatial`/`input`/`run` guard — but no shipped kind is installed
@@ -311,6 +311,8 @@ A call has been proposed and not yet executed. A deny returns to the model AS th
 | [`noActAfterAskSameTurn`](#11-noactafterasksameturn) | `confirmation.ts` | Denies the listed tools on a turn in which the model already asked the user a question. |
 | [`destructiveThrottle`](#12-destructivethrottle) | `confirmation.ts` | At most one destructive action that TOOK EFFECT per turn (a confirmation probe does not count). |
 | [`noInstructionFromData`](#13-noinstructionfromdata) | `reply.ts` | Denies the listed destructive tools while an imperative sits in the conversation's tool results and no earlier turn exposed the action to the user. |
+| [`askedEarlier`](#14-askedearlier) | `structural.ts` | A gated argument may be recorded only when an askUser succeeded in an EARLIER turn; a same-turn ask does not count. |
+| [`confirmedNeedsEarlierProbe`](#15-confirmedneedsearlierprobe) | `structural.ts` | A confirmed:true call is denied unless the SAME tool ran as a probe (confirmed!=true, matching args) in an EARLIER turn. |
 
 #### 1. `requiresBefore`
 
@@ -442,15 +444,35 @@ Denies the listed destructive tools while an imperative sits in the conversation
 noInstructionFromData({ tools: ['cancelBooking'], instructionRe: /please cancel|delete all/i })
 ```
 
+#### 14. `askedEarlier`
+
+A gated argument may be recorded only when an askUser succeeded in an EARLIER turn; a same-turn ask does not count.
+
+**When to reach for it.** A value the agent must not write until it has asked the operator for it and they answered in a later message — the structural replacement for a hand-written regex over "did we ask?". It keys on the presence of the gated arg plus an earlier-turn `askUser`, never on any text.
+
+```ts
+askedEarlier({ tool: 'completeMaintenance', arg: 'condition' })
+```
+
+#### 15. `confirmedNeedsEarlierProbe`
+
+A confirmed:true call is denied unless the SAME tool ran as a probe (confirmed!=true, matching args) in an EARLIER turn.
+
+**When to reach for it.** A destructive tool that carries its own confirm flag and must be previewed before it is confirmed — the preview and the go-ahead have to live in different messages. Pins the probe to the same act by args equality, all structural: no text is matched.
+
+```ts
+confirmedNeedsEarlierProbe({ tools: ['chargeDeposit'] })
+```
+
 ### `postTool` — the call has run
 
 The only hook that sees `ctx.result`. It cannot veto anything — the effect already happened — so its job is to stop the RESULT from being reported as something it was not: a violation here joins the reply redrive set.
 
 | factory | file | what it enforces |
 |---|---|---|
-| [`resultInvariant`](#14-resultinvariant) | `world.ts` | A post-execution check on the tool RESULT: when the predicate fails, the violation joins the reply redrive set. |
+| [`resultInvariant`](#16-resultinvariant) | `world.ts` | A post-execution check on the tool RESULT: when the predicate fails, the violation joins the reply redrive set. |
 
-#### 14. `resultInvariant`
+#### 16. `resultInvariant`
 
 A post-execution check on the tool RESULT: when the predicate fails, the violation joins the reply redrive set.
 
@@ -466,22 +488,22 @@ The reply text is in `ctx.reply` and no tool can run any more. A deny costs a bo
 
 | factory | file | what it enforces |
 |---|---|---|
-| [`pendingConfirmMustAsk`](#15-pendingconfirmmustask) | `confirmation.ts` | When a probe returned `requiresConfirmation` this turn and nothing resolved it, the reply must relay that question. |
-| [`noFabricatedSuccess`](#16-nofabricatedsuccess) | `honesty.ts` | The reply may not claim a tool's effect, cite an invented artifact label, or use a banned phrase when the tool did not succeed this turn. |
-| [`destructiveClaimRequiresSuccess`](#17-destructiveclaimrequiressuccess) | `honesty.ts` | A declarative claim that a destructive action happened is denied unless one actually took effect this turn. |
-| [`noFalseFailureClaim`](#18-nofalsefailureclaim) | `honesty.ts` | When every domain call this turn succeeded and one of them mutated the world, the reply may not claim inability. |
-| [`noOutOfSurfaceActionClaim`](#19-nooutofsurfaceactionclaim) | `honesty.ts` | A declarative claim of an action whose tool is not on this agent's surface is denied. |
-| [`noUngroundedRegulatedFigure`](#20-noungroundedregulatedfigure) | `honesty.ts` | A figure or conclusion of a regulated class may appear only when a tool returned it this turn. |
-| [`noCompetitorClaim`](#21-nocompetitorclaim) | `honesty.ts` | Within one sentence, a named third party plus comparative phrasing or a comparative figure is denied. |
-| [`replyMustMention`](#22-replymustmention) | `reply.ts` | The reply must contain at least one of the given keywords (case-insensitive). |
-| [`replyMaxOccurrences`](#23-replymaxoccurrences) | `reply.ts` | At most n DISTINCT calls-to-action from the list may appear in one reply. |
-| [`replySingleQuestion`](#24-replysinglequestion) | `reply.ts` | The reply must carry exactly one question mark. |
-| [`replyConfirmsLabels`](#25-replyconfirmslabels) | `reply.ts` | The reply must be non-empty and name every one of the given labels. |
-| [`emptyReply`](#26-emptyreply) | `reply.ts` | The final reply must not be blank. |
-| [`degenerationGuard`](#27-degenerationguard) | `reply.ts` | Catches leaked reasoning or tool markup, chat-template tokens and run-away line repetition in the reply. |
-| [`minimalDisclosure`](#28-minimaldisclosure) | `reply.ts` | Caps how many records' personal FIELDS one reply may carry, and requires each named field to have been returned by a tool this turn. |
+| [`pendingConfirmMustAsk`](#17-pendingconfirmmustask) | `confirmation.ts` | When a probe returned `requiresConfirmation` this turn and nothing resolved it, the reply must relay that question. |
+| [`noFabricatedSuccess`](#18-nofabricatedsuccess) | `honesty.ts` | The reply may not claim a tool's effect, cite an invented artifact label, or use a banned phrase when the tool did not succeed this turn. |
+| [`destructiveClaimRequiresSuccess`](#19-destructiveclaimrequiressuccess) | `honesty.ts` | A declarative claim that a destructive action happened is denied unless one actually took effect this turn. |
+| [`noFalseFailureClaim`](#20-nofalsefailureclaim) | `honesty.ts` | When every domain call this turn succeeded and one of them mutated the world, the reply may not claim inability. |
+| [`noOutOfSurfaceActionClaim`](#21-nooutofsurfaceactionclaim) | `honesty.ts` | A declarative claim of an action whose tool is not on this agent's surface is denied. |
+| [`noUngroundedRegulatedFigure`](#22-noungroundedregulatedfigure) | `honesty.ts` | A figure or conclusion of a regulated class may appear only when a tool returned it this turn. |
+| [`noCompetitorClaim`](#23-nocompetitorclaim) | `honesty.ts` | Within one sentence, a named third party plus comparative phrasing or a comparative figure is denied. |
+| [`replyMustMention`](#24-replymustmention) | `reply.ts` | The reply must contain at least one of the given keywords (case-insensitive). |
+| [`replyMaxOccurrences`](#25-replymaxoccurrences) | `reply.ts` | At most n DISTINCT calls-to-action from the list may appear in one reply. |
+| [`replySingleQuestion`](#26-replysinglequestion) | `reply.ts` | The reply must carry exactly one question mark. |
+| [`replyConfirmsLabels`](#27-replyconfirmslabels) | `reply.ts` | The reply must be non-empty and name every one of the given labels. |
+| [`emptyReply`](#28-emptyreply) | `reply.ts` | The final reply must not be blank. |
+| [`degenerationGuard`](#29-degenerationguard) | `reply.ts` | Catches leaked reasoning or tool markup, chat-template tokens and run-away line repetition in the reply. |
+| [`minimalDisclosure`](#30-minimaldisclosure) | `reply.ts` | Caps how many records' personal FIELDS one reply may carry, and requires each named field to have been returned by a tool this turn. |
 
-#### 15. `pendingConfirmMustAsk`
+#### 17. `pendingConfirmMustAsk`
 
 When a probe returned `requiresConfirmation` this turn and nothing resolved it, the reply must relay that question.
 
@@ -491,7 +513,7 @@ When a probe returned `requiresConfirmation` this turn and nothing resolved it, 
 pendingConfirmMustAsk({ askRe: /shall I|do you want me to/i })
 ```
 
-#### 16. `noFabricatedSuccess`
+#### 18. `noFabricatedSuccess`
 
 The reply may not claim a tool's effect, cite an invented artifact label, or use a banned phrase when the tool did not succeed this turn.
 
@@ -501,7 +523,7 @@ The reply may not claim a tool's effect, cite an invented artifact label, or use
 noFabricatedSuccess('generateReport', { reason: 'No report was generated this turn — do not say one was.', claimRe: /report is ready/i })
 ```
 
-#### 17. `destructiveClaimRequiresSuccess`
+#### 19. `destructiveClaimRequiresSuccess`
 
 A declarative claim that a destructive action happened is denied unless one actually took effect this turn.
 
@@ -511,7 +533,7 @@ A declarative claim that a destructive action happened is denied unless one actu
 destructiveClaimRequiresSuccess(['cancelBooking'], { claimRe: /cancelled/i, askRe: /shall I cancel/i, offerRe: /would you like/i })
 ```
 
-#### 18. `noFalseFailureClaim`
+#### 20. `noFalseFailureClaim`
 
 When every domain call this turn succeeded and one of them mutated the world, the reply may not claim inability.
 
@@ -521,7 +543,7 @@ When every domain call this turn succeeded and one of them mutated the world, th
 noFalseFailureClaim({ claimRe: /failed to|something went wrong/i })
 ```
 
-#### 19. `noOutOfSurfaceActionClaim`
+#### 21. `noOutOfSurfaceActionClaim`
 
 A declarative claim of an action whose tool is not on this agent's surface is denied.
 
@@ -531,7 +553,7 @@ A declarative claim of an action whose tool is not on this agent's surface is de
 noOutOfSurfaceActionClaim({ actionClaims: [{ claimRe: /refund (?:has been )?issued/i, tool: 'issueRefund' }], surface: ['findBooking'] })
 ```
 
-#### 20. `noUngroundedRegulatedFigure`
+#### 22. `noUngroundedRegulatedFigure`
 
 A figure or conclusion of a regulated class may appear only when a tool returned it this turn.
 
@@ -541,7 +563,7 @@ A figure or conclusion of a regulated class may appear only when a tool returned
 noUngroundedRegulatedFigure({ regulatedRe: /\b\d+\s?mg\b/i, allowFromToolResults: true })
 ```
 
-#### 21. `noCompetitorClaim`
+#### 23. `noCompetitorClaim`
 
 Within one sentence, a named third party plus comparative phrasing or a comparative figure is denied.
 
@@ -551,7 +573,7 @@ Within one sentence, a named third party plus comparative phrasing or a comparat
 noCompetitorClaim({ competitorRe: /\bAcme\b/i, comparativeRe: /\b(?:better|cheaper|faster) than\b/i })
 ```
 
-#### 22. `replyMustMention`
+#### 24. `replyMustMention`
 
 The reply must contain at least one of the given keywords (case-insensitive).
 
@@ -561,7 +583,7 @@ The reply must contain at least one of the given keywords (case-insensitive).
 replyMustMention(['support@example.com'], 'Give the support address so the person can follow up.')
 ```
 
-#### 23. `replyMaxOccurrences`
+#### 25. `replyMaxOccurrences`
 
 At most n DISTINCT calls-to-action from the list may appear in one reply.
 
@@ -571,7 +593,7 @@ At most n DISTINCT calls-to-action from the list may appear in one reply.
 replyMaxOccurrences(['book now', 'call us', 'subscribe'], 1, 'One ask per reply — drop the extra calls-to-action.')
 ```
 
-#### 24. `replySingleQuestion`
+#### 26. `replySingleQuestion`
 
 The reply must carry exactly one question mark.
 
@@ -581,7 +603,7 @@ The reply must carry exactly one question mark.
 replySingleQuestion('Ask exactly one question so the person can answer it.')
 ```
 
-#### 25. `replyConfirmsLabels`
+#### 27. `replyConfirmsLabels`
 
 The reply must be non-empty and name every one of the given labels.
 
@@ -591,7 +613,7 @@ The reply must be non-empty and name every one of the given labels.
 replyConfirmsLabels(['BK-100234'], 'Name the booking you acted on so the person can check it.')
 ```
 
-#### 26. `emptyReply`
+#### 28. `emptyReply`
 
 The final reply must not be blank.
 
@@ -601,7 +623,7 @@ The final reply must not be blank.
 emptyReply()
 ```
 
-#### 27. `degenerationGuard`
+#### 29. `degenerationGuard`
 
 Catches leaked reasoning or tool markup, chat-template tokens and run-away line repetition in the reply.
 
@@ -611,7 +633,7 @@ Catches leaked reasoning or tool markup, chat-template tokens and run-away line 
 degenerationGuard({ selfNarrationRe: /the assistant (?:then )?(?:called|checked)/i })
 ```
 
-#### 28. `minimalDisclosure`
+#### 30. `minimalDisclosure`
 
 Caps how many records' personal FIELDS one reply may carry, and requires each named field to have been returned by a tool this turn.
 
@@ -627,9 +649,9 @@ A `ReplyMutator`, not a `Guard`: it is applied to the reply before the `onReply`
 
 | factory | file | what it enforces |
 |---|---|---|
-| [`jargonScrub`](#29-jargonscrub) | `reply.ts` | A deterministic egress rewrite of internal vocabulary into user words (word-boundary, case-insensitive). |
+| [`jargonScrub`](#31-jargonscrub) | `reply.ts` | A deterministic egress rewrite of internal vocabulary into user words (word-boundary, case-insensitive). |
 
-#### 29. `jargonScrub`
+#### 31. `jargonScrub`
 
 A deterministic egress rewrite of internal vocabulary into user words (word-boundary, case-insensitive).
 
@@ -645,9 +667,9 @@ One factory, and it is the only one whose hook you choose: `custom` follows the 
 
 | factory | file | what it enforces |
 |---|---|---|
-| [`custom`](#30-custom) | `custom.ts` | The escape hatch: a guard whose kind, dim, check and prose the spec author writes by hand. |
+| [`custom`](#32-custom) | `custom.ts` | The escape hatch: a guard whose kind, dim, check and prose the spec author writes by hand. |
 
-#### 30. `custom`
+#### 32. `custom`
 
 The escape hatch: a guard whose kind, dim, check and prose the spec author writes by hand.
 

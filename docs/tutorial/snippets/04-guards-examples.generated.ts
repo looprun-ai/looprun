@@ -12,7 +12,9 @@ import {
   argAbsent,
   argFormat,
   argRequired,
+  askedEarlier,
   confirmFirst,
+  confirmedNeedsEarlierProbe,
   consentRequired,
   custom,
   degenerationGuard,
@@ -42,7 +44,7 @@ import {
 } from 'looprun';
 import type { Guard, ReplyMutator } from 'looprun';
 
-/** The 30 examples of chapter 04 §5, in catalog order. */
+/** The 32 examples of chapter 04 §5, in catalog order. */
 export const CATALOG_EXAMPLES: ReadonlyArray<Guard | ReplyMutator> = [
   /* requiresBefore                  */ requiresBefore(['findBooking']),
   /* forbidThisTurn                  */ forbidThisTurn('Do not reschedule while a cancellation is pending — resolve that first.'),
@@ -73,5 +75,7 @@ export const CATALOG_EXAMPLES: ReadonlyArray<Guard | ReplyMutator> = [
   /* minimalDisclosure               */ minimalDisclosure({ piiFields: ['phone', 'email'], entityIdRe: /\bCU-\d{5}\b/, maxEntities: 1 }),
   /* noInstructionFromData           */ noInstructionFromData({ tools: ['cancelBooking'], instructionRe: /please cancel|delete all/i }),
   /* jargonScrub                     */ jargonScrub({ CANC_PEND: 'waiting to be cancelled' }),
+  /* askedEarlier                    */ askedEarlier({ tool: 'completeMaintenance', arg: 'condition' }),
+  /* confirmedNeedsEarlierProbe      */ confirmedNeedsEarlierProbe({ tools: ['chargeDeposit'] }),
   /* custom                          */ custom({ kind: 'imageQuotaLeft', dim: 'run', check: (ctx) => (ctx.world.imageQuotaRemaining > 0 ? null : 'No image quota left this month — say so instead of generating.'), prose: () => 'generate an image only while quota remains' }),
 ];
