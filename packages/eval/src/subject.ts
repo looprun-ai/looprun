@@ -10,6 +10,7 @@ import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { renderScopedSpecTrunk } from '@looprun-ai/core/internal';
 import type { AgentSpec, AgentWorld, DomainContract, ToolDef } from '@looprun-ai/core';
+import { parseCasesConfig } from './cases-config.js';
 
 export interface CaseTurn {
   userText: string;
@@ -112,29 +113,47 @@ function moduleUrl(dir: string, base: string): string {
   throw new Error(`${dir}/${base}.{ts,mts,js,mjs} not found`);
 }
 
+/** Read the JSON exam when it exists (`evals/cases.json` — spec §1). Structured data makes anchored
+ *  edits trivial and bulk-regex corruption pointless. The JSON is self-routing, so it contributes a
+ *  per-case `agent` map layered UNDER any explicit `norms/index` CASE_AGENT. */
+function readCasesJson(dir: string): { cases: SubjectCase[]; caseAgent: Record<string, string> } | undefined {
+  const path = join(dir, 'evals', 'cases.json');
+  if (!existsSync(path)) return undefined;
+  return parseCasesConfig(JSON.parse(readFileSync(path, 'utf8')));
+}
+
 export async function loadSubject(subjectDir: string): Promise<Subject> {
   const dir = resolve(subjectDir);
   const load = (base: string) => import(moduleUrl(dir, base));
 
-  const [norms, worldMod, casesMod] = await Promise.all([
-    load('norms/index'),
-    load('gen/world'),
-    load('evals/cases'),
-  ]);
+  const [norms, worldMod] = await Promise.all([load('norms/index'), load('gen/world')]);
 
   const specs = norms.SPECS as Record<string, AgentSpec> | undefined;
   const contract = norms.CONTRACT as DomainContract | undefined;
   if (!specs || !Object.keys(specs).length) throw new Error(`${dir}/norms/index exports no SPECS map`);
   if (!contract) throw new Error(`${dir}/norms/index exports no CONTRACT`);
 
-  const cases = (casesMod.default ?? casesMod.cases) as SubjectCase[] | undefined;
+  // The JSON exam wins when present; otherwise fall back to the TS `evals/cases` module (coworking /
+  // atlas author cases in TS, and both bundles must keep working).
+  const explicitAgent = (norms.CASE_AGENT ?? {}) as Record<string, string>;
+  const json = readCasesJson(dir);
+  let cases: SubjectCase[];
+  let caseAgent: Record<string, string>;
+  if (json) {
+    cases = json.cases;
+    caseAgent = { ...json.caseAgent, ...explicitAgent };
+  } else {
+    const casesMod = await load('evals/cases');
+    cases = (casesMod.default ?? casesMod.cases) as SubjectCase[];
+    caseAgent = explicitAgent;
+  }
   if (!Array.isArray(cases) || !cases.length) throw new Error(`${dir}/evals/cases exports no case array`);
 
   return {
     dir,
     specs,
     contract,
-    caseAgent: (norms.CASE_AGENT ?? {}) as Record<string, string>,
+    caseAgent,
     cases,
     toolDefs: readToolDefs(dir),
     makeWorld: resolveWorldFactory(worldMod as Record<string, unknown>),

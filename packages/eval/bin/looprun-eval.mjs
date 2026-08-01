@@ -4,6 +4,7 @@
  *
  *   looprun-eval run  --subject <dir> [--model <id>] [--base-url <url>] [--api-key-env <ENV>]
  *                     [--case id[,id]] [--ungoverned] [--thinking] [--out <dir>]
+ *   looprun-eval validate --subject <dir> [--reached-floor <ratio>]
  *   looprun-eval fold --dump <cases.jsonl> --verdicts <verdicts.jsonl> [--out <RESULTS.md>]
  *   looprun-eval cert <run-dir> [--bar 0.9] [--model <label>] [--date <iso>] [--note <text>]
  *   looprun-eval seal <subject-dir> [--verify] [--target model:rate:reps ...] [--bar 0.9] [--date <iso>]
@@ -15,6 +16,8 @@ const HELP = `looprun-eval <command>
                      --subject <dir> (required) --model <id> --base-url <url>
                      --api-key-env <ENV> --case id[,id] --ungoverned --thinking --out <dir>
                      Target default: the subject's ask/targets.json (flags/env override).
+  validate [flags]   Schema + references + premise-coherence over a subject, offline (no spend).
+                     --subject <dir> (required) [--reached-floor <ratio>] Exits 1 on any blocking issue.
   fold [flags]       Merge judge verdicts into RESULTS.md (final pass = invariants AND judge).
                      --dump <cases.jsonl> --verdicts <verdicts.jsonl> [--out <RESULTS.md>]
   cert <dir> [dir…]  Fold cases.jsonl + verdicts.jsonl → cert.json + CERT.md (reps=1, stated).
@@ -36,7 +39,7 @@ function has(name) {
   return process.argv.includes(`--${name}`);
 }
 
-const VALUE_FLAGS = new Set(['--subject', '--model', '--base-url', '--api-key-env', '--case', '--out', '--dump', '--verdicts', '--bar', '--date', '--note', '--target']);
+const VALUE_FLAGS = new Set(['--subject', '--model', '--base-url', '--api-key-env', '--case', '--out', '--dump', '--verdicts', '--bar', '--date', '--note', '--target', '--reached-floor']);
 
 function positionals() {
   const argv = process.argv.slice(2);
@@ -75,6 +78,17 @@ async function main() {
       out: flag('out', undefined),
     });
     console.log(outDir);
+    return;
+  }
+
+  if (cmd === 'validate') {
+    const subject = flag('subject');
+    if (!subject) throw new Error('validate: --subject <dir> is required');
+    const report = await api.validateCommand({
+      subject,
+      reachedFloor: has('reached-floor') ? Number(flag('reached-floor')) : undefined,
+    });
+    if (!report.ok) process.exitCode = 1;
     return;
   }
 

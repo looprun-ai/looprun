@@ -6,6 +6,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 import process from 'node:process';
 import { checkTrunkStatic, loadSubject, readDeclaredTarget, validateSubject } from './subject.js';
+import { validateSubjectConfig, type ValidateReport } from './validate.js';
 import { runCase, type CaseDump } from './run.js';
 import { PROVIDER_ENDPOINTS, selectModel } from './provider.js';
 import { foldVerdicts, readJsonl, renderResultsMd, type VerdictLine } from './fold.js';
@@ -120,6 +121,31 @@ export async function runCommand(opts: RunCommandOptions): Promise<string> {
   ].join('\n');
   writeFileSync(join(outDir, 'SUMMARY.md'), summary + '\n');
   return outDir;
+}
+
+export interface ValidateCommandOptions {
+  subject: string;
+  /** Reached-verdict floor for the premise layer (ratio). */
+  reachedFloor?: number;
+  log?: (line: string) => void;
+}
+
+/**
+ * `looprun-eval validate` — schema + references + premise coherence over a subject, offline (no
+ * model, no spend). Returns the full report; a non-empty schema / references / premise layer means
+ * the subject is not fit to run. Advisory lines (reverse-coverage) are reported but never blocking.
+ */
+export async function validateCommand(opts: ValidateCommandOptions): Promise<ValidateReport & { ok: boolean }> {
+  const log = opts.log ?? ((l: string) => process.stderr.write(l + '\n'));
+  const subject = await loadSubject(opts.subject);
+  const report = validateSubjectConfig(opts.subject, subject, { reachedFloor: opts.reachedFloor });
+  for (const layer of ['schema', 'references', 'premise'] as const) {
+    for (const line of report[layer]) log(line);
+  }
+  for (const line of report.advisory) log(`ADVISORY ${line}`);
+  const blocking = report.schema.length + report.references.length + report.premise.length;
+  log(blocking ? `validate: ${blocking} blocking issue(s) · ${report.advisory.length} advisory` : `validate: clean · ${report.advisory.length} advisory`);
+  return { ...report, ok: blocking === 0 };
 }
 
 export interface FoldCommandOptions {

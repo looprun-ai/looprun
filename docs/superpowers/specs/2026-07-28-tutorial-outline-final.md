@@ -66,10 +66,10 @@ chapter                    symbols taught
 02-hello-world              3   ███
 03-agent-anatomy           11   ███████████
 04-guards                  37   █████████████████████████████████████
-05-running-and-eval        27   ███████████████████████████
+05-running-and-eval        28   ████████████████████████████
 06-advanced                13   █████████████
 ------------------------   --------------
-TOTAL                      91
+TOTAL                      92
 ```
 
 | package | round-2 baseline | taught here | delta |
@@ -77,12 +77,12 @@ TOTAL                      91
 | `core` | 53 | 53 | −10 demoted, +8 promoted, +2 structural (increment 1) |
 | `mastra` | 5 | 7 | +2 promoted |
 | `models` | 4 | 8 | +4 promoted |
-| `eval` | 13 | 19 | +6 promoted |
+| `eval` | 13 | 20 | +7 promoted |
 | `server` | 4 | 4 | — |
 | `vercel` | 0 | 0 | — |
-| **total** | **79** | **89** | **+20 / −10** |
+| **total** | **79** | **90** | **+21 / −10** |
 
-Inventory totals move round-2 79 / 35 / 151 → round-3 83 / 31 / 151 → **round-4 89 / 38 / 138**,
+Inventory totals move round-2 79 / 35 / 151 → round-3 83 / 31 / 151 → **round-4 90 / 38 / 138**,
 recorded in the inventory's §9 rounds 3 and 4. Every delta is a §9 row.
 
 ---
@@ -348,7 +348,7 @@ and the chapter teaches the layout before any command:
 | `ReqCall` | eval | authored — one entry of those, with `anyArgs` subset matching |
 | `RubricItem` | eval | authored — `SubjectCase.expectations.rubric` |
 
-*5.4 Measure it — the `looprun-eval` CLI (12)*
+*5.4 Measure it — the `looprun-eval` CLI (13)*
 
 Taught **CLI-first**: the shipped `packages/eval/bin/looprun-eval.mjs` reaches these by dynamic
 namespace import, and that bin is the user-facing contract. Each exported function is named as the
@@ -360,6 +360,7 @@ types are not in this contract (annotation rule, §0).
 | `runCommand` | eval | `looprun-eval run` |
 | `foldCommand` | eval | `looprun-eval fold` |
 | `certCommand` | eval | `looprun-eval cert` |
+| `validateCommand` | eval | `looprun-eval validate` — schema + references + premise coherence, offline |
 | `lintPaths` | eval | lint a set of spec files |
 | `lintSpecLaws` | eval | law-level spec lint |
 | `lintSpecExecution` | eval | execution-level spec lint |
@@ -459,13 +460,13 @@ in the "bring your own loop" seam; internal, not taught.)
 | core | **05** (5) | `TurnInput`↑ `RunResult`↑ `TurnRecord`↑ `geminiThinkingOff` `pinnedDecoding` |
 | mastra | **05** (2) | `runSpecConversation` `RuntimeDeps`↑ |
 | models | **05** (1) | `geminiFlashLiteThinkOff` |
-| eval | **05** (20) | `loadSubject` `loadNormsConfig`↑ `Subject`↑ `SubjectCase`↑ `CaseTurn`↑ `CaseInvariants`↑ `ReqCall`↑ `RubricItem`↑ `agentForCase` `stripGovernance` `runCommand` `foldCommand` `certCommand` `lintPaths` `lintSpecLaws` `lintSpecExecution` `lintSpecQuality` `lintSubject` `mintSeal` `verifySeal` |
+| eval | **05** (21) | `loadSubject` `loadNormsConfig`↑ `Subject`↑ `SubjectCase`↑ `CaseTurn`↑ `CaseInvariants`↑ `ReqCall`↑ `RubricItem`↑ `agentForCase` `stripGovernance` `runCommand` `foldCommand` `certCommand` `validateCommand` `lintPaths` `lintSpecLaws` `lintSpecExecution` `lintSpecQuality` `lintSubject` `mintSeal` `verifySeal` |
 | server | **06** (4) | `createModelServer` `ModelServer` `ModelServerConfig` `TurnEvent` |
 | models | **06** (7) | `localModel`↑ `LocalModelOptions`↑ `LocalModelSpec`↑ `ModelRuntimePort`↑ `resolveAlias` `LlamaCppRuntime` `localModelStatus` |
 | mastra | **06** (2) | `worldFromTools` `StateView`↑ |
 
-**Per-chapter:** 0 + 3 + 11 + 35 + 28 + 13 = **90**.
-**Per-package:** core 51 · mastra 7 · models 8 · eval 20 · server 4 · vercel 0 = **90**, matching the
+**Per-chapter:** 0 + 3 + 11 + 35 + 29 + 13 = **91**.
+**Per-package:** core 51 · mastra 7 · models 8 · eval 21 · server 4 · vercel 0 = **91**, matching the
 inventory's round-4 §1 chart plus the config-only increment's net-new `loadNormsConfig`. No symbol
 appears twice; no inventory-public symbol is missing.
 
@@ -479,7 +480,7 @@ Stated so Tasks 3–7 do not have to re-derive it, and so nobody reads a gap as 
 |---|---|---|
 | inventory `internal` symbols | 38 | sibling-only or seam-only. They move behind `/internal` — including the **ten bring-your-own-loop symbols demoted by this revision** (§8, defect 2) |
 | inventory `delete` symbols | 138 | no consumer outside the defining package and no tutorial home; they leave the barrel (the implementation is a separate decision — inventory §2) |
-| option / result types of the `looprun-eval` entry points | 10 | `RunCommandOptions` `FoldCommandOptions` `CertCommandOptions` `CertSummary` `CertBand` `LintViolation` `FoldResult` `FoldRow` `UngovernedBundle` `VerdictLine` — every one is either an object-literal argument or an inferred result, so the annotation rule (§0) leaves them off |
+| option / result types of the `looprun-eval` entry points | 12 | `RunCommandOptions` `FoldCommandOptions` `CertCommandOptions` `ValidateCommandOptions` `ValidateReport` `CertSummary` `CertBand` `LintViolation` `FoldResult` `FoldRow` `UngovernedBundle` `VerdictLine` — every one is either an object-literal argument or an inferred result, so the annotation rule (§0) leaves them off |
 | authored types of **fields and options the tutorial does not teach** | 6 | `AgentSpecConfig` fields: `SpatialEdge` (`flow`) `StateDirective` (`directives`) `ChainSpec` (`chains`) `SamplingSettings` (`sampling`) `MutatorBinding` (reply mutators). Plus one **`addGuard` opts** field: `Layer` — `'minimal' | 'base' | 'full' | 'agent'` (`spec.ts:36`), the framework's own auto-install tiers, not something a reader sets. All by the taught-field rule (§0) |
 | `@looprun-ai/core/testing` (19) and `@looprun-ai/mastra/testing` (9) | 28 | a separate, deliberately test-only entry point. `GuardProof` is pointed at by the governance skill; that stays true and stays out of the six chapters |
 | `GUARD_CATALOG`, `GuardCatalogEntry` | 2 | build input for chapter 04, not API it teaches — `@looprun-ai/core/internal` (§6, decision 4) |
