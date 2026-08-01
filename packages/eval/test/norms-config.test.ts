@@ -7,9 +7,17 @@
  * named error; plus the closed-expression predicate, the named-ref predicate, and the 'true'-string
  * confirm coercion.
  */
+import { readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import type { AgentSpec, AgentWorld, GuardCtx, ObservedCall } from '@looprun-ai/core';
+import { renderScopedSpecTrunk } from '@looprun-ai/core/internal';
 import { loadNormsConfig, NormsConfigError, renderDeny } from '../src/norms-config.js';
+import { loadSubject } from '../src/subject.js';
+
+const SUBJECT_DIR = resolve(dirname(fileURLToPath(import.meta.url)), 'fixtures/toy-subject');
+const readJson = (rel: string) => JSON.parse(readFileSync(resolve(SUBJECT_DIR, rel), 'utf8'));
 
 const guardIds = (spec: AgentSpec): string[] => spec.guards.preTool.map((b) => b.id);
 
@@ -159,6 +167,23 @@ describe('loadNormsConfig — guards from data', () => {
     const deny = renderDeny(['getPlanUsage', 'getSeatCount'], 'actual values');
     expect(deny).toBe('Read getPlanUsage or getSeatCount first and report the actual values from that result.');
     expect(deny).not.toMatch(/\d/);
+  });
+
+  // ── ACCEPTANCE PROOF: config-built spec renders a trunk BYTE-IDENTICAL to the TS-built one ────────
+  //
+  // The toy-subject's front-desk spec (norms/index.ts) uses exactly one guard, requiresBefore, which
+  // has a catalog kind — so NO uncheckable-prose fallback and NO new schema kind were needed to reach
+  // byte-identity. The loader's `withPolicyDeny` wrapper replaces only the DENY text (never rendered in
+  // the trunk) and preserves `prose()` verbatim, so the sole trunk-visible guard output is identical.
+  // NO residual diff: this is a clean DONE, not DONE_WITH_CONCERNS.
+  it('config-built spec is trunk-byte-identical to the TS-built one', async () => {
+    const subject = await loadSubject(SUBJECT_DIR);
+    const ts = subject.specs['front-desk'];
+    const cfg = loadNormsConfig(readJson('norms/front-desk.json'));
+    const world = subject.makeWorld('default');
+    expect(renderScopedSpecTrunk(world, cfg, [], subject.contract)).toBe(
+      renderScopedSpecTrunk(world, ts, [], subject.contract),
+    );
   });
 
   it('the schema REJECTS a free `reason` on a guard — configs cannot override the deny policy', () => {
