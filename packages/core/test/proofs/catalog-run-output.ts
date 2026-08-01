@@ -599,6 +599,10 @@ const customProof: GuardProof = {
 };
 
 // ── askedEarlier (structural — a value recorded only after an earlier-turn ask) ──────────────
+// Gated arg = the NON-schema `condition` on createItem (survives via the tool schema's passthrough): only
+// the scripts here carry it, so the guard stays inert on every other collective createItem scenario. The
+// L3 scripts call searchItem first (the collective installs requiresBefore(['searchItem']) on createItem)
+// and always pass `title` (argRequired) so the ONLY signal under test is askedEarlier itself.
 const askedEarlierProof: GuardProof = {
   guard: 'askedEarlier',
   make: () => askedEarlier({ tool: 'createItem', arg: 'condition' }),
@@ -614,12 +618,34 @@ const askedEarlierProof: GuardProof = {
         turnIndex: 2,
       },
       l1: 'silent',
+      l3: {
+        preset: 'empty',
+        turns: [{ userText: 'add an item, but ask me its condition first' }, { userText: 'the condition is good' }],
+        script: [
+          [{ tool: 'searchItem', args: { query: 'items' } }],
+          [{ tool: 'askUser', args: { text: 'What condition is the item in?' } }],
+          [{ tool: 'createItem', args: { title: 'Alpha', condition: 'good' } }],
+          [{ tool: 'replyToUser', args: { text: 'Item Alpha has been created with the condition you provided.' } }],
+        ],
+        expect: 'pass',
+      },
     },
     {
       name: 'the gated value is present but no earlier-turn askUser exists',
       polarity: 'negative',
       ctx: { args: { condition: 'good' }, observed: [], turnIndex: 2 },
       l1: 'fires',
+      l3: {
+        preset: 'empty',
+        turns: [{ userText: 'add item Alpha in good condition' }],
+        script: [
+          [{ tool: 'searchItem', args: { query: 'items' } }],
+          [{ tool: 'createItem', args: { title: 'Alpha', condition: 'good' } }],
+          [{ tool: 'replyToUser', args: { text: 'I need the item’s condition confirmed before I record it — what condition is it in?' } }],
+        ],
+        expect: 'veto',
+        tool: 'createItem',
+      },
     },
     {
       name: "the gated value is absent — not this guard's business",
@@ -631,33 +657,58 @@ const askedEarlierProof: GuardProof = {
 };
 
 // ── confirmedNeedsEarlierProbe (structural — confirmed:true needs its own earlier-turn preview) ──
+// Collective target = editMedia (a mutating overwrite), NOT deleteItem: on deleteItem this guard would
+// double-bind the SAME confirmed-needs-a-probe decision as the always-on confirmFirst and short-circuit
+// its veto, so a real bundle picks one or the other. editMedia carries no other collective guard, so the
+// ONLY signal under test is this guard. `confirmed` is a non-schema arg (passthrough) the guard reads.
 const confirmedNeedsEarlierProbeProof: GuardProof = {
   guard: 'confirmedNeedsEarlierProbe',
-  make: () => confirmedNeedsEarlierProbe({ tools: ['deleteItem'] }),
+  make: () => confirmedNeedsEarlierProbe({ tools: ['editMedia'] }),
   hook: 'preTool',
-  target: ['deleteItem'],
+  target: ['editMedia'],
   cases: [
     {
       name: 'an earlier-turn probe of the same tool with matching args exists',
       polarity: 'positive',
       ctx: {
-        tool: 'deleteItem',
-        args: { id: 'itm-1', confirmed: true },
-        observed: [{ name: 'deleteItem', args: { id: 'itm-1', confirmed: false }, ok: true, turnIndex: 0 }],
+        tool: 'editMedia',
+        args: { label: 'g001', instruction: 'crop', confirmed: true },
+        observed: [{ name: 'editMedia', args: { label: 'g001', instruction: 'crop' }, ok: true, turnIndex: 0 }],
         turnIndex: 1,
       },
       l1: 'silent',
+      l3: {
+        preset: 'empty',
+        turns: [{ userText: 'crop the media asset' }, { userText: 'yes, go ahead' }],
+        script: [
+          [{ tool: 'editMedia', args: { label: 'g001', instruction: 'crop' } }],
+          [{ tool: 'replyToUser', args: { text: 'This edit will overwrite the asset — shall I apply it?' } }],
+          [{ tool: 'editMedia', args: { label: 'g001', instruction: 'crop', confirmed: true } }],
+          [{ tool: 'replyToUser', args: { text: 'The edit has been applied as you approved.' } }],
+        ],
+        expect: 'pass',
+      },
     },
     {
       name: 'confirmed:true with no earlier probe of this act',
       polarity: 'negative',
-      ctx: { tool: 'deleteItem', args: { id: 'itm-1', confirmed: true }, observed: [], turnIndex: 1 },
+      ctx: { tool: 'editMedia', args: { label: 'g001', instruction: 'crop', confirmed: true }, observed: [], turnIndex: 1 },
       l1: 'fires',
+      l3: {
+        preset: 'empty',
+        turns: [{ userText: 'crop the media asset and apply it' }],
+        script: [
+          [{ tool: 'editMedia', args: { label: 'g001', instruction: 'crop', confirmed: true } }],
+          [{ tool: 'replyToUser', args: { text: 'This edit needs a preview first — shall I show you the change before applying it?' } }],
+        ],
+        expect: 'veto',
+        tool: 'editMedia',
+      },
     },
     {
       name: 'confirmed flag not set — nothing to gate',
       polarity: 'neutral',
-      ctx: { tool: 'deleteItem', args: { id: 'itm-1' }, observed: [], turnIndex: 1 },
+      ctx: { tool: 'editMedia', args: { label: 'g001', instruction: 'crop' }, observed: [], turnIndex: 1 },
       l1: 'silent',
     },
   ],
