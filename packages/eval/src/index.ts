@@ -1,5 +1,5 @@
 /**
- * @looprun-ai/eval — the public API: exactly the 19 eval rows of `docs/superpowers/specs/2026-07-28-tutorial-outline-final.md` §4
+ * @looprun-ai/eval — the public API: exactly the 20 eval rows of `docs/superpowers/specs/2026-07-28-tutorial-outline-final.md` §4
  * (chapter 05 — the subject directory contract, then the measured loop).
  *
  * Eleven of them are ALSO reached by the published `looprun-eval` bin, which does
@@ -15,6 +15,8 @@
  */
 export { loadSubject, agentForCase } from './subject.js';
 export type { Subject, SubjectCase, CaseTurn, CaseInvariants, ReqCall, RubricItem } from './subject.js';
+export { loadNormsConfig } from './norms-config.js';
+export type { NormsConfig } from './norms-config.js';
 export { stripGovernance } from './ungoverned.js';
 export { runCommand, foldCommand, certCommand } from './commands.js';
 export { lintPaths, lintSpecLaws, lintSpecExecution } from './lint.js';

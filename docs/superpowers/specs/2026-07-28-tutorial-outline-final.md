@@ -324,12 +324,13 @@ helpers) · `looprun/models` (`geminiFlashLiteThinkOff`) · **`@looprun-ai/eval`
 Placed here, not in 06: their purpose is a measurement you can repeat, which is this chapter's whole
 subject.
 
-*5.3 The subject directory contract (7)* — an eval subject is a **directory with a fixed layout**,
+*5.3 The subject directory contract (8)* — an eval subject is a **directory with a fixed layout**,
 and the chapter teaches the layout before any command:
 
 ```
 <subject>/
 ├── norms/index.ts     exports SPECS (id → AgentSpec), CONTRACT, optional CASE_AGENT routing
+│                      (a spec may be built from norms/<agent>.json via loadNormsConfig — guards from data)
 ├── gen/world.ts       the deterministic world factory  (preset → AgentWorld)
 ├── gen/tools.json     the agent-facing ToolDef[]
 ├── evals/cases.ts     export default cases: SubjectCase[]
@@ -339,6 +340,7 @@ and the chapter teaches the layout before any command:
 | symbol | package | role |
 |---|---|---|
 | `loadSubject` | eval | directory → `Subject` |
+| `loadNormsConfig` | eval | a `norms/<agent>.json` value → `AgentSpec` (guards from DATA; regex structurally impossible) |
 | `Subject` | eval | the loaded bundle; parameter of `agentForCase` and `lintSubject` |
 | `SubjectCase` | eval | **authored** — one case: setup, turns, expectations, targets |
 | `CaseTurn` | eval | authored — `SubjectCase.turns` |
@@ -443,7 +445,8 @@ working" step.
 
 ## 4. Completeness check — inventory → outline
 
-All 89 symbols, and the chapter that claims each. `↑` = promoted into public by this outline.
+All 90 symbols, and the chapter that claims each. `↑` = promoted into public by this outline.
+(`loadNormsConfig` is a net-new eval export added by the config-only increment, post-inventory.)
 
 | package | chapter | symbols |
 |---|---|---|
@@ -453,14 +456,15 @@ All 89 symbols, and the chapter that claims each. `↑` = promoted into public b
 | core | **05** (5) | `TurnInput`↑ `RunResult`↑ `TurnRecord`↑ `geminiThinkingOff` `pinnedDecoding` |
 | mastra | **05** (2) | `runSpecConversation` `RuntimeDeps`↑ |
 | models | **05** (1) | `geminiFlashLiteThinkOff` |
-| eval | **05** (19) | `loadSubject` `Subject`↑ `SubjectCase`↑ `CaseTurn`↑ `CaseInvariants`↑ `ReqCall`↑ `RubricItem`↑ `agentForCase` `stripGovernance` `runCommand` `foldCommand` `certCommand` `lintPaths` `lintSpecLaws` `lintSpecExecution` `lintSpecQuality` `lintSubject` `mintSeal` `verifySeal` |
+| eval | **05** (20) | `loadSubject` `loadNormsConfig`↑ `Subject`↑ `SubjectCase`↑ `CaseTurn`↑ `CaseInvariants`↑ `ReqCall`↑ `RubricItem`↑ `agentForCase` `stripGovernance` `runCommand` `foldCommand` `certCommand` `lintPaths` `lintSpecLaws` `lintSpecExecution` `lintSpecQuality` `lintSubject` `mintSeal` `verifySeal` |
 | server | **06** (4) | `createModelServer` `ModelServer` `ModelServerConfig` `TurnEvent` |
 | models | **06** (7) | `localModel`↑ `LocalModelOptions`↑ `LocalModelSpec`↑ `ModelRuntimePort`↑ `resolveAlias` `LlamaCppRuntime` `localModelStatus` |
 | mastra | **06** (2) | `worldFromTools` `StateView`↑ |
 
-**Per-chapter:** 0 + 3 + 11 + 35 + 27 + 13 = **89**.
-**Per-package:** core 51 · mastra 7 · models 8 · eval 19 · server 4 · vercel 0 = **89**, matching the
-inventory's round-4 §1 chart exactly. No symbol appears twice; no inventory-public symbol is missing.
+**Per-chapter:** 0 + 3 + 11 + 35 + 28 + 13 = **90**.
+**Per-package:** core 51 · mastra 7 · models 8 · eval 20 · server 4 · vercel 0 = **90**, matching the
+inventory's round-4 §1 chart plus the config-only increment's net-new `loadNormsConfig`. No symbol
+appears twice; no inventory-public symbol is missing.
 
 ---
 
