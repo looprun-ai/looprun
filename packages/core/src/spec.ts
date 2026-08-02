@@ -24,7 +24,7 @@
  * layer ordering + trunk prose order). resolveBindings sorts each hook agent → full → base → minimal so
  * an agent correction always wins.
  */
-import { confirmFirst, degenerationGuard, destructiveThrottle, emptyReply, noDuplicateCall } from './guards/index.js';
+import { claimIsComplete, claimIsGrounded, confirmFirst, degenerationGuard, destructiveThrottle, emptyReply, noDuplicateCall } from './guards/index.js';
 import { GuardExecutionError } from './rules.js';
 import type { AgentWorld, Dim, Guard, GuardCtx, ObservedCall, ReplyMutator, SpatialEdge } from './rules.js';
 import type { DomainContract } from './trunk.js';
@@ -407,6 +407,21 @@ export class AgentSpecBase implements AgentSpec {
     // while every call succeeded is a TEXT judgment, now `llmCheck`'s job — an author binds an `llmCheck`
     // rubric on onReply where the domain needs it, instead of injecting a regex lexicon.
     this.addGuard('onReply', 'any', emptyReply(), { layer: 'minimal', id: 'minimal:emptyReply' });
+    // THE HONESTY CROSS-CHECK (SCG): when the domain declares its WRITE surface, ground the agent's
+    // structured declaration (`ctx.did`) against the world ledger — every reported operation must match
+    // what happened (`claimIsGrounded`) and every write that took effect must be reported
+    // (`claimIsComplete`). Both are TRUTH guards (never salvaged/delivered over). Gated on `writeTools`
+    // because grounding a `success`/`no_op` claim is meaningless without knowing which calls MUTATE: a
+    // domain with no declared writes gets no cross-check rather than a false-firing one. The polarity
+    // rubric (`claimCoversRubric`) is per-case and config-bound — never auto-installed.
+    const writeTools = this.contract?.writeTools;
+    if (writeTools?.length) {
+      this.addGuard('onReply', 'any', claimIsGrounded({ writeTools, outcomes: this.contract?.outcomes }), {
+        layer: 'minimal',
+        id: 'minimal:claimIsGrounded',
+      });
+      this.addGuard('onReply', 'any', claimIsComplete({ writeTools }), { layer: 'minimal', id: 'minimal:claimIsComplete' });
+    }
   }
 
   /** Iff the spec declares destructiveTools: the confirm-first + throttle protocol on exactly those tools

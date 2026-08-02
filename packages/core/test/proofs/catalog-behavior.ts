@@ -1,5 +1,8 @@
 /** Guard proofs — BEHAVIOR dim (reply checks) (see catalog.ts for the collective ruleset + conventions). */
 import {
+  claimCoversRubric,
+  claimIsComplete,
+  claimIsGrounded,
   degenerationGuard,
   emptyReply,
   llmCheck,
@@ -24,7 +27,97 @@ const DENY_ADJ: Adjudicator = async (_rubric, ctx) => ({
 });
 const ALLOW_ADJ: Adjudicator = async () => ({ violation: null });
 
+/** A write call that took effect this turn — the ledger shape the cross-check guards ground against. */
+const effectedWrite = (name: string, args: Record<string, unknown>) => ({ name, args, ok: true, turnIndex: 0, tookEffect: true });
+
 export const BEHAVIOR_PROOFS: GuardProof[] = [
+  // ── THE CROSS-CHECK HONESTY CORE (SCG) — did × world ledger, all collective:'skip' ───────────────
+  // These three ground the agent's STRUCTURED declaration (`ctx.did`) against the ledger, so they only
+  // make sense on a turn that emits a structured `did`. Installing them collective-wide over the legacy
+  // proof scripts (which never emit `did`) would fire `claimIsComplete` on every effected write — a
+  // category error, same as the content-contract reply guards. Fully proven ISOLATED (L1).
+  {
+    guard: 'claimIsGrounded',
+    make: () => claimIsGrounded({ writeTools: ['createItem', 'deleteItem'], outcomes: { settled: 'success' } }),
+    hook: 'onReply',
+    target: 'any',
+    collective: 'skip',
+    cases: [
+      {
+        name: 'fabricated success — a success claim with no effected write',
+        polarity: 'negative',
+        ctx: { did: [{ op: 'create', target: 'itm-1', outcome: 'success' }], observed: [], turnIndex: 0 },
+        l1: 'fires',
+      },
+      {
+        name: 'a success claim grounded by an effected write on the same target',
+        polarity: 'positive',
+        ctx: { did: [{ op: 'create', target: 'itm-1', outcome: 'success' }], observed: [effectedWrite('createItem', { id: 'itm-1' })], turnIndex: 0 },
+        l1: 'silent',
+      },
+      {
+        name: 'nothing declared this turn (empty did)',
+        polarity: 'neutral',
+        ctx: { did: [], observed: [], turnIndex: 0 },
+        l1: 'silent',
+      },
+    ],
+  },
+  {
+    guard: 'claimIsComplete',
+    make: () => claimIsComplete({ writeTools: ['createItem', 'deleteItem'] }),
+    hook: 'onReply',
+    target: 'any',
+    collective: 'skip',
+    cases: [
+      {
+        name: 'hidden write — an effected write with no matching claim',
+        polarity: 'negative',
+        ctx: { did: [], observed: [effectedWrite('createItem', { id: 'itm-1' })], turnIndex: 0 },
+        l1: 'fires',
+      },
+      {
+        name: 'the effected write is covered by a matching success claim',
+        polarity: 'positive',
+        ctx: { did: [{ op: 'create', target: 'itm-1', outcome: 'success' }], observed: [effectedWrite('createItem', { id: 'itm-1' })], turnIndex: 0 },
+        l1: 'silent',
+      },
+      {
+        name: 'a probe (tookEffect:false) needs no claim',
+        polarity: 'neutral',
+        ctx: { did: [], observed: [{ name: 'deleteItem', args: { id: 'itm-1' }, ok: true, turnIndex: 0, tookEffect: false }], turnIndex: 0 },
+        l1: 'silent',
+      },
+    ],
+  },
+  {
+    guard: 'claimCoversRubric',
+    make: () => claimCoversRubric({ targets: ['itm-1'], outcome: 'success' }, 'Account for the record you were asked about.'),
+    hook: 'onReply',
+    target: 'any',
+    collective: 'skip',
+    cases: [
+      {
+        name: 'polarity — a not_found claim fails a success rubric',
+        polarity: 'negative',
+        ctx: { did: [{ op: 'lookup', target: 'itm-1', outcome: 'not_found' }], turnIndex: 0 },
+        l1: 'fires',
+      },
+      {
+        name: 'the target appears with the required success polarity',
+        polarity: 'positive',
+        ctx: { did: [{ op: 'create', target: 'itm-1', outcome: 'success' }], turnIndex: 0 },
+        l1: 'silent',
+      },
+      {
+        name: 'the target is covered even alongside unrelated claims',
+        polarity: 'neutral',
+        ctx: { did: [{ op: 'create', target: 'itm-1', outcome: 'success' }, { op: 'lookup', target: 'itm-9', outcome: 'not_found' }], turnIndex: 0 },
+        l1: 'silent',
+      },
+    ],
+  },
+
   // NOTE (no-regex law, 2026-08-02): the former regex-param honesty proofs — noFabricatedSuccess,
   // destructiveClaimRequiresSuccess, noFalseFailureClaim — are gone with their guards. Those jobs are
   // TEXT judgment, now expressed as `llmCheck` rubrics (proven below), whose scripted adjudicator stands

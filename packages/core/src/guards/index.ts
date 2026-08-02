@@ -37,6 +37,7 @@ export {
   pendingConfirmMustAsk,
 } from './confirmation.js';
 export { llmCheck } from './llm-check.js';
+export { claimIsGrounded, claimIsComplete, claimCoversRubric, isEmptyReadResult } from './honesty.js';
 export {
   replyMentions,
   replyMaxOccurrences,

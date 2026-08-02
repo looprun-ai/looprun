@@ -125,6 +125,11 @@ export interface GuardCtx {
   /** Whether the delivered `respond` posed a clarifying question. Populated alongside {@link did} on the
    *  reply-side ctx; absent on preTool/onInput. */
   asked?: boolean;
+  /** THIS turn's guard-VETOED attempts — the calls a preTool guard blocked before they reached the world
+   *  (the ledger's `attemptedCalls`, reset per turn). Populated on the reply-side ctx beside {@link did}
+   *  so `claimIsGrounded` can ground a `blocked`/`refused` claim against the attempt the guard stopped —
+   *  which, by construction, appears on NO world-ledger entry. Absent on preTool/onInput. */
+  attemptedThisTurn?: ReadonlyArray<{ name: string; args: unknown }>;
   /** SAME-STEP siblings emitted EARLIER in this model step and still in flight (admitted by their
    *  preTool guards but not yet in `observed` — a domain tool lands in `observed` only in
    *  afterToolCall, AFTER execute). The AI SDK dispatches a step's calls concurrently, so two

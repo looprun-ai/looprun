@@ -25,6 +25,7 @@
 import { resolveBindings } from './spec.js';
 import type { AgentSpec, GuardBinding, Hook } from './spec.js';
 import type { AgentWorld } from './rules.js';
+import type { OutcomeMap } from './runtime/claims.js';
 import { derivePolarity, deriveSubject, foldTrunk } from './trunk-fold.js';
 import type { SubjectRule, TrunkBlock, TrunkLine, TrunkRow } from './trunk-fold.js';
 
@@ -49,6 +50,16 @@ export interface DomainContract {
   languageClause: string;
   /** Deterministic honest-abstain closure (verified observations only). */
   exhaustionReply?: (world: AgentWorld, okTools: string[], produced: string[], violations: string[]) => string;
+  /** The domain's WRITE tools — the ones that MUTATE the world (vs pure reads). The honesty cross-check
+   *  (`claimIsGrounded` / `claimIsComplete`, auto-installed when this is non-empty) reads it to ground a
+   *  `success` claim against an EFFECTED write and to demand every effected write be reported. Same list
+   *  `buildHonestAbstain` consumes so a no-effect probe is never announced as done — seated HERE so both
+   *  the write surface and its {@link outcomes} map arrive together on the one domain object. */
+  writeTools?: readonly string[];
+  /** The domain OUTCOME vocabulary: every non-core outcome word an agent may declare in a `did` claim MUST
+   *  map to a core outcome (e.g. `{ settled: 'success' }`), so the ledger cross-check stays
+   *  engine-owned and never becomes semantic. Fed to `claimIsGrounded` beside {@link writeTools}. */
+  outcomes?: OutcomeMap;
 }
 
 /**

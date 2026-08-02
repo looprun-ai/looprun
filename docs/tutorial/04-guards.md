@@ -284,10 +284,10 @@ disagree about it.
 <!-- Rendered from `packages/core/src/guards/catalog.ts`. Do NOT edit between the markers: run
      `pnpm docs:guards` (it needs a built core), and fix wording in the catalog itself. -->
 
-## 5. The catalog — 23 factories
+## 5. The catalog — 26 factories
 
 Grouped by the hook each one is installed on, because the hook decides what a rule can see and
-therefore what it can enforce (chapter 03 §8). 13 preTool · 1 postTool · 7 onReply · 1 onReplyMutate · 1 escape hatch.
+therefore what it can enforce (chapter 03 §8). 13 preTool · 1 postTool · 10 onReply · 1 onReplyMutate · 1 escape hatch.
 
 A fourth hook exists and has no section here: `onInput` fires before the model runs, and §1's
 matrix makes it legal for every `spatial`/`input`/`run` guard — but no shipped kind is installed
@@ -333,7 +333,7 @@ A call has been proposed and not yet executed. A deny returns to the model AS th
 | [`confirmFirst`](#10-confirmfirst) | `confirmation.ts` | A destructive tool needs the user's go-ahead from an EARLIER turn — licensed `via` a same-record probe, a prior ask, or either. The licensing event is turn-bounded by `within` (default 1). Passing a `via` NAME to the string overload throws at construction. |
 | [`noActAfterAskSameTurn`](#11-noactafterasksameturn) | `confirmation.ts` | Denies the listed tools on a turn in which the model already asked the user a question. |
 | [`destructiveThrottle`](#12-destructivethrottle) | `confirmation.ts` | At most one destructive action that TOOK EFFECT per turn (a confirmation probe does not count). |
-| [`askedEarlier`](#13-askedearlier) | `structural.ts` | A gated argument may be recorded only when an askUser succeeded in an EARLIER turn; a same-turn ask does not count. |
+| [`askedEarlier`](#13-askedearlier) | `structural.ts` | A gated argument may be recorded only when the agent asked the user in an EARLIER turn; a same-turn ask does not count. |
 
 #### 1. `requiresBefore`
 
@@ -429,7 +429,7 @@ consentRequired({ tools: ['storeProfile'], consentOk: (world) => world.consentOn
 
 A destructive tool needs the user's go-ahead from an EARLIER turn — licensed `via` a same-record probe, a prior ask, or either. The licensing event is turn-bounded by `within` (default 1). Passing a `via` NAME to the string overload throws at construction.
 
-**When to reach for it.** The user must have agreed before this call runs, and the evidence has to be cross-turn — this is the ONE consent gate (it absorbed `confirmedNeedsEarlierProbe`). Its neighbours answer different questions: `destructiveThrottle` caps the blast radius of a turn that IS approved, `consentRequired` reads a standing world flag rather than the conversation, and `pendingConfirmMustAsk` gates the REPLY rather than the call. `via`: `'probe'` = a same-record `flag:false` preview of the SAME tool in an earlier turn (the strict, record-bound license); `'ask'` = a flag-LESS action gated on a prior-turn `askUser`; `'either'` (default) = the flag-gated form licensed by a matching probe OR a prior ask. RECENCY LAW: the licensing event must fall `within` turns of now (default 1, the two-step shape) — widen deliberately for genuinely multi-turn flows. The string overload sets the FLAG NAME, so `confirmFirst('probe')` throws rather than silently building a guard that can never fire.
+**When to reach for it.** The user must have agreed before this call runs, and the evidence has to be cross-turn — this is the ONE consent gate (it absorbed `confirmedNeedsEarlierProbe`). Its neighbours answer different questions: `destructiveThrottle` caps the blast radius of a turn that IS approved, `consentRequired` reads a standing world flag rather than the conversation, and `pendingConfirmMustAsk` gates the REPLY rather than the call. `via`: `'probe'` = a same-record `flag:false` preview of the SAME tool in an earlier turn (the strict, record-bound license); `'ask'` = a flag-LESS action gated on the agent having asked the user in a prior turn; `'either'` (default) = the flag-gated form licensed by a matching probe OR a prior-turn question to the user. RECENCY LAW: the licensing event must fall `within` turns of now (default 1, the two-step shape) — widen deliberately for genuinely multi-turn flows. The string overload sets the FLAG NAME, so `confirmFirst('probe')` throws rather than silently building a guard that can never fire.
 
 ```ts
 confirmFirst('confirmed')
@@ -457,9 +457,9 @@ destructiveThrottle(['cancelBooking', 'refundOrder'])
 
 #### 13. `askedEarlier`
 
-A gated argument may be recorded only when an askUser succeeded in an EARLIER turn; a same-turn ask does not count.
+A gated argument may be recorded only when the agent asked the user in an EARLIER turn; a same-turn ask does not count.
 
-**When to reach for it.** A value the agent must not write until it has asked the operator for it and they answered in a later message — the structural replacement for a hand-written regex over "did we ask?". It keys on the presence of the gated arg plus an earlier-turn `askUser`, never on any text.
+**When to reach for it.** A value the agent must not write until it has asked the operator for it and they answered in a later message — the structural replacement for a hand-written regex over "did we ask?". It keys on the presence of the gated arg plus an earlier-turn question to the user, never on any text.
 
 ```ts
 askedEarlier({ tool: 'completeMaintenance', arg: 'condition' })
@@ -490,12 +490,15 @@ The reply text is in `ctx.reply` and no tool can run any more. A deny costs a bo
 | factory | file | what it enforces |
 |---|---|---|
 | [`pendingConfirmMustAsk`](#15-pendingconfirmmustask) | `confirmation.ts` | When a probe returned `requiresConfirmation` this turn and nothing resolved it, the reply must relay that question. |
-| [`replyMentions`](#16-replymentions) | `reply.ts` | The reply must mention the given terms (literal, case-insensitive substring scan). `anyTerm: true` = at least ONE suffices; `anyTerm: false` (default) = EVERY term is required and the reply must be non-empty. |
-| [`replyMaxOccurrences`](#17-replymaxoccurrences) | `reply.ts` | At most n DISTINCT calls-to-action from the list may appear in one reply. |
-| [`replySingleQuestion`](#18-replysinglequestion) | `reply.ts` | The reply must carry exactly one question mark. |
-| [`emptyReply`](#19-emptyreply) | `reply.ts` | The final reply must not be blank. |
-| [`degenerationGuard`](#20-degenerationguard) | `reply.ts` | Catches leaked reasoning or tool markup, chat-template tokens and run-away line repetition in the reply. |
-| [`llmCheck`](#21-llmcheck) | `llm-check.ts` | An LLM-adjudicated guard: a host-registered adjudicator answers a trusted rubric over the full context (history + user text) and its verdict becomes the deny. |
+| [`claimIsGrounded`](#16-claimisgrounded) | `honesty.ts` | Every operation the agent declares in `did` must match the world ledger: a `success` needs a write that took effect, `not_found` an empty read, `blocked`/`refused` a veto or world refusal, `no_op` no effected write — an undeclared outcome word is always a violation. |
+| [`claimIsComplete`](#17-claimiscomplete) | `honesty.ts` | Every write that TOOK EFFECT this turn must be covered by a `success` claim in `did` — no silent action hidden from the user. |
+| [`claimCoversRubric`](#18-claimcoversrubric) | `honesty.ts` | Each configured target must appear in `did` with the required outcome polarity (or any polarity when `outcome: 'any'`). |
+| [`replyMentions`](#19-replymentions) | `reply.ts` | The reply must mention the given terms (literal, case-insensitive substring scan). `anyTerm: true` = at least ONE suffices; `anyTerm: false` (default) = EVERY term is required and the reply must be non-empty. |
+| [`replyMaxOccurrences`](#20-replymaxoccurrences) | `reply.ts` | At most n DISTINCT calls-to-action from the list may appear in one reply. |
+| [`replySingleQuestion`](#21-replysinglequestion) | `reply.ts` | The reply must carry exactly one question mark. |
+| [`emptyReply`](#22-emptyreply) | `reply.ts` | The final reply must not be blank. |
+| [`degenerationGuard`](#23-degenerationguard) | `reply.ts` | Catches leaked reasoning or tool markup, chat-template tokens and run-away line repetition in the reply. |
+| [`llmCheck`](#24-llmcheck) | `llm-check.ts` | An LLM-adjudicated guard: a host-registered adjudicator answers a trusted rubric over the full context (history + user text) and its verdict becomes the deny. |
 
 #### 15. `pendingConfirmMustAsk`
 
@@ -507,7 +510,37 @@ When a probe returned `requiresConfirmation` this turn and nothing resolved it, 
 pendingConfirmMustAsk()
 ```
 
-#### 16. `replyMentions`
+#### 16. `claimIsGrounded`
+
+Every operation the agent declares in `did` must match the world ledger: a `success` needs a write that took effect, `not_found` an empty read, `blocked`/`refused` a veto or world refusal, `no_op` no effected write — an undeclared outcome word is always a violation.
+
+**When to reach for it.** Always on when the domain declares its `writeTools` (the spec class auto-installs it, fed by `contract.writeTools` + `contract.outcomes`). It is the ledger cross-check that replaced the deleted prose honesty guards: it keys on `target` + `outcome` against verified calls, never on op-name semantics or reply text, so a fabricated success cannot ground. A domain outcome word must map to a core outcome via the contract's outcome map or it reads as undeclared.
+
+```ts
+claimIsGrounded({ writeTools: ['createBooking', 'cancelBooking'], outcomes: { settled: 'success' } })
+```
+
+#### 17. `claimIsComplete`
+
+Every write that TOOK EFFECT this turn must be covered by a `success` claim in `did` — no silent action hidden from the user.
+
+**When to reach for it.** Auto-installed alongside `claimIsGrounded` (same `writeTools`). Its mirror is `claimIsGrounded`: that one stops a claim with no matching effect, this one stops an effect with no matching claim. It names the unreported action by the world-issued produced label, never by the tool name.
+
+```ts
+claimIsComplete({ writeTools: ['createBooking', 'cancelBooking'] })
+```
+
+#### 18. `claimCoversRubric`
+
+Each configured target must appear in `did` with the required outcome polarity (or any polarity when `outcome: 'any'`).
+
+**When to reach for it.** The per-case coverage rule that replaces `replyMentions`/`replyConfirmsLabels`: because polarity is a FIELD, a reply that says "no record of BK-1 was found" can never satisfy a `success` requirement again. Config-bound only (a per-case norm) — never auto-installed. Pass `'any'` when only the mention matters, a specific outcome when the polarity is the point.
+
+```ts
+claimCoversRubric({ targets: ['BK-100234'], outcome: 'success' }, 'Account for the booking you were asked about.')
+```
+
+#### 19. `replyMentions`
 
 The reply must mention the given terms (literal, case-insensitive substring scan). `anyTerm: true` = at least ONE suffices; `anyTerm: false` (default) = EVERY term is required and the reply must be non-empty.
 
@@ -517,7 +550,7 @@ The reply must mention the given terms (literal, case-insensitive substring scan
 replyMentions({ terms: ['BK-100234'] }, 'Name the booking you acted on so the person can check it.')
 ```
 
-#### 17. `replyMaxOccurrences`
+#### 20. `replyMaxOccurrences`
 
 At most n DISTINCT calls-to-action from the list may appear in one reply.
 
@@ -527,7 +560,7 @@ At most n DISTINCT calls-to-action from the list may appear in one reply.
 replyMaxOccurrences(['book now', 'call us', 'subscribe'], 1, 'One ask per reply — drop the extra calls-to-action.')
 ```
 
-#### 18. `replySingleQuestion`
+#### 21. `replySingleQuestion`
 
 The reply must carry exactly one question mark.
 
@@ -537,7 +570,7 @@ The reply must carry exactly one question mark.
 replySingleQuestion('Ask exactly one question so the person can answer it.')
 ```
 
-#### 19. `emptyReply`
+#### 22. `emptyReply`
 
 The final reply must not be blank.
 
@@ -547,7 +580,7 @@ The final reply must not be blank.
 emptyReply()
 ```
 
-#### 20. `degenerationGuard`
+#### 23. `degenerationGuard`
 
 Catches leaked reasoning or tool markup, chat-template tokens and run-away line repetition in the reply.
 
@@ -557,7 +590,7 @@ Catches leaked reasoning or tool markup, chat-template tokens and run-away line 
 degenerationGuard()
 ```
 
-#### 21. `llmCheck`
+#### 24. `llmCheck`
 
 An LLM-adjudicated guard: a host-registered adjudicator answers a trusted rubric over the full context (history + user text) and its verdict becomes the deny.
 
@@ -573,9 +606,9 @@ A `ReplyMutator`, not a `Guard`: it is applied to the reply before the `onReply`
 
 | factory | file | what it enforces |
 |---|---|---|
-| [`jargonScrub`](#22-jargonscrub) | `reply.ts` | A deterministic egress rewrite of internal vocabulary into user words (word-boundary, case-insensitive). |
+| [`jargonScrub`](#25-jargonscrub) | `reply.ts` | A deterministic egress rewrite of internal vocabulary into user words (word-boundary, case-insensitive). |
 
-#### 22. `jargonScrub`
+#### 25. `jargonScrub`
 
 A deterministic egress rewrite of internal vocabulary into user words (word-boundary, case-insensitive).
 
@@ -591,9 +624,9 @@ One factory, and it is the only one whose hook you choose: `custom` follows the 
 
 | factory | file | what it enforces |
 |---|---|---|
-| [`custom`](#23-custom) | `custom.ts` | The escape hatch: a guard whose kind, dim, check and prose the spec author writes by hand. |
+| [`custom`](#26-custom) | `custom.ts` | The escape hatch: a guard whose kind, dim, check and prose the spec author writes by hand. |
 
-#### 23. `custom`
+#### 26. `custom`
 
 The escape hatch: a guard whose kind, dim, check and prose the spec author writes by hand.
 

@@ -472,7 +472,7 @@ in the "bring your own loop" seam; internal, not taught.)
 |---|---|---|
 | mastra | **02** (3) | `LoopRunAgent` `LoopRunAgentConfig` `LoopRunOptions` |
 | core | **03** (11) | `AgentSpecBase` `AgentSpec` `AgentSpecConfig` `AgentScope`↑ `TerminalPolicy`↑ `DomainContract` `ToolDef` `AgentWorld` `Hook`↑ `ToolTarget`↑ `validateSpec` |
-| core | **04** (28) | `Guard` `GuardCtx` `ObservedCall` `Dim`↑ · `custom` `llmCheck`↑ `askedEarlier` `requiresBefore` `forbidThisTurn` `argRequired` `argAbsent` `argFormat` `precondition` `maxCalls` `canonArgs` `noDuplicateCall` `confirmFirst` `noActAfterAskSameTurn` `destructiveThrottle` `resultInvariant` `replyMentions` `replyMaxOccurrences` `replySingleQuestion` `emptyReply` `degenerationGuard` `pendingConfirmMustAsk` `consentRequired` `jargonScrub` |
+| core | **04** (31) | `Guard` `GuardCtx` `ObservedCall` `Dim`↑ · `custom` `llmCheck`↑ `askedEarlier` `requiresBefore` `forbidThisTurn` `argRequired` `argAbsent` `argFormat` `precondition` `maxCalls` `canonArgs` `noDuplicateCall` `confirmFirst` `noActAfterAskSameTurn` `destructiveThrottle` `claimIsGrounded`↑ `claimIsComplete`↑ `claimCoversRubric`↑ `resultInvariant` `replyMentions` `replyMaxOccurrences` `replySingleQuestion` `emptyReply` `degenerationGuard` `pendingConfirmMustAsk` `consentRequired` `jargonScrub` |
 | core | **05** (5) | `TurnInput`↑ `RunResult`↑ `TurnRecord`↑ `geminiThinkingOff` `pinnedDecoding` |
 | mastra | **05** (2) | `runSpecConversation` `RuntimeDeps`↑ |
 | models | **05** (1) | `geminiFlashLiteThinkOff` |
@@ -481,8 +481,8 @@ in the "bring your own loop" seam; internal, not taught.)
 | models | **06** (7) | `localModel`↑ `LocalModelOptions`↑ `LocalModelSpec`↑ `ModelRuntimePort`↑ `resolveAlias` `LlamaCppRuntime` `localModelStatus` |
 | mastra | **06** (2) | `worldFromTools` `StateView`↑ |
 
-**Per-chapter:** 0 + 3 + 11 + 28 + 31 + 13 = **86** (04 −8 for the no-regex law's deletions, −1 for the guard-consolidation law absorbing `confirmedNeedsEarlierProbe` into `confirmFirst({via:'probe'})`, then −1 for merging `replyMustMention` + `replyConfirmsLabels` into `replyMentions`).
-**Per-package:** core 44 · mastra 7 · models 8 · eval 23 · server 4 · vercel 0 = **86**, matching the
+**Per-chapter:** 0 + 3 + 11 + 31 + 31 + 13 = **89** (04 −8 for the no-regex law's deletions, −1 for the guard-consolidation law absorbing `confirmedNeedsEarlierProbe` into `confirmFirst({via:'probe'})`, −1 for merging `replyMustMention` + `replyConfirmsLabels` into `replyMentions`, then **+3 for the SCG cross-check honesty core** — `claimIsGrounded` / `claimIsComplete` / `claimCoversRubric`).
+**Per-package:** core 47 · mastra 7 · models 8 · eval 23 · server 4 · vercel 0 = **89**, matching the
 inventory's round-4 §1 chart plus increment 1's net-new `loadNormsConfig` + the structural guard
 `askedEarlier` (its sibling `confirmedNeedsEarlierProbe` was later absorbed into `confirmFirst`), increment 2a's net-new `validateCommand` +
 `judgeInputCommand`, and increment 2b's net-new `campaignCommand`. No symbol appears twice; no
@@ -595,12 +595,14 @@ automatically as Tasks 5–6 shrink what the signatures touch. Two tests hold th
 real consumer against the published `exports` map), and `surface-lock.test.ts` proves it has not
 quietly **grown**.
 
-For `core` the rider is 15 types: `SpecWarning` `AgentControls` `ChainSpec` `StateDirective`
+For `core` the rider is 17 types: `SpecWarning` `AgentControls` `ChainSpec` `StateDirective`
 `GuardBinding` `MutatorBinding` `Layer` `SpatialEdge` `ReplyMutator` `SamplingSettings` `TokenUsage`
-`HistoryTurn` `HistoryToolCall` `Adjudicator` `AdjudicatorVerdict` — the last four added by the
-full-context-guards increment (2026-08-02): `GuardCtx.history` is `ReadonlyArray<HistoryTurn>` and
-`GuardCtx.adjudicator` is an `Adjudicator` (returning an `AdjudicatorVerdict`), so all four ride the
-barrel to stay nameable. Tasks 4–7 derive their own package's rider the same way; a symbol appearing
+`HistoryTurn` `HistoryToolCall` `Adjudicator` `AdjudicatorVerdict` `CoreOutcome` `OutcomeMap` — the
+four `History…`/`Adjudicator…` added by the full-context-guards increment (2026-08-02): `GuardCtx.history`
+is `ReadonlyArray<HistoryTurn>` and `GuardCtx.adjudicator` is an `Adjudicator` (returning an
+`AdjudicatorVerdict`); and `CoreOutcome` / `OutcomeMap` added by SCG (2026-08-02): `claimCoversRubric`'s
+`outcome` param is a `CoreOutcome` and `claimIsGrounded`'s `outcomes` is an `OutcomeMap`, so both ride
+the barrel to stay nameable. Tasks 4–7 derive their own package's rider the same way; a symbol appearing
 there is not a promotion and must not be read as one.
 
 **The per-package rider lists** (`mastra` needs none — it re-exports core's whole barrel, and its

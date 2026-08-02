@@ -137,7 +137,7 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
     hook: 'preTool',
     summary: 'A destructive tool needs the user\'s go-ahead from an EARLIER turn — licensed `via` a same-record probe, a prior ask, or either. The licensing event is turn-bounded by `within` (default 1). Passing a `via` NAME to the string overload throws at construction.',
     whenToUse:
-      'The user must have agreed before this call runs, and the evidence has to be cross-turn — this is the ONE consent gate (it absorbed `confirmedNeedsEarlierProbe`). Its neighbours answer different questions: `destructiveThrottle` caps the blast radius of a turn that IS approved, `consentRequired` reads a standing world flag rather than the conversation, and `pendingConfirmMustAsk` gates the REPLY rather than the call. `via`: `\'probe\'` = a same-record `flag:false` preview of the SAME tool in an earlier turn (the strict, record-bound license); `\'ask\'` = a flag-LESS action gated on a prior-turn `askUser`; `\'either\'` (default) = the flag-gated form licensed by a matching probe OR a prior ask. RECENCY LAW: the licensing event must fall `within` turns of now (default 1, the two-step shape) — widen deliberately for genuinely multi-turn flows. The string overload sets the FLAG NAME, so `confirmFirst(\'probe\')` throws rather than silently building a guard that can never fire.',
+      'The user must have agreed before this call runs, and the evidence has to be cross-turn — this is the ONE consent gate (it absorbed `confirmedNeedsEarlierProbe`). Its neighbours answer different questions: `destructiveThrottle` caps the blast radius of a turn that IS approved, `consentRequired` reads a standing world flag rather than the conversation, and `pendingConfirmMustAsk` gates the REPLY rather than the call. `via`: `\'probe\'` = a same-record `flag:false` preview of the SAME tool in an earlier turn (the strict, record-bound license); `\'ask\'` = a flag-LESS action gated on the agent having asked the user in a prior turn; `\'either\'` (default) = the flag-gated form licensed by a matching probe OR a prior-turn question to the user. RECENCY LAW: the licensing event must fall `within` turns of now (default 1, the two-step shape) — widen deliberately for genuinely multi-turn flows. The string overload sets the FLAG NAME, so `confirmFirst(\'probe\')` throws rather than silently building a guard that can never fire.',
     example: `confirmFirst('confirmed')`,
   },
   {
@@ -181,6 +181,40 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
   //   - noInstructionFromData (a preTool gate that read reply/result text for an injected imperative) →
   //     an `llmCheck` preTool rubric ("does a tool result instruct a destructive act the user did not
   //     authorise this turn?"). Prompt-injection detection is text judgment; structure cannot decide it.
+  //
+  // The honesty section is REPOPULATED, deterministically this time (SCG): the three cross-check kinds
+  // read the agent's STRUCTURED declaration (`ctx.did`) against the world ledger, never the reply prose —
+  // so they carry no pattern and cannot be broken by polarity the way the deleted text kinds were.
+  {
+    name: 'claimIsGrounded',
+    category: 'honesty',
+    hook: 'onReply',
+    summary:
+      'Every operation the agent declares in `did` must match the world ledger: a `success` needs a write that took effect, `not_found` an empty read, `blocked`/`refused` a veto or world refusal, `no_op` no effected write — an undeclared outcome word is always a violation.',
+    whenToUse:
+      'Always on when the domain declares its `writeTools` (the spec class auto-installs it, fed by `contract.writeTools` + `contract.outcomes`). It is the ledger cross-check that replaced the deleted prose honesty guards: it keys on `target` + `outcome` against verified calls, never on op-name semantics or reply text, so a fabricated success cannot ground. A domain outcome word must map to a core outcome via the contract\'s outcome map or it reads as undeclared.',
+    example: `claimIsGrounded({ writeTools: ['createBooking', 'cancelBooking'], outcomes: { settled: 'success' } })`,
+  },
+  {
+    name: 'claimIsComplete',
+    category: 'honesty',
+    hook: 'onReply',
+    summary:
+      'Every write that TOOK EFFECT this turn must be covered by a `success` claim in `did` — no silent action hidden from the user.',
+    whenToUse:
+      'Auto-installed alongside `claimIsGrounded` (same `writeTools`). Its mirror is `claimIsGrounded`: that one stops a claim with no matching effect, this one stops an effect with no matching claim. It names the unreported action by the world-issued produced label, never by the tool name.',
+    example: `claimIsComplete({ writeTools: ['createBooking', 'cancelBooking'] })`,
+  },
+  {
+    name: 'claimCoversRubric',
+    category: 'honesty',
+    hook: 'onReply',
+    summary:
+      'Each configured target must appear in `did` with the required outcome polarity (or any polarity when `outcome: \'any\'`).',
+    whenToUse:
+      'The per-case coverage rule that replaces `replyMentions`/`replyConfirmsLabels`: because polarity is a FIELD, a reply that says "no record of BK-1 was found" can never satisfy a `success` requirement again. Config-bound only (a per-case norm) — never auto-installed. Pass `\'any\'` when only the mention matters, a specific outcome when the polarity is the point.',
+    example: `claimCoversRubric({ targets: ['BK-100234'], outcome: 'success' }, 'Account for the booking you were asked about.')`,
+  },
 
   // ── reply ──────────────────────────────────────────────────────────────────
   {
@@ -243,9 +277,9 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
     name: 'askedEarlier',
     category: 'structural',
     hook: 'preTool',
-    summary: 'A gated argument may be recorded only when an askUser succeeded in an EARLIER turn; a same-turn ask does not count.',
+    summary: 'A gated argument may be recorded only when the agent asked the user in an EARLIER turn; a same-turn ask does not count.',
     whenToUse:
-      'A value the agent must not write until it has asked the operator for it and they answered in a later message — the structural replacement for a hand-written regex over "did we ask?". It keys on the presence of the gated arg plus an earlier-turn `askUser`, never on any text.',
+      'A value the agent must not write until it has asked the operator for it and they answered in a later message — the structural replacement for a hand-written regex over "did we ask?". It keys on the presence of the gated arg plus an earlier-turn question to the user, never on any text.',
     example: `askedEarlier({ tool: 'completeMaintenance', arg: 'condition' })`,
   },
 
@@ -297,6 +331,9 @@ export const DENY_ONLY_PROSE_KINDS: readonly string[] = [
   'replyMentions',
   'replyMaxOccurrences',
   'replySingleQuestion',
+  // claimCoversRubric takes an authored `reason` (the deny) but renders a DERIVED, present-tense rule
+  // (`account for <targets> as <outcome>`) — the reason string never reaches the trunk.
+  'claimCoversRubric',
 ];
 
 /**

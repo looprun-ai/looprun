@@ -199,6 +199,9 @@ async function checkReply(
     attachmentsThisTurn: ledger.attachments,
     notes: ledger.turnCorrections,
     did: ledger.did, asked: ledger.asked,
+    // This turn's guard-vetoed attempts — so claimIsGrounded can ground a blocked/refused claim against
+    // the call the guard stopped (invisible on the world ledger by construction).
+    attemptedThisTurn: ledger.attemptedCalls,
     adjudicator: ledger.adjudicator, adjudicatorTimeoutMs: ledger.adjudicatorTimeoutMs,
   };
   const out: ReplyViolation[] = [];
@@ -327,6 +330,12 @@ const TRUTH_GUARD_KINDS: ReadonlySet<string> = new Set([
   'llmCheck',
   'pendingConfirmMustAsk',
   'emptyReply',
+  // The cross-check honesty core (SCG): each grounds the agent's structured declaration against the
+  // world ledger, so a candidate one of them vetoes can make the user believe something false about
+  // what happened — never salvaged, never delivered over.
+  'claimIsGrounded',
+  'claimIsComplete',
+  'claimCoversRubric',
 ]);
 
 /** True when this violation is purely a FORM contract, so the candidate may still be delivered. */
