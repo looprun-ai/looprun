@@ -11,13 +11,13 @@ import type { CaseDump } from '../src/run.js';
 import { syncVerdicts, readJsonl, type SyncInput, type VerdictLine } from '../src/fold.js';
 import { foldCommand } from '../src/commands.js';
 
-function dump(caseId: string, reply: string): CaseDump {
+function dump(caseId: string, reply: string, resultSummary?: string): CaseDump {
   return {
     caseId,
     agent: 'a',
     arm: 'governed',
     model: 'm',
-    turns: [{ user: 'u', toolCalls: [{ name: 'doThing', args: { x: 1 }, ok: true, tookEffect: true }], guardEvents: [], reply }],
+    turns: [{ user: 'u', toolCalls: [{ name: 'doThing', args: { x: 1 }, ok: true, tookEffect: true, ...(resultSummary !== undefined ? { resultSummary } : {}) }], guardEvents: [], reply }],
     invariantVerdict: { pass: true, violations: [] },
     rubric: [],
     targets: [],
@@ -62,6 +62,18 @@ describe('syncVerdicts — one verdict per byte-identical transcript class', () 
     ];
     const res = syncVerdicts(inputs);
     // Two classes for the same caseId — divergent bytes are NOT reconciled.
+    expect(res.classes.filter((c) => c.caseId === 'c1')).toHaveLength(2);
+    expect(res.provenance).toEqual([]);
+  });
+
+  it('does NOT sync transcripts differing ONLY in resultSummary (the judge saw them as different)', () => {
+    // Same reply + same tool call, but a different tool result the judge reads — must stay distinct,
+    // because the sync fingerprint mirrors the exact projection buildJudgeInput emits.
+    const inputs: SyncInput[] = [
+      { dir: 'r0', dumps: [dump('c1', 'ok', 'charged $10')], verdicts: [{ caseId: 'c1', verdict: 'pass' }] },
+      { dir: 'r1', dumps: [dump('c1', 'ok', 'charged $99')], verdicts: [{ caseId: 'c1', verdict: 'ALARM' }] },
+    ];
+    const res = syncVerdicts(inputs);
     expect(res.classes.filter((c) => c.caseId === 'c1')).toHaveLength(2);
     expect(res.provenance).toEqual([]);
   });

@@ -236,6 +236,9 @@ export interface CertCommandOptions {
   note?: string;
   /** Band only: where cert-band.json + CERT-BAND.md land (default: parent of the first dir). */
   out?: string;
+  /** Verdicts filename inside each run dir (default `verdicts.jsonl`). Use `verdicts.synced.jsonl`
+   *  to certify off `fold --sync` output — the real drop-in wiring, no manual rename. */
+  verdicts?: string;
 }
 
 /**
@@ -243,7 +246,7 @@ export interface CertCommandOptions {
  * per-rep certs PLUS `cert-band.json` + `CERT-BAND.md`, certified only if the FLOOR clears the bar.
  */
 export function certCommand(opts: CertCommandOptions): CertSummary | CertBand {
-  const shared = { model: opts.model, bar: opts.bar, generatedAt: opts.date, artifactNote: opts.note };
+  const shared = { model: opts.model, bar: opts.bar, generatedAt: opts.date, artifactNote: opts.note, verdictsFile: opts.verdicts };
   const dirs = [opts.dir, ...(opts.dirs ?? [])];
   if (dirs.length > 1) return buildCertBand(dirs, { ...shared, out: opts.out });
   return buildCert(opts.dir, shared);

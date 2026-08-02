@@ -22,6 +22,8 @@ const HELP = `looprun-eval <command>
                      --subject <dir> (required) [--reached-floor <ratio>] Exits 1 on any blocking issue.
   judge-input <dir>  Build the blind per-case JSONL the judge reads (turn boundaries preserved,
                      no arm/rep labels, deterministic order). [--chunk <N>] → judge-input.partK.jsonl.
+                     CAVEAT: the EMITTED files are blind, but a run-dir NAME you chose can still leak
+                     the arm via its path — keep dir names neutral when the path reaches the judge.
   fold [flags]       Merge judge verdicts into RESULTS.md (final pass = invariants AND judge).
                      --dump <cases.jsonl> --verdicts <verdicts.jsonl> [--out <RESULTS.md>]
                      --sync <dir> <dir> …  Force one verdict per byte-identical transcript across run
@@ -29,6 +31,8 @@ const HELP = `looprun-eval <command>
   cert <dir> [dir…]  Fold cases.jsonl + verdicts.jsonl → cert.json + CERT.md (reps=1, stated).
                      2+ dirs = multi-rep BAND → cert-band.json + CERT-BAND.md; certified only
                      if the FLOOR over reps clears the bar. [--out <dir>] for the band files.
+                     [--verdicts <file>] reads that verdicts filename per dir (default verdicts.jsonl;
+                     use verdicts.synced.jsonl to certify off 'fold --sync' output).
   seal <subject>     Mint ship/seal.json (hash-bound) — or --verify an existing one.
                      [--bar 0.9] [--model <label>] [--date <iso>] [--note <text>]
   lint [paths…]      Purity/firewall/contract lint. [--spec-laws --subject <dir>]
@@ -131,6 +135,7 @@ async function main() {
       date: flag('date', undefined),
       note: flag('note', undefined),
       out: flag('out', undefined),
+      verdicts: flag('verdicts', undefined),
     });
     if (moreDirs.length) {
       console.log(

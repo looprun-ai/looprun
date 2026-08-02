@@ -21,7 +21,13 @@ export interface CertOptions {
   generatedAt?: string;
   /** Free-form provenance note appended to the default artifact note. */
   artifactNote?: string;
+  /** The verdicts filename inside each run dir. Default `verdicts.jsonl`; set to
+   *  `verdicts.synced.jsonl` to certify off `fold --sync` output (the real drop-in wiring). */
+  verdictsFile?: string;
 }
+
+/** The default judge-verdicts filename a run dir carries. */
+export const DEFAULT_VERDICTS_FILE = 'verdicts.jsonl';
 
 export interface CertSummary {
   model: string;
@@ -41,7 +47,7 @@ const pct = (r: number) => `${(r * 100).toFixed(1)}%`;
 export function buildCert(runDir: string, opts: CertOptions = {}): CertSummary {
   const dumps = readJsonl<CaseDump>(readFileSync(join(runDir, 'cases.jsonl'), 'utf8'));
   if (!dumps.length) throw new Error(`cert: ${runDir}/cases.jsonl is empty`);
-  const verdicts = readJsonl<VerdictLine>(readFileSync(join(runDir, 'verdicts.jsonl'), 'utf8'));
+  const verdicts = readJsonl<VerdictLine>(readFileSync(join(runDir, opts.verdictsFile ?? DEFAULT_VERDICTS_FILE), 'utf8'));
   const fold = foldVerdicts(dumps, verdicts);
   if (fold.missing) {
     process.stderr.write(`[looprun-eval] WARN ${fold.missing} case(s) had NO verdict (counted FAIL) — re-judge those caseIds\n`);

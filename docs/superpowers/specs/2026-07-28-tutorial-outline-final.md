@@ -65,22 +65,22 @@ chapter                    symbols taught
 01-concepts                 0   (concept-only)
 02-hello-world              3   ███
 03-agent-anatomy           11   ███████████
-04-guards                  35   ███████████████████████████████████
+04-guards                  37   █████████████████████████████████████
 05-running-and-eval        30   ██████████████████████████████
 06-advanced                13   █████████████
 ------------------------   --------------
-TOTAL                      92
+TOTAL                      94
 ```
 
 | package | round-2 baseline | taught here | delta |
 |---|---|---|---|
-| `core` | 53 | 51 | −10 demoted, +8 promoted |
+| `core` | 53 | 53 | −10 demoted, +8 promoted, +2 structural (increment 1) |
 | `mastra` | 5 | 7 | +2 promoted |
 | `models` | 4 | 8 | +4 promoted |
 | `eval` | 13 | 22 | +9 promoted |
 | `server` | 4 | 4 | — |
 | `vercel` | 0 | 0 | — |
-| **total** | **79** | **92** | **+23 / −10** |
+| **total** | **79** | **94** | **+25 / −10** |
 
 Inventory totals move round-2 79 / 35 / 151 → round-3 83 / 31 / 151 → **round-4 90 / 38 / 138**,
 recorded in the inventory's §9 rounds 3 and 4. Every delta is a §9 row.
@@ -457,7 +457,7 @@ in the "bring your own loop" seam; internal, not taught.)
 |---|---|---|
 | mastra | **02** (3) | `LoopRunAgent` `LoopRunAgentConfig` `LoopRunOptions` |
 | core | **03** (11) | `AgentSpecBase` `AgentSpec` `AgentSpecConfig` `AgentScope`↑ `TerminalPolicy`↑ `DomainContract` `ToolDef` `AgentWorld` `Hook`↑ `ToolTarget`↑ `validateSpec` |
-| core | **04** (35) | `Guard` `GuardCtx` `ObservedCall` `Dim`↑ · `custom` `requiresBefore` `forbidThisTurn` `argRequired` `argAbsent` `argFormat` `precondition` `maxCalls` `canonArgs` `noDuplicateCall` `confirmFirst` `noActAfterAskSameTurn` `destructiveThrottle` `resultInvariant` `noFabricatedSuccess` `replyMustMention` `replyMaxOccurrences` `replySingleQuestion` `replyConfirmsLabels` `emptyReply` `degenerationGuard` `pendingConfirmMustAsk` `destructiveClaimRequiresSuccess` `noFalseFailureClaim` `minimalDisclosure` `noInstructionFromData` `noCompetitorClaim` `noOutOfSurfaceActionClaim` `noUngroundedRegulatedFigure` `consentRequired` `jargonScrub` |
+| core | **04** (37) | `Guard` `GuardCtx` `ObservedCall` `Dim`↑ · `custom` `askedEarlier` `confirmedNeedsEarlierProbe` `requiresBefore` `forbidThisTurn` `argRequired` `argAbsent` `argFormat` `precondition` `maxCalls` `canonArgs` `noDuplicateCall` `confirmFirst` `noActAfterAskSameTurn` `destructiveThrottle` `resultInvariant` `noFabricatedSuccess` `replyMustMention` `replyMaxOccurrences` `replySingleQuestion` `replyConfirmsLabels` `emptyReply` `degenerationGuard` `pendingConfirmMustAsk` `destructiveClaimRequiresSuccess` `noFalseFailureClaim` `minimalDisclosure` `noInstructionFromData` `noCompetitorClaim` `noOutOfSurfaceActionClaim` `noUngroundedRegulatedFigure` `consentRequired` `jargonScrub` |
 | core | **05** (5) | `TurnInput`↑ `RunResult`↑ `TurnRecord`↑ `geminiThinkingOff` `pinnedDecoding` |
 | mastra | **05** (2) | `runSpecConversation` `RuntimeDeps`↑ |
 | models | **05** (1) | `geminiFlashLiteThinkOff` |
@@ -466,10 +466,11 @@ in the "bring your own loop" seam; internal, not taught.)
 | models | **06** (7) | `localModel`↑ `LocalModelOptions`↑ `LocalModelSpec`↑ `ModelRuntimePort`↑ `resolveAlias` `LlamaCppRuntime` `localModelStatus` |
 | mastra | **06** (2) | `worldFromTools` `StateView`↑ |
 
-**Per-chapter:** 0 + 3 + 11 + 35 + 30 + 13 = **92**.
-**Per-package:** core 51 · mastra 7 · models 8 · eval 22 · server 4 · vercel 0 = **92**, matching the
-inventory's round-4 §1 chart plus increment 1's net-new `loadNormsConfig` and increment 2a's net-new
-`validateCommand` + `judgeInputCommand`. No symbol appears twice; no inventory-public symbol is missing.
+**Per-chapter:** 0 + 3 + 11 + 37 + 30 + 13 = **94**.
+**Per-package:** core 53 · mastra 7 · models 8 · eval 22 · server 4 · vercel 0 = **94**, matching the
+inventory's round-4 §1 chart plus increment 1's net-new `loadNormsConfig` + two structural guards
+(`askedEarlier`, `confirmedNeedsEarlierProbe`) and increment 2a's net-new `validateCommand` +
+`judgeInputCommand`. No symbol appears twice; no inventory-public symbol is missing.
 
 ---
 

@@ -84,6 +84,27 @@ describe('fold + cert commands', () => {
     expect(certMd).toContain('generated: 2026-01-15');
   });
 
+  it('cert --verdicts reads an alternate verdicts filename (fold --sync drop-in)', () => {
+    const { dir } = writeRunDir();
+    // A synced verdicts file that flips 02-b to a FAIL the default file never carried.
+    writeFileSync(
+      join(dir, 'verdicts.synced.jsonl'),
+      [
+        JSON.stringify({ caseId: '01-a', verdict: 'pass' }),
+        JSON.stringify({ caseId: '02-b', verdict: 'ALARM' }),
+        JSON.stringify({ caseId: '03-c', verdict: 'pass' }),
+      ].join('\n') + '\n',
+    );
+    const summary = certCommand({ dir, verdicts: 'verdicts.synced.jsonl', bar: 0.3 }) as CertSummary;
+    // 01-a pass; 02-b ALARM (not 'pass') → FAIL; 03-c now judged pass but invariants clean → pass.
+    expect(summary.perCase).toEqual([
+      { caseId: '01-a', final: 'pass' },
+      { caseId: '02-b', final: 'FAIL' },
+      { caseId: '03-c', final: 'pass' },
+    ]);
+    expect(summary.passRate).toBeCloseTo(2 / 3);
+  });
+
   it('cert has no wall-clock default: generatedAt absent when --date is not passed', () => {
     const { dir } = writeRunDir();
     const summary = certCommand({ dir, bar: 0.3 }) as CertSummary;
