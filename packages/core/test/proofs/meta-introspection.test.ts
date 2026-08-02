@@ -9,19 +9,19 @@
  *      guard would read as introspection-free and the lint would silently check nothing).
  */
 import { describe, expect, it } from 'vitest';
-import { AgentSpecBase, replyConfirmsLabels, replyMustMention, requiresBefore } from '../../src/index.js';
+import { AgentSpecBase, replyMentions, requiresBefore } from '../../src/index.js';
 
 describe('guard meta introspection', () => {
   it('requiresBefore attaches meta.before; reply kinds attach meta.requiredStrings', () => {
     expect(requiresBefore(['a', 'b']).meta).toEqual({ before: ['a', 'b'] });
-    expect(replyMustMention(['x', 'y'], 'r').meta).toEqual({ requiredStrings: ['x', 'y'] });
-    expect(replyConfirmsLabels(['L-1'], 'r').meta).toEqual({ requiredStrings: ['L-1'] });
+    expect(replyMentions({ terms: ['x', 'y'], anyTerm: true }, 'r').meta).toEqual({ requiredStrings: ['x', 'y'] });
+    expect(replyMentions({ terms: ['L-1'] }, 'r').meta).toEqual({ requiredStrings: ['L-1'] });
   });
 
   it('meta survives the attributeGuard wrapper installed by AgentSpecBase.addGuard', () => {
     const spec = new AgentSpecBase({ id: 's', mode: 'M', persona: 'You are s.', tools: ['t1', 't2'] });
     spec.addGuard('preTool', ['t2'], requiresBefore(['t1']), { id: 'agent:order' });
-    spec.addReplyCheck(replyConfirmsLabels(['L-9'], 'name it'), { id: 'agent:labels' });
+    spec.addReplyCheck(replyMentions({ terms: ['L-9'] }, 'name it'), { id: 'agent:labels' });
     const pre = spec.guards.preTool.find((b) => b.id === 'agent:order')!;
     const rep = spec.guards.onReply.find((b) => b.id === 'agent:labels')!;
     expect(pre.guard.meta?.before).toEqual(['t1']);

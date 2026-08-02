@@ -38,10 +38,9 @@ export {
 } from './confirmation.js';
 export { llmCheck } from './llm-check.js';
 export {
-  replyMustMention,
+  replyMentions,
   replyMaxOccurrences,
   replySingleQuestion,
-  replyConfirmsLabels,
   emptyReply,
   degenerationGuard,
   jargonScrub,

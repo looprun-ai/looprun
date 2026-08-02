@@ -1,6 +1,6 @@
 /** Offline e2e of the governed turn: veto, redrive, forced-terminal, exhaustion, sessions. */
 import { describe, expect, it } from 'vitest';
-import { AgentSpecBase, custom, requiresBefore, replyMustMention } from '@looprun-ai/core';
+import { AgentSpecBase, custom, requiresBefore, replyMentions } from '@looprun-ai/core';
 import type { AgentWorld, DomainContract } from '@looprun-ai/core';
 import { LoopRunAgent } from '../src/index.js';
 import { scriptedModel } from './scripted-model.js';
@@ -147,7 +147,7 @@ describe('LoopRunAgent — one governed turn', () => {
 
   it('redrives an onReply violation as a bounded no-tools re-generate', async () => {
     const spec = makeSpec();
-    spec.addReplyCheck(replyMustMention(['fern'], 'Mention the plant name.'), { id: 'agent:mentionPlant' });
+    spec.addReplyCheck(replyMentions({ terms: ['fern'], anyTerm: true }, 'Mention the plant name.'), { id: 'agent:mentionPlant' });
     const scripted = scriptedModel([
       [{ tool: 'listPlants', args: {} }],
       [{ tool: 'replyToUser', args: { text: 'Done.' } }], // violates: no "fern"
@@ -156,7 +156,7 @@ describe('LoopRunAgent — one governed turn', () => {
     const agent = new LoopRunAgent({ spec, world: plantsWorld(), toolDefs: TOOL_DEFS, model: scripted.model });
     const res = await agent.generate('How is my plant?');
     expect(res.text).toBe('Your fern is thriving.');
-    expect(res.looprun.corrections).toContain('redrive:replyMustMention');
+    expect(res.looprun.corrections).toContain('redrive:replyMentions');
     expect(res.looprun.exhausted).toBe(false);
   });
 

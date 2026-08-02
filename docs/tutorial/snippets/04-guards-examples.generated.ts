@@ -27,16 +27,15 @@ import {
   noDuplicateCall,
   pendingConfirmMustAsk,
   precondition,
-  replyConfirmsLabels,
   replyMaxOccurrences,
-  replyMustMention,
+  replyMentions,
   replySingleQuestion,
   requiresBefore,
   resultInvariant,
 } from 'looprun';
 import type { Guard, ReplyMutator } from 'looprun';
 
-/** The 24 examples of chapter 04 §5, in catalog order. */
+/** The 23 examples of chapter 04 §5, in catalog order. */
 export const CATALOG_EXAMPLES: ReadonlyArray<Guard | ReplyMutator> = [
   /* requiresBefore        */ requiresBefore(['findBooking']),
   /* forbidThisTurn        */ forbidThisTurn('Do not reschedule while a cancellation is pending — resolve that first.'),
@@ -52,10 +51,9 @@ export const CATALOG_EXAMPLES: ReadonlyArray<Guard | ReplyMutator> = [
   /* noActAfterAskSameTurn */ noActAfterAskSameTurn(['cancelBooking']),
   /* destructiveThrottle   */ destructiveThrottle(['cancelBooking', 'refundOrder']),
   /* pendingConfirmMustAsk */ pendingConfirmMustAsk(),
-  /* replyMustMention      */ replyMustMention(['support@example.com'], 'Give the support address so the person can follow up.'),
+  /* replyMentions         */ replyMentions({ terms: ['BK-100234'] }, 'Name the booking you acted on so the person can check it.'),
   /* replyMaxOccurrences   */ replyMaxOccurrences(['book now', 'call us', 'subscribe'], 1, 'One ask per reply — drop the extra calls-to-action.'),
   /* replySingleQuestion   */ replySingleQuestion('Ask exactly one question so the person can answer it.'),
-  /* replyConfirmsLabels   */ replyConfirmsLabels(['BK-100234'], 'Name the booking you acted on so the person can check it.'),
   /* emptyReply            */ emptyReply(),
   /* degenerationGuard     */ degenerationGuard(),
   /* jargonScrub           */ jargonScrub({ CANC_PEND: 'waiting to be cancelled' }),

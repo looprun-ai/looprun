@@ -7,17 +7,42 @@ import type { ReplyMutator } from '../rules.js';
 import type { Guard } from '../rules.js';
 import { escapeRe, lc } from './shared.js';
 
-/** The reply must contain at least one of `keywords` (case-insensitive). `prose` = derived rule. */
-export function replyMustMention(keywords: string[], reason: string, prose?: string): Guard {
+/**
+ * The reply must MENTION the given `terms` — a literal, case-insensitive substring scan (terms are DATA
+ * from config, never patterns). Two modes, chosen by `anyTerm`:
+ *  - `anyTerm: true` — AT LEAST ONE term suffices (the former `replyMustMention`): a required disclaimer,
+ *    a referral phrase, any single element of coverage that is the same on every turn.
+ *  - `anyTerm: false` (DEFAULT) — EVERY term is required and the reply must be non-empty (the former
+ *    `replyConfirmsLabels`): the model just acted on identified records and the user must see WHICH ones.
+ * `prose` = derived rule (prose≠reason law) — pass it to override the mode-appropriate default.
+ */
+export function replyMentions(
+  opts: { terms: string[]; anyTerm?: boolean },
+  reason: string,
+  prose?: string,
+): Guard {
+  const terms = [...opts.terms];
+  const anyTerm = opts.anyTerm ?? false;
   return {
-    kind: 'replyMustMention',
+    kind: 'replyMentions',
     dim: 'behavior',
-    meta: { requiredStrings: [...keywords] },
+    meta: { requiredStrings: [...terms] },
     check(ctx) {
-      const r = lc(ctx.reply);
-      return keywords.some((k) => r.includes(lc(k))) ? null : reason;
+      const raw = ctx.reply ?? '';
+      if (anyTerm) {
+        const r = lc(raw);
+        return terms.some((t) => r.includes(lc(t))) ? null : reason;
+      }
+      // all-of: the reply must be non-empty AND name every term (case-insensitive).
+      if (raw.trim() === '') return reason;
+      const r = lc(raw);
+      return terms.every((t) => r.includes(lc(t))) ? null : reason;
     },
-    prose: () => prose ?? `every reply must mention at least one of: ${keywords.join(', ')}`,
+    prose: () =>
+      prose ??
+      (anyTerm
+        ? `every reply must mention at least one of: ${terms.join(', ')}`
+        : `name ${terms.join(', ')} in the reply`),
   };
 }
 
@@ -59,21 +84,6 @@ export function replySingleQuestion(reason: string, prose?: string): Guard {
       return questionMarks === 1 ? null : reason;
     },
     prose: () => prose ?? 'ask exactly ONE question per reply',
-  };
-}
-
-/** The reply must be non-empty and name ALL `labels`. `prose` = derived rule. */
-export function replyConfirmsLabels(labels: string[], reason: string, prose?: string): Guard {
-  return {
-    kind: 'replyConfirmsLabels',
-    dim: 'behavior',
-    meta: { requiredStrings: [...labels] },
-    check(ctx) {
-      const r = ctx.reply ?? '';
-      if (r.trim() === '') return reason;
-      return labels.every((l) => r.includes(l)) ? null : reason;
-    },
-    prose: () => prose ?? `name ${labels.join(', ')} in the reply`,
   };
 }
 

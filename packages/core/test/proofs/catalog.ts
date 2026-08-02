@@ -26,12 +26,13 @@
  * | pendingConfirmMustAsk          | any (onReply)              | structural: unresolved probe requires an askUser this turn |
  * | emptyReply                     | any (auto minimal)         | —                                                  |
  * | degenerationGuard              | any (auto minimal)         | — (param-free artifact-shape lint)                 |
- * | replyMustMention / replyMaxOccurrences / replySingleQuestion / replyConfirmsLabels | collective:'skip' (content-contract guards, proven isolated only) |
+ * | replyMentions / replyMaxOccurrences / replySingleQuestion | collective:'skip' (content-contract guards, proven isolated only) |
  * | llmCheck                       | collective:'skip'          | scripted adjudicator; the honesty/risk text judgment lives here now |
  * | consentRequired                | useMedia                   | consentOk = world.hasPrimary()                     |
  * | (DELETED — no-regex law 2026-08-02) noFabricatedSuccess · destructiveClaimRequiresSuccess · noFalseFailureClaim · minimalDisclosure · noInstructionFromData · noCompetitorClaim · noOutOfSurfaceActionClaim · noUngroundedRegulatedFigure |
  * | askedEarlier                   | createItem                 | askedEarlier({ tool:'createItem', arg:'condition' }) — gates the non-schema `condition` arg |
  * | (ABSORBED 2026-08-02) confirmedNeedsEarlierProbe → confirmFirst({ via:'probe' }) — record-bound probe now a via of the ONE confirm gate |
+ * | (MERGED 2026-08-02) replyMustMention + replyConfirmsLabels → replyMentions({ terms, anyTerm }) — one reply-coverage gate (anyTerm true = any one, false/default = all) |
  * | llmCheck                       | collective:'skip'          | rubric+host adjudicator are agent-specific (like the content-contract reply guards); proven isolated L1+L3 |
  *
  * ## SCRIPT CONVENTIONS (verified in signal-mechanics.test.ts)

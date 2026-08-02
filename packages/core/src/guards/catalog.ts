@@ -184,13 +184,13 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
 
   // ── reply ──────────────────────────────────────────────────────────────────
   {
-    name: 'replyMustMention',
+    name: 'replyMentions',
     category: 'reply',
     hook: 'onReply',
-    summary: 'The reply must contain at least one of the given keywords (case-insensitive).',
+    summary: 'The reply must mention the given terms (literal, case-insensitive substring scan). `anyTerm: true` = at least ONE suffices; `anyTerm: false` (default) = EVERY term is required and the reply must be non-empty.',
     whenToUse:
-      'A mandatory element of coverage that is the same on every turn — a referral phrase, a required disclaimer. For "name the records you just acted on", use `replyConfirmsLabels` instead.',
-    example: `replyMustMention(['support@example.com'], 'Give the support address so the person can follow up.')`,
+      'The ONE reply-coverage gate. Pick the mode by how the terms relate: `anyTerm: true` for a mandatory element that is the same on every turn — a referral phrase, a required disclaimer, any single keyword of the set suffices. `anyTerm: false` (default) for "name the records you just acted on" — the model touched identified records and the user must see WHICH ones, so every label is required. Terms are DATA, never patterns.',
+    example: `replyMentions({ terms: ['BK-100234'] }, 'Name the booking you acted on so the person can check it.')`,
   },
   {
     name: 'replyMaxOccurrences',
@@ -209,15 +209,6 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
     whenToUse:
       'Recovery and clarification turns, where a pile of questions at once is what stalls the conversation. Bind it to the layer that handles those turns, not to every reply.',
     example: `replySingleQuestion('Ask exactly one question so the person can answer it.')`,
-  },
-  {
-    name: 'replyConfirmsLabels',
-    category: 'reply',
-    hook: 'onReply',
-    summary: 'The reply must be non-empty and name every one of the given labels.',
-    whenToUse:
-      'The model just acted on identified records and the user needs to see WHICH ones. Unlike `replyMustMention` (any one keyword), every label is required.',
-    example: `replyConfirmsLabels(['BK-100234'], 'Name the booking you acted on so the person can check it.')`,
   },
   {
     name: 'emptyReply',
@@ -303,10 +294,9 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
 export const DENY_ONLY_PROSE_KINDS: readonly string[] = [
   'forbidThisTurn',
   'maxCalls',
-  'replyMustMention',
+  'replyMentions',
   'replyMaxOccurrences',
   'replySingleQuestion',
-  'replyConfirmsLabels',
 ];
 
 /**

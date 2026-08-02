@@ -15,7 +15,7 @@
  *                       should always close with a NON-empty replyToUser unless probing that path.
  */
 import { describe, expect, it } from 'vitest';
-import { custom, replyMustMention, resultInvariant } from '@looprun-ai/core';
+import { custom, replyMentions, resultInvariant } from '@looprun-ai/core';
 import { buildIsolatedSpec, type GuardProof } from '@looprun-ai/core/testing';
 import { runProofLoop } from '../../src/testing/index.js';
 
@@ -24,8 +24,8 @@ const turn = (userText: string) => ({ userText });
 describe('signal mechanics (proof-authoring conventions)', () => {
   it('onReply redrive: correction step is a plain text part, tag redrive:<kind>', async () => {
     const proof: GuardProof = {
-      guard: 'replyMustMention',
-      make: () => replyMustMention(['done'], 'Your reply must say what was done — include the word "done".'),
+      guard: 'replyMentions',
+      make: () => replyMentions({ terms: ['done'], anyTerm: true }, 'Your reply must say what was done — include the word "done".'),
       hook: 'onReply',
       target: 'any',
       cases: [],
@@ -42,7 +42,7 @@ describe('signal mechanics (proof-authoring conventions)', () => {
     });
     expect(res.errorMsg).toBeUndefined();
     const rec = res.turnRecords[0];
-    expect(rec.recoveryEvents).toContain('redrive:replyMustMention');
+    expect(rec.recoveryEvents).toContain('redrive:replyMentions');
     expect(rec.assistantFinalText).toBe('Done — it is all set.');
   });
 
@@ -100,8 +100,8 @@ describe('signal mechanics (proof-authoring conventions)', () => {
 
   it('empty terminal text: forced-terminal fires before the onReply checks', async () => {
     const proof: GuardProof = {
-      guard: 'replyMustMention',
-      make: () => replyMustMention(['ready'], 'Say it is ready.'),
+      guard: 'replyMentions',
+      make: () => replyMentions({ terms: ['ready'], anyTerm: true }, 'Say it is ready.'),
       hook: 'onReply',
       target: 'any',
       cases: [],

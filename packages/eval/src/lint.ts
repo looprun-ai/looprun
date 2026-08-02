@@ -126,8 +126,8 @@ async function runCheck(b: GuardBinding, reply: string): Promise<{ violation: st
 }
 
 /**
- * UNSAT-RISK: a reply requirement no reply can satisfy — guard X REQUIRES a string (labels from
- * replyConfirmsLabels, terms from replyMustMention, via `meta.requiredStrings`) that another
+ * UNSAT-RISK: a reply requirement no reply can satisfy — guard X REQUIRES a string (the `terms` of
+ * replyMentions — every one when `anyTerm:false`, any one when `anyTerm:true` — via `meta.requiredStrings`) that another
  * onReply guard Y VETOES. Every required string is embedded in a synthetic worst-case reply and
  * every OTHER onReply check() of the same spec is EXECUTED over it; a check that throws on the
  * synthetic ctx is its own finding.

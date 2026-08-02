@@ -71,6 +71,32 @@ const ESCAPE_HATCH = {
     'One factory, and it is the only one whose hook you choose: `custom` follows the `dim` you pass it (`spatial`/`input`/`run` → the tool hooks, `output` → `postTool`, `behavior` → `onReply`), which is why it is listed apart from the phase sections rather than under one of them. Section 6 walks through writing one.',
 };
 
+/** THE CONSENT STORY — one section, rendered into the chapter's preamble. Consent is enforced at THREE
+ *  checkpoints, one per hook, and they are installed as a SET — never two of them redundantly. */
+const CONSENT_STORY = [
+  '### The consent story — three checkpoints, installed as a set',
+  '',
+  'Ask-before-you-act is not one guard. It is three, each gating a different thing on a different hook,',
+  'and a governed destructive flow installs all three together — never two that say the same thing twice.',
+  '',
+  '```',
+  '   ①  confirmFirst          gates the CALL    (preTool)  — the confirmed act may run only when an',
+  '                                                           EARLIER turn licensed it (a probe or an ask)',
+  '   ②  askedEarlier          gates the ARG     (preTool)  — a value may be RECORDED only after the',
+  '                                                           operator was asked for it and answered later',
+  '   ③  pendingConfirmMustAsk  gates the REPLY   (onReply)  — when a probe returned "needs confirmation"',
+  '                                                           and nothing resolved it, the reply MUST relay',
+  '                                                           the question instead of reporting the act done',
+  '```',
+  '',
+  'They compose because they cover disjoint moments: ① stops the unlicensed call, ② stops the unasked-for',
+  'value from being written, ③ stops the reply from summarising a still-pending action as finished. Reach',
+  'for the one that matches WHAT you are gating — the call, the argument, or the message — and do not stack',
+  'a second consent kind on the same moment: `confirmFirst` already carries the cross-turn requirement, so',
+  'pairing it with another call-gate is the redundancy this section exists to prevent.',
+  '',
+].join('\n');
+
 async function loadCatalog() {
   try {
     const mod = await import(pathToFileURL(CORE_DIST).href);
@@ -136,6 +162,7 @@ function render(catalog) {
     'there, because a rule that can refuse the whole turn before a call is even proposed is a domain',
     'decision, not a default. `custom` is how you reach it.',
     '',
+    CONSENT_STORY,
   ];
 
   let n = 1;

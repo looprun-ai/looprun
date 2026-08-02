@@ -60,8 +60,7 @@ export const GUARD_KIND_SUBJECT: Readonly<Record<string, string>> = Object.freez
   emptyReply: 'non-empty-reply',
   degenerationGuard: 'reply-hygiene',
   replySingleQuestion: 'single-question',
-  replyMustMention: 'reply-must-mention',
-  replyConfirmsLabels: 'reply-must-mention',
+  replyMentions: 'reply-must-mention',
   replyMaxOccurrences: 'cta-budget',
 });
 

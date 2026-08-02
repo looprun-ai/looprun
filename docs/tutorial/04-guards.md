@@ -230,7 +230,7 @@ reading only one row will pick the wrong kind:
 | `requiresBefore` · `precondition` | which call came first, vs what state the world is in |
 | `forbidThisTurn` · `noDuplicateCall` | the first call is illegitimate, vs only the repeat is |
 | `confirmFirst` · `consentRequired` · `pendingConfirmMustAsk` | evidence in the CONVERSATION (an earlier turn) · a standing flag in the WORLD · gating the REPLY rather than the call |
-| `replyMustMention` · `replyConfirmsLabels` | any one keyword suffices, vs every label is required |
+| `replyMentions` (`anyTerm: true` vs `false`) | any one term suffices, vs every term is required |
 
 **Where the honesty cluster went.** Six kinds used to sit here — a family that all meant "the reply
 lied" (invented success, false failure, an off-surface claim, an ungrounded regulated figure). The
@@ -284,15 +284,36 @@ disagree about it.
 <!-- Rendered from `packages/core/src/guards/catalog.ts`. Do NOT edit between the markers: run
      `pnpm docs:guards` (it needs a built core), and fix wording in the catalog itself. -->
 
-## 5. The catalog — 24 factories
+## 5. The catalog — 23 factories
 
 Grouped by the hook each one is installed on, because the hook decides what a rule can see and
-therefore what it can enforce (chapter 03 §8). 13 preTool · 1 postTool · 8 onReply · 1 onReplyMutate · 1 escape hatch.
+therefore what it can enforce (chapter 03 §8). 13 preTool · 1 postTool · 7 onReply · 1 onReplyMutate · 1 escape hatch.
 
 A fourth hook exists and has no section here: `onInput` fires before the model runs, and §1's
 matrix makes it legal for every `spatial`/`input`/`run` guard — but no shipped kind is installed
 there, because a rule that can refuse the whole turn before a call is even proposed is a domain
 decision, not a default. `custom` is how you reach it.
+
+### The consent story — three checkpoints, installed as a set
+
+Ask-before-you-act is not one guard. It is three, each gating a different thing on a different hook,
+and a governed destructive flow installs all three together — never two that say the same thing twice.
+
+```
+   ①  confirmFirst          gates the CALL    (preTool)  — the confirmed act may run only when an
+                                                           EARLIER turn licensed it (a probe or an ask)
+   ②  askedEarlier          gates the ARG     (preTool)  — a value may be RECORDED only after the
+                                                           operator was asked for it and answered later
+   ③  pendingConfirmMustAsk  gates the REPLY   (onReply)  — when a probe returned "needs confirmation"
+                                                           and nothing resolved it, the reply MUST relay
+                                                           the question instead of reporting the act done
+```
+
+They compose because they cover disjoint moments: ① stops the unlicensed call, ② stops the unasked-for
+value from being written, ③ stops the reply from summarising a still-pending action as finished. Reach
+for the one that matches WHAT you are gating — the call, the argument, or the message — and do not stack
+a second consent kind on the same moment: `confirmFirst` already carries the cross-turn requirement, so
+pairing it with another call-gate is the redundancy this section exists to prevent.
 
 ### `preTool` — before the call runs
 
@@ -469,13 +490,12 @@ The reply text is in `ctx.reply` and no tool can run any more. A deny costs a bo
 | factory | file | what it enforces |
 |---|---|---|
 | [`pendingConfirmMustAsk`](#15-pendingconfirmmustask) | `confirmation.ts` | When a probe returned `requiresConfirmation` this turn and nothing resolved it, the reply must relay that question. |
-| [`replyMustMention`](#16-replymustmention) | `reply.ts` | The reply must contain at least one of the given keywords (case-insensitive). |
+| [`replyMentions`](#16-replymentions) | `reply.ts` | The reply must mention the given terms (literal, case-insensitive substring scan). `anyTerm: true` = at least ONE suffices; `anyTerm: false` (default) = EVERY term is required and the reply must be non-empty. |
 | [`replyMaxOccurrences`](#17-replymaxoccurrences) | `reply.ts` | At most n DISTINCT calls-to-action from the list may appear in one reply. |
 | [`replySingleQuestion`](#18-replysinglequestion) | `reply.ts` | The reply must carry exactly one question mark. |
-| [`replyConfirmsLabels`](#19-replyconfirmslabels) | `reply.ts` | The reply must be non-empty and name every one of the given labels. |
-| [`emptyReply`](#20-emptyreply) | `reply.ts` | The final reply must not be blank. |
-| [`degenerationGuard`](#21-degenerationguard) | `reply.ts` | Catches leaked reasoning or tool markup, chat-template tokens and run-away line repetition in the reply. |
-| [`llmCheck`](#22-llmcheck) | `llm-check.ts` | An LLM-adjudicated guard: a host-registered adjudicator answers a trusted rubric over the full context (history + user text) and its verdict becomes the deny. |
+| [`emptyReply`](#19-emptyreply) | `reply.ts` | The final reply must not be blank. |
+| [`degenerationGuard`](#20-degenerationguard) | `reply.ts` | Catches leaked reasoning or tool markup, chat-template tokens and run-away line repetition in the reply. |
+| [`llmCheck`](#21-llmcheck) | `llm-check.ts` | An LLM-adjudicated guard: a host-registered adjudicator answers a trusted rubric over the full context (history + user text) and its verdict becomes the deny. |
 
 #### 15. `pendingConfirmMustAsk`
 
@@ -487,14 +507,14 @@ When a probe returned `requiresConfirmation` this turn and nothing resolved it, 
 pendingConfirmMustAsk()
 ```
 
-#### 16. `replyMustMention`
+#### 16. `replyMentions`
 
-The reply must contain at least one of the given keywords (case-insensitive).
+The reply must mention the given terms (literal, case-insensitive substring scan). `anyTerm: true` = at least ONE suffices; `anyTerm: false` (default) = EVERY term is required and the reply must be non-empty.
 
-**When to reach for it.** A mandatory element of coverage that is the same on every turn — a referral phrase, a required disclaimer. For "name the records you just acted on", use `replyConfirmsLabels` instead.
+**When to reach for it.** The ONE reply-coverage gate. Pick the mode by how the terms relate: `anyTerm: true` for a mandatory element that is the same on every turn — a referral phrase, a required disclaimer, any single keyword of the set suffices. `anyTerm: false` (default) for "name the records you just acted on" — the model touched identified records and the user must see WHICH ones, so every label is required. Terms are DATA, never patterns.
 
 ```ts
-replyMustMention(['support@example.com'], 'Give the support address so the person can follow up.')
+replyMentions({ terms: ['BK-100234'] }, 'Name the booking you acted on so the person can check it.')
 ```
 
 #### 17. `replyMaxOccurrences`
@@ -517,17 +537,7 @@ The reply must carry exactly one question mark.
 replySingleQuestion('Ask exactly one question so the person can answer it.')
 ```
 
-#### 19. `replyConfirmsLabels`
-
-The reply must be non-empty and name every one of the given labels.
-
-**When to reach for it.** The model just acted on identified records and the user needs to see WHICH ones. Unlike `replyMustMention` (any one keyword), every label is required.
-
-```ts
-replyConfirmsLabels(['BK-100234'], 'Name the booking you acted on so the person can check it.')
-```
-
-#### 20. `emptyReply`
+#### 19. `emptyReply`
 
 The final reply must not be blank.
 
@@ -537,7 +547,7 @@ The final reply must not be blank.
 emptyReply()
 ```
 
-#### 21. `degenerationGuard`
+#### 20. `degenerationGuard`
 
 Catches leaked reasoning or tool markup, chat-template tokens and run-away line repetition in the reply.
 
@@ -547,7 +557,7 @@ Catches leaked reasoning or tool markup, chat-template tokens and run-away line 
 degenerationGuard()
 ```
 
-#### 22. `llmCheck`
+#### 21. `llmCheck`
 
 An LLM-adjudicated guard: a host-registered adjudicator answers a trusted rubric over the full context (history + user text) and its verdict becomes the deny.
 
@@ -563,9 +573,9 @@ A `ReplyMutator`, not a `Guard`: it is applied to the reply before the `onReply`
 
 | factory | file | what it enforces |
 |---|---|---|
-| [`jargonScrub`](#23-jargonscrub) | `reply.ts` | A deterministic egress rewrite of internal vocabulary into user words (word-boundary, case-insensitive). |
+| [`jargonScrub`](#22-jargonscrub) | `reply.ts` | A deterministic egress rewrite of internal vocabulary into user words (word-boundary, case-insensitive). |
 
-#### 23. `jargonScrub`
+#### 22. `jargonScrub`
 
 A deterministic egress rewrite of internal vocabulary into user words (word-boundary, case-insensitive).
 
@@ -581,9 +591,9 @@ One factory, and it is the only one whose hook you choose: `custom` follows the 
 
 | factory | file | what it enforces |
 |---|---|---|
-| [`custom`](#24-custom) | `custom.ts` | The escape hatch: a guard whose kind, dim, check and prose the spec author writes by hand. |
+| [`custom`](#23-custom) | `custom.ts` | The escape hatch: a guard whose kind, dim, check and prose the spec author writes by hand. |
 
-#### 24. `custom`
+#### 23. `custom`
 
 The escape hatch: a guard whose kind, dim, check and prose the spec author writes by hand.
 

@@ -160,8 +160,8 @@ re-asks instead of executing). The correct rendering is derived from the paramet
 - only state that generateInvoice was done after generateInvoice has actually succeeded this turn.
 ```
 
-**Six kinds derive their prose mechanically** — `forbidThisTurn`, `maxCalls`,
-`replyMustMention`, `replyMaxOccurrences`, `replySingleQuestion`, `replyConfirmsLabels` (the runtime's
+**Five kinds derive their prose mechanically** — `forbidThisTurn`, `maxCalls`,
+`replyMentions`, `replyMaxOccurrences`, `replySingleQuestion` (the runtime's
 `DENY_ONLY_PROSE_KINDS`). Each builds the
 sentence from its own arguments (tool name, `n`, `scope`, keyword/label/CTA lists) and
 accepts an OPTIONAL author override (`prose?: string`, or `opts.prose` on the object-arg kinds). The
@@ -315,6 +315,29 @@ does not carry: they are about the enforcement path, not about choosing a kind.
   "allowed"); `confirmFirst('probe'|'ask'|'either')` passed a `via` NAME to the string overload. An inert safety
   guard still reads as coverage in a spec header, which is worse than an absent one — so it breaks the
   build. An `llmCheck` with an empty `rubric` fails the same way (nothing for the adjudicator to answer).
+
+### The consent story — three checkpoints, installed as a SET
+
+Ask-before-you-act is not one guard. It is three, each gating a different thing on a different hook, and
+a governed destructive flow installs all three TOGETHER — never two of them saying the same thing twice.
+
+```
+ ①  confirmFirst          gates the CALL   (preTool)  — the confirmed act runs only when an EARLIER
+                                                        turn licensed it (a same-record probe or a prior ask)
+ ②  askedEarlier          gates the ARG    (preTool)  — a value is RECORDED only after the operator was
+                                                        asked for it and answered in a LATER turn
+ ③  pendingConfirmMustAsk gates the REPLY  (onReply)  — when a probe returned requiresConfirmation and
+                                                        nothing resolved it, the reply MUST relay the
+                                                        question, not report the act as done
+```
+
+They compose because they cover DISJOINT moments — the call, the argument, the message — and each keys on
+its own structural signal (observed probe/ask · the gated arg + an earlier ask · an unresolved
+requiresConfirmation probe). The redundancy to avoid is stacking a SECOND call-gate next to `confirmFirst`:
+it already carries the cross-turn requirement (`via` + the recency-law `within`), so a second consent kind
+on the same moment is duplicate prose in the trunk, not extra safety. Reach for the checkpoint that matches
+WHAT you are gating. This section is mirrored in the generated chapter 04 preamble and in the agentspec
+`guard-catalog.md`, which stay in lockstep with it.
 
 ## 5. Controls (`spec.controls: AgentControls`) — knobs OUTSIDE the hooks
 

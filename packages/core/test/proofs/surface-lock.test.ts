@@ -6,8 +6,8 @@
  * SHAPE of the barrel. That is precisely how a contract rots.
  *
  * So the three lists below are the contract, transcribed:
- *   · TAUGHT      — the 46 core rows of the placement table in `docs/superpowers/specs/2026-07-28-tutorial-outline-final.md` §4,
- *                   chapters 03 (11) + 04 (30) + 05 (5). Changing this list changes what looprun
+ *   · TAUGHT      — the 44 core rows of the placement table in `docs/superpowers/specs/2026-07-28-tutorial-outline-final.md` §4,
+ *                   chapters 03 (11) + 04 (28) + 05 (5). Changing this list changes what looprun
  *                   promises, and must move the outline in the same commit.
  *   · RIDERS      — the type-closure rider (outline §7): pure types reachable from a taught
  *                   signature, exported so a `declaration: true` consumer can name them. NOT taught,
@@ -35,8 +35,9 @@ const TAUGHT_03 = [
   'AgentSpec', 'AgentSpecBase', 'AgentSpecConfig', 'AgentScope', 'AgentWorld',
   'DomainContract', 'Hook', 'TerminalPolicy', 'ToolDef', 'ToolTarget', 'validateSpec',
 ];
-// ── Chapter 04 (29) — no-regex law (2026-08-02) deleted 8 regex-param kinds; confirmedNeedsEarlierProbe
-//    absorbed into confirmFirst({ via:'probe' }) (2026-08-02) ──
+// ── Chapter 04 (28) — no-regex law (2026-08-02) deleted 8 regex-param kinds; confirmedNeedsEarlierProbe
+//    absorbed into confirmFirst({ via:'probe' }); replyMustMention + replyConfirmsLabels merged into
+//    replyMentions({ terms, anyTerm }) (2026-08-02) ──
 const TAUGHT_04 = [
   'Dim', 'Guard', 'GuardCtx', 'ObservedCall',
   'argAbsent', 'argFormat', 'argRequired', 'askedEarlier', 'canonArgs', 'confirmFirst',
@@ -44,8 +45,8 @@ const TAUGHT_04 = [
   'degenerationGuard', 'destructiveThrottle', 'emptyReply',
   'forbidThisTurn', 'jargonScrub', 'maxCalls', 'noActAfterAskSameTurn',
   'noDuplicateCall',
-  'pendingConfirmMustAsk', 'precondition', 'replyConfirmsLabels', 'replyMaxOccurrences',
-  'replyMustMention', 'replySingleQuestion', 'requiresBefore', 'resultInvariant',
+  'pendingConfirmMustAsk', 'precondition', 'replyMaxOccurrences',
+  'replyMentions', 'replySingleQuestion', 'requiresBefore', 'resultInvariant',
 ];
 // ── Chapter 05 (5) ───────────────────────────────────────────────────────────
 const TAUGHT_05 = ['RunResult', 'TurnInput', 'TurnRecord', 'geminiThinkingOff', 'pinnedDecoding'];
@@ -117,10 +118,10 @@ describe('surface lock — the barrels are the tutorial contract', () => {
   const publicExports = exportsOf(join(SRC, 'index.ts'));
   const internalExports = exportsOf(join(SRC, 'internal.ts'));
 
-  it('the taught surface is exactly the outline §4 core rows (45)', () => {
-    expect(TAUGHT.length).toBe(45);
+  it('the taught surface is exactly the outline §4 core rows (44)', () => {
+    expect(TAUGHT.length).toBe(44);
     expect(TAUGHT_03.length).toBe(11);
-    expect(TAUGHT_04.length).toBe(29);
+    expect(TAUGHT_04.length).toBe(28);
     expect(TAUGHT_05.length).toBe(5);
     expect(publicExports.filter((n) => !RIDERS.includes(n))).toEqual(TAUGHT);
   });

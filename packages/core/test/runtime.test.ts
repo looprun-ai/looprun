@@ -1,6 +1,6 @@
 /** The governed-turn machine: ledger, preTool evaluation, and the finalizeReply pipeline. */
 import { describe, expect, it } from 'vitest';
-import { AgentSpecBase, precondition, replyMustMention, jargonScrub, custom } from '../src/index.js';
+import { AgentSpecBase, precondition, replyMentions, jargonScrub, custom } from '../src/index.js';
 import type { AgentWorld, DomainContract } from '../src/index.js';
 import {
   createLedger,
@@ -119,7 +119,7 @@ describe('finalizeReply pipeline', () => {
 
   it('redrives once with the correction message and accepts the fixed text', async () => {
     const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: [] });
-    spec.addReplyCheck(replyMustMention(['price'], 'Mention the price.'), { id: 'agent:price' });
+    spec.addReplyCheck(replyMentions({ terms: ['price'], anyTerm: true }, 'Mention the price.'), { id: 'agent:price' });
     const ledger = createLedger();
     const seen: string[] = [];
     const out = await finalizeReply(
@@ -137,17 +137,17 @@ describe('finalizeReply pipeline', () => {
     expect(out).toMatchObject({ text: 'The price is $5.', exhausted: false });
     expect(seen).toHaveLength(1);
     expect(seen[0]).toContain('Mention the price.');
-    expect(ledger.turnCorrections).toContain('redrive:replyMustMention');
+    expect(ledger.turnCorrections).toContain('redrive:replyMentions');
   });
 
   it('commits the deterministic closure after redrives exhaust (contract closure)', async () => {
     const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: ['water'] });
-    spec.addReplyCheck(replyMustMention(['impossible-token-xyz'], 'nope'), { id: 'agent:impossible' });
+    spec.addReplyCheck(replyMentions({ terms: ['impossible-token-xyz'], anyTerm: true }, 'nope'), { id: 'agent:impossible' });
     const ledger = createLedger();
     recordToolResult(ledger, 'water', {}, { success: true });
     const out = await finalizeReply(spec, CONTRACT, fixtureWorld(), ledger, 'text', async () => 'still wrong', 1);
     expect(out.exhausted).toBe(true);
-    expect(out.violations).toContain('replyMustMention');
+    expect(out.violations).toContain('replyMentions');
     expect(out.text).toBe('contract-closure:water');
     expect(ledger.turnCorrections).toContain('exhaustion-terminal');
   });
@@ -160,7 +160,7 @@ describe('finalizeReply pipeline', () => {
       tools: [],
       exhaustionReply: () => 'spec-closure',
     });
-    spec.addReplyCheck(replyMustMention(['impossible-token-xyz'], 'nope'), { id: 'agent:impossible' });
+    spec.addReplyCheck(replyMentions({ terms: ['impossible-token-xyz'], anyTerm: true }, 'nope'), { id: 'agent:impossible' });
     const out = await finalizeReply(spec, CONTRACT, fixtureWorld(), createLedger(), 'text', async () => 'still wrong', 0);
     expect(out.text).toBe('spec-closure');
   });

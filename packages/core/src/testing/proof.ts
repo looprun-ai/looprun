@@ -63,7 +63,7 @@ export interface GuardProof {
   /** Spec config to merge (e.g. destructiveTools / confirmMechanism / lexicon for auto kinds). */
   specTweaks?: Partial<AgentSpecConfig>;
   /** 'skip' excludes this guard from the collective super-agent. Reserved for content-contract reply
-   *  guards (replyMustMention, replySingleQuestion, replyConfirmsLabels, replyMaxOccurrences): an author
+   *  guards (replyMentions, replySingleQuestion, replyMaxOccurrences): an author
    *  binds those to ONE agent's specific reply contract — installing them agent-wide over arbitrary
    *  scenarios would fire on every unrelated reply by construction, which is a category error, not an
    *  interference finding. They are still fully proven isolated (L1 + L3). */

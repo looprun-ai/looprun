@@ -305,10 +305,9 @@ Read the §3 column caveat before using the third column for anything.
 | `destructiveThrottle` | — | mastra#test | core, core#test | 12 | **public** | guard-catalog.md (agentspec skill) documents it; auto-installed by AgentSpecBase — no direct consumer import |
 | `resultInvariant` | — | mastra#test | core#test | 9 | **public** | guard-catalog.md (agentspec skill) documents it; auto-installed by AgentSpecBase — no direct consumer import |
 | `noFabricatedSuccess` | bench, examples, yntelli | mastra#test | core#test | 14 | **public** |  |
-| `replyMustMention` | — | mastra#test | core#test | 4 | **public** | guard-catalog.md (agentspec skill) documents it; auto-installed by AgentSpecBase — no direct consumer import |
+| `replyMentions` | — | mastra#test, eval#test | core#test | 4 | **public** | guard-catalog.md (agentspec skill) documents it; auto-installed by AgentSpecBase — no direct consumer import. MERGED 2026-08-02 from `replyMustMention` (`anyTerm:true`) + `replyConfirmsLabels` (`anyTerm:false`) |
 | `replyMaxOccurrences` | — | mastra#test | core#test | 4 | **public** | guard-catalog.md (agentspec skill) documents it; auto-installed by AgentSpecBase — no direct consumer import |
 | `replySingleQuestion` | — | mastra#test | core#test | 4 | **public** | guard-catalog.md (agentspec skill) documents it; auto-installed by AgentSpecBase — no direct consumer import |
-| `replyConfirmsLabels` | — | eval#test | core#test | 4 | **public** | guard-catalog.md (agentspec skill) documents it; auto-installed by AgentSpecBase — no direct consumer import |
 | `emptyReply` | — | — | core, core#test | 10 | **public** | guard-catalog.md (agentspec skill) documents it; auto-installed by AgentSpecBase — no direct consumer import |
 | `degenerationGuard` | — | mastra#test | core, core#test | 7 | **public** | guard-catalog.md (agentspec skill) documents it; auto-installed by AgentSpecBase — no direct consumer import |
 | `pendingConfirmMustAsk` | bench, examples, yntelli | mastra#test | core#test | 13 | **public** |  |

@@ -312,8 +312,7 @@ export function buildHonestAbstain(world: AgentWorld, okTools: string[], writeTo
 const FORM_GUARD_KINDS: ReadonlySet<string> = new Set([
   'replySingleQuestion',
   'replyMaxOccurrences',
-  'replyMustMention',
-  'replyConfirmsLabels',
+  'replyMentions',
   'degenerationGuard',
 ]);
 

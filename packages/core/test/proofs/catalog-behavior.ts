@@ -4,9 +4,8 @@ import {
   emptyReply,
   llmCheck,
   pendingConfirmMustAsk,
-  replyConfirmsLabels,
   replyMaxOccurrences,
-  replyMustMention,
+  replyMentions,
   replySingleQuestion,
 } from '../../src/guards/index.js';
 import type { Adjudicator } from '../../src/rules.js';
@@ -31,45 +30,48 @@ export const BEHAVIOR_PROOFS: GuardProof[] = [
   // TEXT judgment, now expressed as `llmCheck` rubrics (proven below), whose scripted adjudicator stands
   // in for a real model.
 
-  // ── replyMustMention (collective:'skip') ─────────────────────────────────────
+  // ── replyMentions — default all-of (the former replyConfirmsLabels) (collective:'skip') ──────────
+  // The anyTerm:true (at-least-one) mode + case-insensitivity are proven in reply-mentions.test.ts;
+  // this proof exercises the DEFAULT all-of mode (every term required, empty reply denied).
   {
-    guard: 'replyMustMention',
-    make: () => replyMustMention(['done', 'ready'], 'Say clearly whether the work is done or ready.'),
+    guard: 'replyMentions',
+    make: () => replyMentions({ terms: ['g001'] }, 'Confirm the media label g001 explicitly.'),
     hook: 'onReply',
     target: 'any',
     collective: 'skip',
     cases: [
       {
-        name: 'reply omits both keywords',
+        name: 'reply omits the required term',
         polarity: 'negative',
-        ctx: { reply: 'Sure thing.', observed: [], turnIndex: 0 },
+        ctx: { reply: 'All set!', observed: [], turnIndex: 0 },
         l1: 'fires',
         l3: {
           preset: 'empty',
-          turns: [turn('is it finished?')],
+          turns: [turn('confirm the media')],
           script: [
-            [{ tool: 'replyToUser', args: { text: 'Sure thing.' } }],
-            [{ text: 'Yes, it is done now.' }],
+            [{ tool: 'replyToUser', args: { text: 'All set!' } }],
+            [{ text: 'Your media g001 is ready now.' }],
           ],
           expect: 'redrive',
         },
       },
       {
-        name: 'reply says ready',
+        name: 'reply names the required term',
         polarity: 'positive',
-        l1: 'fires', // unused (no ctx) — the l3 below carries the assertion
+        ctx: { reply: 'Your media g001 is ready now.', observed: [], turnIndex: 0 },
+        l1: 'silent',
         l3: {
           preset: 'empty',
-          turns: [turn('is it finished?')],
-          script: [[{ tool: 'replyToUser', args: { text: 'It is ready now.' } }]],
+          turns: [turn('confirm the media')],
+          script: [[{ tool: 'replyToUser', args: { text: 'Your media g001 is ready now.' } }]],
           expect: 'pass',
         },
       },
       {
-        name: 'reply already says ready (ctx only)',
+        name: 'empty reply',
         polarity: 'neutral',
-        ctx: { reply: 'Ready to help further.', observed: [], turnIndex: 0 },
-        l1: 'silent',
+        ctx: { reply: '', observed: [], turnIndex: 0 },
+        l1: 'fires',
       },
     ],
   },
@@ -157,50 +159,6 @@ export const BEHAVIOR_PROOFS: GuardProof[] = [
         name: 'two question marks',
         polarity: 'neutral',
         ctx: { reply: 'Do you want A? Or B?', observed: [], turnIndex: 0 },
-        l1: 'fires',
-      },
-    ],
-  },
-
-  // ── replyConfirmsLabels (collective:'skip') ──────────────────────────────────
-  {
-    guard: 'replyConfirmsLabels',
-    make: () => replyConfirmsLabels(['g001'], 'Confirm the media label g001 explicitly.'),
-    hook: 'onReply',
-    target: 'any',
-    collective: 'skip',
-    cases: [
-      {
-        name: 'reply omits the label',
-        polarity: 'negative',
-        ctx: { reply: 'All set!', observed: [], turnIndex: 0 },
-        l1: 'fires',
-        l3: {
-          preset: 'empty',
-          turns: [turn('confirm the media')],
-          script: [
-            [{ tool: 'replyToUser', args: { text: 'All set!' } }],
-            [{ text: 'Your media g001 is ready now.' }],
-          ],
-          expect: 'redrive',
-        },
-      },
-      {
-        name: 'reply confirms the label',
-        polarity: 'positive',
-        ctx: { reply: 'Your media g001 is ready now.', observed: [], turnIndex: 0 },
-        l1: 'silent',
-        l3: {
-          preset: 'empty',
-          turns: [turn('confirm the media')],
-          script: [[{ tool: 'replyToUser', args: { text: 'Your media g001 is ready now.' } }]],
-          expect: 'pass',
-        },
-      },
-      {
-        name: 'empty reply',
-        polarity: 'neutral',
-        ctx: { reply: '', observed: [], turnIndex: 0 },
         l1: 'fires',
       },
     ],
