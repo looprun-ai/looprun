@@ -6,7 +6,7 @@
  * retired 2026-08-02). `observed` and `history` accumulate for the whole conversation; the other
  * fields reset per turn via `beginTurn`.
  */
-import type { AgentWorld, Guard, ObservedCall, HistoryTurn, HistoryToolCall } from '../rules.js';
+import type { AgentWorld, Guard, ObservedCall, HistoryTurn, HistoryToolCall, Adjudicator } from '../rules.js';
 import { canonArgs } from '../guards/index.js';
 import { isTerminal } from './terminal.js';
 
@@ -47,6 +47,10 @@ export interface TurnLedger {
    *  beginTurn), read into every GuardCtx as the read-only `ctx.history`. A turn lands here via
    *  {@link recordTurnHistory} once its reply is finalized. */
   history: HistoryTurn[];
+  /** The host-registered LLM adjudicator (set at ledger creation from the runtime options), threaded
+   *  into every GuardCtx as `ctx.adjudicator`. Only `llmCheck` guards read it. Conversation-scoped;
+   *  never reset per turn. Absent ⇒ a spec that installs an llmCheck fails loud at conversation start. */
+  adjudicator?: Adjudicator;
 }
 
 /**
@@ -62,8 +66,8 @@ export function vetoStormHit(ledger: TurnLedger): boolean {
   return ledger.vetoStreak >= VETO_STORM_LIMIT;
 }
 
-export function createLedger(): TurnLedger {
-  return { observed: [], turnIndex: 0, producedThisTurn: [], turnCorrections: [], attachments: [], terminalReply: '', vetoStreak: 0, postToolViolations: [], inFlightCalls: [], attemptedCalls: [], currentUserText: '', history: [] };
+export function createLedger(adjudicator?: Adjudicator): TurnLedger {
+  return { observed: [], turnIndex: 0, producedThisTurn: [], turnCorrections: [], attachments: [], terminalReply: '', vetoStreak: 0, postToolViolations: [], inFlightCalls: [], attemptedCalls: [], currentUserText: '', history: [], ...(adjudicator ? { adjudicator } : {}) };
 }
 
 /** Reset the per-turn fields (the conversation-scoped `observed` and `history` are kept). `userText` is

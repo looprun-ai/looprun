@@ -8,8 +8,9 @@
  *                             tools: g.tools, hooks: g.hooks, inputProcessors: g.inputProcessors })
  *   // per turn: const { userMessageTail } = g.beginTurn(); …generate…; await g.finalizeReply(text, redrive)
  */
-import type { AgentSpec, AgentWorld, ToolDef, DomainContract } from '@looprun-ai/core';
+import type { AgentSpec, AgentWorld, ToolDef, DomainContract, Adjudicator } from '@looprun-ai/core';
 import {
+  assertAdjudicatorPresent,
   beginTurn as ledgerBeginTurn,
   createLedger,
   finalizeReply as coreFinalizeReply,
@@ -45,19 +46,21 @@ export interface CompiledSpec {
 
 export function compileSpec(
   spec: AgentSpec,
-  opts: { contract?: DomainContract; world: AgentWorld; toolDefs?: ToolDef[]; terminalProtocol?: boolean; redrives?: number },
+  opts: { contract?: DomainContract; world: AgentWorld; toolDefs?: ToolDef[]; terminalProtocol?: boolean; redrives?: number; adjudicator?: Adjudicator },
 ): CompiledSpec {
   const contract = opts.contract ?? spec.contract;
   if (!contract && !spec.surface.systemPrompt) {
     throw new Error(`compileSpec "${spec.id}": no contract — pass opts.contract or set spec.contract.`);
   }
+  // FAIL-LOUD-AT-START: an llmCheck installed without an adjudicator is a wiring bug — surface it here.
+  assertAdjudicatorPresent(spec, opts.adjudicator);
   const world = opts.world;
   const terminalOn = opts.terminalProtocol !== false;
   const surface = new Set(spec.surface.tools);
   const session: LoopRunSession = {
     id: 'compiled',
     world,
-    ledger: createLedger(),
+    ledger: createLedger(opts.adjudicator),
     turnIndex: 0,
     messages: [],
     chain: Promise.resolve(),

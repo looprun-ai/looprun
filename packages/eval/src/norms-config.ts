@@ -18,7 +18,7 @@
  * load, not run.
  */
 import { z } from 'zod';
-import { AgentSpecBase, askedEarlier, confirmedNeedsEarlierProbe, precondition, requiresBefore } from '@looprun-ai/core';
+import { AgentSpecBase, askedEarlier, confirmedNeedsEarlierProbe, llmCheck, precondition, requiresBefore } from '@looprun-ai/core';
 import type { AgentSpec, AgentWorld, Guard, GuardCtx } from '@looprun-ai/core';
 
 /** A config violation, with a path-qualified message. Thrown by {@link loadNormsConfig}. */
@@ -68,6 +68,21 @@ const guardSchema = z.discriminatedUnion('kind', [
       // A config that carried a free `reason` could hand the model a figure or a role to repeat
       // without reading — the measured leak this loader forbids. `.strict()` rejects it by name.
       prose: z.string(),
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal('llmCheck'),
+      id: z.string(),
+      // The hook the adjudicated guard installs on: onReply (a reply verdict) or preTool (a call veto).
+      hook: z.enum(['onReply', 'preTool']),
+      // Which tools it binds — a name list or the string 'any' (global). No pattern field: the RUBRIC is
+      // the judgement, and it is PROSE, so the no-regex structural ban is untouched.
+      tools: z.union([z.array(z.string()).min(1), z.literal('any')]),
+      // The trusted, pre-baked question the host adjudicator answers. Prose, never a pattern.
+      rubric: z.string(),
+      // Unreachable adjudicator ⇒ open (allow, default) or closed (deny). Optional.
+      failMode: z.enum(['open', 'closed']).optional(),
     })
     .strict(),
 ]);
@@ -278,6 +293,18 @@ function installGuard(spec: AgentSpecBase, g: GuardConfig, deps: NormsDeps): voi
       // `prose` (the condition), never a free post-hoc string that could carry the value being gated.
       const ok = compilePredicate(g, deps);
       spec.addGuard('preTool', [g.tool], precondition(ok, g.prose, g.prose), { layer: 'agent', id });
+      return;
+    }
+    case 'llmCheck': {
+      // NO DENY-POLICY WRAP: the deny an llmCheck emits is the ADJUDICATOR'S verdict (host-registered,
+      // trusted), not a config-authored `reason` — there is no reason field to leak a figure through.
+      // hook → dim: onReply is a behavior verdict, preTool a run veto (the DIM_HOOKS matrix).
+      const dim = g.hook === 'preTool' ? 'run' : 'behavior';
+      const target = g.tools === 'any' ? 'any' : g.tools;
+      spec.addGuard(g.hook, target, llmCheck({ rubric: g.rubric, dim, ...(g.failMode ? { failMode: g.failMode } : {}) }), {
+        layer: 'agent',
+        id,
+      });
       return;
     }
   }

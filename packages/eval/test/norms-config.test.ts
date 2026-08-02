@@ -55,6 +55,34 @@ describe('loadNormsConfig — guards from data', () => {
     expect(spec.persona).toContain('fleet');
   });
 
+  it('(a2) the llmCheck kind loads and installs — onReply→behavior, preTool→run, rubric is prose', () => {
+    const cfg = {
+      id: 'x',
+      persona: 'p',
+      tools: ['cancelBooking'],
+      guards: [
+        { kind: 'llmCheck', id: 'licence', hook: 'onReply', tools: 'any', rubric: 'Did the user authorise THIS act?', failMode: 'closed' },
+        { kind: 'llmCheck', id: 'gateCancel', hook: 'preTool', tools: ['cancelBooking'], rubric: 'Is this cancellation the one the user asked for?' },
+      ],
+    };
+    const spec = loadNormsConfig(cfg);
+    const onReply = spec.guards.onReply.find((b) => b.id === 'agent:licence');
+    expect(onReply?.guard.kind).toBe('llmCheck');
+    expect(onReply?.guard.dim).toBe('behavior');
+    expect(onReply?.guard.prose()).toBe('Did the user authorise THIS act?');
+    const preTool = spec.guards.preTool.find((b) => b.id === 'agent:gateCancel');
+    expect(preTool?.guard.kind).toBe('llmCheck');
+    expect(preTool?.guard.dim).toBe('run');
+  });
+
+  it('(a3) llmCheck: an unknown key is rejected by .strict()', () => {
+    const cfg = {
+      id: 'x', persona: 'p', tools: ['t'],
+      guards: [{ kind: 'llmCheck', id: 'l', hook: 'onReply', tools: 'any', rubric: 'q?', reason: 'leak' }],
+    };
+    expect(() => loadNormsConfig(cfg)).toThrow(NormsConfigError);
+  });
+
   it('(b) REGEX BAN — a pattern-like KEY anywhere fails validation by name', () => {
     const fixtureWithPatternKey = {
       id: 'x',

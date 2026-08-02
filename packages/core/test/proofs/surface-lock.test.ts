@@ -39,7 +39,7 @@ const TAUGHT_03 = [
 const TAUGHT_04 = [
   'Dim', 'Guard', 'GuardCtx', 'ObservedCall',
   'argAbsent', 'argFormat', 'argRequired', 'askedEarlier', 'canonArgs', 'confirmFirst',
-  'confirmedNeedsEarlierProbe', 'consentRequired', 'custom',
+  'confirmedNeedsEarlierProbe', 'consentRequired', 'custom', 'llmCheck',
   'degenerationGuard', 'destructiveClaimRequiresSuccess', 'destructiveThrottle', 'emptyReply',
   'forbidThisTurn', 'jargonScrub', 'maxCalls', 'minimalDisclosure', 'noActAfterAskSameTurn',
   'noCompetitorClaim', 'noDuplicateCall', 'noFabricatedSuccess', 'noFalseFailureClaim',
@@ -56,6 +56,9 @@ const RIDERS = [
   'AgentControls', 'ChainSpec', 'GuardBinding', 'HistoryToolCall', 'HistoryTurn', 'Layer',
   'MutatorBinding', 'ReplyMutator',
   'SamplingSettings', 'SpatialEdge', 'SpecWarning', 'StateDirective', 'TokenUsage',
+  // full-context-guards increment: GuardCtx.adjudicator is an Adjudicator, whose verdict is an
+  // AdjudicatorVerdict — both ride the barrel so a `declaration:true` consumer can name them.
+  'Adjudicator', 'AdjudicatorVerdict',
 ].sort();
 
 const INTERNAL = [
@@ -76,6 +79,8 @@ const INTERNAL = [
   'buildHonestAbstain', 'defaultExhaustionReply', 'enforcePostTool', 'evaluateOnInput', 'evaluatePreTool',
   'finalizeReply', 'FinalizedReply', 'governanceVeto', 'redriveMessage', 'ReplyViolation',
   'runChainCompletionPass',
+  // full-context-guards increment — the fail-loud-at-start adjudicator gate for llmCheck specs.
+  'assertAdjudicatorPresent', 'specInstallsLlmCheck',
   // controller ruling — catchable by class across the package boundary
   'GuardExecutionError',
   // the seam's own type-closure riders (the rest of its closure is nameable from '.')
@@ -112,10 +117,10 @@ describe('surface lock — the barrels are the tutorial contract', () => {
   const publicExports = exportsOf(join(SRC, 'index.ts'));
   const internalExports = exportsOf(join(SRC, 'internal.ts'));
 
-  it('the taught surface is exactly the outline §4 core rows (53)', () => {
-    expect(TAUGHT.length).toBe(53);
+  it('the taught surface is exactly the outline §4 core rows (54)', () => {
+    expect(TAUGHT.length).toBe(54);
     expect(TAUGHT_03.length).toBe(11);
-    expect(TAUGHT_04.length).toBe(37);
+    expect(TAUGHT_04.length).toBe(38);
     expect(TAUGHT_05.length).toBe(5);
     expect(publicExports.filter((n) => !RIDERS.includes(n))).toEqual(TAUGHT);
   });

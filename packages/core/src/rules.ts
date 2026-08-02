@@ -72,6 +72,20 @@ export interface HistoryTurn {
   guardEvents: ReadonlyArray<string>;
 }
 
+/** The verdict a host {@link Adjudicator} returns: a deny `violation` reason, or `null` to allow.
+ *  VERDICT-ONLY — the string is a deny reason for the guard layer, NEVER free text delivered to the
+ *  operator (an llmCheck's `check` returns it verbatim as the deny, relayed only through the runtime's
+ *  correction/redrive channel). */
+export interface AdjudicatorVerdict {
+  violation: string | null;
+}
+
+/** A host-registered LLM adjudicator — the seam an `llmCheck` guard delegates its verdict to. It answers
+ *  a TRUSTED, pre-baked `rubric` over the guard ctx (full `history` + `userText` included, per the
+ *  firewall-retired ruling). Registered on the runtime options like `defineWorld`'s custom executors —
+ *  NEVER named in config. Unreachable (throws/rejects) ⇒ the guard's `failMode` decides open/closed. */
+export type Adjudicator = (rubric: string, ctx: GuardCtx) => Promise<AdjudicatorVerdict>;
+
 /** Everything a guard predicate may read — including, since the firewall was retired (2026-08-02),
  *  the user's own text (`userText` this turn; `history[].userText` for prior turns). */
 export interface GuardCtx {
@@ -104,6 +118,11 @@ export interface GuardCtx {
    *  same-step visibility is a zero-blast-radius augmentation. Absent on backends that dispatch one
    *  call per step (alien) — treat as empty. */
   siblingCallsThisStep?: ObservedCall[];
+  /** The host-registered LLM adjudicator, threaded from the runtime options. Present iff the host
+   *  registered one; ONLY `llmCheck` guards read it — every deterministic guard ignores it, so the
+   *  augmentation is zero-blast-radius. Absent while an `llmCheck` is installed is caught loud at
+   *  conversation start (`assertAdjudicatorPresent`), never mid-turn. */
+  adjudicator?: Adjudicator;
 }
 
 /** A typed guard instance: deterministic gate + LLM-facing explanation (the prose+check pairing). */

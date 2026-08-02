@@ -38,6 +38,7 @@
  * | consentRequired                | useMedia                   | consentOk = world.hasPrimary()                     |
  * | askedEarlier                   | createItem                 | askedEarlier({ tool:'createItem', arg:'condition' }) — gates the non-schema `condition` arg |
  * | confirmedNeedsEarlierProbe     | editMedia                  | confirmedNeedsEarlierProbe({ tools:['editMedia'] }) — NOT deleteItem (would double-bind confirmFirst) |
+ * | llmCheck                       | collective:'skip'          | rubric+host adjudicator are agent-specific (like the content-contract reply guards); proven isolated L1+L3 |
  *
  * ## SCRIPT CONVENTIONS (verified in signal-mechanics.test.ts)
  *  1. Every turn's script ends with a NON-empty replyToUser (or askUser when asking) — an empty text

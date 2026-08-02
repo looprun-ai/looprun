@@ -65,11 +65,11 @@ chapter                    symbols taught
 01-concepts                 0   (concept-only)
 02-hello-world              3   ███
 03-agent-anatomy           11   ███████████
-04-guards                  37   █████████████████████████████████████
+04-guards                  38   ██████████████████████████████████████
 05-running-and-eval        31   ███████████████████████████████
 06-advanced                13   █████████████
 ------------------------   --------------
-TOTAL                      95
+TOTAL                      96
 ```
 
 | package | round-2 baseline | taught here | delta |
@@ -241,7 +241,8 @@ asserts `canonArgs` is not a factory, `GUARDS.md` calls it "the `canonArgs` help
 reference gives it no catalog row. So `GUARD_CATALOG` carries **32 entries** — 31 guard kinds + the
 `jargonScrub` mutator — and the chapter teaches `canonArgs` **in prose** (see the Task 10 amendment
 below for where it landed), as the fingerprint `noDuplicateCall` is built on. Chapter 04's taught
-count is now 37 (§4): 4 vocabulary types + 32 catalog rows + `canonArgs`.
+count is now 38 (§4): 4 vocabulary types + 33 catalog rows + `canonArgs` (the +1 row is `llmCheck`,
+the full-context-guards increment 2026-08-02).
 
 **`GUARD_CATALOG` and `GuardCatalogEntry` are NOT in this contract.** They ship on
 `@looprun-ai/core/internal` and the generator imports them from there (§6, decision 4). They are
@@ -281,7 +282,7 @@ the grouping axis.
 #### Amendment (Task 10): three corrections this section could not have foreseen
 
 Writing the chapter against the real catalog moved three things. Recorded here so nobody reads the
-chapter as having drifted from its contract — the **taught set** (37 symbols after increment 1's two
+chapter as having drifted from its contract — the **taught set** (38 symbols after the full-context-guards increment's `llmCheck`, 37 after increment 1's two
 structural kinds; §4 is otherwise untouched), and all three are placement or accuracy, not surface.
 
 | # | this section said | what shipped, and why |
@@ -460,7 +461,7 @@ in the "bring your own loop" seam; internal, not taught.)
 |---|---|---|
 | mastra | **02** (3) | `LoopRunAgent` `LoopRunAgentConfig` `LoopRunOptions` |
 | core | **03** (11) | `AgentSpecBase` `AgentSpec` `AgentSpecConfig` `AgentScope`↑ `TerminalPolicy`↑ `DomainContract` `ToolDef` `AgentWorld` `Hook`↑ `ToolTarget`↑ `validateSpec` |
-| core | **04** (37) | `Guard` `GuardCtx` `ObservedCall` `Dim`↑ · `custom` `askedEarlier` `confirmedNeedsEarlierProbe` `requiresBefore` `forbidThisTurn` `argRequired` `argAbsent` `argFormat` `precondition` `maxCalls` `canonArgs` `noDuplicateCall` `confirmFirst` `noActAfterAskSameTurn` `destructiveThrottle` `resultInvariant` `noFabricatedSuccess` `replyMustMention` `replyMaxOccurrences` `replySingleQuestion` `replyConfirmsLabels` `emptyReply` `degenerationGuard` `pendingConfirmMustAsk` `destructiveClaimRequiresSuccess` `noFalseFailureClaim` `minimalDisclosure` `noInstructionFromData` `noCompetitorClaim` `noOutOfSurfaceActionClaim` `noUngroundedRegulatedFigure` `consentRequired` `jargonScrub` |
+| core | **04** (38) | `Guard` `GuardCtx` `ObservedCall` `Dim`↑ · `custom` `llmCheck`↑ `askedEarlier` `confirmedNeedsEarlierProbe` `requiresBefore` `forbidThisTurn` `argRequired` `argAbsent` `argFormat` `precondition` `maxCalls` `canonArgs` `noDuplicateCall` `confirmFirst` `noActAfterAskSameTurn` `destructiveThrottle` `resultInvariant` `noFabricatedSuccess` `replyMustMention` `replyMaxOccurrences` `replySingleQuestion` `replyConfirmsLabels` `emptyReply` `degenerationGuard` `pendingConfirmMustAsk` `destructiveClaimRequiresSuccess` `noFalseFailureClaim` `minimalDisclosure` `noInstructionFromData` `noCompetitorClaim` `noOutOfSurfaceActionClaim` `noUngroundedRegulatedFigure` `consentRequired` `jargonScrub` |
 | core | **05** (5) | `TurnInput`↑ `RunResult`↑ `TurnRecord`↑ `geminiThinkingOff` `pinnedDecoding` |
 | mastra | **05** (2) | `runSpecConversation` `RuntimeDeps`↑ |
 | models | **05** (1) | `geminiFlashLiteThinkOff` |
@@ -469,8 +470,8 @@ in the "bring your own loop" seam; internal, not taught.)
 | models | **06** (7) | `localModel`↑ `LocalModelOptions`↑ `LocalModelSpec`↑ `ModelRuntimePort`↑ `resolveAlias` `LlamaCppRuntime` `localModelStatus` |
 | mastra | **06** (2) | `worldFromTools` `StateView`↑ |
 
-**Per-chapter:** 0 + 3 + 11 + 37 + 31 + 13 = **95**.
-**Per-package:** core 53 · mastra 7 · models 8 · eval 23 · server 4 · vercel 0 = **95**, matching the
+**Per-chapter:** 0 + 3 + 11 + 38 + 31 + 13 = **96** (04 +1: `llmCheck`, the full-context-guards increment).
+**Per-package:** core 54 · mastra 7 · models 8 · eval 23 · server 4 · vercel 0 = **96**, matching the
 inventory's round-4 §1 chart plus increment 1's net-new `loadNormsConfig` + two structural guards
 (`askedEarlier`, `confirmedNeedsEarlierProbe`), increment 2a's net-new `validateCommand` +
 `judgeInputCommand`, and increment 2b's net-new `campaignCommand`. No symbol appears twice; no
@@ -499,7 +500,7 @@ Stated so Tasks 3–7 do not have to re-derive it, and so nobody reads a gap as 
 | # | decision | owner |
 |---|---|---|
 | 1 | **The scheduler artifacts are authored in `docs/tutorial/snippets/`** as shared modules (spec, world, tool defs, eval subject). `examples/` stays seeds-only — it is the agentspec skill's input, not the tutorial's | Tasks 8–9 |
-| 2 | **Chapter 04 is generated** from `GUARD_CATALOG`; the generator and the agentspec `guard-catalog.md` lint must agree on the same **32 rows** (30 + increment 1's two structural kinds; Task 4 adjudication: `canonArgs` returns a `string`, so it is a helper taught in prose, not a catalog row — see §3's chapter-04 note) | Tasks 4 + 10 |
+| 2 | **Chapter 04 is generated** from `GUARD_CATALOG`; the generator and the agentspec `guard-catalog.md` lint must agree on the same **33 rows** (30 + increment 1's two structural kinds + the full-context-guards increment's `llmCheck`; Task 4 adjudication: `canonArgs` returns a `string`, so it is a helper taught in prose, not a catalog row — see §3's chapter-04 note) | Tasks 4 + 10 |
 | 3 | **Section 6.4 is dropped**; its ten symbols move to `@looprun-ai/core/internal`. Task 7 must keep the bench shim and the agentspec fork scripts working against that subpath | Task 7 |
 | 4 | **`GUARD_CATALOG` + `GuardCatalogEntry` export from `@looprun-ai/core/internal`, not the public barrel**; Task 10's generator imports from `/internal`. This **amends the plan's Task 4 wording** ("exported publicly") to match the contract principle. Note both names have **no inventory rows** — they do not exist until Task 4 creates them — so this decision is their only record, and Task 4's reviewer must check the resulting exports against it. **Amended (controller ruling, Task 4):** `GuardCatalogEntry` gained a `hook` field (`'preTool' \| 'postTool' \| 'onReply' \| 'onReplyMutate'`) so the generated chapter can group by enforcement phase the way the agentspec reference does — `category` stays file-derived; both names remain `/internal`-only | Task 4 |
 | 5 | **Import specifiers:** 02 `looprun/mastra` · 03 `looprun` · 04 `looprun` · 05 `looprun/mastra` + `looprun` + `looprun/models` + **`@looprun-ai/eval`** · 06 **`@looprun-ai/server`** + `looprun/models` + `looprun/mastra`. The facade publishes only `.` `./core` `./mastra` `./models` `./vercel`. **Open: add `looprun/eval` + `looprun/server` facades** so the tutorial uses one package name throughout? | Task 12 |
@@ -583,12 +584,13 @@ automatically as Tasks 5–6 shrink what the signatures touch. Two tests hold th
 real consumer against the published `exports` map), and `surface-lock.test.ts` proves it has not
 quietly **grown**.
 
-For `core` the rider is 13 types: `SpecWarning` `AgentControls` `ChainSpec` `StateDirective`
+For `core` the rider is 15 types: `SpecWarning` `AgentControls` `ChainSpec` `StateDirective`
 `GuardBinding` `MutatorBinding` `Layer` `SpatialEdge` `ReplyMutator` `SamplingSettings` `TokenUsage`
-`HistoryTurn` `HistoryToolCall` — the last two added by the full-context-guards increment
-(2026-08-02): `GuardCtx.history` is `ReadonlyArray<HistoryTurn>`, so both ride the barrel to stay
-nameable. Tasks 4–7 derive their own package's rider the same way; a symbol appearing there is not a
-promotion and must not be read as one.
+`HistoryTurn` `HistoryToolCall` `Adjudicator` `AdjudicatorVerdict` — the last four added by the
+full-context-guards increment (2026-08-02): `GuardCtx.history` is `ReadonlyArray<HistoryTurn>` and
+`GuardCtx.adjudicator` is an `Adjudicator` (returning an `AdjudicatorVerdict`), so all four ride the
+barrel to stay nameable. Tasks 4–7 derive their own package's rider the same way; a symbol appearing
+there is not a promotion and must not be read as one.
 
 **The per-package rider lists** (`mastra` needs none — it re-exports core's whole barrel, and its
 own three taught types are already public). Each is derived from that package's own value

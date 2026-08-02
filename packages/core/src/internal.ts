@@ -91,6 +91,8 @@ export {
   finalizeReply,
   governanceVeto,
   runChainCompletionPass,
+  assertAdjudicatorPresent,
+  specInstallsLlmCheck,
 } from './runtime/turn.js';
 export type { ReplyViolation, FinalizedReply } from './runtime/turn.js';
 

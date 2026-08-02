@@ -19,6 +19,7 @@
 import { stepCountIs } from 'ai';
 import { Agent } from '@mastra/core/agent';
 import {
+  assertAdjudicatorPresent,
   beginTurn,
   createLedger,
   finalizeReply,
@@ -35,7 +36,7 @@ import {
   renderTurnPrompt,
 } from '@looprun-ai/core/internal';
 import type { TokenUsage } from '@looprun-ai/core/internal';
-import type { AgentSpec, AgentWorld, ToolDef, DomainContract, TurnInput, TurnRecord, RunResult } from '@looprun-ai/core';
+import type { AgentSpec, AgentWorld, ToolDef, DomainContract, TurnInput, TurnRecord, RunResult, Adjudicator } from '@looprun-ai/core';
 import { buildWorldTools } from './tools.js';
 import { makeGuardHooks, makeInputProcessors, repeatedToolCallStop } from './hooks.js';
 import type { LoopRunSession } from './session.js';
@@ -61,6 +62,10 @@ export interface RuntimeDeps {
   contract?: DomainContract;
   maxSteps?: number;
   redrives?: number;
+  /** The host-registered LLM adjudicator for `llmCheck` guards — the model seam, NEVER named in config
+   *  (like defineWorld's custom executors). Threaded onto every GuardCtx. A spec that installs an
+   *  llmCheck with this absent throws at conversation start (assertAdjudicatorPresent). */
+  adjudicator?: Adjudicator;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -78,6 +83,9 @@ export async function runSpecConversation(spec: AgentSpec, turns: TurnInput[], d
   if (!contract && !spec.surface.systemPrompt) {
     throw new Error(`runSpecConversation: spec "${spec.id}" has no contract — pass deps.contract or set spec.contract.`);
   }
+  // FAIL-LOUD-AT-START: an llmCheck installed without an adjudicator is a wiring bug — surface it now,
+  // before the first turn, never mid-turn where it would masquerade as a model failure.
+  assertAdjudicatorPresent(spec, deps.adjudicator);
   // flat call settings → modelSettings (Mastra drops them top-level), then the spec's per-agent
   // sampling merged OVER them (agent wins). One object, spread into EVERY generate() call of the turn.
   const genParams = resolveModelSettings(normalizeModelParams(deps.modelParams ?? {}), spec.controls.sampling);
@@ -88,7 +96,7 @@ export async function runSpecConversation(spec: AgentSpec, turns: TurnInput[], d
   const session: LoopRunSession = {
     id: 'run',
     world,
-    ledger: createLedger(),
+    ledger: createLedger(deps.adjudicator),
     turnIndex: 0,
     messages: [],
     chain: Promise.resolve(),

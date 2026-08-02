@@ -16,7 +16,7 @@
 
 export interface GuardCatalogEntry {
   name: string;            // factory name, e.g. 'confirmFirst'
-  category: 'flow' | 'args' | 'world' | 'confirmation' | 'honesty' | 'reply' | 'structural' | 'custom';
+  category: 'flow' | 'args' | 'world' | 'confirmation' | 'honesty' | 'reply' | 'structural' | 'custom' | 'llm-check';
   /**
    * The hook the runtime INSTALLS the kind on — the axis the agentspec reference catalog is
    * organized by, and the one the generated chapter groups by. It is not computed from the factory's
@@ -325,6 +325,17 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
     whenToUse:
       'A destructive tool that carries its own confirm flag and must be previewed before it is confirmed — the preview and the go-ahead have to live in different messages. Pins the probe to the same act by args equality, all structural: no text is matched.',
     example: `confirmedNeedsEarlierProbe({ tools: ['chargeDeposit'] })`,
+  },
+
+  // ── llm-check ────────────────────────────────────────────────────────────────
+  {
+    name: 'llmCheck',
+    category: 'llm-check',
+    hook: 'onReply',
+    summary: 'An LLM-adjudicated guard: a host-registered adjudicator answers a trusted rubric over the full context (history + user text) and its verdict becomes the deny.',
+    whenToUse:
+      'The judgement genuinely needs a model — "did the operator\'s yes license THIS act?", a promise no arg/observed pattern captures. Use it where structure alone cannot decide; a decidable structural signal always prefers its own kind. The adjudicator is host-registered on the runtime options (never in config), and `failMode` prices an unreachable adjudicator: `\'open\'` allows, `\'closed\'` denies.',
+    example: `llmCheck({ rubric: 'Did the user, in an earlier turn, explicitly authorise THIS exact action?', failMode: 'closed' })`,
   },
 
   // ── custom ─────────────────────────────────────────────────────────────────

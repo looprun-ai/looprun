@@ -7,7 +7,7 @@
  */
 import { createLedger } from '@looprun-ai/core/internal';
 import type { TurnLedger } from '@looprun-ai/core/internal';
-import type { AgentWorld } from '@looprun-ai/core';
+import type { AgentWorld, Adjudicator } from '@looprun-ai/core';
 
 export type WorldFactory<W extends AgentWorld = AgentWorld> = (sessionId: string) => W;
 
@@ -27,8 +27,11 @@ export class SessionStore<W extends AgentWorld = AgentWorld> {
   private readonly sessions = new Map<string, LoopRunSession<W>>();
   private readonly factory: WorldFactory<W> | null;
   private readonly singleton: W | null;
+  /** The host adjudicator threaded into every session's ledger (llmCheck's seam). */
+  private readonly adjudicator: Adjudicator | undefined;
 
-  constructor(world: W | WorldFactory<W>) {
+  constructor(world: W | WorldFactory<W>, adjudicator?: Adjudicator) {
+    this.adjudicator = adjudicator;
     if (typeof world === 'function') {
       this.factory = world as WorldFactory<W>;
       this.singleton = null;
@@ -51,7 +54,7 @@ export class SessionStore<W extends AgentWorld = AgentWorld> {
     const session: LoopRunSession<W> = {
       id,
       world,
-      ledger: createLedger(),
+      ledger: createLedger(this.adjudicator),
       turnIndex: 0,
       messages: [],
       chain: Promise.resolve(),

@@ -25,8 +25,9 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { stepCountIs } from 'ai';
 import { Agent } from '@mastra/core/agent';
-import type { AgentSpec, AgentWorld, ObservedCall, ToolDef, DomainContract } from '@looprun-ai/core';
+import type { AgentSpec, AgentWorld, ObservedCall, ToolDef, DomainContract, Adjudicator } from '@looprun-ai/core';
 import {
+  assertAdjudicatorPresent,
   beginTurn,
   finalizeReply,
   forcedTerminalPrompt,
@@ -77,6 +78,10 @@ export interface LoopRunAgentConfig<W extends AgentWorld = AgentWorld> {
   /** Stop the generation on the first repeated (tool+args) call — enable for LOCAL models
    *  — a small model that loops is either stuck or retrying unchanged. Default false. */
   stopOnRepeatedToolCall?: boolean;
+  /** The host-registered LLM adjudicator for `llmCheck` guards — the model seam, NEVER named in the
+   *  spec/config (like defineWorld's custom executors). Threaded into every session's GuardCtx. A spec
+   *  that installs an llmCheck with this absent throws at construction (assertAdjudicatorPresent). */
+  adjudicator?: Adjudicator;
   /** The certified turn shape (terminal tools + toolChoice:'required'). Default true. */
   terminalProtocol?: boolean;
   /** Certification drift gate: the expected `surfaceFingerprint()` of the RESOLVED active
@@ -157,7 +162,10 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
     };
     const built = resolveConstruction<W>(config, getSession as () => LoopRunSession);
     const { contract, nativeToolsMode, surface, terminalOn } = built;
-    const sessions = new SessionStore<W>(built.world);
+    // FAIL-LOUD-AT-START: an llmCheck installed without an adjudicator is a wiring bug — surface it at
+    // construction, never mid-turn. No-op for a spec with no llmCheck (zero-diff).
+    assertAdjudicatorPresent(spec, config.adjudicator);
+    const sessions = new SessionStore<W>(built.world, config.adjudicator);
     const guardHooks = makeGuardHooks(spec, getSession as () => LoopRunSession);
 
     super({

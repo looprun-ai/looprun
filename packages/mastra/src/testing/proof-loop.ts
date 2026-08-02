@@ -29,6 +29,9 @@ export function runProofLoop(spec: AgentSpec, l3: ProofLoopCase, redrives = 1): 
     toolDefs: FIXTURE_TOOL_DEFS,
     contract: FIXTURE_DOMAIN,
     redrives,
+    // ONLY the llmCheck proof sets this — its guard delegates to a host adjudicator (assertAdjudicatorPresent
+    // demands one is registered). Every other proof leaves it undefined.
+    ...(l3.adjudicator ? { adjudicator: l3.adjudicator } : {}),
   });
 }
 

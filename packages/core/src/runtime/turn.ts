@@ -13,7 +13,7 @@
 import { resolveGuards, resolveMutators } from '../spec.js';
 import type { AgentSpec, ChainSpec } from '../spec.js';
 import type { DomainContract } from '../trunk.js';
-import type { AgentWorld, Guard, GuardCtx, ObservedCall } from '../rules.js';
+import type { AgentWorld, Guard, GuardCtx, ObservedCall, Adjudicator } from '../rules.js';
 import { recordVeto, type TurnLedger } from './ledger.js';
 import { isTerminal } from './terminal.js';
 
@@ -99,6 +99,7 @@ export async function evaluatePreTool(
     history: ledger.history,
     attachmentsThisTurn: ledger.attachments,
     siblingCallsThisStep,
+    adjudicator: ledger.adjudicator,
   };
   for (const g of guards) {
     const reason = await g.check(gctx);
@@ -119,7 +120,7 @@ export async function evaluateOnInput(spec: AgentSpec, ledger: TurnLedger, world
   const guards = resolveGuards(spec.guards.onInput);
   // onInput: `args` is empty (no tool), but the guard now sees the REAL incoming user text via
   // `userText` (this replaces the old hard-coded `args: {}` blindness) plus the prior `history`.
-  const gctx: GuardCtx = { args: {}, world, observed: ledger.observed, turnIndex: ledger.turnIndex, userText: ledger.currentUserText, history: ledger.history };
+  const gctx: GuardCtx = { args: {}, world, observed: ledger.observed, turnIndex: ledger.turnIndex, userText: ledger.currentUserText, history: ledger.history, adjudicator: ledger.adjudicator };
   for (const g of guards) {
     const reason = await g.check(gctx);
     if (reason) {
@@ -128,6 +129,30 @@ export async function evaluateOnInput(spec: AgentSpec, ledger: TurnLedger, world
     }
   }
   return null;
+}
+
+/** True when the spec installs at least one ENABLED `llmCheck` guard on ANY hook. Scans the bindings by
+ *  the runtime `kind`, so a renamed or wrapped guard is caught by what it IS, not by a source token. */
+export function specInstallsLlmCheck(spec: AgentSpec): boolean {
+  const hooks = [spec.guards.onInput, spec.guards.preTool, spec.guards.postTool, spec.guards.onReply];
+  return hooks.some((arr) => arr?.some((b) => !b.disabled && b.guard.kind === 'llmCheck'));
+}
+
+/**
+ * FAIL-LOUD-AT-START gate: a spec that installs an `llmCheck` with NO adjudicator registered is a wiring
+ * bug that must surface at conversation start — never mid-turn, where it would masquerade as a model
+ * failure or (worse) silently allow. The backend calls this once, before the first turn. A spec with no
+ * llmCheck needs no adjudicator, so this is a no-op there (zero-diff).
+ */
+export function assertAdjudicatorPresent(spec: AgentSpec, adjudicator: Adjudicator | undefined): void {
+  if (adjudicator) return;
+  if (specInstallsLlmCheck(spec)) {
+    throw new Error(
+      `looprun: spec "${spec.id}" installs an llmCheck guard but no adjudicator was registered — ` +
+        'pass the runtime an adjudicator ((rubric, ctx) => Promise<{ violation: string | null }>). ' +
+        'llmCheck cannot run without it; failing now, at conversation start, rather than mid-turn.',
+    );
+  }
 }
 
 /** Apply the deterministic egress mutators (e.g. jargonScrub) to the reply text. */
@@ -143,6 +168,7 @@ function applyMutators(spec: AgentSpec, ledger: TurnLedger, world: AgentWorld, t
       history: ledger.history,
       reply: out,
       producedThisTurn: ledger.producedThisTurn,
+      adjudicator: ledger.adjudicator,
     };
     const next = m.apply(out, mctx);
     if (next !== out) {
@@ -171,6 +197,7 @@ async function checkReply(
     producedThisTurn: ledger.producedThisTurn,
     attachmentsThisTurn: ledger.attachments,
     notes: ledger.turnCorrections,
+    adjudicator: ledger.adjudicator,
   };
   const out: ReplyViolation[] = [];
   for (const g of resolveGuards(spec.guards.onReply)) {
