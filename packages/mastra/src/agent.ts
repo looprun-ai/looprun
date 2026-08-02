@@ -29,19 +29,23 @@ import type { AgentSpec, AgentWorld, ObservedCall, ToolDef, DomainContract, Adju
 import {
   assertAdjudicatorPresent,
   beginTurn,
+  clearDeliveredTerminal,
   finalizeReply,
   forcedTerminalPrompt,
   isTerminal,
+  lastTerminalArgs,
   normalizeModelParams,
   prematureTerminalTools,
   pruneSupersededTerminals,
   recordTurnHistory,
   resolveModelSettings,
+  respondPayload,
   runChainCompletionPass,
   supersededTerminalCalls,
   vetoStormHit,
   renderTurnPrompt,
 } from '@looprun-ai/core/internal';
+import type { RespondPayload } from '@looprun-ai/core/internal';
 import { resolveConstruction } from './agent-construction.js';
 import { SessionStore } from './session.js';
 import type { LoopRunSession, WorldFactory } from './session.js';
@@ -261,9 +265,11 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
       terminalProtocol: this.terminalProtocolOn,
     });
 
+    // ONE terminal now (`respond`); "asked" is a field, not a tool — the reply-only policy rides the
+    // protocol prose (terminalProtocol(replyOnly)), not the tool set.
     const activeTools = this.nativeToolsMode
-      ? [...this.nativeActiveNames, ...(replyOnly ? ['replyToUser'] : ['replyToUser', 'askUser'])]
-      : (replyOnly ? [...this.surface, 'replyToUser'] : [...this.surface, 'replyToUser', 'askUser']);
+      ? [...this.nativeActiveNames, 'respond']
+      : [...this.surface, 'respond'];
 
     // Conversation history: Mastra memory owns it when configured; otherwise the session keeps it.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -314,7 +320,9 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
     if (this.terminalProtocolOn) {
       const premature = prematureTerminalTools(full.steps);
       if (premature.length && ledger.terminalReply.trim()) {
-        ledger.terminalReply = '';
+        // Clear the WHOLE delivered declaration (text + did + asked): an invalidated terminal's `did` is
+        // an equally-premature claim the cross-check guards must not ground against.
+        clearDeliveredTerminal(ledger);
         ledger.turnCorrections.push(`premature-terminal:${[...new Set(premature)].join(',')}`);
       }
       // Terminals that lost the delivery contest are not evidence of anything the user saw.
@@ -324,7 +332,7 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
 
     // Forced-terminal fallback (terminal protocol only).
     if (this.terminalProtocolOn && !ledger.terminalReply.trim()) {
-      const fbTools = replyOnly ? ['replyToUser'] : ['replyToUser', 'askUser'];
+      const fbTools = ['respond'];
       const fbMsgs = useMemory || userText === null
         ? forcedTerminalPrompt(replyOnly)
         : [...session.messages, { role: 'user', content: forcedTerminalPrompt(replyOnly) }];
@@ -375,27 +383,42 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
     const initialText: string = full?.tripwire
       ? String(full.tripwireReason ?? full.reason ?? '')
       : (ledger.terminalReply || full.text || '');
+    // The DELIVERED terminal's structured declaration (recordTerminal seated did/asked); a tripwire /
+    // free-text fallback carries the empty declaration beginTurn reset.
+    const initial: RespondPayload = { message: initialText, did: ledger.did, asked: ledger.asked };
 
     const finalized = await finalizeReply(
       spec,
       contract,
       world,
       ledger,
-      initialText,
+      initial,
       async (message) => {
         const reMsgs = useMemory || userText === null
           ? message
           : [...session.messages, { role: 'user', content: message }];
+        // A redrive re-generates ONE respond (tools disabled except respond, toolChoice pinned) — the
+        // candidate returns as a STRUCTURED payload. It is NOT persisted: snapshot the ledger and restore
+        // it, so a rejected draft's respond never enters observed/history (the recorded terminal + any
+        // hook push are rolled back; finalizeReply re-seats did/asked from the returned payload).
+        const obsLen = ledger.observed.length;
+        const snap = { terminalReply: ledger.terminalReply, did: ledger.did, asked: ledger.asked };
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const re: any = await (Agent.prototype.generate as any).call(this, reMsgs, {
           instructions,
-          toolChoice: 'none',
-          activeTools: [],
+          activeTools: ['respond'],
+          toolChoice: 'required',
+          stopWhen: [stepCountIs(2), terminalCalled],
+          hooks: this.guardHooks,
           ...this.modelParams,
           ...(useMemory ? { memory: passOpts.memory } : {}),
         });
-        // Candidates are NOT persisted here — a rejected draft must never enter the history.
-        return re.text ?? '';
+        ledger.observed.length = obsLen;
+        ledger.terminalReply = snap.terminalReply;
+        ledger.did = snap.did;
+        ledger.asked = snap.asked;
+        const args = lastTerminalArgs(re.steps);
+        return args ? respondPayload(args) : { message: typeof re.text === 'string' ? re.text : '', did: [], asked: false };
       },
       this.redrivesResolved,
     );
@@ -442,7 +465,7 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
       if (session.turnIndex > 0) world.advanceTurn();
       beginTurn(ledger, session.turnIndex);
       session.turnIndex += 1;
-      const { instructions, replyOnly } = renderTurnPrompt({
+      const { instructions } = renderTurnPrompt({
         spec: this.spec, contract: this.contract, world, userText: null,
         terminalProtocol: this.terminalProtocolOn,
         // The stream path consumes only the instructions — Mastra owns the message array here, so
@@ -451,8 +474,8 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
         instructionsOnly: true,
       });
       const activeTools = this.nativeToolsMode
-        ? [...this.nativeActiveNames, ...(replyOnly ? ['replyToUser'] : ['replyToUser', 'askUser'])]
-        : (replyOnly ? [...this.surface, 'replyToUser'] : [...this.surface, 'replyToUser', 'askUser']);
+        ? [...this.nativeActiveNames, 'respond']
+        : [...this.surface, 'respond'];
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const passOpts: Record<string, any> = {};
       for (const [k, v] of Object.entries(options ?? {})) if (k !== 'loopRun') passOpts[k] = v;

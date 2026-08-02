@@ -72,7 +72,7 @@ export type { TurnLedger } from './runtime/ledger.js';
 // operation report from the VERIFIED `did`, and derives the true claims from the ledger for the
 // exhaustion closure. Backends consume both; `RespondPayload`/`RenderOpts` ride finalizeReply's/the
 // renderer's signature so a declaration:true consumer can name them.
-export { renderOperationReport, deriveClaimsFromLedger } from './runtime/claims.js';
+export { renderOperationReport, deriveClaimsFromLedger, respondPayload } from './runtime/claims.js';
 export type { RespondPayload, RenderOpts } from './runtime/claims.js';
 
 export {
@@ -83,6 +83,7 @@ export {
   normalizeTerminalToolDef,
   prematureTerminalTools,
   supersededTerminalCalls,
+  lastTerminalArgs,
 } from './runtime/terminal.js';
 
 // The single owner of the bytes a turn sends — drivers AND offline instruments render through this

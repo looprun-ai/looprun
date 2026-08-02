@@ -85,7 +85,7 @@ describe('runProofLoop — full loop', () => {
     const res = await runProofLoop(trivialSpec(), {
       preset: 'empty',
       turns: [{ userText: 'list my items' }],
-      script: [[{ tool: 'listItems', args: {} }], [{ tool: 'replyToUser', args: { text: 'Here are your items.' } }]],
+      script: [[{ tool: 'listItems', args: {} }], [{ tool: 'respond', args: { message: 'Here are your items.', did: [] } }]],
       expect: 'pass',
     });
     expect(res.errorMsg).toBeUndefined();
@@ -102,7 +102,7 @@ describe('runProofLoop — full loop', () => {
       turns: [{ userText: 'create an item' }],
       script: [
         [{ tool: 'createItem', args: { title: 'x' } }],
-        [{ tool: 'replyToUser', args: { text: 'I need to search first.' } }],
+        [{ tool: 'respond', args: { message: 'I need to search first.', did: [] } }],
       ],
       expect: 'veto',
       tool: 'createItem',

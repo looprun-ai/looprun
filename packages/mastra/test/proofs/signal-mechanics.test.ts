@@ -4,18 +4,18 @@
  *
  *  - preTool veto     → recoveryEvents `${dim}:${kind}:${tool}` (call lands ok:false; the model sees a
  *                       failure result and continues with the NEXT script step).
- *  - onReply redrive  → recoveryEvents `redrive:${kind}`; the redrive re-generate runs with
- *                       toolChoice:'none' and takes `re.text` — so the correction script step MUST be a
- *                       plain `{ text: '…' }` part, NEVER a replyToUser call.
+ *  - onReply redrive  → recoveryEvents `redrive:${kind}`; the redrive re-generates ONE respond
+ *                       (respond-only, toolChoice pinned) — a correction step returning a plain
+ *                       `{ text: '…' }` part falls back to that text, which is what these probes use.
  *  - postTool report  → recoveryEvents `output:${kind}:${tool}` AND the violation joins the same
  *                       redrive set (so a clean `{ text }` step clears it in one redrive).
  *  - onInput refusal  → recoveryEvents `onInput:${kind}`; the turn is tripwired (no domain tool calls).
- *  - empty terminal   → a replyToUser with EMPTY text does not set the terminal reply → the runtime
+ *  - empty terminal   → a `respond` with EMPTY message does not set the terminal reply → the runtime
  *                       forces a terminal (`forced-terminal` tag) BEFORE the onReply checks; scripts
- *                       should always close with a NON-empty replyToUser unless probing that path.
+ *                       should always close with a NON-empty `respond` unless probing that path.
  */
 import { describe, expect, it } from 'vitest';
-import { custom, replyMentions, resultInvariant } from '@looprun-ai/core';
+import { custom, resultInvariant } from '@looprun-ai/core';
 import { buildIsolatedSpec, type GuardProof } from '@looprun-ai/core/testing';
 import { runProofLoop } from '../../src/testing/index.js';
 
@@ -23,9 +23,17 @@ const turn = (userText: string) => ({ userText });
 
 describe('signal mechanics (proof-authoring conventions)', () => {
   it('onReply redrive: correction step is a plain text part, tag redrive:<kind>', async () => {
+    // A text-reading `custom` behavior guard stands in for the deleted reply-text kinds (a test-local
+    // custom guard may still read ctx.reply): it fires until the message says "done", so the redrive's
+    // free-text continuation satisfies it.
     const proof: GuardProof = {
-      guard: 'replyMentions',
-      make: () => replyMentions({ terms: ['done'], anyTerm: true }, 'Your reply must say what was done — include the word "done".'),
+      guard: 'saysDone',
+      make: () =>
+        custom({
+          kind: 'saysDone', dim: 'behavior',
+          check: (ctx) => (/done/i.test(ctx.reply ?? '') ? null : 'Your reply must say what was done — include the word "done".'),
+          prose: () => '',
+        }),
       hook: 'onReply',
       target: 'any',
       cases: [],
@@ -35,14 +43,14 @@ describe('signal mechanics (proof-authoring conventions)', () => {
       preset: 'empty',
       turns: [turn('set it up')],
       script: [
-        [{ tool: 'replyToUser', args: { text: 'All set.' } }],
-        [{ text: 'Done — it is all set.' }], // redrive step: PLAIN TEXT (toolChoice:'none')
+        [{ tool: 'respond', args: { message: 'All set.', did: [] } }],
+        [{ text: 'Done — it is all set.' }], // redrive step: free text → falls back to this text
       ],
       expect: 'redrive',
     });
     expect(res.errorMsg).toBeUndefined();
     const rec = res.turnRecords[0];
-    expect(rec.recoveryEvents).toContain('redrive:replyMentions');
+    expect(rec.recoveryEvents).toContain('redrive:saysDone');
     expect(rec.assistantFinalText).toBe('Done — it is all set.');
   });
 
@@ -60,7 +68,7 @@ describe('signal mechanics (proof-authoring conventions)', () => {
       turns: [turn('check the status')],
       script: [
         [{ tool: 'reportStatus', args: {} }],
-        [{ tool: 'replyToUser', args: { text: 'The status was checked.' } }],
+        [{ tool: 'respond', args: { message: 'The status was checked.', did: [] } }],
         [{ text: 'The status was checked — the count does not match the expected zero.' }],
       ],
       expect: 'redrive',
@@ -90,7 +98,7 @@ describe('signal mechanics (proof-authoring conventions)', () => {
     const res = await runProofLoop(spec, {
       preset: 'empty', // hasPrimary() false → refusal
       turns: [turn('create something')],
-      script: [[{ tool: 'replyToUser', args: { text: 'never reached' } }]],
+      script: [[{ tool: 'respond', args: { message: 'never reached', did: [] } }]],
       expect: 'refusal',
     });
     const rec = res.turnRecords[0];
@@ -100,8 +108,13 @@ describe('signal mechanics (proof-authoring conventions)', () => {
 
   it('empty terminal text: forced-terminal fires before the onReply checks', async () => {
     const proof: GuardProof = {
-      guard: 'replyMentions',
-      make: () => replyMentions({ terms: ['ready'], anyTerm: true }, 'Say it is ready.'),
+      guard: 'saysReady',
+      make: () =>
+        custom({
+          kind: 'saysReady', dim: 'behavior',
+          check: (ctx) => (/ready/i.test(ctx.reply ?? '') ? null : 'Say it is ready.'),
+          prose: () => '',
+        }),
       hook: 'onReply',
       target: 'any',
       cases: [],
@@ -111,8 +124,8 @@ describe('signal mechanics (proof-authoring conventions)', () => {
       preset: 'empty',
       turns: [turn('anything')],
       script: [
-        [{ tool: 'replyToUser', args: { text: '' } }], // empty → terminalReply unset
-        [{ tool: 'replyToUser', args: { text: 'It is ready.' } }], // forced-terminal retry
+        [{ tool: 'respond', args: { message: '', did: [] } }], // empty → terminalReply unset
+        [{ tool: 'respond', args: { message: 'It is ready.', did: [] } }], // forced-terminal retry
       ],
       expect: 'pass',
     });

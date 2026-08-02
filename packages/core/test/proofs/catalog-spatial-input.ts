@@ -23,7 +23,7 @@ export const SPATIAL_INPUT_PROOFS: GuardProof[] = [
           script: [
             [{ tool: 'searchItem', args: { query: 'widget' } }],
             [{ tool: 'createItem', args: { title: 'Item One' } }],
-            [{ tool: 'replyToUser', args: { text: 'The item was created.' } }],
+            [{ tool: 'respond', args: { message: 'The item was created.', did: [] } }],
           ],
           expect: 'pass',
         },
@@ -38,7 +38,7 @@ export const SPATIAL_INPUT_PROOFS: GuardProof[] = [
           turns: [turn('add a new item')],
           script: [
             [{ tool: 'createItem', args: { title: 'A' } }],
-            [{ tool: 'replyToUser', args: { text: 'The item request was noted.' } }],
+            [{ tool: 'respond', args: { message: 'The item request was noted.', did: [] } }],
           ],
           expect: 'veto',
           tool: 'createItem',
@@ -75,7 +75,7 @@ export const SPATIAL_INPUT_PROOFS: GuardProof[] = [
           script: [
             [{ tool: 'searchItem', args: { query: 'widget' } }],
             [{ tool: 'createItem', args: { title: 'Item One' } }],
-            [{ tool: 'replyToUser', args: { text: 'The item was created.' } }],
+            [{ tool: 'respond', args: { message: 'The item was created.', did: [] } }],
           ],
           expect: 'pass',
         },
@@ -90,7 +90,7 @@ export const SPATIAL_INPUT_PROOFS: GuardProof[] = [
           turns: [turn('change the item')],
           script: [
             [{ tool: 'updateItem', args: { id: 'itm-001', title: 'Updated title' } }],
-            [{ tool: 'replyToUser', args: { text: 'The update request was noted.' } }],
+            [{ tool: 'respond', args: { message: 'The update request was noted.', did: [] } }],
           ],
           expect: 'veto',
           tool: 'updateItem',
@@ -123,7 +123,7 @@ export const SPATIAL_INPUT_PROOFS: GuardProof[] = [
           script: [
             [{ tool: 'searchItem', args: { query: 'widget' } }],
             [{ tool: 'createItem', args: { title: 'Item One' } }],
-            [{ tool: 'replyToUser', args: { text: 'The item was created.' } }],
+            [{ tool: 'respond', args: { message: 'The item was created.', did: [] } }],
           ],
           expect: 'pass',
         },
@@ -139,7 +139,7 @@ export const SPATIAL_INPUT_PROOFS: GuardProof[] = [
           script: [
             [{ tool: 'searchItem', args: { query: 'widget' } }],
             [{ tool: 'createItem', args: {} }],
-            [{ tool: 'replyToUser', args: { text: 'The item request was noted.' } }],
+            [{ tool: 'respond', args: { message: 'The item request was noted.', did: [] } }],
           ],
           expect: 'veto',
           tool: 'createItem',
@@ -171,7 +171,7 @@ export const SPATIAL_INPUT_PROOFS: GuardProof[] = [
           turns: [turn('delete the item')],
           script: [
             [{ tool: 'deleteItem', args: { id: 'p001' } }],
-            [{ tool: 'askUser', args: { text: 'Are you sure you want to delete this item?' } }],
+            [{ tool: 'respond', args: { message: 'Are you sure you want to delete this item?', asked: true, did: [] } }],
           ],
           expect: 'pass',
         },
@@ -186,7 +186,7 @@ export const SPATIAL_INPUT_PROOFS: GuardProof[] = [
           turns: [turn('delete the item')],
           script: [
             [{ tool: 'deleteItem', args: { id: 'p001', force: true } }],
-            [{ tool: 'replyToUser', args: { text: 'The item request was noted.' } }],
+            [{ tool: 'respond', args: { message: 'The item request was noted.', did: [] } }],
           ],
           expect: 'veto',
           tool: 'deleteItem',
@@ -218,7 +218,7 @@ export const SPATIAL_INPUT_PROOFS: GuardProof[] = [
           turns: [turn('make it the primary item')],
           script: [
             [{ tool: 'setPrimary', args: { id: 'itm-7' } }],
-            [{ tool: 'replyToUser', args: { text: 'The item was set as primary.' } }],
+            [{ tool: 'respond', args: { message: 'The item was set as primary.', did: [] } }],
           ],
           expect: 'pass',
         },
@@ -233,7 +233,7 @@ export const SPATIAL_INPUT_PROOFS: GuardProof[] = [
           turns: [turn('make it the primary item')],
           script: [
             [{ tool: 'setPrimary', args: { id: 'p001' } }],
-            [{ tool: 'replyToUser', args: { text: 'The primary item request was noted.' } }],
+            [{ tool: 'respond', args: { message: 'The primary item request was noted.', did: [] } }],
           ],
           expect: 'veto',
           tool: 'setPrimary',

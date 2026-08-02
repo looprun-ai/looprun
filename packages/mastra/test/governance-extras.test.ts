@@ -21,7 +21,7 @@ function fixtureWorld(): AgentWorld {
   const calls: any[] = [];
   const world: AgentWorld = {
     exec(name: string, args: Record<string, unknown>) {
-      if (name === 'replyToUser' || name === 'askUser') return { success: true };
+      if (name === 'respond') return { success: true };
       let result: Record<string, unknown> = { success: true };
       if (name === 'saveConfig') result = { success: true, applied: false }; // structurally ok, invariant fails
       if (name === 'logAction') result = { success: true, logged: true };
@@ -48,7 +48,7 @@ describe('per-agent sampling (controls.sampling merged over conversation modelPa
       id: 'creative', mode: 'M', persona: 'You are the creative agent.', tools: [], contract: CONTRACT,
       sampling: { temperature: 0.7 },
     });
-    const scripted = scriptedModel([[{ tool: 'replyToUser', args: { text: 'hi' } }]]);
+    const scripted = scriptedModel([[{ tool: 'respond', args: { message: 'hi', did: [] } }]]);
     const agent = new LoopRunAgent({ spec, world: fixtureWorld(), toolDefs: TOOL_DEFS, model: scripted.model, modelParams: { temperature: 0 } });
     await agent.generate('x');
     expect(scripted.received[0].temperature).toBe(0.7); // 0.7 (agent) beats 0 (conversation)
@@ -64,7 +64,7 @@ describe('postTool (OUTPUT-dim) enforcement joins the redrive', () => {
     spec.addGuard('postTool', ['saveConfig'], resultInvariant((r) => (r as { applied?: boolean }).applied === true, 'The change was NOT fully applied — report the real state.'), { id: 'agent:appliedInvariant' });
     const scripted = scriptedModel([
       [{ tool: 'saveConfig', args: {} }],
-      [{ tool: 'replyToUser', args: { text: 'Saved.' } }], // over-claims — postTool violation pending
+      [{ tool: 'respond', args: { message: 'Saved.', did: [] } }], // over-claims — postTool violation pending
       [{ text: 'The change was not fully applied.' }], // the redrive (toolChoice:none)
     ]);
     const agent = new LoopRunAgent({ spec, world: fixtureWorld(), toolDefs: TOOL_DEFS, model: scripted.model });
@@ -84,7 +84,7 @@ describe('flowChain completion (controls.chains)', () => {
     });
     const scripted = scriptedModel([
       [{ tool: 'listItems', args: {} }],
-      [{ tool: 'replyToUser', args: { text: 'Listed the items.' } }], // no logAction → chain forces it
+      [{ tool: 'respond', args: { message: 'Listed the items.', did: [] } }], // no logAction → chain forces it
       [{ text: 'Listed the items and logged the audit action.' }], // the restate redrive
     ]);
     const world = fixtureWorld();
@@ -105,7 +105,7 @@ describe('flowChain completion (controls.chains)', () => {
     const scripted = scriptedModel([
       [{ tool: 'listItems', args: {} }],
       [{ tool: 'logAction', args: { note: 'manual' } }],
-      [{ tool: 'replyToUser', args: { text: 'Listed and logged.' } }],
+      [{ tool: 'respond', args: { message: 'Listed and logged.', did: [] } }],
     ]);
     const world = fixtureWorld();
     const agent = new LoopRunAgent({ spec, world, toolDefs: TOOL_DEFS, model: scripted.model });
@@ -124,7 +124,7 @@ describe('flowChain completion (controls.chains)', () => {
     spec.addGuard('preTool', ['logAction'], { kind: 'blockLog', dim: 'run', check: () => 'logging is blocked', prose: () => 'never log' }, { id: 'agent:blockLog' });
     const scripted = scriptedModel([
       [{ tool: 'listItems', args: {} }],
-      [{ tool: 'replyToUser', args: { text: 'Listed the items.' } }],
+      [{ tool: 'respond', args: { message: 'Listed the items.', did: [] } }],
     ]);
     const world = fixtureWorld();
     const agent = new LoopRunAgent({ spec, world, toolDefs: TOOL_DEFS, model: scripted.model });

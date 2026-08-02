@@ -79,12 +79,14 @@ const INTERNAL = [
   'beginTurn', 'createLedger', 'clearDeliveredTerminal', 'pruneSupersededTerminals', 'recordTerminal', 'recordTerminalCall',
   'recordToolResult', 'recordTurnHistory', 'resultOk', 'TurnLedger', 'vetoStormHit',
   'forcedTerminalPrompt', 'isTerminal', 'normalizeTerminalToolDef', 'prematureTerminalTools',
-  'supersededTerminalCalls', 'terminalProtocol', 'terminalToolDefs',
+  'supersededTerminalCalls', 'terminalProtocol', 'terminalToolDefs', 'lastTerminalArgs',
   'renderTurnPrompt',
   // SCG-T4 — the engine renders the operation report from the verified `did` and derives the true
   // claims for the exhaustion closure; `defaultExhaustionReply`/`buildHonestAbstain` are DELETED
   // (pre-1.0, replaced by the derive-and-render closure). `RespondPayload`/`RenderOpts` ride the surface.
-  'renderOperationReport', 'deriveClaimsFromLedger', 'RespondPayload', 'RenderOpts',
+  // SCG-T6 — the backend seam needs `respondPayload` (args → structured payload for the redrive/fallback
+  // re-generation) and `lastTerminalArgs` (the respond call's args from a result's steps).
+  'renderOperationReport', 'deriveClaimsFromLedger', 'RespondPayload', 'RenderOpts', 'respondPayload',
   'enforcePostTool', 'evaluateOnInput', 'evaluatePreTool',
   'finalizeReply', 'FinalizedReply', 'governanceVeto', 'redriveMessage', 'ReplyViolation',
   'runChainCompletionPass',

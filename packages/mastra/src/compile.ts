@@ -18,7 +18,7 @@ import {
   renderScopedSpecTrunk,
   terminalProtocol,
 } from '@looprun-ai/core/internal';
-import type { FinalizedReply, TurnLedger } from '@looprun-ai/core/internal';
+import type { FinalizedReply, TurnLedger, RespondPayload } from '@looprun-ai/core/internal';
 import { buildWorldTools } from './tools.js';
 import { makeGuardHooks, makeInputProcessors } from './hooks.js';
 import type { GuardHooks } from './hooks.js';
@@ -39,9 +39,10 @@ export interface CompiledSpec {
   /** Advance the turn (world + ledger) and get the state/uploads tail for the user message. Pass
    *  `userText` so onInput/guards see the real incoming text (`ctx.userText`) and it enters history. */
   beginTurn(input?: { attachments?: string[]; userText?: string }): { userMessageTail: string };
-  /** Mutators → onReply checks → bounded no-tools redrive → honest-abstain. Seals the turn into the
-   *  conversation history so a later turn's guards read it via `ctx.history`. */
-  finalizeReply(text: string, redrive: (message: string) => Promise<string>): Promise<FinalizedReply>;
+  /** Mutators → onReply checks → bounded redrive (re-generate ONE respond) → honest-abstain. Seals the
+   *  turn into the conversation history so a later turn's guards read it via `ctx.history`. The `initial`
+   *  and the redrive's return are STRUCTURED respond payloads (message + did + asked). */
+  finalizeReply(initial: RespondPayload, redrive: (message: string) => Promise<RespondPayload>): Promise<FinalizedReply>;
 }
 
 export function compileSpec(
@@ -72,10 +73,10 @@ export function compileSpec(
     ? (w: AgentWorld, u: string[]) => spec.surface.systemPrompt!(w, u)
     : (w: AgentWorld, u: string[]) => renderScopedSpecTrunk(w, spec, u, contract);
 
-  // Frozen at beginTurn (and at creation, for reads before the first turn): instructions() and
-  // activeTools() both derive from it, and the host reads them at times the runtime does not
-  // control. A per-read evaluation lets a mid-turn world mutation make prompt and tools disagree —
-  // the prompt offers askUser while the list has dropped it. Per-turn is the documented contract.
+  // Frozen at beginTurn (and at creation, for reads before the first turn): instructions() derives from
+  // it (the reply-only protocol prose), and the host reads it at times the runtime does not control. A
+  // per-read evaluation lets a mid-turn world mutation make the prompt's reply-only stance flip mid-turn.
+  // Per-turn is the documented contract.
   const evalReplyOnly = () => (spec.controls.terminal ? spec.controls.terminal(world) === true : false);
   let replyOnlyThisTurn = evalReplyOnly();
   const replyOnly = () => replyOnlyThisTurn;
@@ -86,7 +87,7 @@ export function compileSpec(
     instructions: () => renderPrompt(world, session.ledger.attachments) + (terminalOn ? terminalProtocol(replyOnly()) : ''),
     hooks: makeGuardHooks(spec, getSession),
     inputProcessors: makeInputProcessors(spec, getSession),
-    activeTools: () => (replyOnly() ? [...surface, 'replyToUser'] : [...surface, 'replyToUser', 'askUser']),
+    activeTools: () => [...surface, 'respond'],
     beginTurn(input) {
       if (started) {
         world.advanceTurn();
@@ -103,8 +104,8 @@ export function compileSpec(
       if (attLabels.length) tailParts.push(`[Uploads this turn: ${attLabels.join(', ')}]`);
       return { userMessageTail: tailParts.join('\n\n') };
     },
-    async finalizeReply(text, redrive) {
-      const finalized = await coreFinalizeReply(spec, contract, world, session.ledger, text, redrive, spec.controls.redrives ?? opts.redrives ?? DEFAULT_REDRIVES);
+    async finalizeReply(initial, redrive) {
+      const finalized = await coreFinalizeReply(spec, contract, world, session.ledger, initial, redrive, spec.controls.redrives ?? opts.redrives ?? DEFAULT_REDRIVES);
       recordTurnHistory(session.ledger, finalized.text, world);
       return finalized;
     },

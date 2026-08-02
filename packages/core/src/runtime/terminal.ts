@@ -102,6 +102,28 @@ function toolCallArgs(tc: any): Record<string, unknown> {
   return (tc?.args ?? tc?.input ?? tc?.payload?.args ?? tc?.payload?.input ?? {}) as Record<string, unknown>;
 }
 
+/**
+ * The RAW args of the LAST terminal (`respond`) call across a generate result's steps, or `null` when the
+ * generation produced no terminal. Reads both the stop-callback shape (`{toolName,args}`) and the
+ * finished-chunk shape (`{payload:{toolName,input}}`), exactly like {@link supersededTerminalCalls} /
+ * {@link prematureTerminalTools}, so a backend never re-implements the dual-shape read. The backend feeds
+ * this to {@link import('./claims.js').respondPayload} to recover a redrive / forced-terminal fallback
+ * re-generation's STRUCTURED payload (message + did + asked) from the model's tool call.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function lastTerminalArgs(steps: any): Record<string, unknown> | null {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const list = (steps ?? []) as any[];
+  for (let k = list.length - 1; k >= 0; k--) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const calls = (list[k]?.toolCalls ?? []) as any[];
+    for (let j = calls.length - 1; j >= 0; j--) {
+      if (isTerminal(toolCallName(calls[j]))) return toolCallArgs(calls[j]);
+    }
+  }
+  return null;
+}
+
 const TERMINAL_PROTOCOL =
   '\n\n## Turn protocol (ABSOLUTE)\n' +
   '- You speak to the user ONLY by calling **respond**. NEVER write a free-text reply — text outside ' +

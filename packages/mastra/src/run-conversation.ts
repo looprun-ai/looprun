@@ -5,11 +5,11 @@
  *   preTool guards   → `hooks.beforeToolCall` → { proceed:false, output } veto
  *   observed ledger  → `hooks.afterToolCall`
  *   onInput guards   → an `inputProcessors` entry (processInput → abort ⇒ turn refused, no LLM call)
- *   surface scoping  → `activeTools` = spec.surface.tools (+ terminal tools)
- *   force-terminal   → replyToUser/askUser tools + `toolChoice:'required'` + `stopWhen(terminalCalled)`
+ *   surface scoping  → `activeTools` = spec.surface.tools (+ the `respond` terminal)
+ *   force-terminal   → the single `respond` tool + `toolChoice:'required'` + `stopWhen(terminalCalled)`
  *                      + a forced-terminal fallback (pushes a weak model past the action wall)
- *   onReply guards   → runtime finalization: a bounded NO-TOOLS re-generate redrive (toolChoice:'none'),
- *                      then mutators + honest-abstain. NOT a processor `abort({retry:true})`, which
+ *   onReply guards   → runtime finalization: a bounded redrive that re-generates ONE respond (respond-only,
+ *                      toolChoice pinned), then mutators + honest-abstain. NOT a processor `abort({retry:true})`, which
  *                      re-runs the whole generation + re-executes side-effecting tools (measured:
  *                      ~100× slower).
  *
@@ -21,21 +21,24 @@ import { Agent } from '@mastra/core/agent';
 import {
   assertAdjudicatorPresent,
   beginTurn,
+  clearDeliveredTerminal,
   createLedger,
   finalizeReply,
   forcedTerminalPrompt,
   isTerminal,
+  lastTerminalArgs,
   normalizeModelParams,
   prematureTerminalTools,
   pruneSupersededTerminals,
   recordTurnHistory,
   resolveModelSettings,
+  respondPayload,
   runChainCompletionPass,
   supersededTerminalCalls,
   vetoStormHit,
   renderTurnPrompt,
 } from '@looprun-ai/core/internal';
-import type { TokenUsage } from '@looprun-ai/core/internal';
+import type { TokenUsage, RespondPayload } from '@looprun-ai/core/internal';
 import type { AgentSpec, AgentWorld, ToolDef, DomainContract, TurnInput, TurnRecord, RunResult, Adjudicator } from '@looprun-ai/core';
 import { buildWorldTools } from './tools.js';
 import { makeGuardHooks, makeInputProcessors, repeatedToolCallStop } from './hooks.js';
@@ -147,7 +150,8 @@ export async function runSpecConversation(spec: AgentSpec, turns: TurnInput[], d
       spec, contract, world, userText, uploadLabels: attLabels, uploadUrls: attUrls,
     });
     currentSystemPrompt = instructions;
-    const activeTools = replyOnly ? [...surface, 'replyToUser'] : [...surface, 'replyToUser', 'askUser'];
+    // ONE terminal now (`respond`); "asked" is a field — the reply-only policy rides the protocol prose.
+    const activeTools = [...surface, 'respond'];
 
     const before = world.toolCalls.length;
     const sseBefore = world.sseActions.length;
@@ -182,7 +186,9 @@ export async function runSpecConversation(spec: AgentSpec, turns: TurnInput[], d
       // tool RESULTS.
       const premature = prematureTerminalTools(full.steps);
       if (premature.length && ledger.terminalReply.trim()) {
-        ledger.terminalReply = '';
+        // Clear the WHOLE delivered declaration (text + did + asked): an invalidated terminal's `did` is
+        // an equally-premature claim the cross-check guards must not ground against.
+        clearDeliveredTerminal(ledger);
         ledger.turnCorrections.push(`premature-terminal:${[...new Set(premature)].join(',')}`);
       }
       // Terminals that lost the delivery contest are not evidence of anything the user saw.
@@ -191,7 +197,7 @@ export async function runSpecConversation(spec: AgentSpec, turns: TurnInput[], d
 
       // Forced-terminal fallback: if the model ended without a terminal call, force one (no domain tools).
       if (!ledger.terminalReply.trim()) {
-        const fbTools = replyOnly ? ['replyToUser'] : ['replyToUser', 'askUser'];
+        const fbTools = ['respond'];
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const fb: any = await (agent.generate as any)([...messages, { role: 'user', content: forcedTerminalPrompt(replyOnly) }], {
           activeTools: fbTools, toolChoice: 'required', stopWhen: [stepCountIs(2), terminalCalled],
@@ -232,22 +238,34 @@ export async function runSpecConversation(spec: AgentSpec, turns: TurnInput[], d
       }
 
       const initialText: string = full?.tripwire ? String(full.tripwireReason ?? full.reason ?? '') : (ledger.terminalReply || full.text || '');
+      // The DELIVERED terminal's structured declaration (recordTerminal seated did/asked); a tripwire /
+      // free-text fallback carries the empty declaration beginTurn reset.
+      const initial: RespondPayload = { message: initialText, did: ledger.did, asked: ledger.asked };
 
-      // Mutators → onReply checks → bounded NO-TOOLS redrive → deterministic honest-abstain.
+      // Mutators → onReply checks → bounded redrive (re-generates ONE respond) → deterministic honest-abstain.
       const finalized = await finalizeReply(
         spec,
         contract,
         world,
         ledger,
-        initialText,
+        initial,
         async (message) => {
+          // A redrive re-generates ONE respond (respond-only, toolChoice pinned) and returns the STRUCTURED
+          // payload. It is NOT persisted: snapshot the ledger and restore it, so a rejected draft's respond
+          // never enters observed/history (finalizeReply re-seats did/asked from the returned payload).
+          const obsLen = ledger.observed.length;
+          const snap = { terminalReply: ledger.terminalReply, did: ledger.did, asked: ledger.asked };
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const re: any = await (agent.generate as any)(
             [...messages, { role: 'user', content: message }],
-            { toolChoice: 'none', activeTools: [], ...genParams },
+            { activeTools: ['respond'], toolChoice: 'required', stopWhen: [stepCountIs(2), terminalCalled], hooks: guardHooks, ...genParams },
           );
-          // Candidates are NOT persisted — a rejected draft must never enter the history.
-          return re.text ?? '';
+          ledger.observed.length = obsLen;
+          ledger.terminalReply = snap.terminalReply;
+          ledger.did = snap.did;
+          ledger.asked = snap.asked;
+          const args = lastTerminalArgs(re.steps);
+          return args ? respondPayload(args) : { message: typeof re.text === 'string' ? re.text : '', did: [], asked: false };
         },
         redrives,
       );

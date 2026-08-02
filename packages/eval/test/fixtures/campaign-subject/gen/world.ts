@@ -16,7 +16,7 @@ export class FactWorld implements AgentWorld {
   constructor(_preset = 'default') {}
 
   exec(name: string, args: Record<string, unknown>): unknown {
-    if (name === 'replyToUser' || name === 'askUser') return { success: true };
+    if (name === 'respond') return { success: true };
     this.toolCalls.push({ name, args, result: { ok: true }, tookEffect: false });
     return { ok: true, fact: 'The Fact Desk answers grounded questions.' };
   }

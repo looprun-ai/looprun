@@ -121,12 +121,12 @@ describe('M1 · full loop — a same-step bulk destructive is throttled to ONE e
       script: [
         [{ tool: 'deleteItem', args: { id: 'p001' } }],
         [{ tool: 'deleteItem', args: { id: 'p002' } }],
-        [{ tool: 'replyToUser', args: { text: 'Deleting p001 and p002 is permanent — are you sure?' } }],
+        [{ tool: 'respond', args: { message: 'Deleting p001 and p002 is permanent — are you sure?', did: [] } }],
         [
           { tool: 'deleteItem', args: { id: 'p001', confirmed: true } },
           { tool: 'deleteItem', args: { id: 'p002', confirmed: true } },
         ],
-        [{ tool: 'replyToUser', args: { text: 'Done — p001 was deleted; p002 still needs handling.' } }],
+        [{ tool: 'respond', args: { message: 'Done — p001 was deleted; p002 still needs handling.', did: [] } }],
       ],
       expect: 'pass',
     });
@@ -141,9 +141,9 @@ describe('M1 · full loop — a same-step bulk destructive is throttled to ONE e
       turns: [{ userText: 'delete p001' }, { userText: 'yes, confirm' }],
       script: [
         [{ tool: 'deleteItem', args: { id: 'p001' } }],
-        [{ tool: 'replyToUser', args: { text: 'Deleting p001 is permanent — are you sure?' } }],
+        [{ tool: 'respond', args: { message: 'Deleting p001 is permanent — are you sure?', did: [] } }],
         [{ tool: 'deleteItem', args: { id: 'p001', confirmed: true } }],
-        [{ tool: 'replyToUser', args: { text: 'Done — p001 is gone.' } }],
+        [{ tool: 'respond', args: { message: 'Done — p001 is gone.', did: [] } }],
       ],
       expect: 'pass',
     });

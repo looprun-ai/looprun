@@ -17,7 +17,6 @@ import {
   jargonScrub,
   noDuplicateCall,
   pendingConfirmMustAsk,
-  replyMaxOccurrences,
   resultInvariant,
 } from '@looprun-ai/core';
 import { AgentSpecBase } from '@looprun-ai/core';
@@ -65,21 +64,22 @@ describe("confirmFirst({ via: 'ask' }) is SUCCESS-KEYED", () => {
     expect(await guard().check(ctx)).toBeTruthy();
   });
 
-  it('REGRESSION FLOOR: an earlier-turn OK askUser still unlocks', async () => {
+  it('REGRESSION FLOOR: an earlier-turn ask event (respond+asked) still unlocks', async () => {
     const ctx = craftCtx({
       tool: 'purgeAll',
-      observed: [call('askUser', { args: { text: 'Purge everything — are you sure?' }, turnIndex: 0 })],
+      observed: [call('respond', { args: { message: 'Purge everything — are you sure?', asked: true }, turnIndex: 0 })],
       turnIndex: 1,
     });
     expect(await guard().check(ctx)).toBeNull();
   });
 
-  it('no-regex law: a prior-turn replyToUser (prose relay) does NOT unlock — only askUser/probe do', async () => {
-    // The former askRe disjunct is retired: a prose confirmation-ask no longer unlocks; the go-ahead
-    // must be a structural askUser or a same-tool probe. So this now DENIES.
+  it('no-regex law: a prior-turn plain respond (no asked) does NOT unlock — only an ask event/probe do', async () => {
+    // The former askRe disjunct is retired: a prose confirmation-ask no longer unlocks; the go-ahead must
+    // be a STRUCTURAL ask event (`respond` with `asked:true`) or a same-tool probe. A plain respond that
+    // merely phrases a question in its message is NOT an ask event, so this DENIES.
     const ctx = craftCtx({
       tool: 'purgeAll',
-      observed: [call('replyToUser', { args: { text: 'This wipes every item — are you sure?' }, turnIndex: 0 })],
+      observed: [call('respond', { args: { message: 'This wipes every item — are you sure?' }, turnIndex: 0 })],
       turnIndex: 1,
     });
     expect(await guard().check(ctx)).toBeTruthy();
@@ -94,8 +94,8 @@ describe("confirmFirst({ via: 'ask' }) is SUCCESS-KEYED", () => {
     expect(await guard().check(ctx)).toBeNull();
   });
 
-  it('a same-turn askUser never unlocks (the noActAfterAskSameTurn seam is unchanged)', async () => {
-    const ctx = craftCtx({ tool: 'purgeAll', observed: [call('askUser', { turnIndex: 1 })], turnIndex: 1 });
+  it('a same-turn ask event never unlocks (the noActAfterAskSameTurn seam is unchanged)', async () => {
+    const ctx = craftCtx({ tool: 'purgeAll', observed: [call('respond', { args: { asked: true }, turnIndex: 1 })], turnIndex: 1 });
     expect(await guard().check(ctx)).toBeTruthy();
   });
 });
@@ -210,10 +210,10 @@ describe('destructiveThrottle does not count confirmation probes', () => {
       turns: [{ userText: 'delete p001' }, { userText: 'yes, go ahead' }],
       script: [
         [{ tool: 'deleteItem', args: { id: 'p001' } }],
-        [{ tool: 'replyToUser', args: { text: 'Deleting p001 is permanent — are you sure?' } }],
+        [{ tool: 'respond', args: { message: 'Deleting p001 is permanent — are you sure?', did: [] } }],
         [{ tool: 'deleteItem', args: { id: 'p001' } }],
         [{ tool: 'deleteItem', args: { id: 'p001', confirmed: true } }],
-        [{ tool: 'replyToUser', args: { text: 'Done — p001 is gone.' } }],
+        [{ tool: 'respond', args: { message: 'Done — p001 is gone.', did: [] } }],
       ],
       expect: 'pass',
     });
@@ -313,15 +313,6 @@ describe('prose states what the check actually enforces', () => {
     // the FIRST call is denied too — there is no turn/repeat logic in the check.
     expect(await g.check(craftCtx({ tool: 'updateItem', observed: [] }))).toBeTruthy();
   });
-
-  it('(c) replyMaxOccurrences prose says DISTINCT, matching a check that ignores repetition', async () => {
-    const g = replyMaxOccurrences(['book a demo', 'start a trial'], 1, 'too many asks');
-    expect(g.prose()).toMatch(/different|distinct/i);
-    // the documented behavior: the SAME cta five times passes …
-    const repeated = craftCtx({ reply: 'book a demo. book a demo. book a demo. book a demo. book a demo.' });
-    expect(await g.check(repeated)).toBeNull();
-    // … while two DIFFERENT ctas deny.
-    const twoDistinct = craftCtx({ reply: 'book a demo or start a trial.' });
-    expect(await g.check(twoDistinct)).toBeTruthy();
-  });
+  // (c) replyMaxOccurrences is DELETED (tier-③ reply-text kind, SCG-T5) — its prose↔check divergence
+  // audit is gone with the guard; CTA-repetition is now a text-judgment `llmCheck` job.
 });

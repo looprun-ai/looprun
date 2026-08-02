@@ -42,7 +42,7 @@ describe('LoopRunAgent — native-mode surface enforcement', () => {
     let rogueExecuted = false;
     const scripted = scriptedModel([
       [{ tool: 'search', args: { q: 'x' } }],
-      [{ tool: 'replyToUser', args: { text: 'Done.' } }],
+      [{ tool: 'respond', args: { message: 'Done.', did: [] } }],
     ]);
     const agent = new LoopRunAgent({
       spec: makeSpec(['search']),

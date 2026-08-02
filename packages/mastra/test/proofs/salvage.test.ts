@@ -10,7 +10,7 @@
  *  (c) no candidate at all ⇒ the closure, and a non-empty reply regardless.
  */
 import { describe, expect, it } from 'vitest';
-import { AgentSpecBase, custom, replySingleQuestion } from '@looprun-ai/core';
+import { AgentSpecBase, custom } from '@looprun-ai/core';
 import type { RunResult } from '@looprun-ai/core';
 import { FIXTURE_DOMAIN, FIXTURE_TOOL_DEFS, FIXTURE_TOOL_NAMES, FixtureWorld } from '@looprun-ai/core/testing';
 import { fakeLLM } from '../../src/testing/fake-llm.js';
@@ -56,7 +56,7 @@ describe('best-attempt finalization', () => {
     const res = await run(spec(), [
       [{ tool: 'createItem', args: { title: 'Gamma' } }],
       // The create SUCCEEDED; this claims it did not.
-      [{ tool: 'replyToUser', args: { text: "I can't create that item right now." } }],
+      [{ tool: 'respond', args: { message: "I can't create that item right now.", did: [] } }],
       [{ text: 'Sorry, I was unable to do it.' }],
     ]);
 
@@ -69,28 +69,36 @@ describe('best-attempt finalization', () => {
   });
 
   it('delivers a true candidate that trips only a FORM contract', async () => {
+    // `degenerationGuard` is the SOLE salvageable FORM contract under the SCG frontier (an artifact-shape
+    // lint — the reply-text FORM kinds were deleted). It is AUTO-installed (minimal layer), so `spec()`
+    // already carries it; a run-away repeated-line message trips it on FORM while stating nothing false,
+    // so the candidate is delivered over the generic closure.
     const s = spec();
-    s.addGuard('onReply', 'any', replySingleQuestion('Ask exactly ONE question.'), { id: 'agent:replySingleQuestion' });
-    const CANDIDATE = 'I listed your items: Alpha and Beta. Want me to open one? Or add a new one?';
+    const LINE = 'I listed your items: Alpha and Beta.';
+    const CANDIDATE = `${LINE}\n${LINE}\n${LINE}`;
 
+    const REDRAFT = 'Alpha and Beta.\nAlpha and Beta.\nAlpha and Beta.'; // differs from CANDIDATE, still degenerates
     const res = await run(s, [
       [{ tool: 'listItems', args: {} }],
-      [{ tool: 'replyToUser', args: { text: CANDIDATE } }],
-      [{ text: 'Alpha and Beta are there. Open one? Add one?' }],
+      [{ tool: 'respond', args: { message: CANDIDATE, did: [] } }],
+      [{ text: REDRAFT }], // the redrive still degenerates (and ≠ candidate) → salvage the true candidate
     ]);
 
     const rec = res.turnRecords[0];
     expect(res.errorMsg).toBeUndefined();
     expect(rec?.recoveryEvents).not.toContain('exhaustion-terminal');
-    expect(rec?.recoveryEvents).toContain('salvage:form-only:replySingleQuestion');
+    expect(rec?.recoveryEvents).toContain('salvage:form-only:degenerationGuard');
     // The VERIFIED terminal arg wins over the redrive draft.
     expect(rec?.assistantFinalText).toBe(CANDIDATE);
   });
 
   it('falls back to the closure when the turn produced no candidate', async () => {
+    // A free-text turn that trips the TRUTH guard and NEVER emits a `respond`: the forced-terminal
+    // fallback also yields no terminal, so the salvage has no candidate to recover and the engine-derived
+    // closure wins (non-empty by construction).
     const res = await run(spec(), [
       [{ tool: 'listItems', args: {} }],
-      [{ text: '' }], // the last step repeats, so even the forced fallback yields no terminal
+      [{ text: 'I cannot do it.' }], // repeats — trips falseFailureTruth, and no respond is ever captured
     ]);
 
     const rec = res.turnRecords[0];

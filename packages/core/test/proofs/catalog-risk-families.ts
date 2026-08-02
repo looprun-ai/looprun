@@ -44,8 +44,8 @@ const consentRequiredProof: GuardProof = {
           [{ tool: 'useMedia', args: { label: 'u900' } }],
           [
             {
-              tool: 'replyToUser',
-              args: { text: 'Consent is not on file for that, so I have not sent it — I can request it first if you like.' },
+              tool: 'respond',
+              args: { message: 'Consent is not on file for that, so I have not sent it — I can request it first if you like.', did: [] },
             },
           ],
         ],
@@ -63,7 +63,7 @@ const consentRequiredProof: GuardProof = {
         turns: [turn('send that over to them')],
         script: [
           [{ tool: 'useMedia', args: { label: 'u900' } }],
-          [{ tool: 'replyToUser', args: { text: 'The asset has been attached as agreed.' } }],
+          [{ tool: 'respond', args: { message: 'The asset has been attached as agreed.', did: [] } }],
         ],
         expect: 'pass',
       },

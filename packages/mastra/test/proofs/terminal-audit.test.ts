@@ -11,7 +11,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { AgentSpecBase, custom } from '@looprun-ai/core';
-import { defaultExhaustionReply, governanceVeto, normalizeTerminalToolDef, prematureTerminalTools } from '@looprun-ai/core/internal';
+import { governanceVeto, normalizeTerminalToolDef, prematureTerminalTools } from '@looprun-ai/core/internal';
 import type { DomainContract, RunResult, ToolDef } from '@looprun-ai/core';
 import { FIXTURE_DOMAIN, FIXTURE_TOOL_DEFS, FIXTURE_TOOL_NAMES, FixtureWorld } from '@looprun-ai/core/testing';
 import { fakeLLM } from '../../src/testing/fake-llm.js';
@@ -57,17 +57,11 @@ const alwaysFails = () =>
 // 1 — the exhaustion closure is built from DOMAIN evidence only
 // ─────────────────────────────────────────────────────────────────────────────
 describe('exhaustion evidence', () => {
-  it('names no tool in the default closure', () => {
-    const withWork = defaultExhaustionReply(FIXTURE_DOMAIN, new FixtureWorld(), ['listItems', 'createItem'], [], ['k']);
-    expect(withWork).not.toContain('listItems');
-    expect(withWork).not.toContain('createItem');
-    expect(withWork).not.toContain('replyToUser');
-
-    // World-issued labels DO survive: they are what the user asked to see.
-    expect(defaultExhaustionReply(FIXTURE_DOMAIN, new FixtureWorld(), ['createMedia'], ['g002'], ['k'])).toContain('g002');
-
-    expect(defaultExhaustionReply(FIXTURE_DOMAIN, new FixtureWorld(), [], [], ['k'])).toContain('nothing was changed');
-  });
+  // The engine-DERIVED default closure (SCG: deriveClaimsFromLedger + renderOperationReport + the
+  // EXHAUSTION_NOTHING/PARTIAL sentence) replaced the deleted `defaultExhaustionReply` helper. Its
+  // properties — names no tool, surfaces world labels, "nothing was changed" when empty — are proven at
+  // the unit level in core (`test/claims-render.test.ts` + `test/runtime.test.ts` blank-floor cases); the
+  // backend keeps only the wiring proof below, that a host exhaustionReply gets a DOMAIN-only okTools list.
 
   it('hands a host exhaustionReply a DOMAIN-only okTools list', async () => {
     const seen: string[][] = [];
@@ -83,14 +77,14 @@ describe('exhaustion evidence', () => {
 
     const { result } = await runWith(
       spec,
-      [[{ tool: 'listItems', args: {} }], [{ tool: 'replyToUser', args: { text: 'Alpha and Beta.' } }]],
+      [[{ tool: 'listItems', args: {} }], [{ tool: 'respond', args: { message: 'Alpha and Beta.', did: [] } }]],
       { contract },
     );
 
     expect(result.turnRecords[0]?.assistantFinalText).toBe('host closure');
     expect(seen[0]).toContain('listItems');
-    expect(seen[0]).not.toContain('replyToUser');
-    expect(seen[0]).not.toContain('askUser');
+    // A terminal is the runtime's own delivery mechanism, never DOMAIN work handed to the closure.
+    expect(seen[0]).not.toContain('respond');
   });
 });
 
@@ -111,8 +105,7 @@ describe('governance veto envelope', () => {
     expect(escalated.correction).toContain('STOP');
     // HOW to close the turn is the protocol's job — a raw tool name in a tool result is one
     // copy-paste away from the user.
-    expect(escalated.correction).not.toContain('replyToUser');
-    expect(escalated.correction).not.toContain('askUser');
+    expect(escalated.correction).not.toContain('respond');
   });
 
   it('reaches the model tagged', async () => {
@@ -121,7 +114,7 @@ describe('governance veto envelope', () => {
 
     const { llm, result } = await runWith(spec, [
       [{ tool: 'createItem', args: { title: 'X' } }],
-      [{ tool: 'replyToUser', args: { text: 'I could not create it.' } }],
+      [{ tool: 'respond', args: { message: 'I could not create it.', did: [] } }],
     ]);
 
     const wire = JSON.stringify(llm.received);
@@ -135,22 +128,23 @@ describe('governance veto envelope', () => {
 // 3 — a terminal's definition belongs to the protocol, not to the host
 // ─────────────────────────────────────────────────────────────────────────────
 describe('terminal tool definitions', () => {
-  /** A host declaring its own terminal: business prose, a brand-language pin, an extra required arg. */
-  const hostReplyToUser: ToolDef = {
-    name: 'replyToUser',
+  /** A host declaring its OWN `respond`: business prose, a brand-language pin, an extra required arg —
+   *  all of which the runtime replaces with its own contract (message / did / asked). */
+  const hostRespond: ToolDef = {
+    name: 'respond',
     description: 'Send a user-facing reply when no domain tool is needed.',
     inputSchema: {
       type: 'object',
       properties: {
         reflects: { type: 'string', enum: ['stepHistory', 'none'], description: 'What the reply reflects.' },
-        text: { type: 'string', description: 'User-facing message in the brand language.' },
+        message: { type: 'string', description: 'User-facing message in the brand language.' },
       },
-      required: ['reflects', 'text'],
+      required: ['reflects', 'message'],
     },
   };
 
   it('replaces a host terminal def with the runtime contract, and passes domain defs through', () => {
-    const d = normalizeTerminalToolDef(hostReplyToUser);
+    const d = normalizeTerminalToolDef(hostRespond);
     expect(d.description).not.toContain('when no domain tool is needed');
     expect(d.description).toContain('END the turn');
     // No brand-language pin reaches the model, and no argument the runtime never reads.
@@ -158,12 +152,10 @@ describe('terminal tool definitions', () => {
     expect(JSON.stringify(d.inputSchema)).not.toContain('stepHistory');
     const props = (d.inputSchema as { properties: Record<string, { description?: string }> }).properties;
     expect(props.reflects).toBeUndefined();
-    expect(props.text.description).toContain("USER'S language");
-    expect((d.inputSchema as { required: string[] }).required).toEqual(['text']);
-
-    // askUser's argument is `text` too — a differently-named field would be silently ignored.
-    const ask = normalizeTerminalToolDef({ name: 'askUser', description: 'x', inputSchema: { type: 'object', properties: { question: { type: 'string' } }, required: ['question'] } });
-    expect((ask.inputSchema as { required: string[] }).required).toEqual(['text']);
+    expect(props.message.description).toContain("USER'S language");
+    // The runtime reads exactly message + did (asked optional): required is [message, did].
+    expect((d.inputSchema as { required: string[] }).required).toEqual(['message', 'did']);
+    expect(props.did).toBeDefined();
 
     // A domain def is returned BY IDENTITY — provably untouched.
     const domain = FIXTURE_TOOL_DEFS.find((t) => t.name === 'createItem')!;
@@ -171,11 +163,11 @@ describe('terminal tool definitions', () => {
   });
 
   it('puts the runtime contract on the wire, not the host wording', async () => {
-    const toolDefs = [...FIXTURE_TOOL_DEFS.filter((d) => d.name !== 'replyToUser'), hostReplyToUser];
-    const { llm } = await runWith(new AgentSpecBase(baseCfg() as never), [[{ tool: 'replyToUser', args: { text: 'done' } }]], { toolDefs });
+    const toolDefs = [...FIXTURE_TOOL_DEFS.filter((d) => d.name !== 'respond'), hostRespond];
+    const { llm } = await runWith(new AgentSpecBase(baseCfg() as never), [[{ tool: 'respond', args: { message: 'done', did: [] } }]], { toolDefs });
 
     const tools = (llm.received[0] as { tools?: Array<Record<string, unknown>> }).tools ?? [];
-    const reply = tools.find((t) => (t.name ?? t.toolName) === 'replyToUser');
+    const reply = tools.find((t) => (t.name ?? t.toolName) === 'respond');
     expect(reply).toBeDefined();
     expect(JSON.stringify(reply)).not.toContain('when no domain tool is needed');
     expect(JSON.stringify(reply)).not.toContain('brand language');
@@ -188,25 +180,25 @@ describe('terminal tool definitions', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 describe('premature terminal', () => {
   it('detects the premature shape and only that shape', () => {
-    expect(prematureTerminalTools([{ toolCalls: [{ toolName: 'listItems' }, { toolName: 'replyToUser' }] }])).toEqual(['listItems']);
+    expect(prematureTerminalTools([{ toolCalls: [{ toolName: 'listItems' }, { toolName: 'respond' }] }])).toEqual(['listItems']);
     // Order within the step is irrelevant — "same step" means "the result was not observable".
-    expect(prematureTerminalTools([{ toolCalls: [{ toolName: 'replyToUser' }, { toolName: 'listItems' }] }])).toEqual(['listItems']);
+    expect(prematureTerminalTools([{ toolCalls: [{ toolName: 'respond' }, { toolName: 'listItems' }] }])).toEqual(['listItems']);
     // Separate steps are the HEALTHY shape.
-    expect(prematureTerminalTools([{ toolCalls: [{ toolName: 'listItems' }] }, { toolCalls: [{ toolName: 'replyToUser' }] }])).toEqual([]);
+    expect(prematureTerminalTools([{ toolCalls: [{ toolName: 'listItems' }] }, { toolCalls: [{ toolName: 'respond' }] }])).toEqual([]);
     expect(prematureTerminalTools([{ toolCalls: [{ toolName: 'listItems' }] }])).toEqual([]);
     expect(prematureTerminalTools(undefined)).toEqual([]);
     // A finished step is chunk-shaped; reading only `toolName` makes the gate a silent no-op.
     expect(
       prematureTerminalTools([
-        { toolCalls: [{ type: 'tool-call', payload: { toolName: 'listItems' } }, { type: 'tool-call', payload: { toolName: 'replyToUser' } }] },
+        { toolCalls: [{ type: 'tool-call', payload: { toolName: 'listItems' } }, { type: 'tool-call', payload: { toolName: 'respond' } }] },
       ]),
     ).toEqual(['listItems']);
   });
 
   it('discards the same-step reply and re-closes AFTER the tool result exists', async () => {
     const { result } = await runWith(new AgentSpecBase(baseCfg() as never), [
-      [{ tool: 'listItems', args: {} }, { tool: 'replyToUser', args: { text: 'There are no items on record.' } }],
-      [{ tool: 'replyToUser', args: { text: 'You have 2 items: Alpha and Beta.' } }],
+      [{ tool: 'listItems', args: {} }, { tool: 'respond', args: { message: 'There are no items on record.', did: [] } }],
+      [{ tool: 'respond', args: { message: 'You have 2 items: Alpha and Beta.', did: [] } }],
     ]);
 
     const rec = result.turnRecords[0];
@@ -218,7 +210,7 @@ describe('premature terminal', () => {
   it('leaves a well-formed turn untouched', async () => {
     const { llm, result } = await runWith(new AgentSpecBase(baseCfg() as never), [
       [{ tool: 'listItems', args: {} }],
-      [{ tool: 'replyToUser', args: { text: 'You have 2 items: Alpha and Beta.' } }],
+      [{ tool: 'respond', args: { message: 'You have 2 items: Alpha and Beta.', did: [] } }],
     ]);
 
     const rec = result.turnRecords[0];

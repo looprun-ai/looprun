@@ -18,8 +18,21 @@
  * load, not run.
  */
 import { z } from 'zod';
-import { AgentSpecBase, askedEarlier, confirmFirst, llmCheck, precondition, requiresBefore } from '@looprun-ai/core';
-import type { AgentSpec, AgentWorld, Guard, GuardCtx } from '@looprun-ai/core';
+import { AgentSpecBase, askedEarlier, claimCoversRubric, confirmFirst, llmCheck, precondition, requiresBefore } from '@looprun-ai/core';
+import type { AgentSpec, AgentWorld, CoreOutcome, Guard, GuardCtx, OutcomeMap } from '@looprun-ai/core';
+
+/** The CORE, domain-neutral outcome vocabulary as a runtime tuple — the closed set a `did` claim may
+ *  resolve to. Mirrors `CoreOutcome` (the `satisfies` guards it against drift); a domain outcome word
+ *  maps to one of these through the spec-level `outcomes` block. */
+const CORE_OUTCOME_VALUES = [
+  'success',
+  'failure',
+  'not_found',
+  'blocked',
+  'refused',
+  'pending_confirmation',
+  'no_op',
+] as const satisfies readonly CoreOutcome[];
 
 /** A config violation, with a path-qualified message. Thrown by {@link loadNormsConfig}. */
 export class NormsConfigError extends Error {
@@ -56,6 +69,21 @@ const guardSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('requiresBefore'), id: z.string(), tool: z.string(), reads: z.array(z.string()).min(1) }).strict(),
   z.object({ kind: z.literal('consentToken'), id: z.string(), tools: z.array(z.string()).min(1) }).strict(),
   z.object({ kind: z.literal('askedEarlier'), id: z.string(), tool: z.string(), arg: z.string().optional() }).strict(),
+  z
+    .object({
+      // The structured coverage rule (SCG): every `target` must appear in the turn's `did` with the
+      // required `outcome` polarity ('any' accepts any RESOLVED outcome). Replaces the deleted reply-text
+      // `replyMentions`/`replyConfirmsLabels` — polarity is a FIELD, checked over structure, not prose.
+      kind: z.literal('claimCoversRubric'),
+      id: z.string(),
+      targets: z.array(z.string()).min(1),
+      outcome: z.union([z.enum(CORE_OUTCOME_VALUES), z.literal('any')]),
+      // The redrive PROSE the model reads when coverage fails — a followable coverage instruction ("account
+      // for the record you were asked about"), never a world figure. Structured targets, not a text pattern,
+      // are what the check keys on, so the no-regex ban is untouched.
+      reason: z.string(),
+    })
+    .strict(),
   z
     .object({
       kind: z.literal('precondition'),
@@ -102,6 +130,11 @@ const configSchema = z
     persona: z.string(),
     tools: z.array(z.string()),
     destructiveTools: z.array(z.string()).optional(),
+    // The domain OUTCOME vocabulary: every non-core outcome word an agent may declare in a `did` claim maps
+    // to a CORE outcome (e.g. `{ settled: 'success' }`), so the ledger cross-check stays engine-owned. Loads
+    // into the DomainContract seam (`contract.outcomes`) and is threaded into the claim-coverage guard so a
+    // domain outcome resolves the same way the engine's honesty core resolves it.
+    outcomes: z.record(z.string(), z.enum(CORE_OUTCOME_VALUES)).optional(),
     guards: z.array(guardSchema).optional(),
     uncheckable: z.array(uncheckableSchema).optional(),
     behavior: z.array(z.string()).optional(),
@@ -267,7 +300,7 @@ export interface NormsDeps {
   predicates?: Record<string, (world: AgentWorld) => boolean>;
 }
 
-function installGuard(spec: AgentSpecBase, g: GuardConfig, deps: NormsDeps): void {
+function installGuard(spec: AgentSpecBase, g: GuardConfig, deps: NormsDeps, outcomes?: OutcomeMap): void {
   const id = `agent:${g.id}`;
   switch (g.kind) {
     case 'requiresBefore':
@@ -289,6 +322,12 @@ function installGuard(spec: AgentSpecBase, g: GuardConfig, deps: NormsDeps): voi
     case 'askedEarlier':
       // DENY-POLICY AUDIT: askedEarlier's deny names only the gated ARG (structural), no figure/role.
       spec.addGuard('preTool', [g.tool], askedEarlier({ tool: g.tool, ...(g.arg ? { arg: g.arg } : {}) }), { layer: 'agent', id });
+      return;
+    case 'claimCoversRubric':
+      // NO DENY-POLICY WRAP: claimCoversRubric's redrive text IS the author's followable coverage `reason`
+      // (a coverage instruction, never a world figure). It keys on STRUCTURE (targets × did outcome), so the
+      // spec-level outcomes map is threaded in to resolve a domain outcome word exactly as the engine does.
+      spec.addGuard('onReply', 'any', claimCoversRubric({ targets: g.targets, outcome: g.outcome, ...(outcomes ? { outcomes } : {}) }, g.reason), { layer: 'agent', id });
       return;
     case 'precondition': {
       // DENY POLICY: no `reason` field exists on the config, so the deny is the author's followable
@@ -335,6 +374,6 @@ export function loadNormsConfig(json: unknown, deps: NormsDeps = {}): AgentSpec 
     behavior: [...(cfg.behavior ?? []), ...(cfg.uncheckable ?? []).map((u) => u.prose)],
     ...(cfg.scope ? { scope: cfg.scope } : {}),
   });
-  for (const g of cfg.guards ?? []) installGuard(spec, g, deps);
+  for (const g of cfg.guards ?? []) installGuard(spec, g, deps, cfg.outcomes);
   return spec;
 }

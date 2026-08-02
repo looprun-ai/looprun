@@ -18,7 +18,7 @@ function world(): AgentWorld {
   const calls: any[] = [];
   return {
     exec(name: string, args: Record<string, unknown>) {
-      if (name === 'replyToUser' || name === 'askUser') return { success: true };
+      if (name === 'respond') return { success: true };
       const result = { success: true };
       calls.push({ name, args, result, tookEffect: true });
       return result;
@@ -54,10 +54,10 @@ describe('runSpecConversation', () => {
       // turn 0: model tries confirmed:true directly — vetoed; probes; relays the question.
       [{ tool: 'deleteItem', args: { id: 'x', confirmed: true } }],
       [{ tool: 'deleteItem', args: { id: 'x' } }],
-      [{ tool: 'replyToUser', args: { text: 'Delete x — are you sure?' } }],
+      [{ tool: 'respond', args: { message: 'Delete x — are you sure?', did: [] } }],
       // turn 1: user confirmed; probe ran in an EARLIER turn, so confirmed:true is now legal.
       [{ tool: 'deleteItem', args: { id: 'x', confirmed: true } }],
-      [{ tool: 'replyToUser', args: { text: 'Deleted x.' } }],
+      [{ tool: 'respond', args: { message: 'Deleted x.', did: [] } }],
     ]);
 
     const res = await runSpecConversation(
@@ -102,8 +102,8 @@ describe('runSpecConversation', () => {
     spec.addGuard('onInput', 'any', captor, { id: 'x:captor' });
 
     const scripted = scriptedModel([
-      [{ tool: 'replyToUser', args: { text: 'Here is turn zero.' } }],
-      [{ tool: 'replyToUser', args: { text: 'Here is turn one.' } }],
+      [{ tool: 'respond', args: { message: 'Here is turn zero.', did: [] } }],
+      [{ tool: 'respond', args: { message: 'Here is turn one.', did: [] } }],
     ]);
 
     const res = await runSpecConversation(
@@ -134,10 +134,10 @@ describe('runSpecConversation', () => {
     spec.addGuard('postTool', ['listItems'], captor, { id: 'x:postCaptor' });
 
     const scripted = scriptedModel([
-      [{ tool: 'replyToUser', args: { text: 'Turn zero done.' } }],
+      [{ tool: 'respond', args: { message: 'Turn zero done.', did: [] } }],
       // turn 1: a real domain call → afterToolCall runs the postTool guard.
       [{ tool: 'listItems', args: {} }],
-      [{ tool: 'replyToUser', args: { text: 'Here are your items.' } }],
+      [{ tool: 'respond', args: { message: 'Here are your items.', did: [] } }],
     ]);
 
     const res = await runSpecConversation(

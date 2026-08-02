@@ -26,7 +26,14 @@ export function stripGovernance(spec: AgentSpec, contract: DomainContract): Ungo
     stateBlock: contract.stateBlock.bind(contract),
     coreInvariants: [...contract.coreInvariants],
     languageClause: contract.languageClause,
-    // exhaustionReply: omitted — fallback of the redrive mechanism; without redrive it does not exist
+    // exhaustionReply: omitted — fallback of the redrive mechanism; without redrive it does not exist.
+    // RENDERING SEAM KEPT (structure, not enforcement): the engine composes the delivered reply from the
+    // structured `respond` (message + the operation report rendered from `did`), so preserving the domain
+    // `renderClaim` / `outcomes` / `writeTools` keeps the DELIVERED text byte-faithful to the governed arm —
+    // only the guard CHECKS are disarmed (the empty guard arrays below), never the reply-assembly shape.
+    ...(contract.renderClaim ? { renderClaim: contract.renderClaim } : {}),
+    ...(contract.outcomes ? { outcomes: contract.outcomes } : {}),
+    ...(contract.writeTools ? { writeTools: [...contract.writeTools] } : {}),
   };
   const strippedSpec: AgentSpec = {
     id: spec.id,

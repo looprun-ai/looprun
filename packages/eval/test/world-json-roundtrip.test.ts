@@ -106,7 +106,7 @@ describe('3b round-trip — world.json (loadWorldConfig) ≡ in-memory defineWor
       calls: [
         ['registerVisitor', { name: 'Walk In' }],
         ['getInvoice', { memberId: 'mem_ana' }],
-        ['replyToUser', { text: 'hi' }],
+        ['respond', { message: 'hi', did: [] }],
         ['mysteryTool', { x: 1 }],
       ],
     },

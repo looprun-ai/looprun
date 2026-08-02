@@ -44,6 +44,17 @@ export const BEHAVIOR_PROOFS: GuardProof[] = [
         polarity: 'negative',
         ctx: { did: [{ op: 'create', target: 'itm-1', outcome: 'success' }], observed: [], turnIndex: 0 },
         l1: 'fires',
+        // L3: the respond CLAIMS a create-success it never performed (no createItem call this turn) →
+        // claimIsGrounded fires → redrive. The isolated spec installs claimIsGrounded with these writeTools.
+        l3: {
+          preset: 'empty',
+          turns: [turn('create itm-1')],
+          script: [
+            [{ tool: 'respond', args: { message: 'Created itm-1.', did: [{ op: 'create', target: 'itm-1', outcome: 'success' }] } }],
+            [{ text: 'I could not create it — nothing was changed.' }],
+          ],
+          expect: 'redrive',
+        },
       },
       {
         name: 'a success claim grounded by an effected write on the same target',
@@ -71,6 +82,18 @@ export const BEHAVIOR_PROOFS: GuardProof[] = [
         polarity: 'negative',
         ctx: { did: [], observed: [effectedWrite('createItem', { id: 'itm-1' })], turnIndex: 0 },
         l1: 'fires',
+        // L3: an effected createItem this turn but the respond declares nothing (did:[]) → the write is
+        // hidden from the user → claimIsComplete fires → redrive.
+        l3: {
+          preset: 'empty',
+          turns: [turn('create an item called Alpha')],
+          script: [
+            [{ tool: 'createItem', args: { title: 'Alpha' } }],
+            [{ tool: 'respond', args: { message: 'All set.', did: [] } }],
+            [{ text: 'I created Alpha.' }],
+          ],
+          expect: 'redrive',
+        },
       },
       {
         name: 'the effected write is covered by a matching success claim',
@@ -98,6 +121,17 @@ export const BEHAVIOR_PROOFS: GuardProof[] = [
         polarity: 'negative',
         ctx: { did: [{ op: 'lookup', target: 'itm-1', outcome: 'not_found' }], turnIndex: 0 },
         l1: 'fires',
+        // L3: the rubric demands itm-1 be covered with a SUCCESS polarity; the respond declares it
+        // not_found → the polarity fails the rubric → claimCoversRubric fires → redrive.
+        l3: {
+          preset: 'empty',
+          turns: [turn('did you set up itm-1?')],
+          script: [
+            [{ tool: 'respond', args: { message: 'Here is the status.', did: [{ op: 'lookup', target: 'itm-1', outcome: 'not_found' }] } }],
+            [{ text: 'itm-1 is in place.' }],
+          ],
+          expect: 'redrive',
+        },
       },
       {
         name: 'the target appears with the required success polarity',
@@ -136,7 +170,7 @@ export const BEHAVIOR_PROOFS: GuardProof[] = [
           preset: 'empty',
           turns: [turn('is the item ready?')],
           script: [
-            [{ tool: 'replyToUser', args: { text: '<think>plan</think> The item is ready.' } }],
+            [{ tool: 'respond', args: { message: '<think>plan</think> The item is ready.', did: [] } }],
             [{ text: 'The item is ready.' }],
           ],
           expect: 'redrive',
@@ -150,7 +184,7 @@ export const BEHAVIOR_PROOFS: GuardProof[] = [
         l3: {
           preset: 'empty',
           turns: [turn('is the item ready?')],
-          script: [[{ tool: 'replyToUser', args: { text: 'The item is ready.' } }]],
+          script: [[{ tool: 'respond', args: { message: 'The item is ready.', did: [] } }]],
           expect: 'pass',
         },
       },
@@ -198,8 +232,8 @@ export const BEHAVIOR_PROOFS: GuardProof[] = [
           turns: [turn('delete item itm-1')],
           script: [
             [{ tool: 'deleteItem', args: { id: 'itm-1' } }],
-            [{ tool: 'replyToUser', args: { text: 'The item is queued.' } }],
-            [{ tool: 'askUser', args: { text: 'Deleting item itm-1 needs your go-ahead — are you sure?' } }],
+            [{ tool: 'respond', args: { message: 'The item is queued.', did: [] } }],
+            [{ tool: 'respond', args: { message: 'Deleting item itm-1 needs your go-ahead — are you sure?', asked: true, did: [] } }],
           ],
           expect: 'redrive',
         },
@@ -221,7 +255,7 @@ export const BEHAVIOR_PROOFS: GuardProof[] = [
           turns: [turn('delete item itm-1')],
           script: [
             [{ tool: 'deleteItem', args: { id: 'itm-1' } }],
-            [{ tool: 'askUser', args: { text: 'Deleting that item needs your confirmation — are you sure?' } }],
+            [{ tool: 'respond', args: { message: 'Deleting that item needs your confirmation — are you sure?', asked: true, did: [] } }],
           ],
           expect: 'pass',
         },
@@ -264,7 +298,7 @@ export const BEHAVIOR_PROOFS: GuardProof[] = [
           preset: 'empty',
           turns: [turn('cancel my 3pm booking')],
           script: [
-            [{ tool: 'replyToUser', args: { text: 'Done — I also cancelled the other booking for you.' } }],
+            [{ tool: 'respond', args: { message: 'Done — I also cancelled the other booking for you.', did: [] } }],
             [{ text: 'I only cancelled the 3pm booking you asked about; nothing else was touched.' }],
           ],
           adjudicator: DENY_ADJ,
@@ -279,7 +313,7 @@ export const BEHAVIOR_PROOFS: GuardProof[] = [
         l3: {
           preset: 'empty',
           turns: [turn('cancel my 3pm booking')],
-          script: [[{ tool: 'replyToUser', args: { text: 'Done — your 3pm booking is cancelled.' } }]],
+          script: [[{ tool: 'respond', args: { message: 'Done — your 3pm booking is cancelled.', did: [] } }]],
           adjudicator: ALLOW_ADJ,
           expect: 'pass',
         },

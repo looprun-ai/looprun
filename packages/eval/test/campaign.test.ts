@@ -20,7 +20,7 @@ const NEEDKEY = resolve(HERE, 'fixtures/campaign-subject-needskey');
 const ADVISORY = resolve(HERE, 'fixtures/campaign-subject-advisory');
 
 /** A fresh reply-only scripted model per rep (single turn → replyToUser → terminal). */
-const modelFactory = () => fakeLLM([[{ tool: 'replyToUser', args: { text: 'Hello! I can answer grounded questions.' } }]]).model;
+const modelFactory = () => fakeLLM([[{ tool: 'respond', args: { message: 'Hello! I can answer grounded questions.', did: [] } }]]).model;
 
 function tmp(): string {
   return mkdtempSync(join(tmpdir(), 'looprun-campaign-'));

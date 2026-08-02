@@ -36,7 +36,7 @@ function fixtureWorld(): AgentWorld & { plan: string } {
   return {
     plan: 'pro',
     exec(name: string, args: Record<string, unknown>) {
-      if (name === 'replyToUser' || name === 'askUser') {
+      if (name === 'respond') {
         sse.push({ name, args });
         return { success: true };
       }
@@ -95,7 +95,7 @@ describe('prompt identity — the runtime sends what renderTurnPrompt returns', 
     // expectation is the same bytes the turn will assemble.
     const expected = renderTurnPrompt({ spec, contract: CONTRACT, world, userText });
 
-    const scripted = scriptedModel([[{ tool: 'replyToUser', args: { text: 'The fern is fine.' } }]]);
+    const scripted = scriptedModel([[{ tool: 'respond', args: { message: 'The fern is fine.', did: [] } }]]);
     const agent = new LoopRunAgent({
       spec, contract: CONTRACT, world, toolDefs: TOOL_DEFS,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -134,7 +134,7 @@ describe('prompt identity — the runtime sends what renderTurnPrompt returns', 
       stateBlock: (w) => `items=${(w as unknown as { itemCount(): number }).itemCount()}`,
     };
     const world = fixtureWorld();
-    const scripted = scriptedModel([[{ tool: 'replyToUser', args: { text: 'ok' } }]]);
+    const scripted = scriptedModel([[{ tool: 'respond', args: { message: 'ok', did: [] } }]]);
 
     expect(() => new LoopRunAgent({
       spec: new FixtureSpec(), contract: strictContract, world, toolDefs: TOOL_DEFS,

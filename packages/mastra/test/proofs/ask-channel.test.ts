@@ -1,12 +1,12 @@
 /**
  * ASK-CHANNEL AUDIT — the question channel SURVIVES any guard deny.
  *
- * A preTool DENY tells the model to correct or close the turn. The only closing actions are
- * the terminals; if closing with askUser can fail, every new gate becomes a loop trap: the
- * model retries the "failed" terminal until exhaustion. So terminals are PROTOCOL-owned end
- * to end — their result never comes from the world seam, and a world that answers
- * UNKNOWN_TOOL for names it does not dispatch (the shape of every generated subject world)
- * must never reach the model through a terminal call.
+ * A preTool DENY tells the model to correct or close the turn. The only closing action is the
+ * `respond` terminal; if closing with it can fail, every new gate becomes a loop trap: the model
+ * retries the "failed" terminal until exhaustion. So the terminal is PROTOCOL-owned end to end —
+ * its result never comes from the world seam, and a world that answers UNKNOWN_TOOL for names it
+ * does not dispatch (the shape of every generated subject world) must never reach the model
+ * through the terminal call.
  */
 import { describe, expect, it } from 'vitest';
 import { AgentSpecBase, custom } from '@looprun-ai/core';
@@ -16,10 +16,11 @@ import { fakeLLM } from '../../src/testing/fake-llm.js';
 import type { ScriptStep } from '../../src/testing/fake-llm.js';
 import { runSpecConversation } from '../../src/run-conversation.js';
 
-/** A subject-shaped world: dispatches only its domain tools, answers UNKNOWN_TOOL otherwise. */
+/** A subject-shaped world: dispatches only its domain tools, answers UNKNOWN_TOOL otherwise — including
+ *  for the runtime `respond` terminal, which the protocol must NEVER route here. */
 class HostileWorld extends FixtureWorld {
   exec(name: string, args: Record<string, unknown>): unknown {
-    if (name === 'replyToUser' || name === 'askUser') return { ok: false, error: `UNKNOWN_TOOL:${name}` };
+    if (name === 'respond') return { ok: false, error: `UNKNOWN_TOOL:${name}` };
     return super.exec(name, args);
   }
 }
@@ -50,10 +51,10 @@ async function runWith(script: ScriptStep[]): Promise<{ llm: ReturnType<typeof f
 }
 
 describe('ask channel survives a preTool deny', () => {
-  it('askUser executes as a terminal and closes the turn with the question', async () => {
+  it('an ask (respond+asked) executes as a terminal and closes the turn with the question', async () => {
     const { llm, result } = await runWith([
       [{ tool: 'createItem', args: { title: 'X' } }],
-      [{ tool: 'askUser', args: { text: 'Which plan do you want?' } }],
+      [{ tool: 'respond', args: { message: 'Which plan do you want?', asked: true, did: [] } }],
     ]);
 
     const rec = result.turnRecords[0];
@@ -71,14 +72,14 @@ describe('ask channel survives a preTool deny', () => {
   });
 
   it('no repair pass ever replays UNKNOWN_TOOL for a terminal to the model', async () => {
-    // The loop shape from the field: after the deny the model mixes askUser with a domain call
-    // (premature terminal → reply invalidated → forced-terminal fallback). The fallback
+    // The loop shape from the field: after the deny the model mixes the ask (respond+asked) with a
+    // domain call (premature terminal → reply invalidated → forced-terminal fallback). The fallback
     // generation re-reads the history — if the terminal's result came from the world, the model
     // now SEES the failure on its only closing action and retries it until exhaustion.
     const { llm, result } = await runWith([
       [{ tool: 'createItem', args: { title: 'X' } }],
-      [{ tool: 'listItems', args: {} }, { tool: 'askUser', args: { text: 'draft?' } }],
-      [{ tool: 'askUser', args: { text: 'Which plan do you want?' } }],
+      [{ tool: 'listItems', args: {} }, { tool: 'respond', args: { message: 'draft?', asked: true, did: [] } }],
+      [{ tool: 'respond', args: { message: 'Which plan do you want?', asked: true, did: [] } }],
     ]);
 
     const rec = result.turnRecords[0];
@@ -90,10 +91,10 @@ describe('ask channel survives a preTool deny', () => {
     expect(llm.calls()).toBe(3);
   });
 
-  it('replyToUser closes cleanly through the same hostile world', async () => {
+  it('a plain respond closes cleanly through the same hostile world', async () => {
     const { llm, result } = await runWith([
       [{ tool: 'createItem', args: { title: 'X' } }],
-      [{ tool: 'replyToUser', args: { text: 'I could not create it.' } }],
+      [{ tool: 'respond', args: { message: 'I could not create it.', did: [] } }],
     ]);
 
     const rec = result.turnRecords[0];

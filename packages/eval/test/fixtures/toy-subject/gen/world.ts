@@ -23,7 +23,7 @@ export class ToyWorld implements AgentWorld {
   }
 
   exec(name: string, args: Record<string, unknown>): unknown {
-    if (name === 'replyToUser' || name === 'askUser') return { success: true };
+    if (name === 'respond') return { success: true };
     const push = (result: unknown, tookEffect: boolean) => {
       this.toolCalls.push({ name, args, result, tookEffect });
       return result;

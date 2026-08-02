@@ -35,9 +35,11 @@
  * | llmCheck                       | collective:'skip'          | rubric+host adjudicator are agent-specific; proven isolated L1+L3 |
  *
  * ## SCRIPT CONVENTIONS (verified in signal-mechanics.test.ts)
- *  1. Every turn's script ends with a NON-empty replyToUser (or askUser when asking) — an empty text
- *     never sets the terminal reply and triggers `forced-terminal`.
- *  2. Redrive correction steps are PLAIN `{ text: '…' }` parts (the redrive runs toolChoice:'none').
+ *  1. Every turn's script ends with a NON-empty `respond` (`args.message`; `asked:true` when asking; a
+ *     `did: []` — or the real claim array — is required, an absent `did` reads as `claims-invalid`). An
+ *     empty message never sets the terminal reply and triggers `forced-terminal`.
+ *  2. Redrive correction steps may be PLAIN `{ text: '…' }` parts — the redrive re-generates ONE respond
+ *     (respond-only, toolChoice pinned), and a step that returns free text instead falls back to that text.
  *  3. Call searchItem before any createItem; always pass `title` to createItem; never call updateItem
  *     (outside forbidThisTurn's own negative case); setPrimary ids match `itm-\d+`; ≤2 createItem per
  *     turn (vary titles to dodge noDuplicateCall); listItems `page` ≤ 3.
