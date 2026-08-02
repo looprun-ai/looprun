@@ -6,6 +6,10 @@
  * probe/confirm, deterministic ids/counters + audit + `tookEffect` marking, `projection()` carrying
  * the clock, echo-safety tagging, preset application over seed, transition gates (`gates.ts`), and a
  * quarantined `custom` executor escape hatch. Everything is deterministic: no clock read, no RNG.
+ *
+ * Build contract: a WorldSpec MUST declare a `'default'` preset (`makeWorld()` builds it when the
+ * caller names none) — its absence is a spec bug caught once at build with a NAMED error, not a
+ * throw on every construction.
  */
 import { receive } from './reception.js';
 import { evaluateGates, type RecordStore } from './gates.js';
@@ -40,14 +44,28 @@ export function defineWorld(spec: WorldSpec, options: DefineWorldOptions = {}): 
   return factory;
 }
 
-/** Fail-fast wiring checks — a `custom` tool must name a registered executor, and vice versa. */
+/**
+ * Fail-fast wiring checks, all at build (never at exec):
+ *  - the WorldSpec MUST declare a `'default'` preset — `makeWorld()` defaults to it, so its absence
+ *    would otherwise throw on every construction; caught here with a named error;
+ *  - a `custom` tool must name a registered executor, AND every registered executor must be
+ *    referenced by some `custom` tool (dead wiring is an author mistake, never silent).
+ */
 function validateSpec(spec: WorldSpec, options: DefineWorldOptions): void {
+  if (!spec.presets || !Object.prototype.hasOwnProperty.call(spec.presets, 'default')) {
+    throw new Error(`defineWorld: WorldSpec must declare a 'default' preset`);
+  }
   const registered = new Set(Object.keys(options.custom ?? {}));
+  const referenced = new Set<string>();
   for (const [name, tool] of Object.entries(spec.tools)) {
     if (tool.kind === 'custom') {
       if (!tool.custom) throw new Error(`defineWorld: custom tool '${name}' names no executor`);
       if (!registered.has(tool.custom)) throw new Error(`defineWorld: custom tool '${name}' → unregistered executor '${tool.custom}'`);
+      referenced.add(tool.custom);
     }
+  }
+  for (const executor of registered) {
+    if (!referenced.has(executor)) throw new Error(`defineWorld: registered executor '${executor}' is referenced by no custom tool`);
   }
 }
 

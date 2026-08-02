@@ -64,6 +64,45 @@ describe('defineWorld — gates with {ref} (#8)', () => {
   });
 });
 
+describe('defineWorld — stateIs gate (#8)', () => {
+  const stateSpec: WorldSpec = {
+    clock: '2026-07-01',
+    entities: { asset: { idPrefix: 'ast', states: ['available', 'out'] }, log: { idPrefix: 'lg' } },
+    seed: {
+      asset: [
+        { id: 'ast_free', status: 'available' },
+        { id: 'ast_busy', status: 'out' },
+      ],
+    },
+    presets: { default: [] },
+    tools: {
+      checkOut: {
+        kind: 'transition',
+        entity: 'asset',
+        from: 'available',
+        to: 'out',
+        args: [{ name: 'assetId', type: 'string' }],
+        gates: [{ kind: 'stateIs', entity: 'asset', argRef: 'assetId', state: 'available', error: 'NOT_AVAILABLE' }],
+        create: { entity: 'log', id: 'counter', idKey: 'logId' },
+      },
+    },
+  };
+
+  it('admits from the right state', () => {
+    const w = defineWorld(stateSpec)('default');
+    const r = w.exec('checkOut', { assetId: 'ast_free' }) as { ok: boolean; logId?: string };
+    expect(r).toEqual({ ok: true, logId: 'lg_1' });
+    expect(w.toolCalls.at(-1)?.tookEffect).toBe(true);
+  });
+
+  it('denies from the wrong state', () => {
+    const w = defineWorld(stateSpec)('default');
+    const r = w.exec('checkOut', { assetId: 'ast_busy' });
+    expect(r).toEqual({ ok: false, error: 'NOT_AVAILABLE' });
+    expect(w.toolCalls.at(-1)?.tookEffect).toBe(false);
+  });
+});
+
 describe('defineWorld — two-step probe ≡ confirm (#2)', () => {
   it('an unconfirmed probe is side-effect-free and previews; confirm mints', () => {
     const w = defineWorld(assetSpec)('default');
@@ -162,5 +201,25 @@ describe('defineWorld — custom executor (#7)', () => {
   it('throws when a custom tool names an unregistered executor', () => {
     const spec: WorldSpec = { clock: '2026-07-01', presets: { default: [] }, tools: { x: { kind: 'custom', custom: 'missing' } } };
     expect(() => defineWorld(spec)).toThrow(/unregistered executor 'missing'/);
+  });
+
+  it('throws when a registered executor is referenced by no custom tool (dead wiring)', () => {
+    const spec: WorldSpec = { clock: '2026-07-01', presets: { default: [] }, tools: {} };
+    expect(() => defineWorld(spec, { custom: { orphan: () => ({ result: null, tookEffect: false }) } })).toThrow(
+      /registered executor 'orphan' is referenced by no custom tool/,
+    );
+  });
+});
+
+describe('defineWorld — build contract', () => {
+  it("throws a NAMED error when the WorldSpec declares no 'default' preset", () => {
+    const spec: WorldSpec = { clock: '2026-07-01', presets: { other: [] }, tools: {} };
+    expect(() => defineWorld(spec)).toThrow(/WorldSpec must declare a 'default' preset/);
+  });
+
+  it("builds the 'default' preset when the caller names none", () => {
+    const spec: WorldSpec = { clock: '2026-07-01', entities: { a: { idPrefix: 'a' } }, presets: { default: [] }, tools: {} };
+    const w = defineWorld(spec)();
+    expect((w.projection() as { today: string }).today).toBe('2026-07-01');
   });
 });
