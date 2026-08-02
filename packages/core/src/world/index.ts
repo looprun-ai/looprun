@@ -12,6 +12,7 @@ export type {
   ToolDecl,
   ReadResult,
   CreateResult,
+  TransitionResult,
   PresetDelta,
   DefineWorldOptions,
   CustomExecutor,

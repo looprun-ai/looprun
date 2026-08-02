@@ -83,7 +83,7 @@ const INTERNAL = [
   // increment 3a — the declarative world builder + its vocabulary (seam, no tutorial chapter yet;
   // AgentWorld the type stays public, defineWorld the builder is host/generator machinery).
   'defineWorld', 'WorldSpec', 'WorldFactory', 'BuiltWorld', 'WorldCall', 'AuditEntry', 'EntityDecl',
-  'ArgDecl', 'Gate', 'ToolDecl', 'ReadResult', 'CreateResult', 'PresetDelta', 'DefineWorldOptions',
+  'ArgDecl', 'Gate', 'ToolDecl', 'ReadResult', 'CreateResult', 'TransitionResult', 'PresetDelta', 'DefineWorldOptions',
   'CustomExecutor', 'CustomCtx', 'CustomResult', 'ScalarType', 'FieldType',
 ].sort();
 

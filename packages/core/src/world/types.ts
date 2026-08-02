@@ -37,7 +37,10 @@ export type Gate =
   /** a seed record of `entity` whose `matchField` equals `args[argRef]` must exist. */
   | { kind: 'exists'; entity: string; matchField: string; argRef: string; error: string }
   /** the target entity record (by `args[argRef]`) must currently be in `state`. */
-  | { kind: 'stateIs'; entity: string; argRef: string; state: string; error: string };
+  | { kind: 'stateIs'; entity: string; argRef: string; state: string; error: string }
+  /** the MIRROR of `exists`: DENY when a seed record of `entity` whose `matchField` equals
+   *  `args[argRef]` is present (e.g. an active hold blocks a booking on the held asset). */
+  | { kind: 'absent'; entity: string; matchField: string; argRef: string; error: string };
 
 /** How a `read` tool builds its (side-effect-free) result envelope. Exactly one shape applies. */
 export interface ReadResult {
@@ -61,6 +64,17 @@ export interface CreateResult {
   store?: readonly string[];
 }
 
+/** How a `transition` tool PATCHES an existing entity's status (no new record minted). */
+export interface TransitionResult {
+  entity: string;
+  /** the arg naming the target record's id. */
+  argRef: string;
+  /** the status the target record moves to. */
+  to: string;
+  /** optional result-envelope key echoing the target id (e.g. `bookingId`). */
+  idKey?: string;
+}
+
 /** One declared tool. `custom` names a host-registered executor (never part of the literal). */
 export interface ToolDecl {
   kind: 'read' | 'write' | 'transition' | 'custom';
@@ -70,6 +84,8 @@ export interface ToolDecl {
   gates?: readonly Gate[];
   read?: ReadResult;
   create?: CreateResult;
+  /** patch an EXISTING record's status in place (vs `create`, which mints a new record). */
+  transition?: TransitionResult;
   /** transition self-description. */
   entity?: string;
   from?: string;

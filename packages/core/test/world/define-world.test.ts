@@ -103,6 +103,80 @@ describe('defineWorld — stateIs gate (#8)', () => {
   });
 });
 
+describe('defineWorld — absent gate (#8, extension)', () => {
+  // `absent` is the mirror of `exists`: it DENIES when a matching record is present. It expresses
+  // the Atlas "no active hold on this asset" rule the parity slice needs (createBooking on a held asset).
+  const holdSpec: WorldSpec = {
+    clock: '2026-07-01',
+    entities: { booking: { idPrefix: 'bk' }, hold: { idPrefix: 'hold' } },
+    seed: { hold: [{ id: 'hold_1', assetId: 'ast_held', active: true }] },
+    presets: { default: [] },
+    tools: {
+      book: {
+        kind: 'write',
+        args: [{ name: 'assetId', type: 'string' }],
+        gates: [{ kind: 'absent', entity: 'hold', matchField: 'assetId', argRef: 'assetId', error: 'ASSET_ON_HOLD' }],
+        create: { entity: 'booking', id: 'counter', idKey: 'bookingId' },
+      },
+    },
+  };
+
+  it('denies when a matching record EXISTS (mirror of exists)', () => {
+    const w = defineWorld(holdSpec)('default');
+    const r = w.exec('book', { assetId: 'ast_held' });
+    expect(r).toEqual({ ok: false, error: 'ASSET_ON_HOLD' });
+    expect(w.toolCalls.at(-1)?.tookEffect).toBe(false);
+  });
+
+  it('admits when no matching record is present', () => {
+    const w = defineWorld(holdSpec)('default');
+    const r = w.exec('book', { assetId: 'ast_free' }) as { ok: boolean; bookingId?: string };
+    expect(r).toEqual({ ok: true, bookingId: 'bk_1' });
+    expect(w.toolCalls.at(-1)?.tookEffect).toBe(true);
+  });
+});
+
+describe('defineWorld — transition executor patches state (extension)', () => {
+  // A `transition` tool PATCHES an existing record's status (no new record minted) — the shape the
+  // Atlas parity slice needs for cancelBooking (confirmed→cancelled) and retireAsset (available→retired).
+  const cancelSpec: WorldSpec = {
+    clock: '2026-07-01',
+    entities: { booking: { idPrefix: 'bk', states: ['confirmed', 'cancelled'] } },
+    seed: { booking: [{ id: 'bk_1', status: 'confirmed' }, { id: 'bk_2', status: 'out' }] },
+    presets: { default: [] },
+    tools: {
+      cancel: {
+        kind: 'transition',
+        twoStep: true,
+        transition: { entity: 'booking', argRef: 'bookingId', to: 'cancelled', idKey: 'bookingId' },
+        args: [{ name: 'bookingId', type: 'string' }, { name: 'confirmed', type: 'boolean', optional: true }],
+        gates: [{ kind: 'stateIs', entity: 'booking', argRef: 'bookingId', state: 'confirmed', error: 'NOT_CANCELLABLE' }],
+      },
+    },
+  };
+
+  it('confirm patches the target record status and marks tookEffect', () => {
+    const w = defineWorld(cancelSpec)('default');
+    const probe = w.exec('cancel', { bookingId: 'bk_1' }) as { requiresConfirmation?: boolean };
+    expect(probe.requiresConfirmation).toBe(true);
+    expect(w.toolCalls.at(-1)?.tookEffect).toBe(false); // probe is side-effect-free
+    expect((w.projection() as { status: { booking: Record<string, unknown> } }).status.booking.bk_1).toBe('confirmed');
+
+    const done = w.exec('cancel', { bookingId: 'bk_1', confirmed: true });
+    expect(done).toEqual({ ok: true, status: 'cancelled', bookingId: 'bk_1' });
+    expect(w.toolCalls.at(-1)?.tookEffect).toBe(true);
+    expect((w.projection() as { status: { booking: Record<string, unknown> } }).status.booking.bk_1).toBe('cancelled');
+  });
+
+  it('the state gate denies from the wrong state (no patch, no effect)', () => {
+    const w = defineWorld(cancelSpec)('default');
+    const r = w.exec('cancel', { bookingId: 'bk_2', confirmed: true });
+    expect(r).toEqual({ ok: false, error: 'NOT_CANCELLABLE' });
+    expect(w.toolCalls.at(-1)?.tookEffect).toBe(false);
+    expect((w.projection() as { status: { booking: Record<string, unknown> } }).status.booking.bk_2).toBe('out');
+  });
+});
+
 describe('defineWorld — two-step probe ≡ confirm (#2)', () => {
   it('an unconfirmed probe is side-effect-free and previews; confirm mints', () => {
     const w = defineWorld(assetSpec)('default');

@@ -47,7 +47,7 @@ export { normalizeModelParams, resolveModelSettings } from './model-params.js';
 export { defineWorld } from './world/index.js';
 export type {
   WorldSpec, WorldFactory, BuiltWorld, WorldCall, AuditEntry, EntityDecl, ArgDecl, Gate, ToolDecl,
-  ReadResult, CreateResult, PresetDelta, DefineWorldOptions, CustomExecutor, CustomCtx, CustomResult,
+  ReadResult, CreateResult, TransitionResult, PresetDelta, DefineWorldOptions, CustomExecutor, CustomCtx, CustomResult,
   ScalarType, FieldType,
 } from './world/index.js';
 

@@ -119,7 +119,17 @@ function build(spec: WorldSpec, options: DefineWorldOptions, preset: string): Bu
       // side-effect-free preview — gates ALREADY evaluated (probe ≡ confirm identity, #2).
       return push(toolCalls, name, args, { ok: true, requiresConfirmation: true, preview: previewOf(tool.create, received) }, false);
     }
-    return runCreate(name, tool, received, args);
+    return tool.transition ? runTransition(name, tool, received, args) : runCreate(name, tool, received, args);
+  }
+
+  function runTransition(name: string, tool: ToolDecl, received: Record<string, unknown>, rawArgs: Record<string, unknown>): unknown {
+    const t = tool.transition!;
+    const id = String(received[t.argRef] ?? rawArgs[t.argRef] ?? '');
+    const rec = store[t.entity]?.[id];
+    if (rec) rec.status = t.to; // patch in place — a preceding stateIs/exists gate guarantees the record
+    audit.push({ tool: name, outcome: 'ok', detail: id });
+    const result = { ok: true, status: t.to, ...(t.idKey ? { [t.idKey]: id } : {}) };
+    return push(toolCalls, name, rawArgs, result, true);
   }
 
   function runRead(name: string, read: ReadResult | undefined, args: Record<string, unknown>): unknown {

@@ -46,5 +46,11 @@ function evaluateGate(gate: Gate, args: Record<string, unknown>, store: RecordSt
       const rec = store[gate.entity]?.[id];
       return rec && rec.status === gate.state ? null : gate.error;
     }
+    case 'absent': {
+      const want = String(args[gate.argRef]);
+      const records = store[gate.entity] ?? {};
+      const present = Object.values(records).some((r) => String(r[gate.matchField]) === want);
+      return present ? gate.error : null;
+    }
   }
 }
