@@ -14,8 +14,9 @@
  * Its constructor auto-installs, layer-tagged and addressable, exactly:
  *   - ALWAYS the invariants EVERY agent carries: noDuplicateCall (preTool, id `minimal:noDuplicateCall`)
  *     + degenerationGuard (onReply, id `minimal:degenerationGuard`, the sole minimal onReply guard — a
- *     param-free artifact-shape lint). The former `emptyReply` floor is DELETED (SCG-T5): an empty reply is
- *     structurally impossible (respond schema `message` minLength 1 + forced-terminal fallback). Reply-honesty
+ *     param-free artifact-shape lint). The former `emptyReply` floor is DELETED (SCG-T5): the guarantee is
+ *     now ENGINE-OWNED — `finalizeReply` routes a blank delivery (zero-width included) to the non-empty
+ *     engine-derived closure; the respond schema's `message` minLength is advisory only. Reply-honesty
  *     text judgment (the former lexicon-fed noFalseFailureClaim) is now an `llmCheck` an author binds where needed;
  *   - IFF `destructiveTools` is non-empty, the destructive-safety protocol on those tools:
  *     confirmFirst (id `base:confirmFirst`) + destructiveThrottle (id `base:destructiveThrottle`).
@@ -406,9 +407,10 @@ export class AgentSpecBase implements AgentSpec {
     // `cfg.lexicon.falseFailureClaimRe`) is RETIRED with the no-regex law (2026-08-02): claiming inability
     // while every call succeeded is a TEXT judgment, now `llmCheck`'s job — an author binds an `llmCheck`
     // rubric on onReply where the domain needs it, instead of injecting a regex lexicon.
-    // The former always-on `emptyReply` floor is DELETED (SCG-T5): an empty final reply is now structurally
-    // impossible — the respond schema requires `message` (minLength 1) and the forced-terminal fallback
-    // always closes the turn with a non-empty engine-derived closure. No minimal onReply guard replaces it.
+    // The former always-on `emptyReply` floor is DELETED (SCG-T5): the guarantee moved into the ENGINE —
+    // `finalizeReply`'s blank-delivery floor (zero-width included) routes an empty composed delivery to the
+    // non-empty engine-derived closure; the respond schema's `message` minLength is advisory only. No
+    // minimal onReply guard replaces it.
     // THE HONESTY CROSS-CHECK (SCG): when the domain declares its WRITE surface, ground the agent's
     // structured declaration (`ctx.did`) against the world ledger — every reported operation must match
     // what happened (`claimIsGrounded`) and every write that took effect must be reported
