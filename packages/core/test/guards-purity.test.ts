@@ -105,6 +105,58 @@ describe('stateful-regex lint', () => {
   });
 });
 
+describe('no-regex-param law (guard factory surface carries zero RegExp-typed params — 2026-08-02)', () => {
+  // THE BOUNDARY (task item 6): the ban is on GUARD FACTORY PARAMETERS and on guard checks over
+  // CONVERSATION text. Text judgment is `llmCheck`'s job — its verdict is a host adjudicator's, never a
+  // closure-held pattern. What this gate does NOT ban: an internal lint that scans SOURCE/ARTIFACT text
+  // (lint-subject, world input validation) may still use a RegExp INTERNALLY — that is not a guard
+  // reading conversation text; `argFormat(field, pattern: string)` validates a tool-arg value at the
+  // input boundary (its param is a `string`, not a RegExp); `jargonScrub`'s egress rewrite builds a
+  // regex from author strings; module-local helpers (`matches`, `allMatches`) legitimately take a
+  // RegExp. The gate targets ONLY the signatures of `): Guard {` / `): ReplyMutator {` factories.
+  const GUARDS_DIR = join(CORE_SRC, 'guards');
+
+  /** Extract each guard/mutator FACTORY signature (param list + return marker) from a guards file. */
+  function factorySignatures(source: string): { name: string; sig: string }[] {
+    const out: { name: string; sig: string }[] = [];
+    const re = /export function (\w+)/g;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(source))) {
+      const from = m.index;
+      const rest = source.slice(from);
+      // The signature ends at the FIRST return marker `): Guard {` / `): ReplyMutator {` after the name.
+      const end = rest.search(/\)\s*:\s*(?:Guard|ReplyMutator)\s*\{/);
+      if (end === -1) continue; // not a guard/mutator factory (helper returning boolean/string/etc.)
+      out.push({ name: m[1], sig: rest.slice(0, end) });
+    }
+    return out;
+  }
+
+  it('scans a non-empty factory surface', () => {
+    const sigs = listTs(GUARDS_DIR).flatMap((f) => factorySignatures(readFileSync(f, 'utf8')));
+    expect(sigs.length).toBeGreaterThanOrEqual(20);
+    expect(sigs.map((s) => s.name)).toContain('confirmFirst');
+  });
+
+  for (const file of listTs(GUARDS_DIR)) {
+    it(`guards/${relative(GUARDS_DIR, file)} exposes no RegExp-typed factory param`, () => {
+      const offenders = factorySignatures(readFileSync(file, 'utf8'))
+        .filter((s) => /\bRegExp\b/.test(s.sig))
+        .map((s) => s.name);
+      expect(offenders, `${file}: factories with a RegExp-typed param — text judgment is llmCheck's job`).toEqual([]);
+    });
+  }
+
+  // SELF-TEST: plant the defect — a factory with a RegExp param must be caught.
+  it('flags a RegExp-typed factory param (self-test)', () => {
+    const planted = 'export function evilGuard(opts: { claimRe: RegExp }): Guard {\n  return {} as never;\n}';
+    const offenders = factorySignatures(planted).filter((s) => /\bRegExp\b/.test(s.sig)).map((s) => s.name);
+    expect(offenders).toContain('evilGuard');
+    // and a legitimate helper taking a RegExp is NOT a factory (no `): Guard {`), so it is ignored:
+    expect(factorySignatures('export function matches(re: RegExp): boolean { return true; }')).toEqual([]);
+  });
+});
+
 describe('full-context law (GuardCtx exposes the user text — firewall retired 2026-08-02)', () => {
   it('GuardCtx exposes userText and history', () => {
     const rules = readFileSync(join(CORE_SRC, 'rules.ts'), 'utf8');

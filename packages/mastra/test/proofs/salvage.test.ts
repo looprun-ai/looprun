@@ -10,23 +10,36 @@
  *  (c) no candidate at all ⇒ the closure, and a non-empty reply regardless.
  */
 import { describe, expect, it } from 'vitest';
-import { AgentSpecBase, replySingleQuestion } from '@looprun-ai/core';
+import { AgentSpecBase, custom, replySingleQuestion } from '@looprun-ai/core';
 import type { RunResult } from '@looprun-ai/core';
-import { FIXTURE_DOMAIN, FIXTURE_LEXICON, FIXTURE_TOOL_DEFS, FIXTURE_TOOL_NAMES, FixtureWorld } from '@looprun-ai/core/testing';
+import { FIXTURE_DOMAIN, FIXTURE_TOOL_DEFS, FIXTURE_TOOL_NAMES, FixtureWorld } from '@looprun-ai/core/testing';
 import { fakeLLM } from '../../src/testing/fake-llm.js';
 import type { ScriptStep } from '../../src/testing/fake-llm.js';
 import { runSpecConversation } from '../../src/run-conversation.js';
 
-/** `falseFailureClaimRe` arms the always-on TRUTH check the (a) case needs. */
-const spec = (): AgentSpecBase =>
-  new AgentSpecBase({
+/** A behavior-dim `custom` TRUTH guard arms the check the (a) case needs. Under the no-regex law the
+ *  always-on regex-fed honesty guards are gone; text judgment is a `custom`/`llmCheck` job, and a
+ *  behavior-dim guard is TRUTH by construction (never salvaged over). This one denies an "I can't/unable
+ *  to" claim — the deterministic stand-in for the deleted noFalseFailureClaim in this salvage proof. */
+const truthCheck = () =>
+  custom({
+    kind: 'falseFailureTruth',
+    dim: 'behavior',
+    check: (ctx) => (/\b(?:can(?:no|')t|unable to)\b/i.test(ctx.reply ?? '') ? 'do not claim inability' : null),
+    prose: () => 'never claim you could not do something your tools actually did',
+  });
+
+const spec = (): AgentSpecBase => {
+  const s = new AgentSpecBase({
     id: 'proof-salvage',
     mode: 'PROOF',
     persona: 'You are the proof agent.',
     tools: [...FIXTURE_TOOL_NAMES],
     contract: FIXTURE_DOMAIN,
-    lexicon: { falseFailureClaimRe: FIXTURE_LEXICON.falseFailureClaimRe },
-  } as never);
+  });
+  s.addGuard('onReply', 'any', truthCheck(), { id: 'agent:falseFailureTruth' });
+  return s;
+};
 
 const run = (s: AgentSpecBase, script: ScriptStep[]): Promise<RunResult> =>
   runSpecConversation(s, [{ userText: 'do the thing' }], {
@@ -51,7 +64,7 @@ describe('best-attempt finalization', () => {
     expect(res.errorMsg).toBeUndefined();
     expect(rec?.recoveryEvents).toContain('exhaustion-terminal');
     expect(rec?.recoveryEvents?.some((e) => e.startsWith('salvage:form-only:'))).toBe(false);
-    expect(rec?.recoveryEvents?.some((e) => e.startsWith('salvage-miss:checks:noFalseFailureClaim'))).toBe(true);
+    expect(rec?.recoveryEvents?.some((e) => e.startsWith('salvage-miss:checks:falseFailureTruth'))).toBe(true);
     expect(rec?.assistantFinalText).not.toContain("can't create that item");
   });
 

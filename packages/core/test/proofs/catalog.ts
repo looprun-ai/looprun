@@ -23,19 +23,13 @@
  * | destructiveThrottle            | deleteItem, purgeAll (auto base) | —                                            |
  * | resultInvariant                | reportStatus (postTool)    | fires when result.count === 0                      |
  * | custom                         | listItems                  | denies args.page > 3                               |
- * | noFabricatedSuccess            | any (onReply)              | tool 'createMedia', FIXTURE_LEXICON.fabricated + banRe (productionClaimRe) + refExists |
- * | pendingConfirmMustAsk          | any (onReply)              | FIXTURE_LEXICON.confirmAskRe                       |
- * | destructiveClaimRequiresSuccess| any (onReply)              | ['deleteItem','purgeAll'], FIXTURE_LEXICON.destructiveClaim |
- * | noFalseFailureClaim            | any (auto minimal, lexicon)| FIXTURE_LEXICON.falseFailureClaimRe                |
+ * | pendingConfirmMustAsk          | any (onReply)              | structural: unresolved probe requires an askUser this turn |
  * | emptyReply                     | any (auto minimal)         | —                                                  |
- * | degenerationGuard              | any (auto minimal)         | — (selfNarrationRe not injected → narration branch OFF) |
+ * | degenerationGuard              | any (auto minimal)         | — (param-free artifact-shape lint)                 |
  * | replyMustMention / replyMaxOccurrences / replySingleQuestion / replyConfirmsLabels | collective:'skip' (content-contract guards, proven isolated only) |
- * | minimalDisclosure              | any (onReply)              | piiFields ['contactPhone','homeAddress'], entityIdRe /p\d{3}/ |
- * | noInstructionFromData          | deleteItem, purgeAll       | instructionRe /(delete|remove|purge) (all|every)/  |
- * | noCompetitorClaim              | any (onReply)              | competitorRe /RivalCo/, comparativeRe /… than/     |
- * | noOutOfSurfaceActionClaim      | any (onReply)              | refund claims → 'issueRefund' (off-surface); surface = FIXTURE_TOOL_NAMES |
- * | noUngroundedRegulatedFigure    | any (onReply)              | regulatedRe /\d+ ?mg/                              |
+ * | llmCheck                       | collective:'skip'          | scripted adjudicator; the honesty/risk text judgment lives here now |
  * | consentRequired                | useMedia                   | consentOk = world.hasPrimary()                     |
+ * | (DELETED — no-regex law 2026-08-02) noFabricatedSuccess · destructiveClaimRequiresSuccess · noFalseFailureClaim · minimalDisclosure · noInstructionFromData · noCompetitorClaim · noOutOfSurfaceActionClaim · noUngroundedRegulatedFigure |
  * | askedEarlier                   | createItem                 | askedEarlier({ tool:'createItem', arg:'condition' }) — gates the non-schema `condition` arg |
  * | confirmedNeedsEarlierProbe     | editMedia                  | confirmedNeedsEarlierProbe({ tools:['editMedia'] }) — NOT deleteItem (would double-bind confirmFirst) |
  * | llmCheck                       | collective:'skip'          | rubric+host adjudicator are agent-specific (like the content-contract reply guards); proven isolated L1+L3 |

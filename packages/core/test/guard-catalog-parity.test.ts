@@ -55,7 +55,7 @@ describe('the factory extractor', () => {
 
   it('includes the known anchors (canary that the extractor really works)', () => {
     // A guard added in the P8a/single-class port, the escape hatch, and the mutator must all be present.
-    for (const anchor of ['noActAfterAskSameTurn', 'custom', 'jargonScrub', 'destructiveClaimRequiresSuccess']) {
+    for (const anchor of ['noActAfterAskSameTurn', 'custom', 'jargonScrub', 'pendingConfirmMustAsk']) {
       expect(factories, `extractor missed ${anchor}`).toContain(anchor);
     }
     // The pure helper is NOT a guard kind — it must NOT be counted as a factory.
@@ -126,10 +126,9 @@ describe('GUARD_CATALOG ↔ core parity', () => {
 
   it('the hook axis is the PHASE, not the file (the tricky rows)', () => {
     // `category` is file-derived; `hook` follows the factory's dim through spec.ts#DIM_HOOKS. These two
-    // are where the axes disagree, which is exactly why the field exists.
+    // are where the axes disagree, which is exactly why the field exists. (The former reply.ts→preTool
+    // example, noInstructionFromData, was deleted by the no-regex law.)
     const byName = new Map(GUARD_CATALOG.map((e) => [e.name, e]));
-    expect(byName.get('noInstructionFromData')?.category).toBe('reply');
-    expect(byName.get('noInstructionFromData')?.hook, 'it gates a CALL, despite living in reply.ts').toBe('preTool');
     expect(byName.get('jargonScrub')?.hook, 'a ReplyMutator rewrites, it never gates').toBe('onReplyMutate');
     expect(byName.get('resultInvariant')?.hook, 'the only postTool kind').toBe('postTool');
     expect(byName.get('pendingConfirmMustAsk')?.hook, 'it gates the REPLY, not the call').toBe('onReply');

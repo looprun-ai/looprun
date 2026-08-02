@@ -171,7 +171,7 @@ export const SPATIAL_INPUT_PROOFS: GuardProof[] = [
           turns: [turn('delete the item')],
           script: [
             [{ tool: 'deleteItem', args: { id: 'p001' } }],
-            [{ tool: 'replyToUser', args: { text: 'Are you sure you want to delete this item?' } }],
+            [{ tool: 'askUser', args: { text: 'Are you sure you want to delete this item?' } }],
           ],
           expect: 'pass',
         },

@@ -9,12 +9,8 @@ import {
   degenerationGuard,
   jargonScrub,
   maxCalls,
-  minimalDisclosure,
-  noInstructionFromData,
-  noOutOfSurfaceActionClaim,
 } from '../../src/guards/index.js';
-import { AgentSpecBase } from '../../src/spec.js';
-import { craftCtx, FIXTURE_LEXICON, FIXTURE_TOOL_NAMES, runL1 } from '../../src/testing/index.js';
+import { craftCtx, runL1 } from '../../src/testing/index.js';
 import { GUARD_PROOFS } from './catalog.js';
 
 for (const proof of GUARD_PROOFS) {
@@ -67,73 +63,30 @@ describe('L1 · maxCalls — conversation scope (bespoke)', () => {
   });
 });
 
-const NARRATION_DENY =
-  'the reply narrates your own tool calls in third person instead of speaking TO the user — rewrite it addressing the user directly.';
-
-describe('L1 · degenerationGuard — lexicon-injected self-narration branch (bespoke)', () => {
-  const narration = 'The assistant confirmed the update.';
-
-  it('OFF when absent: a lexicon-less guard is silent on third-person narration', () => {
-    expect(degenerationGuard().check(craftCtx({ reply: narration }))).toBeNull();
+describe('L1 · degenerationGuard — param-free artifact-shape lint (bespoke)', () => {
+  // The no-regex law retired the selfNarrationRe branch: plain third-person narration is no longer
+  // gated here (it is llmCheck's job). The always-on markup / repetition branches stay.
+  it('third-person narration is NOT gated (no selfNarrationRe param)', () => {
+    expect(degenerationGuard().check(craftCtx({ reply: 'The assistant confirmed the update.' }))).toBeNull();
   });
-  it('ON when provided: an injected selfNarrationRe fires with the byte-identical deny message', () => {
-    const g = degenerationGuard({ selfNarrationRe: FIXTURE_LEXICON.selfNarrationRe });
-    expect(g.check(craftCtx({ reply: narration }))).toBe(NARRATION_DENY);
-  });
-  it('always-on branches survive the injection: markup still fires, clean stays silent', () => {
-    const g = degenerationGuard({ selfNarrationRe: FIXTURE_LEXICON.selfNarrationRe });
+  it('markup still fires, clean stays silent', () => {
+    const g = degenerationGuard();
     expect(g.check(craftCtx({ reply: '<think>plan</think> done' }))).toBeTruthy();
     expect(g.check(craftCtx({ reply: 'The item is ready.' }))).toBeNull();
   });
-
-  it('AgentSpecBase threads cfg.lexicon.selfNarrationRe into the auto minimal:degenerationGuard instance', () => {
-    const find = (spec: AgentSpecBase) =>
-      spec.guards.onReply.find((b) => b.id === 'minimal:degenerationGuard')!.guard;
-    const withLex = new AgentSpecBase({
-      id: 's', mode: 'PROOF', persona: 'p', tools: [...FIXTURE_TOOL_NAMES],
-      lexicon: { selfNarrationRe: FIXTURE_LEXICON.selfNarrationRe },
-    });
-    const without = new AgentSpecBase({ id: 's', mode: 'PROOF', persona: 'p', tools: [...FIXTURE_TOOL_NAMES] });
-    expect(find(withLex).check(craftCtx({ reply: narration }))).toBe(NARRATION_DENY);
-    expect(find(without).check(craftCtx({ reply: narration }))).toBeNull();
+  it('run-away repetition fires', () => {
+    const rep = 'This is a repeated line.\nThis is a repeated line.\nThis is a repeated line.';
+    expect(degenerationGuard().check(craftCtx({ reply: rep }))).toBeTruthy();
   });
 });
 
 /**
  * FAIL-FAST CONSTRUCTION (bespoke — a GuardProof case can only assert on check(), and these kinds never
- * reach check()). A safety guard whose configuration makes it INERT must break the build, never pass
- * unnoticed: an inert kind still reads as coverage in a spec header, which is strictly worse than an
- * absent one. Every risk-family kind either has a safe, active default or throws here.
+ * reach check()). A safety guard whose configuration makes it INERT must break the build. The former
+ * regex-param risk-family kinds are DELETED (no-regex law); `consentRequired` is the one structural
+ * family with a construction guard.
  */
-describe('L1 · risk-family kinds — misconfiguration throws at CONSTRUCTION', () => {
-  it('minimalDisclosure: no PII vocabulary at all', () => {
-    expect(() => minimalDisclosure({ entityIdRe: /p\d{3}/ })).toThrow(/no PII vocabulary/);
-    expect(() => minimalDisclosure({ piiFields: [], entityIdRe: /p\d{3}/ })).toThrow(/no PII vocabulary/);
-  });
-  it('minimalDisclosure: either PII vocabulary form constructs fine', () => {
-    expect(() => minimalDisclosure({ piiFields: ['contactPhone'], entityIdRe: /p\d{3}/ })).not.toThrow();
-    expect(() => minimalDisclosure({ piiFieldRe: /contactPhone/i, entityIdRe: /p\d{3}/ })).not.toThrow();
-  });
-  it('noInstructionFromData: an empty tool set gates nothing', () => {
-    expect(() => noInstructionFromData({ tools: [], instructionRe: /purge all/i })).toThrow(/gate nothing/);
-  });
-  it('noOutOfSurfaceActionClaim: empty claims, or every claim already ON the surface', () => {
-    expect(() => noOutOfSurfaceActionClaim({ actionClaims: [], surface: [...FIXTURE_TOOL_NAMES] })).toThrow(
-      /check nothing/,
-    );
-    expect(() =>
-      noOutOfSurfaceActionClaim({
-        actionClaims: [{ claimRe: /created/i, tool: 'createItem' }], // ON the fixture surface → skipped
-        surface: [...FIXTURE_TOOL_NAMES],
-      }),
-    ).toThrow(/inert/);
-    expect(() =>
-      noOutOfSurfaceActionClaim({
-        actionClaims: [{ claimRe: /refunded/i, tool: 'issueRefund' }],
-        surface: [...FIXTURE_TOOL_NAMES],
-      }),
-    ).not.toThrow();
-  });
+describe('L1 · consentRequired — misconfiguration throws at CONSTRUCTION', () => {
   it('consentRequired: an empty tool set, or a blank reason (a falsy deny value reads as "allowed")', () => {
     expect(() => consentRequired({ tools: [], consentOk: () => true, reason: 'r' })).toThrow(/gate nothing/);
     expect(() => consentRequired({ tools: ['useMedia'], consentOk: () => true, reason: '  ' })).toThrow(/blank/);

@@ -13,7 +13,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { AgentSpecBase } from '../../src/spec.js';
-import { FIXTURE_TOOL_DEFS, FIXTURE_LEXICON, FIXTURE_TOOL_NAMES } from '../../src/testing/fixture-world.js';
+import { FIXTURE_TOOL_DEFS, FIXTURE_TOOL_NAMES } from '../../src/testing/fixture-world.js';
 
 function spec(cfg: { destructiveTools?: string[]; confirmMechanism?: Record<string, 'arg' | 'prior-ask'> }): AgentSpecBase {
   return new AgentSpecBase({
@@ -21,7 +21,6 @@ function spec(cfg: { destructiveTools?: string[]; confirmMechanism?: Record<stri
     mode: 'PROOF',
     persona: 'You are the proof agent.',
     tools: [...FIXTURE_TOOL_NAMES],
-    lexicon: { falseFailureClaimRe: FIXTURE_LEXICON.falseFailureClaimRe },
     ...cfg,
   });
 }

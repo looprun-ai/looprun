@@ -11,7 +11,7 @@
 import { AgentSpecBase } from '../spec.js';
 import type { AgentSpecConfig, Hook, ToolTarget } from '../spec.js';
 import type { Guard, GuardCtx, Adjudicator } from '../rules.js';
-import { FixtureWorld, FIXTURE_TOOL_NAMES, FIXTURE_DOMAIN, FIXTURE_LEXICON } from './fixture-world.js';
+import { FixtureWorld, FIXTURE_TOOL_NAMES, FIXTURE_DOMAIN } from './fixture-world.js';
 import type { FixturePreset } from './fixture-world.js';
 
 export type ProofPolarity = 'positive' | 'negative' | 'neutral';
@@ -76,7 +76,6 @@ export const AUTO_LAYER_KINDS = [
   'noDuplicateCall',
   'degenerationGuard',
   'emptyReply',
-  'noFalseFailureClaim',
   'confirmFirst',
   'destructiveThrottle',
 ] as const;
@@ -126,7 +125,7 @@ export function buildIsolatedSpec(proof: GuardProof): AgentSpecBase {
 }
 
 /** Build ONE spec with EVERY non-auto proof guard installed — the collective non-interference harness.
- *  Auto kinds ride AgentSpecBase (destructiveTools + confirmMechanism + lexicon below). Duplicate kinds
+ *  Auto kinds ride AgentSpecBase (destructiveTools + confirmMechanism). Duplicate kinds
  *  at different targets are fine; ids are made unique by suffixing `#2`, `#3`, … */
 export function buildCollectiveSpec(proofs: GuardProof[]): AgentSpecBase {
   const spec = new AgentSpecBase({
@@ -137,10 +136,6 @@ export function buildCollectiveSpec(proofs: GuardProof[]): AgentSpecBase {
     contract: FIXTURE_DOMAIN,
     destructiveTools: ['deleteItem', 'purgeAll'],
     confirmMechanism: { purgeAll: 'prior-ask' },
-    lexicon: {
-      falseFailureClaimRe: FIXTURE_LEXICON.falseFailureClaimRe,
-      confirmAskRe: FIXTURE_LEXICON.confirmAskRe,
-    },
   });
   const used = new Set<string>();
   for (const proof of proofs) {

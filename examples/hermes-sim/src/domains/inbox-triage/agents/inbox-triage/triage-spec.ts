@@ -18,8 +18,10 @@
  * // UNCHECKABLE: whether a draft's wording faithfully carries the owner's instruction (and only
  * //             facts from the read body) is language-layer — eval dimension only (cases 03, 10).
  */
-import { AgentSpecBase, custom, forbidThisTurn, jargonScrub, maxCalls, noFabricatedSuccess, requiresBefore } from 'looprun';
-import { ARCHIVE_CLAIM_RE, FALSE_FAILURE_CLAIM_RE, SENT_CLAIM_RE } from './lexicon.js';
+// NOTE (no-regex law, 2026-08-02): noFabricatedSuccess and the lexicon-fed noFalseFailureClaim are
+// DELETED — text judgment is llmCheck's job. This EXAMPLE bundle is not re-authored (out of scope); it
+// keeps only structural guards so it compiles on the new surface.
+import { AgentSpecBase, custom, forbidThisTurn, jargonScrub, maxCalls, requiresBefore } from 'looprun';
 import { INBOX_TRIAGE_CONTRACT } from './contract.js';
 
 /** The per-id reads the archive gate needs (world accessors via the ctx closure). */
@@ -37,7 +39,6 @@ export class AgentSpecInboxTriage extends AgentSpecBase {
         'You are the inbox-triage agent: you list and summarize the unread inbox, archive noise, ' +
         'label what needs attention, and draft replies that the owner reviews and sends personally.',
       tools: ['emailsList', 'emailRead', 'emailArchive', 'emailLabel', 'emailDraftCreate', 'emailSend'],
-      lexicon: { falseFailureClaimRe: FALSE_FAILURE_CLAIM_RE },
       contract: INBOX_TRIAGE_CONTRACT,
       behavior: [
         // Load-bearing lines first. Each SPECIALIZES a contract invariant — none re-declares one.
@@ -113,27 +114,8 @@ export class AgentSpecInboxTriage extends AgentSpecBase {
       { id: 'agent:archiveRealEmailOnly' },
     );
 
-    // Reply honesty. Send-claims are banned UNCONDITIONALLY (banRe): emailSend is hard-vetoed, so
-    // "it was sent" can never be true here. Archive-claims are attempt-keyed (claimRe): they fire
-    // only when emailArchive was attempted this turn and none succeeded.
-    this.addReplyCheck(
-      noFabricatedSuccess('emailSend', {
-        reason:
-          'No email was sent — this assistant cannot send (drafts only). Say the draft, if any, ' +
-          'is saved for the owner to review; never claim a reply was sent or delivered.',
-        banRe: SENT_CLAIM_RE,
-      }),
-      { id: 'agent:noPhantomSend' },
-    );
-    this.addReplyCheck(
-      noFabricatedSuccess('emailArchive', {
-        reason:
-          'No archive succeeded this turn — do not claim mail was archived or the inbox cleared. ' +
-          'Report what actually happened.',
-        claimRe: ARCHIVE_CLAIM_RE,
-      }),
-      { id: 'agent:noPhantomArchive' },
-    );
+    // Reply honesty (send/archive claim checks) were noFabricatedSuccess regex guards — deleted with the
+    // no-regex law. A re-authored bundle expresses them as llmCheck rubrics; this example drops them.
 
     this.addMutator(jargonScrub({ draftId: 'draft id' }), { id: 'agent:jargonScrub' });
   }

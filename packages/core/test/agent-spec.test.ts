@@ -5,7 +5,6 @@ import {
   custom,
   precondition,
   confirmFirst,
-  destructiveClaimRequiresSuccess,
   pendingConfirmMustAsk,
 } from '../src/index.js';
 import { resolveBindings, resolveGuards } from '../src/spec.js';
@@ -111,15 +110,8 @@ describe('AgentSpecBase — destructive protocol (iff destructiveTools)', () => 
   });
 });
 
-describe('AgentSpecBase — noFalseFailureClaim auto-layer (cfg.lexicon)', () => {
-  const FALSE_FAILURE = /\b(cannot|unable|failed)\b/i;
-
-  it('auto-installs minimal:noFalseFailureClaim BEFORE minimal:emptyReply when lexicon provides the regex', () => {
-    const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: ['x'], lexicon: { falseFailureClaimRe: FALSE_FAILURE } });
-    expect(spec.guards.onReply.map((b) => b.id)).toEqual(['minimal:degenerationGuard', 'minimal:noFalseFailureClaim', 'minimal:emptyReply']);
-  });
-
-  it('is byte-stable (NOT installed) when no lexicon is provided', () => {
+describe('AgentSpecBase — minimal onReply layer (no-regex law: no lexicon-fed noFalseFailureClaim)', () => {
+  it('installs exactly degenerationGuard then emptyReply — the former lexicon-fed noFalseFailureClaim is retired', () => {
     const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: ['x'] });
     expect(spec.guards.onReply.map((b) => b.id)).toEqual(['minimal:degenerationGuard', 'minimal:emptyReply']);
   });
@@ -142,67 +134,25 @@ describe('layer resolution (agent wins)', () => {
   });
 });
 
-describe('destructiveClaimRequiresSuccess — attempt-keyed, offer-aware, sentence-scoped (P8a)', () => {
-  // English lexicon injected by the caller (the runtime carries none). The claim-check probe-relay
-  // exemption uses confirm-LANGUAGE only (no bare `?`) so a trailing question cannot mask a claim.
-  const CLAIM = /\b(deleted|removed|cancelled)\b/i;
-  const ASK = /\b(confirm|are you sure|do you want|shall i|proceed|go ahead)\b/i;
-  const OFFER = /\b(want me to|shall i|i can|would you like me to|if you(?:'d| would) like)\b/i;
-  const guard = destructiveClaimRequiresSuccess(['deleteItem'], { claimRe: CLAIM, askRe: ASK, offerRe: OFFER });
+// NOTE (no-regex law, 2026-08-02): destructiveClaimRequiresSuccess is DELETED — that claim-language
+// judgment is now an llmCheck rubric (proven in the core proof catalog).
 
-  // The realistic fabrication footprint under toolChoice:'required' — a confirmed:true call the
-  // confirmFirst gate vetoed: an ATTEMPT with no effect.
-  const vetoedAttempt: ObservedCall = { name: 'deleteItem', args: { confirmed: true }, ok: false, turnIndex: 0 };
-  // A legal PROBE (confirmed absent, ok) — the two-step first leg.
-  const probe: ObservedCall = { name: 'deleteItem', args: { itemId: 'x1' }, ok: true, turnIndex: 0 };
-
-  const ctx = (reply: string, observed: ObservedCall[] = []): GuardCtx => ({
-    args: {}, world: fixtureWorld(), observed, turnIndex: 0, reply, producedThisTurn: [], userText: '', history: [],
-  });
-
-  it('does NOT fire on a status readback when no destructive tool was ATTEMPTED this turn (P1-FP fix)', () => {
-    expect(guard.check(ctx('The item was deleted.'))).toBeNull();
-  });
-
-  it('fires on a declarative deletion claim when the destructive tool was attempted-but-vetoed', () => {
-    expect(guard.check(ctx('The item was deleted.', [vetoedAttempt]))).not.toBeNull();
-  });
-
-  it('does NOT fire when the destructive verb is only OFFERED (same sentence), even given an attempt', () => {
-    expect(guard.check(ctx('I can delete it — want me to remove the record?', [vetoedAttempt]))).toBeNull();
-  });
-
-  it('an earlier offer sentence cannot mask a later declarative claim', () => {
-    expect(guard.check(ctx('Want me to help? The record was deleted.', [vetoedAttempt]))).not.toBeNull();
-  });
-
-  it('exempts a confirm-seeking relay after a probe, but still fires on a declarative claim after only a probe', () => {
-    expect(guard.check(ctx('Are you sure you want to proceed?', [probe]))).toBeNull();
-    expect(guard.check(ctx('The record was deleted.', [probe]))).not.toBeNull();
-  });
-
-  it('does not fire when the destructive tool succeeded with confirmed:true this turn', () => {
-    const ok: ObservedCall = { name: 'deleteItem', args: { confirmed: true }, ok: true, turnIndex: 0 };
-    expect(guard.check(ctx('The item was deleted.', [ok]))).toBeNull();
-  });
-});
-
-describe('pendingConfirmMustAsk — resolution-aware (P8a)', () => {
-  const ASK = /\?|\b(confirm|are you sure|do you want|shall i|proceed|go ahead)\b/i;
-  const guard = pendingConfirmMustAsk({ askRe: ASK });
+describe('pendingConfirmMustAsk — resolution-aware + STRUCTURAL relay (no-regex law)', () => {
+  const guard = pendingConfirmMustAsk();
   const pendingProbe: ObservedCall = {
     name: 'deleteItem', args: { itemId: 'x1' }, ok: true, turnIndex: 0, resultFlags: { requiresConfirmation: true },
   };
+  const askUser: ObservedCall = { name: 'askUser', args: { text: 'Are you sure you want to delete x1?' }, ok: true, turnIndex: 0 };
   const ctx = (reply: string, observed: ObservedCall[]): GuardCtx => ({
     args: {}, world: fixtureWorld(), observed, turnIndex: 0, reply, producedThisTurn: [], userText: '', history: [],
   });
 
-  it('fires when the pending confirm is unresolved and the reply does not ask', () => {
+  it('fires when the pending confirm is unresolved and no askUser was issued this turn', () => {
     expect(guard.check(ctx('Item x1 removed.', [pendingProbe]))).not.toBeNull();
   });
 
-  it('does not fire when the reply relays the confirmation question', () => {
-    expect(guard.check(ctx('Are you sure you want to delete x1?', [pendingProbe]))).toBeNull();
+  it('does not fire when an askUser relays the confirmation question this turn', () => {
+    expect(guard.check(ctx('Are you sure you want to delete x1?', [pendingProbe, askUser]))).toBeNull();
   });
 
   it('does NOT fire once a same-record confirmed:true call resolves the probe (probe→approved-execute tail)', () => {
@@ -210,7 +160,7 @@ describe('pendingConfirmMustAsk — resolution-aware (P8a)', () => {
     expect(guard.check(ctx('Done — x1 removed.', [pendingProbe, resolve]))).toBeNull();
   });
 
-  it('STILL fires when the confirmed:true call was on a DIFFERENT record', () => {
+  it('STILL fires when the confirmed:true call was on a DIFFERENT record and no askUser was issued', () => {
     const other: ObservedCall = { name: 'deleteItem', args: { itemId: 'x7', confirmed: true }, ok: true, turnIndex: 0 };
     expect(guard.check(ctx('Removed.', [pendingProbe, other]))).not.toBeNull();
   });

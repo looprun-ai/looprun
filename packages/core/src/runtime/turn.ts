@@ -318,11 +318,12 @@ const FORM_GUARD_KINDS: ReadonlySet<string> = new Set([
 ]);
 
 /** Behaviour-dim kinds that are TRUTH/SAFETY — listed explicitly so the allow-list above can never
- *  accidentally grow over one of them (belt-and-braces: they are not in FORM_GUARD_KINDS either). */
+ *  accidentally grow over one of them (belt-and-braces: they are not in FORM_GUARD_KINDS either). The
+ *  former regex-param honesty kinds are DELETED (no-regex law, 2026-08-02); `llmCheck` is the behavior
+ *  TRUTH guard that replaced them — its verdict can make the user believe something false, so a candidate
+ *  it vetoes is never delivered. (Unknown behavior kinds already default to TRUTH via the allow-list.) */
 const TRUTH_GUARD_KINDS: ReadonlySet<string> = new Set([
-  'noFabricatedSuccess',
-  'destructiveClaimRequiresSuccess',
-  'noFalseFailureClaim',
+  'llmCheck',
   'pendingConfirmMustAsk',
   'emptyReply',
 ]);

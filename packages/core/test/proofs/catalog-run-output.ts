@@ -11,7 +11,7 @@ import {
   precondition,
   resultInvariant,
 } from '../../src/guards/index.js';
-import { FIXTURE_LEXICON, FixtureWorld } from '../../src/testing/index.js';
+import { FixtureWorld } from '../../src/testing/index.js';
 import type { GuardProof } from '../../src/testing/index.js';
 
 // ── precondition (createMedia — gated on remaining media quota) ──────────────
@@ -200,16 +200,15 @@ const noDuplicateCallProof: GuardProof = {
 // ── confirmFirst (auto:'base' — arg mechanism on deleteItem, prior-ask on purgeAll) ──
 const confirmFirstProof: GuardProof = {
   guard: 'confirmFirst',
-  // askRe wired — the arg mechanism accepts a prior-turn PROSE
-  // confirmation-ask (or askUser) as the probe, mirroring prior-ask's disjuncts.
-  make: () => confirmFirst({ askRe: FIXTURE_LEXICON.confirmAskRe }),
+  // STRUCTURAL probe (no-regex law): the arg mechanism accepts a prior-turn same-tool probe or a
+  // prior-turn askUser as the go-ahead — no reply-text regex.
+  make: () => confirmFirst(),
   hook: 'preTool',
   target: ['deleteItem'],
   auto: 'base',
   specTweaks: {
     destructiveTools: ['deleteItem', 'purgeAll'],
     confirmMechanism: { purgeAll: 'prior-ask' },
-    lexicon: { confirmAskRe: FIXTURE_LEXICON.confirmAskRe },
   },
   cases: [
     {
@@ -243,7 +242,7 @@ const confirmFirstProof: GuardProof = {
         turns: [{ userText: 'delete item itm-1' }, { userText: 'yes, I confirm' }],
         script: [
           [{ tool: 'deleteItem', args: { id: 'itm-1' } }],
-          [{ tool: 'replyToUser', args: { text: 'Delete item itm-1 — are you sure?' } }],
+          [{ tool: 'askUser', args: { text: 'Delete item itm-1 — are you sure?' } }],
           [{ tool: 'deleteItem', args: { id: 'itm-1', confirmed: true } }],
           [{ tool: 'replyToUser', args: { text: 'The item was deleted as requested.' } }],
         ],
@@ -251,8 +250,10 @@ const confirmFirstProof: GuardProof = {
       },
     },
     {
-      name: 'arg mechanism (P9): a prior-turn prose confirmation-ask unlocks confirmed execution',
-      polarity: 'positive',
+      // no-regex law: a prior-turn PROSE confirmation-ask no longer unlocks (that text judgment is
+      // retired); the go-ahead must be a structural same-tool probe or an askUser. So this now DENIES.
+      name: 'arg mechanism: a prior-turn prose confirmation-ask does NOT unlock (structural only)',
+      polarity: 'negative',
       ctx: {
         tool: 'deleteItem',
         args: { confirmed: true },
@@ -261,20 +262,10 @@ const confirmFirstProof: GuardProof = {
         ],
         turnIndex: 1,
       },
-      l1: 'silent',
-      l3: {
-        preset: 'empty',
-        turns: [{ userText: 'delete item itm-1' }, { userText: 'yes, I confirm' }],
-        script: [
-          [{ tool: 'replyToUser', args: { text: 'Deleting item itm-1 is permanent — are you sure?' } }],
-          [{ tool: 'deleteItem', args: { id: 'itm-1', confirmed: true } }],
-          [{ tool: 'replyToUser', args: { text: 'The item was deleted as requested.' } }],
-        ],
-        expect: 'pass',
-      },
+      l1: 'fires',
     },
     {
-      name: 'arg mechanism (P9): a prior-turn askUser also counts as the probe',
+      name: 'arg mechanism: a prior-turn askUser counts as the probe',
       polarity: 'positive',
       ctx: {
         tool: 'deleteItem',
@@ -402,7 +393,7 @@ const noActAfterAskSameTurnProof: GuardProof = {
         script: [
           [{ tool: 'askUser', args: { text: 'Delete item itm-1 — are you sure?' } }],
           [{ tool: 'deleteItem', args: { id: 'itm-1' } }],
-          [{ tool: 'replyToUser', args: { text: 'The item still requires your confirmation before removal — are you sure?' } }],
+          [{ tool: 'askUser', args: { text: 'The item still requires your confirmation before removal — are you sure?' } }],
         ],
         expect: 'pass',
       },
@@ -430,7 +421,6 @@ const destructiveThrottleProof: GuardProof = {
   specTweaks: {
     destructiveTools: ['deleteItem', 'purgeAll'],
     confirmMechanism: { purgeAll: 'prior-ask' },
-    lexicon: { confirmAskRe: FIXTURE_LEXICON.confirmAskRe },
   },
   cases: [
     {

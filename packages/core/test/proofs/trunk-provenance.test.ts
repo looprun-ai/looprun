@@ -16,7 +16,7 @@ import { argRequired, custom, forbidThisTurn, jargonScrub, maxCalls, replySingle
 import { renderScopedSpecTrunk, renderTrunkBlocks } from '../../src/trunk.js';
 import { GUARD_KIND_SUBJECT, derivePolarity, deriveSubject, foldTrunk } from '../../src/trunk-fold.js';
 import type { TrunkBlock, TrunkLine } from '../../src/trunk-fold.js';
-import { FIXTURE_LEXICON, FIXTURE_DOMAIN, FIXTURE_TOOL_NAMES, FixtureWorld } from '../../src/testing/index.js';
+import { FIXTURE_DOMAIN, FIXTURE_TOOL_NAMES, FixtureWorld } from '../../src/testing/index.js';
 
 const world = new FixtureWorld('seeded-media');
 
@@ -38,7 +38,6 @@ function spec(): AgentSpecBase {
     directives: [{ id: 'd1', cond: 'no items exist', directive: 'offer to create the first one' }],
     destructiveTools: ['deleteItem', 'purgeAll'],
     confirmMechanism: { purgeAll: 'prior-ask' },
-    lexicon: { falseFailureClaimRe: FIXTURE_LEXICON.falseFailureClaimRe, confirmAskRe: FIXTURE_LEXICON.confirmAskRe },
   });
 }
 

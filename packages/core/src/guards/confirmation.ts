@@ -3,7 +3,6 @@
  * ask-then-act deny, the one-destructive-action-per-turn throttle, and the pending-probe relay.
  */
 import type { Guard, ObservedCall } from '../rules.js';
-import { matches } from './shared.js';
 import { canonArgs } from './flow.js';
 
 /**
@@ -19,7 +18,7 @@ import { canonArgs } from './flow.js';
  * Reads observed / args only — never the user text (magnet-safe). Auto-installed by `AgentSpecBase` per
  * destructive tool according to `cfg.confirmMechanism`.
  */
-export function confirmFirst(opts?: string | { argFlag?: string; mechanism?: 'arg' | 'prior-ask'; askRe?: RegExp }): Guard {
+export function confirmFirst(opts?: string | { argFlag?: string; mechanism?: 'arg' | 'prior-ask' }): Guard {
   // The string overload sets `argFlag`, NOT `mechanism` — and `confirmFirst('prior-ask')` is the
   // plausible slip (it is literally the mechanism's name). It used to build argFlag:'prior-ask' +
   // mechanism:'arg', a guard that can never fire: no tool carries an arg called `prior-ask`, so
@@ -58,19 +57,16 @@ export function confirmFirst(opts?: string | { argFlag?: string; mechanism?: 'ar
         // This is the hole already closed in the sibling `noInstructionFromData` ("counting it would let
         // a first poisoned attempt unlock the second"); the two now read the same.
         //
-        // The measured case the loose form was protecting — a model that relays the confirmation
-        // question via replyToUser instead of askUser (the measured relay dead-lock) — is
-        // carried by the THIRD disjunct: a prior-turn OK replyToUser whose text matches the injected
-        // confirm-question regex (the bundle lexicon). That reads the MODEL'S OWN prior output, never the
-        // user's — firewall-clean. So no legitimate flow depends on counting a vetoed attempt.
-        const askRe = o.askRe;
+        // The unlock is STRUCTURAL: a prior-turn OK call of the SAME tool (the probe) or a prior-turn OK
+        // `askUser` (the explicit question terminal). The former replyToUser-text disjunct — a prior
+        // reply whose TEXT matched an injected confirm-question regex — is retired with the no-regex law
+        // (2026-08-02): a model that relays confirmation through prose instead of `askUser` is judged by
+        // an `llmCheck` rubric, not by a closure-held pattern here.
         const probedEarlier = ctx.observed.some(
           (obs) =>
             obs.turnIndex < ctx.turnIndex &&
             obs.ok &&
-            (obs.name === ctx.tool ||
-              obs.name === 'askUser' ||
-              (askRe != null && obs.name === 'replyToUser' && matches(askRe, String(obs.args?.text ?? '')))),
+            (obs.name === ctx.tool || obs.name === 'askUser'),
         );
         return probedEarlier
           ? null
@@ -80,20 +76,15 @@ export function confirmFirst(opts?: string | { argFlag?: string; mechanism?: 'ar
       const probe = ctx.observed.find(
         (obs) => obs.name === ctx.tool && obs.ok && obs.args?.[argFlag] !== true && obs.turnIndex < ctx.turnIndex,
       );
-      // accept a prior-turn prose/askUser confirmation surface as the
-      // probe — mirrors the prior-ask mechanism's disjuncts; measured: the tool-probe-only form
-      // dead-locked legitimate later-turn confirmations. Firewall-clean: reads only observed prior
-      // MODEL output, never user text. Same-turn confirmed:true stays vetoed (every disjunct
-      // requires turnIndex < current).
-      const proseProbe =
+      // accept a prior-turn `askUser` as the probe surface too (structural) — measured: the
+      // tool-probe-only form dead-locked legitimate later-turn confirmations. The former replyToUser-text
+      // disjunct is retired with the no-regex law (2026-08-02): prose relay is `llmCheck`'s job, not a
+      // closure-held pattern. Same-turn confirmed:true stays vetoed (every disjunct requires
+      // turnIndex < current).
+      const askProbe =
         !probe &&
-        ctx.observed.some(
-          (obs) =>
-            obs.turnIndex < ctx.turnIndex &&
-            ((obs.name === 'askUser' && obs.ok) ||
-              (o.askRe != null && obs.name === 'replyToUser' && obs.ok && matches(o.askRe, String(obs.args?.text ?? '')))),
-        );
-      return probe || proseProbe
+        ctx.observed.some((obs) => obs.turnIndex < ctx.turnIndex && obs.name === 'askUser' && obs.ok);
+      return probe || askProbe
         ? null
         : `Do NOT pass ${argFlag}:true — first call ${ctx.tool} WITHOUT it, relay the confirmation question to the user, and only confirm in a LATER turn after the user agrees.`;
     },
@@ -176,17 +167,21 @@ export function destructiveThrottle(destructiveTools: string[], opts?: { confirm
 }
 
 /**
- * A destructive PROBE returned requiresConfirmation this turn — the reply MUST relay the question, UNLESS
- * that pending confirmation was already RESOLVED this turn: the SAME tool ran OK with the confirm flag set
- * on the SAME record (its args minus the confirm flag) later in the turn — a legal probe→approved-execute
- * tail of a two-step flow, where the reply correctly reports the DONE action instead of re-asking. Keys
- * only the UNRESOLVED probes: if every requiresConfirmation was resolved, the guard is silent. `askRe` (the
- * "does this reply seek confirmation?" regex — a business-owned, language-specific pattern) is injected;
- * `confirmArg` (default `confirmed`) is the confirm flag a resolving call carries. Reads observed / reply
- * only — the runtime holds no confirm-language of its own.
+ * A destructive PROBE returned requiresConfirmation this turn — the turn MUST relay the question via an
+ * `askUser` call, UNLESS that pending confirmation was already RESOLVED this turn: the SAME tool ran OK
+ * with the confirm flag set on the SAME record (its args minus the confirm flag) later in the turn — a
+ * legal probe→approved-execute tail of a two-step flow, where the reply correctly reports the DONE action
+ * instead of re-asking. Keys only the UNRESOLVED probes: if every requiresConfirmation was resolved, the
+ * guard is silent.
+ *
+ * STRUCTURAL RELAY (no-regex law, 2026-08-02): the relay is satisfied by an `askUser` call succeeding this
+ * turn — the question terminal — NOT by regex-matching the reply text. The former `askRe` param (a
+ * business-owned "does this reply seek confirmation?" pattern) is retired; a domain that relays
+ * confirmation through prose instead of `askUser` judges that with an `llmCheck` rubric. `confirmArg`
+ * (default `confirmed`) is the confirm flag a resolving call carries. Reads observed only.
  */
-export function pendingConfirmMustAsk(opts: { askRe: RegExp; confirmArg?: string }): Guard {
-  const confirmArg = opts.confirmArg ?? 'confirmed';
+export function pendingConfirmMustAsk(opts?: { confirmArg?: string }): Guard {
+  const confirmArg = opts?.confirmArg ?? 'confirmed';
   // The "record" a call acts on = its canonical args with the confirm flag stripped (a probe and its
   // approved re-run differ ONLY in that flag, so matching the rest pins them to the same record).
   const record = (args: Record<string, unknown> | undefined): string => {
@@ -205,10 +200,12 @@ export function pendingConfirmMustAsk(opts: { askRe: RegExp; confirmArg?: string
           (o) => o.name === probe.name && o.ok && o.args?.[confirmArg] === true && record(o.args) === record(probe.args),
         ));
       if (!unresolved.length) return null;
-      return matches(opts.askRe, ctx.reply ?? '')
+      // STRUCTURAL relay: an `askUser` succeeded this turn ⇒ the question was put to the user.
+      const askedThisTurn = thisTurn.some((o) => o.name === 'askUser' && o.ok);
+      return askedThisTurn
         ? null
-        : 'A confirmation is PENDING — relay the confirmation question to the user (your reply must ask it), and do not summarize the action as done.';
+        : 'A confirmation is PENDING — relay the confirmation question to the user with askUser, and do not summarize the action as done.';
     },
-    prose: () => 'when a tool asks for confirmation, relay that question to the user before anything else',
+    prose: () => 'when a tool asks for confirmation, ask the user to confirm before anything else',
   };
 }

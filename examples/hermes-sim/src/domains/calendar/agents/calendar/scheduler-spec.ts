@@ -16,8 +16,11 @@
  * //              people's calendars, no video links; say plainly it cannot be done here and never
  * //              claim it was (conditioned prose + eval dimension only; case 13).
  */
-import { AgentSpecBase, custom, destructiveClaimRequiresSuccess, jargonScrub, noFabricatedSuccess, pendingConfirmMustAsk, requiresBefore } from 'looprun';
-import { CONFIRM_ASK_RE, CONFIRM_LANG_RE, FALSE_FAILURE_CLAIM_RE, HONEST_FAILURE_RE, OFFER_OR_CONDITIONAL_RE } from './lexicon.js';
+// NOTE (no-regex law, 2026-08-02): the former regex-param honesty guards (noFabricatedSuccess,
+// destructiveClaimRequiresSuccess) and the lexicon-fed noFalseFailureClaim are DELETED — text judgment is
+// now llmCheck's job. This EXAMPLE bundle is not re-authored here (porting bundles is out of scope for the
+// purge); it keeps only the structural guards so it compiles on the new surface.
+import { AgentSpecBase, custom, jargonScrub, pendingConfirmMustAsk, requiresBefore } from 'looprun';
 import { CALENDAR_CONTRACT } from './contract.js';
 
 /** The per-id state reads the calendar gates need (world accessors via the ctx closure). */
@@ -53,8 +56,6 @@ export class AgentSpecScheduler extends AgentSpecBase {
         'availabilityCheck',
       ],
       destructiveTools: ['eventDelete'],
-      // Auto-installs the always-on noFalseFailureClaim (attempt-context claimRe — see lexicon.ts).
-      lexicon: { falseFailureClaimRe: FALSE_FAILURE_CLAIM_RE },
       contract: CALENDAR_CONTRACT,
       behavior: [
         // Load-bearing lines first (after the runtime-prepended persona). Each SPECIALIZES a contract
@@ -144,43 +145,11 @@ export class AgentSpecScheduler extends AgentSpecBase {
       { id: 'agent:reminderNeedsRealEvent' },
     );
 
-    // Reply honesty — attempt-keyed, confirm-probe / offer / honest-failure aware.
-    // noFalseFailureClaim auto-installed via cfg.lexicon.
-    this.addReplyCheck(pendingConfirmMustAsk({ askRe: CONFIRM_ASK_RE }), { id: 'agent:pendingConfirmMustAsk' });
-    this.addReplyCheck(
-      destructiveClaimRequiresSuccess(['eventDelete'], {
-        claimRe: /\b(?:(?:event|appointment|it|session|meeting)[^.!?\n]{0,30}\b(?:deleted|removed|cancell?ed)|(?:deleted|removed|cancell?ed)[^.!?\n]{0,30}\b(?:event|appointment|calendar)|is (?:now )?off (?:your|the) calendar)\b/i,
-        askRe: CONFIRM_LANG_RE,
-        offerRe: OFFER_OR_CONDITIONAL_RE,
-        exemptRe: HONEST_FAILURE_RE,
-      }),
-      { id: 'agent:destructiveClaimRequiresSuccess' },
-    );
-    // Created events are echoed with their REAL returned id/time: the labelRe seam denies any evt_ id
-    // the world has never known (attempt-independent), the verbClaimRe seam denies a booking claim on
-    // an attempted-but-not-succeeded turn. knownEventId keeps honest deletion reports legal.
-    this.addReplyCheck(
-      noFabricatedSuccess('eventCreate', {
-        labelRe: /\bevt_\d+\b/,
-        refExists: (world, label) => (world as CalendarStateReader).knownEventId?.(label) ?? false,
-        verbClaimRe: /\b(?:(?:i(?:'|’)?ve|i have|i) (?:booked|scheduled|added|created)|(?:has been|was|is now) (?:booked|scheduled|added|created)|is on (?:your|the) calendar for\b)/i,
-        reason:
-          'Only report an event as booked with the REAL evt_ id and times the tool returned this turn — ' +
-          'never invent an event id, and never claim a booking that did not succeed.',
-      }),
-      { id: 'agent:noFabricatedEvent' },
-    );
-    this.addReplyCheck(
-      noFabricatedSuccess('reminderSet', {
-        labelRe: /\brem_\d+\b/,
-        refExists: (world, label) => (world as CalendarStateReader).knownReminderId?.(label) ?? false,
-        verbClaimRe: /\b(?:(?:i(?:'|’)?ve|i have|i) set (?:a|the|your) reminder|reminder (?:is|has been|was) (?:set|added|created))\b/i,
-        reason:
-          'Only report a reminder as set with the REAL rem_ id / fire time the tool returned this turn — ' +
-          'never invent a reminder or claim one was set when the tool did not succeed.',
-      }),
-      { id: 'agent:noFabricatedReminder' },
-    );
+    // Reply honesty (structural): relay a pending confirmation via askUser.
+    this.addReplyCheck(pendingConfirmMustAsk(), { id: 'agent:pendingConfirmMustAsk' });
+    // The former honesty reply-checks (destructiveClaimRequiresSuccess, noFabricatedSuccess ×2) were
+    // regex-param text judgments — deleted with the no-regex law. In a re-authored bundle those become
+    // llmCheck rubrics; this example drops them rather than porting.
 
     // Egress scrub: internal field jargon → user words.
     this.addMutator(

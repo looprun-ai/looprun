@@ -165,64 +165,15 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
     summary: 'When a probe returned `requiresConfirmation` this turn and nothing resolved it, the reply must relay that question.',
     whenToUse:
       'The world runs the two-step protocol itself: the tool answers "I need confirmation" and the risk is a reply that summarises the action as done. It gates the REPLY; `confirmFirst` gates the call.',
-    example: `pendingConfirmMustAsk({ askRe: /shall I|do you want me to/i })`,
+    example: `pendingConfirmMustAsk()`,
   },
 
   // ── honesty ────────────────────────────────────────────────────────────────
-  {
-    name: 'noFabricatedSuccess',
-    category: 'honesty',
-    hook: 'onReply',
-    summary: 'The reply may not claim a tool\'s effect, cite an invented artifact label, or use a banned phrase when the tool did not succeed this turn.',
-    whenToUse:
-      'A tool whose output the model likes to announce before it exists. Arm only the seams you need — claim language, label existence, or an unconditional ban — and ship `banProse` with every `banRe`.',
-    example: `noFabricatedSuccess('generateReport', { reason: 'No report was generated this turn — do not say one was.', claimRe: /report is ready/i })`,
-  },
-  {
-    name: 'destructiveClaimRequiresSuccess',
-    category: 'honesty',
-    hook: 'onReply',
-    summary: 'A declarative claim that a destructive action happened is denied unless one actually took effect this turn.',
-    whenToUse:
-      'The destructive counterpart of `noFabricatedSuccess`, attempt-keyed and sentence-scoped: with no attempt this turn a destructive verb is read-back status and is left alone, and questions or offers never count as claims.',
-    example: `destructiveClaimRequiresSuccess(['cancelBooking'], { claimRe: /cancelled/i, askRe: /shall I cancel/i, offerRe: /would you like/i })`,
-  },
-  {
-    name: 'noFalseFailureClaim',
-    category: 'honesty',
-    hook: 'onReply',
-    summary: 'When every domain call this turn succeeded and one of them mutated the world, the reply may not claim inability.',
-    whenToUse:
-      'The work actually went through and the model still apologises for failing — the mirror image of the fabricated-success kinds, which catch the opposite lie. It only adjudicates a turn that MUTATED the world, so an honest "I could not find it" on a read-only turn is never touched. Auto-installed when the lexicon supplies the pattern; keep that pattern to attempted-work-failure phrasing ("failed to", "went wrong"), since a broad inability regex would veto honest policy refusals.',
-    example: `noFalseFailureClaim({ claimRe: /failed to|something went wrong/i })`,
-  },
-  {
-    name: 'noOutOfSurfaceActionClaim',
-    category: 'honesty',
-    hook: 'onReply',
-    summary: 'A declarative claim of an action whose tool is not on this agent\'s surface is denied.',
-    whenToUse:
-      'The agent is expected to hand off (billing, legal, dispatch) and the model promises the handoff as done. It deliberately stops at the surface boundary, so it never double-fires with the owned-action honesty kinds.',
-    example: `noOutOfSurfaceActionClaim({ actionClaims: [{ claimRe: /refund (?:has been )?issued/i, tool: 'issueRefund' }], surface: ['findBooking'] })`,
-  },
-  {
-    name: 'noUngroundedRegulatedFigure',
-    category: 'honesty',
-    hook: 'onReply',
-    summary: 'A figure or conclusion of a regulated class may appear only when a tool returned it this turn.',
-    whenToUse:
-      'Legal, medical or financial surfaces. Keep `allowFromToolResults` true when a tool is authoritative for the class; set it false to ban the class outright where nothing in the world can license it.',
-    example: `noUngroundedRegulatedFigure({ regulatedRe: /\\b\\d+\\s?mg\\b/i, allowFromToolResults: true })`,
-  },
-  {
-    name: 'noCompetitorClaim',
-    category: 'honesty',
-    hook: 'onReply',
-    summary: 'Within one sentence, a named third party plus comparative phrasing or a comparative figure is denied.',
-    whenToUse:
-      'Any user-facing sales or support surface. The figure branch is sound by construction: no tool returns a competitor\'s numbers, so any such number is invented.',
-    example: `noCompetitorClaim({ competitorRe: /\\bAcme\\b/i, comparativeRe: /\\b(?:better|cheaper|faster) than\\b/i })`,
-  },
+  // NOTE (no-regex law, 2026-08-02): the former regex-param honesty kinds — noFabricatedSuccess,
+  // destructiveClaimRequiresSuccess, noFalseFailureClaim, noOutOfSurfaceActionClaim,
+  // noUngroundedRegulatedFigure, noCompetitorClaim — are DELETED. Each was a text judgment over the
+  // reply ("did the model claim X that did not happen / that it cannot substantiate?"), which is now
+  // `llmCheck`'s job: an author binds an `llmCheck` rubric (host adjudicator, no closure-held pattern).
 
   // ── reply ──────────────────────────────────────────────────────────────────
   {
@@ -276,26 +227,8 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
     hook: 'onReply',
     summary: 'Catches leaked reasoning or tool markup, chat-template tokens and run-away line repetition in the reply.',
     whenToUse:
-      'The reply is broken as an ARTIFACT rather than wrong as a claim — think blocks, tool-call markup or the same line five times over. No honesty kind fires on that, because nothing was asserted; this one catches the weak-model failure class every domain shares. Always on (auto-installed); pass `selfNarrationRe` to add the language-specific third-person self-narration branch.',
-    example: `degenerationGuard({ selfNarrationRe: /the assistant (?:then )?(?:called|checked)/i })`,
-  },
-  {
-    name: 'minimalDisclosure',
-    category: 'reply',
-    hook: 'onReply',
-    summary: 'Caps how many records\' personal FIELDS one reply may carry, and requires each named field to have been returned by a tool this turn.',
-    whenToUse:
-      'Any surface that reads personal records. It keys on field-name tokens, never on entity mentions, so a correct multi-record summary that lists only ids and dates stays legal.',
-    example: `minimalDisclosure({ piiFields: ['phone', 'email'], entityIdRe: /\\bCU-\\d{5}\\b/, maxEntities: 1 })`,
-  },
-  {
-    name: 'noInstructionFromData',
-    category: 'reply',
-    hook: 'preTool',
-    summary: 'Denies the listed destructive tools while an imperative sits in the conversation\'s tool results and no earlier turn exposed the action to the user.',
-    whenToUse:
-      'Tool results can carry attacker-controlled text (notes, messages, tickets). The proxy is deliberately conservative — it converts a poisoned same-turn request into the legal ask-then-act two-turn flow.',
-    example: `noInstructionFromData({ tools: ['cancelBooking'], instructionRe: /please cancel|delete all/i })`,
+      'The reply is broken as an ARTIFACT rather than wrong as a claim — think blocks, tool-call markup or the same line five times over. No honesty kind fires on that, because nothing was asserted; this one catches the weak-model failure class every domain shares. Always on (auto-installed); it takes no parameters (the former language-specific self-narration branch is now an `llmCheck` job).',
+    example: `degenerationGuard()`,
   },
   {
     name: 'jargonScrub',
@@ -372,7 +305,6 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
 export const DENY_ONLY_PROSE_KINDS: readonly string[] = [
   'forbidThisTurn',
   'maxCalls',
-  'noFabricatedSuccess',
   'replyMustMention',
   'replyMaxOccurrences',
   'replySingleQuestion',
@@ -388,11 +320,13 @@ export const CONFIRM_CLASS_KINDS: readonly string[] = ['confirmFirst', 'destruct
 
 /**
  * ARMED SEAMS: a guard kind that DENIES on a business-owned pattern (`seam`) whose forbidden-thing is an
- * arbitrary domain regex the runtime cannot put into words (P8a), paired with the option (`prose`) that
- * must carry the missing sentence. The Q12 armed-seam-without-prose lint fails a spec that arms `seam`
- * without also passing `prose`. Add a row when a new such seam ships; a seam whose prose IS derivable
- * from its arguments does NOT belong here (see the factory notes).
+ * arbitrary domain regex the runtime cannot put into words, paired with the option (`prose`) that must
+ * carry the missing sentence. The Q12 armed-seam-without-prose lint fails a spec that arms `seam` without
+ * also passing `prose`.
+ *
+ * EMPTY since the no-regex law (2026-08-02): the only armed-seam kind was `noFabricatedSuccess`
+ * (`banRe`/`banProse`), now DELETED — text judgment is `llmCheck`'s job, and an `llmCheck` carries its
+ * whole rubric as prose (no separate seam). The registry stays as the seam the Q12 lint reads; a future
+ * regex-free seam that still needs companion prose adds its row here.
  */
-export const ARMED_SEAMS: readonly { kind: string; seam: string; prose: string }[] = [
-  { kind: 'noFabricatedSuccess', seam: 'banRe', prose: 'banProse' },
-];
+export const ARMED_SEAMS: readonly { kind: string; seam: string; prose: string }[] = [];

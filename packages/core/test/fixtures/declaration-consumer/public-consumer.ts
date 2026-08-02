@@ -33,7 +33,6 @@ import {
   noActAfterAskSameTurn,
   destructiveThrottle,
   resultInvariant,
-  noFabricatedSuccess,
   replyMustMention,
   replyMaxOccurrences,
   replySingleQuestion,
@@ -41,13 +40,6 @@ import {
   emptyReply,
   degenerationGuard,
   pendingConfirmMustAsk,
-  destructiveClaimRequiresSuccess,
-  noFalseFailureClaim,
-  minimalDisclosure,
-  noInstructionFromData,
-  noCompetitorClaim,
-  noOutOfSurfaceActionClaim,
-  noUngroundedRegulatedFigure,
   consentRequired,
   jargonScrub,
 } from '@looprun-ai/core';
@@ -126,9 +118,6 @@ export function readChains(c: AgentSpecConfig) {
 export function readTerminal(c: AgentSpecConfig) {
   return c.terminal;
 }
-export function readLexicon(c: AgentSpecConfig) {
-  return c.lexicon;
-}
 export function readTurnRecords(r: RunResult) {
   return r.turnRecords;
 }
@@ -155,7 +144,6 @@ export const catalog = {
   noActAfterAskSameTurn,
   destructiveThrottle,
   resultInvariant,
-  noFabricatedSuccess,
   replyMustMention,
   replyMaxOccurrences,
   replySingleQuestion,
@@ -163,13 +151,6 @@ export const catalog = {
   emptyReply,
   degenerationGuard,
   pendingConfirmMustAsk,
-  destructiveClaimRequiresSuccess,
-  noFalseFailureClaim,
-  minimalDisclosure,
-  noInstructionFromData,
-  noCompetitorClaim,
-  noOutOfSurfaceActionClaim,
-  noUngroundedRegulatedFigure,
   consentRequired,
   jargonScrub,
 };

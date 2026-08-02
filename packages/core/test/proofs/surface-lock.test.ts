@@ -35,15 +35,14 @@ const TAUGHT_03 = [
   'AgentSpec', 'AgentSpecBase', 'AgentSpecConfig', 'AgentScope', 'AgentWorld',
   'DomainContract', 'Hook', 'TerminalPolicy', 'ToolDef', 'ToolTarget', 'validateSpec',
 ];
-// ── Chapter 04 (37) ──────────────────────────────────────────────────────────
+// ── Chapter 04 (30) — the no-regex law (2026-08-02) deleted the 8 regex-param honesty/reply kinds ──
 const TAUGHT_04 = [
   'Dim', 'Guard', 'GuardCtx', 'ObservedCall',
   'argAbsent', 'argFormat', 'argRequired', 'askedEarlier', 'canonArgs', 'confirmFirst',
   'confirmedNeedsEarlierProbe', 'consentRequired', 'custom', 'llmCheck',
-  'degenerationGuard', 'destructiveClaimRequiresSuccess', 'destructiveThrottle', 'emptyReply',
-  'forbidThisTurn', 'jargonScrub', 'maxCalls', 'minimalDisclosure', 'noActAfterAskSameTurn',
-  'noCompetitorClaim', 'noDuplicateCall', 'noFabricatedSuccess', 'noFalseFailureClaim',
-  'noInstructionFromData', 'noOutOfSurfaceActionClaim', 'noUngroundedRegulatedFigure',
+  'degenerationGuard', 'destructiveThrottle', 'emptyReply',
+  'forbidThisTurn', 'jargonScrub', 'maxCalls', 'noActAfterAskSameTurn',
+  'noDuplicateCall',
   'pendingConfirmMustAsk', 'precondition', 'replyConfirmsLabels', 'replyMaxOccurrences',
   'replyMustMention', 'replySingleQuestion', 'requiresBefore', 'resultInvariant',
 ];
@@ -117,10 +116,10 @@ describe('surface lock — the barrels are the tutorial contract', () => {
   const publicExports = exportsOf(join(SRC, 'index.ts'));
   const internalExports = exportsOf(join(SRC, 'internal.ts'));
 
-  it('the taught surface is exactly the outline §4 core rows (54)', () => {
-    expect(TAUGHT.length).toBe(54);
+  it('the taught surface is exactly the outline §4 core rows (46)', () => {
+    expect(TAUGHT.length).toBe(46);
     expect(TAUGHT_03.length).toBe(11);
-    expect(TAUGHT_04.length).toBe(38);
+    expect(TAUGHT_04.length).toBe(30);
     expect(TAUGHT_05.length).toBe(5);
     expect(publicExports.filter((n) => !RIDERS.includes(n))).toEqual(TAUGHT);
   });

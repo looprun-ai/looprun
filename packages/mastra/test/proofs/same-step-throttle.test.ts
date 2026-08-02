@@ -21,7 +21,7 @@ import { describe, it, expect } from 'vitest';
 import { destructiveThrottle } from '@looprun-ai/core';
 import { AgentSpecBase } from '@looprun-ai/core';
 import type { ObservedCall } from '@looprun-ai/core';
-import { craftCtx, FIXTURE_LEXICON } from '@looprun-ai/core/testing';
+import { craftCtx } from '@looprun-ai/core/testing';
 import { pickRecord, runProofLoop } from '../../src/testing/index.js';
 
 const call = (name: string, over: Partial<ObservedCall> = {}): ObservedCall => ({
@@ -108,7 +108,6 @@ describe('M1 · full loop — a same-step bulk destructive is throttled to ONE e
       persona: 'You are the proof agent.',
       tools: ['searchItem', 'deleteItem'],
       destructiveTools: ['deleteItem'],
-      lexicon: { confirmAskRe: FIXTURE_LEXICON.confirmAskRe },
     });
 
   it('turn-1 emits TWO deleteItem(confirmed:true) in one step → the SECOND is vetoed by the throttle', async () => {

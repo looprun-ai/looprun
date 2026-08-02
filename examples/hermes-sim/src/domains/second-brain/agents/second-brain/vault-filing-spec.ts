@@ -17,17 +17,11 @@
  * // UNCHECKABLE: capabilities outside the tool surface (email, sync, opening apps) must be
  * //              declined honestly, never simulated — conditioned prose + eval dimension (case 13).
  */
-import { AgentSpecBase, argFormat, custom, destructiveClaimRequiresSuccess, jargonScrub, noFabricatedSuccess, pendingConfirmMustAsk } from 'looprun';
-import {
-  CONFIRM_ASK_RE,
-  CONFIRM_LANG_RE,
-  DELETE_CLAIM_RE,
-  FALSE_FAILURE_CLAIM_RE,
-  FILING_CLAIM_RE,
-  HONEST_FAILURE_RE,
-  NOTE_LABEL_RE,
-  OFFER_OR_CONDITIONAL_RE,
-} from './lexicon.js';
+// NOTE (no-regex law, 2026-08-02): the former regex-param honesty guards (destructiveClaimRequiresSuccess,
+// noFabricatedSuccess) and the lexicon-fed noFalseFailureClaim are DELETED — text judgment is llmCheck's
+// job. This EXAMPLE bundle is not re-authored (out of scope); it keeps only structural guards so it
+// compiles on the new surface.
+import { AgentSpecBase, argFormat, custom, jargonScrub, pendingConfirmMustAsk } from 'looprun';
 import { SECOND_BRAIN_CONTRACT } from './contract.js';
 
 /** The per-id state the reply-honesty label seam reads (world accessors via the ctx closure). */
@@ -57,8 +51,6 @@ export class AgentSpecVaultFiling extends AgentSpecBase {
         'noteDelete',
       ],
       destructiveTools: ['noteDelete'],
-      // Auto-installs the always-on noFalseFailureClaim (attempt-context claimRe — see lexicon.ts).
-      lexicon: { falseFailureClaimRe: FALSE_FAILURE_CLAIM_RE },
       contract: SECOND_BRAIN_CONTRACT,
       behavior: [
         // Load-bearing lines first (after the runtime-prepended persona). Each SPECIALIZES a contract
@@ -134,37 +126,11 @@ export class AgentSpecVaultFiling extends AgentSpecBase {
       { id: 'agent:readBeforeFiling' },
     );
 
-    // Reply honesty (behavior dim). pendingConfirmMustAsk relays a pending delete probe (askRe
-    // accepts a bare `?`); destructiveClaimRequiresSuccess is attempt-keyed — it fires only when
-    // noteDelete was tried this turn and did not take effect, and exempts confirm-language relays
-    // (CONFIRM_LANG_RE, no bare `?`), offers, and honest failure/negation reports.
-    // noFalseFailureClaim auto-installed via cfg.lexicon.
-    this.addReplyCheck(pendingConfirmMustAsk({ askRe: CONFIRM_ASK_RE }), { id: 'agent:pendingConfirmMustAsk' });
-    this.addReplyCheck(
-      destructiveClaimRequiresSuccess(['noteDelete'], {
-        claimRe: DELETE_CLAIM_RE,
-        askRe: CONFIRM_LANG_RE,
-        offerRe: OFFER_OR_CONDITIONAL_RE,
-        exemptRe: HONEST_FAILURE_RE,
-      }),
-      { id: 'agent:destructiveClaimRequiresSuccess' },
-    );
-
-    // Fabricated-filing gate: two seams. The LABEL seam (NOTE_LABEL_RE + refExists) is
-    // attempt-independent — a note_ id in the reply must be a real vault note or minted this turn;
-    // the CLAIM seam (FILING_CLAIM_RE) is attempt-keyed — a vetoed/failed noteCreate cannot be
-    // reported as a filing.
-    this.addReplyCheck(
-      noFabricatedSuccess('noteCreate', {
-        reason:
-          'Only claim a note was filed/saved when the tool succeeded this turn, and only cite note_ ' +
-          'ids that exist in the vault or were created this turn — state what actually happened.',
-        claimRe: FILING_CLAIM_RE,
-        labelRe: NOTE_LABEL_RE,
-        refExists: (world, label) => (world as VaultReader).hasNote?.(label) ?? false,
-      }),
-      { id: 'agent:noFabricatedFiling' },
-    );
+    // Reply honesty (structural): relay a pending delete confirmation via askUser.
+    this.addReplyCheck(pendingConfirmMustAsk(), { id: 'agent:pendingConfirmMustAsk' });
+    // The former destructiveClaimRequiresSuccess + noFabricatedSuccess reply-checks were regex-param text
+    // judgments — deleted with the no-regex law. A re-authored bundle expresses them as llmCheck rubrics;
+    // this example drops them.
 
     // Deterministic egress rewrite of the internal kind enum spelling.
     this.addMutator(jargonScrub({ voice_transcript: 'voice transcript' }), { id: 'agent:jargonScrub' });

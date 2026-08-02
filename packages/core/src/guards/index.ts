@@ -3,20 +3,21 @@
  *
  * The guard vocabulary the agentspec skill authors. Each factory returns a {@link Guard}:
  * a deterministic `check()` (the machine gate) + an LLM-facing `prose()` (rendered into the trunk,
- * never read by the checker) — the prose+check pairing. Every predicate reads tool args / world
- * state / observed calls, NEVER the user text (the magnet firewall). The pure set is deterministic
- * by construction: no clock, no entropy, no network, no LLM call inside a check.
+ * never read by the checker) — the prose+check pairing. A deterministic predicate reads tool args /
+ * world state / observed calls; the ONE guard that reasons over conversation TEXT is `llmCheck`, whose
+ * verdict is a host adjudicator's, never a closure-held pattern. The deterministic set is pure by
+ * construction: no clock, no entropy, no network, no LLM call inside a check.
  *
- * DOMAIN-NEUTRALITY LAW (P8a, completed by P8b): this package is truly language- and label-scheme-neutral
- * — and carries no MEDIA concept and no narration language either. No generic guard carries a linguistic
- * regex (claim verbs, confirm-language) or a label scheme by default — those STRINGS/REGEXES live in the
- * business bundle's own lexicon and are passed back in as REQUIRED params (`noFabricatedSuccess(tool, {
- * claimRe, labelRe, verbClaimRe, banRe, refExists, reason })`, `degenerationGuard({ selfNarrationRe })`,
- * `pendingConfirmMustAsk({ askRe })`, `destructiveClaimRequiresSuccess(tools, { claimRe, askRe, offerRe,
- * exemptRe? })`, `noFalseFailureClaim({ claimRe })`). Media/label INPUT guards are a DOMAIN concern —
- * a domain authors them as `custom({ dim:'input' })` over its world's own accessors, never a runtime kind.
- * The runtime holds only the MECHANISM and the generic English prose. A domain-neutrality lint scans this
- * package for accented letters / language stems, so a re-introduced default fails CI.
+ * NO-REGEX LAW (2026-08-02, full-context guards): NO guard FACTORY takes a RegExp-typed parameter.
+ * Text judgment — claim language, confirm-language, PII/regulated/competitor patterns — is `llmCheck`'s
+ * job (a trusted rubric answered by the host adjudicator). Structural jobs use structural signals
+ * (`confirmFirst` / `pendingConfirmMustAsk` key on observed `askUser` + args equality, never on reply
+ * text). The former regex-param honesty/reply guards (`noFabricatedSuccess`, `destructiveClaimRequiresSuccess`,
+ * `noFalseFailureClaim`, `noCompetitorClaim`, `noOutOfSurfaceActionClaim`, `noUngroundedRegulatedFigure`,
+ * `minimalDisclosure`, `noInstructionFromData`) are DELETED — an author expresses those as `llmCheck`
+ * rubrics. Media/label INPUT guards are a DOMAIN concern — `custom({ dim:'input' })` over the world's own
+ * accessors. The runtime holds only the MECHANISM and the generic English prose; a grep-gate
+ * (guards-purity.test.ts) fails CI on any re-introduced RegExp-typed factory param.
  *
  * ONE KIND PER CATEGORY FILE, one import site. The categories are the tutorial's own sections
  * (`docs/superpowers/specs/2026-07-28-tutorial-outline-final.md` §4): flow · args · world · confirmation · honesty · reply · custom.
@@ -37,22 +38,12 @@ export {
 } from './confirmation.js';
 export { llmCheck } from './llm-check.js';
 export {
-  noFabricatedSuccess,
-  destructiveClaimRequiresSuccess,
-  noFalseFailureClaim,
-  noOutOfSurfaceActionClaim,
-  noUngroundedRegulatedFigure,
-  noCompetitorClaim,
-} from './honesty.js';
-export {
   replyMustMention,
   replyMaxOccurrences,
   replySingleQuestion,
   replyConfirmsLabels,
   emptyReply,
   degenerationGuard,
-  minimalDisclosure,
-  noInstructionFromData,
   jargonScrub,
 } from './reply.js';
 

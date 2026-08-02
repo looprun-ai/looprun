@@ -13,11 +13,10 @@
  * ONE class, `AgentSpecBase` (the former Minimal/Base/Full ladder is collapsed — a spec is a spec).
  * Its constructor auto-installs, layer-tagged and addressable, exactly:
  *   - ALWAYS the invariants EVERY agent carries: noDuplicateCall (preTool, id `minimal:noDuplicateCall`)
- *     + degenerationGuard (onReply, id `minimal:degenerationGuard`, FIRST in the onReply tail; its
- *     self-narration branch fires only when `cfg.lexicon.selfNarrationRe` is injected)
- *     + emptyReply (onReply, id `minimal:emptyReply`); and IFF `cfg.lexicon.falseFailureClaimRe` is
- *     provided, noFalseFailureClaim (onReply, id `minimal:noFalseFailureClaim`) — the always-on
- *     reply-honesty invariant (auto-iff-provided, so a lexicon-less spec is byte-stable);
+ *     + degenerationGuard (onReply, id `minimal:degenerationGuard`, FIRST in the onReply tail — a
+ *     param-free artifact-shape lint)
+ *     + emptyReply (onReply, id `minimal:emptyReply`). Reply-honesty text judgment (the former
+ *     lexicon-fed noFalseFailureClaim) is now an `llmCheck` an author binds where needed;
  *   - IFF `destructiveTools` is non-empty, the destructive-safety protocol on those tools:
  *     confirmFirst (id `base:confirmFirst`) + destructiveThrottle (id `base:destructiveThrottle`).
  * Per-tool schema guards (argRequired/argFormat) are now AUTHORED explicitly by the spec — there is no
@@ -25,7 +24,7 @@
  * layer ordering + trunk prose order). resolveBindings sorts each hook agent → full → base → minimal so
  * an agent correction always wins.
  */
-import { confirmFirst, degenerationGuard, destructiveThrottle, emptyReply, noDuplicateCall, noFalseFailureClaim } from './guards/index.js';
+import { confirmFirst, degenerationGuard, destructiveThrottle, emptyReply, noDuplicateCall } from './guards/index.js';
 import { GuardExecutionError } from './rules.js';
 import type { AgentWorld, Dim, Guard, GuardCtx, ObservedCall, ReplyMutator, SpatialEdge } from './rules.js';
 import type { DomainContract } from './trunk.js';
@@ -317,19 +316,13 @@ export interface AgentSpecConfig {
    *  flag gated on a prior-turn probe; `'prior-ask'` = a flag-less action gated on a prior-turn `askUser`.
    *  Absent ⇒ every destructive tool uses `'arg'` (byte-stable with the pre-mechanism layer). */
   confirmMechanism?: Record<string, 'arg' | 'prior-ask'>;
-  /** Business-owned lexicon injected for the ALWAYS-ON reply layer. When `falseFailureClaimRe` is
-   *  provided, `installMinimal` auto-installs `noFalseFailureClaim({ claimRe })` under
-   *  `minimal:noFalseFailureClaim` (a reply-honesty invariant every agent should carry). Auto-iff-provided
-   *  — an absent lexicon leaves the minimal layer exactly as before (non-breaking). Extensible: future
-   *  always-on language-keyed guards add their own key here, keeping the runtime language-neutral (P8a). */
-  lexicon?: { falseFailureClaimRe?: RegExp; confirmAskRe?: RegExp; selfNarrationRe?: RegExp; honestNegationRe?: RegExp };
   /** Optional domain-contract reference (see {@link AgentSpec.contract}). */
   contract?: DomainContract;
 }
 
 /**
  * The ONE AgentSpec class (no Minimal/Base/Full ladder). Its constructor always installs the universal
- * invariants (noDuplicateCall + emptyReply, + noFalseFailureClaim iff `cfg.lexicon` provides its regex)
+ * invariants (noDuplicateCall + degenerationGuard + emptyReply)
  * and, iff `destructiveTools` is non-empty, the destructive-safety protocol (confirmFirst +
  * destructiveThrottle) on those tools — confirmFirst keyed per-tool by `cfg.confirmMechanism`. Ids and
  * install order are byte-stable (`minimal:*` then `base:*`) so the layer-sorted trunk prose and
@@ -348,7 +341,6 @@ export class AgentSpecBase implements AgentSpec {
   readonly contract?: DomainContract;
   protected readonly destructiveTools: string[];
   protected readonly confirmMechanism: Record<string, 'arg' | 'prior-ask'>;
-  protected readonly lexicon: { falseFailureClaimRe?: RegExp; confirmAskRe?: RegExp; selfNarrationRe?: RegExp; honestNegationRe?: RegExp };
   private seq = 0;
 
   constructor(cfg: AgentSpecConfig) {
@@ -391,7 +383,6 @@ export class AgentSpecBase implements AgentSpec {
     if (cfg.contract) this.contract = cfg.contract;
     this.destructiveTools = [...(cfg.destructiveTools ?? [])];
     this.confirmMechanism = { ...(cfg.confirmMechanism ?? {}) };
-    this.lexicon = { ...(cfg.lexicon ?? {}) };
     // Install order is load-bearing (byte-stable trunk): universal invariants first, destructive layer
     // second — same as the former AgentSpecMinimal → AgentSpecBase super()/installBase() flow.
     this.installMinimal();
@@ -406,17 +397,14 @@ export class AgentSpecBase implements AgentSpec {
     // hook's prose lands in the trunk; `target:'any'` onReply prose renders under `## Reply rules`. The
     // previous "onReply prose does NOT render" note here was stale, and contradicted trunk.ts's own
     // PROSE-RENDERING RULE + AgentSpec.behavior's doc — see GUARDS.md §2.)
-    this.addGuard('onReply', 'any', degenerationGuard({ selfNarrationRe: this.lexicon.selfNarrationRe }), { layer: 'minimal', id: 'minimal:degenerationGuard' });
-    // ALWAYS-ON reply-honesty invariant — auto-installed IFF the bundle injects its false-failure lexicon
-    // (auto-iff-provided keeps a spec that ships no lexicon byte-stable). Ordered BEFORE emptyReply so the
-    // resolved onReply tail is `… , minimal:noFalseFailureClaim, minimal:emptyReply` (the same relative
-    // position the agent-layer install formerly held, just under a stable minimal id).
-    if (this.lexicon.falseFailureClaimRe) {
-      // Wire the domain's honest-negation pattern as the exemptRe so a MIXED-turn honest partial
-      // ("renewed A; B could not be renewed — at its limit") is not vetoed. Symmetric with
-      // destructiveClaimRequiresSuccess's exemptRe. Absent ⇒ the exemption is simply not installed.
-      this.addGuard('onReply', 'any', noFalseFailureClaim({ claimRe: this.lexicon.falseFailureClaimRe, ...(this.lexicon.honestNegationRe ? { exemptRe: this.lexicon.honestNegationRe } : {}) }), { layer: 'minimal', id: 'minimal:noFalseFailureClaim' });
-    }
+    // Output-channel degeneration lint (param-free artifact-shape lint since the no-regex law retired its
+    // selfNarrationRe branch). FIRST among the onReply minimal guards: a degenerate reply must be
+    // re-driven before any content-level check reasons about it. Its prose renders under `## Reply rules`.
+    this.addGuard('onReply', 'any', degenerationGuard(), { layer: 'minimal', id: 'minimal:degenerationGuard' });
+    // The former always-on `noFalseFailureClaim` reply-honesty invariant (auto-installed from
+    // `cfg.lexicon.falseFailureClaimRe`) is RETIRED with the no-regex law (2026-08-02): claiming inability
+    // while every call succeeded is a TEXT judgment, now `llmCheck`'s job — an author binds an `llmCheck`
+    // rubric on onReply where the domain needs it, instead of injecting a regex lexicon.
     this.addGuard('onReply', 'any', emptyReply(), { layer: 'minimal', id: 'minimal:emptyReply' });
   }
 
@@ -449,12 +437,10 @@ export class AgentSpecBase implements AgentSpec {
     const argTools = destructive.filter((t) => mechOf(t) === 'arg');
     const priorAskTools = destructive.filter((t) => mechOf(t) === 'prior-ask');
     if (argTools.length) {
-      // askRe is wired so the arg mechanism's prose-probe disjunct can accept a prior-turn
-      // replyToUser confirmation-ask as the probe (guards.ts confirmFirst).
-      this.addGuard('preTool', argTools, confirmFirst({ askRe: this.lexicon.confirmAskRe }), { layer: 'base', id: 'base:confirmFirst' });
+      this.addGuard('preTool', argTools, confirmFirst(), { layer: 'base', id: 'base:confirmFirst' });
     }
     if (priorAskTools.length) {
-      this.addGuard('preTool', priorAskTools, confirmFirst({ mechanism: 'prior-ask', askRe: this.lexicon.confirmAskRe }), { layer: 'base', id: 'base:confirmFirstPriorAsk' });
+      this.addGuard('preTool', priorAskTools, confirmFirst({ mechanism: 'prior-ask' }), { layer: 'base', id: 'base:confirmFirstPriorAsk' });
     }
     this.addGuard('preTool', destructive, destructiveThrottle(destructive), { layer: 'base', id: 'base:destructiveThrottle' });
   }
