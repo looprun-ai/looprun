@@ -2,11 +2,11 @@
  * THE EVAL SURFACE LOCK — the sibling of `packages/core/test/proofs/surface-lock.test.ts`,
  * `packages/mastra/test/surface-lock.test.ts` and `packages/models/test/surface-lock.test.ts`.
  *
- * `@looprun-ai/eval` promises exactly the 21 eval rows of `docs/superpowers/specs/2026-07-28-tutorial-outline-final.md` §4
- * (chapter 05): the subject-directory contract (8) plus the measured loop (13). Changing this list
+ * `@looprun-ai/eval` promises exactly the 22 eval rows of `docs/superpowers/specs/2026-07-28-tutorial-outline-final.md` §4
+ * (chapter 05): the subject-directory contract (8) plus the measured loop (14). Changing this list
  * changes what looprun promises and must move the outline in the same commit.
  *
- * TWELVE of the taught are also reached by the PUBLISHED `looprun-eval` bin, which does
+ * THIRTEEN of the taught are also reached by the PUBLISHED `looprun-eval` bin, which does
  * `await import('@looprun-ai/eval')` and calls them off the namespace — it imports the PACKAGE, not
  * the module files, so every symbol it touches is public by that fact (inventory §3, the
  * published-bin rule). BIN_CALLED is transcribed from `packages/eval/bin/looprun-eval.mjs`'s actual
@@ -33,10 +33,10 @@ const EVAL_BIN = join(HERE, '..', 'bin', 'looprun-eval.mjs');
 const TAUGHT_SUBJECT = [
   'loadSubject', 'loadNormsConfig', 'Subject', 'SubjectCase', 'CaseTurn', 'CaseInvariants', 'ReqCall', 'RubricItem',
 ];
-// ── 5.4 The `looprun-eval` CLI, as functions (13) ────────────────────────────
+// ── 5.4 The `looprun-eval` CLI, as functions (14) ────────────────────────────
 const TAUGHT_CLI = [
-  'runCommand', 'foldCommand', 'certCommand', 'validateCommand', 'lintPaths', 'lintSpecLaws', 'lintSpecExecution',
-  'lintSpecQuality', 'lintSubject', 'mintSeal', 'verifySeal', 'agentForCase', 'stripGovernance',
+  'runCommand', 'foldCommand', 'certCommand', 'validateCommand', 'judgeInputCommand', 'lintPaths', 'lintSpecLaws',
+  'lintSpecExecution', 'lintSpecQuality', 'lintSubject', 'mintSeal', 'verifySeal', 'agentForCase', 'stripGovernance',
 ];
 
 const TAUGHT = [...TAUGHT_SUBJECT, ...TAUGHT_CLI].sort();
@@ -48,8 +48,9 @@ const TAUGHT = [...TAUGHT_SUBJECT, ...TAUGHT_CLI].sort();
  * must still be able to NAME them.
  */
 const RIDERS = [
-  'RunCommandOptions', 'FoldCommandOptions', 'CertCommandOptions', 'ValidateCommandOptions', 'ValidateReport',
-  'CertSummary', 'CertBand', 'LintViolation', 'UngovernedBundle', 'Seal', 'SealTarget', 'SealVerification', 'NormsConfig',
+  'RunCommandOptions', 'FoldCommandOptions', 'CertCommandOptions', 'ValidateCommandOptions', 'JudgeInputCommandOptions',
+  'ValidateReport', 'CertSummary', 'CertBand', 'LintViolation', 'UngovernedBundle', 'Seal', 'SealTarget',
+  'SealVerification', 'NormsConfig',
 ];
 
 /** Inventory §7.4, verdict `delete` — module-local, never on the barrel. */
@@ -59,6 +60,8 @@ const NOT_EXPORTED = [
   'InvariantVerdict', 'RunCaseOptions', 'selectModel', 'SelectedModel', 'TargetSelection',
   'foldVerdicts', 'renderResultsMd', 'readJsonl', 'FoldResult', 'FoldRow', 'VerdictLine',
   'buildCert', 'CertOptions', 'lintSource', 'BANNED_TOKENS', 'computeArtifactHash', 'sealedFiles',
+  'buildJudgeInput', 'writeJudgeInput', 'JudgeInputCase', 'JudgeTraceCall', 'WriteJudgeInputOptions',
+  'syncVerdicts', 'renderSyncMd', 'SyncClass', 'SyncResult', 'SyncInput',
 ];
 
 /** Every name the module exports — values AND types, aliases resolved by the checker. */
@@ -88,10 +91,10 @@ function binCalledSymbols(): string[] {
 describe('eval surface lock — the barrel is the tutorial contract', () => {
   const evalExports = exportsOf(EVAL_INDEX);
 
-  it('the taught surface is exactly the outline §4 eval rows (21)', () => {
-    expect(TAUGHT.length).toBe(21);
+  it('the taught surface is exactly the outline §4 eval rows (22)', () => {
+    expect(TAUGHT.length).toBe(22);
     expect(TAUGHT_SUBJECT.length).toBe(8);
-    expect(TAUGHT_CLI.length).toBe(13);
+    expect(TAUGHT_CLI.length).toBe(14);
     expect(evalExports.filter((n) => !RIDERS.includes(n))).toEqual(TAUGHT);
   });
 
@@ -102,7 +105,7 @@ describe('eval surface lock — the barrel is the tutorial contract', () => {
   it('every symbol the published `looprun-eval` bin calls is still exported', () => {
     // Read from the bin itself — the rule is about what the CLI does, not about a list we maintain.
     const called = binCalledSymbols();
-    expect(called.length).toBe(12);
+    expect(called.length).toBe(13);
     expect(called.filter((n) => !evalExports.includes(n))).toEqual([]);
   });
 

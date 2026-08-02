@@ -9,7 +9,8 @@ import { checkTrunkStatic, loadSubject, readDeclaredTarget, validateSubject } fr
 import { validateSubjectConfig, type ValidateReport } from './validate.js';
 import { runCase, type CaseDump } from './run.js';
 import { PROVIDER_ENDPOINTS, selectModel } from './provider.js';
-import { foldVerdicts, readJsonl, renderResultsMd, type VerdictLine } from './fold.js';
+import { foldVerdicts, readJsonl, renderResultsMd, syncVerdicts, renderSyncMd, type SyncInput, type VerdictLine } from './fold.js';
+import { writeJudgeInput } from './judge-input.js';
 import { buildCert, buildCertBand, type CertBand, type CertSummary } from './cert.js';
 
 function today(): string {
@@ -149,13 +150,27 @@ export async function validateCommand(opts: ValidateCommandOptions): Promise<Val
 }
 
 export interface FoldCommandOptions {
-  dump: string;
-  verdicts: string;
+  /** Merge mode: the run's `cases.jsonl`. */
+  dump?: string;
+  /** Merge mode: the judge's `verdicts.jsonl`. */
+  verdicts?: string;
   out?: string;
+  /** SYNC mode (spec §4): run dirs whose byte-identical transcripts must share one verdict. */
+  sync?: string[];
 }
 
-/** Merge judge verdicts (`{caseId, verdict|overall, reasons}` jsonl) into `RESULTS.md`. */
+/**
+ * `looprun-eval fold`. Two modes:
+ *   - MERGE (default): fold judge verdicts (`{caseId, verdict|overall, reasons}` jsonl) into
+ *     `RESULTS.md` (final pass = invariants AND judge).
+ *   - SYNC (`--sync <dirA> <dirB> …`): force one verdict per byte-identical transcript class across
+ *     run dirs, mechanically (no judge). Writes `verdicts.synced.jsonl` into each dir (drop-in for
+ *     `cert`) plus a `SYNC.md` provenance report. Returns the SYNC.md path.
+ */
 export function foldCommand(opts: FoldCommandOptions): string {
+  if (opts.sync?.length) return foldSync(opts.sync, opts.out);
+
+  if (!opts.dump || !opts.verdicts) throw new Error('fold: --dump and --verdicts are required (or --sync <dir> …)');
   const dumps = readJsonl<CaseDump>(readFileSync(opts.dump, 'utf8'));
   const verdicts = readJsonl<VerdictLine>(readFileSync(opts.verdicts, 'utf8'));
   const fold = foldVerdicts(dumps, verdicts);
@@ -166,6 +181,49 @@ export function foldCommand(opts: FoldCommandOptions): string {
   const out = opts.out ?? join(dirname(resolve(opts.dump)), 'RESULTS.md');
   writeFileSync(out, renderResultsMd(dumps, fold) + '\n');
   return out;
+}
+
+/** SYNC-mode fold: read each dir's dumps + verdicts, reconcile byte-identical transcripts, and
+ *  persist per-dir `verdicts.synced.jsonl` + a shared `SYNC.md`. */
+function foldSync(dirs: string[], out?: string): string {
+  const inputs: SyncInput[] = dirs.map((dir) => ({
+    dir: resolve(dir),
+    dumps: readJsonl<CaseDump>(readFileSync(join(dir, 'cases.jsonl'), 'utf8')),
+    verdicts: readJsonl<VerdictLine>(readFileSync(join(dir, 'verdicts.jsonl'), 'utf8')),
+  }));
+  const result = syncVerdicts(inputs);
+  for (const line of result.provenance) process.stderr.write(`[looprun-eval] ${line}\n`);
+
+  // Drop-in synced verdicts per dir (feed straight into `cert`).
+  const byDir = new Map<string, Array<{ caseId: string; verdict: string }>>();
+  for (const s of result.synced) {
+    const list = byDir.get(s.dir) ?? [];
+    list.push({ caseId: s.caseId, verdict: s.verdict });
+    byDir.set(s.dir, list);
+  }
+  for (const [dir, rows] of byDir) {
+    writeFileSync(join(dir, 'verdicts.synced.jsonl'), rows.map((r) => JSON.stringify(r)).join('\n') + '\n');
+  }
+
+  const syncMd = out ?? join(resolve(dirs[0]), '..', 'SYNC.md');
+  writeFileSync(syncMd, renderSyncMd(result) + '\n');
+  return syncMd;
+}
+
+export interface JudgeInputCommandOptions {
+  /** The run dir (holds `cases.jsonl`). */
+  dir: string;
+  /** Split into `judge-input.partK.jsonl` of at most N cases each. Absent = one file. */
+  chunk?: number;
+}
+
+/**
+ * `looprun-eval judge-input` — build the blind, per-case JSONL the judge reads (spec §3). The ONLY
+ * sanctioned path to the judge: turn boundaries preserved, no arm/rep/model labels, deterministic
+ * case order. Returns the paths written into the run dir.
+ */
+export function judgeInputCommand(opts: JudgeInputCommandOptions): string[] {
+  return writeJudgeInput(opts.dir, { chunk: opts.chunk });
 }
 
 export interface CertCommandOptions {

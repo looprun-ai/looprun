@@ -5,7 +5,9 @@
  *   looprun-eval run  --subject <dir> [--model <id>] [--base-url <url>] [--api-key-env <ENV>]
  *                     [--case id[,id]] [--ungoverned] [--thinking] [--out <dir>]
  *   looprun-eval validate --subject <dir> [--reached-floor <ratio>]
+ *   looprun-eval judge-input <run-dir> [--chunk <N>]
  *   looprun-eval fold --dump <cases.jsonl> --verdicts <verdicts.jsonl> [--out <RESULTS.md>]
+ *   looprun-eval fold --sync <run-dir> <run-dir> … [--out <SYNC.md>]
  *   looprun-eval cert <run-dir> [--bar 0.9] [--model <label>] [--date <iso>] [--note <text>]
  *   looprun-eval seal <subject-dir> [--verify] [--target model:rate:reps ...] [--bar 0.9] [--date <iso>]
  *   looprun-eval lint [paths…] [--spec-laws --subject <dir>]
@@ -18,8 +20,12 @@ const HELP = `looprun-eval <command>
                      Target default: the subject's ask/targets.json (flags/env override).
   validate [flags]   Schema + references + premise-coherence over a subject, offline (no spend).
                      --subject <dir> (required) [--reached-floor <ratio>] Exits 1 on any blocking issue.
+  judge-input <dir>  Build the blind per-case JSONL the judge reads (turn boundaries preserved,
+                     no arm/rep labels, deterministic order). [--chunk <N>] → judge-input.partK.jsonl.
   fold [flags]       Merge judge verdicts into RESULTS.md (final pass = invariants AND judge).
                      --dump <cases.jsonl> --verdicts <verdicts.jsonl> [--out <RESULTS.md>]
+                     --sync <dir> <dir> …  Force one verdict per byte-identical transcript across run
+                     dirs (mechanical, no judge) → verdicts.synced.jsonl per dir + SYNC.md.
   cert <dir> [dir…]  Fold cases.jsonl + verdicts.jsonl → cert.json + CERT.md (reps=1, stated).
                      2+ dirs = multi-rep BAND → cert-band.json + CERT-BAND.md; certified only
                      if the FLOOR over reps clears the bar. [--out <dir>] for the band files.
@@ -39,7 +45,7 @@ function has(name) {
   return process.argv.includes(`--${name}`);
 }
 
-const VALUE_FLAGS = new Set(['--subject', '--model', '--base-url', '--api-key-env', '--case', '--out', '--dump', '--verdicts', '--bar', '--date', '--note', '--target', '--reached-floor']);
+const VALUE_FLAGS = new Set(['--subject', '--model', '--base-url', '--api-key-env', '--case', '--out', '--dump', '--verdicts', '--bar', '--date', '--note', '--target', '--reached-floor', '--chunk']);
 
 function positionals() {
   const argv = process.argv.slice(2);
@@ -92,7 +98,21 @@ async function main() {
     return;
   }
 
+  if (cmd === 'judge-input') {
+    const dir = rest[0];
+    if (!dir) throw new Error('usage: looprun-eval judge-input <run-dir> [--chunk <N>]');
+    const paths = api.judgeInputCommand({ dir, chunk: has('chunk') ? Number(flag('chunk')) : undefined });
+    for (const p of paths) console.log(p);
+    return;
+  }
+
   if (cmd === 'fold') {
+    if (has('sync')) {
+      const dirs = rest;
+      if (dirs.length < 2) throw new Error('fold --sync: needs at least 2 run dirs');
+      console.log(api.foldCommand({ sync: dirs, out: flag('out', undefined) }));
+      return;
+    }
     const dump = flag('dump');
     const verdicts = flag('verdicts');
     if (!dump || !verdicts) throw new Error('fold: --dump and --verdicts are required');

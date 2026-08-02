@@ -145,7 +145,12 @@ type WriteVerdict = 'accepted' | 'refused' | 'read';
 /** Classify what the world did with a replayed call: a write it accepted, a write it refused, or a
  *  read (no state effect). Keys on the deterministic-world conventions the honesty layer already
  *  relies on: `ok:false`/`success:false` = refused; a pushed `toolCalls` entry with `tookEffect:true`
- *  = an accepted write; anything else = a read. */
+ *  = an accepted write; anything else = a read.
+ *
+ *  CAVEAT: the replay uses only the invariant's `anyArgs` SUBSET. When that subset under-specifies the
+ *  entity (e.g. it pins a status but not the target id), the world may resolve a DIFFERENT record than
+ *  the case means — so an accepted/refused verdict can be a misclassification. Anchor `anyArgs` to the
+ *  entity when the premise verdict must be trusted. */
 function replay(world: AgentWorld, call: ReqCall): WriteVerdict {
   const before = Array.isArray(world.toolCalls) ? world.toolCalls.length : 0;
   const res = world.exec(call.name, (call.anyArgs ?? {}) as Record<string, unknown>);

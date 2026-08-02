@@ -1,12 +1,12 @@
 /**
- * @looprun-ai/eval — the public API: exactly the 21 eval rows of `docs/superpowers/specs/2026-07-28-tutorial-outline-final.md` §4
+ * @looprun-ai/eval — the public API: exactly the 22 eval rows of `docs/superpowers/specs/2026-07-28-tutorial-outline-final.md` §4
  * (chapter 05 — the subject directory contract, then the measured loop).
  *
- * Twelve of them are ALSO reached by the published `looprun-eval` bin, which does
+ * Thirteen of them are ALSO reached by the published `looprun-eval` bin, which does
  * `await import('@looprun-ai/eval')` and calls them off the namespace — the package, not the module
- * files. That makes the bin a second, independent reason those twelve stay here: `runCommand`
- * `foldCommand` `certCommand` `validateCommand` `mintSeal` `verifySeal` `lintPaths` `loadSubject`
- * `lintSpecLaws` `lintSpecExecution` `lintSpecQuality` `lintSubject`.
+ * files. That makes the bin a second, independent reason those thirteen stay here: `runCommand`
+ * `foldCommand` `certCommand` `validateCommand` `judgeInputCommand` `mintSeal` `verifySeal` `lintPaths`
+ * `loadSubject` `lintSpecLaws` `lintSpecExecution` `lintSpecQuality` `lintSubject`.
  *
  * Eval has NO `/internal` subpath: the case runner, the fold/cert internals, the provider selection
  * and the lint primitives stay module-local — in-package code and this package's tests import
@@ -18,7 +18,7 @@ export type { Subject, SubjectCase, CaseTurn, CaseInvariants, ReqCall, RubricIte
 export { loadNormsConfig } from './norms-config.js';
 export type { NormsConfig } from './norms-config.js';
 export { stripGovernance } from './ungoverned.js';
-export { runCommand, foldCommand, certCommand, validateCommand } from './commands.js';
+export { runCommand, foldCommand, certCommand, validateCommand, judgeInputCommand } from './commands.js';
 export { lintPaths, lintSpecLaws, lintSpecExecution } from './lint.js';
 export { lintSpecQuality } from './lint-spec-quality.js';
 export { lintSubject } from './lint-subject.js';
@@ -31,9 +31,10 @@ export { mintSeal, verifySeal } from './seal.js';
  * `UngovernedBundle` (`stripGovernance`), `SealTarget` / `Seal` / `SealVerification` (`mintSeal` / `verifySeal`).
  * The outline's §5 keeps them out of the taught contract by the annotation rule — every one is
  * either an object-literal argument or an inferred result — but a consumer building with
- * `declaration: true` must still be able to NAME them (`TS4023`/`TS2742`).
+ * `declaration: true` must still be able to NAME them (`TS4023`/`TS2742`). `JudgeInputCommandOptions`
+ * (the `looprun-eval judge-input` verb) rides here for the same reason.
  */
-export type { RunCommandOptions, FoldCommandOptions, CertCommandOptions, ValidateCommandOptions } from './commands.js';
+export type { RunCommandOptions, FoldCommandOptions, CertCommandOptions, ValidateCommandOptions, JudgeInputCommandOptions } from './commands.js';
 export type { ValidateReport } from './validate.js';
 export type { CertSummary, CertBand } from './cert.js';
 export type { LintViolation } from './lint.js';

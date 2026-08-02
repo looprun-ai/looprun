@@ -21,13 +21,18 @@ a pending item that quietly disappears is the failure this file exists to preven
 | **`noUngroundedRegulatedFigure` prose carries domain wording** | Guard is generic but its rendered prose speaks one domain's vocabulary — a business-string leak in the neutral runtime. | Re-word the prose domain-neutral (check untouched). |
 | **`custom()` guards cannot read tool-result text** | Hook sees calls (name + args) but not what the tool returned; "reply must cite the returned price" is unwritable. | Expose the result payload to the hook. |
 | **Release script silently skips an existing version** | Publishing an already-registered version is a silent no-op — a ghost release (it happened). | Abort loudly when the target version exists. |
-| **Fold verdict-sync is a hand step** | Byte-identical transcripts must get the same verdict; today synced by hand after judging. | Build into `looprun-eval fold` (mechanical, no judge). |
 | **Attestation service (design approved, nothing built)** | Design at `docs/superpowers/specs/2026-07-31-attestation-service-design.md`: ed25519 layer-2 attestation over the seal, free-for-telemetry service, hashed client identifiers, transparency log. Zero code exists — no `attest` command, no service, no keys. | When prioritized: implementation plan for (1) `looprun-eval attest` + telemetry builder, (2) the service repo, (3) `verify` layer-2 extension. |
 | **Certification has no held-out split** | The T3 fix loop iterates against the same exam that S1 certifies — training-on-the-test-set (Goodhart) risk, flagged independently by two round-2 LP reviewers (2026-07-31). Mitigations exist (blind exam authorship, worst-run floor, discrimination gate) but no case is held out of the fix loop. The LP deliberately makes NO held-out claim until this exists. | Design a held-out split (or equivalent) in the skill's T/S phases; then the LP may say "the certified score comes from cases the fix loop never saw". |
 | **Abstain tool-name leak** | `buildHonestAbstain` (turn.ts) interpolates raw tool names into the reply; produced labels, not internal names, are what a user should see. | Map names → produced labels before wiring it into any `exhaustionReply` [gate on wiring]. |
 | **Uncheckable ruleId dropped at load** | `norms-config.ts` discards the `ruleId` on `uncheckable` rules at load; the judge-rubric layer needs it to attribute a verdict to a rule. | Restore id plumbing before the judge-rubric layer consumes uncheckable rules [gate on judge layer]. |
 | **E1 re-baseline** | Forbidden invariants now score over executed ∪ guard-vetoed attempts (E1); every pre-E1 measured number (coworking, atlas) was computed on the old executed-only basis and carries a NEW invalidation reason. | Re-measure or withdraw before citing any pre-E1 number. |
 | **`pendingConfirmMustAsk` regex branch removal (spec §4)** | The replyToUser-regex branch of `pendingConfirmMustAsk` is slated for removal, but doing it now would void coworking's measured numbers mid-increment. | Deferred to bundle migration — remove alongside the coworking/atlas port. |
+
+Retired: *Fold verdict-sync is a hand step* — 2026-08-02, `looprun-eval fold --sync <dirA> <dirB> …`
+now forces one verdict per byte-identical (trace+replies) transcript class across run dirs,
+mechanically (majority; ties resolve to the strictest, so sync never inflates a pass-rate). Writes
+`verdicts.synced.jsonl` per dir (drop-in for `cert`) + a `SYNC.md` provenance line per reconciled
+class (spec §4).
 
 Retired: *cert has no native multi-rep* — 2026-07-31, `looprun-eval cert <r0> <r1> …` now emits
 `cert-band.json` + `CERT-BAND.md` (per-rep rates, band, per-case majority; certified only when
