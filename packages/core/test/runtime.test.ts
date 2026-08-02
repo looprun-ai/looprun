@@ -60,8 +60,8 @@ describe('ledger', () => {
     recordToolResult(ledger, 'gen', {}, { label: 'i101' });
     // Terminal recording is a PAIR since the same-step concurrency fix: recordTerminalCall pushes
     // the observed entry (hook time, synchronous), recordTerminal captures the reply (execute time).
-    recordTerminalCall(ledger, 'replyToUser', { text: 'hi' });
-    recordTerminal(ledger, 'replyToUser', { text: 'hi' });
+    recordTerminalCall(ledger, 'respond', { message: 'hi', did: [] });
+    recordTerminal(ledger, 'respond', { message: 'hi', did: [] });
     expect(ledger.terminalReply).toBe('hi');
     beginTurn(ledger, 1);
     expect(ledger.observed.length).toBe(2);

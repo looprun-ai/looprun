@@ -25,10 +25,10 @@ function ctxWith(partial: Partial<GuardCtx> & { observed: ObservedCall[]; turnIn
 }
 
 const ask = (turn: number): ObservedCall => ({
-  name: 'askUser',
+  name: 'respond',
   ok: true,
   turnIndex: turn,
-  args: { text: 'q?' },
+  args: { message: 'q?', asked: true, did: [] },
 });
 
 const probe = (tool: string, turn: number, args: Record<string, unknown> = {}): ObservedCall => ({

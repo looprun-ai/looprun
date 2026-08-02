@@ -115,13 +115,13 @@ export function superseded(steps: unknown) {
 export function record(l: TurnLedger, w: AgentWorld): void {
   beginTurn(l, 0);
   recordToolResult(l, 'addEvent', {}, { ok: true }, w);
-  recordTerminal(l, 'replyToUser', {});
-  recordTerminalCall(l, 'replyToUser', {});
+  recordTerminal(l, 'respond', {});
+  recordTerminalCall(l, 'respond', {});
   pruneSupersededTerminals(l, []);
 }
 export const ok = resultOk({ ok: true });
-export const term = isTerminal('replyToUser');
-export const normalized = normalizeTerminalToolDef({ name: 'replyToUser', description: 'd', inputSchema: { type: 'object' } });
+export const term = isTerminal('respond');
+export const normalized = normalizeTerminalToolDef({ name: 'respond', description: 'd', inputSchema: { type: 'object' } });
 
 // ── Authored positions ───────────────────────────────────────────────────────
 export const usage: TokenUsage | undefined = undefined;

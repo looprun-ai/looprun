@@ -250,27 +250,28 @@ const confirmFirstProof: GuardProof = {
     },
     {
       // no-regex law: a prior-turn PROSE confirmation-ask no longer unlocks (that text judgment is
-      // retired); the go-ahead must be a structural same-tool probe or an askUser. So this now DENIES.
+      // retired); the go-ahead must be a structural same-tool probe or an ask (respond+asked:true). A
+      // respond WITHOUT asked is just prose, so this now DENIES.
       name: 'arg mechanism: a prior-turn prose confirmation-ask does NOT unlock (structural only)',
       polarity: 'negative',
       ctx: {
         tool: 'deleteItem',
         args: { confirmed: true },
         observed: [
-          { name: 'replyToUser', args: { text: 'Deleting item itm-1 is permanent — are you sure?' }, ok: true, turnIndex: 0 },
+          { name: 'respond', args: { message: 'Deleting item itm-1 is permanent — are you sure?', did: [] }, ok: true, turnIndex: 0 },
         ],
         turnIndex: 1,
       },
       l1: 'fires',
     },
     {
-      name: 'arg mechanism: a prior-turn askUser counts as the probe',
+      name: 'arg mechanism: a prior-turn ask (respond+asked) counts as the probe',
       polarity: 'positive',
       ctx: {
         tool: 'deleteItem',
         args: { confirmed: true },
         observed: [
-          { name: 'askUser', args: { question: 'Delete item itm-1 — are you sure?' }, ok: true, turnIndex: 0 },
+          { name: 'respond', args: { message: 'Delete item itm-1 — are you sure?', asked: true, did: [] }, ok: true, turnIndex: 0 },
         ],
         turnIndex: 1,
       },
@@ -283,7 +284,7 @@ const confirmFirstProof: GuardProof = {
         tool: 'deleteItem',
         args: { confirmed: true },
         observed: [
-          { name: 'replyToUser', args: { text: 'Are you sure?' }, ok: true, turnIndex: 1 },
+          { name: 'respond', args: { message: 'Are you sure?', asked: true, did: [] }, ok: true, turnIndex: 1 },
         ],
         turnIndex: 1,
       },
@@ -296,7 +297,7 @@ const confirmFirstProof: GuardProof = {
         tool: 'deleteItem',
         args: { confirmed: true },
         observed: [
-          { name: 'replyToUser', args: { text: 'Here is the item detail you asked for.' }, ok: true, turnIndex: 0 },
+          { name: 'respond', args: { message: 'Here is the item detail you asked for.', did: [] }, ok: true, turnIndex: 0 },
         ],
         turnIndex: 1,
       },
@@ -385,7 +386,7 @@ const noActAfterAskSameTurnProof: GuardProof = {
       polarity: 'negative',
       ctx: {
         tool: 'deleteItem',
-        observed: [{ name: 'askUser', args: { text: 'x' }, ok: true, turnIndex: 0 }],
+        observed: [{ name: 'respond', args: { message: 'x', asked: true, did: [] }, ok: true, turnIndex: 0 }],
         turnIndex: 0,
       },
       l1: 'fires',
@@ -407,7 +408,7 @@ const noActAfterAskSameTurnProof: GuardProof = {
       polarity: 'positive',
       ctx: {
         tool: 'deleteItem',
-        observed: [{ name: 'askUser', args: { text: 'x' }, ok: true, turnIndex: 0 }],
+        observed: [{ name: 'respond', args: { message: 'x', asked: true, did: [] }, ok: true, turnIndex: 0 }],
         turnIndex: 1,
       },
       l1: 'silent',
@@ -427,7 +428,7 @@ const noActAfterAskSameTurnProof: GuardProof = {
       polarity: 'neutral',
       ctx: {
         tool: 'searchItem',
-        observed: [{ name: 'askUser', args: { text: 'x' }, ok: true, turnIndex: 0 }],
+        observed: [{ name: 'respond', args: { message: 'x', asked: true, did: [] }, ok: true, turnIndex: 0 }],
         turnIndex: 0,
       },
       l1: 'silent',
@@ -628,7 +629,7 @@ const askedEarlierProof: GuardProof = {
       polarity: 'positive',
       ctx: {
         args: { condition: 'good' },
-        observed: [{ name: 'askUser', args: { text: 'q?' }, ok: true, turnIndex: 1 }],
+        observed: [{ name: 'respond', args: { message: 'q?', asked: true, did: [] }, ok: true, turnIndex: 1 }],
         turnIndex: 2,
       },
       l1: 'silent',

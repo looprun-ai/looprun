@@ -96,10 +96,10 @@ describe('confirmFirst — adversarial', () => {
     expect(g.check(confirm)).not.toBeNull();
   });
 
-  it('BREAK: via:either accepts an UNRELATED earlier askUser as license for a destructive confirm', () => {
-    // The attacker's askUser was about something else entirely — the guard does not bind the ask to the
-    // record. Any recent successful askUser unlocks confirmed:true on any destructive record.
-    const unrelatedAsk = okCall('askUser', 1, { text: 'what is your favourite colour?' });
+  it('BREAK: via:either accepts an UNRELATED earlier ask as license for a destructive confirm', () => {
+    // The attacker's ask was about something else entirely — the guard does not bind the ask to the
+    // record. Any recent successful ask unlocks confirmed:true on any destructive record.
+    const unrelatedAsk = okCall('respond', 1, { message: 'what is your favourite colour?', asked: true, did: [] });
     const confirm = ctxWith({
       tool: 'deleteRecord',
       args: { recordId: 'victim-999', confirmed: true },
@@ -111,7 +111,7 @@ describe('confirmFirst — adversarial', () => {
 
   it('HOLDS (via:probe): an unrelated askUser does NOT license — only a record-bound probe does', () => {
     const gp = confirmFirst({ via: 'probe' });
-    const unrelatedAsk = okCall('askUser', 1, { text: 'unrelated' });
+    const unrelatedAsk = okCall('respond', 1, { message: 'unrelated', asked: true, did: [] });
     const confirm = ctxWith({
       tool: 'deleteRecord',
       args: { recordId: 'victim', confirmed: true },
@@ -213,19 +213,19 @@ describe('noActAfterAskSameTurn — adversarial', () => {
   const g = noActAfterAskSameTurn(['deleteRecord']);
 
   it('LEAK: a destructive tool NOT in the set acts freely in the same turn as an ask', () => {
-    const asked = okCall('askUser', 3, { text: 'ok?' });
+    const asked = okCall('respond', 3, { message: 'ok?', asked: true, did: [] });
     const act = ctxWith({ tool: 'wipeAll', args: {}, observed: [asked], turnIndex: 3 });
     expect(g.check(act)).toBeNull(); // wipeAll uncovered = LEAK (coverage gap)
   });
 
-  it('LEAK: asking via replyToUser-with-question is NOT detected as "asked" → listed tool acts same turn', () => {
-    const asked = okCall('replyToUser', 3, { text: 'Delete it? (yes/no)' });
+  it('LEAK: asking in prose (respond WITHOUT asked) is NOT detected as "asked" → listed tool acts same turn', () => {
+    const asked = okCall('respond', 3, { message: 'Delete it? (yes/no)', did: [] });
     const act = ctxWith({ tool: 'deleteRecord', args: {}, observed: [asked], turnIndex: 3 });
-    expect(g.check(act)).toBeNull(); // only name==='askUser' is detected = LEAK
+    expect(g.check(act)).toBeNull(); // only respond+asked:true is detected = LEAK
   });
 
-  it('HOLDS: a real same-turn askUser blocks the listed tool', () => {
-    const asked = okCall('askUser', 3, { text: 'ok?' });
+  it('HOLDS: a real same-turn ask (respond+asked) blocks the listed tool', () => {
+    const asked = okCall('respond', 3, { message: 'ok?', asked: true, did: [] });
     const act = ctxWith({ tool: 'deleteRecord', args: {}, observed: [asked], turnIndex: 3 });
     expect(g.check(act)).not.toBeNull();
   });

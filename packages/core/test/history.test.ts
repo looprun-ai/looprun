@@ -59,7 +59,7 @@ describe('recordTurnHistory', () => {
   it('excludes terminal calls from history toolCalls', () => {
     const ledger = createLedger();
     beginTurn(ledger, 0, 'hi');
-    ledger.observed.push({ name: 'replyToUser', args: { text: 'hi there' }, ok: true, turnIndex: 0 });
+    ledger.observed.push({ name: 'respond', args: { message: 'hi there', did: [] }, ok: true, turnIndex: 0 });
     recordTurnHistory(ledger, 'hi there');
     expect(ledger.history[0].toolCalls).toEqual([]);
   });

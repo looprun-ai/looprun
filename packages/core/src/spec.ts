@@ -34,7 +34,7 @@ export type Hook = 'onInput' | 'preTool' | 'postTool' | 'onReply';
 export type ToolTarget = 'any' | string[];
 export type Layer = 'minimal' | 'base' | 'full' | 'agent';
 
-/** true ⇒ force reply()-only this turn (drop askUser). State-driven, per turn. */
+/** true ⇒ force reply-only this turn (respond with `asked` false/absent). State-driven, per turn. */
 export type TerminalPolicy = (world: AgentWorld) => boolean;
 
 /** State-keyed positive guidance rendered statically as "IF <cond> → <directive>" (cache-stable). */
@@ -181,7 +181,7 @@ export interface AgentSpec {
   assertDestructiveConfirmable?(toolDefs: ReadonlyArray<{ name: string; inputSchema?: { properties?: Record<string, unknown> } }>): void;
 }
 
-const TERMINAL_TOOLS = ['replyToUser', 'askUser'];
+const TERMINAL_TOOLS = ['respond'];
 const LAYER_ORDER: Record<Layer, number> = { agent: 0, full: 1, base: 2, minimal: 3 };
 
 /**

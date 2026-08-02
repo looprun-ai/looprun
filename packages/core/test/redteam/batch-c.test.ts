@@ -134,7 +134,7 @@ describe('pendingConfirmMustAsk', () => {
       reply: 'Your account has been permanently deleted.',
       observed: [
         obs({ name: 'deleteAccount', turnIndex: 3, ok: true, resultFlags: { requiresConfirmation: true } }),
-        obs({ name: 'askUser', turnIndex: 3, ok: true, args: { question: 'What is your billing email?' } }),
+        obs({ name: 'respond', turnIndex: 3, ok: true, args: { message: 'What is your billing email?', asked: true, did: [] } }),
       ],
     } as unknown as GuardCtx;
     expect(g.check(ctx)).toBeNull(); // pending confirm relayed by an off-topic ask → allowed
@@ -150,7 +150,7 @@ describe('askedEarlier', () => {
       tool: 'completeMaintenance',
       turnIndex: 2,
       args: { diagnosis: 'engine seized' },
-      observed: [obs({ name: 'askUser', turnIndex: 1, ok: true, args: { question: 'your name?' } })],
+      observed: [obs({ name: 'respond', turnIndex: 1, ok: true, args: { message: 'your name?', asked: true, did: [] } })],
     } as unknown as GuardCtx;
     expect(g.check(ctx)).toBeNull(); // ask was about the name, not the diagnosis → still licensed
   });
@@ -161,7 +161,7 @@ describe('askedEarlier', () => {
       tool: 'completeMaintenance',
       turnIndex: 4,
       args: { diagnosis: 'x' },
-      observed: [obs({ name: 'askUser', turnIndex: 1, ok: true })],
+      observed: [obs({ name: 'respond', turnIndex: 1, ok: true, args: { asked: true, did: [] } })],
     } as unknown as GuardCtx;
     expect(g.check(ctx)).not.toBeNull();
   });

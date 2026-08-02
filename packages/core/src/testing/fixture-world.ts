@@ -119,9 +119,8 @@ export class FixtureWorld implements AgentWorld {
 
   exec(name: string, args: Record<string, unknown>): unknown {
     switch (name) {
-      // Runtime terminals: no world side effect, always ok.
-      case 'replyToUser':
-      case 'askUser':
+      // Runtime terminal: no world side effect, always ok.
+      case 'respond':
         return { success: true };
 
       case 'createItem': {
@@ -202,9 +201,9 @@ const obj = (properties: Record<string, unknown>, required: string[] = []): Reco
 });
 
 /**
- * Tool defs for the 11 domain tools. The runtime terminals (`replyToUser` / `askUser`) are NOT listed
- * here: the Mastra backend auto-builds them from `terminalToolDefs()` when the host's `toolDefs` omit
- * them (see buildWorldTools) — so a turn closes with these 11 defs alone.
+ * Tool defs for the 11 domain tools. The runtime terminal (`respond`) is NOT listed
+ * here: the Mastra backend auto-builds it from `terminalToolDefs()` when the host's `toolDefs` omit
+ * it (see buildWorldTools) — so a turn closes with these 11 defs alone.
  */
 export const FIXTURE_TOOL_DEFS: ToolDef[] = [
   { name: 'createItem', description: 'Create a new item.', inputSchema: obj({ title: { type: 'string' } }, ['title']) },
@@ -257,6 +256,6 @@ export const FIXTURE_LEXICON = {
   productionClaimRe: /\bpublished to production\b/i,
   /** degenerationGuard `selfNarrationRe` — the third-person self-narration branch, now lexicon-injected
    *  (generic English; no /g lastIndex to leak). Absent ⇒ the narration branch is OFF. */
-  selfNarrationRe: /\b(?:I closed the turn|by calling replyToUser|The assistant (?:confirmed|called|then))\b/i,
+  selfNarrationRe: /\b(?:I closed the turn|by calling respond|The assistant (?:confirmed|called|then))\b/i,
 } as const;
 

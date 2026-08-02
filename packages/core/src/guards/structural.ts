@@ -8,6 +8,7 @@
  * via `via:'probe'` — 2026-08-02.)
  */
 import type { Guard, GuardCtx } from '../rules.js';
+import { isAskEvent } from '../runtime/claims.js';
 
 /**
  * A value the agent may only RECORD after it has asked the operator for it in an EARLIER turn.
@@ -37,7 +38,7 @@ export function askedEarlier(opts: { tool: string; arg?: string; within?: number
       }
       const askedEarlierTurn = ctx.observed.some(
         (o) =>
-          o.name === 'askUser' &&
+          isAskEvent(o) &&
           o.ok &&
           ctx.turnIndex - o.turnIndex >= 1 &&
           ctx.turnIndex - o.turnIndex <= within,

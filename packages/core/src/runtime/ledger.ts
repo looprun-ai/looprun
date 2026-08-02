@@ -139,9 +139,9 @@ export function recordToolResult(ledger: TurnLedger, name: string, args: Record<
 
 /** Record a terminal CALL in the observed ledger. Called from the guard hooks' SYNCHRONOUS segment
  *  (before any await): the model runtime dispatches a step's tool calls concurrently (Promise.all)
- *  but STARTS them in emission order, so a synchronous hook-time push makes a same-step `askUser`
- *  visible to a sibling destructive call's preTool checks — closing the noActAfterAskSameTurn
- *  same-step bypass. */
+ *  but STARTS them in emission order, so a synchronous hook-time push makes a same-step `respond`
+ *  (with `asked:true`) visible to a sibling destructive call's preTool checks — closing the
+ *  noActAfterAskSameTurn same-step bypass. */
 export function recordTerminalCall(ledger: TurnLedger, name: string, args: Record<string, unknown>): void {
   ledger.observed.push({ name, args, ok: true, turnIndex: ledger.turnIndex });
 }
@@ -149,7 +149,7 @@ export function recordTerminalCall(ledger: TurnLedger, name: string, args: Recor
 /**
  * Drop terminal calls that were emitted but never DELIVERED (see `supersededTerminalCalls`). Runs
  * once the generation has resolved, so the hook-time record that gave a same-step sibling's preTool
- * checks visibility of an `askUser` has already done its job; what is corrected here is the
+ * checks visibility of an ask (`respond` with `asked:true`) has already done its job; what is corrected here is the
  * cross-turn evidence, where an undelivered question must not read as consent obtained.
  * Returns the names actually pruned, for the turn's recovery log.
  */
@@ -170,9 +170,10 @@ export function pruneSupersededTerminals(
   return pruned;
 }
 
-/** Capture the terminal REPLY text (the observed push happens at hook time via recordTerminalCall). */
+/** Capture the terminal REPLY text (the observed push happens at hook time via recordTerminalCall).
+ *  The user-facing prose is `respond`'s `message` arg (SCG, 2026-08-02 — was `text`). */
 export function recordTerminal(ledger: TurnLedger, name: string, args: Record<string, unknown>): void {
-  const text = typeof args.text === 'string' ? args.text : '';
+  const text = typeof args.message === 'string' ? args.message : '';
   if (text.trim()) ledger.terminalReply = text;
 }
 

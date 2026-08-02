@@ -248,7 +248,7 @@ export function redriveMessage(violations: ReplyViolation[]): string {
  *
  * `okTools` is read as a BOOLEAN — "did anything actually land this turn?" — and never interpolated.
  * A tool identifier is internal vocabulary: the user did not ask for `listItems`, they asked for
- * their items, and a runtime terminal (`replyToUser`) named in a delivered sentence is pure leakage.
+ * their items, and the runtime terminal (`respond`) named in a delivered sentence is pure leakage.
  * The only nouns that reach the text are `produced`: labels the world itself issued for what it
  * created. Callers pass a DOMAIN-only `okTools` (see finalizeReply).
  */
@@ -371,7 +371,7 @@ export async function finalizeReply(
   if (finalViolations.length) {
     // Salvage-before-canned-closure (measured on the
     // eight-second-limit / zero-quota cells): when the turn DID produce a verified user-facing text —
-    // the `text` arg of a SUCCESSFUL askUser/replyToUser call this turn — and that text itself passes
+    // the `message` arg of a SUCCESSFUL `respond` call this turn — and that text itself passes
     // every onReply check, surface IT instead of the generic exhaustion closure. The violations that got
     // us here came from the generated reply (or postTool reports), not from this verified text; swallowing
     // correct content behind the canned fallback is the silent-filter deadlock's judge-facing twin.
@@ -379,10 +379,10 @@ export async function finalizeReply(
     // deterministic checks — never fabricated. postTool violations are NOT re-counted (they report an
     // already-run result; no choice of closure text can undo them).
     const lastAsk = [...ledger.observed].reverse().find(
-      (o) => o.turnIndex === ledger.turnIndex && o.ok && (o.name === 'askUser' || o.name === 'replyToUser') && typeof o.args?.text === 'string' && (o.args.text as string).trim().length > 0,
+      (o) => o.turnIndex === ledger.turnIndex && o.ok && o.name === 'respond' && typeof o.args?.message === 'string' && (o.args.message as string).trim().length > 0,
     );
     if (lastAsk) {
-      const candidate = (lastAsk.args.text as string).trim();
+      const candidate = (lastAsk.args.message as string).trim();
       if (candidate === text.trim()) {
         ledger.turnCorrections.push('salvage-miss:same-text');
       } else {
@@ -403,7 +403,7 @@ export async function finalizeReply(
     // DOMAIN-only evidence. This list is the closure's answer to "what actually landed this turn",
     // and a turn-closing terminal is not that — it is the runtime's own delivery mechanism. The hooks
     // record every terminal in `observed` with ok:true (they must, so a same-step sibling's preTool
-    // checks can see an askUser), so the filter belongs here, at the one place the ledger is read as
+    // checks can see an ask), so the filter belongs here, at the one place the ledger is read as
     // evidence for user-facing prose.
     const okTools = ledger.observed
       .filter((o) => o.turnIndex === ledger.turnIndex && o.ok && !isTerminal(o.name))

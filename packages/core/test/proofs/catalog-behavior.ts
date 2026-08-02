@@ -295,12 +295,12 @@ export const BEHAVIOR_PROOFS: GuardProof[] = [
         },
       },
       {
-        name: 'unresolved probe, an askUser relays the question this turn',
+        name: 'unresolved probe, an ask (respond+asked) relays the question this turn',
         polarity: 'positive',
         ctx: {
           observed: [
             { name: 'deleteItem', args: { id: 'itm-1' }, ok: true, turnIndex: 0, resultFlags: { requiresConfirmation: true } },
-            { name: 'askUser', args: { text: 'Deleting that item needs your confirmation — are you sure?' }, ok: true, turnIndex: 0 },
+            { name: 'respond', args: { message: 'Deleting that item needs your confirmation — are you sure?', asked: true, did: [] }, ok: true, turnIndex: 0 },
           ],
           turnIndex: 0,
           reply: 'Deleting that item needs your confirmation — are you sure?',

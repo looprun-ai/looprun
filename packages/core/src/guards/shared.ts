@@ -13,21 +13,22 @@ export const ranThisTurn = (ctx: GuardCtx, tool: string): boolean =>
   ctx.observed.some((o) => o.name === tool && o.ok && o.turnIndex === ctx.turnIndex);
 
 /**
- * The runtime-owned TERMINAL tools. They are not domain actions: the Mastra backend pushes them into
- * `ctx.observed` with `ok:true` from `beforeToolCall`'s SYNCHRONOUS segment (so a same-step `askUser`
- * is visible to a sibling call's preTool checks). Consequence: `observed` is NEVER empty on a turn that
- * produced a reply, and it never carries a `!ok` entry merely because the domain work failed.
+ * The runtime-owned TERMINAL tool. It is not a domain action: the Mastra backend pushes it into
+ * `ctx.observed` with `ok:true` from `beforeToolCall`'s SYNCHRONOUS segment (so a same-step ask
+ * (`respond` with `asked:true`) is visible to a sibling call's preTool checks). Consequence:
+ * `observed` is NEVER empty on a turn that produced a reply, and it never carries a `!ok` entry merely
+ * because the domain work failed.
  *
  * Any guard that reasons about "did the model DO anything / did everything succeed" must therefore
- * filter these out first: without the filter, a "did anything run this turn" precondition was
+ * filter this out first: without the filter, a "did anything run this turn" precondition was
  * vacuously true and it vetoed the HONEST "I cannot do X" reply of a turn in which no domain tool ran
  * at all — the reply then went to redrive and out as an exhaustion stub (the failure class measured
  * across 7 models; that class of reply-honesty check is now `llmCheck`'s job, not a deterministic
- * guard's). Guards keyed on a NAMED tool (`destructiveThrottle`, `maxCalls`, …) are unaffected — a
- * terminal name is never in their set — and `confirmFirst`'s prior-ask arm keeps reading `askUser` by
- * name DELIBERATELY.
+ * guard's). Guards keyed on a NAMED tool (`destructiveThrottle`, `maxCalls`, …) are unaffected — the
+ * terminal name is never in their set — and `confirmFirst`'s prior-ask arm keeps reading the ask event
+ * (`respond`+`asked`) DELIBERATELY.
  */
-export const TERMINAL_TOOLS = new Set(['replyToUser', 'askUser']);
+export const TERMINAL_TOOLS = new Set(['respond']);
 export const isTerminalCall = (o: ObservedCall): boolean => TERMINAL_TOOLS.has(o.name);
 
 /** This turn's observed DOMAIN calls (terminals excluded — see {@link TERMINAL_TOOLS}). */

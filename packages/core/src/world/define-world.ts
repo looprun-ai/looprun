@@ -27,7 +27,7 @@ import type {
   WorldSpec,
 } from './types.js';
 
-const TERMINAL_TOOLS = new Set(['replyToUser', 'askUser']);
+const TERMINAL_TOOLS = new Set(['respond']);
 
 export function defineWorld(spec: WorldSpec, options: DefineWorldOptions = {}): WorldFactory {
   validateSpec(spec, options);

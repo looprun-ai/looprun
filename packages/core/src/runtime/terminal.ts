@@ -2,12 +2,18 @@
  * @looprun-ai/core runtime — the TERMINAL protocol (framework-free).
  *
  * The certified turn shape: the model speaks to the user ONLY through the runtime-owned terminal
- * tools (`replyToUser` / `askUser`) — combined with `toolChoice:'required'` this forces action
- * before speech and makes the user-facing text a verifiable tool argument instead of free text.
+ * tool `respond` — combined with `toolChoice:'required'` this forces action before speech and makes
+ * the user-facing text a verifiable tool argument instead of free text.
+ *
+ * `respond` is STRUCTURED (SCG, 2026-08-02): the non-operational prose rides `message`, the operations
+ * the agent performed ride `did` (a `TurnClaim[]` the cross-check guards ground against the world
+ * ledger), and `asked:true` marks a turn that poses a clarifying question. The two-terminal protocol
+ * (`replyToUser`/`askUser`) is RETIRED — "asked" is now a field, not a tool name.
  */
 import type { ToolDef } from './types.js';
 
-const TERMINAL_TOOLS = ['replyToUser', 'askUser'] as const;
+const RESPOND = 'respond';
+const TERMINAL_TOOLS = [RESPOND] as const;
 const TERMINAL_SET: ReadonlySet<string> = new Set(TERMINAL_TOOLS);
 
 export function isTerminal(name: string): boolean {
@@ -56,16 +62,16 @@ export function prematureTerminalTools(steps: any): string[] {
  *
  * {@link prematureTerminalTools} answers "did a terminal ride along with DOMAIN work?" and returns
  * `[]` for a step carrying only terminals — correct for its own question, and a hole for a different
- * one. The runtime delivers the LAST non-empty terminal text, while the guard hooks record EVERY
- * terminal as an ok observation. So a step of `askUser("Delete X?") + replyToUser("Have a nice
- * day.")` delivers only the pleasantry and still leaves an ok `askUser` in the ledger. Next turn, a
- * prior-ask confirmation arm reads that entry as "the user was asked", and a destructive action
- * unlocks off a question the user NEVER SAW. Consent recorded from an undelivered message is the
- * same class of defect as a reply grounding itself.
+ * one. The runtime delivers the LAST non-empty `message`, while the guard hooks record EVERY terminal
+ * as an ok observation. So a step of two `respond` calls — one asking a destructive question
+ * (`asked:true`), one signing off — delivers only the sign-off and still leaves the asking `respond`
+ * in the ledger. Next turn, a prior-ask confirmation arm reads that entry as "the user was asked",
+ * and a destructive action unlocks off a question the user NEVER SAW. Consent recorded from an
+ * undelivered message is the same class of defect as a reply grounding itself.
  *
- * Returns the terminals that lost the delivery contest — everything except the last one carrying
- * non-empty text. The caller prunes them from the ledger AFTER the generation resolves, so
- * within-step visibility (a sibling's preTool checks seeing the askUser) is untouched; only the
+ * Returns the terminals that lost the delivery contest — everything except the last one carrying a
+ * non-empty `message`. The caller prunes them from the ledger AFTER the generation resolves, so
+ * within-step visibility (a sibling's preTool checks seeing the ask) is untouched; only the
  * cross-turn consent evidence is corrected.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -76,9 +82,9 @@ export function supersededTerminalCalls(steps: any): Array<{ name: string; args:
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const calls = ((step?.toolCalls ?? []) as any[]).filter((tc) => isTerminal(toolCallName(tc)));
     if (calls.length < 2) continue;
-    const texts = calls.map((tc) => String(toolCallArgs(tc).text ?? '').trim());
-    const deliveredText = texts.filter(Boolean).slice(-1)[0];
-    const delivered = deliveredText === undefined ? -1 : texts.lastIndexOf(deliveredText);
+    const messages = calls.map((tc) => String(toolCallArgs(tc).message ?? '').trim());
+    const deliveredText = messages.filter(Boolean).slice(-1)[0];
+    const delivered = deliveredText === undefined ? -1 : messages.lastIndexOf(deliveredText);
     calls.forEach((tc, i) => {
       if (i !== delivered) out.push({ name: toolCallName(tc), args: toolCallArgs(tc) });
     });
@@ -98,19 +104,28 @@ function toolCallArgs(tc: any): Record<string, unknown> {
 
 const TERMINAL_PROTOCOL =
   '\n\n## Turn protocol (ABSOLUTE)\n' +
-  '- You speak to the user ONLY by calling **replyToUser** (to answer or summarize what you did) or **askUser** ' +
-  '(to ask ONE clarifying question). NEVER write a free-text reply — text outside these tools is not delivered.\n' +
-  '- Every turn MUST call at least one tool, and MUST END by calling exactly one replyToUser or askUser whose ' +
-  '`text` carries the COMPLETE user-facing message in the user\'s language.\n' +
-  '- Do the domain tools first; then close the turn with the single terminal call.';
+  '- You speak to the user ONLY by calling **respond**. NEVER write a free-text reply — text outside ' +
+  'this tool is not delivered.\n' +
+  '- Every turn MUST call at least one tool, and MUST END by calling exactly one **respond**.\n' +
+  "- `message` carries the COMPLETE user-facing prose in the USER'S language: greeting, explanation " +
+  'and answers ONLY. NEVER assert in `message` an operation you performed this turn — operations go ' +
+  'in `did`.\n' +
+  '- `did` lists EVERY domain operation you attempted this turn, one entry each, with its honest ' +
+  '`outcome`. A result you only READ is not a `did` entry unless the user asked for that lookup (then ' +
+  "outcome `success` when found, `not_found` when empty). Pass `did:[]` when you performed no operation. " +
+  'NEVER claim an operation the tools did not confirm.\n' +
+  '- Set `asked:true` when `message` poses your ONE clarifying question and you will wait for the answer.\n' +
+  '- Do the domain tools first; then close the turn with the single respond call.';
 
 const TERMINAL_PROTOCOL_REPLY_ONLY =
   '\n\n## Turn protocol (ABSOLUTE)\n' +
-  '- You speak to the user ONLY by calling **replyToUser**. NEVER write a free-text reply and NEVER ask the ' +
-  'user a question — there is no ask tool.\n' +
+  '- You speak to the user ONLY by calling **respond**. NEVER write a free-text reply and NEVER ask ' +
+  'the user a question — `asked` must stay false/absent.\n' +
   '- If something is ambiguous, make the MOST REASONABLE assumption and PROCEED — never stop to ask.\n' +
-  '- Every turn MUST first DO the requested action with the domain tools, then END by calling replyToUser whose ' +
-  '`text` reports what you did, in the user\'s language.';
+  '- Every turn MUST first DO the requested action with the domain tools, then END by calling ' +
+  "**respond**: `message` reports what you did in the USER'S language, and `did` lists EVERY operation " +
+  'you attempted with its honest `outcome` (`did:[]` when you performed none). NEVER assert an ' +
+  'operation in `message`, and NEVER claim one the tools did not confirm.';
 
 export function terminalProtocol(replyOnly: boolean): string {
   return replyOnly ? TERMINAL_PROTOCOL_REPLY_ONLY : TERMINAL_PROTOCOL;
@@ -119,64 +134,94 @@ export function terminalProtocol(replyOnly: boolean): string {
 /** The forced-terminal fallback prompt (pushes a weak model past the action wall). */
 export function forcedTerminalPrompt(replyOnly: boolean): string {
   return replyOnly
-    ? 'Close the turn now by calling replyToUser. Do NOT ask a question — state what you did in `text`.'
-    : 'Close the turn now: call replyToUser to answer / summarize what you did, or askUser to ask ONE clarifying question. Put the COMPLETE user-facing message in `text`.';
+    ? 'Close the turn now by calling respond. Do NOT ask a question (asked must stay false). Put your ' +
+        'user-facing message in `message`, and list every operation you attempted in `did` with its honest ' +
+        'outcome (did:[] if none).'
+    : 'Close the turn now by calling respond. Put the COMPLETE user-facing message in `message`; list ' +
+        'every operation you attempted this turn in `did` with its honest outcome (did:[] if none); set ' +
+        'asked:true only if `message` poses ONE clarifying question you will wait on.';
 }
 
 /**
- * The terminal tools' contract — authored by the RUNTIME, never by the host.
+ * The terminal tool's contract — authored by the RUNTIME, never by the host.
  *
  * A terminal is not a domain tool: it is how the turn ends, and the protocol owns what it means. A
  * host-supplied definition can carry business prose in its description, pin the reply to one brand
  * language, or make extra arguments required — each of which the runtime would then have to satisfy
- * or silently ignore. The runtime reads exactly one argument, `text`; anything else costs tokens,
- * invites a wrong value and has no consumer.
+ * or silently ignore. The runtime reads exactly three arguments — `message`, `did`, `asked` — and
+ * anything else costs tokens, invites a wrong value and has no consumer.
  */
-const TERMINAL_TOOL_CONTRACT: Record<string, { description: string; textDoc: string }> = {
-  replyToUser: {
-    description:
-      'END the turn with the final user-facing message. Every turn ends with exactly one replyToUser ' +
-      'or askUser. Call it only AFTER the domain tools you need have returned their results — never in ' +
-      'the same step as a domain tool, because their results are not available to you yet.',
-    textDoc: "The COMPLETE user-facing message, written ENTIRELY in the USER'S language.",
+const RESPOND_DESCRIPTION =
+  'END the turn with your final user-facing message. Every turn ends with exactly one respond, called ' +
+  'only AFTER the domain tools you need have returned — never in the same step as a domain tool, ' +
+  'because their results are not available to you yet. Put the user-facing prose in `message` and the ' +
+  'operations you performed in `did`; set asked:true when message poses ONE clarifying question you ' +
+  'will wait on.';
+
+const DID_ITEM_SCHEMA: Record<string, unknown> = {
+  type: 'object',
+  properties: {
+    op: { type: 'string', minLength: 1, description: 'A short label for the operation you attempted (advisory).' },
+    target: { type: 'string', description: 'The entity label/id the operation acted on, when it has one.' },
+    outcome: {
+      type: 'string',
+      minLength: 1,
+      description:
+        'The HONEST outcome: success, failure, not_found, blocked, refused, pending_confirmation, no_op ' +
+        '(or a domain outcome your spec declares). Never report success the tools did not confirm.',
+    },
+    amount: { type: 'number', description: 'An optional magnitude the operation involved (e.g. a value).' },
   },
-  askUser: {
-    description:
-      'END the turn by asking the user exactly ONE clarifying question, when you cannot proceed without ' +
-      'information only the user has. This closes the turn: do not call it in the same step as a domain ' +
-      'tool, and do not act on the answer until the user has given it.',
-    textDoc: "The single clarifying question, written ENTIRELY in the USER'S language.",
-  },
+  required: ['op', 'outcome'],
+  additionalProperties: false,
 };
 
-function terminalDef(name: string, contract: { description: string; textDoc: string }): ToolDef {
+function respondToolDef(): ToolDef {
   return {
-    name,
-    description: contract.description,
+    name: RESPOND,
+    description: RESPOND_DESCRIPTION,
     inputSchema: {
       type: 'object',
-      properties: { text: { type: 'string', minLength: 1, description: contract.textDoc } },
-      required: ['text'],
+      properties: {
+        message: {
+          type: 'string',
+          minLength: 1,
+          description:
+            "The COMPLETE user-facing prose in the USER'S language — explanation and answers ONLY; " +
+            'NEVER assert an operation you performed here, operations go in did.',
+        },
+        did: {
+          type: 'array',
+          items: DID_ITEM_SCHEMA,
+          description:
+            'Every DOMAIN operation you attempted this turn, one entry each, with its honest outcome. ' +
+            'Pass [] when you performed no operation (a read-only or clarifying turn).',
+        },
+        asked: {
+          type: 'boolean',
+          description: 'True when `message` poses your ONE clarifying question and you will wait for the answer.',
+        },
+      },
+      required: ['message', 'did'],
       additionalProperties: false,
     },
   };
 }
 
-/** The JSON-schema defs for the terminal tools. */
+/** The JSON-schema defs for the terminal tools (a single `respond`). */
 export function terminalToolDefs(): ToolDef[] {
-  return Object.entries(TERMINAL_TOOL_CONTRACT).map(([name, contract]) => terminalDef(name, contract));
+  return [respondToolDef()];
 }
 
 /**
  * Rewrite a TERMINAL tool def to the runtime's own contract; a domain def is returned UNCHANGED —
  * by identity, so passing a tool list through this is provably a no-op for everything else.
  *
- * This is what makes the protocol independent of how a host happens to declare its terminals: a
+ * This is what makes the protocol independent of how a host happens to declare its terminal: a
  * description written for a different runtime, an extra required argument, or a differently-named
- * text field (which this runtime would silently ignore, since the terminal execute and the salvage
- * both key on `args.text`) are all replaced by the contract above.
+ * field (which this runtime would silently ignore, since the terminal execute and the salvage both
+ * key on `args.message` / `args.did`) are all replaced by the contract above.
  */
 export function normalizeTerminalToolDef(def: ToolDef): ToolDef {
-  const contract = TERMINAL_TOOL_CONTRACT[def.name];
-  return contract ? terminalDef(def.name, contract) : def;
+  return isTerminal(def.name) ? respondToolDef() : def;
 }

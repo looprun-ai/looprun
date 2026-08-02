@@ -4,6 +4,7 @@
  */
 import type { Guard, ObservedCall } from '../rules.js';
 import { canonArgs, countOkCalls } from './flow.js';
+import { isAskEvent } from '../runtime/claims.js';
 
 /**
  * A destructive tool needs the user's go-ahead before it runs — the ONE confirm-gate kind (it absorbed the
@@ -49,7 +50,7 @@ export function confirmFirst(
   const recent = (obs: ObservedCall, cur: number): boolean =>
     cur - obs.turnIndex >= 1 && cur - obs.turnIndex <= within;
   const askedRecently = (ctx: { observed: ObservedCall[]; turnIndex: number }): boolean =>
-    ctx.observed.some((obs) => obs.name === 'askUser' && obs.ok && recent(obs, ctx.turnIndex));
+    ctx.observed.some((obs) => isAskEvent(obs) && obs.ok && recent(obs, ctx.turnIndex));
   return {
     kind: 'confirmFirst',
     dim: 'run',
@@ -57,16 +58,16 @@ export function confirmFirst(
       if (!ctx.tool) return null;
       if (via === 'ask') {
         // Flag-less action: every call is gated on the action having been SURFACED to the user in an
-        // earlier turn within recency — either a `askUser` OR a prior SUCCESSFUL call of the tool itself
+        // earlier turn within recency — either an ask (`respond`+`asked:true`) OR a prior SUCCESSFUL call of the tool itself
         // (a flag-less tool has no probe shape, so its own prior OK run is the equivalent surfacing).
         // SUCCESS-KEYING (`obs.ok`) is deliberate — a vetoed turn-1 attempt (ok:false) must never unlock
         // the identical turn-2 call, or the guard defeats itself in exactly two turns.
         const surfacedRecently = ctx.observed.some(
-          (obs) => obs.ok && (obs.name === 'askUser' || obs.name === ctx.tool) && recent(obs, ctx.turnIndex),
+          (obs) => obs.ok && (isAskEvent(obs) || obs.name === ctx.tool) && recent(obs, ctx.turnIndex),
         );
         if (surfacedRecently) return null;
         const askedSameTurn = ctx.observed.some(
-          (obs) => obs.name === 'askUser' && obs.ok && obs.turnIndex === ctx.turnIndex,
+          (obs) => isAskEvent(obs) && obs.ok && obs.turnIndex === ctx.turnIndex,
         );
         return askedSameTurn
           ? `You asked the user a question this turn — wait for their answer; run ${ctx.tool} only in a LATER turn.`
@@ -84,7 +85,7 @@ export function confirmFirst(
           .filter((k) => k !== flag)
           .every((k) => obs.args![k] === ctx.args[k]);
       const probeLicensed = ctx.observed.some((obs) => isMatchingProbe(obs) && recent(obs, ctx.turnIndex));
-      // `'either'` also accepts a prior-turn `askUser` as the confirm surface (structural) — measured: the
+      // `'either'` also accepts a prior-turn ask (`respond`+`asked:true`) as the confirm surface (structural) — measured: the
       // probe-only form dead-locked legitimate later-turn confirmations relayed through a question.
       const askLicensed = via === 'either' && askedRecently(ctx);
       if (probeLicensed || askLicensed) return null;
@@ -104,9 +105,9 @@ export function confirmFirst(
   };
 }
 
-/** Deny `tools` when an `askUser` call already succeeded THIS turn — ask, wait, act only in a LATER
+/** Deny `tools` when an ask (`respond`+`asked:true`) already succeeded THIS turn — ask, wait, act only in a LATER
  *  turn; a model must never confirm-and-execute in the same turn as its own question (a multi-tool
- *  step can call askUser and a destructive tool back-to-back, which reads as "asked" to a human but
+ *  step can ask and call a destructive tool back-to-back, which reads as "asked" to a human but
  *  never gave the user a chance to answer). Keys on observed/turnIndex only — a structural signal. */
 export function noActAfterAskSameTurn(tools: string[]): Guard {
   const set = new Set(tools);
@@ -116,14 +117,14 @@ export function noActAfterAskSameTurn(tools: string[]): Guard {
     check(ctx) {
       if (!ctx.tool || !set.has(ctx.tool)) return null;
       const askedThisTurn = ctx.observed.some(
-        (o) => o.name === 'askUser' && o.ok && o.turnIndex === ctx.turnIndex,
+        (o) => isAskEvent(o) && o.ok && o.turnIndex === ctx.turnIndex,
       );
       return askedThisTurn
         ? 'You already asked the user a question this turn — wait for their answer; do not execute this action in the same turn as the question.'
         : null;
     },
-    // PROSE — no RAW TERMINAL NAME. It used to read "in the same turn as an
-    // askUser question": `askUser` is a runtime-owned terminal, an internal name in a sentence the model
+    // PROSE — no RAW TERMINAL NAME. It must never read "in the same turn as a
+    // `respond` question": the terminal is a runtime-owned name, an internal token in a sentence the model
     // reads as behavioural instruction. The rule is about the ACT of asking, which the model can follow
     // whatever the channel is called, so the prose now states the act.
     prose: () =>
@@ -216,11 +217,11 @@ export function pendingConfirmMustAsk(opts?: { confirmArg?: string }): Guard {
           (o) => o.name === probe.name && o.ok && o.args?.[confirmArg] === true && record(o.args) === record(probe.args),
         ));
       if (!unresolved.length) return null;
-      // STRUCTURAL relay: an `askUser` succeeded this turn ⇒ the question was put to the user.
-      const askedThisTurn = thisTurn.some((o) => o.name === 'askUser' && o.ok);
+      // STRUCTURAL relay: an ask (`respond` with `asked:true`) succeeded this turn ⇒ the question was put to the user.
+      const askedThisTurn = thisTurn.some((o) => isAskEvent(o) && o.ok);
       return askedThisTurn
         ? null
-        : 'A confirmation is PENDING — relay the confirmation question to the user with askUser, and do not summarize the action as done.';
+        : 'A confirmation is PENDING — ask the user to confirm this turn, and do not summarize the action as done.';
     },
     prose: () => 'when a tool asks for confirmation, ask the user to confirm before anything else',
   };

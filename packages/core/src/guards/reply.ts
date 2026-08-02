@@ -119,7 +119,7 @@ export function degenerationGuard(): Guard {
     check(ctx) {
       const r = String(ctx.reply ?? '');
       if (!r) return null;
-      if (/<think|<\/think|<tool_call|<tool_response|<\|im_(?:start|end)\|>|\[end of turn\]|<\|assistant\|>|replyToUser\s*\{/i.test(r)) {
+      if (/<think|<\/think|<tool_call|<tool_response|<\|im_(?:start|end)\|>|\[end of turn\]|<\|assistant\|>|respond\s*\{/i.test(r)) {
         return 'the reply leaks internal scaffolding (think blocks / tool-call markup / chat-template tokens) — rewrite it as ONE short, clean user-facing message with none of that.';
       }
       // run-away repetition: any non-trivial line repeated 3+ times

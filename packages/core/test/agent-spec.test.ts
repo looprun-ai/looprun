@@ -37,7 +37,7 @@ describe('AgentSpecBase — universal invariants', () => {
   });
 
   it('rejects terminal tools in the surface', () => {
-    expect(() => new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: ['replyToUser'] })).toThrow(/terminal tools/);
+    expect(() => new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: ['respond'] })).toThrow(/terminal tools/);
   });
 
   it('requires a non-empty persona (persona-on-spec law)', () => {
@@ -142,17 +142,17 @@ describe('pendingConfirmMustAsk — resolution-aware + STRUCTURAL relay (no-rege
   const pendingProbe: ObservedCall = {
     name: 'deleteItem', args: { itemId: 'x1' }, ok: true, turnIndex: 0, resultFlags: { requiresConfirmation: true },
   };
-  const askUser: ObservedCall = { name: 'askUser', args: { text: 'Are you sure you want to delete x1?' }, ok: true, turnIndex: 0 };
+  const ask: ObservedCall = { name: 'respond', args: { message: 'Are you sure you want to delete x1?', asked: true, did: [] }, ok: true, turnIndex: 0 };
   const ctx = (reply: string, observed: ObservedCall[]): GuardCtx => ({
     args: {}, world: fixtureWorld(), observed, turnIndex: 0, reply, producedThisTurn: [], userText: '', history: [],
   });
 
-  it('fires when the pending confirm is unresolved and no askUser was issued this turn', () => {
+  it('fires when the pending confirm is unresolved and no ask was issued this turn', () => {
     expect(guard.check(ctx('Item x1 removed.', [pendingProbe]))).not.toBeNull();
   });
 
-  it('does not fire when an askUser relays the confirmation question this turn', () => {
-    expect(guard.check(ctx('Are you sure you want to delete x1?', [pendingProbe, askUser]))).toBeNull();
+  it('does not fire when an ask (respond+asked) relays the confirmation question this turn', () => {
+    expect(guard.check(ctx('Are you sure you want to delete x1?', [pendingProbe, ask]))).toBeNull();
   });
 
   it('does NOT fire once a same-record confirmed:true call resolves the probe (probe→approved-execute tail)', () => {
@@ -193,12 +193,12 @@ describe('confirmFirst — either (arg) + ask (flag-less) via', () => {
     it('denies a later turn when the model never asked', () => {
       expect(guard.check(ctx({ turnIndex: 2, observed: [] }))).not.toBeNull();
     });
-    it('allows the act after a prior-turn askUser', () => {
-      const ask: ObservedCall = { name: 'askUser', args: {}, ok: true, turnIndex: 0 };
+    it('allows the act after a prior-turn ask', () => {
+      const ask: ObservedCall = { name: 'respond', args: { asked: true, did: [] }, ok: true, turnIndex: 0 };
       expect(guard.check(ctx({ turnIndex: 1, observed: [ask] }))).toBeNull();
     });
-    it('denies when the only askUser is THIS turn (composes with noActAfterAskSameTurn)', () => {
-      const ask: ObservedCall = { name: 'askUser', args: {}, ok: true, turnIndex: 1 };
+    it('denies when the only ask is THIS turn (composes with noActAfterAskSameTurn)', () => {
+      const ask: ObservedCall = { name: 'respond', args: { asked: true, did: [] }, ok: true, turnIndex: 1 };
       expect(guard.check(ctx({ turnIndex: 1, observed: [ask] }))).not.toBeNull();
     });
   });
