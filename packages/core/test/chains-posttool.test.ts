@@ -27,7 +27,7 @@ function fixtureWorld(exec?: (name: string, args: Record<string, unknown>) => un
 describe('enforcePostTool (OUTPUT-dim result invariants)', () => {
   it('collects an output correction + a reply violation for each failing invariant', async () => {
     const g = resultInvariant((r) => (r as { ok?: boolean }).ok === true, 'The result was not ok.');
-    const ctx: GuardCtx = { args: {}, tool: 'save', world: fixtureWorld(), observed: [], turnIndex: 0, result: { ok: false } };
+    const ctx: GuardCtx = { args: {}, tool: 'save', world: fixtureWorld(), observed: [], turnIndex: 0, userText: '', history: [], result: { ok: false } };
     const out = await enforcePostTool([g], ctx);
     expect(out.corrections).toEqual(['output:resultInvariant:save']);
     expect(out.violations).toHaveLength(1);
@@ -36,7 +36,7 @@ describe('enforcePostTool (OUTPUT-dim result invariants)', () => {
 
   it('is a no-op when every invariant passes', async () => {
     const g = resultInvariant((r) => (r as { ok?: boolean }).ok === true, 'nope');
-    const ctx: GuardCtx = { args: {}, tool: 'save', world: fixtureWorld(), observed: [], turnIndex: 0, result: { ok: true } };
+    const ctx: GuardCtx = { args: {}, tool: 'save', world: fixtureWorld(), observed: [], turnIndex: 0, userText: '', history: [], result: { ok: true } };
     expect(await enforcePostTool([g], ctx)).toEqual({ corrections: [], violations: [] });
   });
 

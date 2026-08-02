@@ -2,10 +2,14 @@
  * @looprun-ai/core — guard TYPES (framework-free).
  *
  * The governance primitives the agentspec skill authors: a deterministic `check` paired with an
- * LLM-facing `prose`, keyed only on tool args / world state / observed calls — NEVER the user
- * text (the magnet firewall: guards must not scope behavior by user intent). The world is an
- * opaque, host-injected seam (`AgentWorld`); a domain reads its own accessors through the index
- * signature — the package itself is domain-neutral.
+ * LLM-facing `prose`, keyed on tool args / world state / observed calls AND the full conversation
+ * history — the user's own text included. The "magnet firewall" (guards blind to user text) is
+ * RETIRED (2026-08-02 ruling): guards are deterministic code, so "influence" does not apply; what
+ * the firewall protected decomposes into laws with better owners — intent-based tool routing stays
+ * banned as a LOOP-shaping law, and text pattern-matching stays banned by the no-regex law in the
+ * config surface. (Full doctrine rewrite: Task 4.) The world is an opaque, host-injected seam
+ * (`AgentWorld`); a domain reads its own accessors through the index signature — the package itself
+ * is domain-neutral.
  */
 
 /** The five enforcement dims (taxonomy metadata; the structural key is the hook it maps to). */
@@ -27,7 +31,7 @@ export interface AgentWorld {
   [k: string]: any;
 }
 
-/** One tool call observed this CONVERSATION. Magnet-safe: no user text. */
+/** One tool call observed this CONVERSATION. */
 export interface ObservedCall {
   name: string;
   args: Record<string, unknown>;
@@ -41,13 +45,48 @@ export interface ObservedCall {
   tookEffect?: boolean;
 }
 
-/** Everything a guard predicate may read — NEVER the user's text. */
+/** One EXECUTED tool call as it is retained in the conversation `history` (a guard-vetoed attempt is
+ *  NOT here — it rides `HistoryTurn.attemptedCalls`). `result` is present only when the backend that
+ *  built the turn had the world result to hand; the framework-free ledger keeps `ok`/`tookEffect`. */
+export interface HistoryToolCall {
+  name: string;
+  args: Record<string, unknown>;
+  ok: boolean;
+  tookEffect?: boolean;
+  result?: unknown;
+}
+
+/** One COMPLETED conversation turn, as seen by a later turn's guards. Read-only: the entries the
+ *  runtime hands to `GuardCtx.history` are frozen. */
+export interface HistoryTurn {
+  turnIndex: number;
+  /** The user's message that opened this turn, verbatim. */
+  userText: string;
+  /** The assistant reply the user actually received (post mutators/redrive/exhaustion). */
+  reply: string;
+  /** Domain tool calls that EXECUTED this turn (terminals excluded). */
+  toolCalls: ReadonlyArray<HistoryToolCall>;
+  /** Calls a guard VETOED before execution — the world never saw them. */
+  attemptedCalls: ReadonlyArray<{ name: string; args: unknown }>;
+  /** The turn's recovery/correction log (guard fires, redrives, superseded terminals, …). */
+  guardEvents: ReadonlyArray<string>;
+}
+
+/** Everything a guard predicate may read — including, since the firewall was retired (2026-08-02),
+ *  the user's own text (`userText` this turn; `history[].userText` for prior turns). */
 export interface GuardCtx {
   args: Record<string, unknown>;
   tool?: string;
   world: AgentWorld;
   observed: ObservedCall[];
   turnIndex: number;
+  /** The user's incoming message for the CURRENT turn, verbatim ('' when a call is not bound to a
+   *  fresh user message — e.g. a forced chain micro-generate). `onInput` reads it as the real
+   *  incoming text; it is the field that replaced the old hard-coded `args: {}`. */
+  userText: string;
+  /** The full PRIOR conversation, turn-structured and read-only. Available to EVERY hook. The
+   *  CURRENT (in-flight) turn is NOT here — its user text is `userText`, its calls are `observed`. */
+  history: ReadonlyArray<HistoryTurn>;
   reply?: string;
   producedThisTurn?: string[];
   attachmentsThisTurn?: string[];

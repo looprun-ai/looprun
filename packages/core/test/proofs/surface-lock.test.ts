@@ -53,7 +53,8 @@ const TAUGHT_05 = ['RunResult', 'TurnInput', 'TurnRecord', 'geminiThinkingOff', 
 const TAUGHT = [...TAUGHT_03, ...TAUGHT_04, ...TAUGHT_05].sort();
 
 const RIDERS = [
-  'AgentControls', 'ChainSpec', 'GuardBinding', 'Layer', 'MutatorBinding', 'ReplyMutator',
+  'AgentControls', 'ChainSpec', 'GuardBinding', 'HistoryToolCall', 'HistoryTurn', 'Layer',
+  'MutatorBinding', 'ReplyMutator',
   'SamplingSettings', 'SpatialEdge', 'SpecWarning', 'StateDirective', 'TokenUsage',
 ].sort();
 
@@ -67,7 +68,7 @@ const INTERNAL = [
   'normalizeModelParams', 'resolveModelSettings',
   'TokenUsage', 'RuntimeTurnRecord',
   'beginTurn', 'createLedger', 'pruneSupersededTerminals', 'recordTerminal', 'recordTerminalCall',
-  'recordToolResult', 'resultOk', 'TurnLedger', 'vetoStormHit',
+  'recordToolResult', 'recordTurnHistory', 'resultOk', 'TurnLedger', 'vetoStormHit',
   'forcedTerminalPrompt', 'isTerminal', 'normalizeTerminalToolDef', 'prematureTerminalTools',
   'supersededTerminalCalls', 'terminalProtocol', 'terminalToolDefs',
   'renderTurnPrompt',

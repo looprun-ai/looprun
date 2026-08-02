@@ -61,6 +61,7 @@ export {
   recordToolResult,
   recordTerminal,
   recordTerminalCall,
+  recordTurnHistory,
   pruneSupersededTerminals,
   vetoStormHit,
 } from './runtime/ledger.js';

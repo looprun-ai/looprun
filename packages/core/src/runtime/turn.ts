@@ -95,6 +95,8 @@ export async function evaluatePreTool(
     world,
     observed: ledger.observed,
     turnIndex: ledger.turnIndex,
+    userText: ledger.currentUserText,
+    history: ledger.history,
     attachmentsThisTurn: ledger.attachments,
     siblingCallsThisStep,
   };
@@ -115,7 +117,9 @@ export async function evaluatePreTool(
 /** Run the onInput guards (before any LLM call). Returns the refusal reason, or null to proceed. */
 export async function evaluateOnInput(spec: AgentSpec, ledger: TurnLedger, world: AgentWorld): Promise<string | null> {
   const guards = resolveGuards(spec.guards.onInput);
-  const gctx: GuardCtx = { args: {}, world, observed: ledger.observed, turnIndex: ledger.turnIndex };
+  // onInput: `args` is empty (no tool), but the guard now sees the REAL incoming user text via
+  // `userText` (this replaces the old hard-coded `args: {}` blindness) plus the prior `history`.
+  const gctx: GuardCtx = { args: {}, world, observed: ledger.observed, turnIndex: ledger.turnIndex, userText: ledger.currentUserText, history: ledger.history };
   for (const g of guards) {
     const reason = await g.check(gctx);
     if (reason) {
@@ -135,6 +139,8 @@ function applyMutators(spec: AgentSpec, ledger: TurnLedger, world: AgentWorld, t
       world,
       observed: ledger.observed,
       turnIndex: ledger.turnIndex,
+      userText: ledger.currentUserText,
+      history: ledger.history,
       reply: out,
       producedThisTurn: ledger.producedThisTurn,
     };
@@ -159,6 +165,8 @@ async function checkReply(
     world,
     observed: ledger.observed,
     turnIndex: ledger.turnIndex,
+    userText: ledger.currentUserText,
+    history: ledger.history,
     reply: text,
     producedThisTurn: ledger.producedThisTurn,
     attachmentsThisTurn: ledger.attachments,

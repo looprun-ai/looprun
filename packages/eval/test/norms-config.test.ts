@@ -115,6 +115,8 @@ describe('loadNormsConfig — guards from data', () => {
       world: { members: new Array(members).fill(0), seats } as unknown as AgentWorld,
       observed: [] as ObservedCall[],
       turnIndex: 0,
+      userText: '',
+      history: [],
     });
     // seats remain → allowed (null); at capacity → denied (a reason string)
     expect(binding!.guard.check(ctxFor(2, 5))).toBeNull();
@@ -137,6 +139,8 @@ describe('loadNormsConfig — guards from data', () => {
       world: {} as AgentWorld,
       observed: [] as ObservedCall[],
       turnIndex: 1,
+      userText: '',
+      history: [],
     };
     expect(typeof binding.guard.check(ctx)).toBe('string');
     // control: an unconfirmed call (no probe requirement triggered) is allowed
@@ -155,6 +159,8 @@ describe('loadNormsConfig — guards from data', () => {
       world: { seats: 2, plan: { price: 4900 }, owner: { role: 'admin' } } as unknown as AgentWorld,
       observed: [] as ObservedCall[],
       turnIndex: 0,
+      userText: '',
+      history: [],
     };
     const deny = binding.guard.check(ctx);
     expect(typeof deny).toBe('string');

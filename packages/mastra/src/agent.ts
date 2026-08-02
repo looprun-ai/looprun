@@ -34,6 +34,7 @@ import {
   normalizeModelParams,
   prematureTerminalTools,
   pruneSupersededTerminals,
+  recordTurnHistory,
   resolveModelSettings,
   runChainCompletionPass,
   supersededTerminalCalls,
@@ -231,16 +232,16 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
     const useMemory = !!options?.memory;
 
     if (session.turnIndex > 0) world.advanceTurn();
-    beginTurn(ledger, session.turnIndex);
-
-    const attUrls = options?.loopRun?.attachments ?? [];
-    const attLabels = attUrls.map((u) => world.ingestAttachment(u));
-    ledger.attachments = attLabels;
 
     const userText = typeof input === 'string' ? input : null;
     if (userText === null && !Array.isArray(input)) {
       throw new Error('LoopRunAgent.generate: pass the user message as a string (or a messages array).');
     }
+    beginTurn(ledger, session.turnIndex, userText ?? '');
+
+    const attUrls = options?.loopRun?.attachments ?? [];
+    const attLabels = attUrls.map((u) => world.ingestAttachment(u));
+    ledger.attachments = attLabels;
 
     // ONE producer for the bytes this turn sends (core/runtime/prompt.ts) — the same function the
     // offline margin instruments render through, so a replay can never feed on a prompt nothing runs.
@@ -403,6 +404,8 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
       violations: finalized.violations,
       observed: ledger.observed.filter((o) => o.turnIndex === session.turnIndex),
     };
+    // Seal this turn into the conversation history so the NEXT turn's guards see it (user text incl.).
+    recordTurnHistory(ledger, finalized.text, world);
     session.turnIndex += 1;
 
     // Return the LAST Mastra result object with the governed text + looprun meta attached.

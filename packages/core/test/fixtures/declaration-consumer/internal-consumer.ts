@@ -82,6 +82,8 @@ export function postTool(spec: AgentSpec, l: TurnLedger, w: AgentWorld, tool: st
     world: w,
     observed: l.observed,
     turnIndex: 0,
+    userText: '',
+    history: [],
     tool,
     args: {},
     result: {},

@@ -157,7 +157,7 @@ describe('destructiveClaimRequiresSuccess — attempt-keyed, offer-aware, senten
   const probe: ObservedCall = { name: 'deleteItem', args: { itemId: 'x1' }, ok: true, turnIndex: 0 };
 
   const ctx = (reply: string, observed: ObservedCall[] = []): GuardCtx => ({
-    args: {}, world: fixtureWorld(), observed, turnIndex: 0, reply, producedThisTurn: [],
+    args: {}, world: fixtureWorld(), observed, turnIndex: 0, reply, producedThisTurn: [], userText: '', history: [],
   });
 
   it('does NOT fire on a status readback when no destructive tool was ATTEMPTED this turn (P1-FP fix)', () => {
@@ -194,7 +194,7 @@ describe('pendingConfirmMustAsk — resolution-aware (P8a)', () => {
     name: 'deleteItem', args: { itemId: 'x1' }, ok: true, turnIndex: 0, resultFlags: { requiresConfirmation: true },
   };
   const ctx = (reply: string, observed: ObservedCall[]): GuardCtx => ({
-    args: {}, world: fixtureWorld(), observed, turnIndex: 0, reply, producedThisTurn: [],
+    args: {}, world: fixtureWorld(), observed, turnIndex: 0, reply, producedThisTurn: [], userText: '', history: [],
   });
 
   it('fires when the pending confirm is unresolved and the reply does not ask', () => {
@@ -218,7 +218,7 @@ describe('pendingConfirmMustAsk — resolution-aware (P8a)', () => {
 
 describe('confirmFirst — arg + prior-ask mechanisms', () => {
   const ctx = (over: Partial<GuardCtx>): GuardCtx => ({
-    args: {}, tool: 'act', world: fixtureWorld(), observed: [], turnIndex: 0, reply: '', producedThisTurn: [], ...over,
+    args: {}, tool: 'act', world: fixtureWorld(), observed: [], turnIndex: 0, reply: '', producedThisTurn: [], userText: '', history: [], ...over,
   });
 
   describe("'arg' (default)", () => {

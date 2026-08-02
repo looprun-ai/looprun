@@ -1,6 +1,6 @@
 /** Scripted multi-turn runner: record shape + cross-turn guard state. */
 import { describe, expect, it } from 'vitest';
-import { AgentSpecBase, confirmFirst } from '@looprun-ai/core';
+import { AgentSpecBase, confirmFirst, custom } from '@looprun-ai/core';
 import type { AgentWorld, DomainContract } from '@looprun-ai/core';
 import { runSpecConversation } from '../src/index.js';
 import { repeatedToolCallStop } from '../src/hooks.js';
@@ -80,6 +80,45 @@ describe('runSpecConversation', () => {
     await expect(
       runSpecConversation(spec, [{ userText: 'hi' }], { model: scriptedModel([]).model, world: world(), toolDefs: [] }),
     ).rejects.toThrow(/contract/);
+  });
+
+  it('a turn-1 guard sees turn-0 in ctx.history (user text + reply) and its own incoming userText', async () => {
+    const seen: Array<{ userText: string; historyUserTexts: string[]; historyReplies: string[] }> = [];
+    const captor = custom({
+      kind: 'captor', dim: 'run',
+      check: (ctx) => {
+        seen.push({
+          userText: ctx.userText,
+          historyUserTexts: ctx.history.map((t) => t.userText),
+          historyReplies: ctx.history.map((t) => t.reply),
+        });
+        return null;
+      },
+      prose: () => '',
+    });
+    const spec = new AgentSpecBase({
+      id: 'echo', mode: 'M', persona: 'You are the echo agent.', tools: ['listItems'], contract: CONTRACT,
+    });
+    spec.addGuard('onInput', 'any', captor, { id: 'x:captor' });
+
+    const scripted = scriptedModel([
+      [{ tool: 'replyToUser', args: { text: 'Here is turn zero.' } }],
+      [{ tool: 'replyToUser', args: { text: 'Here is turn one.' } }],
+    ]);
+
+    const res = await runSpecConversation(
+      spec,
+      [{ userText: 'first question' }, { userText: 'second question' }],
+      { model: scripted.model, world: world(), toolDefs: TOOL_DEFS },
+    );
+    expect(res.errorMsg).toBeUndefined();
+
+    // Turn 0: no prior history, incoming userText is the first message.
+    expect(seen[0]).toEqual({ userText: 'first question', historyUserTexts: [], historyReplies: [] });
+    // Turn 1: sees turn 0 sealed into history, plus its own incoming text.
+    expect(seen[1].userText).toBe('second question');
+    expect(seen[1].historyUserTexts).toEqual(['first question']);
+    expect(seen[1].historyReplies).toEqual(['Here is turn zero.']);
   });
 });
 

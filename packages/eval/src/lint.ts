@@ -108,7 +108,7 @@ function syntheticWorld(): AgentWorld {
 
 /** Worst-case minimal GuardCtx: empty observed ledger, current turn, only the reply populated. */
 function syntheticReplyCtx(reply: string): GuardCtx {
-  return { args: {}, world: syntheticWorld(), observed: [], turnIndex: 0, reply, producedThisTurn: [], attachmentsThisTurn: [] };
+  return { args: {}, world: syntheticWorld(), observed: [], turnIndex: 0, userText: '', history: [], reply, producedThisTurn: [], attachmentsThisTurn: [] };
 }
 
 /** Neutral baseline reply — the differential control: a veto must be TRIGGERED BY the required

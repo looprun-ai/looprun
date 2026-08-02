@@ -3,8 +3,10 @@
  *
  * T1 purity: guard-surface source may not touch clock / entropy / network / a runtime LLM call —
  * that is what keeps `check()` deterministic by construction.
- * S-1 firewall: GuardCtx exposes NO user text — guards key on args/world/observed only (the magnet
- * firewall).
+ * Full-context law (replaces the retired S-1 firewall, 2026-08-02): GuardCtx DOES expose the user's
+ * text — `userText` (this turn) and `history[].userText` (prior turns). Guards are deterministic
+ * code, so "influence" does not apply; intent-based tool routing stays banned as a loop law and text
+ * pattern-matching stays banned by the no-regex law — neither is this suite's job.
  * Statefulness: no /g|/y regex used with .test()/.exec() (lastIndex leaks across calls).
  * Contract law: DomainContract carries no persona (persona-on-spec law).
  */
@@ -103,13 +105,13 @@ describe('stateful-regex lint', () => {
   });
 });
 
-describe('S-1 firewall (GuardCtx exposes no user text)', () => {
-  it('GuardCtx has no user-text key', () => {
+describe('full-context law (GuardCtx exposes the user text — firewall retired 2026-08-02)', () => {
+  it('GuardCtx exposes userText and history', () => {
     const rules = readFileSync(join(CORE_SRC, 'rules.ts'), 'utf8');
     const block = rules.match(/export interface GuardCtx \{[\s\S]*?\n\}/)?.[0];
     expect(block, 'GuardCtx interface not found').toBeTruthy();
-    for (const key of ['userText', 'messages', 'history', 'userMessage', 'prompt']) {
-      expect(block!, `GuardCtx must not expose "${key}"`).not.toMatch(new RegExp(`\\b${key}\\??:`));
+    for (const key of ['userText', 'history']) {
+      expect(block!, `GuardCtx must expose "${key}" (full-context law)`).toMatch(new RegExp(`\\b${key}\\??:`));
     }
   });
 });

@@ -53,6 +53,7 @@ export function makeGuardHooks(spec: AgentSpec, getSession: SessionAccessor): Gu
       if (!postGuards.length) return;
       const gctx: GuardCtx = {
         args, tool: toolName, world, observed: ledger.observed, turnIndex: ledger.turnIndex,
+        userText: ledger.currentUserText, history: ledger.history,
         attachmentsThisTurn: ledger.attachments, result: output,
       };
       const { corrections, violations } = await enforcePostTool(postGuards, gctx);

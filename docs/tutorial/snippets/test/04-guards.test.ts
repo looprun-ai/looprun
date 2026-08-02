@@ -15,6 +15,8 @@ const ctxFor = (eventId: string): GuardCtx => ({
   world: new SchedulerWorld(),
   observed: [],
   turnIndex: 0,
+  userText: '',
+  history: [],
 });
 
 describe('chapter 04 · the custom guard', () => {

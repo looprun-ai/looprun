@@ -89,6 +89,6 @@ export { geminiThinkingOff, pinnedDecoding } from './model-params.js';
 // Recorded in `docs/superpowers/specs/2026-07-28-tutorial-outline-final.md` §7 and the inventory §9.
 export type { SpecWarning } from './validate.js';
 export type { SamplingSettings } from './model-params.js';
-export type { ReplyMutator, SpatialEdge } from './rules.js';
+export type { ReplyMutator, SpatialEdge, HistoryTurn, HistoryToolCall } from './rules.js';
 export type { AgentControls, ChainSpec, StateDirective, GuardBinding, MutatorBinding, Layer } from './spec.js';
 export type { TokenUsage } from './runtime/types.js';

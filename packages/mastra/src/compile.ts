@@ -13,6 +13,7 @@ import {
   beginTurn as ledgerBeginTurn,
   createLedger,
   finalizeReply as coreFinalizeReply,
+  recordTurnHistory,
   renderScopedSpecTrunk,
   terminalProtocol,
 } from '@looprun-ai/core/internal';
@@ -34,9 +35,11 @@ export interface CompiledSpec {
   inputProcessors?: any[];
   /** The tools active THIS turn (respects the reply-only terminal policy). */
   activeTools(): string[];
-  /** Advance the turn (world + ledger) and get the state/uploads tail for the user message. */
-  beginTurn(input?: { attachments?: string[] }): { userMessageTail: string };
-  /** Mutators → onReply checks → bounded no-tools redrive → honest-abstain. */
+  /** Advance the turn (world + ledger) and get the state/uploads tail for the user message. Pass
+   *  `userText` so onInput/guards see the real incoming text (`ctx.userText`) and it enters history. */
+  beginTurn(input?: { attachments?: string[]; userText?: string }): { userMessageTail: string };
+  /** Mutators → onReply checks → bounded no-tools redrive → honest-abstain. Seals the turn into the
+   *  conversation history so a later turn's guards read it via `ctx.history`. */
   finalizeReply(text: string, redrive: (message: string) => Promise<string>): Promise<FinalizedReply>;
 }
 
@@ -88,7 +91,7 @@ export function compileSpec(
       }
       started = true;
       replyOnlyThisTurn = evalReplyOnly();
-      ledgerBeginTurn(session.ledger, session.turnIndex);
+      ledgerBeginTurn(session.ledger, session.turnIndex, input?.userText ?? '');
       const attLabels = (input?.attachments ?? []).map((u) => world.ingestAttachment(u));
       session.ledger.attachments = attLabels;
       const stateBlock = contract ? contract.stateBlock(world) : '';
@@ -97,8 +100,10 @@ export function compileSpec(
       if (attLabels.length) tailParts.push(`[Uploads this turn: ${attLabels.join(', ')}]`);
       return { userMessageTail: tailParts.join('\n\n') };
     },
-    finalizeReply(text, redrive) {
-      return coreFinalizeReply(spec, contract, world, session.ledger, text, redrive, spec.controls.redrives ?? opts.redrives ?? DEFAULT_REDRIVES);
+    async finalizeReply(text, redrive) {
+      const finalized = await coreFinalizeReply(spec, contract, world, session.ledger, text, redrive, spec.controls.redrives ?? opts.redrives ?? DEFAULT_REDRIVES);
+      recordTurnHistory(session.ledger, finalized.text, world);
+      return finalized;
     },
   };
 }

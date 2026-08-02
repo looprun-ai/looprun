@@ -85,6 +85,8 @@ export function craftCtx(partial: PartialGuardCtx = {}): GuardCtx {
     world: new FixtureWorld('seeded-media'),
     observed: [],
     turnIndex: 0,
+    userText: '',
+    history: [],
     ...partial,
   };
 }

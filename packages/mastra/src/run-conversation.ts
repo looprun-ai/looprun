@@ -27,6 +27,7 @@ import {
   normalizeModelParams,
   prematureTerminalTools,
   pruneSupersededTerminals,
+  recordTurnHistory,
   resolveModelSettings,
   runChainCompletionPass,
   supersededTerminalCalls,
@@ -120,12 +121,12 @@ export async function runSpecConversation(spec: AgentSpec, turns: TurnInput[], d
 
   for (let i = 0; i < turns.length; i++) {
     if (i > 0) world.advanceTurn();
-    beginTurn(ledger, i);
+    const userText = turns[i].userText;
+    beginTurn(ledger, i, userText);
 
     const attUrls = (turns[i].attachments ?? []) as string[];
     const attLabels = attUrls.map((u) => world.ingestAttachment(u));
     ledger.attachments = attLabels;
-    const userText = turns[i].userText;
 
     // ONE producer for the bytes this turn sends (core/runtime/prompt.ts): the BYTE-STABLE system
     // prefix (scoped trunk + terminal protocol) and the state-in-tail user message (volatile account
@@ -243,6 +244,8 @@ export async function runSpecConversation(spec: AgentSpec, turns: TurnInput[], d
       // History reconciliation: persist the reply the user ACTUALLY received when the pipeline
       // changed it (mutator / redrive / exhaustion).
       if (answerText && answerText !== initialText) messages.push({ role: 'assistant', content: answerText });
+      // Seal this turn into the conversation history so the NEXT turn's guards see it (user text incl.).
+      recordTurnHistory(ledger, answerText, world);
 
       const durationMs = Date.now() - t0;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -583,10 +583,12 @@ automatically as Tasks 5–6 shrink what the signatures touch. Two tests hold th
 real consumer against the published `exports` map), and `surface-lock.test.ts` proves it has not
 quietly **grown**.
 
-For `core` the rider is 11 types: `SpecWarning` `AgentControls` `ChainSpec` `StateDirective`
-`GuardBinding` `MutatorBinding` `Layer` `SpatialEdge` `ReplyMutator` `SamplingSettings` `TokenUsage`.
-Tasks 4–7 derive their own package's rider the same way; a symbol appearing there is not a promotion
-and must not be read as one.
+For `core` the rider is 13 types: `SpecWarning` `AgentControls` `ChainSpec` `StateDirective`
+`GuardBinding` `MutatorBinding` `Layer` `SpatialEdge` `ReplyMutator` `SamplingSettings` `TokenUsage`
+`HistoryTurn` `HistoryToolCall` — the last two added by the full-context-guards increment
+(2026-08-02): `GuardCtx.history` is `ReadonlyArray<HistoryTurn>`, so both ride the barrel to stay
+nameable. Tasks 4–7 derive their own package's rider the same way; a symbol appearing there is not a
+promotion and must not be read as one.
 
 **The per-package rider lists** (`mastra` needs none — it re-exports core's whole barrel, and its
 own three taught types are already public). Each is derived from that package's own value

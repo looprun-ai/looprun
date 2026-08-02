@@ -2,11 +2,13 @@
  * @looprun-ai/core runtime — the per-conversation observation LEDGER (framework-free).
  *
  * The ledger is what guards read (`ctx.observed`, `producedThisTurn`, …): the model's own verified
- * tool activity — never the user text (magnet firewall). `observed` accumulates for the whole
- * conversation; the other fields reset per turn via `beginTurn`.
+ * tool activity, plus the turn-structured `history` (user text included, since the firewall was
+ * retired 2026-08-02). `observed` and `history` accumulate for the whole conversation; the other
+ * fields reset per turn via `beginTurn`.
  */
-import type { AgentWorld, Guard, ObservedCall } from '../rules.js';
+import type { AgentWorld, Guard, ObservedCall, HistoryTurn, HistoryToolCall } from '../rules.js';
 import { canonArgs } from '../guards/index.js';
+import { isTerminal } from './terminal.js';
 
 /** An OUTPUT-dim (postTool) result-invariant failure OR a flowChain restate — carried on the ledger
  *  and JOINED into the onReply violation set so the same bounded no-tools redrive relays its text. */
@@ -38,6 +40,13 @@ export interface TurnLedger {
    *  turn; surfaced on the TurnRecord as `attemptedCalls` so a FORBIDDEN invariant can fail on the
    *  ATTEMPT the guard blocked, not only on a world-ledger entry (which, for a veto, never exists). */
   attemptedCalls: Array<{ name: string; args: unknown }>;
+  /** The user's incoming message for the CURRENT turn (set by `beginTurn`). Read into every GuardCtx as
+   *  `ctx.userText`; onInput reads it as the real incoming text. Reset per turn. */
+  currentUserText: string;
+  /** The COMPLETED conversation turns — accumulated across the whole conversation (NOT reset by
+   *  beginTurn), read into every GuardCtx as the read-only `ctx.history`. A turn lands here via
+   *  {@link recordTurnHistory} once its reply is finalized. */
+  history: HistoryTurn[];
 }
 
 /**
@@ -54,11 +63,12 @@ export function vetoStormHit(ledger: TurnLedger): boolean {
 }
 
 export function createLedger(): TurnLedger {
-  return { observed: [], turnIndex: 0, producedThisTurn: [], turnCorrections: [], attachments: [], terminalReply: '', vetoStreak: 0, postToolViolations: [], inFlightCalls: [], attemptedCalls: [] };
+  return { observed: [], turnIndex: 0, producedThisTurn: [], turnCorrections: [], attachments: [], terminalReply: '', vetoStreak: 0, postToolViolations: [], inFlightCalls: [], attemptedCalls: [], currentUserText: '', history: [] };
 }
 
-/** Reset the per-turn fields (the conversation-scoped `observed` is kept). */
-export function beginTurn(ledger: TurnLedger, turnIndex: number): void {
+/** Reset the per-turn fields (the conversation-scoped `observed` and `history` are kept). `userText` is
+ *  the current turn's incoming user message ('' when the turn is not opened by a fresh user message). */
+export function beginTurn(ledger: TurnLedger, turnIndex: number, userText = ''): void {
   ledger.turnIndex = turnIndex;
   ledger.producedThisTurn = [];
   ledger.turnCorrections = [];
@@ -68,6 +78,7 @@ export function beginTurn(ledger: TurnLedger, turnIndex: number): void {
   ledger.postToolViolations = [];
   ledger.inFlightCalls = [];
   ledger.attemptedCalls = [];
+  ledger.currentUserText = userText;
 }
 
 /** Structural success check on a tool result ({success:false} / {error} / {PREREQ_NOT_MET} ⇒ failed). */
@@ -156,4 +167,41 @@ export function pruneSupersededTerminals(
 export function recordTerminal(ledger: TurnLedger, name: string, args: Record<string, unknown>): void {
   const text = typeof args.text === 'string' ? args.text : '';
   if (text.trim()) ledger.terminalReply = text;
+}
+
+/**
+ * Seal the CURRENT turn into `ledger.history` once its `reply` is finalized — so the NEXT turn's guards
+ * see it as read-only conversation context (user text included). Assembled purely from the ledger:
+ *   · toolCalls  — the non-terminal calls EXECUTED this turn (a guard-vetoed call is excluded here; it
+ *                  never reached the world and rides `attemptedCalls`). `result` is joined from the
+ *                  world ledger when `world` is passed; `ok`/`tookEffect` come from the observed entry.
+ *   · userText   — the turn's incoming message (`ledger.currentUserText`).
+ *   · guardEvents — the turn's recovery/correction log.
+ * The pushed entry (and its arrays) is FROZEN: `ctx.history` is read-only by construction.
+ */
+export function recordTurnHistory(ledger: TurnLedger, reply: string, world?: AgentWorld): void {
+  const vetoed = new Set(ledger.attemptedCalls.map((a) => a.name + '|' + canonArgs(a.args as Record<string, unknown>)));
+  const toolCalls: HistoryToolCall[] = ledger.observed
+    .filter((o) => o.turnIndex === ledger.turnIndex && !isTerminal(o.name) && !vetoed.has(o.name + '|' + canonArgs(o.args)))
+    .map((o) => {
+      const wtc = world?.toolCalls.find(
+        (t) => t.name === o.name && canonArgs((t.args ?? {}) as Record<string, unknown>) === canonArgs(o.args),
+      );
+      return Object.freeze({
+        name: o.name,
+        args: o.args,
+        ok: o.ok,
+        ...(o.tookEffect !== undefined ? { tookEffect: o.tookEffect } : {}),
+        ...(wtc && 'result' in wtc ? { result: (wtc as { result?: unknown }).result } : {}),
+      }) as HistoryToolCall;
+    });
+  const entry: HistoryTurn = Object.freeze({
+    turnIndex: ledger.turnIndex,
+    userText: ledger.currentUserText,
+    reply,
+    toolCalls: Object.freeze(toolCalls),
+    attemptedCalls: Object.freeze(ledger.attemptedCalls.map((a) => Object.freeze({ ...a }))),
+    guardEvents: Object.freeze(ledger.turnCorrections.slice()),
+  });
+  ledger.history.push(entry);
 }
