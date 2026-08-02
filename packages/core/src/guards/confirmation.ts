@@ -3,7 +3,7 @@
  * ask-then-act deny, the one-destructive-action-per-turn throttle, and the pending-probe relay.
  */
 import type { Guard, ObservedCall } from '../rules.js';
-import { canonArgs } from './flow.js';
+import { canonArgs, countOkCalls } from './flow.js';
 
 /**
  * A destructive tool needs the user's go-ahead before it runs — the ONE confirm-gate kind (it absorbed the
@@ -147,12 +147,20 @@ export function noActAfterAskSameTurn(tools: string[]): Guard {
  * `confirmed`) matches the sibling kinds' parameterisation (`confirmFirst`'s `argFlag`,
  * `pendingConfirmMustAsk`'s `confirmArg`) — a flag-less `'prior-ask'` tool has no probe shape of its own,
  * so every OK call of it counts as an effect, exactly as before.
+ *
+ * BUILT ON `maxCalls`' COUNTING MACHINERY (2026-08-02): this is `maxCalls` with `n:1`, `scope:'turn'`, a
+ * tool-SET match (minus probes), and the same-step sibling candidates folded in — it shares
+ * `countOkCalls`, the one place that decides what an "already-succeeded" call is. No API or behaviour
+ * change; the existing throttle proofs pass unchanged (that IS the acceptance).
  */
 export function destructiveThrottle(destructiveTools: string[], opts?: { confirmArg?: string }): Guard {
   const set = new Set(destructiveTools);
   const confirmArg = opts?.confirmArg ?? 'confirmed';
   const isProbe = (o: ObservedCall): boolean =>
     o.resultFlags?.requiresConfirmation === true || o.args?.[confirmArg] === false;
+  // An EFFECT = a listed destructive tool that ran OK and is not a probe. (The `ok` + turn-window part is
+  // applied by `countOkCalls`; this predicate carries only the set-membership + not-a-probe test.)
+  const isEffect = (o: ObservedCall): boolean => set.has(o.name) && !isProbe(o);
   return {
     kind: 'destructiveThrottle',
     dim: 'run',
@@ -164,12 +172,11 @@ export function destructiveThrottle(destructiveTools: string[], opts?: { confirm
       // gated before either lands). A sibling admitted by its preTool guards WILL take effect, so it
       // counts exactly like an observed effect. Probes (confirmed:false) are excluded by `isProbe`.
       const candidates = ctx.siblingCallsThisStep ? [...ctx.observed, ...ctx.siblingCallsThisStep] : ctx.observed;
-      const prior = candidates.find(
-        (o) => o.turnIndex === ctx.turnIndex && o.ok && set.has(o.name) && !isProbe(o),
-      );
-      return prior
-        ? `A destructive action (${prior.name}) already ran this turn — do NOT chain another destructive call. Reply to the user first.`
-        : null;
+      // The `maxCalls` core: at most ONE prior effect this turn (n:1, scope:'turn').
+      if (countOkCalls(candidates, isEffect, { scope: 'turn', turnIndex: ctx.turnIndex }) < 1) return null;
+      // Name the prior effect for the deny (the counter returns a tally, not the call).
+      const prior = candidates.find((o) => o.turnIndex === ctx.turnIndex && o.ok && isEffect(o))!;
+      return `A destructive action (${prior.name}) already ran this turn — do NOT chain another destructive call. Reply to the user first.`;
     },
     prose: () => 'at most one destructive action per turn (a confirmation probe that changed nothing does not count)',
   };

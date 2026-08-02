@@ -2,8 +2,27 @@
  * FLOW guards — sequencing, budgets and repetition (the `spatial` / `run` dims that key on WHICH calls
  * already happened), plus the canonical-args fingerprint the repetition kinds are built on.
  */
-import type { Guard, GuardCtx } from '../rules.js';
+import type { Guard, GuardCtx, ObservedCall } from '../rules.js';
 import { TERMINAL_TOOLS } from './shared.js';
+
+/**
+ * THE BUDGET COUNTER — the shared counting core of every "at most n" gate. Counts the model's OWN
+ * SUCCESSFUL (`ok`) calls among `candidates` that satisfy `match`, within a budget WINDOW:
+ *  - `scope: 'turn'` — only calls of the current turn (`o.turnIndex === turnIndex`);
+ *  - `scope: 'conversation'` — every turn.
+ * `maxCalls` counts one tool by name; `destructiveThrottle` counts a tool SET minus its probes — both
+ * deny once the count reaches their `n` (1 for the throttle). One place decides what "already acted"
+ * means, so the two kinds can never drift apart on it.
+ */
+export function countOkCalls(
+  candidates: readonly ObservedCall[],
+  match: (o: ObservedCall) => boolean,
+  opts: { scope: 'turn' | 'conversation'; turnIndex: number },
+): number {
+  return candidates.filter(
+    (o) => o.ok && (opts.scope === 'conversation' || o.turnIndex === opts.turnIndex) && match(o),
+  ).length;
+}
 
 // ── SPATIAL (graph / sequencing) ─────────────────────────────────────────────
 
@@ -78,9 +97,7 @@ export function maxCalls(
     kind: 'maxCalls',
     dim: 'run',
     check(ctx) {
-      const count = ctx.observed.filter(
-        (o) => o.name === tool && o.ok && (scope === 'conversation' || o.turnIndex === ctx.turnIndex),
-      ).length;
+      const count = countOkCalls(ctx.observed, (o) => o.name === tool, { scope, turnIndex: ctx.turnIndex });
       return count >= n ? reason : null;
     },
     prose: () =>

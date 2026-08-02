@@ -24,15 +24,18 @@ const src = readdirSync(GUARDS_DIR)
  *  `): Guard|ReplyMutator|string {` after the name — the same discriminator the guard-catalog parity
  *  lane uses). */
 function exportedFactories(): { name: string; returns: string }[] {
-  const out: { name: string; returns: string }[] = [];
-  const re = /export function (\w+)/g;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(src))) {
-    const slice = src.slice(m.index);
-    const sig = slice.match(/\)\s*:\s*(Guard|ReplyMutator|string)\s*\{/);
-    if (sig) out.push({ name: m[1], returns: sig[1] });
-  }
-  return out;
+  // Split into per-function slices (each `export function …` chunk) so a signature match is BOUNDED to
+  // its own function — an exported helper that returns something else (e.g. `countOkCalls(): number`)
+  // must not borrow the return type of the next factory down the file (the parity lane splits the same
+  // way for the same reason).
+  return src
+    .split(/(?=export function )/)
+    .flatMap((slice) => {
+      const name = slice.match(/^export function (\w+)/)?.[1];
+      if (!name) return [];
+      const sig = slice.match(/\)\s*:\s*(Guard|ReplyMutator|string)\s*\{/);
+      return sig ? [{ name, returns: sig[1] }] : [];
+    });
 }
 
 const factories = exportedFactories();
