@@ -498,11 +498,14 @@ export async function finalizeReply(
     // The verified `did` history keeps is ALWAYS the engine-derived truth — an override changes the
     // wording, not the record of what happened.
     const derived = deriveExhaustionClosure(ledger, contract?.writeTools ?? [], contract);
-    const closureText = spec.controls.exhaustionReply
+    const overrideText = spec.controls.exhaustionReply
       ? spec.controls.exhaustionReply(world, okTools, ledger.producedThisTurn, finalViolations)
       : contract?.exhaustionReply
         ? contract.exhaustionReply(world, okTools, ledger.producedThisTurn, finalViolations)
-        : derived.text;
+        : '';
+    // The blank floor holds UNCONDITIONALLY: an override that returns blank falls back to the
+    // engine-derived closure (non-empty by construction) instead of delivering nothing.
+    const closureText = overrideText && !isBlankDelivery(overrideText) ? overrideText : derived.text;
     ledger.did = derived.did;
     ledger.asked = false;
     return { text: closureText, exhausted: true, violations: finalViolations, did: derived.did };
