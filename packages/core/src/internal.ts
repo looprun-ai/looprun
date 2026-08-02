@@ -39,6 +39,18 @@ export { renderScopedSpecTrunk } from './trunk.js';
 // Model call settings.
 export { normalizeModelParams, resolveModelSettings } from './model-params.js';
 
+// The declarative world builder (increment 3a). Seam, not taught API: its audience is the
+// agentspec generator (which emits the WorldSpec literal) and hosts/fork authors wiring a world —
+// exactly the same audience as the governed-turn machinery below, and NO tutorial chapter teaches
+// it yet (3b finalizes the world.json form). AgentWorld the TYPE stays on the public barrel;
+// defineWorld the BUILDER lives here until the world chapter lands.
+export { defineWorld } from './world/index.js';
+export type {
+  WorldSpec, WorldFactory, BuiltWorld, WorldCall, AuditEntry, EntityDecl, ArgDecl, Gate, ToolDecl,
+  ReadResult, CreateResult, PresetDelta, DefineWorldOptions, CustomExecutor, CustomCtx, CustomResult,
+  ScalarType, FieldType,
+} from './world/index.js';
+
 // The governed-turn machine ────────────────────────────────────────────────────
 export type { TokenUsage, RuntimeTurnRecord } from './runtime/types.js';
 

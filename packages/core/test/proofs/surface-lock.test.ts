@@ -80,6 +80,11 @@ const INTERNAL = [
   // the seam's own type-closure riders (the rest of its closure is nameable from '.')
   'ChainPassCtx', 'ChainPassResult', 'GovernanceVeto', 'PostToolEnforcement', 'PostToolViolation',
   'PreToolVerdict', 'TurnPrompt', 'TurnPromptInput',
+  // increment 3a — the declarative world builder + its vocabulary (seam, no tutorial chapter yet;
+  // AgentWorld the type stays public, defineWorld the builder is host/generator machinery).
+  'defineWorld', 'WorldSpec', 'WorldFactory', 'BuiltWorld', 'WorldCall', 'AuditEntry', 'EntityDecl',
+  'ArgDecl', 'Gate', 'ToolDecl', 'ReadResult', 'CreateResult', 'PresetDelta', 'DefineWorldOptions',
+  'CustomExecutor', 'CustomCtx', 'CustomResult', 'ScalarType', 'FieldType',
 ].sort();
 
 /** Every name the module exports — values AND types, aliases resolved by the checker. */
