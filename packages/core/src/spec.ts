@@ -441,7 +441,7 @@ export class AgentSpecBase implements AgentSpec {
       this.addGuard('preTool', argTools, confirmFirst(), { layer: 'base', id: 'base:confirmFirst' });
     }
     if (priorAskTools.length) {
-      this.addGuard('preTool', priorAskTools, confirmFirst({ mechanism: 'prior-ask' }), { layer: 'base', id: 'base:confirmFirstPriorAsk' });
+      this.addGuard('preTool', priorAskTools, confirmFirst({ via: 'ask' }), { layer: 'base', id: 'base:confirmFirstPriorAsk' });
     }
     this.addGuard('preTool', destructive, destructiveThrottle(destructive), { layer: 'base', id: 'base:destructiveThrottle' });
   }
@@ -458,7 +458,7 @@ export class AgentSpecBase implements AgentSpec {
    * Throws (an author bug, same class as the ⊆-surface / stray-mechanism throws) naming the fix.
    */
   assertDestructiveConfirmable(toolDefs: ReadonlyArray<{ name: string; inputSchema?: { properties?: Record<string, unknown> } }>): void {
-    const CONFIRM_FLAG = 'confirmed'; // = confirmFirst's default argFlag, which installBase relies on
+    const CONFIRM_FLAG = 'confirmed'; // = confirmFirst's default `flag`, which installBase relies on
     const argTools = this.destructiveTools.filter((t) => (this.confirmMechanism[t] ?? 'arg') === 'arg');
     if (!argTools.length) return;
     const byName = new Map(toolDefs.map((d) => [d.name, d]));

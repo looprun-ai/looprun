@@ -73,7 +73,7 @@ turn where the model legitimately could not act and said so — vetoing the hone
 out as an exhaustion stub. That is the highest-severity failure class this trap produces (it bit hardest
 on the deleted regex-param honesty kinds, and any `llmCheck` rubric or `custom` guard that reasons about
 "did everything succeed" inherits the same obligation). Kinds keyed on a NAMED tool are unaffected;
-`confirmFirst`'s prior-ask arm reads `askUser` deliberately, by name.
+`confirmFirst`'s `via:'ask'` arm reads `askUser` deliberately, by name.
 
 **A guard MAY use an LLM to decide — that is `llmCheck`.** LLM adjudication is now a first-class guard
 kind (§ the `llm-check` catalog entry). An `llmCheck` binds a trusted, pre-baked `rubric`; the runtime
@@ -238,7 +238,7 @@ spec is a spec). Its constructor auto-installs, from `cfg` alone:
 | trigger | auto-installs (layer · id) |
 |---|---|
 | **always** | `noDuplicateCall` (preTool `any`, `minimal:noDuplicateCall`) · `degenerationGuard()` (onReply, `minimal:degenerationGuard` — FIRST in the onReply tail; markup + run-away-repetition branches only, no parameters. The former language-specific self-narration branch was dropped with the no-regex law) · `emptyReply` (onReply, `minimal:emptyReply`) |
-| `cfg.destructiveTools` **non-empty** | `destructiveThrottle(destructiveTools)` (preTool, `base:destructiveThrottle`) + `confirmFirst` on exactly those tools — the per-tool MECHANISM (`cfg.confirmMechanism[tool]`, default `'arg'`) picks the id: arg-flag tools → `base:confirmFirst`, prior-ask tools → `base:confirmFirstPriorAsk`. **⊆-validated** (each destructive tool must be in `cfg.tools` or the constructor throws) |
+| `cfg.destructiveTools` **non-empty** | `destructiveThrottle(destructiveTools)` (preTool, `base:destructiveThrottle`) + `confirmFirst` on exactly those tools — the per-tool `cfg.confirmMechanism[tool]` (default `'arg'`) picks the id AND the `via`: arg-flag tools → `confirmFirst()` (`via:'either'`) under `base:confirmFirst`, prior-ask tools → `confirmFirst({ via:'ask' })` under `base:confirmFirstPriorAsk`. **⊆-validated** (each destructive tool must be in `cfg.tools` or the constructor throws) |
 
 So **3 kinds always install** (`noDuplicateCall` + `degenerationGuard` + `emptyReply`), **+2 more when the
 agent holds a destructive tool.** The former lexicon-fed reply-honesty invariant (the auto-installed
@@ -298,14 +298,21 @@ does not carry: they are about the enforcement path, not about choosing a kind.
   read, a partial write) reads it through `postTool`'s `ctx.result` (the just-returned value) or through
   the world's own `toolCalls` ledger — never through `observed`, which holds only name/args/ok/turnIndex.
   A reply-side judgment over results ("did the reply overstate an empty search?") is an `llmCheck` rubric.
-- **`confirmFirst`'s `'prior-ask'` arm is SUCCESS-KEYED.** If its same-tool disjunct accepted ANY earlier
+- **THE RECENCY LAW (2026-08-02).** A LICENSING signal — a past event that UNLOCKS a new act — is
+  turn-bounded by a `within` param (`1 ≤ currentTurnIndex − eventTurnIndex ≤ within`), so a probe/ask 20
+  turns ago never licenses today's act. LICENSING guards default `within: 1` (the immediately-preceding
+  turn, the natural two-step shape): `confirmFirst`'s probe/ask licenses, and `askedEarlier`. An EVIDENCE
+  guard — a past call that is PROOF work was done, not a license — defaults `within` **UNBOUNDED**:
+  `requiresBefore` (a read from turn 1 legitimately grounds a turn-3 write); pass `within` to bound it.
+- **`confirmFirst`'s `via:'ask'` arm is SUCCESS-KEYED.** If its same-tool disjunct accepted ANY earlier
   attempt, `ok:false` included, then — because a vetoed call lands in `observed` with `ok:false` — **a
   turn-1 call denied BY THIS VERY GUARD would unlock the identical turn-2 call**: the destructive action
   runs with the user never asked, and the gate defeats itself in exactly two turns. Every disjunct
-  requires `ok:true`. The same success-keying protects `askedEarlier` and `confirmedNeedsEarlierProbe`.
+  requires `ok:true`. The same success-keying protects `askedEarlier` and `confirmFirst`'s `via:'probe'`
+  record-bound arm.
 - **Misconfiguration that would make a safety kind INERT throws at CONSTRUCTION, never at check
   time.** `consentRequired` on empty `tools` (or a blank `reason`, whose falsy deny value would read as
-  "allowed"); `confirmFirst('prior-ask')` passed a mechanism NAME to the string overload. An inert safety
+  "allowed"); `confirmFirst('probe'|'ask'|'either')` passed a `via` NAME to the string overload. An inert safety
   guard still reads as coverage in a spec header, which is worse than an absent one — so it breaks the
   build. An `llmCheck` with an empty `rubric` fails the same way (nothing for the adjudicator to answer).
 

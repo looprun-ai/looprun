@@ -135,9 +135,9 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
     name: 'confirmFirst',
     category: 'confirmation',
     hook: 'preTool',
-    summary: 'A destructive tool needs the user\'s go-ahead from an EARLIER turn — via a confirm flag probe or a prior ask. Passing a mechanism NAME to the string overload throws at construction.',
+    summary: 'A destructive tool needs the user\'s go-ahead from an EARLIER turn — licensed `via` a same-record probe, a prior ask, or either. The licensing event is turn-bounded by `within` (default 1). Passing a `via` NAME to the string overload throws at construction.',
     whenToUse:
-      'The user must have agreed before this call runs, and the evidence has to be cross-turn — this is the consent gate itself. Its neighbours answer different questions: `destructiveThrottle` caps the blast radius of a turn that IS approved, `consentRequired` reads a standing world flag rather than the conversation, and `pendingConfirmMustAsk` gates the REPLY rather than the call. Mechanism: `\'arg\'` when the tool carries a confirm flag, `\'prior-ask\'` when it has none and an earlier question is the only possible evidence; the string overload sets the FLAG NAME, so `confirmFirst(\'prior-ask\')` throws rather than silently building a guard that can never fire.',
+      'The user must have agreed before this call runs, and the evidence has to be cross-turn — this is the ONE consent gate (it absorbed `confirmedNeedsEarlierProbe`). Its neighbours answer different questions: `destructiveThrottle` caps the blast radius of a turn that IS approved, `consentRequired` reads a standing world flag rather than the conversation, and `pendingConfirmMustAsk` gates the REPLY rather than the call. `via`: `\'probe\'` = a same-record `flag:false` preview of the SAME tool in an earlier turn (the strict, record-bound license); `\'ask\'` = a flag-LESS action gated on a prior-turn `askUser`; `\'either\'` (default) = the flag-gated form licensed by a matching probe OR a prior ask. RECENCY LAW: the licensing event must fall `within` turns of now (default 1, the two-step shape) — widen deliberately for genuinely multi-turn flows. The string overload sets the FLAG NAME, so `confirmFirst(\'probe\')` throws rather than silently building a guard that can never fire.',
     example: `confirmFirst('confirmed')`,
   },
   {
@@ -256,15 +256,6 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
     whenToUse:
       'A value the agent must not write until it has asked the operator for it and they answered in a later message — the structural replacement for a hand-written regex over "did we ask?". It keys on the presence of the gated arg plus an earlier-turn `askUser`, never on any text.',
     example: `askedEarlier({ tool: 'completeMaintenance', arg: 'condition' })`,
-  },
-  {
-    name: 'confirmedNeedsEarlierProbe',
-    category: 'structural',
-    hook: 'preTool',
-    summary: 'A confirmed:true call is denied unless the SAME tool ran as a probe (confirmed!=true, matching args) in an EARLIER turn.',
-    whenToUse:
-      'A destructive tool that carries its own confirm flag and must be previewed before it is confirmed — the preview and the go-ahead have to live in different messages. Pins the probe to the same act by args equality, all structural: no text is matched.',
-    example: `confirmedNeedsEarlierProbe({ tools: ['chargeDeposit'] })`,
   },
 
   // ── llm-check ────────────────────────────────────────────────────────────────

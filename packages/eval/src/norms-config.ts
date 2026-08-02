@@ -18,7 +18,7 @@
  * load, not run.
  */
 import { z } from 'zod';
-import { AgentSpecBase, askedEarlier, confirmedNeedsEarlierProbe, llmCheck, precondition, requiresBefore } from '@looprun-ai/core';
+import { AgentSpecBase, askedEarlier, confirmFirst, llmCheck, precondition, requiresBefore } from '@looprun-ai/core';
 import type { AgentSpec, AgentWorld, Guard, GuardCtx } from '@looprun-ai/core';
 
 /** A config violation, with a path-qualified message. Thrown by {@link loadNormsConfig}. */
@@ -210,7 +210,7 @@ function compilePredicate(
 /**
  * NORMALIZE the confirm flag. The world's own `isConfirmed` convention treats `confirmed: 'true'`
  * (the string a JSON tool-call arg often arrives as) as confirmed; the structural
- * `confirmedNeedsEarlierProbe` keys on the strict boolean `true`. Rather than push the coercion into
+ * `confirmFirst` (via:'probe') keys on the strict boolean `true`. Rather than push the coercion into
  * the core primitive, the loader wraps the guard's `check`, promoting a string `'true'` to boolean
  * `true` in the ctx it delegates. Minimal seam, zero core change: the only site the string matters is
  * the trigger `ctx.args.confirmed === true` (probe MATCHING excludes the `confirmed` key, so observed
@@ -279,10 +279,12 @@ function installGuard(spec: AgentSpecBase, g: GuardConfig, deps: NormsDeps): voi
       });
       return;
     case 'consentToken':
-      // DENY-POLICY AUDIT: confirmedNeedsEarlierProbe's deny names only the gated TOOL (structural) and
-      // never a world figure or a role, so there is nothing for renderDeny (which is reads-shaped) to
-      // replace — it stays on its own figure-free primitive text.
-      spec.addGuard('preTool', g.tools, normalizeConfirmed(confirmedNeedsEarlierProbe({ tools: g.tools })), { layer: 'agent', id });
+      // DENY-POLICY AUDIT: confirmFirst's deny names only the gated TOOL (structural) and never a world
+      // figure or a role, so there is nothing for renderDeny (which is reads-shaped) to replace — it stays
+      // on its own figure-free primitive text. The unified confirmFirst with `via:'probe'` is the record-
+      // bound earlier-turn-preview gate that the former `confirmedNeedsEarlierProbe` kind provided; the
+      // recency law bounds the licensing probe to `within:1` by default.
+      spec.addGuard('preTool', g.tools, normalizeConfirmed(confirmFirst({ via: 'probe' })), { layer: 'agent', id });
       return;
     case 'askedEarlier':
       // DENY-POLICY AUDIT: askedEarlier's deny names only the gated ARG (structural), no figure/role.

@@ -2,7 +2,6 @@
 import {
   askedEarlier,
   confirmFirst,
-  confirmedNeedsEarlierProbe,
   custom,
   destructiveThrottle,
   maxCalls,
@@ -197,11 +196,11 @@ const noDuplicateCallProof: GuardProof = {
   ],
 };
 
-// ── confirmFirst (auto:'base' — arg mechanism on deleteItem, prior-ask on purgeAll) ──
+// ── confirmFirst (auto:'base' — via:'either' on deleteItem, via:'ask' on flag-less purgeAll) ──
 const confirmFirstProof: GuardProof = {
   guard: 'confirmFirst',
-  // STRUCTURAL probe (no-regex law): the arg mechanism accepts a prior-turn same-tool probe or a
-  // prior-turn askUser as the go-ahead — no reply-text regex.
+  // STRUCTURAL (no-regex law): via:'either' accepts a matching prior-turn same-tool probe (record-bound)
+  // or a prior-turn askUser as the go-ahead — no reply-text regex. Recency-bounded (default within:1).
   make: () => confirmFirst(),
   hook: 'preTool',
   target: ['deleteItem'],
@@ -228,11 +227,11 @@ const confirmFirstProof: GuardProof = {
       },
     },
     {
-      name: 'arg mechanism: an earlier-turn probe unlocks confirmed execution',
+      name: 'via:either — a matching earlier-turn probe (same RECORD) unlocks confirmed execution',
       polarity: 'positive',
       ctx: {
         tool: 'deleteItem',
-        args: { confirmed: true },
+        args: { id: 'itm-1', confirmed: true },
         observed: [{ name: 'deleteItem', args: { id: 'itm-1' }, ok: true, turnIndex: 0 }],
         turnIndex: 1,
       },
@@ -332,6 +331,31 @@ const confirmFirstProof: GuardProof = {
         ],
         expect: 'pass',
       },
+    },
+    {
+      // Absorbed from the deleted confirmedNeedsEarlierProbe: the probe is RECORD-bound (args-subset),
+      // so a preview of a DIFFERENT record does not license this confirm.
+      name: 'via:either (record-bound): an earlier probe of a DIFFERENT record does not unlock',
+      polarity: 'negative',
+      ctx: {
+        tool: 'deleteItem',
+        args: { id: 'itm-2', confirmed: true },
+        observed: [{ name: 'deleteItem', args: { id: 'itm-1' }, ok: true, turnIndex: 0 }],
+        turnIndex: 1,
+      },
+      l1: 'fires',
+    },
+    {
+      // RECENCY LAW (default within:1): a probe two turns back is stale and does not license today's confirm.
+      name: 'recency: a probe at distance 2 does NOT unlock (default within:1)',
+      polarity: 'negative',
+      ctx: {
+        tool: 'deleteItem',
+        args: { id: 'itm-1', confirmed: true },
+        observed: [{ name: 'deleteItem', args: { id: 'itm-1' }, ok: true, turnIndex: 0 }],
+        turnIndex: 2,
+      },
+      l1: 'fires',
     },
     {
       name: 'a non-destructive tool call is never gated',
@@ -600,11 +624,11 @@ const askedEarlierProof: GuardProof = {
   target: ['createItem'],
   cases: [
     {
-      name: 'the gated value is present and an askUser succeeded in an EARLIER turn',
+      name: 'the gated value is present and an askUser succeeded in an EARLIER turn (distance 1)',
       polarity: 'positive',
       ctx: {
         args: { condition: 'good' },
-        observed: [{ name: 'askUser', args: { text: 'q?' }, ok: true, turnIndex: 0 }],
+        observed: [{ name: 'askUser', args: { text: 'q?' }, ok: true, turnIndex: 1 }],
         turnIndex: 2,
       },
       l1: 'silent',
@@ -646,63 +670,9 @@ const askedEarlierProof: GuardProof = {
   ],
 };
 
-// ── confirmedNeedsEarlierProbe (structural — confirmed:true needs its own earlier-turn preview) ──
-// Collective target = editMedia (a mutating overwrite), NOT deleteItem: on deleteItem this guard would
-// double-bind the SAME confirmed-needs-a-probe decision as the always-on confirmFirst and short-circuit
-// its veto, so a real bundle picks one or the other. editMedia carries no other collective guard, so the
-// ONLY signal under test is this guard. `confirmed` is a non-schema arg (passthrough) the guard reads.
-const confirmedNeedsEarlierProbeProof: GuardProof = {
-  guard: 'confirmedNeedsEarlierProbe',
-  make: () => confirmedNeedsEarlierProbe({ tools: ['editMedia'] }),
-  hook: 'preTool',
-  target: ['editMedia'],
-  cases: [
-    {
-      name: 'an earlier-turn probe of the same tool with matching args exists',
-      polarity: 'positive',
-      ctx: {
-        tool: 'editMedia',
-        args: { label: 'g001', instruction: 'crop', confirmed: true },
-        observed: [{ name: 'editMedia', args: { label: 'g001', instruction: 'crop' }, ok: true, turnIndex: 0 }],
-        turnIndex: 1,
-      },
-      l1: 'silent',
-      l3: {
-        preset: 'empty',
-        turns: [{ userText: 'crop the media asset' }, { userText: 'yes, go ahead' }],
-        script: [
-          [{ tool: 'editMedia', args: { label: 'g001', instruction: 'crop' } }],
-          [{ tool: 'replyToUser', args: { text: 'This edit will overwrite the asset — shall I apply it?' } }],
-          [{ tool: 'editMedia', args: { label: 'g001', instruction: 'crop', confirmed: true } }],
-          [{ tool: 'replyToUser', args: { text: 'The edit has been applied as you approved.' } }],
-        ],
-        expect: 'pass',
-      },
-    },
-    {
-      name: 'confirmed:true with no earlier probe of this act',
-      polarity: 'negative',
-      ctx: { tool: 'editMedia', args: { label: 'g001', instruction: 'crop', confirmed: true }, observed: [], turnIndex: 1 },
-      l1: 'fires',
-      l3: {
-        preset: 'empty',
-        turns: [{ userText: 'crop the media asset and apply it' }],
-        script: [
-          [{ tool: 'editMedia', args: { label: 'g001', instruction: 'crop', confirmed: true } }],
-          [{ tool: 'replyToUser', args: { text: 'This edit needs a preview first — shall I show you the change before applying it?' } }],
-        ],
-        expect: 'veto',
-        tool: 'editMedia',
-      },
-    },
-    {
-      name: 'confirmed flag not set — nothing to gate',
-      polarity: 'neutral',
-      ctx: { tool: 'editMedia', args: { label: 'g001', instruction: 'crop' }, observed: [], turnIndex: 1 },
-      l1: 'silent',
-    },
-  ],
-};
+// NOTE (2026-08-02): the former `confirmedNeedsEarlierProbe` proof is GONE — the kind was absorbed into
+// the unified `confirmFirst` (`via:'probe'`). Its distinctive scenarios (record-bound probe matching +
+// the recency bound) live on as L1 cases inside `confirmFirstProof` above; none was dropped.
 
 export const RUN_OUTPUT_PROOFS: GuardProof[] = [
   preconditionProof,
@@ -714,5 +684,4 @@ export const RUN_OUTPUT_PROOFS: GuardProof[] = [
   resultInvariantProof,
   customProof,
   askedEarlierProof,
-  confirmedNeedsEarlierProbeProof,
 ];

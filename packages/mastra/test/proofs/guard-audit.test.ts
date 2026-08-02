@@ -39,10 +39,10 @@ const call = (name: string, over: Partial<ObservedCall> = {}): ObservedCall => (
 // llmCheck's job), so their audit blocks are gone. What remains audits the STRUCTURAL guards.
 
 // ─────────────────────────────────────────────────────────────────────────────
-// confirmFirst 'prior-ask': a VETOED attempt must not unlock the next turn (all STRUCTURAL)
+// confirmFirst via:'ask': a VETOED attempt must not unlock the next turn (all STRUCTURAL)
 // ─────────────────────────────────────────────────────────────────────────────
-describe("confirmFirst('prior-ask') is SUCCESS-KEYED", () => {
-  const guard = (): Guard => confirmFirst({ mechanism: 'prior-ask' });
+describe("confirmFirst({ via: 'ask' }) is SUCCESS-KEYED", () => {
+  const guard = (): Guard => confirmFirst({ via: 'ask' });
 
   it('THE NEGATIVE PROOF: a turn-1 attempt VETOED BY THIS GUARD does not unlock turn 2', async () => {
     // The self-defeat: the guard denies purgeAll in turn 1, the backend records that veto as
@@ -101,19 +101,23 @@ describe("confirmFirst('prior-ask') is SUCCESS-KEYED", () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// confirmFirst's string overload must reject a mechanism name
+// confirmFirst's string overload must reject a via name
 // ─────────────────────────────────────────────────────────────────────────────
-describe('confirmFirst rejects a mechanism NAME passed as the string overload', () => {
-  it("confirmFirst('prior-ask') throws instead of building a permanently inert guard", () => {
-    expect(() => confirmFirst('prior-ask')).toThrow(/mechanism/i);
+describe('confirmFirst rejects a via NAME passed as the string overload', () => {
+  it("confirmFirst('ask') throws instead of building a permanently inert guard", () => {
+    expect(() => confirmFirst('ask')).toThrow(/via/i);
   });
 
-  it("confirmFirst('arg') throws for the same reason", () => {
-    expect(() => confirmFirst('arg')).toThrow(/mechanism/i);
+  it("confirmFirst('probe') throws for the same reason", () => {
+    expect(() => confirmFirst('probe')).toThrow(/via/i);
+  });
+
+  it("confirmFirst('either') throws for the same reason", () => {
+    expect(() => confirmFirst('either')).toThrow(/via/i);
   });
 
   it('the error names the correct object form so the fix is obvious', () => {
-    expect(() => confirmFirst('prior-ask')).toThrow(/confirmFirst\(\{ mechanism: 'prior-ask' \}\)/);
+    expect(() => confirmFirst('ask')).toThrow(/confirmFirst\(\{ via: 'ask' \}\)/);
   });
 
   it('REGRESSION FLOOR: the legitimate string overload (an arg flag NAME) still works', async () => {
@@ -131,8 +135,8 @@ describe('confirmFirst rejects a mechanism NAME passed as the string overload', 
 
   it('REGRESSION FLOOR: the object form and the no-arg default are untouched', async () => {
     expect(() => confirmFirst()).not.toThrow();
-    expect(() => confirmFirst({ mechanism: 'prior-ask' })).not.toThrow();
-    expect(() => confirmFirst({ argFlag: 'confirmed' })).not.toThrow();
+    expect(() => confirmFirst({ via: 'ask' })).not.toThrow();
+    expect(() => confirmFirst({ flag: 'confirmed' })).not.toThrow();
   });
 });
 

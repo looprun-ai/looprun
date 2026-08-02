@@ -166,7 +166,7 @@ describe('pendingConfirmMustAsk — resolution-aware + STRUCTURAL relay (no-rege
   });
 });
 
-describe('confirmFirst — arg + prior-ask mechanisms', () => {
+describe('confirmFirst — either (arg) + ask (flag-less) via', () => {
   const ctx = (over: Partial<GuardCtx>): GuardCtx => ({
     args: {}, tool: 'act', world: fixtureWorld(), observed: [], turnIndex: 0, reply: '', producedThisTurn: [], userText: '', history: [], ...over,
   });
@@ -185,8 +185,8 @@ describe('confirmFirst — arg + prior-ask mechanisms', () => {
     });
   });
 
-  describe("'prior-ask' (flag-less tools)", () => {
-    const guard = confirmFirst({ mechanism: 'prior-ask' });
+  describe("via 'ask' (flag-less tools)", () => {
+    const guard = confirmFirst({ via: 'ask' });
     it('denies on the opening turn (no prior askUser)', () => {
       expect(guard.check(ctx({ turnIndex: 0, observed: [] }))).not.toBeNull();
     });

@@ -42,7 +42,6 @@ export {
   custom,
   llmCheck,
   askedEarlier,
-  confirmedNeedsEarlierProbe,
   requiresBefore,
   forbidThisTurn,
   argRequired,

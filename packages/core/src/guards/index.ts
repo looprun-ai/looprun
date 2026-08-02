@@ -26,7 +26,7 @@
  */
 
 export { custom } from './custom.js';
-export { askedEarlier, confirmedNeedsEarlierProbe } from './structural.js';
+export { askedEarlier } from './structural.js';
 export { requiresBefore, forbidThisTurn, maxCalls, canonArgs, noDuplicateCall } from './flow.js';
 export { argRequired, argAbsent, argFormat } from './args.js';
 export { precondition, resultInvariant, consentRequired } from './world.js';

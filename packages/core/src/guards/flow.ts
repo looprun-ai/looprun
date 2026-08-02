@@ -3,18 +3,33 @@
  * already happened), plus the canonical-args fingerprint the repetition kinds are built on.
  */
 import type { Guard, GuardCtx } from '../rules.js';
-import { ran, TERMINAL_TOOLS } from './shared.js';
+import { TERMINAL_TOOLS } from './shared.js';
 
 // ── SPATIAL (graph / sequencing) ─────────────────────────────────────────────
 
-/** T may run only after EVERY dep has already run successfully this conversation. */
-export function requiresBefore(deps: string[]): Guard {
+/**
+ * T may run only after EVERY dep has already run successfully this conversation.
+ *
+ * RECENCY LAW (2026-08-02): this is an EVIDENCE guard — a past dep call is PROOF the groundwork was done,
+ * not a license that unlocks a new act — so `within` defaults to **UNBOUNDED**: a read from turn 1
+ * legitimately grounds a turn-3 write. Pass `within` to bound it (`currentTurnIndex − depTurnIndex ≤ within`)
+ * only when the domain genuinely wants the evidence to be fresh.
+ */
+export function requiresBefore(deps: string[], opts?: { within?: number }): Guard {
+  const within = opts?.within;
+  const ranWithin = (ctx: GuardCtx, dep: string): boolean =>
+    ctx.observed.some(
+      (o) =>
+        o.name === dep &&
+        o.ok &&
+        (within == null || (ctx.turnIndex - o.turnIndex >= 0 && ctx.turnIndex - o.turnIndex <= within)),
+    );
   return {
     kind: 'requiresBefore',
     dim: 'spatial',
     meta: { before: [...deps] },
     check(ctx) {
-      const missing = deps.filter((d) => !ran(ctx.observed, d));
+      const missing = deps.filter((d) => !ranWithin(ctx, d));
       return missing.length ? `Do ${missing.join(' then ')} FIRST — it must run before this tool.` : null;
     },
     prose: () => `only after ${deps.join(' → ')} has run`,

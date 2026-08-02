@@ -213,12 +213,12 @@ you want the kind that makes that impossible. Read this column as "the model …
 | calls a legitimate tool too many times — sweeps, repeat contact | [`maxCalls`](#3-maxcalls) | preTool |
 | runs a step before the one it depends on | [`requiresBefore`](#1-requiresbefore) | preTool |
 | acts while the world says it must not (closed account, no consent on record) | [`precondition`](#8-precondition) · [`consentRequired`](#9-consentrequired) | preTool |
-| a value must not be recorded until the operator was asked for it in an earlier turn | [`askedEarlier`](#13-askedearlier) · [`confirmedNeedsEarlierProbe`](#14-confirmedneedsearlierprobe) | preTool |
-| summarises an empty or partial result as if it satisfied the request | [`resultInvariant`](#15-resultinvariant) | postTool |
-| claims a tool's work is done when it is not · apologises for a failure on a turn where the work went through · promises an off-surface handoff · discloses a personal/regulated field the tools do not ground · obeys an instruction that came back INSIDE a tool result | [`llmCheck`](#23-llmcheck) — text judgment is one kind now: a trusted rubric answered by a host adjudicator (the 8 regex-param honesty/reply kinds were deleted by the no-regex law) | onReply / preTool |
-| answers with nothing, leaked think-blocks, or the same line five times | [`emptyReply`](#21-emptyreply) · [`degenerationGuard`](#22-degenerationguard) (both auto-installed) | onReply |
-| writes internal status codes and field names at the user | [`jargonScrub`](#24-jargonscrub) — rewrites, never vetoes | onReplyMutate |
-| breaks a rule that is about YOUR domain and nothing in this table fits | [`custom`](#25-custom) (§6) | you choose |
+| a value must not be recorded until the operator was asked for it in an earlier turn · a confirmed act needs its own earlier-turn preview | [`askedEarlier`](#13-askedearlier) · [`confirmFirst`](#10-confirmfirst) (`via:'probe'`) | preTool |
+| summarises an empty or partial result as if it satisfied the request | [`resultInvariant`](#14-resultinvariant) | postTool |
+| claims a tool's work is done when it is not · apologises for a failure on a turn where the work went through · promises an off-surface handoff · discloses a personal/regulated field the tools do not ground · obeys an instruction that came back INSIDE a tool result | [`llmCheck`](#22-llmcheck) — text judgment is one kind now: a trusted rubric answered by a host adjudicator (the 8 regex-param honesty/reply kinds were deleted by the no-regex law) | onReply / preTool |
+| answers with nothing, leaked think-blocks, or the same line five times | [`emptyReply`](#20-emptyreply) · [`degenerationGuard`](#21-degenerationguard) (both auto-installed) | onReply |
+| writes internal status codes and field names at the user | [`jargonScrub`](#23-jargonscrub) — rewrites, never vetoes | onReplyMutate |
+| breaks a rule that is about YOUR domain and nothing in this table fits | [`custom`](#24-custom) (§6) | you choose |
 
 ### The four confusable clusters
 
@@ -284,10 +284,10 @@ disagree about it.
 <!-- Rendered from `packages/core/src/guards/catalog.ts`. Do NOT edit between the markers: run
      `pnpm docs:guards` (it needs a built core), and fix wording in the catalog itself. -->
 
-## 5. The catalog — 25 factories
+## 5. The catalog — 24 factories
 
 Grouped by the hook each one is installed on, because the hook decides what a rule can see and
-therefore what it can enforce (chapter 03 §8). 14 preTool · 1 postTool · 8 onReply · 1 onReplyMutate · 1 escape hatch.
+therefore what it can enforce (chapter 03 §8). 13 preTool · 1 postTool · 8 onReply · 1 onReplyMutate · 1 escape hatch.
 
 A fourth hook exists and has no section here: `onInput` fires before the model runs, and §1's
 matrix makes it legal for every `spatial`/`input`/`run` guard — but no shipped kind is installed
@@ -309,11 +309,10 @@ A call has been proposed and not yet executed. A deny returns to the model AS th
 | [`argFormat`](#7-argformat) | `args.ts` | A present, non-empty string argument must match the given pattern; absent or empty is left to `argRequired`. |
 | [`precondition`](#8-precondition) | `world.ts` | The call is allowed only while a predicate over the host world holds. |
 | [`consentRequired`](#9-consentrequired) | `world.ts` | A set of writes may run only while the world says this person's consent is on record. |
-| [`confirmFirst`](#10-confirmfirst) | `confirmation.ts` | A destructive tool needs the user's go-ahead from an EARLIER turn — via a confirm flag probe or a prior ask. Passing a mechanism NAME to the string overload throws at construction. |
+| [`confirmFirst`](#10-confirmfirst) | `confirmation.ts` | A destructive tool needs the user's go-ahead from an EARLIER turn — licensed `via` a same-record probe, a prior ask, or either. The licensing event is turn-bounded by `within` (default 1). Passing a `via` NAME to the string overload throws at construction. |
 | [`noActAfterAskSameTurn`](#11-noactafterasksameturn) | `confirmation.ts` | Denies the listed tools on a turn in which the model already asked the user a question. |
 | [`destructiveThrottle`](#12-destructivethrottle) | `confirmation.ts` | At most one destructive action that TOOK EFFECT per turn (a confirmation probe does not count). |
 | [`askedEarlier`](#13-askedearlier) | `structural.ts` | A gated argument may be recorded only when an askUser succeeded in an EARLIER turn; a same-turn ask does not count. |
-| [`confirmedNeedsEarlierProbe`](#14-confirmedneedsearlierprobe) | `structural.ts` | A confirmed:true call is denied unless the SAME tool ran as a probe (confirmed!=true, matching args) in an EARLIER turn. |
 
 #### 1. `requiresBefore`
 
@@ -407,9 +406,9 @@ consentRequired({ tools: ['storeProfile'], consentOk: (world) => world.consentOn
 
 #### 10. `confirmFirst`
 
-A destructive tool needs the user's go-ahead from an EARLIER turn — via a confirm flag probe or a prior ask. Passing a mechanism NAME to the string overload throws at construction.
+A destructive tool needs the user's go-ahead from an EARLIER turn — licensed `via` a same-record probe, a prior ask, or either. The licensing event is turn-bounded by `within` (default 1). Passing a `via` NAME to the string overload throws at construction.
 
-**When to reach for it.** The user must have agreed before this call runs, and the evidence has to be cross-turn — this is the consent gate itself. Its neighbours answer different questions: `destructiveThrottle` caps the blast radius of a turn that IS approved, `consentRequired` reads a standing world flag rather than the conversation, and `pendingConfirmMustAsk` gates the REPLY rather than the call. Mechanism: `'arg'` when the tool carries a confirm flag, `'prior-ask'` when it has none and an earlier question is the only possible evidence; the string overload sets the FLAG NAME, so `confirmFirst('prior-ask')` throws rather than silently building a guard that can never fire.
+**When to reach for it.** The user must have agreed before this call runs, and the evidence has to be cross-turn — this is the ONE consent gate (it absorbed `confirmedNeedsEarlierProbe`). Its neighbours answer different questions: `destructiveThrottle` caps the blast radius of a turn that IS approved, `consentRequired` reads a standing world flag rather than the conversation, and `pendingConfirmMustAsk` gates the REPLY rather than the call. `via`: `'probe'` = a same-record `flag:false` preview of the SAME tool in an earlier turn (the strict, record-bound license); `'ask'` = a flag-LESS action gated on a prior-turn `askUser`; `'either'` (default) = the flag-gated form licensed by a matching probe OR a prior ask. RECENCY LAW: the licensing event must fall `within` turns of now (default 1, the two-step shape) — widen deliberately for genuinely multi-turn flows. The string overload sets the FLAG NAME, so `confirmFirst('probe')` throws rather than silently building a guard that can never fire.
 
 ```ts
 confirmFirst('confirmed')
@@ -445,25 +444,15 @@ A gated argument may be recorded only when an askUser succeeded in an EARLIER tu
 askedEarlier({ tool: 'completeMaintenance', arg: 'condition' })
 ```
 
-#### 14. `confirmedNeedsEarlierProbe`
-
-A confirmed:true call is denied unless the SAME tool ran as a probe (confirmed!=true, matching args) in an EARLIER turn.
-
-**When to reach for it.** A destructive tool that carries its own confirm flag and must be previewed before it is confirmed — the preview and the go-ahead have to live in different messages. Pins the probe to the same act by args equality, all structural: no text is matched.
-
-```ts
-confirmedNeedsEarlierProbe({ tools: ['chargeDeposit'] })
-```
-
 ### `postTool` — the call has run
 
 The only hook that sees `ctx.result`. It cannot veto anything — the effect already happened — so its job is to stop the RESULT from being reported as something it was not: a violation here joins the reply redrive set.
 
 | factory | file | what it enforces |
 |---|---|---|
-| [`resultInvariant`](#15-resultinvariant) | `world.ts` | A post-execution check on the tool RESULT: when the predicate fails, the violation joins the reply redrive set. |
+| [`resultInvariant`](#14-resultinvariant) | `world.ts` | A post-execution check on the tool RESULT: when the predicate fails, the violation joins the reply redrive set. |
 
-#### 15. `resultInvariant`
+#### 14. `resultInvariant`
 
 A post-execution check on the tool RESULT: when the predicate fails, the violation joins the reply redrive set.
 
@@ -479,16 +468,16 @@ The reply text is in `ctx.reply` and no tool can run any more. A deny costs a bo
 
 | factory | file | what it enforces |
 |---|---|---|
-| [`pendingConfirmMustAsk`](#16-pendingconfirmmustask) | `confirmation.ts` | When a probe returned `requiresConfirmation` this turn and nothing resolved it, the reply must relay that question. |
-| [`replyMustMention`](#17-replymustmention) | `reply.ts` | The reply must contain at least one of the given keywords (case-insensitive). |
-| [`replyMaxOccurrences`](#18-replymaxoccurrences) | `reply.ts` | At most n DISTINCT calls-to-action from the list may appear in one reply. |
-| [`replySingleQuestion`](#19-replysinglequestion) | `reply.ts` | The reply must carry exactly one question mark. |
-| [`replyConfirmsLabels`](#20-replyconfirmslabels) | `reply.ts` | The reply must be non-empty and name every one of the given labels. |
-| [`emptyReply`](#21-emptyreply) | `reply.ts` | The final reply must not be blank. |
-| [`degenerationGuard`](#22-degenerationguard) | `reply.ts` | Catches leaked reasoning or tool markup, chat-template tokens and run-away line repetition in the reply. |
-| [`llmCheck`](#23-llmcheck) | `llm-check.ts` | An LLM-adjudicated guard: a host-registered adjudicator answers a trusted rubric over the full context (history + user text) and its verdict becomes the deny. |
+| [`pendingConfirmMustAsk`](#15-pendingconfirmmustask) | `confirmation.ts` | When a probe returned `requiresConfirmation` this turn and nothing resolved it, the reply must relay that question. |
+| [`replyMustMention`](#16-replymustmention) | `reply.ts` | The reply must contain at least one of the given keywords (case-insensitive). |
+| [`replyMaxOccurrences`](#17-replymaxoccurrences) | `reply.ts` | At most n DISTINCT calls-to-action from the list may appear in one reply. |
+| [`replySingleQuestion`](#18-replysinglequestion) | `reply.ts` | The reply must carry exactly one question mark. |
+| [`replyConfirmsLabels`](#19-replyconfirmslabels) | `reply.ts` | The reply must be non-empty and name every one of the given labels. |
+| [`emptyReply`](#20-emptyreply) | `reply.ts` | The final reply must not be blank. |
+| [`degenerationGuard`](#21-degenerationguard) | `reply.ts` | Catches leaked reasoning or tool markup, chat-template tokens and run-away line repetition in the reply. |
+| [`llmCheck`](#22-llmcheck) | `llm-check.ts` | An LLM-adjudicated guard: a host-registered adjudicator answers a trusted rubric over the full context (history + user text) and its verdict becomes the deny. |
 
-#### 16. `pendingConfirmMustAsk`
+#### 15. `pendingConfirmMustAsk`
 
 When a probe returned `requiresConfirmation` this turn and nothing resolved it, the reply must relay that question.
 
@@ -498,7 +487,7 @@ When a probe returned `requiresConfirmation` this turn and nothing resolved it, 
 pendingConfirmMustAsk()
 ```
 
-#### 17. `replyMustMention`
+#### 16. `replyMustMention`
 
 The reply must contain at least one of the given keywords (case-insensitive).
 
@@ -508,7 +497,7 @@ The reply must contain at least one of the given keywords (case-insensitive).
 replyMustMention(['support@example.com'], 'Give the support address so the person can follow up.')
 ```
 
-#### 18. `replyMaxOccurrences`
+#### 17. `replyMaxOccurrences`
 
 At most n DISTINCT calls-to-action from the list may appear in one reply.
 
@@ -518,7 +507,7 @@ At most n DISTINCT calls-to-action from the list may appear in one reply.
 replyMaxOccurrences(['book now', 'call us', 'subscribe'], 1, 'One ask per reply — drop the extra calls-to-action.')
 ```
 
-#### 19. `replySingleQuestion`
+#### 18. `replySingleQuestion`
 
 The reply must carry exactly one question mark.
 
@@ -528,7 +517,7 @@ The reply must carry exactly one question mark.
 replySingleQuestion('Ask exactly one question so the person can answer it.')
 ```
 
-#### 20. `replyConfirmsLabels`
+#### 19. `replyConfirmsLabels`
 
 The reply must be non-empty and name every one of the given labels.
 
@@ -538,7 +527,7 @@ The reply must be non-empty and name every one of the given labels.
 replyConfirmsLabels(['BK-100234'], 'Name the booking you acted on so the person can check it.')
 ```
 
-#### 21. `emptyReply`
+#### 20. `emptyReply`
 
 The final reply must not be blank.
 
@@ -548,7 +537,7 @@ The final reply must not be blank.
 emptyReply()
 ```
 
-#### 22. `degenerationGuard`
+#### 21. `degenerationGuard`
 
 Catches leaked reasoning or tool markup, chat-template tokens and run-away line repetition in the reply.
 
@@ -558,7 +547,7 @@ Catches leaked reasoning or tool markup, chat-template tokens and run-away line 
 degenerationGuard()
 ```
 
-#### 23. `llmCheck`
+#### 22. `llmCheck`
 
 An LLM-adjudicated guard: a host-registered adjudicator answers a trusted rubric over the full context (history + user text) and its verdict becomes the deny.
 
@@ -574,9 +563,9 @@ A `ReplyMutator`, not a `Guard`: it is applied to the reply before the `onReply`
 
 | factory | file | what it enforces |
 |---|---|---|
-| [`jargonScrub`](#24-jargonscrub) | `reply.ts` | A deterministic egress rewrite of internal vocabulary into user words (word-boundary, case-insensitive). |
+| [`jargonScrub`](#23-jargonscrub) | `reply.ts` | A deterministic egress rewrite of internal vocabulary into user words (word-boundary, case-insensitive). |
 
-#### 24. `jargonScrub`
+#### 23. `jargonScrub`
 
 A deterministic egress rewrite of internal vocabulary into user words (word-boundary, case-insensitive).
 
@@ -592,9 +581,9 @@ One factory, and it is the only one whose hook you choose: `custom` follows the 
 
 | factory | file | what it enforces |
 |---|---|---|
-| [`custom`](#25-custom) | `custom.ts` | The escape hatch: a guard whose kind, dim, check and prose the spec author writes by hand. |
+| [`custom`](#24-custom) | `custom.ts` | The escape hatch: a guard whose kind, dim, check and prose the spec author writes by hand. |
 
-#### 25. `custom`
+#### 24. `custom`
 
 The escape hatch: a guard whose kind, dim, check and prose the spec author writes by hand.
 

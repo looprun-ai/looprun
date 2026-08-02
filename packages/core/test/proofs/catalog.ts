@@ -18,7 +18,7 @@
  * | precondition                   | createMedia                | quotaRemaining() > 0                               |
  * | maxCalls                       | createItem                 | max 2 per turn (default 'turn' scope)              |
  * | noDuplicateCall                | any (auto minimal)         | —                                                  |
- * | confirmFirst                   | deleteItem(arg) purgeAll(prior-ask) (auto base) | lexicon.confirmAskRe          |
+ * | confirmFirst                   | deleteItem(via:either) purgeAll(via:ask) (auto base) | record-bound probe + recency (within:1) |
  * | noActAfterAskSameTurn          | deleteItem, purgeAll       | —                                                  |
  * | destructiveThrottle            | deleteItem, purgeAll (auto base) | —                                            |
  * | resultInvariant                | reportStatus (postTool)    | fires when result.count === 0                      |
@@ -31,7 +31,7 @@
  * | consentRequired                | useMedia                   | consentOk = world.hasPrimary()                     |
  * | (DELETED — no-regex law 2026-08-02) noFabricatedSuccess · destructiveClaimRequiresSuccess · noFalseFailureClaim · minimalDisclosure · noInstructionFromData · noCompetitorClaim · noOutOfSurfaceActionClaim · noUngroundedRegulatedFigure |
  * | askedEarlier                   | createItem                 | askedEarlier({ tool:'createItem', arg:'condition' }) — gates the non-schema `condition` arg |
- * | confirmedNeedsEarlierProbe     | editMedia                  | confirmedNeedsEarlierProbe({ tools:['editMedia'] }) — NOT deleteItem (would double-bind confirmFirst) |
+ * | (ABSORBED 2026-08-02) confirmedNeedsEarlierProbe → confirmFirst({ via:'probe' }) — record-bound probe now a via of the ONE confirm gate |
  * | llmCheck                       | collective:'skip'          | rubric+host adjudicator are agent-specific (like the content-contract reply guards); proven isolated L1+L3 |
  *
  * ## SCRIPT CONVENTIONS (verified in signal-mechanics.test.ts)

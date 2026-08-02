@@ -111,13 +111,16 @@ describe('M1 · full loop — a same-step bulk destructive is throttled to ONE e
     });
 
   it('turn-1 emits TWO deleteItem(confirmed:true) in one step → the SECOND is vetoed by the throttle', async () => {
-    // Turn 0 probes + asks (satisfies confirmFirst for turn 1). Turn 1 emits both confirmed deletes in a
-    // SINGLE scripted step (one array = one model response = one concurrent dispatch).
+    // Turn 0 probes BOTH records (record-bound confirmFirst needs a matching earlier-turn preview per
+    // record, distance 1). Turn 1 emits both confirmed deletes in a SINGLE scripted step (one array =
+    // one model response = one concurrent dispatch) — both are confirmFirst-licensed, so the SECOND
+    // effect is caught by destructiveThrottle, which is what this proof pins.
     const res = await runProofLoop(spec(), {
       preset: 'seeded-media',
       turns: [{ userText: 'delete p001 and p002' }, { userText: 'yes, delete both — I confirm' }],
       script: [
         [{ tool: 'deleteItem', args: { id: 'p001' } }],
+        [{ tool: 'deleteItem', args: { id: 'p002' } }],
         [{ tool: 'replyToUser', args: { text: 'Deleting p001 and p002 is permanent — are you sure?' } }],
         [
           { tool: 'deleteItem', args: { id: 'p001', confirmed: true } },

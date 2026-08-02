@@ -6,90 +6,101 @@ import type { Guard, ObservedCall } from '../rules.js';
 import { canonArgs } from './flow.js';
 
 /**
- * A destructive tool needs the user's go-ahead before it runs — via one of two MECHANISMS (the
- * `mechanism` option, default `'arg'`):
- *  - `'arg'`: the tool carries a confirm FLAG (`argFlag`, default `confirmed`). `confirmed:true` is legal
- *    ONLY when a `confirmed:false`/absent PROBE of the SAME tool ran OK in an EARLIER turn — never confirm
- *    your own same-turn probe, never skip it.
- *  - `'prior-ask'`: the tool has NO confirm flag (e.g. a zero-arg action). It is legal ONLY when an
- *    `askUser` succeeded in an EARLIER turn — the model must ASK, wait for the user's answer, and act only
- *    in a LATER turn. A same-turn `askUser` does NOT unlock it (that is `noActAfterAskSameTurn`'s edge —
- *    the two compose: prior-ask = cross-turn REQUIRE, noActAfterAskSameTurn = same-turn DENY).
+ * A destructive tool needs the user's go-ahead before it runs — the ONE confirm-gate kind (it absorbed the
+ * former structural `confirmedNeedsEarlierProbe`). What LICENSES the confirmed act is the `via` option:
+ *  - `'probe'`: a `flag:false`/absent PROBE of the SAME tool that ran OK in an EARLIER turn AND matched
+ *    this call's RECORD (its args, minus the confirm `flag`, are a subset of this call's) — the preview was
+ *    of the SAME act, not a different one. This is the strict, record-bound license.
+ *  - `'ask'`: a flag-LESS action (e.g. a zero-arg tool). It is legal ONLY when an `askUser` succeeded in an
+ *    EARLIER turn — the model must ASK, wait for the user's answer, and act only in a LATER turn. Every call
+ *    is gated (there is no confirm flag to key on). A same-turn `askUser` does NOT unlock it (that is
+ *    `noActAfterAskSameTurn`'s edge — the two compose: `via:'ask'` = cross-turn REQUIRE,
+ *    `noActAfterAskSameTurn` = same-turn DENY).
+ *  - `'either'` (DEFAULT): the flag-gated form — `flag:true` is licensed by a matching earlier-turn probe OR
+ *    an earlier-turn `askUser`. This is what the string overload and `AgentSpecBase`'s arg-flag tools install.
+ *
+ * RECENCY LAW (2026-08-02): a license is a LICENSING signal — a past event that UNLOCKS a new act — so it is
+ * turn-bounded by `within` (default **1**, the immediately-preceding turn / the natural two-step shape):
+ * the licensing event must satisfy `1 ≤ currentTurnIndex − eventTurnIndex ≤ within`. A probe 20 turns ago
+ * must never license today's confirm; widen deliberately with `within` when the flow genuinely spans turns.
+ *
  * Keys on observed / args only (a structural signal, not reply text) — so it stays model-independent.
  * Auto-installed by `AgentSpecBase` per destructive tool according to `cfg.confirmMechanism`.
  */
-export function confirmFirst(opts?: string | { argFlag?: string; mechanism?: 'arg' | 'prior-ask' }): Guard {
-  // The string overload sets `argFlag`, NOT `mechanism` — and `confirmFirst('prior-ask')` is the
-  // plausible slip (it is literally the mechanism's name). It used to build argFlag:'prior-ask' +
-  // mechanism:'arg', a guard that can never fire: no tool carries an arg called `prior-ask`, so
-  // `ctx.args['prior-ask'] !== true` short-circuits to `null` on every call — a destructive tool left
-  // UNGATED while the spec header reads as confirmed-covered. Rejected at construction — the same
-  // fail-fast posture the risk-family kinds already take against
-  // inert configuration.
-  //
-  // WHY REJECT RATHER THAN RETIRE THE OVERLOAD: the string form is the shipping call shape across every
-  // generated bundle (`confirmFirst('confirmed')`) and is mirrored into looprun; retiring it is a
-  // breaking change to specs that are byte-certified. A targeted throw on the two mechanism NAMES costs
-  // nothing legitimate — an arg genuinely named `arg`/`prior-ask` is not a thing — and turns a silent
-  // no-op into a build failure.
-  if (typeof opts === 'string' && (opts === 'prior-ask' || opts === 'arg')) {
+export function confirmFirst(
+  opts?: string | { flag?: string; via?: 'probe' | 'ask' | 'either'; within?: number },
+): Guard {
+  // The string overload sets the confirm `flag`, NOT `via` — and `confirmFirst('probe'|'ask'|'either')` is
+  // the plausible slip (it is literally a `via` value). It would build flag:'ask' (etc.) with via:'either',
+  // a guard that can never fire in the flag-gated arm: no tool carries an arg called `ask`, so
+  // `ctx.args['ask'] !== true` short-circuits to `null` on every call — a destructive tool left UNGATED
+  // while the spec header reads as confirmed-covered. Rejected at construction (same fail-fast posture the
+  // risk-family kinds take against inert configuration); the legitimate call is the object form.
+  if (typeof opts === 'string' && (opts === 'probe' || opts === 'ask' || opts === 'either')) {
     throw new Error(
-      `confirmFirst('${opts}'): the STRING overload sets the confirm ARG FLAG, not the mechanism — this would build argFlag:'${opts}' with mechanism:'arg', a guard that can never fire (no tool has an argument named '${opts}'). Pass the object form: confirmFirst({ mechanism: '${opts}' }).`,
+      `confirmFirst('${opts}'): the STRING overload sets the confirm FLAG, not \`via\` — this would build flag:'${opts}' with via:'either', a guard that can never fire (no tool has an argument named '${opts}'). Pass the object form: confirmFirst({ via: '${opts}' }).`,
     );
   }
-  const o = typeof opts === 'string' ? { argFlag: opts } : (opts ?? {});
-  const argFlag = o.argFlag ?? 'confirmed';
-  const mechanism = o.mechanism ?? 'arg';
+  const o = typeof opts === 'string' ? { flag: opts } : (opts ?? {});
+  const flag = o.flag ?? 'confirmed';
+  const via = o.via ?? 'either';
+  const within = o.within ?? 1;
+  // RECENCY LAW: an earlier-turn event licenses only within `within` turns of the current turn.
+  const recent = (obs: ObservedCall, cur: number): boolean =>
+    cur - obs.turnIndex >= 1 && cur - obs.turnIndex <= within;
+  const askedRecently = (ctx: { observed: ObservedCall[]; turnIndex: number }): boolean =>
+    ctx.observed.some((obs) => obs.name === 'askUser' && obs.ok && recent(obs, ctx.turnIndex));
   return {
     kind: 'confirmFirst',
     dim: 'run',
     check(ctx) {
       if (!ctx.tool) return null;
-      if (mechanism === 'prior-ask') {
-        // The unlock is an earlier-turn SURFACING of the action to the user, in one of three shapes —
-        // and every shape is SUCCESS-KEYED (`obs.ok`).
-        //
-        // SUCCESS-KEYING: the same-tool disjunct accepts only a SUCCESSFUL earlier attempt. Vetoed
-        // attempts land in observed with `ok:false`; accepting those would let a turn-1 call denied BY
-        // THIS VERY GUARD unlock the identical turn-2 call, and the destructive
-        // action ran without the user ever being asked. The guard defeated itself in exactly two turns —
-        // counting a poisoned first attempt must never unlock the second.
-        //
-        // The unlock is STRUCTURAL: a prior-turn OK call of the SAME tool (the probe) or a prior-turn OK
-        // `askUser` (the explicit question terminal). The former replyToUser-text disjunct — a prior
-        // reply whose TEXT matched an injected confirm-question regex — is retired with the no-regex law
-        // (2026-08-02): a model that relays confirmation through prose instead of `askUser` is judged by
-        // an `llmCheck` rubric, not by a closure-held pattern here.
-        const probedEarlier = ctx.observed.some(
-          (obs) =>
-            obs.turnIndex < ctx.turnIndex &&
-            obs.ok &&
-            (obs.name === ctx.tool || obs.name === 'askUser'),
+      if (via === 'ask') {
+        // Flag-less action: every call is gated on the action having been SURFACED to the user in an
+        // earlier turn within recency — either a `askUser` OR a prior SUCCESSFUL call of the tool itself
+        // (a flag-less tool has no probe shape, so its own prior OK run is the equivalent surfacing).
+        // SUCCESS-KEYING (`obs.ok`) is deliberate — a vetoed turn-1 attempt (ok:false) must never unlock
+        // the identical turn-2 call, or the guard defeats itself in exactly two turns.
+        const surfacedRecently = ctx.observed.some(
+          (obs) => obs.ok && (obs.name === 'askUser' || obs.name === ctx.tool) && recent(obs, ctx.turnIndex),
         );
-        return probedEarlier
-          ? null
+        if (surfacedRecently) return null;
+        const askedSameTurn = ctx.observed.some(
+          (obs) => obs.name === 'askUser' && obs.ok && obs.turnIndex === ctx.turnIndex,
+        );
+        return askedSameTurn
+          ? `You asked the user a question this turn — wait for their answer; run ${ctx.tool} only in a LATER turn.`
           : `Do NOT run ${ctx.tool} yet — first ask the user to confirm and STOP; run it only in a LATER turn after they agree.`;
       }
-      if (ctx.args[argFlag] !== true) return null;
-      const probe = ctx.observed.find(
-        (obs) => obs.name === ctx.tool && obs.ok && obs.args?.[argFlag] !== true && obs.turnIndex < ctx.turnIndex,
+      // Flag-gated arms (`'probe'` / `'either'`): a probe (flag≠true) passes freely; only `flag:true` is gated.
+      if (ctx.args[flag] !== true) return null;
+      // A matching probe: the SAME tool, ran OK, carried flag≠true, and its non-`flag` args are a subset of
+      // this call's (same RECORD) — the preview was of THIS act. (Absorbed from confirmedNeedsEarlierProbe.)
+      const isMatchingProbe = (obs: ObservedCall): boolean =>
+        obs.name === ctx.tool &&
+        obs.ok &&
+        obs.args?.[flag] !== true &&
+        Object.keys(obs.args ?? {})
+          .filter((k) => k !== flag)
+          .every((k) => obs.args![k] === ctx.args[k]);
+      const probeLicensed = ctx.observed.some((obs) => isMatchingProbe(obs) && recent(obs, ctx.turnIndex));
+      // `'either'` also accepts a prior-turn `askUser` as the confirm surface (structural) — measured: the
+      // probe-only form dead-locked legitimate later-turn confirmations relayed through a question.
+      const askLicensed = via === 'either' && askedRecently(ctx);
+      if (probeLicensed || askLicensed) return null;
+      // Unlicensed — refine the message. A same-turn matching probe is the "you confirmed your own
+      // same-turn preview" edge (the go-ahead must arrive in a LATER message).
+      const sameTurnProbe = ctx.observed.some(
+        (obs) => isMatchingProbe(obs) && obs.turnIndex === ctx.turnIndex,
       );
-      // accept a prior-turn `askUser` as the probe surface too (structural) — measured: the
-      // tool-probe-only form dead-locked legitimate later-turn confirmations. The former replyToUser-text
-      // disjunct is retired with the no-regex law (2026-08-02): prose relay is `llmCheck`'s job, not a
-      // closure-held pattern. Same-turn confirmed:true stays vetoed (every disjunct requires
-      // turnIndex < current).
-      const askProbe =
-        !probe &&
-        ctx.observed.some((obs) => obs.turnIndex < ctx.turnIndex && obs.name === 'askUser' && obs.ok);
-      return probe || askProbe
-        ? null
-        : `Do NOT pass ${argFlag}:true — first call ${ctx.tool} WITHOUT it, relay the confirmation question to the user, and only confirm in a LATER turn after the user agrees.`;
+      return sameTurnProbe
+        ? `You previewed and confirmed ${ctx.tool} in the SAME turn — the go-ahead must arrive in a LATER message; confirm only after the user has seen the preview and replied.`
+        : `Do NOT pass ${flag}:true — first call ${ctx.tool} WITHOUT it, relay the confirmation question to the user, and only confirm in a LATER turn after the user agrees.`;
     },
     prose: () =>
-      mechanism === 'prior-ask'
+      via === 'ask'
         ? 'this destructive action requires asking the user to confirm first and running it only in a LATER turn after they agree — never on the opening turn or in the same turn as the question'
-        : `destructive actions need ${argFlag}:false first + the USER's explicit confirmation in a later turn`,
+        : `destructive actions need ${flag}:false first + the USER's explicit confirmation in a later turn`,
   };
 }
 
