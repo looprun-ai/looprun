@@ -257,6 +257,33 @@ describe('defineWorld — projection (#4) + determinism', () => {
   });
 });
 
+describe('defineWorld — derived formulas (#3b)', () => {
+  const derivedSpec: WorldSpec = {
+    clock: '2026-07-01',
+    entities: { asset: { idPrefix: 'ast', fields: { dailyRate: 'money' } } },
+    presets: { default: [] },
+    tools: {},
+    derived: { lateFee: { formula: 'lateDays * dailyRate * 0.5', inputs: ['lateDays'] } },
+  };
+
+  it('compiles at build and evaluates against a numeric scope at run', () => {
+    const w = defineWorld(derivedSpec)('default');
+    expect(w.derived.lateFee({ lateDays: 4, dailyRate: 200 })).toBe(400);
+    expect(defineWorld(derivedSpec).describe().derived).toEqual(['lateFee']);
+  });
+
+  it('throws at BUILD (load) when a formula references an undeclared identifier', () => {
+    const bad: WorldSpec = {
+      clock: '2026-07-01',
+      entities: { asset: { idPrefix: 'ast', fields: { dailyRate: 'money' } } },
+      presets: { default: [] },
+      tools: {},
+      derived: { lateFee: { formula: 'lateDays * dailyRate' } }, // lateDays not a field, not an input
+    };
+    expect(() => defineWorld(bad)).toThrow(/derived 'lateFee'.*unknown identifier.*'lateDays'/);
+  });
+});
+
 describe('defineWorld — custom executor (#7)', () => {
   it('runs a host-registered executor and lists it in the self-description', () => {
     const spec: WorldSpec = {

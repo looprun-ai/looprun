@@ -85,6 +85,8 @@ const INTERNAL = [
   'defineWorld', 'WorldSpec', 'WorldFactory', 'BuiltWorld', 'WorldCall', 'AuditEntry', 'EntityDecl',
   'ArgDecl', 'Gate', 'ToolDecl', 'ReadResult', 'CreateResult', 'TransitionResult', 'PresetDelta', 'DefineWorldOptions',
   'CustomExecutor', 'CustomCtx', 'CustomResult', 'ScalarType', 'FieldType',
+  // increment 3b — the `derived` formula mini-language (closed grammar, compiled at load).
+  'compileFormula', 'FormulaError', 'CompiledFormula',
 ].sort();
 
 /** Every name the module exports — values AND types, aliases resolved by the checker. */

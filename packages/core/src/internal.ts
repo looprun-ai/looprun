@@ -44,11 +44,11 @@ export { normalizeModelParams, resolveModelSettings } from './model-params.js';
 // exactly the same audience as the governed-turn machinery below, and NO tutorial chapter teaches
 // it yet (3b finalizes the world.json form). AgentWorld the TYPE stays on the public barrel;
 // defineWorld the BUILDER lives here until the world chapter lands.
-export { defineWorld } from './world/index.js';
+export { defineWorld, compileFormula, FormulaError } from './world/index.js';
 export type {
   WorldSpec, WorldFactory, BuiltWorld, WorldCall, AuditEntry, EntityDecl, ArgDecl, Gate, ToolDecl,
   ReadResult, CreateResult, TransitionResult, PresetDelta, DefineWorldOptions, CustomExecutor, CustomCtx, CustomResult,
-  ScalarType, FieldType,
+  ScalarType, FieldType, CompiledFormula,
 } from './world/index.js';
 
 // The governed-turn machine ────────────────────────────────────────────────────

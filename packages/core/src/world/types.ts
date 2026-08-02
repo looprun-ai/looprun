@@ -106,7 +106,12 @@ export interface WorldSpec {
   clock: string;
   entities?: Record<string, EntityDecl>;
   tools: Record<string, ToolDecl>;
-  derived?: Record<string, { formula: string }>;
+  /**
+   * Named arithmetic values over a numeric scope (spec §Deliverable: `lateFee = lateDays * dailyRate * 0.5`).
+   * `formula` is the CLOSED mini-language (see `formula.ts`); `inputs` NAMES the identifiers the formula
+   * may reference on top of the declared entity fields — so a typo throws at LOAD, not NaN at run.
+   */
+  derived?: Record<string, { formula: string; inputs?: readonly string[] }>;
   presets?: Record<string, readonly PresetDelta[]>;
   seed?: Record<string, readonly Record<string, unknown>[]>;
 }
@@ -149,6 +154,8 @@ export interface BuiltWorld {
   sseActions: unknown[];
   /** deterministic projection: always carries `today` + declared status keys (#4). */
   projection(): Record<string, unknown>;
+  /** compiled `derived` formulas, keyed by name — evaluate a named value against a numeric scope. */
+  derived: Record<string, (scope: Record<string, number>) => number>;
   /** the audit ledger — every exec, gate outcome, and mint, in order. */
   audit: AuditEntry[];
   [k: string]: unknown;
@@ -169,5 +176,6 @@ export interface WorldFactory {
     tools: Record<string, { kind: string; twoStep: boolean; custom?: string }>;
     presets: string[];
     customExecutors: string[];
+    derived: string[];
   };
 }

@@ -13,6 +13,7 @@
  */
 import { receive } from './reception.js';
 import { evaluateGates, type RecordStore } from './gates.js';
+import { compileFormula, type CompiledFormula } from './formula.js';
 import type {
   AuditEntry,
   BuiltWorld,
@@ -30,8 +31,9 @@ const TERMINAL_TOOLS = new Set(['replyToUser', 'askUser']);
 
 export function defineWorld(spec: WorldSpec, options: DefineWorldOptions = {}): WorldFactory {
   validateSpec(spec, options);
+  const derived = compileDerived(spec); // #derived — compiled at BUILD; unknown identifiers throw HERE.
 
-  const factory = ((preset = 'default') => build(spec, options, preset)) as WorldFactory;
+  const factory = ((preset = 'default') => build(spec, options, preset, derived)) as WorldFactory;
   factory.describe = () => ({
     clock: spec.clock,
     entities: Object.keys(spec.entities ?? {}),
@@ -40,8 +42,32 @@ export function defineWorld(spec: WorldSpec, options: DefineWorldOptions = {}): 
     ),
     presets: Object.keys(spec.presets ?? {}),
     customExecutors: Object.keys(options.custom ?? {}),
+    derived: Object.keys(spec.derived ?? {}),
   });
   return factory;
+}
+
+/**
+ * Compile every `derived` formula to a closed AST at BUILD time (load, never run). The allowed
+ * identifier set is the union of all declared entity fields and the derived entry's own `inputs` — so
+ * `lateDays * dailyRate * 0.5` with `inputs: ['lateDays']` reads `dailyRate` from a field and `lateDays`
+ * from an input, while a typo in either throws HERE, named.
+ */
+function compileDerived(spec: WorldSpec): Record<string, CompiledFormula> {
+  const fields = new Set<string>();
+  for (const entity of Object.values(spec.entities ?? {})) {
+    for (const field of Object.keys(entity.fields ?? {})) fields.add(field);
+  }
+  const out: Record<string, CompiledFormula> = {};
+  for (const [name, decl] of Object.entries(spec.derived ?? {})) {
+    const allowed = [...new Set([...fields, ...(decl.inputs ?? [])])];
+    try {
+      out[name] = compileFormula(decl.formula, allowed);
+    } catch (e) {
+      throw new Error(`defineWorld: derived '${name}': ${(e as Error).message}`);
+    }
+  }
+  return out;
 }
 
 /**
@@ -69,13 +95,16 @@ function validateSpec(spec: WorldSpec, options: DefineWorldOptions): void {
   }
 }
 
-function build(spec: WorldSpec, options: DefineWorldOptions, preset: string): BuiltWorld {
+function build(spec: WorldSpec, options: DefineWorldOptions, preset: string, derived: Record<string, CompiledFormula>): BuiltWorld {
   const store = seedStore(spec);
   const counters: Record<string, number> = {};
   applyPreset(spec, preset, store, counters);
 
   const toolCalls: WorldCall[] = [];
   const audit: AuditEntry[] = [];
+  const derivedFns = Object.fromEntries(
+    Object.entries(derived).map(([name, f]) => [name, (scope: Record<string, number>) => f.evaluate(scope)]),
+  );
 
   const mintId = (entity: string): string => {
     const prefix = spec.entities?.[entity]?.idPrefix ?? entity;
@@ -90,6 +119,7 @@ function build(spec: WorldSpec, options: DefineWorldOptions, preset: string): Bu
     advanceTurn() {},
     ingestAttachment: () => 'att_1',
     projection: () => projection(spec, store, counters),
+    derived: derivedFns,
     exec(name: string, rawArgs: Record<string, unknown>): unknown {
       const args = rawArgs ?? {};
       if (TERMINAL_TOOLS.has(name)) return { success: true };
