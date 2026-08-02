@@ -157,6 +157,22 @@ export function recordTerminalCall(ledger: TurnLedger, name: string, args: Recor
 }
 
 /**
+ * Clear the DELIVERED terminal declaration — the reply text AND its structured `did`/`asked`.
+ *
+ * The premature-terminal invalidation path (a terminal that shared its closing step with a domain call,
+ * so its text was composed before that call's result existed) must clear the WHOLE delivered declaration,
+ * not just the reply prose: an invalidated terminal's `did` is an equally-premature claim, and leaving it
+ * on the ledger would let the cross-check guards ground against — or history retain — a declaration the
+ * user never saw. The backend calls this where core owns the invalidation seam; a single call keeps the
+ * three fields in lockstep so no site can clear the text while orphaning the claims.
+ */
+export function clearDeliveredTerminal(ledger: TurnLedger): void {
+  ledger.terminalReply = '';
+  ledger.did = [];
+  ledger.asked = false;
+}
+
+/**
  * Drop terminal calls that were emitted but never DELIVERED (see `supersededTerminalCalls`). Runs
  * once the generation has resolved, so the hook-time record that gave a same-step sibling's preTool
  * checks visibility of an ask (`respond` with `asked:true`) has already done its job; what is corrected here is the
@@ -228,8 +244,10 @@ export function recordTurnHistory(ledger: TurnLedger, reply: string, world?: Age
     userText: ledger.currentUserText,
     reply,
     toolCalls: Object.freeze(toolCalls),
-    // The turn's DELIVERED claims (Task 4 will feed the VERIFIED set; for now what the ledger holds),
-    // frozen entry-and-claim so `ctx.history[n].did` is read-only by construction.
+    // The turn's DELIVERED, VERIFIED claims: finalizeReply syncs `ledger.did` to what it actually
+    // delivered (the accepted/salvaged payload's did, or the engine-derived exhaustion set), so history
+    // retains the grounded set — never a raw or fabricated declaration. Frozen entry-and-claim so
+    // `ctx.history[n].did` is read-only by construction.
     did: Object.freeze(ledger.did.map((c) => Object.freeze({ ...c }))),
     asked: ledger.asked,
     attemptedCalls: Object.freeze(ledger.attemptedCalls.map((a) => Object.freeze({ ...a }))),

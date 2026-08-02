@@ -105,7 +105,8 @@ describe('GuardCtx carries did/asked on the reply-side hooks', () => {
     beginTurn(ledger, 0, 'refund 7');
     recordTerminal(ledger, 'respond', { message: 'Done.', did: [{ op: 'refund', outcome: 'success' }], asked: true });
 
-    await finalizeReply(spec, undefined, fixtureWorld(), ledger, 'Done.', async () => '', 1);
+    // The delivered respond IS the payload finalizeReply reads — it seats ctx.did/asked from it.
+    await finalizeReply(spec, undefined, fixtureWorld(), ledger, { message: 'Done.', did: [{ op: 'refund', outcome: 'success' }], asked: true }, async () => ({ message: '', did: [], asked: false }), 1);
 
     expect(captured?.did).toEqual([{ op: 'refund', outcome: 'success' }]);
     expect(captured?.asked).toBe(true);
@@ -119,7 +120,7 @@ describe('GuardCtx carries did/asked on the reply-side hooks', () => {
     beginTurn(ledger, 0, 'refund 7');
     recordTerminal(ledger, 'respond', { message: 'Done.', did: [{ op: 'refund', outcome: 'success' }], asked: false });
 
-    await finalizeReply(spec, undefined, fixtureWorld(), ledger, 'Done.', async () => '', 0);
+    await finalizeReply(spec, undefined, fixtureWorld(), ledger, { message: 'Done.', did: [{ op: 'refund', outcome: 'success' }], asked: false }, async () => ({ message: '', did: [], asked: false }), 0);
 
     expect(seen.length).toBeGreaterThan(0);
     expect(seen[0].did).toEqual([{ op: 'refund', outcome: 'success' }]);

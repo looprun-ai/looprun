@@ -33,7 +33,9 @@ import {
   evaluateOnInput,
   enforcePostTool,
   redriveMessage,
-  defaultExhaustionReply,
+  renderOperationReport,
+  deriveClaimsFromLedger,
+  clearDeliveredTerminal,
   finalizeReply,
   governanceVeto,
   runChainCompletionPass,
@@ -49,6 +51,8 @@ import type {
   RuntimeTurnRecord,
   ReplyViolation,
   FinalizedReply,
+  RespondPayload,
+  RenderOpts,
 } from '@looprun-ai/core/internal';
 import type { AgentSpec, AgentWorld, DomainContract } from '@looprun-ai/core';
 
@@ -101,8 +105,12 @@ export function prompt(spec: AgentSpec, w: AgentWorld, d: DomainContract) {
 export function redrive(v: ReplyViolation[]) {
   return redriveMessage(v);
 }
-export function exhaustion(w: AgentWorld, d: DomainContract) {
-  return defaultExhaustionReply(d, w, [], [], []);
+export function report(l: TurnLedger, d: DomainContract, opts?: RenderOpts) {
+  const did = deriveClaimsFromLedger(l.observed, 0, d.writeTools ?? [], []);
+  return renderOperationReport(did, opts);
+}
+export function clearTerminal(l: TurnLedger): void {
+  clearDeliveredTerminal(l);
 }
 export function premature(steps: unknown) {
   return prematureTerminalTools(steps);
@@ -134,6 +142,7 @@ export const err = new GuardExecutionError({
   phase: 'check',
   cause: new Error('boom'),
 });
+export const payload: RespondPayload = { message: 'hi', did: [], asked: false };
 export function finalize(...args: Parameters<typeof finalizeReply>) {
   return finalizeReply(...args);
 }

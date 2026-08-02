@@ -5,10 +5,14 @@
  * the framework glue: how tools are wired, how the LLM is called, and ONE async `redrive` callback
  * that re-generates text with tools disabled.
  *
- * The reply pipeline (finalizeReply): mutators → onReply checks → bounded NO-TOOLS redrive →
- * deterministic honest-abstain closure. The redrive is a plain text re-generation with the
- * correction appended — NEVER a framework retry that re-runs the whole generation (that re-executes
- * side-effecting tools; measured ~100× slower).
+ * The reply pipeline (finalizeReply) works over the STRUCTURED respond payload (message + did + asked):
+ * mutators (message only) → onReply checks (over the payload — claims guards read did, degeneration reads
+ * message) → bounded NO-TOOLS redrive (the backend re-generates a whole respond payload) → salvage → a
+ * deterministic exhaustion closure the engine DERIVES from the world ledger. The delivered text is
+ * COMPOSED: `message` alone when `did` is empty, else `message` + the engine-rendered operation report of
+ * the verified `did` — so the operational sentences the user reads come from ledger-grounded structure,
+ * never the agent's free prose. The redrive is a re-generation with the correction appended — NEVER a
+ * framework retry that re-runs the whole generation (that re-executes side-effecting tools; ~100× slower).
  */
 import { resolveGuards, resolveMutators } from '../spec.js';
 import type { AgentSpec, ChainSpec } from '../spec.js';
@@ -16,6 +20,13 @@ import type { DomainContract } from '../trunk.js';
 import type { AgentWorld, Guard, GuardCtx, ObservedCall, Adjudicator } from '../rules.js';
 import { recordVeto, type TurnLedger } from './ledger.js';
 import { isTerminal } from './terminal.js';
+import {
+  deriveClaimsFromLedger,
+  renderOperationReport,
+  respondPayload,
+  type RespondPayload,
+  type TurnClaim,
+} from './claims.js';
 
 export interface ReplyViolation {
   guard: Guard;
@@ -248,49 +259,44 @@ export function redriveMessage(violations: ReplyViolation[]): string {
   return `Revise your last reply to the user:\n${correction}\nReply now in the user's language. Do NOT call a tool.`;
 }
 
+/** The engine's exhaustion sentence when SOMETHING landed this turn (an effected write). The rendered
+ *  operation report of the derived claims precedes it, so this is the honest tail. */
+const EXHAUSTION_PARTIAL = 'I could not safely finish the rest — how would you like to proceed?';
+/** The engine's exhaustion sentence when NOTHING landed (a probe-only / read-only / all-refused turn). */
+const EXHAUSTION_NOTHING = 'I could not complete this safely — nothing was changed. Could you rephrase or add detail?';
+
 /**
- * The built-in honest-abstain closure: a pure function of verified observations.
- *
- * `okTools` is read as a BOOLEAN — "did anything actually land this turn?" — and never interpolated.
- * A tool identifier is internal vocabulary: the user did not ask for `listItems`, they asked for
- * their items, and the runtime terminal (`respond`) named in a delivered sentence is pure leakage.
- * The only nouns that reach the text are `produced`: labels the world itself issued for what it
- * created. Callers pass a DOMAIN-only `okTools` (see finalizeReply).
+ * Compose the DELIVERED text from a verified payload: the `message` alone when `did` is empty, else the
+ * `message` followed by the engine-rendered operation report of the (already ledger-grounded) `did`. The
+ * report's wording comes from the domain's `renderClaim`/`outcomes` seam when present, else the engine
+ * default. This is the ONE place the operational sentences enter the delivered text — from structure the
+ * agent does not control, never from its free prose.
  */
-export function defaultExhaustionReply(
-  contract: DomainContract | undefined,
-  world: AgentWorld,
-  okTools: string[],
-  produced: string[],
-  violations: string[],
-): string {
-  if (contract?.exhaustionReply) return contract.exhaustionReply(world, okTools, produced, violations);
-  return okTools.length
-    ? `I completed part of this request${produced.length ? ` (${produced.join(', ')})` : ''}, but I could not safely finish the rest — how would you like to proceed?`
-    : 'I could not complete this safely — nothing was changed. Could you rephrase or add detail?';
+function composeDelivery(payload: RespondPayload, contract?: DomainContract): string {
+  if (!payload.did.length) return payload.message;
+  const report = renderOperationReport(payload.did, { renderClaim: contract?.renderClaim, outcomes: contract?.outcomes });
+  if (!report.trim()) return payload.message;
+  return payload.message.trim() ? `${payload.message}\n\n${report}` : report;
 }
 
 /**
- * The ENGINE-OWNED honest-abstain string — derived from the world ledger, so a no-effect probe is
- * NEVER announced as a done action. `okTools` is the set of tool names the turn touched; `writeTools`
- * are the ones that MUTATE. A name is announceable iff it is not a write, or some ledger entry under
- * it actually `tookEffect === true` — the exact defect this fixes: a hand-written closure announced a
- * probe (a write with `tookEffect: false`, which changed nothing) as a completed action.
- *
- * WIRING IS PENDING — the loader (`loadNormsConfig` in @looprun-ai/eval) does NOT yet wire this in as
- * the default contract exhaustionReply; the intent is that it will, closing the closure over the
- * domain's `writeTools`. Before that wiring lands there is a LEAK GATE to clear: this function
- * interpolates RAW tool names into the reply, so wiring must first map names → produced labels
- * (BACKLOG: "Abstain tool-name leak").
+ * The engine-DERIVED exhaustion closure, used when the redrive loop exhausts and no override seam is set.
+ * The engine builds the TRUE claims from the world ledger ({@link deriveClaimsFromLedger}) — the model
+ * never produced a groundable declaration, so the engine authors one it can stand behind — renders their
+ * operation report, and appends one honest sentence keyed on whether anything actually landed. Returns
+ * BOTH the text and the derived claims (the latter becomes the turn's verified `did` in history).
  */
-export function buildHonestAbstain(world: AgentWorld, okTools: string[], writeTools: readonly string[]): string {
-  const writes = new Set(writeTools);
-  const announceable = okTools.filter(
-    (name) => !writes.has(name) || world.toolCalls.some((t) => t.name === name && t.tookEffect === true),
-  );
-  return announceable.length
-    ? `I completed part of this request (${announceable.join(', ')}), but I could not safely finish the rest — how would you like to proceed?`
-    : 'I could not complete this safely — nothing was changed. Could you rephrase or add detail?';
+function deriveExhaustionClosure(
+  ledger: TurnLedger,
+  writeTools: readonly string[],
+  contract?: DomainContract,
+): { text: string; did: TurnClaim[] } {
+  const derived = deriveClaimsFromLedger(ledger.observed, ledger.turnIndex, writeTools, ledger.producedThisTurn);
+  const report = renderOperationReport(derived, { renderClaim: contract?.renderClaim, outcomes: contract?.outcomes });
+  const landed = derived.some((c) => c.outcome === 'success');
+  const sentence = landed ? EXHAUSTION_PARTIAL : EXHAUSTION_NOTHING;
+  const text = [report, sentence].filter((s) => s.trim()).join('\n\n');
+  return { text, did: derived };
 }
 
 /**
@@ -349,24 +355,48 @@ export interface FinalizedReply {
   text: string;
   exhausted: boolean;
   violations: string[];
+  /** The turn's DELIVERED, VERIFIED claims — the accepted/salvaged payload's `did`, or the engine-derived
+   *  set on exhaustion. `finalizeReply` also syncs `ledger.did`/`asked` to this, so `recordTurnHistory`
+   *  retains the grounded set (T2 left history storing the RAW declaration; this is the verified one). */
+  did: TurnClaim[];
+}
+
+/** Sync the ledger's reply-side declaration to `payload` and run the onReply checks against it — the ONE
+ *  place `ctx.did`/`ctx.asked` (read by the claims cross-check guards) and `ctx.reply` (the message, read
+ *  by degeneration/emptyReply) are seated, so a candidate payload is checked as a whole. */
+async function checkPayload(
+  spec: AgentSpec,
+  ledger: TurnLedger,
+  world: AgentWorld,
+  payload: RespondPayload,
+): Promise<ReplyViolation[]> {
+  ledger.did = payload.did;
+  ledger.asked = payload.asked;
+  return checkReply(spec, ledger, world, payload.message);
 }
 
 /**
- * The whole reply pipeline: mutators → onReply checks → up to `maxRedrives` NO-TOOLS re-generations
- * (via the backend-supplied `redrive` callback) → deterministic exhaustion closure if still violating.
+ * The whole reply pipeline over the STRUCTURED payload: mutators (message only) → onReply checks (over the
+ * payload) → up to `maxRedrives` NO-TOOLS re-generations (each returns a fresh {@link RespondPayload}) →
+ * salvage → the engine-derived exhaustion closure if still violating. The delivered text is COMPOSED
+ * (message + rendered operation report of the verified `did`); the returned `did` (and `ledger.did`) is the
+ * verified set history must keep.
  */
 export async function finalizeReply(
   spec: AgentSpec,
   contract: DomainContract | undefined,
   world: AgentWorld,
   ledger: TurnLedger,
-  initialText: string,
-  redrive: (message: string) => Promise<string>,
+  initial: RespondPayload,
+  redrive: (message: string) => Promise<RespondPayload>,
   maxRedrives: number,
 ): Promise<FinalizedReply> {
-  let text = applyMutators(spec, ledger, world, initialText);
+  // Mutators touch the MESSAGE only; seat the declaration first so their ctx (and the checks') read it.
+  ledger.did = initial.did;
+  ledger.asked = initial.asked;
+  let payload: RespondPayload = { ...initial, message: applyMutators(spec, ledger, world, initial.message) };
 
-  let violations = await checkReply(spec, ledger, world, text);
+  let violations = await checkPayload(spec, ledger, world, payload);
   // OUTPUT-dim postTool violations + flowChain restates (accrued in the backend's afterToolCall / chain
   // pass) join the reply-violation set so the SAME bounded no-tools redrive relays their correction text —
   // a report/repair of an already-run result, never a veto. Empty ⇒ `violations` untouched (zero-diff).
@@ -374,59 +404,73 @@ export async function finalizeReply(
   for (let r = 0; r < maxRedrives && violations.length; r++) {
     const next = await redrive(redriveMessage(violations));
     for (const v of violations) ledger.turnCorrections.push(`redrive:${v.guard.kind}`);
-    if (next) text = next;
-    violations = await checkReply(spec, ledger, world, text);
+    // Adopt the re-generated payload whole; keep the previous message only if the redrive returned none
+    // (a degenerate empty re-generation must not blank the reply — mirrors the old `if (next) text = next`).
+    const message = next.message.trim() ? applyMutators(spec, ledger, world, next.message) : payload.message;
+    payload = { message, did: next.did, asked: next.asked };
+    violations = await checkPayload(spec, ledger, world, payload);
   }
 
   const finalViolations = violations.map((v) => v.guard.kind);
   if (finalViolations.length) {
-    // Salvage-before-canned-closure (measured on the
-    // eight-second-limit / zero-quota cells): when the turn DID produce a verified user-facing text —
-    // the `message` arg of a SUCCESSFUL `respond` call this turn — and that text itself passes
-    // every onReply check, surface IT instead of the generic exhaustion closure. The violations that got
-    // us here came from the generated reply (or postTool reports), not from this verified text; swallowing
-    // correct content behind the canned fallback is the silent-filter deadlock's judge-facing twin.
-    // Purity holds: the salvage is a verified observation (ok call arg), re-validated by the same
-    // deterministic checks — never fabricated. postTool violations are NOT re-counted (they report an
-    // already-run result; no choice of closure text can undo them).
-    const lastAsk = [...ledger.observed].reverse().find(
+    // Salvage-before-canned-closure (measured on the eight-second-limit / zero-quota cells): when the turn
+    // DID produce a verified terminal — the FULL payload (message + did + asked) of a SUCCESSFUL `respond`
+    // this turn — and that whole payload re-passes every onReply check (the claims guards INCLUDED, so a
+    // fabricated `did` is never salvaged), surface it instead of the generic closure. Purity holds: the
+    // salvage is a verified observation (ok call args), re-validated by the same deterministic checks.
+    const lastRespond = [...ledger.observed].reverse().find(
       (o) => o.turnIndex === ledger.turnIndex && o.ok && o.name === 'respond' && typeof o.args?.message === 'string' && (o.args.message as string).trim().length > 0,
     );
-    if (lastAsk) {
-      const candidate = (lastAsk.args.message as string).trim();
-      if (candidate === text.trim()) {
+    if (lastRespond) {
+      const candidate = respondPayload(lastRespond.args as Record<string, unknown>);
+      const candidateText = composeDelivery(candidate, contract);
+      if (candidateText.trim() === composeDelivery(payload, contract).trim()) {
         ledger.turnCorrections.push('salvage-miss:same-text');
       } else {
-        const candViolations = await checkReply(spec, ledger, world, candidate);
+        const candViolations = await checkPayload(spec, ledger, world, candidate);
         if (candViolations.length === 0) {
           ledger.turnCorrections.push('exhaustion-salvage');
-          return { text: candidate, exhausted: true, violations: finalViolations };
+          ledger.did = candidate.did;
+          ledger.asked = candidate.asked;
+          return { text: candidateText, exhausted: true, violations: finalViolations, did: candidate.did };
         }
         if (candViolations.every((v) => isFormViolation(v.guard))) {
           ledger.turnCorrections.push(`salvage:form-only:${candViolations.map((v) => v.guard.kind).join(',')}`);
-          return { text: candidate, exhausted: true, violations: finalViolations };
+          ledger.did = candidate.did;
+          ledger.asked = candidate.asked;
+          return { text: candidateText, exhausted: true, violations: finalViolations, did: candidate.did };
         }
         ledger.turnCorrections.push(`salvage-miss:checks:${candViolations.map((v) => v.guard.kind).join(',')}`);
       }
     } else {
       ledger.turnCorrections.push('salvage-miss:no-terminal-observed');
     }
-    // DOMAIN-only evidence. This list is the closure's answer to "what actually landed this turn",
-    // and a turn-closing terminal is not that — it is the runtime's own delivery mechanism. The hooks
-    // record every terminal in `observed` with ok:true (they must, so a same-step sibling's preTool
-    // checks can see an ask), so the filter belongs here, at the one place the ledger is read as
-    // evidence for user-facing prose.
+    // DOMAIN-only evidence for the OVERRIDE seams (their signature predates the structured payload): the
+    // turn's non-terminal ok tool names + produced labels. A turn-closing terminal is the runtime's own
+    // delivery mechanism, not something that "landed", so it is filtered here.
     const okTools = ledger.observed
       .filter((o) => o.turnIndex === ledger.turnIndex && o.ok && !isTerminal(o.name))
       .map((o) => o.name);
-    const closure = spec.controls.exhaustionReply
-      ? spec.controls.exhaustionReply(world, okTools, ledger.producedThisTurn, finalViolations)
-      : defaultExhaustionReply(contract, world, okTools, ledger.producedThisTurn, finalViolations);
     ledger.turnCorrections.push('exhaustion-terminal');
-    return { text: closure, exhausted: true, violations: finalViolations };
+    // Override seams keep their old signature + evidence; only the DEFAULT is the engine-derived closure.
+    // The verified `did` history keeps is ALWAYS the engine-derived truth — an override changes the
+    // wording, not the record of what happened.
+    const derived = deriveExhaustionClosure(ledger, contract?.writeTools ?? [], contract);
+    const closureText = spec.controls.exhaustionReply
+      ? spec.controls.exhaustionReply(world, okTools, ledger.producedThisTurn, finalViolations)
+      : contract?.exhaustionReply
+        ? contract.exhaustionReply(world, okTools, ledger.producedThisTurn, finalViolations)
+        : derived.text;
+    ledger.did = derived.did;
+    ledger.asked = false;
+    return { text: closureText, exhausted: true, violations: finalViolations, did: derived.did };
   }
 
-  return { text, exhausted: false, violations: [] };
+  // Clean delivery: compose message + the verified operation report; the accepted payload IS the verified
+  // declaration (it passed the claims cross-check), so it becomes the turn's `did` in history.
+  ledger.did = payload.did;
+  ledger.asked = payload.asked;
+  return { text: composeDelivery(payload, contract), exhausted: false, violations: [], did: payload.did };
 }
 
 // ── flowChain completion (controls.chains) ────────────────────────────────────────────────────────

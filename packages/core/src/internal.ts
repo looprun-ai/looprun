@@ -63,9 +63,17 @@ export {
   recordTerminalCall,
   recordTurnHistory,
   pruneSupersededTerminals,
+  clearDeliveredTerminal,
   vetoStormHit,
 } from './runtime/ledger.js';
 export type { TurnLedger } from './runtime/ledger.js';
+
+// The structured-claim RENDERER + ledger derivation (SCG-T4): the engine renders the user-facing
+// operation report from the VERIFIED `did`, and derives the true claims from the ledger for the
+// exhaustion closure. Backends consume both; `RespondPayload`/`RenderOpts` ride finalizeReply's/the
+// renderer's signature so a declaration:true consumer can name them.
+export { renderOperationReport, deriveClaimsFromLedger } from './runtime/claims.js';
+export type { RespondPayload, RenderOpts } from './runtime/claims.js';
 
 export {
   isTerminal,
@@ -86,8 +94,6 @@ export {
   evaluateOnInput,
   enforcePostTool,
   redriveMessage,
-  defaultExhaustionReply,
-  buildHonestAbstain,
   finalizeReply,
   governanceVeto,
   runChainCompletionPass,

@@ -13,6 +13,10 @@ import {
   VETO_STORM_LIMIT,
 } from '../src/runtime/ledger.js';
 import { evaluatePreTool, evaluateOnInput, finalizeReply, redriveMessage } from '../src/runtime/turn.js';
+import type { RespondPayload } from '../src/runtime/claims.js';
+
+/** A structured respond payload with an empty declaration — the common shape in these composition-free tests. */
+const P = (message: string): RespondPayload => ({ message, did: [], asked: false });
 
 function fixtureWorld(state: Record<string, unknown> = {}): AgentWorld {
   return {
@@ -111,7 +115,7 @@ describe('finalizeReply pipeline', () => {
     const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: [] });
     spec.addMutator(jargonScrub({ Jargon: 'plain words' }), { id: 'agent:scrub' });
     const ledger = createLedger();
-    const out = await finalizeReply(spec, CONTRACT, fixtureWorld(), ledger, 'Some Jargon here.', async () => '', 1);
+    const out = await finalizeReply(spec, CONTRACT, fixtureWorld(), ledger, P('Some Jargon here.'), async () => P(''), 1);
     expect(out.text).toBe('Some plain words here.');
     expect(out.exhausted).toBe(false);
     expect(ledger.turnCorrections).toContain('mutate:jargonScrub');
@@ -127,10 +131,10 @@ describe('finalizeReply pipeline', () => {
       CONTRACT,
       fixtureWorld(),
       ledger,
-      'No mention.',
+      P('No mention.'),
       async (msg) => {
         seen.push(msg);
-        return 'The price is $5.';
+        return P('The price is $5.');
       },
       2,
     );
@@ -145,7 +149,7 @@ describe('finalizeReply pipeline', () => {
     spec.addReplyCheck(replyMentions({ terms: ['impossible-token-xyz'], anyTerm: true }, 'nope'), { id: 'agent:impossible' });
     const ledger = createLedger();
     recordToolResult(ledger, 'water', {}, { success: true });
-    const out = await finalizeReply(spec, CONTRACT, fixtureWorld(), ledger, 'text', async () => 'still wrong', 1);
+    const out = await finalizeReply(spec, CONTRACT, fixtureWorld(), ledger, P('text'), async () => P('still wrong'), 1);
     expect(out.exhausted).toBe(true);
     expect(out.violations).toContain('replyMentions');
     expect(out.text).toBe('contract-closure:water');
@@ -161,13 +165,13 @@ describe('finalizeReply pipeline', () => {
       exhaustionReply: () => 'spec-closure',
     });
     spec.addReplyCheck(replyMentions({ terms: ['impossible-token-xyz'], anyTerm: true }, 'nope'), { id: 'agent:impossible' });
-    const out = await finalizeReply(spec, CONTRACT, fixtureWorld(), createLedger(), 'text', async () => 'still wrong', 0);
+    const out = await finalizeReply(spec, CONTRACT, fixtureWorld(), createLedger(), P('text'), async () => P('still wrong'), 0);
     expect(out.text).toBe('spec-closure');
   });
 
   it('emptyReply (minimal layer) forces content', async () => {
     const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: [] });
-    const out = await finalizeReply(spec, CONTRACT, fixtureWorld(), createLedger(), '   ', async () => 'Real reply.', 1);
+    const out = await finalizeReply(spec, CONTRACT, fixtureWorld(), createLedger(), P('   '), async () => P('Real reply.'), 1);
     expect(out.text).toBe('Real reply.');
   });
 

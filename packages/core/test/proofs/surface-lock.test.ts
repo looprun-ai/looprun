@@ -76,13 +76,16 @@ const INTERNAL = [
   'GuardBinding', 'resolveGuards', 'renderScopedSpecTrunk',
   'normalizeModelParams', 'resolveModelSettings',
   'TokenUsage', 'RuntimeTurnRecord',
-  'beginTurn', 'createLedger', 'pruneSupersededTerminals', 'recordTerminal', 'recordTerminalCall',
+  'beginTurn', 'createLedger', 'clearDeliveredTerminal', 'pruneSupersededTerminals', 'recordTerminal', 'recordTerminalCall',
   'recordToolResult', 'recordTurnHistory', 'resultOk', 'TurnLedger', 'vetoStormHit',
   'forcedTerminalPrompt', 'isTerminal', 'normalizeTerminalToolDef', 'prematureTerminalTools',
   'supersededTerminalCalls', 'terminalProtocol', 'terminalToolDefs',
   'renderTurnPrompt',
-  // buildHonestAbstain — the engine-owned honest-abstain closure (config-only increment, post-inventory).
-  'buildHonestAbstain', 'defaultExhaustionReply', 'enforcePostTool', 'evaluateOnInput', 'evaluatePreTool',
+  // SCG-T4 — the engine renders the operation report from the verified `did` and derives the true
+  // claims for the exhaustion closure; `defaultExhaustionReply`/`buildHonestAbstain` are DELETED
+  // (pre-1.0, replaced by the derive-and-render closure). `RespondPayload`/`RenderOpts` ride the surface.
+  'renderOperationReport', 'deriveClaimsFromLedger', 'RespondPayload', 'RenderOpts',
+  'enforcePostTool', 'evaluateOnInput', 'evaluatePreTool',
   'finalizeReply', 'FinalizedReply', 'governanceVeto', 'redriveMessage', 'ReplyViolation',
   'runChainCompletionPass',
   // full-context-guards increment — the fail-loud-at-start adjudicator gate for llmCheck specs.

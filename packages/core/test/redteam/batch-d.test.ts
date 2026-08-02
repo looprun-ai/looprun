@@ -10,6 +10,10 @@ import { AgentSpecBase, custom, llmCheck, resultInvariant } from '../../src/inde
 import type { Adjudicator, AgentWorld, GuardCtx, DomainContract, ObservedCall } from '../../src/index.js';
 import { createLedger, recordToolResult } from '../../src/runtime/ledger.js';
 import { evaluatePreTool, finalizeReply } from '../../src/runtime/turn.js';
+import type { RespondPayload } from '../../src/runtime/claims.js';
+
+/** A structured respond payload with an empty declaration — these composition-vectors carry prose only. */
+const P = (message: string): RespondPayload => ({ message, did: [], asked: false });
 
 const persona = 'You are the test agent.';
 const CONTRACT: DomainContract = { voice: 'v', stateBlock: () => '', coreInvariants: ['x'], languageClause: 'lang' };
@@ -31,7 +35,7 @@ describe('D1 — llmCheck failMode:open + unreachable adjudicator = forbidden re
     spec.addGuard('onReply', 'any', llmCheck({ rubric: 'Does the reply claim something the world never did?' }), { id: 'agent:honesty' });
     const ledger = createLedger(adjudicator);
     const forbidden = 'Done! I transferred $5,000 to the account.'; // false success — world did nothing
-    const out = await finalizeReply(spec, CONTRACT, world(), ledger, forbidden, async () => forbidden, 1);
+    const out = await finalizeReply(spec, CONTRACT, world(), ledger, P(forbidden), async () => P(forbidden), 1);
     // The truth guard was disabled by the outage; the false-success reply is delivered verbatim.
     expect(out.text).toBe(forbidden);
     expect(out.exhausted).toBe(false);
@@ -58,7 +62,7 @@ describe('D2 — malformed (non-throwing) adjudicator output fails OPEN even in 
     spec.addGuard('onReply', 'any', llmCheck({ rubric: 'q?', failMode: 'closed' }), { id: 'agent:honesty' });
     const ledger = createLedger(adjudicator);
     const forbidden = 'Done! Money moved.';
-    const out = await finalizeReply(spec, CONTRACT, world(), ledger, forbidden, async () => forbidden, 1);
+    const out = await finalizeReply(spec, CONTRACT, world(), ledger, P(forbidden), async () => P(forbidden), 1);
     expect(out.text).toBe(forbidden); // empty-string verdict = silent allow
     expect(out.violations).toHaveLength(0);
   });
@@ -86,7 +90,7 @@ describe('D3 — a THROWING custom guard is NOT swallowed as allow (propagates; 
     const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: ['save'], contract: CONTRACT });
     spec.addGuard('onReply', 'any', custom({ kind: 'boom', dim: 'behavior', check: () => { throw new Error('kaboom'); }, prose: () => 'p' }), { id: 'agent:boom' });
     const ledger = createLedger();
-    await expect(finalizeReply(spec, CONTRACT, world(), ledger, 'hi', async () => 'hi', 1)).rejects.toThrow(/kaboom/);
+    await expect(finalizeReply(spec, CONTRACT, world(), ledger, P('hi'), async () => P('hi'), 1)).rejects.toThrow(/kaboom/);
   });
 });
 
@@ -143,7 +147,7 @@ describe('D5 — a postTool result-invariant violation is relayed ONCE then DROP
     });
     // …the model's regenerated reply still falsely claims success and mentions nothing of the failure.
     const liar = 'All set — your card was charged successfully.';
-    const out = await finalizeReply(spec, CONTRACT, world(), ledger, liar, async () => liar, 1);
+    const out = await finalizeReply(spec, CONTRACT, world(), ledger, P(liar), async () => P(liar), 1);
     expect(out.text).toBe(liar);        // false success reaches the user
     expect(out.exhausted).toBe(false);  // treated as clean — postTool was dropped after round 1
     expect(out.violations).toHaveLength(0);
@@ -176,7 +180,7 @@ describe('D7 — checkReply RE-RUNS on the regenerated reply, so a redrive canno
     const adjudicator: Adjudicator = async () => ({ violation: 'still dishonest' });
     spec.addGuard('onReply', 'any', llmCheck({ rubric: 'honest?' }), { id: 'agent:honesty' });
     const ledger = createLedger(adjudicator);
-    const out = await finalizeReply(spec, CONTRACT, world(), ledger, 'lie v1', async () => { calls++; return 'lie v2'; }, 1);
+    const out = await finalizeReply(spec, CONTRACT, world(), ledger, P('lie v1'), async () => { calls++; return P('lie v2'); }, 1);
     expect(calls).toBe(1);
     expect(out.exhausted).toBe(true);           // never delivered the dishonest text
     expect(out.text).not.toBe('lie v2');

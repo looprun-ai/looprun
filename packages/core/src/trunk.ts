@@ -25,7 +25,7 @@
 import { resolveBindings } from './spec.js';
 import type { AgentSpec, GuardBinding, Hook } from './spec.js';
 import type { AgentWorld } from './rules.js';
-import type { OutcomeMap } from './runtime/claims.js';
+import type { CoreOutcome, OutcomeMap, TurnClaim } from './runtime/claims.js';
 import { derivePolarity, deriveSubject, foldTrunk } from './trunk-fold.js';
 import type { SubjectRule, TrunkBlock, TrunkLine, TrunkRow } from './trunk-fold.js';
 
@@ -48,13 +48,20 @@ export interface DomainContract {
   coreInvariants: string[];
   /** The final "## Output language (ABSOLUTE)" clause. */
   languageClause: string;
-  /** Deterministic honest-abstain closure (verified observations only). */
+  /** Deterministic honest-abstain closure (verified observations only) — an OVERRIDE seam: when present it
+   *  replaces the engine's default derive-and-render exhaustion closure, receiving the same evidence
+   *  (world, the turn's domain tool names, produced labels, the violation kinds). */
   exhaustionReply?: (world: AgentWorld, okTools: string[], produced: string[], violations: string[]) => string;
+  /** The domain's WORDING (and language) for ONE verified claim in the user-facing operation report —
+   *  the domain language seam over {@link renderOperationReport}. Given a claim and its resolved core
+   *  outcome, return the one-liner the user reads. Absent ⇒ the engine's neutral English default (which
+   *  renders the claim's `target`, never a tool name or the advisory `op`). */
+  renderClaim?: (claim: TurnClaim, core: CoreOutcome) => string;
   /** The domain's WRITE tools — the ones that MUTATE the world (vs pure reads). The honesty cross-check
    *  (`claimIsGrounded` / `claimIsComplete`, auto-installed when this is non-empty) reads it to ground a
    *  `success` claim against an EFFECTED write and to demand every effected write be reported. Same list
-   *  `buildHonestAbstain` consumes so a no-effect probe is never announced as done — seated HERE so both
-   *  the write surface and its {@link outcomes} map arrive together on the one domain object. */
+   *  `deriveClaimsFromLedger` consumes so the exhaustion closure never announces a no-effect probe as done —
+   *  seated HERE so both the write surface and its {@link outcomes} map arrive together on the one domain object. */
   writeTools?: readonly string[];
   /** The domain OUTCOME vocabulary: every non-core outcome word an agent may declare in a `did` claim MUST
    *  map to a core outcome (e.g. `{ settled: 'success' }`), so the ledger cross-check stays
