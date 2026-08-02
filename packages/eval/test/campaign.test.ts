@@ -111,6 +111,15 @@ describe('campaign — end-to-end, scripted model, no network', () => {
     expect(cap.lines.some((l) => /CERTIFIED/.test(l))).toBe(true);
   });
 
+  it('short-count: a verdicts file that EXISTS but is short of expectedVerdicts → resume refuses, naming the short dir', async () => {
+    const outDir = await runToPause(dir);
+    // r0 complete; r1 present but short (an empty verdicts.jsonl is a file that exists yet counts 0).
+    seedVerdicts(outDir, 'pass');
+    writeFileSync(join(outDir, 'r1', 'verdicts.jsonl'), '');
+    await expect(campaignCommand({ action: 'resume', out: outDir })).rejects.toThrow(/r1 has 0 verdict\(s\), expected 1/);
+    expect(existsSync(join(outDir, 'cert-band.json'))).toBe(false);
+  });
+
   it('the band file is the ONLY number source — CAMPAIGN.md quotes cert-band.json verbatim', async () => {
     const outDir = await runToPause(dir);
     seedVerdicts(outDir, 'pass');
