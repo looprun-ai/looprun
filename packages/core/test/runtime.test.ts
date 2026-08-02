@@ -49,6 +49,20 @@ const CONTRACT: DomainContract = {
   exhaustionReply: (_w, okTools) => `contract-closure:${okTools.join(',')}`,
 };
 
+/** No `exhaustionReply` override — the blank-delivery floor NEVER routes through a business-authored
+ *  override seam (only the derived closure is guaranteed non-empty by construction), so the floor tests
+ *  below use this contract to assert the engine's OWN derived text, not a stand-in override string. */
+const CONTRACT_NO_OVERRIDE: DomainContract = {
+  voice: 'v',
+  stateBlock: () => '',
+  coreInvariants: ['x'],
+  languageClause: 'lang',
+};
+
+/** The engine's own "nothing landed" exhaustion sentence — {@link EXHAUSTION_NOTHING} is not exported, so
+ *  the floor tests below assert this literal (mirrors the same pattern in claims-render.test.ts). */
+const EXHAUSTION_NOTHING = 'I could not complete this safely — nothing was changed. Could you rephrase or add detail?';
+
 describe('ledger', () => {
   it('resultOk flags structural failures', () => {
     expect(resultOk({ success: true })).toBe(true);
@@ -191,6 +205,42 @@ describe('finalizeReply pipeline', () => {
     expect(out.exhausted).toBe(true);
     expect(out.text.trim().length).toBeGreaterThan(0);
     expect(out.text).toBe('contract-closure:water');
+  });
+
+  it('blank-delivery FLOOR: message:"" + did:[] on the CLEAN path routes to the non-empty engine-derived closure (emptyReply is engine-owned, not schema-owned)', async () => {
+    // No guard fires on `P('')` (degenerationGuard's own check short-circuits on a falsy reply — the
+    // ORIGINAL emptyReply break), so this reaches the clean-delivery return, where the old code composed
+    // and returned '' outright. The floor must catch it there — and NOT route through a business-authored
+    // exhaustionReply override (CONTRACT_NO_OVERRIDE has none): only the derived closure is guaranteed
+    // non-empty by construction.
+    const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: [] });
+    const ledger = createLedger();
+    const out = await finalizeReply(spec, CONTRACT_NO_OVERRIDE, fixtureWorld(), ledger, P(''), async () => P(''), 0);
+    expect(out.exhausted).toBe(true);
+    expect(out.text).toBe(EXHAUSTION_NOTHING);
+    expect(out.did).toEqual([]);
+  });
+
+  it('blank-delivery FLOOR: a message of only zero-width characters (survives .trim()) also routes to the closure', async () => {
+    const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: [] });
+    const ledger = createLedger();
+    // U+200B (zero-width space) + U+2060 (word joiner) — a naive .trim().length check reads this as non-empty.
+    const zeroWidth = P('\u200B\u2060');
+    const out = await finalizeReply(spec, CONTRACT_NO_OVERRIDE, fixtureWorld(), ledger, zeroWidth, async () => zeroWidth, 0);
+    expect(out.exhausted).toBe(true);
+    expect(out.text).toBe(EXHAUSTION_NOTHING);
+    expect(out.did).toEqual([]);
+  });
+
+  it('blank-delivery FLOOR: a mutator that rewrites the message to "" is still caught (post-mutator, not just pre-mutator)', async () => {
+    const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: [] });
+    spec.addMutator({ kind: 'blankOut', apply: () => '' }, { id: 'agent:blank-mutator' });
+    const ledger = createLedger();
+    const out = await finalizeReply(spec, CONTRACT_NO_OVERRIDE, fixtureWorld(), ledger, P('a perfectly fine reply'), async () => P('a perfectly fine reply'), 0);
+    expect(out.exhausted).toBe(true);
+    expect(out.text).toBe(EXHAUSTION_NOTHING);
+    expect(out.did).toEqual([]);
+    expect(ledger.turnCorrections).toContain('mutate:blankOut');
   });
 
   it('redriveMessage lists every violation', () => {

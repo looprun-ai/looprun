@@ -279,6 +279,21 @@ function composeDelivery(payload: RespondPayload, contract?: DomainContract): st
   return payload.message.trim() ? `${payload.message}\n\n${report}` : report;
 }
 
+/** Zero-width / invisible-format characters that survive `.trim()` — U+200B (zero-width space), U+2060
+ *  (word joiner), U+200C/U+200D (ZWNJ/ZWJ) and U+FEFF (BOM / zero-width no-break space). A message made
+ *  of only these reads as non-empty to a naive `.trim().length` check. */
+const ZERO_WIDTH_RE = /[\u200B\u200C\u200D\u2060\uFEFF]/g;
+
+/**
+ * True when `text` carries nothing a user would read: empty after stripping zero-width/format characters
+ * and trimming. This is the runtime's OWN floor for "did the agent actually say anything" — it does not
+ * depend on the `respond` terminal schema's `minLength`, which is advisory only (mastra's
+ * json-schema-zod conversion drops `minLength` at execution time, so it is never runtime-enforced).
+ */
+export function isBlankDelivery(text: string): boolean {
+  return text.replace(ZERO_WIDTH_RE, '').trim().length === 0;
+}
+
 /**
  * The engine-DERIVED exhaustion closure, used when the redrive loop exhausts and no override seam is set.
  * The engine builds the TRUE claims from the world ledger ({@link deriveClaimsFromLedger}) — the model
@@ -297,6 +312,35 @@ function deriveExhaustionClosure(
   const sentence = landed ? EXHAUSTION_PARTIAL : EXHAUSTION_NOTHING;
   const text = [report, sentence].filter((s) => s.trim()).join('\n\n');
   return { text, did: derived };
+}
+
+/**
+ * The blank-delivery FLOOR — the backend-independent guarantee that replaces the deleted `emptyReply`
+ * guard (SCG-T5's "structurally impossible" claim did not hold: the `respond` schema's `minLength` is
+ * advisory only, mastra's json-schema-zod conversion drops it at runtime, and a zero-width message or a
+ * mutator (e.g. `jargonScrub`) can still produce a blank composed delivery). Called at every point a
+ * composed delivery text is about to leave {@link finalizeReply} — the clean path and both salvage
+ * returns: when `text` is blank ({@link isBlankDelivery}), swap in the engine-derived exhaustion closure
+ * (non-empty by construction — {@link deriveExhaustionClosure}) and mark the turn exhausted. `exhausted`
+ * is fixed at `true` on the blank branch (routing to the exhaustion closure IS exhaustion); the caller
+ * supplies what `exhausted` should read when `text` is NOT blank, since that differs by call site (the
+ * clean path is `false`, salvage is `true`).
+ */
+function withBlankFloor(
+  text: string,
+  did: TurnClaim[],
+  violations: string[],
+  exhaustedIfNotBlank: boolean,
+  ledger: TurnLedger,
+  writeTools: readonly string[],
+  contract: DomainContract | undefined,
+): FinalizedReply {
+  if (!isBlankDelivery(text)) return { text, exhausted: exhaustedIfNotBlank, violations, did };
+  ledger.turnCorrections.push('exhaustion-blank-floor');
+  const derived = deriveExhaustionClosure(ledger, writeTools, contract);
+  ledger.did = derived.did;
+  ledger.asked = false;
+  return { text: derived.text, exhausted: true, violations, did: derived.did };
 }
 
 /**
@@ -430,13 +474,13 @@ export async function finalizeReply(
           ledger.turnCorrections.push('exhaustion-salvage');
           ledger.did = candidate.did;
           ledger.asked = candidate.asked;
-          return { text: candidateText, exhausted: true, violations: finalViolations, did: candidate.did };
+          return withBlankFloor(candidateText, candidate.did, finalViolations, true, ledger, contract?.writeTools ?? [], contract);
         }
         if (candViolations.every((v) => isFormViolation(v.guard))) {
           ledger.turnCorrections.push(`salvage:form-only:${candViolations.map((v) => v.guard.kind).join(',')}`);
           ledger.did = candidate.did;
           ledger.asked = candidate.asked;
-          return { text: candidateText, exhausted: true, violations: finalViolations, did: candidate.did };
+          return withBlankFloor(candidateText, candidate.did, finalViolations, true, ledger, contract?.writeTools ?? [], contract);
         }
         ledger.turnCorrections.push(`salvage-miss:checks:${candViolations.map((v) => v.guard.kind).join(',')}`);
       }
@@ -465,10 +509,12 @@ export async function finalizeReply(
   }
 
   // Clean delivery: compose message + the verified operation report; the accepted payload IS the verified
-  // declaration (it passed the claims cross-check), so it becomes the turn's `did` in history.
+  // declaration (it passed the claims cross-check), so it becomes the turn's `did` in history. The blank
+  // floor still applies here — an empty `message` + empty `did` composes to `''` (schema minLength is
+  // advisory only), and a mutator can rewrite an otherwise-fine `message` to `''` after the checks passed.
   ledger.did = payload.did;
   ledger.asked = payload.asked;
-  return { text: composeDelivery(payload, contract), exhausted: false, violations: [], did: payload.did };
+  return withBlankFloor(composeDelivery(payload, contract), payload.did, [], false, ledger, contract?.writeTools ?? [], contract);
 }
 
 // ── flowChain completion (controls.chains) ────────────────────────────────────────────────────────

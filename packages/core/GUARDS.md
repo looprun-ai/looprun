@@ -243,9 +243,12 @@ spec is a spec). Its constructor auto-installs, from `cfg` alone:
 
 So **2 kinds always install** (`noDuplicateCall` + `degenerationGuard`), the SCG honesty cross-check pair
 when the contract declares `writeTools`, and **+2 more when the agent holds a destructive tool.** The former
-always-on `emptyReply` floor is DELETED (tier-③, SCG-T5): an empty final reply is now structurally
-impossible — the `respond` terminal requires a non-empty `message` (schema `minLength` 1) and the
-forced-terminal fallback always closes with a non-empty engine-derived line, so no runtime guard is needed.
+always-on `emptyReply` GUARD is DELETED (tier-③, SCG-T5) — but the guarantee it carried is not a schema
+claim: the `respond` terminal's `message` `minLength` 1 is ADVISORY only (mastra's json-schema-zod
+conversion drops `minLength` at runtime, so it is never enforced there). The real, backend-independent
+guarantee is the ENGINE FLOOR in `finalizeReply` (`runtime/turn.ts`): the composed delivery is stripped of
+zero-width/format characters and, if still blank — including after a mutator rewrite — routed to the
+non-empty engine-derived exhaustion closure instead. No runtime guard is needed for this.
 The former lexicon-fed reply-honesty invariant (the auto-installed
 `noFalseFailureClaim`) is RETIRED with the no-regex law — the `AgentSpecConfig.lexicon` seam is gone;
 reply-honesty text judgment ("did the reply claim an inability the tools do not support?") is now an
@@ -304,7 +307,11 @@ ledger, never on op-name semantics or reply text — so they carry no pattern an
 The four reply-TEXT guards they and the schema subsume — `replyMentions`, `replySingleQuestion`,
 `replyMaxOccurrences`, `emptyReply` — are DELETED (tier-③, SCG-T5): `replyMentions` → `claimCoversRubric`,
 `replySingleQuestion`/`replyMaxOccurrences` → `llmCheck` (punctuation/CTA literalism, no sound structural
-fix), `emptyReply` → subsumed by the `respond` schema (`message` minLength 1) + the forced-terminal fallback.
+fix), `emptyReply` → the ENGINE FLOOR in `finalizeReply` (`runtime/turn.ts`), NOT the `respond` schema's
+`message` `minLength` 1 — that constraint is advisory only (mastra's json-schema-zod conversion drops it
+at runtime). The floor strips zero-width/format characters from the composed delivery and, when still
+blank, routes to the non-empty engine-derived exhaustion closure — catching both a schema-bypassed blank
+`message` and a post-mutator blank rewrite.
 
 ### Reader-of-record notes — the traps a guard author gets wrong
 

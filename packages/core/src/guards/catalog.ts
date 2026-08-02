@@ -228,9 +228,13 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
   //   · replyMaxOccurrences — CTA LITERALISM (batch-c): asks worded outside the CTA lemma list bypass the
   //                           cap (0 distinct matched). Same verdict as replySingleQuestion → `llmCheck`.
   //   · emptyReply          — ZERO-WIDTH / WHITESPACE break (batch-a/c): a U+200B / U+2060 reply survives
-  //                           trim() and passes as "non-empty". Now structurally IMPOSSIBLE: the respond
-  //                           schema requires `message` (minLength 1) and the forced-terminal fallback always
-  //                           closes with a non-empty engine-derived closure — no runtime guard needed.
+  //                           trim() and passes as "non-empty". NOT closed by schema — the respond terminal's
+  //                           `message` minLength 1 is advisory only (mastra's json-schema-zod conversion
+  //                           drops `minLength` at runtime, so it is never enforced there). The real guarantee
+  //                           is the ENGINE FLOOR: `finalizeReply` (`runtime/turn.ts`) strips zero-width/format
+  //                           characters and, when the composed delivery is still blank (including after a
+  //                           mutator rewrite), routes to the non-empty engine-derived exhaustion closure
+  //                           instead — no runtime guard needed; the floor is backend-independent.
   {
     name: 'degenerationGuard',
     category: 'reply',

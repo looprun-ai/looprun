@@ -14,6 +14,7 @@
 import { describe, expect, it } from 'vitest';
 import * as core from '../../src/index.js';
 import {
+  AgentSpecBase,
   claimCoversRubric,
   degenerationGuard,
   jargonScrub,
@@ -21,11 +22,18 @@ import {
   askedEarlier,
 } from '../../src/index.js';
 import { terminalToolDefs } from '../../src/runtime/terminal.js';
-import type { GuardCtx, ObservedCall } from '../../src/rules.js';
+import { createLedger } from '../../src/runtime/ledger.js';
+import { finalizeReply } from '../../src/runtime/turn.js';
+import type { GuardCtx, ObservedCall, AgentWorld } from '../../src/rules.js';
+import type { RespondPayload } from '../../src/runtime/claims.js';
 
 const rctx = (reply: string) => ({ reply, observed: [], turnIndex: 0, history: [] } as unknown as GuardCtx);
 const obs = (o: Partial<ObservedCall>): ObservedCall =>
   ({ name: '', args: {}, ok: true, turnIndex: 0, ...o } as ObservedCall);
+
+function fixtureWorld(): AgentWorld {
+  return { exec: () => ({}), advanceTurn: () => {}, ingestAttachment: (u: string) => u, toolCalls: [], sseActions: [] };
+}
 
 // ── replyMentions → claimCoversRubric (tier-③ deleted; POLARITY break CLOSED) ──
 describe('replyMentions', () => {
@@ -63,17 +71,30 @@ describe('replySingleQuestion / replyMaxOccurrences', () => {
   });
 });
 
-// ── emptyReply → structural (tier-③ deleted; zero-width break CLOSED by construction) ──
+// ── emptyReply → the ENGINE FLOOR in finalizeReply (tier-③ guard deleted; zero-width break CLOSED by
+// the runtime, NOT by the schema) ──
 describe('emptyReply', () => {
   // ORIGINAL BREAK (batch-a/c): a zero-width U+200B / word-joiner U+2060 reply survived trim() and passed
-  // the emptyReply guard as "non-empty". CLOSED without a runtime guard: the respond terminal SCHEMA
-  // requires a non-empty `message` (minLength 1) and, on exhaustion, the engine-derived closure is never
-  // blank — an empty final reply can no longer be constructed.
-  it('CLOSED by construction: the respond terminal schema requires message minLength 1', () => {
+  // the emptyReply guard as "non-empty". The respond terminal's `message` minLength 1 does NOT close this:
+  // mastra's json-schema-zod conversion drops `minLength` at runtime, so it is advisory only and never
+  // runtime-enforced (proven directly below). The real guarantee is `finalizeReply`'s blank-delivery FLOOR
+  // (`runtime/turn.ts`): it strips zero-width/format characters from the composed delivery and, when still
+  // blank, routes to the non-empty engine-derived exhaustion closure — proven by feeding the exact
+  // zero-width payload through the real pipeline, not by inspecting the schema.
+  it('the schema minLength is ADVISORY ONLY — declared, but not what stops a blank reply', () => {
     const [respond] = terminalToolDefs();
     const props = (respond.inputSchema as { properties: Record<string, { minLength?: number }> }).properties;
     expect(props.message.minLength).toBe(1);
     expect((respond.inputSchema as { required: string[] }).required).toContain('message');
+  });
+  it('CLOSED by the engine FLOOR: a zero-width-only message routes finalizeReply to the non-empty closure', async () => {
+    const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona: 'p', tools: [] });
+    const ledger = createLedger();
+    // U+200B (zero-width space) + U+2060 (word joiner) — survives .trim() as a non-empty string.
+    const zeroWidth: RespondPayload = { message: '\u200B\u2060', did: [], asked: false };
+    const out = await finalizeReply(spec, undefined, fixtureWorld(), ledger, zeroWidth, async () => zeroWidth, 1);
+    expect(out.exhausted).toBe(true);
+    expect(out.text.trim().length).toBeGreaterThan(0);
   });
   it('CLOSED by deletion: the emptyReply factory is gone from the public surface', () => {
     expect((core as Record<string, unknown>).emptyReply).toBeUndefined();
