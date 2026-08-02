@@ -168,6 +168,7 @@ function applyMutators(spec: AgentSpec, ledger: TurnLedger, world: AgentWorld, t
       history: ledger.history,
       reply: out,
       producedThisTurn: ledger.producedThisTurn,
+      did: ledger.did, asked: ledger.asked,
       adjudicator: ledger.adjudicator, adjudicatorTimeoutMs: ledger.adjudicatorTimeoutMs,
     };
     const next = m.apply(out, mctx);
@@ -197,6 +198,7 @@ async function checkReply(
     producedThisTurn: ledger.producedThisTurn,
     attachmentsThisTurn: ledger.attachments,
     notes: ledger.turnCorrections,
+    did: ledger.did, asked: ledger.asked,
     adjudicator: ledger.adjudicator, adjudicatorTimeoutMs: ledger.adjudicatorTimeoutMs,
   };
   const out: ReplyViolation[] = [];

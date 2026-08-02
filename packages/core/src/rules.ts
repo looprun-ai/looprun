@@ -11,6 +11,7 @@
  * (`AgentWorld`); a domain reads its own accessors through the index signature — the package itself
  * is domain-neutral.
  */
+import type { TurnClaim } from './runtime/claims.js';
 
 /** The five enforcement dims (taxonomy metadata; the structural key is the hook it maps to). */
 export type Dim = 'spatial' | 'input' | 'run' | 'output' | 'behavior';
@@ -66,6 +67,13 @@ export interface HistoryTurn {
   reply: string;
   /** Domain tool calls that EXECUTED this turn (terminals excluded). */
   toolCalls: ReadonlyArray<HistoryToolCall>;
+  /** The turn's DELIVERED structured claim of operations (the delivered `respond`'s `did`). Retained so
+   *  a later turn's guards can read what the agent DECLARED it did. Frozen with the entry. Task 4 will
+   *  feed this the VERIFIED (post-cross-check) set; for now it is what the ledger held at seal time. */
+  did: ReadonlyArray<TurnClaim>;
+  /** Whether the delivered `respond` posed a clarifying question (`asked:true`) — a later ask/consent
+   *  gate reads it as "the user was asked, last turn". */
+  asked: boolean;
   /** Calls a guard VETOED before execution — the world never saw them. */
   attemptedCalls: ReadonlyArray<{ name: string; args: unknown }>;
   /** The turn's recovery/correction log (guard fires, redrives, superseded terminals, …). */
@@ -109,6 +117,14 @@ export interface GuardCtx {
   attachmentsThisTurn?: string[];
   result?: unknown;
   notes?: string[];
+  /** The CURRENT turn's structured claim of operations, extracted from the delivered `respond`'s `did`
+   *  and grounded against the ledger by the cross-check guards (T4). Populated on the REPLY-side ctx —
+   *  the onReply checks, the postTool result-invariants and the egress mutators — so a guard reads the
+   *  agent's DECLARATION, not its prose. Absent on preTool/onInput (no delivered respond exists yet). */
+  did?: TurnClaim[];
+  /** Whether the delivered `respond` posed a clarifying question. Populated alongside {@link did} on the
+   *  reply-side ctx; absent on preTool/onInput. */
+  asked?: boolean;
   /** SAME-STEP siblings emitted EARLIER in this model step and still in flight (admitted by their
    *  preTool guards but not yet in `observed` — a domain tool lands in `observed` only in
    *  afterToolCall, AFTER execute). The AI SDK dispatches a step's calls concurrently, so two

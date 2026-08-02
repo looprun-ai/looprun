@@ -9,6 +9,7 @@
 import type { AgentWorld, Guard, ObservedCall, HistoryTurn, HistoryToolCall, Adjudicator } from '../rules.js';
 import { canonArgs } from '../guards/index.js';
 import { isTerminal } from './terminal.js';
+import { validateClaims, type TurnClaim } from './claims.js';
 
 /** An OUTPUT-dim (postTool) result-invariant failure OR a flowChain restate — carried on the ledger
  *  and JOINED into the onReply violation set so the same bounded no-tools redrive relays its text. */
@@ -24,6 +25,13 @@ export interface TurnLedger {
   turnCorrections: string[];
   attachments: string[];
   terminalReply: string;
+  /** The CURRENT turn's DELIVERED structured claim of operations — the delivered `respond`'s `did`
+   *  (the last ok respond carrying a non-empty `message`, consistent with the superseded-terminal
+   *  pruning). Read into the reply-side GuardCtx as `ctx.did` so the cross-check guards (T4) ground the
+   *  agent's DECLARATION against the world ledger. Reset per turn by `beginTurn`. */
+  did: TurnClaim[];
+  /** Whether that delivered `respond` posed a clarifying question (`asked:true`). Reset per turn. */
+  asked: boolean;
   /** Consecutive guard-vetoed rounds this turn (reset when a call passes guards and executes). */
   vetoStreak: number;
   /** OUTPUT-dim (postTool) result-invariant violations + flowChain restates accrued this turn — joined
@@ -70,7 +78,7 @@ export function vetoStormHit(ledger: TurnLedger): boolean {
 }
 
 export function createLedger(adjudicator?: Adjudicator, adjudicatorTimeoutMs?: number): TurnLedger {
-  return { observed: [], turnIndex: 0, producedThisTurn: [], turnCorrections: [], attachments: [], terminalReply: '', vetoStreak: 0, postToolViolations: [], inFlightCalls: [], attemptedCalls: [], currentUserText: '', history: [], ...(adjudicator ? { adjudicator } : {}), ...(adjudicatorTimeoutMs !== undefined ? { adjudicatorTimeoutMs } : {}) };
+  return { observed: [], turnIndex: 0, producedThisTurn: [], turnCorrections: [], attachments: [], terminalReply: '', did: [], asked: false, vetoStreak: 0, postToolViolations: [], inFlightCalls: [], attemptedCalls: [], currentUserText: '', history: [], ...(adjudicator ? { adjudicator } : {}), ...(adjudicatorTimeoutMs !== undefined ? { adjudicatorTimeoutMs } : {}) };
 }
 
 /** Reset the per-turn fields (the conversation-scoped `observed` and `history` are kept). `userText` is
@@ -81,6 +89,8 @@ export function beginTurn(ledger: TurnLedger, turnIndex: number, userText = ''):
   ledger.turnCorrections = [];
   ledger.attachments = [];
   ledger.terminalReply = '';
+  ledger.did = [];
+  ledger.asked = false;
   ledger.vetoStreak = 0;
   ledger.postToolViolations = [];
   ledger.inFlightCalls = [];
@@ -170,11 +180,21 @@ export function pruneSupersededTerminals(
   return pruned;
 }
 
-/** Capture the terminal REPLY text (the observed push happens at hook time via recordTerminalCall).
- *  The user-facing prose is `respond`'s `message` arg (SCG, 2026-08-02 — was `text`). */
+/** Capture the DELIVERED respond's declaration (the observed push happens at hook time via
+ *  recordTerminalCall). The user-facing prose is `respond`'s `message` arg (SCG, 2026-08-02 — was
+ *  `text`); the structured operations ride `did`, and `asked` marks a clarifying question. All three
+ *  are the DELIVERED terminal's — captured together, gated on a non-empty `message` and last-wins, so
+ *  they track the exact respond the runtime delivers (the last ok respond with non-empty message,
+ *  consistent with `supersededTerminalCalls`). An ill-shaped `did` is not silently dropped: the
+ *  well-formed subset is stored and a `claims-invalid:<n>` correction records the defect count. */
 export function recordTerminal(ledger: TurnLedger, name: string, args: Record<string, unknown>): void {
   const text = typeof args.message === 'string' ? args.message : '';
-  if (text.trim()) ledger.terminalReply = text;
+  if (!text.trim()) return;
+  ledger.terminalReply = text;
+  const { claims, errors } = validateClaims(args.did);
+  ledger.did = claims;
+  ledger.asked = args.asked === true;
+  if (errors.length) ledger.turnCorrections.push(`claims-invalid:${errors.length}`);
 }
 
 /**
@@ -208,6 +228,10 @@ export function recordTurnHistory(ledger: TurnLedger, reply: string, world?: Age
     userText: ledger.currentUserText,
     reply,
     toolCalls: Object.freeze(toolCalls),
+    // The turn's DELIVERED claims (Task 4 will feed the VERIFIED set; for now what the ledger holds),
+    // frozen entry-and-claim so `ctx.history[n].did` is read-only by construction.
+    did: Object.freeze(ledger.did.map((c) => Object.freeze({ ...c }))),
+    asked: ledger.asked,
     attemptedCalls: Object.freeze(ledger.attemptedCalls.map((a) => Object.freeze({ ...a }))),
     guardEvents: Object.freeze(ledger.turnCorrections.slice()),
   });
