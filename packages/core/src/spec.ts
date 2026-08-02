@@ -13,10 +13,10 @@
  * ONE class, `AgentSpecBase` (the former Minimal/Base/Full ladder is collapsed — a spec is a spec).
  * Its constructor auto-installs, layer-tagged and addressable, exactly:
  *   - ALWAYS the invariants EVERY agent carries: noDuplicateCall (preTool, id `minimal:noDuplicateCall`)
- *     + degenerationGuard (onReply, id `minimal:degenerationGuard`, FIRST in the onReply tail — a
- *     param-free artifact-shape lint)
- *     + emptyReply (onReply, id `minimal:emptyReply`). Reply-honesty text judgment (the former
- *     lexicon-fed noFalseFailureClaim) is now an `llmCheck` an author binds where needed;
+ *     + degenerationGuard (onReply, id `minimal:degenerationGuard`, the sole minimal onReply guard — a
+ *     param-free artifact-shape lint). The former `emptyReply` floor is DELETED (SCG-T5): an empty reply is
+ *     structurally impossible (respond schema `message` minLength 1 + forced-terminal fallback). Reply-honesty
+ *     text judgment (the former lexicon-fed noFalseFailureClaim) is now an `llmCheck` an author binds where needed;
  *   - IFF `destructiveTools` is non-empty, the destructive-safety protocol on those tools:
  *     confirmFirst (id `base:confirmFirst`) + destructiveThrottle (id `base:destructiveThrottle`).
  * Per-tool schema guards (argRequired/argFormat) are now AUTHORED explicitly by the spec — there is no
@@ -24,7 +24,7 @@
  * layer ordering + trunk prose order). resolveBindings sorts each hook agent → full → base → minimal so
  * an agent correction always wins.
  */
-import { claimIsComplete, claimIsGrounded, confirmFirst, degenerationGuard, destructiveThrottle, emptyReply, noDuplicateCall } from './guards/index.js';
+import { claimIsComplete, claimIsGrounded, confirmFirst, degenerationGuard, destructiveThrottle, noDuplicateCall } from './guards/index.js';
 import { GuardExecutionError } from './rules.js';
 import type { AgentWorld, Dim, Guard, GuardCtx, ObservedCall, ReplyMutator, SpatialEdge } from './rules.js';
 import type { DomainContract } from './trunk.js';
@@ -314,7 +314,7 @@ export interface AgentSpecConfig {
   destructiveTools?: string[];
   /** Per destructive tool, the confirm MECHANISM the auto destructive-safety layer installs (P8a-clean —
    *  no linguistic content). `'arg'` (default for any unlisted destructive tool) = a `confirmed:true`
-   *  flag gated on a prior-turn probe; `'prior-ask'` = a flag-less action gated on a prior-turn `askUser`.
+   *  flag gated on a prior-turn probe; `'prior-ask'` = a flag-less action gated on a prior-turn ask event.
    *  Absent ⇒ every destructive tool uses `'arg'` (byte-stable with the pre-mechanism layer). */
   confirmMechanism?: Record<string, 'arg' | 'prior-ask'>;
   /** Optional domain-contract reference (see {@link AgentSpec.contract}). */
@@ -323,7 +323,7 @@ export interface AgentSpecConfig {
 
 /**
  * The ONE AgentSpec class (no Minimal/Base/Full ladder). Its constructor always installs the universal
- * invariants (noDuplicateCall + degenerationGuard + emptyReply)
+ * invariants (noDuplicateCall + degenerationGuard)
  * and, iff `destructiveTools` is non-empty, the destructive-safety protocol (confirmFirst +
  * destructiveThrottle) on those tools — confirmFirst keyed per-tool by `cfg.confirmMechanism`. Ids and
  * install order are byte-stable (`minimal:*` then `base:*`) so the layer-sorted trunk prose and
@@ -406,7 +406,9 @@ export class AgentSpecBase implements AgentSpec {
     // `cfg.lexicon.falseFailureClaimRe`) is RETIRED with the no-regex law (2026-08-02): claiming inability
     // while every call succeeded is a TEXT judgment, now `llmCheck`'s job — an author binds an `llmCheck`
     // rubric on onReply where the domain needs it, instead of injecting a regex lexicon.
-    this.addGuard('onReply', 'any', emptyReply(), { layer: 'minimal', id: 'minimal:emptyReply' });
+    // The former always-on `emptyReply` floor is DELETED (SCG-T5): an empty final reply is now structurally
+    // impossible — the respond schema requires `message` (minLength 1) and the forced-terminal fallback
+    // always closes the turn with a non-empty engine-derived closure. No minimal onReply guard replaces it.
     // THE HONESTY CROSS-CHECK (SCG): when the domain declares its WRITE surface, ground the agent's
     // structured declaration (`ctx.did`) against the world ledger — every reported operation must match
     // what happened (`claimIsGrounded`) and every write that took effect must be reported

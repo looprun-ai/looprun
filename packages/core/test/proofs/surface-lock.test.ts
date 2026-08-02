@@ -6,8 +6,8 @@
  * SHAPE of the barrel. That is precisely how a contract rots.
  *
  * So the three lists below are the contract, transcribed:
- *   · TAUGHT      — the 47 core rows of the placement table in `docs/superpowers/specs/2026-07-28-tutorial-outline-final.md` §4,
- *                   chapters 03 (11) + 04 (31) + 05 (5). Changing this list changes what looprun
+ *   · TAUGHT      — the 43 core rows of the placement table in `docs/superpowers/specs/2026-07-28-tutorial-outline-final.md` §4,
+ *                   chapters 03 (11) + 04 (27) + 05 (5). Changing this list changes what looprun
  *                   promises, and must move the outline in the same commit.
  *   · RIDERS      — the type-closure rider (outline §7): pure types reachable from a taught
  *                   signature, exported so a `declaration: true` consumer can name them. NOT taught,
@@ -35,20 +35,20 @@ const TAUGHT_03 = [
   'AgentSpec', 'AgentSpecBase', 'AgentSpecConfig', 'AgentScope', 'AgentWorld',
   'DomainContract', 'Hook', 'TerminalPolicy', 'ToolDef', 'ToolTarget', 'validateSpec',
 ];
-// ── Chapter 04 (31) — no-regex law (2026-08-02) deleted 8 regex-param kinds; confirmedNeedsEarlierProbe
-//    absorbed into confirmFirst({ via:'probe' }); replyMustMention + replyConfirmsLabels merged into
-//    replyMentions({ terms, anyTerm }) (2026-08-02); SCG (2026-08-02) added the three deterministic
-//    cross-check honesty kinds (claimIsGrounded/claimIsComplete/claimCoversRubric) ──
+// ── Chapter 04 (27) — no-regex law (2026-08-02) deleted 8 regex-param kinds; confirmedNeedsEarlierProbe
+//    absorbed into confirmFirst({ via:'probe' }); SCG (2026-08-02) added the three deterministic
+//    cross-check honesty kinds (claimIsGrounded/claimIsComplete/claimCoversRubric); SCG-T5 (2026-08-02)
+//    DELETED the four tier-③ reply-text kinds — replyMentions (→ claimCoversRubric), replySingleQuestion +
+//    replyMaxOccurrences (→ llmCheck), emptyReply (subsumed by respond schema minLength + fallback) ──
 const TAUGHT_04 = [
   'Dim', 'Guard', 'GuardCtx', 'ObservedCall',
   'argAbsent', 'argFormat', 'argRequired', 'askedEarlier', 'canonArgs', 'confirmFirst',
   'consentRequired', 'custom', 'llmCheck',
   'claimIsGrounded', 'claimIsComplete', 'claimCoversRubric',
-  'degenerationGuard', 'destructiveThrottle', 'emptyReply',
+  'degenerationGuard', 'destructiveThrottle',
   'forbidThisTurn', 'jargonScrub', 'maxCalls', 'noActAfterAskSameTurn',
   'noDuplicateCall',
-  'pendingConfirmMustAsk', 'precondition', 'replyMaxOccurrences',
-  'replyMentions', 'replySingleQuestion', 'requiresBefore', 'resultInvariant',
+  'pendingConfirmMustAsk', 'precondition', 'requiresBefore', 'resultInvariant',
 ];
 // ── Chapter 05 (5) ───────────────────────────────────────────────────────────
 const TAUGHT_05 = ['RunResult', 'TurnInput', 'TurnRecord', 'geminiThinkingOff', 'pinnedDecoding'];
@@ -126,10 +126,10 @@ describe('surface lock — the barrels are the tutorial contract', () => {
   const publicExports = exportsOf(join(SRC, 'index.ts'));
   const internalExports = exportsOf(join(SRC, 'internal.ts'));
 
-  it('the taught surface is exactly the outline §4 core rows (47)', () => {
-    expect(TAUGHT.length).toBe(47);
+  it('the taught surface is exactly the outline §4 core rows (43)', () => {
+    expect(TAUGHT.length).toBe(43);
     expect(TAUGHT_03.length).toBe(11);
-    expect(TAUGHT_04.length).toBe(31);
+    expect(TAUGHT_04.length).toBe(27);
     expect(TAUGHT_05.length).toBe(5);
     expect(publicExports.filter((n) => !RIDERS.includes(n))).toEqual(TAUGHT);
   });

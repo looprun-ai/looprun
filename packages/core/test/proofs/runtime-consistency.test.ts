@@ -11,7 +11,7 @@
  *    the kind and the hook — never swallowed, never converted into a deny.
  */
 import { describe, expect, it } from 'vitest';
-import { AgentSpecBase, custom, emptyReply, precondition, resultInvariant } from '../../src/index.js';
+import { AgentSpecBase, custom, degenerationGuard, precondition, resultInvariant } from '../../src/index.js';
 import { GuardExecutionError } from '../../src/rules.js';
 import { renderScopedSpecTrunk } from '../../src/trunk.js';
 import { resolveGuards } from '../../src/spec.js';
@@ -36,9 +36,9 @@ describe('hook x dim install matrix', () => {
     // A precondition decides a pending CALL — there is none at reply time.
     expect(() => spec().addReplyCheck(precondition(() => false, 'denied', 'the condition'))).toThrow(/cannot be installed on 'onReply'/);
     // A reply check reads ctx.reply — preTool, postTool and onInput have none.
-    expect(() => spec().addGuard('postTool', ['createItem'], emptyReply())).toThrow(/ctx\.reply/);
-    expect(() => spec().addGuard('onInput', 'any', emptyReply())).toThrow(/ctx\.reply/);
-    expect(() => spec().addGuard('preTool', ['createItem'], emptyReply())).toThrow(/cannot be installed on 'preTool'/);
+    expect(() => spec().addGuard('postTool', ['createItem'], degenerationGuard())).toThrow(/ctx\.reply/);
+    expect(() => spec().addGuard('onInput', 'any', degenerationGuard())).toThrow(/ctx\.reply/);
+    expect(() => spec().addGuard('preTool', ['createItem'], degenerationGuard())).toThrow(/cannot be installed on 'preTool'/);
   });
 
   it('refuses an unknown dim', () => {
@@ -48,7 +48,7 @@ describe('hook x dim install matrix', () => {
   it('accepts every legal combination', () => {
     expect(() => spec().addGuard('preTool', ['createItem'], precondition(() => true, 'denied', 'the condition'))).not.toThrow();
     expect(() => spec().addGuard('postTool', ['createItem'], resultInvariant(() => true, 'result must be ok'))).not.toThrow();
-    expect(() => spec().addReplyCheck(emptyReply())).not.toThrow();
+    expect(() => spec().addReplyCheck(degenerationGuard())).not.toThrow();
   });
 });
 

@@ -1,110 +1,20 @@
 /**
- * REPLY guards — the shape and content of the user-facing message: required mentions, CTA budget,
- * single question, label confirmation, the empty/degenerate reply lints, disclosure minimisation and
- * the instruction-from-data proxy (risk families 1 and 2), plus the egress jargon scrub.
+ * REPLY guards — what survives on the user-facing message after the tier-③ deletion (SCG-T5): the
+ * always-on degeneration ARTIFACT lint and the egress jargon scrub (a mutator). The reply-TEXT coverage
+ * guards that used to live here — `replyMentions`, `replySingleQuestion`, `replyMaxOccurrences`,
+ * `emptyReply` — are DELETED (see the tombstone in `catalog.ts`): reply prose stopped being a thing guards
+ * READ (the red-team broke every literal scan structurally). Reply-coverage/polarity moved to the
+ * structured cross-check `claimCoversRubric` (honesty.ts); the empty-reply floor is subsumed by the
+ * respond schema (`message` minLength 1) + the forced-terminal fallback.
  */
 import type { ReplyMutator } from '../rules.js';
 import type { Guard } from '../rules.js';
-import { escapeRe, lc } from './shared.js';
-
-/**
- * The reply must MENTION the given `terms` — a literal, case-insensitive substring scan (terms are DATA
- * from config, never patterns). Two modes, chosen by `anyTerm`:
- *  - `anyTerm: true` — AT LEAST ONE term suffices (the former `replyMustMention`): a required disclaimer,
- *    a referral phrase, any single element of coverage that is the same on every turn.
- *  - `anyTerm: false` (DEFAULT) — EVERY term is required and the reply must be non-empty (the former
- *    `replyConfirmsLabels`): the model just acted on identified records and the user must see WHICH ones.
- * `prose` = derived rule (prose≠reason law) — pass it to override the mode-appropriate default.
- */
-export function replyMentions(
-  opts: { terms: string[]; anyTerm?: boolean },
-  reason: string,
-  prose?: string,
-): Guard {
-  const terms = [...opts.terms];
-  const anyTerm = opts.anyTerm ?? false;
-  return {
-    kind: 'replyMentions',
-    dim: 'behavior',
-    meta: { requiredStrings: [...terms] },
-    check(ctx) {
-      const raw = ctx.reply ?? '';
-      if (anyTerm) {
-        const r = lc(raw);
-        return terms.some((t) => r.includes(lc(t))) ? null : reason;
-      }
-      // all-of: the reply must be non-empty AND name every term (case-insensitive).
-      if (raw.trim() === '') return reason;
-      const r = lc(raw);
-      return terms.every((t) => r.includes(lc(t))) ? null : reason;
-    },
-    prose: () =>
-      prose ??
-      (anyTerm
-        ? `every reply must mention at least one of: ${terms.join(', ')}`
-        : `name ${terms.join(', ')} in the reply`),
-  };
-}
-
-/**
- * At most `n` DISTINCT CTA lemmas from `ctas` may appear in one reply. `prose` = derived rule.
- *
- * NOT an occurrence counter, despite the kind's name: it counts how many
- * DIFFERENT entries of `ctas` the reply contains, so the same CTA repeated five times passes while two
- * different CTAs once each can deny. The CHECK is the intended semantics — the rule it enforces is
- * "don't stack a pile of different asks onto one reply" (anti-nag), which is what a spec author binds it
- * for, and a true occurrence counter would also fire on incidental re-mentions of one CTA inside a
- * genuinely single ask. What was wrong was the PROSE, which read as an anti-repetition rule; it now
- * states the DISTINCT-item semantics explicitly, so a model reading the trunk cannot infer the other
- * rule. The kind's NAME is kept: it is the byte-stable ratchet/proof key and appears in every certified
- * bundle's guard ids — renaming it is a breaking change that buys nothing the prose fix does not.
- */
-export function replyMaxOccurrences(ctas: string[], n: number, reason: string, prose?: string): Guard {
-  return {
-    kind: 'replyMaxOccurrences',
-    dim: 'behavior',
-    check(ctx) {
-      const r = lc(ctx.reply);
-      const distinct = ctas.filter((c) => r.includes(lc(c))).length;
-      return distinct > n ? reason : null;
-    },
-    prose: () =>
-      prose ??
-      `use at most ${n} DIFFERENT of these calls-to-action in one reply (they are counted as distinct asks, not as repetitions): ${ctas.join(', ')}`,
-  };
-}
-
-/** The reply must be a single short question (exactly one '?'). `prose` = derived rule. */
-export function replySingleQuestion(reason: string, prose?: string): Guard {
-  return {
-    kind: 'replySingleQuestion',
-    dim: 'behavior',
-    check(ctx) {
-      const questionMarks = ((ctx.reply ?? '').match(/\?/g) ?? []).length;
-      return questionMarks === 1 ? null : reason;
-    },
-    prose: () => prose ?? 'ask exactly ONE question per reply',
-  };
-}
-
-/** The final reply must be non-empty. */
-export function emptyReply(): Guard {
-  return {
-    kind: 'emptyReply',
-    dim: 'behavior',
-    check(ctx) {
-      return (ctx.reply ?? '').trim() === ''
-        ? 'Your reply was EMPTY — produce the complete user-facing message now, in the user\'s language.'
-        : null;
-    },
-    prose: () => 'never end a turn with an empty reply',
-  };
-}
+import { escapeRe } from './shared.js';
 
 /**
  * Output-channel DEGENERATION lint — domain-neutral, always-on (Minimal layer). Catches the weak-model
  * failure class (leaked reasoning/tool markup — `<think>`, `<tool_call>`, `<tool_response>`, chat-template
- * tokens, raw `replyToUser{` — and run-away repetition). These branches are an ARTIFACT-SHAPE lint over
+ * tokens, raw `respond{` — and run-away repetition). These branches are an ARTIFACT-SHAPE lint over
  * fixed scaffolding tokens (a model-layer property, not business text judgment), so they carry NO param
  * and stay in the deterministic surface. The former third-person SELF-NARRATION branch was a
  * text-judgment param (`selfNarrationRe`) — that job is text judgment, so it is now `llmCheck`'s (an

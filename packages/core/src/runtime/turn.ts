@@ -320,10 +320,9 @@ function deriveExhaustionClosure(
  * how it phrased it — and every unknown kind: the frontier is an ALLOW-list, so a business-authored
  * guard the runtime has never seen defaults to TRUTH. Opting a new kind in is a deliberate edit here.
  */
+// The reply-TEXT FORM kinds (replySingleQuestion / replyMaxOccurrences / replyMentions) are DELETED
+// (SCG-T5); `degenerationGuard` is the sole remaining salvageable FORM contract (an artifact-shape lint).
 const FORM_GUARD_KINDS: ReadonlySet<string> = new Set([
-  'replySingleQuestion',
-  'replyMaxOccurrences',
-  'replyMentions',
   'degenerationGuard',
 ]);
 
@@ -335,7 +334,6 @@ const FORM_GUARD_KINDS: ReadonlySet<string> = new Set([
 const TRUTH_GUARD_KINDS: ReadonlySet<string> = new Set([
   'llmCheck',
   'pendingConfirmMustAsk',
-  'emptyReply',
   // The cross-check honesty core (SCG): each grounds the agent's structured declaration against the
   // world ledger, so a candidate one of them vetoes can make the user believe something false about
   // what happened — never salvaged, never delivered over.
@@ -363,7 +361,7 @@ export interface FinalizedReply {
 
 /** Sync the ledger's reply-side declaration to `payload` and run the onReply checks against it — the ONE
  *  place `ctx.did`/`ctx.asked` (read by the claims cross-check guards) and `ctx.reply` (the message, read
- *  by degeneration/emptyReply) are seated, so a candidate payload is checked as a whole. */
+ *  by degenerationGuard) are seated, so a candidate payload is checked as a whole. */
 async function checkPayload(
   spec: AgentSpec,
   ledger: TurnLedger,

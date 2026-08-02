@@ -10,16 +10,18 @@
  * EVIDENCE guard (`requiresBefore`, proof work was done) defaults UNBOUNDED.
  */
 import { describe, expect, it } from 'vitest';
-import type { GuardCtx, ObservedCall } from '../src/rules.js';
+import type { GuardCtx, HistoryTurn, ObservedCall } from '../src/rules.js';
 import { askedEarlier } from '../src/guards/structural.js';
 import { confirmFirst } from '../src/guards/confirmation.js';
 import { requiresBefore } from '../src/guards/flow.js';
 
-/** A minimal, structure-only GuardCtx — no world accessors, no reply, no user text. */
+/** A minimal, structure-only GuardCtx — no world accessors, no reply, no user text. `history` defaults to
+ *  [] (always an array in the real runtime); the ask-signal FALLBACK reads `observed`. */
 function ctxWith(partial: Partial<GuardCtx> & { observed: ObservedCall[]; turnIndex: number }): GuardCtx {
   return {
     args: {},
     world: {} as GuardCtx['world'],
+    history: [],
     ...partial,
   } as GuardCtx;
 }
@@ -30,6 +32,10 @@ const ask = (turn: number): ObservedCall => ({
   turnIndex: turn,
   args: { message: 'q?', asked: true, did: [] },
 });
+
+/** A sealed HistoryTurn that DID pose a question (`asked:true`) — the PRIMARY ask signal askedEarlier reads. */
+const askedTurn = (turn: number): HistoryTurn =>
+  ({ turnIndex: turn, userText: '', reply: 'q?', toolCalls: [], did: [], asked: true, attemptedCalls: [], guardEvents: [] });
 
 const probe = (tool: string, turn: number, args: Record<string, unknown> = {}): ObservedCall => ({
   name: tool,
@@ -64,6 +70,25 @@ describe('askedEarlier', () => {
 
   it('is silent when the gated arg is absent (not this guard\'s business)', () => {
     expect(g.check(ctxWith({ observed: [], turnIndex: 2, args: {} }))).toBeNull();
+  });
+
+  describe('ask signal — HistoryTurn.asked is the PRIMARY signal (SCG-T5)', () => {
+    it('licenses off an earlier COMPLETED turn with asked:true, no observed ask needed', () => {
+      expect(
+        g.check(ctxWith({ observed: [], history: [askedTurn(1)], turnIndex: 2, args: { condition: 'good' } })),
+      ).toBeNull();
+    });
+    it('a same-turn history entry is impossible (history is prior turns) — a distance-1 earlier ask licenses, distance-2 does not', () => {
+      expect(
+        g.check(ctxWith({ observed: [], history: [askedTurn(1)], turnIndex: 3, args: { condition: 'good' } })),
+      ).toMatch(/ask/i);
+    });
+    it('a history turn that did NOT ask (asked:false) does not license', () => {
+      const noAsk: HistoryTurn = { ...askedTurn(1), asked: false };
+      expect(
+        g.check(ctxWith({ observed: [], history: [noAsk], turnIndex: 2, args: { condition: 'good' } })),
+      ).toMatch(/ask/i);
+    });
   });
 
   describe('recency law (default within:1)', () => {

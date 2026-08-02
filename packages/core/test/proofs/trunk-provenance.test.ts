@@ -12,7 +12,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { AgentSpecBase } from '../../src/spec.js';
-import { argRequired, custom, forbidThisTurn, jargonScrub, maxCalls, replySingleQuestion } from '../../src/guards/index.js';
+import { argRequired, claimCoversRubric, custom, forbidThisTurn, jargonScrub, maxCalls } from '../../src/guards/index.js';
 import { renderScopedSpecTrunk, renderTrunkBlocks } from '../../src/trunk.js';
 import { GUARD_KIND_SUBJECT, derivePolarity, deriveSubject, foldTrunk } from '../../src/trunk-fold.js';
 import type { TrunkBlock, TrunkLine } from '../../src/trunk-fold.js';
@@ -81,7 +81,7 @@ describe('provenance: owner / section / hook / target survive the render', () =>
     const confirm = lines.find((l) => l.owner === 'guard:confirmFirst');
     expect(confirm?.hook).toBe('preTool');
     expect(confirm?.target).not.toBe('any');
-    const reply = lines.find((l) => l.owner === 'guard:emptyReply');
+    const reply = lines.find((l) => l.owner === 'guard:degenerationGuard');
     expect(reply?.hook).toBe('onReply');
     expect(reply?.target).toBe('any');
   });
@@ -166,7 +166,7 @@ describe('audit finding (i): an onInput rule does NOT render under a "reply" hea
   it('onInput prose gets its own INPUT section; onReply keeps the reply section', () => {
     const s = spec();
     s.addGuard('onInput', 'any', maxCalls('createItem', 2, 'too many', { scope: 'conversation' }));
-    s.addReplyCheck(replySingleQuestion('ask one thing'));
+    s.addReplyCheck(claimCoversRubric({ targets: ['L-1'], outcome: 'any' }, 'account for it'));
     const blocks = renderTrunkBlocks(s, FIXTURE_DOMAIN);
     const headings = blocks.map((b) => b.heading);
     expect(headings).toContain('## Input rules (govern the incoming message — checked before you act)');
@@ -242,8 +242,8 @@ describe('regressions the refactor must not introduce', () => {
 
   it('a tool-targeted onReply guard still renders under `## Tool rules`, not `## Reply rules`', () => {
     const s = spec();
-    s.addGuard('onReply', ['createItem'], replySingleQuestion('one question only'));
-    const l = trunkLines(renderTrunkBlocks(s, FIXTURE_DOMAIN)).find((x) => x.owner === 'guard:replySingleQuestion')!;
+    s.addGuard('onReply', ['createItem'], claimCoversRubric({ targets: ['L-1'], outcome: 'any' }, 'account for it'));
+    const l = trunkLines(renderTrunkBlocks(s, FIXTURE_DOMAIN)).find((x) => x.owner === 'guard:claimCoversRubric')!;
     expect(l.section).toBe('## Tool rules');
     expect(l.hook).toBe('onReply');
   });

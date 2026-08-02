@@ -273,7 +273,7 @@ the grouping axis.
 |---|---|
 | `preTool` (13) | `requiresBefore` `forbidThisTurn` `maxCalls` `noDuplicateCall` · `argRequired` `argAbsent` `argFormat` (+ `canonArgs` in prose) · `precondition` `consentRequired` · `confirmFirst` `noActAfterAskSameTurn` `destructiveThrottle` · `askedEarlier` |
 | `postTool` (1) | `resultInvariant` |
-| `onReply` (7) | `pendingConfirmMustAsk` `replyMentions` `replyMaxOccurrences` `replySingleQuestion` `emptyReply` `degenerationGuard` `llmCheck` |
+| `onReply` (6) | `pendingConfirmMustAsk` `degenerationGuard` `llmCheck` `claimIsGrounded` `claimIsComplete` `claimCoversRubric` |
 | `onReplyMutate` (1) | `jargonScrub` |
 | escape hatch (1) | `custom` |
 
@@ -281,10 +281,14 @@ the grouping axis.
 > `noFabricatedSuccess`, `destructiveClaimRequiresSuccess`, `noFalseFailureClaim`,
 > `noOutOfSurfaceActionClaim`, `noUngroundedRegulatedFigure`, `noCompetitorClaim`, `minimalDisclosure`,
 > `noInstructionFromData`. Text judgment is `llmCheck`'s job (a trusted rubric answered by a host
-> adjudicator). The catalog is now **23 factories** (the guard-consolidation law, 2026-08-02, absorbed
-> `confirmedNeedsEarlierProbe` into `confirmFirst({via:'probe'})` and merged `replyMustMention` +
-> `replyConfirmsLabels` into `replyMentions({terms, anyTerm})`); `llmCheck` is the `onReply` kind, and
-> the structural `askedEarlier` joins `preTool`.
+> adjudicator). **SCG (2026-08-02)** added the three deterministic cross-check honesty kinds
+> (`claimIsGrounded` / `claimIsComplete` / `claimCoversRubric`); **SCG-T5 (2026-08-02)** DELETED the four
+> tier-③ reply-TEXT kinds — `replyMentions` (→ `claimCoversRubric`, polarity is a FIELD),
+> `replySingleQuestion` + `replyMaxOccurrences` (→ `llmCheck`), `emptyReply` (subsumed by the respond
+> schema `message` minLength 1 + the forced-terminal fallback). The catalog is now **19 factories**
+> (the guard-consolidation law, 2026-08-02, absorbed `confirmedNeedsEarlierProbe` into
+> `confirmFirst({via:'probe'})`); `llmCheck` is an `onReply` kind, and the structural `askedEarlier`
+> joins `preTool`.
 
 **Example used.** Each catalog row renders its own minimal call site, and the chapter closes with a
 `custom` guard written against `GuardCtx` and `Dim` (see the amendment below).
@@ -472,7 +476,7 @@ in the "bring your own loop" seam; internal, not taught.)
 |---|---|---|
 | mastra | **02** (3) | `LoopRunAgent` `LoopRunAgentConfig` `LoopRunOptions` |
 | core | **03** (11) | `AgentSpecBase` `AgentSpec` `AgentSpecConfig` `AgentScope`↑ `TerminalPolicy`↑ `DomainContract` `ToolDef` `AgentWorld` `Hook`↑ `ToolTarget`↑ `validateSpec` |
-| core | **04** (31) | `Guard` `GuardCtx` `ObservedCall` `Dim`↑ · `custom` `llmCheck`↑ `askedEarlier` `requiresBefore` `forbidThisTurn` `argRequired` `argAbsent` `argFormat` `precondition` `maxCalls` `canonArgs` `noDuplicateCall` `confirmFirst` `noActAfterAskSameTurn` `destructiveThrottle` `claimIsGrounded`↑ `claimIsComplete`↑ `claimCoversRubric`↑ `resultInvariant` `replyMentions` `replyMaxOccurrences` `replySingleQuestion` `emptyReply` `degenerationGuard` `pendingConfirmMustAsk` `consentRequired` `jargonScrub` |
+| core | **04** (27) | `Guard` `GuardCtx` `ObservedCall` `Dim`↑ · `custom` `llmCheck`↑ `askedEarlier` `requiresBefore` `forbidThisTurn` `argRequired` `argAbsent` `argFormat` `precondition` `maxCalls` `canonArgs` `noDuplicateCall` `confirmFirst` `noActAfterAskSameTurn` `destructiveThrottle` `claimIsGrounded`↑ `claimIsComplete`↑ `claimCoversRubric`↑ `resultInvariant` `degenerationGuard` `pendingConfirmMustAsk` `consentRequired` `jargonScrub` |
 | core | **05** (5) | `TurnInput`↑ `RunResult`↑ `TurnRecord`↑ `geminiThinkingOff` `pinnedDecoding` |
 | mastra | **05** (2) | `runSpecConversation` `RuntimeDeps`↑ |
 | models | **05** (1) | `geminiFlashLiteThinkOff` |
@@ -481,8 +485,8 @@ in the "bring your own loop" seam; internal, not taught.)
 | models | **06** (7) | `localModel`↑ `LocalModelOptions`↑ `LocalModelSpec`↑ `ModelRuntimePort`↑ `resolveAlias` `LlamaCppRuntime` `localModelStatus` |
 | mastra | **06** (2) | `worldFromTools` `StateView`↑ |
 
-**Per-chapter:** 0 + 3 + 11 + 31 + 31 + 13 = **89** (04 −8 for the no-regex law's deletions, −1 for the guard-consolidation law absorbing `confirmedNeedsEarlierProbe` into `confirmFirst({via:'probe'})`, −1 for merging `replyMustMention` + `replyConfirmsLabels` into `replyMentions`, then **+3 for the SCG cross-check honesty core** — `claimIsGrounded` / `claimIsComplete` / `claimCoversRubric`).
-**Per-package:** core 47 · mastra 7 · models 8 · eval 23 · server 4 · vercel 0 = **89**, matching the
+**Per-chapter:** 0 + 3 + 11 + 27 + 31 + 13 = **85** (04 −8 for the no-regex law's deletions, −1 for the guard-consolidation law absorbing `confirmedNeedsEarlierProbe` into `confirmFirst({via:'probe'})`, −1 for merging `replyMustMention` + `replyConfirmsLabels` into `replyMentions`, **+3 for the SCG cross-check honesty core** — `claimIsGrounded` / `claimIsComplete` / `claimCoversRubric` — then **−4 for SCG-T5's tier-③ deletion** of `replyMentions` / `replySingleQuestion` / `replyMaxOccurrences` / `emptyReply`).
+**Per-package:** core 43 · mastra 7 · models 8 · eval 23 · server 4 · vercel 0 = **85**, matching the
 inventory's round-4 §1 chart plus increment 1's net-new `loadNormsConfig` + the structural guard
 `askedEarlier` (its sibling `confirmedNeedsEarlierProbe` was later absorbed into `confirmFirst`), increment 2a's net-new `validateCommand` +
 `judgeInputCommand`, and increment 2b's net-new `campaignCommand`. No symbol appears twice; no
@@ -511,14 +515,14 @@ Stated so Tasks 3–7 do not have to re-derive it, and so nobody reads a gap as 
 | # | decision | owner |
 |---|---|---|
 | 1 | **The scheduler artifacts are authored in `docs/tutorial/snippets/`** as shared modules (spec, world, tool defs, eval subject). `examples/` stays seeds-only — it is the agentspec skill's input, not the tutorial's | Tasks 8–9 |
-| 2 | **Chapter 04 is generated** from `GUARD_CATALOG`; the generator and the agentspec `guard-catalog.md` lint must agree on the same rows — now **23** after the no-regex law's −8, the guard-consolidation law's absorption of `confirmedNeedsEarlierProbe` into `confirmFirst({via:'probe'})`, and the merge of `replyMustMention` + `replyConfirmsLabels` into `replyMentions` (Task 4 adjudication: `canonArgs` returns a `string`, so it is a helper taught in prose, not a catalog row — see §3's chapter-04 note) | Tasks 4 + 10 |
+| 2 | **Chapter 04 is generated** from `GUARD_CATALOG`; the generator and the agentspec `guard-catalog.md` lint must agree on the same rows — now **19** after the no-regex law's −8, the guard-consolidation law's absorption of `confirmedNeedsEarlierProbe` into `confirmFirst({via:'probe'})`, the merge of `replyMustMention` + `replyConfirmsLabels` into `replyMentions`, the SCG cross-check honesty core's +3, and **SCG-T5's tier-③ deletion of `replyMentions` / `replySingleQuestion` / `replyMaxOccurrences` / `emptyReply` (−4)** (Task 4 adjudication: `canonArgs` returns a `string`, so it is a helper taught in prose, not a catalog row — see §3's chapter-04 note) | Tasks 4 + 10 |
 | 3 | **Section 6.4 is dropped**; its ten symbols move to `@looprun-ai/core/internal`. Task 7 must keep the bench shim and the agentspec fork scripts working against that subpath | Task 7 |
 | 4 | **`GUARD_CATALOG` + `GuardCatalogEntry` export from `@looprun-ai/core/internal`, not the public barrel**; Task 10's generator imports from `/internal`. This **amends the plan's Task 4 wording** ("exported publicly") to match the contract principle. Note both names have **no inventory rows** — they do not exist until Task 4 creates them — so this decision is their only record, and Task 4's reviewer must check the resulting exports against it. **Amended (controller ruling, Task 4):** `GuardCatalogEntry` gained a `hook` field (`'preTool' \| 'postTool' \| 'onReply' \| 'onReplyMutate'`) so the generated chapter can group by enforcement phase the way the agentspec reference does — `category` stays file-derived; both names remain `/internal`-only | Task 4 |
 | 5 | **Import specifiers:** 02 `looprun/mastra` · 03 `looprun` · 04 `looprun` · 05 `looprun/mastra` + `looprun` + `looprun/models` + **`@looprun-ai/eval`** · 06 **`@looprun-ai/server`** + `looprun/models` + `looprun/mastra`. The facade publishes only `.` `./core` `./mastra` `./models` `./vercel`. **Open: add `looprun/eval` + `looprun/server` facades** so the tutorial uses one package name throughout? | Task 12 |
 | 6 | **`@looprun-ai/vercel` is excluded from the tutorial** (non-functional stub). Package fate — ship, fix or drop — is a Task 12 decision to surface to the user | Task 12 |
 | 7 | The nine superseded docs are deleted only after their absorbing chapter exists (local-models → 06, eval-config + measured-loop → 05, **mcp-tools → 06** — moved from 03 by the §7 amendment) | Task 12 |
 | 9 | **`defineWorld` + its declarative world vocabulary ship on `@looprun-ai/core/internal`** (increment 3a, 2026-08-02). The `AgentWorld` *type* stays taught (chapter 03) — a world implements it — but the `defineWorld` *builder* is host/generator machinery: its audience is the agentspec generator (which emits the `WorldSpec` literal) and hosts/fork authors, exactly the "bring your own loop" seam audience, and no tutorial chapter teaches it yet (3b finalizes the `world.json` form and can then earn a chapter). Under §0's contract principle a symbol with no chapter is internal, not public. Counts unchanged: taught surface stays 53 core rows; the surface-lock `INTERNAL` list grows by the builder + 18 vocabulary types | increment 3a |
-| 8 | **`GuardExecutionError` ships on `@looprun-ai/core/internal`** (Task 3, controller ruling). It is a class the runtime *throws at the consumer* when a guard's `check()`/`prose()` throws, so it must be reachable from some entry point or `catch (e) { if (e instanceof GuardExecutionError) … }` is unwritable outside this package. **Resolved (Task 10): it stays on `/internal`.** Chapter 04 §6 **mentions** it — "a guard that throws is an author bug; the runtime re-throws a `GuardExecutionError` naming the hook, the binding id, the kind and the tool" — but does not teach its API, because the intended reaction is to *fix the guard*, not to catch the error by class. Under §0's teach-vs-mention terms a mention is not teaching, so it is not one of the 89 and does not move. Counts unchanged: 04 teaches 35, core 51 | Task 10 |
+| 8 | **`GuardExecutionError` ships on `@looprun-ai/core/internal`** (Task 3, controller ruling). It is a class the runtime *throws at the consumer* when a guard's `check()`/`prose()` throws, so it must be reachable from some entry point or `catch (e) { if (e instanceof GuardExecutionError) … }` is unwritable outside this package. **Resolved (Task 10): it stays on `/internal`.** Chapter 04 §6 **mentions** it — "a guard that throws is an author bug; the runtime re-throws a `GuardExecutionError` naming the hook, the binding id, the kind and the tool" — but does not teach its API, because the intended reaction is to *fix the guard*, not to catch the error by class. Under §0's teach-vs-mention terms a mention is not teaching, so it is not one of the 85 and does not move. Counts (post SCG-T5 tier-③ deletion): 04 teaches 31, core 47 | Task 10 |
 
 ---
 
@@ -569,8 +573,8 @@ that `exec` is the world's whole job.
    after    03 (11) = 11 core                                   06 (13) = 11 + the two
 ```
 
-**Counts:** per-chapter 0 + 3 + 11 + 35 + 27 + 13 = **89**, unchanged. Per-package unchanged
-(`mastra` still 7). No verdict changed — this is placement only, and it is recorded as the
+**Counts:** per-chapter 0 + 3 + 11 + 31 + 27 + 13 = **85** (04 taught surface 35 → 31 after SCG-T5's
+tier-③ deletion). Per-package unchanged except core (`mastra` still 7). No verdict changed — this is placement only, and it is recorded as the
 inventory's §9 round 7. Chapter 03 keeps a three-line forward reference so a reader who needs the
 path knows it exists and where it lives; `docs/guides/mcp-tools.md` is now absorbed by 06, which
 moves its Task 12 deletion behind Task 11 instead of Task 9.

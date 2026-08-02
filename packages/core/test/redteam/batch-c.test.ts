@@ -1,89 +1,82 @@
 /**
- * RED-TEAM BATCH C — adversarial probes of the LITERAL reply/arg guards.
+ * RED-TEAM BATCH C — the permanent break record for the LITERAL reply/arg guards.
  *
- * Each `it` documents ONE attack. The assertion encodes the OBSERVED verdict:
- *  - a `.toBeNull()` on a should-be-CAUGHT reply that PASSES = a CONFIRMED security break (guard allowed
- *    what it must catch).
- *  - a `.not.toBeNull()` where the guard OVER-BLOCKS a legitimate reply = a quality bug (false-deny), noted
- *    separately, NOT a security break.
+ * Each `it` documents ONE attack. For the SURVIVING guards the assertion encodes the observed verdict:
+ *  - a `.toBeNull()` on a should-be-CAUGHT reply that PASSES = a CONFIRMED break (guard allowed what it
+ *    must catch).
+ *  - a `.not.toBeNull()` where the guard OVER-BLOCKS a legitimate reply = a quality bug (false-deny).
  *
- * Throwaway. Does not modify guard source.
+ * The four reply-TEXT guards this batch originally broke — replyMentions, replySingleQuestion,
+ * replyMaxOccurrences, emptyReply — are DELETED (tier-③, SCG-T5). Their blocks below are REWRITTEN to
+ * assert the NEW closure: reply prose stopped being a thing guards read, so the break can no longer be
+ * constructed. The describe names still point at the original break (permanent record).
  */
 import { describe, expect, it } from 'vitest';
+import * as core from '../../src/index.js';
 import {
-  replyMentions,
-  replyMaxOccurrences,
-  replySingleQuestion,
-  emptyReply,
+  claimCoversRubric,
   degenerationGuard,
   jargonScrub,
   pendingConfirmMustAsk,
   askedEarlier,
 } from '../../src/index.js';
+import { terminalToolDefs } from '../../src/runtime/terminal.js';
 import type { GuardCtx, ObservedCall } from '../../src/rules.js';
 
-const rctx = (reply: string) => ({ reply, observed: [], turnIndex: 0 } as unknown as GuardCtx);
+const rctx = (reply: string) => ({ reply, observed: [], turnIndex: 0, history: [] } as unknown as GuardCtx);
 const obs = (o: Partial<ObservedCall>): ObservedCall =>
   ({ name: '', args: {}, ok: true, turnIndex: 0, ...o } as ObservedCall);
 
-// ── replyMentions ────────────────────────────────────────────────────────────
+// ── replyMentions → claimCoversRubric (tier-③ deleted; POLARITY break CLOSED) ──
 describe('replyMentions', () => {
-  // BREAK: substring scan — a coverage req for record BK-1 is satisfied by a DIFFERENT record BK-12.
-  it('BREAK superset-id: coverage req BK-1 passes on a reply that only names BK-12', () => {
-    const g = replyMentions({ terms: ['BK-1'] }, 'name BK-1');
-    expect(g.check(rctx('Cancelled BK-12 for you.'))).toBeNull(); // must catch → allowed
+  // ORIGINAL BREAK (replyMentions): a literal mention scan for "refund" passed on "no refund possible" —
+  // a text check cannot read polarity, and no pattern fixes it. CLOSED: coverage is now over the STRUCTURED
+  // `did`, and the outcome polarity is a FIELD (claimCoversRubric), never reply prose.
+  const didCtx = (did: unknown) => ({ did, observed: [], turnIndex: 0, history: [] } as unknown as GuardCtx);
+
+  it('CLOSED negated-mention: a success rubric is NOT satisfied by a not_found claim on the same target', () => {
+    const g = claimCoversRubric({ targets: ['refund'], outcome: 'success' }, 'confirm the refund');
+    // The old break: "no refund" satisfied a refund coverage req. Now the not_found polarity is read.
+    expect(g.check(didCtx([{ op: 'refund', target: 'refund', outcome: 'not_found' }]))).not.toBeNull();
   });
-  // BREAK (weaker): a NEGATED mention counts as coverage.
-  it('BREAK negated-mention: coverage req refund passes on "no refund possible"', () => {
-    const g = replyMentions({ terms: ['refund'] }, 'confirm refund');
-    expect(g.check(rctx('Sorry, no refund possible on this order.'))).toBeNull();
+  it('CLOSED false-failure: a success rubric is NOT satisfied by a failure claim', () => {
+    const g = claimCoversRubric({ targets: ['BK-1'], outcome: 'success' }, 'account for BK-1');
+    expect(g.check(didCtx([{ op: 'cancel', target: 'BK-1', outcome: 'failure' }]))).not.toBeNull();
   });
-  // OVER-BLOCK (quality): unicode case-fold miss — required term STRASSE denies a valid ß reply.
-  it('OVER-BLOCK unicode: term STRASSE denies reply "STRAßE" (ß≠ss folding)', () => {
-    const g = replyMentions({ terms: ['STRASSE'], anyTerm: true }, 'mention strasse');
-    expect(g.check(rctx('Delivered to STRAßE 5.'))).not.toBeNull(); // valid reply, denied
+  it('HONEST case still passes: a matching-polarity claim satisfies the rubric', () => {
+    const g = claimCoversRubric({ targets: ['refund'], outcome: 'success' }, 'confirm the refund');
+    expect(g.check(didCtx([{ op: 'refund', target: 'refund', outcome: 'success' }]))).toBeNull();
   });
 });
 
-// ── replySingleQuestion ──────────────────────────────────────────────────────
-describe('replySingleQuestion', () => {
-  // BREAK: two asks, one '?' — the second ask phrased without a mark. Anti-nag defeated.
-  it('BREAK multi-ask: two questions but one "?" passes', () => {
-    const g = replySingleQuestion('one question only');
-    expect(g.check(rctx('Which plan do you want? Also tell me your billing email.'))).toBeNull();
-  });
-  // BREAK: full-width ？ pads a second real question while a lone ASCII ? keeps the count at 1.
-  it('BREAK fullwidth: ASCII "?" + full-width "？" counts as one', () => {
-    const g = replySingleQuestion('one question only');
-    expect(g.check(rctx('Confirm cancel? And your email？'))).toBeNull();
-  });
-  // OVER-BLOCK: a URL query "?" inflates the count on a legitimate single question.
-  it('OVER-BLOCK url: single question containing a URL with "?" is denied', () => {
-    const g = replySingleQuestion('one question only');
-    expect(g.check(rctx('See https://x.io/p?id=9 — shall I proceed?'))).not.toBeNull();
+// ── replySingleQuestion / replyMaxOccurrences → DELETED (no sound structural fix) ──
+describe('replySingleQuestion / replyMaxOccurrences', () => {
+  // ORIGINAL BREAKS (batch-c): a second question worded without a '?' (or a full-width '？') defeated the
+  // one-'?' count; asks worded OUTSIDE the CTA lemma list bypassed the cap. Both are punctuation/CTA
+  // LITERALISM with no sound structural fix — the concern is TEXT judgment, now an `llmCheck` rubric.
+  // Recorded here as a permanent deletion: the fragile guards no longer exist, so the break cannot be built.
+  it('CLOSED by deletion: the fragile factories are gone from the public surface', () => {
+    const api = core as Record<string, unknown>;
+    expect(api.replySingleQuestion).toBeUndefined();
+    expect(api.replyMaxOccurrences).toBeUndefined();
+    expect(api.replyMentions).toBeUndefined();
   });
 });
 
-// ── replyMaxOccurrences ──────────────────────────────────────────────────────
-describe('replyMaxOccurrences', () => {
-  // BREAK: three asks worded OUTSIDE the cta lemma list — 0 distinct matched → passes.
-  it('BREAK off-list asks: stacking asks not in the cta list bypasses the cap', () => {
-    const g = replyMaxOccurrences(['book', 'cancel', 'refund'], 1, 'too many asks');
-    expect(
-      g.check(rctx('Shall I reserve it? Want me to void the order? Should I return your money?')),
-    ).toBeNull();
-  });
-});
-
-// ── emptyReply ───────────────────────────────────────────────────────────────
+// ── emptyReply → structural (tier-③ deleted; zero-width break CLOSED by construction) ──
 describe('emptyReply', () => {
-  // BREAK: zero-width space is NOT whitespace to trim() → effectively-blank reply passes.
-  it('BREAK zero-width-space: reply "\\u200B" passes as non-empty', () => {
-    expect(emptyReply().check(rctx('​'))).toBeNull();
+  // ORIGINAL BREAK (batch-a/c): a zero-width U+200B / word-joiner U+2060 reply survived trim() and passed
+  // the emptyReply guard as "non-empty". CLOSED without a runtime guard: the respond terminal SCHEMA
+  // requires a non-empty `message` (minLength 1) and, on exhaustion, the engine-derived closure is never
+  // blank — an empty final reply can no longer be constructed.
+  it('CLOSED by construction: the respond terminal schema requires message minLength 1', () => {
+    const [respond] = terminalToolDefs();
+    const props = (respond.inputSchema as { properties: Record<string, { minLength?: number }> }).properties;
+    expect(props.message.minLength).toBe(1);
+    expect((respond.inputSchema as { required: string[] }).required).toContain('message');
   });
-  // BREAK: word-joiner U+2060 likewise survives trim().
-  it('BREAK word-joiner: reply "\\u2060" passes as non-empty', () => {
-    expect(emptyReply().check(rctx('⁠⁠'))).toBeNull();
+  it('CLOSED by deletion: the emptyReply factory is gone from the public surface', () => {
+    expect((core as Record<string, unknown>).emptyReply).toBeUndefined();
   });
 });
 
@@ -125,9 +118,9 @@ describe('jargonScrub', () => {
 
 // ── pendingConfirmMustAsk ────────────────────────────────────────────────────
 describe('pendingConfirmMustAsk', () => {
-  // BREAK: an UNRELATED askUser this turn satisfies the pending-confirm relay while the reply
+  // BREAK: an UNRELATED ask this turn satisfies the pending-confirm relay while the reply
   // summarizes the destructive act as DONE — the guard never checks the ask relates to the probe.
-  it('BREAK unrelated-ask: askUser about a different topic clears a pending destructive confirm', () => {
+  it('BREAK unrelated-ask: an ask about a different topic clears a pending destructive confirm', () => {
     const g = pendingConfirmMustAsk();
     const ctx = {
       turnIndex: 3,
@@ -143,14 +136,15 @@ describe('pendingConfirmMustAsk', () => {
 
 // ── askedEarlier ─────────────────────────────────────────────────────────────
 describe('askedEarlier', () => {
-  // BREAK: an earlier-turn askUser about a DIFFERENT arg licenses recording THIS arg — no association.
+  // BREAK: an earlier-turn ask about a DIFFERENT arg licenses recording THIS arg — no association.
   it('BREAK unrelated-ask: earlier ask (any topic) licenses recording a different value', () => {
     const g = askedEarlier({ tool: 'completeMaintenance', arg: 'diagnosis' });
     const ctx = {
       tool: 'completeMaintenance',
       turnIndex: 2,
       args: { diagnosis: 'engine seized' },
-      observed: [obs({ name: 'respond', turnIndex: 1, ok: true, args: { message: 'your name?', asked: true, did: [] } })],
+      history: [{ turnIndex: 1, userText: '', reply: 'your name?', toolCalls: [], did: [], asked: true, attemptedCalls: [], guardEvents: [] }],
+      observed: [],
     } as unknown as GuardCtx;
     expect(g.check(ctx)).toBeNull(); // ask was about the name, not the diagnosis → still licensed
   });
@@ -161,7 +155,8 @@ describe('askedEarlier', () => {
       tool: 'completeMaintenance',
       turnIndex: 4,
       args: { diagnosis: 'x' },
-      observed: [obs({ name: 'respond', turnIndex: 1, ok: true, args: { asked: true, did: [] } })],
+      history: [{ turnIndex: 1, userText: '', reply: 'q?', toolCalls: [], did: [], asked: true, attemptedCalls: [], guardEvents: [] }],
+      observed: [],
     } as unknown as GuardCtx;
     expect(g.check(ctx)).not.toBeNull();
   });

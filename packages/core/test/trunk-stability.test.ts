@@ -91,7 +91,6 @@ describe('trunk byte-stability', () => {
 
       ## Reply rules (govern the message you send — checked on every reply)
       - reply in ONE clean user-facing message — never leak internal reasoning, template tokens, or repeated lines.
-      - never end a turn with an empty reply.
 
       ## Governance (deterministic — evaluate against the account state below)
       - IF plan=starter → suggest the care plan upgrade once

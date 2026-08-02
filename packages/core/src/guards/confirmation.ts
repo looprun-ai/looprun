@@ -12,17 +12,18 @@ import { isAskEvent } from '../runtime/claims.js';
  *  - `'probe'`: a `flag:false`/absent PROBE of the SAME tool that ran OK in an EARLIER turn AND matched
  *    this call's RECORD (its args, minus the confirm `flag`, are a subset of this call's) — the preview was
  *    of the SAME act, not a different one. This is the strict, record-bound license.
- *  - `'ask'`: a flag-LESS action (e.g. a zero-arg tool). It is legal ONLY when an `askUser` succeeded in an
- *    EARLIER turn — the model must ASK, wait for the user's answer, and act only in a LATER turn. Every call
- *    is gated (there is no confirm flag to key on). A same-turn `askUser` does NOT unlock it (that is
- *    `noActAfterAskSameTurn`'s edge — the two compose: `via:'ask'` = cross-turn REQUIRE,
- *    `noActAfterAskSameTurn` = same-turn DENY).
+ *  - `'ask'`: a flag-LESS action (e.g. a zero-arg tool). It is legal ONLY when an ask EVENT (the
+ *    turn-closing `respond` with `asked:true`) succeeded in an EARLIER turn — the model must ASK, wait for
+ *    the user's answer, and act only in a LATER turn. Every call is gated (there is no confirm flag to key
+ *    on). A same-turn ask event does NOT unlock it (that is `noActAfterAskSameTurn`'s edge — the two
+ *    compose: `via:'ask'` = cross-turn REQUIRE, `noActAfterAskSameTurn` = same-turn DENY).
  *  - `'either'` (DEFAULT): the flag-gated form — `flag:true` is licensed by a matching earlier-turn probe OR
- *    an earlier-turn `askUser`. This is what the string overload and `AgentSpecBase`'s arg-flag tools install.
+ *    an earlier-turn ask event. This is what the string overload and `AgentSpecBase`'s arg-flag tools install.
  *
- * RECENCY LAW (2026-08-02): a license is a LICENSING signal — a past event that UNLOCKS a new act — so it is
- * turn-bounded by `within` (default **1**, the immediately-preceding turn / the natural two-step shape):
- * the licensing event must satisfy `1 ≤ currentTurnIndex − eventTurnIndex ≤ within`. A probe 20 turns ago
+ * RECENCY LAW (2026-08-02): a license is a LICENSING signal — a past event (a probe or an earlier-turn ask
+ * event) that UNLOCKS a new act — so it is turn-bounded by `within` (default **1**, the immediately-preceding
+ * turn / the natural two-step shape): the licensing event must satisfy
+ * `1 ≤ currentTurnIndex − eventTurnIndex ≤ within`. A probe 20 turns ago
  * must never license today's confirm; widen deliberately with `within` when the flow genuinely spans turns.
  *
  * Keys on observed / args only (a structural signal, not reply text) — so it stays model-independent.
@@ -184,18 +185,21 @@ export function destructiveThrottle(destructiveTools: string[], opts?: { confirm
 }
 
 /**
- * A destructive PROBE returned requiresConfirmation this turn — the turn MUST relay the question via an
- * `askUser` call, UNLESS that pending confirmation was already RESOLVED this turn: the SAME tool ran OK
- * with the confirm flag set on the SAME record (its args minus the confirm flag) later in the turn — a
- * legal probe→approved-execute tail of a two-step flow, where the reply correctly reports the DONE action
- * instead of re-asking. Keys only the UNRESOLVED probes: if every requiresConfirmation was resolved, the
- * guard is silent.
+ * A destructive PROBE returned requiresConfirmation this turn — the turn MUST relay the question by posing
+ * an ask (the delivered `respond` with `asked:true`), UNLESS that pending confirmation was already RESOLVED
+ * this turn: the SAME tool ran OK with the confirm flag set on the SAME record (its args minus the confirm
+ * flag) later in the turn — a legal probe→approved-execute tail of a two-step flow, where the reply
+ * correctly reports the DONE action instead of re-asking. Keys only the UNRESOLVED probes: if every
+ * requiresConfirmation was resolved, the guard is silent.
  *
- * STRUCTURAL RELAY (no-regex law, 2026-08-02): the relay is satisfied by an `askUser` call succeeding this
- * turn — the question terminal — NOT by regex-matching the reply text. The former `askRe` param (a
- * business-owned "does this reply seek confirmation?" pattern) is retired; a domain that relays
- * confirmation through prose instead of `askUser` judges that with an `llmCheck` rubric. `confirmArg`
- * (default `confirmed`) is the confirm flag a resolving call carries. Reads observed only.
+ * STRUCTURAL RELAY (no-regex law, 2026-08-02; precedence re-keyed SCG-T5): the relay is satisfied by an ask
+ * EVENT this turn — `respond` with `asked:true` — NOT by regex-matching the reply text. Runs at onReply,
+ * where the delivered payload's `asked` field is already seated on the ctx, so the PRIMARY signal is
+ * `ctx.asked === true`; the observed-scan (an ok ask event in this turn's `observed`) is the FALLBACK for
+ * chain / mid-turn contexts with no reply-side ctx. The former `askRe` param (a business-owned "does this
+ * reply seek confirmation?" pattern) is retired; a domain that relays confirmation through prose instead of
+ * an ask event judges that with an `llmCheck` rubric. `confirmArg` (default `confirmed`) is the confirm flag
+ * a resolving call carries. Reads observed + `ctx.asked` only.
  */
 export function pendingConfirmMustAsk(opts?: { confirmArg?: string }): Guard {
   const confirmArg = opts?.confirmArg ?? 'confirmed';
@@ -217,8 +221,11 @@ export function pendingConfirmMustAsk(opts?: { confirmArg?: string }): Guard {
           (o) => o.name === probe.name && o.ok && o.args?.[confirmArg] === true && record(o.args) === record(probe.args),
         ));
       if (!unresolved.length) return null;
-      // STRUCTURAL relay: an ask (`respond` with `asked:true`) succeeded this turn ⇒ the question was put to the user.
-      const askedThisTurn = thisTurn.some((o) => isAskEvent(o) && o.ok);
+      // STRUCTURAL relay (PRECEDENCE, SCG-T5): the delivered `respond` lands at turn END, so at onReply the
+      // relay signal is `ctx.asked === true` — the delivered payload's own `asked` field (seated by
+      // checkPayload before this check runs). The observed-scan (an ok ask EVENT this turn) is the FALLBACK
+      // for chain / mid-turn contexts where `ctx.asked` is not yet populated (no reply-side ctx).
+      const askedThisTurn = ctx.asked === true || thisTurn.some((o) => isAskEvent(o) && o.ok);
       return askedThisTurn
         ? null
         : 'A confirmation is PENDING — ask the user to confirm this turn, and do not summarize the action as done.';

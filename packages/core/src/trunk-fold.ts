@@ -56,12 +56,9 @@ export const GUARD_KIND_SUBJECT: Readonly<Record<string, string>> = Object.freez
   destructiveThrottle: 'destructive-throttle',
   noActAfterAskSameTurn: 'act-after-ask',
   pendingConfirmMustAsk: 'relay-pending-confirmation',
-  // reply honesty / hygiene
-  emptyReply: 'non-empty-reply',
+  // reply hygiene (the reply-TEXT coverage kinds — emptyReply / replySingleQuestion / replyMentions /
+  // replyMaxOccurrences — are DELETED, SCG-T5; degenerationGuard is the sole reply artifact lint left)
   degenerationGuard: 'reply-hygiene',
-  replySingleQuestion: 'single-question',
-  replyMentions: 'reply-must-mention',
-  replyMaxOccurrences: 'cta-budget',
 });
 
 /**

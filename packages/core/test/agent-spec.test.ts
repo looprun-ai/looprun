@@ -27,7 +27,7 @@ describe('AgentSpecBase — universal invariants', () => {
   it('installs the minimal invariants (every spec)', () => {
     const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: ['water'] });
     expect(spec.guards.preTool.map((b) => b.id)).toContain('minimal:noDuplicateCall');
-    expect(spec.guards.onReply.map((b) => b.id)).toContain('minimal:emptyReply');
+    expect(spec.guards.onReply.map((b) => b.id)).toContain('minimal:degenerationGuard');
   });
 
   it('a non-destructive spec installs ONLY the minimal layer (no base:* ids)', () => {
@@ -110,10 +110,10 @@ describe('AgentSpecBase — destructive protocol (iff destructiveTools)', () => 
   });
 });
 
-describe('AgentSpecBase — minimal onReply layer (no-regex law: no lexicon-fed noFalseFailureClaim)', () => {
-  it('installs exactly degenerationGuard then emptyReply — the former lexicon-fed noFalseFailureClaim is retired', () => {
+describe('AgentSpecBase — minimal onReply layer (no-regex law + tier-③ deletion SCG-T5)', () => {
+  it('installs exactly degenerationGuard — emptyReply DELETED (subsumed by respond schema minLength + fallback); the former lexicon-fed noFalseFailureClaim is retired', () => {
     const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: ['x'] });
-    expect(spec.guards.onReply.map((b) => b.id)).toEqual(['minimal:degenerationGuard', 'minimal:emptyReply']);
+    expect(spec.guards.onReply.map((b) => b.id)).toEqual(['minimal:degenerationGuard']);
   });
 });
 

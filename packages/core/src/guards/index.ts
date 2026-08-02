@@ -11,8 +11,8 @@
  * NO-REGEX LAW (2026-08-02, full-context guards): NO guard FACTORY takes a RegExp-typed parameter.
  * Text judgment — claim language, confirm-language, PII/regulated/competitor patterns — is `llmCheck`'s
  * job (a trusted rubric answered by the host adjudicator). Structural jobs use structural signals
- * (`confirmFirst` / `pendingConfirmMustAsk` key on observed `askUser` + args equality, never on reply
- * text). The former regex-param honesty/reply guards (`noFabricatedSuccess`, `destructiveClaimRequiresSuccess`,
+ * (`confirmFirst` / `pendingConfirmMustAsk` key on the observed ask EVENT — `respond`
+ * with `asked:true`, via `isAskEvent` — plus args equality / `ctx.asked`, never on reply text). The former regex-param honesty/reply guards (`noFabricatedSuccess`, `destructiveClaimRequiresSuccess`,
  * `noFalseFailureClaim`, `noCompetitorClaim`, `noOutOfSurfaceActionClaim`, `noUngroundedRegulatedFigure`,
  * `minimalDisclosure`, `noInstructionFromData`) are DELETED — an author expresses those as `llmCheck`
  * rubrics. Media/label INPUT guards are a DOMAIN concern — `custom({ dim:'input' })` over the world's own
@@ -38,14 +38,7 @@ export {
 } from './confirmation.js';
 export { llmCheck } from './llm-check.js';
 export { claimIsGrounded, claimIsComplete, claimCoversRubric, isEmptyReadResult } from './honesty.js';
-export {
-  replyMentions,
-  replyMaxOccurrences,
-  replySingleQuestion,
-  emptyReply,
-  degenerationGuard,
-  jargonScrub,
-} from './reply.js';
+export { degenerationGuard, jargonScrub } from './reply.js';
 
 // The vocabulary as data + the runtime's own kind classification (read via `@looprun-ai/core/internal`).
 export { GUARD_CATALOG, DENY_ONLY_PROSE_KINDS, CONFIRM_CLASS_KINDS, ARMED_SEAMS } from './catalog.js';

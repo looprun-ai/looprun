@@ -59,9 +59,9 @@ a **pure function of its GuardCtx** — one impurity voids the determinism guara
 
 ### `observed` contains RUNTIME-OWNED TERMINAL calls (the reader-of-record trap)
 
-`ctx.observed` is not a log of domain work. The Mastra backend pushes `replyToUser`/`askUser` into it
-with **`ok:true`**, from `beforeToolCall`'s synchronous segment (so a same-step `askUser` is visible to a
-sibling destructive call's preTool checks). Two consequences a guard author must internalise:
+`ctx.observed` is not a log of domain work. The Mastra backend pushes the runtime-owned terminal `respond`
+into it with **`ok:true`**, from `beforeToolCall`'s synchronous segment (so a same-step ask — `respond` with
+`asked:true` — is visible to a sibling destructive call's preTool checks). Two consequences a guard author must internalise:
 
 1. **`observed` is never empty on a turn that produced a reply**, and
 2. **it never carries an `ok:false` entry merely because the domain work failed.**
@@ -73,7 +73,7 @@ turn where the model legitimately could not act and said so — vetoing the hone
 out as an exhaustion stub. That is the highest-severity failure class this trap produces (it bit hardest
 on the deleted regex-param honesty kinds, and any `llmCheck` rubric or `custom` guard that reasons about
 "did everything succeed" inherits the same obligation). Kinds keyed on a NAMED tool are unaffected;
-`confirmFirst`'s `via:'ask'` arm reads `askUser` deliberately, by name.
+the consent kinds read the ask EVENT (`respond` with `asked:true`, via `isAskEvent`) deliberately.
 
 **A guard MAY use an LLM to decide — that is `llmCheck`.** LLM adjudication is now a first-class guard
 kind (§ the `llm-check` catalog entry). An `llmCheck` binds a trusted, pre-baked `rubric`; the runtime
@@ -160,10 +160,10 @@ re-asks instead of executing). The correct rendering is derived from the paramet
 - only state that generateInvoice was done after generateInvoice has actually succeeded this turn.
 ```
 
-**Five kinds derive their prose mechanically** — `forbidThisTurn`, `maxCalls`,
-`replyMentions`, `replyMaxOccurrences`, `replySingleQuestion` (the runtime's
-`DENY_ONLY_PROSE_KINDS`). Each builds the
-sentence from its own arguments (tool name, `n`, `scope`, keyword/label/CTA lists) and
+**Three kinds derive their prose mechanically** — `forbidThisTurn`, `maxCalls`, `claimCoversRubric`
+(the runtime's `DENY_ONLY_PROSE_KINDS`; the reply-text `replyMentions` / `replyMaxOccurrences` /
+`replySingleQuestion` were deleted with tier-③, SCG-T5). Each builds the
+sentence from its own arguments (tool name, `n`, `scope`, target/outcome list) and
 accepts an OPTIONAL author override (`prose?: string`, or `opts.prose` on the object-arg kinds). The
 override never defaults to `reason`. `precondition` is the reference pattern (separate `reason`
 and `prose` params) and is the model to copy for any new kind. The behaviour lives in the KIND — bundles
@@ -217,8 +217,8 @@ law deleted them; the text judgment they encoded is an `llmCheck` rubric, whose 
 
 The lint that runs beside the proof (accusation-in-the-past marks + raw terminal names in model-facing
 prose) backs two more prose facts: `noActAfterAskSameTurn` does not name the runtime-owned
-`askUser` tool ("in the same turn **in which you ask the user a question**" — the rule is about the ACT,
-which survives any channel naming), and `noDuplicateCall`'s DENY text does not assert a bare
+terminal ("in the same turn **in which you ask the user a question**" — the rule is about the ACT,
+which survives any channel naming; the ask itself is now `respond` with `asked:true`), and `noDuplicateCall`'s DENY text does not assert a bare
 "it succeeded": it names what the earlier call actually **came back with** (including "came back EMPTY"),
 because `ok` is true for an empty result and a text telling the model to "use the earlier result" would
 point at nothing when the result was empty (the canonical shape: repeated list sweeps, each "successful",
@@ -237,16 +237,21 @@ spec is a spec). Its constructor auto-installs, from `cfg` alone:
 
 | trigger | auto-installs (layer · id) |
 |---|---|
-| **always** | `noDuplicateCall` (preTool `any`, `minimal:noDuplicateCall`) · `degenerationGuard()` (onReply, `minimal:degenerationGuard` — FIRST in the onReply tail; markup + run-away-repetition branches only, no parameters. The former language-specific self-narration branch was dropped with the no-regex law) · `emptyReply` (onReply, `minimal:emptyReply`) |
+| **always** | `noDuplicateCall` (preTool `any`, `minimal:noDuplicateCall`) · `degenerationGuard()` (onReply, `minimal:degenerationGuard` — the SOLE minimal onReply guard; markup + run-away-repetition branches only, no parameters. The former language-specific self-narration branch was dropped with the no-regex law) |
+| `cfg.contract.writeTools` **non-empty** | `claimIsGrounded` + `claimIsComplete` (onReply, `minimal:*`) — the SCG honesty cross-check over the world ledger, fed `contract.writeTools` + `contract.outcomes` |
 | `cfg.destructiveTools` **non-empty** | `destructiveThrottle(destructiveTools)` (preTool, `base:destructiveThrottle`) + `confirmFirst` on exactly those tools — the per-tool `cfg.confirmMechanism[tool]` (default `'arg'`) picks the id AND the `via`: arg-flag tools → `confirmFirst()` (`via:'either'`) under `base:confirmFirst`, prior-ask tools → `confirmFirst({ via:'ask' })` under `base:confirmFirstPriorAsk`. **⊆-validated** (each destructive tool must be in `cfg.tools` or the constructor throws) |
 
-So **3 kinds always install** (`noDuplicateCall` + `degenerationGuard` + `emptyReply`), **+2 more when the
-agent holds a destructive tool.** The former lexicon-fed reply-honesty invariant (the auto-installed
+So **2 kinds always install** (`noDuplicateCall` + `degenerationGuard`), the SCG honesty cross-check pair
+when the contract declares `writeTools`, and **+2 more when the agent holds a destructive tool.** The former
+always-on `emptyReply` floor is DELETED (tier-③, SCG-T5): an empty final reply is now structurally
+impossible — the `respond` terminal requires a non-empty `message` (schema `minLength` 1) and the
+forced-terminal fallback always closes with a non-empty engine-derived line, so no runtime guard is needed.
+The former lexicon-fed reply-honesty invariant (the auto-installed
 `noFalseFailureClaim`) is RETIRED with the no-regex law — the `AgentSpecConfig.lexicon` seam is gone;
 reply-honesty text judgment ("did the reply claim an inability the tools do not support?") is now an
 `llmCheck` rubric an author binds on onReply where the domain needs it. There is **NO auto-schema layer** —
 `argRequired`/`argFormat`/every other kind is authored explicitly by the spec at the agent layer.
-Terminal tools (`replyToUser`/`askUser`) are runtime-owned; they may never appear in `cfg.tools`
+The runtime-owned terminal `respond` may never appear in `cfg.tools`
 (constructor throws) and are never guarded. A non-empty per-agent `persona` is required (persona-on-spec law: persona is per-agent, on the spec's `persona` field; a contract owns only invariants/language/stateBlock/exhaustion). The `minimal:`/`base:` id namespaces + install order are
 byte-stable so the layer-sorted trunk prose is unchanged.
 
@@ -279,6 +284,27 @@ The family sweep belongs to the generator skill's own reference, which owns it. 
 [`test/proofs/catalog-risk-families.ts`](./test/proofs/catalog-risk-families.ts) is kept as a byte-stable
 proof key; the scenarios it once drove through those kinds now run through an `llmCheck` with a scripted
 adjudicator.
+
+**The honesty core is the cross-check TRIO (SCG).** Honesty stopped being a reply-prose scan — the red-team
+broke every literal check structurally (a mention scan for a record id passes on a reply that says the
+record was NOT found; polarity is unreadable by a pattern). The agent now DECLARES what it did as STRUCTURE
+(`respond`'s `did: TurnClaim[]`) and three deterministic guards GROUND that declaration against the world
+ledger, which the agent does not control:
+
+- **`claimIsGrounded`** — every `did` entry matches the ledger: a `success` needs an effected write, `not_found`
+  an empty read, `blocked`/`refused` a veto/refusal, `no_op` no effected write; an undeclared outcome word is
+  always a violation. Auto-installed when the contract declares `writeTools`.
+- **`claimIsComplete`** — every write that took effect this turn appears in `did` (no silent action). Auto-installed alongside.
+- **`claimCoversRubric`** — a per-case coverage rule: each configured target appears in `did` with the required
+  outcome polarity. It REPLACES the deleted `replyMentions`/`replyConfirmsLabels` — polarity is a FIELD, so
+  "no record of BK-1 was found" can never satisfy a `success` requirement. Config-bound, never auto-installed.
+
+All three are TRUTH guards (never salvaged, never delivered over) and key on `target` + `outcome` vs the
+ledger, never on op-name semantics or reply text — so they carry no pattern and cannot be broken by polarity.
+The four reply-TEXT guards they and the schema subsume — `replyMentions`, `replySingleQuestion`,
+`replyMaxOccurrences`, `emptyReply` — are DELETED (tier-③, SCG-T5): `replyMentions` → `claimCoversRubric`,
+`replySingleQuestion`/`replyMaxOccurrences` → `llmCheck` (punctuation/CTA literalism, no sound structural
+fix), `emptyReply` → subsumed by the `respond` schema (`message` minLength 1) + the forced-terminal fallback.
 
 ### Reader-of-record notes — the traps a guard author gets wrong
 
@@ -327,13 +353,24 @@ a governed destructive flow installs all three TOGETHER — never two of them sa
  ②  askedEarlier          gates the ARG    (preTool)  — a value is RECORDED only after the operator was
                                                         asked for it and answered in a LATER turn
  ③  pendingConfirmMustAsk gates the REPLY  (onReply)  — when a probe returned requiresConfirmation and
-                                                        nothing resolved it, the reply MUST relay the
-                                                        question, not report the act as done
+                                                        nothing resolved it, the turn MUST pose an ask
+                                                        (the delivered respond with asked:true), not
+                                                        report the act as done
 ```
 
+The ASK SIGNAL is now a FIELD, not a tool name (SCG): the single `respond` terminal carries `asked:true`
+when the turn poses a question (`replyToUser`/`askUser` are retired). The consent kinds key on it via
+`isAskEvent` over `observed` and, on the reply side, `ctx.asked`:
+- **①** `confirmFirst`'s `via:'ask'`/`'either'` arm and **②** `askedEarlier` read an EARLIER-turn ask —
+  `askedEarlier`'s PRIMARY signal is a sealed `HistoryTurn.asked === true`, with `isAskEvent` over `observed`
+  as the pre-history fallback.
+- **③** `pendingConfirmMustAsk` runs at onReply, where the delivered payload's `asked` is already seated, so
+  its PRIMARY relay signal is `ctx.asked === true`; the observed-scan (`isAskEvent` this turn) is the FALLBACK
+  for chain/mid-turn contexts.
+
 They compose because they cover DISJOINT moments — the call, the argument, the message — and each keys on
-its own structural signal (observed probe/ask · the gated arg + an earlier ask · an unresolved
-requiresConfirmation probe). The redundancy to avoid is stacking a SECOND call-gate next to `confirmFirst`:
+its own structural signal (observed probe / earlier-turn ask · the gated arg + an earlier ask · an unresolved
+requiresConfirmation probe + `ctx.asked`). The redundancy to avoid is stacking a SECOND call-gate next to `confirmFirst`:
 it already carries the cross-turn requirement (`via` + the recency-law `within`), so a second consent kind
 on the same moment is duplicate prose in the trunk, not extra safety. Reach for the checkpoint that matches
 WHAT you are gating. This section is mirrored in the generated chapter 04 preamble and in the agentspec
@@ -347,7 +384,7 @@ Populated from `AgentSpecConfig`; wired by the Mastra backend unless noted.
 |---|---|---|---|
 | `maxSteps` | `number` | 16 | tool-loop bound per turn (`stopWhen(stepCountIs)`). |
 | `redrives` | `number` | 1 | bounded no-tools onReply re-generate count before the exhaustion terminal. |
-| `terminal` | `(world: AgentWorld) => boolean` | — | **reply-only policy**: `true` ⇒ drop `askUser` this turn (reply-only protocol). This is a per-turn terminal-surface policy, DISTINCT from `exhaustionReply` (the honest-closure text). |
+| `terminal` | `(world: AgentWorld) => boolean` | — | **reply-only policy**: `true` ⇒ force `respond` with `asked` false/absent this turn (reply-only protocol — no clarifying question). This is a per-turn terminal-surface policy, DISTINCT from `exhaustionReply` (the honest-closure text). |
 | `directives` | `StateDirective[]` `{id, cond, directive, when?}` | — | rendered statically into the trunk `## Governance` section as `IF <cond> → <directive>`. Render-only: the `when` runtime predicate is **reserved, not consumed** by the backend. |
 | `chains` | `ChainSpec[]` | — | declared follow-up completions (see below). Absent/empty ⇒ zero added effect. |
 | `sampling` | `{ temperature?, topP?, maxOutputTokens?, seed? }` | — | per-agent AI-SDK call settings, merged OVER the conversation-level `modelParams` (agent wins) by `resolveModelSettings` — a creative agent at temp 0.7 beside a temp-0 admin agent in the same domain. |

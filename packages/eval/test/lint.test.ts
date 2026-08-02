@@ -29,13 +29,13 @@ describe('lint rules', () => {
 });
 
 // ── Execution-based spec-quality checks (unsat pairs + order cycles) ─────────────────────────────
-import { AgentSpecBase, custom, replyMentions, requiresBefore } from '@looprun-ai/core';
+import { AgentSpecBase, custom, claimCoversRubric, requiresBefore } from '@looprun-ai/core';
 import { lintSpecExecution } from '../src/lint.js';
 
 function cleanSpec() {
   const spec = new AgentSpecBase({ id: 'clean', mode: 'M', persona: 'You are clean.', tools: ['a', 'b'] });
   spec.addGuard('preTool', ['b'], requiresBefore(['a']), { id: 'agent:order' });
-  spec.addReplyCheck(replyMentions({ terms: ['REF-1'] }, 'name the reference'), { id: 'agent:labels' });
+  spec.addReplyCheck(claimCoversRubric({ targets: ['REF-1'], outcome: 'any' }, 'name the reference'), { id: 'agent:labels' });
   return spec;
 }
 
@@ -46,7 +46,7 @@ describe('lintSpecExecution — unsatisfiable reply requirements', () => {
 
   it('reports UNSAT-RISK when a required label is vetoed by another onReply guard (custom banRe)', async () => {
     const spec = new AgentSpecBase({ id: 'unsat', mode: 'M', persona: 'You are unsat.', tools: ['a'] });
-    spec.addReplyCheck(replyMentions({ terms: ['REF-1'] }, 'name the reference'), { id: 'agent:labels' });
+    spec.addReplyCheck(claimCoversRubric({ targets: ['REF-1'], outcome: 'any' }, 'name the reference'), { id: 'agent:labels' });
     spec.addReplyCheck(
       custom({
         kind: 'banInternalRefs',
@@ -62,7 +62,7 @@ describe('lintSpecExecution — unsatisfiable reply requirements', () => {
 
   it('a throwing check() is its own finding, not a crash', async () => {
     const spec = new AgentSpecBase({ id: 'thrower', mode: 'M', persona: 'You are thrower.', tools: ['a'] });
-    spec.addReplyCheck(replyMentions({ terms: ['REF-1'] }, 'name it'), { id: 'agent:labels' });
+    spec.addReplyCheck(claimCoversRubric({ targets: ['REF-1'], outcome: 'any' }, 'name it'), { id: 'agent:labels' });
     spec.addReplyCheck(
       custom({ kind: 'boom', dim: 'behavior', check: () => { throw new Error('kaput'); }, prose: () => 'x' }),
       { id: 'agent:boom' },

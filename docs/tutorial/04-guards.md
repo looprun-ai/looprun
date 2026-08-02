@@ -181,16 +181,18 @@ eval output attributes a veto to, and what makes a spec diff readable.
 destructive-safety protocol iff you declared `destructiveTools` (chapter 03 §2):
 
 ```
-   ALWAYS (3)                    noDuplicateCall   (preTool)
+   ALWAYS (2)                    noDuplicateCall   (preTool)
                                  degenerationGuard (onReply)
-                                 emptyReply        (onReply)
    IFF destructiveTools (2)      confirmFirst + destructiveThrottle, on exactly those tools
-   ───────────────────────────   the five a spec like the scheduler's gets
+   ───────────────────────────   the four a spec like the scheduler's gets
 ```
 
-There is no conditional sixth any more: the old regex-fed `noFalseFailureClaim` was retired with the
-no-regex law (2026-08-02). A reply-honesty invariant a domain needs is now an `llmCheck` you bind
-yourself (§5's `llmCheck` row), not an auto-install fed by a lexicon.
+The old always-on `emptyReply` floor is gone (tier-③ deletion, SCG-T5): an empty final reply is now
+structurally impossible — the `respond` terminal requires a non-empty `message` and the forced-terminal
+fallback always closes with a non-empty engine-derived line, so no runtime guard is needed. And there is no
+conditional sixth: the old regex-fed `noFalseFailureClaim` was retired with the no-regex law (2026-08-02).
+A reply-honesty invariant a domain needs is now an `llmCheck` you bind yourself (§5's `llmCheck` row), not
+an auto-install fed by a lexicon.
 
 They have catalog rows in §5 because they are real kinds you must be able to read — **not** because
 you should call them. Re-adding one by hand renders the same rule twice in the prompt, from two
@@ -215,10 +217,11 @@ you want the kind that makes that impossible. Read this column as "the model …
 | acts while the world says it must not (closed account, no consent on record) | [`precondition`](#8-precondition) · [`consentRequired`](#9-consentrequired) | preTool |
 | a value must not be recorded until the operator was asked for it in an earlier turn · a confirmed act needs its own earlier-turn preview | [`askedEarlier`](#13-askedearlier) · [`confirmFirst`](#10-confirmfirst) (`via:'probe'`) | preTool |
 | summarises an empty or partial result as if it satisfied the request | [`resultInvariant`](#14-resultinvariant) | postTool |
-| claims a tool's work is done when it is not · apologises for a failure on a turn where the work went through · promises an off-surface handoff · discloses a personal/regulated field the tools do not ground · obeys an instruction that came back INSIDE a tool result | [`llmCheck`](#22-llmcheck) — text judgment is one kind now: a trusted rubric answered by a host adjudicator (the 8 regex-param honesty/reply kinds were deleted by the no-regex law) | onReply / preTool |
-| answers with nothing, leaked think-blocks, or the same line five times | [`emptyReply`](#20-emptyreply) · [`degenerationGuard`](#21-degenerationguard) (both auto-installed) | onReply |
-| writes internal status codes and field names at the user | [`jargonScrub`](#23-jargonscrub) — rewrites, never vetoes | onReplyMutate |
-| breaks a rule that is about YOUR domain and nothing in this table fits | [`custom`](#24-custom) (§6) | you choose |
+| claims a tool's work is done when it is not · apologises for a failure on a turn where the work went through · promises an off-surface handoff · discloses a personal/regulated field the tools do not ground · obeys an instruction that came back INSIDE a tool result | [`llmCheck`](#20-llmcheck) — text judgment is one kind now: a trusted rubric answered by a host adjudicator (the 8 regex-param honesty/reply kinds were deleted by the no-regex law) | onReply / preTool |
+| reports an operation the ledger does not show, or leaves a real action unreported, or names the wrong outcome polarity for a record | [`claimIsGrounded`](#16-claimisgrounded) · [`claimIsComplete`](#17-claimiscomplete) · [`claimCoversRubric`](#18-claimcoversrubric) | onReply |
+| leaks think-blocks or repeats the same line five times | [`degenerationGuard`](#19-degenerationguard) (auto-installed) | onReply |
+| writes internal status codes and field names at the user | [`jargonScrub`](#21-jargonscrub) — rewrites, never vetoes | onReplyMutate |
+| breaks a rule that is about YOUR domain and nothing in this table fits | [`custom`](#22-custom) (§6) | you choose |
 
 ### The four confusable clusters
 
@@ -230,7 +233,7 @@ reading only one row will pick the wrong kind:
 | `requiresBefore` · `precondition` | which call came first, vs what state the world is in |
 | `forbidThisTurn` · `noDuplicateCall` | the first call is illegitimate, vs only the repeat is |
 | `confirmFirst` · `consentRequired` · `pendingConfirmMustAsk` | evidence in the CONVERSATION (an earlier turn) · a standing flag in the WORLD · gating the REPLY rather than the call |
-| `replyMentions` (`anyTerm: true` vs `false`) | any one term suffices, vs every term is required |
+| `claimIsGrounded` · `claimIsComplete` · `claimCoversRubric` | every claim matches the ledger · every effected write is claimed · a per-case target appears with the required outcome polarity |
 
 **Where the honesty cluster went.** Six kinds used to sit here — a family that all meant "the reply
 lied" (invented success, false failure, an off-surface claim, an ungrounded regulated figure). The
@@ -284,10 +287,10 @@ disagree about it.
 <!-- Rendered from `packages/core/src/guards/catalog.ts`. Do NOT edit between the markers: run
      `pnpm docs:guards` (it needs a built core), and fix wording in the catalog itself. -->
 
-## 5. The catalog — 26 factories
+## 5. The catalog — 22 factories
 
 Grouped by the hook each one is installed on, because the hook decides what a rule can see and
-therefore what it can enforce (chapter 03 §8). 13 preTool · 1 postTool · 10 onReply · 1 onReplyMutate · 1 escape hatch.
+therefore what it can enforce (chapter 03 §8). 13 preTool · 1 postTool · 6 onReply · 1 onReplyMutate · 1 escape hatch.
 
 A fourth hook exists and has no section here: `onInput` fires before the model runs, and §1's
 matrix makes it legal for every `spatial`/`input`/`run` guard — but no shipped kind is installed
@@ -493,12 +496,8 @@ The reply text is in `ctx.reply` and no tool can run any more. A deny costs a bo
 | [`claimIsGrounded`](#16-claimisgrounded) | `honesty.ts` | Every operation the agent declares in `did` must match the world ledger: a `success` needs a write that took effect, `not_found` an empty read, `blocked`/`refused` a veto or world refusal, `no_op` no effected write — an undeclared outcome word is always a violation. |
 | [`claimIsComplete`](#17-claimiscomplete) | `honesty.ts` | Every write that TOOK EFFECT this turn must be covered by a `success` claim in `did` — no silent action hidden from the user. |
 | [`claimCoversRubric`](#18-claimcoversrubric) | `honesty.ts` | Each configured target must appear in `did` with the required outcome polarity (or any polarity when `outcome: 'any'`). |
-| [`replyMentions`](#19-replymentions) | `reply.ts` | The reply must mention the given terms (literal, case-insensitive substring scan). `anyTerm: true` = at least ONE suffices; `anyTerm: false` (default) = EVERY term is required and the reply must be non-empty. |
-| [`replyMaxOccurrences`](#20-replymaxoccurrences) | `reply.ts` | At most n DISTINCT calls-to-action from the list may appear in one reply. |
-| [`replySingleQuestion`](#21-replysinglequestion) | `reply.ts` | The reply must carry exactly one question mark. |
-| [`emptyReply`](#22-emptyreply) | `reply.ts` | The final reply must not be blank. |
-| [`degenerationGuard`](#23-degenerationguard) | `reply.ts` | Catches leaked reasoning or tool markup, chat-template tokens and run-away line repetition in the reply. |
-| [`llmCheck`](#24-llmcheck) | `llm-check.ts` | An LLM-adjudicated guard: a host-registered adjudicator answers a trusted rubric over the full context (history + user text) and its verdict becomes the deny. |
+| [`degenerationGuard`](#19-degenerationguard) | `reply.ts` | Catches leaked reasoning or tool markup, chat-template tokens and run-away line repetition in the reply. |
+| [`llmCheck`](#20-llmcheck) | `llm-check.ts` | An LLM-adjudicated guard: a host-registered adjudicator answers a trusted rubric over the full context (history + user text) and its verdict becomes the deny. |
 
 #### 15. `pendingConfirmMustAsk`
 
@@ -524,10 +523,10 @@ claimIsGrounded({ writeTools: ['createBooking', 'cancelBooking'], outcomes: { se
 
 Every write that TOOK EFFECT this turn must be covered by a `success` claim in `did` — no silent action hidden from the user.
 
-**When to reach for it.** Auto-installed alongside `claimIsGrounded` (same `writeTools`). Its mirror is `claimIsGrounded`: that one stops a claim with no matching effect, this one stops an effect with no matching claim. It names the unreported action by the world-issued produced label, never by the tool name.
+**When to reach for it.** Auto-installed alongside `claimIsGrounded` (same `writeTools` + `outcomes`). Its mirror is `claimIsGrounded`: that one stops a claim with no matching effect, this one stops an effect with no matching claim — both resolve a domain outcome word through the same `OutcomeMap`, so a mapped word (e.g. `settled` → `success`) covers a write exactly like the literal word does. It names the unreported action by the world-issued produced label, never by the tool name.
 
 ```ts
-claimIsComplete({ writeTools: ['createBooking', 'cancelBooking'] })
+claimIsComplete({ writeTools: ['createBooking', 'cancelBooking'], outcomes: { settled: 'success' } })
 ```
 
 #### 18. `claimCoversRubric`
@@ -540,47 +539,7 @@ Each configured target must appear in `did` with the required outcome polarity (
 claimCoversRubric({ targets: ['BK-100234'], outcome: 'success' }, 'Account for the booking you were asked about.')
 ```
 
-#### 19. `replyMentions`
-
-The reply must mention the given terms (literal, case-insensitive substring scan). `anyTerm: true` = at least ONE suffices; `anyTerm: false` (default) = EVERY term is required and the reply must be non-empty.
-
-**When to reach for it.** The ONE reply-coverage gate. Pick the mode by how the terms relate: `anyTerm: true` for a mandatory element that is the same on every turn — a referral phrase, a required disclaimer, any single keyword of the set suffices. `anyTerm: false` (default) for "name the records you just acted on" — the model touched identified records and the user must see WHICH ones, so every label is required. Terms are DATA, never patterns.
-
-```ts
-replyMentions({ terms: ['BK-100234'] }, 'Name the booking you acted on so the person can check it.')
-```
-
-#### 20. `replyMaxOccurrences`
-
-At most n DISTINCT calls-to-action from the list may appear in one reply.
-
-**When to reach for it.** Anti-nag: the model stacks several different asks onto one message. It counts distinct entries, not repetitions, so one CTA restated inside a single ask still passes.
-
-```ts
-replyMaxOccurrences(['book now', 'call us', 'subscribe'], 1, 'One ask per reply — drop the extra calls-to-action.')
-```
-
-#### 21. `replySingleQuestion`
-
-The reply must carry exactly one question mark.
-
-**When to reach for it.** Recovery and clarification turns, where a pile of questions at once is what stalls the conversation. Bind it to the layer that handles those turns, not to every reply.
-
-```ts
-replySingleQuestion('Ask exactly one question so the person can answer it.')
-```
-
-#### 22. `emptyReply`
-
-The final reply must not be blank.
-
-**When to reach for it.** Always on (auto-installed). It is the floor under every other reply kind: a turn that ends with nothing said is a failure no other guard would catch.
-
-```ts
-emptyReply()
-```
-
-#### 23. `degenerationGuard`
+#### 19. `degenerationGuard`
 
 Catches leaked reasoning or tool markup, chat-template tokens and run-away line repetition in the reply.
 
@@ -590,7 +549,7 @@ Catches leaked reasoning or tool markup, chat-template tokens and run-away line 
 degenerationGuard()
 ```
 
-#### 24. `llmCheck`
+#### 20. `llmCheck`
 
 An LLM-adjudicated guard: a host-registered adjudicator answers a trusted rubric over the full context (history + user text) and its verdict becomes the deny.
 
@@ -606,9 +565,9 @@ A `ReplyMutator`, not a `Guard`: it is applied to the reply before the `onReply`
 
 | factory | file | what it enforces |
 |---|---|---|
-| [`jargonScrub`](#25-jargonscrub) | `reply.ts` | A deterministic egress rewrite of internal vocabulary into user words (word-boundary, case-insensitive). |
+| [`jargonScrub`](#21-jargonscrub) | `reply.ts` | A deterministic egress rewrite of internal vocabulary into user words (word-boundary, case-insensitive). |
 
-#### 25. `jargonScrub`
+#### 21. `jargonScrub`
 
 A deterministic egress rewrite of internal vocabulary into user words (word-boundary, case-insensitive).
 
@@ -624,9 +583,9 @@ One factory, and it is the only one whose hook you choose: `custom` follows the 
 
 | factory | file | what it enforces |
 |---|---|---|
-| [`custom`](#26-custom) | `custom.ts` | The escape hatch: a guard whose kind, dim, check and prose the spec author writes by hand. |
+| [`custom`](#22-custom) | `custom.ts` | The escape hatch: a guard whose kind, dim, check and prose the spec author writes by hand. |
 
-#### 26. `custom`
+#### 22. `custom`
 
 The escape hatch: a guard whose kind, dim, check and prose the spec author writes by hand.
 

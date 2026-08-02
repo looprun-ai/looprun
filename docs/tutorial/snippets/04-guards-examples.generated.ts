@@ -21,7 +21,6 @@ import {
   custom,
   degenerationGuard,
   destructiveThrottle,
-  emptyReply,
   forbidThisTurn,
   jargonScrub,
   llmCheck,
@@ -30,15 +29,12 @@ import {
   noDuplicateCall,
   pendingConfirmMustAsk,
   precondition,
-  replyMaxOccurrences,
-  replyMentions,
-  replySingleQuestion,
   requiresBefore,
   resultInvariant,
 } from 'looprun';
 import type { Guard, ReplyMutator } from 'looprun';
 
-/** The 26 examples of chapter 04 §5, in catalog order. */
+/** The 22 examples of chapter 04 §5, in catalog order. */
 export const CATALOG_EXAMPLES: ReadonlyArray<Guard | ReplyMutator> = [
   /* requiresBefore        */ requiresBefore(['findBooking']),
   /* forbidThisTurn        */ forbidThisTurn('Do not reschedule while a cancellation is pending — resolve that first.'),
@@ -55,12 +51,8 @@ export const CATALOG_EXAMPLES: ReadonlyArray<Guard | ReplyMutator> = [
   /* destructiveThrottle   */ destructiveThrottle(['cancelBooking', 'refundOrder']),
   /* pendingConfirmMustAsk */ pendingConfirmMustAsk(),
   /* claimIsGrounded       */ claimIsGrounded({ writeTools: ['createBooking', 'cancelBooking'], outcomes: { settled: 'success' } }),
-  /* claimIsComplete       */ claimIsComplete({ writeTools: ['createBooking', 'cancelBooking'] }),
+  /* claimIsComplete       */ claimIsComplete({ writeTools: ['createBooking', 'cancelBooking'], outcomes: { settled: 'success' } }),
   /* claimCoversRubric     */ claimCoversRubric({ targets: ['BK-100234'], outcome: 'success' }, 'Account for the booking you were asked about.'),
-  /* replyMentions         */ replyMentions({ terms: ['BK-100234'] }, 'Name the booking you acted on so the person can check it.'),
-  /* replyMaxOccurrences   */ replyMaxOccurrences(['book now', 'call us', 'subscribe'], 1, 'One ask per reply — drop the extra calls-to-action.'),
-  /* replySingleQuestion   */ replySingleQuestion('Ask exactly one question so the person can answer it.'),
-  /* emptyReply            */ emptyReply(),
   /* degenerationGuard     */ degenerationGuard(),
   /* jargonScrub           */ jargonScrub({ CANC_PEND: 'waiting to be cancelled' }),
   /* askedEarlier          */ askedEarlier({ tool: 'completeMaintenance', arg: 'condition' }),

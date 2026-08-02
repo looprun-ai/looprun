@@ -1,6 +1,6 @@
 /** The governed-turn machine: ledger, preTool evaluation, and the finalizeReply pipeline. */
 import { describe, expect, it } from 'vitest';
-import { AgentSpecBase, precondition, replyMentions, jargonScrub, custom } from '../src/index.js';
+import { AgentSpecBase, precondition, jargonScrub, custom } from '../src/index.js';
 import type { AgentWorld, DomainContract } from '../src/index.js';
 import {
   createLedger,
@@ -17,6 +17,16 @@ import type { RespondPayload } from '../src/runtime/claims.js';
 
 /** A structured respond payload with an empty declaration — the common shape in these composition-free tests. */
 const P = (message: string): RespondPayload => ({ message, did: [], asked: false });
+
+/** A minimal onReply behaviour guard that denies until the MESSAGE contains `term` — a stand-in for the
+ *  deleted reply-text guards, used here only to exercise the redrive/exhaustion machinery over ctx.reply. */
+const mentions = (term: string, reason: string) =>
+  custom({
+    kind: 'replyHasTerm',
+    dim: 'behavior',
+    check: (ctx) => ((ctx.reply ?? '').toLowerCase().includes(term.toLowerCase()) ? null : reason),
+    prose: () => `mention ${term}`,
+  });
 
 function fixtureWorld(state: Record<string, unknown> = {}): AgentWorld {
   return {
@@ -123,7 +133,7 @@ describe('finalizeReply pipeline', () => {
 
   it('redrives once with the correction message and accepts the fixed text', async () => {
     const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: [] });
-    spec.addReplyCheck(replyMentions({ terms: ['price'], anyTerm: true }, 'Mention the price.'), { id: 'agent:price' });
+    spec.addReplyCheck(mentions('price', 'Mention the price.'), { id: 'agent:price' });
     const ledger = createLedger();
     const seen: string[] = [];
     const out = await finalizeReply(
@@ -141,17 +151,17 @@ describe('finalizeReply pipeline', () => {
     expect(out).toMatchObject({ text: 'The price is $5.', exhausted: false });
     expect(seen).toHaveLength(1);
     expect(seen[0]).toContain('Mention the price.');
-    expect(ledger.turnCorrections).toContain('redrive:replyMentions');
+    expect(ledger.turnCorrections).toContain('redrive:replyHasTerm');
   });
 
   it('commits the deterministic closure after redrives exhaust (contract closure)', async () => {
     const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: ['water'] });
-    spec.addReplyCheck(replyMentions({ terms: ['impossible-token-xyz'], anyTerm: true }, 'nope'), { id: 'agent:impossible' });
+    spec.addReplyCheck(mentions('impossible-token-xyz', 'nope'), { id: 'agent:impossible' });
     const ledger = createLedger();
     recordToolResult(ledger, 'water', {}, { success: true });
     const out = await finalizeReply(spec, CONTRACT, fixtureWorld(), ledger, P('text'), async () => P('still wrong'), 1);
     expect(out.exhausted).toBe(true);
-    expect(out.violations).toContain('replyMentions');
+    expect(out.violations).toContain('replyHasTerm');
     expect(out.text).toBe('contract-closure:water');
     expect(ledger.turnCorrections).toContain('exhaustion-terminal');
   });
@@ -164,15 +174,23 @@ describe('finalizeReply pipeline', () => {
       tools: [],
       exhaustionReply: () => 'spec-closure',
     });
-    spec.addReplyCheck(replyMentions({ terms: ['impossible-token-xyz'], anyTerm: true }, 'nope'), { id: 'agent:impossible' });
+    spec.addReplyCheck(mentions('impossible-token-xyz', 'nope'), { id: 'agent:impossible' });
     const out = await finalizeReply(spec, CONTRACT, fixtureWorld(), createLedger(), P('text'), async () => P('still wrong'), 0);
     expect(out.text).toBe('spec-closure');
   });
 
-  it('emptyReply (minimal layer) forces content', async () => {
-    const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: [] });
-    const out = await finalizeReply(spec, CONTRACT, fixtureWorld(), createLedger(), P('   '), async () => P('Real reply.'), 1);
-    expect(out.text).toBe('Real reply.');
+  it('the forced-terminal fallback guarantees a non-empty delivery (emptyReply subsumed, SCG-T5)', async () => {
+    // emptyReply is DELETED — the empty-reply floor is now structural: the respond schema requires a
+    // non-empty `message` and, on exhaustion, the engine-derived closure is never blank. A guard that never
+    // passes drives to exhaustion; the delivered text must still be non-empty (the contract closure here).
+    const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: ['water'] });
+    spec.addReplyCheck(mentions('impossible-token-xyz', 'nope'), { id: 'agent:impossible' });
+    const ledger = createLedger();
+    recordToolResult(ledger, 'water', {}, { success: true });
+    const out = await finalizeReply(spec, CONTRACT, fixtureWorld(), ledger, P('   '), async () => P('   '), 1);
+    expect(out.exhausted).toBe(true);
+    expect(out.text.trim().length).toBeGreaterThan(0);
+    expect(out.text).toBe('contract-closure:water');
   });
 
   it('redriveMessage lists every violation', () => {

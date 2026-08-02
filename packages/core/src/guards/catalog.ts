@@ -217,42 +217,20 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
   },
 
   // ── reply ──────────────────────────────────────────────────────────────────
-  {
-    name: 'replyMentions',
-    category: 'reply',
-    hook: 'onReply',
-    summary: 'The reply must mention the given terms (literal, case-insensitive substring scan). `anyTerm: true` = at least ONE suffices; `anyTerm: false` (default) = EVERY term is required and the reply must be non-empty.',
-    whenToUse:
-      'The ONE reply-coverage gate. Pick the mode by how the terms relate: `anyTerm: true` for a mandatory element that is the same on every turn — a referral phrase, a required disclaimer, any single keyword of the set suffices. `anyTerm: false` (default) for "name the records you just acted on" — the model touched identified records and the user must see WHICH ones, so every label is required. Terms are DATA, never patterns.',
-    example: `replyMentions({ terms: ['BK-100234'] }, 'Name the booking you acted on so the person can check it.')`,
-  },
-  {
-    name: 'replyMaxOccurrences',
-    category: 'reply',
-    hook: 'onReply',
-    summary: 'At most n DISTINCT calls-to-action from the list may appear in one reply.',
-    whenToUse:
-      'Anti-nag: the model stacks several different asks onto one message. It counts distinct entries, not repetitions, so one CTA restated inside a single ask still passes.',
-    example: `replyMaxOccurrences(['book now', 'call us', 'subscribe'], 1, 'One ask per reply — drop the extra calls-to-action.')`,
-  },
-  {
-    name: 'replySingleQuestion',
-    category: 'reply',
-    hook: 'onReply',
-    summary: 'The reply must carry exactly one question mark.',
-    whenToUse:
-      'Recovery and clarification turns, where a pile of questions at once is what stalls the conversation. Bind it to the layer that handles those turns, not to every reply.',
-    example: `replySingleQuestion('Ask exactly one question so the person can answer it.')`,
-  },
-  {
-    name: 'emptyReply',
-    category: 'reply',
-    hook: 'onReply',
-    summary: 'The final reply must not be blank.',
-    whenToUse:
-      'Always on (auto-installed). It is the floor under every other reply kind: a turn that ends with nothing said is a failure no other guard would catch.',
-    example: `emptyReply()`,
-  },
+  // TOMBSTONE (tier-③ deletion, SCG-T5) — the reply-TEXT guards are DELETED, each recorded with the
+  // red-team break that made it unsound (reply prose stopped being a thing guards READ):
+  //   · replyMentions       — POLARITY BLINDNESS: a literal mention scan for a record id passes on a reply
+  //                           that says the record was NOT found. No pattern reads polarity. Replaced by
+  //                           `claimCoversRubric` (honesty.ts), where outcome polarity is a FIELD of `did`.
+  //   · replySingleQuestion — PUNCTUATION LITERALISM (batch-c): a second question worded without a '?' (or a
+  //                           full-width '？') defeats the one-'?' count. No sound structural fix — a domain
+  //                           that truly needs it binds an `llmCheck` rubric (text judgment).
+  //   · replyMaxOccurrences — CTA LITERALISM (batch-c): asks worded outside the CTA lemma list bypass the
+  //                           cap (0 distinct matched). Same verdict as replySingleQuestion → `llmCheck`.
+  //   · emptyReply          — ZERO-WIDTH / WHITESPACE break (batch-a/c): a U+200B / U+2060 reply survives
+  //                           trim() and passes as "non-empty". Now structurally IMPOSSIBLE: the respond
+  //                           schema requires `message` (minLength 1) and the forced-terminal fallback always
+  //                           closes with a non-empty engine-derived closure — no runtime guard needed.
   {
     name: 'degenerationGuard',
     category: 'reply',
@@ -328,11 +306,9 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
 export const DENY_ONLY_PROSE_KINDS: readonly string[] = [
   'forbidThisTurn',
   'maxCalls',
-  'replyMentions',
-  'replyMaxOccurrences',
-  'replySingleQuestion',
-  // claimCoversRubric takes an authored `reason` (the deny) but renders a DERIVED, present-tense rule
-  // (`account for <targets> as <outcome>`) — the reason string never reaches the trunk.
+  // The reply-TEXT DENY_ONLY kinds (replyMentions / replyMaxOccurrences / replySingleQuestion) are DELETED
+  // (tier-③, SCG-T5). claimCoversRubric takes an authored `reason` (the deny) but renders a DERIVED,
+  // present-tense rule (`account for <targets> as <outcome>`) — the reason string never reaches the trunk.
   'claimCoversRubric',
 ];
 

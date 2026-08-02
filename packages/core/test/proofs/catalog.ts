@@ -23,17 +23,16 @@
  * | destructiveThrottle            | deleteItem, purgeAll (auto base) | —                                            |
  * | resultInvariant                | reportStatus (postTool)    | fires when result.count === 0                      |
  * | custom                         | listItems                  | denies args.page > 3                               |
- * | pendingConfirmMustAsk          | any (onReply)              | structural: unresolved probe requires an askUser this turn |
- * | emptyReply                     | any (auto minimal)         | —                                                  |
+ * | pendingConfirmMustAsk          | any (onReply)              | structural: unresolved probe requires an ask (respond+asked) this turn, ctx.asked precedence |
  * | degenerationGuard              | any (auto minimal)         | — (param-free artifact-shape lint)                 |
- * | replyMentions / replyMaxOccurrences / replySingleQuestion | collective:'skip' (content-contract guards, proven isolated only) |
+ * | (DELETED — tier-③, SCG-T5) replyMentions (→ claimCoversRubric, polarity is a FIELD) · replySingleQuestion / replyMaxOccurrences (punctuation/CTA literalism, → llmCheck) · emptyReply (zero-width break, subsumed by respond schema minLength 1 + forced-terminal fallback) |
  * | llmCheck                       | collective:'skip'          | scripted adjudicator; the honesty/risk text judgment lives here now |
  * | consentRequired                | useMedia                   | consentOk = world.hasPrimary()                     |
  * | (DELETED — no-regex law 2026-08-02) noFabricatedSuccess · destructiveClaimRequiresSuccess · noFalseFailureClaim · minimalDisclosure · noInstructionFromData · noCompetitorClaim · noOutOfSurfaceActionClaim · noUngroundedRegulatedFigure |
  * | askedEarlier                   | createItem                 | askedEarlier({ tool:'createItem', arg:'condition' }) — gates the non-schema `condition` arg |
  * | (ABSORBED 2026-08-02) confirmedNeedsEarlierProbe → confirmFirst({ via:'probe' }) — record-bound probe now a via of the ONE confirm gate |
- * | (MERGED 2026-08-02) replyMustMention + replyConfirmsLabels → replyMentions({ terms, anyTerm }) — one reply-coverage gate (anyTerm true = any one, false/default = all) |
- * | llmCheck                       | collective:'skip'          | rubric+host adjudicator are agent-specific (like the content-contract reply guards); proven isolated L1+L3 |
+ * | (MERGED then DELETED) replyMustMention + replyConfirmsLabels → replyMentions → DELETED (tier-③, SCG-T5); reply-coverage is now claimCoversRubric over structured `did` (polarity is a FIELD) |
+ * | llmCheck                       | collective:'skip'          | rubric+host adjudicator are agent-specific; proven isolated L1+L3 |
  *
  * ## SCRIPT CONVENTIONS (verified in signal-mechanics.test.ts)
  *  1. Every turn's script ends with a NON-empty replyToUser (or askUser when asking) — an empty text
