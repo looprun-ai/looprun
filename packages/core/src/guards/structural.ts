@@ -15,7 +15,7 @@ import type { Guard, GuardCtx, ObservedCall } from '../rules.js';
  * absent arg is not this guard's business. The exemption is purely structural: any observed `askUser`
  * that ran OK in a turn BEFORE this one. A same-turn ask does NOT count — the operator has not had a
  * chance to answer within the same message, so consent to record their answer cannot have arrived yet.
- * Reads observed / args only — never the user's text (magnet-safe).
+ * Keys on observed / args only — a structural signal (an earlier-turn `askUser`), not reply text.
  */
 export function askedEarlier(opts: { tool: string; arg?: string }): Guard {
   const arg = opts.arg;
@@ -48,7 +48,7 @@ export function askedEarlier(opts: { tool: string; arg?: string }): Guard {
  * EARLIER turn, and whose every non-`confirmed` argument key equals this call's — so the preview was of
  * the SAME act, not a different one. A same-turn probe is denied on its own message (the go-ahead must
  * arrive LATER); no matching probe at all is denied for lack of a preview. One agreement covers one act:
- * the preview and the go-ahead live in different messages. Reads observed / args only (magnet-safe).
+ * the preview and the go-ahead live in different messages. Keys on observed / args only — a structural signal.
  */
 export function confirmedNeedsEarlierProbe(opts: { tools: string[] }): Guard {
   const set = new Set(opts.tools);

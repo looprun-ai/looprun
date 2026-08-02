@@ -6,12 +6,12 @@
  * SHAPE of the barrel. That is precisely how a contract rots.
  *
  * So the three lists below are the contract, transcribed:
- *   · TAUGHT      — the 53 core rows of the placement table in `docs/superpowers/specs/2026-07-28-tutorial-outline-final.md` §4,
- *                   chapters 03 (11) + 04 (37) + 05 (5). Changing this list changes what looprun
+ *   · TAUGHT      — the 46 core rows of the placement table in `docs/superpowers/specs/2026-07-28-tutorial-outline-final.md` §4,
+ *                   chapters 03 (11) + 04 (30) + 05 (5). Changing this list changes what looprun
  *                   promises, and must move the outline in the same commit.
  *   · RIDERS      — the type-closure rider (outline §7): pure types reachable from a taught
  *                   signature, exported so a `declaration: true` consumer can name them. NOT taught,
- *                   NOT counted in the 89. Derived, not chosen — `declaration-emit.test.ts` is what
+ *                   NOT counted in the taught total. Derived, not chosen — `declaration-emit.test.ts` is what
  *                   proves the list is sufficient; this one proves it has not quietly grown.
  *   · INTERNAL    — the 37 `internal` verdicts of the symbol inventory §7.1, plus
  *                   `GuardExecutionError` (controller ruling: a class the runtime throws at

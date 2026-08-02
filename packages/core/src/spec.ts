@@ -96,10 +96,11 @@ export interface GuardBinding {
  * zero-arg / spec-derivable call skips the LLM entirely). preTool guards still gate the forced call — a
  * chain cannot bypass governance.
  *
- * FIREWALL: `when`/`args` are spec-authored business code (like `exhaustionReply`) — pure functions of
- * (world, observed) ONLY. They NEVER receive the user's text or the reply (the magnet firewall bars
- * deterministic trigger/derive code from reading user text). Only the `mode:'llm'` micro-generate may
- * see the user text — that is the model filling args, not guard/trigger code.
+ * DETERMINISM: `when`/`args` are spec-authored business code (like `exhaustionReply`) — pure functions of
+ * (world, observed) ONLY, by their signature. They take no user text: a chain trigger that forked on what
+ * the user said would be intent-based routing (the loop-shaping law that stays banned), and the derive
+ * stays a pure projection so the forced call is reproducible. Only the `mode:'llm'` micro-generate may
+ * see the user text — that is the model filling args, not trigger code.
  */
 export interface ChainSpec {
   /** Fires only if this tool was observed OK THIS turn. */
@@ -112,9 +113,9 @@ export interface ChainSpec {
   when?: (world: AgentWorld, observed: ObservedCall[]) => boolean;
   /** 'direct' = execute `world.exec(call, args ?? {})` with NO LLM (zero-arg or spec-derived args), on the
    *  same guard-checked path a model call takes. 'llm' = ONE forced micro-generate where the model fills
-   *  args (it may read the user text — the firewall bars only deterministic guard/trigger code). */
+   *  args (it may read the user text — the ban is on deterministic trigger/derive code, not the model). */
   mode: 'direct' | 'llm';
-  /** For 'direct': static args, or a PURE derive function of (world, observed) [same firewall as `when`].
+  /** For 'direct': static args, or a PURE derive function of (world, observed) [same determinism rule as `when`].
    *  Ignored for 'llm' (the model fills args). Default `{}`. */
   args?: Record<string, unknown> | ((world: AgentWorld, observed: ObservedCall[]) => Record<string, unknown>);
 }

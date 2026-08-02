@@ -65,7 +65,7 @@ chapter                    symbols taught
 01-concepts                 0   (concept-only)
 02-hello-world              3   ███
 03-agent-anatomy           11   ███████████
-04-guards                  38   ██████████████████████████████████████
+04-guards                  30   ██████████████████████████████
 05-running-and-eval        31   ███████████████████████████████
 06-advanced                13   █████████████
 ------------------------   --------------
@@ -241,8 +241,9 @@ asserts `canonArgs` is not a factory, `GUARDS.md` calls it "the `canonArgs` help
 reference gives it no catalog row. So `GUARD_CATALOG` carries **32 entries** — 31 guard kinds + the
 `jargonScrub` mutator — and the chapter teaches `canonArgs` **in prose** (see the Task 10 amendment
 below for where it landed), as the fingerprint `noDuplicateCall` is built on. Chapter 04's taught
-count is now 38 (§4): 4 vocabulary types + 33 catalog rows + `canonArgs` (the +1 row is `llmCheck`,
-the full-context-guards increment 2026-08-02).
+count is now 30 (§4): 4 vocabulary types + 25 catalog rows + `canonArgs` (the full-context-guards
+increment 2026-08-02 added `llmCheck` and then the no-regex law deleted the 8 regex-param honesty/reply
+kinds — net −8 from the pre-increment 37).
 
 **`GUARD_CATALOG` and `GuardCatalogEntry` are NOT in this contract.** They ship on
 `@looprun-ai/core/internal` and the generator imports them from there (§6, decision 4). They are
@@ -270,11 +271,18 @@ the grouping axis.
 
 | group (hook) | factories |
 |---|---|
-| `preTool` (13) | `requiresBefore` `forbidThisTurn` `maxCalls` `noDuplicateCall` · `argRequired` `argAbsent` `argFormat` (+ `canonArgs` in prose) · `precondition` `consentRequired` · `confirmFirst` `noActAfterAskSameTurn` `destructiveThrottle` · `noInstructionFromData` |
+| `preTool` (14) | `requiresBefore` `forbidThisTurn` `maxCalls` `noDuplicateCall` · `argRequired` `argAbsent` `argFormat` (+ `canonArgs` in prose) · `precondition` `consentRequired` · `confirmFirst` `noActAfterAskSameTurn` `destructiveThrottle` · `askedEarlier` `confirmedNeedsEarlierProbe` |
 | `postTool` (1) | `resultInvariant` |
-| `onReply` (14) | `pendingConfirmMustAsk` `noFabricatedSuccess` `destructiveClaimRequiresSuccess` `noFalseFailureClaim` `noOutOfSurfaceActionClaim` `noUngroundedRegulatedFigure` `noCompetitorClaim` `replyMustMention` `replyMaxOccurrences` `replySingleQuestion` `replyConfirmsLabels` `emptyReply` `degenerationGuard` `minimalDisclosure` |
+| `onReply` (8) | `pendingConfirmMustAsk` `replyMustMention` `replyMaxOccurrences` `replySingleQuestion` `replyConfirmsLabels` `emptyReply` `degenerationGuard` `llmCheck` |
 | `onReplyMutate` (1) | `jargonScrub` |
 | escape hatch (1) | `custom` |
+
+> **The no-regex law (2026-08-02) deleted the 8 regex-param honesty/reply kinds** —
+> `noFabricatedSuccess`, `destructiveClaimRequiresSuccess`, `noFalseFailureClaim`,
+> `noOutOfSurfaceActionClaim`, `noUngroundedRegulatedFigure`, `noCompetitorClaim`, `minimalDisclosure`,
+> `noInstructionFromData`. Text judgment is `llmCheck`'s job (a trusted rubric answered by a host
+> adjudicator). The catalog is now **25 factories**; `llmCheck` is the new `onReply` kind, and the two
+> structural kinds (`askedEarlier`, `confirmedNeedsEarlierProbe`) join `preTool`.
 
 **Example used.** Each catalog row renders its own minimal call site, and the chapter closes with a
 `custom` guard written against `GuardCtx` and `Dim` (see the amendment below).
@@ -282,8 +290,9 @@ the grouping axis.
 #### Amendment (Task 10): three corrections this section could not have foreseen
 
 Writing the chapter against the real catalog moved three things. Recorded here so nobody reads the
-chapter as having drifted from its contract — the **taught set** (38 symbols after the full-context-guards increment's `llmCheck`, 37 after increment 1's two
-structural kinds; §4 is otherwise untouched), and all three are placement or accuracy, not surface.
+chapter as having drifted from its contract — the **taught set** (30 symbols: the no-regex law
+(2026-08-02) deleted the 8 regex-param honesty/reply kinds, so `llmCheck` is the only text-judging kind
+left; §4 is otherwise untouched), and all three are placement or accuracy, not surface.
 
 | # | this section said | what shipped, and why |
 |---|---|---|
@@ -461,7 +470,7 @@ in the "bring your own loop" seam; internal, not taught.)
 |---|---|---|
 | mastra | **02** (3) | `LoopRunAgent` `LoopRunAgentConfig` `LoopRunOptions` |
 | core | **03** (11) | `AgentSpecBase` `AgentSpec` `AgentSpecConfig` `AgentScope`↑ `TerminalPolicy`↑ `DomainContract` `ToolDef` `AgentWorld` `Hook`↑ `ToolTarget`↑ `validateSpec` |
-| core | **04** (38) | `Guard` `GuardCtx` `ObservedCall` `Dim`↑ · `custom` `llmCheck`↑ `askedEarlier` `confirmedNeedsEarlierProbe` `requiresBefore` `forbidThisTurn` `argRequired` `argAbsent` `argFormat` `precondition` `maxCalls` `canonArgs` `noDuplicateCall` `confirmFirst` `noActAfterAskSameTurn` `destructiveThrottle` `resultInvariant` `noFabricatedSuccess` `replyMustMention` `replyMaxOccurrences` `replySingleQuestion` `replyConfirmsLabels` `emptyReply` `degenerationGuard` `pendingConfirmMustAsk` `destructiveClaimRequiresSuccess` `noFalseFailureClaim` `minimalDisclosure` `noInstructionFromData` `noCompetitorClaim` `noOutOfSurfaceActionClaim` `noUngroundedRegulatedFigure` `consentRequired` `jargonScrub` |
+| core | **04** (30) | `Guard` `GuardCtx` `ObservedCall` `Dim`↑ · `custom` `llmCheck`↑ `askedEarlier` `confirmedNeedsEarlierProbe` `requiresBefore` `forbidThisTurn` `argRequired` `argAbsent` `argFormat` `precondition` `maxCalls` `canonArgs` `noDuplicateCall` `confirmFirst` `noActAfterAskSameTurn` `destructiveThrottle` `resultInvariant` `replyMustMention` `replyMaxOccurrences` `replySingleQuestion` `replyConfirmsLabels` `emptyReply` `degenerationGuard` `pendingConfirmMustAsk` `consentRequired` `jargonScrub` |
 | core | **05** (5) | `TurnInput`↑ `RunResult`↑ `TurnRecord`↑ `geminiThinkingOff` `pinnedDecoding` |
 | mastra | **05** (2) | `runSpecConversation` `RuntimeDeps`↑ |
 | models | **05** (1) | `geminiFlashLiteThinkOff` |
@@ -470,8 +479,8 @@ in the "bring your own loop" seam; internal, not taught.)
 | models | **06** (7) | `localModel`↑ `LocalModelOptions`↑ `LocalModelSpec`↑ `ModelRuntimePort`↑ `resolveAlias` `LlamaCppRuntime` `localModelStatus` |
 | mastra | **06** (2) | `worldFromTools` `StateView`↑ |
 
-**Per-chapter:** 0 + 3 + 11 + 38 + 31 + 13 = **96** (04 +1: `llmCheck`, the full-context-guards increment).
-**Per-package:** core 54 · mastra 7 · models 8 · eval 23 · server 4 · vercel 0 = **96**, matching the
+**Per-chapter:** 0 + 3 + 11 + 30 + 31 + 13 = **88** (04 −8: the no-regex law deleted the 8 regex-param honesty/reply kinds; `llmCheck` was added and 8 removed).
+**Per-package:** core 46 · mastra 7 · models 8 · eval 23 · server 4 · vercel 0 = **88**, matching the
 inventory's round-4 §1 chart plus increment 1's net-new `loadNormsConfig` + two structural guards
 (`askedEarlier`, `confirmedNeedsEarlierProbe`), increment 2a's net-new `validateCommand` +
 `judgeInputCommand`, and increment 2b's net-new `campaignCommand`. No symbol appears twice; no

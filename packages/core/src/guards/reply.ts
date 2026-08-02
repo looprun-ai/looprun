@@ -135,7 +135,7 @@ export function degenerationGuard(): Guard {
  * names, statuses, product names — and were interpolated RAW into the pattern. A key holding a regex
  * metacharacter either threw at construction (`'(beta)'` → an unbalanced group; `'C++'` → "nothing to
  * repeat") or silently matched the wrong thing, and a throw here is a construction-time crash of the
- * whole spec. `escapeRe` (already in this file, used by `minimalDisclosure`) makes the key a literal.
+ * whole spec. `escapeRe` (a shared guard helper) makes the key a literal.
  *
  * NOTE the `\b…\b` anchors are kept as-is: for a key whose first/last character is a non-word character
  * (`'(beta)'`, `'C++'`) a word boundary next to it will not match as an author might expect. That is a

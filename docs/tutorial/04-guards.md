@@ -1,6 +1,6 @@
 # 04 · Guards
 
-**What you get from this chapter:** the complete rule vocabulary — 30 factories, what each one
+**What you get from this chapter:** the complete rule vocabulary — 25 factories, what each one
 prevents, one minimal example each — plus the four types they are written in and how to write your
 own when nothing fits. Everything here is from `looprun` (≡ `looprun/core`).
 
@@ -28,7 +28,7 @@ This chapter is the rest of the vocabulary:
    §2  binding one to a moment                  addGuard — the chapter 03 socket, in one line
    §3  the ones you already have                what AgentSpecBase installs before your code runs
    §4  finding the right one                    symptom → kind, the confusable pairs, canonArgs
-   §5  THE CATALOG                              30 factories, grouped by hook — generated
+   §5  THE CATALOG                              25 factories, grouped by hook — generated
    §6  writing your own                         custom, and the five rules a reviewer looks for
 ```
 
@@ -75,19 +75,28 @@ interface GuardCtx {
   world: AgentWorld;                  // your world — read it through a type, never bare
   observed: ObservedCall[];           // every call THIS CONVERSATION, oldest first
   turnIndex: number;                  // which turn is being adjudicated
+  userText: string;                   // the current turn's incoming message, verbatim ('' if none)
+  history: readonly HistoryTurn[];    // every PRIOR turn, read-only (userText/reply/toolCalls/…)
   reply?: string;                     // the reply text                     (onReply only)
   result?: unknown;                   // the tool's result                  (postTool only)
   producedThisTurn?: string[];
   attachmentsThisTurn?: string[];
   notes?: string[];
   siblingCallsThisStep?: ObservedCall[];   // same-step calls still in flight — destructiveThrottle only
+  adjudicator?: Adjudicator;          // host-registered LLM judge — only llmCheck reads it
 }
 ```
 <sub>signature, from `looprun` — abridged; the JSDoc on each field is worth reading</sub>
 
-**What is not there is the point: the user's text.** No field carries the message. That is the
-*magnet firewall* — a rule that could be scoped by what the user said would be a rule the user can
-talk their way past. Guards key on arguments, world state and observed calls; nothing else.
+**A guard sees the WHOLE conversation** — `userText` (this turn's incoming message) and `history` (every
+prior turn) are right there. The old *magnet firewall* (guards blind to the user's words) is retired: a
+guard is deterministic code, so "the user can talk their way past it" does not apply. Two laws still
+hold, and they are what the firewall was really protecting. **Never scope tools by intent** — a guard
+that turned tools on or off according to what the user asked for is the banned intent-based routing (a
+loop law, not a guard law). **Never pattern-match text in a guard parameter** — the no-regex law: no
+guard factory takes a `RegExp`. A rule that genuinely needs to JUDGE conversation text is an `llmCheck`
+(a trusted rubric answered by a host adjudicator — § below); everything else keys on arguments, world
+state and observed calls, because a structural signal is model-independent and cheap.
 
 `world` is typed as `AgentWorld`, whose index signature makes a typo compile (chapter 03 §7), so read
 your accessors through a named type — §6 shows the pattern.
@@ -108,8 +117,9 @@ interface ObservedCall {
 
 Three fields do the heavy lifting across the catalog. `turnIndex` is what makes "in an **earlier**
 turn" expressible, which is the whole of `confirmFirst`. `ok` separates a call that happened from one
-that succeeded. `tookEffect` separates a write that landed from a pure read or a refused write — it
-is why `noFalseFailureClaim` does not veto an honest "I could not find it" on a read-only turn.
+that succeeded. `tookEffect` separates a write that landed from a pure read or a refused write — it is
+what lets `destructiveThrottle` count only actions that MUTATED the world, and what an `llmCheck` reply
+rubric keys on so it never faults an honest "I could not find it" on a read-only turn.
 
 Two names in `observed` are runtime-owned rather than yours: `replyToUser` and `askUser` are pushed
 in with `ok: true`, so a check that means "did the model do any work" must filter them out.
@@ -165,7 +175,7 @@ eval output attributes a veto to, and what makes a spec diff readable.
 
 ---
 
-## 3. Five are already installed — plus a conditional sixth
+## 3. Five are already installed
 
 `AgentSpecBase`'s constructor installs the universal invariants before your code runs, and the
 destructive-safety protocol iff you declared `destructiveTools` (chapter 03 §2):
@@ -176,9 +186,11 @@ destructive-safety protocol iff you declared `destructiveTools` (chapter 03 §2)
                                  emptyReply        (onReply)
    IFF destructiveTools (2)      confirmFirst + destructiveThrottle, on exactly those tools
    ───────────────────────────   the five a spec like the scheduler's gets
-   IFF lexicon.falseFail… (1)    noFalseFailureClaim (onReply) — the conditional sixth, and the
-                                 tutorial teaches no lexicon, so the scheduler does not get it
 ```
+
+There is no conditional sixth any more: the old regex-fed `noFalseFailureClaim` was retired with the
+no-regex law (2026-08-02). A reply-honesty invariant a domain needs is now an `llmCheck` you bind
+yourself (§5's `llmCheck` row), not an auto-install fed by a lexicon.
 
 They have catalog rows in §5 because they are real kinds you must be able to read — **not** because
 you should call them. Re-adding one by hand renders the same rule twice in the prompt, from two
@@ -201,21 +213,17 @@ you want the kind that makes that impossible. Read this column as "the model …
 | calls a legitimate tool too many times — sweeps, repeat contact | [`maxCalls`](#3-maxcalls) | preTool |
 | runs a step before the one it depends on | [`requiresBefore`](#1-requiresbefore) | preTool |
 | acts while the world says it must not (closed account, no consent on record) | [`precondition`](#8-precondition) · [`consentRequired`](#9-consentrequired) | preTool |
-| does as it is told by text that came back INSIDE a tool result | [`noInstructionFromData`](#13-noinstructionfromdata) | preTool |
-| summarises an empty or partial result as if it satisfied the request | [`resultInvariant`](#14-resultinvariant) | postTool |
-| says a tool's work is done when it is not | [`noFabricatedSuccess`](#16-nofabricatedsuccess) · [`destructiveClaimRequiresSuccess`](#17-destructiveclaimrequiressuccess) | onReply |
-| apologises for failing on a turn where the work went through | [`noFalseFailureClaim`](#18-nofalsefailureclaim) | onReply |
-| promises a handoff — billing, legal, dispatch — as if it had done it | [`noOutOfSurfaceActionClaim`](#19-nooutofsurfaceactionclaim) | onReply |
-| pours other people's personal fields into one reply | [`minimalDisclosure`](#28-minimaldisclosure) — the PII cap: it counts personal FIELD names per record and demands each one came from a tool result this turn | onReply |
-| answers with nothing, leaked think-blocks, or the same line five times | [`emptyReply`](#26-emptyreply) · [`degenerationGuard`](#27-degenerationguard) (both auto-installed) | onReply |
-| writes internal status codes and field names at the user | [`jargonScrub`](#29-jargonscrub) — rewrites, never vetoes | onReplyMutate |
-| breaks a rule that is about YOUR domain and nothing in this table fits | [`custom`](#30-custom) (§6) | you choose |
+| a value must not be recorded until the operator was asked for it in an earlier turn | [`askedEarlier`](#13-askedearlier) · [`confirmedNeedsEarlierProbe`](#14-confirmedneedsearlierprobe) | preTool |
+| summarises an empty or partial result as if it satisfied the request | [`resultInvariant`](#15-resultinvariant) | postTool |
+| claims a tool's work is done when it is not · apologises for a failure on a turn where the work went through · promises an off-surface handoff · discloses a personal/regulated field the tools do not ground · obeys an instruction that came back INSIDE a tool result | [`llmCheck`](#23-llmcheck) — text judgment is one kind now: a trusted rubric answered by a host adjudicator (the 8 regex-param honesty/reply kinds were deleted by the no-regex law) | onReply / preTool |
+| answers with nothing, leaked think-blocks, or the same line five times | [`emptyReply`](#21-emptyreply) · [`degenerationGuard`](#22-degenerationguard) (both auto-installed) | onReply |
+| writes internal status codes and field names at the user | [`jargonScrub`](#24-jargonscrub) — rewrites, never vetoes | onReplyMutate |
+| breaks a rule that is about YOUR domain and nothing in this table fits | [`custom`](#25-custom) (§6) | you choose |
 
-### The five confusable clusters
+### The four confusable clusters
 
-Every row's *when to reach for it* is written against its neighbours. These are the five groups where
-reading only one row will pick the wrong kind — the four in the table below, plus the honesty cluster
-that follows it:
+Every row's *when to reach for it* is written against its neighbours. These are the four groups where
+reading only one row will pick the wrong kind:
 
 | cluster | the axis that separates them |
 |---|---|
@@ -224,19 +232,13 @@ that follows it:
 | `confirmFirst` · `consentRequired` · `pendingConfirmMustAsk` | evidence in the CONVERSATION (an earlier turn) · a standing flag in the WORLD · gating the REPLY rather than the call |
 | `replyMustMention` · `replyConfirmsLabels` | any one keyword suffices, vs every label is required |
 
-And the honesty cluster — four kinds that all mean "the reply lied", separated by **what** it lied
-about:
-
-```
-   noFabricatedSuccess              a tool YOU own did not succeed this turn      → do not claim its effect
-   destructiveClaimRequiresSuccess  …and the effect was DESTRUCTIVE               → attempt-keyed, sentence-scoped
-   noOutOfSurfaceActionClaim        the tool is not on this agent's surface       → it was never yours to do
-   noFalseFailureClaim              the work SUCCEEDED and the reply claims it failed  ← the mirror image
-```
-
-The first three catch invented success; the fourth catches invented failure. They are written not to
-double-fire: `noOutOfSurfaceActionClaim` stops at the surface boundary the owned-action kinds start
-at, and `noFalseFailureClaim` only adjudicates a turn that mutated the world.
+**Where the honesty cluster went.** Six kinds used to sit here — a family that all meant "the reply
+lied" (invented success, false failure, an off-surface claim, an ungrounded regulated figure). The
+no-regex law (2026-08-02) deleted every one: each was a `RegExp` over the reply, and text judgment is
+now a single kind, `llmCheck`. Instead of choosing between six regex guards you write ONE rubric —
+"does the reply claim an action the tools did not actually complete this turn?" — and a host adjudicator
+answers it over the full context. The structural honesty signals survive as their own kinds
+(`resultInvariant` on the tool result, `destructiveThrottle`/`confirmFirst` on the call).
 
 ### `canonArgs` — the fingerprint `noDuplicateCall` compares
 
@@ -672,7 +674,7 @@ Five rules, learned from the shipped kinds, that a reviewer will look for:
 |---|---|
 | **`dim` must match what `check` reads** | it is a claim, and `addGuard` holds you to it. This one reads `ctx.args` + `ctx.world` ⇒ `run` |
 | **`check` must be pure and total** | no clock, no randomness, no network, no LLM call — and no throw. Same inputs, same verdict, forever, or a failing eval case is not reproducible |
-| **`check` must not read the user's text** | it is not in `GuardCtx` at all, and reaching for it through `world` re-opens the magnet firewall by hand |
+| **`check` must not ROUTE tools by intent, nor pattern-match text** | it MAY read `ctx.userText`/`ctx.history` (the firewall is retired), but scoping tools by what the user asked is the banned intent-routing, and a `RegExp` over the text is the no-regex law's job for `llmCheck`, not a hand-rolled guard |
 | **`prose()` states the RULE, not the incident** | present tense, no accusation: it renders into every prompt, including turns where nothing went wrong |
 | **replicate the exemptions the shared kinds have** | e.g. a reply-side rule that fires on questions and offers as if they were claims is a rule that punishes good behaviour |
 
@@ -690,16 +692,16 @@ You are not expected to catch it; you are expected to fix the guard, which is wh
 
 ```
    Guard         kind · dim · check(ctx) → deny string | null · prose() → the prompt line
-   GuardCtx      args · tool · world · observed · turnIndex · reply · result   (never the user text)
+   GuardCtx      args · tool · world · observed · turnIndex · userText · history · reply · result · adjudicator
    ObservedCall  name · args · ok · turnIndex · resultFlags · tookEffect
    Dim           spatial | input | run | output | behavior  → which hooks are legal
    canonArgs     the key-order-independent call fingerprint — `noDuplicateCall` keys on it, and
                  `pendingConfirmMustAsk` keys on it with the confirm flag stripped
 
-   30 factories, grouped by the hook they run on:
-     preTool        13   prevent it — the deny returns as the tool result, the model retries
+   25 factories, grouped by the hook they run on:
+     preTool        14   prevent it — the deny returns as the tool result, the model retries
      postTool        1   the result is in; correct the REPLY, not the call
-     onReply        14   the reply exists; a deny costs a re-generation, then the honest closure
+     onReply         8   the reply exists; a deny costs a re-generation, then the honest closure
      onReplyMutate   1   rewrite, never veto
      custom          1   the escape hatch — you pass the dim
 ```

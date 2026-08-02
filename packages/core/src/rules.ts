@@ -7,7 +7,7 @@
  * RETIRED (2026-08-02 ruling): guards are deterministic code, so "influence" does not apply; what
  * the firewall protected decomposes into laws with better owners — intent-based tool routing stays
  * banned as a LOOP-shaping law, and text pattern-matching stays banned by the no-regex law in the
- * config surface. (Full doctrine rewrite: Task 4.) The world is an opaque, host-injected seam
+ * config surface (structural in config; a grep-gate in code). The world is an opaque, host-injected seam
  * (`AgentWorld`); a domain reads its own accessors through the index signature — the package itself
  * is domain-neutral.
  */

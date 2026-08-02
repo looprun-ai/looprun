@@ -433,7 +433,7 @@ looprun-eval <command>
   cert <run-dir>     Fold cases.jsonl + verdicts.jsonl → cert.json + CERT.md (reps=1, stated).
   seal <subject>     Mint ship/seal.json (hash-bound) — or --verify an existing one.
                      [--bar 0.9] [--model <label>] [--date <iso>] [--note <text>]
-  lint [paths…]      Purity/firewall/contract lint. [--spec-laws --subject <dir>]
+  lint [paths…]      Purity/contract lint. [--spec-laws --subject <dir>]
 
 Quality verdicts come ONLY from the LLM judge — the run's streamed pass/fail lines are the
 deterministic invariant gate.

@@ -174,6 +174,13 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
   // noUngroundedRegulatedFigure, noCompetitorClaim — are DELETED. Each was a text judgment over the
   // reply ("did the model claim X that did not happen / that it cannot substantiate?"), which is now
   // `llmCheck`'s job: an author binds an `llmCheck` rubric (host adjudicator, no closure-held pattern).
+  // The two reply-borne text kinds that lived in `reply.ts` go the same way and for the same reason:
+  //   - minimalDisclosure (a PII/regulated-field pattern over the reply, grounded in tool results) →
+  //     an `llmCheck` rubric ("does the reply disclose a personal/regulated field the tool results do
+  //     not ground?"). PII detection is text judgment, not a structural signal.
+  //   - noInstructionFromData (a preTool gate that read reply/result text for an injected imperative) →
+  //     an `llmCheck` preTool rubric ("does a tool result instruct a destructive act the user did not
+  //     authorise this turn?"). Prompt-injection detection is text judgment; structure cannot decide it.
 
   // ── reply ──────────────────────────────────────────────────────────────────
   {

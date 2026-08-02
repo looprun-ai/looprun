@@ -15,8 +15,8 @@ import { canonArgs } from './flow.js';
  *    `askUser` succeeded in an EARLIER turn — the model must ASK, wait for the user's answer, and act only
  *    in a LATER turn. A same-turn `askUser` does NOT unlock it (that is `noActAfterAskSameTurn`'s edge —
  *    the two compose: prior-ask = cross-turn REQUIRE, noActAfterAskSameTurn = same-turn DENY).
- * Reads observed / args only — never the user text (magnet-safe). Auto-installed by `AgentSpecBase` per
- * destructive tool according to `cfg.confirmMechanism`.
+ * Keys on observed / args only (a structural signal, not reply text) — so it stays model-independent.
+ * Auto-installed by `AgentSpecBase` per destructive tool according to `cfg.confirmMechanism`.
  */
 export function confirmFirst(opts?: string | { argFlag?: string; mechanism?: 'arg' | 'prior-ask' }): Guard {
   // The string overload sets `argFlag`, NOT `mechanism` — and `confirmFirst('prior-ask')` is the
@@ -98,7 +98,7 @@ export function confirmFirst(opts?: string | { argFlag?: string; mechanism?: 'ar
 /** Deny `tools` when an `askUser` call already succeeded THIS turn — ask, wait, act only in a LATER
  *  turn; a model must never confirm-and-execute in the same turn as its own question (a multi-tool
  *  step can call askUser and a destructive tool back-to-back, which reads as "asked" to a human but
- *  never gave the user a chance to answer). Reads observed/turnIndex only; magnet-safe. */
+ *  never gave the user a chance to answer). Keys on observed/turnIndex only — a structural signal. */
 export function noActAfterAskSameTurn(tools: string[]): Guard {
   const set = new Set(tools);
   return {

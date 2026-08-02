@@ -117,12 +117,12 @@ Those five are what a spec like the scheduler's gets — chapter 04 rows, none o
 **Never re-add them by hand**: the same rule would render twice in the prompt, from two sources that
 can drift.
 
-The box is scoped to a spec with no lexicon and no confirm-mechanism override. Two config fields
-change it, and this tutorial teaches neither: `lexicon.falseFailureClaimRe` adds a sixth guard
-(`noFalseFailureClaim`, on `onReply`) if you supply the domain's regex, and `confirmMechanism`
-selects, per tool, between the default `'arg'` confirm (the `confirmed` flag) and `'prior-ask'` (a
-flag-less action gated on an `askUser` in an earlier turn). Both are domain-language plumbing that no
-chapter claims — reach for the source when you need them.
+The box is scoped to a spec with no confirm-mechanism override. `confirmMechanism` changes it, and this
+tutorial does not teach it: it selects, per tool, between the default `'arg'` confirm (the `confirmed`
+flag) and `'prior-ask'` (a flag-less action gated on an `askUser` in an earlier turn). It is
+domain plumbing no chapter claims — reach for the source when you need it. (There is no longer a
+`lexicon` config field: the no-regex law, 2026-08-02, retired the regex-fed reply-honesty guard. A
+reply-honesty judgment a domain needs is an `llmCheck` rubric you bind on `onReply`, chapter 04.)
 
 Here is the scheduler's whole declaration:
 
@@ -431,6 +431,7 @@ type ToolTarget = 'any' | string[];
 
 ```
    onInput    before the model runs        deny ⇒ the turn is refused, no LLM call at all
+              sees the real incoming user text
    preTool    a call has been proposed     deny ⇒ the correction returns AS the tool result, in
               and not yet executed               the governance envelope { success:false,
                                                  source:'governance', guard, correction, error };
@@ -444,6 +445,13 @@ The hook decides which fields a rule can read, so it also decides which rules ar
 `addGuard` enforces the matrix at construction and **throws** on a mismatch — a reply-honesty rule
 installed on `preTool` would read an undefined reply and silently never fire, which is worse than
 having no rule at all, because it still reads as coverage in the spec and in the prompt.
+
+Every hook sees the WHOLE conversation. `GuardCtx` carries `userText` (the current turn's incoming
+message, verbatim — `onInput` reads the real input, not an empty stub) and `history` (every prior turn,
+read-only). The old "magnet firewall" (guards blind to the user's words) is retired: a guard is
+deterministic code, so it may read the user text freely. Two laws still hold — never scope tools by what
+the user said (intent-based routing stays banned), and never pattern-match text in a guard param (the
+no-regex law); a rule that genuinely needs to judge conversation text is an `llmCheck` (chapter 04).
 
 **`ToolTarget` — which tools it applies to:** an array of tool names, or `'any'`. It has a second
 job most people meet by accident: it decides where the rule's prose is *printed*. Naming tools files

@@ -435,7 +435,8 @@ const chainRestateReason = (call: string): string =>
  * PURE per-chain trigger — the pass's decision function, extracted so it is unit-testable without a live
  * model. Fires iff (a) `after` was observed OK THIS turn, (b) `call` was NOT observed OK this turn, and
  * (c) `when` is absent or returns true. `when` is spec-authored business code — it reads ONLY
- * (world, observed), never the user text (the firewall). Evaluate it per-chain AT execution time, in
+ * (world, observed) by its signature, never the user text (a chain that forked on intent would be the
+ * banned intent-based routing). Evaluate it per-chain AT execution time, in
  * order: a 'direct' chain appends to `observed`, so a later chain sees the updated ledger.
  */
 export function shouldFireChain(
@@ -513,8 +514,8 @@ export async function runChainCompletionPass(
       } catch { corrections.push(`chain-failed:${chain.call}`); continue; }
       landed = ctx.observed.some((o) => o.name === chain.call && o.ok && o.turnIndex === ctx.turnIndex);
     } else {
-      // 'llm': ONE forced micro-generate — the model fills args (it MAY read the user text; the firewall
-      // bars only deterministic guard/trigger code). A real generate → count it toward llmCalls.
+      // 'llm': ONE forced micro-generate — the model fills args (it MAY read the user text; the ban
+      // is on deterministic trigger/derive code, not the model). A real generate → count it toward llmCalls.
       try { await ctx.forceLlmCall(chain.call); llmCalls++; }
       catch { corrections.push(`chain-failed:${chain.call}`); continue; }
       landed = ctx.observed.some((o) => o.name === chain.call && o.ok && o.turnIndex === ctx.turnIndex);
