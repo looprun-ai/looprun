@@ -21,10 +21,31 @@
  */
 import type { Guard, Dim } from '../rules.js';
 
-/** The deny a `failMode:'closed'` guard emits when its adjudicator is UNREACHABLE (threw/rejected) — a
- *  generic, figure-free correction, never the adjudicator's own words (there are none: it failed). */
+/** The deny a `failMode:'closed'` guard emits when its adjudicator is UNREACHABLE (threw/rejected/timed
+ *  out) — a generic, figure-free correction, never the adjudicator's own words (there are none: it
+ *  failed). The SAME reason for a rejection and a timeout: both mean "could not verify". */
 const CLOSED_FAIL_DENY =
   'A required policy check could not be completed — do not proceed until it can be verified.';
+
+/** Default adjudicator timeout when the registration seam did not set `adjudicatorTimeoutMs`. A hung
+ *  adjudicator past this deadline is treated as unreachable → `failMode` decides. */
+const DEFAULT_ADJUDICATOR_TIMEOUT_MS = 30000;
+
+/** A never-settling adjudicator would HANG the turn (failMode only fires on a SETTLED rejection). So the
+ *  guard races the adjudicator against a timeout; on expiry the race rejects and the `catch` applies
+ *  failMode, exactly as for a thrown/rejected adjudicator. The timer is always cleared. */
+function adjudicateWithTimeout(
+  run: Promise<{ violation: string | null }>,
+  timeoutMs: number,
+): Promise<{ violation: string | null }> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<never>((_resolve, reject) => {
+    timer = setTimeout(() => reject(new Error(`adjudicator timed out after ${timeoutMs}ms`)), timeoutMs);
+  });
+  return Promise.race([run, deadline]).finally(() => {
+    if (timer) clearTimeout(timer);
+  });
+}
 
 /**
  * An LLM-adjudicated guard. `rubric` is the trusted question the host adjudicator answers; `failMode`
@@ -50,12 +71,13 @@ export function llmCheck(opts: { rubric: string; failMode?: 'open' | 'closed'; d
             '(deps.adjudicator); assertAdjudicatorPresent should have caught this at conversation start.',
         );
       }
+      const timeoutMs = ctx.adjudicatorTimeoutMs ?? DEFAULT_ADJUDICATOR_TIMEOUT_MS;
       try {
-        const { violation } = await adjudicator(opts.rubric, ctx);
+        const { violation } = await adjudicateWithTimeout(adjudicator(opts.rubric, ctx), timeoutMs);
         return violation ?? null;
       } catch {
-        // Adjudicator UNREACHABLE (threw/rejected) — failMode decides. A throwing adjudicator is a HOST
-        // seam failure (network, model), NOT an author bug in the guard, so it is priced, not re-thrown.
+        // Adjudicator UNREACHABLE (threw / rejected / TIMED OUT) — failMode decides. A host seam failure
+        // (network, model, hang), NOT an author bug in the guard, so it is priced, not re-thrown.
         return failMode === 'closed' ? CLOSED_FAIL_DENY : null;
       }
     },

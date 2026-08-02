@@ -29,9 +29,12 @@ export class SessionStore<W extends AgentWorld = AgentWorld> {
   private readonly singleton: W | null;
   /** The host adjudicator threaded into every session's ledger (llmCheck's seam). */
   private readonly adjudicator: Adjudicator | undefined;
+  /** The adjudicator timeout (ms) threaded beside it (a hung adjudicator resolves via failMode). */
+  private readonly adjudicatorTimeoutMs: number | undefined;
 
-  constructor(world: W | WorldFactory<W>, adjudicator?: Adjudicator) {
+  constructor(world: W | WorldFactory<W>, adjudicator?: Adjudicator, adjudicatorTimeoutMs?: number) {
     this.adjudicator = adjudicator;
+    this.adjudicatorTimeoutMs = adjudicatorTimeoutMs;
     if (typeof world === 'function') {
       this.factory = world as WorldFactory<W>;
       this.singleton = null;
@@ -54,7 +57,7 @@ export class SessionStore<W extends AgentWorld = AgentWorld> {
     const session: LoopRunSession<W> = {
       id,
       world,
-      ledger: createLedger(this.adjudicator),
+      ledger: createLedger(this.adjudicator, this.adjudicatorTimeoutMs),
       turnIndex: 0,
       messages: [],
       chain: Promise.resolve(),

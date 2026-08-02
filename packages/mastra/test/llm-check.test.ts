@@ -114,6 +114,39 @@ describe('llmCheck — case 35: two acts, one yes (structure alone cannot close 
   });
 });
 
+describe('llmCheck — a HUNG adjudicator resolves via failMode through the real loop (no hang)', () => {
+  it('failMode closed + a never-settling adjudicator → the turn resolves via the timeout, not a hang', async () => {
+    const hung: Adjudicator = () => new Promise(() => {}); // never settles
+    const spec = new AgentSpecBase({ id: 'closed', mode: 'M', persona: 'You are the agent.', tools: ['cancelBooking'], contract: CONTRACT });
+    spec.addGuard('onReply', 'any', llmCheck({ rubric: 'q?', failMode: 'closed' }), { id: 'agent:closed' });
+    const scripted = scriptedModel([
+      [{ tool: 'replyToUser', args: { text: 'first draft' } }],
+      [{ text: 'second draft' }],
+    ]);
+    const res = await runSpecConversation(spec, [{ userText: 'hi' }], {
+      model: scripted.model, world: world(), toolDefs: TOOL_DEFS,
+      adjudicator: hung, adjudicatorTimeoutMs: 20, // small timeout so the test does not sleep
+    });
+    expect(res.errorMsg).toBeUndefined();
+    // closed failMode fires on every un-verifiable draft → the bounded redrive relayed it (turn resolved).
+    expect(res.turnRecords[0].recoveryEvents).toContain('redrive:llmCheck');
+  });
+
+  it('failMode open + a never-settling adjudicator → the reply is allowed through after the timeout', async () => {
+    const hung: Adjudicator = () => new Promise(() => {});
+    const spec = new AgentSpecBase({ id: 'open', mode: 'M', persona: 'You are the agent.', tools: ['cancelBooking'], contract: CONTRACT });
+    spec.addGuard('onReply', 'any', llmCheck({ rubric: 'q?' }), { id: 'agent:open' }); // default open
+    const scripted = scriptedModel([[{ tool: 'replyToUser', args: { text: 'the answer' } }]]);
+    const res = await runSpecConversation(spec, [{ userText: 'hi' }], {
+      model: scripted.model, world: world(), toolDefs: TOOL_DEFS,
+      adjudicator: hung, adjudicatorTimeoutMs: 20,
+    });
+    expect(res.errorMsg).toBeUndefined();
+    expect(res.turnRecords[0].recoveryEvents).not.toContain('redrive:llmCheck');
+    expect(res.turnRecords[0].assistantFinalText).toBe('the answer');
+  });
+});
+
 describe('llmCheck — async coexistence with a sync onReply guard', () => {
   it('both a slow async llmCheck and a sync reply guard are enforced in one turn', async () => {
     const slowDeny: Adjudicator = async (_r, ctx) => {

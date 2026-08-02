@@ -99,7 +99,7 @@ export async function evaluatePreTool(
     history: ledger.history,
     attachmentsThisTurn: ledger.attachments,
     siblingCallsThisStep,
-    adjudicator: ledger.adjudicator,
+    adjudicator: ledger.adjudicator, adjudicatorTimeoutMs: ledger.adjudicatorTimeoutMs,
   };
   for (const g of guards) {
     const reason = await g.check(gctx);
@@ -120,7 +120,7 @@ export async function evaluateOnInput(spec: AgentSpec, ledger: TurnLedger, world
   const guards = resolveGuards(spec.guards.onInput);
   // onInput: `args` is empty (no tool), but the guard now sees the REAL incoming user text via
   // `userText` (this replaces the old hard-coded `args: {}` blindness) plus the prior `history`.
-  const gctx: GuardCtx = { args: {}, world, observed: ledger.observed, turnIndex: ledger.turnIndex, userText: ledger.currentUserText, history: ledger.history, adjudicator: ledger.adjudicator };
+  const gctx: GuardCtx = { args: {}, world, observed: ledger.observed, turnIndex: ledger.turnIndex, userText: ledger.currentUserText, history: ledger.history, adjudicator: ledger.adjudicator, adjudicatorTimeoutMs: ledger.adjudicatorTimeoutMs };
   for (const g of guards) {
     const reason = await g.check(gctx);
     if (reason) {
@@ -168,7 +168,7 @@ function applyMutators(spec: AgentSpec, ledger: TurnLedger, world: AgentWorld, t
       history: ledger.history,
       reply: out,
       producedThisTurn: ledger.producedThisTurn,
-      adjudicator: ledger.adjudicator,
+      adjudicator: ledger.adjudicator, adjudicatorTimeoutMs: ledger.adjudicatorTimeoutMs,
     };
     const next = m.apply(out, mctx);
     if (next !== out) {
@@ -197,7 +197,7 @@ async function checkReply(
     producedThisTurn: ledger.producedThisTurn,
     attachmentsThisTurn: ledger.attachments,
     notes: ledger.turnCorrections,
-    adjudicator: ledger.adjudicator,
+    adjudicator: ledger.adjudicator, adjudicatorTimeoutMs: ledger.adjudicatorTimeoutMs,
   };
   const out: ReplyViolation[] = [];
   for (const g of resolveGuards(spec.guards.onReply)) {

@@ -66,6 +66,9 @@ export interface RuntimeDeps {
    *  (like defineWorld's custom executors). Threaded onto every GuardCtx. A spec that installs an
    *  llmCheck with this absent throws at conversation start (assertAdjudicatorPresent). */
   adjudicator?: Adjudicator;
+  /** Per-call adjudicator timeout (ms) — a hung adjudicator resolves via failMode past this deadline.
+   *  Default 30000 (the guard's own). Beside the adjudicator at the seam; the config surface is untouched. */
+  adjudicatorTimeoutMs?: number;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -96,7 +99,7 @@ export async function runSpecConversation(spec: AgentSpec, turns: TurnInput[], d
   const session: LoopRunSession = {
     id: 'run',
     world,
-    ledger: createLedger(deps.adjudicator),
+    ledger: createLedger(deps.adjudicator, deps.adjudicatorTimeoutMs),
     turnIndex: 0,
     messages: [],
     chain: Promise.resolve(),

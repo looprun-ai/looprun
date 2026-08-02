@@ -82,6 +82,9 @@ export interface LoopRunAgentConfig<W extends AgentWorld = AgentWorld> {
    *  spec/config (like defineWorld's custom executors). Threaded into every session's GuardCtx. A spec
    *  that installs an llmCheck with this absent throws at construction (assertAdjudicatorPresent). */
   adjudicator?: Adjudicator;
+  /** Per-call adjudicator timeout (ms) — a hung adjudicator resolves via failMode past this deadline.
+   *  Default 30000 (the guard's own). Beside the adjudicator at the seam; the config surface is untouched. */
+  adjudicatorTimeoutMs?: number;
   /** The certified turn shape (terminal tools + toolChoice:'required'). Default true. */
   terminalProtocol?: boolean;
   /** Certification drift gate: the expected `surfaceFingerprint()` of the RESOLVED active
@@ -165,7 +168,7 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
     // FAIL-LOUD-AT-START: an llmCheck installed without an adjudicator is a wiring bug — surface it at
     // construction, never mid-turn. No-op for a spec with no llmCheck (zero-diff).
     assertAdjudicatorPresent(spec, config.adjudicator);
-    const sessions = new SessionStore<W>(built.world, config.adjudicator);
+    const sessions = new SessionStore<W>(built.world, config.adjudicator, config.adjudicatorTimeoutMs);
     const guardHooks = makeGuardHooks(spec, getSession as () => LoopRunSession);
 
     super({

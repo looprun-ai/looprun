@@ -4,7 +4,7 @@
  * deterministic guard. The full-loop behaviour (redrive, config load, case-35) is proven in the mastra
  * package; here everything runs against a crafted ctx / a built spec, no framework.
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { AgentSpecBase, custom, llmCheck } from '../src/index.js';
 import { assertAdjudicatorPresent, specInstallsLlmCheck } from '../src/internal.js';
 import type { Adjudicator, GuardCtx } from '../src/index.js';
@@ -70,6 +70,44 @@ describe('llmCheck — verdict semantics', () => {
   it('dim selects the hook family: default behavior (onReply), run for preTool', () => {
     expect(llmCheck({ rubric: 'q?' }).dim).toBe('behavior');
     expect(llmCheck({ rubric: 'q?', dim: 'run' }).dim).toBe('run');
+  });
+});
+
+describe('llmCheck — a HUNG adjudicator resolves via failMode (timeout), never hangs the turn', () => {
+  it('never-settling adjudicator, failMode open → allows after the timeout (default 30000, fake timers)', async () => {
+    vi.useFakeTimers();
+    try {
+      const hung: Adjudicator = () => new Promise(() => {}); // never settles
+      const p = llmCheck({ rubric: 'q?' }).check(baseCtx({ adjudicator: hung })); // no ctx timeout → default 30000
+      await vi.advanceTimersByTimeAsync(30000);
+      expect(await p).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('never-settling adjudicator, failMode closed → denies after the timeout with the generic reason', async () => {
+    vi.useFakeTimers();
+    try {
+      const hung: Adjudicator = () => new Promise(() => {});
+      const p = llmCheck({ rubric: 'q?', failMode: 'closed' }).check(baseCtx({ adjudicator: hung, adjudicatorTimeoutMs: 5000 }));
+      await vi.advanceTimersByTimeAsync(5000);
+      expect(await p).toMatch(/could not be completed/i);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('a fast adjudicator settles BEFORE the timeout and is unaffected', async () => {
+    vi.useFakeTimers();
+    try {
+      const fast: Adjudicator = async () => ({ violation: 'quick deny' });
+      const p = llmCheck({ rubric: 'q?' }).check(baseCtx({ adjudicator: fast, adjudicatorTimeoutMs: 30000 }));
+      // do not advance the clock; the fast adjudicator resolves on its own microtask
+      expect(await p).toBe('quick deny');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

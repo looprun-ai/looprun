@@ -51,6 +51,9 @@ export interface TurnLedger {
    *  into every GuardCtx as `ctx.adjudicator`. Only `llmCheck` guards read it. Conversation-scoped;
    *  never reset per turn. Absent ⇒ a spec that installs an llmCheck fails loud at conversation start. */
   adjudicator?: Adjudicator;
+  /** The adjudicator TIMEOUT (ms) from the registration seam, threaded into every GuardCtx alongside
+   *  `adjudicator`. Conversation-scoped; never reset per turn. Absent ⇒ the guard's own default. */
+  adjudicatorTimeoutMs?: number;
 }
 
 /**
@@ -66,8 +69,8 @@ export function vetoStormHit(ledger: TurnLedger): boolean {
   return ledger.vetoStreak >= VETO_STORM_LIMIT;
 }
 
-export function createLedger(adjudicator?: Adjudicator): TurnLedger {
-  return { observed: [], turnIndex: 0, producedThisTurn: [], turnCorrections: [], attachments: [], terminalReply: '', vetoStreak: 0, postToolViolations: [], inFlightCalls: [], attemptedCalls: [], currentUserText: '', history: [], ...(adjudicator ? { adjudicator } : {}) };
+export function createLedger(adjudicator?: Adjudicator, adjudicatorTimeoutMs?: number): TurnLedger {
+  return { observed: [], turnIndex: 0, producedThisTurn: [], turnCorrections: [], attachments: [], terminalReply: '', vetoStreak: 0, postToolViolations: [], inFlightCalls: [], attemptedCalls: [], currentUserText: '', history: [], ...(adjudicator ? { adjudicator } : {}), ...(adjudicatorTimeoutMs !== undefined ? { adjudicatorTimeoutMs } : {}) };
 }
 
 /** Reset the per-turn fields (the conversation-scoped `observed` and `history` are kept). `userText` is

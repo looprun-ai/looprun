@@ -46,7 +46,7 @@ export interface CompiledSpec {
 
 export function compileSpec(
   spec: AgentSpec,
-  opts: { contract?: DomainContract; world: AgentWorld; toolDefs?: ToolDef[]; terminalProtocol?: boolean; redrives?: number; adjudicator?: Adjudicator },
+  opts: { contract?: DomainContract; world: AgentWorld; toolDefs?: ToolDef[]; terminalProtocol?: boolean; redrives?: number; adjudicator?: Adjudicator; adjudicatorTimeoutMs?: number },
 ): CompiledSpec {
   const contract = opts.contract ?? spec.contract;
   if (!contract && !spec.surface.systemPrompt) {
@@ -60,7 +60,7 @@ export function compileSpec(
   const session: LoopRunSession = {
     id: 'compiled',
     world,
-    ledger: createLedger(opts.adjudicator),
+    ledger: createLedger(opts.adjudicator, opts.adjudicatorTimeoutMs),
     turnIndex: 0,
     messages: [],
     chain: Promise.resolve(),

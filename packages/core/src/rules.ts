@@ -123,6 +123,11 @@ export interface GuardCtx {
    *  augmentation is zero-blast-radius. Absent while an `llmCheck` is installed is caught loud at
    *  conversation start (`assertAdjudicatorPresent`), never mid-turn. */
   adjudicator?: Adjudicator;
+  /** The per-call adjudicator TIMEOUT (ms), threaded from the registration seam beside `adjudicator`. An
+   *  llmCheck races the adjudicator against this deadline: a HUNG (never-settling) adjudicator would
+   *  otherwise hang the turn, and `failMode` only fires on a settled rejection — so on expiry the guard
+   *  treats the adjudicator as unreachable and applies `failMode`. Absent ⇒ the guard's own default. */
+  adjudicatorTimeoutMs?: number;
 }
 
 /** A typed guard instance: deterministic gate + LLM-facing explanation (the prose+check pairing). */
