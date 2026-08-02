@@ -315,11 +315,11 @@ describe('increment 3a — reproduction (b): the wrong-record preset class fires
 
   it('the CORRECT preset (assetHold seeds the hold) refuses the forbidden write — premise is quiet', () => {
     const r = checkPremiseCoherence(mkSubject('assetHold'));
-    expect(r.issues).toEqual([]);
+    expect(r.blocking).toEqual([]);
   });
 
   it('the WRONG-RECORD preset (default: the hold was never seeded) ACCEPTS it — premise FIRES', () => {
     const r = checkPremiseCoherence(mkSubject('default'));
-    expect(r.issues.join('\n')).toMatch(/atlas-forbid-booking.*createBooking.*ACCEPTED.*forbids nothing/s);
+    expect(r.blocking.join('\n')).toMatch(/atlas-forbid-booking.*createBooking.*ACCEPTED.*forbids nothing/s);
   });
 });

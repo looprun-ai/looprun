@@ -150,10 +150,14 @@ type WriteVerdict = 'accepted' | 'refused' | 'read';
  *  relies on: `ok:false`/`success:false` = refused; a pushed `toolCalls` entry with `tookEffect:true`
  *  = an accepted write; anything else = a read.
  *
- *  CAVEAT: the replay uses only the invariant's `anyArgs` SUBSET. When that subset under-specifies the
- *  entity (e.g. it pins a status but not the target id), the world may resolve a DIFFERENT record than
- *  the case means — so an accepted/refused verdict can be a misclassification. Anchor `anyArgs` to the
- *  entity when the premise verdict must be trusted. */
+ *  CAVEAT: the replay uses only the invariant's `anyArgs` SUBSET. When that subset omits an arg the
+ *  tool's own schema declares REQUIRED, the world's RECEPTION layer refuses the call before any premise
+ *  gate runs (an INVALID_ / MISSING_ reception error) — a refusal that says nothing about the premise. Such a call is
+ *  detected up-front (see {@link missingRequiredArgs}) and SKIPPED as inconclusive rather than replayed,
+ *  so a reception refusal is never misread as "the required write can never pass". Even when every
+ *  required arg is present, an `anyArgs` that under-specifies the ENTITY (e.g. it pins a status but not
+ *  the target id) may resolve a DIFFERENT record than the case means — anchor `anyArgs` to the entity
+ *  when the premise verdict must be trusted. */
 function replay(world: AgentWorld, call: ReqCall): WriteVerdict {
   const before = Array.isArray(world.toolCalls) ? world.toolCalls.length : 0;
   const res = world.exec(call.name, (call.anyArgs ?? {}) as Record<string, unknown>);
@@ -170,8 +174,33 @@ function replay(world: AgentWorld, call: ReqCall): WriteVerdict {
  *  defect. Skipped, not fired. */
 const isConsentTiming = (call: ReqCall): boolean => call.anyArgs?.confirmed === true;
 
+/** The declared REQUIRED args per tool, read from each toolDef's `inputSchema.required`. A tool with
+ *  no `required` array contributes an empty set (nothing to under-specify). */
+function requiredArgsByTool(subject: Subject): Map<string, string[]> {
+  const out = new Map<string, string[]>();
+  for (const def of subject.toolDefs ?? []) {
+    const schema = def.inputSchema as { required?: unknown } | undefined;
+    const req = Array.isArray(schema?.required) ? schema.required.filter((x): x is string => typeof x === 'string') : [];
+    out.set(def.name, req);
+  }
+  return out;
+}
+
+/** The schema-required args a replayed call would NOT carry. When non-empty the world's RECEPTION layer
+ *  would refuse the call for the missing arg — a refusal orthogonal to the premise — so the replay is
+ *  INCONCLUSIVE and must be skipped, not classified. */
+function missingRequiredArgs(reqByTool: Map<string, string[]>, call: ReqCall): string[] {
+  const required = reqByTool.get(call.name) ?? [];
+  const provided = call.anyArgs ?? {};
+  return required.filter((k) => !(k in provided));
+}
+
 export interface PremiseReport {
-  issues: string[];
+  /** Real premise defects — a case that can never pass / forbids nothing / read-side, plus the floor
+   *  breach. Consumed as blocking. */
+  blocking: string[];
+  /** Inconclusive skips — multi-turn, preset threw, under-specified replay. Loud but not a failure. */
+  advisory: string[];
   /** Cases the replayer could actually reach a verdict on. */
   reached: number;
   total: number;
@@ -180,60 +209,86 @@ export interface PremiseReport {
 }
 
 /**
- * Premise coherence over a subject's cases. Returns fired issues plus the reached/total accounting the
- * floor is computed from. A case is NOT reached when the replayer cannot construct its chain
- * (multi-turn); every such skip is a LOUD line, and when too many pile up the floor itself fires.
+ * Premise coherence over a subject's cases, split into {@link PremiseReport.blocking} real defects and
+ * {@link PremiseReport.advisory} inconclusive skips. A case is NOT reached when the replayer cannot
+ * construct or trust its replay — multi-turn (cross-turn state), a preset that throws, or a required
+ * arg the invariant under-specifies (RECEPTION would refuse, not the premise gate). Every such skip is
+ * a LOUD advisory line and counts toward the skip side of the reached-verdict floor; when too many pile
+ * up the floor itself breaches — and THAT stays blocking, because pass-by-inability is a real defect.
  */
 export function checkPremiseCoherence(subject: Subject, opts: ValidateOptions = {}): PremiseReport {
   const floor = opts.reachedFloor ?? DEFAULT_REACHED_FLOOR;
-  const issues: string[] = [];
+  const blocking: string[] = [];
+  const advisory: string[] = [];
   const cases = subject.cases ?? [];
+  const reqByTool = requiredArgsByTool(subject);
   let reached = 0;
 
   for (const c of cases) {
     // A multi-turn case's later writes depend on state earlier turns build from user input the
-    // replayer has no way to reproduce. Rather than replay a wrong world, SKIP LOUDLY.
+    // replayer has no way to reproduce. Rather than replay a wrong world, SKIP LOUDLY (advisory).
     if ((c.turns?.length ?? 0) > 1) {
-      issues.push(`premise: SKIPPED "${c.id}": multi-turn (${c.turns.length} turns) — the replayer cannot construct cross-turn state; verify its premise by hand`);
+      advisory.push(`premise: SKIPPED "${c.id}": multi-turn (${c.turns.length} turns) — the replayer cannot construct cross-turn state; verify its premise by hand`);
       continue;
     }
-    reached++;
 
+    const preset = c.setup?.preset ?? 'default';
     let world: AgentWorld;
     try {
-      world = subject.makeWorld(c.setup?.preset ?? 'default');
+      world = subject.makeWorld(preset);
     } catch (e) {
       // A preset that throws is a references-layer defect; here we simply cannot reach a verdict.
-      reached--;
-      issues.push(`premise: SKIPPED "${c.id}": preset "${c.setup?.preset ?? 'default'}" threw (${(e as Error).message}) — cannot replay`);
+      advisory.push(`premise: SKIPPED "${c.id}": preset "${preset}" threw (${(e as Error).message}) — cannot replay`);
       continue;
     }
 
     const inv = c.expectations?.invariants;
+    let verdictReached = false; // any call this case actually replayed to a premise verdict
+    let underSpecSkip = false; // any call skipped as inconclusive for a missing required arg
+
     for (const call of inv?.requiredToolCalls ?? []) {
       if (isConsentTiming(call)) continue;
+      const missing = missingRequiredArgs(reqByTool, call);
+      if (missing.length) {
+        underSpecSkip = true;
+        advisory.push(`premise: SKIPPED "${c.id}": required write "${call.name}"${argNote(call)} omits schema-required arg(s) ${missing.join(', ')} — the replay would hit RECEPTION, not the premise; inconclusive`);
+        continue;
+      }
+      verdictReached = true;
       if (replay(world, call) === 'refused') {
-        issues.push(`premise: "${c.id}": required write "${call.name}"${argNote(call)} is REFUSED by preset "${c.setup?.preset ?? 'default'}" — the case can never pass`);
+        blocking.push(`premise: "${c.id}": required write "${call.name}"${argNote(call)} is REFUSED by preset "${preset}" — the case can never pass`);
       }
     }
     for (const call of inv?.forbiddenToolCalls ?? []) {
       if (isConsentTiming(call)) continue;
+      const missing = missingRequiredArgs(reqByTool, call);
+      if (missing.length) {
+        underSpecSkip = true;
+        advisory.push(`premise: SKIPPED "${c.id}": forbidden entry "${call.name}"${argNote(call)} omits schema-required arg(s) ${missing.join(', ')} — the replay would hit RECEPTION, not the premise; inconclusive`);
+        continue;
+      }
+      verdictReached = true;
       const verdict = replay(world, call);
       if (verdict === 'read') {
-        issues.push(`premise: "${c.id}": forbidden entry "${call.name}"${argNote(call)} is a read-side tool (no write effect) — forbidding it enforces nothing`);
+        blocking.push(`premise: "${c.id}": forbidden entry "${call.name}"${argNote(call)} is a read-side tool (no write effect) — forbidding it enforces nothing`);
       } else if (verdict === 'accepted') {
-        issues.push(`premise: "${c.id}": forbidden write "${call.name}"${argNote(call)} is ACCEPTED by preset "${c.setup?.preset ?? 'default'}" — the case forbids nothing (the preset never puts it in a refusing state)`);
+        blocking.push(`premise: "${c.id}": forbidden write "${call.name}"${argNote(call)} is ACCEPTED by preset "${preset}" — the case forbids nothing (the preset never puts it in a refusing state)`);
       }
     }
+
+    // Reached, UNLESS the only reason we replayed nothing is inability (a missing required arg with no
+    // other call landing a verdict). A case with no invariants, or one skipped purely by consent-timing,
+    // stays reached — those are intentional exclusions, not inability.
+    if (!(underSpecSkip && !verdictReached)) reached++;
   }
 
   const total = cases.length;
   if (total > 0 && reached / total < floor) {
-    issues.push(
+    blocking.push(
       `premise: reached-verdict floor breached: ${reached}/${total} cases reached (${(reached / total).toFixed(2)}) < floor ${floor} — too many cases skipped; the exam is passing by inability`,
     );
   }
-  return { issues, reached, total, floor };
+  return { blocking, advisory, reached, total, floor };
 }
 
 const argNote = (call: ReqCall): string => (call.anyArgs && Object.keys(call.anyArgs).length ? ` (${JSON.stringify(call.anyArgs)})` : '');
@@ -374,11 +429,12 @@ export function checkWorldModel(subjectDir: string): string[] {
  *  bundle the reference + premise layers reason over. */
 export function validateSubjectConfig(subjectDir: string, subject: Subject, opts: ValidateOptions = {}): ValidateReport {
   const references = checkReferences(subject);
+  const premise = checkPremiseCoherence(subject, opts);
   return {
     schema: checkSchema(subjectDir),
     references: references.blocking,
-    premise: checkPremiseCoherence(subject, opts).issues,
+    premise: premise.blocking,
     world: checkWorldModel(subjectDir),
-    advisory: references.advisory,
+    advisory: [...references.advisory, ...premise.advisory],
   };
 }

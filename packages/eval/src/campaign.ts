@@ -200,6 +200,8 @@ async function preflight(
   }
   const report = validateSubjectConfig(subjectDir, subject);
   const blocking = [...report.schema, ...report.references, ...report.premise];
+  for (const line of report.advisory) log(`preflight: ADVISORY ${line}`);
+  if (report.advisory.length) log(`preflight: ${report.advisory.length} advisory line(s) (non-blocking)`);
   if (blocking.length) {
     for (const line of blocking) log(`preflight: ${line}`);
     throw new CampaignRefusal(`preflight: validate is RED (${blocking.length} blocking issue(s)) — fix the exam before running`);

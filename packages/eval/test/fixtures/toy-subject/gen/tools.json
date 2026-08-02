@@ -2,7 +2,7 @@
   {
     "name": "lookupMember",
     "description": "Find a member by name.",
-    "parameters": { "type": "object", "properties": { "query": { "type": "string" } }, "required": ["query"] }
+    "parameters": { "type": "object", "properties": { "query": { "type": "string" } } }
   },
   {
     "name": "listRooms",
@@ -20,8 +20,7 @@
         "date": { "type": "string" },
         "startTime": { "type": "string" },
         "endTime": { "type": "string" }
-      },
-      "required": ["roomId", "memberId"]
+      }
     }
   },
   {

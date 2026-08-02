@@ -17,6 +17,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const SUBJECT = resolve(HERE, 'fixtures/campaign-subject');
 const BADREF = resolve(HERE, 'fixtures/campaign-subject-badref');
 const NEEDKEY = resolve(HERE, 'fixtures/campaign-subject-needskey');
+const ADVISORY = resolve(HERE, 'fixtures/campaign-subject-advisory');
 
 /** A fresh reply-only scripted model per rep (single turn → replyToUser → terminal). */
 const modelFactory = () => fakeLLM([[{ tool: 'replyToUser', args: { text: 'Hello! I can answer grounded questions.' } }]]).model;
@@ -176,6 +177,21 @@ describe('campaign — preflight failure fixtures', () => {
     const config = join(dir, 'campaign.json');
     writeFileSync(config, JSON.stringify({ subject: BADREF, reps: 2, control: 'ungoverned', bar: 0.9, chunk: 10, out: join(dir, 'camp') }));
     await expect(campaignCommand({ action: 'run', config, modelFactory })).rejects.toThrow(/validate is RED/);
+  });
+
+  it('advisory-only premise: a multi-turn SKIP with a green floor does NOT block preflight (defect 1)', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'looprun-campaign-'));
+    const { lines, log } = logger();
+    const config = join(dir, 'campaign.json');
+    writeFileSync(config, JSON.stringify({ subject: ADVISORY, reps: 2, control: 'ungoverned', bar: 0.9, chunk: 10, out: join(dir, 'camp') }));
+    // Preflight passes (no RED throw) even though the premise layer emits a SKIP line — it lands as
+    // advisory, and the campaign proceeds to the judging PAUSE.
+    await campaignCommand({ action: 'run', config, modelFactory, date: '2026-08-02', log });
+    const joined = lines.join('\n');
+    expect(joined).toMatch(/preflight: ADVISORY .*SKIPPED "02-followup": multi-turn/);
+    expect(joined).toMatch(/advisory line\(s\) \(non-blocking\)/);
+    expect(joined).not.toMatch(/validate is RED/);
+    expect(existsSync(join(dir, 'camp', 'judging.json'))).toBe(true);
   });
 });
 

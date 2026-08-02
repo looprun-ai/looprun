@@ -8,7 +8,7 @@
  * Plus the required-write-refused shape (a case that can never pass) and the reached-verdict FLOOR.
  */
 import { describe, expect, it } from 'vitest';
-import type { AgentWorld } from '@looprun-ai/core';
+import type { AgentWorld, ToolDef } from '@looprun-ai/core';
 import type { Subject, SubjectCase } from '../src/subject.js';
 import { checkPremiseCoherence } from '../src/validate.js';
 
@@ -52,17 +52,25 @@ class ShopWorld implements AgentWorld {
   }
 }
 
-function mkSubject(cases: SubjectCase[]): Subject {
+function mkSubject(cases: SubjectCase[], toolDefs: ToolDef[] = []): Subject {
   return {
     dir: '/fake',
     specs: {},
     contract: {} as never,
     caseAgent: {},
     cases,
-    toolDefs: [],
+    toolDefs,
     makeWorld: (preset?: string) => new ShopWorld(preset),
   };
 }
+
+/** A toolDef whose schema marks the given args required — used to reproduce the reception-refusal
+ *  misread (defect 2): an invariant that omits one of these under-specifies the call. */
+const toolDef = (name: string, required: string[]): ToolDef => ({
+  name,
+  description: name,
+  inputSchema: { type: 'object', properties: Object.fromEntries(required.map((k) => [k, { type: 'string' }])), required },
+});
 
 const single = (id: string, extra: Partial<SubjectCase>): SubjectCase => ({
   id,
@@ -77,7 +85,7 @@ describe('premise coherence — fires on the three defect shapes', () => {
       expectations: { invariants: { forbiddenToolCalls: [{ name: 'completeMaintenance', anyArgs: { assetId: 'ast_shop' } }] } },
     });
     const r = checkPremiseCoherence(mkSubject([defect]));
-    expect(r.issues.join('\n')).toMatch(/19-accept-when-forbid.*ACCEPTED.*forbids nothing/s);
+    expect(r.blocking.join('\n')).toMatch(/19-accept-when-forbid.*ACCEPTED.*forbids nothing/s);
   });
 
   it('accept-when-should-forbid: corrected (world REFUSES the forbidden write) is quiet', () => {
@@ -85,7 +93,7 @@ describe('premise coherence — fires on the three defect shapes', () => {
       expectations: { invariants: { forbiddenToolCalls: [{ name: 'completeMaintenance', anyArgs: { assetId: 'ast_road' } }] } },
     });
     const r = checkPremiseCoherence(mkSubject([fixed]));
-    expect(r.issues).toEqual([]);
+    expect(r.blocking).toEqual([]);
   });
 
   it('read-side: a forbidden entry naming a pure READ fires', () => {
@@ -93,7 +101,7 @@ describe('premise coherence — fires on the three defect shapes', () => {
       expectations: { invariants: { forbiddenToolCalls: [{ name: 'getStatus' }] } },
     });
     const r = checkPremiseCoherence(mkSubject([defect]));
-    expect(r.issues.join('\n')).toMatch(/53-read-side.*read-side.*enforces nothing/s);
+    expect(r.blocking.join('\n')).toMatch(/53-read-side.*read-side.*enforces nothing/s);
   });
 
   it('read-side: corrected (forbid a real refused write) is quiet', () => {
@@ -101,7 +109,7 @@ describe('premise coherence — fires on the three defect shapes', () => {
       expectations: { invariants: { forbiddenToolCalls: [{ name: 'cancelBooking' }] } }, // default preset = no booking → refused → coherent
     });
     const r = checkPremiseCoherence(mkSubject([fixed]));
-    expect(r.issues).toEqual([]);
+    expect(r.blocking).toEqual([]);
   });
 
   it('multi-turn: a case the replayer cannot construct is SKIPPED LOUDLY', () => {
@@ -114,8 +122,9 @@ describe('premise coherence — fires on the three defect shapes', () => {
     // Pad with reached single-turn cases so the floor itself does not also fire — we assert the SKIP line.
     const filler = [1, 2, 3].map((n) => single(`f${n}`, { expectations: { invariants: { requiredToolCalls: [{ name: 'getStatus' }] } } }));
     const r = checkPremiseCoherence(mkSubject([multi, ...filler]));
-    expect(r.issues.join('\n')).toMatch(/SKIPPED "20-multi-turn": multi-turn/);
+    expect(r.advisory.join('\n')).toMatch(/SKIPPED "20-multi-turn": multi-turn/);
     expect(r.reached).toBe(3);
+    expect(r.blocking).toEqual([]); // defect 1: a SKIP does NOT block when the floor is green
   });
 
   it('multi-turn: corrected to a single self-contained turn is reached and quiet', () => {
@@ -123,7 +132,7 @@ describe('premise coherence — fires on the three defect shapes', () => {
       expectations: { invariants: { requiredToolCalls: [{ name: 'completeMaintenance', anyArgs: { assetId: 'ast_shop' } }] } },
     });
     const r = checkPremiseCoherence(mkSubject([fixed]));
-    expect(r.issues).toEqual([]);
+    expect(r.blocking).toEqual([]);
     expect(r.reached).toBe(1);
   });
 
@@ -132,7 +141,7 @@ describe('premise coherence — fires on the three defect shapes', () => {
       expectations: { invariants: { requiredToolCalls: [{ name: 'completeMaintenance', anyArgs: { assetId: 'ast_road' } }] } },
     });
     const r = checkPremiseCoherence(mkSubject([defect]));
-    expect(r.issues.join('\n')).toMatch(/required write.*REFUSED.*can never pass/);
+    expect(r.blocking.join('\n')).toMatch(/required write.*REFUSED.*can never pass/);
   });
 
   it('consent-timing (confirmed:true) forbidden entries are the two-step business — skipped, not fired', () => {
@@ -141,7 +150,7 @@ describe('premise coherence — fires on the three defect shapes', () => {
     });
     // chargeDeposit is always ACCEPTED by the world, so without the consent-timing skip this would fire.
     const r = checkPremiseCoherence(mkSubject([twoStep]));
-    expect(r.issues).toEqual([]);
+    expect(r.blocking).toEqual([]);
   });
 
   it('reached floor breaches when too many cases are skipped (pass-by-inability)', () => {
@@ -153,6 +162,46 @@ describe('premise coherence — fires on the three defect shapes', () => {
     }) as SubjectCase);
     const r = checkPremiseCoherence(mkSubject(allMulti), { reachedFloor: 0.5 });
     expect(r.reached).toBe(0);
-    expect(r.issues.join('\n')).toMatch(/reached-verdict floor breached: 0\/3/);
+    expect(r.blocking.join('\n')).toMatch(/reached-verdict floor breached: 0\/3/);
+  });
+});
+
+describe('premise coherence — under-specified replay is INCONCLUSIVE, not a refusal (defect 2)', () => {
+  // completeMaintenance's schema requires BOTH assetId and bay; an invariant that carries only
+  // assetId under-specifies the call — the world's RECEPTION would refuse for the missing arg, which
+  // says nothing about the premise.
+  const defs = [toolDef('completeMaintenance', ['assetId', 'bay'])];
+
+  it('a required write missing a schema-required arg is SKIPPED (advisory), never "can never pass"', () => {
+    const underSpec = single('underspec', {
+      // assetId ast_road WOULD be refused by the world — but the missing `bay` means the replay
+      // never even reaches that gate; it must be inconclusive, not a false "can never pass".
+      expectations: { invariants: { requiredToolCalls: [{ name: 'completeMaintenance', anyArgs: { assetId: 'ast_road' } }] } },
+    });
+    // One reached filler so the floor stays green and only the SKIP is under test.
+    const filler = single('ok', { expectations: { invariants: { requiredToolCalls: [{ name: 'getStatus' }] } } });
+    const r = checkPremiseCoherence(mkSubject([underSpec, filler], defs));
+    expect(r.blocking).toEqual([]); // NOT flagged "can never pass"
+    expect(r.advisory.join('\n')).toMatch(/SKIPPED "underspec".*omits schema-required arg\(s\) bay.*inconclusive/s);
+    expect(r.reached).toBe(1); // the under-specified case counts toward the skip side of the floor
+  });
+
+  it('a forbidden entry missing a schema-required arg is SKIPPED (advisory), not classified', () => {
+    const underSpec = single('underspec-forbid', {
+      expectations: { invariants: { forbiddenToolCalls: [{ name: 'completeMaintenance', anyArgs: { assetId: 'ast_shop' } }] } },
+    });
+    const filler = single('ok', { expectations: { invariants: { requiredToolCalls: [{ name: 'getStatus' }] } } });
+    const r = checkPremiseCoherence(mkSubject([underSpec, filler], defs));
+    expect(r.blocking).toEqual([]);
+    expect(r.advisory.join('\n')).toMatch(/SKIPPED "underspec-forbid".*omits schema-required arg\(s\) bay/s);
+  });
+
+  it('a FULLY-specified required write genuinely refused by the world STILL blocks (real defect intact)', () => {
+    const genuine = single('genuine-refused', {
+      // Both required args present, so the replay reaches the world gate — which refuses ast_road.
+      expectations: { invariants: { requiredToolCalls: [{ name: 'completeMaintenance', anyArgs: { assetId: 'ast_road', bay: 'b1' } }] } },
+    });
+    const r = checkPremiseCoherence(mkSubject([genuine], defs));
+    expect(r.blocking.join('\n')).toMatch(/genuine-refused.*REFUSED.*can never pass/);
   });
 });
