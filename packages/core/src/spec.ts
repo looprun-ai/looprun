@@ -420,7 +420,10 @@ export class AgentSpecBase implements AgentSpec {
         layer: 'minimal',
         id: 'minimal:claimIsGrounded',
       });
-      this.addGuard('onReply', 'any', claimIsComplete({ writeTools }), { layer: 'minimal', id: 'minimal:claimIsComplete' });
+      this.addGuard('onReply', 'any', claimIsComplete({ writeTools, outcomes: this.contract?.outcomes }), {
+        layer: 'minimal',
+        id: 'minimal:claimIsComplete',
+      });
     }
   }
 

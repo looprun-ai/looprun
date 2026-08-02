@@ -312,6 +312,16 @@ describe('claimIsComplete', () => {
     };
     expect(complete(ctx)).toBeNull();
   });
+
+  it("MAPPING LAW — a domain word claim ('settled' → 'success' via the OutcomeMap) covers an effected write, exactly like claimIsGrounded", () => {
+    const outcomes: OutcomeMap = { settled: 'success' };
+    const ctx = {
+      did: [{ op: 'refund', target: 'ORD-7', outcome: 'settled' }] as TurnClaim[],
+      observed: [call('refundOrder', { orderId: 'ORD-7' }, { tookEffect: true })],
+      world: worldWith([{ name: 'refundOrder', args: { orderId: 'ORD-7' }, tookEffect: true }]),
+    };
+    expect(claimIsComplete({ writeTools: WRITES, outcomes }).check(replyCtx(ctx))).toBeNull();
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -346,6 +356,20 @@ describe('claimCoversRubric', () => {
   it('every configured target must appear', () => {
     const did: TurnClaim[] = [{ op: 'book', target: 'BK-1', outcome: 'success' }];
     expect(covers({ targets: ['BK-1', 'BK-2'], outcome: 'success' }, did)).toBeTruthy();
+  });
+
+  describe('mapping law — the same OutcomeMap claimIsGrounded/claimIsComplete use also threads here', () => {
+    const outcomes: OutcomeMap = { settled: 'success' };
+    const did: TurnClaim[] = [{ op: 'refund', target: 'ORD-7', outcome: 'settled' }];
+    const reason = 'Account for the order you were asked about.';
+
+    it("'settled' satisfies a rubric requiring 'success' WITH the map", () => {
+      expect(claimCoversRubric({ targets: ['ORD-7'], outcome: 'success', outcomes }, reason).check(replyCtx({ did }))).toBeNull();
+    });
+
+    it("the same 'settled' claim FAILS the same rubric WITHOUT the map (an undeclared word grounds nothing)", () => {
+      expect(claimCoversRubric({ targets: ['ORD-7'], outcome: 'success' }, reason).check(replyCtx({ did }))).toBe(reason);
+    });
   });
 });
 

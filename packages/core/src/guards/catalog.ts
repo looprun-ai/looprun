@@ -202,8 +202,8 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
     summary:
       'Every write that TOOK EFFECT this turn must be covered by a `success` claim in `did` — no silent action hidden from the user.',
     whenToUse:
-      'Auto-installed alongside `claimIsGrounded` (same `writeTools`). Its mirror is `claimIsGrounded`: that one stops a claim with no matching effect, this one stops an effect with no matching claim. It names the unreported action by the world-issued produced label, never by the tool name.',
-    example: `claimIsComplete({ writeTools: ['createBooking', 'cancelBooking'] })`,
+      'Auto-installed alongside `claimIsGrounded` (same `writeTools` + `outcomes`). Its mirror is `claimIsGrounded`: that one stops a claim with no matching effect, this one stops an effect with no matching claim — both resolve a domain outcome word through the same `OutcomeMap`, so a mapped word (e.g. `settled` → `success`) covers a write exactly like the literal word does. It names the unreported action by the world-issued produced label, never by the tool name.',
+    example: `claimIsComplete({ writeTools: ['createBooking', 'cancelBooking'], outcomes: { settled: 'success' } })`,
   },
   {
     name: 'claimCoversRubric',

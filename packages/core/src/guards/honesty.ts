@@ -170,12 +170,15 @@ export function claimIsGrounded(opts: { writeTools: readonly string[]; outcomes?
 /**
  * `claimIsComplete` — no silent action: every write that TOOK EFFECT this turn must be reported.
  *
- * For each effected write, require ≥1 declared claim of outcome `success` that matches it. An unreported
+ * For each effected write, require ≥1 declared claim of outcome `success` that matches it — resolved
+ * through the same `OutcomeMap` `claimIsGrounded` uses, so a domain word that maps to `success` (e.g.
+ * `'settled'`) covers a write exactly like the literal word does (the mapping law: every domain outcome
+ * declares its core outcome, so the two cross-checks can never disagree on the same claim). An unreported
  * write is named by its produced label (`ctx.producedThisTurn` / the call's own result label) when the
  * world issued one, else by a generic phrase — never by the tool name (prose-leak law). Auto-installed
  * alongside `claimIsGrounded`.
  */
-export function claimIsComplete(opts: { writeTools: readonly string[] }): Guard {
+export function claimIsComplete(opts: { writeTools: readonly string[]; outcomes?: OutcomeMap }): Guard {
   const writes = new Set(opts.writeTools);
   return {
     kind: 'claimIsComplete',
@@ -186,7 +189,7 @@ export function claimIsComplete(opts: { writeTools: readonly string[] }): Guard 
       for (const c of calls) {
         if (!(writes.has(c.name) && c.tookEffect === true)) continue;
         const covered = did.some(
-          (claim) => resolveOutcome(claim.outcome) === 'success' && claimMatchesCall(ctx, claim, c),
+          (claim) => resolveOutcome(claim.outcome, opts.outcomes) === 'success' && claimMatchesCall(ctx, claim, c),
         );
         if (covered) continue;
         const label = producedLabel(ctx, c);
@@ -212,9 +215,16 @@ function producedLabel(ctx: GuardCtx, c: ObservedCall): string | null {
  * `claimCoversRubric` — a per-case coverage rule: every configured `target` must appear in `ctx.did`
  * with the required outcome polarity (or any polarity when `outcome: 'any'`). This REPLACES the prose
  * `replyMentions`/`replyConfirmsLabels`: polarity is a FIELD, so a reply that says "no record of BK-1 was found" can never satisfy
- * a `success` requirement again. Config-bound only — never auto-installed.
+ * a `success` requirement again. The polarity test resolves through the same `OutcomeMap`
+ * `claimIsGrounded`/`claimIsComplete` use, so a mapped domain word (e.g. `'settled'` → `success`) satisfies
+ * a `success` rubric exactly like the literal word — the mapping law holds across all three cross-checks.
+ * `outcome: 'any'` accepts any claim whose outcome RESOLVES to a known core outcome via the map (an
+ * undeclared word still does not cover). Config-bound only — never auto-installed.
  */
-export function claimCoversRubric(opts: { targets: string[]; outcome: CoreOutcome | 'any' }, reason: string): Guard {
+export function claimCoversRubric(
+  opts: { targets: string[]; outcome: CoreOutcome | 'any'; outcomes?: OutcomeMap },
+  reason: string,
+): Guard {
   return {
     kind: 'claimCoversRubric',
     dim: 'behavior',
@@ -225,7 +235,8 @@ export function claimCoversRubric(opts: { targets: string[]; outcome: CoreOutcom
         const t = target.toLowerCase();
         const covered = did.some((claim) => {
           if (claim.target === undefined || !claim.target.toLowerCase().includes(t)) return false;
-          return opts.outcome === 'any' || resolveOutcome(claim.outcome) === opts.outcome;
+          const resolved = resolveOutcome(claim.outcome, opts.outcomes);
+          return opts.outcome === 'any' ? resolved !== null : resolved === opts.outcome;
         });
         if (!covered) return reason;
       }
