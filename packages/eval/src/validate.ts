@@ -204,17 +204,24 @@ export interface PremiseReport {
   /** Cases the replayer could actually reach a verdict on. */
   reached: number;
   total: number;
+  /** Cases the instrument declined jurisdiction over (subset-pinned invariant, no verdict landed).
+   *  These leave the floor DENOMINATOR — they are legitimate exam design, not inability. */
+  outOfJurisdiction: number;
   /** The floor applied (ratio). */
   floor: number;
 }
 
 /**
  * Premise coherence over a subject's cases, split into {@link PremiseReport.blocking} real defects and
- * {@link PremiseReport.advisory} inconclusive skips. A case is NOT reached when the replayer cannot
- * construct or trust its replay — multi-turn (cross-turn state), a preset that throws, or a required
- * arg the invariant under-specifies (RECEPTION would refuse, not the premise gate). Every such skip is
- * a LOUD advisory line and counts toward the skip side of the reached-verdict floor; when too many pile
- * up the floor itself breaches — and THAT stays blocking, because pass-by-inability is a real defect.
+ * {@link PremiseReport.advisory} inconclusive skips.
+ *
+ * The reached-verdict FLOOR guards against a suite passing by INABILITY — cases the replayer cannot
+ * reach. Multi-turn (cross-turn state) and preset-threw ARE inability: they stay in the floor
+ * DENOMINATOR, and when too many pile up the floor breaches (blocking). An UNDER-SPECIFIED replay is a
+ * different thing entirely — the invariant deliberately pins only a subset of the call's args (the
+ * runner matches on that subset), so the premise instrument is DECLINING JURISDICTION over it, not
+ * failing to reach it. Those cases are advisory AND leave the denominator: floor = reached / (total −
+ * outOfJurisdiction).
  */
 export function checkPremiseCoherence(subject: Subject, opts: ValidateOptions = {}): PremiseReport {
   const floor = opts.reachedFloor ?? DEFAULT_REACHED_FLOOR;
@@ -223,6 +230,7 @@ export function checkPremiseCoherence(subject: Subject, opts: ValidateOptions = 
   const cases = subject.cases ?? [];
   const reqByTool = requiredArgsByTool(subject);
   let reached = 0;
+  let outOfJurisdiction = 0;
 
   for (const c of cases) {
     // A multi-turn case's later writes depend on state earlier turns build from user input the
@@ -251,7 +259,7 @@ export function checkPremiseCoherence(subject: Subject, opts: ValidateOptions = 
       const missing = missingRequiredArgs(reqByTool, call);
       if (missing.length) {
         underSpecSkip = true;
-        advisory.push(`premise: SKIPPED "${c.id}": required write "${call.name}"${argNote(call)} omits schema-required arg(s) ${missing.join(', ')} — the replay would hit RECEPTION, not the premise; inconclusive`);
+        advisory.push(`premise: SKIPPED "${c.id}": required write "${call.name}"${argNote(call)} omits schema-required arg(s) ${missing.join(', ')} — out of the premise instrument's jurisdiction (subset-pinned invariant; the replay would hit RECEPTION, not the premise gate)`);
         continue;
       }
       verdictReached = true;
@@ -264,7 +272,7 @@ export function checkPremiseCoherence(subject: Subject, opts: ValidateOptions = 
       const missing = missingRequiredArgs(reqByTool, call);
       if (missing.length) {
         underSpecSkip = true;
-        advisory.push(`premise: SKIPPED "${c.id}": forbidden entry "${call.name}"${argNote(call)} omits schema-required arg(s) ${missing.join(', ')} — the replay would hit RECEPTION, not the premise; inconclusive`);
+        advisory.push(`premise: SKIPPED "${c.id}": forbidden entry "${call.name}"${argNote(call)} omits schema-required arg(s) ${missing.join(', ')} — out of the premise instrument's jurisdiction (subset-pinned invariant; the replay would hit RECEPTION, not the premise gate)`);
         continue;
       }
       verdictReached = true;
@@ -276,19 +284,22 @@ export function checkPremiseCoherence(subject: Subject, opts: ValidateOptions = 
       }
     }
 
-    // Reached, UNLESS the only reason we replayed nothing is inability (a missing required arg with no
-    // other call landing a verdict). A case with no invariants, or one skipped purely by consent-timing,
-    // stays reached — those are intentional exclusions, not inability.
-    if (!(underSpecSkip && !verdictReached)) reached++;
+    // A case whose ONLY skip is under-specification (and no other call landed a verdict) is out of the
+    // instrument's jurisdiction — a subset-pinned invariant, legitimate exam design. It leaves the floor
+    // denominator entirely. Everything else (a verdict landed, no invariants, or a consent-timing-only
+    // skip) is reached — those are intentional exclusions, not inability.
+    if (underSpecSkip && !verdictReached) outOfJurisdiction++;
+    else reached++;
   }
 
   const total = cases.length;
-  if (total > 0 && reached / total < floor) {
+  const denom = total - outOfJurisdiction; // inability floor: jurisdiction declines leave the denominator
+  if (denom > 0 && reached / denom < floor) {
     blocking.push(
-      `premise: reached-verdict floor breached: ${reached}/${total} cases reached (${(reached / total).toFixed(2)}) < floor ${floor} — too many cases skipped; the exam is passing by inability`,
+      `premise: reached-verdict floor breached: ${reached}/${denom} reachable cases reached (${(reached / denom).toFixed(2)}) < floor ${floor} — too many cases the replayer cannot construct; the exam is passing by inability`,
     );
   }
-  return { blocking, advisory, reached, total, floor };
+  return { blocking, advisory, reached, total, outOfJurisdiction, floor };
 }
 
 const argNote = (call: ReqCall): string => (call.anyArgs && Object.keys(call.anyArgs).length ? ` (${JSON.stringify(call.anyArgs)})` : '');
