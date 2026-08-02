@@ -1,5 +1,14 @@
 # @looprun-internal/tutorial-snippets
 
+## 0.0.3
+
+### Patch Changes
+
+- Updated dependencies
+  - @looprun-ai/eval@0.10.0
+  - looprun@0.10.0
+  - @looprun-ai/server@0.10.0
+
 ## 0.0.2
 
 ### Patch Changes

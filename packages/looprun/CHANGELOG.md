@@ -1,5 +1,19 @@
 # looprun
 
+## 0.10.0
+
+### Minor Changes
+
+- Release (minor).
+
+### Patch Changes
+
+- Updated dependencies
+  - @looprun-ai/core@0.10.0
+  - @looprun-ai/mastra@0.10.0
+  - @looprun-ai/models@0.10.0
+  - @looprun-ai/vercel@0.10.0
+
 ## 0.9.1
 
 ### Patch Changes
