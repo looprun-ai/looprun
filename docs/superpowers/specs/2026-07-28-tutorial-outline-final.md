@@ -324,14 +324,15 @@ helpers) · `looprun/models` (`geminiFlashLiteThinkOff`) · **`@looprun-ai/eval`
 Placed here, not in 06: their purpose is a measurement you can repeat, which is this chapter's whole
 subject.
 
-*5.3 The subject directory contract (8)* — an eval subject is a **directory with a fixed layout**,
+*5.3 The subject directory contract (9)* — an eval subject is a **directory with a fixed layout**,
 and the chapter teaches the layout before any command:
 
 ```
 <subject>/
 ├── norms/index.ts     exports SPECS (id → AgentSpec), CONTRACT, optional CASE_AGENT routing
 │                      (a spec may be built from norms/<agent>.json via loadNormsConfig — guards from data)
-├── gen/world.ts       the deterministic world factory  (preset → AgentWorld)
+├── gen/world.json     the deterministic world, DECLARED  (loadWorldConfig → preset → AgentWorld; increment 3b)
+│                      (or gen/world.ts — a hand factory; the JSON wins when both are present)
 ├── gen/tools.json     the agent-facing ToolDef[]
 ├── evals/cases.ts     export default cases: SubjectCase[]
 └── ask/targets.json   the declared model target (flags/env override it)
@@ -341,6 +342,7 @@ and the chapter teaches the layout before any command:
 |---|---|---|
 | `loadSubject` | eval | directory → `Subject` |
 | `loadNormsConfig` | eval | a `norms/<agent>.json` value → `AgentSpec` (guards from DATA; regex structurally impossible) |
+| `loadWorldConfig` | eval | a `gen/world.json` value → world factory (the declarative world; the `world.ts` sibling of `loadNormsConfig`; increment 3b) |
 | `Subject` | eval | the loaded bundle; parameter of `agentForCase` and `lintSubject` |
 | `SubjectCase` | eval | **authored** — one case: setup, turns, expectations, targets |
 | `CaseTurn` | eval | authored — `SubjectCase.turns` |
@@ -462,7 +464,7 @@ in the "bring your own loop" seam; internal, not taught.)
 | core | **05** (5) | `TurnInput`↑ `RunResult`↑ `TurnRecord`↑ `geminiThinkingOff` `pinnedDecoding` |
 | mastra | **05** (2) | `runSpecConversation` `RuntimeDeps`↑ |
 | models | **05** (1) | `geminiFlashLiteThinkOff` |
-| eval | **05** (23) | `loadSubject` `loadNormsConfig`↑ `Subject`↑ `SubjectCase`↑ `CaseTurn`↑ `CaseInvariants`↑ `ReqCall`↑ `RubricItem`↑ `agentForCase` `stripGovernance` `runCommand` `foldCommand` `certCommand` `validateCommand` `judgeInputCommand` `campaignCommand` `lintPaths` `lintSpecLaws` `lintSpecExecution` `lintSpecQuality` `lintSubject` `mintSeal` `verifySeal` |
+| eval | **05** (24) | `loadSubject` `loadNormsConfig`↑ `loadWorldConfig`↑ `Subject`↑ `SubjectCase`↑ `CaseTurn`↑ `CaseInvariants`↑ `ReqCall`↑ `RubricItem`↑ `agentForCase` `stripGovernance` `runCommand` `foldCommand` `certCommand` `validateCommand` `judgeInputCommand` `campaignCommand` `lintPaths` `lintSpecLaws` `lintSpecExecution` `lintSpecQuality` `lintSubject` `mintSeal` `verifySeal` |
 | server | **06** (4) | `createModelServer` `ModelServer` `ModelServerConfig` `TurnEvent` |
 | models | **06** (7) | `localModel`↑ `LocalModelOptions`↑ `LocalModelSpec`↑ `ModelRuntimePort`↑ `resolveAlias` `LlamaCppRuntime` `localModelStatus` |
 | mastra | **06** (2) | `worldFromTools` `StateView`↑ |

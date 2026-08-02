@@ -18,12 +18,13 @@
  *                    against a reached-verdict FLOOR — because pass-by-inability is exactly how the
  *                    Atlas defects survived a green board.
  */
-import { readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { AgentSpec, AgentWorld } from '@looprun-ai/core';
 import type { ReqCall, Subject, SubjectCase } from './subject.js';
 import { loadNormsConfig, NormsConfigError } from './norms-config.js';
 import { parseCasesConfig, CasesConfigError } from './cases-config.js';
+import { loadWorldConfig, WorldConfigError } from './world-config.js';
 
 /** The default reached-verdict floor: at least half the cases must be replayable, or the suite is
  *  policing itself by inability. A RATIO, tunable per subject — never a hardcoded count. */
@@ -38,6 +39,8 @@ export interface ValidateReport {
   schema: string[];
   references: string[];
   premise: string[];
+  /** World-model layers (spec §3b) — run ONLY when the subject ships `gen/world.json`; empty otherwise. */
+  world: string[];
   /** Advisory-only lines (reverse-coverage) — reported, but not a failure. */
   advisory: string[];
 }
@@ -235,6 +238,136 @@ export function checkPremiseCoherence(subject: Subject, opts: ValidateOptions = 
 
 const argNote = (call: ReqCall): string => (call.anyArgs && Object.keys(call.anyArgs).length ? ` (${JSON.stringify(call.anyArgs)})` : '');
 
+// ── Layer 4: WORLD MODEL (spec §3b) — only when the subject ships gen/world.json ─────────────────────
+
+/** The raw world.json shape the world layers introspect (tool/arg/preset structure). */
+interface RawArg {
+  name: string;
+  type: string;
+  optional?: boolean;
+}
+interface RawTool {
+  twoStep?: boolean;
+  args?: RawArg[];
+  custom?: string;
+}
+interface RawWorld {
+  tools?: Record<string, RawTool>;
+  presets?: Record<string, unknown>;
+}
+
+const NON_CONFIRM_TYPES = new Set(['string', 'number', 'boolean']);
+
+/** Synthesize a minimal, type-correct arg set for a tool so RECEPTION never throws on a missing
+ *  required arg. `confirmed` is excluded (the two-step probe/confirm lever the identity check drives). */
+function synthArgs(args: RawArg[] | undefined, includeOptional: boolean): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const a of args ?? []) {
+    if (a.name === 'confirmed') continue;
+    if (a.optional && !includeOptional) continue;
+    if (!NON_CONFIRM_TYPES.has(a.type)) continue;
+    out[a.name] = a.type === 'number' ? 1 : a.type === 'boolean' ? false : 'x';
+  }
+  return out;
+}
+
+/** The gate DECISION a call resolved to: the deny error string, or null when gates passed (preview or
+ *  effect). Probe and confirm must land the SAME decision — that IS probe≡confirm identity. */
+function gateDecision(result: unknown): string | null {
+  const r = (result && typeof result === 'object' ? result : {}) as Record<string, unknown>;
+  return r.ok === false ? String(r.error ?? 'DENIED') : null;
+}
+
+const stable = (v: unknown): string => JSON.stringify(v);
+
+/**
+ * The three world layers over a subject that ships `gen/world.json`:
+ *   1. PRESET DISTINGUISHABILITY — every declared preset (other than `default`) yields a projection
+ *      DIFFERENT from default's; an indistinguishable preset is dead wiring (the wrong-record class).
+ *   2. PROBE≡CONFIRM IDENTITY — for every `twoStep` tool, a probe and a confirm resolve the SAME gate
+ *      decision (mechanical, via the 3a machinery: gates run before the two-step branch).
+ *   3. DETERMINISM — the same preset + the same call sequence yields a deep-equal projection, run twice
+ *      (catches a `custom` executor that reaches for a clock or RNG).
+ *
+ * Returns issue strings (empty = clean, or no world.json = nothing to check).
+ */
+export function checkWorldModel(subjectDir: string): string[] {
+  const path = join(subjectDir, 'gen', 'world.json');
+  if (!existsSync(path)) return []; // TS worlds keep the old path — nothing to check here.
+
+  const issues: string[] = [];
+  let raw: RawWorld;
+  let factory: (preset?: string) => AgentWorld;
+  try {
+    raw = JSON.parse(readFileSync(path, 'utf8')) as RawWorld;
+    factory = loadWorldConfig(raw);
+  } catch (e) {
+    const msg = e instanceof WorldConfigError ? e.message : (e as Error).message;
+    return [`world: gen/world.json failed to load: ${msg}`]; // schema-layer already reported it too.
+  }
+
+  const presetNames = Object.keys(raw.presets ?? {});
+  const tools = raw.tools ?? {};
+
+  // 1. Preset distinguishability.
+  let defaultProj: string;
+  try {
+    defaultProj = stable(factory('default').projection());
+  } catch (e) {
+    return [`world: the 'default' preset does not construct: ${(e as Error).message}`];
+  }
+  for (const preset of presetNames) {
+    if (preset === 'default') continue;
+    try {
+      if (stable(factory(preset).projection()) === defaultProj) {
+        issues.push(`world: preset "${preset}" is INDISTINGUISHABLE from default — its projection is byte-identical, so the preset seeds nothing (a wrong-record / dead-preset defect)`);
+      }
+    } catch (e) {
+      issues.push(`world: preset "${preset}" does not construct: ${(e as Error).message}`);
+    }
+  }
+
+  // 2. Probe ≡ confirm identity, per twoStep tool.
+  for (const [name, tool] of Object.entries(tools)) {
+    if (!tool.twoStep) continue;
+    const args = synthArgs(tool.args, true);
+    try {
+      const probe = gateDecision(factory('default').exec(name, args));
+      const confirm = gateDecision(factory('default').exec(name, { ...args, confirmed: true }));
+      if (probe !== confirm) {
+        issues.push(`world: twoStep tool "${name}" breaks probe≡confirm identity — probe gate decision ${JSON.stringify(probe)} ≠ confirm ${JSON.stringify(confirm)}`);
+      }
+    } catch (e) {
+      issues.push(`world: twoStep tool "${name}" threw during the probe≡confirm check: ${(e as Error).message}`);
+    }
+  }
+
+  // 3. Determinism: same preset + same synthesized sequence ⇒ deep-equal projection, twice.
+  const sequence = Object.entries(tools).map(([name, t]) => ({ name, args: synthArgs(t.args, false) }));
+  for (const preset of presetNames) {
+    const run = (): string => {
+      const w = factory(preset);
+      for (const call of sequence) {
+        try {
+          w.exec(call.name, call.args);
+        } catch {
+          /* a synthesized call the world rejects is fine — determinism is about REPEATABILITY */
+        }
+      }
+      return stable(w.projection());
+    };
+    try {
+      if (run() !== run()) {
+        issues.push(`world: preset "${preset}" is NON-DETERMINISTIC — the same call sequence produced two different projections (a clock/RNG leaked into the world)`);
+      }
+    } catch (e) {
+      issues.push(`world: preset "${preset}" threw during the determinism check: ${(e as Error).message}`);
+    }
+  }
+
+  return issues;
+}
+
 // ── Orchestration ────────────────────────────────────────────────────────────────────────────────
 
 /** Run all three layers. `subjectDir` feeds the schema layer (JSON on disk); `subject` is the loaded
@@ -245,6 +378,7 @@ export function validateSubjectConfig(subjectDir: string, subject: Subject, opts
     schema: checkSchema(subjectDir),
     references: references.blocking,
     premise: checkPremiseCoherence(subject, opts).issues,
+    world: checkWorldModel(subjectDir),
     advisory: references.advisory,
   };
 }

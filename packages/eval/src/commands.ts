@@ -161,11 +161,11 @@ export async function validateCommand(opts: ValidateCommandOptions): Promise<Val
   const log = opts.log ?? ((l: string) => process.stderr.write(l + '\n'));
   const subject = await loadSubject(opts.subject);
   const report = validateSubjectConfig(opts.subject, subject, { reachedFloor: opts.reachedFloor });
-  for (const layer of ['schema', 'references', 'premise'] as const) {
+  for (const layer of ['schema', 'references', 'premise', 'world'] as const) {
     for (const line of report[layer]) log(line);
   }
   for (const line of report.advisory) log(`ADVISORY ${line}`);
-  const blocking = report.schema.length + report.references.length + report.premise.length;
+  const blocking = report.schema.length + report.references.length + report.premise.length + report.world.length;
   log(blocking ? `validate: ${blocking} blocking issue(s) · ${report.advisory.length} advisory` : `validate: clean · ${report.advisory.length} advisory`);
   return { ...report, ok: blocking === 0 };
 }

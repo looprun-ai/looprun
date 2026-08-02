@@ -26,7 +26,7 @@ Subject modules may be `.ts`/`.mts` (needs a Node version with type stripping) o
 
 | verb | does |
 |---|---|
-| `validate` | offline preflight — load the subject, check schema + references + premise; RED blocks a run before any spend. |
+| `validate` | offline preflight — load the subject, check schema + references + premise, plus the world layers when the subject ships `gen/world.json` (preset distinguishability · probe≡confirm identity · determinism); RED blocks a run before any spend. |
 | `run` | one arm through the governed (or `--ungoverned`) loop → `cases.jsonl` + `SUMMARY.md`. |
 | `judge-input` | blind per-turn judge inputs from a run dir (`--chunk N` splits into parts) — what the judge reads. |
 | `fold` | verdicts → `RESULTS.md`; `--sync <dirA> <dirB> …` forces one verdict per byte-identical transcript class across reps → `verdicts.synced.jsonl` + `SYNC.md`. |

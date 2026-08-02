@@ -11,6 +11,7 @@ import { pathToFileURL } from 'node:url';
 import { renderScopedSpecTrunk } from '@looprun-ai/core/internal';
 import type { AgentSpec, AgentWorld, DomainContract, ToolDef } from '@looprun-ai/core';
 import { parseCasesConfig } from './cases-config.js';
+import { loadWorldConfig, type WorldConfigDeps } from './world-config.js';
 
 export interface CaseTurn {
   userText: string;
@@ -122,11 +123,19 @@ function readCasesJson(dir: string): { cases: SubjectCase[]; caseAgent: Record<s
   return parseCasesConfig(JSON.parse(readFileSync(path, 'utf8')));
 }
 
-export async function loadSubject(subjectDir: string): Promise<Subject> {
+/** Build the world factory: a `gen/world.json` (spec §3b) wins over the TS `gen/world` module. A
+ *  json world needs no host `custom` wiring in the common case; when it does, deps carry it. */
+async function resolveWorld(dir: string, load: (base: string) => Promise<Record<string, unknown>>, deps: WorldConfigDeps): Promise<(preset?: string) => AgentWorld> {
+  const jsonPath = join(dir, 'gen', 'world.json');
+  if (existsSync(jsonPath)) return loadWorldConfig(JSON.parse(readFileSync(jsonPath, 'utf8')), deps);
+  return resolveWorldFactory(await load('gen/world'));
+}
+
+export async function loadSubject(subjectDir: string, deps: WorldConfigDeps = {}): Promise<Subject> {
   const dir = resolve(subjectDir);
   const load = (base: string) => import(moduleUrl(dir, base));
 
-  const [norms, worldMod] = await Promise.all([load('norms/index'), load('gen/world')]);
+  const [norms, makeWorld] = await Promise.all([load('norms/index'), resolveWorld(dir, load, deps)]);
 
   const specs = norms.SPECS as Record<string, AgentSpec> | undefined;
   const contract = norms.CONTRACT as DomainContract | undefined;
@@ -156,7 +165,7 @@ export async function loadSubject(subjectDir: string): Promise<Subject> {
     caseAgent,
     cases,
     toolDefs: readToolDefs(dir),
-    makeWorld: resolveWorldFactory(worldMod as Record<string, unknown>),
+    makeWorld,
   };
 }
 

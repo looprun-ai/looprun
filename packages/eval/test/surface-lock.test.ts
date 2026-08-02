@@ -2,8 +2,8 @@
  * THE EVAL SURFACE LOCK — the sibling of `packages/core/test/proofs/surface-lock.test.ts`,
  * `packages/mastra/test/surface-lock.test.ts` and `packages/models/test/surface-lock.test.ts`.
  *
- * `@looprun-ai/eval` promises exactly the 23 eval rows of `docs/superpowers/specs/2026-07-28-tutorial-outline-final.md` §4
- * (chapter 05): the subject-directory contract (8) plus the measured loop (15). Changing this list
+ * `@looprun-ai/eval` promises exactly the 24 eval rows of `docs/superpowers/specs/2026-07-28-tutorial-outline-final.md` §4
+ * (chapter 05): the subject-directory contract (9) plus the measured loop (15). Changing this list
  * changes what looprun promises and must move the outline in the same commit.
  *
  * FOURTEEN of the taught are also reached by the PUBLISHED `looprun-eval` bin, which does
@@ -29,9 +29,9 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const EVAL_INDEX = join(HERE, '..', 'src', 'index.ts');
 const EVAL_BIN = join(HERE, '..', 'bin', 'looprun-eval.mjs');
 
-// ── 5.3 The subject directory contract (8) ───────────────────────────────────
+// ── 5.3 The subject directory contract (9) ───────────────────────────────────
 const TAUGHT_SUBJECT = [
-  'loadSubject', 'loadNormsConfig', 'Subject', 'SubjectCase', 'CaseTurn', 'CaseInvariants', 'ReqCall', 'RubricItem',
+  'loadSubject', 'loadNormsConfig', 'loadWorldConfig', 'Subject', 'SubjectCase', 'CaseTurn', 'CaseInvariants', 'ReqCall', 'RubricItem',
 ];
 // ── 5.4 The `looprun-eval` CLI, as functions (15) ────────────────────────────
 const TAUGHT_CLI = [
@@ -51,7 +51,7 @@ const TAUGHT = [...TAUGHT_SUBJECT, ...TAUGHT_CLI].sort();
 const RIDERS = [
   'RunCommandOptions', 'FoldCommandOptions', 'CertCommandOptions', 'ValidateCommandOptions', 'JudgeInputCommandOptions',
   'CampaignCommandOptions', 'ValidateReport', 'CertSummary', 'CertBand', 'LintViolation', 'UngovernedBundle', 'Seal',
-  'SealTarget', 'SealVerification', 'NormsConfig',
+  'SealTarget', 'SealVerification', 'NormsConfig', 'WorldConfig',
 ];
 
 /** Inventory §7.4, verdict `delete` — module-local, never on the barrel. */
@@ -94,14 +94,14 @@ function binCalledSymbols(): string[] {
 describe('eval surface lock — the barrel is the tutorial contract', () => {
   const evalExports = exportsOf(EVAL_INDEX);
 
-  it('the taught surface is exactly the outline §4 eval rows (23)', () => {
-    expect(TAUGHT.length).toBe(23);
-    expect(TAUGHT_SUBJECT.length).toBe(8);
+  it('the taught surface is exactly the outline §4 eval rows (24)', () => {
+    expect(TAUGHT.length).toBe(24);
+    expect(TAUGHT_SUBJECT.length).toBe(9);
     expect(TAUGHT_CLI.length).toBe(15);
     expect(evalExports.filter((n) => !RIDERS.includes(n))).toEqual(TAUGHT);
   });
 
-  it('exports the 23 taught names plus the type-closure riders, and nothing else', () => {
+  it('exports the 24 taught names plus the type-closure riders, and nothing else', () => {
     expect(evalExports).toEqual([...TAUGHT, ...RIDERS].sort());
   });
 

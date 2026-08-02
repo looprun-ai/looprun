@@ -1,6 +1,7 @@
 /**
- * @looprun-ai/eval — the public API: exactly the 22 eval rows of `docs/superpowers/specs/2026-07-28-tutorial-outline-final.md` §4
- * (chapter 05 — the subject directory contract, then the measured loop).
+ * @looprun-ai/eval — the public API: exactly the 24 eval rows of `docs/superpowers/specs/2026-07-28-tutorial-outline-final.md` §4
+ * (chapter 05 — the subject directory contract, then the measured loop). `loadWorldConfig` (increment
+ * 3b) is the newest subject-contract row — the `world.json` sibling of `loadNormsConfig`.
  *
  * Thirteen of them are ALSO reached by the published `looprun-eval` bin, which does
  * `await import('@looprun-ai/eval')` and calls them off the namespace — the package, not the module
@@ -17,6 +18,8 @@ export { loadSubject, agentForCase } from './subject.js';
 export type { Subject, SubjectCase, CaseTurn, CaseInvariants, ReqCall, RubricItem } from './subject.js';
 export { loadNormsConfig } from './norms-config.js';
 export type { NormsConfig } from './norms-config.js';
+export { loadWorldConfig } from './world-config.js';
+export type { WorldConfig } from './world-config.js';
 export { stripGovernance } from './ungoverned.js';
 export { runCommand, foldCommand, certCommand, validateCommand, judgeInputCommand } from './commands.js';
 export { campaignCommand } from './campaign.js';
