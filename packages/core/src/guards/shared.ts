@@ -19,13 +19,13 @@ export const ranThisTurn = (ctx: GuardCtx, tool: string): boolean =>
  * produced a reply, and it never carries a `!ok` entry merely because the domain work failed.
  *
  * Any guard that reasons about "did the model DO anything / did everything succeed" must therefore
- * filter these out first: without the filter `noFalseFailureClaim`'s
- * precondition was vacuously true and it vetoed the HONEST "I cannot do X" reply of a turn in which no
- * domain tool ran at all — the reply then went to redrive and out as an exhaustion stub (the failure
- * class measured across 7 models). Guards keyed on a NAMED tool (`noFabricatedSuccess`,
- * `destructiveThrottle`, `maxCalls`, `destructiveClaimRequiresSuccess`, …) are unaffected — a terminal
- * name is never in their set — and the two kinds that read `askUser` DELIBERATELY (`confirmFirst`'s
- * prior-ask arm, `noInstructionFromData`'s approval shape) keep reading it by name.
+ * filter these out first: without the filter, a "did anything run this turn" precondition was
+ * vacuously true and it vetoed the HONEST "I cannot do X" reply of a turn in which no domain tool ran
+ * at all — the reply then went to redrive and out as an exhaustion stub (the failure class measured
+ * across 7 models; that class of reply-honesty check is now `llmCheck`'s job, not a deterministic
+ * guard's). Guards keyed on a NAMED tool (`destructiveThrottle`, `maxCalls`, …) are unaffected — a
+ * terminal name is never in their set — and `confirmFirst`'s prior-ask arm keeps reading `askUser` by
+ * name DELIBERATELY.
  */
 export const TERMINAL_TOOLS = new Set(['replyToUser', 'askUser']);
 export const isTerminalCall = (o: ObservedCall): boolean => TERMINAL_TOOLS.has(o.name);
@@ -40,8 +40,8 @@ export const domainCallsThisTurn = (ctx: GuardCtx): ObservedCall[] =>
  * GUARDS.md §1 forbids a `/g` or `/y` regex on a closure-held pattern: `RegExp.prototype.test` advances
  * `lastIndex` on a match, so the SAME guard on the SAME reply alternates verdict between turns. Every
  * linguistic pattern in this file is INJECTED by a bundle (P8a), so the runtime cannot assume the flags
- * it is handed — it must be immune by construction. `noFabricatedSuccess` and `allMatches` already
- * rebuilt a local copy; this helper is that discipline made universal.
+ * it is handed — it must be immune by construction. `allMatches` already rebuilt a local copy locally;
+ * this helper is that discipline made universal.
  *
  * Non-stateful regexes (the common case) are tested directly — no allocation on the hot path.
  */

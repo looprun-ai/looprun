@@ -39,9 +39,9 @@ export interface ObservedCall {
   turnIndex: number;
   resultFlags?: { requiresConfirmation?: boolean };
   /** Did this call MUTATE the world (a write that took effect), vs a pure read / a refused write? Threaded
-   *  from the world's `toolCalls[].tookEffect` by the backend. Lets a guard tell "an ACTION succeeded" from
-   *  "a READ succeeded" — noFalseFailureClaim keys on it so it does NOT veto an honest "I cannot do X /
-   *  no record found" reply on a read-only turn (over-firing there costs a redrive and then the exhaustion closure). */
+   *  from the world's `toolCalls[].tookEffect` by the backend. Lets a reply-honesty check tell "an ACTION
+   *  succeeded" from "a READ succeeded" so it does NOT veto an honest "I cannot do X / no record found"
+   *  reply on a read-only turn (over-firing there costs a redrive and then the exhaustion closure). */
   tookEffect?: boolean;
 }
 

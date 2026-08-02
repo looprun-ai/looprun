@@ -47,15 +47,13 @@ export function confirmFirst(opts?: string | { argFlag?: string; mechanism?: 'ar
       if (!ctx.tool) return null;
       if (mechanism === 'prior-ask') {
         // The unlock is an earlier-turn SURFACING of the action to the user, in one of three shapes —
-        // and every shape is SUCCESS-KEYED (`obs.ok`), the same discipline `noInstructionFromData`
-        // documents on both of its arms.
+        // and every shape is SUCCESS-KEYED (`obs.ok`).
         //
         // SUCCESS-KEYING: the same-tool disjunct accepts only a SUCCESSFUL earlier attempt. Vetoed
         // attempts land in observed with `ok:false`; accepting those would let a turn-1 call denied BY
         // THIS VERY GUARD unlock the identical turn-2 call, and the destructive
-        // action ran without the user ever being asked. The guard defeated itself in exactly two turns.
-        // This is the hole already closed in the sibling `noInstructionFromData` ("counting it would let
-        // a first poisoned attempt unlock the second"); the two now read the same.
+        // action ran without the user ever being asked. The guard defeated itself in exactly two turns —
+        // counting a poisoned first attempt must never unlock the second.
         //
         // The unlock is STRUCTURAL: a prior-turn OK call of the SAME tool (the probe) or a prior-turn OK
         // `askUser` (the explicit question terminal). The former replyToUser-text disjunct — a prior

@@ -43,7 +43,6 @@ export const GUARD_KIND_SUBJECT: Readonly<Record<string, string>> = Object.freez
   maxCalls: 'call-budget',
   precondition: 'state-precondition',
   consentRequired: 'consent',
-  noInstructionFromData: 'instruction-from-data',
   // input — argument schema
   argRequired: 'arg-schema',
   argAbsent: 'arg-schema',
@@ -57,21 +56,13 @@ export const GUARD_KIND_SUBJECT: Readonly<Record<string, string>> = Object.freez
   destructiveThrottle: 'destructive-throttle',
   noActAfterAskSameTurn: 'act-after-ask',
   pendingConfirmMustAsk: 'relay-pending-confirmation',
-  destructiveClaimRequiresSuccess: 'destructive-claim-honesty',
   // reply honesty / hygiene
-  noFabricatedSuccess: 'fabricated-success',
-  noFalseFailureClaim: 'false-failure-claim',
   emptyReply: 'non-empty-reply',
   degenerationGuard: 'reply-hygiene',
   replySingleQuestion: 'single-question',
   replyMustMention: 'reply-must-mention',
   replyConfirmsLabels: 'reply-must-mention',
   replyMaxOccurrences: 'cta-budget',
-  // risk families
-  minimalDisclosure: 'pii-disclosure',
-  noCompetitorClaim: 'competitor-claims',
-  noOutOfSurfaceActionClaim: 'out-of-surface-claim',
-  noUngroundedRegulatedFigure: 'regulated-advice',
 });
 
 /**

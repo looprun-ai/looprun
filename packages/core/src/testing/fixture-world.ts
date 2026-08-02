@@ -234,23 +234,26 @@ export const FIXTURE_DOMAIN: DomainContract = {
  * leak between calls). Grouped by the guard family that consumes them.
  */
 export const FIXTURE_LEXICON = {
-  /** minimal:noFalseFailureClaim — "every call succeeded, do not claim you couldn't". */
+  /** reply-honesty fixture — "every call succeeded, do not claim you couldn't" (the check that consumed
+   *  this is now `llmCheck`'s job, not a deterministic guard). */
   falseFailureClaimRe: /\b(?:can(?:no|')t|unable to|failed to)\b/i,
   /** base:confirmFirstPriorAsk / pendingConfirmMustAsk — "does this reply seek confirmation?". */
   confirmAskRe: /\bare you sure\b/i,
-  /** destructiveClaimRequiresSuccess — the deletion claim + offer/exempt qualifiers. */
+  /** reply-honesty fixture — the deletion claim + offer/exempt qualifiers (formerly consumed by a
+   *  deterministic guard; that check is now `llmCheck`'s job). */
   destructiveClaim: {
     claimRe: /\b(?:deleted|removed|purged)\b/i,
     offerRe: /\b(?:would you like|should I|do you want)\b/i,
     exemptRe: /\b(?:could not|did not|wasn't)\b/i,
   },
-  /** noFabricatedSuccess — the media-creation claim + the verb-first claim. */
+  /** reply-honesty fixture — the media-creation claim + the verb-first claim (formerly consumed by a
+   *  deterministic guard; that check is now `llmCheck`'s job). */
   fabricated: {
     claimRe: /\b(?:created|generated) (?:the|a|your) (?:image|media)\b/i,
     verbClaimRe: /\bgenerating\b/i,
   },
-  /** noFabricatedSuccess `banRe` — a phrase the assistant may NEVER say (the unconditional-ban mode
-   *  that absorbed the former replyNoProductionClaim kind). */
+  /** reply-honesty fixture — a phrase the assistant may NEVER say (the unconditional-ban mode that
+   *  absorbed the former replyNoProductionClaim kind; that check is now `llmCheck`'s job). */
   productionClaimRe: /\bpublished to production\b/i,
   /** degenerationGuard `selfNarrationRe` — the third-person self-narration branch, now lexicon-injected
    *  (generic English; no /g lastIndex to leak). Absent ⇒ the narration branch is OFF. */

@@ -117,9 +117,9 @@ export function recordToolResult(ledger: TurnLedger, name: string, args: Record<
   const inFlightIx = ledger.inFlightCalls.findIndex((o) => o.name === name && canonArgs(o.args) === canonArgs(args));
   if (inFlightIx >= 0) ledger.inFlightCalls.splice(inFlightIx, 1);
   // tookEffect: match this call against the world's ledger (by name+args, like the in-flight
-  // reconcile above) to learn whether it MUTATED the world — so noFalseFailureClaim can distinguish an
-  // action-success from a read-success and NOT veto an honest "cannot do X / no record found" reply on
-  // a read-only turn.
+  // reconcile above) to learn whether it MUTATED the world — so a reply-honesty check (now `llmCheck`'s
+  // job) can distinguish an action-success from a read-success and NOT veto an honest "cannot do X / no
+  // record found" reply on a read-only turn.
   const wtc = world
     ? [...world.toolCalls].reverse().find((t) => t.name === name && canonArgs((t.args ?? {}) as Record<string, unknown>) === canonArgs(args))
     : undefined;
