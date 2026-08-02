@@ -1,11 +1,16 @@
 /**
  * @looprun-ai/eval — the guard-purity lint over USER project files (`looprun-eval lint`).
  *
- * The four file-local rule sets that keep generated specs deterministic by construction:
+ * The three file-local rule sets that keep generated specs deterministic by construction:
  *   1. BANNED tokens — clock / entropy / network / runtime-LLM calls inside spec/contract files.
  *   2. Stateful regex — /g|/y flags used with .test()/.exec() (lastIndex leaks across calls).
- *   3. S-1 firewall — guard code must never read user text (ctx.userText / messages / …).
- *   4. Contract-persona law — a contract file may not carry a `persona:` key (persona lives on the spec).
+ *   3. Contract-persona law — a contract file may not carry a `persona:` key (persona lives on the spec).
+ *
+ * NOTE (firewall retired, 2026-08-02): there is no longer an S-1 firewall rule here. Guards see the FULL
+ * conversation (`GuardCtx.history` + `userText`), so reading user text is no longer a lint finding. The
+ * two protections that remain are the no-regex law (text pattern-matching stays out of the config surface;
+ * a grep-gate in core fails on any RegExp-typed guard param) and the intent-based tool-routing ban (a
+ * loop-shaping law). Text judgment a generated spec genuinely needs is an `llmCheck` rubric.
  * Plus `--spec-laws` (subject-level): validateSpec warnings + no own systemPrompt.
  */
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
@@ -37,7 +42,6 @@ export const BANNED_TOKENS = [
 ];
 
 const STATEFUL_RE = /\/[^/\n]+\/[a-z]*[gy][a-z]*\s*\.\s*(test|exec)\s*\(/;
-const FIREWALL_RE = /\bctx\s*\.\s*(userText|messages|history|userMessage|prompt)\b/;
 const PERSONA_KEY_RE = /^\s*persona\s*:/;
 
 export function lintSource(file: string, source: string): LintViolation[] {
@@ -54,9 +58,6 @@ export function lintSource(file: string, source: string): LintViolation[] {
     }
     if (STATEFUL_RE.test(text)) {
       out.push({ file, line, rule: 'stateful-regex', message: 'a /g|/y regex used with .test()/.exec() leaks lastIndex across calls' });
-    }
-    if (FIREWALL_RE.test(text)) {
-      out.push({ file, line, rule: 's1-firewall', message: 'guards must never read user text (the magnet firewall)' });
     }
     if (isContract && PERSONA_KEY_RE.test(text)) {
       out.push({ file, line, rule: 'contract-persona', message: 'a contract carries no persona — persona lives on each spec (persona-on-spec law)' });

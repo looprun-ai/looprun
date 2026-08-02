@@ -3,14 +3,16 @@ import { describe, expect, it } from 'vitest';
 import { lintSource } from '../src/lint.js';
 
 describe('lint rules', () => {
-  it('flags banned tokens, stateful regex, firewall reads and contract persona', () => {
+  it('flags banned tokens, stateful regex and contract persona', () => {
     const spec = lintSource('src/agents/x/gen-spec.ts', [
       'const t = Date.now();',
       'if (/abc/g.test(x)) {}',
-      'const u = ctx.userText;',
     ].join('\n'));
-    expect(spec.map((s) => s.rule)).toEqual(['purity', 'stateful-regex', 's1-firewall']);
+    expect(spec.map((s) => s.rule)).toEqual(['purity', 'stateful-regex']);
     expect(spec[0].line).toBe(1);
+
+    // firewall retired (2026-08-02): reading user text / history is no longer a finding.
+    expect(lintSource('src/agents/x/gen-spec.ts', 'const u = ctx.userText;\nconst h = ctx.history;')).toEqual([]);
 
     const contract = lintSource('src/agents/x/contract.ts', "  persona: 'never here',\n  voice: 'ok',");
     expect(contract.map((s) => s.rule)).toEqual(['contract-persona']);
