@@ -80,9 +80,12 @@ export interface GuardCtx {
   world: AgentWorld;
   observed: ObservedCall[];
   turnIndex: number;
-  /** The user's incoming message for the CURRENT turn, verbatim ('' when a call is not bound to a
-   *  fresh user message — e.g. a forced chain micro-generate). `onInput` reads it as the real
-   *  incoming text; it is the field that replaced the old hard-coded `args: {}`. */
+  /** The user's incoming message for the CURRENT turn, verbatim — set once at `beginTurn` and stable
+   *  for every hook of the turn (the forced chain micro-generate runs inside the same turn, so it
+   *  sees it too). It is '' only when the turn was NOT opened by a string user message: the stream
+   *  path, and `generate(messagesArray)` (a caller-managed message array, no fresh string input).
+   *  `onInput` reads it as the real incoming text; it is the field that replaced the hard-coded
+   *  `args: {}`. */
   userText: string;
   /** The full PRIOR conversation, turn-structured and read-only. Available to EVERY hook. The
    *  CURRENT (in-flight) turn is NOT here — its user text is `userText`, its calls are `observed`. */

@@ -7,7 +7,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { AgentSpecBase, custom } from '../src/index.js';
-import type { AgentWorld, DomainContract, GuardCtx } from '../src/index.js';
+import type { AgentWorld, DomainContract, GuardCtx, ReplyMutator } from '../src/index.js';
 import {
   createLedger,
   beginTurn,
@@ -138,5 +138,20 @@ describe('every hook sees userText + prior history', () => {
     expect(mine.length).toBeGreaterThan(0);
     expect(mine[0].userText).toBe('the second thing I said');
     expect(mine[0].history[0].userText).toBe('the first thing I said');
+  });
+
+  it('onReplyMutate (a mutator) sees userText + history', async () => {
+    const seen: GuardCtx[] = [];
+    const mutator: ReplyMutator = { kind: 'captorMutator', apply: (reply, ctx) => { seen.push(ctx); return reply; } };
+    const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona: 'p', tools: ['act'] });
+    spec.addMutator(mutator, { id: 'x:captorMutator' });
+    const ledger = priorTurn();
+
+    await finalizeReply(spec, CONTRACT, fixtureWorld(), ledger, 'a reply', async () => '', 0);
+
+    expect(seen.length).toBeGreaterThan(0);
+    expect(seen[0].userText).toBe('the second thing I said');
+    expect(seen[0].history[0].userText).toBe('the first thing I said');
+    expect(seen[0].history[0].reply).toBe('the first reply');
   });
 });

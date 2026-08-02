@@ -120,6 +120,38 @@ describe('runSpecConversation', () => {
     expect(seen[1].historyUserTexts).toEqual(['first question']);
     expect(seen[1].historyReplies).toEqual(['Here is turn zero.']);
   });
+
+  it('a postTool guard (running in afterToolCall) sees ctx.userText + the sealed prior history', async () => {
+    const seen: Array<{ tool?: string; userText: string; historyUserTexts: string[] }> = [];
+    const captor = custom({
+      kind: 'postCaptor', dim: 'run',
+      check: (ctx) => { seen.push({ tool: ctx.tool, userText: ctx.userText, historyUserTexts: ctx.history.map((t) => t.userText) }); return null; },
+      prose: () => '',
+    });
+    const spec = new AgentSpecBase({
+      id: 'lister', mode: 'M', persona: 'You are the lister agent.', tools: ['listItems'], contract: CONTRACT,
+    });
+    spec.addGuard('postTool', ['listItems'], captor, { id: 'x:postCaptor' });
+
+    const scripted = scriptedModel([
+      [{ tool: 'replyToUser', args: { text: 'Turn zero done.' } }],
+      // turn 1: a real domain call → afterToolCall runs the postTool guard.
+      [{ tool: 'listItems', args: {} }],
+      [{ tool: 'replyToUser', args: { text: 'Here are your items.' } }],
+    ]);
+
+    const res = await runSpecConversation(
+      spec,
+      [{ userText: 'just say hi' }, { userText: 'list my items' }],
+      { model: scripted.model, world: world(), toolDefs: TOOL_DEFS },
+    );
+    expect(res.errorMsg).toBeUndefined();
+
+    const post = seen.find((s) => s.tool === 'listItems');
+    expect(post).toBeDefined();
+    expect(post!.userText).toBe('list my items');
+    expect(post!.historyUserTexts).toEqual(['just say hi']);
+  });
 });
 
 describe('repeatedToolCallStop (lineage-exact anti-loop stop for local models)', () => {
