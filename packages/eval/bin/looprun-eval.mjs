@@ -9,6 +9,9 @@
  *   looprun-eval fold --dump <cases.jsonl> --verdicts <verdicts.jsonl> [--out <RESULTS.md>]
  *   looprun-eval fold --sync <run-dir> <run-dir> … [--out <SYNC.md>]
  *   looprun-eval cert <run-dir> [--bar 0.9] [--model <label>] [--date <iso>] [--note <text>]
+ *   looprun-eval campaign run <campaign.json> [--resume]
+ *   looprun-eval campaign status <out-dir>
+ *   looprun-eval campaign resume <out-dir> [--judge-model <label>]
  *   looprun-eval seal <subject-dir> [--verify] [--target model:rate:reps ...] [--bar 0.9] [--date <iso>]
  *   looprun-eval lint [paths…] [--spec-laws --subject <dir>]
  */
@@ -33,6 +36,11 @@ const HELP = `looprun-eval <command>
                      if the FLOOR over reps clears the bar. [--out <dir>] for the band files.
                      [--verdicts <file>] reads that verdicts filename per dir (default verdicts.jsonl;
                      use verdicts.synced.jsonl to certify off 'fold --sync' output).
+  campaign <sub>     One verb for the whole measured campaign (preflight → reps + control → judging
+                     PAUSE → fold/sync → cert BAND). Sub-verbs:
+                     run <campaign.json> [--resume]   preflight, run every arm, PAUSE with judging.json
+                     status <out-dir>                 per-phase progress from the dirs (no daemon)
+                     resume <out-dir> [--judge-model <label>]  verify verdicts, monitor gate, cert BAND
   seal <subject>     Mint ship/seal.json (hash-bound) — or --verify an existing one.
                      [--bar 0.9] [--model <label>] [--date <iso>] [--note <text>]
   lint [paths…]      Purity/firewall/contract lint. [--spec-laws --subject <dir>]
@@ -49,7 +57,7 @@ function has(name) {
   return process.argv.includes(`--${name}`);
 }
 
-const VALUE_FLAGS = new Set(['--subject', '--model', '--base-url', '--api-key-env', '--case', '--out', '--dump', '--verdicts', '--bar', '--date', '--note', '--target', '--reached-floor', '--chunk']);
+const VALUE_FLAGS = new Set(['--subject', '--model', '--base-url', '--api-key-env', '--case', '--out', '--dump', '--verdicts', '--bar', '--date', '--note', '--target', '--reached-floor', '--chunk', '--judge-model']);
 
 function positionals() {
   const argv = process.argv.slice(2);
@@ -149,6 +157,22 @@ async function main() {
       );
     }
     if (!summary.certified) process.exitCode = 1;
+    return;
+  }
+
+  if (cmd === 'campaign') {
+    const [sub, target] = rest;
+    if (!['run', 'status', 'resume'].includes(sub)) {
+      throw new Error('usage: looprun-eval campaign <run|status|resume> …');
+    }
+    if (!target) throw new Error(`campaign ${sub}: a ${sub === 'run' ? '<campaign.json>' : '<out-dir>'} argument is required`);
+    await api.campaignCommand({
+      action: sub,
+      ...(sub === 'run' ? { config: target } : { out: target }),
+      resume: has('resume'),
+      judgeModel: flag('judge-model', undefined),
+      log: (l) => console.log(l),
+    });
     return;
   }
 

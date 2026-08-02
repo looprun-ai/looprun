@@ -30,6 +30,19 @@ export interface RunCommandOptions {
   thinking?: boolean;
   /** Date used in the default out-dir name (injectable for tests). */
   date?: string;
+  /**
+   * Test/orchestration seam: a factory for a fresh AI-SDK model per run, bypassing provider
+   * selection and the network. When set, the run spends no tokens on any endpoint — the campaign's
+   * CI end-to-end lane drives the real governed loop with a scripted model this way.
+   */
+  modelFactory?: () => unknown;
+  /**
+   * An inert per-run suffix appended to every turn's `userText`. Semantically neutral — it changes the
+   * prompt bytes (a fresh decode / cache-miss per rep) without changing what the model is asked, so
+   * transcripts stay identical across reps (the sync fingerprint keys on replies + tool calls, never
+   * the user text). This is the campaign's `perturbation: "user-tail"` lever.
+   */
+  userTail?: string;
   log?: (line: string) => void;
 }
 
@@ -39,7 +52,8 @@ export async function runCommand(opts: RunCommandOptions): Promise<string> {
   // Transparent default: the subject's ASK phase records the declared target in
   // ask/targets.json — flags/env only OVERRIDE it.
   const target = readDeclaredTarget(opts.subject);
-  const modelId = opts.model ?? process.env.MODEL ?? target.model;
+  // An injected model (test/orchestration seam) carries its own identity — no target id needed.
+  const modelId = opts.model ?? process.env.MODEL ?? target.model ?? (opts.modelFactory ? 'scripted' : undefined);
   if (!modelId) throw new Error('run: no target — pass --model or record ask/targets.json');
   const explicitBaseUrl = opts.baseUrl;
   const providerDefault = target.provider ? PROVIDER_ENDPOINTS[target.provider] ?? undefined : undefined;
@@ -59,21 +73,28 @@ export async function runCommand(opts: RunCommandOptions): Promise<string> {
   }
   for (const issue of validateSubject(subject)) log(`WARN subject: ${issue}`);
   const only = opts.cases?.length ? opts.cases : undefined;
-  const cases = only ? subject.cases.filter((c) => only.includes(c.id)) : subject.cases;
-  if (!cases.length) throw new Error(`run: no cases matched ${only?.join(',') ?? '(all)'}`);
+  const selected = only ? subject.cases.filter((c) => only.includes(c.id)) : subject.cases;
+  if (!selected.length) throw new Error(`run: no cases matched ${only?.join(',') ?? '(all)'}`);
+  // Inert per-run perturbation: append the tail to each turn's user text (fresh decode, same ask).
+  const tail = opts.userTail ?? '';
+  const cases = tail
+    ? selected.map((c) => ({ ...c, turns: c.turns.map((t) => ({ ...t, userText: t.userText + tail })) }))
+    : selected;
 
   const date = opts.date ?? today();
   const modelSlug = modelId.replace(/[^a-zA-Z0-9.-]+/g, '_');
   const outDir = resolve(opts.out ?? join(subject.dir, 'test', `${date}-${modelSlug}-${arm}`));
   mkdirSync(outDir, { recursive: true });
 
-  const { model, modelParams, isLocal } = selectModel({
-    modelId,
-    explicitBaseUrl,
-    baseUrl,
-    apiKey,
-    thinking: opts.thinking === true || target.thinking === true,
-  });
+  const { model, modelParams, isLocal } = opts.modelFactory
+    ? { model: opts.modelFactory(), modelParams: {} as Record<string, unknown>, isLocal: false }
+    : selectModel({
+        modelId,
+        explicitBaseUrl,
+        baseUrl,
+        apiKey,
+        thinking: opts.thinking === true || target.thinking === true,
+      });
 
   const dumps: CaseDump[] = [];
   for (const c of cases) {

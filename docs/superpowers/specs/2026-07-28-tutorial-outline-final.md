@@ -66,10 +66,10 @@ chapter                    symbols taught
 02-hello-world              3   ███
 03-agent-anatomy           11   ███████████
 04-guards                  37   █████████████████████████████████████
-05-running-and-eval        30   ██████████████████████████████
+05-running-and-eval        31   ███████████████████████████████
 06-advanced                13   █████████████
 ------------------------   --------------
-TOTAL                      94
+TOTAL                      95
 ```
 
 | package | round-2 baseline | taught here | delta |
@@ -77,10 +77,10 @@ TOTAL                      94
 | `core` | 53 | 53 | −10 demoted, +8 promoted, +2 structural (increment 1) |
 | `mastra` | 5 | 7 | +2 promoted |
 | `models` | 4 | 8 | +4 promoted |
-| `eval` | 13 | 22 | +9 promoted |
+| `eval` | 13 | 23 | +10 promoted |
 | `server` | 4 | 4 | — |
 | `vercel` | 0 | 0 | — |
-| **total** | **79** | **94** | **+25 / −10** |
+| **total** | **79** | **95** | **+26 / −10** |
 
 Inventory totals move round-2 79 / 35 / 151 → round-3 83 / 31 / 151 → **round-4 90 / 38 / 138**,
 recorded in the inventory's §9 rounds 3 and 4. Every delta is a §9 row.
@@ -348,7 +348,7 @@ and the chapter teaches the layout before any command:
 | `ReqCall` | eval | authored — one entry of those, with `anyArgs` subset matching |
 | `RubricItem` | eval | authored — `SubjectCase.expectations.rubric` |
 
-*5.4 Measure it — the `looprun-eval` CLI (14)*
+*5.4 Measure it — the `looprun-eval` CLI (15)*
 
 Taught **CLI-first**: the shipped `packages/eval/bin/looprun-eval.mjs` reaches these by dynamic
 namespace import, and that bin is the user-facing contract. Each exported function is named as the
@@ -362,6 +362,7 @@ types are not in this contract (annotation rule, §0).
 | `certCommand` | eval | `looprun-eval cert` |
 | `validateCommand` | eval | `looprun-eval validate` — schema + references + premise coherence, offline |
 | `judgeInputCommand` | eval | `looprun-eval judge-input` — build the blind per-case JSONL the judge reads (spec §3) |
+| `campaignCommand` | eval | `looprun-eval campaign run\|status\|resume` — the whole measured campaign as one verb (increment 2b) |
 | `lintPaths` | eval | lint a set of spec files |
 | `lintSpecLaws` | eval | law-level spec lint |
 | `lintSpecExecution` | eval | execution-level spec lint |
@@ -461,16 +462,17 @@ in the "bring your own loop" seam; internal, not taught.)
 | core | **05** (5) | `TurnInput`↑ `RunResult`↑ `TurnRecord`↑ `geminiThinkingOff` `pinnedDecoding` |
 | mastra | **05** (2) | `runSpecConversation` `RuntimeDeps`↑ |
 | models | **05** (1) | `geminiFlashLiteThinkOff` |
-| eval | **05** (22) | `loadSubject` `loadNormsConfig`↑ `Subject`↑ `SubjectCase`↑ `CaseTurn`↑ `CaseInvariants`↑ `ReqCall`↑ `RubricItem`↑ `agentForCase` `stripGovernance` `runCommand` `foldCommand` `certCommand` `validateCommand` `judgeInputCommand` `lintPaths` `lintSpecLaws` `lintSpecExecution` `lintSpecQuality` `lintSubject` `mintSeal` `verifySeal` |
+| eval | **05** (23) | `loadSubject` `loadNormsConfig`↑ `Subject`↑ `SubjectCase`↑ `CaseTurn`↑ `CaseInvariants`↑ `ReqCall`↑ `RubricItem`↑ `agentForCase` `stripGovernance` `runCommand` `foldCommand` `certCommand` `validateCommand` `judgeInputCommand` `campaignCommand` `lintPaths` `lintSpecLaws` `lintSpecExecution` `lintSpecQuality` `lintSubject` `mintSeal` `verifySeal` |
 | server | **06** (4) | `createModelServer` `ModelServer` `ModelServerConfig` `TurnEvent` |
 | models | **06** (7) | `localModel`↑ `LocalModelOptions`↑ `LocalModelSpec`↑ `ModelRuntimePort`↑ `resolveAlias` `LlamaCppRuntime` `localModelStatus` |
 | mastra | **06** (2) | `worldFromTools` `StateView`↑ |
 
-**Per-chapter:** 0 + 3 + 11 + 37 + 30 + 13 = **94**.
-**Per-package:** core 53 · mastra 7 · models 8 · eval 22 · server 4 · vercel 0 = **94**, matching the
+**Per-chapter:** 0 + 3 + 11 + 37 + 31 + 13 = **95**.
+**Per-package:** core 53 · mastra 7 · models 8 · eval 23 · server 4 · vercel 0 = **95**, matching the
 inventory's round-4 §1 chart plus increment 1's net-new `loadNormsConfig` + two structural guards
-(`askedEarlier`, `confirmedNeedsEarlierProbe`) and increment 2a's net-new `validateCommand` +
-`judgeInputCommand`. No symbol appears twice; no inventory-public symbol is missing.
+(`askedEarlier`, `confirmedNeedsEarlierProbe`), increment 2a's net-new `validateCommand` +
+`judgeInputCommand`, and increment 2b's net-new `campaignCommand`. No symbol appears twice; no
+inventory-public symbol is missing.
 
 ---
 
@@ -590,7 +592,7 @@ signatures and locked by its `surface-lock.test.ts`:
 | package | rider | forced by |
 |---|---|---|
 | `models` (2) | `RuntimeStatus` `EnsureServerResult` | `localModelStatus` returns `Promise<RuntimeStatus>`; `ModelRuntimePort.ensureServer` / `LlamaCppRuntime#ensureServer` return `EnsureServerResult` |
-| `eval` (10) | `RunCommandOptions` `FoldCommandOptions` `CertCommandOptions` `CertSummary` `CertBand` `LintViolation` `UngovernedBundle` `Seal` `SealTarget` `SealVerification` | the parameter/return types of the taught `looprun-eval` verbs — §5 keeps all of them out of the *taught* contract by the annotation rule, which is a statement about teaching, not about nameability |
+| `eval` (11) | `RunCommandOptions` `FoldCommandOptions` `CertCommandOptions` `CampaignCommandOptions` `CertSummary` `CertBand` `LintViolation` `UngovernedBundle` `Seal` `SealTarget` `SealVerification` | the parameter/return types of the taught `looprun-eval` verbs — §5 keeps all of them out of the *taught* contract by the annotation rule, which is a statement about teaching, not about nameability |
 | `server` (3) | `LoopRunResultMeta` `CompletionRequestBody` `WireMessage` | `TurnEvent.meta` is a `LoopRunResultMeta`; `ModelServerConfig.resolveSession` is `(body: CompletionRequestBody, headers: Headers) => string`, and `CompletionRequestBody.messages` is `WireMessage[]` |
 
 #### `TurnEvent.meta` — decided by Task 7b: the mirror keeps its name

@@ -19,6 +19,7 @@ export { loadNormsConfig } from './norms-config.js';
 export type { NormsConfig } from './norms-config.js';
 export { stripGovernance } from './ungoverned.js';
 export { runCommand, foldCommand, certCommand, validateCommand, judgeInputCommand } from './commands.js';
+export { campaignCommand } from './campaign.js';
 export { lintPaths, lintSpecLaws, lintSpecExecution } from './lint.js';
 export { lintSpecQuality } from './lint-spec-quality.js';
 export { lintSubject } from './lint-subject.js';
@@ -35,6 +36,7 @@ export { mintSeal, verifySeal } from './seal.js';
  * (the `looprun-eval judge-input` verb) rides here for the same reason.
  */
 export type { RunCommandOptions, FoldCommandOptions, CertCommandOptions, ValidateCommandOptions, JudgeInputCommandOptions } from './commands.js';
+export type { CampaignCommandOptions } from './campaign.js';
 export type { ValidateReport } from './validate.js';
 export type { CertSummary, CertBand } from './cert.js';
 export type { LintViolation } from './lint.js';
