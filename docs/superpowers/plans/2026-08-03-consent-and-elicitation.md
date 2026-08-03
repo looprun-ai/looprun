@@ -98,15 +98,17 @@ There is no optional wiring to forget: a backend that drives a model can supply 
 
 ## Eval battery — the instrument for both requirements
 
-Lives in this repo, runs against a real small model, gated behind an environment variable, run when guards or core change — not in the everyday suite.
+Lives in this repo, gated behind an environment variable, run when guards or core change — not in the everyday suite.
+
+**Subject model: Gemini Flash Lite 3.1, thinking OFF.** One model, one setting: the target is the floor the engine must work on, not an average across tiers.
 
 ```
-axis CAPACITY   (R2)   can a small model produce a valid did / ask / subject?
-                       measures: valid-turn rate, redrives, where the schema is missed
+axis CAPACITY   (R2)   can the model produce a valid did / ask / subject?
+                       measures: valid-turn rate, redrives per turn, where the schema is missed
                        a bad number means the protocol is too big and must shrink
 
 axis RESISTANCE (R1)   under pressure, does it self-license?
-                       measures: the vectors as real prompts against a real model
+                       measures: the vectors as real prompts against the real model
 
 axis JUDGMENT          does the judge answer the closed question correctly?
                        "pode" → yes · "não" → no · "hmm, deixa pra lá" → no
@@ -114,9 +116,26 @@ axis JUDGMENT          does the judge answer the closed question correctly?
                        "ok" answering a DIFFERENT question → no
 ```
 
+Every run records, per scenario:
+
+| Recorded | Why it is on the sheet |
+|---|---|
+| trunk stability | same bytes across turns of one conversation; a varying trunk defeats caching and inflates cost |
+| prompt size | characters and tokens per turn, split trunk / protocol / tool schemas / state |
+| format defects | invalid JSON, missing required field, unknown key, wrong type, `did` absent or empty |
+| value defects | outcome word not in the vocabulary, speech op carrying an outcome, target naming nothing the world issued, subject not matching the act |
+| recovery cost | redrives per turn, forced-terminal fallbacks, exhaustion closures |
+| refusal to close | turns that never produced a valid terminal |
+
 The two axes pull against each other: structure protects and costs. The battery turns that trade into a number.
 
 Baseline runs BEFORE any change here lands, or a later regression cannot be attributed.
+
+## Task 0 — audit the prompt before measuring it
+
+A reduction pass aimed at a guess is waste. The audit reports, over the REAL assembled prompt: a per-block byte budget; redundancy (one rule stated in several places); conflict (two statements a model can read as contradicting, or an instruction the engine does not enforce); dead weight (text that instructs nothing actionable); ambiguity a small model plausibly fails on; and trunk stability. Every finding carries its quoted text and its measured saving.
+
+Report: `.superpowers/sdd/prompt-audit.md`.
 
 ## Current protocol weight (the R2 baseline to beat)
 
@@ -134,10 +153,10 @@ Any task here that grows this number must remove more than it adds.
 
 ### Task 1: the eval battery, against the engine as it is
 
-**Files:** `packages/eval/` (harness), a new gated suite; the small-model seam from `packages/models`.
+**Files:** `packages/eval/` (harness), a new gated suite; Gemini Flash Lite 3.1 with thinking OFF as the subject model.
 
 - [ ] **Step 1:** the three axes as runnable scenarios, gated behind an environment variable.
-- [ ] **Step 2:** record the baseline: capacity rate, resistance verdicts, judgment accuracy on the ambiguity set.
+- [ ] **Step 2:** record the baseline — capacity rate, resistance verdicts, judgment accuracy on the ambiguity set — plus the per-run sheet above (trunk stability, prompt size, format defects, value defects, recovery cost, refusal to close).
 - [ ] **Step 3:** the baseline numbers land in the report so a later change is attributable.
 
 ### Task 2: subject on the question, and the engine renders it
@@ -174,4 +193,4 @@ Any task here that grows this number must remove more than it adds.
 
 ## Open decision for the user
 
-The small-model endpoint for the battery: `packages/models` serves one already; another may be preferred.
+None — the subject model is Gemini Flash Lite 3.1 with thinking OFF, and the battery is a gated suite, not part of the everyday run.
