@@ -233,6 +233,38 @@ export function forcedTerminalPrompt(replyOnly: boolean): string {
 const RESPOND_DESCRIPTION = 'END the turn.';
 
 /**
+ * ── WHAT THE SCHEMA SAYS, AND WHAT THE ENGINE ENFORCES ────────────────────────────────────────────
+ *
+ * This block is read on EVERY turn of every agent, so a sentence here is the most expensive prose in
+ * the runtime. The test each line has to pass is not "is it true?" but "does the model need to READ
+ * it?" — a rule a guard enforces is discoverable from the correction the model gets back, and a rule
+ * NOTHING enforces is only ever going to be discoverable here.
+ *
+ * What each field states, and the guard that fires when the model stops following it:
+ *
+ * ```
+ *   did ≥ 1 intention          terminalPayloadRejection (+ `minItems` in the backend's zod schema)
+ *   the closed key set         validateClaims "unknown key" → terminalPayloadRejection
+ *   ACTION op ⇒ an outcome     validateClaims partition     → terminalPayloadRejection
+ *   SPEECH op ⇒ no outcome     validateClaims partition     → terminalPayloadRejection
+ *   the seven outcome words    resolveOutcome → an undeclared word denies in `claimIsGrounded`
+ *   a `target` on an action    `claimIsComplete` (an uncovered write is a violation)
+ *   an HONEST outcome          `claimIsGrounded` — the ledger cross-check, never the prose
+ *   `message` asserts no act   NOTHING deterministic (the open prose residual; the optional
+ *                              `did × message` llmCheck is its only named mitigation) — so this one
+ *                              rule is carried by the schema and cannot be cut.
+ * ```
+ *
+ * The `did` FLOOR and the outcome VOCABULARY are stated for opposite reasons, and the difference is
+ * what keeps this block from growing back:
+ *  · `minItems` reaches the model as a schema constraint, so the one-line floor beside it is the
+ *    cheapest possible restatement of the single most likely weak-model mistake, not a second rule;
+ *  · `additionalProperties` does NOT reach the model — the JSON-schema → zod conversion drops it —
+ *    so the closed key set has to be PROSE or it is discoverable only from a refused reply;
+ *  · the seven outcome words are prose rather than a schema `enum` because a domain may declare its
+ *    OWN outcome word (`resolveOutcome` through the contract's `OutcomeMap`), and an `enum` would
+ *    reject at the tool boundary what the engine deliberately accepts.
+ *
  * `amount` is a LEGAL claim key ({@link import('./claims.js').validateClaims} accepts it, and
  * `claimMatches` corroborates it against the ledger) that the schema deliberately does NOT advertise.
  * Nothing REQUIRES a magnitude: the cross-check treats an absent `amount` as a pass, so the only turn
@@ -247,28 +279,23 @@ const DID_ITEM_SCHEMA: Record<string, unknown> = {
       type: 'string',
       minLength: 1,
       description:
-        'What this intention IS. An ACTION op names the domain operation and REQUIRES an outcome. A ' +
-        'SPEECH op carries no outcome, and is one of: `greet` (a greeting with no operation), `refuse` ' +
-        '(declining to act), `ask` (posing your ONE clarifying question you will wait on — the ' +
-        '`message` carries it), or `inform`. `inform` is for conveying information or answering a ' +
+        'An ACTION op — the domain operation, which REQUIRES an `outcome`; or a SPEECH op, which ' +
+        'carries none: `greet`, `refuse`, `ask` (your ONE question, in `message`), `inform`. ' +
+        '`inform` is for conveying information or answering a ' +
         'question. It MUST NOT be used to assert that you performed an action. If you performed an ' +
         "action, declare it as that action's op — which is verified against what actually happened. " +
         'Reporting a done action as `inform` is dishonest.',
     },
     target: {
       type: 'string',
-      description:
-        'The record the operation acted on, named the way the tool result names it. REQUIRED whenever ' +
-        'you report a completed action.',
+      description: 'The record acted on, named as the tool result names it. Required on an ACTION entry.',
     },
     outcome: {
       type: 'string',
       minLength: 1,
       description:
-        'ACTION entries only, and one of these seven words. What really happened: `success` when the ' +
-        'tool confirmed the change; `failure`, `blocked`, `refused` or `pending_confirmation` when the ' +
-        'tool or a rule said so; `not_found` when nothing matched; `no_op` when nothing changed. Never ' +
-        'report a success the tools did not confirm.',
+        'ACTION entries only — what really happened, as one of: `success`, `failure`, `blocked`, ' +
+        '`refused`, `pending_confirmation`, `not_found`, `no_op`.',
     },
   },
   required: ['op'],
@@ -285,17 +312,13 @@ function respondToolDef(): ToolDef {
         message: {
           type: 'string',
           minLength: 1,
-          description:
-            "The COMPLETE user-facing prose in the USER'S language. NEVER assert an operation you " +
-            'performed here, operations go in did.',
+          description: "The COMPLETE user-facing text, in the USER'S language. Never assert an operation here — operations go in `did`.",
         },
         did: {
           type: 'array',
           items: DID_ITEM_SCHEMA,
           minItems: 1,
-          description:
-            'AT LEAST ONE intention — every response declares what it is. Each entry uses ONLY the ' +
-            'keys `op`, `target` and `outcome`; an entry carrying an unknown key is rejected.',
+          description: 'AT LEAST ONE intention. Keys: `op`, `target`, `outcome` — any other key is rejected.',
         },
       },
       required: ['message', 'did'],

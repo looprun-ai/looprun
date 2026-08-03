@@ -202,7 +202,7 @@ describe('terminal tool definitions', () => {
     expect(String(did.description)).toContain('AT LEAST ONE intention'); // the floor is STATED, not only typed
     // The CLOSED key set reaches the model as prose: the converter drops `additionalProperties`, so
     // a model adding a fifth key would otherwise learn the law only from a refused reply.
-    expect(String(did.description)).toContain('an entry carrying an unknown key is rejected');
+    expect(String(did.description)).toContain('`op`, `target`, `outcome` — any other key is rejected');
 
     const op = (did.items as { properties: Record<string, { description?: string }> }).properties.op!;
     // The op vocabulary reaches the model on the field it governs.
@@ -221,8 +221,14 @@ describe('terminal tool definitions', () => {
     expect(op.description).toContain(GUARDRAIL);
     expect(terminalProtocol(false)).not.toContain('dishonest');
     expect(terminalProtocol(true)).not.toContain('dishonest');
+    // The outcome VOCABULARY is prose, not a schema `enum` (a domain may declare its own word), so
+    // the seven core words have to survive the conversion the same way the op vocabulary does.
+    const outcome = (did.items as { properties: Record<string, { description?: string }> }).properties.outcome!;
+    const CORE_OUTCOME_WORDS = ['success', 'failure', 'not_found', 'blocked', 'refused', 'pending_confirmation', 'no_op'];
+    for (const word of CORE_OUTCOME_WORDS) expect(outcome.description).toContain(`\`${word}\``);
+    expect(outcome.description).toContain('ACTION entries only');
     // `message` carries its own contract — prose only, operations belong to `did`.
-    expect(String(schema.properties.message!.description)).toContain('operations go in did');
+    expect(String(schema.properties.message!.description)).toContain('operations go in `did`');
   });
 });
 
