@@ -3,7 +3,7 @@ date: 2026-08-03
 slug: mandatory-intention
 change_kind: runtime
 target: —
-summary: mandatory intention + red-team hardening: did .min(1) with a speech/action partition on op, the ask boolean retired for an ask INTENTION, key-scoped identity and whole-value matching in the honesty cross-check, consent evidence bound to sealed delivered turns, and the final-review perimeter pass (derived-claim speech filter, throttle probe parity, pendingConfirmMustAsk observed-scan fallback deleted). GUARD_CATALOG moves 29 to 23 kinds: the four tier-3 reply-text kinds were deleted under the no-regex law and didMessageConsistency was added.
+summary: mandatory intention + red-team hardening: did .min(1) with a speech/action partition on op, the asked boolean retired for an ask INTENTION, key-scoped identity and whole-value matching in the honesty cross-check, consent evidence bound to sealed delivered turns, and the final-review perimeter pass (derived-claim speech filter, throttle probe parity, pendingConfirmMustAsk observed-scan fallback deleted). GUARD_CATALOG size is UNCHANGED at 23 kinds — four reply-text kinds OUT (emptyReply, replyMentions, replySingleQuestion, replyMaxOccurrences), four cross-check/adjudicated kinds IN (claimIsGrounded, claimIsComplete, claimCoversRubric, didMessageConsistency).
 isolated: 152/152
 collective: 36/36
 coverage: 22/22
@@ -13,12 +13,43 @@ verdict: PASS
 suite_cmd: pnpm proofs:run
 ---
 
-# Proof record — mandatory intention + red-team hardening: did .min(1) with a speech/action partition on op, the ask boolean retired for an ask INTENTION, key-scoped identity and whole-value matching in the honesty cross-check, consent evidence bound to sealed delivered turns, and the final-review perimeter pass (derived-claim speech filter, throttle probe parity, pendingConfirmMustAsk observed-scan fallback deleted). GUARD_CATALOG moves 29 to 23 kinds: the four tier-3 reply-text kinds were deleted under the no-regex law and didMessageConsistency was added.
+# Proof record — mandatory intention + red-team hardening: did .min(1) with a speech/action partition on op, the asked boolean retired for an ask INTENTION, key-scoped identity and whole-value matching in the honesty cross-check, consent evidence bound to sealed delivered turns, and the final-review perimeter pass (derived-claim speech filter, throttle probe parity, pendingConfirmMustAsk observed-scan fallback deleted). GUARD_CATALOG size is UNCHANGED at 23 kinds — four reply-text kinds OUT (emptyReply, replyMentions, replySingleQuestion, replyMaxOccurrences), four cross-check/adjudicated kinds IN (claimIsGrounded, claimIsComplete, claimCoversRubric, didMessageConsistency).
 
 **Scope:** `runtime` · **Date:** 2026-08-03 · **Verdict:** PASS
 
 ## What changed
-mandatory intention + red-team hardening: did .min(1) with a speech/action partition on op, the ask boolean retired for an ask INTENTION, key-scoped identity and whole-value matching in the honesty cross-check, consent evidence bound to sealed delivered turns, and the final-review perimeter pass (derived-claim speech filter, throttle probe parity, pendingConfirmMustAsk observed-scan fallback deleted). GUARD_CATALOG moves 29 to 23 kinds: the four tier-3 reply-text kinds were deleted under the no-regex law and didMessageConsistency was added.
+mandatory intention + red-team hardening: did .min(1) with a speech/action partition on op, the asked boolean retired for an ask INTENTION, key-scoped identity and whole-value matching in the honesty cross-check, consent evidence bound to sealed delivered turns, and the final-review perimeter pass (derived-claim speech filter, throttle probe parity, pendingConfirmMustAsk observed-scan fallback deleted). GUARD_CATALOG size is UNCHANGED at 23 kinds — four reply-text kinds OUT (emptyReply, replyMentions, replySingleQuestion, replyMaxOccurrences), four cross-check/adjudicated kinds IN (claimIsGrounded, claimIsComplete, claimCoversRubric, didMessageConsistency).
+
+### Catalog delta — stated exactly
+
+| | count | kinds |
+|---|---|---|
+| base `f4d3b6b` | 23 | — |
+| HEAD | 23 | — |
+| **OUT** | 4 | `emptyReply` · `replyMentions` · `replySingleQuestion` · `replyMaxOccurrences` — the tier-③ reply-TEXT kinds, deleted under the no-regex law |
+| **IN** | 4 | `claimIsGrounded` · `claimIsComplete` · `claimCoversRubric` (the deterministic ledger cross-check — this branch's headline change) · `didMessageConsistency` (the pre-baked, never-auto-installed adjudicator) |
+
+The swap is net zero on the count, so **the catalog did not shrink on this branch**. Verified with
+`git show f4d3b6b:packages/core/src/guards/catalog.ts` (23) against HEAD (23).
+
+### Coverage denominator — a separate number, 29 → 22
+
+`coverage` here is 22/22, where the previous record (2026-07-29) read 29/29. That drop is NOT this
+branch's catalog delta. Two independent causes:
+
+1. **22 is the count of catalogue kinds that return a `Guard`** — 23 kinds minus `jargonScrub`, a
+   `ReplyMutator` covered through the proven-mutators list (see the coverage-ratchet section of
+   `GOVERNANCE.md`). So 22 is the correct full denominator for a 23-kind catalogue.
+2. **The catalogue itself shrank from 33 to 23 kinds on `main`, BEFORE this branch's base**, across
+   commits that shipped no proof record (33 → 25 at `0ae3bab`/`73f865c`, then 25 → 24 → 23 at
+   `4d40e44` / `c8c4635`). The last recorded denominator, 29, was measured when the catalogue still
+   held ~30 kinds.
+
+**Out-of-scope note for the next reader (not fixed here).** Because of (2), this record is the first
+one written since that shrink, so its `22/22` silently absorbs a ten-kind catalogue reduction that
+belongs to `main`'s history and was never itself proof-recorded. Nothing in this branch caused it and
+nothing here can retro-record it; it is flagged so the 29 → 22 step is not read as a coverage
+regression introduced by mandatory intention.
 
 ## Proof cases
 
