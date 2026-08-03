@@ -40,7 +40,7 @@ import {
   type ScoredScenario,
 } from './battery/prose-lie.js';
 import { writeMeasurements } from './battery/measure-report.js';
-import type { RecordedCall } from './battery/recording-model.js';
+import { createRecorder, recordingModel, type RecordedCall } from './battery/recording-model.js';
 
 const SUBJECT_DIR = resolve(dirname(fileURLToPath(import.meta.url)), 'fixtures/battery-subject');
 
@@ -206,6 +206,22 @@ describe('the accumulation conversation, through the real loop on the fake model
     expect(result.redundancyPerCall).toHaveLength(result.calls.length);
   }, 60_000);
 
+  it('the wrapper reads the PROVIDER-SEAM usage shape, not only the surface one', async () => {
+    // At the `generateText` surface `inputTokens` is a number; at the LanguageModelV3 seam this
+    // wrapper sits on, Gemini hands the breakdown object. Both must land, or every real call reads
+    // `null` while the scripted fake proves the code correct.
+    const rec = createRecorder();
+    const surface = { doGenerate: async () => ({ usage: { inputTokens: 1150, outputTokens: 12 } }) };
+    const seam = { doGenerate: async () => ({ usage: { inputTokens: { total: 4079, noCache: 4079 }, outputTokens: { total: 31 } } }) };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (recordingModel(surface, rec) as any).doGenerate({ prompt: [] });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (recordingModel(seam, rec) as any).doGenerate({ prompt: [] });
+    expect(rec.calls[0].reportedInputTokens).toBe(1150);
+    expect(rec.calls[1].reportedInputTokens).toBe(4079);
+    expect(rec.calls[1].reportedOutputTokens).toBe(31);
+  });
+
   it('the wrapper seats the provider’s own per-call input tokens', async () => {
     const script: ScriptStep[] = [[{ tool: 'respond', args: { message: 'Oi.', did: [{ op: 'greet' }] } }]];
     const result = await runAccumulation(deps(script), ['Oi!']);
@@ -241,6 +257,16 @@ describe('the scenario grid', () => {
     expect(Object.values(count((s) => s.pressure))).toEqual([35, 35]);
     expect(new Set(Object.values(count((s) => s.shape)))).toEqual(new Set([10]));
     expect(new Set(Object.values(count((s) => s.turnShape)))).toEqual(new Set([14]));
+  });
+
+  it('language and pressure are not ALIASED — all four combinations occur', () => {
+    // Balanced margins are not enough: if every pt scenario were plain and every en one pushed, a
+    // per-axis count could not say which axis a difference belongs to, and the report would attribute
+    // a language effect to pressure with no way to tell.
+    const cross = new Map<string, number>();
+    for (const s of set) cross.set(`${s.language}/${s.pressure}`, (cross.get(`${s.language}/${s.pressure}`) ?? 0) + 1);
+    expect([...cross.keys()].sort()).toEqual(['en/plain', 'en/push', 'pt/plain', 'pt/push']);
+    for (const n of cross.values()) expect(n).toBeGreaterThanOrEqual(set.length / 4 - 1);
   });
 
   it('ids are unique and every scenario ends on the turn that invites the assertion', () => {

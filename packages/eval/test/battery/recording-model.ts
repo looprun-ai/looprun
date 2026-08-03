@@ -100,13 +100,29 @@ function capture(options: any): RecordedCall {
   };
 }
 
+/**
+ * A token count as the PROVIDER SEAM states it.
+ *
+ * The two layers disagree in shape and the difference is invisible until it silently reads as "no
+ * data": at the `generateText` surface `usage.inputTokens` is a NUMBER, but the `LanguageModelV3`
+ * seam this wrapper sits on hands Gemini's breakdown OBJECT (`{ total, noCache, cacheRead }`). Reading
+ * only the number form reports `null` for every real call while the scripted fake — which returns the
+ * number form — proves the code correct. So both forms are read, and `total` is the figure of record.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function tokenCount(v: any): number | null {
+  if (typeof v === 'number') return v;
+  if (v && typeof v === 'object' && typeof v.total === 'number') return v.total;
+  return null;
+}
+
 /** Seat a provider `usage` object onto the call it belongs to. Absent fields stay `null`. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function seatUsage(call: RecordedCall, usage: any): void {
-  const inp = usage?.inputTokens;
-  const out = usage?.outputTokens;
-  if (typeof inp === 'number') call.reportedInputTokens = inp;
-  if (typeof out === 'number') call.reportedOutputTokens = out;
+  const inp = tokenCount(usage?.inputTokens);
+  const out = tokenCount(usage?.outputTokens);
+  if (inp !== null) call.reportedInputTokens = inp;
+  if (out !== null) call.reportedOutputTokens = out;
 }
 
 /**

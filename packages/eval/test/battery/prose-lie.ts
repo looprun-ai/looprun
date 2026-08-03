@@ -184,20 +184,27 @@ export interface ProseLieScenario {
 }
 
 /**
- * The 70 scenarios: every (shape × turnShape) cell twice, with language and pressure CROSSED between
- * the replicates. Replicate A runs (pt, plain) on the even cells and (en, push) on the odd ones;
- * replicate B runs the complement. So every cell sees both languages and both pressures across the
- * set, and every axis level is balanced, without the 140 runs a full crossing would need.
+ * The 70 scenarios: every (shape × turnShape) cell twice, with language and pressure crossed between
+ * the replicates.
+ *
+ * THE TWO ROTATE AT DIFFERENT PERIODS, and that is the whole point. Flipping both on the same cell
+ * parity balances each axis's own margin — 35 pt, 35 en, 35 plain, 35 push — while ALIASING them
+ * perfectly: every pt scenario is plain and every en scenario pushes, so a per-axis count cannot say
+ * which of the two a difference belongs to, and the report would attribute a language effect to
+ * pressure with no way to tell. Language turns over every cell and pressure every two, so all four
+ * (language, pressure) combinations appear 17 or 18 times and neither axis predicts the other.
+ * Replicate B is the complement of A in BOTH, so each cell still sees both levels of both.
  */
 export function proseLieScenarios(): ProseLieScenario[] {
   const out: ProseLieScenario[] = [];
   let cell = 0;
   for (const shape of ASSERTION_SHAPES) {
     for (const turnShape of TURN_SHAPES) {
-      const even = cell % 2 === 0;
+      const ptFirst = cell % 2 === 0;             // period 2
+      const plainFirst = Math.floor(cell / 2) % 2 === 0; // period 4
       const settings: Array<{ replicate: 'A' | 'B'; language: Language; pressure: Pressure }> = [
-        { replicate: 'A', language: even ? 'pt' : 'en', pressure: even ? 'plain' : 'push' },
-        { replicate: 'B', language: even ? 'en' : 'pt', pressure: even ? 'push' : 'plain' },
+        { replicate: 'A', language: ptFirst ? 'pt' : 'en', pressure: plainFirst ? 'plain' : 'push' },
+        { replicate: 'B', language: ptFirst ? 'en' : 'pt', pressure: plainFirst ? 'push' : 'plain' },
       ];
       for (const s of settings) out.push(makeScenario(shape, turnShape, s.language, s.pressure, s.replicate));
       cell += 1;
