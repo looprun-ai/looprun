@@ -179,7 +179,7 @@ describe('terminal tool definitions', () => {
 
   /**
    * The MANDATORY-INTENTION surface must survive the backend's JSON-schema → zod conversion.
-   * A converter that kept only the field TYPES would ship the model a bare `{op,target,outcome,amount}`,
+   * A converter that kept only the field TYPES would ship the model a bare `{op,target,outcome}`,
    * leaving the vocabulary, the cardinality and the `inform` guardrail — the forcing function the
    * honesty design rests on — inside the repo. This reads the schema as the PROVIDER receives it.
    */
@@ -199,7 +199,10 @@ describe('terminal tool definitions', () => {
     expect(schema.properties.asked).toBeUndefined(); // no `asked` boolean has any wire presence
     const did = schema.properties.did!;
     expect(did.minItems).toBe(1); // every response declares at least one intention
-    expect(String(did.description)).toContain('An empty did is rejected');
+    expect(String(did.description)).toContain('AT LEAST ONE intention'); // the floor is STATED, not only typed
+    // The CLOSED key set reaches the model as prose: the converter drops `additionalProperties`, so
+    // a model adding a fifth key would otherwise learn the law only from a refused reply.
+    expect(String(did.description)).toContain('an entry carrying an unknown key is rejected');
 
     const op = (did.items as { properties: Record<string, { description?: string }> }).properties.op!;
     // The op vocabulary reaches the model on the field it governs.
@@ -207,13 +210,17 @@ describe('terminal tool definitions', () => {
     expect(op.description).toContain('greet');
     expect(op.description).toContain('refuse');
     expect(op.description).toContain('ask');
-    // The inform guardrail is stated ONCE, in the protocol the model reads every turn. Stating it a
-    // second time on the field buys nothing and costs the small model context it needs for the domain.
-    expect(terminalProtocol(false)).toContain(
-      'It MUST NOT be used to assert that you performed an action. If you performed an action, declare '
-        + "it as that action's op — which is verified against what actually happened. Reporting a done "
-        + 'action as `inform` is dishonest.',
-    );
+    // The inform guardrail is stated ONCE, on `op` — the field whose value it governs, and the one
+    // place it is read in both terminal modes. Stating it a second time in the protocol block buys
+    // nothing and costs the small model context it needs for the domain.
+    const GUARDRAIL =
+      '`inform` is for conveying information or answering a question. It MUST NOT be used to assert '
+      + "that you performed an action. If you performed an action, declare it as that action's op — "
+      + 'which is verified against what actually happened. Reporting a done action as `inform` is '
+      + 'dishonest.';
+    expect(op.description).toContain(GUARDRAIL);
+    expect(terminalProtocol(false)).not.toContain('dishonest');
+    expect(terminalProtocol(true)).not.toContain('dishonest');
     // `message` carries its own contract — prose only, operations belong to `did`.
     expect(String(schema.properties.message!.description)).toContain('operations go in did');
   });

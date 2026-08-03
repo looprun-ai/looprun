@@ -161,55 +161,63 @@ export function lastTerminalArgs(steps: any): Record<string, unknown> | null {
   return null;
 }
 
-const TERMINAL_PROTOCOL =
+/**
+ * ── ONE RULE, ONE HOME ────────────────────────────────────────────────────────────────────────────
+ *
+ * The protocol block and the `respond` schema are read together, every turn, by the same model. A
+ * rule stated in both is paid twice and drifts once. So the split is by SUBJECT, not by emphasis:
+ *
+ *   turn SHAPE (who speaks, how often, in what order, what `did` must contain) → this block;
+ *   FIELD contract (what a legal value of `message` / `op` / `target` / `outcome` is) → the schema.
+ *
+ * Nothing is stated in both places. In particular the SPEECH vocabulary and the `inform` guardrail
+ * live on `op` — the field whose value they govern — and the protocol only says WHEN a speech entry
+ * is owed.
+ *
+ * The two variants share every line but one: reply-only adds the no-question bullet. Building them
+ * from the same parts is what keeps them from drifting.
+ */
+const PROTOCOL_HEAD =
   '\n\n## Turn protocol (ABSOLUTE)\n' +
-  '- You speak to the user ONLY by calling **respond**. NEVER write a free-text reply — text outside ' +
-  'this tool is not delivered.\n' +
-  '- Every turn MUST call at least one tool, and MUST END by calling exactly one **respond**.\n' +
-  "- `message` carries the COMPLETE user-facing prose in the USER'S language: greeting, explanation " +
-  'and answers ONLY. NEVER assert in `message` an operation you performed this turn — operations go ' +
-  'in `did`.\n' +
-  '- `did` declares AT LEAST ONE intention. Each entry uses ONLY these keys: `op`, `target`, ' +
-  '`outcome`, `amount` — any other key is rejected.\n' +
-  '- ONE ACTION intention for every domain operation that CHANGED something this turn: `op` names it, ' +
-  '`target` names the record it changed, `outcome` is `success`. A lookup changes nothing and is NOT ' +
-  'an action — answer it in `message`. Use `not_found` when the user asked you to find something and ' +
-  'it does not exist; `failure`, `blocked`, `refused` or `pending_confirmation` when the tool said so.\n' +
-  '- SPEECH intentions (no `outcome`, no `amount`): `inform` — conveying information or answering a ' +
-  'question; `greet` — a greeting with no operation; `refuse` — declining to act; `ask` — posing your ' +
-  'ONE clarifying question you will wait on (the `message` carries the question).\n' +
-  '- `inform` is for conveying information or answering a question. It MUST NOT be used to assert that ' +
-  "you performed an action. If you performed an action, declare it as that action's op — which is " +
-  'verified against what actually happened. Reporting a done action as `inform` is dishonest.\n' +
-  '- Do the domain tools first; then close the turn with the single respond call.';
+  '- Speak to the user ONLY by calling **respond**, exactly once, as the LAST step of the turn — text ' +
+  'outside it is never delivered. Call the domain tools you need FIRST, in earlier steps.\n';
+
+const PROTOCOL_DID =
+  '- Declare ONE ACTION entry in `did` for every domain operation that CHANGED something this turn. A ' +
+  'lookup changes nothing and is NOT an action — answer it in `message`.\n' +
+  '- Declare a SPEECH entry whenever the turn speaks — alongside the action entries, or alone when ' +
+  'the turn performed no operation.';
+
+const TERMINAL_PROTOCOL = PROTOCOL_HEAD + PROTOCOL_DID;
 
 const TERMINAL_PROTOCOL_REPLY_ONLY =
-  '\n\n## Turn protocol (ABSOLUTE)\n' +
-  '- You speak to the user ONLY by calling **respond**. NEVER write a free-text reply and NEVER ask ' +
-  'the user a question — never declare an `ask` intention.\n' +
-  '- If something is ambiguous, make the MOST REASONABLE assumption and PROCEED — never stop to ask.\n' +
-  '- Every turn MUST first DO the requested action with the domain tools, then END by calling ' +
-  "**respond**: `message` reports what you did in the USER'S language, and `did` declares AT LEAST ONE " +
-  'intention — an ACTION entry for EVERY operation you attempted with its honest `outcome`, or a ' +
-  'SPEECH entry (`inform`/`greet`/`refuse`, no outcome) when the turn only speaks. NEVER assert an ' +
-  'operation in `message`, and NEVER claim one the tools did not confirm. `inform` MUST NOT be used ' +
-  "to assert that you performed an action — a performed action is declared as that action's op.";
+  PROTOCOL_HEAD +
+  '- NEVER ask the user a question — never declare an `ask` intention. When something is ambiguous, ' +
+  'make the MOST REASONABLE assumption and PROCEED.\n' +
+  PROTOCOL_DID;
 
 export function terminalProtocol(replyOnly: boolean): string {
   return replyOnly ? TERMINAL_PROTOCOL_REPLY_ONLY : TERMINAL_PROTOCOL;
 }
 
-/** The forced-terminal fallback prompt (pushes a weak model past the action wall). */
+/**
+ * The forced-terminal fallback prompt (pushes a weak model past the action wall).
+ *
+ * It restates the `did` floor because it is delivered as a USER message on a history the model has
+ * already failed to close — the one moment where repeating the protocol is not duplication but the
+ * whole point. It states the SAME rule as {@link terminalProtocol}: an operation that changed
+ * something is an action entry, a lookup is not.
+ */
 export function forcedTerminalPrompt(replyOnly: boolean): string {
   return replyOnly
     ? 'Close the turn now by calling respond. Do NOT ask a question — never declare an `ask` intention. ' +
         'Put your user-facing message in `message`, and declare at least one intention in `did`: every ' +
-        'operation you attempted with its honest outcome, or `inform`/`greet`/`refuse` (no outcome) when ' +
-        'the turn only speaks.'
+        'operation that CHANGED something with its honest outcome, or `inform`/`greet`/`refuse` (no ' +
+        'outcome) when the turn only speaks.'
     : 'Close the turn now by calling respond. Put the COMPLETE user-facing message in `message`; declare ' +
-        'at least one intention in `did` — every operation you attempted this turn with its honest ' +
-        'outcome, or a speech intention (`inform`/`greet`/`refuse`/`ask`, no outcome) when the turn only ' +
-        'speaks; declare `ask` only if `message` poses ONE clarifying question you will wait on.';
+        'at least one intention in `did` — every operation that CHANGED something this turn with its ' +
+        'honest outcome, or a speech intention (`inform`/`greet`/`refuse`/`ask`, no outcome) when the ' +
+        'turn only speaks; declare `ask` only if `message` poses ONE clarifying question you will wait on.';
 }
 
 /**
@@ -221,10 +229,16 @@ export function forcedTerminalPrompt(replyOnly: boolean): string {
  * or silently ignore. The runtime reads exactly two arguments — `message`, `did` — and
  * anything else costs tokens, invites a wrong value and has no consumer.
  */
-const RESPOND_DESCRIPTION =
-  'END the turn. Call it alone, after the domain tools you need have returned — never in the same step ' +
-  'as one, because their results are not available to you yet.';
+const RESPOND_DESCRIPTION = 'END the turn.';
 
+/**
+ * `amount` is a LEGAL claim key ({@link import('./claims.js').validateClaims} accepts it, and
+ * `claimMatches` corroborates it against the ledger) that the schema deliberately does NOT advertise.
+ * Nothing REQUIRES a magnitude: the cross-check treats an absent `amount` as a pass, so the only turn
+ * the field can change is one it DENIES. Advertising it spends bytes on every turn of every agent to
+ * buy extra ways to fail. Removing the property changes no acceptance — the JSON-schema → zod
+ * conversion builds a passthrough object and `validateClaims` keys on its own `CLAIM_KEYS`.
+ */
 const DID_ITEM_SCHEMA: Record<string, unknown> = {
   type: 'object',
   properties: {
@@ -232,8 +246,13 @@ const DID_ITEM_SCHEMA: Record<string, unknown> = {
       type: 'string',
       minLength: 1,
       description:
-        'An ACTION op names the operation and REQUIRES an outcome. A SPEECH op is one of inform, greet, ' +
-        'refuse, ask and carries no outcome and no amount.',
+        'What this intention IS. An ACTION op names the domain operation and REQUIRES an outcome. A ' +
+        'SPEECH op carries no outcome, and is one of: `greet` (a greeting with no operation), `refuse` ' +
+        '(declining to act), `ask` (posing your ONE clarifying question you will wait on — the ' +
+        '`message` carries it), or `inform`. `inform` is for conveying information or answering a ' +
+        'question. It MUST NOT be used to assert that you performed an action. If you performed an ' +
+        "action, declare it as that action's op — which is verified against what actually happened. " +
+        'Reporting a done action as `inform` is dishonest.',
     },
     target: {
       type: 'string',
@@ -245,13 +264,10 @@ const DID_ITEM_SCHEMA: Record<string, unknown> = {
       type: 'string',
       minLength: 1,
       description:
-        'REQUIRED for an action op, FORBIDDEN for a speech op. The HONEST outcome: success, failure, ' +
-        'not_found, blocked, refused, pending_confirmation, no_op (or a domain outcome your spec ' +
-        'declares). Never report success the tools did not confirm.',
-    },
-    amount: {
-      type: 'number',
-      description: 'An optional magnitude an ACTION involved (e.g. a value). Forbidden for a speech op.',
+        'ACTION entries only, and one of these seven words. What really happened: `success` when the ' +
+        'tool confirmed the change; `not_found` when the user asked you to find something and it does ' +
+        'not exist; `failure`, `blocked`, `refused` or `pending_confirmation` when the tool said so; ' +
+        '`no_op` when nothing changed. Never report a success the tools did not confirm.',
     },
   },
   required: ['op'],
@@ -269,17 +285,16 @@ function respondToolDef(): ToolDef {
           type: 'string',
           minLength: 1,
           description:
-            "The COMPLETE user-facing prose in the USER'S language — explanation and answers ONLY; " +
-            'NEVER assert an operation you performed here, operations go in did.',
+            "The COMPLETE user-facing prose in the USER'S language. NEVER assert an operation you " +
+            'performed here, operations go in did.',
         },
         did: {
           type: 'array',
           items: DID_ITEM_SCHEMA,
           minItems: 1,
           description:
-            'AT LEAST ONE intention — every response declares what it is. An ACTION entry for every ' +
-            'domain operation you attempted this turn (honest outcome each), and/or a SPEECH entry ' +
-            '(inform/greet/refuse/ask) classifying the message. An empty did is rejected.',
+            'AT LEAST ONE intention — every response declares what it is. Each entry uses ONLY the ' +
+            'keys `op`, `target` and `outcome`; an entry carrying an unknown key is rejected.',
         },
       },
       required: ['message', 'did'],
