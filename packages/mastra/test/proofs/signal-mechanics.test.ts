@@ -44,7 +44,10 @@ describe('signal mechanics (proof-authoring conventions)', () => {
       turns: [turn('set it up')],
       script: [
         [{ tool: 'respond', args: { message: 'All set.', did: [{ op: 'inform' }] } }],
-        [{ text: 'Done — it is all set.' }], // redrive step: free text → falls back to this text
+        // The redrive re-generates a WHOLE respond payload — a candidate that declares nothing is
+        // denied by the engine's declaration floor (MI-D1), so a free-text redrive is not a fixture
+        // the runtime would accept.
+        [{ tool: 'respond', args: { message: 'Done — it is all set.', did: [{ op: 'inform' }] } }],
       ],
       expect: 'redrive',
     });

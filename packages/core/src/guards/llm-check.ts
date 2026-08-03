@@ -78,6 +78,14 @@ export function llmCheck(opts: { rubric: string; failMode?: 'open' | 'closed'; d
       } catch {
         // Adjudicator UNREACHABLE (threw / rejected / TIMED OUT) — failMode decides. A host seam failure
         // (network, model, hang), NOT an author bug in the guard, so it is priced, not re-thrown.
+        //
+        // RECORDED EITHER WAY (red-team r2/A-V8). A fail-OPEN unreachable adjudicator used to be
+        // indistinguishable from an approving one: the guard returned null, nothing was written anywhere,
+        // and no eval, log or operator could tell "the check ran and approved" from "the check never ran".
+        // The turn's correction log is the runtime's own record of what happened to a reply, so the
+        // non-run goes there. (`notes` is the reply-side ctx's `turnCorrections`; a preTool-dim llmCheck
+        // has none, and the optional push is a no-op there.)
+        ctx.notes?.push(`llmcheck-unreachable:${failMode}`);
         return failMode === 'closed' ? CLOSED_FAIL_DENY : null;
       }
     },
@@ -109,14 +117,25 @@ const DID_MESSAGE_CONSISTENCY_RUBRIC =
  *
  * An author binds it where the stakes justify a model call per reply (financial, health); it is NOT part
  * of any auto-installed protocol, and it is never the primary guarantee — the structured cross-check is.
- * `failMode` is `llmCheck`'s: `'open'` (default) allows when the adjudicator is unreachable, `'closed'`
- * denies. Its runtime `kind` is `llmCheck`, so the fail-loud adjudicator gate and the TRUTH/SAFETY
- * classification see it for what it is.
+ * Its runtime `kind` is `llmCheck`, so the fail-loud adjudicator gate and the TRUTH/SAFETY classification
+ * see it for what it is.
+ *
+ * IT FAILS CLOSED BY DEFAULT — unlike bare {@link llmCheck}, whose `'open'` default suits an author-bound
+ * lint. This guard is not a lint: it is the ONLY named mitigation of the prose residual, so an adjudicator
+ * outage (network, quota, model down, a 30 s hang) silently DELETING it is the whole attack — install it,
+ * break the adjudicator, and the backstop is gone with nothing recorded (red-team r2/A-V8). A guarantee
+ * that evaporates exactly when the seam it depends on fails is not a guarantee.
+ *
+ * AVAILABILITY COST, stated: while the adjudicator is unreachable, every candidate reply is denied, so each
+ * turn spends its redrives and then delivers the ENGINE-DERIVED closure — still a truthful, non-blank
+ * answer, but not the model's own prose. An author who prefers the model's prose to the backstop opts in
+ * explicitly with `didMessageConsistency({ failMode: 'open' })`; either way the non-run is recorded as an
+ * `llmcheck-unreachable:<failMode>` correction.
  */
 export function didMessageConsistency(opts?: { failMode?: 'open' | 'closed' }): Guard {
   return llmCheck({
     rubric: DID_MESSAGE_CONSISTENCY_RUBRIC,
     dim: 'behavior',
-    ...(opts?.failMode ? { failMode: opts.failMode } : {}),
+    failMode: opts?.failMode ?? 'closed',
   });
 }

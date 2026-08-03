@@ -112,23 +112,51 @@ export function resolveOutcome(outcome: string, map?: OutcomeMap): CoreOutcome |
 }
 
 /**
- * THE SHADOW LAW (m10), enforced ONCE at SPEC LOAD — throws on any {@link OutcomeMap} key whose
- * LOWERCASED form is a core outcome word.
+ * The COMPATIBILITY FOLD of an outcome-map key — what a human reviewing the domain vocabulary reads.
+ *
+ * `trim().toLowerCase()` alone was not the reader's notion (red-team r2, b4.1/b4.2): `'ＳＵＣＣＥＳＳ'`
+ * lowercases to FULLWIDTH lowercase (never the ASCII core word) and `'PENDİNG_CONFIRMATION'` (Turkish
+ * dotted İ) lowercases to a combining-dot form — both read as the core word on screen and both slipped the
+ * gate. NFKD is Unicode's own compatibility decomposition (fullwidth → ASCII, İ → `I` + combining dot);
+ * stripping `\p{M}` drops the freed marks, and the invisible class is the same one the delivery floor owns.
+ * Case folding comes LAST, after the marks are gone, so no locale-sensitive `i`/`İ` pair survives it.
+ */
+function foldOutcomeKey(k: string): string {
+  return k
+    .normalize('NFKD')
+    .replace(/\p{M}/gu, '')
+    .replace(INVISIBLE_STRIP_RE, '')
+    .trim()
+    .toLowerCase();
+}
+
+/**
+ * THE SHADOW LAW (m10) — throws on any {@link OutcomeMap} key that FOLDS to a core outcome word.
  *
  * {@link resolveOutcome} is case-sensitive: `'success'` is core and its map entry is ignored, but
  * `'Success'` is NOT core, so a map keyed by it would REDEFINE a core outcome by casing alone
  * (`resolveOutcome('Success', { Success: 'failure' })` → `'failure'`). A per-turn check would be the
- * wrong shape — the defect is in the authored vocabulary, so it fails the spec at load, before a turn
- * ever runs. An exact-core key is refused too: it is dead config that reads as if it redefined the word.
+ * wrong shape — the defect is in the authored vocabulary, so it fails at LOAD, before a turn ever runs. An
+ * exact-core key is refused too: it is dead config that reads as if it redefined the word.
+ *
+ * EVERY DOOR, NOT ONE (red-team r2, b4.3–b4.5). The assertion used to have a single caller — the spec
+ * constructor, over `cfg.contract?.outcomes` — so any map that did not ride on a contract was ungated:
+ * `packages/eval`'s config path builds a contract-less spec and threads its `outcomes` block straight into
+ * `claimCoversRubric`, and the three cross-check factories are public exports a host can bind directly. A
+ * law about a VALUE has to be enforced where the value enters, so this now runs in each guard factory that
+ * accepts an `OutcomeMap` and in the eval config loader as well. It is idempotent, load-time and O(keys).
+ *
+ * `where` names the door for the message (`AgentSpec "x"`, `claimIsGrounded`, …).
  */
-export function assertNoCoreOutcomeShadow(outcomes: OutcomeMap | undefined, specId: string): void {
+export function assertNoCoreOutcomeShadow(outcomes: OutcomeMap | undefined, where: string): void {
   if (!outcomes) return;
-  const shadows = Object.keys(outcomes).filter((k) => isCoreOutcome(k.trim().toLowerCase()));
+  const shadows = Object.keys(outcomes).filter((k) => isCoreOutcome(foldOutcomeKey(k)));
   if (!shadows.length) return;
   throw new Error(
-    `AgentSpec "${specId}": the outcome map may not key a CORE outcome word (found: ${shadows.join(', ')}). ` +
-      'A core outcome always means itself — an entry keyed by one (in any casing) either does nothing or ' +
-      'redefines the word, and both make the domain vocabulary lie. Map only DOMAIN words to core outcomes.',
+    `${where}: the outcome map may not key a CORE outcome word (found: ${shadows.join(', ')}). ` +
+      'A core outcome always means itself — an entry keyed by one (in any casing, width or accent form) ' +
+      'either does nothing or redefines the word, and both make the domain vocabulary lie. Map only ' +
+      'DOMAIN words to core outcomes.',
   );
 }
 
@@ -291,7 +319,42 @@ export function terminalPayloadRejection(args: Record<string, unknown>): string 
   if (!Array.isArray(args.did) || args.did.length === 0) {
     return 'Your reply declared nothing in `did` — declare AT LEAST ONE intention (every operation you attempted with its honest outcome, or a speech intention) and send it again.';
   }
+  // WELL-FORMEDNESS, not merely arity (red-team r2/A-V4, B-b2.4). The schema's `minItems:1` cannot express
+  // the speech/action PARTITION — `outcome` is just an optional property, so `{op:'inform',
+  // outcome:'success'}` is schema-legal — and {@link respondPayload} keeps only the well-formed subset and
+  // DISCARDS the errors. A `did` whose every entry is malformed therefore collapsed to `[]` INSIDE the
+  // engine: `claimIsGrounded` short-circuits on an empty declaration, the operation report renders '', and
+  // the raw prose shipped alone with zero intentions and zero violations — exactly the empty-`did` state
+  // MI-D1 exists to delete, reachable by the single most likely `did` mistake a weak model makes.
+  // A declaration the system could not read is not a declaration, so the runtime REFUSES the payload and
+  // tells the model what was wrong, rather than silently pruning it.
+  const { errors } = validateClaims(args.did);
+  if (errors.length) {
+    return (
+      `Your \`did\` could not be read as declared intentions (${errors.join('; ')}) — ` +
+      'an operation intention carries an `outcome`, a speech intention (inform/greet/refuse/ask) carries ' +
+      'none; fix every entry and send the reply again.'
+    );
+  }
   return null;
+}
+
+/**
+ * THE ATTESTED EFFECT — the world's own statement that this call MUTATED it (red-team r2/A-V3).
+ *
+ * `tookEffect` and `writeTools` come from different authorities: the flag is the WORLD's per-call record,
+ * the list is the DOMAIN's hand-maintained vocabulary. Reading an effect only through their INTERSECTION
+ * made a mutation the author forgot to list invisible to the cross-check while the guards read as fully
+ * installed — the engine held the evidence and declined to use it. So an attested effect now counts on its
+ * own, whatever the tool is called: `writeTools` says which calls a domain INTENDS as writes; the world
+ * says which ones actually changed something, and only the second can be wrong in the unsafe direction.
+ *
+ * An INFERRED effect (`effectInferred`, the native-tools path) does NOT attest: the runtime guessed it from
+ * `ok && !requiresConfirmation`, which every successful READ satisfies, so widening on it would demand a
+ * `success` claim for every lookup. There the intersection with `writeTools` remains the rule.
+ */
+export function attestedEffect(c: { tookEffect?: boolean; effectInferred?: boolean }): boolean {
+  return c.tookEffect === true && c.effectInferred !== true;
 }
 
 /** True when the turn's `did` carries an `ask` intention (MI-D3) — the structured replacement for the
@@ -422,7 +485,10 @@ export function deriveClaimsFromLedger(
   const claims: TurnClaim[] = [];
   for (const o of observed) {
     if (o.turnIndex !== turnIndex) continue;
-    if (!writes.has(o.name)) continue; // reads / terminals contribute nothing
+    // A declared write tool, OR any call whose effect the WORLD attested — the engine's own honest account
+    // has to name a mutation the domain forgot to list, exactly as the cross-check now demands one
+    // ({@link attestedEffect}). Reads / terminals contribute nothing.
+    if (!writes.has(o.name) && !attestedEffect(o)) continue;
     if (o.tookEffect === true) {
       const label = o.producedLabel;
       claims.push(label ? { op: label, target: label, outcome: 'success' } : { op: 'operation', outcome: 'success' });

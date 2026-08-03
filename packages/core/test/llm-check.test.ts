@@ -201,10 +201,27 @@ describe('didMessageConsistency — the did × message rubric (available, not au
     }
   });
 
-  it('takes failMode like any llmCheck: closed denies when the adjudicator is unreachable', async () => {
+  // MI-T7 wave 3 (red-team r2/A-V8): the DEFAULT is now `closed`. A backstop that deletes itself the
+  // moment its own seam fails is not a backstop — an adjudicator outage used to silently remove the only
+  // named mitigation of the prose residual, with nothing written anywhere. The `open` arm stays reachable
+  // for an author who prefers the model's prose to the guarantee, and BOTH arms record the non-run.
+  it('fails CLOSED by default when the adjudicator is unreachable — and the non-run is RECORDED', async () => {
     const dead: Adjudicator = async () => { throw new Error('offline'); };
-    expect(await didMessageConsistency().check(baseCtx({ adjudicator: dead }))).toBeNull(); // open by default
-    expect(await didMessageConsistency({ failMode: 'closed' }).check(baseCtx({ adjudicator: dead }))).toMatch(/could not be completed/i);
+    const notes: string[] = [];
+    expect(await didMessageConsistency().check(baseCtx({ adjudicator: dead, notes }))).toMatch(/could not be completed/i);
+    expect(notes).toEqual(['llmcheck-unreachable:closed']);
+  });
+
+  it('failMode "open" is an explicit OPT-IN, and its silent allow is still recorded', async () => {
+    const dead: Adjudicator = async () => { throw new Error('offline'); };
+    const notes: string[] = [];
+    expect(await didMessageConsistency({ failMode: 'open' }).check(baseCtx({ adjudicator: dead, notes }))).toBeNull();
+    expect(notes).toEqual(['llmcheck-unreachable:open']);
+  });
+
+  it('bare llmCheck keeps its OPEN default — an author-bound lint, not the honesty backstop', async () => {
+    const dead: Adjudicator = async () => { throw new Error('offline'); };
+    expect(await llmCheck({ rubric: 'q?' }).check(baseCtx({ adjudicator: dead }))).toBeNull();
   });
 
   it('is NOT auto-installed: a spec with destructive tools and a contract installs no llmCheck', () => {

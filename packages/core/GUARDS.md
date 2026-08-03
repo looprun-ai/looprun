@@ -105,6 +105,17 @@ auto-installed**: no protocol installs it, and it is never the primary guarantee
 it where the stakes justify a model call per reply. Its runtime `kind` is `llmCheck`, deliberately — the
 adjudicator gate and the TRUTH/SAFETY frontier scan by kind, so a wrapped guard is seen for what it is.
 
+**It fails CLOSED by default — unlike bare `llmCheck`, whose `'open'` default suits an author-bound lint**
+(red-team r2/A-V8). This one is not a lint: it is the ONLY named mitigation of the prose residual, so an
+adjudicator outage (network, quota, model down, a 30 s hang) silently deleting it *was* the whole attack —
+install the backstop, break the adjudicator, and nothing denied and nothing was recorded. The availability
+cost is stated rather than hidden: while the adjudicator is unreachable every candidate is denied, so each
+turn spends its redrives and delivers the engine-derived closure — still truthful, still non-blank, but not
+the model's prose. An author who prefers the prose asks for it explicitly (`didMessageConsistency({ failMode:
+'open' })`). **Either way the non-run is RECORDED**: every unreachable adjudicator, at any `failMode` and for
+any `llmCheck`, appends an `llmcheck-unreachable:<failMode>` correction to the turn, so "the check ran and
+approved" is never indistinguishable from "the check never ran".
+
 ## 2. The five hooks — and the CORRECT enforcement semantics
 
 | Hook | Fires (backend primitive) | What a deny/violation does |
@@ -320,6 +331,18 @@ ledger, which the agent does not control:
 - **`claimIsComplete`** — every write that took effect this turn is covered by a DISTINCT `success` action
   intention that NAMES the entity (no silent action, and none hidden behind a vague or duplicated claim).
   Auto-installed alongside.
+- **What counts as "a write that took effect"** — the UNION of two authorities, never their intersection
+  (red-team r2/A-V3): a call whose tool is in `contract.writeTools` and whose `tookEffect` is true, OR any
+  call at all whose effect the WORLD ATTESTED. Keying it on the intersection alone made a mutation through
+  a tool the author forgot to list invisible to both cross-checks *while the guard catalog reported full
+  coverage* — the ledger row said `tookEffect:true` and the engine declined to use it. `writeTools` remains
+  the domain's statement of intent (it decides whether the cross-check installs at all); it is a LOWER
+  bound on the write surface, never an upper one.
+- **Attested vs INFERRED effect.** A world that keeps its own ledger (`defineWorld`, `FixtureWorld`, any
+  custom world) sets `tookEffect` per executor: that is an attestation, and it is trusted for any tool name.
+  The native-tools/MCP path has no executor to ask, so the runtime infers the flag from the result
+  (`ok && !requiresConfirmation`) and marks the row `effectInferred: true` — that means "the call
+  succeeded", which every successful READ satisfies, so the `writeTools` intersection stays the rule there.
 - **`claimCoversRubric`** — a per-case coverage rule: each configured target appears in `did` with the required
   outcome polarity. It REPLACES the deleted `replyMentions`/`replyConfirmsLabels` — polarity is a FIELD, so
   "no record of BK-1 was found" can never satisfy a `success` requirement. Config-bound, never auto-installed.
@@ -369,6 +392,7 @@ ledger, never on op-name semantics or reply text — so they carry no pattern an
 | every READ takes the entity under an identity-key ARG (`{ bookingId: 'BK-1' }`, not `{ query: '…' }`) | a `not_found`/`no_op` has no other way to name its subject |
 | an EMPTY read returns a data channel — `data: []` (or `found: false`) | emptiness needs positive evidence; a result whose only field is a status sentence is undecidable and fails closed |
 | write results report their magnitudes when the domain renders `amount` | the figure is checked against them |
+| the world records `tookEffect: true` for a call that CHANGED something and `false` for one that did not — **including reads** | it is an ATTESTATION, and the write surface is now keyed on it: a read recorded as effectful will be demanded in the report; a mutation recorded as effect-free can be hidden |
 
 A domain that does none of this is not silently degraded — the cross-check finds nothing to match, the
 guard fires, the turn redrives and the engine closure delivers. Fail-closed by design.
@@ -391,8 +415,28 @@ fields only — `target`, `outcome`, `amount` — because its output is delivere
 domain that reads it does not compile.
 
 Speech intentions (`inform`/`greet`/`refuse`/`ask`) are never grounded and never cover a write (MI-D5), so an
-action can never hide behind an `inform`. And a domain `outcomes` map may not key a core outcome word in ANY
-casing — that is refused at spec load, not at check time.
+action can never hide behind an `inform`.
+
+**The SHADOW LAW (m10) — every door, not one.** A domain `outcomes` map may not key a core outcome word in
+any casing, WIDTH or accent form: the key is folded (NFKD → strip combining marks → strip invisibles → trim
+→ lowercase) before the test, so `Success`, `ＳＵＣＣＥＳＳ` and `PENDİNG_CONFIRMATION` are all refused — each
+reads as the core word to a human reviewing the vocabulary, which is exactly the lie the law exists to stop.
+And it is enforced wherever the map ENTERS, not only at the spec constructor: `AgentSpecBase`,
+`claimIsGrounded`, `claimIsComplete`, `claimCoversRubric`, and `packages/eval`'s config loader (which builds
+a contract-less spec and so bypassed the constructor entirely — red-team r2/b4.3). It is a LOAD-time
+assertion, never a check-time one, and it is idempotent, so asserting it at several doors costs nothing.
+
+**THE MANDATORY-DECLARATION FLOOR (MI-D1) — engine-owned, beside the blank-delivery floor.** A candidate
+reply payload carrying ZERO intentions is not deliverable, and the `respond` schema's `minItems:1` is NOT
+the guarantee: it counts entries and cannot express the speech/action partition, so one schema-legal
+malformed intention (`{op:'inform', outcome:'success'}` — the likeliest `did` mistake a weak model makes) was
+dropped by `validateClaims` and left the pipeline holding the empty declaration MI-D1 deleted, delivering
+raw prose with no report and no violation (red-team r2/A-V4, B-b2.4). Two doors now close it:
+`terminalPayloadRejection` refuses a malformed payload at the terminal boundary (so it never becomes an
+observation, and the model gets the validation errors back), and `finalizeReply` denies any undeclared
+candidate as a `declarationPresent` violation — TRUTH-class, so it is never salvaged over. A model that
+still declares nothing gets the engine-derived closure, which declares its OWN speech intention: no
+delivered turn ever seals an empty `did`.
 The four reply-TEXT guards they and the schema subsume — `replyMentions`, `replySingleQuestion`,
 `replyMaxOccurrences`, `emptyReply` — are DELETED (tier-③, SCG-T5): `replyMentions` → `claimCoversRubric`,
 `replySingleQuestion`/`replyMaxOccurrences` → `llmCheck` (punctuation/CTA literalism, no sound structural
@@ -551,7 +595,16 @@ Populated from `AgentSpecConfig`; wired by the Mastra backend unless noted.
 | `directives` | `StateDirective[]` `{id, cond, directive, when?}` | — | rendered statically into the trunk `## Governance` section as `IF <cond> → <directive>`. Render-only: the `when` runtime predicate is **reserved, not consumed** by the backend. |
 | `chains` | `ChainSpec[]` | — | declared follow-up completions (see below). Absent/empty ⇒ zero added effect. |
 | `sampling` | `{ temperature?, topP?, maxOutputTokens?, seed? }` | — | per-agent AI-SDK call settings, merged OVER the conversation-level `modelParams` (agent wins) by `resolveModelSettings` — a creative agent at temp 0.7 beside a temp-0 admin agent in the same domain. |
-| `exhaustionReply` | `(world, okTools: string[], produced: string[], violations: string[]) => string` | contract/`defaultExhaustionReply` | committed when the reply STILL violates a check after all redrives — a PURE function of verified observations (structurally unable to fabricate, never empty). Precedence: spec → contract → default. |
+| `exhaustionReply` | `(world, okTools: string[], produced: string[], violations: string[]) => string` | the engine's own closing sentence | the CLOSING SENTENCE committed when the reply STILL violates a check after all redrives — a PURE function of verified observations (structurally unable to fabricate). Precedence: spec → contract → engine. **It supplies the sentence, never the whole closure:** the engine ALWAYS prepends the operation report it derived from the ledger, exactly as the clean path composes `message` + report. |
+
+**Why the override composes rather than replaces (red-team r2/A-V5).** It used to replace the entire derived
+closure. Its signature predates the structured payload — it receives tool names and labels, not claims — so
+it cannot re-render the operation report and nothing required it to; a domain whose override said
+*"I could not complete this safely — nothing was changed."* (the natural abstain wording) delivered exactly
+that over a write the ledger had recorded, while `ledger.did` kept the derived truth. History and the user
+disagreed. The report is engine-owned on every path now; an override that already narrates the operations
+will read as duplicating it, which is the correct pressure — the sentence is the domain's, the account of
+what happened is not.
 
 **`ChainSpec`** (`chains[]`): `{ after: string; call: string; when?: (world, observed) => boolean;
 mode: 'direct' | 'llm'; args?: Record<string, unknown> | ((world, observed) => Record<string, unknown>) }`.

@@ -135,12 +135,28 @@ describe('deriveClaimsFromLedger — the engine derives TRUTH from the world led
 });
 
 describe('finalizeReply — composed delivery over the structured payload', () => {
-  it('empty did → the message alone (no report appended)', async () => {
+  // MI-T7 wave 3 (red-team r2/A-V4, B-b2.4): an EMPTY `did` is no longer deliverable. This test used to
+  // pin "empty did → the message alone", which is the state MI-D1 deleted — and the route back into it
+  // (one schema-legal malformed intention, dropped by validateClaims) was the wave's Critical vector.
+  // The engine's declaration floor denies the candidate; a model that still declares nothing gets the
+  // engine-derived closure, which declares its OWN speech intention rather than sealing an empty turn.
+  it('empty did → NOT deliverable: the declaration floor drives the turn to the engine closure', async () => {
     const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona: 'p', tools: [], contract: BOOKING_CONTRACT });
     const out = await finalizeReply(spec, BOOKING_CONTRACT, fixtureWorld(), createLedger(), P('Hello there.'), async () => P(''), 0);
+    expect(out.text).not.toBe('Hello there.');
+    expect(out.exhausted).toBe(true);
+    expect(out.violations).toContain('declarationPresent');
+    expect(out.did).toEqual([{ op: 'inform' }]);
+  });
+
+  // CONTROL (availability): a SPEECH intention is all an ordinary conversational turn needs — the floor
+  // costs a well-behaved agent nothing, and adds no operation line.
+  it('CONTROL: a speech-only did delivers the message alone, unexhausted', async () => {
+    const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona: 'p', tools: [], contract: BOOKING_CONTRACT });
+    const out = await finalizeReply(spec, BOOKING_CONTRACT, fixtureWorld(), createLedger(), P('Hello there.', [{ op: 'greet' }]), async () => P(''), 0);
     expect(out.text).toBe('Hello there.');
     expect(out.exhausted).toBe(false);
-    expect(out.did).toEqual([]);
+    expect(out.did).toEqual([{ op: 'greet' }]);
   });
 
   it('non-empty VERIFIED did → message + the engine-rendered operation report', async () => {
@@ -198,7 +214,10 @@ describe('finalizeReply — the claims-derived exhaustion closure never fabricat
     expect(out.exhausted).toBe(true);
     expect(out.text).toBe('I could not complete this safely — nothing was changed. Could you rephrase or add detail?');
     expect(out.text).not.toContain('createBooking');
-    expect(out.did).toEqual([]); // nothing landed → no claim
+    // Nothing landed → no ACTION claim is derived. The closure is still a delivered turn, so the engine
+    // declares it as the speech act it is (MI-D1: no delivered turn carries zero intentions) — an
+    // `inform` renders no operation line, which is why the text is the bare sentence above.
+    expect(out.did).toEqual([{ op: 'inform' }]);
   });
 });
 

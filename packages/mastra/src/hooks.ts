@@ -71,7 +71,11 @@ export function makeGuardHooks(spec: AgentSpec, getSession: SessionAccessor, opt
       if (opts.nativeToolsMode) {
         const ok = output !== undefined && resultOk(output);
         const pending = (output as { requiresConfirmation?: unknown } | null | undefined)?.requiresConfirmation === true;
-        world.toolCalls.push({ name: toolName, args, result: output, tookEffect: ok && !pending });
+        // INFERRED, not attested: there is no executor to ask on this path, so the flag really means "the
+        // call succeeded and did not come back asking for confirmation" — true of every successful READ
+        // too. `effectInferred` marks it so the honesty core keeps the `writeTools` intersection here
+        // instead of applying the attested-effect law to a guess (red-team r2/A-V3).
+        world.toolCalls.push({ name: toolName, args, result: output, tookEffect: ok && !pending, effectInferred: true });
       }
       recordToolResult(ledger, toolName, args, output, world);
       // OUTPUT-dim (postTool) result invariants — enforce the previously-dead hook. ZERO-DIFF: a spec

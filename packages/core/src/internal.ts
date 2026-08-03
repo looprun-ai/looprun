@@ -77,6 +77,11 @@ export {
   deriveClaimsFromLedger,
   respondPayload,
   terminalPayloadRejection,
+  // m10's assertion, exported so the CONFIG path can enforce the shadow law at its own door and report
+  // it as a path-qualified load error (red-team r2/b4.3): `packages/eval`'s loader builds a
+  // contract-less spec, so the spec constructor's call site never sees its `outcomes` block. The guard
+  // factories assert it too — this is the loader's earlier, better-worded gate, not the only one.
+  assertNoCoreOutcomeShadow,
   hasAskIntent,
   isSpeechOp,
   isActionOp,

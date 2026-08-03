@@ -565,10 +565,10 @@ llmCheck({ rubric: 'Did the user, in an earlier turn, explicitly authorise THIS 
 
 The `did` × `message` backstop: an adjudicator answers a pre-baked rubric asking whether the message asserts an operation the declaration does not carry, or contradicts a declared intention.
 
-**When to reach for it.** The deterministic cross-check grounds the DECLARATION against the ledger, but the message beside it is free prose — an agent can declare an honest `inform` and still write that it completed something. Install this where the stakes justify a model call per reply (money, health). It is NOT auto-installed and it is never the primary guarantee; the structured cross-check is. Same `failMode` as `llmCheck` (its rubric is baked, so there is nothing else to configure).
+**When to reach for it.** The deterministic cross-check grounds the DECLARATION against the ledger, but the message beside it is free prose — an agent can declare an honest `inform` and still write that it completed something. Install this where the stakes justify a model call per reply (money, health). It is NOT auto-installed and it is never the primary guarantee; the structured cross-check is. Unlike bare `llmCheck` it fails CLOSED by default: it is the residual's only named mitigation, so an adjudicator outage must not silently delete it. Pass `failMode: 'open'` to trade the guarantee for availability; either way an unreachable adjudicator is recorded as an `llmcheck-unreachable:<failMode>` correction.
 
 ```ts
-didMessageConsistency({ failMode: 'closed' })
+didMessageConsistency()
 ```
 
 ### `onReplyMutate` — rewrite the reply, never veto it

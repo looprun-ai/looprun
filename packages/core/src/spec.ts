@@ -388,7 +388,7 @@ export class AgentSpecBase implements AgentSpec {
     // m10 — the outcome-map SHADOW LAW is a LOAD-time invariant: a map key that redefines a core outcome
     // (`Success`, `NOT_FOUND`, …) is an authoring defect in the domain vocabulary, so it fails here rather
     // than silently changing what a claim means on every later turn.
-    assertNoCoreOutcomeShadow(cfg.contract?.outcomes, cfg.id);
+    assertNoCoreOutcomeShadow(cfg.contract?.outcomes, `AgentSpec "${cfg.id}"`);
     if (cfg.contract) this.contract = cfg.contract;
     this.destructiveTools = [...(cfg.destructiveTools ?? [])];
     this.confirmMechanism = { ...(cfg.confirmMechanism ?? {}) };

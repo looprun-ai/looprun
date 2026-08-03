@@ -39,7 +39,15 @@
  * grounded and never covers a write (an action can therefore never hide behind an `inform`).
  */
 import type { Guard, GuardCtx, ObservedCall } from '../rules.js';
-import { isActionOp, resolveOutcome, type CoreOutcome, type OutcomeMap, type TurnClaim } from '../runtime/claims.js';
+import {
+  assertNoCoreOutcomeShadow,
+  attestedEffect,
+  isActionOp,
+  resolveOutcome,
+  type CoreOutcome,
+  type OutcomeMap,
+  type TurnClaim,
+} from '../runtime/claims.js';
 import { canonArgs } from './flow.js';
 import { domainCallsThisTurn } from './shared.js';
 
@@ -334,6 +342,22 @@ function claimMatches(claim: TurnClaim, ev: Evidence): boolean {
   return claim.amount === undefined || ev.magnitude.includes(claim.amount);
 }
 
+/**
+ * Did this call EFFECT A WRITE this turn — the one notion both cross-checks key on.
+ *
+ * TWO AUTHORITIES, UNION not intersection (red-team r2/A-V3). A call is an effected write when the DOMAIN
+ * declared its tool a write AND it took effect, OR when the WORLD ATTESTED the effect for any tool at all
+ * ({@link attestedEffect}). The old rule was the intersection alone, so a mutation through a tool absent
+ * from `writeTools` — a hand-maintained list, and the easiest thing in a domain to leave stale — was
+ * silently uncovered while the guard catalog reported full coverage: the ledger row said `tookEffect:true`
+ * and the engine declined to use it. `writeTools` still says which calls a domain INTENDS as writes (it
+ * gates whether the cross-check is installed at all, and it is what makes a `success` claim groundable on
+ * the inferred-effect path); it is now a LOWER BOUND on the write surface, never an upper one.
+ */
+function isEffectedWrite(c: ObservedCall, writes: ReadonlySet<string>): boolean {
+  return attestedEffect(c) || (writes.has(c.name) && c.tookEffect === true);
+}
+
 /** ` on <target>` when the claim names one, else '' — for the deny messages (no tool names leak). */
 function onTarget(claim: TurnClaim): string {
   return claim.target ? ` on ${claim.target}` : '';
@@ -350,7 +374,8 @@ function isGrounded(
 ): boolean {
   const issued = (c: ObservedCall) => claimMatches(claim, issuedEvidence(ctx, c));
   const addressed = (c: ObservedCall) => claimMatches(claim, addressedEvidence(ctx, c));
-  const effectedWrite = (c: ObservedCall) => writes.has(c.name) && c.tookEffect === true;
+  const effectedWrite = (c: ObservedCall) => isEffectedWrite(c, writes);
+  const isRead = (c: ObservedCall) => !writes.has(c.name) && !attestedEffect(c);
   switch (resolved) {
     case 'success':
       return calls.some((c) => effectedWrite(c) && issued(c));
@@ -363,9 +388,7 @@ function isGrounded(
         calls.some((c) => c.ok === false && addressed(c))
       );
     case 'not_found':
-      return calls.some(
-        (c) => !writes.has(c.name) && c.ok && isEmptyReadResult(resultOf(ctx, c)) && addressed(c),
-      );
+      return calls.some((c) => isRead(c) && c.ok && isEmptyReadResult(resultOf(ctx, c)) && addressed(c));
     case 'pending_confirmation':
       return calls.some((c) => c.resultFlags?.requiresConfirmation === true && addressed(c));
     case 'no_op':
@@ -391,6 +414,9 @@ function isGrounded(
  * table. Auto-installed by the spec class when the domain declares its `writeTools`.
  */
 export function claimIsGrounded(opts: { writeTools: readonly string[]; outcomes?: OutcomeMap }): Guard {
+  // m10 at THIS door: the factory is a public export a host (and the eval config loader) binds directly,
+  // so the shadow law is enforced where the map enters, not only at the spec constructor (r2/b4.5).
+  assertNoCoreOutcomeShadow(opts.outcomes, 'claimIsGrounded');
   const writes = new Set(opts.writeTools);
   return {
     kind: 'claimIsGrounded',
@@ -437,12 +463,13 @@ export function claimIsGrounded(opts: { writeTools: readonly string[]; outcomes?
  * can never cover more writes than there are claims, so this removes false denials and weakens nothing.
  */
 export function claimIsComplete(opts: { writeTools: readonly string[]; outcomes?: OutcomeMap }): Guard {
+  assertNoCoreOutcomeShadow(opts.outcomes, 'claimIsComplete'); // m10 at this door (r2/b4.5)
   const writes = new Set(opts.writeTools);
   return {
     kind: 'claimIsComplete',
     dim: 'behavior',
     check(ctx) {
-      const effected = domainCallsThisTurn(ctx).filter((c) => writes.has(c.name) && c.tookEffect === true);
+      const effected = domainCallsThisTurn(ctx).filter((c) => isEffectedWrite(c, writes));
       if (!effected.length) return null;
       // The claims that CAN cover a write: action intentions that resolve to success and name a target.
       const covering = (ctx.did ?? []).filter(
@@ -506,6 +533,11 @@ export function claimCoversRubric(
   opts: { targets: string[]; outcome: CoreOutcome | 'any'; outcomes?: OutcomeMap },
   reason: string,
 ): Guard {
+  // m10 at THIS door (r2/b4.3–b4.4): the eval config path builds a CONTRACT-LESS spec and threads its
+  // `outcomes` block straight in here, so the spec constructor's gate never saw it — and an ungated
+  // `{NOT_FOUND:'success'}` let the core word for "nothing was there" satisfy a `success` rubric, faking
+  // the one field the rubric exists to make unfakeable.
+  assertNoCoreOutcomeShadow(opts.outcomes, 'claimCoversRubric');
   return {
     kind: 'claimCoversRubric',
     dim: 'behavior',

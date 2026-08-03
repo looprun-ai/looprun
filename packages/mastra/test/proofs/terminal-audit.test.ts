@@ -253,7 +253,10 @@ describe('an empty did never delivers', () => {
     // `terminal-rejected` × 2: the main generate's respond and the forced-terminal's respond both carry
     // `did: []`, and since r2/C5 the guard hook REFUSES such a call with a governed correction instead of
     // letting it fail silently in zod — so the rejection is now in the turn's recovery log.
-    expect(r.recoveryEvents).toEqual(['terminal-rejected', 'terminal-rejected', 'forced-terminal', 'exhaustion-blank-floor']);
+    // MI-T7 wave 3: the engine's DECLARATION FLOOR now denies the undeclared candidate BEFORE the blank
+    // floor can see it, so the turn exhausts through the ordinary reply path (no terminal was observed
+    // to salvage — both were refused) into the engine-derived closure.
+    expect(r.recoveryEvents).toEqual(['terminal-rejected', 'terminal-rejected', 'forced-terminal', 'salvage-miss:no-terminal-observed', 'exhaustion-terminal']);
     // BOUNDED: the main generate + exactly one forced-terminal generate. No step burn, no retry loop.
     expect(llm.calls()).toBe(2);
     expect(r.maxIterHit).toBe(false);

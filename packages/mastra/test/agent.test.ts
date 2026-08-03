@@ -38,7 +38,10 @@ function plantsWorld(): PlantsWorld {
         world.watered++;
         result = { success: true, label: 'w1' };
       }
-      calls.push({ name, args, result, tookEffect: true });
+      // `tookEffect` is the world's ATTESTATION that this call CHANGED something — a listing does not.
+    // (Recording a read as effectful made the engine's own honest account report it: MI-T7 wave 3 keys
+    // the write surface on the attested effect, not only on `contract.writeTools`.)
+    calls.push({ name, args, result, tookEffect: name === 'waterPlant' });
       return result;
     },
     advanceTurn() {},
@@ -159,7 +162,9 @@ describe('LoopRunAgent — one governed turn', () => {
     const scripted = scriptedModel([
       [{ tool: 'listPlants', args: {} }],
       [{ tool: 'respond', args: { message: 'Done.', did: [{ op: 'inform' }] } }], // violates: no "fern"
-      [{ text: 'Your fern is thriving.' }], // the redrive falls back to free text → passes
+      // The redrive re-generates a WHOLE respond payload (the backend pins activeTools:['respond'] +
+      // toolChoice:'required'), so the corrected candidate declares its intention like any other.
+      [{ tool: 'respond', args: { message: 'Your fern is thriving.', did: [{ op: 'inform' }] } }],
     ]);
     const agent = new LoopRunAgent({ spec, world: plantsWorld(), toolDefs: TOOL_DEFS, model: scripted.model });
     const res = await agent.generate('How is my plant?');
@@ -187,7 +192,7 @@ describe('LoopRunAgent — one governed turn', () => {
     const scripted = scriptedModel([
       [{ tool: 'listPlants', args: {} }],
       [{ tool: 'respond', args: { message: 'A.', did: [{ op: 'inform' }] } }],
-      [{ text: 'B.' }], // redrive 1 — still violating
+      [{ tool: 'respond', args: { message: 'B.', did: [{ op: 'inform' }] } }], // redrive 1 — still violating
     ]);
     const agent = new LoopRunAgent({ spec, world: plantsWorld(), toolDefs: TOOL_DEFS, model: scripted.model });
     const res = await agent.generate('Hi');

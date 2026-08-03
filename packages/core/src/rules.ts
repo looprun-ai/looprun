@@ -26,7 +26,7 @@ export interface AgentWorld {
   exec(name: string, args: Record<string, unknown>): Promise<unknown> | unknown;
   advanceTurn(): void;
   ingestAttachment(url: string): string;
-  toolCalls: Array<{ name: string; args: unknown; result?: unknown; tookEffect?: boolean }>;
+  toolCalls: Array<{ name: string; args: unknown; result?: unknown; tookEffect?: boolean; effectInferred?: boolean }>;
   sseActions: unknown[];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [k: string]: any;
@@ -44,6 +44,16 @@ export interface ObservedCall {
    *  succeeded" from "a READ succeeded" so it does NOT veto an honest "I cannot do X / no record found"
    *  reply on a read-only turn (over-firing there costs a redrive and then the exhaustion closure). */
   tookEffect?: boolean;
+  /** Was `tookEffect` INFERRED by the runtime rather than ATTESTED by the world?
+   *
+   *  A world that keeps its own ledger (`defineWorld`, `FixtureWorld`, any custom world) sets `tookEffect`
+   *  per executor — it is a deliberate statement that THIS call mutated the world, and it is trustworthy
+   *  for any tool name. The native-tools/MCP path has no executor to ask: the tool ran itself, so the
+   *  runtime derives the flag from the RESULT (`ok && !requiresConfirmation`), which is really "the call
+   *  succeeded" — true of every successful READ as well. The two must not be read with the same authority:
+   *  "it took effect ⇒ it must be reported" is a sound law only over an ATTESTED effect. Set only by the
+   *  inferring path; absent everywhere else. */
+  effectInferred?: boolean;
   /** The LABEL this call's own result issued (a world-issued noun for what it produced/touched), when it
    *  issued one. Attached PER CALL so the engine's derived account (`deriveClaimsFromLedger`) names the
    *  entity the acting call itself named — the conversation-wide `producedThisTurn` array is a positional

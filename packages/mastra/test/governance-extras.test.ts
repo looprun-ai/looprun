@@ -65,7 +65,8 @@ describe('postTool (OUTPUT-dim) enforcement joins the redrive', () => {
     const scripted = scriptedModel([
       [{ tool: 'saveConfig', args: {} }],
       [{ tool: 'respond', args: { message: 'Saved.', did: [{ op: 'inform' }] } }], // over-claims — postTool violation pending
-      [{ text: 'The change was not fully applied.' }], // the redrive (toolChoice:none)
+      // The redrive re-generates a whole respond payload (respond-only, toolChoice pinned).
+      [{ tool: 'respond', args: { message: 'The change was not fully applied.', did: [{ op: 'inform' }] } }],
     ]);
     const agent = new LoopRunAgent({ spec, world: fixtureWorld(), toolDefs: TOOL_DEFS, model: scripted.model });
     const res = await agent.generate('save it');
@@ -85,7 +86,7 @@ describe('flowChain completion (controls.chains)', () => {
     const scripted = scriptedModel([
       [{ tool: 'listItems', args: {} }],
       [{ tool: 'respond', args: { message: 'Listed the items.', did: [{ op: 'inform' }] } }], // no logAction → chain forces it
-      [{ text: 'Listed the items and logged the audit action.' }], // the restate redrive
+      [{ tool: 'respond', args: { message: 'Listed the items and logged the audit action.', did: [{ op: 'inform' }] } }], // the restate redrive
     ]);
     const world = fixtureWorld();
     const agent = new LoopRunAgent({ spec, world, toolDefs: TOOL_DEFS, model: scripted.model });

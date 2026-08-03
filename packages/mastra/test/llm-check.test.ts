@@ -75,7 +75,7 @@ describe('llmCheck — case 35: two acts, one yes (structure alone cannot close 
       [{ tool: 'cancelBooking', args: { id: '3pm' } }],
       [{ tool: 'respond', args: { message: 'Done — I also cancelled the other booking for you.', did: [{ op: 'inform' }] } }],
       // redrive (no tools): the corrected reply claims only the licensed act (no second-act phrasing).
-      [{ text: 'Your 3pm booking is cancelled. Nothing else was changed.' }],
+      [{ tool: 'respond', args: { message: 'Your 3pm booking is cancelled. Nothing else was changed.', did: [{ op: 'inform' }] } }],
     ]);
     const res = await runSpecConversation(bookingSpec(), [{ userText: 'cancel my 3pm booking' }], {
       model: scripted.model, world: world(), toolDefs: TOOL_DEFS, adjudicator: licenceAdjudicator,
@@ -121,7 +121,7 @@ describe('llmCheck — a HUNG adjudicator resolves via failMode through the real
     spec.addGuard('onReply', 'any', llmCheck({ rubric: 'q?', failMode: 'closed' }), { id: 'agent:closed' });
     const scripted = scriptedModel([
       [{ tool: 'respond', args: { message: 'first draft', did: [{ op: 'inform' }] } }],
-      [{ text: 'second draft' }],
+      [{ tool: 'respond', args: { message: 'second draft', did: [{ op: 'inform' }] } }],
     ]);
     const res = await runSpecConversation(spec, [{ userText: 'hi' }], {
       model: scripted.model, world: world(), toolDefs: TOOL_DEFS,
@@ -159,7 +159,7 @@ describe('llmCheck — async coexistence with a sync onReply guard', () => {
 
     const scripted = scriptedModel([
       [{ tool: 'respond', args: { message: 'this is bad', did: [{ op: 'inform' }] } }],
-      [{ text: 'this is fine now' }],
+      [{ tool: 'respond', args: { message: 'this is fine now', did: [{ op: 'inform' }] } }],
     ]);
     const res = await runSpecConversation(spec, [{ userText: 'hi' }], {
       model: scripted.model, world: world(), toolDefs: TOOL_DEFS, adjudicator: slowDeny,

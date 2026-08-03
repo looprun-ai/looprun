@@ -88,6 +88,10 @@ const INTERNAL = [
   // backend hook refuses (and does not observe) a call that fails it; `supersededTerminalCalls` uses the
   // same notion to decide which terminal of a step was actually delivered.
   'terminalPayloadRejection',
+  // MI-T7 wave 3 (red-team r2/b4.3) — m10's shadow-law assertion, so the eval CONFIG loader can gate its
+  // own `outcomes` block (it builds a contract-less spec, which the spec constructor's call site misses)
+  // and report a path-qualified NormsConfigError. Not taught: a domain gets it for free at spec load.
+  'assertNoCoreOutcomeShadow',
   'supersededTerminalCalls', 'terminalProtocol', 'terminalToolDefs', 'lastTerminalArgs',
   'renderTurnPrompt',
   // SCG-T4 — the engine renders the operation report from the verified `did` and derives the true

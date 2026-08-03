@@ -183,7 +183,7 @@ describe('b2 — an ACTION cannot hide behind a SPEECH intention', () => {
     expect(respondPayload({ message: 'hi', did: [{ op: 'inform', outcome: 'success' }] }).did).toEqual([]);
   });
 
-  it.fails('BREAK b2.4 — a turn whose EVERY intention violates the partition delivers as if it declared nothing', async () => {
+  it('CLOSED b2.4 (wave 3) — a declaration the partition rejects can never end as a clean delivery', async () => {
     // The schema accepts `did:[{op:'inform',outcome:'success'}]` (non-empty). validateClaims drops it.
     // `did` is now [] — and `claimIsGrounded` opens with `if (!did.length) return null`, while
     // `claimIsComplete` has no effected write to miss on a read-only turn. So MI-D1's "there is no
@@ -366,13 +366,13 @@ describe('b4 — shadow-law normalization', () => {
     expect(() => assertNoCoreOutcomeShadow({ 'NOT_FOUND\t': 'success' } as OutcomeMap, 's')).toThrow();
   });
 
-  it.fails('BREAK b4.1 — a FULLWIDTH core key passes the gate (trim+toLowerCase, no NFKC fold)', () => {
+  it('CLOSED b4.1 (wave 3) — a FULLWIDTH core key is caught (NFKD compatibility fold)', () => {
     // `ＳＵＣＣＥＳＳ`.toLowerCase() is fullwidth lowercase, never the ASCII core word — so the gate
     // that exists to stop a domain vocabulary from LYING lets the lie through in another width.
     expect(() => assertNoCoreOutcomeShadow({ 'ＳＵＣＣＥＳＳ': 'failure' } as OutcomeMap, 's')).toThrow();
   });
 
-  it.fails('BREAK b4.2 — a combining-mark core key passes the gate (no NFKD fold)', () => {
+  it('CLOSED b4.2 (wave 3) — a combining-mark core key is caught (NFKD + mark strip)', () => {
     // 'PENDİNG_CONFIRMATION' (Turkish dotted İ) NFKD-folds to the core word and reads as it to a human.
     expect(() => assertNoCoreOutcomeShadow({ 'PENDİNG_CONFIRMATION': 'success' } as OutcomeMap, 's')).toThrow();
   });
@@ -411,7 +411,7 @@ describe('b4 — the shadow law is bound to ONE call site, and the config path w
   // threads the config's `outcomes` block straight into `claimCoversRubric` (norms-config.ts:399→342).
   const SHADOW: OutcomeMap = { NOT_FOUND: 'success', Success: 'failure' } as unknown as OutcomeMap;
 
-  it.fails('BREAK b4.3 — a spec built without a contract never gates its outcome map', () => {
+  it('CLOSED b4.3 (wave 3) — the GUARD FACTORY gates the map, contract or no contract', () => {
     // SECURE EXPECTATION: a shadowing outcome vocabulary fails at LOAD, on every path that can bind it.
     expect(() => {
       const spec = new AgentSpecBase({ id: 'norms-agent', mode: 'A', persona: 'p', tools: ['refundOrder'] });
@@ -422,17 +422,21 @@ describe('b4 — the shadow law is bound to ONE call site, and the config path w
     }).toThrow(/outcome map/i);
   });
 
-  it.fails('BREAK b4.4 — the shadowed core key then satisfies a `success` rubric with a not_found word', () => {
+  it('CLOSED b4.4 (wave 3) — the shadowed rubric can never be BUILT, so it can never be satisfied', () => {
     // The rubric exists so POLARITY is a field a text check cannot fake. With `NOT_FOUND → success`
-    // slipped past the gate, a claim declaring the core word for "nothing was there" covers a
-    // success requirement. SECURE EXPECTATION: it does not cover.
-    const verdict = claimCoversRubric({ targets: ['ORD-9'], outcome: 'success', outcomes: SHADOW }, 'account for ORD-9').check(
-      replyCtx({ did: [{ op: 'lookup', target: 'ORD-9', outcome: 'NOT_FOUND' }] }),
-    );
-    expect(verdict).not.toBeNull();
+    // slipped past the gate, a claim declaring the core word for "nothing was there" covered a success
+    // requirement. The map is now refused where it ENTERS, so there is no guard left to satisfy …
+    expect(() =>
+      claimCoversRubric({ targets: ['ORD-9'], outcome: 'success', outcomes: SHADOW }, 'account for ORD-9'),
+    ).toThrow(/outcome map/i);
+    // … and the CONTROL: with an honest DOMAIN word the rubric still resolves polarity through the map,
+    // so the fix removed the lie without removing the feature.
+    const ok = claimCoversRubric({ targets: ['ORD-9'], outcome: 'success', outcomes: { settled: 'success' } }, 'account for ORD-9');
+    expect(ok.check(replyCtx({ did: [{ op: 'lookup', target: 'ORD-9', outcome: 'settled' }] }))).toBeNull();
+    expect(ok.check(replyCtx({ did: [{ op: 'lookup', target: 'ORD-9', outcome: 'not_found' }] }))).not.toBeNull();
   });
 
-  it.fails('BREAK b4.5 — the same shadow map is accepted by the auto-installed cross-check factories', () => {
+  it('CLOSED b4.5 (wave 3) — every cross-check factory refuses a shadowing map', () => {
     // claimIsGrounded / claimIsComplete are public exports; a host binding them directly supplies the
     // map itself and no gate ever runs. SECURE EXPECTATION: the factory refuses a shadowing map.
     expect(() => claimIsGrounded({ writeTools: WRITES, outcomes: SHADOW })).toThrow();

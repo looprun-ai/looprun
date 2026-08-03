@@ -281,23 +281,35 @@ function composeDelivery(payload: RespondPayload, contract?: DomainContract): st
 }
 
 /**
- * The engine-DERIVED exhaustion closure, used when the redrive loop exhausts and no override seam is set.
- * The engine builds the TRUE claims from the world ledger ({@link deriveClaimsFromLedger}) — the model
- * never produced a groundable declaration, so the engine authors one it can stand behind — renders their
- * operation report, and appends one honest sentence keyed on whether anything actually landed. Returns
- * BOTH the text and the derived claims (the latter becomes the turn's verified `did` in history).
+ * The engine-DERIVED exhaustion closure, used when the redrive loop exhausts. The engine builds the TRUE
+ * claims from the world ledger ({@link deriveClaimsFromLedger}) — the model never produced a groundable
+ * declaration, so the engine authors one it can stand behind — renders their operation REPORT, and pairs it
+ * with one honest SENTENCE keyed on whether anything actually landed.
+ *
+ * Report and sentence are returned SEPARATELY because an `exhaustionReply` override may replace the
+ * sentence and may NEVER replace the report (see {@link finalizeReply}).
+ *
+ * The derived `did` is never empty: a turn on which the ledger shows nothing to report is still a DELIVERED
+ * turn, and MI-D1 admits no delivered turn with zero intentions — the closure is prose, so the engine
+ * declares it as the speech act it is (`inform`, which renders no operation line by MI-D5).
  */
 function deriveExhaustionClosure(
   ledger: TurnLedger,
   writeTools: readonly string[],
   contract?: DomainContract,
-): { text: string; did: TurnClaim[] } {
-  const derived = deriveClaimsFromLedger(ledger.observed, ledger.turnIndex, writeTools);
-  const report = renderOperationReport(derived, { renderClaim: contract?.renderClaim, outcomes: contract?.outcomes });
-  const landed = derived.some((c) => c.outcome === 'success');
+): { report: string; sentence: string; text: string; did: TurnClaim[] } {
+  const fromLedger = deriveClaimsFromLedger(ledger.observed, ledger.turnIndex, writeTools);
+  const did: TurnClaim[] = fromLedger.length ? fromLedger : [{ op: 'inform' }];
+  const report = renderOperationReport(did, { renderClaim: contract?.renderClaim, outcomes: contract?.outcomes });
+  const landed = did.some((c) => c.outcome === 'success');
   const sentence = landed ? EXHAUSTION_PARTIAL : EXHAUSTION_NOTHING;
-  const text = [report, sentence].filter((s) => s.trim()).join('\n\n');
-  return { text, did: derived };
+  return { report, sentence, text: closureText(report, sentence), did };
+}
+
+/** The closure's delivered shape: the VERIFIED operation report first, the closing sentence after — the
+ *  same order (and the same separator) {@link composeDelivery} uses on the clean path. */
+function closureText(report: string, sentence: string): string {
+  return [report, sentence].filter((s) => s.trim()).join('\n\n');
 }
 
 /**
@@ -388,10 +400,39 @@ export interface FinalizedReply {
   did: TurnClaim[];
 }
 
+/**
+ * The MANDATORY-DECLARATION FLOOR (MI-D1) — engine-owned, like the blank-delivery floor beside it.
+ *
+ * A candidate payload with ZERO intentions is not deliverable. The `respond` schema's `minItems:1` cannot
+ * be the guarantee: it counts entries, and it cannot express the speech/action partition, so a single
+ * malformed intention (`{op:'inform', outcome:'success'}` — the likeliest `did` mistake a weak model makes)
+ * is schema-legal, is DROPPED by `validateClaims`, and left the pipeline holding the empty declaration
+ * MI-D1 deleted: `claimIsGrounded` short-circuits on it, the operation report renders '', and the raw prose
+ * shipped alone with no violations (red-team r2/A-V4, B-b2.4). The same hole swallowed the free-text
+ * fallback path, where a model that never called the terminal delivered undeclared prose.
+ *
+ * As a violation rather than a hard failure, it takes the ordinary route: the redrive relays the correction
+ * (the backends re-generate with the terminal pinned), and a model that still declares nothing falls
+ * through to the engine-derived closure — which declares its own intention. Its kind is unknown to
+ * `FORM_GUARD_KINDS`, so the frontier's allow-list treats it as TRUTH: an undeclared candidate is never
+ * salvaged over.
+ */
+const DECLARATION_REASON =
+  'Your reply declared no intentions — every reply must declare at least one: each operation you performed ' +
+  'with its honest outcome, or a speech intention (inform/greet/refuse/ask) when you only spoke.';
+
+const DECLARATION_GUARD: Guard = {
+  kind: 'declarationPresent',
+  dim: 'behavior',
+  check: (ctx) => (ctx.did?.length ? null : DECLARATION_REASON),
+  prose: () => 'every reply declares what you did — at least one intention, always',
+};
+
 /** Sync the ledger's reply-side declaration to `payload` and run the onReply checks against it — the ONE
  *  place `ctx.did` (read by the claims cross-check guards, and by the consent guards as the turn's
  *  AUTHORITATIVE ask record — MI-D3) and `ctx.reply` (the message, read by degenerationGuard) are seated,
- *  so a candidate payload is checked as a whole. */
+ *  so a candidate payload is checked as a whole. The engine's own declaration floor runs FIRST, ahead of
+ *  every installed guard: an undeclared payload is a protocol failure, not a content judgment. */
 async function checkPayload(
   spec: AgentSpec,
   ledger: TurnLedger,
@@ -399,7 +440,9 @@ async function checkPayload(
   payload: RespondPayload,
 ): Promise<ReplyViolation[]> {
   ledger.did = payload.did;
-  return checkReply(spec, ledger, world, payload.message);
+  const violations = await checkReply(spec, ledger, world, payload.message);
+  if (payload.did.length) return violations;
+  return [{ guard: DECLARATION_GUARD, reason: DECLARATION_REASON }, ...violations];
 }
 
 /**
@@ -496,11 +539,17 @@ export async function finalizeReply(
       : contract?.exhaustionReply
         ? contract.exhaustionReply(world, okTools, ledger.producedThisTurn, finalViolations)
         : '';
-    // The blank floor holds UNCONDITIONALLY: an override that returns blank falls back to the
-    // engine-derived closure (non-empty by construction) instead of delivering nothing.
-    const closureText = overrideText && !isBlankDelivery(overrideText) ? overrideText : derived.text;
+    // COMPOSE, NEVER REPLACE (red-team r2/A-V5). An override used to discard the WHOLE derived closure,
+    // report included — and its signature predates the structured payload, so it cannot re-render the
+    // report and nothing required it to. A domain whose override said "nothing was changed" (the natural
+    // abstain wording) delivered exactly that over a write the ledger recorded: `ledger.did` kept the
+    // derived truth, so the history and the user disagreed. The override supplies the closing SENTENCE;
+    // the engine always prepends the verified operation report, exactly as `composeDelivery` does on the
+    // clean path. The blank floor holds UNCONDITIONALLY: a blank override falls back to the engine's own
+    // sentence rather than delivering the report alone.
+    const sentence = overrideText && !isBlankDelivery(overrideText) ? overrideText : derived.sentence;
     ledger.did = derived.did;
-    return { text: closureText, exhausted: true, violations: finalViolations, did: derived.did };
+    return { text: closureText(derived.report, sentence), exhausted: true, violations: finalViolations, did: derived.did };
   }
 
   // Clean delivery: compose message + the verified operation report; the accepted payload IS the verified

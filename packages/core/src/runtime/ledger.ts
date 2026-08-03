@@ -149,6 +149,10 @@ export function recordToolResult(ledger: TurnLedger, name: string, args: Record<
     ok,
     turnIndex: ledger.turnIndex,
     ...(wtc ? { tookEffect: wtc.tookEffect === true } : {}),
+    // PROVENANCE of the effect flag rides with it: a world that keeps its own ledger ATTESTS the effect
+    // per executor, while the native-tools path INFERS it from the result. Only the attested form carries
+    // "this call mutated the world" for a tool the domain never listed (see ObservedCall.effectInferred).
+    ...(wtc?.effectInferred === true ? { effectInferred: true } : {}),
     ...(requiresConfirmation ? { resultFlags: { requiresConfirmation: true } } : {}),
     ...(producedLabel !== undefined ? { producedLabel } : {}),
   });

@@ -108,6 +108,32 @@ describe('loadNormsConfig — guards from data', () => {
     expect(() => loadNormsConfig(cfg)).toThrow(NormsConfigError);
   });
 
+  // m10 THE SHADOW LAW on the config path (red-team r2/b4.3–b4.4). This loader builds a CONTRACT-LESS
+  // spec, so the spec constructor's gate never saw the config's `outcomes` block: `{"NOT_FOUND":"success"}`
+  // loaded clean and a `NOT_FOUND` claim then satisfied a `success` rubric — faking the one field the
+  // rubric exists to make unfakeable.
+  it('(a6) SHADOW LAW — an `outcomes` block keying a core word fails at LOAD, path-qualified', () => {
+    const cfg = {
+      id: 'x', persona: 'p', tools: ['t'],
+      outcomes: { NOT_FOUND: 'success', settled: 'success' },
+      guards: [{ kind: 'claimCoversRubric', id: 'r', targets: ['ORD-9'], outcome: 'success', reason: 'account for ORD-9' }],
+    };
+    expect(() => loadNormsConfig(cfg)).toThrow(NormsConfigError);
+    expect(() => loadNormsConfig(cfg)).toThrow(/outcomes.*outcome map|outcome map/i);
+  });
+
+  it('(a7) CONTROL — an honest DOMAIN outcome vocabulary still loads and resolves polarity', () => {
+    const cfg = {
+      id: 'x', persona: 'p', tools: ['t'],
+      outcomes: { settled: 'success', bounced: 'failure' },
+      guards: [{ kind: 'claimCoversRubric', id: 'r', targets: ['ORD-9'], outcome: 'success', reason: 'account for ORD-9' }],
+    };
+    const spec = loadNormsConfig(cfg);
+    const guard = spec.guards.onReply.find((b) => b.guard.kind === 'claimCoversRubric')!.guard;
+    const ctx = { args: {}, world: {} as AgentWorld, observed: [], turnIndex: 0, userText: '', history: [], did: [{ op: 'lookup', target: 'ORD-9', outcome: 'settled' }] } as GuardCtx;
+    expect(guard.check(ctx)).toBeNull();
+  });
+
   it('(b) REGEX BAN — a pattern-like KEY anywhere fails validation by name', () => {
     const fixtureWithPatternKey = {
       id: 'x',

@@ -218,7 +218,8 @@ describe('finalizeReply pipeline', () => {
     const out = await finalizeReply(spec, CONTRACT_NO_OVERRIDE, fixtureWorld(), ledger, P(''), async () => P(''), 0);
     expect(out.exhausted).toBe(true);
     expect(out.text).toBe(EXHAUSTION_NOTHING);
-    expect(out.did).toEqual([]);
+    // MI-T7 wave 3: the closure is a DELIVERED turn, so it declares its own speech intention (MI-D1).
+    expect(out.did).toEqual([{ op: 'inform' }]);
   });
 
   it('blank-delivery FLOOR: a message of only zero-width characters (survives .trim()) also routes to the closure', async () => {
@@ -229,7 +230,8 @@ describe('finalizeReply pipeline', () => {
     const out = await finalizeReply(spec, CONTRACT_NO_OVERRIDE, fixtureWorld(), ledger, zeroWidth, async () => zeroWidth, 0);
     expect(out.exhausted).toBe(true);
     expect(out.text).toBe(EXHAUSTION_NOTHING);
-    expect(out.did).toEqual([]);
+    // MI-T7 wave 3: the closure is a DELIVERED turn, so it declares its own speech intention (MI-D1).
+    expect(out.did).toEqual([{ op: 'inform' }]);
   });
 
   it('blank-delivery FLOOR: a mutator that rewrites the message to "" is still caught (post-mutator, not just pre-mutator)', async () => {
@@ -239,7 +241,8 @@ describe('finalizeReply pipeline', () => {
     const out = await finalizeReply(spec, CONTRACT_NO_OVERRIDE, fixtureWorld(), ledger, P('a perfectly fine reply'), async () => P('a perfectly fine reply'), 0);
     expect(out.exhausted).toBe(true);
     expect(out.text).toBe(EXHAUSTION_NOTHING);
-    expect(out.did).toEqual([]);
+    // MI-T7 wave 3: the closure is a DELIVERED turn, so it declares its own speech intention (MI-D1).
+    expect(out.did).toEqual([{ op: 'inform' }]);
     expect(ledger.turnCorrections).toContain('mutate:blankOut');
   });
 

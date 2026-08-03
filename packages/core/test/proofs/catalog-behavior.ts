@@ -419,9 +419,26 @@ export const BEHAVIOR_PROOFS: GuardProof[] = [
         },
       },
       {
-        name: 'failMode open (the default): an UNREACHABLE adjudicator allows → silent',
-        polarity: 'neutral',
+        // MI-T7 wave 3 (r2/A-V8): this backstop's default is `closed`, unlike bare llmCheck's. An
+        // adjudicator outage must not silently delete the residual's only named mitigation.
+        name: 'failMode closed (the default here): an UNREACHABLE adjudicator DENIES',
+        polarity: 'negative',
         ctx: { reply: 'anything', did: [{ op: 'inform' }], adjudicator: (async () => { throw new Error('adjudicator offline'); }) as Adjudicator, turnIndex: 0, observed: [] },
+        l1: 'fires',
+      },
+      {
+        // The rubric judges MISMATCH only — a message that asserts no operation at all cannot mismatch
+        // one, so a pure speech turn is silent. (The availability opt-out `failMode:'open'` is proven in
+        // `llm-check.test.ts`; a per-case guard override is not part of the proof shape.)
+        name: 'a message asserting no operation beside a speech-only did → silent',
+        polarity: 'neutral',
+        ctx: {
+          reply: 'Happy to help — anything else?',
+          did: [{ op: 'greet' }],
+          adjudicator: DID_MESSAGE_ADJ,
+          turnIndex: 0,
+          observed: [],
+        },
         l1: 'silent',
       },
     ],

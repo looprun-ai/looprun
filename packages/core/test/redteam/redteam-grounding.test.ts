@@ -255,9 +255,15 @@ describe('VECTOR 3 — CLOSED: no undeclared or prototype outcome word resolves 
     }
   });
 
-  it('a map may not SHADOW a core word to flip its meaning (core wins in resolveOutcome)', () => {
-    // Even if a malicious map says success→... it is ignored; but the real test: a map entry keyed by a
-    // core word cannot make a fabricated success ground. success still requires an effected write.
-    expect(grounded({ did: [{ op: 'x', target: 'BK-1', outcome: 'success' }] }, { success: 'success' })).toBeTruthy();
+  it('a map may not SHADOW a core word — the FACTORY now refuses it, at every door (m10, r2/b4.5)', () => {
+    // Two layers, and the outer one is new: `resolveOutcome` still lets the core meaning win, but a map
+    // keyed by a core word never reaches it — `claimIsGrounded` asserts the shadow law when it is BUILT,
+    // so a host binding the factory directly (or the eval config path, which builds a contract-less spec)
+    // can no longer walk around the spec constructor's single call site.
+    expect(() => grounded({ did: [{ op: 'x', target: 'BK-1', outcome: 'success' }] }, { success: 'success' })).toThrow(
+      /outcome map/i,
+    );
+    // …and the inner layer is unchanged: a fabricated success still requires an effected write.
+    expect(grounded({ did: [{ op: 'x', target: 'BK-1', outcome: 'success' }] }, { settled: 'success' })).toBeTruthy();
   });
 });

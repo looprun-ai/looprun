@@ -20,6 +20,7 @@
 import { z } from 'zod';
 import { AgentSpecBase, askedEarlier, claimCoversRubric, confirmFirst, didMessageConsistency, llmCheck, precondition, requiresBefore } from '@looprun-ai/core';
 import type { AgentSpec, AgentWorld, CoreOutcome, Guard, GuardCtx, OutcomeMap } from '@looprun-ai/core';
+import { assertNoCoreOutcomeShadow } from '@looprun-ai/core/internal';
 
 /** The CORE, domain-neutral outcome vocabulary as a runtime tuple — the closed set a `did` claim may
  *  resolve to. Mirrors `CoreOutcome` (the `satisfies` guards it against drift); a domain outcome word
@@ -386,6 +387,16 @@ export function loadNormsConfig(json: unknown, deps: NormsDeps = {}): AgentSpec 
     throw new NormsConfigError(`norms config invalid at ${issue.path.join('.') || '(root)'}: ${issue.message}`);
   }
   const cfg = parsed.data;
+  // m10 — THE SHADOW LAW on the config path (red-team r2/b4.3). The spec constructor gates
+  // `contract.outcomes`, and this loader builds a CONTRACT-LESS spec: the config's `outcomes` block went
+  // straight into the cross-check guards, so `{"NOT_FOUND":"success"}` loaded clean and a `NOT_FOUND` claim
+  // then satisfied a `success` rubric. The guard factories now assert it themselves, but the config path
+  // owes the author a PATH-QUALIFIED load error rather than a raw guard-factory throw.
+  try {
+    assertNoCoreOutcomeShadow(cfg.outcomes, 'norms config `outcomes`');
+  } catch (e) {
+    throw new NormsConfigError(`norms config invalid at outcomes: ${e instanceof Error ? e.message : String(e)}`);
+  }
   const spec = new AgentSpecBase({
     id: cfg.id,
     mode: cfg.id.toUpperCase().replace(/[^A-Z0-9]+/g, '_') || 'AGENT',
