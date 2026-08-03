@@ -49,7 +49,7 @@ export const CATALOG_EXAMPLES: ReadonlyArray<Guard | ReplyMutator> = [
   /* consentRequired       */ consentRequired({ tools: ['storeProfile'], consentOk: (world) => world.consentOnRecord === true, reason: 'No consent on record — ask for it before storing anything.' }),
   /* confirmFirst          */ confirmFirst('confirmed'),
   /* noActAfterAskSameTurn */ noActAfterAskSameTurn(['cancelBooking']),
-  /* destructiveThrottle   */ destructiveThrottle(['cancelBooking', 'refundOrder']),
+  /* destructiveThrottle   */ destructiveThrottle(['cancelBooking', 'purgeAccount'], { flagless: ['purgeAccount'] }),
   /* pendingConfirmMustAsk */ pendingConfirmMustAsk(),
   /* claimIsGrounded       */ claimIsGrounded({ writeTools: ['createBooking', 'cancelBooking'], outcomes: { settled: 'success' } }),
   /* claimIsComplete       */ claimIsComplete({ writeTools: ['createBooking', 'cancelBooking'], outcomes: { settled: 'success' } }),

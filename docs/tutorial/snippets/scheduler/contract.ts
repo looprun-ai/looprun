@@ -22,7 +22,7 @@ export const SCHEDULER_SCOPE: AgentScope = {
 };
 
 export const SCHEDULER_CONTRACT: DomainContract = {
-  voice: 'You keep one person’s calendar. Be brief, concrete, and name events by their title and time.',
+  voice: 'You keep one person’s calendar. Be brief, concrete, and name events by their label and time.',
   stateBlock: (world) => `Calendar: ${(world as SchedulerWorld).snapshot().length} event(s). Now: ${REFERENCE_NOW} (Monday).`,
   coreInvariants: [
     'Only report what the calendar tools actually returned — never an event, time or id you did not read.',

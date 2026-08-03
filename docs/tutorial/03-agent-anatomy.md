@@ -223,7 +223,7 @@ policy contradict each other is a spec that will fail an eval case you cannot de
 
 ```ts
 export const SCHEDULER_CONTRACT: DomainContract = {
-  voice: 'You keep one person’s calendar. Be brief, concrete, and name events by their title and time.',
+  voice: 'You keep one person’s calendar. Be brief, concrete, and name events by their label and time.',
   stateBlock: (world) => `Calendar: ${(world as SchedulerWorld).snapshot().length} event(s). Now: ${REFERENCE_NOW} (Monday).`,
   coreInvariants: [
     'Only report what the calendar tools actually returned — never an event, time or id you did not read.',
@@ -474,7 +474,7 @@ Here is "never double-book", bound:
 ```ts
     // Shape first: the clash check below compares date-time STRINGS, so it is only meaningful on
     // well-formed input — "next Tuesday" would compare as garbage and slip straight past it.
-    this.addGuard('preTool', ['addEvent'], argRequired('title'), { id: 'agent:titleRequired' });
+    this.addGuard('preTool', ['addEvent'], argRequired('label'), { id: 'agent:labelRequired' });
     this.addGuard('preTool', ['addEvent'], argFormat('start', DATETIME_PATTERN), { id: 'agent:startFormat' });
     this.addGuard('preTool', ['addEvent'], argFormat('end', DATETIME_PATTERN), { id: 'agent:endFormat' });
 ```
@@ -492,7 +492,7 @@ Then the state gate, written by hand because no catalog row knows what a calenda
         check: (ctx) => {
           const clashes = (ctx.world as SchedulerWorld).clashesWith(String(ctx.args.start ?? ''), String(ctx.args.end ?? ''));
           return clashes.length
-            ? `That window clashes with "${clashes[0]!.title}" (${clashes[0]!.id}) — do not book it. Name the clash and ask what to do.`
+            ? `That window clashes with "${clashes[0]!.label}" (${clashes[0]!.id}) — do not book it. Name the clash and ask what to do.`
             : null;
         },
         prose: () => 'a window that clashes with an existing event is never booked — name the clashing event and ask how to proceed',

@@ -37,7 +37,7 @@ describe('05 · runSpecConversation over the scheduler', () => {
       [{ tool: 'respond', args: { message: 'Standup on Monday 10:00 and the dentist on Wednesday 15:00.', did: [{ op: 'inform' }] } }],
       // turn 2: the clashing booking — vetoed before execution, so the model asks instead. The
       // attempt is declared honestly (`blocked`, never `success`) and asking is an `ask` intention.
-      [{ tool: 'addEvent', args: { title: 'Design review', start: '2026-03-02T10:15', end: '2026-03-02T10:45' } }],
+      [{ tool: 'addEvent', args: { label: 'Design review', start: '2026-03-02T10:15', end: '2026-03-02T10:45' } }],
       [
         {
           tool: 'respond',
@@ -56,7 +56,26 @@ describe('05 · runSpecConversation over the scheduler', () => {
     expect(executedToolNames(result.turnRecords[0]!)).toEqual(['listEvents']);
     // The vetoed call never reached the world: no addEvent in turn 2's executed calls.
     expect(executedToolNames(result.turnRecords[1]!)).toEqual([]);
-    expect(guardEvents(result)).toContain('run:noDoubleBook:addEvent');
+
+    // THE DELIVERED REPLY, both turns — the chapter's whole claim is that the user READS these.
+    // Asserting only guard events let a broken flow pass: when `addEvent` took its subject under
+    // `title` (not an identity key) the vetoed attempt named nothing the ledger recognised,
+    // `claimIsGrounded` denied the honest `blocked` declaration, and the engine's exhaustion closure
+    // was delivered INSTEAD of the sentence printed in the chapter — invisibly, because the four
+    // recovery events still contained the one this test looked for.
+    expect(result.turnRecords[0]!.assistantFinalText).toBe(
+      'Standup on Monday 10:00 and the dentist on Wednesday 15:00.',
+    );
+    // Turn 2 is the COMPOSED delivery: the model's `message`, then the operation report the ENGINE
+    // rendered from the verified declaration. `blocked` on `Design review` grounded against the vetoed
+    // attempt's own args, so the user is told the booking did not happen — by the engine, not the model.
+    expect(result.turnRecords[1]!.assistantFinalText).toBe(
+      'That clashes with Standup (10:00–10:30). Move it or replace it?\n\nDesign review: not permitted',
+    );
+
+    // The recovery-event set is EXACTLY what the chapter claims: one veto, nothing else. A redrive,
+    // a salvage miss or an exhaustion terminal here means the taught flow does not close cleanly.
+    expect(guardEvents(result)).toEqual(['run:noDoubleBook:addEvent']);
   });
 });
 

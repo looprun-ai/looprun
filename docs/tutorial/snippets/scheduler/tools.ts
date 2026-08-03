@@ -22,8 +22,8 @@ export const addEventTool: ToolDef = {
   description: 'Add an event to the calendar. Fails if the window clashes with an existing event.',
   inputSchema: {
     type: 'object',
-    properties: { title: { type: 'string' }, start: DATE_TIME, end: DATE_TIME },
-    required: ['title', 'start', 'end'],
+    properties: { label: { type: 'string' }, start: DATE_TIME, end: DATE_TIME },
+    required: ['label', 'start', 'end'],
   },
 };
 

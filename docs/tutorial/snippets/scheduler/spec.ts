@@ -4,7 +4,7 @@
  * "Messaging-driven calendar management: add events, check the schedule, cancel — never
  * double-book, never delete without asking." The two obligations land differently:
  *
- *   never double-book        → four guards installed below on `addEvent`: `argRequired('title')`,
+ *   never double-book        → four guards installed below on `addEvent`: `argRequired('label')`,
  *                              `argFormat` on each date-time, then the `custom` run-dim clash gate
  *                              (shape first, because the clash check compares strings)
  *   never delete without ask → NOT written here. Naming `cancelEvent` in `destructiveTools` makes
@@ -42,7 +42,7 @@ export class SchedulerSpec extends AgentSpecBase {
 
     // Shape first: the clash check below compares date-time STRINGS, so it is only meaningful on
     // well-formed input — "next Tuesday" would compare as garbage and slip straight past it.
-    this.addGuard('preTool', ['addEvent'], argRequired('title'), { id: 'agent:titleRequired' });
+    this.addGuard('preTool', ['addEvent'], argRequired('label'), { id: 'agent:labelRequired' });
     this.addGuard('preTool', ['addEvent'], argFormat('start', DATETIME_PATTERN), { id: 'agent:startFormat' });
     this.addGuard('preTool', ['addEvent'], argFormat('end', DATETIME_PATTERN), { id: 'agent:endFormat' });
 
@@ -56,7 +56,7 @@ export class SchedulerSpec extends AgentSpecBase {
         check: (ctx) => {
           const clashes = (ctx.world as SchedulerWorld).clashesWith(String(ctx.args.start ?? ''), String(ctx.args.end ?? ''));
           return clashes.length
-            ? `That window clashes with "${clashes[0]!.title}" (${clashes[0]!.id}) — do not book it. Name the clash and ask what to do.`
+            ? `That window clashes with "${clashes[0]!.label}" (${clashes[0]!.id}) — do not book it. Name the clash and ask what to do.`
             : null;
         },
         prose: () => 'a window that clashes with an existing event is never booked — name the clashing event and ask how to proceed',

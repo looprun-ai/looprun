@@ -155,8 +155,8 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
     hook: 'preTool',
     summary: 'At most one destructive action that TOOK EFFECT per turn (a probe does not count; a call that RAN with no world record of its effect does).',
     whenToUse:
-      'Auto-installed alongside `confirmFirst`. It is the blast-radius cap, not a consent gate: it stops chained destructive calls in one turn even when each one is individually confirmed.',
-    example: `destructiveThrottle(['cancelBooking', 'refundOrder'])`,
+      'Auto-installed alongside `confirmFirst`. It is the blast-radius cap, not a consent gate: it stops chained destructive calls in one turn even when each one is individually confirmed. A same-step call that is NOT confirmed reads as a preview and does not count (so a legitimate multi-preview is not vetoed) — which means a tool with NO confirm flag needs `flagless`, or its same-step cap never engages. `AgentSpecBase` passes its `prior-ask` tools automatically; pass them yourself when you install this by hand.',
+    example: `destructiveThrottle(['cancelBooking', 'purgeAccount'], { flagless: ['purgeAccount'] })`,
   },
   {
     name: 'pendingConfirmMustAsk',

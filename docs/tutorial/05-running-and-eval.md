@@ -143,9 +143,10 @@ One `TurnRecord` per turn that ran. The fields worth asserting on:
 | `iters`, `llmCalls`, `durationMs`, `maxIterHit` | the loop's cost and whether it hit the step ceiling |
 | `thoughts`, `sseActions`, `attachments` | the model's reasoning text (when the provider returns it), the world's queued UI actions, the labels ingested this turn |
 
-The two together are the whole assertion vocabulary: *what reached the world*, and *which rules
-fired*. The snippets' own smoke test is exactly that shape, run against a scripted model so it costs
-nothing:
+Those two are the core assertion vocabulary — *what reached the world*, and *which rules fired* — but
+they are not sufficient on their own. Add a third: **what the user actually read**
+(`assistantFinalText`). The snippets' own smoke test is that shape, run against a scripted model so it
+costs nothing:
 
 ```ts
     const result = await runScheduler(scripted.model);
@@ -155,9 +156,32 @@ nothing:
     expect(executedToolNames(result.turnRecords[0]!)).toEqual(['listEvents']);
     // The vetoed call never reached the world: no addEvent in turn 2's executed calls.
     expect(executedToolNames(result.turnRecords[1]!)).toEqual([]);
-    expect(guardEvents(result)).toContain('run:noDoubleBook:addEvent');
+
+    expect(result.turnRecords[1]!.assistantFinalText).toBe(
+      'That clashes with Standup (10:00–10:30). Move it or replace it?\n\nDesign review: not permitted',
+    );
+    expect(guardEvents(result)).toEqual(['run:noDoubleBook:addEvent']);
 ```
 <sub>excerpt · `snippets/test/05-running-and-eval.test.ts` — the clash gate of chapter 03 §8, proven</sub>
+
+Two things in there are deliberate, and both are lessons.
+
+**Assert the DELIVERED reply, not just the events.** A turn can log the veto you expect and still not
+deliver the reply you expect: if a declaration fails its cross-check the engine redrives and then
+delivers its own honest closure INSTEAD of the model's sentence. The recovery list still contains your
+veto, so a `toContain` passes while the user reads something else entirely. `assistantFinalText` is the
+only assertion that catches it.
+
+**Assert the recovery set with `toEqual`, not `toContain`.** `toContain` is satisfied by
+`['run:noDoubleBook:addEvent', 'redrive:claimIsGrounded', 'salvage-miss:same-text',
+'exhaustion-terminal']` — a flow that broke three ways past the one event you named. `toEqual` says
+"this fired, and nothing else did", which is what a clean governed turn looks like.
+
+Note the reply is the model's `message` followed by a line the ENGINE wrote: `Design review: not
+permitted`. That is the operation report rendered from the verified `did` — the agent declared
+`{ op: 'addEvent', target: 'Design review', outcome: 'blocked' }`, the cross-check matched it against
+the vetoed attempt, and the engine told the user the booking did not happen. The domain can word that
+line itself through `contract.renderClaim` (chapter 03 §5); absent it you get this neutral default.
 
 The scripted model there is `scriptedModel` from `@looprun-ai/mastra/testing`, a **test-only entry
 point** this tutorial does not teach: a list of scripted steps, each one LLM call. It exists so a
@@ -317,7 +341,7 @@ const cases: SubjectCase[] = [
         },
       ],
     },
-    targets: ['agent:noDoubleBook', 'agent:titleRequired', 'agent:startFormat', 'agent:endFormat'],
+    targets: ['agent:noDoubleBook', 'agent:labelRequired', 'agent:startFormat', 'agent:endFormat'],
   },
 ```
 <sub>excerpt · `snippets/scheduler-subject/evals/cases.ts` — one of three cases</sub>

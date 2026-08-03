@@ -25,13 +25,13 @@ describe('the scheduler snippet modules', () => {
     const world = new SchedulerWorld();
 
     expect(world.exec('listEvents', {}).events).toHaveLength(2);
-    expect(world.exec('addEvent', { title: 'Lunch', start: '2026-03-02T12:00', end: '2026-03-02T13:00' }).success).toBe(true);
-    expect(world.exec('addEvent', { title: 'Clash', start: '2026-03-02T10:15', end: '2026-03-02T10:45' }).success).toBe(false);
+    expect(world.exec('addEvent', { label: 'Lunch', start: '2026-03-02T12:00', end: '2026-03-02T13:00' }).success).toBe(true);
+    expect(world.exec('addEvent', { label: 'Clash', start: '2026-03-02T10:15', end: '2026-03-02T10:45' }).success).toBe(false);
     // A malformed date-time never reaches the lexicographic clash compare.
-    expect(world.exec('addEvent', { title: 'Vague', start: 'next Tuesday', end: 'later' }).success).toBe(false);
+    expect(world.exec('addEvent', { label: 'Vague', start: 'next Tuesday', end: 'later' }).success).toBe(false);
     // …nor does a backwards window, or one before the reference clock.
-    expect(world.exec('addEvent', { title: 'Backwards', start: '2026-03-03T11:00', end: '2026-03-03T10:00' }).success).toBe(false);
-    expect(world.exec('addEvent', { title: 'Yesterday', start: '2026-03-01T09:00', end: '2026-03-01T10:00' }).success).toBe(false);
+    expect(world.exec('addEvent', { label: 'Backwards', start: '2026-03-03T11:00', end: '2026-03-03T10:00' }).success).toBe(false);
+    expect(world.exec('addEvent', { label: 'Yesterday', start: '2026-03-01T09:00', end: '2026-03-01T10:00' }).success).toBe(false);
 
     // Destructive: the unconfirmed call is a side-effect-free probe.
     expect(world.exec('cancelEvent', { eventId: 'evt_101' }).requiresConfirmation).toBe(true);

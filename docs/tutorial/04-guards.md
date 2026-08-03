@@ -272,11 +272,11 @@ not identity and a re-ordered retry is still the same call:
 ```ts
 /** Key order is not identity: to `noDuplicateCall`, both of these are the SAME call. */
 export const sameCallFingerprint =
-  canonArgs({ start: '2026-03-02T10:00', title: 'Standup' }) === canonArgs({ title: 'Standup', start: '2026-03-02T10:00' });
+  canonArgs({ start: '2026-03-02T10:00', label: 'Standup' }) === canonArgs({ label: 'Standup', start: '2026-03-02T10:00' });
 
 /** …and a different VALUE is a different call, so a corrected retry is never denied as a repeat. */
 export const differentCallFingerprint =
-  canonArgs({ title: 'Standup' }) !== canonArgs({ title: 'Stand-up' });
+  canonArgs({ label: 'Standup' }) !== canonArgs({ label: 'Stand-up' });
 ```
 <sub>excerpt · `snippets/04-guards.ts`</sub>
 
@@ -465,10 +465,10 @@ noActAfterAskSameTurn(['cancelBooking'])
 
 At most one destructive action that TOOK EFFECT per turn (a probe does not count; a call that RAN with no world record of its effect does).
 
-**When to reach for it.** Auto-installed alongside `confirmFirst`. It is the blast-radius cap, not a consent gate: it stops chained destructive calls in one turn even when each one is individually confirmed.
+**When to reach for it.** Auto-installed alongside `confirmFirst`. It is the blast-radius cap, not a consent gate: it stops chained destructive calls in one turn even when each one is individually confirmed. A same-step call that is NOT confirmed reads as a preview and does not count (so a legitimate multi-preview is not vetoed) — which means a tool with NO confirm flag needs `flagless`, or its same-step cap never engages. `AgentSpecBase` passes its `prior-ask` tools automatically; pass them yourself when you install this by hand.
 
 ```ts
-destructiveThrottle(['cancelBooking', 'refundOrder'])
+destructiveThrottle(['cancelBooking', 'purgeAccount'], { flagless: ['purgeAccount'] })
 ```
 
 #### 13. `askedEarlier`
@@ -664,7 +664,7 @@ export function noCancelAfterStart(now: string): Guard {
     check: (ctx) => {
       const event = targetEvent(ctx);
       if (!event || event.start > now) return null;
-      return `"${event.title}" (${event.id}) started at ${event.start} — it is too late to cancel it. Say so and offer to remove the remaining time instead.`;
+      return `"${event.label}" (${event.id}) started at ${event.start} — it is too late to cancel it. Say so and offer to remove the remaining time instead.`;
     },
     prose: () => 'an event that has already started is never cancelled — say it is too late and offer what can still be done',
   });

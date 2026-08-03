@@ -13,7 +13,12 @@ const DATETIME_RE = new RegExp(DATETIME_PATTERN);
 
 export interface CalendarEvent {
   id: string;
-  title: string;
+  /** The event's NAME — deliberately `label`, an IDENTITY key the engine's cross-check can read.
+   *  A write result must name what it touched under `id`/`label`/`<entity>Id`, and a VETOED attempt can
+   *  only name its subject through its own args, so the arg carries the same key. Calling it `title`
+   *  put the one word the agent reports outside the identity set: a blocked booking could then name
+   *  nothing the ledger recognised. */
+  label: string;
   start: string;
   end: string;
 }
@@ -22,8 +27,8 @@ type ToolResult = { success: boolean; [k: string]: unknown };
 
 /** A fixed seed calendar, positioned around {@link REFERENCE_NOW}. */
 export const SEED_EVENTS: CalendarEvent[] = [
-  { id: 'evt_101', title: 'Standup', start: '2026-03-02T10:00', end: '2026-03-02T10:30' },
-  { id: 'evt_102', title: 'Dentist', start: '2026-03-04T15:00', end: '2026-03-04T16:00' },
+  { id: 'evt_101', label: 'Standup', start: '2026-03-02T10:00', end: '2026-03-02T10:30' },
+  { id: 'evt_102', label: 'Dentist', start: '2026-03-04T15:00', end: '2026-03-04T16:00' },
 ];
 
 export class SchedulerWorld implements AgentWorld {
@@ -74,14 +79,14 @@ export class SchedulerWorld implements AgentWorld {
         return { success: true, events: this.snapshot() };
 
       case 'addEvent': {
-        const [title, start, end] = [str('title'), str('start'), str('end')];
-        if (!title) return { success: false, error: 'title is required' };
+        const [label, start, end] = [str('label'), str('start'), str('end')];
+        if (!label) return { success: false, error: 'label is required' };
         if (!DATETIME_RE.test(start) || !DATETIME_RE.test(end)) return { success: false, error: 'start and end must be YYYY-MM-DDTHH:mm' };
         if (!(start < end)) return { success: false, error: 'end must be after start' };
         if (start < REFERENCE_NOW) return { success: false, error: `start ${start} is in the past (now is ${REFERENCE_NOW})` };
         const clashes = this.clashesWith(start, end);
         if (clashes.length) return { success: false, error: 'the window clashes with an existing event — not booked', clashes };
-        const event: CalendarEvent = { id: `evt_${this.nextId++}`, title, start, end };
+        const event: CalendarEvent = { id: `evt_${this.nextId++}`, label, start, end };
         this.events = [...this.events, event];
         return { success: true, ...event };
       }
@@ -91,10 +96,10 @@ export class SchedulerWorld implements AgentWorld {
         const event = this.events.find((e) => e.id === eventId);
         if (!event) return { success: false, error: `unknown eventId "${eventId}" — look it up with listEvents` };
         if (args.confirmed !== true) {
-          return { success: true, requiresConfirmation: true, question: `Cancel "${event.title}" (${event.id})? This cannot be undone.` };
+          return { success: true, requiresConfirmation: true, question: `Cancel "${event.label}" (${event.id})? This cannot be undone.` };
         }
         this.events = this.events.filter((e) => e.id !== eventId);
-        return { success: true, cancelledEventId: event.id, title: event.title };
+        return { success: true, cancelledEventId: event.id, label: event.label };
       }
 
       default:

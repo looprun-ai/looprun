@@ -39,7 +39,7 @@ export function noCancelAfterStart(now: string): Guard {
     check: (ctx) => {
       const event = targetEvent(ctx);
       if (!event || event.start > now) return null;
-      return `"${event.title}" (${event.id}) started at ${event.start} — it is too late to cancel it. Say so and offer to remove the remaining time instead.`;
+      return `"${event.label}" (${event.id}) started at ${event.start} — it is too late to cancel it. Say so and offer to remove the remaining time instead.`;
     },
     prose: () => 'an event that has already started is never cancelled — say it is too late and offer what can still be done',
   });
@@ -60,8 +60,8 @@ export const lateCancelSchedulerSpec = new LateCancelSchedulerSpec();
 // arguments, so a rephrased retry escapes `noDuplicateCall` and still burns `maxCalls` budget.
 /** Key order is not identity: to `noDuplicateCall`, both of these are the SAME call. */
 export const sameCallFingerprint =
-  canonArgs({ start: '2026-03-02T10:00', title: 'Standup' }) === canonArgs({ title: 'Standup', start: '2026-03-02T10:00' });
+  canonArgs({ start: '2026-03-02T10:00', label: 'Standup' }) === canonArgs({ label: 'Standup', start: '2026-03-02T10:00' });
 
 /** …and a different VALUE is a different call, so a corrected retry is never denied as a repeat. */
 export const differentCallFingerprint =
-  canonArgs({ title: 'Standup' }) !== canonArgs({ title: 'Stand-up' });
+  canonArgs({ label: 'Standup' }) !== canonArgs({ label: 'Stand-up' });
