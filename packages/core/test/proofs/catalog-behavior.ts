@@ -283,6 +283,9 @@ export const BEHAVIOR_PROOFS: GuardProof[] = [
           ],
           turnIndex: 0,
           reply: 'Deleting that item needs your confirmation — are you sure?',
+          // The DELIVERED declaration is the relay signal (the same one the L3 loop seats from the
+          // accepted payload); the raw `observed` terminal above is only the call record.
+          did: [{ op: 'ask' }],
         },
         l1: 'silent',
         l3: {

@@ -35,7 +35,8 @@ const TAUGHT_03 = [
   'AgentSpec', 'AgentSpecBase', 'AgentSpecConfig', 'AgentScope', 'AgentWorld',
   'DomainContract', 'Hook', 'TerminalPolicy', 'ToolDef', 'ToolTarget', 'validateSpec',
 ];
-// ── Chapter 04 (27) — no-regex law (2026-08-02) deleted 8 regex-param kinds; confirmedNeedsEarlierProbe
+// ── Chapter 04 (28 names = the 23 GUARD_CATALOG factories + the 5 supporting types/helpers the chapter
+//    teaches beside them; the count is pinned below) — no-regex law (2026-08-02) deleted 8 regex-param kinds; confirmedNeedsEarlierProbe
 //    absorbed into confirmFirst({ via:'probe' }); SCG (2026-08-02) added the three deterministic
 //    cross-check honesty kinds (claimIsGrounded/claimIsComplete/claimCoversRubric); SCG-T5 (2026-08-02)
 //    DELETED the four tier-③ reply-text kinds — replyMentions (→ claimCoversRubric), replySingleQuestion +

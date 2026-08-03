@@ -1,6 +1,18 @@
 # Guards redesign from zero — structured turn-claims + ledger cross-check
 
-Date: 2026-08-02 · Status: direction approved · Repo: looprun (+ agentspec) · Pre-1.0: disposable.
+Date: 2026-08-02 · Status: **SUPERSEDED — historical record of the approved direction** · Repo: looprun
+(+ agentspec) · Pre-1.0: disposable.
+
+> **SUPERSEDED by `2026-08-03-mandatory-intention-design.md` and its verdicts.** This document records the
+> direction as approved on 2026-08-02; the shipped surface moved past it. Read the design addendum and
+> `packages/core/GUARDS.md` for the law. What is stale here, specifically:
+>
+> | in this doc | what shipped |
+> |---|---|
+> | `asked?: boolean` on `respond` (§"Core mechanism"), and `did.asked` | DELETED — asking is an `ask` INTENTION inside `did` (`hasAskIntent` is the only reader) |
+> | `did` optional | MANDATORY, `.min(1)`, with a speech/action partition on `op` |
+> | `degenerationGuard` listed as a delete candidate | it ships |
+> | "a fabricated claim cannot reach the user" | true of the engine-rendered operation REPORT only; the agent's `message` still ships verbatim beside it |
 
 ## Why from zero
 
@@ -30,7 +42,9 @@ type Outcome =   // CORE, domain-neutral, ledger-checkable
 
 **The user-facing operation report is RENDERED BY THE ENGINE from `did`** (verified first).
 The agent's free `message` may not assert operations — the operational sentences the user reads
-come from ledger-verified structure, so a fabricated claim cannot reach the user.
+come from ledger-verified structure, so a fabricated claim cannot reach the user THROUGH THE REPORT.
+(As shipped: `composeDelivery` ships the agent's `message` verbatim beside that report, so an operational
+assertion written in prose is a priced residual, never a blocked one. See the supersession note above.)
 
 ### The cross-check guards (deterministic, ledger-grounded — the new honesty core)
 
@@ -84,8 +98,9 @@ observed, D5 postTool-violation persistence) are fixed in the same rewrite.
 - A verdict "unbreakable only by removing ambiguity X" is a FINDING: structure X (→①) or delete
   the guard. "Impossible to make sound" is the signal we are hunting.
 - Attacks must include: agent lies in `did` (ledger catches) · agent omits a `did` for a real
-  effected call (claimIsComplete catches) · structure correct, prose contradicts (prose is
-  engine-rendered → cannot) · every prior batch-a/b/c/d vector re-run against the new surface.
+  effected call (claimIsComplete catches) · structure correct, prose contradicts (the REPORT is
+  engine-rendered, but the `message` beside it is not — this became the priced residual, not an
+  impossibility) · every prior batch-a/b/c/d vector re-run against the new surface.
 - Red-team runs as multiple independent adversaries per guard; their break tests become
   permanent regression. No guard ships until its adversary reports "could not break, and here is
   why it is structurally impossible."

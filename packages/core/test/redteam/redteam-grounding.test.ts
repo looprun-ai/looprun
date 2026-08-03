@@ -17,9 +17,10 @@
  * SUBSTRING test, grounding is circular: the agent can put its own fabricated target string into any arg
  * of any one genuine write and ground a `success` claim on an entity it never touched.
  *
- * STATUS (MI-T3, M1+M2): the root finding is CLOSED. `claimMatchesCall` now scans ONLY the values the
- * WORLD issued for that call (its result), and the comparison is whole-value / whole-token equality
- * instead of a substring test. Every `it.fails(BROKEN:)` below is now a plain `it(CLOSED:)`, and each
+ * STATUS (MI-T3, M1+M2, hardened in MI-T7): the root finding is CLOSED. A presence claim now scans ONLY
+ * the values the WORLD issued for that call (its result), identity is KEY-SCOPED (`id`/`label`/`<entity>Id`
+ * only, strings and numbers alike), and the comparison is WHOLE-VALUE equality after canonicalization —
+ * no substring and no token run. Every `it.fails(BROKEN:)` below is now a plain `it(CLOSED:)`, and each
  * "defect is real" companion has been rewritten into the control that proves the fix is not blanket
  * denial (the honest claim still grounds). Vectors are NEVER deleted — they are the regression.
  */

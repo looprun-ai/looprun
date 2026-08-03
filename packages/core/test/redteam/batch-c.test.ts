@@ -146,6 +146,9 @@ describe('pendingConfirmMustAsk', () => {
     const ctx = {
       turnIndex: 3,
       reply: 'Your account has been permanently deleted.',
+      // The DELIVERED declaration — the only relay signal the guard reads. It carries an `ask`, and the
+      // guard has no way to tell what the ask was ABOUT.
+      did: [{ op: 'ask' }],
       observed: [
         obs({ name: 'deleteAccount', turnIndex: 3, ok: true, resultFlags: { requiresConfirmation: true } }),
         obs({ name: 'respond', turnIndex: 3, ok: true, args: { message: 'What is your billing email?', did: [{ op: 'ask' }] } }),

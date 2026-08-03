@@ -154,8 +154,10 @@ describe('pendingConfirmMustAsk — resolution-aware + STRUCTURAL relay (no-rege
     name: 'deleteItem', args: { itemId: 'x1' }, ok: true, turnIndex: 0, resultFlags: { requiresConfirmation: true },
   };
   const ask: ObservedCall = { name: 'respond', args: { message: 'Are you sure you want to delete x1?', did: [{ op: 'ask' }] }, ok: true, turnIndex: 0 };
-  const ctx = (reply: string, observed: ObservedCall[]): GuardCtx => ({
-    args: {}, world: fixtureWorld(), observed, turnIndex: 0, reply, producedThisTurn: [], userText: '', history: [],
+  // `did` is the DELIVERED declaration the runtime seats on every reply-side ctx — the guard's only
+  // relay signal. The `respond` entry in `observed` is the call RECORD, not evidence of delivery.
+  const ctx = (reply: string, observed: ObservedCall[], did: GuardCtx['did'] = []): GuardCtx => ({
+    args: {}, world: fixtureWorld(), observed, turnIndex: 0, reply, producedThisTurn: [], userText: '', history: [], did,
   });
 
   it('fires when the pending confirm is unresolved and no ask was issued this turn', () => {
@@ -163,7 +165,11 @@ describe('pendingConfirmMustAsk — resolution-aware + STRUCTURAL relay (no-rege
   });
 
   it('does not fire when an ask intention relays the confirmation question this turn', () => {
-    expect(guard.check(ctx('Are you sure you want to delete x1?', [pendingProbe, ask]))).toBeNull();
+    expect(guard.check(ctx('Are you sure you want to delete x1?', [pendingProbe, ask], [{ op: 'ask' }]))).toBeNull();
+  });
+
+  it('fails CLOSED on a ctx that seats no declaration — an absent `did` is not an ask', () => {
+    expect(guard.check(ctx('Are you sure you want to delete x1?', [pendingProbe, ask]))).not.toBeNull();
   });
 
   it('does NOT fire once a same-record confirmed:true call resolves the probe (probe→approved-execute tail)', () => {

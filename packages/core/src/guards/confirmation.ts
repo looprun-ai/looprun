@@ -176,17 +176,26 @@ export function noActAfterAskSameTurn(tools: string[]): Guard {
  *   · a same-step SIBLING (`siblingCallsThisStep`) has been admitted but has NOT run, so `tookEffect` is
  *     `undefined` by construction and its declared flags are the only evidence there is.
  * `confirmArg` (default `confirmed`) matches the sibling kinds' parameterisation (`confirmFirst`'s
- * `argFlag`, `pendingConfirmMustAsk`'s `confirmArg`) — a flag-less `'prior-ask'` tool has no probe shape of
- * its own, so every OK call of it counts as an effect, exactly as before.
+ * `argFlag`, `pendingConfirmMustAsk`'s `confirmArg`). `flagless` names the destructive tools that run the
+ * `'prior-ask'` mechanism instead: they carry no confirm flag at all, so they have no preview shape of
+ * their own and EVERY call of them counts as an effect. `AgentSpecBase` passes the mechanism split it
+ * already computes; a hand-installed throttle that omits `flagless` treats every listed tool as
+ * flag-gated.
  *
  * BUILT ON `maxCalls`' COUNTING MACHINERY (2026-08-02): this is `maxCalls` with `n:1`, `scope:'turn'`, a
  * tool-SET match (minus probes), and the same-step sibling candidates folded in — it shares
  * `countOkCalls`, the one place that decides what an "already-succeeded" call is. No API or behaviour
  * change; the existing throttle proofs pass unchanged (that IS the acceptance).
  */
-export function destructiveThrottle(destructiveTools: string[], opts?: { confirmArg?: string }): Guard {
+export function destructiveThrottle(
+  destructiveTools: string[],
+  opts?: { confirmArg?: string; flagless?: readonly string[] },
+): Guard {
   const set = new Set(destructiveTools);
   const confirmArg = opts?.confirmArg ?? 'confirmed';
+  // The `'prior-ask'` tools: no confirm flag exists on them, so nothing they can put in their args
+  // declares a preview and every call is an act.
+  const flagless = new Set(opts?.flagless ?? []);
   // The caller's DECLARED intent to preview. A flag is not evidence of what happened — it is what the
   // model said it was about to do.
   const flagsDeclarePreview = (o: ObservedCall): boolean =>
@@ -207,11 +216,22 @@ export function destructiveThrottle(destructiveTools: string[], opts?: { confirm
   // and the second would be vetoed for an effect neither call has had yet (MI-T7 review). For a call
   // that has not run, its declared flags are the only evidence that exists, so they decide.
   //
-  // RESIDUAL, stated rather than hidden: a tool that MUTATES while declaring `confirmed:false` and is
-  // emitted TWICE IN ONE STEP is not capped. Nothing observable distinguishes it from the honest
-  // multi-preview at admission time — the cross-step form of the same shape IS capped (the first call's
-  // effect is recorded by then), and `confirmFirst` independently denies same-step probe→execute.
-  const pendingIsProbe = flagsDeclarePreview;
+  // NOT-CONFIRMED IS THE PREVIEW SHAPE, exactly as `confirmFirst` reads it (final review). Keying the
+  // sibling test on `confirmed === false` alone counted a preview that simply OMITS the flag — the shape
+  // `confirmFirst`'s `'probe'` arm explicitly licenses ("a `flag:false`/absent PROBE") and the shape it
+  // lets through untouched (it returns null on `args[flag] !== true`). So the two kinds disagreed on the
+  // very case the throttle's own doc claims they agree on: a model previewing two cancellations without
+  // spelling `confirmed:false` had its second preview vetoed for an effect neither call had had. A
+  // sibling declares a preview when it is NOT CONFIRMED.
+  //
+  // RESIDUAL, stated rather than hidden: a flag-gated tool that MUTATES without `confirmed:true` and is
+  // emitted N times in ONE step is not capped — the cap is per-step-effect and there is no counter here,
+  // so it is UNBOUNDED N, not merely two. Nothing observable distinguishes those calls from an honest
+  // multi-preview at admission time. What DOES bound the shape: the cross-step form is capped (by then
+  // the first call's effect is on record), `flagless` tools are capped from the first sibling, and the
+  // world's own two-step protocol never mutates on an unconfirmed call.
+  const pendingIsProbe = (o: ObservedCall): boolean =>
+    !flagless.has(o.name) && o.args?.[confirmArg] !== true;
   // An EFFECT = a listed destructive tool that ran OK and is not a probe. (The `ok` + turn-window part is
   // applied by `countOkCalls`; this predicate carries only the set-membership + not-a-probe test.)
   const isEffectAmong = (pending: readonly ObservedCall[]) => (o: ObservedCall): boolean =>
@@ -285,15 +305,17 @@ export function pendingConfirmMustAsk(opts?: { confirmArg?: string }): Guard {
       if (!unresolved.length) return null;
       // STRUCTURAL relay (PRECEDENCE, MI-T2): the delivered `respond` lands at turn END, so at onReply the
       // relay signal is the delivered payload's own `did` (seated by checkPayload before this check runs).
-      // PRESENT ⇒ AUTHORITATIVE — never OR-ed with the observed scan, which can still hold a ghost the user
-      // never received. The scan is the FALLBACK only where no delivered declaration exists (chain/mid-turn).
+      // It is the ONLY signal. There used to be an observed-scan fallback "for a chain / mid-turn ctx";
+      // no such caller exists — `ledger.did` is a `TurnClaim[]` that is reset, never unset, so every
+      // onReply and postTool ctx the runtime builds seats it, and the scan could only ever be reached by
+      // a hand-built ctx. Worse, what it read was the raw `observed` stream, which can still hold a
+      // terminal ghost the user never received — the exact evidence the delivered-turn law deleted
+      // everywhere else. A ctx with no declaration now fails CLOSED (an absent declaration is not an ask).
       // THE ASK MUST HAVE BEEN SAID (red-team r2/C7). The relay is a declaration, and a declaration over
       // a blank `message` relays nothing: the delivery floor would swap that turn out for the engine's
       // exhaustion closure, whose `did` carries no ask, so the user would be told the pending action is
       // over without ever seeing the question. Same floor `askedInDeliveredTurn` applies cross-turn.
-      const askedThisTurn = ctx.did !== undefined
-        ? hasAskIntent(ctx.did) && !isBlankDelivery(ctx.reply ?? '')
-        : thisTurn.some((o) => isAskEvent(o) && o.ok);
+      const askedThisTurn = hasAskIntent(ctx.did ?? []) && !isBlankDelivery(ctx.reply ?? '');
       return askedThisTurn
         ? null
         : 'A confirmation is PENDING — ask the user to confirm this turn, and do not summarize the action as done.';

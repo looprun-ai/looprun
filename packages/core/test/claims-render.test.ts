@@ -2,14 +2,15 @@
  * SCG-T4 — the did → operation-report RENDERER, the COMPOSED delivery, the claims-derived exhaustion
  * closure, and salvage over the structured payload.
  *
- * The user-facing operational sentences come from the ledger-verified `did` rendered BY THE ENGINE, never
- * from the agent's free prose — so a fabricated claim cannot reach the user, and a redrive/exhaustion never
- * announces an effect the ledger does not show.
+ * The user-facing OPERATION REPORT comes from the ledger-verified `did` rendered BY THE ENGINE, never from
+ * the agent's free prose — so no fabricated claim reaches the user THROUGH THE REPORT, and a
+ * redrive/exhaustion never announces an effect the ledger does not show. The agent's own `message` still
+ * ships verbatim beside it; an operational assertion written there is the priced residual, not a blocked one.
  */
 import { describe, expect, it } from 'vitest';
 import { AgentSpecBase, custom } from '../src/index.js';
 import type { AgentWorld, DomainContract } from '../src/index.js';
-import { renderOperationReport, deriveClaimsFromLedger } from '../src/internal.js';
+import { renderOperationReport, deriveClaimsFromLedger, hasAskIntent } from '../src/internal.js';
 import type { TurnClaim } from '../src/runtime/claims.js';
 import { createLedger, recordToolResult, recordTerminalCall } from '../src/runtime/ledger.js';
 import { finalizeReply } from '../src/runtime/turn.js';
@@ -131,6 +132,36 @@ describe('deriveClaimsFromLedger — the engine derives TRUTH from the world led
     const derived = deriveClaimsFromLedger(ledger.observed, 0, ['refund']);
     expect(derived).toEqual([{ op: 'ORD-7', target: 'ORD-7', outcome: 'success' }]);
     expect(renderOperationReport(derived)).toBe('ORD-7: done');
+  });
+
+  // ── the derived claim is always an ACTION claim (final review) ─────────────────────────────────
+  it('a world label colliding with a SPEECH op never becomes the derived `op`', () => {
+    const ledger = createLedger();
+    const world = fixtureWorld();
+    // A domain whose write result labels the touched entity `ask` (a ticket queue, a survey step — the
+    // word is ordinary). Passing the label through as `op` made the engine's OWN derived closure seal an
+    // `ask` INTENTION into history, which `askedInDeliveredTurn` reads as the user's consent next turn.
+    effectWrite(ledger, world, 'createTicket', { q: 1 }, 'ask');
+    const derived = deriveClaimsFromLedger(ledger.observed, 0, ['createTicket']);
+    expect(derived).toEqual([{ op: 'operation', target: 'ask', outcome: 'success' }]);
+    expect(hasAskIntent(derived)).toBe(false);
+  });
+
+  it('every SPEECH op is coerced; an ordinary label is untouched', () => {
+    for (const speech of ['inform', 'greet', 'refuse', 'ask']) {
+      const ledger = createLedger();
+      const world = fixtureWorld();
+      effectWrite(ledger, world, 'createTicket', { q: 1 }, speech);
+      expect(deriveClaimsFromLedger(ledger.observed, 0, ['createTicket'])).toEqual([
+        { op: 'operation', target: speech, outcome: 'success' },
+      ]);
+    }
+    const ledger = createLedger();
+    const world = fixtureWorld();
+    effectWrite(ledger, world, 'createTicket', { q: 1 }, 'BK-9');
+    expect(deriveClaimsFromLedger(ledger.observed, 0, ['createTicket'])).toEqual([
+      { op: 'BK-9', target: 'BK-9', outcome: 'success' },
+    ]);
   });
 });
 

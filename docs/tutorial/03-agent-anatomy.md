@@ -107,15 +107,18 @@ Three names for what feels like one thing, so be precise about which is which:
 ```
    ALWAYS                            noDuplicateCall   (preTool)
                                      degenerationGuard (onReply)
-                                     emptyReply        (onReply)
 
    IFF destructiveTools is set       confirmFirst        ┐ on exactly those tools
                                      destructiveThrottle ┘
+
+   IFF contract.writeTools is set    claimIsGrounded     ┐ the honesty cross-check (§5)
+                                     claimIsComplete     ┘
 ```
 
-Those five are what a spec like the scheduler's gets — chapter 04 rows, none of which you name here.
+Those six are what a spec like the scheduler's gets — chapter 04 rows, none of which you name here.
 **Never re-add them by hand**: the same rule would render twice in the prompt, from two sources that
-can drift.
+can drift. (There is no always-on `emptyReply` guard: the blank-reply floor moved into the runtime's
+own `finalizeReply`, so no guard is needed for it — chapter 04 §3.)
 
 The box is scoped to a spec with no confirm-mechanism override. `confirmMechanism` changes it, and this
 tutorial does not teach it: it selects, per tool, between the default `'arg'` confirm (the `confirmed`
@@ -227,6 +230,9 @@ export const SCHEDULER_CONTRACT: DomainContract = {
     'Times are written as `YYYY-MM-DDTHH:mm`; a day without a resolvable time is a question, not a booking.',
   ],
   languageClause: 'Always reply in the language the user wrote in.',
+  // The honesty switch: naming the tools that MUTATE the calendar auto-installs the cross-check
+  // pair (chapter 04 §3). `listEvents` is a read and is deliberately absent.
+  writeTools: ['addEvent', 'cancelEvent'],
 };
 ```
 <sub>excerpt · `snippets/scheduler/contract.ts`</sub>
@@ -267,7 +273,10 @@ behavior list.
 | `stateBlock(world)` | the volatile block, rendered onto the **user-message tail**. This is where the model learns what is currently true |
 | `coreInvariants` | domain-wide rules rendered verbatim into every agent. Nothing agent-specific belongs here — that is what `scope` and the guards' own prose are for |
 | `languageClause` | the absolute output-language rule |
-| `exhaustionReply?` | optional: the deterministic closure committed when a reply still violates its checks after every correction. It must be a pure function of verified observations — structurally unable to fabricate |
+| `exhaustionReply?` | optional: the deterministic closing SENTENCE committed when a reply still violates its checks after every correction. It must be a pure function of verified observations — structurally unable to fabricate. It supplies the sentence only: the engine always prepends the operation report it derived from the ledger |
+| `writeTools?` | **the honesty switch.** The tools that MUTATE the world, as opposed to pure reads. Naming them auto-installs the cross-check pair `claimIsGrounded` + `claimIsComplete` (chapter 04 §3): a declared action the ledger cannot match is denied, and an effected write no intention covers is denied. Leave it out and there is no cross-check at all — and nothing tells you |
+| `outcomes?` | optional: the domain's outcome vocabulary, mapping each non-core word an agent may declare onto one of the seven core outcomes (`{ settled: 'success' }`). The domain adds words; it never adds a way around the ledger |
+| `renderClaim?` | optional: the domain's wording (and language) for ONE verified claim in the engine-rendered operation report. It receives the VERIFIED fields only — never the agent-authored `op`. Absent ⇒ a neutral English default naming the claim's `target` |
 
 `stateBlock` is also the first place you will meet the cast in §7. Note the seed: `REFERENCE_NOW` is
 a fixed clock constant, because a tutorial world that reads `Date.now()` cannot be replayed.
@@ -567,6 +576,7 @@ host that already owns its state.
    AgentScope       the lane, and who owns the rest
    TerminalPolicy   (world) => boolean — reply-only this turn
    DomainContract   voice · stateBlock · coreInvariants · languageClause
+                    · writeTools (installs the honesty cross-check) · outcomes · renderClaim
    ToolDef          the JSON-schema surface the model sees
    AgentWorld       state + execution — hand-write it (mind the index signature)
    Hook             onInput | preTool | postTool | onReply    ─┐ addGuard's

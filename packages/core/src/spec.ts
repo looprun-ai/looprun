@@ -136,8 +136,14 @@ export interface AgentControls {
    *  backend — so a creative content agent can run at temperature 0.7 beside a temp-0 admin agent in the
    *  same domain. Absent ⇒ the conversation-level modelParams apply unchanged. */
   sampling?: SamplingSettings;
-  /** Committed when the reply still violates its checks after all redrives — MUST be a pure function
-   *  of verified observations (structurally unable to fabricate). Omitted ⇒ the domain/default closure. */
+  /** The CLOSING SENTENCE committed when the reply still violates its checks after all redrives — MUST be
+   *  a pure function of verified observations (structurally unable to fabricate). Omitted ⇒ the
+   *  domain/default sentence.
+   *
+   *  IT SUPPLIES THE SENTENCE, NOT THE WHOLE CLOSURE: the engine ALWAYS prepends the operation report it
+   *  derived from the ledger, exactly as the clean path composes `message` + report. An override that
+   *  narrates the operations itself will read as duplicating that report — write the abstain sentence and
+   *  let the account of what happened stay engine-owned. */
   exhaustionReply?: (world: AgentWorld, okTools: string[], produced: string[], violations: string[]) => string;
 }
 
@@ -473,7 +479,9 @@ export class AgentSpecBase implements AgentSpec {
     if (priorAskTools.length) {
       this.addGuard('preTool', priorAskTools, confirmFirst({ via: 'ask' }), { layer: 'base', id: 'base:confirmFirstPriorAsk' });
     }
-    this.addGuard('preTool', destructive, destructiveThrottle(destructive), { layer: 'base', id: 'base:destructiveThrottle' });
+    // The throttle needs the mechanism split too: a `'prior-ask'` tool has no confirm flag, so it has no
+    // preview shape and every same-step sibling of it counts as an effect.
+    this.addGuard('preTool', destructive, destructiveThrottle(destructive, { flagless: priorAskTools }), { layer: 'base', id: 'base:destructiveThrottle' });
   }
 
   /**

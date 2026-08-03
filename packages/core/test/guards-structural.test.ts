@@ -233,6 +233,25 @@ describe('confirmFirst — via matrix', () => {
     expect(g.check(ctxConfirmed('act', record, priorProbe, 2))).toBeNull();
   });
 
+  // ISOLATING (final review): the SEALED-HISTORY-ONLY rule at `confirmFirst`'s two ask arms. `askedEarlier`
+  // carries its own killer for it; these arms carried none, so putting a raw-`observed` fallback back into
+  // `askedInDeliveredTurn` left every consent assertion in the suite green.
+  it('via:ask — an EARLIER-turn RAW observed ask respond is not consent evidence', () => {
+    const g = confirmFirst({ via: 'ask' });
+    expect(g.check(ctxConfirmed('act', {}, [askCall(1)], 2))).not.toBeNull();
+  });
+
+  it('via:either — an EARLIER-turn RAW observed ask respond does not license the confirmed act', () => {
+    const g = confirmFirst({ via: 'either' });
+    expect(g.check(ctxConfirmed('act', record, [askCall(1)], 2))).not.toBeNull();
+  });
+
+  it('via:ask/either — a SEALED ask over a BLANK delivered reply licenses nothing', () => {
+    const silent: HistoryTurn = { ...askedTurn(1), reply: '​ ㅤ' };
+    expect(confirmFirst({ via: 'ask' }).check(ctxConfirmed('act', {}, [], 2, [silent]))).not.toBeNull();
+    expect(confirmFirst({ via: 'either' }).check(ctxConfirmed('act', record, [], 2, [silent]))).not.toBeNull();
+  });
+
   it('string overload maps to {flag:confirmed, via:either, within:1}', () => {
     const g = confirmFirst('confirmed');
     expect(g.check(ctxConfirmed('act', record, priorProbe, 2))).toBeNull(); // distance 1

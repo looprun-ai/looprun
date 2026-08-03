@@ -38,8 +38,16 @@ This is the sentence the rest of the document supports. It has two halves and th
  │                                       closing SENTENCE; it can never replace the      │
  │                                       report.                                         │
  │                                                                                       │
- │  Every delivered turn DECLARES      — no delivered turn carries zero intentions, and  │
- │                                       none is blank or invisible.                     │
+ │  Every FINALIZED turn DECLARES     — no turn that goes through `finalizeReply`        │
+ │                                       carries zero intentions, and none is blank or   │
+ │                                       invisible. SCOPE: it is a `finalizeReply`       │
+ │                                       property, not a universal one.                  │
+ │                                       `LoopRunAgent.stream()` runs no reply           │
+ │                                       finalization, so a streamed turn can seal       │
+ │                                       `did: []` over an empty reply. That fails       │
+ │                                       CLOSED for consent (an empty `did` carries no   │
+ │                                       `ask` and licenses nothing), but the sentence   │
+ │                                       above is not true of it.                        │
  └───────────────────────────────────────────────────────────────────────────────────────┘
 
  ┌─ NOT DETERMINISTIC (a forcing function + an OPTIONAL model call) ─────────────────────┐
@@ -53,6 +61,12 @@ This is the sentence the rest of the document supports. It has two halves and th
  │                      licenses a later destructive act). The engine can prove the turn │
  │                      was DELIVERED, non-blank, recent and declared `ask`. It cannot   │
  │                      prove the message POSED A QUESTION.                              │
+ │                                                                                       │
+ │  THE UNBOUND ASK   — nor can it prove the question was ABOUT the thing the ask now    │
+ │                      licenses. An `ask` intention names no subject, so one question    │
+ │                      on any topic satisfies every consent kind that reads one, for    │
+ │                      one turn. Binding it would mean judging what the prose ASKED —   │
+ │                      the same non-deterministic judgement as the row above.           │
  │                                                                                       │
  │  What prices them:  the forcing function (a declaration is MANDATORY, so an           │
  │                      operational lie is a deliberate self-contradiction sitting next  │
@@ -81,9 +95,9 @@ This is the sentence the rest of the document supports. It has two halves and th
 |---|---|---|
 | `confirmFirst` | **BROKEN, 3×, 2 fixed + 1 residual** | r2/C3 probe→confirm binding was a SUBSET (now set EQUALITY); r2/C4 `via:'ask'` self-licensed its repeat (arm RETIRED); r2/b2.1-b2.2 the licensing `ask` is self-declared — **residual, see §3** |
 | `destructiveThrottle` | **BROKEN, 2×, both fixed** | r2/C6 `tookEffect` was INERT in native-tools mode (unknown ≠ probe; the native path now records); same-step siblings now always count |
-| `pendingConfirmMustAsk` | **BROKEN, 1×, partially fixed** | r2/b2.3 a bare `ask` satisfied it while the message said "done". The BLANK-message arm is closed; whether a non-blank message poses a question is the §3 residual |
+| `pendingConfirmMustAsk` | **BROKEN, 1×, partially fixed** | r2/b2.3 a bare `ask` satisfied it while the message said "done". The BLANK-message arm is closed; whether a non-blank message poses a question — **and whether the question was about the pending act** — is the §3 residual. Its observed-scan fallback is DELETED: the delivered `ctx.did` is the only relay signal, and a ctx that seats none fails closed |
 | `noActAfterAskSameTurn` | **could not break** | it reads THIS turn's observed ask event and denies a domain call after it — a same-turn ordering fact with no agent-controlled input beyond the ask itself, which can only make the guard FIRE, never stay silent |
-| `askedEarlier` | **BROKEN, 1×, fixed + the §3 residual** | r2/C2 it read the RAW `observed` array, so a respond the user never received armed it; the raw-observed arm was DELETED — the licence now rests on a SEALED, non-blank delivered turn. It routes through the same `askedInDeliveredTurn` as `confirmFirst`, so it inherits §3's self-declared-ask residual |
+| `askedEarlier` | **BROKEN, 1×, fixed + the §3 residual** | r2/C2 it read the RAW `observed` array, so a respond the user never received armed it; the raw-observed arm was DELETED — the licence now rests on a SEALED, non-blank delivered turn. It routes through the same `askedInDeliveredTurn` as `confirmFirst`, so it inherits BOTH §3 ask residuals: the self-declared ask, and the ask bound to nothing (an earlier question on ANY topic licenses recording ANY gated argument — it enforces the two-turn rhythm, not relevance) |
 | `consentRequired` | **could not break** | it requires a literal confirm flag on the call's own args; there is no second path to the flag and no normalization step to abuse. Fails closed on absence |
 
 ### 1.3 Flow / args / world — structural preTool guards
@@ -151,9 +165,9 @@ the test, so a future reader meets the argument before the vector.
 |---|---|---|
 | **b2.1 / b2.2 / b2.3 / C7** — a sealed, non-blank turn declaring `ask` licenses a later destructive act even when the message poses no question | HIGH | Whether prose ASKS SOMETHING is a natural-language judgement. The engine has exactly two instruments: a linguistic pattern — which the no-regex law forbids, which an adversary defeats by appending one character, and which false-denies across languages — or a model call, which IS `didMessageConsistency`. There is no third deterministic option. What IS closed deterministically: the licence rests on a DELIVERED turn record (never a hook-time respond), the sealed `did` belongs to the payload whose message was delivered, the reply must be non-blank, recency is bounded, and a tool no longer self-licenses its own repeat |
 | **3.1b** — a `success` claim on ORD-2 grounds while an ORD-1 write also happened | (grounding half only) | Grounding is EXISTENTIAL per claim and the turn really did effect a write on ORD-2, so the claim names a true ledger fact. No per-claim rule separates it from the honest single-write case without inventing a claim→write binding, which would false-deny every turn reporting two writes on one entity. **The HARM is a coverage property and coverage is closed** (3.1a denies the turn), so the ORD-1 write can no longer be hidden |
-| **batch-b** — `confirmFirst({via:'either'})` accepts an UNRELATED earlier ask as licence | MEDIUM | Binding an ask to a RECORD requires the ask to NAME one, and a speech intention deliberately does not (MI-D5). Closing it is a design decision about the `ask` shape, not a guard fix |
+| **the ask is bound to NOTHING** — an `ask` intention names no subject, so an off-topic question satisfies EVERY consent kind that reads one, for one turn: `confirmFirst` `via:'ask'`/`'either'` (batch-b), `askedEarlier` (any gated arg licensed by any earlier ask), `pendingConfirmMustAsk` (an unrelated ask clears a pending destructive confirm while the reply reads "permanently deleted") | MEDIUM | Binding an ask to a RECORD requires the ask to NAME one, and a speech intention deliberately does not (MI-D5). Judging what a question was ABOUT is the same prose judgement as the row above and is closed by the same instrument. Three live BREAK tests pin the three shapes. Closing it is a design decision about the `ask` shape, not a guard fix |
 | **A-V6 / A-V7** — the prose lie beside an honest declaration | RESIDUAL, documented | This is the design's stated boundary, not a defect. V6 pins the shape of the counter-evidence (the verified report ships in the same delivery); V7 pins the sharp edge (a speech-only `did` on a read-only turn renders no report, so the lie is the entire delivery). §0 states it as non-deterministic |
-| **`amount` unit naivety** | LOW | A domain whose world reports cents while its claims report units will false-deny. Documented in `GUARDS.md`, not solved |
+| **`amount` unit naivety** | LOW | A domain whose world reports cents while its claims report units will false-deny. The corroboration compares raw numbers and knows no unit. Stated as a **Limit** on the `amount` bullet in `GUARDS.md`, not solved |
 | **`not_found`/`no_op` read agent-authored args** | LOW | L4's deliberate widening. An agent can call a read with a fabricated identity-key arg and report `not_found` on it. Closing it needs the attempt record to carry a GUARD-RESOLVED subject rather than raw args — the same structural change 4.1's residual needs. One change would close both; it is larger than a fix wave |
 
 ---
@@ -215,6 +229,7 @@ summarised here because a verdict document that omitted it would overstate the g
 
 | obligation | consequence of skipping |
 |---|---|
+| **the domain DECLARES `contract.writeTools`** | this is the switch. `claimIsGrounded`/`claimIsComplete` auto-install only when it is non-empty, so a contract-less or `writeTools`-less domain gets NO cross-check at all — the guarantee is simply absent, and nothing announces its absence. It is the first obligation because every row below is conditional on it. Note the eval `norms-config` path has no `writeTools` key at all, so a benchmark subject configured that way runs uncross-checked |
 | every WRITE result names what it touched under `id`/`label`/`<entity>Id` | no `success` claim can ground and no write can be covered |
 | the identity value EQUALS the entity name the agent will report | whole-value matching; an id inside a longer label does not match |
 | every READ takes its subject under an identity-key ARG | a `not_found`/`no_op` has no way to name its subject |

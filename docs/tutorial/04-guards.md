@@ -1,6 +1,6 @@
 # 04 · Guards
 
-**What you get from this chapter:** the complete rule vocabulary — 25 factories, what each one
+**What you get from this chapter:** the complete rule vocabulary — 23 factories, what each one
 prevents, one minimal example each — plus the four types they are written in and how to write your
 own when nothing fits. Everything here is from `looprun` (≡ `looprun/core`).
 
@@ -28,7 +28,7 @@ This chapter is the rest of the vocabulary:
    §2  binding one to a moment                  addGuard — the chapter 03 socket, in one line
    §3  the ones you already have                what AgentSpecBase installs before your code runs
    §4  finding the right one                    symptom → kind, the confusable pairs, canonArgs
-   §5  THE CATALOG                              25 factories, grouped by hook — generated
+   §5  THE CATALOG                              23 factories, grouped by hook — generated
    §6  writing your own                         custom, and the five rules a reviewer looks for
 ```
 
@@ -176,24 +176,36 @@ eval output attributes a veto to, and what makes a spec diff readable.
 
 ---
 
-## 3. Five are already installed
+## 3. Six you never install by hand
 
-`AgentSpecBase`'s constructor installs the universal invariants before your code runs, and the
-destructive-safety protocol iff you declared `destructiveTools` (chapter 03 §2):
+`AgentSpecBase`'s constructor installs the universal invariants before your code runs, plus two
+CONDITIONAL pairs — each keyed on one field of your spec (chapter 03 §2 and §5):
 
 ```
-   ALWAYS (2)                    noDuplicateCall   (preTool)
-                                 degenerationGuard (onReply)
-   IFF destructiveTools (2)      confirmFirst + destructiveThrottle, on exactly those tools
-   ───────────────────────────   the four a spec like the scheduler's gets
+   ALWAYS (2)                       noDuplicateCall   (preTool)
+                                    degenerationGuard (onReply)
+   IFF destructiveTools (2)         confirmFirst + destructiveThrottle, on exactly those tools
+   IFF contract.writeTools (2)      claimIsGrounded + claimIsComplete — the HONESTY CORE
+   ─────────────────────────────   all six for the scheduler: it declares `cancelEvent` destructive
+                                    and its contract names `addEvent` + `cancelEvent` as writes
 ```
 
-The old always-on `emptyReply` floor is gone (tier-③ deletion, SCG-T5): an empty final reply is now
-structurally impossible — the `respond` terminal requires a non-empty `message` and the forced-terminal
-fallback always closes with a non-empty engine-derived line, so no runtime guard is needed. And there is no
-conditional sixth: the old regex-fed `noFalseFailureClaim` was retired with the no-regex law (2026-08-02).
-A reply-honesty invariant a domain needs is now an `llmCheck` you bind yourself (§5's `llmCheck` row), not
-an auto-install fed by a lexicon.
+**The honesty pair is the one people miss.** `claimIsGrounded` and `claimIsComplete` cross-check the
+`did` the model declares against what the world ledger actually recorded — a claimed action that never
+happened is denied, and an action that happened but was never claimed is denied. They auto-install the
+moment `contract.writeTools` is non-empty, and **not at all** if it is missing: a domain that never names
+its write tools gets no cross-check, and nothing warns you. Naming them is the switch (chapter 03 §5).
+
+The old always-on `emptyReply` floor is gone (tier-③ deletion, SCG-T5). It was replaced by a
+backend-independent floor inside `finalizeReply`, not by the schema: the `respond` terminal's non-empty
+`message` is only enforced where the backend validates it, a zero-width message satisfies `minLength`
+anyway, and a reply mutator can blank an otherwise-fine delivery AFTER every check has passed. So the floor
+is the runtime's: every composed delivery about to leave `finalizeReply` is tested for blankness and
+swapped for the engine-derived closure if it is blank. No runtime GUARD is needed — but "structurally
+impossible at the schema" was never true. There is also no unconditional reply-honesty kind: the old
+regex-fed `noFalseFailureClaim` was retired with the no-regex law (2026-08-02). A reply-honesty invariant
+a domain needs beyond the cross-check is an `llmCheck` you bind yourself (§5's `llmCheck` row), not an
+auto-install fed by a lexicon.
 
 They have catalog rows in §5 because they are real kinds you must be able to read — **not** because
 you should call them. Re-adding one by hand renders the same rule twice in the prompt, from two
@@ -337,7 +349,7 @@ A call has been proposed and not yet executed. A deny returns to the model AS th
 | [`confirmFirst`](#10-confirmfirst) | `confirmation.ts` | A destructive tool needs the user's go-ahead from an EARLIER turn — licensed `via` a same-record probe, a prior ask, or either. The licensing event is turn-bounded by `within` (default 1). Passing a `via` NAME to the string overload throws at construction. |
 | [`noActAfterAskSameTurn`](#11-noactafterasksameturn) | `confirmation.ts` | Denies the listed tools on a turn in which the model already asked the user a question. |
 | [`destructiveThrottle`](#12-destructivethrottle) | `confirmation.ts` | At most one destructive action that TOOK EFFECT per turn (a probe does not count; a call that RAN with no world record of its effect does). |
-| [`askedEarlier`](#13-askedearlier) | `structural.ts` | A gated argument may be recorded only when the agent asked the user in an EARLIER turn; a same-turn ask does not count. |
+| [`askedEarlier`](#13-askedearlier) | `structural.ts` | A gated argument may be recorded only when the agent asked the user SOMETHING in an EARLIER turn; a same-turn ask does not count, and the ask is not bound to the argument. |
 
 #### 1. `requiresBefore`
 
@@ -461,9 +473,9 @@ destructiveThrottle(['cancelBooking', 'refundOrder'])
 
 #### 13. `askedEarlier`
 
-A gated argument may be recorded only when the agent asked the user in an EARLIER turn; a same-turn ask does not count.
+A gated argument may be recorded only when the agent asked the user SOMETHING in an EARLIER turn; a same-turn ask does not count, and the ask is not bound to the argument.
 
-**When to reach for it.** A value the agent must not write until it has asked the operator for it and they answered in a later message — the structural replacement for a hand-written regex over "did we ask?". It keys on the presence of the gated arg plus an earlier-turn question to the user, never on any text.
+**When to reach for it.** A value the agent must not write until it has asked the operator and they answered in a later message — the structural replacement for a hand-written regex over "did we ask?". It keys on the presence of the gated arg plus an earlier-turn ask INTENTION, never on any text. An intention carries no subject, so an ask on any topic licenses this argument: it enforces the two-turn RHYTHM, not the relevance of the question.
 
 ```ts
 askedEarlier({ tool: 'completeMaintenance', arg: 'condition' })
@@ -493,7 +505,7 @@ The reply text is in `ctx.reply` and no tool can run any more. A deny costs a bo
 
 | factory | file | what it enforces |
 |---|---|---|
-| [`pendingConfirmMustAsk`](#15-pendingconfirmmustask) | `confirmation.ts` | When a probe returned `requiresConfirmation` this turn and nothing resolved it, the reply must relay that question. |
+| [`pendingConfirmMustAsk`](#15-pendingconfirmmustask) | `confirmation.ts` | When a probe returned `requiresConfirmation` this turn and nothing resolved it, the delivered reply must declare an `ask` intention — ANY ask, since an intention names no subject. |
 | [`claimIsGrounded`](#16-claimisgrounded) | `honesty.ts` | Every operation the agent declares in `did` must match the world ledger: a `success` needs a write that took effect, `not_found` an empty read, `blocked`/`refused` a veto or world refusal, `no_op` a call that addressed the entity and no effected write on it — an undeclared outcome word is always a violation. |
 | [`claimIsComplete`](#17-claimiscomplete) | `honesty.ts` | Every write that TOOK EFFECT this turn must be covered by a DISTINCT `success` ACTION intention in `did` that NAMES the entity — no silent action hidden from the user. |
 | [`claimCoversRubric`](#18-claimcoversrubric) | `honesty.ts` | Each configured target must appear in `did` with the required outcome polarity (or any polarity when `outcome: 'any'`). |
@@ -503,9 +515,9 @@ The reply text is in `ctx.reply` and no tool can run any more. A deny costs a bo
 
 #### 15. `pendingConfirmMustAsk`
 
-When a probe returned `requiresConfirmation` this turn and nothing resolved it, the reply must relay that question.
+When a probe returned `requiresConfirmation` this turn and nothing resolved it, the delivered reply must declare an `ask` intention — ANY ask, since an intention names no subject.
 
-**When to reach for it.** The world runs the two-step protocol itself: the tool answers "I need confirmation" and the risk is a reply that summarises the action as done. It gates the REPLY; `confirmFirst` gates the call.
+**When to reach for it.** The world runs the two-step protocol itself: the tool answers "I need confirmation" and the risk is a reply that summarises the action as done. It gates the REPLY; `confirmFirst` gates the call. It checks that a question was DECLARED, never that it was about the pending act — pair it with `didMessageConsistency` where that matters.
 
 ```ts
 pendingConfirmMustAsk()
@@ -701,10 +713,10 @@ You are not expected to catch it; you are expected to fix the guard, which is wh
    canonArgs     the key-order-independent call fingerprint — `noDuplicateCall` keys on it, and
                  `pendingConfirmMustAsk` keys on it with the confirm flag stripped
 
-   25 factories, grouped by the hook they run on:
-     preTool        14   prevent it — the deny returns as the tool result, the model retries
+   23 factories, grouped by the hook they run on:
+     preTool        13   prevent it — the deny returns as the tool result, the model retries
      postTool        1   the result is in; correct the REPLY, not the call
-     onReply         8   the reply exists; a deny costs a re-generation, then the honest closure
+     onReply         7   the reply exists; a deny costs a re-generation, then the honest closure
      onReplyMutate   1   rewrite, never veto
      custom          1   the escape hatch — you pass the dim
 ```

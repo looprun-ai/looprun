@@ -122,7 +122,10 @@ const guardSchema = z.discriminatedUnion('kind', [
       // either. Available, never auto-installed: an agent gets it only by naming it in its norms.
       kind: z.literal('didMessageConsistency'),
       id: z.string(),
-      // Unreachable adjudicator ⇒ open (allow, default) or closed (deny). Optional.
+      // Unreachable adjudicator ⇒ open (allow) or closed (deny). Optional, and this kind DEFAULTS TO
+      // `'closed'` — UNLIKE the bare `llmCheck` above, which defaults open. It is the consent backstop
+      // for the two residuals the ask cannot cover deterministically, and a backstop that evaporates when
+      // the adjudicator is unreachable is not one. Set `'open'` only as a deliberate availability choice.
       failMode: z.enum(['open', 'closed']).optional(),
     })
     .strict(),
@@ -378,6 +381,15 @@ function installGuard(spec: AgentSpecBase, g: GuardConfig, deps: NormsDeps, outc
  * Load a `norms/<agent>.json` value into an {@link AgentSpec}. Throws {@link NormsConfigError} with a
  * path-qualified message on any violation — a regex/pattern key, an unknown key, missing prose, or an
  * unresolvable predicate ref (all at LOAD time).
+ *
+ * LIMITATION — THE HONESTY CROSS-CHECK IS NOT REACHABLE FROM THIS PATH. The spec this builds is
+ * CONTRACT-LESS, and there is no `writeTools` key in the schema, so `claimIsGrounded` / `claimIsComplete`
+ * never auto-install: a subject configured through a norms file runs with the consent, flow and args
+ * families installed and the ledger cross-check absent entirely. Nothing about the loaded spec announces
+ * that gap — the guard count simply comes up short. A benchmark subject that needs the cross-check must
+ * be built in TypeScript with a `contract` carrying `writeTools` (see `AgentSpecBase`), not from a norms
+ * config. Adding a `writeTools` key here (plus the `outcomes` map it already parses) is the fix; it is a
+ * config-surface change and is deliberately not smuggled in as a side effect of a documentation pass.
  */
 export function loadNormsConfig(json: unknown, deps: NormsDeps = {}): AgentSpec {
   scanBannedKeys(json, '');

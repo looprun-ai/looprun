@@ -162,9 +162,9 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
     name: 'pendingConfirmMustAsk',
     category: 'confirmation',
     hook: 'onReply',
-    summary: 'When a probe returned `requiresConfirmation` this turn and nothing resolved it, the reply must relay that question.',
+    summary: 'When a probe returned `requiresConfirmation` this turn and nothing resolved it, the delivered reply must declare an `ask` intention — ANY ask, since an intention names no subject.',
     whenToUse:
-      'The world runs the two-step protocol itself: the tool answers "I need confirmation" and the risk is a reply that summarises the action as done. It gates the REPLY; `confirmFirst` gates the call.',
+      'The world runs the two-step protocol itself: the tool answers "I need confirmation" and the risk is a reply that summarises the action as done. It gates the REPLY; `confirmFirst` gates the call. It checks that a question was DECLARED, never that it was about the pending act — pair it with `didMessageConsistency` where that matters.',
     example: `pendingConfirmMustAsk()`,
   },
 
@@ -259,9 +259,9 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
     name: 'askedEarlier',
     category: 'structural',
     hook: 'preTool',
-    summary: 'A gated argument may be recorded only when the agent asked the user in an EARLIER turn; a same-turn ask does not count.',
+    summary: 'A gated argument may be recorded only when the agent asked the user SOMETHING in an EARLIER turn; a same-turn ask does not count, and the ask is not bound to the argument.',
     whenToUse:
-      'A value the agent must not write until it has asked the operator for it and they answered in a later message — the structural replacement for a hand-written regex over "did we ask?". It keys on the presence of the gated arg plus an earlier-turn question to the user, never on any text.',
+      'A value the agent must not write until it has asked the operator and they answered in a later message — the structural replacement for a hand-written regex over "did we ask?". It keys on the presence of the gated arg plus an earlier-turn ask INTENTION, never on any text. An intention carries no subject, so an ask on any topic licenses this argument: it enforces the two-turn RHYTHM, not the relevance of the question.',
     example: `askedEarlier({ tool: 'completeMaintenance', arg: 'condition' })`,
   },
 

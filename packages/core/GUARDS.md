@@ -382,6 +382,9 @@ ledger, never on op-name semantics or reply text — so they carry no pattern an
   magnitudes of the same ledger fact that grounds the claim (the world's result for a presence claim, the
   attempted args for an absence/veto claim). It is rendered by the domain seam into the block the engine
   advertises as verified, so an unchecked figure would be a fabricated number delivered as fact.
+  **Limit**: the comparison is between RAW NUMBERS and knows nothing about units. A world that reports
+  cents (`{ amount: 1250 }`) while the domain's claims report currency units (`amount: 12.5`) false-denies
+  every honest claim. Report the figure in the same unit on both sides, or do not carry `amount`.
 
 **What a domain must do for this to work.**
 
@@ -520,8 +523,10 @@ on the reply side, `ctx.did`:
   non-blank `reply`, and nothing else. The former `isAskEvent`-over-`observed` fallback is DELETED (see
   "What the ask GUARANTEES" below).
 - **③** `pendingConfirmMustAsk` runs at onReply, where the delivered payload's `did` is already seated, so
-  its PRIMARY relay signal is `hasAskIntent(ctx.did)`; the observed-scan (`isAskEvent` this turn) is the
-  FALLBACK for chain/mid-turn contexts.
+  its relay signal is `hasAskIntent(ctx.did)` and nothing else. Its observed-scan fallback is DELETED too:
+  `ledger.did` is reset per turn but never unset, so every reply-side and postTool ctx the runtime builds
+  seats it and no caller could reach the fallback — while what it read was the raw `observed` stream, which
+  can still hold a terminal ghost the user never received. A ctx that seats no declaration fails CLOSED.
 
 #### What the ask GUARANTEES — stated exactly (red-team r2/C1, C2, C7)
 
@@ -541,15 +546,32 @@ Everything in that sentence is deterministic and engine-verified:
 | the question was recent | the recency law: `1 ≤ turnIndex − askTurn ≤ within` (default 1) |
 | a repeat needs its own ask | no self-surfacing disjunct (above) |
 
-And exactly one thing it does **NOT** guarantee, which no deterministic layer can:
+And exactly **two** things it does **NOT** guarantee, neither of which any deterministic layer can:
 
-> **that the delivered message actually POSES a question.**
+> **1. that the delivered message actually POSES a question.**
+>
+> **2. that the question was ABOUT the thing the ask now licenses.**
 
+**(1) — the ask may not be a question.**
 `ask` is a SPEECH intention, and speech intentions are never ledger-grounded (MI-D5) — there is no world
 fact to check them against. The only ways to judge the prose are a linguistic pattern, which the no-regex
 law forbids (it fails silently across languages and an adversary satisfies it by appending one character),
 or a model call. So a turn CAN declare `ask` over "All set, have a good day" and license a `confirmed:true`
-act next turn. That residual is **priced, not hidden**: it is the documented forcing function (the terminal
+act next turn.
+
+**(2) — the ask is bound to NOTHING.** An `ask` intention carries no subject: `hasAskIntent` asks only
+whether one is present. Nothing associates a question with the act, the argument or the probe it goes on to
+license, so an ask on ANY topic satisfies EVERY consent kind that reads it, for one turn:
+
+| the shape | what an off-topic ask licenses |
+|---|---|
+| `confirmFirst` `via:'ask'`/`'either'` | any `confirmed:true` call of the gated tool — the ask never named the tool or the record |
+| `askedEarlier` | recording ANY gated argument — the ask never named the argument |
+| `pendingConfirmMustAsk` | clearing an unresolved destructive probe, over a reply that reads "permanently deleted" — the ask never named the pending act |
+
+Binding an ask to its subject would mean judging what the question was ABOUT, which is the same prose
+judgment as (1) and forbidden by the same law. Both residuals therefore live together and are closed by
+the same instrument. They are **priced, not hidden**: the price is the documented forcing function (the terminal
 protocol tells the model `ask` means "the `message` carries the ONE clarifying question you will wait on")
 plus `didMessageConsistency()` (MI-D6) — the shipped `llmCheck` rubric that asks whether the message
 contradicts the declaration. Bind it on a destructive surface where the stakes justify a model call per
@@ -580,10 +602,20 @@ never open:
    admitted but has not run, so `tookEffect` is `undefined` for it by construction and its declared
    confirm flag is what decides — otherwise a legitimate multi-preview ("preview cancelling both
    bookings" ⇒ two `confirmed:false` calls in one step) would have its second call vetoed for an effect
-   neither call has had yet. The residual is stated rather than hidden: a tool that MUTATES while
-   declaring `confirmed:false`, emitted TWICE IN ONE STEP, is not capped — nothing observable separates
-   it from the honest multi-preview at admission time. Its cross-step form IS capped (the first call's
-   effect is on record by then), and `confirmFirst` independently denies same-step probe→execute.
+   neither call has had yet. **NOT-CONFIRMED is the preview shape**, exactly as `confirmFirst` reads it: a
+   sibling declares a preview when `args[confirmArg] !== true`, which covers both `confirmed:false` and an
+   OMITTED flag (the shape `confirmFirst`'s probe arm explicitly licenses, and the one it lets through
+   untouched). `AgentSpecBase` passes its `'prior-ask'` tools to the throttle as `flagless`: they carry no
+   confirm flag at all, so nothing in their args can declare a preview and every admitted call of them
+   counts — otherwise the rule above would leave the same-step cap inert on that whole mechanism.
+
+   The residual is stated rather than hidden: a FLAG-GATED tool that MUTATES without `confirmed:true` and
+   is emitted N times in ONE step is not capped — and it is UNBOUNDED N, not merely two: the cap is per
+   recorded effect and a sibling has none, so there is no counter over admitted previews. Nothing
+   observable separates those calls from the honest multi-preview at admission time. What bounds the shape
+   instead: the cross-step form IS capped (the first call's effect is on record by then), `flagless` tools
+   are capped from the first sibling, and a world that honours its own two-step protocol never mutates on
+   an unconfirmed call.
 
 They compose because they cover DISJOINT moments — the call, the argument, the message — and each keys on
 its own structural signal (observed probe / earlier-turn ask · the gated arg + an earlier ask · an unresolved

@@ -3,7 +3,7 @@
  *
  * `claimIsGrounded` / `claimIsComplete` are auto-installed the moment a domain declares its
  * `writeTools`, and until now no fixture, example or eval subject declared any — so the matching laws
- * MI-T3 wrote (world-issued identity values only, whole-value/whole-token equality, injective
+ * (KEY-SCOPED identity, world-issued values for a presence claim, WHOLE-VALUE equality, injective
  * coverage) were proven at unit level and never once through a governed turn. This drives all four
  * shapes end to end on the Mastra loop: the honest declaration, the fabricated target, the
  * boundary-collision target, and the write hidden behind a speech intention.

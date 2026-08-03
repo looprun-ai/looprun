@@ -200,7 +200,8 @@ describe('V4 — destructiveThrottle: one destructive effect per turn', () => {
 
   it('CLOSED: a same-STEP destructive sibling (siblingCallsThisStep) denies the second', () => {
     const g = destructiveThrottle(['refund']);
-    const ctx = baseCtx({ tool: 'refund', args: { id: '2' }, turnIndex: 0, siblingCallsThisStep: [obs('refund', { id: '1' }, 0)] });
+    // The sibling declares an ACT (`confirmed:true`), so it is the one effect this turn is allowed.
+    const ctx = baseCtx({ tool: 'refund', args: { id: '2', confirmed: true }, turnIndex: 0, siblingCallsThisStep: [obs('refund', { id: '1', confirmed: true }, 0)] });
     expect(g.check(ctx)).not.toBeNull();
   });
 
@@ -233,11 +234,35 @@ describe('V4 — destructiveThrottle: one destructive effect per turn', () => {
     expect(g.check(ctx)).toBeNull();
   });
 
-  it('CONTROL: a same-step sibling declaring NO preview still caps the second call', () => {
+  it('CONTROL: a same-step sibling that is CONFIRMED still caps the second call', () => {
     const g = destructiveThrottle(['refund']);
     const ctx = baseCtx({
       tool: 'refund', args: { id: '2', confirmed: true }, turnIndex: 0,
+      siblingCallsThisStep: [obs('refund', { id: '1', confirmed: true }, 0)],
+    });
+    expect(g.check(ctx)).not.toBeNull();
+  });
+
+  it('CONTROL (final review): a preview that OMITS the flag is a preview — parity with confirmFirst', () => {
+    const g = destructiveThrottle(['refund']);
+    // `confirmFirst`'s probe arm licenses "a `flag:false`/ABSENT probe", and its flag arm returns null on
+    // `args[flag] !== true` — so an omitted flag is a not-yet-confirmed call to the consent gate. The
+    // throttle read it as an act and vetoed the second preview of a two-booking cancel.
+    const ctx = baseCtx({
+      tool: 'refund', args: { id: '2' }, turnIndex: 0,
       siblingCallsThisStep: [obs('refund', { id: '1' }, 0)],
+    });
+    expect(g.check(ctx)).toBeNull();
+  });
+
+  it('CONTROL (final review): a FLAGLESS (prior-ask) tool has no preview shape — the first sibling caps', () => {
+    const g = destructiveThrottle(['wipe'], { flagless: ['wipe'] });
+    // A `'prior-ask'` tool carries no confirm flag at all, so "not confirmed" says nothing about it and
+    // every admitted call is an act. Without this the not-confirmed rule above would make the same-step
+    // cap permanently inert on the whole prior-ask mechanism.
+    const ctx = baseCtx({
+      tool: 'wipe', args: { id: '2' }, turnIndex: 0,
+      siblingCallsThisStep: [obs('wipe', { id: '1' }, 0)],
     });
     expect(g.check(ctx)).not.toBeNull();
   });

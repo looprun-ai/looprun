@@ -83,6 +83,35 @@ describe('L1 — the schema-REJECTED respond ghost', () => {
     expect(ghosts).toEqual([]);
   });
 
+  // The well-formedness arm of the SAME refusal, through the real loop. `message` is non-blank and `did`
+  // is non-empty, so neither arity floor fires and the `respond` schema accepts the payload — the only
+  // thing that refuses it is the PARTITION check (`inform` is a speech op and may carry no `outcome`).
+  // Until now that arm was asserted only over a bare function call, so the backend was never driven with
+  // the shape at all: if the hook stopped consulting it, nothing here would go red.
+  it('CLOSED: a schema-LEGAL but MALFORMED did is refused at the hook, and the model is told why', async () => {
+    const { agent, llm } = makeAgent([
+      // A speech op carrying an `outcome` — schema-legal, unreadable as a declaration. `respondPayload`
+      // would prune it to `[]`, which is the empty-`did` state the runtime no longer delivers.
+      [{ tool: 'respond', args: { message: 'Order ORD-1 has been refunded.', did: [{ op: 'inform', outcome: 'success' }] } }],
+      [{ tool: 'respond', args: { message: 'All done.', did: [{ op: 'inform' }] } }],
+    ]);
+    const res = await agent.generate('refund my order');
+    expect(res.looprun.corrections).toContain('terminal-rejected');
+    expect(res.text).toBe('All done.'); // the unreadable payload never reached the user
+
+    // Not an observation: a call the runtime refused to execute is not evidence of anything.
+    const ghosts = agent.getSession().ledger.observed.filter(
+      (o) => o.name === 'respond' && (o.args.message as string).includes('refunded'),
+    );
+    expect(ghosts).toEqual([]);
+
+    // The C5 property: the refusal is a GOVERNED correction the model can act on — the validation error
+    // naming the partition rule is handed back to it, not swallowed.
+    const handedBack = JSON.stringify(llm.received);
+    expect(handedBack).toContain('outcome');
+    expect(handedBack).toContain('inform/greet/refuse/ask');
+  });
+
   it('CLOSED (MI-T2): turn SEALING neutralises the ghost across turns — the delete is still denied', async () => {
     const { agent } = makeAgent([
       [{ tool: 'respond', args: { message: '', did: [{ op: 'ask' }] } }],

@@ -21,10 +21,13 @@
  *      `observed` that licenses a consent guard off a question that was never delivered.
  *
  * WORLD-SIDE OBLIGATION a backend author must relay to a domain: a write result must NAME what it
- * touched, as its own whitespace-delimited word. A number counts as an identity only under a
- * singular identity key (`id`, `label`, `<entity>Id`, `<entity>_id`) — `{ orderIds: [5,6] }`, a bare
- * scalar result and `{ ORDER_ID: 5 }` name nothing, so the effected write cannot be covered by any
- * claim and the turn fails closed into the engine closure (see `packages/core/GUARDS.md`).
+ * touched, under a singular IDENTITY KEY (`id`, `label`, `<entity>Id`, `<entity>_id`) — that key scope is
+ * the whole identity set, whatever the value's type, so `{ orderIds: [5,6] }`, a bare scalar result and
+ * `{ ORDER_ID: 5 }` name nothing. The comparison is WHOLE-VALUE equality after canonicalization, so the
+ * value must EQUAL the entity name the agent will report: an id embedded in a longer label matches
+ * nothing (`{ label: 'Order 5' }` grounds a target of `'Order 5'`, never of `'5'`). A write the
+ * cross-check cannot match is a write no claim can cover, and the turn fails closed into the engine
+ * closure (see `packages/core/GUARDS.md`).
  */
 import type { AgentSpec, AgentWorld, ToolDef, DomainContract } from '@looprun-ai/core';
 

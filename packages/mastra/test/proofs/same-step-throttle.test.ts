@@ -86,13 +86,38 @@ describe('M1 · destructiveThrottle counts a same-STEP sibling effect', () => {
     expect(await g.check(ctx)).toBeNull();
   });
 
-  it('CONTROL: a same-step sibling with NO preview flag still throttles — the r2/C6 direction is intact', async () => {
-    // The sibling declares nothing, so there is no preview claim to honour: an admitted destructive call
-    // with no probe shape counts exactly as it always did.
+  it('CONTROL: a same-step sibling that is CONFIRMED still throttles — the r2/C6 direction is intact', async () => {
+    // The sibling declares the ACT, so it is the one effect this turn is allowed.
     const g = destructiveThrottle(['cancelMove']);
     const ctx = craftCtx({
       tool: 'cancelMove',
       args: { moveId: 'mv_2002', confirmed: true },
+      siblingCallsThisStep: [call('cancelMove', { args: { moveId: 'mv_2001', confirmed: true } })],
+    });
+    expect(await g.check(ctx)).toBeTruthy();
+  });
+
+  it('a same-step sibling that OMITS the flag is a preview too — parity with confirmFirst', async () => {
+    // `confirmFirst` licenses "a `flag:false`/ABSENT probe" and returns null on any `flag !== true`, so an
+    // omitted flag is a not-yet-confirmed call to the consent gate. Keying the throttle on
+    // `confirmed === false` alone made the two kinds disagree on exactly the case they claim to agree on.
+    const g = destructiveThrottle(['cancelMove']);
+    const ctx = craftCtx({
+      tool: 'cancelMove',
+      args: { moveId: 'mv_2002' },
+      siblingCallsThisStep: [call('cancelMove', { args: { moveId: 'mv_2001' } })],
+    });
+    expect(await g.check(ctx)).toBeNull();
+  });
+
+  it('CONTROL: a FLAGLESS (prior-ask) tool has no preview shape — the first sibling throttles', async () => {
+    // `AgentSpecBase` passes its `'prior-ask'` tools as `flagless`: they carry no confirm flag at all, so
+    // "not confirmed" says nothing about them and every admitted call is an act. Without this, the
+    // not-confirmed rule above would leave the same-step cap inert on the whole prior-ask mechanism.
+    const g = destructiveThrottle(['cancelMove'], { flagless: ['cancelMove'] });
+    const ctx = craftCtx({
+      tool: 'cancelMove',
+      args: { moveId: 'mv_2002' },
       siblingCallsThisStep: [call('cancelMove', { args: { moveId: 'mv_2001' } })],
     });
     expect(await g.check(ctx)).toBeTruthy();

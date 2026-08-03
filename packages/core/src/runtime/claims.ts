@@ -473,8 +473,15 @@ export function renderOperationReport(did: TurnClaim[], opts?: RenderOpts): stri
  * effected writes made a read's label shift onto a write's target (the engine's own honest closure then
  * named the wrong entity). A write with no label of its own yields a claim with no `target`, which
  * {@link renderOperationReport} renders as a generic completed-action line — so this NEVER leaks a tool
- * name (it names world-issued labels or nothing). `op` is a neutral advisory label; the renderer default
- * ignores it, so it is safe.
+ * name (it names world-issued labels or nothing).
+ *
+ * A DERIVED CLAIM IS ALWAYS AN ACTION CLAIM. `op` stopped being purely advisory when the speech/action
+ * partition started keying on it: `inform`/`greet`/`refuse`/`ask` are SPEECH ops, and an `ask` sealed
+ * into history is read as consent by {@link askedInDeliveredTurn} on the next turn. A world is free to
+ * issue a label that collides with one of those four words, so passing the label straight through as `op`
+ * let the engine's OWN exhaustion closure seal an ask intention the agent never made. The label is
+ * world-issued evidence of WHICH ENTITY was touched, so it stays as `target`; a colliding `op` falls back
+ * to the neutral `'operation'`, which is what a labelless write already uses.
  */
 export function deriveClaimsFromLedger(
   observed: ObservedCall[],
@@ -491,7 +498,13 @@ export function deriveClaimsFromLedger(
     if (!writes.has(o.name) && !attestedEffect(o)) continue;
     if (o.tookEffect === true) {
       const label = o.producedLabel;
-      claims.push(label ? { op: label, target: label, outcome: 'success' } : { op: 'operation', outcome: 'success' });
+      // A label that collides with a reserved SPEECH op is kept as the `target` (it is what the world
+      // named) but never becomes the `op` — see the partition note above.
+      claims.push(
+        label
+          ? { op: isSpeechOp(label) ? 'operation' : label, target: label, outcome: 'success' }
+          : { op: 'operation', outcome: 'success' },
+      );
       continue;
     }
     if (o.resultFlags?.requiresConfirmation === true) {

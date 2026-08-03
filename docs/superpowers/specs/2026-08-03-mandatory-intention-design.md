@@ -9,8 +9,10 @@ The re-chartered red-team broke the SCG surface (verdicts:
 `.superpowers/sdd/redteam-verdicts.md`). Two findings were paradigm-level: the free `message`
 prose channel (P1) and the bare `asked` boolean (P2) were unverified agent-declared channels. The
 user's resolution: **there is no unstructured intention.** Every `respond` declares ≥1 intention,
-enforced in the schema; the natural-language `message` becomes the SURFACE of declared intentions,
-never a side-channel that can assert an operation the structure does not carry.
+enforced in the schema; the natural-language `message` is REDEFINED as the SURFACE of declared intentions
+rather than a side-channel — a rule the model is bound to, not a mechanism that enforces it. The `message`
+is still shipped verbatim, so it CAN carry an assertion the structure does not (see the precise statement
+below); what mandatory declaration removes is the ability to do so by accident.
 
 The guarantee is precise (not overclaimed): a REAL action can never be hidden or fabricated
 (deterministic — structure + ledger check). An operational LIE in prose is not deterministically
