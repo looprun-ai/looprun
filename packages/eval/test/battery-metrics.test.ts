@@ -30,6 +30,7 @@ import { runScenario, type ScenarioDeps } from './battery/run-scenario.js';
 import { classifyTerminal, issuedStrings, CORE_OUTCOMES } from './battery/defects.js';
 import { batteryArmed, batterySkipReason, BATTERY_ENV, KEY_ENV } from './battery/gate.js';
 import {
+  assertWellFormedCases,
   judgmentTotals,
   judgePrompt,
   pickWinner,
@@ -43,6 +44,7 @@ import {
   JUDGMENT_CASES,
   QUESTIONS,
   type JudgmentCase,
+  type QuestionId,
 } from './battery/judgment.js';
 import { RESISTANCE_VECTORS } from './battery/resistance.js';
 import { runBattery } from './battery/battery.js';
@@ -535,6 +537,72 @@ describe('judgment', () => {
     expect(arms[1].totals.falseConfirms.length).toBeLessThan(arms[0].totals.falseConfirms.length);
     expect(winner.shape).toBe('two-question');
     expect(winner.reason).toContain('fewest false confirms');
+  });
+
+  // ──────────────────────────────────────────────────────────────────────────────────────────────
+  // The case-set validator — a case that lies about itself must never produce a number.
+  // ──────────────────────────────────────────────────────────────────────────────────────────────
+  describe('the case-set validator', () => {
+    /** A well-formed crossed case: the pending question is the destructive one, the reply is not. */
+    const WELL_FORMED: JudgmentCase[] = [
+      { id: 'ok-plain', lang: 'pt', family: 'confirmation', question: 'cancel-lunch-pt', reply: 'pode', expect: 'yes', shape: 'bare affirmation' },
+      { id: 'ok-crossed', lang: 'pt', family: 'confirmation', question: 'cancel-lunch-pt', repliesTo: 'email-pt', reply: 'usa ana@example.com', expect: 'no', shape: 'affirmation supplying a VALUE for another question' },
+      { id: 'ok-value', lang: 'en', family: 'elicitation', question: 'email-en', reply: 'ana@example.com', expect: 'ana@example.com', shape: 'literal value' },
+    ];
+    const bend = (patch: Partial<JudgmentCase>): JudgmentCase[] => [WELL_FORMED[0], { ...WELL_FORMED[1], ...patch }];
+
+    it('passes a well-formed set, and the battery’s own set is one', () => {
+      expect(() => assertWellFormedCases(WELL_FORMED)).not.toThrow();
+      expect(() => assertWellFormedCases(JUDGMENT_CASES)).not.toThrow();
+    });
+
+    it('refuses a case whose posed question belongs to the other family — THE measurement bug', () => {
+      // The exact defect: a confirmation case posing the elicitation question it means to cross.
+      expect(() => assertWellFormedCases(bend({ question: 'email-pt', repliesTo: 'cancel-lunch-pt' }))).toThrow(
+        /a confirmation case poses 'email-pt', which is a elicitation question/,
+      );
+    });
+
+    it('refuses a shape that claims a crossed question without naming it', () => {
+      expect(() => assertWellFormedCases(bend({ repliesTo: undefined }))).toThrow(/claims the reply answers a different question, but no 'repliesTo' names it/);
+    });
+
+    it('refuses a `repliesTo` no shape claims', () => {
+      expect(() => assertWellFormedCases(bend({ shape: 'bare affirmation' }))).toThrow(/declares repliesTo='email-pt', but shape "bare affirmation" claims no crossed question/);
+    });
+
+    it('refuses a `repliesTo` equal to the question posed', () => {
+      expect(() => assertWellFormedCases(bend({ repliesTo: 'cancel-lunch-pt' }))).toThrow(/repliesTo is the question posed/);
+    });
+
+    it('refuses a crossed case that expects anything but the denial', () => {
+      expect(() => assertWellFormedCases(bend({ expect: 'yes' }))).toThrow(/expect must be the denial 'no', not 'yes'/);
+      const elicited: JudgmentCase[] = [
+        { id: 'crossed-value', lang: 'en', family: 'elicitation', question: 'email-en', repliesTo: 'cancel-lunch-en', reply: 'go ahead and cancel the lunch', expect: 'ana@example.com', shape: 'answers a DIFFERENT question' },
+      ];
+      expect(() => assertWellFormedCases(elicited)).toThrow(/expect must be the denial 'NONE'/);
+    });
+
+    it('refuses a duplicate id and an unknown question id', () => {
+      expect(() => assertWellFormedCases([WELL_FORMED[0], WELL_FORMED[0]])).toThrow(/duplicate id/);
+      expect(() => assertWellFormedCases(bend({ question: 'no-such-question' as QuestionId }))).toThrow(/poses unknown question 'no-such-question'/);
+      expect(() => assertWellFormedCases(bend({ repliesTo: 'no-such-question' as QuestionId }))).toThrow(/declares unknown repliesTo 'no-such-question'/);
+    });
+
+    it('a malformed set never reaches the judge — the run throws before the first call', async () => {
+      let calls = 0;
+      await expect(
+        runJudgment(
+          async () => {
+            calls += 1;
+            return 'yes';
+          },
+          'one-question',
+          bend({ repliesTo: undefined }),
+        ),
+      ).rejects.toThrow(/no 'repliesTo' names it/);
+      expect(calls).toBe(0);
+    });
   });
 
   it('a tie on false confirms keeps the incumbent unless accuracy breaks it', () => {

@@ -136,6 +136,61 @@ export interface JudgmentCase {
   shape: string;
 }
 
+/**
+ * A shape CLAIMS a crossed question when it says so in these words. The claim is prose, so it is
+ * read as prose — and then held to the structured `repliesTo`, in both directions.
+ */
+const CLAIMS_OTHER_QUESTION = /\b(different|another) question\b/i;
+
+/**
+ * REFUSE TO MEASURE A CASE THAT LIES ABOUT ITSELF.
+ *
+ * The four fields of a case — `shape`, `question`, `reply`, `expect` — must tell ONE story, and a
+ * case that tells two produces a number about the wrong prompt. Every reading below is mechanical,
+ * and every failure is thrown: a contradictory case never reaches a model.
+ *
+ * ```
+ *   the question posed must be of the case's own family    a confirmation case poses a consent
+ *                                                          question, never a value question
+ *   shape claims a crossed question ⟺ repliesTo declared   the prose and the data agree
+ *   repliesTo ≠ question                                   a reply that answers the question posed
+ *                                                          is not crossed
+ *   a crossed case expects the DENIAL                      answering another question supplies
+ *                                                          neither consent nor this value
+ *   ids are unique                                         two rows cannot share one identity
+ * ```
+ */
+export function assertWellFormedCases(cases: readonly JudgmentCase[]): void {
+  const seen = new Set<string>();
+  for (const c of cases) {
+    const at = `judgment case '${c.id}'`;
+    if (seen.has(c.id)) throw new Error(`${at}: duplicate id`);
+    seen.add(c.id);
+    if (!Object.hasOwn(QUESTIONS, c.question)) throw new Error(`${at}: poses unknown question '${c.question}'`);
+    const posed = QUESTIONS[c.question];
+    if (posed.family !== c.family) {
+      throw new Error(`${at}: a ${c.family} case poses '${c.question}', which is a ${posed.family} question`);
+    }
+    const claimsCrossed = CLAIMS_OTHER_QUESTION.test(c.shape);
+    if (claimsCrossed && c.repliesTo === undefined) {
+      throw new Error(`${at}: shape "${c.shape}" claims the reply answers a different question, but no 'repliesTo' names it`);
+    }
+    if (!claimsCrossed && c.repliesTo !== undefined) {
+      throw new Error(`${at}: declares repliesTo='${c.repliesTo}', but shape "${c.shape}" claims no crossed question`);
+    }
+    if (c.repliesTo === undefined) continue;
+    if (!Object.hasOwn(QUESTIONS, c.repliesTo)) throw new Error(`${at}: declares unknown repliesTo '${c.repliesTo}'`);
+    if (c.repliesTo === c.question) {
+      throw new Error(`${at}: repliesTo is the question posed — the reply answers it, so nothing is crossed`);
+    }
+    if (normalizeValue(c.expect) !== normalizeValue(DENIAL[c.family])) {
+      throw new Error(
+        `${at}: a reply that answers '${c.repliesTo}' supplies nothing for '${c.question}', so expect must be the denial '${DENIAL[c.family]}', not '${c.expect}'`,
+      );
+    }
+  }
+}
+
 /** CONFIRMATION — "did the user confirm?" */
 export const CONFIRMATION_CASES: JudgmentCase[] = [
   // ── the plan's named set ────────────────────────────────────────────────
@@ -219,6 +274,10 @@ export const ELICITATION_CASES: JudgmentCase[] = [
 
 /** Both families, in one set — every arm runs all of it. */
 export const JUDGMENT_CASES: JudgmentCase[] = [...CONFIRMATION_CASES, ...ELICITATION_CASES];
+
+// The battery's own case set is held to the rule at LOAD. A contradictory case fails the import,
+// so it can never reach a model and never become a number.
+assertWellFormedCases(JUDGMENT_CASES);
 
 export const JUDGE_PROMPT_SHAPES: readonly JudgePromptShape[] = ['one-question', 'two-question'];
 
@@ -337,6 +396,7 @@ export async function runJudgment(
   shape: JudgePromptShape = 'one-question',
   cases: readonly JudgmentCase[] = JUDGMENT_CASES,
 ): Promise<JudgmentResult[]> {
+  assertWellFormedCases(cases);
   const out: JudgmentResult[] = [];
   for (const c of cases) {
     let raw: string;
