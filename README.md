@@ -75,21 +75,16 @@ tool calls the agent actually made.
 
 ## The tutorial
 
-> **Coming back after a while?** The old doc set under `docs/` — `overview.md`,
-> `getting-started.md`, `illustrated-guide.md`, `examples.md`, `references.md` and the four
-> `guides/` pages — was retired. The six chapters below absorbed all of it; `docs/tutorial/` is
-> now the only guide.
-
-Six chapters, one running example — a calendar assistant grown from a single purpose sentence into a
-certified agent. Every code block is compiled in CI against the published packages, so nothing here
-can drift from what ships.
+`docs/tutorial/` is the only guide: six chapters, one running example — a calendar assistant grown
+from a single purpose sentence into a certified agent. Every code block is compiled in CI against the
+published packages, so nothing here can drift from what ships.
 
 | # | chapter | what you get |
 |---|---|---|
 | 01 | [Concepts](docs/tutorial/01-concepts.md) | the mental model — the three nouns every later chapter hangs off, and why the architecture is shaped this way. No code |
 | 02 | [Hello world](docs/tutorial/02-hello-world.md) | a governed agent answering a real turn, in about twenty lines. Three symbols |
 | 03 | [Agent anatomy](docs/tutorial/03-agent-anatomy.md) | what a spec declares, what a world provides, where the tool surface comes from, and how a rule binds to a moment in the turn |
-| 04 | [Guards](docs/tutorial/04-guards.md) | the complete rule vocabulary — 25 factories, what each prevents, one example each — and how to write your own |
+| 04 | [Guards](docs/tutorial/04-guards.md) | the complete rule vocabulary — 23 factories, what each prevents, one example each — and how to write your own |
 | 05 | [Running and eval](docs/tutorial/05-running-and-eval.md) | running a spec over a scripted conversation, and turning "it seemed fine" into a number you can re-run |
 | 06 | [Advanced](docs/tutorial/06-advanced.md) | the same agent served over HTTP, run on a local model with no cloud key, and driven by a host whose tools execute themselves |
 
@@ -136,7 +131,7 @@ Cloud models need none of this: pass a router string as `model` and skip this se
 | package | what |
 |---|---|
 | `looprun` | umbrella — `looprun/core`, `looprun/mastra`, `looprun/models`, `looprun/vercel` (+ the `looprun` CLI) |
-| `@looprun-ai/core` | `AgentSpec` + the 25 guard factories — the teaching surface. The trunk renderer and the governed-turn machine ship too, but on `@looprun-ai/core/internal` (no compatibility promise) |
+| `@looprun-ai/core` | `AgentSpec` + the 23 guard factories — the teaching surface. The trunk renderer and the governed-turn machine ship too, but on `@looprun-ai/core/internal` (no compatibility promise) |
 | `@looprun-ai/mastra` | `LoopRunAgent` (a real Mastra Agent), `runSpecConversation`, `worldFromTools` |
 | `@looprun-ai/models` | validated local models (llama.cpp `ModelRuntimePort`) + the cloud validation model |
 | `@looprun-ai/eval` | the `looprun-eval` CLI: run / fold / cert / lint / seal (dev dependency) |
@@ -147,12 +142,10 @@ Cloud models need none of this: pass a router string as `model` and skip this se
 
 | Benchmark | Question it answers | Scale | Headline (governed vs ungoverned) | Where |
 |---|---|---|---|---|
-| **Atlas** | Do declarative guards beat a raw ReAct loop on a business agent generated from one sentence? | 61 cases × 5 agents (generated from a single sentence); 13 cloud models, N=3 | governed **96.5** vs ungoverned **92.6** — every fabrication / one-shot-destructive incident was in the ungoverned arm | [looprun-bench](https://github.com/looprun-ai/looprun-bench) |
 | **τ²-Bench Telecom** | Does adding the looprun protocol lift a raw model on a public agent benchmark? | paired: raw model vs model + looprun protocol | in progress | [looprun-bench](https://github.com/looprun-ai/looprun-bench) |
 
-Benchmark editions are pinned to looprun releases (current edition: **v0.6.0**; the next patch **v0.6.1**
-re-certifies the anchors without re-running the matrix). Method and full results:
-[docs/benchmarks.md](docs/benchmarks.md).
+Benchmark editions are pinned to looprun releases (current edition: **v0.6.0**). Method and full
+results: [docs/benchmarks.md](docs/benchmarks.md).
 
 ## Credits
 

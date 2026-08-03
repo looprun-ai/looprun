@@ -18,9 +18,9 @@
  * // UNCHECKABLE: whether a draft's wording faithfully carries the owner's instruction (and only
  * //             facts from the read body) is language-layer — eval dimension only (cases 03, 10).
  */
-// NOTE (no-regex law, 2026-08-02): noFabricatedSuccess and the lexicon-fed noFalseFailureClaim are
-// DELETED — text judgment is llmCheck's job. This EXAMPLE bundle is not re-authored (out of scope); it
-// keeps only structural guards so it compiles on the new surface.
+// NO-REGEX LAW: text judgment — whether a reply fabricates a success or a failure — belongs to an
+// `llmCheck` rubric, never to a regex over a guard param. This EXAMPLE bundle carries STRUCTURAL guards
+// only; the honesty dimensions above ride as conditioned prose plus eval dimensions.
 import { AgentSpecBase, custom, forbidThisTurn, jargonScrub, maxCalls, requiresBefore } from 'looprun';
 import { INBOX_TRIAGE_CONTRACT } from './contract.js';
 
@@ -113,9 +113,6 @@ export class AgentSpecInboxTriage extends AgentSpecBase {
       }),
       { id: 'agent:archiveRealEmailOnly' },
     );
-
-    // Reply honesty (send/archive claim checks) were noFabricatedSuccess regex guards — deleted with the
-    // no-regex law. A re-authored bundle expresses them as llmCheck rubrics; this example drops them.
 
     this.addMutator(jargonScrub({ draftId: 'draft id' }), { id: 'agent:jargonScrub' });
   }

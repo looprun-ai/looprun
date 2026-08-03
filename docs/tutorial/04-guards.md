@@ -89,11 +89,10 @@ interface GuardCtx {
 <sub>signature, from `looprun` — abridged; the JSDoc on each field is worth reading</sub>
 
 **A guard sees the WHOLE conversation** — `userText` (this turn's incoming message) and `history` (every
-prior turn) are right there. The old *magnet firewall* (guards blind to the user's words) is retired: a
-guard is deterministic code, so "the user can talk their way past it" does not apply. Two laws still
-hold, and they are what the firewall was really protecting. **Never scope tools by intent** — a guard
-that turned tools on or off according to what the user asked for is the banned intent-based routing (a
-loop law, not a guard law). **Never pattern-match text in a guard parameter** — the no-regex law: no
+prior turn) are right there, and a check may read both: a guard is deterministic code, so "the user can
+talk their way past it" does not apply. Two laws bound that freedom. **Never scope tools by intent** — a
+guard that turns tools on or off according to what the user asked for is the banned intent-based routing
+(a loop law, not a guard law). **Never pattern-match text in a guard parameter** — the no-regex law: no
 guard factory takes a `RegExp`. A rule that genuinely needs to JUDGE conversation text is an `llmCheck`
 (a trusted rubric answered by a host adjudicator — § below); everything else keys on arguments, world
 state and observed calls, because a structural signal is model-independent and cheap.
@@ -196,16 +195,16 @@ happened is denied, and an action that happened but was never claimed is denied.
 moment `contract.writeTools` is non-empty, and **not at all** if it is missing: a domain that never names
 its write tools gets no cross-check, and nothing warns you. Naming them is the switch (chapter 03 §5).
 
-The old always-on `emptyReply` floor is gone (tier-③ deletion, SCG-T5). It was replaced by a
-backend-independent floor inside `finalizeReply`, not by the schema: the `respond` terminal's non-empty
-`message` is only enforced where the backend validates it, a zero-width message satisfies `minLength`
-anyway, and a reply mutator can blank an otherwise-fine delivery AFTER every check has passed. So the floor
-is the runtime's: every composed delivery about to leave `finalizeReply` is tested for blankness and
-swapped for the engine-derived closure if it is blank. No runtime GUARD is needed — but "structurally
-impossible at the schema" was never true. There is also no unconditional reply-honesty kind: the old
-regex-fed `noFalseFailureClaim` was retired with the no-regex law (2026-08-02). A reply-honesty invariant
-a domain needs beyond the cross-check is an `llmCheck` you bind yourself (§5's `llmCheck` row), not an
-auto-install fed by a lexicon.
+**The blank-reply floor is the runtime's — not a guard's, and not the schema's.** The `respond`
+terminal's non-empty `message` is only enforced where the backend validates it, a zero-width message
+satisfies `minLength` anyway, and a reply mutator can blank an otherwise-fine delivery AFTER every check
+has passed — so no schema constraint can carry this. `finalizeReply` tests every composed delivery for
+blankness on its way out and swaps in the engine-derived closure when it is blank. Backend-independent,
+and no guard kind involved.
+
+There is also no unconditional reply-honesty kind. A reply-honesty invariant a domain needs beyond the
+cross-check is an `llmCheck` you bind yourself (§5's `llmCheck` row), never something the base spec
+installs on your behalf.
 
 They have catalog rows in §5 because they are real kinds you must be able to read — **not** because
 you should call them. Re-adding one by hand renders the same rule twice in the prompt, from two
@@ -230,7 +229,7 @@ you want the kind that makes that impossible. Read this column as "the model …
 | acts while the world says it must not (closed account, no consent on record) | [`precondition`](#8-precondition) · [`consentRequired`](#9-consentrequired) | preTool |
 | a value must not be recorded until the operator was asked for it in an earlier turn · a confirmed act needs its own earlier-turn preview | [`askedEarlier`](#13-askedearlier) · [`confirmFirst`](#10-confirmfirst) (`via:'probe'`) | preTool |
 | summarises an empty or partial result as if it satisfied the request | [`resultInvariant`](#14-resultinvariant) | postTool |
-| claims a tool's work is done when it is not · apologises for a failure on a turn where the work went through · promises an off-surface handoff · discloses a personal/regulated field the tools do not ground · obeys an instruction that came back INSIDE a tool result | [`llmCheck`](#20-llmcheck) — text judgment is one kind now: a trusted rubric answered by a host adjudicator (the 8 regex-param honesty/reply kinds were deleted by the no-regex law) | onReply / preTool |
+| claims a tool's work is done when it is not · apologises for a failure on a turn where the work went through · promises an off-surface handoff · discloses a personal/regulated field the tools do not ground · obeys an instruction that came back INSIDE a tool result | [`llmCheck`](#20-llmcheck) — text judgment is one single kind: a trusted rubric answered by a host adjudicator | onReply / preTool |
 | reports an operation the ledger does not show, or leaves a real action unreported, or names the wrong outcome polarity for a record | [`claimIsGrounded`](#16-claimisgrounded) · [`claimIsComplete`](#17-claimiscomplete) · [`claimCoversRubric`](#18-claimcoversrubric) | onReply |
 | leaks think-blocks or repeats the same line five times | [`degenerationGuard`](#19-degenerationguard) (auto-installed) | onReply |
 | writes internal status codes and field names at the user | [`jargonScrub`](#21-jargonscrub) — rewrites, never vetoes | onReplyMutate |
@@ -248,13 +247,13 @@ reading only one row will pick the wrong kind:
 | `confirmFirst` · `consentRequired` · `pendingConfirmMustAsk` | evidence in the CONVERSATION (an earlier turn) · a standing flag in the WORLD · gating the REPLY rather than the call |
 | `claimIsGrounded` · `claimIsComplete` · `claimCoversRubric` | every claim matches the ledger · every effected write is claimed · a per-case target appears with the required outcome polarity |
 
-**Where the honesty cluster went.** Six kinds used to sit here — a family that all meant "the reply
-lied" (invented success, false failure, an off-surface claim, an ungrounded regulated figure). The
-no-regex law (2026-08-02) deleted every one: each was a `RegExp` over the reply, and text judgment is
-now a single kind, `llmCheck`. Instead of choosing between six regex guards you write ONE rubric —
-"does the reply claim an action the tools did not actually complete this turn?" — and a host adjudicator
-answers it over the full context. The structural honesty signals survive as their own kinds
-(`resultInvariant` on the tool result, `destructiveThrottle`/`confirmFirst` on the call).
+**Text judgment is one kind, not a cluster.** There is no family of reply-text kinds to pick between:
+every rule of the form "the reply lied" — invented success, a false failure, an off-surface claim, an
+ungrounded regulated figure — is ONE `llmCheck` rubric ("does the reply claim an action the tools did
+not actually complete this turn?"), answered by a host adjudicator over the full context. No guard
+factory takes a `RegExp`, so a reply-honesty rule is never a pattern you tune. The structural honesty
+signals are their own kinds (`resultInvariant` on the tool result, `destructiveThrottle`/`confirmFirst`
+on the call), and the ledger cross-check is `claimIsGrounded`/`claimIsComplete`.
 
 ### `canonArgs` — the fingerprint `noDuplicateCall` compares
 
@@ -365,7 +364,7 @@ requiresBefore(['findBooking'])
 
 An unconditional deny of the bound tool while the binding is installed — the first call is denied too.
 
-**When to reach for it.** A tool must be off, no matter what. Its scope is the BINDING'S LIFETIME — the check is `() => reason`, with no turn logic in it at all, so the ban holds for as long as the binding is installed (the name is historical). It is not a repeat detector: reach for `noDuplicateCall` when the FIRST call is legitimate and only the repeat is not.
+**When to reach for it.** A tool must be off, no matter what. Its scope is the BINDING'S LIFETIME — the check is `() => reason`, with no turn logic in it at all, so — despite the name — the ban holds for as long as the binding is installed, not for one turn. It is not a repeat detector: reach for `noDuplicateCall` when the FIRST call is legitimate and only the repeat is not.
 
 ```ts
 forbidThisTurn('Do not reschedule while a cancellation is pending — resolve that first.')
@@ -527,7 +526,7 @@ pendingConfirmMustAsk()
 
 Every operation the agent declares in `did` must match the world ledger: a `success` needs a write that took effect, `not_found` an empty read, `blocked`/`refused` a veto or world refusal, `no_op` a call that addressed the entity and no effected write on it — an undeclared outcome word is always a violation.
 
-**When to reach for it.** Always on when the domain declares its `writeTools` (the spec class auto-installs it, fed by `contract.writeTools` + `contract.outcomes`). It is the ledger cross-check that replaced the deleted prose honesty guards: it keys on `target` + `outcome` against verified calls, never on op-name semantics or reply text, so a fabricated success cannot ground. It checks ACTION intentions only — a speech intention (`inform`/`greet`/`refuse`/`ask`) names no ledger fact. A `target` matches an IDENTITY the ledger carries — a scalar under `id`/`label`/`<entity>Id`, never a status word, a note or a sentence — by WHOLE-VALUE equality, so `BK-1` never grounds against `BK-10` and `12` never stands for `Order 12`. A `success` matches only what the WORLD issued for the write (its own entity, not the ones its result references); a claim of absence or non-effect (`not_found`/`failure`/`blocked`/`refused`/`pending_confirmation`/`no_op`) matches the world's negative answer plus the identity-key ARGS that name the entity asked about, because an absent record issues no value of its own. An `amount`, when declared, must appear among the magnitudes of that same ledger fact. A domain outcome word must map to a core outcome via the contract's outcome map or it reads as undeclared.
+**When to reach for it.** Always on when the domain declares its `writeTools` (the spec class auto-installs it, fed by `contract.writeTools` + `contract.outcomes`). It is the ledger cross-check: it keys on `target` + `outcome` against verified calls, never on op-name semantics or reply text, so a fabricated success cannot ground. It checks ACTION intentions only — a speech intention (`inform`/`greet`/`refuse`/`ask`) names no ledger fact. A `target` matches an IDENTITY the ledger carries — a scalar under `id`/`label`/`<entity>Id`, never a status word, a note or a sentence — by WHOLE-VALUE equality, so `BK-1` never grounds against `BK-10` and `12` never stands for `Order 12`. A `success` matches only what the WORLD issued for the write (its own entity, not the ones its result references); a claim of absence or non-effect (`not_found`/`failure`/`blocked`/`refused`/`pending_confirmation`/`no_op`) matches the world's negative answer plus the identity-key ARGS that name the entity asked about, because an absent record issues no value of its own. An `amount`, when declared, must appear among the magnitudes of that same ledger fact. A domain outcome word must map to a core outcome via the contract's outcome map or it reads as undeclared.
 
 ```ts
 claimIsGrounded({ writeTools: ['createBooking', 'cancelBooking'], outcomes: { settled: 'success' } })
@@ -547,7 +546,7 @@ claimIsComplete({ writeTools: ['createBooking', 'cancelBooking'], outcomes: { se
 
 Each configured target must appear in `did` with the required outcome polarity (or any polarity when `outcome: 'any'`).
 
-**When to reach for it.** The per-case coverage rule that replaces `replyMentions`/`replyConfirmsLabels`: because polarity is a FIELD, a reply that says "no record of BK-1 was found" can never satisfy a `success` requirement again. The target must BE the claim's `target` by whole-value equality, so neither a claim about `BK-10` nor a sentence-shaped target answers a rubric about `BK-1`. Config-bound only (a per-case norm) — never auto-installed. Pass `'any'` when only the mention matters, a specific outcome when the polarity is the point.
+**When to reach for it.** The per-case coverage rule: because polarity is a FIELD, a reply that says "no record of BK-1 was found" can never satisfy a `success` requirement again. The target must BE the claim's `target` by whole-value equality, so neither a claim about `BK-10` nor a sentence-shaped target answers a rubric about `BK-1`. Config-bound only (a per-case norm) — never auto-installed. Pass `'any'` when only the mention matters, a specific outcome when the polarity is the point.
 
 ```ts
 claimCoversRubric({ targets: ['BK-100234'], outcome: 'success' }, 'Account for the booking you were asked about.')
@@ -557,7 +556,7 @@ claimCoversRubric({ targets: ['BK-100234'], outcome: 'success' }, 'Account for t
 
 Catches leaked reasoning or tool markup, chat-template tokens and run-away line repetition in the reply.
 
-**When to reach for it.** The reply is broken as an ARTIFACT rather than wrong as a claim — think blocks, tool-call markup or the same line five times over. No honesty kind fires on that, because nothing was asserted; this one catches the weak-model failure class every domain shares. Always on (auto-installed); it takes no parameters (the former language-specific self-narration branch is now an `llmCheck` job).
+**When to reach for it.** The reply is broken as an ARTIFACT rather than wrong as a claim — think blocks, tool-call markup or the same line five times over. No honesty kind fires on that, because nothing was asserted; this one catches the weak-model failure class every domain shares. Always on (auto-installed); it takes no parameters — language-specific judgments such as self-narration are text judgment, so an author who wants one binds an `llmCheck` rubric.
 
 ```ts
 degenerationGuard()
@@ -689,7 +688,7 @@ Five rules, learned from the shipped kinds, that a reviewer will look for:
 |---|---|
 | **`dim` must match what `check` reads** | it is a claim, and `addGuard` holds you to it. This one reads `ctx.args` + `ctx.world` ⇒ `run` |
 | **`check` must be pure and total** | no clock, no randomness, no network, no LLM call — and no throw. Same inputs, same verdict, forever, or a failing eval case is not reproducible |
-| **`check` must not ROUTE tools by intent, nor pattern-match text** | it MAY read `ctx.userText`/`ctx.history` (the firewall is retired), but scoping tools by what the user asked is the banned intent-routing, and a `RegExp` over the text is the no-regex law's job for `llmCheck`, not a hand-rolled guard |
+| **`check` must not ROUTE tools by intent, nor pattern-match text** | it MAY read `ctx.userText`/`ctx.history`, but scoping tools by what the user asked is the banned intent-routing, and a `RegExp` over the text is the no-regex law's job for `llmCheck`, not a hand-rolled guard |
 | **`prose()` states the RULE, not the incident** | present tense, no accusation: it renders into every prompt, including turns where nothing went wrong |
 | **replicate the exemptions the shared kinds have** | e.g. a reply-side rule that fires on questions and offers as if they were claims is a rule that punishes good behaviour |
 

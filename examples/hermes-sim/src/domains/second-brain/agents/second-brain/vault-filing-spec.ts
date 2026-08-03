@@ -17,10 +17,9 @@
  * // UNCHECKABLE: capabilities outside the tool surface (email, sync, opening apps) must be
  * //              declined honestly, never simulated — conditioned prose + eval dimension (case 13).
  */
-// NOTE (no-regex law, 2026-08-02): the former regex-param honesty guards (destructiveClaimRequiresSuccess,
-// noFabricatedSuccess) and the lexicon-fed noFalseFailureClaim are DELETED — text judgment is llmCheck's
-// job. This EXAMPLE bundle is not re-authored (out of scope); it keeps only structural guards so it
-// compiles on the new surface.
+// NO-REGEX LAW: text judgment — whether a reply fabricates a success or a failure — belongs to an
+// `llmCheck` rubric, never to a regex over a guard param. This EXAMPLE bundle carries STRUCTURAL guards
+// only; the honesty dimensions above ride as conditioned prose plus eval dimensions.
 import { AgentSpecBase, argFormat, custom, jargonScrub, pendingConfirmMustAsk } from 'looprun';
 import { SECOND_BRAIN_CONTRACT } from './contract.js';
 
@@ -128,9 +127,6 @@ export class AgentSpecVaultFiling extends AgentSpecBase {
 
     // Reply honesty (structural): relay a pending delete confirmation as an `ask` intention in `did`.
     this.addReplyCheck(pendingConfirmMustAsk(), { id: 'agent:pendingConfirmMustAsk' });
-    // The former destructiveClaimRequiresSuccess + noFabricatedSuccess reply-checks were regex-param text
-    // judgments — deleted with the no-regex law. A re-authored bundle expresses them as llmCheck rubrics;
-    // this example drops them.
 
     // Deterministic egress rewrite of the internal kind enum spelling.
     this.addMutator(jargonScrub({ voice_transcript: 'voice transcript' }), { id: 'agent:jargonScrub' });

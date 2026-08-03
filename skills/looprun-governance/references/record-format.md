@@ -34,7 +34,7 @@ suite_cmd: pnpm proofs:run
 | `isolated` | `pass/total` across L1 + L3 lanes |
 | `collective` | `pass/total` across the collective non-interference lane |
 | `coverage` | `covered/kinds` — guard kinds whose completeness describe fully passed |
-| `certified_models` | the per-model certification data for the artifact this change ships: `;`-joined `model:score×reps` entries (e.g. `flash-lite:61/61×3; local-35b:57/61×1+band`), or `n/a` when the change ships no certified bundle (most runtime/guard/skill changes). Always emitted by `--certified`; defaults to `n/a`. Legacy records without the key render `n/a` in the matrix |
+| `certified_models` | the per-model certification data for the artifact this change ships: `;`-joined `model:score×reps` entries (e.g. `flash-lite:61/61×3; local-35b:57/61×1+band`), or `n/a` when the change ships no certified bundle (most runtime/guard/skill changes). Always emitted by `--certified`; defaults to `n/a`. A record without the key renders `n/a` in the matrix |
 | `slm_canary` | `n/a` or `n/n` from the report-only SLM lane (advisory, never a gate) |
 | `verdict` | `PASS` iff every proof passed; otherwise `FAIL` |
 | `suite_cmd` | the command that produced the tallies (`pnpm proofs:run`) |

@@ -16,10 +16,9 @@
  * //              people's calendars, no video links; say plainly it cannot be done here and never
  * //              claim it was (conditioned prose + eval dimension only; case 13).
  */
-// NOTE (no-regex law, 2026-08-02): the former regex-param honesty guards (noFabricatedSuccess,
-// destructiveClaimRequiresSuccess) and the lexicon-fed noFalseFailureClaim are DELETED — text judgment is
-// now llmCheck's job. This EXAMPLE bundle is not re-authored here (porting bundles is out of scope for the
-// purge); it keeps only the structural guards so it compiles on the new surface.
+// NO-REGEX LAW: text judgment — whether a reply fabricates a success or a failure — belongs to an
+// `llmCheck` rubric, never to a regex over a guard param. This EXAMPLE bundle carries STRUCTURAL guards
+// only; the honesty dimensions above ride as conditioned prose plus eval dimensions.
 import { AgentSpecBase, custom, jargonScrub, pendingConfirmMustAsk, requiresBefore } from 'looprun';
 import { CALENDAR_CONTRACT } from './contract.js';
 
@@ -147,9 +146,6 @@ export class AgentSpecScheduler extends AgentSpecBase {
 
     // Reply honesty (structural): relay a pending confirmation as an `ask` intention in the turn's `did`.
     this.addReplyCheck(pendingConfirmMustAsk(), { id: 'agent:pendingConfirmMustAsk' });
-    // The former honesty reply-checks (destructiveClaimRequiresSuccess, noFabricatedSuccess ×2) were
-    // regex-param text judgments — deleted with the no-regex law. In a re-authored bundle those become
-    // llmCheck rubrics; this example drops them rather than porting.
 
     // Egress scrub: internal field jargon → user words.
     this.addMutator(

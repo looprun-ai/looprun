@@ -78,5 +78,6 @@ Writes `governance/proofs/YYYY-MM-DD-<slug>.md` (`verdict: PASS` iff every proof
   a live model is not a proof (that is the report-only SLM canary lane — advisory, never a gate).
 - **One record file per change.** Never edit an old record to cover a new change — add a new dated file
   (this is why records never merge-conflict).
-- **The S-1 firewall holds in proofs too.** A `check()` reads only `GuardCtx` (args, tool, world,
-  observed, reply, result) — never user text. Do not craft a proof that smuggles user text into a check.
+- **The two guard laws hold in proofs too.** A `check()` reads only `GuardCtx`, and it may read every
+  field of it — but a proof case must never make a guard scope tools by what the user asked (intent
+  routing), nor pattern-match text in a guard parameter (the no-regex law).

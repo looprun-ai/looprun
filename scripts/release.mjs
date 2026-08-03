@@ -67,9 +67,9 @@ const pendingChangesets = readdirSync(join(ROOT, '.changeset')).filter(
   (f) => f.endsWith('.md') && f !== 'README.md',
 );
 // PATCH is the baked default (package.json passes --bump=patch); release-minor bakes minor.
-// ── ANTI-ESCALATION GATE (2026-07-18, after the accidental 0.7.0) ─────────────────────────────
+// ── ANTI-ESCALATION GATE ──────────────────────────────────────────────────────────────────────
 // The packages are a LINKED group: `changeset version` applies the HIGHEST bump across ALL
-// pending changesets, so a stray pending `minor` silently escalated an explicit `pnpm release`
+// pending changesets, so a stray pending `minor` would silently escalate an explicit `pnpm release`
 // (patch) into a minor. A pending changeset may never escalate past the requested bump —
 // abort (before ANY mutation; also on --dry-run) and make the human choose explicitly.
 if (!RESUME && pendingChangesets.length) {
@@ -104,9 +104,9 @@ console.log(`  npm: ${npmUser} · branch: ${branch}`);
 const gates = () => {
   step('gates: clean + build + typecheck + test + drift');
   // CLEAN FIRST, ALWAYS. `tsc` only ever ADDS to `dist/` — it never removes an output whose source
-  // is gone, so a `dist/` carried over from an earlier layout keeps shipping orphans (measured: a
-  // pre-split `dist/guards.js`, 80.8 kB, plus `coherence.*` maps, all listed by `npm pack`). The
-  // published tarball is built from whatever sits in `dist/`, so the clean is part of the gate.
+  // is gone, so a `dist/` carried over from an earlier layout keeps shipping orphan modules and maps
+  // that `npm pack` happily lists. The published tarball is built from whatever sits in `dist/`, so
+  // the clean is part of the gate.
   run('pnpm -r --if-present clean');
   run('pnpm -r --if-present build');
   run('pnpm -r --if-present typecheck');

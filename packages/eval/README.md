@@ -64,7 +64,7 @@ clears the bar. `--date` supplies `generatedAt` (no wall-clock default).
 
 ### The orchestrated path: `campaign`
 
-One verb runs the whole measured campaign — the ~30 hand invocations the Atlas run needed:
+One verb runs the whole measured campaign, in place of dozens of hand invocations:
 
 ```sh
 looprun-eval campaign run <campaign.json>    # preflight → K governed reps + control → judging PAUSE

@@ -117,15 +117,15 @@ Three names for what feels like one thing, so be precise about which is which:
 
 Those six are what a spec like the scheduler's gets — chapter 04 rows, none of which you name here.
 **Never re-add them by hand**: the same rule would render twice in the prompt, from two sources that
-can drift. (There is no always-on `emptyReply` guard: the blank-reply floor moved into the runtime's
-own `finalizeReply`, so no guard is needed for it — chapter 04 §3.)
+can drift. (The blank-reply floor is not among them: it lives in the runtime's own `finalizeReply`, so
+no guard carries it — chapter 04 §3.)
 
 The box is scoped to a spec with no confirm-mechanism override. `confirmMechanism` changes it, and this
 tutorial does not teach it: it selects, per tool, between the default `'arg'` confirm (the `confirmed`
 flag) and `'prior-ask'` (a flag-less action gated on an `ask` intention in an earlier turn). It is
-domain plumbing no chapter claims — reach for the source when you need it. (There is no longer a
-`lexicon` config field: the no-regex law, 2026-08-02, retired the regex-fed reply-honesty guard. A
-reply-honesty judgment a domain needs is an `llmCheck` rubric you bind on `onReply`, chapter 04.)
+domain plumbing no chapter claims — reach for the source when you need it. (The config carries no
+pattern vocabulary for reply text: a reply-honesty judgment a domain needs is an `llmCheck` rubric you
+bind on `onReply`, chapter 04.)
 
 Here is the scheduler's whole declaration:
 
@@ -457,10 +457,10 @@ having no rule at all, because it still reads as coverage in the spec and in the
 
 Every hook sees the WHOLE conversation. `GuardCtx` carries `userText` (the current turn's incoming
 message, verbatim — `onInput` reads the real input, not an empty stub) and `history` (every prior turn,
-read-only). The old "magnet firewall" (guards blind to the user's words) is retired: a guard is
-deterministic code, so it may read the user text freely. Two laws still hold — never scope tools by what
-the user said (intent-based routing stays banned), and never pattern-match text in a guard param (the
-no-regex law); a rule that genuinely needs to judge conversation text is an `llmCheck` (chapter 04).
+read-only). A guard is deterministic code, so it may read the user's words freely — "talking your way
+past it" is not a failure mode here. Two laws bound that: never scope tools by what the user said
+(intent-based routing is banned), and never pattern-match text in a guard param (the no-regex law); a
+rule that genuinely needs to judge conversation text is an `llmCheck` (chapter 04).
 
 **`ToolTarget` — which tools it applies to:** an array of tool names, or `'any'`. It has a second
 job most people meet by accident: it decides where the rule's prose is *printed*. Naming tools files

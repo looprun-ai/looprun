@@ -15,18 +15,19 @@ import { argRequired } from '@looprun-ai/core';
 import type { GuardProof } from '@looprun-ai/core/testing';
 
 export const argRequiredProof: GuardProof = {
-  guard: 'argRequired',          // the kind under proof — MUST equal the guards.ts export name (ratchet key)
+  guard: 'argRequired',          // the kind under proof — MUST equal the `guards/` export name (ratchet key)
   make: () => argRequired('title'), // install the exact instance the proof exercises
   hook: 'preTool',               // 'onInput' | 'preTool' | 'postTool' | 'onReply'
   target: ['createItem'],        // the tool(s) this instance is scoped to, or 'any'
   // auto?: 'minimal' | 'base'   — ONLY for constructor-auto-installed kinds (noDuplicateCall,
-  //   degenerationGuard, emptyReply, noFalseFailureClaim, confirmFirst, destructiveThrottle): the spec
-  //   builders then rely on the auto instance instead of addGuard. make() is still required.
+  //   degenerationGuard, confirmFirst, destructiveThrottle): the spec builders then rely on the auto
+  //   instance instead of addGuard. make() is still required.
   // specTweaks?: Partial<AgentSpecConfig> — extra spec config the auto layer needs, e.g.
-  //   { destructiveTools: [...], confirmMechanism: {...}, lexicon: {...} }.
-  // collective?: 'skip'         — ONLY for content-contract reply guards (replyMustMention,
-  //   replySingleQuestion, replyConfirmsLabels, replyMaxOccurrences): they bind one agent's specific
-  //   reply contract and would fire on every unrelated reply in the super-agent by construction.
+  //   { destructiveTools: [...], confirmMechanism: {...} }.
+  // collective?: 'skip'         — ONLY for kinds bound to ONE agent's contract: the did-vs-ledger
+  //   cross-check (claimIsGrounded, claimIsComplete, claimCoversRubric) and the adjudicated kinds
+  //   (llmCheck, didMessageConsistency). Installing them over arbitrary scenarios is a category
+  //   error, not an interference finding — they are proven ISOLATED instead.
   cases: [
     {
       name: 'title is present',
@@ -87,9 +88,10 @@ The neutral case is where most guard regressions (false-fires) are actually caug
 ## L1 — crafting the `GuardCtx`
 
 An L1 case is a `Partial<GuardCtx>` in, a verdict out. `craftCtx` fills the defaults (empty `args`, a
-fresh `FixtureWorld('seeded-media')`, empty `observed`, `turnIndex: 0`). The firewall holds: a `check()`
-reads only `args`, `tool`, `world`, `observed`, `turnIndex`, `reply`, `producedThisTurn`,
-`attachmentsThisTurn`, `result`, `notes` — **never user text**. Observed calls are
+fresh `FixtureWorld('seeded-media')`, empty `observed`, `turnIndex: 0`). A `check()` may read any
+`GuardCtx` field, `userText` and `history` included — but two laws bound a proof case as they bind a
+guard: never scope tools by what the user asked (intent routing), and never pattern-match text in a
+guard parameter (the no-regex law). Observed calls are
 `{ name, args, ok, turnIndex, resultFlags? }`; reply guards need `reply` set; postTool guards need
 `result`; world-keyed guards can pass `world: new FixtureWorld('quota-exhausted')` etc.
 

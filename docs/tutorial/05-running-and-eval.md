@@ -710,7 +710,7 @@ iterations. Cheapest and most deterministic first:
 |---|---|---|
 | 1 | state-visibility gap | render the missing state — `contract.stateBlock`, or a directive |
 | 2 | missing hard gate | add a guard from chapter 04's catalog, at the right hook |
-| 3 | scope gap | give the agent the missing tool, or route the case to the right agent — historically the highest-yield single fix |
+| 3 | scope gap | give the agent the missing tool, or route the case to the right agent — in practice the highest-yield single fix |
 | 4 | unconditioned prose | add the state condition to the behavior line |
 | 5 | fabrication pattern | an existence-keyed anti-fabrication reply gate |
 | 6 | language coin | **accept as residual** — a human gate. Do not chase it with prose |

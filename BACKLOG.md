@@ -1,53 +1,31 @@
 # Backlog
 
-Open items. An entry leaves this table only when done or explicitly retired with a reason —
-a pending item that quietly disappears is the failure this file exists to prevent.
+Open items. Every entry here is work that is still owed; an item leaves the table only when it is
+done — a pending item that quietly disappears is the failure this file exists to prevent.
 
 | item | what remains | next step |
 |---|---|---|
-| **Every published figure is void** | Engine, guards and process were audited and repaired after the last measurement campaign; `docs/benchmarks.md` still carries the old table — a claim the tree cannot back. | Re-measure or withdraw the table. |
-| **No current bundle to measure or lint against** | Examples became seeds; the only complete subject is the minimal toy-subject fixture. Lint non-vacuity proofs and discrimination runs have nothing realistic to run on. | Generate a current bundle when one is needed. |
-| **hermes-sim bundles stripped of honesty guards** | The no-regex law (2026-08-02) deleted the 8 regex-param honesty/reply kinds, so the hermes-sim example bundles were stripped of those installs to compile (not re-authored). They now carry no reply-honesty coverage. | Re-author the honesty rules as `llmCheck` rubrics (host-adjudicator seam) when the bundles are next ported/measured. |
+| **Every published figure is void** | No looprun-measured number in the tree was produced by the engine, the guards and the process as they now stand. | Re-measure before publishing any looprun figure. |
+| **No current bundle to measure or lint against** | Examples are seeds; the only complete subject is the minimal toy-subject fixture. Lint non-vacuity proofs and discrimination runs have nothing realistic to run on. | Generate a current bundle when one is needed. |
+| **hermes-sim bundles carry no reply-honesty coverage** | No guard factory takes a `RegExp`, and the hermes-sim example bundles install no reply-honesty rule at all — the coverage was never re-authored against the adjudicator seam. | Re-author the honesty rules as `llmCheck` rubrics (host-adjudicator seam) when the bundles are next ported/measured. |
 | **Lint: tools.json drift vs served surface** | Not decidable offline — needs a live server. | Implement as a runtime check, not a lint. |
 | **Lint: projection key / preset never exercised in world test** | The world TEST file has no fixed shape; a gate over an unconstrained file is a guess. | Define the convention first, then lint. |
 | **Lint: probe parity for the two-step flow** | Requires executing the confirm flow, not reading it. | Decide lint vs test, then implement. |
 | **New lint modules have no tests** | `lintSpecQuality` and `lintSubject` ship untested; nothing stops an edit from silently disarming a rule. | Plant-the-defect / watch-it-fire test per rule. |
-| **Non-vacuity proved on a STALE bundle** | The proving run used a pre-rename bundle (`theme.ts`); rules fire, but not proven on today's shape. | Re-run once a current bundle exists. |
-| **`@looprun-ai/vercel`** | Factory throws; seam contract documented, nothing implements it — runtime is Mastra-only in practice. Decision 2026-07-30: the landing page names Vercel AI as a supported framework with no roadmap caveat — implementing this seam is now a **launch gate** for the LP. | Implement before the LP launches. |
-| **LangChain adapter** | No seam exists. Decision 2026-07-30: the landing page names LangChain as a supported framework with no roadmap caveat — an adapter is now a **launch gate** for the LP. | Design + implement before the LP launches. |
-| **Public skill-install path** | The LP's "How to Start" section promises `npx skills add looprun-ai/looprun -g` — command DECIDED 2026-08-02, replacing the earlier `npx add skill looprun/looprun`. No such command exists yet and the skill still lives in a private repo. Author's plan (2026-08-02): fold the skill into the `looprun` repo under the same Apache-2.0 licence, so engine and skill ship together. **Launch gate** for the LP. | Move the skill into the looprun repo and ship the install path before the LP launches. |
-| **Two org names on the public page** | The LP install command says `looprun-ai/looprun` while six links point at `github.com/criaty/looprun` and `criaty/looprun-bench` (raised 2026-08-02). One of them is wrong in public. **Launch gate** for the LP. | Decide the public org, then align the LP links, the skill path and the repos. |
+| **Non-vacuity proved on a STALE bundle** | The bundle the proving run used (`theme.ts`) is not the shape the tree emits; rules fire, but not against a current bundle. | Re-run once a current bundle exists. |
+| **`@looprun-ai/vercel`** | Factory throws; seam contract documented, nothing implements it — runtime is Mastra-only in practice. The landing page names Vercel AI as a supported framework with no roadmap caveat, which makes this seam a **launch gate** for the LP. | Implement before the LP launches. |
+| **LangChain adapter** | No seam exists. The landing page names LangChain as a supported framework with no roadmap caveat, which makes an adapter a **launch gate** for the LP. | Design + implement before the LP launches. |
+| **Public skill-install path** | The LP's "How to Start" section promises `npx skills add looprun-ai/looprun -g`. No such command exists and the skill lives in a private repo. The plan: fold the skill into the `looprun` repo under the same Apache-2.0 licence, so engine and skill ship together. **Launch gate** for the LP. | Move the skill into the looprun repo and ship the install path before the LP launches. |
+| **Two org names on the public page** | The LP install command says `looprun-ai/looprun` while six links point at `github.com/criaty/looprun` and `criaty/looprun-bench`. One of them is wrong in public. **Launch gate** for the LP. | Decide the public org, then align the LP links, the skill path and the repos. |
 | **`StateDirective.when` never evaluated** | The conditional hook on `controls.directives` has no caller — directives render as static prose. | Implement the evaluation or remove the field. |
-| **Agent-as-tool bridge (MCP server)** | Runtime consumes MCP tools but never serves agents as tools; governance verdict as structured result data. Decision 2026-07-29: OpenAI endpoint is the works-today path; this is roadmap. | Roadmap — design when prioritized. |
+| **Agent-as-tool bridge (MCP server)** | Runtime consumes MCP tools but never serves agents as tools; governance verdict as structured result data. The OpenAI endpoint is the works-today path; this is roadmap. | Roadmap — design when prioritized. |
 | **Skill's own lint battery split** | Artifact laws lint here, authoring conventions in the skill's `lint-authoring.mjs`. | If a rule moves, update both sides. |
 | **`custom()` guards cannot read tool-result text** | Hook sees calls (name + args) but not what the tool returned; "reply must cite the returned price" is unwritable. | Expose the result payload to the hook. |
 | **Release script silently skips an existing version** | Publishing an already-registered version is a silent no-op — a ghost release (it happened). | Abort loudly when the target version exists. |
 | **Attestation service (design approved, nothing built)** | Design at `docs/superpowers/specs/2026-07-31-attestation-service-design.md`: ed25519 layer-2 attestation over the seal, free-for-telemetry service, hashed client identifiers, transparency log. Zero code exists — no `attest` command, no service, no keys. | When prioritized: implementation plan for (1) `looprun-eval attest` + telemetry builder, (2) the service repo, (3) `verify` layer-2 extension. |
-| **Certification has no held-out split** | The T3 fix loop iterates against the same exam that S1 certifies — training-on-the-test-set (Goodhart) risk, flagged independently by two round-2 LP reviewers (2026-07-31). Mitigations exist (blind exam authorship, worst-run floor, discrimination gate) but no case is held out of the fix loop. The LP deliberately makes NO held-out claim until this exists. | Design a held-out split (or equivalent) in the skill's T/S phases; then the LP may say "the certified score comes from cases the fix loop never saw". |
+| **Certification has no held-out split** | The T3 fix loop iterates against the same exam that S1 certifies — training-on-the-test-set (Goodhart) risk. Mitigations exist (blind exam authorship, worst-run floor, discrimination gate) but no case is held out of the fix loop. The LP deliberately makes NO held-out claim until this exists. | Design a held-out split (or equivalent) in the skill's T/S phases; then the LP may say "the certified score comes from cases the fix loop never saw". |
 | **Abstain tool-name leak** | `buildHonestAbstain` (turn.ts) interpolates raw tool names into the reply; produced labels, not internal names, are what a user should see. | Map names → produced labels before wiring it into any `exhaustionReply` [gate on wiring]. |
 | **Uncheckable ruleId dropped at load** | `norms-config.ts` discards the `ruleId` on `uncheckable` rules at load; the judge-rubric layer needs it to attribute a verdict to a rule. | Restore id plumbing before the judge-rubric layer consumes uncheckable rules [gate on judge layer]. |
-| **E1 re-baseline** | Forbidden invariants now score over executed ∪ guard-vetoed attempts (E1); every pre-E1 measured number (coworking, atlas) was computed on the old executed-only basis and carries a NEW invalidation reason. | Re-measure or withdraw before citing any pre-E1 number. |
-| **`retireAsset` confirm-parity sequence missing in world-atlas-parity** | The parity test exercises the confirm/execute two-step for other destructive tools but never for `retireAsset` — its confirm→execute sequence is unproven against the world. | Add the `retireAsset` confirm-parity sequence to `world-atlas-parity`. |
-| **Atlas parity S1 "across turns" label is same-array adjacent calls** | The S1 case comment says the two calls land "across turns", but the fixture issues them as adjacent calls in one array (same turn) — cosmetic mislabel, the assertion still holds. | Re-word the label to "adjacent calls" (or split into real turns if the distinction is ever load-bearing). |
+| **E1 re-baseline** | Forbidden invariants score over executed ∪ guard-vetoed attempts (E1). A figure measured on an executed-only basis does not carry over to this scoring rule. | Re-measure or withdraw before citing a figure measured on a different basis. |
 | **`MONITOR.resolved` marker is presence-only, not incident-bound** | The monitor gate clears on the mere existence of a `MONITOR.resolved` file — a marker dropped before the incident (or left stale from a prior run) bypasses the gate; it is not bound to the specific incident it claims to resolve. | Bind the marker to the incident (id/hash) so a pre-creation or stale marker cannot clear a fresh incident. |
 | **Preset distinguishability keyed off projection only** | `checkWorldModel` compares `projection()` (today/status/counters); a preset patching a non-projected field of a seeded record is falsely flagged INDISTINGUISHABLE despite a real world change. | Either document projection as the canonical distinguishability surface, or widen the check to a full-state digest. |
-
-Retired: *`noUngroundedRegulatedFigure` prose carries domain wording* + *`pendingConfirmMustAsk` regex
-branch removal (spec §4)* — 2026-08-02, both closed by the no-regex law (full-context guards). The 8
-regex-param honesty/reply kinds (incl. `noUngroundedRegulatedFigure`) are DELETED — no prose left to
-neutralize — and `pendingConfirmMustAsk` dropped its replyToUser-regex branch (structural askUser branch
-only). Text judgment is now `llmCheck`'s job.
-
-Retired: *Fold verdict-sync is a hand step* — 2026-08-02, `looprun-eval fold --sync <dirA> <dirB> …`
-now forces one verdict per byte-identical (trace+replies) transcript class across run dirs,
-mechanically (majority; ties resolve to the strictest, so sync never inflates a pass-rate). Writes
-`verdicts.synced.jsonl` per dir (drop-in for `cert`) + a `SYNC.md` provenance line per reconciled
-class (spec §4).
-
-Retired: *cert has no native multi-rep* — 2026-07-31, `looprun-eval cert <r0> <r1> …` now emits
-`cert-band.json` + `CERT-BAND.md` (per-rep rates, band, per-case majority; certified only when
-the FLOOR over reps clears the bar).
-
-Retired: *margin probe is ported, not validated* — 2026-07-29, validated in the field against a
-served local model on a genuinely oscillating case (three probe rounds located a world reception
-defect that the fix + re-certification confirmed).

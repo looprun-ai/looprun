@@ -36,7 +36,7 @@ benchmark the 2026 frontier reports on one independent, same-harness ruler
 ([Artificial Analysis](https://artificialanalysis.ai/evaluations/tau2-bench)), so raw-model
 reference numbers actually exist to compare against.
 
-> AA has since moved τ²-Telecom to *legacy* and tracks **τ³-Banking** in its current
+> AA files τ²-Telecom under *legacy* and tracks **τ³-Banking** in its current
 > Intelligence Index (Agents weighted 34%). τ²-Telecom stays our **first target** because its
 > harness is public and mature (§3); τ³-Banking is deferred to a later pass (§4).
 
@@ -112,8 +112,8 @@ Harness + results live in the sibling repo **`looprun-bench`**, separate from th
 the `no-bench-drift` firewall never touches bench code.
 
 **Official harness:**
-[`github.com/sierra-research/tau2-bench`](https://github.com/sierra-research/tau2-bench) — now
-the unified τ³-bench repo, backward-compatible, domains
+[`github.com/sierra-research/tau2-bench`](https://github.com/sierra-research/tau2-bench) — the
+unified τ³-bench repo, which still runs the τ² domains
 `airline · retail · telecom · banking_knowledge · mock`. It ships the stateful env, the LLM
 **user-simulator**, and the **programmatic DB-state reward** (`pass^k`). Stack: `uv sync`
 (uv, Python 3.12–3.13); model keys via LiteLLM in `.env`.
@@ -140,12 +140,13 @@ the unified τ³-bench repo, backward-compatible, domains
    `looprun-bench`.
 
 **Run comparability — the engine's model-facing bytes are part of the experiment.** A run is only
-comparable with another run of the same engine surface. The 2026-08-03 mandatory-intention change
-(MI-T5) altered what every tool schema looks like on the wire: per-field `description`s now reach the
-model for **every** tool, and `minLength`/`minItems` are carried through. Runs recorded before it are
-therefore not byte-comparable with runs after — **re-baseline BOTH arms** rather than comparing a new
-governed arm against an old raw one. Neither the `no-bench-drift` gate nor the eval seal detects this:
-the seal binds the subject's artifacts, not the engine's prompt/schema rendering.
+comparable with another run produced by the same engine surface. The engine renders per-field
+`description`s into **every** tool schema and carries `minLength`/`minItems` through to the wire, so
+two engine versions put different bytes in front of the model even when the subject, the tasks and the
+spec are identical. Whenever the engine version differs, **re-baseline BOTH arms** rather than pairing
+a fresh governed arm with a raw arm recorded on another engine. Neither the `no-bench-drift` gate nor
+the eval seal catches this: the seal binds the subject's artifacts, not the engine's prompt/schema
+rendering.
 
 ---
 
@@ -153,7 +154,7 @@ the seal binds the subject's artifacts, not the engine's prompt/schema rendering
 
 Not being run now — recorded so the scope stays honest.
 
-- **τ³-Banking** — the current Artificial Analysis flagship agent benchmark (τ² is now AA
+- **τ³-Banking** — the current Artificial Analysis flagship agent benchmark (AA files τ² under
   *legacy*); same repo, `uv sync --extra knowledge` (`banking_knowledge` domain).
 - **IFBench** — instruction-following constraint checkers (pure JS, no sandbox).
 - **Other looprun-relevant axes with no frontier market number.** These measure exactly what
@@ -186,28 +187,3 @@ honest-abstention axis), **Harvey LAB-AA** (agentic legal deliverables).
   54.7. See §2 for the full roster.
 - **GPQA-Diamond band** (deferred no-harm baseline) —
   <https://artificialanalysis.ai/evaluations/gpqa-diamond>
-
----
-
-## 6. Atlas — the governance-vs-traditional benchmark
-
-Complementing τ² (looprun vs the market), **Atlas** answers the second question: *what does the
-governance layer add over a traditional hand-built agent on the same framework?* The subject — an
-equipment-rental and field-operations business, 5 agents / 61 cases / 54 tools — is generated end to
-end by the `agentspec` skill from one purpose sentence; the control arm is a plain Mastra agent
-blind-authored by a frontier coding agent (no looprun exposure, up to 3 iterations of parity
-budget). Both arms: same evals, same LLM judge, N=3.
-
-| tier | looprun-governed | traditional (vanilla) | Δ |
-|---|---|---|---|
-| reference model (gemini flash-lite) | **100%** (61/61 ×3) | 98.4% | +1.6 |
-| cloud aggregate (13 models, OpenRouter) | **96.5** | 92.6 | **+3.9** (11 wins / 1 tie / 1 loss) |
-| local 24 GB (Qwen3.6-35B quant) | **91.8** (honest band) | 86.9 | +4.9 |
-
-Every fabrication, unconfirmed destructive execution, empty-reply delivery stub, privilege and
-tenant-isolation incident in the matrix occurred in the **ungoverned** arm; the governed arm was
-also rep-stable (ungoverned replicates swing up to ±6.6 pt) and ~30–37% cheaper per case.
-
-Data, specs, both arms' bundles and the full reports:
-[`looprun-bench`](https://github.com/looprun-ai/looprun-bench) → `atlas/`. Version measured:
-**looprun 0.6.0**.
