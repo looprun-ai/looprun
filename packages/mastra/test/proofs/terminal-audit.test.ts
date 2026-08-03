@@ -214,13 +214,11 @@ describe('terminal tool definitions', () => {
     // place it is read in both terminal modes. Stating it a second time in the protocol block buys
     // nothing and costs the small model context it needs for the domain.
     const GUARDRAIL =
-      '`inform` is for conveying information or answering a question. It MUST NOT be used to assert '
-      + "that you performed an action. If you performed an action, declare it as that action's op — "
-      + 'which is verified against what actually happened. Reporting a done action as `inform` is '
-      + 'dishonest.';
+      '`inform` NEVER asserts an action you performed — a performed action is declared as that '
+      + "action's op, which is verified.";
     expect(op.description).toContain(GUARDRAIL);
-    expect(terminalProtocol(false)).not.toContain('dishonest');
-    expect(terminalProtocol(true)).not.toContain('dishonest');
+    expect(terminalProtocol(false)).not.toContain('NEVER asserts an action');
+    expect(terminalProtocol(true)).not.toContain('NEVER asserts an action');
     // The outcome VOCABULARY is prose, not a schema `enum` (a domain may declare its own word), so
     // the seven core words have to survive the conversion the same way the op vocabulary does.
     const outcome = (did.items as { properties: Record<string, { description?: string }> }).properties.outcome!;

@@ -46,14 +46,19 @@ guard (`confirmFirst`, `pendingConfirmMustAsk`, `askedEarlier`) and `HistoryTurn
 turn's `did` carried an `ask` intent." Marking a question now requires DECLARING an ask intention —
 consistent with every other intention; the forcing-function + `llmCheck` covers the residual.
 
-### D4 — the tool + prompt SPECIFY the ops, especially the `inform` guardrail
-The `respond` tool description and the turn-protocol prose enumerate the op families with a
-worked line each. `inform` gets an explicit guardrail, verbatim intent:
-> `inform` is for conveying information or answering a question. It MUST NOT be used to assert that
-> you performed an action. If you performed an action, declare it as that action's op — which is
-> verified against what actually happened. Reporting a done action as `inform` is dishonest.
-The other speech ops get one line each (`greet` = a greeting/acknowledgement with no operation;
-`refuse` = declining to act; `ask` = posing your ONE question, the message carries it).
+### D4 — the tool SPECIFIES the ops, especially the `inform` guardrail
+The `respond` tool's `op` field names the two families — an ACTION op, which requires an `outcome`,
+and the four reserved SPEECH ops, which carry none. `inform` gets an explicit guardrail, verbatim:
+> `inform` NEVER asserts an action you performed — a performed action is declared as that action's
+> op, which is verified.
+
+The guardrail carries exactly two clauses because both are load-bearing: the PROHIBITION (`inform`
+may not stand in for a performed action) and its REPLACEMENT plus the reason (the action's own op,
+which the ledger cross-check verifies). The other speech ops are named, not glossed — `greet`,
+`refuse` and `ask` mean what the words mean, and only `ask` carries a consequence worth stating (the
+ONE question, posed in `message`). Every line here is read on every turn of every agent, so a
+sentence earns its place by being one the model needs to READ: a rule a guard enforces is
+discoverable from the correction the model gets back.
 
 ### D5 — the honesty cross-check applies to ACTION intents only
 `claimIsGrounded` grounds each ACTION intent against the ledger (unchanged mechanism). Speech
