@@ -1,0 +1,132 @@
+/**
+ * THE TWO OUTPUTS — `battery.json` for the diff, `BATTERY.md` for the reader.
+ *
+ * A baseline is only a baseline if a later run can be subtracted from it, so the JSON is the
+ * artefact of record: stable key order, no clock, no run id, no absolute path beyond the subject dir
+ * the caller passed. Two runs of the same code against the same model differ only where the model
+ * differed.
+ *
+ * The Markdown restates the same numbers as tables. It never carries a figure the JSON does not.
+ */
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import type { BatteryResult } from './battery.js';
+import type { ScenarioSheet } from './sheet.js';
+
+export interface WrittenBattery {
+  jsonPath: string;
+  markdownPath: string;
+}
+
+/** Write both artefacts into `outDir`, creating it when needed. */
+export function writeBattery(result: BatteryResult, outDir: string): WrittenBattery {
+  mkdirSync(outDir, { recursive: true });
+  const jsonPath = join(outDir, 'battery.json');
+  const markdownPath = join(outDir, 'BATTERY.md');
+  writeFileSync(jsonPath, JSON.stringify(result, null, 2) + '\n');
+  writeFileSync(markdownPath, renderBatteryMd(result) + '\n');
+  return { jsonPath, markdownPath };
+}
+
+const pct = (n: number) => `${(n * 100).toFixed(1)}%`;
+const num = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(2));
+
+export function renderBatteryMd(r: BatteryResult): string {
+  return [
+    '# Eval battery',
+    '',
+    `Subject model: \`${r.modelId}\` · subject: \`${r.subjectDir}\` · axes: ${r.axesRun.join(', ')}`,
+    '',
+    ...capacitySection(r),
+    '',
+    ...resistanceSection(r),
+    '',
+    ...judgmentSection(r),
+  ].join('\n');
+}
+
+function capacitySection(r: BatteryResult): string[] {
+  if (!r.capacity) return ['## CAPACITY (R2)', '', 'Not run.'];
+  const t = r.capacity.totals;
+  const lines = [
+    '## CAPACITY (R2) — can the model produce a valid `did` / `ask` / `subject`?',
+    '',
+    '| metric | value |',
+    '|---|---|',
+    `| scenarios / turns | ${t.scenarios} / ${t.turns} |`,
+    `| valid-turn rate | **${pct(t.validTurnRate)}** (${t.validTurns}/${t.turns}) |`,
+    `| redrives per turn | **${num(t.redrivesPerTurn)}** (${t.redrives} total) |`,
+    `| format defects | ${t.formatDefects} |`,
+    `| value defects | ${t.valueDefects} |`,
+    `| forced-terminal fallbacks | ${t.forcedTerminals} |`,
+    `| exhaustion closures | ${t.exhaustionClosures} |`,
+    `| terminal rejections | ${t.terminalRejections} |`,
+    `| refusal to close | ${t.refusalToClose} turn(s) |`,
+    `| trunk unstable in | ${t.trunkUnstableScenarios.length ? t.trunkUnstableScenarios.join(', ') : 'no scenario'} |`,
+    `| run errors | ${t.errors.length ? t.errors.join(' · ') : 'none'} |`,
+    '',
+    '### Where the shape is missed',
+    '',
+  ];
+  const where = Object.entries(r.capacity.defectsWhere).sort((a, b) => b[1] - a[1]);
+  lines.push(...(where.length ? ['| defect | count |', '|---|---|', ...where.map(([k, v]) => `| ${k} | ${v} |`)] : ['No defect observed.']));
+  lines.push('', '### Prompt size per turn (characters)', '', ...promptTable(r.capacity.sheets));
+  return lines;
+}
+
+function promptTable(sheets: readonly ScenarioSheet[]): string[] {
+  const rows = sheets.flatMap((s) =>
+    s.turns.map((t) => {
+      const c = t.prompt.chars;
+      return `| ${s.id} | ${t.turn} | ${c.trunk} | ${c.protocol} | ${c.toolSchemas} | ${c.state} | ${c.userText} | ${c.total} | ${t.prompt.tokensEstimated.total} | ${t.prompt.reportedInputTokens ?? '—'} |`;
+    }),
+  );
+  if (!rows.length) return ['No turn recorded.'];
+  return [
+    '| scenario | turn | trunk | protocol | tool schemas | state | user | total | tok (est) | tok (reported in) |',
+    '|---|---|---|---|---|---|---|---|---|---|',
+    ...rows,
+  ];
+}
+
+function resistanceSection(r: BatteryResult): string[] {
+  if (!r.resistance) return ['## RESISTANCE (R1)', '', 'Not run.'];
+  const t = r.resistance.totals;
+  return [
+    '## RESISTANCE (R1) — under pressure, does it self-license?',
+    '',
+    `Vectors: ${t.vectors} · breaches: **${t.breaches}** · suspects: ${t.suspects} · clean: ${t.clean}` +
+      (t.controlBreaches.length ? ` · **CONTROL BREACH (regression): ${t.controlBreaches.join(', ')}**` : ''),
+    '',
+    '| vector | verdict | evidence |',
+    '|---|---|---|',
+    ...r.resistance.results.map((v) => `| ${v.id}${v.control ? ' *(control)*' : ''} | **${v.verdict}** | ${v.evidence.replace(/\|/g, '\\|')} |`),
+    '',
+    '| vector | residual it is drawn from |',
+    '|---|---|',
+    ...r.resistance.results.map((v) => `| ${v.id} | ${v.residual.replace(/\|/g, '\\|')} |`),
+  ];
+}
+
+function judgmentSection(r: BatteryResult): string[] {
+  if (!r.judgment) return ['## JUDGMENT', '', 'Not run (no `judge` call supplied).'];
+  const t = r.judgment.totals;
+  return [
+    '## JUDGMENT — the closed consent question',
+    '',
+    '| metric | value |',
+    '|---|---|',
+    `| accuracy (decidable cases) | **${pct(t.accuracy)}** (${t.correct}/${t.scored}) |`,
+    `| accuracy pt | ${pct(t.byLanguage.pt.accuracy)} (${t.byLanguage.pt.correct}/${t.byLanguage.pt.scored}) |`,
+    `| accuracy en | ${pct(t.byLanguage.en.accuracy)} (${t.byLanguage.en.correct}/${t.byLanguage.en.scored}) |`,
+    `| unparseable answers | ${t.unparseable} |`,
+    `| FALSE CONFIRMS (said yes, truth no) | **${t.falseConfirms.length}**${t.falseConfirms.length ? ` — ${t.falseConfirms.join(', ')}` : ''} |`,
+    `| false refusals (said no, truth yes) | ${t.falseRefusals.length}${t.falseRefusals.length ? ` — ${t.falseRefusals.join(', ')}` : ''} |`,
+    `| ambiguous cases | ${t.ambiguous.cases} → yes ${t.ambiguous.yes} · no ${t.ambiguous.no} · unparseable ${t.ambiguous.unparseable} |`,
+    `| safe-side rate on ambiguous | ${pct(t.ambiguous.safeSideRate)} |`,
+    '',
+    '| case | reply | expected | answered |',
+    '|---|---|---|---|',
+    ...r.judgment.results.map((c) => `| ${c.id} | ${c.reply.replace(/\|/g, '\\|')} | ${c.expect} | ${c.verdict} |`),
+  ];
+}
