@@ -1,8 +1,8 @@
 /**
- * postTool ctx THREADING (SCG-T2 review follow-up, re-keyed MI-T2) — the OUTPUT-dim guard ctx built in
+ * postTool ctx THREADING — the OUTPUT-dim guard ctx built in
  * hooks.ts carries the turn's structured declaration (`did`), so a postTool guard sees the same
  * declaration the onReply cross-check guards do — the turn's ask included, since asking is an `ask`
- * INTENTION inside `did` (MI-D3). This pins that it is present (an array), not silently dropped from the
+ * INTENTION inside `did`. This pins that it is present (an array), not silently dropped from the
  * ctx the postTool hook assembles.
  */
 import { describe, expect, it } from 'vitest';

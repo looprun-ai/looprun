@@ -1,11 +1,11 @@
 /**
- * CORE CLAIMS module (SCG-T1) — the structural spine the cross-check guards (T2), the ledger
- * plumbing (T4) and the did→message renderer (T5) all build on. These tests pin the EXACT names and
- * the strict shape law: `validateClaims` is exhaustive typed checking (no `typeof`/`trim` guesses that
- * the red-team broke), and `resolveOutcome` lets core meaning win over any domain shadow.
+ * CORE CLAIMS module — the structural spine the cross-check guards, the ledger plumbing and the
+ * did→message renderer all build on. These tests pin the EXACT names and the strict shape law:
+ * `validateClaims` is exhaustive typed checking, never a `typeof`/`trim` guess, and `resolveOutcome`
+ * lets core meaning win over any domain shadow.
  *
- * Runner note: the SCG brief wrote these with `node:test`; the core package runs under vitest, so the
- * `test` binding comes from vitest while the assertions stay verbatim on `node:assert/strict`.
+ * Runner note: the `test` binding comes from vitest (the package's runner) while the assertions are
+ * written against `node:assert/strict`.
  */
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
@@ -51,12 +51,12 @@ test('validateClaims: non-array, non-object items, wrong field types, empty op a
   assert.ok(validateClaims([{ op: 'cancel', outcome: 42 }]).errors.length);
   assert.ok(validateClaims([{ op: 'cancel', outcome: 'success', amount: 'big' }]).errors.length);
 });
-test('validateClaims: [] is REJECTED (MI-D1: every respond declares at least one intention)', () => {
+test('validateClaims: [] is REJECTED (every respond declares at least one intention)', () => {
   const r = validateClaims([]);
   assert.deepEqual(r.claims, []);
   assert.ok(r.errors.length);
 });
-test('validateClaims: the speech/action partition (MI-D2)', () => {
+test('validateClaims: the speech/action partition', () => {
   // a speech op alone is valid (no outcome, no amount)
   assert.deepEqual(validateClaims([{ op: 'inform' }]), { claims: [{ op: 'inform' }], errors: [] });
   // a speech op must NOT carry outcome or amount
@@ -65,11 +65,11 @@ test('validateClaims: the speech/action partition (MI-D2)', () => {
   // an action op REQUIRES an outcome
   assert.ok(validateClaims([{ op: 'refund' }]).errors.length);
 });
-test('isAskEvent keys on respond + an ask intention in did (MI-D3)', () => {
+test('isAskEvent keys on respond + an ask intention in did', () => {
   assert.ok(isAskEvent({ name: 'respond', args: { did: [{ op: 'ask' }] } }));
-  assert.ok(!isAskEvent({ name: 'respond', args: { asked: true } })); // the retired boolean is DEAD
+  assert.ok(!isAskEvent({ name: 'respond', args: { asked: true } })); // a bare boolean is not an ask
   assert.ok(!isAskEvent({ name: 'respond', args: {} }));
-  assert.ok(!isAskEvent({ name: 'askUser', args: { did: [{ op: 'ask' }] } })); // the old terminal is DEAD
+  assert.ok(!isAskEvent({ name: 'askUser', args: { did: [{ op: 'ask' }] } })); // `respond` is the only terminal
 });
 
 // ── beyond the brief snippet: pin the extra strictness + tolerant extraction the later tasks lean on ──
@@ -90,7 +90,7 @@ test('respondPayload: tolerant extraction of message/did (a stray `asked` arg is
   const p = respondPayload({ message: 'done', did: [{ op: 'refund', outcome: 'success' }], asked: true });
   assert.equal(p.message, 'done');
   assert.deepEqual(p.did, [{ op: 'refund', outcome: 'success' }]);
-  assert.ok(!('asked' in p)); // the retired boolean never reaches the payload
+  assert.ok(!('asked' in p)); // a bare `asked` arg never reaches the payload
 });
 test('respondPayload: absent fields default (message="", did=[])', () => {
   assert.deepEqual(respondPayload({}), { message: '', did: [] });

@@ -39,8 +39,8 @@ function plantsWorld(): PlantsWorld {
         result = { success: true, label: 'w1' };
       }
       // `tookEffect` is the world's ATTESTATION that this call CHANGED something — a listing does not.
-    // (Recording a read as effectful made the engine's own honest account report it: MI-T7 wave 3 keys
-    // the write surface on the attested effect, not only on `contract.writeTools`.)
+    // (Recording a read as effectful makes the engine's own honest account report it: the write surface
+    // keys on the attested effect, not only on `contract.writeTools`.)
     calls.push({ name, args, result, tookEffect: name === 'waterPlant' });
       return result;
     },
@@ -150,9 +150,9 @@ describe('LoopRunAgent — one governed turn', () => {
 
   it('redrives an onReply violation as a bounded respond re-generate', async () => {
     const spec = makeSpec();
-    // A host `custom` behavior check standing in for the redrive trigger (the deleted reply-text
-    // `replyMentions` kind is gone under the no-regex law; a test-local custom guard may still read
-    // ctx.reply). It fires until the message names the plant, then the redrive re-generation satisfies it.
+    // A host `custom` behavior check standing in for the redrive trigger. No shipped guard kind reads
+    // reply text, but a test-local custom guard may. It fires until the message names the plant, then
+    // the redrive re-generation satisfies it.
     const mentionFern = custom({
       kind: 'mentionFern', dim: 'behavior',
       check: (ctx) => ((ctx.reply ?? '').includes('fern') ? null : 'Mention the plant name.'),
@@ -238,7 +238,7 @@ describe('LoopRunAgent — sessions', () => {
   });
 });
 
-describe('LoopRunAgent — the premature ask leaves no ghost (MI-T2 / red-team M8)', () => {
+describe('LoopRunAgent — the premature ask leaves no ghost', () => {
   it('prunes the invalidated premature respond from the observed ledger, so no later turn reads it as consent', async () => {
     const { agent } = makeAgent([
       // ONE step carrying domain work AND an asking respond — the PREMATURE shape. Its text was composed

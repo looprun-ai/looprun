@@ -1,8 +1,8 @@
 /**
- * CLAIMS as first-class TURN STATE (SCG-T2, re-keyed MI-T2) — the ledger records the CURRENT turn's
+ * CLAIMS as first-class TURN STATE — the ledger records the CURRENT turn's
  * `did`, the onReply/postTool/mutator GuardCtx expose it, and `recordTurnHistory` freezes it into the
- * sealed turn. Asking is an `ask` INTENTION inside that `did` (MI-D3) — there is no `asked` field on the
- * ledger, on `HistoryTurn` or on `GuardCtx` any more; every reader answers the question with
+ * sealed turn. Asking is an `ask` INTENTION inside that `did` — there is no `asked` field on the
+ * ledger, on `HistoryTurn` or on `GuardCtx`; every reader answers the question with
  * `hasAskIntent`. This pins the plumbing the cross-check AND consent guards read: the delivered respond's
  * declaration, reset per turn, retained in history as delivered.
  */
@@ -29,14 +29,14 @@ describe('claims in the turn ledger', () => {
     expect(hasAskIntent(ledger.did)).toBe(false);
   });
 
-  it('an ask intention is captured — that IS the ask signal (MI-D3)', () => {
+  it('an ask intention is captured — that IS the ask signal', () => {
     const ledger = createLedger();
     recordTerminal(ledger, 'respond', { message: 'Which order?', did: [{ op: 'ask' }] });
     expect(ledger.did).toEqual([{ op: 'ask' }]);
     expect(hasAskIntent(ledger.did)).toBe(true);
   });
 
-  it('the retired asked boolean is DEAD — a stray `asked:true` arg does not make the turn an ask', () => {
+  it('a stray `asked:true` arg does not make the turn an ask', () => {
     const ledger = createLedger();
     recordTerminal(ledger, 'respond', { message: 'Which order?', did: [{ op: 'inform' }], asked: true });
     expect(ledger.did).toEqual([{ op: 'inform' }]);

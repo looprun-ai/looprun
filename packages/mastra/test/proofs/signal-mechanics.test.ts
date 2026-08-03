@@ -23,7 +23,7 @@ const turn = (userText: string) => ({ userText });
 
 describe('signal mechanics (proof-authoring conventions)', () => {
   it('onReply redrive: correction step is a plain text part, tag redrive:<kind>', async () => {
-    // A text-reading `custom` behavior guard stands in for the deleted reply-text kinds (a test-local
+    // A text-reading `custom` behavior guard supplies the redrive trigger (a test-local
     // custom guard may still read ctx.reply): it fires until the message says "done", so the redrive's
     // free-text continuation satisfies it.
     const proof: GuardProof = {
@@ -45,7 +45,7 @@ describe('signal mechanics (proof-authoring conventions)', () => {
       script: [
         [{ tool: 'respond', args: { message: 'All set.', did: [{ op: 'inform' }] } }],
         // The redrive re-generates a WHOLE respond payload — a candidate that declares nothing is
-        // denied by the engine's declaration floor (MI-D1), so a free-text redrive is not a fixture
+        // denied by the engine's declaration floor, so a free-text redrive is not a fixture
         // the runtime would accept.
         [{ tool: 'respond', args: { message: 'Done — it is all set.', did: [{ op: 'inform' }] } }],
       ],

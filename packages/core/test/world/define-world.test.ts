@@ -104,8 +104,8 @@ describe('defineWorld — stateIs gate (#8)', () => {
 });
 
 describe('defineWorld — absent gate (#8, extension)', () => {
-  // `absent` is the mirror of `exists`: it DENIES when a matching record is present. It expresses
-  // the Atlas "no active hold on this asset" rule the parity slice needs (createBooking on a held asset).
+  // `absent` is the mirror of `exists`: it DENIES when a matching record is present. It expresses a
+  // precondition that forbids the write when a conflicting record is held on the entity.
   const holdSpec: WorldSpec = {
     clock: '2026-07-01',
     entities: { booking: { idPrefix: 'bk' }, hold: { idPrefix: 'hold' } },
@@ -137,8 +137,8 @@ describe('defineWorld — absent gate (#8, extension)', () => {
 });
 
 describe('defineWorld — transition executor patches state (extension)', () => {
-  // A `transition` tool PATCHES an existing record's status (no new record minted) — the shape the
-  // Atlas parity slice needs for cancelBooking (confirmed→cancelled) and retireAsset (available→retired).
+  // A `transition` tool PATCHES an existing record's status (no new record minted) — the shape a
+  // status change needs (confirmed→cancelled, available→retired).
   const cancelSpec: WorldSpec = {
     clock: '2026-07-01',
     entities: { booking: { idPrefix: 'bk', states: ['confirmed', 'cancelled'] } },

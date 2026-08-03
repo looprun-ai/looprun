@@ -4,7 +4,7 @@
  * invalidation, superseded-terminal pruning, redrive snapshot/restore, blank-delivery floor, the
  * did → operation-report renderer + honesty cross-check).
  *
- * Convention (batch-a lineage):
+ * Convention:
  *   - a `.toBeNull()` on a should-be-DENIED ctx = a CONFIRMED BREAK (the guard allowed a forbidden thing).
  *   - a `.not.toBeNull()` / a rejected-shape assertion = the guard HOLDS.
  * Each `it` is labelled BREAK / CLOSED / DOCUMENTED. Throwaway; not committed; does not modify source.
@@ -53,12 +53,12 @@ const base = (over: Partial<GuardCtx>): GuardCtx => ({
 const oc = (over: Partial<ObservedCall>): ObservedCall => ({ name: 'x', args: {}, ok: true, turnIndex: 0, ...over });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// SECTION 0 — RE-RUN OF EVERY BATCH-A VALUE-SHAPE VECTOR AGAINST CURRENT CODE
-// The prior red-team broke argRequired/argAbsent/argFormat with typeof/trim guesses. These re-assert the
-// CURRENT verdict so any silent regression in the guard surface is caught. Verdict UNCHANGED = documented
-// design gap still reproduces (the team accepted these; they are container/type-agnostic field guards).
+// SECTION 0 — EVERY VALUE-SHAPE VECTOR AGAINST argRequired / argAbsent / argFormat
+// These attack the guards with typeof/trim guesses and pin the CURRENT verdict, so any silent
+// regression in the guard surface is caught. A "DOCUMENTED GAP" case is an accepted design gap: these
+// are container/type-agnostic field guards.
 // ═══════════════════════════════════════════════════════════════════════════════
-describe('SECTION 0 — batch-a value-shape vectors, re-run against current code', () => {
+describe('SECTION 0 — value-shape vectors', () => {
   describe('argRequired', () => {
     const g = argRequired('title');
     it('HOLDS: missing/empty/blank/null/undefined all denied', () => {
@@ -125,7 +125,7 @@ describe('SECTION 0 — batch-a value-shape vectors, re-run against current code
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// SECTION 1 — validateClaims STRICT SHAPE (forbidden #1). Push HARDER than batch-a:
+// SECTION 1 — validateClaims STRICT SHAPE (forbidden #1):
 // prototype pollution, Symbol keys, coercible outcome, NaN/Infinity amount, deeply-nested did.
 // ═══════════════════════════════════════════════════════════════════════════════
 describe('SECTION 1 — validateClaims strict shape (forbidden #1)', () => {
@@ -181,25 +181,25 @@ describe('SECTION 1 — validateClaims strict shape (forbidden #1)', () => {
     const { claims } = validateClaims([{ op: 'x', outcome: 'success', target: 't' }]);
     expect(() => renderOperationReport(claims)).not.toThrow();
   });
-  it('CLOSED (MI-D1): an EMPTY did is rejected — there is no undeclared turn', () => {
+  it('CLOSED: an EMPTY did is rejected — there is no undeclared turn', () => {
     const { claims, errors } = validateClaims([]);
     expect(claims).toEqual([]);
     expect(errors.length).toBeGreaterThan(0);
   });
-  it('CLOSED (MI-D2): a speech op smuggling an outcome/amount is rejected (a speech act is not grounded)', () => {
+  it('CLOSED: a speech op smuggling an outcome/amount is rejected (a speech act is not grounded)', () => {
     expect(validateClaims([{ op: 'inform', outcome: 'success' }]).claims).toEqual([]);
     expect(validateClaims([{ op: 'ask', outcome: 'success' }]).claims).toEqual([]);
     expect(validateClaims([{ op: 'greet', amount: 9999 }]).claims).toEqual([]);
   });
-  it('CLOSED (MI-D2): an action op with NO outcome is rejected (an operation always reports honestly)', () => {
+  it('CLOSED: an action op with NO outcome is rejected (an operation always reports honestly)', () => {
     expect(validateClaims([{ op: 'refund', target: 'BK5' }]).claims).toEqual([]);
   });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // SECTION 2 — respondPayload TOLERANT extraction (forbidden #3). It only ever DEGRADES
-// (never fabricates a FAVORABLE payload): a bad did → [], a bad message → ''; the retired `asked`
-// boolean never reaches the payload (asking is an `ask` intention — MI-D3).
+// (never fabricates a FAVORABLE payload): a bad did → [], a bad message → ''; a bare `asked` arg
+// never reaches the payload (asking is an `ask` intention).
 // ═══════════════════════════════════════════════════════════════════════════════
 describe('SECTION 2 — respondPayload extraction (forbidden #3)', () => {
   it('CLOSED did-not-array: a string/object/number did degrades to [] (no fabricated claim survives)', () => {
@@ -211,7 +211,7 @@ describe('SECTION 2 — respondPayload extraction (forbidden #3)', () => {
     expect(respondPayload({ message: 42, did: [] }).message).toBe('');
     expect(respondPayload({ message: { toString: () => 'evil' }, did: [] }).message).toBe('');
   });
-  it('CLOSED asked is DEAD: no value of the retired boolean reaches the payload or reads as an ask', () => {
+  it('CLOSED: no value of a bare `asked` arg reaches the payload or reads as an ask', () => {
     for (const v of [1, 'yes', 'true', {}, [], 'false', true]) {
       const p = respondPayload({ message: 'x', did: [], asked: v });
       expect('asked' in p).toBe(false);
@@ -253,15 +253,15 @@ describe('SECTION 3 — turnCorrections leak on the reject path is telemetry-onl
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// SECTION 4 — PREMATURE-TERMINAL left an undelivered ASK in `observed`, which licensed a cross-turn
-// destructive action (forbidden: bypass a destructive protocol). CLOSED by MI-T2 / red-team M8.
+// SECTION 4 — a PREMATURE terminal must not leave an undelivered ASK in `observed`, where it would
+// license a cross-turn destructive action (forbidden: bypass a destructive protocol).
 //
 // supersededTerminalCalls covers the TWO-terminal case (it prunes the observed ask entry). The
 // PREMATURE path — a SINGLE ask-intent `respond` sharing a step with a domain call — invalidates
-// the DELIVERED declaration (clearDeliveredTerminal wipes did + terminalReply) but did NOT prune the
-// observed entry (superseded requires ≥2 terminals in the step), so the stale ask-intent `respond`
-// survived in the conversation-scoped ledger and read as "the user was asked" next turn.
-// THE FIX: the backends now feed `prematureTerminalCalls(steps)` to the SAME prune, so both undelivered
+// the DELIVERED declaration (clearDeliveredTerminal wipes did + terminalReply); on its own that does
+// NOT prune the observed entry, because superseded requires ≥2 terminals in the step, so the ask-intent
+// `respond` would survive in the conversation-scoped ledger and read as "the user was asked" next turn.
+// The backends therefore feed `prematureTerminalCalls(steps)` to the SAME prune, so both undelivered
 // paths end at the same place. These vectors are the regression.
 // ═══════════════════════════════════════════════════════════════════════════════
 describe('SECTION 4 — the premature-terminal ask leak is pruned, so no cross-turn license survives', () => {
@@ -338,7 +338,7 @@ describe('SECTION 4 — the premature-terminal ask leak is pruned, so no cross-t
 // writes, defeating claimIsComplete's "no silent action". Two destructive writes on entities whose
 // ids share a substring, reported as ONE claim → both guards pass, the second write is silent.
 // ═══════════════════════════════════════════════════════════════════════════════
-describe('SECTION 5 — substring target absorption hides a second effected write (CLOSED by MI-T3 / M1)', () => {
+describe('SECTION 5 — substring target absorption hides a second effected write (CLOSED)', () => {
   // Two effected deletes this turn: account "5" and account "50".
   const w = world({ toolCalls: [
     { name: 'deleteAccount', args: { id: '5' }, result: { label: '5' }, tookEffect: true },
@@ -357,7 +357,7 @@ describe('SECTION 5 — substring target absorption hides a second effected writ
   });
   it('CLOSED claimIsComplete: the "50" delete is NOT absorbed by the "5" claim → unreported-action violation', () => {
     const g = claimIsComplete({ writeTools: ['deleteAccount'] });
-    // "5" no longer substring-matches the value "50", so deleting account "50" stays unreported and the
+    // "5" does not substring-match the value "50", so deleting account "50" stays unreported and the
     // guard that exists to forbid exactly this ("report every action that takes effect") fires.
     expect(g.check(base({ did, observed: calls, world: w, turnIndex: 0 }))).not.toBeNull();
   });
@@ -377,7 +377,7 @@ describe('SECTION 5 — substring target absorption hides a second effected writ
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// SECTION 6 — BLANK-DELIVERY FLOOR (forbidden #5). Push past the batch-c zero-width case:
+// SECTION 6 — BLANK-DELIVERY FLOOR (forbidden #5):
 // an exhaustionReply OVERRIDE that returns a zero-width string must still floor to a non-empty closure.
 // ═══════════════════════════════════════════════════════════════════════════════
 describe('SECTION 6 — blank-delivery floor holds against a zero-width override (forbidden #5)', () => {
@@ -398,13 +398,13 @@ describe('SECTION 6 — blank-delivery floor holds against a zero-width override
     expect(out.text.replace(/[​⁠﻿‌‍]/g, '').trim().length).toBeGreaterThan(0);
   });
 
-  // ── M9: the floor stripped an ENUMERATED list, so the invisibles it never heard of survived ─────
+  // ── the floor strips by CATEGORY, never from an ENUMERATED list ─────
   // U+2063 invisible separator, U+2062 invisible times, U+2064 invisible plus, U+180E Mongolian vowel
-  // separator, U+3164 Hangul filler: all render as NOTHING, none were in the five-character list, so a
-  // reply made of them read as content and was delivered as the user's answer. FIX (MI-T4/M9): strip by
-  // CHARACTER CATEGORY (Cf + Default_Ignorable_Code_Point) before the emptiness test — a closed class,
-  // not a list someone has to remember to extend.
-  it('CLOSED (M9): the exotic invisibles are blank — per character and combined', () => {
+  // separator, U+3164 Hangul filler: all render as NOTHING. Any hand-written character list omits some
+  // of them, and a reply made of the omitted ones reads as content and is delivered as the user's
+  // answer. Stripping by CHARACTER CATEGORY (Cf + Default_Ignorable_Code_Point) before the emptiness
+  // test is a closed class, not a list someone has to remember to extend.
+  it('CLOSED: the exotic invisibles are blank — per character and combined', () => {
     // Written as escapes on purpose: these characters are INVISIBLE in a source file.
     const INVISIBLES = ['\u2061', '\u2062', '\u2063', '\u2064', '\u180E', '\u3164', '\u115F', '\u1160', '\uFFA0'];
     for (const ch of INVISIBLES) {
@@ -414,13 +414,13 @@ describe('SECTION 6 — blank-delivery floor holds against a zero-width override
     expect(isBlankDelivery(' \u2063\n\u3164\t')).toBe(true); // mixed with whitespace
   });
 
-  it('CLOSED (M9) control: real text (including text CARRYING an invisible) is never blank', () => {
+  it('CLOSED control: real text (including text CARRYING an invisible) is never blank', () => {
     expect(isBlankDelivery('Done.')).toBe(false);
     expect(isBlankDelivery('\u2063Done.\u3164')).toBe(false);
     expect(isBlankDelivery('한글')).toBe(false); // a Hangul SYLLABLE is content; only the FILLER is not
   });
 
-  it('CLOSED (M9): a message of exotic invisibles routes finalizeReply to the non-empty closure', async () => {
+  it('CLOSED: a message of exotic invisibles routes finalizeReply to the non-empty closure', async () => {
     const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona: 'p', tools: [] });
     const ledger = createLedger();
     beginTurn(ledger, 0);
@@ -433,10 +433,10 @@ describe('SECTION 6 — blank-delivery floor holds against a zero-width override
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// SECTION 7 — `amount` is CORROBORATED (MI-T7). It used to be advisory: validateClaims accepted any
-// finite number and no guard read it, so a domain `renderClaim` that surfaced it delivered a fabricated
-// magnitude inside the block the engine advertises as verified. It is now checked against the same
-// ledger fact that grounds the claim.
+// SECTION 7 — `amount` is CORROBORATED against the same ledger fact that grounds the claim. An
+// advisory `amount` — any finite number validateClaims accepts, read by no guard — would let a domain
+// `renderClaim` that surfaces it deliver a fabricated magnitude inside the block the engine advertises
+// as verified.
 // ═══════════════════════════════════════════════════════════════════════════════
 describe('SECTION 7 — amount is corroborated against the ledger fact that grounds the claim', () => {
   it('a fabricated amount on an otherwise-grounded claim is DENIED', () => {

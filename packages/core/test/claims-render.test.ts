@@ -1,5 +1,5 @@
 /**
- * SCG-T4 — the did → operation-report RENDERER, the COMPOSED delivery, the claims-derived exhaustion
+ * The did → operation-report RENDERER, the COMPOSED delivery, the claims-derived exhaustion
  * closure, and salvage over the structured payload.
  *
  * The user-facing OPERATION REPORT comes from the ledger-verified `did` rendered BY THE ENGINE, never from
@@ -11,7 +11,7 @@ import { describe, expect, it } from 'vitest';
 import { AgentSpecBase, custom } from '../src/index.js';
 import type { AgentWorld, DomainContract } from '../src/index.js';
 import { renderOperationReport, deriveClaimsFromLedger, hasAskIntent } from '../src/internal.js';
-import type { TurnClaim } from '../src/runtime/claims.js';
+import type { Intention } from '../src/runtime/claims.js';
 import { createLedger, recordToolResult, recordTerminalCall } from '../src/runtime/ledger.js';
 import { finalizeReply } from '../src/runtime/turn.js';
 
@@ -37,11 +37,11 @@ const BOOKING_CONTRACT: DomainContract = {
   writeTools: ['createBooking'],
 };
 
-const P = (message: string, did: TurnClaim[] = []) => ({ message, did });
+const P = (message: string, did: Intention[] = []) => ({ message, did });
 
 describe('renderOperationReport — one neutral English line per verified claim', () => {
   it('renders the target-keyed default line per core outcome', () => {
-    const did: TurnClaim[] = [
+    const did: Intention[] = [
       { op: 'book', target: 'BK-1', outcome: 'success' },
       { op: 'look', target: 'ORD-9', outcome: 'not_found' },
       { op: 'cancel', target: 'BK-2', outcome: 'pending_confirmation' },
@@ -54,25 +54,25 @@ describe('renderOperationReport — one neutral English line per verified claim'
   });
 
   it('a target-less claim renders a GENERIC line — never the advisory op, never a tool name', () => {
-    const did: TurnClaim[] = [{ op: 'createBooking', outcome: 'success' }]; // op is a tool-looking token
+    const did: Intention[] = [{ op: 'createBooking', outcome: 'success' }]; // op is a tool-looking token
     const out = renderOperationReport(did);
     expect(out).toBe('One action completed.');
     expect(out).not.toContain('createBooking');
   });
 
   it('resolves a DOMAIN outcome word through the outcomes map', () => {
-    const did: TurnClaim[] = [{ op: 'settle', target: 'INV-3', outcome: 'settled' }];
+    const did: Intention[] = [{ op: 'settle', target: 'INV-3', outcome: 'settled' }];
     expect(renderOperationReport(did, { outcomes: { settled: 'success' } })).toBe('INV-3: done');
   });
 
   it('a domain renderClaim override supplies the wording (and language)', () => {
-    const did: TurnClaim[] = [{ op: 'refund', target: 'ORD-5', outcome: 'success', amount: 50 }];
+    const did: Intention[] = [{ op: 'refund', target: 'ORD-5', outcome: 'success', amount: 50 }];
     const out = renderOperationReport(did, { renderClaim: (c, core) => `${c.target} reembolsado (${core}) €${c.amount}` });
     expect(out).toBe('ORD-5 reembolsado (success) €50');
   });
 
   it('skips a claim whose outcome does not resolve (defensive — never fabricates a line)', () => {
-    const did: TurnClaim[] = [{ op: 'x', target: 'T', outcome: 'invented' }, { op: 'y', target: 'BK-1', outcome: 'success' }];
+    const did: Intention[] = [{ op: 'x', target: 'T', outcome: 'invented' }, { op: 'y', target: 'BK-1', outcome: 'success' }];
     expect(renderOperationReport(did)).toBe('BK-1: done');
   });
 });
@@ -96,8 +96,8 @@ describe('deriveClaimsFromLedger — the engine derives TRUTH from the world led
     expect(derived).toEqual([{ op: 'operation', outcome: 'failure' }, { op: 'operation', outcome: 'pending_confirmation' }]);
   });
 
-  // ── M5: each produced label belongs to the CALL that produced it ───────────────────────────────
-  it('M5: a READ that emitted a label does NOT lend it to a later effected write', () => {
+  // ── each produced label belongs to the CALL that produced it ──────────────────────────────────
+  it('a READ that emitted a label does NOT lend it to a later effected write', () => {
     const ledger = createLedger();
     const world = fixtureWorld();
     world.toolCalls.push({ name: 'search', args: { q: 'x' }, result: { label: 'SEARCH-RESULT' }, tookEffect: false });
@@ -109,7 +109,7 @@ describe('deriveClaimsFromLedger — the engine derives TRUTH from the world led
     expect(derived).toEqual([{ op: 'operation', outcome: 'success' }]);
   });
 
-  it('M5: two effected writes each wear THEIR OWN label (no positional cursor to misalign)', () => {
+  it('two effected writes each wear THEIR OWN label (no positional cursor to misalign)', () => {
     const ledger = createLedger();
     const world = fixtureWorld();
     effectWrite(ledger, world, 'createBooking', { slot: 1 }, 'BK-1');
@@ -123,8 +123,8 @@ describe('deriveClaimsFromLedger — the engine derives TRUTH from the world led
     ]);
   });
 
-  // ── M6: an EFFECTED write is a completed action, whatever flags it carries ─────────────────────
-  it('M6: an effected write carrying requiresConfirmation derives as SUCCESS, not pending', () => {
+  // ── an EFFECTED write is a completed action, whatever flags it carries ────────────────────────
+  it('an effected write carrying requiresConfirmation derives as SUCCESS, not pending', () => {
     const ledger = createLedger();
     const world = fixtureWorld();
     world.toolCalls.push({ name: 'refund', args: { order: 'ORD-7' }, result: { label: 'ORD-7', requiresConfirmation: true }, tookEffect: true });
@@ -166,11 +166,11 @@ describe('deriveClaimsFromLedger — the engine derives TRUTH from the world led
 });
 
 describe('finalizeReply — composed delivery over the structured payload', () => {
-  // MI-T7 wave 3 (red-team r2/A-V4, B-b2.4): an EMPTY `did` is no longer deliverable. This test used to
-  // pin "empty did → the message alone", which is the state MI-D1 deleted — and the route back into it
-  // (one schema-legal malformed intention, dropped by validateClaims) was the wave's Critical vector.
-  // The engine's declaration floor denies the candidate; a model that still declares nothing gets the
-  // engine-derived closure, which declares its OWN speech intention rather than sealing an empty turn.
+  // An EMPTY `did` is not deliverable. The route into it is one schema-legal malformed intention,
+  // dropped by validateClaims, which would otherwise reduce the declaration to nothing and deliver the
+  // message alone. The engine's declaration floor denies the candidate; a model that still declares
+  // nothing gets the engine-derived closure, which declares its OWN speech intention rather than
+  // sealing an empty turn.
   it('empty did → NOT deliverable: the declaration floor drives the turn to the engine closure', async () => {
     const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona: 'p', tools: [], contract: BOOKING_CONTRACT });
     const out = await finalizeReply(spec, BOOKING_CONTRACT, fixtureWorld(), createLedger(), P('Hello there.'), async () => P(''), 0);
@@ -195,7 +195,7 @@ describe('finalizeReply — composed delivery over the structured payload', () =
     const ledger = createLedger();
     const world = fixtureWorld();
     effectWrite(ledger, world, 'createBooking', { slot: 1 }, 'BK-1');
-    const did: TurnClaim[] = [{ op: 'book', target: 'BK-1', outcome: 'success' }];
+    const did: Intention[] = [{ op: 'book', target: 'BK-1', outcome: 'success' }];
     const out = await finalizeReply(spec, BOOKING_CONTRACT, world, ledger, P('All booked.', did), async () => P(''), 0);
     expect(out.text).toBe('All booked.\n\nBK-1: done');
     expect(out.exhausted).toBe(false);
@@ -204,14 +204,14 @@ describe('finalizeReply — composed delivery over the structured payload', () =
     expect(ledger.did).toEqual(did);
   });
 
-  // PIN (MI-T2 binding constraint, re-asserted by MI-T4): the `ask` intention is BOTH the claim record
-  // and the CONSENT record — the delivered `did` is what a later turn's consent guards read as "the user
-  // was asked". A verified/derived path that dropped it would silently delete a genuine cross-turn
-  // licence, so the accepted payload's `ask` must survive into `out.did` AND `ledger.did` (history).
+  // PIN: the `ask` intention is BOTH the claim record and the CONSENT record — the delivered `did` is
+  // what a later turn's consent guards read as "the user was asked". A verified/derived path that
+  // dropped it would silently delete a genuine cross-turn licence, so the accepted payload's `ask`
+  // must survive into `out.did` AND `ledger.did` (history).
   it('an accepted payload KEEPS its ask intention in the verified did (the consent record)', async () => {
     const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona: 'p', tools: ['createBooking'], contract: BOOKING_CONTRACT });
     const ledger = createLedger();
-    const did: TurnClaim[] = [{ op: 'ask' }];
+    const did: Intention[] = [{ op: 'ask' }];
     const out = await finalizeReply(spec, BOOKING_CONTRACT, fixtureWorld(), ledger, P('Shall I cancel it?', did), async () => P(''), 0);
     expect(out.text).toBe('Shall I cancel it?'); // a speech intention adds no operation line
     expect(out.did).toEqual([{ op: 'ask' }]);
@@ -246,7 +246,7 @@ describe('finalizeReply — the claims-derived exhaustion closure never fabricat
     expect(out.text).toBe('I could not complete this safely — nothing was changed. Could you rephrase or add detail?');
     expect(out.text).not.toContain('createBooking');
     // Nothing landed → no ACTION claim is derived. The closure is still a delivered turn, so the engine
-    // declares it as the speech act it is (MI-D1: no delivered turn carries zero intentions) — an
+    // declares it as the speech act it is (no delivered turn carries zero intentions) — an
     // `inform` renders no operation line, which is why the text is the bare sentence above.
     expect(out.did).toEqual([{ op: 'inform' }]);
   });

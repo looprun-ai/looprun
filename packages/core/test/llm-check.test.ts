@@ -139,11 +139,11 @@ describe('assertAdjudicatorPresent — fail loud at conversation start', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
-// didMessageConsistency (MI-D6) — the did × message BACKSTOP. The structured cross-check grounds the
+// didMessageConsistency — the did × message BACKSTOP. The structured cross-check grounds the
 // DECLARATION against the ledger, but the `message` is free prose beside it: an agent can declare an
-// honest `inform` and still WRITE that it refunded €500. No structural signal reads that (the red-team's
-// P1). This is the priced, opt-in backstop — a pre-baked rubric an author installs where the stakes
-// justify a model call. It is NEVER auto-installed and never the primary guarantee.
+// honest `inform` and still WRITE that it refunded €500. No structural signal reads that. This is the
+// priced, opt-in backstop — a pre-baked rubric an author installs where the stakes justify a model
+// call. It is NEVER auto-installed and never the primary guarantee.
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
 describe('didMessageConsistency — the did × message rubric (available, not auto-installed)', () => {
   /** A fake adjudicator standing in for the host model: it answers the rubric by comparing the ops the
@@ -201,10 +201,10 @@ describe('didMessageConsistency — the did × message rubric (available, not au
     }
   });
 
-  // MI-T7 wave 3 (red-team r2/A-V8): the DEFAULT is now `closed`. A backstop that deletes itself the
-  // moment its own seam fails is not a backstop — an adjudicator outage used to silently remove the only
-  // named mitigation of the prose residual, with nothing written anywhere. The `open` arm stays reachable
-  // for an author who prefers the model's prose to the guarantee, and BOTH arms record the non-run.
+  // The DEFAULT is `closed`. A backstop that deletes itself the moment its own seam fails is not a
+  // backstop: an adjudicator outage would otherwise silently remove the only named mitigation of the
+  // prose residual, with nothing written anywhere. The `open` arm stays reachable for an author who
+  // prefers the model's prose to the guarantee, and BOTH arms record the non-run.
   it('fails CLOSED by default when the adjudicator is unreachable — and the non-run is RECORDED', async () => {
     const dead: Adjudicator = async () => { throw new Error('offline'); };
     const notes: string[] = [];

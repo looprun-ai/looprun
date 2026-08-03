@@ -44,10 +44,10 @@ const okCall = (name: string, turn: number, args: Record<string, unknown>, extra
 describe('confirmFirst — adversarial', () => {
   const g = confirmFirst(); // via:'either', flag:'confirmed', within:1
 
-  it('HOLDS (r2/C3): an UNDER-SPECIFIED probe (empty non-flag args) does NOT license a confirm of ANY record', () => {
+  it('HOLDS: an UNDER-SPECIFIED probe (empty non-flag args) does NOT license a confirm of ANY record', () => {
     // Attacker: turn 1 probe deleteRecord with NO recordId (empty args except confirmed:false). Its
-    // non-flag key set is [] and `.every()` over [] is vacuously true, so the old SUBSET test matched
-    // ANY confirm. The binding is now a set EQUALITY: [] ≠ ['recordId'] → the preview was not of this act.
+    // non-flag key set is [] and `.every()` over [] is vacuously true, so a SUBSET test would match ANY
+    // confirm. Binding by set EQUALITY is what denies it: [] ≠ ['recordId'] → the preview was not of this act.
     const probe = okCall('deleteRecord', 1, { confirmed: false }); // no recordId
     const confirm = ctxWith({
       tool: 'deleteRecord',
@@ -103,9 +103,9 @@ describe('confirmFirst — adversarial', () => {
   });
 
   it('BREAK (STILL OPEN): via:either accepts an UNRELATED earlier ask as license for a destructive confirm', () => {
-    // The attacker's ask was about something else entirely — the guard does not bind the ask to the
-    // record. Any recent DELIVERED ask unlocks confirmed:true on any destructive record. Unchanged by
-    // wave 2: binding an ask to a record needs the ask to name one, which a speech intention does not.
+    // The attacker's ask is about something else entirely — the guard does not bind the ask to the
+    // record. Any recent DELIVERED ask unlocks confirmed:true on any destructive record. Binding an ask
+    // to a record would need the ask to name one, which a speech intention does not.
     const asked: HistoryTurn = {
       turnIndex: 1, userText: 'chat', reply: 'what is your favourite colour?', toolCalls: [],
       did: [{ op: 'ask' }], attemptedCalls: [], guardEvents: [],
@@ -134,7 +134,7 @@ describe('confirmFirst — adversarial', () => {
     expect(gp.check(confirm)).not.toBeNull();
   });
 
-  it('HOLDS (r2/C3): an under-specified probe no longer bypasses the strict record-bound arm', () => {
+  it('HOLDS: an under-specified probe does not bypass the strict record-bound arm', () => {
     const gp = confirmFirst({ via: 'probe' });
     const probe = okCall('deleteRecord', 1, { confirmed: false });
     const confirm = ctxWith({
@@ -153,17 +153,17 @@ describe('confirmFirst — adversarial', () => {
     expect(ga.check(act)).not.toBeNull();
   });
 
-  it('HOLDS (r2/C4): a prior SUCCESSFUL run of the tool ITSELF does NOT surface or license the next run', () => {
-    // A flag-less tool's own prior OK run used to count as "surfacing", so a second identical destructive
-    // run in the next turn was allowed with no fresh ask — and chained turn by turn it carried ONE consent
-    // across unbounded turns, bridging the recency law. Every repeat now needs its own earlier-turn ask.
+  it('HOLDS: a prior SUCCESSFUL run of the tool ITSELF does NOT surface or license the next run', () => {
+    // Counting a flag-less tool's own prior OK run as "surfacing" would let a second identical
+    // destructive run happen in the next turn with no fresh ask — and, chained turn by turn, carry ONE
+    // consent across unbounded turns, bridging the recency law. Every repeat needs its own earlier-turn ask.
     const ga = confirmFirst({ via: 'ask' });
     const priorRun = okCall('wipeAll', 1, {});
     const act = ctxWith({ tool: 'wipeAll', args: {}, observed: [priorRun], turnIndex: 2 });
     expect(ga.check(act)).not.toBeNull();
   });
 
-  it('CONTROL (r2/C4): the legitimate two-step still works — a DELIVERED ask licenses the next turn', () => {
+  it('CONTROL: the legitimate two-step works — a DELIVERED ask licenses the next turn', () => {
     const ga = confirmFirst({ via: 'ask' });
     const asked: HistoryTurn = {
       turnIndex: 1, userText: 'wipe everything', reply: 'This deletes every record — go ahead?', toolCalls: [],
@@ -179,11 +179,11 @@ describe('confirmFirst — adversarial', () => {
 describe('destructiveThrottle — adversarial', () => {
   const g = destructiveThrottle(['deleteRecord', 'wipeAll']);
 
-  it('CLOSED (M7): two effected calls flagged confirmed:false are two EFFECTS — the second is denied', () => {
-    // isProbe used to key on args.confirmed===false and NEVER consult tookEffect. A tool that mutates
-    // while confirmed:false (it ignores/omits the flag semantics) produced two real effects that both
-    // looked like probes → the throttle counted 0 prior effects → the second destructive call slipped
-    // the n:1 cap. FIX (MI-T4/M7): a call that TOOK EFFECT is an effect, whatever flags it carries.
+  it('CLOSED: two effected calls flagged confirmed:false are two EFFECTS — the second is denied', () => {
+    // Keying `isProbe` on args.confirmed===false without consulting tookEffect would let a tool that
+    // mutates while confirmed:false (it ignores the flag semantics) produce two real effects that both
+    // look like probes → 0 prior effects counted → the second destructive call slips the n:1 cap. A
+    // call that TOOK EFFECT is an effect, whatever flags it carries.
     const firstEffect = okCall('deleteRecord', 5, { recordId: 'A', confirmed: false }, { tookEffect: true });
     const second = ctxWith({
       tool: 'deleteRecord',
@@ -194,8 +194,8 @@ describe('destructiveThrottle — adversarial', () => {
     expect(g.check(second)).not.toBeNull();
   });
 
-  it('CLOSED (M7): an effected write that ALSO returned requiresConfirmation counts as an effect', () => {
-    // The other half of the same hole: `resultFlags.requiresConfirmation` alone marked a call a probe.
+  it('CLOSED: an effected write that ALSO returned requiresConfirmation counts as an effect', () => {
+    // The other half of the same hole: `resultFlags.requiresConfirmation` alone would mark a call a probe.
     // A world that both mutates and asks (a "done, but confirm the rest" shape) must not buy a free
     // second destructive call. tookEffect is the authority.
     const firstEffect = okCall('deleteRecord', 5, { recordId: 'A' }, { tookEffect: true, resultFlags: { requiresConfirmation: true } });
@@ -203,8 +203,8 @@ describe('destructiveThrottle — adversarial', () => {
     expect(g.check(second)).not.toBeNull();
   });
 
-  it('CONTROL (M7): a confirmed:false call that changed NOTHING is still a probe — the execute passes', () => {
-    // The fix must not re-break the two-step flow the throttle exists to permit: a probe that took no
+  it('CONTROL: a confirmed:false call that changed NOTHING is still a probe — the execute passes', () => {
+    // The effect test must not break the two-step flow the throttle exists to permit: a probe that took no
     // effect stays a probe, so the approved execute in the same turn is still allowed.
     const probe = okCall('deleteRecord', 5, { recordId: 'A', confirmed: false }, { tookEffect: false });
     const execute = ctxWith({ tool: 'deleteRecord', args: { recordId: 'A', confirmed: true }, observed: [probe], turnIndex: 5 });
@@ -234,7 +234,7 @@ describe('destructiveThrottle — adversarial', () => {
   });
 
   it('HOLDS: a genuine probe (recorded tookEffect:false) does not block the approved execute', () => {
-    // r2/C6: `tookEffect:false` is POSITIVE evidence that the probe changed nothing — the backend records
+    // `tookEffect:false` is POSITIVE evidence that the probe changed nothing — the backend records
     // it whenever the world keeps a ledger. Without it the call is unverified, not effect-free.
     const probe = okCall('deleteRecord', 5, { recordId: 'A', confirmed: false }, {
       tookEffect: false,

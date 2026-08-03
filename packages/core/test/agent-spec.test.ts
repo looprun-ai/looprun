@@ -90,7 +90,7 @@ describe('AgentSpecBase — destructive protocol (iff destructiveTools)', () => 
   it('installs confirmFirst + destructiveThrottle on destructive tools, in byte-stable order', () => {
     const spec = new AgentSpecBase({ id: 'b', mode: 'M', persona, tools: ['deleteItem'], destructiveTools: ['deleteItem'] });
     const ids = spec.guards.preTool.map((b) => b.id);
-    // minimal installs first, then base — the former ladder's super()/installBase() order.
+    // minimal installs first, then base.
     expect(ids).toEqual(['minimal:noDuplicateCall', 'base:confirmFirst', 'base:destructiveThrottle']);
   });
 
@@ -121,8 +121,8 @@ describe('AgentSpecBase — destructive protocol (iff destructiveTools)', () => 
   });
 });
 
-describe('AgentSpecBase — minimal onReply layer (no-regex law + tier-③ deletion SCG-T5)', () => {
-  it('installs exactly degenerationGuard — emptyReply DELETED (replaced by the ENGINE FLOOR in finalizeReply, not by the schema); the former lexicon-fed noFalseFailureClaim is retired', () => {
+describe('AgentSpecBase — minimal onReply layer (no-regex law)', () => {
+  it('installs exactly degenerationGuard — the empty-reply floor is the ENGINE FLOOR in finalizeReply, not a guard and not the schema', () => {
     const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: ['x'] });
     expect(spec.guards.onReply.map((b) => b.id)).toEqual(['minimal:degenerationGuard']);
   });
@@ -144,9 +144,6 @@ describe('layer resolution (agent wins)', () => {
     expect(resolveGuards(spec.guards.preTool, 'a').some((g) => g.kind === 'precondition')).toBe(true);
   });
 });
-
-// NOTE (no-regex law, 2026-08-02): destructiveClaimRequiresSuccess is DELETED — that claim-language
-// judgment is now an llmCheck rubric (proven in the core proof catalog).
 
 describe('pendingConfirmMustAsk — resolution-aware + STRUCTURAL relay (no-regex law)', () => {
   const guard = pendingConfirmMustAsk();
@@ -210,11 +207,11 @@ describe('confirmFirst — either (arg) + ask (flag-less) via', () => {
     it('denies a later turn when the model never asked', () => {
       expect(guard.check(ctx({ turnIndex: 2, observed: [] }))).not.toBeNull();
     });
-    it('allows the act after a prior-turn ask — the SEALED turn (r2/C2: history is the only ask signal)', () => {
+    it('allows the act after a prior-turn ask — the SEALED turn (history is the only ask signal)', () => {
       const asked = { turnIndex: 0, userText: '', reply: 'Delete everything?', toolCalls: [], did: [{ op: 'ask' }], attemptedCalls: [], guardEvents: [] } as unknown as GuardCtx['history'][number];
       expect(guard.check(ctx({ turnIndex: 1, history: [asked] }))).toBeNull();
     });
-    it('a RAW observed ask respond from an UNSEALED turn licenses nothing (r2/C2)', () => {
+    it('a RAW observed ask respond from an UNSEALED turn licenses nothing', () => {
       const ask: ObservedCall = { name: 'respond', args: { message: 'q?', did: [{ op: 'ask' }] }, ok: true, turnIndex: 0 };
       expect(guard.check(ctx({ turnIndex: 1, observed: [ask] }))).not.toBeNull();
     });

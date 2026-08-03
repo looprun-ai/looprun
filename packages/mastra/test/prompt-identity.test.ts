@@ -1,10 +1,10 @@
 /**
  * THE IDENTITY GATE: a real governed turn sends EXACTLY what `renderTurnPrompt` returns.
  *
- * This test exists because of a repeated, expensive failure: the offline instruments (the margin
- * probe and its fork replays) used to carry their own REPLICA of the prompt assembly. A refactor
- * moved the runtime and the replica silently diverged — and the instruments kept producing numbers,
- * now about a prompt nothing ran. A wrong prompt does not crash; it answers.
+ * The failure this rules out is expensive and silent: if the offline instruments (the margin probe
+ * and its fork replays) carried their own REPLICA of the prompt assembly, a refactor of the runtime
+ * would leave the replica behind, and the instruments would keep producing numbers about a prompt
+ * nothing ran. A wrong prompt does not crash; it answers.
  *
  * So the runtime and the instruments render through one function, and this pins that the function is
  * telling the truth. If someone reassembles the prompt inside a driver again, this test fails.

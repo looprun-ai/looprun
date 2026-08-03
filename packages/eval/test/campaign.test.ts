@@ -179,7 +179,7 @@ describe('campaign — preflight failure fixtures', () => {
     await expect(campaignCommand({ action: 'run', config, modelFactory })).rejects.toThrow(/validate is RED/);
   });
 
-  it('advisory-only premise: a multi-turn SKIP with a green floor does NOT block preflight (defect 1)', async () => {
+  it('advisory-only premise: a multi-turn SKIP with a green floor does NOT block preflight', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'looprun-campaign-'));
     const { lines, log } = logger();
     const config = join(dir, 'campaign.json');

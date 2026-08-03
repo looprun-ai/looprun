@@ -17,10 +17,10 @@ import { fakeLLM } from '../../src/testing/fake-llm.js';
 import type { ScriptStep } from '../../src/testing/fake-llm.js';
 import { runSpecConversation } from '../../src/run-conversation.js';
 
-/** A behavior-dim `custom` TRUTH guard arms the check the (a) case needs. Under the no-regex law the
- *  always-on regex-fed honesty guards are gone; text judgment is a `custom`/`llmCheck` job, and a
- *  behavior-dim guard is TRUTH by construction (never salvaged over). This one denies an "I can't/unable
- *  to" claim — the deterministic stand-in for the deleted noFalseFailureClaim in this salvage proof. */
+/** A behavior-dim `custom` TRUTH guard arms the check the (a) case needs. Under the no-regex law, text
+ *  judgment is a `custom`/`llmCheck` job, and a behavior-dim guard is TRUTH by construction (never
+ *  salvaged over). This one denies an "I can't/unable to" claim — a deterministic stand-in for a text
+ *  honesty rubric in this salvage proof. */
 const truthCheck = () =>
   custom({
     kind: 'falseFailureTruth',
@@ -69,8 +69,8 @@ describe('best-attempt finalization', () => {
   });
 
   it('delivers a true candidate that trips only a FORM contract', async () => {
-    // `degenerationGuard` is the SOLE salvageable FORM contract under the SCG frontier (an artifact-shape
-    // lint — the reply-text FORM kinds were deleted). It is AUTO-installed (minimal layer), so `spec()`
+    // `degenerationGuard` is the SOLE salvageable FORM contract — an artifact-shape lint, and the only
+    // shipped guard kind that reads the reply at all. It is AUTO-installed (minimal layer), so `spec()`
     // already carries it; a run-away repeated-line message trips it on FORM while stating nothing false,
     // so the candidate is delivered over the generic closure.
     const s = spec();

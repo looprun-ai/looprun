@@ -9,7 +9,7 @@
  *
  * TWO paths produce such a ghost, and each has its own detector:
  *   · the DELIVERY CONTEST (≥2 terminals in one step)      → `supersededTerminalCalls`
- *   · the PREMATURE step (a terminal beside DOMAIN work)   → `prematureTerminalCalls` (MI-T2 / M8)
+ *   · the PREMATURE step (a terminal beside DOMAIN work)   → `prematureTerminalCalls`
  * `prematureTerminalTools` answers a third question — "which domain tools rode along?" — used to
  * INVALIDATE the delivery. The three must not be collapsed into one; this file pins the boundaries,
  * and that BOTH ghost paths end at the same ledger prune.
@@ -19,7 +19,7 @@ import { prematureTerminalCalls, prematureTerminalTools, supersededTerminalCalls
 import { createLedger, pruneSupersededTerminals, recordTerminalCall } from '../../src/runtime/ledger.js';
 
 /** DELIVERY = the last terminal the runtime would ACCEPT (`terminalPayloadRejection`), not merely the
- *  last with a non-empty message (red-team r2/C5). Every fixture below therefore carries a
+ *  last with a non-empty message. Every fixture below therefore carries a
  *  schema-legal `did` (non-empty) unless it is deliberately proving the refused shape. */
 /** One model step carrying the given `[toolName, args]` calls. */
 const step = (...calls: Array<[string, Record<string, unknown>]>) => ({
@@ -61,7 +61,7 @@ describe('supersededTerminalCalls', () => {
     expect(out.map((o) => o.args.message)).toEqual(['Delete record r_1?']);
   });
 
-  it('a REFUSED last terminal never wins delivery — the accepted earlier one is kept (r2/C5)', () => {
+  it('a REFUSED last terminal never wins delivery — the accepted earlier one is kept', () => {
     // The runtime rejects a `did`-less respond before it executes, so it is not what the user received.
     // The old notion ("last non-empty message wins") classified it as delivered and pruned the entry for
     // the message the user ACTUALLY got.
@@ -100,12 +100,12 @@ describe('supersededTerminalCalls', () => {
   });
 });
 
-// ── The PREMATURE ghost (red-team M8) ─────────────────────────────────────────────────────────────
+// ── The PREMATURE ghost ─────────────────────────────────────────────────────────────
 // `supersededTerminalCalls` returns [] for a `[domainCall, respond]` step (only ONE terminal, so there
 // is no delivery contest), yet that respond is invalidated by the premature policy and never reaches
-// the user. Before MI-T2 nothing removed its `observed` entry, so a `did:[{op:'ask'}]` respond read as
-// consent obtained — in THIS turn (pendingConfirmMustAsk) and in every later one (confirmFirst /
-// askedEarlier), since `observed` is conversation-wide.
+// the user. If nothing removed its `observed` entry, a `did:[{op:'ask'}]` respond would read as consent
+// obtained — in THIS turn (pendingConfirmMustAsk) and in every later one (confirmFirst / askedEarlier),
+// since `observed` is conversation-wide. The prune is what removes it.
 describe('prematureTerminalCalls', () => {
   it('returns the terminal that shared its step with domain work, with its args', () => {
     const out = prematureTerminalCalls([
@@ -135,7 +135,7 @@ describe('prematureTerminalCalls', () => {
     expect(out.map((o) => o.args.message)).toEqual(['Delete account X?']);
   });
 
-  it('THE M8 CLOSURE: the premature ask leaves NO ghost in observed after the prune', () => {
+  it('THE CLOSURE: the premature ask leaves NO ghost in observed after the prune', () => {
     const steps = [step(['deleteAcct', { id: 'X' }], ['respond', { message: 'Delete account X?', did: [{ op: 'ask' }] }])];
     const ledger = createLedger();
     // What the backend's hook-time record leaves behind (the ask is visible to same-step siblings).

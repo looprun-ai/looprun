@@ -1,11 +1,10 @@
 /**
  * STRUCTURAL / LICENSING primitives + the RECENCY LAW — `askedEarlier`, the unified `confirmFirst`
- * (`via` matrix, absorbing the former `confirmedNeedsEarlierProbe`), and `requiresBefore`'s evidence
- * bound.
+ * (`via` matrix), and `requiresBefore`'s evidence bound.
  *
  * These kinds read ONLY structure (observed call names, `ok`, `turnIndex`, args equality) — never any
- * text. The tests build a minimal fake `GuardCtx` and assert deny/allow, including the RECENCY LAW
- * (2026-08-02): a LICENSING event (a probe/ask that UNLOCKS an act) is turn-bounded — default `within:1`
+ * text. The tests build a minimal fake `GuardCtx` and assert deny/allow, including the RECENCY LAW:
+ * a LICENSING event (a probe/ask that UNLOCKS an act) is turn-bounded — default `within:1`
  * (only the immediately-preceding turn licenses; distance 2 does NOT; `within` widens it) — while an
  * EVIDENCE guard (`requiresBefore`, proof work was done) defaults UNBOUNDED.
  */
@@ -16,9 +15,9 @@ import { confirmFirst } from '../src/guards/confirmation.js';
 import { requiresBefore } from '../src/guards/flow.js';
 
 /** A minimal, structure-only GuardCtx — no world accessors, no reply, no user text. `history` defaults to
- *  [] (always an array in the real runtime). The cross-turn ask signal is SEALED HISTORY ONLY since
- *  red-team r2/C2 (a raw `observed` respond is a hook-time record, not evidence of a delivered turn), so
- *  every ask fixture below is a `HistoryTurn`. */
+ *  [] (always an array in the real runtime). The cross-turn ask signal is SEALED HISTORY ONLY — a raw
+ *  `observed` respond is a hook-time record, not evidence of a delivered turn — so every ask fixture
+ *  below is a `HistoryTurn`. */
 function ctxWith(partial: Partial<GuardCtx> & { observed: ObservedCall[]; turnIndex: number }): GuardCtx {
   return {
     args: {},
@@ -29,7 +28,7 @@ function ctxWith(partial: Partial<GuardCtx> & { observed: ObservedCall[]; turnIn
 }
 
 /** The RAW hook-time record of a turn-closing `respond` that declared an ask. It is NOT consent
- *  evidence (r2/C2) — only `confirmFirst`'s SAME-TURN diagnostic still reads it. */
+ *  evidence — only `confirmFirst`'s SAME-TURN diagnostic still reads it. */
 const askCall = (turn: number): ObservedCall => ({
   name: 'respond',
   ok: true,
@@ -37,7 +36,7 @@ const askCall = (turn: number): ObservedCall => ({
   args: { message: 'q?', did: [{ op: 'ask' }] },
 });
 
-/** A SEALED HistoryTurn that DID pose a question — its `did` carries an `ask` intention (MI-D3) over a
+/** A SEALED HistoryTurn that DID pose a question — its `did` carries an `ask` intention over a
  *  non-blank delivered `reply`. This is THE cross-turn ask signal. */
 const askedTurn = (turn: number): HistoryTurn =>
   ({ turnIndex: turn, userText: '', reply: 'q?', toolCalls: [], did: [{ op: 'ask' }], attemptedCalls: [], guardEvents: [] });
@@ -74,11 +73,11 @@ describe('askedEarlier', () => {
     expect(g.check(ctxWith({ observed: [], history: [askedTurn(2)], turnIndex: 2, args: { condition: 'good' } }))).toMatch(/ask/i);
   });
 
-  it('a RAW observed ask-intent respond is NOT consent evidence (r2/C2 — sealed history only)', () => {
+  it('a RAW observed ask-intent respond is NOT consent evidence (sealed history only)', () => {
     expect(g.check(ctxWith({ observed: [askCall(1)], turnIndex: 2, args: { condition: 'good' } }))).toMatch(/ask/i);
   });
 
-  it('a sealed ask over a BLANK delivered reply licenses nothing (r2/C7 floor)', () => {
+  it('a sealed ask over a BLANK delivered reply licenses nothing', () => {
     const silent: HistoryTurn = { ...askedTurn(1), reply: '\u200b \u3164' };
     expect(g.check(ctxWith({ observed: [], history: [silent], turnIndex: 2, args: { condition: 'good' } }))).toMatch(/ask/i);
   });
@@ -87,7 +86,7 @@ describe('askedEarlier', () => {
     expect(g.check(ctxWith({ observed: [], turnIndex: 2, args: {} }))).toBeNull();
   });
 
-  describe('ask signal — the sealed HistoryTurn\'s ask INTENTION is the PRIMARY signal (MI-T2)', () => {
+  describe('ask signal — the sealed HistoryTurn\'s ask INTENTION is the PRIMARY signal', () => {
     it('licenses off an earlier COMPLETED turn whose did carries an ask, no observed ask needed', () => {
       expect(
         g.check(ctxWith({ observed: [], history: [askedTurn(1)], turnIndex: 2, args: { condition: 'good' } })),
@@ -212,8 +211,8 @@ describe('confirmFirst — via matrix', () => {
   it('via:ask — flag-less: licensed ONLY by a prior DELIVERED ask, never by its own prior run', () => {
     const g = confirmFirst({ via: 'ask' });
     expect(g.check(ctxConfirmed('act', {}, [], 2, priorAsk))).toBeNull();
-    // r2/C4: the tool's own prior OK run is NOT surfacing — accepting it chained one consent across
-    // unbounded turns and bridged the recency law. Every repeat needs its own earlier-turn ask.
+    // The tool's own prior OK run is NOT surfacing — accepting it would chain one consent across
+    // unbounded turns and bridge the recency law. Every repeat needs its own earlier-turn ask.
     expect(g.check(ctxConfirmed('act', {}, [{ name: 'act', ok: true, turnIndex: 1, args: {} }], 2))).not.toBeNull();
     expect(g.check(ctxConfirmed('act', {}, [], 2))).not.toBeNull();
     // gated on every call regardless of any confirm flag; a same-turn ask does not license

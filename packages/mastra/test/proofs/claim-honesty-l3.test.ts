@@ -1,5 +1,5 @@
 /**
- * L3 — the CLAIM CROSS-CHECK through the real backend loop (MI-T5).
+ * L3 — the CLAIM CROSS-CHECK through the real backend loop.
  *
  * `claimIsGrounded` / `claimIsComplete` are auto-installed the moment a domain declares its
  * `writeTools`, and until now no fixture, example or eval subject declared any — so the matching laws

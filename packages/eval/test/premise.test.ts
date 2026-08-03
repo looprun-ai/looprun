@@ -1,10 +1,9 @@
 /**
- * PREMISE COHERENCE — the engine-owned generalization of the run's `premise.test.ts`, WITHOUT its
- * hand exclusions. It must FIRE on each of the three defect shapes the Atlas run named, and go QUIET
- * once the case is corrected:
- *   - accept-when-should-forbid (cases 19/56/59): a forbidden write the world ACCEPTS;
- *   - multi-turn (cases 20/36): a chain the replayer cannot construct → SKIPPED LOUDLY + floor;
- *   - read-side (case 53): a forbidden entry naming a pure READ → forbids nothing.
+ * PREMISE COHERENCE — an engine-owned check with no per-case hand exclusions. It FIRES on each of
+ * three defect shapes, and goes QUIET once the case is corrected:
+ *   - accept-when-should-forbid: a forbidden write the world ACCEPTS;
+ *   - multi-turn: a chain the replayer cannot construct → SKIPPED LOUDLY + floor;
+ *   - read-side: a forbidden entry naming a pure READ → forbids nothing.
  * Plus the required-write-refused shape (a case that can never pass) and the reached-verdict FLOOR.
  */
 import { describe, expect, it } from 'vitest';
@@ -64,8 +63,8 @@ function mkSubject(cases: SubjectCase[], toolDefs: ToolDef[] = []): Subject {
   };
 }
 
-/** A toolDef whose schema marks the given args required — used to reproduce the reception-refusal
- *  misread (defect 2): an invariant that omits one of these under-specifies the call. */
+/** A toolDef whose schema marks the given args required — an invariant that omits one of these
+ *  under-specifies the call, which is the reception-refusal misread. */
 const toolDef = (name: string, required: string[]): ToolDef => ({
   name,
   description: name,
@@ -124,7 +123,7 @@ describe('premise coherence — fires on the three defect shapes', () => {
     const r = checkPremiseCoherence(mkSubject([multi, ...filler]));
     expect(r.advisory.join('\n')).toMatch(/SKIPPED "20-multi-turn": multi-turn/);
     expect(r.reached).toBe(3);
-    expect(r.blocking).toEqual([]); // defect 1: a SKIP does NOT block when the floor is green
+    expect(r.blocking).toEqual([]); // a SKIP does NOT block when the floor is green
   });
 
   it('multi-turn: corrected to a single self-contained turn is reached and quiet', () => {
@@ -166,7 +165,7 @@ describe('premise coherence — fires on the three defect shapes', () => {
   });
 });
 
-describe('premise coherence — under-specified replay is OUT OF JURISDICTION, not a refusal (defect 2)', () => {
+describe('premise coherence — under-specified replay is OUT OF JURISDICTION, not a refusal', () => {
   // completeMaintenance's schema requires BOTH assetId and bay; an invariant that carries only
   // assetId is subset-pinned — the world's RECEPTION would refuse for the missing arg, which says
   // nothing about the premise. The instrument declines jurisdiction rather than misread a refusal.
@@ -206,8 +205,8 @@ describe('premise coherence — under-specified replay is OUT OF JURISDICTION, n
     expect(r.blocking.join('\n')).toMatch(/genuine-refused.*REFUSED.*can never pass/);
   });
 
-  it('(a) under-spec skips that WOULD breach the old flat ratio leave the denominator → stays green', () => {
-    // 1 reached case + 2 subset-pinned cases. Old ratio 1/3 = 0.33 < 0.5 would have breached; the new
+  it('(a) under-spec skips leave the denominator → stays green', () => {
+    // 1 reached case + 2 subset-pinned cases. A flat ratio of 1/3 = 0.33 < 0.5 would breach; the
     // denominator drops the two jurisdiction declines: 1/(3−2) = 1.00, green, zero blocking.
     const reached = single('reached', { expectations: { invariants: { requiredToolCalls: [{ name: 'getStatus' }] } } });
     const under1 = single('under1', { expectations: { invariants: { requiredToolCalls: [{ name: 'completeMaintenance', anyArgs: { assetId: 'ast_road' } }] } } });

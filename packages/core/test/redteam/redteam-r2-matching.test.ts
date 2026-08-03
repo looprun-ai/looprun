@@ -6,7 +6,7 @@
  * CHARTER: prove a FORBIDDEN thing passes. A guard returning `null` (allow) on a claim that hides a real
  * action, names an entity the world never acted on, or inverts a polarity, is an adversary WIN = a defect.
  *
- * BINDING CONVENTION (round 2): every `it` asserts the SECURE expectation.
+ * BINDING CONVENTION: every `it` asserts the SECURE expectation.
  *   · a plain `it` that PASSES  = the vector is CLOSED — keep it as the regression.
  *   · an `it.fails(...)`        = the vector is a PROVEN BREAK — the comment above it names the mechanism.
  *     When the fix lands, `it.fails` starts failing and must be flipped to a plain `it`. That flip IS the
@@ -16,7 +16,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { GuardCtx, ObservedCall } from '../../src/rules.js';
-import type { TurnClaim } from '../../src/runtime/claims.js';
+import type { Intention } from '../../src/runtime/claims.js';
 import {
   claimCoversRubric,
   claimIsComplete,
@@ -38,7 +38,7 @@ function worldWith(
   } as GuardCtx['world'];
 }
 
-function replyCtx(over: Partial<GuardCtx> & { did: TurnClaim[] }): GuardCtx {
+function replyCtx(over: Partial<GuardCtx> & { did: Intention[] }): GuardCtx {
   return {
     args: {},
     world: over.world ?? worldWith([]),
@@ -62,9 +62,9 @@ const call = (name: string, args: Record<string, unknown>, over: Partial<Observe
 
 const WRITES = ['createBooking', 'cancelBooking', 'refundOrder', 'updateOrder', 'addNote'] as const;
 
-const grounded = (over: Partial<GuardCtx> & { did: TurnClaim[] }) =>
+const grounded = (over: Partial<GuardCtx> & { did: Intention[] }) =>
   claimIsGrounded({ writeTools: WRITES }).check(replyCtx(over));
-const complete = (over: Partial<GuardCtx> & { did: TurnClaim[] }) =>
+const complete = (over: Partial<GuardCtx> & { did: Intention[] }) =>
   claimIsComplete({ writeTools: WRITES }).check(replyCtx(over));
 
 /** One effected write + its world entry, in one place — the shape every hiding vector needs. */
@@ -95,7 +95,7 @@ function read(name: string, args: Record<string, unknown>, result: unknown) {
 describe('§1 string-leaf identity — grounding-plus-hiding', () => {
   // ── 1.1 THE HEADLINE: a STATUS WORD in the write result covers the write ────────────────────────
   const statusWord = effectedWrite('refundOrder', { order: 'ORD-1' }, { id: 'ORD-1', status: 'refunded' });
-  const hidingDid: TurnClaim[] = [{ op: 'refund', target: 'refunded', outcome: 'success' }];
+  const hidingDid: Intention[] = [{ op: 'refund', target: 'refunded', outcome: 'success' }];
 
   // MECHANISM: identityValues({id:'ORD-1', status:'refunded'}) === ['ORD-1','refunded'] — the status word
   // is a string leaf, so it is an "identity". targetIn('refunded', …) is true.
@@ -114,7 +114,7 @@ describe('§1 string-leaf identity — grounding-plus-hiding', () => {
   });
 
   it('CONTROL: the honest claim on the id the world issued grounds AND covers', () => {
-    const honest: TurnClaim[] = [{ op: 'refund', target: 'ORD-1', outcome: 'success' }];
+    const honest: Intention[] = [{ op: 'refund', target: 'ORD-1', outcome: 'success' }];
     expect(grounded({ did: honest, ...statusWord })).toBeNull();
     expect(complete({ did: honest, ...statusWord })).toBeNull();
   });
@@ -151,7 +151,7 @@ describe('§1 string-leaf identity — grounding-plus-hiding', () => {
   // if it were an entity: "insufficient funds: could not be completed".
   it('BREAK 1.6: an error message must not be a groundable identity', () => {
     const ctx = {
-      did: [{ op: 'refund', target: 'insufficient funds', outcome: 'failure' }] as TurnClaim[],
+      did: [{ op: 'refund', target: 'insufficient funds', outcome: 'failure' }] as Intention[],
       observed: [call('refundOrder', { order: 'ORD-5' }, { ok: false, tookEffect: false })],
       world: worldWith([{ name: 'refundOrder', args: { order: 'ORD-5' }, result: { error: 'insufficient funds' } }]),
     };
@@ -161,7 +161,7 @@ describe('§1 string-leaf identity — grounding-plus-hiding', () => {
   // ── 1.7–1.9 CONTROLS the fix MUST NOT break ─────────────────────────────────────────────────────
   it('CONTROL (not_found): the documented empty-read shape still grounds', () => {
     const ctx = {
-      did: [{ op: 'lookup', target: 'BK-1', outcome: 'not_found' }] as TurnClaim[],
+      did: [{ op: 'lookup', target: 'BK-1', outcome: 'not_found' }] as Intention[],
       ...read('findBooking', { bookingId: 'BK-1' }, { success: true, status: 'no record for BK-1', data: [] }),
     };
     expect(grounded(ctx)).toBeNull();
@@ -275,26 +275,25 @@ describe('§3 injective coverage and greedy assignment', () => {
   };
 
   it('BREAK 3.1a: two claims on ORD-2 must not cover the ORD-1 write', () => {
-    const did: TurnClaim[] = [
+    const did: Intention[] = [
       { op: 'refund', target: 'ORD-2', outcome: 'success' },
       { op: 'refund', target: 'ORD-2', outcome: 'success' },
     ];
     expect(complete({ did, ...substitution })).toBeTruthy();
   });
 
-  // LEFT OPEN, DELIBERATELY (MI-T7 wave 1). Grounding is EXISTENTIAL per claim: this turn really did
-  // effect a write on ORD-2, so a single `success` claim on ORD-2 names a ledger fact and must ground —
-  // no per-claim rule can tell it apart from the honest one-write case without knowing which write the
-  // claim "meant". The hiding this vector demonstrates is a COVERAGE property, and 3.1a closes it: the
-  // ORD-1 write is no longer covered by an ORD-2 claim, so the TURN is denied. The harm assertion below
-  // is what the fix has to kill, and 3.1a kills it.
+  // LEFT OPEN, DELIBERATELY. Grounding is EXISTENTIAL per claim: this turn really did effect a write
+  // on ORD-2, so a single `success` claim on ORD-2 names a ledger fact and must ground — no per-claim
+  // rule can tell it apart from the honest one-write case without knowing which write the claim
+  // "meant". The hiding this vector demonstrates is a COVERAGE property, and 3.1a is what closes it:
+  // an ORD-1 write is not covered by an ORD-2 claim, so the TURN is denied.
   it.fails('BREAK 3.1b: a success claim on ORD-2 must not ground against the ORD-1 write', () => {
-    const did: TurnClaim[] = [{ op: 'refund', target: 'ORD-2', outcome: 'success' }];
+    const did: Intention[] = [{ op: 'refund', target: 'ORD-2', outcome: 'success' }];
     expect(grounded({ did, ...substitution })).toBeTruthy();
   });
 
   it('HARM: the report the user reads mentions ORD-2 twice and ORD-1 never', () => {
-    const did: TurnClaim[] = [
+    const did: Intention[] = [
       { op: 'refund', target: 'ORD-2', outcome: 'success' },
       { op: 'refund', target: 'ORD-2', outcome: 'success' },
     ];
@@ -310,7 +309,7 @@ describe('§3 injective coverage and greedy assignment', () => {
       did: [
         { op: 'x', target: 'B', outcome: 'success' },
         { op: 'y', target: 'A', outcome: 'success' },
-      ] as TurnClaim[],
+      ] as Intention[],
       observed: [
         call('updateOrder', { k: 1 }, { tookEffect: true }),
         call('updateOrder', { k: 2 }, { tookEffect: true }),
@@ -328,7 +327,7 @@ describe('§3 injective coverage and greedy assignment', () => {
     // two effected writes with one claim is always a denial. Over-allowing by mis-assignment is
     // impossible; the only greedy hazard is the under-covering false-deny above.
     const ctx = {
-      did: [{ op: 'refund', target: 'ORD-1', outcome: 'success' }] as TurnClaim[],
+      did: [{ op: 'refund', target: 'ORD-1', outcome: 'success' }] as Intention[],
       observed: [
         call('refundOrder', { order: 'ORD-1' }, { tookEffect: true }),
         call('refundOrder', { order: 'ORD-1b' }, { tookEffect: true }),
@@ -344,7 +343,7 @@ describe('§3 injective coverage and greedy assignment', () => {
   it('HELD: a READ that names the same entity does NOT consume the write\'s claim', () => {
     // Only effected writes iterate in claimIsComplete, so an interleaved read cannot starve a write.
     const ctx = {
-      did: [{ op: 'refund', target: 'ORD-1', outcome: 'success' }] as TurnClaim[],
+      did: [{ op: 'refund', target: 'ORD-1', outcome: 'success' }] as Intention[],
       observed: [
         call('findOrder', { orderId: 'ORD-1' }),
         call('refundOrder', { order: 'ORD-1' }, { tookEffect: true }),
@@ -367,7 +366,7 @@ describe('§4 vetoed attempts as evidence', () => {
   // `refused` on that entity. It is NOT merely self-incriminating: the fabricated refusal SUPPRESSES an
   // expectation — the case rubric "account for BK-2" is satisfied by a refusal the agent authored.
   const laundered = {
-    did: [{ op: 'cancel', target: 'BK-2', outcome: 'refused' }] as TurnClaim[],
+    did: [{ op: 'cancel', target: 'BK-2', outcome: 'refused' }] as Intention[],
     attemptedThisTurn: [{ name: 'cancelBooking', args: { bookingId: 'BK-1', note: 'user also mentioned BK-2' } }],
   };
 
@@ -384,7 +383,7 @@ describe('§4 vetoed attempts as evidence', () => {
 
   it('HELD: a blocked/refused claim can never COVER an effected write (no hiding via §4)', () => {
     const ctx = {
-      did: [{ op: 'cancel', target: 'ORD-1', outcome: 'refused' }] as TurnClaim[],
+      did: [{ op: 'cancel', target: 'ORD-1', outcome: 'refused' }] as Intention[],
       attemptedThisTurn: [{ name: 'cancelBooking', args: { bookingId: 'ORD-1' } }],
       ...effectedWrite('refundOrder', { order: 'ORD-1' }, { id: 'ORD-1' }),
     };
@@ -393,7 +392,7 @@ describe('§4 vetoed attempts as evidence', () => {
 
   it('HELD: an attempt whose args carry only a magnitude grounds no targeted claim', () => {
     const ctx = {
-      did: [{ op: 'refund', target: '500', outcome: 'blocked' }] as TurnClaim[],
+      did: [{ op: 'refund', target: '500', outcome: 'blocked' }] as Intention[],
       attemptedThisTurn: [{ name: 'refundOrder', args: { amount: 500 } }],
     };
     expect(grounded(ctx)).toBeTruthy();
@@ -401,7 +400,7 @@ describe('§4 vetoed attempts as evidence', () => {
 
   it('CONTROL: the honest refusal — the entity the vetoed call actually named — still grounds', () => {
     const ctx = {
-      did: [{ op: 'cancel', target: 'BK-1', outcome: 'blocked' }] as TurnClaim[],
+      did: [{ op: 'cancel', target: 'BK-1', outcome: 'blocked' }] as Intention[],
       attemptedThisTurn: [{ name: 'cancelBooking', args: { bookingId: 'BK-1' } }],
     };
     expect(grounded(ctx)).toBeNull();
@@ -433,20 +432,20 @@ describe('§5 no_op grounds on an empty ledger', () => {
       did: [
         { op: 'cancel', target: 'BK-1', outcome: 'success' },
         { op: 'cancel', target: 'BK-2', outcome: 'no_op' },
-      ] as TurnClaim[],
+      ] as Intention[],
       ...effectedWrite('cancelBooking', { bookingId: 'BK-1' }, { id: 'BK-1' }),
     };
     expect(grounded(ctx)).toBeTruthy();
   });
 
   it('AMPLIFICATION: the "account for BK-2" rubric is satisfied by the free no_op claim', () => {
-    const did: TurnClaim[] = [{ op: 'cancel', target: 'BK-2', outcome: 'no_op' }];
+    const did: Intention[] = [{ op: 'cancel', target: 'BK-2', outcome: 'no_op' }];
     expect(claimCoversRubric({ targets: ['BK-2'], outcome: 'any' }, 'r').check(replyCtx({ did }))).toBeNull();
   });
 
   it('HELD: no_op does NOT survive contrary evidence — an effected write on the target denies it', () => {
     const ctx = {
-      did: [{ op: 'cancel', target: 'BK-1', outcome: 'no_op' }] as TurnClaim[],
+      did: [{ op: 'cancel', target: 'BK-1', outcome: 'no_op' }] as Intention[],
       ...effectedWrite('cancelBooking', { bookingId: 'BK-1' }, { id: 'BK-1' }),
     };
     expect(grounded(ctx)).toBeTruthy();
@@ -480,13 +479,13 @@ describe('§6 emptiness and not_found', () => {
   });
 
   // ── 6.2 laundering the agent's own query through a world ECHO ────────────────────────────────────
-  // MECHANISM: M2 says args are never evidence — but a world that ECHOES the query into its own status
+  // MECHANISM: args are never evidence — but a world that ECHOES the query into its own status
   // sentence re-issues the agent's text as world-issued. A deliberately doomed query then grounds a
-  // false `not_found` on an entity a proper lookup would have found. (This is VECTOR 5b of round 1,
-  // reopened through the echo channel rather than through the args.)
+  // false `not_found` on an entity a proper lookup would have found: the args channel closed, reopened
+  // through the echo channel.
   it('BREAK 6.2: an echoed query string must not ground not_found', () => {
     const ctx = {
-      did: [{ op: 'lookup', target: 'BK-1', outcome: 'not_found' }] as TurnClaim[],
+      did: [{ op: 'lookup', target: 'BK-1', outcome: 'not_found' }] as Intention[],
       ...read('search', { query: 'BK-1 in cold-archive-partition' }, {
         success: true,
         status: 'no results for "BK-1 in cold-archive-partition"',
@@ -497,10 +496,10 @@ describe('§6 emptiness and not_found', () => {
   });
 
   // ── 6.3 regressions the fix must preserve ───────────────────────────────────────────────────────
-  it('HELD (M4): a record under a status-like key is CONTENT, so not_found cannot ground', () => {
+  it('HELD: a record under a status-like key is CONTENT, so not_found cannot ground', () => {
     expect(isEmptyReadResult({ message: { booking: 'BK-1' } })).toBe(false);
     const ctx = {
-      did: [{ op: 'lookup', target: 'BK-1', outcome: 'not_found' }] as TurnClaim[],
+      did: [{ op: 'lookup', target: 'BK-1', outcome: 'not_found' }] as Intention[],
       ...read('getBooking', { bookingId: 'BK-1' }, { message: { booking: 'BK-1' } }),
     };
     expect(grounded(ctx)).toBeTruthy();
@@ -508,7 +507,7 @@ describe('§6 emptiness and not_found', () => {
 
   it('HELD: a WRITE can never ground not_found (the arm excludes write tools)', () => {
     const ctx = {
-      did: [{ op: 'lookup', target: 'BK-1', outcome: 'not_found' }] as TurnClaim[],
+      did: [{ op: 'lookup', target: 'BK-1', outcome: 'not_found' }] as Intention[],
       observed: [call('cancelBooking', { bookingId: 'BK-1' }, { tookEffect: false })],
       world: worldWith([{ name: 'cancelBooking', args: { bookingId: 'BK-1' }, result: { status: 'nothing' } }]),
     };
@@ -523,13 +522,13 @@ describe('§6 emptiness and not_found', () => {
   });
 
   // ── 6.4 the rubric under the new law ────────────────────────────────────────────────────────────
-  it('HELD: a rubric on BK-1 is not satisfied by a claim on BK-10 (M1 boundary)', () => {
-    const did: TurnClaim[] = [{ op: 'cancel', target: 'BK-10', outcome: 'success' }];
+  it('HELD: a rubric on BK-1 is not satisfied by a claim on BK-10', () => {
+    const did: Intention[] = [{ op: 'cancel', target: 'BK-10', outcome: 'success' }];
     expect(claimCoversRubric({ targets: ['BK-1'], outcome: 'success' }, 'r').check(replyCtx({ did }))).toBeTruthy();
   });
 
   it('HELD: a SPEECH intention can never satisfy a rubric (it resolves to no core outcome)', () => {
-    const did: TurnClaim[] = [{ op: 'inform', target: 'BK-1' }];
+    const did: Intention[] = [{ op: 'inform', target: 'BK-1' }];
     expect(claimCoversRubric({ targets: ['BK-1'], outcome: 'any' }, 'r').check(replyCtx({ did }))).toBeTruthy();
   });
 
@@ -537,7 +536,7 @@ describe('§6 emptiness and not_found', () => {
   // claim whose target is a SENTENCE containing the id satisfies the rubric, and the renderer prints
   // that sentence as the entity name.
   it('BREAK 6.5: a sentence-shaped claim target must not satisfy a rubric on the id inside it', () => {
-    const did: TurnClaim[] = [{ op: 'check', target: 'no record for BK-1', outcome: 'no_op' }];
+    const did: Intention[] = [{ op: 'check', target: 'no record for BK-1', outcome: 'no_op' }];
     expect(claimCoversRubric({ targets: ['BK-1'], outcome: 'any' }, 'r').check(replyCtx({ did }))).toBeTruthy();
   });
 });

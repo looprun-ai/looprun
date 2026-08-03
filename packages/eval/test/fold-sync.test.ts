@@ -1,7 +1,8 @@
 /**
  * `looprun-eval fold --sync` (spec §4) — byte-identical transcripts across run dirs get ONE verdict,
- * mechanically (no judge). The Atlas run had a weaker ruler fabricate ALARMs on transcripts it had
- * elsewhere passed; sync dissolves the divergence and writes a provenance line.
+ * mechanically (no judge). Deciding identical transcripts mechanically is what stops a weak ruler
+ * from fabricating an ALARM on a transcript it passes elsewhere; sync dissolves the divergence and
+ * writes a provenance line.
  */
 import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';

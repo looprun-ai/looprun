@@ -1,9 +1,9 @@
 /**
  * THE SURFACE LOCK — the public API is data in this file, not an emergent property of a barrel.
  *
- * Tasks 4–7 of the simplification all edit `src/index.ts`. Without this, a symbol can be added,
- * renamed or dropped and every other test stays green: nothing else in the repo asserts on the
- * SHAPE of the barrel. That is precisely how a contract rots.
+ * Without this, a symbol can be added, renamed or dropped from `src/index.ts` and every other test
+ * stays green: nothing else in the repo asserts on the SHAPE of the barrel. That is precisely how a
+ * contract rots.
  *
  * So the three lists below are the contract, transcribed:
  *   · TAUGHT      — the 44 core rows of the placement table in `docs/superpowers/specs/2026-07-28-tutorial-outline-final.md` §4,
@@ -14,8 +14,8 @@
  *                   NOT counted in the taught total. Derived, not chosen — `declaration-emit.test.ts` is what
  *                   proves the list is sufficient; this one proves it has not quietly grown.
  *   · INTERNAL    — the 37 `internal` verdicts of the symbol inventory §7.1, plus
- *                   `GuardExecutionError` (controller ruling: a class the runtime throws at
- *                   consumers must be catchable by class), plus that seam's own riders.
+ *                   `GuardExecutionError` (a class the runtime throws at consumers must be
+ *                   catchable by class), plus that seam's own riders.
  *
  * A deliberate surface change EDITS THESE ARRAYS. That is the point, not an inconvenience.
  *
@@ -36,13 +36,11 @@ const TAUGHT_03 = [
   'DomainContract', 'Hook', 'TerminalPolicy', 'ToolDef', 'ToolTarget', 'validateSpec',
 ];
 // ── Chapter 04 (28 names = the 23 GUARD_CATALOG factories + the 5 supporting types/helpers the chapter
-//    teaches beside them; the count is pinned below) — no-regex law (2026-08-02) deleted 8 regex-param kinds; confirmedNeedsEarlierProbe
-//    absorbed into confirmFirst({ via:'probe' }); SCG (2026-08-02) added the three deterministic
-//    cross-check honesty kinds (claimIsGrounded/claimIsComplete/claimCoversRubric); SCG-T5 (2026-08-02)
-//    DELETED the four tier-③ reply-text kinds — replyMentions (→ claimCoversRubric), replySingleQuestion +
-//    replyMaxOccurrences (→ llmCheck), emptyReply (→ the ENGINE FLOOR in finalizeReply, not the schema) ──
-//    MI-T4 (2026-08-03) added `didMessageConsistency` — the AVAILABLE, never auto-installed did×message
-//    backstop (design D6): a pre-baked llmCheck rubric a domain binds where the stakes justify it ──
+//    teaches beside them; the count is pinned below). Guard kinds take no regex parameters: text
+//    judgment is an `llmCheck` rubric, and reply coverage is the structured cross-check
+//    (claimIsGrounded/claimIsComplete/claimCoversRubric) over `did`. `didMessageConsistency` is the
+//    AVAILABLE, never auto-installed did×message backstop: a pre-baked llmCheck rubric a domain
+//    binds where the stakes justify it. ──
 const TAUGHT_04 = [
   'Dim', 'Guard', 'GuardCtx', 'ObservedCall',
   'argAbsent', 'argFormat', 'argRequired', 'askedEarlier', 'canonArgs', 'confirmFirst',
@@ -62,18 +60,18 @@ const RIDERS = [
   'AgentControls', 'ChainSpec', 'GuardBinding', 'HistoryToolCall', 'HistoryTurn', 'Layer',
   'MutatorBinding', 'ReplyMutator',
   'SamplingSettings', 'SpatialEdge', 'SpecWarning', 'StateDirective', 'TokenUsage',
-  // full-context-guards increment: GuardCtx.adjudicator is an Adjudicator, whose verdict is an
-  // AdjudicatorVerdict — both ride the barrel so a `declaration:true` consumer can name them.
+  // GuardCtx.adjudicator is an Adjudicator, whose verdict is an AdjudicatorVerdict — both ride the
+  // barrel so a `declaration:true` consumer can name them.
   'Adjudicator', 'AdjudicatorVerdict',
-  // SCG (2026-08-02): claimIsGrounded's `outcomes` param is an OutcomeMap and claimCoversRubric's
-  // `outcome` is a CoreOutcome — both ride the barrel to stay nameable.
+  // claimIsGrounded's `outcomes` param is an OutcomeMap and claimCoversRubric's `outcome` is a
+  // CoreOutcome — both ride the barrel to stay nameable.
   'CoreOutcome', 'OutcomeMap',
 ].sort();
 
 const INTERNAL = [
-  // inventory §7.1, verdict `internal` (37) + buildHonestAbstain (config-only increment, post-inventory)
+  // inventory §7.1, verdict `internal` (37)
   'ARMED_SEAMS', 'CONFIRM_CLASS_KINDS', 'DENY_ONLY_PROSE_KINDS',
-  // Task 4 — the guard vocabulary as DATA, read by the chapter generator (outline §6, decision 4).
+  // The guard vocabulary as DATA, read by the chapter generator (outline §6, decision 4).
   // Documentation infrastructure, deliberately NOT on the taught surface.
   'GUARD_CATALOG', 'GuardCatalogEntry',
   'GuardBinding', 'resolveGuards', 'renderScopedSpecTrunk',
@@ -82,45 +80,43 @@ const INTERNAL = [
   'beginTurn', 'createLedger', 'clearDeliveredTerminal', 'pruneSupersededTerminals', 'recordTerminal', 'recordTerminalCall',
   'recordToolResult', 'recordTurnHistory', 'resultOk', 'TurnLedger', 'vetoStormHit',
   'forcedTerminalPrompt', 'isTerminal', 'normalizeTerminalToolDef', 'prematureTerminalTools',
-  // MI-T2 (2026-08-03) — the backends prune the PREMATURE (invalidated, never-delivered) terminal from
-  // `observed`, so an ask the user never saw cannot license consent; the calls come from here.
+  // The backends prune the PREMATURE (invalidated, never-delivered) terminal from `observed`, so an
+  // ask the user never saw cannot license consent; the calls come from here.
   'prematureTerminalCalls',
-  // MI-T7 wave 2 (red-team r2/C5) — the ONE notion of a terminal payload the runtime will ACCEPT. The
-  // backend hook refuses (and does not observe) a call that fails it; `supersededTerminalCalls` uses the
-  // same notion to decide which terminal of a step was actually delivered.
+  // The ONE notion of a terminal payload the runtime will ACCEPT. The backend hook refuses (and does
+  // not observe) a call that fails it; `supersededTerminalCalls` uses the same notion to decide which
+  // terminal of a step was actually delivered.
   'terminalPayloadRejection',
-  // MI-T7 wave 3 (red-team r2/b4.3) — m10's shadow-law assertion, so the eval CONFIG loader can gate its
-  // own `outcomes` block (it builds a contract-less spec, which the spec constructor's call site misses)
-  // and report a path-qualified NormsConfigError. Not taught: a domain gets it for free at spec load.
+  // The shadow-law assertion, so the eval CONFIG loader can gate its own `outcomes` block (it builds
+  // a contract-less spec, which the spec constructor's call site misses) and report a path-qualified
+  // NormsConfigError. Not taught: a domain gets it for free at spec load.
   'assertNoCoreOutcomeShadow',
   'supersededTerminalCalls', 'terminalProtocol', 'terminalToolDefs', 'lastTerminalArgs',
   'renderTurnPrompt',
-  // SCG-T4 — the engine renders the operation report from the verified `did` and derives the true
-  // claims for the exhaustion closure; `defaultExhaustionReply`/`buildHonestAbstain` are DELETED
-  // (pre-1.0, replaced by the derive-and-render closure). `RespondPayload`/`RenderOpts` ride the surface.
-  // SCG-T6 — the backend seam needs `respondPayload` (args → structured payload for the redrive/fallback
-  // re-generation) and `lastTerminalArgs` (the respond call's args from a result's steps).
+  // The engine renders the operation report from the verified `did` and derives the true claims for
+  // the exhaustion closure; `RespondPayload`/`RenderOpts` ride the surface. The backend seam needs
+  // `respondPayload` (args → structured payload for the redrive/fallback re-generation) and
+  // `lastTerminalArgs` (the respond call's args from a result's steps).
   'renderOperationReport', 'deriveClaimsFromLedger', 'RespondPayload', 'RenderOpts', 'respondPayload',
-  // MI-T1 — the mandatory-intention partition: the reserved speech-op vocabulary + partition
-  // predicates, the `Intention` shape (SCG's `TurnClaim` renamed), and the structured ask signal
-  // (`hasAskIntent`) the consent guards re-key onto (the bare `asked` boolean is retired).
+  // The mandatory-intention partition: the reserved speech-op vocabulary + partition predicates, the
+  // `Intention` shape, and the structured ask signal (`hasAskIntent`) the consent guards key onto.
   'SPEECH_OPS', 'SpeechOp', 'Intention', 'isSpeechOp', 'isActionOp', 'hasAskIntent',
   'enforcePostTool', 'evaluateOnInput', 'evaluatePreTool',
   'finalizeReply', 'FinalizedReply', 'governanceVeto', 'redriveMessage', 'ReplyViolation',
   'runChainCompletionPass',
-  // full-context-guards increment — the fail-loud-at-start adjudicator gate for llmCheck specs.
+  // the fail-loud-at-start adjudicator gate for llmCheck specs.
   'assertAdjudicatorPresent', 'specInstallsLlmCheck',
-  // controller ruling — catchable by class across the package boundary
+  // catchable by class across the package boundary
   'GuardExecutionError',
   // the seam's own type-closure riders (the rest of its closure is nameable from '.')
   'ChainPassCtx', 'ChainPassResult', 'GovernanceVeto', 'PostToolEnforcement', 'PostToolViolation',
   'PreToolVerdict', 'TurnPrompt', 'TurnPromptInput',
-  // increment 3a — the declarative world builder + its vocabulary (seam, no tutorial chapter yet;
-  // AgentWorld the type stays public, defineWorld the builder is host/generator machinery).
+  // the declarative world builder + its vocabulary (seam, not taught; `AgentWorld` the type stays
+  // public, `defineWorld` the builder is host/generator machinery).
   'defineWorld', 'WorldSpec', 'WorldFactory', 'BuiltWorld', 'WorldCall', 'AuditEntry', 'EntityDecl',
   'ArgDecl', 'Gate', 'ToolDecl', 'ReadResult', 'CreateResult', 'TransitionResult', 'PresetDelta', 'DefineWorldOptions',
   'CustomExecutor', 'CustomCtx', 'CustomResult', 'ScalarType', 'FieldType',
-  // increment 3b — the `derived` formula mini-language (closed grammar, compiled at load).
+  // the `derived` formula mini-language (closed grammar, compiled at load).
   'compileFormula', 'FormulaError', 'CompiledFormula',
 ].sort();
 

@@ -1,8 +1,8 @@
 /**
- * Full-context guards — the conversation `history` + real `onInput` text (firewall retired 2026-08-02).
+ * Full-context guards — the conversation `history` + real `onInput` text.
  *
  * Property: EVERY hook's GuardCtx carries the read-only `history` (prior turns, user text included) and
- * the current turn's incoming `userText`. `onInput` sees the real incoming text — no longer a blind
+ * the current turn's incoming `userText`. `onInput` sees the real incoming text, not a blind
  * `args: {}`. And `recordTurnHistory` seals a completed turn into `ledger.history`, frozen.
  */
 import { describe, expect, it } from 'vitest';

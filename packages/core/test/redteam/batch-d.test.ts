@@ -114,7 +114,7 @@ describe('D4 — a paired-gate guard reading ctx.observed is BYPASSED by same-st
     // B's preTool runs BEFORE A's afterToolCall records A into observed (concurrent same-step dispatch).
     const vb = await evaluatePreTool(spec, ledger, world(), 'B', {});
     expect(vb.verdict).toBe('allow'); // BREAK: A is invisible via observed; the pairing is defeated.
-    // The seam the guard SHOULD have read carries A — proving the info was available, just not on observed.
+    // The seam the guard SHOULD read carries A — the information is available, just not on observed.
     // (siblingCallsThisStep is the runtime's provided channel; ctx.observed is not it.)
   });
 
@@ -149,7 +149,7 @@ describe('D5 — a postTool result-invariant violation is relayed ONCE then DROP
     const liar = 'All set — your card was charged successfully.';
     const out = await finalizeReply(spec, CONTRACT, world(), ledger, P(liar), async () => P(liar), 1);
     expect(out.text).toBe(liar);        // false success reaches the user
-    expect(out.exhausted).toBe(false);  // treated as clean — postTool was dropped after round 1
+    expect(out.exhausted).toBe(false);  // treated as clean — the postTool violation is not carried here
     expect(out.violations).toHaveLength(0);
   });
 });

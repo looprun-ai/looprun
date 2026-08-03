@@ -85,7 +85,7 @@ describe('ask channel survives a preTool deny', () => {
     const rec = result.turnRecords[0];
     expect(rec?.assistantFinalText).toBe('Which plan do you want?');
     expect(rec?.recoveryEvents).toContain('forced-terminal');
-    // MI-T2 / M8: the invalidated premature respond is also pruned from `observed`, so the question the
+    // The invalidated premature respond is also pruned from `observed`, so the question the
     // user never received cannot license consent in this turn or any later one.
     expect(rec?.recoveryEvents).toContain('premature-terminal-pruned:respond');
     // The LAW: the wire the model reads never carries UNKNOWN_TOOL for a terminal.

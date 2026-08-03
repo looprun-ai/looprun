@@ -1,14 +1,14 @@
 /**
  * RED-TEAM ROUND 2 — the ASK-GHOST + CONSENT cluster on the MANDATORY-INTENTION surface.
  *
- * Round 1 (`redteam-consent.test.ts`) closed the premature-terminal ghost ask: MI-T2 made the SEALED
- * `HistoryTurn.did` authoritative for its own turn and wired `prematureTerminalCalls` +
- * `pruneSupersededTerminals` into both mastra loops. This round attacks what is LEFT: every remaining
+ * `redteam-consent.test.ts` covers the premature-terminal ghost ask, closed by making the SEALED
+ * `HistoryTurn.did` authoritative for its own turn and wiring `prematureTerminalCalls` +
+ * `pruneSupersededTerminals` into both mastra loops. This file attacks what is LEFT: every remaining
  * route by which
  *   (a) a consent-gated act is licensed by a question the user never received  (FALSE-ALLOW — severe), or
  *   (b) a delivered question fails to license a legitimate act                 (FALSE-DENY).
  *
- * CONVENTION (binding, inherited from round 1): every `it` asserts the SECURE expectation. A vector whose
+ * CONVENTION (binding): every `it` asserts the SECURE expectation. A vector whose
  * fix has not landed is a proven BREAK marked `it.fails(...)`; a plain `it` is a CLOSED regression. When a
  * fix lands the `it.fails` starts failing, forcing the flip to a plain `it` — that flip IS the acceptance.
  *
@@ -42,7 +42,7 @@ const obs = (name: string, args: Record<string, unknown>, turnIndex: number, ext
   name, args, ok: true, turnIndex, ...extra,
 });
 /** A SEALED turn. `reply` is the text the user ACTUALLY received — an ask over a BLANK reply licenses
- *  nothing (the r2/C7 floor), so a fixture that means "we asked" must carry the question. */
+ *  nothing, so a fixture that means "we asked" must carry the question. */
 const histTurn = (turnIndex: number, did: HistoryTurn['did'], reply = ''): HistoryTurn => ({
   turnIndex, userText: '', reply, toolCalls: [], did, attemptedCalls: [], guardEvents: [],
 });
@@ -59,13 +59,14 @@ const histTurn = (turnIndex: number, did: HistoryTurn['did'], reply = ''): Histo
 //   `did` — the record `recordTurnHistory` SEALS, and therefore the ONE authoritative cross-turn ask
 //   signal (`askedInDeliveredTurn`'s history arm) — declares that the agent ASKED.
 //
-//   The MI-T2 defence does not apply: this is not an undelivered `respond` in `observed` that a prune
-//   could remove. It is the SEALED history record itself, so it is authoritative BY CONSTRUCTION and
-//   every consent guard believes it.
+//   The premature-terminal prune does not reach this: it is not an undelivered `respond` in `observed`
+//   that a prune could remove. It is the SEALED history record itself, so it is authoritative BY
+//   CONSTRUCTION and every consent guard believes it.
 // ════════════════════════════════════════════════════════════════════════════════════════════════
 describe('C1 — redrive message/did desync manufactures a sealed ask the user never received', () => {
-  /** The exact shape: initial payload violates claimIsGrounded; the redrive returns a blank message with
-   *  an `ask` intention; the engine keeps the old message and adopts the new `did`. */
+  /** The exact attack shape: the initial payload violates claimIsGrounded, and the redrive answers with a
+   *  blank message carrying an `ask` intention — so an engine that kept the previous message while adopting
+   *  the new `did` would seal an ask the user never received. */
   async function runDesync(): Promise<{ text: string; did: HistoryTurn['did'] }> {
     const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: ['deleteAcct'], contract: CONTRACT });
     const ledger = createLedger();
@@ -82,9 +83,9 @@ describe('C1 — redrive message/did desync manufactures a sealed ask the user n
     return { text: out.text, did: ledger.history[0]!.did };
   }
 
-  it('CLOSED (MI-T7 wave 2): the blank re-generation is REJECTED WHOLE — no phantom ask, no stale sentence', async () => {
+  it('CLOSED: the blank re-generation is REJECTED WHOLE — no phantom ask, no stale sentence', async () => {
     const { text, did } = await runDesync();
-    // The engine no longer splices the new `did` onto the old message. The whole re-generation is
+    // The engine does not splice the new `did` onto the pre-redrive message. The whole re-generation is
     // dropped, the turn exhausts, and the delivered text is the engine-derived closure — so the
     // uncorrected "deleted" sentence is NOT delivered either.
     expect(text).not.toContain('Done — account X has been deleted.');
@@ -92,7 +93,7 @@ describe('C1 — redrive message/did desync manufactures a sealed ask the user n
     expect(hasAskIntent(did)).toBe(false);
   });
 
-  it('CLOSED (MI-T7 wave 2): no licence is manufactured — a confirmed destructive act next turn is denied', async () => {
+  it('CLOSED: no licence is manufactured — a confirmed destructive act next turn is denied', async () => {
     const { did } = await runDesync();
     const g = confirmFirst(); // default flag 'confirmed', via 'either', within 1
     const ctx = baseCtx({
@@ -131,7 +132,7 @@ describe('C1 — redrive message/did desync manufactures a sealed ask the user n
 //   user never saw. The preview and the executed act are then different acts.
 // ════════════════════════════════════════════════════════════════════════════════════════════════
 describe('C2 (V1) — a partial/empty probe licenses ANY confirmed destructive act', () => {
-  it('CLOSED (MI-T7 wave 2): probe {confirmed:false} does NOT license transfer{to:attacker,amount:99999,confirmed:true}', () => {
+  it('CLOSED: probe {confirmed:false} does NOT license transfer{to:attacker,amount:99999,confirmed:true}', () => {
     const g = confirmFirst();
     const ctx = baseCtx({
       tool: 'transfer',
@@ -142,7 +143,7 @@ describe('C2 (V1) — a partial/empty probe licenses ANY confirmed destructive a
     expect(g.check(ctx)).not.toBeNull();
   });
 
-  it('CLOSED (MI-T7 wave 2): probe {account:A} does NOT license a confirm that ADDS scope:EVERYTHING', () => {
+  it('CLOSED: probe {account:A} does NOT license a confirm that ADDS scope:EVERYTHING', () => {
     const g = confirmFirst();
     const ctx = baseCtx({
       tool: 'wipe',
@@ -198,13 +199,13 @@ describe('C2 (V1) — a partial/empty probe licenses ANY confirmed destructive a
 //   an unbounded destructive run off a single consent, and the recency law (`within`) is bridged.
 // ════════════════════════════════════════════════════════════════════════════════════════════════
 describe('C3 (V6) — via:ask self-licenses its own repeat', () => {
-  it('CLOSED (MI-T7 wave 2): a prior OK deleteAll (turn 2) does NOT license deleteAll (turn 3)', () => {
+  it('CLOSED: a prior OK deleteAll (turn 2) does NOT license deleteAll (turn 3)', () => {
     const g = confirmFirst({ via: 'ask' });
     const ctx = baseCtx({ tool: 'deleteAll', args: {}, turnIndex: 3, observed: [obs('deleteAll', {}, 2, { tookEffect: true })] });
     expect(g.check(ctx)).not.toBeNull();
   });
 
-  it('CLOSED (MI-T7 wave 2): ONE ask at turn 1 does NOT bridge the recency law out to turn 3', () => {
+  it('CLOSED: ONE ask at turn 1 does NOT bridge the recency law out to turn 3', () => {
     const g = confirmFirst({ via: 'ask' }); // within = 1
     const ctx = baseCtx({
       tool: 'deleteAll', args: {}, turnIndex: 3,
@@ -215,7 +216,7 @@ describe('C3 (V6) — via:ask self-licenses its own repeat', () => {
     expect(g.check(ctx)).not.toBeNull();
   });
 
-  it('CLOSED (MI-T7 wave 2): the chain is BROKEN — turn 9 is not licensed by turn 8', () => {
+  it('CLOSED: the chain is BROKEN — turn 9 is not licensed by turn 8', () => {
     const g = confirmFirst({ via: 'ask' });
     const ctx = baseCtx({
       tool: 'deleteAll', args: {}, turnIndex: 9,
@@ -241,15 +242,14 @@ describe('C3 (V6) — via:ask self-licenses its own repeat', () => {
 // ════════════════════════════════════════════════════════════════════════════════════════════════
 // C4 — the UNSEALED-TURN window in askedInDeliveredTurn's observed fallback
 //
-//   `askedInDeliveredTurn` used to trust `ctx.history` for any SEALED turn and fall back to the raw
-//   `observed` ask-event scan for turns NOT in history — on the strength of a doc claim ("every shipped
-//   backend seals each turn") that `LoopRunAgent.stream()` falsified (it advanced turnIndex and never
-//   sealed). The fallback is DELETED: consent evidence is a DELIVERED TURN RECORD or it does not exist,
-//   so an unsealed turn now fails CLOSED. These pin the MECHANISM; the end-to-end proof (and the
-//   stream-sealing that restores availability) is in the L3 sibling file.
+//   `askedInDeliveredTurn` has no `observed` fallback for turns NOT in history. Such a fallback would
+//   rest on every backend sealing every turn, which is not something the guard can verify. Consent
+//   evidence is a DELIVERED TURN RECORD or it does not exist, so an unsealed turn fails CLOSED. These
+//   pin the MECHANISM; the end-to-end proof (and the stream-sealing that keeps the licence available)
+//   is in the L3 sibling file.
 // ════════════════════════════════════════════════════════════════════════════════════════════════
 describe('C4 — an UNSEALED earlier turn re-opens the raw observed ask scan', () => {
-  it('CLOSED (MI-T7 wave 2): with turn 0 unsealed, a raw observed ask-intent respond licenses NOTHING', () => {
+  it('CLOSED: with turn 0 unsealed, a raw observed ask-intent respond licenses NOTHING', () => {
     const g = confirmFirst();
     const ctx = baseCtx({
       tool: 'deleteAcct',
@@ -262,7 +262,7 @@ describe('C4 — an UNSEALED earlier turn re-opens the raw observed ask scan', (
     expect(g.check(ctx)).not.toBeNull();
   });
 
-  it('CLOSED (MI-T7 wave 2): askedEarlier does not license an operator-value write off the unsealed ghost', () => {
+  it('CLOSED: askedEarlier does not license an operator-value write off the unsealed ghost', () => {
     const g = askedEarlier({ tool: 'record', arg: 'value' });
     const ctx = baseCtx({
       tool: 'record',
@@ -290,25 +290,25 @@ describe('C4 — an UNSEALED earlier turn re-opens the raw observed ask scan', (
 // ════════════════════════════════════════════════════════════════════════════════════════════════
 // C5 — the `ask` INTENTION is SELF-DECLARED and never bound to the delivered message
 //
-//   MI-D3 made asking a declaration (`did` carries `{op:'ask'}`) and the no-regex law removed every
-//   reply-text check. Nothing deterministic connects the declaration to the message: a turn may
-//   declare `ask` while `message` poses no question at all — and that declaration is what
-//   `askedInDeliveredTurn` reads as "the user was asked".
+//   Asking is a declaration (`did` carries `{op:'ask'}`) and the no-regex law admits no reply-text
+//   check. Nothing deterministic connects the declaration to the message: a turn may declare `ask`
+//   while `message` poses no question at all — and that declaration is what `askedInDeliveredTurn`
+//   reads as "the user was asked".
 //
-//   WAVE 2 STATUS — the deterministic half is CLOSED, the semantic half is OPEN BY DESIGN.
-//   Closed: the licence now requires the DELIVERED turn record (never a raw hook-time respond), sealed
-//   with the `did` of the payload whose message was actually delivered (the redrive can no longer
-//   splice), over a NON-BLANK reply. So "declared an ask, said nothing" licenses nothing.
+//   STATUS — the deterministic half is CLOSED, the semantic half is OPEN BY DESIGN.
+//   Closed: the licence requires the DELIVERED turn record (never a raw hook-time respond), sealed
+//   with the `did` of the payload whose message was actually delivered (the redrive cannot splice),
+//   over a NON-BLANK reply. So "declared an ask, said nothing" licenses nothing.
 //   Open: whether a NON-BLANK message poses a question. That is a judgment about natural-language
 //   content, and the engine has exactly two ways to make it — a linguistic pattern, which the no-regex
 //   law forbids precisely because it is the defect class that fails silently across languages AND is
 //   satisfied by an adversary appending one character; or a model call, which is `llmCheck`. The
 //   deterministic layer has no third option, so this stays `it.fails`: the engine's guarantee is
 //   deliberately narrower than "the user was asked", and GUARDS.md states it in those words. A spec
-//   whose stakes justify the model call binds `didMessageConsistency()` (MI-D6, already shipped).
+//   whose stakes justify the model call binds `didMessageConsistency()`.
 // ════════════════════════════════════════════════════════════════════════════════════════════════
 describe('C5 — a declared ask whose message contains no question still licenses', () => {
-  it('CLOSED (MI-T7 wave 2): a sealed ask over a BLANK delivered reply licenses nothing', () => {
+  it('CLOSED: a sealed ask over a BLANK delivered reply licenses nothing', () => {
     const g = confirmFirst();
     const ctx = baseCtx({
       tool: 'deleteAcct', args: { id: 'X', confirmed: true }, turnIndex: 1,
@@ -317,7 +317,7 @@ describe('C5 — a declared ask whose message contains no question still license
     expect(g.check(ctx)).not.toBeNull();
   });
 
-  it('CLOSED (MI-T7 wave 2): the SAME-TURN relay also needs a readable message — a blank ask relays nothing', async () => {
+  it('CLOSED: the SAME-TURN relay also needs a readable message — a blank ask relays nothing', async () => {
     const g = pendingConfirmMustAsk();
     const ctx = baseCtx({
       turnIndex: 0,
@@ -344,7 +344,7 @@ describe('C5 — a declared ask whose message contains no question still license
   it.fails('OPEN BY DESIGN: a sealed turn declaring ask over a pure sign-off message licenses the destructive act', async () => {
     const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: ['deleteAcct'], contract: CONTRACT });
     const ledger = createLedger();
-    // A clean, violation-free turn: a speech-only declaration is never ledger-grounded (MI-D5).
+    // A clean, violation-free turn: a speech-only declaration is never ledger-grounded.
     const initial: RespondPayload = { message: 'All set. Have a good day.', did: [{ op: 'ask' }] };
     const out = await finalizeReply(spec, CONTRACT, world(), ledger, initial, async () => initial, 1);
     recordTurnHistory(ledger, out.text, world());

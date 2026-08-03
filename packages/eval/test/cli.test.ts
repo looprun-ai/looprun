@@ -1,9 +1,9 @@
 /**
  * The CLI WRAPPER, executed as a process.
  *
- * The library functions were covered; the argv plumbing around them was not — so a command could
- * reference an undeclared variable and fail with a ReferenceError on its first line while every
- * unit test stayed green. These tests run the binary the way a user does.
+ * Unit tests cover the library functions, not the argv plumbing around them — so a command can
+ * reference an undeclared variable and fail with a ReferenceError on its first line while every unit
+ * test stays green. These tests run the binary the way a user does.
  */
 import { test } from 'vitest';
 import assert from 'node:assert/strict';

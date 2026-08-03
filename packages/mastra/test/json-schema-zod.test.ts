@@ -1,5 +1,5 @@
 /**
- * THE KEYWORD CONTRACT of the JSON-Schema → zod conversion, pinned in BOTH directions (MI-T5 review).
+ * THE KEYWORD CONTRACT of the JSON-Schema → zod conversion, pinned in BOTH directions.
  *
  * The converter decides what a model sees and what the backend enforces locally, so "which keywords
  * survive" cannot live in a comment alone: a later contributor adding `pattern` (or dropping

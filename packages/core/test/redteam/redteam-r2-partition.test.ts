@@ -34,7 +34,7 @@ import {
   respondPayload,
   validateClaims,
   type OutcomeMap,
-  type TurnClaim,
+  type Intention,
 } from '../../src/runtime/claims.js';
 import { claimCoversRubric, claimIsComplete, claimIsGrounded } from '../../src/guards/honesty.js';
 import { confirmFirst, pendingConfirmMustAsk } from '../../src/guards/confirmation.js';
@@ -55,7 +55,7 @@ const call = (name: string, args: Record<string, unknown>, over: Partial<Observe
   ...over,
 });
 
-function replyCtx(over: Partial<GuardCtx> & { did?: TurnClaim[] }): GuardCtx {
+function replyCtx(over: Partial<GuardCtx> & { did?: Intention[] }): GuardCtx {
   return {
     args: {},
     world: over.world ?? fixtureWorld(),
@@ -81,9 +81,9 @@ const historyTurn = (over: Partial<HistoryTurn> & { turnIndex: number }): Histor
   }) as HistoryTurn;
 
 const WRITES = ['createBooking', 'cancelBooking', 'refundOrder'] as const;
-const grounded = (over: Partial<GuardCtx> & { did: TurnClaim[] }, outcomes?: OutcomeMap) =>
+const grounded = (over: Partial<GuardCtx> & { did: Intention[] }, outcomes?: OutcomeMap) =>
   claimIsGrounded({ writeTools: WRITES, outcomes }).check(replyCtx(over));
-const complete = (over: Partial<GuardCtx> & { did: TurnClaim[] }, outcomes?: OutcomeMap) =>
+const complete = (over: Partial<GuardCtx> & { did: Intention[] }, outcomes?: OutcomeMap) =>
   claimIsComplete({ writeTools: WRITES, outcomes }).check(replyCtx(over));
 
 /** A world + ledger where `createBooking` took effect and issued the label BK-1. */
@@ -130,7 +130,7 @@ describe('b1 — a speech-op LOOKALIKE must never be classified as SPEECH (it mu
   });
 
   it('a speech-op LOOKALIKE never counts as an ask (hasAskIntent is exact)', () => {
-    for (const [op] of LOOKALIKES) expect(hasAskIntent([{ op } as TurnClaim])).toBe(false);
+    for (const [op] of LOOKALIKES) expect(hasAskIntent([{ op } as Intention])).toBe(false);
     expect(hasAskIntent([{ op: 'ask' }])).toBe(true);
   });
 
@@ -183,12 +183,12 @@ describe('b2 — an ACTION cannot hide behind a SPEECH intention', () => {
     expect(respondPayload({ message: 'hi', did: [{ op: 'inform', outcome: 'success' }] }).did).toEqual([]);
   });
 
-  it('CLOSED b2.4 (wave 3) — a declaration the partition rejects can never end as a clean delivery', async () => {
-    // The schema accepts `did:[{op:'inform',outcome:'success'}]` (non-empty). validateClaims drops it.
-    // `did` is now [] — and `claimIsGrounded` opens with `if (!did.length) return null`, while
-    // `claimIsComplete` has no effected write to miss on a read-only turn. So MI-D1's "there is no
-    // honest empty turn" is not what the runtime enforces: the free-prose message is delivered with
-    // ZERO declared intentions and zero cross-checks run.
+  it('CLOSED b2.4 — a declaration the partition rejects can never end as a clean delivery', async () => {
+    // The schema accepts `did:[{op:'inform',outcome:'success'}]` (non-empty). validateClaims drops it,
+    // leaving `did` as [] — and `claimIsGrounded` opens with `if (!did.length) return null`, while
+    // `claimIsComplete` has no effected write to miss on a read-only turn. Without the declaration
+    // floor, "there is no honest empty turn" would not be what the runtime enforces: the free-prose
+    // message would be delivered with ZERO declared intentions and zero cross-checks run.
     const world = fixtureWorld();
     const contract: DomainContract = { voice: 'v', stateBlock: () => '', coreInvariants: ['x'], languageClause: 'l', writeTools: ['refundOrder'] };
     const spec = new AgentSpecBase({ id: 'a', mode: 'A', persona: 'p', tools: ['refundOrder'], contract });
@@ -201,7 +201,7 @@ describe('b2 — an ACTION cannot hide behind a SPEECH intention', () => {
 });
 
 describe('b2 — a SPEECH intention is EVIDENCE nowhere… except `ask`, which licenses destruction', () => {
-  // ROOT: speech intentions are never grounded (MI-D5) — deliberate. But ONE speech intention is read
+  // ROOT: speech intentions are never grounded — deliberate. But ONE speech intention IS read
   // as EVIDENCE by the consent family: `ask`. `hasAskIntent` is a pure declaration check, and nothing
   // (no ledger fact, no message content) corroborates it. So the agent MANUFACTURES its own consent
   // license by emitting a three-letter token, in a turn whose message asks nothing at all.
@@ -366,13 +366,13 @@ describe('b4 — shadow-law normalization', () => {
     expect(() => assertNoCoreOutcomeShadow({ 'NOT_FOUND\t': 'success' } as OutcomeMap, 's')).toThrow();
   });
 
-  it('CLOSED b4.1 (wave 3) — a FULLWIDTH core key is caught (NFKD compatibility fold)', () => {
+  it('CLOSED b4.1 — a FULLWIDTH core key is caught (NFKD compatibility fold)', () => {
     // `ＳＵＣＣＥＳＳ`.toLowerCase() is fullwidth lowercase, never the ASCII core word — so the gate
     // that exists to stop a domain vocabulary from LYING lets the lie through in another width.
     expect(() => assertNoCoreOutcomeShadow({ 'ＳＵＣＣＥＳＳ': 'failure' } as OutcomeMap, 's')).toThrow();
   });
 
-  it('CLOSED b4.2 (wave 3) — a combining-mark core key is caught (NFKD + mark strip)', () => {
+  it('CLOSED b4.2 — a combining-mark core key is caught (NFKD + mark strip)', () => {
     // 'PENDİNG_CONFIRMATION' (Turkish dotted İ) NFKD-folds to the core word and reads as it to a human.
     expect(() => assertNoCoreOutcomeShadow({ 'PENDİNG_CONFIRMATION': 'success' } as OutcomeMap, 's')).toThrow();
   });
@@ -411,7 +411,7 @@ describe('b4 — the shadow law is bound to ONE call site, and the config path w
   // threads the config's `outcomes` block straight into `claimCoversRubric` (norms-config.ts:399→342).
   const SHADOW: OutcomeMap = { NOT_FOUND: 'success', Success: 'failure' } as unknown as OutcomeMap;
 
-  it('CLOSED b4.3 (wave 3) — the GUARD FACTORY gates the map, contract or no contract', () => {
+  it('CLOSED b4.3 — the GUARD FACTORY gates the map, contract or no contract', () => {
     // SECURE EXPECTATION: a shadowing outcome vocabulary fails at LOAD, on every path that can bind it.
     expect(() => {
       const spec = new AgentSpecBase({ id: 'norms-agent', mode: 'A', persona: 'p', tools: ['refundOrder'] });
@@ -422,10 +422,10 @@ describe('b4 — the shadow law is bound to ONE call site, and the config path w
     }).toThrow(/outcome map/i);
   });
 
-  it('CLOSED b4.4 (wave 3) — the shadowed rubric can never be BUILT, so it can never be satisfied', () => {
-    // The rubric exists so POLARITY is a field a text check cannot fake. With `NOT_FOUND → success`
-    // slipped past the gate, a claim declaring the core word for "nothing was there" covered a success
-    // requirement. The map is now refused where it ENTERS, so there is no guard left to satisfy …
+  it('CLOSED b4.4 — the shadowed rubric can never be BUILT, so it can never be satisfied', () => {
+    // The rubric exists so POLARITY is a field a text check cannot fake. Were `NOT_FOUND → success` to
+    // slip past the gate, a claim declaring the core word for "nothing was there" would cover a success
+    // requirement. The map is refused where it ENTERS, so there is no guard left to satisfy …
     expect(() =>
       claimCoversRubric({ targets: ['ORD-9'], outcome: 'success', outcomes: SHADOW }, 'account for ORD-9'),
     ).toThrow(/outcome map/i);
@@ -436,7 +436,7 @@ describe('b4 — the shadow law is bound to ONE call site, and the config path w
     expect(ok.check(replyCtx({ did: [{ op: 'lookup', target: 'ORD-9', outcome: 'not_found' }] }))).not.toBeNull();
   });
 
-  it('CLOSED b4.5 (wave 3) — every cross-check factory refuses a shadowing map', () => {
+  it('CLOSED b4.5 — every cross-check factory refuses a shadowing map', () => {
     // claimIsGrounded / claimIsComplete are public exports; a host binding them directly supplies the
     // map itself and no gate ever runs. SECURE EXPECTATION: the factory refuses a shadowing map.
     expect(() => claimIsGrounded({ writeTools: WRITES, outcomes: SHADOW })).toThrow();

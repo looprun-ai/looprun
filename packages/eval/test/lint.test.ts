@@ -11,7 +11,7 @@ describe('lint rules', () => {
     expect(spec.map((s) => s.rule)).toEqual(['purity', 'stateful-regex']);
     expect(spec[0].line).toBe(1);
 
-    // firewall retired (2026-08-02): reading user text / history is no longer a finding.
+    // Guards read the full context: user text / history is not a finding.
     expect(lintSource('src/agents/x/gen-spec.ts', 'const u = ctx.userText;\nconst h = ctx.history;')).toEqual([]);
 
     const contract = lintSource('src/agents/x/contract.ts', "  persona: 'never here',\n  voice: 'ok',");

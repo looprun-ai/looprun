@@ -1,8 +1,8 @@
 /**
- * Acceptance for increment 3a: the toy-subject world, re-expressed DECLARATIVELY via `defineWorld`,
- * produces the SAME ledger (name/args/result/tookEffect) as the frozen hand-written `ToyWorld` for
- * identical call sequences — on both presets. This is the "Atlas-as-fixture" property, one domain
- * down; the atlas-slice parity is the next task.
+ * A world expressed DECLARATIVELY via `defineWorld` produces the SAME ledger
+ * (name/args/result/tookEffect) as the equivalent hand-written world for identical call sequences,
+ * on every preset. This is what lets a hand-written world be replaced by a spec without any
+ * observable change to what the engine records.
  */
 import { describe, expect, it } from 'vitest';
 import { defineWorld } from '@looprun-ai/core/internal';

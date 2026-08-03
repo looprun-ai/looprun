@@ -4,11 +4,10 @@
  * chapter is generated from, so an undocumented kind cannot reach the docs by omission, and a
  * documented kind cannot outlive its factory. Anchored to THIS core, not any external harness.
  *
- * There is no second, markdown lane. `packages/core/GUARDS.md` used to carry a hand-maintained kind
- * table and was gated here; it drifted anyway (it still read "29 kinds" after the split shipped 30),
- * because a name list a human retypes is exactly the artifact a name-only gate cannot keep honest.
- * GUARDS.md is now maintainer internals and points at the catalog instead — one vocabulary of record,
- * and this gate is the whole of it.
+ * There is no second, markdown lane. A hand-maintained kind table in prose drifts even under a
+ * name-only gate, because a name list a human retypes is exactly the artifact such a gate cannot keep
+ * honest. `packages/core/GUARDS.md` is maintainer internals and points at the catalog — one
+ * vocabulary of record, and this gate is the whole of it.
  */
 import { describe, expect, it } from 'vitest';
 import { readdirSync, readFileSync } from 'node:fs';
@@ -126,8 +125,7 @@ describe('GUARD_CATALOG ↔ core parity', () => {
 
   it('the hook axis is the PHASE, not the file (the tricky rows)', () => {
     // `category` is file-derived; `hook` follows the factory's dim through spec.ts#DIM_HOOKS. These two
-    // are where the axes disagree, which is exactly why the field exists. (The former reply.ts→preTool
-    // example, noInstructionFromData, was deleted by the no-regex law.)
+    // are where the axes disagree, which is exactly why the field exists.
     const byName = new Map(GUARD_CATALOG.map((e) => [e.name, e]));
     expect(byName.get('jargonScrub')?.hook, 'a ReplyMutator rewrites, it never gates').toBe('onReplyMutate');
     expect(byName.get('resultInvariant')?.hook, 'the only postTool kind').toBe('postTool');

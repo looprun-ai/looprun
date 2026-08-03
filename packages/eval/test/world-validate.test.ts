@@ -1,7 +1,8 @@
 /**
- * Increment 3b — `looprun-eval validate` world layers (`checkWorldModel`). Drives the three checks
- * off a `gen/world.json` written to a temp dir: preset distinguishability, probe≡confirm identity, and
- * determinism. A subject WITHOUT a world.json yields no world issues (TS worlds keep the old path).
+ * `looprun-eval validate` world layers (`checkWorldModel`). Drives the three checks off a
+ * `gen/world.json` written to a temp dir: preset distinguishability, probe≡confirm identity, and
+ * determinism. A subject WITHOUT a world.json yields no world issues — a TS world is not validated
+ * from a spec.
  */
 import { describe, expect, it, beforeAll, afterAll } from 'vitest';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
@@ -57,7 +58,7 @@ describe('checkWorldModel — a clean world.json', () => {
 });
 
 describe('checkWorldModel — no world.json', () => {
-  it('returns empty (TS worlds keep the old path)', () => {
+  it('returns empty (a TS world has no spec to validate)', () => {
     const dir = mkdtempSync(join(tmpdir(), 'looprun-noworld-'));
     expect(checkWorldModel(dir)).toEqual([]);
     rmSync(dir, { recursive: true, force: true });

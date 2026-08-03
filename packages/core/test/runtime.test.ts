@@ -18,8 +18,8 @@ import type { RespondPayload } from '../src/runtime/claims.js';
 /** A structured respond payload with a bare speech intention — the common shape in these composition-free tests. */
 const P = (message: string): RespondPayload => ({ message, did: [{ op: 'inform' }] });
 
-/** A minimal onReply behaviour guard that denies until the MESSAGE contains `term` — a stand-in for the
- *  deleted reply-text guards, used here only to exercise the redrive/exhaustion machinery over ctx.reply. */
+/** A minimal onReply behaviour guard that denies until the MESSAGE contains `term` — a test-local
+ *  stand-in, used here only to exercise the redrive/exhaustion machinery over ctx.reply. */
 const mentions = (term: string, reason: string) =>
   custom({
     kind: 'replyHasTerm',
@@ -193,10 +193,10 @@ describe('finalizeReply pipeline', () => {
     expect(out.text).toBe('spec-closure');
   });
 
-  it('the forced-terminal fallback guarantees a non-empty delivery (emptyReply subsumed, SCG-T5)', async () => {
-    // emptyReply is DELETED — the empty-reply floor is now structural: the respond schema requires a
-    // non-empty `message` and, on exhaustion, the engine-derived closure is never blank. A guard that never
-    // passes drives to exhaustion; the delivered text must still be non-empty (the contract closure here).
+  it('the forced-terminal fallback guarantees a non-empty delivery', async () => {
+    // The empty-reply floor is structural: the respond schema requires a non-empty `message` and, on
+    // exhaustion, the engine-derived closure is never blank. A guard that never passes drives to
+    // exhaustion; the delivered text must still be non-empty (the contract closure here).
     const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: ['water'] });
     spec.addReplyCheck(mentions('impossible-token-xyz', 'nope'), { id: 'agent:impossible' });
     const ledger = createLedger();
@@ -207,10 +207,10 @@ describe('finalizeReply pipeline', () => {
     expect(out.text).toBe('contract-closure:water');
   });
 
-  it('blank-delivery FLOOR: message:"" + did:[] on the CLEAN path routes to the non-empty engine-derived closure (emptyReply is engine-owned, not schema-owned)', async () => {
-    // No guard fires on `P('')` (degenerationGuard's own check short-circuits on a falsy reply — the
-    // ORIGINAL emptyReply break), so this reaches the clean-delivery return, where the old code composed
-    // and returned '' outright. The floor must catch it there — and NOT route through a business-authored
+  it('blank-delivery FLOOR: message:"" + did:[] on the CLEAN path routes to the non-empty engine-derived closure (the floor is engine-owned, not schema-owned)', async () => {
+    // No guard fires on `P('')` — degenerationGuard's own check short-circuits on a falsy reply — so this
+    // reaches the clean-delivery return, which would otherwise compose and return '' outright. The floor
+    // must catch it there — and NOT route through a business-authored
     // exhaustionReply override (CONTRACT_NO_OVERRIDE has none): only the derived closure is guaranteed
     // non-empty by construction.
     const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: [] });
@@ -218,7 +218,7 @@ describe('finalizeReply pipeline', () => {
     const out = await finalizeReply(spec, CONTRACT_NO_OVERRIDE, fixtureWorld(), ledger, P(''), async () => P(''), 0);
     expect(out.exhausted).toBe(true);
     expect(out.text).toBe(EXHAUSTION_NOTHING);
-    // MI-T7 wave 3: the closure is a DELIVERED turn, so it declares its own speech intention (MI-D1).
+    // The closure is a DELIVERED turn, so it declares its own speech intention.
     expect(out.did).toEqual([{ op: 'inform' }]);
   });
 
@@ -230,7 +230,7 @@ describe('finalizeReply pipeline', () => {
     const out = await finalizeReply(spec, CONTRACT_NO_OVERRIDE, fixtureWorld(), ledger, zeroWidth, async () => zeroWidth, 0);
     expect(out.exhausted).toBe(true);
     expect(out.text).toBe(EXHAUSTION_NOTHING);
-    // MI-T7 wave 3: the closure is a DELIVERED turn, so it declares its own speech intention (MI-D1).
+    // The closure is a DELIVERED turn, so it declares its own speech intention.
     expect(out.did).toEqual([{ op: 'inform' }]);
   });
 
@@ -241,7 +241,7 @@ describe('finalizeReply pipeline', () => {
     const out = await finalizeReply(spec, CONTRACT_NO_OVERRIDE, fixtureWorld(), ledger, P('a perfectly fine reply'), async () => P('a perfectly fine reply'), 0);
     expect(out.exhausted).toBe(true);
     expect(out.text).toBe(EXHAUSTION_NOTHING);
-    // MI-T7 wave 3: the closure is a DELIVERED turn, so it declares its own speech intention (MI-D1).
+    // The closure is a DELIVERED turn, so it declares its own speech intention.
     expect(out.did).toEqual([{ op: 'inform' }]);
     expect(ledger.turnCorrections).toContain('mutate:blankOut');
   });

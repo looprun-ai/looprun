@@ -1,12 +1,10 @@
 /**
  * Guard proofs — RISK FAMILIES.
  *
- * NOTE (no-regex law, 2026-08-02): five of the six risk-family kinds — `minimalDisclosure`,
- * `noInstructionFromData`, `noCompetitorClaim`, `noOutOfSurfaceActionClaim`,
- * `noUngroundedRegulatedFigure` — were REGEX-param honesty guards over the reply / tool-result TEXT.
- * They are DELETED with the no-regex law: those jobs are text judgment, now expressed as `llmCheck`
- * rubrics (the `llmCheck` proof in catalog-behavior.ts proves the kind). The one STRUCTURAL family —
- * `consentRequired` (a `precondition` specialised to a tool set, keyed on a world flag, no text) — stays.
+ * Risk-family concerns over reply / tool-result TEXT are text judgment, expressed as `llmCheck`
+ * rubrics (the `llmCheck` proof in catalog-behavior.ts proves the kind). The one STRUCTURAL family is
+ * `consentRequired` — a `precondition` specialised to a tool set, keyed on a world flag, no text — and
+ * it is what this file proves.
  */
 import { consentRequired } from '../../src/guards/index.js';
 import { FixtureWorld } from '../../src/testing/index.js';

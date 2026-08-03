@@ -40,8 +40,8 @@ const DID_MESSAGE_ADJ: Adjudicator = async (_rubric, ctx) => {
 /** A write call that took effect this turn — the ledger shape the cross-check guards ground against. */
 const effectedWrite = (name: string, args: Record<string, unknown>) => ({ name, args, ok: true, turnIndex: 0, tookEffect: true });
 
-/** The WORLD side of that ledger: the result the world ISSUED for the call (MI-T3/M2 — a claim grounds
- *  against these values only, never against the call's agent-authored args). */
+/** The WORLD side of that ledger: the result the world ISSUED for the call. A claim grounds against
+ *  these values only, never against the call's agent-authored args. */
 const worldIssuing = (calls: Array<{ name: string; args: Record<string, unknown>; result: unknown }>): AgentWorld =>
   ({
     exec: () => ({ success: true }),
@@ -183,10 +183,8 @@ export const BEHAVIOR_PROOFS: GuardProof[] = [
     ],
   },
 
-  // NOTE (no-regex law, 2026-08-02): the former regex-param honesty proofs — noFabricatedSuccess,
-  // destructiveClaimRequiresSuccess, noFalseFailureClaim — are gone with their guards. Those jobs are
-  // TEXT judgment, now expressed as `llmCheck` rubrics (proven below), whose scripted adjudicator stands
-  // in for a real model.
+  // Honesty over reply TEXT is judgment, expressed as `llmCheck` rubrics (proven below), whose
+  // scripted adjudicator stands in for a real model.
 
   // ── degenerationGuard (auto minimal) ─────────────────────────────────────────
   {
@@ -224,10 +222,10 @@ export const BEHAVIOR_PROOFS: GuardProof[] = [
         },
       },
       {
-        name: 'third-person self-narration is NOT gated here (that text judgment is llmCheck\'s job now)',
+        name: 'third-person self-narration is NOT gated here (that text judgment is llmCheck\'s job)',
         polarity: 'neutral',
-        // The no-regex law retired the selfNarrationRe branch: degenerationGuard is a param-free
-        // artifact-shape lint (template tokens / repetition), so plain narrative prose passes.
+        // degenerationGuard is a param-free artifact-shape lint (template tokens / repetition), so
+        // plain narrative prose passes.
         ctx: { reply: 'The assistant confirmed the update.', observed: [], turnIndex: 0 },
         l1: 'silent',
       },
@@ -422,7 +420,7 @@ export const BEHAVIOR_PROOFS: GuardProof[] = [
         },
       },
       {
-        // MI-T7 wave 3 (r2/A-V8): this backstop's default is `closed`, unlike bare llmCheck's. An
+        // This backstop's default is `closed`, unlike bare llmCheck's. An
         // adjudicator outage must not silently delete the residual's only named mitigation.
         name: 'failMode closed (the default here): an UNREACHABLE adjudicator DENIES',
         polarity: 'negative',

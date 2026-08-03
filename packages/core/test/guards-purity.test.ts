@@ -1,9 +1,9 @@
 /**
- * THE LAW SUITE (purity + firewall) — CI-enforced on every push/PR.
+ * THE LAW SUITE (purity + full-context) — CI-enforced on every push/PR.
  *
  * T1 purity: guard-surface source may not touch clock / entropy / network / a runtime LLM call —
  * that is what keeps `check()` deterministic by construction.
- * Full-context law (replaces the retired S-1 firewall, 2026-08-02): GuardCtx DOES expose the user's
+ * Full-context law: GuardCtx DOES expose the user's
  * text — `userText` (this turn) and `history[].userText` (prior turns). Guards are deterministic
  * code, so "influence" does not apply; intent-based tool routing stays banned as a loop law and text
  * pattern-matching stays banned by the no-regex law — neither is this suite's job.
@@ -105,8 +105,8 @@ describe('stateful-regex lint', () => {
   });
 });
 
-describe('no-regex-param law (guard factory surface carries zero RegExp-typed params — 2026-08-02)', () => {
-  // THE BOUNDARY (task item 6): the ban is on GUARD FACTORY PARAMETERS and on guard checks over
+describe('no-regex-param law (guard factory surface carries zero RegExp-typed params)', () => {
+  // THE BOUNDARY: the ban is on GUARD FACTORY PARAMETERS and on guard checks over
   // CONVERSATION text. Text judgment is `llmCheck`'s job — its verdict is a host adjudicator's, never a
   // closure-held pattern. What this gate does NOT ban: an internal lint that scans SOURCE/ARTIFACT text
   // (lint-subject, world input validation) may still use a RegExp INTERNALLY — that is not a guard
@@ -157,7 +157,7 @@ describe('no-regex-param law (guard factory surface carries zero RegExp-typed pa
   });
 });
 
-describe('full-context law (GuardCtx exposes the user text — firewall retired 2026-08-02)', () => {
+describe('full-context law (GuardCtx exposes the user text)', () => {
   it('GuardCtx exposes userText and history', () => {
     const rules = readFileSync(join(CORE_SRC, 'rules.ts'), 'utf8');
     const block = rules.match(/export interface GuardCtx \{[\s\S]*?\n\}/)?.[0];

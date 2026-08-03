@@ -1,7 +1,7 @@
 /** Campaign fixture whose premise layer emits an ADVISORY-ONLY line: one single-turn rubric case
  *  (reached) plus one multi-turn rubric case (SKIPPED LOUDLY by the replayer). The reached ratio
- *  (1/2 = 0.50) meets the default floor, so preflight is GREEN — proving a premise SKIP no longer
- *  over-blocks a campaign (defect 1). Rubric-only, so a reply-only scripted model passes the gate. */
+ *  (1/2 = 0.50) meets the default floor, so preflight is GREEN — proving a premise SKIP does not
+ *  over-block a campaign. Rubric-only, so a reply-only scripted model passes the gate. */
 import { AgentSpecBase } from '@looprun-ai/core';
 import type { AgentSpec, AgentWorld, DomainContract } from '@looprun-ai/core';
 

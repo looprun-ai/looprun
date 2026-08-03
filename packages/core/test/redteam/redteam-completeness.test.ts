@@ -10,7 +10,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { GuardCtx, ObservedCall } from '../../src/rules.js';
-import type { TurnClaim } from '../../src/runtime/claims.js';
+import type { Intention } from '../../src/runtime/claims.js';
 import { claimIsComplete, claimIsGrounded } from '../../src/guards/honesty.js';
 import { deriveClaimsFromLedger, renderOperationReport } from '../../src/runtime/claims.js';
 import { createLedger, beginTurn, recordToolResult } from '../../src/runtime/ledger.js';
@@ -29,7 +29,7 @@ function worldWith(
 }
 
 /** A reply-side GuardCtx (turnIndex 0) — the shape `checkReply` builds. */
-function replyCtx(over: Partial<GuardCtx> & { did: TurnClaim[] }): GuardCtx {
+function replyCtx(over: Partial<GuardCtx> & { did: Intention[] }): GuardCtx {
   return {
     args: {},
     world: over.world ?? worldWith([]),
@@ -62,7 +62,7 @@ const WRITES = ['updateOrder', 'refundOrder', 'cancelOrder'] as const;
 // effected writes to ANY targets. The renderer shows the single generic line "One action completed."
 // while N distinct writes to N distinct targets all happened. Silent actions, hidden by construction.
 // ─────────────────────────────────────────────────────────────────────────────────────────────
-describe('VECTOR 1 — targetless success claim hides all effected writes [CLOSED by M3]', () => {
+describe('VECTOR 1 — targetless success claim hides all effected writes [CLOSED]', () => {
   const twoWritesDifferentTargets: ObservedCall[] = [
     call('updateOrder', { order: 'ORD-1', status: 'shipped' }, { tookEffect: true }),
     call('refundOrder', { order: 'ORD-2', amount: 500 }, { tookEffect: true }),
@@ -73,7 +73,7 @@ describe('VECTOR 1 — targetless success claim hides all effected writes [CLOSE
   ]);
 
   it('CLOSED: ONE targetless success claim covers NEITHER of the two distinct writes', () => {
-    const did: TurnClaim[] = [{ op: 'update', outcome: 'success' }]; // no target
+    const did: Intention[] = [{ op: 'update', outcome: 'success' }]; // no target
     const reason = claimIsComplete({ writeTools: WRITES }).check(
       replyCtx({ did, observed: twoWritesDifferentTargets, world: twoWritesWorld }),
     );
@@ -82,7 +82,7 @@ describe('VECTOR 1 — targetless success claim hides all effected writes [CLOSE
   });
 
   it('CONTROL: one success claim PER target covers both writes (the fix is not blanket denial)', () => {
-    const did: TurnClaim[] = [
+    const did: Intention[] = [
       { op: 'update', target: 'ORD-1', outcome: 'success' },
       { op: 'refund', target: 'ORD-2', outcome: 'success' },
     ];
@@ -95,7 +95,7 @@ describe('VECTOR 1 — targetless success claim hides all effected writes [CLOSE
   it('DOCUMENTED: claimIsGrounded keeps the targetless latitude — completeness is the wall', () => {
     // A targetless claim still GROUNDS (an honest "one action completed" on a single-write turn is not a
     // lie), so the un-hideability guarantee rests on claimIsComplete's target-defined coverage above.
-    const did: TurnClaim[] = [{ op: 'update', outcome: 'success' }];
+    const did: Intention[] = [{ op: 'update', outcome: 'success' }];
     const reason = claimIsGrounded({ writeTools: WRITES }).check(
       replyCtx({ did, observed: twoWritesDifferentTargets, world: twoWritesWorld }),
     );
@@ -103,14 +103,14 @@ describe('VECTOR 1 — targetless success claim hides all effected writes [CLOSE
   });
 
   it('the user-facing report is a single generic line — the refund is invisible', () => {
-    const did: TurnClaim[] = [{ op: 'update', outcome: 'success' }];
+    const did: Intention[] = [{ op: 'update', outcome: 'success' }];
     const report = renderOperationReport(did);
     expect(report).toBe('One action completed.'); // ORD-2 / the $500 refund never reach the user
   });
 
-  // FIX AS LANDED (MI-T3 / M3): `claimIsComplete`'s covered predicate requires `claim.target !== undefined`
-  // (plus the ACTION-op partition and world-issued-value matching). Grounding keeps the targetless
-  // latitude, exactly as this vector prescribed; COMPLETENESS is per-target.
+  // THE RULE: `claimIsComplete`'s covered predicate requires `claim.target !== undefined` (plus the
+  // ACTION-op partition and world-issued-value matching). Grounding keeps the targetless latitude;
+  // COMPLETENESS is per-target.
 });
 
 // ─────────────────────────────────────────────────────────────────────────────────────────────
@@ -121,7 +121,7 @@ describe('VECTOR 1 — targetless success claim hides all effected writes [CLOSE
 // single `{target:'ORD-1', outcome:'success'}` claim → both "covered" → null. The second operation
 // hides behind the first's claim.
 // ─────────────────────────────────────────────────────────────────────────────────────────────
-describe('VECTOR 2 — one claim covers two writes to the same target [CLOSED by M3 injectivity]', () => {
+describe('VECTOR 2 — one claim covers two writes to the same target [CLOSED by injectivity]', () => {
   const twoWritesSameTarget: ObservedCall[] = [
     call('updateOrder', { order: 'ORD-1', status: 'shipped' }, { tookEffect: true }),
     call('refundOrder', { order: 'ORD-1', amount: 500 }, { tookEffect: true }), // distinct op, same target
@@ -130,7 +130,7 @@ describe('VECTOR 2 — one claim covers two writes to the same target [CLOSED by
     { name: 'updateOrder', args: { order: 'ORD-1', status: 'shipped' }, result: { id: 'ORD-1' }, tookEffect: true },
     { name: 'refundOrder', args: { order: 'ORD-1', amount: 500 }, result: { id: 'ORD-1' }, tookEffect: true },
   ]);
-  const complete = (did: TurnClaim[]) =>
+  const complete = (did: Intention[]) =>
     claimIsComplete({ writeTools: WRITES }).check(replyCtx({ did, observed: twoWritesSameTarget, world: sameTargetWorld }));
 
   it('CLOSED: ONE claim on ORD-1 cannot cover TWO effected writes on ORD-1 — the refund is not hidden', () => {
@@ -146,19 +146,19 @@ describe('VECTOR 2 — one claim covers two writes to the same target [CLOSED by
     ).toBeNull();
   });
 
-  // FIX AS LANDED (MI-T3 / M3): each effected write SPENDS a distinct covering claim (a `spent` index set
-  // over the success-resolving, target-bearing ACTION claims), so coverage counts occurrences.
+  // THE RULE: each effected write SPENDS a distinct covering claim (a `spent` index set over the
+  // success-resolving, target-bearing ACTION claims), so coverage counts occurrences.
 });
 
 // ─────────────────────────────────────────────────────────────────────────────────────────────
-// VECTOR 4 — deriveClaimsFromLedger positional label misalignment (exhaustion path) [CLOSED by M5]
+// VECTOR 4 — deriveClaimsFromLedger positional label misalignment (exhaustion path) [CLOSED]
 //
-// recordToolResult pushes ANY ok call's string `label` into producedThisTurn — READS INCLUDED.
-// deriveClaimsFromLedger used to consume `produced[labelIx++]` for EFFECTED WRITES ONLY, positionally,
-// so a read that emitted a label shifted the array and the write wore the READ's label as its `target`.
-// The exhaustion closure then told the user the WRONG entity for a real action.
+// recordToolResult pushes ANY ok call's string `label` into producedThisTurn — READS INCLUDED. A derive
+// loop consuming `produced[labelIx++]` for EFFECTED WRITES ONLY, positionally, lets a read that emitted
+// a label shift the array so the write wears the READ's label as its `target`, and the exhaustion
+// closure tells the user the WRONG entity for a real action.
 // ─────────────────────────────────────────────────────────────────────────────────────────────
-describe('VECTOR 4 — read label shifts a write target on the derive path [CLOSED by M5]', () => {
+describe('VECTOR 4 — read label shifts a write target on the derive path [CLOSED]', () => {
   it('CLOSED: a READ label ahead of the write is NOT worn by the write', () => {
     const world = worldWith([
       { name: 'lookupOrder', args: { q: 'blue widget' }, result: { label: 'SEARCH-RESULT', items: [1] }, tookEffect: false },
@@ -197,21 +197,20 @@ describe('VECTOR 4 — read label shifts a write target on the derive path [CLOS
     expect(derived).toEqual([{ op: 'REFUND-9', target: 'REFUND-9', outcome: 'success' }]);
   });
 
-  // FIX AS LANDED (MI-T4 / M5): option (b) of the two the vector prescribed — each produced label is
-  // attached to its OWN observed call (`ObservedCall.producedLabel`, set in recordToolResult) and the
-  // derive loop reads `o.producedLabel`. There is no positional cursor left to misalign, so the
-  // last-write-drops-when-counts-differ hazard is gone with it.
+  // THE RULE: each produced label is attached to its OWN observed call (`ObservedCall.producedLabel`,
+  // set in recordToolResult) and the derive loop reads `o.producedLabel`. There is no positional cursor
+  // to misalign, so the last-write-drops-when-counts-differ hazard cannot arise either.
 });
 
 // ─────────────────────────────────────────────────────────────────────────────────────────────
-// VECTOR 3 — deriveClaimsFromLedger mis-buckets an EFFECTED write as pending_confirmation [CLOSED by M6]
+// VECTOR 3 — deriveClaimsFromLedger mis-buckets an EFFECTED write as pending_confirmation [CLOSED]
 //
-// The derive loop used to check `resultFlags.requiresConfirmation` FIRST and `continue` — BEFORE the
-// `tookEffect` branch. A write that BOTH took effect AND carried the confirmation flag rendered
+// A derive loop that checks `resultFlags.requiresConfirmation` FIRST and `continue`s — BEFORE the
+// `tookEffect` branch — makes a write that BOTH took effect AND carried the confirmation flag render
 // "Awaiting your confirmation." The user was told an action is still pending their OK when it already
 // happened — a real action mis-reported (and it consumed no label, so it dropped out of the success set).
 // ─────────────────────────────────────────────────────────────────────────────────────────────
-describe('VECTOR 3 — effected write + confirmation flag mis-bucketed as pending [CLOSED by M6]', () => {
+describe('VECTOR 3 — effected write + confirmation flag mis-bucketed as pending [CLOSED]', () => {
   it('CLOSED: an effected write with requiresConfirmation derives as SUCCESS, not pending', () => {
     const observed: ObservedCall[] = [
       call('refundOrder', { order: 'ORD-7', amount: 200 }, {
@@ -235,8 +234,8 @@ describe('VECTOR 3 — effected write + confirmation flag mis-bucketed as pendin
     expect(derived).toEqual([{ op: 'operation', outcome: 'pending_confirmation' }]);
   });
 
-  // FIX AS LANDED (MI-T4 / M6): `tookEffect === true` is tested BEFORE `requiresConfirmation` —
-  // pending_confirmation is honest only for a write that did NOT take effect.
+  // THE RULE: `tookEffect === true` is tested BEFORE `requiresConfirmation` — pending_confirmation is
+  // honest only for a write that did NOT take effect.
 });
 
 // ─────────────────────────────────────────────────────────────────────────────────────────────
@@ -256,7 +255,7 @@ describe('VECTOR 5 — salvage cannot pass a hiding candidate [CLOSED]', () => {
       call('refundOrder', { order: 'ORD-3', amount: 99 }, { tookEffect: true }),
     ];
     // A salvage candidate whose did reports an UNRELATED target — does not cover the ORD-3 refund.
-    const did: TurnClaim[] = [{ op: 'note', target: 'ORD-OTHER', outcome: 'success' }];
+    const did: Intention[] = [{ op: 'note', target: 'ORD-OTHER', outcome: 'success' }];
     const reason = claimIsComplete({ writeTools: WRITES }).check(replyCtx({ did, observed }));
     expect(reason).toBeTruthy(); // salvage's checkPayload sees this too → candViolations ≠ 0 → not salvaged
   });

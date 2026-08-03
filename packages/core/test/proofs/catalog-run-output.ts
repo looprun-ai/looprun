@@ -249,9 +249,9 @@ const confirmFirstProof: GuardProof = {
       },
     },
     {
-      // no-regex law: a prior-turn PROSE confirmation-ask no longer unlocks (that text judgment is
-      // retired); the go-ahead must be a structural same-tool probe or an ask intention. A
-      // respond WITHOUT asked is just prose, so this now DENIES.
+      // no-regex law: a prior-turn PROSE confirmation-ask does not unlock — the go-ahead must be a
+      // structural same-tool probe or an ask intention. A respond without one is just prose, so this
+      // DENIES.
       name: 'arg mechanism: a prior-turn prose confirmation-ask does NOT unlock (structural only)',
       polarity: 'negative',
       ctx: {
@@ -265,7 +265,7 @@ const confirmFirstProof: GuardProof = {
       l1: 'fires',
     },
     {
-      // The ask signal is the SEALED turn record, never a raw `observed` respond (r2/C2).
+      // The ask signal is the SEALED turn record, never a raw `observed` respond.
       name: 'arg mechanism: a prior-turn ask intention counts as the probe',
       polarity: 'positive',
       ctx: {
@@ -335,8 +335,8 @@ const confirmFirstProof: GuardProof = {
       },
     },
     {
-      // Absorbed from the deleted confirmedNeedsEarlierProbe: the probe is RECORD-bound (args-subset),
-      // so a preview of a DIFFERENT record does not license this confirm.
+      // The probe is RECORD-bound (args-subset), so a preview of a DIFFERENT record does not license
+      // this confirm.
       name: 'via:either (record-bound): an earlier probe of a DIFFERENT record does not unlock',
       polarity: 'negative',
       ctx: {
@@ -630,7 +630,7 @@ const askedEarlierProof: GuardProof = {
       polarity: 'positive',
       ctx: {
         args: { condition: 'good' },
-        // SEALED history is the only cross-turn ask signal (r2/C2).
+        // SEALED history is the only cross-turn ask signal.
         history: [{ turnIndex: 1, userText: 'add an item', reply: 'What condition is the item in?', toolCalls: [], did: [{ op: 'ask' }], attemptedCalls: [], guardEvents: [] }],
         turnIndex: 2,
       },
@@ -672,10 +672,6 @@ const askedEarlierProof: GuardProof = {
     },
   ],
 };
-
-// NOTE (2026-08-02): the former `confirmedNeedsEarlierProbe` proof is GONE — the kind was absorbed into
-// the unified `confirmFirst` (`via:'probe'`). Its distinctive scenarios (record-bound probe matching +
-// the recency bound) live on as L1 cases inside `confirmFirstProof` above; none was dropped.
 
 export const RUN_OUTPUT_PROOFS: GuardProof[] = [
   preconditionProof,

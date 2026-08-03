@@ -57,9 +57,9 @@ const alwaysFails = () =>
 // 1 — the exhaustion closure is built from DOMAIN evidence only
 // ─────────────────────────────────────────────────────────────────────────────
 describe('exhaustion evidence', () => {
-  // The engine-DERIVED default closure (SCG: deriveClaimsFromLedger + renderOperationReport + the
-  // EXHAUSTION_NOTHING/PARTIAL sentence) replaced the deleted `defaultExhaustionReply` helper. Its
-  // properties — names no tool, surfaces world labels, "nothing was changed" when empty — are proven at
+  // The engine-DERIVED default closure (deriveClaimsFromLedger + renderOperationReport + the
+  // EXHAUSTION_NOTHING/PARTIAL sentence) has properties — names no tool, surfaces world labels,
+  // "nothing was changed" when empty — that are proven at
   // the unit level in core (`test/claims-render.test.ts` + `test/runtime.test.ts` blank-floor cases); the
   // backend keeps only the wiring proof below, that a host exhaustionReply gets a DOMAIN-only okTools list.
 
@@ -154,7 +154,7 @@ describe('terminal tool definitions', () => {
     expect(props.reflects).toBeUndefined();
     expect(props.message.description).toContain("USER'S language");
     // The runtime reads exactly message + did — both REQUIRED, and `did` carries at least one
-    // intention (MI-D1). The retired `asked` boolean has no property to be set through.
+    // intention. There is no `asked` property to be set through.
     expect((d.inputSchema as { required: string[] }).required).toEqual(['message', 'did']);
     expect(props.did).toBeDefined();
     expect((props.did as unknown as { minItems: number }).minItems).toBe(1);
@@ -178,10 +178,10 @@ describe('terminal tool definitions', () => {
   });
 
   /**
-   * MI-T5 — the MANDATORY-INTENTION surface must survive the backend's JSON-schema → zod conversion.
-   * A converter that kept only the field TYPES shipped the model a bare `{op,target,outcome,amount}`:
-   * the vocabulary, the cardinality and the `inform` guardrail — the forcing function the honesty
-   * design rests on — never left the repo. This reads the schema as the PROVIDER receives it.
+   * The MANDATORY-INTENTION surface must survive the backend's JSON-schema → zod conversion.
+   * A converter that kept only the field TYPES would ship the model a bare `{op,target,outcome,amount}`,
+   * leaving the vocabulary, the cardinality and the `inform` guardrail — the forcing function the
+   * honesty design rests on — inside the repo. This reads the schema as the PROVIDER receives it.
    */
   it('ships the mandatory-intention respond schema to the model (did ≥ 1, op prose, no `asked`)', async () => {
     const { llm } = await runWith(new AgentSpecBase(baseCfg() as never), [
@@ -196,13 +196,13 @@ describe('terminal tool definitions', () => {
     };
 
     expect(schema.required).toEqual(['message', 'did']);
-    expect(schema.properties.asked).toBeUndefined(); // the retired boolean has no wire presence
+    expect(schema.properties.asked).toBeUndefined(); // no `asked` boolean has any wire presence
     const did = schema.properties.did!;
-    expect(did.minItems).toBe(1); // MI-D1: every response declares at least one intention
+    expect(did.minItems).toBe(1); // every response declares at least one intention
     expect(String(did.description)).toContain('An empty did is rejected');
 
     const op = (did.items as { properties: Record<string, { description?: string }> }).properties.op!;
-    // The op vocabulary AND the inform guardrail reach the model verbatim (MI-D4).
+    // The op vocabulary AND the inform guardrail reach the model verbatim.
     expect(op.description).toContain('inform');
     expect(op.description).toContain('greet');
     expect(op.description).toContain('refuse');
@@ -214,11 +214,11 @@ describe('terminal tool definitions', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 3b — the `did` floor AT THE TOOL BOUNDARY (MI-T5 review)
+// 3b — the `did` floor AT THE TOOL BOUNDARY
 //
-// Carrying `minItems` through the conversion means the backend's own input validation now REJECTS
-// a `respond` with an empty `did` before its execute runs. That is the riskiest live behavior change
-// of MI-T5, so what follows pins the OBSERVED reality — including the step/LLM-call cost, because a
+// Carrying `minItems` through the conversion means the backend's own input validation REJECTS a
+// `respond` with an empty `did` before its execute runs. What follows pins the OBSERVED consequence
+// — including the step/LLM-call cost, because a
 // rejected tool input under `toolChoice:'required'` could in principle be handed back to the model
 // and burn the whole step budget. It does not: the stop condition keys on the terminal CALL, not on
 // its successful execution, so the generate stops at once and the turn takes the ordinary
@@ -251,9 +251,9 @@ describe('an empty did never delivers', () => {
     expect(r.assistantFinalText).not.toContain('All done!');
     expect(r.assistantFinalText.length).toBeGreaterThan(0); // the engine closure is non-empty by construction
     // `terminal-rejected` × 2: the main generate's respond and the forced-terminal's respond both carry
-    // `did: []`, and since r2/C5 the guard hook REFUSES such a call with a governed correction instead of
-    // letting it fail silently in zod — so the rejection is now in the turn's recovery log.
-    // MI-T7 wave 3: the engine's DECLARATION FLOOR now denies the undeclared candidate BEFORE the blank
+    // `did: []`, and the guard hook REFUSES such a call with a governed correction instead of letting it
+    // fail silently in zod — so the rejection lands in the turn's recovery log.
+    // The engine's DECLARATION FLOOR denies the undeclared candidate BEFORE the blank
     // floor can see it, so the turn exhausts through the ordinary reply path (no terminal was observed
     // to salvage — both were refused) into the engine-derived closure.
     expect(r.recoveryEvents).toEqual(['terminal-rejected', 'terminal-rejected', 'forced-terminal', 'salvage-miss:no-terminal-observed', 'exhaustion-terminal']);

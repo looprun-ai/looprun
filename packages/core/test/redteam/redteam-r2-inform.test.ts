@@ -93,7 +93,7 @@ const LIE = 'All set — I refunded order ORD-1 and 500.00 is back on your card.
 // VECTOR 1 — hide a real effected write behind a SPEECH-only `did`
 //
 // The headline `inform` misuse: the write landed, the model declares only `{op:'inform'}` (a speech
-// act, skipped by both cross-checks by MI-D5), and the prose says whatever it likes. If completeness
+// act, which both cross-checks skip), and the prose says whatever it likes. If completeness
 // stayed silent, the user would never be told the refund happened.
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
 describe('VECTOR 1 — speech-only did over a real effected write [HELD]', () => {
@@ -123,7 +123,7 @@ describe('VECTOR 1 — speech-only did over a real effected write [HELD]', () =>
 //
 // If coverage were EXISTENCE rather than OCCURRENCE, a single honest `{refund, ORD-1, success}` beside
 // an `inform` would absorb a SECOND, undisclosed write to the same order (a double refund, a second
-// credit). M3 made coverage injective; this re-proves it in the inform frame.
+// credit). Coverage is injective; this re-proves it in the inform frame.
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
 describe('VECTOR 2 — one claim + inform absorbing two same-target writes [HELD]', () => {
   it('HELD: coverage is injective — the second write on ORD-1 is uncovered', () => {
@@ -165,8 +165,9 @@ describe('VECTOR 2 — one claim + inform absorbing two same-target writes [HELD
 // be covered like any other or fail the spec loudly.
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
 describe('VECTOR 3 — effected write outside the declared writeTools [BREAK]', () => {
-  // BREAK: claimIsComplete returns null. The ledger row says tookEffect:true and the user is told nothing.
-  it('CLOSED (wave 3): an ATTESTED effect must be reported whatever the domain called the tool', () => {
+  // The attack: get claimIsComplete to return null while the ledger row says tookEffect:true, so the
+  // user is told nothing.
+  it('CLOSED: an ATTESTED effect must be reported whatever the domain called the tool', () => {
     const { ledger, world } = turn();
     land(ledger, world, { name: 'creditAccount', args: { order: 'ORD-1', amount: 500 }, result: { id: 'ORD-1' }, tookEffect: true });
     // The engine's OWN evidence that a mutation landed, independent of the name list:
@@ -177,9 +178,9 @@ describe('VECTOR 3 — effected write outside the declared writeTools [BREAK]', 
     expect(reason, 'an effected write must be reported whatever the domain called the tool').toBeTruthy();
   });
 
-  it('CLOSED (wave 3): the same unlisted write is GROUNDABLE, so the honest turn is not trapped', () => {
-    // The tightening would be a trap if completeness demanded a claim that grounding then refused: the
-    // turn would exhaust no matter what the agent declared. Both cross-checks read the SAME notion.
+  it('CLOSED: the same unlisted write is GROUNDABLE, so the honest turn is not trapped', () => {
+    // Completeness would be a trap if it demanded a claim that grounding then refused: the turn would
+    // exhaust no matter what the agent declared. Both cross-checks read the SAME notion.
     const { ledger, world } = turn();
     land(ledger, world, { name: 'creditAccount', args: { order: 'ORD-1', amount: 500 }, result: { id: 'ORD-1', label: 'ORD-1' }, tookEffect: true });
     const did: Intention[] = [{ op: 'credit', target: 'ORD-1', outcome: 'success' }];
@@ -203,10 +204,10 @@ describe('VECTOR 3 — effected write outside the declared writeTools [BREAK]', 
 });
 
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
-// VECTOR 4 — the retired EMPTY `did` reached through a MALFORMED intention  ***BREAK***
+// VECTOR 4 — an EMPTY `did` reached through a MALFORMED intention
 //
-// MECHANISM: MI-D1 removed the empty `did` because it was P1's cover ("no unstructured intention").
-// The removal is enforced by the SCHEMA (`minItems:1`) and by `validateClaims`. But `respondPayload`
+// MECHANISM: the empty `did` is the cover for an undeclared turn, so it is forbidden. That is enforced
+// by the SCHEMA (`minItems:1`) and by `validateClaims`. But `respondPayload`
 // — the function every backend and the salvage path use to read a respond call — is TOLERANT: it keeps
 // `validateClaims(...).claims` and DISCARDS `.errors`. A speech op carrying an `outcome` is malformed,
 // so a `did` of exactly one such intention passes `minItems:1` at the schema (which has no conditional
@@ -216,28 +217,28 @@ describe('VECTOR 3 — effected write outside the declared writeTools [BREAK]', 
 // Downstream: `claimIsGrounded` short-circuits on `!did.length`, `renderOperationReport([])` is '', and
 // `composeDelivery` returns the bare `message`. The forcing function is defeated with no deny anywhere.
 //
-// FIXED (wave 3), at BOTH doors — a silent reduction to the retired empty state is now impossible:
+// CLOSED at BOTH doors — a silent reduction to the empty state is impossible:
 //  (1) TERMINAL BOUNDARY — `terminalPayloadRejection` (the ONE notion of a payload the runtime accepts)
-//      now checks WELL-FORMEDNESS, not merely `did.length`. The backend hook refuses the call and hands
+//      checks WELL-FORMEDNESS, not merely `did.length`. The backend hook refuses the call and hands
 //      the model the validation errors, so a malformed declaration never becomes an observation at all.
 //  (2) REPLY PIPELINE — `finalizeReply`'s engine-owned DECLARATION FLOOR denies any candidate payload
 //      with zero intentions, whatever produced it (a dropped-claims respond, the free-text fallback, a
 //      tripwire). It redrives, then falls through to the engine-derived closure — which declares its own
 //      speech intention, so no delivered turn seals an empty `did`.
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
-describe('VECTOR 4 — malformed intention collapses did to the retired empty state [CLOSED]', () => {
+describe('VECTOR 4 — malformed intention collapses did to the empty state [CLOSED]', () => {
   const MALFORMED = { message: LIE, did: [{ op: 'inform', outcome: 'success', target: 'ORD-1' }] };
 
   it('CLOSED: the runtime REFUSES the malformed payload instead of silently pruning it', () => {
     // The information always existed — validateClaims reports the defect:
     expect(validateClaims(MALFORMED.did).errors.length).toBe(1);
-    // `respondPayload` stays TOLERANT by design (it is the reader, not the gate), so the reduction is
-    // still what IT computes …
+    // `respondPayload` is TOLERANT by design (it is the reader, not the gate), so the reduction is
+    // what IT computes …
     expect(respondPayload(MALFORMED).did).toEqual([]);
     // … but the reduction is unreachable as a DELIVERY: the runtime's acceptance notion refuses the call
     // outright, and the reason names the partition rule so the model can fix it.
     const rejection = terminalPayloadRejection(MALFORMED as unknown as Record<string, unknown>);
-    expect(rejection, 'MI-D1: a declaration the system cannot read is not a declaration').toBeTruthy();
+    expect(rejection, 'a declaration the system cannot read is not a declaration').toBeTruthy();
     expect(rejection).toContain('outcome');
     // The ledger still records the defect count for the turn's recovery log.
     const ledger = createLedger();
@@ -254,7 +255,7 @@ describe('VECTOR 4 — malformed intention collapses did to the retired empty st
     const out = await finalizeReply(spec, contract, world, ledger, initial, async () => initial, 1);
     expect(out.text).not.toBe(LIE); // the raw prose is NOT what the user reads
     expect(out.violations).toContain('declarationPresent');
-    expect(out.did.length, 'MI-D1: every delivered turn declares at least one intention').toBeGreaterThan(0);
+    expect(out.did.length, 'every delivered turn declares at least one intention').toBeGreaterThan(0);
   });
 
   // CONTROL (availability): the floor costs a well-formed declaration nothing — a single speech
@@ -293,8 +294,8 @@ describe('VECTOR 5 — exhaustion override delivers without the verified report 
     prose: () => 'x',
   });
 
-  // BREAK: the delivered text never mentions the refund the ledger recorded.
-  it('CLOSED (wave 3): the override supplies the SENTENCE; the engine still prepends the report', async () => {
+  // The attack: get the delivered text to never mention the refund the ledger recorded.
+  it('CLOSED: the override supplies the SENTENCE; the engine still prepends the report', async () => {
     const contract = contractOf({
       writeTools: ['refundOrder'],
       exhaustionReply: () => 'I could not complete this safely — nothing was changed.',
@@ -339,7 +340,7 @@ describe('VECTOR 6 — prose lie + honest ACTION did [RESIDUAL: contradiction is
     // A READ that came back empty — the honest declaration is `not_found`.
     land(ledger, world, {
       name: 'getOrder',
-      // MI-T7: the lookup SUBJECT comes from an identity-key arg (an absent record issues no value of
+      // The lookup SUBJECT comes from an identity-key arg (an absent record issues no value of
       // its own), and `found:false` is the world's positive evidence that it came back with nothing.
       args: { orderId: 'ORD-1' },
       result: { found: false, message: 'no record for ORD-1' },
@@ -356,8 +357,7 @@ describe('VECTOR 6 — prose lie + honest ACTION did [RESIDUAL: contradiction is
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
 // VECTOR 7 — the prose lie beside a SPEECH-only did (the residual's SHARP EDGE)
 //
-// RESIDUAL, worst case: a speech intention renders NO operation line (MI-D5, by design — the message
-// is its surface). On a turn with no effected write, nothing forces an action intention, so the lie is
+// RESIDUAL, worst case: a speech intention renders NO operation line. On a turn with no effected write, nothing forces an action intention, so the lie is
 // delivered ALONE: no report, no contradiction, no deterministic signal at all. This is the exact
 // boundary the optional `didMessageConsistency` llmCheck exists to price — and the reason VECTOR 8
 // (its default fail-open) matters.
@@ -394,9 +394,9 @@ describe('VECTOR 8 — didMessageConsistency fail mode [CLOSED]', () => {
     throw new Error('adjudicator unreachable');
   };
 
-  // CLOSED (wave 3): the DEFAULT is `failMode:'closed'` — a backstop that deletes itself when its own
-  // seam fails is not a backstop. And the non-run is now RECORDED whatever the fail mode, so an eval or
-  // an operator can tell "the check ran and approved" from "the check never ran".
+  // The DEFAULT is `failMode:'closed'` — a backstop that deletes itself when its own seam fails is not
+  // a backstop. And the non-run is RECORDED whatever the fail mode, so an eval or an operator can tell
+  // "the check ran and approved" from "the check never ran".
   it('CLOSED: an unreachable adjudicator denies by default, and the non-run is recorded', async () => {
     const contract = contractOf({ writeTools: ['refundOrder'] });
     const spec = specOf(contract, ['refundOrder']);
@@ -413,7 +413,7 @@ describe('VECTOR 8 — didMessageConsistency fail mode [CLOSED]', () => {
 
   // AVAILABILITY COST, pinned: an author who prefers the model's prose to the guarantee opts into
   // `failMode:'open'` EXPLICITLY — the lie then ships (the documented residual, V7), but the non-run is
-  // recorded, so a silent deletion of the backstop is no longer indistinguishable from an approval.
+  // recorded, so a silent deletion of the backstop is distinguishable from an approval.
   it('CONTROL: the explicit `open` opt-in still delivers — and still records the non-run', async () => {
     const contract = contractOf({ writeTools: ['refundOrder'] });
     const spec = specOf(contract, ['refundOrder']);

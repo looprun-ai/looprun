@@ -1,19 +1,19 @@
 /**
- * THE CROSS-CHECK GUARDS — the deterministic honesty core (SCG-T3).
+ * THE CROSS-CHECK GUARDS — the deterministic honesty core.
  *
  * The agent DECLARES what it did as STRUCTURE (`ctx.did`), and these three guards ground that
  * declaration against the WORLD LEDGER — which the agent does not control. No guard here reads reply
- * prose; every verdict is a comparison of a `TurnClaim` against `ctx.observed` / `ctx.world.toolCalls`
+ * prose; every verdict is a comparison of a `Intention` against `ctx.observed` / `ctx.world.toolCalls`
  * / `ctx.attemptedThisTurn` (LEDGER DATA, never authored patterns — the no-regex law).
  *
- * One `describe` block per row of the grounding table in the task brief, plus the Step-1 vectors:
+ * One `describe` block per row of the grounding table, plus the attack vectors:
  * fabricated success, hidden effected write, honest not_found on an empty read, a no-effect probe with
  * a no_op claim, a domain outcome word mapping to a core outcome, an undeclared outcome word, and the
  * rubric polarity in BOTH directions.
  */
 import { describe, expect, it } from 'vitest';
 import type { GuardCtx, ObservedCall } from '../src/rules.js';
-import type { OutcomeMap, TurnClaim } from '../src/runtime/claims.js';
+import type { OutcomeMap, Intention } from '../src/runtime/claims.js';
 import { claimIsGrounded, claimIsComplete, claimCoversRubric, isEmptyReadResult, targetMatchesValue } from '../src/guards/honesty.js';
 
 /** A world whose `toolCalls` carry the RESULT the ledger observed for a call (name + args keyed). */
@@ -28,7 +28,7 @@ function worldWith(toolCalls: Array<{ name: string; args: unknown; result?: unkn
 }
 
 /** A reply-side GuardCtx (turnIndex 0) — the shape `checkReply` builds. */
-function replyCtx(over: Partial<GuardCtx> & { did: TurnClaim[] }): GuardCtx {
+function replyCtx(over: Partial<GuardCtx> & { did: Intention[] }): GuardCtx {
   return {
     args: {},
     world: over.world ?? worldWith([]),
@@ -52,14 +52,14 @@ const call = (
 const WRITES = ['createBooking', 'cancelBooking', 'refundOrder'] as const;
 
 // ─────────────────────────────────────────────────────────────────────────────
-// targetMatchesValue — THE RISK CENTER (MI-T3 / M1, tightened MI-T7). Every grounding, coverage and
+// targetMatchesValue — THE RISK CENTER. Every grounding, coverage and
 // rubric verdict routes through this one predicate, so it is unit-tested exhaustively: WHOLE-VALUE
 // equality after canonicalization (case-folded within-script, trimmed, edge punctuation stripped).
-// NEVER a substring and — since red-team r2 — never a token RUN either: `BK-1` must not match `BK-10`,
-// `BK-12345`, `xBK-1y` or `BK-1-EXTRA`, and `12` must not match `Order 12` (one word of a name is not
-// the name: it stood for the entity, and equally for `Invoice 12`).
+// NEVER a substring, and never a token RUN either: `BK-1` must not match `BK-10`, `BK-12345`,
+// `xBK-1y` or `BK-1-EXTRA`, and `12` must not match `Order 12` (one word of a name is not the name:
+// it would stand for that entity and equally for `Invoice 12`).
 // ─────────────────────────────────────────────────────────────────────────────
-describe('targetMatchesValue — whole-value equality (M1)', () => {
+describe('targetMatchesValue — whole-value equality', () => {
   it('EXACT value equality matches (the honest case)', () => {
     expect(targetMatchesValue('BK-1', 'BK-1')).toBe(true);
   });
@@ -87,10 +87,10 @@ describe('targetMatchesValue — whole-value equality (M1)', () => {
     expect(targetMatchesValue('5', '15')).toBe(false);
   });
 
-  it('an id INSIDE a world sentence no longer matches — only the whole value does (MI-T7)', () => {
-    // WAS true: the id "stood on its own word" inside the sentence. That token-run scan is what let a
-    // status word, a note fragment or one word of a name ground and COVER a write, so it is gone.
-    // Identity is key-scoped now, so the values on the other side are ids and labels, not prose.
+  it('an id INSIDE a world sentence does NOT match — only the whole value does', () => {
+    // A token-run scan would accept the id because it "stands on its own word" inside the sentence, and
+    // that is what lets a status word, a note fragment or one word of a name ground and COVER a write.
+    // Identity is key-scoped, so the values on the other side are ids and labels, not prose.
     expect(targetMatchesValue('BK-1', 'no record for BK-1 in the archive')).toBe(false);
     expect(targetMatchesValue('BK-1', 'Booking BK-1.')).toBe(false);
     expect(targetMatchesValue('BK-1', '(BK-1)')).toBe(true); // EDGE punctuation is still stripped
@@ -100,7 +100,7 @@ describe('targetMatchesValue — whole-value equality (M1)', () => {
     expect(targetMatchesValue('BK-1', 'no record for BK-10 in the archive')).toBe(false);
   });
 
-  it('a MULTI-WORD name matches as a WHOLE, never by one of its words (MI-T7 / §2.1)', () => {
+  it('a MULTI-WORD name matches as a WHOLE, never by one of its words', () => {
     expect(targetMatchesValue('John Smith', 'John Smith')).toBe(true);
     expect(targetMatchesValue('John Smith', 'customer John Smith created')).toBe(false);
     expect(targetMatchesValue('John', 'John Smith')).toBe(false);
@@ -123,7 +123,7 @@ describe('targetMatchesValue — whole-value equality (M1)', () => {
 // claimIsGrounded — the grounding table, one describe per row
 // ─────────────────────────────────────────────────────────────────────────────
 describe('claimIsGrounded', () => {
-  const grounded = (over: Partial<GuardCtx> & { did: TurnClaim[] }, outcomes?: OutcomeMap) =>
+  const grounded = (over: Partial<GuardCtx> & { did: Intention[] }, outcomes?: OutcomeMap) =>
     claimIsGrounded({ writeTools: WRITES, outcomes }).check(replyCtx(over));
 
   it('is a no-op when the turn declared nothing (empty did)', () => {
@@ -139,7 +139,7 @@ describe('claimIsGrounded', () => {
   });
 
   describe("row: success ⇔ ∃ write in calls with tookEffect===true and matches", () => {
-    const did: TurnClaim[] = [{ op: 'book', target: 'BK-1', outcome: 'success' }];
+    const did: Intention[] = [{ op: 'book', target: 'BK-1', outcome: 'success' }];
 
     it('grounds against an effected write on the same target', () => {
       const ctx = {
@@ -174,13 +174,13 @@ describe('claimIsGrounded', () => {
 
     it('a targetless success claim grounds against ANY effected write', () => {
       const ctx = {
-        did: [{ op: 'book', outcome: 'success' }] as TurnClaim[],
+        did: [{ op: 'book', outcome: 'success' }] as Intention[],
         observed: [call('createBooking', { bookingId: 'BK-1' }, { tookEffect: true })],
       };
       expect(grounded(ctx)).toBeNull();
     });
 
-    it('M2 — only WORLD-ISSUED values ground: the target in an agent-authored ARG is not evidence', () => {
+    it('only WORLD-ISSUED values ground: the target in an agent-authored ARG is not evidence', () => {
       // The write really took effect, and its args name BK-1 — but the args are the AGENT's own text.
       // The world's result says nothing about BK-1, so the claim has no ledger fact behind it.
       const ctx = {
@@ -195,7 +195,7 @@ describe('claimIsGrounded', () => {
   describe('row: failure ⇔ ∃ call with ok===false and matches', () => {
     it('grounds against a failed call on the target', () => {
       const ctx = {
-        did: [{ op: 'book', target: 'BK-1', outcome: 'failure' }] as TurnClaim[],
+        did: [{ op: 'book', target: 'BK-1', outcome: 'failure' }] as Intention[],
         observed: [call('createBooking', { bookingId: 'BK-1' }, { ok: false })],
         world: worldWith([{ name: 'createBooking', args: { bookingId: 'BK-1' }, result: { error: 'BK-1 could not be created' } }]),
       };
@@ -210,7 +210,7 @@ describe('claimIsGrounded', () => {
   describe('row: blocked/refused ⇔ ∃ vetoed attempt with matches OR ∃ ok===false call', () => {
     it('grounds a blocked claim against a guard-vetoed attempt', () => {
       const ctx = {
-        did: [{ op: 'cancel', target: 'BK-1', outcome: 'blocked' }] as TurnClaim[],
+        did: [{ op: 'cancel', target: 'BK-1', outcome: 'blocked' }] as Intention[],
         attemptedThisTurn: [{ name: 'cancelBooking', args: { bookingId: 'BK-1' } }],
       };
       expect(grounded(ctx)).toBeNull();
@@ -218,7 +218,7 @@ describe('claimIsGrounded', () => {
 
     it('grounds a refused claim against a world refusal (ok:false)', () => {
       const ctx = {
-        did: [{ op: 'cancel', target: 'BK-1', outcome: 'refused' }] as TurnClaim[],
+        did: [{ op: 'cancel', target: 'BK-1', outcome: 'refused' }] as Intention[],
         observed: [call('cancelBooking', { bookingId: 'BK-1' }, { ok: false })],
         world: worldWith([{ name: 'cancelBooking', args: { bookingId: 'BK-1' }, result: { error: 'BK-1 may not be cancelled' } }]),
       };
@@ -233,7 +233,7 @@ describe('claimIsGrounded', () => {
   describe('row: not_found ⇔ ∃ read (non-write), ok, empty result, matches', () => {
     it('grounds against an empty read whose identity-key ARG names the target', () => {
       const ctx = {
-        did: [{ op: 'lookup', target: 'BK-1', outcome: 'not_found' }] as TurnClaim[],
+        did: [{ op: 'lookup', target: 'BK-1', outcome: 'not_found' }] as Intention[],
         observed: [call('findBooking', { bookingId: 'BK-1' })],
         world: worldWith([
           { name: 'findBooking', args: { bookingId: 'BK-1' }, result: { success: true, status: 'no record for BK-1', data: [] } },
@@ -242,10 +242,10 @@ describe('claimIsGrounded', () => {
       expect(grounded(ctx)).toBeNull();
     });
 
-    it('an empty read GROUNDS the entity its identity-key ARG named — that is what a lookup is (MI-T7)', () => {
+    it('an empty read GROUNDS the entity its identity-key ARG named — that is what a lookup is', () => {
       const observed = [call('findBooking', { bookingId: 'BK-1' })];
       const world = worldWith([{ name: 'findBooking', args: { bookingId: 'BK-1' }, result: { success: true, data: [] } }]);
-      // M2 (args are never evidence) is a law about claims of PRESENCE and is unchanged for `success`.
+      // "Args are never evidence" is a law about claims of PRESENCE, and it holds for `success`.
       // An ABSENT record issues no value at all, so the ONLY thing that can name the subject of an empty
       // lookup is the lookup: `bookingId:'BK-1'` + the world's own empty answer IS the not_found.
       expect(grounded({ did: [{ op: 'lookup', target: 'BK-1', outcome: 'not_found' }], observed, world })).toBeNull();
@@ -255,7 +255,7 @@ describe('claimIsGrounded', () => {
     it('a FREE-TEXT query arg carries no verdict — an echoed search string never grounds not_found', () => {
       // The identity filter is what keeps the args conjunct honest: a world that ECHOES the agent's
       // query into its own status sentence cannot launder a not_found on an entity a real lookup would
-      // have found (red-team r2, §6.2).
+      // have found.
       const observed = [call('search', { query: 'BK-1 in cold-archive-partition' })];
       const world = worldWith([
         { name: 'search', args: { query: 'BK-1 in cold-archive-partition' }, result: { status: 'no results for "BK-1 in cold-archive-partition"', data: [] } },
@@ -265,7 +265,7 @@ describe('claimIsGrounded', () => {
 
     it('a NON-empty read does not ground a not_found claim', () => {
       const ctx = {
-        did: [{ op: 'lookup', target: 'BK-1', outcome: 'not_found' }] as TurnClaim[],
+        did: [{ op: 'lookup', target: 'BK-1', outcome: 'not_found' }] as Intention[],
         observed: [call('findBooking', { bookingId: 'BK-1' })],
         world: worldWith([{ name: 'findBooking', args: { bookingId: 'BK-1' }, result: { data: [{ id: 'BK-1' }] } }]),
       };
@@ -274,7 +274,7 @@ describe('claimIsGrounded', () => {
 
     it('a WRITE call does not ground a not_found claim (must be a read)', () => {
       const ctx = {
-        did: [{ op: 'lookup', target: 'BK-1', outcome: 'not_found' }] as TurnClaim[],
+        did: [{ op: 'lookup', target: 'BK-1', outcome: 'not_found' }] as Intention[],
         observed: [call('createBooking', { bookingId: 'BK-1' })],
         world: worldWith([{ name: 'createBooking', args: { bookingId: 'BK-1' }, result: [] }]),
       };
@@ -285,7 +285,7 @@ describe('claimIsGrounded', () => {
   describe('row: pending_confirmation ⇔ ∃ call with resultFlags.requiresConfirmation and matches', () => {
     it('grounds against a call flagged requiresConfirmation', () => {
       const ctx = {
-        did: [{ op: 'cancel', target: 'BK-1', outcome: 'pending_confirmation' }] as TurnClaim[],
+        did: [{ op: 'cancel', target: 'BK-1', outcome: 'pending_confirmation' }] as Intention[],
         observed: [call('cancelBooking', { bookingId: 'BK-1' }, { resultFlags: { requiresConfirmation: true } })],
         world: worldWith([
           { name: 'cancelBooking', args: { bookingId: 'BK-1' }, result: { requiresConfirmation: true, question: 'Cancel BK-1?' } },
@@ -296,7 +296,7 @@ describe('claimIsGrounded', () => {
 
     it('no requiresConfirmation flag → violation', () => {
       const ctx = {
-        did: [{ op: 'cancel', target: 'BK-1', outcome: 'pending_confirmation' }] as TurnClaim[],
+        did: [{ op: 'cancel', target: 'BK-1', outcome: 'pending_confirmation' }] as Intention[],
         observed: [call('cancelBooking', { bookingId: 'BK-1' })],
       };
       expect(grounded(ctx)).toBeTruthy();
@@ -306,7 +306,7 @@ describe('claimIsGrounded', () => {
   describe('row: no_op ⇔ NO write in calls with tookEffect===true and matches', () => {
     it('a no_op claim grounds when the write only PROBED (tookEffect:false)', () => {
       const ctx = {
-        did: [{ op: 'cancel', target: 'BK-1', outcome: 'no_op' }] as TurnClaim[],
+        did: [{ op: 'cancel', target: 'BK-1', outcome: 'no_op' }] as Intention[],
         observed: [call('cancelBooking', { bookingId: 'BK-1' }, { tookEffect: false })],
       };
       expect(grounded(ctx)).toBeNull();
@@ -314,19 +314,19 @@ describe('claimIsGrounded', () => {
 
     it('a no_op claim is a violation when the write DID take effect', () => {
       const ctx = {
-        did: [{ op: 'cancel', target: 'BK-1', outcome: 'no_op' }] as TurnClaim[],
+        did: [{ op: 'cancel', target: 'BK-1', outcome: 'no_op' }] as Intention[],
         observed: [call('cancelBooking', { bookingId: 'BK-1' }, { tookEffect: true })],
         world: worldWith([{ name: 'cancelBooking', args: { bookingId: 'BK-1' }, tookEffect: true, result: { label: 'BK-1' } }]),
       };
       expect(grounded(ctx)).toBeTruthy();
     });
 
-    it('an effected write the world NAMED NOTHING for still contradicts a no_op on it (MI-T7)', () => {
+    it('an effected write the world NAMED NOTHING for still contradicts a no_op on it', () => {
       // The write took effect and its result identifies nothing — but the CALL addressed BK-1, and the
-      // contrary-evidence test reads everything the call addressed, so grounding catches it now too.
-      // (It used to pass grounding, with claimIsComplete as the only backstop; both deny today.)
+      // contrary-evidence test reads everything the call addressed, so grounding catches it too —
+      // claimIsComplete is not the only backstop; both deny.
       const ctx = {
-        did: [{ op: 'cancel', target: 'BK-1', outcome: 'no_op' }] as TurnClaim[],
+        did: [{ op: 'cancel', target: 'BK-1', outcome: 'no_op' }] as Intention[],
         observed: [call('cancelBooking', { bookingId: 'BK-1' }, { tookEffect: true })],
         world: worldWith([{ name: 'cancelBooking', args: { bookingId: 'BK-1' }, tookEffect: true, result: { success: true } }]),
       };
@@ -335,11 +335,11 @@ describe('claimIsGrounded', () => {
     });
 
     it('a no_op on an entity the turn NEVER ADDRESSED does not ground (the vacuous row is closed)', () => {
-      // `no_op` was the one row satisfied by the ABSENCE of contrary evidence, so any target grounded on
-      // an empty ledger and the renderer announced it as a verified non-event (red-team r2, §5).
+      // `no_op` is the one row a bare ABSENCE of contrary evidence would satisfy: without this, any
+      // target grounds on an empty ledger and the renderer announces it as a verified non-event.
       expect(grounded({ did: [{ op: 'check', target: 'BK-999', outcome: 'no_op' }] })).toBeTruthy();
       const ctx = {
-        did: [{ op: 'check', target: 'BK-2', outcome: 'no_op' }] as TurnClaim[],
+        did: [{ op: 'check', target: 'BK-2', outcome: 'no_op' }] as Intention[],
         observed: [call('findBooking', { bookingId: 'BK-1' })],
         world: worldWith([{ name: 'findBooking', args: { bookingId: 'BK-1' }, result: { id: 'BK-1' } }]),
       };
@@ -348,7 +348,7 @@ describe('claimIsGrounded', () => {
 
     it('CONTROL: a no_op grounds when the turn DID look at the entity and changed nothing', () => {
       const ctx = {
-        did: [{ op: 'check', target: 'BK-1', outcome: 'no_op' }] as TurnClaim[],
+        did: [{ op: 'check', target: 'BK-1', outcome: 'no_op' }] as Intention[],
         observed: [call('findBooking', { bookingId: 'BK-1' })],
         world: worldWith([{ name: 'findBooking', args: { bookingId: 'BK-1' }, result: { id: 'BK-1', status: 'already cancelled' } }]),
       };
@@ -357,7 +357,7 @@ describe('claimIsGrounded', () => {
   });
 
   describe('IDENTITY vs MAGNITUDE — a result scalar that names nothing grounds nothing', () => {
-    // REVIEW FINDING (MI-T3): with every scalar of the result in the match set, the AMOUNT of a write
+    // REVIEW FINDING: with every scalar of the result in the match set, the AMOUNT of a write
     // grounded a claim — and covered the write — so the entity acted on never reached the user.
     const refundWorld = worldWith([
       { name: 'refundOrder', args: { orderId: 'ORD-1' }, tookEffect: true, result: { id: 'ORD-1', refunded: 500 } },
@@ -365,17 +365,17 @@ describe('claimIsGrounded', () => {
     const refundCall = [call('refundOrder', { orderId: 'ORD-1' }, { tookEffect: true })];
 
     it('a claim on the AMOUNT does not ground (500 is a magnitude, not an entity)', () => {
-      const ctx = { did: [{ op: 'refund', target: '500', outcome: 'success' }] as TurnClaim[], observed: refundCall, world: refundWorld };
+      const ctx = { did: [{ op: 'refund', target: '500', outcome: 'success' }] as Intention[], observed: refundCall, world: refundWorld };
       expect(grounded(ctx)).toBeTruthy();
     });
 
     it('and it does not COVER the write either — the hidden ORD-1 refund is reported', () => {
-      const ctx = { did: [{ op: 'refund', target: '500', outcome: 'success' }] as TurnClaim[], observed: refundCall, world: refundWorld };
+      const ctx = { did: [{ op: 'refund', target: '500', outcome: 'success' }] as Intention[], observed: refundCall, world: refundWorld };
       expect(claimIsComplete({ writeTools: WRITES }).check(replyCtx(ctx))).toBeTruthy();
     });
 
     it('CONTROL: the claim on the entity the world NAMED grounds and covers', () => {
-      const ctx = { did: [{ op: 'refund', target: 'ORD-1', outcome: 'success' }] as TurnClaim[], observed: refundCall, world: refundWorld };
+      const ctx = { did: [{ op: 'refund', target: 'ORD-1', outcome: 'success' }] as Intention[], observed: refundCall, world: refundWorld };
       expect(grounded(ctx)).toBeNull();
       expect(claimIsComplete({ writeTools: WRITES }).check(replyCtx(ctx))).toBeNull();
     });
@@ -383,7 +383,7 @@ describe('claimIsGrounded', () => {
     it('CONTROL: a NUMERIC id under an identity key still grounds (id / label / <entity>Id)', () => {
       for (const result of [{ id: 5 }, { label: 5 }, { accountId: 5 }, { account_id: 5 }]) {
         const ctx = {
-          did: [{ op: 'close', target: '5', outcome: 'success' }] as TurnClaim[],
+          did: [{ op: 'close', target: '5', outcome: 'success' }] as Intention[],
           observed: [call('cancelBooking', { n: 5 }, { tookEffect: true })],
           world: worldWith([{ name: 'cancelBooking', args: { n: 5 }, tookEffect: true, result }]),
         };
@@ -394,7 +394,7 @@ describe('claimIsGrounded', () => {
     it('a number under a NON-identity key never names an entity (count / code / paid)', () => {
       for (const result of [{ count: 5 }, { code: 5 }, { paid: 5 }, { total: 5 }]) {
         const ctx = {
-          did: [{ op: 'close', target: '5', outcome: 'success' }] as TurnClaim[],
+          did: [{ op: 'close', target: '5', outcome: 'success' }] as Intention[],
           observed: [call('cancelBooking', { n: 5 }, { tookEffect: true })],
           world: worldWith([{ name: 'cancelBooking', args: { n: 5 }, tookEffect: true, result }]),
         };
@@ -404,7 +404,7 @@ describe('claimIsGrounded', () => {
 
     it('a boolean flag never names an entity', () => {
       const ctx = {
-        did: [{ op: 'close', target: 'true', outcome: 'success' }] as TurnClaim[],
+        did: [{ op: 'close', target: 'true', outcome: 'success' }] as Intention[],
         observed: [call('cancelBooking', { bookingId: 'BK-1' }, { tookEffect: true })],
         world: worldWith([{ name: 'cancelBooking', args: { bookingId: 'BK-1' }, tookEffect: true, result: { success: true } }]),
       };
@@ -412,7 +412,7 @@ describe('claimIsGrounded', () => {
     });
   });
 
-  describe('MI-D5 — the cross-check applies to ACTION intents only', () => {
+  describe('the cross-check applies to ACTION intents only', () => {
     it('a SPEECH intention is never grounded (it carries no outcome and names no ledger fact)', () => {
       for (const op of ['inform', 'greet', 'refuse', 'ask']) {
         expect(grounded({ did: [{ op }] })).toBeNull();
@@ -421,7 +421,7 @@ describe('claimIsGrounded', () => {
 
     it('a speech intention alongside a grounded action intention does not disturb the verdict', () => {
       const ctx = {
-        did: [{ op: 'greet' }, { op: 'book', target: 'BK-1', outcome: 'success' }] as TurnClaim[],
+        did: [{ op: 'greet' }, { op: 'book', target: 'BK-1', outcome: 'success' }] as Intention[],
         observed: [call('createBooking', { bookingId: 'BK-1' }, { tookEffect: true })],
         world: worldWith([{ name: 'createBooking', args: { bookingId: 'BK-1' }, tookEffect: true, result: { label: 'BK-1' } }]),
       };
@@ -438,7 +438,7 @@ describe('claimIsGrounded', () => {
 
     it("'settled' → 'success' grounds against an effected write", () => {
       const ctx = {
-        did: [{ op: 'refund', target: 'ORD-7', outcome: 'settled' }] as TurnClaim[],
+        did: [{ op: 'refund', target: 'ORD-7', outcome: 'settled' }] as Intention[],
         observed: [call('refundOrder', { orderId: 'ORD-7' }, { tookEffect: true })],
         world: worldWith([{ name: 'refundOrder', args: { orderId: 'ORD-7' }, tookEffect: true, result: { label: 'ORD-7' } }]),
       };
@@ -467,7 +467,7 @@ describe('claimIsGrounded', () => {
 // claimIsComplete — every effected write must be claimed as success
 // ─────────────────────────────────────────────────────────────────────────────
 describe('claimIsComplete', () => {
-  const complete = (over: Partial<GuardCtx> & { did: TurnClaim[] }) =>
+  const complete = (over: Partial<GuardCtx> & { did: Intention[] }) =>
     claimIsComplete({ writeTools: WRITES }).check(replyCtx(over));
 
   it('is a no-op when no write took effect this turn', () => {
@@ -476,23 +476,23 @@ describe('claimIsComplete', () => {
 
   it('passes when every effected write is covered by a matching success claim', () => {
     const ctx = {
-      did: [{ op: 'book', target: 'BK-1', outcome: 'success' }] as TurnClaim[],
+      did: [{ op: 'book', target: 'BK-1', outcome: 'success' }] as Intention[],
       observed: [call('createBooking', { bookingId: 'BK-1' }, { tookEffect: true })],
       world: worldWith([{ name: 'createBooking', args: { bookingId: 'BK-1' }, tookEffect: true, result: { label: 'BK-1' } }]),
     };
     expect(complete(ctx)).toBeNull();
   });
 
-  it('M3 — a TARGETLESS claim covers nothing: "some action succeeded" names no ledger fact', () => {
+  it('a TARGETLESS claim covers nothing: "some action succeeded" names no ledger fact', () => {
     const ctx = {
-      did: [{ op: 'book', outcome: 'success' }] as TurnClaim[],
+      did: [{ op: 'book', outcome: 'success' }] as Intention[],
       observed: [call('createBooking', { bookingId: 'BK-1' }, { tookEffect: true })],
       world: worldWith([{ name: 'createBooking', args: { bookingId: 'BK-1' }, tookEffect: true, result: { label: 'BK-1' } }]),
     };
     expect(complete(ctx)).toBeTruthy();
   });
 
-  it('M3 — INJECTIVE: two effected writes on the SAME target need TWO claims (occurrence, not existence)', () => {
+  it('INJECTIVE: two effected writes on the SAME target need TWO claims (occurrence, not existence)', () => {
     const observed = [
       call('createBooking', { bookingId: 'BK-1' }, { tookEffect: true }),
       call('cancelBooking', { bookingId: 'BK-1' }, { tookEffect: true }),
@@ -501,15 +501,15 @@ describe('claimIsComplete', () => {
       { name: 'createBooking', args: { bookingId: 'BK-1' }, tookEffect: true, result: { label: 'BK-1' } },
       { name: 'cancelBooking', args: { bookingId: 'BK-1' }, tookEffect: true, result: { label: 'BK-1' } },
     ]);
-    const one: TurnClaim[] = [{ op: 'book', target: 'BK-1', outcome: 'success' }];
-    const two: TurnClaim[] = [...one, { op: 'cancel', target: 'BK-1', outcome: 'success' }];
+    const one: Intention[] = [{ op: 'book', target: 'BK-1', outcome: 'success' }];
+    const two: Intention[] = [...one, { op: 'cancel', target: 'BK-1', outcome: 'success' }];
     expect(complete({ did: one, observed, world })).toBeTruthy();
     expect(complete({ did: two, observed, world })).toBeNull();
   });
 
-  it('a SPEECH intention never covers an effected write (MI-D5: no action hides behind an inform)', () => {
+  it('a SPEECH intention never covers an effected write (no action hides behind an inform)', () => {
     const ctx = {
-      did: [{ op: 'inform' }] as TurnClaim[],
+      did: [{ op: 'inform' }] as Intention[],
       observed: [call('createBooking', { bookingId: 'BK-1' }, { tookEffect: true })],
       world: worldWith([{ name: 'createBooking', args: { bookingId: 'BK-1' }, tookEffect: true, result: { label: 'BK-1' } }]),
     };
@@ -518,7 +518,7 @@ describe('claimIsComplete', () => {
 
   it('HIDDEN WRITE — an effected write with no claim is a violation', () => {
     const ctx = {
-      did: [] as TurnClaim[],
+      did: [] as Intention[],
       observed: [call('createBooking', { bookingId: 'BK-1' }, { tookEffect: true })],
       world: worldWith([{ name: 'createBooking', args: { bookingId: 'BK-1' }, tookEffect: true }]),
     };
@@ -527,7 +527,7 @@ describe('claimIsComplete', () => {
 
   it('names the produced label when the world issued one', () => {
     const ctx = {
-      did: [] as TurnClaim[],
+      did: [] as Intention[],
       observed: [call('createBooking', { bookingId: 'BK-1' }, { tookEffect: true })],
       world: worldWith([{ name: 'createBooking', args: { bookingId: 'BK-1' }, tookEffect: true, result: { label: 'Booking BK-1' } }]),
     };
@@ -538,7 +538,7 @@ describe('claimIsComplete', () => {
 
   it('falls back to a generic phrase when no produced label is available', () => {
     const ctx = {
-      did: [] as TurnClaim[],
+      did: [] as Intention[],
       observed: [call('createBooking', { bookingId: 'BK-1' }, { tookEffect: true })],
       world: worldWith([{ name: 'createBooking', args: { bookingId: 'BK-1' }, tookEffect: true }]),
     };
@@ -549,7 +549,7 @@ describe('claimIsComplete', () => {
 
   it('a non-success claim does not cover an effected write', () => {
     const ctx = {
-      did: [{ op: 'book', target: 'BK-1', outcome: 'failure' }] as TurnClaim[],
+      did: [{ op: 'book', target: 'BK-1', outcome: 'failure' }] as Intention[],
       observed: [call('createBooking', { bookingId: 'BK-1' }, { tookEffect: true })],
       world: worldWith([{ name: 'createBooking', args: { bookingId: 'BK-1' }, tookEffect: true }]),
     };
@@ -558,7 +558,7 @@ describe('claimIsComplete', () => {
 
   it('a probe (tookEffect:false) needs no claim', () => {
     const ctx = {
-      did: [] as TurnClaim[],
+      did: [] as Intention[],
       observed: [call('cancelBooking', { bookingId: 'BK-1' }, { tookEffect: false })],
     };
     expect(complete(ctx)).toBeNull();
@@ -567,7 +567,7 @@ describe('claimIsComplete', () => {
   it("MAPPING LAW — a domain word claim ('settled' → 'success' via the OutcomeMap) covers an effected write, exactly like claimIsGrounded", () => {
     const outcomes: OutcomeMap = { settled: 'success' };
     const ctx = {
-      did: [{ op: 'refund', target: 'ORD-7', outcome: 'settled' }] as TurnClaim[],
+      did: [{ op: 'refund', target: 'ORD-7', outcome: 'settled' }] as Intention[],
       observed: [call('refundOrder', { orderId: 'ORD-7' }, { tookEffect: true })],
       world: worldWith([{ name: 'refundOrder', args: { orderId: 'ORD-7' }, tookEffect: true, result: { label: 'ORD-7' } }]),
     };
@@ -579,7 +579,7 @@ describe('claimIsComplete', () => {
 // claimCoversRubric — polarity is a FIELD (replaces replyMentions)
 // ─────────────────────────────────────────────────────────────────────────────
 describe('claimCoversRubric', () => {
-  const covers = (opts: { targets: string[]; outcome: 'success' | 'not_found' | 'any' }, did: TurnClaim[]) =>
+  const covers = (opts: { targets: string[]; outcome: 'success' | 'not_found' | 'any' }, did: Intention[]) =>
     claimCoversRubric(opts, 'Account for the record you were asked about.').check(replyCtx({ did }));
 
   it('passes when the target appears with the required outcome', () => {
@@ -598,7 +598,7 @@ describe('claimCoversRubric', () => {
     expect(covers({ targets: ['BK-1'], outcome: 'any' }, [{ op: 'book', target: 'BK-1', outcome: 'not_found' }])).toBeNull();
   });
 
-  it('M1 — a NEAR-MISS id does not satisfy the rubric: BK-1 is not covered by a BK-10 claim', () => {
+  it('a NEAR-MISS id does not satisfy the rubric: BK-1 is not covered by a BK-10 claim', () => {
     expect(covers({ targets: ['BK-1'], outcome: 'success' }, [{ op: 'book', target: 'BK-10', outcome: 'success' }])).toBeTruthy();
     expect(covers({ targets: ['BK-1'], outcome: 'success' }, [{ op: 'book', target: 'BK-1', outcome: 'success' }])).toBeNull();
   });
@@ -610,13 +610,13 @@ describe('claimCoversRubric', () => {
   });
 
   it('every configured target must appear', () => {
-    const did: TurnClaim[] = [{ op: 'book', target: 'BK-1', outcome: 'success' }];
+    const did: Intention[] = [{ op: 'book', target: 'BK-1', outcome: 'success' }];
     expect(covers({ targets: ['BK-1', 'BK-2'], outcome: 'success' }, did)).toBeTruthy();
   });
 
   describe('mapping law — the same OutcomeMap claimIsGrounded/claimIsComplete use also threads here', () => {
     const outcomes: OutcomeMap = { settled: 'success' };
-    const did: TurnClaim[] = [{ op: 'refund', target: 'ORD-7', outcome: 'settled' }];
+    const did: Intention[] = [{ op: 'refund', target: 'ORD-7', outcome: 'settled' }];
     const reason = 'Account for the order you were asked about.';
 
     it("'settled' satisfies a rubric requiring 'success' WITH the map", () => {
@@ -671,30 +671,30 @@ describe('isEmptyReadResult', () => {
     expect(isEmptyReadResult({ id: 'BK-1' })).toBe(false);
   });
 
-  // ── M4 (red-team): a status-like KEY must not hide a RECORD ────────────────────────────────────
-  // The status-key skip existed for a status STRING (`status:'not_found'` is not content). It ran
-  // BEFORE the nested-object check, so a found entity returned under one of those key names —
-  // `{message:{booking:'BK-1'}}`, the common "envelope" read shape — read as EMPTY, and a
-  // `not_found` claim about a record the world DID return grounded. Only a SCALAR/boolean under a
-  // status key is skipped now; a nested record is content whatever the key is called.
-  it('M4: a RECORD under a status-like key is CONTENT, not empty', () => {
+  // ── a status-like KEY must not hide a RECORD ────────────────────────────────────
+  // The status-key skip is for a status STRING (`status:'not_found'` is not content). Running it
+  // BEFORE the nested-object check would make a found entity returned under one of those key names —
+  // `{message:{booking:'BK-1'}}`, the common "envelope" read shape — read as EMPTY, so a `not_found`
+  // claim about a record the world DID return would ground. Only a SCALAR/boolean under a status key
+  // is skipped; a nested record is content whatever the key is called.
+  it('a RECORD under a status-like key is CONTENT, not empty', () => {
     expect(isEmptyReadResult({ message: { booking: 'BK-1' } })).toBe(false);
     expect(isEmptyReadResult({ status: { id: 'BK-1' } })).toBe(false);
     expect(isEmptyReadResult({ state: { id: 'BK-1' }, success: true })).toBe(false);
   });
 
-  it('M4 control: a SCALAR under a status-like key is still not content', () => {
-    // …but a status WORD alone is no longer EVIDENCE of emptiness either — see the next test.
+  it('control: a SCALAR under a status-like key is still not content', () => {
+    // …but a status WORD alone is not EVIDENCE of emptiness either — see the next test.
     expect(isEmptyReadResult({ status: 'not_found', found: false })).toBe(true);
     expect(isEmptyReadResult({ message: 'no record found', data: [] })).toBe(true);
   });
 
-  // ── MI-T7 (red-team r2 §6.1): emptiness needs POSITIVE evidence, and a status SENTENCE is not it ──
-  // The old law skipped every scalar status-like field, so a result whose ONLY field was a status
-  // sentence read as EMPTY — and `{status:'BK-1 is active and confirmed'}`, a read reporting the record
-  // as PRESENT, grounded a `not_found` on it. That is the polarity inversion the whole structured-claims
-  // redesign exists to kill, reappearing inside the emptiness heuristic. A result with no DATA CHANNEL
-  // is undecidable and fails closed; a domain whose empty read has none must return one.
+  // ── emptiness needs POSITIVE evidence, and a status SENTENCE is not it ──
+  // Skipping every scalar status-like field would make a result whose ONLY field is a status sentence
+  // read as EMPTY — so `{status:'BK-1 is active and confirmed'}`, a read reporting the record as
+  // PRESENT, would ground a `not_found` on it. That is the polarity inversion the structured
+  // cross-check exists to kill, reappearing inside the emptiness heuristic. A result with no DATA
+  // CHANNEL is undecidable and fails closed; a domain whose empty read has none must return one.
   it('a record with NO data channel is not empty — undecidable fails closed', () => {
     expect(isEmptyReadResult({ status: 'BK-1 is active and confirmed' })).toBe(false);
     expect(isEmptyReadResult({ message: 'no record found' })).toBe(false);

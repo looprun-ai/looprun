@@ -32,10 +32,9 @@ const call = (name: string, over: Partial<ObservedCall> = {}): ObservedCall => (
   ...over,
 });
 
-// NOTE (no-regex law, 2026-08-02): the regex-param honesty guards audited here — noFalseFailureClaim,
-// noUngroundedRegulatedFigure, destructiveClaimRequiresSuccess, noCompetitorClaim, noInstructionFromData,
-// noOutOfSurfaceActionClaim, noFabricatedSuccess, minimalDisclosure — are DELETED (text judgment is
-// llmCheck's job), so their audit blocks are gone. What remains audits the STRUCTURAL guards.
+// This audit covers the STRUCTURAL guards — the kinds that decide on structure, where a prose↔check
+// divergence is a real defect. Text judgment is `llmCheck`'s job and is stated as a rubric, not audited
+// against a pattern.
 
 // ─────────────────────────────────────────────────────────────────────────────
 // confirmFirst via:'ask': a VETOED attempt must not unlock the next turn (all STRUCTURAL)
@@ -44,9 +43,9 @@ describe("confirmFirst({ via: 'ask' }) is SUCCESS-KEYED", () => {
   const guard = (): Guard => confirmFirst({ via: 'ask' });
 
   it('THE NEGATIVE PROOF: a turn-1 attempt VETOED BY THIS GUARD does not unlock turn 2', async () => {
-    // The self-defeat: the guard denies purgeAll in turn 1, the backend records that veto as
-    // {ok:false}, and pre-fix the very same record satisfied the "probed earlier" disjunct — so the
-    // destructive action ran in turn 2 with the user never asked. Two turns to bypass the gate.
+    // The self-defeat this rules out: the guard denies purgeAll in turn 1 and the backend records that
+    // veto as {ok:false}. If that record satisfied the "probed earlier" disjunct, the destructive action
+    // would run in turn 2 with the user never asked — two turns to bypass the gate.
     const ctx = craftCtx({
       tool: 'purgeAll',
       observed: [call('purgeAll', { ok: false, turnIndex: 0 })],
@@ -64,7 +63,7 @@ describe("confirmFirst({ via: 'ask' }) is SUCCESS-KEYED", () => {
     expect(await guard().check(ctx)).toBeTruthy();
   });
 
-  it('REGRESSION FLOOR: an earlier-turn ask intention still unlocks — from the SEALED turn (r2/C2)', async () => {
+  it('REGRESSION FLOOR: an earlier-turn ask intention still unlocks — from the SEALED turn', async () => {
     const ctx = craftCtx({
       tool: 'purgeAll',
       history: [{
@@ -77,8 +76,8 @@ describe("confirmFirst({ via: 'ask' }) is SUCCESS-KEYED", () => {
   });
 
   it('no-regex law: a prior-turn plain respond (no ask intention) does NOT unlock — only an ask event/probe do', async () => {
-    // The former askRe disjunct is retired: a prose confirmation-ask no longer unlocks; the go-ahead must
-    // be a STRUCTURAL ask event (a `respond` declaring an `ask` intention) or a same-tool probe. A plain respond that
+    // A prose confirmation-ask does not unlock: the go-ahead must be a STRUCTURAL ask event
+    // (a `respond` declaring an `ask` intention) or a same-tool probe. A plain respond that
     // merely phrases a question in its message is NOT an ask event, so this DENIES.
     const ctx = craftCtx({
       tool: 'purgeAll',
@@ -88,9 +87,9 @@ describe("confirmFirst({ via: 'ask' }) is SUCCESS-KEYED", () => {
     expect(await guard().check(ctx)).toBeTruthy();
   });
 
-  it('an earlier-turn SUCCESSFUL call of the tool itself does NOT unlock (r2/C4)', async () => {
-    // Retired disjunct: a flag-less tool's own prior OK run used to count as "surfacing", which chained
-    // ONE consent across unbounded turns and bridged the recency law. Every repeat needs a fresh ask.
+  it('an earlier-turn SUCCESSFUL call of the tool itself does NOT unlock', async () => {
+    // Counting a flag-less tool's own prior OK run as "surfacing" would chain ONE consent across
+    // unbounded turns and bridge the recency law. Every repeat needs a fresh ask.
     const ctx = craftCtx({
       tool: 'purgeAll',
       observed: [call('purgeAll', { turnIndex: 0 })],
@@ -149,7 +148,7 @@ describe('confirmFirst rejects a via NAME passed as the string overload', () => 
 // destructiveThrottle must not count the PROBE, which would make an exemption dead code
 // ─────────────────────────────────────────────────────────────────────────────
 describe('destructiveThrottle does not count confirmation probes', () => {
-  // r2/C6: a probe is a call the world RECORDED as having changed nothing (`tookEffect:false`), which is
+  // A probe is a call the world RECORDED as having changed nothing (`tookEffect:false`), which is
   // what every backend with a world ledger writes. An UNRECORDED call is unverified, not effect-free.
   it('THE BUG: a probe (requiresConfirmation, ok:true) must not block the approved execute', async () => {
     const g = destructiveThrottle(['deleteItem']);
@@ -171,7 +170,7 @@ describe('destructiveThrottle does not count confirmation probes', () => {
     expect(await g.check(ctx)).toBeNull();
   });
 
-  it('r2/C6: a confirmed:false call with UNKNOWN effect DOES count — fail closed', async () => {
+  it('a confirmed:false call with UNKNOWN effect DOES count — fail closed', async () => {
     const g = destructiveThrottle(['deleteItem']);
     const ctx = craftCtx({
       tool: 'deleteItem',
@@ -197,7 +196,7 @@ describe('destructiveThrottle does not count confirmation probes', () => {
   });
 
   it("pendingConfirmMustAsk's same-turn resolution exemption is reachable, not dead code", async () => {
-    // The coherence claim, stated directly: the flow throttle used to block is exactly the flow
+    // The coherence claim, stated directly: the flow the throttle gates is exactly the flow
     // pendingConfirmMustAsk documents as legal. (Structural: the probe is RESOLVED by a same-record
     // confirmed:true, so the guard is silent regardless of any ask.)
     const g = pendingConfirmMustAsk();
@@ -266,7 +265,7 @@ describe('jargonScrub escapes its keys', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 // prose≠reason residue
 // ─────────────────────────────────────────────────────────────────────────────
-describe('resultInvariant and consentRequired no longer render `reason` as prose', () => {
+describe('resultInvariant and consentRequired do not render `reason` as prose', () => {
   const accusation = 'You reported the summary, but the report came back empty — say what actually happened.';
 
   it('resultInvariant: prose is a RULE, not the deny text', () => {
@@ -330,6 +329,4 @@ describe('prose states what the check actually enforces', () => {
     // the FIRST call is denied too — there is no turn/repeat logic in the check.
     expect(await g.check(craftCtx({ tool: 'updateItem', observed: [] }))).toBeTruthy();
   });
-  // (c) replyMaxOccurrences is DELETED (tier-③ reply-text kind, SCG-T5) — its prose↔check divergence
-  // audit is gone with the guard; CTA-repetition is now a text-judgment `llmCheck` job.
 });

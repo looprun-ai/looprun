@@ -35,7 +35,7 @@ const call = (name: string, over: Partial<ObservedCall> = {}): ObservedCall => (
 // ─────────────────────────────────────────────────────────────────────────────
 // L1 — the guard now reads same-step siblings (the fix), and only counts EFFECTS
 // ─────────────────────────────────────────────────────────────────────────────
-describe('M1 · destructiveThrottle counts a same-STEP sibling effect', () => {
+describe('destructiveThrottle counts a same-STEP sibling effect', () => {
   it('THE FIX: a same-step sibling EXECUTE (confirmed:true) throttles the second destructive call', async () => {
     const g = destructiveThrottle(['cancelMove']);
     const ctx = craftCtx({
@@ -47,7 +47,7 @@ describe('M1 · destructiveThrottle counts a same-STEP sibling effect', () => {
     expect(await g.check(ctx)).toBeTruthy();
   });
 
-  // WHAT COUNTS AS A PROBE DEPENDS ON WHETHER THE CALL HAS RUN (r2/C6 + the MI-T7 review). A same-step
+  // WHAT COUNTS AS A PROBE DEPENDS ON WHETHER THE CALL HAS RUN. A same-step
   // sibling has NOT executed, so `tookEffect` is `undefined` for every one of them BY CONSTRUCTION — the
   // world cannot have recorded an effect that has not happened. The EXECUTED rule ("a probe is a call the
   // world recorded as changing nothing") therefore cannot be applied here: it would count every admitted
@@ -73,7 +73,7 @@ describe('M1 · destructiveThrottle counts a same-STEP sibling effect', () => {
     expect(await g.check(ctx)).toBeNull();
   });
 
-  it('CONTROL (MI-T7 review): a same-step MULTI-PREVIEW passes — two probes in one step are not an effect', async () => {
+  it('CONTROL: a same-step MULTI-PREVIEW passes — two probes in one step are not an effect', async () => {
     // "Preview cancelling both of my bookings" is a legal request, and the model answers it with two
     // `confirmed:false` calls in ONE step. Neither has run when the second is gated, so neither can have
     // an effect on record; vetoing the second would deny the preview for an effect nothing has had.
@@ -86,7 +86,7 @@ describe('M1 · destructiveThrottle counts a same-STEP sibling effect', () => {
     expect(await g.check(ctx)).toBeNull();
   });
 
-  it('CONTROL: a same-step sibling that is CONFIRMED still throttles — the r2/C6 direction is intact', async () => {
+  it('CONTROL: a same-step sibling that is CONFIRMED still throttles', async () => {
     // The sibling declares the ACT, so it is the one effect this turn is allowed.
     const g = destructiveThrottle(['cancelMove']);
     const ctx = craftCtx({
@@ -139,7 +139,7 @@ describe('M1 · destructiveThrottle counts a same-STEP sibling effect', () => {
     expect(await g.check(ctx)).toBeNull();
   });
 
-  it('REGRESSION FLOOR: a cross-STEP prior EFFECT (in observed) still throttles — the old path is intact', async () => {
+  it('REGRESSION FLOOR: a cross-STEP prior EFFECT (in observed) still throttles', async () => {
     const g = destructiveThrottle(['cancelMove']);
     const ctx = craftCtx({
       tool: 'cancelMove',
@@ -166,7 +166,7 @@ describe('M1 · destructiveThrottle counts a same-STEP sibling effect', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 // L3 — the full backend loop: two confirmed destructives in ONE step ⇒ one effect
 // ─────────────────────────────────────────────────────────────────────────────
-describe('M1 · full loop — a same-step bulk destructive is throttled to ONE effect', () => {
+describe('full loop — a same-step bulk destructive is throttled to ONE effect', () => {
   const spec = (): AgentSpecBase =>
     new AgentSpecBase({
       id: 'same-step-throttle',

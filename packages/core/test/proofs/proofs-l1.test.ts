@@ -64,8 +64,8 @@ describe('L1 · maxCalls — conversation scope (bespoke)', () => {
 });
 
 describe('L1 · degenerationGuard — param-free artifact-shape lint (bespoke)', () => {
-  // The no-regex law retired the selfNarrationRe branch: plain third-person narration is no longer
-  // gated here (it is llmCheck's job). The always-on markup / repetition branches stay.
+  // degenerationGuard takes no params, so plain third-person narration is NOT gated here — that is
+  // llmCheck's job. The always-on markup / repetition branches are the whole of it.
   it('third-person narration is NOT gated (no selfNarrationRe param)', () => {
     expect(degenerationGuard().check(craftCtx({ reply: 'The assistant confirmed the update.' }))).toBeNull();
   });
@@ -82,9 +82,8 @@ describe('L1 · degenerationGuard — param-free artifact-shape lint (bespoke)',
 
 /**
  * FAIL-FAST CONSTRUCTION (bespoke — a GuardProof case can only assert on check(), and these kinds never
- * reach check()). A safety guard whose configuration makes it INERT must break the build. The former
- * regex-param risk-family kinds are DELETED (no-regex law); `consentRequired` is the one structural
- * family with a construction guard.
+ * reach check()). A safety guard whose configuration makes it INERT must break the build.
+ * `consentRequired` is the risk-family kind with a construction guard.
  */
 describe('L1 · consentRequired — misconfiguration throws at CONSTRUCTION', () => {
   it('consentRequired: an empty tool set, or a blank reason (a falsy deny value reads as "allowed")', () => {

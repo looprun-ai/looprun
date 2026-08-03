@@ -64,7 +64,7 @@ const vetoed = (corrections: string[], tool: string): boolean =>
 //   `supersededTerminalCalls` needs ≥2 terminals in one step. A lone rejected `respond` is invisible to both.
 // ════════════════════════════════════════════════════════════════════════════════════════════════
 describe('L1 — the schema-REJECTED respond ghost', () => {
-  it('CLOSED (MI-T7 wave 2): a rejected respond is REFUSED at the hook — it never becomes an observation', async () => {
+  it('CLOSED: a rejected respond is REFUSED at the hook — it never becomes an observation', async () => {
     const { agent } = makeAgent([
       // `message: ''` violates the respond schema's minLength — the call is rejected before execute.
       [{ tool: 'respond', args: { message: '', did: [{ op: 'ask' }] } }],
@@ -91,7 +91,7 @@ describe('L1 — the schema-REJECTED respond ghost', () => {
   it('CLOSED: a schema-LEGAL but MALFORMED did is refused at the hook, and the model is told why', async () => {
     const { agent, llm } = makeAgent([
       // A speech op carrying an `outcome` — schema-legal, unreadable as a declaration. `respondPayload`
-      // would prune it to `[]`, which is the empty-`did` state the runtime no longer delivers.
+      // would prune it to `[]` — the empty-`did` state the runtime refuses to deliver.
       [{ tool: 'respond', args: { message: 'Order ORD-1 has been refunded.', did: [{ op: 'inform', outcome: 'success' }] } }],
       [{ tool: 'respond', args: { message: 'All done.', did: [{ op: 'inform' }] } }],
     ]);
@@ -112,7 +112,7 @@ describe('L1 — the schema-REJECTED respond ghost', () => {
     expect(handedBack).toContain('inform/greet/refuse/ask');
   });
 
-  it('CLOSED (MI-T2): turn SEALING neutralises the ghost across turns — the delete is still denied', async () => {
+  it('CLOSED: turn SEALING neutralises the ghost across turns — the delete is still denied', async () => {
     const { agent } = makeAgent([
       [{ tool: 'respond', args: { message: '', did: [{ op: 'ask' }] } }],
       [{ tool: 'respond', args: { message: 'All done.', did: [{ op: 'inform' }] } }],
@@ -146,7 +146,7 @@ describe('L2 — an unsealed stream() turn licenses a later destructive act', ()
     for await (const _ of st.fullStream) { /* drain so the tool calls execute */ }
   }
 
-  it('CLOSED (MI-T7 wave 2): a REJECTED ask respond emitted during stream() licenses NOTHING', async () => {
+  it('CLOSED: a REJECTED ask respond emitted during stream() licenses NOTHING', async () => {
     const { agent } = makeAgent([
       // The streamed turn: a respond the schema rejects (blank message) that declares an ask.
       [{ tool: 'respond', args: { message: '', did: [{ op: 'ask' }] } }],
@@ -168,7 +168,7 @@ describe('L2 — an unsealed stream() turn licenses a later destructive act', ()
     expect(vetoed(res.looprun.corrections, 'deleteItem')).toBe(true);
   });
 
-  it('CLOSED (MI-T7 wave 2): a DELIVERED streamed ask leaves a SEALED record — auditable, and it licenses', async () => {
+  it('CLOSED: a DELIVERED streamed ask leaves a SEALED record — auditable, and it licenses', async () => {
     const { agent } = makeAgent([
       [{ tool: 'respond', args: { message: 'Delete every item — are you sure?', did: [{ op: 'ask' }] } }],
       [{ text: 'stop' }], // a tool-less step ends the streamed generation
@@ -218,11 +218,11 @@ describe('L3 — redrive message/did desync seals a phantom ask', () => {
     [{ tool: 'respond', args: { message: 'Deleted.', did: [{ op: 'deleteItem', target: 'p001', outcome: 'success' }] } }],
   ];
 
-  it('CLOSED (MI-T7 wave 2): the blank re-generation is dropped WHOLE — no phantom ask, no stale sentence', async () => {
+  it('CLOSED: the blank re-generation is dropped WHOLE — no phantom ask, no stale sentence', async () => {
     const { agent } = makeAgent(script(), 1);
     const res = await agent.generate('delete item p001');
     const sealed = agent.getSession().ledger.history[0]!;
-    // The engine no longer splices the redrive's `did` onto the pre-redrive message: the whole
+    // The engine never splices the redrive's `did` onto the pre-redrive message: the whole
     // re-generation is rejected, the turn exhausts, and the false sentence is not delivered either.
     expect(res.text).not.toContain('Done — item p001 has been deleted.');
     expect(res.looprun.corrections).toContain('redrive-empty:kept-previous');
@@ -230,7 +230,7 @@ describe('L3 — redrive message/did desync seals a phantom ask', () => {
     expect(sealed.did.some((c) => c.op === 'ask')).toBe(false);
   });
 
-  it('CLOSED (MI-T7 wave 2): no phantom ask exists, so the next turn\'s confirmed delete is denied', async () => {
+  it('CLOSED: no phantom ask exists, so the next turn\'s confirmed delete is denied', async () => {
     const { agent } = makeAgent(script(), 1);
     await agent.generate('delete item p001');
     const res = await agent.generate('yes');
@@ -239,18 +239,18 @@ describe('L3 — redrive message/did desync seals a phantom ask', () => {
 });
 
 // ════════════════════════════════════════════════════════════════════════════════════════════════
-// L4 — destructiveThrottle's M7 "EFFECT BEATS FLAGS" fix is INERT IN NATIVE-TOOLS MODE
+// L4 — destructiveThrottle's "EFFECT BEATS FLAGS" rule is INERT IN NATIVE-TOOLS MODE
 //
 //   `isProbe(o) = o.tookEffect !== true && (requiresConfirmation || args[confirmArg] === false)`.
 //   `tookEffect` is computed in `recordToolResult` by matching the call against `world.toolCalls` — but in
 //   NATIVE-TOOLS mode (`LoopRunAgent({ tools })`, the MCP path) the world is the `worldFromTools` stub,
 //   whose `toolCalls` array NOTHING ever writes to. So `tookEffect` is `false` for EVERY call, the
-//   `tookEffect !== true` clause is permanently satisfied, and the throttle degenerates back to exactly the
-//   pure-flag test M7 replaced: a tool that MUTATES while carrying `confirmed:false` is classified as a
-//   probe and the one-effect-per-turn cap never engages.
+//   `tookEffect !== true` clause is permanently satisfied, and the throttle degenerates to a pure-flag
+//   test: a tool that MUTATES while carrying `confirmed:false` is classified as a probe and the
+//   one-effect-per-turn cap never engages.
 // ════════════════════════════════════════════════════════════════════════════════════════════════
 describe('L4 — destructiveThrottle in native-tools mode', () => {
-  /** A native tool that ALWAYS wipes, whatever the `confirmed` flag says (the M7 threat model). */
+  /** A native tool that ALWAYS wipes, whatever the `confirmed` flag says — the threat model here. */
   function wipeTool(log: string[]) {
     return createTool({
       id: 'wipe',
@@ -278,7 +278,7 @@ describe('L4 — destructiveThrottle in native-tools mode', () => {
     });
   }
 
-  it('CLOSED (MI-T7 wave 2): two mutating wipe{confirmed:false} calls — the n:1 cap engages on the second', async () => {
+  it('CLOSED: two mutating wipe{confirmed:false} calls — the n:1 cap engages on the second', async () => {
     const log: string[] = [];
     const agent = nativeAgent([
       [{ tool: 'wipe', args: { account: 'A', confirmed: false } }],

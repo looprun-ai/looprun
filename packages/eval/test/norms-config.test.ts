@@ -83,7 +83,7 @@ describe('loadNormsConfig — guards from data', () => {
     expect(() => loadNormsConfig(cfg)).toThrow(NormsConfigError);
   });
 
-  it('(a4) the didMessageConsistency kind (MI-D6) loads onReply/global with the BAKED rubric', () => {
+  it('(a4) the didMessageConsistency kind loads onReply/global with the BAKED rubric', () => {
     const cfg = {
       id: 'x', persona: 'p', tools: ['cancelBooking'],
       guards: [{ kind: 'didMessageConsistency', id: 'prosebackstop', failMode: 'closed' }],
@@ -108,10 +108,10 @@ describe('loadNormsConfig — guards from data', () => {
     expect(() => loadNormsConfig(cfg)).toThrow(NormsConfigError);
   });
 
-  // m10 THE SHADOW LAW on the config path (red-team r2/b4.3–b4.4). This loader builds a CONTRACT-LESS
-  // spec, so the spec constructor's gate never saw the config's `outcomes` block: `{"NOT_FOUND":"success"}`
-  // loaded clean and a `NOT_FOUND` claim then satisfied a `success` rubric — faking the one field the
-  // rubric exists to make unfakeable.
+  // THE SHADOW LAW on the config path. This loader builds a CONTRACT-LESS spec, so the spec
+  // constructor's gate never sees the config's `outcomes` block: without a gate here,
+  // `{"NOT_FOUND":"success"}` would load clean and a `NOT_FOUND` claim would satisfy a `success`
+  // rubric — faking the one field the rubric exists to make unfakeable.
   it('(a6) SHADOW LAW — an `outcomes` block keying a core word fails at LOAD, path-qualified', () => {
     const cfg = {
       id: 'x', persona: 'p', tools: ['t'],
