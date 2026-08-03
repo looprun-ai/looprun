@@ -1,17 +1,39 @@
 /**
  * @looprun-ai/mastra — JSON Schema → Zod (shallow; sufficient for Mastra createTool inputSchema).
  *
- * WHAT MUST SURVIVE THE CONVERSION (MI-T5). The `respond` contract is not just a shape: its field
- * DESCRIPTIONS are the protocol itself — the intention vocabulary, the `inform` guardrail ("MUST NOT
- * assert a performed action"), and the honest-outcome list live in `terminal.ts`'s schema. A converter
- * that kept only types shipped the model an unexplained `{op,target,outcome,amount}` and left the
- * forcing function to the tool description alone. `description`, `minLength` and `minItems` are
- * therefore carried through — the model reads the same contract the runtime authored.
+ * ── THE KEYWORD CONTRACT (decided at MI-T5 — this list is the whole of it) ────────────────────────
  *
- * ENFORCEMENT IS STILL THE ENGINE'S. A schema constraint the provider honors is a hint, not a
- * guarantee: `did` cardinality is re-checked by `validateClaims` (recording `claims-invalid:<n>`) and a
- * blank delivery is caught by the engine's blank floor, which also strips zero-width characters a
- * `minLength` can never see.
+ * | keyword                                | carried | why |
+ * |----------------------------------------|---------|-----|
+ * | `type`, `properties`, `items`, `required`, `enum` | ✅ | the shape a call must have |
+ * | `description` (EVERY node, nested included)       | ✅ | the CONTRACT IN WORDS — see below |
+ * | `minLength`, `minItems`                           | ✅ | "this may not be EMPTY" |
+ * | `pattern`, `format`                               | ❌ | the guard layer owns format (`argFormat`) |
+ * | `maxLength`, `maxItems`, `minimum`, `maximum`     | ❌ | bounds are a `precondition`/`custom` judgment |
+ * | `default`, `uniqueItems`, `$ref`, `oneOf`/`anyOf` | ❌ | not expressible here; no in-repo consumer |
+ *
+ * WHY `description` IS NON-NEGOTIABLE. The `respond` contract is not just a shape: its field
+ * descriptions ARE the protocol — the intention vocabulary, the `inform` guardrail ("MUST NOT assert
+ * a performed action"), the honest-outcome list, all authored in `core/runtime/terminal.ts`. A
+ * converter that kept only types shipped the model an unexplained `{op,target,outcome,amount}` and
+ * left the forcing function to the tool description alone.
+ *
+ * WHY THE VALIDATION KEYWORDS STOP AT "NOT EMPTY". A constraint carried here is enforced LOCALLY by
+ * zod before the tool executes, and that rejection is an UNGOVERNED failure path: no guard fires, no
+ * governance-tagged deny prose reaches the model, no recovery event lands in the ledger. Format and
+ * range are exactly the judgments the governed layer is built to make — `argFormat` is the pattern
+ * kind, and the tutorial's scheduler declares the SAME date-time pattern in its tool def AND in an
+ * `argFormat` guard on purpose: the guard is what denies, legibly and on the record. Emptiness is the
+ * one case that is not a domain judgment — an empty required argument, or a `did` with no intention,
+ * is a malformed call the runtime has nothing to reason about — so the two minima are carried and
+ * their rejection is accepted. For `did: []` that rejection is deterministic and bounded (forced
+ * terminal → engine closure, pinned in `test/proofs/terminal-audit.test.ts`).
+ *
+ * THE FLOOR IS STILL THE ENGINE'S. `minLength` on `message` cannot decide emptiness (a zero-width
+ * message satisfies it), so `finalizeReply`'s blank-delivery floor remains the guarantee.
+ *
+ * EVAL COMPARABILITY: carrying `description` changed the model-facing tool-schema bytes of EVERY
+ * subject — see the run-comparability note in `docs/benchmarks.md` §3.
  */
 import { z } from 'zod';
 

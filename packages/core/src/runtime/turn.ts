@@ -298,9 +298,9 @@ const INVISIBLE_RE = /[\p{Cf}\p{Default_Ignorable_Code_Point}]/gu;
 /**
  * True when `text` carries nothing a user would read: empty after stripping invisible/format characters
  * and trimming. This is the runtime's OWN floor for "did the agent actually say anything" — it does not
- * depend on the `respond` terminal schema's `minLength`. That constraint reaches the provider (the
- * mastra conversion carries it since MI-T5), but a zero-width message SATISFIES it, so it can never be
- * the floor.
+ * depend on the `respond` terminal schema's `minLength`. That constraint is REAL since MI-T5 — the
+ * mastra backend carries it into its zod input schema and rejects a violating call before the terminal
+ * executes — but a zero-width message SATISFIES it, so it can never be the floor.
  */
 export function isBlankDelivery(text: string): boolean {
   return text.replace(INVISIBLE_RE, '').trim().length === 0;
@@ -328,9 +328,9 @@ function deriveExhaustionClosure(
 
 /**
  * The blank-delivery FLOOR — the backend-independent guarantee that replaces the deleted `emptyReply`
- * guard (SCG-T5's "structurally impossible" claim did not hold: the `respond` schema's `minLength` is a
- * provider-side hint that a zero-width message satisfies, and a mutator (e.g. `jargonScrub`) can blank an
- * otherwise-fine delivery after the checks passed). Called at every point a
+ * guard (SCG-T5's "structurally impossible" claim did not hold: the `respond` schema's `minLength` is
+ * enforced by the mastra backend but a zero-width message satisfies it, and a mutator (e.g.
+ * `jargonScrub`) can blank an otherwise-fine delivery after the checks passed). Called at every point a
  * composed delivery text is about to leave {@link finalizeReply} — the clean path and both salvage
  * returns: when `text` is blank ({@link isBlankDelivery}), swap in the engine-derived exhaustion closure
  * (non-empty by construction — {@link deriveExhaustionClosure}) and mark the turn exhausted. `exhausted`

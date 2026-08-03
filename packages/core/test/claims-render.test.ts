@@ -36,7 +36,7 @@ const BOOKING_CONTRACT: DomainContract = {
   writeTools: ['createBooking'],
 };
 
-const P = (message: string, did: TurnClaim[] = [], asked = false) => ({ message, did, asked });
+const P = (message: string, did: TurnClaim[] = []) => ({ message, did });
 
 describe('renderOperationReport — one neutral English line per verified claim', () => {
   it('renders the target-keyed default line per core outcome', () => {
@@ -230,7 +230,7 @@ describe('finalizeReply — salvage re-validates the FULL payload, so a fabricat
     const ledger = createLedger();
     const world = fixtureWorld(); // NO effected write — nothing grounds a success on BK-9
     // A prior ok respond in the ledger fabricated a success it never made.
-    recordTerminalCall(ledger, 'respond', { message: 'Done! Booked BK-9.', did: [{ op: 'book', target: 'BK-9', outcome: 'success' }], asked: false });
+    recordTerminalCall(ledger, 'respond', { message: 'Done! Booked BK-9.', did: [{ op: 'book', target: 'BK-9', outcome: 'success' }] });
     // The current (different) payload also fabricates → claimIsGrounded fires → we reach the salvage branch.
     const out = await finalizeReply(
       spec, BOOKING_CONTRACT, world, ledger,

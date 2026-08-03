@@ -214,6 +214,50 @@ describe('terminal tool definitions', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+// 3b — the `did` floor AT THE TOOL BOUNDARY (MI-T5 review)
+//
+// Carrying `minItems` through the conversion means the backend's own input validation now REJECTS
+// a `respond` with an empty `did` before its execute runs. That is the riskiest live behavior change
+// of MI-T5, so what follows pins the OBSERVED reality — including the step/LLM-call cost, because a
+// rejected tool input under `toolChoice:'required'` could in principle be handed back to the model
+// and burn the whole step budget. It does not: the stop condition keys on the terminal CALL, not on
+// its successful execution, so the generate stops at once and the turn takes the ordinary
+// forced-terminal path.
+// ─────────────────────────────────────────────────────────────────────────────
+describe('an empty did never delivers', () => {
+  /** The same spec/world for both arms — only the `did` differs. */
+  const emptyDidScript = (did: unknown[]): ScriptStep[] => [
+    [{ tool: 'respond', args: { message: 'All done!', did } }],
+    // Three more identical steps are AVAILABLE: if a rejected input were fed back to the model, the
+    // loop would consume them. The call-count assertion below is what proves it does not.
+    [{ tool: 'respond', args: { message: 'All done!', did } }],
+    [{ tool: 'respond', args: { message: 'All done!', did } }],
+    [{ tool: 'respond', args: { message: 'All done!', did } }],
+  ];
+
+  it('CONTROL — the same turn with one intention delivers the model’s own message', async () => {
+    const { llm, result } = await runWith(new AgentSpecBase(baseCfg() as never), emptyDidScript([{ op: 'inform' }]));
+
+    expect(result.turnRecords[0]!.assistantFinalText).toBe('All done!');
+    expect(result.turnRecords[0]!.recoveryEvents).toEqual([]);
+    expect(llm.calls()).toBe(1);
+  });
+
+  it('`did: []` is rejected at the boundary → forced terminal → the engine closure, in ONE extra call', async () => {
+    const { llm, result } = await runWith(new AgentSpecBase(baseCfg() as never), emptyDidScript([]));
+
+    const r = result.turnRecords[0]!;
+    // The model's prose NEVER ships: the terminal's execute never ran, so nothing was captured.
+    expect(r.assistantFinalText).not.toContain('All done!');
+    expect(r.assistantFinalText.length).toBeGreaterThan(0); // the engine closure is non-empty by construction
+    expect(r.recoveryEvents).toEqual(['forced-terminal', 'exhaustion-blank-floor']);
+    // BOUNDED: the main generate + exactly one forced-terminal generate. No step burn, no retry loop.
+    expect(llm.calls()).toBe(2);
+    expect(r.maxIterHit).toBe(false);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 // 4 — the closing step is TERMINAL-ONLY
 // ─────────────────────────────────────────────────────────────────────────────
 describe('premature terminal', () => {

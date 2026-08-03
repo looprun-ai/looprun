@@ -122,7 +122,7 @@ describe('AgentSpecBase — destructive protocol (iff destructiveTools)', () => 
 });
 
 describe('AgentSpecBase — minimal onReply layer (no-regex law + tier-③ deletion SCG-T5)', () => {
-  it('installs exactly degenerationGuard — emptyReply DELETED (subsumed by respond schema minLength + fallback); the former lexicon-fed noFalseFailureClaim is retired', () => {
+  it('installs exactly degenerationGuard — emptyReply DELETED (replaced by the ENGINE FLOOR in finalizeReply, not by the schema); the former lexicon-fed noFalseFailureClaim is retired', () => {
     const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: ['x'] });
     expect(spec.guards.onReply.map((b) => b.id)).toEqual(['minimal:degenerationGuard']);
   });

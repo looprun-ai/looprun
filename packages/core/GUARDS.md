@@ -256,8 +256,9 @@ spec is a spec). Its constructor auto-installs, from `cfg` alone:
 So **2 kinds always install** (`noDuplicateCall` + `degenerationGuard`), the SCG honesty cross-check pair
 when the contract declares `writeTools`, and **+2 more when the agent holds a destructive tool.** The former
 always-on `emptyReply` GUARD is DELETED (tier-③, SCG-T5) — but the guarantee it carried is not a schema
-claim: the `respond` terminal's `message` `minLength` 1 cannot decide emptiness (the backend ships that
-constraint to the provider since MI-T5, but a zero-width message SATISFIES it). The real, backend-independent
+claim: the `respond` terminal's `message` `minLength` 1 cannot decide emptiness (since MI-T5 the mastra
+backend really does enforce it, in its own zod input validation — but a zero-width message SATISFIES
+it). The real, backend-independent
 guarantee is the ENGINE FLOOR in `finalizeReply` (`runtime/turn.ts`): the composed delivery is stripped of
 zero-width/format characters and, if still blank — including after a mutator rewrite — routed to the
 non-empty engine-derived exhaustion closure instead. No runtime guard is needed for this.
@@ -361,9 +362,9 @@ The four reply-TEXT guards they and the schema subsume — `replyMentions`, `rep
 `replyMaxOccurrences`, `emptyReply` — are DELETED (tier-③, SCG-T5): `replyMentions` → `claimCoversRubric`,
 `replySingleQuestion`/`replyMaxOccurrences` → `llmCheck` (punctuation/CTA literalism, no sound structural
 fix), `emptyReply` → the ENGINE FLOOR in `finalizeReply` (`runtime/turn.ts`), NOT the `respond` schema's
-`message` `minLength` 1 — the schema constraint now reaches the provider (MI-T5: the mastra
-json-schema→zod conversion carries `minLength`/`minItems`/`description` through), but a provider-side
-constraint is a hint, and a whitespace-or-zero-width `message` satisfies it. The floor strips zero-width/format characters from the composed delivery and, when still
+`message` `minLength` 1 — that constraint is enforced since MI-T5 (the mastra json-schema→zod
+conversion carries `minLength`/`minItems`/`description` through, so zod rejects a violating call before
+the terminal executes), but a whitespace-or-zero-width `message` satisfies it. The floor strips zero-width/format characters from the composed delivery and, when still
 blank, routes to the non-empty engine-derived exhaustion closure — catching both a schema-bypassed blank
 `message` and a post-mutator blank rewrite.
 

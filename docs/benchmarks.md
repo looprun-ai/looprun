@@ -139,6 +139,14 @@ the unified τ³-bench repo, backward-compatible, domains
    the thinking-on Qwen rows (6, 9) stay on the board as reference. Save every run under
    `looprun-bench`.
 
+**Run comparability — the engine's model-facing bytes are part of the experiment.** A run is only
+comparable with another run of the same engine surface. The 2026-08-03 mandatory-intention change
+(MI-T5) altered what every tool schema looks like on the wire: per-field `description`s now reach the
+model for **every** tool, and `minLength`/`minItems` are carried through. Runs recorded before it are
+therefore not byte-comparable with runs after — **re-baseline BOTH arms** rather than comparing a new
+governed arm against an old raw one. Neither the `no-bench-drift` gate nor the eval seal detects this:
+the seal binds the subject's artifacts, not the engine's prompt/schema rendering.
+
 ---
 
 ## 4. Later work (deferred)

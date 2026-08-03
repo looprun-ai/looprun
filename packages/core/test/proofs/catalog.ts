@@ -25,7 +25,7 @@
  * | custom                         | listItems                  | denies args.page > 3                               |
  * | pendingConfirmMustAsk          | any (onReply)              | structural: unresolved probe requires an `ask` intention in the DELIVERED did this turn (ctx.did authoritative) |
  * | degenerationGuard              | any (auto minimal)         | — (param-free artifact-shape lint)                 |
- * | (DELETED — tier-③, SCG-T5) replyMentions (→ claimCoversRubric, polarity is a FIELD) · replySingleQuestion / replyMaxOccurrences (punctuation/CTA literalism, → llmCheck) · emptyReply (zero-width break, subsumed by respond schema minLength 1 + forced-terminal fallback) |
+ * | (DELETED — tier-③, SCG-T5) replyMentions (→ claimCoversRubric, polarity is a FIELD) · replySingleQuestion / replyMaxOccurrences (punctuation/CTA literalism, → llmCheck) · emptyReply (zero-width break — the schema's `message` minLength 1 CANNOT decide it, a zero-width message satisfies it; the ENGINE FLOOR in finalizeReply is the guarantee) |
  * | llmCheck                       | collective:'skip'          | scripted adjudicator; the honesty/risk text judgment lives here now |
  * | consentRequired                | useMedia                   | consentOk = world.hasPrimary()                     |
  * | (DELETED — no-regex law 2026-08-02) noFabricatedSuccess · destructiveClaimRequiresSuccess · noFalseFailureClaim · minimalDisclosure · noInstructionFromData · noCompetitorClaim · noOutOfSurfaceActionClaim · noUngroundedRegulatedFigure |

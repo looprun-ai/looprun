@@ -39,7 +39,7 @@ const TAUGHT_03 = [
 //    absorbed into confirmFirst({ via:'probe' }); SCG (2026-08-02) added the three deterministic
 //    cross-check honesty kinds (claimIsGrounded/claimIsComplete/claimCoversRubric); SCG-T5 (2026-08-02)
 //    DELETED the four tier-③ reply-text kinds — replyMentions (→ claimCoversRubric), replySingleQuestion +
-//    replyMaxOccurrences (→ llmCheck), emptyReply (subsumed by respond schema minLength + fallback) ──
+//    replyMaxOccurrences (→ llmCheck), emptyReply (→ the ENGINE FLOOR in finalizeReply, not the schema) ──
 //    MI-T4 (2026-08-03) added `didMessageConsistency` — the AVAILABLE, never auto-installed did×message
 //    backstop (design D6): a pre-baked llmCheck rubric a domain binds where the stakes justify it ──
 const TAUGHT_04 = [

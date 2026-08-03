@@ -229,8 +229,8 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
   //                           cap (0 distinct matched). Same verdict as replySingleQuestion → `llmCheck`.
   //   · emptyReply          — ZERO-WIDTH / WHITESPACE break (batch-a/c): a U+200B / U+2060 reply survives
   //                           trim() and passes as "non-empty". NOT closed by schema — the respond terminal's
-  //                           `message` minLength 1 does not decide it (the backend ships the constraint to the
-  //                           provider since MI-T5, but a zero-width message SATISFIES it). The real guarantee
+  //                           `message` minLength 1 does not decide it (the mastra backend enforces that constraint
+  //                           since MI-T5, but a zero-width message SATISFIES it). The real guarantee
   //                           is the ENGINE FLOOR: `finalizeReply` (`runtime/turn.ts`) strips zero-width/format
   //                           characters and, when the composed delivery is still blank (including after a
   //                           mutator rewrite), routes to the non-empty engine-derived exhaustion closure
