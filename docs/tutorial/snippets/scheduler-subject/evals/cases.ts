@@ -64,7 +64,7 @@ const cases: SubjectCase[] = [
       },
       rubric: [
         { id: 'reports-free', description: 'Says the week is free — invents no event.', critical: true },
-        { id: 'answers-instead-of-asking', description: 'Answers rather than asking a question (the terminal policy forces reply-only on an empty calendar).' },
+        { id: 'answers-instead-of-asking', description: 'Answers rather than asking a question — on an empty calendar there is nothing an `ask` could disambiguate.' },
       ],
     },
     // The always-on duplicate gate is what stops a model that distrusts an empty result from

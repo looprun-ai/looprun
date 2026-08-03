@@ -12,8 +12,8 @@ surface comes from, and how a rule gets bound to a moment in the turn. Eleven sy
 > compiled here.
 
 Chapter 02 ran the scheduler with one read-only tool. This chapter builds the whole thing: three
-tools, a scope, a terminal policy, a domain contract, and the two obligations from the purpose
-sentence — *never double-book, never delete without asking* — turned into mechanisms.
+tools, a scope, a domain contract, and the two obligations from the purpose sentence — *never
+double-book, never delete without asking* — turned into mechanisms.
 
 ---
 
@@ -55,7 +55,7 @@ contract, so they enforce identically on both sides.
    ┌──────────┴────────────┐                  ┌───────────┴───────────┐
    │ class SchedulerSpec   │                  │ class                 │
    │ 3 tools · scope ·     │                  │ HelloSchedulerSpec    │
-   │ terminal · 4 guards   │                  │ 1 tool (chapter 02)   │
+   │ contract · 4 guards   │                  │ 1 tool (chapter 02)   │
    └──────────┬────────────┘                  └───────────┬───────────┘
               │                                           │
               └─────────────────┐        ┌────────────────┘
@@ -139,7 +139,6 @@ export class SchedulerSpec extends AgentSpecBase {
       scope: SCHEDULER_SCOPE,
       tools: ['listEvents', 'addEvent', 'cancelEvent'],
       destructiveTools: ['cancelEvent'], // ⇒ confirmFirst + destructiveThrottle, installed for you
-      terminal: TERMINAL,
       contract: SCHEDULER_CONTRACT,
       behavior: [
         // UNCHECKABLE residue only — every rule with a guard states itself from that guard's prose.
@@ -156,7 +155,7 @@ Field by field, the ones that carry a rule:
 | `id` / `mode` | both **required**. `id` names the agent; `mode` is a free-form label echoed into eval records and case routing. It is near-vestigial today — nothing in the runtime branches on it — but it is not optional, so pick something stable and move on |
 | `persona` | lives on the **spec**, never on the shared domain contract — one line, per agent, rendered as late as possible so agents of the same domain share a maximal cacheable prompt prefix |
 | `tools` | the surface, declared. ≤15, and the terminal tool (`respond`) is runtime-owned — naming it **throws** at construction |
-| `destructiveTools` | a declaration, not a comment: it *installs* the confirm-first protocol |
+| `destructiveTools` | a declaration, not a comment: it *installs* the confirm-first protocol — and with it, the obligation to ask. That is why this spec carries no `terminal` policy: the two are refused together (§4) |
 | `behavior` | the **uncheckable residue only**. A line here that restates a rule some guard already enforces is two copies of one rule with only one wired to a check — guaranteed drift, and the spec lint flags it |
 
 That last row is the discipline the whole design rests on. The behavior bullet above survives the
@@ -200,22 +199,100 @@ rendered — including the `lane` sentence. If you want the lane but have no oth
 ## 4. `TerminalPolicy` — when asking is not an option
 
 ```ts
-const TERMINAL: TerminalPolicy = (world) => (world as SchedulerWorld).snapshot().length === 0;
-```
-<sub>excerpt · `snippets/scheduler/spec.ts` — the `as SchedulerWorld` cast is explained in §7</sub>
-
-```ts
 type TerminalPolicy = (world: AgentWorld) => boolean;   // true ⇒ force reply-only this turn
 ```
 <sub>signature, from `looprun`</sub>
 
-Returning `true` forbids the `ask` intention this turn: the agent must answer, not ask. It is
-evaluated per turn, from state — which is what makes it a *policy* and not a flag.
+```ts
+export const EMPTY_CALENDAR_IS_REPLY_ONLY: TerminalPolicy = (world) => (world as SchedulerWorld).snapshot().length === 0;
+```
+<sub>excerpt · `snippets/03-agent-anatomy.ts` — the `as SchedulerWorld` cast is explained in §7</sub>
 
-Why this one? In this domain an `ask` only ever disambiguates or confirms an **existing** event. On
-an empty calendar it has nothing to bite on, so asking would be a stall. The behavior bullet in §2
-and this policy therefore say the same thing from two directions — a spec where the prose and the
-policy contradict each other is a spec that will fail an eval case you cannot debug.
+It is evaluated per turn, from state — which is what makes it a *policy* and not a flag. Returning
+`true` adds exactly one line to the turn protocol the model reads, and that line is the whole of
+what reply-only means:
+
+```
+   - NEVER ask the user a question — never declare an `ask` intention. When something is
+     ambiguous, make the MOST REASONABLE assumption and PROCEED.
+```
+
+Reach for it on a **read surface** — a status desk, a digest, a lookup agent — where a question is a
+stall rather than a step, because nothing the answer unlocks is on the tool surface anyway.
+
+### It cannot share a spec with a destructive tool
+
+`AgentSpecBase`'s constructor refuses the combination outright. This class compiles; constructing it
+throws:
+
+```ts
+class ReplyOnlyCanceller extends AgentSpecBase {
+  constructor() {
+    super({
+      id: 'canceller',
+      mode: 'CALENDAR',
+      persona: 'You are the calendar canceller.',
+      tools: ['listEvents', 'cancelEvent'],
+      destructiveTools: ['cancelEvent'],
+      terminal: EMPTY_CALENDAR_IS_REPLY_ONLY,
+    });
+  }
+}
+```
+<sub>excerpt · `snippets/03-agent-anatomy.ts`</sub>
+
+```
+   AgentSpec "canceller": a reply-only terminal policy cannot be combined with destructive
+   tools (cancelEvent). Reply-only forbids the model from asking, and the consent guards
+   require an ask before a destructive act. Drop the policy, or move the destructive tools
+   to a spec that may ask.
+```
+<sub>the message `new ReplyOnlyCanceller()` throws — asserted in `snippets/test/scheduler.test.ts`</sub>
+
+The two fields give the same turn contradictory orders, and the contradiction is a property of the
+**spec**, not of any world — so it is decided once, at load:
+
+| the spec declares | what it demands of one turn |
+|---|---|
+| `terminal` returns `true` | never declare an `ask` |
+| `destructiveTools` ⇒ `confirmFirst` (its ask arm) | an `ask` in an earlier turn licenses the destructive act |
+| a probe that came back `requiresConfirmation` ⇒ `pendingConfirmMustAsk` | the delivered reply must declare an `ask` |
+
+Neither runtime escape is survivable: suppress the guard and consent is dropped; suppress the policy
+and the turn delivers the very question the policy exists to prevent. Refusing at construction is the
+only outcome that loses nothing.
+
+### The remedy is to split the agent
+
+The scheduler owns `cancelEvent`, so it keeps its ask and carries no policy. The read surface becomes
+its own agent, and *that* one holds the policy:
+
+```ts
+export class CalendarDigestSpec extends AgentSpecBase {
+  constructor() {
+    super({
+      id: 'calendar-digest',
+      mode: 'CALENDAR',
+      persona: 'You are the calendar digest: you report what is on this person’s calendar and never change it.',
+      tools: ['listEvents'],
+      terminal: EMPTY_CALENDAR_IS_REPLY_ONLY,
+      contract: SCHEDULER_CONTRACT,
+      behavior: ['Report the calendar as it came back — an empty day is reported as free, never filled in.'],
+    });
+  }
+}
+```
+<sub>excerpt · `snippets/03-agent-anatomy.ts`</sub>
+
+```
+   calendar-digest    listEvents                        terminal: reply-only    ── never asks
+   scheduler          listEvents · addEvent ·           no terminal policy      ── asks, and must
+                      cancelEvent (destructive)                                    for the cancel
+```
+
+Both share `SCHEDULER_CONTRACT`, so the two agents open with a byte-identical prompt prefix (§5) and
+the split costs nothing at the seam. The rule generalises: **a spec that may not ask keeps only the
+tools that never need consent.**
 
 ---
 
@@ -574,7 +651,8 @@ host that already owns its state.
    AgentSpecBase    the class you extend            ├─ the MAP
    AgentSpecConfig  its constructor argument       ─┘
    AgentScope       the lane, and who owns the rest
-   TerminalPolicy   (world) => boolean — reply-only this turn
+   TerminalPolicy   (world) => boolean — reply-only this turn; refused beside a
+                    destructive tool, so it belongs on a read-surface spec
    DomainContract   voice · stateBlock · coreInvariants · languageClause
                     · writeTools (installs the honesty cross-check) · outcomes · renderClaim
    ToolDef          the JSON-schema surface the model sees

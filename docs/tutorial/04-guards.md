@@ -195,6 +195,43 @@ happened is denied, and an action that happened but was never claimed is denied.
 moment `contract.writeTools` is non-empty, and **not at all** if it is missing: a domain that never names
 its write tools gets no cross-check, and nothing warns you. Naming them is the switch (chapter 03 §5).
 
+### What a `did` entry may carry
+
+The declaration those two guards read is a closed shape. The `respond` call carries the user-facing
+`message` plus `did`, an array of at least one intention, and an intention has **exactly four legal
+keys**:
+
+```
+   op        what this intention IS — a domain operation, or one of the four speech
+             words `inform` · `greet` · `refuse` · `ask`
+   target    the record the operation acted on
+   outcome   what really happened, on ACTION entries only
+   amount    an optional magnitude
+```
+
+A fifth key is a validation error, not an ignored extra: the runtime refuses the whole reply and
+tells the model which key it could not read. Three rules decide what goes in the four:
+
+| rule | the payload |
+|---|---|
+| **`target` is required on a completed action**, named the way the tool result named it | `{ op: 'cancelEvent', target: 'evt_102', outcome: 'success' }` — `claimIsComplete` passes over a claim with no `target`, so an action without one covers nothing and the write reads as silent |
+| **`success` means a write that took effect.** Every other outcome names what really happened | `{ op: 'addEvent', target: 'Design review', outcome: 'blocked' }` — the clash gate vetoed the call, so `blocked` is the honest word and `claimIsGrounded` matches it against the vetoed attempt |
+| **A lookup is not an action.** It changes nothing, so it produces no entry — the answer lives in `message` | *"You have Standup at 10:00 and Dentist on Wednesday at 15:00."* declared as `[{ op: 'inform' }]`. Declaring that read as `outcome: 'success'` is vetoed: no write took effect |
+
+The one exception to the third rule is a search **the user asked for** that came back empty. That is
+an answer the user must see, so it is an entry with `outcome: 'not_found'` — and it grounds only when
+the read tool took the entity under an identity-key argument, because an absent record issues no
+value of its own to match:
+
+```
+   user     "Is booking BK-1 still on file?"
+   call     getBooking({ bookingId: 'BK-1' })  →  { data: [] }      ← empty, and it names BK-1
+   did      [{ op: 'lookup', target: 'BK-1', outcome: 'not_found' }]
+```
+
+A read the agent ran for its own benefit — the `listEvents` it needed before booking — is not that
+case: nobody asked for it, so it stays out of `did` entirely.
+
 **The blank-reply floor is the runtime's — not a guard's, and not the schema's.** The `respond`
 terminal's non-empty `message` is only enforced where the backend validates it, a zero-width message
 satisfies `minLength` anyway, and a reply mutator can blank an otherwise-fine delivery AFTER every check

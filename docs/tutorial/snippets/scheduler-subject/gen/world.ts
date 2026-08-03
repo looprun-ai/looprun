@@ -11,7 +11,7 @@ import { SchedulerWorld } from '../../scheduler/world.ts';
 const PRESETS: Record<string, () => AgentWorld> = {
   /** The seeded calendar of chapters 02–04: Standup (Mon 10:00) + Dentist (Wed 15:00). */
   default: () => new SchedulerWorld(),
-  /** Nothing booked — the state that makes the spec's `terminal` policy fire (reply-only turn). */
+  /** Nothing booked — the empty result a model is most tempted to distrust and read again. */
   'empty-calendar': () => new SchedulerWorld([]),
 };
 
