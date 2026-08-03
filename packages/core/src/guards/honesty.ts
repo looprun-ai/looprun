@@ -10,12 +10,22 @@
  * `ctx.attemptedThisTurn` (the calls a guard VETOED before they reached the world). None of those the
  * agent controls, so a fabricated claim cannot ground.
  *
- * NO-REGEX LAW: `matches` is a comparison of a claim's `target` against the CANONICALIZED values a call
- * carried — ledger DATA, never an authored pattern. `op` names are advisory labels; the check keys on
- * `target` + `outcome` vs the ledger, never on op-name semantics.
+ * NO-REGEX LAW: `matches` is a comparison of a claim's `target` against the CANONICALIZED values the
+ * WORLD issued for a call — ledger DATA, never an authored pattern. `op` names are advisory labels; the
+ * check keys on `target` + `outcome` vs the ledger, never on op-name semantics.
+ *
+ * TWO LAWS THE RED-TEAM WROTE (MI-T3):
+ *  · PROVENANCE (M2) — a claim grounds ONLY against values the WORLD issued for that call (its result).
+ *    A call's ARGS are the agent's own text, so scanning them made grounding circular: one permitted
+ *    write plus the fabricated id in a free-text arg used to ground `success` on an untouched entity.
+ *  · BOUNDARY (M1) — the comparison is whole-VALUE or whole-TOKEN equality, never a substring: `BK-1`
+ *    is not `BK-10`, `BK-12345`, `BK-1-EXTRA` or `xBK-1y`; they are DIFFERENT entities.
+ * And the PARTITION (MI-D5): both cross-checks iterate ACTION intentions only — a speech intention
+ * (`inform`/`greet`/`refuse`/`ask`) classifies the message and names no ledger fact, so it is never
+ * grounded and never covers a write (an action can therefore never hide behind an `inform`).
  */
 import type { Guard, GuardCtx, ObservedCall } from '../rules.js';
-import { resolveOutcome, type CoreOutcome, type OutcomeMap, type TurnClaim } from '../runtime/claims.js';
+import { isActionOp, resolveOutcome, type CoreOutcome, type OutcomeMap, type TurnClaim } from '../runtime/claims.js';
 import { canonArgs } from './flow.js';
 import { domainCallsThisTurn } from './shared.js';
 
@@ -79,19 +89,69 @@ function resultOf(ctx: GuardCtx, c: ObservedCall): unknown {
   return undefined;
 }
 
-/** Does `target` appear (case-insensitive substring) among the searchable values? `undefined` ⇒ always. */
+/** The CANONICAL comparison form of one value: trimmed + lowercased. */
+function canonValue(v: string): string {
+  return v.trim().toLowerCase();
+}
+
+const LEADING_PUNCT = /^[^\p{L}\p{N}]+/u;
+const TRAILING_PUNCT = /[^\p{L}\p{N}]+$/u;
+
+/**
+ * The WHOLE TOKENS of a value: its whitespace-delimited words, canonicalized, with EDGE punctuation
+ * stripped (so `"(BK-1)"` and `"BK-1."` both tokenize to `bk-1`).
+ *
+ * A token is a WORD, not an alphanumeric run: splitting `BK-1` into `bk` + `1` would let the target
+ * `BK-1` match the value `BK-1-EXTRA` — the very same "a longer id is a different entity" collision M1
+ * exists to kill. Word tokens fail CLOSED instead: an id embedded in a larger token never matches.
+ */
+function tokensOf(v: string): string[] {
+  const out: string[] = [];
+  for (const word of canonValue(v).split(/\s+/)) {
+    const token = word.replace(LEADING_PUNCT, '').replace(TRAILING_PUNCT, '');
+    if (token) out.push(token);
+  }
+  return out;
+}
+
+/**
+ * M1 — does `target` equal `value`, or a WHOLE-TOKEN run inside it? The one boundary predicate every
+ * grounding and coverage verdict routes through.
+ *
+ * Match ⇔ the canonicalized strings are equal, OR the target's token sequence occurs CONTIGUOUSLY in the
+ * value's token sequence (so an id the world named inside its own sentence — `"no record for BK-1"` —
+ * still matches, while `BK-10`, `BK-12345`, `BK-1-EXTRA` and `xBK-1y` never do). No substring test, no
+ * authored pattern: both sides are data.
+ */
+export function targetMatchesValue(target: string, value: string): boolean {
+  if (canonValue(target) === canonValue(value)) return true;
+  const t = tokensOf(target);
+  if (!t.length) return false; // a target with no token can only match by whole value
+  const v = tokensOf(value);
+  for (let i = 0; i + t.length <= v.length; i += 1) {
+    if (t.every((tok, j) => tok === v[i + j])) return true;
+  }
+  return false;
+}
+
+/** Does `target` match any of these values by {@link targetMatchesValue}? `undefined` ⇒ always. */
 function targetIn(target: string | undefined, values: string[]): boolean {
   if (target === undefined) return true;
-  const t = target.toLowerCase();
-  return values.some((v) => v.toLowerCase().includes(t));
+  return values.some((v) => targetMatchesValue(target, v));
 }
 
-/** `matches(claim, call)` — the target appears in the canonicalized args OR result values of the call. */
+/** `matches(claim, call)` — the target matches a value the WORLD issued for this call (M2: the call's
+ *  own args are agent-authored text and are NEVER evidence). */
 function claimMatchesCall(ctx: GuardCtx, claim: TurnClaim, c: ObservedCall): boolean {
-  return targetIn(claim.target, [...leafValues(c.args), ...leafValues(resultOf(ctx, c))]);
+  return targetIn(claim.target, leafValues(resultOf(ctx, c)));
 }
 
-/** `matches` against a guard-VETOED attempt — its args only (a vetoed call has no result). */
+/**
+ * `matches` against a guard-VETOED attempt — its args, because a vetoed call never reached the world and
+ * so has no result at all. The args are agent-authored, but the ATTEMPT is a world-ledger fact the guard
+ * recorded, and the only outcomes this backs (`blocked`/`refused`) are SELF-INCRIMINATING: the worst an
+ * agent buys by naming a target here is reporting a refusal on something it never really touched.
+ */
 function claimMatchesAttempt(claim: TurnClaim, a: { name: string; args: unknown }): boolean {
   return targetIn(claim.target, leafValues(a.args));
 }
@@ -135,9 +195,10 @@ function isGrounded(
 }
 
 /**
- * `claimIsGrounded` — every declared operation must match what the ledger shows happened this turn.
+ * `claimIsGrounded` — every declared ACTION must match what the ledger shows happened this turn.
  *
- * For each claim: resolve its outcome word to a core meaning (a domain word maps through `outcomes`; an
+ * For each ACTION intention (MI-D5: a speech intention is skipped — it classifies the message and names
+ * no ledger fact): resolve its outcome word to a core meaning (a domain word maps through `outcomes`; an
  * UNDECLARED word is a violation by construction — it can name no ledger fact), then ground it by the
  * table. Auto-installed by the spec class when the domain declares its `writeTools`.
  */
@@ -152,11 +213,12 @@ export function claimIsGrounded(opts: { writeTools: readonly string[]; outcomes?
       const calls = domainCallsThisTurn(ctx);
       const attempts = ctx.attemptedThisTurn ?? [];
       for (const claim of did) {
-        // `outcome` is optional on Intention (speech ops carry none); an action claim reaching this
-        // guard always has one — coerce absent → '' so an outcome-less claim resolves to null (unrecognised).
+        if (!isActionOp(claim.op)) continue; // MI-D5: a speech intention is not tool-checked
+        // `outcome` is optional on Intention (speech ops carry none); an ACTION intention always carries
+        // one (validateClaims enforces it) — absent coerces to '' and resolves to null (unrecognised).
         const resolved = resolveOutcome(claim.outcome ?? '', opts.outcomes);
         if (resolved === null) {
-          return `You reported "${claim.op}"${onTarget(claim)} with an outcome the system does not recognise ("${claim.outcome}") — report it as one of the known outcomes instead.`;
+          return `You reported "${claim.op}"${onTarget(claim)} with an outcome the system does not recognise ("${claim.outcome ?? ''}") — report it as one of the known outcomes instead.`;
         }
         if (!isGrounded(ctx, claim, resolved, calls, attempts, writes)) {
           return `You reported "${claim.op}"${onTarget(claim)} as ${resolved}, but nothing this turn shows that — report only what actually happened.`;
@@ -172,13 +234,14 @@ export function claimIsGrounded(opts: { writeTools: readonly string[]; outcomes?
 /**
  * `claimIsComplete` — no silent action: every write that TOOK EFFECT this turn must be reported.
  *
- * For each effected write, require ≥1 declared claim of outcome `success` that matches it — resolved
- * through the same `OutcomeMap` `claimIsGrounded` uses, so a domain word that maps to `success` (e.g.
- * `'settled'`) covers a write exactly like the literal word does (the mapping law: every domain outcome
- * declares its core outcome, so the two cross-checks can never disagree on the same claim). An unreported
- * write is named by its produced label (`ctx.producedThisTurn` / the call's own result label) when the
- * world issued one, else by a generic phrase — never by the tool name (prose-leak law). Auto-installed
- * alongside `claimIsGrounded`.
+ * A write is COVERED by an ACTION intention that (a) resolves to `success` through the same `OutcomeMap`
+ * `claimIsGrounded` uses — so a domain word like `'settled'` covers exactly like the literal word (the
+ * mapping law: the two cross-checks can never disagree on the same claim) — (b) NAMES a `target`, and
+ * (c) matches that write's world-issued values. Coverage is INJECTIVE (M3): each write SPENDS a distinct
+ * claim, so two writes on the same entity need two claims and a vague "one action succeeded" covers
+ * nothing at all. An unreported write is named by its produced label (the call's own result label) when
+ * the world issued one, else by a generic phrase — never by the tool name (prose-leak law).
+ * Auto-installed alongside `claimIsGrounded`.
  */
 export function claimIsComplete(opts: { writeTools: readonly string[]; outcomes?: OutcomeMap }): Guard {
   const writes = new Set(opts.writeTools);
@@ -186,14 +249,22 @@ export function claimIsComplete(opts: { writeTools: readonly string[]; outcomes?
     kind: 'claimIsComplete',
     dim: 'behavior',
     check(ctx) {
-      const did = ctx.did ?? [];
+      // The claims that CAN cover a write: action intentions that resolve to success and name a target.
+      const covering = (ctx.did ?? []).filter(
+        (claim) =>
+          isActionOp(claim.op) &&
+          claim.target !== undefined &&
+          resolveOutcome(claim.outcome ?? '', opts.outcomes) === 'success',
+      );
+      const spent = new Set<number>();
       const calls = domainCallsThisTurn(ctx);
       for (const c of calls) {
         if (!(writes.has(c.name) && c.tookEffect === true)) continue;
-        const covered = did.some(
-          (claim) => resolveOutcome(claim.outcome ?? '', opts.outcomes) === 'success' && claimMatchesCall(ctx, claim, c),
-        );
-        if (covered) continue;
+        const ix = covering.findIndex((claim, i) => !spent.has(i) && claimMatchesCall(ctx, claim, c));
+        if (ix >= 0) {
+          spent.add(ix); // this claim now accounts for THIS write and no other
+          continue;
+        }
         const label = producedLabel(ctx, c);
         return label
           ? `You completed ${label} this turn but did not report it — report every action that takes effect so the user knows.`
@@ -234,9 +305,10 @@ export function claimCoversRubric(
     check(ctx) {
       const did = ctx.did ?? [];
       for (const target of opts.targets) {
-        const t = target.toLowerCase();
         const covered = did.some((claim) => {
-          if (claim.target === undefined || !claim.target.toLowerCase().includes(t)) return false;
+          // M1: the configured target must be the claim's target (or a whole token of it) — never a
+          // substring, so a `BK-10` claim does not answer a rubric about `BK-1`.
+          if (claim.target === undefined || !targetMatchesValue(target, claim.target)) return false;
           const resolved = resolveOutcome(claim.outcome ?? '', opts.outcomes);
           return opts.outcome === 'any' ? resolved !== null : resolved === opts.outcome;
         });

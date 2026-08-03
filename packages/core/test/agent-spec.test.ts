@@ -62,6 +62,17 @@ describe('AgentSpecBase — universal invariants', () => {
     expect(spec.contract).toBe(CONTRACT);
   });
 
+  it('m10 — rejects an outcome map that SHADOWS a core outcome word (any casing) at load', () => {
+    const shadow = (outcomes: Record<string, 'success' | 'failure'>) =>
+      new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: [], contract: { ...CONTRACT, outcomes } });
+    // A core outcome always means itself, so a map entry keyed by one is silently ignored at resolution —
+    // except in a casing `resolveOutcome` does not treat as core, where it would REDEFINE the word.
+    expect(() => shadow({ Success: 'failure' })).toThrow(/Success/);
+    expect(() => shadow({ NOT_FOUND: 'success' })).toThrow(/outcome/i);
+    expect(() => shadow({ success: 'success' })).toThrow(/success/);
+    expect(() => shadow({ settled: 'success' })).not.toThrow();
+  });
+
   it('carries per-agent sampling on controls', () => {
     const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: [], sampling: { temperature: 0.7 } });
     expect(spec.controls.sampling).toEqual({ temperature: 0.7 });

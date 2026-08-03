@@ -294,16 +294,29 @@ record was NOT found; polarity is unreadable by a pattern). The agent now DECLAR
 (`respond`'s `did: TurnClaim[]`) and three deterministic guards GROUND that declaration against the world
 ledger, which the agent does not control:
 
-- **`claimIsGrounded`** — every `did` entry matches the ledger: a `success` needs an effected write, `not_found`
+- **`claimIsGrounded`** — every ACTION intention matches the ledger: a `success` needs an effected write, `not_found`
   an empty read, `blocked`/`refused` a veto/refusal, `no_op` no effected write; an undeclared outcome word is
   always a violation. Auto-installed when the contract declares `writeTools`.
-- **`claimIsComplete`** — every write that took effect this turn appears in `did` (no silent action). Auto-installed alongside.
+- **`claimIsComplete`** — every write that took effect this turn is covered by a DISTINCT `success` action
+  intention that NAMES the entity (no silent action, and none hidden behind a vague or duplicated claim).
+  Auto-installed alongside.
 - **`claimCoversRubric`** — a per-case coverage rule: each configured target appears in `did` with the required
   outcome polarity. It REPLACES the deleted `replyMentions`/`replyConfirmsLabels` — polarity is a FIELD, so
   "no record of BK-1 was found" can never satisfy a `success` requirement. Config-bound, never auto-installed.
 
 All three are TRUTH guards (never salvaged, never delivered over) and key on `target` + `outcome` vs the
 ledger, never on op-name semantics or reply text — so they carry no pattern and cannot be broken by polarity.
+
+**Two matching laws the red-team wrote (MI-T3).** *Provenance*: a `target` is compared only against values the
+WORLD issued for a call (its result) — a call's ARGS are agent-authored, and scanning them made grounding
+circular (one permitted write plus the fabricated id in a free-text arg used to ground a success on an entity
+never touched). *Boundary*: the comparison is whole-VALUE or whole-TOKEN equality, never a substring — `BK-1`,
+`BK-10`, `BK-12345` and `BK-1-EXTRA` are different entities. A consequence worth stating: a domain whose write
+results carry NO identifying value gives the cross-check nothing to match, so its effected writes cannot be
+covered — write results must name what they touched (a `label`/id) for target-level honesty to be checkable.
+Speech intentions (`inform`/`greet`/`refuse`/`ask`) are never grounded and never cover a write (MI-D5), so an
+action can never hide behind an `inform`. And a domain `outcomes` map may not key a core outcome word in ANY
+casing — that is refused at spec load, not at check time.
 The four reply-TEXT guards they and the schema subsume — `replyMentions`, `replySingleQuestion`,
 `replyMaxOccurrences`, `emptyReply` — are DELETED (tier-③, SCG-T5): `replyMentions` → `claimCoversRubric`,
 `replySingleQuestion`/`replyMaxOccurrences` → `llmCheck` (punctuation/CTA literalism, no sound structural

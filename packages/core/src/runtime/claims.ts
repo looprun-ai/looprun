@@ -111,6 +111,27 @@ export function resolveOutcome(outcome: string, map?: OutcomeMap): CoreOutcome |
   return null;
 }
 
+/**
+ * THE SHADOW LAW (m10), enforced ONCE at SPEC LOAD — throws on any {@link OutcomeMap} key whose
+ * LOWERCASED form is a core outcome word.
+ *
+ * {@link resolveOutcome} is case-sensitive: `'success'` is core and its map entry is ignored, but
+ * `'Success'` is NOT core, so a map keyed by it would REDEFINE a core outcome by casing alone
+ * (`resolveOutcome('Success', { Success: 'failure' })` → `'failure'`). A per-turn check would be the
+ * wrong shape — the defect is in the authored vocabulary, so it fails the spec at load, before a turn
+ * ever runs. An exact-core key is refused too: it is dead config that reads as if it redefined the word.
+ */
+export function assertNoCoreOutcomeShadow(outcomes: OutcomeMap | undefined, specId: string): void {
+  if (!outcomes) return;
+  const shadows = Object.keys(outcomes).filter((k) => isCoreOutcome(k.trim().toLowerCase()));
+  if (!shadows.length) return;
+  throw new Error(
+    `AgentSpec "${specId}": the outcome map may not key a CORE outcome word (found: ${shadows.join(', ')}). ` +
+      'A core outcome always means itself — an entry keyed by one (in any casing) either does nothing or ' +
+      'redefines the word, and both make the domain vocabulary lie. Map only DOMAIN words to core outcomes.',
+  );
+}
+
 /** A non-empty string after trimming — the field law for `op` / `target` / `outcome`. */
 function isNonEmptyString(v: unknown): v is string {
   return typeof v === 'string' && v.trim().length > 0;

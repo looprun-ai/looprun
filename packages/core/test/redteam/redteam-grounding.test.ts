@@ -16,6 +16,12 @@
  * `leafValues(c.args)`, and a call's ARGS are AGENT-AUTHORED. Combined with `targetIn`'s case-insensitive
  * SUBSTRING test, grounding is circular: the agent can put its own fabricated target string into any arg
  * of any one genuine write and ground a `success` claim on an entity it never touched.
+ *
+ * STATUS (MI-T3, M1+M2): the root finding is CLOSED. `claimMatchesCall` now scans ONLY the values the
+ * WORLD issued for that call (its result), and the comparison is whole-value / whole-token equality
+ * instead of a substring test. Every `it.fails(BROKEN:)` below is now a plain `it(CLOSED:)`, and each
+ * "defect is real" companion has been rewritten into the control that proves the fix is not blanket
+ * denial (the honest claim still grounds). Vectors are NEVER deleted — they are the regression.
  */
 import { describe, expect, it } from 'vitest';
 import type { GuardCtx, ObservedCall } from '../../src/rules.js';
@@ -72,23 +78,22 @@ describe('VECTOR 2 — matches() substring collision: short target grounds again
   const ctx = {
     did,
     observed: [call('createBooking', { bookingId: 'BK-12345' }, { tookEffect: true })],
-    world: worldWith([{ name: 'createBooking', args: { bookingId: 'BK-12345' }, tookEffect: true }]),
+    world: worldWith([{ name: 'createBooking', args: { bookingId: 'BK-12345' }, tookEffect: true, result: { label: 'BK-12345' } }]),
   };
 
-  it('defect is real: guard ALLOWS success on BK-1 though only BK-12345 was written (returns null)', () => {
-    expect(grounded(ctx)).toBeNull();
-  });
-
-  it.fails('BROKEN: guard SHOULD deny — BK-1 is a distinct entity that had no effected write', () => {
+  it('CLOSED (M1): guard DENIES — BK-1 is a distinct entity that had no effected write', () => {
     expect(grounded(ctx)).toBeTruthy();
   });
 
+  it('CONTROL: the honest claim on the id the world DID issue still grounds (no blanket denial)', () => {
+    expect(grounded({ ...ctx, did: [{ op: 'book', target: 'BK-12345', outcome: 'success' }] })).toBeNull();
+  });
+
   it('directionality: the reverse (claim BK-12345 when only BK-1 written) is correctly DENIED', () => {
-    // "bk-1".includes("bk-12345") === false, so a longer target does NOT collide with a shorter id.
     const reverse = {
       did: [{ op: 'book', target: 'BK-12345', outcome: 'success' }] as TurnClaim[],
       observed: [call('createBooking', { bookingId: 'BK-1' }, { tookEffect: true })],
-      world: worldWith([{ name: 'createBooking', args: { bookingId: 'BK-1' }, tookEffect: true }]),
+      world: worldWith([{ name: 'createBooking', args: { bookingId: 'BK-1' }, tookEffect: true, result: { label: 'BK-1' } }]),
     };
     expect(grounded(reverse)).toBeTruthy();
   });
@@ -112,21 +117,30 @@ describe('VECTOR 5 — args are agent-controlled: a decoy write grounds ANY fabr
     ]),
   };
 
-  it('defect is real: guard ALLOWS success on BK-1 grounded only by the agent-written note text (null)', () => {
-    expect(grounded(ctx)).toBeNull();
-  });
-
-  it.fails('BROKEN: guard SHOULD deny — no write EFFECTED anything on BK-1; the match is circular', () => {
+  it('CLOSED (M2): guard DENIES — no write EFFECTED anything on BK-1; the match was circular', () => {
     expect(grounded(ctx)).toBeTruthy();
   });
 
-  it('purest form: target placed directly as an arg VALUE grounds success (fully agent-controlled)', () => {
-    // The agent controls both `target` and `args`; it can make them identical.
+  it('CONTROL: when the WORLD ITSELF names BK-1 in the write result, the claim grounds', () => {
+    // The distinction is provenance, not wording: a value the world put in the result is evidence that
+    // the call acted on it; the same string in an arg is only the agent repeating itself.
+    const worldNamed = {
+      ...ctx,
+      world: worldWith([
+        { name: 'addNote', args: { orderId: 'ORD-999', note: 'customer also mentioned BK-1' }, tookEffect: true, result: { label: 'BK-1' } },
+      ]),
+    };
+    expect(grounded(worldNamed)).toBeNull();
+  });
+
+  it('purest form: target placed directly as an arg VALUE is DENIED (fully agent-controlled)', () => {
+    // The agent controls both `target` and `args`; it can make them identical — and it buys nothing.
     const pure = {
       did: [{ op: 'refund', target: 'FABRICATED-XYZ', outcome: 'success' }] as TurnClaim[],
       observed: [call('addNote', { orderId: 'ORD-1', memo: 'FABRICATED-XYZ' }, { tookEffect: true })],
+      world: worldWith([{ name: 'addNote', args: { orderId: 'ORD-1', memo: 'FABRICATED-XYZ' }, tookEffect: true, result: { ok: true } }]),
     };
-    expect(grounded(pure)).toBeNull(); // defect: fabricated target grounds
+    expect(grounded(pure)).toBeTruthy();
   });
 });
 
@@ -143,15 +157,24 @@ describe('VECTOR 4 — polarity flip: success on an entity that was actually REF
     expect(grounded(ctx)).toBeTruthy();
   });
 
-  it.fails('BROKEN (via VECTOR 5): a decoy write flips the refusal on BK-1 into a grounded success', () => {
+  it('CLOSED (via the VECTOR 5 fix): a decoy write can no longer flip the refusal on BK-1 into a success', () => {
     // cancelBooking(BK-1) was VETOED (refused). The agent then does an allowed addNote decoy whose args
-    // mention BK-1, and claims SUCCESS on BK-1. The user is told "BK-1: done" for a cancel that was refused.
+    // mention BK-1, and claims SUCCESS on BK-1. The decoy's args are not evidence, so the refusal stands.
     const ctx = {
       did: [{ op: 'cancel', target: 'BK-1', outcome: 'success' }] as TurnClaim[],
       attemptedThisTurn: [{ name: 'cancelBooking', args: { bookingId: 'BK-1' } }],
       observed: [call('addNote', { orderId: 'ORD-2', note: 're BK-1' }, { tookEffect: true })],
+      world: worldWith([{ name: 'addNote', args: { orderId: 'ORD-2', note: 're BK-1' }, tookEffect: true, result: { label: 'ORD-2' } }]),
     };
-    expect(grounded(ctx)).toBeTruthy(); // SHOULD deny; actually returns null → this assertion FAILS
+    expect(grounded(ctx)).toBeTruthy();
+  });
+
+  it('CONTROL: the honest polarity for that turn — blocked on BK-1 — still grounds against the veto', () => {
+    const ctx = {
+      did: [{ op: 'cancel', target: 'BK-1', outcome: 'blocked' }] as TurnClaim[],
+      attemptedThisTurn: [{ name: 'cancelBooking', args: { bookingId: 'BK-1' } }],
+    };
+    expect(grounded(ctx)).toBeNull();
   });
 });
 
@@ -170,12 +193,19 @@ describe('VECTOR 5b — not_found fabricated by mentioning the target in a doome
     ]),
   };
 
-  it('defect is real: not_found on BK-1 grounds against an agent-crafted empty read (null)', () => {
-    expect(grounded(ctx)).toBeNull();
+  it('CLOSED (M2): an agent-authored query string does not ground a not_found polarity', () => {
+    expect(grounded(ctx)).toBeTruthy();
   });
 
-  it.fails('BROKEN: guard SHOULD NOT let an agent-authored query substring ground a not_found polarity', () => {
-    expect(grounded(ctx)).toBeTruthy();
+  it('CONTROL: an honest not_found grounds when the WORLD\'s own empty answer names the target', () => {
+    const honest = {
+      did: [{ op: 'lookup', target: 'BK-1', outcome: 'not_found' }] as TurnClaim[],
+      observed: [call('findBooking', { bookingId: 'BK-1' })],
+      world: worldWith([
+        { name: 'findBooking', args: { bookingId: 'BK-1' }, result: { success: true, status: 'no record for BK-1', data: [] } },
+      ]),
+    };
+    expect(grounded(honest)).toBeNull();
   });
 });
 

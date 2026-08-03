@@ -7,7 +7,7 @@ import {
   llmCheck,
   pendingConfirmMustAsk,
 } from '../../src/guards/index.js';
-import type { Adjudicator } from '../../src/rules.js';
+import type { Adjudicator, AgentWorld } from '../../src/rules.js';
 import type { GuardProof } from '../../src/testing/index.js';
 
 /** TurnInput shorthand (channel-agnostic — just the user text). */
@@ -25,6 +25,17 @@ const ALLOW_ADJ: Adjudicator = async () => ({ violation: null });
 
 /** A write call that took effect this turn — the ledger shape the cross-check guards ground against. */
 const effectedWrite = (name: string, args: Record<string, unknown>) => ({ name, args, ok: true, turnIndex: 0, tookEffect: true });
+
+/** The WORLD side of that ledger: the result the world ISSUED for the call (MI-T3/M2 — a claim grounds
+ *  against these values only, never against the call's agent-authored args). */
+const worldIssuing = (calls: Array<{ name: string; args: Record<string, unknown>; result: unknown }>): AgentWorld =>
+  ({
+    exec: () => ({ success: true }),
+    advanceTurn: () => {},
+    ingestAttachment: (u: string) => u,
+    toolCalls: calls.map((c) => ({ ...c, tookEffect: true })),
+    sseActions: [],
+  }) as AgentWorld;
 
 export const BEHAVIOR_PROOFS: GuardProof[] = [
   // ── THE CROSS-CHECK HONESTY CORE (SCG) — did × world ledger, all collective:'skip' ───────────────
@@ -59,7 +70,12 @@ export const BEHAVIOR_PROOFS: GuardProof[] = [
       {
         name: 'a success claim grounded by an effected write on the same target',
         polarity: 'positive',
-        ctx: { did: [{ op: 'create', target: 'itm-1', outcome: 'success' }], observed: [effectedWrite('createItem', { id: 'itm-1' })], turnIndex: 0 },
+        ctx: {
+          did: [{ op: 'create', target: 'itm-1', outcome: 'success' }],
+          observed: [effectedWrite('createItem', { id: 'itm-1' })],
+          world: worldIssuing([{ name: 'createItem', args: { id: 'itm-1' }, result: { id: 'itm-1' } }]),
+          turnIndex: 0,
+        },
         l1: 'silent',
       },
       {
@@ -98,7 +114,12 @@ export const BEHAVIOR_PROOFS: GuardProof[] = [
       {
         name: 'the effected write is covered by a matching success claim',
         polarity: 'positive',
-        ctx: { did: [{ op: 'create', target: 'itm-1', outcome: 'success' }], observed: [effectedWrite('createItem', { id: 'itm-1' })], turnIndex: 0 },
+        ctx: {
+          did: [{ op: 'create', target: 'itm-1', outcome: 'success' }],
+          observed: [effectedWrite('createItem', { id: 'itm-1' })],
+          world: worldIssuing([{ name: 'createItem', args: { id: 'itm-1' }, result: { id: 'itm-1' } }]),
+          turnIndex: 0,
+        },
         l1: 'silent',
       },
       {

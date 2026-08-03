@@ -337,7 +337,7 @@ describe('SECTION 4 — the premature-terminal ask leak is pruned, so no cross-t
 // writes, defeating claimIsComplete's "no silent action". Two destructive writes on entities whose
 // ids share a substring, reported as ONE claim → both guards pass, the second write is silent.
 // ═══════════════════════════════════════════════════════════════════════════════
-describe('SECTION 5 — substring target absorption hides a second effected write (BREAK)', () => {
+describe('SECTION 5 — substring target absorption hides a second effected write (CLOSED by MI-T3 / M1)', () => {
   // Two effected deletes this turn: account "5" and account "50".
   const w = world({ toolCalls: [
     { name: 'deleteAccount', args: { id: '5' }, result: { label: '5' }, tookEffect: true },
@@ -350,20 +350,27 @@ describe('SECTION 5 — substring target absorption hides a second effected writ
   // ONE claim, target "5" — a substring of BOTH "5" and "50".
   const did = [{ op: 'delete', target: '5', outcome: 'success' as const }];
 
-  it('BREAK claimIsGrounded: the single loose-target claim grounds (matches the "5" write)', () => {
+  it('CLOSED claimIsGrounded: the target "5" grounds ONLY against the "5" write (whole-value equality)', () => {
     const g = claimIsGrounded({ writeTools: ['deleteAccount'] });
-    expect(g.check(base({ did, observed: calls, world: w, turnIndex: 0 }))).toBeNull();
+    expect(g.check(base({ did, observed: calls, world: w, turnIndex: 0 }))).toBeNull(); // honest for the "5" delete
   });
-  it('BREAK claimIsComplete: BOTH effected writes count as "covered" by the one claim → NO unreported-action violation', () => {
+  it('CLOSED claimIsComplete: the "50" delete is NOT absorbed by the "5" claim → unreported-action violation', () => {
     const g = claimIsComplete({ writeTools: ['deleteAccount'] });
-    // Deleting account "50" is silently absorbed under the "5" claim — the guard that exists to forbid
-    // exactly this ("report every action that takes effect") is defeated by substring matching.
-    expect(g.check(base({ did, observed: calls, world: w, turnIndex: 0 }))).toBeNull();
+    // "5" no longer substring-matches the value "50", so deleting account "50" stays unreported and the
+    // guard that exists to forbid exactly this ("report every action that takes effect") fires.
+    expect(g.check(base({ did, observed: calls, world: w, turnIndex: 0 }))).not.toBeNull();
   });
-  it('CONTROL: with a PRECISE per-entity claim set, completeness holds (proves the loose target is the cause)', () => {
+  it('CONTROL: declaring BOTH deletes covers both writes', () => {
+    const g = claimIsComplete({ writeTools: ['deleteAccount'] });
+    const both = [
+      { op: 'delete', target: '5', outcome: 'success' as const },
+      { op: 'delete', target: '50', outcome: 'success' as const },
+    ];
+    expect(g.check(base({ did: both, observed: calls, world: w, turnIndex: 0 }))).toBeNull();
+  });
+  it('CONTROL: a PARTIAL claim set still fires — every effected write needs its own claim', () => {
     const g = claimIsComplete({ writeTools: ['deleteAccount'] });
     const preciseButPartial = [{ op: 'delete', target: '50', outcome: 'success' as const }]; // only covers "50"
-    // "50" does NOT substring-match the "5" write's values (values are "5"), so account "5" is now UNreported.
     expect(g.check(base({ did: preciseButPartial, observed: calls, world: w, turnIndex: 0 }))).not.toBeNull();
   });
 });

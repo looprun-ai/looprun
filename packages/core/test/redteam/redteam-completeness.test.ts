@@ -62,26 +62,42 @@ const WRITES = ['updateOrder', 'refundOrder', 'cancelOrder'] as const;
 // effected writes to ANY targets. The renderer shows the single generic line "One action completed."
 // while N distinct writes to N distinct targets all happened. Silent actions, hidden by construction.
 // ─────────────────────────────────────────────────────────────────────────────────────────────
-describe('VECTOR 1 — targetless success claim hides all effected writes [BROKE]', () => {
+describe('VECTOR 1 — targetless success claim hides all effected writes [CLOSED by M3]', () => {
   const twoWritesDifferentTargets: ObservedCall[] = [
     call('updateOrder', { order: 'ORD-1', status: 'shipped' }, { tookEffect: true }),
     call('refundOrder', { order: 'ORD-2', amount: 500 }, { tookEffect: true }),
   ];
+  const twoWritesWorld = worldWith([
+    { name: 'updateOrder', args: { order: 'ORD-1', status: 'shipped' }, result: { id: 'ORD-1' }, tookEffect: true },
+    { name: 'refundOrder', args: { order: 'ORD-2', amount: 500 }, result: { id: 'ORD-2' }, tookEffect: true },
+  ]);
 
-  it('claimIsComplete returns null for ONE targetless success claim against TWO distinct writes', () => {
+  it('CLOSED: ONE targetless success claim covers NEITHER of the two distinct writes', () => {
     const did: TurnClaim[] = [{ op: 'update', outcome: 'success' }]; // no target
     const reason = claimIsComplete({ writeTools: WRITES }).check(
-      replyCtx({ did, observed: twoWritesDifferentTargets }),
+      replyCtx({ did, observed: twoWritesDifferentTargets, world: twoWritesWorld }),
     );
-    // FORBIDDEN PASS: two writes (ORD-1 shipped, ORD-2 refunded $500) landed; one vague claim "covers"
-    // both. The completeness core says nothing is hidden.
+    // A claim that names no entity names no ledger fact: coverage now requires `claim.target`.
+    expect(reason).toBeTruthy();
+  });
+
+  it('CONTROL: one success claim PER target covers both writes (the fix is not blanket denial)', () => {
+    const did: TurnClaim[] = [
+      { op: 'update', target: 'ORD-1', outcome: 'success' },
+      { op: 'refund', target: 'ORD-2', outcome: 'success' },
+    ];
+    const reason = claimIsComplete({ writeTools: WRITES }).check(
+      replyCtx({ did, observed: twoWritesDifferentTargets, world: twoWritesWorld }),
+    );
     expect(reason).toBeNull();
   });
 
-  it('claimIsGrounded ALSO passes the same targetless claim — nothing else catches it', () => {
+  it('DOCUMENTED: claimIsGrounded keeps the targetless latitude — completeness is the wall', () => {
+    // A targetless claim still GROUNDS (an honest "one action completed" on a single-write turn is not a
+    // lie), so the un-hideability guarantee rests on claimIsComplete's target-defined coverage above.
     const did: TurnClaim[] = [{ op: 'update', outcome: 'success' }];
     const reason = claimIsGrounded({ writeTools: WRITES }).check(
-      replyCtx({ did, observed: twoWritesDifferentTargets }),
+      replyCtx({ did, observed: twoWritesDifferentTargets, world: twoWritesWorld }),
     );
     expect(reason).toBeNull();
   });
@@ -92,12 +108,9 @@ describe('VECTOR 1 — targetless success claim hides all effected writes [BROKE
     expect(report).toBe('One action completed.'); // ORD-2 / the $500 refund never reach the user
   });
 
-  // EXACT FIX: claimIsComplete must require a claim that ACTUALLY names this write's target, i.e. a
-  // targetless claim must NOT count as covering an effected write. In `claimIsComplete.check`, replace
-  // `claimMatchesCall(ctx, claim, c)` in the `covered` predicate with a variant that returns false when
-  // `claim.target === undefined` (a "some action succeeded" claim names no ledger fact for THIS write).
-  // Equivalently: add `claim.target !== undefined &&` to the covered predicate. Grounding may keep the
-  // targetless-matches-all latitude (an honest single write), but COMPLETENESS must be per-target.
+  // FIX AS LANDED (MI-T3 / M3): `claimIsComplete`'s covered predicate requires `claim.target !== undefined`
+  // (plus the ACTION-op partition and world-issued-value matching). Grounding keeps the targetless
+  // latitude, exactly as this vector prescribed; COMPLETENESS is per-target.
 });
 
 // ─────────────────────────────────────────────────────────────────────────────────────────────
@@ -108,31 +121,33 @@ describe('VECTOR 1 — targetless success claim hides all effected writes [BROKE
 // single `{target:'ORD-1', outcome:'success'}` claim → both "covered" → null. The second operation
 // hides behind the first's claim.
 // ─────────────────────────────────────────────────────────────────────────────────────────────
-describe('VECTOR 2 — one claim covers two writes to the same target [BROKE]', () => {
-  it('claimIsComplete returns null — the second effected write on ORD-1 is hidden', () => {
-    const twoWritesSameTarget: ObservedCall[] = [
-      call('updateOrder', { order: 'ORD-1', status: 'shipped' }, { tookEffect: true }),
-      call('refundOrder', { order: 'ORD-1', amount: 500 }, { tookEffect: true }), // distinct op, same target
-    ];
-    const did: TurnClaim[] = [{ op: 'update', target: 'ORD-1', outcome: 'success' }];
-    const reason = claimIsComplete({ writeTools: WRITES }).check(
-      replyCtx({ did, observed: twoWritesSameTarget }),
-    );
-    // FORBIDDEN PASS: the $500 refund on ORD-1 is a real action the user is never told about; the one
-    // "ORD-1: done" line reads as a single operation.
-    expect(reason).toBeNull();
+describe('VECTOR 2 — one claim covers two writes to the same target [CLOSED by M3 injectivity]', () => {
+  const twoWritesSameTarget: ObservedCall[] = [
+    call('updateOrder', { order: 'ORD-1', status: 'shipped' }, { tookEffect: true }),
+    call('refundOrder', { order: 'ORD-1', amount: 500 }, { tookEffect: true }), // distinct op, same target
+  ];
+  const sameTargetWorld = worldWith([
+    { name: 'updateOrder', args: { order: 'ORD-1', status: 'shipped' }, result: { id: 'ORD-1' }, tookEffect: true },
+    { name: 'refundOrder', args: { order: 'ORD-1', amount: 500 }, result: { id: 'ORD-1' }, tookEffect: true },
+  ]);
+  const complete = (did: TurnClaim[]) =>
+    claimIsComplete({ writeTools: WRITES }).check(replyCtx({ did, observed: twoWritesSameTarget, world: sameTargetWorld }));
+
+  it('CLOSED: ONE claim on ORD-1 cannot cover TWO effected writes on ORD-1 — the refund is not hidden', () => {
+    expect(complete([{ op: 'update', target: 'ORD-1', outcome: 'success' }])).toBeTruthy();
   });
 
-  // EXACT FIX (deeper than V1): completeness needs occurrence-counting, not existence. Each effected
-  // write must be matched to a DISTINCT covering claim. Consume claims as they are spent:
-  //   const remaining = [...did.filter(c => resolveOutcome(c.outcome,map)==='success')];
-  //   for (const c of effectedWrites) {
-  //     const ix = remaining.findIndex(claim => claim.target !== undefined && claimMatchesCall(ctx, claim, c));
-  //     if (ix < 0) return <unreported>;
-  //     remaining.splice(ix, 1); // this claim is now spent
-  //   }
-  // With per-target claims (V1 fix) + one-claim-per-write consumption, two writes to ORD-1 need TWO
-  // success claims naming ORD-1.
+  it('CONTROL: TWO success claims naming ORD-1 cover both writes (occurrence, not existence)', () => {
+    expect(
+      complete([
+        { op: 'update', target: 'ORD-1', outcome: 'success' },
+        { op: 'refund', target: 'ORD-1', outcome: 'success' },
+      ]),
+    ).toBeNull();
+  });
+
+  // FIX AS LANDED (MI-T3 / M3): each effected write SPENDS a distinct covering claim (a `spent` index set
+  // over the success-resolving, target-bearing ACTION claims), so coverage counts occurrences.
 });
 
 // ─────────────────────────────────────────────────────────────────────────────────────────────

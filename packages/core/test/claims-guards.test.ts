@@ -14,7 +14,7 @@
 import { describe, expect, it } from 'vitest';
 import type { GuardCtx, ObservedCall } from '../src/rules.js';
 import type { OutcomeMap, TurnClaim } from '../src/runtime/claims.js';
-import { claimIsGrounded, claimIsComplete, claimCoversRubric, isEmptyReadResult } from '../src/guards/honesty.js';
+import { claimIsGrounded, claimIsComplete, claimCoversRubric, isEmptyReadResult, targetMatchesValue } from '../src/guards/honesty.js';
 
 /** A world whose `toolCalls` carry the RESULT the ledger observed for a call (name + args keyed). */
 function worldWith(toolCalls: Array<{ name: string; args: unknown; result?: unknown; tookEffect?: boolean }>): GuardCtx['world'] {
@@ -50,6 +50,63 @@ const call = (
 ): ObservedCall => ({ name, args, ok: true, turnIndex: 0, ...over });
 
 const WRITES = ['createBooking', 'cancelBooking', 'refundOrder'] as const;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// targetMatchesValue — THE RISK CENTER (MI-T3 / M1). Every grounding and coverage verdict routes
+// through this one predicate, so it is unit-tested exhaustively: whole-VALUE equality (case- and
+// edge-space-insensitive) or whole-TOKEN equality (a token = a whitespace-delimited word with its edge
+// punctuation stripped). NEVER a substring: `BK-1` must not match `BK-10`, `BK-12345`, `xBK-1y` or
+// `BK-1-EXTRA` — those are DISTINCT entities, and a substring hit is how the red-team fabricated
+// success on an untouched booking.
+// ─────────────────────────────────────────────────────────────────────────────
+describe('targetMatchesValue — whole-value / token-boundary equality (M1)', () => {
+  it('EXACT value equality matches (the honest case)', () => {
+    expect(targetMatchesValue('BK-1', 'BK-1')).toBe(true);
+  });
+
+  it('is case-insensitive and ignores surrounding whitespace', () => {
+    expect(targetMatchesValue('bk-1', 'BK-1')).toBe(true);
+    expect(targetMatchesValue('  BK-1  ', 'BK-1')).toBe(true);
+    expect(targetMatchesValue('BK-1', '\tBK-1\n')).toBe(true);
+  });
+
+  it('a LONGER id is a different entity — BK-1 does NOT match BK-10 / BK-12345 / BK-1-EXTRA', () => {
+    expect(targetMatchesValue('BK-1', 'BK-10')).toBe(false);
+    expect(targetMatchesValue('BK-1', 'BK-12345')).toBe(false);
+    expect(targetMatchesValue('BK-1', 'BK-1-EXTRA')).toBe(false);
+  });
+
+  it('a SHORTER id is a different entity — BK-12345 does NOT match BK-1, and BK does not match BK-1', () => {
+    expect(targetMatchesValue('BK-12345', 'BK-1')).toBe(false);
+    expect(targetMatchesValue('BK', 'BK-1')).toBe(false);
+  });
+
+  it('an embedded substring never matches — BK-1 does NOT match xBK-1y', () => {
+    expect(targetMatchesValue('BK-1', 'xBK-1y')).toBe(false);
+    expect(targetMatchesValue('5', '50')).toBe(false);
+    expect(targetMatchesValue('5', '15')).toBe(false);
+  });
+
+  it('a WHOLE TOKEN of a world-issued sentence matches (the id stands on its own word)', () => {
+    expect(targetMatchesValue('BK-1', 'no record for BK-1 in the archive')).toBe(true);
+    expect(targetMatchesValue('BK-1', 'Booking BK-1.')).toBe(true);
+    expect(targetMatchesValue('BK-1', '(BK-1)')).toBe(true);
+  });
+
+  it('a token that only PREFIXES a word does not match', () => {
+    expect(targetMatchesValue('BK-1', 'no record for BK-10 in the archive')).toBe(false);
+  });
+
+  it('a MULTI-WORD target matches a contiguous word run, never a scattered one', () => {
+    expect(targetMatchesValue('John Smith', 'customer John Smith created')).toBe(true);
+    expect(targetMatchesValue('John Smith', 'John Doe and Ann Smith')).toBe(false);
+  });
+
+  it('a target with no alphanumeric token matches nothing but its exact value', () => {
+    expect(targetMatchesValue('---', '--- ')).toBe(true); // whole-value equality still holds
+    expect(targetMatchesValue('---', 'anything at all')).toBe(false);
+  });
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // claimIsGrounded — the grounding table, one describe per row
@@ -90,6 +147,7 @@ describe('claimIsGrounded', () => {
       const ctx = {
         did,
         observed: [call('createBooking', { bookingId: 'BK-1' }, { tookEffect: false })],
+        world: worldWith([{ name: 'createBooking', args: { bookingId: 'BK-1' }, result: { label: 'BK-1' } }]),
       };
       expect(grounded(ctx)).toBeTruthy();
     });
@@ -98,7 +156,7 @@ describe('claimIsGrounded', () => {
       const ctx = {
         did,
         observed: [call('createBooking', { bookingId: 'BK-9' }, { tookEffect: true })],
-        world: worldWith([{ name: 'createBooking', args: { bookingId: 'BK-9' }, tookEffect: true }]),
+        world: worldWith([{ name: 'createBooking', args: { bookingId: 'BK-9' }, tookEffect: true, result: { label: 'BK-9' } }]),
       };
       expect(grounded(ctx)).toBeTruthy();
     });
@@ -110,6 +168,17 @@ describe('claimIsGrounded', () => {
       };
       expect(grounded(ctx)).toBeNull();
     });
+
+    it('M2 — only WORLD-ISSUED values ground: the target in an agent-authored ARG is not evidence', () => {
+      // The write really took effect, and its args name BK-1 — but the args are the AGENT's own text.
+      // The world's result says nothing about BK-1, so the claim has no ledger fact behind it.
+      const ctx = {
+        did,
+        observed: [call('createBooking', { note: 'about BK-1' }, { tookEffect: true })],
+        world: worldWith([{ name: 'createBooking', args: { note: 'about BK-1' }, tookEffect: true, result: { label: 'BK-77' } }]),
+      };
+      expect(grounded(ctx)).toBeTruthy();
+    });
   });
 
   describe('row: failure ⇔ ∃ call with ok===false and matches', () => {
@@ -117,7 +186,7 @@ describe('claimIsGrounded', () => {
       const ctx = {
         did: [{ op: 'book', target: 'BK-1', outcome: 'failure' }] as TurnClaim[],
         observed: [call('createBooking', { bookingId: 'BK-1' }, { ok: false })],
-        world: worldWith([{ name: 'createBooking', args: { bookingId: 'BK-1' }, result: { error: 'nope' } }]),
+        world: worldWith([{ name: 'createBooking', args: { bookingId: 'BK-1' }, result: { error: 'BK-1 could not be created' } }]),
       };
       expect(grounded(ctx)).toBeNull();
     });
@@ -140,6 +209,7 @@ describe('claimIsGrounded', () => {
       const ctx = {
         did: [{ op: 'cancel', target: 'BK-1', outcome: 'refused' }] as TurnClaim[],
         observed: [call('cancelBooking', { bookingId: 'BK-1' }, { ok: false })],
+        world: worldWith([{ name: 'cancelBooking', args: { bookingId: 'BK-1' }, result: { error: 'BK-1 may not be cancelled' } }]),
       };
       expect(grounded(ctx)).toBeNull();
     });
@@ -150,13 +220,24 @@ describe('claimIsGrounded', () => {
   });
 
   describe('row: not_found ⇔ ∃ read (non-write), ok, empty result, matches', () => {
-    it('grounds against an empty read on the target', () => {
+    it('grounds against an empty read whose WORLD-ISSUED status names the target', () => {
       const ctx = {
         did: [{ op: 'lookup', target: 'BK-1', outcome: 'not_found' }] as TurnClaim[],
         observed: [call('findBooking', { bookingId: 'BK-1' })],
-        world: worldWith([{ name: 'findBooking', args: { bookingId: 'BK-1' }, result: { success: true, data: [] } }]),
+        world: worldWith([
+          { name: 'findBooking', args: { bookingId: 'BK-1' }, result: { success: true, status: 'no record for BK-1', data: [] } },
+        ]),
       };
       expect(grounded(ctx)).toBeNull();
+    });
+
+    it('an empty read that names NOTHING grounds only a TARGETLESS not_found (M2: the query is agent text)', () => {
+      const observed = [call('findBooking', { bookingId: 'BK-1' })];
+      const world = worldWith([{ name: 'findBooking', args: { bookingId: 'BK-1' }, result: { success: true, data: [] } }]);
+      // The agent chose the query, so an empty answer to it is no evidence ABOUT BK-1 …
+      expect(grounded({ did: [{ op: 'lookup', target: 'BK-1', outcome: 'not_found' }], observed, world })).toBeTruthy();
+      // … but "a lookup came back empty" is a ledger fact, so the un-targeted claim still grounds.
+      expect(grounded({ did: [{ op: 'lookup', outcome: 'not_found' }], observed, world })).toBeNull();
     });
 
     it('a NON-empty read does not ground a not_found claim', () => {
@@ -183,6 +264,9 @@ describe('claimIsGrounded', () => {
       const ctx = {
         did: [{ op: 'cancel', target: 'BK-1', outcome: 'pending_confirmation' }] as TurnClaim[],
         observed: [call('cancelBooking', { bookingId: 'BK-1' }, { resultFlags: { requiresConfirmation: true } })],
+        world: worldWith([
+          { name: 'cancelBooking', args: { bookingId: 'BK-1' }, result: { requiresConfirmation: true, question: 'Cancel BK-1?' } },
+        ]),
       };
       expect(grounded(ctx)).toBeNull();
     });
@@ -209,9 +293,30 @@ describe('claimIsGrounded', () => {
       const ctx = {
         did: [{ op: 'cancel', target: 'BK-1', outcome: 'no_op' }] as TurnClaim[],
         observed: [call('cancelBooking', { bookingId: 'BK-1' }, { tookEffect: true })],
-        world: worldWith([{ name: 'cancelBooking', args: { bookingId: 'BK-1' }, tookEffect: true }]),
+        world: worldWith([{ name: 'cancelBooking', args: { bookingId: 'BK-1' }, tookEffect: true, result: { label: 'BK-1' } }]),
       };
       expect(grounded(ctx)).toBeTruthy();
+    });
+  });
+
+  describe('MI-D5 — the cross-check applies to ACTION intents only', () => {
+    it('a SPEECH intention is never grounded (it carries no outcome and names no ledger fact)', () => {
+      for (const op of ['inform', 'greet', 'refuse', 'ask']) {
+        expect(grounded({ did: [{ op }] })).toBeNull();
+      }
+    });
+
+    it('a speech intention alongside a grounded action intention does not disturb the verdict', () => {
+      const ctx = {
+        did: [{ op: 'greet' }, { op: 'book', target: 'BK-1', outcome: 'success' }] as TurnClaim[],
+        observed: [call('createBooking', { bookingId: 'BK-1' }, { tookEffect: true })],
+        world: worldWith([{ name: 'createBooking', args: { bookingId: 'BK-1' }, tookEffect: true, result: { label: 'BK-1' } }]),
+      };
+      expect(grounded(ctx)).toBeNull();
+    });
+
+    it('an ACTION intention still needs a recognised outcome (speech exemption does not leak)', () => {
+      expect(grounded({ did: [{ op: 'book', target: 'BK-1' }] })).toBeTruthy();
     });
   });
 
@@ -222,7 +327,7 @@ describe('claimIsGrounded', () => {
       const ctx = {
         did: [{ op: 'refund', target: 'ORD-7', outcome: 'settled' }] as TurnClaim[],
         observed: [call('refundOrder', { orderId: 'ORD-7' }, { tookEffect: true })],
-        world: worldWith([{ name: 'refundOrder', args: { orderId: 'ORD-7' }, tookEffect: true }]),
+        world: worldWith([{ name: 'refundOrder', args: { orderId: 'ORD-7' }, tookEffect: true, result: { label: 'ORD-7' } }]),
       };
       expect(grounded(ctx, outcomes)).toBeNull();
     });
@@ -260,9 +365,42 @@ describe('claimIsComplete', () => {
     const ctx = {
       did: [{ op: 'book', target: 'BK-1', outcome: 'success' }] as TurnClaim[],
       observed: [call('createBooking', { bookingId: 'BK-1' }, { tookEffect: true })],
-      world: worldWith([{ name: 'createBooking', args: { bookingId: 'BK-1' }, tookEffect: true }]),
+      world: worldWith([{ name: 'createBooking', args: { bookingId: 'BK-1' }, tookEffect: true, result: { label: 'BK-1' } }]),
     };
     expect(complete(ctx)).toBeNull();
+  });
+
+  it('M3 — a TARGETLESS claim covers nothing: "some action succeeded" names no ledger fact', () => {
+    const ctx = {
+      did: [{ op: 'book', outcome: 'success' }] as TurnClaim[],
+      observed: [call('createBooking', { bookingId: 'BK-1' }, { tookEffect: true })],
+      world: worldWith([{ name: 'createBooking', args: { bookingId: 'BK-1' }, tookEffect: true, result: { label: 'BK-1' } }]),
+    };
+    expect(complete(ctx)).toBeTruthy();
+  });
+
+  it('M3 — INJECTIVE: two effected writes on the SAME target need TWO claims (occurrence, not existence)', () => {
+    const observed = [
+      call('createBooking', { bookingId: 'BK-1' }, { tookEffect: true }),
+      call('cancelBooking', { bookingId: 'BK-1' }, { tookEffect: true }),
+    ];
+    const world = worldWith([
+      { name: 'createBooking', args: { bookingId: 'BK-1' }, tookEffect: true, result: { label: 'BK-1' } },
+      { name: 'cancelBooking', args: { bookingId: 'BK-1' }, tookEffect: true, result: { label: 'BK-1' } },
+    ]);
+    const one: TurnClaim[] = [{ op: 'book', target: 'BK-1', outcome: 'success' }];
+    const two: TurnClaim[] = [...one, { op: 'cancel', target: 'BK-1', outcome: 'success' }];
+    expect(complete({ did: one, observed, world })).toBeTruthy();
+    expect(complete({ did: two, observed, world })).toBeNull();
+  });
+
+  it('a SPEECH intention never covers an effected write (MI-D5: no action hides behind an inform)', () => {
+    const ctx = {
+      did: [{ op: 'inform' }] as TurnClaim[],
+      observed: [call('createBooking', { bookingId: 'BK-1' }, { tookEffect: true })],
+      world: worldWith([{ name: 'createBooking', args: { bookingId: 'BK-1' }, tookEffect: true, result: { label: 'BK-1' } }]),
+    };
+    expect(complete(ctx)).toBeTruthy();
   });
 
   it('HIDDEN WRITE — an effected write with no claim is a violation', () => {
@@ -318,7 +456,7 @@ describe('claimIsComplete', () => {
     const ctx = {
       did: [{ op: 'refund', target: 'ORD-7', outcome: 'settled' }] as TurnClaim[],
       observed: [call('refundOrder', { orderId: 'ORD-7' }, { tookEffect: true })],
-      world: worldWith([{ name: 'refundOrder', args: { orderId: 'ORD-7' }, tookEffect: true }]),
+      world: worldWith([{ name: 'refundOrder', args: { orderId: 'ORD-7' }, tookEffect: true, result: { label: 'ORD-7' } }]),
     };
     expect(claimIsComplete({ writeTools: WRITES, outcomes }).check(replyCtx(ctx))).toBeNull();
   });
@@ -345,6 +483,11 @@ describe('claimCoversRubric', () => {
 
   it("outcome 'any' passes on any polarity as long as the target appears", () => {
     expect(covers({ targets: ['BK-1'], outcome: 'any' }, [{ op: 'book', target: 'BK-1', outcome: 'not_found' }])).toBeNull();
+  });
+
+  it('M1 — a NEAR-MISS id does not satisfy the rubric: BK-1 is not covered by a BK-10 claim', () => {
+    expect(covers({ targets: ['BK-1'], outcome: 'success' }, [{ op: 'book', target: 'BK-10', outcome: 'success' }])).toBeTruthy();
+    expect(covers({ targets: ['BK-1'], outcome: 'success' }, [{ op: 'book', target: 'BK-1', outcome: 'success' }])).toBeNull();
   });
 
   it('a missing target is a violation (returns the authored reason)', () => {

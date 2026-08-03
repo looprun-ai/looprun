@@ -9,7 +9,14 @@
  */
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { resolveOutcome, validateClaims, isAskEvent, respondPayload, CORE_OUTCOMES } from '../src/runtime/claims.js';
+import {
+  resolveOutcome,
+  validateClaims,
+  isAskEvent,
+  respondPayload,
+  CORE_OUTCOMES,
+  assertNoCoreOutcomeShadow,
+} from '../src/runtime/claims.js';
 
 test('core outcomes resolve to themselves without a map', () => {
   for (const o of CORE_OUTCOMES) assert.equal(resolveOutcome(o, undefined), o);
@@ -22,6 +29,20 @@ test('domain outcome resolves through the map; undeclared resolves to null', () 
 test('a domain word may not shadow a core outcome', () => {
   // map entry keyed by a core outcome is ignored: core meaning wins
   assert.equal(resolveOutcome('success', { success: 'refused' as const }), 'success');
+});
+test('m10 — a CASE-VARIANT core key is a shadow too, and is rejected at SPEC LOAD', () => {
+  // `resolveOutcome` is case-sensitive, so 'Success' is NOT a core word and WOULD resolve through the
+  // map — a domain could redefine a core outcome by casing alone. The shadow law is enforced once, at
+  // load: any key whose lowercased form is a core word is refused before a turn ever runs.
+  assert.equal(resolveOutcome('Success', { Success: 'failure' as const }), 'failure'); // why the load gate exists
+  assert.throws(() => assertNoCoreOutcomeShadow({ Success: 'failure' }, 'a'), /Success/);
+  assert.throws(() => assertNoCoreOutcomeShadow({ SUCCESS: 'failure' }, 'a'), /outcome/i);
+  assert.throws(() => assertNoCoreOutcomeShadow({ not_Found: 'success' }, 'a'), /not_Found/);
+  assert.throws(() => assertNoCoreOutcomeShadow({ success: 'success' }, 'a'), /success/);
+});
+test('m10 — a genuine domain vocabulary loads without complaint', () => {
+  assert.equal(assertNoCoreOutcomeShadow({ settled: 'success', bounced: 'failure' }, 'a'), undefined);
+  assert.equal(assertNoCoreOutcomeShadow(undefined, 'a'), undefined);
 });
 test('validateClaims: non-array, non-object items, wrong field types, empty op are ERRORS', () => {
   assert.ok(validateClaims('nope').errors.length);

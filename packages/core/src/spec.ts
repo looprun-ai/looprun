@@ -27,6 +27,7 @@
  */
 import { claimIsComplete, claimIsGrounded, confirmFirst, degenerationGuard, destructiveThrottle, noDuplicateCall } from './guards/index.js';
 import { GuardExecutionError } from './rules.js';
+import { assertNoCoreOutcomeShadow } from './runtime/claims.js';
 import type { AgentWorld, Dim, Guard, GuardCtx, ObservedCall, ReplyMutator, SpatialEdge } from './rules.js';
 import type { DomainContract } from './trunk.js';
 import type { SamplingSettings } from './model-params.js';
@@ -383,6 +384,10 @@ export class AgentSpecBase implements AgentSpec {
       ...(cfg.chains?.length ? { chains: [...cfg.chains] } : {}),
     };
     this.behavior = [...(cfg.behavior ?? [])];
+    // m10 — the outcome-map SHADOW LAW is a LOAD-time invariant: a map key that redefines a core outcome
+    // (`Success`, `NOT_FOUND`, …) is an authoring defect in the domain vocabulary, so it fails here rather
+    // than silently changing what a claim means on every later turn.
+    assertNoCoreOutcomeShadow(cfg.contract?.outcomes, cfg.id);
     if (cfg.contract) this.contract = cfg.contract;
     this.destructiveTools = [...(cfg.destructiveTools ?? [])];
     this.confirmMechanism = { ...(cfg.confirmMechanism ?? {}) };

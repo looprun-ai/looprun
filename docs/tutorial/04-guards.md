@@ -494,7 +494,7 @@ The reply text is in `ctx.reply` and no tool can run any more. A deny costs a bo
 |---|---|---|
 | [`pendingConfirmMustAsk`](#15-pendingconfirmmustask) | `confirmation.ts` | When a probe returned `requiresConfirmation` this turn and nothing resolved it, the reply must relay that question. |
 | [`claimIsGrounded`](#16-claimisgrounded) | `honesty.ts` | Every operation the agent declares in `did` must match the world ledger: a `success` needs a write that took effect, `not_found` an empty read, `blocked`/`refused` a veto or world refusal, `no_op` no effected write — an undeclared outcome word is always a violation. |
-| [`claimIsComplete`](#17-claimiscomplete) | `honesty.ts` | Every write that TOOK EFFECT this turn must be covered by a `success` claim in `did` — no silent action hidden from the user. |
+| [`claimIsComplete`](#17-claimiscomplete) | `honesty.ts` | Every write that TOOK EFFECT this turn must be covered by a DISTINCT `success` ACTION intention in `did` that NAMES the entity — no silent action hidden from the user. |
 | [`claimCoversRubric`](#18-claimcoversrubric) | `honesty.ts` | Each configured target must appear in `did` with the required outcome polarity (or any polarity when `outcome: 'any'`). |
 | [`degenerationGuard`](#19-degenerationguard) | `reply.ts` | Catches leaked reasoning or tool markup, chat-template tokens and run-away line repetition in the reply. |
 | [`llmCheck`](#20-llmcheck) | `llm-check.ts` | An LLM-adjudicated guard: a host-registered adjudicator answers a trusted rubric over the full context (history + user text) and its verdict becomes the deny. |
@@ -513,7 +513,7 @@ pendingConfirmMustAsk()
 
 Every operation the agent declares in `did` must match the world ledger: a `success` needs a write that took effect, `not_found` an empty read, `blocked`/`refused` a veto or world refusal, `no_op` no effected write — an undeclared outcome word is always a violation.
 
-**When to reach for it.** Always on when the domain declares its `writeTools` (the spec class auto-installs it, fed by `contract.writeTools` + `contract.outcomes`). It is the ledger cross-check that replaced the deleted prose honesty guards: it keys on `target` + `outcome` against verified calls, never on op-name semantics or reply text, so a fabricated success cannot ground. A domain outcome word must map to a core outcome via the contract's outcome map or it reads as undeclared.
+**When to reach for it.** Always on when the domain declares its `writeTools` (the spec class auto-installs it, fed by `contract.writeTools` + `contract.outcomes`). It is the ledger cross-check that replaced the deleted prose honesty guards: it keys on `target` + `outcome` against verified calls, never on op-name semantics or reply text, so a fabricated success cannot ground. It checks ACTION intentions only — a speech intention (`inform`/`greet`/`refuse`/`ask`) names no ledger fact. A `target` grounds only against the values the WORLD issued for a call (its result), never the call's agent-authored args, and by whole-value / whole-token equality, so `BK-1` never grounds against `BK-10`. A domain outcome word must map to a core outcome via the contract's outcome map or it reads as undeclared.
 
 ```ts
 claimIsGrounded({ writeTools: ['createBooking', 'cancelBooking'], outcomes: { settled: 'success' } })
@@ -521,9 +521,9 @@ claimIsGrounded({ writeTools: ['createBooking', 'cancelBooking'], outcomes: { se
 
 #### 17. `claimIsComplete`
 
-Every write that TOOK EFFECT this turn must be covered by a `success` claim in `did` — no silent action hidden from the user.
+Every write that TOOK EFFECT this turn must be covered by a DISTINCT `success` ACTION intention in `did` that NAMES the entity — no silent action hidden from the user.
 
-**When to reach for it.** Auto-installed alongside `claimIsGrounded` (same `writeTools` + `outcomes`). Its mirror is `claimIsGrounded`: that one stops a claim with no matching effect, this one stops an effect with no matching claim — both resolve a domain outcome word through the same `OutcomeMap`, so a mapped word (e.g. `settled` → `success`) covers a write exactly like the literal word does. It names the unreported action by the world-issued produced label, never by the tool name.
+**When to reach for it.** Auto-installed alongside `claimIsGrounded` (same `writeTools` + `outcomes`). Its mirror is `claimIsGrounded`: that one stops a claim with no matching effect, this one stops an effect with no matching claim — both resolve a domain outcome word through the same `OutcomeMap`, so a mapped word (e.g. `settled` → `success`) covers a write exactly like the literal word does. Coverage is per-entity and INJECTIVE: a claim with no `target` covers nothing, a speech intention covers nothing, and two writes on the same entity need two claims. It names the unreported action by the world-issued produced label, never by the tool name.
 
 ```ts
 claimIsComplete({ writeTools: ['createBooking', 'cancelBooking'], outcomes: { settled: 'success' } })
@@ -533,7 +533,7 @@ claimIsComplete({ writeTools: ['createBooking', 'cancelBooking'], outcomes: { se
 
 Each configured target must appear in `did` with the required outcome polarity (or any polarity when `outcome: 'any'`).
 
-**When to reach for it.** The per-case coverage rule that replaces `replyMentions`/`replyConfirmsLabels`: because polarity is a FIELD, a reply that says "no record of BK-1 was found" can never satisfy a `success` requirement again. Config-bound only (a per-case norm) — never auto-installed. Pass `'any'` when only the mention matters, a specific outcome when the polarity is the point.
+**When to reach for it.** The per-case coverage rule that replaces `replyMentions`/`replyConfirmsLabels`: because polarity is a FIELD, a reply that says "no record of BK-1 was found" can never satisfy a `success` requirement again. The target must be the claim's `target` by whole-value / whole-token equality, so a claim about `BK-10` does not answer a rubric about `BK-1`. Config-bound only (a per-case norm) — never auto-installed. Pass `'any'` when only the mention matters, a specific outcome when the polarity is the point.
 
 ```ts
 claimCoversRubric({ targets: ['BK-100234'], outcome: 'success' }, 'Account for the booking you were asked about.')
