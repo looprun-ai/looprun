@@ -52,14 +52,14 @@ const call = (
 const WRITES = ['createBooking', 'cancelBooking', 'refundOrder'] as const;
 
 // ─────────────────────────────────────────────────────────────────────────────
-// targetMatchesValue — THE RISK CENTER (MI-T3 / M1). Every grounding and coverage verdict routes
-// through this one predicate, so it is unit-tested exhaustively: whole-VALUE equality (case- and
-// edge-space-insensitive) or whole-TOKEN equality (a token = a whitespace-delimited word with its edge
-// punctuation stripped). NEVER a substring: `BK-1` must not match `BK-10`, `BK-12345`, `xBK-1y` or
-// `BK-1-EXTRA` — those are DISTINCT entities, and a substring hit is how the red-team fabricated
-// success on an untouched booking.
+// targetMatchesValue — THE RISK CENTER (MI-T3 / M1, tightened MI-T7). Every grounding, coverage and
+// rubric verdict routes through this one predicate, so it is unit-tested exhaustively: WHOLE-VALUE
+// equality after canonicalization (case-folded within-script, trimmed, edge punctuation stripped).
+// NEVER a substring and — since red-team r2 — never a token RUN either: `BK-1` must not match `BK-10`,
+// `BK-12345`, `xBK-1y` or `BK-1-EXTRA`, and `12` must not match `Order 12` (one word of a name is not
+// the name: it stood for the entity, and equally for `Invoice 12`).
 // ─────────────────────────────────────────────────────────────────────────────
-describe('targetMatchesValue — whole-value / token-boundary equality (M1)', () => {
+describe('targetMatchesValue — whole-value equality (M1)', () => {
   it('EXACT value equality matches (the honest case)', () => {
     expect(targetMatchesValue('BK-1', 'BK-1')).toBe(true);
   });
@@ -87,24 +87,35 @@ describe('targetMatchesValue — whole-value / token-boundary equality (M1)', ()
     expect(targetMatchesValue('5', '15')).toBe(false);
   });
 
-  it('a WHOLE TOKEN of a world-issued sentence matches (the id stands on its own word)', () => {
-    expect(targetMatchesValue('BK-1', 'no record for BK-1 in the archive')).toBe(true);
-    expect(targetMatchesValue('BK-1', 'Booking BK-1.')).toBe(true);
-    expect(targetMatchesValue('BK-1', '(BK-1)')).toBe(true);
+  it('an id INSIDE a world sentence no longer matches — only the whole value does (MI-T7)', () => {
+    // WAS true: the id "stood on its own word" inside the sentence. That token-run scan is what let a
+    // status word, a note fragment or one word of a name ground and COVER a write, so it is gone.
+    // Identity is key-scoped now, so the values on the other side are ids and labels, not prose.
+    expect(targetMatchesValue('BK-1', 'no record for BK-1 in the archive')).toBe(false);
+    expect(targetMatchesValue('BK-1', 'Booking BK-1.')).toBe(false);
+    expect(targetMatchesValue('BK-1', '(BK-1)')).toBe(true); // EDGE punctuation is still stripped
   });
 
   it('a token that only PREFIXES a word does not match', () => {
     expect(targetMatchesValue('BK-1', 'no record for BK-10 in the archive')).toBe(false);
   });
 
-  it('a MULTI-WORD target matches a contiguous word run, never a scattered one', () => {
-    expect(targetMatchesValue('John Smith', 'customer John Smith created')).toBe(true);
+  it('a MULTI-WORD name matches as a WHOLE, never by one of its words (MI-T7 / §2.1)', () => {
+    expect(targetMatchesValue('John Smith', 'John Smith')).toBe(true);
+    expect(targetMatchesValue('John Smith', 'customer John Smith created')).toBe(false);
+    expect(targetMatchesValue('John', 'John Smith')).toBe(false);
     expect(targetMatchesValue('John Smith', 'John Doe and Ann Smith')).toBe(false);
   });
 
-  it('a target with no alphanumeric token matches nothing but its exact value', () => {
-    expect(targetMatchesValue('---', '--- ')).toBe(true); // whole-value equality still holds
+  it('a target that canonicalizes to nothing matches NOTHING (fails closed)', () => {
+    expect(targetMatchesValue('---', '--- ')).toBe(false); // no letter or digit ⇒ it names no entity
     expect(targetMatchesValue('---', 'anything at all')).toBe(false);
+  });
+
+  it('a unicode LOOKALIKE never folds onto the ASCII id (§2.4), and an invisible control never strips (§2.6)', () => {
+    expect(targetMatchesValue('ORD-K1', 'ORD-K1')).toBe(false); // U+212A KELVIN SIGN
+    expect(targetMatchesValue('BK-1‏', 'BK-1')).toBe(false);    // RIGHT-TO-LEFT MARK
+    expect(targetMatchesValue('‮BK-1', 'BK-1')).toBe(false);    // RIGHT-TO-LEFT OVERRIDE
   });
 });
 
@@ -220,7 +231,7 @@ describe('claimIsGrounded', () => {
   });
 
   describe('row: not_found ⇔ ∃ read (non-write), ok, empty result, matches', () => {
-    it('grounds against an empty read whose WORLD-ISSUED status names the target', () => {
+    it('grounds against an empty read whose identity-key ARG names the target', () => {
       const ctx = {
         did: [{ op: 'lookup', target: 'BK-1', outcome: 'not_found' }] as TurnClaim[],
         observed: [call('findBooking', { bookingId: 'BK-1' })],
@@ -231,13 +242,25 @@ describe('claimIsGrounded', () => {
       expect(grounded(ctx)).toBeNull();
     });
 
-    it('an empty read that names NOTHING grounds only a TARGETLESS not_found (M2: the query is agent text)', () => {
+    it('an empty read GROUNDS the entity its identity-key ARG named — that is what a lookup is (MI-T7)', () => {
       const observed = [call('findBooking', { bookingId: 'BK-1' })];
       const world = worldWith([{ name: 'findBooking', args: { bookingId: 'BK-1' }, result: { success: true, data: [] } }]);
-      // The agent chose the query, so an empty answer to it is no evidence ABOUT BK-1 …
-      expect(grounded({ did: [{ op: 'lookup', target: 'BK-1', outcome: 'not_found' }], observed, world })).toBeTruthy();
-      // … but "a lookup came back empty" is a ledger fact, so the un-targeted claim still grounds.
+      // M2 (args are never evidence) is a law about claims of PRESENCE and is unchanged for `success`.
+      // An ABSENT record issues no value at all, so the ONLY thing that can name the subject of an empty
+      // lookup is the lookup: `bookingId:'BK-1'` + the world's own empty answer IS the not_found.
+      expect(grounded({ did: [{ op: 'lookup', target: 'BK-1', outcome: 'not_found' }], observed, world })).toBeNull();
       expect(grounded({ did: [{ op: 'lookup', outcome: 'not_found' }], observed, world })).toBeNull();
+    });
+
+    it('a FREE-TEXT query arg carries no verdict — an echoed search string never grounds not_found', () => {
+      // The identity filter is what keeps the args conjunct honest: a world that ECHOES the agent's
+      // query into its own status sentence cannot launder a not_found on an entity a real lookup would
+      // have found (red-team r2, §6.2).
+      const observed = [call('search', { query: 'BK-1 in cold-archive-partition' })];
+      const world = worldWith([
+        { name: 'search', args: { query: 'BK-1 in cold-archive-partition' }, result: { status: 'no results for "BK-1 in cold-archive-partition"', data: [] } },
+      ]);
+      expect(grounded({ did: [{ op: 'lookup', target: 'BK-1', outcome: 'not_found' }], observed, world })).toBeTruthy();
     });
 
     it('a NON-empty read does not ground a not_found claim', () => {
@@ -298,17 +321,38 @@ describe('claimIsGrounded', () => {
       expect(grounded(ctx)).toBeTruthy();
     });
 
-    it('BACKSTOP: a no_op claim over an effected write the world NAMED NOTHING for is caught by completeness', () => {
-      // The write took effect but its result identifies nothing, so `matches` is false and the no_op
-      // claim GROUNDS ("no effected write matches me" is literally true). The un-hideability guarantee
-      // therefore rests on claimIsComplete here: the write is uncovered, so the turn is denied.
+    it('an effected write the world NAMED NOTHING for still contradicts a no_op on it (MI-T7)', () => {
+      // The write took effect and its result identifies nothing — but the CALL addressed BK-1, and the
+      // contrary-evidence test reads everything the call addressed, so grounding catches it now too.
+      // (It used to pass grounding, with claimIsComplete as the only backstop; both deny today.)
       const ctx = {
         did: [{ op: 'cancel', target: 'BK-1', outcome: 'no_op' }] as TurnClaim[],
         observed: [call('cancelBooking', { bookingId: 'BK-1' }, { tookEffect: true })],
         world: worldWith([{ name: 'cancelBooking', args: { bookingId: 'BK-1' }, tookEffect: true, result: { success: true } }]),
       };
-      expect(grounded(ctx)).toBeNull(); // grounding alone does NOT catch it
-      expect(claimIsComplete({ writeTools: WRITES }).check(replyCtx(ctx))).toBeTruthy(); // completeness does
+      expect(grounded(ctx)).toBeTruthy();
+      expect(claimIsComplete({ writeTools: WRITES }).check(replyCtx(ctx))).toBeTruthy();
+    });
+
+    it('a no_op on an entity the turn NEVER ADDRESSED does not ground (the vacuous row is closed)', () => {
+      // `no_op` was the one row satisfied by the ABSENCE of contrary evidence, so any target grounded on
+      // an empty ledger and the renderer announced it as a verified non-event (red-team r2, §5).
+      expect(grounded({ did: [{ op: 'check', target: 'BK-999', outcome: 'no_op' }] })).toBeTruthy();
+      const ctx = {
+        did: [{ op: 'check', target: 'BK-2', outcome: 'no_op' }] as TurnClaim[],
+        observed: [call('findBooking', { bookingId: 'BK-1' })],
+        world: worldWith([{ name: 'findBooking', args: { bookingId: 'BK-1' }, result: { id: 'BK-1' } }]),
+      };
+      expect(grounded(ctx)).toBeTruthy();
+    });
+
+    it('CONTROL: a no_op grounds when the turn DID look at the entity and changed nothing', () => {
+      const ctx = {
+        did: [{ op: 'check', target: 'BK-1', outcome: 'no_op' }] as TurnClaim[],
+        observed: [call('findBooking', { bookingId: 'BK-1' })],
+        world: worldWith([{ name: 'findBooking', args: { bookingId: 'BK-1' }, result: { id: 'BK-1', status: 'already cancelled' } }]),
+      };
+      expect(grounded(ctx)).toBeNull();
     });
   });
 
@@ -640,7 +684,31 @@ describe('isEmptyReadResult', () => {
   });
 
   it('M4 control: a SCALAR under a status-like key is still not content', () => {
-    expect(isEmptyReadResult({ message: 'no record found' })).toBe(true);
+    // …but a status WORD alone is no longer EVIDENCE of emptiness either — see the next test.
     expect(isEmptyReadResult({ status: 'not_found', found: false })).toBe(true);
+    expect(isEmptyReadResult({ message: 'no record found', data: [] })).toBe(true);
+  });
+
+  // ── MI-T7 (red-team r2 §6.1): emptiness needs POSITIVE evidence, and a status SENTENCE is not it ──
+  // The old law skipped every scalar status-like field, so a result whose ONLY field was a status
+  // sentence read as EMPTY — and `{status:'BK-1 is active and confirmed'}`, a read reporting the record
+  // as PRESENT, grounded a `not_found` on it. That is the polarity inversion the whole structured-claims
+  // redesign exists to kill, reappearing inside the emptiness heuristic. A result with no DATA CHANNEL
+  // is undecidable and fails closed; a domain whose empty read has none must return one.
+  it('a record with NO data channel is not empty — undecidable fails closed', () => {
+    expect(isEmptyReadResult({ status: 'BK-1 is active and confirmed' })).toBe(false);
+    expect(isEmptyReadResult({ message: 'no record found' })).toBe(false);
+    expect(isEmptyReadResult({ success: false })).toBe(false);
+    expect(isEmptyReadResult('')).toBe(false); // a bare scalar names no channel either
+  });
+
+  it('a FALSE found/exists flag IS a data channel — the envelope shape stays groundable', () => {
+    expect(isEmptyReadResult({ found: false, message: 'no record for BK-1' })).toBe(true);
+    expect(isEmptyReadResult({ exists: false })).toBe(true);
+    expect(isEmptyReadResult({ found: true })).toBe(false); // "it is there" is not emptiness
+  });
+
+  it('an empty data channel beside a NAMED entity is not empty', () => {
+    expect(isEmptyReadResult({ data: [], id: 'BK-1' })).toBe(false);
   });
 });

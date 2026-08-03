@@ -25,7 +25,7 @@
 import { resolveBindings } from './spec.js';
 import type { AgentSpec, GuardBinding, Hook } from './spec.js';
 import type { AgentWorld } from './rules.js';
-import type { CoreOutcome, OutcomeMap, TurnClaim } from './runtime/claims.js';
+import type { CoreOutcome, OutcomeMap, RenderedClaim } from './runtime/claims.js';
 import { derivePolarity, deriveSubject, foldTrunk } from './trunk-fold.js';
 import type { SubjectRule, TrunkBlock, TrunkLine, TrunkRow } from './trunk-fold.js';
 
@@ -53,10 +53,11 @@ export interface DomainContract {
    *  (world, the turn's domain tool names, produced labels, the violation kinds). */
   exhaustionReply?: (world: AgentWorld, okTools: string[], produced: string[], violations: string[]) => string;
   /** The domain's WORDING (and language) for ONE verified claim in the user-facing operation report —
-   *  the domain language seam over {@link renderOperationReport}. Given a claim and its resolved core
-   *  outcome, return the one-liner the user reads. Absent ⇒ the engine's neutral English default (which
-   *  renders the claim's `target`, never a tool name or the advisory `op`). */
-  renderClaim?: (claim: TurnClaim, core: CoreOutcome) => string;
+   *  the domain language seam over {@link renderOperationReport}. Given the VERIFIED fields of a claim
+   *  ({@link RenderedClaim}: `target`/`outcome`/`amount`, never the agent-authored advisory `op`) and its
+   *  resolved core outcome, return the one-liner the user reads. Absent ⇒ the engine's neutral English
+   *  default (which renders the claim's `target` and nothing else). */
+  renderClaim?: (claim: RenderedClaim, core: CoreOutcome) => string;
   /** The domain's WRITE tools — the ones that MUTATE the world (vs pure reads). The honesty cross-check
    *  (`claimIsGrounded` / `claimIsComplete`, auto-installed when this is non-empty) reads it to ground a
    *  `success` claim against an EFFECTED write and to demand every effected write be reported. Same list

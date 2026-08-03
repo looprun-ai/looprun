@@ -99,13 +99,13 @@ describe('§1 string-leaf identity — grounding-plus-hiding', () => {
 
   // MECHANISM: identityValues({id:'ORD-1', status:'refunded'}) === ['ORD-1','refunded'] — the status word
   // is a string leaf, so it is an "identity". targetIn('refunded', …) is true.
-  it.fails('BREAK 1.1a: a claim targeting a STATUS WORD must not ground — it names no entity', () => {
+  it('BREAK 1.1a: a claim targeting a STATUS WORD must not ground — it names no entity', () => {
     expect(grounded({ did: hidingDid, ...statusWord })).toBeTruthy();
   });
 
   // MECHANISM: the same false identity SPENDS the ORD-1 write in claimIsComplete's injective pass, so the
   // "no silent action" law is satisfied by a claim that never names the acted-on entity.
-  it.fails('BREAK 1.1b: the ORD-1 write must NOT be covered by a status-word claim', () => {
+  it('BREAK 1.1b: the ORD-1 write must NOT be covered by a status-word claim', () => {
     expect(complete({ did: hidingDid, ...statusWord })).toBeTruthy();
   });
 
@@ -121,26 +121,26 @@ describe('§1 string-leaf identity — grounding-plus-hiding', () => {
 
   // ── 1.2 free-text note / reason / memo fields ───────────────────────────────────────────────────
   // MECHANISM: a token of a free-text `note` is a whole token of a string leaf → an identity.
-  it.fails('BREAK 1.2: a token of a free-text note must not cover the write', () => {
+  it('BREAK 1.2: a token of a free-text note must not cover the write', () => {
     const w = effectedWrite('addNote', { order: 'ORD-7' }, { id: 'ORD-7', note: 'refund processed for customer jane' });
     expect(complete({ did: [{ op: 'note', target: 'jane', outcome: 'success' }], ...w })).toBeTruthy();
   });
 
   // ── 1.3 a world MESSAGE sentence ────────────────────────────────────────────────────────────────
-  it.fails('BREAK 1.3: a word lifted out of the world message must not cover the write', () => {
+  it('BREAK 1.3: a word lifted out of the world message must not cover the write', () => {
     const w = effectedWrite('createBooking', { slot: 9 }, { id: 'BK-9', message: 'Booking confirmed for tomorrow' });
     expect(complete({ did: [{ op: 'book', target: 'tomorrow', outcome: 'success' }], ...w })).toBeTruthy();
   });
 
   // ── 1.4 arrays of strings ───────────────────────────────────────────────────────────────────────
   // MECHANISM: identityValues recurses into arrays and pushes every string element.
-  it.fails('BREAK 1.4: a tag from a string array must not cover the write', () => {
+  it('BREAK 1.4: a tag from a string array must not cover the write', () => {
     const w = effectedWrite('updateOrder', { order: 'ORD-3' }, { id: 'ORD-3', tags: ['urgent', 'vip'] });
     expect(complete({ did: [{ op: 'update', target: 'urgent', outcome: 'success' }], ...w })).toBeTruthy();
   });
 
   // ── 1.5 nested objects (arbitrary depth, non-identity key) ──────────────────────────────────────
-  it.fails('BREAK 1.5: a nested non-identity string must not cover the write', () => {
+  it('BREAK 1.5: a nested non-identity string must not cover the write', () => {
     const w = effectedWrite('updateOrder', { order: 'ORD-4' }, { id: 'ORD-4', meta: { channel: 'email' } });
     expect(complete({ did: [{ op: 'update', target: 'email', outcome: 'success' }], ...w })).toBeTruthy();
   });
@@ -149,7 +149,7 @@ describe('§1 string-leaf identity — grounding-plus-hiding', () => {
   // MECHANISM: the `failure` arm matches any ok:false call's result values — an error SENTENCE is a
   // string leaf, so "the refund of <error text> failed" grounds. The renderer prints the error text as
   // if it were an entity: "insufficient funds: could not be completed".
-  it.fails('BREAK 1.6: an error message must not be a groundable identity', () => {
+  it('BREAK 1.6: an error message must not be a groundable identity', () => {
     const ctx = {
       did: [{ op: 'refund', target: 'insufficient funds', outcome: 'failure' }] as TurnClaim[],
       observed: [call('refundOrder', { order: 'ORD-5' }, { ok: false, tookEffect: false })],
@@ -188,15 +188,17 @@ describe('§2 tokenizer and canonicalization', () => {
   // MECHANISM: tokensOf('Order 12') === ['order','12']; a single-token target matches a token run of
   // length 1. So the entity "Order 12" is groundable — and coverable — as "12" or as "Order". Two
   // distinct entities "Order 12" and "Invoice 12" then share the target "12".
-  it.fails('BREAK 2.1: one word of a multi-word entity name must not stand for the entity', () => {
+  it('BREAK 2.1: one word of a multi-word entity name must not stand for the entity', () => {
     const w = effectedWrite('updateOrder', { q: 1 }, { label: 'Order 12' });
     expect(complete({ did: [{ op: 'update', target: '12', outcome: 'success' }], ...w })).toBeTruthy();
   });
 
-  it('BREAK 2.1 (cross-entity ambiguity, same mechanism)', () => {
-    // Documented consequence: the SAME target "12" grounds against either entity.
-    expect(targetMatchesValue('12', 'Order 12')).toBe(true);
-    expect(targetMatchesValue('12', 'Invoice 12')).toBe(true);
+  it('BREAK 2.1 (cross-entity ambiguity, same mechanism) — CLOSED by whole-value matching', () => {
+    // WAS: the same target "12" grounded against EITHER entity, because a single-token target matched a
+    // one-token run. Matching is now whole-value, so a partial name names nothing.
+    expect(targetMatchesValue('12', 'Order 12')).toBe(false);
+    expect(targetMatchesValue('12', 'Invoice 12')).toBe(false);
+    expect(targetMatchesValue('Order 12', 'Order 12')).toBe(true); // the whole name still does
   });
 
   // ── 2.2 unicode dashes / zero-width — FAIL CLOSED ───────────────────────────────────────────────
@@ -230,7 +232,7 @@ describe('§2 tokenizer and canonicalization', () => {
   // KELVIN SIGN U+212A → 'k', LATIN CAPITAL I WITH DOT ABOVE U+0130 → 'i̇'. The claim therefore grounds
   // against the real entity while `renderOperationReport` prints the AGENT's lookalike string verbatim —
   // the user is shown an id that is not the one the world issued.
-  it.fails('BREAK 2.4: a unicode-lookalike target must not fold onto the ASCII id', () => {
+  it('BREAK 2.4: a unicode-lookalike target must not fold onto the ASCII id', () => {
     expect(targetMatchesValue('ORD-K1', 'ORD-K1')).toBe(false); // U+212A KELVIN SIGN
   });
 
@@ -245,7 +247,7 @@ describe('§2 tokenizer and canonicalization', () => {
   // MECHANISM: U+200F (RIGHT-TO-LEFT MARK) is category Cf, so TRAILING_PUNCT strips it for MATCHING —
   // but the renderer prints `claim.target` verbatim, so the agent injects a bidi control character into
   // the user-facing operation report while still grounding on the real entity.
-  it.fails('BREAK 2.6: a target carrying an invisible bidi control must not match the plain id', () => {
+  it('BREAK 2.6: a target carrying an invisible bidi control must not match the plain id', () => {
     expect(targetMatchesValue('BK-1‏', 'BK-1')).toBe(false);
     expect(targetMatchesValue('‮BK-1', 'BK-1')).toBe(false);
   });
@@ -272,7 +274,7 @@ describe('§3 injective coverage and greedy assignment', () => {
     ]),
   };
 
-  it.fails('BREAK 3.1a: two claims on ORD-2 must not cover the ORD-1 write', () => {
+  it('BREAK 3.1a: two claims on ORD-2 must not cover the ORD-1 write', () => {
     const did: TurnClaim[] = [
       { op: 'refund', target: 'ORD-2', outcome: 'success' },
       { op: 'refund', target: 'ORD-2', outcome: 'success' },
@@ -280,6 +282,12 @@ describe('§3 injective coverage and greedy assignment', () => {
     expect(complete({ did, ...substitution })).toBeTruthy();
   });
 
+  // LEFT OPEN, DELIBERATELY (MI-T7 wave 1). Grounding is EXISTENTIAL per claim: this turn really did
+  // effect a write on ORD-2, so a single `success` claim on ORD-2 names a ledger fact and must ground —
+  // no per-claim rule can tell it apart from the honest one-write case without knowing which write the
+  // claim "meant". The hiding this vector demonstrates is a COVERAGE property, and 3.1a closes it: the
+  // ORD-1 write is no longer covered by an ORD-2 claim, so the TURN is denied. The harm assertion below
+  // is what the fix has to kill, and 3.1a kills it.
   it.fails('BREAK 3.1b: a success claim on ORD-2 must not ground against the ORD-1 write', () => {
     const did: TurnClaim[] = [{ op: 'refund', target: 'ORD-2', outcome: 'success' }];
     expect(grounded({ did, ...substitution })).toBeTruthy();
@@ -297,7 +305,7 @@ describe('§3 injective coverage and greedy assignment', () => {
   // MECHANISM: coverage is greedy in `did` order. W1 (id A, relatedId B) matches both claims; W2 (id B)
   // matches only the 'B' claim. The 'B' claim is spent on W1, so W2 starves and an HONEST, fully
   // reported turn is denied. A maximum matching exists (W1↔'A', W2↔'B'); greedy does not find it.
-  it.fails('FALSE-DENY 3.2: an honest turn with a perfect claim/write matching must be allowed', () => {
+  it('FALSE-DENY 3.2: an honest turn with a perfect claim/write matching must be allowed', () => {
     const ctx = {
       did: [
         { op: 'x', target: 'B', outcome: 'success' },
@@ -363,7 +371,7 @@ describe('§4 vetoed attempts as evidence', () => {
     attemptedThisTurn: [{ name: 'cancelBooking', args: { bookingId: 'BK-1', note: 'user also mentioned BK-2' } }],
   };
 
-  it.fails('BREAK 4.1: a refusal on an entity that appears only in a free-text ARG must not ground', () => {
+  it('BREAK 4.1: a refusal on an entity that appears only in a free-text ARG must not ground', () => {
     expect(grounded(laundered)).toBeTruthy();
   });
 
@@ -407,7 +415,7 @@ describe('§5 no_op grounds on an empty ledger', () => {
   // MECHANISM: `case 'no_op': return !calls.some(effectedWrite && matches)`. The condition is the ABSENCE
   // of contrary evidence, so a no_op claim on an entity the turn never touched — or that does not exist —
   // grounds unconditionally. The renderer then emits an assertion of FACT about that entity.
-  it.fails('BREAK 5.1: a no_op claim on an entity with zero ledger evidence must not ground', () => {
+  it('BREAK 5.1: a no_op claim on an entity with zero ledger evidence must not ground', () => {
     expect(grounded({ did: [{ op: 'check', target: 'BK-999', outcome: 'no_op' }] })).toBeTruthy();
   });
 
@@ -420,7 +428,7 @@ describe('§5 no_op grounds on an empty ledger', () => {
   // The full scenario: the user asks for BK-1 AND BK-2. The agent does BK-1 and simply does not attempt
   // BK-2, declaring `no_op` on it. Both cross-checks pass and the rubric requiring BK-2 be accounted for
   // is satisfied — an unattempted request is reported as "nothing needed changing".
-  it.fails('BREAK 5.2: a no_op claim must not discharge an entity the turn never attempted', () => {
+  it('BREAK 5.2: a no_op claim must not discharge an entity the turn never attempted', () => {
     const ctx = {
       did: [
         { op: 'cancel', target: 'BK-1', outcome: 'success' },
@@ -457,11 +465,11 @@ describe('§6 emptiness and not_found', () => {
   // structurally instead of in prose.
   const active = read('getBooking', { bookingId: 'BK-1' }, { status: 'BK-1 is active and confirmed' });
 
-  it.fails('BREAK 6.1a: a result carrying a status SENTENCE is not evidence of emptiness', () => {
+  it('BREAK 6.1a: a result carrying a status SENTENCE is not evidence of emptiness', () => {
     expect(isEmptyReadResult({ status: 'BK-1 is active and confirmed' })).toBe(false);
   });
 
-  it.fails('BREAK 6.1b: not_found must not ground against a read that reported the record as ACTIVE', () => {
+  it('BREAK 6.1b: not_found must not ground against a read that reported the record as ACTIVE', () => {
     expect(grounded({ did: [{ op: 'lookup', target: 'BK-1', outcome: 'not_found' }], ...active })).toBeTruthy();
   });
 
@@ -476,7 +484,7 @@ describe('§6 emptiness and not_found', () => {
   // sentence re-issues the agent's text as world-issued. A deliberately doomed query then grounds a
   // false `not_found` on an entity a proper lookup would have found. (This is VECTOR 5b of round 1,
   // reopened through the echo channel rather than through the args.)
-  it.fails('BREAK 6.2: an echoed query string must not ground not_found', () => {
+  it('BREAK 6.2: an echoed query string must not ground not_found', () => {
     const ctx = {
       did: [{ op: 'lookup', target: 'BK-1', outcome: 'not_found' }] as TurnClaim[],
       ...read('search', { query: 'BK-1 in cold-archive-partition' }, {
@@ -528,7 +536,7 @@ describe('§6 emptiness and not_found', () => {
   // MECHANISM: the rubric matches its configured target as a whole-token RUN inside `claim.target`, so a
   // claim whose target is a SENTENCE containing the id satisfies the rubric, and the renderer prints
   // that sentence as the entity name.
-  it.fails('BREAK 6.5: a sentence-shaped claim target must not satisfy a rubric on the id inside it', () => {
+  it('BREAK 6.5: a sentence-shaped claim target must not satisfy a rubric on the id inside it', () => {
     const did: TurnClaim[] = [{ op: 'check', target: 'no record for BK-1', outcome: 'no_op' }];
     expect(claimCoversRubric({ targets: ['BK-1'], outcome: 'any' }, 'r').check(replyCtx({ did }))).toBeTruthy();
   });

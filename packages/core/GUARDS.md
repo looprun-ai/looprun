@@ -308,8 +308,8 @@ record was NOT found; polarity is unreadable by a pattern). The agent now DECLAR
 ledger, which the agent does not control:
 
 - **`claimIsGrounded`** — every ACTION intention matches the ledger: a `success` needs an effected write, `not_found`
-  an empty read, `blocked`/`refused` a veto/refusal, `no_op` no effected write; an undeclared outcome word is
-  always a violation. Auto-installed when the contract declares `writeTools`.
+  an empty read, `blocked`/`refused` a veto/refusal, `no_op` a call that ADDRESSED the entity and no effected
+  write on it; an undeclared outcome word is always a violation. Auto-installed when the contract declares `writeTools`.
 - **`claimIsComplete`** — every write that took effect this turn is covered by a DISTINCT `success` action
   intention that NAMES the entity (no silent action, and none hidden behind a vague or duplicated claim).
   Auto-installed alongside.
@@ -320,40 +320,68 @@ ledger, which the agent does not control:
 All three are TRUTH guards (never salvaged, never delivered over) and key on `target` + `outcome` vs the
 ledger, never on op-name semantics or reply text — so they carry no pattern and cannot be broken by polarity.
 
-**Two matching laws the red-team wrote (MI-T3).**
+**The matching laws the red-team wrote (MI-T3, tightened by round 2 in MI-T7).**
 
-- *Provenance*: a `target` is compared only against the IDENTITY values the WORLD issued for a call (its
-  result). A call's ARGS are agent-authored, and scanning them made grounding circular (one permitted write
-  plus the fabricated id in a free-text arg used to ground a success on an entity never touched). "Identity"
-  means what the world NAMED, not what it counted: string leaves are names; a number or boolean counts only
-  under an identity key (`id`, `label`, `<entity>Id`, `<entity>_id`). So `{ id: 5 }` grounds a claim on `5`
-  while `{ refunded: 500 }`, `{ count: 5 }` and `{ code: 200 }` name no entity — otherwise a claim on the
-  AMOUNT of a write would both ground and COVER it, hiding the entity from the user.
-  **The one remaining args path is deliberate and conservative**: a guard-VETOED attempt never reached the
-  world and has no result, so `blocked`/`refused` ground against the attempt's args (same identity filter).
-  Those polarities are self-incriminating — the worst an agent buys is reporting a refusal on something it
-  never touched.
-- *Boundary*: the comparison is whole-VALUE or whole-TOKEN equality, never a substring — `BK-1`, `BK-10`,
-  `BK-12345` and `BK-1-EXTRA` are different entities. A token is a whitespace-delimited WORD with its edge
-  punctuation stripped. **Limit**: the comparison is case-FOLDED, so ids that differ only by case (`ab-1` vs
+- *Identity is KEY-SCOPED*: an identity is a SCALAR under an identity key — `id`, `label`, `<entity>Id`,
+  `<entity>_id` — whatever its type. Strings and numbers on the same footing: `{ id: 5 }` and
+  `{ id: 'ORD-1' }` both name an entity, while `{ refunded: 500 }`, `{ count: 5 }`, `{ status: 'refunded' }`
+  and `{ note: 'for customer jane' }` name none. Admitting every STRING leaf (the pre-MI-T7 law) let a
+  status word, a note fragment, a tag or one word of the world's own sentence BOTH ground a claim and
+  COVER the write it hid — the user read `refunded: done` and was never told which order.
+- *Boundary*: WHOLE-VALUE equality after canonicalization (trim, case-fold, strip EDGE punctuation) —
+  never a substring, and no longer a token RUN either. `BK-1` is not `BK-10`/`BK-12345`/`BK-1-EXTRA`/
+  `xBK-1y`; `12` is not `Order 12` (one word of a name stood for the entity, and equally for `Invoice 12`).
+  Lookalikes fail CLOSED: unicode dashes, interior zero-width marks and invisible format characters never
+  collide with the ASCII id, and a case fold never crosses scripts (U+212A KELVIN no longer folds onto `k`).
+  A `target` carrying any invisible format character is rejected outright by `validateClaims`.
+  **Limit**: the comparison is case-FOLDED within a script, so ids that differ only by case (`ab-1` vs
   `AB-1`) collide — a domain whose ids are case-sensitive must not rely on case alone to distinguish them.
+- *A write speaks for ITS OWN entity*: `success` grounding and write COVERAGE match a result's PREFERRED
+  identity — the shallowest identity keys, `id`/`label` winning over the `<entity>Id` references beside
+  them. `{ id:'ORD-1', parentId:'ORD-2' }` therefore means ORD-1 and only ORD-1; otherwise two claims on
+  the RELATED entity covered two writes and the acted-on one vanished from the report.
+- *Provenance* (M2, now stated per polarity): a claim of PRESENCE (`success`) grounds ONLY against values
+  the WORLD issued — scanning agent-authored args made grounding circular. A claim of ABSENCE or
+  NON-EFFECT (`not_found`, `failure`, `blocked`, `refused`, `pending_confirmation`, `no_op`) cannot obey
+  that, because an absent record issues no value: those arms ground on the world's own negative answer
+  (an empty read / `ok:false` / a `requiresConfirmation` flag / a guard veto) PLUS the identity-KEY ARGS
+  that say which entity was addressed. Free-text args are not identities, so a `query` string can never
+  carry a verdict, and a `note` can never fabricate a refusal on a bystander. These polarities never enter
+  the covering set, so they can never hide a write.
+- *`amount` is corroborated*: when a claim carries an `amount`, that number must appear among the
+  magnitudes of the same ledger fact that grounds the claim (the world's result for a presence claim, the
+  attempted args for an absence/veto claim). It is rendered by the domain seam into the block the engine
+  advertises as verified, so an unchecked figure would be a fabricated number delivered as fact.
 
-**What a domain must do for this to work.** Write results must NAME what they touched — a `label`/id value,
-and it must stand as its own whitespace-delimited word (`"BK-1"` or `"Booking BK-1"`, not `"ref:BK-1"`). A
-domain whose write results carry no identifying value gives the cross-check nothing to match, so its effected
-writes cannot be covered: the guard fires, the turn redrives, and the engine closure delivers. That is
-fail-closed by design.
+**What a domain must do for this to work.**
+
+| requirement | why |
+|---|---|
+| every WRITE result carries `id` or `label` (or `<entity>Id`) naming what it touched | it is the only thing a `success` claim can match, and the only way an effected write can be covered |
+| the identity value EQUALS the entity name the agent will report (`"BK-1"`, or `"Booking BK-1"` if that is the whole name) | matching is whole-value; an id embedded in a longer label no longer matches |
+| every READ takes the entity under an identity-key ARG (`{ bookingId: 'BK-1' }`, not `{ query: '…' }`) | a `not_found`/`no_op` has no other way to name its subject |
+| an EMPTY read returns a data channel — `data: []` (or `found: false`) | emptiness needs positive evidence; a result whose only field is a status sentence is undecidable and fails closed |
+| write results report their magnitudes when the domain renders `amount` | the figure is checked against them |
+
+A domain that does none of this is not silently degraded — the cross-check finds nothing to match, the
+guard fires, the turn redrives and the engine closure delivers. Fail-closed by design.
 
 **The fail-closed edges of the identity-key rule** (an adapter/world author's checklist — each one is a
 world that must be re-shaped, never a guard to relax):
 
 | world result | grounds an identity? | why |
 |---|---|---|
-| `{ id: 5 }`, `{ orderId: 5 }`, `{ order_id: 5 }` | ✅ | a NUMERIC value under a singular identity key |
+| `{ id: 5 }`, `{ orderId: 5 }`, `{ order_id: 5 }`, `{ id: 'ORD-1' }` | ✅ | a scalar under a singular identity key |
 | `{ orderIds: [5, 6] }` | ❌ | a PLURAL key is not an identity key — return one result per entity, or a string id |
 | `5` (a bare scalar result) | ❌ | nothing names it; wrap it (`{ id: 5 }`) |
 | `{ ORDER_ID: 5 }` | ❌ | the key match is exact-cased on the documented spellings — use `orderId`/`order_id` |
-| `{ id: 'ORD-1' }` | ✅ | a STRING leaf is a name under any key |
+| `{ status: 'ORD-1 refunded' }` | ❌ | a SENTENCE is prose, not an identity — put the id under `id`/`label` |
+| `{ id: 'ORD-1', parentId: 'ORD-2' }` | ✅ ORD-1 only | a write speaks for its own entity, not the ones it references |
+
+**The domain render seam (`contract.renderClaim`) never receives the `op`.** It is handed the VERIFIED
+fields only — `target`, `outcome`, `amount` — because its output is delivered to the user verbatim and
+`op` is free agent-authored text. The parameter type (`RenderedClaim`) types `op` as `undefined`, so a
+domain that reads it does not compile.
 
 Speech intentions (`inform`/`greet`/`refuse`/`ask`) are never grounded and never cover a write (MI-D5), so an
 action can never hide behind an `inform`. And a domain `outcomes` map may not key a core outcome word in ANY

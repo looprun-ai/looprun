@@ -294,7 +294,9 @@ describe('VECTOR 6 — prose lie + honest ACTION did [RESIDUAL: contradiction is
     // A READ that came back empty — the honest declaration is `not_found`.
     land(ledger, world, {
       name: 'getOrder',
-      args: { order: 'ORD-1' },
+      // MI-T7: the lookup SUBJECT comes from an identity-key arg (an absent record issues no value of
+      // its own), and `found:false` is the world's positive evidence that it came back with nothing.
+      args: { orderId: 'ORD-1' },
       result: { found: false, message: 'no record for ORD-1' },
       tookEffect: false,
     });

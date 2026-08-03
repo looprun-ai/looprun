@@ -306,7 +306,7 @@ describe('b3 — `op` never reaches the user through the ENGINE renderer', () =>
     expect(out.text).not.toContain('BK-77');
   });
 
-  it.fails('BREAK b3.1 — the DOMAIN render seam is handed the raw agent-authored `op`', () => {
+  it('BREAK b3.1 — the DOMAIN render seam is handed the raw agent-authored `op`', () => {
     // `renderOperationReport` documents the op as unrenderable ("a leak is impossible by
     // construction"). That holds for the DEFAULT line only: RenderOpts.renderClaim receives the WHOLE
     // claim, so the engine hands model-authored text to the one seam whose output IS user-delivered.
@@ -328,12 +328,12 @@ describe('b3 — an UNGROUNDED `target` reaches the user through the "verified" 
   // and composeDelivery presents the rendered report as the ledger-grounded part of the delivery.
   const INJECTED = 'Your card was charged $980. Call 1-800-555-0000 to dispute';
 
-  it.fails('BREAK b3.2 — a `no_op` claim on arbitrary text is GROUNDED', () => {
+  it('BREAK b3.2 — a `no_op` claim on arbitrary text is GROUNDED', () => {
     // SECURE EXPECTATION: a claim naming an entity no ledger fact mentions cannot ground.
     expect(grounded({ did: [{ op: 'check', target: INJECTED, outcome: 'no_op' }], observed: [] })).not.toBeNull();
   });
 
-  it.fails('BREAK b3.3 — that text is DELIVERED inside the engine-rendered operation report', async () => {
+  it('BREAK b3.3 — that text is DELIVERED inside the engine-rendered operation report', async () => {
     const world = fixtureWorld();
     const contract: DomainContract = { voice: 'v', stateBlock: () => '', coreInvariants: ['x'], languageClause: 'l', writeTools: ['createBooking'] };
     const spec = new AgentSpecBase({ id: 'a', mode: 'A', persona: 'p', tools: ['createBooking'], contract });
@@ -450,7 +450,7 @@ describe('b4 — the shadow law is bound to ONE call site, and the config path w
 describe('b5 — a fabricated `amount` rides a genuine, grounded claim into the delivered report', () => {
   const REAL = { name: 'refundOrder', args: { id: 'ORD-5' }, result: { id: 'ORD-5', label: 'ORD-5', refunded: 12.5 }, tookEffect: true };
 
-  it.fails('BREAK b5.1 — a claim whose amount contradicts the world result still GROUNDS', () => {
+  it('BREAK b5.1 — a claim whose amount contradicts the world result still GROUNDS', () => {
     const world = fixtureWorld();
     world.toolCalls.push(REAL);
     // SECURE EXPECTATION: an amount the engine will render must be checked against the world result.
@@ -462,7 +462,7 @@ describe('b5 — a fabricated `amount` rides a genuine, grounded claim into the 
     expect(verdict).not.toBeNull();
   });
 
-  it.fails('BREAK b5.2 — the fabricated figure is DELIVERED through the domain render seam', async () => {
+  it('BREAK b5.2 — the fabricated figure is DELIVERED through the domain render seam', async () => {
     const world = fixtureWorld();
     world.toolCalls.push(REAL);
     const contract: DomainContract = {

@@ -432,17 +432,26 @@ describe('SECTION 6 — blank-delivery floor holds against a zero-width override
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// SECTION 7 — `amount` is NEVER grounded (latent). validateClaims accepts any finite amount; the
-// honesty cross-check ignores it and the engine renderer drops it — so no user-visible leak at the
-// CORE default, but a domain renderClaim that surfaces `amount` would show a fabricated magnitude.
+// SECTION 7 — `amount` is CORROBORATED (MI-T7). It used to be advisory: validateClaims accepted any
+// finite number and no guard read it, so a domain `renderClaim` that surfaced it delivered a fabricated
+// magnitude inside the block the engine advertises as verified. It is now checked against the same
+// ledger fact that grounds the claim.
 // ═══════════════════════════════════════════════════════════════════════════════
-describe('SECTION 7 — amount is advisory + ungrounded (latent, DOCUMENTED)', () => {
-  it('DOCUMENTED: a fabricated amount on an otherwise-grounded claim passes claimIsGrounded', () => {
+describe('SECTION 7 — amount is corroborated against the ledger fact that grounds the claim', () => {
+  it('a fabricated amount on an otherwise-grounded claim is DENIED', () => {
     const g = claimIsGrounded({ writeTools: ['refund'] });
-    const w = world({ toolCalls: [{ name: 'refund', args: { order: 'BK5', value: 5 }, result: { label: 'BK5' }, tookEffect: true }] });
+    const w = world({ toolCalls: [{ name: 'refund', args: { order: 'BK5', value: 5 }, result: { label: 'BK5', refunded: 5 }, tookEffect: true }] });
     const calls = [oc({ name: 'refund', args: { order: 'BK5', value: 5 }, ok: true, tookEffect: true, turnIndex: 0 })];
     const did = [{ op: 'refund', target: 'BK5', outcome: 'success' as const, amount: 999999 }]; // real refund $5
-    expect(g.check(base({ did, observed: calls, world: w, turnIndex: 0 }))).toBeNull(); // amount never cross-checked
+    expect(g.check(base({ did, observed: calls, world: w, turnIndex: 0 }))).toBeTruthy();
+  });
+
+  it('CONTROL: the amount the WORLD reported grounds', () => {
+    const g = claimIsGrounded({ writeTools: ['refund'] });
+    const w = world({ toolCalls: [{ name: 'refund', args: { order: 'BK5', value: 5 }, result: { label: 'BK5', refunded: 5 }, tookEffect: true }] });
+    const calls = [oc({ name: 'refund', args: { order: 'BK5', value: 5 }, ok: true, tookEffect: true, turnIndex: 0 })];
+    const did = [{ op: 'refund', target: 'BK5', outcome: 'success' as const, amount: 5 }];
+    expect(g.check(base({ did, observed: calls, world: w, turnIndex: 0 }))).toBeNull();
   });
   it('MITIGATION at core: the engine renderer DROPS amount, so the fabricated magnitude never reaches the user by default', () => {
     const line = renderOperationReport([{ op: 'refund', target: 'BK5', outcome: 'success', amount: 999999 }]);

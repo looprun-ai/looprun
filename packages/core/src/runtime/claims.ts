@@ -139,6 +139,12 @@ function isNonEmptyString(v: unknown): v is string {
 
 const CLAIM_KEYS: ReadonlySet<string> = new Set(['op', 'target', 'outcome', 'amount']);
 
+/** INVISIBLE characters — format controls (bidi overrides, zero-width marks) and default-ignorables.
+ *  Barred from a `target` because the target is the ONE claim field the renderer prints verbatim into
+ *  user-facing text: an id decorated with U+202E still matched the plain id while the user was shown a
+ *  bidi-reordered string (red-team r2, §2.6). Same class the delivery blank-floor already strips. */
+const INVISIBLE_RE = /[\p{Cf}\p{Default_Ignorable_Code_Point}]/u;
+
 /**
  * STRUCTURAL validation of a raw `did` value — SHAPE + the speech/action PARTITION (MI-D1/D2), never
  * grounding against the ledger (that is the guards' job). Exhaustive typed checks, NOT `typeof`/`trim`
@@ -171,7 +177,10 @@ export function validateClaims(did: unknown): { claims: Intention[]; errors: str
       if (!CLAIM_KEYS.has(key)) local.push(`did[${i}] has unknown key "${key}"`);
     }
     if (!isNonEmptyString(rec.op)) local.push(`did[${i}].op must be a non-empty string`);
-    if ('target' in rec && !isNonEmptyString(rec.target)) local.push(`did[${i}].target must be a non-empty string when present`);
+    if ('target' in rec) {
+      if (!isNonEmptyString(rec.target)) local.push(`did[${i}].target must be a non-empty string when present`);
+      else if (INVISIBLE_RE.test(rec.target)) local.push(`did[${i}].target must not contain invisible formatting characters`);
+    }
     // The outcome/amount rules depend on the op partition, so they apply only once `op` is a valid string.
     const opStr = isNonEmptyString(rec.op) ? rec.op : undefined;
     if (opStr !== undefined) {
@@ -248,9 +257,23 @@ export function isAskEvent(o: { name: string; args?: Record<string, unknown> }):
  * way the cross-check guards do.
  */
 export interface RenderOpts {
-  renderClaim?: (c: TurnClaim, core: CoreOutcome) => string;
+  renderClaim?: (c: RenderedClaim, core: CoreOutcome) => string;
   outcomes?: OutcomeMap;
 }
+
+/**
+ * What the DOMAIN render seam is allowed to see: the fields of an intention that the cross-check guards
+ * VERIFIED — the `target` the world named, the `outcome` word (already resolved through the domain map,
+ * so it is declared vocabulary), and the `amount` (corroborated against the same ledger fact that
+ * grounded the claim). The advisory `op` is NOT among them.
+ *
+ * `op` is free, agent-authored text. The engine default line never renders it, and `renderOperationReport`
+ * documented that as "a leak is impossible by construction" — but the seam received the WHOLE claim, and
+ * the seam's output IS delivered to the user, so the construction argument was false for exactly the one
+ * path that matters (red-team r2, b3.1). Typing `op` as `undefined` here makes the law hold by
+ * construction for real: a domain that reads `c.op` does not compile, and at runtime there is nothing there.
+ */
+export type RenderedClaim = Omit<Intention, 'op'> & { op?: undefined };
 
 /**
  * The ENGINE default one-liner for a verified claim, keyed on its CORE outcome.
@@ -294,7 +317,10 @@ export function renderOperationReport(did: TurnClaim[], opts?: RenderOpts): stri
     // (MI-D5: the `message` is the speech surface). resolveOutcome takes a string, so coerce absent → ''.
     const core = resolveOutcome(claim.outcome ?? '', opts?.outcomes);
     if (core === null) continue;
-    const line = opts?.renderClaim ? opts.renderClaim(claim, core) : defaultClaimLine(claim, core);
+    // The seam is handed a NARROWED claim — never the advisory, agent-authored `op` (see RenderedClaim).
+    const line = opts?.renderClaim
+      ? opts.renderClaim({ target: claim.target, outcome: claim.outcome, amount: claim.amount }, core)
+      : defaultClaimLine(claim, core);
     if (line && line.trim()) lines.push(line.trim());
   }
   return lines.join('\n');
