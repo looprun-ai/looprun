@@ -25,6 +25,18 @@ export interface RecordedCall {
   toolNames: string[];
   /** The conversation turn this generation belongs to — seated by {@link attributeCalls}. */
   turn: number;
+  /** This generation's position WITHIN its turn, in call order — seated by {@link attributeCalls}. */
+  step: number;
+  /**
+   * The provider's own input-token count for THIS generation, when it reported one.
+   *
+   * The turn-level figure on `TurnRecord.tokens` is the SUM over a turn's generations, so it cannot
+   * answer where a prompt grows: a turn that made three calls reports one number covering three
+   * different message arrays. This is the per-call figure, read off the very response the wrapped model
+   * returned, so a step-by-step accumulation curve is measured rather than apportioned.
+   */
+  reportedInputTokens: number | null;
+  reportedOutputTokens: number | null;
 }
 
 export interface Recorder {
@@ -54,11 +66,17 @@ export function createRecorder(): Recorder {
  * engine-authored instruction.
  */
 export function attributeCalls(rec: Recorder, turnTexts: readonly string[]): void {
+  const nextStep = new Map<number, number>();
   for (const call of rec.calls) {
     const k = countUserMessages(call) - 1;
     const last = lastUserTextOf(call);
     const isMain = k >= 0 && k < turnTexts.length && last.endsWith(turnTexts[k]);
     call.turn = Math.max(0, isMain ? k : k - 1);
+    // The step is the generation's ORDER within its turn — the recorder appends in call order, so a
+    // running counter per turn is exact and needs no hook inside the runner.
+    const step = nextStep.get(call.turn) ?? 0;
+    call.step = step;
+    nextStep.set(call.turn, step + 1);
   }
 }
 
@@ -76,7 +94,41 @@ function capture(options: any): RecordedCall {
     tools,
     toolNames: tools.map((t) => String(t?.name ?? t?.toolName ?? '')).filter(Boolean),
     turn: 0,
+    step: 0,
+    reportedInputTokens: null,
+    reportedOutputTokens: null,
   };
+}
+
+/** Seat a provider `usage` object onto the call it belongs to. Absent fields stay `null`. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function seatUsage(call: RecordedCall, usage: any): void {
+  const inp = usage?.inputTokens;
+  const out = usage?.outputTokens;
+  if (typeof inp === 'number') call.reportedInputTokens = inp;
+  if (typeof out === 'number') call.reportedOutputTokens = out;
+}
+
+/**
+ * Tee a `doStream` result so the `finish` part's usage lands on the recorded call.
+ *
+ * The streaming path is not optional to cover: the backend picks between `doGenerate` and `doStream`
+ * on its own, and a per-call token figure that silently reads `null` on whichever path the runtime
+ * happens to take is a measurement that reports its own blind spot as data.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function teeUsage(result: any, call: RecordedCall): any {
+  const stream = result?.stream;
+  if (!stream || typeof stream.pipeThrough !== 'function') return result;
+  const spy = new TransformStream({
+    transform(part, controller) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const p = part as any;
+      if (p?.type === 'finish' && p.usage) seatUsage(call, p.usage);
+      controller.enqueue(part);
+    },
+  });
+  return { ...result, stream: stream.pipeThrough(spy) };
 }
 
 /**
@@ -89,11 +141,18 @@ export function recordingModel<T extends object>(model: T, rec: Recorder): T {
       if (prop !== 'doGenerate' && prop !== 'doStream') return Reflect.get(target, prop, receiver);
       const inner = Reflect.get(target, prop, receiver);
       if (typeof inner !== 'function') return inner;
+      const streaming = prop === 'doStream';
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return (options: any) => {
-        rec.calls.push(capture(options));
+      return async (options: any) => {
+        const call = capture(options);
+        rec.calls.push(call);
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        return (inner as (o: any) => unknown).call(target, options);
+        const result = await (inner as (o: any) => unknown).call(target, options);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        if (streaming) return teeUsage(result as any, call);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        seatUsage(call, (result as any)?.usage);
+        return result;
       };
     },
   }) as T;

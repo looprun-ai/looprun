@@ -13,8 +13,8 @@
  * package, so the instrument brings its own thin driver and shares everything below it.
  */
 import { runSpecConversation } from '@looprun-ai/mastra';
-import type { AgentSpec, AgentWorld, DomainContract, ToolDef } from '@looprun-ai/core';
-import { attributeCalls, createRecorder, recordingModel } from './recording-model.js';
+import type { AgentSpec, AgentWorld, DomainContract, RunResult, ToolDef } from '@looprun-ai/core';
+import { attributeCalls, createRecorder, recordingModel, type Recorder } from './recording-model.js';
 import { buildScenarioSheet, BATTERY_REDRIVES, type ScenarioSheet } from './sheet.js';
 
 export interface ScenarioSpec {
@@ -35,22 +35,47 @@ export interface ScenarioDeps {
   modelParams?: Record<string, unknown>;
 }
 
-export async function runScenario(scenario: ScenarioSpec, deps: ScenarioDeps): Promise<ScenarioSheet> {
+/** Everything one driven conversation produced — the raw material every battery instrument folds. */
+export interface DrivenScenario {
+  world: AgentWorld;
+  recorder: Recorder;
+  result: RunResult;
+}
+
+/**
+ * Drive one conversation through `runSpecConversation` and hand back the RAW material: the world (its
+ * ledger), the recorder (every prompt and its per-call token count) and the run result. Every battery
+ * instrument folds this same drive rather than each opening its own conversation, so two instruments
+ * can never disagree about what the loop does.
+ */
+export async function driveScenario(
+  turnTexts: readonly string[],
+  preset: string | undefined,
+  deps: ScenarioDeps,
+): Promise<DrivenScenario> {
   const recorder = createRecorder();
-  const world = deps.makeWorld(scenario.preset ?? 'default');
+  const world = deps.makeWorld(preset ?? 'default');
   const model = recordingModel(deps.model as object, recorder);
-  const turns = scenario.turns.map((userText) => ({ userText }));
 
-  const result = await runSpecConversation(deps.spec, turns, {
-    model,
-    modelParams: deps.modelParams ?? { temperature: 0 },
-    world,
-    toolDefs: deps.toolDefs,
-    contract: deps.contract,
-    redrives: BATTERY_REDRIVES,
-  });
+  const result = await runSpecConversation(
+    deps.spec,
+    turnTexts.map((userText) => ({ userText })),
+    {
+      model,
+      modelParams: deps.modelParams ?? { temperature: 0 },
+      world,
+      toolDefs: deps.toolDefs,
+      contract: deps.contract,
+      redrives: BATTERY_REDRIVES,
+    },
+  );
 
-  attributeCalls(recorder, scenario.turns);
+  attributeCalls(recorder, turnTexts);
+  return { world, recorder, result };
+}
+
+export async function runScenario(scenario: ScenarioSpec, deps: ScenarioDeps): Promise<ScenarioSheet> {
+  const { world, recorder, result } = await driveScenario(scenario.turns, scenario.preset, deps);
 
   return buildScenarioSheet({
     id: scenario.id,
