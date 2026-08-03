@@ -168,9 +168,14 @@ export function noActAfterAskSameTurn(tools: string[]): Guard {
  * the second call slipped the n:1 cap. The flags describe an INTENT to preview; `tookEffect` is the world's
  * own record of what happened, so it is the authority.
  *
- * A prior call is a PROBE (not an effect) when it did NOT take effect AND it either returned
- * `requiresConfirmation` or carries `confirmArg:false` explicitly. Everything else that ran OK is an
- * effect. `confirmArg` (default `confirmed`) matches the sibling kinds' parameterisation (`confirmFirst`'s
+ * WHAT COUNTS AS A PROBE DEPENDS ON WHETHER THE CALL HAS RUN — because that decides what evidence can
+ * exist at all:
+ *   · an EXECUTED call (in `observed`) is a probe when the world RECORDED that it changed nothing
+ *     (`tookEffect === false`) AND its flags declare a preview. A call that ran and left NO record is
+ *     unverifiable and counts (r2/C6 — see below).
+ *   · a same-step SIBLING (`siblingCallsThisStep`) has been admitted but has NOT run, so `tookEffect` is
+ *     `undefined` by construction and its declared flags are the only evidence there is.
+ * `confirmArg` (default `confirmed`) matches the sibling kinds' parameterisation (`confirmFirst`'s
  * `argFlag`, `pendingConfirmMustAsk`'s `confirmArg`) — a flag-less `'prior-ask'` tool has no probe shape of
  * its own, so every OK call of it counts as an effect, exactly as before.
  *
@@ -182,22 +187,35 @@ export function noActAfterAskSameTurn(tools: string[]): Guard {
 export function destructiveThrottle(destructiveTools: string[], opts?: { confirmArg?: string }): Guard {
   const set = new Set(destructiveTools);
   const confirmArg = opts?.confirmArg ?? 'confirmed';
-  // A call that MUTATED the world is never a probe — `tookEffect` (the world's record) overrides the
-  // preview flags (the caller's intent). See EFFECT BEATS FLAGS above.
+  // The caller's DECLARED intent to preview. A flag is not evidence of what happened — it is what the
+  // model said it was about to do.
+  const flagsDeclarePreview = (o: ObservedCall): boolean =>
+    o.resultFlags?.requiresConfirmation === true || o.args?.[confirmArg] === false;
+  // An EXECUTED call is a probe only when the world POSITIVELY recorded that it changed nothing.
   //
   // UNKNOWN EFFECT IS NOT A PROBE (red-team r2/C6). The test used to read `tookEffect !== true`, which
   // treats "the world has no record of this call" exactly like "the world says it changed nothing" — and
-  // in native-tools/MCP mode NOTHING writes the world ledger, so every call read as not-effected and the
-  // EFFECT-BEATS-FLAGS fix above was permanently INERT: a third-party tool that mutates while carrying
-  // `confirmed:false` was classified as a probe and slipped the n:1 cap. A call is a probe only when the
-  // backend POSITIVELY recorded that it changed nothing (`tookEffect === false`); an unverifiable
-  // destructive call counts against the cap, which is the conservative reading and the one the guard's
-  // stated authority order implies.
-  const isProbe = (o: ObservedCall): boolean =>
-    o.tookEffect === false && (o.resultFlags?.requiresConfirmation === true || o.args?.[confirmArg] === false);
+  // in native-tools/MCP mode NOTHING wrote the world ledger, so every call read as not-effected and the
+  // EFFECT-BEATS-FLAGS rule above was permanently INERT: a third-party tool that mutates while carrying
+  // `confirmed:false` was classified as a probe and slipped the n:1 cap. A call that RAN and left no
+  // record of its effect is unverifiable, so it counts.
+  const executedIsProbe = (o: ObservedCall): boolean => o.tookEffect === false && flagsDeclarePreview(o);
+  // A same-step SIBLING has been admitted but has NOT executed, so it has no world record BY
+  // CONSTRUCTION — `tookEffect` is `undefined` for every one of them, always. Applying the executed rule
+  // here would count every admitted destructive sibling, which denies a legitimate MULTI-PREVIEW: an
+  // agent asked to preview cancelling two bookings emits two `cancel({confirmed:false})` in ONE step,
+  // and the second would be vetoed for an effect neither call has had yet (MI-T7 review). For a call
+  // that has not run, its declared flags are the only evidence that exists, so they decide.
+  //
+  // RESIDUAL, stated rather than hidden: a tool that MUTATES while declaring `confirmed:false` and is
+  // emitted TWICE IN ONE STEP is not capped. Nothing observable distinguishes it from the honest
+  // multi-preview at admission time — the cross-step form of the same shape IS capped (the first call's
+  // effect is recorded by then), and `confirmFirst` independently denies same-step probe→execute.
+  const pendingIsProbe = flagsDeclarePreview;
   // An EFFECT = a listed destructive tool that ran OK and is not a probe. (The `ok` + turn-window part is
   // applied by `countOkCalls`; this predicate carries only the set-membership + not-a-probe test.)
-  const isEffect = (o: ObservedCall): boolean => set.has(o.name) && !isProbe(o);
+  const isEffectAmong = (pending: readonly ObservedCall[]) => (o: ObservedCall): boolean =>
+    set.has(o.name) && !(pending.includes(o) ? pendingIsProbe(o) : executedIsProbe(o));
   return {
     kind: 'destructiveThrottle',
     dim: 'run',
@@ -207,8 +225,11 @@ export function destructiveThrottle(destructiveTools: string[], opts?: { confirm
       // destructive sibling emitted earlier in the SAME step that the backend admitted but has not yet
       // pushed to `observed` (a same-step concurrency gap — two `Promise.all`-dispatched calls are both
       // gated before either lands). A sibling admitted by its preTool guards WILL take effect, so it
-      // counts exactly like an observed effect. Probes (confirmed:false) are excluded by `isProbe`.
-      const candidates = ctx.siblingCallsThisStep ? [...ctx.observed, ...ctx.siblingCallsThisStep] : ctx.observed;
+      // counts exactly like an observed effect — unless its own args declare it a preview, which is the
+      // only evidence a call that has not run can offer (see `pendingIsProbe`).
+      const pending = ctx.siblingCallsThisStep ?? [];
+      const candidates = ctx.siblingCallsThisStep ? [...ctx.observed, ...pending] : ctx.observed;
+      const isEffect = isEffectAmong(pending);
       // The `maxCalls` core: at most ONE prior effect this turn (n:1, scope:'turn').
       if (countOkCalls(candidates, isEffect, { scope: 'turn', turnIndex: ctx.turnIndex }) < 1) return null;
       // Name the prior effect for the deny (the counter returns a tally, not the call).

@@ -153,7 +153,7 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
     name: 'destructiveThrottle',
     category: 'confirmation',
     hook: 'preTool',
-    summary: 'At most one destructive action that TOOK EFFECT per turn (a probe the world RECORDED as effect-free does not count; a call whose effect is unrecorded does).',
+    summary: 'At most one destructive action that TOOK EFFECT per turn (a probe does not count; a call that RAN with no world record of its effect does).',
     whenToUse:
       'Auto-installed alongside `confirmFirst`. It is the blast-radius cap, not a consent gate: it stops chained destructive calls in one turn even when each one is individually confirmed.',
     example: `destructiveThrottle(['cancelBooking', 'refundOrder'])`,

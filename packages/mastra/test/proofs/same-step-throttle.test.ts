@@ -47,28 +47,53 @@ describe('M1 · destructiveThrottle counts a same-STEP sibling effect', () => {
     expect(await g.check(ctx)).toBeTruthy();
   });
 
-  // r2/C6 CHANGED THESE TWO. A same-step sibling has NOT executed yet, so no world record of its effect
-  // can exist — its `tookEffect` is unknown by construction. Since a probe is now "the world recorded
-  // that it changed nothing", an admitted destructive sibling always counts, whatever flag it carries.
-  // That is what the guard's own doc always claimed ("a sibling admitted by its preTool guards WILL take
-  // effect"), and it costs no legitimate flow: probe-then-execute in the SAME STEP is never legal —
-  // confirmFirst denies a confirm licensed by a same-turn probe, because the user must answer in between.
-  it('a same-step sibling PROBE (confirmed:false) DOES throttle — its effect is unverifiable', async () => {
+  // WHAT COUNTS AS A PROBE DEPENDS ON WHETHER THE CALL HAS RUN (r2/C6 + the MI-T7 review). A same-step
+  // sibling has NOT executed, so `tookEffect` is `undefined` for every one of them BY CONSTRUCTION — the
+  // world cannot have recorded an effect that has not happened. The EXECUTED rule ("a probe is a call the
+  // world recorded as changing nothing") therefore cannot be applied here: it would count every admitted
+  // destructive sibling and veto the honest MULTI-PREVIEW pinned two tests below. For a call that has not
+  // run, its declared flags are the only evidence that exists.
+  it('a same-step sibling PROBE (confirmed:false) does NOT throttle — a probe changes nothing', async () => {
     const g = destructiveThrottle(['cancelMove']);
     const ctx = craftCtx({
       tool: 'cancelMove',
       args: { moveId: 'mv_2001', confirmed: true },
       siblingCallsThisStep: [call('cancelMove', { args: { moveId: 'mv_2001', confirmed: false } })],
     });
-    expect(await g.check(ctx)).toBeTruthy();
+    expect(await g.check(ctx)).toBeNull();
   });
 
-  it('a same-step sibling that requiresConfirmation likewise throttles', async () => {
+  it('a same-step sibling that requiresConfirmation (probe result) does NOT throttle', async () => {
     const g = destructiveThrottle(['cancelMove']);
     const ctx = craftCtx({
       tool: 'cancelMove',
       args: { moveId: 'mv_2001', confirmed: true },
       siblingCallsThisStep: [call('cancelMove', { args: { moveId: 'mv_2001' }, resultFlags: { requiresConfirmation: true } })],
+    });
+    expect(await g.check(ctx)).toBeNull();
+  });
+
+  it('CONTROL (MI-T7 review): a same-step MULTI-PREVIEW passes — two probes in one step are not an effect', async () => {
+    // "Preview cancelling both of my bookings" is a legal request, and the model answers it with two
+    // `confirmed:false` calls in ONE step. Neither has run when the second is gated, so neither can have
+    // an effect on record; vetoing the second would deny the preview for an effect nothing has had.
+    const g = destructiveThrottle(['cancelMove']);
+    const ctx = craftCtx({
+      tool: 'cancelMove',
+      args: { moveId: 'mv_2002', confirmed: false },
+      siblingCallsThisStep: [call('cancelMove', { args: { moveId: 'mv_2001', confirmed: false } })],
+    });
+    expect(await g.check(ctx)).toBeNull();
+  });
+
+  it('CONTROL: a same-step sibling with NO preview flag still throttles — the r2/C6 direction is intact', async () => {
+    // The sibling declares nothing, so there is no preview claim to honour: an admitted destructive call
+    // with no probe shape counts exactly as it always did.
+    const g = destructiveThrottle(['cancelMove']);
+    const ctx = craftCtx({
+      tool: 'cancelMove',
+      args: { moveId: 'mv_2002', confirmed: true },
+      siblingCallsThisStep: [call('cancelMove', { args: { moveId: 'mv_2001' } })],
     });
     expect(await g.check(ctx)).toBeTruthy();
   });

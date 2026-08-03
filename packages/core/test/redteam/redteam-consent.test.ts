@@ -213,10 +213,32 @@ describe('V4 — destructiveThrottle: one destructive effect per turn', () => {
     expect(g.check(ctx)).toBeNull();
   });
 
-  it('CLOSED (r2/C6): a prior destructive call with UNKNOWN effect counts against the cap', () => {
+  it('CLOSED (r2/C6): a prior EXECUTED destructive call with UNKNOWN effect counts against the cap', () => {
     const g = destructiveThrottle(['refund']);
-    // No `tookEffect` at all — the world kept no record (the native-tools/MCP shape). Fail closed.
+    // It RAN (it is in `observed`) and left no `tookEffect` — the world kept no record. Unverifiable ⇒
+    // it counts. This is the native-tools/MCP shape the M7 fix was inert on.
     const ctx = baseCtx({ tool: 'refund', args: { id: '2', confirmed: false }, turnIndex: 0, observed: [obs('refund', { id: '1', confirmed: false }, 0)] });
+    expect(g.check(ctx)).not.toBeNull();
+  });
+
+  it('CONTROL (MI-T7 review): a same-step MULTI-PREVIEW is NOT capped — neither probe has run yet', () => {
+    const g = destructiveThrottle(['refund']);
+    // "Preview refunding both orders" → two `confirmed:false` calls in ONE step. A sibling has not
+    // executed, so no world record of its effect can exist; its declared flag is the only evidence
+    // there is, and vetoing the second would deny the preview for an effect nothing has had.
+    const ctx = baseCtx({
+      tool: 'refund', args: { id: '2', confirmed: false }, turnIndex: 0,
+      siblingCallsThisStep: [obs('refund', { id: '1', confirmed: false }, 0)],
+    });
+    expect(g.check(ctx)).toBeNull();
+  });
+
+  it('CONTROL: a same-step sibling declaring NO preview still caps the second call', () => {
+    const g = destructiveThrottle(['refund']);
+    const ctx = baseCtx({
+      tool: 'refund', args: { id: '2', confirmed: true }, turnIndex: 0,
+      siblingCallsThisStep: [obs('refund', { id: '1' }, 0)],
+    });
     expect(g.check(ctx)).not.toBeNull();
   });
 });

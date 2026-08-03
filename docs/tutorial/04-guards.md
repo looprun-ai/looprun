@@ -336,7 +336,7 @@ A call has been proposed and not yet executed. A deny returns to the model AS th
 | [`consentRequired`](#9-consentrequired) | `world.ts` | A set of writes may run only while the world says this person's consent is on record. |
 | [`confirmFirst`](#10-confirmfirst) | `confirmation.ts` | A destructive tool needs the user's go-ahead from an EARLIER turn — licensed `via` a same-record probe, a prior ask, or either. The licensing event is turn-bounded by `within` (default 1). Passing a `via` NAME to the string overload throws at construction. |
 | [`noActAfterAskSameTurn`](#11-noactafterasksameturn) | `confirmation.ts` | Denies the listed tools on a turn in which the model already asked the user a question. |
-| [`destructiveThrottle`](#12-destructivethrottle) | `confirmation.ts` | At most one destructive action that TOOK EFFECT per turn (a probe the world RECORDED as effect-free does not count; a call whose effect is unrecorded does). |
+| [`destructiveThrottle`](#12-destructivethrottle) | `confirmation.ts` | At most one destructive action that TOOK EFFECT per turn (a probe does not count; a call that RAN with no world record of its effect does). |
 | [`askedEarlier`](#13-askedearlier) | `structural.ts` | A gated argument may be recorded only when the agent asked the user in an EARLIER turn; a same-turn ask does not count. |
 
 #### 1. `requiresBefore`
@@ -451,7 +451,7 @@ noActAfterAskSameTurn(['cancelBooking'])
 
 #### 12. `destructiveThrottle`
 
-At most one destructive action that TOOK EFFECT per turn (a probe the world RECORDED as effect-free does not count; a call whose effect is unrecorded does).
+At most one destructive action that TOOK EFFECT per turn (a probe does not count; a call that RAN with no world record of its effect does).
 
 **When to reach for it.** Auto-installed alongside `confirmFirst`. It is the blast-radius cap, not a consent gate: it stops chained destructive calls in one turn even when each one is individually confirmed.
 

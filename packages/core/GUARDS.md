@@ -566,14 +566,24 @@ never open:
    nothing. `LoopRunAgent.generate`, `runSpecConversation` and `LoopRunAgent.stream` all seal (the stream
    seals on stream completion — a stream nobody consumes never finishes and is never sealed, which is the
    right reading of a turn that was thrown away).
-2. **RECORD WHAT EACH CALL DID** on `world.toolCalls`, with `tookEffect`. `destructiveThrottle` treats a
-   call as a PROBE only when the world POSITIVELY recorded that it changed nothing (`tookEffect === false`);
-   a call the world never recorded has UNKNOWN effect and counts against the one-effect-per-turn cap. A
-   world whose ledger nothing writes previously read as "every call changed nothing", which made the
-   throttle inert on the whole native-tools/MCP path (red-team r2/C6). `defineWorld` and `FixtureWorld`
-   record every exec; native-tools mode records in the guard hook, deriving effect from the result (a call
-   that succeeded and did not come back asking for confirmation changed something). A custom world that
-   logs only mutations will see its probes counted — record them with `tookEffect:false`.
+2. **RECORD WHAT EACH CALL DID** on `world.toolCalls`, with `tookEffect`. `destructiveThrottle` treats an
+   EXECUTED call as a PROBE only when the world POSITIVELY recorded that it changed nothing
+   (`tookEffect === false`); a call that RAN and left no record has UNKNOWN effect and counts against the
+   one-effect-per-turn cap. A world whose ledger nothing writes previously read as "every call changed
+   nothing", which made the throttle inert on the whole native-tools/MCP path (red-team r2/C6).
+   `defineWorld` and `FixtureWorld` record every exec; native-tools mode records in the guard hook,
+   deriving effect from the result (a call that succeeded and did not come back asking for confirmation
+   changed something). A custom world that logs only mutations will see its probes counted — record them
+   with `tookEffect:false`.
+
+   This obligation covers EXECUTED calls only. A same-step SIBLING (`siblingCallsThisStep`) has been
+   admitted but has not run, so `tookEffect` is `undefined` for it by construction and its declared
+   confirm flag is what decides — otherwise a legitimate multi-preview ("preview cancelling both
+   bookings" ⇒ two `confirmed:false` calls in one step) would have its second call vetoed for an effect
+   neither call has had yet. The residual is stated rather than hidden: a tool that MUTATES while
+   declaring `confirmed:false`, emitted TWICE IN ONE STEP, is not capped — nothing observable separates
+   it from the honest multi-preview at admission time. Its cross-step form IS capped (the first call's
+   effect is on record by then), and `confirmFirst` independently denies same-step probe→execute.
 
 They compose because they cover DISJOINT moments — the call, the argument, the message — and each keys on
 its own structural signal (observed probe / earlier-turn ask · the gated arg + an earlier ask · an unresolved
