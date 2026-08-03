@@ -47,19 +47,53 @@ export function isCoreOutcome(s: string): s is CoreOutcome {
 }
 
 /**
- * One structured claim the agent makes about ONE operation it attempted this turn.
- *
- * `op` is an ADVISORY label (what the agent calls the operation) — the cross-check NEVER keys on its
- * semantics; grounding is `target` + `outcome` against the ledger. `outcome` is a {@link CoreOutcome}
- * or a domain word declared in the spec's {@link OutcomeMap}. `target` is the entity label/id acted on;
- * `amount` an optional magnitude (e.g. a refunded value).
+ * The RESERVED, engine-core, domain-neutral SPEECH ops (MI-D2). An intention whose `op` is one of these
+ * is a SPEECH act: it classifies the `message`'s speech act, is NOT backed by a tool, is NOT grounded
+ * against the world ledger, and carries NO action `outcome`/`amount`. Every other op is an ACTION op —
+ * domain-declared, backed by a write, and REQUIRED to carry an `outcome`. A domain may not redefine
+ * these four names.
  */
-export interface TurnClaim {
+export const SPEECH_OPS = ['inform', 'greet', 'refuse', 'ask'] as const;
+
+/** One of the four reserved speech ops (see {@link SPEECH_OPS}). */
+export type SpeechOp = (typeof SPEECH_OPS)[number];
+
+const SPEECH_OP_SET: ReadonlySet<string> = new Set(SPEECH_OPS);
+
+/** True when `op` is one of the four reserved SPEECH ops. Partition predicate for MI-D2. */
+export function isSpeechOp(op: string): op is SpeechOp {
+  return SPEECH_OP_SET.has(op);
+}
+
+/** True when `op` is an ACTION op — anything that is not a reserved speech op (= `!isSpeechOp`). */
+export function isActionOp(op: string): boolean {
+  return !isSpeechOp(op);
+}
+
+/**
+ * One structured INTENTION the agent declares about ONE thing it did this turn (MI-D2).
+ *
+ * Two disjoint families keyed off `op` (see {@link SPEECH_OPS}): a SPEECH intention (`inform`/`greet`/
+ * `refuse`/`ask`) classifies the `message`'s speech act and carries NO `outcome`/`amount`; an ACTION
+ * intention (any other `op`) is backed by a write and MUST carry an `outcome`. `op` is an ADVISORY label —
+ * the cross-check NEVER keys on its semantics; grounding is `target` + `outcome` against the ledger.
+ * `outcome` (ACTION only) is a {@link CoreOutcome} or a domain word declared in the spec's {@link OutcomeMap};
+ * `target` is the entity label/id acted on; `amount` an optional magnitude (ACTION only). `outcome` is
+ * OPTIONAL at the type level (speech ops carry none); {@link validateClaims} enforces the partition rule.
+ */
+export interface Intention {
   op: string;
   target?: string;
-  outcome: string;
+  outcome?: string;
   amount?: number;
 }
+
+/**
+ * @deprecated Transitional alias for {@link Intention} — the SCG name. Kept so the SCG-era importers
+ * (rules/trunk/ledger/turn/honesty) and their tests compile without a rename churn; new code names
+ * `Intention`. Removed once the last importer is migrated.
+ */
+export type TurnClaim = Intention;
 
 /** Domain outcome vocabulary: every non-core outcome word MUST map to a {@link CoreOutcome}, so the
  *  ledger cross-check stays engine-owned and never becomes semantic. */
@@ -85,17 +119,25 @@ function isNonEmptyString(v: unknown): v is string {
 const CLAIM_KEYS: ReadonlySet<string> = new Set(['op', 'target', 'outcome', 'amount']);
 
 /**
- * STRUCTURAL validation of a raw `did` value — SHAPE only (grounding against the ledger is the guards'
- * job). Exhaustive typed checks, NOT `typeof`/`trim` guesses (the red-team broke those): `op` and
- * `outcome` must be non-empty strings; `target`, when present, a non-empty string; `amount`, when
- * present, a FINITE number; any unknown key on a claim is an error. `[]` is VALID — a read-only / ask
- * turn legitimately did nothing. Returns the well-formed claims plus one error string per defect.
+ * STRUCTURAL validation of a raw `did` value — SHAPE + the speech/action PARTITION (MI-D1/D2), never
+ * grounding against the ledger (that is the guards' job). Exhaustive typed checks, NOT `typeof`/`trim`
+ * guesses (the red-team broke those):
+ *   · `did` MUST be a NON-EMPTY array — an empty `did` is an error (MI-D1: every respond declares ≥1
+ *     intention; there is no "honest empty" turn).
+ *   · `op` must be a non-empty string; `target`, when present, a non-empty string; any unknown key is an error.
+ *   · An ACTION op (`op ∉ SPEECH_OPS`) REQUIRES a non-empty string `outcome`, and `amount`, when present,
+ *     a FINITE number.
+ *   · A SPEECH op (`op ∈ SPEECH_OPS`) MUST NOT carry `outcome` or `amount` (a speech act is not grounded).
+ * Returns the well-formed intentions plus one error string per defect.
  */
-export function validateClaims(did: unknown): { claims: TurnClaim[]; errors: string[] } {
+export function validateClaims(did: unknown): { claims: Intention[]; errors: string[] } {
   if (!Array.isArray(did)) {
     return { claims: [], errors: [`did must be an array, got ${did === null ? 'null' : typeof did}`] };
   }
-  const claims: TurnClaim[] = [];
+  if (did.length === 0) {
+    return { claims: [], errors: ['did must declare at least one intention (an empty did is not allowed)'] };
+  }
+  const claims: Intention[] = [];
   const errors: string[] = [];
   did.forEach((item, i) => {
     if (item === null || typeof item !== 'object' || Array.isArray(item)) {
@@ -108,17 +150,27 @@ export function validateClaims(did: unknown): { claims: TurnClaim[]; errors: str
       if (!CLAIM_KEYS.has(key)) local.push(`did[${i}] has unknown key "${key}"`);
     }
     if (!isNonEmptyString(rec.op)) local.push(`did[${i}].op must be a non-empty string`);
-    if (!isNonEmptyString(rec.outcome)) local.push(`did[${i}].outcome must be a non-empty string`);
     if ('target' in rec && !isNonEmptyString(rec.target)) local.push(`did[${i}].target must be a non-empty string when present`);
-    if ('amount' in rec && !(typeof rec.amount === 'number' && Number.isFinite(rec.amount))) {
-      local.push(`did[${i}].amount must be a finite number when present`);
+    // The outcome/amount rules depend on the op partition, so they apply only once `op` is a valid string.
+    const opStr = isNonEmptyString(rec.op) ? rec.op : undefined;
+    if (opStr !== undefined) {
+      if (isSpeechOp(opStr)) {
+        if ('outcome' in rec) local.push(`did[${i}] speech op "${opStr}" must not carry an outcome`);
+        if ('amount' in rec) local.push(`did[${i}] speech op "${opStr}" must not carry an amount`);
+      } else {
+        if (!isNonEmptyString(rec.outcome)) local.push(`did[${i}].outcome must be a non-empty string for action op "${opStr}"`);
+        if ('amount' in rec && !(typeof rec.amount === 'number' && Number.isFinite(rec.amount))) {
+          local.push(`did[${i}].amount must be a finite number when present`);
+        }
+      }
     }
     if (local.length) {
       errors.push(...local);
       return;
     }
-    const claim: TurnClaim = { op: rec.op as string, outcome: rec.outcome as string };
+    const claim: Intention = { op: rec.op as string };
     if ('target' in rec) claim.target = rec.target as string;
+    if ('outcome' in rec) claim.outcome = rec.outcome as string;
     if ('amount' in rec) claim.amount = rec.amount as number;
     claims.push(claim);
   });
@@ -126,37 +178,42 @@ export function validateClaims(did: unknown): { claims: TurnClaim[]; errors: str
 }
 
 /**
- * The payload one `respond` call carries: the non-operational user-facing prose, the structured claim
- * of operations, and whether this turn poses a question.
+ * The payload one `respond` call carries: the non-operational user-facing prose and the structured
+ * intentions of the turn. Asking is no longer a bare boolean (MI-D3) — a question is declared as an
+ * `ask` speech-intention in `did` (see {@link hasAskIntent}), so `asked` is gone from the payload.
  */
 export interface RespondPayload {
   message: string;
-  did: TurnClaim[];
-  asked: boolean;
+  did: Intention[];
 }
 
 /**
  * TOLERANT extraction of a `respond` call's args into a {@link RespondPayload} — never throws. A missing
- * or non-string `message` becomes `''`, a missing/ill-shaped `did` becomes `[]` (only the well-formed
- * claims survive; strict rejection is {@link validateClaims}' job at the guard boundary), and `asked`
- * is true only when it is exactly the boolean `true`.
+ * or non-string `message` becomes `''`, and a missing/empty/ill-shaped `did` becomes `[]` (only the
+ * well-formed intentions survive; the strict mandatory-non-empty rejection is {@link validateClaims}' job
+ * at the ledger/guard boundary).
  */
 export function respondPayload(args: Record<string, unknown>): RespondPayload {
   return {
     message: typeof args.message === 'string' ? args.message : '',
     did: validateClaims(args.did).claims,
-    asked: args.asked === true,
   };
 }
 
+/** True when the turn's `did` carries an `ask` intention (MI-D3) — the structured replacement for the
+ *  retired `asked` boolean. Every consent/ask gate reads "the turn posed a question" through this. */
+export function hasAskIntent(did: Intention[]): boolean {
+  return did.some((i) => i.op === 'ask');
+}
+
 /**
- * True when this observed call is the ASK event: the single `respond` terminal with `asked:true`. The
- * two-terminal protocol is retired — `askUser`/`replyToUser` are DEAD — so "the user was asked" is now
- * a FIELD (`asked`) on the one terminal, not a separate tool name. Confirmation/consent guards key on
- * this instead of a tool name.
+ * True when this observed call is the ASK event: the single `respond` terminal whose `did` carries an
+ * `ask` intention (MI-D3). The bare `asked` boolean is retired — asking is now a declared `did`
+ * intention like every other, extracted through {@link respondPayload}. Confirmation/consent guards key
+ * on this instead of a tool name or a flag.
  */
 export function isAskEvent(o: { name: string; args?: Record<string, unknown> }): boolean {
-  return o.name === 'respond' && o.args?.asked === true;
+  return o.name === 'respond' && hasAskIntent(respondPayload(o.args ?? {}).did);
 }
 
 // ── The did → operation-report RENDERER (engine-owned) ──────────────────────────────────────────────
@@ -211,7 +268,9 @@ function defaultClaimLine(claim: TurnClaim, core: CoreOutcome): string {
 export function renderOperationReport(did: TurnClaim[], opts?: RenderOpts): string {
   const lines: string[] = [];
   for (const claim of did) {
-    const core = resolveOutcome(claim.outcome, opts?.outcomes);
+    // A speech intention carries no outcome (`undefined`) → resolves to null → renders no operation line
+    // (MI-D5: the `message` is the speech surface). resolveOutcome takes a string, so coerce absent → ''.
+    const core = resolveOutcome(claim.outcome ?? '', opts?.outcomes);
     if (core === null) continue;
     const line = opts?.renderClaim ? opts.renderClaim(claim, core) : defaultClaimLine(claim, core);
     if (line && line.trim()) lines.push(line.trim());

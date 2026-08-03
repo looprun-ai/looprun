@@ -72,8 +72,16 @@ export type { TurnLedger } from './runtime/ledger.js';
 // operation report from the VERIFIED `did`, and derives the true claims from the ledger for the
 // exhaustion closure. Backends consume both; `RespondPayload`/`RenderOpts` ride finalizeReply's/the
 // renderer's signature so a declaration:true consumer can name them.
-export { renderOperationReport, deriveClaimsFromLedger, respondPayload } from './runtime/claims.js';
-export type { RespondPayload, RenderOpts } from './runtime/claims.js';
+export {
+  renderOperationReport,
+  deriveClaimsFromLedger,
+  respondPayload,
+  hasAskIntent,
+  isSpeechOp,
+  isActionOp,
+  SPEECH_OPS,
+} from './runtime/claims.js';
+export type { RespondPayload, RenderOpts, Intention, SpeechOp } from './runtime/claims.js';
 
 export {
   isTerminal,

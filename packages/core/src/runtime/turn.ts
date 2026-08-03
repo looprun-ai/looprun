@@ -22,6 +22,7 @@ import { recordVeto, type TurnLedger } from './ledger.js';
 import { isTerminal } from './terminal.js';
 import {
   deriveClaimsFromLedger,
+  hasAskIntent,
   renderOperationReport,
   respondPayload,
   type RespondPayload,
@@ -413,7 +414,9 @@ async function checkPayload(
   payload: RespondPayload,
 ): Promise<ReplyViolation[]> {
   ledger.did = payload.did;
-  ledger.asked = payload.asked;
+  // `asked` is derived from the `ask` intention now (MI-D3); the ledger.asked FIELD stays a transitional
+  // store Task 2 finishes re-keying. Computed here from the delivered did, so ctx.asked stays consistent.
+  ledger.asked = hasAskIntent(payload.did);
   return checkReply(spec, ledger, world, payload.message);
 }
 

@@ -152,7 +152,9 @@ export function claimIsGrounded(opts: { writeTools: readonly string[]; outcomes?
       const calls = domainCallsThisTurn(ctx);
       const attempts = ctx.attemptedThisTurn ?? [];
       for (const claim of did) {
-        const resolved = resolveOutcome(claim.outcome, opts.outcomes);
+        // `outcome` is optional on Intention (speech ops carry none); an action claim reaching this
+        // guard always has one — coerce absent → '' so an outcome-less claim resolves to null (unrecognised).
+        const resolved = resolveOutcome(claim.outcome ?? '', opts.outcomes);
         if (resolved === null) {
           return `You reported "${claim.op}"${onTarget(claim)} with an outcome the system does not recognise ("${claim.outcome}") — report it as one of the known outcomes instead.`;
         }
@@ -189,7 +191,7 @@ export function claimIsComplete(opts: { writeTools: readonly string[]; outcomes?
       for (const c of calls) {
         if (!(writes.has(c.name) && c.tookEffect === true)) continue;
         const covered = did.some(
-          (claim) => resolveOutcome(claim.outcome, opts.outcomes) === 'success' && claimMatchesCall(ctx, claim, c),
+          (claim) => resolveOutcome(claim.outcome ?? '', opts.outcomes) === 'success' && claimMatchesCall(ctx, claim, c),
         );
         if (covered) continue;
         const label = producedLabel(ctx, c);
@@ -235,7 +237,7 @@ export function claimCoversRubric(
         const t = target.toLowerCase();
         const covered = did.some((claim) => {
           if (claim.target === undefined || !claim.target.toLowerCase().includes(t)) return false;
-          const resolved = resolveOutcome(claim.outcome, opts.outcomes);
+          const resolved = resolveOutcome(claim.outcome ?? '', opts.outcomes);
           return opts.outcome === 'any' ? resolved !== null : resolved === opts.outcome;
         });
         if (!covered) return reason;
