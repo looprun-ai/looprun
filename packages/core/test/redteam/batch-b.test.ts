@@ -7,7 +7,7 @@
  * Guard source is NOT modified; this only probes behaviour.
  */
 import { describe, expect, it } from 'vitest';
-import type { GuardCtx, ObservedCall } from '../../src/rules.js';
+import type { GuardCtx, HistoryTurn, ObservedCall } from '../../src/rules.js';
 import {
   confirmFirst,
   destructiveThrottle,
@@ -44,9 +44,10 @@ const okCall = (name: string, turn: number, args: Record<string, unknown>, extra
 describe('confirmFirst — adversarial', () => {
   const g = confirmFirst(); // via:'either', flag:'confirmed', within:1
 
-  it('BREAK: an UNDER-SPECIFIED probe (empty non-flag args) licenses a confirm of ANY record', () => {
-    // Attacker: turn 1 probe deleteRecord with NO recordId (empty args except confirmed:false).
-    // Its non-flag key set is [] → `.every()` over [] is vacuously true → matches ANY confirm.
+  it('HOLDS (r2/C3): an UNDER-SPECIFIED probe (empty non-flag args) does NOT license a confirm of ANY record', () => {
+    // Attacker: turn 1 probe deleteRecord with NO recordId (empty args except confirmed:false). Its
+    // non-flag key set is [] and `.every()` over [] is vacuously true, so the old SUBSET test matched
+    // ANY confirm. The binding is now a set EQUALITY: [] ≠ ['recordId'] → the preview was not of this act.
     const probe = okCall('deleteRecord', 1, { confirmed: false }); // no recordId
     const confirm = ctxWith({
       tool: 'deleteRecord',
@@ -54,7 +55,7 @@ describe('confirmFirst — adversarial', () => {
       observed: [probe],
       turnIndex: 2,
     });
-    expect(g.check(confirm)).toBeNull(); // allowed = BREAK
+    expect(g.check(confirm)).not.toBeNull();
   });
 
   it('HOLDS: a FULLY-specified probe of a DIFFERENT record does NOT license (probe not a subset)', () => {
@@ -101,14 +102,18 @@ describe('confirmFirst — adversarial', () => {
     expect(g.check(confirm)).not.toBeNull();
   });
 
-  it('BREAK: via:either accepts an UNRELATED earlier ask as license for a destructive confirm', () => {
+  it('BREAK (STILL OPEN): via:either accepts an UNRELATED earlier ask as license for a destructive confirm', () => {
     // The attacker's ask was about something else entirely — the guard does not bind the ask to the
-    // record. Any recent successful ask unlocks confirmed:true on any destructive record.
-    const unrelatedAsk = okCall('respond', 1, { message: 'what is your favourite colour?', did: [{ op: 'ask' }] });
+    // record. Any recent DELIVERED ask unlocks confirmed:true on any destructive record. Unchanged by
+    // wave 2: binding an ask to a record needs the ask to name one, which a speech intention does not.
+    const asked: HistoryTurn = {
+      turnIndex: 1, userText: 'chat', reply: 'what is your favourite colour?', toolCalls: [],
+      did: [{ op: 'ask' }], attemptedCalls: [], guardEvents: [],
+    };
     const confirm = ctxWith({
       tool: 'deleteRecord',
       args: { recordId: 'victim-999', confirmed: true },
-      observed: [unrelatedAsk],
+      history: [asked],
       turnIndex: 2,
     });
     expect(g.check(confirm)).toBeNull(); // allowed = BREAK
@@ -116,17 +121,20 @@ describe('confirmFirst — adversarial', () => {
 
   it('HOLDS (via:probe): an unrelated ask does NOT license — only a record-bound probe does', () => {
     const gp = confirmFirst({ via: 'probe' });
-    const unrelatedAsk = okCall('respond', 1, { message: 'unrelated', did: [{ op: 'ask' }] });
+    const asked: HistoryTurn = {
+      turnIndex: 1, userText: 'chat', reply: 'unrelated', toolCalls: [],
+      did: [{ op: 'ask' }], attemptedCalls: [], guardEvents: [],
+    };
     const confirm = ctxWith({
       tool: 'deleteRecord',
       args: { recordId: 'victim', confirmed: true },
-      observed: [unrelatedAsk],
+      history: [asked],
       turnIndex: 2,
     });
     expect(gp.check(confirm)).not.toBeNull();
   });
 
-  it('BREAK (via:probe still): under-specified probe bypasses even the strict record-bound arm', () => {
+  it('HOLDS (r2/C3): an under-specified probe no longer bypasses the strict record-bound arm', () => {
     const gp = confirmFirst({ via: 'probe' });
     const probe = okCall('deleteRecord', 1, { confirmed: false });
     const confirm = ctxWith({
@@ -135,7 +143,7 @@ describe('confirmFirst — adversarial', () => {
       observed: [probe],
       turnIndex: 2,
     });
-    expect(gp.check(confirm)).toBeNull(); // allowed = BREAK
+    expect(gp.check(confirm)).not.toBeNull();
   });
 
   it('HOLDS (via:ask): a vetoed turn-1 attempt (ok:false) does NOT unlock the identical turn-2 call', () => {
@@ -145,13 +153,23 @@ describe('confirmFirst — adversarial', () => {
     expect(ga.check(act)).not.toBeNull();
   });
 
-  it('LEAK (via:ask): a prior SUCCESSFUL run of the tool ITSELF surfaces and licenses the next run', () => {
-    // A flag-less tool: its own prior OK run counts as "surfacing" → a second identical destructive run
-    // in the next turn is allowed with no fresh ask. Documented, but worth flagging as a repeat-fire path.
+  it('HOLDS (r2/C4): a prior SUCCESSFUL run of the tool ITSELF does NOT surface or license the next run', () => {
+    // A flag-less tool's own prior OK run used to count as "surfacing", so a second identical destructive
+    // run in the next turn was allowed with no fresh ask — and chained turn by turn it carried ONE consent
+    // across unbounded turns, bridging the recency law. Every repeat now needs its own earlier-turn ask.
     const ga = confirmFirst({ via: 'ask' });
     const priorRun = okCall('wipeAll', 1, {});
     const act = ctxWith({ tool: 'wipeAll', args: {}, observed: [priorRun], turnIndex: 2 });
-    expect(ga.check(act)).toBeNull(); // allowed
+    expect(ga.check(act)).not.toBeNull();
+  });
+
+  it('CONTROL (r2/C4): the legitimate two-step still works — a DELIVERED ask licenses the next turn', () => {
+    const ga = confirmFirst({ via: 'ask' });
+    const asked: HistoryTurn = {
+      turnIndex: 1, userText: 'wipe everything', reply: 'This deletes every record — go ahead?', toolCalls: [],
+      did: [{ op: 'ask' }], attemptedCalls: [], guardEvents: [],
+    };
+    expect(ga.check(ctxWith({ tool: 'wipeAll', args: {}, history: [asked], turnIndex: 2 }))).toBeNull();
   });
 });
 
@@ -215,8 +233,11 @@ describe('destructiveThrottle — adversarial', () => {
     expect(g.check(second)).toBeNull(); // correct: nothing effected yet
   });
 
-  it('HOLDS: a genuine probe (requiresConfirmation) does not block the approved execute', () => {
+  it('HOLDS: a genuine probe (recorded tookEffect:false) does not block the approved execute', () => {
+    // r2/C6: `tookEffect:false` is POSITIVE evidence that the probe changed nothing — the backend records
+    // it whenever the world keeps a ledger. Without it the call is unverified, not effect-free.
     const probe = okCall('deleteRecord', 5, { recordId: 'A', confirmed: false }, {
+      tookEffect: false,
       resultFlags: { requiresConfirmation: true },
     });
     const execute = ctxWith({

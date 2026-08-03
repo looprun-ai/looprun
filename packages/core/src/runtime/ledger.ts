@@ -128,6 +128,13 @@ export function recordToolResult(ledger: TurnLedger, name: string, args: Record<
   // reconcile above) to learn whether it MUTATED the world — so a reply-honesty check (now `llmCheck`'s
   // job) can distinguish an action-success from a read-success and NOT veto an honest "cannot do X / no
   // record found" reply on a read-only turn.
+  //
+  // NO RECORD ⇒ UNKNOWN, NEVER `false` (red-team r2/C6). This used to write `tookEffect: false` whenever
+  // a world object was present but held no matching row, which conflates "the world says it changed
+  // nothing" with "nobody recorded what happened" — and a world whose ledger nothing writes (the
+  // native-tools/MCP stub) then reported every mutation as effect-free, making `destructiveThrottle`'s
+  // EFFECT-BEATS-FLAGS rule inert. The field is now OMITTED when there is no row, and the readers treat
+  // unknown as unverified rather than as "no effect".
   const wtc = world
     ? [...world.toolCalls].reverse().find((t) => t.name === name && canonArgs((t.args ?? {}) as Record<string, unknown>) === canonArgs(args))
     : undefined;
@@ -141,7 +148,7 @@ export function recordToolResult(ledger: TurnLedger, name: string, args: Record<
     args,
     ok,
     turnIndex: ledger.turnIndex,
-    ...(world ? { tookEffect: wtc?.tookEffect === true } : {}),
+    ...(wtc ? { tookEffect: wtc.tookEffect === true } : {}),
     ...(requiresConfirmation ? { resultFlags: { requiresConfirmation: true } } : {}),
     ...(producedLabel !== undefined ? { producedLabel } : {}),
   });

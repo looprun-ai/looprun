@@ -16,7 +16,9 @@ import { confirmFirst } from '../src/guards/confirmation.js';
 import { requiresBefore } from '../src/guards/flow.js';
 
 /** A minimal, structure-only GuardCtx — no world accessors, no reply, no user text. `history` defaults to
- *  [] (always an array in the real runtime); the ask-signal FALLBACK reads `observed`. */
+ *  [] (always an array in the real runtime). The cross-turn ask signal is SEALED HISTORY ONLY since
+ *  red-team r2/C2 (a raw `observed` respond is a hook-time record, not evidence of a delivered turn), so
+ *  every ask fixture below is a `HistoryTurn`. */
 function ctxWith(partial: Partial<GuardCtx> & { observed: ObservedCall[]; turnIndex: number }): GuardCtx {
   return {
     args: {},
@@ -26,15 +28,17 @@ function ctxWith(partial: Partial<GuardCtx> & { observed: ObservedCall[]; turnIn
   } as GuardCtx;
 }
 
-const ask = (turn: number): ObservedCall => ({
+/** The RAW hook-time record of a turn-closing `respond` that declared an ask. It is NOT consent
+ *  evidence (r2/C2) — only `confirmFirst`'s SAME-TURN diagnostic still reads it. */
+const askCall = (turn: number): ObservedCall => ({
   name: 'respond',
   ok: true,
   turnIndex: turn,
   args: { message: 'q?', did: [{ op: 'ask' }] },
 });
 
-/** A sealed HistoryTurn that DID pose a question — its `did` carries an `ask` intention (MI-D3), the
- *  PRIMARY (delivered, authoritative) ask signal askedEarlier reads. */
+/** A SEALED HistoryTurn that DID pose a question — its `did` carries an `ask` intention (MI-D3) over a
+ *  non-blank delivered `reply`. This is THE cross-turn ask signal. */
 const askedTurn = (turn: number): HistoryTurn =>
   ({ turnIndex: turn, userText: '', reply: 'q?', toolCalls: [], did: [{ op: 'ask' }], attemptedCalls: [], guardEvents: [] });
 
@@ -50,8 +54,9 @@ function ctxConfirmed(
   args: Record<string, unknown>,
   observed: ObservedCall[],
   turnIndex: number,
+  history: HistoryTurn[] = [],
 ): GuardCtx {
-  return ctxWith({ tool, args, observed, turnIndex });
+  return ctxWith({ tool, args, observed, turnIndex, history });
 }
 
 describe('askedEarlier', () => {
@@ -62,11 +67,20 @@ describe('askedEarlier', () => {
   });
 
   it('allows when an earlier-turn ask exists (distance 1)', () => {
-    expect(g.check(ctxWith({ observed: [ask(1)], turnIndex: 2, args: { condition: 'good' } }))).toBeNull();
+    expect(g.check(ctxWith({ observed: [], history: [askedTurn(1)], turnIndex: 2, args: { condition: 'good' } }))).toBeNull();
   });
 
   it('does not count a SAME-turn ask', () => {
-    expect(g.check(ctxWith({ observed: [ask(2)], turnIndex: 2, args: { condition: 'good' } }))).toMatch(/ask/i);
+    expect(g.check(ctxWith({ observed: [], history: [askedTurn(2)], turnIndex: 2, args: { condition: 'good' } }))).toMatch(/ask/i);
+  });
+
+  it('a RAW observed ask-intent respond is NOT consent evidence (r2/C2 — sealed history only)', () => {
+    expect(g.check(ctxWith({ observed: [askCall(1)], turnIndex: 2, args: { condition: 'good' } }))).toMatch(/ask/i);
+  });
+
+  it('a sealed ask over a BLANK delivered reply licenses nothing (r2/C7 floor)', () => {
+    const silent: HistoryTurn = { ...askedTurn(1), reply: '\u200b \u3164' };
+    expect(g.check(ctxWith({ observed: [], history: [silent], turnIndex: 2, args: { condition: 'good' } }))).toMatch(/ask/i);
   });
 
   it('is silent when the gated arg is absent (not this guard\'s business)', () => {
@@ -94,14 +108,14 @@ describe('askedEarlier', () => {
 
   describe('recency law (default within:1)', () => {
     it('distance 1 licenses', () => {
-      expect(g.check(ctxWith({ observed: [ask(1)], turnIndex: 2, args: { condition: 'good' } }))).toBeNull();
+      expect(g.check(ctxWith({ observed: [], history: [askedTurn(1)], turnIndex: 2, args: { condition: 'good' } }))).toBeNull();
     });
     it('distance 2 does NOT license (a stale ask must not unlock today\'s write)', () => {
-      expect(g.check(ctxWith({ observed: [ask(1)], turnIndex: 3, args: { condition: 'good' } }))).toMatch(/ask/i);
+      expect(g.check(ctxWith({ observed: [], history: [askedTurn(1)], turnIndex: 3, args: { condition: 'good' } }))).toMatch(/ask/i);
     });
     it('within:5 widens the window (distance 4 licenses)', () => {
       const wide = askedEarlier({ tool: 'completeMaintenance', arg: 'condition', within: 5 });
-      expect(wide.check(ctxWith({ observed: [ask(1)], turnIndex: 5, args: { condition: 'good' } }))).toBeNull();
+      expect(wide.check(ctxWith({ observed: [], history: [askedTurn(1)], turnIndex: 5, args: { condition: 'good' } }))).toBeNull();
     });
   });
 });
@@ -166,7 +180,7 @@ describe('confirmFirst — via:probe (absorbed confirmedNeedsEarlierProbe)', () 
 
   it('does NOT accept a prior ask (probe-only, unlike either)', () => {
     expect(
-      c.check(ctxConfirmed('chargeDeposit', { bookingId: 'bk_1', confirmed: true }, [ask(1)], 2)),
+      c.check(ctxConfirmed('chargeDeposit', { bookingId: 'bk_1', confirmed: true }, [], 2, [askedTurn(1)])),
     ).toMatch(/preview|probe|confirm/i);
   });
 
@@ -193,35 +207,36 @@ describe('confirmFirst — via:probe (absorbed confirmedNeedsEarlierProbe)', () 
 describe('confirmFirst — via matrix', () => {
   const record = { id: 'x', confirmed: true };
   const priorProbe = [probe('act', 1, { id: 'x' })];
-  const priorAsk = [ask(1)];
+  const priorAsk = [askedTurn(1)];
 
-  it('via:ask — flag-less: licensed by a prior ask OR a prior OK run of the tool itself', () => {
+  it('via:ask — flag-less: licensed ONLY by a prior DELIVERED ask, never by its own prior run', () => {
     const g = confirmFirst({ via: 'ask' });
-    expect(g.check(ctxConfirmed('act', {}, priorAsk, 2))).toBeNull();
-    // a prior successful call of the flag-less tool is its own surfacing signal
-    expect(g.check(ctxConfirmed('act', {}, [{ name: 'act', ok: true, turnIndex: 1, args: {} }], 2))).toBeNull();
+    expect(g.check(ctxConfirmed('act', {}, [], 2, priorAsk))).toBeNull();
+    // r2/C4: the tool's own prior OK run is NOT surfacing — accepting it chained one consent across
+    // unbounded turns and bridged the recency law. Every repeat needs its own earlier-turn ask.
+    expect(g.check(ctxConfirmed('act', {}, [{ name: 'act', ok: true, turnIndex: 1, args: {} }], 2))).not.toBeNull();
     expect(g.check(ctxConfirmed('act', {}, [], 2))).not.toBeNull();
     // gated on every call regardless of any confirm flag; a same-turn ask does not license
-    expect(g.check(ctxConfirmed('act', {}, [ask(2)], 2))).not.toBeNull();
+    expect(g.check(ctxConfirmed('act', {}, [askCall(2)], 2))).not.toBeNull();
   });
 
   it('via:either — licensed by a matching probe OR a prior ask', () => {
     const g = confirmFirst({ via: 'either' });
     expect(g.check(ctxConfirmed('act', record, priorProbe, 2))).toBeNull();
-    expect(g.check(ctxConfirmed('act', record, priorAsk, 2))).toBeNull();
+    expect(g.check(ctxConfirmed('act', record, [], 2, priorAsk))).toBeNull();
     expect(g.check(ctxConfirmed('act', record, [], 2))).not.toBeNull();
   });
 
   it('via:probe — a prior ask does NOT license (probe only)', () => {
     const g = confirmFirst({ via: 'probe' });
-    expect(g.check(ctxConfirmed('act', record, priorAsk, 2))).not.toBeNull();
+    expect(g.check(ctxConfirmed('act', record, [], 2, priorAsk))).not.toBeNull();
     expect(g.check(ctxConfirmed('act', record, priorProbe, 2))).toBeNull();
   });
 
   it('string overload maps to {flag:confirmed, via:either, within:1}', () => {
     const g = confirmFirst('confirmed');
     expect(g.check(ctxConfirmed('act', record, priorProbe, 2))).toBeNull(); // distance 1
-    expect(g.check(ctxConfirmed('act', record, priorAsk, 2))).toBeNull();
+    expect(g.check(ctxConfirmed('act', record, [], 2, priorAsk))).toBeNull();
     expect(g.check(ctxConfirmed('act', record, [probe('act', 1, { id: 'x' })], 3))).not.toBeNull(); // distance 2
   });
 

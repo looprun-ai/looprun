@@ -18,6 +18,9 @@ import { describe, expect, it } from 'vitest';
 import { prematureTerminalCalls, prematureTerminalTools, supersededTerminalCalls } from '../../src/runtime/terminal.js';
 import { createLedger, pruneSupersededTerminals, recordTerminalCall } from '../../src/runtime/ledger.js';
 
+/** DELIVERY = the last terminal the runtime would ACCEPT (`terminalPayloadRejection`), not merely the
+ *  last with a non-empty message (red-team r2/C5). Every fixture below therefore carries a
+ *  schema-legal `did` (non-empty) unless it is deliberately proving the refused shape. */
 /** One model step carrying the given `[toolName, args]` calls. */
 const step = (...calls: Array<[string, Record<string, unknown>]>) => ({
   toolCalls: calls.map(([toolName, args]) => ({ toolName, args })),
@@ -25,12 +28,12 @@ const step = (...calls: Array<[string, Record<string, unknown>]>) => ({
 
 describe('supersededTerminalCalls', () => {
   it('leaves a lone terminal alone', () => {
-    expect(supersededTerminalCalls([step(['respond', { message: 'done', did: [] }])])).toEqual([]);
+    expect(supersededTerminalCalls([step(['respond', { message: 'done', did: [{ op: 'inform' }] }])])).toEqual([]);
   });
 
   it('returns the terminal that lost the delivery contest, with its args', () => {
     const out = supersededTerminalCalls([
-      step(['respond', { message: 'Delete record r_1?', did: [{ op: 'ask' }] }], ['respond', { message: 'Have a nice day.', did: [] }]),
+      step(['respond', { message: 'Delete record r_1?', did: [{ op: 'ask' }] }], ['respond', { message: 'Have a nice day.', did: [{ op: 'greet' }] }]),
     ]);
     // Both are `respond` now — the loser is identified by its message, not its name.
     expect(out.map((o) => o.name)).toEqual(['respond']);
@@ -41,7 +44,7 @@ describe('supersededTerminalCalls', () => {
 
   it('never lets a whitespace-only terminal win delivery', () => {
     const out = supersededTerminalCalls([
-      step(['respond', { message: 'the real answer', did: [] }], ['respond', { message: '   ', did: [] }]),
+      step(['respond', { message: 'the real answer', did: [{ op: 'inform' }] }], ['respond', { message: '   ', did: [{ op: 'inform' }] }]),
     ]);
     expect(out.map((o) => o.args.message)).toEqual(['   ']);
   });
@@ -51,23 +54,45 @@ describe('supersededTerminalCalls', () => {
       {
         toolCalls: [
           { type: 'tool-call', payload: { toolName: 'respond', args: { message: 'Delete record r_1?', did: [{ op: 'ask' }] } } },
-          { type: 'tool-call', payload: { toolName: 'respond', args: { message: 'Have a nice day.', did: [] } } },
+          { type: 'tool-call', payload: { toolName: 'respond', args: { message: 'Have a nice day.', did: [{ op: 'greet' }] } } },
         ],
       },
     ]);
     expect(out.map((o) => o.args.message)).toEqual(['Delete record r_1?']);
   });
 
+  it('a REFUSED last terminal never wins delivery — the accepted earlier one is kept (r2/C5)', () => {
+    // The runtime rejects a `did`-less respond before it executes, so it is not what the user received.
+    // The old notion ("last non-empty message wins") classified it as delivered and pruned the entry for
+    // the message the user ACTUALLY got.
+    const emptyDid = supersededTerminalCalls([
+      step(['respond', { message: 'Done — record r_1 removed.', did: [{ op: 'delete', target: 'r_1', outcome: 'success' }] }],
+           ['respond', { message: 'Are you sure?', did: [] }]),
+    ]);
+    expect(emptyDid.map((o) => o.args.message)).toEqual(['Are you sure?']);
+    // Same for a zero-width message the schema's minLength accepts but the delivery floor does not.
+    const invisible = supersededTerminalCalls([
+      step(['respond', { message: 'the real answer', did: [{ op: 'inform' }] }],
+           ['respond', { message: '\u200b\u3164', did: [{ op: 'inform' }] }]),
+    ]);
+    expect(invisible.map((o) => o.args.message)).toEqual(['\u200b\u3164']);
+    // And when NO terminal in the step is acceptable, none of them was delivered — all are pruned.
+    const allRefused = supersededTerminalCalls([
+      step(['respond', { message: '', did: [{ op: 'ask' }] }], ['respond', { message: 'a', did: [] }]),
+    ]);
+    expect(allRefused).toHaveLength(2);
+  });
+
   it('stays distinct from the premature-terminal gate', () => {
     // Two terminals, no domain work: superseded fires, premature does NOT.
-    const twoTerminals = [step(['respond', { message: 'q?', did: [{ op: 'ask' }] }], ['respond', { message: 'a', did: [] }])];
+    const twoTerminals = [step(['respond', { message: 'q?', did: [{ op: 'ask' }] }], ['respond', { message: 'a', did: [{ op: 'inform' }] }])];
     expect(prematureTerminalTools(twoTerminals)).toEqual([]);
     expect(supersededTerminalCalls(twoTerminals).map((o) => o.args.message)).toEqual(['q?']);
 
     // Domain work + one terminal: premature fires either order, superseded does NOT.
     for (const mixed of [
-      [step(['deleteItem', { id: 'r_1' }], ['respond', { message: 'a', did: [] }])],
-      [step(['respond', { message: 'a', did: [] }], ['deleteItem', { id: 'r_1' }])],
+      [step(['deleteItem', { id: 'r_1' }], ['respond', { message: 'a', did: [{ op: 'inform' }] }])],
+      [step(['respond', { message: 'a', did: [{ op: 'inform' }] }], ['deleteItem', { id: 'r_1' }])],
     ]) {
       expect(prematureTerminalTools(mixed)).toEqual(['deleteItem']);
       expect(supersededTerminalCalls(mixed)).toEqual([]);
@@ -94,7 +119,7 @@ describe('prematureTerminalCalls', () => {
   it('leaves a TERMINAL-ONLY step alone (that is the delivery contest, not the premature path)', () => {
     expect(prematureTerminalCalls([step(['respond', { message: 'done', did: [{ op: 'inform' }] }])])).toEqual([]);
     expect(
-      prematureTerminalCalls([step(['respond', { message: 'q?', did: [{ op: 'ask' }] }], ['respond', { message: 'a', did: [] }])]),
+      prematureTerminalCalls([step(['respond', { message: 'q?', did: [{ op: 'ask' }] }], ['respond', { message: 'a', did: [{ op: 'inform' }] }])]),
     ).toEqual([]);
   });
 

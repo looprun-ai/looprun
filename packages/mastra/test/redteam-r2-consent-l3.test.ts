@@ -64,7 +64,7 @@ const vetoed = (corrections: string[], tool: string): boolean =>
 //   `supersededTerminalCalls` needs ≥2 terminals in one step. A lone rejected `respond` is invisible to both.
 // ════════════════════════════════════════════════════════════════════════════════════════════════
 describe('L1 — the schema-REJECTED respond ghost', () => {
-  it.fails('BREAK: a rejected respond carrying an ask intention is recorded ok:true and never pruned', async () => {
+  it('CLOSED (MI-T7 wave 2): a rejected respond is REFUSED at the hook — it never becomes an observation', async () => {
     const { agent } = makeAgent([
       // `message: ''` violates the respond schema's minLength — the call is rejected before execute.
       [{ tool: 'respond', args: { message: '', did: [{ op: 'ask' }] } }],
@@ -72,6 +72,7 @@ describe('L1 — the schema-REJECTED respond ghost', () => {
       [{ tool: 'respond', args: { message: 'All done.', did: [{ op: 'inform' }] } }],
     ]);
     const res = await agent.generate('delete everything');
+    expect(res.looprun.corrections).toContain('terminal-rejected'); // now a GOVERNED refusal, not a silent zod failure
     expect(res.looprun.corrections).toContain('forced-terminal'); // the rejection really happened
     expect(res.text).toBe('All done.'); // the user never saw a question
 
@@ -116,32 +117,55 @@ describe('L2 — an unsealed stream() turn licenses a later destructive act', ()
     for await (const _ of st.fullStream) { /* drain so the tool calls execute */ }
   }
 
-  it.fails('BREAK: a REJECTED ask respond emitted during stream() licenses next turn\'s confirmed delete', async () => {
+  it('CLOSED (MI-T7 wave 2): a REJECTED ask respond emitted during stream() licenses NOTHING', async () => {
     const { agent } = makeAgent([
       // The streamed turn: a respond the schema rejects (blank message) that declares an ask.
       [{ tool: 'respond', args: { message: '', did: [{ op: 'ask' }] } }],
+      // A tool-less step ends the streamed generation (the stream path pins no stopWhen of its own).
+      [{ text: 'stop' }],
       // The generated turn: straight to the destructive act with the confirm flag.
       [{ tool: 'deleteItem', args: { id: 'p001', confirmed: true } }],
       [{ tool: 'respond', args: { message: 'Deleted.', did: [{ op: 'deleteItem', target: 'p001', outcome: 'success' }] } }],
     ]);
     await streamTurn(agent, 'clean up my account');
     const ledger = agent.getSession().ledger;
-    expect(ledger.history.length).toBe(0); // the streamed turn was never sealed — the precondition
+    // The streamed turn IS sealed now — and it sealed what was actually delivered: nothing. The refused
+    // respond never executed, so neither the reply nor the `did` carries anything.
+    expect(ledger.history.length).toBe(1);
+    expect(ledger.history[0]!.did).toEqual([]);
 
     const res = await agent.generate('ok');
     // SECURE: no question ever reached the user, so confirmFirst must veto the confirmed delete.
     expect(vetoed(res.looprun.corrections, 'deleteItem')).toBe(true);
   });
 
-  it.fails('BREAK: even a DELIVERED streamed ask leaves no sealed record — the turn is unauditable', async () => {
+  it('CLOSED (MI-T7 wave 2): a DELIVERED streamed ask leaves a SEALED record — auditable, and it licenses', async () => {
     const { agent } = makeAgent([
       [{ tool: 'respond', args: { message: 'Delete every item — are you sure?', did: [{ op: 'ask' }] } }],
-      [{ tool: 'respond', args: { message: 'ok', did: [{ op: 'inform' }] } }],
+      [{ text: 'stop' }], // a tool-less step ends the streamed generation
     ]);
     await streamTurn(agent, 'clean up my account');
     // SECURE: a turn that spoke to the user must leave a sealed history record; consent evidence must
-    // never rest on raw hook-time observations.
-    expect(agent.getSession().ledger.history.length).toBe(1);
+    // never rest on raw hook-time observations. AVAILABILITY: sealing is also what keeps a real streamed
+    // question able to license the answer the user gives next turn.
+    const sealed = agent.getSession().ledger.history;
+    expect(sealed.length).toBe(1);
+    expect(sealed[0]!.reply).toBe('Delete every item — are you sure?');
+    expect(sealed[0]!.did).toEqual([{ op: 'ask' }]);
+  });
+
+  it('CONTROL (availability): the DELIVERED streamed ask licenses the next turn\'s confirmed delete', async () => {
+    const { agent } = makeAgent([
+      [{ tool: 'respond', args: { message: 'Delete every item — are you sure?', did: [{ op: 'ask' }] } }],
+      [{ text: 'stop' }],
+      [{ tool: 'deleteItem', args: { id: 'p001', confirmed: true } }],
+      [{ tool: 'respond', args: { message: 'Done.', did: [{ op: 'deleteItem', target: 'p001', outcome: 'success' }] } }],
+    ]);
+    await streamTurn(agent, 'delete every item');
+    const res = await agent.generate('yes, go ahead');
+    // The two-step consent flow must survive every tightening: a real question, really delivered, really
+    // sealed, licenses the answer the user gives next turn.
+    expect(vetoed(res.looprun.corrections, 'deleteItem')).toBe(false);
   });
 });
 
@@ -165,17 +189,19 @@ describe('L3 — redrive message/did desync seals a phantom ask', () => {
     [{ tool: 'respond', args: { message: 'Deleted.', did: [{ op: 'deleteItem', target: 'p001', outcome: 'success' }] } }],
   ];
 
-  it.fails('BREAK: the sealed turn declares an ask while the delivered text is the pre-redrive sentence', async () => {
+  it('CLOSED (MI-T7 wave 2): the blank re-generation is dropped WHOLE — no phantom ask, no stale sentence', async () => {
     const { agent } = makeAgent(script(), 1);
     const res = await agent.generate('delete item p001');
     const sealed = agent.getSession().ledger.history[0]!;
-    // The user read the OLD sentence (no question in it).
-    expect(res.text).toContain('Done — item p001 has been deleted.');
+    // The engine no longer splices the redrive's `did` onto the pre-redrive message: the whole
+    // re-generation is rejected, the turn exhausts, and the false sentence is not delivered either.
+    expect(res.text).not.toContain('Done — item p001 has been deleted.');
+    expect(res.looprun.corrections).toContain('redrive-empty:kept-previous');
     // SECURE: the engine must not seal a declaration whose message it discarded.
     expect(sealed.did.some((c) => c.op === 'ask')).toBe(false);
   });
 
-  it.fails('BREAK: the phantom ask licenses the next turn\'s confirmed delete', async () => {
+  it('CLOSED (MI-T7 wave 2): no phantom ask exists, so the next turn\'s confirmed delete is denied', async () => {
     const { agent } = makeAgent(script(), 1);
     await agent.generate('delete item p001');
     const res = await agent.generate('yes');
@@ -223,7 +249,7 @@ describe('L4 — destructiveThrottle in native-tools mode', () => {
     });
   }
 
-  it.fails('BREAK: two mutating wipe{confirmed:false} calls both run — the n:1 cap never engages', async () => {
+  it('CLOSED (MI-T7 wave 2): two mutating wipe{confirmed:false} calls — the n:1 cap engages on the second', async () => {
     const log: string[] = [];
     const agent = nativeAgent([
       [{ tool: 'wipe', args: { account: 'A', confirmed: false } }],

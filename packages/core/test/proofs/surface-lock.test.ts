@@ -84,6 +84,10 @@ const INTERNAL = [
   // MI-T2 (2026-08-03) — the backends prune the PREMATURE (invalidated, never-delivered) terminal from
   // `observed`, so an ask the user never saw cannot license consent; the calls come from here.
   'prematureTerminalCalls',
+  // MI-T7 wave 2 (red-team r2/C5) — the ONE notion of a terminal payload the runtime will ACCEPT. The
+  // backend hook refuses (and does not observe) a call that fails it; `supersededTerminalCalls` uses the
+  // same notion to decide which terminal of a step was actually delivered.
+  'terminalPayloadRejection',
   'supersededTerminalCalls', 'terminalProtocol', 'terminalToolDefs', 'lastTerminalArgs',
   'renderTurnPrompt',
   // SCG-T4 — the engine renders the operation report from the verified `did` and derives the true

@@ -37,7 +37,8 @@ import {
   pruneSupersededTerminals,
 } from '../../src/runtime/ledger.js';
 import { prematureTerminalCalls, prematureTerminalTools, supersededTerminalCalls } from '../../src/runtime/terminal.js';
-import { finalizeReply, isBlankDelivery } from '../../src/runtime/turn.js';
+import { finalizeReply } from '../../src/runtime/turn.js';
+import { isBlankDelivery } from '../../src/runtime/claims.js';
 import { AgentSpecBase } from '../../src/index.js';
 import type { AgentWorld, GuardCtx, ObservedCall } from '../../src/index.js';
 import type { RespondPayload } from '../../src/runtime/claims.js';

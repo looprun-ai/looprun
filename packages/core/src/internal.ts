@@ -76,6 +76,7 @@ export {
   renderOperationReport,
   deriveClaimsFromLedger,
   respondPayload,
+  terminalPayloadRejection,
   hasAskIntent,
   isSpeechOp,
   isActionOp,

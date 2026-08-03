@@ -6,7 +6,7 @@
  * fed by `hooks.afterToolCall`. Mastra applies hooks to ALL tool sources (assigned, toolsets,
  * client, MCP), so guards also govern native/MCP tools with zero extra wiring.
  */
-import { evaluatePreTool, evaluateOnInput, enforcePostTool, governanceVeto, isTerminal, recordTerminalCall, recordToolResult, resolveGuards } from '@looprun-ai/core/internal';
+import { evaluatePreTool, evaluateOnInput, enforcePostTool, governanceVeto, isTerminal, recordTerminalCall, recordToolResult, resolveGuards, resultOk, terminalPayloadRejection } from '@looprun-ai/core/internal';
 import type { AgentSpec, GuardCtx } from '@looprun-ai/core';
 import type { LoopRunSession } from './session.js';
 import type { SessionAccessor } from './tools.js';
@@ -16,14 +16,33 @@ export interface GuardHooks {
   afterToolCall(ctx: { toolName: string; input: unknown; output?: unknown; error?: unknown }): Promise<void> | void;
 }
 
-export function makeGuardHooks(spec: AgentSpec, getSession: SessionAccessor): GuardHooks {
+export interface GuardHookOptions {
+  /** NATIVE-TOOLS mode (incl. MCP): the tools execute themselves and the synthesized world keeps no
+   *  ledger of its own, so `afterToolCall` writes the call into `world.toolCalls`. Without it the
+   *  world's record is permanently empty and every effect reads as unverifiable (red-team r2/C6). */
+  nativeToolsMode?: boolean;
+}
+
+export function makeGuardHooks(spec: AgentSpec, getSession: SessionAccessor, opts: GuardHookOptions = {}): GuardHooks {
   return {
     async beforeToolCall({ toolName, input }) {
       if (isTerminal(toolName)) {
+        const args = (input ?? {}) as Record<string, unknown>;
+        // REFUSE BEFORE OBSERVING (red-team r2/C5). Mastra wraps the tool's `execute`, so this hook runs
+        // OUTSIDE the terminal's own input validation: a `respond` the runtime will REJECT (blank
+        // message / no `did`) would otherwise be pushed into `observed` with `ok:true` — a call that
+        // never executed, recorded as a successful observation, and (when its `did` carried an `ask`)
+        // read as a question the user answered. Vetoing here also turns today's silent zod failure into
+        // a GOVERNED correction the model can act on.
+        const rejection = terminalPayloadRejection(args);
+        if (rejection) {
+          getSession().ledger.turnCorrections.push('terminal-rejected');
+          return { proceed: false as const, output: governanceVeto('terminalPayload', rejection, false) };
+        }
         // SYNCHRONOUS segment (no await above): record the terminal call at HOOK time so a same-step
         // sibling call's preTool checks can see it — see recordTerminalCall's doc for the concurrency
         // rationale. The terminal tool's execute captures the reply text and does NOT push again.
-        recordTerminalCall(getSession().ledger, toolName, (input ?? {}) as Record<string, unknown>);
+        recordTerminalCall(getSession().ledger, toolName, args);
         return undefined;
       }
       const session = getSession();
@@ -42,6 +61,18 @@ export function makeGuardHooks(spec: AgentSpec, getSession: SessionAccessor): Gu
       const session = getSession();
       const { ledger, world } = session;
       const args = (input ?? {}) as Record<string, unknown>;
+      // NATIVE-TOOLS mode: the tool executed ITSELF, so nothing has written the world's ledger — and an
+      // empty ledger made every call read as "changed nothing" (red-team r2/C6). Record the call here,
+      // where the runtime knows it ran and what it returned. EFFECT is derived from the RESULT, the only
+      // evidence this path has: a call that succeeded and did NOT come back asking for confirmation
+      // changed something. That keeps the legitimate two-step alive (a probe answering
+      // `requiresConfirmation` is effect-free) while a tool that mutates under `confirmed:false` — the
+      // case the throttle exists for — counts as the effect it is.
+      if (opts.nativeToolsMode) {
+        const ok = output !== undefined && resultOk(output);
+        const pending = (output as { requiresConfirmation?: unknown } | null | undefined)?.requiresConfirmation === true;
+        world.toolCalls.push({ name: toolName, args, result: output, tookEffect: ok && !pending });
+      }
       recordToolResult(ledger, toolName, args, output, world);
       // OUTPUT-dim (postTool) result invariants — enforce the previously-dead hook. ZERO-DIFF: a spec
       // with no postTool guards short-circuits here (no ctx built, no ledger writes). The tool already

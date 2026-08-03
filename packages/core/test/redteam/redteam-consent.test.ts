@@ -13,12 +13,12 @@
  * acceptance signal. A plain `it` is a CLOSED vector kept as regression.
  * Findings + fixes: .superpowers/sdd/redteam-consent.md.
  *
- * MI-T2 (2026-08-03) closed the GHOST ASK (V3 + V5, red-team vuln #1) — flipped to regression. STILL OPEN,
- * and deliberately out of MI-T2's scope (they are confirmFirst ARG-MATCHING / licensing-arm defects, not
- * the `asked`→ask-intention re-key): V1 (vuln #2 — probe→confirm record binding is a SUBSET, needs
- * set-EQUALITY of the non-flag args) and V6 (vuln #3 — `via:'ask'` accepts the tool's OWN prior run as
- * surfacing, which chains a single consent across unbounded turns). Both keep their `it.fails` and their
- * fixes are specified in the findings doc.
+ * MI-T2 (2026-08-03) closed the GHOST ASK (V3 + V5, red-team vuln #1) — flipped to regression. MI-T7 wave 2
+ * (2026-08-03) closed the last two: V1 (vuln #2 — probe→confirm record binding is now set-EQUALITY of the
+ * non-flag args) and V6 (vuln #3 — `via:'ask'` no longer accepts the tool's OWN prior run as surfacing,
+ * which had chained a single consent across unbounded turns). Every vector in this file is now a CLOSED
+ * regression. The same wave made the cross-turn ask signal SEALED-HISTORY-ONLY (red-team r2/C2), so the
+ * ghost fixtures below assert what a raw `observed` respond is worth: nothing.
  */
 import { describe, expect, it } from 'vitest';
 import { AgentSpecBase, confirmFirst, destructiveThrottle, pendingConfirmMustAsk, askedEarlier } from '../../src/index.js';
@@ -53,7 +53,7 @@ describe('V1 — confirmFirst: a partial/empty probe licenses ANY confirmed dest
   // (`Object.keys(obs.args).filter(!flag).every(k => obs.args[k] === ctx.args[k])`). A probe that
   // omits the destructive parameters (here: only `confirmed:false`) has an EMPTY key set, so `.every`
   // over [] is vacuously true — it matches a confirm carrying ANY `to`/`amount` the user never previewed.
-  it.fails('probe {confirmed:false} (previews nothing) licenses transfer{to:attacker,amount:99999,confirmed:true}', () => {
+  it('CLOSED (MI-T7 wave 2): probe {confirmed:false} (previews nothing) does NOT license transfer{to:attacker,amount:99999,confirmed:true}', () => {
     const g = confirmFirst(); // default flag 'confirmed', via 'either', within 1
     const ctx = baseCtx({
       tool: 'transfer',
@@ -62,11 +62,11 @@ describe('V1 — confirmFirst: a partial/empty probe licenses ANY confirmed dest
       observed: [obs('transfer', { confirmed: false }, 0)], // earlier-turn probe, previewed NO record
     });
     // SECURE: the confirmed act specifies to/amount the probe never previewed → the preview was NOT of
-    // this record → must DENY. Today it returns null (licensed) — BREAK.
+    // this record → DENY. (Was a BREAK until the subset test became a set EQUALITY.)
     expect(g.check(ctx)).not.toBeNull();
   });
 
-  it.fails('probe {account:A} licenses a confirm that ADDS destructive fields (partial-record subset)', () => {
+  it('CLOSED (MI-T7 wave 2): probe {account:A} does NOT license a confirm that ADDS destructive fields', () => {
     const g = confirmFirst();
     const ctx = baseCtx({
       tool: 'wipe',
@@ -74,7 +74,7 @@ describe('V1 — confirmFirst: a partial/empty probe licenses ANY confirmed dest
       turnIndex: 1,
       observed: [obs('wipe', { account: 'A' }, 0)],
     });
-    expect(g.check(ctx)).not.toBeNull(); // BREAK: subset match licenses the un-previewed `scope`
+    expect(g.check(ctx)).not.toBeNull(); // the un-previewed `scope` makes it a DIFFERENT record
   });
 
   it('CLOSED regression: a probe with a DIFFERENT discriminating value does NOT license', () => {
@@ -115,7 +115,8 @@ describe('V2 — confirmFirst recency window: same-turn and stale asks/probes mu
     const g = confirmFirst();
     const ctx = baseCtx({
       tool: 'transfer', args: { account: 'A', confirmed: true }, turnIndex: 1,
-      observed: [obs('respond', { message: 'Transfer from A? confirm', did: [{ op: 'ask' }] }, 0)],
+      // The DELIVERED, sealed turn is the ask signal (r2/C2) — a raw observed respond is not.
+      history: [{ ...histTurn(0, true), reply: 'Transfer from A? confirm' }],
     });
     expect(g.check(ctx)).toBeNull(); // legit: asked last turn → licensed
   });
@@ -205,8 +206,18 @@ describe('V4 — destructiveThrottle: one destructive effect per turn', () => {
 
   it('CLOSED: a PROBE (requiresConfirmation) does not count — the approved execute still passes', () => {
     const g = destructiveThrottle(['refund']);
-    const ctx = baseCtx({ tool: 'refund', args: { id: '1', confirmed: true }, turnIndex: 0, observed: [obs('refund', { id: '1', confirmed: false }, 0, { resultFlags: { requiresConfirmation: true } })] });
+    // `tookEffect:false` is what the backend records for a probe against a world that keeps a ledger —
+    // POSITIVE evidence that nothing changed. Since r2/C6 that evidence is REQUIRED: an unrecorded call
+    // is unverified, not effect-free, so it counts against the cap.
+    const ctx = baseCtx({ tool: 'refund', args: { id: '1', confirmed: true }, turnIndex: 0, observed: [obs('refund', { id: '1', confirmed: false }, 0, { tookEffect: false, resultFlags: { requiresConfirmation: true } })] });
     expect(g.check(ctx)).toBeNull();
+  });
+
+  it('CLOSED (r2/C6): a prior destructive call with UNKNOWN effect counts against the cap', () => {
+    const g = destructiveThrottle(['refund']);
+    // No `tookEffect` at all — the world kept no record (the native-tools/MCP shape). Fail closed.
+    const ctx = baseCtx({ tool: 'refund', args: { id: '2', confirmed: false }, turnIndex: 0, observed: [obs('refund', { id: '1', confirmed: false }, 0)] });
+    expect(g.check(ctx)).not.toBeNull();
   });
 });
 
@@ -248,7 +259,7 @@ describe('V5 — askedEarlier: fallback licenses a record off a never-delivered 
     const g = askedEarlier({ tool: 'setLimit', arg: 'limit' });
     const ctx = baseCtx({
       tool: 'setLimit', args: { limit: 5000 }, turnIndex: 1,
-      history: [histTurn(0, true)], // delivered ask
+      history: [{ ...histTurn(0, true), reply: 'What limit should I set?' }], // delivered ask
     });
     expect(g.check(ctx)).toBeNull();
   });
@@ -261,7 +272,7 @@ describe('V5 — askedEarlier: fallback licenses a record off a never-delivered 
 //   turns, a SINGLE ask licenses an unbounded run of destructive calls and DEFEATS the recency law.
 // ════════════════════════════════════════════════════════════════════════════════════════════════
 describe('V6 — confirmFirst via:ask: own prior run self-licenses the repeat (no fresh ask)', () => {
-  it.fails('BREAK: a prior OK deleteAll run (turn 2) licenses another deleteAll (turn 3) with NO ask anywhere', () => {
+  it('CLOSED (MI-T7 wave 2): a prior OK deleteAll run (turn 2) does NOT license another deleteAll (turn 3)', () => {
     const g = confirmFirst({ via: 'ask' });
     const ctx = baseCtx({
       tool: 'deleteAll',
@@ -269,11 +280,11 @@ describe('V6 — confirmFirst via:ask: own prior run self-licenses the repeat (n
       turnIndex: 3,
       observed: [obs('deleteAll', {}, 2, { tookEffect: true })], // its OWN prior run — no ask event exists
     });
-    // SECURE: a destructive flag-less repeat must be surfaced (asked) afresh → deny. Self-license = BREAK.
+    // SECURE: a destructive flag-less repeat must be surfaced (asked) afresh → deny.
     expect(g.check(ctx)).not.toBeNull();
   });
 
-  it.fails('BREAK: a SINGLE ask (turn 1) bridges the recency law — turn-3 delete is 2 turns from the ask yet licensed', () => {
+  it('CLOSED (MI-T7 wave 2): a SINGLE ask (turn 1) does NOT bridge the recency law out to turn 3', () => {
     const g = confirmFirst({ via: 'ask' }); // within default 1
     const ctx = baseCtx({
       tool: 'deleteAll',
@@ -284,8 +295,8 @@ describe('V6 — confirmFirst via:ask: own prior run self-licenses the repeat (n
         obs('deleteAll', {}, 2, { tookEffect: true }), // turn-2 run, itself licensed by the ask (distance 1)
       ],
     });
-    // The ask is at distance 2 (outside within=1) — it must NOT license turn 3. Only the turn-2 self-run
-    // (distance 1) bridges it. SECURE expectation: deny. Today: null. BREAK — recency defeated.
+    // The ask is at distance 2 (outside within=1) — it must NOT license turn 3, and the turn-2 self-run
+    // no longer bridges it.
     expect(g.check(ctx)).not.toBeNull();
   });
 

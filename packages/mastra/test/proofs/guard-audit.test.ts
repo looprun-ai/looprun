@@ -64,10 +64,13 @@ describe("confirmFirst({ via: 'ask' }) is SUCCESS-KEYED", () => {
     expect(await guard().check(ctx)).toBeTruthy();
   });
 
-  it('REGRESSION FLOOR: an earlier-turn ask intention still unlocks', async () => {
+  it('REGRESSION FLOOR: an earlier-turn ask intention still unlocks — from the SEALED turn (r2/C2)', async () => {
     const ctx = craftCtx({
       tool: 'purgeAll',
-      observed: [call('respond', { args: { message: 'Purge everything — are you sure?', did: [{ op: 'ask' }] }, turnIndex: 0 })],
+      history: [{
+        turnIndex: 0, userText: 'clean up', reply: 'Purge everything — are you sure?', toolCalls: [],
+        did: [{ op: 'ask' }], attemptedCalls: [], guardEvents: [],
+      }],
       turnIndex: 1,
     });
     expect(await guard().check(ctx)).toBeNull();
@@ -85,13 +88,15 @@ describe("confirmFirst({ via: 'ask' }) is SUCCESS-KEYED", () => {
     expect(await guard().check(ctx)).toBeTruthy();
   });
 
-  it('REGRESSION FLOOR: an earlier-turn SUCCESSFUL call of the tool itself still unlocks', async () => {
+  it('an earlier-turn SUCCESSFUL call of the tool itself does NOT unlock (r2/C4)', async () => {
+    // Retired disjunct: a flag-less tool's own prior OK run used to count as "surfacing", which chained
+    // ONE consent across unbounded turns and bridged the recency law. Every repeat needs a fresh ask.
     const ctx = craftCtx({
       tool: 'purgeAll',
       observed: [call('purgeAll', { turnIndex: 0 })],
       turnIndex: 1,
     });
-    expect(await guard().check(ctx)).toBeNull();
+    expect(await guard().check(ctx)).toBeTruthy();
   });
 
   it('a same-turn ask event never unlocks (the noActAfterAskSameTurn seam is unchanged)', async () => {
@@ -144,12 +149,14 @@ describe('confirmFirst rejects a via NAME passed as the string overload', () => 
 // destructiveThrottle must not count the PROBE, which would make an exemption dead code
 // ─────────────────────────────────────────────────────────────────────────────
 describe('destructiveThrottle does not count confirmation probes', () => {
+  // r2/C6: a probe is a call the world RECORDED as having changed nothing (`tookEffect:false`), which is
+  // what every backend with a world ledger writes. An UNRECORDED call is unverified, not effect-free.
   it('THE BUG: a probe (requiresConfirmation, ok:true) must not block the approved execute', async () => {
     const g = destructiveThrottle(['deleteItem']);
     const ctx = craftCtx({
       tool: 'deleteItem',
       args: { id: 'p001', confirmed: true },
-      observed: [call('deleteItem', { args: { id: 'p001' }, resultFlags: { requiresConfirmation: true } })],
+      observed: [call('deleteItem', { args: { id: 'p001' }, tookEffect: false, resultFlags: { requiresConfirmation: true } })],
     });
     expect(await g.check(ctx)).toBeNull();
   });
@@ -159,9 +166,19 @@ describe('destructiveThrottle does not count confirmation probes', () => {
     const ctx = craftCtx({
       tool: 'deleteItem',
       args: { id: 'p001', confirmed: true },
-      observed: [call('deleteItem', { args: { id: 'p001', confirmed: false } })],
+      observed: [call('deleteItem', { args: { id: 'p001', confirmed: false }, tookEffect: false })],
     });
     expect(await g.check(ctx)).toBeNull();
+  });
+
+  it('r2/C6: a confirmed:false call with UNKNOWN effect DOES count — fail closed', async () => {
+    const g = destructiveThrottle(['deleteItem']);
+    const ctx = craftCtx({
+      tool: 'deleteItem',
+      args: { id: 'p002', confirmed: false },
+      observed: [call('deleteItem', { args: { id: 'p001', confirmed: false } })], // no world record
+    });
+    expect(await g.check(ctx)).toBeTruthy();
   });
 
   it('REGRESSION FLOOR: a real prior EFFECT still throttles the second destructive call', async () => {

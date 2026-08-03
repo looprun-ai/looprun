@@ -5,18 +5,19 @@
 import type { Guard, ObservedCall } from '../rules.js';
 import { canonArgs, countOkCalls } from './flow.js';
 import { askedInDeliveredTurn } from './shared.js';
-import { hasAskIntent, isAskEvent } from '../runtime/claims.js';
+import { hasAskIntent, isAskEvent, isBlankDelivery } from '../runtime/claims.js';
 
 /**
  * A destructive tool needs the user's go-ahead before it runs — the ONE confirm-gate kind (it absorbed the
  * former structural `confirmedNeedsEarlierProbe`). What LICENSES the confirmed act is the `via` option:
- *  - `'probe'`: a `flag:false`/absent PROBE of the SAME tool that ran OK in an EARLIER turn AND matched
- *    this call's RECORD (its args, minus the confirm `flag`, are a subset of this call's) — the preview was
- *    of the SAME act, not a different one. This is the strict, record-bound license.
- *  - `'ask'`: a flag-LESS action (e.g. a zero-arg tool). It is legal ONLY when an ask EVENT (a delivered
- *    turn-closing `respond` whose `did` carries an `ask` intention) succeeded in an EARLIER turn — the model
- *    must ASK, wait for the user's answer, and act only in a LATER turn. Every call is gated (there is no
- *    confirm flag to key on). A same-turn ask event does NOT unlock it (that is `noActAfterAskSameTurn`'s
+ *  - `'probe'`: a `flag:false`/absent PROBE of the SAME tool that ran OK in an EARLIER turn AND acted on
+ *    this call's RECORD (its args, minus the confirm `flag`, are set-EQUAL to this call's) — the preview
+ *    was of the SAME act, not a smaller or different one. This is the strict, record-bound license.
+ *  - `'ask'`: a flag-LESS action (e.g. a zero-arg tool). It is legal ONLY when the turn `[1, within]`
+ *    turns back DELIVERED an ask (its sealed `did` carries an `ask` intention) — the model must ASK, wait
+ *    for the user's answer, and act only in a LATER turn. Every call is gated (there is no confirm flag to
+ *    key on), and EVERY REPEAT needs its own earlier-turn ask: the tool's own prior successful run is not
+ *    surfacing (red-team r2/C4). A same-turn ask does NOT unlock it (that is `noActAfterAskSameTurn`'s
  *    edge — the two compose: `via:'ask'` = cross-turn REQUIRE, `noActAfterAskSameTurn` = same-turn DENY).
  *  - `'either'` (DEFAULT): the flag-gated form — `flag:true` is licensed by a matching earlier-turn probe OR
  *    an earlier-turn ask event. This is what the string overload and `AgentSpecBase`'s arg-flag tools install.
@@ -55,21 +56,25 @@ export function confirmFirst(
   // RECENCY LAW: an earlier-turn event licenses only within `within` turns of the current turn.
   const recent = (obs: ObservedCall, cur: number): boolean =>
     cur - obs.turnIndex >= 1 && cur - obs.turnIndex <= within;
+  // The RECORD a call acts on = its args minus the confirm flag, minus explicitly-`undefined` values —
+  // matching `canonArgs`' identity notion (it drops undefined-valued keys; `Object.keys` does not), so a
+  // call carrying `{account:'A', scope:undefined}` is the SAME record as `{account:'A'}`.
+  const recordKeys = (args: Record<string, unknown> | undefined): string[] =>
+    Object.keys(args ?? {}).filter((k) => k !== flag && args![k] !== undefined);
   return {
     kind: 'confirmFirst',
     dim: 'run',
     check(ctx) {
       if (!ctx.tool) return null;
       if (via === 'ask') {
-        // Flag-less action: every call is gated on the action having been SURFACED to the user in an
-        // earlier turn within recency — either a DELIVERED ask OR a prior SUCCESSFUL call of the tool
-        // itself (a flag-less tool has no probe shape, so its own prior OK run is the equivalent
-        // surfacing). SUCCESS-KEYING (`obs.ok`) is deliberate — a vetoed turn-1 attempt (ok:false) must
-        // never unlock the identical turn-2 call, or the guard defeats itself in exactly two turns.
-        const surfacedRecently =
-          askedInDeliveredTurn(ctx, within) ||
-          ctx.observed.some((obs) => obs.ok && obs.name === ctx.tool && recent(obs, ctx.turnIndex));
-        if (surfacedRecently) return null;
+        // Flag-less action: every call is gated on a DELIVERED earlier-turn ask, within recency. ITS OWN
+        // PRIOR OK RUN IS NOT SURFACING (red-team r2/C4, round-1 V6): that disjunct made a successful
+        // destructive call license the next one, so turn 1's ask licensed turn 2, turn 2's run licensed
+        // turn 3, … — one consent authorising an UNBOUNDED destructive run (proved to turn 9) and the
+        // recency law bridged, plus a first repeat licensed with no ask anywhere in the conversation.
+        // Every repeat needs its own earlier-turn ask; a flag-less tool has no probe shape, so the ask
+        // IS its whole licensing surface.
+        if (askedInDeliveredTurn(ctx, within)) return null;
         const askedSameTurn = ctx.observed.some(
           (obs) => isAskEvent(obs) && obs.ok && obs.turnIndex === ctx.turnIndex,
         );
@@ -79,15 +84,22 @@ export function confirmFirst(
       }
       // Flag-gated arms (`'probe'` / `'either'`): a probe (flag≠true) passes freely; only `flag:true` is gated.
       if (ctx.args[flag] !== true) return null;
-      // A matching probe: the SAME tool, ran OK, carried flag≠true, and its non-`flag` args are a subset of
-      // this call's (same RECORD) — the preview was of THIS act. (Absorbed from confirmedNeedsEarlierProbe.)
-      const isMatchingProbe = (obs: ObservedCall): boolean =>
-        obs.name === ctx.tool &&
-        obs.ok &&
-        obs.args?.[flag] !== true &&
-        Object.keys(obs.args ?? {})
-          .filter((k) => k !== flag)
-          .every((k) => obs.args![k] === ctx.args[k]);
+      // A matching probe: the SAME tool, ran OK, carried flag≠true, and acts on the SAME RECORD — its
+      // non-`flag` args are set-EQUAL to this call's. (Absorbed from confirmedNeedsEarlierProbe.)
+      //
+      // EQUALITY, NOT CONTAINMENT (red-team r2/C3, round-1 V1): the test used to require only that the
+      // PROBE's keys are a SUBSET of the confirm's, and `.every` over an EMPTY key set is vacuously
+      // true — so a probe that previewed NOTHING (`{confirmed:false}`) licensed
+      // `transfer{to:'attacker',amount:99999,confirmed:true}`, and a probe of a strictly smaller record
+      // licensed a confirm that ADDED `scope:'EVERYTHING'`. The preview and the executed act were then
+      // different acts, which is exactly what this gate exists to prevent.
+      const isMatchingProbe = (obs: ObservedCall): boolean => {
+        if (obs.name !== ctx.tool || !obs.ok || obs.args?.[flag] === true) return false;
+        const probeKeys = recordKeys(obs.args);
+        const confirmKeys = recordKeys(ctx.args);
+        // Equal cardinality + one-way containment IS set equality (the keys of one object are unique).
+        return probeKeys.length === confirmKeys.length && probeKeys.every((k) => obs.args![k] === ctx.args[k]);
+      };
       const probeLicensed = ctx.observed.some((obs) => isMatchingProbe(obs) && recent(obs, ctx.turnIndex));
       // `'either'` also accepts a prior-turn DELIVERED ask as the confirm surface (structural) — measured:
       // the probe-only form dead-locked legitimate later-turn confirmations relayed through a question.
@@ -172,8 +184,17 @@ export function destructiveThrottle(destructiveTools: string[], opts?: { confirm
   const confirmArg = opts?.confirmArg ?? 'confirmed';
   // A call that MUTATED the world is never a probe — `tookEffect` (the world's record) overrides the
   // preview flags (the caller's intent). See EFFECT BEATS FLAGS above.
+  //
+  // UNKNOWN EFFECT IS NOT A PROBE (red-team r2/C6). The test used to read `tookEffect !== true`, which
+  // treats "the world has no record of this call" exactly like "the world says it changed nothing" — and
+  // in native-tools/MCP mode NOTHING writes the world ledger, so every call read as not-effected and the
+  // EFFECT-BEATS-FLAGS fix above was permanently INERT: a third-party tool that mutates while carrying
+  // `confirmed:false` was classified as a probe and slipped the n:1 cap. A call is a probe only when the
+  // backend POSITIVELY recorded that it changed nothing (`tookEffect === false`); an unverifiable
+  // destructive call counts against the cap, which is the conservative reading and the one the guard's
+  // stated authority order implies.
   const isProbe = (o: ObservedCall): boolean =>
-    o.tookEffect !== true && (o.resultFlags?.requiresConfirmation === true || o.args?.[confirmArg] === false);
+    o.tookEffect === false && (o.resultFlags?.requiresConfirmation === true || o.args?.[confirmArg] === false);
   // An EFFECT = a listed destructive tool that ran OK and is not a probe. (The `ok` + turn-window part is
   // applied by `countOkCalls`; this predicate carries only the set-membership + not-a-probe test.)
   const isEffect = (o: ObservedCall): boolean => set.has(o.name) && !isProbe(o);
@@ -245,8 +266,12 @@ export function pendingConfirmMustAsk(opts?: { confirmArg?: string }): Guard {
       // relay signal is the delivered payload's own `did` (seated by checkPayload before this check runs).
       // PRESENT ⇒ AUTHORITATIVE — never OR-ed with the observed scan, which can still hold a ghost the user
       // never received. The scan is the FALLBACK only where no delivered declaration exists (chain/mid-turn).
+      // THE ASK MUST HAVE BEEN SAID (red-team r2/C7). The relay is a declaration, and a declaration over
+      // a blank `message` relays nothing: the delivery floor would swap that turn out for the engine's
+      // exhaustion closure, whose `did` carries no ask, so the user would be told the pending action is
+      // over without ever seeing the question. Same floor `askedInDeliveredTurn` applies cross-turn.
       const askedThisTurn = ctx.did !== undefined
-        ? hasAskIntent(ctx.did)
+        ? hasAskIntent(ctx.did) && !isBlankDelivery(ctx.reply ?? '')
         : thisTurn.some((o) => isAskEvent(o) && o.ok);
       return askedThisTurn
         ? null

@@ -204,9 +204,13 @@ describe('confirmFirst — either (arg) + ask (flag-less) via', () => {
     it('denies a later turn when the model never asked', () => {
       expect(guard.check(ctx({ turnIndex: 2, observed: [] }))).not.toBeNull();
     });
-    it('allows the act after a prior-turn ask', () => {
-      const ask: ObservedCall = { name: 'respond', args: { did: [{ op: 'ask' }] }, ok: true, turnIndex: 0 };
-      expect(guard.check(ctx({ turnIndex: 1, observed: [ask] }))).toBeNull();
+    it('allows the act after a prior-turn ask — the SEALED turn (r2/C2: history is the only ask signal)', () => {
+      const asked = { turnIndex: 0, userText: '', reply: 'Delete everything?', toolCalls: [], did: [{ op: 'ask' }], attemptedCalls: [], guardEvents: [] } as unknown as GuardCtx['history'][number];
+      expect(guard.check(ctx({ turnIndex: 1, history: [asked] }))).toBeNull();
+    });
+    it('a RAW observed ask respond from an UNSEALED turn licenses nothing (r2/C2)', () => {
+      const ask: ObservedCall = { name: 'respond', args: { message: 'q?', did: [{ op: 'ask' }] }, ok: true, turnIndex: 0 };
+      expect(guard.check(ctx({ turnIndex: 1, observed: [ask] }))).not.toBeNull();
     });
     it('denies when the only ask is THIS turn (composes with noActAfterAskSameTurn)', () => {
       const ask: ObservedCall = { name: 'respond', args: { did: [{ op: 'ask' }] }, ok: true, turnIndex: 1 };

@@ -12,6 +12,7 @@
  * protocol (`replyToUser`/`askUser`) is RETIRED.
  */
 import type { ToolDef } from './types.js';
+import { terminalPayloadRejection } from './claims.js';
 
 const RESPOND = 'respond';
 const TERMINAL_TOOLS = [RESPOND] as const;
@@ -97,8 +98,8 @@ export function prematureTerminalCalls(steps: any): Array<{ name: string; args: 
  * and a destructive action unlocks off a question the user NEVER SAW. Consent recorded from an
  * undelivered message is the same class of defect as a reply grounding itself.
  *
- * Returns the terminals that lost the delivery contest — everything except the last one carrying a
- * non-empty `message`. The caller prunes them from the ledger AFTER the generation resolves, so
+ * Returns the terminals that lost the delivery contest — everything except the last one the runtime
+ * would ACCEPT ({@link terminalPayloadRejection}). The caller prunes them from the ledger AFTER the generation resolves, so
  * within-step visibility (a sibling's preTool checks seeing the ask) is untouched; only the
  * cross-turn consent evidence is corrected.
  */
@@ -110,9 +111,17 @@ export function supersededTerminalCalls(steps: any): Array<{ name: string; args:
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const calls = ((step?.toolCalls ?? []) as any[]).filter((tc) => isTerminal(toolCallName(tc)));
     if (calls.length < 2) continue;
-    const messages = calls.map((tc) => String(toolCallArgs(tc).message ?? '').trim());
-    const deliveredText = messages.filter(Boolean).slice(-1)[0];
-    const delivered = deliveredText === undefined ? -1 : messages.lastIndexOf(deliveredText);
+    // THE DELIVERED ONE IS THE LAST THE RUNTIME WOULD ACCEPT (red-team r2/C5). This used to be "the last
+    // terminal with a non-empty message", a notion that drifts from what the runtime actually delivers:
+    // for a step of [respond{message:'Done.', did:[…]}, respond{message:'Are you sure?', did:[]}] the
+    // second is REFUSED (`did` violates minItems, so it never executes and never becomes the reply) yet
+    // it counted as delivered — and the prune then dropped the observation for the message the user
+    // really received. `terminalPayloadRejection` is the ONE acceptance notion, shared with the backend
+    // hook that refuses such a call in the first place.
+    const delivered = calls.reduce(
+      (acc, tc, i) => (terminalPayloadRejection(toolCallArgs(tc)) === null ? i : acc),
+      -1,
+    );
     calls.forEach((tc, i) => {
       if (i !== delivered) out.push({ name: toolCallName(tc), args: toolCallArgs(tc) });
     });

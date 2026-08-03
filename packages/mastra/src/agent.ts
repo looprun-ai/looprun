@@ -19,7 +19,9 @@
  * abort/retry — that re-runs side-effecting tools, measured ~100× slower) → deterministic
  * honest-abstain closure. The result's `.text` is the governed reply; `.looprun` carries the meta.
  *
- * stream(): tool-level governance only (guard hooks + terminal protocol + activeTools). Reply
+ * stream(): tool-level governance only (guard hooks + terminal protocol + activeTools) PLUS turn
+ * sealing — the turn is recorded into history when the stream finishes, so a question really asked
+ * while streaming still licenses the user's next-turn answer and the turn is auditable. Reply
  * finalization (mutators/redrive/exhaustion) requires generate() — documented degraded mode.
  */
 import { AsyncLocalStorage } from 'node:async_hooks';
@@ -174,7 +176,7 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
     // construction, never mid-turn. No-op for a spec with no llmCheck (zero-diff).
     assertAdjudicatorPresent(spec, config.adjudicator);
     const sessions = new SessionStore<W>(built.world, config.adjudicator, config.adjudicatorTimeoutMs);
-    const guardHooks = makeGuardHooks(spec, getSession as () => LoopRunSession);
+    const guardHooks = makeGuardHooks(spec, getSession as () => LoopRunSession, { nativeToolsMode });
 
     super({
       id: config.id ?? spec.id,
@@ -456,9 +458,9 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
 
   /**
    * Streaming: tool-level governance (guard hooks + terminal protocol + activeTools + per-turn
-   * instructions). Reply finalization (mutators/redrive/exhaustion) needs generate() — with the
-   * terminal protocol ON the user text arrives via the terminal tool call, so nothing ungoverned
-   * streams as text.
+   * instructions) plus TURN SEALING on stream completion. Reply finalization (mutators/redrive/
+   * exhaustion) needs generate() — with the terminal protocol ON the user text arrives via the
+   * terminal tool call, so nothing ungoverned streams as text.
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   override async stream(messages: any, options?: LoopRunOptions): Promise<any> {
@@ -485,6 +487,28 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const passOpts: Record<string, any> = {};
       for (const [k, v] of Object.entries(options ?? {})) if (k !== 'loopRun') passOpts[k] = v;
+      // SEAL THE STREAMED TURN (red-team r2/C2). This path advances `turnIndex` and feeds `observed`
+      // through the guard hooks, but it used to call `recordTurnHistory` NEVER — so the turn stayed
+      // permanently UNSEALED, and the cross-turn ask signal's old raw-`observed` fallback then read
+      // every `respond` the stream emitted (rejected ones included) as consent. The fallback is gone
+      // (`askedInDeliveredTurn` is history-only), which makes an unsealed turn fail CLOSED — and that
+      // is the availability bug this seal fixes: a question the user really was asked while streaming
+      // must still license the answer they give in the next turn, and the turn must be auditable.
+      // What is sealed is what the terminal tool captured (`terminalReply` + its `did`) — the stream
+      // path runs no reply finalization by design, so there is nothing later to reconcile.
+      // A stream nobody consumes never finishes and is never sealed: it licenses nothing, which is the
+      // correct reading of a turn that was thrown away.
+      const callerOnFinish = passOpts.onFinish;
+      delete passOpts.onFinish;
+      let sealed = false;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const onFinish = async (event: any): Promise<void> => {
+        if (!sealed) {
+          sealed = true;
+          recordTurnHistory(ledger, ledger.terminalReply, world);
+        }
+        if (typeof callerOnFinish === 'function') await callerOnFinish(event);
+      };
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return (Agent.prototype.stream as any).call(this, messages, {
         instructions,
@@ -493,6 +517,7 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
         ...(this.inputProcessorsResolved ? { inputProcessors: this.inputProcessorsResolved } : {}),
         ...this.modelParams,
         ...passOpts,
+        onFinish,
       });
     });
   }

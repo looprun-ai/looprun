@@ -250,7 +250,10 @@ describe('an empty did never delivers', () => {
     // The model's prose NEVER ships: the terminal's execute never ran, so nothing was captured.
     expect(r.assistantFinalText).not.toContain('All done!');
     expect(r.assistantFinalText.length).toBeGreaterThan(0); // the engine closure is non-empty by construction
-    expect(r.recoveryEvents).toEqual(['forced-terminal', 'exhaustion-blank-floor']);
+    // `terminal-rejected` × 2: the main generate's respond and the forced-terminal's respond both carry
+    // `did: []`, and since r2/C5 the guard hook REFUSES such a call with a governed correction instead of
+    // letting it fail silently in zod — so the rejection is now in the turn's recovery log.
+    expect(r.recoveryEvents).toEqual(['terminal-rejected', 'terminal-rejected', 'forced-terminal', 'exhaustion-blank-floor']);
     // BOUNDED: the main generate + exactly one forced-terminal generate. No step burn, no retry loop.
     expect(llm.calls()).toBe(2);
     expect(r.maxIterHit).toBe(false);

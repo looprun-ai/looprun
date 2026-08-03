@@ -61,7 +61,13 @@ a **pure function of its GuardCtx** — one impurity voids the determinism guara
 
 `ctx.observed` is not a log of domain work. The Mastra backend pushes the runtime-owned terminal `respond`
 into it with **`ok:true`**, from `beforeToolCall`'s synchronous segment (so a same-step ask — a `respond`
-whose `did` carries an `ask` intention — is visible to a sibling destructive call's preTool checks). Two consequences a guard author must internalise:
+whose `did` carries an `ask` intention — is visible to a sibling destructive call's preTool checks). It
+pushes only a payload the runtime will ACCEPT: the hook runs OUTSIDE the tool's own zod validation, so a
+`respond` with a blank `message` or no `did` would otherwise be recorded as a successful observation of a
+call that never executed. `terminalPayloadRejection` (core internal) is the ONE acceptance notion — the
+hook refuses such a call with a governance veto (tagged `terminal-rejected`) instead of letting it fail
+silently, and `supersededTerminalCalls` uses the same notion to decide which terminal of a multi-terminal
+step was the delivered one. Two further consequences a guard author must internalise:
 
 1. **`observed` is never empty on a turn that produced a reply**, and
 2. **it never carries an `ok:false` entry merely because the domain work failed.**
@@ -73,8 +79,9 @@ turn where the model legitimately could not act and said so — vetoing the hone
 out as an exhaustion stub. That is the highest-severity failure class this trap produces (it bit hardest
 on the deleted regex-param honesty kinds, and any `llmCheck` rubric or `custom` guard that reasons about
 "did everything succeed" inherits the same obligation). Kinds keyed on a NAMED tool are unaffected;
-the consent kinds read the ask EVENT (a `respond` whose `did` carries an `ask` intention, via `isAskEvent`)
-deliberately.
+the consent kinds read the ask through the SEALED turn record, and `isAskEvent` over `observed` only for
+SAME-TURN questions (`noActAfterAskSameTurn`, `pendingConfirmMustAsk`'s chain fallback, `confirmFirst`'s
+same-turn diagnostic) — never as cross-turn consent evidence.
 
 **A guard MAY use an LLM to decide — that is `llmCheck`.** LLM adjudication is now a first-class guard
 kind (§ the `llm-check` catalog entry). An `llmCheck` binds a trusted, pre-baked `rubric`; the runtime
@@ -420,12 +427,22 @@ does not carry: they are about the enforcement path, not about choosing a kind.
   turn, the natural two-step shape): `confirmFirst`'s probe/ask licenses, and `askedEarlier`. An EVIDENCE
   guard — a past call that is PROOF work was done, not a license — defaults `within` **UNBOUNDED**:
   `requiresBefore` (a read from turn 1 legitimately grounds a turn-3 write); pass `within` to bound it.
-- **`confirmFirst`'s `via:'ask'` arm is SUCCESS-KEYED.** If its same-tool disjunct accepted ANY earlier
-  attempt, `ok:false` included, then — because a vetoed call lands in `observed` with `ok:false` — **a
-  turn-1 call denied BY THIS VERY GUARD would unlock the identical turn-2 call**: the destructive action
-  runs with the user never asked, and the gate defeats itself in exactly two turns. Every disjunct
-  requires `ok:true`. The same success-keying protects `askedEarlier` and `confirmFirst`'s `via:'probe'`
-  record-bound arm.
+- **`confirmFirst`'s `via:'ask'` arm has NO self-surfacing disjunct** (red-team r2/C4). It used to accept
+  the tool's own prior successful run as "the action was surfaced", on the reasoning that a flag-less tool
+  has no probe shape. Chained turn by turn that was a self-sustaining licence: turn 1's ask licensed turn
+  2, turn 2's run licensed turn 3, … — ONE consent authorising an unbounded destructive run (proved to
+  turn 9), with the recency law bridged, and a first repeat licensed with no ask anywhere. A flag-less
+  destructive action is now legal ONLY off a delivered earlier-turn ask, and every repeat needs its own.
+- **SUCCESS-KEYING protects every remaining licensing disjunct.** If one accepted ANY earlier attempt,
+  `ok:false` included, then — because a vetoed call lands in `observed` with `ok:false` — **a turn-1 call
+  denied BY THIS VERY GUARD would unlock the identical turn-2 call**: the destructive action runs with the
+  user never asked, and the gate defeats itself in exactly two turns. Every disjunct requires `ok:true`
+  (`askedEarlier` and `confirmFirst`'s `via:'probe'` record-bound arm included).
+- **`confirmFirst`'s probe→confirm binding is a set EQUALITY, not containment** (red-team r2/C3). The
+  probe's non-`flag` args (minus explicitly-`undefined` values, matching `canonArgs`' identity notion)
+  must equal the confirm's. Containment made `.every` over an EMPTY key set vacuously true, so a probe
+  that previewed nothing licensed `transfer{to:'attacker',amount:99999,confirmed:true}` — the preview and
+  the executed act were different acts.
 - **Misconfiguration that would make a safety kind INERT throws at CONSTRUCTION, never at check
   time.** `consentRequired` on empty `tools` (or a blank `reason`, whose falsy deny value would read as
   "allowed"); `confirmFirst('probe'|'ask'|'either')` passed a `via` NAME to the string overload. An inert safety
@@ -452,13 +469,67 @@ a governed destructive flow installs all three TOGETHER — never two of them sa
 The ASK SIGNAL is an INTENTION, not a tool name and no longer a boolean (SCG → MI, 2026-08-03): the single
 `respond` terminal declares `ask` inside its `did` when the turn poses a question (`replyToUser`/`askUser`
 are retired, and the `asked` boolean is DELETED — `hasAskIntent(did)` is the only reader). The consent kinds
-key on it via `isAskEvent` over `observed` and, on the reply side, `ctx.did`:
-- **①** `confirmFirst`'s `via:'ask'`/`'either'` arm and **②** `askedEarlier` read an EARLIER-turn ask —
-  `askedEarlier`'s PRIMARY signal is a sealed `hasAskIntent(HistoryTurn.did)`, with `isAskEvent` over
-  `observed` as the pre-history fallback.
+key on it through the SEALED `HistoryTurn` (cross-turn), `isAskEvent` over `observed` (same-turn only) and,
+on the reply side, `ctx.did`:
+- **①** `confirmFirst`'s `via:'ask'`/`'either'` arm and **②** `askedEarlier` read an EARLIER-turn ask
+  through the ONE shared signal `askedInDeliveredTurn` — a sealed `hasAskIntent(HistoryTurn.did)` over a
+  non-blank `reply`, and nothing else. The former `isAskEvent`-over-`observed` fallback is DELETED (see
+  "What the ask GUARANTEES" below).
 - **③** `pendingConfirmMustAsk` runs at onReply, where the delivered payload's `did` is already seated, so
   its PRIMARY relay signal is `hasAskIntent(ctx.did)`; the observed-scan (`isAskEvent` this turn) is the
   FALLBACK for chain/mid-turn contexts.
+
+#### What the ask GUARANTEES — stated exactly (red-team r2/C1, C2, C7)
+
+The cross-turn ask signal is `askedInDeliveredTurn`, and it is **SEALED HISTORY ONLY**. It answers one
+question, and it is worth reading as the narrow thing it is:
+
+> **Did a turn `[1, within]` turns back, whose delivered reply was NOT blank, seal a `did` carrying an
+> `ask` intention?**
+
+Everything in that sentence is deterministic and engine-verified:
+
+| the engine DOES guarantee | how |
+|---|---|
+| the evidence is a DELIVERED turn record | the raw `observed` fallback is DELETED — an unsealed turn licenses nothing at all |
+| the `did` belongs to the payload that was delivered | `finalizeReply` never splices a re-generation's `did` onto a previous message; a blank re-generation is rejected WHOLE (`redrive-empty:kept-previous`) |
+| the turn said something a user could read | the sealed `reply` must pass `isBlankDelivery` (invisibles stripped), and the delivery floor guarantees the same on the way out |
+| the question was recent | the recency law: `1 ≤ turnIndex − askTurn ≤ within` (default 1) |
+| a repeat needs its own ask | no self-surfacing disjunct (above) |
+
+And exactly one thing it does **NOT** guarantee, which no deterministic layer can:
+
+> **that the delivered message actually POSES a question.**
+
+`ask` is a SPEECH intention, and speech intentions are never ledger-grounded (MI-D5) — there is no world
+fact to check them against. The only ways to judge the prose are a linguistic pattern, which the no-regex
+law forbids (it fails silently across languages and an adversary satisfies it by appending one character),
+or a model call. So a turn CAN declare `ask` over "All set, have a good day" and license a `confirmed:true`
+act next turn. That residual is **priced, not hidden**: it is the documented forcing function (the terminal
+protocol tells the model `ask` means "the `message` carries the ONE clarifying question you will wait on")
+plus `didMessageConsistency()` (MI-D6) — the shipped `llmCheck` rubric that asks whether the message
+contradicts the declaration. Bind it on a destructive surface where the stakes justify a model call per
+reply. It is deliberately NOT auto-installed: a guard that needs an adjudicator cannot be forced on every
+spec that declares a destructive tool without breaking every such spec that has no adjudicator registered.
+
+#### What a BACKEND must do to make consent work
+
+Two obligations, both newly load-bearing — a backend that skips either fails CLOSED (acts get denied),
+never open:
+
+1. **SEAL EVERY TURN** (`recordTurnHistory`) with the reply the user actually received. This is the whole
+   trust boundary now: an unsealed turn is not consent evidence, so a question asked in it licenses
+   nothing. `LoopRunAgent.generate`, `runSpecConversation` and `LoopRunAgent.stream` all seal (the stream
+   seals on stream completion — a stream nobody consumes never finishes and is never sealed, which is the
+   right reading of a turn that was thrown away).
+2. **RECORD WHAT EACH CALL DID** on `world.toolCalls`, with `tookEffect`. `destructiveThrottle` treats a
+   call as a PROBE only when the world POSITIVELY recorded that it changed nothing (`tookEffect === false`);
+   a call the world never recorded has UNKNOWN effect and counts against the one-effect-per-turn cap. A
+   world whose ledger nothing writes previously read as "every call changed nothing", which made the
+   throttle inert on the whole native-tools/MCP path (red-team r2/C6). `defineWorld` and `FixtureWorld`
+   record every exec; native-tools mode records in the guard hook, deriving effect from the result (a call
+   that succeeded and did not come back asking for confirmation changed something). A custom world that
+   logs only mutations will see its probes counted — record them with `tookEffect:false`.
 
 They compose because they cover DISJOINT moments — the call, the argument, the message — and each keys on
 its own structural signal (observed probe / earlier-turn ask · the gated arg + an earlier ask · an unresolved

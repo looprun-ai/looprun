@@ -6,7 +6,7 @@
  * filtering, flag-safe regex testing for `argFormat`), not vocabulary a spec author binds.
  */
 import type { GuardCtx, ObservedCall } from '../rules.js';
-import { hasAskIntent, isAskEvent } from '../runtime/claims.js';
+import { hasAskIntent, isBlankDelivery } from '../runtime/claims.js';
 
 export const lc = (s: unknown): string => String(s ?? '').toLowerCase();
 export const ran = (observed: ObservedCall[], tool: string): boolean => observed.some((o) => o.name === tool && o.ok);
@@ -39,13 +39,23 @@ export const isTerminalCall = (o: ObservedCall): boolean => TERMINAL_TOOLS.has(o
  * so the two can never disagree about what consent looks like. Asking is an `ask` INTENTION in the
  * turn's `did` (MI-D3) — the `asked` boolean is retired.
  *
- * SEALED HISTORY IS AUTHORITATIVE (red-team M8). `ctx.observed` records EVERY `respond` at hook time,
- * including ones the user never received — a terminal that lost a delivery contest, or one invalidated
- * as premature. Both are pruned by the backend, but a guard must not depend on that having run: for any
- * turn already SEALED into `ctx.history`, its `did` IS the delivered record, so the observed entries of
- * that turn are ignored. Every shipped backend seals each turn (`recordTurnHistory`), so in practice the
- * cross-turn signal is history-only and a ghost cannot reach it at all; the observed scan remains as the
- * answer for a turn a HOST left unsealed — better a structural ask event than no signal.
+ * SEALED HISTORY IS THE ONLY SOURCE (red-team M8, tightened by r2/C2). `ctx.observed` records EVERY
+ * `respond` at HOOK time — including calls the runtime then REFUSED (a blank message / an empty `did`
+ * fail the terminal schema, and the hook runs outside the tool's input validation), one that lost a
+ * within-step delivery contest, and one invalidated as premature. The backend prunes what it can, but
+ * this function used to fall back to a RAW `observed` ask scan for any turn missing from `ctx.history`,
+ * and that fallback was a silent failure mode: any host that does not seal its turns lost the whole
+ * MI-T2 guarantee with no signal (`LoopRunAgent.stream()` was exactly that host — it advanced the turn
+ * counter and never sealed, so a refused `respond` licensed a `confirmed:true` delete one turn later).
+ * The fallback is GONE. Consent evidence is a DELIVERED TURN RECORD or it does not exist: a host that
+ * wants its turns to license anything must seal them (`recordTurnHistory`) — fail-closed, and loud in
+ * the only way that matters (the act is denied).
+ *
+ * THE TURN MUST HAVE SAID SOMETHING (r2/C1+C7). The sealed `reply` is checked alongside the sealed
+ * `did`: a turn whose delivered text is blank ({@link isBlankDelivery} — invisibles stripped) never
+ * asked anything a user could answer, whatever its declaration says. This is the deterministic floor
+ * under a SELF-DECLARED signal; it does not (and cannot, under the no-regex law) decide whether a
+ * non-blank message actually poses a question — see GUARDS.md, "what the ask guarantees".
  *
  * RECENCY LAW: an ask is a LICENSING signal, so it must satisfy `1 ≤ ctx.turnIndex − askTurn ≤ within`.
  * A same-turn ask (distance 0) never licenses — the user has had no chance to answer.
@@ -53,9 +63,7 @@ export const isTerminalCall = (o: ObservedCall): boolean => TERMINAL_TOOLS.has(o
 export function askedInDeliveredTurn(ctx: GuardCtx, within: number): boolean {
   const recent = (turnIndex: number): boolean =>
     ctx.turnIndex - turnIndex >= 1 && ctx.turnIndex - turnIndex <= within;
-  if (ctx.history.some((h) => recent(h.turnIndex) && hasAskIntent(h.did))) return true;
-  const sealed = new Set(ctx.history.map((h) => h.turnIndex));
-  return ctx.observed.some((o) => o.ok && recent(o.turnIndex) && !sealed.has(o.turnIndex) && isAskEvent(o));
+  return ctx.history.some((h) => recent(h.turnIndex) && hasAskIntent(h.did) && !isBlankDelivery(h.reply));
 }
 
 /** This turn's observed DOMAIN calls (terminals excluded — see {@link TERMINAL_TOOLS}). */

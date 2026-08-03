@@ -139,11 +139,41 @@ function isNonEmptyString(v: unknown): v is string {
 
 const CLAIM_KEYS: ReadonlySet<string> = new Set(['op', 'target', 'outcome', 'amount']);
 
-/** INVISIBLE characters — format controls (bidi overrides, zero-width marks) and default-ignorables.
- *  Barred from a `target` because the target is the ONE claim field the renderer prints verbatim into
+/**
+ * The INVISIBLE characters, as a CHARACTER CLASS rather than a list (red-team M9).
+ *
+ * The delivery floor used to enumerate five code points (U+200B/200C/200D/2060/FEFF), so every
+ * invisible it had never heard of got through: U+2062–U+2064 (invisible times/separator/plus), U+180E
+ * (Mongolian vowel separator), and the Hangul fillers U+3164/U+115F/U+1160/U+FFA0. A message made of
+ * those renders as NOTHING yet read as content, and was delivered as the user's answer. A list is the
+ * wrong shape for the job — it needs extending every time Unicode names another invisible.
+ *
+ * `\p{Cf}` is the FORMAT category (every zero-width joiner / separator / mark) and
+ * `\p{Default_Ignorable_Code_Point}` is Unicode's own "renders as nothing" property, which covers the
+ * Hangul fillers and the variation selectors `Cf` does not. Together they are the closed class.
+ * Ordinary whitespace is left to `.trim()`, which already handles every space separator, tab, newline
+ * and NBSP.
+ *
+ * ONE class, two compiled forms — the non-global for `.test` (a `/g` regex advances `lastIndex`, so a
+ * shared instance alternates verdict between calls) and the global for stripping.
+ */
+const INVISIBLE_CLASS = '[\\p{Cf}\\p{Default_Ignorable_Code_Point}]';
+/** Barred from a `target` because the target is the ONE claim field the renderer prints verbatim into
  *  user-facing text: an id decorated with U+202E still matched the plain id while the user was shown a
- *  bidi-reordered string (red-team r2, §2.6). Same class the delivery blank-floor already strips. */
-const INVISIBLE_RE = /[\p{Cf}\p{Default_Ignorable_Code_Point}]/u;
+ *  bidi-reordered string (red-team r2, §2.6). Same class the delivery blank-floor strips. */
+const INVISIBLE_RE = new RegExp(INVISIBLE_CLASS, 'u');
+const INVISIBLE_STRIP_RE = new RegExp(INVISIBLE_CLASS, 'gu');
+
+/**
+ * True when `text` carries nothing a user would read: empty after stripping invisible/format characters
+ * and trimming. This is the runtime's OWN floor for "did the agent actually say anything" — it does not
+ * depend on the `respond` terminal schema's `minLength`. That constraint is REAL since MI-T5 — the
+ * mastra backend carries it into its zod input schema and rejects a violating call before the terminal
+ * executes — but a zero-width message SATISFIES it, so it can never be the floor.
+ */
+export function isBlankDelivery(text: string): boolean {
+  return text.replace(INVISIBLE_STRIP_RE, '').trim().length === 0;
+}
 
 /**
  * STRUCTURAL validation of a raw `did` value — SHAPE + the speech/action PARTITION (MI-D1/D2), never
@@ -228,6 +258,40 @@ export function respondPayload(args: Record<string, unknown>): RespondPayload {
     message: typeof args.message === 'string' ? args.message : '',
     did: validateClaims(args.did).claims,
   };
+}
+
+/**
+ * ── The ONE notion of a terminal payload the runtime will ACCEPT ──────────────────────────────────
+ *
+ * Returns the model-facing reason the payload is REFUSED, or `null` when the runtime will deliver it.
+ *
+ * The `respond` schema requires a `message` (`minLength:1`) and a `did` (`minItems:1`), and the mastra
+ * backend carries both into zod — so a violating call is rejected BEFORE the terminal executes. That
+ * rejection used to be invisible to governance in two places, and both were consent defects (red-team
+ * r2/C5):
+ *  · the guard hook records the terminal at HOOK time, which runs OUTSIDE the tool's own input
+ *    validation — so a call the runtime REFUSED still landed in `observed` with `ok:true`, and a
+ *    refused `respond` whose `did` carried an `ask` read as a question the user answered;
+ *  · {@link supersededTerminalCalls} computed "the delivered one" as the last terminal with a non-empty
+ *    message, which for a step whose LAST terminal is refused pruned the entry the user actually got.
+ *
+ * Both now ask this one function, so the ledger's notion of "delivered" cannot drift from the
+ * runtime's notion of "accepted". The message floor is {@link isBlankDelivery} — STRICTER than the
+ * schema's `minLength`, deliberately: a zero-width message satisfies `minLength` and renders as
+ * nothing.
+ *
+ * The reason is MODEL-facing (it rides the governance-veto envelope): it names the protocol's own
+ * argument names, never the terminal tool, and never reaches the user.
+ */
+export function terminalPayloadRejection(args: Record<string, unknown>): string | null {
+  const message = typeof args.message === 'string' ? args.message : '';
+  if (isBlankDelivery(message)) {
+    return 'Your reply carried no readable text for the user — put the COMPLETE user-facing message in `message` and send it again.';
+  }
+  if (!Array.isArray(args.did) || args.did.length === 0) {
+    return 'Your reply declared nothing in `did` — declare AT LEAST ONE intention (every operation you attempted with its honest outcome, or a speech intention) and send it again.';
+  }
+  return null;
 }
 
 /** True when the turn's `did` carries an `ask` intention (MI-D3) — the structured replacement for the

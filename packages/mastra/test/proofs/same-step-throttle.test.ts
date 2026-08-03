@@ -47,22 +47,38 @@ describe('M1 · destructiveThrottle counts a same-STEP sibling effect', () => {
     expect(await g.check(ctx)).toBeTruthy();
   });
 
-  it('a same-step sibling PROBE (confirmed:false) does NOT throttle — a probe changes nothing', async () => {
+  // r2/C6 CHANGED THESE TWO. A same-step sibling has NOT executed yet, so no world record of its effect
+  // can exist — its `tookEffect` is unknown by construction. Since a probe is now "the world recorded
+  // that it changed nothing", an admitted destructive sibling always counts, whatever flag it carries.
+  // That is what the guard's own doc always claimed ("a sibling admitted by its preTool guards WILL take
+  // effect"), and it costs no legitimate flow: probe-then-execute in the SAME STEP is never legal —
+  // confirmFirst denies a confirm licensed by a same-turn probe, because the user must answer in between.
+  it('a same-step sibling PROBE (confirmed:false) DOES throttle — its effect is unverifiable', async () => {
     const g = destructiveThrottle(['cancelMove']);
     const ctx = craftCtx({
       tool: 'cancelMove',
       args: { moveId: 'mv_2001', confirmed: true },
       siblingCallsThisStep: [call('cancelMove', { args: { moveId: 'mv_2001', confirmed: false } })],
     });
-    expect(await g.check(ctx)).toBeNull();
+    expect(await g.check(ctx)).toBeTruthy();
   });
 
-  it('a same-step sibling that requiresConfirmation (probe result) does NOT throttle', async () => {
+  it('a same-step sibling that requiresConfirmation likewise throttles', async () => {
     const g = destructiveThrottle(['cancelMove']);
     const ctx = craftCtx({
       tool: 'cancelMove',
       args: { moveId: 'mv_2001', confirmed: true },
       siblingCallsThisStep: [call('cancelMove', { args: { moveId: 'mv_2001' }, resultFlags: { requiresConfirmation: true } })],
+    });
+    expect(await g.check(ctx)).toBeTruthy();
+  });
+
+  it('CONTROL: the legal CROSS-STEP two-step tail still passes — a recorded probe, then the execute', async () => {
+    const g = destructiveThrottle(['cancelMove']);
+    const ctx = craftCtx({
+      tool: 'cancelMove',
+      args: { moveId: 'mv_2001', confirmed: true },
+      observed: [call('cancelMove', { args: { moveId: 'mv_2001', confirmed: false }, tookEffect: false })],
     });
     expect(await g.check(ctx)).toBeNull();
   });

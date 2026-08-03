@@ -22,6 +22,7 @@ import { recordVeto, type TurnLedger } from './ledger.js';
 import { isTerminal } from './terminal.js';
 import {
   deriveClaimsFromLedger,
+  isBlankDelivery,
   renderOperationReport,
   respondPayload,
   type RespondPayload,
@@ -280,33 +281,6 @@ function composeDelivery(payload: RespondPayload, contract?: DomainContract): st
 }
 
 /**
- * The INVISIBLE characters that survive `.trim()`, as a CHARACTER CLASS rather than a list (red-team M9).
- *
- * The floor used to enumerate five code points (U+200B/200C/200D/2060/FEFF), so every invisible it had
- * never heard of got through: U+2062–U+2064 (invisible times/separator/plus), U+180E (Mongolian vowel
- * separator), and the Hangul fillers U+3164/U+115F/U+1160/U+FFA0. A message made of those renders as
- * NOTHING yet read as content, and was delivered as the user's answer. A list is the wrong shape for the
- * job — it needs extending every time Unicode names another invisible.
- *
- * `\p{Cf}` is the FORMAT category (every zero-width joiner / separator / mark) and
- * `\p{Default_Ignorable_Code_Point}` is Unicode's own "renders as nothing" property, which covers the
- * Hangul fillers and the variation selectors `Cf` does not. Together they are the closed class. Ordinary
- * whitespace is left to `.trim()`, which already handles every space separator, tab, newline and NBSP.
- */
-const INVISIBLE_RE = /[\p{Cf}\p{Default_Ignorable_Code_Point}]/gu;
-
-/**
- * True when `text` carries nothing a user would read: empty after stripping invisible/format characters
- * and trimming. This is the runtime's OWN floor for "did the agent actually say anything" — it does not
- * depend on the `respond` terminal schema's `minLength`. That constraint is REAL since MI-T5 — the
- * mastra backend carries it into its zod input schema and rejects a violating call before the terminal
- * executes — but a zero-width message SATISFIES it, so it can never be the floor.
- */
-export function isBlankDelivery(text: string): boolean {
-  return text.replace(INVISIBLE_RE, '').trim().length === 0;
-}
-
-/**
  * The engine-DERIVED exhaustion closure, used when the redrive loop exhausts and no override seam is set.
  * The engine builds the TRUE claims from the world ledger ({@link deriveClaimsFromLedger}) — the model
  * never produced a groundable declaration, so the engine authors one it can stand behind — renders their
@@ -456,10 +430,21 @@ export async function finalizeReply(
   for (let r = 0; r < maxRedrives && violations.length; r++) {
     const next = await redrive(redriveMessage(violations));
     for (const v of violations) ledger.turnCorrections.push(`redrive:${v.guard.kind}`);
-    // Adopt the re-generated payload whole; keep the previous message only if the redrive returned none
-    // (a degenerate empty re-generation must not blank the reply — mirrors the old `if (next) text = next`).
-    const message = next.message.trim() ? applyMutators(spec, ledger, world, next.message) : payload.message;
-    payload = { message, did: next.did };
+    // MESSAGE AND `did` COME FROM THE SAME PAYLOAD — never spliced (red-team r2/C1). This used to keep
+    // the PREVIOUS message when the re-generation returned a blank one while adopting the new `did`
+    // unconditionally, so a redrive answering `{message:'', did:[{op:'ask'}]}` delivered the OLD,
+    // uncorrected sentence and SEALED the turn as having asked a question. That seal is the
+    // authoritative cross-turn consent signal (`askedInDeliveredTurn`'s history arm), so the engine
+    // itself manufactured a licence for a `confirmed:true` destructive act — no prune can reach it,
+    // because the defect is in the reply pipeline, not in the ledger.
+    // A re-generation with no readable message is REJECTED WHOLE: the previous payload stands intact
+    // (message AND did), the redrive counts as spent, and the turn falls through to salvage / the
+    // engine-derived exhaustion closure — the honest outcome for a model that said nothing.
+    if (isBlankDelivery(next.message)) {
+      ledger.turnCorrections.push('redrive-empty:kept-previous');
+      continue;
+    }
+    payload = { message: applyMutators(spec, ledger, world, next.message), did: next.did };
     violations = await checkPayload(spec, ledger, world, payload);
   }
 

@@ -265,13 +265,14 @@ const confirmFirstProof: GuardProof = {
       l1: 'fires',
     },
     {
+      // The ask signal is the SEALED turn record, never a raw `observed` respond (r2/C2).
       name: 'arg mechanism: a prior-turn ask intention counts as the probe',
       polarity: 'positive',
       ctx: {
         tool: 'deleteItem',
         args: { confirmed: true },
-        observed: [
-          { name: 'respond', args: { message: 'Delete item itm-1 — are you sure?', did: [{ op: 'ask' }] }, ok: true, turnIndex: 0 },
+        history: [
+          { turnIndex: 0, userText: 'delete itm-1', reply: 'Delete item itm-1 — are you sure?', toolCalls: [], did: [{ op: 'ask' }], attemptedCalls: [], guardEvents: [] },
         ],
         turnIndex: 1,
       },
@@ -629,7 +630,8 @@ const askedEarlierProof: GuardProof = {
       polarity: 'positive',
       ctx: {
         args: { condition: 'good' },
-        observed: [{ name: 'respond', args: { message: 'q?', did: [{ op: 'ask' }] }, ok: true, turnIndex: 1 }],
+        // SEALED history is the only cross-turn ask signal (r2/C2).
+        history: [{ turnIndex: 1, userText: 'add an item', reply: 'What condition is the item in?', toolCalls: [], did: [{ op: 'ask' }], attemptedCalls: [], guardEvents: [] }],
         turnIndex: 2,
       },
       l1: 'silent',
