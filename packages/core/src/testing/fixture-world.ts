@@ -10,7 +10,7 @@
  * `createMedia`/`editMedia`; uploads are `u9\d{2}` (u900, u901, …) produced by `ingestAttachment`. The
  * scheme regexes are exported as {@link FIXTURE_LABEL_SCHEME} for the noFabricatedSuccess proofs. The
  * `hasMediaLabel` method below backs the noFabricatedSuccess `refExists` proof — it is a fixture
- * accessor, no longer a typed `MediaWorld` contract (the runtime carries no media concept). The 11 domain tools + the two runtime terminals are
+ * accessor rather than a typed contract (the runtime carries no media concept). The 11 domain tools + the two runtime terminals are
  * exported as {@link FIXTURE_TOOL_DEFS}; the generic domain + lexicon are {@link FIXTURE_DOMAIN} /
  * {@link FIXTURE_LEXICON}.
  */
@@ -238,21 +238,21 @@ export const FIXTURE_LEXICON = {
   falseFailureClaimRe: /\b(?:can(?:no|')t|unable to|failed to)\b/i,
   /** base:confirmFirstPriorAsk / pendingConfirmMustAsk — "does this reply seek confirmation?". */
   confirmAskRe: /\bare you sure\b/i,
-  /** reply-honesty fixture — the deletion claim + offer/exempt qualifiers (formerly consumed by a
-   *  deterministic guard; that check is now `llmCheck`'s job). */
+  /** reply-honesty fixture — the deletion claim + offer/exempt qualifiers (the judgment they describe is
+   *  `llmCheck`'s job; these are fixture data for exercising that seam). */
   destructiveClaim: {
     claimRe: /\b(?:deleted|removed|purged)\b/i,
     offerRe: /\b(?:would you like|should I|do you want)\b/i,
     exemptRe: /\b(?:could not|did not|wasn't)\b/i,
   },
-  /** reply-honesty fixture — the media-creation claim + the verb-first claim (formerly consumed by a
-   *  deterministic guard; that check is now `llmCheck`'s job). */
+  /** reply-honesty fixture — the media-creation claim + the verb-first claim (the judgment they describe
+   *  is `llmCheck`'s job; these are fixture data for exercising that seam). */
   fabricated: {
     claimRe: /\b(?:created|generated) (?:the|a|your) (?:image|media)\b/i,
     verbClaimRe: /\bgenerating\b/i,
   },
-  /** reply-honesty fixture — a phrase the assistant may NEVER say (the unconditional-ban mode that
-   *  absorbed the former replyNoProductionClaim kind; that check is now `llmCheck`'s job). */
+  /** reply-honesty fixture — a phrase the assistant may NEVER say (an unconditional ban; the judgment it
+   *  describes is `llmCheck`'s job). */
   productionClaimRe: /\bpublished to production\b/i,
   /** degenerationGuard `selfNarrationRe` — the third-person self-narration branch, now lexicon-injected
    *  (generic English; no /g lastIndex to leak). Absent ⇒ the narration branch is OFF. */

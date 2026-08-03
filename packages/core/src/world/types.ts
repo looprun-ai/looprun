@@ -1,10 +1,10 @@
 /**
- * `defineWorld` — the DECLARATIVE world vocabulary (increment 3a).
+ * `defineWorld` — the DECLARATIVE world vocabulary.
  *
  * A generated subject emits ONLY the object literal described here; the builder
- * (`define-world.ts`) supplies the machinery every world used to re-implement by hand:
+ * (`define-world.ts`) supplies the machinery, so no world hand-writes it:
  * RECEPTION, two-step probes, deterministic ids, projection, audit, presets, gates, and the
- * quarantined `custom` escape hatch. The `world.json` serialization of this same shape is 3b.
+ * quarantined `custom` escape hatch.
  */
 
 /** A scalar an argument can carry. `money` is a number the domain reads as currency. */

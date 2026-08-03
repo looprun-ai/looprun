@@ -1,10 +1,8 @@
 /**
- * REPLY guards — what survives on the user-facing message after the tier-③ deletion (SCG-T5): the
- * always-on degeneration ARTIFACT lint and the egress jargon scrub (a mutator). The reply-TEXT coverage
- * guards that used to live here — `replyMentions`, `replySingleQuestion`, `replyMaxOccurrences`,
- * `emptyReply` — are DELETED (see the tombstone in `catalog.ts`): reply prose stopped being a thing guards
- * READ (the red-team broke every literal scan structurally). Reply-coverage/polarity moved to the
- * structured cross-check `claimCoversRubric` (honesty.ts); the empty-reply floor is the ENGINE's
+ * REPLY guards — everything that acts on the user-facing message: the always-on degeneration ARTIFACT
+ * lint and the egress jargon scrub (a mutator). Neither reads reply prose for MEANING, and nothing here
+ * does: a literal scan over a reply cannot see polarity, so reply coverage/polarity is the structured
+ * cross-check `claimCoversRubric` (honesty.ts), and the non-empty guarantee is the engine's
  * blank-delivery floor in `finalizeReply` (a zero-width message satisfies the schema's `minLength`).
  */
 import type { ReplyMutator } from '../rules.js';
@@ -16,9 +14,9 @@ import { escapeRe } from './shared.js';
  * failure class (leaked reasoning/tool markup — `<think>`, `<tool_call>`, `<tool_response>`, chat-template
  * tokens, raw `respond{` — and run-away repetition). These branches are an ARTIFACT-SHAPE lint over
  * fixed scaffolding tokens (a model-layer property, not business text judgment), so they carry NO param
- * and stay in the deterministic surface. The former third-person SELF-NARRATION branch was a
- * text-judgment param (`selfNarrationRe`) — that job is text judgment, so it is now `llmCheck`'s (an
- * author who wants it binds an `llmCheck` rubric); this guard no longer takes any RegExp param.
+ * and stay in the deterministic surface. This guard takes no RegExp param at all: a judgment like
+ * third-person SELF-NARRATION depends on wording, and wording is `llmCheck`'s job — an author who wants
+ * it binds an `llmCheck` rubric.
  * A hit routes into the existing redrive → exhaustion battery (redrives are reply-only regenerations,
  * which is exactly what this class needs). Pure check: no clock/RNG/IO; fresh regexes per call.
  */
@@ -51,16 +49,15 @@ export function degenerationGuard(): Guard {
 /**
  * Deterministic egress jargon scrub (word-boundary, case-insensitive) before the reply leaves.
  *
- * KEYS ARE ESCAPED. The keys are arbitrary domain strings — internal field
- * names, statuses, product names — and were interpolated RAW into the pattern. A key holding a regex
- * metacharacter either threw at construction (`'(beta)'` → an unbalanced group; `'C++'` → "nothing to
- * repeat") or silently matched the wrong thing, and a throw here is a construction-time crash of the
- * whole spec. `escapeRe` (a shared guard helper) makes the key a literal.
+ * KEYS ARE ESCAPED (`escapeRe`, a shared guard helper, makes each key a literal). The keys are arbitrary
+ * domain strings — internal field names, statuses, product names — so a key holding a regex
+ * metacharacter would otherwise either throw at construction (`'(beta)'` → an unbalanced group; `'C++'` →
+ * "nothing to repeat"), which crashes the whole spec, or silently match the wrong thing.
  *
- * NOTE the `\b…\b` anchors are kept as-is: for a key whose first/last character is a non-word character
- * (`'(beta)'`, `'C++'`) a word boundary next to it will not match as an author might expect. That is a
- * pre-existing property of the word-boundary contract this mutator advertises, not something escaping
- * changes — but it no longer THROWS, which is the defect.
+ * NOTE the `\b…\b` anchors: for a key whose first or last character is a non-word character (`'(beta)'`,
+ * `'C++'`) a word boundary next to it will not match as an author might expect. That is a property of
+ * the word-boundary contract this mutator advertises; escaping does not change it, and never throwing is
+ * the point.
  */
 export function jargonScrub(map: Record<string, string>): ReplyMutator {
   const entries = Object.entries(map).map(([from, to]) => ({ re: new RegExp(`\\b${escapeRe(from)}\\b`, 'gi'), to }));

@@ -19,10 +19,10 @@ import { askedInDeliveredTurn } from './shared.js';
  * operator has not had a chance to answer within the same message, so consent to record their answer cannot
  * have arrived yet.
  *
- * ASK SIGNAL (MI-T2): {@link askedInDeliveredTurn} — a SEALED `HistoryTurn` whose `did` carries an `ask`
+ * ASK SIGNAL: {@link askedInDeliveredTurn} — a SEALED `HistoryTurn` whose `did` carries an `ask`
  * intention is authoritative for its own turn; the observed scan covers only the PRE-HISTORY window (an
  * earlier ask not yet sealed, e.g. a chained micro-turn), so a `respond` the user never received cannot
- * license a write (red-team M8). Structure only — never reply text.
+ * license a write. Structure only — never reply text.
  *
  * RECENCY LAW (2026-08-02): the earlier ask is a LICENSING signal — it UNLOCKS this write — so it is
  * turn-bounded by `within` (default **1**, the immediately-preceding turn): the ask must satisfy

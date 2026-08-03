@@ -1,8 +1,8 @@
 /**
- * `defineWorld` (increment 3a) — a typed builder that interprets a DECLARATIVE {@link WorldSpec}
+ * `defineWorld` — a typed builder that interprets a DECLARATIVE {@link WorldSpec}
  * into a factory producing worlds that implement the engine's `AgentWorld` seam.
  *
- * The machinery the generated subject no longer hand-writes: RECEPTION (`reception.ts`), two-step
+ * The machinery it supplies, so a subject never hand-writes it: RECEPTION (`reception.ts`), two-step
  * probe/confirm, deterministic ids/counters + audit + `tookEffect` marking, `projection()` carrying
  * the clock, echo-safety tagging, preset application over seed, transition gates (`gates.ts`), and a
  * quarantined `custom` executor escape hatch. Everything is deterministic: no clock read, no RNG.

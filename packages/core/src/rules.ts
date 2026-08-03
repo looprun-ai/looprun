@@ -11,7 +11,7 @@
  * (`AgentWorld`); a domain reads its own accessors through the index signature — the package itself
  * is domain-neutral.
  */
-import type { TurnClaim } from './runtime/claims.js';
+import type { Intention } from './runtime/claims.js';
 
 /** The five enforcement dims (taxonomy metadata; the structural key is the hook it maps to). */
 export type Dim = 'spatial' | 'input' | 'run' | 'output' | 'behavior';
@@ -58,7 +58,7 @@ export interface ObservedCall {
    *  issued one. Attached PER CALL so the engine's derived account (`deriveClaimsFromLedger`) names the
    *  entity the acting call itself named — the conversation-wide `producedThisTurn` array is a positional
    *  stream that includes READ labels, and consuming it positionally made a read's label shift onto a
-   *  write's derived target (red-team M5). */
+   *  write's derived target. */
   producedLabel?: string;
 }
 
@@ -86,9 +86,9 @@ export interface HistoryTurn {
   /** The turn's DELIVERED structured claim of operations (the delivered `respond`'s `did`). Retained so
    *  a later turn's guards can read what the agent DECLARED it did. Frozen with the entry. Task 4 will
    *  feed this the VERIFIED (post-cross-check) set; for now it is what the ledger held at seal time.
-   *  This is ALSO the ask record: a turn posed a question iff `hasAskIntent(did)` (MI-D3 — the `asked`
-   *  boolean is retired), and a SEALED turn is the authoritative answer for its own `turnIndex`. */
-  did: ReadonlyArray<TurnClaim>;
+   *  This is ALSO the ask record: a turn posed a question iff `hasAskIntent(did)`, never through a flag,
+   *  and a SEALED turn is the authoritative answer for its own `turnIndex`. */
+  did: ReadonlyArray<Intention>;
   /** Calls a guard VETOED before execution — the world never saw them. */
   attemptedCalls: ReadonlyArray<{ name: string; args: unknown }>;
   /** The turn's recovery/correction log (guard fires, redrives, superseded terminals, …). */
@@ -104,13 +104,13 @@ export interface AdjudicatorVerdict {
 }
 
 /** A host-registered LLM adjudicator — the seam an `llmCheck` guard delegates its verdict to. It answers
- *  a TRUSTED, pre-baked `rubric` over the guard ctx (full `history` + `userText` included, per the
- *  firewall-retired ruling). Registered on the runtime options like `defineWorld`'s custom executors —
+ *  a TRUSTED, pre-baked `rubric` over the guard ctx (full `history` + `userText` included).
+ *  Registered on the runtime options like `defineWorld`'s custom executors —
  *  NEVER named in config. Unreachable (throws/rejects) ⇒ the guard's `failMode` decides open/closed. */
 export type Adjudicator = (rubric: string, ctx: GuardCtx) => Promise<AdjudicatorVerdict>;
 
-/** Everything a guard predicate may read — including, since the firewall was retired (2026-08-02),
- *  the user's own text (`userText` this turn; `history[].userText` for prior turns). */
+/** Everything a guard predicate may read — including the user's own text (`userText` this turn;
+ *  `history[].userText` for prior turns). */
 export interface GuardCtx {
   args: Record<string, unknown>;
   tool?: string;
@@ -121,8 +121,7 @@ export interface GuardCtx {
    *  for every hook of the turn (the forced chain micro-generate runs inside the same turn, so it
    *  sees it too). It is '' only when the turn was NOT opened by a string user message: the stream
    *  path, and `generate(messagesArray)` (a caller-managed message array, no fresh string input).
-   *  `onInput` reads it as the real incoming text; it is the field that replaced the hard-coded
-   *  `args: {}`. */
+   *  `onInput` reads it as the real incoming text. */
   userText: string;
   /** The full PRIOR conversation, turn-structured and read-only. Available to EVERY hook. The
    *  CURRENT (in-flight) turn is NOT here — its user text is `userText`, its calls are `observed`. */
@@ -133,13 +132,13 @@ export interface GuardCtx {
   result?: unknown;
   notes?: string[];
   /** The CURRENT turn's structured claim of operations, extracted from the delivered `respond`'s `did`
-   *  and grounded against the ledger by the cross-check guards (T4). Populated on the REPLY-side ctx —
+   *  and grounded against the ledger by the cross-check guards. Populated on the REPLY-side ctx —
    *  the onReply checks, the postTool result-invariants and the egress mutators — so a guard reads the
    *  agent's DECLARATION, not its prose. Absent on preTool/onInput (no delivered respond exists yet).
-   *  It carries the turn's ASK too: `hasAskIntent(ctx.did)` (MI-D3 — the `asked` boolean is retired).
+   *  It carries the turn's ASK too: `hasAskIntent(ctx.did)`, never a flag.
    *  PRESENT ⇒ AUTHORITATIVE: a guard that needs "did this turn pose a question" must trust it over any
    *  observed scan, which can still hold a terminal the user never received. */
-  did?: TurnClaim[];
+  did?: Intention[];
   /** THIS turn's guard-VETOED attempts — the calls a preTool guard blocked before they reached the world
    *  (the ledger's `attemptedCalls`, reset per turn). Populated on the reply-side ctx beside {@link did}
    *  so `claimIsGrounded` can ground a `blocked`/`refused` claim against the attempt the guard stopped —

@@ -1,11 +1,9 @@
 /**
  * @looprun-ai/core runtime — the STRUCTURED TURN-CLAIM core (framework-free).
  *
- * The honesty guards used to read the reply PROSE, and the red-team broke that structurally:
- * a literal `replyMentions('BK-1')` passes on a reply that says BK-1 was NOT found — a text check
- * cannot read polarity.
- * The fix is to stop making prose the thing guards read. The agent DECLARES what it did as
- * STRUCTURE (`did: TurnClaim[]`), and the cross-check guards (T2) ground that declaration against the
+ * PROSE IS NOT THE THING GUARDS READ: a literal mention scan for `BK-1` passes on a reply that says
+ * BK-1 was NOT found, because a text check cannot read polarity. So the agent DECLARES what it did as
+ * STRUCTURE (`did: Intention[]`), and the cross-check guards ground that declaration against the
  * world ledger — which the agent does not control. This module owns the domain-neutral vocabulary of
  * that structure: the core outcome set, the claim shape + its STRICT validation, the domain→core
  * outcome resolution, and the tolerant extraction of one `respond` call's payload.
@@ -13,7 +11,7 @@
  * Type-only imports: this is the spine every later layer (ledger plumbing, cross-check guards, renderer,
  * and the agentspec domain extension) depends on, so it stays a pure leaf at RUNTIME — the single
  * `ObservedCall` import below is `import type` (erased by the compiler), so no runtime cycle forms even
- * though `rules.ts` names `TurnClaim` from here.
+ * though `rules.ts` names `Intention` from here.
  */
 import type { ObservedCall } from '../rules.js';
 
@@ -47,7 +45,7 @@ export function isCoreOutcome(s: string): s is CoreOutcome {
 }
 
 /**
- * The RESERVED, engine-core, domain-neutral SPEECH ops (MI-D2). An intention whose `op` is one of these
+ * The RESERVED, engine-core, domain-neutral SPEECH ops. An intention whose `op` is one of these
  * is a SPEECH act: it classifies the `message`'s speech act, is NOT backed by a tool, is NOT grounded
  * against the world ledger, and carries NO action `outcome`/`amount`. Every other op is an ACTION op —
  * domain-declared, backed by a write, and REQUIRED to carry an `outcome`. A domain may not redefine
@@ -60,7 +58,7 @@ export type SpeechOp = (typeof SPEECH_OPS)[number];
 
 const SPEECH_OP_SET: ReadonlySet<string> = new Set(SPEECH_OPS);
 
-/** True when `op` is one of the four reserved SPEECH ops. Partition predicate for MI-D2. */
+/** True when `op` is one of the four reserved SPEECH ops. The partition predicate. */
 export function isSpeechOp(op: string): op is SpeechOp {
   return SPEECH_OP_SET.has(op);
 }
@@ -71,7 +69,7 @@ export function isActionOp(op: string): boolean {
 }
 
 /**
- * One structured INTENTION the agent declares about ONE thing it did this turn (MI-D2).
+ * One structured INTENTION the agent declares about ONE thing it did this turn.
  *
  * Two disjoint families keyed off `op` (see {@link SPEECH_OPS}): a SPEECH intention (`inform`/`greet`/
  * `refuse`/`ask`) classifies the `message`'s speech act and carries NO `outcome`/`amount`; an ACTION
@@ -87,13 +85,6 @@ export interface Intention {
   outcome?: string;
   amount?: number;
 }
-
-/**
- * @deprecated Transitional alias for {@link Intention} — the SCG name. Kept so the SCG-era importers
- * (rules/trunk/ledger/turn/honesty) and their tests compile without a rename churn; new code names
- * `Intention`. Removed once the last importer is migrated.
- */
-export type TurnClaim = Intention;
 
 /** Domain outcome vocabulary: every non-core outcome word MUST map to a {@link CoreOutcome}, so the
  *  ledger cross-check stays engine-owned and never becomes semantic. */
@@ -114,10 +105,9 @@ export function resolveOutcome(outcome: string, map?: OutcomeMap): CoreOutcome |
 /**
  * The COMPATIBILITY FOLD of an outcome-map key — what a human reviewing the domain vocabulary reads.
  *
- * `trim().toLowerCase()` alone was not the reader's notion (red-team r2, b4.1/b4.2): `'ＳＵＣＣＥＳＳ'`
- * lowercases to FULLWIDTH lowercase (never the ASCII core word) and `'PENDİNG_CONFIRMATION'` (Turkish
- * dotted İ) lowercases to a combining-dot form — both read as the core word on screen and both slipped the
- * gate. NFKD is Unicode's own compatibility decomposition (fullwidth → ASCII, İ → `I` + combining dot);
+ * `trim().toLowerCase()` alone is not the reader's notion: `'ＳＵＣＣＥＳＳ'` lowercases to FULLWIDTH
+ * lowercase (never the ASCII core word) and `'PENDİNG_CONFIRMATION'` (Turkish dotted İ) lowercases to a
+ * combining-dot form — both read as the core word on screen, so both would slip a plain-lowercase gate. NFKD is Unicode's own compatibility decomposition (fullwidth → ASCII, İ → `I` + combining dot);
  * stripping `\p{M}` drops the freed marks, and the invisible class is the same one the delivery floor owns.
  * Case folding comes LAST, after the marks are gone, so no locale-sensitive `i`/`İ` pair survives it.
  */
@@ -139,12 +129,12 @@ function foldOutcomeKey(k: string): string {
  * wrong shape — the defect is in the authored vocabulary, so it fails at LOAD, before a turn ever runs. An
  * exact-core key is refused too: it is dead config that reads as if it redefined the word.
  *
- * EVERY DOOR, NOT ONE (red-team r2, b4.3–b4.5). The assertion used to have a single caller — the spec
- * constructor, over `cfg.contract?.outcomes` — so any map that did not ride on a contract was ungated:
- * `packages/eval`'s config path builds a contract-less spec and threads its `outcomes` block straight into
- * `claimCoversRubric`, and the three cross-check factories are public exports a host can bind directly. A
- * law about a VALUE has to be enforced where the value enters, so this now runs in each guard factory that
- * accepts an `OutcomeMap` and in the eval config loader as well. It is idempotent, load-time and O(keys).
+ * EVERY DOOR, NOT ONE. A law about a VALUE has to be enforced where the value enters, so this runs in
+ * EVERY guard factory that accepts an `OutcomeMap` and in the eval config loader as well — not only in
+ * the spec constructor over `cfg.contract?.outcomes`. A map that does not ride on a contract still has to
+ * be gated: `packages/eval`'s config path builds a contract-less spec and threads its `outcomes` block
+ * straight into `claimCoversRubric`, and the three cross-check factories are public exports a host can
+ * bind directly. It is idempotent, load-time and O(keys).
  *
  * `where` names the door for the message (`AgentSpec "x"`, `claimIsGrounded`, …).
  */
@@ -168,13 +158,12 @@ function isNonEmptyString(v: unknown): v is string {
 const CLAIM_KEYS: ReadonlySet<string> = new Set(['op', 'target', 'outcome', 'amount']);
 
 /**
- * The INVISIBLE characters, as a CHARACTER CLASS rather than a list (red-team M9).
+ * The INVISIBLE characters, as a CHARACTER CLASS rather than a list.
  *
- * The delivery floor used to enumerate five code points (U+200B/200C/200D/2060/FEFF), so every
- * invisible it had never heard of got through: U+2062–U+2064 (invisible times/separator/plus), U+180E
- * (Mongolian vowel separator), and the Hangul fillers U+3164/U+115F/U+1160/U+FFA0. A message made of
- * those renders as NOTHING yet read as content, and was delivered as the user's answer. A list is the
- * wrong shape for the job — it needs extending every time Unicode names another invisible.
+ * A LIST IS THE WRONG SHAPE — it needs extending every time Unicode names another invisible, and every
+ * invisible it has not heard of gets through: U+2062–U+2064 (invisible times/separator/plus), U+180E
+ * (Mongolian vowel separator), and the Hangul fillers U+3164/U+115F/U+1160/U+FFA0 all render as NOTHING
+ * yet would read as content and ship as the user's answer.
  *
  * `\p{Cf}` is the FORMAT category (every zero-width joiner / separator / mark) and
  * `\p{Default_Ignorable_Code_Point}` is Unicode's own "renders as nothing" property, which covers the
@@ -188,27 +177,27 @@ const CLAIM_KEYS: ReadonlySet<string> = new Set(['op', 'target', 'outcome', 'amo
 const INVISIBLE_CLASS = '[\\p{Cf}\\p{Default_Ignorable_Code_Point}]';
 /** Barred from a `target` because the target is the ONE claim field the renderer prints verbatim into
  *  user-facing text: an id decorated with U+202E still matched the plain id while the user was shown a
- *  bidi-reordered string (red-team r2, §2.6). Same class the delivery blank-floor strips. */
+ *  bidi-reordered string. Same class the delivery blank-floor strips. */
 const INVISIBLE_RE = new RegExp(INVISIBLE_CLASS, 'u');
 const INVISIBLE_STRIP_RE = new RegExp(INVISIBLE_CLASS, 'gu');
 
 /**
  * True when `text` carries nothing a user would read: empty after stripping invisible/format characters
  * and trimming. This is the runtime's OWN floor for "did the agent actually say anything" — it does not
- * depend on the `respond` terminal schema's `minLength`. That constraint is REAL since MI-T5 — the
- * mastra backend carries it into its zod input schema and rejects a violating call before the terminal
- * executes — but a zero-width message SATISFIES it, so it can never be the floor.
+ * depend on the `respond` terminal schema's `minLength`. That constraint is real — the mastra backend
+ * carries it into its zod input schema and rejects a violating call before the terminal executes — but a
+ * zero-width message SATISFIES it, so it can never be the floor.
  */
 export function isBlankDelivery(text: string): boolean {
   return text.replace(INVISIBLE_STRIP_RE, '').trim().length === 0;
 }
 
 /**
- * STRUCTURAL validation of a raw `did` value — SHAPE + the speech/action PARTITION (MI-D1/D2), never
- * grounding against the ledger (that is the guards' job). Exhaustive typed checks, NOT `typeof`/`trim`
- * guesses (the red-team broke those):
- *   · `did` MUST be a NON-EMPTY array — an empty `did` is an error (MI-D1: every respond declares ≥1
- *     intention; there is no "honest empty" turn).
+ * STRUCTURAL validation of a raw `did` value — SHAPE + the speech/action PARTITION, never grounding
+ * against the ledger (that is the guards' job). Exhaustive typed checks, NOT `typeof`/`trim` guesses,
+ * which a hostile shape walks straight through:
+ *   · `did` MUST be a NON-EMPTY array — an empty `did` is an error: every respond declares ≥1
+ *     intention, and there is no "honest empty" turn.
  *   · `op` must be a non-empty string; `target`, when present, a non-empty string; any unknown key is an error.
  *   · An ACTION op (`op ∉ SPEECH_OPS`) REQUIRES a non-empty string `outcome`, and `amount`, when present,
  *     a FINITE number.
@@ -267,8 +256,8 @@ export function validateClaims(did: unknown): { claims: Intention[]; errors: str
 
 /**
  * The payload one `respond` call carries: the non-operational user-facing prose and the structured
- * intentions of the turn. Asking is no longer a bare boolean (MI-D3) — a question is declared as an
- * `ask` speech-intention in `did` (see {@link hasAskIntent}), so `asked` is gone from the payload.
+ * intentions of the turn. Asking is not a bare boolean: a question is declared as an `ask`
+ * speech-intention in `did` (see {@link hasAskIntent}), like every other intention.
  */
 export interface RespondPayload {
   message: string;
@@ -295,8 +284,8 @@ export function respondPayload(args: Record<string, unknown>): RespondPayload {
  *
  * The `respond` schema requires a `message` (`minLength:1`) and a `did` (`minItems:1`), and the mastra
  * backend carries both into zod — so a violating call is rejected BEFORE the terminal executes. That
- * rejection used to be invisible to governance in two places, and both were consent defects (red-team
- * r2/C5):
+ * rejection must stay VISIBLE to governance in two places, because in both an invisible rejection is a
+ * consent defect:
  *  · the guard hook records the terminal at HOOK time, which runs OUTSIDE the tool's own input
  *    validation — so a call the runtime REFUSED still landed in `observed` with `ok:true`, and a
  *    refused `respond` whose `did` carried an `ask` read as a question the user answered;
@@ -319,13 +308,13 @@ export function terminalPayloadRejection(args: Record<string, unknown>): string 
   if (!Array.isArray(args.did) || args.did.length === 0) {
     return 'Your reply declared nothing in `did` — declare AT LEAST ONE intention (every operation you attempted with its honest outcome, or a speech intention) and send it again.';
   }
-  // WELL-FORMEDNESS, not merely arity (red-team r2/A-V4, B-b2.4). The schema's `minItems:1` cannot express
-  // the speech/action PARTITION — `outcome` is just an optional property, so `{op:'inform',
-  // outcome:'success'}` is schema-legal — and {@link respondPayload} keeps only the well-formed subset and
-  // DISCARDS the errors. A `did` whose every entry is malformed therefore collapsed to `[]` INSIDE the
-  // engine: `claimIsGrounded` short-circuits on an empty declaration, the operation report renders '', and
-  // the raw prose shipped alone with zero intentions and zero violations — exactly the empty-`did` state
-  // MI-D1 exists to delete, reachable by the single most likely `did` mistake a weak model makes.
+  // WELL-FORMEDNESS, not merely arity. The schema's `minItems:1` cannot express the speech/action
+  // PARTITION — `outcome` is just an optional property, so `{op:'inform', outcome:'success'}` is
+  // schema-legal — and {@link respondPayload} keeps only the well-formed subset and DISCARDS the errors.
+  // Without this check a `did` whose every entry is malformed would collapse to `[]` INSIDE the engine:
+  // `claimIsGrounded` short-circuits on an empty declaration, the operation report renders '', and the
+  // raw prose would ship alone with zero intentions and zero violations — the empty-`did` state this
+  // module forbids, reached by the single most likely `did` mistake a weak model makes.
   // A declaration the system could not read is not a declaration, so the runtime REFUSES the payload and
   // tells the model what was wrong, rather than silently pruning it.
   const { errors } = validateClaims(args.did);
@@ -340,7 +329,7 @@ export function terminalPayloadRejection(args: Record<string, unknown>): string 
 }
 
 /**
- * THE ATTESTED EFFECT — the world's own statement that this call MUTATED it (red-team r2/A-V3).
+ * THE ATTESTED EFFECT — the world's own statement that this call MUTATED it.
  *
  * `tookEffect` and `writeTools` come from different authorities: the flag is the WORLD's per-call record,
  * the list is the DOMAIN's hand-maintained vocabulary. Reading an effect only through their INTERSECTION
@@ -357,8 +346,8 @@ export function attestedEffect(c: { tookEffect?: boolean; effectInferred?: boole
   return c.tookEffect === true && c.effectInferred !== true;
 }
 
-/** True when the turn's `did` carries an `ask` intention (MI-D3) — the structured replacement for the
- *  retired `asked` boolean. Every consent/ask gate reads "the turn posed a question" through this.
+/** True when the turn's `did` carries an `ask` intention. Every consent/ask gate reads "the turn posed a
+ *  question" through this, never through a flag.
  *  Takes a READONLY array so a frozen `HistoryTurn.did` is read without copying. */
 export function hasAskIntent(did: readonly Intention[]): boolean {
   return did.some((i) => i.op === 'ask');
@@ -366,9 +355,9 @@ export function hasAskIntent(did: readonly Intention[]): boolean {
 
 /**
  * True when this observed call is the ASK event: the single `respond` terminal whose `did` carries an
- * `ask` intention (MI-D3). The bare `asked` boolean is retired — asking is now a declared `did`
- * intention like every other, extracted through {@link respondPayload}. Confirmation/consent guards key
- * on this instead of a tool name or a flag.
+ * `ask` intention. Asking is a declared `did` intention like every other, extracted through
+ * {@link respondPayload}, so confirmation/consent guards key on this rather than on a tool name or a
+ * flag.
  */
 export function isAskEvent(o: { name: string; args?: Record<string, unknown> }): boolean {
   return o.name === 'respond' && hasAskIntent(respondPayload(o.args ?? {}).did);
@@ -397,7 +386,7 @@ export interface RenderOpts {
  * `op` is free, agent-authored text. The engine default line never renders it, and `renderOperationReport`
  * documented that as "a leak is impossible by construction" — but the seam received the WHOLE claim, and
  * the seam's output IS delivered to the user, so the construction argument was false for exactly the one
- * path that matters (red-team r2, b3.1). Typing `op` as `undefined` here makes the law hold by
+ * path that matters. Typing `op` as `undefined` here makes the law hold by
  * construction for real: a domain that reads `c.op` does not compile, and at runtime there is nothing there.
  */
 export type RenderedClaim = Omit<Intention, 'op'> & { op?: undefined };
@@ -410,7 +399,7 @@ export type RenderedClaim = Omit<Intention, 'op'> & { op?: undefined };
  * name, never the word `respond`. When no `target` is present the line is a neutral generic sentence (the
  * "one action completed" shape the exhaustion closure calls for), so a leak is impossible by construction.
  */
-function defaultClaimLine(claim: TurnClaim, core: CoreOutcome): string {
+function defaultClaimLine(claim: Intention, core: CoreOutcome): string {
   const t = claim.target;
   switch (core) {
     case 'success':
@@ -437,11 +426,11 @@ function defaultClaimLine(claim: TurnClaim, core: CoreOutcome): string {
  * ledger fact and is skipped (it never survives the cross-check guards, so this is defensive only). A
  * domain overrides the wording per-claim via {@link RenderOpts.renderClaim}. Empty `did` ⇒ `''`.
  */
-export function renderOperationReport(did: TurnClaim[], opts?: RenderOpts): string {
+export function renderOperationReport(did: Intention[], opts?: RenderOpts): string {
   const lines: string[] = [];
   for (const claim of did) {
     // A speech intention carries no outcome (`undefined`) → resolves to null → renders no operation line
-    // (MI-D5: the `message` is the speech surface). resolveOutcome takes a string, so coerce absent → ''.
+    // (the `message` is the speech surface). resolveOutcome takes a string, so coerce absent → ''.
     const core = resolveOutcome(claim.outcome ?? '', opts?.outcomes);
     if (core === null) continue;
     // The seam is handed a NARROWED claim — never the advisory, agent-authored `op` (see RenderedClaim).
@@ -463,15 +452,15 @@ export function renderOperationReport(did: TurnClaim[], opts?: RenderOpts): stri
  *   · a WRITE that ran ok yet took NO effect (a probe) → contributes NOTHING (it changed nothing)
  *   · a READ (any non-write, incl. the runtime terminal) → contributes NOTHING
  *
- * EFFECT WINS OVER FLAGS (M6): `tookEffect` is tested FIRST. The old order let a write that BOTH landed
- * and carried `requiresConfirmation` render as "awaiting your confirmation" — the user told an action is
- * still pending their OK when the world had already made the change. `pending_confirmation` is honest only
- * for a write that did not take effect.
+ * EFFECT WINS OVER FLAGS: `tookEffect` is tested FIRST, so a write that BOTH landed and carried
+ * `requiresConfirmation` never renders as "awaiting your confirmation" — that would tell the user an
+ * action is still pending their OK when the world had already made the change. `pending_confirmation` is
+ * honest only for a write that did not take effect.
  *
- * LABELS ARE PER CALL (M5): each claim reads `o.producedLabel` — the label THAT call's own result issued.
- * The turn-wide `producedThisTurn` stream includes READ labels, so consuming it positionally across the
- * effected writes made a read's label shift onto a write's target (the engine's own honest closure then
- * named the wrong entity). A write with no label of its own yields a claim with no `target`, which
+ * LABELS ARE PER CALL: each claim reads `o.producedLabel` — the label THAT call's own result issued. The
+ * turn-wide `producedThisTurn` stream includes READ labels, so consuming it positionally across the
+ * effected writes would shift a read's label onto a write's target and the engine's own honest closure
+ * would name the wrong entity. A write with no label of its own yields a claim with no `target`, which
  * {@link renderOperationReport} renders as a generic completed-action line — so this NEVER leaks a tool
  * name (it names world-issued labels or nothing).
  *
@@ -487,9 +476,9 @@ export function deriveClaimsFromLedger(
   observed: ObservedCall[],
   turnIndex: number,
   writeTools: readonly string[],
-): TurnClaim[] {
+): Intention[] {
   const writes = new Set(writeTools);
-  const claims: TurnClaim[] = [];
+  const claims: Intention[] = [];
   for (const o of observed) {
     if (o.turnIndex !== turnIndex) continue;
     // A declared write tool, OR any call whose effect the WORLD attested — the engine's own honest account

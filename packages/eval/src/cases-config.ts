@@ -1,10 +1,10 @@
 /**
  * @looprun-ai/eval — the `evals/cases.json` schema (zod) + loader.
  *
- * THE EXAM AS DATA. A case used to be a free TypeScript object; a global bulk regex edit could (and
- * did, in the Atlas run) corrupt fifteen of them at once because the format made a sweeping edit look
- * as safe as a surgical one. As a strict JSON object the corruption class dies: an anchored edit
- * touches ONE case object, and a bulk regex over structured data is simply pointless.
+ * THE EXAM AS DATA. Cases held as free TypeScript objects are open to a global bulk regex edit that
+ * corrupts a dozen of them at once, because that format makes a sweeping edit look as safe as a
+ * surgical one. As a strict JSON object the corruption class dies: an anchored edit touches ONE case
+ * object, and a bulk regex over structured data is simply pointless.
  *
  * The JSON shape (spec §1) is deliberately terser than the in-memory {@link SubjectCase}:
  *   - `agent` lives ON the case (the JSON is self-routing) — the loader lifts it into the subject's

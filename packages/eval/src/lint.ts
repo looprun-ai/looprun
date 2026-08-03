@@ -6,11 +6,10 @@
  *   2. Stateful regex — /g|/y flags used with .test()/.exec() (lastIndex leaks across calls).
  *   3. Contract-persona law — a contract file may not carry a `persona:` key (persona lives on the spec).
  *
- * NOTE (firewall retired, 2026-08-02): there is no longer an S-1 firewall rule here. Guards see the FULL
- * conversation (`GuardCtx.history` + `userText`), so reading user text is no longer a lint finding. The
- * two protections that remain are the no-regex law (text pattern-matching stays out of the config surface;
- * a grep-gate in core fails on any RegExp-typed guard param) and the intent-based tool-routing ban (a
- * loop-shaping law). Text judgment a generated spec genuinely needs is an `llmCheck` rubric.
+ * Guards see the FULL conversation (`GuardCtx.history` + `userText`), so reading user text is NOT a lint
+ * finding. The two protections here are the no-regex law (text pattern-matching stays out of the config
+ * surface; a grep-gate in core fails on any RegExp-typed guard param) and the intent-based tool-routing
+ * ban (a loop-shaping law). Text judgment a generated spec genuinely needs is an `llmCheck` rubric.
  * Plus `--spec-laws` (subject-level): validateSpec warnings + no own systemPrompt.
  */
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
@@ -139,7 +138,7 @@ async function runCheck(b: GuardBinding, reply: string): Promise<{ violation: st
  * every OTHER onReply check() of the same spec is EXECUTED over it; a check that throws on the
  * synthetic ctx is its own finding.
  *
- * SCOPE, POST-SCG/MI: the requirer keys on STRUCTURE (a `did` target), while the vetoers that can
+ * SCOPE: the requirer keys on STRUCTURE (a `did` target), while the vetoers that can
  * contradict it are the text-reading ones (`llmCheck` rubrics, `custom` behavior checks, mutable
  * reply prose) — the required target still has to be SAYABLE. So the probe embeds the target in the
  * reply text; it is not claiming the coverage rule itself is text-matched.

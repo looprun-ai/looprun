@@ -26,7 +26,7 @@ import {
   renderOperationReport,
   respondPayload,
   type RespondPayload,
-  type TurnClaim,
+  type Intention,
 } from './claims.js';
 
 export interface ReplyViolation {
@@ -130,8 +130,8 @@ export async function evaluatePreTool(
 /** Run the onInput guards (before any LLM call). Returns the refusal reason, or null to proceed. */
 export async function evaluateOnInput(spec: AgentSpec, ledger: TurnLedger, world: AgentWorld): Promise<string | null> {
   const guards = resolveGuards(spec.guards.onInput);
-  // onInput: `args` is empty (no tool), but the guard now sees the REAL incoming user text via
-  // `userText` (this replaces the old hard-coded `args: {}` blindness) plus the prior `history`.
+  // onInput: `args` is empty (no tool); the guard reads the REAL incoming user text via `userText`
+  // plus the prior `history`.
   const gctx: GuardCtx = { args: {}, world, observed: ledger.observed, turnIndex: ledger.turnIndex, userText: ledger.currentUserText, history: ledger.history, adjudicator: ledger.adjudicator, adjudicatorTimeoutMs: ledger.adjudicatorTimeoutMs };
   for (const g of guards) {
     const reason = await g.check(gctx);
@@ -235,7 +235,7 @@ export interface PostToolEnforcement {
 }
 
 /**
- * OUTPUT-dim (postTool) enforcement — the previously-dead `spec.guards.postTool` hook. Runs each
+ * OUTPUT-dim (postTool) enforcement — the `spec.guards.postTool` hook. Runs each
  * already-resolved result-invariant guard against `ctx` (whose `ctx.result` carries the tool RESULT) and
  * collects, for every guard that FAILS, (a) an `output:${kind}:${tool}` correction tag and (b) the
  * `{ guard, reason }` pair. PURE: no I/O, no ledger mutation — the caller records the corrections and
@@ -290,16 +290,16 @@ function composeDelivery(payload: RespondPayload, contract?: DomainContract): st
  * sentence and may NEVER replace the report (see {@link finalizeReply}).
  *
  * The derived `did` is never empty: a turn on which the ledger shows nothing to report is still a DELIVERED
- * turn, and MI-D1 admits no delivered turn with zero intentions — the closure is prose, so the engine
- * declares it as the speech act it is (`inform`, which renders no operation line by MI-D5).
+ * turn, and no delivered turn may carry zero intentions — the closure is prose, so the engine declares it
+ * as the speech act it is (`inform`, which renders no operation line).
  */
 function deriveExhaustionClosure(
   ledger: TurnLedger,
   writeTools: readonly string[],
   contract?: DomainContract,
-): { report: string; sentence: string; text: string; did: TurnClaim[] } {
+): { report: string; sentence: string; text: string; did: Intention[] } {
   const fromLedger = deriveClaimsFromLedger(ledger.observed, ledger.turnIndex, writeTools);
-  const did: TurnClaim[] = fromLedger.length ? fromLedger : [{ op: 'inform' }];
+  const did: Intention[] = fromLedger.length ? fromLedger : [{ op: 'inform' }];
   const report = renderOperationReport(did, { renderClaim: contract?.renderClaim, outcomes: contract?.outcomes });
   const landed = did.some((c) => c.outcome === 'success');
   const sentence = landed ? EXHAUSTION_PARTIAL : EXHAUSTION_NOTHING;
@@ -313,10 +313,10 @@ function closureText(report: string, sentence: string): string {
 }
 
 /**
- * The blank-delivery FLOOR — the backend-independent guarantee that replaces the deleted `emptyReply`
- * guard (SCG-T5's "structurally impossible" claim did not hold: the `respond` schema's `minLength` is
- * enforced by the mastra backend but a zero-width message satisfies it, and a mutator (e.g.
- * `jargonScrub`) can blank an otherwise-fine delivery after the checks passed). Called at every point a
+ * The blank-delivery FLOOR — the backend-independent non-empty guarantee. Schema cannot supply it: the
+ * `respond` schema's `minLength` is enforced by the mastra backend but a zero-width message SATISFIES it,
+ * and a mutator (e.g. `jargonScrub`) can blank an otherwise-fine delivery after every check has passed.
+ * Called at every point a
  * composed delivery text is about to leave {@link finalizeReply} — the clean path and both salvage
  * returns: when `text` is blank ({@link isBlankDelivery}), swap in the engine-derived exhaustion closure
  * (non-empty by construction — {@link deriveExhaustionClosure}) and mark the turn exhausted. `exhausted`
@@ -326,7 +326,7 @@ function closureText(report: string, sentence: string): string {
  */
 function withBlankFloor(
   text: string,
-  did: TurnClaim[],
+  did: Intention[],
   violations: string[],
   exhaustedIfNotBlank: boolean,
   ledger: TurnLedger,
@@ -361,21 +361,21 @@ function withBlankFloor(
  * how it phrased it — and every unknown kind: the frontier is an ALLOW-list, so a business-authored
  * guard the runtime has never seen defaults to TRUTH. Opting a new kind in is a deliberate edit here.
  */
-// The reply-TEXT FORM kinds (replySingleQuestion / replyMaxOccurrences / replyMentions) are DELETED
-// (SCG-T5); `degenerationGuard` is the sole remaining salvageable FORM contract (an artifact-shape lint).
+// `degenerationGuard` — an artifact-shape lint — is the ONLY salvageable FORM contract. Nothing that
+// judges reply TEXT for meaning belongs here, because a salvaged delivery must still be true.
 const FORM_GUARD_KINDS: ReadonlySet<string> = new Set([
   'degenerationGuard',
 ]);
 
 /** Behaviour-dim kinds that are TRUTH/SAFETY — listed explicitly so the allow-list above can never
- *  accidentally grow over one of them (belt-and-braces: they are not in FORM_GUARD_KINDS either). The
- *  former regex-param honesty kinds are DELETED (no-regex law, 2026-08-02); `llmCheck` is the behavior
- *  TRUTH guard that replaced them — its verdict can make the user believe something false, so a candidate
- *  it vetoes is never delivered. (Unknown behavior kinds already default to TRUTH via the allow-list.) */
+ *  accidentally grow over one of them (belt-and-braces: they are not in FORM_GUARD_KINDS either).
+ *  `llmCheck` is the behavior TRUTH guard: its verdict can make the user believe something false, so a
+ *  candidate it vetoes is never delivered. (Unknown behavior kinds already default to TRUTH via the
+ *  allow-list.) */
 const TRUTH_GUARD_KINDS: ReadonlySet<string> = new Set([
   'llmCheck',
   'pendingConfirmMustAsk',
-  // The cross-check honesty core (SCG): each grounds the agent's structured declaration against the
+  // The cross-check honesty core: each grounds the agent's structured declaration against the
   // world ledger, so a candidate one of them vetoes can make the user believe something false about
   // what happened — never salvaged, never delivered over.
   'claimIsGrounded',
@@ -397,19 +397,19 @@ export interface FinalizedReply {
   /** The turn's DELIVERED, VERIFIED claims — the accepted/salvaged payload's `did`, or the engine-derived
    *  set on exhaustion. `finalizeReply` also syncs `ledger.did` to this, so `recordTurnHistory`
    *  retains the grounded set (T2 left history storing the RAW declaration; this is the verified one). */
-  did: TurnClaim[];
+  did: Intention[];
 }
 
 /**
- * The MANDATORY-DECLARATION FLOOR (MI-D1) — engine-owned, like the blank-delivery floor beside it.
+ * The MANDATORY-DECLARATION FLOOR — engine-owned, like the blank-delivery floor beside it.
  *
  * A candidate payload with ZERO intentions is not deliverable. The `respond` schema's `minItems:1` cannot
  * be the guarantee: it counts entries, and it cannot express the speech/action partition, so a single
  * malformed intention (`{op:'inform', outcome:'success'}` — the likeliest `did` mistake a weak model makes)
- * is schema-legal, is DROPPED by `validateClaims`, and left the pipeline holding the empty declaration
- * MI-D1 deleted: `claimIsGrounded` short-circuits on it, the operation report renders '', and the raw prose
- * shipped alone with no violations (red-team r2/A-V4, B-b2.4). The same hole swallowed the free-text
- * fallback path, where a model that never called the terminal delivered undeclared prose.
+ * is schema-legal and is DROPPED by `validateClaims`, leaving the pipeline holding an empty declaration.
+ * Without this floor `claimIsGrounded` short-circuits on it, the operation report renders '', and the raw
+ * prose ships alone with no violations — and the same hole swallows the free-text fallback path, where a
+ * model that never called the terminal would deliver undeclared prose.
  *
  * As a violation rather than a hard failure, it takes the ordinary route: the redrive relays the correction
  * (the backends re-generate with the terminal pinned), and a model that still declares nothing falls
@@ -430,7 +430,7 @@ const DECLARATION_GUARD: Guard = {
 
 /** Sync the ledger's reply-side declaration to `payload` and run the onReply checks against it — the ONE
  *  place `ctx.did` (read by the claims cross-check guards, and by the consent guards as the turn's
- *  AUTHORITATIVE ask record — MI-D3) and `ctx.reply` (the message, read by degenerationGuard) are seated,
+ *  AUTHORITATIVE ask record) and `ctx.reply` (the message, read by degenerationGuard) are seated,
  *  so a candidate payload is checked as a whole. The engine's own declaration floor runs FIRST, ahead of
  *  every installed guard: an undeclared payload is a protocol failure, not a content judgment. */
 async function checkPayload(
@@ -473,13 +473,13 @@ export async function finalizeReply(
   for (let r = 0; r < maxRedrives && violations.length; r++) {
     const next = await redrive(redriveMessage(violations));
     for (const v of violations) ledger.turnCorrections.push(`redrive:${v.guard.kind}`);
-    // MESSAGE AND `did` COME FROM THE SAME PAYLOAD — never spliced (red-team r2/C1). This used to keep
-    // the PREVIOUS message when the re-generation returned a blank one while adopting the new `did`
-    // unconditionally, so a redrive answering `{message:'', did:[{op:'ask'}]}` delivered the OLD,
-    // uncorrected sentence and SEALED the turn as having asked a question. That seal is the
-    // authoritative cross-turn consent signal (`askedInDeliveredTurn`'s history arm), so the engine
-    // itself manufactured a licence for a `confirmed:true` destructive act — no prune can reach it,
-    // because the defect is in the reply pipeline, not in the ledger.
+    // MESSAGE AND `did` COME FROM THE SAME PAYLOAD — never spliced. Keeping the PREVIOUS message when a
+    // re-generation returns a blank one, while adopting the new `did` unconditionally, would let a
+    // redrive answering `{message:'', did:[{op:'ask'}]}` deliver the OLD, uncorrected sentence and SEAL
+    // the turn as having asked a question. That seal is the authoritative cross-turn consent signal
+    // (`askedInDeliveredTurn`'s history arm), so the engine would manufacture a licence for a
+    // `confirmed:true` destructive act — and no prune could reach it, because the defect would be in the
+    // reply pipeline, not in the ledger.
     // A re-generation with no readable message is REJECTED WHOLE: the previous payload stands intact
     // (message AND did), the redrive counts as spent, and the turn falls through to salvage / the
     // engine-derived exhaustion closure — the honest outcome for a model that said nothing.
@@ -539,11 +539,11 @@ export async function finalizeReply(
       : contract?.exhaustionReply
         ? contract.exhaustionReply(world, okTools, ledger.producedThisTurn, finalViolations)
         : '';
-    // COMPOSE, NEVER REPLACE (red-team r2/A-V5). An override used to discard the WHOLE derived closure,
-    // report included — and its signature predates the structured payload, so it cannot re-render the
-    // report and nothing required it to. A domain whose override said "nothing was changed" (the natural
-    // abstain wording) delivered exactly that over a write the ledger recorded: `ledger.did` kept the
-    // derived truth, so the history and the user disagreed. The override supplies the closing SENTENCE;
+    // COMPOSE, NEVER REPLACE. Letting an override discard the WHOLE derived closure, report included,
+    // would put the user and the ledger in disagreement: the override signature cannot re-render the
+    // report, so a domain whose override says "nothing was changed" (the natural abstain wording) would
+    // deliver exactly that over a write the ledger recorded, while `ledger.did` kept the derived truth.
+    // The override supplies the closing SENTENCE;
     // the engine always prepends the verified operation report, exactly as `composeDelivery` does on the
     // clean path. The blank floor holds UNCONDITIONALLY: a blank override falls back to the engine's own
     // sentence rather than delivering the report alone.

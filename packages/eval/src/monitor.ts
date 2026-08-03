@@ -1,13 +1,14 @@
 /**
- * @looprun-ai/eval — the always-armed run-dir monitor (spec §3). The Atlas run armed its monitor
- * only after the operator complained; here every run dir is scanned the moment it finishes, and the
- * campaign REFUSES to certify over an unresolved incident.
+ * @looprun-ai/eval — the always-armed run-dir monitor (spec §3). Arming a monitor by hand loses every
+ * failure that lands before someone remembers to arm it, so it is armed by construction: every run
+ * dir is scanned the moment it finishes, and the campaign REFUSES to certify over an unresolved
+ * incident.
  *
  * Two engine-side vigils (the local-only FINGERPRINT/SPEED tok/s vigils are deliberately out of
  * scope — they need a local decode this instrument never sees):
- *   - NETWORK — a case whose run `error` carries a transport marker (a 178-error round is exactly
- *     this, unscanned). The token spend already happened; the point is that the number never
- *     silently folds a transport failure into a quality FAIL.
+ *   - NETWORK — a case whose run `error` carries a transport marker. The token spend already
+ *     happened; the point is that the number never silently folds a transport failure into a
+ *     quality FAIL.
  *   - HOLES   — a case with no judgeable transcript: a non-network run error, or an empty turn set.
  *     A hole cannot be judged, so certifying over it would be pass-by-absence.
  *
@@ -19,7 +20,7 @@ import { join } from 'node:path';
 import { readJsonl } from './fold.js';
 import type { CaseDump } from './run.js';
 
-/** Transport-failure markers — the class the 178-error round belonged to. */
+/** Transport-failure markers — the class a run `error` must match to be scored as NETWORK. */
 const NETWORK_RE =
   /(fetch failed|ENOTFOUND|ECONNREFUSED|ECONNRESET|ETIMEDOUT|socket hang up|network error|getaddrinfo|timed out|timeout|\b429\b|\b5\d\d\b)/i;
 

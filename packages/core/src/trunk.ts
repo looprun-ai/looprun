@@ -15,11 +15,11 @@
  * MESSAGE tail (like upload labels), keeping the stable prefix intact. For that to hold, a spec's
  * `persona` MUST be case-invariant (do not interpolate volatile world state into it).
  *
- * PROVENANCE The renderer no longer builds strings and joins them. It builds a typed,
+ * PROVENANCE The renderer does not build strings and join them. It builds a typed,
  * attributed table — {@link TrunkBlock}[] of {@link TrunkRow}s of {@link TrunkLine}s — and the trunk
- * string is a pure FOLD over that table ({@link foldTrunk}). Before this, `parts.join('\n\n')` was the
- * point where every trace of who-said-what died, which is precisely why contradictions between
- * sections (and between the trunk and the tool schemas the model also reads) were structurally
+ * string is a pure FOLD over that table ({@link foldTrunk}). A bare `parts.join('\n\n')` is the
+ * point where every trace of who-said-what dies, which is precisely why contradictions between
+ * sections (and between the trunk and the tool schemas the model also reads) would be structurally
  * unaskable. See `trunk-fold.ts` for the table's shape and the fold that renders it.
  */
 import { resolveBindings } from './spec.js';
@@ -147,12 +147,11 @@ const SECTION_GLOBAL_TOOL = '## Global tool rules';
 const SECTION_TOOL = '## Tool rules';
 const SECTION_REPLY = '## Reply rules (govern the message you send — checked on every reply)';
 /**
- * NEW `onInput` prose used to render under the `## Reply rules` heading,
- * which tells the model the rule governs "the message you send — checked on every reply". For an INPUT
- * rule that is simply false: it is checked on the INCOMING message, before the model acts, and a turn
- * it rejects never reaches a reply at all. A heading that misdescribes its own contents is the same
- * defect class as prose that misdescribes its check (the prose≠reason law) — so the two hooks now get
- * two headings instead of one heading that is honest for only one of them.
+ * `onInput` prose gets its OWN heading, separate from `## Reply rules`. The reply heading tells the
+ * model the rule governs "the message you send — checked on every reply", and for an INPUT rule that is
+ * simply false: an input rule is checked on the INCOMING message, before the model acts, and a turn it
+ * rejects never reaches a reply at all. A heading that misdescribes its own contents is the same defect
+ * class as prose that misdescribes its check (the prose≠reason law).
  *
  * BYTE-FREE for every shipping bundle: no generated bundle installs an `onInput` guard, so this block
  * is absent and the trunk is unchanged. It is placed immediately BEFORE `## Reply rules` (after

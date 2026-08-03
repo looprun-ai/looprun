@@ -10,20 +10,19 @@
  *              a deterministic guard-authored closure)
  *   controls → maxSteps (stop condition) · terminal (reply-only policy) · directives · exhaustionReply
  *
- * ONE class, `AgentSpecBase` (the former Minimal/Base/Full ladder is collapsed — a spec is a spec).
- * Its constructor auto-installs, layer-tagged and addressable, exactly:
+ * ONE class, `AgentSpecBase` — a spec is a spec. Its constructor auto-installs, layer-tagged and
+ * addressable, exactly:
  *   - ALWAYS the invariants EVERY agent carries: noDuplicateCall (preTool, id `minimal:noDuplicateCall`)
  *     + degenerationGuard (onReply, id `minimal:degenerationGuard`, the sole minimal onReply guard — a
- *     param-free artifact-shape lint). The former `emptyReply` floor is DELETED (SCG-T5): the guarantee is
- *     now ENGINE-OWNED — `finalizeReply` routes a blank delivery (zero-width included) to the non-empty
- *     engine-derived closure; the respond schema's `message` minLength cannot decide it (a zero-width
- *     message satisfies it). Reply-honesty
- *     text judgment (the former lexicon-fed noFalseFailureClaim) is now an `llmCheck` an author binds where needed;
+ *     param-free artifact-shape lint). The non-empty-reply guarantee is ENGINE-OWNED rather than a guard:
+ *     `finalizeReply` routes a blank delivery (zero-width included) to the non-empty engine-derived
+ *     closure, because the respond schema's `message` minLength cannot decide it (a zero-width message
+ *     satisfies it). Reply-honesty TEXT judgment is an `llmCheck` an author binds where the domain needs it;
  *   - IFF `destructiveTools` is non-empty, the destructive-safety protocol on those tools:
  *     confirmFirst (id `base:confirmFirst`) + destructiveThrottle (id `base:destructiveThrottle`).
- * Per-tool schema guards (argRequired/argFormat) are now AUTHORED explicitly by the spec — there is no
- * auto-schema layer. The `minimal:`/`base:` id namespaces are retained (load-bearing for resolveBindings
- * layer ordering + trunk prose order). resolveBindings sorts each hook agent → full → base → minimal so
+ * Per-tool schema guards (argRequired/argFormat) are AUTHORED explicitly by the spec — there is no
+ * auto-schema layer. The `minimal:`/`base:` id namespaces are load-bearing for resolveBindings layer
+ * ordering + trunk prose order. resolveBindings sorts each hook agent → full → base → minimal so
  * an agent correction always wins.
  */
 import { claimIsComplete, claimIsGrounded, confirmFirst, degenerationGuard, destructiveThrottle, noDuplicateCall } from './guards/index.js';
@@ -77,8 +76,7 @@ export interface MutatorBinding {
 export interface GuardBinding {
   id: string;
   /**
-   * onInput/onReply: ignored by the CHECK, but NOT by the RENDER — the old one-line comment here said
-   * only the first half and was therefore a lie by omission (found).
+   * onInput/onReply: ignored by the CHECK, but NOT by the RENDER — both halves matter.
    *
    * CHECK: the backend resolves onInput/onReply with no tool, and `resolveBindings` short-circuits on
    * `tool === undefined`, so target is never consulted to decide whether the guard RUNS.
@@ -197,9 +195,9 @@ const LAYER_ORDER: Record<Layer, number> = { agent: 0, full: 1, base: 2, minimal
 /**
  * THE HOOK×DIM MATRIX — which hook may carry which `dim`.
  *
- * The constructor used to validate ONE direction only ("a behavior/output guard may not be a preTool
- * gate"). The other direction was unchecked and SILENTLY INERT, because the hook decides which
- * `GuardCtx` fields exist:
+ * The constructor validates BOTH directions. Checking only one ("a behavior/output guard may not be a
+ * preTool gate") leaves the other SILENTLY INERT, because the hook decides which `GuardCtx` fields
+ * exist:
  *   · `reply` is populated ONLY on the onReply path  → a `behavior` guard installed on preTool/postTool/
  *     onInput reads `ctx.reply === undefined` and can never fire (the reply-honesty kinds all read it).
  *   · `result` is populated ONLY on the postTool path → an `output` guard (`resultInvariant`) installed
@@ -332,12 +330,11 @@ export interface AgentSpecConfig {
 }
 
 /**
- * The ONE AgentSpec class (no Minimal/Base/Full ladder). Its constructor always installs the universal
- * invariants (noDuplicateCall + degenerationGuard)
- * and, iff `destructiveTools` is non-empty, the destructive-safety protocol (confirmFirst +
- * destructiveThrottle) on those tools — confirmFirst keyed per-tool by `cfg.confirmMechanism`. Ids and
- * install order are byte-stable (`minimal:*` then `base:*`) so the layer-sorted trunk prose and
- * resolveBindings order are unchanged from the former ladder.
+ * The ONE AgentSpec class. Its constructor always installs the universal invariants (noDuplicateCall +
+ * degenerationGuard) and, iff `destructiveTools` is non-empty, the destructive-safety protocol
+ * (confirmFirst + destructiveThrottle) on those tools — confirmFirst keyed per-tool by
+ * `cfg.confirmMechanism`. Ids and install order are byte-stable (`minimal:*` then `base:*`), which is
+ * what makes the layer-sorted trunk prose and the resolveBindings order deterministic.
  */
 export class AgentSpecBase implements AgentSpec {
   readonly id: string;
@@ -399,33 +396,26 @@ export class AgentSpecBase implements AgentSpec {
     this.destructiveTools = [...(cfg.destructiveTools ?? [])];
     this.confirmMechanism = { ...(cfg.confirmMechanism ?? {}) };
     // Install order is load-bearing (byte-stable trunk): universal invariants first, destructive layer
-    // second — same as the former AgentSpecMinimal → AgentSpecBase super()/installBase() flow.
+    // second.
     this.installMinimal();
     this.installBase();
   }
 
   protected installMinimal(): void {
     this.addGuard('preTool', 'any', noDuplicateCall(), { layer: 'minimal', id: 'minimal:noDuplicateCall' });
-    // Output-channel degeneration lint (promoted after targeted validation + flash N=3
-    // zero-firing recert). FIRST among the onReply minimal guards: a degenerate reply must be re-driven
-    // before any content-level check reasons about it. (Its prose DOES render —  every
-    // hook's prose lands in the trunk; `target:'any'` onReply prose renders under `## Reply rules`. The
-    // previous "onReply prose does NOT render" note here was stale, and contradicted trunk.ts's own
-    // PROSE-RENDERING RULE + AgentSpec.behavior's doc — see GUARDS.md §2.)
-    // Output-channel degeneration lint (param-free artifact-shape lint since the no-regex law retired its
-    // selfNarrationRe branch). FIRST among the onReply minimal guards: a degenerate reply must be
-    // re-driven before any content-level check reasons about it. Its prose renders under `## Reply rules`.
+    // Output-channel degeneration lint (a param-free artifact-shape lint — it takes no patterns).
+    // FIRST among the onReply minimal guards: a degenerate reply must be re-driven before any
+    // content-level check reasons about it. Its prose renders under `## Reply rules` (every hook's prose
+    // lands in the trunk; `target:'any'` onReply prose renders there — see trunk.ts's PROSE-RENDERING
+    // RULE and GUARDS.md §2).
     this.addGuard('onReply', 'any', degenerationGuard(), { layer: 'minimal', id: 'minimal:degenerationGuard' });
-    // The former always-on `noFalseFailureClaim` reply-honesty invariant (auto-installed from
-    // `cfg.lexicon.falseFailureClaimRe`) is RETIRED with the no-regex law (2026-08-02): claiming inability
-    // while every call succeeded is a TEXT judgment, now `llmCheck`'s job — an author binds an `llmCheck`
-    // rubric on onReply where the domain needs it, instead of injecting a regex lexicon.
-    // The former always-on `emptyReply` floor is DELETED (SCG-T5): the guarantee moved into the ENGINE —
-    // `finalizeReply`'s blank-delivery floor (zero-width included) routes an empty composed delivery to the
-    // non-empty engine-derived closure; the respond schema's `message` minLength cannot decide it (a
-    // zero-width message satisfies it). No
-    // minimal onReply guard replaces it.
-    // THE HONESTY CROSS-CHECK (SCG): when the domain declares its WRITE surface, ground the agent's
+    // Two reply-level guarantees are deliberately NOT minimal guards:
+    //   · Claiming inability while every call succeeded is a TEXT judgment, so it belongs to `llmCheck` —
+    //     an author binds a rubric on onReply where the domain needs it, rather than injecting a regex lexicon.
+    //   · The non-empty reply floor is ENGINE-OWNED: `finalizeReply`'s blank-delivery floor (zero-width
+    //     included) routes an empty composed delivery to the non-empty engine-derived closure, because the
+    //     respond schema's `message` minLength cannot decide it (a zero-width message satisfies it).
+    // THE HONESTY CROSS-CHECK: when the domain declares its WRITE surface, ground the agent's
     // structured declaration (`ctx.did`) against the world ledger — every reported operation must match
     // what happened (`claimIsGrounded`) and every write that took effect must be reported
     // (`claimIsComplete`). Both are TRUTH guards (never salvaged/delivered over). Gated on `writeTools`
@@ -453,8 +443,8 @@ export class AgentSpecBase implements AgentSpec {
   protected installBase(): void {
     const destructive = this.destructiveTools;
     // A `confirmMechanism` key that is NOT a destructive tool (a typo, a renamed tool, a tool the author
-    // forgot to also list in `destructiveTools`) used to be ignored in silence, and the tool it MEANT to
-    // key fell back to `'arg'`. For a flag-LESS destructive tool that fallback is a permanent no-op:
+    // forgot to also list in `destructiveTools`) must be a construction error: silently ignoring it leaves
+    // the tool it MEANT to key on the `'arg'` fallback. For a flag-LESS destructive tool that is a permanent no-op:
     // `confirmFirst`'s arg mechanism returns null as soon as `args.confirmed !== true`, which is always —
     // i.e. the destructive-confirm gate reads as installed and enforces nothing. `destructiveTools` is
     // ⊆-validated above; the mechanism map is validated the same way, for the same reason.
@@ -517,13 +507,13 @@ export class AgentSpecBase implements AgentSpec {
   }
 
   addGuard(hook: Hook, target: ToolTarget, guard: Guard, opts?: { id?: string; layer?: Layer }): string {
-    // BOTH directions of the hook×dim matrix (see DIM_HOOKS): the old one-way check let a guard be
-    // installed on a hook whose GuardCtx can never satisfy it — a silent no-op that still reads as
+    // BOTH directions of the hook×dim matrix (see DIM_HOOKS) are checked: a one-way check would let a
+    // guard install on a hook whose GuardCtx can never satisfy it — a silent no-op that still reads as
     // coverage. Fail at construction instead.
     const legalHooks = DIM_HOOKS[guard.dim];
-    // An UNRECOGNISED dim used to install silently. `dim` is not free-form metadata: the backend's
+    // An UNRECOGNISED dim must not install. `dim` is not free-form metadata: the backend's
     // TRUTH/SAFETY↔FORM salvage frontier keys on it (`dim !== 'behavior'` ⇒ TRUTH by construction), and
-    // this matrix keys on it — so an unknown value gets an accidental classification nobody chose.
+    // this matrix keys on it — so an unknown value would get an accidental classification nobody chose.
     if (!legalHooks) {
       throw new Error(
         `AgentSpec "${this.id}": guard ${guard.kind} declares an unknown dim '${guard.dim}'. ` +

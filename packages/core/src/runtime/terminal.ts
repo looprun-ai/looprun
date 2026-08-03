@@ -5,11 +5,11 @@
  * tool `respond` — combined with `toolChoice:'required'` this forces action before speech and makes
  * the user-facing text a verifiable tool argument instead of free text.
  *
- * `respond` is STRUCTURED (SCG, 2026-08-02; MI, 2026-08-03): the non-operational prose rides `message`,
+ * `respond` is STRUCTURED: the non-operational prose rides `message`,
  * and `did` (≥1 `Intention`, enforced by the schema) declares what the turn IS — action intentions the
  * cross-check guards ground against the world ledger, speech intentions (`inform`/`greet`/`refuse`/`ask`)
- * that classify the message's speech act. Asking is an `ask` intention, not a flag; the two-terminal
- * protocol (`replyToUser`/`askUser`) is RETIRED.
+ * that classify the message's speech act. Asking is an `ask` intention, not a flag, and not a second
+ * terminal tool — there is exactly ONE terminal.
  */
 import type { ToolDef } from './types.js';
 import { terminalPayloadRejection } from './claims.js';
@@ -66,7 +66,7 @@ export function prematureTerminalTools(steps: any): string[] {
  * domain tools so the backend can invalidate the delivery. But invalidation alone leaves the premature
  * terminal's OBSERVATION in the ledger — and a premature `respond` whose `did` carried an `ask`
  * intention then reads, next turn, as "the user was asked", licensing the consent guards off a question
- * the user never saw (red-team M8). This returns the terminal CALLS of every step that also carried a
+ * the user never saw. This returns the terminal CALLS of every step that also carried a
  * domain call, so the caller can prune them from `ledger.observed` — symmetric with
  * {@link supersededTerminalCalls}, and reading both toolCall shapes the same way.
  */
@@ -111,13 +111,13 @@ export function supersededTerminalCalls(steps: any): Array<{ name: string; args:
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const calls = ((step?.toolCalls ?? []) as any[]).filter((tc) => isTerminal(toolCallName(tc)));
     if (calls.length < 2) continue;
-    // THE DELIVERED ONE IS THE LAST THE RUNTIME WOULD ACCEPT (red-team r2/C5). This used to be "the last
-    // terminal with a non-empty message", a notion that drifts from what the runtime actually delivers:
-    // for a step of [respond{message:'Done.', did:[…]}, respond{message:'Are you sure?', did:[]}] the
-    // second is REFUSED (`did` violates minItems, so it never executes and never becomes the reply) yet
-    // it counted as delivered — and the prune then dropped the observation for the message the user
-    // really received. `terminalPayloadRejection` is the ONE acceptance notion, shared with the backend
-    // hook that refuses such a call in the first place.
+    // THE DELIVERED ONE IS THE LAST THE RUNTIME WOULD ACCEPT. "The last terminal with a non-empty
+    // message" is a different notion and drifts from what the runtime actually delivers: for a step of
+    // [respond{message:'Done.', did:[…]}, respond{message:'Are you sure?', did:[]}] the second is REFUSED
+    // (`did` violates minItems, so it never executes and never becomes the reply), so counting it as
+    // delivered would make the prune drop the observation for the message the user really received.
+    // `terminalPayloadRejection` is the ONE acceptance notion, shared with the backend hook that refuses
+    // such a call in the first place.
     const delivered = calls.reduce(
       (acc, tc, i) => (terminalPayloadRejection(toolCallArgs(tc)) === null ? i : acc),
       -1,
@@ -303,7 +303,7 @@ export function terminalToolDefs(): ToolDef[] {
  * This is what makes the protocol independent of how a host happens to declare its terminal: a
  * description written for a different runtime, an extra required argument, or a differently-named
  * field (which this runtime would silently ignore, since the terminal execute and the salvage both
- * key on `args.message` / `args.did`) are all replaced by the contract above.
+ * key on `args.message` / `args.did`) all give way to the contract above.
  */
 export function normalizeTerminalToolDef(def: ToolDef): ToolDef {
   return isTerminal(def.name) ? respondToolDef() : def;

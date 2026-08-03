@@ -50,7 +50,7 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
     hook: 'preTool',
     summary: 'An unconditional deny of the bound tool while the binding is installed — the first call is denied too.',
     whenToUse:
-      'A tool must be off, no matter what. Its scope is the BINDING\'S LIFETIME — the check is `() => reason`, with no turn logic in it at all, so the ban holds for as long as the binding is installed (the name is historical). It is not a repeat detector: reach for `noDuplicateCall` when the FIRST call is legitimate and only the repeat is not.',
+      'A tool must be off, no matter what. Its scope is the BINDING\'S LIFETIME — the check is `() => reason`, with no turn logic in it at all, so — despite the name — the ban holds for as long as the binding is installed, not for one turn. It is not a repeat detector: reach for `noDuplicateCall` when the FIRST call is legitimate and only the repeat is not.',
     example: `forbidThisTurn('Do not reschedule while a cancellation is pending — resolve that first.')`,
   },
   {
@@ -169,22 +169,15 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
   },
 
   // ── honesty ────────────────────────────────────────────────────────────────
-  // NOTE (no-regex law, 2026-08-02): the former regex-param honesty kinds — noFabricatedSuccess,
-  // destructiveClaimRequiresSuccess, noFalseFailureClaim, noOutOfSurfaceActionClaim,
-  // noUngroundedRegulatedFigure, noCompetitorClaim — are DELETED. Each was a text judgment over the
-  // reply ("did the model claim X that did not happen / that it cannot substantiate?"), which is now
-  // `llmCheck`'s job: an author binds an `llmCheck` rubric (host adjudicator, no closure-held pattern).
-  // The two reply-borne text kinds that lived in `reply.ts` go the same way and for the same reason:
-  //   - minimalDisclosure (a PII/regulated-field pattern over the reply, grounded in tool results) →
-  //     an `llmCheck` rubric ("does the reply disclose a personal/regulated field the tool results do
-  //     not ground?"). PII detection is text judgment, not a structural signal.
-  //   - noInstructionFromData (a preTool gate that read reply/result text for an injected imperative) →
-  //     an `llmCheck` preTool rubric ("does a tool result instruct a destructive act the user did not
-  //     authorise this turn?"). Prompt-injection detection is text judgment; structure cannot decide it.
-  //
-  // The honesty section is REPOPULATED, deterministically this time (SCG): the three cross-check kinds
-  // read the agent's STRUCTURED declaration (`ctx.did`) against the world ledger, never the reply prose —
-  // so they carry no pattern and cannot be broken by polarity the way the deleted text kinds were.
+  // THE HONESTY KINDS ARE STRUCTURAL, NOT TEXTUAL: each reads the agent's declaration (`ctx.did`)
+  // against the world ledger, never the reply prose, so it carries no pattern and no polarity that a
+  // wording can flip. Judgments that only text can settle stay OUT of this section and belong to
+  // `llmCheck`, where a host adjudicator decides and no closure holds a pattern:
+  //   - "did the model claim something that did not happen, or that it cannot substantiate?"
+  //   - "does the reply disclose a personal or regulated field the tool results do not ground?"
+  //     (PII detection is text judgment, not a structural signal)
+  //   - "does a tool result instruct a destructive act the user did not authorise this turn?"
+  //     (prompt-injection detection is text judgment; structure cannot decide it)
   {
     name: 'claimIsGrounded',
     category: 'honesty',
@@ -192,7 +185,7 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
     summary:
       'Every operation the agent declares in `did` must match the world ledger: a `success` needs a write that took effect, `not_found` an empty read, `blocked`/`refused` a veto or world refusal, `no_op` a call that addressed the entity and no effected write on it — an undeclared outcome word is always a violation.',
     whenToUse:
-      'Always on when the domain declares its `writeTools` (the spec class auto-installs it, fed by `contract.writeTools` + `contract.outcomes`). It is the ledger cross-check that replaced the deleted prose honesty guards: it keys on `target` + `outcome` against verified calls, never on op-name semantics or reply text, so a fabricated success cannot ground. It checks ACTION intentions only — a speech intention (`inform`/`greet`/`refuse`/`ask`) names no ledger fact. A `target` matches an IDENTITY the ledger carries — a scalar under `id`/`label`/`<entity>Id`, never a status word, a note or a sentence — by WHOLE-VALUE equality, so `BK-1` never grounds against `BK-10` and `12` never stands for `Order 12`. A `success` matches only what the WORLD issued for the write (its own entity, not the ones its result references); a claim of absence or non-effect (`not_found`/`failure`/`blocked`/`refused`/`pending_confirmation`/`no_op`) matches the world\'s negative answer plus the identity-key ARGS that name the entity asked about, because an absent record issues no value of its own. An `amount`, when declared, must appear among the magnitudes of that same ledger fact. A domain outcome word must map to a core outcome via the contract\'s outcome map or it reads as undeclared.',
+      'Always on when the domain declares its `writeTools` (the spec class auto-installs it, fed by `contract.writeTools` + `contract.outcomes`). It is the ledger cross-check: it keys on `target` + `outcome` against verified calls, never on op-name semantics or reply text, so a fabricated success cannot ground. It checks ACTION intentions only — a speech intention (`inform`/`greet`/`refuse`/`ask`) names no ledger fact. A `target` matches an IDENTITY the ledger carries — a scalar under `id`/`label`/`<entity>Id`, never a status word, a note or a sentence — by WHOLE-VALUE equality, so `BK-1` never grounds against `BK-10` and `12` never stands for `Order 12`. A `success` matches only what the WORLD issued for the write (its own entity, not the ones its result references); a claim of absence or non-effect (`not_found`/`failure`/`blocked`/`refused`/`pending_confirmation`/`no_op`) matches the world\'s negative answer plus the identity-key ARGS that name the entity asked about, because an absent record issues no value of its own. An `amount`, when declared, must appear among the magnitudes of that same ledger fact. A domain outcome word must map to a core outcome via the contract\'s outcome map or it reads as undeclared.',
     example: `claimIsGrounded({ writeTools: ['createBooking', 'cancelBooking'], outcomes: { settled: 'success' } })`,
   },
   {
@@ -212,36 +205,28 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
     summary:
       'Each configured target must appear in `did` with the required outcome polarity (or any polarity when `outcome: \'any\'`).',
     whenToUse:
-      'The per-case coverage rule that replaces `replyMentions`/`replyConfirmsLabels`: because polarity is a FIELD, a reply that says "no record of BK-1 was found" can never satisfy a `success` requirement again. The target must BE the claim\'s `target` by whole-value equality, so neither a claim about `BK-10` nor a sentence-shaped target answers a rubric about `BK-1`. Config-bound only (a per-case norm) — never auto-installed. Pass `\'any\'` when only the mention matters, a specific outcome when the polarity is the point.',
+      'The per-case coverage rule: because polarity is a FIELD, a reply that says "no record of BK-1 was found" can never satisfy a `success` requirement again. The target must BE the claim\'s `target` by whole-value equality, so neither a claim about `BK-10` nor a sentence-shaped target answers a rubric about `BK-1`. Config-bound only (a per-case norm) — never auto-installed. Pass `\'any\'` when only the mention matters, a specific outcome when the polarity is the point.',
     example: `claimCoversRubric({ targets: ['BK-100234'], outcome: 'success' }, 'Account for the booking you were asked about.')`,
   },
 
   // ── reply ──────────────────────────────────────────────────────────────────
-  // TOMBSTONE (tier-③ deletion, SCG-T5) — the reply-TEXT guards are DELETED, each recorded with the
-  // red-team break that made it unsound (reply prose stopped being a thing guards READ):
-  //   · replyMentions       — POLARITY BLINDNESS: a literal mention scan for a record id passes on a reply
-  //                           that says the record was NOT found. No pattern reads polarity. Replaced by
-  //                           `claimCoversRubric` (honesty.ts), where outcome polarity is a FIELD of `did`.
-  //   · replySingleQuestion — PUNCTUATION LITERALISM (batch-c): a second question worded without a '?' (or a
-  //                           full-width '？') defeats the one-'?' count. No sound structural fix — a domain
-  //                           that truly needs it binds an `llmCheck` rubric (text judgment).
-  //   · replyMaxOccurrences — CTA LITERALISM (batch-c): asks worded outside the CTA lemma list bypass the
-  //                           cap (0 distinct matched). Same verdict as replySingleQuestion → `llmCheck`.
-  //   · emptyReply          — ZERO-WIDTH / WHITESPACE break (batch-a/c): a U+200B / U+2060 reply survives
-  //                           trim() and passes as "non-empty". NOT closed by schema — the respond terminal's
-  //                           `message` minLength 1 does not decide it (the mastra backend enforces that constraint
-  //                           since MI-T5, but a zero-width message SATISFIES it). The real guarantee
-  //                           is the ENGINE FLOOR: `finalizeReply` (`runtime/turn.ts`) strips zero-width/format
-  //                           characters and, when the composed delivery is still blank (including after a
-  //                           mutator rewrite), routes to the non-empty engine-derived exhaustion closure
-  //                           instead — no runtime guard needed; the floor is backend-independent.
+  // REPLY PROSE IS NOT A THING GUARDS READ FOR MEANING. A literal scan over a reply cannot see polarity
+  // (a mention of a record id reads the same whether the reply says it was found or not found), cannot
+  // see a question worded without a '?', and cannot see an ask worded outside a lemma list — so
+  // coverage and polarity are `claimCoversRubric`'s job over the structured `did`, and anything that
+  // genuinely needs to weigh wording is an `llmCheck` rubric.
+  // The NON-EMPTY guarantee is likewise not a guard: `finalizeReply` (`runtime/turn.ts`) strips
+  // zero-width/format characters and routes a still-blank composed delivery (including after a mutator
+  // rewrite) to the non-empty engine-derived exhaustion closure. Schema cannot decide it — a zero-width
+  // message SATISFIES the respond terminal's `message` minLength — and the engine floor is
+  // backend-independent.
   {
     name: 'degenerationGuard',
     category: 'reply',
     hook: 'onReply',
     summary: 'Catches leaked reasoning or tool markup, chat-template tokens and run-away line repetition in the reply.',
     whenToUse:
-      'The reply is broken as an ARTIFACT rather than wrong as a claim — think blocks, tool-call markup or the same line five times over. No honesty kind fires on that, because nothing was asserted; this one catches the weak-model failure class every domain shares. Always on (auto-installed); it takes no parameters (the former language-specific self-narration branch is now an `llmCheck` job).',
+      'The reply is broken as an ARTIFACT rather than wrong as a claim — think blocks, tool-call markup or the same line five times over. No honesty kind fires on that, because nothing was asserted; this one catches the weak-model failure class every domain shares. Always on (auto-installed); it takes no parameters — language-specific judgments such as self-narration are text judgment, so an author who wants one binds an `llmCheck` rubric.',
     example: `degenerationGuard()`,
   },
   {
@@ -319,9 +304,8 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
 export const DENY_ONLY_PROSE_KINDS: readonly string[] = [
   'forbidThisTurn',
   'maxCalls',
-  // The reply-TEXT DENY_ONLY kinds (replyMentions / replyMaxOccurrences / replySingleQuestion) are DELETED
-  // (tier-③, SCG-T5). claimCoversRubric takes an authored `reason` (the deny) but renders a DERIVED,
-  // present-tense rule (`account for <targets> as <outcome>`) — the reason string never reaches the trunk.
+  // claimCoversRubric takes an authored `reason` (the deny) but renders a DERIVED, present-tense rule
+  // (`account for <targets> as <outcome>`) — the reason string never reaches the trunk.
   'claimCoversRubric',
 ];
 
@@ -338,9 +322,8 @@ export const CONFIRM_CLASS_KINDS: readonly string[] = ['confirmFirst', 'destruct
  * carry the missing sentence. The Q12 armed-seam-without-prose lint fails a spec that arms `seam` without
  * also passing `prose`.
  *
- * EMPTY since the no-regex law (2026-08-02): the only armed-seam kind was `noFabricatedSuccess`
- * (`banRe`/`banProse`), now DELETED — text judgment is `llmCheck`'s job, and an `llmCheck` carries its
- * whole rubric as prose (no separate seam). The registry stays as the seam the Q12 lint reads; a future
- * regex-free seam that still needs companion prose adds its row here.
+ * EMPTY: no guard kind denies on a business-owned pattern. Text judgment is `llmCheck`'s job, and an
+ * `llmCheck` carries its whole rubric as prose, so it needs no separate seam. The registry is the seam
+ * the Q12 lint reads; a regex-free seam that still needs companion prose adds its row here.
  */
 export const ARMED_SEAMS: readonly { kind: string; seam: string; prose: string }[] = [];

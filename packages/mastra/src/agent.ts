@@ -268,7 +268,7 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
       terminalProtocol: this.terminalProtocolOn,
     });
 
-    // ONE terminal now (`respond`); asking is a `did` INTENTION, not a tool — the reply-only policy
+    // ONE terminal (`respond`); asking is a `did` INTENTION, not a tool — the reply-only policy
     // rides the protocol prose (terminalProtocol(replyOnly)), not the tool set.
     const activeTools = this.nativeToolsMode
       ? [...this.nativeActiveNames, 'respond']
@@ -328,7 +328,7 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
         clearDeliveredTerminal(ledger);
         ledger.turnCorrections.push(`premature-terminal:${[...new Set(premature)].join(',')}`);
       }
-      // …and drop the invalidated terminal's OBSERVATION too (MI-T2 / red-team M8): clearing the captured
+      // …and drop the invalidated terminal's OBSERVATION too: clearing the captured
       // declaration leaves the hook-time `observed` push in place, where a `did` carrying an `ask`
       // intention reads — this turn and every later one — as a question the user answered. It never
       // reached them. Runs unconditionally: a premature terminal is never delivered, whatever its message.
@@ -487,13 +487,12 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const passOpts: Record<string, any> = {};
       for (const [k, v] of Object.entries(options ?? {})) if (k !== 'loopRun') passOpts[k] = v;
-      // SEAL THE STREAMED TURN (red-team r2/C2). This path advances `turnIndex` and feeds `observed`
-      // through the guard hooks, but it used to call `recordTurnHistory` NEVER — so the turn stayed
-      // permanently UNSEALED, and the cross-turn ask signal's old raw-`observed` fallback then read
-      // every `respond` the stream emitted (rejected ones included) as consent. The fallback is gone
-      // (`askedInDeliveredTurn` is history-only), which makes an unsealed turn fail CLOSED — and that
-      // is the availability bug this seal fixes: a question the user really was asked while streaming
-      // must still license the answer they give in the next turn, and the turn must be auditable.
+      // SEAL THE STREAMED TURN. This path advances `turnIndex` and feeds `observed` through the guard
+      // hooks, so without a `recordTurnHistory` call the turn would stay permanently UNSEALED. The
+      // cross-turn ask signal is history-only (`askedInDeliveredTurn`), so an unsealed turn fails
+      // CLOSED — and closed is an availability bug here: a question the user really was asked while
+      // streaming must still license the answer they give in the next turn, and the turn must be
+      // auditable.
       // What is sealed is what the terminal tool captured (`terminalReply` + its `did`) — the stream
       // path runs no reply finalization by design, so there is nothing later to reconcile.
       // A stream nobody consumes never finishes and is never sealed: it licenses nothing, which is the

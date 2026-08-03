@@ -19,7 +19,7 @@ export interface GuardHooks {
 export interface GuardHookOptions {
   /** NATIVE-TOOLS mode (incl. MCP): the tools execute themselves and the synthesized world keeps no
    *  ledger of its own, so `afterToolCall` writes the call into `world.toolCalls`. Without it the
-   *  world's record is permanently empty and every effect reads as unverifiable (red-team r2/C6). */
+   *  world's record is permanently empty and every effect reads as unverifiable. */
   nativeToolsMode?: boolean;
 }
 
@@ -28,7 +28,7 @@ export function makeGuardHooks(spec: AgentSpec, getSession: SessionAccessor, opt
     async beforeToolCall({ toolName, input }) {
       if (isTerminal(toolName)) {
         const args = (input ?? {}) as Record<string, unknown>;
-        // REFUSE BEFORE OBSERVING (red-team r2/C5). Mastra wraps the tool's `execute`, so this hook runs
+        // REFUSE BEFORE OBSERVING. Mastra wraps the tool's `execute`, so this hook runs
         // OUTSIDE the terminal's own input validation: a `respond` the runtime will REJECT (blank
         // message / no `did`) would otherwise be pushed into `observed` with `ok:true` — a call that
         // never executed, recorded as a successful observation, and (when its `did` carried an `ask`)
@@ -62,7 +62,7 @@ export function makeGuardHooks(spec: AgentSpec, getSession: SessionAccessor, opt
       const { ledger, world } = session;
       const args = (input ?? {}) as Record<string, unknown>;
       // NATIVE-TOOLS mode: the tool executed ITSELF, so nothing has written the world's ledger — and an
-      // empty ledger made every call read as "changed nothing" (red-team r2/C6). Record the call here,
+      // empty ledger would make every call read as "changed nothing". Record the call here,
       // where the runtime knows it ran and what it returned. EFFECT is derived from the RESULT, the only
       // evidence this path has: a call that succeeded and did NOT come back asking for confirmation
       // changed something. That keeps the legitimate two-step alive (a probe answering
@@ -74,11 +74,11 @@ export function makeGuardHooks(spec: AgentSpec, getSession: SessionAccessor, opt
         // INFERRED, not attested: there is no executor to ask on this path, so the flag really means "the
         // call succeeded and did not come back asking for confirmation" — true of every successful READ
         // too. `effectInferred` marks it so the honesty core keeps the `writeTools` intersection here
-        // instead of applying the attested-effect law to a guess (red-team r2/A-V3).
+        // instead of applying the attested-effect law to a guess.
         world.toolCalls.push({ name: toolName, args, result: output, tookEffect: ok && !pending, effectInferred: true });
       }
       recordToolResult(ledger, toolName, args, output, world);
-      // OUTPUT-dim (postTool) result invariants — enforce the previously-dead hook. ZERO-DIFF: a spec
+      // OUTPUT-dim (postTool) result invariants — this is where the postTool hook fires. ZERO-DIFF: a spec
       // with no postTool guards short-circuits here (no ctx built, no ledger writes). The tool already
       // executed — enforcement records an `output:…` correction + joins the reply-violation set so the
       // bounded no-tools redrive relays it (a report/repair, never a veto). Mastra AWAITS afterToolCall

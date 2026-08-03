@@ -4,7 +4,7 @@
  * yes license THIS act?", "is this reply promising something the world never did?" — a judgement over
  * the full conversation (history + user text) that no arg/observed pattern captures.
  *
- * THE CONTRACT (design 2026-08-02, firewall retired):
+ * THE CONTRACT:
  *  - The MODEL is host-registered: an {@link Adjudicator} on the runtime options, threaded onto the
  *    guard ctx, NEVER named in config. `llmCheck` only carries the trusted, pre-baked `rubric` (the
  *    question) and a `failMode`.
@@ -17,7 +17,7 @@
  *    every `check` uniformly, so an llmCheck coexists ordered with the sync guards on the same hook.
  *
  * PURITY: no LLM call, clock or entropy lives HERE — the guard only DELEGATES to the injected seam, so
- * the T1 purity lint holds. The impurity is the host's adjudicator, outside the guard surface.
+ * the purity lint holds. The impurity is the host's adjudicator, outside the guard surface.
  */
 import type { Guard, Dim } from '../rules.js';
 
@@ -79,9 +79,9 @@ export function llmCheck(opts: { rubric: string; failMode?: 'open' | 'closed'; d
         // Adjudicator UNREACHABLE (threw / rejected / TIMED OUT) — failMode decides. A host seam failure
         // (network, model, hang), NOT an author bug in the guard, so it is priced, not re-thrown.
         //
-        // RECORDED EITHER WAY (red-team r2/A-V8). A fail-OPEN unreachable adjudicator used to be
-        // indistinguishable from an approving one: the guard returned null, nothing was written anywhere,
-        // and no eval, log or operator could tell "the check ran and approved" from "the check never ran".
+        // RECORDED EITHER WAY. Left unrecorded, a fail-OPEN unreachable adjudicator is indistinguishable
+        // from an approving one: the guard returns null, nothing is written anywhere, and no eval, log or
+        // operator can tell "the check ran and approved" from "the check never ran".
         // The turn's correction log is the runtime's own record of what happened to a reply, so the
         // non-run goes there. (`notes` is the reply-side ctx's `turnCorrections`; a preTool-dim llmCheck
         // has none, and the optional push is a no-op there.)
@@ -94,7 +94,7 @@ export function llmCheck(opts: { rubric: string; failMode?: 'open' | 'closed'; d
 }
 
 /**
- * The `did × message` CONSISTENCY rubric (MI-D6) — the pre-baked question the backstop asks.
+ * The `did × message` CONSISTENCY rubric — the pre-baked question the backstop asks.
  *
  * Domain-neutral by construction: it names only the two engine-owned fields of a `respond` payload and the
  * generic word "operation". Model-facing protocol prose (it is rendered into the trunk and handed to the
@@ -107,12 +107,12 @@ const DID_MESSAGE_CONSISTENCY_RUBRIC =
   'tone or omission.';
 
 /**
- * The `did × message` CONSISTENCY BACKSTOP (MI-D6) — AVAILABLE, never auto-installed.
+ * The `did × message` CONSISTENCY BACKSTOP — AVAILABLE, never auto-installed.
  *
  * The deterministic cross-check grounds the DECLARATION against the world ledger, but the `message` is
  * free prose beside it: an agent can declare an honest `inform` and still WRITE that it refunded the
  * order. No structural signal reads that — polarity and assertion live in the prose, which is exactly
- * what a pattern cannot judge (the whole reason the regex-param honesty kinds were deleted). This is the
+ * what a pattern cannot judge, and the reason no honesty kind carries one. This is the
  * priced backstop for that residual: a trusted, pre-baked rubric answered by the host adjudicator.
  *
  * An author binds it where the stakes justify a model call per reply (financial, health); it is NOT part
@@ -123,7 +123,7 @@ const DID_MESSAGE_CONSISTENCY_RUBRIC =
  * IT FAILS CLOSED BY DEFAULT — unlike bare {@link llmCheck}, whose `'open'` default suits an author-bound
  * lint. This guard is not a lint: it is the ONLY named mitigation of the prose residual, so an adjudicator
  * outage (network, quota, model down, a 30 s hang) silently DELETING it is the whole attack — install it,
- * break the adjudicator, and the backstop is gone with nothing recorded (red-team r2/A-V8). A guarantee
+ * break the adjudicator, and the backstop is gone with nothing recorded. A guarantee
  * that evaporates exactly when the seam it depends on fails is not a guarantee.
  *
  * AVAILABILITY COST, stated: while the adjudicator is unreachable, every candidate reply is denied, so each

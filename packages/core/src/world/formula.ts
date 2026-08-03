@@ -1,5 +1,5 @@
 /**
- * The `derived` formula mini-language (increment 3b) — a CLOSED arithmetic grammar.
+ * The `derived` formula mini-language — a CLOSED arithmetic grammar.
  *
  * The spec sketches a derived value as a STRING: `"lateDays * dailyRate * 0.5"`. 3b keeps that string
  * form (it is what `world.json` serializes) and compiles it — at LOAD time — with a tiny tokenizer +

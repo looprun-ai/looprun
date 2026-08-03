@@ -1,7 +1,7 @@
 /**
  * @looprun-ai/mastra — JSON Schema → Zod (shallow; sufficient for Mastra createTool inputSchema).
  *
- * ── THE KEYWORD CONTRACT (decided at MI-T5 — this list is the whole of it) ────────────────────────
+ * ── THE KEYWORD CONTRACT (this list is the whole of it) ──────────────────────────────────────────
  *
  * | keyword                                | carried | why |
  * |----------------------------------------|---------|-----|
@@ -15,8 +15,8 @@
  * WHY `description` IS NON-NEGOTIABLE. The `respond` contract is not just a shape: its field
  * descriptions ARE the protocol — the intention vocabulary, the `inform` guardrail ("MUST NOT assert
  * a performed action"), the honest-outcome list, all authored in `core/runtime/terminal.ts`. A
- * converter that kept only types shipped the model an unexplained `{op,target,outcome,amount}` and
- * left the forcing function to the tool description alone.
+ * converter that kept only types would ship the model an unexplained `{op,target,outcome,amount}`
+ * and leave the forcing function to the tool description alone.
  *
  * WHY THE VALIDATION KEYWORDS STOP AT "NOT EMPTY". A constraint carried here is enforced LOCALLY by
  * zod before the tool executes, and that rejection is an UNGOVERNED failure path: no guard fires, no
@@ -32,7 +32,7 @@
  * THE FLOOR IS STILL THE ENGINE'S. `minLength` on `message` cannot decide emptiness (a zero-width
  * message satisfies it), so `finalizeReply`'s blank-delivery floor remains the guarantee.
  *
- * EVAL COMPARABILITY: carrying `description` changed the model-facing tool-schema bytes of EVERY
+ * EVAL COMPARABILITY: carrying `description` puts it in the model-facing tool-schema bytes of EVERY
  * subject — see the run-comparability note in `docs/benchmarks.md` §3.
  */
 import { z } from 'zod';

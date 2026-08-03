@@ -1,10 +1,10 @@
 /**
  * @looprun-ai/core — the TURN PROMPT producer: the single owner of the bytes the model receives.
  *
- * WHY THIS EXISTS. The assembly used to live inside the backend, duplicated across the two drivers:
- * each one folded `trunk + terminal protocol` into the instructions and `state block + uploads +
- * user text` into the message tail. Two copies of one law is a drift hazard, and it is worse than
- * ordinary duplication because the drift is INVISIBLE — a wrong prompt still produces a number.
+ * WHY THIS EXISTS. The assembly must NOT live inside the backend, where each of the two drivers would
+ * fold `trunk + terminal protocol` into the instructions and `state block + uploads + user text` into
+ * the message tail on its own. Two copies of one law is a drift hazard, and it is worse than ordinary
+ * duplication because the drift is INVISIBLE — a wrong prompt still produces a number.
  *
  * The offline instruments (the margin probe and its fork replays) need those exact bytes without
  * running a model. Giving them a REPLICA of this assembly is the failure this module is built to

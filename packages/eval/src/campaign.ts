@@ -1,6 +1,7 @@
 /**
  * @looprun-ai/eval — `looprun-eval campaign` (spec 2026-08-02): ONE verb for the whole measured
- * campaign, replacing the ~30 hand bash invocations + improvised watchers the Atlas run needed.
+ * campaign. Driving a campaign by hand costs dozens of bash invocations plus improvised watchers,
+ * and every one of them is a place for the instrument to drift between arms.
  *
  * Orchestration is deterministic work — engine work — so it lives here, not in the operator's head:
  *

@@ -11,7 +11,7 @@
  * prompt override; the spec fields that drive the loop are emptied. Never mutates the
  * source spec/contract — returns fresh plain objects.
  *
- * THE TERMINAL SURFACE IS IDENTICAL BY CONSTRUCTION (MI-T5). The `respond` schema — `did` with its
+ * THE TERMINAL SURFACE IS IDENTICAL BY CONSTRUCTION. The `respond` schema — `did` with its
  * minimum of one intention, the speech/action vocabulary, the `inform` guardrail — and the terminal
  * protocol prose are RUNTIME-owned (`terminalToolDefs` / `terminalProtocol`), so neither arm can
  * carry more or less of them than the other; `controls.terminal` (the reply-only policy that decides

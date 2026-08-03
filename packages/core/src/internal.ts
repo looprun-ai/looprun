@@ -39,7 +39,7 @@ export { renderScopedSpecTrunk } from './trunk.js';
 // Model call settings.
 export { normalizeModelParams, resolveModelSettings } from './model-params.js';
 
-// The declarative world builder (increment 3a). Seam, not taught API: its audience is the
+// The declarative world builder. Seam, not taught API: its audience is the
 // agentspec generator (which emits the WorldSpec literal) and hosts/fork authors wiring a world —
 // exactly the same audience as the governed-turn machinery below, and NO tutorial chapter teaches
 // it yet (3b finalizes the world.json form). AgentWorld the TYPE stays on the public barrel;
@@ -68,7 +68,7 @@ export {
 } from './runtime/ledger.js';
 export type { TurnLedger } from './runtime/ledger.js';
 
-// The structured-claim RENDERER + ledger derivation (SCG-T4): the engine renders the user-facing
+// The structured-claim RENDERER + ledger derivation: the engine renders the user-facing
 // operation report from the VERIFIED `did`, and derives the true claims from the ledger for the
 // exhaustion closure. Backends consume both; `RespondPayload`/`RenderOpts` ride finalizeReply's/the
 // renderer's signature so a declaration:true consumer can name them.
@@ -77,8 +77,8 @@ export {
   deriveClaimsFromLedger,
   respondPayload,
   terminalPayloadRejection,
-  // m10's assertion, exported so the CONFIG path can enforce the shadow law at its own door and report
-  // it as a path-qualified load error (red-team r2/b4.3): `packages/eval`'s loader builds a
+  // The shadow-law assertion, exported so the CONFIG path can enforce it at its own door and report
+  // it as a path-qualified load error: `packages/eval`'s loader builds a
   // contract-less spec, so the spec constructor's call site never sees its `outcomes` block. The guard
   // factories assert it too — this is the loader's earlier, better-worded gate, not the only one.
   assertNoCoreOutcomeShadow,

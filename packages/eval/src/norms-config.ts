@@ -1,16 +1,16 @@
 /**
  * @looprun-ai/eval — the `norms/<agent>.json` schema + loader.
  *
- * THE AUTHORING SURFACE WHERE HAND-WRITTEN REGEXES BECOME STRUCTURALLY IMPOSSIBLE. A generated
- * bundle used to install guards through free TypeScript (`custom()` + hand regexes); this loader
- * turns a guard into DATA — a small closed catalog of `kind`s, each carrying only NAMES (tools,
- * reads, args) and PROSE. Two properties are enforced by construction:
+ * THE AUTHORING SURFACE WHERE HAND-WRITTEN REGEXES BECOME STRUCTURALLY IMPOSSIBLE. A bundle that
+ * installs guards through free TypeScript (`custom()` + hand regexes) can smuggle a text pattern into
+ * any of them; this loader turns a guard into DATA — a small closed catalog of `kind`s, each carrying
+ * only NAMES (tools, reads, args) and PROSE. Two properties are enforced by construction:
  *
  *   1. NO field accepts a regex, a string pattern, or a free predicate. Every object is `.strict()`,
  *      so any `pattern`/`regex`/`re` key fails loudly (and a pre-scan names the offending path even
- *      before zod runs). This is the run's rule C made structural.
+ *      before zod runs).
  *   2. Guard prose lives ON the guard entry (`precondition.prose`, `uncheckable[].prose`) — never
- *      displaced into `behavior` (the run's finding A). `behavior[]` is style/voice residue ONLY.
+ *      displaced into `behavior`. `behavior[]` is style/voice residue ONLY.
  *
  * `precondition`'s `predicate` is a CLOSED expression language over world structure
  * (`count|limit|field` refs + `lt/lte/eq/neq/in/absent` ops), compiled to a world predicate at LOAD
@@ -72,9 +72,9 @@ const guardSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('askedEarlier'), id: z.string(), tool: z.string(), arg: z.string().optional() }).strict(),
   z
     .object({
-      // The structured coverage rule (SCG): every `target` must appear in the turn's `did` with the
-      // required `outcome` polarity ('any' accepts any RESOLVED outcome). Replaces the deleted reply-text
-      // `replyMentions`/`replyConfirmsLabels` — polarity is a FIELD, checked over structure, not prose.
+      // The structured coverage rule: every `target` must appear in the turn's `did` with the
+      // required `outcome` polarity ('any' accepts any RESOLVED outcome). Polarity is a FIELD, checked
+      // over structure — never over the reply prose.
       kind: z.literal('claimCoversRubric'),
       id: z.string(),
       targets: z.array(z.string()).min(1),
@@ -116,7 +116,7 @@ const guardSchema = z.discriminatedUnion('kind', [
     .strict(),
   z
     .object({
-      // The did × message BACKSTOP (MI-D6). Its rubric is BAKED into the engine factory, so there is no
+      // The did × message BACKSTOP. Its rubric is BAKED into the engine factory, so there is no
       // `rubric` field here — a domain opts IN to the engine's question, it does not rewrite it. Always
       // onReply and always global (it judges the delivered payload as a whole), so no `hook`/`tools`
       // either. Available, never auto-installed: an agent gets it only by naming it in its norms.
@@ -330,9 +330,8 @@ function installGuard(spec: AgentSpecBase, g: GuardConfig, deps: NormsDeps, outc
     case 'consentToken':
       // DENY-POLICY AUDIT: confirmFirst's deny names only the gated TOOL (structural) and never a world
       // figure or a role, so there is nothing for renderDeny (which is reads-shaped) to replace — it stays
-      // on its own figure-free primitive text. The unified confirmFirst with `via:'probe'` is the record-
-      // bound earlier-turn-preview gate that the former `confirmedNeedsEarlierProbe` kind provided; the
-      // recency law bounds the licensing probe to `within:1` by default.
+      // on its own figure-free primitive text. `confirmFirst` with `via:'probe'` IS the record-bound
+      // earlier-turn-preview gate; the recency law bounds the licensing probe to `within:1` by default.
       spec.addGuard('preTool', g.tools, normalizeConfirmed(confirmFirst({ via: 'probe' })), { layer: 'agent', id });
       return;
     case 'askedEarlier':
@@ -399,11 +398,11 @@ export function loadNormsConfig(json: unknown, deps: NormsDeps = {}): AgentSpec 
     throw new NormsConfigError(`norms config invalid at ${issue.path.join('.') || '(root)'}: ${issue.message}`);
   }
   const cfg = parsed.data;
-  // m10 — THE SHADOW LAW on the config path (red-team r2/b4.3). The spec constructor gates
-  // `contract.outcomes`, and this loader builds a CONTRACT-LESS spec: the config's `outcomes` block went
-  // straight into the cross-check guards, so `{"NOT_FOUND":"success"}` loaded clean and a `NOT_FOUND` claim
-  // then satisfied a `success` rubric. The guard factories now assert it themselves, but the config path
-  // owes the author a PATH-QUALIFIED load error rather than a raw guard-factory throw.
+  // THE SHADOW LAW on the config path. The spec constructor gates `contract.outcomes`, and this loader
+  // builds a CONTRACT-LESS spec: unchecked, the config's `outcomes` block would go straight into the
+  // cross-check guards, so `{"NOT_FOUND":"success"}` would load clean and a `NOT_FOUND` claim would then
+  // satisfy a `success` rubric. The guard factories assert it themselves, but the config path owes the
+  // author a PATH-QUALIFIED load error rather than a raw guard-factory throw.
   try {
     assertNoCoreOutcomeShadow(cfg.outcomes, 'norms config `outcomes`');
   } catch (e) {

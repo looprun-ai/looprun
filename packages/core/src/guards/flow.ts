@@ -62,11 +62,10 @@ export function requiresBefore(deps: string[], opts?: { within?: number }): Guar
  * (post-hoc, read only when the model already violated); `prose()` returns a followable RULE derived
  * from the guard's parameters, read BEFORE acting. Pass `prose` to override the derived default.
  *
- * PROSE↔CHECK ALIGNMENT: the derived prose used to read "do not call this
- * tool AGAIN in this turn", which describes a repeat-detector — there is none. `check` is
- * `() => reason`, unconditional and turn-logic-free: the FIRST call is denied too. The CHECK is the
- * intended semantics (this kind is the hard "not now" on a tool; the repeat-detector is
- * `noDuplicateCall`), so the PROSE was corrected to state the unconditional ban.
+ * PROSE↔CHECK ALIGNMENT: the derived prose states an UNCONDITIONAL ban, not "do not call this tool
+ * AGAIN in this turn" — the latter describes a repeat-detector, and this kind is not one. `check` is
+ * `() => reason`, unconditional and turn-logic-free: the FIRST call is denied too. This kind is the hard
+ * "not now" on a tool; the repeat-detector is `noDuplicateCall`.
  */
 export function forbidThisTurn(reason: string, prose?: string): Guard {
   return {
@@ -121,12 +120,11 @@ export function canonArgs(v: unknown): string {
  * Describe what a prior tool result actually CAME BACK WITH, in one clause — pure, domain-neutral,
  * shape-driven (it reads container sizes, never values).
  *
- * WHY: `noDuplicateCall`'s deny used to assert "…and it succeeded —
- * Use the earlier result and move on". But `ok` is true for a call that returned an EMPTY list, so the
- * model was told to use a result with no content in it. Measured shape: a trace
- * where the model swept `listBookings` status-by-status 6× — each call "succeeded", each came back empty,
- * and the correction gave it no way to know that repeating the sweep was pointless. A deny that names the
- * SHAPE of what came back ("came back EMPTY (zero items)") is followable; "it succeeded" is not.
+ * WHY: `noDuplicateCall`'s deny must not assert "…and it succeeded — use the earlier result and move
+ * on". `ok` is true for a call that returned an EMPTY list, so that wording tells the model to use a
+ * result with no content in it: a model sweeping `listBookings` status-by-status gets "succeeded" on
+ * every empty call and no way to know that repeating the sweep is pointless. A deny that names the SHAPE
+ * of what came back ("came back EMPTY (zero items)") is followable; "it succeeded" is not.
  */
 function describeResultShape(result: unknown): string {
   if (result === undefined || result === null) return 'came back with nothing';

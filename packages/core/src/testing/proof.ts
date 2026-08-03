@@ -66,14 +66,12 @@ export interface GuardProof {
    *  guards (e.g. claimCoversRubric / claimIsGrounded / claimIsComplete, which need a per-agent `did`
    *  contract): an author binds those to ONE agent's specific contract — installing them agent-wide over
    *  arbitrary scenarios would fire on every unrelated turn by construction, which is a category error, not
-   *  an interference finding. They are still fully proven isolated (L1 + L3). (The deleted reply-text kinds
-   *  replyMentions / replySingleQuestion / replyMaxOccurrences were the former example — tier-③, SCG-T5.) */
+   *  an interference finding. They are still fully proven isolated (L1 + L3). */
   collective?: 'include' | 'skip';
   cases: ProofCase[];
 }
 
-/** The collective non-interference whitelist — the kinds AgentSpecBase auto-installs. (emptyReply was
- *  auto-installed until its tier-③ deletion, SCG-T5.) */
+/** The collective non-interference whitelist — the kinds AgentSpecBase auto-installs. */
 export const AUTO_LAYER_KINDS = [
   'noDuplicateCall',
   'degenerationGuard',

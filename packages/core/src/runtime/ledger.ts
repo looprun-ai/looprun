@@ -2,14 +2,13 @@
  * @looprun-ai/core runtime — the per-conversation observation LEDGER (framework-free).
  *
  * The ledger is what guards read (`ctx.observed`, `producedThisTurn`, …): the model's own verified
- * tool activity, plus the turn-structured `history` (user text included, since the firewall was
- * retired 2026-08-02). `observed` and `history` accumulate for the whole conversation; the other
+ * tool activity, plus the turn-structured `history` (user text included). `observed` and `history` accumulate for the whole conversation; the other
  * fields reset per turn via `beginTurn`.
  */
 import type { AgentWorld, Guard, ObservedCall, HistoryTurn, HistoryToolCall, Adjudicator } from '../rules.js';
 import { canonArgs } from '../guards/index.js';
 import { isTerminal } from './terminal.js';
-import { validateClaims, type TurnClaim } from './claims.js';
+import { validateClaims, type Intention } from './claims.js';
 
 /** An OUTPUT-dim (postTool) result-invariant failure OR a flowChain restate — carried on the ledger
  *  and JOINED into the onReply violation set so the same bounded no-tools redrive relays its text. */
@@ -27,10 +26,10 @@ export interface TurnLedger {
   terminalReply: string;
   /** The CURRENT turn's DELIVERED structured claim of operations — the delivered `respond`'s `did`
    *  (the last ok respond carrying a non-empty `message`, consistent with the superseded-terminal
-   *  pruning). Read into the reply-side GuardCtx as `ctx.did` so the cross-check guards (T4) ground the
+   *  pruning). Read into the reply-side GuardCtx as `ctx.did` so the cross-check guards ground the
    *  agent's DECLARATION against the world ledger. It is ALSO the turn's ask record — the turn posed a
-   *  question iff `hasAskIntent(ledger.did)` (MI-D3; the `asked` boolean is retired). Reset per turn. */
-  did: TurnClaim[];
+   *  question iff `hasAskIntent(ledger.did)`, never through a flag. Reset per turn. */
+  did: Intention[];
   /** Consecutive guard-vetoed rounds this turn (reset when a call passes guards and executes). */
   vetoStreak: number;
   /** OUTPUT-dim (postTool) result-invariant violations + flowChain restates accrued this turn — joined
@@ -129,17 +128,17 @@ export function recordToolResult(ledger: TurnLedger, name: string, args: Record<
   // job) can distinguish an action-success from a read-success and NOT veto an honest "cannot do X / no
   // record found" reply on a read-only turn.
   //
-  // NO RECORD ⇒ UNKNOWN, NEVER `false` (red-team r2/C6). This used to write `tookEffect: false` whenever
-  // a world object was present but held no matching row, which conflates "the world says it changed
-  // nothing" with "nobody recorded what happened" — and a world whose ledger nothing writes (the
-  // native-tools/MCP stub) then reported every mutation as effect-free, making `destructiveThrottle`'s
-  // EFFECT-BEATS-FLAGS rule inert. The field is now OMITTED when there is no row, and the readers treat
-  // unknown as unverified rather than as "no effect".
+  // NO RECORD ⇒ UNKNOWN, NEVER `false`. Writing `tookEffect: false` whenever a world object is present
+  // but holds no matching row would conflate "the world says it changed nothing" with "nobody recorded
+  // what happened" — and a world whose ledger nothing writes (the native-tools/MCP stub) would then
+  // report every mutation as effect-free, making `destructiveThrottle`'s EFFECT-BEATS-FLAGS rule inert.
+  // The field is OMITTED when there is no row, and the readers treat unknown as unverified rather than
+  // as "no effect".
   const wtc = world
     ? [...world.toolCalls].reverse().find((t) => t.name === name && canonArgs((t.args ?? {}) as Record<string, unknown>) === canonArgs(args))
     : undefined;
   // The label THIS call's result issued, if any. It rides the observed entry (so the derived account can
-  // name the acting call's own entity — red-team M5) AND the turn-wide `producedThisTurn` stream (which
+  // name the acting call's own entity) AND the turn-wide `producedThisTurn` stream (which
   // the guard ctx and the domain `exhaustionReply` seams still read as a flat list of what was produced).
   const lbl = ok ? (output as { label?: unknown } | null | undefined)?.label : undefined;
   const producedLabel = typeof lbl === 'string' ? lbl : undefined;
@@ -189,7 +188,7 @@ export function clearDeliveredTerminal(ledger: TurnLedger): void {
 /**
  * Drop terminal calls that were emitted but never DELIVERED. TWO producers feed it, one per ghost path:
  * `supersededTerminalCalls` (the within-step delivery contest) and `prematureTerminalCalls` (a terminal
- * that shared its step with domain work, so the premature policy invalidated it — MI-T2 / red-team M8).
+ * that shared its step with domain work, so the premature policy invalidated it).
  *
  * Runs once the generation has resolved, so the hook-time record that gave a same-step sibling's preTool
  * checks visibility of an ask (`respond` whose `did` carries an `ask` intention) has already done its
@@ -215,8 +214,8 @@ export function pruneSupersededTerminals(
 }
 
 /** Capture the DELIVERED respond's declaration (the observed push happens at hook time via
- *  recordTerminalCall). The user-facing prose is `respond`'s `message` arg (SCG, 2026-08-02 — was
- *  `text`); the structured intentions ride `did`, and asking is an `ask` intention among them (MI-D3).
+ *  recordTerminalCall). The user-facing prose is `respond`'s `message` arg; the structured intentions
+ *  ride `did`, and asking is an `ask` intention among them.
  *  All of it is the DELIVERED terminal's — captured together, gated on a non-empty `message` and last-wins, so
  *  they track the exact respond the runtime delivers (the last ok respond with non-empty message,
  *  consistent with `supersededTerminalCalls`). An ill-shaped `did` is not silently dropped: the

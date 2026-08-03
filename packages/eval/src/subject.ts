@@ -142,8 +142,8 @@ export async function loadSubject(subjectDir: string, deps: WorldConfigDeps = {}
   if (!specs || !Object.keys(specs).length) throw new Error(`${dir}/norms/index exports no SPECS map`);
   if (!contract) throw new Error(`${dir}/norms/index exports no CONTRACT`);
 
-  // The JSON exam wins when present; otherwise fall back to the TS `evals/cases` module (coworking /
-  // atlas author cases in TS, and both bundles must keep working).
+  // The JSON exam wins when present; otherwise fall back to the TS `evals/cases` module — a subject
+  // may author its cases in either form, and both bundles must keep working.
   const explicitAgent = (norms.CASE_AGENT ?? {}) as Record<string, string>;
   const json = readCasesJson(dir);
   let cases: SubjectCase[];

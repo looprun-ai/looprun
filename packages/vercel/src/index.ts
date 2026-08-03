@@ -8,12 +8,12 @@
  *      on terminal calls (`isTerminal`), and the forced-terminal fallback.
  *   3. Reply finalization via `finalizeReply` with a bounded NO-TOOLS re-generate callback —
  *      never a framework-level retry that re-runs side-effecting tools.
- *   4. The STRUCTURED terminal (SCG/MI): ship `terminalToolDefs()` / `normalizeTerminalToolDef` AS
+ *   4. The STRUCTURED terminal: ship `terminalToolDefs()` / `normalizeTerminalToolDef` AS
  *      AUTHORED — `did` keeps `minItems: 1` and every field keeps its description, because the
  *      intention vocabulary and the `inform` guardrail ARE the honesty forcing function (a
  *      schema converter that drops descriptions silently deletes the protocol). Read the payload
- *      through `respondPayload` — `message` + `did`, never a reply-text field, never the retired
- *      `asked` boolean.
+ *      through `respondPayload` — `message` + `did`, never a reply-text field and never a boolean
+ *      `asked` flag: an intention to ask is one of the `did` entries, nothing else.
  *   5. Prune the terminals the user never saw, in the SAME place the delivery is invalidated:
  *      `pruneSupersededTerminals(ledger, prematureTerminalCalls(steps))` for a terminal that shared
  *      its step with a domain call, and the same call with `supersededTerminalCalls(steps)` for the

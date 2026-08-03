@@ -3,9 +3,9 @@
  * JUDGE (spec §3): the dispatcher passes paths, never interpretive rules, and the sealed
  * `judge-prompt.md` remains the ruler.
  *
- * The Atlas run built judge input ad hoc — a flattened trace left the ruler guessing turn
- * boundaries, a monolithic file blew the context window, and per-dispatch interpretive rules
- * contaminated later rounds. This verb kills all three:
+ * Judge input built ad hoc fails three ways: a flattened trace leaves the ruler guessing turn
+ * boundaries, a monolithic file blows the context window, and per-dispatch interpretive rules
+ * contaminate later rounds. This verb kills all three:
  *   - per-case JSONL with the turn boundaries PRESERVED (`actualReplyByTurn`, `actualTraceByTurn`),
  *     never flattened;
  *   - BLIND — no arm label, no rep/model label, no agent/targets, nothing that hints at which arm

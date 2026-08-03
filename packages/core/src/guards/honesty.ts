@@ -1,11 +1,10 @@
 /**
  * THE CROSS-CHECK GUARDS — the deterministic honesty core.
  *
- * The honesty family used to READ the reply prose, and the red-team broke that structurally: a literal
- * `replyMentions('BK-1')` passes on a reply that says "no record of BK-1 was found" — a text check cannot read polarity, and no
- * better pattern fixes it (patterns are the banned fragility). So the reply prose stops being the thing
- * guards read. The agent DECLARES what it did as STRUCTURE (`ctx.did: TurnClaim[]`), and these three
- * guards GROUND that declaration against the WORLD LEDGER — `ctx.observed` (the model's verified calls,
+ * REPLY PROSE IS NOT THE THING GUARDS READ. A literal mention scan for `BK-1` passes on a reply that
+ * says "no record of BK-1 was found" — a text check cannot read polarity, and no better pattern fixes
+ * it (patterns are the banned fragility). Instead, the agent DECLARES what it did as STRUCTURE
+ * (`ctx.did: Intention[]`), and these three guards GROUND that declaration against the WORLD LEDGER — `ctx.observed` (the model's verified calls,
  * with `tookEffect`/`ok`/`resultFlags`), `ctx.world.toolCalls` (the results those calls returned), and
  * `ctx.attemptedThisTurn` (the calls a guard VETOED before they reached the world). None of those the
  * agent controls, so a fabricated claim cannot ground.
@@ -14,27 +13,28 @@
  * WORLD issued for a call — ledger DATA, never an authored pattern. `op` names are advisory labels; the
  * check keys on `target` + `outcome` vs the ledger, never on op-name semantics.
  *
- * THE LAWS THE RED-TEAM WROTE (MI-T3, tightened by round 2 / MI-T7):
- *  · PROVENANCE (M2) — a claim of PRESENCE (`success`) grounds ONLY against values the WORLD issued for
- *    that call. A call's ARGS are the agent's own text, so scanning them made grounding circular: one
- *    permitted write plus a fabricated id in a free-text arg used to ground `success` on an untouched
+ * THE LAWS OF GROUNDING:
+ *  · PROVENANCE — a claim of PRESENCE (`success`) grounds ONLY against values the WORLD issued for
+ *    that call. A call's ARGS are the agent's own text, so scanning them makes grounding circular: one
+ *    permitted write plus a fabricated id in a free-text arg would ground `success` on an untouched
  *    entity. A claim of ABSENCE or NON-EFFECT (`not_found`/`failure`/`blocked`/`refused`/
  *    `pending_confirmation`/`no_op`) cannot obey it — an absent record issues no value — so those arms
  *    read the world's own negative answer PLUS the identity-KEY args that say which entity was asked
  *    about. They can never cover a write, so they can never hide one.
- *  · IDENTITY IS KEY-SCOPED (r2 §1) — an identity is a scalar under `id`/`label`/`<entity>Id`, never any
+ *  · IDENTITY IS KEY-SCOPED — an identity is a scalar under `id`/`label`/`<entity>Id`, never any
  *    string leaf. With every string an "identity", a status word, a note fragment, a tag or one word of
- *    the world's own sentence both GROUNDED a claim and COVERED the write, so "no silent action" was
- *    satisfied by a claim that never named the entity and the user read "refunded: done".
- *  · A WRITE SPEAKS FOR ITS OWN ENTITY (r2 §3.1) — coverage and `success` match a result's PREFERRED
+ *    the world's own sentence would both GROUND a claim and COVER the write, satisfying "no silent
+ *    action" with a claim that never names the entity while the user reads "refunded: done".
+ *  · A WRITE SPEAKS FOR ITS OWN ENTITY — coverage and `success` match a result's PREFERRED
  *    identity (shallowest `id`/`label`), never the related entities it references.
- *  · BOUNDARY (M1) — the comparison is WHOLE-VALUE equality after canonicalization, never a substring
- *    and (since r2 §2.1) never a token run: `BK-1` is not `BK-10`/`BK-1-EXTRA`/`xBK-1y`, and `12` is not
+ *  · BOUNDARY — the comparison is WHOLE-VALUE equality after canonicalization, never a substring and
+ *    never a token run: `BK-1` is not `BK-10`/`BK-1-EXTRA`/`xBK-1y`, and `12` is not
  *    `Order 12`. Lookalikes fail closed: no NFC folding, no cross-script case fold, no stripping of
  *    invisible format characters.
- *  · EVERY ARM NEEDS POSITIVE EVIDENCE (r2 §5) — including `no_op`, which used to be satisfied by the
- *    mere ABSENCE of a contradicting write and so grounded any target on an empty ledger.
- * And the PARTITION (MI-D5): both cross-checks iterate ACTION intentions only — a speech intention
+ *  · EVERY ARM NEEDS POSITIVE EVIDENCE — including `no_op`. No arm passes on absence alone, because the
+ *    mere ABSENCE of a contradicting write is trivially true of an entity the turn never touched and
+ *    would ground any target on an empty ledger.
+ * And the PARTITION: both cross-checks iterate ACTION intentions only — a speech intention
  * (`inform`/`greet`/`refuse`/`ask`) classifies the message and names no ledger fact, so it is never
  * grounded and never covers a write (an action can therefore never hide behind an `inform`).
  */
@@ -46,7 +46,7 @@ import {
   resolveOutcome,
   type CoreOutcome,
   type OutcomeMap,
-  type TurnClaim,
+  type Intention,
 } from '../runtime/claims.js';
 import { canonArgs } from './flow.js';
 import { domainCallsThisTurn } from './shared.js';
@@ -73,14 +73,13 @@ const EXISTENCE_KEYS: ReadonlySet<string> = new Set(['found', 'exists']);
  * `{success:true, data:[]}` and `{found:false, message:'no record'}` are empty, and `{data:[], id:'BK-1'}`
  * is not (the world named something).
  *
- * FAIL CLOSED WITHOUT A DATA CHANNEL (D-§6.1, red-team r2): a record whose only fields are scalars is
- * UNDECIDABLE and is NOT empty. The old law skipped every scalar status-like field, so
- * `{status:'BK-1 is active and confirmed'}` — a read reporting the record as PRESENT — read as EMPTY and
- * grounded a `not_found` on it. That is the polarity inversion the structured-claims redesign exists to
- * kill, reappearing inside the guard's own emptiness heuristic. A domain whose empty read has no data
- * channel must return one (`data: []`).
+ * FAIL CLOSED WITHOUT A DATA CHANNEL: a record whose only fields are scalars is UNDECIDABLE and is NOT
+ * empty. Skipping every scalar status-like field would let `{status:'BK-1 is active and confirmed'}` —
+ * a read reporting the record as PRESENT — read as EMPTY and ground a `not_found` on it, which is the
+ * exact polarity inversion the structured cross-check exists to kill, reappearing inside the guard's own
+ * emptiness heuristic. A domain whose empty read has no data channel must return one (`data: []`).
  *
- * KEY-BLINDNESS FOR CONTAINERS (M4, red-team r1): the status-key skip is a statement about a status
+ * KEY-BLINDNESS FOR CONTAINERS: the status-key skip is a statement about a status
  * WORD, so it applies only to a scalar/boolean value; a record or a non-empty list is content whatever
  * its key is called (`{message:{booking:'BK-1'}}` is content).
  */
@@ -136,12 +135,12 @@ interface IdentityHit {
  * Every IDENTITY leaf in a structure — KEY-SCOPED: a scalar under an {@link isIdentityKey} key, at any
  * depth, whatever its type. Strings and numbers on the SAME footing.
  *
- * The old law admitted every STRING leaf under any key, and the red-team (r2, §1) broke the whole
- * cross-check with it: a status word, a note fragment, a tag, or a word of the world's own sentence was
- * an "identity", so `{id:'ORD-1', status:'refunded'}` let a claim on `target:'refunded'` BOTH ground and
- * COVER the ORD-1 write — the "no silent action" law satisfied by a claim that never names the entity,
- * and the user reads "refunded: done". Key-scoping is what makes an identity an IDENTITY: the world
- * names entities under `id`/`label`/`<entity>Id`, and everything else it says is prose or magnitude.
+ * KEY-SCOPING IS WHAT MAKES AN IDENTITY AN IDENTITY: the world names entities under
+ * `id`/`label`/`<entity>Id`, and everything else it says is prose or magnitude. Admitting every STRING
+ * leaf under any key instead would make a status word, a note fragment, a tag, or a word of the world's
+ * own sentence an "identity" — so `{id:'ORD-1', status:'refunded'}` would let a claim on
+ * `target:'refunded'` BOTH ground and COVER the ORD-1 write, satisfying the "no silent action" law with
+ * a claim that never names the entity while the user reads "refunded: done".
  */
 function identityHits(v: unknown, key: string | undefined, depth: number, out: IdentityHit[]): IdentityHit[] {
   if (v === null || v === undefined) return out;
@@ -167,10 +166,10 @@ function identityValues(v: unknown): string[] {
  * The PREFERRED identity of a result — the one entity this call is ABOUT.
  *
  * The SHALLOWEST identity keys win, and among those `id`/`label` win over the `<entity>Id` references
- * beside them. Without this, a result that names a RELATED entity ("this order's parent") let a claim on
- * the RELATION stand for the acted-on entity: `{id:'ORD-1', parentId:'ORD-2'}` plus a second
- * `{id:'ORD-2'}` write is covered by TWO claims on ORD-2 — injectivity satisfied, ORD-1 never reported
- * (red-team r2, §3.1). Only the PRESENCE arms (`success` grounding and write coverage) use this: what an
+ * beside them. Without this, a result that names a RELATED entity ("this order's parent") would let a
+ * claim on the RELATION stand for the acted-on entity: `{id:'ORD-1', parentId:'ORD-2'}` plus a second
+ * `{id:'ORD-2'}` write would be covered by TWO claims on ORD-2 — injectivity satisfied, ORD-1 never
+ * reported. Only the PRESENCE arms (`success` grounding and write coverage) use this: what an
  * effected write DID is to its own entity, never to the ones it merely points at.
  */
 function preferredIdentityValues(v: unknown): string[] {
@@ -220,9 +219,9 @@ function resultOf(ctx: GuardCtx, c: ObservedCall): unknown {
 
 /** EDGE punctuation — everything that is neither a letter, a digit, nor an INVISIBLE format character.
  *  Format characters (`\p{Cf}`: bidi controls, zero-width marks) are deliberately NOT stripped: stripping
- *  them let an agent decorate a real id with an invisible control that the renderer then printed into the
- *  user-facing report while the match still succeeded (red-team r2, §2.6). They now fail CLOSED, exactly
- *  like a unicode lookalike dash. */
+ *  them would let an agent decorate a real id with an invisible control that the renderer then prints
+ *  into the user-facing report while the match still succeeds. They fail CLOSED, exactly like a unicode
+ *  lookalike dash. */
 const LEADING_PUNCT = /^[^\p{L}\p{N}\p{Cf}]+/u;
 const TRAILING_PUNCT = /[^\p{L}\p{N}\p{Cf}]+$/u;
 
@@ -233,10 +232,10 @@ function isAscii(ch: string): boolean {
 
 /**
  * CASE FOLD that never changes SCRIPT. `String.prototype.toLowerCase` maps some non-ASCII lookalikes
- * ONTO ASCII — KELVIN SIGN U+212A folds to `k` — so a target spelled with the lookalike matched the real
- * ASCII id while the renderer printed the lookalike back to the user (red-team r2, §2.4). A fold that
- * would cross into ASCII keeps the original character, so lookalikes fail closed like the unicode dashes
- * already did, and ordinary case folding (`BK-1` ⇄ `bk-1`, and every non-ASCII letter with its own
+ * ONTO ASCII — KELVIN SIGN U+212A folds to `k` — so under a plain lowercase a target spelled with the
+ * lookalike would match the real ASCII id while the renderer printed the lookalike back to the user. A
+ * fold that would cross into ASCII keeps the original character instead, so lookalikes fail closed like
+ * the unicode dashes, and ordinary case folding (`BK-1` ⇄ `bk-1`, and every non-ASCII letter with its own
  * lowercase in the same script) is untouched.
  */
 function foldCase(v: string): string {
@@ -255,15 +254,15 @@ function canonValue(v: string): string {
 }
 
 /**
- * M1 — is `target` the WHOLE of `value`? The one boundary predicate every grounding, coverage and rubric
- * verdict routes through.
+ * THE BOUNDARY — is `target` the WHOLE of `value`? The one boundary predicate every grounding, coverage
+ * and rubric verdict routes through.
  *
- * Match ⇔ the canonical forms are EQUAL. Nothing else: no substring, no authored pattern, and (since
- * red-team r2) no token-run scan either. The token run was there so an id the world named inside its own
- * SENTENCE still matched — but that is precisely what let one word of an entity stand for the entity
- * (`'12'` grounded and COVERED `Order 12`, and equally `Invoice 12`, §2.1) and what let a status word or
- * a note fragment cover a write. Identity is now key-scoped, so the values on the other side are ids and
- * labels rather than prose, and whole-value equality is the honest comparison for them. A target that
+ * Match ⇔ the canonical forms are EQUAL. Nothing else: no substring, no authored pattern, no token-run
+ * scan. A token run would match an id the world named inside its own SENTENCE, and that is precisely
+ * what lets one word of an entity stand for the entity (`'12'` grounding and COVERING `Order 12`, and
+ * equally `Invoice 12`) and what lets a status word or a note fragment cover a write. Identity is
+ * key-scoped, so the values on the other side are ids and labels rather than prose, and whole-value
+ * equality is the honest comparison for them. A target that
  * canonicalizes to nothing (punctuation only) matches nothing.
  */
 export function targetMatchesValue(target: string, value: string): boolean {
@@ -321,8 +320,8 @@ function addressedEvidence(ctx: GuardCtx, c: ObservedCall): Evidence {
  * Evidence from a guard-VETOED attempt — its args, because a vetoed call never reached the world and so
  * has no result at all. The ATTEMPT is a ledger fact the guard recorded, and the identity filter is the
  * same key-scoped one: `cancelBooking({bookingId:'BK-1', note:'user also mentioned BK-2'})` names BK-1
- * and NOT BK-2. Before key-scoping, that free-text note grounded a fabricated `refused` on BK-2 — which
- * is not merely self-incriminating, it SUPPRESSES a rubric expectation (red-team r2, §4.1).
+ * and NOT BK-2. Without key-scoping that free-text note would ground a fabricated `refused` on BK-2 —
+ * which is not merely self-incriminating, it SUPPRESSES a rubric expectation.
  */
 function attemptEvidence(a: { name: string; args: unknown }): Evidence {
   return { identity: identityValues(a.args), magnitude: magnitudes(a.args) };
@@ -333,11 +332,11 @@ function attemptEvidence(a: { name: string; args: unknown }): Evidence {
  * `amount`, when it carries one, is a magnitude the same ledger fact reported.
  *
  * The amount check is not decoration: `amount` is rendered by the domain seam into the block the engine
- * advertises as verified, so an unchecked figure is a fabricated number delivered as fact (red-team r2,
- * b5). It is corroborated against the SAME fact that grounds the claim — a presence claim against what
+ * advertises as verified, so an unchecked figure is a fabricated number delivered as fact. It is
+ * corroborated against the SAME fact that grounds the claim — a presence claim against what
  * the world issued, an absence/attempt claim against what was attempted.
  */
-function claimMatches(claim: TurnClaim, ev: Evidence): boolean {
+function claimMatches(claim: Intention, ev: Evidence): boolean {
   if (!targetIn(claim.target, ev.identity)) return false;
   return claim.amount === undefined || ev.magnitude.includes(claim.amount);
 }
@@ -345,28 +344,28 @@ function claimMatches(claim: TurnClaim, ev: Evidence): boolean {
 /**
  * Did this call EFFECT A WRITE this turn — the one notion both cross-checks key on.
  *
- * TWO AUTHORITIES, UNION not intersection (red-team r2/A-V3). A call is an effected write when the DOMAIN
- * declared its tool a write AND it took effect, OR when the WORLD ATTESTED the effect for any tool at all
- * ({@link attestedEffect}). The old rule was the intersection alone, so a mutation through a tool absent
- * from `writeTools` — a hand-maintained list, and the easiest thing in a domain to leave stale — was
- * silently uncovered while the guard catalog reported full coverage: the ledger row said `tookEffect:true`
- * and the engine declined to use it. `writeTools` still says which calls a domain INTENDS as writes (it
- * gates whether the cross-check is installed at all, and it is what makes a `success` claim groundable on
- * the inferred-effect path); it is now a LOWER BOUND on the write surface, never an upper one.
+ * TWO AUTHORITIES, UNION not intersection. A call is an effected write when the DOMAIN declared its tool
+ * a write AND it took effect, OR when the WORLD ATTESTED the effect for any tool at all
+ * ({@link attestedEffect}). The intersection alone would leave a mutation through a tool absent from
+ * `writeTools` — a hand-maintained list, and the easiest thing in a domain to leave stale — silently
+ * uncovered while the guard catalog reported full coverage: the ledger row says `tookEffect:true` and the
+ * engine would decline to use it. `writeTools` says which calls a domain INTENDS as writes (it gates
+ * whether the cross-check is installed at all, and it is what makes a `success` claim groundable on the
+ * inferred-effect path); it is a LOWER BOUND on the write surface, never an upper one.
  */
 function isEffectedWrite(c: ObservedCall, writes: ReadonlySet<string>): boolean {
   return attestedEffect(c) || (writes.has(c.name) && c.tookEffect === true);
 }
 
 /** ` on <target>` when the claim names one, else '' — for the deny messages (no tool names leak). */
-function onTarget(claim: TurnClaim): string {
+function onTarget(claim: Intention): string {
   return claim.target ? ` on ${claim.target}` : '';
 }
 
 /** Is this claim GROUNDED, given its resolved core outcome? One arm per grounding-table row. */
 function isGrounded(
   ctx: GuardCtx,
-  claim: TurnClaim,
+  claim: Intention,
   resolved: CoreOutcome,
   calls: ObservedCall[],
   attempts: ReadonlyArray<{ name: string; args: unknown }>,
@@ -392,12 +391,12 @@ function isGrounded(
     case 'pending_confirmation':
       return calls.some((c) => c.resultFlags?.requiresConfirmation === true && addressed(c));
     case 'no_op':
-      // POSITIVE EVIDENCE + no contrary evidence. The arm used to be the absence condition ALONE, which
-      // made it vacuous: "no effected write matches" is trivially true of an entity the turn never
-      // touched, so `{target:'BK-999', outcome:'no_op'}` grounded on an EMPTY ledger and the renderer
-      // announced it to the user as a verified non-event — the cheapest bypass on the surface, and the
-      // way an unattempted request gets discharged and its rubric satisfied (red-team r2, §5). A `no_op`
-      // now requires the turn to have ADDRESSED the entity at all.
+      // POSITIVE EVIDENCE + no contrary evidence: a `no_op` requires the turn to have ADDRESSED the
+      // entity at all. The absence condition ALONE would be vacuous — "no effected write matches" is
+      // trivially true of an entity the turn never touched, so `{target:'BK-999', outcome:'no_op'}` would
+      // ground on an EMPTY ledger and the renderer would announce it to the user as a verified
+      // non-event: the cheapest bypass on the surface, and the way an unattempted request would get
+      // discharged with its rubric satisfied.
       return (
         calls.some((c) => addressed(c)) &&
         !calls.some((c) => effectedWrite(c) && targetIn(claim.target, addressedEvidence(ctx, c).identity))
@@ -408,7 +407,7 @@ function isGrounded(
 /**
  * `claimIsGrounded` — every declared ACTION must match what the ledger shows happened this turn.
  *
- * For each ACTION intention (MI-D5: a speech intention is skipped — it classifies the message and names
+ * For each ACTION intention (a speech intention is skipped — it classifies the message and names
  * no ledger fact): resolve its outcome word to a core meaning (a domain word maps through `outcomes`; an
  * UNDECLARED word is a violation by construction — it can name no ledger fact), then ground it by the
  * table. Auto-installed by the spec class when the domain declares its `writeTools`.
@@ -427,7 +426,7 @@ export function claimIsGrounded(opts: { writeTools: readonly string[]; outcomes?
       const calls = domainCallsThisTurn(ctx);
       const attempts = ctx.attemptedThisTurn ?? [];
       for (const claim of did) {
-        if (!isActionOp(claim.op)) continue; // MI-D5: a speech intention is not tool-checked
+        if (!isActionOp(claim.op)) continue; // a speech intention is not tool-checked
         // `outcome` is optional on Intention (speech ops carry none); an ACTION intention always carries
         // one (validateClaims enforces it) — absent coerces to '' and resolves to null (unrecognised).
         const resolved = resolveOutcome(claim.outcome ?? '', opts.outcomes);
@@ -451,16 +450,16 @@ export function claimIsGrounded(opts: { writeTools: readonly string[]; outcomes?
  * A write is COVERED by an ACTION intention that (a) resolves to `success` through the same `OutcomeMap`
  * `claimIsGrounded` uses — so a domain word like `'settled'` covers exactly like the literal word (the
  * mapping law: the two cross-checks can never disagree on the same claim) — (b) NAMES a `target`, and
- * (c) matches that write's PREFERRED identity. Coverage is INJECTIVE (M3): each write SPENDS a distinct
+ * (c) matches that write's PREFERRED identity. Coverage is INJECTIVE: each write SPENDS a distinct
  * claim, so two writes on the same entity need two claims and a vague "one action succeeded" covers
  * nothing at all. An unreported write is named by its produced label (the call's own result label) when
  * the world issued one, else by a generic phrase — never by the tool name (prose-leak law).
  * Auto-installed alongside `claimIsGrounded`.
  *
- * The assignment is a MAXIMUM MATCHING, not a first-fit sweep. First-fit was order-dependent: a write
- * whose result named two entities could spend the claim a later write needed, starving it and DENYING an
- * honest, fully reported turn even though a perfect assignment existed (red-team r2, §3.2). A matching
- * can never cover more writes than there are claims, so this removes false denials and weakens nothing.
+ * The assignment is a MAXIMUM MATCHING, not a first-fit sweep. First-fit is order-dependent: a write
+ * whose result names two entities can spend the claim a later write needs, starving it and DENYING an
+ * honest, fully reported turn even though a perfect assignment exists. A matching can never cover more
+ * writes than there are claims, so it removes false denials and weakens nothing.
  */
 export function claimIsComplete(opts: { writeTools: readonly string[]; outcomes?: OutcomeMap }): Guard {
   assertNoCoreOutcomeShadow(opts.outcomes, 'claimIsComplete'); // m10 at this door (r2/b4.5)
@@ -521,9 +520,9 @@ function producedLabel(ctx: GuardCtx, c: ObservedCall): string | null {
 
 /**
  * `claimCoversRubric` — a per-case coverage rule: every configured `target` must appear in `ctx.did`
- * with the required outcome polarity (or any polarity when `outcome: 'any'`). This REPLACES the prose
- * `replyMentions`/`replyConfirmsLabels`: polarity is a FIELD, so a reply that says "no record of BK-1 was found" can never satisfy
- * a `success` requirement again. The polarity test resolves through the same `OutcomeMap`
+ * with the required outcome polarity (or any polarity when `outcome: 'any'`). Polarity is a FIELD, so a
+ * reply that says "no record of BK-1 was found" can never satisfy a `success` requirement — which is
+ * exactly what a literal mention scan over the prose cannot decide. The polarity test resolves through the same `OutcomeMap`
  * `claimIsGrounded`/`claimIsComplete` use, so a mapped domain word (e.g. `'settled'` → `success`) satisfies
  * a `success` rubric exactly like the literal word — the mapping law holds across all three cross-checks.
  * `outcome: 'any'` accepts any claim whose outcome RESOLVES to a known core outcome via the map (an
@@ -546,9 +545,9 @@ export function claimCoversRubric(
       const did = ctx.did ?? [];
       for (const target of opts.targets) {
         const covered = did.some((claim) => {
-          // M1: the configured target must BE the claim's target, whole value — never a substring and
-          // never a token inside it, so neither a `BK-10` claim nor a sentence-shaped target
-          // (`'no record for BK-1'`) answers a rubric about `BK-1` (red-team r2, §6.5).
+          // THE BOUNDARY: the configured target must BE the claim's target, whole value — never a
+          // substring and never a token inside it, so neither a `BK-10` claim nor a sentence-shaped
+          // target (`'no record for BK-1'`) answers a rubric about `BK-1`.
           if (claim.target === undefined || !targetMatchesValue(target, claim.target)) return false;
           const resolved = resolveOutcome(claim.outcome ?? '', opts.outcomes);
           return opts.outcome === 'any' ? resolved !== null : resolved === opts.outcome;

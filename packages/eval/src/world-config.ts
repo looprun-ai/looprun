@@ -1,9 +1,9 @@
 /**
- * @looprun-ai/eval — the `world.json` schema (zod) + loader (increment 3b).
+ * @looprun-ai/eval — the `world.json` schema (zod) + loader.
  *
- * THE SIBLING OF `norms-config.ts`, one layer down: a generated subject stops emitting a hand-written
- * `gen/world.ts` and ships `gen/world.json` — the SAME declarative {@link WorldSpec} shape 3a's
- * `defineWorld` interprets, now serialized. This loader parses that JSON under a closed, `.strict()`
+ * THE SIBLING OF `norms-config.ts`, one layer down: a generated subject ships `gen/world.json` rather
+ * than a hand-written `gen/world.ts` — the SAME declarative {@link WorldSpec} shape `defineWorld`
+ * interprets, serialized. This loader parses that JSON under a closed, `.strict()`
  * zod schema and returns `defineWorld`'s factory. Two properties hold by construction:
  *
  *   1. NO field accepts a regex or a free function. Every object is `.strict()`, and a pre-scan names

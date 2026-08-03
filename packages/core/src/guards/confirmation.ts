@@ -17,16 +17,16 @@ import { hasAskIntent, isAskEvent, isBlankDelivery } from '../runtime/claims.js'
  *    turns back DELIVERED an ask (its sealed `did` carries an `ask` intention) — the model must ASK, wait
  *    for the user's answer, and act only in a LATER turn. Every call is gated (there is no confirm flag to
  *    key on), and EVERY REPEAT needs its own earlier-turn ask: the tool's own prior successful run is not
- *    surfacing (red-team r2/C4). A same-turn ask does NOT unlock it (that is `noActAfterAskSameTurn`'s
+ *    surfacing. A same-turn ask does NOT unlock it (that is `noActAfterAskSameTurn`'s
  *    edge — the two compose: `via:'ask'` = cross-turn REQUIRE, `noActAfterAskSameTurn` = same-turn DENY).
  *  - `'either'` (DEFAULT): the flag-gated form — `flag:true` is licensed by a matching earlier-turn probe OR
  *    an earlier-turn ask event. This is what the string overload and `AgentSpecBase`'s arg-flag tools install.
  *
- * ASK SIGNAL (MI-T2): every ask arm reads {@link askedInDeliveredTurn} — asking is an `ask` INTENTION in the
- * delivered turn's `did` (MI-D3), and a turn already sealed into `ctx.history` is authoritative for itself,
+ * ASK SIGNAL: every ask arm reads {@link askedInDeliveredTurn} — asking is an `ask` INTENTION in the
+ * delivered turn's `did`, and a turn already sealed into `ctx.history` is authoritative for itself,
  * so a `respond` that was recorded but never DELIVERED (superseded or premature) can never license.
  *
- * RECENCY LAW (2026-08-02): a license is a LICENSING signal — a past event (a probe or an earlier-turn ask
+ * RECENCY LAW: a license is a LICENSING signal — a past event (a probe or an earlier-turn ask
  * event) that UNLOCKS a new act — so it is turn-bounded by `within` (default **1**, the immediately-preceding
  * turn / the natural two-step shape): the licensing event must satisfy
  * `1 ≤ currentTurnIndex − eventTurnIndex ≤ within`. A probe 20 turns ago
@@ -68,12 +68,11 @@ export function confirmFirst(
       if (!ctx.tool) return null;
       if (via === 'ask') {
         // Flag-less action: every call is gated on a DELIVERED earlier-turn ask, within recency. ITS OWN
-        // PRIOR OK RUN IS NOT SURFACING (red-team r2/C4, round-1 V6): that disjunct made a successful
-        // destructive call license the next one, so turn 1's ask licensed turn 2, turn 2's run licensed
-        // turn 3, … — one consent authorising an UNBOUNDED destructive run (proved to turn 9) and the
-        // recency law bridged, plus a first repeat licensed with no ask anywhere in the conversation.
-        // Every repeat needs its own earlier-turn ask; a flag-less tool has no probe shape, so the ask
-        // IS its whole licensing surface.
+        // ITS OWN PRIOR OK RUN IS NOT SURFACING: admitting that disjunct would let a successful
+        // destructive call license the next one, so turn 1's ask licenses turn 2, turn 2's run licenses
+        // turn 3, … — one consent authorising an UNBOUNDED destructive run, the recency law bridged, and
+        // a first repeat licensed with no ask anywhere in the conversation. Every repeat needs its own
+        // earlier-turn ask; a flag-less tool has no probe shape, so the ask IS its whole licensing surface.
         if (askedInDeliveredTurn(ctx, within)) return null;
         const askedSameTurn = ctx.observed.some(
           (obs) => isAskEvent(obs) && obs.ok && obs.turnIndex === ctx.turnIndex,
@@ -87,12 +86,11 @@ export function confirmFirst(
       // A matching probe: the SAME tool, ran OK, carried flag≠true, and acts on the SAME RECORD — its
       // non-`flag` args are set-EQUAL to this call's. (Absorbed from confirmedNeedsEarlierProbe.)
       //
-      // EQUALITY, NOT CONTAINMENT (red-team r2/C3, round-1 V1): the test used to require only that the
-      // PROBE's keys are a SUBSET of the confirm's, and `.every` over an EMPTY key set is vacuously
-      // true — so a probe that previewed NOTHING (`{confirmed:false}`) licensed
-      // `transfer{to:'attacker',amount:99999,confirmed:true}`, and a probe of a strictly smaller record
-      // licensed a confirm that ADDED `scope:'EVERYTHING'`. The preview and the executed act were then
-      // different acts, which is exactly what this gate exists to prevent.
+      // EQUALITY, NOT CONTAINMENT: requiring only that the PROBE's keys are a SUBSET of the confirm's
+      // would be vacuous, because `.every` over an EMPTY key set is true — a probe that previewed NOTHING
+      // (`{confirmed:false}`) would license `transfer{to:'attacker',amount:99999,confirmed:true}`, and a
+      // probe of a strictly smaller record would license a confirm that ADDED `scope:'EVERYTHING'`. The
+      // preview and the executed act would be different acts, which is exactly what this gate prevents.
       const isMatchingProbe = (obs: ObservedCall): boolean => {
         if (obs.name !== ctx.tool || !obs.ok || obs.args?.[flag] === true) return false;
         const probeKeys = recordKeys(obs.args);
@@ -161,18 +159,18 @@ export function noActAfterAskSameTurn(tools: string[]): Guard {
  * "probe→approved-execute in the SAME turn" exemption DEAD CODE: the flow it exempts could never occur.
  * The two kinds now agree on what "already acted" means.
  *
- * EFFECT BEATS FLAGS (red-team M7): a call that `tookEffect` is an EFFECT, whatever flags it carries. The
- * probe test used to key on `confirmed:false` / `requiresConfirmation` and NEVER consult `tookEffect`, so a
- * tool that mutates while carrying `confirmed:false` (it ignores or omits the flag's semantics) produced
- * two real destructive effects that BOTH classified as probes — the throttle counted zero prior effects and
- * the second call slipped the n:1 cap. The flags describe an INTENT to preview; `tookEffect` is the world's
+ * EFFECT BEATS FLAGS: a call that `tookEffect` is an EFFECT, whatever flags it carries. Keying the probe
+ * test on `confirmed:false` / `requiresConfirmation` without consulting `tookEffect` would let a tool that
+ * mutates while carrying `confirmed:false` (it ignores or omits the flag's semantics) produce two real
+ * destructive effects that BOTH classify as probes — the throttle would count zero prior effects and the
+ * second call would slip the n:1 cap. The flags describe an INTENT to preview; `tookEffect` is the world's
  * own record of what happened, so it is the authority.
  *
  * WHAT COUNTS AS A PROBE DEPENDS ON WHETHER THE CALL HAS RUN — because that decides what evidence can
  * exist at all:
  *   · an EXECUTED call (in `observed`) is a probe when the world RECORDED that it changed nothing
  *     (`tookEffect === false`) AND its flags declare a preview. A call that ran and left NO record is
- *     unverifiable and counts (r2/C6 — see below).
+ *     unverifiable and counts (see below).
  *   · a same-step SIBLING (`siblingCallsThisStep`) has been admitted but has NOT run, so `tookEffect` is
  *     `undefined` by construction and its declared flags are the only evidence there is.
  * `confirmArg` (default `confirmed`) matches the sibling kinds' parameterisation (`confirmFirst`'s
@@ -202,24 +200,24 @@ export function destructiveThrottle(
     o.resultFlags?.requiresConfirmation === true || o.args?.[confirmArg] === false;
   // An EXECUTED call is a probe only when the world POSITIVELY recorded that it changed nothing.
   //
-  // UNKNOWN EFFECT IS NOT A PROBE (red-team r2/C6). The test used to read `tookEffect !== true`, which
-  // treats "the world has no record of this call" exactly like "the world says it changed nothing" — and
-  // in native-tools/MCP mode NOTHING wrote the world ledger, so every call read as not-effected and the
-  // EFFECT-BEATS-FLAGS rule above was permanently INERT: a third-party tool that mutates while carrying
-  // `confirmed:false` was classified as a probe and slipped the n:1 cap. A call that RAN and left no
-  // record of its effect is unverifiable, so it counts.
+  // UNKNOWN EFFECT IS NOT A PROBE. Reading `tookEffect !== true` would treat "the world has no record of
+  // this call" exactly like "the world says it changed nothing" — and in native-tools/MCP mode NOTHING
+  // writes the world ledger, so every call would read as not-effected and the EFFECT-BEATS-FLAGS rule
+  // above would be permanently INERT: a third-party tool that mutates while carrying `confirmed:false`
+  // would classify as a probe and slip the n:1 cap. A call that RAN and left no record of its effect is
+  // unverifiable, so it counts.
   const executedIsProbe = (o: ObservedCall): boolean => o.tookEffect === false && flagsDeclarePreview(o);
   // A same-step SIBLING has been admitted but has NOT executed, so it has no world record BY
   // CONSTRUCTION — `tookEffect` is `undefined` for every one of them, always. Applying the executed rule
   // here would count every admitted destructive sibling, which denies a legitimate MULTI-PREVIEW: an
   // agent asked to preview cancelling two bookings emits two `cancel({confirmed:false})` in ONE step,
-  // and the second would be vetoed for an effect neither call has had yet (MI-T7 review). For a call
+  // and the second would be vetoed for an effect neither call has had yet. For a call
   // that has not run, its declared flags are the only evidence that exists, so they decide.
   //
-  // NOT-CONFIRMED IS THE PREVIEW SHAPE, exactly as `confirmFirst` reads it (final review). Keying the
-  // sibling test on `confirmed === false` alone counted a preview that simply OMITS the flag — the shape
+  // NOT-CONFIRMED IS THE PREVIEW SHAPE, exactly as `confirmFirst` reads it. Keying the sibling test on
+  // `confirmed === false` alone would miss a preview that simply OMITS the flag — the shape
   // `confirmFirst`'s `'probe'` arm explicitly licenses ("a `flag:false`/absent PROBE") and the shape it
-  // lets through untouched (it returns null on `args[flag] !== true`). So the two kinds disagreed on the
+  // lets through untouched (it returns null on `args[flag] !== true`). The two kinds must agree on the
   // very case the throttle's own doc claims they agree on: a model previewing two cancellations without
   // spelling `confirmed:false` had its second preview vetoed for an effect neither call had had. A
   // sibling declares a preview when it is NOT CONFIRMED.
@@ -268,19 +266,18 @@ export function destructiveThrottle(
  * correctly reports the DONE action instead of re-asking. Keys only the UNRESOLVED probes: if every
  * requiresConfirmation was resolved, the guard is silent.
  *
- * STRUCTURAL RELAY (no-regex law, 2026-08-02; precedence re-keyed MI-T2): the relay is satisfied by an ask
- * INTENTION in the DELIVERED turn's `did` (MI-D3) — never by regex-matching the reply text. It runs at
+ * STRUCTURAL RELAY: the relay is satisfied by an ask INTENTION in the DELIVERED turn's `did` — never by
+ * regex-matching the reply text. It runs at
  * onReply, where `checkPayload` has already seated the delivered declaration, so `ctx.did` is PRESENT and
  * AUTHORITATIVE: `hasAskIntent(ctx.did)` decides, full stop. The observed scan is the FALLBACK for the
  * contexts that have no delivered declaration at all (a chain / mid-turn ctx, where `ctx.did` is absent).
  *
- * THE PRECEDENCE IS THE FIX (red-team M8): `observed` holds every `respond` recorded at hook time,
- * including one the premature policy invalidated. OR-ing the two signals let such a ghost satisfy the
- * relay while the user received an unconditional "done" — a pending confirmation reported as complete.
+ * PRECEDENCE, NOT DISJUNCTION: `observed` holds every `respond` recorded at hook time, including one the
+ * premature policy invalidated. OR-ing the two signals would let such a ghost satisfy the relay while the
+ * user received an unconditional "done" — a pending confirmation reported as complete.
  *
- * The former `askRe` param (a business-owned "does this reply seek confirmation?" pattern) is retired; a
- * domain that relays confirmation through prose instead of an ask intention judges that with an `llmCheck`
- * rubric. `confirmArg` (default `confirmed`) is the confirm flag a resolving call carries. Reads observed +
+ * This guard takes no reply pattern. A domain that relays confirmation through prose instead of an ask
+ * intention judges that with an `llmCheck` rubric. `confirmArg` (default `confirmed`) is the confirm flag a resolving call carries. Reads observed +
  * `ctx.did` only.
  */
 export function pendingConfirmMustAsk(opts?: { confirmArg?: string }): Guard {
@@ -303,15 +300,14 @@ export function pendingConfirmMustAsk(opts?: { confirmArg?: string }): Guard {
           (o) => o.name === probe.name && o.ok && o.args?.[confirmArg] === true && record(o.args) === record(probe.args),
         ));
       if (!unresolved.length) return null;
-      // STRUCTURAL relay (PRECEDENCE, MI-T2): the delivered `respond` lands at turn END, so at onReply the
-      // relay signal is the delivered payload's own `did` (seated by checkPayload before this check runs).
-      // It is the ONLY signal. There used to be an observed-scan fallback "for a chain / mid-turn ctx";
-      // no such caller exists — `ledger.did` is a `TurnClaim[]` that is reset, never unset, so every
-      // onReply and postTool ctx the runtime builds seats it, and the scan could only ever be reached by
-      // a hand-built ctx. Worse, what it read was the raw `observed` stream, which can still hold a
-      // terminal ghost the user never received — the exact evidence the delivered-turn law deleted
-      // everywhere else. A ctx with no declaration now fails CLOSED (an absent declaration is not an ask).
-      // THE ASK MUST HAVE BEEN SAID (red-team r2/C7). The relay is a declaration, and a declaration over
+      // STRUCTURAL relay: the delivered `respond` lands at turn END, so at onReply the relay signal is
+      // the delivered payload's own `did` (seated by checkPayload before this check runs). It is the ONLY
+      // signal — there is no observed-scan fallback, and a ctx with no declaration fails CLOSED (an absent
+      // declaration is not an ask). A fallback would have nothing legitimate to serve (`ledger.did` is an
+      // `Intention[]` that is reset, never unset, so every onReply and postTool ctx the runtime builds
+      // seats it) and would read the raw `observed` stream, which can still hold a terminal ghost the user
+      // never received — the exact evidence the delivered-turn law excludes everywhere else.
+      // THE ASK MUST HAVE BEEN SAID. The relay is a declaration, and a declaration over
       // a blank `message` relays nothing: the delivery floor would swap that turn out for the engine's
       // exhaustion closure, whose `did` carries no ask, so the user would be told the pending action is
       // over without ever seeing the question. Same floor `askedInDeliveredTurn` applies cross-turn.

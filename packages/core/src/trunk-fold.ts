@@ -1,14 +1,14 @@
 /**
  * @looprun-ai/core — the TRUNK's attributed table and the FOLD that renders it.
  *
- * THE CAUSE-ROOT THIS FILE CLOSES. `renderScopedSpecTrunk` used to end in `parts.join('\n\n')`. At the
- * instant of that join every trace of PROVENANCE died and what remained was an opaque string: you could
- * no longer ask "who emitted this rule?", "under which hook?", "about WHAT?".
+ * THE CAUSE-ROOT THIS FILE CLOSES. A trunk assembled by `parts.join('\n\n')` is an opaque string: at
+ * the instant of the join every trace of PROVENANCE dies, and nothing downstream can ask "who emitted
+ * this rule?", "under which hook?", "about WHAT?".
  *
- * The fix is to make the trunk a FOLD over a typed table. {@link TrunkLine} is the atomic normative
- * unit (who said it, in which section, under which hook/target, about WHAT, with which polarity, and
- * the exact bytes it renders as); {@link TrunkBlock}/{@link TrunkRow} carry the layout so the fold
- * reproduces the previous string BYTE-FOR-BYTE (trunk-static law / D8 cacheable prefix).
+ * So the trunk is a FOLD over a typed table. {@link TrunkLine} is the atomic normative unit (who said
+ * it, in which section, under which hook/target, about WHAT, with which polarity, and the exact bytes
+ * it renders as); {@link TrunkBlock}/{@link TrunkRow} carry the layout, and the fold is BYTE-STABLE
+ * (trunk-static law — the cacheable prefix depends on it).
  *
  * DOMAIN NEUTRALITY (P8a). This file carries no business vocabulary. `subject` is derived from the
  * GUARD KIND (runtime vocabulary — see {@link GUARD_KIND_SUBJECT}) and, for prose that has no guard
@@ -56,8 +56,7 @@ export const GUARD_KIND_SUBJECT: Readonly<Record<string, string>> = Object.freez
   destructiveThrottle: 'destructive-throttle',
   noActAfterAskSameTurn: 'act-after-ask',
   pendingConfirmMustAsk: 'relay-pending-confirmation',
-  // reply hygiene (the reply-TEXT coverage kinds — emptyReply / replySingleQuestion / replyMentions /
-  // replyMaxOccurrences — are DELETED, SCG-T5; degenerationGuard is the sole reply artifact lint left)
+  // reply hygiene (degenerationGuard is the only reply kind that reads the message as an ARTIFACT)
   degenerationGuard: 'reply-hygiene',
 });
 

@@ -8,14 +8,12 @@
  * verdict is a host adjudicator's, never a closure-held pattern. The deterministic set is pure by
  * construction: no clock, no entropy, no network, no LLM call inside a check.
  *
- * NO-REGEX LAW (2026-08-02, full-context guards): NO guard FACTORY takes a RegExp-typed parameter.
- * Text judgment — claim language, confirm-language, PII/regulated/competitor patterns — is `llmCheck`'s
- * job (a trusted rubric answered by the host adjudicator). Structural jobs use structural signals
- * (`confirmFirst` / `pendingConfirmMustAsk` key on the ask INTENTION a delivered `respond` declares in its
- * `did` — `hasAskIntent` / `isAskEvent` — plus args equality, never on reply text). The former regex-param honesty/reply guards (`noFabricatedSuccess`, `destructiveClaimRequiresSuccess`,
- * `noFalseFailureClaim`, `noCompetitorClaim`, `noOutOfSurfaceActionClaim`, `noUngroundedRegulatedFigure`,
- * `minimalDisclosure`, `noInstructionFromData`) are DELETED — an author expresses those as `llmCheck`
- * rubrics. Media/label INPUT guards are a DOMAIN concern — `custom({ dim:'input' })` over the world's own
+ * NO-REGEX LAW: NO guard FACTORY takes a RegExp-typed parameter. Text judgment — claim language,
+ * confirm-language, PII/regulated/competitor patterns — is `llmCheck`'s job (a trusted rubric answered
+ * by the host adjudicator). Structural jobs use structural signals (`confirmFirst` /
+ * `pendingConfirmMustAsk` key on the ask INTENTION a delivered `respond` declares in its `did` —
+ * `hasAskIntent` / `isAskEvent` — plus args equality, never on reply text). Media/label INPUT guards are
+ * a DOMAIN concern — `custom({ dim:'input' })` over the world's own
  * accessors. The runtime holds only the MECHANISM and the generic English prose; a grep-gate
  * (guards-purity.test.ts) fails CI on any re-introduced RegExp-typed factory param.
  *

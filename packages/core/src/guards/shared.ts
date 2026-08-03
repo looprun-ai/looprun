@@ -35,23 +35,22 @@ export const isTerminalCall = (o: ObservedCall): boolean => TERMINAL_TOOLS.has(o
 /**
  * Did the agent pose a question to the user in a DELIVERED turn `[1, within]` turns back?
  *
- * The ONE cross-turn ask signal (MI-T2), shared by `confirmFirst`'s ask/either arms and `askedEarlier`
- * so the two can never disagree about what consent looks like. Asking is an `ask` INTENTION in the
- * turn's `did` (MI-D3) — the `asked` boolean is retired.
+ * The ONE cross-turn ask signal, shared by `confirmFirst`'s ask/either arms and `askedEarlier` so the
+ * two can never disagree about what consent looks like. Asking is an `ask` INTENTION in the turn's
+ * `did`, never a flag.
  *
- * SEALED HISTORY IS THE ONLY SOURCE (red-team M8, tightened by r2/C2). `ctx.observed` records EVERY
- * `respond` at HOOK time — including calls the runtime then REFUSED (a blank message / an empty `did`
- * fail the terminal schema, and the hook runs outside the tool's input validation), one that lost a
- * within-step delivery contest, and one invalidated as premature. The backend prunes what it can, but
- * this function used to fall back to a RAW `observed` ask scan for any turn missing from `ctx.history`,
- * and that fallback was a silent failure mode: any host that does not seal its turns lost the whole
- * MI-T2 guarantee with no signal (`LoopRunAgent.stream()` was exactly that host — it advanced the turn
- * counter and never sealed, so a refused `respond` licensed a `confirmed:true` delete one turn later).
- * The fallback is GONE. Consent evidence is a DELIVERED TURN RECORD or it does not exist: a host that
- * wants its turns to license anything must seal them (`recordTurnHistory`) — fail-closed, and loud in
- * the only way that matters (the act is denied).
+ * SEALED HISTORY IS THE ONLY SOURCE. `ctx.observed` records EVERY `respond` at HOOK time — including
+ * calls the runtime then REFUSED (a blank message / an empty `did` fail the terminal schema, and the
+ * hook runs outside the tool's input validation), one that lost a within-step delivery contest, and one
+ * invalidated as premature. The backend prunes what it can, but falling back to a RAW `observed` ask
+ * scan for a turn missing from `ctx.history` would be a silent failure mode: any host that does not seal
+ * its turns would lose the whole guarantee with no signal — a host that advances the turn counter and
+ * never seals would let a refused `respond` license a `confirmed:true` delete one turn later. So there
+ * is no fallback. Consent evidence is a DELIVERED TURN RECORD or it does not exist: a host that wants
+ * its turns to license anything must seal them (`recordTurnHistory`) — fail-closed, and loud in the only
+ * way that matters (the act is denied).
  *
- * THE TURN MUST HAVE SAID SOMETHING (r2/C1+C7). The sealed `reply` is checked alongside the sealed
+ * THE TURN MUST HAVE SAID SOMETHING. The sealed `reply` is checked alongside the sealed
  * `did`: a turn whose delivered text is blank ({@link isBlankDelivery} — invisibles stripped) never
  * asked anything a user could answer, whatever its declaration says. This is the deterministic floor
  * under a SELF-DECLARED signal; it does not (and cannot, under the no-regex law) decide whether a

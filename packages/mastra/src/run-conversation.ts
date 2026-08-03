@@ -151,7 +151,7 @@ export async function runSpecConversation(spec: AgentSpec, turns: TurnInput[], d
       spec, contract, world, userText, uploadLabels: attLabels, uploadUrls: attUrls,
     });
     currentSystemPrompt = instructions;
-    // ONE terminal now (`respond`); asking is a `did` INTENTION — the reply-only policy rides the protocol prose.
+    // ONE terminal (`respond`); asking is a `did` INTENTION — the reply-only policy rides the protocol prose.
     const activeTools = [...surface, 'respond'];
 
     const before = world.toolCalls.length;
@@ -192,7 +192,7 @@ export async function runSpecConversation(spec: AgentSpec, turns: TurnInput[], d
         clearDeliveredTerminal(ledger);
         ledger.turnCorrections.push(`premature-terminal:${[...new Set(premature)].join(',')}`);
       }
-      // …and drop the invalidated terminal's OBSERVATION too (MI-T2 / red-team M8): clearing the captured
+      // …and drop the invalidated terminal's OBSERVATION too: clearing the captured
       // declaration leaves the hook-time `observed` push in place, where a `did` carrying an `ask`
       // intention reads — this turn and every later one — as a question the user answered. It never
       // reached them. Runs unconditionally: a premature terminal is never delivered, whatever its message.

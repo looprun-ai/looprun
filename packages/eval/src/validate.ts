@@ -1,22 +1,23 @@
 /**
- * @looprun-ai/eval — `looprun-eval validate`: three offline layers over a subject, replacing the
- * subject-minted lints/tests that used to police the exam by hand.
+ * @looprun-ai/eval — `looprun-eval validate`: three offline layers over a subject, so the exam is
+ * policed by the instrument rather than by subject-minted lints and tests.
  *
  *   1. SCHEMA      — every config the subject ships (`norms/*.json`, `evals/cases.json`) parses under
  *                    its zod loader. A malformed config fails HERE, by name, not mid-run after spend.
  *   2. REFERENCES  — every `targets` id names a guard in the assembled inventory; every `setup.preset`
  *                    constructs; every case routes to a real agent; reverse-coverage (a guard no case
  *                    targets) is reported as ADVISORY with a justification hook.
- *   3. PREMISE     — premise coherence, generalizing the run's `premise.test.ts` WITHOUT its hand
- *                    exclusions. It replays a case's required writes in declaration order against the
- *                    world its preset builds and asks whether the case's premise is even reachable:
+ *   3. PREMISE     — premise coherence, applied to every case with NO hand exclusions: an exclusion
+ *                    list is a way to hide an incoherent case. It replays a case's required writes
+ *                    in declaration order against the world its preset builds and asks whether the
+ *                    case's premise is even reachable:
  *                    a required write the world REFUSES (the case can never pass), a forbidden write
  *                    the world ACCEPTS (the case forbids nothing — accept-when-should-forbid), a
  *                    forbidden READ (forbidding a query enforces nothing — read-side). Consent-timing
  *                    entries (`confirmed:true`) are the two-step's own business and are skipped;
  *                    chains the replayer cannot construct (multi-turn) are SKIPPED LOUDLY and counted
- *                    against a reached-verdict FLOOR — because pass-by-inability is exactly how the
- *                    Atlas defects survived a green board.
+ *                    against a reached-verdict FLOOR — because pass-by-inability is exactly how a
+ *                    real defect survives a green board.
  */
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -359,7 +360,7 @@ const stable = (v: unknown): string => JSON.stringify(v);
  */
 export function checkWorldModel(subjectDir: string): string[] {
   const path = join(subjectDir, 'gen', 'world.json');
-  if (!existsSync(path)) return []; // TS worlds keep the old path — nothing to check here.
+  if (!existsSync(path)) return []; // TS worlds ship no `gen/world.json` — nothing to check here.
 
   const issues: string[] = [];
   let raw: RawWorld;
