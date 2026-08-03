@@ -273,7 +273,7 @@ the grouping axis.
 |---|---|
 | `preTool` (13) | `requiresBefore` `forbidThisTurn` `maxCalls` `noDuplicateCall` · `argRequired` `argAbsent` `argFormat` (+ `canonArgs` in prose) · `precondition` `consentRequired` · `confirmFirst` `noActAfterAskSameTurn` `destructiveThrottle` · `askedEarlier` |
 | `postTool` (1) | `resultInvariant` |
-| `onReply` (6) | `pendingConfirmMustAsk` `degenerationGuard` `llmCheck` `claimIsGrounded` `claimIsComplete` `claimCoversRubric` |
+| `onReply` (7) | `pendingConfirmMustAsk` `degenerationGuard` `llmCheck` `didMessageConsistency` `claimIsGrounded` `claimIsComplete` `claimCoversRubric` |
 | `onReplyMutate` (1) | `jargonScrub` |
 | escape hatch (1) | `custom` |
 
@@ -476,7 +476,7 @@ in the "bring your own loop" seam; internal, not taught.)
 |---|---|---|
 | mastra | **02** (3) | `LoopRunAgent` `LoopRunAgentConfig` `LoopRunOptions` |
 | core | **03** (11) | `AgentSpecBase` `AgentSpec` `AgentSpecConfig` `AgentScope`↑ `TerminalPolicy`↑ `DomainContract` `ToolDef` `AgentWorld` `Hook`↑ `ToolTarget`↑ `validateSpec` |
-| core | **04** (27) | `Guard` `GuardCtx` `ObservedCall` `Dim`↑ · `custom` `llmCheck`↑ `askedEarlier` `requiresBefore` `forbidThisTurn` `argRequired` `argAbsent` `argFormat` `precondition` `maxCalls` `canonArgs` `noDuplicateCall` `confirmFirst` `noActAfterAskSameTurn` `destructiveThrottle` `claimIsGrounded`↑ `claimIsComplete`↑ `claimCoversRubric`↑ `resultInvariant` `degenerationGuard` `pendingConfirmMustAsk` `consentRequired` `jargonScrub` |
+| core | **04** (28) | `Guard` `GuardCtx` `ObservedCall` `Dim`↑ · `custom` `llmCheck`↑ `didMessageConsistency`↑ `askedEarlier` `requiresBefore` `forbidThisTurn` `argRequired` `argAbsent` `argFormat` `precondition` `maxCalls` `canonArgs` `noDuplicateCall` `confirmFirst` `noActAfterAskSameTurn` `destructiveThrottle` `claimIsGrounded`↑ `claimIsComplete`↑ `claimCoversRubric`↑ `resultInvariant` `degenerationGuard` `pendingConfirmMustAsk` `consentRequired` `jargonScrub` |
 | core | **05** (5) | `TurnInput`↑ `RunResult`↑ `TurnRecord`↑ `geminiThinkingOff` `pinnedDecoding` |
 | mastra | **05** (2) | `runSpecConversation` `RuntimeDeps`↑ |
 | models | **05** (1) | `geminiFlashLiteThinkOff` |

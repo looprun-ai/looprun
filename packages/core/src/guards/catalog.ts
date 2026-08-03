@@ -275,6 +275,15 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
       'The judgement genuinely needs a model — "did the operator\'s yes license THIS act?", a promise no arg/observed pattern captures. Use it where structure alone cannot decide; a decidable structural signal always prefers its own kind. The adjudicator is host-registered on the runtime options (never in config), and `failMode` prices an unreachable adjudicator: `\'open\'` allows, `\'closed\'` denies.',
     example: `llmCheck({ rubric: 'Did the user, in an earlier turn, explicitly authorise THIS exact action?', failMode: 'closed' })`,
   },
+  {
+    name: 'didMessageConsistency',
+    category: 'llm-check',
+    hook: 'onReply',
+    summary: 'The `did` × `message` backstop: an adjudicator answers a pre-baked rubric asking whether the message asserts an operation the declaration does not carry, or contradicts a declared intention.',
+    whenToUse:
+      'The deterministic cross-check grounds the DECLARATION against the ledger, but the message beside it is free prose — an agent can declare an honest `inform` and still write that it completed something. Install this where the stakes justify a model call per reply (money, health). It is NOT auto-installed and it is never the primary guarantee; the structured cross-check is. Same `failMode` as `llmCheck` (its rubric is baked, so there is nothing else to configure).',
+    example: `didMessageConsistency({ failMode: 'closed' })`,
+  },
 
   // ── custom ─────────────────────────────────────────────────────────────────
   {

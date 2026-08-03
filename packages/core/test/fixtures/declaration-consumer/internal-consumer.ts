@@ -106,7 +106,7 @@ export function redrive(v: ReplyViolation[]) {
   return redriveMessage(v);
 }
 export function report(l: TurnLedger, d: DomainContract, opts?: RenderOpts) {
-  const did = deriveClaimsFromLedger(l.observed, 0, d.writeTools ?? [], []);
+  const did = deriveClaimsFromLedger(l.observed, 0, d.writeTools ?? []);
   return renderOperationReport(did, opts);
 }
 export function clearTerminal(l: TurnLedger): void {

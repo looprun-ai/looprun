@@ -287,10 +287,10 @@ disagree about it.
 <!-- Rendered from `packages/core/src/guards/catalog.ts`. Do NOT edit between the markers: run
      `pnpm docs:guards` (it needs a built core), and fix wording in the catalog itself. -->
 
-## 5. The catalog — 22 factories
+## 5. The catalog — 23 factories
 
 Grouped by the hook each one is installed on, because the hook decides what a rule can see and
-therefore what it can enforce (chapter 03 §8). 13 preTool · 1 postTool · 6 onReply · 1 onReplyMutate · 1 escape hatch.
+therefore what it can enforce (chapter 03 §8). 13 preTool · 1 postTool · 7 onReply · 1 onReplyMutate · 1 escape hatch.
 
 A fourth hook exists and has no section here: `onInput` fires before the model runs, and §1's
 matrix makes it legal for every `spatial`/`input`/`run` guard — but no shipped kind is installed
@@ -498,6 +498,7 @@ The reply text is in `ctx.reply` and no tool can run any more. A deny costs a bo
 | [`claimCoversRubric`](#18-claimcoversrubric) | `honesty.ts` | Each configured target must appear in `did` with the required outcome polarity (or any polarity when `outcome: 'any'`). |
 | [`degenerationGuard`](#19-degenerationguard) | `reply.ts` | Catches leaked reasoning or tool markup, chat-template tokens and run-away line repetition in the reply. |
 | [`llmCheck`](#20-llmcheck) | `llm-check.ts` | An LLM-adjudicated guard: a host-registered adjudicator answers a trusted rubric over the full context (history + user text) and its verdict becomes the deny. |
+| [`didMessageConsistency`](#21-didmessageconsistency) | `llm-check.ts` | The `did` × `message` backstop: an adjudicator answers a pre-baked rubric asking whether the message asserts an operation the declaration does not carry, or contradicts a declared intention. |
 
 #### 15. `pendingConfirmMustAsk`
 
@@ -559,15 +560,25 @@ An LLM-adjudicated guard: a host-registered adjudicator answers a trusted rubric
 llmCheck({ rubric: 'Did the user, in an earlier turn, explicitly authorise THIS exact action?', failMode: 'closed' })
 ```
 
+#### 21. `didMessageConsistency`
+
+The `did` × `message` backstop: an adjudicator answers a pre-baked rubric asking whether the message asserts an operation the declaration does not carry, or contradicts a declared intention.
+
+**When to reach for it.** The deterministic cross-check grounds the DECLARATION against the ledger, but the message beside it is free prose — an agent can declare an honest `inform` and still write that it completed something. Install this where the stakes justify a model call per reply (money, health). It is NOT auto-installed and it is never the primary guarantee; the structured cross-check is. Same `failMode` as `llmCheck` (its rubric is baked, so there is nothing else to configure).
+
+```ts
+didMessageConsistency({ failMode: 'closed' })
+```
+
 ### `onReplyMutate` — rewrite the reply, never veto it
 
 A `ReplyMutator`, not a `Guard`: it is applied to the reply before the `onReply` checks run and it has no pass/fail. Bind it with `spec.addMutator(...)`, not `addGuard`.
 
 | factory | file | what it enforces |
 |---|---|---|
-| [`jargonScrub`](#21-jargonscrub) | `reply.ts` | A deterministic egress rewrite of internal vocabulary into user words (word-boundary, case-insensitive). |
+| [`jargonScrub`](#22-jargonscrub) | `reply.ts` | A deterministic egress rewrite of internal vocabulary into user words (word-boundary, case-insensitive). |
 
-#### 21. `jargonScrub`
+#### 22. `jargonScrub`
 
 A deterministic egress rewrite of internal vocabulary into user words (word-boundary, case-insensitive).
 
@@ -583,9 +594,9 @@ One factory, and it is the only one whose hook you choose: `custom` follows the 
 
 | factory | file | what it enforces |
 |---|---|---|
-| [`custom`](#22-custom) | `custom.ts` | The escape hatch: a guard whose kind, dim, check and prose the spec author writes by hand. |
+| [`custom`](#23-custom) | `custom.ts` | The escape hatch: a guard whose kind, dim, check and prose the spec author writes by hand. |
 
-#### 22. `custom`
+#### 23. `custom`
 
 The escape hatch: a guard whose kind, dim, check and prose the spec author writes by hand.
 

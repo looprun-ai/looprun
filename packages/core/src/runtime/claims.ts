@@ -304,35 +304,42 @@ export function renderOperationReport(did: TurnClaim[], opts?: RenderOpts): stri
  * Derive the TRUE claims from the world ledger — the engine's own honest account of what this turn did,
  * used when the redrive loop exhausts (the model never produced a groundable declaration, so the engine
  * builds one it CAN stand behind). For each of THIS turn's observed calls:
- *   · a WRITE that took effect  → `success` (its produced label as `target`, when the world issued one)
- *   · a WRITE with a pending-confirmation result flag → `pending_confirmation`
+ *   · a WRITE that TOOK EFFECT → `success` (its OWN produced label as `target`, when it issued one)
+ *   · a WRITE that did NOT take effect but carries a pending-confirmation result flag → `pending_confirmation`
  *   · a WRITE that ran but returned `ok:false` → `failure`
  *   · a WRITE that ran ok yet took NO effect (a probe) → contributes NOTHING (it changed nothing)
  *   · a READ (any non-write, incl. the runtime terminal) → contributes NOTHING
- * Produced labels are consumed positionally across the effected writes; a write with no label available
- * yields a claim with no `target`, which {@link renderOperationReport} renders as a generic completed-action
- * line — so this NEVER leaks a tool name (it names produced labels or nothing). `op` is a neutral advisory
- * label; the renderer default ignores it, so it is safe.
+ *
+ * EFFECT WINS OVER FLAGS (M6): `tookEffect` is tested FIRST. The old order let a write that BOTH landed
+ * and carried `requiresConfirmation` render as "awaiting your confirmation" — the user told an action is
+ * still pending their OK when the world had already made the change. `pending_confirmation` is honest only
+ * for a write that did not take effect.
+ *
+ * LABELS ARE PER CALL (M5): each claim reads `o.producedLabel` — the label THAT call's own result issued.
+ * The turn-wide `producedThisTurn` stream includes READ labels, so consuming it positionally across the
+ * effected writes made a read's label shift onto a write's target (the engine's own honest closure then
+ * named the wrong entity). A write with no label of its own yields a claim with no `target`, which
+ * {@link renderOperationReport} renders as a generic completed-action line — so this NEVER leaks a tool
+ * name (it names world-issued labels or nothing). `op` is a neutral advisory label; the renderer default
+ * ignores it, so it is safe.
  */
 export function deriveClaimsFromLedger(
   observed: ObservedCall[],
   turnIndex: number,
   writeTools: readonly string[],
-  produced: string[],
 ): TurnClaim[] {
   const writes = new Set(writeTools);
   const claims: TurnClaim[] = [];
-  let labelIx = 0;
   for (const o of observed) {
     if (o.turnIndex !== turnIndex) continue;
     if (!writes.has(o.name)) continue; // reads / terminals contribute nothing
-    if (o.resultFlags?.requiresConfirmation === true) {
-      claims.push({ op: 'operation', outcome: 'pending_confirmation' });
+    if (o.tookEffect === true) {
+      const label = o.producedLabel;
+      claims.push(label ? { op: label, target: label, outcome: 'success' } : { op: 'operation', outcome: 'success' });
       continue;
     }
-    if (o.tookEffect === true) {
-      const label = produced[labelIx++];
-      claims.push(label ? { op: label, target: label, outcome: 'success' } : { op: 'operation', outcome: 'success' });
+    if (o.resultFlags?.requiresConfirmation === true) {
+      claims.push({ op: 'operation', outcome: 'pending_confirmation' });
       continue;
     }
     if (o.ok === false) {

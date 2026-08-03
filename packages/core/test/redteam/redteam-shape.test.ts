@@ -37,7 +37,7 @@ import {
   pruneSupersededTerminals,
 } from '../../src/runtime/ledger.js';
 import { prematureTerminalCalls, prematureTerminalTools, supersededTerminalCalls } from '../../src/runtime/terminal.js';
-import { finalizeReply } from '../../src/runtime/turn.js';
+import { finalizeReply, isBlankDelivery } from '../../src/runtime/turn.js';
 import { AgentSpecBase } from '../../src/index.js';
 import type { AgentWorld, GuardCtx, ObservedCall } from '../../src/index.js';
 import type { RespondPayload } from '../../src/runtime/claims.js';
@@ -395,6 +395,39 @@ describe('SECTION 6 — blank-delivery floor holds against a zero-width override
     expect(out.exhausted).toBe(true);
     // Even though the override returned a zero-width string, the floor swapped in the engine closure.
     expect(out.text.replace(/[​⁠﻿‌‍]/g, '').trim().length).toBeGreaterThan(0);
+  });
+
+  // ── M9: the floor stripped an ENUMERATED list, so the invisibles it never heard of survived ─────
+  // U+2063 invisible separator, U+2062 invisible times, U+2064 invisible plus, U+180E Mongolian vowel
+  // separator, U+3164 Hangul filler: all render as NOTHING, none were in the five-character list, so a
+  // reply made of them read as content and was delivered as the user's answer. FIX (MI-T4/M9): strip by
+  // CHARACTER CATEGORY (Cf + Default_Ignorable_Code_Point) before the emptiness test — a closed class,
+  // not a list someone has to remember to extend.
+  it('CLOSED (M9): the exotic invisibles are blank — per character and combined', () => {
+    // Written as escapes on purpose: these characters are INVISIBLE in a source file.
+    const INVISIBLES = ['\u2061', '\u2062', '\u2063', '\u2064', '\u180E', '\u3164', '\u115F', '\u1160', '\uFFA0'];
+    for (const ch of INVISIBLES) {
+      expect(isBlankDelivery(ch), `U+${ch.codePointAt(0)!.toString(16).toUpperCase()} must read as blank`).toBe(true);
+    }
+    expect(isBlankDelivery(INVISIBLES.join(''))).toBe(true);
+    expect(isBlankDelivery(' \u2063\n\u3164\t')).toBe(true); // mixed with whitespace
+  });
+
+  it('CLOSED (M9) control: real text (including text CARRYING an invisible) is never blank', () => {
+    expect(isBlankDelivery('Done.')).toBe(false);
+    expect(isBlankDelivery('\u2063Done.\u3164')).toBe(false);
+    expect(isBlankDelivery('한글')).toBe(false); // a Hangul SYLLABLE is content; only the FILLER is not
+  });
+
+  it('CLOSED (M9): a message of exotic invisibles routes finalizeReply to the non-empty closure', async () => {
+    const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona: 'p', tools: [] });
+    const ledger = createLedger();
+    beginTurn(ledger, 0);
+    const invisible: RespondPayload = { message: '\u2063\u3164\u180E', did: [{ op: 'inform' }] };
+    const out = await finalizeReply(spec, undefined, world(), ledger, invisible, async () => invisible, 0);
+    expect(out.exhausted).toBe(true);
+    expect(isBlankDelivery(out.text)).toBe(false);
+    expect(ledger.turnCorrections).toContain('exhaustion-blank-floor');
   });
 });
 

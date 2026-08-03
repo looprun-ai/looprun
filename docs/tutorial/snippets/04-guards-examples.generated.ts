@@ -21,6 +21,7 @@ import {
   custom,
   degenerationGuard,
   destructiveThrottle,
+  didMessageConsistency,
   forbidThisTurn,
   jargonScrub,
   llmCheck,
@@ -34,7 +35,7 @@ import {
 } from 'looprun';
 import type { Guard, ReplyMutator } from 'looprun';
 
-/** The 22 examples of chapter 04 §5, in catalog order. */
+/** The 23 examples of chapter 04 §5, in catalog order. */
 export const CATALOG_EXAMPLES: ReadonlyArray<Guard | ReplyMutator> = [
   /* requiresBefore        */ requiresBefore(['findBooking']),
   /* forbidThisTurn        */ forbidThisTurn('Do not reschedule while a cancellation is pending — resolve that first.'),
@@ -57,5 +58,6 @@ export const CATALOG_EXAMPLES: ReadonlyArray<Guard | ReplyMutator> = [
   /* jargonScrub           */ jargonScrub({ CANC_PEND: 'waiting to be cancelled' }),
   /* askedEarlier          */ askedEarlier({ tool: 'completeMaintenance', arg: 'condition' }),
   /* llmCheck              */ llmCheck({ rubric: 'Did the user, in an earlier turn, explicitly authorise THIS exact action?', failMode: 'closed' }),
+  /* didMessageConsistency */ didMessageConsistency({ failMode: 'closed' }),
   /* custom                */ custom({ kind: 'imageQuotaLeft', dim: 'run', check: (ctx) => (ctx.world.imageQuotaRemaining > 0 ? null : 'No image quota left this month — say so instead of generating.'), prose: () => 'generate an image only while quota remains' }),
 ];

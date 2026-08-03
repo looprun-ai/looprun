@@ -131,6 +131,11 @@ export function recordToolResult(ledger: TurnLedger, name: string, args: Record<
   const wtc = world
     ? [...world.toolCalls].reverse().find((t) => t.name === name && canonArgs((t.args ?? {}) as Record<string, unknown>) === canonArgs(args))
     : undefined;
+  // The label THIS call's result issued, if any. It rides the observed entry (so the derived account can
+  // name the acting call's own entity — red-team M5) AND the turn-wide `producedThisTurn` stream (which
+  // the guard ctx and the domain `exhaustionReply` seams still read as a flat list of what was produced).
+  const lbl = ok ? (output as { label?: unknown } | null | undefined)?.label : undefined;
+  const producedLabel = typeof lbl === 'string' ? lbl : undefined;
   ledger.observed.push({
     name,
     args,
@@ -138,11 +143,9 @@ export function recordToolResult(ledger: TurnLedger, name: string, args: Record<
     turnIndex: ledger.turnIndex,
     ...(world ? { tookEffect: wtc?.tookEffect === true } : {}),
     ...(requiresConfirmation ? { resultFlags: { requiresConfirmation: true } } : {}),
+    ...(producedLabel !== undefined ? { producedLabel } : {}),
   });
-  if (ok) {
-    const lbl = (output as { label?: unknown } | null | undefined)?.label;
-    if (typeof lbl === 'string') ledger.producedThisTurn.push(lbl);
-  }
+  if (producedLabel !== undefined) ledger.producedThisTurn.push(producedLabel);
 }
 
 /** Record a terminal CALL in the observed ledger. Called from the guard hooks' SYNCHRONOUS segment

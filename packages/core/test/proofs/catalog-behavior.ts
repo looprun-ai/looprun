@@ -4,6 +4,7 @@ import {
   claimIsComplete,
   claimIsGrounded,
   degenerationGuard,
+  didMessageConsistency,
   llmCheck,
   pendingConfirmMustAsk,
 } from '../../src/guards/index.js';
@@ -22,6 +23,19 @@ const DENY_ADJ: Adjudicator = async (_rubric, ctx) => ({
     : null,
 });
 const ALLOW_ADJ: Adjudicator = async () => ({ violation: null });
+
+/** The scripted adjudicator for the D6 backstop: it answers the BAKED did×message rubric by comparing the
+ *  operations the MESSAGE asserts against the ones the DECLARATION carries — an unbacked assertion denies. */
+const DID_MESSAGE_ADJ: Adjudicator = async (_rubric, ctx) => {
+  const declared = new Set((ctx.did ?? []).map((i) => i.op));
+  const assertedOps = ['cancel', 'refund'].filter((op) => (ctx.reply ?? '').toLowerCase().includes(op));
+  const unbacked = assertedOps.find((op) => !declared.has(op));
+  return {
+    violation: unbacked
+      ? `Your message tells the user you performed "${unbacked}", but your declared intentions do not carry that operation.`
+      : null,
+  };
+};
 
 /** A write call that took effect this turn — the ledger shape the cross-check guards ground against. */
 const effectedWrite = (name: string, args: Record<string, unknown>) => ({ name, args, ok: true, turnIndex: 0, tookEffect: true });
@@ -345,6 +359,69 @@ export const BEHAVIOR_PROOFS: GuardProof[] = [
         // The guard from make() is failMode 'open'; a throwing adjudicator means "could not verify" and,
         // open, that allows. (The 'closed' direction is proven at the check level in proofs-l1.test.ts.)
         ctx: { reply: 'anything', adjudicator: (async () => { throw new Error('adjudicator offline'); }) as Adjudicator, turnIndex: 0, observed: [] },
+        l1: 'silent',
+      },
+    ],
+  },
+
+  // ── didMessageConsistency (collective:'skip' — an llmCheck, so the adjudicator is agent-specific) ──
+  {
+    guard: 'didMessageConsistency',
+    // The D6 backstop: its rubric is BAKED, so the only thing a proof scripts is the adjudicator that
+    // answers it. DID_MESSAGE_ADJ compares the operations the MESSAGE asserts against the ones `did`
+    // carries — the judgement the rubric asks for, made deterministic.
+    make: () => didMessageConsistency(),
+    hook: 'onReply',
+    target: 'any',
+    // Same ruling as `llmCheck` (it IS one): a rubric + host adjudicator are bound to one agent's
+    // contract, so installing it collective-wide over arbitrary scenarios is a category error.
+    collective: 'skip',
+    cases: [
+      {
+        name: 'the message asserts an operation the did does not carry → fires',
+        polarity: 'negative',
+        ctx: {
+          reply: 'I have cancelled the booking for you.',
+          did: [{ op: 'inform' }], // declared: nothing happened. Prose: an act happened.
+          adjudicator: DID_MESSAGE_ADJ,
+          turnIndex: 0,
+          observed: [],
+        },
+        l1: 'fires',
+        l3: {
+          preset: 'empty',
+          turns: [turn('can you cancel my 3pm booking?')],
+          script: [
+            [{ tool: 'respond', args: { message: 'I have cancelled the booking for you.', did: [{ op: 'inform' }] } }],
+            [{ text: 'I have not cancelled anything — shall I go ahead?' }],
+          ],
+          adjudicator: DID_MESSAGE_ADJ,
+          expect: 'redrive',
+        },
+      },
+      {
+        name: 'the message matches the declared intentions → silent',
+        polarity: 'positive',
+        ctx: {
+          reply: 'The cancellation is done.',
+          did: [{ op: 'cancel', target: 'BK-1', outcome: 'success' }],
+          adjudicator: DID_MESSAGE_ADJ,
+          turnIndex: 0,
+          observed: [],
+        },
+        l1: 'silent',
+        l3: {
+          preset: 'empty',
+          turns: [turn('cancel my 3pm booking')],
+          script: [[{ tool: 'respond', args: { message: 'The cancellation is done.', did: [{ op: 'cancel', target: 'BK-1', outcome: 'success' }] } }]],
+          adjudicator: DID_MESSAGE_ADJ,
+          expect: 'pass',
+        },
+      },
+      {
+        name: 'failMode open (the default): an UNREACHABLE adjudicator allows → silent',
+        polarity: 'neutral',
+        ctx: { reply: 'anything', did: [{ op: 'inform' }], adjudicator: (async () => { throw new Error('adjudicator offline'); }) as Adjudicator, turnIndex: 0, observed: [] },
         l1: 'silent',
       },
     ],

@@ -626,4 +626,21 @@ describe('isEmptyReadResult', () => {
   it('a truthy scalar field (a plain id string) counts as content', () => {
     expect(isEmptyReadResult({ id: 'BK-1' })).toBe(false);
   });
+
+  // ── M4 (red-team): a status-like KEY must not hide a RECORD ────────────────────────────────────
+  // The status-key skip existed for a status STRING (`status:'not_found'` is not content). It ran
+  // BEFORE the nested-object check, so a found entity returned under one of those key names —
+  // `{message:{booking:'BK-1'}}`, the common "envelope" read shape — read as EMPTY, and a
+  // `not_found` claim about a record the world DID return grounded. Only a SCALAR/boolean under a
+  // status key is skipped now; a nested record is content whatever the key is called.
+  it('M4: a RECORD under a status-like key is CONTENT, not empty', () => {
+    expect(isEmptyReadResult({ message: { booking: 'BK-1' } })).toBe(false);
+    expect(isEmptyReadResult({ status: { id: 'BK-1' } })).toBe(false);
+    expect(isEmptyReadResult({ state: { id: 'BK-1' }, success: true })).toBe(false);
+  });
+
+  it('M4 control: a SCALAR under a status-like key is still not content', () => {
+    expect(isEmptyReadResult({ message: 'no record found' })).toBe(true);
+    expect(isEmptyReadResult({ status: 'not_found', found: false })).toBe(true);
+  });
 });

@@ -30,7 +30,8 @@ import { canonArgs } from './flow.js';
 import { domainCallsThisTurn } from './shared.js';
 
 /** The record-field names that describe a call's STATUS rather than the data it returned — ignored when
- *  deciding whether a read came back empty (a `status:'not_found'` string is not content). */
+ *  deciding whether a read came back empty, but ONLY when the value under them is a SCALAR (see
+ *  {@link isEmptyReadResult}): a `status:'not_found'` string is not content, a record under `message` is. */
 const STATUS_LIKE_KEYS: ReadonlySet<string> = new Set([
   'success', 'ok', 'status', 'state', 'code', 'error', 'message', 'reason', 'found', 'exists',
 ]);
@@ -38,10 +39,16 @@ const STATUS_LIKE_KEYS: ReadonlySet<string> = new Set([
 /**
  * Is this read result EMPTY — "the lookup came back with nothing"?
  *
- * Empty ⇔ no non-empty array anywhere AND no truthy record field besides booleans and status-like
+ * Empty ⇔ no non-empty array anywhere AND no truthy record field besides booleans and SCALAR status-like
  * fields. `null`/`undefined`/`[]`/`{}` are empty; the `{success:true, data:[]}` style is empty (a boolean
  * flag + an empty list is not content); a non-empty array field, a nested entity, or any other truthy
  * scalar field IS content. A bare truthy scalar (a plain id) is content; a falsy scalar is empty.
+ *
+ * KEY-BLINDNESS FOR CONTAINERS (M4, red-team): the status-key skip used to run BEFORE the nested-object
+ * check, so a found entity returned under one of those names — `{message:{booking:'BK-1'}}`, the ordinary
+ * "envelope" read shape — read as EMPTY and a `not_found` claim about a record the world DID return
+ * grounded. The skip is a statement about a status WORD, so it now applies only to a scalar/boolean
+ * value; a record or a non-empty list is content whatever its key is called.
  */
 export function isEmptyReadResult(result: unknown): boolean {
   if (result === null || result === undefined) return true;
@@ -52,10 +59,11 @@ export function isEmptyReadResult(result: unknown): boolean {
         if (val.length > 0) return false; // a non-empty list is content
         continue;
       }
+      // CONTAINERS FIRST, key-blind: a nested record is content under ANY key, status-like or not.
+      if (val !== null && typeof val === 'object') return false;
       if (typeof val === 'boolean') continue;       // a flag (success:true) is not content
-      if (STATUS_LIKE_KEYS.has(key)) continue;       // a status/error field is not content
+      if (STATUS_LIKE_KEYS.has(key)) continue;       // a SCALAR status/error word is not content
       if (val === null || val === undefined) continue;
-      if (typeof val === 'object') return false;     // a nested record/entity is content
       if (val) return false;                         // a truthy scalar field is content
     }
     return true;

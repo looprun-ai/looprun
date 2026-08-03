@@ -83,6 +83,31 @@ describe('loadNormsConfig — guards from data', () => {
     expect(() => loadNormsConfig(cfg)).toThrow(NormsConfigError);
   });
 
+  it('(a4) the didMessageConsistency kind (MI-D6) loads onReply/global with the BAKED rubric', () => {
+    const cfg = {
+      id: 'x', persona: 'p', tools: ['cancelBooking'],
+      guards: [{ kind: 'didMessageConsistency', id: 'prosebackstop', failMode: 'closed' }],
+    };
+    const spec = loadNormsConfig(cfg);
+    const bound = spec.guards.onReply.find((b) => b.id === 'agent:prosebackstop');
+    expect(bound?.guard.kind).toBe('llmCheck'); // it IS an llmCheck — the adjudicator gate sees it
+    expect(bound?.guard.dim).toBe('behavior');
+    // The rubric is the ENGINE's, not the config's: the config chose only to install it.
+    expect(bound?.guard.prose()).toContain('did');
+    expect(bound?.guard.prose()).toContain('message');
+    // AVAILABLE, NOT AUTO-INSTALLED: a config that does not name it gets no such guard.
+    const without = loadNormsConfig({ id: 'x', persona: 'p', tools: ['cancelBooking'], guards: [] });
+    expect(without.guards.onReply.some((b) => b.guard.prose().includes('operations it declared'))).toBe(false);
+  });
+
+  it('(a5) didMessageConsistency: a rubric of its own is rejected by .strict() (the rubric is engine-owned)', () => {
+    const cfg = {
+      id: 'x', persona: 'p', tools: ['t'],
+      guards: [{ kind: 'didMessageConsistency', id: 'd', rubric: 'my own question?' }],
+    };
+    expect(() => loadNormsConfig(cfg)).toThrow(NormsConfigError);
+  });
+
   it('(b) REGEX BAN — a pattern-like KEY anywhere fails validation by name', () => {
     const fixtureWithPatternKey = {
       id: 'x',

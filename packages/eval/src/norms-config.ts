@@ -18,7 +18,7 @@
  * load, not run.
  */
 import { z } from 'zod';
-import { AgentSpecBase, askedEarlier, claimCoversRubric, confirmFirst, llmCheck, precondition, requiresBefore } from '@looprun-ai/core';
+import { AgentSpecBase, askedEarlier, claimCoversRubric, confirmFirst, didMessageConsistency, llmCheck, precondition, requiresBefore } from '@looprun-ai/core';
 import type { AgentSpec, AgentWorld, CoreOutcome, Guard, GuardCtx, OutcomeMap } from '@looprun-ai/core';
 
 /** The CORE, domain-neutral outcome vocabulary as a runtime tuple — the closed set a `did` claim may
@@ -109,6 +109,18 @@ const guardSchema = z.discriminatedUnion('kind', [
       tools: z.union([z.array(z.string()).min(1), z.literal('any')]),
       // The trusted, pre-baked question the host adjudicator answers. Prose, never a pattern.
       rubric: z.string(),
+      // Unreachable adjudicator ⇒ open (allow, default) or closed (deny). Optional.
+      failMode: z.enum(['open', 'closed']).optional(),
+    })
+    .strict(),
+  z
+    .object({
+      // The did × message BACKSTOP (MI-D6). Its rubric is BAKED into the engine factory, so there is no
+      // `rubric` field here — a domain opts IN to the engine's question, it does not rewrite it. Always
+      // onReply and always global (it judges the delivered payload as a whole), so no `hook`/`tools`
+      // either. Available, never auto-installed: an agent gets it only by naming it in its norms.
+      kind: z.literal('didMessageConsistency'),
+      id: z.string(),
       // Unreachable adjudicator ⇒ open (allow, default) or closed (deny). Optional.
       failMode: z.enum(['open', 'closed']).optional(),
     })
@@ -343,6 +355,16 @@ function installGuard(spec: AgentSpecBase, g: GuardConfig, deps: NormsDeps, outc
       const dim = g.hook === 'preTool' ? 'run' : 'behavior';
       const target = g.tools === 'any' ? 'any' : g.tools;
       spec.addGuard(g.hook, target, llmCheck({ rubric: g.rubric, dim, ...(g.failMode ? { failMode: g.failMode } : {}) }), {
+        layer: 'agent',
+        id,
+      });
+      return;
+    }
+    case 'didMessageConsistency': {
+      // Same no-deny-policy-wrap reasoning as `llmCheck` (it IS one): the deny is the adjudicator's
+      // verdict. The rubric is the engine's, so the config chooses only WHETHER to install it and what an
+      // unreachable adjudicator means.
+      spec.addGuard('onReply', 'any', didMessageConsistency(g.failMode ? { failMode: g.failMode } : undefined), {
         layer: 'agent',
         id,
       });

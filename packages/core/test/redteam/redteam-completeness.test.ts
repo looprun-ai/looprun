@@ -151,15 +151,15 @@ describe('VECTOR 2 — one claim covers two writes to the same target [CLOSED by
 });
 
 // ─────────────────────────────────────────────────────────────────────────────────────────────
-// VECTOR 4 — deriveClaimsFromLedger positional label misalignment (exhaustion path, T4 minor)
+// VECTOR 4 — deriveClaimsFromLedger positional label misalignment (exhaustion path) [CLOSED by M5]
 //
 // recordToolResult pushes ANY ok call's string `label` into producedThisTurn — READS INCLUDED.
-// deriveClaimsFromLedger consumes `produced[labelIx++]` for EFFECTED WRITES ONLY, positionally. So a
-// read that emitted a label shifts the array, and the write consumes the READ's label as its `target`.
-// The exhaustion closure then tells the user the WRONG entity for a real action.
+// deriveClaimsFromLedger used to consume `produced[labelIx++]` for EFFECTED WRITES ONLY, positionally,
+// so a read that emitted a label shifted the array and the write wore the READ's label as its `target`.
+// The exhaustion closure then told the user the WRONG entity for a real action.
 // ─────────────────────────────────────────────────────────────────────────────────────────────
-describe('VECTOR 4 — read label shifts a write target on the derive path [BROKE]', () => {
-  it('producedThisTurn (built by the runtime) includes a READ label ahead of the write', () => {
+describe('VECTOR 4 — read label shifts a write target on the derive path [CLOSED by M5]', () => {
+  it('CLOSED: a READ label ahead of the write is NOT worn by the write', () => {
     const world = worldWith([
       { name: 'lookupOrder', args: { q: 'blue widget' }, result: { label: 'SEARCH-RESULT', items: [1] }, tookEffect: false },
       { name: 'refundOrder', args: { order: 'ORD-9' }, result: { ok: true }, tookEffect: true },
@@ -171,57 +171,72 @@ describe('VECTOR 4 — read label shifts a write target on the derive path [BROK
     // … then the WRITE that took effect but emitted no label of its own.
     recordToolResult(ledger, 'refundOrder', { order: 'ORD-9' }, { ok: true }, world);
 
-    expect(ledger.producedThisTurn).toEqual(['SEARCH-RESULT']); // the read's label sits at index 0
+    expect(ledger.producedThisTurn).toEqual(['SEARCH-RESULT']); // the read's label is still recorded …
 
-    const derived = deriveClaimsFromLedger(ledger.observed, 0, ['refundOrder'], ledger.producedThisTurn);
-    // FORBIDDEN: the refund of ORD-9 is reported under the SEARCH's label.
-    expect(derived).toEqual([{ op: 'SEARCH-RESULT', target: 'SEARCH-RESULT', outcome: 'success' }]);
-    expect(renderOperationReport(derived)).toBe('SEARCH-RESULT: done'); // wrong target for a real action
+    const derived = deriveClaimsFromLedger(ledger.observed, 0, ['refundOrder']);
+    // … but the derive path reads each call's OWN label, so the nameless refund stays nameless.
+    expect(derived).toEqual([{ op: 'operation', outcome: 'success' }]);
+    expect(renderOperationReport(derived)).toBe('One action completed.'); // generic, never the wrong entity
   });
 
-  it('isolated: a read label at produced[0] is consumed by the first effected write', () => {
+  it('CLOSED isolated: a write with no producedLabel of its own derives no target', () => {
     const observed: ObservedCall[] = [
-      call('lookupOrder', { q: 'x' }, { tookEffect: false }), // a read (not in writeTools)
-      call('refundOrder', { order: 'ORD-9' }, { tookEffect: true }),
+      call('lookupOrder', { q: 'x' }, { tookEffect: false, producedLabel: 'SEARCH-RESULT' }), // a read WITH a label
+      call('refundOrder', { order: 'ORD-9' }, { tookEffect: true }),                          // the write, unlabelled
     ];
-    const derived = deriveClaimsFromLedger(observed, 0, ['refundOrder'], ['SEARCH-RESULT']);
-    expect(derived[0].target).toBe('SEARCH-RESULT'); // the write wears the read's label
+    const derived = deriveClaimsFromLedger(observed, 0, ['refundOrder']);
+    expect(derived[0].target).toBeUndefined();
   });
 
-  // EXACT FIX: deriveClaimsFromLedger must not consume a GLOBAL positional array that includes read
-  // labels. Either (a) build producedThisTurn as write-only (recordToolResult pushes a label only when
-  // `writes.has(name)`), or better (b) attach each produced label to its OWN observed call (a
-  // per-call `producedLabel` field set in recordToolResult) and read `o.producedLabel` in the derive
-  // loop instead of a positional cursor. Option (b) also removes the last-write-drops-when-counts-
-  // differ hazard entirely, because there is no cursor to misalign.
+  it('CONTROL: a write that DID produce a label still wears its own (the fix is not blanket erasure)', () => {
+    const observed: ObservedCall[] = [
+      call('lookupOrder', { q: 'x' }, { tookEffect: false, producedLabel: 'SEARCH-RESULT' }),
+      call('refundOrder', { order: 'ORD-9' }, { tookEffect: true, producedLabel: 'REFUND-9' }),
+    ];
+    const derived = deriveClaimsFromLedger(observed, 0, ['refundOrder']);
+    expect(derived).toEqual([{ op: 'REFUND-9', target: 'REFUND-9', outcome: 'success' }]);
+  });
+
+  // FIX AS LANDED (MI-T4 / M5): option (b) of the two the vector prescribed — each produced label is
+  // attached to its OWN observed call (`ObservedCall.producedLabel`, set in recordToolResult) and the
+  // derive loop reads `o.producedLabel`. There is no positional cursor left to misalign, so the
+  // last-write-drops-when-counts-differ hazard is gone with it.
 });
 
 // ─────────────────────────────────────────────────────────────────────────────────────────────
-// VECTOR 3 — deriveClaimsFromLedger mis-buckets an EFFECTED write as pending_confirmation
+// VECTOR 3 — deriveClaimsFromLedger mis-buckets an EFFECTED write as pending_confirmation [CLOSED by M6]
 //
-// The derive loop checks `resultFlags.requiresConfirmation` FIRST and `continue`s — BEFORE the
-// `tookEffect` branch. A write that BOTH took effect AND carries the confirmation flag is rendered
-// "Awaiting your confirmation." The user is told an action is still pending their OK when it already
-// happened — a real action mis-reported (and it consumes no label, so it drops out of the success set).
+// The derive loop used to check `resultFlags.requiresConfirmation` FIRST and `continue` — BEFORE the
+// `tookEffect` branch. A write that BOTH took effect AND carried the confirmation flag rendered
+// "Awaiting your confirmation." The user was told an action is still pending their OK when it already
+// happened — a real action mis-reported (and it consumed no label, so it dropped out of the success set).
 // ─────────────────────────────────────────────────────────────────────────────────────────────
-describe('VECTOR 3 — effected write + confirmation flag mis-bucketed as pending [BROKE]', () => {
-  it('an effected write with requiresConfirmation is derived as pending_confirmation, not success', () => {
+describe('VECTOR 3 — effected write + confirmation flag mis-bucketed as pending [CLOSED by M6]', () => {
+  it('CLOSED: an effected write with requiresConfirmation derives as SUCCESS, not pending', () => {
     const observed: ObservedCall[] = [
       call('refundOrder', { order: 'ORD-7', amount: 200 }, {
         tookEffect: true,
+        producedLabel: 'REFUND-7',
         resultFlags: { requiresConfirmation: true },
       }),
     ];
-    const derived = deriveClaimsFromLedger(observed, 0, ['refundOrder'], ['REFUND-7']);
-    // FORBIDDEN: the refund landed (tookEffect:true) yet the engine's own account calls it pending.
-    expect(derived).toEqual([{ op: 'operation', outcome: 'pending_confirmation' }]);
-    expect(renderOperationReport(derived)).toBe('Awaiting your confirmation.'); // action already done
+    const derived = deriveClaimsFromLedger(observed, 0, ['refundOrder']);
+    // The refund LANDED, so the engine's own account says so — no "awaiting your confirmation" over a
+    // change the world already made.
+    expect(derived).toEqual([{ op: 'REFUND-7', target: 'REFUND-7', outcome: 'success' }]);
+    expect(renderOperationReport(derived)).toBe('REFUND-7: done');
   });
 
-  // EXACT FIX: an EFFECTED write is a completed action regardless of a stray confirmation flag — test
-  // `tookEffect === true` BEFORE `requiresConfirmation` in deriveClaimsFromLedger (reorder the two
-  // branches), OR gate the pending branch on `tookEffect !== true`. pending_confirmation is only honest
-  // for a write that DID NOT take effect.
+  it('CONTROL: a write that did NOT take effect and requires confirmation is still pending', () => {
+    const observed: ObservedCall[] = [
+      call('refundOrder', { order: 'ORD-7' }, { tookEffect: false, resultFlags: { requiresConfirmation: true } }),
+    ];
+    const derived = deriveClaimsFromLedger(observed, 0, ['refundOrder']);
+    expect(derived).toEqual([{ op: 'operation', outcome: 'pending_confirmation' }]);
+  });
+
+  // FIX AS LANDED (MI-T4 / M6): `tookEffect === true` is tested BEFORE `requiresConfirmation` —
+  // pending_confirmation is honest only for a write that did NOT take effect.
 });
 
 // ─────────────────────────────────────────────────────────────────────────────────────────────

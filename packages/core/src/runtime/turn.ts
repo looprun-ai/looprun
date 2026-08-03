@@ -279,19 +279,30 @@ function composeDelivery(payload: RespondPayload, contract?: DomainContract): st
   return payload.message.trim() ? `${payload.message}\n\n${report}` : report;
 }
 
-/** Zero-width / invisible-format characters that survive `.trim()` — U+200B (zero-width space), U+2060
- *  (word joiner), U+200C/U+200D (ZWNJ/ZWJ) and U+FEFF (BOM / zero-width no-break space). A message made
- *  of only these reads as non-empty to a naive `.trim().length` check. */
-const ZERO_WIDTH_RE = /[\u200B\u200C\u200D\u2060\uFEFF]/g;
+/**
+ * The INVISIBLE characters that survive `.trim()`, as a CHARACTER CLASS rather than a list (red-team M9).
+ *
+ * The floor used to enumerate five code points (U+200B/200C/200D/2060/FEFF), so every invisible it had
+ * never heard of got through: U+2062–U+2064 (invisible times/separator/plus), U+180E (Mongolian vowel
+ * separator), and the Hangul fillers U+3164/U+115F/U+1160/U+FFA0. A message made of those renders as
+ * NOTHING yet read as content, and was delivered as the user's answer. A list is the wrong shape for the
+ * job — it needs extending every time Unicode names another invisible.
+ *
+ * `\p{Cf}` is the FORMAT category (every zero-width joiner / separator / mark) and
+ * `\p{Default_Ignorable_Code_Point}` is Unicode's own "renders as nothing" property, which covers the
+ * Hangul fillers and the variation selectors `Cf` does not. Together they are the closed class. Ordinary
+ * whitespace is left to `.trim()`, which already handles every space separator, tab, newline and NBSP.
+ */
+const INVISIBLE_RE = /[\p{Cf}\p{Default_Ignorable_Code_Point}]/gu;
 
 /**
- * True when `text` carries nothing a user would read: empty after stripping zero-width/format characters
+ * True when `text` carries nothing a user would read: empty after stripping invisible/format characters
  * and trimming. This is the runtime's OWN floor for "did the agent actually say anything" — it does not
  * depend on the `respond` terminal schema's `minLength`, which is advisory only (mastra's
  * json-schema-zod conversion drops `minLength` at execution time, so it is never runtime-enforced).
  */
 export function isBlankDelivery(text: string): boolean {
-  return text.replace(ZERO_WIDTH_RE, '').trim().length === 0;
+  return text.replace(INVISIBLE_RE, '').trim().length === 0;
 }
 
 /**
@@ -306,7 +317,7 @@ function deriveExhaustionClosure(
   writeTools: readonly string[],
   contract?: DomainContract,
 ): { text: string; did: TurnClaim[] } {
-  const derived = deriveClaimsFromLedger(ledger.observed, ledger.turnIndex, writeTools, ledger.producedThisTurn);
+  const derived = deriveClaimsFromLedger(ledger.observed, ledger.turnIndex, writeTools);
   const report = renderOperationReport(derived, { renderClaim: contract?.renderClaim, outcomes: contract?.outcomes });
   const landed = derived.some((c) => c.outcome === 'success');
   const sentence = landed ? EXHAUSTION_PARTIAL : EXHAUSTION_NOTHING;

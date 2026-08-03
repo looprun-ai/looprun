@@ -5,7 +5,7 @@
  * package; here everything runs against a crafted ctx / a built spec, no framework.
  */
 import { describe, expect, it, vi } from 'vitest';
-import { AgentSpecBase, custom, llmCheck } from '../src/index.js';
+import { AgentSpecBase, custom, didMessageConsistency, llmCheck } from '../src/index.js';
 import { assertAdjudicatorPresent, specInstallsLlmCheck } from '../src/internal.js';
 import type { Adjudicator, GuardCtx } from '../src/index.js';
 
@@ -135,6 +135,83 @@ describe('assertAdjudicatorPresent — fail loud at conversation start', () => {
   it('is a no-op for a spec with no llmCheck (zero-diff)', () => {
     const plain = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: ['water'] });
     expect(() => assertAdjudicatorPresent(plain, undefined)).not.toThrow();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────────
+// didMessageConsistency (MI-D6) — the did × message BACKSTOP. The structured cross-check grounds the
+// DECLARATION against the ledger, but the `message` is free prose beside it: an agent can declare an
+// honest `inform` and still WRITE that it refunded €500. No structural signal reads that (the red-team's
+// P1). This is the priced, opt-in backstop — a pre-baked rubric an author installs where the stakes
+// justify a model call. It is NEVER auto-installed and never the primary guarantee.
+// ─────────────────────────────────────────────────────────────────────────────────────────────────
+describe('didMessageConsistency — the did × message rubric (available, not auto-installed)', () => {
+  /** A fake adjudicator standing in for the host model: it answers the rubric by comparing the ops the
+   *  MESSAGE asserts against the ops the DECLARATION carries. Deterministic, so the proof is reproducible. */
+  const CONSISTENCY_ADJ: Adjudicator = async (_rubric, ctx) => {
+    const declared = new Set((ctx.did ?? []).map((i) => i.op));
+    const asserted = ['refund', 'cancel'].filter((op) => (ctx.reply ?? '').toLowerCase().includes(op));
+    const unbacked = asserted.filter((op) => !declared.has(op));
+    return {
+      violation: unbacked.length
+        ? `Your message states you performed "${unbacked[0]}" but your declaration does not carry that operation. Say only what you declared.`
+        : null,
+    };
+  };
+
+  it('DENIES a message asserting an operation the did does not carry', async () => {
+    const reason = await didMessageConsistency().check(
+      baseCtx({
+        adjudicator: CONSISTENCY_ADJ,
+        did: [{ op: 'inform' }], // the agent declared it only INFORMED …
+        reply: 'I went ahead and processed the refund of €500 for you.', // … while the prose claims a refund
+      }),
+    );
+    expect(reason).toContain('refund');
+  });
+
+  it('ALLOWS a message whose assertions match the declared intentions', async () => {
+    const reason = await didMessageConsistency().check(
+      baseCtx({
+        adjudicator: CONSISTENCY_ADJ,
+        did: [{ op: 'refund', target: 'ORD-1', outcome: 'success' }],
+        reply: 'The refund for ORD-1 is done.',
+      }),
+    );
+    expect(reason).toBeNull();
+  });
+
+  it('is an llmCheck by KIND, so the adjudicator gate and the TRUTH classification hold', () => {
+    const g = didMessageConsistency();
+    expect(g.kind).toBe('llmCheck'); // specInstallsLlmCheck scans by kind, not by source token
+    expect(g.dim).toBe('behavior');  // a reply verdict → onReply
+    const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: ['water'] });
+    spec.addGuard('onReply', 'any', g, { id: 'agent:d6' });
+    expect(specInstallsLlmCheck(spec)).toBe(true);
+    expect(() => assertAdjudicatorPresent(spec, undefined)).toThrow(/no adjudicator/i);
+  });
+
+  it('carries the BAKED did × message rubric as its prose — domain-neutral, no business words', () => {
+    const prose = didMessageConsistency().prose();
+    expect(prose.toLowerCase()).toContain('did');
+    expect(prose.toLowerCase()).toContain('message');
+    // Domain-neutral: the engine never ships a business noun in a guard's prose.
+    for (const business of ['booking', 'refund', 'order', 'invoice', 'patient', 'account']) {
+      expect(prose.toLowerCase()).not.toContain(business);
+    }
+  });
+
+  it('takes failMode like any llmCheck: closed denies when the adjudicator is unreachable', async () => {
+    const dead: Adjudicator = async () => { throw new Error('offline'); };
+    expect(await didMessageConsistency().check(baseCtx({ adjudicator: dead }))).toBeNull(); // open by default
+    expect(await didMessageConsistency({ failMode: 'closed' }).check(baseCtx({ adjudicator: dead }))).toMatch(/could not be completed/i);
+  });
+
+  it('is NOT auto-installed: a spec with destructive tools and a contract installs no llmCheck', () => {
+    const spec = new AgentSpecBase({
+      id: 'a', mode: 'M', persona, tools: ['cancelBooking'], destructiveTools: ['cancelBooking'],
+    });
+    expect(specInstallsLlmCheck(spec)).toBe(false);
   });
 });
 

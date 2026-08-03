@@ -41,6 +41,7 @@ export type { Guard, GuardCtx, ObservedCall, Dim } from './rules.js';
 export {
   custom,
   llmCheck,
+  didMessageConsistency,
   askedEarlier,
   requiresBefore,
   forbidThisTurn,

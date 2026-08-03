@@ -86,6 +86,17 @@ hooks are async-capable. An `llmCheck` installed with no adjudicator registered 
 start (`assertAdjudicatorPresent`), never mid-turn. Prompt-injection is acknowledged and priced by evals,
 not by blindness: the rubric is fixed, the channel is a verdict.
 
+**The ONE pre-baked rubric the engine ships: `didMessageConsistency` (MI-D6).** The deterministic
+cross-check grounds the DECLARATION (`did`) against the world ledger, but the `message` delivered beside it
+is free prose — an agent can declare an honest `inform` and still WRITE that it completed something. No
+structural signal reads that (assertion and polarity live in the prose, which is exactly what a pattern
+cannot judge). `didMessageConsistency()` is the priced backstop: an `llmCheck` whose rubric — "does the
+message state an operation `did` does not carry, or contradict a declared intention?" — is baked in, so a
+domain opts INTO the engine's question rather than authoring its own. It is **AVAILABLE, never
+auto-installed**: no protocol installs it, and it is never the primary guarantee (the cross-check is). Bind
+it where the stakes justify a model call per reply. Its runtime `kind` is `llmCheck`, deliberately — the
+adjudicator gate and the TRUTH/SAFETY frontier scan by kind, so a wrapped guard is seen for what it is.
+
 ## 2. The five hooks — and the CORRECT enforcement semantics
 
 | Hook | Fires (backend primitive) | What a deny/violation does |

@@ -149,11 +149,18 @@ export function noActAfterAskSameTurn(tools: string[]): Guard {
  * "probe→approved-execute in the SAME turn" exemption DEAD CODE: the flow it exempts could never occur.
  * The two kinds now agree on what "already acted" means.
  *
- * A prior call is a PROBE (not an effect) when it returned `requiresConfirmation`, or when it carries
- * `confirmArg:false` explicitly. Everything else that ran OK is an effect. `confirmArg` (default
- * `confirmed`) matches the sibling kinds' parameterisation (`confirmFirst`'s `argFlag`,
- * `pendingConfirmMustAsk`'s `confirmArg`) — a flag-less `'prior-ask'` tool has no probe shape of its own,
- * so every OK call of it counts as an effect, exactly as before.
+ * EFFECT BEATS FLAGS (red-team M7): a call that `tookEffect` is an EFFECT, whatever flags it carries. The
+ * probe test used to key on `confirmed:false` / `requiresConfirmation` and NEVER consult `tookEffect`, so a
+ * tool that mutates while carrying `confirmed:false` (it ignores or omits the flag's semantics) produced
+ * two real destructive effects that BOTH classified as probes — the throttle counted zero prior effects and
+ * the second call slipped the n:1 cap. The flags describe an INTENT to preview; `tookEffect` is the world's
+ * own record of what happened, so it is the authority.
+ *
+ * A prior call is a PROBE (not an effect) when it did NOT take effect AND it either returned
+ * `requiresConfirmation` or carries `confirmArg:false` explicitly. Everything else that ran OK is an
+ * effect. `confirmArg` (default `confirmed`) matches the sibling kinds' parameterisation (`confirmFirst`'s
+ * `argFlag`, `pendingConfirmMustAsk`'s `confirmArg`) — a flag-less `'prior-ask'` tool has no probe shape of
+ * its own, so every OK call of it counts as an effect, exactly as before.
  *
  * BUILT ON `maxCalls`' COUNTING MACHINERY (2026-08-02): this is `maxCalls` with `n:1`, `scope:'turn'`, a
  * tool-SET match (minus probes), and the same-step sibling candidates folded in — it shares
@@ -163,8 +170,10 @@ export function noActAfterAskSameTurn(tools: string[]): Guard {
 export function destructiveThrottle(destructiveTools: string[], opts?: { confirmArg?: string }): Guard {
   const set = new Set(destructiveTools);
   const confirmArg = opts?.confirmArg ?? 'confirmed';
+  // A call that MUTATED the world is never a probe — `tookEffect` (the world's record) overrides the
+  // preview flags (the caller's intent). See EFFECT BEATS FLAGS above.
   const isProbe = (o: ObservedCall): boolean =>
-    o.resultFlags?.requiresConfirmation === true || o.args?.[confirmArg] === false;
+    o.tookEffect !== true && (o.resultFlags?.requiresConfirmation === true || o.args?.[confirmArg] === false);
   // An EFFECT = a listed destructive tool that ran OK and is not a probe. (The `ok` + turn-window part is
   // applied by `countOkCalls`; this predicate carries only the set-membership + not-a-probe test.)
   const isEffect = (o: ObservedCall): boolean => set.has(o.name) && !isProbe(o);

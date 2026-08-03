@@ -84,3 +84,39 @@ export function llmCheck(opts: { rubric: string; failMode?: 'open' | 'closed'; d
     prose: () => opts.rubric,
   };
 }
+
+/**
+ * The `did × message` CONSISTENCY rubric (MI-D6) — the pre-baked question the backstop asks.
+ *
+ * Domain-neutral by construction: it names only the two engine-owned fields of a `respond` payload and the
+ * generic word "operation". Model-facing protocol prose (it is rendered into the trunk and handed to the
+ * adjudicator), never user-delivered text, so naming the declaration is legitimate here.
+ */
+const DID_MESSAGE_CONSISTENCY_RUBRIC =
+  'Read the message the agent wrote to the user together with the operations it declared in `did`. ' +
+  'Does the message state or imply an operation that `did` does not carry, or state an outcome that ' +
+  'contradicts a declared intention? Report a violation ONLY for that mismatch — never for wording, ' +
+  'tone or omission.';
+
+/**
+ * The `did × message` CONSISTENCY BACKSTOP (MI-D6) — AVAILABLE, never auto-installed.
+ *
+ * The deterministic cross-check grounds the DECLARATION against the world ledger, but the `message` is
+ * free prose beside it: an agent can declare an honest `inform` and still WRITE that it refunded the
+ * order. No structural signal reads that — polarity and assertion live in the prose, which is exactly
+ * what a pattern cannot judge (the whole reason the regex-param honesty kinds were deleted). This is the
+ * priced backstop for that residual: a trusted, pre-baked rubric answered by the host adjudicator.
+ *
+ * An author binds it where the stakes justify a model call per reply (financial, health); it is NOT part
+ * of any auto-installed protocol, and it is never the primary guarantee — the structured cross-check is.
+ * `failMode` is `llmCheck`'s: `'open'` (default) allows when the adjudicator is unreachable, `'closed'`
+ * denies. Its runtime `kind` is `llmCheck`, so the fail-loud adjudicator gate and the TRUTH/SAFETY
+ * classification see it for what it is.
+ */
+export function didMessageConsistency(opts?: { failMode?: 'open' | 'closed' }): Guard {
+  return llmCheck({
+    rubric: DID_MESSAGE_CONSISTENCY_RUBRIC,
+    dim: 'behavior',
+    ...(opts?.failMode ? { failMode: opts.failMode } : {}),
+  });
+}

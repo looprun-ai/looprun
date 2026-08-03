@@ -83,7 +83,7 @@ describe('deriveClaimsFromLedger — the engine derives TRUTH from the world led
     effectWrite(ledger, world, 'createBooking', { slot: 1 }, 'BK-1'); // effected
     probeWrite(ledger, world, 'createBooking', { slot: 2 });          // probe, no effect
     recordToolResult(ledger, 'getMember', { id: 7 }, { name: 'Ana' }); // a read
-    const derived = deriveClaimsFromLedger(ledger.observed, 0, ['createBooking'], ledger.producedThisTurn);
+    const derived = deriveClaimsFromLedger(ledger.observed, 0, ['createBooking']);
     expect(derived).toEqual([{ op: 'BK-1', target: 'BK-1', outcome: 'success' }]);
   });
 
@@ -91,8 +91,46 @@ describe('deriveClaimsFromLedger — the engine derives TRUTH from the world led
     const ledger = createLedger();
     recordToolResult(ledger, 'createBooking', { a: 1 }, { success: false });
     recordToolResult(ledger, 'createBooking', { a: 2 }, { requiresConfirmation: true });
-    const derived = deriveClaimsFromLedger(ledger.observed, 0, ['createBooking'], []);
+    const derived = deriveClaimsFromLedger(ledger.observed, 0, ['createBooking']);
     expect(derived).toEqual([{ op: 'operation', outcome: 'failure' }, { op: 'operation', outcome: 'pending_confirmation' }]);
+  });
+
+  // ── M5: each produced label belongs to the CALL that produced it ───────────────────────────────
+  it('M5: a READ that emitted a label does NOT lend it to a later effected write', () => {
+    const ledger = createLedger();
+    const world = fixtureWorld();
+    world.toolCalls.push({ name: 'search', args: { q: 'x' }, result: { label: 'SEARCH-RESULT' }, tookEffect: false });
+    recordToolResult(ledger, 'search', { q: 'x' }, { label: 'SEARCH-RESULT' }, world); // a READ with a label
+    world.toolCalls.push({ name: 'createBooking', args: { slot: 1 }, result: { ok: true }, tookEffect: true });
+    recordToolResult(ledger, 'createBooking', { slot: 1 }, { ok: true }, world);       // a WRITE with none
+    const derived = deriveClaimsFromLedger(ledger.observed, 0, ['createBooking']);
+    // The write named nothing, so the engine's account names nothing — never the search's label.
+    expect(derived).toEqual([{ op: 'operation', outcome: 'success' }]);
+  });
+
+  it('M5: two effected writes each wear THEIR OWN label (no positional cursor to misalign)', () => {
+    const ledger = createLedger();
+    const world = fixtureWorld();
+    effectWrite(ledger, world, 'createBooking', { slot: 1 }, 'BK-1');
+    world.toolCalls.push({ name: 'search', args: { q: 'y' }, result: { label: 'SEARCH-RESULT' }, tookEffect: false });
+    recordToolResult(ledger, 'search', { q: 'y' }, { label: 'SEARCH-RESULT' }, world); // a read in between
+    effectWrite(ledger, world, 'createBooking', { slot: 2 }, 'BK-2');
+    const derived = deriveClaimsFromLedger(ledger.observed, 0, ['createBooking']);
+    expect(derived).toEqual([
+      { op: 'BK-1', target: 'BK-1', outcome: 'success' },
+      { op: 'BK-2', target: 'BK-2', outcome: 'success' },
+    ]);
+  });
+
+  // ── M6: an EFFECTED write is a completed action, whatever flags it carries ─────────────────────
+  it('M6: an effected write carrying requiresConfirmation derives as SUCCESS, not pending', () => {
+    const ledger = createLedger();
+    const world = fixtureWorld();
+    world.toolCalls.push({ name: 'refund', args: { order: 'ORD-7' }, result: { label: 'ORD-7', requiresConfirmation: true }, tookEffect: true });
+    recordToolResult(ledger, 'refund', { order: 'ORD-7' }, { label: 'ORD-7', requiresConfirmation: true }, world);
+    const derived = deriveClaimsFromLedger(ledger.observed, 0, ['refund']);
+    expect(derived).toEqual([{ op: 'ORD-7', target: 'ORD-7', outcome: 'success' }]);
+    expect(renderOperationReport(derived)).toBe('ORD-7: done');
   });
 });
 
@@ -117,6 +155,20 @@ describe('finalizeReply — composed delivery over the structured payload', () =
     expect(out.did).toEqual(did);
     // History keeps the VERIFIED set: finalizeReply synced the ledger to what it delivered.
     expect(ledger.did).toEqual(did);
+  });
+
+  // PIN (MI-T2 binding constraint, re-asserted by MI-T4): the `ask` intention is BOTH the claim record
+  // and the CONSENT record — the delivered `did` is what a later turn's consent guards read as "the user
+  // was asked". A verified/derived path that dropped it would silently delete a genuine cross-turn
+  // licence, so the accepted payload's `ask` must survive into `out.did` AND `ledger.did` (history).
+  it('an accepted payload KEEPS its ask intention in the verified did (the consent record)', async () => {
+    const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona: 'p', tools: ['createBooking'], contract: BOOKING_CONTRACT });
+    const ledger = createLedger();
+    const did: TurnClaim[] = [{ op: 'ask' }];
+    const out = await finalizeReply(spec, BOOKING_CONTRACT, fixtureWorld(), ledger, P('Shall I cancel it?', did), async () => P(''), 0);
+    expect(out.text).toBe('Shall I cancel it?'); // a speech intention adds no operation line
+    expect(out.did).toEqual([{ op: 'ask' }]);
+    expect(ledger.did).toEqual([{ op: 'ask' }]);
   });
 });
 

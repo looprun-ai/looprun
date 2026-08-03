@@ -44,6 +44,12 @@ export interface ObservedCall {
    *  succeeded" from "a READ succeeded" so it does NOT veto an honest "I cannot do X / no record found"
    *  reply on a read-only turn (over-firing there costs a redrive and then the exhaustion closure). */
   tookEffect?: boolean;
+  /** The LABEL this call's own result issued (a world-issued noun for what it produced/touched), when it
+   *  issued one. Attached PER CALL so the engine's derived account (`deriveClaimsFromLedger`) names the
+   *  entity the acting call itself named — the conversation-wide `producedThisTurn` array is a positional
+   *  stream that includes READ labels, and consuming it positionally made a read's label shift onto a
+   *  write's derived target (red-team M5). */
+  producedLabel?: string;
 }
 
 /** One EXECUTED tool call as it is retained in the conversation `history` (a guard-vetoed attempt is

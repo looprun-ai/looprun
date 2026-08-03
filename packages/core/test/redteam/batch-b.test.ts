@@ -161,10 +161,11 @@ describe('confirmFirst — adversarial', () => {
 describe('destructiveThrottle — adversarial', () => {
   const g = destructiveThrottle(['deleteRecord', 'wipeAll']);
 
-  it('BREAK: two effected calls flagged confirmed:false both classify as PROBES → second slips past n:1', () => {
-    // isProbe keys on args.confirmed===false and NEVER consults tookEffect. A tool that mutates while
-    // confirmed:false (ignores/omits the flag semantics) produces two real effects that both look like
-    // probes → the throttle counts 0 prior effects → allows the second destructive call.
+  it('CLOSED (M7): two effected calls flagged confirmed:false are two EFFECTS — the second is denied', () => {
+    // isProbe used to key on args.confirmed===false and NEVER consult tookEffect. A tool that mutates
+    // while confirmed:false (it ignores/omits the flag semantics) produced two real effects that both
+    // looked like probes → the throttle counted 0 prior effects → the second destructive call slipped
+    // the n:1 cap. FIX (MI-T4/M7): a call that TOOK EFFECT is an effect, whatever flags it carries.
     const firstEffect = okCall('deleteRecord', 5, { recordId: 'A', confirmed: false }, { tookEffect: true });
     const second = ctxWith({
       tool: 'deleteRecord',
@@ -172,7 +173,24 @@ describe('destructiveThrottle — adversarial', () => {
       observed: [firstEffect],
       turnIndex: 5,
     });
-    expect(g.check(second)).toBeNull(); // allowed = BREAK
+    expect(g.check(second)).not.toBeNull();
+  });
+
+  it('CLOSED (M7): an effected write that ALSO returned requiresConfirmation counts as an effect', () => {
+    // The other half of the same hole: `resultFlags.requiresConfirmation` alone marked a call a probe.
+    // A world that both mutates and asks (a "done, but confirm the rest" shape) must not buy a free
+    // second destructive call. tookEffect is the authority.
+    const firstEffect = okCall('deleteRecord', 5, { recordId: 'A' }, { tookEffect: true, resultFlags: { requiresConfirmation: true } });
+    const second = ctxWith({ tool: 'wipeAll', args: {}, observed: [firstEffect], turnIndex: 5 });
+    expect(g.check(second)).not.toBeNull();
+  });
+
+  it('CONTROL (M7): a confirmed:false call that changed NOTHING is still a probe — the execute passes', () => {
+    // The fix must not re-break the two-step flow the throttle exists to permit: a probe that took no
+    // effect stays a probe, so the approved execute in the same turn is still allowed.
+    const probe = okCall('deleteRecord', 5, { recordId: 'A', confirmed: false }, { tookEffect: false });
+    const execute = ctxWith({ tool: 'deleteRecord', args: { recordId: 'A', confirmed: true }, observed: [probe], turnIndex: 5 });
+    expect(g.check(execute)).toBeNull();
   });
 
   it('HOLDS: a real prior effect (confirmed:true) blocks a second destructive call same turn', () => {
