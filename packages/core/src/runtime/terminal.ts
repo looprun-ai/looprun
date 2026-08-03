@@ -169,15 +169,15 @@ const TERMINAL_PROTOCOL =
   "- `message` carries the COMPLETE user-facing prose in the USER'S language: greeting, explanation " +
   'and answers ONLY. NEVER assert in `message` an operation you performed this turn — operations go ' +
   'in `did`.\n' +
-  '- `did` declares AT LEAST ONE intention — every response has one; an empty `did` is rejected. An ' +
-  'intention is either an ACTION or a SPEECH act:\n' +
-  '- ACTION intentions: one entry for EVERY domain operation you attempted this turn, `op` naming the ' +
-  'operation, with its honest `outcome`. A result you only READ is a `did` entry only when the user ' +
-  'asked for that lookup (then outcome `success` when found, `not_found` when empty). NEVER claim an ' +
-  'operation the tools did not confirm.\n' +
+  '- `did` declares AT LEAST ONE intention. Each entry uses ONLY these keys: `op`, `target`, ' +
+  '`outcome`, `amount` — any other key is rejected.\n' +
+  '- ONE ACTION intention for every domain operation that CHANGED something this turn: `op` names it, ' +
+  '`target` names the record it changed, `outcome` is `success`. A lookup changes nothing and is NOT ' +
+  'an action — answer it in `message`. Use `not_found` when the user asked you to find something and ' +
+  'it does not exist; `failure`, `blocked`, `refused` or `pending_confirmation` when the tool said so.\n' +
   '- SPEECH intentions (no `outcome`, no `amount`): `inform` — conveying information or answering a ' +
-  'question; `greet` — a greeting/acknowledgement with no operation; `refuse` — declining to act; ' +
-  '`ask` — posing your ONE clarifying question you will wait on (the `message` carries the question).\n' +
+  'question; `greet` — a greeting with no operation; `refuse` — declining to act; `ask` — posing your ' +
+  'ONE clarifying question you will wait on (the `message` carries the question).\n' +
   '- `inform` is for conveying information or answering a question. It MUST NOT be used to assert that ' +
   "you performed an action. If you performed an action, declare it as that action's op — which is " +
   'verified against what actually happened. Reporting a done action as `inform` is dishonest.\n' +
@@ -222,12 +222,8 @@ export function forcedTerminalPrompt(replyOnly: boolean): string {
  * anything else costs tokens, invites a wrong value and has no consumer.
  */
 const RESPOND_DESCRIPTION =
-  'END the turn with your final user-facing message. Every turn ends with exactly one respond, called ' +
-  'only AFTER the domain tools you need have returned — never in the same step as a domain tool, ' +
-  'because their results are not available to you yet. Put the user-facing prose in `message` and ' +
-  'declare AT LEAST ONE intention in `did`: an ACTION entry (op + honest outcome) for every operation ' +
-  'you attempted, or a SPEECH entry — inform (conveying information/answering; NEVER to assert a ' +
-  'performed action), greet, refuse, or ask (your ONE clarifying question, carried by message).';
+  'END the turn. Call it alone, after the domain tools you need have returned — never in the same step ' +
+  'as one, because their results are not available to you yet.';
 
 const DID_ITEM_SCHEMA: Record<string, unknown> = {
   type: 'object',
@@ -236,14 +232,15 @@ const DID_ITEM_SCHEMA: Record<string, unknown> = {
       type: 'string',
       minLength: 1,
       description:
-        'What this intention IS. An ACTION op is a short label for the operation you attempted ' +
-        '(advisory) and REQUIRES an outcome. A SPEECH op is one of: inform (conveying information or ' +
-        'answering a question — MUST NOT assert a performed action; a performed action is declared as ' +
-        "that action's op), greet (a greeting/acknowledgement with no operation), refuse (declining to " +
-        'act), ask (posing your ONE clarifying question — the message carries it). Speech ops carry no ' +
-        'outcome and no amount.',
+        'An ACTION op names the operation and REQUIRES an outcome. A SPEECH op is one of inform, greet, ' +
+        'refuse, ask and carries no outcome and no amount.',
     },
-    target: { type: 'string', description: 'The entity label/id the operation acted on, when it has one.' },
+    target: {
+      type: 'string',
+      description:
+        'The record the operation acted on, named the way the tool result names it. REQUIRED whenever ' +
+        'you report a completed action.',
+    },
     outcome: {
       type: 'string',
       minLength: 1,

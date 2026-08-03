@@ -11,7 +11,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { AgentSpecBase, custom } from '@looprun-ai/core';
-import { governanceVeto, normalizeTerminalToolDef, prematureTerminalTools } from '@looprun-ai/core/internal';
+import { governanceVeto, normalizeTerminalToolDef, prematureTerminalTools, terminalProtocol } from '@looprun-ai/core/internal';
 import type { DomainContract, RunResult, ToolDef } from '@looprun-ai/core';
 import { FIXTURE_DOMAIN, FIXTURE_TOOL_DEFS, FIXTURE_TOOL_NAMES, FixtureWorld } from '@looprun-ai/core/testing';
 import { fakeLLM } from '../../src/testing/fake-llm.js';
@@ -202,12 +202,18 @@ describe('terminal tool definitions', () => {
     expect(String(did.description)).toContain('An empty did is rejected');
 
     const op = (did.items as { properties: Record<string, { description?: string }> }).properties.op!;
-    // The op vocabulary AND the inform guardrail reach the model verbatim.
+    // The op vocabulary reaches the model on the field it governs.
     expect(op.description).toContain('inform');
     expect(op.description).toContain('greet');
     expect(op.description).toContain('refuse');
     expect(op.description).toContain('ask');
-    expect(op.description).toContain('MUST NOT assert a performed action');
+    // The inform guardrail is stated ONCE, in the protocol the model reads every turn. Stating it a
+    // second time on the field buys nothing and costs the small model context it needs for the domain.
+    expect(terminalProtocol(false)).toContain(
+      'It MUST NOT be used to assert that you performed an action. If you performed an action, declare '
+        + "it as that action's op — which is verified against what actually happened. Reporting a done "
+        + 'action as `inform` is dishonest.',
+    );
     // `message` carries its own contract — prose only, operations belong to `did`.
     expect(String(schema.properties.message!.description)).toContain('operations go in did');
   });
