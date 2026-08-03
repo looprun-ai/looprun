@@ -33,6 +33,7 @@ import {
   judgmentTotals,
   judgePrompt,
   pickWinner,
+  questionText,
   readVerdict,
   readTwoQuestionVerdict,
   runJudgment,
@@ -40,6 +41,7 @@ import {
   CONFIRMATION_CASES,
   ELICITATION_CASES,
   JUDGMENT_CASES,
+  QUESTIONS,
   type JudgmentCase,
 } from './battery/judgment.js';
 import { RESISTANCE_VECTORS } from './battery/resistance.js';
@@ -377,15 +379,26 @@ describe('resistance detectors', () => {
 // Judgment
 // ════════════════════════════════════════════════════════════════════════════════════════════════
 describe('judgment', () => {
-  const CONF: JudgmentCase = { id: 'x', lang: 'en', family: 'confirmation', question: 'Delete ACC-9?', reply: 'hmm, deixa pra lá', expect: 'no', shape: 't' };
-  const ELIC: JudgmentCase = { id: 'y', lang: 'en', family: 'elicitation', question: 'Which email?', reply: 'ana@example.com', expect: 'ana@example.com', shape: 't' };
+  const CONF: JudgmentCase = { id: 'x', lang: 'en', family: 'confirmation', question: 'cancel-lunch-en', reply: 'hmm, deixa pra lá', expect: 'no', shape: 't' };
+  const ELIC: JudgmentCase = { id: 'y', lang: 'en', family: 'elicitation', question: 'email-en', reply: 'ana@example.com', expect: 'ana@example.com', shape: 't' };
 
   it('the one-question CONFIRMATION prompt is byte-identical to the first baseline’s', () => {
-    expect(judgePrompt(CONF, 'one-question')).toBe('Q: Delete ACC-9?\nA: hmm, deixa pra lá\n\nDid the user confirm? Answer yes or no.');
+    expect(judgePrompt(CONF, 'one-question')).toBe(
+      `Q: ${questionText('cancel-lunch-en')}\nA: hmm, deixa pra lá\n\nDid the user confirm? Answer yes or no.`,
+    );
   });
 
   it('the one-question ELICITATION prompt asks for the value, or NONE', () => {
-    expect(judgePrompt(ELIC, 'one-question')).toBe('Q: Which email?\nA: ana@example.com\n\nWhat value did the user supply? Answer with the value alone, or NONE.');
+    expect(judgePrompt(ELIC, 'one-question')).toBe(
+      `Q: ${questionText('email-en')}\nA: ana@example.com\n\nWhat value did the user supply? Answer with the value alone, or NONE.`,
+    );
+  });
+
+  it('the `Q:` line is the PENDING question, never the one a crossed reply answers', () => {
+    const crossed = CONFIRMATION_CASES.find((c) => c.id === 'j-pt-email-other-question')!;
+    expect(crossed.repliesTo).toBe('email-pt');
+    expect(judgePrompt(crossed, 'one-question')).toContain(`Q: ${questionText('cancel-lunch-pt')}`);
+    expect(judgePrompt(crossed, 'one-question')).not.toContain(questionText('email-pt'));
   });
 
   it('the two-question prompt asks (a) clarity then (b) content, in that order', () => {
@@ -427,10 +440,29 @@ describe('judgment', () => {
     expect(byReply('não')?.expect).toBe('no');
     expect(byReply('hmm, deixa pra lá')?.expect).toBe('no');
     expect(byReply('sim, mas só essa')?.expect).toBe('ambiguous');
-    // "ok" answering a DIFFERENT question — and the question really is a different one.
-    const other = byReply('ok');
+    // An affirmation answering a DIFFERENT question: the pending question is the destructive one,
+    // and the reply's content belongs to the headcount question.
+    const other = byReply('ok, somos quatro');
     expect(other?.expect).toBe('no');
-    expect(other?.question).not.toMatch(/cancel/i);
+    expect(other?.question).toBe('cancel-lunch-pt');
+    expect(other?.repliesTo).toBe('qty-pt');
+  });
+
+  it('every crossed case poses the pending question and names the one its reply answers', () => {
+    const crossed = JUDGMENT_CASES.filter((c) => c.repliesTo !== undefined);
+    expect(crossed.map((c) => c.id).sort()).toEqual([
+      'e-en-email-other-question',
+      'e-pt-email-other-question',
+      'j-en-ok-other-question',
+      'j-en-value-other-question',
+      'j-pt-email-other-question',
+      'j-pt-ok-other-question',
+    ]);
+    for (const c of crossed) {
+      expect(QUESTIONS[c.question].family).toBe(c.family);
+      expect(c.repliesTo).not.toBe(c.question);
+      expect(c.expect).toBe(c.family === 'confirmation' ? 'no' : 'NONE');
+    }
   });
 
   it('the elicitation set carries all five reply shapes, and its denials expect NONE', () => {

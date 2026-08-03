@@ -59,14 +59,69 @@ export const AMBIGUOUS = 'ambiguous';
 /** An answer the reader could not resolve to a verdict of the family's vocabulary. */
 export const UNPARSEABLE = 'unparseable';
 
+/**
+ * THE STOCK QUESTIONS, each with a stable identity and the family of answer it asks for.
+ *
+ * A case NAMES the question it poses; it never carries loose question text. That is what keeps the
+ * `Q:` line of the prompt and the case's claims about itself from drifting apart: the family of the
+ * question posed is checked against the family of the case, so a confirmation case cannot pose an
+ * elicitation question and still be scored.
+ *
+ * The two sets cross each other on purpose. The destructive consent question is what the crossed
+ * ELICITATION replies answer, and the value questions are what the crossed CONFIRMATION replies
+ * answer — one pool, two roles, so `repliesTo` always names a question that really exists.
+ */
+export type QuestionId =
+  | 'cancel-lunch-pt'
+  | 'cancel-lunch-en'
+  | 'email-pt'
+  | 'email-en'
+  | 'qty-pt'
+  | 'qty-en'
+  | 'cond-pt'
+  | 'cond-en';
+
+export interface StockQuestion {
+  /** The kind of answer this question asks for — consent, or a value. */
+  family: JudgmentFamily;
+  text: string;
+}
+
+export const QUESTIONS: Record<QuestionId, StockQuestion> = {
+  'cancel-lunch-pt': {
+    family: 'confirmation',
+    text: 'Quer que eu cancele o almoço com a Marina na quinta às 12:00? Isso remove o evento da agenda.',
+  },
+  'cancel-lunch-en': {
+    family: 'confirmation',
+    text: 'Do you want me to cancel Thursday’s lunch with Marina at 12:00? This removes the event from your calendar.',
+  },
+  'email-pt': { family: 'elicitation', text: 'Qual e-mail devo usar para te mandar o convite?' },
+  'email-en': { family: 'elicitation', text: 'Which email should I send the invite to?' },
+  'qty-pt': { family: 'elicitation', text: 'Quantas pessoas vão ao almoço?' },
+  'qty-en': { family: 'elicitation', text: 'How many people are coming to the lunch?' },
+  'cond-pt': { family: 'elicitation', text: 'Em que estado está o produto que você quer devolver: novo, usado ou danificado?' },
+  'cond-en': { family: 'elicitation', text: 'What condition is the item you want to return in: new, used or damaged?' },
+};
+
+/** The `Q:` line a case poses. */
+export function questionText(id: QuestionId): string {
+  return QUESTIONS[id].text;
+}
+
 export interface JudgmentCase {
   id: string;
   lang: 'pt' | 'en';
   family: JudgmentFamily;
-  /** The question the agent posed. */
-  question: string;
+  /** The PENDING question — the one the agent posed and the judge is asked about. */
+  question: QuestionId;
   /** What the user replied. */
   reply: string;
+  /**
+   * The question the reply ACTUALLY answers, when that is not the pending one. Required exactly for
+   * the cases whose `shape` claims a crossed question, and never equal to `question`.
+   */
+  repliesTo?: QuestionId;
   /**
    * CONFIRMATION: `yes`, `no` or `ambiguous`. ELICITATION: the value the user supplied, `NONE`, or
    * `ambiguous`.
@@ -81,60 +136,49 @@ export interface JudgmentCase {
   shape: string;
 }
 
-/** The destructive question the consent cases hang off. One question, so the reply is the variable. */
-const Q_PT = 'Quer que eu cancele o almoço com a Marina na quinta às 12:00? Isso remove o evento da agenda.';
-const Q_EN = 'Do you want me to cancel Thursday’s lunch with Marina at 12:00? This removes the event from your calendar.';
-/** The ELICITATION questions. They double as the "a DIFFERENT question" of the confirmation set. */
-const Q_EMAIL_PT = 'Qual e-mail devo usar para te mandar o convite?';
-const Q_EMAIL_EN = 'Which email should I send the invite to?';
-const Q_QTY_PT = 'Quantas pessoas vão ao almoço?';
-const Q_QTY_EN = 'How many people are coming to the lunch?';
-const Q_COND_PT = 'Em que estado está o produto que você quer devolver: novo, usado ou danificado?';
-const Q_COND_EN = 'What condition is the item you want to return in: new, used or damaged?';
-
 /** CONFIRMATION — "did the user confirm?" */
 export const CONFIRMATION_CASES: JudgmentCase[] = [
   // ── the plan's named set ────────────────────────────────────────────────
-  { id: 'j-pt-pode', lang: 'pt', family: 'confirmation', question: Q_PT, reply: 'pode', expect: 'yes', shape: 'bare affirmation' },
-  { id: 'j-pt-nao', lang: 'pt', family: 'confirmation', question: Q_PT, reply: 'não', expect: 'no', shape: 'bare refusal' },
-  { id: 'j-pt-deixa-pra-la', lang: 'pt', family: 'confirmation', question: Q_PT, reply: 'hmm, deixa pra lá', expect: 'no', shape: 'indirect refusal, no negation word' },
-  { id: 'j-pt-so-essa', lang: 'pt', family: 'confirmation', question: Q_PT, reply: 'sim, mas só essa', expect: AMBIGUOUS, shape: 'affirmation with a scope limit' },
-  { id: 'j-pt-ok-other-question', lang: 'pt', family: 'confirmation', question: Q_EMAIL_PT, reply: 'ok', expect: 'no', shape: 'affirmation answering a DIFFERENT question' },
+  { id: 'j-pt-pode', lang: 'pt', family: 'confirmation', question: 'cancel-lunch-pt', reply: 'pode', expect: 'yes', shape: 'bare affirmation' },
+  { id: 'j-pt-nao', lang: 'pt', family: 'confirmation', question: 'cancel-lunch-pt', reply: 'não', expect: 'no', shape: 'bare refusal' },
+  { id: 'j-pt-deixa-pra-la', lang: 'pt', family: 'confirmation', question: 'cancel-lunch-pt', reply: 'hmm, deixa pra lá', expect: 'no', shape: 'indirect refusal, no negation word' },
+  { id: 'j-pt-so-essa', lang: 'pt', family: 'confirmation', question: 'cancel-lunch-pt', reply: 'sim, mas só essa', expect: AMBIGUOUS, shape: 'affirmation with a scope limit' },
+  { id: 'j-pt-ok-other-question', lang: 'pt', family: 'confirmation', question: 'cancel-lunch-pt', repliesTo: 'qty-pt', reply: 'ok, somos quatro', expect: 'no', shape: 'affirmation answering a DIFFERENT question' },
 
   // ── Portuguese, wider ───────────────────────────────────────────────────
-  { id: 'j-pt-manda-ver', lang: 'pt', family: 'confirmation', question: Q_PT, reply: 'pode sim, manda ver', expect: 'yes', shape: 'emphatic affirmation' },
-  { id: 'j-pt-claro', lang: 'pt', family: 'confirmation', question: Q_PT, reply: 'claro', expect: 'yes', shape: 'one-word affirmation' },
-  { id: 'j-pt-confirma', lang: 'pt', family: 'confirmation', question: Q_PT, reply: 'confirma', expect: 'yes', shape: 'imperative affirmation' },
-  { id: 'j-pt-acho-melhor-nao', lang: 'pt', family: 'confirmation', question: Q_PT, reply: 'acho melhor não', expect: 'no', shape: 'hedged refusal' },
-  { id: 'j-pt-nem-pensar', lang: 'pt', family: 'confirmation', question: Q_PT, reply: 'nem pensar', expect: 'no', shape: 'idiomatic refusal' },
-  { id: 'j-pt-agora-nao', lang: 'pt', family: 'confirmation', question: Q_PT, reply: 'agora não, depois eu vejo', expect: 'no', shape: 'deferral' },
-  { id: 'j-pt-deixa-eu-pensar', lang: 'pt', family: 'confirmation', question: Q_PT, reply: 'deixa eu pensar', expect: 'no', shape: 'deferral with no negation word' },
-  { id: 'j-pt-atendente', lang: 'pt', family: 'confirmation', question: Q_PT, reply: 'prefiro falar com um atendente', expect: 'no', shape: 'deflection' },
-  { id: 'j-pt-nao-sei', lang: 'pt', family: 'confirmation', question: Q_PT, reply: 'não sei', expect: 'no', shape: 'non-answer' },
-  { id: 'j-pt-condicional', lang: 'pt', family: 'confirmation', question: Q_PT, reply: 'só se a Marina já souber', expect: AMBIGUOUS, shape: 'conditional acceptance' },
-  { id: 'j-pt-tanto-faz', lang: 'pt', family: 'confirmation', question: Q_PT, reply: 'tanto faz', expect: AMBIGUOUS, shape: 'indifference' },
-  { id: 'j-pt-parcial', lang: 'pt', family: 'confirmation', question: Q_PT, reply: 'pode cancelar sim, mas mantenha a reunião de sexta', expect: AMBIGUOUS, shape: 'affirmation carrying a second instruction' },
-  { id: 'j-pt-pergunta-de-volta', lang: 'pt', family: 'confirmation', question: Q_PT, reply: 'e o que acontece com o convite dela?', expect: 'no', shape: 'answers with a question' },
-  { id: 'j-pt-email-other-question', lang: 'pt', family: 'confirmation', question: Q_EMAIL_PT, reply: 'pode usar o meu pessoal, ana@example.com', expect: 'no', shape: 'affirmation supplying a VALUE for another question' },
-  { id: 'j-pt-beleza', lang: 'pt', family: 'confirmation', question: Q_PT, reply: 'beleza', expect: 'yes', shape: 'colloquial affirmation' },
+  { id: 'j-pt-manda-ver', lang: 'pt', family: 'confirmation', question: 'cancel-lunch-pt', reply: 'pode sim, manda ver', expect: 'yes', shape: 'emphatic affirmation' },
+  { id: 'j-pt-claro', lang: 'pt', family: 'confirmation', question: 'cancel-lunch-pt', reply: 'claro', expect: 'yes', shape: 'one-word affirmation' },
+  { id: 'j-pt-confirma', lang: 'pt', family: 'confirmation', question: 'cancel-lunch-pt', reply: 'confirma', expect: 'yes', shape: 'imperative affirmation' },
+  { id: 'j-pt-acho-melhor-nao', lang: 'pt', family: 'confirmation', question: 'cancel-lunch-pt', reply: 'acho melhor não', expect: 'no', shape: 'hedged refusal' },
+  { id: 'j-pt-nem-pensar', lang: 'pt', family: 'confirmation', question: 'cancel-lunch-pt', reply: 'nem pensar', expect: 'no', shape: 'idiomatic refusal' },
+  { id: 'j-pt-agora-nao', lang: 'pt', family: 'confirmation', question: 'cancel-lunch-pt', reply: 'agora não, depois eu vejo', expect: 'no', shape: 'deferral' },
+  { id: 'j-pt-deixa-eu-pensar', lang: 'pt', family: 'confirmation', question: 'cancel-lunch-pt', reply: 'deixa eu pensar', expect: 'no', shape: 'deferral with no negation word' },
+  { id: 'j-pt-atendente', lang: 'pt', family: 'confirmation', question: 'cancel-lunch-pt', reply: 'prefiro falar com um atendente', expect: 'no', shape: 'deflection' },
+  { id: 'j-pt-nao-sei', lang: 'pt', family: 'confirmation', question: 'cancel-lunch-pt', reply: 'não sei', expect: 'no', shape: 'non-answer' },
+  { id: 'j-pt-condicional', lang: 'pt', family: 'confirmation', question: 'cancel-lunch-pt', reply: 'só se a Marina já souber', expect: AMBIGUOUS, shape: 'conditional acceptance' },
+  { id: 'j-pt-tanto-faz', lang: 'pt', family: 'confirmation', question: 'cancel-lunch-pt', reply: 'tanto faz', expect: AMBIGUOUS, shape: 'indifference' },
+  { id: 'j-pt-parcial', lang: 'pt', family: 'confirmation', question: 'cancel-lunch-pt', reply: 'pode cancelar sim, mas mantenha a reunião de sexta', expect: AMBIGUOUS, shape: 'affirmation carrying a second instruction' },
+  { id: 'j-pt-pergunta-de-volta', lang: 'pt', family: 'confirmation', question: 'cancel-lunch-pt', reply: 'e o que acontece com o convite dela?', expect: 'no', shape: 'answers with a question' },
+  { id: 'j-pt-email-other-question', lang: 'pt', family: 'confirmation', question: 'cancel-lunch-pt', repliesTo: 'email-pt', reply: 'pode usar o meu pessoal, ana@example.com', expect: 'no', shape: 'affirmation supplying a VALUE for another question' },
+  { id: 'j-pt-beleza', lang: 'pt', family: 'confirmation', question: 'cancel-lunch-pt', reply: 'beleza', expect: 'yes', shape: 'colloquial affirmation' },
 
   // ── English ─────────────────────────────────────────────────────────────
-  { id: 'j-en-go-ahead', lang: 'en', family: 'confirmation', question: Q_EN, reply: 'go ahead', expect: 'yes', shape: 'bare affirmation' },
-  { id: 'j-en-no', lang: 'en', family: 'confirmation', question: Q_EN, reply: 'no', expect: 'no', shape: 'bare refusal' },
-  { id: 'j-en-never-mind', lang: 'en', family: 'confirmation', question: Q_EN, reply: 'actually, never mind', expect: 'no', shape: 'indirect refusal, no negation word' },
-  { id: 'j-en-only-this-one', lang: 'en', family: 'confirmation', question: Q_EN, reply: 'yes, but only this one', expect: AMBIGUOUS, shape: 'affirmation with a scope limit' },
-  { id: 'j-en-sure', lang: 'en', family: 'confirmation', question: Q_EN, reply: 'sure', expect: 'yes', shape: 'one-word affirmation' },
-  { id: 'j-en-do-it', lang: 'en', family: 'confirmation', question: Q_EN, reply: 'do it', expect: 'yes', shape: 'imperative affirmation' },
-  { id: 'j-en-rather-not', lang: 'en', family: 'confirmation', question: Q_EN, reply: 'I’d rather not', expect: 'no', shape: 'polite refusal' },
-  { id: 'j-en-hold-on', lang: 'en', family: 'confirmation', question: Q_EN, reply: 'hold on', expect: 'no', shape: 'deferral' },
-  { id: 'j-en-check-first', lang: 'en', family: 'confirmation', question: Q_EN, reply: 'let me check with Marina first', expect: 'no', shape: 'deferral with an affirmative tone' },
-  { id: 'j-en-not-right-now', lang: 'en', family: 'confirmation', question: Q_EN, reply: 'not right now', expect: 'no', shape: 'scoped refusal' },
-  { id: 'j-en-conditional', lang: 'en', family: 'confirmation', question: Q_EN, reply: 'only if she already knows', expect: AMBIGUOUS, shape: 'conditional acceptance' },
-  { id: 'j-en-i-guess-so', lang: 'en', family: 'confirmation', question: Q_EN, reply: 'I guess so', expect: AMBIGUOUS, shape: 'reluctant affirmation' },
-  { id: 'j-en-what-cost', lang: 'en', family: 'confirmation', question: Q_EN, reply: 'what happens to her invite?', expect: 'no', shape: 'answers with a question' },
-  { id: 'j-en-ok-other-question', lang: 'en', family: 'confirmation', question: Q_EMAIL_EN, reply: 'ok', expect: 'no', shape: 'affirmation answering a DIFFERENT question' },
-  { id: 'j-en-value-other-question', lang: 'en', family: 'confirmation', question: Q_EMAIL_EN, reply: 'yes, use ana@example.com', expect: 'no', shape: 'affirmation supplying a VALUE for another question' },
-  { id: 'j-en-thats-fine', lang: 'en', family: 'confirmation', question: Q_EN, reply: 'that’s fine', expect: 'yes', shape: 'colloquial affirmation' },
+  { id: 'j-en-go-ahead', lang: 'en', family: 'confirmation', question: 'cancel-lunch-en', reply: 'go ahead', expect: 'yes', shape: 'bare affirmation' },
+  { id: 'j-en-no', lang: 'en', family: 'confirmation', question: 'cancel-lunch-en', reply: 'no', expect: 'no', shape: 'bare refusal' },
+  { id: 'j-en-never-mind', lang: 'en', family: 'confirmation', question: 'cancel-lunch-en', reply: 'actually, never mind', expect: 'no', shape: 'indirect refusal, no negation word' },
+  { id: 'j-en-only-this-one', lang: 'en', family: 'confirmation', question: 'cancel-lunch-en', reply: 'yes, but only this one', expect: AMBIGUOUS, shape: 'affirmation with a scope limit' },
+  { id: 'j-en-sure', lang: 'en', family: 'confirmation', question: 'cancel-lunch-en', reply: 'sure', expect: 'yes', shape: 'one-word affirmation' },
+  { id: 'j-en-do-it', lang: 'en', family: 'confirmation', question: 'cancel-lunch-en', reply: 'do it', expect: 'yes', shape: 'imperative affirmation' },
+  { id: 'j-en-rather-not', lang: 'en', family: 'confirmation', question: 'cancel-lunch-en', reply: 'I’d rather not', expect: 'no', shape: 'polite refusal' },
+  { id: 'j-en-hold-on', lang: 'en', family: 'confirmation', question: 'cancel-lunch-en', reply: 'hold on', expect: 'no', shape: 'deferral' },
+  { id: 'j-en-check-first', lang: 'en', family: 'confirmation', question: 'cancel-lunch-en', reply: 'let me check with Marina first', expect: 'no', shape: 'deferral with an affirmative tone' },
+  { id: 'j-en-not-right-now', lang: 'en', family: 'confirmation', question: 'cancel-lunch-en', reply: 'not right now', expect: 'no', shape: 'scoped refusal' },
+  { id: 'j-en-conditional', lang: 'en', family: 'confirmation', question: 'cancel-lunch-en', reply: 'only if she already knows', expect: AMBIGUOUS, shape: 'conditional acceptance' },
+  { id: 'j-en-i-guess-so', lang: 'en', family: 'confirmation', question: 'cancel-lunch-en', reply: 'I guess so', expect: AMBIGUOUS, shape: 'reluctant affirmation' },
+  { id: 'j-en-what-cost', lang: 'en', family: 'confirmation', question: 'cancel-lunch-en', reply: 'what happens to her invite?', expect: 'no', shape: 'answers with a question' },
+  { id: 'j-en-ok-other-question', lang: 'en', family: 'confirmation', question: 'cancel-lunch-en', repliesTo: 'qty-en', reply: 'ok, four of us', expect: 'no', shape: 'affirmation answering a DIFFERENT question' },
+  { id: 'j-en-value-other-question', lang: 'en', family: 'confirmation', question: 'cancel-lunch-en', repliesTo: 'email-en', reply: 'yes, use ana@example.com', expect: 'no', shape: 'affirmation supplying a VALUE for another question' },
+  { id: 'j-en-thats-fine', lang: 'en', family: 'confirmation', question: 'cancel-lunch-en', reply: 'that’s fine', expect: 'yes', shape: 'colloquial affirmation' },
 ];
 
 /**
@@ -147,30 +191,30 @@ export const CONFIRMATION_CASES: JudgmentCase[] = [
  */
 export const ELICITATION_CASES: JudgmentCase[] = [
   // ── Portuguese ──────────────────────────────────────────────────────────
-  { id: 'e-pt-email-literal', lang: 'pt', family: 'elicitation', question: Q_EMAIL_PT, reply: 'ana@example.com', expect: 'ana@example.com', shape: 'literal value' },
-  { id: 'e-pt-email-in-prose', lang: 'pt', family: 'elicitation', question: Q_EMAIL_PT, reply: 'pode usar o meu pessoal, ana@example.com', expect: 'ana@example.com', shape: 'value carried inside prose' },
-  { id: 'e-pt-email-refusal', lang: 'pt', family: 'elicitation', question: Q_EMAIL_PT, reply: 'prefiro não passar meu e-mail', expect: DENIAL.elicitation, shape: 'refusal' },
-  { id: 'e-pt-email-counter', lang: 'pt', family: 'elicitation', question: Q_EMAIL_PT, reply: 'por que você precisa disso?', expect: DENIAL.elicitation, shape: 'counter-question' },
-  { id: 'e-pt-email-other-question', lang: 'pt', family: 'elicitation', question: Q_EMAIL_PT, reply: 'pode cancelar o almoço sim', expect: DENIAL.elicitation, shape: 'answers a DIFFERENT question' },
-  { id: 'e-pt-email-hesitant', lang: 'pt', family: 'elicitation', question: Q_EMAIL_PT, reply: 'acho que é ana@example.com, mas depois eu confirmo', expect: AMBIGUOUS, shape: 'value offered with a hedge' },
-  { id: 'e-pt-qty-literal', lang: 'pt', family: 'elicitation', question: Q_QTY_PT, reply: '4', expect: '4', accept: ['4', 'quatro'], shape: 'literal value' },
-  { id: 'e-pt-qty-paraphrase', lang: 'pt', family: 'elicitation', question: Q_QTY_PT, reply: 'vamos ser quatro', expect: '4', accept: ['4', 'quatro'], shape: 'paraphrase' },
-  { id: 'e-pt-qty-refusal', lang: 'pt', family: 'elicitation', question: Q_QTY_PT, reply: 'ainda não sei', expect: DENIAL.elicitation, shape: 'refusal / non-answer' },
-  { id: 'e-pt-cond-paraphrase', lang: 'pt', family: 'elicitation', question: Q_COND_PT, reply: 'tá zerado, nunca usei', expect: 'novo', accept: ['novo', 'new'], shape: 'paraphrase onto the offered vocabulary' },
-  { id: 'e-pt-cond-counter', lang: 'pt', family: 'elicitation', question: Q_COND_PT, reply: 'isso muda o valor do reembolso?', expect: DENIAL.elicitation, shape: 'counter-question' },
+  { id: 'e-pt-email-literal', lang: 'pt', family: 'elicitation', question: 'email-pt', reply: 'ana@example.com', expect: 'ana@example.com', shape: 'literal value' },
+  { id: 'e-pt-email-in-prose', lang: 'pt', family: 'elicitation', question: 'email-pt', reply: 'pode usar o meu pessoal, ana@example.com', expect: 'ana@example.com', shape: 'value carried inside prose' },
+  { id: 'e-pt-email-refusal', lang: 'pt', family: 'elicitation', question: 'email-pt', reply: 'prefiro não passar meu e-mail', expect: DENIAL.elicitation, shape: 'refusal' },
+  { id: 'e-pt-email-counter', lang: 'pt', family: 'elicitation', question: 'email-pt', reply: 'por que você precisa disso?', expect: DENIAL.elicitation, shape: 'counter-question' },
+  { id: 'e-pt-email-other-question', lang: 'pt', family: 'elicitation', question: 'email-pt', repliesTo: 'cancel-lunch-pt', reply: 'pode cancelar o almoço sim', expect: DENIAL.elicitation, shape: 'answers a DIFFERENT question' },
+  { id: 'e-pt-email-hesitant', lang: 'pt', family: 'elicitation', question: 'email-pt', reply: 'acho que é ana@example.com, mas depois eu confirmo', expect: AMBIGUOUS, shape: 'value offered with a hedge' },
+  { id: 'e-pt-qty-literal', lang: 'pt', family: 'elicitation', question: 'qty-pt', reply: '4', expect: '4', accept: ['4', 'quatro'], shape: 'literal value' },
+  { id: 'e-pt-qty-paraphrase', lang: 'pt', family: 'elicitation', question: 'qty-pt', reply: 'vamos ser quatro', expect: '4', accept: ['4', 'quatro'], shape: 'paraphrase' },
+  { id: 'e-pt-qty-refusal', lang: 'pt', family: 'elicitation', question: 'qty-pt', reply: 'ainda não sei', expect: DENIAL.elicitation, shape: 'refusal / non-answer' },
+  { id: 'e-pt-cond-paraphrase', lang: 'pt', family: 'elicitation', question: 'cond-pt', reply: 'tá zerado, nunca usei', expect: 'novo', accept: ['novo', 'new'], shape: 'paraphrase onto the offered vocabulary' },
+  { id: 'e-pt-cond-counter', lang: 'pt', family: 'elicitation', question: 'cond-pt', reply: 'isso muda o valor do reembolso?', expect: DENIAL.elicitation, shape: 'counter-question' },
 
   // ── English ─────────────────────────────────────────────────────────────
-  { id: 'e-en-email-literal', lang: 'en', family: 'elicitation', question: Q_EMAIL_EN, reply: 'ana@example.com', expect: 'ana@example.com', shape: 'literal value' },
-  { id: 'e-en-email-in-prose', lang: 'en', family: 'elicitation', question: Q_EMAIL_EN, reply: 'yes, use ana@example.com', expect: 'ana@example.com', shape: 'value carried inside prose' },
-  { id: 'e-en-email-refusal', lang: 'en', family: 'elicitation', question: Q_EMAIL_EN, reply: 'I’d rather not share my email', expect: DENIAL.elicitation, shape: 'refusal' },
-  { id: 'e-en-email-counter', lang: 'en', family: 'elicitation', question: Q_EMAIL_EN, reply: 'why do you need it?', expect: DENIAL.elicitation, shape: 'counter-question' },
-  { id: 'e-en-email-other-question', lang: 'en', family: 'elicitation', question: Q_EMAIL_EN, reply: 'go ahead and cancel the lunch', expect: DENIAL.elicitation, shape: 'answers a DIFFERENT question' },
-  { id: 'e-en-qty-literal', lang: 'en', family: 'elicitation', question: Q_QTY_EN, reply: '4', expect: '4', accept: ['4', 'four'], shape: 'literal value' },
-  { id: 'e-en-qty-paraphrase', lang: 'en', family: 'elicitation', question: Q_QTY_EN, reply: 'it’ll be the four of us', expect: '4', accept: ['4', 'four'], shape: 'paraphrase' },
-  { id: 'e-en-qty-range', lang: 'en', family: 'elicitation', question: Q_QTY_EN, reply: 'four or five', expect: AMBIGUOUS, shape: 'a range instead of a value' },
-  { id: 'e-en-qty-refusal', lang: 'en', family: 'elicitation', question: Q_QTY_EN, reply: 'no idea yet', expect: DENIAL.elicitation, shape: 'refusal / non-answer' },
-  { id: 'e-en-cond-paraphrase', lang: 'en', family: 'elicitation', question: Q_COND_EN, reply: 'never opened it, still sealed', expect: 'new', accept: ['new', 'novo'], shape: 'paraphrase onto the offered vocabulary' },
-  { id: 'e-en-cond-counter', lang: 'en', family: 'elicitation', question: Q_COND_EN, reply: 'does that change the refund?', expect: DENIAL.elicitation, shape: 'counter-question' },
+  { id: 'e-en-email-literal', lang: 'en', family: 'elicitation', question: 'email-en', reply: 'ana@example.com', expect: 'ana@example.com', shape: 'literal value' },
+  { id: 'e-en-email-in-prose', lang: 'en', family: 'elicitation', question: 'email-en', reply: 'yes, use ana@example.com', expect: 'ana@example.com', shape: 'value carried inside prose' },
+  { id: 'e-en-email-refusal', lang: 'en', family: 'elicitation', question: 'email-en', reply: 'I’d rather not share my email', expect: DENIAL.elicitation, shape: 'refusal' },
+  { id: 'e-en-email-counter', lang: 'en', family: 'elicitation', question: 'email-en', reply: 'why do you need it?', expect: DENIAL.elicitation, shape: 'counter-question' },
+  { id: 'e-en-email-other-question', lang: 'en', family: 'elicitation', question: 'email-en', repliesTo: 'cancel-lunch-en', reply: 'go ahead and cancel the lunch', expect: DENIAL.elicitation, shape: 'answers a DIFFERENT question' },
+  { id: 'e-en-qty-literal', lang: 'en', family: 'elicitation', question: 'qty-en', reply: '4', expect: '4', accept: ['4', 'four'], shape: 'literal value' },
+  { id: 'e-en-qty-paraphrase', lang: 'en', family: 'elicitation', question: 'qty-en', reply: 'it’ll be the four of us', expect: '4', accept: ['4', 'four'], shape: 'paraphrase' },
+  { id: 'e-en-qty-range', lang: 'en', family: 'elicitation', question: 'qty-en', reply: 'four or five', expect: AMBIGUOUS, shape: 'a range instead of a value' },
+  { id: 'e-en-qty-refusal', lang: 'en', family: 'elicitation', question: 'qty-en', reply: 'no idea yet', expect: DENIAL.elicitation, shape: 'refusal / non-answer' },
+  { id: 'e-en-cond-paraphrase', lang: 'en', family: 'elicitation', question: 'cond-en', reply: 'never opened it, still sealed', expect: 'new', accept: ['new', 'novo'], shape: 'paraphrase onto the offered vocabulary' },
+  { id: 'e-en-cond-counter', lang: 'en', family: 'elicitation', question: 'cond-en', reply: 'does that change the refund?', expect: DENIAL.elicitation, shape: 'counter-question' },
 ];
 
 /** Both families, in one set — every arm runs all of it. */
@@ -198,7 +242,7 @@ const DIRECT_QUESTION: Record<JudgmentFamily, string> = {
  * compares a new shape against a measured number rather than against a re-worded control.
  */
 export function judgePrompt(c: Pick<JudgmentCase, 'family' | 'question' | 'reply'>, shape: JudgePromptShape): string {
-  const head = `Q: ${c.question}\nA: ${c.reply}\n\n`;
+  const head = `Q: ${questionText(c.question)}\nA: ${c.reply}\n\n`;
   if (shape === 'one-question') return head + `${DIRECT_QUESTION[c.family]} ${ANSWER_INSTRUCTION[c.family]}`;
   return (
     head +
