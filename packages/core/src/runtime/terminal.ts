@@ -184,7 +184,8 @@ const PROTOCOL_HEAD =
 
 const PROTOCOL_DID =
   '- Declare ONE ACTION entry in `did` for every domain operation that CHANGED something this turn. A ' +
-  'lookup changes nothing and is NOT an action — answer it in `message`.\n' +
+  'lookup changes nothing and is NOT an action — answer it in `message`, unless the user asked you to ' +
+  'find something and it came back empty: that is an entry with outcome `not_found`.\n' +
   '- Declare a SPEECH entry whenever the turn speaks — alongside the action entries, or alone when ' +
   'the turn performed no operation.';
 
@@ -265,9 +266,9 @@ const DID_ITEM_SCHEMA: Record<string, unknown> = {
       minLength: 1,
       description:
         'ACTION entries only, and one of these seven words. What really happened: `success` when the ' +
-        'tool confirmed the change; `not_found` when the user asked you to find something and it does ' +
-        'not exist; `failure`, `blocked`, `refused` or `pending_confirmation` when the tool said so; ' +
-        '`no_op` when nothing changed. Never report a success the tools did not confirm.',
+        'tool confirmed the change; `failure`, `blocked`, `refused` or `pending_confirmation` when the ' +
+        'tool or a rule said so; `not_found` when nothing matched; `no_op` when nothing changed. Never ' +
+        'report a success the tools did not confirm.',
     },
   },
   required: ['op'],
