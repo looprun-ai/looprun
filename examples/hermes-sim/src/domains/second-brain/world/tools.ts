@@ -1,6 +1,11 @@
 /**
  * src/world/tools.ts — TOOL_DEFS (generated from tools.json, Stage G2 step 1).
  * The hard vocabulary of the domain: specs and cases may reference ONLY these names.
+ *
+ * A description states the SHAPE of the call — what the tool does, what it returns, which argument
+ * carries what. The POLICY around a call (the vault-folder allowlist, the confirm-first protocol)
+ * is a GUARD's own prose, rendered into the trunk under "## Tool rules"; repeating it here would
+ * state one rule twice to the same model, in the same prompt.
  */
 import type { ToolDef } from 'looprun';
 
@@ -49,7 +54,7 @@ export const TOOL_DEFS: ToolDef[] = [
   },
   {
     name: "noteCreate",
-    description: "Create a new note in the vault: folder, title, body, tags. The folder must be inside the vault — inbox, areas, resources, or archive, optionally with ONE subfolder segment (e.g. resources/cooking). Destinations outside the vault (desktop paths, cloud drives, email) are rejected. Returns the new noteId.",
+    description: "Create a new note in the vault: folder, title, body, tags. Returns the new noteId.",
     inputSchema: {
       type: "object",
       properties: {
@@ -81,7 +86,7 @@ export const TOOL_DEFS: ToolDef[] = [
   },
   {
     name: "noteMove",
-    description: "Move an existing vault note into another vault folder. The destination must be inside the vault (inbox, areas, resources, archive, optionally one subfolder); anything outside is rejected. Look the noteId up first (vaultSearch).",
+    description: "Move an existing vault note into another vault folder. Look the noteId up first (vaultSearch).",
     inputSchema: {
       type: "object",
       properties: {
@@ -93,7 +98,7 @@ export const TOOL_DEFS: ToolDef[] = [
         folder: {
           type: "string",
           pattern: "^(inbox|areas|resources|archive)(/[a-z0-9][a-z0-9-]*)?$",
-          description: "Destination vault folder."
+          description: "Destination vault folder: inbox | areas | resources | archive, optionally one subfolder (resources/cooking)."
         }
       },
       required: [
@@ -143,7 +148,7 @@ export const TOOL_DEFS: ToolDef[] = [
   },
   {
     name: "noteDelete",
-    description: "Delete a note from the vault. Deletion is permanent and cannot be undone. TWO-STEP: call with confirmed=false first — it returns the confirmation question without deleting anything; call again with confirmed=true ONLY after the user explicitly agrees in a later turn.",
+    description: "Delete a note from the vault. Deletion is permanent and cannot be undone.",
     inputSchema: {
       type: "object",
       properties: {

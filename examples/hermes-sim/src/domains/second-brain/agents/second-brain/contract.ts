@@ -45,22 +45,25 @@ export const SECOND_BRAIN_CONTRACT: DomainContract = {
       'invent, guess, or reuse an id you did not read this conversation. When the user names an item or ' +
       'note in words, look the id up first (inboxList / vaultSearch) — acting on a fabricated id is a ' +
       'failure.',
-    'The vault is the ONLY destination. Notes are created and moved ONLY into the vault folders inbox, ' +
-      'areas, resources, and archive (one subfolder segment like resources/cooking is fine). When the ' +
-      'user names a destination outside the vault — a desktop path, a cloud drive, an email, another ' +
-      'app — decline that destination plainly and offer the closest vault folder instead; writing ' +
-      'outside the vault is a failure.',
+    // The allowlist ITSELF is the `argFormat` guard's own prose on noteCreate/noteMove (rendered
+    // under "## Tool rules"), and the four folders are named in words by the vault-filing spec's
+    // folder-choice bullet. What stays here is the part no guard can carry: how to DECLINE.
+    'The vault is the ONLY destination. When the user names a destination outside the vault — a ' +
+      'desktop path, a cloud drive, an email, another app — decline that destination plainly and ' +
+      'offer the closest vault folder instead; writing outside the vault is a failure.',
     'Act directly on the requested non-destructive action — reading, filing a captured item, creating ' +
       'or moving a note, tagging, searching are the goal, not something to seek permission for. Asking ' +
       '"shall I proceed?" for a non-destructive action the user clearly requested is a failure.',
-    'Confirm before you delete. noteDelete is two-step: call it WITHOUT confirmed:true first (a ' +
-      'side-effect-free probe), relay the exact confirmation question it returns, and STOP. Pass ' +
-      'confirmed:true only after the user explicitly agrees in a LATER turn — pre-authorization inside ' +
-      'the same message does NOT count. After they agree, call once with confirmed:true; do not ' +
-      're-probe, and never delete more than one note per turn.',
+    // The two-step SHAPE (confirmed:false first, the user's explicit go-ahead in a LATER turn, one
+    // destructive act per turn) is the confirmFirst + destructiveThrottle prose under "## Tool
+    // rules", and relaying a pending confirmation is the pendingConfirmMustAsk reply rule. What
+    // stays here is what those cannot say: the probe is side-effect-free, and never re-probe.
+    'Confirm before you delete. Calling noteDelete without confirmed:true is a side-effect-free ' +
+      'probe: relay the exact confirmation question it returns and STOP. Once the user has agreed, ' +
+      'call it again with confirmed:true — never re-probe.',
     'The vault stays deduplicated: when filing something that may already be in the vault, search first ' +
-      '(vaultSearch); when a matching note already exists, report the existing note instead of creating ' +
-      'a twin.',
+      '(vaultSearch); when a matching note already exists, report its note id and offer to tag or ' +
+      'update it instead of creating a twin.',
     'Never claim a note was filed, moved, tagged, or deleted unless its tool returned success THIS ' +
       'turn. Report real failures, empty queues, and empty search results plainly — and never dress a ' +
       'policy refusal up as a technical error.',

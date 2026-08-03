@@ -43,7 +43,7 @@
     },
     {
       "name": "noteCreate",
-      "description": "Create a new note in the vault: folder, title, body, tags. The folder must be inside the vault — inbox, areas, resources, or archive, optionally with ONE subfolder segment (e.g. resources/cooking). Destinations outside the vault (desktop paths, cloud drives, email) are rejected. Returns the new noteId.",
+      "description": "Create a new note in the vault: folder, title, body, tags. Returns the new noteId.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -71,7 +71,7 @@
     },
     {
       "name": "noteMove",
-      "description": "Move an existing vault note into another vault folder. The destination must be inside the vault (inbox, areas, resources, archive, optionally one subfolder); anything outside is rejected. Look the noteId up first (vaultSearch).",
+      "description": "Move an existing vault note into another vault folder. Look the noteId up first (vaultSearch).",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -83,7 +83,7 @@
           "folder": {
             "type": "string",
             "pattern": "^(inbox|areas|resources|archive)(/[a-z0-9][a-z0-9-]*)?$",
-            "description": "Destination vault folder."
+            "description": "Destination vault folder: inbox | areas | resources | archive, optionally one subfolder (resources/cooking)."
           }
         },
         "required": ["noteId", "folder"]
@@ -125,7 +125,7 @@
     },
     {
       "name": "noteDelete",
-      "description": "Delete a note from the vault. Deletion is permanent and cannot be undone. TWO-STEP: call with confirmed=false first — it returns the confirmation question without deleting anything; call again with confirmed=true ONLY after the user explicitly agrees in a later turn.",
+      "description": "Delete a note from the vault. Deletion is permanent and cannot be undone.",
       "inputSchema": {
         "type": "object",
         "properties": {

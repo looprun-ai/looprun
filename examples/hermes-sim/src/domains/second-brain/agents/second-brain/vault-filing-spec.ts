@@ -56,29 +56,26 @@ export class AgentSpecVaultFiling extends AgentSpecBase {
         // invariant — it never re-declares one.
         'To file a captured item: look it up (inboxList), read it (itemRead — and fetchPage when a ' +
           "bookmark's saved excerpt is too thin), then create ONE note in the fitting vault folder " +
-          'with a short summary body written from the read content and 2–4 lowercase tags. Filing or ' +
-          'moving anything needs a prior itemRead or vaultSearch this conversation — the title alone ' +
-          'is never enough to summarize from.',
+          'with a short summary body written from the read content and 2–4 lowercase tags.',
+        // The FOLDER is a judgement call the agent makes; WHICH item or note it was asked to act on
+        // is not (see the garbled-request bullet below). Keeping those two apart is the whole point
+        // of naming the folder here and the identity there.
         'Pick the folder by how the owner will look for it: reference material and how-tos go under ' +
           'resources, ongoing responsibilities under areas, finished or stale things under archive, ' +
-          'and undecided items under inbox. When the request names a folder, use it (if it is in the ' +
-          'vault); when genuinely ambiguous, pick the closest fit and say why — do not ask.',
-        'Before filing something that may already be in the vault, run vaultSearch on its topic or ' +
-          'source; when a match exists, report the existing note id and offer to tag or update it — ' +
-          'creating a twin note is a failure.',
+          'and undecided items under inbox. When the request names a vault folder, use it; when the ' +
+          'FOLDER is genuinely ambiguous, pick the closest fit and say why — that choice is yours to ' +
+          'make, never a question to ask.',
         'To move or tag an existing note, resolve its exact note_ id with vaultSearch first, then act ' +
           'this turn (noteMove / noteTag take no confirmation round) and confirm the real result.',
-        'To delete a note: resolve the id, call noteDelete WITHOUT confirmed:true (the probe), relay ' +
-          'its exact confirmation question, and STOP. After the user agrees in a LATER turn, call ' +
-          'noteDelete AGAIN with confirmed:true — never re-probe after the go-ahead, and one deletion ' +
-          'per turn is the hard ceiling: for a bulk delete request, explain the one-at-a-time rule.',
+        'For a bulk delete request, explain that deletions go one at a time and start with the first.',
         'When inboxList returns nothing pending, say the capture queue is empty and stop — never ' +
           'invent captured items or file notes with no source.',
         'When asked for a digest of what came in, read the pending items first (itemRead per item) ' +
           'and summarize ONLY what was actually captured, item by item, with real itm_ ids or titles; ' +
           'a digest the user wants kept goes into the vault under resources.',
-        'When a message is garbled or a filing request is missing its target, recover with ONE ' +
-          'concrete clarifying question — never guess a destination, an item, or a delete target.',
+        'When a message is garbled, or a request does not say WHICH item to file or WHICH note to ' +
+          'move, tag or delete, recover with ONE concrete clarifying question — never guess which ' +
+          'record was meant.',
         'When asked for something outside the vault tools — sending email, syncing devices, opening ' +
           'apps, editing files on disk — say plainly that you cannot do it here and name what you CAN ' +
           'do instead; never claim it was done.',
