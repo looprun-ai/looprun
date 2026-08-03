@@ -129,7 +129,7 @@ describe('governance veto envelope', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 describe('terminal tool definitions', () => {
   /** A host declaring its OWN `respond`: business prose, a brand-language pin, an extra required arg —
-   *  all of which the runtime replaces with its own contract (message / did / asked). */
+   *  all of which the runtime replaces with its own contract (exactly `message` + `did`). */
   const hostRespond: ToolDef = {
     name: 'respond',
     description: 'Send a user-facing reply when no domain tool is needed.',
@@ -153,9 +153,12 @@ describe('terminal tool definitions', () => {
     const props = (d.inputSchema as { properties: Record<string, { description?: string }> }).properties;
     expect(props.reflects).toBeUndefined();
     expect(props.message.description).toContain("USER'S language");
-    // The runtime reads exactly message + did (asked optional): required is [message, did].
+    // The runtime reads exactly message + did — both REQUIRED, and `did` carries at least one
+    // intention (MI-D1). The retired `asked` boolean has no property to be set through.
     expect((d.inputSchema as { required: string[] }).required).toEqual(['message', 'did']);
     expect(props.did).toBeDefined();
+    expect((props.did as unknown as { minItems: number }).minItems).toBe(1);
+    expect((props as Record<string, unknown>).asked).toBeUndefined();
 
     // A domain def is returned BY IDENTITY — provably untouched.
     const domain = FIXTURE_TOOL_DEFS.find((t) => t.name === 'createItem')!;
@@ -172,6 +175,41 @@ describe('terminal tool definitions', () => {
     expect(JSON.stringify(reply)).not.toContain('when no domain tool is needed');
     expect(JSON.stringify(reply)).not.toContain('brand language');
     expect(JSON.stringify(reply)).not.toContain('reflects');
+  });
+
+  /**
+   * MI-T5 — the MANDATORY-INTENTION surface must survive the backend's JSON-schema → zod conversion.
+   * A converter that kept only the field TYPES shipped the model a bare `{op,target,outcome,amount}`:
+   * the vocabulary, the cardinality and the `inform` guardrail — the forcing function the honesty
+   * design rests on — never left the repo. This reads the schema as the PROVIDER receives it.
+   */
+  it('ships the mandatory-intention respond schema to the model (did ≥ 1, op prose, no `asked`)', async () => {
+    const { llm } = await runWith(new AgentSpecBase(baseCfg() as never), [
+      [{ tool: 'respond', args: { message: 'done', did: [{ op: 'inform' }] } }],
+    ]);
+
+    const tools = (llm.received[0] as { tools?: Array<Record<string, unknown>> }).tools ?? [];
+    const reply = tools.find((t) => (t.name ?? t.toolName) === 'respond')!;
+    const schema = reply.inputSchema as {
+      required: string[];
+      properties: Record<string, Record<string, unknown>>;
+    };
+
+    expect(schema.required).toEqual(['message', 'did']);
+    expect(schema.properties.asked).toBeUndefined(); // the retired boolean has no wire presence
+    const did = schema.properties.did!;
+    expect(did.minItems).toBe(1); // MI-D1: every response declares at least one intention
+    expect(String(did.description)).toContain('An empty did is rejected');
+
+    const op = (did.items as { properties: Record<string, { description?: string }> }).properties.op!;
+    // The op vocabulary AND the inform guardrail reach the model verbatim (MI-D4).
+    expect(op.description).toContain('inform');
+    expect(op.description).toContain('greet');
+    expect(op.description).toContain('refuse');
+    expect(op.description).toContain('ask');
+    expect(op.description).toContain('MUST NOT assert a performed action');
+    // `message` carries its own contract — prose only, operations belong to `did`.
+    expect(String(schema.properties.message!.description)).toContain('operations go in did');
   });
 });
 

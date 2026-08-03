@@ -119,7 +119,7 @@ can drift.
 
 The box is scoped to a spec with no confirm-mechanism override. `confirmMechanism` changes it, and this
 tutorial does not teach it: it selects, per tool, between the default `'arg'` confirm (the `confirmed`
-flag) and `'prior-ask'` (a flag-less action gated on an `askUser` in an earlier turn). It is
+flag) and `'prior-ask'` (a flag-less action gated on an `ask` intention in an earlier turn). It is
 domain plumbing no chapter claims — reach for the source when you need it. (There is no longer a
 `lexicon` config field: the no-regex law, 2026-08-02, retired the regex-fed reply-honesty guard. A
 reply-honesty judgment a domain needs is an `llmCheck` rubric you bind on `onReply`, chapter 04.)
@@ -152,7 +152,7 @@ Field by field, the ones that carry a rule:
 |---|---|
 | `id` / `mode` | both **required**. `id` names the agent; `mode` is a free-form label echoed into eval records and case routing. It is near-vestigial today — nothing in the runtime branches on it — but it is not optional, so pick something stable and move on |
 | `persona` | lives on the **spec**, never on the shared domain contract — one line, per agent, rendered as late as possible so agents of the same domain share a maximal cacheable prompt prefix |
-| `tools` | the surface, declared. ≤15, and the terminal tools (`replyToUser`, `askUser`) are runtime-owned — naming one **throws** at construction |
+| `tools` | the surface, declared. ≤15, and the terminal tool (`respond`) is runtime-owned — naming it **throws** at construction |
 | `destructiveTools` | a declaration, not a comment: it *installs* the confirm-first protocol |
 | `behavior` | the **uncheckable residue only**. A line here that restates a rule some guard already enforces is two copies of one rule with only one wired to a check — guaranteed drift, and the spec lint flags it |
 
@@ -206,10 +206,10 @@ type TerminalPolicy = (world: AgentWorld) => boolean;   // true ⇒ force reply-
 ```
 <sub>signature, from `looprun`</sub>
 
-Returning `true` drops `askUser` from the turn: the agent must answer, not ask. It is evaluated per
-turn, from state — which is what makes it a *policy* and not a flag.
+Returning `true` forbids the `ask` intention this turn: the agent must answer, not ask. It is
+evaluated per turn, from state — which is what makes it a *policy* and not a flag.
 
-Why this one? In this domain `askUser` only ever disambiguates or confirms an **existing** event. On
+Why this one? In this domain an `ask` only ever disambiguates or confirms an **existing** event. On
 an empty calendar it has nothing to bite on, so asking would be a stall. The behavior bullet in §2
 and this policy therefore say the same thing from two directions — a spec where the prose and the
 policy contradict each other is a spec that will fail an eval case you cannot debug.

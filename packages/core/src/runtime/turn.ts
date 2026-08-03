@@ -298,8 +298,9 @@ const INVISIBLE_RE = /[\p{Cf}\p{Default_Ignorable_Code_Point}]/gu;
 /**
  * True when `text` carries nothing a user would read: empty after stripping invisible/format characters
  * and trimming. This is the runtime's OWN floor for "did the agent actually say anything" — it does not
- * depend on the `respond` terminal schema's `minLength`, which is advisory only (mastra's
- * json-schema-zod conversion drops `minLength` at execution time, so it is never runtime-enforced).
+ * depend on the `respond` terminal schema's `minLength`. That constraint reaches the provider (the
+ * mastra conversion carries it since MI-T5), but a zero-width message SATISFIES it, so it can never be
+ * the floor.
  */
 export function isBlankDelivery(text: string): boolean {
   return text.replace(INVISIBLE_RE, '').trim().length === 0;
@@ -327,9 +328,9 @@ function deriveExhaustionClosure(
 
 /**
  * The blank-delivery FLOOR — the backend-independent guarantee that replaces the deleted `emptyReply`
- * guard (SCG-T5's "structurally impossible" claim did not hold: the `respond` schema's `minLength` is
- * advisory only, mastra's json-schema-zod conversion drops it at runtime, and a zero-width message or a
- * mutator (e.g. `jargonScrub`) can still produce a blank composed delivery). Called at every point a
+ * guard (SCG-T5's "structurally impossible" claim did not hold: the `respond` schema's `minLength` is a
+ * provider-side hint that a zero-width message satisfies, and a mutator (e.g. `jargonScrub`) can blank an
+ * otherwise-fine delivery after the checks passed). Called at every point a
  * composed delivery text is about to leave {@link finalizeReply} — the clean path and both salvage
  * returns: when `text` is blank ({@link isBlankDelivery}), swap in the engine-derived exhaustion closure
  * (non-empty by construction — {@link deriveExhaustionClosure}) and mark the turn exhausted. `exhausted`
@@ -519,8 +520,8 @@ export async function finalizeReply(
 
   // Clean delivery: compose message + the verified operation report; the accepted payload IS the verified
   // declaration (it passed the claims cross-check), so it becomes the turn's `did` in history. The blank
-  // floor still applies here — an empty `message` + empty `did` composes to `''` (schema minLength is
-  // advisory only), and a mutator can rewrite an otherwise-fine `message` to `''` after the checks passed.
+  // floor still applies here — a zero-width `message` + empty `did` composes to a blank the schema
+  // `minLength` accepts, and a mutator can rewrite an otherwise-fine `message` to `''` after the checks.
   ledger.did = payload.did;
   return withBlankFloor(composeDelivery(payload, contract), payload.did, [], false, ledger, contract?.writeTools ?? [], contract);
 }

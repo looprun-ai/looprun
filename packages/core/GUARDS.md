@@ -60,8 +60,8 @@ a **pure function of its GuardCtx** — one impurity voids the determinism guara
 ### `observed` contains RUNTIME-OWNED TERMINAL calls (the reader-of-record trap)
 
 `ctx.observed` is not a log of domain work. The Mastra backend pushes the runtime-owned terminal `respond`
-into it with **`ok:true`**, from `beforeToolCall`'s synchronous segment (so a same-step ask — `respond` with
-`asked:true` — is visible to a sibling destructive call's preTool checks). Two consequences a guard author must internalise:
+into it with **`ok:true`**, from `beforeToolCall`'s synchronous segment (so a same-step ask — a `respond`
+whose `did` carries an `ask` intention — is visible to a sibling destructive call's preTool checks). Two consequences a guard author must internalise:
 
 1. **`observed` is never empty on a turn that produced a reply**, and
 2. **it never carries an `ok:false` entry merely because the domain work failed.**
@@ -73,7 +73,8 @@ turn where the model legitimately could not act and said so — vetoing the hone
 out as an exhaustion stub. That is the highest-severity failure class this trap produces (it bit hardest
 on the deleted regex-param honesty kinds, and any `llmCheck` rubric or `custom` guard that reasons about
 "did everything succeed" inherits the same obligation). Kinds keyed on a NAMED tool are unaffected;
-the consent kinds read the ask EVENT (`respond` with `asked:true`, via `isAskEvent`) deliberately.
+the consent kinds read the ask EVENT (a `respond` whose `did` carries an `ask` intention, via `isAskEvent`)
+deliberately.
 
 **A guard MAY use an LLM to decide — that is `llmCheck`.** LLM adjudication is now a first-class guard
 kind (§ the `llm-check` catalog entry). An `llmCheck` binds a trusted, pre-baked `rubric`; the runtime
@@ -229,7 +230,7 @@ law deleted them; the text judgment they encoded is an `llmCheck` rubric, whose 
 The lint that runs beside the proof (accusation-in-the-past marks + raw terminal names in model-facing
 prose) backs two more prose facts: `noActAfterAskSameTurn` does not name the runtime-owned
 terminal ("in the same turn **in which you ask the user a question**" — the rule is about the ACT,
-which survives any channel naming; the ask itself is now `respond` with `asked:true`), and `noDuplicateCall`'s DENY text does not assert a bare
+which survives any channel naming; the ask itself is now a `respond` carrying an `ask` intention), and `noDuplicateCall`'s DENY text does not assert a bare
 "it succeeded": it names what the earlier call actually **came back with** (including "came back EMPTY"),
 because `ok` is true for an empty result and a text telling the model to "use the earlier result" would
 point at nothing when the result was empty (the canonical shape: repeated list sweeps, each "successful",
@@ -255,8 +256,8 @@ spec is a spec). Its constructor auto-installs, from `cfg` alone:
 So **2 kinds always install** (`noDuplicateCall` + `degenerationGuard`), the SCG honesty cross-check pair
 when the contract declares `writeTools`, and **+2 more when the agent holds a destructive tool.** The former
 always-on `emptyReply` GUARD is DELETED (tier-③, SCG-T5) — but the guarantee it carried is not a schema
-claim: the `respond` terminal's `message` `minLength` 1 is ADVISORY only (mastra's json-schema-zod
-conversion drops `minLength` at runtime, so it is never enforced there). The real, backend-independent
+claim: the `respond` terminal's `message` `minLength` 1 cannot decide emptiness (the backend ships that
+constraint to the provider since MI-T5, but a zero-width message SATISFIES it). The real, backend-independent
 guarantee is the ENGINE FLOOR in `finalizeReply` (`runtime/turn.ts`): the composed delivery is stripped of
 zero-width/format characters and, if still blank — including after a mutator rewrite — routed to the
 non-empty engine-derived exhaustion closure instead. No runtime guard is needed for this.
@@ -342,6 +343,17 @@ domain whose write results carry no identifying value gives the cross-check noth
 writes cannot be covered: the guard fires, the turn redrives, and the engine closure delivers. That is
 fail-closed by design.
 
+**The fail-closed edges of the identity-key rule** (an adapter/world author's checklist — each one is a
+world that must be re-shaped, never a guard to relax):
+
+| world result | grounds an identity? | why |
+|---|---|---|
+| `{ id: 5 }`, `{ orderId: 5 }`, `{ order_id: 5 }` | ✅ | a NUMERIC value under a singular identity key |
+| `{ orderIds: [5, 6] }` | ❌ | a PLURAL key is not an identity key — return one result per entity, or a string id |
+| `5` (a bare scalar result) | ❌ | nothing names it; wrap it (`{ id: 5 }`) |
+| `{ ORDER_ID: 5 }` | ❌ | the key match is exact-cased on the documented spellings — use `orderId`/`order_id` |
+| `{ id: 'ORD-1' }` | ✅ | a STRING leaf is a name under any key |
+
 Speech intentions (`inform`/`greet`/`refuse`/`ask`) are never grounded and never cover a write (MI-D5), so an
 action can never hide behind an `inform`. And a domain `outcomes` map may not key a core outcome word in ANY
 casing — that is refused at spec load, not at check time.
@@ -349,8 +361,9 @@ The four reply-TEXT guards they and the schema subsume — `replyMentions`, `rep
 `replyMaxOccurrences`, `emptyReply` — are DELETED (tier-③, SCG-T5): `replyMentions` → `claimCoversRubric`,
 `replySingleQuestion`/`replyMaxOccurrences` → `llmCheck` (punctuation/CTA literalism, no sound structural
 fix), `emptyReply` → the ENGINE FLOOR in `finalizeReply` (`runtime/turn.ts`), NOT the `respond` schema's
-`message` `minLength` 1 — that constraint is advisory only (mastra's json-schema-zod conversion drops it
-at runtime). The floor strips zero-width/format characters from the composed delivery and, when still
+`message` `minLength` 1 — the schema constraint now reaches the provider (MI-T5: the mastra
+json-schema→zod conversion carries `minLength`/`minItems`/`description` through), but a provider-side
+constraint is a hint, and a whitespace-or-zero-width `message` satisfies it. The floor strips zero-width/format characters from the composed delivery and, when still
 blank, routes to the non-empty engine-derived exhaustion closure — catching both a schema-bypassed blank
 `message` and a post-mutator blank rewrite.
 
@@ -402,23 +415,25 @@ a governed destructive flow installs all three TOGETHER — never two of them sa
                                                         asked for it and answered in a LATER turn
  ③  pendingConfirmMustAsk gates the REPLY  (onReply)  — when a probe returned requiresConfirmation and
                                                         nothing resolved it, the turn MUST pose an ask
-                                                        (the delivered respond with asked:true), not
+                                                        (the delivered respond whose did carries an
+                                                        ask intention), not
                                                         report the act as done
 ```
 
-The ASK SIGNAL is now a FIELD, not a tool name (SCG): the single `respond` terminal carries `asked:true`
-when the turn poses a question (`replyToUser`/`askUser` are retired). The consent kinds key on it via
-`isAskEvent` over `observed` and, on the reply side, `ctx.asked`:
+The ASK SIGNAL is an INTENTION, not a tool name and no longer a boolean (SCG → MI, 2026-08-03): the single
+`respond` terminal declares `ask` inside its `did` when the turn poses a question (`replyToUser`/`askUser`
+are retired, and the `asked` boolean is DELETED — `hasAskIntent(did)` is the only reader). The consent kinds
+key on it via `isAskEvent` over `observed` and, on the reply side, `ctx.did`:
 - **①** `confirmFirst`'s `via:'ask'`/`'either'` arm and **②** `askedEarlier` read an EARLIER-turn ask —
-  `askedEarlier`'s PRIMARY signal is a sealed `HistoryTurn.asked === true`, with `isAskEvent` over `observed`
-  as the pre-history fallback.
-- **③** `pendingConfirmMustAsk` runs at onReply, where the delivered payload's `asked` is already seated, so
-  its PRIMARY relay signal is `ctx.asked === true`; the observed-scan (`isAskEvent` this turn) is the FALLBACK
-  for chain/mid-turn contexts.
+  `askedEarlier`'s PRIMARY signal is a sealed `hasAskIntent(HistoryTurn.did)`, with `isAskEvent` over
+  `observed` as the pre-history fallback.
+- **③** `pendingConfirmMustAsk` runs at onReply, where the delivered payload's `did` is already seated, so
+  its PRIMARY relay signal is `hasAskIntent(ctx.did)`; the observed-scan (`isAskEvent` this turn) is the
+  FALLBACK for chain/mid-turn contexts.
 
 They compose because they cover DISJOINT moments — the call, the argument, the message — and each keys on
 its own structural signal (observed probe / earlier-turn ask · the gated arg + an earlier ask · an unresolved
-requiresConfirmation probe + `ctx.asked`). The redundancy to avoid is stacking a SECOND call-gate next to `confirmFirst`:
+requiresConfirmation probe + the delivered `ctx.did`). The redundancy to avoid is stacking a SECOND call-gate next to `confirmFirst`:
 it already carries the cross-turn requirement (`via` + the recency-law `within`), so a second consent kind
 on the same moment is duplicate prose in the trunk, not extra safety. Reach for the checkpoint that matches
 WHAT you are gating. This section is mirrored in the generated chapter 04 preamble and in the agentspec
@@ -432,7 +447,7 @@ Populated from `AgentSpecConfig`; wired by the Mastra backend unless noted.
 |---|---|---|---|
 | `maxSteps` | `number` | 16 | tool-loop bound per turn (`stopWhen(stepCountIs)`). |
 | `redrives` | `number` | 1 | bounded no-tools onReply re-generate count before the exhaustion terminal. |
-| `terminal` | `(world: AgentWorld) => boolean` | — | **reply-only policy**: `true` ⇒ force `respond` with `asked` false/absent this turn (reply-only protocol — no clarifying question). This is a per-turn terminal-surface policy, DISTINCT from `exhaustionReply` (the honest-closure text). |
+| `terminal` | `(world: AgentWorld) => boolean` | — | **reply-only policy**: `true` ⇒ force a `respond` whose `did` declares NO `ask` intention this turn (reply-only protocol — no clarifying question). This is a per-turn terminal-surface policy, DISTINCT from `exhaustionReply` (the honest-closure text). |
 | `directives` | `StateDirective[]` `{id, cond, directive, when?}` | — | rendered statically into the trunk `## Governance` section as `IF <cond> → <directive>`. Render-only: the `when` runtime predicate is **reserved, not consumed** by the backend. |
 | `chains` | `ChainSpec[]` | — | declared follow-up completions (see below). Absent/empty ⇒ zero added effect. |
 | `sampling` | `{ temperature?, topP?, maxOutputTokens?, seed? }` | — | per-agent AI-SDK call settings, merged OVER the conversation-level `modelParams` (agent wins) by `resolveModelSettings` — a creative agent at temp 0.7 beside a temp-0 admin agent in the same domain. |

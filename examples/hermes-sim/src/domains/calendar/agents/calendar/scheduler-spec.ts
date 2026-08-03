@@ -145,7 +145,7 @@ export class AgentSpecScheduler extends AgentSpecBase {
       { id: 'agent:reminderNeedsRealEvent' },
     );
 
-    // Reply honesty (structural): relay a pending confirmation via askUser.
+    // Reply honesty (structural): relay a pending confirmation as an `ask` intention in the turn's `did`.
     this.addReplyCheck(pendingConfirmMustAsk(), { id: 'agent:pendingConfirmMustAsk' });
     // The former honesty reply-checks (destructiveClaimRequiresSuccess, noFabricatedSuccess ×2) were
     // regex-param text judgments — deleted with the no-regex law. In a re-authored bundle those become

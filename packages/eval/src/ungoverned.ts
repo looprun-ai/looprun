@@ -10,6 +10,14 @@
  * original spec + contract (`renderScopedSpecTrunk`), which the runtime honors as the
  * prompt override; the spec fields that drive the loop are emptied. Never mutates the
  * source spec/contract — returns fresh plain objects.
+ *
+ * THE TERMINAL SURFACE IS IDENTICAL BY CONSTRUCTION (MI-T5). The `respond` schema — `did` with its
+ * minimum of one intention, the speech/action vocabulary, the `inform` guardrail — and the terminal
+ * protocol prose are RUNTIME-owned (`terminalToolDefs` / `terminalProtocol`), so neither arm can
+ * carry more or less of them than the other; `controls.terminal` (the reply-only policy that decides
+ * which protocol variant renders) is preserved above with the rest of `loopControls`. The ungoverned
+ * arm is therefore a fully-instructed agent — it is TOLD to declare its intentions honestly, it is
+ * simply never CHECKED.
  */
 import { renderScopedSpecTrunk } from '@looprun-ai/core/internal';
 import type { AgentSpec, DomainContract } from '@looprun-ai/core';

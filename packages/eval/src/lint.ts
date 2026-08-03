@@ -107,9 +107,16 @@ function syntheticWorld(): AgentWorld {
   return { exec: () => ({}), advanceTurn: () => {}, ingestAttachment: (u: string) => u, toolCalls: [], sseActions: [] };
 }
 
-/** Worst-case minimal GuardCtx: empty observed ledger, current turn, only the reply populated. */
+/**
+ * Worst-case minimal GuardCtx: empty observed ledger, current turn, the reply populated — plus the
+ * MINIMUM LEGAL DECLARATION (MI): a delivered `respond` always carries at least one intention, so an
+ * absent `did` is a state no onReply guard can be in. The intention is a SPEECH one (`inform`), which
+ * names no ledger fact: the structured cross-checks stay silent on the synthetic ctx instead of
+ * reporting an ungrounded claim this probe invented, and the differential below keeps measuring what
+ * it is meant to measure — whether the required STRING itself is what a sibling guard vetoes.
+ */
 function syntheticReplyCtx(reply: string): GuardCtx {
-  return { args: {}, world: syntheticWorld(), observed: [], turnIndex: 0, userText: '', history: [], reply, producedThisTurn: [], attachmentsThisTurn: [] };
+  return { args: {}, world: syntheticWorld(), observed: [], turnIndex: 0, userText: '', history: [], reply, did: [{ op: 'inform' }], producedThisTurn: [], attachmentsThisTurn: [] };
 }
 
 /** Neutral baseline reply — the differential control: a veto must be TRIGGERED BY the required
@@ -131,6 +138,11 @@ async function runCheck(b: GuardBinding, reply: string): Promise<{ violation: st
  * onReply guard Y VETOES. Every required string is embedded in a synthetic worst-case reply and
  * every OTHER onReply check() of the same spec is EXECUTED over it; a check that throws on the
  * synthetic ctx is its own finding.
+ *
+ * SCOPE, POST-SCG/MI: the requirer keys on STRUCTURE (a `did` target), while the vetoers that can
+ * contradict it are the text-reading ones (`llmCheck` rubrics, `custom` behavior checks, mutable
+ * reply prose) — the required target still has to be SAYABLE. So the probe embeds the target in the
+ * reply text; it is not claiming the coverage rule itself is text-matched.
  */
 async function unsatReplyFindings(id: string, spec: AgentSpec): Promise<string[]> {
   const out: string[] = [];

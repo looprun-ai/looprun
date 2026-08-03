@@ -121,9 +121,9 @@ export class SecondBrainWorld implements AgentWorld {
 
   private dispatch(name: string, args: Record<string, unknown>): ToolResult {
     switch (name) {
-      // terminal tools are runtime-owned; the world just acknowledges them
-      case 'replyToUser':
-      case 'askUser':
+      // the terminal is runtime-owned (ONE `respond`; asking is a `did` intention, not a tool) — the
+      // world never answers for it, and just acknowledges the name if it is ever dispatched here
+      case 'respond':
         return { success: true };
 
       case 'inboxList': return this.inboxList();

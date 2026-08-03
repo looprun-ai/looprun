@@ -92,7 +92,7 @@ server also answers `GET /v1/models` with `{"object":"list","data":[…]}` — a
 is `{"id":"scheduler","object":"model","owned_by":"looprun","context_length":128000}`</sub>
 
 Three things in that response are the whole pattern: the reply came out of a **governed turn** (the
-model called `listEvents` and closed with `replyToUser`, both gated); the `model` field routed to the
+model called `listEvents` and closed with `respond`, both gated); the `model` field routed to the
 agent registered under that key; and the non-standard `looprun` field reports what governance did —
 here, nothing to correct.
 

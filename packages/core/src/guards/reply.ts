@@ -4,8 +4,8 @@
  * guards that used to live here — `replyMentions`, `replySingleQuestion`, `replyMaxOccurrences`,
  * `emptyReply` — are DELETED (see the tombstone in `catalog.ts`): reply prose stopped being a thing guards
  * READ (the red-team broke every literal scan structurally). Reply-coverage/polarity moved to the
- * structured cross-check `claimCoversRubric` (honesty.ts); the empty-reply floor is subsumed by the
- * respond schema (`message` minLength 1) + the forced-terminal fallback.
+ * structured cross-check `claimCoversRubric` (honesty.ts); the empty-reply floor is the ENGINE's
+ * blank-delivery floor in `finalizeReply` (a zero-width message satisfies the schema's `minLength`).
  */
 import type { ReplyMutator } from '../rules.js';
 import type { Guard } from '../rules.js';

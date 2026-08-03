@@ -31,12 +31,22 @@ import { join } from 'node:path';
 describe('05 · runSpecConversation over the scheduler', () => {
   it('answers turn 1 and refuses the clashing booking in turn 2', async () => {
     const scripted = scriptedModel([
-      // turn 1: read the calendar, then close the turn.
+      // turn 1: read the calendar, then close the turn. ONE terminal (`respond`): the prose rides
+      // `message` and `did` declares what the turn IS — here a single `inform` speech intention.
       [{ tool: 'listEvents', args: {} }],
-      [{ tool: 'replyToUser', args: { text: 'Standup on Monday 10:00 and the dentist on Wednesday 15:00.' } }],
-      // turn 2: the clashing booking — vetoed before execution, so the model asks instead.
+      [{ tool: 'respond', args: { message: 'Standup on Monday 10:00 and the dentist on Wednesday 15:00.', did: [{ op: 'inform' }] } }],
+      // turn 2: the clashing booking — vetoed before execution, so the model asks instead. The
+      // attempt is declared honestly (`blocked`, never `success`) and asking is an `ask` intention.
       [{ tool: 'addEvent', args: { title: 'Design review', start: '2026-03-02T10:15', end: '2026-03-02T10:45' } }],
-      [{ tool: 'askUser', args: { text: 'That clashes with Standup (10:00–10:30). Move it or replace it?' } }],
+      [
+        {
+          tool: 'respond',
+          args: {
+            message: 'That clashes with Standup (10:00–10:30). Move it or replace it?',
+            did: [{ op: 'addEvent', target: 'Design review', outcome: 'blocked' }, { op: 'ask' }],
+          },
+        },
+      ],
     ]);
 
     const result = await runScheduler(scripted.model);
@@ -103,7 +113,7 @@ describe('06 · the served agent', () => {
   it('answers a governed turn over the OpenAI-compatible route, with the looprun envelope', async () => {
     const scripted = scriptedModel([
       [{ tool: 'listEvents', args: {} }],
-      [{ tool: 'replyToUser', args: { text: 'Standup on Monday 10:00 and the dentist on Wednesday 15:00.' } }],
+      [{ tool: 'respond', args: { message: 'Standup on Monday 10:00 and the dentist on Wednesday 15:00.', did: [{ op: 'inform' }] } }],
     ]);
     // Port 0 (ephemeral) so the suite never fights the chapter's 8099 or a parallel run.
     const server = await createModelServer({ ...schedulerServerConfig(scripted.model, () => {}), port: 0 });

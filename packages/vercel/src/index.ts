@@ -8,6 +8,23 @@
  *      on terminal calls (`isTerminal`), and the forced-terminal fallback.
  *   3. Reply finalization via `finalizeReply` with a bounded NO-TOOLS re-generate callback —
  *      never a framework-level retry that re-runs side-effecting tools.
+ *   4. The STRUCTURED terminal (SCG/MI): ship `terminalToolDefs()` / `normalizeTerminalToolDef` AS
+ *      AUTHORED — `did` keeps `minItems: 1` and every field keeps its description, because the
+ *      intention vocabulary and the `inform` guardrail ARE the honesty forcing function (a
+ *      schema converter that drops descriptions silently deletes the protocol). Read the payload
+ *      through `respondPayload` — `message` + `did`, never a reply-text field, never the retired
+ *      `asked` boolean.
+ *   5. Prune the terminals the user never saw, in the SAME place the delivery is invalidated:
+ *      `pruneSupersededTerminals(ledger, prematureTerminalCalls(steps))` for a terminal that shared
+ *      its step with a domain call, and the same call with `supersededTerminalCalls(steps)` for the
+ *      losers of a within-step delivery contest. Skipping either leaves an `ask` intention in
+ *      `observed` that licenses a consent guard off a question that was never delivered.
+ *
+ * WORLD-SIDE OBLIGATION a backend author must relay to a domain: a write result must NAME what it
+ * touched, as its own whitespace-delimited word. A number counts as an identity only under a
+ * singular identity key (`id`, `label`, `<entity>Id`, `<entity>_id`) — `{ orderIds: [5,6] }`, a bare
+ * scalar result and `{ ORDER_ID: 5 }` name nothing, so the effected write cannot be covered by any
+ * claim and the turn fails closed into the engine closure (see `packages/core/GUARDS.md`).
  */
 import type { AgentSpec, AgentWorld, ToolDef, DomainContract } from '@looprun-ai/core';
 

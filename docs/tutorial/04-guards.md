@@ -121,8 +121,9 @@ that succeeded. `tookEffect` separates a write that landed from a pure read or a
 what lets `destructiveThrottle` count only actions that MUTATED the world, and what an `llmCheck` reply
 rubric keys on so it never faults an honest "I could not find it" on a read-only turn.
 
-Two names in `observed` are runtime-owned rather than yours: `replyToUser` and `askUser` are pushed
-in with `ok: true`, so a check that means "did the model do any work" must filter them out.
+One name in `observed` is runtime-owned rather than yours: the terminal `respond` is pushed in with
+`ok: true` (its `did` is what makes a turn's `ask` intention visible to a sibling call's checks), so
+a check that means "did the model do any work" must filter it out.
 
 ### `Dim` — the five enforcement dims, and why they exist
 

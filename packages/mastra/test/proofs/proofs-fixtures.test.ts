@@ -81,7 +81,7 @@ describe('fakeLLM — scripted model', () => {
 });
 
 describe('runProofLoop — full loop', () => {
-  it('clean pass: domain tool then replyToUser, no recovery events', async () => {
+  it('clean pass: domain tool then respond, no recovery events', async () => {
     const res = await runProofLoop(trivialSpec(), {
       preset: 'empty',
       turns: [{ userText: 'list my items' }],

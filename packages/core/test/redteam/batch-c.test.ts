@@ -76,12 +76,12 @@ describe('replySingleQuestion / replyMaxOccurrences', () => {
 describe('emptyReply', () => {
   // ORIGINAL BREAK (batch-a/c): a zero-width U+200B / word-joiner U+2060 reply survived trim() and passed
   // the emptyReply guard as "non-empty". The respond terminal's `message` minLength 1 does NOT close this:
-  // mastra's json-schema-zod conversion drops `minLength` at runtime, so it is advisory only and never
-  // runtime-enforced (proven directly below). The real guarantee is `finalizeReply`'s blank-delivery FLOOR
+  // the backend ships that constraint to the provider (MI-T5), but a zero-width string SATISFIES it — it can
+  // never decide emptiness (proven directly below). The real guarantee is `finalizeReply`'s blank-delivery FLOOR
   // (`runtime/turn.ts`): it strips zero-width/format characters from the composed delivery and, when still
   // blank, routes to the non-empty engine-derived exhaustion closure — proven by feeding the exact
   // zero-width payload through the real pipeline, not by inspecting the schema.
-  it('the schema minLength is ADVISORY ONLY — declared, but not what stops a blank reply', () => {
+  it('the schema minLength is DECLARED — but a zero-width message satisfies it, so it stops nothing', () => {
     const [respond] = terminalToolDefs();
     const props = (respond.inputSchema as { properties: Record<string, { minLength?: number }> }).properties;
     expect(props.message.minLength).toBe(1);

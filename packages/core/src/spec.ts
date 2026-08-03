@@ -16,7 +16,8 @@
  *     + degenerationGuard (onReply, id `minimal:degenerationGuard`, the sole minimal onReply guard — a
  *     param-free artifact-shape lint). The former `emptyReply` floor is DELETED (SCG-T5): the guarantee is
  *     now ENGINE-OWNED — `finalizeReply` routes a blank delivery (zero-width included) to the non-empty
- *     engine-derived closure; the respond schema's `message` minLength is advisory only. Reply-honesty
+ *     engine-derived closure; the respond schema's `message` minLength cannot decide it (a zero-width
+ *     message satisfies it). Reply-honesty
  *     text judgment (the former lexicon-fed noFalseFailureClaim) is now an `llmCheck` an author binds where needed;
  *   - IFF `destructiveTools` is non-empty, the destructive-safety protocol on those tools:
  *     confirmFirst (id `base:confirmFirst`) + destructiveThrottle (id `base:destructiveThrottle`).
@@ -415,7 +416,8 @@ export class AgentSpecBase implements AgentSpec {
     // rubric on onReply where the domain needs it, instead of injecting a regex lexicon.
     // The former always-on `emptyReply` floor is DELETED (SCG-T5): the guarantee moved into the ENGINE —
     // `finalizeReply`'s blank-delivery floor (zero-width included) routes an empty composed delivery to the
-    // non-empty engine-derived closure; the respond schema's `message` minLength is advisory only. No
+    // non-empty engine-derived closure; the respond schema's `message` minLength cannot decide it (a
+    // zero-width message satisfies it). No
     // minimal onReply guard replaces it.
     // THE HONESTY CROSS-CHECK (SCG): when the domain declares its WRITE surface, ground the agent's
     // structured declaration (`ctx.did`) against the world ledger — every reported operation must match

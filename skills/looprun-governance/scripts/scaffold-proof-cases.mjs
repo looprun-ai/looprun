@@ -85,7 +85,9 @@ ${autoLines}${skipLine}    cases: [
           preset: 'seeded-media',
           turns: [{ userText: '<user ask>' }],
           script: [
-            // steps of {tool,args} parts, ending with a NON-empty replyToUser
+            // steps of {tool,args} parts, ending with a respond whose `message` is NON-empty and
+            // whose `did` declares at least one intention (an action op + honest outcome, or
+            // inform/greet/refuse/ask)
           ],
           expect: 'pass',
         },

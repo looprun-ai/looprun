@@ -126,7 +126,7 @@ export class AgentSpecVaultFiling extends AgentSpecBase {
       { id: 'agent:readBeforeFiling' },
     );
 
-    // Reply honesty (structural): relay a pending delete confirmation via askUser.
+    // Reply honesty (structural): relay a pending delete confirmation as an `ask` intention in `did`.
     this.addReplyCheck(pendingConfirmMustAsk(), { id: 'agent:pendingConfirmMustAsk' });
     // The former destructiveClaimRequiresSuccess + noFabricatedSuccess reply-checks were regex-param text
     // judgments — deleted with the no-regex law. A re-authored bundle expresses them as llmCheck rubrics;
