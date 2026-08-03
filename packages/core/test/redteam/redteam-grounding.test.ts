@@ -138,7 +138,9 @@ describe('VECTOR 5 — args are agent-controlled: a decoy write grounds ANY fabr
     const pure = {
       did: [{ op: 'refund', target: 'FABRICATED-XYZ', outcome: 'success' }] as TurnClaim[],
       observed: [call('addNote', { orderId: 'ORD-1', memo: 'FABRICATED-XYZ' }, { tookEffect: true })],
-      world: worldWith([{ name: 'addNote', args: { orderId: 'ORD-1', memo: 'FABRICATED-XYZ' }, tookEffect: true, result: { ok: true } }]),
+      // The world DID name an entity for this write (ORD-1) — so the deny is caused by the boundary law
+      // (the fabricated target is not what the world named), not by an absent result.
+      world: worldWith([{ name: 'addNote', args: { orderId: 'ORD-1', memo: 'FABRICATED-XYZ' }, tookEffect: true, result: { label: 'ORD-1' } }]),
     };
     expect(grounded(pure)).toBeTruthy();
   });

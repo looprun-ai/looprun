@@ -297,6 +297,75 @@ describe('claimIsGrounded', () => {
       };
       expect(grounded(ctx)).toBeTruthy();
     });
+
+    it('BACKSTOP: a no_op claim over an effected write the world NAMED NOTHING for is caught by completeness', () => {
+      // The write took effect but its result identifies nothing, so `matches` is false and the no_op
+      // claim GROUNDS ("no effected write matches me" is literally true). The un-hideability guarantee
+      // therefore rests on claimIsComplete here: the write is uncovered, so the turn is denied.
+      const ctx = {
+        did: [{ op: 'cancel', target: 'BK-1', outcome: 'no_op' }] as TurnClaim[],
+        observed: [call('cancelBooking', { bookingId: 'BK-1' }, { tookEffect: true })],
+        world: worldWith([{ name: 'cancelBooking', args: { bookingId: 'BK-1' }, tookEffect: true, result: { success: true } }]),
+      };
+      expect(grounded(ctx)).toBeNull(); // grounding alone does NOT catch it
+      expect(claimIsComplete({ writeTools: WRITES }).check(replyCtx(ctx))).toBeTruthy(); // completeness does
+    });
+  });
+
+  describe('IDENTITY vs MAGNITUDE — a result scalar that names nothing grounds nothing', () => {
+    // REVIEW FINDING (MI-T3): with every scalar of the result in the match set, the AMOUNT of a write
+    // grounded a claim — and covered the write — so the entity acted on never reached the user.
+    const refundWorld = worldWith([
+      { name: 'refundOrder', args: { orderId: 'ORD-1' }, tookEffect: true, result: { id: 'ORD-1', refunded: 500 } },
+    ]);
+    const refundCall = [call('refundOrder', { orderId: 'ORD-1' }, { tookEffect: true })];
+
+    it('a claim on the AMOUNT does not ground (500 is a magnitude, not an entity)', () => {
+      const ctx = { did: [{ op: 'refund', target: '500', outcome: 'success' }] as TurnClaim[], observed: refundCall, world: refundWorld };
+      expect(grounded(ctx)).toBeTruthy();
+    });
+
+    it('and it does not COVER the write either — the hidden ORD-1 refund is reported', () => {
+      const ctx = { did: [{ op: 'refund', target: '500', outcome: 'success' }] as TurnClaim[], observed: refundCall, world: refundWorld };
+      expect(claimIsComplete({ writeTools: WRITES }).check(replyCtx(ctx))).toBeTruthy();
+    });
+
+    it('CONTROL: the claim on the entity the world NAMED grounds and covers', () => {
+      const ctx = { did: [{ op: 'refund', target: 'ORD-1', outcome: 'success' }] as TurnClaim[], observed: refundCall, world: refundWorld };
+      expect(grounded(ctx)).toBeNull();
+      expect(claimIsComplete({ writeTools: WRITES }).check(replyCtx(ctx))).toBeNull();
+    });
+
+    it('CONTROL: a NUMERIC id under an identity key still grounds (id / label / <entity>Id)', () => {
+      for (const result of [{ id: 5 }, { label: 5 }, { accountId: 5 }, { account_id: 5 }]) {
+        const ctx = {
+          did: [{ op: 'close', target: '5', outcome: 'success' }] as TurnClaim[],
+          observed: [call('cancelBooking', { n: 5 }, { tookEffect: true })],
+          world: worldWith([{ name: 'cancelBooking', args: { n: 5 }, tookEffect: true, result }]),
+        };
+        expect(grounded(ctx), JSON.stringify(result)).toBeNull();
+      }
+    });
+
+    it('a number under a NON-identity key never names an entity (count / code / paid)', () => {
+      for (const result of [{ count: 5 }, { code: 5 }, { paid: 5 }, { total: 5 }]) {
+        const ctx = {
+          did: [{ op: 'close', target: '5', outcome: 'success' }] as TurnClaim[],
+          observed: [call('cancelBooking', { n: 5 }, { tookEffect: true })],
+          world: worldWith([{ name: 'cancelBooking', args: { n: 5 }, tookEffect: true, result }]),
+        };
+        expect(grounded(ctx), JSON.stringify(result)).toBeTruthy();
+      }
+    });
+
+    it('a boolean flag never names an entity', () => {
+      const ctx = {
+        did: [{ op: 'close', target: 'true', outcome: 'success' }] as TurnClaim[],
+        observed: [call('cancelBooking', { bookingId: 'BK-1' }, { tookEffect: true })],
+        world: worldWith([{ name: 'cancelBooking', args: { bookingId: 'BK-1' }, tookEffect: true, result: { success: true } }]),
+      };
+      expect(grounded(ctx)).toBeTruthy();
+    });
   });
 
   describe('MI-D5 — the cross-check applies to ACTION intents only', () => {

@@ -63,18 +63,38 @@ export function isEmptyReadResult(result: unknown): boolean {
   return !result; // a scalar read: truthy is content, falsy is empty
 }
 
-/** Every scalar leaf value in a structure, stringified — the searchable VALUES a call carried. */
-function leafValues(v: unknown, out: string[] = []): string[] {
+/**
+ * Is this record key an ENTITY-IDENTITY key — the structural `id`/`label` the engine already speaks,
+ * plus the `<entity>Id` / `<entity>_id` convention? Domain-neutral by construction: no business word
+ * appears here, only the shape of an identifier field. A NUMBER is admitted into the identity set ONLY
+ * under such a key (`{ id: 5 }`, `{ orderId: 5 }`), so a numeric-id domain stays groundable while
+ * `{ count: 5 }` / `{ code: 200 }` / `{ refunded: 500 }` never name an entity.
+ */
+function isIdentityKey(key: string): boolean {
+  return key === 'id' || key === 'label' || key.endsWith('Id') || key.endsWith('_id');
+}
+
+/**
+ * The IDENTITY values in a structure — what the world NAMED, never what it merely counted.
+ *
+ * A STRING leaf is a name: labels, ids and the world's own sentences are how it identifies things. A
+ * NUMBER or BOOLEAN leaf is a magnitude or a flag, admitted only under an {@link isIdentityKey} key.
+ * The distinction is load-bearing, not cosmetic: with every scalar in the set, a result like
+ * `{ id: 'ORD-1', refunded: 500 }` let a claim on `target:'500'` BOTH ground and COVER the ORD-1 write —
+ * the user reads "500: done" and is never told which order was refunded (review finding, MI-T3).
+ */
+function identityValues(v: unknown, key?: string, out: string[] = []): string[] {
   if (v === null || v === undefined) return out;
   if (Array.isArray(v)) {
-    for (const x of v) leafValues(x, out);
+    for (const x of v) identityValues(x, key, out);
     return out;
   }
   if (typeof v === 'object') {
-    for (const val of Object.values(v as Record<string, unknown>)) leafValues(val, out);
+    for (const [k, val] of Object.entries(v as Record<string, unknown>)) identityValues(val, k, out);
     return out;
   }
-  out.push(String(v));
+  if (typeof v === 'string') out.push(v);
+  else if (key !== undefined && isIdentityKey(key)) out.push(String(v));
   return out;
 }
 
@@ -140,20 +160,21 @@ function targetIn(target: string | undefined, values: string[]): boolean {
   return values.some((v) => targetMatchesValue(target, v));
 }
 
-/** `matches(claim, call)` — the target matches a value the WORLD issued for this call (M2: the call's
- *  own args are agent-authored text and are NEVER evidence). */
+/** `matches(claim, call)` — the target matches an IDENTITY value the WORLD issued for this call (M2: the
+ *  call's own args are agent-authored text and are NEVER evidence; a bare count/amount is not a name). */
 function claimMatchesCall(ctx: GuardCtx, claim: TurnClaim, c: ObservedCall): boolean {
-  return targetIn(claim.target, leafValues(resultOf(ctx, c)));
+  return targetIn(claim.target, identityValues(resultOf(ctx, c)));
 }
 
 /**
  * `matches` against a guard-VETOED attempt — its args, because a vetoed call never reached the world and
  * so has no result at all. The args are agent-authored, but the ATTEMPT is a world-ledger fact the guard
  * recorded, and the only outcomes this backs (`blocked`/`refused`) are SELF-INCRIMINATING: the worst an
- * agent buys by naming a target here is reporting a refusal on something it never really touched.
+ * agent buys by naming a target here is reporting a refusal on something it never really touched. Same
+ * identity filter as the result path, for the same reason — an amount argument names no entity.
  */
 function claimMatchesAttempt(claim: TurnClaim, a: { name: string; args: unknown }): boolean {
-  return targetIn(claim.target, leafValues(a.args));
+  return targetIn(claim.target, identityValues(a.args));
 }
 
 /** ` on <target>` when the claim names one, else '' — for the deny messages (no tool names leak). */

@@ -307,13 +307,30 @@ ledger, which the agent does not control:
 All three are TRUTH guards (never salvaged, never delivered over) and key on `target` + `outcome` vs the
 ledger, never on op-name semantics or reply text — so they carry no pattern and cannot be broken by polarity.
 
-**Two matching laws the red-team wrote (MI-T3).** *Provenance*: a `target` is compared only against values the
-WORLD issued for a call (its result) — a call's ARGS are agent-authored, and scanning them made grounding
-circular (one permitted write plus the fabricated id in a free-text arg used to ground a success on an entity
-never touched). *Boundary*: the comparison is whole-VALUE or whole-TOKEN equality, never a substring — `BK-1`,
-`BK-10`, `BK-12345` and `BK-1-EXTRA` are different entities. A consequence worth stating: a domain whose write
-results carry NO identifying value gives the cross-check nothing to match, so its effected writes cannot be
-covered — write results must name what they touched (a `label`/id) for target-level honesty to be checkable.
+**Two matching laws the red-team wrote (MI-T3).**
+
+- *Provenance*: a `target` is compared only against the IDENTITY values the WORLD issued for a call (its
+  result). A call's ARGS are agent-authored, and scanning them made grounding circular (one permitted write
+  plus the fabricated id in a free-text arg used to ground a success on an entity never touched). "Identity"
+  means what the world NAMED, not what it counted: string leaves are names; a number or boolean counts only
+  under an identity key (`id`, `label`, `<entity>Id`, `<entity>_id`). So `{ id: 5 }` grounds a claim on `5`
+  while `{ refunded: 500 }`, `{ count: 5 }` and `{ code: 200 }` name no entity — otherwise a claim on the
+  AMOUNT of a write would both ground and COVER it, hiding the entity from the user.
+  **The one remaining args path is deliberate and conservative**: a guard-VETOED attempt never reached the
+  world and has no result, so `blocked`/`refused` ground against the attempt's args (same identity filter).
+  Those polarities are self-incriminating — the worst an agent buys is reporting a refusal on something it
+  never touched.
+- *Boundary*: the comparison is whole-VALUE or whole-TOKEN equality, never a substring — `BK-1`, `BK-10`,
+  `BK-12345` and `BK-1-EXTRA` are different entities. A token is a whitespace-delimited WORD with its edge
+  punctuation stripped. **Limit**: the comparison is case-FOLDED, so ids that differ only by case (`ab-1` vs
+  `AB-1`) collide — a domain whose ids are case-sensitive must not rely on case alone to distinguish them.
+
+**What a domain must do for this to work.** Write results must NAME what they touched — a `label`/id value,
+and it must stand as its own whitespace-delimited word (`"BK-1"` or `"Booking BK-1"`, not `"ref:BK-1"`). A
+domain whose write results carry no identifying value gives the cross-check nothing to match, so its effected
+writes cannot be covered: the guard fires, the turn redrives, and the engine closure delivers. That is
+fail-closed by design.
+
 Speech intentions (`inform`/`greet`/`refuse`/`ask`) are never grounded and never cover a write (MI-D5), so an
 action can never hide behind an `inform`. And a domain `outcomes` map may not key a core outcome word in ANY
 casing — that is refused at spec load, not at check time.
