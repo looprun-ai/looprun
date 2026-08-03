@@ -79,6 +79,9 @@ const INTERNAL = [
   'beginTurn', 'createLedger', 'clearDeliveredTerminal', 'pruneSupersededTerminals', 'recordTerminal', 'recordTerminalCall',
   'recordToolResult', 'recordTurnHistory', 'resultOk', 'TurnLedger', 'vetoStormHit',
   'forcedTerminalPrompt', 'isTerminal', 'normalizeTerminalToolDef', 'prematureTerminalTools',
+  // MI-T2 (2026-08-03) — the backends prune the PREMATURE (invalidated, never-delivered) terminal from
+  // `observed`, so an ask the user never saw cannot license consent; the calls come from here.
+  'prematureTerminalCalls',
   'supersededTerminalCalls', 'terminalProtocol', 'terminalToolDefs', 'lastTerminalArgs',
   'renderTurnPrompt',
   // SCG-T4 — the engine renders the operation report from the verified `did` and derives the true

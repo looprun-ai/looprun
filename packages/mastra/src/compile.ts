@@ -41,7 +41,7 @@ export interface CompiledSpec {
   beginTurn(input?: { attachments?: string[]; userText?: string }): { userMessageTail: string };
   /** Mutators → onReply checks → bounded redrive (re-generate ONE respond) → honest-abstain. Seals the
    *  turn into the conversation history so a later turn's guards read it via `ctx.history`. The `initial`
-   *  and the redrive's return are STRUCTURED respond payloads (message + did + asked). */
+   *  and the redrive's return are STRUCTURED respond payloads (message + did). */
   finalizeReply(initial: RespondPayload, redrive: (message: string) => Promise<RespondPayload>): Promise<FinalizedReply>;
 }
 

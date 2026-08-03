@@ -2,7 +2,7 @@
  * @looprun-ai/mastra — tool wiring: JSON-schema ToolDefs → Mastra tools executed through the world seam.
  *
  * The terminal tool (`respond`) is runtime-owned: its execute captures the structured payload
- * (message + did + asked) into the ACTIVE session's ledger. Domain tools route to `world.exec(name, args)`.
+ * (message + did) into the ACTIVE session's ledger. Domain tools route to `world.exec(name, args)`.
  */
 import { createTool } from '@mastra/core/tools';
 import { isTerminal, normalizeTerminalToolDef, recordTerminal, terminalToolDefs } from '@looprun-ai/core/internal';

@@ -4,7 +4,8 @@
  */
 import type { Guard, ObservedCall } from '../rules.js';
 import { canonArgs, countOkCalls } from './flow.js';
-import { isAskEvent } from '../runtime/claims.js';
+import { askedInDeliveredTurn } from './shared.js';
+import { hasAskIntent, isAskEvent } from '../runtime/claims.js';
 
 /**
  * A destructive tool needs the user's go-ahead before it runs — the ONE confirm-gate kind (it absorbed the
@@ -12,13 +13,17 @@ import { isAskEvent } from '../runtime/claims.js';
  *  - `'probe'`: a `flag:false`/absent PROBE of the SAME tool that ran OK in an EARLIER turn AND matched
  *    this call's RECORD (its args, minus the confirm `flag`, are a subset of this call's) — the preview was
  *    of the SAME act, not a different one. This is the strict, record-bound license.
- *  - `'ask'`: a flag-LESS action (e.g. a zero-arg tool). It is legal ONLY when an ask EVENT (the
- *    turn-closing `respond` with `asked:true`) succeeded in an EARLIER turn — the model must ASK, wait for
- *    the user's answer, and act only in a LATER turn. Every call is gated (there is no confirm flag to key
- *    on). A same-turn ask event does NOT unlock it (that is `noActAfterAskSameTurn`'s edge — the two
- *    compose: `via:'ask'` = cross-turn REQUIRE, `noActAfterAskSameTurn` = same-turn DENY).
+ *  - `'ask'`: a flag-LESS action (e.g. a zero-arg tool). It is legal ONLY when an ask EVENT (a delivered
+ *    turn-closing `respond` whose `did` carries an `ask` intention) succeeded in an EARLIER turn — the model
+ *    must ASK, wait for the user's answer, and act only in a LATER turn. Every call is gated (there is no
+ *    confirm flag to key on). A same-turn ask event does NOT unlock it (that is `noActAfterAskSameTurn`'s
+ *    edge — the two compose: `via:'ask'` = cross-turn REQUIRE, `noActAfterAskSameTurn` = same-turn DENY).
  *  - `'either'` (DEFAULT): the flag-gated form — `flag:true` is licensed by a matching earlier-turn probe OR
  *    an earlier-turn ask event. This is what the string overload and `AgentSpecBase`'s arg-flag tools install.
+ *
+ * ASK SIGNAL (MI-T2): every ask arm reads {@link askedInDeliveredTurn} — asking is an `ask` INTENTION in the
+ * delivered turn's `did` (MI-D3), and a turn already sealed into `ctx.history` is authoritative for itself,
+ * so a `respond` that was recorded but never DELIVERED (superseded or premature) can never license.
  *
  * RECENCY LAW (2026-08-02): a license is a LICENSING signal — a past event (a probe or an earlier-turn ask
  * event) that UNLOCKS a new act — so it is turn-bounded by `within` (default **1**, the immediately-preceding
@@ -50,8 +55,6 @@ export function confirmFirst(
   // RECENCY LAW: an earlier-turn event licenses only within `within` turns of the current turn.
   const recent = (obs: ObservedCall, cur: number): boolean =>
     cur - obs.turnIndex >= 1 && cur - obs.turnIndex <= within;
-  const askedRecently = (ctx: { observed: ObservedCall[]; turnIndex: number }): boolean =>
-    ctx.observed.some((obs) => isAskEvent(obs) && obs.ok && recent(obs, ctx.turnIndex));
   return {
     kind: 'confirmFirst',
     dim: 'run',
@@ -59,13 +62,13 @@ export function confirmFirst(
       if (!ctx.tool) return null;
       if (via === 'ask') {
         // Flag-less action: every call is gated on the action having been SURFACED to the user in an
-        // earlier turn within recency — either an ask (`respond`+`asked:true`) OR a prior SUCCESSFUL call of the tool itself
-        // (a flag-less tool has no probe shape, so its own prior OK run is the equivalent surfacing).
-        // SUCCESS-KEYING (`obs.ok`) is deliberate — a vetoed turn-1 attempt (ok:false) must never unlock
-        // the identical turn-2 call, or the guard defeats itself in exactly two turns.
-        const surfacedRecently = ctx.observed.some(
-          (obs) => obs.ok && (isAskEvent(obs) || obs.name === ctx.tool) && recent(obs, ctx.turnIndex),
-        );
+        // earlier turn within recency — either a DELIVERED ask OR a prior SUCCESSFUL call of the tool
+        // itself (a flag-less tool has no probe shape, so its own prior OK run is the equivalent
+        // surfacing). SUCCESS-KEYING (`obs.ok`) is deliberate — a vetoed turn-1 attempt (ok:false) must
+        // never unlock the identical turn-2 call, or the guard defeats itself in exactly two turns.
+        const surfacedRecently =
+          askedInDeliveredTurn(ctx, within) ||
+          ctx.observed.some((obs) => obs.ok && obs.name === ctx.tool && recent(obs, ctx.turnIndex));
         if (surfacedRecently) return null;
         const askedSameTurn = ctx.observed.some(
           (obs) => isAskEvent(obs) && obs.ok && obs.turnIndex === ctx.turnIndex,
@@ -86,9 +89,9 @@ export function confirmFirst(
           .filter((k) => k !== flag)
           .every((k) => obs.args![k] === ctx.args[k]);
       const probeLicensed = ctx.observed.some((obs) => isMatchingProbe(obs) && recent(obs, ctx.turnIndex));
-      // `'either'` also accepts a prior-turn ask (`respond`+`asked:true`) as the confirm surface (structural) — measured: the
-      // probe-only form dead-locked legitimate later-turn confirmations relayed through a question.
-      const askLicensed = via === 'either' && askedRecently(ctx);
+      // `'either'` also accepts a prior-turn DELIVERED ask as the confirm surface (structural) — measured:
+      // the probe-only form dead-locked legitimate later-turn confirmations relayed through a question.
+      const askLicensed = via === 'either' && askedInDeliveredTurn(ctx, within);
       if (probeLicensed || askLicensed) return null;
       // Unlicensed — refine the message. A same-turn matching probe is the "you confirmed your own
       // same-turn preview" edge (the go-ahead must arrive in a LATER message).
@@ -106,10 +109,12 @@ export function confirmFirst(
   };
 }
 
-/** Deny `tools` when an ask (`respond`+`asked:true`) already succeeded THIS turn — ask, wait, act only in a LATER
- *  turn; a model must never confirm-and-execute in the same turn as its own question (a multi-tool
- *  step can ask and call a destructive tool back-to-back, which reads as "asked" to a human but
- *  never gave the user a chance to answer). Keys on observed/turnIndex only — a structural signal. */
+/** Deny `tools` when an ask (a `respond` whose `did` carries an `ask` intention) already succeeded THIS
+ *  turn — ask, wait, act only in a LATER turn; a model must never confirm-and-execute in the same turn as
+ *  its own question (a multi-tool step can ask and call a destructive tool back-to-back, which reads as
+ *  "asked" to a human but never gave the user a chance to answer). SAME-TURN by definition, so it reads
+ *  `observed` (this is preTool — the turn has no delivered `did` yet, and the hook-time terminal record is
+ *  exactly the evidence it needs). Keys on observed/turnIndex only — a structural signal. */
 export function noActAfterAskSameTurn(tools: string[]): Guard {
   const set = new Set(tools);
   return {
@@ -186,20 +191,26 @@ export function destructiveThrottle(destructiveTools: string[], opts?: { confirm
 
 /**
  * A destructive PROBE returned requiresConfirmation this turn — the turn MUST relay the question by posing
- * an ask (the delivered `respond` with `asked:true`), UNLESS that pending confirmation was already RESOLVED
+ * an ask (the delivered `respond` declaring an `ask` intention), UNLESS that pending confirmation was RESOLVED
  * this turn: the SAME tool ran OK with the confirm flag set on the SAME record (its args minus the confirm
  * flag) later in the turn — a legal probe→approved-execute tail of a two-step flow, where the reply
  * correctly reports the DONE action instead of re-asking. Keys only the UNRESOLVED probes: if every
  * requiresConfirmation was resolved, the guard is silent.
  *
- * STRUCTURAL RELAY (no-regex law, 2026-08-02; precedence re-keyed SCG-T5): the relay is satisfied by an ask
- * EVENT this turn — `respond` with `asked:true` — NOT by regex-matching the reply text. Runs at onReply,
- * where the delivered payload's `asked` field is already seated on the ctx, so the PRIMARY signal is
- * `ctx.asked === true`; the observed-scan (an ok ask event in this turn's `observed`) is the FALLBACK for
- * chain / mid-turn contexts with no reply-side ctx. The former `askRe` param (a business-owned "does this
- * reply seek confirmation?" pattern) is retired; a domain that relays confirmation through prose instead of
- * an ask event judges that with an `llmCheck` rubric. `confirmArg` (default `confirmed`) is the confirm flag
- * a resolving call carries. Reads observed + `ctx.asked` only.
+ * STRUCTURAL RELAY (no-regex law, 2026-08-02; precedence re-keyed MI-T2): the relay is satisfied by an ask
+ * INTENTION in the DELIVERED turn's `did` (MI-D3) — never by regex-matching the reply text. It runs at
+ * onReply, where `checkPayload` has already seated the delivered declaration, so `ctx.did` is PRESENT and
+ * AUTHORITATIVE: `hasAskIntent(ctx.did)` decides, full stop. The observed scan is the FALLBACK for the
+ * contexts that have no delivered declaration at all (a chain / mid-turn ctx, where `ctx.did` is absent).
+ *
+ * THE PRECEDENCE IS THE FIX (red-team M8): `observed` holds every `respond` recorded at hook time,
+ * including one the premature policy invalidated. OR-ing the two signals let such a ghost satisfy the
+ * relay while the user received an unconditional "done" — a pending confirmation reported as complete.
+ *
+ * The former `askRe` param (a business-owned "does this reply seek confirmation?" pattern) is retired; a
+ * domain that relays confirmation through prose instead of an ask intention judges that with an `llmCheck`
+ * rubric. `confirmArg` (default `confirmed`) is the confirm flag a resolving call carries. Reads observed +
+ * `ctx.did` only.
  */
 export function pendingConfirmMustAsk(opts?: { confirmArg?: string }): Guard {
   const confirmArg = opts?.confirmArg ?? 'confirmed';
@@ -221,11 +232,13 @@ export function pendingConfirmMustAsk(opts?: { confirmArg?: string }): Guard {
           (o) => o.name === probe.name && o.ok && o.args?.[confirmArg] === true && record(o.args) === record(probe.args),
         ));
       if (!unresolved.length) return null;
-      // STRUCTURAL relay (PRECEDENCE, SCG-T5): the delivered `respond` lands at turn END, so at onReply the
-      // relay signal is `ctx.asked === true` — the delivered payload's own `asked` field (seated by
-      // checkPayload before this check runs). The observed-scan (an ok ask EVENT this turn) is the FALLBACK
-      // for chain / mid-turn contexts where `ctx.asked` is not yet populated (no reply-side ctx).
-      const askedThisTurn = ctx.asked === true || thisTurn.some((o) => isAskEvent(o) && o.ok);
+      // STRUCTURAL relay (PRECEDENCE, MI-T2): the delivered `respond` lands at turn END, so at onReply the
+      // relay signal is the delivered payload's own `did` (seated by checkPayload before this check runs).
+      // PRESENT ⇒ AUTHORITATIVE — never OR-ed with the observed scan, which can still hold a ghost the user
+      // never received. The scan is the FALLBACK only where no delivered declaration exists (chain/mid-turn).
+      const askedThisTurn = ctx.did !== undefined
+        ? hasAskIntent(ctx.did)
+        : thisTurn.some((o) => isAskEvent(o) && o.ok);
       return askedThisTurn
         ? null
         : 'A confirmation is PENDING — ask the user to confirm this turn, and do not summarize the action as done.';

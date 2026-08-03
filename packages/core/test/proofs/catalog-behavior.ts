@@ -212,14 +212,14 @@ export const BEHAVIOR_PROOFS: GuardProof[] = [
   // ── pendingConfirmMustAsk ─────────────────────────────────────────────────────
   {
     guard: 'pendingConfirmMustAsk',
-    // STRUCTURAL relay (no-regex law): the pending question must be put via an `askUser` call this turn —
+    // STRUCTURAL relay (no-regex law): the pending question must be relayed by an `ask` intention this turn —
     // no reply-text regex. make() is opts-less.
     make: () => pendingConfirmMustAsk(),
     hook: 'onReply',
     target: 'any',
     cases: [
       {
-        name: 'unresolved probe, no askUser this turn',
+        name: 'unresolved probe, no ask intention this turn',
         polarity: 'negative',
         ctx: {
           observed: [{ name: 'deleteItem', args: { id: 'itm-1' }, ok: true, turnIndex: 0, resultFlags: { requiresConfirmation: true } }],
@@ -239,7 +239,7 @@ export const BEHAVIOR_PROOFS: GuardProof[] = [
         },
       },
       {
-        name: 'unresolved probe, an ask (respond+asked) relays the question this turn',
+        name: 'unresolved probe, an ask intention relays the question this turn',
         polarity: 'positive',
         ctx: {
           observed: [

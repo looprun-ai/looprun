@@ -69,11 +69,10 @@ export interface HistoryTurn {
   toolCalls: ReadonlyArray<HistoryToolCall>;
   /** The turn's DELIVERED structured claim of operations (the delivered `respond`'s `did`). Retained so
    *  a later turn's guards can read what the agent DECLARED it did. Frozen with the entry. Task 4 will
-   *  feed this the VERIFIED (post-cross-check) set; for now it is what the ledger held at seal time. */
+   *  feed this the VERIFIED (post-cross-check) set; for now it is what the ledger held at seal time.
+   *  This is ALSO the ask record: a turn posed a question iff `hasAskIntent(did)` (MI-D3 — the `asked`
+   *  boolean is retired), and a SEALED turn is the authoritative answer for its own `turnIndex`. */
   did: ReadonlyArray<TurnClaim>;
-  /** Whether the delivered `respond` posed a clarifying question (`asked:true`) — a later ask/consent
-   *  gate reads it as "the user was asked, last turn". */
-  asked: boolean;
   /** Calls a guard VETOED before execution — the world never saw them. */
   attemptedCalls: ReadonlyArray<{ name: string; args: unknown }>;
   /** The turn's recovery/correction log (guard fires, redrives, superseded terminals, …). */
@@ -120,11 +119,11 @@ export interface GuardCtx {
   /** The CURRENT turn's structured claim of operations, extracted from the delivered `respond`'s `did`
    *  and grounded against the ledger by the cross-check guards (T4). Populated on the REPLY-side ctx —
    *  the onReply checks, the postTool result-invariants and the egress mutators — so a guard reads the
-   *  agent's DECLARATION, not its prose. Absent on preTool/onInput (no delivered respond exists yet). */
+   *  agent's DECLARATION, not its prose. Absent on preTool/onInput (no delivered respond exists yet).
+   *  It carries the turn's ASK too: `hasAskIntent(ctx.did)` (MI-D3 — the `asked` boolean is retired).
+   *  PRESENT ⇒ AUTHORITATIVE: a guard that needs "did this turn pose a question" must trust it over any
+   *  observed scan, which can still hold a terminal the user never received. */
   did?: TurnClaim[];
-  /** Whether the delivered `respond` posed a clarifying question. Populated alongside {@link did} on the
-   *  reply-side ctx; absent on preTool/onInput. */
-  asked?: boolean;
   /** THIS turn's guard-VETOED attempts — the calls a preTool guard blocked before they reached the world
    *  (the ledger's `attemptedCalls`, reset per turn). Populated on the reply-side ctx beside {@link did}
    *  so `claimIsGrounded` can ground a `blocked`/`refused` claim against the attempt the guard stopped —

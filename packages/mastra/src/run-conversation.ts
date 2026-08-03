@@ -28,6 +28,7 @@ import {
   isTerminal,
   lastTerminalArgs,
   normalizeModelParams,
+  prematureTerminalCalls,
   prematureTerminalTools,
   pruneSupersededTerminals,
   recordTurnHistory,
@@ -150,7 +151,7 @@ export async function runSpecConversation(spec: AgentSpec, turns: TurnInput[], d
       spec, contract, world, userText, uploadLabels: attLabels, uploadUrls: attUrls,
     });
     currentSystemPrompt = instructions;
-    // ONE terminal now (`respond`); "asked" is a field — the reply-only policy rides the protocol prose.
+    // ONE terminal now (`respond`); asking is a `did` INTENTION — the reply-only policy rides the protocol prose.
     const activeTools = [...surface, 'respond'];
 
     const before = world.toolCalls.length;
@@ -186,11 +187,17 @@ export async function runSpecConversation(spec: AgentSpec, turns: TurnInput[], d
       // tool RESULTS.
       const premature = prematureTerminalTools(full.steps);
       if (premature.length && ledger.terminalReply.trim()) {
-        // Clear the WHOLE delivered declaration (text + did + asked): an invalidated terminal's `did` is
-        // an equally-premature claim the cross-check guards must not ground against.
+        // Clear the WHOLE delivered declaration (text + did): an invalidated terminal's `did` is an
+        // equally-premature claim the cross-check guards must not ground against.
         clearDeliveredTerminal(ledger);
         ledger.turnCorrections.push(`premature-terminal:${[...new Set(premature)].join(',')}`);
       }
+      // …and drop the invalidated terminal's OBSERVATION too (MI-T2 / red-team M8): clearing the captured
+      // declaration leaves the hook-time `observed` push in place, where a `did` carrying an `ask`
+      // intention reads — this turn and every later one — as a question the user answered. It never
+      // reached them. Runs unconditionally: a premature terminal is never delivered, whatever its message.
+      const prunedPremature = pruneSupersededTerminals(ledger, prematureTerminalCalls(full.steps));
+      if (prunedPremature.length) ledger.turnCorrections.push(`premature-terminal-pruned:${[...new Set(prunedPremature)].join(',')}`);
       // Terminals that lost the delivery contest are not evidence of anything the user saw.
       const pruned = pruneSupersededTerminals(ledger, supersededTerminalCalls(full.steps));
       if (pruned.length) ledger.turnCorrections.push(`superseded-terminal:${[...new Set(pruned)].join(',')}`);
@@ -238,7 +245,7 @@ export async function runSpecConversation(spec: AgentSpec, turns: TurnInput[], d
       }
 
       const initialText: string = full?.tripwire ? String(full.tripwireReason ?? full.reason ?? '') : (ledger.terminalReply || full.text || '');
-      // The DELIVERED terminal's structured declaration (recordTerminal seated did/asked); a tripwire /
+      // The DELIVERED terminal's structured declaration (recordTerminal seated `did`); a tripwire /
       // free-text fallback carries the empty declaration beginTurn reset.
       const initial: RespondPayload = { message: initialText, did: ledger.did };
 
@@ -252,9 +259,9 @@ export async function runSpecConversation(spec: AgentSpec, turns: TurnInput[], d
         async (message) => {
           // A redrive re-generates ONE respond (respond-only, toolChoice pinned) and returns the STRUCTURED
           // payload. It is NOT persisted: snapshot the ledger and restore it, so a rejected draft's respond
-          // never enters observed/history (finalizeReply re-seats did/asked from the returned payload).
+          // never enters observed/history (finalizeReply re-seats `did` from the returned payload).
           const obsLen = ledger.observed.length;
-          const snap = { terminalReply: ledger.terminalReply, did: ledger.did, asked: ledger.asked };
+          const snap = { terminalReply: ledger.terminalReply, did: ledger.did };
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const re: any = await (agent.generate as any)(
             [...messages, { role: 'user', content: message }],
@@ -263,9 +270,8 @@ export async function runSpecConversation(spec: AgentSpec, turns: TurnInput[], d
           ledger.observed.length = obsLen;
           ledger.terminalReply = snap.terminalReply;
           ledger.did = snap.did;
-          ledger.asked = snap.asked;
           const args = lastTerminalArgs(re.steps);
-          return args ? respondPayload(args) : { message: typeof re.text === 'string' ? re.text : '', did: [], asked: false };
+          return args ? respondPayload(args) : { message: typeof re.text === 'string' ? re.text : '', did: [] };
         },
         redrives,
       );

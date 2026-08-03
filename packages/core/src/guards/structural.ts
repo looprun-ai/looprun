@@ -8,22 +8,21 @@
  * via `via:'probe'` — 2026-08-02.)
  */
 import type { Guard, GuardCtx } from '../rules.js';
-import { isAskEvent } from '../runtime/claims.js';
+import { askedInDeliveredTurn } from './shared.js';
 
 /**
  * A value the agent may only RECORD after it has asked the operator for it in an EARLIER turn.
  *
  * Fires only when the gated argument is actually present on this call (`ctx.args[arg]` non-nullish) — an
  * absent arg is not this guard's business. The exemption is purely structural: an EARLIER completed turn
- * that posed an ask (its delivered `respond` carried `asked:true`). A same-turn ask does NOT count — the
+ * that posed an ask (its delivered `did` carries an `ask` intention). A same-turn ask does NOT count — the
  * operator has not had a chance to answer within the same message, so consent to record their answer cannot
  * have arrived yet.
  *
- * ASK SIGNAL (SCG-T5): the PRIMARY signal is a sealed `HistoryTurn` with `asked === true` — the delivered,
- * verified ask (`ledger.asked` synced by `finalizeReply`, retained frozen in history since T2). The
- * observed-scan (an `isAskEvent` over `ctx.observed` in an earlier turn) is the FALLBACK for the
- * same-conversation PRE-HISTORY window — an earlier ask observed but not yet sealed into history (e.g. a
- * chained micro-turn). Both key on structure only — never reply text.
+ * ASK SIGNAL (MI-T2): {@link askedInDeliveredTurn} — a SEALED `HistoryTurn` whose `did` carries an `ask`
+ * intention is authoritative for its own turn; the observed scan covers only the PRE-HISTORY window (an
+ * earlier ask not yet sealed, e.g. a chained micro-turn), so a `respond` the user never received cannot
+ * license a write (red-team M8). Structure only — never reply text.
  *
  * RECENCY LAW (2026-08-02): the earlier ask is a LICENSING signal — it UNLOCKS this write — so it is
  * turn-bounded by `within` (default **1**, the immediately-preceding turn): the ask must satisfy
@@ -42,14 +41,7 @@ export function askedEarlier(opts: { tool: string; arg?: string; within?: number
         const v = ctx.args[arg];
         if (v === undefined || v === null || v === '') return null;
       }
-      // An earlier-turn ask, turn-bounded by `within`: `1 ≤ currentTurn − askTurn ≤ within`.
-      const recent = (turnIndex: number): boolean =>
-        ctx.turnIndex - turnIndex >= 1 && ctx.turnIndex - turnIndex <= within;
-      // PRIMARY: an earlier COMPLETED turn delivered an ask (history.asked — the verified delivered signal).
-      const askedInHistory = ctx.history.some((h) => h.asked && recent(h.turnIndex));
-      // FALLBACK: an ask observed in an earlier turn not yet sealed into history (pre-history window).
-      const askedInObserved = ctx.observed.some((o) => isAskEvent(o) && o.ok && recent(o.turnIndex));
-      if (askedInHistory || askedInObserved) return null;
+      if (askedInDeliveredTurn(ctx, within)) return null;
       const what = arg ?? 'that value';
       return `Ask the operator for ${what} first — record it only after they answer.`;
     },

@@ -23,7 +23,7 @@
  * | destructiveThrottle            | deleteItem, purgeAll (auto base) | —                                            |
  * | resultInvariant                | reportStatus (postTool)    | fires when result.count === 0                      |
  * | custom                         | listItems                  | denies args.page > 3                               |
- * | pendingConfirmMustAsk          | any (onReply)              | structural: unresolved probe requires an ask (respond+asked) this turn, ctx.asked precedence |
+ * | pendingConfirmMustAsk          | any (onReply)              | structural: unresolved probe requires an `ask` intention in the DELIVERED did this turn (ctx.did authoritative) |
  * | degenerationGuard              | any (auto minimal)         | — (param-free artifact-shape lint)                 |
  * | (DELETED — tier-③, SCG-T5) replyMentions (→ claimCoversRubric, polarity is a FIELD) · replySingleQuestion / replyMaxOccurrences (punctuation/CTA literalism, → llmCheck) · emptyReply (zero-width break, subsumed by respond schema minLength 1 + forced-terminal fallback) |
  * | llmCheck                       | collective:'skip'          | scripted adjudicator; the honesty/risk text judgment lives here now |
@@ -35,7 +35,7 @@
  * | llmCheck                       | collective:'skip'          | rubric+host adjudicator are agent-specific; proven isolated L1+L3 |
  *
  * ## SCRIPT CONVENTIONS (verified in signal-mechanics.test.ts)
- *  1. Every turn's script ends with a NON-empty `respond` (`args.message`; `asked:true` when asking; a
+ *  1. Every turn's script ends with a NON-empty `respond` (`args.message`; `did:[{op:'ask'}]` when asking; a
  *     `did: []` — or the real claim array — is required, an absent `did` reads as `claims-invalid`). An
  *     empty message never sets the terminal reply and triggers `forced-terminal`.
  *  2. Redrive correction steps may be PLAIN `{ text: '…' }` parts — the redrive re-generates ONE respond
@@ -44,7 +44,7 @@
  *     (outside forbidThisTurn's own negative case); setPrimary ids match `itm-\d+`; ≤2 createItem per
  *     turn (vary titles to dodge noDuplicateCall); listItems `page` ≤ 3.
  *  4. Destructive protocol: deleteItem first WITHOUT `confirmed` (the probe), the SAME turn's reply asks
- *     "are you sure"; `confirmed:true` only in a LATER turn. purgeAll only after an earlier-turn askUser.
+ *     "are you sure"; `confirmed:true` only in a LATER turn. purgeAll only after an earlier-turn ask.
  *     At most one destructive SUCCESS per turn. Never pass `force` to deleteItem.
  *  5. Replies: no '?' except confirmation/ask replies (which say "are you sure"); never
  *     deleted/removed/purged unless the destructive action truly succeeded this turn (or the sentence is

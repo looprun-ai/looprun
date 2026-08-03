@@ -1,18 +1,22 @@
 /**
- * SUPERSEDED TERMINALS — emitted in a step, never delivered to the user.
+ * UNDELIVERED TERMINALS — emitted in a step, never seen by the user.
  *
  * The runtime delivers the LAST non-empty `respond` message, while the guard hooks record EVERY
- * terminal as an ok observation. A step of two `respond` calls — one asking "Delete X?"
- * (`asked:true`) and one signing off — therefore delivers only the sign-off and still leaves the ok
- * asking `respond` in the ledger — which a prior-ask confirmation arm reads as "the user was asked",
- * unlocking a destructive action off a question the user never saw.
+ * terminal as an ok observation. A step of two `respond` calls — one asking "Delete X?" (an `ask`
+ * intention in its `did`) and one signing off — therefore delivers only the sign-off and still leaves
+ * the ok asking `respond` in the ledger — which a prior-ask confirmation arm reads as "the user was
+ * asked", unlocking a destructive action off a question the user never saw.
  *
- * This file also pins the boundary with `prematureTerminalTools`: the two answer different questions
- * and must not be collapsed into one. `prematureTerminalTools` asks "did a terminal ride along with
- * DOMAIN work?"; `supersededTerminalCalls` asks "which terminals lost the delivery contest?".
+ * TWO paths produce such a ghost, and each has its own detector:
+ *   · the DELIVERY CONTEST (≥2 terminals in one step)      → `supersededTerminalCalls`
+ *   · the PREMATURE step (a terminal beside DOMAIN work)   → `prematureTerminalCalls` (MI-T2 / M8)
+ * `prematureTerminalTools` answers a third question — "which domain tools rode along?" — used to
+ * INVALIDATE the delivery. The three must not be collapsed into one; this file pins the boundaries,
+ * and that BOTH ghost paths end at the same ledger prune.
  */
 import { describe, expect, it } from 'vitest';
-import { prematureTerminalTools, supersededTerminalCalls } from '../../src/runtime/terminal.js';
+import { prematureTerminalCalls, prematureTerminalTools, supersededTerminalCalls } from '../../src/runtime/terminal.js';
+import { createLedger, pruneSupersededTerminals, recordTerminalCall } from '../../src/runtime/ledger.js';
 
 /** One model step carrying the given `[toolName, args]` calls. */
 const step = (...calls: Array<[string, Record<string, unknown>]>) => ({
@@ -68,5 +72,52 @@ describe('supersededTerminalCalls', () => {
       expect(prematureTerminalTools(mixed)).toEqual(['deleteItem']);
       expect(supersededTerminalCalls(mixed)).toEqual([]);
     }
+  });
+});
+
+// ── The PREMATURE ghost (red-team M8) ─────────────────────────────────────────────────────────────
+// `supersededTerminalCalls` returns [] for a `[domainCall, respond]` step (only ONE terminal, so there
+// is no delivery contest), yet that respond is invalidated by the premature policy and never reaches
+// the user. Before MI-T2 nothing removed its `observed` entry, so a `did:[{op:'ask'}]` respond read as
+// consent obtained — in THIS turn (pendingConfirmMustAsk) and in every later one (confirmFirst /
+// askedEarlier), since `observed` is conversation-wide.
+describe('prematureTerminalCalls', () => {
+  it('returns the terminal that shared its step with domain work, with its args', () => {
+    const out = prematureTerminalCalls([
+      step(['deleteAcct', { id: 'X' }], ['respond', { message: 'Delete account X?', did: [{ op: 'ask' }] }]),
+    ]);
+    expect(out.map((o) => o.name)).toEqual(['respond']);
+    expect(out[0]?.args.message).toBe('Delete account X?');
+    expect(out[0]?.args.did).toEqual([{ op: 'ask' }]);
+  });
+
+  it('leaves a TERMINAL-ONLY step alone (that is the delivery contest, not the premature path)', () => {
+    expect(prematureTerminalCalls([step(['respond', { message: 'done', did: [{ op: 'inform' }] }])])).toEqual([]);
+    expect(
+      prematureTerminalCalls([step(['respond', { message: 'q?', did: [{ op: 'ask' }] }], ['respond', { message: 'a', did: [] }])]),
+    ).toEqual([]);
+  });
+
+  it('reads the chunk-shaped spelling a finished step uses', () => {
+    const out = prematureTerminalCalls([
+      {
+        toolCalls: [
+          { type: 'tool-call', payload: { toolName: 'deleteAcct', args: { id: 'X' } } },
+          { type: 'tool-call', payload: { toolName: 'respond', args: { message: 'Delete account X?', did: [{ op: 'ask' }] } } },
+        ],
+      },
+    ]);
+    expect(out.map((o) => o.args.message)).toEqual(['Delete account X?']);
+  });
+
+  it('THE M8 CLOSURE: the premature ask leaves NO ghost in observed after the prune', () => {
+    const steps = [step(['deleteAcct', { id: 'X' }], ['respond', { message: 'Delete account X?', did: [{ op: 'ask' }] }])];
+    const ledger = createLedger();
+    // What the backend's hook-time record leaves behind (the ask is visible to same-step siblings).
+    recordTerminalCall(ledger, 'respond', { message: 'Delete account X?', did: [{ op: 'ask' }] });
+    expect(ledger.observed).toHaveLength(1);
+    const pruned = pruneSupersededTerminals(ledger, prematureTerminalCalls(steps));
+    expect(pruned).toEqual(['respond']);
+    expect(ledger.observed).toEqual([]);
   });
 });

@@ -9,7 +9,7 @@
 import type { AgentWorld, Guard, ObservedCall, HistoryTurn, HistoryToolCall, Adjudicator } from '../rules.js';
 import { canonArgs } from '../guards/index.js';
 import { isTerminal } from './terminal.js';
-import { hasAskIntent, validateClaims, type TurnClaim } from './claims.js';
+import { validateClaims, type TurnClaim } from './claims.js';
 
 /** An OUTPUT-dim (postTool) result-invariant failure OR a flowChain restate — carried on the ledger
  *  and JOINED into the onReply violation set so the same bounded no-tools redrive relays its text. */
@@ -28,12 +28,9 @@ export interface TurnLedger {
   /** The CURRENT turn's DELIVERED structured claim of operations — the delivered `respond`'s `did`
    *  (the last ok respond carrying a non-empty `message`, consistent with the superseded-terminal
    *  pruning). Read into the reply-side GuardCtx as `ctx.did` so the cross-check guards (T4) ground the
-   *  agent's DECLARATION against the world ledger. Reset per turn by `beginTurn`. */
+   *  agent's DECLARATION against the world ledger. It is ALSO the turn's ask record — the turn posed a
+   *  question iff `hasAskIntent(ledger.did)` (MI-D3; the `asked` boolean is retired). Reset per turn. */
   did: TurnClaim[];
-  /** Whether that delivered `respond` posed a clarifying question — derived from an `ask` intention in
-   *  its `did` (MI-D3; the bare `asked` boolean is retired). Transitional convenience the consent guards
-   *  still read; MI-T2 re-keys them onto the intention itself. Reset per turn. */
-  asked: boolean;
   /** Consecutive guard-vetoed rounds this turn (reset when a call passes guards and executes). */
   vetoStreak: number;
   /** OUTPUT-dim (postTool) result-invariant violations + flowChain restates accrued this turn — joined
@@ -80,7 +77,7 @@ export function vetoStormHit(ledger: TurnLedger): boolean {
 }
 
 export function createLedger(adjudicator?: Adjudicator, adjudicatorTimeoutMs?: number): TurnLedger {
-  return { observed: [], turnIndex: 0, producedThisTurn: [], turnCorrections: [], attachments: [], terminalReply: '', did: [], asked: false, vetoStreak: 0, postToolViolations: [], inFlightCalls: [], attemptedCalls: [], currentUserText: '', history: [], ...(adjudicator ? { adjudicator } : {}), ...(adjudicatorTimeoutMs !== undefined ? { adjudicatorTimeoutMs } : {}) };
+  return { observed: [], turnIndex: 0, producedThisTurn: [], turnCorrections: [], attachments: [], terminalReply: '', did: [], vetoStreak: 0, postToolViolations: [], inFlightCalls: [], attemptedCalls: [], currentUserText: '', history: [], ...(adjudicator ? { adjudicator } : {}), ...(adjudicatorTimeoutMs !== undefined ? { adjudicatorTimeoutMs } : {}) };
 }
 
 /** Reset the per-turn fields (the conversation-scoped `observed` and `history` are kept). `userText` is
@@ -92,7 +89,6 @@ export function beginTurn(ledger: TurnLedger, turnIndex: number, userText = ''):
   ledger.attachments = [];
   ledger.terminalReply = '';
   ledger.did = [];
-  ledger.asked = false;
   ledger.vetoStreak = 0;
   ledger.postToolViolations = [];
   ledger.inFlightCalls = [];
@@ -159,34 +155,40 @@ export function recordTerminalCall(ledger: TurnLedger, name: string, args: Recor
 }
 
 /**
- * Clear the DELIVERED terminal declaration — the reply text AND its structured `did`/`asked`.
+ * Clear the DELIVERED terminal declaration — the reply text AND its structured `did`.
  *
  * The premature-terminal invalidation path (a terminal that shared its closing step with a domain call,
  * so its text was composed before that call's result existed) must clear the WHOLE delivered declaration,
  * not just the reply prose: an invalidated terminal's `did` is an equally-premature claim, and leaving it
  * on the ledger would let the cross-check guards ground against — or history retain — a declaration the
  * user never saw. The backend calls this where core owns the invalidation seam; a single call keeps the
- * three fields in lockstep so no site can clear the text while orphaning the claims.
+ * two fields in lockstep so no site can clear the text while orphaning the claims.
+ *
+ * It does NOT touch `observed`: the invalidated terminal's OBSERVATION is dropped by
+ * {@link pruneSupersededTerminals} fed with `prematureTerminalCalls(steps)` — the backend runs both.
  */
 export function clearDeliveredTerminal(ledger: TurnLedger): void {
   ledger.terminalReply = '';
   ledger.did = [];
-  ledger.asked = false;
 }
 
 /**
- * Drop terminal calls that were emitted but never DELIVERED (see `supersededTerminalCalls`). Runs
- * once the generation has resolved, so the hook-time record that gave a same-step sibling's preTool
- * checks visibility of an ask (`respond` whose `did` carries an `ask` intention) has already done its job; what is corrected here is the
- * cross-turn evidence, where an undelivered question must not read as consent obtained.
- * Returns the names actually pruned, for the turn's recovery log.
+ * Drop terminal calls that were emitted but never DELIVERED. TWO producers feed it, one per ghost path:
+ * `supersededTerminalCalls` (the within-step delivery contest) and `prematureTerminalCalls` (a terminal
+ * that shared its step with domain work, so the premature policy invalidated it — MI-T2 / red-team M8).
+ *
+ * Runs once the generation has resolved, so the hook-time record that gave a same-step sibling's preTool
+ * checks visibility of an ask (`respond` whose `did` carries an `ask` intention) has already done its
+ * job; what is corrected here is the evidence a LATER check reads — this turn's `pendingConfirmMustAsk`
+ * fallback and every later turn's consent scan, where an undelivered question must not read as consent
+ * obtained. Returns the names actually pruned, for the turn's recovery log.
  */
 export function pruneSupersededTerminals(
   ledger: TurnLedger,
-  superseded: Array<{ name: string; args: Record<string, unknown> }>,
+  undelivered: Array<{ name: string; args: Record<string, unknown> }>,
 ): string[] {
   const pruned: string[] = [];
-  for (const s of superseded) {
+  for (const s of undelivered) {
     const ix = ledger.observed.findIndex(
       (o) => o.turnIndex === ledger.turnIndex && o.name === s.name && canonArgs(o.args) === canonArgs(s.args),
     );
@@ -211,7 +213,6 @@ export function recordTerminal(ledger: TurnLedger, name: string, args: Record<st
   ledger.terminalReply = text;
   const { claims, errors } = validateClaims(args.did);
   ledger.did = claims;
-  ledger.asked = hasAskIntent(claims);
   if (errors.length) ledger.turnCorrections.push(`claims-invalid:${errors.length}`);
 }
 
@@ -251,7 +252,6 @@ export function recordTurnHistory(ledger: TurnLedger, reply: string, world?: Age
     // retains the grounded set — never a raw or fabricated declaration. Frozen entry-and-claim so
     // `ctx.history[n].did` is read-only by construction.
     did: Object.freeze(ledger.did.map((c) => Object.freeze({ ...c }))),
-    asked: ledger.asked,
     attemptedCalls: Object.freeze(ledger.attemptedCalls.map((a) => Object.freeze({ ...a }))),
     guardEvents: Object.freeze(ledger.turnCorrections.slice()),
   });

@@ -11,8 +11,8 @@
  * NO-REGEX LAW (2026-08-02, full-context guards): NO guard FACTORY takes a RegExp-typed parameter.
  * Text judgment — claim language, confirm-language, PII/regulated/competitor patterns — is `llmCheck`'s
  * job (a trusted rubric answered by the host adjudicator). Structural jobs use structural signals
- * (`confirmFirst` / `pendingConfirmMustAsk` key on the observed ask EVENT — `respond`
- * with `asked:true`, via `isAskEvent` — plus args equality / `ctx.asked`, never on reply text). The former regex-param honesty/reply guards (`noFabricatedSuccess`, `destructiveClaimRequiresSuccess`,
+ * (`confirmFirst` / `pendingConfirmMustAsk` key on the ask INTENTION a delivered `respond` declares in its
+ * `did` — `hasAskIntent` / `isAskEvent` — plus args equality, never on reply text). The former regex-param honesty/reply guards (`noFabricatedSuccess`, `destructiveClaimRequiresSuccess`,
  * `noFalseFailureClaim`, `noCompetitorClaim`, `noOutOfSurfaceActionClaim`, `noUngroundedRegulatedFigure`,
  * `minimalDisclosure`, `noInstructionFromData`) are DELETED — an author expresses those as `llmCheck`
  * rubrics. Media/label INPUT guards are a DOMAIN concern — `custom({ dim:'input' })` over the world's own

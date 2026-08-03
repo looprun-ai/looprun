@@ -51,7 +51,7 @@ async function runWith(script: ScriptStep[]): Promise<{ llm: ReturnType<typeof f
 }
 
 describe('ask channel survives a preTool deny', () => {
-  it('an ask (respond+asked) executes as a terminal and closes the turn with the question', async () => {
+  it('an ask intention executes as a terminal and closes the turn with the question', async () => {
     const { llm, result } = await runWith([
       [{ tool: 'createItem', args: { title: 'X' } }],
       [{ tool: 'respond', args: { message: 'Which plan do you want?', did: [{ op: 'ask' }] } }],
@@ -72,7 +72,7 @@ describe('ask channel survives a preTool deny', () => {
   });
 
   it('no repair pass ever replays UNKNOWN_TOOL for a terminal to the model', async () => {
-    // The loop shape from the field: after the deny the model mixes the ask (respond+asked) with a
+    // The loop shape from the field: after the deny the model mixes the ask intention with a
     // domain call (premature terminal → reply invalidated → forced-terminal fallback). The fallback
     // generation re-reads the history — if the terminal's result came from the world, the model
     // now SEES the failure on its only closing action and retries it until exhaustion.
@@ -85,6 +85,9 @@ describe('ask channel survives a preTool deny', () => {
     const rec = result.turnRecords[0];
     expect(rec?.assistantFinalText).toBe('Which plan do you want?');
     expect(rec?.recoveryEvents).toContain('forced-terminal');
+    // MI-T2 / M8: the invalidated premature respond is also pruned from `observed`, so the question the
+    // user never received cannot license consent in this turn or any later one.
+    expect(rec?.recoveryEvents).toContain('premature-terminal-pruned:respond');
     // The LAW: the wire the model reads never carries UNKNOWN_TOOL for a terminal.
     expect(JSON.stringify(llm.received)).not.toContain('UNKNOWN_TOOL');
     expect(rec?.maxIterHit).toBe(false);

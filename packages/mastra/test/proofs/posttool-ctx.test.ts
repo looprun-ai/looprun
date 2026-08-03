@@ -1,8 +1,9 @@
 /**
- * postTool ctx THREADING (SCG-T2 review follow-up) — the OUTPUT-dim guard ctx built in hooks.ts
- * carries the turn's structured declaration seam (`did` / `asked`), so a postTool guard sees the same
- * declaration fields the onReply cross-check guards do. This pins that they are present (an array + a
- * boolean), not silently dropped from the ctx the postTool hook assembles.
+ * postTool ctx THREADING (SCG-T2 review follow-up, re-keyed MI-T2) — the OUTPUT-dim guard ctx built in
+ * hooks.ts carries the turn's structured declaration (`did`), so a postTool guard sees the same
+ * declaration the onReply cross-check guards do — the turn's ask included, since asking is an `ask`
+ * INTENTION inside `did` (MI-D3). This pins that it is present (an array), not silently dropped from the
+ * ctx the postTool hook assembles.
  */
 import { describe, expect, it } from 'vitest';
 import { AgentSpecBase, custom } from '@looprun-ai/core';
@@ -11,9 +12,9 @@ import { FIXTURE_DOMAIN, FIXTURE_TOOL_DEFS, FIXTURE_TOOL_NAMES, FixtureWorld } f
 import { fakeLLM } from '../../src/testing/fake-llm.js';
 import { runSpecConversation } from '../../src/run-conversation.js';
 
-describe('postTool ctx carries the did/asked declaration seam', () => {
-  it('threads did (array) and asked (boolean) into the OUTPUT-dim guard ctx', async () => {
-    let seen: Pick<GuardCtx, 'did' | 'asked'> | undefined;
+describe('postTool ctx carries the did declaration seam', () => {
+  it('threads did (array) into the OUTPUT-dim guard ctx', async () => {
+    let seen: Pick<GuardCtx, 'did'> | undefined;
     const spec = new AgentSpecBase({
       id: 'posttool-ctx',
       mode: 'PROOF',
@@ -29,7 +30,7 @@ describe('postTool ctx carries the did/asked declaration seam', () => {
         kind: 'captureCtx',
         dim: 'output',
         check: (ctx) => {
-          seen = { did: ctx.did, asked: ctx.asked };
+          seen = { did: ctx.did };
           return null;
         },
         prose: () => '',
@@ -51,6 +52,5 @@ describe('postTool ctx carries the did/asked declaration seam', () => {
     expect(res.errorMsg).toBeUndefined();
     expect(seen).toBeDefined();
     expect(Array.isArray(seen!.did)).toBe(true);
-    expect(typeof seen!.asked).toBe('boolean');
   });
 });

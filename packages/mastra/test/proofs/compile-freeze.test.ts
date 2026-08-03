@@ -13,7 +13,7 @@ import { AgentSpecBase } from '@looprun-ai/core';
 import { FIXTURE_DOMAIN, FIXTURE_TOOL_DEFS, FIXTURE_TOOL_NAMES, FixtureWorld } from '@looprun-ai/core/testing';
 import { compileSpec } from '../../src/compile.js';
 
-/** A phrase present ONLY in the reply-only terminal protocol prose (the normal protocol invites `asked:true`). */
+/** A phrase present ONLY in the reply-only terminal protocol prose (the normal protocol invites an `ask` intention). */
 const REPLY_ONLY_MARKER = 'NEVER ask the user a question';
 
 function compiled(terminal: () => boolean) {

@@ -200,7 +200,7 @@ const noDuplicateCallProof: GuardProof = {
 const confirmFirstProof: GuardProof = {
   guard: 'confirmFirst',
   // STRUCTURAL (no-regex law): via:'either' accepts a matching prior-turn same-tool probe (record-bound)
-  // or a prior-turn askUser as the go-ahead — no reply-text regex. Recency-bounded (default within:1).
+  // or a prior-turn ask as the go-ahead — no reply-text regex. Recency-bounded (default within:1).
   make: () => confirmFirst(),
   hook: 'preTool',
   target: ['deleteItem'],
@@ -250,7 +250,7 @@ const confirmFirstProof: GuardProof = {
     },
     {
       // no-regex law: a prior-turn PROSE confirmation-ask no longer unlocks (that text judgment is
-      // retired); the go-ahead must be a structural same-tool probe or an ask (respond+asked:true). A
+      // retired); the go-ahead must be a structural same-tool probe or an ask intention. A
       // respond WITHOUT asked is just prose, so this now DENIES.
       name: 'arg mechanism: a prior-turn prose confirmation-ask does NOT unlock (structural only)',
       polarity: 'negative',
@@ -265,7 +265,7 @@ const confirmFirstProof: GuardProof = {
       l1: 'fires',
     },
     {
-      name: 'arg mechanism: a prior-turn ask (respond+asked) counts as the probe',
+      name: 'arg mechanism: a prior-turn ask intention counts as the probe',
       polarity: 'positive',
       ctx: {
         tool: 'deleteItem',
@@ -319,7 +319,7 @@ const confirmFirstProof: GuardProof = {
       },
     },
     {
-      name: 'prior-ask mechanism: an earlier-turn askUser unlocks execution',
+      name: 'prior-ask mechanism: an earlier-turn ask unlocks execution',
       polarity: 'positive',
       l1: 'silent',
       l3: {
@@ -376,9 +376,9 @@ const noActAfterAskSameTurnProof: GuardProof = {
   cases: [
     {
       // The same-turn ask→act sequence only
-      // exists inside ONE multi-tool step (askUser is a terminal), and the AI SDK dispatches a
+      // exists inside ONE multi-tool step (the ask rides the terminal), and the AI SDK dispatches a
       // step's tool calls CONCURRENTLY (Promise.all) — the destructive call's preTool check used to
-      // run BEFORE the askUser landed in the observed ledger, so this deny was unreachable at L3.
+      // run BEFORE the ask landed in the observed ledger, so this deny was unreachable at L3.
       // FIXED same day: the runtime now records terminal calls in beforeToolCall's SYNCHRONOUS
       // segment (emission order), so the sibling check sees the ask. The L3 deny below is the
       // regression proof for that fix.
@@ -625,7 +625,7 @@ const askedEarlierProof: GuardProof = {
   target: ['createItem'],
   cases: [
     {
-      name: 'the gated value is present and an askUser succeeded in an EARLIER turn (distance 1)',
+      name: 'the gated value is present and an ask succeeded in an EARLIER turn (distance 1)',
       polarity: 'positive',
       ctx: {
         args: { condition: 'good' },
@@ -646,7 +646,7 @@ const askedEarlierProof: GuardProof = {
       },
     },
     {
-      name: 'the gated value is present but no earlier-turn askUser exists',
+      name: 'the gated value is present but no earlier-turn ask exists',
       polarity: 'negative',
       ctx: { args: { condition: 'good' }, observed: [], turnIndex: 2 },
       l1: 'fires',

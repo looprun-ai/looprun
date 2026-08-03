@@ -35,7 +35,8 @@ export type Hook = 'onInput' | 'preTool' | 'postTool' | 'onReply';
 export type ToolTarget = 'any' | string[];
 export type Layer = 'minimal' | 'base' | 'full' | 'agent';
 
-/** true ⇒ force reply-only this turn (respond with `asked` false/absent). State-driven, per turn. */
+/** true ⇒ force reply-only this turn (the protocol prose forbids declaring an `ask` intention).
+ *  State-driven, per turn. */
 export type TerminalPolicy = (world: AgentWorld) => boolean;
 
 /** State-keyed positive guidance rendered statically as "IF <cond> → <directive>" (cache-stable). */

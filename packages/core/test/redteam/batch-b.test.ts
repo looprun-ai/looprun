@@ -20,6 +20,11 @@ function ctxWith(partial: Partial<GuardCtx> & { turnIndex: number }): GuardCtx {
   return {
     args: {},
     observed: [],
+    // The runtime ALWAYS seats `history` (every hook's ctx) — the consent guards read it as the
+    // authoritative record of what was DELIVERED, so a hostile ctx must carry it too or it is testing a
+    // shape the engine never produces.
+    history: [],
+    userText: '',
     world: {} as GuardCtx['world'],
     ...partial,
   } as GuardCtx;
@@ -109,7 +114,7 @@ describe('confirmFirst — adversarial', () => {
     expect(g.check(confirm)).toBeNull(); // allowed = BREAK
   });
 
-  it('HOLDS (via:probe): an unrelated askUser does NOT license — only a record-bound probe does', () => {
+  it('HOLDS (via:probe): an unrelated ask does NOT license — only a record-bound probe does', () => {
     const gp = confirmFirst({ via: 'probe' });
     const unrelatedAsk = okCall('respond', 1, { message: 'unrelated', did: [{ op: 'ask' }] });
     const confirm = ctxWith({
@@ -218,13 +223,13 @@ describe('noActAfterAskSameTurn — adversarial', () => {
     expect(g.check(act)).toBeNull(); // wipeAll uncovered = LEAK (coverage gap)
   });
 
-  it('LEAK: asking in prose (respond WITHOUT asked) is NOT detected as "asked" → listed tool acts same turn', () => {
+  it('LEAK: asking in prose (respond WITHOUT an ask intention) is NOT detected as an ask → listed tool acts same turn', () => {
     const asked = okCall('respond', 3, { message: 'Delete it? (yes/no)', did: [] });
     const act = ctxWith({ tool: 'deleteRecord', args: {}, observed: [asked], turnIndex: 3 });
-    expect(g.check(act)).toBeNull(); // only respond+asked:true is detected = LEAK
+    expect(g.check(act)).toBeNull(); // only a declared `ask` intention is detected = LEAK
   });
 
-  it('HOLDS: a real same-turn ask (respond+asked) blocks the listed tool', () => {
+  it('HOLDS: a real same-turn ask intention blocks the listed tool', () => {
     const asked = okCall('respond', 3, { message: 'ok?', did: [{ op: 'ask' }] });
     const act = ctxWith({ tool: 'deleteRecord', args: {}, observed: [asked], turnIndex: 3 });
     expect(g.check(act)).not.toBeNull();
@@ -352,7 +357,7 @@ describe('pendingConfirmMustAsk — adversarial', () => {
     expect(g.check(ctx)).not.toBeNull(); // HOLDS
   });
 
-  it('HOLDS: a pending probe with no askUser this turn demands the relay', () => {
+  it('HOLDS: a pending probe with no ask this turn demands the relay', () => {
     const probe = okCall('deleteRecord', 4, { recordId: 'A', confirmed: false }, {
       resultFlags: { requiresConfirmation: true },
     });

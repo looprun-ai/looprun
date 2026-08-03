@@ -151,7 +151,7 @@ describe('pendingConfirmMustAsk — resolution-aware + STRUCTURAL relay (no-rege
     expect(guard.check(ctx('Item x1 removed.', [pendingProbe]))).not.toBeNull();
   });
 
-  it('does not fire when an ask (respond+asked) relays the confirmation question this turn', () => {
+  it('does not fire when an ask intention relays the confirmation question this turn', () => {
     expect(guard.check(ctx('Are you sure you want to delete x1?', [pendingProbe, ask]))).toBeNull();
   });
 
@@ -160,7 +160,7 @@ describe('pendingConfirmMustAsk — resolution-aware + STRUCTURAL relay (no-rege
     expect(guard.check(ctx('Done — x1 removed.', [pendingProbe, resolve]))).toBeNull();
   });
 
-  it('STILL fires when the confirmed:true call was on a DIFFERENT record and no askUser was issued', () => {
+  it('STILL fires when the confirmed:true call was on a DIFFERENT record and no ask was issued', () => {
     const other: ObservedCall = { name: 'deleteItem', args: { itemId: 'x7', confirmed: true }, ok: true, turnIndex: 0 };
     expect(guard.check(ctx('Removed.', [pendingProbe, other]))).not.toBeNull();
   });
@@ -187,7 +187,7 @@ describe('confirmFirst — either (arg) + ask (flag-less) via', () => {
 
   describe("via 'ask' (flag-less tools)", () => {
     const guard = confirmFirst({ via: 'ask' });
-    it('denies on the opening turn (no prior askUser)', () => {
+    it('denies on the opening turn (no prior ask)', () => {
       expect(guard.check(ctx({ turnIndex: 0, observed: [] }))).not.toBeNull();
     });
     it('denies a later turn when the model never asked', () => {

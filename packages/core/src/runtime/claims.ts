@@ -201,8 +201,9 @@ export function respondPayload(args: Record<string, unknown>): RespondPayload {
 }
 
 /** True when the turn's `did` carries an `ask` intention (MI-D3) — the structured replacement for the
- *  retired `asked` boolean. Every consent/ask gate reads "the turn posed a question" through this. */
-export function hasAskIntent(did: Intention[]): boolean {
+ *  retired `asked` boolean. Every consent/ask gate reads "the turn posed a question" through this.
+ *  Takes a READONLY array so a frozen `HistoryTurn.did` is read without copying. */
+export function hasAskIntent(did: readonly Intention[]): boolean {
   return did.some((i) => i.op === 'ask');
 }
 

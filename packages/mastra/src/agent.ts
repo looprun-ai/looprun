@@ -35,6 +35,7 @@ import {
   isTerminal,
   lastTerminalArgs,
   normalizeModelParams,
+  prematureTerminalCalls,
   prematureTerminalTools,
   pruneSupersededTerminals,
   recordTurnHistory,
@@ -265,8 +266,8 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
       terminalProtocol: this.terminalProtocolOn,
     });
 
-    // ONE terminal now (`respond`); "asked" is a field, not a tool — the reply-only policy rides the
-    // protocol prose (terminalProtocol(replyOnly)), not the tool set.
+    // ONE terminal now (`respond`); asking is a `did` INTENTION, not a tool — the reply-only policy
+    // rides the protocol prose (terminalProtocol(replyOnly)), not the tool set.
     const activeTools = this.nativeToolsMode
       ? [...this.nativeActiveNames, 'respond']
       : [...this.surface, 'respond'];
@@ -320,11 +321,17 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
     if (this.terminalProtocolOn) {
       const premature = prematureTerminalTools(full.steps);
       if (premature.length && ledger.terminalReply.trim()) {
-        // Clear the WHOLE delivered declaration (text + did + asked): an invalidated terminal's `did` is
-        // an equally-premature claim the cross-check guards must not ground against.
+        // Clear the WHOLE delivered declaration (text + did): an invalidated terminal's `did` is an
+        // equally-premature claim the cross-check guards must not ground against.
         clearDeliveredTerminal(ledger);
         ledger.turnCorrections.push(`premature-terminal:${[...new Set(premature)].join(',')}`);
       }
+      // …and drop the invalidated terminal's OBSERVATION too (MI-T2 / red-team M8): clearing the captured
+      // declaration leaves the hook-time `observed` push in place, where a `did` carrying an `ask`
+      // intention reads — this turn and every later one — as a question the user answered. It never
+      // reached them. Runs unconditionally: a premature terminal is never delivered, whatever its message.
+      const prunedPremature = pruneSupersededTerminals(ledger, prematureTerminalCalls(full.steps));
+      if (prunedPremature.length) ledger.turnCorrections.push(`premature-terminal-pruned:${[...new Set(prunedPremature)].join(',')}`);
       // Terminals that lost the delivery contest are not evidence of anything the user saw.
       const pruned = pruneSupersededTerminals(ledger, supersededTerminalCalls(full.steps));
       if (pruned.length) ledger.turnCorrections.push(`superseded-terminal:${[...new Set(pruned)].join(',')}`);
@@ -383,7 +390,7 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
     const initialText: string = full?.tripwire
       ? String(full.tripwireReason ?? full.reason ?? '')
       : (ledger.terminalReply || full.text || '');
-    // The DELIVERED terminal's structured declaration (recordTerminal seated did/asked); a tripwire /
+    // The DELIVERED terminal's structured declaration (recordTerminal seated `did`); a tripwire /
     // free-text fallback carries the empty declaration beginTurn reset.
     const initial: RespondPayload = { message: initialText, did: ledger.did };
 
@@ -400,9 +407,9 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
         // A redrive re-generates ONE respond (tools disabled except respond, toolChoice pinned) — the
         // candidate returns as a STRUCTURED payload. It is NOT persisted: snapshot the ledger and restore
         // it, so a rejected draft's respond never enters observed/history (the recorded terminal + any
-        // hook push are rolled back; finalizeReply re-seats did/asked from the returned payload).
+        // hook push are rolled back; finalizeReply re-seats `did` from the returned payload).
         const obsLen = ledger.observed.length;
-        const snap = { terminalReply: ledger.terminalReply, did: ledger.did, asked: ledger.asked };
+        const snap = { terminalReply: ledger.terminalReply, did: ledger.did };
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const re: any = await (Agent.prototype.generate as any).call(this, reMsgs, {
           instructions,
@@ -416,9 +423,8 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
         ledger.observed.length = obsLen;
         ledger.terminalReply = snap.terminalReply;
         ledger.did = snap.did;
-        ledger.asked = snap.asked;
         const args = lastTerminalArgs(re.steps);
-        return args ? respondPayload(args) : { message: typeof re.text === 'string' ? re.text : '', did: [], asked: false };
+        return args ? respondPayload(args) : { message: typeof re.text === 'string' ? re.text : '', did: [] };
       },
       this.redrivesResolved,
     );

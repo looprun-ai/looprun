@@ -26,6 +26,7 @@ import {
   respondPayload,
   renderOperationReport,
   isAskEvent,
+  hasAskIntent,
 } from '../../src/runtime/claims.js';
 import {
   createLedger,
@@ -35,7 +36,7 @@ import {
   clearDeliveredTerminal,
   pruneSupersededTerminals,
 } from '../../src/runtime/ledger.js';
-import { prematureTerminalTools, supersededTerminalCalls } from '../../src/runtime/terminal.js';
+import { prematureTerminalCalls, prematureTerminalTools, supersededTerminalCalls } from '../../src/runtime/terminal.js';
 import { finalizeReply } from '../../src/runtime/turn.js';
 import { AgentSpecBase } from '../../src/index.js';
 import type { AgentWorld, GuardCtx, ObservedCall } from '../../src/index.js';
@@ -251,24 +252,27 @@ describe('SECTION 3 — turnCorrections leak on the reject path is telemetry-onl
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// SECTION 4 — ★ THE BREAK ★  PREMATURE-TERMINAL leaves an undelivered ASK in `observed`,
-// which licenses a cross-turn destructive action (forbidden: bypass a destructive protocol).
+// SECTION 4 — PREMATURE-TERMINAL left an undelivered ASK in `observed`, which licensed a cross-turn
+// destructive action (forbidden: bypass a destructive protocol). CLOSED by MI-T2 / red-team M8.
 //
-// supersededTerminalCalls fixes the TWO-terminal case (it prunes the observed ask entry). The
+// supersededTerminalCalls covers the TWO-terminal case (it prunes the observed ask entry). The
 // PREMATURE path — a SINGLE ask-intent `respond` sharing a step with a domain call — invalidates
-// the DELIVERED declaration (clearDeliveredTerminal wipes did/asked/terminalReply) but NEVER prunes
-// the observed entry (superseded requires ≥2 terminals in the step). The stale ask-intent `respond`
-// survives in the conversation-scoped ledger and is read as "the user was asked" next turn.
+// the DELIVERED declaration (clearDeliveredTerminal wipes did + terminalReply) but did NOT prune the
+// observed entry (superseded requires ≥2 terminals in the step), so the stale ask-intent `respond`
+// survived in the conversation-scoped ledger and read as "the user was asked" next turn.
+// THE FIX: the backends now feed `prematureTerminalCalls(steps)` to the SAME prune, so both undelivered
+// paths end at the same place. These vectors are the regression.
 // ═══════════════════════════════════════════════════════════════════════════════
-describe('SECTION 4 — premature-terminal ask-event leak licenses a cross-turn destructive call (BREAK)', () => {
+describe('SECTION 4 — the premature-terminal ask leak is pruned, so no cross-turn license survives', () => {
   /** Reproduce EXACTLY the backend's post-generate terminal reconciliation (agent.ts / run-conversation.ts). */
   function replayBackendTerminalReconcile(steps: unknown, ledger: ReturnType<typeof createLedger>) {
     const premature = prematureTerminalTools(steps);
     if (premature.length && ledger.terminalReply.trim()) clearDeliveredTerminal(ledger);
+    pruneSupersededTerminals(ledger, prematureTerminalCalls(steps));
     pruneSupersededTerminals(ledger, supersededTerminalCalls(steps));
   }
 
-  it('the premature ask-intent respond SURVIVES in observed after invalidation (superseded prunes nothing)', () => {
+  it('the premature ask-intent respond is REMOVED from observed by the invalidation path', () => {
     const ledger = createLedger();
     beginTurn(ledger, 1);
     // Turn 1, ONE step: a domain read + an asking respond, emitted together (the premature shape).
@@ -284,15 +288,14 @@ describe('SECTION 4 — premature-terminal ask-event leak licenses a cross-turn 
 
     replayBackendTerminalReconcile(steps, ledger);
 
-    // The delivered declaration was correctly wiped …
+    // The delivered declaration is wiped …
     expect(ledger.terminalReply).toBe('');
-    expect(ledger.asked).toBe(false);
-    // … but the OBSERVED ask event is STILL there (never pruned) — the leak.
-    const leaked = ledger.observed.filter((o) => o.ok && isAskEvent(o));
-    expect(leaked.length).toBe(1);
+    expect(hasAskIntent(ledger.did)).toBe(false);
+    // … AND the observed ask event is gone with it — nothing left to read as consent.
+    expect(ledger.observed.filter((o) => o.ok && isAskEvent(o))).toEqual([]);
   });
 
-  it('BREAK: next turn, confirmFirst(via:"either") licenses deleteAccount(confirmed:true) off the leaked ask', () => {
+  it('CLOSED: next turn, confirmFirst(via:"either"/"ask") DENIES deleteAccount — the ask never reached the user', () => {
     const ledger = createLedger();
     beginTurn(ledger, 1);
     recordTerminalCall(ledger, 'respond', { message: 'Delete account 5?', did: [{ op: 'ask' }] });
@@ -311,12 +314,12 @@ describe('SECTION 4 — premature-terminal ask-event leak licenses a cross-turn 
     const ctxEither = base({ tool: 'deleteAccount', args: { confirmed: true, id: 5 }, observed: ledger.observed, turnIndex: 2 });
     const ctxAsk = base({ tool: 'deleteAccount', args: {}, observed: ledger.observed, turnIndex: 2 });
 
-    // FORBIDDEN THING PASSES: the destructive call is ALLOWED, licensed by a question the user never saw.
-    expect(gEither.check(ctxEither)).toBeNull();
-    expect(gAsk.check(ctxAsk)).toBeNull();
+    // SECURE: no phantom license survives the prune — both arms deny.
+    expect(gEither.check(ctxEither)).not.toBeNull();
+    expect(gAsk.check(ctxAsk)).not.toBeNull();
   });
 
-  it('CONTROL: had the ask entry been pruned (the superseded fix), confirmFirst correctly DENIES', () => {
+  it('CONTROL: with the ask entry pruned by hand, confirmFirst denies just the same', () => {
     const ledger = createLedger();
     beginTurn(ledger, 1);
     recordTerminalCall(ledger, 'respond', { message: 'Delete account 5?', did: [{ op: 'ask' }] });

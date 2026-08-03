@@ -90,6 +90,7 @@ export {
   terminalToolDefs,
   normalizeTerminalToolDef,
   prematureTerminalTools,
+  prematureTerminalCalls,
   supersededTerminalCalls,
   lastTerminalArgs,
 } from './runtime/terminal.js';

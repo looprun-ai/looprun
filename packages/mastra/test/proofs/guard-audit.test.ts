@@ -64,7 +64,7 @@ describe("confirmFirst({ via: 'ask' }) is SUCCESS-KEYED", () => {
     expect(await guard().check(ctx)).toBeTruthy();
   });
 
-  it('REGRESSION FLOOR: an earlier-turn ask event (respond+asked) still unlocks', async () => {
+  it('REGRESSION FLOOR: an earlier-turn ask intention still unlocks', async () => {
     const ctx = craftCtx({
       tool: 'purgeAll',
       observed: [call('respond', { args: { message: 'Purge everything — are you sure?', did: [{ op: 'ask' }] }, turnIndex: 0 })],
@@ -73,9 +73,9 @@ describe("confirmFirst({ via: 'ask' }) is SUCCESS-KEYED", () => {
     expect(await guard().check(ctx)).toBeNull();
   });
 
-  it('no-regex law: a prior-turn plain respond (no asked) does NOT unlock — only an ask event/probe do', async () => {
+  it('no-regex law: a prior-turn plain respond (no ask intention) does NOT unlock — only an ask event/probe do', async () => {
     // The former askRe disjunct is retired: a prose confirmation-ask no longer unlocks; the go-ahead must
-    // be a STRUCTURAL ask event (`respond` with `asked:true`) or a same-tool probe. A plain respond that
+    // be a STRUCTURAL ask event (a `respond` declaring an `ask` intention) or a same-tool probe. A plain respond that
     // merely phrases a question in its message is NOT an ask event, so this DENIES.
     const ctx = craftCtx({
       tool: 'purgeAll',
@@ -182,7 +182,7 @@ describe('destructiveThrottle does not count confirmation probes', () => {
   it("pendingConfirmMustAsk's same-turn resolution exemption is reachable, not dead code", async () => {
     // The coherence claim, stated directly: the flow throttle used to block is exactly the flow
     // pendingConfirmMustAsk documents as legal. (Structural: the probe is RESOLVED by a same-record
-    // confirmed:true, so the guard is silent regardless of any askUser.)
+    // confirmed:true, so the guard is silent regardless of any ask.)
     const g = pendingConfirmMustAsk();
     const ctx = craftCtx({
       observed: [

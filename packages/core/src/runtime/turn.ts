@@ -5,7 +5,7 @@
  * the framework glue: how tools are wired, how the LLM is called, and ONE async `redrive` callback
  * that re-generates text with tools disabled.
  *
- * The reply pipeline (finalizeReply) works over the STRUCTURED respond payload (message + did + asked):
+ * The reply pipeline (finalizeReply) works over the STRUCTURED respond payload (message + did):
  * mutators (message only) → onReply checks (over the payload — claims guards read did, degeneration reads
  * message) → bounded NO-TOOLS redrive (the backend re-generates a whole respond payload) → salvage → a
  * deterministic exhaustion closure the engine DERIVES from the world ledger. The delivered text is
@@ -22,7 +22,6 @@ import { recordVeto, type TurnLedger } from './ledger.js';
 import { isTerminal } from './terminal.js';
 import {
   deriveClaimsFromLedger,
-  hasAskIntent,
   renderOperationReport,
   respondPayload,
   type RespondPayload,
@@ -180,7 +179,7 @@ function applyMutators(spec: AgentSpec, ledger: TurnLedger, world: AgentWorld, t
       history: ledger.history,
       reply: out,
       producedThisTurn: ledger.producedThisTurn,
-      did: ledger.did, asked: ledger.asked,
+      did: ledger.did,
       adjudicator: ledger.adjudicator, adjudicatorTimeoutMs: ledger.adjudicatorTimeoutMs,
     };
     const next = m.apply(out, mctx);
@@ -210,7 +209,7 @@ async function checkReply(
     producedThisTurn: ledger.producedThisTurn,
     attachmentsThisTurn: ledger.attachments,
     notes: ledger.turnCorrections,
-    did: ledger.did, asked: ledger.asked,
+    did: ledger.did,
     // This turn's guard-vetoed attempts — so claimIsGrounded can ground a blocked/refused claim against
     // the call the guard stopped (invisible on the world ledger by construction).
     attemptedThisTurn: ledger.attemptedCalls,
@@ -340,7 +339,6 @@ function withBlankFloor(
   ledger.turnCorrections.push('exhaustion-blank-floor');
   const derived = deriveExhaustionClosure(ledger, writeTools, contract);
   ledger.did = derived.did;
-  ledger.asked = false;
   return { text: derived.text, exhausted: true, violations, did: derived.did };
 }
 
@@ -399,14 +397,15 @@ export interface FinalizedReply {
   exhausted: boolean;
   violations: string[];
   /** The turn's DELIVERED, VERIFIED claims — the accepted/salvaged payload's `did`, or the engine-derived
-   *  set on exhaustion. `finalizeReply` also syncs `ledger.did`/`asked` to this, so `recordTurnHistory`
+   *  set on exhaustion. `finalizeReply` also syncs `ledger.did` to this, so `recordTurnHistory`
    *  retains the grounded set (T2 left history storing the RAW declaration; this is the verified one). */
   did: TurnClaim[];
 }
 
 /** Sync the ledger's reply-side declaration to `payload` and run the onReply checks against it — the ONE
- *  place `ctx.did`/`ctx.asked` (read by the claims cross-check guards) and `ctx.reply` (the message, read
- *  by degenerationGuard) are seated, so a candidate payload is checked as a whole. */
+ *  place `ctx.did` (read by the claims cross-check guards, and by the consent guards as the turn's
+ *  AUTHORITATIVE ask record — MI-D3) and `ctx.reply` (the message, read by degenerationGuard) are seated,
+ *  so a candidate payload is checked as a whole. */
 async function checkPayload(
   spec: AgentSpec,
   ledger: TurnLedger,
@@ -414,9 +413,6 @@ async function checkPayload(
   payload: RespondPayload,
 ): Promise<ReplyViolation[]> {
   ledger.did = payload.did;
-  // `asked` is derived from the `ask` intention now (MI-D3); the ledger.asked FIELD stays a transitional
-  // store Task 2 finishes re-keying. Computed here from the delivered did, so ctx.asked stays consistent.
-  ledger.asked = hasAskIntent(payload.did);
   return checkReply(spec, ledger, world, payload.message);
 }
 
@@ -438,7 +434,6 @@ export async function finalizeReply(
 ): Promise<FinalizedReply> {
   // Mutators touch the MESSAGE only; seat the declaration first so their ctx (and the checks') read it.
   ledger.did = initial.did;
-  ledger.asked = hasAskIntent(initial.did);
   let payload: RespondPayload = { ...initial, message: applyMutators(spec, ledger, world, initial.message) };
 
   let violations = await checkPayload(spec, ledger, world, payload);
@@ -476,13 +471,11 @@ export async function finalizeReply(
         if (candViolations.length === 0) {
           ledger.turnCorrections.push('exhaustion-salvage');
           ledger.did = candidate.did;
-          ledger.asked = hasAskIntent(candidate.did);
           return withBlankFloor(candidateText, candidate.did, finalViolations, true, ledger, contract?.writeTools ?? [], contract);
         }
         if (candViolations.every((v) => isFormViolation(v.guard))) {
           ledger.turnCorrections.push(`salvage:form-only:${candViolations.map((v) => v.guard.kind).join(',')}`);
           ledger.did = candidate.did;
-          ledger.asked = hasAskIntent(candidate.did);
           return withBlankFloor(candidateText, candidate.did, finalViolations, true, ledger, contract?.writeTools ?? [], contract);
         }
         ledger.turnCorrections.push(`salvage-miss:checks:${candViolations.map((v) => v.guard.kind).join(',')}`);
@@ -510,7 +503,6 @@ export async function finalizeReply(
     // engine-derived closure (non-empty by construction) instead of delivering nothing.
     const closureText = overrideText && !isBlankDelivery(overrideText) ? overrideText : derived.text;
     ledger.did = derived.did;
-    ledger.asked = false;
     return { text: closureText, exhausted: true, violations: finalViolations, did: derived.did };
   }
 
@@ -519,7 +511,6 @@ export async function finalizeReply(
   // floor still applies here — an empty `message` + empty `did` composes to `''` (schema minLength is
   // advisory only), and a mutator can rewrite an otherwise-fine `message` to `''` after the checks passed.
   ledger.did = payload.did;
-  ledger.asked = hasAskIntent(payload.did);
   return withBlankFloor(composeDelivery(payload, contract), payload.did, [], false, ledger, contract?.writeTools ?? [], contract);
 }
 

@@ -233,6 +233,28 @@ describe('LoopRunAgent — sessions', () => {
   });
 });
 
+describe('LoopRunAgent — the premature ask leaves no ghost (MI-T2 / red-team M8)', () => {
+  it('prunes the invalidated premature respond from the observed ledger, so no later turn reads it as consent', async () => {
+    const { agent } = makeAgent([
+      // ONE step carrying domain work AND an asking respond — the PREMATURE shape. Its text was composed
+      // before listPlants returned, so the policy invalidates the delivery …
+      [{ tool: 'listPlants', args: {} }, { tool: 'respond', args: { message: 'Which plant?', did: [{ op: 'ask' }] } }],
+      // … and the forced-terminal fallback re-closes the turn without a question.
+      [{ tool: 'respond', args: { message: 'Your plants are listed.', did: [{ op: 'inform' }] } }],
+    ]);
+    const res = await agent.generate('water something');
+
+    expect(res.text).toBe('Your plants are listed.');
+    expect(res.looprun.corrections).toContain('premature-terminal:listPlants');
+    expect(res.looprun.corrections).toContain('premature-terminal-pruned:respond');
+    // THE POINT: the question the user never received is not in the ledger any consent guard reads.
+    const asks = agent.getSession().ledger.observed.filter(
+      (o) => o.name === 'respond' && JSON.stringify(o.args?.did ?? []).includes('"ask"'),
+    );
+    expect(asks).toEqual([]);
+  });
+});
+
 describe('LoopRunAgent — review regressions', () => {
   it('#1 native-tools mode: native tools are actually reachable from generate()', async () => {
     const { createTool } = await import('@mastra/core/tools');

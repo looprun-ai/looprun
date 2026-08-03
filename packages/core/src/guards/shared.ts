@@ -6,6 +6,7 @@
  * filtering, flag-safe regex testing for `argFormat`), not vocabulary a spec author binds.
  */
 import type { GuardCtx, ObservedCall } from '../rules.js';
+import { hasAskIntent, isAskEvent } from '../runtime/claims.js';
 
 export const lc = (s: unknown): string => String(s ?? '').toLowerCase();
 export const ran = (observed: ObservedCall[], tool: string): boolean => observed.some((o) => o.name === tool && o.ok);
@@ -15,7 +16,7 @@ export const ranThisTurn = (ctx: GuardCtx, tool: string): boolean =>
 /**
  * The runtime-owned TERMINAL tool. It is not a domain action: the Mastra backend pushes it into
  * `ctx.observed` with `ok:true` from `beforeToolCall`'s SYNCHRONOUS segment (so a same-step ask
- * (`respond` with `asked:true`) is visible to a sibling call's preTool checks). Consequence:
+ * (a `respond` whose `did` carries an `ask` intention) is visible to a sibling's preTool checks). Consequence:
  * `observed` is NEVER empty on a turn that produced a reply, and it never carries a `!ok` entry merely
  * because the domain work failed.
  *
@@ -26,10 +27,36 @@ export const ranThisTurn = (ctx: GuardCtx, tool: string): boolean =>
  * across 7 models; that class of reply-honesty check is now `llmCheck`'s job, not a deterministic
  * guard's). Guards keyed on a NAMED tool (`destructiveThrottle`, `maxCalls`, …) are unaffected — the
  * terminal name is never in their set — and `confirmFirst`'s prior-ask arm keeps reading the ask event
- * (`respond`+`asked`) DELIBERATELY.
+ * (a `respond` whose `did` carries an `ask` intention) DELIBERATELY.
  */
 export const TERMINAL_TOOLS = new Set(['respond']);
 export const isTerminalCall = (o: ObservedCall): boolean => TERMINAL_TOOLS.has(o.name);
+
+/**
+ * Did the agent pose a question to the user in a DELIVERED turn `[1, within]` turns back?
+ *
+ * The ONE cross-turn ask signal (MI-T2), shared by `confirmFirst`'s ask/either arms and `askedEarlier`
+ * so the two can never disagree about what consent looks like. Asking is an `ask` INTENTION in the
+ * turn's `did` (MI-D3) — the `asked` boolean is retired.
+ *
+ * SEALED HISTORY IS AUTHORITATIVE (red-team M8). `ctx.observed` records EVERY `respond` at hook time,
+ * including ones the user never received — a terminal that lost a delivery contest, or one invalidated
+ * as premature. Both are pruned by the backend, but a guard must not depend on that having run: for any
+ * turn already SEALED into `ctx.history`, its `did` IS the delivered record, so the observed entries of
+ * that turn are ignored. Every shipped backend seals each turn (`recordTurnHistory`), so in practice the
+ * cross-turn signal is history-only and a ghost cannot reach it at all; the observed scan remains as the
+ * answer for a turn a HOST left unsealed — better a structural ask event than no signal.
+ *
+ * RECENCY LAW: an ask is a LICENSING signal, so it must satisfy `1 ≤ ctx.turnIndex − askTurn ≤ within`.
+ * A same-turn ask (distance 0) never licenses — the user has had no chance to answer.
+ */
+export function askedInDeliveredTurn(ctx: GuardCtx, within: number): boolean {
+  const recent = (turnIndex: number): boolean =>
+    ctx.turnIndex - turnIndex >= 1 && ctx.turnIndex - turnIndex <= within;
+  if (ctx.history.some((h) => recent(h.turnIndex) && hasAskIntent(h.did))) return true;
+  const sealed = new Set(ctx.history.map((h) => h.turnIndex));
+  return ctx.observed.some((o) => o.ok && recent(o.turnIndex) && !sealed.has(o.turnIndex) && isAskEvent(o));
+}
 
 /** This turn's observed DOMAIN calls (terminals excluded — see {@link TERMINAL_TOOLS}). */
 export const domainCallsThisTurn = (ctx: GuardCtx): ObservedCall[] =>

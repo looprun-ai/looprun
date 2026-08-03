@@ -33,9 +33,10 @@ const ask = (turn: number): ObservedCall => ({
   args: { message: 'q?', did: [{ op: 'ask' }] },
 });
 
-/** A sealed HistoryTurn that DID pose a question (`asked:true`) — the PRIMARY ask signal askedEarlier reads. */
+/** A sealed HistoryTurn that DID pose a question — its `did` carries an `ask` intention (MI-D3), the
+ *  PRIMARY (delivered, authoritative) ask signal askedEarlier reads. */
 const askedTurn = (turn: number): HistoryTurn =>
-  ({ turnIndex: turn, userText: '', reply: 'q?', toolCalls: [], did: [{ op: 'ask' }], asked: true, attemptedCalls: [], guardEvents: [] });
+  ({ turnIndex: turn, userText: '', reply: 'q?', toolCalls: [], did: [{ op: 'ask' }], attemptedCalls: [], guardEvents: [] });
 
 const probe = (tool: string, turn: number, args: Record<string, unknown> = {}): ObservedCall => ({
   name: tool,
@@ -56,11 +57,11 @@ function ctxConfirmed(
 describe('askedEarlier', () => {
   const g = askedEarlier({ tool: 'completeMaintenance', arg: 'condition' });
 
-  it('denies when no earlier-turn askUser exists', () => {
+  it('denies when no earlier-turn ask exists', () => {
     expect(g.check(ctxWith({ observed: [], turnIndex: 2, args: { condition: 'good' } }))).toMatch(/ask/i);
   });
 
-  it('allows when an earlier-turn askUser exists (distance 1)', () => {
+  it('allows when an earlier-turn ask exists (distance 1)', () => {
     expect(g.check(ctxWith({ observed: [ask(1)], turnIndex: 2, args: { condition: 'good' } }))).toBeNull();
   });
 
@@ -72,8 +73,8 @@ describe('askedEarlier', () => {
     expect(g.check(ctxWith({ observed: [], turnIndex: 2, args: {} }))).toBeNull();
   });
 
-  describe('ask signal — HistoryTurn.asked is the PRIMARY signal (SCG-T5)', () => {
-    it('licenses off an earlier COMPLETED turn with asked:true, no observed ask needed', () => {
+  describe('ask signal — the sealed HistoryTurn\'s ask INTENTION is the PRIMARY signal (MI-T2)', () => {
+    it('licenses off an earlier COMPLETED turn whose did carries an ask, no observed ask needed', () => {
       expect(
         g.check(ctxWith({ observed: [], history: [askedTurn(1)], turnIndex: 2, args: { condition: 'good' } })),
       ).toBeNull();
@@ -83,8 +84,8 @@ describe('askedEarlier', () => {
         g.check(ctxWith({ observed: [], history: [askedTurn(1)], turnIndex: 3, args: { condition: 'good' } })),
       ).toMatch(/ask/i);
     });
-    it('a history turn that did NOT ask (asked:false) does not license', () => {
-      const noAsk: HistoryTurn = { ...askedTurn(1), asked: false };
+    it('a history turn that did NOT ask (no ask intention in did) does not license', () => {
+      const noAsk: HistoryTurn = { ...askedTurn(1), did: [{ op: 'inform' }] };
       expect(
         g.check(ctxWith({ observed: [], history: [noAsk], turnIndex: 2, args: { condition: 'good' } })),
       ).toMatch(/ask/i);
@@ -163,7 +164,7 @@ describe('confirmFirst — via:probe (absorbed confirmedNeedsEarlierProbe)', () 
     ).toMatch(/preview|probe|confirm/i);
   });
 
-  it('does NOT accept a prior askUser (probe-only, unlike either)', () => {
+  it('does NOT accept a prior ask (probe-only, unlike either)', () => {
     expect(
       c.check(ctxConfirmed('chargeDeposit', { bookingId: 'bk_1', confirmed: true }, [ask(1)], 2)),
     ).toMatch(/preview|probe|confirm/i);
