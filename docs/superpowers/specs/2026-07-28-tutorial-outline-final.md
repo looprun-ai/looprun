@@ -485,8 +485,8 @@ in the "bring your own loop" seam; internal, not taught.)
 | models | **06** (7) | `localModel`↑ `LocalModelOptions`↑ `LocalModelSpec`↑ `ModelRuntimePort`↑ `resolveAlias` `LlamaCppRuntime` `localModelStatus` |
 | mastra | **06** (2) | `worldFromTools` `StateView`↑ |
 
-**Per-chapter:** 0 + 3 + 11 + 27 + 31 + 13 = **85** (04 −8 for the no-regex law's deletions, −1 for the guard-consolidation law absorbing `confirmedNeedsEarlierProbe` into `confirmFirst({via:'probe'})`, −1 for merging `replyMustMention` + `replyConfirmsLabels` into `replyMentions`, **+3 for the SCG cross-check honesty core** — `claimIsGrounded` / `claimIsComplete` / `claimCoversRubric` — then **−4 for SCG-T5's tier-③ deletion** of `replyMentions` / `replySingleQuestion` / `replyMaxOccurrences` / `emptyReply`).
-**Per-package:** core 43 · mastra 7 · models 8 · eval 23 · server 4 · vercel 0 = **85**, matching the
+**Per-chapter:** 0 + 3 + 11 + 28 + 31 + 13 = **86** (04 −8 for the no-regex law's deletions, −1 for the guard-consolidation law absorbing `confirmedNeedsEarlierProbe` into `confirmFirst({via:'probe'})`, −1 for merging `replyMustMention` + `replyConfirmsLabels` into `replyMentions`, **+3 for the SCG cross-check honesty core** — `claimIsGrounded` / `claimIsComplete` / `claimCoversRubric` — then **−4 for SCG-T5's tier-③ deletion** of `replyMentions` / `replySingleQuestion` / `replyMaxOccurrences` / `emptyReply`, then **+1 for MI-T4's `didMessageConsistency`** — the available, never auto-installed did×message backstop, design D6).
+**Per-package:** core 44 · mastra 7 · models 8 · eval 23 · server 4 · vercel 0 = **86**, matching the
 inventory's round-4 §1 chart plus increment 1's net-new `loadNormsConfig` + the structural guard
 `askedEarlier` (its sibling `confirmedNeedsEarlierProbe` was later absorbed into `confirmFirst`), increment 2a's net-new `validateCommand` +
 `judgeInputCommand`, and increment 2b's net-new `campaignCommand`. No symbol appears twice; no
