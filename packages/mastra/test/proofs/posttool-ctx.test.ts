@@ -40,7 +40,7 @@ describe('postTool ctx carries the did/asked declaration seam', () => {
     const res = await runSpecConversation(spec, [{ userText: 'check the status' }], {
       model: fakeLLM([
         [{ tool: 'reportStatus', args: {} }],
-        [{ tool: 'respond', args: { message: 'The status was checked.', did: [] } }],
+        [{ tool: 'respond', args: { message: 'The status was checked.', did: [{ op: 'inform' }] } }],
       ]).model,
       modelParams: {},
       world: new FixtureWorld('seeded-media'),

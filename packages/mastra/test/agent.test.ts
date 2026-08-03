@@ -95,7 +95,7 @@ describe('LoopRunAgent — one governed turn', () => {
         [{ tool: 'waterPlant', args: { plant: 'fern' } }], // vetoed: requiresBefore(listPlants)
         [{ tool: 'listPlants', args: {} }],
         [{ tool: 'waterPlant', args: { plant: 'fern' } }],
-        [{ tool: 'respond', args: { message: 'Watered your fern.', did: [] } }],
+        [{ tool: 'respond', args: { message: 'Watered your fern.', did: [{ op: 'inform' }] } }],
       ],
       world,
     );
@@ -117,9 +117,9 @@ describe('LoopRunAgent — one governed turn', () => {
     const { agent, scripted } = makeAgent(
       [
         [{ tool: 'listPlants', args: {} }],
-        [{ tool: 'respond', args: { message: 'ok', did: [] } }],
+        [{ tool: 'respond', args: { message: 'ok', did: [{ op: 'inform' }] } }],
         [{ tool: 'listPlants', args: {} }],
-        [{ tool: 'respond', args: { message: 'ok2', did: [] } }],
+        [{ tool: 'respond', args: { message: 'ok2', did: [{ op: 'inform' }] } }],
       ],
       world,
     );
@@ -158,7 +158,7 @@ describe('LoopRunAgent — one governed turn', () => {
     spec.addReplyCheck(mentionFern, { id: 'agent:mentionPlant' });
     const scripted = scriptedModel([
       [{ tool: 'listPlants', args: {} }],
-      [{ tool: 'respond', args: { message: 'Done.', did: [] } }], // violates: no "fern"
+      [{ tool: 'respond', args: { message: 'Done.', did: [{ op: 'inform' }] } }], // violates: no "fern"
       [{ text: 'Your fern is thriving.' }], // the redrive falls back to free text → passes
     ]);
     const agent = new LoopRunAgent({ spec, world: plantsWorld(), toolDefs: TOOL_DEFS, model: scripted.model });
@@ -172,7 +172,7 @@ describe('LoopRunAgent — one governed turn', () => {
     const { agent } = makeAgent([
       [{ tool: 'listPlants', args: {} }],
       [{ text: 'chatty free text, no terminal' }],
-      [{ tool: 'respond', args: { message: 'Here is the status.', did: [] } }], // the forced fallback
+      [{ tool: 'respond', args: { message: 'Here is the status.', did: [{ op: 'inform' }] } }], // the forced fallback
     ]);
     const res = await agent.generate('Status?');
     expect(res.text).toBe('Here is the status.');
@@ -186,7 +186,7 @@ describe('LoopRunAgent — one governed turn', () => {
     spec.addReplyCheck(unsatisfiableTruthCheck(), { id: 'agent:impossible' });
     const scripted = scriptedModel([
       [{ tool: 'listPlants', args: {} }],
-      [{ tool: 'respond', args: { message: 'A.', did: [] } }],
+      [{ tool: 'respond', args: { message: 'A.', did: [{ op: 'inform' }] } }],
       [{ text: 'B.' }], // redrive 1 — still violating
     ]);
     const agent = new LoopRunAgent({ spec, world: plantsWorld(), toolDefs: TOOL_DEFS, model: scripted.model });
@@ -201,7 +201,7 @@ describe('LoopRunAgent — one governed turn', () => {
 
 describe('LoopRunAgent — sessions', () => {
   it('rejects a second session on a world INSTANCE', async () => {
-    const { agent } = makeAgent([[{ tool: 'respond', args: { message: 'hi', did: [] } }]]);
+    const { agent } = makeAgent([[{ tool: 'respond', args: { message: 'hi', did: [{ op: 'inform' }] } }]]);
     await agent.generate('a');
     await expect(agent.generate('b', { loopRun: { sessionId: 'other' } })).rejects.toThrow(/world FACTORY/);
   });
@@ -211,9 +211,9 @@ describe('LoopRunAgent — sessions', () => {
     const { agent } = makeAgent(
       [
         [{ tool: 'listPlants', args: {} }],
-        [{ tool: 'respond', args: { message: 'ok', did: [] } }],
+        [{ tool: 'respond', args: { message: 'ok', did: [{ op: 'inform' }] } }],
         [{ tool: 'listPlants', args: {} }],
-        [{ tool: 'respond', args: { message: 'ok', did: [] } }],
+        [{ tool: 'respond', args: { message: 'ok', did: [{ op: 'inform' }] } }],
       ],
       undefined as unknown as AgentWorld,
       {
@@ -250,7 +250,7 @@ describe('LoopRunAgent — review regressions', () => {
     });
     const scripted = scriptedModel([
       [{ tool: 'search', args: { q: 'x' } }],
-      [{ tool: 'respond', args: { message: 'Found it.', did: [] } }],
+      [{ tool: 'respond', args: { message: 'Found it.', did: [{ op: 'inform' }] } }],
     ]);
     const spec = new AgentSpecBase({
       id: 'searcher', mode: 'M', persona: 'You are the search agent.', tools: ['search'], contract: CONTRACT,
@@ -266,7 +266,7 @@ describe('LoopRunAgent — review regressions', () => {
     spec.addReplyCheck(unsatisfiableTruthCheck(), { id: 'agent:impossible' });
     const scripted = scriptedModel([
       [{ tool: 'listPlants', args: {} }],
-      [{ tool: 'respond', args: { message: 'A.', did: [] } }],
+      [{ tool: 'respond', args: { message: 'A.', did: [{ op: 'inform' }] } }],
       [{ text: 'B-rejected-draft.' }], // redrive candidate, still violating
     ]);
     const agent = new LoopRunAgent({ spec, world: plantsWorld(), toolDefs: TOOL_DEFS, model: scripted.model });
@@ -291,7 +291,7 @@ describe('LoopRunAgent — review regressions', () => {
         await new Promise((r) => setTimeout(r, tag === 'A' ? 40 : 5)); // A resolves LATE
         const content = n === 1
           ? [{ type: 'tool-call', toolCallId: `${tag}${n}`, toolName: 'waterPlant', input: JSON.stringify({ plant: tag }) }]
-          : [{ type: 'tool-call', toolCallId: `${tag}${n}`, toolName: 'respond', input: JSON.stringify({ message: tag, did: [] }) }];
+          : [{ type: 'tool-call', toolCallId: `${tag}${n}`, toolName: 'respond', input: JSON.stringify({ message: tag, did: [{ op: 'inform' }] }) }];
         return { content, finishReason: 'tool-calls', usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 }, warnings: [] };
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       }) as any,
@@ -320,7 +320,7 @@ describe('LoopRunAgent — review regressions', () => {
 
   it('#4 terminalProtocol:false still honors a terminal-tool reply', async () => {
     const { agent } = makeAgent(
-      [[{ tool: 'respond', args: { message: 'Hello from the tool call.', did: [] } }]],
+      [[{ tool: 'respond', args: { message: 'Hello from the tool call.', did: [{ op: 'inform' }] } }]],
       plantsWorld(),
       { terminalProtocol: false },
     );

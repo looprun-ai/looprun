@@ -240,7 +240,7 @@ export async function runSpecConversation(spec: AgentSpec, turns: TurnInput[], d
       const initialText: string = full?.tripwire ? String(full.tripwireReason ?? full.reason ?? '') : (ledger.terminalReply || full.text || '');
       // The DELIVERED terminal's structured declaration (recordTerminal seated did/asked); a tripwire /
       // free-text fallback carries the empty declaration beginTurn reset.
-      const initial: RespondPayload = { message: initialText, did: ledger.did, asked: ledger.asked };
+      const initial: RespondPayload = { message: initialText, did: ledger.did };
 
       // Mutators → onReply checks → bounded redrive (re-generates ONE respond) → deterministic honest-abstain.
       const finalized = await finalizeReply(

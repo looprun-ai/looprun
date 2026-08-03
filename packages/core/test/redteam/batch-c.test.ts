@@ -91,7 +91,7 @@ describe('emptyReply', () => {
     const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona: 'p', tools: [] });
     const ledger = createLedger();
     // U+200B (zero-width space) + U+2060 (word joiner) — survives .trim() as a non-empty string.
-    const zeroWidth: RespondPayload = { message: '\u200B\u2060', did: [], asked: false };
+    const zeroWidth: RespondPayload = { message: '\u200B\u2060', did: [{ op: 'inform' }] };
     const out = await finalizeReply(spec, undefined, fixtureWorld(), ledger, zeroWidth, async () => zeroWidth, 1);
     expect(out.exhausted).toBe(true);
     expect(out.text.trim().length).toBeGreaterThan(0);
@@ -148,7 +148,7 @@ describe('pendingConfirmMustAsk', () => {
       reply: 'Your account has been permanently deleted.',
       observed: [
         obs({ name: 'deleteAccount', turnIndex: 3, ok: true, resultFlags: { requiresConfirmation: true } }),
-        obs({ name: 'respond', turnIndex: 3, ok: true, args: { message: 'What is your billing email?', asked: true, did: [] } }),
+        obs({ name: 'respond', turnIndex: 3, ok: true, args: { message: 'What is your billing email?', did: [{ op: 'ask' }] } }),
       ],
     } as unknown as GuardCtx;
     expect(g.check(ctx)).toBeNull(); // pending confirm relayed by an off-topic ask → allowed
@@ -164,7 +164,7 @@ describe('askedEarlier', () => {
       tool: 'completeMaintenance',
       turnIndex: 2,
       args: { diagnosis: 'engine seized' },
-      history: [{ turnIndex: 1, userText: '', reply: 'your name?', toolCalls: [], did: [], asked: true, attemptedCalls: [], guardEvents: [] }],
+      history: [{ turnIndex: 1, userText: '', reply: 'your name?', toolCalls: [], did: [{ op: 'ask' }], asked: true, attemptedCalls: [], guardEvents: [] }],
       observed: [],
     } as unknown as GuardCtx;
     expect(g.check(ctx)).toBeNull(); // ask was about the name, not the diagnosis → still licensed
@@ -176,7 +176,7 @@ describe('askedEarlier', () => {
       tool: 'completeMaintenance',
       turnIndex: 4,
       args: { diagnosis: 'x' },
-      history: [{ turnIndex: 1, userText: '', reply: 'q?', toolCalls: [], did: [], asked: true, attemptedCalls: [], guardEvents: [] }],
+      history: [{ turnIndex: 1, userText: '', reply: 'q?', toolCalls: [], did: [{ op: 'ask' }], asked: true, attemptedCalls: [], guardEvents: [] }],
       observed: [],
     } as unknown as GuardCtx;
     expect(g.check(ctx)).not.toBeNull();

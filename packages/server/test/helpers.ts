@@ -37,5 +37,5 @@ export function makeAgent(script: ScriptStep[]) {
 /** A simple happy-path script: one read, then a terminal reply. */
 export const HAPPY_SCRIPT: ScriptStep[] = [
   [{ tool: 'searchItem', args: { query: 'alpha' } }],
-  [{ tool: 'respond', args: { message: 'Found alpha.', did: [] } }],
+  [{ tool: 'respond', args: { message: 'Found alpha.', did: [{ op: 'inform' }] } }],
 ];

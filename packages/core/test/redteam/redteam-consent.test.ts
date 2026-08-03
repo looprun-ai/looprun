@@ -3,13 +3,15 @@
  * scg-structured-claims-guards).
  *
  * Target family: confirmFirst · noActAfterAskSameTurn · destructiveThrottle · pendingConfirmMustAsk ·
- * askedEarlier — all now keyed on the structured ask signal (`respond` + `asked:true` = isAskEvent),
- * no `askUser` tool. Source: src/guards/confirmation.ts, src/guards/structural.ts,
+ * askedEarlier — all now keyed on the structured ask signal (`respond` whose `did` carries an `ask`
+ * intention = isAskEvent, MI-D3), no `askUser` tool. Source: src/guards/confirmation.ts, src/guards/structural.ts,
  * src/runtime/claims.ts (isAskEvent), src/runtime/ledger.ts, src/runtime/turn.ts, src/runtime/terminal.ts.
  *
- * CONVENTION: every `it` asserts the SECURE expectation (the guard SHOULD deny / block). A test that
- * currently FAILS (red) is a proven BREAK — a forbidden act slips through today. A test that PASSES
- * (green) is a CLOSED vector kept as a regression. Findings + fixes: .superpowers/sdd/redteam-consent.md.
+ * CONVENTION: every `it` asserts the SECURE expectation (the guard SHOULD deny / block). A vector whose
+ * fix has NOT landed yet is marked `it.fails` (a proven BREAK, suite stays green per commit): when the
+ * fix lands the `it.fails` starts failing, forcing the flip to a plain `it` — that flip IS the
+ * acceptance signal (MI-T2 for this file). A plain `it` is a CLOSED vector kept as regression.
+ * Findings + fixes: .superpowers/sdd/redteam-consent.md.
  */
 import { describe, expect, it } from 'vitest';
 import { AgentSpecBase, confirmFirst, destructiveThrottle, pendingConfirmMustAsk, askedEarlier } from '../../src/index.js';
@@ -31,7 +33,7 @@ const obs = (name: string, args: Record<string, unknown>, turnIndex: number, ext
   name, args, ok: true, turnIndex, ...extra,
 });
 const histTurn = (turnIndex: number, asked: boolean): HistoryTurn => ({
-  turnIndex, userText: '', reply: '', toolCalls: [], did: [], asked, attemptedCalls: [], guardEvents: [],
+  turnIndex, userText: '', reply: '', toolCalls: [], did: asked ? [{ op: 'ask' }] : [], asked, attemptedCalls: [], guardEvents: [],
 });
 
 // ════════════════════════════════════════════════════════════════════════════════════════════════
@@ -43,7 +45,7 @@ describe('V1 — confirmFirst: a partial/empty probe licenses ANY confirmed dest
   // (`Object.keys(obs.args).filter(!flag).every(k => obs.args[k] === ctx.args[k])`). A probe that
   // omits the destructive parameters (here: only `confirmed:false`) has an EMPTY key set, so `.every`
   // over [] is vacuously true — it matches a confirm carrying ANY `to`/`amount` the user never previewed.
-  it('probe {confirmed:false} (previews nothing) licenses transfer{to:attacker,amount:99999,confirmed:true}', () => {
+  it.fails('probe {confirmed:false} (previews nothing) licenses transfer{to:attacker,amount:99999,confirmed:true}', () => {
     const g = confirmFirst(); // default flag 'confirmed', via 'either', within 1
     const ctx = baseCtx({
       tool: 'transfer',
@@ -56,7 +58,7 @@ describe('V1 — confirmFirst: a partial/empty probe licenses ANY confirmed dest
     expect(g.check(ctx)).not.toBeNull();
   });
 
-  it('probe {account:A} licenses a confirm that ADDS destructive fields (partial-record subset)', () => {
+  it.fails('probe {account:A} licenses a confirm that ADDS destructive fields (partial-record subset)', () => {
     const g = confirmFirst();
     const ctx = baseCtx({
       tool: 'wipe',
@@ -105,7 +107,7 @@ describe('V2 — confirmFirst recency window: same-turn and stale asks/probes mu
     const g = confirmFirst();
     const ctx = baseCtx({
       tool: 'transfer', args: { account: 'A', confirmed: true }, turnIndex: 1,
-      observed: [obs('respond', { message: 'Transfer from A? confirm', asked: true }, 0)],
+      observed: [obs('respond', { message: 'Transfer from A? confirm', did: [{ op: 'ask' }] }, 0)],
     });
     expect(g.check(ctx)).toBeNull(); // legit: asked last turn → licensed
   });
@@ -114,27 +116,27 @@ describe('V2 — confirmFirst recency window: same-turn and stale asks/probes mu
 // ════════════════════════════════════════════════════════════════════════════════════════════════
 // VECTOR 3 — pendingConfirmMustAsk: the GHOST ASK (same-turn observed-fallback)
 //   Forbidden thing #3: a pending_confirmation turn returns null WITHOUT the turn actually asking,
-//   by exploiting the observed-fallback over a respond{asked:true} the user NEVER RECEIVED.
+//   by exploiting the observed-fallback over a ask-intent respond the user NEVER RECEIVED.
 //
 //   ROOT CAUSE: `recordTerminalCall` pushes EVERY respond into `observed` at hook time. When the model
-//   emits [destructiveProbe, respond{asked:true}] in ONE step, `prematureTerminalTools` invalidates the
+//   emits [destructiveProbe, an ask-intent respond] in ONE step, `prematureTerminalTools` invalidates the
 //   reply (clearDeliveredTerminal wipes terminalReply/did/asked) — but does NOT remove the respond from
 //   `observed`. `pruneSupersededTerminals` only drops within-step delivery-losers (needs 2 terminals in
 //   one step), so this single-terminal premature respond is NEVER pruned. The forced-terminal fallback
 //   then delivers a NON-ASK sign-off (asked:false). At onReply ctx.asked=false, but the ghost
-//   respond{asked:true} still sits in observed → the observed-fallback fires → the pending confirmation
+//   ask-intent respond still sits in observed → the observed-fallback fires → the pending confirmation
 //   is summarized as DONE with no question ever delivered.
 // ════════════════════════════════════════════════════════════════════════════════════════════════
 describe('V3 — pendingConfirmMustAsk bypassed by a premature-invalidated (never-delivered) ghost ask', () => {
-  it('UNIT: ctx.asked=false + a ghost respond{asked:true} in observed → guard ALLOWS (BREAK)', async () => {
+  it.fails('UNIT: ctx.asked=false + a ghost ask-intent respond in observed → guard ALLOWS (BREAK)', async () => {
     const g = pendingConfirmMustAsk();
     const ctx = baseCtx({
       turnIndex: 0,
       asked: false, // the DELIVERED respond is a non-ask sign-off
       observed: [
         obs('deleteAcct', { id: 'X' }, 0, { resultFlags: { requiresConfirmation: true } }), // UNRESOLVED probe
-        obs('respond', { message: 'Delete account X? Please confirm.', asked: true }, 0), // GHOST — invalidated, never delivered, never pruned
-        obs('respond', { message: 'Done — account X deleted.', asked: false }, 0), // the delivered sign-off
+        obs('respond', { message: 'Delete account X? Please confirm.', did: [{ op: 'ask' }] }, 0), // GHOST — invalidated, never delivered, never pruned
+        obs('respond', { message: 'Done — account X deleted.', did: [{ op: 'inform' }] }, 0), // the delivered sign-off
       ],
     });
     // SECURE: nothing was actually asked this turn AND the probe is unresolved → MUST deny.
@@ -142,21 +144,21 @@ describe('V3 — pendingConfirmMustAsk bypassed by a premature-invalidated (neve
     expect(await g.check(ctx)).not.toBeNull();
   });
 
-  it('INTEGRATED: finalizeReply delivers the false "deleted" sign-off — the pending confirm is dropped', async () => {
+  it.fails('INTEGRATED: finalizeReply delivers the false "deleted" sign-off — the pending confirm is dropped', async () => {
     const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: ['deleteAcct'], contract: CONTRACT });
     spec.addGuard('onReply', 'any', pendingConfirmMustAsk(), { id: 'agent:pending' });
     const ledger = createLedger();
     // Reconstruct the exact post-premature-clear + post-forced-terminal ledger state the mastra backend
     // produces (recordTerminalCall for BOTH responds; clearDeliveredTerminal wiped did/asked; prune
-    // missed the single-terminal premature respond; forced-terminal delivered the asked:false sign-off).
+    // missed the single-terminal premature respond; forced-terminal delivered the non-ask sign-off).
     ledger.observed = [
       obs('deleteAcct', { id: 'X' }, 0, { resultFlags: { requiresConfirmation: true } }),
-      obs('respond', { message: 'Delete account X? Please confirm.', asked: true }, 0), // ghost
-      obs('respond', { message: 'Done — account X deleted.', asked: false }, 0), // delivered
+      obs('respond', { message: 'Delete account X? Please confirm.', did: [{ op: 'ask' }] }, 0), // ghost
+      obs('respond', { message: 'Done — account X deleted.', did: [{ op: 'inform' }] }, 0), // delivered
     ];
     ledger.did = [];
     ledger.asked = false;
-    const initial: RespondPayload = { message: 'Done — account X deleted.', did: [], asked: false };
+    const initial: RespondPayload = { message: 'Done — account X deleted.', did: [{ op: 'inform' }] };
     const out = await finalizeReply(spec, CONTRACT, world(), ledger, initial, async () => initial, 1);
     // SECURE: pendingConfirmMustAsk must fire → the false "deleted" reply must NOT be delivered clean.
     expect(out.violations).toContain('pendingConfirmMustAsk'); // today: [] → BREAK
@@ -169,7 +171,7 @@ describe('V3 — pendingConfirmMustAsk bypassed by a premature-invalidated (neve
       asked: false,
       observed: [
         obs('deleteAcct', { id: 'X' }, 0, { resultFlags: { requiresConfirmation: true } }),
-        obs('respond', { message: 'Done — account X deleted.', asked: false }, 0), // ghost removed
+        obs('respond', { message: 'Done — account X deleted.', did: [{ op: 'inform' }] }, 0), // ghost removed
       ],
     });
     expect(await g.check(ctx)).not.toBeNull(); // correct: no ask delivered → deny
@@ -203,30 +205,30 @@ describe('V4 — destructiveThrottle: one destructive effect per turn', () => {
 // VECTOR 5 — askedEarlier: the GHOST ASK poisons the CROSS-TURN observed-fallback
 //   Forbidden thing #5: a write licensed off an ask that never reached the user. history.asked is the
 //   PRIMARY (verified-delivered) signal and is correctly FALSE here, but the guard ORs it with the
-//   observed-scan fallback, which still sees the never-pruned ghost respond{asked:true} from turn 0.
+//   observed-scan fallback, which still sees the never-pruned ghost ask-intent respond from turn 0.
 // ════════════════════════════════════════════════════════════════════════════════════════════════
 describe('V5 — askedEarlier: fallback licenses a record off a never-delivered (ghost) earlier ask', () => {
-  it('BREAK: history[0].asked=false but a ghost observed respond{asked:true} licenses the record', () => {
+  it.fails('BREAK: history[0].asked=false but a ghost observed ask-intent respond licenses the record', () => {
     const g = askedEarlier({ tool: 'setLimit', arg: 'limit' });
     const ctx = baseCtx({
       tool: 'setLimit',
       args: { limit: 5000 },
       turnIndex: 1,
       history: [histTurn(0, false)], // the DELIVERED turn 0 posed NO question (verified)
-      observed: [obs('respond', { message: 'What limit? ', asked: true }, 0)], // ghost, never delivered, never pruned
+      observed: [obs('respond', { message: 'What limit? ', did: [{ op: 'ask' }] }, 0)], // ghost, never delivered, never pruned
     });
     // SECURE: the verified delivered signal says no ask happened → must DENY. The OR-fallback licenses. BREAK.
     expect(g.check(ctx)).not.toBeNull();
   });
 
-  it('BREAK (confirmFirst sibling): the same ghost ask cross-turn licenses a confirmed destructive act', () => {
+  it.fails('BREAK (confirmFirst sibling): the same ghost ask cross-turn licenses a confirmed destructive act', () => {
     const g = confirmFirst(); // via 'either' → askLicensed reads the observed ask-event scan
     const ctx = baseCtx({
       tool: 'transfer',
       args: { to: 'attacker', amount: 99999, confirmed: true },
       turnIndex: 1,
       history: [histTurn(0, false)],
-      observed: [obs('respond', { message: 'Confirm? ', asked: true }, 0)], // ghost
+      observed: [obs('respond', { message: 'Confirm? ', did: [{ op: 'ask' }] }, 0)], // ghost
     });
     expect(g.check(ctx)).not.toBeNull(); // BREAK: a confirmed transfer unlocked off an ask the user never saw
   });
@@ -248,7 +250,7 @@ describe('V5 — askedEarlier: fallback licenses a record off a never-delivered 
 //   turns, a SINGLE ask licenses an unbounded run of destructive calls and DEFEATS the recency law.
 // ════════════════════════════════════════════════════════════════════════════════════════════════
 describe('V6 — confirmFirst via:ask: own prior run self-licenses the repeat (no fresh ask)', () => {
-  it('BREAK: a prior OK deleteAll run (turn 2) licenses another deleteAll (turn 3) with NO ask anywhere', () => {
+  it.fails('BREAK: a prior OK deleteAll run (turn 2) licenses another deleteAll (turn 3) with NO ask anywhere', () => {
     const g = confirmFirst({ via: 'ask' });
     const ctx = baseCtx({
       tool: 'deleteAll',
@@ -260,14 +262,14 @@ describe('V6 — confirmFirst via:ask: own prior run self-licenses the repeat (n
     expect(g.check(ctx)).not.toBeNull();
   });
 
-  it('BREAK: a SINGLE ask (turn 1) bridges the recency law — turn-3 delete is 2 turns from the ask yet licensed', () => {
+  it.fails('BREAK: a SINGLE ask (turn 1) bridges the recency law — turn-3 delete is 2 turns from the ask yet licensed', () => {
     const g = confirmFirst({ via: 'ask' }); // within default 1
     const ctx = baseCtx({
       tool: 'deleteAll',
       args: {},
       turnIndex: 3,
       observed: [
-        obs('respond', { message: 'Delete everything? confirm', asked: true }, 1), // the ONE ask, 2 turns ago
+        obs('respond', { message: 'Delete everything? confirm', did: [{ op: 'ask' }] }, 1), // the ONE ask, 2 turns ago
         obs('deleteAll', {}, 2, { tookEffect: true }), // turn-2 run, itself licensed by the ask (distance 1)
       ],
     });

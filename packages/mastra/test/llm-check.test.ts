@@ -50,7 +50,7 @@ describe('llmCheck — fail loud at conversation start', () => {
     const spec = bookingSpec();
     await expect(
       runSpecConversation(spec, [{ userText: 'cancel my 3pm booking' }], {
-        model: scriptedModel([[{ tool: 'respond', args: { message: 'done', did: [] } }]]).model,
+        model: scriptedModel([[{ tool: 'respond', args: { message: 'done', did: [{ op: 'inform' }] } }]]).model,
         world: world(),
         toolDefs: TOOL_DEFS,
         // no adjudicator
@@ -73,7 +73,7 @@ describe('llmCheck — case 35: two acts, one yes (structure alone cannot close 
   it('denies (redrives) the reply that claims an un-authorised second act, then passes the corrected one', async () => {
     const scripted = scriptedModel([
       [{ tool: 'cancelBooking', args: { id: '3pm' } }],
-      [{ tool: 'respond', args: { message: 'Done — I also cancelled the other booking for you.', did: [] } }],
+      [{ tool: 'respond', args: { message: 'Done — I also cancelled the other booking for you.', did: [{ op: 'inform' }] } }],
       // redrive (no tools): the corrected reply claims only the licensed act (no second-act phrasing).
       [{ text: 'Your 3pm booking is cancelled. Nothing else was changed.' }],
     ]);
@@ -88,7 +88,7 @@ describe('llmCheck — case 35: two acts, one yes (structure alone cannot close 
   it('passes cleanly when the reply claims only the authorised act', async () => {
     const scripted = scriptedModel([
       [{ tool: 'cancelBooking', args: { id: '3pm' } }],
-      [{ tool: 'respond', args: { message: 'Your 3pm booking is cancelled.', did: [] } }],
+      [{ tool: 'respond', args: { message: 'Your 3pm booking is cancelled.', did: [{ op: 'inform' }] } }],
     ]);
     const res = await runSpecConversation(bookingSpec(), [{ userText: 'cancel my 3pm booking' }], {
       model: scripted.model, world: world(), toolDefs: TOOL_DEFS, adjudicator: licenceAdjudicator,
@@ -100,9 +100,9 @@ describe('llmCheck — case 35: two acts, one yes (structure alone cannot close 
 
   it('the SECOND act is licensed when an earlier turn authorised it → no redrive', async () => {
     const scripted = scriptedModel([
-      [{ tool: 'respond', args: { message: 'Which ones — just the 3pm, or all of them?', did: [] } }],
+      [{ tool: 'respond', args: { message: 'Which ones — just the 3pm, or all of them?', did: [{ op: 'inform' }] } }],
       [{ tool: 'cancelBooking', args: { id: '3pm' } }],
-      [{ tool: 'respond', args: { message: 'Done — I also cancelled the other booking for you.', did: [] } }],
+      [{ tool: 'respond', args: { message: 'Done — I also cancelled the other booking for you.', did: [{ op: 'inform' }] } }],
     ]);
     const res = await runSpecConversation(bookingSpec(), [
       { userText: 'cancel all my bookings' },
@@ -120,7 +120,7 @@ describe('llmCheck — a HUNG adjudicator resolves via failMode through the real
     const spec = new AgentSpecBase({ id: 'closed', mode: 'M', persona: 'You are the agent.', tools: ['cancelBooking'], contract: CONTRACT });
     spec.addGuard('onReply', 'any', llmCheck({ rubric: 'q?', failMode: 'closed' }), { id: 'agent:closed' });
     const scripted = scriptedModel([
-      [{ tool: 'respond', args: { message: 'first draft', did: [] } }],
+      [{ tool: 'respond', args: { message: 'first draft', did: [{ op: 'inform' }] } }],
       [{ text: 'second draft' }],
     ]);
     const res = await runSpecConversation(spec, [{ userText: 'hi' }], {
@@ -136,7 +136,7 @@ describe('llmCheck — a HUNG adjudicator resolves via failMode through the real
     const hung: Adjudicator = () => new Promise(() => {});
     const spec = new AgentSpecBase({ id: 'open', mode: 'M', persona: 'You are the agent.', tools: ['cancelBooking'], contract: CONTRACT });
     spec.addGuard('onReply', 'any', llmCheck({ rubric: 'q?' }), { id: 'agent:open' }); // default open
-    const scripted = scriptedModel([[{ tool: 'respond', args: { message: 'the answer', did: [] } }]]);
+    const scripted = scriptedModel([[{ tool: 'respond', args: { message: 'the answer', did: [{ op: 'inform' }] } }]]);
     const res = await runSpecConversation(spec, [{ userText: 'hi' }], {
       model: scripted.model, world: world(), toolDefs: TOOL_DEFS,
       adjudicator: hung, adjudicatorTimeoutMs: 20,
@@ -158,7 +158,7 @@ describe('llmCheck — async coexistence with a sync onReply guard', () => {
     spec.addGuard('onReply', 'any', custom({ kind: 'syncBad', dim: 'behavior', check: (ctx) => (/bad/i.test(ctx.reply ?? '') ? 'sync says bad' : null), prose: () => 'no bad word' }), { id: 'agent:sync' });
 
     const scripted = scriptedModel([
-      [{ tool: 'respond', args: { message: 'this is bad', did: [] } }],
+      [{ tool: 'respond', args: { message: 'this is bad', did: [{ op: 'inform' }] } }],
       [{ text: 'this is fine now' }],
     ]);
     const res = await runSpecConversation(spec, [{ userText: 'hi' }], {

@@ -56,7 +56,7 @@ describe('best-attempt finalization', () => {
     const res = await run(spec(), [
       [{ tool: 'createItem', args: { title: 'Gamma' } }],
       // The create SUCCEEDED; this claims it did not.
-      [{ tool: 'respond', args: { message: "I can't create that item right now.", did: [] } }],
+      [{ tool: 'respond', args: { message: "I can't create that item right now.", did: [{ op: 'inform' }] } }],
       [{ text: 'Sorry, I was unable to do it.' }],
     ]);
 
@@ -80,7 +80,7 @@ describe('best-attempt finalization', () => {
     const REDRAFT = 'Alpha and Beta.\nAlpha and Beta.\nAlpha and Beta.'; // differs from CANDIDATE, still degenerates
     const res = await run(s, [
       [{ tool: 'listItems', args: {} }],
-      [{ tool: 'respond', args: { message: CANDIDATE, did: [] } }],
+      [{ tool: 'respond', args: { message: CANDIDATE, did: [{ op: 'inform' }] } }],
       [{ text: REDRAFT }], // the redrive still degenerates (and ≠ candidate) → salvage the true candidate
     ]);
 

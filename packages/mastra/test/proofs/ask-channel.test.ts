@@ -54,7 +54,7 @@ describe('ask channel survives a preTool deny', () => {
   it('an ask (respond+asked) executes as a terminal and closes the turn with the question', async () => {
     const { llm, result } = await runWith([
       [{ tool: 'createItem', args: { title: 'X' } }],
-      [{ tool: 'respond', args: { message: 'Which plan do you want?', asked: true, did: [] } }],
+      [{ tool: 'respond', args: { message: 'Which plan do you want?', did: [{ op: 'ask' }] } }],
     ]);
 
     const rec = result.turnRecords[0];
@@ -78,8 +78,8 @@ describe('ask channel survives a preTool deny', () => {
     // now SEES the failure on its only closing action and retries it until exhaustion.
     const { llm, result } = await runWith([
       [{ tool: 'createItem', args: { title: 'X' } }],
-      [{ tool: 'listItems', args: {} }, { tool: 'respond', args: { message: 'draft?', asked: true, did: [] } }],
-      [{ tool: 'respond', args: { message: 'Which plan do you want?', asked: true, did: [] } }],
+      [{ tool: 'listItems', args: {} }, { tool: 'respond', args: { message: 'draft?', did: [{ op: 'ask' }] } }],
+      [{ tool: 'respond', args: { message: 'Which plan do you want?', did: [{ op: 'ask' }] } }],
     ]);
 
     const rec = result.turnRecords[0];
@@ -94,7 +94,7 @@ describe('ask channel survives a preTool deny', () => {
   it('a plain respond closes cleanly through the same hostile world', async () => {
     const { llm, result } = await runWith([
       [{ tool: 'createItem', args: { title: 'X' } }],
-      [{ tool: 'respond', args: { message: 'I could not create it.', did: [] } }],
+      [{ tool: 'respond', args: { message: 'I could not create it.', did: [{ op: 'inform' }] } }],
     ]);
 
     const rec = result.turnRecords[0];

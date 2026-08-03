@@ -25,6 +25,7 @@ import {
   validateClaims,
   respondPayload,
   renderOperationReport,
+  isAskEvent,
 } from '../../src/runtime/claims.js';
 import {
   createLedger,
@@ -178,11 +179,25 @@ describe('SECTION 1 — validateClaims strict shape (forbidden #1)', () => {
     const { claims } = validateClaims([{ op: 'x', outcome: 'success', target: 't' }]);
     expect(() => renderOperationReport(claims)).not.toThrow();
   });
+  it('CLOSED (MI-D1): an EMPTY did is rejected — there is no undeclared turn', () => {
+    const { claims, errors } = validateClaims([]);
+    expect(claims).toEqual([]);
+    expect(errors.length).toBeGreaterThan(0);
+  });
+  it('CLOSED (MI-D2): a speech op smuggling an outcome/amount is rejected (a speech act is not grounded)', () => {
+    expect(validateClaims([{ op: 'inform', outcome: 'success' }]).claims).toEqual([]);
+    expect(validateClaims([{ op: 'ask', outcome: 'success' }]).claims).toEqual([]);
+    expect(validateClaims([{ op: 'greet', amount: 9999 }]).claims).toEqual([]);
+  });
+  it('CLOSED (MI-D2): an action op with NO outcome is rejected (an operation always reports honestly)', () => {
+    expect(validateClaims([{ op: 'refund', target: 'BK5' }]).claims).toEqual([]);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // SECTION 2 — respondPayload TOLERANT extraction (forbidden #3). It only ever DEGRADES
-// (never fabricates a FAVORABLE payload): a bad did → [], a bad message → '', asked strict.
+// (never fabricates a FAVORABLE payload): a bad did → [], a bad message → ''; the retired `asked`
+// boolean never reaches the payload (asking is an `ask` intention — MI-D3).
 // ═══════════════════════════════════════════════════════════════════════════════
 describe('SECTION 2 — respondPayload extraction (forbidden #3)', () => {
   it('CLOSED did-not-array: a string/object/number did degrades to [] (no fabricated claim survives)', () => {
@@ -194,11 +209,12 @@ describe('SECTION 2 — respondPayload extraction (forbidden #3)', () => {
     expect(respondPayload({ message: 42, did: [] }).message).toBe('');
     expect(respondPayload({ message: { toString: () => 'evil' }, did: [] }).message).toBe('');
   });
-  it('CLOSED asked strict-true only: truthy-non-boolean asked does NOT set asked (1/"yes"/{}/[] all false)', () => {
-    for (const v of [1, 'yes', 'true', {}, [], 'false']) {
-      expect(respondPayload({ message: 'x', did: [], asked: v }).asked).toBe(false);
+  it('CLOSED asked is DEAD: no value of the retired boolean reaches the payload or reads as an ask', () => {
+    for (const v of [1, 'yes', 'true', {}, [], 'false', true]) {
+      const p = respondPayload({ message: 'x', did: [], asked: v });
+      expect('asked' in p).toBe(false);
+      expect(isAskEvent({ name: 'respond', args: { message: 'x', did: [], asked: v } })).toBe(false);
     }
-    expect(respondPayload({ message: 'x', did: [], asked: true }).asked).toBe(true);
   });
   it('CLOSED partial did: the well-formed subset survives, malformed entries are dropped (favorable claim NOT smuggled)', () => {
     const p = respondPayload({ message: 'x', did: [{ op: 'good', outcome: 'success' }, { op: 'bad', outcome: 5 }] });
@@ -229,7 +245,7 @@ describe('SECTION 3 — turnCorrections leak on the reject path is telemetry-onl
     // reject-path field the honesty core actually reads never accretes a phantom attempt.
     const ledger = createLedger();
     beginTurn(ledger, 0);
-    recordTerminalCall(ledger, 'respond', { message: 'draft', asked: false, did: [] });
+    recordTerminalCall(ledger, 'respond', { message: 'draft', did: [{ op: 'inform' }] });
     expect(ledger.attemptedCalls).toEqual([]); // a terminal is never a vetoed attempt
   });
 });
@@ -239,9 +255,9 @@ describe('SECTION 3 — turnCorrections leak on the reject path is telemetry-onl
 // which licenses a cross-turn destructive action (forbidden: bypass a destructive protocol).
 //
 // supersededTerminalCalls fixes the TWO-terminal case (it prunes the observed ask entry). The
-// PREMATURE path — a SINGLE `respond(asked:true)` sharing a step with a domain call — invalidates
+// PREMATURE path — a SINGLE ask-intent `respond` sharing a step with a domain call — invalidates
 // the DELIVERED declaration (clearDeliveredTerminal wipes did/asked/terminalReply) but NEVER prunes
-// the observed entry (superseded requires ≥2 terminals in the step). The stale `respond`+`asked:true`
+// the observed entry (superseded requires ≥2 terminals in the step). The stale ask-intent `respond`
 // survives in the conversation-scoped ledger and is read as "the user was asked" next turn.
 // ═══════════════════════════════════════════════════════════════════════════════
 describe('SECTION 4 — premature-terminal ask-event leak licenses a cross-turn destructive call (BREAK)', () => {
@@ -252,15 +268,15 @@ describe('SECTION 4 — premature-terminal ask-event leak licenses a cross-turn 
     pruneSupersededTerminals(ledger, supersededTerminalCalls(steps));
   }
 
-  it('the premature respond(asked:true) SURVIVES in observed after invalidation (superseded prunes nothing)', () => {
+  it('the premature ask-intent respond SURVIVES in observed after invalidation (superseded prunes nothing)', () => {
     const ledger = createLedger();
     beginTurn(ledger, 1);
     // Turn 1, ONE step: a domain read + an asking respond, emitted together (the premature shape).
-    recordTerminalCall(ledger, 'respond', { message: 'Delete account 5? (yes/no)', asked: true, did: [] });
-    recordTerminal(ledger, 'respond', { message: 'Delete account 5? (yes/no)', asked: true, did: [] });
+    recordTerminalCall(ledger, 'respond', { message: 'Delete account 5? (yes/no)', did: [{ op: 'ask' }] });
+    recordTerminal(ledger, 'respond', { message: 'Delete account 5? (yes/no)', did: [{ op: 'ask' }] });
     const steps = [{ toolCalls: [
       { toolName: 'lookupAccount', args: { id: 5 } },
-      { toolName: 'respond', args: { message: 'Delete account 5? (yes/no)', asked: true, did: [] } },
+      { toolName: 'respond', args: { message: 'Delete account 5? (yes/no)', did: [{ op: 'ask' }] } },
     ] }];
     // Sanity: this IS a premature terminal, and NOT a superseded-terminal case.
     expect(prematureTerminalTools(steps)).toEqual(['lookupAccount']);
@@ -272,18 +288,18 @@ describe('SECTION 4 — premature-terminal ask-event leak licenses a cross-turn 
     expect(ledger.terminalReply).toBe('');
     expect(ledger.asked).toBe(false);
     // … but the OBSERVED ask event is STILL there (never pruned) — the leak.
-    const leaked = ledger.observed.filter((o) => o.name === 'respond' && o.args?.asked === true && o.ok);
+    const leaked = ledger.observed.filter((o) => o.ok && isAskEvent(o));
     expect(leaked.length).toBe(1);
   });
 
   it('BREAK: next turn, confirmFirst(via:"either") licenses deleteAccount(confirmed:true) off the leaked ask', () => {
     const ledger = createLedger();
     beginTurn(ledger, 1);
-    recordTerminalCall(ledger, 'respond', { message: 'Delete account 5?', asked: true, did: [] });
-    recordTerminal(ledger, 'respond', { message: 'Delete account 5?', asked: true, did: [] });
+    recordTerminalCall(ledger, 'respond', { message: 'Delete account 5?', did: [{ op: 'ask' }] });
+    recordTerminal(ledger, 'respond', { message: 'Delete account 5?', did: [{ op: 'ask' }] });
     const steps = [{ toolCalls: [
       { toolName: 'lookupAccount', args: { id: 5 } },
-      { toolName: 'respond', args: { message: 'Delete account 5?', asked: true, did: [] } },
+      { toolName: 'respond', args: { message: 'Delete account 5?', did: [{ op: 'ask' }] } },
     ] }];
     replayBackendTerminalReconcile(steps, ledger);
     // (the user actually saw the forced-terminal reply — a NON-asking sign-off — not this question)
@@ -303,9 +319,9 @@ describe('SECTION 4 — premature-terminal ask-event leak licenses a cross-turn 
   it('CONTROL: had the ask entry been pruned (the superseded fix), confirmFirst correctly DENIES', () => {
     const ledger = createLedger();
     beginTurn(ledger, 1);
-    recordTerminalCall(ledger, 'respond', { message: 'Delete account 5?', asked: true, did: [] });
+    recordTerminalCall(ledger, 'respond', { message: 'Delete account 5?', did: [{ op: 'ask' }] });
     // Simulate the pruning the premature path OMITS: drop the leaked ask entry.
-    ledger.observed = ledger.observed.filter((o) => !(o.name === 'respond' && o.args?.asked === true));
+    ledger.observed = ledger.observed.filter((o) => !isAskEvent(o));
     beginTurn(ledger, 2);
     const g = confirmFirst({ via: 'either' });
     const ctx = base({ tool: 'deleteAccount', args: { confirmed: true, id: 5 }, observed: ledger.observed, turnIndex: 2 });
@@ -364,7 +380,7 @@ describe('SECTION 6 — blank-delivery floor holds against a zero-width override
     // A payload that will be REJECTED by a stubbed onReply violation path is not needed here — instead
     // force the exhaustion branch by making the initial payload trip the floor AND leaving redrives at 0
     // so we reach a composed delivery. Simplest: an empty message + empty did composes to '' → floor.
-    const blank: RespondPayload = { message: '', did: [], asked: false };
+    const blank: RespondPayload = { message: '', did: [] };
     const out = await finalizeReply(spec, undefined, world(), ledger, blank, async () => blank, 0);
     expect(out.exhausted).toBe(true);
     // Even though the override returned a zero-width string, the floor swapped in the engine closure.

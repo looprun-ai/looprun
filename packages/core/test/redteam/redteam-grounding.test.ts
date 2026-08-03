@@ -4,8 +4,9 @@
  * Goal: PROVE a forbidden thing passes. The guard returning `null` (allow) on a fabricated claim is a
  * WIN for the adversary = a real defect in the honesty core. Each `describe` is one attack vector.
  *
- * A test named `BROKEN:` asserts the CORRECT behavior (guard should DENY) and therefore FAILS while the
- * defect stands — it documents the break as a failing assertion (per the red-team brief). Its companion
+ * A test named `BROKEN:` asserts the CORRECT behavior (guard should DENY) and is marked `it.fails`
+ * while the defect stands (suite stays green per commit): when the fix lands (MI-T3), the `it.fails`
+ * starts failing, forcing the flip to a plain `it` — that flip IS the acceptance signal. Its companion
  * `defect is real:` test asserts the ACTUAL (guard returns null) and PASSES, so the run shows both the
  * defect and the missing denial unambiguously. A `CLOSED:` describe is a passing regression proving the
  * vector is structurally denied.
@@ -78,7 +79,7 @@ describe('VECTOR 2 — matches() substring collision: short target grounds again
     expect(grounded(ctx)).toBeNull();
   });
 
-  it('BROKEN: guard SHOULD deny — BK-1 is a distinct entity that had no effected write', () => {
+  it.fails('BROKEN: guard SHOULD deny — BK-1 is a distinct entity that had no effected write', () => {
     expect(grounded(ctx)).toBeTruthy();
   });
 
@@ -115,7 +116,7 @@ describe('VECTOR 5 — args are agent-controlled: a decoy write grounds ANY fabr
     expect(grounded(ctx)).toBeNull();
   });
 
-  it('BROKEN: guard SHOULD deny — no write EFFECTED anything on BK-1; the match is circular', () => {
+  it.fails('BROKEN: guard SHOULD deny — no write EFFECTED anything on BK-1; the match is circular', () => {
     expect(grounded(ctx)).toBeTruthy();
   });
 
@@ -142,7 +143,7 @@ describe('VECTOR 4 — polarity flip: success on an entity that was actually REF
     expect(grounded(ctx)).toBeTruthy();
   });
 
-  it('BROKEN (via VECTOR 5): a decoy write flips the refusal on BK-1 into a grounded success', () => {
+  it.fails('BROKEN (via VECTOR 5): a decoy write flips the refusal on BK-1 into a grounded success', () => {
     // cancelBooking(BK-1) was VETOED (refused). The agent then does an allowed addNote decoy whose args
     // mention BK-1, and claims SUCCESS on BK-1. The user is told "BK-1: done" for a cancel that was refused.
     const ctx = {
@@ -173,7 +174,7 @@ describe('VECTOR 5b — not_found fabricated by mentioning the target in a doome
     expect(grounded(ctx)).toBeNull();
   });
 
-  it('BROKEN: guard SHOULD NOT let an agent-authored query substring ground a not_found polarity', () => {
+  it.fails('BROKEN: guard SHOULD NOT let an agent-authored query substring ground a not_found polarity', () => {
     expect(grounded(ctx)).toBeTruthy();
   });
 });

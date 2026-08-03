@@ -87,6 +87,10 @@ const INTERNAL = [
   // SCG-T6 — the backend seam needs `respondPayload` (args → structured payload for the redrive/fallback
   // re-generation) and `lastTerminalArgs` (the respond call's args from a result's steps).
   'renderOperationReport', 'deriveClaimsFromLedger', 'RespondPayload', 'RenderOpts', 'respondPayload',
+  // MI-T1 — the mandatory-intention partition: the reserved speech-op vocabulary + partition
+  // predicates, the `Intention` shape (SCG's `TurnClaim` renamed), and the structured ask signal
+  // (`hasAskIntent`) the consent guards re-key onto (the bare `asked` boolean is retired).
+  'SPEECH_OPS', 'SpeechOp', 'Intention', 'isSpeechOp', 'isActionOp', 'hasAskIntent',
   'enforcePostTool', 'evaluateOnInput', 'evaluatePreTool',
   'finalizeReply', 'FinalizedReply', 'governanceVeto', 'redriveMessage', 'ReplyViolation',
   'runChainCompletionPass',

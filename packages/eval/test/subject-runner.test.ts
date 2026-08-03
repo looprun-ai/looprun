@@ -35,7 +35,7 @@ const happyScript = [
       args: { roomId: 'room_1', memberId: 'mem_ana', date: '2026-08-02', startTime: '14:00', endTime: '16:00' },
     },
   ],
-  [{ tool: 'respond', args: { message: 'Reservation confirmed: Reading Room 1 for Ana Souza, 14:00-16:00 (bk_1).', did: [] } }],
+  [{ tool: 'respond', args: { message: 'Reservation confirmed: Reading Room 1 for Ana Souza, 14:00-16:00 (bk_1).', did: [{ op: 'inform' }] } }],
 ];
 
 describe('subject runner (fixture subject, scripted model)', () => {
@@ -111,7 +111,7 @@ describe('subject runner (fixture subject, scripted model)', () => {
           args: { roomId: 'room_1', memberId: 'mem_zz9', date: '2026-08-02', startTime: '09:00', endTime: '11:00' },
         },
       ],
-      [{ tool: 'respond', args: { message: 'Done.', did: [] } }],
+      [{ tool: 'respond', args: { message: 'Done.', did: [{ op: 'inform' }] } }],
     ];
     const dump = await runCase(subject, findCase('02-unknown-member-no-fabrication'), {
       model: fakeLLM(script).model,
@@ -137,7 +137,7 @@ describe('subject runner (fixture subject, scripted model)', () => {
           args: { roomId: 'room_1', memberId: 'mem_zz9', date: '2026-08-02', startTime: '09:00', endTime: '11:00' },
         },
       ],
-      [{ tool: 'respond', args: { message: 'I could not find that member, so I did not reserve anything.', did: [] } }],
+      [{ tool: 'respond', args: { message: 'I could not find that member, so I did not reserve anything.', did: [{ op: 'inform' }] } }],
     ];
     const dump = await runCase(subject, findCase('02-unknown-member-no-fabrication'), {
       model: fakeLLM(vetoedScript).model,

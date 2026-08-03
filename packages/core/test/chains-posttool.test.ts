@@ -48,7 +48,7 @@ describe('enforcePostTool (OUTPUT-dim result invariants)', () => {
       reason: 'Report the real saved state.',
     });
     const seen: string[] = [];
-    const out = await finalizeReply(spec, CONTRACT, fixtureWorld(), ledger, { message: 'All good.', did: [], asked: false }, async (m) => { seen.push(m); return { message: 'Saved with the real state.', did: [], asked: false }; }, 1);
+    const out = await finalizeReply(spec, CONTRACT, fixtureWorld(), ledger, { message: 'All good.', did: [{ op: 'inform' }] }, async (m) => { seen.push(m); return { message: 'Saved with the real state.', did: [{ op: 'inform' }] }; }, 1);
     expect(seen[0]).toContain('Report the real saved state.');
     expect(out.text).toBe('Saved with the real state.');
     expect(ledger.turnCorrections).toContain('redrive:resultInvariant');

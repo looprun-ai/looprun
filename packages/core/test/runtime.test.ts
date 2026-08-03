@@ -15,8 +15,8 @@ import {
 import { evaluatePreTool, evaluateOnInput, finalizeReply, redriveMessage } from '../src/runtime/turn.js';
 import type { RespondPayload } from '../src/runtime/claims.js';
 
-/** A structured respond payload with an empty declaration — the common shape in these composition-free tests. */
-const P = (message: string): RespondPayload => ({ message, did: [], asked: false });
+/** A structured respond payload with a bare speech intention — the common shape in these composition-free tests. */
+const P = (message: string): RespondPayload => ({ message, did: [{ op: 'inform' }] });
 
 /** A minimal onReply behaviour guard that denies until the MESSAGE contains `term` — a stand-in for the
  *  deleted reply-text guards, used here only to exercise the redrive/exhaustion machinery over ctx.reply. */

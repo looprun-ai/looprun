@@ -67,7 +67,7 @@ describe("confirmFirst({ via: 'ask' }) is SUCCESS-KEYED", () => {
   it('REGRESSION FLOOR: an earlier-turn ask event (respond+asked) still unlocks', async () => {
     const ctx = craftCtx({
       tool: 'purgeAll',
-      observed: [call('respond', { args: { message: 'Purge everything — are you sure?', asked: true }, turnIndex: 0 })],
+      observed: [call('respond', { args: { message: 'Purge everything — are you sure?', did: [{ op: 'ask' }] }, turnIndex: 0 })],
       turnIndex: 1,
     });
     expect(await guard().check(ctx)).toBeNull();
@@ -95,7 +95,7 @@ describe("confirmFirst({ via: 'ask' }) is SUCCESS-KEYED", () => {
   });
 
   it('a same-turn ask event never unlocks (the noActAfterAskSameTurn seam is unchanged)', async () => {
-    const ctx = craftCtx({ tool: 'purgeAll', observed: [call('respond', { args: { asked: true }, turnIndex: 1 })], turnIndex: 1 });
+    const ctx = craftCtx({ tool: 'purgeAll', observed: [call('respond', { args: { did: [{ op: 'ask' }] }, turnIndex: 1 })], turnIndex: 1 });
     expect(await guard().check(ctx)).toBeTruthy();
   });
 });
@@ -210,10 +210,10 @@ describe('destructiveThrottle does not count confirmation probes', () => {
       turns: [{ userText: 'delete p001' }, { userText: 'yes, go ahead' }],
       script: [
         [{ tool: 'deleteItem', args: { id: 'p001' } }],
-        [{ tool: 'respond', args: { message: 'Deleting p001 is permanent — are you sure?', did: [] } }],
+        [{ tool: 'respond', args: { message: 'Deleting p001 is permanent — are you sure?', did: [{ op: 'inform' }] } }],
         [{ tool: 'deleteItem', args: { id: 'p001' } }],
         [{ tool: 'deleteItem', args: { id: 'p001', confirmed: true } }],
-        [{ tool: 'respond', args: { message: 'Done — p001 is gone.', did: [] } }],
+        [{ tool: 'respond', args: { message: 'Done — p001 is gone.', did: [{ op: 'inform' }] } }],
       ],
       expect: 'pass',
     });

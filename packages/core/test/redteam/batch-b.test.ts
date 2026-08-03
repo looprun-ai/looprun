@@ -99,7 +99,7 @@ describe('confirmFirst — adversarial', () => {
   it('BREAK: via:either accepts an UNRELATED earlier ask as license for a destructive confirm', () => {
     // The attacker's ask was about something else entirely — the guard does not bind the ask to the
     // record. Any recent successful ask unlocks confirmed:true on any destructive record.
-    const unrelatedAsk = okCall('respond', 1, { message: 'what is your favourite colour?', asked: true, did: [] });
+    const unrelatedAsk = okCall('respond', 1, { message: 'what is your favourite colour?', did: [{ op: 'ask' }] });
     const confirm = ctxWith({
       tool: 'deleteRecord',
       args: { recordId: 'victim-999', confirmed: true },
@@ -111,7 +111,7 @@ describe('confirmFirst — adversarial', () => {
 
   it('HOLDS (via:probe): an unrelated askUser does NOT license — only a record-bound probe does', () => {
     const gp = confirmFirst({ via: 'probe' });
-    const unrelatedAsk = okCall('respond', 1, { message: 'unrelated', asked: true, did: [] });
+    const unrelatedAsk = okCall('respond', 1, { message: 'unrelated', did: [{ op: 'ask' }] });
     const confirm = ctxWith({
       tool: 'deleteRecord',
       args: { recordId: 'victim', confirmed: true },
@@ -213,7 +213,7 @@ describe('noActAfterAskSameTurn — adversarial', () => {
   const g = noActAfterAskSameTurn(['deleteRecord']);
 
   it('LEAK: a destructive tool NOT in the set acts freely in the same turn as an ask', () => {
-    const asked = okCall('respond', 3, { message: 'ok?', asked: true, did: [] });
+    const asked = okCall('respond', 3, { message: 'ok?', did: [{ op: 'ask' }] });
     const act = ctxWith({ tool: 'wipeAll', args: {}, observed: [asked], turnIndex: 3 });
     expect(g.check(act)).toBeNull(); // wipeAll uncovered = LEAK (coverage gap)
   });
@@ -225,7 +225,7 @@ describe('noActAfterAskSameTurn — adversarial', () => {
   });
 
   it('HOLDS: a real same-turn ask (respond+asked) blocks the listed tool', () => {
-    const asked = okCall('respond', 3, { message: 'ok?', asked: true, did: [] });
+    const asked = okCall('respond', 3, { message: 'ok?', did: [{ op: 'ask' }] });
     const act = ctxWith({ tool: 'deleteRecord', args: {}, observed: [asked], turnIndex: 3 });
     expect(g.check(act)).not.toBeNull();
   });

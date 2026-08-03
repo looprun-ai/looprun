@@ -142,7 +142,7 @@ export const err = new GuardExecutionError({
   phase: 'check',
   cause: new Error('boom'),
 });
-export const payload: RespondPayload = { message: 'hi', did: [], asked: false };
+export const payload: RespondPayload = { message: 'hi', did: [] };
 export function finalize(...args: Parameters<typeof finalizeReply>) {
   return finalizeReply(...args);
 }

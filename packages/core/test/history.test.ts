@@ -132,7 +132,7 @@ describe('every hook sees userText + prior history', () => {
     spec.addGuard('onReply', 'any', c.guard, { id: 'x:captor' });
     const ledger = priorTurn();
 
-    await finalizeReply(spec, CONTRACT, fixtureWorld(), ledger, { message: 'a reply', did: [], asked: false }, async () => ({ message: '', did: [], asked: false }), 0);
+    await finalizeReply(spec, CONTRACT, fixtureWorld(), ledger, { message: 'a reply', did: [{ op: 'inform' }] }, async () => ({ message: '', did: [] }), 0);
 
     const mine = c.seen.filter((s) => s.reply === 'a reply');
     expect(mine.length).toBeGreaterThan(0);
@@ -147,7 +147,7 @@ describe('every hook sees userText + prior history', () => {
     spec.addMutator(mutator, { id: 'x:captorMutator' });
     const ledger = priorTurn();
 
-    await finalizeReply(spec, CONTRACT, fixtureWorld(), ledger, { message: 'a reply', did: [], asked: false }, async () => ({ message: '', did: [], asked: false }), 0);
+    await finalizeReply(spec, CONTRACT, fixtureWorld(), ledger, { message: 'a reply', did: [{ op: 'inform' }] }, async () => ({ message: '', did: [] }), 0);
 
     expect(seen.length).toBeGreaterThan(0);
     expect(seen[0].userText).toBe('the second thing I said');

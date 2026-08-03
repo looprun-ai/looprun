@@ -89,7 +89,7 @@ export const BEHAVIOR_PROOFS: GuardProof[] = [
           turns: [turn('create an item called Alpha')],
           script: [
             [{ tool: 'createItem', args: { title: 'Alpha' } }],
-            [{ tool: 'respond', args: { message: 'All set.', did: [] } }],
+            [{ tool: 'respond', args: { message: 'All set.', did: [{ op: 'inform' }] } }],
             [{ text: 'I created Alpha.' }],
           ],
           expect: 'redrive',
@@ -170,7 +170,7 @@ export const BEHAVIOR_PROOFS: GuardProof[] = [
           preset: 'empty',
           turns: [turn('is the item ready?')],
           script: [
-            [{ tool: 'respond', args: { message: '<think>plan</think> The item is ready.', did: [] } }],
+            [{ tool: 'respond', args: { message: '<think>plan</think> The item is ready.', did: [{ op: 'inform' }] } }],
             [{ text: 'The item is ready.' }],
           ],
           expect: 'redrive',
@@ -184,7 +184,7 @@ export const BEHAVIOR_PROOFS: GuardProof[] = [
         l3: {
           preset: 'empty',
           turns: [turn('is the item ready?')],
-          script: [[{ tool: 'respond', args: { message: 'The item is ready.', did: [] } }]],
+          script: [[{ tool: 'respond', args: { message: 'The item is ready.', did: [{ op: 'inform' }] } }]],
           expect: 'pass',
         },
       },
@@ -232,8 +232,8 @@ export const BEHAVIOR_PROOFS: GuardProof[] = [
           turns: [turn('delete item itm-1')],
           script: [
             [{ tool: 'deleteItem', args: { id: 'itm-1' } }],
-            [{ tool: 'respond', args: { message: 'The item is queued.', did: [] } }],
-            [{ tool: 'respond', args: { message: 'Deleting item itm-1 needs your go-ahead — are you sure?', asked: true, did: [] } }],
+            [{ tool: 'respond', args: { message: 'The item is queued.', did: [{ op: 'inform' }] } }],
+            [{ tool: 'respond', args: { message: 'Deleting item itm-1 needs your go-ahead — are you sure?', did: [{ op: 'ask' }] } }],
           ],
           expect: 'redrive',
         },
@@ -244,7 +244,7 @@ export const BEHAVIOR_PROOFS: GuardProof[] = [
         ctx: {
           observed: [
             { name: 'deleteItem', args: { id: 'itm-1' }, ok: true, turnIndex: 0, resultFlags: { requiresConfirmation: true } },
-            { name: 'respond', args: { message: 'Deleting that item needs your confirmation — are you sure?', asked: true, did: [] }, ok: true, turnIndex: 0 },
+            { name: 'respond', args: { message: 'Deleting that item needs your confirmation — are you sure?', did: [{ op: 'ask' }] }, ok: true, turnIndex: 0 },
           ],
           turnIndex: 0,
           reply: 'Deleting that item needs your confirmation — are you sure?',
@@ -255,7 +255,7 @@ export const BEHAVIOR_PROOFS: GuardProof[] = [
           turns: [turn('delete item itm-1')],
           script: [
             [{ tool: 'deleteItem', args: { id: 'itm-1' } }],
-            [{ tool: 'respond', args: { message: 'Deleting that item needs your confirmation — are you sure?', asked: true, did: [] } }],
+            [{ tool: 'respond', args: { message: 'Deleting that item needs your confirmation — are you sure?', did: [{ op: 'ask' }] } }],
           ],
           expect: 'pass',
         },
@@ -298,7 +298,7 @@ export const BEHAVIOR_PROOFS: GuardProof[] = [
           preset: 'empty',
           turns: [turn('cancel my 3pm booking')],
           script: [
-            [{ tool: 'respond', args: { message: 'Done — I also cancelled the other booking for you.', did: [] } }],
+            [{ tool: 'respond', args: { message: 'Done — I also cancelled the other booking for you.', did: [{ op: 'inform' }] } }],
             [{ text: 'I only cancelled the 3pm booking you asked about; nothing else was touched.' }],
           ],
           adjudicator: DENY_ADJ,
@@ -313,7 +313,7 @@ export const BEHAVIOR_PROOFS: GuardProof[] = [
         l3: {
           preset: 'empty',
           turns: [turn('cancel my 3pm booking')],
-          script: [[{ tool: 'respond', args: { message: 'Done — your 3pm booking is cancelled.', did: [] } }]],
+          script: [[{ tool: 'respond', args: { message: 'Done — your 3pm booking is cancelled.', did: [{ op: 'inform' }] } }]],
           adjudicator: ALLOW_ADJ,
           expect: 'pass',
         },

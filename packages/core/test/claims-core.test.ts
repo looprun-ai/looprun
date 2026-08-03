@@ -30,13 +30,25 @@ test('validateClaims: non-array, non-object items, wrong field types, empty op a
   assert.ok(validateClaims([{ op: 'cancel', outcome: 42 }]).errors.length);
   assert.ok(validateClaims([{ op: 'cancel', outcome: 'success', amount: 'big' }]).errors.length);
 });
-test('validateClaims: [] is VALID (a read-only/ask turn did nothing)', () => {
-  assert.deepEqual(validateClaims([]), { claims: [], errors: [] });
+test('validateClaims: [] is REJECTED (MI-D1: every respond declares at least one intention)', () => {
+  const r = validateClaims([]);
+  assert.deepEqual(r.claims, []);
+  assert.ok(r.errors.length);
 });
-test('isAskEvent keys on respond+asked:true only', () => {
-  assert.ok(isAskEvent({ name: 'respond', args: { asked: true } }));
+test('validateClaims: the speech/action partition (MI-D2)', () => {
+  // a speech op alone is valid (no outcome, no amount)
+  assert.deepEqual(validateClaims([{ op: 'inform' }]), { claims: [{ op: 'inform' }], errors: [] });
+  // a speech op must NOT carry outcome or amount
+  assert.ok(validateClaims([{ op: 'ask', outcome: 'success' }]).errors.length);
+  assert.ok(validateClaims([{ op: 'greet', amount: 1 }]).errors.length);
+  // an action op REQUIRES an outcome
+  assert.ok(validateClaims([{ op: 'refund' }]).errors.length);
+});
+test('isAskEvent keys on respond + an ask intention in did (MI-D3)', () => {
+  assert.ok(isAskEvent({ name: 'respond', args: { did: [{ op: 'ask' }] } }));
+  assert.ok(!isAskEvent({ name: 'respond', args: { asked: true } })); // the retired boolean is DEAD
   assert.ok(!isAskEvent({ name: 'respond', args: {} }));
-  assert.ok(!isAskEvent({ name: 'askUser', args: {} })); // the old terminal is DEAD
+  assert.ok(!isAskEvent({ name: 'askUser', args: { did: [{ op: 'ask' }] } })); // the old terminal is DEAD
 });
 
 // ── beyond the brief snippet: pin the extra strictness + tolerant extraction the later tasks lean on ──
@@ -53,12 +65,12 @@ test('validateClaims: target present but blank/non-string is an ERROR; amount no
   assert.ok(validateClaims([{ op: 'cancel', target: 7, outcome: 'success' }]).errors.length);
   assert.ok(validateClaims([{ op: 'cancel', outcome: 'success', amount: Number.POSITIVE_INFINITY }]).errors.length);
 });
-test('respondPayload: tolerant extraction of message/did/asked', () => {
+test('respondPayload: tolerant extraction of message/did (a stray `asked` arg is ignored)', () => {
   const p = respondPayload({ message: 'done', did: [{ op: 'refund', outcome: 'success' }], asked: true });
   assert.equal(p.message, 'done');
-  assert.equal(p.asked, true);
   assert.deepEqual(p.did, [{ op: 'refund', outcome: 'success' }]);
+  assert.ok(!('asked' in p)); // the retired boolean never reaches the payload
 });
-test('respondPayload: absent fields default (message="", did=[], asked=false)', () => {
-  assert.deepEqual(respondPayload({}), { message: '', did: [], asked: false });
+test('respondPayload: absent fields default (message="", did=[])', () => {
+  assert.deepEqual(respondPayload({}), { message: '', did: [] });
 });

@@ -385,7 +385,7 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
       : (ledger.terminalReply || full.text || '');
     // The DELIVERED terminal's structured declaration (recordTerminal seated did/asked); a tripwire /
     // free-text fallback carries the empty declaration beginTurn reset.
-    const initial: RespondPayload = { message: initialText, did: ledger.did, asked: ledger.asked };
+    const initial: RespondPayload = { message: initialText, did: ledger.did };
 
     const finalized = await finalizeReply(
       spec,

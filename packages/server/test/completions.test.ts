@@ -54,7 +54,7 @@ describe('POST /v1/chat/completions — governed turn behind the facade', () => 
       [{ tool: 'updateItem', args: { id: 'i1', title: 'x' } }], // vetoed: requiresBefore(searchItem)
       [{ tool: 'searchItem', args: { query: 'i1' } }],
       [{ tool: 'updateItem', args: { id: 'i1', title: 'x' } }],
-      [{ tool: 'respond', args: { message: 'Updated i1.', did: [] } }],
+      [{ tool: 'respond', args: { message: 'Updated i1.', did: [{ op: 'inform' }] } }],
     ]);
     const res = await post(url, { model: 'fixture-agent', messages: [{ role: 'user', content: 'update i1' }] });
     const body = await res.json();
@@ -77,11 +77,11 @@ describe('POST /v1/chat/completions — governed turn behind the facade', () => 
   it('keeps one session across requests sharing the first user message (fingerprint) and forks on a new one', async () => {
     const script: ScriptStep[] = [
       [{ tool: 'createItem', args: { title: 'alpha' } }],
-      [{ tool: 'respond', args: { message: 'Created alpha.', did: [] } }],
+      [{ tool: 'respond', args: { message: 'Created alpha.', did: [{ op: 'inform' }] } }],
       [{ tool: 'listItems', args: {} }],
-      [{ tool: 'respond', args: { message: 'You have items.', did: [] } }],
+      [{ tool: 'respond', args: { message: 'You have items.', did: [{ op: 'inform' }] } }],
       [{ tool: 'listItems', args: {} }],
-      [{ tool: 'respond', args: { message: 'Fresh session.', did: [] } }],
+      [{ tool: 'respond', args: { message: 'Fresh session.', did: [{ op: 'inform' }] } }],
     ];
     const { url, turns } = await startServer(script);
 

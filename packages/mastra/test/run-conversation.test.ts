@@ -54,10 +54,10 @@ describe('runSpecConversation', () => {
       // turn 0: model tries confirmed:true directly — vetoed; probes; relays the question.
       [{ tool: 'deleteItem', args: { id: 'x', confirmed: true } }],
       [{ tool: 'deleteItem', args: { id: 'x' } }],
-      [{ tool: 'respond', args: { message: 'Delete x — are you sure?', did: [] } }],
+      [{ tool: 'respond', args: { message: 'Delete x — are you sure?', did: [{ op: 'inform' }] } }],
       // turn 1: user confirmed; probe ran in an EARLIER turn, so confirmed:true is now legal.
       [{ tool: 'deleteItem', args: { id: 'x', confirmed: true } }],
-      [{ tool: 'respond', args: { message: 'Deleted x.', did: [] } }],
+      [{ tool: 'respond', args: { message: 'Deleted x.', did: [{ op: 'inform' }] } }],
     ]);
 
     const res = await runSpecConversation(
@@ -102,8 +102,8 @@ describe('runSpecConversation', () => {
     spec.addGuard('onInput', 'any', captor, { id: 'x:captor' });
 
     const scripted = scriptedModel([
-      [{ tool: 'respond', args: { message: 'Here is turn zero.', did: [] } }],
-      [{ tool: 'respond', args: { message: 'Here is turn one.', did: [] } }],
+      [{ tool: 'respond', args: { message: 'Here is turn zero.', did: [{ op: 'inform' }] } }],
+      [{ tool: 'respond', args: { message: 'Here is turn one.', did: [{ op: 'inform' }] } }],
     ]);
 
     const res = await runSpecConversation(
@@ -134,10 +134,10 @@ describe('runSpecConversation', () => {
     spec.addGuard('postTool', ['listItems'], captor, { id: 'x:postCaptor' });
 
     const scripted = scriptedModel([
-      [{ tool: 'respond', args: { message: 'Turn zero done.', did: [] } }],
+      [{ tool: 'respond', args: { message: 'Turn zero done.', did: [{ op: 'inform' }] } }],
       // turn 1: a real domain call → afterToolCall runs the postTool guard.
       [{ tool: 'listItems', args: {} }],
-      [{ tool: 'respond', args: { message: 'Here are your items.', did: [] } }],
+      [{ tool: 'respond', args: { message: 'Here are your items.', did: [{ op: 'inform' }] } }],
     ]);
 
     const res = await runSpecConversation(

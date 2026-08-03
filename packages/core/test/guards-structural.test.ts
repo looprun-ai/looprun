@@ -30,12 +30,12 @@ const ask = (turn: number): ObservedCall => ({
   name: 'respond',
   ok: true,
   turnIndex: turn,
-  args: { message: 'q?', asked: true, did: [] },
+  args: { message: 'q?', did: [{ op: 'ask' }] },
 });
 
 /** A sealed HistoryTurn that DID pose a question (`asked:true`) — the PRIMARY ask signal askedEarlier reads. */
 const askedTurn = (turn: number): HistoryTurn =>
-  ({ turnIndex: turn, userText: '', reply: 'q?', toolCalls: [], did: [], asked: true, attemptedCalls: [], guardEvents: [] });
+  ({ turnIndex: turn, userText: '', reply: 'q?', toolCalls: [], did: [{ op: 'ask' }], asked: true, attemptedCalls: [], guardEvents: [] });
 
 const probe = (tool: string, turn: number, args: Record<string, unknown> = {}): ObservedCall => ({
   name: tool,

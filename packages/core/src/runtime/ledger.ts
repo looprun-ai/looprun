@@ -9,7 +9,7 @@
 import type { AgentWorld, Guard, ObservedCall, HistoryTurn, HistoryToolCall, Adjudicator } from '../rules.js';
 import { canonArgs } from '../guards/index.js';
 import { isTerminal } from './terminal.js';
-import { validateClaims, type TurnClaim } from './claims.js';
+import { hasAskIntent, validateClaims, type TurnClaim } from './claims.js';
 
 /** An OUTPUT-dim (postTool) result-invariant failure OR a flowChain restate — carried on the ledger
  *  and JOINED into the onReply violation set so the same bounded no-tools redrive relays its text. */
@@ -30,7 +30,9 @@ export interface TurnLedger {
    *  pruning). Read into the reply-side GuardCtx as `ctx.did` so the cross-check guards (T4) ground the
    *  agent's DECLARATION against the world ledger. Reset per turn by `beginTurn`. */
   did: TurnClaim[];
-  /** Whether that delivered `respond` posed a clarifying question (`asked:true`). Reset per turn. */
+  /** Whether that delivered `respond` posed a clarifying question — derived from an `ask` intention in
+   *  its `did` (MI-D3; the bare `asked` boolean is retired). Transitional convenience the consent guards
+   *  still read; MI-T2 re-keys them onto the intention itself. Reset per turn. */
   asked: boolean;
   /** Consecutive guard-vetoed rounds this turn (reset when a call passes guards and executes). */
   vetoStreak: number;
@@ -150,8 +152,8 @@ export function recordToolResult(ledger: TurnLedger, name: string, args: Record<
 /** Record a terminal CALL in the observed ledger. Called from the guard hooks' SYNCHRONOUS segment
  *  (before any await): the model runtime dispatches a step's tool calls concurrently (Promise.all)
  *  but STARTS them in emission order, so a synchronous hook-time push makes a same-step `respond`
- *  (with `asked:true`) visible to a sibling destructive call's preTool checks — closing the
- *  noActAfterAskSameTurn same-step bypass. */
+ *  (whose `did` carries an `ask` intention) visible to a sibling destructive call's preTool checks —
+ *  closing the noActAfterAskSameTurn same-step bypass. */
 export function recordTerminalCall(ledger: TurnLedger, name: string, args: Record<string, unknown>): void {
   ledger.observed.push({ name, args, ok: true, turnIndex: ledger.turnIndex });
 }
@@ -175,7 +177,7 @@ export function clearDeliveredTerminal(ledger: TurnLedger): void {
 /**
  * Drop terminal calls that were emitted but never DELIVERED (see `supersededTerminalCalls`). Runs
  * once the generation has resolved, so the hook-time record that gave a same-step sibling's preTool
- * checks visibility of an ask (`respond` with `asked:true`) has already done its job; what is corrected here is the
+ * checks visibility of an ask (`respond` whose `did` carries an `ask` intention) has already done its job; what is corrected here is the
  * cross-turn evidence, where an undelivered question must not read as consent obtained.
  * Returns the names actually pruned, for the turn's recovery log.
  */
@@ -198,8 +200,8 @@ export function pruneSupersededTerminals(
 
 /** Capture the DELIVERED respond's declaration (the observed push happens at hook time via
  *  recordTerminalCall). The user-facing prose is `respond`'s `message` arg (SCG, 2026-08-02 — was
- *  `text`); the structured operations ride `did`, and `asked` marks a clarifying question. All three
- *  are the DELIVERED terminal's — captured together, gated on a non-empty `message` and last-wins, so
+ *  `text`); the structured intentions ride `did`, and asking is an `ask` intention among them (MI-D3).
+ *  All of it is the DELIVERED terminal's — captured together, gated on a non-empty `message` and last-wins, so
  *  they track the exact respond the runtime delivers (the last ok respond with non-empty message,
  *  consistent with `supersededTerminalCalls`). An ill-shaped `did` is not silently dropped: the
  *  well-formed subset is stored and a `claims-invalid:<n>` correction records the defect count. */
@@ -209,7 +211,7 @@ export function recordTerminal(ledger: TurnLedger, name: string, args: Record<st
   ledger.terminalReply = text;
   const { claims, errors } = validateClaims(args.did);
   ledger.did = claims;
-  ledger.asked = args.asked === true;
+  ledger.asked = hasAskIntent(claims);
   if (errors.length) ledger.turnCorrections.push(`claims-invalid:${errors.length}`);
 }
 

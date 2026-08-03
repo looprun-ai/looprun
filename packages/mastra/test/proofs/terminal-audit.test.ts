@@ -77,7 +77,7 @@ describe('exhaustion evidence', () => {
 
     const { result } = await runWith(
       spec,
-      [[{ tool: 'listItems', args: {} }], [{ tool: 'respond', args: { message: 'Alpha and Beta.', did: [] } }]],
+      [[{ tool: 'listItems', args: {} }], [{ tool: 'respond', args: { message: 'Alpha and Beta.', did: [{ op: 'inform' }] } }]],
       { contract },
     );
 
@@ -114,7 +114,7 @@ describe('governance veto envelope', () => {
 
     const { llm, result } = await runWith(spec, [
       [{ tool: 'createItem', args: { title: 'X' } }],
-      [{ tool: 'respond', args: { message: 'I could not create it.', did: [] } }],
+      [{ tool: 'respond', args: { message: 'I could not create it.', did: [{ op: 'inform' }] } }],
     ]);
 
     const wire = JSON.stringify(llm.received);
@@ -164,7 +164,7 @@ describe('terminal tool definitions', () => {
 
   it('puts the runtime contract on the wire, not the host wording', async () => {
     const toolDefs = [...FIXTURE_TOOL_DEFS.filter((d) => d.name !== 'respond'), hostRespond];
-    const { llm } = await runWith(new AgentSpecBase(baseCfg() as never), [[{ tool: 'respond', args: { message: 'done', did: [] } }]], { toolDefs });
+    const { llm } = await runWith(new AgentSpecBase(baseCfg() as never), [[{ tool: 'respond', args: { message: 'done', did: [{ op: 'inform' }] } }]], { toolDefs });
 
     const tools = (llm.received[0] as { tools?: Array<Record<string, unknown>> }).tools ?? [];
     const reply = tools.find((t) => (t.name ?? t.toolName) === 'respond');
@@ -197,8 +197,8 @@ describe('premature terminal', () => {
 
   it('discards the same-step reply and re-closes AFTER the tool result exists', async () => {
     const { result } = await runWith(new AgentSpecBase(baseCfg() as never), [
-      [{ tool: 'listItems', args: {} }, { tool: 'respond', args: { message: 'There are no items on record.', did: [] } }],
-      [{ tool: 'respond', args: { message: 'You have 2 items: Alpha and Beta.', did: [] } }],
+      [{ tool: 'listItems', args: {} }, { tool: 'respond', args: { message: 'There are no items on record.', did: [{ op: 'inform' }] } }],
+      [{ tool: 'respond', args: { message: 'You have 2 items: Alpha and Beta.', did: [{ op: 'inform' }] } }],
     ]);
 
     const rec = result.turnRecords[0];
@@ -210,7 +210,7 @@ describe('premature terminal', () => {
   it('leaves a well-formed turn untouched', async () => {
     const { llm, result } = await runWith(new AgentSpecBase(baseCfg() as never), [
       [{ tool: 'listItems', args: {} }],
-      [{ tool: 'respond', args: { message: 'You have 2 items: Alpha and Beta.', did: [] } }],
+      [{ tool: 'respond', args: { message: 'You have 2 items: Alpha and Beta.', did: [{ op: 'inform' }] } }],
     ]);
 
     const rec = result.turnRecords[0];

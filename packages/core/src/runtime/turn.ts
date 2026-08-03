@@ -438,7 +438,7 @@ export async function finalizeReply(
 ): Promise<FinalizedReply> {
   // Mutators touch the MESSAGE only; seat the declaration first so their ctx (and the checks') read it.
   ledger.did = initial.did;
-  ledger.asked = initial.asked;
+  ledger.asked = hasAskIntent(initial.did);
   let payload: RespondPayload = { ...initial, message: applyMutators(spec, ledger, world, initial.message) };
 
   let violations = await checkPayload(spec, ledger, world, payload);
@@ -452,14 +452,14 @@ export async function finalizeReply(
     // Adopt the re-generated payload whole; keep the previous message only if the redrive returned none
     // (a degenerate empty re-generation must not blank the reply — mirrors the old `if (next) text = next`).
     const message = next.message.trim() ? applyMutators(spec, ledger, world, next.message) : payload.message;
-    payload = { message, did: next.did, asked: next.asked };
+    payload = { message, did: next.did };
     violations = await checkPayload(spec, ledger, world, payload);
   }
 
   const finalViolations = violations.map((v) => v.guard.kind);
   if (finalViolations.length) {
     // Salvage-before-canned-closure (measured on the eight-second-limit / zero-quota cells): when the turn
-    // DID produce a verified terminal — the FULL payload (message + did + asked) of a SUCCESSFUL `respond`
+    // DID produce a verified terminal — the FULL payload (message + did) of a SUCCESSFUL `respond`
     // this turn — and that whole payload re-passes every onReply check (the claims guards INCLUDED, so a
     // fabricated `did` is never salvaged), surface it instead of the generic closure. Purity holds: the
     // salvage is a verified observation (ok call args), re-validated by the same deterministic checks.
@@ -476,13 +476,13 @@ export async function finalizeReply(
         if (candViolations.length === 0) {
           ledger.turnCorrections.push('exhaustion-salvage');
           ledger.did = candidate.did;
-          ledger.asked = candidate.asked;
+          ledger.asked = hasAskIntent(candidate.did);
           return withBlankFloor(candidateText, candidate.did, finalViolations, true, ledger, contract?.writeTools ?? [], contract);
         }
         if (candViolations.every((v) => isFormViolation(v.guard))) {
           ledger.turnCorrections.push(`salvage:form-only:${candViolations.map((v) => v.guard.kind).join(',')}`);
           ledger.did = candidate.did;
-          ledger.asked = candidate.asked;
+          ledger.asked = hasAskIntent(candidate.did);
           return withBlankFloor(candidateText, candidate.did, finalViolations, true, ledger, contract?.writeTools ?? [], contract);
         }
         ledger.turnCorrections.push(`salvage-miss:checks:${candViolations.map((v) => v.guard.kind).join(',')}`);
@@ -519,7 +519,7 @@ export async function finalizeReply(
   // floor still applies here — an empty `message` + empty `did` composes to `''` (schema minLength is
   // advisory only), and a mutator can rewrite an otherwise-fine `message` to `''` after the checks passed.
   ledger.did = payload.did;
-  ledger.asked = payload.asked;
+  ledger.asked = hasAskIntent(payload.did);
   return withBlankFloor(composeDelivery(payload, contract), payload.did, [], false, ledger, contract?.writeTools ?? [], contract);
 }
 

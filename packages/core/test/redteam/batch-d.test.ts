@@ -12,8 +12,8 @@ import { createLedger, recordToolResult } from '../../src/runtime/ledger.js';
 import { evaluatePreTool, finalizeReply } from '../../src/runtime/turn.js';
 import type { RespondPayload } from '../../src/runtime/claims.js';
 
-/** A structured respond payload with an empty declaration — these composition-vectors carry prose only. */
-const P = (message: string): RespondPayload => ({ message, did: [], asked: false });
+/** A structured respond payload with a bare speech intention — these composition-vectors carry prose only. */
+const P = (message: string): RespondPayload => ({ message, did: [{ op: 'inform' }] });
 
 const persona = 'You are the test agent.';
 const CONTRACT: DomainContract = { voice: 'v', stateBlock: () => '', coreInvariants: ['x'], languageClause: 'lang' };

@@ -142,7 +142,7 @@ describe('pendingConfirmMustAsk — resolution-aware + STRUCTURAL relay (no-rege
   const pendingProbe: ObservedCall = {
     name: 'deleteItem', args: { itemId: 'x1' }, ok: true, turnIndex: 0, resultFlags: { requiresConfirmation: true },
   };
-  const ask: ObservedCall = { name: 'respond', args: { message: 'Are you sure you want to delete x1?', asked: true, did: [] }, ok: true, turnIndex: 0 };
+  const ask: ObservedCall = { name: 'respond', args: { message: 'Are you sure you want to delete x1?', did: [{ op: 'ask' }] }, ok: true, turnIndex: 0 };
   const ctx = (reply: string, observed: ObservedCall[]): GuardCtx => ({
     args: {}, world: fixtureWorld(), observed, turnIndex: 0, reply, producedThisTurn: [], userText: '', history: [],
   });
@@ -194,11 +194,11 @@ describe('confirmFirst — either (arg) + ask (flag-less) via', () => {
       expect(guard.check(ctx({ turnIndex: 2, observed: [] }))).not.toBeNull();
     });
     it('allows the act after a prior-turn ask', () => {
-      const ask: ObservedCall = { name: 'respond', args: { asked: true, did: [] }, ok: true, turnIndex: 0 };
+      const ask: ObservedCall = { name: 'respond', args: { did: [{ op: 'ask' }] }, ok: true, turnIndex: 0 };
       expect(guard.check(ctx({ turnIndex: 1, observed: [ask] }))).toBeNull();
     });
     it('denies when the only ask is THIS turn (composes with noActAfterAskSameTurn)', () => {
-      const ask: ObservedCall = { name: 'respond', args: { asked: true, did: [] }, ok: true, turnIndex: 1 };
+      const ask: ObservedCall = { name: 'respond', args: { did: [{ op: 'ask' }] }, ok: true, turnIndex: 1 };
       expect(guard.check(ctx({ turnIndex: 1, observed: [ask] }))).not.toBeNull();
     });
   });

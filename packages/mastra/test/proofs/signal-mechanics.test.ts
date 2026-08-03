@@ -43,7 +43,7 @@ describe('signal mechanics (proof-authoring conventions)', () => {
       preset: 'empty',
       turns: [turn('set it up')],
       script: [
-        [{ tool: 'respond', args: { message: 'All set.', did: [] } }],
+        [{ tool: 'respond', args: { message: 'All set.', did: [{ op: 'inform' }] } }],
         [{ text: 'Done — it is all set.' }], // redrive step: free text → falls back to this text
       ],
       expect: 'redrive',
@@ -68,7 +68,7 @@ describe('signal mechanics (proof-authoring conventions)', () => {
       turns: [turn('check the status')],
       script: [
         [{ tool: 'reportStatus', args: {} }],
-        [{ tool: 'respond', args: { message: 'The status was checked.', did: [] } }],
+        [{ tool: 'respond', args: { message: 'The status was checked.', did: [{ op: 'inform' }] } }],
         [{ text: 'The status was checked — the count does not match the expected zero.' }],
       ],
       expect: 'redrive',
@@ -98,7 +98,7 @@ describe('signal mechanics (proof-authoring conventions)', () => {
     const res = await runProofLoop(spec, {
       preset: 'empty', // hasPrimary() false → refusal
       turns: [turn('create something')],
-      script: [[{ tool: 'respond', args: { message: 'never reached', did: [] } }]],
+      script: [[{ tool: 'respond', args: { message: 'never reached', did: [{ op: 'inform' }] } }]],
       expect: 'refusal',
     });
     const rec = res.turnRecords[0];
@@ -124,8 +124,8 @@ describe('signal mechanics (proof-authoring conventions)', () => {
       preset: 'empty',
       turns: [turn('anything')],
       script: [
-        [{ tool: 'respond', args: { message: '', did: [] } }], // empty → terminalReply unset
-        [{ tool: 'respond', args: { message: 'It is ready.', did: [] } }], // forced-terminal retry
+        [{ tool: 'respond', args: { message: '', did: [{ op: 'inform' }] } }], // empty → terminalReply unset
+        [{ tool: 'respond', args: { message: 'It is ready.', did: [{ op: 'inform' }] } }], // forced-terminal retry
       ],
       expect: 'pass',
     });

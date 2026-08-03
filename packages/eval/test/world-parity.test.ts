@@ -116,7 +116,7 @@ describe('increment 3a acceptance — declarative toy world ≡ hand ToyWorld', 
       label: 'terminal + unknown tool',
       preset: 'default',
       calls: [
-        ['respond', { message: 'hi', did: [] }],
+        ['respond', { message: 'hi', did: [{ op: 'inform' }] }],
         ['mysteryTool', { x: 1 }],
       ],
     },

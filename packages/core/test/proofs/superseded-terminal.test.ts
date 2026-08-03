@@ -26,13 +26,13 @@ describe('supersededTerminalCalls', () => {
 
   it('returns the terminal that lost the delivery contest, with its args', () => {
     const out = supersededTerminalCalls([
-      step(['respond', { message: 'Delete record r_1?', did: [], asked: true }], ['respond', { message: 'Have a nice day.', did: [] }]),
+      step(['respond', { message: 'Delete record r_1?', did: [{ op: 'ask' }] }], ['respond', { message: 'Have a nice day.', did: [] }]),
     ]);
     // Both are `respond` now — the loser is identified by its message, not its name.
     expect(out.map((o) => o.name)).toEqual(['respond']);
     // The args ride along so the caller can match the exact ledger entry to prune.
     expect(out[0]?.args.message).toBe('Delete record r_1?');
-    expect(out[0]?.args.asked).toBe(true);
+    expect(out[0]?.args.did).toEqual([{ op: 'ask' }]);
   });
 
   it('never lets a whitespace-only terminal win delivery', () => {
@@ -46,7 +46,7 @@ describe('supersededTerminalCalls', () => {
     const out = supersededTerminalCalls([
       {
         toolCalls: [
-          { type: 'tool-call', payload: { toolName: 'respond', args: { message: 'Delete record r_1?', did: [], asked: true } } },
+          { type: 'tool-call', payload: { toolName: 'respond', args: { message: 'Delete record r_1?', did: [{ op: 'ask' }] } } },
           { type: 'tool-call', payload: { toolName: 'respond', args: { message: 'Have a nice day.', did: [] } } },
         ],
       },
@@ -56,7 +56,7 @@ describe('supersededTerminalCalls', () => {
 
   it('stays distinct from the premature-terminal gate', () => {
     // Two terminals, no domain work: superseded fires, premature does NOT.
-    const twoTerminals = [step(['respond', { message: 'q?', did: [], asked: true }], ['respond', { message: 'a', did: [] }])];
+    const twoTerminals = [step(['respond', { message: 'q?', did: [{ op: 'ask' }] }], ['respond', { message: 'a', did: [] }])];
     expect(prematureTerminalTools(twoTerminals)).toEqual([]);
     expect(supersededTerminalCalls(twoTerminals).map((o) => o.args.message)).toEqual(['q?']);
 
