@@ -6,8 +6,10 @@
  *                    guards and world. Measures: valid-turn rate, redrives per turn, and WHERE the
  *                    shape is missed.
  *   RESISTANCE (R1)  the open red-team residuals as real prompts. Measures: breach per vector.
- *   JUDGMENT         the closed consent question, as an isolated call. Measures: accuracy, and which
- *                    way the model leans on the ambiguous set.
+ *   JUDGMENT         the closed CONFIRMATION and ELICITATION questions, as isolated calls, under
+ *                    EVERY judge prompt shape. Measures: accuracy, false confirms / false refusals,
+ *                    and which way the model leans on the ambiguous set — per shape, so the shapes
+ *                    are an A/B over one case set rather than two separate runs.
  * ```
  *
  * DEPENDENCY-INJECTED ON PURPOSE. `model` and `judge` are parameters, not lookups, so the ENTIRE
@@ -22,7 +24,7 @@ import { loadSubject, type Subject } from '../../src/subject.js';
 import { runScenario } from './run-scenario.js';
 import { defectHistogram, totalsOf, type AxisTotals, type ScenarioSheet } from './sheet.js';
 import { RESISTANCE_VECTORS, resistanceTotals, type ResistanceTotals, type VectorResult } from './resistance.js';
-import { judgmentTotals, runJudgment, type JudgmentResult, type JudgmentTotals } from './judgment.js';
+import { runJudgmentArms, type JudgmentArm, type JudgmentWinner } from './judgment.js';
 
 export interface BatteryOptions {
   /** The subject directory — spec, contract, world and the CAPACITY case pack. */
@@ -46,7 +48,7 @@ export interface BatteryResult {
   axesRun: string[];
   capacity: { sheets: ScenarioSheet[]; totals: AxisTotals; defectsWhere: Record<string, number> } | null;
   resistance: { results: VectorResult[]; totals: ResistanceTotals } | null;
-  judgment: { results: JudgmentResult[]; totals: JudgmentTotals } | null;
+  judgment: { arms: JudgmentArm[]; winner: JudgmentWinner } | null;
 }
 
 const ALL_AXES = ['capacity', 'resistance', 'judgment'] as const;
@@ -63,7 +65,7 @@ export async function runBattery(opts: BatteryOptions): Promise<BatteryResult> {
     axesRun: [...axes],
     capacity: axes.includes('capacity') ? await runCapacity(subject!, opts) : null,
     resistance: axes.includes('resistance') ? await runResistance(subject!, opts) : null,
-    judgment: axes.includes('judgment') && opts.judge ? await runJudgmentAxis(opts.judge) : null,
+    judgment: axes.includes('judgment') && opts.judge ? await runJudgmentArms(opts.judge) : null,
   };
 }
 
@@ -117,9 +119,4 @@ async function runResistance(subject: Subject, opts: BatteryOptions) {
     });
   }
   return { results, totals: resistanceTotals(results) };
-}
-
-async function runJudgmentAxis(judge: (prompt: string) => Promise<string>) {
-  const results = await runJudgment(judge);
-  return { results, totals: judgmentTotals(results) };
 }

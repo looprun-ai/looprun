@@ -110,23 +110,38 @@ function resistanceSection(r: BatteryResult): string[] {
 
 function judgmentSection(r: BatteryResult): string[] {
   if (!r.judgment) return ['## JUDGMENT', '', 'Not run (no `judge` call supplied).'];
-  const t = r.judgment.totals;
+  const { arms, winner } = r.judgment;
+  const head = arms.map((a) => a.shape);
+  const row = (label: string, cell: (a: (typeof arms)[number]) => string) => `| ${label} | ${arms.map(cell).join(' | ')} |`;
+  const ids = (list: readonly string[]) => (list.length ? `**${list.length}** — ${list.join(', ')}` : '0');
   return [
-    '## JUDGMENT — the closed consent question',
+    '## JUDGMENT — the closed questions, one case set, every prompt shape',
     '',
-    '| metric | value |',
-    '|---|---|',
-    `| accuracy (decidable cases) | **${pct(t.accuracy)}** (${t.correct}/${t.scored}) |`,
-    `| accuracy pt | ${pct(t.byLanguage.pt.accuracy)} (${t.byLanguage.pt.correct}/${t.byLanguage.pt.scored}) |`,
-    `| accuracy en | ${pct(t.byLanguage.en.accuracy)} (${t.byLanguage.en.correct}/${t.byLanguage.en.scored}) |`,
-    `| unparseable answers | ${t.unparseable} |`,
-    `| FALSE CONFIRMS (said yes, truth no) | **${t.falseConfirms.length}**${t.falseConfirms.length ? ` — ${t.falseConfirms.join(', ')}` : ''} |`,
-    `| false refusals (said no, truth yes) | ${t.falseRefusals.length}${t.falseRefusals.length ? ` — ${t.falseRefusals.join(', ')}` : ''} |`,
-    `| ambiguous cases | ${t.ambiguous.cases} → yes ${t.ambiguous.yes} · no ${t.ambiguous.no} · unparseable ${t.ambiguous.unparseable} |`,
-    `| safe-side rate on ambiguous | ${pct(t.ambiguous.safeSideRate)} |`,
+    `Winner: **${winner.shape}** — ${winner.reason}.`,
     '',
-    '| case | reply | expected | answered |',
-    '|---|---|---|---|',
-    ...r.judgment.results.map((c) => `| ${c.id} | ${c.reply.replace(/\|/g, '\\|')} | ${c.expect} | ${c.verdict} |`),
+    `| metric | ${head.join(' | ')} |`,
+    `|---|${head.map(() => '---').join('|')}|`,
+    row('accuracy (decidable cases)', (a) => `**${pct(a.totals.accuracy)}** (${a.totals.correct}/${a.totals.scored})`),
+    row('FALSE CONFIRMS (affirmed, truth denies)', (a) => ids(a.totals.falseConfirms)),
+    row('false refusals (denied, truth affirms)', (a) => ids(a.totals.falseRefusals)),
+    row('wrong values (affirmed the wrong value)', (a) => ids(a.totals.wrongValues)),
+    row('accuracy · confirmation', (a) => `${pct(a.totals.byFamily.confirmation.accuracy)} (${a.totals.byFamily.confirmation.correct}/${a.totals.byFamily.confirmation.scored})`),
+    row('accuracy · elicitation', (a) => `${pct(a.totals.byFamily.elicitation.accuracy)} (${a.totals.byFamily.elicitation.correct}/${a.totals.byFamily.elicitation.scored})`),
+    row('accuracy pt', (a) => `${pct(a.totals.byLanguage.pt.accuracy)} (${a.totals.byLanguage.pt.correct}/${a.totals.byLanguage.pt.scored})`),
+    row('accuracy en', (a) => `${pct(a.totals.byLanguage.en.accuracy)} (${a.totals.byLanguage.en.correct}/${a.totals.byLanguage.en.scored})`),
+    row('unparseable answers', (a) => String(a.totals.unparseable)),
+    row('ambiguous lean', (a) => `${a.totals.ambiguous.cases} → affirmed ${a.totals.ambiguous.affirmed} · denied ${a.totals.ambiguous.denied} · unparseable ${a.totals.ambiguous.unparseable}`),
+    row('safe-side rate on ambiguous', (a) => pct(a.totals.ambiguous.safeSideRate)),
+    '',
+    '### Case by case',
+    '',
+    `| case | family | reply | expected | ${head.join(' | ')} |`,
+    `|---|---|---|---|${head.map(() => '---').join('|')}|`,
+    ...(arms[0]?.results ?? []).map((c, i) => {
+      const answered = arms.map((a) => esc(a.results[i]?.verdict ?? '—')).join(' | ');
+      return `| ${c.id} | ${c.family} | ${esc(c.reply)} | ${esc(c.expect)} | ${answered} |`;
+    }),
   ];
 }
+
+const esc = (s: string) => s.replace(/\|/g, '\\|');
