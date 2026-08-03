@@ -18,6 +18,9 @@ eval-results/**/*.verdicts.jsonl
 governance/.artifacts/*
 !governance/.artifacts/.gitkeep
 
+# eval battery output (a baseline artefact the operator keeps where they want it)
+packages/eval/.battery/
+
 # logs
 *.log
 
