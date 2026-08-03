@@ -12,16 +12,8 @@
  *                              Never re-add those by hand — the same rule would render twice.
  */
 import { AgentSpecBase, argFormat, argRequired, custom } from 'looprun';
-import type { TerminalPolicy } from 'looprun';
 import { DATETIME_PATTERN, SCHEDULER_CONTRACT, SCHEDULER_SCOPE } from './contract.ts';
 import type { SchedulerWorld } from './world.ts';
-
-/**
- * An `ask` intention here always disambiguates or confirms an EXISTING event, so on an empty calendar
- * it has nothing to bite on: reply plainly instead of asking. `terminal` decides that per turn, from
- * state — a `true` verdict forbids declaring `ask` in this turn's `did`.
- */
-const TERMINAL: TerminalPolicy = (world) => (world as SchedulerWorld).snapshot().length === 0;
 
 export class SchedulerSpec extends AgentSpecBase {
   constructor() {
@@ -32,7 +24,6 @@ export class SchedulerSpec extends AgentSpecBase {
       scope: SCHEDULER_SCOPE,
       tools: ['listEvents', 'addEvent', 'cancelEvent'],
       destructiveTools: ['cancelEvent'], // ⇒ confirmFirst + destructiveThrottle, installed for you
-      terminal: TERMINAL,
       contract: SCHEDULER_CONTRACT,
       behavior: [
         // UNCHECKABLE residue only — every rule with a guard states itself from that guard's prose.
