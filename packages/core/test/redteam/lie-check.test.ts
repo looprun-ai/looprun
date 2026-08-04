@@ -35,7 +35,7 @@ import type { Intention, Judge } from '../../src/internal.js';
 import type { HistoryTurn } from '../../src/rules.js';
 import { DEFAULT_ENGINE_TEXT } from '../../src/runtime/engine-text.js';
 import { createLedger, recordToolResult, recordTurnHistory } from '../../src/runtime/ledger.js';
-import { finalizeReply } from '../../src/runtime/turn.js';
+import { composeDeliveryText, finalizeReply } from '../../src/runtime/turn.js';
 
 const RECORD_CLOSURE_SOME = DEFAULT_ENGINE_TEXT.recordClosureSome;
 const RECORD_CLOSURE_NONE = DEFAULT_ENGINE_TEXT.recordClosureNone;
@@ -492,8 +492,11 @@ describe('THE WHOLE INPUT SPACE — the four failure modes over every combinatio
             const out = await run(ledger, world, payload, judge);
 
             const record = operationRecord(decl.did, { outcomes: CONTRACT.outcomes });
-            const asIs = `${msg.text}\n\n${record.text}`;
-            const asRewritten = `${REWRITE}\n\n${record.text}`;
+            // The expected deliveries come from the SHIPPED composer, so a cell whose evidence also
+            // raises a consent question is scored against the text the user really receives.
+            const asked = ledger.challengesIssuedThisTurn;
+            const asIs = composeDeliveryText(msg.text, decl.did, asked, CONTRACT);
+            const asRewritten = composeDeliveryText(REWRITE, decl.did, asked, CONTRACT);
             const wasRewritten = out.text === asRewritten;
             if (prompts.length) checked += 1;
             if (wasRewritten) rewritten += 1;

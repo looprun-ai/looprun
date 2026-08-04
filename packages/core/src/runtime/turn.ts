@@ -33,6 +33,8 @@ import {
   type Intention,
 } from './claims.js';
 import { runLieCheck, type Judge } from './lie-check.js';
+import { resolveEngineText } from './engine-text.js';
+import type { Challenge } from './challenge.js';
 
 export interface ReplyViolation {
   guard: Guard;
@@ -272,20 +274,40 @@ const EXHAUSTION_PARTIAL = 'I could not safely finish the rest — how would you
 const EXHAUSTION_NOTHING = 'I could not complete this safely — nothing was changed. Could you rephrase or add detail?';
 
 /**
- * Compose the DELIVERED text from a verified payload: the `message` followed by the engine-rendered
- * OPERATION RECORD of the (already ledger-grounded) `did`. The record's wording comes from the domain's
- * `renderClaim`/`outcomes` seam when present, else the engine default. This is the ONE place the
- * operational sentences enter the delivered text — from structure the agent does not control, never from
- * its free prose.
+ * The DELIVERED text: the agent's `message`, then the CONSENT QUESTIONS this turn raised, then the
+ * engine-rendered OPERATION RECORD of the (already ledger-grounded) `did`.
+ *
+ * ```
+ *   Your booking BK-1 carries an 80.00 fee.     ← the agent's prose
+ *
+ *   To confirm BK-1, reply: CONFIRM BK-1        ← the engine's question
+ *
+ *   No operation was carried out on this turn.  ← the engine's account
+ * ```
+ *
+ * The two engine blocks are the parts the agent does not write: the question it must not be able to
+ * reframe, and the account of what changed it must not be able to soften. This is the ONE place either
+ * enters the delivered text.
  *
  * EVERY delivery carries the record, with no exception and no configuration. A turn that declared only
- * speech carries the empty-case closure `No operation was carried out on this turn.` — the sentence that
- * denies whatever operation the prose beside it may have claimed. There is no branch here that can omit
- * it: a delivery with no record is a claim with nothing standing against it.
+ * speech carries the empty-case closure — the sentence that denies whatever operation the prose beside
+ * it may have claimed. There is no branch here that can omit it: a delivery with no record is a claim
+ * with nothing standing against it.
  */
-function composeDelivery(payload: RespondPayload, contract?: DomainContract): string {
-  const report = renderOperationReport(payload.did, { renderClaim: contract?.renderClaim, outcomes: contract?.outcomes });
-  return payload.message.trim() ? `${payload.message}\n\n${report}` : report;
+export function composeDeliveryText(
+  message: string,
+  did: Intention[],
+  challenges: readonly Challenge[],
+  contract?: Pick<DomainContract, 'renderClaim' | 'outcomes' | 'engineText'>,
+): string {
+  const text = resolveEngineText(contract?.engineText);
+  const report = renderOperationReport(did, { renderClaim: contract?.renderClaim, outcomes: contract?.outcomes, text });
+  const asked = challenges.map((c) => text.challenge(c.meaning, c.token)).join('\n');
+  return [message.trim(), asked, report].filter((s) => s.trim()).join('\n\n');
+}
+
+function composeDelivery(payload: RespondPayload, ledger: TurnLedger, contract?: DomainContract): string {
+  return composeDeliveryText(payload.message, payload.did, ledger.challengesIssuedThisTurn, contract);
 }
 
 /**
@@ -308,7 +330,7 @@ function deriveExhaustionClosure(
 ): { report: string; sentence: string; text: string; did: Intention[] } {
   const fromLedger = deriveClaimsFromLedger(ledger.observed, ledger.turnIndex, writeTools);
   const did: Intention[] = fromLedger.length ? fromLedger : [{ op: 'inform' }];
-  const report = renderOperationReport(did, { renderClaim: contract?.renderClaim, outcomes: contract?.outcomes });
+  const report = renderOperationReport(did, { renderClaim: contract?.renderClaim, outcomes: contract?.outcomes, text: resolveEngineText(contract?.engineText) });
   const landed = did.some((c) => c.outcome === 'success');
   const sentence = landed ? EXHAUSTION_PARTIAL : EXHAUSTION_NOTHING;
   return { report, sentence, text: closureText(report, sentence), did };
@@ -341,13 +363,14 @@ function withBlankFloor(
   contract: DomainContract | undefined,
 ): FinalizedReply {
   const did = payload.did;
-  // BLANK means the user would receive NOTHING THEY CAN READ AS AN ANSWER: no prose AND no operation
-  // line. The record's closure sentence is always there, so the composed text is never literally empty —
-  // it is the record ALONE that this floor is about, and a record with a line still tells the user what
-  // changed. Prose gone AND nothing changed is the case with nothing to deliver.
-  const record = operationRecord(did, { renderClaim: contract?.renderClaim, outcomes: contract?.outcomes });
-  if (!isBlankDelivery(payload.message) || record.hasOperations) {
-    return { text: composeDelivery(payload, contract), exhausted: exhaustedIfNotBlank, violations, did };
+  // BLANK means the user would receive NOTHING THEY CAN READ AS AN ANSWER: no prose, no operation line
+  // AND no question. The record's closure sentence is always there, so the composed text is never
+  // literally empty — it is the record ALONE that this floor is about, and a record with a line still
+  // tells the user what changed, exactly as a consent question still tells them what they are being
+  // asked. Prose gone AND nothing changed AND nothing asked is the case with nothing to deliver.
+  const record = operationRecord(did, { renderClaim: contract?.renderClaim, outcomes: contract?.outcomes, text: resolveEngineText(contract?.engineText) });
+  if (!isBlankDelivery(payload.message) || record.hasOperations || ledger.challengesIssuedThisTurn.length) {
+    return { text: composeDelivery(payload, ledger, contract), exhausted: exhaustedIfNotBlank, violations, did };
   }
   ledger.turnCorrections.push('exhaustion-blank-floor');
   const derived = deriveExhaustionClosure(ledger, writeTools, contract);
@@ -546,8 +569,8 @@ export async function finalizeReply(
     );
     if (lastRespond) {
       const candidate = respondPayload(lastRespond.args as Record<string, unknown>);
-      const candidateText = composeDelivery(candidate, contract);
-      if (candidateText.trim() === composeDelivery(payload, contract).trim()) {
+      const candidateText = composeDelivery(candidate, ledger, contract);
+      if (candidateText.trim() === composeDelivery(payload, ledger, contract).trim()) {
         ledger.turnCorrections.push('salvage-miss:same-text');
       } else {
         const candViolations = await checkPayload(spec, ledger, world, candidate);
