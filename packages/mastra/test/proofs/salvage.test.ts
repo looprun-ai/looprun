@@ -16,6 +16,7 @@ import { FIXTURE_DOMAIN, FIXTURE_TOOL_DEFS, FIXTURE_TOOL_NAMES, FixtureWorld } f
 import { fakeLLM } from '../../src/testing/fake-llm.js';
 import type { ScriptStep } from '../../src/testing/fake-llm.js';
 import { runSpecConversation } from '../../src/run-conversation.js';
+import { nothingDone } from '../delivery.js';
 
 /** A behavior-dim `custom` TRUTH guard arms the check the (a) case needs. Under the no-regex law, text
  *  judgment is a `custom`/`llmCheck` job, and a behavior-dim guard is TRUTH by construction (never
@@ -89,7 +90,7 @@ describe('best-attempt finalization', () => {
     expect(rec?.recoveryEvents).not.toContain('exhaustion-terminal');
     expect(rec?.recoveryEvents).toContain('salvage:form-only:degenerationGuard');
     // The VERIFIED terminal arg wins over the redrive draft.
-    expect(rec?.assistantFinalText).toBe(CANDIDATE);
+    expect(rec?.assistantFinalText).toBe(nothingDone(CANDIDATE));
   });
 
   it('falls back to the closure when the turn produced no candidate', async () => {

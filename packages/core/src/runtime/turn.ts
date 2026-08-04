@@ -9,9 +9,12 @@
  * mutators (message only) → onReply checks (over the payload — claims guards read did, degeneration reads
  * message) → bounded NO-TOOLS redrive (the backend re-generates a whole respond payload) → salvage → a
  * deterministic exhaustion closure the engine DERIVES from the world ledger. The delivered text is
- * COMPOSED: `message` alone when `did` is empty, else `message` + the engine-rendered operation report of
- * the verified `did` — so the operational sentences the user reads come from ledger-grounded structure,
- * never the agent's free prose. The redrive is a re-generation with the correction appended — NEVER a
+ * COMPOSED: `message` + the engine-rendered OPERATION RECORD of the verified `did`, on every turn —
+ * so the operational sentences the user reads come from ledger-grounded structure, never the agent's
+ * free prose, and a claim the prose makes always arrives beside the engine's own account of what
+ * changed. On a turn where nothing was carried out, that account is also what gates the LIE CHECK: one
+ * closed question to the backend's `judge`, and a rewrite of the prose when it answers yes.
+ * The redrive is a re-generation with the correction appended — NEVER a
  * framework retry that re-runs the whole generation (that re-executes side-effecting tools; ~100× slower).
  */
 import { resolveGuards, resolveMutators } from '../spec.js';
@@ -23,11 +26,13 @@ import { isTerminal } from './terminal.js';
 import {
   deriveClaimsFromLedger,
   isBlankDelivery,
+  operationRecord,
   renderOperationReport,
   respondPayload,
   type RespondPayload,
   type Intention,
 } from './claims.js';
+import { runLieCheck, type Judge } from './lie-check.js';
 
 export interface ReplyViolation {
   guard: Guard;
@@ -267,16 +272,19 @@ const EXHAUSTION_PARTIAL = 'I could not safely finish the rest — how would you
 const EXHAUSTION_NOTHING = 'I could not complete this safely — nothing was changed. Could you rephrase or add detail?';
 
 /**
- * Compose the DELIVERED text from a verified payload: the `message` alone when `did` is empty, else the
- * `message` followed by the engine-rendered operation report of the (already ledger-grounded) `did`. The
- * report's wording comes from the domain's `renderClaim`/`outcomes` seam when present, else the engine
- * default. This is the ONE place the operational sentences enter the delivered text — from structure the
- * agent does not control, never from its free prose.
+ * Compose the DELIVERED text from a verified payload: the `message` followed by the engine-rendered
+ * OPERATION RECORD of the (already ledger-grounded) `did`. The record's wording comes from the domain's
+ * `renderClaim`/`outcomes` seam when present, else the engine default. This is the ONE place the
+ * operational sentences enter the delivered text — from structure the agent does not control, never from
+ * its free prose.
+ *
+ * EVERY delivery carries the record, with no exception and no configuration. A turn that declared only
+ * speech carries the empty-case closure `No operation was carried out on this turn.` — the sentence that
+ * denies whatever operation the prose beside it may have claimed. There is no branch here that can omit
+ * it: a delivery with no record is a claim with nothing standing against it.
  */
 function composeDelivery(payload: RespondPayload, contract?: DomainContract): string {
-  if (!payload.did.length) return payload.message;
   const report = renderOperationReport(payload.did, { renderClaim: contract?.renderClaim, outcomes: contract?.outcomes });
-  if (!report.trim()) return payload.message;
   return payload.message.trim() ? `${payload.message}\n\n${report}` : report;
 }
 
@@ -325,19 +333,53 @@ function closureText(report: string, sentence: string): string {
  * clean path is `false`, salvage is `true`).
  */
 function withBlankFloor(
-  text: string,
-  did: Intention[],
+  payload: RespondPayload,
   violations: string[],
   exhaustedIfNotBlank: boolean,
   ledger: TurnLedger,
   writeTools: readonly string[],
   contract: DomainContract | undefined,
 ): FinalizedReply {
-  if (!isBlankDelivery(text)) return { text, exhausted: exhaustedIfNotBlank, violations, did };
+  const did = payload.did;
+  // BLANK means the user would receive NOTHING THEY CAN READ AS AN ANSWER: no prose AND no operation
+  // line. The record's closure sentence is always there, so the composed text is never literally empty —
+  // it is the record ALONE that this floor is about, and a record with a line still tells the user what
+  // changed. Prose gone AND nothing changed is the case with nothing to deliver.
+  const record = operationRecord(did, { renderClaim: contract?.renderClaim, outcomes: contract?.outcomes });
+  if (!isBlankDelivery(payload.message) || record.hasOperations) {
+    return { text: composeDelivery(payload, contract), exhausted: exhaustedIfNotBlank, violations, did };
+  }
   ledger.turnCorrections.push('exhaustion-blank-floor');
   const derived = deriveExhaustionClosure(ledger, writeTools, contract);
   ledger.did = derived.did;
   return { text: derived.text, exhausted: true, violations, did: derived.did };
+}
+
+/**
+ * THE LIE CHECK, applied to a payload that is about to be delivered — the ONE place agent prose is
+ * checked for a claim the turn cannot back. It runs on the paths that deliver the AGENT's own sentence
+ * (the clean path and both salvages) and on no other: the exhaustion closure's prose is engine-derived
+ * or domain-authored, so there is no agent claim in it to check.
+ *
+ * Only the `message` can change. `did` is untouched, so nothing here needs re-grounding, and the record
+ * composed beneath the prose is the same record the check was shown.
+ */
+async function withLieCheck(
+  payload: RespondPayload,
+  ledger: TurnLedger,
+  contract: DomainContract | undefined,
+  judge: Judge | undefined,
+): Promise<RespondPayload> {
+  const outcome = await runLieCheck(
+    { message: payload.message, did: payload.did, history: ledger.history, userText: ledger.currentUserText },
+    judge,
+    { renderClaim: contract?.renderClaim, outcomes: contract?.outcomes },
+  );
+  // A check that found nothing is the nominal path and is recorded nowhere: `turnCorrections` is the
+  // log of what the engine had to CORRECT, and a clean turn corrected nothing. Only a fired check —
+  // and the rewrite it produced — is an event.
+  if (outcome.fired) ledger.turnCorrections.push(outcome.rewritten ? 'lie-check:rewritten' : 'lie-check:fired');
+  return outcome.rewritten ? { ...payload, message: outcome.message } : payload;
 }
 
 /**
@@ -460,6 +502,7 @@ export async function finalizeReply(
   initial: RespondPayload,
   redrive: (message: string) => Promise<RespondPayload>,
   maxRedrives: number,
+  judge?: Judge,
 ): Promise<FinalizedReply> {
   // Mutators touch the MESSAGE only; seat the declaration first so their ctx (and the checks') read it.
   ledger.did = initial.did;
@@ -511,12 +554,14 @@ export async function finalizeReply(
         if (candViolations.length === 0) {
           ledger.turnCorrections.push('exhaustion-salvage');
           ledger.did = candidate.did;
-          return withBlankFloor(candidateText, candidate.did, finalViolations, true, ledger, contract?.writeTools ?? [], contract);
+          const checked = await withLieCheck(candidate, ledger, contract, judge);
+          return withBlankFloor(checked, finalViolations, true, ledger, contract?.writeTools ?? [], contract);
         }
         if (candViolations.every((v) => isFormViolation(v.guard))) {
           ledger.turnCorrections.push(`salvage:form-only:${candViolations.map((v) => v.guard.kind).join(',')}`);
           ledger.did = candidate.did;
-          return withBlankFloor(candidateText, candidate.did, finalViolations, true, ledger, contract?.writeTools ?? [], contract);
+          const checked = await withLieCheck(candidate, ledger, contract, judge);
+          return withBlankFloor(checked, finalViolations, true, ledger, contract?.writeTools ?? [], contract);
         }
         ledger.turnCorrections.push(`salvage-miss:checks:${candViolations.map((v) => v.guard.kind).join(',')}`);
       }
@@ -557,7 +602,8 @@ export async function finalizeReply(
   // floor still applies here — a zero-width `message` + empty `did` composes to a blank the schema
   // `minLength` accepts, and a mutator can rewrite an otherwise-fine `message` to `''` after the checks.
   ledger.did = payload.did;
-  return withBlankFloor(composeDelivery(payload, contract), payload.did, [], false, ledger, contract?.writeTools ?? [], contract);
+  const checked = await withLieCheck(payload, ledger, contract, judge);
+  return withBlankFloor(checked, [], false, ledger, contract?.writeTools ?? [], contract);
 }
 
 // ── flowChain completion (controls.chains) ────────────────────────────────────────────────────────

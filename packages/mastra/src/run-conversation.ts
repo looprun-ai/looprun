@@ -43,6 +43,7 @@ import type { TokenUsage, RespondPayload } from '@looprun-ai/core/internal';
 import type { AgentSpec, AgentWorld, ToolDef, DomainContract, TurnInput, TurnRecord, RunResult, Adjudicator } from '@looprun-ai/core';
 import { buildWorldTools } from './tools.js';
 import { makeGuardHooks, makeInputProcessors, repeatedToolCallStop } from './hooks.js';
+import { judgeOptions, judgeText } from './judge.js';
 import type { LoopRunSession } from './session.js';
 
 export const DEFAULT_MAX_STEPS = 16;
@@ -274,6 +275,10 @@ export async function runSpecConversation(spec: AgentSpec, turns: TurnInput[], d
           return args ? respondPayload(args) : { message: typeof re.text === 'string' ? re.text : '', did: [] };
         },
         redrives,
+        // The lie check and the rewrite it gates, on the same model the turn ran on and with nothing
+        // of the turn attached to it (see judge.ts).
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        async (prompt: string) => judgeText(await (agent.generate as any)(prompt, judgeOptions(genParams))),
       );
       const answerText = finalized.text;
       // History reconciliation: persist the reply the user ACTUALLY received when the pipeline

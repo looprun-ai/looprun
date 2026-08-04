@@ -21,7 +21,7 @@ import { AgentSpecBase, custom, didMessageConsistency } from '../../src/index.js
 import type { AgentWorld, DomainContract } from '../../src/index.js';
 import type { Adjudicator, GuardCtx, ObservedCall } from '../../src/rules.js';
 import { claimIsComplete, claimIsGrounded } from '../../src/guards/honesty.js';
-import { respondPayload, terminalPayloadRejection, validateClaims, type Intention } from '../../src/runtime/claims.js';
+import { RECORD_CLOSURE_NONE, respondPayload, terminalPayloadRejection, validateClaims, type Intention } from '../../src/runtime/claims.js';
 import { beginTurn, createLedger, recordTerminal, recordToolResult, type TurnLedger } from '../../src/runtime/ledger.js';
 import { finalizeReply } from '../../src/runtime/turn.js';
 
@@ -268,7 +268,7 @@ describe('VECTOR 4 — malformed intention collapses did to the empty state [CLO
     const out = await finalizeReply(spec, contract, world, ledger, initial, async () => initial, 1);
     expect(out.exhausted).toBe(false);
     expect(out.violations).toEqual([]);
-    expect(out.text).toBe('Anything else?');
+    expect(out.text).toBe('Anything else?\n\nNo operation was carried out on this turn.');
   });
 });
 
@@ -355,22 +355,47 @@ describe('VECTOR 6 — prose lie + honest ACTION did [RESIDUAL: contradiction is
 });
 
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
-// VECTOR 7 — the prose lie beside a SPEECH-only did (the residual's SHARP EDGE)
+// VECTOR 7 — the prose lie beside a SPEECH-only did  ***CLOSED***
 //
-// RESIDUAL, worst case: a speech intention renders NO operation line. On a turn with no effected write, nothing forces an action intention, so the lie is
-// delivered ALONE: no report, no contradiction, no deterministic signal at all. This is the exact
-// boundary the optional `didMessageConsistency` llmCheck exists to price — and the reason VECTOR 8
-// (its default fail-open) matters.
+// MECHANISM the vector aims at: a speech intention renders no operation LINE, so a turn with no
+// effected write has no line to contradict the prose with.
+//
+// WHY IT IS CLOSED: the record does not consist of lines alone. It always closes with a sentence, and
+// the sentence for an empty list asserts the absence outright — so the delivery carries the denial
+// even when it carries no line:
+//
+//   message   All set — I refunded order ORD-1 and 500.00 is back on your card.
+//   record    No operation was carried out on this turn.
+//
+// The claim is not PREVENTED — that is not deterministic. The CONTRADICTION is: it is composed from
+// the verified `did` and arrives with every delivery.
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
-describe('VECTOR 7 — prose lie + speech-only did on a read-only turn [RESIDUAL: no counter-evidence]', () => {
-  it('RESIDUAL: the operational lie is the ENTIRE delivery — no report accompanies it', async () => {
+describe('VECTOR 7 — prose lie + speech-only did on a read-only turn [CLOSED]', () => {
+  it('CLOSED: the empty-case closure denies the claim the prose makes', async () => {
     const contract = contractOf({ writeTools: ['refundOrder'] });
     const spec = specOf(contract, ['refundOrder', 'getOrder']);
     const { ledger, world } = turn();
     const initial = { message: LIE, did: [{ op: 'greet' }] };
     const out = await finalizeReply(spec, contract, world, ledger, initial, async () => initial, 1);
-    expect(out.violations).toEqual([]);
-    expect(out.text).toBe(LIE); // nothing added, nothing contradicted
+    expect(out.violations).toEqual([]); // deterministically silent — the claim is not prevented
+    expect(out.text).toBe(`${LIE}\n\n${RECORD_CLOSURE_NONE}`);
+  });
+
+  // The record is composed from STRUCTURE, so the prose cannot move it. Three deliveries that say
+  // opposite things about the world carry byte-identical records.
+  it('CLOSED: the record is identical whatever the prose claims', async () => {
+    const contract = contractOf({ writeTools: ['refundOrder'] });
+    const spec = specOf(contract, ['refundOrder', 'getOrder']);
+    const records = await Promise.all(
+      [LIE, 'I have not refunded anything.', 'Good morning! How can I help?'].map(async (message) => {
+        const { ledger, world } = turn();
+        const initial = { message, did: [{ op: 'greet' }] };
+        const out = await finalizeReply(spec, contract, world, ledger, initial, async () => initial, 1);
+        return out.text.slice(message.length);
+      }),
+    );
+    expect(new Set(records).size).toBe(1);
+    expect(records[0]).toBe(`\n\n${RECORD_CLOSURE_NONE}`);
   });
 });
 
@@ -412,8 +437,8 @@ describe('VECTOR 8 — didMessageConsistency fail mode [CLOSED]', () => {
   });
 
   // AVAILABILITY COST, pinned: an author who prefers the model's prose to the guarantee opts into
-  // `failMode:'open'` EXPLICITLY — the lie then ships (the documented residual, V7), but the non-run is
-  // recorded, so a silent deletion of the backstop is distinguishable from an approval.
+  // `failMode:'open'` EXPLICITLY — the claim then ships, under the record that denies it (V7), and the
+  // non-run is recorded, so a silent deletion of the backstop is distinguishable from an approval.
   it('CONTROL: the explicit `open` opt-in still delivers — and still records the non-run', async () => {
     const contract = contractOf({ writeTools: ['refundOrder'] });
     const spec = specOf(contract, ['refundOrder']);
@@ -423,7 +448,7 @@ describe('VECTOR 8 — didMessageConsistency fail mode [CLOSED]', () => {
     const world = worldWith([]);
     const initial = { message: LIE, did: [{ op: 'greet' }] };
     const out = await finalizeReply(spec, contract, world, ledger, initial, async () => initial, 1);
-    expect(out.text).toBe(LIE);
+    expect(out.text).toBe(`${LIE}\n\n${RECORD_CLOSURE_NONE}`);
     expect(ledger.turnCorrections).toContain('llmcheck-unreachable:open');
   });
 

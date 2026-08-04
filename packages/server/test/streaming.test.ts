@@ -2,6 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { createOpenAiHandler } from '../src/handler.js';
 import { HAPPY_SCRIPT, makeAgent } from './helpers.js';
+import { nothingDone } from './delivery.js';
 
 function parseSse(raw: string): { chunks: Array<Record<string, any>>; done: boolean; comments: number } {
   const chunks: Array<Record<string, any>> = [];
@@ -34,7 +35,7 @@ describe('stream: true', () => {
     expect(chunks.length).toBe(3);
     expect(chunks[0]!.object).toBe('chat.completion.chunk');
     expect(chunks[0]!.choices[0].delta.role).toBe('assistant');
-    expect(chunks[1]!.choices[0].delta.content).toBe('Found alpha.');
+    expect(chunks[1]!.choices[0].delta.content).toBe(nothingDone('Found alpha.'));
     expect(chunks[2]!.choices[0].finish_reason).toBe('stop');
     expect(chunks[2]!.usage.total_tokens).toBeGreaterThan(0);
     expect(chunks[2]!.looprun.sessionId).toMatch(/^fp-/);

@@ -17,6 +17,7 @@ import { FIXTURE_DOMAIN, FIXTURE_TOOL_DEFS, FIXTURE_TOOL_NAMES, FixtureWorld } f
 import { fakeLLM } from '../../src/testing/fake-llm.js';
 import type { ScriptStep } from '../../src/testing/fake-llm.js';
 import { runSpecConversation } from '../../src/run-conversation.js';
+import { closureOverNothing, nothingDone } from '../delivery.js';
 
 const baseCfg = () => ({
   id: 'terminal-audit',
@@ -81,7 +82,7 @@ describe('exhaustion evidence', () => {
       { contract },
     );
 
-    expect(result.turnRecords[0]?.assistantFinalText).toBe('host closure');
+    expect(result.turnRecords[0]?.assistantFinalText).toBe(closureOverNothing('host closure'));
     expect(seen[0]).toContain('listItems');
     // A terminal is the runtime's own delivery mechanism, never DOMAIN work handed to the closure.
     expect(seen[0]).not.toContain('respond');
@@ -255,7 +256,7 @@ describe('an empty did never delivers', () => {
   it('CONTROL — the same turn with one intention delivers the model’s own message', async () => {
     const { llm, result } = await runWith(new AgentSpecBase(baseCfg() as never), emptyDidScript([{ op: 'inform' }]));
 
-    expect(result.turnRecords[0]!.assistantFinalText).toBe('All done!');
+    expect(result.turnRecords[0]!.assistantFinalText).toBe(nothingDone('All done!'));
     expect(result.turnRecords[0]!.recoveryEvents).toEqual([]);
     expect(llm.calls()).toBe(1);
   });
@@ -307,7 +308,7 @@ describe('premature terminal', () => {
     ]);
 
     const rec = result.turnRecords[0];
-    expect(rec?.assistantFinalText).toBe('You have 2 items: Alpha and Beta.');
+    expect(rec?.assistantFinalText).toBe(nothingDone('You have 2 items: Alpha and Beta.'));
     expect(rec?.recoveryEvents).toContain('premature-terminal:listItems');
     expect(rec?.recoveryEvents).toContain('forced-terminal');
   });
@@ -319,7 +320,7 @@ describe('premature terminal', () => {
     ]);
 
     const rec = result.turnRecords[0];
-    expect(rec?.assistantFinalText).toBe('You have 2 items: Alpha and Beta.');
+    expect(rec?.assistantFinalText).toBe(nothingDone('You have 2 items: Alpha and Beta.'));
     expect((rec?.recoveryEvents ?? []).join(',')).not.toContain('premature-terminal');
     expect(rec?.recoveryEvents).not.toContain('forced-terminal');
     // Zero repair round: exactly the two scripted steps.

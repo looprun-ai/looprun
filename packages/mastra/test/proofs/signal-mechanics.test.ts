@@ -18,6 +18,7 @@ import { describe, expect, it } from 'vitest';
 import { custom, resultInvariant } from '@looprun-ai/core';
 import { buildIsolatedSpec, type GuardProof } from '@looprun-ai/core/testing';
 import { runProofLoop } from '../../src/testing/index.js';
+import { nothingDone } from '../delivery.js';
 
 const turn = (userText: string) => ({ userText });
 
@@ -54,7 +55,7 @@ describe('signal mechanics (proof-authoring conventions)', () => {
     expect(res.errorMsg).toBeUndefined();
     const rec = res.turnRecords[0];
     expect(rec.recoveryEvents).toContain('redrive:saysDone');
-    expect(rec.assistantFinalText).toBe('Done — it is all set.');
+    expect(rec.assistantFinalText).toBe(nothingDone('Done — it is all set.'));
   });
 
   it('postTool report: output:<kind>:<tool> tag + joins the redrive set (cleared by one text step)', async () => {
@@ -134,6 +135,6 @@ describe('signal mechanics (proof-authoring conventions)', () => {
     });
     const rec = res.turnRecords[0];
     expect(rec.recoveryEvents).toContain('forced-terminal');
-    expect(rec.assistantFinalText).toBe('It is ready.');
+    expect(rec.assistantFinalText).toBe(nothingDone('It is ready.'));
   });
 });

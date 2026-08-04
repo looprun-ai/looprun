@@ -4,6 +4,7 @@ import type { ScriptStep } from '@looprun-ai/mastra/testing';
 import { createModelServer } from '../src/index.js';
 import type { ModelServer, TurnEvent } from '../src/index.js';
 import { HAPPY_SCRIPT, makeAgent } from './helpers.js';
+import { nothingDone } from './delivery.js';
 
 let server: ModelServer | undefined;
 afterEach(async () => {
@@ -42,7 +43,7 @@ describe('POST /v1/chat/completions — governed turn behind the facade', () => 
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.object).toBe('chat.completion');
-    expect(body.choices[0].message).toEqual({ role: 'assistant', content: 'Found alpha.' });
+    expect(body.choices[0].message).toEqual({ role: 'assistant', content: nothingDone('Found alpha.') });
     expect(body.choices[0].finish_reason).toBe('stop');
     expect(body.usage.total_tokens).toBeGreaterThan(0);
     expect(body.looprun.sessionId).toMatch(/^fp-/);
@@ -58,7 +59,7 @@ describe('POST /v1/chat/completions — governed turn behind the facade', () => 
     ]);
     const res = await post(url, { model: 'fixture-agent', messages: [{ role: 'user', content: 'update i1' }] });
     const body = await res.json();
-    expect(body.choices[0].message.content).toBe('Updated i1.');
+    expect(body.choices[0].message.content).toBe(nothingDone('Updated i1.'));
     expect(body.looprun.corrections).toContain('spatial:requiresBefore:updateItem');
 
     // The vetoed call never reached the world: the first world-visible updateItem comes AFTER searchItem.

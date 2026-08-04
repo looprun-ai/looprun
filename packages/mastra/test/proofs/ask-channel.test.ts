@@ -15,6 +15,7 @@ import { FIXTURE_DOMAIN, FIXTURE_TOOL_DEFS, FIXTURE_TOOL_NAMES, FixtureWorld } f
 import { fakeLLM } from '../../src/testing/fake-llm.js';
 import type { ScriptStep } from '../../src/testing/fake-llm.js';
 import { runSpecConversation } from '../../src/run-conversation.js';
+import { nothingDone } from '../delivery.js';
 
 /** A subject-shaped world: dispatches only its domain tools, answers UNKNOWN_TOOL otherwise — including
  *  for the runtime `respond` terminal, which the protocol must NEVER route here. */
@@ -59,7 +60,7 @@ describe('ask channel survives a preTool deny', () => {
 
     const rec = result.turnRecords[0];
     // (3) the turn ends with the question delivered to the user.
-    expect(rec?.assistantFinalText).toBe('Which plan do you want?');
+    expect(rec?.assistantFinalText).toBe(nothingDone('Which plan do you want?'));
     // The model NEVER sees UNKNOWN_TOOL for a terminal.
     expect(JSON.stringify(llm.received)).not.toContain('UNKNOWN_TOOL');
     // The deny happened (the gate is real) — and no repair machinery had to fire.
@@ -83,7 +84,7 @@ describe('ask channel survives a preTool deny', () => {
     ]);
 
     const rec = result.turnRecords[0];
-    expect(rec?.assistantFinalText).toBe('Which plan do you want?');
+    expect(rec?.assistantFinalText).toBe(nothingDone('Which plan do you want?'));
     expect(rec?.recoveryEvents).toContain('forced-terminal');
     // The invalidated premature respond is also pruned from `observed`, so the question the
     // user never received cannot license consent in this turn or any later one.
@@ -101,7 +102,7 @@ describe('ask channel survives a preTool deny', () => {
     ]);
 
     const rec = result.turnRecords[0];
-    expect(rec?.assistantFinalText).toBe('I could not create it.');
+    expect(rec?.assistantFinalText).toBe(nothingDone('I could not create it.'));
     expect(JSON.stringify(llm.received)).not.toContain('UNKNOWN_TOOL');
     expect(rec?.recoveryEvents).not.toContain('forced-terminal');
     expect(llm.calls()).toBe(2);

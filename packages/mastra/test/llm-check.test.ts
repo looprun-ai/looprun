@@ -9,6 +9,7 @@ import { AgentSpecBase, custom, llmCheck } from '@looprun-ai/core';
 import type { AgentWorld, DomainContract, Adjudicator } from '@looprun-ai/core';
 import { runSpecConversation } from '../src/index.js';
 import { scriptedModel } from './scripted-model.js';
+import { nothingDone } from './delivery.js';
 
 const CONTRACT: DomainContract = {
   voice: 'You are the assistant of Fixture Bookings.',
@@ -95,7 +96,7 @@ describe('llmCheck — case 35: two acts, one yes (structure alone cannot close 
     });
     expect(res.errorMsg).toBeUndefined();
     expect(res.turnRecords[0].recoveryEvents).not.toContain('redrive:llmCheck');
-    expect(res.turnRecords[0].assistantFinalText).toBe('Your 3pm booking is cancelled.');
+    expect(res.turnRecords[0].assistantFinalText).toBe(nothingDone('Your 3pm booking is cancelled.'));
   });
 
   it('the SECOND act is licensed when an earlier turn authorised it → no redrive', async () => {
@@ -143,7 +144,7 @@ describe('llmCheck — a HUNG adjudicator resolves via failMode through the real
     });
     expect(res.errorMsg).toBeUndefined();
     expect(res.turnRecords[0].recoveryEvents).not.toContain('redrive:llmCheck');
-    expect(res.turnRecords[0].assistantFinalText).toBe('the answer');
+    expect(res.turnRecords[0].assistantFinalText).toBe(nothingDone('the answer'));
   });
 });
 
@@ -168,6 +169,6 @@ describe('llmCheck — async coexistence with a sync onReply guard', () => {
     // BOTH guards fired on the first draft → both relayed through the same bounded redrive.
     expect(res.turnRecords[0].recoveryEvents).toContain('redrive:llmCheck');
     expect(res.turnRecords[0].recoveryEvents).toContain('redrive:syncBad');
-    expect(res.turnRecords[0].assistantFinalText).toBe('this is fine now');
+    expect(res.turnRecords[0].assistantFinalText).toBe(nothingDone('this is fine now'));
   });
 });

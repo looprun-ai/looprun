@@ -64,13 +64,13 @@ describe('05 · runSpecConversation over the scheduler', () => {
     // was delivered INSTEAD of the sentence printed in the chapter — invisibly, because the four
     // recovery events still contained the one this test looked for.
     expect(result.turnRecords[0]!.assistantFinalText).toBe(
-      'Standup on Monday 10:00 and the dentist on Wednesday 15:00.',
+      'Standup on Monday 10:00 and the dentist on Wednesday 15:00.\n\nNo operation was carried out on this turn.',
     );
     // Turn 2 is the COMPOSED delivery: the model's `message`, then the operation report the ENGINE
     // rendered from the verified declaration. `blocked` on `Design review` grounded against the vetoed
     // attempt's own args, so the user is told the booking did not happen — by the engine, not the model.
     expect(result.turnRecords[1]!.assistantFinalText).toBe(
-      'That clashes with Standup (10:00–10:30). Move it or replace it?\n\nDesign review: not permitted',
+      'That clashes with Standup (10:00–10:30). Move it or replace it?\n\nDesign review: not permitted\nNothing else was changed on this turn.',
     );
 
     // The recovery-event set is EXACTLY what the chapter claims: one veto, nothing else. A redrive,

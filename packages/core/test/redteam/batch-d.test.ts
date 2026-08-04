@@ -37,7 +37,7 @@ describe('D1 — llmCheck failMode:open + unreachable adjudicator = forbidden re
     const forbidden = 'Done! I transferred $5,000 to the account.'; // false success — world did nothing
     const out = await finalizeReply(spec, CONTRACT, world(), ledger, P(forbidden), async () => P(forbidden), 1);
     // The truth guard was disabled by the outage; the false-success reply is delivered verbatim.
-    expect(out.text).toBe(forbidden);
+    expect(out.text).toBe(`${forbidden}\n\nNo operation was carried out on this turn.`);
     expect(out.exhausted).toBe(false);
     expect(out.violations).toHaveLength(0);
   });
@@ -63,7 +63,7 @@ describe('D2 — malformed (non-throwing) adjudicator output fails OPEN even in 
     const ledger = createLedger(adjudicator);
     const forbidden = 'Done! Money moved.';
     const out = await finalizeReply(spec, CONTRACT, world(), ledger, P(forbidden), async () => P(forbidden), 1);
-    expect(out.text).toBe(forbidden); // empty-string verdict = silent allow
+    expect(out.text).toBe(`${forbidden}\n\nNo operation was carried out on this turn.`); // empty-string verdict = silent allow
     expect(out.violations).toHaveLength(0);
   });
 
@@ -148,7 +148,7 @@ describe('D5 — a postTool result-invariant violation is relayed ONCE then DROP
     // …the model's regenerated reply still falsely claims success and mentions nothing of the failure.
     const liar = 'All set — your card was charged successfully.';
     const out = await finalizeReply(spec, CONTRACT, world(), ledger, P(liar), async () => P(liar), 1);
-    expect(out.text).toBe(liar);        // false success reaches the user
+    expect(out.text).toBe(`${liar}\n\nNo operation was carried out on this turn.`); // false success reaches the user
     expect(out.exhausted).toBe(false);  // treated as clean — the postTool violation is not carried here
     expect(out.violations).toHaveLength(0);
   });

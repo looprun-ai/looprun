@@ -50,6 +50,7 @@ import {
 } from '@looprun-ai/core/internal';
 import type { RespondPayload } from '@looprun-ai/core/internal';
 import { resolveConstruction } from './agent-construction.js';
+import { judgeOptions, judgeText } from './judge.js';
 import { SessionStore } from './session.js';
 import type { LoopRunSession, WorldFactory } from './session.js';
 import { makeGuardHooks, makeInputProcessors, repeatedToolCallStop } from './hooks.js';
@@ -429,6 +430,11 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
         return args ? respondPayload(args) : { message: typeof re.text === 'string' ? re.text : '', did: [] };
       },
       this.redrivesResolved,
+      // The lie check and the rewrite it gates, on the same model the turn ran on and with nothing of
+      // the turn attached to it (see judge.ts).
+      async (prompt: string) =>
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        judgeText(await (Agent.prototype.generate as any).call(this, prompt, judgeOptions(this.modelParams))),
     );
 
     // History reconciliation: when the pipeline changed the outgoing text (mutator / redrive /

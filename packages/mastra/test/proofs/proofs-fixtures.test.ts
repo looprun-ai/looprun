@@ -16,6 +16,7 @@ import {
   FIXTURE_DOMAIN,
 } from '@looprun-ai/core/testing';
 import { fakeLLM, runProofLoop } from '../../src/testing/index.js';
+import { nothingDone } from '../delivery.js';
 
 const trivialSpec = () =>
   new AgentSpecBase({ id: 'smoke', mode: 'PROOF', persona: 'You are the proof agent.', tools: [...FIXTURE_TOOL_NAMES], contract: FIXTURE_DOMAIN });
@@ -90,7 +91,7 @@ describe('runProofLoop — full loop', () => {
     });
     expect(res.errorMsg).toBeUndefined();
     expect(res.turnRecords).toHaveLength(1);
-    expect(res.turnRecords[0].assistantFinalText).toBe('Here are your items.');
+    expect(res.turnRecords[0].assistantFinalText).toBe(nothingDone('Here are your items.'));
     expect(res.turnRecords[0].recoveryEvents).toEqual([]);
   });
 

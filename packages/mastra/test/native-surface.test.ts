@@ -7,6 +7,7 @@ import type { DomainContract } from '@looprun-ai/core';
 import { LoopRunAgent } from '../src/index.js';
 import { surfaceFingerprint } from '../src/surface.js';
 import { scriptedModel } from './scripted-model.js';
+import { nothingDone } from './delivery.js';
 
 const CONTRACT: DomainContract = {
   voice: 'You are the assistant of Fixture Search.',
@@ -52,7 +53,7 @@ describe('LoopRunAgent — native-mode surface enforcement', () => {
     expect(errSpy).toHaveBeenCalledTimes(1);
     expect(String(errSpy.mock.calls[0]?.[0])).toContain('rogue');
     const res = await agent.generate('find x');
-    expect(res.text).toBe('Done.');
+    expect(res.text).toBe(nothingDone('Done.'));
     expect(rogueExecuted).toBe(false); // excluded tool never executed
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const active: string[] = (scripted.received[0] as any).tools?.map((t: any) => t.name) ?? [];

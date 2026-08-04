@@ -117,7 +117,7 @@ describe('C1 — redrive message/did desync manufactures a sealed ask the user n
       1,
     );
     // The delivered text IS the question, so sealing the ask is honest.
-    expect(out.text).toBe('Delete account X — are you sure?');
+    expect(out.text).toBe('Delete account X — are you sure?\n\nNo operation was carried out on this turn.');
     expect(hasAskIntent(out.did)).toBe(true);
   });
 });

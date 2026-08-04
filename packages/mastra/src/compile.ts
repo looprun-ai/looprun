@@ -18,7 +18,7 @@ import {
   renderScopedSpecTrunk,
   terminalProtocol,
 } from '@looprun-ai/core/internal';
-import type { FinalizedReply, TurnLedger, RespondPayload } from '@looprun-ai/core/internal';
+import type { FinalizedReply, TurnLedger, RespondPayload, Judge } from '@looprun-ai/core/internal';
 import { buildWorldTools } from './tools.js';
 import { makeGuardHooks, makeInputProcessors } from './hooks.js';
 import type { GuardHooks } from './hooks.js';
@@ -42,7 +42,14 @@ export interface CompiledSpec {
   /** Mutators → onReply checks → bounded redrive (re-generate ONE respond) → honest-abstain. Seals the
    *  turn into the conversation history so a later turn's guards read it via `ctx.history`. The `initial`
    *  and the redrive's return are STRUCTURED respond payloads (message + did). */
-  finalizeReply(initial: RespondPayload, redrive: (message: string) => Promise<RespondPayload>): Promise<FinalizedReply>;
+  /** `judge` carries the lie check and the rewrite it gates: one prompt in, the model's raw text out,
+   *  on the same model the turn ran on and with no persona, tools or history. A host that omits it
+   *  delivers the agent's prose as it stands, under the operation record that contradicts it. */
+  finalizeReply(
+    initial: RespondPayload,
+    redrive: (message: string) => Promise<RespondPayload>,
+    judge?: Judge,
+  ): Promise<FinalizedReply>;
 }
 
 export function compileSpec(
@@ -104,8 +111,8 @@ export function compileSpec(
       if (attLabels.length) tailParts.push(`[Uploads this turn: ${attLabels.join(', ')}]`);
       return { userMessageTail: tailParts.join('\n\n') };
     },
-    async finalizeReply(initial, redrive) {
-      const finalized = await coreFinalizeReply(spec, contract, world, session.ledger, initial, redrive, spec.controls.redrives ?? opts.redrives ?? DEFAULT_REDRIVES);
+    async finalizeReply(initial, redrive, judge) {
+      const finalized = await coreFinalizeReply(spec, contract, world, session.ledger, initial, redrive, spec.controls.redrives ?? opts.redrives ?? DEFAULT_REDRIVES, judge);
       recordTurnHistory(session.ledger, finalized.text, world);
       return finalized;
     },

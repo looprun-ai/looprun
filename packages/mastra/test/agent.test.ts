@@ -5,6 +5,7 @@ import type { AgentWorld, DomainContract } from '@looprun-ai/core';
 import { LoopRunAgent } from '../src/index.js';
 import { scriptedModel } from './scripted-model.js';
 import type { ScriptStep } from './scripted-model.js';
+import { closureOverNothing, nothingDone } from './delivery.js';
 
 const CONTRACT: DomainContract = {
   voice: 'You are the assistant of Fixture Plants.',
@@ -103,7 +104,7 @@ describe('LoopRunAgent — one governed turn', () => {
       world,
     );
     const res = await agent.generate('Water the fern');
-    expect(res.text).toBe('Watered your fern.');
+    expect(res.text).toBe(nothingDone('Watered your fern.'));
     expect(res.looprun.corrections).toContain('spatial:requiresBefore:waterPlant');
     expect(world.watered).toBe(1); // the vetoed call never reached the world
     const session = agent.getSession();
@@ -168,7 +169,7 @@ describe('LoopRunAgent — one governed turn', () => {
     ]);
     const agent = new LoopRunAgent({ spec, world: plantsWorld(), toolDefs: TOOL_DEFS, model: scripted.model });
     const res = await agent.generate('How is my plant?');
-    expect(res.text).toBe('Your fern is thriving.');
+    expect(res.text).toBe(nothingDone('Your fern is thriving.'));
     expect(res.looprun.corrections).toContain('redrive:mentionFern');
     expect(res.looprun.exhausted).toBe(false);
   });
@@ -180,7 +181,7 @@ describe('LoopRunAgent — one governed turn', () => {
       [{ tool: 'respond', args: { message: 'Here is the status.', did: [{ op: 'inform' }] } }], // the forced fallback
     ]);
     const res = await agent.generate('Status?');
-    expect(res.text).toBe('Here is the status.');
+    expect(res.text).toBe(nothingDone('Here is the status.'));
     expect(res.looprun.corrections).toContain('forced-terminal');
   });
 
@@ -200,7 +201,7 @@ describe('LoopRunAgent — one governed turn', () => {
     expect(res.looprun.violations).toContain('proofTruthGate');
     // The contract closure runs over verified DOMAIN work only: a terminal is the runtime's own
     // delivery mechanism, not evidence of anything done for the user.
-    expect(res.text).toBe('closure:listPlants');
+    expect(res.text).toBe(closureOverNothing('closure:listPlants'));
   });
 });
 
@@ -249,7 +250,7 @@ describe('LoopRunAgent — the premature ask leaves no ghost', () => {
     ]);
     const res = await agent.generate('water something');
 
-    expect(res.text).toBe('Your plants are listed.');
+    expect(res.text).toBe(nothingDone('Your plants are listed.'));
     expect(res.looprun.corrections).toContain('premature-terminal:listPlants');
     expect(res.looprun.corrections).toContain('premature-terminal-pruned:respond');
     // THE POINT: the question the user never received is not in the ledger any consent guard reads.
@@ -285,7 +286,7 @@ describe('LoopRunAgent — review regressions', () => {
     const agent = new LoopRunAgent({ spec, tools: { search }, model: scripted.model });
     const res = await agent.generate('find x');
     expect(executed).toBe(true);
-    expect(res.text).toBe('Found it.');
+    expect(res.text).toBe(nothingDone('Found it.'));
   });
 
   it('#2 history holds the reply the user received — never a rejected draft', async () => {
@@ -352,7 +353,7 @@ describe('LoopRunAgent — review regressions', () => {
       { terminalProtocol: false },
     );
     const res = await agent.generate('hi');
-    expect(res.text).toBe('Hello from the tool call.');
+    expect(res.text).toBe(nothingDone('Hello from the tool call.'));
     expect(res.looprun.exhausted).toBe(false);
   });
 });

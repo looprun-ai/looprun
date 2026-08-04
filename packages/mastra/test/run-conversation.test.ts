@@ -5,6 +5,7 @@ import type { AgentWorld, DomainContract } from '@looprun-ai/core';
 import { runSpecConversation } from '../src/index.js';
 import { repeatedToolCallStop } from '../src/hooks.js';
 import { scriptedModel } from './scripted-model.js';
+import { nothingDone } from './delivery.js';
 
 const CONTRACT: DomainContract = {
   voice: 'You are the assistant of Fixture Plants.',
@@ -68,9 +69,9 @@ describe('runSpecConversation', () => {
 
     expect(res.errorMsg).toBeUndefined();
     expect(res.turnRecords).toHaveLength(2);
-    expect(res.turnRecords[0].assistantFinalText).toBe('Delete x — are you sure?');
+    expect(res.turnRecords[0].assistantFinalText).toBe(nothingDone('Delete x — are you sure?'));
     expect(res.turnRecords[0].recoveryEvents).toContain('run:confirmFirst:deleteItem');
-    expect(res.turnRecords[1].assistantFinalText).toBe('Deleted x.');
+    expect(res.turnRecords[1].assistantFinalText).toBe(nothingDone('Deleted x.'));
     expect(res.turnRecords[1].recoveryEvents).toEqual([]); // confirmed:true legal after the earlier-turn probe
     expect(res.turnRecords[1].toolCalls.map((c) => c.name)).toEqual(['deleteItem']);
   });
@@ -118,7 +119,7 @@ describe('runSpecConversation', () => {
     // Turn 1: sees turn 0 sealed into history, plus its own incoming text.
     expect(seen[1].userText).toBe('second question');
     expect(seen[1].historyUserTexts).toEqual(['first question']);
-    expect(seen[1].historyReplies).toEqual(['Here is turn zero.']);
+    expect(seen[1].historyReplies).toEqual([nothingDone('Here is turn zero.')]);
   });
 
   it('a postTool guard (running in afterToolCall) sees ctx.userText + the sealed prior history', async () => {

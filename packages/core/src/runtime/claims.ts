@@ -420,13 +420,56 @@ function defaultClaimLine(claim: Intention, core: CoreOutcome): string {
 }
 
 /**
- * Render the user-facing OPERATION REPORT from a VERIFIED `did` — the operational sentences the user reads
+ * THE CLOSURE, when the record names at least one operation: the lines above it are the WHOLE of what
+ * this turn changed, so every operation they do not name is denied.
+ */
+export const RECORD_CLOSURE_SOME = 'Nothing else was changed on this turn.';
+
+/**
+ * THE CLOSURE, when the record names NONE.
+ *
+ * It is a SECOND sentence, not the same one, because "nothing else was changed" over an empty list
+ * presupposes that something WAS changed — and beside a false claim that presupposition CONFIRMS it:
+ *
+ * ```
+ *   message   "I cancelled the Dentist appointment."
+ *   lines     (none)
+ *   closure   "Nothing else was changed on this turn."
+ *             the reader concludes → so it really was cancelled, and nothing further
+ * ```
+ *
+ * This sentence asserts the absence outright, so there is nothing left to presuppose and the claim above
+ * it stands contradicted.
+ */
+export const RECORD_CLOSURE_NONE = 'No operation was carried out on this turn.';
+
+/**
+ * The turn's OPERATION RECORD — the engine's own account of what this turn did, as the user receives it.
+ * Deterministic: its only inputs are the VERIFIED `did` and the domain's wording seam, so the same turn
+ * renders the same record whatever the prose beside it says.
+ */
+export interface OperationRecord {
+  /** One rendered line per ACTION intention, in declaration order. */
+  lines: string[];
+  /** The record names at least one operation. Also the reply pipeline's CHECK-ELIGIBILITY answer: a turn
+   *  on which no action was carried out is the only turn whose prose is checked for a lie. */
+  hasOperations: boolean;
+  /** The delivered text: the lines, then the closure the line count selects. NEVER empty. */
+  text: string;
+}
+
+/**
+ * Build the user-facing OPERATION RECORD from a VERIFIED `did` — the operational sentences the user reads
  * come from ledger-grounded structure, never from the agent's free prose, so a fabricated claim cannot
  * reach the user. One line per claim; a claim whose outcome does not resolve to a core meaning names no
  * ledger fact and is skipped (it never survives the cross-check guards, so this is defensive only). A
- * domain overrides the wording per-claim via {@link RenderOpts.renderClaim}. Empty `did` ⇒ `''`.
+ * domain overrides the wording per-claim via {@link RenderOpts.renderClaim}.
+ *
+ * The record ALWAYS closes with a sentence, and the two sentences are not interchangeable — see
+ * {@link RECORD_CLOSURE_NONE}. A turn that declared only speech therefore renders the empty-case closure,
+ * never nothing at all: a claim with no record beside it has nothing standing against it.
  */
-export function renderOperationReport(did: Intention[], opts?: RenderOpts): string {
+export function operationRecord(did: Intention[], opts?: RenderOpts): OperationRecord {
   const lines: string[] = [];
   for (const claim of did) {
     // A speech intention carries no outcome (`undefined`) → resolves to null → renders no operation line
@@ -439,7 +482,17 @@ export function renderOperationReport(did: Intention[], opts?: RenderOpts): stri
       : defaultClaimLine(claim, core);
     if (line && line.trim()) lines.push(line.trim());
   }
-  return lines.join('\n');
+  const hasOperations = lines.length > 0;
+  return {
+    lines,
+    hasOperations,
+    text: [...lines, hasOperations ? RECORD_CLOSURE_SOME : RECORD_CLOSURE_NONE].join('\n'),
+  };
+}
+
+/** The {@link OperationRecord}'s delivered TEXT — the shape every caller that only needs the sentences uses. */
+export function renderOperationReport(did: Intention[], opts?: RenderOpts): string {
+  return operationRecord(did, opts).text;
 }
 
 /**

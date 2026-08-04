@@ -46,34 +46,34 @@ describe('renderOperationReport — one neutral English line per verified claim'
       { op: 'look', target: 'ORD-9', outcome: 'not_found' },
       { op: 'cancel', target: 'BK-2', outcome: 'pending_confirmation' },
     ];
-    expect(renderOperationReport(did)).toBe('BK-1: done\nORD-9: no record found\nBK-2: awaiting your confirmation');
+    expect(renderOperationReport(did)).toBe('BK-1: done\nORD-9: no record found\nBK-2: awaiting your confirmation\nNothing else was changed on this turn.');
   });
 
-  it('empty did → empty report', () => {
-    expect(renderOperationReport([])).toBe('');
+  it('empty did → the closure that denies every operation, never nothing at all', () => {
+    expect(renderOperationReport([])).toBe('No operation was carried out on this turn.');
   });
 
   it('a target-less claim renders a GENERIC line — never the advisory op, never a tool name', () => {
     const did: Intention[] = [{ op: 'createBooking', outcome: 'success' }]; // op is a tool-looking token
     const out = renderOperationReport(did);
-    expect(out).toBe('One action completed.');
+    expect(out).toBe('One action completed.\nNothing else was changed on this turn.');
     expect(out).not.toContain('createBooking');
   });
 
   it('resolves a DOMAIN outcome word through the outcomes map', () => {
     const did: Intention[] = [{ op: 'settle', target: 'INV-3', outcome: 'settled' }];
-    expect(renderOperationReport(did, { outcomes: { settled: 'success' } })).toBe('INV-3: done');
+    expect(renderOperationReport(did, { outcomes: { settled: 'success' } })).toBe('INV-3: done\nNothing else was changed on this turn.');
   });
 
   it('a domain renderClaim override supplies the wording (and language)', () => {
     const did: Intention[] = [{ op: 'refund', target: 'ORD-5', outcome: 'success', amount: 50 }];
     const out = renderOperationReport(did, { renderClaim: (c, core) => `${c.target} reembolsado (${core}) €${c.amount}` });
-    expect(out).toBe('ORD-5 reembolsado (success) €50');
+    expect(out).toBe('ORD-5 reembolsado (success) €50\nNothing else was changed on this turn.');
   });
 
   it('skips a claim whose outcome does not resolve (defensive — never fabricates a line)', () => {
     const did: Intention[] = [{ op: 'x', target: 'T', outcome: 'invented' }, { op: 'y', target: 'BK-1', outcome: 'success' }];
-    expect(renderOperationReport(did)).toBe('BK-1: done');
+    expect(renderOperationReport(did)).toBe('BK-1: done\nNothing else was changed on this turn.');
   });
 });
 
@@ -131,7 +131,7 @@ describe('deriveClaimsFromLedger — the engine derives TRUTH from the world led
     recordToolResult(ledger, 'refund', { order: 'ORD-7' }, { label: 'ORD-7', requiresConfirmation: true }, world);
     const derived = deriveClaimsFromLedger(ledger.observed, 0, ['refund']);
     expect(derived).toEqual([{ op: 'ORD-7', target: 'ORD-7', outcome: 'success' }]);
-    expect(renderOperationReport(derived)).toBe('ORD-7: done');
+    expect(renderOperationReport(derived)).toBe('ORD-7: done\nNothing else was changed on this turn.');
   });
 
   // ── the derived claim is always an ACTION claim (final review) ─────────────────────────────────
@@ -182,10 +182,10 @@ describe('finalizeReply — composed delivery over the structured payload', () =
 
   // CONTROL (availability): a SPEECH intention is all an ordinary conversational turn needs — the floor
   // costs a well-behaved agent nothing, and adds no operation line.
-  it('CONTROL: a speech-only did delivers the message alone, unexhausted', async () => {
+  it('CONTROL: a speech-only did delivers the message under the empty-case closure, unexhausted', async () => {
     const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona: 'p', tools: [], contract: BOOKING_CONTRACT });
     const out = await finalizeReply(spec, BOOKING_CONTRACT, fixtureWorld(), createLedger(), P('Hello there.', [{ op: 'greet' }]), async () => P(''), 0);
-    expect(out.text).toBe('Hello there.');
+    expect(out.text).toBe('Hello there.\n\nNo operation was carried out on this turn.');
     expect(out.exhausted).toBe(false);
     expect(out.did).toEqual([{ op: 'greet' }]);
   });
@@ -197,7 +197,7 @@ describe('finalizeReply — composed delivery over the structured payload', () =
     effectWrite(ledger, world, 'createBooking', { slot: 1 }, 'BK-1');
     const did: Intention[] = [{ op: 'book', target: 'BK-1', outcome: 'success' }];
     const out = await finalizeReply(spec, BOOKING_CONTRACT, world, ledger, P('All booked.', did), async () => P(''), 0);
-    expect(out.text).toBe('All booked.\n\nBK-1: done');
+    expect(out.text).toBe('All booked.\n\nBK-1: done\nNothing else was changed on this turn.');
     expect(out.exhausted).toBe(false);
     expect(out.did).toEqual(did);
     // History keeps the VERIFIED set: finalizeReply synced the ledger to what it delivered.
@@ -213,7 +213,7 @@ describe('finalizeReply — composed delivery over the structured payload', () =
     const ledger = createLedger();
     const did: Intention[] = [{ op: 'ask' }];
     const out = await finalizeReply(spec, BOOKING_CONTRACT, fixtureWorld(), ledger, P('Shall I cancel it?', did), async () => P(''), 0);
-    expect(out.text).toBe('Shall I cancel it?'); // a speech intention adds no operation line
+    expect(out.text).toBe('Shall I cancel it?\n\nNo operation was carried out on this turn.'); // a speech intention adds no operation line
     expect(out.did).toEqual([{ op: 'ask' }]);
     expect(ledger.did).toEqual([{ op: 'ask' }]);
   });
@@ -243,7 +243,7 @@ describe('finalizeReply — the claims-derived exhaustion closure never fabricat
     probeWrite(ledger, world, 'createBooking', { slot: 9 }); // ran, changed nothing
     const out = await finalizeReply(spec, BOOKING_CONTRACT, world, ledger, P('Working on it.'), async () => P('Working on it.'), 0);
     expect(out.exhausted).toBe(true);
-    expect(out.text).toBe('I could not complete this safely — nothing was changed. Could you rephrase or add detail?');
+    expect(out.text).toBe('No operation was carried out on this turn.\n\nI could not complete this safely — nothing was changed. Could you rephrase or add detail?');
     expect(out.text).not.toContain('createBooking');
     // Nothing landed → no ACTION claim is derived. The closure is still a delivered turn, so the engine
     // declares it as the speech act it is (no delivered turn carries zero intentions) — an
@@ -269,7 +269,7 @@ describe('finalizeReply — redrive returns a whole payload, re-checked against 
     expect(seen).toHaveLength(1);
     expect(seen[0]).toContain('report every action that takes effect'); // the claimIsComplete correction
     expect(out.exhausted).toBe(false);
-    expect(out.text).toBe('Booked your slot.\n\nBK-1: done');
+    expect(out.text).toBe('Booked your slot.\n\nBK-1: done\nNothing else was changed on this turn.');
     expect(out.did).toEqual([{ op: 'book', target: 'BK-1', outcome: 'success' }]);
   });
 });
@@ -290,7 +290,7 @@ describe('finalizeReply — salvage re-validates the FULL payload, so a fabricat
     );
     expect(out.exhausted).toBe(true);
     expect(out.text).not.toContain('BK-9'); // the fabricated success is NEVER delivered
-    expect(out.text).toBe('I could not complete this safely — nothing was changed. Could you rephrase or add detail?');
+    expect(out.text).toBe('No operation was carried out on this turn.\n\nI could not complete this safely — nothing was changed. Could you rephrase or add detail?');
     expect(ledger.turnCorrections.some((c) => c.startsWith('salvage-miss:checks:claimIsGrounded'))).toBe(true);
   });
 });

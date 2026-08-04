@@ -105,7 +105,7 @@ describe('VECTOR 1 — targetless success claim hides all effected writes [CLOSE
   it('the user-facing report is a single generic line — the refund is invisible', () => {
     const did: Intention[] = [{ op: 'update', outcome: 'success' }];
     const report = renderOperationReport(did);
-    expect(report).toBe('One action completed.'); // ORD-2 / the $500 refund never reach the user
+    expect(report).toBe('One action completed.\nNothing else was changed on this turn.'); // ORD-2 / the $500 refund never reach the user
   });
 
   // THE RULE: `claimIsComplete`'s covered predicate requires `claim.target !== undefined` (plus the
@@ -176,7 +176,7 @@ describe('VECTOR 4 — read label shifts a write target on the derive path [CLOS
     const derived = deriveClaimsFromLedger(ledger.observed, 0, ['refundOrder']);
     // … but the derive path reads each call's OWN label, so the nameless refund stays nameless.
     expect(derived).toEqual([{ op: 'operation', outcome: 'success' }]);
-    expect(renderOperationReport(derived)).toBe('One action completed.'); // generic, never the wrong entity
+    expect(renderOperationReport(derived)).toBe('One action completed.\nNothing else was changed on this turn.'); // generic, never the wrong entity
   });
 
   it('CLOSED isolated: a write with no producedLabel of its own derives no target', () => {
@@ -223,7 +223,7 @@ describe('VECTOR 3 — effected write + confirmation flag mis-bucketed as pendin
     // The refund LANDED, so the engine's own account says so — no "awaiting your confirmation" over a
     // change the world already made.
     expect(derived).toEqual([{ op: 'REFUND-7', target: 'REFUND-7', outcome: 'success' }]);
-    expect(renderOperationReport(derived)).toBe('REFUND-7: done');
+    expect(renderOperationReport(derived)).toBe('REFUND-7: done\nNothing else was changed on this turn.');
   });
 
   it('CONTROL: a write that did NOT take effect and requires confirmation is still pending', () => {

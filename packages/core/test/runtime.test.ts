@@ -13,6 +13,7 @@ import {
   VETO_STORM_LIMIT,
 } from '../src/runtime/ledger.js';
 import { evaluatePreTool, evaluateOnInput, finalizeReply, redriveMessage } from '../src/runtime/turn.js';
+import { RECORD_CLOSURE_NONE } from '../src/runtime/claims.js';
 import type { RespondPayload } from '../src/runtime/claims.js';
 
 /** A structured respond payload with a bare speech intention — the common shape in these composition-free tests. */
@@ -59,9 +60,13 @@ const CONTRACT_NO_OVERRIDE: DomainContract = {
   languageClause: 'lang',
 };
 
-/** The engine's own "nothing landed" exhaustion sentence — {@link EXHAUSTION_NOTHING} is not exported, so
- *  the floor tests below assert this literal (mirrors the same pattern in claims-render.test.ts). */
+/** The engine's own "nothing landed" exhaustion sentence. It is module-private, so the floor tests
+ *  below assert the literal. */
 const EXHAUSTION_NOTHING = 'I could not complete this safely — nothing was changed. Could you rephrase or add detail?';
+
+/** What a closure DELIVERS: the turn's operation record, then the honest sentence. Every finalized
+ *  turn carries the record, so no delivered text is ever the sentence alone. */
+const closure = (sentence: string) => `${RECORD_CLOSURE_NONE}\n\n${sentence}`;
 
 describe('ledger', () => {
   it('resultOk flags structural failures', () => {
@@ -140,7 +145,7 @@ describe('finalizeReply pipeline', () => {
     spec.addMutator(jargonScrub({ Jargon: 'plain words' }), { id: 'agent:scrub' });
     const ledger = createLedger();
     const out = await finalizeReply(spec, CONTRACT, fixtureWorld(), ledger, P('Some Jargon here.'), async () => P(''), 1);
-    expect(out.text).toBe('Some plain words here.');
+    expect(out.text).toBe(`Some plain words here.\n\n${RECORD_CLOSURE_NONE}`);
     expect(out.exhausted).toBe(false);
     expect(ledger.turnCorrections).toContain('mutate:jargonScrub');
   });
@@ -162,7 +167,7 @@ describe('finalizeReply pipeline', () => {
       },
       2,
     );
-    expect(out).toMatchObject({ text: 'The price is $5.', exhausted: false });
+    expect(out).toMatchObject({ text: `The price is $5.\n\n${RECORD_CLOSURE_NONE}`, exhausted: false });
     expect(seen).toHaveLength(1);
     expect(seen[0]).toContain('Mention the price.');
     expect(ledger.turnCorrections).toContain('redrive:replyHasTerm');
@@ -176,7 +181,7 @@ describe('finalizeReply pipeline', () => {
     const out = await finalizeReply(spec, CONTRACT, fixtureWorld(), ledger, P('text'), async () => P('still wrong'), 1);
     expect(out.exhausted).toBe(true);
     expect(out.violations).toContain('replyHasTerm');
-    expect(out.text).toBe('contract-closure:water');
+    expect(out.text).toBe(closure('contract-closure:water'));
     expect(ledger.turnCorrections).toContain('exhaustion-terminal');
   });
 
@@ -190,7 +195,7 @@ describe('finalizeReply pipeline', () => {
     });
     spec.addReplyCheck(mentions('impossible-token-xyz', 'nope'), { id: 'agent:impossible' });
     const out = await finalizeReply(spec, CONTRACT, fixtureWorld(), createLedger(), P('text'), async () => P('still wrong'), 0);
-    expect(out.text).toBe('spec-closure');
+    expect(out.text).toBe(closure('spec-closure'));
   });
 
   it('the forced-terminal fallback guarantees a non-empty delivery', async () => {
@@ -204,7 +209,7 @@ describe('finalizeReply pipeline', () => {
     const out = await finalizeReply(spec, CONTRACT, fixtureWorld(), ledger, P('   '), async () => P('   '), 1);
     expect(out.exhausted).toBe(true);
     expect(out.text.trim().length).toBeGreaterThan(0);
-    expect(out.text).toBe('contract-closure:water');
+    expect(out.text).toBe(closure('contract-closure:water'));
   });
 
   it('blank-delivery FLOOR: message:"" + did:[] on the CLEAN path routes to the non-empty engine-derived closure (the floor is engine-owned, not schema-owned)', async () => {
@@ -217,7 +222,7 @@ describe('finalizeReply pipeline', () => {
     const ledger = createLedger();
     const out = await finalizeReply(spec, CONTRACT_NO_OVERRIDE, fixtureWorld(), ledger, P(''), async () => P(''), 0);
     expect(out.exhausted).toBe(true);
-    expect(out.text).toBe(EXHAUSTION_NOTHING);
+    expect(out.text).toBe(closure(EXHAUSTION_NOTHING));
     // The closure is a DELIVERED turn, so it declares its own speech intention.
     expect(out.did).toEqual([{ op: 'inform' }]);
   });
@@ -229,7 +234,7 @@ describe('finalizeReply pipeline', () => {
     const zeroWidth = P('\u200B\u2060');
     const out = await finalizeReply(spec, CONTRACT_NO_OVERRIDE, fixtureWorld(), ledger, zeroWidth, async () => zeroWidth, 0);
     expect(out.exhausted).toBe(true);
-    expect(out.text).toBe(EXHAUSTION_NOTHING);
+    expect(out.text).toBe(closure(EXHAUSTION_NOTHING));
     // The closure is a DELIVERED turn, so it declares its own speech intention.
     expect(out.did).toEqual([{ op: 'inform' }]);
   });
@@ -240,7 +245,7 @@ describe('finalizeReply pipeline', () => {
     const ledger = createLedger();
     const out = await finalizeReply(spec, CONTRACT_NO_OVERRIDE, fixtureWorld(), ledger, P('a perfectly fine reply'), async () => P('a perfectly fine reply'), 0);
     expect(out.exhausted).toBe(true);
-    expect(out.text).toBe(EXHAUSTION_NOTHING);
+    expect(out.text).toBe(closure(EXHAUSTION_NOTHING));
     // The closure is a DELIVERED turn, so it declares its own speech intention.
     expect(out.did).toEqual([{ op: 'inform' }]);
     expect(ledger.turnCorrections).toContain('mutate:blankOut');

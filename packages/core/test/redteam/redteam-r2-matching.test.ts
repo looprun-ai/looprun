@@ -110,7 +110,7 @@ describe('§1 string-leaf identity — grounding-plus-hiding', () => {
   });
 
   it('HARM: what the user actually reads names no order at all', () => {
-    expect(renderOperationReport(hidingDid)).toBe('refunded: done');
+    expect(renderOperationReport(hidingDid)).toBe('refunded: done\nNothing else was changed on this turn.');
   });
 
   it('CONTROL: the honest claim on the id the world issued grounds AND covers', () => {
@@ -297,7 +297,7 @@ describe('§3 injective coverage and greedy assignment', () => {
       { op: 'refund', target: 'ORD-2', outcome: 'success' },
       { op: 'refund', target: 'ORD-2', outcome: 'success' },
     ];
-    expect(renderOperationReport(did)).toBe('ORD-2: done\nORD-2: done');
+    expect(renderOperationReport(did)).toBe('ORD-2: done\nORD-2: done\nNothing else was changed on this turn.');
   });
 
   // ── 3.2 GREEDY STARVATION (fails OPEN? no — fails CLOSED; recorded as a false-DENY defect) ───────
@@ -420,7 +420,7 @@ describe('§5 no_op grounds on an empty ledger', () => {
 
   it('HARM: the fabricated line reaches the user as a statement about BK-999', () => {
     expect(renderOperationReport([{ op: 'check', target: 'BK-999', outcome: 'no_op' }])).toBe(
-      'BK-999: nothing needed changing',
+      'BK-999: nothing needed changing\nNothing else was changed on this turn.',
     );
   });
 
@@ -474,7 +474,7 @@ describe('§6 emptiness and not_found', () => {
 
   it('HARM: the user is told the record does not exist', () => {
     expect(renderOperationReport([{ op: 'lookup', target: 'BK-1', outcome: 'not_found' }])).toBe(
-      'BK-1: no record found',
+      'BK-1: no record found\nNothing else was changed on this turn.',
     );
   });
 

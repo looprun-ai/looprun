@@ -19,6 +19,7 @@ import { FIXTURE_DOMAIN, FIXTURE_TOOL_DEFS, FIXTURE_TOOL_NAMES, FixtureWorld } f
 import { fakeLLM } from '../src/testing/fake-llm.js';
 import type { ScriptStep } from '../src/testing/fake-llm.js';
 import { LoopRunAgent } from '../src/agent.js';
+import { nothingDone } from './delivery.js';
 
 /** The fixture domain with WRITE tools declared, so the claims cross-check guards install. */
 const CONTRACT: DomainContract = { ...FIXTURE_DOMAIN, writeTools: ['createItem', 'updateItem', 'deleteItem', 'purgeAll'] };
@@ -74,7 +75,7 @@ describe('L1 — the schema-REJECTED respond ghost', () => {
     const res = await agent.generate('delete everything');
     expect(res.looprun.corrections).toContain('terminal-rejected'); // now a GOVERNED refusal, not a silent zod failure
     expect(res.looprun.corrections).toContain('forced-terminal'); // the rejection really happened
-    expect(res.text).toBe('All done.'); // the user never saw a question
+    expect(res.text).toBe(nothingDone('All done.')); // the user never saw a question
 
     const ghosts = agent.getSession().ledger.observed.filter(
       (o) => o.name === 'respond' && o.ok && (o.args.message as string) === '',
@@ -97,7 +98,7 @@ describe('L1 — the schema-REJECTED respond ghost', () => {
     ]);
     const res = await agent.generate('refund my order');
     expect(res.looprun.corrections).toContain('terminal-rejected');
-    expect(res.text).toBe('All done.'); // the unreadable payload never reached the user
+    expect(res.text).toBe(nothingDone('All done.')); // the unreadable payload never reached the user
 
     // Not an observation: a call the runtime refused to execute is not evidence of anything.
     const ghosts = agent.getSession().ledger.observed.filter(

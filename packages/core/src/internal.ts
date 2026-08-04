@@ -74,6 +74,9 @@ export type { TurnLedger } from './runtime/ledger.js';
 // renderer's signature so a declaration:true consumer can name them.
 export {
   renderOperationReport,
+  operationRecord,
+  RECORD_CLOSURE_SOME,
+  RECORD_CLOSURE_NONE,
   deriveClaimsFromLedger,
   respondPayload,
   terminalPayloadRejection,
@@ -87,7 +90,18 @@ export {
   isActionOp,
   SPEECH_OPS,
 } from './runtime/claims.js';
-export type { RespondPayload, RenderOpts, Intention, SpeechOp } from './runtime/claims.js';
+export type { RespondPayload, RenderOpts, Intention, SpeechOp, OperationRecord } from './runtime/claims.js';
+
+// WHAT THE SESSION HAS ALREADY DONE — one line per entity, its latest state. Input to the lie check
+// and the rewriter; never delivered.
+export { sessionRecord, SESSION_HEADING } from './runtime/session-record.js';
+export type { SessionRecord } from './runtime/session-record.js';
+
+// THE LIE CHECK and the rewrite it gates. `Judge` rides finalizeReply's signature, so a
+// `declaration: true` consumer can name the callback it supplies; the prompts and the pass itself are
+// exported so the gated measurement suite exercises the SHIPPED instrument rather than a copy of it.
+export { runLieCheck, isChecked, lieCheckPrompt, rewritePrompt, readLieVerdict, TURN_HEADING } from './runtime/lie-check.js';
+export type { Judge, LieCheckInput, LieCheckOutcome } from './runtime/lie-check.js';
 
 export {
   isTerminal,

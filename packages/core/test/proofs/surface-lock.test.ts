@@ -98,6 +98,17 @@ const INTERNAL = [
   // `respondPayload` (args → structured payload for the redrive/fallback re-generation) and
   // `lastTerminalArgs` (the respond call's args from a result's steps).
   'renderOperationReport', 'deriveClaimsFromLedger', 'RespondPayload', 'RenderOpts', 'respondPayload',
+  // The turn's OPERATION RECORD as an object, and the two closing sentences it selects between. The
+  // record is what the reader holds beside the prose, so its exact wording is part of the seam.
+  'operationRecord', 'OperationRecord', 'RECORD_CLOSURE_SOME', 'RECORD_CLOSURE_NONE',
+  // What the SESSION has already done — one line per entity, its latest state. Input to the lie check
+  // and the rewriter; never delivered.
+  'sessionRecord', 'SessionRecord', 'SESSION_HEADING',
+  // The lie check and the rewrite it gates. `Judge` is the backend-supplied callback that carries both
+  // model calls and rides finalizeReply's signature; the prompts and the pass are on the seam so the
+  // gated measurement suite exercises the shipped instrument rather than a copy of it.
+  'Judge', 'runLieCheck', 'LieCheckInput', 'LieCheckOutcome', 'isChecked',
+  'lieCheckPrompt', 'rewritePrompt', 'readLieVerdict', 'TURN_HEADING',
   // The mandatory-intention partition: the reserved speech-op vocabulary + partition predicates, the
   // `Intention` shape, and the structured ask signal (`hasAskIntent`) the consent guards key onto.
   'SPEECH_OPS', 'SpeechOp', 'Intention', 'isSpeechOp', 'isActionOp', 'hasAskIntent',

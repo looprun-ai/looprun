@@ -7,6 +7,7 @@ import { AgentSpecBase, resultInvariant } from '@looprun-ai/core';
 import type { AgentWorld, DomainContract } from '@looprun-ai/core';
 import { LoopRunAgent } from '../src/index.js';
 import { scriptedModel } from './scripted-model.js';
+import { nothingDone } from './delivery.js';
 
 const CONTRACT: DomainContract = {
   voice: 'You are the assistant of Fixture Co.',
@@ -72,7 +73,7 @@ describe('postTool (OUTPUT-dim) enforcement joins the redrive', () => {
     const res = await agent.generate('save it');
     expect(res.looprun.corrections).toContain('output:resultInvariant:saveConfig');
     expect(res.looprun.corrections).toContain('redrive:resultInvariant');
-    expect(res.text).toBe('The change was not fully applied.');
+    expect(res.text).toBe(nothingDone('The change was not fully applied.'));
   });
 });
 
@@ -94,7 +95,7 @@ describe('flowChain completion (controls.chains)', () => {
     expect(res.looprun.corrections).toContain('chain:logAction');
     expect(res.looprun.corrections).toContain('redrive:chainRestate');
     expect(world.toolCalls.map((c) => c.name)).toContain('logAction'); // executed via world.exec
-    expect(res.text).toBe('Listed the items and logged the audit action.');
+    expect(res.text).toBe(nothingDone('Listed the items and logged the audit action.'));
   });
 
   it('does not fire when the follow-up already ran', async () => {
@@ -113,7 +114,7 @@ describe('flowChain completion (controls.chains)', () => {
     const res = await agent.generate('list and log');
     expect(res.looprun.corrections.filter((c: string) => c.startsWith('chain:'))).toHaveLength(0);
     expect(world.toolCalls.filter((c) => c.name === 'logAction')).toHaveLength(1); // only the model's own
-    expect(res.text).toBe('Listed and logged.');
+    expect(res.text).toBe(nothingDone('Listed and logged.'));
   });
 
   it('records chain-vetoed and never calls the world when a preTool guard denies the forced call', async () => {

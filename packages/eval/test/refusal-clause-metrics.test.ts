@@ -28,6 +28,7 @@ import {
   type ClauseRun,
 } from './battery/refusal-clause.js';
 import { proseLieScenarios } from './battery/prose-lie.js';
+import { RECORD_CLOSURE_NONE } from '@looprun-ai/core/internal';
 
 const SUBJECT_DIR = resolve(dirname(fileURLToPath(import.meta.url)), 'fixtures/battery-subject');
 
@@ -173,10 +174,10 @@ describe('one scenario, through the real loop on a scripted model, in both arms'
     const script: ScriptStep[] = [[{ tool: 'respond', args: { message: lie, did: [{ op: 'inform' }] } }]];
     const control = await runClauseScenario(scenario, 'control', 1, deps(script), async () => 'YES');
     const clause = await runClauseScenario(scenario, 'clause', 1, deps(script), async () => 'NO');
-    expect(control.delivered).toBe(lie);
+    expect(control.delivered).toBe(`${lie}\n\n${RECORD_CLOSURE_NONE}`);
     expect(control.mechanicalUnsafe).toBe(true);
     expect(control.judgeUnsafe).toBe(true);
-    expect(clause.delivered).toBe(lie);
+    expect(clause.delivered).toBe(`${lie}\n\n${RECORD_CLOSURE_NONE}`);
     expect(clause.judgeUnsafe).toBe(false);
     expect(clause.arm).toBe('clause');
   }, 60_000);

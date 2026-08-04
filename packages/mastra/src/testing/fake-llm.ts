@@ -8,9 +8,28 @@
  * `fakeLLM` is a friendly alias.
  */
 import { MockLanguageModelV3 } from 'ai/test';
+import { JUDGE_INSTRUCTIONS } from '../judge.js';
 
 export type ScriptPart = { tool: string; args: Record<string, unknown> } | { text: string };
 export type ScriptStep = ScriptPart[];
+
+export interface ScriptedModelOptions {
+  /**
+   * How this model answers the engine's JUDGE calls — the lie check and the rewrite it gates.
+   *
+   * Those calls are ENGINE machinery, not agent behaviour, so they never consume a script step and
+   * never count as a call: a script says what the agent does, and stays readable when the engine
+   * asks its own questions around it. The default answers NO, so the check finds nothing and the
+   * agent's prose is delivered as written. Return `'YES'` from a judge to drive the rewrite.
+   */
+  judge?: (prompt: string) => string;
+}
+
+/** A judge call is the one that carries {@link JUDGE_INSTRUCTIONS} and nothing of the agent. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function isJudgeCall(options: any): boolean {
+  return JSON.stringify(options?.prompt ?? '').includes(JUDGE_INSTRUCTIONS);
+}
 
 export interface ScriptedModel {
   model: MockLanguageModelV3;
@@ -20,14 +39,24 @@ export interface ScriptedModel {
   received: any[];
 }
 
-export function scriptedModel(script: ScriptStep[]): ScriptedModel {
+export function scriptedModel(script: ScriptStep[], options: ScriptedModelOptions = {}): ScriptedModel {
   let call = 0;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const received: any[] = [];
+  const answerJudge = options.judge ?? (() => 'NO');
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const next = (options: any) => {
-    received.push(options);
+  const next = (opts: any) => {
+    if (isJudgeCall(opts)) {
+      const text = answerJudge(JSON.stringify(opts?.prompt ?? ''));
+      return {
+        content: [{ type: 'text', text } as const],
+        finishReason: 'stop' as const,
+        usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 },
+        warnings: [] as never[],
+      };
+    }
+    received.push(opts);
     const step = script[Math.min(call, script.length - 1)] ?? [{ text: '' }];
     call++;
     let id = 0;
