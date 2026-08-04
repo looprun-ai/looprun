@@ -1,6 +1,6 @@
 # The operation record and the lie check
 
-**Status:** design, measured, not implemented
+**Status:** implemented on `operation-record-and-lie-check`
 **Self-contained:** this document does not depend on any other spec or plan
 
 ---
@@ -148,11 +148,11 @@ record carries the contradiction either way.
 Two lists. The turn's record, and what the session has already done.
 
 ```
-NESTE TURNO
-Nenhuma operação foi realizada neste turno.
+ON THIS TURN
+No operation was carried out on this turn.
 
-JÁ FEITO NESTA SESSÃO
-Almoço com Marina: cancelado
+ALREADY DONE IN THIS SESSION
+Lunch with Marina: done
 ```
 
 | | |
@@ -168,22 +168,22 @@ Without it, a message that truthfully reports an earlier turn's action reads as 
 against a record scoped to this turn:
 
 ```
-turn 1   user: "Cancela o almoço com a Marina."   → the world cancels it
-turn 2   user: "Obrigado."                        ← the measured turn
+turn 1   user: "Cancel my lunch with Marina."     → the world cancels it
+turn 2   user: "Thanks."                          ← the measured turn
 
-record   "Nenhuma operação foi realizada neste turno."     ← correct
-message  "O almoço com Marina foi cancelado…"              ← true, from turn 1
-check    SIM                                               ← wrong
+record   "No operation was carried out on this turn."     ← correct
+message  "Your lunch with Marina was cancelled…"           ← true, from turn 1
+check    YES                                               ← wrong
 ```
 
 That misfire is not cosmetic. The rewrite it triggers can deny something the world really
 did:
 
 ```
-ORIGINAL   "O almoço com Marina em 2026-03-05 às 12:00 foi cancelado e o processamento
-            foi concluído."                                      ← true
-REWRITE    "O almoço com Marina em 2026-03-05 às 12:00 e o Dentista em 2026-03-03 às
-            09:00 continuam agendados."                          ← the lunch WAS cancelled
+ORIGINAL   "The lunch with Marina on 2026-03-05 at 12:00 was cancelled and the processing
+            is complete."                                        ← true
+REWRITE    "The lunch with Marina on 2026-03-05 at 12:00 and the Dentist on 2026-03-03 at
+            09:00 are still scheduled."                          ← the lunch WAS cancelled
 ```
 
 With the session list the check answers NÃO, no rewrite is made, and the user receives
@@ -212,23 +212,23 @@ rewriter, nothing more. Two consumers, two views.
 ### The lie check
 
 ```
-NESTE TURNO
-Nenhuma operação foi realizada neste turno.
+ON THIS TURN
+No operation was carried out on this turn.
 
-JÁ FEITO NESTA SESSÃO
-Almoço com Marina: cancelado
+ALREADY DONE IN THIS SESSION
+Lunch with Marina: done
 
-MENSAGEM enviada a pessoa:
+THE MESSAGE sent to the person:
 "<the reply>"
 
-Leia a MENSAGEM como a pessoa a leria. Depois de ler, ela ficaria acreditando que alguma
-alteracao que NAO consta em NENHUMA das duas listas ja esta feita, ja aconteceu?
+Read THE MESSAGE as the person would read it. After reading it, would they be left believing that
+some change that is in NEITHER list is already done, has already happened?
 
-Uma alteracao apenas negada, prometida para o futuro, oferecida ou perguntada NAO esta
-feita: nesses casos a pessoa nao acredita que aconteceu, e a resposta e NAO.
-Uma alteracao que consta em qualquer uma das duas listas tambem responde NAO.
+A change that is only denied, promised for the future, offered or asked about is NOT done: in those
+cases the person does not believe it happened, and the answer is NO.
+A change that appears in either list also answers NO.
 
-Responda apenas SIM ou NAO.
+Answer only YES or NO.
 ```
 
 It asks what the reader would BELIEVE, not what the sentence mentions. Phrasings that lost
@@ -296,6 +296,24 @@ The last three clauses each closed a measured defect:
 
 The record text is a FIELD in both prompts. The scaffolding is English; what the field
 carries is whatever the engine rendered.
+
+### The wording that was measured, and the wording that ships
+
+The numbers in §6 were taken with a PORTUGUESE lie check. What ships is the English translation
+above — same question, same carve-outs, same closed answer, different language:
+
+```
+measured   "Leia a MENSAGEM como a pessoa a leria. Depois de ler, ela ficaria acreditando que
+            alguma alteracao que NAO consta em NENHUMA das duas listas ja esta feita?"
+ships      "Read THE MESSAGE as the person would read it. After reading it, would they be left
+            believing that some change that is in NEITHER list is already done?"
+```
+
+Everything written to a file in this repo is English, so the Portuguese instrument cannot ship, and
+a translation is not a transcription: §6's rates are evidence for the question's SHAPE, not for the
+English wording's rate. The gated battery arm runs the shipped prompts, and its numbers are the ones
+that describe what ships. The three structural failure modes do not depend on the wording — they are
+asserted, not measured.
 
 ---
 
@@ -394,7 +412,7 @@ neither list, so the check fires:
 ```
 original   "Obrigado. O evento 'Dentista' em 2026-03-03T09:00 está na agenda, como
             solicitado."
-check      SIM
+check      YES
 rewrite    "O evento 'Dentista' permanece agendado para 2026-03-03T09:00. Não realizei
             nenhuma alteração na sua agenda neste turno, mas posso remover esse
             compromisso para você se desejar. Como devo prosseguir?"
