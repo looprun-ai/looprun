@@ -49,6 +49,7 @@ import {
   type Intention,
 } from '../runtime/claims.js';
 import { canonArgs } from './flow.js';
+import { targetMatchesValue } from './matching.js';
 import { domainCallsThisTurn } from './shared.js';
 
 /** The record-field names that describe a call's STATUS rather than the data it returned — ignored when
@@ -217,59 +218,12 @@ function resultOf(ctx: GuardCtx, c: ObservedCall): unknown {
   return undefined;
 }
 
-/** EDGE punctuation — everything that is neither a letter, a digit, nor an INVISIBLE format character.
- *  Format characters (`\p{Cf}`: bidi controls, zero-width marks) are deliberately NOT stripped: stripping
- *  them would let an agent decorate a real id with an invisible control that the renderer then prints
- *  into the user-facing report while the match still succeeds. They fail CLOSED, exactly like a unicode
- *  lookalike dash. */
-const LEADING_PUNCT = /^[^\p{L}\p{N}\p{Cf}]+/u;
-const TRAILING_PUNCT = /[^\p{L}\p{N}\p{Cf}]+$/u;
-
-/** Is this single code point ASCII? */
-function isAscii(ch: string): boolean {
-  return (ch.codePointAt(0) ?? 0) < 128;
-}
-
 /**
- * CASE FOLD that never changes SCRIPT. `String.prototype.toLowerCase` maps some non-ASCII lookalikes
- * ONTO ASCII — KELVIN SIGN U+212A folds to `k` — so under a plain lowercase a target spelled with the
- * lookalike would match the real ASCII id while the renderer printed the lookalike back to the user. A
- * fold that would cross into ASCII keeps the original character instead, so lookalikes fail closed like
- * the unicode dashes, and ordinary case folding (`BK-1` ⇄ `bk-1`, and every non-ASCII letter with its own
- * lowercase in the same script) is untouched.
+ * THE BOUNDARY every grounding, coverage and rubric verdict routes through — whole-value equality, from
+ * the engine's one matching law. Re-exported here because this is the module its consumers import it
+ * from, and because the honesty verdicts below are the reason it is written the way it is.
  */
-function foldCase(v: string): string {
-  let out = '';
-  for (const ch of v) {
-    const lower = ch.toLowerCase();
-    out += lower.length === 1 && isAscii(lower) && !isAscii(ch) ? ch : lower;
-  }
-  return out;
-}
-
-/** The CANONICAL comparison form of one value: trimmed, case-folded, EDGE punctuation stripped — so
- *  `"(BK-1)"`, `"BK-1."` and `"  bk-1  "` all canonicalize to `bk-1`, while `BK-1-EXTRA` does not. */
-function canonValue(v: string): string {
-  return foldCase(v.trim()).replace(LEADING_PUNCT, '').replace(TRAILING_PUNCT, '');
-}
-
-/**
- * THE BOUNDARY — is `target` the WHOLE of `value`? The one boundary predicate every grounding, coverage
- * and rubric verdict routes through.
- *
- * Match ⇔ the canonical forms are EQUAL. Nothing else: no substring, no authored pattern, no token-run
- * scan. A token run would match an id the world named inside its own SENTENCE, and that is precisely
- * what lets one word of an entity stand for the entity (`'12'` grounding and COVERING `Order 12`, and
- * equally `Invoice 12`) and what lets a status word or a note fragment cover a write. Identity is
- * key-scoped, so the values on the other side are ids and labels rather than prose, and whole-value
- * equality is the honest comparison for them. A target that
- * canonicalizes to nothing (punctuation only) matches nothing.
- */
-export function targetMatchesValue(target: string, value: string): boolean {
-  const t = canonValue(target);
-  if (!t) return false;
-  return t === canonValue(value);
-}
+export { targetMatchesValue } from './matching.js';
 
 /** Does `target` match any of these values by {@link targetMatchesValue}? `undefined` ⇒ always. */
 function targetIn(target: string | undefined, values: string[]): boolean {
