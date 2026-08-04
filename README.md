@@ -16,6 +16,17 @@ looprun adds everything that makes it safe to hand the keys to an agent:
 - **The GPS with course-correction** — when the reply violates its checks, a bounded no-tools *redrive*
   corrects it; when correction fails, a **deterministic honest-abstain closure** (a pure function of what
   verifiably happened) goes out instead of a fabrication.
+- **The receipt** — every reply carries the engine's own **operation record**, composed from the agent's
+  verified declaration and the world ledger, never from its prose. A turn that changed nothing says so:
+
+  ```
+  message   Done — I cancelled your dentist appointment on 2026-03-03 at 09:00.
+  record    No operation was carried out on this turn.
+  ```
+
+  The engine does not stop that sentence; it makes sure the reader never gets it alone. On a turn that
+  carried out nothing it also asks one closed question and rewrites the prose when the answer says the
+  reader would be misled.
 - **The map generator** — the **agentspec** skill (private beta, developed in its own repo) interviews you:
   **one mandatory question** — the purpose, in one sentence — and generates the specs, the domain
   contract, the tool world **and the eval set that certifies them**. Writing a spec by hand is a fully

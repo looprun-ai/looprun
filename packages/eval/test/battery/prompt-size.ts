@@ -23,6 +23,7 @@
  */
 import { createHash } from 'node:crypto';
 import { terminalProtocol } from '@looprun-ai/core/internal';
+import { JUDGE_INSTRUCTIONS } from '@looprun-ai/mastra/testing';
 import { lastUserTextOf, systemOf, type RecordedCall } from './recording-model.js';
 
 /** Characters per token, for the per-block estimate only. Stated, never inferred. */
@@ -93,19 +94,24 @@ export interface TrunkStability {
 }
 
 /**
- * Trunk stability over ONE conversation: the system message of EVERY generation — main turns,
- * forced-terminal fallbacks and redrives alike — hashed and compared.
+ * Trunk stability over ONE conversation: the system message of EVERY generation of the AGENT — main
+ * turns, forced-terminal fallbacks and redrives alike — hashed and compared.
  *
  * Sampling every generation matters: a redrive re-renders nothing (it reuses the turn's
  * instructions), so a run whose redrive drifted would be invisible to an endpoint-only sample.
+ *
+ * A JUDGE call is not one of them. It is the engine asking its own closed question, deliberately
+ * carrying no persona and no trunk, so counting its system text here would report a stable trunk as
+ * unstable and hide a real drift behind a known one.
  */
 export function trunkStability(calls: readonly RecordedCall[]): TrunkStability {
   const hashes: string[] = [];
-  for (const call of calls) {
+  const agentCalls = calls.filter((c) => !systemOf(c).includes(JUDGE_INSTRUCTIONS));
+  for (const call of agentCalls) {
     const h = sha256(systemOf(call));
     if (!hashes.includes(h)) hashes.push(h);
   }
-  return { hashes, samples: calls.length, stable: hashes.length <= 1 };
+  return { hashes, samples: agentCalls.length, stable: hashes.length <= 1 };
 }
 
 export function sha256(s: string): string {

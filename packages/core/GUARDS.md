@@ -673,10 +673,10 @@ Populated from `AgentSpecConfig`; wired by the Mastra backend unless noted.
 | `directives` | `StateDirective[]` `{id, cond, directive, when?}` | — | rendered statically into the trunk `## Governance` section as `IF <cond> → <directive>`. Render-only: the `when` runtime predicate is **reserved, not consumed** by the backend. |
 | `chains` | `ChainSpec[]` | — | declared follow-up completions (see below). Absent/empty ⇒ zero added effect. |
 | `sampling` | `{ temperature?, topP?, maxOutputTokens?, seed? }` | — | per-agent AI-SDK call settings, merged OVER the conversation-level `modelParams` (agent wins) by `resolveModelSettings` — a creative agent at temp 0.7 beside a temp-0 admin agent in the same domain. |
-| `exhaustionReply` | `(world, okTools: string[], produced: string[], violations: string[]) => string` | the engine's own closing sentence | the CLOSING SENTENCE committed when the reply STILL violates a check after all redrives — a PURE function of verified observations (structurally unable to fabricate). Precedence: spec → contract → engine. **It supplies the sentence, never the whole closure:** the engine ALWAYS prepends the operation report it derived from the ledger, exactly as the clean path composes `message` + report. |
+| `exhaustionReply` | `(world, okTools: string[], produced: string[], violations: string[]) => string` | the engine's own closing sentence | the CLOSING SENTENCE committed when the reply STILL violates a check after all redrives — a PURE function of verified observations (structurally unable to fabricate). Precedence: spec → contract → engine. **It supplies the sentence, never the whole closure:** the engine ALWAYS prepends the operation record it derived from the ledger, exactly as the clean path composes `message` + record. |
 
 **Why the override composes rather than replaces.** Its signature receives tool names and labels, not
-claims, so it CANNOT re-render the operation report. An override that replaced the whole derived closure
+claims, so it CANNOT re-render the operation record. An override that replaced the whole derived closure
 would therefore deliver a domain sentence with no account beside it: *"I could not complete this safely —
 nothing was changed."* — the natural abstain wording — would go out over a write the ledger had recorded,
 while `ledger.did` held the derived truth, and history and the user would disagree. The report is
