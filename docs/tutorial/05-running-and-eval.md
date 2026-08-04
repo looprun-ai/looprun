@@ -158,7 +158,7 @@ costs nothing:
     expect(executedToolNames(result.turnRecords[1]!)).toEqual([]);
 
     expect(result.turnRecords[1]!.assistantFinalText).toBe(
-      'That clashes with Standup (10:00–10:30). Move it or replace it?\n\nDesign review: not permitted',
+      'That clashes with Standup (10:00–10:30). Move it or replace it?\n\nDesign review: not permitted\nNothing else was changed on this turn.',
     );
     expect(guardEvents(result)).toEqual(['run:noDoubleBook:addEvent']);
 ```
@@ -177,11 +177,26 @@ only assertion that catches it.
 'exhaustion-terminal']` — a flow that broke three ways past the one event you named. `toEqual` says
 "this fired, and nothing else did", which is what a clean governed turn looks like.
 
-Note the reply is the model's `message` followed by a line the ENGINE wrote: `Design review: not
-permitted`. That is the operation report rendered from the verified `did` — the agent declared
-`{ op: 'addEvent', target: 'Design review', outcome: 'blocked' }`, the cross-check matched it against
-the vetoed attempt, and the engine told the user the booking did not happen. The domain can word that
-line itself through `contract.renderClaim` (chapter 03 §5); absent it you get this neutral default.
+Note the reply is the model's `message` followed by two lines the ENGINE wrote — the OPERATION RECORD,
+rendered from the verified `did`:
+
+```
+Design review: not permitted
+Nothing else was changed on this turn.
+```
+
+The agent declared `{ op: 'addEvent', target: 'Design review', outcome: 'blocked' }`, the cross-check
+matched it against the vetoed attempt, and the engine told the user the booking did not happen. The
+closing sentence is always there, and it is the reason the record works as an account rather than a
+list: it says the lines above are the WHOLE of what changed, so every operation they do not name is
+denied. On a turn that changed nothing at all the record is that sentence alone, in its other form:
+
+```
+No operation was carried out on this turn.
+```
+
+The domain can word the LINES itself through `contract.renderClaim` (chapter 03 §5); absent it you get
+this neutral default.
 
 The scripted model there is `scriptedModel` from `@looprun-ai/mastra/testing`, a **test-only entry
 point** this tutorial does not teach: a list of scripted steps, each one LLM call. It exists so a

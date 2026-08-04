@@ -94,20 +94,61 @@ hooks are async-capable. An `llmCheck` installed with no adjudicator registered 
 start (`assertAdjudicatorPresent`), never mid-turn. Prompt-injection is acknowledged and priced by evals,
 not by blindness: the rubric is fixed, the channel is a verdict.
 
-**The ONE pre-baked rubric the engine ships: `didMessageConsistency`.** The deterministic
-cross-check grounds the DECLARATION (`did`) against the world ledger, but the `message` delivered beside it
-is free prose — an agent can declare an honest `inform` and still WRITE that it completed something. No
-structural signal reads that (assertion and polarity live in the prose, which is exactly what a pattern
-cannot judge). `didMessageConsistency()` is the priced backstop: an `llmCheck` whose rubric — "does the
-message state an operation `did` does not carry, or contradict a declared intention?" — is baked in, so a
-domain opts INTO the engine's question rather than authoring its own. It is **AVAILABLE, never
-auto-installed**: no protocol installs it, and it is never the primary guarantee (the cross-check is). Bind
+**The prose channel: what always ships beside the message.** The deterministic cross-check grounds the
+DECLARATION (`did`) against the world ledger, but the `message` delivered beside it is free prose — an
+agent can declare an honest `inform` and still WRITE that it completed something. No structural signal
+reads that (assertion and polarity live in the prose, which is exactly what a pattern cannot judge). Two
+engine-owned mechanisms answer it, and they answer to different standards.
+
+**The OPERATION RECORD — deterministic, on every turn.** It is composed from the verified `did` and the
+world ledger, never from the prose, and every finalized delivery carries it. One line per action
+intention, then a closing sentence chosen by whether any line exists:
+
+```
+≥ 1 action line   →  Nothing else was changed on this turn.
+  0 action lines  →  No operation was carried out on this turn.
+```
+
+The two sentences are not interchangeable. Over an EMPTY list, "nothing else was changed" presupposes
+that something was — which, beside a false claim, confirms it. The empty case asserts the absence
+outright, so the claim above it stands contradicted:
+
+```
+message   Done — I cancelled your dentist appointment on 2026-03-03 at 09:00.
+record    No operation was carried out on this turn.
+```
+
+Replace that message with anything and the record is byte-identical. Prevention is not deterministic —
+the engine does not stop the sentence. Contradiction is.
+
+**The LIE CHECK — a judgement, on the turns where it can help.** A turn whose record has ZERO action
+lines goes through one closed question to the backend's `judge` callback: reading the message as the
+user would, would they be left believing that some change in neither list is already done? On yes, the
+prose is rewritten from the conversation, the reply and the two lists — never from the raw `did`, so
+nothing needs re-grounding — and the rewrite is what ships. A turn that DID carry out an action makes
+zero model calls and ships as it stands: handed a record that names an operation, a rewriter anchors to
+that entity and leaves every other claim standing, which is worse than not rewriting.
+
+The check is shown TWO lists: this turn's record, and one line per distinct entity the SESSION has
+already changed, carrying its latest state. Without the second, a reply that truthfully reports an
+earlier turn's action reads as a lie against a record scoped to this turn — and the rewrite that
+misfire triggers can deny something the world really did. The session list is input only; the user
+receives the turn's record alone.
+
+`judge` is backend-supplied, never host-configured: same model, same endpoint, no persona, no tools, no
+history. A runtime without one delivers the prose as it stands, under the record that contradicts it.
+
+**The pre-baked rubric beside them: `didMessageConsistency`.** An `llmCheck` whose rubric — "does the
+message state an operation `did` does not carry, or contradict a declared intention?" — is baked in, so
+a domain opts INTO the engine's question rather than authoring its own. It is **AVAILABLE, never
+auto-installed**: no protocol installs it, and it is never the primary guarantee (the record is). Bind
 it where the stakes justify a model call per reply. Its runtime `kind` is `llmCheck`, deliberately — the
 adjudicator gate and the TRUTH/SAFETY frontier scan by kind, so a wrapped guard is seen for what it is.
 
 **It fails CLOSED by default — unlike bare `llmCheck`, whose `'open'` default suits an author-bound
-lint.** This one is not a lint: it is the ONLY named mitigation of the prose residual, so a failMode that
-let an adjudicator outage (network, quota, model down, a 30 s hang) silently delete it would BE the attack —
+lint.** This one is not a lint: an author binds it where the record and the check are not enough, so a
+failMode that let an adjudicator outage (network, quota, model down, a 30 s hang) silently delete it
+would BE the attack —
 install the backstop, break the adjudicator, and nothing denies and nothing is recorded. The availability
 cost is stated rather than hidden: while the adjudicator is unreachable every candidate is denied, so each
 turn spends its redrives and delivers the engine-derived closure — still truthful, still non-blank, but not

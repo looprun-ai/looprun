@@ -6,6 +6,7 @@ Regenerate with `pnpm proofs:matrix`; CI runs `--check` to keep it in sync.
 
 | Date | Record | Change | Scope | Isolated | Collective | Coverage | Certified models | SLM canary | Verdict |
 |---|---|---|---|---|---|---|---|---|---|
+| 2026-08-04 | [operation-record-and-lie-check](proofs/2026-08-04-operation-record-and-lie-check.md) | the operation record closes every finalized turn with a sentence chosen by whether any action line exists, and a turn that carried out nothing goes through one closed lie check that gates a prose rewrite | runtime | 152/152 | 36/36 | 22/22 | n/a | n/a | PASS |
 | 2026-08-03 | [as-is-prose-sweep](proofs/2026-08-03-as-is-prose-sweep.md) | engine comments + GUARDS.md state constraints in the present tense; TurnClaim renamed to Intention (type-only, zero runtime footprint) | docs | 152/152 | 36/36 | 22/22 | n/a | n/a | PASS |
 | 2026-08-03 | [cut-respond-schema](proofs/2026-08-03-cut-respond-schema.md) | respond schema: state each rule once, in the fewest words its guard leaves it needing | runtime | 152/152 | 36/36 | 22/22 | n/a | n/a | PASS |
 | 2026-08-03 | [inform-guardrail-one-sentence](proofs/2026-08-03-inform-guardrail-one-sentence.md) | the inform guardrail states the rule in one sentence, in lockstep with the design and the skill | runtime | 152/152 | 36/36 | 22/22 | n/a | n/a | PASS |
