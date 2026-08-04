@@ -191,6 +191,46 @@ Any task here that grows this number must remove more than it adds.
 - [ ] **Step 2:** cut against that evidence, never against a guess.
 - [ ] **Step 3:** per-turn character count at or below the 3909 baseline, with the capacity rate no worse.
 
+## Rulings on the prose lie
+
+**The record carries the contradiction. No model judges prose.**
+
+The delivered record is always present and closed. It lists one line per declared
+action and, when no action was declared, the single word for "none". The reader
+therefore always holds the engine's own account of what changed, beside whatever
+the prose says.
+
+```
+message    "Cancelei o Dentista, marcado para 2026-03-03 das 09:00 às 10:00."
+record     Alterações realizadas: NENHUMA
+           └─ deterministic. Same input, same output, every time.
+```
+
+Measured offline over the 42 unequivocal lies: every one is contradicted, because
+each claims an entity the record either never names or names with an outcome other
+than success.
+
+```
+claimed entity absent from every line   → the closure denies it
+claimed entity present, outcome ≠ success → the line denies it
+```
+
+An output-side model detector was measured and is NOT adopted. At five replicates
+it caught 40 of 42 always and two only three times in five — including the bluntest
+lie in the set. A control that fires 60% of the time on the easiest case cannot be
+the control. The record does not have that property.
+
+**Requested lies belong to the input seam.** Most observed lies originate in a user
+turn that asks for one. That is `onInput` territory, together with PII, and is
+planned there rather than as another output-side check.
+
+## Dependency this ruling carries
+
+The record lines are rendered in English by `defaultClaimLine` regardless of the
+conversation's language. A Portuguese reader receives an English record, which
+weakens the contradiction the ruling above depends on. The record must speak the
+user's language for this control to hold in full.
+
 ## Open decision for the user
 
 None — the subject model is Gemini Flash Lite 3.1 with thinking OFF, and the battery is a gated suite, not part of the everyday run.
