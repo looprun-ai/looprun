@@ -173,7 +173,7 @@ function identityValues(v: unknown): string[] {
  * reported. Only the PRESENCE arms (`success` grounding and write coverage) use this: what an
  * effected write DID is to its own entity, never to the ones it merely points at.
  */
-function preferredIdentityValues(v: unknown): string[] {
+export function preferredIdentityValues(v: unknown): string[] {
   const hits = identityHits(v, undefined, 0, []);
   if (!hits.length) return [];
   let minDepth = hits[0]!.depth;

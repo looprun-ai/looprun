@@ -88,7 +88,7 @@ export function makeGuardHooks(spec: AgentSpec, getSession: SessionAccessor, opt
       if (!postGuards.length) return;
       const gctx: GuardCtx = {
         args, tool: toolName, world, observed: ledger.observed, turnIndex: ledger.turnIndex,
-        userText: ledger.currentUserText, history: ledger.history,
+        userText: ledger.currentUserText, consent: ledger.consentThisTurn, history: ledger.history,
         attachmentsThisTurn: ledger.attachments, result: output,
         did: ledger.did,
         adjudicator: ledger.adjudicator, adjudicatorTimeoutMs: ledger.adjudicatorTimeoutMs,

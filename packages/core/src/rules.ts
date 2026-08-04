@@ -12,6 +12,7 @@
  * is domain-neutral.
  */
 import type { Intention } from './runtime/claims.js';
+import type { Challenge } from './runtime/challenge.js';
 
 /** The five enforcement dims (taxonomy metadata; the structural key is the hook it maps to). */
 export type Dim = 'spatial' | 'input' | 'run' | 'output' | 'behavior';
@@ -158,6 +159,11 @@ export interface GuardCtx {
    *  augmentation is zero-blast-radius. Absent while an `llmCheck` is installed is caught loud at
    *  conversation start (`assertAdjudicatorPresent`), never mid-turn. */
   adjudicator?: Adjudicator;
+  /** The consent challenges the CURRENT turn's incoming message consumed — the WHOLE licensing surface
+   *  for a destructive act. A guard asks whether one of these is about the call in front of it, and
+   *  never reads text or history to decide: the runtime already did the reading, once, at turn start.
+   *  Absent ⇒ empty, which is no consent. */
+  consent?: ReadonlyArray<Challenge>;
   /** The per-call adjudicator TIMEOUT (ms), threaded from the registration seam beside `adjudicator`. An
    *  llmCheck races the adjudicator against this deadline: a HUNG (never-settling) adjudicator would
    *  otherwise hang the turn, and `failMode` only fires on a settled rejection — so on expiry the guard
