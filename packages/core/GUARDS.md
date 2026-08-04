@@ -96,7 +96,8 @@ not by blindness: the rubric is fixed, the channel is a verdict.
 
 **The prose channel.** `did` is grounded against the ledger. `message` beside it is free prose — an
 agent can declare an honest `inform` and still WRITE that it completed something. Two engine-owned
-mechanisms answer it, on every turn, with no configuration.
+mechanisms answer it: a record that ships on every turn with no configuration, and a check the host
+turns on.
 
 **1 · THE OPERATION RECORD — deterministic.** Composed from the verified `did`, never from the prose.
 
@@ -138,7 +139,9 @@ Without the second list, "your lunch with Marina was cancelled" — true, from t
 and the rewrite denies something real.
 
 `judge: (prompt) => Promise<string>` is backend-supplied: same model, no persona, no tools, no history.
-No judge ⇒ the prose ships as it stands, under the record that contradicts it.
+No judge ⇒ the prose ships as it stands, under the record that contradicts it. The Mastra adapters pass
+one only when the host sets `lieCheck: true`, so the pass is off until asked for — what the check is
+worth is a property of the model that answers it, not of the algorithm.
 
 ```
 PREVENTED?      no — the engine does not stop the sentence

@@ -101,6 +101,13 @@ export interface LoopRunAgentConfig<W extends AgentWorld = AgentWorld> {
   expectedSurfaceHash?: string;
   maxSteps?: number;
   redrives?: number;
+  /** Run the lie check on turns that carried out no operation. Default false.
+   *
+   *  The check is a JUDGEMENT the turn's model answers, and what it is worth depends on that model:
+   *  a model that reads the question correctly turns a false sentence into a true one, a model that
+   *  answers NO to everything spends one call per empty turn and changes nothing. Off, the prose ships
+   *  as it stands under the operation record that contradicts it — the floor is the same either way. */
+  lieCheck?: boolean;
   /** Throw on validateSpec warnings instead of console.warn. */
   strict?: boolean;
   /** Agent id/name override; defaults to the spec id. */
@@ -155,6 +162,7 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
   private readonly stopOnRepeatedToolCall: boolean;
   private readonly maxStepsResolved: number;
   private readonly redrivesResolved: number;
+  private readonly lieCheckOn: boolean;
   private readonly guardHooks: ReturnType<typeof makeGuardHooks>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private readonly inputProcessorsResolved: any[] | undefined;
@@ -208,6 +216,7 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
     this.stopOnRepeatedToolCall = config.stopOnRepeatedToolCall ?? false;
     this.maxStepsResolved = spec.controls.maxSteps ?? config.maxSteps ?? DEFAULT_MAX_STEPS;
     this.redrivesResolved = spec.controls.redrives ?? config.redrives ?? DEFAULT_REDRIVES;
+    this.lieCheckOn = config.lieCheck === true;
     this.guardHooks = guardHooks;
     this.inputProcessorsResolved = makeInputProcessors(spec, getSession as () => LoopRunSession);
   }
@@ -431,10 +440,12 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
       },
       this.redrivesResolved,
       // The lie check and the rewrite it gates, on the same model the turn ran on and with nothing of
-      // the turn attached to it (see judge.ts).
-      async (prompt: string) =>
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        judgeText(await (Agent.prototype.generate as any).call(this, prompt, judgeOptions(this.modelParams))),
+      // the turn attached to it (see judge.ts). Absent unless the host asked for the pass.
+      this.lieCheckOn
+        ? async (prompt: string) =>
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            judgeText(await (Agent.prototype.generate as any).call(this, prompt, judgeOptions(this.modelParams)))
+        : undefined,
     );
 
     // History reconciliation: when the pipeline changed the outgoing text (mutator / redrive /

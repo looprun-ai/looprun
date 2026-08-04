@@ -698,7 +698,9 @@ changed — so a true "your lunch with Marina was cancelled" from turn 1 is not 
 The second list never reaches the user.
 
 Your backend supplies the one callback both calls run on (`judge`). Without it, the prose ships as it
-stands, under the record that contradicts it.
+stands, under the record that contradicts it. `new LoopRunAgent({ …, lieCheck: true })` is what asks
+for the pass; it is off until you do, because how well the check reads the question is a property of
+your model, not of the algorithm.
 
 ```
 PREVENTED?      no — the engine does not stop the sentence
