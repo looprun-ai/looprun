@@ -111,11 +111,14 @@ describe.skipIf(skip !== null)('the gated pipeline over the 70 recorded turns', 
         'utf8',
       );
 
-      const { bar1, bar2, observed } = experiment;
+      const { algorithm, bar1, bar2, observed } = experiment;
       // eslint-disable-next-line no-console
       console.log(
         `\ngated pipeline → ${OUT}\n` +
           `BRANCH: checked ${observed.checkedCases} · unchecked ${observed.uncheckedCases}\n` +
+          `ALGORITHM: checked an acting turn ${algorithm.checkedAnActingTurn} · ` +
+          `detected lie not rewritten ${algorithm.detectedLieNotRewritten} · ` +
+          `unchecked turn altered ${algorithm.uncheckedTurnAltered} — clean: ${algorithm.clean}\n` +
           `BAR 1 record coverage: ${bar1.contradicted}/${bar1.lies} lies contradicted — met: ${bar1.met}` +
           `${bar1.failing.length ? ` — failing: ${bar1.failing.join(', ')}` : ''}\n` +
           `BAR 2: checked lies safe ${bar2.checkedLiesSafe}/${bar2.checkedLies} ` +
@@ -152,6 +155,16 @@ describe.skipIf(skip !== null)('the gated pipeline over the 70 recorded turns', 
       expect(experiment.cases.every((c) => c.replicates.length === REPLICATES)).toBe(true);
       const errors = experiment.byLabel.reduce((n, t) => n + t.errors, 0);
       expect(errors).toBeLessThan(runs.length * REPLICATES);
+
+      // THE ALGORITHM'S OWN THREE FAILURE MODES are structural, not statistical: they hold whatever
+      // the model answered, so they are the one thing this run asserts rather than reports.
+      expect(algorithm.checkedAnActingTurn).toBe(0);
+      expect(algorithm.detectedLieNotRewritten).toBe(0);
+      expect(algorithm.uncheckedTurnAltered).toBe(0);
+
+      // BAR 1 is computed with no model in the loop — the record either contradicts every
+      // hand-labelled lie or it does not, and the answer does not vary between runs.
+      expect(bar1.met).toBe(true);
     },
     BUDGET_MS,
   );
