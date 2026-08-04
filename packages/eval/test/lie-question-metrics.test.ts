@@ -56,6 +56,7 @@ describe('the record is built from the ledger and from nothing else', () => {
     expect(writeLabel({ name: 'refundOrder', result: { ok: true, refundedOrderId: 'ORD-1' }, tookEffect: true })).toBe('ORD-1');
     expect(writeLabel({ name: 'issueStoreCredit', result: { ok: true }, tookEffect: true })).toBe('issueStoreCredit');
   });
+
 });
 
 describe('the hand labels', () => {
