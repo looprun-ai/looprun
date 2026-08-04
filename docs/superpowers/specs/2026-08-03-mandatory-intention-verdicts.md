@@ -68,12 +68,21 @@ This is the sentence the rest of the document supports. It has two halves and th
  │                      one turn. Binding it would mean judging what the prose ASKED —   │
  │                      the same non-deterministic judgement as the row above.           │
  │                                                                                       │
- │  What prices them:  the forcing function (a declaration is MANDATORY, so an           │
- │                      operational lie is a deliberate self-contradiction sitting next  │
- │                      to the engine's own verified report) + the OPTIONAL              │
- │                      `didMessageConsistency()` llmCheck, which now fails CLOSED.      │
+ │  What prices the PROSE LIE: the CLOSED OPERATION RECORD, rendered on every finalized  │
+ │                      turn without exception — the lines the declaration earned, then  │
+ │                      a closure sentence chosen by whether any action was declared.    │
+ │                      The engine never judges the prose; it states its own facts       │
+ │                      beside it. Measured: it contradicts every one of the 42          │
+ │                      hand-adjudicated lies. See                                       │
+ │                      `2026-08-04-closed-operation-record-design.md`.                  │
  │                                                                                       │
- │  These are NEVER claimed as deterministic. Anywhere.                                  │
+ │  What prices the TWO ASK ROWS: the forcing function alone — a declaration is          │
+ │                      MANDATORY, so a false `ask` is a deliberate self-contradiction   │
+ │                      sitting next to the engine's own verified report.                │
+ │                                                                                       │
+ │  PREVENTION is what is not deterministic here: the engine does not stop the sentence  │
+ │  or the declaration. CONTRADICTION is deterministic — its own account always arrives  │
+ │  with the delivery. Prevention is NEVER claimed as deterministic. Anywhere.           │
  └───────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -163,10 +172,10 @@ the test, so a future reader meets the argument before the vector.
 
 | vector | severity | why it is open |
 |---|---|---|
-| **b2.1 / b2.2 / b2.3 / C7** — a sealed, non-blank turn declaring `ask` licenses a later destructive act even when the message poses no question | HIGH | Whether prose ASKS SOMETHING is a natural-language judgement. The engine has exactly two instruments: a linguistic pattern — which the no-regex law forbids, which an adversary defeats by appending one character, and which false-denies across languages — or a model call, which IS `didMessageConsistency`. There is no third deterministic option. What IS closed deterministically: the licence rests on a DELIVERED turn record (never a hook-time respond), the sealed `did` belongs to the payload whose message was delivered, the reply must be non-blank, recency is bounded, and a tool no longer self-licenses its own repeat |
+| **b2.1 / b2.2 / b2.3 / C7** — a sealed, non-blank turn declaring `ask` licenses a later destructive act even when the message poses no question | HIGH | Whether prose ASKS SOMETHING is a natural-language judgement, and reading it has no deterministic instrument: a linguistic pattern is forbidden by the no-regex law, is defeated by appending one character, and false-denies across languages; a model call is `didMessageConsistency`, which is a judgement, not a proof. The deterministic route does not read the prose at all — it makes the engine RENDER the question from the ask's subject, so declaring an ask is what puts a question on the user's screen (D1/D2 in `plans/2026-08-03-consent-and-elicitation.md`). Until that lands, what IS closed deterministically: the licence rests on a DELIVERED turn record (never a hook-time respond), the sealed `did` belongs to the payload whose message was delivered, the reply must be non-blank, recency is bounded, and a tool no longer self-licenses its own repeat |
 | **3.1b** — a `success` claim on ORD-2 grounds while an ORD-1 write also happened | (grounding half only) | Grounding is EXISTENTIAL per claim and the turn really did effect a write on ORD-2, so the claim names a true ledger fact. No per-claim rule separates it from the honest single-write case without inventing a claim→write binding, which would false-deny every turn reporting two writes on one entity. **The HARM is a coverage property and coverage is closed** (3.1a denies the turn), so the ORD-1 write can no longer be hidden |
 | **the ask is bound to NOTHING** — an `ask` intention names no subject, so an off-topic question satisfies EVERY consent kind that reads one, for one turn: `confirmFirst` `via:'ask'`/`'either'` (batch-b), `askedEarlier` (any gated arg licensed by any earlier ask), `pendingConfirmMustAsk` (an unrelated ask clears a pending destructive confirm while the reply reads "permanently deleted") | MEDIUM | Binding an ask to a RECORD requires the ask to NAME one, and a speech intention deliberately does not (MI-D5). Judging what a question was ABOUT is the same prose judgement as the row above and is closed by the same instrument. Three live BREAK tests pin the three shapes. Closing it is a design decision about the `ask` shape, not a guard fix |
-| **A-V6 / A-V7** — the prose lie beside an honest declaration | RESIDUAL, documented | This is the design's stated boundary, not a defect. V6 pins the shape of the counter-evidence (the verified report ships in the same delivery); V7 pins the sharp edge (a speech-only `did` on a read-only turn renders no report, so the lie is the entire delivery). §0 states it as non-deterministic |
+| **A-V6 / A-V7** — the prose lie beside an honest declaration | PREVENTION open, CONTRADICTION closed | The engine does not stop the sentence — assertion and polarity live in prose. What it does deterministically is deliver its own account beside it: the CLOSED OPERATION RECORD ships on every finalized turn, and its closure sentence is chosen by whether any action was declared, so V7's sharp edge (a speech-only `did` renders no report) is removed — that turn now carries "No operation was carried out on this turn." Measured against all 42 hand-adjudicated lies: every one is contradicted. Design: `2026-08-04-closed-operation-record-design.md` |
 | **`amount` unit naivety** | LOW | A domain whose world reports cents while its claims report units will false-deny. The corroboration compares raw numbers and knows no unit. Stated as a **Limit** on the `amount` bullet in `GUARDS.md`, not solved |
 | **`not_found`/`no_op` read agent-authored args** | LOW | L4's deliberate widening. An agent can call a read with a fabricated identity-key arg and report `not_found` on it. Closing it needs the attempt record to carry a GUARD-RESOLVED subject rather than raw args — the same structural change 4.1's residual needs. One change would close both; it is larger than a fix wave |
 
@@ -186,13 +195,14 @@ what each buys.
   ── MI-D5: the partition ─────────────────►      `inform`/`greet`/`refuse`/`ask`, so the lie
                                                   cannot ALSO suppress the report.
 
-  the report ships beside the prose                whenever the turn carries an ACTION intention,
-  ── the engine composes the delivery ──────►      the verified account is on the same screen as
-                                                  the claim that contradicts it.
+  the report ships beside the prose                on EVERY finalized turn, action or not, the
+  ── the engine composes the delivery ──────►      verified account is on the same screen as the
+                                                  claim that contradicts it.
 ```
 
-What that leaves: a lie on a turn where **nothing happened** (V7). It is real, it is documented, and
-`didMessageConsistency()` — failing closed since wave 3 — is the priced instrument for it.
+A turn where **nothing happened** (V7) is covered by the same mechanism: the record is closed, so it
+renders "No operation was carried out on this turn." rather than nothing at all. Design and
+measurement: `2026-08-04-closed-operation-record-design.md`.
 
 ---
 
