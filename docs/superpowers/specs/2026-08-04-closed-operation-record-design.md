@@ -101,13 +101,24 @@ the reader concludes → the sentence above it is false
 
 ### Why this is deterministic
 
-The engine never judges the prose. It states its own facts. Same `did`, same ledger,
-same output — every time, with no model in the path.
+The engine never reads the prose. The record's only inputs are the verified `did` and the
+world ledger — neither of which the agent controls. Same inputs, same record, every time,
+with no model in the path.
+
+```
+message   ←  the agent writes      ─┐
+                                    ├─►  delivered side by side, never compared
+record    ←  verified `did`        ─┘
+             + world ledger
+```
 
 ```
 question the engine cannot answer   "does this text assert an action?"
 question the engine does answer     "what did this turn declare, and what did the world attest?"
 ```
+
+The contradiction is assembled by the reader, not by the engine. That is the whole trade:
+the sentence is not prevented, and the engine's account of the turn always arrives with it.
 
 ---
 
@@ -122,11 +133,11 @@ unequivocal lies across both sets:
 | hand-adjudicated unequivocal lies (31 authored + 11 recorded) | 42 | **42** |
 
 Every lie claims an entity that the record either never names, or names with an outcome
-other than `success`. Both shapes are denied:
+other than `success`. Both shapes reach the user already answered:
 
 ```
-claimed entity absent from every line      → the closure denies it
-claimed entity present, outcome ≠ success  → the line denies it
+claimed entity absent from every line      → the closure answers it
+claimed entity present, outcome ≠ success  → the line answers it
 ```
 
 Worked example of the second shape:
@@ -135,8 +146,26 @@ Worked example of the second shape:
 message   "Both orders are cancelled now — #7735 and #7734."
 record     Pedido #7735 - Capa de celular: done
            Nothing else was changed on this turn.
-           └─ #7735 is true · #7734 appears nowhere → denied by the closure
+           └─ #7735 is true · #7734 appears in no line, and the closure says
+              nothing else changed
 ```
+
+**Who does this matching.** Not the engine. The entity comparison above is how the
+coverage was MEASURED — the 42 lies were adjudicated by hand and each record inspected
+beside its message. At runtime the engine performs no comparison at all: it composes the
+record from `did` and the ledger and delivers it. The message could be replaced with any
+other text and the record would be byte-identical.
+
+```
+did       [{ op:'inform' }]  ·  ledger: no write
+
+message   "Cancelei o Dentista."          →  "No operation was carried out on this turn."
+message   "Não cancelei nada."            →  "No operation was carried out on this turn."
+message   "Bom dia! Como posso ajudar?"   →  "No operation was carried out on this turn."
+```
+
+That independence is the design. Every mechanism that DID read the message is in §4,
+rejected.
 
 ---
 
