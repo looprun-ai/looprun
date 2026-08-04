@@ -30,6 +30,7 @@ import {
   RECORD_CLOSURE_NONE,
   RECORD_CLOSURE_SOME,
   SESSION_HEADING,
+  operationRecord,
   sessionRecord,
 } from '../../src/internal.js';
 import type { Intention, Judge } from '../../src/internal.js';
@@ -49,13 +50,25 @@ const CONTRACT: DomainContract = {
 };
 
 const specOf = (): AgentSpecBase =>
-  new AgentSpecBase({ id: 'lie-check', mode: 'M', persona: 'p', tools: ['cancelEvent'], contract: CONTRACT });
+  new AgentSpecBase({ id: 'lie-check', mode: 'M', persona: 'p', tools: ['cancelEvent', 'getEvent'], contract: CONTRACT });
 
 /** A write that TOOK EFFECT, aligned across the world ledger and the observed entry. */
 function effectWrite(ledger: ReturnType<typeof createLedger>, world: AgentWorld, label: string): void {
   const args = { eventId: label };
   world.toolCalls.push({ name: 'cancelEvent', args, result: { id: label, label }, tookEffect: true });
   recordToolResult(ledger, 'cancelEvent', args, { id: label, label }, world);
+}
+
+/** A call the world RAN, with the result it returned — the evidence a non-success claim grounds on. */
+function landCall(
+  ledger: ReturnType<typeof createLedger>,
+  world: AgentWorld,
+  name: string,
+  result: Record<string, unknown>,
+): void {
+  const args = { eventId: 'EV-2' };
+  world.toolCalls.push({ name, args, result, tookEffect: false });
+  recordToolResult(ledger, name, args, result, world);
 }
 
 /** A judge that records every prompt it is handed and answers from a queue. */
@@ -326,5 +339,197 @@ describe('the session list', () => {
     ]);
 
     expect(list.lines).toEqual(['EV-2: done']);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────────
+// THE WHOLE INPUT SPACE — the four failure modes, counted over every combination
+//
+// The algorithm has five inputs and each one has a small, enumerable set of shapes. Their product is
+// the space the algorithm has to be right on, so it is swept rather than sampled: every cell runs a
+// real `finalizeReply` and is scored on the four ways it can go wrong.
+//
+// ```
+//   F1  the check ran on a turn that carried out an action
+//   F2  the check ran without being shown what the session had already done
+//   F3  the check found a lie, a usable rewrite came back, and the original still shipped
+//   F4  no rewrite happened and the delivery was not exactly the message and the record
+// ```
+//
+// F2 is the ENGINE's half of "a truth read as a lie". Whether the model then answers correctly is the
+// model's half and no test can assert it; what the engine owes is that the question always carries the
+// session's own account, so a reply about an earlier turn's action has something to be true against.
+// ─────────────────────────────────────────────────────────────────────────────────────────────────
+
+type Ledger = ReturnType<typeof createLedger>;
+
+/**
+ * What the turn carried out — the axis eligibility is computed from. Each row carries the LEDGER
+ * EVIDENCE its declaration needs, so every cell reaches the algorithm instead of stopping at the
+ * cross-check: an ungrounded declaration is a different mechanism's job, and a sweep full of them
+ * would be measuring that one.
+ */
+const DECLARATIONS: Array<{ id: string; did: Intention[]; seed: (l: Ledger, w: AgentWorld) => void }> = [
+  { id: 'speech:inform', did: [{ op: 'inform' }], seed: () => {} },
+  { id: 'speech:greet', did: [{ op: 'greet' }], seed: () => {} },
+  { id: 'speech:refuse', did: [{ op: 'refuse' }], seed: () => {} },
+  { id: 'speech:ask', did: [{ op: 'ask' }], seed: () => {} },
+  {
+    id: 'action:success',
+    did: [{ op: 'cancel', target: 'EV-2', outcome: 'success' }],
+    seed: (l, w) => effectWrite(l, w, 'EV-2'),
+  },
+  {
+    id: 'action:blocked',
+    did: [{ op: 'cancel', target: 'EV-2', outcome: 'blocked' }],
+    seed: (l) => { l.attemptedCalls.push({ name: 'cancelEvent', args: { eventId: 'EV-2' } }); },
+  },
+  {
+    id: 'action:failure',
+    did: [{ op: 'cancel', target: 'EV-2', outcome: 'failure' }],
+    seed: (l, w) => landCall(l, w, 'cancelEvent', { success: false, error: 'nope' }),
+  },
+  {
+    id: 'action:not_found',
+    did: [{ op: 'lookup', target: 'EV-2', outcome: 'not_found' }],
+    seed: (l, w) => landCall(l, w, 'getEvent', { found: false, data: [] }),
+  },
+  {
+    id: 'action:pending',
+    did: [{ op: 'cancel', target: 'EV-2', outcome: 'pending_confirmation' }],
+    seed: (l, w) => landCall(l, w, 'cancelEvent', { requiresConfirmation: true, id: 'EV-2' }),
+  },
+  {
+    id: 'action:no_op',
+    did: [{ op: 'cancel', target: 'EV-2', outcome: 'no_op' }],
+    seed: (l, w) => landCall(l, w, 'cancelEvent', { id: 'EV-2', unchanged: true }),
+  },
+  {
+    id: 'action:two-writes',
+    did: [
+      { op: 'cancel', target: 'EV-2', outcome: 'success' },
+      { op: 'cancel', target: 'EV-9', outcome: 'success' },
+    ],
+    seed: (l, w) => { effectWrite(l, w, 'EV-2'); effectWrite(l, w, 'EV-9'); },
+  },
+  {
+    id: 'mixed:action+speech',
+    did: [{ op: 'cancel', target: 'EV-2', outcome: 'success' }, { op: 'inform' }],
+    seed: (l, w) => effectWrite(l, w, 'EV-2'),
+  },
+];
+
+/** What the model answers, and what comes back when it is asked to rewrite. */
+const JUDGES: Array<{ id: string; answers?: string[]; throws?: boolean; absent?: boolean }> = [
+  { id: 'judge:none', absent: true },
+  { id: 'judge:no', answers: ['NO'] },
+  { id: 'judge:yes+rewrite', answers: ['YES', REWRITE] },
+  { id: 'judge:yes+empty', answers: ['YES', ''] },
+  { id: 'judge:yes+blank', answers: ['YES', '   \n  '] },
+  { id: 'judge:lowercase-yes', answers: ['yes, the reader would.', REWRITE] },
+  { id: 'judge:prose', answers: ['I am not sure what you are asking.'] },
+  { id: 'judge:empty', answers: [''] },
+  { id: 'judge:throws', throws: true },
+];
+
+/** What the session had already carried out before this turn. */
+const SESSIONS: Array<{ id: string; entities: string[] }> = [
+  { id: 'session:none', entities: [] },
+  { id: 'session:one', entities: ['Lunch with Marina'] },
+  { id: 'session:three', entities: ['Lunch with Marina', 'Dentist', 'Standup'] },
+];
+
+/** What the prose says. */
+const MESSAGES: Array<{ id: string; text: string }> = [
+  { id: 'msg:lie', text: LIE },
+  { id: 'msg:earlier-truth', text: 'Your lunch with Marina was cancelled, as you asked.' },
+  { id: 'msg:honest-refusal', text: 'I have not cancelled anything. Shall I?' },
+  { id: 'msg:question', text: 'Which appointment should I cancel?' },
+];
+
+describe('THE WHOLE INPUT SPACE — the four failure modes over every combination', () => {
+  it('sweeps every cell and counts zero of each', async () => {
+    const failures = { F1: [] as string[], F2: [] as string[], F3: [] as string[], F4: [] as string[] };
+    const exhausted: string[] = [];
+    let cells = 0;
+    let checked = 0;
+    let rewritten = 0;
+
+    for (const decl of DECLARATIONS) {
+      for (const j of JUDGES) {
+        for (const sess of SESSIONS) {
+          for (const msg of MESSAGES) {
+            cells += 1;
+            const cell = `${decl.id} · ${j.id} · ${sess.id} · ${msg.id}`;
+
+            const world = fixtureWorld();
+            const ledger = createLedger();
+            // The SESSION: one completed turn per entity it already carried out.
+            for (const entity of sess.entities) {
+              effectWrite(ledger, world, entity);
+              ledger.did = [{ op: 'cancel', target: entity, outcome: 'success' }];
+              recordTurnHistory(ledger, 'Cancelled.', world);
+              ledger.turnIndex += 1;
+            }
+            ledger.did = [];
+            // THIS turn's evidence, so the declaration grounds and the cell reaches the algorithm.
+            decl.seed(ledger, world);
+
+            const prompts: string[] = [];
+            let judge: Judge | undefined;
+            if (!j.absent) {
+              let i = 0;
+              judge = async (prompt: string) => {
+                prompts.push(prompt);
+                if (j.throws) throw new Error('judge unreachable');
+                return j.answers![Math.min(i++, j.answers!.length - 1)];
+              };
+            }
+
+            const payload = { message: msg.text, did: decl.did };
+            const out = await run(ledger, world, payload, judge);
+
+            const record = operationRecord(decl.did, { outcomes: CONTRACT.outcomes });
+            const asIs = `${msg.text}\n\n${record.text}`;
+            const asRewritten = `${REWRITE}\n\n${record.text}`;
+            const wasRewritten = out.text === asRewritten;
+            if (prompts.length) checked += 1;
+            if (wasRewritten) rewritten += 1;
+            if (out.exhausted) exhausted.push(cell);
+
+            // F1 — a turn that carried out an action must make no model call at all.
+            if (prompts.length > 0 && record.hasOperations) failures.F1.push(cell);
+
+            // F2 — a check that ran must have been shown the session's own account.
+            if (prompts.length > 0 && sess.entities.some((e) => !prompts[0].includes(e))) failures.F2.push(cell);
+
+            // F3 — the check found a lie, a usable rewrite came back, and the original still shipped.
+            const usableRewrite = j.answers?.[0]?.trim().toLowerCase().startsWith('yes') && j.answers[1]?.trim();
+            if (prompts.length > 0 && usableRewrite && !wasRewritten) failures.F3.push(cell);
+
+            // F4 — every other cell delivers the message and the record, exactly as they are.
+            if (!wasRewritten && out.text !== asIs) failures.F4.push(cell);
+          }
+        }
+      }
+    }
+
+    // eslint-disable-next-line no-console
+    console.log(
+      `\n  cells ${cells} · checked ${checked} · rewritten ${rewritten} · exhausted ${exhausted.length}\n` +
+        `  F1 check ran on an acting turn        ${failures.F1.length}\n` +
+        `  F2 check ran blind to the session     ${failures.F2.length}\n` +
+        `  F3 detected lie not rewritten         ${failures.F3.length}\n` +
+        `  F4 other cell not delivered as is     ${failures.F4.length}`,
+    );
+
+    expect(cells).toBe(DECLARATIONS.length * JUDGES.length * SESSIONS.length * MESSAGES.length);
+    // Every cell reached the algorithm: an exhausted turn ships engine-derived prose, so a sweep with
+    // one in it would be scoring a different mechanism and calling the result a hundred per cent.
+    expect(exhausted).toEqual([]);
+    expect(failures.F1).toEqual([]);
+    expect(failures.F2).toEqual([]);
+    expect(failures.F3).toEqual([]);
+    expect(failures.F4).toEqual([]);
   });
 });
