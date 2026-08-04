@@ -29,6 +29,7 @@ This chapter is the rest of the vocabulary:
    §3  the ones you already have                what AgentSpecBase installs before your code runs
    §4  finding the right one                    symptom → kind, the confusable pairs, canonArgs
    §5  THE CATALOG                              23 factories, grouped by hook — generated
+   §5b what ships with every reply              the operation record and the lie check — no guard
    §6  writing your own                         custom, and the five rules a reviewer looks for
 ```
 
@@ -656,6 +657,55 @@ custom({ kind: 'imageQuotaLeft', dim: 'run', check: (ctx) => (ctx.world.imageQuo
 ```
 
 <!-- END GENERATED: guard catalog -->
+
+---
+
+## 5b. What ships with every reply, without a guard
+
+No guard reads prose. Two engine-owned things do, on every turn, and you install neither.
+
+### The operation record — deterministic
+
+Built from the verified `did`, never from the message. It closes with one of two sentences:
+
+```
+≥ 1 action line   →  Design review: not permitted
+                     Nothing else was changed on this turn.
+  0 action lines  →  No operation was carried out on this turn.
+```
+
+So a claim the turn cannot back never arrives alone:
+
+```
+message   Done — I cancelled your dentist appointment on 2026-03-03 at 09:00.
+record    No operation was carried out on this turn.
+```
+
+Two sentences and not one, because over an empty list "nothing else was changed" would presuppose that
+something was — and confirm the lie.
+
+### The lie check — a judgement
+
+```
+no action was carried out this turn  →  ask: would the reader believe it was?
+     yes  →  rewrite the prose, then deliver
+     no   →  deliver the message as it stands
+any action was carried out           →  deliver the message as it stands   (0 model calls)
+```
+
+The question is shown two lists — this turn's record, and one line per entity the session already
+changed — so a true "your lunch with Marina was cancelled" from turn 1 is not read as a lie on turn 2.
+The second list never reaches the user.
+
+Your backend supplies the one callback both calls run on (`judge`). Without it, the prose ships as it
+stands, under the record that contradicts it.
+
+```
+PREVENTED?      no — the engine does not stop the sentence
+CONTRADICTED?   always
+```
+
+`didMessageConsistency` (§5, #21) is a third layer over these two, for domains where they are not enough.
 
 ---
 

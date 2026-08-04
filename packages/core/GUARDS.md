@@ -94,49 +94,56 @@ hooks are async-capable. An `llmCheck` installed with no adjudicator registered 
 start (`assertAdjudicatorPresent`), never mid-turn. Prompt-injection is acknowledged and priced by evals,
 not by blindness: the rubric is fixed, the channel is a verdict.
 
-**The prose channel: what always ships beside the message.** The deterministic cross-check grounds the
-DECLARATION (`did`) against the world ledger, but the `message` delivered beside it is free prose — an
-agent can declare an honest `inform` and still WRITE that it completed something. No structural signal
-reads that (assertion and polarity live in the prose, which is exactly what a pattern cannot judge). Two
-engine-owned mechanisms answer it, and they answer to different standards.
+**The prose channel.** `did` is grounded against the ledger. `message` beside it is free prose — an
+agent can declare an honest `inform` and still WRITE that it completed something. Two engine-owned
+mechanisms answer it, on every turn, with no configuration.
 
-**The OPERATION RECORD — deterministic, on every turn.** It is composed from the verified `did` and the
-world ledger, never from the prose, and every finalized delivery carries it. One line per action
-intention, then a closing sentence chosen by whether any line exists:
+**1 · THE OPERATION RECORD — deterministic.** Composed from the verified `did`, never from the prose.
 
 ```
-≥ 1 action line   →  Nothing else was changed on this turn.
+≥ 1 action line   →  <lines>
+                     Nothing else was changed on this turn.
   0 action lines  →  No operation was carried out on this turn.
 ```
 
-The two sentences are not interchangeable. Over an EMPTY list, "nothing else was changed" presupposes
-that something was — which, beside a false claim, confirms it. The empty case asserts the absence
-outright, so the claim above it stands contradicted:
+Two sentences, not one: over an empty list "nothing else was changed" presupposes that something was.
 
 ```
 message   Done — I cancelled your dentist appointment on 2026-03-03 at 09:00.
 record    No operation was carried out on this turn.
 ```
 
-Replace that message with anything and the record is byte-identical. Prevention is not deterministic —
-the engine does not stop the sentence. Contradiction is.
+Change the message to anything; the record is byte-identical.
 
-**The LIE CHECK — a judgement, on the turns where it can help.** A turn whose record has ZERO action
-lines goes through one closed question to the backend's `judge` callback: reading the message as the
-user would, would they be left believing that some change in neither list is already done? On yes, the
-prose is rewritten from the conversation, the reply and the two lists — never from the raw `did`, so
-nothing needs re-grounding — and the rewrite is what ships. A turn that DID carry out an action makes
-zero model calls and ships as it stands: handed a record that names an operation, a rewriter anchors to
-that entity and leaves every other claim standing, which is worse than not rewriting.
+**2 · THE LIE CHECK — a judgement.** The whole algorithm:
 
-The check is shown TWO lists: this turn's record, and one line per distinct entity the SESSION has
-already changed, carrying its latest state. Without the second, a reply that truthfully reports an
-earlier turn's action reads as a lie against a record scoped to this turn — and the rewrite that
-misfire triggers can deny something the world really did. The session list is input only; the user
-receives the turn's record alone.
+```
+no action was carried out this turn  →  ask the judge: is this a lie?
+     yes  →  rewrite the prose
+     no   →  deliver the message as it stands
+any action was carried out           →  deliver the message as it stands   (0 model calls)
+```
 
-`judge` is backend-supplied, never host-configured: same model, same endpoint, no persona, no tools, no
-history. A runtime without one delivers the prose as it stands, under the record that contradicts it.
+The judge sees TWO lists and never the raw `did`:
+
+```
+ON THIS TURN                        ← what changed now
+No operation was carried out on this turn.
+
+ALREADY DONE IN THIS SESSION        ← one line per entity, latest state
+Lunch with Marina: done                input only; the user never sees it
+```
+
+Without the second list, "your lunch with Marina was cancelled" — true, from turn 1 — reads as a lie,
+and the rewrite denies something real.
+
+`judge: (prompt) => Promise<string>` is backend-supplied: same model, no persona, no tools, no history.
+No judge ⇒ the prose ships as it stands, under the record that contradicts it.
+
+```
+PREVENTED?      no — the engine does not stop the sentence
+CONTRADICTED?   always — the record ships with every delivery
+```
 
 **The pre-baked rubric beside them: `didMessageConsistency`.** An `llmCheck` whose rubric — "does the
 message state an operation `did` does not carry, or contradict a declared intention?" — is baked in, so
