@@ -21,9 +21,12 @@ import { AgentSpecBase, custom, didMessageConsistency } from '../../src/index.js
 import type { AgentWorld, DomainContract } from '../../src/index.js';
 import type { Adjudicator, GuardCtx, ObservedCall } from '../../src/rules.js';
 import { claimIsComplete, claimIsGrounded } from '../../src/guards/honesty.js';
-import { RECORD_CLOSURE_NONE, respondPayload, terminalPayloadRejection, validateClaims, type Intention } from '../../src/runtime/claims.js';
+import { respondPayload, terminalPayloadRejection, validateClaims, type Intention } from '../../src/runtime/claims.js';
+import { DEFAULT_ENGINE_TEXT } from '../../src/runtime/engine-text.js';
 import { beginTurn, createLedger, recordTerminal, recordToolResult, type TurnLedger } from '../../src/runtime/ledger.js';
 import { finalizeReply } from '../../src/runtime/turn.js';
+
+const RECORD_CLOSURE_NONE = DEFAULT_ENGINE_TEXT.recordClosureNone;
 
 // ── harness ────────────────────────────────────────────────────────────────────────────────────────
 

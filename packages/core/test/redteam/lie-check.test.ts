@@ -27,16 +27,18 @@ import { describe, expect, it } from 'vitest';
 import { AgentSpecBase } from '../../src/index.js';
 import type { AgentWorld, DomainContract } from '../../src/index.js';
 import {
-  RECORD_CLOSURE_NONE,
-  RECORD_CLOSURE_SOME,
   SESSION_HEADING,
   operationRecord,
   sessionRecord,
 } from '../../src/internal.js';
 import type { Intention, Judge } from '../../src/internal.js';
 import type { HistoryTurn } from '../../src/rules.js';
+import { DEFAULT_ENGINE_TEXT } from '../../src/runtime/engine-text.js';
 import { createLedger, recordToolResult, recordTurnHistory } from '../../src/runtime/ledger.js';
 import { finalizeReply } from '../../src/runtime/turn.js';
+
+const RECORD_CLOSURE_SOME = DEFAULT_ENGINE_TEXT.recordClosureSome;
+const RECORD_CLOSURE_NONE = DEFAULT_ENGINE_TEXT.recordClosureNone;
 
 // ── harness ────────────────────────────────────────────────────────────────────────────────────────
 

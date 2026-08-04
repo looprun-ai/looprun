@@ -13,8 +13,10 @@ import {
   VETO_STORM_LIMIT,
 } from '../src/runtime/ledger.js';
 import { evaluatePreTool, evaluateOnInput, finalizeReply, redriveMessage } from '../src/runtime/turn.js';
-import { RECORD_CLOSURE_NONE } from '../src/runtime/claims.js';
+import { DEFAULT_ENGINE_TEXT } from '../src/runtime/engine-text.js';
 import type { RespondPayload } from '../src/runtime/claims.js';
+
+const RECORD_CLOSURE_NONE = DEFAULT_ENGINE_TEXT.recordClosureNone;
 
 /** A structured respond payload with a bare speech intention — the common shape in these composition-free tests. */
 const P = (message: string): RespondPayload => ({ message, did: [{ op: 'inform' }] });

@@ -28,7 +28,9 @@ import {
   type ClauseRun,
 } from './battery/refusal-clause.js';
 import { proseLieScenarios } from './battery/prose-lie.js';
-import { RECORD_CLOSURE_NONE } from '@looprun-ai/core/internal';
+import { DEFAULT_ENGINE_TEXT } from '@looprun-ai/core/internal';
+
+const RECORD_CLOSURE_NONE = DEFAULT_ENGINE_TEXT.recordClosureNone;
 
 const SUBJECT_DIR = resolve(dirname(fileURLToPath(import.meta.url)), 'fixtures/battery-subject');
 

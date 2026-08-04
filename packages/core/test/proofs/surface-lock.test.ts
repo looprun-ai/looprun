@@ -98,9 +98,10 @@ const INTERNAL = [
   // `respondPayload` (args → structured payload for the redrive/fallback re-generation) and
   // `lastTerminalArgs` (the respond call's args from a result's steps).
   'renderOperationReport', 'deriveClaimsFromLedger', 'RespondPayload', 'RenderOpts', 'respondPayload',
-  // The turn's OPERATION RECORD as an object, and the two closing sentences it selects between. The
-  // record is what the reader holds beside the prose, so its exact wording is part of the seam.
-  'operationRecord', 'OperationRecord', 'RECORD_CLOSURE_SOME', 'RECORD_CLOSURE_NONE',
+  // The turn's OPERATION RECORD as an object. The record is what the reader holds beside the prose, so
+  // its exact wording is part of the seam — and the wording itself is the host-declarable text pack,
+  // because a challenge the user cannot read is an act they can never consent to.
+  'operationRecord', 'OperationRecord', 'EngineText', 'DEFAULT_ENGINE_TEXT', 'resolveEngineText',
   // What the SESSION has already done — one line per entity, its latest state. Input to the lie check
   // and the rewriter; never delivered.
   'sessionRecord', 'SessionRecord', 'SESSION_HEADING',

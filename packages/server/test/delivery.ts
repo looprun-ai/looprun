@@ -5,7 +5,9 @@
  * out nothing, that record is one sentence, and it is there precisely so a claim in the prose has
  * something standing against it.
  */
-import { RECORD_CLOSURE_NONE } from '@looprun-ai/core/internal';
+import { DEFAULT_ENGINE_TEXT } from '@looprun-ai/core/internal';
+
+const RECORD_CLOSURE_NONE = DEFAULT_ENGINE_TEXT.recordClosureNone;
 
 /** Prose delivered on a turn that carried out nothing: the prose, then the record. */
 export const nothingDone = (prose: string): string => `${prose}\n\n${RECORD_CLOSURE_NONE}`;

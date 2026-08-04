@@ -26,6 +26,7 @@ import { resolveBindings } from './spec.js';
 import type { AgentSpec, GuardBinding, Hook } from './spec.js';
 import type { AgentWorld } from './rules.js';
 import type { CoreOutcome, OutcomeMap, RenderedClaim } from './runtime/claims.js';
+import type { EngineText } from './runtime/engine-text.js';
 import { derivePolarity, deriveSubject, foldTrunk } from './trunk-fold.js';
 import type { SubjectRule, TrunkBlock, TrunkLine, TrunkRow } from './trunk-fold.js';
 
@@ -58,6 +59,12 @@ export interface DomainContract {
    *  resolved core outcome, return the one-liner the user reads. Absent ⇒ the engine's neutral English
    *  default (which renders the claim's `target` and nothing else). */
   renderClaim?: (claim: RenderedClaim, core: CoreOutcome) => string;
+  /** The ENGINE's own user-facing sentences — the record closures and the consent question. The engine
+   *  puts these on the user's screen itself, so a conversation held in another language declares them
+   *  here. Partial: what is not declared falls back per key to the engine's English. Distinct from
+   *  {@link renderClaim}, which words one CLAIM; this words what the engine says around them, and the
+   *  consent question is the part that has to be readable — the user types its token back. */
+  engineText?: Partial<EngineText>;
   /** The domain's WRITE tools — the ones that MUTATE the world (vs pure reads). The honesty cross-check
    *  (`claimIsGrounded` / `claimIsComplete`, auto-installed when this is non-empty) reads it to ground a
    *  `success` claim against an EFFECTED write and to demand every effected write be reported. Same list

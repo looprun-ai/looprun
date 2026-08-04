@@ -41,7 +41,9 @@ import {
 } from './battery/prose-lie.js';
 import { writeMeasurements } from './battery/measure-report.js';
 import { createRecorder, recordingModel, type RecordedCall } from './battery/recording-model.js';
-import { RECORD_CLOSURE_NONE } from '@looprun-ai/core/internal';
+import { DEFAULT_ENGINE_TEXT } from '@looprun-ai/core/internal';
+
+const RECORD_CLOSURE_NONE = DEFAULT_ENGINE_TEXT.recordClosureNone;
 
 const SUBJECT_DIR = resolve(dirname(fileURLToPath(import.meta.url)), 'fixtures/battery-subject');
 

@@ -52,8 +52,7 @@
  * turns, new model calls — and the folding.
  */
 import {
-  RECORD_CLOSURE_NONE,
-  RECORD_CLOSURE_SOME,
+  DEFAULT_ENGINE_TEXT,
   lieCheckPrompt,
   readLieVerdict,
   rewritePrompt,
@@ -78,6 +77,9 @@ import {
   type HandLabel,
   type LedgerCall,
 } from './lie-question.js';
+
+const RECORD_CLOSURE_SOME = DEFAULT_ENGINE_TEXT.recordClosureSome;
+const RECORD_CLOSURE_NONE = DEFAULT_ENGINE_TEXT.recordClosureNone;
 
 // ── The two lists the check and the rewriter are shown ────────────────────────────────────────────
 

@@ -14,6 +14,7 @@
  * though `rules.ts` names `Intention` from here.
  */
 import type { ObservedCall } from '../rules.js';
+import { resolveEngineText, type EngineText } from './engine-text.js';
 
 /** The CORE, domain-neutral, ledger-checkable outcome vocabulary. Every claim ultimately means one of
  *  these; a domain outcome word MUST map to one (see {@link OutcomeMap} / {@link resolveOutcome}). */
@@ -375,6 +376,8 @@ export function isAskEvent(o: { name: string; args?: Record<string, unknown> }):
 export interface RenderOpts {
   renderClaim?: (c: RenderedClaim, core: CoreOutcome) => string;
   outcomes?: OutcomeMap;
+  /** The engine's OWN sentences — the record closures. Absent ⇒ the engine's English defaults. */
+  text?: EngineText;
 }
 
 /**
@@ -420,30 +423,6 @@ function defaultClaimLine(claim: Intention, core: CoreOutcome): string {
 }
 
 /**
- * THE CLOSURE, when the record names at least one operation: the lines above it are the WHOLE of what
- * this turn changed, so every operation they do not name is denied.
- */
-export const RECORD_CLOSURE_SOME = 'Nothing else was changed on this turn.';
-
-/**
- * THE CLOSURE, when the record names NONE.
- *
- * It is a SECOND sentence, not the same one, because "nothing else was changed" over an empty list
- * presupposes that something WAS changed — and beside a false claim that presupposition CONFIRMS it:
- *
- * ```
- *   message   "I cancelled the Dentist appointment."
- *   lines     (none)
- *   closure   "Nothing else was changed on this turn."
- *             the reader concludes → so it really was cancelled, and nothing further
- * ```
- *
- * This sentence asserts the absence outright, so there is nothing left to presuppose and the claim above
- * it stands contradicted.
- */
-export const RECORD_CLOSURE_NONE = 'No operation was carried out on this turn.';
-
-/**
  * The turn's OPERATION RECORD — the engine's own account of what this turn did, as the user receives it.
  * Deterministic: its only inputs are the VERIFIED `did` and the domain's wording seam, so the same turn
  * renders the same record whatever the prose beside it says.
@@ -466,7 +445,7 @@ export interface OperationRecord {
  * domain overrides the wording per-claim via {@link RenderOpts.renderClaim}.
  *
  * The record ALWAYS closes with a sentence, and the two sentences are not interchangeable — see
- * {@link RECORD_CLOSURE_NONE}. A turn that declared only speech therefore renders the empty-case closure,
+ * {@link EngineText.recordClosureNone}. A turn that declared only speech therefore renders the empty-case closure,
  * never nothing at all: a claim with no record beside it has nothing standing against it.
  */
 export function operationRecord(did: Intention[], opts?: RenderOpts): OperationRecord {
@@ -483,10 +462,11 @@ export function operationRecord(did: Intention[], opts?: RenderOpts): OperationR
     if (line && line.trim()) lines.push(line.trim());
   }
   const hasOperations = lines.length > 0;
+  const sentences = resolveEngineText(opts?.text);
   return {
     lines,
     hasOperations,
-    text: [...lines, hasOperations ? RECORD_CLOSURE_SOME : RECORD_CLOSURE_NONE].join('\n'),
+    text: [...lines, hasOperations ? sentences.recordClosureSome : sentences.recordClosureNone].join('\n'),
   };
 }
 

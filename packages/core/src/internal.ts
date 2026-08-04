@@ -75,8 +75,6 @@ export type { TurnLedger } from './runtime/ledger.js';
 export {
   renderOperationReport,
   operationRecord,
-  RECORD_CLOSURE_SOME,
-  RECORD_CLOSURE_NONE,
   deriveClaimsFromLedger,
   respondPayload,
   terminalPayloadRejection,
@@ -91,6 +89,12 @@ export {
   SPEECH_OPS,
 } from './runtime/claims.js';
 export type { RespondPayload, RenderOpts, Intention, SpeechOp, OperationRecord } from './runtime/claims.js';
+
+// THE ENGINE'S OWN USER-FACING SENTENCES — the record closures and the consent question. A host whose
+// conversation runs in another language declares them, because the user must TYPE the consent token back
+// and a sentence they cannot read is an act they can never agree to.
+export { DEFAULT_ENGINE_TEXT, resolveEngineText } from './runtime/engine-text.js';
+export type { EngineText } from './runtime/engine-text.js';
 
 // WHAT THE SESSION HAS ALREADY DONE — one line per entity, its latest state. Input to the lie check
 // and the rewriter; never delivered.
