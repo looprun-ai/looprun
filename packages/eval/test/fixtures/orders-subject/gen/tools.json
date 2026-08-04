@@ -1,0 +1,31 @@
+[
+  {
+    "name": "listOrders",
+    "description": "List every order on the desk with its customer, item, amount and status.",
+    "inputSchema": { "type": "object", "properties": {}, "required": [] }
+  },
+  {
+    "name": "noteOnOrder",
+    "description": "Attach an internal note to an order. Does not move any money.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "orderId": { "type": "string", "description": "the order number, e.g. `OR-1001`" },
+        "note": { "type": "string" }
+      },
+      "required": ["orderId", "note"]
+    }
+  },
+  {
+    "name": "refundOrder",
+    "description": "Refund an order. Call it without `confirmed` first to surface what would be refunded; then again in a LATER turn, after the customer answers, with `confirmed: true`.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "orderId": { "type": "string", "description": "the order number, e.g. `OR-1001`" },
+        "confirmed": { "type": "boolean" }
+      },
+      "required": ["orderId"]
+    }
+  }
+]
