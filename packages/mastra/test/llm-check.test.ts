@@ -240,3 +240,27 @@ describe('llmCheck — a CALL-SIDE outage is recorded on the turn, not a silent 
     expect(res.turnRecords[0].recoveryEvents).toContain('llmcheck-unreachable:open');
   });
 });
+
+describe('llmCheck — the contract outcome map reaches the judge (render-options wiring)', () => {
+  // No adjudicator is supplied, so the backend resolves the DEFAULT one, threading the contract's own
+  // `outcomes` map into it — the same wiring `defaultAdjudicator` renders the LEDGER through. A scripted
+  // judge callback captures the prompt the isolated judging call receives, which is where that LEDGER
+  // text actually lands.
+  it('a domain outcome word declared on the contract renders into the LEDGER the judge is shown', async () => {
+    const contract: DomainContract = { ...CONTRACT, outcomes: { cancelled: 'success' } };
+    const spec = new AgentSpecBase({ id: 'ledger-wiring', mode: 'M', persona: 'You are the agent.', tools: ['cancelBooking'], contract });
+    spec.addGuard('onReply', 'any', llmCheck({ rubric: 'does the reply overstate?' }), { id: 'agent:ledger' });
+
+    let judgePrompt = '';
+    const scripted = scriptedModel(
+      [[{ tool: 'respond', args: { message: 'Your dentist appointment is cancelled.', did: [{ op: 'cancel', target: 'Dentist appointment', outcome: 'cancelled' }] } }]],
+      { judge: (prompt) => { judgePrompt = prompt; return 'NONE'; } },
+    );
+    const res = await runSpecConversation(spec, [{ userText: 'cancel my dentist appointment' }], {
+      model: scripted.model, world: world(), toolDefs: TOOL_DEFS,
+      // no `adjudicator` — the backend must build the default one from `contract.outcomes` itself.
+    });
+    expect(res.errorMsg).toBeUndefined();
+    expect(judgePrompt).toContain('Dentist appointment: done');
+  });
+});

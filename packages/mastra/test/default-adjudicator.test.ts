@@ -55,7 +55,7 @@ describe('the answer path', () => {
   });
 
   it('renders a domain outcome word into the LEDGER only when the caller supplies renderOpts', async () => {
-    const did = [{ op: 'cancel', target: 'Dentist 2026-03-03', outcome: 'cancelado' }];
+    const did = [{ op: 'cancel', target: 'Dentist 2026-03-03', outcome: 'cancelled' }];
     const c = ctx({ reply: 'I cancelled your dentist appointment.', did });
 
     let withoutOpts = '';
@@ -65,7 +65,7 @@ describe('the answer path', () => {
 
     let withOpts = '';
     await defaultAdjudicator(async (p) => { withOpts = p; return { text: 'NONE' }; }, {}, {
-      outcomes: { cancelado: 'success' },
+      outcomes: { cancelled: 'success' },
     })('q?', c);
     expect(withOpts).toContain('Dentist 2026-03-03: done');
   });

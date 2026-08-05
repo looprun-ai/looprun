@@ -148,7 +148,7 @@ export async function evaluateOnInput(spec: AgentSpec, ledger: TurnLedger, world
   const guards = resolveGuards(spec.guards.onInput);
   // onInput: `args` is empty (no tool); the guard reads the REAL incoming user text via `userText`
   // plus the prior `history`.
-  const gctx: GuardCtx = { args: {}, world, observed: ledger.observed, turnIndex: ledger.turnIndex, userText: ledger.currentUserText, consent: ledger.consentThisTurn, history: ledger.history, adjudicator: ledger.adjudicator, adjudicatorTimeoutMs: ledger.adjudicatorTimeoutMs };
+  const gctx: GuardCtx = { args: {}, world, observed: ledger.observed, turnIndex: ledger.turnIndex, userText: ledger.currentUserText, consent: ledger.consentThisTurn, history: ledger.history, notes: ledger.turnCorrections, adjudicator: ledger.adjudicator, adjudicatorTimeoutMs: ledger.adjudicatorTimeoutMs };
   for (const g of guards) {
     const reason = await g.check(gctx);
     if (reason) {
