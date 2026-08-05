@@ -19,8 +19,12 @@ export interface ScriptedModelOptions {
    *
    * Those calls are ENGINE machinery, not agent behaviour, so they never consume a script step and
    * never count as a call: a script says what the agent does, and stays readable when the engine
-   * asks its own questions around it. The default answers NO, so the check finds nothing and the
-   * agent's prose is delivered as written. Return `'YES'` from a judge to drive the rewrite.
+   * asks its own questions around it. The default answers `NONE`, so the question finds nothing and
+   * the agent's prose is delivered as written. Return `'VIOLATION: <reason>'` to drive the outcome the
+   * turn picks — a rewrite where nothing was carried out, a deny where an action was.
+   *
+   * An answer that is neither is UNREADABLE, and an unreadable answer is not a verdict: it allows,
+   * and the turn records `judge-unreadable`.
    */
   judge?: (prompt: string) => string;
 }
@@ -43,7 +47,7 @@ export function scriptedModel(script: ScriptStep[], options: ScriptedModelOption
   let call = 0;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const received: any[] = [];
-  const answerJudge = options.judge ?? (() => 'NO');
+  const answerJudge = options.judge ?? (() => 'NONE');
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const next = (opts: any) => {
