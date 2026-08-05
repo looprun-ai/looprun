@@ -7,6 +7,8 @@
  * in, the model's raw text out.
  */
 import { stepCountIs } from 'ai';
+import { adjudicationPrompt, readAdjudicationVerdict } from '@looprun-ai/core/internal';
+import type { Adjudicator } from '@looprun-ai/core';
 
 /**
  * The only instructions a judge call carries. They say how to answer and nothing about who is asking —
@@ -30,4 +32,42 @@ export function judgeOptions(modelParams: Record<string, unknown>): Record<strin
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function judgeText(result: any): string {
   return typeof result?.text === 'string' ? result.text : '';
+}
+
+/** The correction a non-run appends. It says the call did not answer — which is not what
+ *  `llmcheck-unreachable:<failMode>` says: that one records a guard applying its failMode to a
+ *  rejection, and an adjudicator knows nothing about failMode. Left unrecorded, an outage and a clean
+ *  session are the same observation. */
+export const ADJUDICATOR_UNREACHABLE = 'adjudicator-unreachable';
+
+/**
+ * THE DEFAULT ADJUDICATOR — every bound rubric, on the turn's own model and endpoint.
+ *
+ * The engine composes the prompt and reads the answer; this carries the call, under the same isolation
+ * the lie check's judge runs under. It SETTLES on every path: a refused endpoint, a spent quota, a hung
+ * call and an empty answer all come back as no violation. A deny drives a redrive and, on exhaustion,
+ * replaces the model's answer with the engine's closure — so treating a failed call as a detection
+ * would convert every reply in the session into a closure, one broken call at a time.
+ *
+ * Because it never rejects, `failMode` never fires from it. A domain that needs an outage to DENY
+ * registers its own adjudicator, one that rejects, and `failMode` prices it as written.
+ */
+export function defaultAdjudicator(
+  generate: (prompt: string, opts: Record<string, unknown>) => Promise<unknown>,
+  modelParams: Record<string, unknown>,
+): Adjudicator {
+  return async (rubric, ctx) => {
+    let text: string;
+    try {
+      text = judgeText(await generate(adjudicationPrompt(rubric, ctx), judgeOptions(modelParams)));
+    } catch {
+      ctx.notes?.push(ADJUDICATOR_UNREACHABLE);
+      return { violation: null };
+    }
+    if (!text.trim()) {
+      ctx.notes?.push(ADJUDICATOR_UNREACHABLE);
+      return { violation: null };
+    }
+    return readAdjudicationVerdict(text);
+  };
 }
