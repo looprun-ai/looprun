@@ -135,19 +135,10 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
     name: 'confirmFirst',
     category: 'confirmation',
     hook: 'preTool',
-    summary: 'A destructive tool needs the user\'s go-ahead from an EARLIER turn — licensed `via` a same-record probe, a prior ask, or either. The licensing event is turn-bounded by `within` (default 1). Passing a `via` NAME to the string overload throws at construction.',
+    summary: 'A destructive tool runs only on a turn whose incoming message carried the engine-issued confirmation token for THIS record. Takes no options.',
     whenToUse:
-      'The user must have agreed before this call runs, and the evidence has to be cross-turn — this is the ONE consent gate (it absorbed `confirmedNeedsEarlierProbe`). Its neighbours answer different questions: `destructiveThrottle` caps the blast radius of a turn that IS approved, `consentRequired` reads a standing world flag rather than the conversation, and `pendingConfirmMustAsk` gates the REPLY rather than the call. `via`: `\'probe\'` = a same-record `flag:false` preview of the SAME tool in an earlier turn (the strict, record-bound license); `\'ask\'` = a flag-LESS action gated on the agent having asked the user in a prior turn; `\'either\'` (default) = the flag-gated form licensed by a matching probe OR a prior-turn question to the user. RECENCY LAW: the licensing event must fall `within` turns of now (default 1, the two-step shape) — widen deliberately for genuinely multi-turn flows. The string overload sets the FLAG NAME, so `confirmFirst(\'probe\')` throws rather than silently building a guard that can never fire.',
-    example: `confirmFirst('confirmed')`,
-  },
-  {
-    name: 'noActAfterAskSameTurn',
-    category: 'confirmation',
-    hook: 'preTool',
-    summary: 'Denies the listed tools on a turn in which the model already asked the user a question.',
-    whenToUse:
-      'The mirror image of `confirmFirst`\'s cross-turn requirement: it closes the multi-tool step that asks and executes back to back, which reads as "asked" but never gave the user a chance to answer.',
-    example: `noActAfterAskSameTurn(['cancelBooking'])`,
+      'The user must have agreed before this call runs, and the agreement has to be THEIRS: the engine issues a confirmation token naming the record, renders it into the delivered text, and this gate allows the act only on a turn whose incoming message carried that token back. There is nothing to configure, because there is no declaration to trust — the agent has no channel through which to produce a consent. Its neighbours answer different questions: `destructiveThrottle` caps the blast radius of a turn that IS confirmed, and `consentRequired` reads a standing world flag rather than the conversation. A denial is also what RAISES the question for a tool the world has no preview form for, so attempting the act is what asks permission for it — and such a tool needs a declared label on the spec, or it can issue no question and never runs.',
+    example: `confirmFirst()`,
   },
   {
     name: 'destructiveThrottle',
@@ -157,15 +148,6 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
     whenToUse:
       'Auto-installed alongside `confirmFirst`. It is the blast-radius cap, not a consent gate: it stops chained destructive calls in one turn even when each one is individually confirmed. A same-step call that is NOT confirmed reads as a preview and does not count (so a legitimate multi-preview is not vetoed) — which means a tool with NO confirm flag needs `flagless`, or its same-step cap never engages. `AgentSpecBase` passes its `prior-ask` tools automatically; pass them yourself when you install this by hand.',
     example: `destructiveThrottle(['cancelBooking', 'purgeAccount'], { flagless: ['purgeAccount'] })`,
-  },
-  {
-    name: 'pendingConfirmMustAsk',
-    category: 'confirmation',
-    hook: 'onReply',
-    summary: 'When a probe returned `requiresConfirmation` this turn and nothing resolved it, the delivered reply must declare an `ask` intention — ANY ask, since an intention names no subject.',
-    whenToUse:
-      'The world runs the two-step protocol itself: the tool answers "I need confirmation" and the risk is a reply that summarises the action as done. It gates the REPLY; `confirmFirst` gates the call. It checks that a question was DECLARED, never that it was about the pending act — pair it with `didMessageConsistency` where that matters.',
-    example: `pendingConfirmMustAsk()`,
   },
 
   // ── honesty ────────────────────────────────────────────────────────────────

@@ -11,8 +11,6 @@ import type { GuardCtx, HistoryTurn, ObservedCall } from '../../src/rules.js';
 import {
   confirmFirst,
   destructiveThrottle,
-  noActAfterAskSameTurn,
-  pendingConfirmMustAsk,
 } from '../../src/guards/confirmation.js';
 import { precondition, resultInvariant, consentRequired } from '../../src/guards/world.js';
 
@@ -102,10 +100,9 @@ describe('confirmFirst — adversarial', () => {
     expect(g.check(confirm)).not.toBeNull();
   });
 
-  it('BREAK (STILL OPEN): via:either accepts an UNRELATED earlier ask as license for a destructive confirm', () => {
-    // The attacker's ask is about something else entirely — the guard does not bind the ask to the
-    // record. Any recent DELIVERED ask unlocks confirmed:true on any destructive record. Binding an ask
-    // to a record would need the ask to name one, which a speech intention does not.
+  it('an UNRELATED earlier ask licenses nothing — a question is not a consent', () => {
+    // The attacker's ask is about something else entirely. Nothing an agent DECLARES is a licence: what
+    // licences a destructive act is a token the engine issued for THAT record and the user typed back.
     const asked: HistoryTurn = {
       turnIndex: 1, userText: 'chat', reply: 'what is your favourite colour?', toolCalls: [],
       did: [{ op: 'ask' }], attemptedCalls: [], guardEvents: [],
@@ -116,11 +113,11 @@ describe('confirmFirst — adversarial', () => {
       history: [asked],
       turnIndex: 2,
     });
-    expect(g.check(confirm)).toBeNull(); // allowed = BREAK
+    expect(g.check(confirm)).not.toBeNull();
   });
 
   it('HOLDS (via:probe): an unrelated ask does NOT license — only a record-bound probe does', () => {
-    const gp = confirmFirst({ via: 'probe' });
+    const gp = confirmFirst();
     const asked: HistoryTurn = {
       turnIndex: 1, userText: 'chat', reply: 'unrelated', toolCalls: [],
       did: [{ op: 'ask' }], attemptedCalls: [], guardEvents: [],
@@ -135,7 +132,7 @@ describe('confirmFirst — adversarial', () => {
   });
 
   it('HOLDS: an under-specified probe does not bypass the strict record-bound arm', () => {
-    const gp = confirmFirst({ via: 'probe' });
+    const gp = confirmFirst();
     const probe = okCall('deleteRecord', 1, { confirmed: false });
     const confirm = ctxWith({
       tool: 'deleteRecord',
@@ -147,7 +144,7 @@ describe('confirmFirst — adversarial', () => {
   });
 
   it('HOLDS (via:ask): a vetoed turn-1 attempt (ok:false) does NOT unlock the identical turn-2 call', () => {
-    const ga = confirmFirst({ via: 'ask' });
+    const ga = confirmFirst({ flag: false });
     const vetoed = okCall('wipeAll', 1, {}, { ok: false });
     const act = ctxWith({ tool: 'wipeAll', args: {}, observed: [vetoed], turnIndex: 2 });
     expect(ga.check(act)).not.toBeNull();
@@ -157,19 +154,19 @@ describe('confirmFirst — adversarial', () => {
     // Counting a flag-less tool's own prior OK run as "surfacing" would let a second identical
     // destructive run happen in the next turn with no fresh ask — and, chained turn by turn, carry ONE
     // consent across unbounded turns, bridging the recency law. Every repeat needs its own earlier-turn ask.
-    const ga = confirmFirst({ via: 'ask' });
+    const ga = confirmFirst({ flag: false });
     const priorRun = okCall('wipeAll', 1, {});
     const act = ctxWith({ tool: 'wipeAll', args: {}, observed: [priorRun], turnIndex: 2 });
     expect(ga.check(act)).not.toBeNull();
   });
 
-  it('CONTROL: the legitimate two-step works — a DELIVERED ask licenses the next turn', () => {
-    const ga = confirmFirst({ via: 'ask' });
-    const asked: HistoryTurn = {
-      turnIndex: 1, userText: 'wipe everything', reply: 'This deletes every record — go ahead?', toolCalls: [],
-      did: [{ op: 'ask' }], attemptedCalls: [], guardEvents: [],
+  it('CONTROL: the legitimate two-step works — the typed token licenses the next turn', () => {
+    const ga = confirmFirst({ flag: false });
+    const consent = {
+      tool: 'wipeAll', meaning: 'delete every record', token: 'CONFIRM DELETE-EVERY',
+      issuedTurn: 1, consumedTurn: 2,
     };
-    expect(ga.check(ctxWith({ tool: 'wipeAll', args: {}, history: [asked], turnIndex: 2 }))).toBeNull();
+    expect(ga.check(ctxWith({ tool: 'wipeAll', args: {}, turnIndex: 2, consent: [consent] }))).toBeNull();
   });
 });
 
@@ -249,35 +246,6 @@ describe('destructiveThrottle — adversarial', () => {
     expect(g.check(execute)).toBeNull();
   });
 });
-
-// ─────────────────────────────────────────────────────────────────────────────
-// noActAfterAskSameTurn
-// ─────────────────────────────────────────────────────────────────────────────
-describe('noActAfterAskSameTurn — adversarial', () => {
-  const g = noActAfterAskSameTurn(['deleteRecord']);
-
-  it('LEAK: a destructive tool NOT in the set acts freely in the same turn as an ask', () => {
-    const asked = okCall('respond', 3, { message: 'ok?', did: [{ op: 'ask' }] });
-    const act = ctxWith({ tool: 'wipeAll', args: {}, observed: [asked], turnIndex: 3 });
-    expect(g.check(act)).toBeNull(); // wipeAll uncovered = LEAK (coverage gap)
-  });
-
-  it('LEAK: asking in prose (respond WITHOUT an ask intention) is NOT detected as an ask → listed tool acts same turn', () => {
-    const asked = okCall('respond', 3, { message: 'Delete it? (yes/no)', did: [] });
-    const act = ctxWith({ tool: 'deleteRecord', args: {}, observed: [asked], turnIndex: 3 });
-    expect(g.check(act)).toBeNull(); // only a declared `ask` intention is detected = LEAK
-  });
-
-  it('HOLDS: a real same-turn ask intention blocks the listed tool', () => {
-    const asked = okCall('respond', 3, { message: 'ok?', did: [{ op: 'ask' }] });
-    const act = ctxWith({ tool: 'deleteRecord', args: {}, observed: [asked], turnIndex: 3 });
-    expect(g.check(act)).not.toBeNull();
-  });
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
-// precondition
-// ─────────────────────────────────────────────────────────────────────────────
 describe('precondition — adversarial', () => {
   it('LEAK: predicate reads WORLD only — a per-record arg cannot be gated by a global world flag', () => {
     // Guard: allowed only while the account is verified. But "verified" is a GLOBAL world flag; the tool
@@ -375,32 +343,5 @@ describe('resultInvariant — adversarial', () => {
     // null through. Documented as a foot-gun the undefined short-circuit encourages.
     const ctx = ctxWith({ tool: 'runReport', args: {}, result: null, turnIndex: 1 });
     expect(g.check(ctx)).toBe('the report came back empty');
-  });
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
-// pendingConfirmMustAsk (consent-cluster neighbour)
-// ─────────────────────────────────────────────────────────────────────────────
-describe('pendingConfirmMustAsk — adversarial', () => {
-  const g = pendingConfirmMustAsk();
-
-  it('BREAK: an under-specified approved execute RESOLVES a pending probe of a different record', () => {
-    // The resolver matches on record = args minus confirm flag. A probe of record {recordId:A} is marked
-    // resolved by an execute {confirmed:true} carrying NO recordId only if records match — they don't here,
-    // so it should stay pending. Test the inverse: probe with NO recordId, execute WITH one → records
-    // differ → stays unresolved (HOLDS). Then the true break: identical empty records collide.
-    const probe = okCall('deleteRecord', 4, { confirmed: false }, { resultFlags: { requiresConfirmation: true } });
-    const execute = okCall('deleteRecord', 4, { recordId: 'B', confirmed: true }, { tookEffect: true });
-    const ctx = ctxWith({ observed: [probe, execute], turnIndex: 4 });
-    // record(probe)='{}' vs record(execute)='{"recordId":"B"}' → differ → still unresolved → must ask.
-    expect(g.check(ctx)).not.toBeNull(); // HOLDS
-  });
-
-  it('HOLDS: a pending probe with no ask this turn demands the relay', () => {
-    const probe = okCall('deleteRecord', 4, { recordId: 'A', confirmed: false }, {
-      resultFlags: { requiresConfirmation: true },
-    });
-    const ctx = ctxWith({ observed: [probe], turnIndex: 4 });
-    expect(g.check(ctx)).not.toBeNull();
   });
 });

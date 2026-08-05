@@ -30,9 +30,7 @@ export { argRequired, argAbsent, argFormat } from './args.js';
 export { precondition, resultInvariant, consentRequired } from './world.js';
 export {
   confirmFirst,
-  noActAfterAskSameTurn,
   destructiveThrottle,
-  pendingConfirmMustAsk,
 } from './confirmation.js';
 export { llmCheck, didMessageConsistency } from './llm-check.js';
 export { claimIsGrounded, claimIsComplete, claimCoversRubric, isEmptyReadResult } from './honesty.js';

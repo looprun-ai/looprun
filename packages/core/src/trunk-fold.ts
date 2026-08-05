@@ -51,11 +51,9 @@ export const GUARD_KIND_SUBJECT: Readonly<Record<string, string>> = Object.freez
   resultInvariant: 'result-invariant',
   // destructive-safety protocol
   confirmFirst: 'confirm-before-destructive',
-  // These two are deliberately NOT one subject: a per-turn CAP reads `require` and a same-turn BAN
-  // reads `forbid`, so a single shared subject would describe two different rules as one.
+  // A per-turn CAP is its own subject: it bounds a turn that HAS been confirmed, which is a different
+  // rule from requiring the confirmation in the first place.
   destructiveThrottle: 'destructive-throttle',
-  noActAfterAskSameTurn: 'act-after-ask',
-  pendingConfirmMustAsk: 'relay-pending-confirmation',
   // reply hygiene (degenerationGuard is the only reply kind that reads the message as an ARTIFACT)
   degenerationGuard: 'reply-hygiene',
 });

@@ -296,7 +296,7 @@ describe('SECTION 4 — the premature-terminal ask leak is pruned, so no cross-t
     expect(ledger.observed.filter((o) => o.ok && isAskEvent(o))).toEqual([]);
   });
 
-  it('CLOSED: next turn, confirmFirst(via:"either"/"ask") DENIES deleteAccount — the ask never reached the user', () => {
+  it('CLOSED: next turn, confirmFirst DENIES deleteAccount in both shapes — no declaration is a licence', () => {
     const ledger = createLedger();
     beginTurn(ledger, 1);
     recordTerminalCall(ledger, 'respond', { message: 'Delete account 5?', did: [{ op: 'ask' }] });
@@ -310,8 +310,8 @@ describe('SECTION 4 — the premature-terminal ask leak is pruned, so no cross-t
 
     // Turn 2: the model now fires the confirmed destructive call.
     beginTurn(ledger, 2); // observed is conversation-scoped → the leaked ask persists
-    const gEither = confirmFirst({ via: 'either' });
-    const gAsk = confirmFirst({ via: 'ask' });
+    const gEither = confirmFirst();
+    const gAsk = confirmFirst({ flag: false });
     const ctxEither = base({ tool: 'deleteAccount', args: { confirmed: true, id: 5 }, observed: ledger.observed, turnIndex: 2 });
     const ctxAsk = base({ tool: 'deleteAccount', args: {}, observed: ledger.observed, turnIndex: 2 });
 
@@ -327,7 +327,7 @@ describe('SECTION 4 — the premature-terminal ask leak is pruned, so no cross-t
     // Simulate the pruning the premature path OMITS: drop the leaked ask entry.
     ledger.observed = ledger.observed.filter((o) => !isAskEvent(o));
     beginTurn(ledger, 2);
-    const g = confirmFirst({ via: 'either' });
+    const g = confirmFirst();
     const ctx = base({ tool: 'deleteAccount', args: { confirmed: true, id: 5 }, observed: ledger.observed, turnIndex: 2 });
     expect(g.check(ctx)).not.toBeNull(); // no phantom license → denied, as intended
   });

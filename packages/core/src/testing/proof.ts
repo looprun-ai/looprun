@@ -124,7 +124,7 @@ export function buildIsolatedSpec(proof: GuardProof): AgentSpecBase {
 }
 
 /** Build ONE spec with EVERY non-auto proof guard installed — the collective non-interference harness.
- *  Auto kinds ride AgentSpecBase (destructiveTools + confirmMechanism). Duplicate kinds
+ *  Auto kinds ride AgentSpecBase (destructiveTools + confirmMechanism + destructiveLabels). Duplicate kinds
  *  at different targets are fine; ids are made unique by suffixing `#2`, `#3`, … */
 export function buildCollectiveSpec(proofs: GuardProof[]): AgentSpecBase {
   const spec = new AgentSpecBase({
@@ -135,6 +135,8 @@ export function buildCollectiveSpec(proofs: GuardProof[]): AgentSpecBase {
     contract: FIXTURE_DOMAIN,
     destructiveTools: ['deleteItem', 'purgeAll'],
     confirmMechanism: { purgeAll: 'prior-ask' },
+    // purgeAll acts on no identifiable record, so its consent question is built from this label.
+    destructiveLabels: { purgeAll: 'delete every item' },
   });
   const used = new Set<string>();
   for (const proof of proofs) {

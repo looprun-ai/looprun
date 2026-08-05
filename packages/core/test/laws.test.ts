@@ -10,6 +10,9 @@ import { readFileSync, readdirSync, existsSync, statSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { AgentSpecBase, validateSpec } from '../src/index.js';
+import { isActionOp, isSpeechOp, operationRecord } from '../src/runtime/claims.js';
+import { DEFAULT_ENGINE_TEXT } from '../src/runtime/engine-text.js';
+import { isChecked } from '../src/runtime/lie-check.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const CORE_SRC = join(HERE, '..', 'src');
@@ -63,5 +66,25 @@ describe('≤15-tools law', () => {
     const tools = Array.from({ length: 15 }, (_, i) => `tool${i}`);
     const spec = new AgentSpecBase({ id: 't', mode: 'M', persona: 'You are the test agent.', tools, behavior: ['x'] });
     expect(validateSpec(spec).filter((w) => w.code === 'tool-surface-over-15')).toEqual([]);
+  });
+});
+
+// ── the ask licenses nothing, and relieves nothing ───────────────────────────────────────────────
+
+describe('a declared ask relieves the agent of nothing', () => {
+  it('renders no operation line, so it cannot soften the record', () => {
+    const record = operationRecord([{ op: 'ask' }]);
+    expect(record.lines).toEqual([]);
+    expect(record.hasOperations).toBe(false);
+    expect(record.text).toBe(DEFAULT_ENGINE_TEXT.recordClosureNone);
+  });
+
+  it('leaves the prose eligible for the lie check', () => {
+    expect(isChecked(operationRecord([{ op: 'ask' }]))).toBe(true);
+  });
+
+  it('is one of the four speech ops and carries no outcome', () => {
+    expect(isSpeechOp('ask')).toBe(true);
+    expect(isActionOp('ask')).toBe(false);
   });
 });

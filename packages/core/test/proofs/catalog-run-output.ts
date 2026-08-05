@@ -5,7 +5,6 @@ import {
   custom,
   destructiveThrottle,
   maxCalls,
-  noActAfterAskSameTurn,
   noDuplicateCall,
   precondition,
   resultInvariant,
@@ -196,11 +195,11 @@ const noDuplicateCallProof: GuardProof = {
   ],
 };
 
-// ── confirmFirst (auto:'base' — via:'either' on deleteItem, via:'ask' on flag-less purgeAll) ──
+// ── confirmFirst (auto:'base' — deleteItem previews its record, purgeAll declares a label) ──
 const confirmFirstProof: GuardProof = {
   guard: 'confirmFirst',
-  // STRUCTURAL (no-regex law): via:'either' accepts a matching prior-turn same-tool probe (record-bound)
-  // or a prior-turn ask as the go-ahead — no reply-text regex. Recency-bounded (default within:1).
+  // The licence is a token the ENGINE issued for a record and the USER typed back. Nothing the agent
+  // emits is admitted, so the guard takes no options and reads only `ctx.consent`.
   make: () => confirmFirst(),
   hook: 'preTool',
   target: ['deleteItem'],
@@ -208,104 +207,94 @@ const confirmFirstProof: GuardProof = {
   specTweaks: {
     destructiveTools: ['deleteItem', 'purgeAll'],
     confirmMechanism: { purgeAll: 'prior-ask' },
+    // purgeAll acts on no identifiable record, so its question is built from this label.
+    destructiveLabels: { purgeAll: 'delete every item' },
   },
   cases: [
     {
-      name: 'arg mechanism: confirming without an earlier probe is denied',
+      name: 'acting with no consent is denied',
       polarity: 'negative',
-      ctx: { tool: 'deleteItem', args: { confirmed: true }, observed: [], turnIndex: 1 },
+      ctx: { tool: 'deleteItem', args: { id: 'itm-1', confirmed: true }, consent: [], turnIndex: 1 },
       l1: 'fires',
       l3: {
         preset: 'empty',
         turns: [{ userText: 'delete item itm-1' }],
         script: [
           [{ tool: 'deleteItem', args: { id: 'itm-1', confirmed: true } }],
-          [{ tool: 'respond', args: { message: 'That deletion still needs your confirmation — are you sure?', did: [{ op: 'inform' }] } }],
+          [{ tool: 'respond', args: { message: 'That deletion still needs your confirmation.', did: [{ op: 'inform' }] } }],
         ],
         expect: 'veto',
         tool: 'deleteItem',
       },
     },
     {
-      name: 'via:either — a matching earlier-turn probe (same RECORD) unlocks confirmed execution',
+      name: 'the token the user typed for THIS record unlocks execution',
       polarity: 'positive',
       ctx: {
         tool: 'deleteItem',
         args: { id: 'itm-1', confirmed: true },
-        observed: [{ name: 'deleteItem', args: { id: 'itm-1' }, ok: true, turnIndex: 0 }],
+        consent: [{ tool: 'deleteItem', subject: 'itm-1', meaning: 'itm-1', token: 'CONFIRM ITM-1', issuedTurn: 0, consumedTurn: 1 }],
         turnIndex: 1,
       },
       l1: 'silent',
       l3: {
         preset: 'empty',
-        turns: [{ userText: 'delete item itm-1' }, { userText: 'yes, I confirm' }],
+        turns: [{ userText: 'delete item itm-1' }, { userText: 'CONFIRM itm-1' }],
         script: [
           [{ tool: 'deleteItem', args: { id: 'itm-1' } }],
-          [{ tool: 'respond', args: { message: 'Delete item itm-1 — are you sure?', did: [{ op: 'ask' }] } }],
+          [{ tool: 'respond', args: { message: 'That one needs your confirmation.', did: [{ op: 'cancel', target: 'itm-1', outcome: 'pending_confirmation' }] } }],
           [{ tool: 'deleteItem', args: { id: 'itm-1', confirmed: true } }],
-          [{ tool: 'respond', args: { message: 'The item was deleted as requested.', did: [{ op: 'inform' }] } }],
+          [{ tool: 'respond', args: { message: 'The item was deleted as requested.', did: [{ op: 'cancel', target: 'itm-1', outcome: 'success' }] } }],
         ],
         expect: 'pass',
       },
     },
     {
-      // no-regex law: a prior-turn PROSE confirmation-ask does not unlock — the go-ahead must be a
-      // structural same-tool probe or an ask intention. A respond without one is just prose, so this
-      // DENIES.
-      name: 'arg mechanism: a prior-turn prose confirmation-ask does NOT unlock (structural only)',
+      name: 'a consent for another record does not unlock this one',
       polarity: 'negative',
       ctx: {
         tool: 'deleteItem',
-        args: { confirmed: true },
-        observed: [
-          { name: 'respond', args: { message: 'Deleting item itm-1 is permanent — are you sure?', did: [{ op: 'inform' }] }, ok: true, turnIndex: 0 },
-        ],
+        args: { id: 'itm-2', confirmed: true },
+        consent: [{ tool: 'deleteItem', subject: 'itm-1', meaning: 'itm-1', token: 'CONFIRM ITM-1', issuedTurn: 0, consumedTurn: 1 }],
         turnIndex: 1,
       },
       l1: 'fires',
     },
     {
-      // The ask signal is the SEALED turn record, never a raw `observed` respond.
-      name: 'arg mechanism: a prior-turn ask intention counts as the probe',
-      polarity: 'positive',
+      name: 'a prior-turn reply that merely asks a question unlocks nothing',
+      polarity: 'negative',
       ctx: {
         tool: 'deleteItem',
-        args: { confirmed: true },
+        args: { id: 'itm-1', confirmed: true },
+        consent: [],
         history: [
           { turnIndex: 0, userText: 'delete itm-1', reply: 'Delete item itm-1 — are you sure?', toolCalls: [], did: [{ op: 'ask' }], attemptedCalls: [], guardEvents: [] },
         ],
         turnIndex: 1,
       },
+      l1: 'fires',
+    },
+    {
+      name: 'the tool\'s own earlier successful run unlocks nothing',
+      polarity: 'negative',
+      ctx: {
+        tool: 'deleteItem',
+        args: { id: 'itm-1', confirmed: true },
+        consent: [],
+        observed: [{ name: 'deleteItem', args: { id: 'itm-1', confirmed: true }, ok: true, turnIndex: 0, tookEffect: true }],
+        turnIndex: 1,
+      },
+      l1: 'fires',
+    },
+    {
+      // The PREVIEW is how the world raises the question, so it runs freely; only the acting call is gated.
+      name: 'the preview call is never gated — it is how the question gets asked',
+      polarity: 'neutral',
+      ctx: { tool: 'deleteItem', args: { id: 'itm-1' }, consent: [], turnIndex: 1 },
       l1: 'silent',
     },
     {
-      name: 'arg mechanism (P9): a SAME-turn ask does not unlock — the one-shot stays vetoed',
-      polarity: 'negative',
-      ctx: {
-        tool: 'deleteItem',
-        args: { confirmed: true },
-        observed: [
-          { name: 'respond', args: { message: 'Are you sure?', did: [{ op: 'ask' }] }, ok: true, turnIndex: 1 },
-        ],
-        turnIndex: 1,
-      },
-      l1: 'fires',
-    },
-    {
-      name: 'arg mechanism (P9): a prior-turn reply that is NOT a confirmation-ask does not unlock',
-      polarity: 'negative',
-      ctx: {
-        tool: 'deleteItem',
-        args: { confirmed: true },
-        observed: [
-          { name: 'respond', args: { message: 'Here is the item detail you asked for.', did: [{ op: 'inform' }] }, ok: true, turnIndex: 0 },
-        ],
-        turnIndex: 1,
-      },
-      l1: 'fires',
-    },
-    {
-      name: 'prior-ask mechanism: acting with no earlier ask is denied',
+      name: 'a recordless act: running it with no consent is denied',
       polarity: 'negative',
       l1: 'fires',
       l3: {
@@ -313,126 +302,27 @@ const confirmFirstProof: GuardProof = {
         turns: [{ userText: 'purge everything' }],
         script: [
           [{ tool: 'purgeAll', args: {} }],
-          [{ tool: 'respond', args: { message: 'Purging everything needs your confirmation first — are you sure?', did: [{ op: 'inform' }] } }],
+          [{ tool: 'respond', args: { message: 'Purging everything needs your confirmation first.', did: [{ op: 'inform' }] } }],
         ],
         expect: 'veto',
         tool: 'purgeAll',
       },
     },
     {
-      name: 'prior-ask mechanism: an earlier-turn ask unlocks execution',
+      name: 'a recordless act: the label token the user typed unlocks execution',
       polarity: 'positive',
       l1: 'silent',
       l3: {
         preset: 'empty',
-        turns: [{ userText: 'purge everything' }, { userText: 'yes' }],
+        turns: [{ userText: 'purge everything' }, { userText: 'CONFIRM DELETE-EVERY' }],
         script: [
-          [{ tool: 'respond', args: { message: 'This will purge every item — are you sure?', did: [{ op: 'ask' }] } }],
           [{ tool: 'purgeAll', args: {} }],
-          [{ tool: 'respond', args: { message: 'Every item is gone now, as you confirmed.', did: [{ op: 'inform' }] } }],
+          [{ tool: 'respond', args: { message: 'That needs your confirmation.', did: [{ op: 'inform' }] } }],
+          [{ tool: 'purgeAll', args: {} }],
+          [{ tool: 'respond', args: { message: 'Every item was purged.', did: [{ op: 'purge', outcome: 'success' }] } }],
         ],
         expect: 'pass',
       },
-    },
-    {
-      // The probe is RECORD-bound (args-subset), so a preview of a DIFFERENT record does not license
-      // this confirm.
-      name: 'via:either (record-bound): an earlier probe of a DIFFERENT record does not unlock',
-      polarity: 'negative',
-      ctx: {
-        tool: 'deleteItem',
-        args: { id: 'itm-2', confirmed: true },
-        observed: [{ name: 'deleteItem', args: { id: 'itm-1' }, ok: true, turnIndex: 0 }],
-        turnIndex: 1,
-      },
-      l1: 'fires',
-    },
-    {
-      // RECENCY LAW (default within:1): a probe two turns back is stale and does not license today's confirm.
-      name: 'recency: a probe at distance 2 does NOT unlock (default within:1)',
-      polarity: 'negative',
-      ctx: {
-        tool: 'deleteItem',
-        args: { id: 'itm-1', confirmed: true },
-        observed: [{ name: 'deleteItem', args: { id: 'itm-1' }, ok: true, turnIndex: 0 }],
-        turnIndex: 2,
-      },
-      l1: 'fires',
-    },
-    {
-      name: 'a non-destructive tool call is never gated',
-      polarity: 'neutral',
-      ctx: { tool: 'searchItem', args: {}, observed: [], turnIndex: 0 },
-      l1: 'silent',
-    },
-  ],
-};
-
-// ── noActAfterAskSameTurn (deleteItem, purgeAll — never same turn as the ask) ──
-const noActAfterAskSameTurnProof: GuardProof = {
-  guard: 'noActAfterAskSameTurn',
-  make: () => noActAfterAskSameTurn(['deleteItem', 'purgeAll']),
-  hook: 'preTool',
-  target: ['deleteItem', 'purgeAll'],
-  cases: [
-    {
-      // The same-turn ask→act sequence only
-      // exists inside ONE multi-tool step (the ask rides the terminal), and the AI SDK dispatches a
-      // step's tool calls CONCURRENTLY (Promise.all) — the destructive call's preTool check used to
-      // run BEFORE the ask landed in the observed ledger, so this deny was unreachable at L3.
-      // FIXED same day: the runtime now records terminal calls in beforeToolCall's SYNCHRONOUS
-      // segment (emission order), so the sibling check sees the ask. The L3 deny below is the
-      // regression proof for that fix.
-      name: 'asking then acting in the very same turn is denied',
-      polarity: 'negative',
-      ctx: {
-        tool: 'deleteItem',
-        observed: [{ name: 'respond', args: { message: 'x', did: [{ op: 'ask' }] }, ok: true, turnIndex: 0 }],
-        turnIndex: 0,
-      },
-      l1: 'fires',
-      l3: {
-        preset: 'empty',
-        turns: [{ userText: 'delete item itm-1' }],
-        script: [
-          [
-            { tool: 'respond', args: { message: 'Delete item itm-1 — are you sure?', did: [{ op: 'ask' }] } },
-            { tool: 'deleteItem', args: { id: 'itm-1' } },
-          ],
-        ],
-        expect: 'veto',
-        tool: 'deleteItem',
-      },
-    },
-    {
-      name: 'asking in one turn and acting in a later turn is allowed',
-      polarity: 'positive',
-      ctx: {
-        tool: 'deleteItem',
-        observed: [{ name: 'respond', args: { message: 'x', did: [{ op: 'ask' }] }, ok: true, turnIndex: 0 }],
-        turnIndex: 1,
-      },
-      l1: 'silent',
-      l3: {
-        preset: 'empty',
-        turns: [{ userText: 'delete item itm-1' }, { userText: 'yes' }],
-        script: [
-          [{ tool: 'respond', args: { message: 'Delete item itm-1 — are you sure?', did: [{ op: 'ask' }] } }],
-          [{ tool: 'deleteItem', args: { id: 'itm-1' } }],
-          [{ tool: 'respond', args: { message: 'The item still requires your confirmation before removal — are you sure?', did: [{ op: 'ask' }] } }],
-        ],
-        expect: 'pass',
-      },
-    },
-    {
-      name: 'the guard ignores tools outside its list',
-      polarity: 'neutral',
-      ctx: {
-        tool: 'searchItem',
-        observed: [{ name: 'respond', args: { message: 'x', did: [{ op: 'ask' }] }, ok: true, turnIndex: 0 }],
-        turnIndex: 0,
-      },
-      l1: 'silent',
     },
   ],
 };
@@ -447,6 +337,7 @@ const destructiveThrottleProof: GuardProof = {
   specTweaks: {
     destructiveTools: ['deleteItem', 'purgeAll'],
     confirmMechanism: { purgeAll: 'prior-ask' },
+    destructiveLabels: { purgeAll: 'delete every item' },
   },
   cases: [
     {
@@ -460,9 +351,10 @@ const destructiveThrottleProof: GuardProof = {
       l1: 'silent',
       l3: {
         preset: 'empty',
-        turns: [{ userText: 'purge everything' }, { userText: 'yes' }],
+        turns: [{ userText: 'purge everything' }, { userText: 'CONFIRM DELETE-EVERY' }],
         script: [
-          [{ tool: 'respond', args: { message: 'This will purge every item — are you sure?', did: [{ op: 'ask' }] } }],
+          [{ tool: 'purgeAll', args: {} }],
+          [{ tool: 'respond', args: { message: 'That one needs your confirmation.', did: [{ op: 'inform' }] } }],
           [{ tool: 'purgeAll', args: {} }],
           [{ tool: 'respond', args: { message: 'Every item is gone now, as agreed.', did: [{ op: 'inform' }] } }],
         ],
@@ -480,10 +372,10 @@ const destructiveThrottleProof: GuardProof = {
       l1: 'fires',
       l3: {
         preset: 'empty',
-        turns: [{ userText: 'delete item itm-1 and purge everything' }, { userText: 'yes' }],
+        turns: [{ userText: 'delete item itm-1 and purge everything' }, { userText: 'CONFIRM itm-1 and CONFIRM DELETE-EVERY' }],
         script: [
-          [{ tool: 'deleteItem', args: { id: 'itm-1' } }],
-          [{ tool: 'respond', args: { message: 'Delete itm-1 and purge everything — are you sure?', did: [{ op: 'ask' }] } }],
+          [{ tool: 'deleteItem', args: { id: 'itm-1' } }, { tool: 'purgeAll', args: {} }],
+          [{ tool: 'respond', args: { message: 'Both of those need your confirmation.', did: [{ op: 'inform' }] } }],
           [{ tool: 'deleteItem', args: { id: 'itm-1', confirmed: true } }],
           [{ tool: 'purgeAll', args: {} }],
           [{ tool: 'respond', args: { message: 'Item itm-1 was deleted; the purge can run next turn.', did: [{ op: 'inform' }] } }],
@@ -678,7 +570,6 @@ export const RUN_OUTPUT_PROOFS: GuardProof[] = [
   maxCallsProof,
   noDuplicateCallProof,
   confirmFirstProof,
-  noActAfterAskSameTurnProof,
   destructiveThrottleProof,
   resultInvariantProof,
   customProof,

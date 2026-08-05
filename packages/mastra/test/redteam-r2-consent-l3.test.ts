@@ -184,17 +184,18 @@ describe('L2 — an unsealed stream() turn licenses a later destructive act', ()
     expect(sealed[0]!.did).toEqual([{ op: 'ask' }]);
   });
 
-  it('CONTROL (availability): the DELIVERED streamed ask licenses the next turn\'s confirmed delete', async () => {
+  it('CONTROL (availability): a streamed turn that raised the question licenses the token the user types', async () => {
     const { agent } = makeAgent([
-      [{ tool: 'respond', args: { message: 'Delete every item — are you sure?', did: [{ op: 'ask' }] } }],
+      [{ tool: 'deleteItem', args: { id: 'p001' } }],
+      [{ tool: 'respond', args: { message: 'That one needs your confirmation.', did: [{ op: 'inform' }] } }],
       [{ text: 'stop' }],
       [{ tool: 'deleteItem', args: { id: 'p001', confirmed: true } }],
       [{ tool: 'respond', args: { message: 'Done.', did: [{ op: 'deleteItem', target: 'p001', outcome: 'success' }] } }],
     ]);
-    await streamTurn(agent, 'delete every item');
-    const res = await agent.generate('yes, go ahead');
-    // The two-step consent flow must survive every tightening: a real question, really delivered, really
-    // sealed, licenses the answer the user gives next turn.
+    await streamTurn(agent, 'delete item p001');
+    const res = await agent.generate('CONFIRM p001');
+    // The two-step consent flow must survive every tightening: a question the engine really raised, over
+    // a streamed turn, is answerable by the token the user types next turn.
     expect(vetoed(res.looprun.corrections, 'deleteItem')).toBe(false);
   });
 });

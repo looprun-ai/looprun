@@ -1,150 +1,61 @@
 /**
- * CONFIRMATION guards — the ask-before-you-act family: the confirm gate itself, the same-turn
- * ask-then-act deny, the one-destructive-action-per-turn throttle, and the pending-probe relay.
+ * CONFIRMATION guards — the consent family: the gate that reads the user's typed confirmation, and the
+ * one-destructive-action-per-turn throttle that caps a turn which HAS been confirmed.
  */
 import type { Guard, ObservedCall } from '../rules.js';
-import { canonArgs, countOkCalls } from './flow.js';
-import { askedInDeliveredTurn } from './shared.js';
-import { hasAskIntent, isAskEvent, isBlankDelivery } from '../runtime/claims.js';
+import { countOkCalls } from './flow.js';
+import { challengeMatchesCall } from '../runtime/challenge.js';
 
 /**
- * A destructive tool needs the user's go-ahead before it runs — the ONE confirm-gate kind (it absorbed the
- * former structural `confirmedNeedsEarlierProbe`). What LICENSES the confirmed act is the `via` option:
- *  - `'probe'`: a `flag:false`/absent PROBE of the SAME tool that ran OK in an EARLIER turn AND acted on
- *    this call's RECORD (its args, minus the confirm `flag`, are set-EQUAL to this call's) — the preview
- *    was of the SAME act, not a smaller or different one. This is the strict, record-bound license.
- *  - `'ask'`: a flag-LESS action (e.g. a zero-arg tool). It is legal ONLY when the turn `[1, within]`
- *    turns back DELIVERED an ask (its sealed `did` carries an `ask` intention) — the model must ASK, wait
- *    for the user's answer, and act only in a LATER turn. Every call is gated (there is no confirm flag to
- *    key on), and EVERY REPEAT needs its own earlier-turn ask: the tool's own prior successful run is not
- *    surfacing. A same-turn ask does NOT unlock it (that is `noActAfterAskSameTurn`'s
- *    edge — the two compose: `via:'ask'` = cross-turn REQUIRE, `noActAfterAskSameTurn` = same-turn DENY).
- *  - `'either'` (DEFAULT): the flag-gated form — `flag:true` is licensed by a matching earlier-turn probe OR
- *    an earlier-turn ask event. This is what the string overload and `AgentSpecBase`'s arg-flag tools install.
+ * A destructive tool ACTS only on a turn whose incoming message carried the engine's consent token for
+ * THIS record.
  *
- * ASK SIGNAL: every ask arm reads {@link askedInDeliveredTurn} — asking is an `ask` INTENTION in the
- * delivered turn's `did`, and a turn already sealed into `ctx.history` is authoritative for itself,
- * so a `respond` that was recorded but never DELIVERED (superseded or premature) can never license.
+ * ```
+ *   open question    To confirm itm-1, reply: CONFIRM ITM-1
  *
- * RECENCY LAW: a license is a LICENSING signal — a past event (a probe or an earlier-turn ask
- * event) that UNLOCKS a new act — so it is turn-bounded by `within` (default **1**, the immediately-preceding
- * turn / the natural two-step shape): the licensing event must satisfy
- * `1 ≤ currentTurnIndex − eventTurnIndex ≤ within`. A probe 20 turns ago
- * must never license today's confirm; widen deliberately with `within` when the flow genuinely spans turns.
+ *   user types  "yes, CONFIRM itm-1"   → deleteItem({id:'itm-1',confirmed:true}) runs
+ *   user types  "go ahead"             → denied, and the question is put back on the screen
+ *   user types  "delete itm-12"        → denied; itm-12 is not itm-1
+ * ```
  *
- * Keys on observed / args only (a structural signal, not reply text) — so it stays model-independent.
- * Auto-installed by `AgentSpecBase` per destructive tool according to `cfg.confirmMechanism`.
+ * WHAT LICENSES is a PURE READ of `ctx.consent` — the challenges the runtime already matched against the
+ * user's own words. The guard reads no text, keeps no state, and accepts no declaration: the agent has no
+ * channel through which to produce a consent, because a consent is a literal only the engine issued and
+ * only the user can type.
+ *
+ * WHAT IS GATED is decided by `flag`, and that is the whole of the configuration. A two-step tool
+ * distinguishes its PREVIEW from its ACT by an argument, and the preview must run — it is how the world
+ * raises the question in the first place:
+ *
+ * ```
+ *   deleteItem({id:'itm-1'})                   preview → the world answers "I need confirmation on itm-1"
+ *                                                      → the engine raises the question
+ *   deleteItem({id:'itm-1', confirmed:true})   act     → gated on the token
+ * ```
+ *
+ * `flag: false` is the one-step shape: the tool has no preview form, so EVERY call acts and every call is
+ * gated. There the DENIAL is what raises the question, from the label the spec declared — attempting the
+ * act is what asks permission for it, and an agent that never attempts never acts.
  */
-export function confirmFirst(
-  opts?: string | { flag?: string; via?: 'probe' | 'ask' | 'either'; within?: number },
-): Guard {
-  // The string overload sets the confirm `flag`, NOT `via` — and `confirmFirst('probe'|'ask'|'either')` is
-  // the plausible slip (it is literally a `via` value). It would build flag:'ask' (etc.) with via:'either',
-  // a guard that can never fire in the flag-gated arm: no tool carries an arg called `ask`, so
-  // `ctx.args['ask'] !== true` short-circuits to `null` on every call — a destructive tool left UNGATED
-  // while the spec header reads as confirmed-covered. Rejected at construction (same fail-fast posture the
-  // risk-family kinds take against inert configuration); the legitimate call is the object form.
-  if (typeof opts === 'string' && (opts === 'probe' || opts === 'ask' || opts === 'either')) {
-    throw new Error(
-      `confirmFirst('${opts}'): the STRING overload sets the confirm FLAG, not \`via\` — this would build flag:'${opts}' with via:'either', a guard that can never fire (no tool has an argument named '${opts}'). Pass the object form: confirmFirst({ via: '${opts}' }).`,
-    );
-  }
-  const o = typeof opts === 'string' ? { flag: opts } : (opts ?? {});
-  const flag = o.flag ?? 'confirmed';
-  const via = o.via ?? 'either';
-  const within = o.within ?? 1;
-  // RECENCY LAW: an earlier-turn event licenses only within `within` turns of the current turn.
-  const recent = (obs: ObservedCall, cur: number): boolean =>
-    cur - obs.turnIndex >= 1 && cur - obs.turnIndex <= within;
-  // The RECORD a call acts on = its args minus the confirm flag, minus explicitly-`undefined` values —
-  // matching `canonArgs`' identity notion (it drops undefined-valued keys; `Object.keys` does not), so a
-  // call carrying `{account:'A', scope:undefined}` is the SAME record as `{account:'A'}`.
-  const recordKeys = (args: Record<string, unknown> | undefined): string[] =>
-    Object.keys(args ?? {}).filter((k) => k !== flag && args![k] !== undefined);
+export function confirmFirst(opts?: { flag?: string | false }): Guard {
+  const flag = opts?.flag === undefined ? 'confirmed' : opts.flag;
   return {
     kind: 'confirmFirst',
     dim: 'run',
     check(ctx) {
-      if (!ctx.tool) return null;
-      if (via === 'ask') {
-        // Flag-less action: every call is gated on a DELIVERED earlier-turn ask, within recency. ITS OWN
-        // ITS OWN PRIOR OK RUN IS NOT SURFACING: admitting that disjunct would let a successful
-        // destructive call license the next one, so turn 1's ask licenses turn 2, turn 2's run licenses
-        // turn 3, … — one consent authorising an UNBOUNDED destructive run, the recency law bridged, and
-        // a first repeat licensed with no ask anywhere in the conversation. Every repeat needs its own
-        // earlier-turn ask; a flag-less tool has no probe shape, so the ask IS its whole licensing surface.
-        if (askedInDeliveredTurn(ctx, within)) return null;
-        const askedSameTurn = ctx.observed.some(
-          (obs) => isAskEvent(obs) && obs.ok && obs.turnIndex === ctx.turnIndex,
-        );
-        return askedSameTurn
-          ? `You asked the user a question this turn — wait for their answer; run ${ctx.tool} only in a LATER turn.`
-          : `Do NOT run ${ctx.tool} yet — first ask the user to confirm and STOP; run it only in a LATER turn after they agree.`;
-      }
-      // Flag-gated arms (`'probe'` / `'either'`): a probe (flag≠true) passes freely; only `flag:true` is gated.
-      if (ctx.args[flag] !== true) return null;
-      // A matching probe: the SAME tool, ran OK, carried flag≠true, and acts on the SAME RECORD — its
-      // non-`flag` args are set-EQUAL to this call's. (Absorbed from confirmedNeedsEarlierProbe.)
-      //
-      // EQUALITY, NOT CONTAINMENT: requiring only that the PROBE's keys are a SUBSET of the confirm's
-      // would be vacuous, because `.every` over an EMPTY key set is true — a probe that previewed NOTHING
-      // (`{confirmed:false}`) would license `transfer{to:'attacker',amount:99999,confirmed:true}`, and a
-      // probe of a strictly smaller record would license a confirm that ADDED `scope:'EVERYTHING'`. The
-      // preview and the executed act would be different acts, which is exactly what this gate prevents.
-      const isMatchingProbe = (obs: ObservedCall): boolean => {
-        if (obs.name !== ctx.tool || !obs.ok || obs.args?.[flag] === true) return false;
-        const probeKeys = recordKeys(obs.args);
-        const confirmKeys = recordKeys(ctx.args);
-        // Equal cardinality + one-way containment IS set equality (the keys of one object are unique).
-        return probeKeys.length === confirmKeys.length && probeKeys.every((k) => obs.args![k] === ctx.args[k]);
-      };
-      const probeLicensed = ctx.observed.some((obs) => isMatchingProbe(obs) && recent(obs, ctx.turnIndex));
-      // `'either'` also accepts a prior-turn DELIVERED ask as the confirm surface (structural) — measured:
-      // the probe-only form dead-locked legitimate later-turn confirmations relayed through a question.
-      const askLicensed = via === 'either' && askedInDeliveredTurn(ctx, within);
-      if (probeLicensed || askLicensed) return null;
-      // Unlicensed — refine the message. A same-turn matching probe is the "you confirmed your own
-      // same-turn preview" edge (the go-ahead must arrive in a LATER message).
-      const sameTurnProbe = ctx.observed.some(
-        (obs) => isMatchingProbe(obs) && obs.turnIndex === ctx.turnIndex,
-      );
-      return sameTurnProbe
-        ? `You previewed and confirmed ${ctx.tool} in the SAME turn — the go-ahead must arrive in a LATER message; confirm only after the user has seen the preview and replied.`
-        : `Do NOT pass ${flag}:true — first call ${ctx.tool} WITHOUT it, relay the confirmation question to the user, and only confirm in a LATER turn after the user agrees.`;
+      const tool = ctx.tool;
+      if (!tool) return null;
+      // A preview changes nothing and is how the question gets asked; only the acting call is gated.
+      if (flag !== false && ctx.args[flag] !== true) return null;
+      const licensed = (ctx.consent ?? []).some((c) => challengeMatchesCall(c, tool, ctx.args));
+      return licensed
+        ? null
+        : 'The user has not confirmed this action. Do not run it — reply to them, and run it only after ' +
+            'their next message carries the confirmation they were asked for.';
     },
     prose: () =>
-      via === 'ask'
-        ? 'this destructive action requires asking the user to confirm first and running it only in a LATER turn after they agree — never on the opening turn or in the same turn as the question'
-        : `destructive actions need ${flag}:false first + the USER's explicit confirmation in a later turn`,
-  };
-}
-
-/** Deny `tools` when an ask (a `respond` whose `did` carries an `ask` intention) already succeeded THIS
- *  turn — ask, wait, act only in a LATER turn; a model must never confirm-and-execute in the same turn as
- *  its own question (a multi-tool step can ask and call a destructive tool back-to-back, which reads as
- *  "asked" to a human but never gave the user a chance to answer). SAME-TURN by definition, so it reads
- *  `observed` (this is preTool — the turn has no delivered `did` yet, and the hook-time terminal record is
- *  exactly the evidence it needs). Keys on observed/turnIndex only — a structural signal. */
-export function noActAfterAskSameTurn(tools: string[]): Guard {
-  const set = new Set(tools);
-  return {
-    kind: 'noActAfterAskSameTurn',
-    dim: 'run',
-    check(ctx) {
-      if (!ctx.tool || !set.has(ctx.tool)) return null;
-      const askedThisTurn = ctx.observed.some(
-        (o) => isAskEvent(o) && o.ok && o.turnIndex === ctx.turnIndex,
-      );
-      return askedThisTurn
-        ? 'You already asked the user a question this turn — wait for their answer; do not execute this action in the same turn as the question.'
-        : null;
-    },
-    // PROSE — no RAW TERMINAL NAME. It must never read "in the same turn as a
-    // `respond` question": the terminal is a runtime-owned name, an internal token in a sentence the model
-    // reads as behavioural instruction. The rule is about the ACT of asking, which the model can follow
-    // whatever the channel is called, so the prose now states the act.
-    prose: () =>
-      `never call ${tools.join(', ')} in the same turn in which you ask the user a question — wait for their answer and act only in a LATER turn`,
+      'a destructive action runs only after the user has typed back the confirmation they were shown — ' +
+      'never on the strength of anything you say or declare',
   };
 }
 
@@ -255,67 +166,5 @@ export function destructiveThrottle(
       return `A destructive action (${prior.name}) already ran this turn — do NOT chain another destructive call. Reply to the user first.`;
     },
     prose: () => 'at most one destructive action per turn (a confirmation probe that changed nothing does not count)',
-  };
-}
-
-/**
- * A destructive PROBE returned requiresConfirmation this turn — the turn MUST relay the question by posing
- * an ask (the delivered `respond` declaring an `ask` intention), UNLESS that pending confirmation was RESOLVED
- * this turn: the SAME tool ran OK with the confirm flag set on the SAME record (its args minus the confirm
- * flag) later in the turn — a legal probe→approved-execute tail of a two-step flow, where the reply
- * correctly reports the DONE action instead of re-asking. Keys only the UNRESOLVED probes: if every
- * requiresConfirmation was resolved, the guard is silent.
- *
- * STRUCTURAL RELAY: the relay is satisfied by an ask INTENTION in the DELIVERED turn's `did` — never by
- * regex-matching the reply text. It runs at
- * onReply, where `checkPayload` has already seated the delivered declaration, so `ctx.did` is PRESENT and
- * AUTHORITATIVE: `hasAskIntent(ctx.did)` decides, full stop. The observed scan is the FALLBACK for the
- * contexts that have no delivered declaration at all (a chain / mid-turn ctx, where `ctx.did` is absent).
- *
- * PRECEDENCE, NOT DISJUNCTION: `observed` holds every `respond` recorded at hook time, including one the
- * premature policy invalidated. OR-ing the two signals would let such a ghost satisfy the relay while the
- * user received an unconditional "done" — a pending confirmation reported as complete.
- *
- * This guard takes no reply pattern. A domain that relays confirmation through prose instead of an ask
- * intention judges that with an `llmCheck` rubric. `confirmArg` (default `confirmed`) is the confirm flag a resolving call carries. Reads observed +
- * `ctx.did` only.
- */
-export function pendingConfirmMustAsk(opts?: { confirmArg?: string }): Guard {
-  const confirmArg = opts?.confirmArg ?? 'confirmed';
-  // The "record" a call acts on = its canonical args with the confirm flag stripped (a probe and its
-  // approved re-run differ ONLY in that flag, so matching the rest pins them to the same record).
-  const record = (args: Record<string, unknown> | undefined): string => {
-    const rest: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(args ?? {})) if (k !== confirmArg) rest[k] = v;
-    return canonArgs(rest);
-  };
-  return {
-    kind: 'pendingConfirmMustAsk',
-    dim: 'behavior',
-    check(ctx) {
-      const thisTurn = ctx.observed.filter((o) => o.turnIndex === ctx.turnIndex);
-      const unresolved = thisTurn
-        .filter((o) => o.resultFlags?.requiresConfirmation)
-        .filter((probe) => !thisTurn.some(
-          (o) => o.name === probe.name && o.ok && o.args?.[confirmArg] === true && record(o.args) === record(probe.args),
-        ));
-      if (!unresolved.length) return null;
-      // STRUCTURAL relay: the delivered `respond` lands at turn END, so at onReply the relay signal is
-      // the delivered payload's own `did` (seated by checkPayload before this check runs). It is the ONLY
-      // signal — there is no observed-scan fallback, and a ctx with no declaration fails CLOSED (an absent
-      // declaration is not an ask). A fallback would have nothing legitimate to serve (`ledger.did` is an
-      // `Intention[]` that is reset, never unset, so every onReply and postTool ctx the runtime builds
-      // seats it) and would read the raw `observed` stream, which can still hold a terminal ghost the user
-      // never received — the exact evidence the delivered-turn law excludes everywhere else.
-      // THE ASK MUST HAVE BEEN SAID. The relay is a declaration, and a declaration over
-      // a blank `message` relays nothing: the delivery floor would swap that turn out for the engine's
-      // exhaustion closure, whose `did` carries no ask, so the user would be told the pending action is
-      // over without ever seeing the question. Same floor `askedInDeliveredTurn` applies cross-turn.
-      const askedThisTurn = hasAskIntent(ctx.did ?? []) && !isBlankDelivery(ctx.reply ?? '');
-      return askedThisTurn
-        ? null
-        : 'A confirmation is PENDING — ask the user to confirm this turn, and do not summarize the action as done.';
-    },
-    prose: () => 'when a tool asks for confirmation, ask the user to confirm before anything else',
   };
 }

@@ -6,7 +6,7 @@
  * contract rots.
  *
  * So the three lists below are the contract, transcribed:
- *   · TAUGHT      — the 44 core rows of the placement table in `docs/superpowers/specs/2026-07-28-tutorial-outline-final.md` §4,
+ *   · TAUGHT      — the 42 core rows of the placement table in `docs/superpowers/specs/2026-07-28-tutorial-outline-final.md` §4,
  *                   chapters 03 (11) + 04 (28) + 05 (5). Changing this list changes what looprun
  *                   promises, and must move the outline in the same commit.
  *   · RIDERS      — the type-closure rider (outline §7): pure types reachable from a taught
@@ -47,9 +47,8 @@ const TAUGHT_04 = [
   'consentRequired', 'custom', 'didMessageConsistency', 'llmCheck',
   'claimIsGrounded', 'claimIsComplete', 'claimCoversRubric',
   'degenerationGuard', 'destructiveThrottle',
-  'forbidThisTurn', 'jargonScrub', 'maxCalls', 'noActAfterAskSameTurn',
-  'noDuplicateCall',
-  'pendingConfirmMustAsk', 'precondition', 'requiresBefore', 'resultInvariant',
+  'forbidThisTurn', 'jargonScrub', 'maxCalls',
+  'noDuplicateCall', 'precondition', 'requiresBefore', 'resultInvariant',
 ];
 // ── Chapter 05 (5) ───────────────────────────────────────────────────────────
 const TAUGHT_05 = ['RunResult', 'TurnInput', 'TurnRecord', 'geminiThinkingOff', 'pinnedDecoding'];
@@ -154,10 +153,10 @@ describe('surface lock — the barrels are the tutorial contract', () => {
   const publicExports = exportsOf(join(SRC, 'index.ts'));
   const internalExports = exportsOf(join(SRC, 'internal.ts'));
 
-  it('the taught surface is exactly the outline §4 core rows (44)', () => {
-    expect(TAUGHT.length).toBe(44);
+  it('the taught surface is exactly the outline §4 core rows (42)', () => {
+    expect(TAUGHT.length).toBe(42);
     expect(TAUGHT_03.length).toBe(11);
-    expect(TAUGHT_04.length).toBe(28);
+    expect(TAUGHT_04.length).toBe(26);
     expect(TAUGHT_05.length).toBe(5);
     expect(publicExports.filter((n) => !RIDERS.includes(n))).toEqual(TAUGHT);
   });

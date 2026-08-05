@@ -21,7 +21,7 @@ import { resolveGuards, resolveMutators } from '../spec.js';
 import type { AgentSpec, ChainSpec } from '../spec.js';
 import type { DomainContract } from '../trunk.js';
 import type { AgentWorld, Guard, GuardCtx, ObservedCall, Adjudicator } from '../rules.js';
-import { recordVeto, type TurnLedger } from './ledger.js';
+import { issueChallengeForVeto, recordVeto, type TurnLedger } from './ledger.js';
 import { isTerminal } from './terminal.js';
 import {
   deriveClaimsFromLedger,
@@ -105,6 +105,10 @@ export async function evaluatePreTool(
   // runtime dispatches a step's calls concurrently but starts them in emission order up to the first
   // await, so this ordering is deterministic. `selfEntry` is reconciled out when the result is
   // recorded (now in `observed`) or removed on the veto path just below (it never ran).
+  // The spec's labels are what turn a DENIAL into a question the user can read and answer, so they are
+  // seated where the spec and the ledger first meet — a spec that declares none leaves the ledger's own
+  // map alone, and a flag-less destructive tool with no label stays permanently unconsentable.
+  if (spec.destructiveLabels) ledger.destructiveLabels = spec.destructiveLabels;
   const siblingCallsThisStep = [...ledger.inFlightCalls];
   const selfEntry: ObservedCall = { name: tool, args, ok: true, turnIndex: ledger.turnIndex };
   ledger.inFlightCalls.push(selfEntry);
@@ -126,6 +130,10 @@ export async function evaluatePreTool(
       const selfIx = ledger.inFlightCalls.indexOf(selfEntry);
       if (selfIx >= 0) ledger.inFlightCalls.splice(selfIx, 1);
       recordVeto(ledger, tool, args, `${g.dim}:${g.kind}:${tool}`);
+      // THE DENIAL IS THE QUESTION. A destructive tool the world has no preview form for is asked about
+      // by being attempted: the gate refuses, and the refusal raises the consent question the delivered
+      // text then carries. An agent cannot choose not to ask and still act.
+      if (g.kind === 'confirmFirst') issueChallengeForVeto(ledger, tool);
       // 2nd+ consecutive veto: the model is looping. The backend wraps `reason` in the veto
       // envelope, which carries the escalation both as prose and as a structural flag.
       return { verdict: 'deny', reason, guard: g, mustCloseTurn: ledger.vetoStreak >= 2 };
@@ -439,7 +447,6 @@ const FORM_GUARD_KINDS: ReadonlySet<string> = new Set([
  *  allow-list.) */
 const TRUTH_GUARD_KINDS: ReadonlySet<string> = new Set([
   'llmCheck',
-  'pendingConfirmMustAsk',
   // The cross-check honesty core: each grounds the agent's structured declaration against the
   // world ledger, so a candidate one of them vetoes can make the user believe something false about
   // what happened — never salvaged, never delivered over.

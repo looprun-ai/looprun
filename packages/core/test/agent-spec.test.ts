@@ -5,7 +5,6 @@ import {
   custom,
   precondition,
   confirmFirst,
-  pendingConfirmMustAsk,
 } from '../src/index.js';
 import { resolveBindings, resolveGuards } from '../src/spec.js';
 import type { AgentWorld, GuardCtx, ObservedCall, DomainContract } from '../src/index.js';
@@ -158,79 +157,51 @@ describe('layer resolution (agent wins)', () => {
   });
 });
 
-describe('pendingConfirmMustAsk — resolution-aware + STRUCTURAL relay (no-regex law)', () => {
-  const guard = pendingConfirmMustAsk();
-  const pendingProbe: ObservedCall = {
-    name: 'deleteItem', args: { itemId: 'x1' }, ok: true, turnIndex: 0, resultFlags: { requiresConfirmation: true },
+describe('destructiveLabels — the question a recordless act asks', () => {
+  const base = {
+    id: 'a',
+    mode: 'M',
+    persona: 'You are the test agent.',
+    surface: { tools: ['deleteAllData', 'deleteEverything'] },
+    tools: ['deleteAllData', 'deleteEverything'],
   };
-  const ask: ObservedCall = { name: 'respond', args: { message: 'Are you sure you want to delete x1?', did: [{ op: 'ask' }] }, ok: true, turnIndex: 0 };
-  // `did` is the DELIVERED declaration the runtime seats on every reply-side ctx — the guard's only
-  // relay signal. The `respond` entry in `observed` is the call RECORD, not evidence of delivery.
-  const ctx = (reply: string, observed: ObservedCall[], did: GuardCtx['did'] = []): GuardCtx => ({
-    args: {}, world: fixtureWorld(), observed, turnIndex: 0, reply, producedThisTurn: [], userText: '', history: [], did,
+
+  it('rejects a label for a tool that is not destructive', () => {
+    expect(
+      () =>
+        new AgentSpecBase({
+          ...base,
+          destructiveTools: ['deleteAllData'],
+          destructiveLabels: { deleteEverything: 'delete everything' },
+        }),
+    ).toThrow(/not in destructiveTools/);
   });
 
-  it('fires when the pending confirm is unresolved and no ask was issued this turn', () => {
-    expect(guard.check(ctx('Item x1 removed.', [pendingProbe]))).not.toBeNull();
+  it('rejects two labels whose derived tokens collide', () => {
+    expect(
+      () =>
+        new AgentSpecBase({
+          ...base,
+          destructiveTools: ['deleteAllData', 'deleteEverything'],
+          destructiveLabels: {
+            deleteAllData: 'delete all of your data',
+            deleteEverything: 'delete all of your bookings',
+          },
+        }),
+    ).toThrow(/CONFIRM DELETE-ALL/);
   });
 
-  it('does not fire when an ask intention relays the confirmation question this turn', () => {
-    expect(guard.check(ctx('Are you sure you want to delete x1?', [pendingProbe, ask], [{ op: 'ask' }]))).toBeNull();
-  });
-
-  it('fails CLOSED on a ctx that seats no declaration — an absent `did` is not an ask', () => {
-    expect(guard.check(ctx('Are you sure you want to delete x1?', [pendingProbe, ask]))).not.toBeNull();
-  });
-
-  it('does NOT fire once a same-record confirmed:true call resolves the probe (probe→approved-execute tail)', () => {
-    const resolve: ObservedCall = { name: 'deleteItem', args: { itemId: 'x1', confirmed: true }, ok: true, turnIndex: 0 };
-    expect(guard.check(ctx('Done — x1 removed.', [pendingProbe, resolve]))).toBeNull();
-  });
-
-  it('STILL fires when the confirmed:true call was on a DIFFERENT record and no ask was issued', () => {
-    const other: ObservedCall = { name: 'deleteItem', args: { itemId: 'x7', confirmed: true }, ok: true, turnIndex: 0 };
-    expect(guard.check(ctx('Removed.', [pendingProbe, other]))).not.toBeNull();
-  });
-});
-
-describe('confirmFirst — either (arg) + ask (flag-less) via', () => {
-  const ctx = (over: Partial<GuardCtx>): GuardCtx => ({
-    args: {}, tool: 'act', world: fixtureWorld(), observed: [], turnIndex: 0, reply: '', producedThisTurn: [], userText: '', history: [], ...over,
-  });
-
-  describe("'arg' (default)", () => {
-    const guard = confirmFirst();
-    it('allows a call without the confirm flag (the probe)', () => {
-      expect(guard.check(ctx({ args: {} }))).toBeNull();
-    });
-    it('denies confirmed:true with no prior-turn probe', () => {
-      expect(guard.check(ctx({ args: { confirmed: true }, turnIndex: 0 }))).not.toBeNull();
-    });
-    it('allows confirmed:true after a prior-turn probe', () => {
-      const probe: ObservedCall = { name: 'act', args: {}, ok: true, turnIndex: 0 };
-      expect(guard.check(ctx({ args: { confirmed: true }, turnIndex: 1, observed: [probe] }))).toBeNull();
-    });
-  });
-
-  describe("via 'ask' (flag-less tools)", () => {
-    const guard = confirmFirst({ via: 'ask' });
-    it('denies on the opening turn (no prior ask)', () => {
-      expect(guard.check(ctx({ turnIndex: 0, observed: [] }))).not.toBeNull();
-    });
-    it('denies a later turn when the model never asked', () => {
-      expect(guard.check(ctx({ turnIndex: 2, observed: [] }))).not.toBeNull();
-    });
-    it('allows the act after a prior-turn ask — the SEALED turn (history is the only ask signal)', () => {
-      const asked = { turnIndex: 0, userText: '', reply: 'Delete everything?', toolCalls: [], did: [{ op: 'ask' }], attemptedCalls: [], guardEvents: [] } as unknown as GuardCtx['history'][number];
-      expect(guard.check(ctx({ turnIndex: 1, history: [asked] }))).toBeNull();
-    });
-    it('a RAW observed ask respond from an UNSEALED turn licenses nothing', () => {
-      const ask: ObservedCall = { name: 'respond', args: { message: 'q?', did: [{ op: 'ask' }] }, ok: true, turnIndex: 0 };
-      expect(guard.check(ctx({ turnIndex: 1, observed: [ask] }))).not.toBeNull();
-    });
-    it('denies when the only ask is THIS turn (composes with noActAfterAskSameTurn)', () => {
-      const ask: ObservedCall = { name: 'respond', args: { did: [{ op: 'ask' }] }, ok: true, turnIndex: 1 };
-      expect(guard.check(ctx({ turnIndex: 1, observed: [ask] }))).not.toBeNull();
-    });
+  it('accepts labels whose derived tokens differ', () => {
+    expect(
+      () =>
+        new AgentSpecBase({
+          ...base,
+          destructiveTools: ['deleteAllData', 'deleteEverything'],
+          destructiveLabels: {
+            deleteAllData: 'delete all of your data',
+            deleteEverything: 'close your account',
+          },
+        }),
+    ).not.toThrow();
   });
 });

@@ -16,7 +16,6 @@ import {
   forbidThisTurn,
   jargonScrub,
   noDuplicateCall,
-  pendingConfirmMustAsk,
   resultInvariant,
 } from '@looprun-ai/core';
 import { AgentSpecBase } from '@looprun-ai/core';
@@ -37,110 +36,61 @@ const call = (name: string, over: Partial<ObservedCall> = {}): ObservedCall => (
 // against a pattern.
 
 // ─────────────────────────────────────────────────────────────────────────────
-// confirmFirst via:'ask': a VETOED attempt must not unlock the next turn (all STRUCTURAL)
+// confirmFirst: nothing the AGENT produces is a licence (all STRUCTURAL)
 // ─────────────────────────────────────────────────────────────────────────────
-describe("confirmFirst({ via: 'ask' }) is SUCCESS-KEYED", () => {
-  const guard = (): Guard => confirmFirst({ via: 'ask' });
+describe('confirmFirst is licensed only by a consent the user typed', () => {
+  const oneStep = (): Guard => confirmFirst({ flag: false });
 
-  it('THE NEGATIVE PROOF: a turn-1 attempt VETOED BY THIS GUARD does not unlock turn 2', async () => {
+  it('a turn-1 attempt VETOED BY THIS GUARD does not unlock turn 2', async () => {
     // The self-defeat this rules out: the guard denies purgeAll in turn 1 and the backend records that
-    // veto as {ok:false}. If that record satisfied the "probed earlier" disjunct, the destructive action
-    // would run in turn 2 with the user never asked — two turns to bypass the gate.
+    // veto as {ok:false}. A record of the attempt is not a record of the user agreeing to it.
     const ctx = craftCtx({
       tool: 'purgeAll',
       observed: [call('purgeAll', { ok: false, turnIndex: 0 })],
       turnIndex: 1,
     });
-    expect(await guard().check(ctx)).toBeTruthy();
+    expect(await oneStep().check(ctx)).toBeTruthy();
   });
 
-  it('a FAILED (not vetoed) earlier attempt likewise does not unlock', async () => {
+  it("an earlier-turn SUCCESSFUL call of the tool itself does not unlock", async () => {
+    // Admitting this would let one consent carry an unbounded destructive run: turn 1 licenses turn 2,
+    // turn 2's run licenses turn 3, and so on.
     const ctx = craftCtx({
       tool: 'purgeAll',
-      observed: [call('purgeAll', { ok: false, turnIndex: 0 }), call('purgeAll', { ok: false, turnIndex: 1 })],
-      turnIndex: 2,
+      observed: [call('purgeAll', { ok: true, tookEffect: true, turnIndex: 0 })],
+      turnIndex: 1,
     });
-    expect(await guard().check(ctx)).toBeTruthy();
+    expect(await oneStep().check(ctx)).toBeTruthy();
   });
 
-  it('REGRESSION FLOOR: an earlier-turn ask intention still unlocks — from the SEALED turn', async () => {
+  it('a prior-turn respond declaring an ask does not unlock', async () => {
     const ctx = craftCtx({
       tool: 'purgeAll',
-      history: [{
-        turnIndex: 0, userText: 'clean up', reply: 'Purge everything — are you sure?', toolCalls: [],
-        did: [{ op: 'ask' }], attemptedCalls: [], guardEvents: [],
-      }],
+      history: [{ turnIndex: 0, userText: 'purge', reply: 'Purge everything?', toolCalls: [], did: [{ op: 'ask' }], attemptedCalls: [], guardEvents: [] }],
       turnIndex: 1,
     });
-    expect(await guard().check(ctx)).toBeNull();
+    expect(await oneStep().check(ctx)).toBeTruthy();
   });
 
-  it('no-regex law: a prior-turn plain respond (no ask intention) does NOT unlock — only an ask event/probe do', async () => {
-    // A prose confirmation-ask does not unlock: the go-ahead must be a STRUCTURAL ask event
-    // (a `respond` declaring an `ask` intention) or a same-tool probe. A plain respond that
-    // merely phrases a question in its message is NOT an ask event, so this DENIES.
+  it('the consumed token for THIS act unlocks it', async () => {
     const ctx = craftCtx({
       tool: 'purgeAll',
-      observed: [call('respond', { args: { message: 'This wipes every item — are you sure?' }, turnIndex: 0 })],
+      consent: [{ tool: 'purgeAll', meaning: 'purge every item', token: 'CONFIRM PURGE-EVERY', issuedTurn: 0, consumedTurn: 1 }],
       turnIndex: 1,
     });
-    expect(await guard().check(ctx)).toBeTruthy();
+    expect(await oneStep().check(ctx)).toBeNull();
   });
 
-  it('an earlier-turn SUCCESSFUL call of the tool itself does NOT unlock', async () => {
-    // Counting a flag-less tool's own prior OK run as "surfacing" would chain ONE consent across
-    // unbounded turns and bridge the recency law. Every repeat needs a fresh ask.
-    const ctx = craftCtx({
-      tool: 'purgeAll',
-      observed: [call('purgeAll', { turnIndex: 0 })],
-      turnIndex: 1,
-    });
-    expect(await guard().check(ctx)).toBeTruthy();
+  it('the two-step shape gates only the ACT — its preview runs so the world can raise the question', async () => {
+    const g = confirmFirst();
+    expect(await g.check(craftCtx({ tool: 'deleteItem', args: { id: 'x1' }, turnIndex: 1 }))).toBeNull();
+    expect(await g.check(craftCtx({ tool: 'deleteItem', args: { id: 'x1', confirmed: true }, turnIndex: 1 }))).toBeTruthy();
   });
 
-  it('a same-turn ask event never unlocks (the noActAfterAskSameTurn seam is unchanged)', async () => {
-    const ctx = craftCtx({ tool: 'purgeAll', observed: [call('respond', { args: { did: [{ op: 'ask' }] }, turnIndex: 1 })], turnIndex: 1 });
-    expect(await guard().check(ctx)).toBeTruthy();
-  });
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
-// confirmFirst's string overload must reject a via name
-// ─────────────────────────────────────────────────────────────────────────────
-describe('confirmFirst rejects a via NAME passed as the string overload', () => {
-  it("confirmFirst('ask') throws instead of building a permanently inert guard", () => {
-    expect(() => confirmFirst('ask')).toThrow(/via/i);
-  });
-
-  it("confirmFirst('probe') throws for the same reason", () => {
-    expect(() => confirmFirst('probe')).toThrow(/via/i);
-  });
-
-  it("confirmFirst('either') throws for the same reason", () => {
-    expect(() => confirmFirst('either')).toThrow(/via/i);
-  });
-
-  it('the error names the correct object form so the fix is obvious', () => {
-    expect(() => confirmFirst('ask')).toThrow(/confirmFirst\(\{ via: 'ask' \}\)/);
-  });
-
-  it('REGRESSION FLOOR: the legitimate string overload (an arg flag NAME) still works', async () => {
-    const g = confirmFirst('userApproved');
-    const ctx = craftCtx({ tool: 'deleteItem', args: { userApproved: true }, turnIndex: 1 });
-    expect(await g.check(ctx)).toBeTruthy(); // no earlier probe → denied, i.e. the guard is LIVE
-    const probed = craftCtx({
-      tool: 'deleteItem',
-      args: { userApproved: true },
-      observed: [call('deleteItem', { args: {}, turnIndex: 0 })],
-      turnIndex: 1,
-    });
-    expect(await g.check(probed)).toBeNull();
-  });
-
-  it('REGRESSION FLOOR: the object form and the no-arg default are untouched', async () => {
-    expect(() => confirmFirst()).not.toThrow();
-    expect(() => confirmFirst({ via: 'ask' })).not.toThrow();
-    expect(() => confirmFirst({ flag: 'confirmed' })).not.toThrow();
+  it('a custom confirm flag names which call acts', async () => {
+    const g = confirmFirst({ flag: 'userApproved' });
+    expect(await g.check(craftCtx({ tool: 'deleteItem', args: { id: 'x1' }, turnIndex: 1 }))).toBeNull();
+    expect(await g.check(craftCtx({ tool: 'deleteItem', args: { id: 'x1', userApproved: true }, turnIndex: 1 }))).toBeTruthy();
   });
 });
 
@@ -195,25 +145,10 @@ describe('destructiveThrottle does not count confirmation probes', () => {
     expect(await g.check(ctx)).toBeTruthy();
   });
 
-  it("pendingConfirmMustAsk's same-turn resolution exemption is reachable, not dead code", async () => {
-    // The coherence claim, stated directly: the flow the throttle gates is exactly the flow
-    // pendingConfirmMustAsk documents as legal. (Structural: the probe is RESOLVED by a same-record
-    // confirmed:true, so the guard is silent regardless of any ask.)
-    const g = pendingConfirmMustAsk();
-    const ctx = craftCtx({
-      observed: [
-        call('deleteItem', { args: { id: 'p001' }, resultFlags: { requiresConfirmation: true } }),
-        call('deleteItem', { args: { id: 'p001', confirmed: true } }),
-      ],
-      reply: 'The item was deleted.',
-    });
-    expect(await g.check(ctx)).toBeNull();
-  });
-
   it('FULL FLOW (L3): probe → approved execute in one turn completes with no recovery events', async () => {
-    // Turn 0 probes and asks. Turn 1 re-probes (satisfying nothing new) and then executes with
-    // confirmed:true — the confirm gate is satisfied by turn 0's OK probe. Pre-fix the throttle vetoed
-    // that execute (`run:destructiveThrottle:deleteItem`) because the turn-1 probe counted as an effect.
+    // Turn 0 probes: the world answers "I need confirmation on p001" and the engine renders the question.
+    // Turn 1 carries the token the user typed, re-probes (which changes nothing) and then executes. The
+    // re-probe must not count as an effect against the one-destructive-action-per-turn cap.
     const spec = new AgentSpecBase({
       id: 'audit-throttle',
       mode: 'PROOF',
@@ -223,7 +158,7 @@ describe('destructiveThrottle does not count confirmation probes', () => {
     });
     const res = await runProofLoop(spec, {
       preset: 'seeded-media',
-      turns: [{ userText: 'delete p001' }, { userText: 'yes, go ahead' }],
+      turns: [{ userText: 'delete p001' }, { userText: 'CONFIRM p001' }],
       script: [
         [{ tool: 'deleteItem', args: { id: 'p001' } }],
         [{ tool: 'respond', args: { message: 'Deleting p001 is permanent — are you sure?', did: [{ op: 'inform' }] } }],

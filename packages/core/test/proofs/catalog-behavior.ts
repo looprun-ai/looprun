@@ -6,7 +6,6 @@ import {
   degenerationGuard,
   didMessageConsistency,
   llmCheck,
-  pendingConfirmMustAsk,
 } from '../../src/guards/index.js';
 import type { Adjudicator, AgentWorld } from '../../src/rules.js';
 import type { GuardProof } from '../../src/testing/index.js';
@@ -238,76 +237,6 @@ export const BEHAVIOR_PROOFS: GuardProof[] = [
           turnIndex: 0,
         },
         l1: 'fires',
-      },
-    ],
-  },
-
-  // ── pendingConfirmMustAsk ─────────────────────────────────────────────────────
-  {
-    guard: 'pendingConfirmMustAsk',
-    // STRUCTURAL relay (no-regex law): the pending question must be relayed by an `ask` intention this turn —
-    // no reply-text regex. make() is opts-less.
-    make: () => pendingConfirmMustAsk(),
-    hook: 'onReply',
-    target: 'any',
-    cases: [
-      {
-        name: 'unresolved probe, no ask intention this turn',
-        polarity: 'negative',
-        ctx: {
-          observed: [{ name: 'deleteItem', args: { id: 'itm-1' }, ok: true, turnIndex: 0, resultFlags: { requiresConfirmation: true } }],
-          turnIndex: 0,
-          reply: 'The item is queued.',
-        },
-        l1: 'fires',
-        l3: {
-          preset: 'empty',
-          turns: [turn('delete item itm-1')],
-          script: [
-            [{ tool: 'deleteItem', args: { id: 'itm-1' } }],
-            [{ tool: 'respond', args: { message: 'The item is queued.', did: [{ op: 'inform' }] } }],
-            [{ tool: 'respond', args: { message: 'Deleting item itm-1 needs your go-ahead — are you sure?', did: [{ op: 'ask' }] } }],
-          ],
-          expect: 'redrive',
-        },
-      },
-      {
-        name: 'unresolved probe, an ask intention relays the question this turn',
-        polarity: 'positive',
-        ctx: {
-          observed: [
-            { name: 'deleteItem', args: { id: 'itm-1' }, ok: true, turnIndex: 0, resultFlags: { requiresConfirmation: true } },
-            { name: 'respond', args: { message: 'Deleting that item needs your confirmation — are you sure?', did: [{ op: 'ask' }] }, ok: true, turnIndex: 0 },
-          ],
-          turnIndex: 0,
-          reply: 'Deleting that item needs your confirmation — are you sure?',
-          // The DELIVERED declaration is the relay signal (the same one the L3 loop seats from the
-          // accepted payload); the raw `observed` terminal above is only the call record.
-          did: [{ op: 'ask' }],
-        },
-        l1: 'silent',
-        l3: {
-          preset: 'empty',
-          turns: [turn('delete item itm-1')],
-          script: [
-            [{ tool: 'deleteItem', args: { id: 'itm-1' } }],
-            [{ tool: 'respond', args: { message: 'Deleting that item needs your confirmation — are you sure?', did: [{ op: 'ask' }] } }],
-          ],
-          expect: 'pass',
-        },
-      },
-      {
-        name: 'probe resolved by a same-turn confirmed success',
-        polarity: 'neutral',
-        ctx: {
-          observed: [
-            { name: 'deleteItem', args: { id: 'itm-1' }, ok: true, turnIndex: 0, resultFlags: { requiresConfirmation: true } },
-            { name: 'deleteItem', args: { id: 'itm-1', confirmed: true }, ok: true, turnIndex: 0 },
-          ],
-          turnIndex: 0,
-          reply: 'The item has been deleted as requested.',
-        },
-        l1: 'silent',
       },
     ],
   },

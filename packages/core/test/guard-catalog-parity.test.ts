@@ -53,8 +53,9 @@ describe('the factory extractor', () => {
   });
 
   it('includes the known anchors (canary that the extractor really works)', () => {
-    // A guard added in the P8a/single-class port, the escape hatch, and the mutator must all be present.
-    for (const anchor of ['noActAfterAskSameTurn', 'custom', 'jargonScrub', 'pendingConfirmMustAsk']) {
+    // A guard from each family the extractor must reach — the destructive layer, the escape hatch, the
+    // mutator, and a reply-side kind — must all be present.
+    for (const anchor of ['destructiveThrottle', 'custom', 'jargonScrub', 'claimIsComplete']) {
       expect(factories, `extractor missed ${anchor}`).toContain(anchor);
     }
     // The pure helper is NOT a guard kind — it must NOT be counted as a factory.
@@ -129,7 +130,7 @@ describe('GUARD_CATALOG ↔ core parity', () => {
     const byName = new Map(GUARD_CATALOG.map((e) => [e.name, e]));
     expect(byName.get('jargonScrub')?.hook, 'a ReplyMutator rewrites, it never gates').toBe('onReplyMutate');
     expect(byName.get('resultInvariant')?.hook, 'the only postTool kind').toBe('postTool');
-    expect(byName.get('pendingConfirmMustAsk')?.hook, 'it gates the REPLY, not the call').toBe('onReply');
+    expect(byName.get('claimIsGrounded')?.hook, 'it reads the delivered declaration').toBe('onReply');
   });
 
   it('every entry sits in the category file that actually exports it', () => {

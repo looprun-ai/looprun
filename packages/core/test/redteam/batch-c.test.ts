@@ -16,7 +16,6 @@ import {
   claimCoversRubric,
   degenerationGuard,
   jargonScrub,
-  pendingConfirmMustAsk,
   askedEarlier,
 } from '../../src/index.js';
 import { terminalToolDefs } from '../../src/runtime/terminal.js';
@@ -116,29 +115,6 @@ describe('jargonScrub', () => {
     expect(m.apply('This is the (beta) release.', rctx('') as GuardCtx)).toContain('(beta)');
   });
 });
-
-// ── pendingConfirmMustAsk ────────────────────────────────────────────────────
-describe('pendingConfirmMustAsk', () => {
-  // BREAK: an UNRELATED ask this turn satisfies the pending-confirm relay while the reply
-  // summarizes the destructive act as DONE — the guard never checks the ask relates to the probe.
-  it('BREAK unrelated-ask: an ask about a different topic clears a pending destructive confirm', () => {
-    const g = pendingConfirmMustAsk();
-    const ctx = {
-      turnIndex: 3,
-      reply: 'Your account has been permanently deleted.',
-      // The DELIVERED declaration — the only relay signal the guard reads. It carries an `ask`, and the
-      // guard has no way to tell what the ask was ABOUT.
-      did: [{ op: 'ask' }],
-      observed: [
-        obs({ name: 'deleteAccount', turnIndex: 3, ok: true, resultFlags: { requiresConfirmation: true } }),
-        obs({ name: 'respond', turnIndex: 3, ok: true, args: { message: 'What is your billing email?', did: [{ op: 'ask' }] } }),
-      ],
-    } as unknown as GuardCtx;
-    expect(g.check(ctx)).toBeNull(); // pending confirm relayed by an off-topic ask → allowed
-  });
-});
-
-// ── askedEarlier ─────────────────────────────────────────────────────────────
 describe('askedEarlier', () => {
   // BREAK: an earlier-turn ask about a DIFFERENT arg licenses recording THIS arg — no association.
   it('BREAK unrelated-ask: earlier ask (any topic) licenses recording a different value', () => {

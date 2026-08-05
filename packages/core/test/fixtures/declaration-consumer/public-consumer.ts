@@ -30,11 +30,9 @@ import {
   canonArgs,
   noDuplicateCall,
   confirmFirst,
-  noActAfterAskSameTurn,
   destructiveThrottle,
   resultInvariant,
   degenerationGuard,
-  pendingConfirmMustAsk,
   consentRequired,
   jargonScrub,
 } from '@looprun-ai/core';
@@ -136,11 +134,9 @@ export const catalog = {
   canonArgs,
   noDuplicateCall,
   confirmFirst,
-  noActAfterAskSameTurn,
   destructiveThrottle,
   resultInvariant,
   degenerationGuard,
-  pendingConfirmMustAsk,
   consentRequired,
   jargonScrub,
 };

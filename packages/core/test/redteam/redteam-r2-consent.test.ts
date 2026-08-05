@@ -16,8 +16,9 @@
  * End-to-end (real mastra loop) siblings: packages/mastra/test/redteam-r2-consent-l3.test.ts
  */
 import { describe, expect, it } from 'vitest';
-import { AgentSpecBase, confirmFirst, askedEarlier, pendingConfirmMustAsk } from '../../src/index.js';
+import { AgentSpecBase, confirmFirst, askedEarlier } from '../../src/index.js';
 import type { AgentWorld, GuardCtx, DomainContract, ObservedCall, HistoryTurn } from '../../src/index.js';
+import { DEFAULT_ENGINE_TEXT } from '../../src/runtime/engine-text.js';
 import { createLedger, recordTurnHistory } from '../../src/runtime/ledger.js';
 import { finalizeReply } from '../../src/runtime/turn.js';
 import { hasAskIntent } from '../../src/runtime/claims.js';
@@ -167,13 +168,13 @@ describe('C2 (V1) — a partial/empty probe licenses ANY confirmed destructive a
     expect(g.check(ctx)).not.toBeNull();
   });
 
-  it('CLOSED regression: an IDENTICAL record (probe minus the flag) still licenses — the legit two-step', () => {
+  it('CLOSED regression: the token the user typed for this record licenses it — the legit two-step', () => {
     const g = confirmFirst();
     const ctx = baseCtx({
       tool: 'wipe',
       args: { account: 'A', scope: 'ONE', confirmed: true },
       turnIndex: 1,
-      observed: [obs('wipe', { account: 'A', scope: 'ONE', confirmed: false }, 0)],
+      consent: [{ tool: 'wipe', subject: 'A', meaning: 'A', token: 'CONFIRM A', issuedTurn: 0, consumedTurn: 1 }],
     });
     expect(g.check(ctx)).toBeNull();
   });
@@ -200,13 +201,13 @@ describe('C2 (V1) — a partial/empty probe licenses ANY confirmed destructive a
 // ════════════════════════════════════════════════════════════════════════════════════════════════
 describe('C3 (V6) — via:ask self-licenses its own repeat', () => {
   it('CLOSED: a prior OK deleteAll (turn 2) does NOT license deleteAll (turn 3)', () => {
-    const g = confirmFirst({ via: 'ask' });
+    const g = confirmFirst({ flag: false });
     const ctx = baseCtx({ tool: 'deleteAll', args: {}, turnIndex: 3, observed: [obs('deleteAll', {}, 2, { tookEffect: true })] });
     expect(g.check(ctx)).not.toBeNull();
   });
 
   it('CLOSED: ONE ask at turn 1 does NOT bridge the recency law out to turn 3', () => {
-    const g = confirmFirst({ via: 'ask' }); // within = 1
+    const g = confirmFirst({ flag: false }); // within = 1
     const ctx = baseCtx({
       tool: 'deleteAll', args: {}, turnIndex: 3,
       history: [histTurn(1, [{ op: 'ask' }], 'Delete everything?'), histTurn(2, [{ op: 'deleteAll', outcome: 'success' }], 'Deleted.')],
@@ -217,7 +218,7 @@ describe('C3 (V6) — via:ask self-licenses its own repeat', () => {
   });
 
   it('CLOSED: the chain is BROKEN — turn 9 is not licensed by turn 8', () => {
-    const g = confirmFirst({ via: 'ask' });
+    const g = confirmFirst({ flag: false });
     const ctx = baseCtx({
       tool: 'deleteAll', args: {}, turnIndex: 9,
       history: [histTurn(1, [{ op: 'ask' }], 'Delete everything?')],
@@ -227,14 +228,17 @@ describe('C3 (V6) — via:ask self-licenses its own repeat', () => {
   });
 
   it('CLOSED regression: a vetoed (ok:false) prior attempt does not self-license', () => {
-    const g = confirmFirst({ via: 'ask' });
+    const g = confirmFirst({ flag: false });
     const ctx = baseCtx({ tool: 'deleteAll', args: {}, turnIndex: 3, observed: [obs('deleteAll', {}, 2, { ok: false })] });
     expect(g.check(ctx)).not.toBeNull();
   });
 
-  it('CLOSED regression: the legit shape (ask at turn 1 → act at turn 2) is still licensed', () => {
-    const g = confirmFirst({ via: 'ask' });
-    const ctx = baseCtx({ tool: 'deleteAll', args: {}, turnIndex: 2, history: [histTurn(1, [{ op: 'ask' }], 'Delete everything — are you sure?')] });
+  it('CLOSED regression: the legit shape (question at turn 1 → token at turn 2) is still licensed', () => {
+    const g = confirmFirst({ flag: false });
+    const ctx = baseCtx({
+      tool: 'deleteAll', args: {}, turnIndex: 2,
+      consent: [{ tool: 'deleteAll', meaning: 'delete everything', token: 'CONFIRM DELETE-EVERYTHING', issuedTurn: 1, consumedTurn: 2 }],
+    });
     expect(g.check(ctx)).toBeNull();
   });
 });
@@ -295,19 +299,11 @@ describe('C4 — an UNSEALED earlier turn re-opens the raw observed ask scan', (
 //   while `message` poses no question at all — and that declaration is what `askedInDeliveredTurn`
 //   reads as "the user was asked".
 //
-//   STATUS — the deterministic half is CLOSED, the semantic half is OPEN BY DESIGN.
-//   Closed: the licence requires the DELIVERED turn record (never a raw hook-time respond), sealed
-//   with the `did` of the payload whose message was actually delivered (the redrive cannot splice),
-//   over a NON-BLANK reply. So "declared an ask, said nothing" licenses nothing.
-//   Open: whether a NON-BLANK message poses a question. That is a judgment about natural-language
-//   content, and the engine has exactly two ways to make it — a linguistic pattern, which the no-regex
-//   law forbids precisely because it is the defect class that fails silently across languages AND is
-//   satisfied by an adversary appending one character; or a model call, which is `llmCheck`. The
-//   deterministic layer has no third option, so this stays `it.fails`: the engine's guarantee is
-//   deliberately narrower than "the user was asked", and GUARDS.md states it in those words. A spec
-//   whose stakes justify the model call binds `didMessageConsistency()`.
+//   STATUS — CLOSED. What licenses a destructive act is a token the ENGINE issued for a record and the
+//   USER typed back, so a declaration is never evidence and the question of whether the agent's own
+//   message poses a question never arises: the question the user answers is one the engine wrote.
 // ════════════════════════════════════════════════════════════════════════════════════════════════
-describe('C5 — a declared ask whose message contains no question still licenses', () => {
+describe('C5 — a declared ask licenses nothing, whatever its message says', () => {
   it('CLOSED: a sealed ask over a BLANK delivered reply licenses nothing', () => {
     const g = confirmFirst();
     const ctx = baseCtx({
@@ -317,31 +313,11 @@ describe('C5 — a declared ask whose message contains no question still license
     expect(g.check(ctx)).not.toBeNull();
   });
 
-  it('CLOSED: the SAME-TURN relay also needs a readable message — a blank ask relays nothing', async () => {
-    const g = pendingConfirmMustAsk();
-    const ctx = baseCtx({
-      turnIndex: 0,
-      did: [{ op: 'ask' }],
-      reply: '\u200b', // declared the question, said nothing
-      observed: [obs('deleteAcct', { id: 'X' }, 0, { resultFlags: { requiresConfirmation: true } })],
-    });
-    // The blank delivery would be swapped for the engine's exhaustion closure (no ask in its `did`), so
-    // the user would be told the pending action is over having never seen the question.
-    expect(await g.check(ctx)).not.toBeNull();
-  });
 
-  it('CONTROL: the same relay with the question actually in `message` passes', async () => {
-    const g = pendingConfirmMustAsk();
-    const ctx = baseCtx({
-      turnIndex: 0,
-      did: [{ op: 'ask' }],
-      reply: 'Deleting account X is permanent — should I go ahead?',
-      observed: [obs('deleteAcct', { id: 'X' }, 0, { resultFlags: { requiresConfirmation: true } })],
-    });
-    expect(await g.check(ctx)).toBeNull();
-  });
 
-  it.fails('OPEN BY DESIGN: a sealed turn declaring ask over a pure sign-off message licenses the destructive act', async () => {
+
+
+  it('a sealed turn declaring ask over a pure sign-off message licenses NOTHING', async () => {
     const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: ['deleteAcct'], contract: CONTRACT });
     const ledger = createLedger();
     // A clean, violation-free turn: a speech-only declaration is never ledger-grounded.
@@ -349,7 +325,7 @@ describe('C5 — a declared ask whose message contains no question still license
     const out = await finalizeReply(spec, CONTRACT, world(), ledger, initial, async () => initial, 1);
     recordTurnHistory(ledger, out.text, world());
     expect(out.violations).toEqual([]);
-    expect(out.text).toBe('All set. Have a good day.'); // no question was delivered
+    expect(out.text).toBe(`All set. Have a good day.\n\n${DEFAULT_ENGINE_TEXT.recordClosureNone}`);
 
     const g = confirmFirst();
     const ctx = baseCtx({

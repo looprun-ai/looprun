@@ -328,11 +328,11 @@ function installGuard(spec: AgentSpecBase, g: GuardConfig, deps: NormsDeps, outc
       });
       return;
     case 'consentToken':
-      // DENY-POLICY AUDIT: confirmFirst's deny names only the gated TOOL (structural) and never a world
-      // figure or a role, so there is nothing for renderDeny (which is reads-shaped) to replace — it stays
-      // on its own figure-free primitive text. `confirmFirst` with `via:'probe'` IS the record-bound
-      // earlier-turn-preview gate; the recency law bounds the licensing probe to `within:1` by default.
-      spec.addGuard('preTool', g.tools, normalizeConfirmed(confirmFirst({ via: 'probe' })), { layer: 'agent', id });
+      // DENY-POLICY AUDIT: confirmFirst's deny carries no world figure and no role, so there is nothing
+      // for renderDeny (which is reads-shaped) to replace — it stays on its own figure-free primitive
+      // text. What licenses the act is the consent token the engine issued for the record and the user
+      // typed back; the confirm flag only says WHICH call acts.
+      spec.addGuard('preTool', g.tools, normalizeConfirmed(confirmFirst()), { layer: 'agent', id });
       return;
     case 'askedEarlier':
       // DENY-POLICY AUDIT: askedEarlier's deny names only the gated ARG (structural), no figure/role.

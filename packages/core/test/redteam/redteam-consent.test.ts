@@ -1,10 +1,10 @@
 /**
  * RED-TEAM — the CONSENT / CONFIRMATION cluster on the STRUCTURED-respond surface.
  *
- * Target family: confirmFirst · noActAfterAskSameTurn · destructiveThrottle · pendingConfirmMustAsk ·
- * askedEarlier — all keyed on the structured ask signal (`respond` whose `did` carries an `ask`
- * intention = isAskEvent); there is no `askUser` tool. Source: src/guards/confirmation.ts, src/guards/structural.ts,
- * src/runtime/claims.ts (isAskEvent), src/runtime/ledger.ts, src/runtime/turn.ts, src/runtime/terminal.ts.
+ * Target family: confirmFirst · destructiveThrottle · askedEarlier — the gates around a destructive
+ * act. What licenses one is a token the ENGINE issued for a record and the USER typed back; the agent
+ * has no channel that produces one. Source: src/guards/confirmation.ts, src/guards/structural.ts,
+ * src/runtime/challenge.ts, src/runtime/ledger.ts, src/runtime/turn.ts.
  *
  * CONVENTION: every `it` asserts the SECURE expectation (the guard SHOULD deny / block). A vector whose
  * fix has NOT landed yet is marked `it.fails` (a proven BREAK, suite stays green per commit): when the
@@ -12,14 +12,13 @@
  * acceptance signal. A plain `it` is a CLOSED vector kept as regression.
  * Findings + fixes: .superpowers/sdd/redteam-consent.md.
  *
- * Every vector in this file is a CLOSED regression. What closes them: the SEALED `HistoryTurn.did` is
- * authoritative for its own turn (no ghost ask); probe→confirm record binding is set-EQUALITY of the
- * non-flag args; `via:'ask'` does not accept the tool's OWN prior run as surfacing (which would chain a
- * single consent across unbounded turns); and the cross-turn ask signal is SEALED-HISTORY-ONLY, so the
- * ghost fixtures below assert what a raw `observed` respond is worth: nothing.
+ * Every vector in this file is a CLOSED regression. What closes them: a consent names the record it was
+ * given for and is compared by whole-value equality, so it never travels to another record or another
+ * tool; and nothing the agent emits — a declared ask, its own prior successful run, a sealed history
+ * turn — is admitted as evidence of one.
  */
 import { describe, expect, it } from 'vitest';
-import { AgentSpecBase, confirmFirst, destructiveThrottle, pendingConfirmMustAsk, askedEarlier } from '../../src/index.js';
+import { AgentSpecBase, confirmFirst, destructiveThrottle, askedEarlier } from '../../src/index.js';
 import type { AgentWorld, GuardCtx, DomainContract, ObservedCall, HistoryTurn } from '../../src/index.js';
 import { createLedger } from '../../src/runtime/ledger.js';
 import { finalizeReply } from '../../src/runtime/turn.js';
@@ -43,150 +42,74 @@ const histTurn = (turnIndex: number, posedAsk: boolean): HistoryTurn => ({
 });
 
 // ════════════════════════════════════════════════════════════════════════════════════════════════
-// VECTOR 1 — confirmFirst probe→confirm RECORD binding is a SUBSET, not an EQUALITY
-//   Forbidden thing #1: a probe of record A licenses a confirmed:true act of a DIFFERENT record B.
+// VECTOR 1 — a consent must not travel: not to another record, not to another tool
 // ════════════════════════════════════════════════════════════════════════════════════════════════
-describe('V1 — confirmFirst: a partial/empty probe licenses ANY confirmed destructive act (subset hole)', () => {
-  // isMatchingProbe checks only that the PROBE's non-flag args are a SUBSET of the confirm's args
-  // (`Object.keys(obs.args).filter(!flag).every(k => obs.args[k] === ctx.args[k])`). A probe that
-  // omits the destructive parameters (here: only `confirmed:false`) has an EMPTY key set, so `.every`
-  // over [] is vacuously true — it matches a confirm carrying ANY `to`/`amount` the user never previewed.
-  it('CLOSED: probe {confirmed:false} (previews nothing) does NOT license transfer{to:attacker,amount:99999,confirmed:true}', () => {
-    const g = confirmFirst(); // default flag 'confirmed', via 'either', within 1
-    const ctx = baseCtx({
-      tool: 'transfer',
-      args: { to: 'attacker', amount: 99999, confirmed: true },
-      turnIndex: 1,
-      observed: [obs('transfer', { confirmed: false }, 0)], // earlier-turn probe, previewed NO record
-    });
-    // SECURE: the confirmed act specifies to/amount the probe never previewed → the preview was NOT of
-    // this record → DENY. (Was a BREAK until the subset test became a set EQUALITY.)
+const consentFor = (tool: string, subject?: string): GuardCtx['consent'] => [
+  { tool, ...(subject === undefined ? {} : { subject }), meaning: subject ?? tool, token: `CONFIRM ${(subject ?? tool).toUpperCase()}`, issuedTurn: 0, consumedTurn: 1 },
+];
+
+describe('V1 — a consent licenses the act it was given for, and nothing else', () => {
+  it('CLOSED: a consent for record A does NOT license an act on record B', () => {
+    const g = confirmFirst();
+    const ctx = baseCtx({ tool: 'transfer', args: { account: 'B', confirmed: true }, turnIndex: 1, consent: consentFor('transfer', 'A') });
     expect(g.check(ctx)).not.toBeNull();
   });
 
-  it('CLOSED: probe {account:A} does NOT license a confirm that ADDS destructive fields', () => {
+  it('CLOSED: a consent for record BK-1 does NOT license BK-12 — the token is a whole value', () => {
     const g = confirmFirst();
-    const ctx = baseCtx({
-      tool: 'wipe',
-      args: { account: 'A', scope: 'EVERYTHING', confirmed: true }, // `scope` never previewed
-      turnIndex: 1,
-      observed: [obs('wipe', { account: 'A' }, 0)],
-    });
-    expect(g.check(ctx)).not.toBeNull(); // the un-previewed `scope` makes it a DIFFERENT record
+    const ctx = baseCtx({ tool: 'cancel', args: { id: 'BK-12', confirmed: true }, turnIndex: 1, consent: consentFor('cancel', 'BK-1') });
+    expect(g.check(ctx)).not.toBeNull();
   });
 
-  it('CLOSED regression: a probe with a DIFFERENT discriminating value does NOT license', () => {
+  it('CLOSED: a consent for one tool does NOT license another', () => {
     const g = confirmFirst();
-    const ctx = baseCtx({
-      tool: 'transfer',
-      args: { to: 'attacker', amount: 99999, confirmed: true },
-      turnIndex: 1,
-      observed: [obs('transfer', { to: 'me', amount: 1, confirmed: false }, 0)],
-    });
-    expect(g.check(ctx)).not.toBeNull(); // holds: to='me' !== to='attacker'
+    const ctx = baseCtx({ tool: 'wipe', args: { account: 'A', confirmed: true }, turnIndex: 1, consent: consentFor('transfer', 'A') });
+    expect(g.check(ctx)).not.toBeNull();
+  });
+
+  it('CLOSED: an act carrying extra destructive fields is still licensed — the record is what was agreed', () => {
+    // The token names the RECORD, so a field the user never previewed cannot make it a different act:
+    // what bounds the blast radius of an agreed act is destructiveThrottle, not the consent gate.
+    const g = confirmFirst();
+    const ctx = baseCtx({ tool: 'wipe', args: { account: 'A', scope: 'EVERYTHING', confirmed: true }, turnIndex: 1, consent: consentFor('wipe', 'A') });
+    expect(g.check(ctx)).toBeNull();
   });
 });
 
 // ════════════════════════════════════════════════════════════════════════════════════════════════
-// VECTOR 2 — the RECENCY window (within=1) — direct off-by-one probes (expected CLOSED)
+// VECTOR 2 — nothing the AGENT produces is a consent
 // ════════════════════════════════════════════════════════════════════════════════════════════════
-describe('V2 — confirmFirst recency window: same-turn and stale asks/probes must not license', () => {
-  it('CLOSED: a same-turn probe (distance 0) does NOT license a same-turn confirm', () => {
+describe('V2 — the agent has no channel that licenses a destructive act', () => {
+  it('CLOSED: an empty consent set denies', () => {
     const g = confirmFirst();
-    const ctx = baseCtx({
-      tool: 'transfer', args: { account: 'A', confirmed: true }, turnIndex: 0,
-      observed: [obs('transfer', { account: 'A', confirmed: false }, 0)],
-    });
-    expect(g.check(ctx)).not.toBeNull(); // distance 0 < 1 → not recent → deny
+    expect(g.check(baseCtx({ tool: 'transfer', args: { account: 'A', confirmed: true }, turnIndex: 1, consent: [] }))).not.toBeNull();
   });
 
-  it('CLOSED: a probe 2 turns ago (distance 2 > within 1) does NOT license', () => {
-    const g = confirmFirst();
-    const ctx = baseCtx({
-      tool: 'transfer', args: { account: 'A', confirmed: true }, turnIndex: 2,
-      observed: [obs('transfer', { account: 'A', confirmed: false }, 0)],
-    });
-    expect(g.check(ctx)).not.toBeNull(); // distance 2 → outside window → deny
-  });
-
-  it('CLOSED: an earlier-turn ask (distance 1) legitimately licenses via:either — the two-step shape', () => {
+  it('CLOSED: a sealed turn that declared an ask licenses nothing', () => {
     const g = confirmFirst();
     const ctx = baseCtx({
       tool: 'transfer', args: { account: 'A', confirmed: true }, turnIndex: 1,
-      // The DELIVERED, sealed turn is the ask signal — a raw observed respond is not.
       history: [{ ...histTurn(0, true), reply: 'Transfer from A? confirm' }],
     });
-    expect(g.check(ctx)).toBeNull(); // legit: asked last turn → licensed
+    expect(g.check(ctx)).not.toBeNull();
+  });
+
+  it('CLOSED: the tool\'s own earlier successful run licenses nothing', () => {
+    const g = confirmFirst();
+    const ctx = baseCtx({
+      tool: 'transfer', args: { account: 'A', confirmed: true }, turnIndex: 2,
+      observed: [obs('transfer', { account: 'A', confirmed: true }, 1, { tookEffect: true })],
+    });
+    expect(g.check(ctx)).not.toBeNull();
+  });
+
+  it('CLOSED: the token the user typed for THIS record licenses the act — the two-step shape', () => {
+    const g = confirmFirst();
+    const ctx = baseCtx({ tool: 'transfer', args: { account: 'A', confirmed: true }, turnIndex: 1, consent: consentFor('transfer', 'A') });
+    expect(g.check(ctx)).toBeNull();
   });
 });
 
-// ════════════════════════════════════════════════════════════════════════════════════════════════
-// VECTOR 3 — pendingConfirmMustAsk: the GHOST ASK (same-turn observed-fallback)
-//   Forbidden thing #3: a pending_confirmation turn returns null WITHOUT the turn actually asking,
-//   by exploiting the observed-fallback over a ask-intent respond the user NEVER RECEIVED.
-//
-//   ROOT CAUSE: `recordTerminalCall` pushes EVERY respond into `observed` at hook time. When the model
-//   emits [destructiveProbe, an ask-intent respond] in ONE step, `prematureTerminalTools` invalidates the
-//   reply (clearDeliveredTerminal wipes terminalReply + did) — but did NOT remove the respond from
-//   `observed`. `pruneSupersededTerminals` only drops within-step delivery-losers (needs 2 terminals in
-//   one step), so this single-terminal premature respond was NEVER pruned. The forced-terminal fallback
-//   then delivers a NON-ASK sign-off. At onReply the delivered `did` carries no ask, but the ghost
-//   ask-intent respond still sat in observed → the observed-fallback fired → the pending confirmation
-//   was summarized as DONE with no question ever delivered.
-//   FIX: (a) the delivered `did` is AUTHORITATIVE whenever `ctx.did` exists — the observed scan
-//   is the fallback for chain/mid-turn contexts only; (b) the backends prune the premature terminal from
-//   `observed` (`prematureTerminalCalls` → `pruneSupersededTerminals`), so no ghost survives at all.
-// ════════════════════════════════════════════════════════════════════════════════════════════════
-describe('V3 — pendingConfirmMustAsk bypassed by a premature-invalidated (never-delivered) ghost ask', () => {
-  it('CLOSED: the delivered `did` is authoritative — a ghost ask in observed does NOT satisfy the relay', async () => {
-    const g = pendingConfirmMustAsk();
-    const ctx = baseCtx({
-      turnIndex: 0,
-      did: [{ op: 'inform' }], // the DELIVERED respond is a non-ask sign-off
-      observed: [
-        obs('deleteAcct', { id: 'X' }, 0, { resultFlags: { requiresConfirmation: true } }), // UNRESOLVED probe
-        obs('respond', { message: 'Delete account X? Please confirm.', did: [{ op: 'ask' }] }, 0), // GHOST — invalidated, never delivered, never pruned
-        obs('respond', { message: 'Done — account X deleted.', did: [{ op: 'inform' }] }, 0), // the delivered sign-off
-      ],
-    });
-    // SECURE: nothing was actually asked this turn AND the probe is unresolved → MUST deny.
-    expect(await g.check(ctx)).not.toBeNull();
-  });
-
-  it('CLOSED INTEGRATED: finalizeReply refuses the false "deleted" sign-off', async () => {
-    const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: ['deleteAcct'], contract: CONTRACT });
-    spec.addGuard('onReply', 'any', pendingConfirmMustAsk(), { id: 'agent:pending' });
-    const ledger = createLedger();
-    // Reconstruct the exact post-premature-clear + post-forced-terminal ledger state the mastra backend
-    // produces (recordTerminalCall for BOTH responds; clearDeliveredTerminal wiped the declaration; the
-    // prune missed the single-terminal premature respond; forced-terminal delivered the non-ask sign-off).
-    ledger.observed = [
-      obs('deleteAcct', { id: 'X' }, 0, { resultFlags: { requiresConfirmation: true } }),
-      obs('respond', { message: 'Delete account X? Please confirm.', did: [{ op: 'ask' }] }, 0), // ghost
-      obs('respond', { message: 'Done — account X deleted.', did: [{ op: 'inform' }] }, 0), // delivered
-    ];
-    ledger.did = [];
-    const initial: RespondPayload = { message: 'Done — account X deleted.', did: [{ op: 'inform' }] };
-    const out = await finalizeReply(spec, CONTRACT, world(), ledger, initial, async () => initial, 1);
-    // SECURE: pendingConfirmMustAsk must fire → the false "deleted" reply must NOT be delivered clean.
-    expect(out.violations).toContain('pendingConfirmMustAsk');
-  });
-
-  it('CLOSED regression: with the ghost PRUNED from observed (what the backend now leaves), guard denies', async () => {
-    const g = pendingConfirmMustAsk();
-    const ctx = baseCtx({
-      turnIndex: 0,
-      did: [{ op: 'inform' }],
-      observed: [
-        obs('deleteAcct', { id: 'X' }, 0, { resultFlags: { requiresConfirmation: true } }),
-        obs('respond', { message: 'Done — account X deleted.', did: [{ op: 'inform' }] }, 0), // ghost removed
-      ],
-    });
-    expect(await g.check(ctx)).not.toBeNull(); // correct: no ask delivered → deny
-  });
-});
-
-// ════════════════════════════════════════════════════════════════════════════════════════════════
 // VECTOR 4 — destructiveThrottle: two effected destructive writes in one turn (expected CLOSED)
 // ════════════════════════════════════════════════════════════════════════════════════════════════
 describe('V4 — destructiveThrottle: one destructive effect per turn', () => {
@@ -318,7 +241,7 @@ describe('V5 — askedEarlier: fallback licenses a record off a never-delivered 
 // ════════════════════════════════════════════════════════════════════════════════════════════════
 describe('V6 — confirmFirst via:ask: own prior run self-licenses the repeat (no fresh ask)', () => {
   it('CLOSED: a prior OK deleteAll run (turn 2) does NOT license another deleteAll (turn 3)', () => {
-    const g = confirmFirst({ via: 'ask' });
+    const g = confirmFirst({ flag: false });
     const ctx = baseCtx({
       tool: 'deleteAll',
       args: {},
@@ -330,7 +253,7 @@ describe('V6 — confirmFirst via:ask: own prior run self-licenses the repeat (n
   });
 
   it('CLOSED: a SINGLE ask (turn 1) does NOT bridge the recency law out to turn 3', () => {
-    const g = confirmFirst({ via: 'ask' }); // within default 1
+    const g = confirmFirst({ flag: false }); // within default 1
     const ctx = baseCtx({
       tool: 'deleteAll',
       args: {},
@@ -346,7 +269,7 @@ describe('V6 — confirmFirst via:ask: own prior run self-licenses the repeat (n
   });
 
   it('CLOSED regression: a vetoed (ok:false) prior attempt does NOT self-license the repeat', () => {
-    const g = confirmFirst({ via: 'ask' });
+    const g = confirmFirst({ flag: false });
     const ctx = baseCtx({
       tool: 'deleteAll', args: {}, turnIndex: 3,
       observed: [obs('deleteAll', {}, 2, { ok: false })], // prior attempt was vetoed

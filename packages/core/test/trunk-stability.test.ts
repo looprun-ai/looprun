@@ -87,7 +87,7 @@ describe('trunk byte-stability', () => {
 
       ## Tool rules
       - **waterPlant**: only after listPlants has run.
-      - **repotPlant**: Repotting needs the pro plan; destructive actions need confirmed:false first + the USER's explicit confirmation in a later turn; at most one destructive action per turn (a confirmation probe that changed nothing does not count).
+      - **repotPlant**: Repotting needs the pro plan; a destructive action runs only after the user has typed back the confirmation they were shown — never on the strength of anything you say or declare; at most one destructive action per turn (a confirmation probe that changed nothing does not count).
 
       ## Reply rules (govern the message you send — checked on every reply)
       - reply in ONE clean user-facing message — never leak internal reasoning, template tokens, or repeated lines.

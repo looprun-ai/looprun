@@ -28,6 +28,7 @@
 import { claimIsComplete, claimIsGrounded, confirmFirst, degenerationGuard, destructiveThrottle, noDuplicateCall } from './guards/index.js';
 import { GuardExecutionError } from './rules.js';
 import { assertNoCoreOutcomeShadow } from './runtime/claims.js';
+import { challengeToken } from './runtime/challenge.js';
 import type { AgentWorld, Dim, Guard, GuardCtx, ObservedCall, ReplyMutator, SpatialEdge } from './rules.js';
 import type { DomainContract } from './trunk.js';
 import type { SamplingSettings } from './model-params.js';
@@ -169,6 +170,10 @@ export interface AgentSpec {
     onReplyMutate?: MutatorBinding[];
   };
   controls: AgentControls;
+  /** Per destructive tool that acts on no identifiable record, the human-facing label its consent
+   *  question is built from. The runtime seats it on the ledger, which is what turns a denial into a
+   *  question the user can read and answer. */
+  destructiveLabels?: Record<string, string>;
   /** The LANGUAGE / JUDGEMENT layer: prose whose rules have NO possible `check()` (redefined
    *  ). Every rule that HAS a guard states itself in the trunk from that guard's own
    *  `prose()` — the PROSE-RENDERING RULE renders EVERY hook now, `onInput`/`onReply` included
@@ -353,6 +358,12 @@ export interface AgentSpecConfig {
    *  flag gated on a prior-turn probe; `'prior-ask'` = a flag-less action gated on a prior-turn ask event.
    *  Absent ⇒ every destructive tool uses `'arg'` (byte-stable with the pre-mechanism layer). */
   confirmMechanism?: Record<string, 'arg' | 'prior-ask'>;
+  /** Per destructive tool that acts on NO identifiable record, the human-facing label its consent
+   *  question is built from — what the user is agreeing to, in the words they will read. The engine
+   *  derives the token from it, so two labels whose first two words agree are a construction error. A
+   *  destructive tool with neither a record nor a label can raise no question, so it can never be
+   *  consented to and never runs. */
+  destructiveLabels?: Record<string, string>;
   /** Optional domain-contract reference (see {@link AgentSpec.contract}). */
   contract?: DomainContract;
 }
@@ -377,6 +388,7 @@ export class AgentSpecBase implements AgentSpec {
   readonly contract?: DomainContract;
   protected readonly destructiveTools: string[];
   protected readonly confirmMechanism: Record<string, 'arg' | 'prior-ask'>;
+  readonly destructiveLabels: Record<string, string>;
   private seq = 0;
 
   constructor(cfg: AgentSpecConfig) {
@@ -423,6 +435,7 @@ export class AgentSpecBase implements AgentSpec {
     if (cfg.contract) this.contract = cfg.contract;
     this.destructiveTools = [...(cfg.destructiveTools ?? [])];
     this.confirmMechanism = { ...(cfg.confirmMechanism ?? {}) };
+    this.destructiveLabels = { ...(cfg.destructiveLabels ?? {}) };
     assertReplyOnlyHasNoDestructiveTool(cfg.terminal, this.destructiveTools, `AgentSpec "${cfg.id}"`);
     // Install order is load-bearing (byte-stable trunk): universal invariants first, destructive layer
     // second.
@@ -484,6 +497,28 @@ export class AgentSpecBase implements AgentSpec {
           'The mechanism would be ignored and the tool would silently fall back to the arg mechanism (a no-op for a flag-less tool).',
       );
     }
+    // A label for a tool that is not destructive gates nothing — the same silent-no-op class the stray
+    // mechanism check above closes.
+    const strayLabel = Object.keys(this.destructiveLabels).filter((t) => !destructive.includes(t));
+    if (strayLabel.length) {
+      throw new Error(
+        `AgentSpec "${this.id}": destructiveLabels names tool(s) that are not in destructiveTools: ${strayLabel.join(', ')}.`,
+      );
+    }
+    // Two labels that derive the SAME token would give the user ONE literal for two different acts:
+    // typing it would consent to whichever question is open, which is not the one they read.
+    const byToken = new Map<string, string>();
+    for (const [tool, label] of Object.entries(this.destructiveLabels)) {
+      const token = challengeToken(label);
+      const owner = byToken.get(token);
+      if (owner) {
+        throw new Error(
+          `AgentSpec "${this.id}": destructiveLabels for "${owner}" and "${tool}" both derive the token "${token}". ` +
+            'One typed literal would consent to either act. Give them labels whose first two words differ.',
+        );
+      }
+      byToken.set(token, tool);
+    }
     if (!destructive.length) return;
     const missing = destructive.filter((t) => !this.surface.tools.includes(t));
     if (missing.length) {
@@ -496,7 +531,7 @@ export class AgentSpecBase implements AgentSpec {
       this.addGuard('preTool', argTools, confirmFirst(), { layer: 'base', id: 'base:confirmFirst' });
     }
     if (priorAskTools.length) {
-      this.addGuard('preTool', priorAskTools, confirmFirst({ via: 'ask' }), { layer: 'base', id: 'base:confirmFirstPriorAsk' });
+      this.addGuard('preTool', priorAskTools, confirmFirst({ flag: false }), { layer: 'base', id: 'base:confirmFirstPriorAsk' });
     }
     // The throttle needs the mechanism split too: a `'prior-ask'` tool has no confirm flag, so it has no
     // preview shape and every same-step sibling of it counts as an effect.

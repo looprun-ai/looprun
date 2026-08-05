@@ -37,7 +37,7 @@ import {
   type Intention,
 } from '../../src/runtime/claims.js';
 import { claimCoversRubric, claimIsComplete, claimIsGrounded } from '../../src/guards/honesty.js';
-import { confirmFirst, pendingConfirmMustAsk } from '../../src/guards/confirmation.js';
+import { confirmFirst } from '../../src/guards/confirmation.js';
 import { createLedger, recordToolResult } from '../../src/runtime/ledger.js';
 import { finalizeReply } from '../../src/runtime/turn.js';
 
@@ -211,42 +211,29 @@ describe('b2 — a SPEECH intention is EVIDENCE nowhere… except `ask`, which l
     did: [{ op: 'ask' }, { op: 'inform' }],
   });
 
-  it.fails('BREAK b2.1 — an uncorroborated `ask` licenses a next-turn destructive call (confirmFirst via:ask)', () => {
-    // SECURE EXPECTATION: a destructive flag-less tool stays gated until the user was really asked.
-    // ACTUAL: askedInDeliveredTurn → hasAskIntent(history.did) → true → the guard allows the deletion.
-    const verdict = confirmFirst({ via: 'ask' }).check(
+  it('an uncorroborated `ask` licenses no next-turn destructive call', () => {
+    // A destructive flag-less tool stays gated until the USER confirmed: what the agent declared about
+    // its own previous turn is not evidence of anything.
+    const verdict = confirmFirst({ flag: false }).check(
       replyCtx({ tool: 'deleteAccount', args: {}, turnIndex: 1, history: [silentTurn] }),
     );
     expect(verdict).not.toBeNull();
   });
 
   it('CONTROL — with NO ask intention declared, the same destructive call is denied', () => {
-    const verdict = confirmFirst({ via: 'ask' }).check(
+    const verdict = confirmFirst({ flag: false }).check(
       replyCtx({ tool: 'deleteAccount', args: {}, turnIndex: 1, history: [historyTurn({ turnIndex: 0, did: [{ op: 'inform' }] })] }),
     );
-    expect(verdict).toContain('deleteAccount');
+    expect(verdict).not.toBeNull();
   });
 
-  it.fails('BREAK b2.2 — an uncorroborated `ask` also unlocks the flag-gated arm (confirmFirst via:either)', () => {
-    const verdict = confirmFirst({ via: 'either' }).check(
+  it('an uncorroborated `ask` unlocks nothing — consent is a token the user types, not a declaration', () => {
+    const verdict = confirmFirst().check(
       replyCtx({ tool: 'cancelBooking', args: { id: 'BK-1', confirmed: true }, turnIndex: 1, history: [silentTurn] }),
     );
     expect(verdict).not.toBeNull();
   });
 
-  it.fails('BREAK b2.3 — a bare `ask` satisfies pendingConfirmMustAsk while the message reports it DONE', () => {
-    // A destructive probe returned requiresConfirmation. The guard exists to force "ask this turn and
-    // do not summarize the action as done". A declared `ask` + a message that says "Cancelled." passes:
-    // `hasAskIntent(ctx.did)` is AUTHORITATIVE ("full stop") and reads only the declaration.
-    const verdict = pendingConfirmMustAsk().check(
-      replyCtx({
-        did: [{ op: 'ask' }],
-        reply: 'Cancelled. Your booking BK-1 has been deleted.',
-        observed: [call('cancelBooking', { id: 'BK-1' }, { resultFlags: { requiresConfirmation: true } })],
-      }),
-    );
-    expect(verdict).not.toBeNull();
-  });
 });
 
 // ═════════════════════════════════════════════════════════════════════════════════════════════════

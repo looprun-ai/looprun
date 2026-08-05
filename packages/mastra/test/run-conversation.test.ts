@@ -20,6 +20,13 @@ function world(): AgentWorld {
   return {
     exec(name: string, args: Record<string, unknown>) {
       if (name === 'respond') return { success: true };
+      // The two-step protocol is the WORLD's: an unconfirmed destructive call changes nothing and names
+      // the record it needs confirmation for, which is what the engine builds its question from.
+      if (name === 'deleteItem' && args.confirmed !== true) {
+        const probe = { requiresConfirmation: true, id: args.id };
+        calls.push({ name, args, result: probe, tookEffect: false });
+        return probe;
+      }
       const result = { success: true };
       calls.push({ name, args, result, tookEffect: true });
       return result;
@@ -52,24 +59,25 @@ describe('runSpecConversation', () => {
     spec.addGuard('preTool', ['deleteItem'], confirmFirst(), { id: 'agent:confirmFirst' });
 
     const scripted = scriptedModel([
-      // turn 0: model tries confirmed:true directly — vetoed; probes; relays the question.
+      // turn 0: the model tries confirmed:true directly — vetoed; then probes, and the world's
+      // "I need confirmation on x" is what makes the engine put the question on the screen.
       [{ tool: 'deleteItem', args: { id: 'x', confirmed: true } }],
       [{ tool: 'deleteItem', args: { id: 'x' } }],
       [{ tool: 'respond', args: { message: 'Delete x — are you sure?', did: [{ op: 'inform' }] } }],
-      // turn 1: user confirmed; probe ran in an EARLIER turn, so confirmed:true is now legal.
+      // turn 1: the user typed the token the engine issued, so confirmed:true is now licensed.
       [{ tool: 'deleteItem', args: { id: 'x', confirmed: true } }],
       [{ tool: 'respond', args: { message: 'Deleted x.', did: [{ op: 'inform' }] } }],
     ]);
 
     const res = await runSpecConversation(
       spec,
-      [{ userText: 'delete x' }, { userText: 'yes, delete it' }],
+      [{ userText: 'delete x' }, { userText: 'CONFIRM x' }],
       { model: scripted.model, world: world(), toolDefs: TOOL_DEFS },
     );
 
     expect(res.errorMsg).toBeUndefined();
     expect(res.turnRecords).toHaveLength(2);
-    expect(res.turnRecords[0].assistantFinalText).toBe(nothingDone('Delete x — are you sure?'));
+    expect(res.turnRecords[0].assistantFinalText).toContain('To confirm x, reply: CONFIRM X');
     expect(res.turnRecords[0].recoveryEvents).toContain('run:confirmFirst:deleteItem');
     expect(res.turnRecords[1].assistantFinalText).toBe(nothingDone('Deleted x.'));
     expect(res.turnRecords[1].recoveryEvents).toEqual([]); // confirmed:true legal after the earlier-turn probe
