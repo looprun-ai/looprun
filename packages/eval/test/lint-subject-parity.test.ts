@@ -90,3 +90,66 @@ describe('TARGET-SILENT-ON-EVERY-PRESET', () => {
     ).toBe(true);
   });
 });
+
+describe('the id laws', () => {
+  it('a minted, positional guard id is a violation', async () => {
+    const { lintSpecLaws } = await import('../src/lint.js');
+    const spec = new AgentSpecBase({
+      id: 'rentals',
+      mode: 'M',
+      persona: 'The rentals desk.',
+      tools: ['createBooking'],
+      contract: CONTRACT,
+    });
+    spec.addGuard('preTool', ['createBooking'], {
+      kind: 'custom',
+      dim: 'run',
+      check: () => null,
+      prose: () => 'x',
+    } as never);
+    expect(
+      lintSpecLaws({ rentals: spec }).some((f) => f.includes('GUARD-ID-POSITIONAL') && f.includes('agent:custom#1')),
+    ).toBe(true);
+  });
+
+  it('a guard id shared by two lanes is not covered by the other lane targeting it', () => {
+    const s = subject(CONTRACT);
+    const shared = {
+      kind: 'precondition',
+      dim: 'run',
+      check: () => 'no',
+      prose: () => 'x',
+    } as never;
+    const other = new AgentSpecBase({
+      id: 'fleet',
+      mode: 'M',
+      persona: 'The fleet desk.',
+      tools: ['createBooking'],
+      contract: CONTRACT,
+    });
+    other.addGuard('preTool', ['createBooking'], shared, { id: 'agent:sharedGate' });
+    const mine = s.specs.rentals as AgentSpecBase;
+    mine.addGuard('preTool', ['createBooking'], shared, { id: 'agent:sharedGate' });
+    s.specs = { rentals: mine, fleet: other };
+    s.cases = [{ ...s.cases[0], targets: ['agent:sharedGate'] }];
+    expect(lintSubject(s).some((f) => f.includes("GUARD-NEVER-TARGETED: 'agent:sharedGate' on agent fleet"))).toBe(
+      true,
+    );
+  });
+
+  it('the never-targeted message offers no way to accept the gap', () => {
+    const s = subject(CONTRACT);
+    const mine = s.specs.rentals as AgentSpecBase;
+    mine.addGuard(
+      'preTool',
+      ['createBooking'],
+      { kind: 'precondition', dim: 'run', check: () => 'no', prose: () => 'x' } as never,
+      { id: 'agent:lonelyGate' },
+    );
+    s.cases = [{ ...s.cases[0], targets: [] }];
+    const msg = lintSubject(s).find((f) => f.includes('GUARD-NEVER-TARGETED'));
+    expect(msg).toMatch(/Repair one of/);
+    expect(msg).toMatch(/cannot be accepted, only closed/);
+    expect(msg).not.toMatch(/ignore|allowlist|suppress|record the gap/i);
+  });
+});

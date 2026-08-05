@@ -61,12 +61,14 @@ const rubricText = (c: SubjectCase): string =>
 function coverageFindings(subject: Subject): string[] {
   const out: string[] = [];
   const inventory = new Set<string>();   // everything installed — what a target may legally name
-  const authored = new Set<string>();    // what this bundle chose — what a case is expected to cover
   for (const spec of Object.values(subject.specs ?? {})) {
     for (const id of guardIds(spec)) inventory.add(id);
-    for (const id of authoredGuardIds(spec)) authored.add(id);
   }
 
+  // A guard id is not unique across lanes: two specs may install `agent:sharedGate`, and a case that
+  // targets it on one lane says nothing about the copy on the other. The diff is per (agent, guardId)
+  // so a copy no case on ITS lane can reach still reads as uncovered.
+  const key = (agent: string, id: string) => `${agent} ${id}`;
   const targeted = new Set<string>();
   for (const c of subject.cases ?? []) {
     const agent = routedAgent(subject, c);
@@ -76,7 +78,7 @@ function coverageFindings(subject: Subject): string[] {
       out.push(`case "${c.id}": CASE-WITHOUT-TARGET: names no rule it tests — without it, "does the suite exercise what we ship" is unanswerable`);
     }
     for (const t of c.targets ?? []) {
-      targeted.add(t);
+      if (agent) targeted.add(key(agent, t));
       if (!inventory.has(t)) {
         out.push(`case "${c.id}": PHANTOM-TARGET: targets '${t}', which matches no guard in the assembled inventory — remap it at the wire, or the case is proving nothing`);
       } else if (spec && !guardIds(spec).includes(t)) {
@@ -96,9 +98,12 @@ function coverageFindings(subject: Subject): string[] {
     }
   }
 
-  for (const id of authored) {
-    if (!targeted.has(id)) {
-      out.push(`GUARD-NEVER-TARGETED: '${id}' shipped and no case targets it — a guard the exam never exercises passes in BOTH arms of a discrimination run, so it reads as coverage while never having fired`);
+  for (const [agent, spec] of Object.entries(subject.specs ?? {})) {
+    for (const id of authoredGuardIds(spec)) {
+      if (targeted.has(key(agent, id))) continue;
+      out.push(
+        `GUARD-NEVER-TARGETED: '${id}' on agent ${agent} shipped and no case on that lane targets it — a guard the exam never exercises passes in BOTH arms of a discrimination run, so it reads as coverage while never having fired. Repair one of: write a case whose preset makes it deny; give the world the preset that condition needs. A gap here cannot be accepted, only closed`,
+      );
     }
   }
   return out;
