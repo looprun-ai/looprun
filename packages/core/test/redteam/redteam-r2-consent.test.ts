@@ -16,7 +16,7 @@
  * End-to-end (real mastra loop) siblings: packages/mastra/test/redteam-r2-consent-l3.test.ts
  */
 import { describe, expect, it } from 'vitest';
-import { AgentSpecBase, confirmFirst, askedEarlier } from '../../src/index.js';
+import { AgentSpecBase, confirmFirst, valueFromUser } from '../../src/index.js';
 import type { AgentWorld, GuardCtx, DomainContract, ObservedCall, HistoryTurn } from '../../src/index.js';
 import { DEFAULT_ENGINE_TEXT } from '../../src/runtime/engine-text.js';
 import { createLedger, recordTurnHistory } from '../../src/runtime/ledger.js';
@@ -266,8 +266,8 @@ describe('C4 — an UNSEALED earlier turn re-opens the raw observed ask scan', (
     expect(g.check(ctx)).not.toBeNull();
   });
 
-  it('CLOSED: askedEarlier does not license an operator-value write off the unsealed ghost', () => {
-    const g = askedEarlier({ tool: 'record', arg: 'value' });
+  it('CLOSED: valueFromUser does not license an operator-value write off the unsealed ghost', () => {
+    const g = valueFromUser({ arg: 'value' });
     const ctx = baseCtx({
       tool: 'record',
       args: { value: '42' },

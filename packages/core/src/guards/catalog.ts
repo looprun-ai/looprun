@@ -223,13 +223,13 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
 
   // ── structural ───────────────────────────────────────────────────────────────
   {
-    name: 'askedEarlier',
+    name: 'valueFromUser',
     category: 'structural',
     hook: 'preTool',
-    summary: 'A gated argument may be recorded only when the agent asked the user SOMETHING in an EARLIER turn; a same-turn ask does not count, and the ask is not bound to the argument.',
+    summary: 'A field the agent fills in on the user\'s behalf must carry the value the user actually said.',
     whenToUse:
-      'A value the agent must not write until it has asked the operator and they answered in a later message — the structural replacement for a hand-written regex over "did we ask?". It keys on the presence of the gated arg plus an earlier-turn ask INTENTION, never on any text. An intention carries no subject, so an ask on any topic licenses this argument: it enforces the two-turn RHYTHM, not the relevance of the question.',
-    example: `askedEarlier({ tool: 'completeMaintenance', arg: 'condition' })`,
+      'The world is meant to receive what the PERSON said, not the agent\'s version of it. The recorded value is compared against everything the user has said in the conversation, as a contiguous run of whole tokens — so a value they never said is denied, and so is a paraphrase of one they did. Fires only when the gated argument is present on the call.',
+    example: `valueFromUser({ arg: 'email' })`,
   },
 
   // ── llm-check ────────────────────────────────────────────────────────────────

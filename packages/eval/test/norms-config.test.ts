@@ -29,7 +29,7 @@ const fixtureValid = {
   guards: [
     { kind: 'requiresBefore', id: 'planChangeReadsUsageFirst', tool: 'changePlan', reads: ['getPlanUsage'] },
     { kind: 'consentToken', id: 'chargeConsent', tools: ['issueRefund', 'chargeDeposit'] },
-    { kind: 'askedEarlier', id: 'conditionAsked', tool: 'completeMaintenance', arg: 'condition' },
+    { kind: 'valueFromUser', id: 'conditionAsked', tool: 'completeMaintenance', arg: 'condition' },
     {
       kind: 'precondition',
       id: 'seatsAvailable',
@@ -139,7 +139,7 @@ describe('loadNormsConfig — guards from data', () => {
       id: 'x',
       persona: 'p',
       tools: ['t'],
-      guards: [{ kind: 'askedEarlier', id: 'a', tool: 't', pattern: 'foo.*' }],
+      guards: [{ kind: 'valueFromUser', id: 'a', tool: 't', pattern: 'foo.*' }],
     };
     expect(() => loadNormsConfig(fixtureWithPatternKey)).toThrow(/pattern|regex.*not.*supported/i);
   });

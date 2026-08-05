@@ -1,51 +1,45 @@
 /**
- * STRUCTURAL guards — the consent-binding kind that keys ONLY on structure: observed call NAMES, their
- * `ok`/`turnIndex`, and args EQUALITY. No text is ever matched (no RegExp over any user or model
- * string) — that is the defect class this family exists to replace. A generated bundle used to
- * hand-write this as a `custom()` guard carrying a regex over the reply or the args; the kind here
- * carries the identical decision as a runtime primitive, so the bundle binds a name instead of shipping a
- * pattern. (The former sibling `confirmedNeedsEarlierProbe` was absorbed into the unified `confirmFirst`
- * via `via:'probe'` — 2026-08-02.)
+ * STRUCTURAL guards — the kind that keys ONLY on values the conversation itself produced. No text is
+ * ever pattern-matched: matching is the engine's one law (whole tokens, contiguous, whole-value equal).
  */
 import type { Guard, GuardCtx } from '../rules.js';
-import { askedInDeliveredTurn } from './shared.js';
+import { valueSpokenBy } from './matching.js';
 
 /**
- * A value the agent may only RECORD after it has asked the operator for it in an EARLIER turn.
+ * A value the agent records on the user's behalf must be a value the USER SAID.
  *
- * Fires only when the gated argument is actually present on this call (`ctx.args[arg]` non-nullish) — an
- * absent arg is not this guard's business. The exemption is purely structural: an EARLIER completed turn
- * that posed an ask (its delivered `did` carries an `ask` intention). A same-turn ask does NOT count — the
- * operator has not had a chance to answer within the same message, so consent to record their answer cannot
- * have arrived yet.
+ * ```
+ *   user says   "my email is marcos@x.com"
+ *   saveLead({ email:'marcos@x.com' })              allowed — the user said it
+ *   saveLead({ email:'guess@y.com' })               denied  — the agent invented it
  *
- * ASK SIGNAL: {@link askedInDeliveredTurn} — a SEALED `HistoryTurn` whose `did` carries an `ask`
- * intention is authoritative for its own turn; the observed scan covers only the PRE-HISTORY window (an
- * earlier ask not yet sealed, e.g. a chained micro-turn), so a `respond` the user never received cannot
- * license a write. Structure only — never reply text.
+ *   user says   "the engine locked up"
+ *   saveCase({ diagnosis:'engine seized' })         denied  — a paraphrase is the agent's words
+ *   saveCase({ diagnosis:'the engine locked up' })  allowed
+ * ```
  *
- * RECENCY LAW (2026-08-02): the earlier ask is a LICENSING signal — it UNLOCKS this write — so it is
- * turn-bounded by `within` (default **1**, the immediately-preceding turn): the ask must satisfy
- * `1 ≤ currentTurnIndex − askTurnIndex ≤ within`. An answer given 20 turns ago must not license today's
- * record; widen deliberately with `within` when the flow genuinely spans turns.
+ * The world receives the person's own words, not the agent's normalization. Paraphrase is denied: a
+ * normalization that never passed the user's lips is a value they cannot be held to.
+ *
+ * Every turn of the conversation counts, this one included — a value the user supplied is theirs however
+ * long ago they said it, and nothing about a later turn unsays it.
+ *
+ * Fires only when the gated argument is actually present on this call; an absent arg is not this guard's
+ * business.
  */
-export function askedEarlier(opts: { tool: string; arg?: string; within?: number }): Guard {
+export function valueFromUser(opts: { arg: string }): Guard {
   const arg = opts.arg;
-  const within = opts.within ?? 1;
   return {
-    kind: 'askedEarlier',
+    kind: 'valueFromUser',
     dim: 'run',
     check(ctx: GuardCtx): string | null {
-      // Only in scope when the value this guard governs is actually being written this call.
-      if (arg != null) {
-        const v = ctx.args[arg];
-        if (v === undefined || v === null || v === '') return null;
-      }
-      if (askedInDeliveredTurn(ctx, within)) return null;
-      const what = arg ?? 'that value';
-      return `Ask the operator for ${what} first — record it only after they answer.`;
+      const v = ctx.args[arg];
+      if (typeof v !== 'string' || v === '') return null;
+      if (valueSpokenBy(v, ctx.userText)) return null;
+      if (ctx.history.some((t) => valueSpokenBy(v, t.userText))) return null;
+      return `Record ${arg} only with the value the user gave you, in their own words — do not supply it yourself or rephrase what they said.`;
     },
     prose: () =>
-      `record ${arg ?? 'that value'} only after asking the operator for it in an earlier turn — never on the opening turn`,
+      `record ${arg} only using the exact words the user gave you — never your own rephrasing, and never a value they did not say`,
   };
 }

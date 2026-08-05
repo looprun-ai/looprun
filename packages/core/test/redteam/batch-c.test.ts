@@ -16,7 +16,7 @@ import {
   claimCoversRubric,
   degenerationGuard,
   jargonScrub,
-  askedEarlier,
+  valueFromUser,
 } from '../../src/index.js';
 import { terminalToolDefs } from '../../src/runtime/terminal.js';
 import { createLedger } from '../../src/runtime/ledger.js';
@@ -115,29 +115,46 @@ describe('jargonScrub', () => {
     expect(m.apply('This is the (beta) release.', rctx('') as GuardCtx)).toContain('(beta)');
   });
 });
-describe('askedEarlier', () => {
-  // BREAK: an earlier-turn ask about a DIFFERENT arg licenses recording THIS arg — no association.
-  it('BREAK unrelated-ask: earlier ask (any topic) licenses recording a different value', () => {
-    const g = askedEarlier({ tool: 'completeMaintenance', arg: 'diagnosis' });
+describe('valueFromUser', () => {
+  // CLOSED: what licenses the write is the USER having said the value, so a question about something
+  // else — or no question at all — buys the agent nothing.
+  it('CLOSED unrelated-ask: an earlier question about another field licenses no value', () => {
+    const g = valueFromUser({ arg: 'diagnosis' });
     const ctx = {
       tool: 'completeMaintenance',
       turnIndex: 2,
       args: { diagnosis: 'engine seized' },
-      history: [{ turnIndex: 1, userText: '', reply: 'your name?', toolCalls: [], did: [{ op: 'ask' }], asked: true, attemptedCalls: [], guardEvents: [] }],
-      observed: [],
-    } as unknown as GuardCtx;
-    expect(g.check(ctx)).toBeNull(); // ask was about the name, not the diagnosis → still licensed
-  });
-  // CONTROL (should HOLD): a stale ask (>within) must NOT license.
-  it('HOLDS stale: an ask 3 turns ago (within:1) does not license', () => {
-    const g = askedEarlier({ tool: 'completeMaintenance', arg: 'diagnosis' });
-    const ctx = {
-      tool: 'completeMaintenance',
-      turnIndex: 4,
-      args: { diagnosis: 'x' },
-      history: [{ turnIndex: 1, userText: '', reply: 'q?', toolCalls: [], did: [{ op: 'ask' }], asked: true, attemptedCalls: [], guardEvents: [] }],
+      userText: 'go ahead',
+      history: [{ turnIndex: 1, userText: 'Marcos', reply: 'your name?', toolCalls: [], did: [{ op: 'ask' }], attemptedCalls: [], guardEvents: [] }],
       observed: [],
     } as unknown as GuardCtx;
     expect(g.check(ctx)).not.toBeNull();
   });
+
+  it('CLOSED paraphrase: the agent\'s wording for what the user said is not what the user said', () => {
+    const g = valueFromUser({ arg: 'diagnosis' });
+    const ctx = {
+      tool: 'completeMaintenance',
+      turnIndex: 2,
+      args: { diagnosis: 'engine seized' },
+      userText: 'the engine locked up',
+      history: [],
+      observed: [],
+    } as unknown as GuardCtx;
+    expect(g.check(ctx)).not.toBeNull();
+  });
+
+  it('CONTROL: the value the user actually said is recorded', () => {
+    const g = valueFromUser({ arg: 'diagnosis' });
+    const ctx = {
+      tool: 'completeMaintenance',
+      turnIndex: 2,
+      args: { diagnosis: 'the engine locked up' },
+      userText: 'the engine locked up',
+      history: [],
+      observed: [],
+    } as unknown as GuardCtx;
+    expect(g.check(ctx)).toBeNull();
+  });
 });
+

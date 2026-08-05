@@ -1,7 +1,7 @@
 /**
  * RED-TEAM — the CONSENT / CONFIRMATION cluster on the STRUCTURED-respond surface.
  *
- * Target family: confirmFirst · destructiveThrottle · askedEarlier — the gates around a destructive
+ * Target family: confirmFirst · destructiveThrottle · valueFromUser — the gates around a destructive
  * act. What licenses one is a token the ENGINE issued for a record and the USER typed back; the agent
  * has no channel that produces one. Source: src/guards/confirmation.ts, src/guards/structural.ts,
  * src/runtime/challenge.ts, src/runtime/ledger.ts, src/runtime/turn.ts.
@@ -18,7 +18,7 @@
  * turn — is admitted as evidence of one.
  */
 import { describe, expect, it } from 'vitest';
-import { AgentSpecBase, confirmFirst, destructiveThrottle, askedEarlier } from '../../src/index.js';
+import { AgentSpecBase, confirmFirst, destructiveThrottle, valueFromUser } from '../../src/index.js';
 import type { AgentWorld, GuardCtx, DomainContract, ObservedCall, HistoryTurn } from '../../src/index.js';
 import { createLedger } from '../../src/runtime/ledger.js';
 import { finalizeReply } from '../../src/runtime/turn.js';
@@ -190,29 +190,29 @@ describe('V4 — destructiveThrottle: one destructive effect per turn', () => {
 });
 
 // ════════════════════════════════════════════════════════════════════════════════════════════════
-// VECTOR 5 — askedEarlier: the GHOST ASK poisons the CROSS-TURN observed-fallback
+// VECTOR 5 — valueFromUser: the GHOST ASK poisons the CROSS-TURN observed-fallback
 //   Forbidden thing #5: a write licensed off an ask that never reached the user. The SEALED history turn
 //   is the PRIMARY (verified-delivered) signal and correctly carries no ask intent here, but the guard
 //   OR-ed it with an observed-scan fallback that still saw the never-pruned ghost respond from turn 0.
 //   FIX: a SEALED turn is authoritative for its own turnIndex — the observed fallback covers only
 //   turns not yet in history (the pre-history window it was written for).
 // ════════════════════════════════════════════════════════════════════════════════════════════════
-describe('V5 — askedEarlier: fallback licenses a record off a never-delivered (ghost) earlier ask', () => {
-  it('CLOSED: a SEALED turn 0 that posed no ask beats the ghost observed ask-intent respond', () => {
-    const g = askedEarlier({ tool: 'setLimit', arg: 'limit' });
+describe('V5 — valueFromUser: the value the world records must be the value the user said', () => {
+  it('CLOSED: a ghost respond declaring a question licenses no value', () => {
+    const g = valueFromUser({ arg: 'limit' });
     const ctx = baseCtx({
       tool: 'setLimit',
-      args: { limit: 5000 },
+      args: { limit: '5000' },
       turnIndex: 1,
-      history: [histTurn(0, false)], // the DELIVERED turn 0 posed NO question (verified)
-      observed: [obs('respond', { message: 'What limit? ', did: [{ op: 'ask' }] }, 0)], // ghost, never delivered, never pruned
+      userText: 'go ahead',
+      history: [histTurn(0, false)],
+      observed: [obs('respond', { message: 'What limit? ', did: [{ op: 'ask' }] }, 0)], // never delivered
     });
-    // SECURE: the verified delivered signal says no ask happened → must DENY.
     expect(g.check(ctx)).not.toBeNull();
   });
 
   it('CLOSED: the same ghost ask does NOT license a confirmed destructive act', () => {
-    const g = confirmFirst(); // via 'either' → askLicensed reads the observed ask-event scan
+    const g = confirmFirst();
     const ctx = baseCtx({
       tool: 'transfer',
       args: { to: 'attacker', amount: 99999, confirmed: true },
@@ -220,18 +220,19 @@ describe('V5 — askedEarlier: fallback licenses a record off a never-delivered 
       history: [histTurn(0, false)],
       observed: [obs('respond', { message: 'Confirm? ', did: [{ op: 'ask' }] }, 0)], // ghost
     });
-    expect(g.check(ctx)).not.toBeNull(); // a confirmed transfer must not unlock off an ask the user never saw
+    expect(g.check(ctx)).not.toBeNull();
   });
 
-  it('CLOSED regression: a genuine EARLIER-turn ask (delivered) correctly licenses', () => {
-    const g = askedEarlier({ tool: 'setLimit', arg: 'limit' });
+  it('CLOSED regression: the figure the user actually gave is recorded', () => {
+    const g = valueFromUser({ arg: 'limit' });
     const ctx = baseCtx({
-      tool: 'setLimit', args: { limit: 5000 }, turnIndex: 1,
-      history: [{ ...histTurn(0, true), reply: 'What limit should I set?' }], // delivered ask
+      tool: 'setLimit', args: { limit: '5000' }, turnIndex: 1,
+      userText: 'set it to 5000',
     });
     expect(g.check(ctx)).toBeNull();
   });
 });
+
 
 // ════════════════════════════════════════════════════════════════════════════════════════════════
 // VECTOR 6 — confirmFirst via:'ask' — a flag-less destructive tool SELF-LICENSES its repeat

@@ -18,7 +18,7 @@
  * load, not run.
  */
 import { z } from 'zod';
-import { AgentSpecBase, askedEarlier, claimCoversRubric, confirmFirst, didMessageConsistency, llmCheck, precondition, requiresBefore } from '@looprun-ai/core';
+import { AgentSpecBase, claimCoversRubric, confirmFirst, didMessageConsistency, llmCheck, precondition, requiresBefore, valueFromUser } from '@looprun-ai/core';
 import type { AgentSpec, AgentWorld, CoreOutcome, Guard, GuardCtx, OutcomeMap } from '@looprun-ai/core';
 import { assertNoCoreOutcomeShadow } from '@looprun-ai/core/internal';
 
@@ -69,7 +69,7 @@ const predicateSchema = z.union([z.object({ ref: z.string() }).strict(), exprSch
 const guardSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('requiresBefore'), id: z.string(), tool: z.string(), reads: z.array(z.string()).min(1) }).strict(),
   z.object({ kind: z.literal('consentToken'), id: z.string(), tools: z.array(z.string()).min(1) }).strict(),
-  z.object({ kind: z.literal('askedEarlier'), id: z.string(), tool: z.string(), arg: z.string().optional() }).strict(),
+  z.object({ kind: z.literal('valueFromUser'), id: z.string(), tool: z.string(), arg: z.string() }).strict(),
   z
     .object({
       // The structured coverage rule: every `target` must appear in the turn's `did` with the
@@ -334,9 +334,9 @@ function installGuard(spec: AgentSpecBase, g: GuardConfig, deps: NormsDeps, outc
       // typed back; the confirm flag only says WHICH call acts.
       spec.addGuard('preTool', g.tools, normalizeConfirmed(confirmFirst()), { layer: 'agent', id });
       return;
-    case 'askedEarlier':
-      // DENY-POLICY AUDIT: askedEarlier's deny names only the gated ARG (structural), no figure/role.
-      spec.addGuard('preTool', [g.tool], askedEarlier({ tool: g.tool, ...(g.arg ? { arg: g.arg } : {}) }), { layer: 'agent', id });
+    case 'valueFromUser':
+      // DENY-POLICY AUDIT: valueFromUser's deny names only the gated ARG (structural), no figure/role.
+      spec.addGuard('preTool', [g.tool], valueFromUser({ arg: g.arg }), { layer: 'agent', id });
       return;
     case 'claimCoversRubric':
       // NO DENY-POLICY WRAP: claimCoversRubric's redrive text IS the author's followable coverage `reason`

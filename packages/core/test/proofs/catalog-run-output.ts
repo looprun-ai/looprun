@@ -1,6 +1,6 @@
 /** Guard proofs — RUN + OUTPUT dims + custom (see catalog.ts for the collective ruleset + conventions). */
 import {
-  askedEarlier,
+  valueFromUser,
   confirmFirst,
   custom,
   destructiveThrottle,
@@ -506,24 +506,23 @@ const customProof: GuardProof = {
   ],
 };
 
-// ── askedEarlier (structural — a value recorded only after an earlier-turn ask) ──────────────
+// ── valueFromUser (structural — a value recorded only after an earlier-turn ask) ──────────────
 // Gated arg = the NON-schema `condition` on createItem (survives via the tool schema's passthrough): only
 // the scripts here carry it, so the guard stays inert on every other collective createItem scenario. The
 // L3 scripts call searchItem first (the collective installs requiresBefore(['searchItem']) on createItem)
-// and always pass `title` (argRequired) so the ONLY signal under test is askedEarlier itself.
-const askedEarlierProof: GuardProof = {
-  guard: 'askedEarlier',
-  make: () => askedEarlier({ tool: 'createItem', arg: 'condition' }),
+// and always pass `title` (argRequired) so the ONLY signal under test is valueFromUser itself.
+const valueFromUserProof: GuardProof = {
+  guard: 'valueFromUser',
+  make: () => valueFromUser({ arg: 'condition' }),
   hook: 'preTool',
   target: ['createItem'],
   cases: [
     {
-      name: 'the gated value is present and an ask succeeded in an EARLIER turn (distance 1)',
+      name: 'the gated value is one the user said, on an earlier turn',
       polarity: 'positive',
       ctx: {
         args: { condition: 'good' },
-        // SEALED history is the only cross-turn ask signal.
-        history: [{ turnIndex: 1, userText: 'add an item', reply: 'What condition is the item in?', toolCalls: [], did: [{ op: 'ask' }], attemptedCalls: [], guardEvents: [] }],
+        history: [{ turnIndex: 1, userText: 'the condition is good', reply: 'Noted.', toolCalls: [], did: [{ op: 'inform' }], attemptedCalls: [], guardEvents: [] }],
         turnIndex: 2,
       },
       l1: 'silent',
@@ -540,13 +539,14 @@ const askedEarlierProof: GuardProof = {
       },
     },
     {
-      name: 'the gated value is present but no earlier-turn ask exists',
+      name: 'the gated value is one the user never said',
       polarity: 'negative',
-      ctx: { args: { condition: 'good' }, observed: [], turnIndex: 2 },
+      ctx: { args: { condition: 'good' }, userText: 'add item Alpha', observed: [], turnIndex: 2 },
       l1: 'fires',
       l3: {
         preset: 'empty',
-        turns: [{ userText: 'add item Alpha in good condition' }],
+        // The user never says what condition the item is in, so the agent supplying one is the defect.
+        turns: [{ userText: 'add item Alpha' }],
         script: [
           [{ tool: 'searchItem', args: { query: 'items' } }],
           [{ tool: 'createItem', args: { title: 'Alpha', condition: 'good' } }],
@@ -573,5 +573,5 @@ export const RUN_OUTPUT_PROOFS: GuardProof[] = [
   destructiveThrottleProof,
   resultInvariantProof,
   customProof,
-  askedEarlierProof,
+  valueFromUserProof,
 ];

@@ -43,7 +43,7 @@ const TAUGHT_03 = [
 //    binds where the stakes justify it. ──
 const TAUGHT_04 = [
   'Dim', 'Guard', 'GuardCtx', 'ObservedCall',
-  'argAbsent', 'argFormat', 'argRequired', 'askedEarlier', 'canonArgs', 'confirmFirst',
+  'argAbsent', 'argFormat', 'argRequired', 'valueFromUser', 'canonArgs', 'confirmFirst',
   'consentRequired', 'custom', 'didMessageConsistency', 'llmCheck',
   'claimIsGrounded', 'claimIsComplete', 'claimCoversRubric',
   'degenerationGuard', 'destructiveThrottle',

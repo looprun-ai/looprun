@@ -35,7 +35,7 @@ export const isTerminalCall = (o: ObservedCall): boolean => TERMINAL_TOOLS.has(o
 /**
  * Did the agent pose a question to the user in a DELIVERED turn `[1, within]` turns back?
  *
- * The ONE cross-turn ask signal, shared by `confirmFirst`'s ask/either arms and `askedEarlier` so the
+ * The ONE cross-turn ask signal, shared by every kind that reads one, so the
  * two can never disagree about what consent looks like. Asking is an `ask` INTENTION in the turn's
  * `did`, never a flag.
  *

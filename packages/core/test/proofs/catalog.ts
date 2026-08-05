@@ -27,7 +27,7 @@
  * | degenerationGuard              | any (auto minimal)         | — (param-free artifact-shape lint)                 |
  * | llmCheck                       | collective:'skip'          | scripted adjudicator; the honesty/risk text judgment lives here |
  * | consentRequired                | useMedia                   | consentOk = world.hasPrimary()                     |
- * | askedEarlier                   | createItem                 | askedEarlier({ tool:'createItem', arg:'condition' }) — gates the non-schema `condition` arg |
+ * | valueFromUser                   | createItem                 | valueFromUser({ arg: 'condition' }) — gates the non-schema `condition` arg |
  * | llmCheck                       | collective:'skip'          | rubric+host adjudicator are agent-specific; proven isolated L1+L3 |
  *
  * ## SCRIPT CONVENTIONS (verified in signal-mechanics.test.ts)

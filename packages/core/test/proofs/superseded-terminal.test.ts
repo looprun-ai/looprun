@@ -104,7 +104,7 @@ describe('supersededTerminalCalls', () => {
 // `supersededTerminalCalls` returns [] for a `[domainCall, respond]` step (only ONE terminal, so there
 // is no delivery contest), yet that respond is invalidated by the premature policy and never reaches
 // the user. If nothing removed its `observed` entry, a `did:[{op:'ask'}]` respond would read as consent
-// obtained — in THIS turn (pendingConfirmMustAsk) and in every later one (confirmFirst / askedEarlier),
+// obtained — in THIS turn (pendingConfirmMustAsk) and in every later one (confirmFirst / valueFromUser),
 // since `observed` is conversation-wide. The prune is what removes it.
 describe('prematureTerminalCalls', () => {
   it('returns the terminal that shared its step with domain work, with its args', () => {
