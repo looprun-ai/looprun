@@ -79,9 +79,8 @@ turn where the model legitimately could not act and said so — vetoing the hone
 out as an exhaustion stub. That is the highest-severity failure class this trap produces, and any
 `llmCheck` rubric or `custom` guard that reasons about "did everything succeed" carries the same
 obligation. Kinds keyed on a NAMED tool are unaffected;
-the consent kinds read the ask through the SEALED turn record, and `isAskEvent` over `observed` only for
-SAME-TURN questions (`noActAfterAskSameTurn` and `confirmFirst`'s same-turn diagnostic) — never as
-cross-turn consent evidence.
+the consent gate reads no observed stream at all: what licenses a destructive act is a consent the
+runtime already matched against the user's own words.
 
 **A guard MAY use an LLM to decide — that is `llmCheck`.** LLM adjudication is a first-class guard
 kind (§ the `llm-check` catalog entry). An `llmCheck` binds a trusted, pre-baked `rubric`; the runtime
@@ -296,9 +295,9 @@ An `llmCheck` never has a row here: its whole rubric IS its prose, so the senten
 adjudicated are the same object and cannot diverge.
 
 The lint that runs beside the proof (accusation-in-the-past marks + raw terminal names in model-facing
-prose) backs two more prose facts: `noActAfterAskSameTurn` does not name the runtime-owned
-terminal ("in the same turn **in which you ask the user a question**" — the rule is about the ACT,
-which survives any channel naming; the ask itself is a `respond` carrying an `ask` intention), and `noDuplicateCall`'s DENY text does not assert a bare
+prose) backs two more prose facts: `confirmFirst` does not name the runtime-owned terminal ("only after
+the user has **typed back the confirmation they were shown**" — the rule is about what the user did,
+which survives any channel naming), and `noDuplicateCall`'s DENY text does not assert a bare
 "it succeeded": it names what the earlier call actually **came back with** (including "came back EMPTY"),
 because `ok` is true for an empty result and a text telling the model to "use the earlier result" would
 point at nothing when the result was empty (the canonical shape: repeated list sweeps, each "successful",
@@ -319,7 +318,7 @@ spec is a spec). Its constructor auto-installs, from `cfg` alone:
 |---|---|
 | **always** | `noDuplicateCall` (preTool `any`, `minimal:noDuplicateCall`) · `degenerationGuard()` (onReply, `minimal:degenerationGuard` — the SOLE minimal onReply guard; markup + run-away-repetition branches only, no parameters — a language-specific judgment such as self-narration is text judgment, so an author who wants one binds an `llmCheck`) |
 | `cfg.contract.writeTools` **non-empty** | `claimIsGrounded` + `claimIsComplete` (onReply, `minimal:*`) — the honesty cross-check over the world ledger, fed `contract.writeTools` + `contract.outcomes` |
-| `cfg.destructiveTools` **non-empty** | `destructiveThrottle(destructiveTools)` (preTool, `base:destructiveThrottle`) + `confirmFirst` on exactly those tools — the per-tool `cfg.confirmMechanism[tool]` (default `'arg'`) picks the id AND the `via`: arg-flag tools → `confirmFirst()` (`via:'either'`) under `base:confirmFirst`, prior-ask tools → `confirmFirst({ via:'ask' })` under `base:confirmFirstPriorAsk`. **⊆-validated** (each destructive tool must be in `cfg.tools` or the constructor throws) |
+| `cfg.destructiveTools` **non-empty** | `destructiveThrottle(destructiveTools)` (preTool, `base:destructiveThrottle`) + `confirmFirst` on exactly those tools — the per-tool `cfg.confirmMechanism[tool]` (default `'arg'`) picks the id AND which call ACTS: two-step tools → `confirmFirst()` under `base:confirmFirst`, one-step tools → `confirmFirst({ flag: false })` under `base:confirmFirstPriorAsk`. **⊆-validated** (each destructive tool must be in `cfg.tools` or the constructor throws), and `cfg.destructiveLabels` is validated the same way |
 
 So **2 kinds always install** (`noDuplicateCall` + `degenerationGuard`), the honesty cross-check pair
 when the contract declares `writeTools`, and **+2 more when the agent holds a destructive tool.**
@@ -514,115 +513,154 @@ does not carry: they are about the enforcement path, not about choosing a kind.
   read, a partial write) reads it through `postTool`'s `ctx.result` (the just-returned value) or through
   the world's own `toolCalls` ledger — never through `observed`, which holds only name/args/ok/turnIndex.
   A reply-side judgment over results ("did the reply overstate an empty search?") is an `llmCheck` rubric.
-- **THE RECENCY LAW.** A LICENSING signal — a past event that UNLOCKS a new act — is
-  turn-bounded by a `within` param (`1 ≤ currentTurnIndex − eventTurnIndex ≤ within`), so a probe/ask 20
-  turns ago never licenses today's act. LICENSING guards default `within: 1` (the immediately-preceding
-  turn, the natural two-step shape): `confirmFirst`'s probe/ask licenses, and `askedEarlier`. An EVIDENCE
-  guard — a past call that is PROOF work was done, not a license — defaults `within` **UNBOUNDED**:
-  `requiresBefore` (a read from turn 1 legitimately grounds a turn-3 write); pass `within` to bound it.
-- **`confirmFirst`'s `via:'ask'` arm has NO self-surfacing disjunct.** Accepting the tool's own prior
-  successful run as "the action was surfaced" — tempting, because a flag-less tool has no probe shape —
-  would chain turn by turn into a self-sustaining licence: turn 1's ask licenses turn 2, turn 2's run
-  licenses turn 3, … — ONE consent authorising an unbounded destructive run, with the recency law bridged
-  and a first repeat licensed with no ask anywhere. A flag-less destructive action is legal ONLY off a
-  delivered earlier-turn ask, and every repeat needs its own.
-- **SUCCESS-KEYING protects every licensing disjunct.** If one accepted ANY earlier attempt,
-  `ok:false` included, then — because a vetoed call lands in `observed` with `ok:false` — **a turn-1 call
-  denied BY THIS VERY GUARD would unlock the identical turn-2 call**: the destructive action runs with the
-  user never asked, and the gate defeats itself in exactly two turns. Every disjunct requires `ok:true`
-  (`askedEarlier` and `confirmFirst`'s `via:'probe'` record-bound arm included).
-- **`confirmFirst`'s probe→confirm binding is a set EQUALITY, not containment.** The
-  probe's non-`flag` args (minus explicitly-`undefined` values, matching `canonArgs`' identity notion)
-  must equal the confirm's. Containment would make `.every` over an EMPTY key set vacuously true, so a
-  probe that previewed nothing would license `transfer{to:'attacker',amount:99999,confirmed:true}` — the
-  preview and the executed act would be different acts.
+- **THE RECENCY LAW, where a licence is still a past EVENT.** An EVIDENCE guard — a past call that is
+  PROOF work was done — defaults `within` **UNBOUNDED**: `requiresBefore` (a read from turn 1
+  legitimately grounds a turn-3 write); pass `within` to bound it. Consent needs no such window: a
+  consent is not an event the agent can point back to but a literal the user has to type, and consuming
+  it closes it.
+- **NOTHING THE AGENT EMITS IS A LICENCE.** Not a declared `ask`, not the tool's own prior successful
+  run, not a vetoed attempt, not a probe. Admitting the tool's own prior run would chain turn by turn
+  into a self-sustaining licence — turn 1 licenses turn 2, turn 2's run licenses turn 3 — one consent
+  authorising an unbounded destructive run. Admitting a vetoed attempt would be worse: a call denied BY
+  THIS VERY GUARD lands in `observed` with `ok:false`, so the gate would defeat itself in two turns.
+- **A CONSENT NAMES ITS RECORD.** The token carries the identity the world issued, compared by
+  whole-value equality, so a consent given for `BK-1` never reaches `BK-12` and a consent for one tool
+  never reaches another.
 - **Misconfiguration that would make a safety kind INERT throws at CONSTRUCTION, never at check
   time.** `consentRequired` on empty `tools` (or a blank `reason`, whose falsy deny value would read as
   "allowed"); `confirmFirst('probe'|'ask'|'either')` passed a `via` NAME to the string overload. An inert safety
   guard still reads as coverage in a spec header, which is worse than an absent one — so it breaks the
   build. An `llmCheck` with an empty `rubric` fails the same way (nothing for the adjudicator to answer).
 
-### The consent story — three checkpoints, installed as a SET
+### The consent story — a token the engine issues and the user types back
 
-Ask-before-you-act is not one guard. It is three, each gating a different thing on a different hook, and
-a governed destructive flow installs all three TOGETHER — never two of them saying the same thing twice.
+Ask-before-you-act is not a thing the agent declares. It is a literal the ENGINE writes onto the user's
+screen and the USER writes back, and the agent has no channel that produces one.
 
 ```
- ①  confirmFirst          gates the CALL   (preTool)  — the confirmed act runs only when an EARLIER
-                                                        turn licensed it (a same-record probe or a prior ask)
- ②  askedEarlier          gates the ARG    (preTool)  — a value is RECORDED only after the operator was
-                                                        asked for it and answered in a LATER turn
- ③  pendingConfirmMustAsk gates the REPLY  (onReply)  — when a probe returned requiresConfirmation and
-                                                        nothing resolved it, the turn MUST pose an ask
-                                                        (the delivered respond whose did carries an
-                                                        ask intention), not
-                                                        report the act as done
+ ①  the world raises it   a call that answers requiresConfirmation NAMES its record, and the engine
+                          opens a question bound to that record
+ ②  the denial raises it  a destructive tool with NO preview form is denied, and the denial opens a
+                          question built from the label the spec declared
+ ③  the engine renders    the question goes into the delivered text, between the agent's prose and the
+                          operation record — the agent writes no part of it
+ ④  the user answers      the runtime reads the incoming message ONCE, at turn start, and marks the
+                          challenge consumed if their words carry its token
+ ⑤  confirmFirst allows   the act runs iff a consumed challenge is about THIS call
 ```
 
-The ASK SIGNAL is an INTENTION, not a tool name and not a boolean: the single
-`respond` terminal declares `ask` inside its `did` when the turn poses a question, and `hasAskIntent(did)`
-is its only reader. The consent kinds
-key on it through the SEALED `HistoryTurn` (cross-turn), `isAskEvent` over `observed` (same-turn only) and,
-on the reply side, `ctx.did`:
-- **①** `confirmFirst`'s `via:'ask'`/`'either'` arm and **②** `askedEarlier` read an EARLIER-turn ask
-  through the ONE shared signal `askedInDeliveredTurn` — a sealed `hasAskIntent(HistoryTurn.did)` over a
-  non-blank `reply`, and nothing else. There is no `observed`-scan fallback beside it (see
-  "What the ask GUARANTEES" below).
-- **③** `pendingConfirmMustAsk` runs at onReply, where the delivered payload's `did` is already seated, so
-  its relay signal is `hasAskIntent(ctx.did)` and nothing else — it has no observed-scan fallback either.
-  `ledger.did` is reset per turn but never unset, so every reply-side and postTool ctx the runtime builds
-  seats it and no caller could reach such a fallback anyway; and the raw `observed` stream it would read
-  can hold a terminal ghost the user never received. A ctx that seats no declaration fails CLOSED.
+The turn, end to end:
 
-#### What the ask GUARANTEES — stated exactly
+```
+turn 1   agent:   cancelBooking({ id:'BK-1' })
+         world:   { requiresConfirmation: true, id: 'BK-1' }
+         screen:  Your booking BK-1 carries an 80.00 fee.
 
-The cross-turn ask signal is `askedInDeliveredTurn`, and it is **SEALED HISTORY ONLY**. It answers one
-question, and it is worth reading as the narrow thing it is:
+                  To confirm BK-1, reply: CONFIRM BK-1
 
-> **Did a turn `[1, within]` turns back, whose delivered reply was NOT blank, seal a `did` carrying an
-> `ask` intention?**
+                  No operation was carried out on this turn.
 
-Everything in that sentence is deterministic and engine-verified:
+turn 2   user:    "yes, CONFIRM BK-1"
+         engine:  the token matched → the challenge is consumed
+         agent:   cancelBooking({ id:'BK-1', confirmed:true })   → ALLOWED
+```
 
-| the engine DOES guarantee | how |
+#### Who does what
+
+| step | owner | why it is theirs |
+|---|---|---|
+| raising the question | the runtime | it holds both the world's answer and the spec's labels |
+| writing the question | the engine | a sentence the agent writes is a sentence the agent can misframe |
+| reading the answer | the runtime | reading text is done ONCE per turn, in one place, never in a guard |
+| allowing the act | `confirmFirst` | a pure read of `ctx.consent` — no text, no state, no declaration |
+
+`confirmFirst` takes exactly one option, and it is not about licensing: `flag` says WHICH call acts. A
+two-step tool distinguishes its preview from its act by an argument, and the preview must run — it is how
+the world raises the question. `flag: false` is the one-step shape, where every call acts and every call is
+gated.
+
+#### The matching law
+
+One law decides every "is this string THAT string" verdict in the engine — claim-to-ledger grounding, the
+consent token, and a value recorded on the user's behalf:
+
+```
+against ONE value        canonical forms EQUAL — trimmed, case-folded, edge punctuation stripped
+against a PERSON'S text  the value's tokens appear CONTIGUOUS, each equal as a WHOLE
+                         split on WHITESPACE, never on punctuation
+```
+
+Substring matching is the failure it exists to prevent:
+
+```
+user says   "cancel the BK-12"
+pending     CONFIRM BK-1
+substring   "BK-1" occurs inside "BK-12"  → consent accepted for the wrong record
+```
+
+Consent fails CLOSED. `"go ahead"` is a human yes and is denied; the question is simply asked again.
+
+#### The life of a question
+
+```
+open        from the moment it is raised
+consumed    single use — a second act on the same record needs a new question
+superseded  a different question about the same act closes the previous one
+closed      the record it names changed, so the sentence it asks is no longer true
+```
+
+There is no turn window. What bounds a stale token is that consuming it requires typing that exact
+literal, and that consuming it closes it.
+
+#### What the ask intention is FOR
+
+`ask` remains a speech classification in `did`. It licenses nothing, proves nothing and reports nothing.
+Because it is self-declared, what it may drive is bounded by the direction of the incentive:
+
+> the `ask` MAY feed anything that PENALIZES over-declaring.
+> the `ask` NEVER feeds anything that RELIEVES over-declaring.
+
+| may read `ask` | what a false `ask` buys |
 |---|---|
-| the evidence is a DELIVERED turn record | only the sealed record is read, never the raw `observed` stream — an unsealed turn licenses nothing at all |
-| the `did` belongs to the payload that was delivered | `finalizeReply` never splices a re-generation's `did` onto a previous message; a blank re-generation is rejected WHOLE (`redrive-empty:kept-previous`) |
-| the turn said something a user could read | the sealed `reply` must pass `isBlankDelivery` (invisibles stripped), and the delivery floor guarantees the same on the way out |
-| the question was recent | the recency law: `1 ≤ turnIndex − askTurn ≤ within` (default 1) |
-| a repeat needs its own ask | no self-surfacing disjunct (above) |
+| the session is not treated as resolved | nothing |
+| a follow-up reminder when the user goes quiet | a spurious reminder |
+| escalation to a human after repeated questions | earlier escalation |
+| a throttle on questions asked before acting | the agent is blocked sooner |
+| routing the user's next message back to the asker | the agent loses the routing |
+| an open microphone on a voice channel | a microphone open over nothing |
+| turns-spent-asking as a measurement | the agent's own number gets worse |
 
-And exactly **two** things it does **NOT** guarantee, neither of which any deterministic layer can:
-
-> **1. that the delivered message actually POSES a question.**
->
-> **2. that the question was ABOUT the thing the ask now licenses.**
-
-**(1) — the ask may not be a question.**
-`ask` is a SPEECH intention, and speech intentions are never ledger-grounded — there is no world
-fact to check them against. The only ways to judge the prose are a linguistic pattern, which the no-regex
-law forbids (it fails silently across languages and an adversary satisfies it by appending one character),
-or a model call. So a turn CAN declare `ask` over "All set, have a good day" and license a `confirmed:true`
-act next turn.
-
-**(2) — the ask is bound to NOTHING.** An `ask` intention carries no subject: `hasAskIntent` asks only
-whether one is present. Nothing associates a question with the act, the argument or the probe it goes on to
-license, so an ask on ANY topic satisfies EVERY consent kind that reads it, for one turn:
-
-| the shape | what an off-topic ask licenses |
+| may NOT read `ask` | what a false `ask` would buy |
 |---|---|
-| `confirmFirst` `via:'ask'`/`'either'` | any `confirmed:true` call of the gated tool — the ask never named the tool or the record |
-| `askedEarlier` | recording ANY gated argument — the ask never named the argument |
-| `pendingConfirmMustAsk` | clearing an unresolved destructive probe, over a reply that reads "permanently deleted" — the ask never named the pending act |
+| the operation record | the record softens and stops contradicting the prose |
+| the lie check | the liar switches the check off by declaring a question |
+| any honesty guard | the same |
+| any licence | the defect this design closes |
 
-Binding an ask to its subject would mean judging what the question was ABOUT, which is the same prose
-judgment as (1) and forbidden by the same law. Both residuals therefore live together and are closed by
-the same instrument. They are **priced, not hidden**: the price is the documented forcing function (the terminal
-protocol tells the model `ask` means "the `message` carries the ONE clarifying question you will wait on")
-plus `didMessageConsistency()` — the shipped `llmCheck` rubric that asks whether the message
-contradicts the declaration. Bind it on a destructive surface where the stakes justify a model call per
-reply. It is deliberately NOT auto-installed: a guard that needs an adjudicator cannot be forced on every
-spec that declares a destructive tool without breaking every such spec that has no adjudicator registered.
+#### What the engine GUARANTEES about consent
+
+| property | deterministic |
+|---|---|
+| the user saw a question about this exact act | **YES** — the engine wrote it |
+| the question names what it authorizes | **YES** — the world's record identity, or the spec's label |
+| the user agreed | **YES** — their own words carry the engine's token |
+| the agent cannot forge, reframe or skip any of the three | **YES** |
+
+No model participates in a consent decision.
+
+#### What a DOMAIN must declare
+
+| obligation | when |
+|---|---|
+| a preview form that answers `requiresConfirmation` and names its record under an identity key | a two-step destructive tool |
+| a `destructiveLabels` entry — the human-facing words the question is built from | a destructive tool that acts on no identifiable record |
+| `engineText`, the engine's own sentences | a conversation held in a language other than English |
+
+A destructive tool with neither a record nor a label can raise no question, so it can never be consented
+to and never runs. Absence of a label is absence of any possible consent.
+
+Two labels whose first two words agree derive the same token and are a construction error: one typed
+literal would consent to either act, which is not what the user read.
 
 #### What a BACKEND must do to make consent work
 
