@@ -38,12 +38,21 @@ const NO_VIOLATION = 'NONE';
 const VIOLATION_PREFIX = 'VIOLATION:';
 
 /**
- * Fence one block. A fence sequence occurring INSIDE the data would otherwise let the text end its own
- * quotation and continue as instructions, so every occurrence is neutralised before the block is
- * closed. The replacement is visible rather than silent: a judge reading it sees a marker, not a gap.
+ * Fence one block. A closing-fence sequence (`>>>`) occurring INSIDE the data would otherwise let the
+ * text end its own quotation and continue as instructions, so every `>` is neutralised before the block
+ * is closed — not just complete `>>>` runs. Splitting on the literal `>>>` string leaves a run of `>`
+ * whose length is not a multiple of 3 free to re-concatenate into one: a run of five `>` splits into one
+ * `>>>` plus a trailing `>>`, rejoins as `>·>·>` plus `>>`, and that trailing `>·>·>>>` still contains
+ * `>>>`.
+ *
+ * The invariant this must hold for EVERY input, not just the runs someone thought to test: after
+ * neutralisation, no two `>` characters are ever adjacent. Replacing each `>` with `>·` is provable by
+ * inspection — every `>` in the output is immediately followed by `·`, so no `>` can ever sit next to
+ * another `>`, regardless of how the input's `>` runs were shaped. The marker stays visible rather than
+ * a silent deletion: a judge reading it sees `·` standing in for nothing removed.
  */
 function fenced(body: string): string {
-  return `${OPEN}\n${body.split(CLOSE).join('>·>·>')}\n${CLOSE}`;
+  return `${OPEN}\n${body.split('>').join('>·')}\n${CLOSE}`;
 }
 
 /** One labelled, fenced section. */
