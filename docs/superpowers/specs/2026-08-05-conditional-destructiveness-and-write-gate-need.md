@@ -2,9 +2,10 @@
 
 Date: 2026-08-05 · Status: the need, and the propagation it owes · Owner: to brainstorm
 
-Three gaps found by a generated subject's T1 review, each confirmed by execution against the
+Four gaps found by a generated subject's T1 review, each confirmed by execution against the
 running engine, and each producing a defect a careful author could not have avoided. They are one
-document because the third changes shape depending on whether the second lands.
+document because the third changes shape depending on whether the second lands, and the fourth is
+what the third does when it cannot be satisfied.
 
 ## 1 · A tool is destructive per TOOL; a domain is destructive per CALL
 
@@ -36,10 +37,32 @@ placeHold({scope:'asset', confirmed:true})
 The model is primed to send that flag by the tool's own schema description, so the deny is not a
 rare path.
 
-### What authors do instead, and what it costs
+### For one shape there is no valid expression at all
+
+When the destructive branch names a record the tool's arguments never carry, it needs a
+`destructiveLabels` entry — a label-derived question is the only one such a call can answer. And a
+label may only name a tool that is already destructive. Measured:
+
+```
+destructiveTools: ['releaseHold']
+destructiveLabels: { placeHold: 'freeze the entire workspace' }
+  → THROWS: destructiveLabels names tool(s) that are not in destructiveTools: placeHold
+
+destructiveTools: ['releaseHold', 'placeHold']
+destructiveLabels: { placeHold: 'freeze the entire workspace' }
+  → constructs, and now placeHold(scope:'asset') is denied for a confirmation nobody will ask for
+```
+
+So the workspace hold is in a closed loop: it needs the label, the label needs the list, and the
+list denies its protective branch. The author cannot escape by choosing differently, because both
+choices are wrong. A remediation attempt on a real bundle stopped here and recorded the price in the
+spec header rather than repairing it — there was nothing to repair it with.
+
+### What authors do for the shapes that DO have an escape, and what it costs
 
 Leave the tool out of `destructiveTools` and hand-write a gate that reads `ctx.consent`. One
-generated bundle did exactly that for `updateMemberRole`. The costs:
+generated bundle did exactly that for `updateMemberRole`, and a remediation did it for
+`resolveClaim`. The costs:
 
 | cost | why |
 |---|---|
@@ -137,6 +160,28 @@ lint narrows to what the contract cannot cover — a lane that opts out without 
 gate whose predicate reads less than the condition it claims. **Design §2 first; the lint's shape
 falls out of it.**
 
+**The predicate has to be preset-aware, and a first attempt at it was wrong.** The obvious phrasing
+— *a case may not target a guard bound to tools the case never calls* — produces false accusations.
+A real one, caught when a reviewer swept the presets instead of the tool list:
+
+```
+agent:availabilityAnswerReadsTheAccount   bound to checkAvailability
+case 57                                   calls createBooking, never checkAvailability
+   → accused as a phantom target
+
+but: the case runs on the accountHold preset, and on that preset the guard DENIES until the
+     agent reads the account. createBooking is itself gated behind checkAvailability by a
+     sibling guard, so the forced path reaches it. It goes quiet only when the agent complies.
+```
+
+A guard that is silent because the agent obeyed is doing its job. The decidable question is
+therefore about STATE, not about the call list:
+
+```
+a case's target must be non-silent on at least one preset the case runs on,
+evaluated before the agent has complied with it
+```
+
 Two neighbours from the same review, both decidable and both cheap once this machinery exists:
 
 - **an `addGuard` with no explicit `{ id }`.** The engine mints `${layer}:${kind}#${++seq}`, a
@@ -145,6 +190,29 @@ Two neighbours from the same review, both decidable and both cheap once this mac
 - **the guard-target diff keyed on `(agent, guardId)`, not `guardId`.** A guard id shared across
   lanes is satisfied by any lane targeting it, so a copy that no case on ITS lane can reach reads
   as covered. One bundle had two such guards, both inert, both passing in either arm.
+
+## 4 · An accepted coverage gap has two ledgers that disagree
+
+`GUARD-NEVER-TARGETED` is an engine artifact law, and it offers no way to accept a gap. A bundle
+that records one keeps the engine red:
+
+```
+norms/bundle.test.ts   COVERAGE_GAPS: { fleet: ['agent:workspaceStateStopsRegistryWrites'] }
+                       → 30/30 pass
+
+looprun-eval lint --spec-laws
+                       → GUARD-NEVER-TARGETED: 'agent:workspaceStateStopsRegistryWrites'
+                         lint: 2 violation(s)
+```
+
+Two ledgers for one law, and the subject's own record does not reach the engine's. The right
+resolution in that instance was to write the missing cases, which is what the law wants. But a gap
+that genuinely cannot be closed — a guard whose condition the exam's world offers no preset for —
+has nowhere to be recorded except a file the law does not read.
+
+**Open question.** Does the law read an accepted-gap declaration off the subject, the way
+`CROSS_LANE_CASES` is read? Or is "no accepted gaps" the correct absolute, and a guard with no
+reachable case is always a defect in the exam or the world rather than a fact to record?
 
 ## Why these three and not more
 
