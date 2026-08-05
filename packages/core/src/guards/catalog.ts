@@ -108,7 +108,7 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
     hook: 'preTool',
     summary: 'The call is allowed only while a predicate over the host world holds.',
     whenToUse:
-      'A gate whose discriminator lives in WORLD state, not in this call — the predicate never sees the acting call\'s arguments. If the discriminator is in the args, use `custom` instead.',
+      'A gate whose discriminator lives in WORLD state, not in this call — the predicate never sees the acting call\'s arguments. If the discriminator is in the args, use `custom` instead. A condition EVERY lane of the domain refuses writes under belongs on `contract.writeGate` instead — declared once, installed on every spec that carries a write. `precondition` stays the gate for what one lane alone refuses on.',
     example: `precondition((world) => world.accountActive === true, 'This account is closed — you cannot act on it.', 'act on an account only while it is open')`,
   },
   {
@@ -135,10 +135,10 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
     name: 'confirmFirst',
     category: 'confirmation',
     hook: 'preTool',
-    summary: 'A destructive tool runs only on a turn whose incoming message carried the engine-issued confirmation token for THIS record. Takes no options.',
+    summary: 'A destructive tool runs only on a turn whose incoming message carried the engine-issued confirmation token for THIS record. The tool\'s own arguments decide which of its calls are destructive.',
     whenToUse:
-      'The user must have agreed before this call runs, and the agreement has to be THEIRS: the engine issues a confirmation token naming the record, renders it into the delivered text, and this gate allows the act only on a turn whose incoming message carried that token back. There is nothing to configure, because there is no declaration to trust — the agent has no channel through which to produce a consent. Its neighbours answer different questions: `destructiveThrottle` caps the blast radius of a turn that IS confirmed, and `consentRequired` reads a standing world flag rather than the conversation. A denial is also what RAISES the question for a tool the world has no preview form for, so attempting the act is what asks permission for it — and such a tool needs a declared label on the spec, or it can issue no question and never runs.',
-    example: `confirmFirst()`,
+      'The user must have agreed before this call runs, and the agreement has to be THEIRS: the engine issues a confirmation token naming the record, renders it into the delivered text, and this gate allows the act only on a turn whose incoming message carried that token back. There is nothing to configure, because there is no declaration to trust — the agent has no channel through which to produce a consent. Its neighbours answer different questions: `destructiveThrottle` caps the blast radius of a turn that IS confirmed, and `consentRequired` reads a standing world flag rather than the conversation. A denial is also what RAISES the question for a tool the world has no preview form for, so attempting the act is what asks permission for it — and such a tool needs a declared label on the spec, or it can issue no question and never runs. A tool that is destructive on one branch and protective on another declares `destructiveWhen` on the spec: the predicate reads the acting call\'s arguments and says which calls the protocol applies to. It licenses nothing — consent is still the token the user typed.',
+    example: `confirmFirst({ when: { placeHold: (args) => args.scope === 'workspace' } })`,
   },
   {
     name: 'destructiveThrottle',
@@ -146,7 +146,7 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
     hook: 'preTool',
     summary: 'At most one destructive action that TOOK EFFECT per turn (a probe does not count; a call that RAN with no world record of its effect does).',
     whenToUse:
-      'Auto-installed alongside `confirmFirst`. It is the blast-radius cap, not a consent gate: it stops chained destructive calls in one turn even when each one is individually confirmed. A same-step call that is NOT confirmed reads as a preview and does not count (so a legitimate multi-preview is not vetoed) — which means a tool with NO confirm flag needs `flagless`, or its same-step cap never engages. `AgentSpecBase` passes its `prior-ask` tools automatically; pass them yourself when you install this by hand.',
+      'Auto-installed alongside `confirmFirst`. It is the blast-radius cap, not a consent gate: it stops chained destructive calls in one turn even when each one is individually confirmed. A same-step call that is NOT confirmed reads as a preview and does not count (so a legitimate multi-preview is not vetoed) — which means a tool with NO confirm flag needs `flagless`, or its same-step cap never engages. `AgentSpecBase` passes its `prior-ask` tools automatically; pass them yourself when you install this by hand. It shares the spec\'s `destructiveWhen` predicates, so the cap counts destructive acts: three protective calls in one turn are three legitimate calls, and the second destructive one is still stopped.',
     example: `destructiveThrottle(['cancelBooking', 'purgeAccount'], { flagless: ['purgeAccount'] })`,
   },
 

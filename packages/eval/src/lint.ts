@@ -90,6 +90,16 @@ export function lintSpecLaws(specs: Record<string, AgentSpec>): string[] {
     if (spec.surface.systemPrompt) {
       out.push(`spec "${id}": carries its own systemPrompt — generated specs must use the trunk renderer (contract + spec only)`);
     }
+    // A MINTED id is positional: `${layer}:${kind}#${n}` counts installs, so inserting one guard above
+    // silently re-points every case and every profile keyed on the ids below it. An explicit id is the
+    // only stable name a case can target.
+    for (const bound of [...spec.guards.onInput ?? [], ...spec.guards.preTool ?? [], ...spec.guards.postTool ?? [], ...spec.guards.onReply ?? []]) {
+      if (/#\d+$/.test(bound.id)) {
+        out.push(
+          `spec "${id}": GUARD-ID-POSITIONAL: '${bound.id}' was minted from an install counter — a guard inserted above it re-points every case and profile that names it. Pass an explicit { id }`,
+        );
+      }
+    }
   }
   return out;
 }

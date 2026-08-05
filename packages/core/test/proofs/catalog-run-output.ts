@@ -195,12 +195,19 @@ const noDuplicateCallProof: GuardProof = {
   ],
 };
 
+/**
+ * A tool that is destructive on one branch and protective on another: moving an item to the bin is
+ * reversible and asks nothing, while erasing it is the act the token licenses. The predicate reads the
+ * acting call's own arguments and nothing else — a call with no `soft` flag is the erasing branch.
+ */
+const DELETE_IS_DESTRUCTIVE = { deleteItem: (args: Record<string, unknown>) => args.soft !== true };
+
 // ── confirmFirst (auto:'base' — deleteItem previews its record, purgeAll declares a label) ──
 const confirmFirstProof: GuardProof = {
   guard: 'confirmFirst',
   // The licence is a token the ENGINE issued for a record and the USER typed back. Nothing the agent
   // emits is admitted, so the guard takes no options and reads only `ctx.consent`.
-  make: () => confirmFirst(),
+  make: () => confirmFirst({ when: DELETE_IS_DESTRUCTIVE }),
   hook: 'preTool',
   target: ['deleteItem'],
   auto: 'base',
@@ -209,6 +216,7 @@ const confirmFirstProof: GuardProof = {
     confirmMechanism: { purgeAll: 'prior-ask' },
     // purgeAll acts on no identifiable record, so its question is built from this label.
     destructiveLabels: { purgeAll: 'delete every item' },
+    destructiveWhen: DELETE_IS_DESTRUCTIVE,
   },
   cases: [
     {
@@ -294,6 +302,20 @@ const confirmFirstProof: GuardProof = {
       l1: 'silent',
     },
     {
+      // The protective branch of a listed tool is an act the world carries out with no question raised.
+      // Gating it would deny a call no consent could ever license.
+      name: 'the protective branch of a predicated tool runs with no consent at all',
+      polarity: 'positive',
+      ctx: { tool: 'deleteItem', args: { id: 'itm-1', soft: true, confirmed: true }, consent: [], turnIndex: 1 },
+      l1: 'silent',
+    },
+    {
+      name: 'the destructive branch of the same tool is gated exactly as an unconditional one',
+      polarity: 'negative',
+      ctx: { tool: 'deleteItem', args: { id: 'itm-1', soft: false, confirmed: true }, consent: [], turnIndex: 1 },
+      l1: 'fires',
+    },
+    {
       name: 'a recordless act: running it with no consent is denied',
       polarity: 'negative',
       l1: 'fires',
@@ -330,7 +352,7 @@ const confirmFirstProof: GuardProof = {
 // ── destructiveThrottle (auto:'base' — at most one destructive success per turn) ──
 const destructiveThrottleProof: GuardProof = {
   guard: 'destructiveThrottle',
-  make: () => destructiveThrottle(['deleteItem', 'purgeAll']),
+  make: () => destructiveThrottle(['deleteItem', 'purgeAll'], { flagless: ['purgeAll'], when: DELETE_IS_DESTRUCTIVE }),
   hook: 'preTool',
   target: ['deleteItem', 'purgeAll'],
   auto: 'base',
@@ -338,6 +360,7 @@ const destructiveThrottleProof: GuardProof = {
     destructiveTools: ['deleteItem', 'purgeAll'],
     confirmMechanism: { purgeAll: 'prior-ask' },
     destructiveLabels: { purgeAll: 'delete every item' },
+    destructiveWhen: DELETE_IS_DESTRUCTIVE,
   },
   cases: [
     {
@@ -384,6 +407,30 @@ const destructiveThrottleProof: GuardProof = {
         tool: 'purgeAll',
         turn: 1,
       },
+    },
+    {
+      // The cap is measured in DESTRUCTIVE acts: a protective call neither consumes the turn's single
+      // act nor is stopped by one, so three reversible deletions in a turn are three legitimate calls.
+      name: 'a protective call is neither capped by nor counted against the turn',
+      polarity: 'positive',
+      ctx: {
+        tool: 'deleteItem',
+        args: { id: 'itm-2', soft: true, confirmed: true },
+        observed: [{ name: 'deleteItem', args: { id: 'itm-1', soft: true, confirmed: true }, ok: true, tookEffect: true, turnIndex: 0 }],
+        turnIndex: 0,
+      },
+      l1: 'silent',
+    },
+    {
+      name: 'a destructive call is still capped by a prior destructive act in the same turn',
+      polarity: 'negative',
+      ctx: {
+        tool: 'deleteItem',
+        args: { id: 'itm-2', confirmed: true },
+        observed: [{ name: 'deleteItem', args: { id: 'itm-1', confirmed: true }, ok: true, tookEffect: true, turnIndex: 0 }],
+        turnIndex: 0,
+      },
+      l1: 'fires',
     },
     {
       name: 'the guard ignores tools outside its list',

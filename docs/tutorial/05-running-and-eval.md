@@ -217,6 +217,9 @@ If its `inputSchema` has no `confirmed` flag, the model can never complete the s
 forever. The schema is only known where `toolDefs` are injected — which is
 here — so `spec.assertDestructiveConfirmable(deps.toolDefs)` runs at run start and throws, naming the
 tool. Constructing an agent with the same mistake succeeds and fails later as an unexplained loop.
+A tool that is destructive only on some of its calls (`destructiveWhen`, chapter 03 §6) is not exempt:
+its destructive branch is gated on the same `confirmed` flag, so a schema without it leaves that branch
+asking forever.
 
 Until that changes: **"the eval runs" is the gate for this particular mistake.** Chapter 03 §6 puts
 the flag in the schema when the tool is declared; this is why.
@@ -425,7 +428,10 @@ start: '2026-03-02T10:15' } }` therefore says "no `addEvent` starting at 10:15",
 `targets` names the guard ids the case exercises — `agent:noDoubleBook`, `base:confirmFirst`,
 `minimal:noDuplicateCall`. It is not decoration: a guard no case targets passes in **both** arms of a
 discrimination run, so it reads as coverage while never having fired. §5's `lintSubject` refuses a
-case without targets, and refuses a bundle with an **authored** guard nobody targets — where
+case without targets, and refuses a bundle with an **authored** guard no case ON ITS OWN LANE targets —
+a guard id is not unique across specs, so a case targeting `agent:sharedGate` on the booking lane says
+nothing about the copy installed on the fleet lane. The gap is closed with a case or a preset; nothing
+records it as accepted. Where
 "authored" excludes the `minimal:` layer, the invariants `AgentSpecBase` installs on every spec in
 every domain and the engine proves in its own suite. So `minimal:noDuplicateCall` is a legal target
 (the tutorial's third case uses it, because a read-only turn is where that gate earns its keep), but
@@ -531,7 +537,8 @@ Its findings, and why each is a failure and not a style note:
 
 ```
    CASE-WITHOUT-TARGET       a case that names no rule cannot answer "is this rule exercised?"
-   GUARD-NEVER-TARGETED      a guard no case targets passes in BOTH arms — coverage that never fired
+   GUARD-NEVER-TARGETED      a guard no case ON ITS LANE targets passes in BOTH arms — coverage that
+                             never fired. The repair is a case or a preset; there is no third way
    PHANTOM-TARGET            a target matching no installed guard: the case proves nothing
    TARGET-ON-ANOTHER-AGENT   the guard is installed on a spec this case never routes to
    RUBRIC-TOOL-OFF-SURFACE   a rubric names a tool this agent does not have — unpassable as written
@@ -539,7 +546,21 @@ Its findings, and why each is a failure and not a style note:
    ACCEPTS-ANY-PRESET        the world factory took an unknown preset: a typo grades the wrong state
    REFUSED-WRITE-READS-OK    a refused write returned without ok:false — every honesty guard on that
                              tool is disarmed, silently, behind a green board
+   WRITE-REFUSED-UNGATED     a preset refuses a write no spec on that lane gates: the refusal reaches
+                             the model as a tool failure and the reply invents its reason
+   TARGET-SILENT-ON-EVERY-PRESET
+                             a case targets a world gate that cannot deny on the preset the case runs,
+                             before the agent has done anything — it grades a rule that cannot speak
 ```
+
+The last two read the SUBJECT'S OWN PRESETS: `WRITE-REFUSED-UNGATED` compares each declared preset
+against `default` (a write the world carries out on one and refuses on the other is refused BY STATE),
+and `TARGET-SILENT-ON-EVERY-PRESET` evaluates the targeted gate on the case's declared preset with an
+empty ledger. Both are decidable offline — no key, no model.
+
+The parity finding has one repair that closes it for every lane at once: `contract.writeGate`
+(chapter 03 §5). Six per-lane `precondition`s close it too; the declaration exists so that they do not
+have to.
 
 The programmatic form is the same five calls:
 

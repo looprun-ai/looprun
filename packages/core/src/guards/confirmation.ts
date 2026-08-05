@@ -36,15 +36,34 @@ import { challengeMatchesCall } from '../runtime/challenge.js';
  * `flag: false` is the one-step shape: the tool has no preview form, so EVERY call acts and every call is
  * gated. There the DENIAL is what raises the question, from the label the spec declared — attempting the
  * act is what asks permission for it, and an agent that never attempts never acts.
+ *
+ * `when` answers a SECOND question, on a second axis: WHICH CALLS of this tool are destructive at all.
+ * It is a pure predicate over the acting call's own arguments, keyed by tool:
+ *
+ * ```
+ *   placeHold({scope:'asset'})       when → false  → the world executes it; nothing is gated
+ *   placeHold({scope:'workspace'})   when → true   → gated on the token, exactly as any destructive call
+ * ```
+ *
+ * It licenses nothing. `ctx.consent` remains the only thing that allows an act.
  */
-export function confirmFirst(opts?: { flag?: string | false }): Guard {
+export function confirmFirst(opts?: {
+  flag?: string | false;
+  when?: Record<string, (args: Record<string, unknown>) => boolean>;
+}): Guard {
   const flag = opts?.flag === undefined ? 'confirmed' : opts.flag;
+  const when = opts?.when;
   return {
     kind: 'confirmFirst',
     dim: 'run',
     check(ctx) {
       const tool = ctx.tool;
       if (!tool) return null;
+      // WHEN a call is destructive is a pure question about its own arguments, and it is asked FIRST:
+      // the protective branch of a listed tool is an act the world carries out with no question raised,
+      // so a gate on it denies a call no consent can ever license. A tool with no entry here is
+      // destructive on every call, which is what a bare list means.
+      if (when?.[tool] && !when[tool](ctx.args)) return null;
       // A preview changes nothing and is how the question gets asked; only the acting call is gated.
       if (flag !== false && ctx.args[flag] !== true) return null;
       const licensed = (ctx.consent ?? []).some((c) => challengeMatchesCall(c, tool, ctx.args));
@@ -98,10 +117,20 @@ export function confirmFirst(opts?: { flag?: string | false }): Guard {
  */
 export function destructiveThrottle(
   destructiveTools: string[],
-  opts?: { confirmArg?: string; flagless?: readonly string[] },
+  opts?: {
+    confirmArg?: string;
+    flagless?: readonly string[];
+    when?: Record<string, (args: Record<string, unknown>) => boolean>;
+  },
 ): Guard {
   const set = new Set(destructiveTools);
   const confirmArg = opts?.confirmArg ?? 'confirmed';
+  const when = opts?.when;
+  // The blast radius is measured in DESTRUCTIVE acts. A call the predicate declines is one the world
+  // carries out freely, so it neither consumes the turn's single act nor is stopped by one: three
+  // protective holds in a turn are three legitimate calls, and the cap still stops the second freeze.
+  const isDestructive = (name: string, args: Record<string, unknown> | undefined): boolean =>
+    !when?.[name] || when[name](args ?? {});
   // The `'prior-ask'` tools: no confirm flag exists on them, so nothing they can put in their args
   // declares a preview and every call is an act.
   const flagless = new Set(opts?.flagless ?? []);
@@ -144,12 +173,13 @@ export function destructiveThrottle(
   // An EFFECT = a listed destructive tool that ran OK and is not a probe. (The `ok` + turn-window part is
   // applied by `countOkCalls`; this predicate carries only the set-membership + not-a-probe test.)
   const isEffectAmong = (pending: readonly ObservedCall[]) => (o: ObservedCall): boolean =>
-    set.has(o.name) && !(pending.includes(o) ? pendingIsProbe(o) : executedIsProbe(o));
+    set.has(o.name) && isDestructive(o.name, o.args) && !(pending.includes(o) ? pendingIsProbe(o) : executedIsProbe(o));
   return {
     kind: 'destructiveThrottle',
     dim: 'run',
     check(ctx) {
       if (!ctx.tool || !set.has(ctx.tool)) return null;
+      if (!isDestructive(ctx.tool, ctx.args)) return null;
       // `observed` catches a prior EFFECT from an EARLIER step; `siblingCallsThisStep` catches a
       // destructive sibling emitted earlier in the SAME step that the backend admitted but has not yet
       // pushed to `observed` (a same-step concurrency gap — two `Promise.all`-dispatched calls are both

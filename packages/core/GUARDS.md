@@ -417,7 +417,8 @@ spec is a spec). Its constructor auto-installs, from `cfg` alone:
 |---|---|
 | **always** | `noDuplicateCall` (preTool `any`, `minimal:noDuplicateCall`) · `degenerationGuard()` (onReply, `minimal:degenerationGuard` — the SOLE minimal onReply guard; markup + run-away-repetition branches only, no parameters — a language-specific judgment such as self-narration is text judgment, so an author who wants one binds an `llmCheck`) |
 | `cfg.contract.writeTools` **non-empty** | `claimIsGrounded` + `claimIsComplete` (onReply, `minimal:*`) — the honesty cross-check over the world ledger, fed `contract.writeTools` + `contract.outcomes` |
-| `cfg.destructiveTools` **non-empty** | `destructiveThrottle(destructiveTools)` (preTool, `base:destructiveThrottle`) + `confirmFirst` on exactly those tools — the per-tool `cfg.confirmMechanism[tool]` (default `'arg'`) picks the id AND which call ACTS: two-step tools → `confirmFirst()` under `base:confirmFirst`, one-step tools → `confirmFirst({ flag: false })` under `base:confirmFirstPriorAsk`. **⊆-validated** (each destructive tool must be in `cfg.tools` or the constructor throws), and `cfg.destructiveLabels` is validated the same way |
+| `cfg.contract.writeGate` **present** | `precondition(ok, reason, prose)` on `contract.writeTools` minus `exempt` (preTool, `minimal:writeGate`) — the domain's ONE statement of what its world refuses every write under, installed on every spec that carries a write. Declared with no `writeTools`, or with an `exempt` entry that is not a write tool, it throws at construction |
+| `cfg.destructiveTools` **non-empty** | `destructiveThrottle(destructiveTools)` (preTool, `base:destructiveThrottle`) + `confirmFirst` on exactly those tools — the per-tool `cfg.confirmMechanism[tool]` (default `'arg'`) picks the id AND which call ACTS: two-step tools → `confirmFirst()` under `base:confirmFirst`, one-step tools → `confirmFirst({ flag: false })` under `base:confirmFirstPriorAsk`. The LIST installs the protocol; `cfg.destructiveWhen[tool]` decides which CALLS of a listed tool it applies to (absent ⇒ every call). **⊆-validated** (each destructive tool must be in `cfg.tools` or the constructor throws), and `cfg.destructiveLabels`, `cfg.confirmMechanism` and `cfg.destructiveWhen` are validated the same way |
 
 So **2 kinds always install** (`noDuplicateCall` + `degenerationGuard`), the honesty cross-check pair
 when the contract declares `writeTools`, and **+2 more when the agent holds a destructive tool.**
@@ -633,8 +634,12 @@ does not carry: they are about the enforcement path, not about choosing a kind.
   never reaches another.
 - **Misconfiguration that would make a safety kind INERT throws at CONSTRUCTION, never at check
   time.** `consentRequired` on empty `tools` (or a blank `reason`, whose falsy deny value would read as
-  "allowed"); a `destructiveLabels` entry for a tool that is not destructive; two labels whose first two
-  words agree, which derive ONE token for two different acts. An inert safety guard still reads as
+  "allowed"); a `destructiveLabels` entry for a tool that is not destructive; a `destructiveWhen`
+  predicate for a tool that is not destructive, which would gate nothing because the protocol it
+  modifies was never installed there; two labels whose first two
+  words agree, which derive ONE token for two different acts. A tool that is destructive only on some
+  of its calls IS on `destructiveTools`, so its label is legal and its predicate has a protocol to
+  narrow. An inert safety guard still reads as
   coverage in a spec header, which is worse than an absent one — so it breaks the build. An `llmCheck`
   with an empty `question` fails the same way (nothing for the judge to answer).
 
@@ -680,10 +685,14 @@ turn 2   user:    "yes, CONFIRM BK-1"
 | reading the answer | the runtime | reading text is done ONCE per turn, in one place, never in a guard |
 | allowing the act | `confirmFirst` | a pure read of `ctx.consent` — no text, no state, no declaration |
 
-`confirmFirst` takes exactly one option, and it is not about licensing: `flag` says WHICH call acts. A
+`confirmFirst` takes two options, and neither is about licensing: `flag` says WHICH call acts, `when` says
+WHICH calls are destructive. A
 two-step tool distinguishes its preview from its act by an argument, and the preview must run — it is how
 the world raises the question. `flag: false` is the one-step shape, where every call acts and every call is
-gated.
+gated. `when` is a pure predicate over the acting call's own arguments, keyed by tool:
+`placeHold({scope:'asset'})` is an act the world carries out with no question raised, while
+`placeHold({scope:'workspace'})` is gated on the token like any destructive call. A tool with no predicate
+is destructive on every call.
 
 #### The matching law
 
@@ -759,7 +768,7 @@ No model participates in a consent decision.
 | obligation | when |
 |---|---|
 | a preview form that answers `requiresConfirmation` and names its record under an identity key | a two-step destructive tool |
-| a `destructiveLabels` entry — the human-facing words the question is built from | a destructive tool that acts on no identifiable record |
+| a `destructiveLabels` entry — the human-facing words the question is built from | a destructive tool that acts on no identifiable record, including one whose destructive branch names a record its arguments never carry (a hold over a whole workspace is that shape: listed, predicated, and labelled) |
 | `engineText`, the engine's own sentences | a conversation held in a language other than English |
 
 A destructive tool with neither a record nor a label can raise no question, so it can never be consented

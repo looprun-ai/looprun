@@ -71,6 +71,18 @@ export interface DomainContract {
    *  `deriveClaimsFromLedger` consumes so the exhaustion closure never announces a no-effect probe as done —
    *  seated HERE so both the write surface and its {@link outcomes} map arrive together on the one domain object. */
   writeTools?: readonly string[];
+  /** The world condition every write of this domain is refused under — declared ONCE, installed on
+   *  every spec that carries a write. `ok(world)` is the whole condition: a gate keyed on a third of
+   *  it is a gate that misses the other two thirds on every lane at once. `exempt` names the writes
+   *  that must stay usable while the condition holds — a compliance hold is the shape that needs it —
+   *  and each entry must be one of {@link writeTools}, so an exemption is visible beside the rule it
+   *  suspends rather than per lane. `prose` is what the trunk renders; absent ⇒ the reason. */
+  writeGate?: {
+    ok: (world: AgentWorld) => boolean;
+    reason: string;
+    prose?: string;
+    exempt?: readonly string[];
+  };
   /** The domain OUTCOME vocabulary: every non-core outcome word an agent may declare in a `did` claim MUST
    *  map to a core outcome (e.g. `{ settled: 'success' }`), so the ledger cross-check stays
    *  engine-owned and never becomes semantic. Fed to `claimIsGrounded` beside {@link writeTools}. */

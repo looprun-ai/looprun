@@ -27,6 +27,7 @@ Subject modules may be `.ts`/`.mts` (needs a Node version with type stripping) o
 | verb | does |
 |---|---|
 | `validate` | offline preflight — load the subject, check schema + references + premise, plus the world layers when the subject ships `gen/world.json` (preset distinguishability · probe≡confirm identity · determinism); RED blocks a run before any spend. |
+| `lint` | the artifact laws over the sources and the assembled specs; `--spec-laws --subject <dir>` adds the subject battery (see below). |
 | `run` | one arm through the governed (or `--ungoverned`) loop → `cases.jsonl` + `SUMMARY.md`. |
 | `judge-input` | blind per-turn judge inputs from a run dir (`--chunk N` splits into parts) — what the judge reads. |
 | `fold` | verdicts → `RESULTS.md`; `--sync <dirA> <dirB> …` forces one verdict per byte-identical transcript class across reps → `verdicts.synced.jsonl` + `SYNC.md`. |
@@ -85,6 +86,21 @@ host to dispatch judge subagents against. After verdicts land, `campaign resume`
 the counts, gates on the always-armed monitor (an unresolved incident blocks cert), folds
 with `--sync` across the governed reps, folds the control arm to its own `RESULTS.md`
 (A/B, never in the band), and emits the `cert-band.json` — the only source of the number.
+
+## The subject laws `--spec-laws` adds
+
+Three of them read the subject's own presets and its per-lane routing, so they are decidable offline —
+no key, no model:
+
+| finding | what it reads | what it demands |
+|---|---|---|
+| `WRITE-REFUSED-UNGATED` | each preset a case declares, compared against `default`, and every spec that carries the write | a write the world refuses BY STATE must have a spec-side gate that denies there, or the refusal reaches the model as a tool failure and the reply invents its reason. `contract.writeGate` closes it for every lane at once |
+| `TARGET-SILENT-ON-EVERY-PRESET` | the world gate a case targets, evaluated on the case's preset with an empty ledger | a target must be able to DENY on a preset the case runs; a gate that is silent before the agent has done anything grades nothing |
+| `GUARD-ID-POSITIONAL` | every bound guard id on the assembled specs | an id minted from the install counter (`agent:custom#3`) re-points every case and profile that names it the moment a guard is inserted above; pass an explicit `{ id }` |
+
+`GUARD-NEVER-TARGETED` is keyed per `(agent, guardId)`: a guard id is not unique across lanes, so a
+case targeting `agent:sharedGate` on one lane says nothing about the copy on another. Its repair is a
+case or a preset — the finding names both and offers no third.
 
 ## Provider matrix
 
