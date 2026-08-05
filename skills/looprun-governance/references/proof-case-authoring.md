@@ -23,7 +23,7 @@ export const argRequiredProof: GuardProof = {
   //   degenerationGuard, confirmFirst, destructiveThrottle): the spec builders then rely on the auto
   //   instance instead of addGuard. make() is still required.
   // specTweaks?: Partial<AgentSpecConfig> — extra spec config the auto layer needs, e.g.
-  //   { destructiveTools: [...], confirmMechanism: {...} }.
+  //   { destructiveTools: [...], confirmMechanism: {...}, destructiveLabels: {...} }.
   // collective?: 'skip'         — ONLY for kinds bound to ONE agent's contract: the did-vs-ledger
   //   cross-check (claimIsGrounded, claimIsComplete, claimCoversRubric) and the adjudicated kinds
   //   (llmCheck, didMessageConsistency). Installing them over arbitrary scenarios is a category
@@ -118,20 +118,24 @@ and the loop will not close the way you expect):
   NO-TOOLS re-generation.
 - **A preTool veto costs no extra model step** — the vetoed call returns a failure result and the same
   generation continues with your next scripted step.
-- **A step's tool calls are dispatched CONCURRENTLY** — never rely on within-step ordering (this is why
-  the same-step ask-then-act deny is proven at L1 only).
+- **A step's tool calls are dispatched CONCURRENTLY** — never rely on within-step ordering.
+- **A consent case is TWO turns.** The first attempts the act, which is what raises the engine's
+  question; the second's `userText` must carry the token that question asked for. A two-step tool's
+  token is built from the record the world named (`CONFIRM BK-1`); a one-step tool's from the label the
+  spec declared (`destructiveLabels: { purgeAll: 'delete every item' }` → `CONFIRM DELETE-EVERY`). A
+  human "yes, go ahead" licenses nothing, so a case that uses one is proving the deny, not the pass.
 - **Respect the collective ruleset** (the table in `packages/core/test/proofs/catalog.ts`): in the
   collective run every other guard is live, so a script must satisfy every rule except the one its own
-  negative case violates — search before create, titles on createItem, the destructive confirm
-  protocol, clean reply wording, and so on.
+  negative case violates — search before create, titles on createItem, the consent token for a
+  destructive act, clean reply wording, and so on.
 
 ## Collective non-interference
 
 The collective lane builds ONE super-agent carrying every proof's guard (`buildCollectiveSpec`) and
 replays each loop case against it: a negative case must still surface ITS guard's tag, and no guard
 outside the whitelist (the guard under proof + the always-on auto layer) may fire; a pass case must
-stay byte-clean. When two guards *genuinely* co-fire on the same violation (e.g. a destructive claim
-that is also a pending, un-relayed confirmation), declare the partner kind in that **l3 case's
+stay byte-clean. When two guards *genuinely* co-fire on the same violation (e.g. an unconsented
+destructive call that is also the turn's second destructive effect), declare the partner kind in that **l3 case's
 `alsoFires`** — it extends the whitelist for that case only, declared instead of surprising.
 
 ## Coverage obligation
