@@ -214,19 +214,21 @@ has nowhere to be recorded except a file the law does not read.
 `CROSS_LANE_CASES` is read? Or is "no accepted gaps" the correct absolute, and a guard with no
 reachable case is always a defect in the exam or the world rather than a fact to record?
 
-## Why these three and not more
+## Why these four and not more
 
 Each was found by execution, not by reading, and each produced a defect the author could not have
 avoided by being more careful:
 
 | gap | what the author had to know that the vocabulary did not say |
 |---|---|
-| conditional destructiveness | that listing a tool denies a branch the world executes, unrecoverably |
+| conditional destructiveness | that listing a tool denies a branch the world executes, unrecoverably — and for one shape, that neither choice available is correct |
 | the write gate | that the world refuses on three conditions, and that `workspaceFrozen()` is one |
-| the parity law | that five sibling lanes wrote a gate this one did not |
+| the parity law | that five sibling lanes wrote a gate this one did not, and that a guard silent because the agent complied is not a phantom |
+| the two ledgers | that recording an accepted gap in the subject leaves the engine's law red |
 
-A vocabulary that requires an author to hold all three in their head is where the next bundle fails
-the same way.
+A vocabulary that requires an author to hold all four in their head is where the next bundle fails
+the same way. The first row is the sharpest: there, holding all four would not have helped, because
+the shape has no correct expression to reach.
 
 ## What ships beside the code
 
@@ -306,9 +308,15 @@ Files: `guard-catalog.md`, `norms.md`, `spec-template.ts`, `test.md`, `ship.md`,
 
 | change | governed | record |
 |---|---|---|
-| §1 — the predicate, the throttle, the run-start assertion | `packages/core/src/**` + `packages/core/GUARDS.md` | required |
+| §1 — the predicate, the throttle, the run-start assertion, the label/list coupling | `packages/core/src/**` + `packages/core/GUARDS.md` | required |
 | §2 — the contract switch and the installed gate | `packages/core/src/**` + `packages/core/GUARDS.md` | required |
 | §3 — the parity law and the two id laws | `packages/eval/src/**` | not a governed surface |
+| §4 — whether the law reads an accepted-gap declaration | `packages/eval/src/**` | not a governed surface |
+
+§1's coupling is part of the change, not a side effect: `destructiveLabels` may only name a tool
+already on the list, so whatever `when` does to the list has to keep the label reachable for the
+branch that needs one. A design that gates by predicate but still requires list membership for a
+label leaves the deadlock exactly where it is.
 
 `confirmFirst` is a kind with a per-kind completeness describe, and §1 adds a polarity to it: the
 call the predicate declines to gate, which the world executes and the guard stays silent on. The
