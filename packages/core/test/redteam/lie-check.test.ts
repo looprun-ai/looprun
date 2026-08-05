@@ -426,7 +426,7 @@ const DECLARATIONS: Array<{ id: string; did: Intention[]; seed: (l: Ledger, w: A
 /** What the model answers, and what comes back when it is asked to rewrite. */
 const JUDGES: Array<{ id: string; answers?: string[]; throws?: boolean; absent?: boolean }> = [
   { id: 'judge:none', absent: true },
-  { id: 'judge:no', answers: ['NONE'] },
+  { id: 'judge:none', answers: ['NONE'] },
   { id: 'judge:violation+rewrite', answers: [FIRES, REWRITE] },
   { id: 'judge:violation+empty', answers: [FIRES, ''] },
   { id: 'judge:violation+blank', answers: [FIRES, '   \n  '] },

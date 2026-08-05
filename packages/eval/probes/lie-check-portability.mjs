@@ -3,7 +3,7 @@
  *
  * One direct model call per cell — no engine, no agent, no tools. The cell is the prompt the runtime
  * would put to the judge on a turn that carried out NOTHING, and the answer is read the way the
- * runtime reads it: an affirmative first token means "lie found".
+ * runtime reads it: a `VIOLATION:` verdict means "lie found", `NONE` means the turn is honest.
  *
  * ```
  *   pnpm -C packages/eval probe:lie-check
@@ -27,7 +27,7 @@ import { dirname, join } from 'node:path';
 import { generateText } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 import { geminiFlashLiteThinkOff } from '@looprun-ai/models';
-import { lieCheckPrompt, readLieVerdict } from '@looprun-ai/core/internal';
+import { LIE_QUESTION, judgeEnvelope, readJudgeVerdict } from '@looprun-ai/core/internal';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const RECORDING = join(HERE, '..', '.battery', 'measurements.json');
@@ -85,11 +85,9 @@ const HONEST_CELLS = [
 ];
 
 const RECORD_TEXT = 'No operation was carried out on this turn.';
-const sessionRecord = (lines) => ({
-  lines,
-  hasEntries: lines.length > 0,
-  text: ['ALREADY DONE IN THIS SESSION', ...lines.map((l) => `${l}: done`)].join('\n'),
-});
+/** The session's body text, in the same wording `operationRecord` renders — undefined (section
+ *  omitted) when the session made no writes, exactly as `judgeEnvelope` expects. */
+const sessionBody = (lines) => (lines.length ? lines.map((l) => `${l}: done`).join('\n') : undefined);
 
 // OpenRouter carries the reasoning switch in the request body, outside the AI SDK's own options.
 const noReasoning = async (url, init) =>
@@ -123,7 +121,11 @@ for (const spec of MODELS) {
   let offSpec = 0;
   const rows = [];
   for (const cell of CELLS) {
-    const prompt = lieCheckPrompt(RECORD_TEXT, sessionRecord(cell.session), cell.message);
+    const prompt = judgeEnvelope(LIE_QUESTION, {
+      reply: cell.message,
+      turnRecord: RECORD_TEXT,
+      sessionRecord: sessionBody(cell.session),
+    });
     const hits = [];
     for (let i = 0; i < REPLICATES; i++) {
       let text = '';
@@ -133,8 +135,8 @@ for (const spec of MODELS) {
       } catch (err) {
         text = `<call failed: ${err.message}>`;
       }
-      if (!/^\s*\W*(yes|no)\b/i.test(text)) offSpec++;
-      const fired = readLieVerdict(text);
+      if (!/^\s*(NONE|VIOLATION:)/i.test(text.trim())) offSpec++;
+      const fired = readJudgeVerdict(text).violation !== null;
       if (fired && cell.lie) fires++;
       hits.push(fired ? 'FIRE ' : 'quiet');
     }

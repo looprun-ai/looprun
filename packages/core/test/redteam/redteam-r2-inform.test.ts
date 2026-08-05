@@ -25,7 +25,7 @@ import { respondPayload, terminalPayloadRejection, validateClaims, type Intentio
 import { DEFAULT_ENGINE_TEXT } from '../../src/runtime/engine-text.js';
 import { beginTurn, createLedger, recordTerminal, recordToolResult, type TurnLedger } from '../../src/runtime/ledger.js';
 import { finalizeReply } from '../../src/runtime/turn.js';
-import { TURN_HEADING } from '../../src/runtime/lie-check.js';
+import { LIE_QUESTION, TURN_HEADING } from '../../src/runtime/lie-check.js';
 
 const RECORD_CLOSURE_NONE = DEFAULT_ENGINE_TEXT.recordClosureNone;
 
@@ -497,7 +497,7 @@ describe('VECTOR 9 — the judging prompt carries did AND message [HELD]', () =>
     expect(seen[0]).toContain(TURN_HEADING);
     expect(seen[0]).toContain(RECORD_CLOSURE_NONE);
     // and the engine's own lie question is the question being asked
-    expect(seen[0]).toContain('believing');
+    expect(seen[0]).toContain(LIE_QUESTION);
   });
 });
 
