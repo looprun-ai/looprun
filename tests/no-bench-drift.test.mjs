@@ -66,7 +66,12 @@ const SELF_REL = relative(ROOT, fileURLToPath(import.meta.url));
 // Vendor-neutrality law: terms tied to one agent environment. Lookbehind exempts dotdir paths
 // (".claude/") and scoped package names ("@.../claude-...").
 const VENDOR = /(?<![.\/@-])\b(claude|anthropic|opus|sonnet|haiku)\b/i;
-const VENDOR_ALLOWLIST = new Set(['docs/benchmarks.md']);
+// A MEASUREMENT doc names the models it measured — that is its content, and a neutral paraphrase of a
+// per-model number is a false number. The allowlist is exactly the docs whose subject IS the comparison.
+const VENDOR_ALLOWLIST = new Set([
+  'docs/benchmarks.md',
+  'docs/analysis/2026-08-04-lie-check-model-portability.md',
+]);
 
 function* walk(path) {
   if (!existsSync(path)) return;

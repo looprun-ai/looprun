@@ -186,7 +186,7 @@ Keys the probe reads:
 
 ```
 GOOGLE_GENERATIVE_AI_API_KEY    the reference model      ~/Dev/js/looprun/agentspec-bench/.env.local
-OPENROUTER_LOOPRUN_BENCH_KEY    the other five           ~/Dev/js/neurono/neurono-bench/.env.local
+OPENROUTER_LOOPRUN_BENCH_KEY    the other five           the sibling benchmark repo's .env.local
 ```
 
 The 1296-cell sweep in the core red-team suite covers the ALGORITHM — eligibility, delivery, rewrite
