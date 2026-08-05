@@ -1,6 +1,6 @@
 # 04 · Guards
 
-**What you get from this chapter:** the complete rule vocabulary — 23 factories, what each one
+**What you get from this chapter:** the complete rule vocabulary — 21 factories, what each one
 prevents, one minimal example each — plus the four types they are written in and how to write your
 own when nothing fits. Everything here is from `looprun` (≡ `looprun/core`).
 
@@ -28,7 +28,7 @@ This chapter is the rest of the vocabulary:
    §2  binding one to a moment                  addGuard — the chapter 03 socket, in one line
    §3  the ones you already have                what AgentSpecBase installs before your code runs
    §4  finding the right one                    symptom → kind, the confusable pairs, canonArgs
-   §5  THE CATALOG                              23 factories, grouped by hook — generated
+   §5  THE CATALOG                              21 factories, grouped by hook — generated
    §5b what ships with every reply              the operation record and the lie check — no guard
    §6  writing your own                         custom, and the five rules a reviewer looks for
 ```

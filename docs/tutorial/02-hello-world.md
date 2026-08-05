@@ -210,8 +210,8 @@ key that is looprun's:
 | `sessionId` | the conversation key. Picks (or creates) the world, the turn counter and the ledger of verified calls. Defaults to the memory thread id, else `'default'` |
 | `attachments` | URLs to ingest into the world this turn |
 
-The session is what makes multi-turn governance possible at all: a rule like "confirm in an *earlier*
-turn" needs to know which turns are the same conversation.
+The session is what makes multi-turn governance possible at all: a rule like "the user must have typed
+back the confirmation they were shown" needs to know which turns are the same conversation.
 
 > **Use `generate()`, not `stream()`, where the reply matters.** Streaming runs in a documented
 > degraded mode: tool-level governance still binds (the preTool veto works), but reply checking,

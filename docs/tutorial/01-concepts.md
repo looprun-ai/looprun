@@ -60,8 +60,9 @@ move:
    └──────────────────────────────────────────────────────────────────────┘
 ```
 
-"Never delete without asking" is an action-layer claim: *did a confirmation land in an earlier turn
-before `cancelEvent` ran with `confirmed: true`?* — a yes/no question about recorded calls. "Be warm
+"Never delete without asking" is an action-layer claim: *did the user's own message carry the
+confirmation token the engine asked for, before `cancelEvent` ran with `confirmed: true`?* — a yes/no
+question about a literal, not about wording. "Be warm
 but not chatty" is a language-layer claim, and every attempt to gate it ends in prose-chasing: a
 phrasing fix that rescues one case quietly regresses its siblings.
 
@@ -144,8 +145,8 @@ type you can bind to, and `confirmFirst` is one row of chapter 04's catalog:
    │   the model proposes:  cancelEvent({ eventId: 'evt_102',            │
    │        │                             confirmed: true })             │
    │        ▼                                                            │
-   │   ② preTool gate ──── confirmFirst.check() ── no confirmation       │
-   │        │              was recorded in an earlier turn               │
+   │   ② preTool gate ──── confirmFirst.check() ── the user never typed  │
+   │        │              the confirmation they were shown              │
    │        │                                                            │
    │        └──► VETO ─────────────────────────────────────────────┐     │
    │                                                               │     │

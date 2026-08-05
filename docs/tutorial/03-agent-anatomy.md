@@ -155,7 +155,8 @@ Field by field, the ones that carry a rule:
 | `id` / `mode` | both **required**. `id` names the agent; `mode` is a free-form label echoed into eval records and case routing. It is near-vestigial today — nothing in the runtime branches on it — but it is not optional, so pick something stable and move on |
 | `persona` | lives on the **spec**, never on the shared domain contract — one line, per agent, rendered as late as possible so agents of the same domain share a maximal cacheable prompt prefix |
 | `tools` | the surface, declared. ≤15, and the terminal tool (`respond`) is runtime-owned — naming it **throws** at construction |
-| `destructiveTools` | a declaration, not a comment: it *installs* the confirm-first protocol — and with it, the obligation to ask. That is why this spec carries no `terminal` policy: the two are refused together (§4) |
+| `destructiveTools` | a declaration, not a comment: it *installs* the confirm-first protocol on exactly those tools. A tool here that acts on no identifiable record also needs a `destructiveLabels` entry — the words its confirmation question is built from — or it can raise no question and never runs |
+| `destructiveLabels` | per destructive tool with no record of its own, the human-facing words the engine's confirmation question is built from (`{ emptyBin: 'empty the compost bin' }` → the user replies `CONFIRM EMPTY-THE`). Two labels whose first two words agree derive one token for two acts and **throw** at construction |
 | `behavior` | the **uncheckable residue only**. A line here that restates a rule some guard already enforces is two copies of one rule with only one wired to a check — guaranteed drift, and the spec lint flags it |
 
 That last row is the discipline the whole design rests on. The behavior bullet above survives the
@@ -331,7 +332,8 @@ behavior list.
 | `exhaustionReply?` | optional: the deterministic closing SENTENCE committed when a reply still violates its checks after every correction. It must be a pure function of verified observations — structurally unable to fabricate. It supplies the sentence only: the engine always prepends the operation record it derived from the ledger |
 | `writeTools?` | **the honesty switch.** The tools that MUTATE the world, as opposed to pure reads. Naming them auto-installs the cross-check pair `claimIsGrounded` + `claimIsComplete` (chapter 04 §3): a declared action the ledger cannot match is denied, and an effected write no intention covers is denied. Leave it out and there is no cross-check at all — and nothing tells you |
 | `outcomes?` | optional: the domain's outcome vocabulary, mapping each non-core word an agent may declare onto one of the seven core outcomes (`{ settled: 'success' }`). The domain adds words; it never adds a way around the ledger |
-| `renderClaim?` | optional: the domain's wording (and language) for ONE verified claim LINE in the engine-rendered operation record. It receives the VERIFIED fields only — never the agent-authored `op`. Absent ⇒ a neutral English default naming the claim's `target`. The record's closing sentence is engine-owned and has no seam |
+| `renderClaim?` | optional: the domain's wording (and language) for ONE verified claim LINE in the engine-rendered operation record. It receives the VERIFIED fields only — never the agent-authored `op`. Absent ⇒ a neutral English default naming the claim's `target` |
+| `engineText?` | optional: the ENGINE's own sentences — the record's closing lines and the confirmation question. A conversation held in another language declares them, per key, because the user has to READ the instruction whose token they type back. The token itself is engine-issued and is the same literal in every language |
 
 `stateBlock` is also the first place you will meet the cast in §7. Note the seed: `REFERENCE_NOW` is
 a fixed clock constant, because a tutorial world that reads `Date.now()` cannot be replayed.
@@ -380,14 +382,15 @@ export const cancelEventTool: ToolDef = {
 <sub>excerpt · `snippets/scheduler/tools.ts`</sub>
 
 Declaring `destructiveTools: ['cancelEvent']` installs a protocol the tool must be able to honour:
-"confirm first, act in a **later** turn, with `confirmed: true`". A tool with no `confirmed` in its
-schema cannot — so the model asks forever.
+"preview first — which is what makes the engine ask — then act in a **later** turn, with
+`confirmed: true`". A tool with no `confirmed` in its schema cannot take the second step, so it previews
+forever.
 
 **Where that is caught, precisely.** The spec exposes the cross-check as
 `assertDestructiveConfirmable(toolDefs)`, and today exactly one caller runs it: chapter 05's scripted
 runner, `runSpecConversation`, which throws at run start naming the tool and the three ways out.
 `new LoopRunAgent({…})` does **not** call it — so a flag-less destructive tool constructs happily and
-fails as an ask-forever loop at run time instead. Until that changes, treat "the eval runs" as the
+fails as a preview-forever loop at run time instead. Until that changes, treat "the eval runs" as the
 gate for this particular mistake, and put the flag in the schema when you declare the tool.
 
 Keep the schema and the rules in one source. The scheduler's date-time pattern lives once, in

@@ -103,8 +103,9 @@ interface TurnInput {
 
 One element per user message. The array **is** the conversation: turn *i* runs with the history of
 turns 0…*i*−1 in the message list and the world in whatever state turn *i*−1 left it. That is what
-makes it the right harness for cross-turn rules — `confirmFirst` requires the probe to have landed
-in a strictly *earlier* turn, which a single `generate()` call can never demonstrate.
+makes it the right harness for cross-turn rules — `confirmFirst` requires a confirmation token that
+arrived in a *later user message* than the question that asked for it, which a single `generate()` call
+can never demonstrate.
 
 ### `RuntimeDeps` — everything the runner does not own
 
@@ -209,9 +210,10 @@ governance assertion needs no key, no network and no money.
    runSpecConversation(…)       DOES — at run start, and it THROWS
 ```
 
-A tool named in `destructiveTools` is promised a two-step ritual: ask first, then act in a later turn
-with `confirmed: true`. If its `inputSchema` has no `confirmed` flag, the model can never complete
-the second step and asks forever. The schema is only known where `toolDefs` are injected — which is
+A tool named in `destructiveTools` is promised a two-step ritual: preview first — which is what makes
+the engine put its confirmation question on screen — then act in a later turn with `confirmed: true`.
+If its `inputSchema` has no `confirmed` flag, the model can never complete the second step and previews
+forever. The schema is only known where `toolDefs` are injected — which is
 here — so `spec.assertDestructiveConfirmable(deps.toolDefs)` runs at run start and throws, naming the
 tool. Constructing an agent with the same mistake succeeds and fails later as an unexplained loop.
 

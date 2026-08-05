@@ -495,7 +495,7 @@ What needs a `stateView`, and what does not:
 
 | guards | need a `stateView`? |
 |---|---|
-| everything keyed on the ledger of recorded calls — `requiresBefore`, `noDuplicateCall`, `confirmFirst`, `destructiveThrottle`, `maxCalls`, the argument guards, reply checks over observed activity | **no.** The hooks feed the ledger; it is there either way |
+| everything keyed on the ledger of recorded calls — `requiresBefore`, `noDuplicateCall`, `destructiveThrottle`, `maxCalls`, the argument guards, reply checks over observed activity — plus `confirmFirst` and `valueFromUser`, which read the consent and the user's own words off the ctx | **no.** The hooks feed the ledger and the runtime seats the rest; it is there either way |
 | `precondition` and custom guards that read *domain* state, and `contract.stateBlock` | **yes** — those accessors have to come from somewhere |
 
 > **`refresh()` is fire-and-forget.** `advanceTurn()` calls it as `void view.refresh?.()` — it does
