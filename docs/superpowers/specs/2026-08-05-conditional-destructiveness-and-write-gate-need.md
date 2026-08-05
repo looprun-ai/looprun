@@ -259,16 +259,20 @@ about the CALL        two questions: WHICH call acts (flag), WHEN it is destruct
 | 1 | `GUARDS.md` — the auto-install table, `cfg.destructiveTools` row | the list installs a gate whose predicate decides the branch, not a gate on every call |
 | 1 | `GUARDS.md` — the `confirmFirst` option paragraph | the option count, and that the new option answers WHEN rather than WHICH |
 | 1 | `GUARDS.md` — the `destructiveLabels` row | a conditionally destructive tool still owes a label when its destructive branch names a record its arguments never carry |
+| 1 | `GUARDS.md` — the construction-throw list, "a `destructiveLabels` entry for a tool that is not destructive" | one half of the deadlock, stated as a law: it stands only if the predicate reaches a label some other way |
+| 1 | `GUARDS.md` — the auto-install table's ⊆-validation of `cfg.destructiveLabels` | the same rule at its second statement; the two agree or the vocabulary contradicts itself |
 | 1 | `docs/tutorial/03-agent-anatomy.md` — the `destructiveTools` and `destructiveLabels` rows, and the protocol a destructive tool must honour | the protocol binds the destructive branch, and the protective branch runs untouched |
 | 1 | `docs/tutorial/05-running-and-eval.md` — the run-start throw | what `assertDestructiveConfirmable` checks when the confirmation record is only sometimes required |
 | 2 | `GUARDS.md` — the contract table, `cfg.contract.writeTools` row | `writeGate` beside it: one declaration installing the state gate on every spec that carries a write |
 | 2 | `docs/tutorial/03-agent-anatomy.md` — the `CONTRACT` block and the `writeTools?` row | the contract's second switch, and what a bundle loses by omitting it |
 | 2 | `docs/tutorial/04-guards.md` — the auto-install ladder | a rung: `IFF contract.writeGate`, on every spec carrying a write |
 | 2 | `catalog.ts` — the `precondition` entry | the condition every lane shares is a contract declaration; `precondition` stays the gate for what one lane alone refuses on |
-| 3 | `packages/eval/src/lint.ts` and its `lint-spec-quality` / `lint-subject` neighbours | where the parity law and the two id laws live |
-| 3 | `docs/tutorial/05-running-and-eval.md` — the preflight lint table | the lints an author runs before spending a token, and the violation string each new law prints |
+| 3 | `packages/eval/src/**` — the entry point that owns the parity law | the preset-aware predicate reads the world's presets, so the law lands in `lintSubject(subject)` or `lintSpecExecution(specs)`, not in `lintSpecQuality(specs, toolDefs)`, which never sees a preset |
+| 3 | `docs/tutorial/05-running-and-eval.md` — the preflight lint table | that table publishes what each lint receives; the law's row states its inputs, and the violation string each new law prints |
 | 3 | `packages/eval/README.md` | what `--spec-laws` covers |
-| 3 | `BACKLOG.md` — the probe-parity lint row | the parity law's execution half and that row are the same question |
+| 3 | `BACKLOG.md` — the probe-parity lint row | the parity law's execution half and that row are one question: a check that must RUN the flow rather than read it |
+| 4 | `docs/tutorial/05-running-and-eval.md` — `lintSubject`'s findings, the `GUARD-NEVER-TARGETED` line | whether a gap can be accepted at all, and if so what the subject writes to accept it |
+| 4 | `packages/eval/src/lint-subject.ts` — the violation string | it names the defect; if a declaration is readable, it names the escape too |
 | — | `docs/tutorial/04-guards.md` | regenerated for §1 and §2 through the catalog, hand-edited for neither |
 | — | `README.md` | nothing: it names no destructive, contract or lint vocabulary |
 
@@ -301,6 +305,20 @@ table is where that routing lives.
 The two neighbours of §3 are authoring-time rules before they are lint rules: every `addGuard`
 carries an explicit `{ id }`, and a guard id is reachable only from the lane that owns it.
 
+§4 is the skill's obligation whichever way the open question resolves, because the second ledger has
+no publisher. The skill names `norms/bundle.test.ts` as the bundle's own assertion file; the ledgers
+written inside it — the accepted-gap record, and the cross-lane record the open question compares it
+to — appear in no reference the skill ships and on no engine surface. So the design is not choosing
+between two mechanisms that exist:
+
+```
+reads a declaration    the skill states where the record lives, what a valid entry says,
+                       and that a gap with no reason is a lint failure of its own
+
+no accepted gaps       the skill states that a guard no case can reach is a defect in the
+                       exam or in the world — the repair is a preset, never a record
+```
+
 Files: `guard-catalog.md`, `norms.md`, `spec-template.ts`, `test.md`, `ship.md`,
 `scripts/lint-authoring.mjs`.
 
@@ -317,6 +335,10 @@ Files: `guard-catalog.md`, `norms.md`, `spec-template.ts`, `test.md`, `ship.md`,
 already on the list, so whatever `when` does to the list has to keep the label reachable for the
 branch that needs one. A design that gates by predicate but still requires list membership for a
 label leaves the deadlock exactly where it is.
+
+`GUARDS.md` states that rule twice — in the construction-throw list and in the auto-install table's
+⊆-validation — and those two sentences are the acceptance test in prose: after the change they read
+true together, or the workspace hold still has no expression.
 
 `confirmFirst` is a kind with a per-kind completeness describe, and §1 adds a polarity to it: the
 call the predicate declines to gate, which the world executes and the guard stays silent on. The
