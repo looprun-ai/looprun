@@ -1,10 +1,12 @@
 /**
- * THE JUDGE CALL — how this backend drives the engine's lie check and the rewrite it gates.
+ * THE BACKEND'S ISOLATED MODEL CALL — one call shape, reused on the turn's own model, that carries two
+ * things the engine composes and reads: the lie check and the rewrite it gates, and the adjudicator
+ * behind every bound rubric an `llmCheck` guard installs.
  *
- * The engine composes both prompts and reads both answers; the backend only carries the call. It runs
- * on the SAME model and endpoint the turn ran on, and what makes that safe is ISOLATION: the call has
- * no persona, no tools, no memory, no history, and no knowledge that anything is pending. One prompt
- * in, the model's raw text out.
+ * The engine composes the prompt and reads the answer; the backend only carries the call. What makes
+ * reusing the turn's own model safe is ISOLATION: the call has no persona, no tools, no memory, no
+ * history, no knowledge that anything is pending, and stops after one step. One prompt in, the model's
+ * raw text out.
  */
 import { stepCountIs } from 'ai';
 import { adjudicationPrompt, readAdjudicationVerdict } from '@looprun-ai/core/internal';
