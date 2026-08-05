@@ -208,6 +208,7 @@ governance assertion needs no key, no network and no money.
 ```
    new LoopRunAgent({ … })      does NOT run assertDestructiveConfirmable
    runSpecConversation(…)       DOES — at run start, and it THROWS
+                                and assertAdjudicatorPresent beside it
 ```
 
 A tool named in `destructiveTools` is promised a two-step ritual: preview first — which is what makes
@@ -219,6 +220,13 @@ tool. Constructing an agent with the same mistake succeeds and fails later as an
 
 Until that changes: **"the eval runs" is the gate for this particular mistake.** Chapter 03 §6 puts
 the flag in the schema when the tool is declared; this is why.
+
+`assertAdjudicatorPresent` runs at the same run start, for the same reason: a spec that installs an
+`llmCheck` guard needs an adjudicator on the runtime options, and finding that out mid-turn reads as an
+unexplained model failure rather than a wiring mistake. It does not fire through this backend, because
+`runSpecConversation` resolves an adjudicator from the turn's own model for every run when the host
+supplies none — the throw protects a runtime that resolves nothing, which is `LoopRunAgent` and
+`compileSpec`: a spec bound for either registers an adjudicator or fails loud at construction.
 
 ---
 

@@ -88,11 +88,15 @@ kind (§ the `llm-check` catalog entry). An `llmCheck` binds a trusted, pre-bake
 delegates the verdict to a **host-registered adjudicator** (`Adjudicator` on the runtime options, like
 `defineWorld`'s custom executors — NEVER named in config), which reads the rubric plus the relevant
 `history` slice (user text included) and returns `{ violation: string | null }`. Its output is a deny
-reason for the guard layer, never free text delivered to the operator; `failMode` (`'open'`/`'closed'`)
-prices an unreachable adjudicator. Deterministic guards stay sync; an `llmCheck`'s `check` awaits, so the
-hooks are async-capable. An `llmCheck` installed with no adjudicator registered fails LOUD at conversation
-start (`assertAdjudicatorPresent`), never mid-turn. Prompt-injection is acknowledged and priced by evals,
-not by blindness: the rubric is fixed, the channel is a verdict.
+reason for the guard layer, never free text delivered to the operator. The engine composes the judging
+prompt — the rubric is the only instruction it carries, and the reply, the ledger, the call and the
+result each arrive as a labelled, fenced data block — so the no-framing and data-delimiting rules hold
+wherever the adjudicator carries the call. The backend resolves the adjudicator from the turn's own
+model when the host registers none; `assertAdjudicatorPresent` protects a runtime that resolves nothing,
+failing LOUD at construction rather than mid-turn. `failMode` (`'open'`/`'closed'`) prices a REJECTED
+adjudicator. Deterministic guards stay sync; an `llmCheck`'s `check` awaits, so the hooks are
+async-capable. Prompt-injection is acknowledged and priced by evals, not by blindness: the rubric is
+fixed, the channel is a verdict.
 
 **The prose channel.** `did` is grounded against the ledger. `message` beside it is free prose — an
 agent can declare an honest `inform` and still WRITE that it completed something. Two engine-owned
@@ -148,6 +152,19 @@ PREVENTED?      no — the engine does not stop the sentence
 CONTRADICTED?   always — the record ships with every delivery
 ```
 
+**3 · A BOUND RUBRIC — a judgement, on the same model.** An `llmCheck` an author binds carries its own
+question and is answered by the turn's own model, under the isolation the lie check's judge runs
+under. Its miss rate is measured and stated beside it; it does not make the prose channel
+deterministic, and a same-model judge does not make it independent.
+
+```
+1 of 4 violations the judge let pass · 2 of 4 honest replies it denied
+```
+
+Measured on `geminiFlashLiteThinkOff`, one repetition, eight fixtures. Eight fixtures, one model, one
+repetition is an indication, not a characterisation — see `docs/benchmarks.md` for the fixture set and
+the reading it supports.
+
 **The pre-baked rubric beside them: `didMessageConsistency`.** An `llmCheck` whose rubric — "does the
 message state an operation `did` does not carry, or contradict a declared intention?" — is baked in, so
 a domain opts INTO the engine's question rather than authoring its own. It is **AVAILABLE, never
@@ -156,16 +173,18 @@ it where the stakes justify a model call per reply. Its runtime `kind` is `llmCh
 adjudicator gate and the TRUTH/SAFETY frontier scan by kind, so a wrapped guard is seen for what it is.
 
 **It fails CLOSED by default — unlike bare `llmCheck`, whose `'open'` default suits an author-bound
-lint.** This one is not a lint: an author binds it where the record and the check are not enough, so a
-failMode that let an adjudicator outage (network, quota, model down, a 30 s hang) silently delete it
-would BE the attack —
-install the backstop, break the adjudicator, and nothing denies and nothing is recorded. The availability
-cost is stated rather than hidden: while the adjudicator is unreachable every candidate is denied, so each
-turn spends its redrives and delivers the engine-derived closure — still truthful, still non-blank, but not
-the model's prose. An author who prefers the prose asks for it explicitly (`didMessageConsistency({ failMode:
-'open' })`). **Either way the non-run is RECORDED**: every unreachable adjudicator, at any `failMode` and for
-any `llmCheck`, appends an `llmcheck-unreachable:<failMode>` correction to the turn, so "the check ran and
-approved" is never indistinguishable from "the check never ran".
+lint.** This one is not a lint: an author binds it where the record and the check are not enough. A
+`failMode: 'closed'` denies on a REJECTED adjudicator — one that throws, rejects, or hangs past its
+timeout — so this guard's closed default is a contract written for the host-supplied adjudicator: install
+the backstop, break the host's adjudicator, and every candidate is still denied, spending the turn's
+redrives and delivering the engine-derived closure instead of the model's prose. The resolved default
+never rejects — it SETTLES on every failure with no violation — so `failMode` never fires from it: under
+the resolved default, an outage passes. A host that needs an outage to deny registers its own adjudicator,
+one that rejects. **Either way the non-run is RECORDED**, under one of two names: a host-supplied
+adjudicator that rejects appends an `llmcheck-unreachable:<failMode>` correction (from the guard, which
+caught the rejection); the resolved default appends `adjudicator-unreachable` (from the adjudicator
+itself, which never rejects). So "the check ran and approved" is never indistinguishable from "the check
+never ran" — under either adjudicator.
 
 ## 2. The five hooks — and the CORRECT enforcement semantics
 

@@ -7,7 +7,7 @@ done — a pending item that quietly disappears is the failure this file exists 
 |---|---|---|
 | **Every published figure is void** | No looprun-measured number in the tree was produced by the engine, the guards and the process as they now stand. | Re-measure before publishing any looprun figure. |
 | **No current bundle to measure or lint against** | Examples are seeds; the only complete subject is the minimal toy-subject fixture. Lint non-vacuity proofs and discrimination runs have nothing realistic to run on. | Generate a current bundle when one is needed. |
-| **hermes-sim bundles carry no reply-honesty coverage** | No guard factory takes a `RegExp`, and the hermes-sim example bundles install no reply-honesty rule at all — the coverage was never re-authored against the adjudicator seam. | Re-author the honesty rules as `llmCheck` rubrics (host-adjudicator seam) when the bundles are next ported/measured. |
+| **hermes-sim bundles carry no reply-honesty coverage** | No guard factory takes a `RegExp`, and the hermes-sim example bundles install no reply-honesty rule at all. The adjudicator seam a rubric needs is reachable now, so this is a porting task, not a design gap. | Author the honesty rules as `llmCheck` rubrics and port them into the bundles. |
 | **Lint: tools.json drift vs served surface** | Not decidable offline — needs a live server. | Implement as a runtime check, not a lint. |
 | **Lint: projection key / preset never exercised in world test** | The world TEST file has no fixed shape; a gate over an unconstrained file is a guess. | Define the convention first, then lint. |
 | **Lint: probe parity for the two-step flow** | Requires executing the confirm flow, not reading it. | Decide lint vs test, then implement. |
