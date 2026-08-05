@@ -110,7 +110,7 @@ export type { Judge } from './rules.js';
 
 // THE JUDGE ENVELOPE — the prompt every judging call receives and how its answer is read. The
 // engine composes it so the no-framing and data-delimiting rules hold wherever the call is carried.
-export { judgePrompt, readJudgeVerdict, JUDGE_INSTRUCTIONS, JUDGE_UNREACHABLE, JUDGE_UNREADABLE } from './runtime/judge-prompt.js';
+export { judgePrompt, readJudgeVerdict, JUDGE_INSTRUCTIONS, JUDGE_UNREACHABLE, JUDGE_UNREADABLE, USER_TURN_WINDOW } from './runtime/judge-prompt.js';
 
 export {
   isTerminal,

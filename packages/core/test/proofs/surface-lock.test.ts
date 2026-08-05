@@ -111,6 +111,7 @@ const INTERNAL = [
   'lieCheckPrompt', 'rewritePrompt', 'readLieVerdict', 'TURN_HEADING',
   // The judge envelope: the prompt every judging call receives, and how its answer is read.
   'judgePrompt', 'readJudgeVerdict', 'JUDGE_INSTRUCTIONS', 'JUDGE_UNREACHABLE', 'JUDGE_UNREADABLE',
+  'USER_TURN_WINDOW',
   // The mandatory-intention partition: the reserved speech-op vocabulary + partition predicates, the
   // `Intention` shape, and the structured ask signal (`hasAskIntent`) the consent guards key onto.
   'SPEECH_OPS', 'SpeechOp', 'Intention', 'isSpeechOp', 'isActionOp', 'hasAskIntent',

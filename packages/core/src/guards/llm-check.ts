@@ -1,13 +1,14 @@
 /**
  * The LLM-JUDGED guard kind (`llmCheck`) — the one guard whose verdict is a MODEL's, not a
- * deterministic predicate's. It exists for the jobs structure alone cannot decide: "is this reply
- * promising something the world never did?" — a judgement over prose that no arg/observed pattern
- * captures.
+ * deterministic predicate's. It exists for the jobs structure alone cannot decide: "did the operator's
+ * yes license THIS act?", "is this reply promising something the world never did?" — judgements no
+ * arg/observed pattern captures.
  *
  * IT READS THE ENVELOPE, NOT THE CONVERSATION. The guard fences the evidence the hook has into the
- * prompt — the reply plus both operation lists on onReply, the call on preTool, the result on postTool
- * — and nothing else goes in: no persona, no role-tagged turns, no user text. A question the envelope
- * carries no evidence for cannot be answered, however well it is worded.
+ * prompt: the person's own recent turns on every hook, plus the reply and both operation lists on
+ * onReply, the call on preTool, the result on postTool. Nothing the AGENT said goes in — no persona,
+ * no role-tagged turns, no prior replies. A question the envelope carries no evidence for cannot be
+ * answered, however well it is worded.
  *
  * THE CONTRACT:
  *  - The MODEL is registered on the runtime options as a {@link Judge} and threaded onto the guard ctx,

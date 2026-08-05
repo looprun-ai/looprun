@@ -94,15 +94,17 @@ describe('the judge the backend resolves', () => {
 });
 
 describe('llmCheck — case 35: two acts, one yes (structure alone cannot close it)', () => {
-  // The judge reads the ENVELOPE the guard composed: the agent's prose fenced as data, the turn's own
-  // operation record, and the operations earlier turns completed. Structure (observed calls) sees a
-  // legal cancelBooking plus a terminal reply and would pass; the model verdict is what catches a reply
-  // claiming a SECOND cancellation no list accounts for.
+  // The judge reads the ENVELOPE the guard composed: the person's own last turns, the agent's prose
+  // fenced as data, and the operations this turn and earlier turns carried out. Structure (observed
+  // calls) sees a legal cancelBooking plus a terminal reply and would pass; the model verdict is what
+  // catches a reply claiming a SECOND cancellation that neither the person's words nor a list covers.
   const licenceJudge: Judge = async (prompt) => {
+    const asked = prompt.match(/USER REQUEST[^\n]*\n<<<\n([\s\S]*?)\n>>>/)?.[1] ?? '';
     const reply = prompt.match(/REPLY UNDER JUDGEMENT[^\n]*\n<<<\n([\s\S]*?)\n>>>/)?.[1] ?? '';
-    const claimsSecond = /other booking|both bookings|also cancelled/i.test(reply);
-    const accountedFor = /Other booking: done/.test(prompt);
-    return claimsSecond && !accountedFor
+    const claimsSecond = /also cancelled|other booking|both bookings/i.test(reply);
+    const licensedByUser = /all my bookings|both of them/i.test(asked);
+    const alreadyDone = /Dentist appointment: done/.test(prompt);
+    return claimsSecond && !licensedByUser && !alreadyDone
       ? 'VIOLATION: The user authorised one cancellation; the reply claims a second the user never licensed.'
       : 'NONE';
   };
@@ -135,15 +137,34 @@ describe('llmCheck — case 35: two acts, one yes (structure alone cannot close 
     expect(res.turnRecords[0].assistantFinalText).toBe(nothingDone('Your 3pm booking is cancelled.'));
   });
 
-  it('the SECOND act is accounted for when an EARLIER turn carried it out → no redrive', async () => {
+  // THE PERSON'S WORDS licence it. Nothing in either list covers the second act on this turn — only
+  // what the user said two turns ago does, and the envelope carries it.
+  it('the SECOND act is LICENSED when an earlier turn authorised it → no redrive', async () => {
     const scripted = scriptedModel([
-      [{ tool: 'cancelBooking', args: { id: 'other' } }],
-      [{ tool: 'respond', args: { message: 'The other booking is cancelled.', did: [{ op: 'cancel', target: 'Other booking', outcome: 'success' }] } }],
+      [{ tool: 'respond', args: { message: 'Which ones — just the 3pm, or all of them?', did: [{ op: 'inform' }] } }],
       [{ tool: 'cancelBooking', args: { id: '3pm' } }],
       [{ tool: 'respond', args: { message: 'Done — I also cancelled the other booking for you.', did: [{ op: 'inform' }] } }],
     ]);
     const res = await runSpecConversation(bookingSpec(), [
-      { userText: 'cancel the other booking' },
+      { userText: 'cancel all my bookings' },
+      { userText: 'yes, cancel them' },
+    ], { model: scripted.model, world: world(), toolDefs: TOOL_DEFS, judge: licenceJudge });
+    expect(res.errorMsg).toBeUndefined();
+    // turn 1's reply claims a second act; turn 0's "all my bookings" is in the USER REQUEST block.
+    expect(res.turnRecords[1].recoveryEvents).not.toContain('redrive:llmCheck');
+  });
+
+  // THE SESSION LIST accounts for it. The person never authorised a second act in words here — an
+  // earlier turn simply already carried it out, and the list says so.
+  it('the SECOND act is ACCOUNTED FOR when an earlier turn carried it out → no redrive', async () => {
+    const scripted = scriptedModel([
+      [{ tool: 'cancelBooking', args: { id: 'dentist' } }],
+      [{ tool: 'respond', args: { message: 'The dentist appointment is cancelled.', did: [{ op: 'cancel', target: 'Dentist appointment', outcome: 'success' }] } }],
+      [{ tool: 'cancelBooking', args: { id: '3pm' } }],
+      [{ tool: 'respond', args: { message: 'Done — I also cancelled the dentist appointment for you.', did: [{ op: 'inform' }] } }],
+    ]);
+    const res = await runSpecConversation(bookingSpec(), [
+      { userText: 'cancel the dentist appointment' },
       { userText: 'now cancel my 3pm one too' },
     ], { model: scripted.model, world: world(), toolDefs: TOOL_DEFS, judge: licenceJudge });
     expect(res.errorMsg).toBeUndefined();
