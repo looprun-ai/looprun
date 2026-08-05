@@ -74,9 +74,11 @@ export interface RuntimeDeps {
    *  answers NO to everything spends one call per empty turn and changes nothing. Off, the prose ships
    *  as it stands under the operation record that contradicts it — the floor is the same either way. */
   lieCheck?: boolean;
-  /** The host-registered LLM adjudicator for `llmCheck` guards — the model seam, NEVER named in config
-   *  (like defineWorld's custom executors). Threaded onto every GuardCtx. A spec that installs an
-   *  llmCheck with this absent throws at conversation start (assertAdjudicatorPresent). */
+  /** The LLM adjudicator for `llmCheck` guards — the model seam, NEVER named in config (like
+   *  defineWorld's custom executors). Threaded onto every GuardCtx. Optional: supplying one puts the
+   *  host's own adjudicator behind every bound rubric, and its REJECTIONS are what a guard's `failMode`
+   *  prices; omitting it resolves the engine-composed default built from this run's own agent, which
+   *  settles on every failure and therefore never triggers `failMode`. */
   adjudicator?: Adjudicator;
   /** Per-call adjudicator timeout (ms) — a hung adjudicator resolves via failMode past this deadline.
    *  Default 30000 (the guard's own). Beside the adjudicator at the seam; the config surface is untouched. */
