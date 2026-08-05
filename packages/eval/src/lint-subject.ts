@@ -163,7 +163,73 @@ function worldFindings(subject: Subject): string[] {
   return out;
 }
 
-/** The subject-level battery: exam coverage + the world's ok/failed contract. */
+/** A write the world carries out on the default preset and refuses on another is refused BY STATE —
+ *  the differential is what makes the condition decidable without reading the world's source. */
+function refusesWrite(world: AgentWorld, name: string): boolean {
+  try {
+    const r = world.exec(name, {}) as Record<string, unknown> | undefined;
+    if (!r || typeof r !== 'object') return false;
+    return r.ok === false || r.success === false;
+  } catch {
+    return false; // A throw on empty args is argument validation, not a state refusal.
+  }
+}
+
+/** Does any preTool guard of this spec deny the call on this world? */
+function anyGateDenies(spec: AgentSpec, world: AgentWorld, tool: string): boolean {
+  return (spec.guards.preTool ?? []).filter((b) => !b.disabled).some((b) => {
+    const target = b.target;
+    if (Array.isArray(target) && !target.includes(tool)) return false;
+    try {
+      return typeof b.guard.check({
+        tool, args: {}, world, observed: [], turnIndex: 0, userText: '', history: [], consent: [],
+      } as never) === 'string';
+    } catch {
+      return false;
+    }
+  });
+}
+
+/**
+ * THE PARITY LAW. A world refuses a write under some condition; a preset is that condition made
+ * reachable. Every lane that carries the write must have a spec-side gate that denies on that preset —
+ * otherwise the refusal reaches the model as a tool failure and the lane's prose invents the reason.
+ * One declaration satisfies it for every lane (`contract.writeGate`); six copies satisfy it too, and
+ * that is the shape this law exists to make unnecessary rather than to forbid.
+ */
+function parityFindings(subject: Subject): string[] {
+  const out: string[] = [];
+  if (typeof subject.makeWorld !== 'function') return out;
+  const base = tryPreset(subject.makeWorld, 'default').world;
+  if (!base) return out;
+  const declaredWrites = subject.contract?.writeTools;
+  const writes = new Set(
+    declaredWrites?.length
+      ? declaredWrites
+      : (subject.toolDefs ?? []).map((t) => t.name).filter((n) => WRITE_NAME_RE.test(n)),
+  );
+  const presets = new Set<string>();
+  for (const c of subject.cases ?? []) if (c.setup?.preset && c.setup.preset !== 'default') presets.add(c.setup.preset);
+
+  for (const preset of presets) {
+    const world = tryPreset(subject.makeWorld, preset).world;
+    if (!world) continue;
+    for (const tool of writes) {
+      if (!refusesWrite(world, tool) || refusesWrite(base, tool)) continue;
+      for (const [agent, spec] of Object.entries(subject.specs ?? {})) {
+        if (!spec.surface.tools.includes(tool)) continue;
+        if (anyGateDenies(spec, world, tool)) continue;
+        out.push(
+          `WRITE-REFUSED-UNGATED: preset '${preset}' refuses '${tool}' and agent ${agent} carries it with no gate that denies there — ` +
+            'the refusal reaches the model as a tool failure and the reply invents its reason. Declare contract.writeGate, or gate the lane on the same condition',
+        );
+      }
+    }
+  }
+  return out;
+}
+
+/** The subject-level battery: exam coverage + the world's ok/failed contract + write-gate parity. */
 export function lintSubject(subject: Subject): string[] {
-  return [...coverageFindings(subject), ...worldFindings(subject)];
+  return [...coverageFindings(subject), ...worldFindings(subject), ...parityFindings(subject)];
 }
