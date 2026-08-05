@@ -52,12 +52,13 @@ collapse them — but it must not build the second one's plumbing from scratch e
 | who reads the answer | the engine (`readLieVerdict`) | the host |
 | when it runs | only on a turn that carried out no action | every hook firing of every bound rubric |
 | what it can do | REWRITE the delivered prose | DENY, driving a redrive |
-| a failed call | the prose stands, always | `failMode` decides, and the non-run is recorded |
+| a failed call | the prose stands, always | `{ violation: null }`, always (§6) |
 
-The `a failed call` row is a real difference and stays: the lie check sits on top of the
-deterministic operation record, so a failed call falls back onto a floor that still contradicts a
-lie. An `llmCheck` is often the only layer covering its rule, so a failed call has no floor and has
-to be priced.
+The `a failed call` row is where the two agree, and §6 is why: a failed call found nothing. What they
+do NOT share is the floor underneath. A missed lie still arrives contradicted by the deterministic
+operation record; a missed `llmCheck` arrives with nothing beneath it, because for most rubrics it is
+the only layer covering that rule. The floor is what §5 measures and what the guarantee table has to
+keep separate — not something the seam can supply.
 
 The `who composes the PROMPT` row is the defect. Sections 1, 2 and 4 below are obligations about how
 the judging prompt is BUILT, and the `Adjudicator` type as written hands that construction to the
@@ -77,6 +78,26 @@ That isolated call is the containment §1 describes, and it is one primitive ser
 `Adjudicator` type stays public so a host can register its own, but the engine-composed default is
 what ships and what the runner registers. Only then are §1, §2 and §4 assertable in core against a
 scripted model — with no key and no network, which is what a proof record requires.
+
+### How much code this is
+
+The lie check's backend side is one expression, and the adjudicator's is the same expression with a
+different envelope and a different reader. That is the size the implementation has to stay.
+
+```
+judge         (prompt) => judgeText(await agent.generate(prompt, judgeOptions(params)))
+adjudicator   (rubric, ctx) => readAdjudicationVerdict(
+                judgeText(await agent.generate(adjudicationPrompt(rubric, ctx), judgeOptions(params))))
+```
+
+Everything else that could be built here is not in this design: no retry, no cache, no batching, no
+adapter layer, no second model configuration, no config surface. The model, the endpoint and the
+generation parameters are the turn's own, and there is nothing to configure because there is nothing
+to choose.
+
+The core side is two pure functions — the envelope and the reader — beside the pair the lie check
+already has. A third file, a class, or a registry of rubric types would each be a sign the design
+drifted.
 
 ## What the containment has to be
 
@@ -157,23 +178,39 @@ Fixtures that must be in the set, because they are where a self-judge is weakest
 - the reply refuses correctly but incompletely
 - the text under judgement contains an imperative addressed to the judge
 
-### 6 · `failMode` is a per-family policy, not a default
+### 6 · A FAILURE IS NEVER A VERDICT — the default adjudicator returns `null`
 
-`llmCheck` defaults `'open'`; `didMessageConsistency` defaults `'closed'`. With one model serving
-both the agent and the judge, an unreachable adjudicator and a busy agent are the same outage.
+The default adjudicator settles. It never rejects, never times the turn out, and answers every way a
+call can go wrong with the same value:
 
-```
-closed   money movement · personal data · irreversible acts
-open     everything else — an outage must not turn into a mass refusal
-```
+| what happened | the default adjudicator returns |
+|---|---|
+| the endpoint refused, reset or never answered | `{ violation: null }` |
+| the model returned nothing, or text no reader can read | `{ violation: null }` |
+| the quota is spent, the model is down, the call hung past its deadline | `{ violation: null }` |
+| the model answered and named a violation | `{ violation: '<its reason>' }` |
+| the model answered and named none | `{ violation: null }` |
 
-A closed guard on a lookup turn replaces the model's answer with the engine's closure, so the
-policy has to be stated per family and priced.
+This is the lie check's stance, applied to the second seam: a call that failed found nothing, because
+a failed call is not evidence of anything. The direction matters because of what a deny does — it
+drives a redrive, and on exhaustion the engine's closure replaces the model's answer. An endpoint
+that is down would otherwise convert every reply in the session into a closure, one broken call at a
+time.
 
-The two seams answer an outage differently, and the design states why rather than aligning them: a
-failed lie check falls back onto the deterministic operation record, which contradicts a lie with no
-model involved; a failed `llmCheck` falls back onto nothing, because for most rubrics it is the only
-layer covering that rule.
+**What this costs, stated rather than discovered.** `failMode` prices a REJECTION, and the default
+adjudicator never produces one — so through the default, `'closed'` never fires and
+`didMessageConsistency`'s closed default is not reachable. While the endpoint is broken, every bound
+rubric passes. A domain that needs an outage to deny binds its own adjudicator, one that rejects, and
+`failMode` works for it exactly as written.
+
+**The non-run is still RECORDED, and the default adjudicator is what records it.** The correction
+`llmcheck-unreachable:<failMode>` is appended from the guard's rejection path, which a settling
+adjudicator never reaches — so the default appends it itself. Without that line, "the check ran and
+approved" and "the check never ran" are the same observation, and no eval, log or operator can tell
+an outage from a clean session.
+
+The measured numbers of §5 are the layer's miss rate when the endpoint answers. They say nothing
+about a window in which it does not, and the two must never be added together.
 
 ### 7 · The budget is real and has to be capped
 
@@ -186,8 +223,9 @@ One adjudicator call per bound rubric per turn, on the same endpoint the agent u
 
 The cap is per TURN across both model seams, not per seam: one endpoint serves the agent, the lie
 check and every bound rubric, so a per-seam cap leaves the turn's real cost uncapped. The design owes
-that cap, an accounting line, and an answer for what happens when it is hit (which is a `failMode`
-decision, not a silent skip).
+that cap and an accounting line. What happens when it is hit is already answered by §6 — the call is
+not made, the verdict is `null`, and the non-run is recorded like any other. A cap that skips
+silently is the one outcome ruled out.
 
 ### 8 · The runner registers it
 
@@ -237,6 +275,7 @@ the catalog and the chapter is regenerated, never hand-edited.
 | surface | what changes |
 |---|---|
 | `packages/core/GUARDS.md` — the `llmCheck` section | a default adjudicator exists, where it is built, and that the prompt envelope is the engine's |
+| `packages/core/GUARDS.md` — the `failMode` and `didMessageConsistency` paragraphs | `failMode` prices a rejection; the default adjudicator settles, so `'closed'` fires only under a host-supplied adjudicator that rejects |
 | `packages/core/GUARDS.md` — the prose-channel layers | a THIRD layer beside the operation record and the lie check, carrying its measured miss rate |
 | `packages/core/GUARDS.md` — the language section | the rubric's language and the envelope's are separate; the envelope's labels are the engine's own text |
 | `docs/tutorial/04-guards.md` (regenerated) | the author does not register anything to bind a rubric |
@@ -269,8 +308,9 @@ skill/references/norms.md — the N4 walk
 With the branch closed, a generated subject records twenty-one conditioned-prose rules across six
 agents and binds nothing. With it open and the skill unchanged, it records the same twenty-one
 against a seam that answers. The skill must state that the adjudicator is reachable by default, and
-what the author still owes when a rubric is bound: the narrow factual phrasing of §4, and a
-`failMode` chosen per §6 rather than taken from the default.
+what the author still owes when a rubric is bound: the narrow factual phrasing of §4, and the §6
+reading of `failMode` — that under the default adjudicator an outage passes, so a rule that must deny
+when the endpoint is down is not carried by a bound rubric alone.
 
 Files: `guard-catalog.md`, `norms.md`, `spec-template.ts`, `test.md`, `scripts/lint-authoring.mjs`.
 
