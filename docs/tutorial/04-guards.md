@@ -356,7 +356,7 @@ screen and the USER writes back:
    ①  the world raises it   your tool answers requiresConfirmation and NAMES its record
    ②  or the denial does    a tool with no preview form is denied, and the denial raises the question
                             from the label your spec declared
-   ③  the engine renders    the question lands in the delivered text, between the agent's prose and the
+   ③  the engine renders    the question lands in the delivered text, between the agent prose and the
                             operation record
    ④  the user answers      their next message either carries the token or does not
    ⑤  confirmFirst allows   the act runs iff a consumed question is about THIS call
