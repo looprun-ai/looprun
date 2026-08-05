@@ -115,7 +115,7 @@ describe('loadNormsConfig — guards from data', () => {
     const cfg = {
       id: 'x', persona: 'p', tools: ['t'],
       outcomes: { NOT_FOUND: 'success', settled: 'success' },
-      guards: [{ kind: 'claimCoversRubric', id: 'r', targets: ['ORD-9'], outcome: 'success', reason: 'account for ORD-9' }],
+      guards: [{ kind: 'mustAccountFor', id: 'r', records: ['ORD-9'], outcome: 'success', reason: 'account for ORD-9' }],
     };
     expect(() => loadNormsConfig(cfg)).toThrow(NormsConfigError);
     expect(() => loadNormsConfig(cfg)).toThrow(/outcomes.*outcome map|outcome map/i);
@@ -125,10 +125,10 @@ describe('loadNormsConfig — guards from data', () => {
     const cfg = {
       id: 'x', persona: 'p', tools: ['t'],
       outcomes: { settled: 'success', bounced: 'failure' },
-      guards: [{ kind: 'claimCoversRubric', id: 'r', targets: ['ORD-9'], outcome: 'success', reason: 'account for ORD-9' }],
+      guards: [{ kind: 'mustAccountFor', id: 'r', records: ['ORD-9'], outcome: 'success', reason: 'account for ORD-9' }],
     };
     const spec = loadNormsConfig(cfg);
-    const guard = spec.guards.onReply.find((b) => b.guard.kind === 'claimCoversRubric')!.guard;
+    const guard = spec.guards.onReply.find((b) => b.guard.kind === 'mustAccountFor')!.guard;
     const ctx = { args: {}, world: {} as AgentWorld, observed: [], turnIndex: 0, userText: '', history: [], did: [{ op: 'lookup', target: 'ORD-9', outcome: 'settled' }] } as GuardCtx;
     expect(guard.check(ctx)).toBeNull();
   });

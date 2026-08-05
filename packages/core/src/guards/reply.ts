@@ -2,7 +2,7 @@
  * REPLY guards — everything that acts on the user-facing message: the always-on degeneration ARTIFACT
  * lint and the egress jargon scrub (a mutator). Neither reads reply prose for MEANING, and nothing here
  * does: a literal scan over a reply cannot see polarity, so reply coverage/polarity is the structured
- * cross-check `claimCoversRubric` (honesty.ts), and the non-empty guarantee is the engine's
+ * cross-check `mustAccountFor` (honesty.ts), and the non-empty guarantee is the engine's
  * blank-delivery floor in `finalizeReply` (a zero-width message satisfies the schema's `minLength`).
  */
 import type { ReplyMutator } from '../rules.js';

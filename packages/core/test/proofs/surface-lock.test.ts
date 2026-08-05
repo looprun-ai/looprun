@@ -38,13 +38,13 @@ const TAUGHT_03 = [
 // ── Chapter 04 (28 names = the 23 GUARD_CATALOG factories + the 5 supporting types/helpers the chapter
 //    teaches beside them; the count is pinned below). Guard kinds take no regex parameters: text
 //    judgment is an `llmCheck` question, and reply coverage is the structured cross-check
-//    (claimIsGrounded/claimIsComplete/claimCoversRubric) over `did`. `llmCheckLie` is the engine's
+//    (claimIsGrounded/claimIsComplete/mustAccountFor) over `did`. `llmCheckLie` is the engine's
 //    own lie question, bound by an author who wants the deny — never auto-installed. ──
 const TAUGHT_04 = [
   'Dim', 'Guard', 'GuardCtx', 'ObservedCall',
   'argAbsent', 'argFormat', 'argRequired', 'valueFromUser', 'canonArgs', 'confirmFirst',
   'consentRequired', 'custom', 'llmCheckLie', 'llmCheck',
-  'claimIsGrounded', 'claimIsComplete', 'claimCoversRubric',
+  'claimIsGrounded', 'claimIsComplete', 'mustAccountFor',
   'degenerationGuard', 'destructiveThrottle',
   'forbidThisTurn', 'jargonScrub', 'maxCalls',
   'noDuplicateCall', 'precondition', 'requiresBefore', 'resultInvariant',
@@ -61,7 +61,7 @@ const RIDERS = [
   // GuardCtx.judge is a Judge — the one seam every judging call rides, on the barrel so a
   // `declaration:true` consumer can name it.
   'Judge',
-  // claimIsGrounded's `outcomes` param is an OutcomeMap and claimCoversRubric's `outcome` is a
+  // claimIsGrounded's `outcomes` param is an OutcomeMap and mustAccountFor's `outcome` is a
   // CoreOutcome — both ride the barrel to stay nameable.
   'CoreOutcome', 'OutcomeMap',
 ].sort();

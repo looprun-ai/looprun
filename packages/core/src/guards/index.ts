@@ -33,7 +33,7 @@ export {
   destructiveThrottle,
 } from './confirmation.js';
 export { llmCheck, llmCheckLie } from './llm-check.js';
-export { claimIsGrounded, claimIsComplete, claimCoversRubric, isEmptyReadResult } from './honesty.js';
+export { claimIsGrounded, claimIsComplete, mustAccountFor, isEmptyReadResult } from './honesty.js';
 export { degenerationGuard, jargonScrub } from './reply.js';
 
 // The vocabulary as data + the runtime's own kind classification (read via `@looprun-ai/core/internal`).

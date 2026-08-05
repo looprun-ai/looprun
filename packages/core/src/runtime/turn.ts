@@ -564,7 +564,7 @@ const TRUTH_GUARD_KINDS: ReadonlySet<string> = new Set([
   // what happened — never salvaged, never delivered over.
   'claimIsGrounded',
   'claimIsComplete',
-  'claimCoversRubric',
+  'mustAccountFor',
 ]);
 
 /** True when this violation is purely a FORM contract, so the candidate may still be delivered. */

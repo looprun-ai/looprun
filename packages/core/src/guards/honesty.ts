@@ -473,7 +473,7 @@ function producedLabel(ctx: GuardCtx, c: ObservedCall): string | null {
 }
 
 /**
- * `claimCoversRubric` — a per-case coverage rule: every configured `target` must appear in `ctx.did`
+ * `mustAccountFor` — a per-case coverage rule: every configured `target` must appear in `ctx.did`
  * with the required outcome polarity (or any polarity when `outcome: 'any'`). Polarity is a FIELD, so a
  * reply that says "no record of BK-1 was found" can never satisfy a `success` requirement — which is
  * exactly what a literal mention scan over the prose cannot decide. The polarity test resolves through the same `OutcomeMap`
@@ -482,27 +482,27 @@ function producedLabel(ctx: GuardCtx, c: ObservedCall): string | null {
  * `outcome: 'any'` accepts any claim whose outcome RESOLVES to a known core outcome via the map (an
  * undeclared word still does not cover). Config-bound only — never auto-installed.
  */
-export function claimCoversRubric(
-  opts: { targets: string[]; outcome: CoreOutcome | 'any'; outcomes?: OutcomeMap },
+export function mustAccountFor(
+  opts: { records: string[]; outcome: CoreOutcome | 'any'; outcomes?: OutcomeMap },
   reason: string,
 ): Guard {
   // m10 at THIS door (r2/b4.3–b4.4): the eval config path builds a CONTRACT-LESS spec and threads its
   // `outcomes` block straight in here, so the spec constructor's gate never saw it — and an ungated
   // `{NOT_FOUND:'success'}` let the core word for "nothing was there" satisfy a `success` rubric, faking
   // the one field the rubric exists to make unfakeable.
-  assertNoCoreOutcomeShadow(opts.outcomes, 'claimCoversRubric');
+  assertNoCoreOutcomeShadow(opts.outcomes, 'mustAccountFor');
   return {
-    kind: 'claimCoversRubric',
+    kind: 'mustAccountFor',
     dim: 'behavior',
-    meta: { requiredStrings: [...opts.targets] },
+    meta: { requiredStrings: [...opts.records] },
     check(ctx) {
       const did = ctx.did ?? [];
-      for (const target of opts.targets) {
+      for (const record of opts.records) {
         const covered = did.some((claim) => {
           // THE BOUNDARY: the configured target must BE the claim's target, whole value — never a
           // substring and never a token inside it, so neither a `BK-10` claim nor a sentence-shaped
           // target (`'no record for BK-1'`) answers a rubric about `BK-1`.
-          if (claim.target === undefined || !targetMatchesValue(target, claim.target)) return false;
+          if (claim.target === undefined || !targetMatchesValue(record, claim.target)) return false;
           const resolved = resolveOutcome(claim.outcome ?? '', opts.outcomes);
           return opts.outcome === 'any' ? resolved !== null : resolved === opts.outcome;
         });
@@ -511,6 +511,6 @@ export function claimCoversRubric(
       return null;
     },
     prose: () =>
-      `your reply must account for ${opts.targets.join(', ')}${opts.outcome === 'any' ? '' : ` as ${opts.outcome}`}`,
+      `your reply must account for ${opts.records.join(', ')}${opts.outcome === 'any' ? '' : ` as ${opts.outcome}`}`,
   };
 }

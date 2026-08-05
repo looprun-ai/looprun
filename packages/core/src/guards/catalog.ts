@@ -181,21 +181,21 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
     example: `claimIsComplete({ writeTools: ['createBooking', 'cancelBooking'], outcomes: { settled: 'success' } })`,
   },
   {
-    name: 'claimCoversRubric',
+    name: 'mustAccountFor',
     category: 'honesty',
     hook: 'onReply',
     summary:
       'Each configured target must appear in `did` with the required outcome polarity (or any polarity when `outcome: \'any\'`).',
     whenToUse:
       'The per-case coverage rule: because polarity is a FIELD, a reply that says "no record of BK-1 was found" can never satisfy a `success` requirement again. The target must BE the claim\'s `target` by whole-value equality, so neither a claim about `BK-10` nor a sentence-shaped target answers a rubric about `BK-1`. Config-bound only (a per-case norm) — never auto-installed. Pass `\'any\'` when only the mention matters, a specific outcome when the polarity is the point.',
-    example: `claimCoversRubric({ targets: ['BK-100234'], outcome: 'success' }, 'Account for the booking you were asked about.')`,
+    example: `mustAccountFor({ records: ['BK-100234'], outcome: 'success' }, 'Account for the booking you were asked about.')`,
   },
 
   // ── reply ──────────────────────────────────────────────────────────────────
   // REPLY PROSE IS NOT A THING GUARDS READ FOR MEANING. A literal scan over a reply cannot see polarity
   // (a mention of a record id reads the same whether the reply says it was found or not found), cannot
   // see a question worded without a '?', and cannot see an ask worded outside a lemma list — so
-  // coverage and polarity are `claimCoversRubric`'s job over the structured `did`, and anything that
+  // coverage and polarity are `mustAccountFor`'s job over the structured `did`, and anything that
   // genuinely needs to weigh wording is an `llmCheck` question.
   // The NON-EMPTY guarantee is likewise not a guard: `finalizeReply` (`runtime/turn.ts`) strips
   // zero-width/format characters and routes a still-blank composed delivery (including after a mutator
@@ -286,9 +286,9 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
 export const DENY_ONLY_PROSE_KINDS: readonly string[] = [
   'forbidThisTurn',
   'maxCalls',
-  // claimCoversRubric takes an authored `reason` (the deny) but renders a DERIVED, present-tense rule
-  // (`account for <targets> as <outcome>`) — the reason string never reaches the trunk.
-  'claimCoversRubric',
+  // mustAccountFor takes an authored `reason` (the deny) but renders a DERIVED, present-tense rule
+  // (`account for <records> as <outcome>`) — the reason string never reaches the trunk.
+  'mustAccountFor',
 ];
 
 /**

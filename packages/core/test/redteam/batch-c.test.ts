@@ -13,7 +13,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   AgentSpecBase,
-  claimCoversRubric,
+  mustAccountFor,
   degenerationGuard,
   jargonScrub,
   valueFromUser,
@@ -33,23 +33,23 @@ function fixtureWorld(): AgentWorld {
 }
 
 // ── rubric coverage reads POLARITY, so the negated-mention attack has nothing to land on ──
-describe('claimCoversRubric — coverage over structured `did`', () => {
+describe('mustAccountFor — coverage over structured `did`', () => {
   // A literal mention scan cannot read polarity: scanning a reply for "refund" matches "no refund
   // possible", and no pattern fixes that. Coverage is decided over the STRUCTURED `did` instead, where
   // the outcome polarity is a FIELD, never reply prose.
   const didCtx = (did: unknown) => ({ did, observed: [], turnIndex: 0, history: [] } as unknown as GuardCtx);
 
   it('CLOSED negated-mention: a success rubric is NOT satisfied by a not_found claim on the same target', () => {
-    const g = claimCoversRubric({ targets: ['refund'], outcome: 'success' }, 'confirm the refund');
+    const g = mustAccountFor({ records: ['refund'], outcome: 'success' }, 'confirm the refund');
     // A text scan would take "no refund" for coverage of a refund; the not_found polarity is a field.
     expect(g.check(didCtx([{ op: 'refund', target: 'refund', outcome: 'not_found' }]))).not.toBeNull();
   });
   it('CLOSED false-failure: a success rubric is NOT satisfied by a failure claim', () => {
-    const g = claimCoversRubric({ targets: ['BK-1'], outcome: 'success' }, 'account for BK-1');
+    const g = mustAccountFor({ records: ['BK-1'], outcome: 'success' }, 'account for BK-1');
     expect(g.check(didCtx([{ op: 'cancel', target: 'BK-1', outcome: 'failure' }]))).not.toBeNull();
   });
   it('HONEST case still passes: a matching-polarity claim satisfies the rubric', () => {
-    const g = claimCoversRubric({ targets: ['refund'], outcome: 'success' }, 'confirm the refund');
+    const g = mustAccountFor({ records: ['refund'], outcome: 'success' }, 'confirm the refund');
     expect(g.check(didCtx([{ op: 'refund', target: 'refund', outcome: 'success' }]))).toBeNull();
   });
 });

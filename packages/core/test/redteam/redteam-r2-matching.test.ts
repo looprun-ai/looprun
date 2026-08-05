@@ -18,7 +18,7 @@ import { describe, expect, it } from 'vitest';
 import type { GuardCtx, ObservedCall } from '../../src/rules.js';
 import type { Intention } from '../../src/runtime/claims.js';
 import {
-  claimCoversRubric,
+  mustAccountFor,
   claimIsComplete,
   claimIsGrounded,
   isEmptyReadResult,
@@ -375,9 +375,9 @@ describe('§4 vetoed attempts as evidence', () => {
   });
 
   it('AMPLIFICATION: the rubric defers to grounding, so the fabricated refusal satisfies it', () => {
-    // claimCoversRubric's contract is polarity accounting, not grounding — correct in isolation. It is
+    // mustAccountFor's contract is polarity accounting, not grounding — correct in isolation. It is
     // the grounding wall above that must hold; once it is breached the rubric is breached with it.
-    const rubric = claimCoversRubric({ targets: ['BK-2'], outcome: 'any' }, 'account for BK-2');
+    const rubric = mustAccountFor({ records: ['BK-2'], outcome: 'any' }, 'account for BK-2');
     expect(rubric.check(replyCtx(laundered))).toBeNull();
   });
 
@@ -440,7 +440,7 @@ describe('§5 no_op grounds on an empty ledger', () => {
 
   it('AMPLIFICATION: the "account for BK-2" rubric is satisfied by the free no_op claim', () => {
     const did: Intention[] = [{ op: 'cancel', target: 'BK-2', outcome: 'no_op' }];
-    expect(claimCoversRubric({ targets: ['BK-2'], outcome: 'any' }, 'r').check(replyCtx({ did }))).toBeNull();
+    expect(mustAccountFor({ records: ['BK-2'], outcome: 'any' }, 'r').check(replyCtx({ did }))).toBeNull();
   });
 
   it('HELD: no_op does NOT survive contrary evidence — an effected write on the target denies it', () => {
@@ -524,12 +524,12 @@ describe('§6 emptiness and not_found', () => {
   // ── 6.4 the rubric under the new law ────────────────────────────────────────────────────────────
   it('HELD: a rubric on BK-1 is not satisfied by a claim on BK-10', () => {
     const did: Intention[] = [{ op: 'cancel', target: 'BK-10', outcome: 'success' }];
-    expect(claimCoversRubric({ targets: ['BK-1'], outcome: 'success' }, 'r').check(replyCtx({ did }))).toBeTruthy();
+    expect(mustAccountFor({ records: ['BK-1'], outcome: 'success' }, 'r').check(replyCtx({ did }))).toBeTruthy();
   });
 
   it('HELD: a SPEECH intention can never satisfy a rubric (it resolves to no core outcome)', () => {
     const did: Intention[] = [{ op: 'inform', target: 'BK-1' }];
-    expect(claimCoversRubric({ targets: ['BK-1'], outcome: 'any' }, 'r').check(replyCtx({ did }))).toBeTruthy();
+    expect(mustAccountFor({ records: ['BK-1'], outcome: 'any' }, 'r').check(replyCtx({ did }))).toBeTruthy();
   });
 
   // MECHANISM: the rubric matches its configured target as a whole-token RUN inside `claim.target`, so a
@@ -537,6 +537,6 @@ describe('§6 emptiness and not_found', () => {
   // that sentence as the entity name.
   it('BREAK 6.5: a sentence-shaped claim target must not satisfy a rubric on the id inside it', () => {
     const did: Intention[] = [{ op: 'check', target: 'no record for BK-1', outcome: 'no_op' }];
-    expect(claimCoversRubric({ targets: ['BK-1'], outcome: 'any' }, 'r').check(replyCtx({ did }))).toBeTruthy();
+    expect(mustAccountFor({ records: ['BK-1'], outcome: 'any' }, 'r').check(replyCtx({ did }))).toBeTruthy();
   });
 });

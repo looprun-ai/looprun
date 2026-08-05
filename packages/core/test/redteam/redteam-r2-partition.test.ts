@@ -36,7 +36,7 @@ import {
   type OutcomeMap,
   type Intention,
 } from '../../src/runtime/claims.js';
-import { claimCoversRubric, claimIsComplete, claimIsGrounded } from '../../src/guards/honesty.js';
+import { mustAccountFor, claimIsComplete, claimIsGrounded } from '../../src/guards/honesty.js';
 import { confirmFirst } from '../../src/guards/confirmation.js';
 import { createLedger, recordToolResult } from '../../src/runtime/ledger.js';
 import { finalizeReply } from '../../src/runtime/turn.js';
@@ -395,14 +395,14 @@ describe('b4 — the shadow law is bound to ONE call site, and the config path w
   // spec.ts:391 is the ONLY caller: `assertNoCoreOutcomeShadow(cfg.contract?.outcomes, cfg.id)`.
   // An OutcomeMap that never rides on `cfg.contract` is never gated — and `packages/eval`'s
   // `loadNormsConfig` builds exactly that shape: it constructs AgentSpecBase with NO contract and
-  // threads the config's `outcomes` block straight into `claimCoversRubric` (norms-config.ts:399→342).
+  // threads the config's `outcomes` block straight into `mustAccountFor` (norms-config.ts:399→342).
   const SHADOW: OutcomeMap = { NOT_FOUND: 'success', Success: 'failure' } as unknown as OutcomeMap;
 
   it('CLOSED b4.3 — the GUARD FACTORY gates the map, contract or no contract', () => {
     // SECURE EXPECTATION: a shadowing outcome vocabulary fails at LOAD, on every path that can bind it.
     expect(() => {
       const spec = new AgentSpecBase({ id: 'norms-agent', mode: 'A', persona: 'p', tools: ['refundOrder'] });
-      spec.addGuard('onReply', 'any', claimCoversRubric({ targets: ['ORD-9'], outcome: 'success', outcomes: SHADOW }, 'account for ORD-9'), {
+      spec.addGuard('onReply', 'any', mustAccountFor({ records: ['ORD-9'], outcome: 'success', outcomes: SHADOW }, 'account for ORD-9'), {
         layer: 'agent',
         id: 'agent:rubric',
       });
@@ -414,11 +414,11 @@ describe('b4 — the shadow law is bound to ONE call site, and the config path w
     // slip past the gate, a claim declaring the core word for "nothing was there" would cover a success
     // requirement. The map is refused where it ENTERS, so there is no guard left to satisfy …
     expect(() =>
-      claimCoversRubric({ targets: ['ORD-9'], outcome: 'success', outcomes: SHADOW }, 'account for ORD-9'),
+      mustAccountFor({ records: ['ORD-9'], outcome: 'success', outcomes: SHADOW }, 'account for ORD-9'),
     ).toThrow(/outcome map/i);
     // … and the CONTROL: with an honest DOMAIN word the rubric still resolves polarity through the map,
     // so the fix removed the lie without removing the feature.
-    const ok = claimCoversRubric({ targets: ['ORD-9'], outcome: 'success', outcomes: { settled: 'success' } }, 'account for ORD-9');
+    const ok = mustAccountFor({ records: ['ORD-9'], outcome: 'success', outcomes: { settled: 'success' } }, 'account for ORD-9');
     expect(ok.check(replyCtx({ did: [{ op: 'lookup', target: 'ORD-9', outcome: 'settled' }] }))).toBeNull();
     expect(ok.check(replyCtx({ did: [{ op: 'lookup', target: 'ORD-9', outcome: 'not_found' }] }))).not.toBeNull();
   });

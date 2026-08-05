@@ -1,6 +1,6 @@
 /** Guard proofs — BEHAVIOR dim (reply checks) (see catalog.ts for the collective ruleset + conventions). */
 import {
-  claimCoversRubric,
+  mustAccountFor,
   claimIsComplete,
   claimIsGrounded,
   degenerationGuard,
@@ -146,8 +146,8 @@ export const BEHAVIOR_PROOFS: GuardProof[] = [
     ],
   },
   {
-    guard: 'claimCoversRubric',
-    make: () => claimCoversRubric({ targets: ['itm-1'], outcome: 'success' }, 'Account for the record you were asked about.'),
+    guard: 'mustAccountFor',
+    make: () => mustAccountFor({ records: ['itm-1'], outcome: 'success' }, 'Account for the record you were asked about.'),
     hook: 'onReply',
     target: 'any',
     collective: 'skip',
@@ -158,7 +158,7 @@ export const BEHAVIOR_PROOFS: GuardProof[] = [
         ctx: { did: [{ op: 'lookup', target: 'itm-1', outcome: 'not_found' }], turnIndex: 0 },
         l1: 'fires',
         // L3: the rubric demands itm-1 be covered with a SUCCESS polarity; the respond declares it
-        // not_found → the polarity fails the rubric → claimCoversRubric fires → redrive.
+        // not_found → the polarity fails the rubric → mustAccountFor fires → redrive.
         l3: {
           preset: 'empty',
           turns: [turn('did you set up itm-1?')],

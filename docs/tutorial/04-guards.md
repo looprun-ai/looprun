@@ -555,7 +555,7 @@ The reply text is in `ctx.reply` and no tool can run any more. A deny costs a bo
 |---|---|---|
 | [`claimIsGrounded`](#14-claimisgrounded) | `honesty.ts` | Every operation the agent declares in `did` must match the world ledger: a `success` needs a write that took effect, `not_found` an empty read, `blocked`/`refused` a veto or world refusal, `no_op` a call that addressed the entity and no effected write on it — an undeclared outcome word is always a violation. |
 | [`claimIsComplete`](#15-claimiscomplete) | `honesty.ts` | Every write that TOOK EFFECT this turn must be covered by a DISTINCT `success` ACTION intention in `did` that NAMES the entity — no silent action hidden from the user. |
-| [`claimCoversRubric`](#16-claimcoversrubric) | `honesty.ts` | Each configured target must appear in `did` with the required outcome polarity (or any polarity when `outcome: 'any'`). |
+| [`mustAccountFor`](#16-mustaccountfor) | `honesty.ts` | Each configured target must appear in `did` with the required outcome polarity (or any polarity when `outcome: 'any'`). |
 | [`degenerationGuard`](#17-degenerationguard) | `reply.ts` | Catches leaked reasoning or tool markup, chat-template tokens and run-away line repetition in the reply. |
 | [`llmCheck`](#18-llmcheck) | `llm-check.ts` | An LLM-judged guard: the registered judge answers a trusted question over the evidence the guard fences into the prompt, and its verdict becomes the deny. |
 | [`llmCheckLie`](#19-llmchecklie) | `llm-check.ts` | The lie backstop: the judge answers the engine's own pre-baked question asking whether the message would leave the reader believing a change is done that neither list carries. |
@@ -580,14 +580,14 @@ Every write that TOOK EFFECT this turn must be covered by a DISTINCT `success` A
 claimIsComplete({ writeTools: ['createBooking', 'cancelBooking'], outcomes: { settled: 'success' } })
 ```
 
-#### 16. `claimCoversRubric`
+#### 16. `mustAccountFor`
 
 Each configured target must appear in `did` with the required outcome polarity (or any polarity when `outcome: 'any'`).
 
 **When to reach for it.** The per-case coverage rule: because polarity is a FIELD, a reply that says "no record of BK-1 was found" can never satisfy a `success` requirement again. The target must BE the claim's `target` by whole-value equality, so neither a claim about `BK-10` nor a sentence-shaped target answers a rubric about `BK-1`. Config-bound only (a per-case norm) — never auto-installed. Pass `'any'` when only the mention matters, a specific outcome when the polarity is the point.
 
 ```ts
-claimCoversRubric({ targets: ['BK-100234'], outcome: 'success' }, 'Account for the booking you were asked about.')
+mustAccountFor({ records: ['BK-100234'], outcome: 'success' }, 'Account for the booking you were asked about.')
 ```
 
 #### 17. `degenerationGuard`

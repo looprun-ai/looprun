@@ -14,7 +14,7 @@
 import { describe, expect, it } from 'vitest';
 import type { GuardCtx, ObservedCall } from '../src/rules.js';
 import type { OutcomeMap, Intention } from '../src/runtime/claims.js';
-import { claimIsGrounded, claimIsComplete, claimCoversRubric, isEmptyReadResult, targetMatchesValue } from '../src/guards/honesty.js';
+import { claimIsGrounded, claimIsComplete, mustAccountFor, isEmptyReadResult, targetMatchesValue } from '../src/guards/honesty.js';
 
 /** A world whose `toolCalls` carry the RESULT the ledger observed for a call (name + args keyed). */
 function worldWith(toolCalls: Array<{ name: string; args: unknown; result?: unknown; tookEffect?: boolean }>): GuardCtx['world'] {
@@ -576,42 +576,42 @@ describe('claimIsComplete', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// claimCoversRubric — polarity is a FIELD (replaces replyMentions)
+// mustAccountFor — polarity is a FIELD, so a not_found claim can never satisfy a success requirement
 // ─────────────────────────────────────────────────────────────────────────────
-describe('claimCoversRubric', () => {
-  const covers = (opts: { targets: string[]; outcome: 'success' | 'not_found' | 'any' }, did: Intention[]) =>
-    claimCoversRubric(opts, 'Account for the record you were asked about.').check(replyCtx({ did }));
+describe('mustAccountFor', () => {
+  const covers = (opts: { records: string[]; outcome: 'success' | 'not_found' | 'any' }, did: Intention[]) =>
+    mustAccountFor(opts, 'Account for the record you were asked about.').check(replyCtx({ did }));
 
   it('passes when the target appears with the required outcome', () => {
-    expect(covers({ targets: ['BK-1'], outcome: 'success' }, [{ op: 'book', target: 'BK-1', outcome: 'success' }])).toBeNull();
+    expect(covers({ records: ['BK-1'], outcome: 'success' }, [{ op: 'book', target: 'BK-1', outcome: 'success' }])).toBeNull();
   });
 
-  it('POLARITY — a not_found claim FAILS a rubric requiring success', () => {
-    expect(covers({ targets: ['BK-1'], outcome: 'success' }, [{ op: 'book', target: 'BK-1', outcome: 'not_found' }])).toBeTruthy();
+  it('POLARITY — a not_found claim FAILS a requirement of success', () => {
+    expect(covers({ records: ['BK-1'], outcome: 'success' }, [{ op: 'book', target: 'BK-1', outcome: 'not_found' }])).toBeTruthy();
   });
 
   it('POLARITY — the same not_found claim PASSES a rubric requiring not_found', () => {
-    expect(covers({ targets: ['BK-1'], outcome: 'not_found' }, [{ op: 'book', target: 'BK-1', outcome: 'not_found' }])).toBeNull();
+    expect(covers({ records: ['BK-1'], outcome: 'not_found' }, [{ op: 'book', target: 'BK-1', outcome: 'not_found' }])).toBeNull();
   });
 
   it("outcome 'any' passes on any polarity as long as the target appears", () => {
-    expect(covers({ targets: ['BK-1'], outcome: 'any' }, [{ op: 'book', target: 'BK-1', outcome: 'not_found' }])).toBeNull();
+    expect(covers({ records: ['BK-1'], outcome: 'any' }, [{ op: 'book', target: 'BK-1', outcome: 'not_found' }])).toBeNull();
   });
 
   it('a NEAR-MISS id does not satisfy the rubric: BK-1 is not covered by a BK-10 claim', () => {
-    expect(covers({ targets: ['BK-1'], outcome: 'success' }, [{ op: 'book', target: 'BK-10', outcome: 'success' }])).toBeTruthy();
-    expect(covers({ targets: ['BK-1'], outcome: 'success' }, [{ op: 'book', target: 'BK-1', outcome: 'success' }])).toBeNull();
+    expect(covers({ records: ['BK-1'], outcome: 'success' }, [{ op: 'book', target: 'BK-10', outcome: 'success' }])).toBeTruthy();
+    expect(covers({ records: ['BK-1'], outcome: 'success' }, [{ op: 'book', target: 'BK-1', outcome: 'success' }])).toBeNull();
   });
 
   it('a missing target is a violation (returns the authored reason)', () => {
-    expect(covers({ targets: ['BK-1'], outcome: 'any' }, [{ op: 'book', target: 'BK-2', outcome: 'success' }])).toBe(
+    expect(covers({ records: ['BK-1'], outcome: 'any' }, [{ op: 'book', target: 'BK-2', outcome: 'success' }])).toBe(
       'Account for the record you were asked about.',
     );
   });
 
   it('every configured target must appear', () => {
     const did: Intention[] = [{ op: 'book', target: 'BK-1', outcome: 'success' }];
-    expect(covers({ targets: ['BK-1', 'BK-2'], outcome: 'success' }, did)).toBeTruthy();
+    expect(covers({ records: ['BK-1', 'BK-2'], outcome: 'success' }, did)).toBeTruthy();
   });
 
   describe('mapping law — the same OutcomeMap claimIsGrounded/claimIsComplete use also threads here', () => {
@@ -620,11 +620,11 @@ describe('claimCoversRubric', () => {
     const reason = 'Account for the order you were asked about.';
 
     it("'settled' satisfies a rubric requiring 'success' WITH the map", () => {
-      expect(claimCoversRubric({ targets: ['ORD-7'], outcome: 'success', outcomes }, reason).check(replyCtx({ did }))).toBeNull();
+      expect(mustAccountFor({ records: ['ORD-7'], outcome: 'success', outcomes }, reason).check(replyCtx({ did }))).toBeNull();
     });
 
     it("the same 'settled' claim FAILS the same rubric WITHOUT the map (an undeclared word grounds nothing)", () => {
-      expect(claimCoversRubric({ targets: ['ORD-7'], outcome: 'success' }, reason).check(replyCtx({ did }))).toBe(reason);
+      expect(mustAccountFor({ records: ['ORD-7'], outcome: 'success' }, reason).check(replyCtx({ did }))).toBe(reason);
     });
   });
 });

@@ -440,7 +440,7 @@ export class AgentSpecBase implements AgentSpec {
     // (`claimIsComplete`). Both are TRUTH guards (never salvaged/delivered over). Gated on `writeTools`
     // because grounding a `success`/`no_op` claim is meaningless without knowing which calls MUTATE: a
     // domain with no declared writes gets no cross-check rather than a false-firing one. The polarity
-    // rubric (`claimCoversRubric`) is per-case and config-bound — never auto-installed.
+    // rubric (`mustAccountFor`) is per-case and config-bound — never auto-installed.
     const writeTools = this.contract?.writeTools;
     if (writeTools?.length) {
       this.addGuard('onReply', 'any', claimIsGrounded({ writeTools, outcomes: this.contract?.outcomes }), {

@@ -63,7 +63,7 @@ export interface GuardProof {
   /** Spec config to merge (e.g. destructiveTools / confirmMechanism / lexicon for auto kinds). */
   specTweaks?: Partial<AgentSpecConfig>;
   /** 'skip' excludes this guard from the collective super-agent. Reserved for config-bound content-contract
-   *  guards (e.g. claimCoversRubric / claimIsGrounded / claimIsComplete, which need a per-agent `did`
+   *  guards (e.g. mustAccountFor / claimIsGrounded / claimIsComplete, which need a per-agent `did`
    *  contract): an author binds those to ONE agent's specific contract — installing them agent-wide over
    *  arbitrary scenarios would fire on every unrelated turn by construction, which is a category error, not
    *  an interference finding. They are still fully proven isolated (L1 + L3). */

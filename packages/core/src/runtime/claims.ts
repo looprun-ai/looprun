@@ -134,7 +134,7 @@ function foldOutcomeKey(k: string): string {
  * EVERY guard factory that accepts an `OutcomeMap` and in the eval config loader as well — not only in
  * the spec constructor over `cfg.contract?.outcomes`. A map that does not ride on a contract still has to
  * be gated: `packages/eval`'s config path builds a contract-less spec and threads its `outcomes` block
- * straight into `claimCoversRubric`, and the three cross-check factories are public exports a host can
+ * straight into `mustAccountFor`, and the three cross-check factories are public exports a host can
  * bind directly. It is idempotent, load-time and O(keys).
  *
  * `where` names the door for the message (`AgentSpec "x"`, `claimIsGrounded`, …).

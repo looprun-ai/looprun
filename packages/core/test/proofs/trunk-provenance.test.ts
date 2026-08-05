@@ -12,7 +12,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { AgentSpecBase } from '../../src/spec.js';
-import { argRequired, claimCoversRubric, custom, forbidThisTurn, jargonScrub, maxCalls } from '../../src/guards/index.js';
+import { argRequired, mustAccountFor, custom, forbidThisTurn, jargonScrub, maxCalls } from '../../src/guards/index.js';
 import { renderScopedSpecTrunk, renderTrunkBlocks } from '../../src/trunk.js';
 import { GUARD_KIND_SUBJECT, derivePolarity, deriveSubject, foldTrunk } from '../../src/trunk-fold.js';
 import type { TrunkBlock, TrunkLine } from '../../src/trunk-fold.js';
@@ -166,7 +166,7 @@ describe('audit finding (i): an onInput rule does NOT render under a "reply" hea
   it('onInput prose gets its own INPUT section; onReply keeps the reply section', () => {
     const s = spec();
     s.addGuard('onInput', 'any', maxCalls('createItem', 2, 'too many', { scope: 'conversation' }));
-    s.addReplyCheck(claimCoversRubric({ targets: ['L-1'], outcome: 'any' }, 'account for it'));
+    s.addReplyCheck(mustAccountFor({ records: ['L-1'], outcome: 'any' }, 'account for it'));
     const blocks = renderTrunkBlocks(s, FIXTURE_DOMAIN);
     const headings = blocks.map((b) => b.heading);
     expect(headings).toContain('## Input rules (govern the incoming message — checked before you act)');
@@ -242,8 +242,8 @@ describe('regressions the refactor must not introduce', () => {
 
   it('a tool-targeted onReply guard still renders under `## Tool rules`, not `## Reply rules`', () => {
     const s = spec();
-    s.addGuard('onReply', ['createItem'], claimCoversRubric({ targets: ['L-1'], outcome: 'any' }, 'account for it'));
-    const l = trunkLines(renderTrunkBlocks(s, FIXTURE_DOMAIN)).find((x) => x.owner === 'guard:claimCoversRubric')!;
+    s.addGuard('onReply', ['createItem'], mustAccountFor({ records: ['L-1'], outcome: 'any' }, 'account for it'));
+    const l = trunkLines(renderTrunkBlocks(s, FIXTURE_DOMAIN)).find((x) => x.owner === 'guard:mustAccountFor')!;
     expect(l.section).toBe('## Tool rules');
     expect(l.hook).toBe('onReply');
   });

@@ -18,7 +18,7 @@
  * load, not run.
  */
 import { z } from 'zod';
-import { AgentSpecBase, claimCoversRubric, confirmFirst, llmCheck, llmCheckLie, precondition, requiresBefore, valueFromUser } from '@looprun-ai/core';
+import { AgentSpecBase, mustAccountFor, confirmFirst, llmCheck, llmCheckLie, precondition, requiresBefore, valueFromUser } from '@looprun-ai/core';
 import type { AgentSpec, AgentWorld, CoreOutcome, Guard, GuardCtx, OutcomeMap } from '@looprun-ai/core';
 import { assertNoCoreOutcomeShadow } from '@looprun-ai/core/internal';
 
@@ -75,12 +75,12 @@ const guardSchema = z.discriminatedUnion('kind', [
       // The structured coverage rule: every `target` must appear in the turn's `did` with the
       // required `outcome` polarity ('any' accepts any RESOLVED outcome). Polarity is a FIELD, checked
       // over structure — never over the reply prose.
-      kind: z.literal('claimCoversRubric'),
+      kind: z.literal('mustAccountFor'),
       id: z.string(),
-      targets: z.array(z.string()).min(1),
+      records: z.array(z.string()).min(1),
       outcome: z.union([z.enum(CORE_OUTCOME_VALUES), z.literal('any')]),
       // The redrive PROSE the model reads when coverage fails — a followable coverage instruction ("account
-      // for the record you were asked about"), never a world figure. Structured targets, not a text pattern,
+      // for the record you were asked about"), never a world figure. Structured records, not a text pattern,
       // are what the check keys on, so the no-regex ban is untouched.
       reason: z.string(),
     })
@@ -338,11 +338,11 @@ function installGuard(spec: AgentSpecBase, g: GuardConfig, deps: NormsDeps, outc
       // DENY-POLICY AUDIT: valueFromUser's deny names only the gated ARG (structural), no figure/role.
       spec.addGuard('preTool', [g.tool], valueFromUser({ arg: g.arg }), { layer: 'agent', id });
       return;
-    case 'claimCoversRubric':
-      // NO DENY-POLICY WRAP: claimCoversRubric's redrive text IS the author's followable coverage `reason`
-      // (a coverage instruction, never a world figure). It keys on STRUCTURE (targets × did outcome), so the
+    case 'mustAccountFor':
+      // NO DENY-POLICY WRAP: mustAccountFor's redrive text IS the author's followable coverage `reason`
+      // (a coverage instruction, never a world figure). It keys on STRUCTURE (records × did outcome), so the
       // spec-level outcomes map is threaded in to resolve a domain outcome word exactly as the engine does.
-      spec.addGuard('onReply', 'any', claimCoversRubric({ targets: g.targets, outcome: g.outcome, ...(outcomes ? { outcomes } : {}) }, g.reason), { layer: 'agent', id });
+      spec.addGuard('onReply', 'any', mustAccountFor({ records: g.records, outcome: g.outcome, ...(outcomes ? { outcomes } : {}) }, g.reason), { layer: 'agent', id });
       return;
     case 'precondition': {
       // DENY POLICY: no `reason` field exists on the config, so the deny is the author's followable

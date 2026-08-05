@@ -56,7 +56,7 @@ export {
   destructiveThrottle,
   claimIsGrounded,
   claimIsComplete,
-  claimCoversRubric,
+  mustAccountFor,
   resultInvariant,
   degenerationGuard,
   consentRequired,
@@ -78,7 +78,7 @@ export { geminiThinkingOff, pinnedDecoding } from './model-params.js';
 // Recorded in `docs/superpowers/specs/2026-07-28-tutorial-outline-final.md` §7 and the inventory §9.
 export type { SpecWarning } from './validate.js';
 export type { SamplingSettings } from './model-params.js';
-// The cross-check guards: claimIsGrounded's `outcomes` is an OutcomeMap and claimCoversRubric's
+// The cross-check guards: claimIsGrounded's `outcomes` is an OutcomeMap and mustAccountFor's
 // `outcome` is a CoreOutcome, so both ride the barrel to stay nameable by a declaration:true consumer
 // (e.g. eval's config loader building the outcome map / rubric norms).
 export type { CoreOutcome, OutcomeMap } from './runtime/claims.js';
