@@ -45,7 +45,7 @@ export const CATALOG_EXAMPLES: ReadonlyArray<Guard | ReplyMutator> = [
   /* precondition        */ precondition((world) => world.accountActive === true, 'This account is closed — you cannot act on it.', 'act on an account only while it is open'),
   /* resultInvariant     */ resultInvariant((result) => Array.isArray(result) && result.length > 0, 'The search returned nothing — say so instead of summarising it.', 'report an empty result as empty'),
   /* consentRequired     */ consentRequired({ tools: ['storeProfile'], consentOk: (world) => world.consentOnRecord === true, reason: 'No consent on record — ask for it before storing anything.' }),
-  /* confirmFirst        */ confirmFirst(),
+  /* confirmFirst        */ confirmFirst({ when: { placeHold: (args) => args.scope === 'workspace' } }),
   /* destructiveThrottle */ destructiveThrottle(['cancelBooking', 'purgeAccount'], { flagless: ['purgeAccount'] }),
   /* claimIsGrounded     */ claimIsGrounded({ writeTools: ['createBooking', 'cancelBooking'], outcomes: { settled: 'success' } }),
   /* claimIsComplete     */ claimIsComplete({ writeTools: ['createBooking', 'cancelBooking'], outcomes: { settled: 'success' } }),

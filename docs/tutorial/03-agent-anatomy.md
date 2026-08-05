@@ -156,6 +156,7 @@ Field by field, the ones that carry a rule:
 | `persona` | lives on the **spec**, never on the shared domain contract — one line, per agent, rendered as late as possible so agents of the same domain share a maximal cacheable prompt prefix |
 | `tools` | the surface, declared. ≤15, and the terminal tool (`respond`) is runtime-owned — naming it **throws** at construction |
 | `destructiveTools` | a declaration, not a comment: it *installs* the confirm-first protocol on exactly those tools. A tool here that acts on no identifiable record also needs a `destructiveLabels` entry — the words its confirmation question is built from — or it can raise no question and never runs |
+| `destructiveWhen?` | per listed tool whose destructiveness lives in its ARGUMENTS, the predicate that says which calls the protocol applies to (`{ placeHold: (args) => args.scope === 'workspace' }`). The tool stays on the list — that is what installs the protocol and what makes its label legal — and the protective branch runs untouched. A listed tool with no predicate is destructive on every call. A predicate for a tool that is not on the list **throws** at construction |
 | `destructiveLabels` | per destructive tool with no record of its own, the human-facing words the engine's confirmation question is built from (`{ emptyBin: 'empty the compost bin' }` → the user replies `CONFIRM EMPTY-THE`). Two labels whose first two words agree derive one token for two acts and **throw** at construction |
 | `behavior` | the **uncheckable residue only**. A line here that restates a rule some guard already enforces is two copies of one rule with only one wired to a check — guaranteed drift, and the spec lint flags it |
 
@@ -331,6 +332,7 @@ behavior list.
 | `languageClause` | the absolute output-language rule |
 | `exhaustionReply?` | optional: the deterministic closing SENTENCE committed when a reply still violates its checks after every correction. It must be a pure function of verified observations — structurally unable to fabricate. It supplies the sentence only: the engine always prepends the operation record it derived from the ledger |
 | `writeTools?` | **the honesty switch.** The tools that MUTATE the world, as opposed to pure reads. Naming them auto-installs the cross-check pair `claimIsGrounded` + `claimIsComplete` (chapter 04 §3): a declared action the ledger cannot match is denied, and an effected write no intention covers is denied. Leave it out and there is no cross-check at all — and nothing tells you |
+| `writeGate?` | the ONE world condition every write of the domain is refused under, stated once. It installs a `precondition` (id `minimal:writeGate`) on every agent that carries a write, so no lane can key on a third of the condition while the others key on the rest. `exempt` names the writes that must stay usable while the condition holds — a compliance hold is that shape — and each entry must be one of `writeTools`. Declaring it with no `writeTools`, or exempting a tool that is not a write, **throws** at construction |
 | `outcomes?` | optional: the domain's outcome vocabulary, mapping each non-core word an agent may declare onto one of the seven core outcomes (`{ settled: 'success' }`). The domain adds words; it never adds a way around the ledger |
 | `renderClaim?` | optional: the domain's wording (and language) for ONE verified claim LINE in the engine-rendered operation record. It receives the VERIFIED fields only — never the agent-authored `op`. Absent ⇒ a neutral English default naming the claim's `target` |
 | `engineText?` | optional: the ENGINE's own sentences — the record's closing lines and the confirmation question. A conversation held in another language declares them, per key, because the user has to READ the instruction whose token they type back. The token itself is engine-issued and is the same literal in every language |
@@ -385,6 +387,23 @@ Declaring `destructiveTools: ['cancelEvent']` installs a protocol the tool must 
 "preview first — which is what makes the engine ask — then act in a **later** turn, with
 `confirmed: true`". A tool with no `confirmed` in its schema cannot take the second step, so it previews
 forever.
+
+**The protocol binds the destructive BRANCH, not the tool name.** Some tools are destructive only on
+some of their calls — a hold over one asset protects it, the same hold over a whole workspace freezes
+everyone's work. That tool stays on `destructiveTools` (which is what installs the protocol and what
+makes its `destructiveLabels` entry legal) and declares which calls it applies to:
+
+```ts
+destructiveTools: ['placeHold'],
+destructiveWhen: { placeHold: (args) => args.scope === 'workspace' },
+destructiveLabels: { placeHold: 'freeze the entire workspace' },
+```
+
+`placeHold({scope:'asset'})` now runs with nothing asked; `placeHold({scope:'workspace'})` is gated on
+the token the user types back, and counts against the one-destructive-act-per-turn cap. The predicate
+reads the acting call's own arguments and nothing else — it says what the call IS, never who licensed
+it. A predicated tool still owes its `confirmed` flag: its destructive branch is gated on the same flag
+as any other.
 
 **Where that is caught, precisely.** The spec exposes the cross-check as
 `assertDestructiveConfirmable(toolDefs)`, and today exactly one caller runs it: chapter 05's scripted
