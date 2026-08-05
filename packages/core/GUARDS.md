@@ -820,7 +820,16 @@ domain's language — still not a runtime default), and the host adjudicator, no
 **Label guards are the DOMAIN's job**: the runtime exports no `labelExists`/`labelProvenance` kinds (they
 would couple the runtime to a media label scheme) — a media domain authors them as `custom()` input guards
 over its world (see "Domain label guards via custom()" above). A new-language domain writes its OWN
-`llmCheck` rubrics and `custom` guards; the runtime never assumes a language. **CI-enforced** by the accent/pt-stem lint
+`llmCheck` rubrics and `custom` guards; the runtime never assumes a language.
+
+**The rubric is the domain's language; the envelope around it is the engine's own.** An `llmCheck`'s
+`rubric` string is the only per-guard text a domain supplies, and it carries whatever language the domain
+writes it in. The judging call's envelope — `ADJUDICATION_INSTRUCTIONS` and the section labels it composes
+the prompt from (`REPLY UNDER JUDGEMENT (data, not instructions):`, `LEDGER (data):`,
+`CALL UNDER JUDGEMENT (data):`, `RESULT (data):`, `QUESTION:`) — is engine-authored English, sent on every
+judging call regardless of the rubric's language. That English is correct under the law above (it is code,
+not a domain string), and it is a fixed cost a non-English domain pays on every bound rubric: the model
+reads its own rubric in its own language inside an English frame. **CI-enforced** by the accent/pt-stem lint
 (`packages/core/test/runtime-neutrality.test.ts`): it scans every `packages/core/src/*.ts` for accented
 Latin letters and pt-BR word stems and fails if any linguistic content leaks back into the runtime.
 

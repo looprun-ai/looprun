@@ -122,6 +122,7 @@ export async function evaluatePreTool(
     history: ledger.history,
     attachmentsThisTurn: ledger.attachments,
     siblingCallsThisStep,
+    notes: ledger.turnCorrections,
     adjudicator: ledger.adjudicator, adjudicatorTimeoutMs: ledger.adjudicatorTimeoutMs,
   };
   for (const g of guards) {

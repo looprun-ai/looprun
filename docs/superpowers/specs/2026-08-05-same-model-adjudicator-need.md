@@ -217,11 +217,14 @@ about a window in which it does not, and the two must never be added together.
 
 ### 7 · The budget is real and has to be capped
 
-One adjudicator call per bound rubric per turn, on the same endpoint the agent uses.
+One adjudicator call per bound rubric per PAYLOAD the turn evaluates, on the same endpoint the agent
+uses — not per turn. `finalizeReply` checks the initial payload, each of the `redrives` re-generations
+(default 1), and the salvage candidate, so a bound onReply rubric runs up to `redrives + 2` times in one
+turn.
 
 ```
-92 cases × 3 reps × 2 arms × <rubrics per turn>   plus the agent's own calls
-                                                  plus the lie check's, where it is on
+92 cases × 3 reps × 2 arms × <rubrics per turn> × <redrives + 2>   plus the agent's own calls
+                                                                   plus the lie check's, where it is on
 ```
 
 The cap is per TURN across both model seams, not per seam: one endpoint serves the agent, the lie

@@ -82,9 +82,10 @@ export function llmCheck(opts: { rubric: string; failMode?: 'open' | 'closed'; d
         // RECORDED EITHER WAY. Left unrecorded, a fail-OPEN unreachable adjudicator is indistinguishable
         // from an approving one: the guard returns null, nothing is written anywhere, and no eval, log or
         // operator can tell "the check ran and approved" from "the check never ran".
-        // The turn's correction log is the runtime's own record of what happened to a reply, so the
-        // non-run goes there. (`notes` is the reply-side ctx's `turnCorrections`; a preTool-dim llmCheck
-        // has none, and the optional push is a no-op there.)
+        // The turn's correction log is the runtime's own record of what happened to a call or a reply, so
+        // the non-run goes there — `notes` is the SAME `turnCorrections` array on every hook's ctx
+        // (preTool, postTool, onReply), so a call-side dim:'run' llmCheck records its non-run exactly as
+        // a reply-side one does.
         ctx.notes?.push(`llmcheck-unreachable:${failMode}`);
         return failMode === 'closed' ? CLOSED_FAIL_DENY : null;
       }

@@ -8,7 +8,7 @@ isolated: 137/137
 collective: 32/32
 coverage: 20/20
 certified_models: n/a
-slm_canary: geminiFlashLiteThinkOff, 1 rep, 8 fixtures: 1/4 violations passed (false negative); 2/4 honest replies denied (false positives)
+slm_canary: n/a
 verdict: PASS
 suite_cmd: pnpm proofs:run
 ---
@@ -36,9 +36,12 @@ Recorded from `governance/.artifacts/proofs.json` (`scripts/proofs/run-proofs.mj
 | **all** | **339/339** |
 
 ## SLM canary (advisory)
-Report-only small-local-model run: geminiFlashLiteThinkOff, 1 rep, 8 fixtures: 1/4 violations passed (false negative); 2/4 honest replies denied (false positives).
+`n/a` — no local-weights replay was run. `slm_canary` is reserved for a local model reported as
+`(caught+clean+exhausted)/total`; the hosted-model measurement below is reported outside this field.
 
 ## Verdict & residuals
 **PASS.**
 
-_None._
+**Hosted-model residual:** `geminiFlashLiteThinkOff` is a hosted cloud model, not a local-weights canary, so
+its numbers are reported here rather than in `slm_canary`. One repetition, eight fixtures: 1 of 4 violations
+passed (false negative); 2 of 4 honest replies denied (false positives).

@@ -205,3 +205,38 @@ describe('llmCheck — async coexistence with a sync onReply guard', () => {
     expect(res.turnRecords[0].assistantFinalText).toBe(nothingDone('this is fine now'));
   });
 });
+
+describe('llmCheck — a CALL-SIDE outage is recorded on the turn, not a silent allow', () => {
+  const dead: Adjudicator = async () => {
+    throw new Error('offline');
+  };
+
+  it('a preTool llmCheck outage lands in recoveryEvents', async () => {
+    const spec = new AgentSpecBase({ id: 'pre-outage', mode: 'M', persona: 'You are the agent.', tools: ['cancelBooking'], contract: CONTRACT });
+    spec.addGuard('preTool', ['cancelBooking'], llmCheck({ rubric: 'Did the user authorise THIS cancellation?', dim: 'run' }), { id: 'agent:pre' });
+    const scripted = scriptedModel([
+      [{ tool: 'cancelBooking', args: { id: '3pm' } }],
+      [{ tool: 'respond', args: { message: 'Your 3pm booking is cancelled.', did: [{ op: 'inform' }] } }],
+    ]);
+    const res = await runSpecConversation(spec, [{ userText: 'cancel my 3pm booking' }], {
+      model: scripted.model, world: world(), toolDefs: TOOL_DEFS, adjudicator: dead,
+    });
+    expect(res.errorMsg).toBeUndefined();
+    // failMode 'open' (default): the outage never denies the call, but the non-run still lands.
+    expect(res.turnRecords[0].recoveryEvents).toContain('llmcheck-unreachable:open');
+  });
+
+  it('a postTool llmCheck outage lands in recoveryEvents', async () => {
+    const spec = new AgentSpecBase({ id: 'post-outage', mode: 'M', persona: 'You are the agent.', tools: ['cancelBooking'], contract: CONTRACT });
+    spec.addGuard('postTool', ['cancelBooking'], llmCheck({ rubric: 'Did the cancellation result look right?', dim: 'output' }), { id: 'agent:post' });
+    const scripted = scriptedModel([
+      [{ tool: 'cancelBooking', args: { id: '3pm' } }],
+      [{ tool: 'respond', args: { message: 'Your 3pm booking is cancelled.', did: [{ op: 'inform' }] } }],
+    ]);
+    const res = await runSpecConversation(spec, [{ userText: 'cancel my 3pm booking' }], {
+      model: scripted.model, world: world(), toolDefs: TOOL_DEFS, adjudicator: dead,
+    });
+    expect(res.errorMsg).toBeUndefined();
+    expect(res.turnRecords[0].recoveryEvents).toContain('llmcheck-unreachable:open');
+  });
+});

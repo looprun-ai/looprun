@@ -53,6 +53,22 @@ describe('the answer path', () => {
     expect(prompt).toContain('does it overstate?');
     expect(prompt).toMatch(/<<<\nall set\n>>>/);
   });
+
+  it('renders a domain outcome word into the LEDGER only when the caller supplies renderOpts', async () => {
+    const did = [{ op: 'cancel', target: 'Dentist 2026-03-03', outcome: 'cancelado' }];
+    const c = ctx({ reply: 'I cancelled your dentist appointment.', did });
+
+    let withoutOpts = '';
+    await defaultAdjudicator(async (p) => { withoutOpts = p; return { text: 'NONE' }; }, {})('q?', c);
+    expect(withoutOpts).toContain('No operation was carried out on this turn.');
+    expect(withoutOpts).not.toContain('Dentist 2026-03-03');
+
+    let withOpts = '';
+    await defaultAdjudicator(async (p) => { withOpts = p; return { text: 'NONE' }; }, {}, {
+      outcomes: { cancelado: 'success' },
+    })('q?', c);
+    expect(withOpts).toContain('Dentist 2026-03-03: done');
+  });
 });
 
 describe('a failure is never a verdict', () => {

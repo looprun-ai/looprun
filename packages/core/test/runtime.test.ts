@@ -1,7 +1,7 @@
 /** The governed-turn machine: ledger, preTool evaluation, and the finalizeReply pipeline. */
 import { describe, expect, it } from 'vitest';
-import { AgentSpecBase, precondition, jargonScrub, custom } from '../src/index.js';
-import type { AgentWorld, DomainContract } from '../src/index.js';
+import { AgentSpecBase, precondition, jargonScrub, custom, llmCheck } from '../src/index.js';
+import type { AgentWorld, DomainContract, Adjudicator } from '../src/index.js';
 import {
   createLedger,
   beginTurn,
@@ -126,6 +126,21 @@ describe('evaluatePreTool', () => {
     recordToolResult(ledger, 'water', { id: 7 }, { success: true });
     const dup = await evaluatePreTool(spec, ledger, world, 'water', { id: 7 });
     expect(dup.verdict).toBe('deny');
+  });
+
+  it('a preTool llmCheck records its non-run in the turn correction log — an outage is never a silent allow', async () => {
+    const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: ['water'] });
+    spec.addGuard('preTool', ['water'], llmCheck({ rubric: 'Did the user authorise THIS call?', dim: 'run' }), {
+      id: 'agent:llm',
+    });
+    const deadAdjudicator: Adjudicator = async () => {
+      throw new Error('offline');
+    };
+    const ledger = createLedger(deadAdjudicator);
+    const verdict = await evaluatePreTool(spec, ledger, fixtureWorld(), 'water', {});
+    // failMode 'open' (default): an unreachable adjudicator allows — but the non-run still lands.
+    expect(verdict.verdict).toBe('allow');
+    expect(ledger.turnCorrections).toContain('llmcheck-unreachable:open');
   });
 });
 

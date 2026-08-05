@@ -10,6 +10,7 @@
  */
 import { stepCountIs } from 'ai';
 import { adjudicationPrompt, readAdjudicationVerdict } from '@looprun-ai/core/internal';
+import type { RenderOpts } from '@looprun-ai/core/internal';
 import type { Adjudicator } from '@looprun-ai/core';
 
 /**
@@ -64,15 +65,22 @@ export const ADJUDICATOR_UNREADABLE = 'adjudicator-unreadable';
  *
  * Because it never rejects, `failMode` never fires from it. A domain that needs an outage to DENY
  * registers its own adjudicator, one that rejects, and `failMode` prices it as written.
+ *
+ * `renderOpts` carries the domain's own outcome vocabulary (`renderClaim`/`outcomes`) into the LEDGER
+ * block the envelope renders beside a reply-side judgement — the same render seam every other runtime
+ * caller of `operationRecord` threads from the contract. Absent, the LEDGER renders under the engine's
+ * neutral defaults, so a claim declared with a domain outcome word the engine does not know resolves to
+ * no operation line at all.
  */
 export function defaultAdjudicator(
   generate: (prompt: string, opts: Record<string, unknown>) => Promise<unknown>,
   modelParams: Record<string, unknown>,
+  renderOpts?: RenderOpts,
 ): Adjudicator {
   return async (rubric, ctx) => {
     let text: string;
     try {
-      text = judgeText(await generate(adjudicationPrompt(rubric, ctx), judgeOptions(modelParams)));
+      text = judgeText(await generate(adjudicationPrompt(rubric, ctx, renderOpts), judgeOptions(modelParams)));
     } catch {
       ctx.notes?.push(ADJUDICATOR_UNREACHABLE);
       return { violation: null };

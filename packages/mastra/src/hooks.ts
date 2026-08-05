@@ -91,6 +91,7 @@ export function makeGuardHooks(spec: AgentSpec, getSession: SessionAccessor, opt
         userText: ledger.currentUserText, consent: ledger.consentThisTurn, history: ledger.history,
         attachmentsThisTurn: ledger.attachments, result: output,
         did: ledger.did,
+        notes: ledger.turnCorrections,
         adjudicator: ledger.adjudicator, adjudicatorTimeoutMs: ledger.adjudicatorTimeoutMs,
       };
       const { corrections, violations } = await enforcePostTool(postGuards, gctx);

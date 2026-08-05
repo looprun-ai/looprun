@@ -1256,8 +1256,12 @@ git commit -m "docs(skill): a text judgement binds a rubric, and UNCHECKABLE is 
 
 **Gap, stated rather than hidden: §7's per-turn budget cap has no task.** A cap spanning the agent,
 the lie check and every bound rubric is a turn-machine change, not an adjudicator change — it belongs
-to a plan of its own with its own accounting line. This plan ships the adjudicator uncapped, which is
-the same footing the lie check ships on today. Raise it before merging if that is not acceptable.
+to a plan of its own with its own accounting line. This plan ships the adjudicator uncapped, and its
+exposure is NOT the same footing the lie check ships on: `withLieCheck` runs at most once per finalized
+turn, while a bound `llmCheck` rubric is re-evaluated on every payload `finalizeReply` checks — the
+initial payload, each of the `redrives` re-generations (default 1), and the salvage candidate — up to
+`redrives + 2` calls per bound rubric at the default. Raise the cap before merging if that exposure is
+not acceptable.
 
 **Type consistency:** `adjudicationPrompt(rubric, ctx, opts?)` and `readAdjudicationVerdict(text)` are
 named identically in Tasks 1, 2 and 5. `defaultAdjudicator(generate, modelParams)` is named identically

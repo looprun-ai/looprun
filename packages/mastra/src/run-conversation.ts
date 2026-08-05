@@ -109,7 +109,10 @@ export async function runSpecConversation(spec: AgentSpec, turns: TurnInput[], d
   const adjudicator: Adjudicator =
     deps.adjudicator ??
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    defaultAdjudicator((prompt, opts) => (agent.generate as any)(prompt, opts), genParams);
+    defaultAdjudicator((prompt, opts) => (agent.generate as any)(prompt, opts), genParams, {
+      renderClaim: contract?.renderClaim,
+      outcomes: contract?.outcomes,
+    });
   // A spec can be driven by a runtime that resolves nothing, and a rubric with no adjudicator is a
   // wiring bug — surface it before the first turn, never mid-turn where it reads as a model failure.
   assertAdjudicatorPresent(spec, adjudicator);

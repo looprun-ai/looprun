@@ -38,6 +38,18 @@ describe('the envelope', () => {
     expect(p).toContain('No operation was carried out on this turn.');
   });
 
+  it('renders a domain outcome word into the LEDGER line only when the caller supplies the outcome map', () => {
+    const did = [{ op: 'cancel', target: 'Dentist 2026-03-03', outcome: 'cancelado' }];
+    const withoutOpts = adjudicationPrompt('q?', ctx({ reply: 'I cancelled your dentist appointment.', did }));
+    expect(withoutOpts).toContain('No operation was carried out on this turn.');
+    expect(withoutOpts).not.toContain('Dentist 2026-03-03');
+
+    const withOpts = adjudicationPrompt('q?', ctx({ reply: 'I cancelled your dentist appointment.', did }), {
+      outcomes: { cancelado: 'success' },
+    });
+    expect(withOpts).toContain('Dentist 2026-03-03: done');
+  });
+
   it('names the tool and arguments on a call-side judgement, where there is no reply', () => {
     const p = adjudicationPrompt('q?', ctx({ tool: 'cancelBooking', args: { id: 'B-1' } }));
     expect(p).toContain('CALL UNDER JUDGEMENT (data):');
