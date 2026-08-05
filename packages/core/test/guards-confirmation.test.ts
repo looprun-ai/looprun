@@ -83,3 +83,26 @@ describe('confirmFirst — the acting call is gated, the preview is not', () => 
     expect(g.prose()).not.toContain('respond');
   });
 });
+
+describe('confirmFirst({ when }) — the call decides, not the tool', () => {
+  const when = { placeHold: (args: Record<string, unknown>) => args.scope === 'workspace' };
+
+  it('the protective branch runs with no consent at all', () => {
+    const g = confirmFirst({ when });
+    expect(g.check(ctx({ tool: 'placeHold', args: { scope: 'asset', confirmed: true }, consent: [] }))).toBeNull();
+  });
+
+  it('the destructive branch is gated exactly as an unconditional tool is', () => {
+    const g = confirmFirst({ when });
+    expect(g.check(ctx({ tool: 'placeHold', args: { scope: 'workspace', confirmed: true }, consent: [] }))).toMatch(
+      /has not confirmed this action/,
+    );
+  });
+
+  it('a tool with no predicate keeps the unconditional reading', () => {
+    const g = confirmFirst({ when });
+    expect(g.check(ctx({ tool: 'cancelBooking', args: { confirmed: true }, consent: [] }))).toMatch(
+      /has not confirmed this action/,
+    );
+  });
+});
