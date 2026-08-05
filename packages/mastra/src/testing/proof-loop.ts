@@ -38,7 +38,7 @@ export function runProofLoop(spec: AgentSpec, l3: ProofLoopCase, redrives = 1): 
 /** The `recoveryEvents` tag we expect this proof's loop case to emit ('' for a clean pass). */
 export function expectedSignal(proof: GuardProof, l3: ProofLoopCase): string {
   // The RUNTIME kind, read off the instantiated guard — not the factory name. They coincide for almost
-  // every kind, but a factory that WRAPS another (didMessageConsistency bakes a rubric into an llmCheck)
+  // every kind, but a factory that WRAPS another (llmCheckLie bakes the lie question into an llmCheck)
   // keeps the wrapped kind on purpose, because that is what the judge gate and the TRUTH/SAFETY
   // classification scan for. The recoveryEvents tag the runtime writes is `guard.kind`, so that is what
   // this must expect.

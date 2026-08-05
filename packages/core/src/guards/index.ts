@@ -9,7 +9,7 @@
  * construction: no clock, no entropy, no network, no LLM call inside a check.
  *
  * NO-REGEX LAW: NO guard FACTORY takes a RegExp-typed parameter. Text judgment — claim language,
- * confirm-language, PII/regulated/competitor patterns — is `llmCheck`'s job (a trusted rubric answered
+ * confirm-language, PII/regulated/competitor patterns — is `llmCheck`'s job (a trusted question answered
  * by the judge). Structural jobs use structural signals (`confirmFirst` /
  * `pendingConfirmMustAsk` key on the ask INTENTION a delivered `respond` declares in its `did` —
  * `hasAskIntent` / `isAskEvent` — plus args equality, never on reply text). Media/label INPUT guards are
@@ -32,7 +32,7 @@ export {
   confirmFirst,
   destructiveThrottle,
 } from './confirmation.js';
-export { llmCheck, didMessageConsistency } from './llm-check.js';
+export { llmCheck, llmCheckLie } from './llm-check.js';
 export { claimIsGrounded, claimIsComplete, claimCoversRubric, isEmptyReadResult } from './honesty.js';
 export { degenerationGuard, jargonScrub } from './reply.js';
 

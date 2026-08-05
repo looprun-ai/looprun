@@ -130,7 +130,7 @@ describe('evaluatePreTool', () => {
 
   it('a preTool llmCheck records its non-run in the turn correction log — an outage is never a silent allow', async () => {
     const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: ['water'] });
-    spec.addGuard('preTool', ['water'], llmCheck({ rubric: 'Did the user authorise THIS call?', dim: 'run' }), {
+    spec.addGuard('preTool', ['water'], llmCheck({ question: 'Did the user authorise THIS call?', dim: 'run' }), {
       id: 'agent:llm',
     });
     const deadJudge: Judge = async () => {

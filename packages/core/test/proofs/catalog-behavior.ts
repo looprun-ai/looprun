@@ -4,8 +4,8 @@ import {
   claimIsComplete,
   claimIsGrounded,
   degenerationGuard,
-  didMessageConsistency,
   llmCheck,
+  llmCheckLie,
 } from '../../src/guards/index.js';
 import type { Judge, AgentWorld } from '../../src/rules.js';
 import type { GuardProof } from '../../src/testing/index.js';
@@ -28,9 +28,9 @@ const DENY_JUDGE: Judge = async (prompt) =>
     : 'NONE';
 const ALLOW_JUDGE: Judge = async () => 'NONE';
 
-/** The scripted judge for the D6 backstop. It answers the BAKED did×message rubric from the two blocks
+/** The scripted judge for the lie backstop. It answers the BAKED lie question from the two blocks
  *  the envelope carries: prose asserting an operation, beside a turn record that names none. */
-const DID_MESSAGE_JUDGE: Judge = async (prompt) => {
+const LIE_JUDGE: Judge = async (prompt) => {
   const recordNamesNothing = prompt.includes('No operation was carried out on this turn.');
   const asserted = ['cancel', 'refund'].find((op) => fencedReply(prompt).toLowerCase().includes(op));
   return asserted && recordNamesNothing
@@ -248,10 +248,10 @@ export const BEHAVIOR_PROOFS: GuardProof[] = [
     guard: 'llmCheck',
     // The case-35 shape: "did the operator's yes license THIS act?" — a two-acts-one-yes judgement that
     // structure alone (observed calls) cannot make. failMode default 'open'.
-    make: () => llmCheck({ rubric: "Did the user, in an earlier turn, explicitly authorise THIS exact action — not merely a related one?" }),
+    make: () => llmCheck({ question: "Did the user, in an earlier turn, explicitly authorise THIS exact action — not merely a related one?" }),
     hook: 'onReply',
     target: 'any',
-    // Like the content-contract reply guards: an llmCheck's rubric + judge are bound to ONE
+    // Like the content-contract reply guards: an llmCheck's question + judge are bound to ONE
     // agent's contract; installing it collective-wide over arbitrary scenarios (with one shared scripted
     // judge) is a category error, not an interference finding. Fully proven ISOLATED (L1 + L3).
     collective: 'skip',
@@ -296,16 +296,16 @@ export const BEHAVIOR_PROOFS: GuardProof[] = [
     ],
   },
 
-  // ── didMessageConsistency (collective:'skip' — an llmCheck, so the judge is agent-specific) ──
+  // ── llmCheckLie (collective:'skip' — an llmCheck, so the judge is agent-specific) ──
   {
-    guard: 'didMessageConsistency',
-    // The D6 backstop: its rubric is BAKED, so the only thing a proof scripts is the judge that
-    // answers it. DID_MESSAGE_JUDGE compares the operations the MESSAGE asserts against the ones `did`
-    // carries — the judgement the rubric asks for, made deterministic.
-    make: () => didMessageConsistency(),
+    guard: 'llmCheckLie',
+    // The lie backstop: its question is BAKED, so the only thing a proof scripts is the judge that
+    // answers it. LIE_JUDGE compares the operations the MESSAGE asserts against the ones `did`
+    // carries — the judgement the question asks, made deterministic.
+    make: () => llmCheckLie(),
     hook: 'onReply',
     target: 'any',
-    // Same ruling as `llmCheck` (it IS one): a rubric + judge are bound to one agent's
+    // Same ruling as `llmCheck` (it IS one): a question + judge are bound to one agent's
     // contract, so installing it collective-wide over arbitrary scenarios is a category error.
     collective: 'skip',
     cases: [
@@ -315,7 +315,7 @@ export const BEHAVIOR_PROOFS: GuardProof[] = [
         ctx: {
           reply: 'I have cancelled the booking for you.',
           did: [{ op: 'inform' }], // declared: nothing happened. Prose: an act happened.
-          judge: DID_MESSAGE_JUDGE,
+          judge: LIE_JUDGE,
           turnIndex: 0,
           observed: [],
         },
@@ -327,7 +327,7 @@ export const BEHAVIOR_PROOFS: GuardProof[] = [
             [{ tool: 'respond', args: { message: 'I have cancelled the booking for you.', did: [{ op: 'inform' }] } }],
             [{ text: 'I have not cancelled anything — shall I go ahead?' }],
           ],
-          judge: DID_MESSAGE_JUDGE,
+          judge: LIE_JUDGE,
           expect: 'redrive',
         },
       },
@@ -337,7 +337,7 @@ export const BEHAVIOR_PROOFS: GuardProof[] = [
         ctx: {
           reply: 'The cancellation is done.',
           did: [{ op: 'cancel', target: 'BK-1', outcome: 'success' }],
-          judge: DID_MESSAGE_JUDGE,
+          judge: LIE_JUDGE,
           turnIndex: 0,
           observed: [],
         },
@@ -346,7 +346,7 @@ export const BEHAVIOR_PROOFS: GuardProof[] = [
           preset: 'empty',
           turns: [turn('cancel my 3pm booking')],
           script: [[{ tool: 'respond', args: { message: 'The cancellation is done.', did: [{ op: 'cancel', target: 'BK-1', outcome: 'success' }] } }]],
-          judge: DID_MESSAGE_JUDGE,
+          judge: LIE_JUDGE,
           expect: 'pass',
         },
       },
@@ -359,7 +359,7 @@ export const BEHAVIOR_PROOFS: GuardProof[] = [
         l1: 'fires',
       },
       {
-        // The rubric judges MISMATCH only — a message that asserts no operation at all cannot mismatch
+        // The question judges MISMATCH only — a message that asserts no operation at all cannot mismatch
         // one, so a pure speech turn is silent. (The availability opt-out `failMode:'open'` is proven in
         // `llm-check.test.ts`; a per-case guard override is not part of the proof shape.)
         name: 'a message asserting no operation beside a speech-only did → silent',
@@ -367,7 +367,7 @@ export const BEHAVIOR_PROOFS: GuardProof[] = [
         ctx: {
           reply: 'Happy to help — anything else?',
           did: [{ op: 'greet' }],
-          judge: DID_MESSAGE_JUDGE,
+          judge: LIE_JUDGE,
           turnIndex: 0,
           observed: [],
         },

@@ -104,7 +104,7 @@ export type { SessionRecord } from './runtime/session-record.js';
 // THE LIE CHECK and the rewrite it gates. `Judge` rides finalizeReply's signature, so a
 // `declaration: true` consumer can name the callback it supplies; the prompts and the pass itself are
 // exported so the gated measurement suite exercises the SHIPPED instrument rather than a copy of it.
-export { runLieCheck, isChecked, lieCheckPrompt, rewritePrompt, readLieVerdict, TURN_HEADING } from './runtime/lie-check.js';
+export { runLieCheck, isChecked, LIE_QUESTION, rewritePrompt, TURN_HEADING } from './runtime/lie-check.js';
 export type { LieCheckInput, LieCheckOutcome } from './runtime/lie-check.js';
 export type { Judge } from './rules.js';
 

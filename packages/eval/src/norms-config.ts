@@ -18,7 +18,7 @@
  * load, not run.
  */
 import { z } from 'zod';
-import { AgentSpecBase, claimCoversRubric, confirmFirst, didMessageConsistency, llmCheck, precondition, requiresBefore, valueFromUser } from '@looprun-ai/core';
+import { AgentSpecBase, claimCoversRubric, confirmFirst, llmCheck, llmCheckLie, precondition, requiresBefore, valueFromUser } from '@looprun-ai/core';
 import type { AgentSpec, AgentWorld, CoreOutcome, Guard, GuardCtx, OutcomeMap } from '@looprun-ai/core';
 import { assertNoCoreOutcomeShadow } from '@looprun-ai/core/internal';
 
@@ -116,11 +116,11 @@ const guardSchema = z.discriminatedUnion('kind', [
     .strict(),
   z
     .object({
-      // The did × message BACKSTOP. Its rubric is BAKED into the engine factory, so there is no
-      // `rubric` field here — a domain opts IN to the engine's question, it does not rewrite it. Always
+      // The lie BACKSTOP. Its question is BAKED into the engine factory, so there is no `rubric`
+      // field here — a domain opts IN to the engine's question, it does not rewrite it. Always
       // onReply and always global (it judges the delivered payload as a whole), so no `hook`/`tools`
       // either. Available, never auto-installed: an agent gets it only by naming it in its norms.
-      kind: z.literal('didMessageConsistency'),
+      kind: z.literal('llmCheckLie'),
       id: z.string(),
       // Unreachable judge ⇒ open (allow) or closed (deny). Optional, and this kind DEFAULTS TO
       // `'closed'` — UNLIKE the bare `llmCheck` above, which defaults open. It is the consent backstop
@@ -357,17 +357,17 @@ function installGuard(spec: AgentSpecBase, g: GuardConfig, deps: NormsDeps, outc
       // hook → dim: onReply is a behavior verdict, preTool a run veto (the DIM_HOOKS matrix).
       const dim = g.hook === 'preTool' ? 'run' : 'behavior';
       const target = g.tools === 'any' ? 'any' : g.tools;
-      spec.addGuard(g.hook, target, llmCheck({ rubric: g.rubric, dim, ...(g.failMode ? { failMode: g.failMode } : {}) }), {
+      spec.addGuard(g.hook, target, llmCheck({ question: g.rubric, dim, ...(g.failMode ? { failMode: g.failMode } : {}) }), {
         layer: 'agent',
         id,
       });
       return;
     }
-    case 'didMessageConsistency': {
+    case 'llmCheckLie': {
       // Same no-deny-policy-wrap reasoning as `llmCheck` (it IS one): the deny is the judge's
-      // verdict. The rubric is the engine's, so the config chooses only WHETHER to install it and what an
+      // verdict. The question is the engine's, so the config chooses only WHETHER to install it and what an
       // unreachable judge means.
-      spec.addGuard('onReply', 'any', didMessageConsistency(g.failMode ? { failMode: g.failMode } : undefined), {
+      spec.addGuard('onReply', 'any', llmCheckLie(g.failMode ? { failMode: g.failMode } : undefined), {
         layer: 'agent',
         id,
       });

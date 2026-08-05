@@ -37,14 +37,13 @@ const TAUGHT_03 = [
 ];
 // ── Chapter 04 (28 names = the 23 GUARD_CATALOG factories + the 5 supporting types/helpers the chapter
 //    teaches beside them; the count is pinned below). Guard kinds take no regex parameters: text
-//    judgment is an `llmCheck` rubric, and reply coverage is the structured cross-check
-//    (claimIsGrounded/claimIsComplete/claimCoversRubric) over `did`. `didMessageConsistency` is the
-//    AVAILABLE, never auto-installed did×message backstop: a pre-baked llmCheck rubric a domain
-//    binds where the stakes justify it. ──
+//    judgment is an `llmCheck` question, and reply coverage is the structured cross-check
+//    (claimIsGrounded/claimIsComplete/claimCoversRubric) over `did`. `llmCheckLie` is the engine's
+//    own lie question, bound by an author who wants the deny — never auto-installed. ──
 const TAUGHT_04 = [
   'Dim', 'Guard', 'GuardCtx', 'ObservedCall',
   'argAbsent', 'argFormat', 'argRequired', 'valueFromUser', 'canonArgs', 'confirmFirst',
-  'consentRequired', 'custom', 'didMessageConsistency', 'llmCheck',
+  'consentRequired', 'custom', 'llmCheckLie', 'llmCheck',
   'claimIsGrounded', 'claimIsComplete', 'claimCoversRubric',
   'degenerationGuard', 'destructiveThrottle',
   'forbidThisTurn', 'jargonScrub', 'maxCalls',
@@ -108,7 +107,7 @@ const INTERNAL = [
   // gated measurement suite exercises the shipped instrument rather than a copy of it (`Judge` itself
   // is public, and rides finalizeReply's signature).
   'Judge', 'runLieCheck', 'LieCheckInput', 'LieCheckOutcome', 'isChecked',
-  'lieCheckPrompt', 'rewritePrompt', 'readLieVerdict', 'TURN_HEADING',
+  'LIE_QUESTION', 'rewritePrompt', 'TURN_HEADING',
   // The judge envelope: the prompt every judging call receives, and how its answer is read.
   'judgePrompt', 'readJudgeVerdict', 'JUDGE_INSTRUCTIONS', 'JUDGE_UNREACHABLE', 'JUDGE_UNREADABLE',
   'USER_TURN_WINDOW',

@@ -196,7 +196,7 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
   // (a mention of a record id reads the same whether the reply says it was found or not found), cannot
   // see a question worded without a '?', and cannot see an ask worded outside a lemma list — so
   // coverage and polarity are `claimCoversRubric`'s job over the structured `did`, and anything that
-  // genuinely needs to weigh wording is an `llmCheck` rubric.
+  // genuinely needs to weigh wording is an `llmCheck` question.
   // The NON-EMPTY guarantee is likewise not a guard: `finalizeReply` (`runtime/turn.ts`) strips
   // zero-width/format characters and routes a still-blank composed delivery (including after a mutator
   // rewrite) to the non-empty engine-derived exhaustion closure. Schema cannot decide it — a zero-width
@@ -208,7 +208,7 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
     hook: 'onReply',
     summary: 'Catches leaked reasoning or tool markup, chat-template tokens and run-away line repetition in the reply.',
     whenToUse:
-      'The reply is broken as an ARTIFACT rather than wrong as a claim — think blocks, tool-call markup or the same line five times over. No honesty kind fires on that, because nothing was asserted; this one catches the weak-model failure class every domain shares. Always on (auto-installed); it takes no parameters — language-specific judgments such as self-narration are text judgment, so an author who wants one binds an `llmCheck` rubric.',
+      'The reply is broken as an ARTIFACT rather than wrong as a claim — think blocks, tool-call markup or the same line five times over. No honesty kind fires on that, because nothing was asserted; this one catches the weak-model failure class every domain shares. Always on (auto-installed); it takes no parameters — language-specific judgments such as self-narration are text judgment, so an author who wants one binds an `llmCheck` question.',
     example: `degenerationGuard()`,
   },
   {
@@ -237,19 +237,19 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
     name: 'llmCheck',
     category: 'llm-check',
     hook: 'onReply',
-    summary: 'An LLM-judged guard: the registered judge answers a trusted rubric over the evidence the guard fences into the prompt, and its verdict becomes the deny.',
+    summary: 'An LLM-judged guard: the registered judge answers a trusted question over the evidence the guard fences into the prompt, and its verdict becomes the deny.',
     whenToUse:
       'The judgement genuinely needs a model — "did the operator\'s yes license THIS act?", "does this reply state an outcome nothing accounts for?" — a claim no arg/observed pattern captures. Use it where structure alone cannot decide; a decidable structural signal always prefers its own kind. THE QUESTION MUST BE ANSWERABLE FROM THE ENVELOPE: every hook is shown the person\'s own last eight turns, and beside them onReply gets the reply, the turn\'s operation record and the operations earlier turns completed; preTool gets the call and its arguments; postTool gets the call and its result. Nothing the AGENT said is in it — no persona, no role-tagged turns, no prior replies — so a question about the agent\'s past wording has no evidence to read. When the window cuts older turns it says so and rules the omission out as evidence, so an authorisation the judge cannot see never reads as a violation. The judge is registered on the runtime options, never in config. `runSpecConversation` resolves one from the turn\'s own model when the host supplies none; `LoopRunAgent` and `compileSpec` resolve nothing, so a spec bound for either registers one or fails loud at construction. `failMode` prices a REJECTED judge, and EVERY judge rejects — the resolved default included, since it carries the call and lets a refused endpoint, a spent quota or a hung call reach the guard. The guard records `judge-unreachable` beside `llmcheck-unreachable:<failMode>` and then applies the mode: `\'open\'` (the default) allows, `\'closed\'` denies every candidate until the endpoint returns. A call that ANSWERS without reaching a verdict is the other case, and it never denies: an empty answer records `judge-unreachable`, an illegible one records `judge-unreadable`, and both allow whatever the mode.',
-    example: `llmCheck({ rubric: 'Did the user, in an earlier turn, explicitly authorise THIS exact action?', failMode: 'closed' })`,
+    example: `llmCheck({ question: 'Did the user, in an earlier turn, explicitly authorise THIS exact action?', failMode: 'closed' })`,
   },
   {
-    name: 'didMessageConsistency',
+    name: 'llmCheckLie',
     category: 'llm-check',
     hook: 'onReply',
-    summary: 'The `did` × `message` backstop: the judge answers a pre-baked rubric asking whether the message asserts an operation the declaration does not carry, or contradicts a declared intention.',
+    summary: 'The lie backstop: the judge answers the engine\'s own pre-baked question asking whether the message would leave the reader believing a change is done that neither list carries.',
     whenToUse:
-      'The deterministic cross-check grounds the DECLARATION against the ledger, but the message beside it is free prose — an agent can declare an honest `inform` and still write that it completed something. Install this where the stakes justify a model call per reply (money, health). It is NOT auto-installed and it is never the primary guarantee: the structured cross-check grounds the declaration, and the operation record ships under every delivery so a claim the turn cannot back arrives contradicted. This is a third layer over both. It carries `failMode: \'closed\'`, unlike a bare `llmCheck`, and that denies on a REJECTED judge — the resolved default included. THE AVAILABILITY COST IS REAL: while the judging endpoint is down every candidate reply is denied, so each turn spends its redrives and then delivers the engine-derived closure ("I could not complete this safely — nothing was changed.") in place of the model\'s own prose. Every non-run is recorded, `judge-unreachable` beside `llmcheck-unreachable:closed`. An author who would rather ship the model\'s prose than hold the guarantee opts out explicitly with `didMessageConsistency({ failMode: \'open\' })`.',
-    example: `didMessageConsistency()`,
+      'The structured cross-check grounds the DECLARATION against the ledger, but the message beside it is free prose — an agent can declare an honest `inform` and still write that it completed something. Install this where the stakes justify a model call per reply (money, health). It is NOT auto-installed and it is never the primary guarantee: the structured cross-check grounds the declaration, and the operation record ships under every delivery so a claim the turn cannot back arrives contradicted. This is a third layer over both. It carries `failMode: \'closed\'`, unlike a bare `llmCheck`, and that denies on a REJECTED judge — the resolved default included. THE AVAILABILITY COST IS REAL: while the judging endpoint is down every candidate reply is denied, so each turn spends its redrives and then delivers the engine-derived closure ("I could not complete this safely — nothing was changed.") in place of the model\'s own prose. Every non-run is recorded, `judge-unreachable` beside `llmcheck-unreachable:closed`. An author who would rather ship the model\'s prose than hold the guarantee opts out explicitly with `llmCheckLie({ failMode: \'open\' })`.',
+    example: `llmCheckLie()`,
   },
 
   // ── custom ─────────────────────────────────────────────────────────────────
@@ -305,7 +305,7 @@ export const CONFIRM_CLASS_KINDS: readonly string[] = ['confirmFirst', 'destruct
  * also passing `prose`.
  *
  * EMPTY: no guard kind denies on a business-owned pattern. Text judgment is `llmCheck`'s job, and an
- * `llmCheck` carries its whole rubric as prose, so it needs no separate seam. The registry is the seam
+ * `llmCheck` carries its whole question as prose, so it needs no separate seam. The registry is the seam
  * the Q12 lint reads; a regex-free seam that still needs companion prose adds its row here.
  */
 export const ARMED_SEAMS: readonly { kind: string; seam: string; prose: string }[] = [];

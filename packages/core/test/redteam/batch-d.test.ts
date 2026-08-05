@@ -33,7 +33,7 @@ describe('D1 — llmCheck failMode:open + unreachable judge = forbidden reply DE
   it('judge throws → open allows → violating reply reaches the user through finalizeReply', async () => {
     const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: ['save'], contract: CONTRACT });
     const judge: Judge = async () => { throw new Error('model offline'); };
-    spec.addGuard('onReply', 'any', llmCheck({ rubric: 'Does the reply claim something the world never did?' }), { id: 'agent:honesty' });
+    spec.addGuard('onReply', 'any', llmCheck({ question: 'Does the reply claim something the world never did?' }), { id: 'agent:honesty' });
     const ledger = createLedger(judge);
     const forbidden = 'Done! I transferred $5,000 to the account.'; // false success — world did nothing
     const out = await finalizeReply(spec, CONTRACT, world(), ledger, P(forbidden), async () => P(forbidden), 1);
@@ -49,7 +49,7 @@ describe('D2 — an answer that reaches no verdict allows even in failMode:close
     // `failMode` prices a REJECTION. This call answered, so nothing rejected and the catch never runs.
     const notes: string[] = [];
     const judge: Judge = async () => 'BLOCKED: unauthorised';
-    const reason = await llmCheck({ rubric: 'q?', failMode: 'closed' }).check(baseCtx({ judge, notes }));
+    const reason = await llmCheck({ question: 'q?', failMode: 'closed' }).check(baseCtx({ judge, notes }));
     expect(reason).toBeNull();
     expect(notes).toEqual([JUDGE_UNREADABLE]);
   });
@@ -57,14 +57,14 @@ describe('D2 — an answer that reaches no verdict allows even in failMode:close
   it('an EMPTY answer → closed does NOT deny — allow, recorded UNREACHABLE', async () => {
     const notes: string[] = [];
     const judge: Judge = async () => '';
-    expect(await llmCheck({ rubric: 'q?', failMode: 'closed' }).check(baseCtx({ judge, notes }))).toBeNull();
+    expect(await llmCheck({ question: 'q?', failMode: 'closed' }).check(baseCtx({ judge, notes }))).toBeNull();
     expect(notes).toEqual([JUDGE_UNREACHABLE]);
   });
 
   it('a VIOLATION line with no reason after it → checkReply sees no violation, and the reply ships', async () => {
     const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: ['save'], contract: CONTRACT });
     const judge: Judge = async () => 'VIOLATION:';
-    spec.addGuard('onReply', 'any', llmCheck({ rubric: 'q?', failMode: 'closed' }), { id: 'agent:honesty' });
+    spec.addGuard('onReply', 'any', llmCheck({ question: 'q?', failMode: 'closed' }), { id: 'agent:honesty' });
     const ledger = createLedger(judge);
     const forbidden = 'Done! Money moved.';
     const out = await finalizeReply(spec, CONTRACT, world(), ledger, P(forbidden), async () => P(forbidden), 1);
@@ -75,8 +75,8 @@ describe('D2 — an answer that reaches no verdict allows even in failMode:close
 
   it('a judge that THROWS → failMode governs (closed denies, open allows) — this one HOLDS', async () => {
     const judge: Judge = async () => { throw new Error('offline'); };
-    expect(await llmCheck({ rubric: 'q?', failMode: 'closed' }).check(baseCtx({ judge }))).not.toBeNull();
-    expect(await llmCheck({ rubric: 'q?', failMode: 'open' }).check(baseCtx({ judge }))).toBeNull();
+    expect(await llmCheck({ question: 'q?', failMode: 'closed' }).check(baseCtx({ judge }))).not.toBeNull();
+    expect(await llmCheck({ question: 'q?', failMode: 'open' }).check(baseCtx({ judge }))).toBeNull();
   });
 });
 
@@ -184,7 +184,7 @@ describe('D7 — checkReply RE-RUNS on the regenerated reply, so a redrive canno
     const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: ['save'], contract: CONTRACT });
     let calls = 0;
     const judge: Judge = async () => 'VIOLATION: still dishonest';
-    spec.addGuard('onReply', 'any', llmCheck({ rubric: 'honest?' }), { id: 'agent:honesty' });
+    spec.addGuard('onReply', 'any', llmCheck({ question: 'honest?' }), { id: 'agent:honesty' });
     const ledger = createLedger(judge);
     const out = await finalizeReply(spec, CONTRACT, world(), ledger, P('lie v1'), async () => { calls++; return P('lie v2'); }, 1);
     expect(calls).toBe(1);

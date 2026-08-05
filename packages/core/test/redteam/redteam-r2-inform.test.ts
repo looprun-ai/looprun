@@ -3,7 +3,7 @@
  *
  * CHARTER: the design's own guarantee is that prose misuse is NOT deterministically blocked — it is a
  * forcing function (`did` is mandatory, so an operational lie becomes a deliberate self-contradiction)
- * plus an OPTIONAL `didMessageConsistency` llmCheck. That residual is DOCUMENTED and is not the target.
+ * plus an OPTIONAL `llmCheckLie` backstop. That residual is DOCUMENTED and is not the target.
  * The target is the DETERMINISTIC HALF: every route by which a real effected write reaches the user
  * unreported, by which `message` is delivered WITHOUT the engine-verified operation report, or by which
  * the mandatory-intention forcing function itself is defeated.
@@ -17,7 +17,7 @@
  * Findings mirror: .superpowers/sdd/2026-08-03-mandatory-intention/redteam-r2-a.md
  */
 import { describe, expect, it } from 'vitest';
-import { AgentSpecBase, custom, didMessageConsistency } from '../../src/index.js';
+import { AgentSpecBase, custom, llmCheckLie } from '../../src/index.js';
 import type { AgentWorld, DomainContract } from '../../src/index.js';
 import type { Judge, GuardCtx, ObservedCall } from '../../src/rules.js';
 import { claimIsComplete, claimIsGrounded } from '../../src/guards/honesty.js';
@@ -404,21 +404,17 @@ describe('VECTOR 7 — prose lie + speech-only did on a read-only turn [CLOSED]'
 });
 
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
-// VECTOR 8 — the OPTIONAL backstop fails OPEN by default  ***BREAK***
+// VECTOR 8 — the OPTIONAL backstop's fail mode
 //
-// MECHANISM: `didMessageConsistency()` delegates to `llmCheck`, whose `failMode` defaults to `'open'`.
-// A judge that throws, rejects or times out is caught and returns `null` — ALLOW. The
-// fail-loud gate (`assertJudgePresent`) only catches a MISSING judge at conversation start,
-// so a registered-but-broken one (network, quota, model outage, a 30s hang) silently deletes the ONE
-// backstop the design names for the prose residual — and nothing is written to `turnCorrections`, so
-// no eval, log or operator can tell the difference between "the backstop ran and approved" and "the
-// backstop never ran".
-//
-// FIX DIRECTION: `didMessageConsistency` is an honesty backstop, not a nicety — default it to
-// `failMode:'closed'`; at minimum record a `llmcheck-unreachable:<kind>` correction so a silent
-// non-run is observable.
+// MECHANISM: `llmCheckLie()` delegates to `llmCheck`, but defaults `failMode` to `'closed'` — a judge
+// that throws, rejects or times out DENIES, never ALLOWS. The fail-loud gate (`assertJudgePresent`)
+// only catches a MISSING judge at conversation start; the closed default is what keeps a
+// registered-but-broken one (network, quota, model outage, a 30s hang) from silently deleting the ONE
+// backstop the design names for the prose residual. Every non-run is written to `turnCorrections`, so
+// an eval, log or operator can always tell "the backstop ran and approved" from "the backstop never
+// ran".
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
-describe('VECTOR 8 — didMessageConsistency fail mode [CLOSED]', () => {
+describe('VECTOR 8 — llmCheckLie fail mode [CLOSED]', () => {
   const broken: Judge = async () => {
     throw new Error('judge unreachable');
   };
@@ -429,7 +425,7 @@ describe('VECTOR 8 — didMessageConsistency fail mode [CLOSED]', () => {
   it('CLOSED: an unreachable judge denies by default, and the non-run is recorded', async () => {
     const contract = contractOf({ writeTools: ['refundOrder'] });
     const spec = specOf(contract, ['refundOrder']);
-    spec.addGuard('onReply', 'any', didMessageConsistency(), { id: 'agent:didMessageConsistency' });
+    spec.addGuard('onReply', 'any', llmCheckLie(), { id: 'agent:llmCheckLie' });
     const ledger = createLedger(broken);
     beginTurn(ledger, 0, 'refund my order');
     const world = worldWith([]);
@@ -446,7 +442,7 @@ describe('VECTOR 8 — didMessageConsistency fail mode [CLOSED]', () => {
   it('CONTROL: the explicit `open` opt-in still delivers — and still records the non-run', async () => {
     const contract = contractOf({ writeTools: ['refundOrder'] });
     const spec = specOf(contract, ['refundOrder']);
-    spec.addGuard('onReply', 'any', didMessageConsistency({ failMode: 'open' }), { id: 'agent:didMessageConsistency' });
+    spec.addGuard('onReply', 'any', llmCheckLie({ failMode: 'open' }), { id: 'agent:llmCheckLie' });
     const ledger = createLedger(broken);
     beginTurn(ledger, 0, 'refund my order');
     const world = worldWith([]);
@@ -459,7 +455,7 @@ describe('VECTOR 8 — didMessageConsistency fail mode [CLOSED]', () => {
   it('CONTROL: an explicit failMode "closed" behaves identically to the default', async () => {
     const contract = contractOf({ writeTools: ['refundOrder'] });
     const spec = specOf(contract, ['refundOrder']);
-    spec.addGuard('onReply', 'any', didMessageConsistency({ failMode: 'closed' }), { id: 'agent:didMessageConsistency' });
+    spec.addGuard('onReply', 'any', llmCheckLie({ failMode: 'closed' }), { id: 'agent:llmCheckLie' });
     const ledger = createLedger(broken);
     beginTurn(ledger, 0, 'refund my order');
     const world = worldWith([]);
@@ -473,11 +469,11 @@ describe('VECTOR 8 — didMessageConsistency fail mode [CLOSED]', () => {
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
 // VECTOR 9 — does the backstop actually SEE both halves of the payload?
 //
-// A rubric asking "does the message assert an operation `did` does not carry?" is worthless if the
-// PROMPT the judge receives carries only one of the two. `checkReply` seats `reply` (the MESSAGE, not
-// the composed delivery — correct: the rubric judges the agent's prose) and `did` (the candidate
-// payload's, re-seated per redrive round by `checkPayload`), and the guard renders both into the
-// envelope: the prose fenced as data, the declaration as the turn's operation record.
+// A question asking "would the reader believe a change is done that neither list carries?" is
+// worthless if the PROMPT the judge receives carries only one of the two. `checkReply` seats `reply`
+// (the MESSAGE, not the composed delivery — correct: the question judges the agent's prose) and `did`
+// (the candidate payload's, re-seated per redrive round by `checkPayload`), and the guard renders both
+// into the envelope: the prose fenced as data, the declaration as the turn's operation record.
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
 describe('VECTOR 9 — the judging prompt carries did AND message [HELD]', () => {
   it('HELD: both halves reach the judge, and the record tracks the candidate payload', async () => {
@@ -488,7 +484,7 @@ describe('VECTOR 9 — the judging prompt carries did AND message [HELD]', () =>
     };
     const contract = contractOf({ writeTools: ['refundOrder'] });
     const spec = specOf(contract, ['refundOrder']);
-    spec.addGuard('onReply', 'any', didMessageConsistency(), { id: 'agent:didMessageConsistency' });
+    spec.addGuard('onReply', 'any', llmCheckLie(), { id: 'agent:llmCheckLie' });
     const ledger = createLedger(spy);
     beginTurn(ledger, 0, 'refund my order');
     const world = worldWith([]);
@@ -500,8 +496,8 @@ describe('VECTOR 9 — the judging prompt carries did AND message [HELD]', () =>
     // the DECLARATION, rendered as the turn record — a speech-only `did` names no operation
     expect(seen[0]).toContain(TURN_HEADING);
     expect(seen[0]).toContain(RECORD_CLOSURE_NONE);
-    // and the baked rubric is the question being asked
-    expect(seen[0]).toContain('`did`');
+    // and the engine's own lie question is the question being asked
+    expect(seen[0]).toContain('believing');
   });
 });
 
@@ -516,7 +512,7 @@ describe('VECTOR 10 — installing the backstop on a blind hook [HELD]', () => {
   it('HELD: a behavior-dim guard cannot be installed on preTool/onInput/postTool', () => {
     const spec = specOf(contractOf({ writeTools: ['refundOrder'] }), ['refundOrder']);
     for (const hook of ['preTool', 'onInput', 'postTool'] as const) {
-      expect(() => spec.addGuard(hook, 'any', didMessageConsistency(), { id: `agent:dmc-${hook}` })).toThrow(
+      expect(() => spec.addGuard(hook, 'any', llmCheckLie(), { id: `agent:lie-${hook}` })).toThrow(
         /cannot be installed on/,
       );
     }

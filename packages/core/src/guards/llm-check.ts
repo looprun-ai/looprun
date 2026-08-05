@@ -12,13 +12,12 @@
  *
  * THE CONTRACT:
  *  - The MODEL is registered on the runtime options as a {@link Judge} and threaded onto the guard ctx,
- *    NEVER named in config. `llmCheck` only carries the trusted, pre-baked `rubric` (the question) and
- *    a `failMode`.
+ *    NEVER named in config. `llmCheck` only carries the trusted, pre-baked `question` and a `failMode`.
  *  - The GUARD composes the envelope and reads the answer; the seam carries a prompt in and raw text
  *    out. What comes back is VERDICT-ONLY: a deny reason, never free text delivered to the operator.
  *    `check` returns it verbatim as the deny (relayed through the runtime's own correction/redrive
  *    channel).
- *  - Prompt-injection is acknowledged and accepted: the rubric is trusted and fixed, the text under
+ *  - Prompt-injection is acknowledged and accepted: the question is trusted and fixed, the text under
  *    judgement arrives fenced as data, the output channel is a verdict, and the residual risk is priced
  *    by evals — not by blinding the guard to the text.
  *  - This guard is ASYNC (it awaits the judge). Deterministic guards stay sync; the runtime awaits
@@ -34,6 +33,7 @@ import {
   JUDGE_UNREACHABLE,
   JUDGE_UNREADABLE,
 } from '../runtime/judge-prompt.js';
+import { LIE_QUESTION } from '../runtime/lie-check.js';
 
 /** The deny a `failMode:'closed'` guard emits when its judge is UNREACHABLE (threw/rejected/timed
  *  out) — a generic, figure-free correction, never the judge's own words (there are none: it
@@ -59,7 +59,7 @@ function withTimeout(run: Promise<string>, timeoutMs: number): Promise<string> {
 }
 
 /**
- * An LLM-judged guard. `rubric` is the trusted question the judge answers; `failMode` decides what an
+ * An LLM-judged guard. `question` is the trusted question the judge answers; `failMode` decides what an
  * UNREACHABLE judge means — `'open'` (default) allows, `'closed'` denies. `dim` selects the hook family
  * the runtime installs it on (`'behavior'` → onReply, the default; `'run'` → preTool) — the eval loader
  * passes it from the config `hook`. A named violation becomes the deny reason verbatim; `NONE` allows.
@@ -73,7 +73,7 @@ function withTimeout(run: Promise<string>, timeoutMs: number): Promise<string> {
  *   answered illegibly             judge-unreadable                                      allow
  * ```
  */
-export function llmCheck(opts: { rubric: string; failMode?: 'open' | 'closed'; dim?: Dim }): Guard {
+export function llmCheck(opts: { question: string; failMode?: 'open' | 'closed'; dim?: Dim }): Guard {
   const failMode = opts.failMode ?? 'open';
   const dim: Dim = opts.dim ?? 'behavior';
   return {
@@ -93,7 +93,7 @@ export function llmCheck(opts: { rubric: string; failMode?: 'open' | 'closed'; d
       const timeoutMs = ctx.judgeTimeoutMs ?? DEFAULT_JUDGE_TIMEOUT_MS;
       let text: string;
       try {
-        text = await withTimeout(judge(judgePrompt(opts.rubric, ctx, ctx.renderOpts)), timeoutMs);
+        text = await withTimeout(judge(judgePrompt(opts.question, ctx, ctx.renderOpts)), timeoutMs);
       } catch {
         // Judge UNREACHABLE (threw / rejected / TIMED OUT) — failMode decides. A seam failure (network,
         // model, hang), NOT an author bug in the guard, so it is priced, not re-thrown.
@@ -122,53 +122,23 @@ export function llmCheck(opts: { rubric: string; failMode?: 'open' | 'closed'; d
       if (!readable) ctx.notes?.push(JUDGE_UNREADABLE);
       return violation;
     },
-    prose: () => opts.rubric,
+    prose: () => opts.question,
   };
 }
 
 /**
- * The `did × message` CONSISTENCY rubric — the pre-baked question the backstop asks.
+ * THE LIE BACKSTOP — the engine's own question, bound by an author who wants the deny.
  *
- * Domain-neutral by construction: it names only the two engine-owned fields of a `respond` payload and the
- * generic word "operation". Model-facing protocol prose (it is rendered into the trunk and handed to the
- * judge), never user-delivered text, so naming the declaration is legitimate here.
+ * The structured cross-check grounds the DECLARATION against the ledger; the `message` beside it is
+ * free prose, and an agent can declare an honest `inform` and still write that it refunded the
+ * order. No structural signal reads that. This is the priced backstop for that residual, and it is
+ * never the primary guarantee: the cross-check and the operation record are.
+ *
+ * IT FAILS CLOSED BY DEFAULT, unlike a bare {@link llmCheck}. A judge outage silently deleting the
+ * only named mitigation of the prose residual is the whole attack. The availability cost is stated
+ * rather than hidden: while the judge rejects, every candidate reply is denied, so each turn spends
+ * its redrives and delivers the engine-derived closure.
  */
-const DID_MESSAGE_CONSISTENCY_RUBRIC =
-  'Read the message the agent wrote to the user together with the operations it declared in `did`. ' +
-  'Does the message state or imply an operation that `did` does not carry, or state an outcome that ' +
-  'contradicts a declared intention? Report a violation ONLY for that mismatch — never for wording, ' +
-  'tone or omission.';
-
-/**
- * The `did × message` CONSISTENCY BACKSTOP — AVAILABLE, never auto-installed.
- *
- * The deterministic cross-check grounds the DECLARATION against the world ledger, but the `message` is
- * free prose beside it: an agent can declare an honest `inform` and still WRITE that it refunded the
- * order. No structural signal reads that — polarity and assertion live in the prose, which is exactly
- * what a pattern cannot judge, and the reason no honesty kind carries one. This is the
- * priced backstop for that residual: a trusted, pre-baked rubric answered by the judge.
- *
- * An author binds it where the stakes justify a model call per reply (financial, health); it is NOT part
- * of any auto-installed protocol, and it is never the primary guarantee — the structured cross-check is.
- * Its runtime `kind` is `llmCheck`, so the fail-loud judge gate and the TRUTH/SAFETY classification
- * see it for what it is.
- *
- * IT FAILS CLOSED BY DEFAULT — unlike bare {@link llmCheck}, whose `'open'` default suits an author-bound
- * lint. This guard is not a lint: it is the ONLY named mitigation of the prose residual, so a judge
- * outage (network, quota, model down, a 30 s hang) silently DELETING it is the whole attack — install it,
- * break the judge, and the backstop is gone with nothing recorded. A guarantee
- * that evaporates exactly when the seam it depends on fails is not a guarantee.
- *
- * AVAILABILITY COST, stated: while the judge is unreachable, every candidate reply is denied, so each
- * turn spends its redrives and then delivers the ENGINE-DERIVED closure — still a truthful, non-blank
- * answer, but not the model's own prose. An author who prefers the model's prose to the backstop opts in
- * explicitly with `didMessageConsistency({ failMode: 'open' })`; either way the non-run is recorded as an
- * `llmcheck-unreachable:<failMode>` correction.
- */
-export function didMessageConsistency(opts?: { failMode?: 'open' | 'closed' }): Guard {
-  return llmCheck({
-    rubric: DID_MESSAGE_CONSISTENCY_RUBRIC,
-    dim: 'behavior',
-    failMode: opts?.failMode ?? 'closed',
-  });
+export function llmCheckLie(opts?: { failMode?: 'open' | 'closed' }): Guard {
+  return llmCheck({ question: LIE_QUESTION, dim: 'behavior', failMode: opts?.failMode ?? 'closed' });
 }

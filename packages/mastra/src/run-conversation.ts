@@ -80,7 +80,7 @@ export interface RuntimeDeps {
    *
    *  EITHER WAY A FAILURE REACHES THE GUARD. The default carries the call and nothing else, so a
    *  refused endpoint or a spent quota rejects exactly as a host judge's would, and the guard's
-   *  `failMode` prices it — a bound `didMessageConsistency` (closed) denies every candidate while the
+   *  `failMode` prices it — a bound `llmCheckLie` (closed) denies every candidate while the
    *  endpoint is down, spending each turn's redrives and delivering the engine's closure. */
   judge?: Judge;
   /** Per-call judge timeout (ms) — a hung judge resolves via failMode past this deadline.

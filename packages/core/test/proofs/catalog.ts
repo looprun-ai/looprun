@@ -28,7 +28,7 @@
  * | llmCheck                       | collective:'skip'          | scripted judge; the honesty/risk text judgment lives here |
  * | consentRequired                | useMedia                   | consentOk = world.hasPrimary()                     |
  * | valueFromUser                   | createItem                 | valueFromUser({ arg: 'condition' }) — gates the non-schema `condition` arg |
- * | llmCheck                       | collective:'skip'          | rubric+judge are agent-specific; proven isolated L1+L3 |
+ * | llmCheck                       | collective:'skip'          | question+judge are agent-specific; proven isolated L1+L3 |
  *
  * ## SCRIPT CONVENTIONS (verified in signal-mechanics.test.ts)
  *  1. Every turn's script ends with a NON-empty `respond` (`args.message`; `did:[{op:'ask'}]` when asking; a

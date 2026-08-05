@@ -6,8 +6,8 @@
  * a built spec, no framework.
  */
 import { describe, expect, it, vi } from 'vitest';
-import { AgentSpecBase, custom, didMessageConsistency, llmCheck } from '../src/index.js';
-import { assertJudgePresent, specInstallsLlmCheck, JUDGE_UNREACHABLE, JUDGE_UNREADABLE } from '../src/internal.js';
+import { AgentSpecBase, custom, llmCheck, llmCheckLie } from '../src/index.js';
+import { assertJudgePresent, specInstallsLlmCheck, JUDGE_UNREACHABLE, JUDGE_UNREADABLE, LIE_QUESTION } from '../src/internal.js';
 import type { Judge, GuardCtx } from '../src/index.js';
 
 const persona = 'You are the test agent.';
@@ -28,18 +28,18 @@ const answers = (text: string): Judge => async () => text;
 describe('llmCheck — verdict semantics', () => {
   it('returns the named violation VERBATIM as the deny', async () => {
     const judge = answers('VIOLATION: the user never authorised THIS act');
-    const reason = await llmCheck({ rubric: 'q?' }).check(baseCtx({ judge }));
+    const reason = await llmCheck({ question: 'q?' }).check(baseCtx({ judge }));
     expect(reason).toBe('the user never authorised THIS act');
   });
 
   it('NONE → allow (null)', async () => {
-    expect(await llmCheck({ rubric: 'q?' }).check(baseCtx({ judge: answers('NONE') }))).toBeNull();
+    expect(await llmCheck({ question: 'q?' }).check(baseCtx({ judge: answers('NONE') }))).toBeNull();
   });
 
-  it('the guard composes the envelope: the rubric is the QUESTION and the reply arrives fenced as data', async () => {
+  it('the guard composes the envelope: the question is the QUESTION and the reply arrives fenced as data', async () => {
     let prompt = '';
     const judge: Judge = async (p) => { prompt = p; return 'NONE'; };
-    await llmCheck({ rubric: 'did the yes cover this?' }).check(baseCtx({ judge, reply: 'all set' }));
+    await llmCheck({ question: 'did the yes cover this?' }).check(baseCtx({ judge, reply: 'all set' }));
     expect(prompt).toContain('QUESTION:');
     expect(prompt).toContain('did the yes cover this?');
     expect(prompt).toMatch(/<<<\nall set\n>>>/);
@@ -49,14 +49,14 @@ describe('llmCheck — verdict semantics', () => {
     const did = [{ op: 'cancel', target: 'Dentist 2026-03-03', outcome: 'cancelled' }];
 
     let neutral = '';
-    await llmCheck({ rubric: 'q?' }).check(
+    await llmCheck({ question: 'q?' }).check(
       baseCtx({ judge: async (p) => { neutral = p; return 'NONE'; }, reply: 'Cancelled.', did }),
     );
     expect(neutral).toContain('No operation was carried out on this turn.');
     expect(neutral).not.toContain('Dentist 2026-03-03');
 
     let domain = '';
-    await llmCheck({ rubric: 'q?' }).check(
+    await llmCheck({ question: 'q?' }).check(
       baseCtx({
         judge: async (p) => { domain = p; return 'NONE'; },
         reply: 'Cancelled.',
@@ -69,28 +69,28 @@ describe('llmCheck — verdict semantics', () => {
 
   it('failMode open (default): an UNREACHABLE judge (throws) allows', async () => {
     const dead: Judge = async () => { throw new Error('offline'); };
-    expect(await llmCheck({ rubric: 'q?' }).check(baseCtx({ judge: dead }))).toBeNull();
+    expect(await llmCheck({ question: 'q?' }).check(baseCtx({ judge: dead }))).toBeNull();
   });
 
   it('failMode closed: an UNREACHABLE judge (throws) denies with a generic figure-free reason', async () => {
     const dead: Judge = async () => { throw new Error('offline'); };
-    const reason = await llmCheck({ rubric: 'q?', failMode: 'closed' }).check(baseCtx({ judge: dead }));
+    const reason = await llmCheck({ question: 'q?', failMode: 'closed' }).check(baseCtx({ judge: dead }));
     expect(reason).toMatch(/could not be completed/i);
   });
 
   it('a REJECTED promise is treated as unreachable too (failMode decides)', async () => {
     const judge: Judge = () => Promise.reject(new Error('timeout'));
-    expect(await llmCheck({ rubric: 'q?' }).check(baseCtx({ judge }))).toBeNull();
-    expect(await llmCheck({ rubric: 'q?', failMode: 'closed' }).check(baseCtx({ judge }))).not.toBeNull();
+    expect(await llmCheck({ question: 'q?' }).check(baseCtx({ judge }))).toBeNull();
+    expect(await llmCheck({ question: 'q?', failMode: 'closed' }).check(baseCtx({ judge }))).not.toBeNull();
   });
 
   it('THROWS (author bug) when no judge is on the ctx — never a silent allow', async () => {
-    await expect(llmCheck({ rubric: 'q?' }).check(baseCtx({ judge: undefined }))).rejects.toThrow(/no judge/i);
+    await expect(llmCheck({ question: 'q?' }).check(baseCtx({ judge: undefined }))).rejects.toThrow(/no judge/i);
   });
 
   it('dim selects the hook family: default behavior (onReply), run for preTool', () => {
-    expect(llmCheck({ rubric: 'q?' }).dim).toBe('behavior');
-    expect(llmCheck({ rubric: 'q?', dim: 'run' }).dim).toBe('run');
+    expect(llmCheck({ question: 'q?' }).dim).toBe('behavior');
+    expect(llmCheck({ question: 'q?', dim: 'run' }).dim).toBe('run');
   });
 });
 
@@ -100,7 +100,7 @@ describe('llmCheck — verdict semantics', () => {
 describe('llmCheck — a call that settles without a verdict allows, and is RECORDED', () => {
   it('an EMPTY answer allows and records the non-run as UNREACHABLE — failMode does not fire', async () => {
     const notes: string[] = [];
-    const reason = await llmCheck({ rubric: 'q?', failMode: 'closed' }).check(
+    const reason = await llmCheck({ question: 'q?', failMode: 'closed' }).check(
       baseCtx({ judge: answers('   '), notes }),
     );
     expect(reason).toBeNull();
@@ -109,25 +109,25 @@ describe('llmCheck — a call that settles without a verdict allows, and is RECO
 
   it('an ILLEGIBLE answer allows and records it as UNREADABLE, not unreachable', async () => {
     const notes: string[] = [];
-    expect(await llmCheck({ rubric: 'q?' }).check(baseCtx({ judge: answers('hmm, possibly'), notes }))).toBeNull();
+    expect(await llmCheck({ question: 'q?' }).check(baseCtx({ judge: answers('hmm, possibly'), notes }))).toBeNull();
     expect(notes).toEqual([JUDGE_UNREADABLE]);
   });
 
   it('a VIOLATION line with no reason after it is malformed, not a deny', async () => {
     const notes: string[] = [];
-    expect(await llmCheck({ rubric: 'q?' }).check(baseCtx({ judge: answers('VIOLATION:'), notes }))).toBeNull();
+    expect(await llmCheck({ question: 'q?' }).check(baseCtx({ judge: answers('VIOLATION:'), notes }))).toBeNull();
     expect(notes).toEqual([JUDGE_UNREADABLE]);
   });
 
   it('a readable answer naming no violation records NOTHING', async () => {
     const notes: string[] = [];
-    expect(await llmCheck({ rubric: 'q?' }).check(baseCtx({ judge: answers('NONE'), notes }))).toBeNull();
+    expect(await llmCheck({ question: 'q?' }).check(baseCtx({ judge: answers('NONE'), notes }))).toBeNull();
     expect(notes).toEqual([]);
   });
 
   it('a ctx with no notes array does not break the call', async () => {
     const dead: Judge = async () => { throw new Error('offline'); };
-    expect(await llmCheck({ rubric: 'q?' }).check(baseCtx({ judge: dead }))).toBeNull();
+    expect(await llmCheck({ question: 'q?' }).check(baseCtx({ judge: dead }))).toBeNull();
   });
 });
 
@@ -136,7 +136,7 @@ describe('llmCheck — a HUNG judge resolves via failMode (timeout), never hangs
     vi.useFakeTimers();
     try {
       const hung: Judge = () => new Promise(() => {}); // never settles
-      const p = llmCheck({ rubric: 'q?' }).check(baseCtx({ judge: hung })); // no ctx timeout → default 30000
+      const p = llmCheck({ question: 'q?' }).check(baseCtx({ judge: hung })); // no ctx timeout → default 30000
       await vi.advanceTimersByTimeAsync(30000);
       expect(await p).toBeNull();
     } finally {
@@ -148,7 +148,7 @@ describe('llmCheck — a HUNG judge resolves via failMode (timeout), never hangs
     vi.useFakeTimers();
     try {
       const hung: Judge = () => new Promise(() => {});
-      const p = llmCheck({ rubric: 'q?', failMode: 'closed' }).check(baseCtx({ judge: hung, judgeTimeoutMs: 5000 }));
+      const p = llmCheck({ question: 'q?', failMode: 'closed' }).check(baseCtx({ judge: hung, judgeTimeoutMs: 5000 }));
       await vi.advanceTimersByTimeAsync(5000);
       expect(await p).toMatch(/could not be completed/i);
     } finally {
@@ -160,7 +160,7 @@ describe('llmCheck — a HUNG judge resolves via failMode (timeout), never hangs
     vi.useFakeTimers();
     try {
       const fast = answers('VIOLATION: quick deny');
-      const p = llmCheck({ rubric: 'q?' }).check(baseCtx({ judge: fast, judgeTimeoutMs: 30000 }));
+      const p = llmCheck({ question: 'q?' }).check(baseCtx({ judge: fast, judgeTimeoutMs: 30000 }));
       // do not advance the clock; the fast judge resolves on its own microtask
       expect(await p).toBe('quick deny');
     } finally {
@@ -172,7 +172,7 @@ describe('llmCheck — a HUNG judge resolves via failMode (timeout), never hangs
 describe('assertJudgePresent — fail loud at conversation start', () => {
   const specWithLlmCheck = () => {
     const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: ['water'] });
-    spec.addGuard('onReply', 'any', llmCheck({ rubric: 'q?' }), { id: 'agent:x' });
+    spec.addGuard('onReply', 'any', llmCheck({ question: 'q?' }), { id: 'agent:x' });
     return spec;
   };
 
@@ -196,18 +196,18 @@ describe('assertJudgePresent — fail loud at conversation start', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
-// didMessageConsistency — the did × message BACKSTOP. The structured cross-check grounds the
-// DECLARATION against the ledger, but the `message` is free prose beside it: an agent can declare an
-// honest `inform` and still WRITE that it refunded €500. No structural signal reads that. This is the
-// priced, opt-in backstop — a pre-baked rubric an author installs where the stakes justify a model
-// call. It is NEVER auto-installed and never the primary guarantee.
+// llmCheckLie — the LIE BACKSTOP. The structured cross-check grounds the DECLARATION against the
+// ledger, but the `message` is free prose beside it: an agent can declare an honest `inform` and
+// still WRITE that it refunded €500. No structural signal reads that. This is the priced, opt-in
+// backstop — the engine's own lie question, bound by an author who wants the deny. It is NEVER
+// auto-installed and never the primary guarantee.
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
-describe('didMessageConsistency — the did × message rubric (available, not auto-installed)', () => {
+describe('llmCheckLie — the engine\'s lie question (available, not auto-installed)', () => {
   /** A fake judge standing in for the host model. It reads the SAME two blocks a real judge reads —
-   *  the fenced reply and the turn's rendered operation record — and reports the mismatch the rubric
-   *  asks about: prose asserting an operation while the record names none. Deterministic, so the
-   *  proof is reproducible, and it fails if the guard stops sending either block. */
-  const CONSISTENCY_JUDGE: Judge = async (prompt) => {
+   *  the fenced reply and the turn's rendered operation record — and reports the mismatch the
+   *  question asks about: prose asserting an operation while the record names none. Deterministic,
+   *  so the proof is reproducible, and it fails if the guard stops sending either block. */
+  const LIE_JUDGE: Judge = async (prompt) => {
     const reply = prompt.match(/REPLY UNDER JUDGEMENT[^\n]*\n<<<\n([\s\S]*?)\n>>>/)?.[1] ?? '';
     const recordNamesNothing = prompt.includes('No operation was carried out on this turn.');
     const asserted = ['refund', 'cancel'].find((op) => reply.toLowerCase().includes(op));
@@ -217,9 +217,9 @@ describe('didMessageConsistency — the did × message rubric (available, not au
   };
 
   it('DENIES a message asserting an operation the did does not carry', async () => {
-    const reason = await didMessageConsistency().check(
+    const reason = await llmCheckLie().check(
       baseCtx({
-        judge: CONSISTENCY_JUDGE,
+        judge: LIE_JUDGE,
         did: [{ op: 'inform' }], // the agent declared it only INFORMED …
         reply: 'I went ahead and processed the refund of €500 for you.', // … while the prose claims a refund
       }),
@@ -228,9 +228,9 @@ describe('didMessageConsistency — the did × message rubric (available, not au
   });
 
   it('ALLOWS a message whose assertions match the declared intentions', async () => {
-    const reason = await didMessageConsistency().check(
+    const reason = await llmCheckLie().check(
       baseCtx({
-        judge: CONSISTENCY_JUDGE,
+        judge: LIE_JUDGE,
         did: [{ op: 'refund', target: 'ORD-1', outcome: 'success' }],
         reply: 'The refund for ORD-1 is done.',
       }),
@@ -239,23 +239,17 @@ describe('didMessageConsistency — the did × message rubric (available, not au
   });
 
   it('is an llmCheck by KIND, so the judge gate and the TRUTH classification hold', () => {
-    const g = didMessageConsistency();
+    const g = llmCheckLie();
     expect(g.kind).toBe('llmCheck'); // specInstallsLlmCheck scans by kind, not by source token
     expect(g.dim).toBe('behavior');  // a reply verdict → onReply
     const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: ['water'] });
-    spec.addGuard('onReply', 'any', g, { id: 'agent:d6' });
+    spec.addGuard('onReply', 'any', g, { id: 'agent:lie' });
     expect(specInstallsLlmCheck(spec)).toBe(true);
     expect(() => assertJudgePresent(spec, undefined)).toThrow(/no judge/i);
   });
 
-  it('carries the BAKED did × message rubric as its prose — domain-neutral, no business words', () => {
-    const prose = didMessageConsistency().prose();
-    expect(prose.toLowerCase()).toContain('did');
-    expect(prose.toLowerCase()).toContain('message');
-    // Domain-neutral: the engine never ships a business noun in a guard's prose.
-    for (const business of ['booking', 'refund', 'order', 'invoice', 'patient', 'account']) {
-      expect(prose.toLowerCase()).not.toContain(business);
-    }
+  it('carries the engine\'s own lie question as its prose', () => {
+    expect(llmCheckLie().prose()).toBe(LIE_QUESTION);
   });
 
   // The DEFAULT is `closed`. A backstop that deletes itself the moment its own seam fails is not a
@@ -265,20 +259,20 @@ describe('didMessageConsistency — the did × message rubric (available, not au
   it('fails CLOSED by default when the judge is unreachable — and the non-run is RECORDED', async () => {
     const dead: Judge = async () => { throw new Error('offline'); };
     const notes: string[] = [];
-    expect(await didMessageConsistency().check(baseCtx({ judge: dead, notes }))).toMatch(/could not be completed/i);
+    expect(await llmCheckLie().check(baseCtx({ judge: dead, notes }))).toMatch(/could not be completed/i);
     expect(notes).toEqual([JUDGE_UNREACHABLE, 'llmcheck-unreachable:closed']);
   });
 
   it('failMode "open" is an explicit OPT-IN, and its silent allow is still recorded', async () => {
     const dead: Judge = async () => { throw new Error('offline'); };
     const notes: string[] = [];
-    expect(await didMessageConsistency({ failMode: 'open' }).check(baseCtx({ judge: dead, notes }))).toBeNull();
+    expect(await llmCheckLie({ failMode: 'open' }).check(baseCtx({ judge: dead, notes }))).toBeNull();
     expect(notes).toEqual([JUDGE_UNREACHABLE, 'llmcheck-unreachable:open']);
   });
 
-  it('bare llmCheck keeps its OPEN default — an author-bound lint, not the honesty backstop', async () => {
+  it('bare llmCheck keeps its OPEN default — an author-bound lint, not the lie backstop', async () => {
     const dead: Judge = async () => { throw new Error('offline'); };
-    expect(await llmCheck({ rubric: 'q?' }).check(baseCtx({ judge: dead }))).toBeNull();
+    expect(await llmCheck({ question: 'q?' }).check(baseCtx({ judge: dead }))).toBeNull();
   });
 
   it('is NOT auto-installed: a spec with destructive tools and a contract installs no llmCheck', () => {
@@ -289,13 +283,44 @@ describe('didMessageConsistency — the did × message rubric (available, not au
   });
 });
 
+describe('the engine lie question', () => {
+  it('asks what the reader would BELIEVE, not what the reply mentions', () => {
+    expect(LIE_QUESTION).toMatch(/would they be left\s+believing/i);
+    expect(LIE_QUESTION).not.toMatch(/does the reply (state|mention)/i);
+  });
+
+  it('carries the carve-out that keeps an honest refusal or promise quiet', () => {
+    expect(LIE_QUESTION).toMatch(/refused, promised for the future, offered, or asked about is NOT done/);
+  });
+
+  it('carries the carve-out that a change in either list is not a lie', () => {
+    expect(LIE_QUESTION).toMatch(/appears in either list also answers NONE/);
+  });
+
+  it('llmCheckLie binds that question and nothing from the author', async () => {
+    let seen = '';
+    const judge: Judge = async (prompt) => { seen = prompt; return 'NONE'; };
+    await llmCheckLie().check(baseCtx({ judge, reply: 'ok', did: [] }));
+    expect(seen).toContain(LIE_QUESTION);
+  });
+
+  it('llmCheckLie fails CLOSED by default', async () => {
+    const judge: Judge = async () => { throw new Error('offline'); };
+    expect(await llmCheckLie().check(baseCtx({ judge, reply: 'ok', did: [] }))).toMatch(/could not be completed/i);
+  });
+
+  it('llmCheckLie is reply-side — its dim is behavior', () => {
+    expect(llmCheckLie().dim).toBe('behavior');
+  });
+});
+
 describe('async coexistence — an llmCheck awaits, a sync guard does not', () => {
   it('both run and both verdicts are collected when awaited uniformly', async () => {
     const slowDeny: Judge = async () => {
       await new Promise((r) => setTimeout(r, 5));
       return 'VIOLATION: slow deny';
     };
-    const asyncGuard = llmCheck({ rubric: 'q?' });
+    const asyncGuard = llmCheck({ question: 'q?' });
     const syncGuard = custom({ kind: 'k', dim: 'behavior', check: () => 'sync deny', prose: () => 'p' });
     const ctx = baseCtx({ judge: slowDeny });
     // The runtime awaits every check the same way; a sync check just resolves immediately.

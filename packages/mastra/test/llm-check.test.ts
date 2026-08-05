@@ -42,8 +42,8 @@ const TOOL_DEFS = [
 
 function bookingSpec(): AgentSpecBase {
   const spec = new AgentSpecBase({ id: 'bookings', mode: 'M', persona: 'You are the bookings agent.', tools: ['cancelBooking'], contract: CONTRACT });
-  // The rubric IS the case-35 question. Its verdict is the judge's; failMode default 'open'.
-  spec.addGuard('onReply', 'any', llmCheck({ rubric: 'Did the user explicitly authorise EVERY action the reply claims — not merely a related one?' }), { id: 'agent:licence' });
+  // The question IS the case-35 question. Its verdict is the judge's; failMode default 'open'.
+  spec.addGuard('onReply', 'any', llmCheck({ question: 'Did the user explicitly authorise EVERY action the reply claims — not merely a related one?' }), { id: 'agent:licence' });
   return spec;
 }
 
@@ -60,11 +60,11 @@ describe('llmCheck — fail loud at conversation start (core-level gate)', () =>
 describe('the judge the backend resolves', () => {
   function defaultedSpec(): AgentSpecBase {
     const spec = new AgentSpecBase({ id: 'defaulted', mode: 'M', persona: 'You are the agent.', tools: [], contract: CONTRACT });
-    spec.addGuard('onReply', 'any', llmCheck({ rubric: 'does the reply overstate?' }), { id: 'agent:rubric' });
+    spec.addGuard('onReply', 'any', llmCheck({ question: 'does the reply overstate?' }), { id: 'agent:question' });
     return spec;
   }
 
-  it('a spec binding a rubric runs with NO judge in deps', async () => {
+  it('a spec binding a question runs with NO judge in deps', async () => {
     const scripted = scriptedModel([[{ tool: 'respond', args: { message: 'hi', did: [{ op: 'inform' }] } }]]);
     const res = await runSpecConversation(defaultedSpec(), [{ userText: 'hello' }], {
       model: scripted.model,
@@ -177,7 +177,7 @@ describe('llmCheck — a HUNG judge resolves via failMode through the real loop 
   it('failMode closed + a never-settling judge → the turn resolves via the timeout, not a hang', async () => {
     const hung: Judge = () => new Promise(() => {}); // never settles
     const spec = new AgentSpecBase({ id: 'closed', mode: 'M', persona: 'You are the agent.', tools: ['cancelBooking'], contract: CONTRACT });
-    spec.addGuard('onReply', 'any', llmCheck({ rubric: 'q?', failMode: 'closed' }), { id: 'agent:closed' });
+    spec.addGuard('onReply', 'any', llmCheck({ question: 'q?', failMode: 'closed' }), { id: 'agent:closed' });
     const scripted = scriptedModel([
       [{ tool: 'respond', args: { message: 'first draft', did: [{ op: 'inform' }] } }],
       [{ tool: 'respond', args: { message: 'second draft', did: [{ op: 'inform' }] } }],
@@ -194,7 +194,7 @@ describe('llmCheck — a HUNG judge resolves via failMode through the real loop 
   it('failMode open + a never-settling judge → the reply is allowed through after the timeout', async () => {
     const hung: Judge = () => new Promise(() => {});
     const spec = new AgentSpecBase({ id: 'open', mode: 'M', persona: 'You are the agent.', tools: ['cancelBooking'], contract: CONTRACT });
-    spec.addGuard('onReply', 'any', llmCheck({ rubric: 'q?' }), { id: 'agent:open' }); // default open
+    spec.addGuard('onReply', 'any', llmCheck({ question: 'q?' }), { id: 'agent:open' }); // default open
     const scripted = scriptedModel([[{ tool: 'respond', args: { message: 'the answer', did: [{ op: 'inform' }] } }]]);
     const res = await runSpecConversation(spec, [{ userText: 'hi' }], {
       model: scripted.model, world: world(), toolDefs: TOOL_DEFS,
@@ -213,7 +213,7 @@ describe('llmCheck — async coexistence with a sync onReply guard', () => {
       return /bad/i.test(prompt) ? 'VIOLATION: the judge says bad' : 'NONE';
     };
     const spec = new AgentSpecBase({ id: 'both', mode: 'M', persona: 'You are the agent.', tools: ['cancelBooking'], contract: CONTRACT });
-    spec.addGuard('onReply', 'any', llmCheck({ rubric: 'q?' }), { id: 'agent:async' });
+    spec.addGuard('onReply', 'any', llmCheck({ question: 'q?' }), { id: 'agent:async' });
     spec.addGuard('onReply', 'any', custom({ kind: 'syncBad', dim: 'behavior', check: (ctx) => (/bad/i.test(ctx.reply ?? '') ? 'sync says bad' : null), prose: () => 'no bad word' }), { id: 'agent:sync' });
 
     const scripted = scriptedModel([
@@ -238,7 +238,7 @@ describe('llmCheck — a CALL-SIDE outage is recorded on the turn, not a silent 
 
   it('a preTool llmCheck outage lands in recoveryEvents', async () => {
     const spec = new AgentSpecBase({ id: 'pre-outage', mode: 'M', persona: 'You are the agent.', tools: ['cancelBooking'], contract: CONTRACT });
-    spec.addGuard('preTool', ['cancelBooking'], llmCheck({ rubric: 'Did the user authorise THIS cancellation?', dim: 'run' }), { id: 'agent:pre' });
+    spec.addGuard('preTool', ['cancelBooking'], llmCheck({ question: 'Did the user authorise THIS cancellation?', dim: 'run' }), { id: 'agent:pre' });
     const scripted = scriptedModel([
       [{ tool: 'cancelBooking', args: { id: '3pm' } }],
       [{ tool: 'respond', args: { message: 'Your 3pm booking is cancelled.', did: [{ op: 'inform' }] } }],
@@ -253,7 +253,7 @@ describe('llmCheck — a CALL-SIDE outage is recorded on the turn, not a silent 
 
   it('a postTool llmCheck outage lands in recoveryEvents', async () => {
     const spec = new AgentSpecBase({ id: 'post-outage', mode: 'M', persona: 'You are the agent.', tools: ['cancelBooking'], contract: CONTRACT });
-    spec.addGuard('postTool', ['cancelBooking'], llmCheck({ rubric: 'Did the cancellation result look right?', dim: 'output' }), { id: 'agent:post' });
+    spec.addGuard('postTool', ['cancelBooking'], llmCheck({ question: 'Did the cancellation result look right?', dim: 'output' }), { id: 'agent:post' });
     const scripted = scriptedModel([
       [{ tool: 'cancelBooking', args: { id: '3pm' } }],
       [{ tool: 'respond', args: { message: 'Your 3pm booking is cancelled.', did: [{ op: 'inform' }] } }],
@@ -274,7 +274,7 @@ describe('llmCheck — the contract outcome map reaches the judge (render-option
   it('a domain outcome word declared on the contract renders into the LEDGER the judge is shown', async () => {
     const contract: DomainContract = { ...CONTRACT, outcomes: { cancelled: 'success' } };
     const spec = new AgentSpecBase({ id: 'ledger-wiring', mode: 'M', persona: 'You are the agent.', tools: ['cancelBooking'], contract });
-    spec.addGuard('onReply', 'any', llmCheck({ rubric: 'does the reply overstate?' }), { id: 'agent:ledger' });
+    spec.addGuard('onReply', 'any', llmCheck({ question: 'does the reply overstate?' }), { id: 'agent:ledger' });
 
     let judgePrompt = '';
     const scripted = scriptedModel(

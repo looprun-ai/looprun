@@ -557,8 +557,8 @@ The reply text is in `ctx.reply` and no tool can run any more. A deny costs a bo
 | [`claimIsComplete`](#15-claimiscomplete) | `honesty.ts` | Every write that TOOK EFFECT this turn must be covered by a DISTINCT `success` ACTION intention in `did` that NAMES the entity — no silent action hidden from the user. |
 | [`claimCoversRubric`](#16-claimcoversrubric) | `honesty.ts` | Each configured target must appear in `did` with the required outcome polarity (or any polarity when `outcome: 'any'`). |
 | [`degenerationGuard`](#17-degenerationguard) | `reply.ts` | Catches leaked reasoning or tool markup, chat-template tokens and run-away line repetition in the reply. |
-| [`llmCheck`](#18-llmcheck) | `llm-check.ts` | An LLM-judged guard: the registered judge answers a trusted rubric over the evidence the guard fences into the prompt, and its verdict becomes the deny. |
-| [`didMessageConsistency`](#19-didmessageconsistency) | `llm-check.ts` | The `did` × `message` backstop: the judge answers a pre-baked rubric asking whether the message asserts an operation the declaration does not carry, or contradicts a declared intention. |
+| [`llmCheck`](#18-llmcheck) | `llm-check.ts` | An LLM-judged guard: the registered judge answers a trusted question over the evidence the guard fences into the prompt, and its verdict becomes the deny. |
+| [`llmCheckLie`](#19-llmchecklie) | `llm-check.ts` | The lie backstop: the judge answers the engine's own pre-baked question asking whether the message would leave the reader believing a change is done that neither list carries. |
 
 #### 14. `claimIsGrounded`
 
@@ -594,7 +594,7 @@ claimCoversRubric({ targets: ['BK-100234'], outcome: 'success' }, 'Account for t
 
 Catches leaked reasoning or tool markup, chat-template tokens and run-away line repetition in the reply.
 
-**When to reach for it.** The reply is broken as an ARTIFACT rather than wrong as a claim — think blocks, tool-call markup or the same line five times over. No honesty kind fires on that, because nothing was asserted; this one catches the weak-model failure class every domain shares. Always on (auto-installed); it takes no parameters — language-specific judgments such as self-narration are text judgment, so an author who wants one binds an `llmCheck` rubric.
+**When to reach for it.** The reply is broken as an ARTIFACT rather than wrong as a claim — think blocks, tool-call markup or the same line five times over. No honesty kind fires on that, because nothing was asserted; this one catches the weak-model failure class every domain shares. Always on (auto-installed); it takes no parameters — language-specific judgments such as self-narration are text judgment, so an author who wants one binds an `llmCheck` question.
 
 ```ts
 degenerationGuard()
@@ -602,22 +602,22 @@ degenerationGuard()
 
 #### 18. `llmCheck`
 
-An LLM-judged guard: the registered judge answers a trusted rubric over the evidence the guard fences into the prompt, and its verdict becomes the deny.
+An LLM-judged guard: the registered judge answers a trusted question over the evidence the guard fences into the prompt, and its verdict becomes the deny.
 
 **When to reach for it.** The judgement genuinely needs a model — "did the operator's yes license THIS act?", "does this reply state an outcome nothing accounts for?" — a claim no arg/observed pattern captures. Use it where structure alone cannot decide; a decidable structural signal always prefers its own kind. THE QUESTION MUST BE ANSWERABLE FROM THE ENVELOPE: every hook is shown the person's own last eight turns, and beside them onReply gets the reply, the turn's operation record and the operations earlier turns completed; preTool gets the call and its arguments; postTool gets the call and its result. Nothing the AGENT said is in it — no persona, no role-tagged turns, no prior replies — so a question about the agent's past wording has no evidence to read. When the window cuts older turns it says so and rules the omission out as evidence, so an authorisation the judge cannot see never reads as a violation. The judge is registered on the runtime options, never in config. `runSpecConversation` resolves one from the turn's own model when the host supplies none; `LoopRunAgent` and `compileSpec` resolve nothing, so a spec bound for either registers one or fails loud at construction. `failMode` prices a REJECTED judge, and EVERY judge rejects — the resolved default included, since it carries the call and lets a refused endpoint, a spent quota or a hung call reach the guard. The guard records `judge-unreachable` beside `llmcheck-unreachable:<failMode>` and then applies the mode: `'open'` (the default) allows, `'closed'` denies every candidate until the endpoint returns. A call that ANSWERS without reaching a verdict is the other case, and it never denies: an empty answer records `judge-unreachable`, an illegible one records `judge-unreadable`, and both allow whatever the mode.
 
 ```ts
-llmCheck({ rubric: 'Did the user, in an earlier turn, explicitly authorise THIS exact action?', failMode: 'closed' })
+llmCheck({ question: 'Did the user, in an earlier turn, explicitly authorise THIS exact action?', failMode: 'closed' })
 ```
 
-#### 19. `didMessageConsistency`
+#### 19. `llmCheckLie`
 
-The `did` × `message` backstop: the judge answers a pre-baked rubric asking whether the message asserts an operation the declaration does not carry, or contradicts a declared intention.
+The lie backstop: the judge answers the engine's own pre-baked question asking whether the message would leave the reader believing a change is done that neither list carries.
 
-**When to reach for it.** The deterministic cross-check grounds the DECLARATION against the ledger, but the message beside it is free prose — an agent can declare an honest `inform` and still write that it completed something. Install this where the stakes justify a model call per reply (money, health). It is NOT auto-installed and it is never the primary guarantee: the structured cross-check grounds the declaration, and the operation record ships under every delivery so a claim the turn cannot back arrives contradicted. This is a third layer over both. It carries `failMode: 'closed'`, unlike a bare `llmCheck`, and that denies on a REJECTED judge — the resolved default included. THE AVAILABILITY COST IS REAL: while the judging endpoint is down every candidate reply is denied, so each turn spends its redrives and then delivers the engine-derived closure ("I could not complete this safely — nothing was changed.") in place of the model's own prose. Every non-run is recorded, `judge-unreachable` beside `llmcheck-unreachable:closed`. An author who would rather ship the model's prose than hold the guarantee opts out explicitly with `didMessageConsistency({ failMode: 'open' })`.
+**When to reach for it.** The structured cross-check grounds the DECLARATION against the ledger, but the message beside it is free prose — an agent can declare an honest `inform` and still write that it completed something. Install this where the stakes justify a model call per reply (money, health). It is NOT auto-installed and it is never the primary guarantee: the structured cross-check grounds the declaration, and the operation record ships under every delivery so a claim the turn cannot back arrives contradicted. This is a third layer over both. It carries `failMode: 'closed'`, unlike a bare `llmCheck`, and that denies on a REJECTED judge — the resolved default included. THE AVAILABILITY COST IS REAL: while the judging endpoint is down every candidate reply is denied, so each turn spends its redrives and then delivers the engine-derived closure ("I could not complete this safely — nothing was changed.") in place of the model's own prose. Every non-run is recorded, `judge-unreachable` beside `llmcheck-unreachable:closed`. An author who would rather ship the model's prose than hold the guarantee opts out explicitly with `llmCheckLie({ failMode: 'open' })`.
 
 ```ts
-didMessageConsistency()
+llmCheckLie()
 ```
 
 ### `onReplyMutate` — rewrite the reply, never veto it

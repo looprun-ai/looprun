@@ -81,7 +81,7 @@ function recordingJudge(answers: string[]): { judge: Judge; prompts: string[] } 
     prompts,
     judge: async (prompt: string) => {
       prompts.push(prompt);
-      return answers[Math.min(i++, answers.length - 1)] ?? 'NO';
+      return answers[Math.min(i++, answers.length - 1)] ?? 'NONE';
     },
   };
 }
@@ -89,6 +89,8 @@ function recordingJudge(answers: string[]): { judge: Judge; prompts: string[] } 
 /** The lie every prose vector uses — an operation the turn never carried out. */
 const LIE = 'Done — I cancelled your dentist appointment on 2026-03-03 at 09:00.';
 const REWRITE = 'I have not cancelled the dentist appointment on 2026-03-03 at 09:00. Shall I do it now?';
+/** The check's affirmative answer — the envelope's own VIOLATION verdict, never a bare YES. */
+const FIRES = 'VIOLATION: the reader would believe an operation that never happened.';
 
 const P = (message: string, did: Intention[] = [{ op: 'inform' }]) => ({ message, did });
 
@@ -111,7 +113,7 @@ describe('MODE 1 — an action was carried out, so the check must not run', () =
     const world = fixtureWorld();
     const ledger = createLedger();
     effectWrite(ledger, world, 'EV-2');
-    const { judge, prompts } = recordingJudge(['YES', REWRITE]);
+    const { judge, prompts } = recordingJudge([FIRES, REWRITE]);
     const did: Intention[] = [{ op: 'cancel', target: 'EV-2', outcome: 'success' }];
 
     const out = await run(ledger, world, { message: LIE, did }, judge);
@@ -121,7 +123,7 @@ describe('MODE 1 — an action was carried out, so the check must not run', () =
   });
 
   it('IMPOSSIBLE: a NON-success action line is still an action line — a blocked turn is not checked', async () => {
-    const { judge, prompts } = recordingJudge(['YES', REWRITE]);
+    const { judge, prompts } = recordingJudge([FIRES, REWRITE]);
     const did: Intention[] = [{ op: 'cancel', target: 'EV-2', outcome: 'blocked' }];
 
     await run(createLedger(), fixtureWorld(), { message: LIE, did }, judge);
@@ -130,7 +132,7 @@ describe('MODE 1 — an action was carried out, so the check must not run', () =
   });
 
   it('CONTROL: a speech-only turn IS checked — exactly one judge call when the answer is no', async () => {
-    const { judge, prompts } = recordingJudge(['NO']);
+    const { judge, prompts } = recordingJudge(['NONE']);
 
     await run(createLedger(), fixtureWorld(), P(LIE), judge);
 
@@ -146,8 +148,8 @@ describe('MODE 1 — an action was carried out, so the check must not run', () =
 // path that discards it.
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
 describe('MODE 2 — a detected lie must be rewritten, and the rewrite must ship', () => {
-  it('IMPOSSIBLE: YES → the delivered prose is the rewrite, and the lie is gone', async () => {
-    const { judge } = recordingJudge(['YES', REWRITE]);
+  it('IMPOSSIBLE: VIOLATION → the delivered prose is the rewrite, and the lie is gone', async () => {
+    const { judge } = recordingJudge([FIRES, REWRITE]);
 
     const out = await run(createLedger(), fixtureWorld(), P(LIE), judge);
 
@@ -156,7 +158,7 @@ describe('MODE 2 — a detected lie must be rewritten, and the rewrite must ship
   });
 
   it('the rewrite touches the PROSE only — the verified declaration is delivered untouched', async () => {
-    const { judge } = recordingJudge(['YES', REWRITE]);
+    const { judge } = recordingJudge([FIRES, REWRITE]);
     const ledger = createLedger();
     const did: Intention[] = [{ op: 'inform' }];
 
@@ -168,7 +170,7 @@ describe('MODE 2 — a detected lie must be rewritten, and the rewrite must ship
   });
 
   it('an empty rewrite is not a delivery — the original stands under the record that denies it', async () => {
-    const { judge } = recordingJudge(['YES', '   ']);
+    const { judge } = recordingJudge([FIRES, '   ']);
 
     const out = await run(createLedger(), fixtureWorld(), P(LIE), judge);
 
@@ -183,9 +185,9 @@ describe('MODE 2 — a detected lie must be rewritten, and the rewrite must ship
 // own prose, then the engine's record. Nothing is dropped, nothing is added, nothing is reworded.
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
 describe('MODE 3 — every other turn delivers the message and the record as they are', () => {
-  it('IMPOSSIBLE: NO → the original prose, unaltered, under the record', async () => {
+  it('IMPOSSIBLE: NONE → the original prose, unaltered, under the record', async () => {
     const honest = 'The dentist appointment is still on your calendar. Shall I cancel it?';
-    const { judge } = recordingJudge(['NO']);
+    const { judge } = recordingJudge(['NONE']);
 
     const out = await run(createLedger(), fixtureWorld(), P(honest), judge);
 
@@ -209,7 +211,7 @@ describe('MODE 3 — every other turn delivers the message and the record as the
     expect(out.text).toBe(`${LIE}\n\n${RECORD_CLOSURE_NONE}`);
   });
 
-  it('IMPOSSIBLE: a judge that answers neither word is read as NO — the safe direction', async () => {
+  it('IMPOSSIBLE: a judge that answers no readable verdict is read as NONE — the safe direction', async () => {
     const { judge } = recordingJudge(['I am not sure what you are asking.']);
 
     const out = await run(createLedger(), fixtureWorld(), P(LIE), judge);
@@ -235,7 +237,7 @@ describe('MODE 4 — what an earlier turn did is shown to the check', () => {
     ledger.turnIndex = 1;
     ledger.did = [];
 
-    const { judge, prompts } = recordingJudge(['NO']);
+    const { judge, prompts } = recordingJudge(['NONE']);
     await run(ledger, world, P('Your lunch with Marina was cancelled.'), judge);
 
     expect(prompts[0]).toContain(SESSION_HEADING);
@@ -250,7 +252,7 @@ describe('INVARIANT — the record is never absent from a finalized turn', () =>
   it('IMPOSSIBLE: a speech-only turn, a rewritten turn and an acting turn all carry a record', async () => {
     const speech = await run(createLedger(), fixtureWorld(), P('Hello.'));
 
-    const { judge } = recordingJudge(['YES', REWRITE]);
+    const { judge } = recordingJudge([FIRES, REWRITE]);
     const rewritten = await run(createLedger(), fixtureWorld(), P(LIE), judge);
 
     const world = fixtureWorld();
@@ -281,7 +283,7 @@ describe('INVARIANT — the session list never reaches the delivered text', () =
     ledger.turnIndex = 1;
     ledger.did = [];
 
-    const { judge } = recordingJudge(['YES', REWRITE]);
+    const { judge } = recordingJudge([FIRES, REWRITE]);
     const out = await run(ledger, world, P('Thanks!'), judge);
 
     expect(out.text).not.toContain(SESSION_HEADING);
@@ -424,11 +426,11 @@ const DECLARATIONS: Array<{ id: string; did: Intention[]; seed: (l: Ledger, w: A
 /** What the model answers, and what comes back when it is asked to rewrite. */
 const JUDGES: Array<{ id: string; answers?: string[]; throws?: boolean; absent?: boolean }> = [
   { id: 'judge:none', absent: true },
-  { id: 'judge:no', answers: ['NO'] },
-  { id: 'judge:yes+rewrite', answers: ['YES', REWRITE] },
-  { id: 'judge:yes+empty', answers: ['YES', ''] },
-  { id: 'judge:yes+blank', answers: ['YES', '   \n  '] },
-  { id: 'judge:lowercase-yes', answers: ['yes, the reader would.', REWRITE] },
+  { id: 'judge:no', answers: ['NONE'] },
+  { id: 'judge:violation+rewrite', answers: [FIRES, REWRITE] },
+  { id: 'judge:violation+empty', answers: [FIRES, ''] },
+  { id: 'judge:violation+blank', answers: [FIRES, '   \n  '] },
+  { id: 'judge:lowercase-violation', answers: ['violation: the reader would believe it.', REWRITE] },
   { id: 'judge:prose', answers: ['I am not sure what you are asking.'] },
   { id: 'judge:empty', answers: [''] },
   { id: 'judge:throws', throws: true },
@@ -509,7 +511,7 @@ describe('THE WHOLE INPUT SPACE — the four failure modes over every combinatio
             if (prompts.length > 0 && sess.entities.some((e) => !prompts[0].includes(e))) failures.F2.push(cell);
 
             // F3 — the check found a lie, a usable rewrite came back, and the original still shipped.
-            const usableRewrite = j.answers?.[0]?.trim().toLowerCase().startsWith('yes') && j.answers[1]?.trim();
+            const usableRewrite = j.answers?.[0]?.trim().toLowerCase().startsWith('violation') && j.answers[1]?.trim();
             if (prompts.length > 0 && usableRewrite && !wasRewritten) failures.F3.push(cell);
 
             // F4 — every other cell delivers the message and the record, exactly as they are.

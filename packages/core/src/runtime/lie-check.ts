@@ -28,10 +28,22 @@
  */
 import { operationRecord, type Intention, type RenderOpts } from './claims.js';
 import { sessionRecord, type SessionRecord } from './session-record.js';
-import type { HistoryTurn, Judge } from '../rules.js';
+import { judgePrompt, readJudgeVerdict } from './judge-prompt.js';
+import type { AgentWorld, GuardCtx, HistoryTurn, Judge } from '../rules.js';
 
 /** The heading over the turn's own record inside both prompts. */
 export const TURN_HEADING = 'ON THIS TURN';
+
+/** A world stub for the lie check's own judge envelope. `judgePrompt` never reads world structure —
+ *  it renders from `reply`/`did`/`history`/`userText` — so this exists only to satisfy {@link GuardCtx}'s
+ *  shape; no call the lie check makes ever reaches it. */
+const LIE_CHECK_WORLD: AgentWorld = {
+  exec: () => undefined,
+  advanceTurn: () => {},
+  ingestAttachment: (url) => url,
+  toolCalls: [],
+  sseActions: [],
+};
 
 /**
  * IS THIS TURN CHECKED? Only when NO ACTION WAS CARRIED OUT — when the turn's record has zero action
@@ -64,47 +76,25 @@ export function bothLists(recordText: string, session: SessionRecord): string {
 }
 
 /**
- * THE LIE-CHECK PROMPT. It asks what the reader would BELIEVE is already done — not what the sentence
- * mentions, and not whether it contradicts the lists. Those two are the wrong questions here:
+ * THE LIE QUESTION — the one the engine asks about prose, in the form that answers it correctly.
  *
  * ```
- *   "does it CONTRADICT the lists?"   a lie that never names the lists reads as no contradiction
- *                                     "I cancelled the dentist" against an empty list → NO
- *   "does it MENTION an operation?"   an honest refusal names one
- *                                     "I cannot cancel the dentist" → YES, on a truthful reply
+ *   "does it CONTRADICT the lists?"   a lie that never names the lists contradicts nothing
+ *   "does it MENTION an operation?"   an honest refusal mentions one
  *   "what does the reader BELIEVE?"   both come out right
  * ```
  *
- * The two carve-out lines are what keep honest turns quiet: a change that is only denied, promised,
- * offered or asked about is not done, and a change named in either list is not a lie.
- *
- * The prompt's language is not the conversation's: the model answers one closed question about a text,
- * and neither the question nor its one-word answer reaches the user.
+ * The two carve-out lines are what keep an honest turn quiet: a change that is only denied,
+ * promised, offered or asked about is not done, and a change named in either list is not a lie.
  */
-export function lieCheckPrompt(recordText: string, session: SessionRecord, message: string): string {
-  return [
-    bothLists(recordText, session),
-    '',
-    'MESSAGE sent to the person:',
-    `"${message}"`,
-    '',
-    'Read the MESSAGE as the person would read it. After reading it, would they be left believing that some change that does NOT appear in ANY of the two lists is already done, has already happened?',
-    '',
-    'A change that is only denied, promised for the future, offered or asked about is NOT done: in those cases the person does not believe it happened, and the answer is NO.',
-    'A change that appears in any of the two lists also answers NO.',
-    '',
-    'Answer only YES or NO.',
-  ].join('\n');
-}
-
-/**
- * How the check's answer is read: the FIRST word. Anything that is not an affirmative is a NO — a judge
- * that failed to answer its own closed question must never be scored as having found a lie, because the
- * rewrite that answer triggers can deny something the world really did.
- */
-export function readLieVerdict(text: string): boolean {
-  return /^\s*\W*yes\b/i.test(text);
-}
+export const LIE_QUESTION = [
+  'Read the REPLY as the person receiving it would read it. After reading it, would they be left',
+  'believing that some change is already done which does not appear in either list below?',
+  '',
+  'A change that is only refused, promised for the future, offered, or asked about is NOT done: in',
+  'those cases the person does not believe it happened, and the answer is NONE.',
+  'A change that appears in either list also answers NONE.',
+].join('\n');
 
 /**
  * THE REWRITE PROMPT. It is shown the conversation, the reply, and the two LISTS — never the raw `did`.
@@ -190,7 +180,7 @@ export interface LieCheckOutcome {
   message: string;
   /** The turn was eligible — no action was carried out on it. `false` ⇒ zero model calls were made. */
   checked: boolean;
-  /** The check answered SIM. */
+  /** The check found a violation. */
   fired: boolean;
   /** A rewrite was made and is what {@link message} carries. */
   rewritten: boolean;
@@ -200,9 +190,9 @@ export interface LieCheckOutcome {
  * RUN THE PASS over one turn's prose.
  *
  * ```
- *   ineligible          0 model calls   the prose is returned untouched
- *   eligible, NAO       1 model call    the prose is returned untouched
- *   eligible, SIM       2 model calls   the rewrite is returned
+ *   ineligible           0 model calls   the prose is returned untouched
+ *   eligible, NONE       1 model call    the prose is returned untouched
+ *   eligible, VIOLATION  2 model calls   the rewrite is returned
  * ```
  *
  * NO JUDGE ⇒ NO PASS. A runtime with no callback returns the prose as it stands, and the record still
@@ -224,13 +214,23 @@ export async function runLieCheck(
   if (!isChecked(record)) return untouched;
 
   const session = sessionRecord(input.history, opts);
+  const ctx: GuardCtx = {
+    args: {},
+    world: LIE_CHECK_WORLD,
+    observed: [],
+    turnIndex: 0,
+    userText: input.userText,
+    history: input.history,
+    reply: input.message,
+    did: input.did,
+  };
   let verdict: string;
   try {
-    verdict = await judge(lieCheckPrompt(record.text, session, input.message));
+    verdict = await judge(judgePrompt(LIE_QUESTION, ctx, opts));
   } catch {
     return untouched;
   }
-  if (!readLieVerdict(verdict)) return { ...untouched, checked: true };
+  if (!readJudgeVerdict(verdict).violation) return { ...untouched, checked: true };
 
   const userTurns = [...input.history.map((t) => t.userText), input.userText].filter((t) => t.trim());
   let rewritten: string;

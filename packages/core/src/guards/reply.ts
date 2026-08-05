@@ -16,7 +16,7 @@ import { escapeRe } from './shared.js';
  * fixed scaffolding tokens (a model-layer property, not business text judgment), so they carry NO param
  * and stay in the deterministic surface. This guard takes no RegExp param at all: a judgment like
  * third-person SELF-NARRATION depends on wording, and wording is `llmCheck`'s job — an author who wants
- * it binds an `llmCheck` rubric.
+ * it binds an `llmCheck` question.
  * A hit routes into the existing redrive → exhaustion battery (redrives are reply-only regenerations,
  * which is exactly what this class needs). Pure check: no clock/RNG/IO; fresh regexes per call.
  */

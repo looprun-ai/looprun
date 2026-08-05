@@ -12,7 +12,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import type { AgentSpec, AgentWorld, GuardCtx, ObservedCall } from '@looprun-ai/core';
-import { renderScopedSpecTrunk } from '@looprun-ai/core/internal';
+import { LIE_QUESTION, renderScopedSpecTrunk } from '@looprun-ai/core/internal';
 import { loadNormsConfig, NormsConfigError, renderDeny } from '../src/norms-config.js';
 import { loadSubject } from '../src/subject.js';
 
@@ -83,27 +83,26 @@ describe('loadNormsConfig — guards from data', () => {
     expect(() => loadNormsConfig(cfg)).toThrow(NormsConfigError);
   });
 
-  it('(a4) the didMessageConsistency kind loads onReply/global with the BAKED rubric', () => {
+  it('(a4) the llmCheckLie kind loads onReply/global with the BAKED lie question', () => {
     const cfg = {
       id: 'x', persona: 'p', tools: ['cancelBooking'],
-      guards: [{ kind: 'didMessageConsistency', id: 'prosebackstop', failMode: 'closed' }],
+      guards: [{ kind: 'llmCheckLie', id: 'prosebackstop', failMode: 'closed' }],
     };
     const spec = loadNormsConfig(cfg);
     const bound = spec.guards.onReply.find((b) => b.id === 'agent:prosebackstop');
     expect(bound?.guard.kind).toBe('llmCheck'); // it IS an llmCheck — the judge gate sees it
     expect(bound?.guard.dim).toBe('behavior');
-    // The rubric is the ENGINE's, not the config's: the config chose only to install it.
-    expect(bound?.guard.prose()).toContain('did');
-    expect(bound?.guard.prose()).toContain('message');
+    // The question is the ENGINE's, not the config's: the config chose only to install it.
+    expect(bound?.guard.prose()).toBe(LIE_QUESTION);
     // AVAILABLE, NOT AUTO-INSTALLED: a config that does not name it gets no such guard.
     const without = loadNormsConfig({ id: 'x', persona: 'p', tools: ['cancelBooking'], guards: [] });
-    expect(without.guards.onReply.some((b) => b.guard.prose().includes('operations it declared'))).toBe(false);
+    expect(without.guards.onReply.some((b) => b.guard.prose() === LIE_QUESTION)).toBe(false);
   });
 
-  it('(a5) didMessageConsistency: a rubric of its own is rejected by .strict() (the rubric is engine-owned)', () => {
+  it('(a5) llmCheckLie: a rubric of its own is rejected by .strict() (the question is engine-owned)', () => {
     const cfg = {
       id: 'x', persona: 'p', tools: ['t'],
-      guards: [{ kind: 'didMessageConsistency', id: 'd', rubric: 'my own question?' }],
+      guards: [{ kind: 'llmCheckLie', id: 'd', rubric: 'my own question?' }],
     };
     expect(() => loadNormsConfig(cfg)).toThrow(NormsConfigError);
   });
