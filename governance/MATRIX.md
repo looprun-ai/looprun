@@ -6,6 +6,7 @@ Regenerate with `pnpm proofs:matrix`; CI runs `--check` to keep it in sync.
 
 | Date | Record | Change | Scope | Isolated | Collective | Coverage | Certified models | SLM canary | Verdict |
 |---|---|---|---|---|---|---|---|---|---|
+| 2026-08-05 | [one-judge-one-question](proofs/2026-08-05-one-judge-one-question.md) | one seam carries every judging call; one envelope carries both lists and the person's own words; the lie question is the engine's and the no-action gate belongs to the rewrite | guard:llmCheck | 138/138 | 32/32 | 20/20 | n/a | n/a | PASS |
 | 2026-08-05 | [same-model-adjudicator](proofs/2026-08-05-same-model-adjudicator.md) | the engine composes the judging prompt; the backend resolves the adjudicator from the turn's own model when the host supplies none; a failed or unreadable call finds nothing and is recorded | guard:llmCheck | 137/137 | 32/32 | 20/20 | n/a | n/a | PASS |
 | 2026-08-04 | [operation-record-and-lie-check](proofs/2026-08-04-operation-record-and-lie-check.md) | the operation record closes every finalized turn with a sentence chosen by whether any action line exists, and a turn that carried out nothing goes through one closed lie check that gates a prose rewrite | runtime | 152/152 | 36/36 | 22/22 | n/a | n/a | PASS |
 | 2026-08-03 | [as-is-prose-sweep](proofs/2026-08-03-as-is-prose-sweep.md) | engine comments + GUARDS.md state constraints in the present tense; TurnClaim renamed to Intention (type-only, zero runtime footprint) | docs | 152/152 | 36/36 | 22/22 | n/a | n/a | PASS |
