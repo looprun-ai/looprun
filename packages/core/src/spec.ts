@@ -196,33 +196,6 @@ export interface AgentSpec {
 
 const TERMINAL_TOOLS = ['respond'];
 
-/**
- * A reply-only policy and a destructive tool cannot coexist in one spec.
- *
- * `controls.terminal` decides per world state whether the turn may pose a question. When it returns
- * true the protocol forbids declaring an `ask` — while `confirmFirst`'s ask arm and
- * `pendingConfirmMustAsk` REQUIRE one before a destructive act is licensed or a pending confirmation
- * is relayed. A spec carrying both hands the model a prompt that forbids what its own guards demand,
- * and the only ways out at runtime are worse than refusing: suppressing the guard drops consent,
- * suppressing the policy delivers the question the policy exists to prevent.
- *
- * The collision is a property of the SPEC, not of any world, so it is decided once at load. Split the
- * agent instead: the reply-only surface keeps the read tools, the destructive tools live on a spec
- * that may ask.
- */
-function assertReplyOnlyHasNoDestructiveTool(
-  terminal: unknown,
-  destructiveTools: readonly string[],
-  where: string,
-): void {
-  if (!terminal || !destructiveTools.length) return;
-  throw new Error(
-    `${where}: a reply-only terminal policy cannot be combined with destructive tools ` +
-      `(${destructiveTools.join(', ')}). Reply-only forbids the model from asking, and the consent ` +
-      'guards require an ask before a destructive act. Drop the policy, or move the destructive tools ' +
-      'to a spec that may ask.',
-  );
-}
 const LAYER_ORDER: Record<Layer, number> = { agent: 0, full: 1, base: 2, minimal: 3 };
 
 /**
@@ -436,7 +409,6 @@ export class AgentSpecBase implements AgentSpec {
     this.destructiveTools = [...(cfg.destructiveTools ?? [])];
     this.confirmMechanism = { ...(cfg.confirmMechanism ?? {}) };
     this.destructiveLabels = { ...(cfg.destructiveLabels ?? {}) };
-    assertReplyOnlyHasNoDestructiveTool(cfg.terminal, this.destructiveTools, `AgentSpec "${cfg.id}"`);
     // Install order is load-bearing (byte-stable trunk): universal invariants first, destructive layer
     // second.
     this.installMinimal();

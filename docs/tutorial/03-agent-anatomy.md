@@ -220,52 +220,30 @@ what reply-only means:
 Reach for it on a **read surface** — a status desk, a digest, a lookup agent — where a question is a
 stall rather than a step, because nothing the answer unlocks is on the tool surface anyway.
 
-### It cannot share a spec with a destructive tool
+### It composes with a destructive tool, because the question is not the agent's
 
-`AgentSpecBase`'s constructor refuses the combination outright. This class compiles; constructing it
-throws:
-
-```ts
-class ReplyOnlyCanceller extends AgentSpecBase {
-  constructor() {
-    super({
-      id: 'canceller',
-      mode: 'CALENDAR',
-      persona: 'You are the calendar canceller.',
-      tools: ['listEvents', 'cancelEvent'],
-      destructiveTools: ['cancelEvent'],
-      terminal: EMPTY_CALENDAR_IS_REPLY_ONLY,
-    });
-  }
-}
-```
-<sub>excerpt · `snippets/03-agent-anatomy.ts`</sub>
+Reply-only forbids the AGENT from asking. It does not forbid consent, because the confirmation question
+is written and rendered by the ENGINE:
 
 ```
-   AgentSpec "canceller": a reply-only terminal policy cannot be combined with destructive
-   tools (cancelEvent). Reply-only forbids the model from asking, and the consent guards
-   require an ask before a destructive act. Drop the policy, or move the destructive tools
-   to a spec that may ask.
+   turn 1   agent:   cancelEvent({ id: 'EV-2' })          ← reply-only: it asks nothing
+            world:   { requiresConfirmation: true, id: 'EV-2' }
+            screen:  The 10:00 meeting is on your calendar.
+
+                     To confirm EV-2, reply: CONFIRM EV-2   ← the ENGINE wrote this line
+
+   turn 2   user:    "CONFIRM EV-2"
+            agent:   cancelEvent({ id: 'EV-2', confirmed: true })   → allowed
 ```
-<sub>the message `new ReplyOnlyCanceller()` throws — asserted in `snippets/test/scheduler.test.ts`</sub>
 
-The two fields give the same turn contradictory orders, and the contradiction is a property of the
-**spec**, not of any world — so it is decided once, at load:
+So a reply-only agent may hold a destructive tool and still take consent for it. What it may not do is
+ask a *clarifying* question — which is the thing the policy is actually for.
 
-| the spec declares | what it demands of one turn |
-|---|---|
-| `terminal` returns `true` | never declare an `ask` |
-| `destructiveTools` ⇒ `confirmFirst` (its ask arm) | an `ask` in an earlier turn licenses the destructive act |
-| a probe that came back `requiresConfirmation` ⇒ `pendingConfirmMustAsk` | the delivered reply must declare an `ask` |
+### Splitting the agent is still usually right
 
-Neither runtime escape is survivable: suppress the guard and consent is dropped; suppress the policy
-and the turn delivers the very question the policy exists to prevent. Refusing at construction is the
-only outcome that loses nothing.
-
-### The remedy is to split the agent
-
-The scheduler owns `cancelEvent`, so it keeps its ask and carries no policy. The read surface becomes
-its own agent, and *that* one holds the policy:
+Nothing forces the split, but a read surface and a write surface answer different questions and carry
+different risk. The scheduler owns `cancelEvent` and carries no policy; the read surface becomes its own
+agent, and *that* one holds it:
 
 ```ts
 export class CalendarDigestSpec extends AgentSpecBase {
@@ -291,8 +269,8 @@ export class CalendarDigestSpec extends AgentSpecBase {
 ```
 
 Both share `SCHEDULER_CONTRACT`, so the two agents open with a byte-identical prompt prefix (§5) and
-the split costs nothing at the seam. The rule generalises: **a spec that may not ask keeps only the
-tools that never need consent.**
+the split costs nothing at the seam. The guidance generalises: **put the policy where a question would
+be a stall, and keep the tools that change things on a surface that can talk about them.**
 
 ---
 

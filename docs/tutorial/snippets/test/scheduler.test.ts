@@ -7,7 +7,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { validateSpec } from 'looprun';
-import { calendarDigestSpec, replyOnlyRefusal } from '../03-agent-anatomy.js';
+import { calendarDigestSpec } from '../03-agent-anatomy.js';
 import { helloSchedulerSpec } from '../scheduler/hello-spec.js';
 import { schedulerSpec } from '../scheduler/spec.js';
 import { SCHEDULER_TOOLS, listEventsTool } from '../scheduler/tools.js';
@@ -50,12 +50,5 @@ describe('the scheduler snippet modules', () => {
 
     // The scheduler owns `cancelEvent`, so it carries no policy at all.
     expect(schedulerSpec.controls?.terminal).toBeUndefined();
-
-    // And the two together are refused at CONSTRUCTION — the message the chapter quotes.
-    expect(replyOnlyRefusal()).toBe(
-      'AgentSpec "canceller": a reply-only terminal policy cannot be combined with destructive tools ' +
-        '(cancelEvent). Reply-only forbids the model from asking, and the consent guards require an ask ' +
-        'before a destructive act. Drop the policy, or move the destructive tools to a spec that may ask.',
-    );
   });
 });

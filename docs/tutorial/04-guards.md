@@ -259,13 +259,13 @@ you want the kind that makes that impossible. Read this column as "the model …
 
 | the model … | reach for | which is on |
 |---|---|---|
-| acts destructively without ever having asked | [`confirmFirst`](#10-confirmfirst) (auto-installed by `destructiveTools`) | preTool |
-| asks and acts in the same breath, or chains two destructive calls in one turn | [`noActAfterAskSameTurn`](#11-noactafterasksameturn) · [`destructiveThrottle`](#12-destructivethrottle) | preTool |
+| acts destructively without the user having confirmed | [`confirmFirst`](#10-confirmfirst) (auto-installed by `destructiveTools`) | preTool |
+| chains two destructive calls in one turn | [`destructiveThrottle`](#11-destructivethrottle) | preTool |
 | makes the same call again, hoping for a different answer | [`noDuplicateCall`](#4-noduplicatecall) | preTool |
 | calls a legitimate tool too many times — sweeps, repeat contact | [`maxCalls`](#3-maxcalls) | preTool |
 | runs a step before the one it depends on | [`requiresBefore`](#1-requiresbefore) | preTool |
 | acts while the world says it must not (closed account, no consent on record) | [`precondition`](#8-precondition) · [`consentRequired`](#9-consentrequired) | preTool |
-| a value must not be recorded until the operator was asked for it in an earlier turn · a confirmed act needs its own earlier-turn preview | [`askedEarlier`](#13-askedearlier) · [`confirmFirst`](#10-confirmfirst) (`via:'probe'`) | preTool |
+| fills a field in on the user's behalf with a value they never said | [`valueFromUser`](#12-valuefromuser) | preTool |
 | summarises an empty or partial result as if it satisfied the request | [`resultInvariant`](#14-resultinvariant) | postTool |
 | claims a tool's work is done when it is not · apologises for a failure on a turn where the work went through · promises an off-surface handoff · discloses a personal/regulated field the tools do not ground · obeys an instruction that came back INSIDE a tool result | [`llmCheck`](#20-llmcheck) — text judgment is one single kind: a trusted rubric answered by a host adjudicator | onReply / preTool |
 | reports an operation the ledger does not show, or leaves a real action unreported, or names the wrong outcome polarity for a record | [`claimIsGrounded`](#16-claimisgrounded) · [`claimIsComplete`](#17-claimiscomplete) · [`claimCoversRubric`](#18-claimcoversrubric) | onReply |
@@ -282,7 +282,7 @@ reading only one row will pick the wrong kind:
 |---|---|
 | `requiresBefore` · `precondition` | which call came first, vs what state the world is in |
 | `forbidThisTurn` · `noDuplicateCall` | the first call is illegitimate, vs only the repeat is |
-| `confirmFirst` · `consentRequired` · `pendingConfirmMustAsk` | evidence in the CONVERSATION (an earlier turn) · a standing flag in the WORLD · gating the REPLY rather than the call |
+| `confirmFirst` · `consentRequired` | the user typed the engine's confirmation token · a standing flag in the WORLD |
 | `claimIsGrounded` · `claimIsComplete` · `claimCoversRubric` | every claim matches the ledger · every effected write is claimed · a per-case target appears with the required outcome polarity |
 
 **Text judgment is one kind, not a cluster.** There is no family of reply-text kinds to pick between:
@@ -347,26 +347,48 @@ matrix makes it legal for every `spatial`/`input`/`run` guard — but no shipped
 there, because a rule that can refuse the whole turn before a call is even proposed is a domain
 decision, not a default. `custom` is how you reach it.
 
-### The consent story — three checkpoints, installed as a set
+### The consent story — a token the engine issues and the user types back
 
-Ask-before-you-act is not one guard. It is three, each gating a different thing on a different hook,
-and a governed destructive flow installs all three together — never two that say the same thing twice.
+Ask-before-you-act is not a thing your agent declares. It is a literal the ENGINE writes onto the user's
+screen and the USER writes back:
 
 ```
-   ①  confirmFirst          gates the CALL    (preTool)  — the confirmed act may run only when an
-                                                           EARLIER turn licensed it (a probe or an ask)
-   ②  askedEarlier          gates the ARG     (preTool)  — a value may be RECORDED only after the
-                                                           operator was asked for it and answered later
-   ③  pendingConfirmMustAsk  gates the REPLY   (onReply)  — when a probe returned "needs confirmation"
-                                                           and nothing resolved it, the reply MUST relay
-                                                           the question instead of reporting the act done
+   ①  the world raises it   your tool answers requiresConfirmation and NAMES its record
+   ②  or the denial does    a tool with no preview form is denied, and the denial raises the question
+                            from the label your spec declared
+   ③  the engine renders    the question lands in the delivered text, between the agent's prose and the
+                            operation record
+   ④  the user answers      their next message either carries the token or does not
+   ⑤  confirmFirst allows   the act runs iff a consumed question is about THIS call
 ```
 
-They compose because they cover disjoint moments: ① stops the unlicensed call, ② stops the unasked-for
-value from being written, ③ stops the reply from summarising a still-pending action as finished. Reach
-for the one that matches WHAT you are gating — the call, the argument, or the message — and do not stack
-a second consent kind on the same moment: `confirmFirst` already carries the cross-turn requirement, so
-pairing it with another call-gate is the redundancy this section exists to prevent.
+The whole turn:
+
+```
+turn 1   agent:   cancelBooking({ id: 'BK-1' })
+         world:   { requiresConfirmation: true, id: 'BK-1' }
+         screen:  Your booking BK-1 carries an 80.00 fee.
+
+                  To confirm BK-1, reply: CONFIRM BK-1
+
+                  No operation was carried out on this turn.
+
+turn 2   user:    "yes, CONFIRM BK-1"
+         agent:   cancelBooking({ id: 'BK-1', confirmed: true })   → allowed
+```
+
+`"go ahead"` is a human yes and is **denied** — the question is simply asked again. That is deliberate:
+consent fails closed, because the alternative is a model deciding what a person meant.
+
+**What you owe the engine.** A two-step tool returns `requiresConfirmation` and names its record under
+an identity key. A tool that acts on no identifiable record declares `destructiveLabels` — the words the
+question is built from — and without one it can raise no question, so it never runs. A conversation in
+another language declares `engineText`, because the user has to be able to READ the instruction they are
+being asked to type back.
+
+**`valueFromUser` is the sibling, one moment earlier.** Consent is about an ACT; `valueFromUser` is about
+a VALUE your agent fills in on the user's behalf. It allows only what the person actually said, compared
+as whole words — so an invented value is denied, and so is a paraphrase of a real one.
 
 ### `preTool` — before the call runs
 
@@ -773,18 +795,16 @@ You are not expected to catch it; you are expected to fix the guard, which is wh
 
 ```
    Guard         kind · dim · check(ctx) → deny string | null · prose() → the prompt line
-   GuardCtx      args · tool · world · observed · turnIndex · userText · history · reply · result · adjudicator
+   GuardCtx      args · tool · world · observed · turnIndex · userText · consent · history · reply · result · adjudicator
    ObservedCall  name · args · ok · turnIndex · resultFlags · tookEffect
    Dim           spatial | input | run | output | behavior  → which hooks are legal
-   canonArgs     the key-order-independent call fingerprint — `noDuplicateCall` keys on it, and
-                 `pendingConfirmMustAsk` keys on it with the confirm flag stripped
+   canonArgs     the key-order-independent call fingerprint — `noDuplicateCall` keys on it
 
-   23 factories, grouped by the hook they run on:
-     preTool        13   prevent it — the deny returns as the tool result, the model retries
-     postTool        1   the result is in; correct the REPLY, not the call
-     onReply         7   the reply exists; a deny costs a re-generation, then the honest closure
-     onReplyMutate   1   rewrite, never veto
-     custom          1   the escape hatch — you pass the dim
+   21 factories, grouped by the hook they run on:
+     preTool       13   prevent it — the deny returns as the tool result, the model retries
+     postTool       1   the result is in; correct the REPLY, not the call
+     onReply        6   the reply exists; a deny costs a re-generation, then the honest closure
+     onReplyMutate  1   rewrite, never veto
 ```
 
 You now have the map, the machine and the rules. Chapter 05 runs all three over a scripted

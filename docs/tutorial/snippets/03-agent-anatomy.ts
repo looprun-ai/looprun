@@ -44,33 +44,8 @@ export class CalendarDigestSpec extends AgentSpecBase {
 
 export const calendarDigestSpec = new CalendarDigestSpec();
 
-/**
- * The combination `AgentSpecBase` REFUSES. Declaring the class is fine; CONSTRUCTING it throws, so a
- * spec that both forbids the ask and requires it can never reach a world or a turn.
- */
-class ReplyOnlyCanceller extends AgentSpecBase {
-  constructor() {
-    super({
-      id: 'canceller',
-      mode: 'CALENDAR',
-      persona: 'You are the calendar canceller.',
-      tools: ['listEvents', 'cancelEvent'],
-      destructiveTools: ['cancelEvent'],
-      terminal: EMPTY_CALENDAR_IS_REPLY_ONLY,
-    });
-  }
-}
 
 /** The refusal, in the constructor's own words. */
-export function replyOnlyRefusal(): string {
-  try {
-    new ReplyOnlyCanceller();
-  } catch (err) {
-    return (err as Error).message;
-  }
-  throw new Error('expected AgentSpecBase to refuse a reply-only policy beside a destructive tool');
-}
-
 // ── 3 · reading world state: the nominal cast vs the structural one ──────────
 /** The cost of `AgentWorld`'s `[k: string]: any`, demonstrated: BOTH of these typecheck. */
 export function indexSignatureCost(world: AgentWorld): void {

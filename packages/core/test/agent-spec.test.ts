@@ -72,15 +72,12 @@ describe('AgentSpecBase — universal invariants', () => {
     expect(() => shadow({ settled: 'success' })).not.toThrow();
   });
 
-  it('rejects a reply-only terminal policy on a spec that owns a destructive tool, at load', () => {
+  it('accepts a reply-only terminal policy beside a destructive tool', () => {
     const build = (over: { terminal?: () => boolean; destructiveTools?: string[] }) =>
       new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: ['deleteAccount'], ...over } as never);
-    // Reply-only forbids the model from declaring an `ask`; confirmFirst's ask arm and
-    // pendingConfirmMustAsk require one before a destructive act is licensed. A spec carrying both
-    // hands the model a prompt that forbids what its own guards demand.
-    expect(() => build({ terminal: () => true, destructiveTools: ['deleteAccount'] })).toThrow(/deleteAccount/);
-    expect(() => build({ terminal: () => true, destructiveTools: ['deleteAccount'] })).toThrow(/reply-only/i);
-    // Either alone is legal: a reply-only read surface, or a destructive spec that may ask.
+    // Reply-only forbids the AGENT from asking. It does not forbid consent: the confirmation question is
+    // written and rendered by the ENGINE, so the prompt and the guards ask for nothing incompatible.
+    expect(() => build({ terminal: () => true, destructiveTools: ['deleteAccount'] })).not.toThrow();
     expect(() => build({ terminal: () => true })).not.toThrow();
     expect(() => build({ destructiveTools: ['deleteAccount'] })).not.toThrow();
   });
