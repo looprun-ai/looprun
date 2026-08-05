@@ -109,8 +109,8 @@ const INTERNAL = [
   // gated measurement suite exercises the shipped instrument rather than a copy of it.
   'Judge', 'runLieCheck', 'LieCheckInput', 'LieCheckOutcome', 'isChecked',
   'lieCheckPrompt', 'rewritePrompt', 'readLieVerdict', 'TURN_HEADING',
-  // The adjudication envelope: the prompt a judging call receives, and how its answer is read.
-  'adjudicationPrompt', 'readAdjudicationVerdict', 'ADJUDICATION_INSTRUCTIONS',
+  // The judge envelope: the prompt every judging call receives, and how its answer is read.
+  'judgePrompt', 'readJudgeVerdict', 'JUDGE_INSTRUCTIONS',
   // The mandatory-intention partition: the reserved speech-op vocabulary + partition predicates, the
   // `Intention` shape, and the structured ask signal (`hasAskIntent`) the consent guards key onto.
   'SPEECH_OPS', 'SpeechOp', 'Intention', 'isSpeechOp', 'isActionOp', 'hasAskIntent',

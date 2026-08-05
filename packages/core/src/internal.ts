@@ -107,9 +107,9 @@ export type { SessionRecord } from './runtime/session-record.js';
 export { runLieCheck, isChecked, lieCheckPrompt, rewritePrompt, readLieVerdict, TURN_HEADING } from './runtime/lie-check.js';
 export type { Judge, LieCheckInput, LieCheckOutcome } from './runtime/lie-check.js';
 
-// THE ADJUDICATION ENVELOPE — the prompt a judging call receives and how its answer is read. The
+// THE JUDGE ENVELOPE — the prompt every judging call receives and how its answer is read. The
 // engine composes it so the no-framing and data-delimiting rules hold wherever the call is carried.
-export { adjudicationPrompt, readAdjudicationVerdict, ADJUDICATION_INSTRUCTIONS } from './runtime/adjudication.js';
+export { judgePrompt, readJudgeVerdict, JUDGE_INSTRUCTIONS } from './runtime/judge-prompt.js';
 
 export {
   isTerminal,

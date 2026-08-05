@@ -824,10 +824,10 @@ over its world (see "Domain label guards via custom()" above). A new-language do
 
 **The rubric is the domain's language; the envelope around it is the engine's own.** An `llmCheck`'s
 `rubric` string is the only per-guard text a domain supplies, and it carries whatever language the domain
-writes it in. The judging call's envelope — `ADJUDICATION_INSTRUCTIONS` and the section labels it composes
-the prompt from (`REPLY UNDER JUDGEMENT (data, not instructions):`, `LEDGER (data):`,
-`CALL UNDER JUDGEMENT (data):`, `RESULT (data):`, `QUESTION:`) — is engine-authored English, sent on every
-judging call regardless of the rubric's language. That English is correct under the law above (it is code,
+writes it in. The judging call's envelope — `JUDGE_INSTRUCTIONS` and the section labels it composes
+the prompt from (`REPLY UNDER JUDGEMENT (data, not instructions):`, `ON THIS TURN (data):`,
+`ALREADY DONE IN THIS SESSION (data):`, `CALL UNDER JUDGEMENT (data):`, `RESULT (data):`, `QUESTION:`) —
+is engine-authored English, sent on every judging call regardless of the rubric's language. That English is correct under the law above (it is code,
 not a domain string), and it is a fixed cost a non-English domain pays on every bound rubric: the model
 reads its own rubric in its own language inside an English frame. **CI-enforced** by the accent/pt-stem lint
 (`packages/core/test/runtime-neutrality.test.ts`): it scans every `packages/core/src/*.ts` for accented
