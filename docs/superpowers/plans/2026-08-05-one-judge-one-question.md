@@ -375,9 +375,9 @@ git commit -m "feat(core): one envelope, and it carries both lists"
 - Produces:
   - `type Judge = (prompt: string) => Promise<string>` — the only seam, exported from
     `@looprun-ai/core`
-  - `GuardCtx.judge?: Judge`, `GuardCtx.judgeTimeoutMs?: number`
+  - `GuardCtx.judge?: Judge`, `GuardCtx.judgeTimeoutMs?: number`, `GuardCtx.renderOpts?: RenderOpts`
   - `assertJudgePresent(spec, judge)` from `@looprun-ai/core/internal`
-  - `defaultJudge(generate, modelParams, renderOpts): Judge` from `packages/mastra/src/judge.ts`
+  - `defaultJudge(generate, modelParams): Judge` from `packages/mastra/src/judge.ts`
   - `JUDGE_UNREACHABLE = 'judge-unreachable'`, `JUDGE_UNREADABLE = 'judge-unreadable'`
 
 - [ ] **Step 1: Apply the rename table**
@@ -429,10 +429,23 @@ async check(ctx) {
 }
 ```
 
-`ctx.renderOpts` does not exist and must not be added to `GuardCtx` — thread the contract's render
-options into `defaultJudge` in the backend instead, exactly as the current code does. Drop the
-third argument from `judgePrompt` here and let the backend-composed judge apply them; if that proves
-impossible, STOP and report rather than widening `GuardCtx`.
+**`GuardCtx` carries the domain's render options, and it must.** A seam that takes a finished string
+cannot apply a vocabulary it never sees: the backend receives text, not claims. The options are
+run-scoped, exactly like the judge itself, and `GuardCtx` is the run-scoped channel into a guard. A
+guard-factory argument is spec-scoped and would render the wrong contract whenever a host overrides
+it per run.
+
+```
+contract     outcomes: { cancelled: 'success' }
+did          [{ op:'cancel', target:'Dentist 2026-03-03', outcome:'cancelled' }]
+
+with them    ON THIS TURN   Dentist 2026-03-03: done
+without      ON THIS TURN   No operation was carried out on this turn.
+                            ← a truthful reply now reads as a lie, and failMode closed denies it
+```
+
+Seat `renderOpts` on every ctx from the same place `judge` and `judgeTimeoutMs` are seated. Only a
+prompt-composing guard reads it.
 
 - [ ] **Step 3: Rewrite the backend's default**
 
