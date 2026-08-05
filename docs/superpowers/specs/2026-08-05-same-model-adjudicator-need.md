@@ -203,11 +203,14 @@ adjudicator never produces one — so through the default, `'closed'` never fire
 rubric passes. A domain that needs an outage to deny binds its own adjudicator, one that rejects, and
 `failMode` works for it exactly as written.
 
-**The non-run is still RECORDED, and the default adjudicator is what records it.** The correction
-`llmcheck-unreachable:<failMode>` is appended from the guard's rejection path, which a settling
-adjudicator never reaches — so the default appends it itself. Without that line, "the check ran and
-approved" and "the check never ran" are the same observation, and no eval, log or operator can tell
-an outage from a clean session.
+**The non-run is still RECORDED, and the default adjudicator is what records it.** Without a line,
+"the check ran and approved" and "the check never ran" are the same observation, and no eval, log or
+operator can tell an outage from a clean session.
+
+It is its OWN correction, not the guard's. `llmcheck-unreachable:<failMode>` says a guard applied its
+`failMode` to a rejection, and an adjudicator knows nothing about `failMode` — that is the guard's
+parameter. The default adjudicator appends `adjudicator-unreachable`, which says the call did not
+answer. Both markers exist, and they mean different things.
 
 The measured numbers of §5 are the layer's miss rate when the endpoint answers. They say nothing
 about a window in which it does not, and the two must never be added together.
@@ -227,20 +230,24 @@ that cap and an accounting line. What happens when it is hit is already answered
 not made, the verdict is `null`, and the non-run is recorded like any other. A cap that skips
 silently is the one outcome ruled out.
 
-### 8 · The runner registers it
+### 8 · The BACKEND defaults it; the runner registers nothing
 
-The one line that unblocks everything:
+The seam is registered where the agent is built, not where the run is launched. Only the backend
+holds the agent, the endpoint and the generation parameters — the runner holds a model name.
 
-```ts
-runSpecConversation(spec, c.turns, { model, modelParams, world, toolDefs, contract, adjudicator })
+```
+deps.adjudicator supplied   →  the host's own, and `failMode` prices its rejections
+deps.adjudicator absent     →  the engine-composed default, from this run's own agent
 ```
 
-The adjudicator the runner passes is the engine-composed default, built in the backend from the
-agent's own model and the isolated-call options — the same construction the lie check's judge takes.
-The target model is already declared in `ask/targets.json`, so the runner names no model of its own.
+That is where the lie check's judge is built, and it is the same construction. The eval runner
+changes nothing: it names no model of its own beyond the target already declared in
+`ask/targets.json`, and it passes no adjudicator.
 
-`assertAdjudicatorPresent` then stops being a gate any generated subject can trip, which is what
-makes the skill change in the propagation section safe to make.
+`assertAdjudicatorPresent` then never fires through this backend, because the resolution it is handed
+always yields one. It stays, because a spec can be driven by a runtime that resolves nothing. What it
+stops being is a gate a generated subject can trip — which is what makes the skill change in the
+propagation section safe.
 
 ## What must NOT be claimed afterwards
 
@@ -281,7 +288,7 @@ the catalog and the chapter is regenerated, never hand-edited.
 | `docs/tutorial/04-guards.md` (regenerated) | the author does not register anything to bind a rubric |
 | `docs/tutorial/05-running-and-eval.md` — "the one check that only happens here" | there are TWO run-start throws, and `assertAdjudicatorPresent` is the second |
 | `docs/benchmarks.md` | the two numbers of §5 — false negatives, false positives — and the fixture set they came from |
-| `packages/eval/README.md` | the default the runner registers and the flag that turns it off |
+| `packages/eval/README.md` | binding a rubric needs no wiring from the runner; a host replaces the default by supplying its own |
 | `README.md` | the deterministic claim stays exactly as narrow as it is; text judgement is named as the separate, measured layer it is |
 | `BACKLOG.md` | the reply-honesty row for the example bundles is answerable once the seam is reachable |
 
