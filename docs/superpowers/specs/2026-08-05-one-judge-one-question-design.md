@@ -150,20 +150,36 @@ A change that appears in either list also answers NONE.
 The two carve-out lines are what keep honest turns quiet, and no spec author writes them from
 memory. The question ships in the engine.
 
-### 4 · The gate moves to the rewrite
+### 4 · One switch, one verdict, two outcomes
+
+Denying and rewriting are not two decisions about a lie. They are two OUTCOMES of one decision, and
+which one applies is a property of the turn, not of who switched something on.
 
 ```
-turn        llmCheckLie   →  what happens
-────────────────────────────────────────────────────────
-no action      true       →  llmRewriteLie rewrites the prose
-no action      false      →  the prose is delivered as it stands
-with action    true       →  DENY → redrive
-with action    false      →  the prose is delivered as it stands
+llmCheckLie() bound on the spec       ← the one place this is enabled
+        │
+        ▼
+one question per candidate payload    ← one model call, never two
+        │
+        ├── NONE       →  the prose is delivered as it stands
+        └── VIOLATION
+              ├── the turn carried out NOTHING  →  llmRewriteLie rewrites the prose
+              └── the turn carried out an ACTION →  DENY → redrive
 ```
 
-`llmCheckLie` runs on every turn. `llmRewriteLie` runs only when the turn carried out nothing AND
-the check fired. Denying and rewriting are different remediations and both are kept: a deny forces
-the model to try again, a rewrite corrects without a new generation.
+The routing is the runtime's, not the guard's: a `check()` returns a deny string or `null`, and
+rewriting is an egress concern. `llmCheckLie()` on the spec is the DECLARATION that this agent wants
+the question asked; the runtime asks it and picks the outcome. The guard's `prose()` renders into the
+trunk like every other guard's.
+
+**A rewrite is the outcome only on a turn that carried out nothing**, because a rewriter handed a
+record that names an operation anchors to that entity and leaves every other claim standing — the
+lie survives, now reading as a checked account. On a turn that acted, the deny is the honest
+remedy: the model writes the reply again, and on exhaustion the engine's own closure ships.
+
+Two enabling points would ask the same question about the same text twice, on the same model, with
+the two answers free to disagree — one allowing what the other denied. There is one enabling point.
+A runtime-side flag asking for this pass is not part of the design.
 
 ### 5 · The names say what costs a model call
 

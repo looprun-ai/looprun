@@ -3,13 +3,13 @@
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Collapse two model seams into one, give every judging call one envelope carrying both
-lists, move the lie question into the engine, and put the no-action gate on the rewrite instead of
-the check.
+lists, move the lie question into the engine, and leave one place where that question is enabled.
 
 **Architecture:** `Judge = (prompt) => Promise<string>` becomes the only seam; the engine composes
-every prompt and parses every answer. One envelope serves the author's question and the engine's
-lie question alike. `llmCheckLie` runs on every turn and denies; `llmRewriteLie` runs only when the
-turn carried out nothing and the check fired.
+every prompt and parses every answer. One envelope serves the author's question and the engine's lie
+question alike. Binding `llmCheckLie()` on the spec is the single enabling point: the runtime asks
+once per candidate payload and routes the verdict — a rewrite when the turn carried out nothing, a
+deny when it acted.
 
 **Tech Stack:** TypeScript, pnpm workspaces, vitest, Mastra `Agent`, the AI SDK.
 
@@ -54,7 +54,7 @@ A repo-wide find-and-replace on `rubric` destroys the eval surface. Rename by re
 |---|---|
 | `packages/core/src/runtime/adjudication.ts` → `judge-prompt.ts` | RENAME + REWRITE — the one envelope, both lists, the verdict reader |
 | `packages/core/src/runtime/lie-check.ts` | the engine's lie question and the rewrite prompt; the verdict reader and the two-list builder move out |
-| `packages/core/src/runtime/turn.ts` | the gate moves: the check runs every turn, the rewrite keeps the no-action condition |
+| `packages/core/src/runtime/turn.ts` | asks the lie question once per candidate payload and routes the verdict to a rewrite or a deny |
 | `packages/core/src/rules.ts` | `GuardCtx.adjudicator` → `judge`; the `Adjudicator` type is deleted |
 | `packages/core/src/guards/llm-check.ts` | `llmCheck({ question })`, `llmCheckLie()` |
 | `packages/core/src/guards/honesty.ts` | `mustAccountFor({ records, outcome })` |
@@ -601,60 +601,112 @@ git commit -m "feat(core)!: the lie question is the engine's, in the form that a
 
 ---
 
-### Task 4: The gate moves to the rewrite
+### Task 4: One switch, one verdict, two outcomes
 
-The check runs on every turn. The rewrite keeps the no-action condition, because a rewriter handed
-a record that names an operation anchors to that entity and leaves every other claim standing.
+`llmCheckLie()` bound on the spec is the ONLY place this is enabled. `deps.lieCheck` is deleted. One
+question per candidate payload; the runtime routes the verdict to one of two outcomes.
+
+```
+VIOLATION + the turn carried out NOTHING   →  llmRewriteLie rewrites the prose
+VIOLATION + the turn carried out an ACTION →  DENY → redrive
+NONE                                       →  delivered as it stands
+```
+
+Two enabling points would ask the same question about the same text twice, on the same model, with
+the answers free to disagree. There is one.
 
 **Files:**
-- Modify: `packages/core/src/runtime/lie-check.ts` (`runLieCheck` → `llmRewriteLie`)
-- Modify: `packages/core/src/runtime/turn.ts` (the call site)
-- Test: `packages/core/test/runtime.test.ts` or the existing lie-check test file
+- Modify: `packages/core/src/runtime/lie-check.ts` (`runLieCheck` → `llmRewriteLie`, which now only REWRITES)
+- Modify: `packages/core/src/runtime/turn.ts` (asks once per payload and routes the verdict)
+- Modify: `packages/core/src/guards/llm-check.ts` (`llmCheckLie` becomes declarative)
+- Modify: `packages/mastra/src/run-conversation.ts` (delete `deps.lieCheck`)
+- Test: `packages/core/test/lie-check.test.ts`
 
 **Interfaces:**
-- Consumes: `LIE_QUESTION`, `judgePrompt`, `readJudgeVerdict`, `Judge`.
-- Produces: `llmRewriteLie(input: LieCheckInput, judge: Judge | undefined, opts?: RenderOpts): Promise<LieCheckOutcome>`
-  — same `LieCheckInput` / `LieCheckOutcome` shapes as today.
+- Consumes: `LIE_QUESTION`, `judgePrompt`, `readJudgeVerdict`, `Judge`, `isChecked`.
+- Produces:
+  - `llmRewriteLie(input: LieCheckInput, judge: Judge, opts?: RenderOpts): Promise<string>` — given a
+    verdict already reached, returns the rewritten prose, or the original when the rewrite comes back
+    empty or the call fails. It does NOT ask the question and does NOT gate.
+  - `llmCheckLie()`'s `check()` returns `null` always; its `prose()` renders the rule into the trunk.
+  - `specInstallsLieCheck(spec): boolean` from `@looprun-ai/core/internal`.
+
+**Why the enforcement is runtime-side.** A `check()` can return a deny string or `null` and nothing
+else. One of the two outcomes is a REWRITE, which is an egress concern. Splitting the decision across
+a guard and the runtime is what produced two askers, so the whole decision lives in one place: the
+runtime asks, and the runtime picks the outcome. The guard is the declaration that the agent wants
+the question, and the prose that tells the model the rule.
 
 - [ ] **Step 1: Write the failing test**
 
 ```ts
-describe('llmRewriteLie — the gate', () => {
-  it('makes ZERO calls on a turn that carried out an action', async () => {
+describe('one switch, one verdict, two outcomes', () => {
+  const spec = () => {
+    const s = new (class extends AgentSpecBase {
+      id = 'lie';
+      constructor() { super(); this.surface = { tools: ['respond'] }; this.addGuard('onReply', [], llmCheckLie()); }
+    })();
+    return s;
+  };
+
+  it('asks NOTHING when the spec does not bind llmCheckLie', async () => {
     let calls = 0;
-    const judge: Judge = async () => { calls++; return 'VIOLATION: lie'; };
-    const out = await llmRewriteLie(
-      { message: 'I also cancelled the dentist.', did: [{ op: 'book', target: 'Team meeting', outcome: 'success' }], history: [], userText: '' },
-      judge,
-    );
+    const judge: Judge = async () => { calls++; return 'NONE'; };
+    await finalizeReplyForTest({ spec: bareSpec(), message: 'Done.', did: [{ op: 'inform' }], judge });
     expect(calls).toBe(0);
-    expect(out.checked).toBe(false);
-    expect(out.message).toBe('I also cancelled the dentist.');
   });
 
-  it('asks, and rewrites, on a turn that carried out nothing', async () => {
-    const judge: Judge = async (p) => (p.includes('QUESTION:') ? 'VIOLATION: it claims a cancellation' : 'I have not cancelled it yet.');
-    const out = await llmRewriteLie({ message: 'Done, cancelled.', did: [{ op: 'inform' }], history: [], userText: 'cancel it' }, judge);
-    expect(out.rewritten).toBe(true);
-    expect(out.message).toBe('I have not cancelled it yet.');
+  it('asks EXACTLY ONCE per candidate payload', async () => {
+    let calls = 0;
+    const judge: Judge = async () => { calls++; return 'NONE'; };
+    await finalizeReplyForTest({ spec: spec(), message: 'I cannot cancel that.', did: [{ op: 'inform' }], judge });
+    expect(calls).toBe(1);
   });
 
-  it('delivers the original when the question answers NONE', async () => {
+  it('VIOLATION on a turn that carried out NOTHING rewrites the prose', async () => {
+    const judge: Judge = async (p) =>
+      p.includes('QUESTION:') ? 'VIOLATION: it claims a cancellation' : 'I have not cancelled it yet.';
+    const out = await finalizeReplyForTest({ spec: spec(), message: 'Done, cancelled.', did: [{ op: 'inform' }], judge });
+    expect(out.text).toBe('I have not cancelled it yet.');
+    expect(out.denied).toBe(false);
+  });
+
+  it('VIOLATION on a turn that carried out an ACTION denies instead of rewriting', async () => {
+    let rewriteAsked = false;
+    const judge: Judge = async (p) => {
+      if (!p.includes('QUESTION:')) { rewriteAsked = true; return 'anything'; }
+      return 'VIOLATION: it claims a second cancellation';
+    };
+    const out = await finalizeReplyForTest({
+      spec: spec(),
+      message: 'The team meeting is booked, and I also cancelled the dentist.',
+      did: [{ op: 'book', target: 'Team meeting', outcome: 'success' }],
+      judge,
+    });
+    expect(out.denied).toBe(true);
+    expect(rewriteAsked).toBe(false);
+  });
+
+  it('NONE delivers the prose untouched', async () => {
     const judge: Judge = async () => 'NONE';
-    const out = await llmRewriteLie({ message: 'I cannot cancel that.', did: [{ op: 'inform' }], history: [], userText: '' }, judge);
-    expect(out.checked).toBe(true);
-    expect(out.fired).toBe(false);
-    expect(out.message).toBe('I cannot cancel that.');
+    const out = await finalizeReplyForTest({ spec: spec(), message: 'I cannot cancel that.', did: [{ op: 'inform' }], judge });
+    expect(out.text).toBe('I cannot cancel that.');
+    expect(out.denied).toBe(false);
   });
 
-  it('a judge that throws leaves the prose untouched — a failed call is not a detection', async () => {
+  it('a judge that throws delivers the prose untouched — a failed call is not a detection', async () => {
     const judge: Judge = async () => { throw new Error('offline'); };
-    const out = await llmRewriteLie({ message: 'Done.', did: [{ op: 'inform' }], history: [], userText: '' }, judge);
-    expect(out.message).toBe('Done.');
-    expect(out.rewritten).toBe(false);
+    const out = await finalizeReplyForTest({ spec: spec(), message: 'Done.', did: [{ op: 'inform' }], judge });
+    expect(out.text).toBe('Done.');
+    expect(out.denied).toBe(false);
   });
 });
 ```
+
+`finalizeReplyForTest` and `bareSpec` are local helpers you write in the test file: the first drives
+the real `finalizeReply` with a scripted judge and returns `{ text, denied }`, the second builds a
+spec with no `llmCheckLie` bound. Model them on the existing helpers in
+`packages/core/test/runtime.test.ts`.
 
 - [ ] **Step 2: Run it to verify it fails**
 
@@ -662,48 +714,96 @@ describe('llmRewriteLie — the gate', () => {
 pnpm -C packages/core exec vitest run test/lie-check.test.ts
 ```
 
-Expected: FAIL — no export `llmRewriteLie`.
+Expected: FAIL — the spec-installs check does not exist and `deps.lieCheck` still gates the pass.
 
-- [ ] **Step 3: Write the implementation**
-
-Rename `runLieCheck` to `llmRewriteLie` and have it build its prompt from `LIE_QUESTION` through
-`judgePrompt`, reading the answer with `readJudgeVerdict`. The `isChecked` gate stays exactly where
-it is — inside this pass — and `bothLists` is no longer needed here because the envelope builds the
-lists.
-
-Construct the ctx the envelope needs from the pass's own input:
+- [ ] **Step 3: Make `llmCheckLie` declarative**
 
 ```ts
-const verdictCtx = {
-  args: {}, world: NO_WORLD, observed: [], turnIndex: 0,
-  userText: input.userText, history: input.history,
-  reply: input.message, did: input.did,
-} as GuardCtx;
-const { violation } = readJudgeVerdict(await judge(judgePrompt(LIE_QUESTION, verdictCtx, opts)));
-if (!violation) return { ...untouched, checked: true };
+/**
+ * THE LIE BACKSTOP — the DECLARATION that this agent wants the lie question asked, and the prose
+ * that states the rule to the model.
+ *
+ * The question is asked once per candidate payload by the runtime, which owns the answer because one
+ * of its two outcomes is a rewrite and a `check()` can only deny. Binding this guard is the single
+ * place the pass is enabled; there is no runtime flag beside it.
+ */
+export function llmCheckLie(): Guard {
+  return {
+    kind: 'llmCheckLie',
+    dim: 'behavior',
+    check: () => null,
+    prose: () => LIE_QUESTION,
+  };
+}
 ```
 
-`NO_WORLD` is a frozen no-op world local to this module — the envelope never reads it, and a pass
-that fabricated a world would be lying to any future reader of the ctx.
+Export `specInstallsLieCheck(spec)` from `@looprun-ai/core/internal`, scanning the spec's onReply
+guards for `kind === 'llmCheckLie'` — model it on the existing `specInstallsLlmCheck`.
 
-- [ ] **Step 4: Update the call site**
+- [ ] **Step 4: Reduce `llmRewriteLie` to the rewrite**
 
-In `packages/core/src/runtime/turn.ts`, rename the import and the call. The `judge` parameter
-threaded through `finalizeReply` keeps its position and its optionality.
+Delete `isChecked`'s use inside it, delete its question call, and delete the `LieCheckOutcome`
+plumbing it no longer decides. It receives a message it has already been told is a lie and returns
+the corrected prose:
 
-- [ ] **Step 5: Run the tests**
-
-```bash
-pnpm -C packages/core test && pnpm -C packages/mastra test
+```ts
+/**
+ * THE REWRITE — the outcome a lie takes on a turn that carried out NOTHING.
+ *
+ * Where the rewrite cannot fully correct, not rewriting is the safer output: the operation record
+ * contradicts the prose either way, and a rewrite that came back empty is not a delivery.
+ */
+export async function llmRewriteLie(
+  input: LieCheckInput,
+  judge: Judge,
+  opts?: RenderOpts,
+): Promise<string> {
+  const record = operationRecord(input.did, opts);
+  const session = sessionRecord(input.history, opts);
+  const userTurns = [...input.history.map((t) => t.userText), input.userText].filter((t) => t.trim());
+  try {
+    const rewritten = (await judge(rewritePrompt(userTurns, input.message, record.text, session))).trim();
+    return rewritten || input.message;
+  } catch {
+    return input.message;
+  }
+}
 ```
 
-Expected: PASS.
+- [ ] **Step 5: Route in the runtime**
 
-- [ ] **Step 6: Commit**
+In `packages/core/src/runtime/turn.ts`, inside `finalizeReply`, replace the `withLieCheck` plumbing
+with one ask and one route, run per candidate payload:
+
+```
+specInstallsLieCheck(spec) === false   →  no call, deliver
+verdict NONE                           →  deliver
+verdict VIOLATION + isChecked(record)  →  llmRewriteLie, deliver the result
+verdict VIOLATION + the turn acted     →  treat as an onReply violation → redrive
+```
+
+`isChecked(record)` keeps its meaning: the turn carried out nothing.
+
+- [ ] **Step 6: Delete the second switch**
+
+Remove `deps.lieCheck` from `packages/mastra/src/run-conversation.ts` and its `RuntimeDeps` field,
+and delete the separate judge construction it gated. The judge the routing uses is the one Task 2
+resolves for every run.
+
+- [ ] **Step 7: Run the tests**
 
 ```bash
-git add -A packages/core packages/mastra
-git commit -m "feat(core)!: the no-action gate belongs to the rewrite, not the check"
+pnpm -C packages/core test && pnpm -C packages/mastra test && pnpm -C packages/eval exec vitest run
+```
+
+Expected: PASS. Any test setting `lieCheck: true` is rewritten to bind `llmCheckLie()` on its spec —
+the flag is gone, not deprecated.
+
+- [ ] **Step 8: Commit**
+
+```bash
+git add -A packages/core packages/mastra packages/eval
+git commit -m "feat(core)!: one switch asks once, and the turn decides the outcome"
 ```
 
 ---
@@ -977,7 +1077,7 @@ git add skill/ && git commit -m "docs(skill): one judge, one question, and whose
 | Which sections each hook receives | 1 |
 | `failMode` keeps its meaning; both non-run markers | 2 |
 | One question about lying, owned by the engine | 3 |
-| The gate moves to the rewrite | 4 |
+| One switch, one verdict, two outcomes | 4 |
 | The names | 2, 3, 5 |
 | What must be measured before this ships | 6 |
 | What must NOT be claimed afterwards | 7 |
@@ -985,11 +1085,10 @@ git add skill/ && git commit -m "docs(skill): one judge, one question, and whose
 | Out of scope: no compatibility | Global Constraints |
 | Out of scope: other pre-baked questions | not in this plan, recorded in `BACKLOG.md` |
 
-**Known gap, stated rather than hidden.** With both `llmCheckLie()` bound and the rewrite pass
-enabled, a no-action turn asks the same question twice — once in the guard chain, once in the
-rewrite pass. Deduplicating that is a caching concern this plan does not solve; the plan's job is to
-make the two ask the SAME question. Measure the per-turn call count in Task 6 and state it in Task 7
-rather than discovering it in production.
+**Call count, measured rather than assumed.** One question per candidate payload is the design's
+claim, and a turn evaluates the initial payload plus each redrive plus the salvage candidate. Task 6
+counts the calls a turn actually makes and Task 7 states the number; a count above one per payload
+means the single enabling point did not hold.
 
 **Type consistency:** `judgePrompt(question, ctx, opts?)` and
 `readJudgeVerdict(text) → { violation, readable }` are named identically in Tasks 1, 2, 3, 4 and 6.
