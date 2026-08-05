@@ -187,6 +187,11 @@ export interface Guard {
   dim: Dim;
   check(ctx: GuardCtx): string | null | Promise<string | null>;
   prose(): string;
+  /** How this guard prices a judge that could not answer, for the kinds whose VERDICT the runtime owns
+   *  rather than the `check`. `'closed'` denies, `'open'` allows, and either way the non-run is
+   *  recorded. A guard whose `check` reaches its own seam prices the failure inside that `check` and
+   *  leaves this unset. */
+  failMode?: 'open' | 'closed';
   /** Optional STRUCTURAL introspection a kind may attach for static analyzers (e.g. the eval lint):
    *  `before` (requiresBefore's dep list), `requiredStrings` (strings a reply guard demands).
    *  Purely additive metadata — never read by the runtime's enforcement path. */

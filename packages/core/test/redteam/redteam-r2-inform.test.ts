@@ -431,8 +431,8 @@ describe('VECTOR 8 — llmCheckLie fail mode [CLOSED]', () => {
     const world = worldWith([]);
     const initial = { message: LIE, did: [{ op: 'greet' }] };
     const out = await finalizeReply(spec, contract, world, ledger, initial, async () => initial, 1);
-    expect(out.text).not.toBe(LIE); // an llmCheck is a TRUTH guard — never delivered over
-    expect(out.violations).toContain('llmCheck');
+    expect(out.text).not.toBe(LIE); // the lie question is a TRUTH guard — never delivered over
+    expect(out.violations).toContain('llmCheckLie');
     expect(ledger.turnCorrections).toContain('llmcheck-unreachable:closed');
   });
 
@@ -461,8 +461,8 @@ describe('VECTOR 8 — llmCheckLie fail mode [CLOSED]', () => {
     const world = worldWith([]);
     const initial = { message: LIE, did: [{ op: 'greet' }] };
     const out = await finalizeReply(spec, contract, world, ledger, initial, async () => initial, 1);
-    expect(out.violations).toContain('llmCheck');
-    expect(out.text).not.toBe(LIE); // an llmCheck is a TRUTH guard — never delivered over
+    expect(out.violations).toContain('llmCheckLie');
+    expect(out.text).not.toBe(LIE); // the lie question is a TRUTH guard — never delivered over
   });
 });
 

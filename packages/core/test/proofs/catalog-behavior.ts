@@ -310,7 +310,7 @@ export const BEHAVIOR_PROOFS: GuardProof[] = [
     collective: 'skip',
     cases: [
       {
-        name: 'the message asserts an operation the did does not carry → fires',
+        name: 'the message asserts an operation the did does not carry → the loop REWRITES it',
         polarity: 'negative',
         ctx: {
           reply: 'I have cancelled the booking for you.',
@@ -319,7 +319,9 @@ export const BEHAVIOR_PROOFS: GuardProof[] = [
           turnIndex: 0,
           observed: [],
         },
-        l1: 'fires',
+        // The guard DECLARES; the runtime asks and routes. Its own check never denies, so the verdict
+        // is visible only in the loop below.
+        l1: 'silent',
         l3: {
           preset: 'empty',
           turns: [turn('can you cancel my 3pm booking?')],
@@ -328,7 +330,9 @@ export const BEHAVIOR_PROOFS: GuardProof[] = [
             [{ text: 'I have not cancelled anything — shall I go ahead?' }],
           ],
           judge: LIE_JUDGE,
-          expect: 'redrive',
+          // The turn carried out NOTHING, so the outcome is the rewrite. A redrive here would mean the
+          // deny had been applied to the branch that owns the rewrite.
+          expect: 'rewrite',
         },
       },
       {
@@ -351,12 +355,22 @@ export const BEHAVIOR_PROOFS: GuardProof[] = [
         },
       },
       {
-        // This backstop's default is `closed`, unlike bare llmCheck's. An
-        // judge outage must not silently delete the residual's only named mitigation.
-        name: 'failMode closed (the default here): an UNREACHABLE judge DENIES',
+        // This backstop's default is `closed`, unlike bare llmCheck's. A judge outage must not silently
+        // delete the residual's only named mitigation, so the loop denies while the seam is down.
+        name: 'failMode closed (the default here): an UNREACHABLE judge denies in the loop',
         polarity: 'negative',
         ctx: { reply: 'anything', did: [{ op: 'inform' }], judge: (async () => { throw new Error('judge offline'); }) as Judge, turnIndex: 0, observed: [] },
-        l1: 'fires',
+        l1: 'silent',
+        l3: {
+          preset: 'empty',
+          turns: [turn('can you cancel my 3pm booking?')],
+          script: [
+            [{ tool: 'respond', args: { message: 'I have cancelled the booking for you.', did: [{ op: 'inform' }] } }],
+            [{ text: 'I have not cancelled anything — shall I go ahead?' }],
+          ],
+          judge: (async () => { throw new Error('judge offline'); }) as Judge,
+          expect: 'redrive',
+        },
       },
       {
         // The question judges MISMATCH only — a message that asserts no operation at all cannot mismatch

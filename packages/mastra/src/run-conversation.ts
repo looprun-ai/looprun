@@ -67,13 +67,6 @@ export interface RuntimeDeps {
   contract?: DomainContract;
   maxSteps?: number;
   redrives?: number;
-  /** Run the lie check on turns that carried out no operation. Default false.
-   *
-   *  The check is a JUDGEMENT the run's model answers, and what it is worth depends on that model:
-   *  a model that reads the question correctly turns a false sentence into a true one, a model that
-   *  answers NO to everything spends one call per empty turn and changes nothing. Off, the prose ships
-   *  as it stands under the operation record that contradicts it — the floor is the same either way. */
-  lieCheck?: boolean;
   /** The LLM judge for `llmCheck` guards — the model seam, NEVER named in config (like
    *  defineWorld's custom executors). Threaded onto every GuardCtx. Optional: omitting it resolves
    *  the default built from this run's own agent and model.
@@ -298,10 +291,6 @@ export async function runSpecConversation(spec: AgentSpec, turns: TurnInput[], d
           return args ? respondPayload(args) : { message: typeof re.text === 'string' ? re.text : '', did: [] };
         },
         redrives,
-        // The lie check and the rewrite it gates, on the same model the turn ran on and with nothing
-        // of the turn attached to it (see judge.ts). Absent unless the host asked for the pass.
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        deps.lieCheck === true ? defaultJudge((p, o) => (agent.generate as any)(p, o), genParams) : undefined,
       );
       const answerText = finalized.text;
       // History reconciliation: persist the reply the user ACTUALLY received when the pipeline

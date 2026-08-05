@@ -48,6 +48,12 @@ const proven = new Map(GUARD_PROOFS.map((p) => [p.guard, p]));
  *  fires cases plus an L3 pass case showing the target scoping. */
 const ALWAYS_FIRE_KINDS = new Set(['forbidThisTurn']);
 
+/** Kinds whose VERDICT belongs to the runtime, not to `check`. `llmCheckLie` declares that the agent
+ *  wants the engine's lie question asked; one of the two outcomes of a violation is a REWRITE, which a
+ *  `check` returning a deny string or null cannot express. Its `check` is therefore silent by
+ *  construction, and the discriminating proof is the LOOP: a case that redrives and a case that passes. */
+const RUNTIME_VERDICT_KINDS = new Set(['llmCheckLie']);
+
 describe('coverage ratchet', () => {
   it('extractor self-test (non-vacuous): finds the known kinds', () => {
     expect(guardKinds.length).toBeGreaterThanOrEqual(18);
@@ -86,6 +92,16 @@ describe('coverage ratchet', () => {
         }
       });
       it('has both L1 verdict classes (a fires case and a silent case with a crafted ctx)', () => {
+        if (RUNTIME_VERDICT_KINDS.has(proof.guard)) {
+          // No ctx can make this `check` fire — it never does. The loop is where the two outcomes are
+          // visible, so the bar moves there rather than down: one L3 case must redrive, one must pass.
+          expect(proof.cases.every((c) => c.l1 !== 'fires')).toBe(true);
+          // All three outcomes, each proven where it happens: the deny, the rewrite, and the clean turn.
+          expect(proof.cases.some((c) => c.l3?.expect === 'redrive')).toBe(true);
+          expect(proof.cases.some((c) => c.l3?.expect === 'rewrite')).toBe(true);
+          expect(proof.cases.some((c) => c.l3?.expect === 'pass')).toBe(true);
+          return;
+        }
         expect(proof.cases.some((c) => c.ctx !== undefined && c.l1 === 'fires')).toBe(true);
         if (ALWAYS_FIRE_KINDS.has(proof.guard)) {
           // No honest silent ctx exists — require ctx-independence (≥2 fires) + an L3 pass case

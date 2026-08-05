@@ -15,7 +15,7 @@ import { FixtureWorld, FIXTURE_TOOL_NAMES, FIXTURE_DOMAIN } from './fixture-worl
 import type { FixturePreset } from './fixture-world.js';
 
 export type ProofPolarity = 'positive' | 'negative' | 'neutral';
-export type ProofExpect = 'veto' | 'redrive' | 'refusal' | 'pass';
+export type ProofExpect = 'veto' | 'redrive' | 'rewrite' | 'refusal' | 'pass';
 export type PartialGuardCtx = Partial<GuardCtx>;
 
 /** One conversation turn's input (structural — the backend's TurnInput shape). */

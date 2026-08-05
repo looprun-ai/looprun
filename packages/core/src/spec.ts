@@ -243,10 +243,15 @@ function attributeGuard(guard: Guard, hook: Hook, bindingId: string): Guard {
     if (cause instanceof GuardExecutionError) throw cause; // already attributed (nested/composed guard)
     throw new GuardExecutionError({ hook, bindingId, guardKind: guard.kind, phase, tool, cause });
   };
+  // EVERY DECLARED FIELD RIDES THROUGH. This rebuilds the guard, so a field it forgets is a field the
+  // author set and the runtime never sees: an `llmCheckLie({ failMode: 'open' })` whose failMode is
+  // dropped here reverts to the closed default, and the author's explicit opt-out denies every reply
+  // during an outage instead of delivering it.
   return {
     kind: guard.kind,
     dim: guard.dim,
     ...(guard.meta ? { meta: guard.meta } : {}),
+    ...(guard.failMode ? { failMode: guard.failMode } : {}),
     check(ctx: GuardCtx) {
       try {
         const out = guard.check(ctx);

@@ -1,22 +1,23 @@
 /**
- * RED TEAM — THE OPERATION RECORD AND THE LIE CHECK.
+ * RED TEAM — THE OPERATION RECORD AND THE LIE QUESTION.
  *
  * The algorithm, whole:
  *
  * ```
- *   no action was carried out this turn  →  run the lie check
- *       lie detected                     →  rewrite the prose
- *       no lie detected                  →  deliver the prose as it stands
+ *   the spec binds llmCheckLie  →  ask once per candidate payload
+ *       NONE                                       →  deliver the prose as it stands
+ *       VIOLATION, the turn carried out NOTHING    →  rewrite the prose
+ *       VIOLATION, the turn carried out an ACTION  →  deny, and the model writes the reply again
  *
- *   any action was carried out           →  deliver the prose as it stands
+ *   the spec binds nothing      →  zero model calls, deliver the prose as it stands
  * ```
  *
  * Four ways that algorithm can go wrong, and each one gets a test that fails if it ever does:
  *
  * ```
- *   1  the check runs on a turn where an action WAS carried out
+ *   1  a turn that carried out an action is REWRITTEN instead of denied
  *   2  a detected lie is not rewritten, so the lie ships
- *   3  an unchecked turn does not deliver the message and the record as they are
+ *   3  a verdict takes the outcome belonging to the other branch
  *   4  a truth is detected as a lie
  * ```
  *
@@ -24,7 +25,7 @@
  * and the session list reaching the text the user reads.
  */
 import { describe, expect, it } from 'vitest';
-import { AgentSpecBase } from '../../src/index.js';
+import { AgentSpecBase, llmCheckLie } from '../../src/index.js';
 import type { AgentWorld, DomainContract } from '../../src/index.js';
 import {
   SESSION_HEADING,
@@ -51,8 +52,11 @@ const CONTRACT: DomainContract = {
   writeTools: ['cancelEvent'],
 };
 
-const specOf = (): AgentSpecBase =>
-  new AgentSpecBase({ id: 'lie-check', mode: 'M', persona: 'p', tools: ['cancelEvent', 'getEvent'], contract: CONTRACT });
+const specOf = (): AgentSpecBase => {
+  const spec = new AgentSpecBase({ id: 'lie-check', mode: 'M', persona: 'p', tools: ['cancelEvent', 'getEvent'], contract: CONTRACT });
+  spec.addGuard('onReply', 'any', llmCheckLie(), { id: 'agent:llmCheckLie' });
+  return spec;
+};
 
 /** A write that TOOK EFFECT, aligned across the world ledger and the observed entry. */
 function effectWrite(ledger: ReturnType<typeof createLedger>, world: AgentWorld, label: string): void {
@@ -99,17 +103,21 @@ const run = (
   world: AgentWorld,
   payload: { message: string; did: Intention[] },
   judge?: Judge,
-) => finalizeReply(specOf(), CONTRACT, world, ledger, payload, async () => payload, 0, judge);
+) => {
+  if (judge) ledger.judge = judge;
+  return finalizeReply(specOf(), CONTRACT, world, ledger, payload, async () => payload, 0);
+};
 
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
-// FAILURE MODE 1 — the check runs on a turn where an action WAS carried out
+// FAILURE MODE 1 — a turn that ACTED is rewritten instead of denied
 //
 // A rewriter handed a record that NAMES an operation anchors to that entity and leaves every other
-// claim standing, so a turn that did something must never reach the check at all. This is not a
-// preference the model can be talked out of: eligibility is computed from the record's action lines.
+// claim standing, so the lie survives with more authority than before. A turn that did something must
+// therefore take the DENY, never the rewrite. Which outcome applies is computed from the record's
+// action lines, not from anything the model can be talked out of.
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
-describe('MODE 1 — an action was carried out, so the check must not run', () => {
-  it('IMPOSSIBLE: a turn whose record names an operation makes ZERO judge calls', async () => {
+describe('MODE 1 — an action was carried out, so the outcome is the deny', () => {
+  it('IMPOSSIBLE: a turn whose record names an operation is never handed to the rewriter', async () => {
     const world = fixtureWorld();
     const ledger = createLedger();
     effectWrite(ledger, world, 'EV-2');
@@ -118,25 +126,48 @@ describe('MODE 1 — an action was carried out, so the check must not run', () =
 
     const out = await run(ledger, world, { message: LIE, did }, judge);
 
-    expect(prompts).toEqual([]);
-    expect(out.text).toBe(`${LIE}\n\nEV-2: done\n${RECORD_CLOSURE_SOME}`);
+    // One prompt only: the question. A second prompt would be the rewrite this turn may not take.
+    expect(prompts).toHaveLength(1);
+    expect(out.text).not.toContain(REWRITE);
+    expect(out.violations).toContain('llmCheckLie');
   });
 
-  it('IMPOSSIBLE: a NON-success action line is still an action line — a blocked turn is not checked', async () => {
+  it('IMPOSSIBLE: a NON-success action line is still an action line — a blocked turn is denied, not rewritten', async () => {
     const { judge, prompts } = recordingJudge([FIRES, REWRITE]);
     const did: Intention[] = [{ op: 'cancel', target: 'EV-2', outcome: 'blocked' }];
 
-    await run(createLedger(), fixtureWorld(), { message: LIE, did }, judge);
-
-    expect(prompts).toEqual([]);
-  });
-
-  it('CONTROL: a speech-only turn IS checked — exactly one judge call when the answer is no', async () => {
-    const { judge, prompts } = recordingJudge(['NONE']);
-
-    await run(createLedger(), fixtureWorld(), P(LIE), judge);
+    const out = await run(createLedger(), fixtureWorld(), { message: LIE, did }, judge);
 
     expect(prompts).toHaveLength(1);
+    expect(out.violations).toContain('llmCheckLie');
+  });
+
+  it('CONTROL: a speech-only turn takes the REWRITE — the question, then the rewrite', async () => {
+    const { judge, prompts } = recordingJudge([FIRES, REWRITE]);
+
+    const out = await run(createLedger(), fixtureWorld(), P(LIE), judge);
+
+    expect(prompts).toHaveLength(2);
+    expect(out.text).toContain(REWRITE);
+  });
+
+  it('CONTROL: an answer of NONE spends exactly one call and delivers the prose', async () => {
+    const { judge, prompts } = recordingJudge(['NONE']);
+
+    const out = await run(createLedger(), fixtureWorld(), P(LIE), judge);
+
+    expect(prompts).toHaveLength(1);
+    expect(out.text).toContain(LIE);
+  });
+
+  it('IMPOSSIBLE: a spec that does not bind llmCheckLie makes ZERO judge calls', async () => {
+    const { judge, prompts } = recordingJudge([FIRES, REWRITE]);
+    const bare = new AgentSpecBase({ id: 'bare', mode: 'M', persona: 'p', tools: ['cancelEvent', 'getEvent'], contract: CONTRACT });
+    const ledger = createLedger(judge);
+
+    await finalizeReply(bare, CONTRACT, fixtureWorld(), ledger, P(LIE), async () => P(LIE), 0);
+
+    expect(prompts).toEqual([]);
   });
 });
 
@@ -201,14 +232,18 @@ describe('MODE 3 — every other turn delivers the message and the record as the
     expect(out.exhausted).toBe(false);
   });
 
-  it('IMPOSSIBLE: a judge that THROWS delivers what the turn had — a broken endpoint rewrites nothing', async () => {
+  it('IMPOSSIBLE: a judge that THROWS is never treated as an approval — the closed default denies', async () => {
     const throwing: Judge = async () => {
       throw new Error('judge unreachable');
     };
 
     const out = await run(createLedger(), fixtureWorld(), P(LIE), throwing);
 
-    expect(out.text).toBe(`${LIE}\n\n${RECORD_CLOSURE_NONE}`);
+    // A backstop that deletes itself the moment its own seam fails is not a backstop. The lie does not
+    // ship; the turn spends its redrives and delivers the engine's own closure instead.
+    expect(out.text).not.toContain(LIE);
+    expect(out.violations).toContain('llmCheckLie');
+    expect(out.exhausted).toBe(true);
   });
 
   it('IMPOSSIBLE: a judge that answers no readable verdict is read as NONE — the safe direction', async () => {
@@ -455,6 +490,7 @@ describe('THE WHOLE INPUT SPACE — the four failure modes over every combinatio
   it('sweeps every cell and counts zero of each', async () => {
     const failures = { F1: [] as string[], F2: [] as string[], F3: [] as string[], F4: [] as string[] };
     const exhausted: string[] = [];
+    const denied: string[] = [];
     let cells = 0;
     let checked = 0;
     let rewritten = 0;
@@ -500,22 +536,33 @@ describe('THE WHOLE INPUT SPACE — the four failure modes over every combinatio
             const asIs = composeDeliveryText(msg.text, decl.did, asked, CONTRACT);
             const asRewritten = composeDeliveryText(REWRITE, decl.did, asked, CONTRACT);
             const wasRewritten = out.text === asRewritten;
+            const wasDenied = out.violations.includes('llmCheckLie');
+            // The verdict the cell's judge produces, read from the cell's own script rather than from
+            // the output — a scoring rule derived from the result cannot catch the result being wrong.
+            const fires = j.answers?.[0]?.trim().toLowerCase().startsWith('violation') === true;
+            const answers = !j.absent && !j.throws;
             if (prompts.length) checked += 1;
             if (wasRewritten) rewritten += 1;
             if (out.exhausted) exhausted.push(cell);
+            if (wasDenied) denied.push(cell);
 
-            // F1 — a turn that carried out an action must make no model call at all.
-            if (prompts.length > 0 && record.hasOperations) failures.F1.push(cell);
+            // F1 — a turn that carried out an action must never be REWRITTEN: handed a record that
+            // names an operation, a rewriter anchors to that entity and leaves the other claim standing.
+            // Its outcome is the deny, and the deny costs one call, never two.
+            if (record.hasOperations && (wasRewritten || prompts.length > 1)) failures.F1.push(cell);
 
-            // F2 — a check that ran must have been shown the session's own account.
+            // F2 — a question that was asked must have been shown the session's own account.
             if (prompts.length > 0 && sess.entities.some((e) => !prompts[0].includes(e))) failures.F2.push(cell);
 
-            // F3 — the check found a lie, a usable rewrite came back, and the original still shipped.
-            const usableRewrite = j.answers?.[0]?.trim().toLowerCase().startsWith('violation') && j.answers[1]?.trim();
-            if (prompts.length > 0 && usableRewrite && !wasRewritten) failures.F3.push(cell);
+            // F3 — the two outcomes, each where it belongs. A fired verdict on a turn that acted is a
+            // deny; on a turn that carried out nothing with a usable rewrite, it is the rewrite.
+            const usableRewrite = fires && j.answers?.[1]?.trim();
+            if (answers && fires && record.hasOperations && !wasDenied) failures.F3.push(cell);
+            if (answers && usableRewrite && !record.hasOperations && !wasRewritten) failures.F3.push(cell);
 
-            // F4 — every other cell delivers the message and the record, exactly as they are.
-            if (!wasRewritten && out.text !== asIs) failures.F4.push(cell);
+            // F4 — every cell that was neither denied nor rewritten delivers the message and the
+            // record, exactly as they are. A failed or illegible answer is not a verdict.
+            if (!wasRewritten && !wasDenied && out.text !== asIs) failures.F4.push(cell);
           }
         }
       }
@@ -523,17 +570,18 @@ describe('THE WHOLE INPUT SPACE — the four failure modes over every combinatio
 
     // eslint-disable-next-line no-console
     console.log(
-      `\n  cells ${cells} · checked ${checked} · rewritten ${rewritten} · exhausted ${exhausted.length}\n` +
-        `  F1 check ran on an acting turn        ${failures.F1.length}\n` +
-        `  F2 check ran blind to the session     ${failures.F2.length}\n` +
-        `  F3 detected lie not rewritten         ${failures.F3.length}\n` +
-        `  F4 other cell not delivered as is     ${failures.F4.length}`,
+      `\n  cells ${cells} · asked ${checked} · rewritten ${rewritten} · denied ${denied.length}\n` +
+        `  F1 an acting turn was rewritten       ${failures.F1.length}\n` +
+        `  F2 question asked blind to the session ${failures.F2.length}\n` +
+        `  F3 a verdict took the wrong outcome   ${failures.F3.length}\n` +
+        `  F4 an untouched cell was not delivered as is ${failures.F4.length}`,
     );
 
     expect(cells).toBe(DECLARATIONS.length * JUDGES.length * SESSIONS.length * MESSAGES.length);
-    // Every cell reached the algorithm: an exhausted turn ships engine-derived prose, so a sweep with
-    // one in it would be scoring a different mechanism and calling the result a hundred per cent.
-    expect(exhausted).toEqual([]);
+    // A DENIED cell exhausts by design: the sweep drives zero redrives, so the deny goes straight to
+    // the engine-derived closure. Every other cell must reach the algorithm — an unexplained exhausted
+    // cell would be scoring a different mechanism and calling the result a hundred per cent.
+    expect(exhausted.filter((c) => !denied.includes(c))).toEqual([]);
     expect(failures.F1).toEqual([]);
     expect(failures.F2).toEqual([]);
     expect(failures.F3).toEqual([]);

@@ -106,7 +106,7 @@ const INTERNAL = [
   // The lie check and the rewrite it gates. The prompts and the pass ride the seam so the
   // gated measurement suite exercises the shipped instrument rather than a copy of it (`Judge` itself
   // is public, and rides finalizeReply's signature).
-  'Judge', 'runLieCheck', 'LieCheckInput', 'LieCheckOutcome', 'isChecked',
+  'Judge', 'llmRewriteLie', 'LieCheckInput', 'isChecked',
   'LIE_QUESTION', 'rewritePrompt', 'TURN_HEADING',
   // The judge envelope: the prompt every judging call receives, and how its answer is read.
   // `judgeEnvelope` is the shape over already-rendered `JudgeEvidence`; `judgePrompt` renders a
@@ -120,7 +120,7 @@ const INTERNAL = [
   'finalizeReply', 'FinalizedReply', 'governanceVeto', 'redriveMessage', 'ReplyViolation',
   'runChainCompletionPass',
   // the fail-loud-at-start judge gate for llmCheck specs.
-  'assertJudgePresent', 'specInstallsLlmCheck',
+  'assertJudgePresent', 'specInstallsLlmCheck', 'specInstallsLieCheck',
   // catchable by class across the package boundary
   'GuardExecutionError',
   // the seam's own type-closure riders (the rest of its closure is nameable from '.')

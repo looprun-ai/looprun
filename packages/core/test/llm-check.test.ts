@@ -7,7 +7,7 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 import { AgentSpecBase, custom, llmCheck, llmCheckLie } from '../src/index.js';
-import { assertJudgePresent, specInstallsLlmCheck, JUDGE_UNREACHABLE, JUDGE_UNREADABLE, LIE_QUESTION } from '../src/internal.js';
+import { assertJudgePresent, specInstallsLlmCheck, specInstallsLieCheck, JUDGE_UNREACHABLE, JUDGE_UNREADABLE, LIE_QUESTION } from '../src/internal.js';
 import type { Judge, GuardCtx } from '../src/index.js';
 
 const persona = 'You are the test agent.';
@@ -216,36 +216,48 @@ describe('llmCheckLie — the engine\'s lie question (available, not auto-instal
       : 'NONE';
   };
 
-  it('DENIES a message asserting an operation the did does not carry', async () => {
+  it('DECLARES, and never denies on its own — the runtime owns the verdict', async () => {
+    // One of the two outcomes of a violation is a REWRITE, and a `check` can only return a deny
+    // string or null. So the whole decision lives in the runtime, and this guard is the declaration
+    // that the agent wants the question asked. The end-to-end outcomes are asserted where the
+    // routing lives, over a real `finalizeReply`.
     const reason = await llmCheckLie().check(
       baseCtx({
         judge: LIE_JUDGE,
         did: [{ op: 'inform' }], // the agent declared it only INFORMED …
-        reply: 'I went ahead and processed the refund of €500 for you.', // … while the prose claims a refund
-      }),
-    );
-    expect(reason).toContain('refund');
-  });
-
-  it('ALLOWS a message whose assertions match the declared intentions', async () => {
-    const reason = await llmCheckLie().check(
-      baseCtx({
-        judge: LIE_JUDGE,
-        did: [{ op: 'refund', target: 'ORD-1', outcome: 'success' }],
-        reply: 'The refund for ORD-1 is done.',
+        reply: 'I went ahead and processed the refund of 500 for you.', // … while the prose claims a refund
       }),
     );
     expect(reason).toBeNull();
   });
 
-  it('is an llmCheck by KIND, so the judge gate and the TRUTH classification hold', () => {
+  it('is its OWN kind, so the runtime can find the binding and read its failMode', () => {
     const g = llmCheckLie();
-    expect(g.kind).toBe('llmCheck'); // specInstallsLlmCheck scans by kind, not by source token
+    expect(g.kind).toBe('llmCheckLie');
     expect(g.dim).toBe('behavior');  // a reply verdict → onReply
+    // It is not an `llmCheck`, so the fail-loud judge gate does not fire on it: an absent judge
+    // leaves the question unasked and the record still ships beneath the prose.
     const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: ['water'] });
     spec.addGuard('onReply', 'any', g, { id: 'agent:lie' });
-    expect(specInstallsLlmCheck(spec)).toBe(true);
-    expect(() => assertJudgePresent(spec, undefined)).toThrow(/no judge/i);
+    expect(specInstallsLlmCheck(spec)).toBe(false);
+    expect(specInstallsLieCheck(spec)).toBe(true);
+  });
+
+  // The DEFAULT is `closed`. A backstop that deletes itself the moment its own seam fails is not a
+  // backstop: a judge outage would otherwise silently remove the only named mitigation of the
+  // prose residual, with nothing written anywhere. The `open` arm stays reachable for an author who
+  // prefers the model's prose to the guarantee.
+  it('declares failMode CLOSED by default, and carries an explicit open opt-out', () => {
+    expect(llmCheckLie().failMode).toBe('closed');
+    expect(llmCheckLie({ failMode: 'open' }).failMode).toBe('open');
+  });
+
+  // The binding REBUILDS the guard, so a declared field it forgets is a field the author set and the
+  // runtime never sees — the open opt-out would silently revert to denying every reply.
+  it('the declared failMode survives being bound on a spec', () => {
+    const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: ['water'] });
+    spec.addGuard('onReply', 'any', llmCheckLie({ failMode: 'open' }), { id: 'agent:lie' });
+    expect(spec.guards.onReply.find((b) => b.id === 'agent:lie')?.guard.failMode).toBe('open');
   });
 
   it('carries the engine\'s own lie question as its prose', () => {
@@ -256,20 +268,6 @@ describe('llmCheckLie — the engine\'s lie question (available, not auto-instal
   // backstop: a judge outage would otherwise silently remove the only named mitigation of the
   // prose residual, with nothing written anywhere. The `open` arm stays reachable for an author who
   // prefers the model's prose to the guarantee, and BOTH arms record the non-run.
-  it('fails CLOSED by default when the judge is unreachable — and the non-run is RECORDED', async () => {
-    const dead: Judge = async () => { throw new Error('offline'); };
-    const notes: string[] = [];
-    expect(await llmCheckLie().check(baseCtx({ judge: dead, notes }))).toMatch(/could not be completed/i);
-    expect(notes).toEqual([JUDGE_UNREACHABLE, 'llmcheck-unreachable:closed']);
-  });
-
-  it('failMode "open" is an explicit OPT-IN, and its silent allow is still recorded', async () => {
-    const dead: Judge = async () => { throw new Error('offline'); };
-    const notes: string[] = [];
-    expect(await llmCheckLie({ failMode: 'open' }).check(baseCtx({ judge: dead, notes }))).toBeNull();
-    expect(notes).toEqual([JUDGE_UNREACHABLE, 'llmcheck-unreachable:open']);
-  });
-
   it('bare llmCheck keeps its OPEN default — an author-bound lint, not the lie backstop', async () => {
     const dead: Judge = async () => { throw new Error('offline'); };
     expect(await llmCheck({ question: 'q?' }).check(baseCtx({ judge: dead }))).toBeNull();
@@ -297,16 +295,8 @@ describe('the engine lie question', () => {
     expect(LIE_QUESTION).toMatch(/appears in either list also answers NONE/);
   });
 
-  it('llmCheckLie binds that question and nothing from the author', async () => {
-    let seen = '';
-    const judge: Judge = async (prompt) => { seen = prompt; return 'NONE'; };
-    await llmCheckLie().check(baseCtx({ judge, reply: 'ok', did: [] }));
-    expect(seen).toContain(LIE_QUESTION);
-  });
-
-  it('llmCheckLie fails CLOSED by default', async () => {
-    const judge: Judge = async () => { throw new Error('offline'); };
-    expect(await llmCheckLie().check(baseCtx({ judge, reply: 'ok', did: [] }))).toMatch(/could not be completed/i);
+  it('llmCheckLie carries that question and nothing from the author', () => {
+    expect(llmCheckLie().prose()).toBe(LIE_QUESTION);
   });
 
   it('llmCheckLie is reply-side — its dim is behavior', () => {

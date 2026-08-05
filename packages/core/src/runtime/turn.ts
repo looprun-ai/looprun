@@ -32,7 +32,9 @@ import {
   type RespondPayload,
   type Intention,
 } from './claims.js';
-import { runLieCheck } from './lie-check.js';
+import { isChecked, llmRewriteLie, LIE_QUESTION } from './lie-check.js';
+import { CLOSED_FAIL_DENY } from '../guards/llm-check.js';
+import { judgePrompt, readJudgeVerdict, JUDGE_UNREACHABLE, JUDGE_UNREADABLE } from './judge-prompt.js';
 import { resolveEngineText } from './engine-text.js';
 import type { Challenge } from './challenge.js';
 
@@ -164,6 +166,21 @@ export async function evaluateOnInput(spec: AgentSpec, ledger: TurnLedger, world
 export function specInstallsLlmCheck(spec: AgentSpec): boolean {
   const hooks = [spec.guards.onInput, spec.guards.preTool, spec.guards.postTool, spec.guards.onReply];
   return hooks.some((arr) => arr?.some((b) => !b.disabled && b.guard.kind === 'llmCheck'));
+}
+
+/**
+ * IS THE LIE QUESTION ENABLED? Binding {@link llmCheckLie} on the spec is the ONE place, and there is no
+ * runtime flag beside it. Two enabling points would ask the same question about the same sentence twice,
+ * on the same model, with the two answers free to disagree.
+ */
+export function specInstallsLieCheck(spec: AgentSpec): boolean {
+  return lieCheckGuard(spec) !== undefined;
+}
+
+/** The bound lie guard itself — the runtime needs its `failMode`, which prices a judge that could not
+ *  answer. Absent ⇒ the question is not enabled and no call is made. */
+function lieCheckGuard(spec: AgentSpec): Guard | undefined {
+  return spec.guards.onReply?.find((b) => !b.disabled && b.guard.kind === 'llmCheckLie')?.guard;
 }
 
 /**
@@ -388,30 +405,124 @@ function withBlankFloor(
 }
 
 /**
- * THE LIE CHECK, applied to a payload that is about to be delivered — the ONE place agent prose is
- * checked for a claim the turn cannot back. It runs on the paths that deliver the AGENT's own sentence
- * (the clean path and both salvages) and on no other: the exhaustion closure's prose is engine-derived
- * or domain-authored, so there is no agent claim in it to check.
- *
- * Only the `message` can change. `did` is untouched, so nothing here needs re-grounding, and the record
- * composed beneath the prose is the same record the check was shown.
+ * The synthetic violation a fired lie question raises on a turn that ACTED. It carries the judge's own
+ * words as the correction, exactly as an {@link llmCheck} deny does, and its `kind` puts
+ * `redrive:llmCheckLie` in `recoveryEvents`. Not a real check (`check ⇒ null`): the runtime already has
+ * the verdict, and asking again inside the redrive would be the second asker this design removes.
  */
-async function withLieCheck(
+const LIE_GUARD: Guard = { kind: 'llmCheckLie', dim: 'behavior', check: () => null, prose: () => '' };
+
+/** What the lie question decided about ONE candidate payload. */
+interface LieVerdict {
+  /** The judge's words, to relay as a correction — set only on a turn that carried out an action. */
+  deny: string | null;
+  /** The prose must be rewritten before delivery — set only on a turn that carried out nothing. */
+  rewrite: boolean;
+}
+
+const NO_LIE: LieVerdict = { deny: null, rewrite: false };
+
+/**
+ * ASK THE LIE QUESTION about one candidate payload — once, and never twice about the same text.
+ *
+ * ```
+ *   the spec does not bind llmCheckLie  →  0 model calls
+ *   NONE / unreadable / the call fails  →  the prose stands
+ *   VIOLATION, no action carried out    →  rewrite
+ *   VIOLATION, an action carried out    →  deny, and the model writes the reply again
+ * ```
+ *
+ * A REWRITE IS THE OUTCOME ONLY WHERE NOTHING HAPPENED. Handed a record that names an operation, a
+ * rewriter anchors to that entity and leaves every other claim standing:
+ *
+ * ```
+ *   did        [{ op:'book', target:'Team meeting', outcome:'success' }]
+ *   ORIGINAL   "The team meeting is booked, and I also cancelled the dentist appointment."
+ *   REWRITE    "The team meeting is booked. The dentist appointment was cancelled."
+ *                                            ↑ the lie survives, now reading as a checked account
+ * ```
+ *
+ * On a turn that acted, the deny is the honest remedy: the model writes the reply again, and on
+ * exhaustion the engine's own closure ships.
+ *
+ * A FAILED CALL IS NOT A DETECTION. A judge that throws, rejects or answers illegibly leaves the prose
+ * where it was — scoring an outage as a verdict would let a broken endpoint rewrite or deny every reply
+ * in the session, and the operation record still ships beneath the prose either way.
+ */
+async function askLieQuestion(
+  spec: AgentSpec,
+  world: AgentWorld,
   payload: RespondPayload,
   ledger: TurnLedger,
   contract: DomainContract | undefined,
-  judge: Judge | undefined,
+): Promise<LieVerdict> {
+  const guard = lieCheckGuard(spec);
+  const judge = ledger.judge;
+  if (!judge || !guard) return NO_LIE;
+  const failMode = guard.failMode ?? 'closed';
+  const opts = { renderClaim: contract?.renderClaim, outcomes: contract?.outcomes };
+  const ctx: GuardCtx = {
+    args: {},
+    world,
+    observed: ledger.observed,
+    turnIndex: ledger.turnIndex,
+    userText: ledger.currentUserText,
+    history: ledger.history,
+    reply: payload.message,
+    did: payload.did,
+    notes: ledger.turnCorrections,
+    renderOpts: opts,
+  };
+  let answer: string;
+  try {
+    answer = await judge(judgePrompt(LIE_QUESTION, ctx, opts));
+  } catch {
+    // The judge REJECTED — failMode prices it. A backstop that deletes itself the moment its own seam
+    // fails is not a backstop: install it, break the judge, and the only named mitigation of the prose
+    // residual is gone with nothing recorded. Two facts, two markers.
+    ledger.turnCorrections.push(JUDGE_UNREACHABLE);
+    ledger.turnCorrections.push(`llmcheck-unreachable:${failMode}`);
+    return failMode === 'closed' ? { deny: CLOSED_FAIL_DENY, rewrite: false } : NO_LIE;
+  }
+  // SETTLED WITHOUT A VERDICT. A call that answered nothing, or answered something that is not a
+  // verdict, found no violation, and scoring either as a detection would let one broken endpoint deny
+  // every reply in the session. `failMode` does not fire here: it prices a REJECTION, and this call
+  // did not reject.
+  if (!answer.trim()) {
+    ledger.turnCorrections.push(JUDGE_UNREACHABLE);
+    return NO_LIE;
+  }
+  const { violation, readable } = readJudgeVerdict(answer);
+  if (!readable) ledger.turnCorrections.push(JUDGE_UNREADABLE);
+  if (!violation) return NO_LIE;
+  return isChecked(operationRecord(payload.did, opts))
+    ? { deny: null, rewrite: true }
+    : { deny: violation, rewrite: false };
+}
+
+/**
+ * THE REWRITE, applied to a payload that is about to be delivered. It runs on the paths that deliver the
+ * AGENT's own sentence (the clean path and both salvages) and on no other: the exhaustion closure's prose
+ * is engine-derived or domain-authored, so there is no agent claim in it to correct.
+ *
+ * Only the `message` can change. `did` is untouched, so nothing here needs re-grounding, and the record
+ * composed beneath the prose is the same record the question was shown.
+ */
+async function withLieRewrite(
+  payload: RespondPayload,
+  verdict: LieVerdict,
+  ledger: TurnLedger,
+  contract: DomainContract | undefined,
 ): Promise<RespondPayload> {
-  const outcome = await runLieCheck(
+  const judge = ledger.judge;
+  if (!verdict.rewrite || !judge) return payload;
+  const message = await llmRewriteLie(
     { message: payload.message, did: payload.did, history: ledger.history, userText: ledger.currentUserText },
     judge,
     { renderClaim: contract?.renderClaim, outcomes: contract?.outcomes },
   );
-  // A check that found nothing is the nominal path and is recorded nowhere: `turnCorrections` is the
-  // log of what the engine had to CORRECT, and a clean turn corrected nothing. Only a fired check —
-  // and the rewrite it produced — is an event.
-  if (outcome.fired) ledger.turnCorrections.push(outcome.rewritten ? 'lie-check:rewritten' : 'lie-check:fired');
-  return outcome.rewritten ? { ...payload, message: outcome.message } : payload;
+  ledger.turnCorrections.push(message === payload.message ? 'lie-check:fired' : 'lie-check:rewritten');
+  return message === payload.message ? payload : { ...payload, message };
 }
 
 /**
@@ -511,11 +622,16 @@ async function checkPayload(
   ledger: TurnLedger,
   world: AgentWorld,
   payload: RespondPayload,
-): Promise<ReplyViolation[]> {
+  contract?: DomainContract,
+): Promise<{ violations: ReplyViolation[]; lie: LieVerdict }> {
   ledger.did = payload.did;
-  const violations = await checkReply(spec, ledger, world, payload.message);
-  if (payload.did.length) return violations;
-  return [{ guard: DECLARATION_GUARD, reason: DECLARATION_REASON }, ...violations];
+  const checked = await checkReply(spec, ledger, world, payload.message);
+  const lie = await askLieQuestion(spec, world, payload, ledger, contract);
+  const denied = lie.deny ? [...checked, { guard: LIE_GUARD, reason: lie.deny }] : checked;
+  const violations = payload.did.length
+    ? denied
+    : [{ guard: DECLARATION_GUARD, reason: DECLARATION_REASON }, ...denied];
+  return { violations, lie };
 }
 
 /**
@@ -533,13 +649,13 @@ export async function finalizeReply(
   initial: RespondPayload,
   redrive: (message: string) => Promise<RespondPayload>,
   maxRedrives: number,
-  judge?: Judge,
 ): Promise<FinalizedReply> {
   // Mutators touch the MESSAGE only; seat the declaration first so their ctx (and the checks') read it.
   ledger.did = initial.did;
   let payload: RespondPayload = { ...initial, message: applyMutators(spec, ledger, world, initial.message) };
 
-  let violations = await checkPayload(spec, ledger, world, payload);
+  let checked = await checkPayload(spec, ledger, world, payload, contract);
+  let violations = checked.violations;
   // OUTPUT-dim postTool violations + flowChain restates (accrued in the backend's afterToolCall / chain
   // pass) join the reply-violation set so the SAME bounded no-tools redrive relays their correction text —
   // a report/repair of an already-run result, never a veto. Empty ⇒ `violations` untouched (zero-diff).
@@ -562,7 +678,8 @@ export async function finalizeReply(
       continue;
     }
     payload = { message: applyMutators(spec, ledger, world, next.message), did: next.did };
-    violations = await checkPayload(spec, ledger, world, payload);
+    checked = await checkPayload(spec, ledger, world, payload, contract);
+    violations = checked.violations;
   }
 
   const finalViolations = violations.map((v) => v.guard.kind);
@@ -581,18 +698,19 @@ export async function finalizeReply(
       if (candidateText.trim() === composeDelivery(payload, ledger, contract).trim()) {
         ledger.turnCorrections.push('salvage-miss:same-text');
       } else {
-        const candViolations = await checkPayload(spec, ledger, world, candidate);
+        const cand = await checkPayload(spec, ledger, world, candidate, contract);
+        const candViolations = cand.violations;
         if (candViolations.length === 0) {
           ledger.turnCorrections.push('exhaustion-salvage');
           ledger.did = candidate.did;
-          const checked = await withLieCheck(candidate, ledger, contract, judge);
-          return withBlankFloor(checked, finalViolations, true, ledger, contract?.writeTools ?? [], contract);
+          const delivered = await withLieRewrite(candidate, cand.lie, ledger, contract);
+          return withBlankFloor(delivered, finalViolations, true, ledger, contract?.writeTools ?? [], contract);
         }
         if (candViolations.every((v) => isFormViolation(v.guard))) {
           ledger.turnCorrections.push(`salvage:form-only:${candViolations.map((v) => v.guard.kind).join(',')}`);
           ledger.did = candidate.did;
-          const checked = await withLieCheck(candidate, ledger, contract, judge);
-          return withBlankFloor(checked, finalViolations, true, ledger, contract?.writeTools ?? [], contract);
+          const delivered = await withLieRewrite(candidate, cand.lie, ledger, contract);
+          return withBlankFloor(delivered, finalViolations, true, ledger, contract?.writeTools ?? [], contract);
         }
         ledger.turnCorrections.push(`salvage-miss:checks:${candViolations.map((v) => v.guard.kind).join(',')}`);
       }
@@ -633,8 +751,8 @@ export async function finalizeReply(
   // floor still applies here — a zero-width `message` + empty `did` composes to a blank the schema
   // `minLength` accepts, and a mutator can rewrite an otherwise-fine `message` to `''` after the checks.
   ledger.did = payload.did;
-  const checked = await withLieCheck(payload, ledger, contract, judge);
-  return withBlankFloor(checked, [], false, ledger, contract?.writeTools ?? [], contract);
+  const delivered = await withLieRewrite(payload, checked.lie, ledger, contract);
+  return withBlankFloor(delivered, [], false, ledger, contract?.writeTools ?? [], contract);
 }
 
 // ── flowChain completion (controls.chains) ────────────────────────────────────────────────────────

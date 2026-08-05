@@ -38,7 +38,7 @@ import { LIE_QUESTION } from '../runtime/lie-check.js';
 /** The deny a `failMode:'closed'` guard emits when its judge is UNREACHABLE (threw/rejected/timed
  *  out) — a generic, figure-free correction, never the judge's own words (there are none: it
  *  failed). The SAME reason for a rejection and a timeout: both mean "could not verify". */
-const CLOSED_FAIL_DENY =
+export const CLOSED_FAIL_DENY =
   'A required policy check could not be completed — do not proceed until it can be verified.';
 
 /** Default judge timeout when the registration seam did not set `judgeTimeoutMs`. A hung judge past
@@ -127,18 +127,40 @@ export function llmCheck(opts: { question: string; failMode?: 'open' | 'closed';
 }
 
 /**
- * THE LIE BACKSTOP — the engine's own question, bound by an author who wants the deny.
+ * THE LIE BACKSTOP — the DECLARATION that this agent wants the engine's lie question asked, and the
+ * prose that states the rule to the model.
  *
  * The structured cross-check grounds the DECLARATION against the ledger; the `message` beside it is
  * free prose, and an agent can declare an honest `inform` and still write that it refunded the
  * order. No structural signal reads that. This is the priced backstop for that residual, and it is
  * never the primary guarantee: the cross-check and the operation record are.
  *
+ * THE RUNTIME OWNS THE ANSWER, so this `check` returns nothing. One of the two outcomes of a violation
+ * is a REWRITE, and a `check` can only return a deny string or `null`:
+ *
+ * ```
+ *   NONE                                      →  the prose is delivered as it stands
+ *   VIOLATION, the turn carried out NOTHING   →  the prose is rewritten
+ *   VIOLATION, the turn carried out an ACTION →  denied, and the model writes the reply again
+ * ```
+ *
+ * Binding this guard is the single place the pass is enabled. Two enabling points would ask the same
+ * question about the same text twice, on the same model, with the two answers free to disagree — one
+ * allowing what the other denied.
+ *
  * IT FAILS CLOSED BY DEFAULT, unlike a bare {@link llmCheck}. A judge outage silently deleting the
- * only named mitigation of the prose residual is the whole attack. The availability cost is stated
- * rather than hidden: while the judge rejects, every candidate reply is denied, so each turn spends
- * its redrives and delivers the engine-derived closure.
+ * only named mitigation of the prose residual is the whole attack: install the backstop, break the
+ * judge, and the backstop is gone with nothing recorded. The availability cost is stated rather than
+ * hidden — while the judge cannot answer, every candidate reply is denied, so each turn spends its
+ * redrives and delivers the engine-derived closure. An author who prefers the model's prose to the
+ * guarantee opts out with `llmCheckLie({ failMode: 'open' })`, and either way the non-run is recorded.
  */
 export function llmCheckLie(opts?: { failMode?: 'open' | 'closed' }): Guard {
-  return llmCheck({ question: LIE_QUESTION, dim: 'behavior', failMode: opts?.failMode ?? 'closed' });
+  return {
+    kind: 'llmCheckLie',
+    dim: 'behavior',
+    failMode: opts?.failMode ?? 'closed',
+    check: () => null,
+    prose: () => LIE_QUESTION,
+  };
 }

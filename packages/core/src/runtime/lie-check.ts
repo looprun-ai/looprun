@@ -1,5 +1,5 @@
 /**
- * @looprun-ai/core runtime — THE LIE CHECK, and the rewrite it gates.
+ * @looprun-ai/core runtime — THE LIE QUESTION, and the rewrite that is one of its two outcomes.
  *
  * `did` is structure the engine verifies. `message` is free text. An agent can declare honestly and still
  * write a false sentence beside it, and every deterministic guard passes:
@@ -12,38 +12,25 @@
  *             ↑ the user reads this and believes the appointment is gone
  * ```
  *
- * THE ALGORITHM, whole:
+ * ONE QUESTION, TWO OUTCOMES. The runtime asks once per candidate payload and the TURN decides what a
+ * violation costs:
  *
  * ```
- *   no action was carried out this turn  →  run the lie check
- *       lie detected                     →  rewrite the prose
- *       no lie detected                  →  deliver the prose as it stands
- *
- *   any action was carried out           →  deliver the prose as it stands
+ *   NONE                                  →  the prose is delivered as it stands
+ *   VIOLATION, the turn carried out NOTHING  →  the prose is rewritten
+ *   VIOLATION, the turn carried out an ACTION →  denied, and the model writes the reply again
  * ```
  *
- * The check is a JUDGEMENT and can miss. The turn's operation RECORD is deterministic and always ships
+ * The question is a JUDGEMENT and can miss. The turn's operation RECORD is deterministic and always ships
  * beneath the prose, so a missed lie still arrives contradicted. That is the floor this pass sits on top
  * of, never a replacement for it.
  */
 import { operationRecord, type Intention, type RenderOpts } from './claims.js';
 import { sessionRecord, type SessionRecord } from './session-record.js';
-import { judgePrompt, readJudgeVerdict } from './judge-prompt.js';
-import type { AgentWorld, GuardCtx, HistoryTurn, Judge } from '../rules.js';
+import type { HistoryTurn, Judge } from '../rules.js';
 
 /** The heading over the turn's own record inside both prompts. */
 export const TURN_HEADING = 'ON THIS TURN';
-
-/** A world stub for the lie check's own judge envelope. `judgePrompt` never reads world structure —
- *  it renders from `reply`/`did`/`history`/`userText` — so this exists only to satisfy {@link GuardCtx}'s
- *  shape; no call the lie check makes ever reaches it. */
-const LIE_CHECK_WORLD: AgentWorld = {
-  exec: () => undefined,
-  advanceTurn: () => {},
-  ingestAttachment: (url) => url,
-  toolCalls: [],
-  sseActions: [],
-};
 
 /**
  * IS THIS TURN CHECKED? Only when NO ACTION WAS CARRIED OUT — when the turn's record has zero action
@@ -174,73 +161,33 @@ export interface LieCheckInput {
   userText: string;
 }
 
-/** What the pass did, so the caller can log which branch a turn took. */
-export interface LieCheckOutcome {
-  /** The prose to deliver: the rewrite when one was made, the original otherwise. */
-  message: string;
-  /** The turn was eligible — no action was carried out on it. `false` ⇒ zero model calls were made. */
-  checked: boolean;
-  /** The check found a violation. */
-  fired: boolean;
-  /** A rewrite was made and is what {@link message} carries. */
-  rewritten: boolean;
-}
-
 /**
- * RUN THE PASS over one turn's prose.
+ * THE REWRITE — the outcome a lie takes on a turn that carried out NOTHING.
+ *
+ * It is handed a verdict already reached and never asks the question itself: one asker means one answer,
+ * and two askers on the same model are free to disagree about the same sentence.
  *
  * ```
- *   ineligible           0 model calls   the prose is returned untouched
- *   eligible, NONE       1 model call    the prose is returned untouched
- *   eligible, VIOLATION  2 model calls   the rewrite is returned
+ *   the rewrite comes back with words   →  it is delivered
+ *   the rewrite comes back empty        →  the original stands
+ *   the call fails                      →  the original stands
  * ```
  *
- * NO JUDGE ⇒ NO PASS. A runtime with no callback returns the prose as it stands, and the record still
- * ships beneath it. That is the floor, and it is the same floor that catches the check's misses — so an
- * absent judge weakens the delivery, never breaks it.
- *
- * A judge that THROWS is the same case: the turn delivers what it had. The alternative — treating a
- * failed call as a detection — would let a broken endpoint rewrite every honest reply in the session.
+ * Where the rewrite cannot fully correct, not rewriting is the safer output: the operation record
+ * contradicts the prose either way, and a rewrite that came back empty is not a delivery.
  */
-export async function runLieCheck(
+export async function llmRewriteLie(
   input: LieCheckInput,
-  judge: Judge | undefined,
+  judge: Judge,
   opts?: RenderOpts,
-): Promise<LieCheckOutcome> {
-  const untouched: LieCheckOutcome = { message: input.message, checked: false, fired: false, rewritten: false };
-  if (!judge) return untouched;
-
+): Promise<string> {
   const record = operationRecord(input.did, opts);
-  if (!isChecked(record)) return untouched;
-
   const session = sessionRecord(input.history, opts);
-  const ctx: GuardCtx = {
-    args: {},
-    world: LIE_CHECK_WORLD,
-    observed: [],
-    turnIndex: 0,
-    userText: input.userText,
-    history: input.history,
-    reply: input.message,
-    did: input.did,
-  };
-  let verdict: string;
-  try {
-    verdict = await judge(judgePrompt(LIE_QUESTION, ctx, opts));
-  } catch {
-    return untouched;
-  }
-  if (!readJudgeVerdict(verdict).violation) return { ...untouched, checked: true };
-
   const userTurns = [...input.history.map((t) => t.userText), input.userText].filter((t) => t.trim());
-  let rewritten: string;
   try {
-    rewritten = (await judge(rewritePrompt(userTurns, input.message, record.text, session))).trim();
+    const rewritten = (await judge(rewritePrompt(userTurns, input.message, record.text, session))).trim();
+    return rewritten || input.message;
   } catch {
-    return { ...untouched, checked: true, fired: true };
+    return input.message;
   }
-  // A rewrite that came back empty is not a delivery. The original stands, contradicted by the record —
-  // the same place an absent judge leaves the turn.
-  if (!rewritten) return { ...untouched, checked: true, fired: true };
-  return { message: rewritten, checked: true, fired: true, rewritten: true };
 }

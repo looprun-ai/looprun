@@ -37,11 +37,9 @@ export function runProofLoop(spec: AgentSpec, l3: ProofLoopCase, redrives = 1): 
 
 /** The `recoveryEvents` tag we expect this proof's loop case to emit ('' for a clean pass). */
 export function expectedSignal(proof: GuardProof, l3: ProofLoopCase): string {
-  // The RUNTIME kind, read off the instantiated guard — not the factory name. They coincide for almost
-  // every kind, but a factory that WRAPS another (llmCheckLie bakes the lie question into an llmCheck)
-  // keeps the wrapped kind on purpose, because that is what the judge gate and the TRUTH/SAFETY
-  // classification scan for. The recoveryEvents tag the runtime writes is `guard.kind`, so that is what
-  // this must expect.
+  // The RUNTIME kind, read off the instantiated guard — not the factory name. The recoveryEvents tag
+  // the runtime writes is `guard.kind`, so that is what this must expect, and a factory whose name
+  // differs from the kind it produces would otherwise be asserted against a tag nothing writes.
   const kind = requireMake(proof)().kind;
   const tool = l3.tool ?? (Array.isArray(proof.target) ? proof.target[0] ?? '' : '');
   switch (l3.expect) {
@@ -53,6 +51,10 @@ export function expectedSignal(proof: GuardProof, l3: ProofLoopCase): string {
       // A postTool result invariant reports via `output:${kind}:${tool}` (then joins the redrive set);
       // an onReply guard redrives via `redrive:${kind}`.
       return proof.hook === 'postTool' ? `output:${kind}:${tool}` : `redrive:${kind}`;
+    case 'rewrite':
+      // The outcome a fired lie question takes on a turn that carried out nothing. It is neither a veto
+      // nor a redrive: the prose is corrected and delivered, and the turn ends clean.
+      return 'lie-check:rewritten';
     case 'refusal':
       return `onInput:${kind}`;
     case 'pass':
