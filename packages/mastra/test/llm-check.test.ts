@@ -7,6 +7,7 @@
 import { describe, expect, it } from 'vitest';
 import { AgentSpecBase, custom, llmCheck } from '@looprun-ai/core';
 import type { AgentWorld, DomainContract, Adjudicator } from '@looprun-ai/core';
+import { assertAdjudicatorPresent } from '@looprun-ai/core/internal';
 import { runSpecConversation } from '../src/index.js';
 import { scriptedModel } from './scripted-model.js';
 import { nothingDone } from './delivery.js';
@@ -46,17 +47,49 @@ function bookingSpec(): AgentSpecBase {
   return spec;
 }
 
-describe('llmCheck — fail loud at conversation start', () => {
-  it('a spec that installs an llmCheck with NO adjudicator throws BEFORE the first turn', async () => {
+describe('llmCheck — fail loud at conversation start (core-level gate)', () => {
+  // `runSpecConversation` resolves an adjudicator for every run (the default below), so a spec that
+  // installs an llmCheck with no adjudicator runs cleanly through this backend. The gate this protects
+  // is one layer down: `assertAdjudicatorPresent` itself, guarding a caller that resolves nothing.
+  it('a spec that installs an llmCheck with NO adjudicator throws through assertAdjudicatorPresent', () => {
     const spec = bookingSpec();
-    await expect(
-      runSpecConversation(spec, [{ userText: 'cancel my 3pm booking' }], {
-        model: scriptedModel([[{ tool: 'respond', args: { message: 'done', did: [{ op: 'inform' }] } }]]).model,
-        world: world(),
-        toolDefs: TOOL_DEFS,
-        // no adjudicator
-      }),
-    ).rejects.toThrow(/installs an llmCheck guard but no adjudicator/i);
+    expect(() => assertAdjudicatorPresent(spec, undefined)).toThrow(/installs an llmCheck guard but no adjudicator/i);
+  });
+});
+
+describe('the adjudicator the backend resolves', () => {
+  function defaultedSpec(): AgentSpecBase {
+    const spec = new AgentSpecBase({ id: 'defaulted', mode: 'M', persona: 'You are the agent.', tools: [], contract: CONTRACT });
+    spec.addGuard('onReply', 'any', llmCheck({ rubric: 'does the reply overstate?' }), { id: 'agent:rubric' });
+    return spec;
+  }
+
+  it('a spec binding a rubric runs with NO adjudicator in deps', async () => {
+    const scripted = scriptedModel([[{ tool: 'respond', args: { message: 'hi', did: [{ op: 'inform' }] } }]]);
+    const res = await runSpecConversation(defaultedSpec(), [{ userText: 'hello' }], {
+      model: scripted.model,
+      world: world(),
+      toolDefs: TOOL_DEFS,
+      // no adjudicator — the backend resolves its own default
+    });
+    expect(res.errorMsg).toBeUndefined();
+    expect(res.turnRecords).toHaveLength(1);
+  });
+
+  it('a supplied adjudicator WINS over the default', async () => {
+    let called = false;
+    const mine: Adjudicator = async () => {
+      called = true;
+      return { violation: null };
+    };
+    const scripted = scriptedModel([[{ tool: 'respond', args: { message: 'hi', did: [{ op: 'inform' }] } }]]);
+    await runSpecConversation(defaultedSpec(), [{ userText: 'hello' }], {
+      model: scripted.model,
+      world: world(),
+      toolDefs: TOOL_DEFS,
+      adjudicator: mine,
+    });
+    expect(called).toBe(true);
   });
 });
 

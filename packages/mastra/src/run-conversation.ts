@@ -43,7 +43,7 @@ import type { TokenUsage, RespondPayload } from '@looprun-ai/core/internal';
 import type { AgentSpec, AgentWorld, ToolDef, DomainContract, TurnInput, TurnRecord, RunResult, Adjudicator } from '@looprun-ai/core';
 import { buildWorldTools } from './tools.js';
 import { makeGuardHooks, makeInputProcessors, repeatedToolCallStop } from './hooks.js';
-import { judgeOptions, judgeText } from './judge.js';
+import { judgeOptions, judgeText, defaultAdjudicator } from './judge.js';
 import type { LoopRunSession } from './session.js';
 
 export const DEFAULT_MAX_STEPS = 16;
@@ -98,12 +98,19 @@ export async function runSpecConversation(spec: AgentSpec, turns: TurnInput[], d
   if (!contract && !spec.surface.systemPrompt) {
     throw new Error(`runSpecConversation: spec "${spec.id}" has no contract — pass deps.contract or set spec.contract.`);
   }
-  // FAIL-LOUD-AT-START: an llmCheck installed without an adjudicator is a wiring bug — surface it now,
-  // before the first turn, never mid-turn where it would masquerade as a model failure.
-  assertAdjudicatorPresent(spec, deps.adjudicator);
   // flat call settings → modelSettings (Mastra drops them top-level), then the spec's per-agent
   // sampling merged OVER them (agent wins). One object, spread into EVERY generate() call of the turn.
   const genParams = resolveModelSettings(normalizeModelParams(deps.modelParams ?? {}), spec.controls.sampling);
+  // THE ADJUDICATOR EVERY BOUND RUBRIC RUNS ON. The host's own when it supplied one — its rejections
+  // are what `failMode` prices. Otherwise the engine-composed default, on this run's own agent: the
+  // arrow is built here and CALLED during a turn, long after `agent` below is initialised.
+  const adjudicator: Adjudicator =
+    deps.adjudicator ??
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    defaultAdjudicator((prompt, opts) => (agent.generate as any)(prompt, opts), genParams);
+  // A spec can be driven by a runtime that resolves nothing, and a rubric with no adjudicator is a
+  // wiring bug — surface it before the first turn, never mid-turn where it reads as a model failure.
+  assertAdjudicatorPresent(spec, adjudicator);
   const maxSteps = spec.controls.maxSteps ?? deps.maxSteps ?? DEFAULT_MAX_STEPS;
   const redrives = spec.controls.redrives ?? deps.redrives ?? DEFAULT_REDRIVES;
   const surface = new Set(spec.surface.tools);
@@ -111,7 +118,7 @@ export async function runSpecConversation(spec: AgentSpec, turns: TurnInput[], d
   const session: LoopRunSession = {
     id: 'run',
     world,
-    ledger: createLedger(deps.adjudicator, deps.adjudicatorTimeoutMs),
+    ledger: createLedger(adjudicator, deps.adjudicatorTimeoutMs),
     turnIndex: 0,
     messages: [],
     chain: Promise.resolve(),
