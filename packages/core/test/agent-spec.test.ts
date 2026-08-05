@@ -202,3 +202,51 @@ describe('destructiveLabels — the question a recordless act asks', () => {
     ).not.toThrow();
   });
 });
+
+describe('destructiveWhen — the spec declares which calls of a listed tool are destructive', () => {
+  const build = (over: Record<string, unknown> = {}) =>
+    new AgentSpecBase({
+      id: 'workspace',
+      mode: 'M',
+      persona: 'The workspace desk: holds and releases.',
+      tools: ['placeHold', 'releaseHold'],
+      destructiveTools: ['placeHold'],
+      destructiveWhen: { placeHold: (args: Record<string, unknown>) => args.scope === 'workspace' },
+      destructiveLabels: { placeHold: 'freeze the entire workspace' },
+      ...over,
+    } as never);
+
+  it('the workspace-hold shape constructs: the label names a listed tool', () => {
+    expect(() => build()).not.toThrow();
+  });
+
+  it('the protective branch is allowed and the destructive branch is gated', () => {
+    const s = build();
+    const gate = s.guards.preTool.find((b) => b.id === 'base:confirmFirst')!;
+    const at = (args: Record<string, unknown>) =>
+      gate.guard.check({
+        tool: 'placeHold',
+        args,
+        consent: [],
+        world: fixtureWorld(),
+        observed: [],
+        turnIndex: 1,
+        userText: '',
+        history: [],
+      } as unknown as GuardCtx);
+    expect(at({ scope: 'asset', confirmed: true })).toBeNull();
+    expect(at({ scope: 'workspace', confirmed: true })).toMatch(/has not confirmed this action/);
+  });
+
+  it('a predicate for a tool that is not destructive throws at construction', () => {
+    expect(() => build({ destructiveWhen: { releaseHold: () => true } })).toThrow(
+      /destructiveWhen names tool\(s\) that are not in destructiveTools: releaseHold/,
+    );
+  });
+
+  it('a predicated arg-mechanism tool still owes its confirm flag', () => {
+    expect(() =>
+      build().assertDestructiveConfirmable([{ name: 'placeHold', inputSchema: { properties: { scope: {} } } }]),
+    ).toThrow(/must declare a 'confirmed' flag/);
+  });
+});

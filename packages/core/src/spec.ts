@@ -342,6 +342,13 @@ export interface AgentSpecConfig {
    *  destructive tool with neither a record nor a label can raise no question, so it can never be
    *  consented to and never runs. */
   destructiveLabels?: Record<string, string>;
+  /** Per destructive tool whose destructiveness depends on its ARGUMENTS, the pure predicate that says
+   *  which calls are destructive. The tool stays on {@link destructiveTools} — that is what installs the
+   *  protocol and what makes a {@link destructiveLabels} entry legal for it — and the predicate decides
+   *  which of its calls the protocol applies to. A tool with no predicate is destructive on every call.
+   *  Reads the acting call's own arguments and nothing else: it answers what the call IS, never who
+   *  licensed it. */
+  destructiveWhen?: Record<string, (args: Record<string, unknown>) => boolean>;
   /** Optional domain-contract reference (see {@link AgentSpec.contract}). */
   contract?: DomainContract;
 }
@@ -367,6 +374,7 @@ export class AgentSpecBase implements AgentSpec {
   protected readonly destructiveTools: string[];
   protected readonly confirmMechanism: Record<string, 'arg' | 'prior-ask'>;
   readonly destructiveLabels: Record<string, string>;
+  protected readonly destructiveWhen: Record<string, (args: Record<string, unknown>) => boolean>;
   private seq = 0;
 
   constructor(cfg: AgentSpecConfig) {
@@ -414,6 +422,7 @@ export class AgentSpecBase implements AgentSpec {
     this.destructiveTools = [...(cfg.destructiveTools ?? [])];
     this.confirmMechanism = { ...(cfg.confirmMechanism ?? {}) };
     this.destructiveLabels = { ...(cfg.destructiveLabels ?? {}) };
+    this.destructiveWhen = { ...(cfg.destructiveWhen ?? {}) };
     // Install order is load-bearing (byte-stable trunk): universal invariants first, destructive layer
     // second.
     this.installMinimal();
@@ -508,6 +517,14 @@ export class AgentSpecBase implements AgentSpec {
         `AgentSpec "${this.id}": destructiveLabels names tool(s) that are not in destructiveTools: ${strayLabel.join(', ')}.`,
       );
     }
+    // A predicate for a tool that is not destructive is a gate on nothing: the protocol it modifies was
+    // never installed on that tool.
+    const strayWhen = Object.keys(this.destructiveWhen).filter((t) => !destructive.includes(t));
+    if (strayWhen.length) {
+      throw new Error(
+        `AgentSpec "${this.id}": destructiveWhen names tool(s) that are not in destructiveTools: ${strayWhen.join(', ')}.`,
+      );
+    }
     // Two labels that derive the SAME token would give the user ONE literal for two different acts:
     // typing it would consent to whichever question is open, which is not the one they read.
     const byToken = new Map<string, string>();
@@ -530,15 +547,16 @@ export class AgentSpecBase implements AgentSpec {
     const mechOf = (t: string): 'arg' | 'prior-ask' => this.confirmMechanism[t] ?? 'arg';
     const argTools = destructive.filter((t) => mechOf(t) === 'arg');
     const priorAskTools = destructive.filter((t) => mechOf(t) === 'prior-ask');
+    const when = this.destructiveWhen;
     if (argTools.length) {
-      this.addGuard('preTool', argTools, confirmFirst(), { layer: 'base', id: 'base:confirmFirst' });
+      this.addGuard('preTool', argTools, confirmFirst({ when }), { layer: 'base', id: 'base:confirmFirst' });
     }
     if (priorAskTools.length) {
-      this.addGuard('preTool', priorAskTools, confirmFirst({ flag: false }), { layer: 'base', id: 'base:confirmFirstPriorAsk' });
+      this.addGuard('preTool', priorAskTools, confirmFirst({ flag: false, when }), { layer: 'base', id: 'base:confirmFirstPriorAsk' });
     }
     // The throttle needs the mechanism split too: a `'prior-ask'` tool has no confirm flag, so it has no
     // preview shape and every same-step sibling of it counts as an effect.
-    this.addGuard('preTool', destructive, destructiveThrottle(destructive, { flagless: priorAskTools }), { layer: 'base', id: 'base:destructiveThrottle' });
+    this.addGuard('preTool', destructive, destructiveThrottle(destructive, { flagless: priorAskTools, when }), { layer: 'base', id: 'base:destructiveThrottle' });
   }
 
   /**
@@ -550,6 +568,8 @@ export class AgentSpecBase implements AgentSpec {
    * forever (a destructive tool listed with a one-step schema; an eval catches it only by
    * READING). `installBase` runs at construction where no schema exists; this runs where the toolDefs are
    * injected (the backend, at run start). A `'prior-ask'` tool is a zero-arg confirm — exempt by design.
+   * A predicated tool is NOT exempt: its destructive branch is gated on the same flag, so a schema
+   * without it leaves that branch asking forever.
    * Throws (an author bug, same class as the ⊆-surface / stray-mechanism throws) naming the fix.
    */
   assertDestructiveConfirmable(toolDefs: ReadonlyArray<{ name: string; inputSchema?: { properties?: Record<string, unknown> } }>): void {
