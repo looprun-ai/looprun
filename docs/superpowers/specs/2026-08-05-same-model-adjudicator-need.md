@@ -236,9 +236,14 @@ The seam is registered where the agent is built, not where the run is launched. 
 holds the agent, the endpoint and the generation parameters — the runner holds a model name.
 
 ```
-deps.adjudicator supplied   →  the host's own, and `failMode` prices its rejections
-deps.adjudicator absent     →  the engine-composed default, from this run's own agent
+runSpecConversation, deps.adjudicator supplied   →  the host's own, and failMode prices its rejections
+runSpecConversation, deps.adjudicator absent     →  the engine-composed default, from this run's own agent
+LoopRunAgent · compileSpec                       →  nothing is resolved; an absent adjudicator fails loud
 ```
+
+The scripted-run entry point is the one that defaults, because it is the one whose caller holds a
+model name and nothing else. A host building a `LoopRunAgent` holds the model, the endpoint and the
+lifetime, so an absent adjudicator there is a wiring bug and is surfaced as one.
 
 That is where the lie check's judge is built, and it is the same construction. The eval runner
 changes nothing: it names no model of its own beyond the target already declared in

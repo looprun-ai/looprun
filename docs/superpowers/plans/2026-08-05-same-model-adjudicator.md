@@ -70,8 +70,8 @@ the rubric with the reply would defeat spec §1, §2 and §4, and nothing in the
   - `ADJUDICATION_INSTRUCTIONS: string`
   - `adjudicationPrompt(rubric: string, ctx: GuardCtx): string`
   - `readAdjudicationVerdict(text: string): { violation: string | null }`
-  - `FENCE: string` (the delimiter, `'<<<'` / `'>>>'` halves are not separate — one constant used as
-    an opening and closing line)
+  - The fence constants stay PRIVATE to the module. Nothing outside it opens or closes a block, and a
+    dead export on a governed public surface is the minimality constraint broken.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -1025,10 +1025,12 @@ In `packages/core/src/guards/catalog.ts`, in the `llmCheck` entry's `whenToReach
 adjudicator sentence with:
 
 ```
-The adjudicator runs on the turn's own model and endpoint, resolved by the backend — an author binds
-a rubric and wires nothing. `failMode` prices a REJECTED adjudicator, which the resolved default never
-produces: it answers every failure with no violation and records the non-run, so while an endpoint is
-down a bound rubric passes. A host that needs an outage to deny registers its own.
+The adjudicator is host-registered on the runtime options, never in config. `runSpecConversation`
+resolves one from the turn's own model when the host supplies none; `LoopRunAgent` and `compileSpec`
+resolve nothing, so a spec bound for either registers one or fails loud at construction. `failMode`
+prices a REJECTED adjudicator, which the resolved default never produces: it answers every failure
+with no violation and records the non-run, so while an endpoint is down a bound rubric passes. A host
+that needs an outage to deny registers its own.
 ```
 
 In the `didMessageConsistency` entry's `whenToReach`, replace the fail-closed sentence with:
@@ -1183,10 +1185,13 @@ repo — its own commit, its own cycle.
 In `references/guard-catalog.md`, replace the "check the runner before binding one" instruction with:
 
 ```
-The adjudicator is resolved by the backend from the turn's own model — bind a rubric and wire nothing.
-What the author still owes: the narrow factual phrasing below, and the reading of `failMode` — the
-resolved default answers an outage with no violation, so a rule that must DENY when the endpoint is
-down is not carried by a bound rubric alone.
+Under the eval runner, the adjudicator is resolved from the turn's own model — bind a rubric and wire
+nothing. `LoopRunAgent` and `compileSpec` resolve nothing: a spec bound for one of those registers an
+adjudicator or fails loud at construction, which is the wiring bug it is.
+
+What the author still owes either way: the narrow factual phrasing below, and the reading of
+`failMode` — the resolved default answers an outage with no violation, so a rule that must DENY when
+the endpoint is down is not carried by a bound rubric alone.
 ```
 
 - [ ] **Step 2: Reopen the N4 walk's closed branch**
