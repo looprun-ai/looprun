@@ -82,6 +82,6 @@ export type { SamplingSettings } from './model-params.js';
 // `outcome` is a CoreOutcome, so both ride the barrel to stay nameable by a declaration:true consumer
 // (e.g. eval's config loader building the outcome map / rubric norms).
 export type { CoreOutcome, OutcomeMap } from './runtime/claims.js';
-export type { ReplyMutator, SpatialEdge, HistoryTurn, HistoryToolCall, Adjudicator, AdjudicatorVerdict } from './rules.js';
+export type { ReplyMutator, SpatialEdge, HistoryTurn, HistoryToolCall, Judge } from './rules.js';
 export type { AgentControls, ChainSpec, StateDirective, GuardBinding, MutatorBinding, Layer } from './spec.js';
 export type { TokenUsage } from './runtime/types.js';

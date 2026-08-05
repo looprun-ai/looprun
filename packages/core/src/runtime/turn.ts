@@ -20,7 +20,7 @@
 import { resolveGuards, resolveMutators } from '../spec.js';
 import type { AgentSpec, ChainSpec } from '../spec.js';
 import type { DomainContract } from '../trunk.js';
-import type { AgentWorld, Guard, GuardCtx, ObservedCall, Adjudicator } from '../rules.js';
+import type { AgentWorld, Guard, GuardCtx, ObservedCall, Judge } from '../rules.js';
 import { issueChallengeForVeto, recordVeto, type TurnLedger } from './ledger.js';
 import { isTerminal } from './terminal.js';
 import {
@@ -32,7 +32,7 @@ import {
   type RespondPayload,
   type Intention,
 } from './claims.js';
-import { runLieCheck, type Judge } from './lie-check.js';
+import { runLieCheck } from './lie-check.js';
 import { resolveEngineText } from './engine-text.js';
 import type { Challenge } from './challenge.js';
 
@@ -123,7 +123,7 @@ export async function evaluatePreTool(
     attachmentsThisTurn: ledger.attachments,
     siblingCallsThisStep,
     notes: ledger.turnCorrections,
-    adjudicator: ledger.adjudicator, adjudicatorTimeoutMs: ledger.adjudicatorTimeoutMs,
+    judge: ledger.judge, judgeTimeoutMs: ledger.judgeTimeoutMs, renderOpts: ledger.renderOpts,
   };
   for (const g of guards) {
     const reason = await g.check(gctx);
@@ -148,7 +148,7 @@ export async function evaluateOnInput(spec: AgentSpec, ledger: TurnLedger, world
   const guards = resolveGuards(spec.guards.onInput);
   // onInput: `args` is empty (no tool); the guard reads the REAL incoming user text via `userText`
   // plus the prior `history`.
-  const gctx: GuardCtx = { args: {}, world, observed: ledger.observed, turnIndex: ledger.turnIndex, userText: ledger.currentUserText, consent: ledger.consentThisTurn, history: ledger.history, notes: ledger.turnCorrections, adjudicator: ledger.adjudicator, adjudicatorTimeoutMs: ledger.adjudicatorTimeoutMs };
+  const gctx: GuardCtx = { args: {}, world, observed: ledger.observed, turnIndex: ledger.turnIndex, userText: ledger.currentUserText, consent: ledger.consentThisTurn, history: ledger.history, notes: ledger.turnCorrections, judge: ledger.judge, judgeTimeoutMs: ledger.judgeTimeoutMs, renderOpts: ledger.renderOpts };
   for (const g of guards) {
     const reason = await g.check(gctx);
     if (reason) {
@@ -167,17 +167,17 @@ export function specInstallsLlmCheck(spec: AgentSpec): boolean {
 }
 
 /**
- * FAIL-LOUD-AT-START gate: a spec that installs an `llmCheck` with NO adjudicator registered is a wiring
+ * FAIL-LOUD-AT-START gate: a spec that installs an `llmCheck` with NO judge registered is a wiring
  * bug that must surface at conversation start — never mid-turn, where it would masquerade as a model
  * failure or (worse) silently allow. The backend calls this once, before the first turn. A spec with no
- * llmCheck needs no adjudicator, so this is a no-op there (zero-diff).
+ * llmCheck needs no judge, so this is a no-op there (zero-diff).
  */
-export function assertAdjudicatorPresent(spec: AgentSpec, adjudicator: Adjudicator | undefined): void {
-  if (adjudicator) return;
+export function assertJudgePresent(spec: AgentSpec, judge: Judge | undefined): void {
+  if (judge) return;
   if (specInstallsLlmCheck(spec)) {
     throw new Error(
-      `looprun: spec "${spec.id}" installs an llmCheck guard but no adjudicator was registered — ` +
-        'pass the runtime an adjudicator ((rubric, ctx) => Promise<{ violation: string | null }>). ' +
+      `looprun: spec "${spec.id}" installs an llmCheck guard but no judge was registered — ` +
+        'pass the runtime a judge ((prompt: string) => Promise<string>). ' +
         'llmCheck cannot run without it; failing now, at conversation start, rather than mid-turn.',
     );
   }
@@ -197,7 +197,7 @@ function applyMutators(spec: AgentSpec, ledger: TurnLedger, world: AgentWorld, t
       reply: out,
       producedThisTurn: ledger.producedThisTurn,
       did: ledger.did,
-      adjudicator: ledger.adjudicator, adjudicatorTimeoutMs: ledger.adjudicatorTimeoutMs,
+      judge: ledger.judge, judgeTimeoutMs: ledger.judgeTimeoutMs, renderOpts: ledger.renderOpts,
     };
     const next = m.apply(out, mctx);
     if (next !== out) {
@@ -230,7 +230,7 @@ async function checkReply(
     // This turn's guard-vetoed attempts — so claimIsGrounded can ground a blocked/refused claim against
     // the call the guard stopped (invisible on the world ledger by construction).
     attemptedThisTurn: ledger.attemptedCalls,
-    adjudicator: ledger.adjudicator, adjudicatorTimeoutMs: ledger.adjudicatorTimeoutMs,
+    judge: ledger.judge, judgeTimeoutMs: ledger.judgeTimeoutMs, renderOpts: ledger.renderOpts,
   };
   const out: ReplyViolation[] = [];
   for (const g of resolveGuards(spec.guards.onReply)) {

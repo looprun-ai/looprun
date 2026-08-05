@@ -19,7 +19,7 @@
 import { stepCountIs } from 'ai';
 import { Agent } from '@mastra/core/agent';
 import {
-  assertAdjudicatorPresent,
+  assertJudgePresent,
   beginTurn,
   clearDeliveredTerminal,
   createLedger,
@@ -39,11 +39,11 @@ import {
   vetoStormHit,
   renderTurnPrompt,
 } from '@looprun-ai/core/internal';
-import type { TokenUsage, RespondPayload } from '@looprun-ai/core/internal';
-import type { AgentSpec, AgentWorld, ToolDef, DomainContract, TurnInput, TurnRecord, RunResult, Adjudicator } from '@looprun-ai/core';
+import type { TokenUsage, RespondPayload, RenderOpts } from '@looprun-ai/core/internal';
+import type { AgentSpec, AgentWorld, ToolDef, DomainContract, TurnInput, TurnRecord, RunResult, Judge } from '@looprun-ai/core';
 import { buildWorldTools } from './tools.js';
 import { makeGuardHooks, makeInputProcessors, repeatedToolCallStop } from './hooks.js';
-import { judgeOptions, judgeText, defaultAdjudicator } from './judge.js';
+import { defaultJudge } from './judge.js';
 import type { LoopRunSession } from './session.js';
 
 export const DEFAULT_MAX_STEPS = 16;
@@ -74,15 +74,15 @@ export interface RuntimeDeps {
    *  answers NO to everything spends one call per empty turn and changes nothing. Off, the prose ships
    *  as it stands under the operation record that contradicts it — the floor is the same either way. */
   lieCheck?: boolean;
-  /** The LLM adjudicator for `llmCheck` guards — the model seam, NEVER named in config (like
+  /** The LLM judge for `llmCheck` guards — the model seam, NEVER named in config (like
    *  defineWorld's custom executors). Threaded onto every GuardCtx. Optional: supplying one puts the
-   *  host's own adjudicator behind every bound rubric, and its REJECTIONS are what a guard's `failMode`
+   *  host's own judge behind every bound rubric, and its REJECTIONS are what a guard's `failMode`
    *  prices; omitting it resolves the engine-composed default built from this run's own agent, which
    *  settles on every failure and therefore never triggers `failMode`. */
-  adjudicator?: Adjudicator;
-  /** Per-call adjudicator timeout (ms) — a hung adjudicator resolves via failMode past this deadline.
-   *  Default 30000 (the guard's own). Beside the adjudicator at the seam; the config surface is untouched. */
-  adjudicatorTimeoutMs?: number;
+  judge?: Judge;
+  /** Per-call judge timeout (ms) — a hung judge resolves via failMode past this deadline.
+   *  Default 30000 (the guard's own). Beside the judge at the seam; the config surface is untouched. */
+  judgeTimeoutMs?: number;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -103,19 +103,20 @@ export async function runSpecConversation(spec: AgentSpec, turns: TurnInput[], d
   // flat call settings → modelSettings (Mastra drops them top-level), then the spec's per-agent
   // sampling merged OVER them (agent wins). One object, spread into EVERY generate() call of the turn.
   const genParams = resolveModelSettings(normalizeModelParams(deps.modelParams ?? {}), spec.controls.sampling);
-  // THE ADJUDICATOR EVERY BOUND RUBRIC RUNS ON. The host's own when it supplied one — its rejections
+  // THE JUDGE EVERY BOUND RUBRIC RUNS ON. The host's own when it supplied one — its rejections
   // are what `failMode` prices. Otherwise the engine-composed default, on this run's own agent: the
   // arrow is built here and CALLED during a turn, long after `agent` below is initialised.
-  const adjudicator: Adjudicator =
-    deps.adjudicator ??
+  const judge: Judge =
+    deps.judge ??
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    defaultAdjudicator((prompt, opts) => (agent.generate as any)(prompt, opts), genParams, {
-      renderClaim: contract?.renderClaim,
-      outcomes: contract?.outcomes,
-    });
-  // A spec can be driven by a runtime that resolves nothing, and a rubric with no adjudicator is a
+    defaultJudge((prompt, opts) => (agent.generate as any)(prompt, opts), genParams);
+  // A spec can be driven by a runtime that resolves nothing, and a rubric with no judge is a
   // wiring bug — surface it before the first turn, never mid-turn where it reads as a model failure.
-  assertAdjudicatorPresent(spec, adjudicator);
+  assertJudgePresent(spec, judge);
+  // THE VOCABULARY A JUDGING PROMPT RENDERS IN. It comes from the contract THIS RUN was given, which a
+  // host may supply in place of the spec's own — so it is resolved here, beside the judge, and rides
+  // the ledger onto every guard ctx.
+  const renderOpts: RenderOpts = { renderClaim: contract?.renderClaim, outcomes: contract?.outcomes };
   const maxSteps = spec.controls.maxSteps ?? deps.maxSteps ?? DEFAULT_MAX_STEPS;
   const redrives = spec.controls.redrives ?? deps.redrives ?? DEFAULT_REDRIVES;
   const surface = new Set(spec.surface.tools);
@@ -123,7 +124,7 @@ export async function runSpecConversation(spec: AgentSpec, turns: TurnInput[], d
   const session: LoopRunSession = {
     id: 'run',
     world,
-    ledger: createLedger(adjudicator, deps.adjudicatorTimeoutMs),
+    ledger: createLedger(judge, deps.judgeTimeoutMs, renderOpts),
     turnIndex: 0,
     messages: [],
     chain: Promise.resolve(),
@@ -296,10 +297,8 @@ export async function runSpecConversation(spec: AgentSpec, turns: TurnInput[], d
         redrives,
         // The lie check and the rewrite it gates, on the same model the turn ran on and with nothing
         // of the turn attached to it (see judge.ts). Absent unless the host asked for the pass.
-        deps.lieCheck === true
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          ? async (prompt: string) => judgeText(await (agent.generate as any)(prompt, judgeOptions(genParams)))
-          : undefined,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        deps.lieCheck === true ? defaultJudge((p, o) => (agent.generate as any)(p, o), genParams) : undefined,
       );
       const answerText = finalized.text;
       // History reconciliation: persist the reply the user ACTUALLY received when the pipeline

@@ -103,14 +103,14 @@ const guardSchema = z.discriminatedUnion('kind', [
     .object({
       kind: z.literal('llmCheck'),
       id: z.string(),
-      // The hook the adjudicated guard installs on: onReply (a reply verdict) or preTool (a call veto).
+      // The hook the judged guard installs on: onReply (a reply verdict) or preTool (a call veto).
       hook: z.enum(['onReply', 'preTool']),
       // Which tools it binds — a name list or the string 'any' (global). No pattern field: the RUBRIC is
       // the judgement, and it is PROSE, so the no-regex structural ban is untouched.
       tools: z.union([z.array(z.string()).min(1), z.literal('any')]),
-      // The trusted, pre-baked question the host adjudicator answers. Prose, never a pattern.
+      // The trusted, pre-baked question the judge answers. Prose, never a pattern.
       rubric: z.string(),
-      // Unreachable adjudicator ⇒ open (allow, default) or closed (deny). Optional.
+      // Unreachable judge ⇒ open (allow, default) or closed (deny). Optional.
       failMode: z.enum(['open', 'closed']).optional(),
     })
     .strict(),
@@ -122,10 +122,10 @@ const guardSchema = z.discriminatedUnion('kind', [
       // either. Available, never auto-installed: an agent gets it only by naming it in its norms.
       kind: z.literal('didMessageConsistency'),
       id: z.string(),
-      // Unreachable adjudicator ⇒ open (allow) or closed (deny). Optional, and this kind DEFAULTS TO
+      // Unreachable judge ⇒ open (allow) or closed (deny). Optional, and this kind DEFAULTS TO
       // `'closed'` — UNLIKE the bare `llmCheck` above, which defaults open. It is the consent backstop
       // for the two residuals the ask cannot cover deterministically, and a backstop that evaporates when
-      // the adjudicator is unreachable is not one. Set `'open'` only as a deliberate availability choice.
+      // the judge is unreachable is not one. Set `'open'` only as a deliberate availability choice.
       failMode: z.enum(['open', 'closed']).optional(),
     })
     .strict(),
@@ -352,7 +352,7 @@ function installGuard(spec: AgentSpecBase, g: GuardConfig, deps: NormsDeps, outc
       return;
     }
     case 'llmCheck': {
-      // NO DENY-POLICY WRAP: the deny an llmCheck emits is the ADJUDICATOR'S verdict (host-registered,
+      // NO DENY-POLICY WRAP: the deny an llmCheck emits is the JUDGE'S verdict (registered on the runtime,
       // trusted), not a config-authored `reason` — there is no reason field to leak a figure through.
       // hook → dim: onReply is a behavior verdict, preTool a run veto (the DIM_HOOKS matrix).
       const dim = g.hook === 'preTool' ? 'run' : 'behavior';
@@ -364,9 +364,9 @@ function installGuard(spec: AgentSpecBase, g: GuardConfig, deps: NormsDeps, outc
       return;
     }
     case 'didMessageConsistency': {
-      // Same no-deny-policy-wrap reasoning as `llmCheck` (it IS one): the deny is the adjudicator's
+      // Same no-deny-policy-wrap reasoning as `llmCheck` (it IS one): the deny is the judge's
       // verdict. The rubric is the engine's, so the config chooses only WHETHER to install it and what an
-      // unreachable adjudicator means.
+      // unreachable judge means.
       spec.addGuard('onReply', 'any', didMessageConsistency(g.failMode ? { failMode: g.failMode } : undefined), {
         layer: 'agent',
         id,

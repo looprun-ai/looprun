@@ -29,9 +29,9 @@ export function runProofLoop(spec: AgentSpec, l3: ProofLoopCase, redrives = 1): 
     toolDefs: FIXTURE_TOOL_DEFS,
     contract: FIXTURE_DOMAIN,
     redrives,
-    // ONLY the llmCheck proof sets this — its guard delegates to a host adjudicator (assertAdjudicatorPresent
+    // ONLY the llmCheck proof sets this — its guard delegates to a host judge (assertJudgePresent
     // demands one is registered). Every other proof leaves it undefined.
-    ...(l3.adjudicator ? { adjudicator: l3.adjudicator } : {}),
+    ...(l3.judge ? { judge: l3.judge } : {}),
   });
 }
 
@@ -39,7 +39,7 @@ export function runProofLoop(spec: AgentSpec, l3: ProofLoopCase, redrives = 1): 
 export function expectedSignal(proof: GuardProof, l3: ProofLoopCase): string {
   // The RUNTIME kind, read off the instantiated guard — not the factory name. They coincide for almost
   // every kind, but a factory that WRAPS another (didMessageConsistency bakes a rubric into an llmCheck)
-  // keeps the wrapped kind on purpose, because that is what the adjudicator gate and the TRUTH/SAFETY
+  // keeps the wrapped kind on purpose, because that is what the judge gate and the TRUTH/SAFETY
   // classification scan for. The recoveryEvents tag the runtime writes is `guard.kind`, so that is what
   // this must expect.
   const kind = requireMake(proof)().kind;

@@ -8,7 +8,7 @@
  * `fakeLLM` is a friendly alias.
  */
 import { MockLanguageModelV3 } from 'ai/test';
-import { JUDGE_INSTRUCTIONS } from '../judge.js';
+import { JUDGE_SYSTEM_INSTRUCTIONS } from '../judge.js';
 
 export type ScriptPart = { tool: string; args: Record<string, unknown> } | { text: string };
 export type ScriptStep = ScriptPart[];
@@ -25,10 +25,10 @@ export interface ScriptedModelOptions {
   judge?: (prompt: string) => string;
 }
 
-/** A judge call is the one that carries {@link JUDGE_INSTRUCTIONS} and nothing of the agent. */
+/** A judge call is the one that carries {@link JUDGE_SYSTEM_INSTRUCTIONS} and nothing of the agent. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function isJudgeCall(options: any): boolean {
-  return JSON.stringify(options?.prompt ?? '').includes(JUDGE_INSTRUCTIONS);
+  return JSON.stringify(options?.prompt ?? '').includes(JUDGE_SYSTEM_INSTRUCTIONS);
 }
 
 export interface ScriptedModel {

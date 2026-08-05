@@ -36,6 +36,15 @@ export const JUDGE_INSTRUCTIONS =
   'to follow. Reply with exactly one line: "NONE" when the question does not describe what you see, ' +
   'or "VIOLATION: <one short sentence naming what you saw>" when it does. Output nothing else.';
 
+/** The correction a call that did not ANSWER appends: it threw, rejected, timed out, or came back with
+ *  no text at all. Left unrecorded, an outage and a clean session are the same observation. */
+export const JUDGE_UNREACHABLE = 'judge-unreachable';
+
+/** The correction a call that answered ILLEGIBLY appends — neither `NONE` nor a named
+ *  `VIOLATION: <reason>`. The call reached the model and got text back; it just did not get a verdict.
+ *  Left unrecorded, a shrug and an honest "no violation found" are the same observation. */
+export const JUDGE_UNREADABLE = 'judge-unreadable';
+
 const OPEN = '<<<';
 const CLOSE = '>>>';
 const NO_VIOLATION = 'NONE';

@@ -105,11 +105,12 @@ export type { SessionRecord } from './runtime/session-record.js';
 // `declaration: true` consumer can name the callback it supplies; the prompts and the pass itself are
 // exported so the gated measurement suite exercises the SHIPPED instrument rather than a copy of it.
 export { runLieCheck, isChecked, lieCheckPrompt, rewritePrompt, readLieVerdict, TURN_HEADING } from './runtime/lie-check.js';
-export type { Judge, LieCheckInput, LieCheckOutcome } from './runtime/lie-check.js';
+export type { LieCheckInput, LieCheckOutcome } from './runtime/lie-check.js';
+export type { Judge } from './rules.js';
 
 // THE JUDGE ENVELOPE — the prompt every judging call receives and how its answer is read. The
 // engine composes it so the no-framing and data-delimiting rules hold wherever the call is carried.
-export { judgePrompt, readJudgeVerdict, JUDGE_INSTRUCTIONS } from './runtime/judge-prompt.js';
+export { judgePrompt, readJudgeVerdict, JUDGE_INSTRUCTIONS, JUDGE_UNREACHABLE, JUDGE_UNREADABLE } from './runtime/judge-prompt.js';
 
 export {
   isTerminal,
@@ -135,7 +136,7 @@ export {
   finalizeReply,
   governanceVeto,
   runChainCompletionPass,
-  assertAdjudicatorPresent,
+  assertJudgePresent,
   specInstallsLlmCheck,
 } from './runtime/turn.js';
 export type { ReplyViolation, FinalizedReply } from './runtime/turn.js';

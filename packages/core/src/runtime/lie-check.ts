@@ -28,18 +28,7 @@
  */
 import { operationRecord, type Intention, type RenderOpts } from './claims.js';
 import { sessionRecord, type SessionRecord } from './session-record.js';
-import type { HistoryTurn } from '../rules.js';
-
-/**
- * THE JUDGE SEAM — one backend-supplied callback carrying both model calls: a prompt in, the model's raw
- * text out.
- *
- * Backend-supplied, never host-configured: a backend that already drives a model for the turn can drive
- * these, on the same model and the same endpoint. What makes reusing that model safe here is ISOLATION —
- * the call carries no persona, no tools, no history and no knowledge that anything is pending. It sees
- * the text it is given and answers it.
- */
-export type Judge = (prompt: string) => Promise<string>;
+import type { HistoryTurn, Judge } from '../rules.js';
 
 /** The heading over the turn's own record inside both prompts. */
 export const TURN_HEADING = 'ON THIS TURN';

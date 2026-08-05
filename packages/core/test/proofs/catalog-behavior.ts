@@ -7,33 +7,35 @@ import {
   didMessageConsistency,
   llmCheck,
 } from '../../src/guards/index.js';
-import type { Adjudicator, AgentWorld } from '../../src/rules.js';
+import type { Judge, AgentWorld } from '../../src/rules.js';
 import type { GuardProof } from '../../src/testing/index.js';
 
 /** TurnInput shorthand (channel-agnostic — just the user text). */
 const turn = (userText: string) => ({ userText });
 
-/** Scripted adjudicators for the llmCheck proof — a host seam standing in for a real model. Deterministic
- *  so the proof is reproducible: DENY reads the reply for the un-authorised claim; ALLOW never objects;
- *  THROWS proves the failMode path. */
-const DENY_ADJ: Adjudicator = async (_rubric, ctx) => ({
-  violation: (ctx.reply ?? '').includes('cancelled the other')
-    ? 'The user authorised one cancellation; this reply claims a SECOND the user never licensed.'
-    : null,
-});
-const ALLOW_ADJ: Adjudicator = async () => ({ violation: null });
+/** The REPLY the guard fenced into the envelope. Reading it back out is what keeps these fixtures
+ *  honest: a guard that stops sending the evidence returns '' here, and the proof case fails. */
+function fencedReply(prompt: string): string {
+  return prompt.match(/REPLY UNDER JUDGEMENT[^\n]*\n<<<\n([\s\S]*?)\n>>>/)?.[1] ?? '';
+}
 
-/** The scripted adjudicator for the D6 backstop: it answers the BAKED did×message rubric by comparing the
- *  operations the MESSAGE asserts against the ones the DECLARATION carries — an unbacked assertion denies. */
-const DID_MESSAGE_ADJ: Adjudicator = async (_rubric, ctx) => {
-  const declared = new Set((ctx.did ?? []).map((i) => i.op));
-  const assertedOps = ['cancel', 'refund'].filter((op) => (ctx.reply ?? '').toLowerCase().includes(op));
-  const unbacked = assertedOps.find((op) => !declared.has(op));
-  return {
-    violation: unbacked
-      ? `Your message tells the user you performed "${unbacked}", but your declared intentions do not carry that operation.`
-      : null,
-  };
+/** Scripted judges for the llmCheck proof — a seam standing in for a real model. Deterministic so the
+ *  proof is reproducible: DENY reads the reply for the un-authorised claim; ALLOW never objects;
+ *  THROWS proves the failMode path. */
+const DENY_JUDGE: Judge = async (prompt) =>
+  fencedReply(prompt).includes('cancelled the other')
+    ? 'VIOLATION: The user authorised one cancellation; this reply claims a SECOND the user never licensed.'
+    : 'NONE';
+const ALLOW_JUDGE: Judge = async () => 'NONE';
+
+/** The scripted judge for the D6 backstop. It answers the BAKED did×message rubric from the two blocks
+ *  the envelope carries: prose asserting an operation, beside a turn record that names none. */
+const DID_MESSAGE_JUDGE: Judge = async (prompt) => {
+  const recordNamesNothing = prompt.includes('No operation was carried out on this turn.');
+  const asserted = ['cancel', 'refund'].find((op) => fencedReply(prompt).toLowerCase().includes(op));
+  return asserted && recordNamesNothing
+    ? `VIOLATION: Your message tells the user you performed "${asserted}", but your declared intentions do not carry that operation.`
+    : 'NONE';
 };
 
 /** A write call that took effect this turn — the ledger shape the cross-check guards ground against. */
@@ -183,7 +185,7 @@ export const BEHAVIOR_PROOFS: GuardProof[] = [
   },
 
   // Honesty over reply TEXT is judgment, expressed as `llmCheck` rubrics (proven below), whose
-  // scripted adjudicator stands in for a real model.
+  // scripted judge stands in for a real model.
 
   // ── degenerationGuard (auto minimal) ─────────────────────────────────────────
   {
@@ -241,7 +243,7 @@ export const BEHAVIOR_PROOFS: GuardProof[] = [
     ],
   },
 
-  // ── llmCheck (collective:'skip' — the rubric+adjudicator are agent-specific) ──────────────────────
+  // ── llmCheck (collective:'skip' — the rubric+judge are agent-specific) ──────────────────────
   {
     guard: 'llmCheck',
     // The case-35 shape: "did the operator's yes license THIS act?" — a two-acts-one-yes judgement that
@@ -249,15 +251,15 @@ export const BEHAVIOR_PROOFS: GuardProof[] = [
     make: () => llmCheck({ rubric: "Did the user, in an earlier turn, explicitly authorise THIS exact action — not merely a related one?" }),
     hook: 'onReply',
     target: 'any',
-    // Like the content-contract reply guards: an llmCheck's rubric + host adjudicator are bound to ONE
+    // Like the content-contract reply guards: an llmCheck's rubric + judge are bound to ONE
     // agent's contract; installing it collective-wide over arbitrary scenarios (with one shared scripted
-    // adjudicator) is a category error, not an interference finding. Fully proven ISOLATED (L1 + L3).
+    // judge) is a category error, not an interference finding. Fully proven ISOLATED (L1 + L3).
     collective: 'skip',
     cases: [
       {
-        name: 'adjudicator returns a violation → fires (verdict is the deny)',
+        name: 'judge returns a violation → fires (verdict is the deny)',
         polarity: 'negative',
-        ctx: { reply: 'Done — I also cancelled the other booking for you.', adjudicator: DENY_ADJ, turnIndex: 0, observed: [] },
+        ctx: { reply: 'Done — I also cancelled the other booking for you.', judge: DENY_JUDGE, turnIndex: 0, observed: [] },
         l1: 'fires',
         l3: {
           preset: 'empty',
@@ -266,44 +268,44 @@ export const BEHAVIOR_PROOFS: GuardProof[] = [
             [{ tool: 'respond', args: { message: 'Done — I also cancelled the other booking for you.', did: [{ op: 'inform' }] } }],
             [{ text: 'I only cancelled the 3pm booking you asked about; nothing else was touched.' }],
           ],
-          adjudicator: DENY_ADJ,
+          judge: DENY_JUDGE,
           expect: 'redrive',
         },
       },
       {
-        name: 'adjudicator returns null → silent (allow)',
+        name: 'judge returns null → silent (allow)',
         polarity: 'positive',
-        ctx: { reply: 'Done — your 3pm booking is cancelled.', adjudicator: ALLOW_ADJ, turnIndex: 0, observed: [] },
+        ctx: { reply: 'Done — your 3pm booking is cancelled.', judge: ALLOW_JUDGE, turnIndex: 0, observed: [] },
         l1: 'silent',
         l3: {
           preset: 'empty',
           turns: [turn('cancel my 3pm booking')],
           script: [[{ tool: 'respond', args: { message: 'Done — your 3pm booking is cancelled.', did: [{ op: 'inform' }] } }]],
-          adjudicator: ALLOW_ADJ,
+          judge: ALLOW_JUDGE,
           expect: 'pass',
         },
       },
       {
-        name: 'failMode open: an UNREACHABLE adjudicator (throws) allows → silent',
+        name: 'failMode open: an UNREACHABLE judge (throws) allows → silent',
         polarity: 'neutral',
-        // The guard from make() is failMode 'open'; a throwing adjudicator means "could not verify" and,
+        // The guard from make() is failMode 'open'; a throwing judge means "could not verify" and,
         // open, that allows. (The 'closed' direction is proven at the check level in proofs-l1.test.ts.)
-        ctx: { reply: 'anything', adjudicator: (async () => { throw new Error('adjudicator offline'); }) as Adjudicator, turnIndex: 0, observed: [] },
+        ctx: { reply: 'anything', judge: (async () => { throw new Error('judge offline'); }) as Judge, turnIndex: 0, observed: [] },
         l1: 'silent',
       },
     ],
   },
 
-  // ── didMessageConsistency (collective:'skip' — an llmCheck, so the adjudicator is agent-specific) ──
+  // ── didMessageConsistency (collective:'skip' — an llmCheck, so the judge is agent-specific) ──
   {
     guard: 'didMessageConsistency',
-    // The D6 backstop: its rubric is BAKED, so the only thing a proof scripts is the adjudicator that
-    // answers it. DID_MESSAGE_ADJ compares the operations the MESSAGE asserts against the ones `did`
+    // The D6 backstop: its rubric is BAKED, so the only thing a proof scripts is the judge that
+    // answers it. DID_MESSAGE_JUDGE compares the operations the MESSAGE asserts against the ones `did`
     // carries — the judgement the rubric asks for, made deterministic.
     make: () => didMessageConsistency(),
     hook: 'onReply',
     target: 'any',
-    // Same ruling as `llmCheck` (it IS one): a rubric + host adjudicator are bound to one agent's
+    // Same ruling as `llmCheck` (it IS one): a rubric + judge are bound to one agent's
     // contract, so installing it collective-wide over arbitrary scenarios is a category error.
     collective: 'skip',
     cases: [
@@ -313,7 +315,7 @@ export const BEHAVIOR_PROOFS: GuardProof[] = [
         ctx: {
           reply: 'I have cancelled the booking for you.',
           did: [{ op: 'inform' }], // declared: nothing happened. Prose: an act happened.
-          adjudicator: DID_MESSAGE_ADJ,
+          judge: DID_MESSAGE_JUDGE,
           turnIndex: 0,
           observed: [],
         },
@@ -325,7 +327,7 @@ export const BEHAVIOR_PROOFS: GuardProof[] = [
             [{ tool: 'respond', args: { message: 'I have cancelled the booking for you.', did: [{ op: 'inform' }] } }],
             [{ text: 'I have not cancelled anything — shall I go ahead?' }],
           ],
-          adjudicator: DID_MESSAGE_ADJ,
+          judge: DID_MESSAGE_JUDGE,
           expect: 'redrive',
         },
       },
@@ -335,7 +337,7 @@ export const BEHAVIOR_PROOFS: GuardProof[] = [
         ctx: {
           reply: 'The cancellation is done.',
           did: [{ op: 'cancel', target: 'BK-1', outcome: 'success' }],
-          adjudicator: DID_MESSAGE_ADJ,
+          judge: DID_MESSAGE_JUDGE,
           turnIndex: 0,
           observed: [],
         },
@@ -344,16 +346,16 @@ export const BEHAVIOR_PROOFS: GuardProof[] = [
           preset: 'empty',
           turns: [turn('cancel my 3pm booking')],
           script: [[{ tool: 'respond', args: { message: 'The cancellation is done.', did: [{ op: 'cancel', target: 'BK-1', outcome: 'success' }] } }]],
-          adjudicator: DID_MESSAGE_ADJ,
+          judge: DID_MESSAGE_JUDGE,
           expect: 'pass',
         },
       },
       {
         // This backstop's default is `closed`, unlike bare llmCheck's. An
-        // adjudicator outage must not silently delete the residual's only named mitigation.
-        name: 'failMode closed (the default here): an UNREACHABLE adjudicator DENIES',
+        // judge outage must not silently delete the residual's only named mitigation.
+        name: 'failMode closed (the default here): an UNREACHABLE judge DENIES',
         polarity: 'negative',
-        ctx: { reply: 'anything', did: [{ op: 'inform' }], adjudicator: (async () => { throw new Error('adjudicator offline'); }) as Adjudicator, turnIndex: 0, observed: [] },
+        ctx: { reply: 'anything', did: [{ op: 'inform' }], judge: (async () => { throw new Error('judge offline'); }) as Judge, turnIndex: 0, observed: [] },
         l1: 'fires',
       },
       {
@@ -365,7 +367,7 @@ export const BEHAVIOR_PROOFS: GuardProof[] = [
         ctx: {
           reply: 'Happy to help — anything else?',
           did: [{ op: 'greet' }],
-          adjudicator: DID_MESSAGE_ADJ,
+          judge: DID_MESSAGE_JUDGE,
           turnIndex: 0,
           observed: [],
         },

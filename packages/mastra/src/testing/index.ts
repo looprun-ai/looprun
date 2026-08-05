@@ -9,4 +9,4 @@ export * from './fake-llm.js';
 export * from './proof-loop.js';
 // The judge's instructions, so a harness can tell an engine JUDGE call from an agent TURN and
 // measure the turn. Recognising it by shape would break the moment the wording changed.
-export { JUDGE_INSTRUCTIONS } from '../judge.js';
+export { JUDGE_SYSTEM_INSTRUCTIONS } from '../judge.js';

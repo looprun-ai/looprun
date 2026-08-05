@@ -27,9 +27,9 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { stepCountIs } from 'ai';
 import { Agent } from '@mastra/core/agent';
-import type { AgentSpec, AgentWorld, ObservedCall, ToolDef, DomainContract, Adjudicator } from '@looprun-ai/core';
+import type { AgentSpec, AgentWorld, ObservedCall, ToolDef, DomainContract, Judge } from '@looprun-ai/core';
 import {
-  assertAdjudicatorPresent,
+  assertJudgePresent,
   beginTurn,
   clearDeliveredTerminal,
   finalizeReply,
@@ -86,13 +86,13 @@ export interface LoopRunAgentConfig<W extends AgentWorld = AgentWorld> {
   /** Stop the generation on the first repeated (tool+args) call — enable for LOCAL models
    *  — a small model that loops is either stuck or retrying unchanged. Default false. */
   stopOnRepeatedToolCall?: boolean;
-  /** The host-registered LLM adjudicator for `llmCheck` guards — the model seam, NEVER named in the
+  /** The host-registered LLM judge for `llmCheck` guards — the model seam, NEVER named in the
    *  spec/config (like defineWorld's custom executors). Threaded into every session's GuardCtx. A spec
-   *  that installs an llmCheck with this absent throws at construction (assertAdjudicatorPresent). */
-  adjudicator?: Adjudicator;
-  /** Per-call adjudicator timeout (ms) — a hung adjudicator resolves via failMode past this deadline.
-   *  Default 30000 (the guard's own). Beside the adjudicator at the seam; the config surface is untouched. */
-  adjudicatorTimeoutMs?: number;
+   *  that installs an llmCheck with this absent throws at construction (assertJudgePresent). */
+  judge?: Judge;
+  /** Per-call judge timeout (ms) — a hung judge resolves via failMode past this deadline.
+   *  Default 30000 (the guard's own). Beside the judge at the seam; the config surface is untouched. */
+  judgeTimeoutMs?: number;
   /** The certified turn shape (terminal tools + toolChoice:'required'). Default true. */
   terminalProtocol?: boolean;
   /** Certification drift gate: the expected `surfaceFingerprint()` of the RESOLVED active
@@ -181,10 +181,13 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
     };
     const built = resolveConstruction<W>(config, getSession as () => LoopRunSession);
     const { contract, nativeToolsMode, surface, terminalOn } = built;
-    // FAIL-LOUD-AT-START: an llmCheck installed without an adjudicator is a wiring bug — surface it at
+    // FAIL-LOUD-AT-START: an llmCheck installed without a judge is a wiring bug — surface it at
     // construction, never mid-turn. No-op for a spec with no llmCheck (zero-diff).
-    assertAdjudicatorPresent(spec, config.adjudicator);
-    const sessions = new SessionStore<W>(built.world, config.adjudicator, config.adjudicatorTimeoutMs);
+    assertJudgePresent(spec, config.judge);
+    const sessions = new SessionStore<W>(built.world, config.judge, config.judgeTimeoutMs, {
+      renderClaim: contract?.renderClaim,
+      outcomes: contract?.outcomes,
+    });
     const guardHooks = makeGuardHooks(spec, getSession as () => LoopRunSession, { nativeToolsMode });
 
     super({

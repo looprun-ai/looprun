@@ -11,7 +11,7 @@
  * (`AgentWorld`); a domain reads its own accessors through the index signature — the package itself
  * is domain-neutral.
  */
-import type { Intention } from './runtime/claims.js';
+import type { Intention, RenderOpts } from './runtime/claims.js';
 import type { Challenge } from './runtime/challenge.js';
 
 /** The five enforcement dims (taxonomy metadata; the structural key is the hook it maps to). */
@@ -96,19 +96,20 @@ export interface HistoryTurn {
   guardEvents: ReadonlyArray<string>;
 }
 
-/** The verdict a host {@link Adjudicator} returns: a deny `violation` reason, or `null` to allow.
- *  VERDICT-ONLY — the string is a deny reason for the guard layer, NEVER free text delivered to the
- *  operator (an llmCheck's `check` returns it verbatim as the deny, relayed only through the runtime's
- *  correction/redrive channel). */
-export interface AdjudicatorVerdict {
-  violation: string | null;
-}
-
-/** A host-registered LLM adjudicator — the seam an `llmCheck` guard delegates its verdict to. It answers
- *  a TRUSTED, pre-baked `rubric` over the guard ctx (full `history` + `userText` included).
- *  Registered on the runtime options like `defineWorld`'s custom executors —
- *  NEVER named in config. Unreachable (throws/rejects) ⇒ the guard's `failMode` decides open/closed. */
-export type Adjudicator = (rubric: string, ctx: GuardCtx) => Promise<AdjudicatorVerdict>;
+/**
+ * THE JUDGE SEAM — the ONE callback every judging call in the engine rides: a prompt in, the model's
+ * raw text out. The lie check, the rewrite it gates, and every question an `llmCheck` guard binds all
+ * go through this single shape.
+ *
+ * Backend-supplied, never host-configured: a backend already driving a model for the turn drives these
+ * on the same model and endpoint. What makes that safe is ISOLATION — the call carries no persona, no
+ * tools, no history and no knowledge that anything is pending. It sees the text it is given, and
+ * answers it.
+ *
+ * The CALLER composes the prompt and reads the answer. A judge that throws or rejects propagates to its
+ * caller, which is the only place that knows what an unanswered question means.
+ */
+export type Judge = (prompt: string) => Promise<string>;
 
 /** Everything a guard predicate may read — including the user's own text (`userText` this turn;
  *  `history[].userText` for prior turns). */
@@ -154,21 +155,30 @@ export interface GuardCtx {
    *  same-step visibility is a zero-blast-radius augmentation. Absent on backends that dispatch one
    *  call per step (alien) — treat as empty. */
   siblingCallsThisStep?: ObservedCall[];
-  /** The host-registered LLM adjudicator, threaded from the runtime options. Present iff the host
-   *  registered one; ONLY `llmCheck` guards read it — every deterministic guard ignores it, so the
-   *  augmentation is zero-blast-radius. Absent while an `llmCheck` is installed is caught loud at
-   *  conversation start (`assertAdjudicatorPresent`), never mid-turn. */
-  adjudicator?: Adjudicator;
+  /** The judge seam, threaded from the runtime options. Present iff the host registered one or the
+   *  backend resolved one; ONLY `llmCheck` guards read it — every deterministic guard ignores it, so
+   *  the augmentation is zero-blast-radius. Absent while an `llmCheck` is installed is caught loud at
+   *  conversation start (`assertJudgePresent`), never mid-turn. */
+  judge?: Judge;
   /** The consent challenges the CURRENT turn's incoming message consumed — the WHOLE licensing surface
    *  for a destructive act. A guard asks whether one of these is about the call in front of it, and
    *  never reads text or history to decide: the runtime already did the reading, once, at turn start.
    *  Absent ⇒ empty, which is no consent. */
   consent?: ReadonlyArray<Challenge>;
-  /** The per-call adjudicator TIMEOUT (ms), threaded from the registration seam beside `adjudicator`. An
-   *  llmCheck races the adjudicator against this deadline: a HUNG (never-settling) adjudicator would
-   *  otherwise hang the turn, and `failMode` only fires on a settled rejection — so on expiry the guard
-   *  treats the adjudicator as unreachable and applies `failMode`. Absent ⇒ the guard's own default. */
-  adjudicatorTimeoutMs?: number;
+  /** The per-call judge TIMEOUT (ms), threaded from the registration seam beside `judge`. An llmCheck
+   *  races the judge against this deadline: a HUNG (never-settling) judge would otherwise hang the turn,
+   *  and `failMode` only fires on a settled rejection — so on expiry the guard treats the judge as
+   *  unreachable and applies `failMode`. Absent ⇒ the guard's own default. */
+  judgeTimeoutMs?: number;
+  /** The domain's own render vocabulary (`renderClaim` / `outcomes`), threaded from the contract beside
+   *  {@link judge}. A guard that composes a judging prompt renders the turn's operation record and the
+   *  session list through it, so the judge reads the operations in the words the user saw them in.
+   *
+   *  It rides the ctx because it is RUN-scoped exactly as the judge is — a host may hand the runtime a
+   *  different contract than the spec carries — while a guard is built once per spec. Absent ⇒ the
+   *  engine's neutral defaults, under which a claim declared with a domain outcome word the engine does
+   *  not know renders no operation line at all. */
+  renderOpts?: RenderOpts;
 }
 
 /** A typed guard instance: deterministic gate + LLM-facing explanation (the prose+check pairing). */

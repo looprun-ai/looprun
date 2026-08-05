@@ -8,9 +8,9 @@
  *                             tools: g.tools, hooks: g.hooks, inputProcessors: g.inputProcessors })
  *   // per turn: const { userMessageTail } = g.beginTurn(); …generate…; await g.finalizeReply(text, redrive)
  */
-import type { AgentSpec, AgentWorld, ToolDef, DomainContract, Adjudicator } from '@looprun-ai/core';
+import type { AgentSpec, AgentWorld, ToolDef, DomainContract, Judge } from '@looprun-ai/core';
 import {
-  assertAdjudicatorPresent,
+  assertJudgePresent,
   beginTurn as ledgerBeginTurn,
   createLedger,
   finalizeReply as coreFinalizeReply,
@@ -18,7 +18,7 @@ import {
   renderScopedSpecTrunk,
   terminalProtocol,
 } from '@looprun-ai/core/internal';
-import type { FinalizedReply, TurnLedger, RespondPayload, Judge } from '@looprun-ai/core/internal';
+import type { FinalizedReply, TurnLedger, RespondPayload } from '@looprun-ai/core/internal';
 import { buildWorldTools } from './tools.js';
 import { makeGuardHooks, makeInputProcessors } from './hooks.js';
 import type { GuardHooks } from './hooks.js';
@@ -54,21 +54,24 @@ export interface CompiledSpec {
 
 export function compileSpec(
   spec: AgentSpec,
-  opts: { contract?: DomainContract; world: AgentWorld; toolDefs?: ToolDef[]; terminalProtocol?: boolean; redrives?: number; adjudicator?: Adjudicator; adjudicatorTimeoutMs?: number },
+  opts: { contract?: DomainContract; world: AgentWorld; toolDefs?: ToolDef[]; terminalProtocol?: boolean; redrives?: number; judge?: Judge; judgeTimeoutMs?: number },
 ): CompiledSpec {
   const contract = opts.contract ?? spec.contract;
   if (!contract && !spec.surface.systemPrompt) {
     throw new Error(`compileSpec "${spec.id}": no contract — pass opts.contract or set spec.contract.`);
   }
-  // FAIL-LOUD-AT-START: an llmCheck installed without an adjudicator is a wiring bug — surface it here.
-  assertAdjudicatorPresent(spec, opts.adjudicator);
+  // FAIL-LOUD-AT-START: an llmCheck installed without a judge is a wiring bug — surface it here.
+  assertJudgePresent(spec, opts.judge);
   const world = opts.world;
   const terminalOn = opts.terminalProtocol !== false;
   const surface = new Set(spec.surface.tools);
   const session: LoopRunSession = {
     id: 'compiled',
     world,
-    ledger: createLedger(opts.adjudicator, opts.adjudicatorTimeoutMs),
+    ledger: createLedger(opts.judge, opts.judgeTimeoutMs, {
+      renderClaim: contract?.renderClaim,
+      outcomes: contract?.outcomes,
+    }),
     turnIndex: 0,
     messages: [],
     chain: Promise.resolve(),

@@ -90,7 +90,7 @@ describe('loadNormsConfig — guards from data', () => {
     };
     const spec = loadNormsConfig(cfg);
     const bound = spec.guards.onReply.find((b) => b.id === 'agent:prosebackstop');
-    expect(bound?.guard.kind).toBe('llmCheck'); // it IS an llmCheck — the adjudicator gate sees it
+    expect(bound?.guard.kind).toBe('llmCheck'); // it IS an llmCheck — the judge gate sees it
     expect(bound?.guard.dim).toBe('behavior');
     // The rubric is the ENGINE's, not the config's: the config chose only to install it.
     expect(bound?.guard.prose()).toContain('did');

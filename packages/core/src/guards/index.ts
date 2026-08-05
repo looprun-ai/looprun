@@ -5,12 +5,12 @@
  * a deterministic `check()` (the machine gate) + an LLM-facing `prose()` (rendered into the trunk,
  * never read by the checker) — the prose+check pairing. A deterministic predicate reads tool args /
  * world state / observed calls; the ONE guard that reasons over conversation TEXT is `llmCheck`, whose
- * verdict is a host adjudicator's, never a closure-held pattern. The deterministic set is pure by
+ * verdict is the judge's, never a closure-held pattern. The deterministic set is pure by
  * construction: no clock, no entropy, no network, no LLM call inside a check.
  *
  * NO-REGEX LAW: NO guard FACTORY takes a RegExp-typed parameter. Text judgment — claim language,
  * confirm-language, PII/regulated/competitor patterns — is `llmCheck`'s job (a trusted rubric answered
- * by the host adjudicator). Structural jobs use structural signals (`confirmFirst` /
+ * by the judge). Structural jobs use structural signals (`confirmFirst` /
  * `pendingConfirmMustAsk` key on the ask INTENTION a delivered `respond` declares in its `did` —
  * `hasAskIntent` / `isAskEvent` — plus args equality, never on reply text). Media/label INPUT guards are
  * a DOMAIN concern — `custom({ dim:'input' })` over the world's own

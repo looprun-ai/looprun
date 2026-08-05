@@ -1,13 +1,13 @@
 /**
  * llmCheck through the real loop: the case-35 "two-acts-one-yes" shape structure alone cannot close, the
- * fail-loud-at-start adjudicator gate, and an async llmCheck coexisting (ordered) with a sync onReply
+ * fail-loud-at-start judge gate, and an async llmCheck coexisting (ordered) with a sync onReply
  * guard. Core-level verdict/failMode semantics are proven in @looprun-ai/core; here we drive
- * runSpecConversation with a scripted model + a scripted host adjudicator.
+ * runSpecConversation with a scripted model + a scripted judge.
  */
 import { describe, expect, it } from 'vitest';
 import { AgentSpecBase, custom, llmCheck } from '@looprun-ai/core';
-import type { AgentWorld, DomainContract, Adjudicator } from '@looprun-ai/core';
-import { assertAdjudicatorPresent } from '@looprun-ai/core/internal';
+import type { AgentWorld, DomainContract, Judge } from '@looprun-ai/core';
+import { assertJudgePresent } from '@looprun-ai/core/internal';
 import { runSpecConversation } from '../src/index.js';
 import { scriptedModel } from './scripted-model.js';
 import { nothingDone } from './delivery.js';
@@ -42,66 +42,69 @@ const TOOL_DEFS = [
 
 function bookingSpec(): AgentSpecBase {
   const spec = new AgentSpecBase({ id: 'bookings', mode: 'M', persona: 'You are the bookings agent.', tools: ['cancelBooking'], contract: CONTRACT });
-  // The rubric IS the case-35 question. Its verdict is the adjudicator's; failMode default 'open'.
+  // The rubric IS the case-35 question. Its verdict is the judge's; failMode default 'open'.
   spec.addGuard('onReply', 'any', llmCheck({ rubric: 'Did the user explicitly authorise EVERY action the reply claims — not merely a related one?' }), { id: 'agent:licence' });
   return spec;
 }
 
 describe('llmCheck — fail loud at conversation start (core-level gate)', () => {
-  // `runSpecConversation` resolves an adjudicator for every run (the default below), so a spec that
-  // installs an llmCheck with no adjudicator runs cleanly through this backend. The gate this protects
-  // is one layer down: `assertAdjudicatorPresent` itself, guarding a caller that resolves nothing.
-  it('a spec that installs an llmCheck with NO adjudicator throws through assertAdjudicatorPresent', () => {
+  // `runSpecConversation` resolves a judge for every run (the default below), so a spec that
+  // installs an llmCheck with no judge runs cleanly through this backend. The gate this protects
+  // is one layer down: `assertJudgePresent` itself, guarding a caller that resolves nothing.
+  it('a spec that installs an llmCheck with NO judge throws through assertJudgePresent', () => {
     const spec = bookingSpec();
-    expect(() => assertAdjudicatorPresent(spec, undefined)).toThrow(/installs an llmCheck guard but no adjudicator/i);
+    expect(() => assertJudgePresent(spec, undefined)).toThrow(/installs an llmCheck guard but no judge/i);
   });
 });
 
-describe('the adjudicator the backend resolves', () => {
+describe('the judge the backend resolves', () => {
   function defaultedSpec(): AgentSpecBase {
     const spec = new AgentSpecBase({ id: 'defaulted', mode: 'M', persona: 'You are the agent.', tools: [], contract: CONTRACT });
     spec.addGuard('onReply', 'any', llmCheck({ rubric: 'does the reply overstate?' }), { id: 'agent:rubric' });
     return spec;
   }
 
-  it('a spec binding a rubric runs with NO adjudicator in deps', async () => {
+  it('a spec binding a rubric runs with NO judge in deps', async () => {
     const scripted = scriptedModel([[{ tool: 'respond', args: { message: 'hi', did: [{ op: 'inform' }] } }]]);
     const res = await runSpecConversation(defaultedSpec(), [{ userText: 'hello' }], {
       model: scripted.model,
       world: world(),
       toolDefs: TOOL_DEFS,
-      // no adjudicator — the backend resolves its own default
+      // no judge — the backend resolves its own default
     });
     expect(res.errorMsg).toBeUndefined();
     expect(res.turnRecords).toHaveLength(1);
   });
 
-  it('a supplied adjudicator WINS over the default', async () => {
+  it('a supplied judge WINS over the default', async () => {
     let called = false;
-    const mine: Adjudicator = async () => {
+    const mine: Judge = async () => {
       called = true;
-      return { violation: null };
+      return 'NONE';
     };
     const scripted = scriptedModel([[{ tool: 'respond', args: { message: 'hi', did: [{ op: 'inform' }] } }]]);
     await runSpecConversation(defaultedSpec(), [{ userText: 'hello' }], {
       model: scripted.model,
       world: world(),
       toolDefs: TOOL_DEFS,
-      adjudicator: mine,
+      judge: mine,
     });
     expect(called).toBe(true);
   });
 });
 
 describe('llmCheck — case 35: two acts, one yes (structure alone cannot close it)', () => {
-  // The adjudicator reads the FULL context (history + userText): the user authorised cancelling the 3pm
-  // booking only. Structure (observed calls) sees a legal cancelBooking + a terminal reply and would pass;
-  // the model verdict is what catches the reply claiming a SECOND cancellation the user never licensed.
-  const licenceAdjudicator: Adjudicator = async (_rubric, ctx) => {
-    const authorised = [ctx.userText, ...ctx.history.map((t) => t.userText)].join(' ').toLowerCase();
-    const claimsSecond = /other booking|both bookings|also cancelled/i.test(ctx.reply ?? '');
-    const licensedSecond = /other|both|all my bookings/i.test(authorised);
-    return { violation: claimsSecond && !licensedSecond ? 'The user authorised one cancellation; the reply claims a second the user never licensed.' : null };
+  // The judge reads the ENVELOPE the guard composed: the agent's prose fenced as data, the turn's own
+  // operation record, and the operations earlier turns completed. Structure (observed calls) sees a
+  // legal cancelBooking plus a terminal reply and would pass; the model verdict is what catches a reply
+  // claiming a SECOND cancellation no list accounts for.
+  const licenceJudge: Judge = async (prompt) => {
+    const reply = prompt.match(/REPLY UNDER JUDGEMENT[^\n]*\n<<<\n([\s\S]*?)\n>>>/)?.[1] ?? '';
+    const claimsSecond = /other booking|both bookings|also cancelled/i.test(reply);
+    const accountedFor = /Other booking: done/.test(prompt);
+    return claimsSecond && !accountedFor
+      ? 'VIOLATION: The user authorised one cancellation; the reply claims a second the user never licensed.'
+      : 'NONE';
   };
 
   it('denies (redrives) the reply that claims an un-authorised second act, then passes the corrected one', async () => {
@@ -112,7 +115,7 @@ describe('llmCheck — case 35: two acts, one yes (structure alone cannot close 
       [{ tool: 'respond', args: { message: 'Your 3pm booking is cancelled. Nothing else was changed.', did: [{ op: 'inform' }] } }],
     ]);
     const res = await runSpecConversation(bookingSpec(), [{ userText: 'cancel my 3pm booking' }], {
-      model: scripted.model, world: world(), toolDefs: TOOL_DEFS, adjudicator: licenceAdjudicator,
+      model: scripted.model, world: world(), toolDefs: TOOL_DEFS, judge: licenceJudge,
     });
     expect(res.errorMsg).toBeUndefined();
     expect(res.turnRecords[0].recoveryEvents).toContain('redrive:llmCheck');
@@ -125,32 +128,33 @@ describe('llmCheck — case 35: two acts, one yes (structure alone cannot close 
       [{ tool: 'respond', args: { message: 'Your 3pm booking is cancelled.', did: [{ op: 'inform' }] } }],
     ]);
     const res = await runSpecConversation(bookingSpec(), [{ userText: 'cancel my 3pm booking' }], {
-      model: scripted.model, world: world(), toolDefs: TOOL_DEFS, adjudicator: licenceAdjudicator,
+      model: scripted.model, world: world(), toolDefs: TOOL_DEFS, judge: licenceJudge,
     });
     expect(res.errorMsg).toBeUndefined();
     expect(res.turnRecords[0].recoveryEvents).not.toContain('redrive:llmCheck');
     expect(res.turnRecords[0].assistantFinalText).toBe(nothingDone('Your 3pm booking is cancelled.'));
   });
 
-  it('the SECOND act is licensed when an earlier turn authorised it → no redrive', async () => {
+  it('the SECOND act is accounted for when an EARLIER turn carried it out → no redrive', async () => {
     const scripted = scriptedModel([
-      [{ tool: 'respond', args: { message: 'Which ones — just the 3pm, or all of them?', did: [{ op: 'inform' }] } }],
+      [{ tool: 'cancelBooking', args: { id: 'other' } }],
+      [{ tool: 'respond', args: { message: 'The other booking is cancelled.', did: [{ op: 'cancel', target: 'Other booking', outcome: 'success' }] } }],
       [{ tool: 'cancelBooking', args: { id: '3pm' } }],
       [{ tool: 'respond', args: { message: 'Done — I also cancelled the other booking for you.', did: [{ op: 'inform' }] } }],
     ]);
     const res = await runSpecConversation(bookingSpec(), [
-      { userText: 'cancel all my bookings' },
-      { userText: 'yes, cancel them' },
-    ], { model: scripted.model, world: world(), toolDefs: TOOL_DEFS, adjudicator: licenceAdjudicator });
+      { userText: 'cancel the other booking' },
+      { userText: 'now cancel my 3pm one too' },
+    ], { model: scripted.model, world: world(), toolDefs: TOOL_DEFS, judge: licenceJudge });
     expect(res.errorMsg).toBeUndefined();
-    // turn 1's reply claims a second act, but turn 0's "all my bookings" licensed it → adjudicator allows.
+    // turn 1's reply names a second cancellation; the SESSION list carries it from turn 0 → judge allows.
     expect(res.turnRecords[1].recoveryEvents).not.toContain('redrive:llmCheck');
   });
 });
 
-describe('llmCheck — a HUNG adjudicator resolves via failMode through the real loop (no hang)', () => {
-  it('failMode closed + a never-settling adjudicator → the turn resolves via the timeout, not a hang', async () => {
-    const hung: Adjudicator = () => new Promise(() => {}); // never settles
+describe('llmCheck — a HUNG judge resolves via failMode through the real loop (no hang)', () => {
+  it('failMode closed + a never-settling judge → the turn resolves via the timeout, not a hang', async () => {
+    const hung: Judge = () => new Promise(() => {}); // never settles
     const spec = new AgentSpecBase({ id: 'closed', mode: 'M', persona: 'You are the agent.', tools: ['cancelBooking'], contract: CONTRACT });
     spec.addGuard('onReply', 'any', llmCheck({ rubric: 'q?', failMode: 'closed' }), { id: 'agent:closed' });
     const scripted = scriptedModel([
@@ -159,21 +163,21 @@ describe('llmCheck — a HUNG adjudicator resolves via failMode through the real
     ]);
     const res = await runSpecConversation(spec, [{ userText: 'hi' }], {
       model: scripted.model, world: world(), toolDefs: TOOL_DEFS,
-      adjudicator: hung, adjudicatorTimeoutMs: 20, // small timeout so the test does not sleep
+      judge: hung, judgeTimeoutMs: 20, // small timeout so the test does not sleep
     });
     expect(res.errorMsg).toBeUndefined();
     // closed failMode fires on every un-verifiable draft → the bounded redrive relayed it (turn resolved).
     expect(res.turnRecords[0].recoveryEvents).toContain('redrive:llmCheck');
   });
 
-  it('failMode open + a never-settling adjudicator → the reply is allowed through after the timeout', async () => {
-    const hung: Adjudicator = () => new Promise(() => {});
+  it('failMode open + a never-settling judge → the reply is allowed through after the timeout', async () => {
+    const hung: Judge = () => new Promise(() => {});
     const spec = new AgentSpecBase({ id: 'open', mode: 'M', persona: 'You are the agent.', tools: ['cancelBooking'], contract: CONTRACT });
     spec.addGuard('onReply', 'any', llmCheck({ rubric: 'q?' }), { id: 'agent:open' }); // default open
     const scripted = scriptedModel([[{ tool: 'respond', args: { message: 'the answer', did: [{ op: 'inform' }] } }]]);
     const res = await runSpecConversation(spec, [{ userText: 'hi' }], {
       model: scripted.model, world: world(), toolDefs: TOOL_DEFS,
-      adjudicator: hung, adjudicatorTimeoutMs: 20,
+      judge: hung, judgeTimeoutMs: 20,
     });
     expect(res.errorMsg).toBeUndefined();
     expect(res.turnRecords[0].recoveryEvents).not.toContain('redrive:llmCheck');
@@ -183,9 +187,9 @@ describe('llmCheck — a HUNG adjudicator resolves via failMode through the real
 
 describe('llmCheck — async coexistence with a sync onReply guard', () => {
   it('both a slow async llmCheck and a sync reply guard are enforced in one turn', async () => {
-    const slowDeny: Adjudicator = async (_r, ctx) => {
+    const slowDeny: Judge = async (prompt) => {
       await new Promise((r) => setTimeout(r, 3));
-      return { violation: /bad/i.test(ctx.reply ?? '') ? 'adjudicator says bad' : null };
+      return /bad/i.test(prompt) ? 'VIOLATION: the judge says bad' : 'NONE';
     };
     const spec = new AgentSpecBase({ id: 'both', mode: 'M', persona: 'You are the agent.', tools: ['cancelBooking'], contract: CONTRACT });
     spec.addGuard('onReply', 'any', llmCheck({ rubric: 'q?' }), { id: 'agent:async' });
@@ -196,7 +200,7 @@ describe('llmCheck — async coexistence with a sync onReply guard', () => {
       [{ tool: 'respond', args: { message: 'this is fine now', did: [{ op: 'inform' }] } }],
     ]);
     const res = await runSpecConversation(spec, [{ userText: 'hi' }], {
-      model: scripted.model, world: world(), toolDefs: TOOL_DEFS, adjudicator: slowDeny,
+      model: scripted.model, world: world(), toolDefs: TOOL_DEFS, judge: slowDeny,
     });
     expect(res.errorMsg).toBeUndefined();
     // BOTH guards fired on the first draft → both relayed through the same bounded redrive.
@@ -207,7 +211,7 @@ describe('llmCheck — async coexistence with a sync onReply guard', () => {
 });
 
 describe('llmCheck — a CALL-SIDE outage is recorded on the turn, not a silent allow', () => {
-  const dead: Adjudicator = async () => {
+  const dead: Judge = async () => {
     throw new Error('offline');
   };
 
@@ -219,7 +223,7 @@ describe('llmCheck — a CALL-SIDE outage is recorded on the turn, not a silent 
       [{ tool: 'respond', args: { message: 'Your 3pm booking is cancelled.', did: [{ op: 'inform' }] } }],
     ]);
     const res = await runSpecConversation(spec, [{ userText: 'cancel my 3pm booking' }], {
-      model: scripted.model, world: world(), toolDefs: TOOL_DEFS, adjudicator: dead,
+      model: scripted.model, world: world(), toolDefs: TOOL_DEFS, judge: dead,
     });
     expect(res.errorMsg).toBeUndefined();
     // failMode 'open' (default): the outage never denies the call, but the non-run still lands.
@@ -234,7 +238,7 @@ describe('llmCheck — a CALL-SIDE outage is recorded on the turn, not a silent 
       [{ tool: 'respond', args: { message: 'Your 3pm booking is cancelled.', did: [{ op: 'inform' }] } }],
     ]);
     const res = await runSpecConversation(spec, [{ userText: 'cancel my 3pm booking' }], {
-      model: scripted.model, world: world(), toolDefs: TOOL_DEFS, adjudicator: dead,
+      model: scripted.model, world: world(), toolDefs: TOOL_DEFS, judge: dead,
     });
     expect(res.errorMsg).toBeUndefined();
     expect(res.turnRecords[0].recoveryEvents).toContain('llmcheck-unreachable:open');
@@ -242,9 +246,9 @@ describe('llmCheck — a CALL-SIDE outage is recorded on the turn, not a silent 
 });
 
 describe('llmCheck — the contract outcome map reaches the judge (render-options wiring)', () => {
-  // No adjudicator is supplied, so the backend resolves the DEFAULT one, threading the contract's own
-  // `outcomes` map into it — the same wiring `defaultAdjudicator` renders the LEDGER through. A scripted
-  // judge callback captures the prompt the isolated judging call receives, which is where that LEDGER
+  // No judge is supplied, so the backend resolves the DEFAULT one. The contract's own `outcomes` map
+  // rides the ledger onto the guard ctx, and the guard renders the turn record through it. A scripted
+  // judge callback captures the prompt the isolated judging call receives, which is where that record
   // text actually lands.
   it('a domain outcome word declared on the contract renders into the LEDGER the judge is shown', async () => {
     const contract: DomainContract = { ...CONTRACT, outcomes: { cancelled: 'success' } };
@@ -258,7 +262,7 @@ describe('llmCheck — the contract outcome map reaches the judge (render-option
     );
     const res = await runSpecConversation(spec, [{ userText: 'cancel my dentist appointment' }], {
       model: scripted.model, world: world(), toolDefs: TOOL_DEFS,
-      // no `adjudicator` — the backend must build the default one from `contract.outcomes` itself.
+      // no `judge` — the backend must thread `contract.outcomes` onto the ctx itself.
     });
     expect(res.errorMsg).toBeUndefined();
     expect(judgePrompt).toContain('Dentist appointment: done');

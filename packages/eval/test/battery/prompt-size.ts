@@ -23,7 +23,7 @@
  */
 import { createHash } from 'node:crypto';
 import { terminalProtocol } from '@looprun-ai/core/internal';
-import { JUDGE_INSTRUCTIONS } from '@looprun-ai/mastra/testing';
+import { JUDGE_SYSTEM_INSTRUCTIONS } from '@looprun-ai/mastra/testing';
 import { lastUserTextOf, systemOf, type RecordedCall } from './recording-model.js';
 
 /** Characters per token, for the per-block estimate only. Stated, never inferred. */
@@ -106,7 +106,7 @@ export interface TrunkStability {
  */
 export function trunkStability(calls: readonly RecordedCall[]): TrunkStability {
   const hashes: string[] = [];
-  const agentCalls = calls.filter((c) => !systemOf(c).includes(JUDGE_INSTRUCTIONS));
+  const agentCalls = calls.filter((c) => !systemOf(c).includes(JUDGE_SYSTEM_INSTRUCTIONS));
   for (const call of agentCalls) {
     const h = sha256(systemOf(call));
     if (!hashes.includes(h)) hashes.push(h);

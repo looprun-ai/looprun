@@ -7,7 +7,8 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 import { AgentSpecBase, custom, llmCheck, resultInvariant } from '../../src/index.js';
-import type { Adjudicator, AgentWorld, GuardCtx, DomainContract, ObservedCall } from '../../src/index.js';
+import type { Judge, AgentWorld, GuardCtx, DomainContract, ObservedCall } from '../../src/index.js';
+import { JUDGE_UNREACHABLE, JUDGE_UNREADABLE } from '../../src/internal.js';
 import { createLedger, recordToolResult } from '../../src/runtime/ledger.js';
 import { evaluatePreTool, finalizeReply } from '../../src/runtime/turn.js';
 import type { RespondPayload } from '../../src/runtime/claims.js';
@@ -26,14 +27,14 @@ const baseCtx = (over: Partial<GuardCtx> = {}): GuardCtx => ({
 });
 
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
-// VECTOR 1 — llmCheck failMode / malformed adjudicator output
+// VECTOR 1 — llmCheck failMode / an answer that reaches no verdict
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
-describe('D1 — llmCheck failMode:open + unreachable adjudicator = forbidden reply DELIVERED (DESIGNED)', () => {
-  it('adjudicator throws → open allows → violating reply reaches the user through finalizeReply', async () => {
+describe('D1 — llmCheck failMode:open + unreachable judge = forbidden reply DELIVERED (DESIGNED)', () => {
+  it('judge throws → open allows → violating reply reaches the user through finalizeReply', async () => {
     const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: ['save'], contract: CONTRACT });
-    const adjudicator: Adjudicator = async () => { throw new Error('model offline'); };
+    const judge: Judge = async () => { throw new Error('model offline'); };
     spec.addGuard('onReply', 'any', llmCheck({ rubric: 'Does the reply claim something the world never did?' }), { id: 'agent:honesty' });
-    const ledger = createLedger(adjudicator);
+    const ledger = createLedger(judge);
     const forbidden = 'Done! I transferred $5,000 to the account.'; // false success — world did nothing
     const out = await finalizeReply(spec, CONTRACT, world(), ledger, P(forbidden), async () => P(forbidden), 1);
     // The truth guard was disabled by the outage; the false-success reply is delivered verbatim.
@@ -43,34 +44,39 @@ describe('D1 — llmCheck failMode:open + unreachable adjudicator = forbidden re
   });
 });
 
-describe('D2 — malformed (non-throwing) adjudicator output fails OPEN even in failMode:closed (HOLE)', () => {
-  it('adjudicator returns a bare STRING (no .violation) → closed does NOT deny — silent allow', async () => {
-    // Destructuring a string yields violation===undefined WITHOUT throwing, so the catch/failMode never runs.
-    const adjudicator = (async () => 'BLOCKED: unauthorised' as unknown) as Adjudicator;
-    const reason = await llmCheck({ rubric: 'q?', failMode: 'closed' }).check(baseCtx({ adjudicator }));
-    expect(reason).toBeNull(); // BREAK: failMode:closed expected a deny, got allow
+describe('D2 — an answer that reaches no verdict allows even in failMode:closed (DESIGNED, and RECORDED)', () => {
+  it('an answer naming no verdict → closed does NOT deny — allow, recorded UNREADABLE', async () => {
+    // `failMode` prices a REJECTION. This call answered, so nothing rejected and the catch never runs.
+    const notes: string[] = [];
+    const judge: Judge = async () => 'BLOCKED: unauthorised';
+    const reason = await llmCheck({ rubric: 'q?', failMode: 'closed' }).check(baseCtx({ judge, notes }));
+    expect(reason).toBeNull();
+    expect(notes).toEqual([JUDGE_UNREADABLE]);
   });
 
-  it('adjudicator returns {violation: undefined} → allow (?? null collapses it)', async () => {
-    const adjudicator = (async () => ({ violation: undefined }) as unknown) as Adjudicator;
-    expect(await llmCheck({ rubric: 'q?', failMode: 'closed' }).check(baseCtx({ adjudicator }))).toBeNull();
+  it('an EMPTY answer → closed does NOT deny — allow, recorded UNREACHABLE', async () => {
+    const notes: string[] = [];
+    const judge: Judge = async () => '';
+    expect(await llmCheck({ rubric: 'q?', failMode: 'closed' }).check(baseCtx({ judge, notes }))).toBeNull();
+    expect(notes).toEqual([JUDGE_UNREACHABLE]);
   });
 
-  it("adjudicator returns {violation:''} (empty deny string) → checkReply treats falsy as NO violation", async () => {
+  it('a VIOLATION line with no reason after it → checkReply sees no violation, and the reply ships', async () => {
     const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: ['save'], contract: CONTRACT });
-    const adjudicator = (async () => ({ violation: '' }) as unknown) as Adjudicator;
+    const judge: Judge = async () => 'VIOLATION:';
     spec.addGuard('onReply', 'any', llmCheck({ rubric: 'q?', failMode: 'closed' }), { id: 'agent:honesty' });
-    const ledger = createLedger(adjudicator);
+    const ledger = createLedger(judge);
     const forbidden = 'Done! Money moved.';
     const out = await finalizeReply(spec, CONTRACT, world(), ledger, P(forbidden), async () => P(forbidden), 1);
-    expect(out.text).toBe(`${forbidden}\n\nNo operation was carried out on this turn.`); // empty-string verdict = silent allow
+    expect(out.text).toBe(`${forbidden}\n\nNo operation was carried out on this turn.`); // reasonless verdict = silent allow
     expect(out.violations).toHaveLength(0);
+    expect(ledger.turnCorrections).toContain(JUDGE_UNREADABLE);
   });
 
-  it('adjudicator returns null (not object) → destructure THROWS → failMode governs (closed denies) — this one HOLDS', async () => {
-    const adjudicator = (async () => null as unknown) as Adjudicator;
-    expect(await llmCheck({ rubric: 'q?', failMode: 'closed' }).check(baseCtx({ adjudicator }))).not.toBeNull();
-    expect(await llmCheck({ rubric: 'q?', failMode: 'open' }).check(baseCtx({ adjudicator }))).toBeNull();
+  it('a judge that THROWS → failMode governs (closed denies, open allows) — this one HOLDS', async () => {
+    const judge: Judge = async () => { throw new Error('offline'); };
+    expect(await llmCheck({ rubric: 'q?', failMode: 'closed' }).check(baseCtx({ judge }))).not.toBeNull();
+    expect(await llmCheck({ rubric: 'q?', failMode: 'open' }).check(baseCtx({ judge }))).toBeNull();
   });
 });
 
@@ -177,9 +183,9 @@ describe('D7 — checkReply RE-RUNS on the regenerated reply, so a redrive canno
   it('redrive returns a reply that fails an onReply guard → caught → exhaustion closure, not delivered', async () => {
     const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: ['save'], contract: CONTRACT });
     let calls = 0;
-    const adjudicator: Adjudicator = async () => ({ violation: 'still dishonest' });
+    const judge: Judge = async () => 'VIOLATION: still dishonest';
     spec.addGuard('onReply', 'any', llmCheck({ rubric: 'honest?' }), { id: 'agent:honesty' });
-    const ledger = createLedger(adjudicator);
+    const ledger = createLedger(judge);
     const out = await finalizeReply(spec, CONTRACT, world(), ledger, P('lie v1'), async () => { calls++; return P('lie v2'); }, 1);
     expect(calls).toBe(1);
     expect(out.exhausted).toBe(true);           // never delivered the dishonest text

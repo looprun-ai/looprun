@@ -6,8 +6,8 @@
  * serializes concurrent turns of the same conversation.
  */
 import { createLedger } from '@looprun-ai/core/internal';
-import type { TurnLedger } from '@looprun-ai/core/internal';
-import type { AgentWorld, Adjudicator } from '@looprun-ai/core';
+import type { TurnLedger, RenderOpts } from '@looprun-ai/core/internal';
+import type { AgentWorld, Judge } from '@looprun-ai/core';
 
 export type WorldFactory<W extends AgentWorld = AgentWorld> = (sessionId: string) => W;
 
@@ -27,14 +27,18 @@ export class SessionStore<W extends AgentWorld = AgentWorld> {
   private readonly sessions = new Map<string, LoopRunSession<W>>();
   private readonly factory: WorldFactory<W> | null;
   private readonly singleton: W | null;
-  /** The host adjudicator threaded into every session's ledger (llmCheck's seam). */
-  private readonly adjudicator: Adjudicator | undefined;
-  /** The adjudicator timeout (ms) threaded beside it (a hung adjudicator resolves via failMode). */
-  private readonly adjudicatorTimeoutMs: number | undefined;
+  /** The host judge threaded into every session's ledger (llmCheck's seam). */
+  private readonly judge: Judge | undefined;
+  /** The judge timeout (ms) threaded beside it (a hung judge resolves via failMode). */
+  private readonly judgeTimeoutMs: number | undefined;
+  /** The domain's render vocabulary, threaded beside the judge so a guard composing a judging prompt
+   *  renders the operation record in the words the user saw. */
+  private readonly renderOpts: RenderOpts | undefined;
 
-  constructor(world: W | WorldFactory<W>, adjudicator?: Adjudicator, adjudicatorTimeoutMs?: number) {
-    this.adjudicator = adjudicator;
-    this.adjudicatorTimeoutMs = adjudicatorTimeoutMs;
+  constructor(world: W | WorldFactory<W>, judge?: Judge, judgeTimeoutMs?: number, renderOpts?: RenderOpts) {
+    this.judge = judge;
+    this.judgeTimeoutMs = judgeTimeoutMs;
+    this.renderOpts = renderOpts;
     if (typeof world === 'function') {
       this.factory = world as WorldFactory<W>;
       this.singleton = null;
@@ -57,7 +61,7 @@ export class SessionStore<W extends AgentWorld = AgentWorld> {
     const session: LoopRunSession<W> = {
       id,
       world,
-      ledger: createLedger(this.adjudicator, this.adjudicatorTimeoutMs),
+      ledger: createLedger(this.judge, this.judgeTimeoutMs, this.renderOpts),
       turnIndex: 0,
       messages: [],
       chain: Promise.resolve(),

@@ -19,12 +19,13 @@
 import { describe, expect, it } from 'vitest';
 import { AgentSpecBase, custom, didMessageConsistency } from '../../src/index.js';
 import type { AgentWorld, DomainContract } from '../../src/index.js';
-import type { Adjudicator, GuardCtx, ObservedCall } from '../../src/rules.js';
+import type { Judge, GuardCtx, ObservedCall } from '../../src/rules.js';
 import { claimIsComplete, claimIsGrounded } from '../../src/guards/honesty.js';
 import { respondPayload, terminalPayloadRejection, validateClaims, type Intention } from '../../src/runtime/claims.js';
 import { DEFAULT_ENGINE_TEXT } from '../../src/runtime/engine-text.js';
 import { beginTurn, createLedger, recordTerminal, recordToolResult, type TurnLedger } from '../../src/runtime/ledger.js';
 import { finalizeReply } from '../../src/runtime/turn.js';
+import { TURN_HEADING } from '../../src/runtime/lie-check.js';
 
 const RECORD_CLOSURE_NONE = DEFAULT_ENGINE_TEXT.recordClosureNone;
 
@@ -406,8 +407,8 @@ describe('VECTOR 7 — prose lie + speech-only did on a read-only turn [CLOSED]'
 // VECTOR 8 — the OPTIONAL backstop fails OPEN by default  ***BREAK***
 //
 // MECHANISM: `didMessageConsistency()` delegates to `llmCheck`, whose `failMode` defaults to `'open'`.
-// An adjudicator that throws, rejects or times out is caught and returns `null` — ALLOW. The
-// fail-loud gate (`assertAdjudicatorPresent`) only catches a MISSING adjudicator at conversation start,
+// An judge that throws, rejects or times out is caught and returns `null` — ALLOW. The
+// fail-loud gate (`assertJudgePresent`) only catches a MISSING judge at conversation start,
 // so a registered-but-broken one (network, quota, model outage, a 30s hang) silently deletes the ONE
 // backstop the design names for the prose residual — and nothing is written to `turnCorrections`, so
 // no eval, log or operator can tell the difference between "the backstop ran and approved" and "the
@@ -418,14 +419,14 @@ describe('VECTOR 7 — prose lie + speech-only did on a read-only turn [CLOSED]'
 // non-run is observable.
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
 describe('VECTOR 8 — didMessageConsistency fail mode [CLOSED]', () => {
-  const broken: Adjudicator = async () => {
-    throw new Error('adjudicator unreachable');
+  const broken: Judge = async () => {
+    throw new Error('judge unreachable');
   };
 
   // The DEFAULT is `failMode:'closed'` — a backstop that deletes itself when its own seam fails is not
   // a backstop. And the non-run is RECORDED whatever the fail mode, so an eval or an operator can tell
   // "the check ran and approved" from "the check never ran".
-  it('CLOSED: an unreachable adjudicator denies by default, and the non-run is recorded', async () => {
+  it('CLOSED: an unreachable judge denies by default, and the non-run is recorded', async () => {
     const contract = contractOf({ writeTools: ['refundOrder'] });
     const spec = specOf(contract, ['refundOrder']);
     spec.addGuard('onReply', 'any', didMessageConsistency(), { id: 'agent:didMessageConsistency' });
@@ -472,17 +473,18 @@ describe('VECTOR 8 — didMessageConsistency fail mode [CLOSED]', () => {
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
 // VECTOR 9 — does the backstop actually SEE both halves of the payload?
 //
-// A rubric asking "does the message assert an operation `did` does not carry?" is worthless if the ctx
-// handed to the adjudicator carries only one of the two. `checkReply` seats `reply` (the MESSAGE, not
+// A rubric asking "does the message assert an operation `did` does not carry?" is worthless if the
+// PROMPT the judge receives carries only one of the two. `checkReply` seats `reply` (the MESSAGE, not
 // the composed delivery — correct: the rubric judges the agent's prose) and `did` (the candidate
-// payload's, re-seated per redrive round by `checkPayload`).
+// payload's, re-seated per redrive round by `checkPayload`), and the guard renders both into the
+// envelope: the prose fenced as data, the declaration as the turn's operation record.
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
-describe('VECTOR 9 — the adjudicator ctx carries did AND message [HELD]', () => {
-  it('HELD: both halves reach the adjudicator, and `did` tracks the candidate payload', async () => {
-    const seen: Array<{ rubric: string; reply?: string; did?: readonly Intention[] }> = [];
-    const spy: Adjudicator = async (rubric, ctx) => {
-      seen.push({ rubric, reply: ctx.reply, did: ctx.did });
-      return { violation: null };
+describe('VECTOR 9 — the judging prompt carries did AND message [HELD]', () => {
+  it('HELD: both halves reach the judge, and the record tracks the candidate payload', async () => {
+    const seen: string[] = [];
+    const spy: Judge = async (prompt) => {
+      seen.push(prompt);
+      return 'NONE';
     };
     const contract = contractOf({ writeTools: ['refundOrder'] });
     const spec = specOf(contract, ['refundOrder']);
@@ -493,9 +495,13 @@ describe('VECTOR 9 — the adjudicator ctx carries did AND message [HELD]', () =
     const initial = { message: LIE, did: [{ op: 'greet' }] };
     await finalizeReply(spec, contract, world, ledger, initial, async () => initial, 1);
     expect(seen).toHaveLength(1);
-    expect(seen[0].reply).toBe(LIE);
-    expect(seen[0].did).toEqual([{ op: 'greet' }]);
-    expect(seen[0].rubric).toContain('`did`');
+    // the MESSAGE, fenced as data — the agent's own prose, not the composed delivery
+    expect(seen[0]).toContain(`<<<\n${LIE}\n>>>`);
+    // the DECLARATION, rendered as the turn record — a speech-only `did` names no operation
+    expect(seen[0]).toContain(TURN_HEADING);
+    expect(seen[0]).toContain(RECORD_CLOSURE_NONE);
+    // and the baked rubric is the question being asked
+    expect(seen[0]).toContain('`did`');
   });
 });
 

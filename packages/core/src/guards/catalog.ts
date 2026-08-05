@@ -154,7 +154,7 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
   // THE HONESTY KINDS ARE STRUCTURAL, NOT TEXTUAL: each reads the agent's declaration (`ctx.did`)
   // against the world ledger, never the reply prose, so it carries no pattern and no polarity that a
   // wording can flip. Judgments that only text can settle stay OUT of this section and belong to
-  // `llmCheck`, where a host adjudicator decides and no closure holds a pattern:
+  // `llmCheck`, where the judge decides and no closure holds a pattern:
   //   - "did the model claim something that did not happen, or that it cannot substantiate?"
   //   - "does the reply disclose a personal or regulated field the tool results do not ground?"
   //     (PII detection is text judgment, not a structural signal)
@@ -237,18 +237,18 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
     name: 'llmCheck',
     category: 'llm-check',
     hook: 'onReply',
-    summary: 'An LLM-adjudicated guard: a host-registered adjudicator answers a trusted rubric over the full context (history + user text) and its verdict becomes the deny.',
+    summary: 'An LLM-judged guard: the registered judge answers a trusted rubric over the evidence the guard fences into the prompt, and its verdict becomes the deny.',
     whenToUse:
-      'The judgement genuinely needs a model — "did the operator\'s yes license THIS act?", a promise no arg/observed pattern captures. Use it where structure alone cannot decide; a decidable structural signal always prefers its own kind. The adjudicator is host-registered on the runtime options, never in config. `runSpecConversation` resolves one from the turn\'s own model when the host supplies none; `LoopRunAgent` and `compileSpec` resolve nothing, so a spec bound for either registers one or fails loud at construction. `failMode` prices a REJECTED adjudicator, which the resolved default never produces: it answers every failure with no violation and records the non-run, so while an endpoint is down a bound rubric passes. A host that needs an outage to deny registers its own.',
-    example: `llmCheck({ rubric: 'Did the user, in an earlier turn, explicitly authorise THIS exact action?', failMode: 'closed' })`,
+      'The judgement genuinely needs a model — "does this reply state an outcome nothing accounts for?", a claim no arg/observed pattern captures. Use it where structure alone cannot decide; a decidable structural signal always prefers its own kind. THE QUESTION MUST BE ANSWERABLE FROM THE ENVELOPE: on onReply the judge is shown the reply, the turn\'s operation record and the operations earlier turns completed; on preTool the call and its arguments; on postTool the call and its result. The conversation itself is NOT in it — no persona, no role-tagged turns, no user text — so a question about what the user authorised has no evidence to read and belongs on a consent guard, which keys on the challenge the runtime already resolved. The judge is registered on the runtime options, never in config. `runSpecConversation` resolves one from the turn\'s own model when the host supplies none; `LoopRunAgent` and `compileSpec` resolve nothing, so a spec bound for either registers one or fails loud at construction. `failMode` prices a REJECTED judge, which the resolved default never produces: it answers every failure with no violation and the guard records the non-run, so while an endpoint is down a bound rubric passes. A host that needs an outage to deny registers its own.',
+    example: `llmCheck({ rubric: 'Does the reply state an operation that neither list below accounts for?', failMode: 'closed' })`,
   },
   {
     name: 'didMessageConsistency',
     category: 'llm-check',
     hook: 'onReply',
-    summary: 'The `did` × `message` backstop: an adjudicator answers a pre-baked rubric asking whether the message asserts an operation the declaration does not carry, or contradicts a declared intention.',
+    summary: 'The `did` × `message` backstop: the judge answers a pre-baked rubric asking whether the message asserts an operation the declaration does not carry, or contradicts a declared intention.',
     whenToUse:
-      'The deterministic cross-check grounds the DECLARATION against the ledger, but the message beside it is free prose — an agent can declare an honest `inform` and still write that it completed something. Install this where the stakes justify a model call per reply (money, health). It is NOT auto-installed and it is never the primary guarantee: the structured cross-check grounds the declaration, and the operation record ships under every delivery so a claim the turn cannot back arrives contradicted. This is a third layer over both. It carries `failMode: \'closed\'`, unlike a bare `llmCheck`. That denies on a REJECTED adjudicator, so it is the host-supplied adjudicator this guard is written for; under the resolved default, which never rejects, an outage passes and is recorded as an `adjudicator-unreachable` correction.',
+      'The deterministic cross-check grounds the DECLARATION against the ledger, but the message beside it is free prose — an agent can declare an honest `inform` and still write that it completed something. Install this where the stakes justify a model call per reply (money, health). It is NOT auto-installed and it is never the primary guarantee: the structured cross-check grounds the declaration, and the operation record ships under every delivery so a claim the turn cannot back arrives contradicted. This is a third layer over both. It carries `failMode: \'closed\'`, unlike a bare `llmCheck`. That denies on a REJECTED judge, so it is the host-supplied judge this guard is written for; under the resolved default, which never rejects, an outage passes and is recorded as a `judge-unreachable` correction.',
     example: `didMessageConsistency()`,
   },
 

@@ -92,7 +92,7 @@ export function makeGuardHooks(spec: AgentSpec, getSession: SessionAccessor, opt
         attachmentsThisTurn: ledger.attachments, result: output,
         did: ledger.did,
         notes: ledger.turnCorrections,
-        adjudicator: ledger.adjudicator, adjudicatorTimeoutMs: ledger.adjudicatorTimeoutMs,
+        judge: ledger.judge, judgeTimeoutMs: ledger.judgeTimeoutMs, renderOpts: ledger.renderOpts,
       };
       const { corrections, violations } = await enforcePostTool(postGuards, gctx);
       if (corrections.length) ledger.turnCorrections.push(...corrections);

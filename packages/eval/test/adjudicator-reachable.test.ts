@@ -1,7 +1,7 @@
 /**
  * A subject that binds a rubric reaches its first turn through the eval package's OWN dependency
  * path — `@looprun-ai/mastra`'s `runSpecConversation`, not a relative import into its `src`. The
- * runner passes no adjudicator; the backend resolves one before the first turn. This is the gate
+ * runner passes no judge; the backend resolves one before the first turn. This is the gate
  * the skill's authoring rule depends on — with it red, every generated subject that binds an
  * `llmCheck` rubric aborts before its first reply.
  */
@@ -35,13 +35,13 @@ function rubricBoundSpec(): AgentSpecBase {
 }
 
 describe('a bound rubric through the eval package own runner path', () => {
-  it('does not abort at conversation start with NO adjudicator in deps', async () => {
+  it('does not abort at conversation start with NO judge in deps', async () => {
     const scripted = scriptedModel([[{ tool: 'respond', args: { message: 'hi', did: [{ op: 'inform' }] } }]]);
     const res = await runSpecConversation(rubricBoundSpec(), [{ userText: 'hello' }], {
       model: scripted.model,
       world: world(),
       toolDefs: [],
-      // no adjudicator — the backend resolves its own default
+      // no judge — the backend resolves its own default
     });
     expect(res.errorMsg).toBeUndefined();
     expect(res.turnRecords).toHaveLength(1);

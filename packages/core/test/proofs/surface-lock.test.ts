@@ -59,9 +59,9 @@ const RIDERS = [
   'AgentControls', 'ChainSpec', 'GuardBinding', 'HistoryToolCall', 'HistoryTurn', 'Layer',
   'MutatorBinding', 'ReplyMutator',
   'SamplingSettings', 'SpatialEdge', 'SpecWarning', 'StateDirective', 'TokenUsage',
-  // GuardCtx.adjudicator is an Adjudicator, whose verdict is an AdjudicatorVerdict — both ride the
-  // barrel so a `declaration:true` consumer can name them.
-  'Adjudicator', 'AdjudicatorVerdict',
+  // GuardCtx.judge is a Judge — the one seam every judging call rides, on the barrel so a
+  // `declaration:true` consumer can name it.
+  'Judge',
   // claimIsGrounded's `outcomes` param is an OutcomeMap and claimCoversRubric's `outcome` is a
   // CoreOutcome — both ride the barrel to stay nameable.
   'CoreOutcome', 'OutcomeMap',
@@ -104,21 +104,21 @@ const INTERNAL = [
   // What the SESSION has already done — one line per entity, its latest state. Input to the lie check
   // and the rewriter; never delivered.
   'sessionRecord', 'SessionRecord', 'SESSION_HEADING',
-  // The lie check and the rewrite it gates. `Judge` is the backend-supplied callback that carries both
-  // model calls and rides finalizeReply's signature; the prompts and the pass are on the seam so the
-  // gated measurement suite exercises the shipped instrument rather than a copy of it.
+  // The lie check and the rewrite it gates. The prompts and the pass ride the seam so the
+  // gated measurement suite exercises the shipped instrument rather than a copy of it (`Judge` itself
+  // is public, and rides finalizeReply's signature).
   'Judge', 'runLieCheck', 'LieCheckInput', 'LieCheckOutcome', 'isChecked',
   'lieCheckPrompt', 'rewritePrompt', 'readLieVerdict', 'TURN_HEADING',
   // The judge envelope: the prompt every judging call receives, and how its answer is read.
-  'judgePrompt', 'readJudgeVerdict', 'JUDGE_INSTRUCTIONS',
+  'judgePrompt', 'readJudgeVerdict', 'JUDGE_INSTRUCTIONS', 'JUDGE_UNREACHABLE', 'JUDGE_UNREADABLE',
   // The mandatory-intention partition: the reserved speech-op vocabulary + partition predicates, the
   // `Intention` shape, and the structured ask signal (`hasAskIntent`) the consent guards key onto.
   'SPEECH_OPS', 'SpeechOp', 'Intention', 'isSpeechOp', 'isActionOp', 'hasAskIntent',
   'enforcePostTool', 'evaluateOnInput', 'evaluatePreTool',
   'finalizeReply', 'FinalizedReply', 'governanceVeto', 'redriveMessage', 'ReplyViolation',
   'runChainCompletionPass',
-  // the fail-loud-at-start adjudicator gate for llmCheck specs.
-  'assertAdjudicatorPresent', 'specInstallsLlmCheck',
+  // the fail-loud-at-start judge gate for llmCheck specs.
+  'assertJudgePresent', 'specInstallsLlmCheck',
   // catchable by class across the package boundary
   'GuardExecutionError',
   // the seam's own type-closure riders (the rest of its closure is nameable from '.')

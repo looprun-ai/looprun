@@ -1,7 +1,7 @@
 /** The governed-turn machine: ledger, preTool evaluation, and the finalizeReply pipeline. */
 import { describe, expect, it } from 'vitest';
 import { AgentSpecBase, precondition, jargonScrub, custom, llmCheck } from '../src/index.js';
-import type { AgentWorld, DomainContract, Adjudicator } from '../src/index.js';
+import type { AgentWorld, DomainContract, Judge } from '../src/index.js';
 import {
   createLedger,
   beginTurn,
@@ -133,12 +133,12 @@ describe('evaluatePreTool', () => {
     spec.addGuard('preTool', ['water'], llmCheck({ rubric: 'Did the user authorise THIS call?', dim: 'run' }), {
       id: 'agent:llm',
     });
-    const deadAdjudicator: Adjudicator = async () => {
+    const deadJudge: Judge = async () => {
       throw new Error('offline');
     };
-    const ledger = createLedger(deadAdjudicator);
+    const ledger = createLedger(deadJudge);
     const verdict = await evaluatePreTool(spec, ledger, fixtureWorld(), 'water', {});
-    // failMode 'open' (default): an unreachable adjudicator allows — but the non-run still lands.
+    // failMode 'open' (default): an unreachable judge allows — but the non-run still lands.
     expect(verdict.verdict).toBe('allow');
     expect(ledger.turnCorrections).toContain('llmcheck-unreachable:open');
   });

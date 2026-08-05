@@ -22,7 +22,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { generateText } from 'ai';
 import { geminiFlashLiteThinkOff } from '@looprun-ai/models';
-import { adjudicationPrompt, readAdjudicationVerdict } from '@looprun-ai/core/internal';
+import { judgePrompt, readJudgeVerdict } from '@looprun-ai/core/internal';
 import type { GuardCtx } from '@looprun-ai/core';
 import { batterySkipReason } from './battery/gate.js';
 import { BIAS_FIXTURES, foldBias, type BiasOutcome } from './battery/adjudicator-bias.js';
@@ -49,10 +49,10 @@ describe('the same-model judge against known verdicts', () => {
     for (const f of BIAS_FIXTURES) {
       const { text } = await generateText({
         model,
-        prompt: adjudicationPrompt(f.rubric, ctxFor(f.reply, f.did)),
+        prompt: judgePrompt(f.rubric, ctxFor(f.reply, f.did)),
         ...modelParams,
       });
-      const { violation } = readAdjudicationVerdict(text);
+      const { violation } = readJudgeVerdict(text);
       outcomes.push({ id: f.id, violates: f.violates, denied: violation !== null });
     }
     const fold = foldBias(outcomes);

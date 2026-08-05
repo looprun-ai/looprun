@@ -5,10 +5,10 @@
  * tool activity, plus the turn-structured `history` (user text included). `observed` and `history` accumulate for the whole conversation; the other
  * fields reset per turn via `beginTurn`.
  */
-import type { AgentWorld, Guard, ObservedCall, HistoryTurn, HistoryToolCall, Adjudicator } from '../rules.js';
+import type { AgentWorld, Guard, ObservedCall, HistoryTurn, HistoryToolCall, Judge } from '../rules.js';
 import { canonArgs } from '../guards/index.js';
 import { isTerminal } from './terminal.js';
-import { validateClaims, type Intention } from './claims.js';
+import { validateClaims, type Intention, type RenderOpts } from './claims.js';
 import { challengeToken, closeChallengesFor, consumeChallenges, type Challenge } from './challenge.js';
 import { preferredIdentityValues } from '../guards/honesty.js';
 
@@ -55,13 +55,17 @@ export interface TurnLedger {
    *  beginTurn), read into every GuardCtx as the read-only `ctx.history`. A turn lands here via
    *  {@link recordTurnHistory} once its reply is finalized. */
   history: HistoryTurn[];
-  /** The host-registered LLM adjudicator (set at ledger creation from the runtime options), threaded
-   *  into every GuardCtx as `ctx.adjudicator`. Only `llmCheck` guards read it. Conversation-scoped;
+  /** The judge seam (set at ledger creation from the runtime options), threaded into every GuardCtx as
+   *  `ctx.judge`. Only `llmCheck` guards read it. Conversation-scoped;
    *  never reset per turn. Absent ⇒ a spec that installs an llmCheck fails loud at conversation start. */
-  adjudicator?: Adjudicator;
-  /** The adjudicator TIMEOUT (ms) from the registration seam, threaded into every GuardCtx alongside
-   *  `adjudicator`. Conversation-scoped; never reset per turn. Absent ⇒ the guard's own default. */
-  adjudicatorTimeoutMs?: number;
+  judge?: Judge;
+  /** The judge TIMEOUT (ms) from the registration seam, threaded into every GuardCtx alongside
+   *  `judge`. Conversation-scoped; never reset per turn. Absent ⇒ the guard's own default. */
+  judgeTimeoutMs?: number;
+  /** The domain's render vocabulary from the contract this RUN was given, threaded into every GuardCtx
+   *  as `ctx.renderOpts` so a guard composing a judging prompt renders the operation record in the words
+   *  the user saw. Conversation-scoped; never reset per turn. */
+  renderOpts?: RenderOpts;
   /** Every consent challenge this CONVERSATION has issued — open, consumed and closed alike.
    *  Conversation-scoped: a challenge stays open until the user's own words carry its token, a newer
    *  question about the same act supersedes it, or the record it names changes. There is no turn window;
@@ -93,8 +97,8 @@ export function vetoStormHit(ledger: TurnLedger): boolean {
   return ledger.vetoStreak >= VETO_STORM_LIMIT;
 }
 
-export function createLedger(adjudicator?: Adjudicator, adjudicatorTimeoutMs?: number): TurnLedger {
-  return { observed: [], turnIndex: 0, producedThisTurn: [], turnCorrections: [], attachments: [], terminalReply: '', did: [], vetoStreak: 0, postToolViolations: [], inFlightCalls: [], attemptedCalls: [], currentUserText: '', history: [], challenges: [], consentThisTurn: [], challengesIssuedThisTurn: [], destructiveLabels: {}, ...(adjudicator ? { adjudicator } : {}), ...(adjudicatorTimeoutMs !== undefined ? { adjudicatorTimeoutMs } : {}) };
+export function createLedger(judge?: Judge, judgeTimeoutMs?: number, renderOpts?: RenderOpts): TurnLedger {
+  return { observed: [], turnIndex: 0, producedThisTurn: [], turnCorrections: [], attachments: [], terminalReply: '', did: [], vetoStreak: 0, postToolViolations: [], inFlightCalls: [], attemptedCalls: [], currentUserText: '', history: [], challenges: [], consentThisTurn: [], challengesIssuedThisTurn: [], destructiveLabels: {}, ...(judge ? { judge } : {}), ...(judgeTimeoutMs !== undefined ? { judgeTimeoutMs } : {}), ...(renderOpts ? { renderOpts } : {}) };
 }
 
 /** Reset the per-turn fields (the conversation-scoped `observed` and `history` are kept). `userText` is

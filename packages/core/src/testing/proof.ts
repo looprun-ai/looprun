@@ -10,7 +10,7 @@
  */
 import { AgentSpecBase } from '../spec.js';
 import type { AgentSpecConfig, Hook, ToolTarget } from '../spec.js';
-import type { Guard, GuardCtx, Adjudicator } from '../rules.js';
+import type { Guard, GuardCtx, Judge } from '../rules.js';
 import { FixtureWorld, FIXTURE_TOOL_NAMES, FIXTURE_DOMAIN } from './fixture-world.js';
 import type { FixturePreset } from './fixture-world.js';
 
@@ -35,10 +35,10 @@ export interface ProofLoopCase {
    *  binding the same violation — e.g. a destructive claim that is also a pending, un-relayed
    *  confirmation). Added to that case's non-interference whitelist; keep it minimal and justified. */
   alsoFires?: string[];
-  /** A host adjudicator to register for this loop case — ONLY for the `llmCheck` proof, whose guard
-   *  delegates its verdict to it. Threaded into runSpecConversation deps by `runProofLoop`; every other
-   *  proof leaves it undefined (deterministic guards ignore it). */
-  adjudicator?: Adjudicator;
+  /** A judge to register for this loop case — ONLY for the `llmCheck` proof, whose guard delegates its
+   *  verdict to it. Threaded into runSpecConversation deps by `runProofLoop`; every other proof leaves
+   *  it undefined (deterministic guards ignore it). */
+  judge?: Judge;
 }
 
 export interface ProofCase {

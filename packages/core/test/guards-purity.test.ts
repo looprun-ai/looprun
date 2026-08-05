@@ -107,7 +107,7 @@ describe('stateful-regex lint', () => {
 
 describe('no-regex-param law (guard factory surface carries zero RegExp-typed params)', () => {
   // THE BOUNDARY: the ban is on GUARD FACTORY PARAMETERS and on guard checks over
-  // CONVERSATION text. Text judgment is `llmCheck`'s job — its verdict is a host adjudicator's, never a
+  // CONVERSATION text. Text judgment is `llmCheck`'s job — its verdict is the judge's, never a
   // closure-held pattern. What this gate does NOT ban: an internal lint that scans SOURCE/ARTIFACT text
   // (lint-subject, world input validation) may still use a RegExp INTERNALLY — that is not a guard
   // reading conversation text; `argFormat(field, pattern: string)` validates a tool-arg value at the

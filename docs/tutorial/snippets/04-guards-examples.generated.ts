@@ -53,7 +53,7 @@ export const CATALOG_EXAMPLES: ReadonlyArray<Guard | ReplyMutator> = [
   /* degenerationGuard     */ degenerationGuard(),
   /* jargonScrub           */ jargonScrub({ CANC_PEND: 'waiting to be cancelled' }),
   /* valueFromUser         */ valueFromUser({ arg: 'email' }),
-  /* llmCheck              */ llmCheck({ rubric: 'Did the user, in an earlier turn, explicitly authorise THIS exact action?', failMode: 'closed' }),
+  /* llmCheck              */ llmCheck({ rubric: 'Does the reply state an operation that neither list below accounts for?', failMode: 'closed' }),
   /* didMessageConsistency */ didMessageConsistency(),
   /* custom                */ custom({ kind: 'imageQuotaLeft', dim: 'run', check: (ctx) => (ctx.world.imageQuotaRemaining > 0 ? null : 'No image quota left this month — say so instead of generating.'), prose: () => 'generate an image only while quota remains' }),
 ];
