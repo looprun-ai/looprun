@@ -6,7 +6,8 @@
  * list is not a lie, so a reply about work an earlier turn completed reads as honest.
  */
 import { describe, expect, it } from 'vitest';
-import { judgePrompt, readJudgeVerdict, JUDGE_INSTRUCTIONS, USER_TURN_WINDOW } from '../src/internal.js';
+import { judgeEnvelope, judgePrompt, readJudgeVerdict, JUDGE_INSTRUCTIONS, USER_TURN_WINDOW } from '../src/internal.js';
+import type { JudgeEvidence } from '../src/internal.js';
 import type { GuardCtx, HistoryTurn } from '../src/index.js';
 
 const ctx = (over: Partial<GuardCtx> = {}): GuardCtx => ({
@@ -252,6 +253,61 @@ describe('the USER REQUEST section', () => {
     const p = judgePrompt('q?', ctx({ reply: 'the booking is cancelled', userText: 'cancel it' }));
     expect(p).toContain('cancel it');
     expect(p.indexOf('cancel it')).toBeLessThan(p.indexOf('the booking is cancelled'));
+  });
+});
+
+// TWO WAYS IN, ONE ENVELOPE. `judgePrompt` renders a live `GuardCtx`; a caller with no ctx (a
+// recorded-turn replay, a battery over a frozen log) renders its own `JudgeEvidence` and calls
+// `judgeEnvelope` directly. If the two ever drifted, a battery composing its own evidence by hand
+// would be measuring a prompt the engine does not send — so the same ctx, rendered both ways, must
+// come out byte-identical.
+describe('judgePrompt and judgeEnvelope agree — the same ctx, rendered by hand, is byte-identical', () => {
+  it('onReply: reply + did + a non-empty session', () => {
+    const c = ctx({
+      reply: 'The dentist appointment is cancelled.',
+      did: [{ op: 'cancel', target: 'Dentist', outcome: 'success' }],
+      history: [turn({ userText: 'cancel the dentist', did: [{ op: 'book', target: 'Lunch', outcome: 'success' }] })],
+      userText: 'thanks',
+    });
+    const byHand: JudgeEvidence = {
+      userTurns: [...c.history.map((t) => t.userText), c.userText],
+      reply: c.reply,
+      turnRecord: 'Dentist: done\nNothing else was changed on this turn.',
+      sessionRecord: 'Lunch: done',
+    };
+    expect(judgePrompt('q?', c)).toBe(judgeEnvelope('q?', byHand));
+  });
+
+  it('preTool: a call, no reply, no lists', () => {
+    const c = ctx({ tool: 'cancelBooking', args: { id: 'B-1' }, history: [turn({ userText: 'cancel it' })], userText: 'yes' });
+    const byHand: JudgeEvidence = {
+      userTurns: [...c.history.map((t) => t.userText), c.userText],
+      call: `${c.tool} ${JSON.stringify(c.args)}`,
+    };
+    expect(judgePrompt('q?', c)).toBe(judgeEnvelope('q?', byHand));
+  });
+
+  it('postTool: a call plus its result', () => {
+    const c = ctx({ tool: 'cancelBooking', args: { id: 'B-1' }, result: { ok: true }, userText: 'go ahead' });
+    const byHand: JudgeEvidence = {
+      userTurns: [...c.history.map((t) => t.userText), c.userText],
+      call: `${c.tool} ${JSON.stringify(c.args)}`,
+      result: JSON.stringify(c.result),
+    };
+    expect(judgePrompt('q?', c)).toBe(judgeEnvelope('q?', byHand));
+  });
+
+  it('a truncated USER REQUEST renders identically through both paths', () => {
+    const history = Array.from({ length: 11 }, (_, i) => turn({ userText: `turn-${i}` }));
+    const c = ctx({ reply: 'ok', did: [], history, userText: 'turn-11' });
+    const byHand: JudgeEvidence = {
+      userTurns: [...c.history.map((t) => t.userText), c.userText],
+      reply: c.reply,
+      turnRecord: 'No operation was carried out on this turn.',
+    };
+    const rendered = judgePrompt('q?', c);
+    expect(rendered).toBe(judgeEnvelope('q?', byHand));
+    expect(rendered).toContain('Earlier user turns exist');
   });
 });
 

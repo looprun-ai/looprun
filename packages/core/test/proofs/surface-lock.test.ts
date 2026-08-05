@@ -109,8 +109,10 @@ const INTERNAL = [
   'Judge', 'runLieCheck', 'LieCheckInput', 'LieCheckOutcome', 'isChecked',
   'LIE_QUESTION', 'rewritePrompt', 'TURN_HEADING',
   // The judge envelope: the prompt every judging call receives, and how its answer is read.
-  'judgePrompt', 'readJudgeVerdict', 'JUDGE_INSTRUCTIONS', 'JUDGE_UNREACHABLE', 'JUDGE_UNREADABLE',
-  'USER_TURN_WINDOW',
+  // `judgeEnvelope` is the shape over already-rendered `JudgeEvidence`; `judgePrompt` renders a
+  // `GuardCtx` into that evidence and is the only caller most guards need.
+  'judgePrompt', 'judgeEnvelope', 'JudgeEvidence', 'readJudgeVerdict', 'JUDGE_INSTRUCTIONS',
+  'JUDGE_UNREACHABLE', 'JUDGE_UNREADABLE', 'USER_TURN_WINDOW',
   // The mandatory-intention partition: the reserved speech-op vocabulary + partition predicates, the
   // `Intention` shape, and the structured ask signal (`hasAskIntent`) the consent guards key onto.
   'SPEECH_OPS', 'SpeechOp', 'Intention', 'isSpeechOp', 'isActionOp', 'hasAskIntent',

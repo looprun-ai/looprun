@@ -16,8 +16,9 @@
  *
  * ```
  *   1  ELIGIBILITY  deterministic, no model. {@link isChecked}.
- *   2  GATE         one model call, checked branch only — the engine's own `lieCheckPrompt` over both
- *                   lists and the emitted prose, read by the engine's own `readLieVerdict`.
+ *   2  GATE         one model call, checked branch only — the engine's own `LIE_QUESTION`, over both
+ *                   lists and the emitted prose, composed by the engine's own `judgeEnvelope` and read
+ *                   by the engine's own `readJudgeVerdict`.
  *   3  REWRITE      one model call, only on a fired gate — the engine's own `rewritePrompt`. Prose in,
  *                   prose out; no new `did` is requested and the raw `did` array is never shown, the
  *                   rewriter sees the RENDERED lists only. What comes back is what goes out: the
@@ -53,8 +54,9 @@
  */
 import {
   DEFAULT_ENGINE_TEXT,
-  lieCheckPrompt,
-  readLieVerdict,
+  LIE_QUESTION,
+  judgeEnvelope,
+  readJudgeVerdict,
   rewritePrompt,
   sessionRecord,
   type SessionRecord,
@@ -128,11 +130,22 @@ export function sessionOf(run: PipelineInput): SessionRecord {
 export const READER_BELIEF = candidateByKey('C-reader-belief');
 
 /**
- * STEP 2. WHAT THE CHECK IS SHOWN: both lists, then the emitted prose. The prompt is the ENGINE's
- * own, so what this run measures is the question the engine asks and not a restatement of it.
+ * STEP 2. WHAT THE CHECK IS SHOWN: the person's own turns, both lists, then the emitted prose. The
+ * envelope is the ENGINE's own — `judgeEnvelope` over `LIE_QUESTION` — so what this run measures is the
+ * question the engine asks and not a restatement of it.
  */
-export function gatePromptFor(record: ClosedRecord, session: SessionRecord, message: string): string {
-  return lieCheckPrompt(record.text, session, message);
+export function gatePromptFor(
+  record: ClosedRecord,
+  session: SessionRecord,
+  message: string,
+  userTurns: readonly string[],
+): string {
+  return judgeEnvelope(LIE_QUESTION, {
+    userTurns: [...userTurns],
+    reply: message,
+    turnRecord: record.text,
+    sessionRecord: session.lines.join('\n'),
+  });
 }
 
 // ── Step 1 — who is eligible for the check at all ──────────────────────────────────────────────────
@@ -417,11 +430,13 @@ export async function runReplicate(
   let gateFired = false;
   if (checked) {
     try {
-      gateRaw = await deps.gate(gatePromptFor(record, session, run.emittedMessage));
+      gateRaw = await deps.gate(gatePromptFor(record, session, run.emittedMessage, run.scenario.turns));
     } catch (e) {
       return { ...blank, error: `gate: ${e instanceof Error ? e.message : String(e)}` };
     }
-    gateFired = readLieVerdict(gateRaw);
+    // An answer that fails to reach a verdict found no violation — the same safe direction the guard
+    // itself takes: a broken endpoint must never be scored as having detected a lie.
+    gateFired = readJudgeVerdict(gateRaw).violation !== null;
   }
 
   // STEP 2 — the rewrite, only on a fired gate. What comes back is what goes out.
@@ -692,7 +707,7 @@ export function foldExperiment(cases: readonly PipelineCase[], replicates: numbe
   const checkedLiesSafe = checkedLies.filter((c) => c.unsafeCount === 0 && c.errors.length === 0);
 
   return {
-    gatePromptShape: gatePromptFor(sample, sampleSession, '<the reply>'),
+    gatePromptShape: gatePromptFor(sample, sampleSession, '<the reply>', ['<user turn>']),
     rewritePromptShape: pipelineRewritePrompt(['<user turn>'], '<the reply>', sample, sampleSession),
     judgePromptShape: judgePromptFor('<REGISTRO>', '<the reply>\n\n<the record>'),
     replicates,
