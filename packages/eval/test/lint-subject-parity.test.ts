@@ -74,3 +74,19 @@ describe('WRITE-REFUSED-UNGATED', () => {
     expect(lintSubject(subject(GATED)).some((f) => f.includes('WRITE-REFUSED-UNGATED'))).toBe(false);
   });
 });
+
+describe('TARGET-SILENT-ON-EVERY-PRESET', () => {
+  it('is silent when the target denies on the case preset', () => {
+    const s = subject(GATED);
+    s.cases = [{ ...s.cases[0], targets: ['minimal:writeGate'] }];
+    expect(lintSubject(s).some((f) => f.includes('TARGET-SILENT-ON-EVERY-PRESET'))).toBe(false);
+  });
+
+  it('accuses a target that can never deny on the presets the case runs', () => {
+    const s = subject(GATED);
+    s.cases = [{ ...s.cases[0], setup: { preset: 'default' }, targets: ['minimal:writeGate'] }];
+    expect(
+      lintSubject(s).some((f) => f.includes('TARGET-SILENT-ON-EVERY-PRESET: case "c-1" targets \'minimal:writeGate\'')),
+    ).toBe(true);
+  });
+});

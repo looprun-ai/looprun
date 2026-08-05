@@ -191,6 +191,51 @@ function anyGateDenies(spec: AgentSpec, world: AgentWorld, tool: string): boolea
 }
 
 /**
+ * A target the case can never make speak. The question is about STATE, not about the call list: a
+ * guard bound to a tool the case never calls is doing its job when the case's forced path reaches it,
+ * and it goes silent precisely when the agent complies. So the test is run BEFORE any compliance —
+ * an empty `observed`, on the world the case declares — and a target that stays silent on every one
+ * of them proves nothing wherever it is listed.
+ *
+ * Only world-dim gates are decidable this way: a guard that reads the acting call's arguments cannot
+ * be evaluated without inventing them, and an invented argument is an invented accusation.
+ */
+const WORLD_GATE_KINDS = new Set(['precondition', 'consentRequired']);
+
+function targetSilenceFindings(subject: Subject): string[] {
+  const out: string[] = [];
+  if (typeof subject.makeWorld !== 'function') return out;
+  for (const c of subject.cases ?? []) {
+    const agent = routedAgent(subject, c);
+    const spec = agent ? subject.specs?.[agent] : undefined;
+    if (!spec) continue;
+    const world = tryPreset(subject.makeWorld, c.setup?.preset ?? 'default').world;
+    if (!world) continue;
+    for (const id of c.targets ?? []) {
+      const bound = (spec.guards.preTool ?? []).find((b) => b.id === id && !b.disabled);
+      if (!bound || !WORLD_GATE_KINDS.has(bound.guard.kind)) continue;
+      const tools = Array.isArray(bound.target) ? bound.target : spec.surface.tools;
+      const speaks = tools.some((tool) => {
+        try {
+          return typeof bound.guard.check({
+            tool, args: {}, world, observed: [], turnIndex: 0, userText: '', history: [], consent: [],
+          } as never) === 'string';
+        } catch {
+          return true; // A guard that throws here is a defect of its own; the execution lint owns it.
+        }
+      });
+      if (!speaks) {
+        out.push(
+          `TARGET-SILENT-ON-EVERY-PRESET: case "${c.id}" targets '${id}', which is silent on preset '${c.setup?.preset ?? 'default'}' before the agent has done anything — ` +
+            'the case grades a rule that cannot speak there. Run the case on the preset whose state the guard refuses, or target the rule the case really tests',
+        );
+      }
+    }
+  }
+  return out;
+}
+
+/**
  * THE PARITY LAW. A world refuses a write under some condition; a preset is that condition made
  * reachable. Every lane that carries the write must have a spec-side gate that denies on that preset —
  * otherwise the refusal reaches the model as a tool failure and the lane's prose invents the reason.
@@ -231,5 +276,10 @@ function parityFindings(subject: Subject): string[] {
 
 /** The subject-level battery: exam coverage + the world's ok/failed contract + write-gate parity. */
 export function lintSubject(subject: Subject): string[] {
-  return [...coverageFindings(subject), ...worldFindings(subject), ...parityFindings(subject)];
+  return [
+    ...coverageFindings(subject),
+    ...worldFindings(subject),
+    ...parityFindings(subject),
+    ...targetSilenceFindings(subject),
+  ];
 }
