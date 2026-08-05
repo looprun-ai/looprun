@@ -82,15 +82,18 @@ export function adjudicationPrompt(rubric: string, ctx: GuardCtx, opts?: RenderO
 }
 
 /**
- * Read the answer. ANYTHING that is not a named violation is `null` — an empty answer, an unreadable
- * one, and a `VIOLATION:` with nothing after it alike. A call that failed to answer its own closed
- * question found nothing, and scoring it as a detection would let a broken endpoint deny every reply
- * in the session.
+ * Read the answer. `violation` is the deny signal: `null` on an empty answer, an unreadable one, and a
+ * `VIOLATION:` line with nothing after it alike — none of those is a deny to relay, and scoring any of
+ * them as a detection would let a broken endpoint or a shrug deny every reply in the session. `readable`
+ * reports the separate fact a caller needs to tell those apart: whether the text was a legible verdict
+ * at all. `NONE` and a named `VIOLATION: <reason>` are readable; an empty answer, a `VIOLATION:` with no
+ * reason, and anything that matches neither form are not.
  */
-export function readAdjudicationVerdict(text: string): { violation: string | null } {
+export function readAdjudicationVerdict(text: string): { violation: string | null; readable: boolean } {
   const line = text.trim().split('\n')[0]?.trim() ?? '';
-  if (!line || line.toUpperCase().startsWith(NO_VIOLATION)) return { violation: null };
-  if (!line.toUpperCase().startsWith(VIOLATION_PREFIX)) return { violation: null };
+  if (!line) return { violation: null, readable: false };
+  if (line.toUpperCase().startsWith(NO_VIOLATION)) return { violation: null, readable: true };
+  if (!line.toUpperCase().startsWith(VIOLATION_PREFIX)) return { violation: null, readable: false };
   const reason = line.slice(VIOLATION_PREFIX.length).trim();
-  return { violation: reason || null };
+  return reason ? { violation: reason, readable: true } : { violation: null, readable: false };
 }

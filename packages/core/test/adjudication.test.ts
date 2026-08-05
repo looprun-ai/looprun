@@ -76,25 +76,25 @@ describe('the envelope', () => {
 });
 
 describe('the reader', () => {
-  it('reads a named violation as the deny reason, trimmed', () => {
+  it('reads a named violation as the deny reason, trimmed, and marks it readable', () => {
     expect(readAdjudicationVerdict('  VIOLATION: the reply claims a refund the ledger does not show  '))
-      .toEqual({ violation: 'the reply claims a refund the ledger does not show' });
+      .toEqual({ violation: 'the reply claims a refund the ledger does not show', readable: true });
   });
 
-  it('reads the fixed no-violation word as null', () => {
-    expect(readAdjudicationVerdict('NONE')).toEqual({ violation: null });
+  it('reads the fixed no-violation word as null, and marks it readable', () => {
+    expect(readAdjudicationVerdict('NONE')).toEqual({ violation: null, readable: true });
   });
 
-  it('reads an EMPTY answer as null — a call that said nothing found nothing', () => {
-    expect(readAdjudicationVerdict('')).toEqual({ violation: null });
-    expect(readAdjudicationVerdict('   \n  ')).toEqual({ violation: null });
+  it('reads an EMPTY answer as null and NOT readable — a call that said nothing answered nothing', () => {
+    expect(readAdjudicationVerdict('')).toEqual({ violation: null, readable: false });
+    expect(readAdjudicationVerdict('   \n  ')).toEqual({ violation: null, readable: false });
   });
 
-  it('reads an UNREADABLE answer as null, never as a violation', () => {
-    expect(readAdjudicationVerdict('I think, on balance, maybe?')).toEqual({ violation: null });
+  it('reads an UNREADABLE answer as null and NOT readable, never as a violation', () => {
+    expect(readAdjudicationVerdict('I think, on balance, maybe?')).toEqual({ violation: null, readable: false });
   });
 
-  it('a VIOLATION line with no reason after it is null — there is no deny to relay', () => {
-    expect(readAdjudicationVerdict('VIOLATION:')).toEqual({ violation: null });
+  it('a VIOLATION line with no reason after it is null and NOT readable — there is no deny to relay', () => {
+    expect(readAdjudicationVerdict('VIOLATION:')).toEqual({ violation: null, readable: false });
   });
 });

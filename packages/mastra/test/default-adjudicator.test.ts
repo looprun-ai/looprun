@@ -2,12 +2,14 @@
  * THE DEFAULT ADJUDICATOR — the isolated same-model call behind every bound rubric.
  *
  * It settles. A refused endpoint, a spent quota, an empty answer and an unreadable one all come back
- * as no violation, because a call that failed found nothing — and a deny drives a redrive that ends in
- * the engine's closure replacing the model's answer. The non-run is recorded so an outage is never
- * mistaken for a clean session.
+ * as no violation, because a call that failed to reach a verdict found nothing — and a deny drives a
+ * redrive that ends in the engine's closure replacing the model's answer. The non-run is recorded under
+ * one of two distinct names, so an outage, a shrug and a clean session are never mistaken for each
+ * other: `adjudicator-unreachable` for a call that threw, rejected, or answered empty;
+ * `adjudicator-unreadable` for a call that answered something the rubric could not parse as a verdict.
  */
 import { describe, expect, it } from 'vitest';
-import { defaultAdjudicator, ADJUDICATOR_UNREACHABLE, JUDGE_INSTRUCTIONS } from '../src/judge.js';
+import { defaultAdjudicator, ADJUDICATOR_UNREACHABLE, ADJUDICATOR_UNREADABLE, JUDGE_INSTRUCTIONS } from '../src/judge.js';
 import type { GuardCtx } from '@looprun-ai/core';
 
 const ctx = (over: Partial<GuardCtx> = {}): GuardCtx => ({
@@ -54,32 +56,54 @@ describe('the answer path', () => {
 });
 
 describe('a failure is never a verdict', () => {
-  it('a THROWN call returns null and records the non-run', async () => {
+  it('a THROWN call returns null and records the non-run as UNREACHABLE', async () => {
     const c = ctx();
     const gen = async () => { throw new Error('offline'); };
     expect(await defaultAdjudicator(gen, {})('q?', c)).toEqual({ violation: null });
     expect(c.notes).toContain(ADJUDICATOR_UNREACHABLE);
+    expect(c.notes).not.toContain(ADJUDICATOR_UNREADABLE);
   });
 
-  it('a REJECTED call returns null and records the non-run', async () => {
+  it('a REJECTED call returns null and records the non-run as UNREACHABLE', async () => {
     const c = ctx();
     const gen = () => Promise.reject(new Error('quota'));
     expect(await defaultAdjudicator(gen, {})('q?', c)).toEqual({ violation: null });
     expect(c.notes).toContain(ADJUDICATOR_UNREACHABLE);
+    expect(c.notes).not.toContain(ADJUDICATOR_UNREADABLE);
   });
 
-  it('an EMPTY answer returns null and records the non-run', async () => {
+  it('an EMPTY answer returns null and records the non-run as UNREACHABLE', async () => {
     const c = ctx();
     const gen = async () => ({ text: '' });
     expect(await defaultAdjudicator(gen, {})('q?', c)).toEqual({ violation: null });
     expect(c.notes).toContain(ADJUDICATOR_UNREACHABLE);
+    expect(c.notes).not.toContain(ADJUDICATOR_UNREADABLE);
   });
 
-  it('an UNREADABLE answer returns null WITHOUT recording — the call answered, it just found nothing', async () => {
+  it('an UNREADABLE answer returns null and records the non-run as UNREADABLE, not UNREACHABLE', async () => {
     const c = ctx();
     const gen = async () => ({ text: 'hmm, possibly' });
     expect(await defaultAdjudicator(gen, {})('q?', c)).toEqual({ violation: null });
+    expect(c.notes).toContain(ADJUDICATOR_UNREADABLE);
     expect(c.notes).not.toContain(ADJUDICATOR_UNREACHABLE);
+  });
+
+  it('a VIOLATION line with no reason after it returns null and records UNREADABLE — malformed, not a deny', async () => {
+    const c = ctx();
+    const gen = async () => ({ text: 'VIOLATION:' });
+    expect(await defaultAdjudicator(gen, {})('q?', c)).toEqual({ violation: null });
+    expect(c.notes).toContain(ADJUDICATOR_UNREADABLE);
+    expect(c.notes).not.toContain(ADJUDICATOR_UNREACHABLE);
+  });
+
+  it('the two non-run markers are never both recorded for the same call', async () => {
+    const unreachable = ctx();
+    await defaultAdjudicator(async () => { throw new Error('offline'); }, {})('q?', unreachable);
+    expect(unreachable.notes).toEqual([ADJUDICATOR_UNREACHABLE]);
+
+    const unreadable = ctx();
+    await defaultAdjudicator(async () => ({ text: 'hmm, possibly' }), {})('q?', unreadable);
+    expect(unreadable.notes).toEqual([ADJUDICATOR_UNREADABLE]);
   });
 
   it('it NEVER rejects, so no failMode can fire from it', async () => {

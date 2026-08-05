@@ -180,11 +180,14 @@ the backstop, break the host's adjudicator, and every candidate is still denied,
 redrives and delivering the engine-derived closure instead of the model's prose. The resolved default
 never rejects — it SETTLES on every failure with no violation — so `failMode` never fires from it: under
 the resolved default, an outage passes. A host that needs an outage to deny registers its own adjudicator,
-one that rejects. **Either way the non-run is RECORDED**, under one of two names: a host-supplied
-adjudicator that rejects appends an `llmcheck-unreachable:<failMode>` correction (from the guard, which
-caught the rejection); the resolved default appends `adjudicator-unreachable` (from the adjudicator
-itself, which never rejects). So "the check ran and approved" is never indistinguishable from "the check
-never ran" — under either adjudicator.
+one that rejects — a REJECTED host-supplied adjudicator is caught by the guard, which appends an
+`llmcheck-unreachable:<failMode>` correction. **The non-run is always RECORDED, and never as the same
+observation as an approval.** The resolved default separates three outcomes, each under its own name: a
+readable answer naming no violation appends nothing; a call that answered, but not with `NONE` or a named
+`VIOLATION: <reason>`, appends `adjudicator-unreadable`; a call that threw, rejected, or returned empty
+appends `adjudicator-unreachable`. So "the check ran and approved" is never indistinguishable from "the
+check ran but answered nothing legible", and neither is indistinguishable from "the check never ran" —
+under either adjudicator.
 
 ## 2. The five hooks — and the CORRECT enforcement semantics
 
