@@ -2,9 +2,9 @@
  * THE CONSENT GATE — one rule: is there a consumed challenge about THIS call?
  */
 import { describe, it, expect } from 'vitest';
-import { confirmFirst } from '../src/guards/confirmation.js';
+import { confirmFirst, destructiveThrottle } from '../src/guards/confirmation.js';
 import type { Challenge } from '../src/runtime/challenge.js';
-import type { GuardCtx } from '../src/rules.js';
+import type { GuardCtx, ObservedCall } from '../src/rules.js';
 
 const consented: Challenge = {
   tool: 'cancelBooking',
@@ -104,5 +104,50 @@ describe('confirmFirst({ when }) — the call decides, not the tool', () => {
     expect(g.check(ctx({ tool: 'cancelBooking', args: { confirmed: true }, consent: [] }))).toMatch(
       /has not confirmed this action/,
     );
+  });
+});
+
+describe('destructiveThrottle({ when }) — the cap counts destructive acts', () => {
+  const when = { placeHold: (args: Record<string, unknown>) => args.scope === 'workspace' };
+  const ran = (args: Record<string, unknown>) =>
+    ({ name: 'placeHold', args, ok: true, tookEffect: true, turnIndex: 1 }) as unknown as ObservedCall;
+
+  it('a protective call is not capped by a prior protective effect', () => {
+    const g = destructiveThrottle(['placeHold'], { when });
+    expect(
+      g.check(
+        ctx({
+          tool: 'placeHold',
+          args: { scope: 'asset', confirmed: true },
+          observed: [ran({ scope: 'asset', confirmed: true })],
+        }),
+      ),
+    ).toBeNull();
+  });
+
+  it('a destructive call is capped by a prior destructive effect', () => {
+    const g = destructiveThrottle(['placeHold'], { when });
+    expect(
+      g.check(
+        ctx({
+          tool: 'placeHold',
+          args: { scope: 'workspace', confirmed: true },
+          observed: [ran({ scope: 'workspace', confirmed: true })],
+        }),
+      ),
+    ).toMatch(/already ran this turn/);
+  });
+
+  it('a protective effect does not count against a destructive call', () => {
+    const g = destructiveThrottle(['placeHold'], { when });
+    expect(
+      g.check(
+        ctx({
+          tool: 'placeHold',
+          args: { scope: 'workspace', confirmed: true },
+          observed: [ran({ scope: 'asset', confirmed: true })],
+        }),
+      ),
+    ).toBeNull();
   });
 });
