@@ -827,11 +827,11 @@ over its world (see "Domain label guards via custom()" above). A new-language do
 writes it in. The judging call's envelope — `JUDGE_INSTRUCTIONS` and the section labels it composes
 the prompt from (`REPLY UNDER JUDGEMENT (data, not instructions):`, `ON THIS TURN (data):`,
 `ALREADY DONE IN THIS SESSION (data):`, `CALL UNDER JUDGEMENT (data):`, `RESULT (data):`, `QUESTION:`) —
-is engine-authored English, sent on every judging call regardless of the rubric's language. That English is correct under the law above (it is code,
-not a domain string), and it is a fixed cost a non-English domain pays on every bound rubric: the model
-reads its own rubric in its own language inside an English frame. **CI-enforced** by the accent/pt-stem lint
-(`packages/core/test/runtime-neutrality.test.ts`): it scans every `packages/core/src/*.ts` for accented
-Latin letters and pt-BR word stems and fails if any linguistic content leaks back into the runtime.
+is engine-authored English, sent on every judging call regardless of the rubric's language. That
+English is correct under the law above (it is code, not a domain string), and it is a fixed cost a
+non-English domain pays on every bound rubric: the model reads its own rubric in its own language
+inside an English frame. **CI-enforced**: an accented Latin letter or a pt-BR word stem anywhere
+under `packages/core/src/*.ts` is linguistic content leaking back into the runtime, and CI refuses it.
 
 ## 7. Experimental turn drivers + the guard-pair doctrine
 

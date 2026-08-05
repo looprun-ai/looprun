@@ -26,7 +26,7 @@
  * speech, and the persona that produced the text would bias the reading of it.
  */
 import { operationRecord, type RenderOpts } from './claims.js';
-import { sessionRecord } from './session-record.js';
+import { sessionRecord, SESSION_HEADING } from './session-record.js';
 import { TURN_HEADING } from './lie-check.js';
 import type { GuardCtx } from '../rules.js';
 
@@ -72,7 +72,7 @@ export function judgePrompt(question: string, ctx: GuardCtx, opts?: RenderOpts):
       parts.push(section(`${TURN_HEADING} (data):`, operationRecord(ctx.did, opts).text), '');
       const session = sessionRecord(ctx.history, opts);
       if (session.hasEntries) {
-        parts.push(section('ALREADY DONE IN THIS SESSION (data):', session.lines.join('\n')), '');
+        parts.push(section(`${SESSION_HEADING} (data):`, session.lines.join('\n')), '');
       }
     }
   } else if (ctx.tool) {
