@@ -25,7 +25,7 @@
  * ordering + trunk prose order. resolveBindings sorts each hook agent → full → base → minimal so
  * an agent correction always wins.
  */
-import { claimIsComplete, claimIsGrounded, confirmFirst, degenerationGuard, destructiveThrottle, noDuplicateCall } from './guards/index.js';
+import { claimIsComplete, claimIsGrounded, confirmFirst, degenerationGuard, destructiveThrottle, noDuplicateCall, precondition } from './guards/index.js';
 import { GuardExecutionError } from './rules.js';
 import { assertNoCoreOutcomeShadow } from './runtime/claims.js';
 import { challengeToken } from './runtime/challenge.js';
@@ -451,6 +451,32 @@ export class AgentSpecBase implements AgentSpec {
         layer: 'minimal',
         id: 'minimal:claimIsComplete',
       });
+    }
+    // THE WRITE GATE: the domain states ONCE what its world refuses every write under, and it installs
+    // on every spec that carries a write. Declared per lane it is six chances to key on a third of the
+    // condition; declared here there is one predicate and no lane can diverge from it.
+    const gate = this.contract?.writeGate;
+    if (gate) {
+      if (!writeTools?.length) {
+        throw new Error(
+          `AgentSpec "${this.id}": contract.writeGate is declared with no contract.writeTools — the gate has no ` +
+            'surface to install on and would enforce nothing.',
+        );
+      }
+      const strayExempt = (gate.exempt ?? []).filter((t) => !writeTools.includes(t));
+      if (strayExempt.length) {
+        throw new Error(
+          `AgentSpec "${this.id}": contract.writeGate.exempt names tool(s) that are not in contract.writeTools: ${strayExempt.join(', ')}. ` +
+            'An exemption from a gate that never covered the tool reads as a decision nobody made.',
+        );
+      }
+      const gated = writeTools.filter((t) => !(gate.exempt ?? []).includes(t));
+      if (gated.length) {
+        this.addGuard('preTool', [...gated], precondition(gate.ok, gate.reason, gate.prose), {
+          layer: 'minimal',
+          id: 'minimal:writeGate',
+        });
+      }
     }
   }
 
