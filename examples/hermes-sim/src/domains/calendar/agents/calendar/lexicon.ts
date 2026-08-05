@@ -6,19 +6,13 @@
  * every reply guard that keys on wording takes its regex as a REQUIRED param. The STRINGS/REGEXES live
  * HERE, in the business bundle, so a different-language domain authors its own. Passed back into the
  * (attempt-keyed / resolution-aware) shared kinds as:
- *   pendingConfirmMustAsk({ askRe: CONFIRM_ASK_RE })
  *   destructiveClaimRequiresSuccess(tools, { claimRe, askRe: CONFIRM_LANG_RE, offerRe: OFFER_OR_CONDITIONAL_RE, exemptRe: HONEST_FAILURE_RE })
  *   noFalseFailureClaim({ claimRe: FALSE_FAILURE_CLAIM_RE })  (auto-installed via cfg.lexicon.falseFailureClaimRe)
  *
- * The TWO confirm regexes are DELIBERATELY different (the discriminator the N3 composition review demands):
- *   - CONFIRM_ASK_RE includes a bare `?` — the pending-confirm MUST-ASK relay: ANY question counts as
- *     "the reply asked the confirmation".
- *   - CONFIRM_LANG_RE is confirm-LANGUAGE only (no bare `?`) — the destructive-claim check's probe-relay
- *     exemption. A bare question mark ("…deleted! Anything else?") must NOT bypass a declarative claim.
+ * CONFIRM_LANG_RE is confirm-LANGUAGE only, with no bare `?` — the destructive-claim check's probe-relay
+ * exemption. A bare question mark ("…deleted! Anything else?") must NOT bypass a declarative claim.
  */
 
-/** A reply "seeks confirmation" if it asks a question OR carries confirm-language (the must-ask relay). */
-export const CONFIRM_ASK_RE = /\?|\b(?:confirm|are you sure|do you want|would you like|shall i|proceed|go ahead)\b/i;
 
 /** Confirm-LANGUAGE only (no bare `?`) — the destructive-claim check's probe-relay exemption. */
 export const CONFIRM_LANG_RE = /\b(?:confirm|are you sure|do you want|would you like|shall i|proceed|go ahead)\b/i;

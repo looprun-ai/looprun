@@ -20,7 +20,7 @@
 // NO-REGEX LAW: text judgment — whether a reply fabricates a success or a failure — belongs to an
 // `llmCheck` rubric, never to a regex over a guard param. This EXAMPLE bundle carries STRUCTURAL guards
 // only; the honesty dimensions above ride as conditioned prose plus eval dimensions.
-import { AgentSpecBase, argFormat, custom, jargonScrub, pendingConfirmMustAsk } from 'looprun';
+import { AgentSpecBase, argFormat, custom, jargonScrub } from 'looprun';
 import { SECOND_BRAIN_CONTRACT } from './contract.js';
 
 /** The per-id state the reply-honesty label seam reads (world accessors via the ctx closure). */
@@ -122,8 +122,6 @@ export class AgentSpecVaultFiling extends AgentSpecBase {
       { id: 'agent:readBeforeFiling' },
     );
 
-    // Reply honesty (structural): relay a pending delete confirmation as an `ask` intention in `did`.
-    this.addReplyCheck(pendingConfirmMustAsk(), { id: 'agent:pendingConfirmMustAsk' });
 
     // Deterministic egress rewrite of the internal kind enum spelling.
     this.addMutator(jargonScrub({ voice_transcript: 'voice transcript' }), { id: 'agent:jargonScrub' });

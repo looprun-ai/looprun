@@ -56,7 +56,7 @@ export const SECOND_BRAIN_CONTRACT: DomainContract = {
       '"shall I proceed?" for a non-destructive action the user clearly requested is a failure.',
     // The two-step SHAPE (confirmed:false first, the user's explicit go-ahead in a LATER turn, one
     // destructive act per turn) is the confirmFirst + destructiveThrottle prose under "## Tool
-    // rules", and relaying a pending confirmation is the pendingConfirmMustAsk reply rule. What
+    // rules", and a pending confirmation is relayed by the engine's own question. What
     // stays here is what those cannot say: the probe is side-effect-free, and never re-probe.
     'Confirm before you delete. Calling noteDelete without confirmed:true is a side-effect-free ' +
       'probe: relay the exact confirmation question it returns and STOP. Once the user has agreed, ' +

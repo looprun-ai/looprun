@@ -337,10 +337,10 @@ disagree about it.
 <!-- Rendered from `packages/core/src/guards/catalog.ts`. Do NOT edit between the markers: run
      `pnpm docs:guards` (it needs a built core), and fix wording in the catalog itself. -->
 
-## 5. The catalog — 23 factories
+## 5. The catalog — 21 factories
 
 Grouped by the hook each one is installed on, because the hook decides what a rule can see and
-therefore what it can enforce (chapter 03 §8). 13 preTool · 1 postTool · 7 onReply · 1 onReplyMutate · 1 escape hatch.
+therefore what it can enforce (chapter 03 §8). 12 preTool · 1 postTool · 6 onReply · 1 onReplyMutate · 1 escape hatch.
 
 A fourth hook exists and has no section here: `onInput` fires before the model runs, and §1's
 matrix makes it legal for every `spatial`/`input`/`run` guard — but no shipped kind is installed
@@ -383,10 +383,9 @@ A call has been proposed and not yet executed. A deny returns to the model AS th
 | [`argFormat`](#7-argformat) | `args.ts` | A present, non-empty string argument must match the given pattern; absent or empty is left to `argRequired`. |
 | [`precondition`](#8-precondition) | `world.ts` | The call is allowed only while a predicate over the host world holds. |
 | [`consentRequired`](#9-consentrequired) | `world.ts` | A set of writes may run only while the world says this person's consent is on record. |
-| [`confirmFirst`](#10-confirmfirst) | `confirmation.ts` | A destructive tool needs the user's go-ahead from an EARLIER turn — licensed `via` a same-record probe, a prior ask, or either. The licensing event is turn-bounded by `within` (default 1). Passing a `via` NAME to the string overload throws at construction. |
-| [`noActAfterAskSameTurn`](#11-noactafterasksameturn) | `confirmation.ts` | Denies the listed tools on a turn in which the model already asked the user a question. |
-| [`destructiveThrottle`](#12-destructivethrottle) | `confirmation.ts` | At most one destructive action that TOOK EFFECT per turn (a probe does not count; a call that RAN with no world record of its effect does). |
-| [`askedEarlier`](#13-askedearlier) | `structural.ts` | A gated argument may be recorded only when the agent asked the user SOMETHING in an EARLIER turn; a same-turn ask does not count, and the ask is not bound to the argument. |
+| [`confirmFirst`](#10-confirmfirst) | `confirmation.ts` | A destructive tool runs only on a turn whose incoming message carried the engine-issued confirmation token for THIS record. Takes no options. |
+| [`destructiveThrottle`](#11-destructivethrottle) | `confirmation.ts` | At most one destructive action that TOOK EFFECT per turn (a probe does not count; a call that RAN with no world record of its effect does). |
+| [`valueFromUser`](#12-valuefromuser) | `structural.ts` | A field the agent fills in on the user's behalf must carry the value the user actually said. |
 
 #### 1. `requiresBefore`
 
@@ -480,25 +479,15 @@ consentRequired({ tools: ['storeProfile'], consentOk: (world) => world.consentOn
 
 #### 10. `confirmFirst`
 
-A destructive tool needs the user's go-ahead from an EARLIER turn — licensed `via` a same-record probe, a prior ask, or either. The licensing event is turn-bounded by `within` (default 1). Passing a `via` NAME to the string overload throws at construction.
+A destructive tool runs only on a turn whose incoming message carried the engine-issued confirmation token for THIS record. Takes no options.
 
-**When to reach for it.** The user must have agreed before this call runs, and the evidence has to be cross-turn — this is the ONE consent gate (it absorbed `confirmedNeedsEarlierProbe`). Its neighbours answer different questions: `destructiveThrottle` caps the blast radius of a turn that IS approved, `consentRequired` reads a standing world flag rather than the conversation, and `pendingConfirmMustAsk` gates the REPLY rather than the call. `via`: `'probe'` = a same-record `flag:false` preview of the SAME tool in an earlier turn (the strict, record-bound license); `'ask'` = a flag-LESS action gated on the agent having asked the user in a prior turn; `'either'` (default) = the flag-gated form licensed by a matching probe OR a prior-turn question to the user. RECENCY LAW: the licensing event must fall `within` turns of now (default 1, the two-step shape) — widen deliberately for genuinely multi-turn flows. The string overload sets the FLAG NAME, so `confirmFirst('probe')` throws rather than silently building a guard that can never fire.
-
-```ts
-confirmFirst('confirmed')
-```
-
-#### 11. `noActAfterAskSameTurn`
-
-Denies the listed tools on a turn in which the model already asked the user a question.
-
-**When to reach for it.** The mirror image of `confirmFirst`'s cross-turn requirement: it closes the multi-tool step that asks and executes back to back, which reads as "asked" but never gave the user a chance to answer.
+**When to reach for it.** The user must have agreed before this call runs, and the agreement has to be THEIRS: the engine issues a confirmation token naming the record, renders it into the delivered text, and this gate allows the act only on a turn whose incoming message carried that token back. There is nothing to configure, because there is no declaration to trust — the agent has no channel through which to produce a consent. Its neighbours answer different questions: `destructiveThrottle` caps the blast radius of a turn that IS confirmed, and `consentRequired` reads a standing world flag rather than the conversation. A denial is also what RAISES the question for a tool the world has no preview form for, so attempting the act is what asks permission for it — and such a tool needs a declared label on the spec, or it can issue no question and never runs.
 
 ```ts
-noActAfterAskSameTurn(['cancelBooking'])
+confirmFirst()
 ```
 
-#### 12. `destructiveThrottle`
+#### 11. `destructiveThrottle`
 
 At most one destructive action that TOOK EFFECT per turn (a probe does not count; a call that RAN with no world record of its effect does).
 
@@ -508,14 +497,14 @@ At most one destructive action that TOOK EFFECT per turn (a probe does not count
 destructiveThrottle(['cancelBooking', 'purgeAccount'], { flagless: ['purgeAccount'] })
 ```
 
-#### 13. `askedEarlier`
+#### 12. `valueFromUser`
 
-A gated argument may be recorded only when the agent asked the user SOMETHING in an EARLIER turn; a same-turn ask does not count, and the ask is not bound to the argument.
+A field the agent fills in on the user's behalf must carry the value the user actually said.
 
-**When to reach for it.** A value the agent must not write until it has asked the operator and they answered in a later message — the structural replacement for a hand-written regex over "did we ask?". It keys on the presence of the gated arg plus an earlier-turn ask INTENTION, never on any text. An intention carries no subject, so an ask on any topic licenses this argument: it enforces the two-turn RHYTHM, not the relevance of the question.
+**When to reach for it.** The world is meant to receive what the PERSON said, not the agent's version of it. The recorded value is compared against everything the user has said in the conversation, as a contiguous run of whole tokens — so a value they never said is denied, and so is a paraphrase of one they did. Fires only when the gated argument is present on the call.
 
 ```ts
-askedEarlier({ tool: 'completeMaintenance', arg: 'condition' })
+valueFromUser({ arg: 'email' })
 ```
 
 ### `postTool` — the call has run
@@ -524,9 +513,9 @@ The only hook that sees `ctx.result`. It cannot veto anything — the effect alr
 
 | factory | file | what it enforces |
 |---|---|---|
-| [`resultInvariant`](#14-resultinvariant) | `world.ts` | A post-execution check on the tool RESULT: when the predicate fails, the violation joins the reply redrive set. |
+| [`resultInvariant`](#13-resultinvariant) | `world.ts` | A post-execution check on the tool RESULT: when the predicate fails, the violation joins the reply redrive set. |
 
-#### 14. `resultInvariant`
+#### 13. `resultInvariant`
 
 A post-execution check on the tool RESULT: when the predicate fails, the violation joins the reply redrive set.
 
@@ -542,25 +531,14 @@ The reply text is in `ctx.reply` and no tool can run any more. A deny costs a bo
 
 | factory | file | what it enforces |
 |---|---|---|
-| [`pendingConfirmMustAsk`](#15-pendingconfirmmustask) | `confirmation.ts` | When a probe returned `requiresConfirmation` this turn and nothing resolved it, the delivered reply must declare an `ask` intention — ANY ask, since an intention names no subject. |
-| [`claimIsGrounded`](#16-claimisgrounded) | `honesty.ts` | Every operation the agent declares in `did` must match the world ledger: a `success` needs a write that took effect, `not_found` an empty read, `blocked`/`refused` a veto or world refusal, `no_op` a call that addressed the entity and no effected write on it — an undeclared outcome word is always a violation. |
-| [`claimIsComplete`](#17-claimiscomplete) | `honesty.ts` | Every write that TOOK EFFECT this turn must be covered by a DISTINCT `success` ACTION intention in `did` that NAMES the entity — no silent action hidden from the user. |
-| [`claimCoversRubric`](#18-claimcoversrubric) | `honesty.ts` | Each configured target must appear in `did` with the required outcome polarity (or any polarity when `outcome: 'any'`). |
-| [`degenerationGuard`](#19-degenerationguard) | `reply.ts` | Catches leaked reasoning or tool markup, chat-template tokens and run-away line repetition in the reply. |
-| [`llmCheck`](#20-llmcheck) | `llm-check.ts` | An LLM-adjudicated guard: a host-registered adjudicator answers a trusted rubric over the full context (history + user text) and its verdict becomes the deny. |
-| [`didMessageConsistency`](#21-didmessageconsistency) | `llm-check.ts` | The `did` × `message` backstop: an adjudicator answers a pre-baked rubric asking whether the message asserts an operation the declaration does not carry, or contradicts a declared intention. |
+| [`claimIsGrounded`](#14-claimisgrounded) | `honesty.ts` | Every operation the agent declares in `did` must match the world ledger: a `success` needs a write that took effect, `not_found` an empty read, `blocked`/`refused` a veto or world refusal, `no_op` a call that addressed the entity and no effected write on it — an undeclared outcome word is always a violation. |
+| [`claimIsComplete`](#15-claimiscomplete) | `honesty.ts` | Every write that TOOK EFFECT this turn must be covered by a DISTINCT `success` ACTION intention in `did` that NAMES the entity — no silent action hidden from the user. |
+| [`claimCoversRubric`](#16-claimcoversrubric) | `honesty.ts` | Each configured target must appear in `did` with the required outcome polarity (or any polarity when `outcome: 'any'`). |
+| [`degenerationGuard`](#17-degenerationguard) | `reply.ts` | Catches leaked reasoning or tool markup, chat-template tokens and run-away line repetition in the reply. |
+| [`llmCheck`](#18-llmcheck) | `llm-check.ts` | An LLM-adjudicated guard: a host-registered adjudicator answers a trusted rubric over the full context (history + user text) and its verdict becomes the deny. |
+| [`didMessageConsistency`](#19-didmessageconsistency) | `llm-check.ts` | The `did` × `message` backstop: an adjudicator answers a pre-baked rubric asking whether the message asserts an operation the declaration does not carry, or contradicts a declared intention. |
 
-#### 15. `pendingConfirmMustAsk`
-
-When a probe returned `requiresConfirmation` this turn and nothing resolved it, the delivered reply must declare an `ask` intention — ANY ask, since an intention names no subject.
-
-**When to reach for it.** The world runs the two-step protocol itself: the tool answers "I need confirmation" and the risk is a reply that summarises the action as done. It gates the REPLY; `confirmFirst` gates the call. It checks that a question was DECLARED, never that it was about the pending act — pair it with `didMessageConsistency` where that matters.
-
-```ts
-pendingConfirmMustAsk()
-```
-
-#### 16. `claimIsGrounded`
+#### 14. `claimIsGrounded`
 
 Every operation the agent declares in `did` must match the world ledger: a `success` needs a write that took effect, `not_found` an empty read, `blocked`/`refused` a veto or world refusal, `no_op` a call that addressed the entity and no effected write on it — an undeclared outcome word is always a violation.
 
@@ -570,7 +548,7 @@ Every operation the agent declares in `did` must match the world ledger: a `succ
 claimIsGrounded({ writeTools: ['createBooking', 'cancelBooking'], outcomes: { settled: 'success' } })
 ```
 
-#### 17. `claimIsComplete`
+#### 15. `claimIsComplete`
 
 Every write that TOOK EFFECT this turn must be covered by a DISTINCT `success` ACTION intention in `did` that NAMES the entity — no silent action hidden from the user.
 
@@ -580,7 +558,7 @@ Every write that TOOK EFFECT this turn must be covered by a DISTINCT `success` A
 claimIsComplete({ writeTools: ['createBooking', 'cancelBooking'], outcomes: { settled: 'success' } })
 ```
 
-#### 18. `claimCoversRubric`
+#### 16. `claimCoversRubric`
 
 Each configured target must appear in `did` with the required outcome polarity (or any polarity when `outcome: 'any'`).
 
@@ -590,7 +568,7 @@ Each configured target must appear in `did` with the required outcome polarity (
 claimCoversRubric({ targets: ['BK-100234'], outcome: 'success' }, 'Account for the booking you were asked about.')
 ```
 
-#### 19. `degenerationGuard`
+#### 17. `degenerationGuard`
 
 Catches leaked reasoning or tool markup, chat-template tokens and run-away line repetition in the reply.
 
@@ -600,7 +578,7 @@ Catches leaked reasoning or tool markup, chat-template tokens and run-away line 
 degenerationGuard()
 ```
 
-#### 20. `llmCheck`
+#### 18. `llmCheck`
 
 An LLM-adjudicated guard: a host-registered adjudicator answers a trusted rubric over the full context (history + user text) and its verdict becomes the deny.
 
@@ -610,7 +588,7 @@ An LLM-adjudicated guard: a host-registered adjudicator answers a trusted rubric
 llmCheck({ rubric: 'Did the user, in an earlier turn, explicitly authorise THIS exact action?', failMode: 'closed' })
 ```
 
-#### 21. `didMessageConsistency`
+#### 19. `didMessageConsistency`
 
 The `did` × `message` backstop: an adjudicator answers a pre-baked rubric asking whether the message asserts an operation the declaration does not carry, or contradicts a declared intention.
 
@@ -626,9 +604,9 @@ A `ReplyMutator`, not a `Guard`: it is applied to the reply before the `onReply`
 
 | factory | file | what it enforces |
 |---|---|---|
-| [`jargonScrub`](#22-jargonscrub) | `reply.ts` | A deterministic egress rewrite of internal vocabulary into user words (word-boundary, case-insensitive). |
+| [`jargonScrub`](#20-jargonscrub) | `reply.ts` | A deterministic egress rewrite of internal vocabulary into user words (word-boundary, case-insensitive). |
 
-#### 22. `jargonScrub`
+#### 20. `jargonScrub`
 
 A deterministic egress rewrite of internal vocabulary into user words (word-boundary, case-insensitive).
 
@@ -644,9 +622,9 @@ One factory, and it is the only one whose hook you choose: `custom` follows the 
 
 | factory | file | what it enforces |
 |---|---|---|
-| [`custom`](#23-custom) | `custom.ts` | The escape hatch: a guard whose kind, dim, check and prose the spec author writes by hand. |
+| [`custom`](#21-custom) | `custom.ts` | The escape hatch: a guard whose kind, dim, check and prose the spec author writes by hand. |
 
-#### 23. `custom`
+#### 21. `custom`
 
 The escape hatch: a guard whose kind, dim, check and prose the spec author writes by hand.
 

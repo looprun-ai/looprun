@@ -19,7 +19,7 @@
 // NO-REGEX LAW: text judgment — whether a reply fabricates a success or a failure — belongs to an
 // `llmCheck` rubric, never to a regex over a guard param. This EXAMPLE bundle carries STRUCTURAL guards
 // only; the honesty dimensions above ride as conditioned prose plus eval dimensions.
-import { AgentSpecBase, custom, jargonScrub, pendingConfirmMustAsk, requiresBefore } from 'looprun';
+import { AgentSpecBase, custom, jargonScrub, requiresBefore } from 'looprun';
 import { CALENDAR_CONTRACT } from './contract.js';
 
 /** The per-id state reads the calendar gates need (world accessors via the ctx closure). */
@@ -144,8 +144,6 @@ export class AgentSpecScheduler extends AgentSpecBase {
       { id: 'agent:reminderNeedsRealEvent' },
     );
 
-    // Reply honesty (structural): relay a pending confirmation as an `ask` intention in the turn's `did`.
-    this.addReplyCheck(pendingConfirmMustAsk(), { id: 'agent:pendingConfirmMustAsk' });
 
     // Egress scrub: internal field jargon → user words.
     this.addMutator(
