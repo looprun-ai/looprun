@@ -1,6 +1,6 @@
 # Conditional destructiveness, the contract write gate, and the parity law — the need
 
-Date: 2026-08-05 · Status: need, not a design · Owner: to brainstorm
+Date: 2026-08-05 · Status: the need, and the propagation it owes · Owner: to brainstorm
 
 Three gaps found by a generated subject's T1 review, each confirmed by execution against the
 running engine, and each producing a defect a careful author could not have avoided. They are one
@@ -159,6 +159,94 @@ avoided by being more careful:
 
 A vocabulary that requires an author to hold all three in their head is where the next bundle fails
 the same way.
+
+## What ships beside the code
+
+Four surfaces publish the vocabulary an author reads, and each states today's shape as a closed
+rule: `confirmFirst` has nothing to configure, a destructive tool is a name on a list, a world
+condition is a `precondition` each lane writes for itself. A merge that leaves them saying so ships
+a vocabulary no author reaches — and §1 and §2 are worth nothing unless the author reaches them.
+
+### 1 · The catalog entry is the source
+
+`packages/core/src/guards/catalog.ts` holds the `confirmFirst`, `destructiveThrottle` and
+`precondition` entries; `pnpm docs:guards` renders them into `docs/tutorial/04-guards.md` and its
+snippet, and CI holds the two together. Every wording change starts in the catalog and the chapter
+is regenerated, never hand-edited.
+
+The `confirmFirst` entry is where §1 is most visible, and the entry has to carry both halves at once:
+
+```
+about the CONSENT     nothing is configurable — the agent has no channel to produce one
+about the CALL        two questions: WHICH call acts (flag), WHEN it is destructive (when)
+```
+
+### 2 · The doc surfaces
+
+| § | surface | what changes |
+|---|---|---|
+| 1 | `catalog.ts` — `confirmFirst`, `destructiveThrottle` | the second option, and whether the throttle reads the same predicate or caps every call of the tool |
+| 1 | `GUARDS.md` — the auto-install table, `cfg.destructiveTools` row | the list installs a gate whose predicate decides the branch, not a gate on every call |
+| 1 | `GUARDS.md` — the `confirmFirst` option paragraph | the option count, and that the new option answers WHEN rather than WHICH |
+| 1 | `GUARDS.md` — the `destructiveLabels` row | a conditionally destructive tool still owes a label when its destructive branch names a record its arguments never carry |
+| 1 | `docs/tutorial/03-agent-anatomy.md` — the `destructiveTools` and `destructiveLabels` rows, and the protocol a destructive tool must honour | the protocol binds the destructive branch, and the protective branch runs untouched |
+| 1 | `docs/tutorial/05-running-and-eval.md` — the run-start throw | what `assertDestructiveConfirmable` checks when the confirmation record is only sometimes required |
+| 2 | `GUARDS.md` — the contract table, `cfg.contract.writeTools` row | `writeGate` beside it: one declaration installing the state gate on every spec that carries a write |
+| 2 | `docs/tutorial/03-agent-anatomy.md` — the `CONTRACT` block and the `writeTools?` row | the contract's second switch, and what a bundle loses by omitting it |
+| 2 | `docs/tutorial/04-guards.md` — the auto-install ladder | a rung: `IFF contract.writeGate`, on every spec carrying a write |
+| 2 | `catalog.ts` — the `precondition` entry | the condition every lane shares is a contract declaration; `precondition` stays the gate for what one lane alone refuses on |
+| 3 | `packages/eval/src/lint.ts` and its `lint-spec-quality` / `lint-subject` neighbours | where the parity law and the two id laws live |
+| 3 | `docs/tutorial/05-running-and-eval.md` — the preflight lint table | the lints an author runs before spending a token, and the violation string each new law prints |
+| 3 | `packages/eval/README.md` | what `--spec-laws` covers |
+| 3 | `BACKLOG.md` — the probe-parity lint row | the parity law's execution half and that row are the same question |
+| — | `docs/tutorial/04-guards.md` | regenerated for §1 and §2 through the catalog, hand-edited for neither |
+| — | `README.md` | nothing: it names no destructive, contract or lint vocabulary |
+
+### 3 · The `agentspec` skill
+
+This is the surface that decides whether an author ever writes a predicate or a `writeGate`, and it
+lives in the sibling `agentspec` repo — its own commit, its own cycle, and the reason it belongs in
+the plan rather than in a discovery later.
+
+The skill routes the author into the exact defect §1 describes:
+
+```
+skill/references/guard-catalog.md — the ADVICE
+  "only genuinely destructive tools get confirmFirst. A gate that blocks a required
+   single-turn call fails the exam"
+
+skill/references/norms.md — the CHECKLIST
+  "every destructive tool is in destructiveTools"
+```
+
+A tool that is destructive on one branch satisfies neither reading: listing it blocks the required
+call, leaving it off breaks the checklist. The author resolves the contradiction the only way it
+resolves today — off the list, with a hand-written `ctx.consent` read. `confirmFirst({ when })` is
+what makes both readings true at once, and the skill must say which one to write.
+
+The same for §2: `precondition` is published as world-only by design, and nothing tells an author
+that a condition six lanes share belongs to the contract instead. The skill's own laws-to-guards
+table is where that routing lives.
+
+The two neighbours of §3 are authoring-time rules before they are lint rules: every `addGuard`
+carries an explicit `{ id }`, and a guard id is reachable only from the lane that owns it.
+
+Files: `guard-catalog.md`, `norms.md`, `spec-template.ts`, `test.md`, `ship.md`,
+`scripts/lint-authoring.mjs`.
+
+### 4 · The proof record
+
+| change | governed | record |
+|---|---|---|
+| §1 — the predicate, the throttle, the run-start assertion | `packages/core/src/**` + `packages/core/GUARDS.md` | required |
+| §2 — the contract switch and the installed gate | `packages/core/src/**` + `packages/core/GUARDS.md` | required |
+| §3 — the parity law and the two id laws | `packages/eval/src/**` | not a governed surface |
+
+`confirmFirst` is a kind with a per-kind completeness describe, and §1 adds a polarity to it: the
+call the predicate declines to gate, which the world executes and the guard stays silent on. The
+proof carries that branch or the ratchet asserts a completeness the guard no longer has.
+
+The skill lands in a repo with no proof gate of its own, which is why its change is named here.
 
 ## Explicitly out of scope
 
