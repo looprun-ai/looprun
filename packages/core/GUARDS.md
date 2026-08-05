@@ -27,7 +27,8 @@ can never drift apart.
 A `check()` reads ONLY `GuardCtx`, and that ctx carries the WHOLE conversation — `args`, `tool`,
 `world` (host-injected read/exec seam), `observed` (the conversation's `ObservedCall[]`, each carrying
 `turnIndex`/`ok`/`resultFlags`), `turnIndex`, `reply`, `producedThisTurn`, `attachmentsThisTurn`,
-`result` (postTool only), `notes`, **`userText`** (the current turn's incoming message, verbatim) and
+`result` (postTool only), `notes`, **`userText`** (the current turn's incoming message, verbatim),
+**`consent`** (the consent challenges this turn's message consumed — see §4) and
 **`history`** (every prior turn, turn-structured and read-only: `userText`/`reply`/`toolCalls`/
 `attemptedCalls`/`guardEvents`). **A guard is NOT blind to the user's text**: a guard is deterministic
 code, so "influence" does not apply to it. What a blindness rule would try to buy is bought by two
@@ -455,6 +456,12 @@ world that must be re-shaped, never a guard to relax):
 | `{ status: 'ORD-1 refunded' }` | ❌ | a SENTENCE is prose, not an identity — put the id under `id`/`label` |
 | `{ id: 'ORD-1', parentId: 'ORD-2' }` | ✅ ORD-1 only | a write speaks for its own entity, not the ones it references |
 
+**The engine's own sentences are `contract.engineText`.** The record closures and the consent question
+are what the ENGINE puts on the user's screen, so a conversation held in another language declares them
+(`Partial<EngineText>`, falling back per key to the engine's English). It is not cosmetic: the user has
+to TYPE the consent token back, so an instruction they cannot read is an act that can never be agreed
+to. The TOKEN itself is engine-issued and identical whatever language the sentence around it is in.
+
 **The domain render seam (`contract.renderClaim`) never receives the `op`.** It is handed the VERIFIED
 fields only — `target`, `outcome`, `amount` — because its output is delivered to the user verbatim and
 `op` is free agent-authored text. The parameter type (`RenderedClaim`) types `op` as `undefined`, so a
@@ -528,9 +535,10 @@ does not carry: they are about the enforcement path, not about choosing a kind.
   never reaches another.
 - **Misconfiguration that would make a safety kind INERT throws at CONSTRUCTION, never at check
   time.** `consentRequired` on empty `tools` (or a blank `reason`, whose falsy deny value would read as
-  "allowed"); `confirmFirst('probe'|'ask'|'either')` passed a `via` NAME to the string overload. An inert safety
-  guard still reads as coverage in a spec header, which is worse than an absent one — so it breaks the
-  build. An `llmCheck` with an empty `rubric` fails the same way (nothing for the adjudicator to answer).
+  "allowed"); a `destructiveLabels` entry for a tool that is not destructive; two labels whose first two
+  words agree, which derive ONE token for two different acts. An inert safety guard still reads as
+  coverage in a spec header, which is worse than an absent one — so it breaks the build. An `llmCheck`
+  with an empty `rubric` fails the same way (nothing for the adjudicator to answer).
 
 ### The consent story — a token the engine issues and the user types back
 
@@ -662,16 +670,15 @@ to and never runs. Absence of a label is absence of any possible consent.
 Two labels whose first two words agree derive the same token and are a construction error: one typed
 literal would consent to either act, which is not what the user read.
 
-#### What a BACKEND must do to make consent work
+#### What a BACKEND must do
 
-Two obligations, both load-bearing — a backend that skips either fails CLOSED (acts get denied),
-never open:
+Two obligations, both load-bearing — a backend that skips either fails CLOSED (acts get denied), never
+open:
 
-1. **SEAL EVERY TURN** (`recordTurnHistory`) with the reply the user actually received. This is the whole
-   trust boundary: an unsealed turn is not consent evidence, so a question asked in it licenses
-   nothing. `LoopRunAgent.generate`, `runSpecConversation` and `LoopRunAgent.stream` all seal (the stream
-   seals on stream completion — a stream nobody consumes never finishes and is never sealed, which is the
-   right reading of a turn that was thrown away).
+1. **CALL `beginTurn` WITH THE INCOMING MESSAGE.** It is the one place the user's text is read for
+   consent: an open challenge becomes consent there, or nowhere. A backend that opens a turn with an
+   empty `userText` (the stream path, a caller-managed message array) simply never carries consent, so
+   every gated act is denied.
 2. **RECORD WHAT EACH CALL DID** on `world.toolCalls`, with `tookEffect`. `destructiveThrottle` treats an
    EXECUTED call as a PROBE only when the world POSITIVELY recorded that it changed nothing
    (`tookEffect === false`); a call that RAN and left no record has UNKNOWN effect and counts against the
@@ -688,9 +695,8 @@ never open:
    bookings" ⇒ two `confirmed:false` calls in one step) would have its second call vetoed for an effect
    neither call has had yet. **NOT-CONFIRMED is the preview shape**, exactly as `confirmFirst` reads it: a
    sibling declares a preview when `args[confirmArg] !== true`, which covers both `confirmed:false` and an
-   OMITTED flag (the shape `confirmFirst`'s probe arm explicitly licenses, and the one it lets through
-   untouched). `AgentSpecBase` passes its `'prior-ask'` tools to the throttle as `flagless`: they carry no
-   confirm flag at all, so nothing in their args can declare a preview and every admitted call of them
+   OMITTED flag. `AgentSpecBase` passes its `'prior-ask'` tools to the throttle as `flagless`: they carry
+   no confirm flag at all, so nothing in their args can declare a preview and every admitted call of them
    counts — otherwise the rule above would leave the same-step cap inert on that whole mechanism.
 
    The residual is stated rather than hidden: a FLAG-GATED tool that MUTATES without `confirmed:true` and
@@ -701,13 +707,15 @@ never open:
    are capped from the first sibling, and a world that honours its own two-step protocol never mutates on
    an unconfirmed call.
 
-They compose because they cover DISJOINT moments — the call, the argument, the message — and each keys on
-its own structural signal (observed probe / earlier-turn ask · the gated arg + an earlier ask · an unresolved
-requiresConfirmation probe + the delivered `ctx.did`). The redundancy to avoid is stacking a SECOND call-gate next to `confirmFirst`:
-it already carries the cross-turn requirement (`via` + the recency-law `within`), so a second consent kind
-on the same moment is duplicate prose in the trunk, not extra safety. Reach for the checkpoint that matches
-WHAT you are gating. This section is mirrored in the generated chapter 04 preamble and in the agentspec
-`guard-catalog.md`, which stay in lockstep with it.
+**Sealing every turn** (`recordTurnHistory`, with the reply the user actually received) is a separate
+obligation and it is not about consent: it is what gives `ctx.history` its content, which `valueFromUser`
+reads to find a value the user gave several turns ago, and what every audit of a conversation is built
+from. `LoopRunAgent.generate`, `runSpecConversation` and `LoopRunAgent.stream` all seal (the stream seals
+on stream completion — a stream nobody consumes never finishes and is never sealed, which is the right
+reading of a turn that was thrown away).
+
+This section is mirrored in the generated chapter 04 preamble and in the agentspec `guard-catalog.md`,
+which stay in lockstep with it.
 
 ## 5. Controls (`spec.controls: AgentControls`) — knobs OUTSIDE the hooks
 
@@ -717,7 +725,7 @@ Populated from `AgentSpecConfig`; wired by the Mastra backend unless noted.
 |---|---|---|---|
 | `maxSteps` | `number` | 16 | tool-loop bound per turn (`stopWhen(stepCountIs)`). |
 | `redrives` | `number` | 1 | bounded no-tools onReply re-generate count before the exhaustion terminal. |
-| `terminal` | `(world: AgentWorld) => boolean` | — | **reply-only policy**: `true` ⇒ force a `respond` whose `did` declares NO `ask` intention this turn (reply-only protocol — no clarifying question). This is a per-turn terminal-surface policy, DISTINCT from `exhaustionReply` (the honest-closure text). |
+| `terminal` | `(world: AgentWorld) => boolean` | — | **reply-only policy**: `true` ⇒ force a `respond` whose `did` declares NO `ask` intention this turn (reply-only protocol — no clarifying question). It bounds the AGENT, not the engine: a reply-only spec may hold a destructive tool and still take consent, because the confirmation question is engine-written. DISTINCT from `exhaustionReply` (the honest-closure text). |
 | `directives` | `StateDirective[]` `{id, cond, directive, when?}` | — | rendered statically into the trunk `## Governance` section as `IF <cond> → <directive>`. Render-only: the `when` runtime predicate is **reserved, not consumed** by the backend. |
 | `chains` | `ChainSpec[]` | — | declared follow-up completions (see below). Absent/empty ⇒ zero added effect. |
 | `sampling` | `{ temperature?, topP?, maxOutputTokens?, seed? }` | — | per-agent AI-SDK call settings, merged OVER the conversation-level `modelParams` (agent wins) by `resolveModelSettings` — a creative agent at temp 0.7 beside a temp-0 admin agent in the same domain. |
