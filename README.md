@@ -27,11 +27,11 @@ looprun adds everything that makes it safe to hand the keys to an agent:
   The engine does not stop that sentence; it makes sure the reader never gets it alone. On a turn that
   carried out nothing it also asks one closed question and rewrites the prose when the answer says the
   reader would be misled.
-- **The judgment call** — an `llmCheck` guard binds a rubric to a genuine judgement call, answered by an
-  adjudicator under an isolated call (no persona, no tools, no memory) that `runSpecConversation` resolves
+- **The judgment call** — an `llmCheck` guard binds a question to a genuine judgement call, answered by a
+  judge under an isolated call (no persona, no tools, no memory) that `runSpecConversation` resolves
   to the turn's own model by default — `LoopRunAgent` and `compileSpec` register nothing and fail loud
   until the host supplies one. It is a separate, measured layer, not a substitute for the deterministic
-  guards above — binding a rubric never makes the prose channel deterministic, and its miss rate is a
+  guards above — binding a question never makes the prose channel deterministic, and its miss rate is a
   stated, per-model number, not a proof.
 - **The map generator** — the **agentspec** skill (private beta, developed in its own repo) interviews you:
   **one mandatory question** — the purpose, in one sentence — and generates the specs, the domain

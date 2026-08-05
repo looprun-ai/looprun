@@ -84,7 +84,7 @@ interface GuardCtx {
   attachmentsThisTurn?: string[];
   notes?: string[];
   siblingCallsThisStep?: ObservedCall[];   // same-step calls still in flight — destructiveThrottle only
-  adjudicator?: Adjudicator;          // host-registered LLM judge — only llmCheck reads it
+  judge?: Judge;                      // host-registered LLM judge — only llmCheck reads it
 }
 ```
 <sub>signature, from `looprun` — abridged; the JSDoc on each field is worth reading</sub>
@@ -95,7 +95,7 @@ talk their way past it" does not apply. Two laws bound that freedom. **Never sco
 guard that turns tools on or off according to what the user asked for is the banned intent-based routing
 (a loop law, not a guard law). **Never pattern-match text in a guard parameter** — the no-regex law: no
 guard factory takes a `RegExp`. A rule that genuinely needs to JUDGE conversation text is an `llmCheck`
-(a trusted rubric answered by a host adjudicator — § below); everything else keys on arguments, world
+(a trusted question answered by a host judge — § below); everything else keys on arguments, world
 state and observed calls, because a structural signal is model-independent and cheap.
 
 `world` is typed as `AgentWorld`, whose index signature makes a typo compile (chapter 03 §7), so read
@@ -267,8 +267,8 @@ you want the kind that makes that impossible. Read this column as "the model …
 | acts while the world says it must not (closed account, no consent on record) | [`precondition`](#8-precondition) · [`consentRequired`](#9-consentrequired) | preTool |
 | fills a field in on the user's behalf with a value they never said | [`valueFromUser`](#12-valuefromuser) | preTool |
 | summarises an empty or partial result as if it satisfied the request | [`resultInvariant`](#14-resultinvariant) | postTool |
-| claims a tool's work is done when it is not · apologises for a failure on a turn where the work went through · promises an off-surface handoff · discloses a personal/regulated field the tools do not ground · obeys an instruction that came back INSIDE a tool result | [`llmCheck`](#20-llmcheck) — text judgment is one single kind: a trusted rubric answered by a host adjudicator | onReply / preTool |
-| reports an operation the ledger does not show, or leaves a real action unreported, or names the wrong outcome polarity for a record | [`claimIsGrounded`](#16-claimisgrounded) · [`claimIsComplete`](#17-claimiscomplete) · [`claimCoversRubric`](#18-claimcoversrubric) | onReply |
+| claims a tool's work is done when it is not · apologises for a failure on a turn where the work went through · promises an off-surface handoff · discloses a personal/regulated field the tools do not ground · obeys an instruction that came back INSIDE a tool result | [`llmCheck`](#20-llmcheck) — text judgment is one single kind: a trusted question answered by a host judge | onReply / preTool |
+| reports an operation the ledger does not show, or leaves a real action unreported, or names the wrong outcome polarity for a record | [`claimIsGrounded`](#16-claimisgrounded) · [`claimIsComplete`](#17-claimiscomplete) · [`mustAccountFor`](#18-mustaccountfor) | onReply |
 | leaks think-blocks or repeats the same line five times | [`degenerationGuard`](#19-degenerationguard) (auto-installed) | onReply |
 | writes internal status codes and field names at the user | [`jargonScrub`](#21-jargonscrub) — rewrites, never vetoes | onReplyMutate |
 | breaks a rule that is about YOUR domain and nothing in this table fits | [`custom`](#22-custom) (§6) | you choose |
@@ -283,12 +283,12 @@ reading only one row will pick the wrong kind:
 | `requiresBefore` · `precondition` | which call came first, vs what state the world is in |
 | `forbidThisTurn` · `noDuplicateCall` | the first call is illegitimate, vs only the repeat is |
 | `confirmFirst` · `consentRequired` | the user typed the engine's confirmation token · a standing flag in the WORLD |
-| `claimIsGrounded` · `claimIsComplete` · `claimCoversRubric` | every claim matches the ledger · every effected write is claimed · a per-case target appears with the required outcome polarity |
+| `claimIsGrounded` · `claimIsComplete` · `mustAccountFor` | every claim matches the ledger · every effected write is claimed · a per-case record appears with the required outcome polarity |
 
 **Text judgment is one kind, not a cluster.** There is no family of reply-text kinds to pick between:
 every rule of the form "the reply lied" — invented success, a false failure, an off-surface claim, an
 ungrounded regulated figure — is ONE `llmCheck` rubric ("does the reply claim an action the tools did
-not actually complete this turn?"), answered by a host adjudicator over the full context. No guard
+not actually complete this turn?"), answered by a host judge over the envelope the hook fills. No guard
 factory takes a `RegExp`, so a reply-honesty rule is never a pattern you tune. The structural honesty
 signals are their own kinds (`resultInvariant` on the tool result, `destructiveThrottle`/`confirmFirst`
 on the call), and the ledger cross-check is `claimIsGrounded`/`claimIsComplete`.
@@ -687,27 +687,29 @@ something was — and confirm the lie.
 ### The lie check — a judgement
 
 ```
-no action was carried out this turn  →  ask: would the reader believe it was?
-     yes  →  rewrite the prose, then deliver
-     no   →  deliver the message as it stands
-any action was carried out           →  deliver the message as it stands   (0 model calls)
+ask once per candidate reply: would the reader believe a change is done that neither list names?
+     no                                    →  deliver the message as it stands
+     yes, and nothing was carried out      →  rewrite the prose, then deliver
+     yes, and an action was carried out    →  deny; the model writes the reply again
 ```
 
 The question is shown two lists — this turn's record, and one line per entity the session already
 changed — so a true "your lunch with Marina was cancelled" from turn 1 is not read as a lie on turn 2.
 The second list never reaches the user.
 
-Your backend supplies the one callback both calls run on (`judge`). Without it, the prose ships as it
-stands, under the record that contradicts it. `new LoopRunAgent({ …, lieCheck: true })` is what asks
-for the pass; it is off until you do, because how well the check reads the question is a property of
-your model, not of the algorithm.
+A rewrite is the outcome only where nothing happened. Handed a record that names an operation, a
+rewriter anchors to that entity and leaves every other claim standing, so the lie survives reading as a
+checked account — on a turn that acted, the deny is the honest remedy.
+
+Binding `llmCheckLie()` on your spec is the one thing that asks for the pass; there is no runtime flag
+beside it, because two switches would ask the same question twice on the same model and let the two
+answers disagree. It is off until you bind it, because how well the model reads the question is a
+property of your model, not of the algorithm.
 
 ```
 PREVENTED?      no — the engine does not stop the sentence
 CONTRADICTED?   always
 ```
-
-`didMessageConsistency` (§5, #21) is a third layer over these two, for domains where they are not enough.
 
 ---
 
@@ -795,7 +797,7 @@ You are not expected to catch it; you are expected to fix the guard, which is wh
 
 ```
    Guard         kind · dim · check(ctx) → deny string | null · prose() → the prompt line
-   GuardCtx      args · tool · world · observed · turnIndex · userText · consent · history · reply · result · adjudicator
+   GuardCtx      args · tool · world · observed · turnIndex · userText · consent · history · reply · result · judge
    ObservedCall  name · args · ok · turnIndex · resultFlags · tookEffect
    Dim           spatial | input | run | output | behavior  → which hooks are legal
    canonArgs     the key-order-independent call fingerprint — `noDuplicateCall` keys on it

@@ -47,10 +47,11 @@ looprun-eval run --subject <dir> --ungoverned    # same prompt, enforcement disa
 `forbiddenToolCalls` fail on the ATTEMPT, even when the world refuses) are the
 deterministic gate only — never the quality verdict.
 
-A subject whose spec binds an `llmCheck` rubric needs no wiring here: `run` supplies no adjudicator, so
-the backend resolves one from the case's own model for every turn. A host that wants its own adjudicator
-behind every bound rubric supplies one on the runtime deps instead — the runner exposes no flag for it,
-because it is a model seam, never a config value.
+A subject whose spec binds an `llmCheck` question needs no wiring here: `run` supplies no judge, so
+`runSpecConversation` resolves one from the case's own model for every turn. A host that wants its own
+judge behind every bound question supplies it on the runtime deps instead — the runner exposes no flag
+for it, because it is a model seam, never a config value. `LoopRunAgent` and `compileSpec` resolve
+nothing: a spec bound for either registers a judge or fails loud at construction.
 
 The LLM judge (the coding agent running the skill) reads `judge-input` chunks and writes
 `verdicts.jsonl` (`{caseId, verdict: "pass"|"fail", reasons: []}`), then:

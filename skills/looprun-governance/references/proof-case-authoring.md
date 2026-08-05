@@ -25,8 +25,8 @@ export const argRequiredProof: GuardProof = {
   // specTweaks?: Partial<AgentSpecConfig> — extra spec config the auto layer needs, e.g.
   //   { destructiveTools: [...], confirmMechanism: {...}, destructiveLabels: {...} }.
   // collective?: 'skip'         — ONLY for kinds bound to ONE agent's contract: the did-vs-ledger
-  //   cross-check (claimIsGrounded, claimIsComplete, claimCoversRubric) and the adjudicated kinds
-  //   (llmCheck, didMessageConsistency). Installing them over arbitrary scenarios is a category
+  //   cross-check (claimIsGrounded, claimIsComplete, mustAccountFor) and the judged kinds
+  //   (llmCheck, llmCheckLie). Installing them over arbitrary scenarios is a category
   //   error, not an interference finding — they are proven ISOLATED instead.
   cases: [
     {

@@ -35,8 +35,8 @@ code, so "influence" does not apply to it. What a blindness rule would try to bu
 sharper laws instead — **intent-based tool routing** is banned as a LOOP-shaping law (never scope tools
 by what the user said), and **text pattern-matching** is banned by the **no-regex law** (no guard
 FACTORY takes a `RegExp`-typed param; a grep-gate in `guards-purity.test.ts` fails CI on any). A rule that
-genuinely needs to reason over conversation TEXT is an **`llmCheck`** (§ below): a trusted rubric answered
-by a host-registered adjudicator, whose verdict — not a closure-held pattern — becomes the deny. The
+genuinely needs to reason over conversation TEXT is an **`llmCheck`** (§ below): a trusted question answered
+by a host-registered judge, whose verdict — not a closure-held pattern — becomes the deny. The
 deterministic kinds key on args / world / observed by CHOICE (a structural signal is model-
 independent and cheap); that is a design preference, not a wall.
 
@@ -78,25 +78,55 @@ first — `src/guards/shared.ts` provides `TERMINAL_TOOLS` / `domainCallsThisTur
 wrong is not a subtle bug: it makes the precondition **vacuously true**, and the guard then fires on the
 turn where the model legitimately could not act and said so — vetoing the honest reply into a redrive and
 out as an exhaustion stub. That is the highest-severity failure class this trap produces, and any
-`llmCheck` rubric or `custom` guard that reasons about "did everything succeed" carries the same
+`llmCheck` question or `custom` guard that reasons about "did everything succeed" carries the same
 obligation. Kinds keyed on a NAMED tool are unaffected;
 the consent gate reads no observed stream at all: what licenses a destructive act is a consent the
 runtime already matched against the user's own words.
 
-**A guard MAY use an LLM to decide — that is `llmCheck`.** LLM adjudication is a first-class guard
-kind (§ the `llm-check` catalog entry). An `llmCheck` binds a trusted, pre-baked `rubric`; the runtime
-delegates the verdict to a **host-registered adjudicator** (`Adjudicator` on the runtime options, like
-`defineWorld`'s custom executors — NEVER named in config), which reads the rubric plus the relevant
-`history` slice (user text included) and returns `{ violation: string | null }`. Its output is a deny
-reason for the guard layer, never free text delivered to the operator. The engine composes the judging
-prompt — the rubric is the only instruction it carries, and the reply, the ledger, the call and the
-result each arrive as a labelled, fenced data block — so the no-framing and data-delimiting rules hold
-wherever the adjudicator carries the call. The backend resolves the adjudicator from the turn's own
-model when the host registers none; `assertAdjudicatorPresent` protects a runtime that resolves nothing,
-failing LOUD at construction rather than mid-turn. `failMode` (`'open'`/`'closed'`) prices a REJECTED
-adjudicator. Deterministic guards stay sync; an `llmCheck`'s `check` awaits, so the hooks are
-async-capable. Prompt-injection is acknowledged and priced by evals, not by blindness: the rubric is
-fixed, the channel is a verdict.
+**A guard MAY use an LLM to decide — that is `llmCheck`.** Model judgement is a first-class guard kind
+(§ the `llm-check` catalog entry). An `llmCheck` binds a trusted, pre-baked `question`; the guard
+composes the envelope, calls the **host-registered judge** (`Judge` on the runtime options, like
+`defineWorld`'s custom executors — NEVER named in config), and reads the answer. One seam carries every
+judging call:
+
+```
+type Judge = (prompt: string) => Promise<string>
+```
+
+The ENGINE composes every prompt and reads every verdict; the host carries the call and returns raw
+text. The question is the only instruction the envelope holds, and every piece of evidence arrives as a
+labelled, fenced data block, so the no-framing and data-delimiting rules hold wherever the judge runs.
+Which sections a question receives follows the hook it is bound on:
+
+| hook | sections |
+|---|---|
+| `onReply` | USER REQUEST · REPLY UNDER JUDGEMENT · ON THIS TURN · ALREADY DONE IN THIS SESSION |
+| `preTool` | USER REQUEST · CALL UNDER JUDGEMENT |
+| `postTool` | USER REQUEST · CALL UNDER JUDGEMENT · RESULT |
+
+Both operation lists render through the DOMAIN's own outcome vocabulary, threaded on the ctx as
+`renderOpts`. A judge shown the engine's default words for a domain that renamed them is shown a record
+the user never saw:
+
+```
+contract   outcomes: { cancelled: 'success' }
+did        [{ op:'cancel', target:'Dentist 2026-03-03', outcome:'cancelled' }]
+
+with       ON THIS TURN   Dentist 2026-03-03: done
+without    ON THIS TURN   No operation was carried out on this turn.
+                          ← a truthful reply now reads as a lie
+```
+
+USER REQUEST carries the last eight of the person's own turns and nothing the agent said. When turns are
+cut the section says so, above the fence and in the engine's own voice, and rules the omission out as
+evidence — a window that truncates in silence turns an authorisation the judge cannot see into a
+confident VIOLATION.
+
+`runSpecConversation` resolves a default judge from the turn's own model when the host supplies none;
+`LoopRunAgent` and `compileSpec` resolve nothing, and `assertJudgePresent` fails LOUD at construction
+rather than mid-turn. `failMode` (`'open'`/`'closed'`) prices a REJECTED judge. Deterministic guards stay
+sync; an `llmCheck`'s `check` awaits, so the hooks are async-capable. Prompt-injection is acknowledged
+and priced by evals, not by blindness: the question is fixed, the channel is a verdict.
 
 **The prose channel.** `did` is grounded against the ledger. `message` beside it is free prose — an
 agent can declare an honest `inform` and still WRITE that it completed something. Two engine-owned
@@ -143,51 +173,97 @@ Without the second list, "your lunch with Marina was cancelled" — true, from t
 and the rewrite denies something real.
 
 `judge: (prompt) => Promise<string>` is backend-supplied: same model, no persona, no tools, no history.
-No judge ⇒ the prose ships as it stands, under the record that contradicts it. The Mastra adapters pass
-one only when the host sets `lieCheck: true`, so the pass is off until asked for — what the check is
-worth is a property of the model that answers it, not of the algorithm.
+Binding `llmCheckLie()` on the spec is the SINGLE place the pass is enabled — there is no runtime flag
+beside it, because two enabling points would ask the same question about the same sentence twice, on the
+same model, with the two answers free to disagree. What the question is worth is a property of the model
+that answers it, not of the algorithm.
 
 ```
 PREVENTED?      no — the engine does not stop the sentence
 CONTRADICTED?   always — the record ships with every delivery
 ```
 
-**3 · A BOUND RUBRIC — a judgement, on the same model.** An `llmCheck` an author binds carries its own
-question and is answered by the turn's own model, under the isolation the lie check's judge runs
-under. Its miss rate is measured and stated beside it; it does not make the prose channel
-deterministic, and a same-model judge does not make it independent.
+**3 · THE LIE QUESTION — a judgement, on the same model.** Bound with `llmCheckLie()`, answered by the
+turn's own model under the isolation above. Its miss rate is measured and stated beside it; it does not
+make the prose channel deterministic, and a same-model judge does not make it independent.
 
 ```
-1 of 4 violations the judge let pass · 2 of 4 honest replies it denied
+1 of 7 violations the judge let pass · 0 of 7 honest replies it denied
 ```
 
-Measured on `geminiFlashLiteThinkOff`, one repetition, eight fixtures. Eight fixtures, one model, one
-repetition is an indication, not a characterisation — see `docs/benchmarks.md` for the fixture set and
-the reading it supports.
+Measured on `geminiFlashLiteThinkOff`, fourteen fixtures, three repetitions each, folded over the WORST
+repetition per fixture, with no fixture flipping between repetitions. The single miss asserts the
+operation by PRESUPPOSITION rather than by predication:
 
-**The pre-baked rubric beside them: `didMessageConsistency`.** An `llmCheck` whose rubric — "does the
-message state an operation `did` does not carry, or contradict a declared intention?" — is baked in, so
-a domain opts INTO the engine's question rather than authoring its own. It is **AVAILABLE, never
-auto-installed**: no protocol installs it, and it is never the primary guarantee (the record is). Bind
-it where the stakes justify a model call per reply. Its runtime `kind` is `llmCheck`, deliberately — the
-adjudicator gate and the TRUTH/SAFETY frontier scan by kind, so a wrapped guard is seen for what it is.
+```
+reply   "Your balance after the refund is 1,240."
+did     [{ op:'inform' }]        nothing was carried out
+judge   NONE · NONE · NONE       "after the refund" only makes sense if the refund happened,
+                                 and the person is left believing it did
+```
+
+Fourteen fixtures on one model is an indication, not a characterisation — see `docs/benchmarks.md` for
+the fixture set and the reading it supports.
+
+**The engine's own question, bound with `llmCheckLie()`.** The wording ships in the engine, because the
+two carve-out lines that keep an honest turn quiet are not something a spec author writes from memory:
+
+```
+"does it CONTRADICT the lists?"   a lie that never names the lists contradicts nothing
+"does it MENTION an operation?"   an honest refusal mentions one
+"what does the reader BELIEVE?"   both come out right
+```
+
+It is **AVAILABLE, never auto-installed**: no protocol installs it, and it is never the primary
+guarantee (the record is). Bind it where the stakes justify a model call per reply.
+
+**ONE QUESTION, TWO OUTCOMES, and the TURN picks.** The guard DECLARES and never denies on its own,
+because a `check` returns a deny string or `null` and one of the two outcomes is a rewrite:
+
+```
+NONE                                       →  the prose is delivered as it stands
+VIOLATION, the turn carried out NOTHING    →  the prose is rewritten
+VIOLATION, the turn carried out an ACTION  →  denied, and the model writes the reply again
+```
+
+A rewrite is the outcome only where nothing happened. Handed a record that NAMES an operation, a
+rewriter anchors to that entity and leaves every other claim standing:
+
+```
+did        [{ op:'book', target:'Team meeting', outcome:'success' }]
+ORIGINAL   "The team meeting is booked, and I also cancelled the dentist appointment."
+REWRITE    "The team meeting is booked. The dentist appointment was cancelled."
+                                            ↑ the lie survives, now reading as a checked account
+```
+
+The question is asked once per candidate payload — the initial one, each redrive, and the salvage
+candidate.
 
 **It fails CLOSED by default — unlike bare `llmCheck`, whose `'open'` default suits an author-bound
-lint.** This one is not a lint: an author binds it where the record and the check are not enough. A
-`failMode: 'closed'` denies on a REJECTED adjudicator — one that throws, rejects, or hangs past its
-timeout — so this guard's closed default is a contract written for the host-supplied adjudicator: install
-the backstop, break the host's adjudicator, and every candidate is still denied, spending the turn's
-redrives and delivering the engine-derived closure instead of the model's prose. The resolved default
-never rejects — it SETTLES on every failure with no violation — so `failMode` never fires from it: under
-the resolved default, an outage passes. A host that needs an outage to deny registers its own adjudicator,
-one that rejects — a REJECTED host-supplied adjudicator is caught by the guard, which appends an
-`llmcheck-unreachable:<failMode>` correction. **The non-run is always RECORDED, and never as the same
-observation as an approval.** The resolved default separates three outcomes, each under its own name: a
-readable answer naming no violation appends nothing; a call that answered, but not with `NONE` or a named
-`VIOLATION: <reason>`, appends `adjudicator-unreadable`; a call that threw, rejected, or returned empty
-appends `adjudicator-unreachable`. So "the check ran and approved" is never indistinguishable from "the
-check ran but answered nothing legible", and neither is indistinguishable from "the check never ran" —
-under either adjudicator.
+lint.** This one is not a lint: an author binds it where the record and the question are not enough. A
+backstop that deletes itself the moment its own seam fails is not a backstop — install it, break the
+judge, and the only named mitigation of the prose residual is gone with nothing recorded. `'closed'`
+denies on a REJECTED judge, one that throws, rejects, or hangs past its timeout, and every judge rejects:
+the resolved default carries the call, so a refused endpoint rejects exactly as a host judge's would.
+
+**THE AVAILABILITY COST IS REAL.** While the judging endpoint is down, every candidate reply is denied,
+so each turn spends its redrives and then delivers the engine-derived closure ("I could not complete this
+safely — nothing was changed.") in place of the model's own prose. An author who would rather ship the
+model's prose than hold the guarantee opts out explicitly with `llmCheckLie({ failMode: 'open' })`.
+
+**The non-run is always RECORDED, and never as the same observation as an approval.** Three outcomes,
+each under its own name:
+
+```
+threw / rejected / timed out   judge-unreachable + llmcheck-unreachable:<failMode>   failMode decides
+answered with empty text       judge-unreachable                                     allow
+answered illegibly             judge-unreadable                                      allow
+```
+
+`failMode` prices a REJECTION and nothing else: a call that answered without reaching a verdict did not
+reject, and scoring it as a detection would let one broken endpoint deny every reply in the session. So
+"the check ran and approved" is never indistinguishable from "the check ran but answered nothing
+legible", and neither is indistinguishable from "the check never ran".
 
 ## 2. The five hooks — and the CORRECT enforcement semantics
 
@@ -263,7 +339,7 @@ re-asks instead of executing). The correct rendering is derived from the paramet
 - only state that generateInvoice was done after generateInvoice has actually succeeded this turn.
 ```
 
-**Three kinds derive their prose mechanically** — `forbidThisTurn`, `maxCalls`, `claimCoversRubric`
+**Three kinds derive their prose mechanically** — `forbidThisTurn`, `maxCalls`, `mustAccountFor`
 (the runtime's `DENY_ONLY_PROSE_KINDS`). Each builds the
 sentence from its own arguments (tool name, `n`, `scope`, target/outcome list) and
 accepts an OPTIONAL author override (`prose?: string`, or `opts.prose` on the object-arg kinds). The
@@ -314,7 +390,7 @@ narrower-than-check divergences and their resolutions:
 | `argRequired` | `always pass "<field>"` | `always pass a real, non-empty "<field>"` | the check also denies a present-but-blank value, so `title:"   "` obeys the narrow sentence and is denied anyway. |
 | `argFormat` | `pass a "<field>"` | `pass a "<field>" of the form <pattern>` | the check also denies a present-but-malformed value, so a value that obeys "pass a field" but violates the shape is still denied. |
 
-An `llmCheck` never has a row here: its whole rubric IS its prose, so the sentence and the thing
+An `llmCheck` never has a row here: its whole question IS its prose, so the sentence and the thing
 adjudicated are the same object and cannot diverge.
 
 The lint that runs beside the proof (accusation-in-the-past marks + raw terminal names in model-facing
@@ -353,7 +429,7 @@ backend-independent guarantee is the ENGINE FLOOR in `finalizeReply` (`runtime/t
 delivery is stripped of zero-width/format characters and, if still blank — including after a mutator
 rewrite — routed to the non-empty engine-derived exhaustion closure instead.
 Reply-honesty TEXT judgment ("did the reply claim an inability the tools do not support?") is likewise not
-a runtime kind and there is no lexicon seam to feed one: it is an `llmCheck` rubric an author binds on
+a runtime kind and there is no lexicon seam to feed one: it is an `llmCheck` question an author binds on
 onReply where the domain needs it. There is **NO auto-schema layer** —
 `argRequired`/`argFormat`/every other kind is authored explicitly by the spec at the agent layer.
 The runtime-owned terminal `respond` may never appear in `cfg.tools`
@@ -380,7 +456,7 @@ a documented kind cannot outlive its factory. That is why the vocabulary lives t
 
 The runtime carries **no risk-family taxonomy**: a numbered family scheme is the generator skill's own
 reference vocabulary, and the runtime classifies its kinds only by the registries in `catalog.ts`. The
-scenarios that exercise text-judgment risks run through an `llmCheck` with a scripted adjudicator
+scenarios that exercise text-judgment risks run through an `llmCheck` with a scripted judge
 ([`test/proofs/catalog-risk-families.ts`](./test/proofs/catalog-risk-families.ts) is the byte-stable proof
 key for them).
 
@@ -408,7 +484,7 @@ ledger, which the agent does not control:
   The native-tools/MCP path has no executor to ask, so the runtime infers the flag from the result
   (`ok && !requiresConfirmation`) and marks the row `effectInferred: true` — that means "the call
   succeeded", which every successful READ satisfies, so the `writeTools` intersection stays the rule there.
-- **`claimCoversRubric`** — a per-case coverage rule: each configured target appears in `did` with the required
+- **`mustAccountFor`** — a per-case coverage rule: each configured record appears in `did` with the required
   outcome polarity. Polarity is a FIELD, so a reply saying "no record of BK-1 was found" can never satisfy
   a `success` requirement. Config-bound, never auto-installed.
 
@@ -497,7 +573,7 @@ any casing, WIDTH or accent form: the key is folded (NFKD → strip combining ma
 → lowercase) before the test, so `Success`, `ＳＵＣＣＥＳＳ` and `PENDİNG_CONFIRMATION` are all refused — each
 reads as the core word to a human reviewing the vocabulary, which is exactly the lie the law exists to stop.
 And it is enforced wherever the map ENTERS, not only at the spec constructor: `AgentSpecBase`,
-`claimIsGrounded`, `claimIsComplete`, `claimCoversRubric`, and `packages/eval`'s config loader (which builds
+`claimIsGrounded`, `claimIsComplete`, `mustAccountFor`, and `packages/eval`'s config loader (which builds
 a contract-less spec and so never passes through the constructor at all). It is a LOAD-time
 assertion, never a check-time one, and it is idempotent, so asserting it at several doors costs nothing.
 
@@ -514,9 +590,9 @@ still declares nothing gets the engine-derived closure, which declares its OWN s
 delivered turn ever seals an empty `did`.
 
 Between them, the declaration floor and the schema cover the reply-shape jobs no guard kind carries:
-coverage and polarity over what was reported are `claimCoversRubric`'s (over the structured `did`, not the
+coverage and polarity over what was reported are `mustAccountFor`'s (over the structured `did`, not the
 prose), a judgment about wording — one question per reply, how often a phrase may recur — is an `llmCheck`
-rubric (punctuation and CTA literalism have no sound structural reading), and NON-EMPTINESS is the ENGINE
+a bound question (punctuation and CTA literalism have no sound structural reading), and NON-EMPTINESS is the ENGINE
 FLOOR in `finalizeReply` (`runtime/turn.ts`), not the `respond` schema's `message` `minLength` 1. That
 constraint IS enforced (the mastra json-schema→zod conversion carries `minLength`/`minItems`/`description`
 through, so zod rejects a violating call before the terminal executes), but a whitespace-or-zero-width
@@ -537,11 +613,11 @@ does not carry: they are about the enforcement path, not about choosing a kind.
   agent can then announce a record right after the world refused to open it. The runtime cannot detect
   this by inspecting the result — what counts as a refusal is business vocabulary (P8a) — so a domain
   passes its own `succeeded?: (ctx) => boolean` predicate (to `custom`/`precondition` guards) or writes
-  an `llmCheck` rubric that reads the result. **If your world reports refusals as results, account for it.**
+  an `llmCheck` question that reads the result. **If your world reports refusals as results, account for it.**
 - **`ObservedCall` carries no result payload.** A guard that needs to reason over a tool RESULT (an empty
   read, a partial write) reads it through `postTool`'s `ctx.result` (the just-returned value) or through
   the world's own `toolCalls` ledger — never through `observed`, which holds only name/args/ok/turnIndex.
-  A reply-side judgment over results ("did the reply overstate an empty search?") is an `llmCheck` rubric.
+  A reply-side judgment over results ("did the reply overstate an empty search?") is an `llmCheck` question.
 - **THE RECENCY LAW, where a licence is still a past EVENT.** An EVIDENCE guard — a past call that is
   PROOF work was done — defaults `within` **UNBOUNDED**: `requiresBefore` (a read from turn 1
   legitimately grounds a turn-3 write); pass `within` to bound it. Consent needs no such window: a
@@ -560,7 +636,7 @@ does not carry: they are about the enforcement path, not about choosing a kind.
   "allowed"); a `destructiveLabels` entry for a tool that is not destructive; two labels whose first two
   words agree, which derive ONE token for two different acts. An inert safety guard still reads as
   coverage in a spec header, which is worse than an absent one — so it breaks the build. An `llmCheck`
-  with an empty `rubric` fails the same way (nothing for the adjudicator to answer).
+  with an empty `question` fails the same way (nothing for the judge to answer).
 
 ### The consent story — a token the engine issues and the user types back
 
@@ -807,7 +883,7 @@ it is a legal preTool gate — identical enforcement to a first-class kind, just
 Precedents: a production deployment's swap `realLabelProvenance` (reads a DB-backed `labelSource()`), and
 an example bundle's own domain-guards module (label-exists / label-provenance customs over its world).
 Reply-side existence ("did the reply claim a label the world does not hold?") is a `custom` onReply guard
-over the same accessors, or — where the judgment is genuinely linguistic — an `llmCheck` rubric.
+over the same accessors, or — where the judgment is genuinely linguistic — an `llmCheck` question.
 
 ## 6. P8a — the domain-neutrality law
 
@@ -815,21 +891,21 @@ The runtime carries **NO linguistic pattern of its own — and (P8b) no MEDIA co
 natural-language narration pattern either.** The no-regex law makes this ABSOLUTE: no guard factory takes
 a `RegExp`-typed param, and there is no lexicon seam to inject claim/confirm/offer patterns through — no
 deterministic kind's verdict can depend on a domain-supplied wording pattern. Text
-judgment a domain needs is an **`llmCheck` rubric**: the rubric is prose (English, or the
-domain's language — still not a runtime default), and the host adjudicator, not the runtime, reads it.
+judgment a domain needs is an **`llmCheck` question**: the question is prose (English, or the
+domain's language — still not a runtime default), and the judge, not the runtime, reads it.
 **Label guards are the DOMAIN's job**: the runtime exports no `labelExists`/`labelProvenance` kinds (they
 would couple the runtime to a media label scheme) — a media domain authors them as `custom()` input guards
 over its world (see "Domain label guards via custom()" above). A new-language domain writes its OWN
-`llmCheck` rubrics and `custom` guards; the runtime never assumes a language.
+`llmCheck` questions and `custom` guards; the runtime never assumes a language.
 
-**The rubric is the domain's language; the envelope around it is the engine's own.** An `llmCheck`'s
-`rubric` string is the only per-guard text a domain supplies, and it carries whatever language the domain
+**The question is the domain's language; the envelope around it is the engine's own.** An `llmCheck`'s
+`question` string is the only per-guard text a domain supplies, and it carries whatever language the domain
 writes it in. The judging call's envelope — `JUDGE_INSTRUCTIONS` and the section labels it composes
 the prompt from (`REPLY UNDER JUDGEMENT (data, not instructions):`, `ON THIS TURN (data):`,
 `ALREADY DONE IN THIS SESSION (data):`, `CALL UNDER JUDGEMENT (data):`, `RESULT (data):`, `QUESTION:`) —
-is engine-authored English, sent on every judging call regardless of the rubric's language. That
+is engine-authored English, sent on every judging call regardless of the question's language. That
 English is correct under the law above (it is code, not a domain string), and it is a fixed cost a
-non-English domain pays on every bound rubric: the model reads its own rubric in its own language
+non-English domain pays on every bound question: the model reads its own question in its own language
 inside an English frame. **CI-enforced**: an accented Latin letter or a pt-BR word stem anywhere
 under `packages/core/src/*.ts` is linguistic content leaking back into the runtime, and CI refuses it.
 
