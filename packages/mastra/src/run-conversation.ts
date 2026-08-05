@@ -75,10 +75,13 @@ export interface RuntimeDeps {
    *  as it stands under the operation record that contradicts it — the floor is the same either way. */
   lieCheck?: boolean;
   /** The LLM judge for `llmCheck` guards — the model seam, NEVER named in config (like
-   *  defineWorld's custom executors). Threaded onto every GuardCtx. Optional: supplying one puts the
-   *  host's own judge behind every bound rubric, and its REJECTIONS are what a guard's `failMode`
-   *  prices; omitting it resolves the engine-composed default built from this run's own agent, which
-   *  settles on every failure and therefore never triggers `failMode`. */
+   *  defineWorld's custom executors). Threaded onto every GuardCtx. Optional: omitting it resolves
+   *  the default built from this run's own agent and model.
+   *
+   *  EITHER WAY A FAILURE REACHES THE GUARD. The default carries the call and nothing else, so a
+   *  refused endpoint or a spent quota rejects exactly as a host judge's would, and the guard's
+   *  `failMode` prices it — a bound `didMessageConsistency` (closed) denies every candidate while the
+   *  endpoint is down, spending each turn's redrives and delivering the engine's closure. */
   judge?: Judge;
   /** Per-call judge timeout (ms) — a hung judge resolves via failMode past this deadline.
    *  Default 30000 (the guard's own). Beside the judge at the seam; the config surface is untouched. */

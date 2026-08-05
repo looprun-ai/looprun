@@ -407,7 +407,7 @@ describe('VECTOR 7 — prose lie + speech-only did on a read-only turn [CLOSED]'
 // VECTOR 8 — the OPTIONAL backstop fails OPEN by default  ***BREAK***
 //
 // MECHANISM: `didMessageConsistency()` delegates to `llmCheck`, whose `failMode` defaults to `'open'`.
-// An judge that throws, rejects or times out is caught and returns `null` — ALLOW. The
+// A judge that throws, rejects or times out is caught and returns `null` — ALLOW. The
 // fail-loud gate (`assertJudgePresent`) only catches a MISSING judge at conversation start,
 // so a registered-but-broken one (network, quota, model outage, a 30s hang) silently deletes the ONE
 // backstop the design names for the prose residual — and nothing is written to `turnCorrections`, so
