@@ -1,5 +1,9 @@
 # Plain Names Implementation Plan
 
+> **Status:** shipped in v0.13.0. Tasks 1–9 ran; `looprun`, `agentspec` and `agentspec-bench` are
+> clean. Task 10 is out of scope: `accounting`, `lawfirm`, `homeservices` and `looprun.ai` keep their
+> vocabulary, and the spec and this plan stay in the tree.
+>
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Retire seven internal names — `ledger`, `probe`, `preview`, `trunk`, `challenge`, `arm`, `band` — from every file a person reads, across eight repos, leaving no alias and no file that says what a name used to be.
@@ -100,7 +104,7 @@ PROSE LANE  *.md outside fences    \bledger\b  →  action history
 - Consumes: nothing.
 - Produces: `node tests/plain-names.test.mjs [--root <path>] [--only <csv>]`. Exit 0 = clean, 1 = hits found (printed as `rel:line  [word]  text`), 2 = self-test broken. Every later task uses it as its pass condition.
 
-- [ ] **Step 1: Write the gate with its self-test**
+- [x] **Step 1: Write the gate with its self-test**
 
 `tests/plain-names.test.mjs`:
 
@@ -229,7 +233,7 @@ if (hits.length) {
 console.log(`plain-names: clean (${words.join(', ')}) in ${ROOT}`);
 ```
 
-- [ ] **Step 2: Run it — the self-test must pass and the gate must fire**
+- [x] **Step 2: Run it — the self-test must pass and the gate must fire**
 
 ```bash
 node tests/plain-names.test.mjs --only band
@@ -237,7 +241,7 @@ node tests/plain-names.test.mjs --only band
 
 Expected: exit 1, ~35 lines printed, ending `plain-names: 35 occurrence(s) of a retired name`. If it exits 2, the regexes are wrong — fix them before going on.
 
-- [ ] **Step 3: Prove the frozen-path exclusion works**
+- [x] **Step 3: Prove the frozen-path exclusion works**
 
 ```bash
 node tests/plain-names.test.mjs --root ../looprun-bench --only arm | tail -3
@@ -246,7 +250,7 @@ node tests/plain-names.test.mjs --root ../looprun-bench --only arm 2>&1 | grep -
 
 Expected: the second command prints `0` — no line from a benchmark results directory appears.
 
-- [ ] **Step 4: Wire the gate into `test:laws` but not yet into `test`**
+- [x] **Step 4: Wire the gate into `test:laws` but not yet into `test`**
 
 In root `package.json`, change:
 
@@ -262,11 +266,11 @@ to:
 
 Leave `"test"` untouched — the gate stays red until Task 7, and going red on `pnpm test` for six tasks would hide real regressions.
 
-- [ ] **Step 5: Point the spec at the real path**
+- [x] **Step 5: Point the spec at the real path**
 
 In `docs/superpowers/specs/2026-08-06-plain-names-design.md`, replace every `scripts/check-plain-names.mjs` with `tests/plain-names.test.mjs` — the repo's home for a repo-wide vocabulary gate, beside `tests/no-bench-drift.test.mjs`. Do the same in the `BACKLOG.md` row.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git checkout -b plain-names
@@ -290,7 +294,7 @@ Both are measurement vocabulary, both live in `packages/eval` and the docs that 
 - Consumes: the gate from Task 1.
 - Produces: `CertRange`, `CertRangeOptions`, `buildCertRange(...)`, `renderCertRangeMd(...)` exported from `@looprun-ai/eval`; the run-summary field `variant: 'governed' | 'ungoverned'`; the artefacts `cert-range.json` and `CERT-RANGE.md`.
 
-- [ ] **Step 1: See the whole surface**
+- [x] **Step 1: See the whole surface**
 
 ```bash
 node tests/plain-names.test.mjs --only arm,band > /tmp/arm-band.txt; wc -l /tmp/arm-band.txt
@@ -298,7 +302,7 @@ node tests/plain-names.test.mjs --only arm,band > /tmp/arm-band.txt; wc -l /tmp/
 
 Expected: ~149 lines. Keep the file open — it is the checklist for Step 4.
 
-- [ ] **Step 2: Rename the two dated records**
+- [x] **Step 2: Rename the two dated records**
 
 ```bash
 git mv docs/superpowers/plans/2026-07-31-prose-only-ungoverned-arm.md \
@@ -307,7 +311,7 @@ git mv docs/superpowers/specs/2026-07-31-prose-only-ungoverned-arm-design.md \
        docs/superpowers/specs/2026-07-31-prose-only-ungoverned-variant-design.md
 ```
 
-- [ ] **Step 3: Run the code lane — most-specific patterns first**
+- [x] **Step 3: Run the code lane — most-specific patterns first**
 
 Order matters: `CertBand` has no word boundary before `Band`, so it must be replaced before the bare-word rule runs.
 
@@ -330,7 +334,7 @@ sed -i '' \
   $FILES
 ```
 
-- [ ] **Step 4: Work the prose lane from the gate's output**
+- [x] **Step 4: Work the prose lane from the gate's output**
 
 ```bash
 node tests/plain-names.test.mjs --only arm,band
@@ -348,7 +352,7 @@ BEFORE  docs/tutorial/06-advanced.md
 AFTER   unchanged — `warm` is ordinary English and the gate does not report it
 ```
 
-- [ ] **Step 5: Regenerate the guards chapter, then verify**
+- [x] **Step 5: Regenerate the guards chapter, then verify**
 
 ```bash
 node scripts/gen-guards-chapter.mjs
@@ -358,7 +362,7 @@ node tests/plain-names.test.mjs --only arm,band
 
 Expected: typecheck clean, all suites pass, gate prints `plain-names: clean (arm, band)`.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add -A
@@ -393,7 +397,7 @@ export function issueApprovalForVeto(ledger: TurnLedger, tool: string): void
 
 `deriveToken` keeps its name — it carries no retired word. `TurnLedger` and the parameter spelled `ledger` are untouched by this task; Task 6 renames both.
 
-- [ ] **Step 1: See the whole surface**
+- [x] **Step 1: See the whole surface**
 
 ```bash
 node tests/plain-names.test.mjs --only challenge > /tmp/challenge.txt; wc -l /tmp/challenge.txt
@@ -401,7 +405,7 @@ node tests/plain-names.test.mjs --only challenge > /tmp/challenge.txt; wc -l /tm
 
 Expected: ~311 lines across 22 files.
 
-- [ ] **Step 2: Rename the files**
+- [x] **Step 2: Rename the files**
 
 ```bash
 git mv packages/core/src/runtime/challenge.ts packages/core/src/runtime/approval-request.ts
@@ -414,7 +418,7 @@ git mv docs/superpowers/specs/2026-08-05-consent-by-challenge-design.md \
        docs/superpowers/specs/2026-08-05-consent-by-approval-design.md
 ```
 
-- [ ] **Step 3: Run the code lane**
+- [x] **Step 3: Run the code lane**
 
 ```bash
 FILES=$(git ls-files '*.ts' '*.mjs' '*.json' | grep -v node_modules)
@@ -433,7 +437,7 @@ sed -i '' \
   $FILES
 ```
 
-- [ ] **Step 4: Work the prose lane**
+- [x] **Step 4: Work the prose lane**
 
 ```bash
 node tests/plain-names.test.mjs --only challenge
@@ -446,7 +450,7 @@ BEFORE  the engine issues a confirmation token naming the record
 AFTER   the engine opens an approval request naming the record, carrying the code that answers it
 ```
 
-- [ ] **Step 5: Regenerate and verify**
+- [x] **Step 5: Regenerate and verify**
 
 ```bash
 node scripts/gen-guards-chapter.mjs
@@ -456,7 +460,7 @@ node tests/plain-names.test.mjs --only challenge
 
 Expected: typecheck clean, all suites pass, gate prints `plain-names: clean (challenge)`.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add -A
@@ -479,7 +483,7 @@ One flow, one pair of names: the helper that asks without acting, and the field 
 - Consumes: the gate from Task 1.
 - Produces: the world helper `simulate()`; the world-result key `simulationResult`; `simulationResultOf(create, received)` in `define-world.ts`; the audit union member `outcome: 'simulated'`. The script `probe:lie-check` and the directory `packages/eval/probes/` keep their name.
 
-- [ ] **Step 1: See the whole surface**
+- [x] **Step 1: See the whole surface**
 
 ```bash
 node tests/plain-names.test.mjs --only probe,preview > /tmp/sim.txt; wc -l /tmp/sim.txt
@@ -487,7 +491,7 @@ node tests/plain-names.test.mjs --only probe,preview > /tmp/sim.txt; wc -l /tmp/
 
 Expected: ~438 lines.
 
-- [ ] **Step 2: Leave the measuring instrument alone**
+- [x] **Step 2: Leave the measuring instrument alone**
 
 `packages/eval/probes/`, the script `probe:lie-check`, "the margin probe" in
 `packages/core/src/runtime/prompt.ts:9` and `packages/mastra/test/prompt-identity.test.ts`, and the
@@ -505,7 +509,7 @@ instrument** — an experiment someone runs against the engine, not a world answ
 The gate's `ALLOW` already carries all five paths with `word: 'probe'`, so they report clean while
 every other `probe` still fails.
 
-- [ ] **Step 3: Run the code lane**
+- [x] **Step 3: Run the code lane**
 
 ```bash
 FILES=$(git ls-files '*.ts' '*.mjs' '*.json' | grep -v node_modules)
@@ -527,7 +531,7 @@ The union member is written on one line in `packages/core/src/world/types.ts:166
 outcome: 'ok' | 'denied' | 'simulated' | 'unknown-tool' | 'custom';
 ```
 
-- [ ] **Step 4: Fix the two fixture maps by hand**
+- [x] **Step 4: Fix the two fixture maps by hand**
 
 `packages/core/test/redteam/batch-c.test.ts:114` and `packages/mastra/test/proofs/guard-audit.test.ts:183` both read `jargonScrub({ '(beta)': 'preview' })`. The map is arbitrary test data; the word goes:
 
@@ -537,7 +541,7 @@ jargonScrub({ '(beta)': 'early access' })
 
 Check the assertion below each call — if it asserts on the output string `preview`, change it to `early access` too.
 
-- [ ] **Step 5: Work the prose lane, including the ritual's name**
+- [x] **Step 5: Work the prose lane, including the ritual's name**
 
 ```bash
 node tests/plain-names.test.mjs --only probe,preview
@@ -565,7 +569,7 @@ AFTER   A destructive tool with no simulate form was DENIED.
 
 `docs/benchmarks.md:68` reads `Gemini 3.1 Pro Preview`. Leave it — the gate allowlists that line as a third-party product name.
 
-- [ ] **Step 6: Regenerate and verify**
+- [x] **Step 6: Regenerate and verify**
 
 ```bash
 node scripts/gen-guards-chapter.mjs
@@ -575,7 +579,7 @@ node tests/plain-names.test.mjs --only probe,preview
 
 Expected: typecheck clean, all suites pass, gate prints `plain-names: clean (probe, preview)`.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add -A
@@ -610,7 +614,7 @@ export interface PromptRenderOptions
 
 `spec.surface.systemPrompt` is untouched. `DomainContract` moves with the file to `./assembled-prompt.js` and keeps its name.
 
-- [ ] **Step 1: See the whole surface**
+- [x] **Step 1: See the whole surface**
 
 ```bash
 node tests/plain-names.test.mjs --only trunk > /tmp/trunk.txt; wc -l /tmp/trunk.txt
@@ -618,7 +622,7 @@ node tests/plain-names.test.mjs --only trunk > /tmp/trunk.txt; wc -l /tmp/trunk.
 
 Expected: ~383 lines.
 
-- [ ] **Step 2: Rename the files**
+- [x] **Step 2: Rename the files**
 
 ```bash
 git mv packages/core/src/trunk.ts packages/core/src/assembled-prompt.ts
@@ -629,7 +633,7 @@ git mv governance/proofs/2026-07-29-trunk-fold-coherence-cut.md \
        governance/proofs/2026-07-29-prompt-fold-coherence-cut.md
 ```
 
-- [ ] **Step 3: Run the code lane**
+- [x] **Step 3: Run the code lane**
 
 ```bash
 FILES=$(git ls-files '*.ts' '*.mjs' '*.json' | grep -v node_modules)
@@ -653,7 +657,7 @@ sed -i '' \
   $FILES
 ```
 
-- [ ] **Step 4: Work the prose lane**
+- [x] **Step 4: Work the prose lane**
 
 ```bash
 node tests/plain-names.test.mjs --only trunk
@@ -670,7 +674,7 @@ trunk-warm law     →   prefix-warm law      N distinct prefixes stay cached ac
 
 `trunk-static` appears 18 times in 12 files, including `packages/core/GUARDS.md` and the three generated `contract.ts` files under `examples/hermes-sim/src/domains/`. `trunk-warm` appears once, in `packages/models/src/llamacpp.ts:4`. `armed-seam law` keeps its name — `armed` is ordinary English. The file docstrings in `assembled-prompt.ts` and `prompt-fold.ts` carry most of the source-side prose — read them whole rather than substituting, because sentences like *"the domain's agents share a maximal static trunk prefix"* become *"the domain's agents share a maximal static prompt prefix"* and must still parse.
 
-- [ ] **Step 5: Regenerate and verify**
+- [x] **Step 5: Regenerate and verify**
 
 ```bash
 node scripts/gen-guards-chapter.mjs
@@ -680,7 +684,7 @@ node tests/plain-names.test.mjs --only trunk
 
 `pnpm build` is added here because two source files moved and the `.d.ts` surface changes with them. Expected: build clean, typecheck clean, all suites pass, gate prints `plain-names: clean (trunk)`.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add -A
@@ -710,7 +714,7 @@ export function deriveClaimsFromActionHistory(observed, turnIndex, writeTools): 
 
 Every function in `action-history.ts` that took `ledger: TurnLedger` now takes `actionHistory: TurnActionHistory` — `beginTurn`, `vetoStormHit`, `recordVeto`, `recordToolResult`, `recordTerminalCall`, `recordTerminal`, `recordTurnHistory`, `clearDeliveredTerminal`, `pruneSupersededTerminals`, `issueApprovalForVeto`, `issueApproval`.
 
-- [ ] **Step 1: See the whole surface**
+- [x] **Step 1: See the whole surface**
 
 ```bash
 node tests/plain-names.test.mjs --only ledger > /tmp/ledger.txt; wc -l /tmp/ledger.txt
@@ -718,14 +722,14 @@ node tests/plain-names.test.mjs --only ledger > /tmp/ledger.txt; wc -l /tmp/ledg
 
 Expected: ~1,514 lines across 155 files.
 
-- [ ] **Step 2: Rename the files**
+- [x] **Step 2: Rename the files**
 
 ```bash
 git mv packages/core/src/runtime/ledger.ts packages/core/src/runtime/action-history.ts
 git mv packages/core/test/claims-ledger.test.ts packages/core/test/claims-action-history.test.ts
 ```
 
-- [ ] **Step 3: Run the code lane**
+- [x] **Step 3: Run the code lane**
 
 ```bash
 FILES=$(git ls-files '*.ts' '*.mjs' '*.json' | grep -v node_modules)
@@ -743,7 +747,7 @@ sed -i '' \
   $FILES
 ```
 
-- [ ] **Step 4: Work the prose lane**
+- [x] **Step 4: Work the prose lane**
 
 ```bash
 node tests/plain-names.test.mjs --only ledger
@@ -756,7 +760,7 @@ history         the prior turns' MESSAGES
 actionHistory   what was DONE this conversation
 ```
 
-- [ ] **Step 5: Regenerate and verify**
+- [x] **Step 5: Regenerate and verify**
 
 ```bash
 node scripts/gen-guards-chapter.mjs
@@ -766,7 +770,7 @@ node tests/plain-names.test.mjs --only ledger
 
 Expected: build clean, typecheck clean, all suites pass, gate prints `plain-names: clean (ledger)`.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add -A
@@ -786,7 +790,7 @@ git commit -m "refactor: what was done this conversation is the action history"
 - Consumes: Tasks 2–6.
 - Produces: `pnpm test` in `looprun` runs the gate; `@looprun-ai/core` and `@looprun-ai/eval` ship the new public surface with a major-version changeset.
 
-- [ ] **Step 1: Run the gate with no `--only`**
+- [x] **Step 1: Run the gate with no `--only`**
 
 ```bash
 node tests/plain-names.test.mjs
@@ -794,7 +798,7 @@ node tests/plain-names.test.mjs
 
 Every remaining hit is a file none of Tasks 2–6 walked: root docs, CI config, changesets, the governance matrix. Fix each one, choosing code form inside fences and spaced English in sentences.
 
-- [ ] **Step 2: Confirm the two allowlisted files are the only ones left**
+- [x] **Step 2: Confirm the two allowlisted files are the only ones left**
 
 ```bash
 node tests/plain-names.test.mjs && echo GREEN
@@ -803,7 +807,7 @@ grep -c 'ledger\|probe\|preview\|trunk\|challenge' docs/superpowers/specs/2026-0
 
 Expected: `GREEN`, and the second command prints a non-zero count — the spec still names both vocabularies, which is why it is allowlisted and why Task 10 deletes it.
 
-- [ ] **Step 3: Wire the gate into `pnpm test`**
+- [x] **Step 3: Wire the gate into `pnpm test`**
 
 In root `package.json`:
 
@@ -817,7 +821,7 @@ becomes
 "test": "pnpm -r --if-present test && node scripts/gen-guards-chapter.mjs --check && node tests/plain-names.test.mjs"
 ```
 
-- [ ] **Step 4: Write the changeset**
+- [x] **Step 4: Write the changeset**
 
 `.changeset/plain-names.md` — state the new vocabulary and the breaking surface; do not narrate the change.
 
@@ -850,7 +854,7 @@ Breaking, world authors: the helper `probe()` is `simulate()`, the world-result 
 `simulationResult`, and the audit outcome `'preview'` is `'simulated'`.
 ```
 
-- [ ] **Step 5: Full verification**
+- [x] **Step 5: Full verification**
 
 ```bash
 pnpm build && pnpm typecheck && pnpm test && pnpm test:proofs && pnpm test:laws
@@ -858,7 +862,7 @@ pnpm build && pnpm typecheck && pnpm test && pnpm test:proofs && pnpm test:laws
 
 Expected: every command exits 0.
 
-- [ ] **Step 6: Commit and squash-merge**
+- [x] **Step 6: Commit and squash-merge**
 
 ```bash
 git add -A
@@ -878,7 +882,7 @@ git branch -D plain-names
 - Consumes: the gate from Task 1, run with `--root ../agentspec`.
 - Produces: skill references that teach the new vocabulary to every future generated subject, and lint rule names/messages that match it.
 
-- [ ] **Step 1: Branch and survey**
+- [x] **Step 1: Branch and survey**
 
 ```bash
 cd ../agentspec && git checkout -b plain-names
@@ -887,7 +891,7 @@ node ../looprun/tests/plain-names.test.mjs --root . > /tmp/agentspec.txt; wc -l 
 
 Expected: ~285 lines.
 
-- [ ] **Step 2: Run the code lane**
+- [x] **Step 2: Run the code lane**
 
 ```bash
 FILES=$(git ls-files '*.ts' '*.mjs' '*.json' | grep -v node_modules)
@@ -902,7 +906,7 @@ sed -i '' \
   $FILES
 ```
 
-- [ ] **Step 3: Work the prose lane and the lint rules**
+- [x] **Step 3: Work the prose lane and the lint rules**
 
 ```bash
 node ../looprun/tests/plain-names.test.mjs --root .
@@ -910,7 +914,7 @@ node ../looprun/tests/plain-names.test.mjs --root .
 
 `skill/scripts/lint-authoring.mjs` carries rule names and user-facing messages. A rule named after a retired word gets renamed with it, and the message it prints must read as a sentence a spec author understands.
 
-- [ ] **Step 4: Verify**
+- [x] **Step 4: Verify**
 
 ```bash
 node skill/scripts/lint-authoring.mjs
@@ -919,7 +923,7 @@ node ../looprun/tests/plain-names.test.mjs --root .
 
 Expected: the linter's own suite passes and the gate prints `plain-names: clean`.
 
-- [ ] **Step 5: Commit and squash-merge**
+- [x] **Step 5: Commit and squash-merge**
 
 ```bash
 git add -A && git commit -m "refactor: the skill teaches the plain names"
@@ -938,7 +942,7 @@ git branch -D plain-names
 - Consumes: the gate from Task 1.
 - Produces: bench subjects whose world helper is `simulate()` and whose result key is `simulationResult`; run tooling that labels a `variant` and a `range`.
 
-- [ ] **Step 1: Survey both, confirming the frozen split**
+- [x] **Step 1: Survey both, confirming the frozen split**
 
 ```bash
 cd ../agentspec-bench && node ../looprun/tests/plain-names.test.mjs --root . | tail -1
@@ -948,7 +952,7 @@ cd ../looprun-bench   && node ../looprun/tests/plain-names.test.mjs --root . 2>&
 
 Expected: roughly 657 and 1,174 occurrences, and `0` lines from a results directory.
 
-- [ ] **Step 2: Check whether the subjects are generated**
+- [x] **Step 2: Check whether the subjects are generated**
 
 ```bash
 cd ../agentspec-bench && ls -d */subject* benchmarks/*/subject 2>/dev/null
@@ -957,11 +961,11 @@ grep -rln "generated" --include='*.ts' . | grep -v node_modules | head
 
 A subject that is generated from the `agentspec` skill is regenerated with Task 8's references rather than swept. A subject that is hand-written is swept with the same two lanes as Task 8. Decide per subject and record which is which in the commit body.
 
-- [ ] **Step 3: Sweep or regenerate, one repo at a time**
+- [x] **Step 3: Sweep or regenerate, one repo at a time**
 
 Use the identical `sed` block from Task 8 Step 2 over `$(git ls-files '*.ts' '*.mjs' '*.json' | grep -v node_modules)`, then work the prose lane from the gate output.
 
-- [ ] **Step 4: Verify each repo**
+- [x] **Step 4: Verify each repo**
 
 ```bash
 pnpm typecheck 2>/dev/null; pnpm test 2>/dev/null
@@ -970,7 +974,7 @@ node ../looprun/tests/plain-names.test.mjs --root .
 
 Expected: whatever suites the repo has pass, and the gate prints `plain-names: clean`.
 
-- [ ] **Step 5: Commit each repo separately**
+- [x] **Step 5: Commit each repo separately**
 
 ```bash
 git add -A && git commit -m "refactor!: seven concepts carry the plain word for what they are"
@@ -991,7 +995,7 @@ git add -A && git commit -m "refactor!: seven concepts carry the plain word for 
 - Consumes: every prior task.
 - Produces: a tree in which no file names a retired word and the gate carries one allowlist entry — the product name in `docs/benchmarks.md`.
 
-- [ ] **Step 1: Sweep the four subject repos**
+- [x] **Step 1: Sweep the four subject repos**
 
 **A subject repo's world is a business, and a business has its own vocabulary.** The rename retires an *engine* name; a domain's content is not engine vocabulary. `accounting` is where this bites:
 
@@ -1024,7 +1028,7 @@ Commit each repo once the gate is clean:
 git add -A && git commit -m "refactor!: seven concepts carry the plain word for what they are"
 ```
 
-- [ ] **Step 2: Drop the two transition allowlist entries**
+- [x] **Step 2: Drop the two transition allowlist entries**
 
 In `looprun/tests/plain-names.test.mjs`, the `ALLOW` array loses both self-naming files and keeps one entry:
 
@@ -1034,7 +1038,7 @@ const ALLOW = [
 ];
 ```
 
-- [ ] **Step 3: Delete the spec, the plan, and the backlog row**
+- [x] **Step 3: Delete the spec, the plan, and the backlog row**
 
 ```bash
 cd ../looprun
@@ -1044,7 +1048,7 @@ git rm docs/superpowers/plans/2026-08-06-plain-names.md
 
 In `BACKLOG.md`, delete the row beginning `**Seven concepts carry names written for the people who built the engine**`.
 
-- [ ] **Step 4: Final verification across every repo**
+- [x] **Step 4: Final verification across every repo**
 
 ```bash
 cd ../looprun && pnpm build && pnpm typecheck && pnpm test && pnpm test:proofs && pnpm test:laws
@@ -1055,7 +1059,7 @@ done
 
 Expected: every `looprun` command exits 0, and each of the seven lines reads `plain-names: clean`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A

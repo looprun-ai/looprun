@@ -1,6 +1,9 @@
 # Plain names — design
 
-Date: 2026-08-06 · Status: design, not yet built
+Date: 2026-08-06 · Status: shipped in v0.13.0 — `looprun`, `agentspec` and `agentspec-bench` carry the
+seven plain names, held there by `tests/plain-names.test.mjs`. `looprun-bench` is the one surface
+left: each of its editions pins the engine that measured it, so an edition renames only when it is
+rebuilt on a post-rename engine.
 
 Seven concepts carry names written for the people who built the engine. This renames them across
 every live surface — source, types, tests, docs, guard text, CLI output, the skill, generated
