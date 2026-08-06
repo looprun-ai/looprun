@@ -352,11 +352,20 @@ BANNED, identifier     Layer  as a type name or import
                        layer  ONLY where it is a property: `layer:` or `.layer`
 UNTOUCHED              layer  as a word — "the action layer", "the two-layer law"
 
-EXCLUDED PATHS         **/results/**                       a number taken on a date
+EXCLUDED PATHS         docs/superpowers/**                 a spec or plan is a dated record
+                       **/results/**                       a number taken on a date
                        **/test/*/cases.jsonl               a run's own transcript
-                       looprun-bench/                       every edition pins its engine
-                       node_modules/  dist/
+                       looprun-bench/                      every edition pins its engine
+                       node_modules/  dist/  .*/
 ```
+
+**A design spec and its plan keep the vocabulary they were written in.** Each is a dated record of a
+decision, read to learn what was decided and on what grounds — not documentation of the system as it
+stands. Rewriting one makes it describe a decision nobody took. `docs/superpowers/` is excluded as a
+directory, so this spec and its plan need no allowlist entry of their own.
+
+A dot-directory is excluded for a different reason: it holds tooling state and vendored third-party
+files. `examples/hermes-sim/.hermes-home/` ships skill files where `Layer` is a graphics layer.
 
 **`full` is not on that list, and the gate cannot put it there.** The word is ordinary English in
 every repo — a full refund, a full sweep, a full context — so a gate that banned it would fire on
@@ -383,10 +392,8 @@ names to every future subject. Then the subjects, which quote both.
                     GUARDS.md, tutorial 03 · 04 · 05 and the tutorial snippet; the grep gate
                     ships here.
                     `full` is its OWN item, checked by reading rather than by the gate: the union
-                    member (`spec.ts:38`) and its order slot (`spec.ts:200`) both go. Two dated
-                    design records quote the whole union — `2026-07-28-symbol-inventory.md` and
-                    `2026-07-28-tutorial-outline-final.md` — and the gate reaches those through
-                    `Layer`, which they also name.
+                    member (`spec.ts:38`) and its order slot (`spec.ts:200`) are its only two live
+                    sites, and both go.
 2  agentspec        guard-catalog.md, norms.md, spec-template.ts
 3  agentspec-bench  case targets, profile keys, bundle-test ledgers, gen/world.ts, thinking logs
 4  accounting · lawfirm · homeservices    eleven hits across eight files

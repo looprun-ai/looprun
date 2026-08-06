@@ -67,9 +67,11 @@ packages/eval/test/lint-subject-parity.test.ts  five id strings
 - Modify: `packages/core/src/index.ts:86`
 - Modify: `packages/core/src/internal.ts:163`
 - Modify: `packages/eval/src/norms-config.ts:326` `:335` `:339` `:345` `:351` `:361` `:371`
-- Modify: `packages/core/test/agent-spec.test.ts:134`
+- Modify: `packages/core/test/agent-spec.test.ts:130-137`
 - Modify: `packages/core/test/redteam/redteam-r2-partition.test.ts:406`
-- Test: `packages/core/test/agent-spec.test.ts`
+- Modify: `packages/core/test/proofs/surface-lock.test.ts:58`
+- Modify: `packages/core/test/fixtures/declaration-consumer/internal-consumer.ts:7`
+- Test: `packages/core/test/agent-spec.test.ts`, `packages/core/test/proofs/surface-lock.test.ts`
 
 **Interfaces:**
 - Consumes: nothing.
@@ -199,6 +201,15 @@ In `packages/eval/src/norms-config.ts`, lines 326, 335, 339, 345, 351, 361, 371 
 ```
 
 Same single change at `packages/core/test/redteam/redteam-r2-partition.test.ts:406`.
+
+- [ ] **Step 9b: Move the type in the public-surface lock**
+
+`packages/core/test/proofs/surface-lock.test.ts:58` holds the exported type names in ALPHABETICAL order, so this is a move and not only a rename: `Layer` leaves its slot after `HistoryTurn`, and `Priority` takes the slot its own letter earns. Delete `'Layer',` from line 58 and insert `'Priority',` in alphabetical position within the same array.
+
+Run: `pnpm -C packages/core test -- surface-lock`
+Expected: PASS. This test is what makes the breaking export change deliberate rather than accidental — if it fails with a name you did not touch, the barrel changed by mistake.
+
+`packages/core/test/fixtures/declaration-consumer/internal-consumer.ts:7` names `Layer` in a comment listing the types reachable from the internal barrel. Replace it with `Priority`.
 
 - [ ] **Step 10: Run the typechecker to find every remaining site**
 
@@ -717,10 +728,7 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 - Modify: `docs/tutorial/03-agent-anatomy.md:334`
 - Modify: `docs/tutorial/05-running-and-eval.md:557`
 - Modify: `docs/tutorial/snippets/scheduler-subject/evals/cases.ts:53` `:72`
-- Modify + rename: `docs/superpowers/plans/2026-08-05-conditional-destructiveness-and-write-gate.md` (53 occurrences)
-- Modify + rename: `docs/superpowers/specs/2026-08-05-conditional-destructiveness-and-write-gate-need.md` (5)
-- Modify: `docs/superpowers/specs/2026-07-28-symbol-inventory.md` (6) · `2026-07-28-tutorial-outline-final.md` (4)
-- Modify: `docs/superpowers/plans/2026-08-06-consent-simulate-first-plan.md` (5) · `docs/superpowers/specs/2026-08-06-consent-dead-ends-design.md` (2)
+- NOT touched: anything under `docs/superpowers/` — a spec or a plan is a dated record
 
 **Interfaces:**
 - Consumes: every name produced by Tasks 1–5.
@@ -768,39 +776,9 @@ The priority-composed id namespaces + install order are
     targets: ['always:noDuplicateCall'],
 ```
 
-- [ ] **Step 6: Rewrite the six dated records that quote the old names**
+**`docs/superpowers/` is not swept.** A design spec and its plan are dated records of a decision, read to learn what was decided and on what grounds — not documentation of the system as it stands. Rewriting one makes it describe a decision nobody took. Six files there carry the old names across 75 occurrences, and all six stay exactly as they are.
 
-A dated design record or plan is prose someone reads to understand the system, so it carries the vocabulary the system uses, and its file name changes with its contents. Six files, 75 occurrences:
-
-```
-plans/2026-08-05-conditional-destructiveness-and-write-gate.md        53   writeGate · minimal: · base:
-specs/2026-08-05-conditional-destructiveness-and-write-gate-need.md    5   writeGate
-specs/2026-07-28-symbol-inventory.md                                   6   Layer · .layer
-specs/2026-07-28-tutorial-outline-final.md                             4   Layer
-plans/2026-08-06-consent-simulate-first-plan.md                        5   base:
-specs/2026-08-06-consent-dead-ends-design.md                           2   base:
-```
-
-Apply the seven-id map, `contract.writeGate` → `contract.changeAllowed`, `Layer` → `Priority`, the union → `'agent' | 'changeAllowed' | 'consent' | 'honesty' | 'always'`, and `opts.layer` → `opts.priority`.
-
-Two of them carry the retired field in their file name:
-
-```bash
-git mv docs/superpowers/plans/2026-08-05-conditional-destructiveness-and-write-gate.md \
-       docs/superpowers/plans/2026-08-05-conditional-destructiveness-and-change-gate.md
-git mv docs/superpowers/specs/2026-08-05-conditional-destructiveness-and-write-gate-need.md \
-       docs/superpowers/specs/2026-08-05-conditional-destructiveness-and-change-gate-need.md
-```
-
-Then grep for anything that linked to them under the old path:
-
-```bash
-rg -n "conditional-destructiveness-and-write-gate" --glob '!node_modules' .
-```
-
-Expected after the fix: no output.
-
-- [ ] **Step 7: Run the full workspace suite**
+- [ ] **Step 6: Run the full workspace suite**
 
 Run: `pnpm test`
 Expected: PASS — this runs every package's tests, `gen-guards-chapter.mjs --check`, and the plain-names gate.
@@ -875,18 +853,22 @@ const NAMES = {
 // allows, and why. Allowing `Layer` in the validator does not also allow `writeGate` there.
 const ALLOW = [
   { path: 'packages/eval/src/validate.ts', name: 'Layer', why: 'the validator\'s own four numbered stages' },
-  { path: 'docs/superpowers/specs/2026-07-31-attestation-service-design.md', name: 'Layer', why: 'Layer 1 of a hash scheme' },
-  { path: 'docs/superpowers/specs/2026-08-06-guard-priority-design.md', why: 'the only spec that names both vocabularies' },
-  { path: 'docs/superpowers/plans/2026-08-06-guard-priority.md', why: 'the plan that carries out the rename' },
 ];
 
-const SKIP_DIR = new Set(['node_modules', 'dist', '.git', 'results', 'coverage', '.turbo']);
+const SKIP_DIR = new Set(['node_modules', 'dist', 'results', 'coverage']);
 const EXT = new Set(['.ts', '.tsx', '.js', '.mjs', '.cjs', '.json', '.md', '.sh']);
 
-// A run transcript records what a model did on a date, guard denials and all. Editing the ids inside
-// makes the record disagree with the run that wrote it. A release note is dated the same way: it
-// keeps the names its release shipped, or a consumer on that version has no migration to follow.
-const skipFile = (rel) => rel.endsWith('cases.jsonl') || rel.endsWith('CHANGELOG.md');
+// THREE KINDS OF DATED RECORD keep the names they were written with, because rewriting one makes it
+// disagree with what it records:
+//   docs/superpowers/**   a spec states what was decided and on what grounds; a plan, how it was
+//                         carried out. Neither documents the system as it stands.
+//   **/cases.jsonl        a transcript of what a model did on a date, guard denials and all.
+//   **/CHANGELOG.md       a release note keeps the names its release shipped, or a consumer on that
+//                         version has no migration to follow.
+const skipFile = (rel) =>
+  rel.startsWith('docs/superpowers/') ||
+  rel.endsWith('cases.jsonl') ||
+  rel.endsWith('CHANGELOG.md');
 
 // A dot-directory holds tooling state and vendored third-party files, neither of which this repo
 // writes: `examples/hermes-sim/.hermes-home/` ships skill files where `Layer` is a graphics layer.
