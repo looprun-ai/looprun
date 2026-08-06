@@ -61,6 +61,14 @@ const ALLOW = [
   { path: 'docs/analysis/2026-08-04-lie-check-model-portability.md', word: 'probe', why: "the instrument's own report" },
   // A recording keeps the key names it was written with. Its reader has to name them to map them.
   { path: 'packages/eval/test/entity-record.analysis.test.ts', word: 'ledger', why: 'a recorded run\'s own key, mapped at the read boundary' },
+  // ── the agentspec skill (gate this repo with --root ../agentspec) ────────────────────────────
+  { path: 'skill/scripts/margin-probe.mjs', word: 'probe', why: 'the instrument itself' },
+  { path: 'skill/scripts/serve-local.sh', word: 'probe', why: 'the instrument, in its serving recipe' },
+  // `band` and `arm` are also ordinary English: an out-of-band channel is one outside the normal
+  // route, and to arm something is to make it live.
+  { path: 'skill/references/evals.md', word: 'band', text: 'out-of-band', why: 'an English idiom' },
+  { path: 'README.md', word: 'arm', text: 'silently arm the agent', why: 'the verb: to make live' },
+  { path: 'docs/superpowers/specs/2026-08-02-judge-protocol-and-authoring-laws-design.md', word: 'arm', text: 'arms the monitor', why: 'the verb: to make live' },
   { path: 'docs/superpowers/specs/2026-08-06-plain-names-design.md', why: 'the only spec that names both vocabularies; deleted by the final task' },
   { path: 'docs/superpowers/plans/2026-08-06-plain-names.md', why: 'the plan that carries out the rename; deleted by the final task' },
 ];
@@ -85,7 +93,16 @@ function* walk(path) {
   }
 }
 
+// The offline measuring instrument is named on every line that invokes or describes it. A phrase
+// allows its word wherever it appears, because the instrument is one thing across every repo.
+const INSTRUMENT = [
+  { word: 'probe', text: 'margin-probe' },
+  { word: 'probe', text: 'margin probe' },
+  { word: 'probe', text: 'probes-within-probes' },
+];
+
 function allowed(rel, word, text) {
+  if (INSTRUMENT.some((i) => i.word === word && text.includes(i.text))) return true;
   return ALLOW.some(
     (a) =>
       (rel === a.path || rel.startsWith(a.path)) &&
