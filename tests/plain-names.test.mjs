@@ -70,6 +70,7 @@ const ALLOW = [
   { path: 'skill/references/evals.md', word: 'band', text: 'out-of-band', why: 'an English idiom' },
   { path: 'README.md', word: 'arm', text: 'silently arm the agent', why: 'the verb: to make live' },
   { path: 'docs/superpowers/specs/2026-08-02-judge-protocol-and-authoring-laws-design.md', word: 'arm', text: 'arms the monitor', why: 'the verb: to make live' },
+  { path: 'BACKLOG.md', why: 'the row that tracks the repos still to rename, and the senses that survive in them' },
   { path: 'docs/superpowers/specs/2026-08-06-plain-names-design.md', why: 'the only spec that names both vocabularies; deleted by the final task' },
   { path: 'docs/superpowers/plans/2026-08-06-plain-names.md', why: 'the plan that carries out the rename; deleted by the final task' },
 ];
