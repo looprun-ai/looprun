@@ -50,6 +50,24 @@ describe('deriveClaimsFromActionHistory — the report rides the derived claim',
       { op: 'bk_1001', target: 'bk_1001', outcome: 'success', report: 'removed tech_4003; 2026-07-10 freed' },
     ]);
   });
+
+  it('a requiresConfirmation result carries its report onto the derived pending_confirmation claim', () => {
+    const actionHistory = createActionHistory();
+    recordToolResult(actionHistory, 'createBooking', { a: 2 }, {
+      requiresConfirmation: true, report: 'charges 3000 USD deposit',
+    });
+    const derived = deriveClaimsFromActionHistory(actionHistory.observed, 0, ['createBooking']);
+    expect(derived).toEqual([{ op: 'operation', outcome: 'pending_confirmation', report: 'charges 3000 USD deposit' }]);
+  });
+
+  it('an ok:false result carries its report onto the derived failure claim', () => {
+    const actionHistory = createActionHistory();
+    recordToolResult(actionHistory, 'createBooking', { a: 1 }, {
+      success: false, report: 'slot already taken',
+    });
+    const derived = deriveClaimsFromActionHistory(actionHistory.observed, 0, ['createBooking']);
+    expect(derived).toEqual([{ op: 'operation', outcome: 'failure', report: 'slot already taken' }]);
+  });
 });
 
 describe('operationRecord — a claim carrying a report renders it after the outcome word', () => {
