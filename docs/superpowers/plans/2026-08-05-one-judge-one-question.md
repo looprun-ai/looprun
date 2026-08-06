@@ -1,5 +1,7 @@
 # One Judge, One Question — Implementation Plan
 
+> **Status:** shipped. `llmCheckLie` ships in `packages/core/src/spec.ts`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Collapse two model seams into one, give every judging call one envelope carrying both
@@ -113,7 +115,7 @@ reads as a lie.
   - `readJudgeVerdict(text: string): { violation: string | null; readable: boolean }`
   - `JUDGE_INSTRUCTIONS: string`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `packages/core/test/judge-prompt.test.ts`:
 
@@ -235,7 +237,7 @@ describe('the reader', () => {
 });
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 ```bash
 pnpm -C packages/core exec vitest run test/judge-prompt.test.ts
@@ -243,7 +245,7 @@ pnpm -C packages/core exec vitest run test/judge-prompt.test.ts
 
 Expected: FAIL — no such module / no export `judgePrompt`.
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 `git mv packages/core/src/runtime/adjudication.ts packages/core/src/runtime/judge-prompt.ts`, then
 rewrite its contents. The fence neutralisation and the reader semantics carry over unchanged; what
@@ -356,13 +358,13 @@ Update the export group in `packages/core/src/internal.ts` to name the new file 
 Delete the old export line for `adjudicationPrompt` / `readAdjudicationVerdict` /
 `ADJUDICATION_INSTRUCTIONS`.
 
-- [ ] **Step 4: Update the internal barrel lock**
+- [x] **Step 4: Update the internal barrel lock**
 
 `packages/core/test/proofs/surface-lock.test.ts` holds the exact export list of
 `@looprun-ai/core/internal`. Replace the three old names with the three new ones, in the same
 grouping. Never weaken the lock to make it pass.
 
-- [ ] **Step 5: Run the tests**
+- [x] **Step 5: Run the tests**
 
 ```bash
 pnpm -C packages/core exec vitest run test/judge-prompt.test.ts test/proofs/surface-lock.test.ts
@@ -372,7 +374,7 @@ pnpm -C packages/core typecheck
 Expected: PASS. `typecheck` will still report errors in `packages/mastra` consumers — those are
 Task 2's, not yours; confirm they are only about the renamed symbols.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add packages/core/src/runtime/judge-prompt.ts packages/core/src/internal.ts \
@@ -407,7 +409,7 @@ git commit -m "feat(core): one envelope, and it carries both lists"
   - `defaultJudge(generate, modelParams): Judge` from `packages/mastra/src/judge.ts`
   - `JUDGE_UNREACHABLE = 'judge-unreachable'`, `JUDGE_UNREADABLE = 'judge-unreadable'`
 
-- [ ] **Step 1: Apply the rename table**
+- [x] **Step 1: Apply the rename table**
 
 Every one of these is a delete-and-replace. No alias, no re-export of the old name.
 
@@ -428,7 +430,7 @@ Every one of these is a delete-and-replace. No alias, no re-export of the old na
 `Judge`'s shape is the survivor: `(prompt: string) => Promise<string>`. The guard, not the host, now
 composes and parses.
 
-- [ ] **Step 2: Rewrite the guard's call**
+- [x] **Step 2: Rewrite the guard's call**
 
 In `packages/core/src/guards/llm-check.ts`, the guard composes the prompt, calls the seam, and reads
 the answer. Keep the timeout race and the `failMode` semantics exactly as they are — `failMode`
@@ -474,7 +476,7 @@ without      ON THIS TURN   No operation was carried out on this turn.
 Seat `renderOpts` on every ctx from the same place `judge` and `judgeTimeoutMs` are seated. Only a
 prompt-composing guard reads it.
 
-- [ ] **Step 3: Rewrite the backend's default**
+- [x] **Step 3: Rewrite the backend's default**
 
 In `packages/mastra/src/judge.ts`, `defaultJudge` is the isolated call and nothing more — the
 engine already composed the prompt:
@@ -491,7 +493,7 @@ export function defaultJudge(
 The unreachable and unreadable corrections move to the guard, which is the only place that knows
 `failMode` and holds `ctx.notes`. A judge that throws propagates; the guard catches it.
 
-- [ ] **Step 4: Run every suite**
+- [x] **Step 4: Run every suite**
 
 ```bash
 pnpm -C packages/core test && pnpm -C packages/mastra test && pnpm -C packages/eval exec vitest run
@@ -501,12 +503,12 @@ pnpm -C packages/core typecheck && pnpm -C packages/mastra typecheck
 Expected: PASS. Rename `packages/mastra/test/default-adjudicator.test.ts` to
 `default-judge.test.ts` and update its imports and assertions to the new marker names.
 
-- [ ] **Step 5: Update both barrel locks**
+- [x] **Step 5: Update both barrel locks**
 
 `packages/core/test/proofs/surface-lock.test.ts` and `packages/mastra/test/surface-lock.test.ts`.
 Search both for every renamed symbol. Never weaken a lock.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add -A packages/core packages/mastra packages/eval
@@ -529,7 +531,7 @@ git commit -m "feat(core)!: one seam carries every judging call"
   - `llmCheckLie(opts?: { failMode?: 'open' | 'closed' }): Guard` from `@looprun-ai/core`
   - `didMessageConsistency` and `DID_MESSAGE_CONSISTENCY_RUBRIC` are DELETED
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append to `packages/core/test/llm-check.test.ts`:
 
@@ -566,7 +568,7 @@ describe('the engine lie question', () => {
 });
 ```
 
-- [ ] **Step 2: Run it to verify it fails**
+- [x] **Step 2: Run it to verify it fails**
 
 ```bash
 pnpm -C packages/core exec vitest run test/llm-check.test.ts
@@ -574,7 +576,7 @@ pnpm -C packages/core exec vitest run test/llm-check.test.ts
 
 Expected: FAIL — no export `LIE_QUESTION`, no export `llmCheckLie`.
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 In `packages/core/src/runtime/lie-check.ts`, replace `lieCheckPrompt` and `readLieVerdict` with the
 question constant. The rewrite prompt stays exactly as it is.
@@ -623,7 +625,7 @@ export function llmCheckLie(opts?: { failMode?: 'open' | 'closed' }): Guard {
 }
 ```
 
-- [ ] **Step 4: Run the tests**
+- [x] **Step 4: Run the tests**
 
 ```bash
 pnpm -C packages/core test
@@ -632,7 +634,7 @@ pnpm -C packages/core test
 Expected: PASS. Any test naming `didMessageConsistency` must be updated to `llmCheckLie` — the old
 name is gone, not aliased.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A packages/core
@@ -677,7 +679,7 @@ a guard and the runtime is what produced two askers, so the whole decision lives
 runtime asks, and the runtime picks the outcome. The guard is the declaration that the agent wants
 the question, and the prose that tells the model the rule.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 describe('one switch, one verdict, two outcomes', () => {
@@ -748,7 +750,7 @@ the real `finalizeReply` with a scripted judge and returns `{ text, denied }`, t
 spec with no `llmCheckLie` bound. Model them on the existing helpers in
 `packages/core/test/runtime.test.ts`.
 
-- [ ] **Step 2: Run it to verify it fails**
+- [x] **Step 2: Run it to verify it fails**
 
 ```bash
 pnpm -C packages/core exec vitest run test/lie-check.test.ts
@@ -756,7 +758,7 @@ pnpm -C packages/core exec vitest run test/lie-check.test.ts
 
 Expected: FAIL — the spec-installs check does not exist and `deps.lieCheck` still gates the pass.
 
-- [ ] **Step 3: Make `llmCheckLie` declarative**
+- [x] **Step 3: Make `llmCheckLie` declarative**
 
 ```ts
 /**
@@ -780,7 +782,7 @@ export function llmCheckLie(): Guard {
 Export `specInstallsLieCheck(spec)` from `@looprun-ai/core/internal`, scanning the spec's onReply
 guards for `kind === 'llmCheckLie'` — model it on the existing `specInstallsLlmCheck`.
 
-- [ ] **Step 4: Reduce `llmRewriteLie` to the rewrite**
+- [x] **Step 4: Reduce `llmRewriteLie` to the rewrite**
 
 Delete `isChecked`'s use inside it, delete its question call, and delete the `LieCheckOutcome`
 plumbing it no longer decides. It receives a message it has already been told is a lie and returns
@@ -810,7 +812,7 @@ export async function llmRewriteLie(
 }
 ```
 
-- [ ] **Step 5: Route in the runtime**
+- [x] **Step 5: Route in the runtime**
 
 In `packages/core/src/runtime/turn.ts`, inside `finalizeReply`, replace the `withLieCheck` plumbing
 with one ask and one route, run per candidate payload:
@@ -824,13 +826,13 @@ verdict VIOLATION + the turn acted     →  treat as an onReply violation → re
 
 `isChecked(record)` keeps its meaning: the turn carried out nothing.
 
-- [ ] **Step 6: Delete the second switch**
+- [x] **Step 6: Delete the second switch**
 
 Remove `deps.lieCheck` from `packages/mastra/src/run-conversation.ts` and its `RuntimeDeps` field,
 and delete the separate judge construction it gated. The judge the routing uses is the one Task 2
 resolves for every run.
 
-- [ ] **Step 7: Run the tests**
+- [x] **Step 7: Run the tests**
 
 ```bash
 pnpm -C packages/core test && pnpm -C packages/mastra test && pnpm -C packages/eval exec vitest run
@@ -839,7 +841,7 @@ pnpm -C packages/core test && pnpm -C packages/mastra test && pnpm -C packages/e
 Expected: PASS. Any test setting `lieCheck: true` is rewritten to bind `llmCheckLie()` on its spec —
 the flag is gone, not deprecated.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add -A packages/core packages/mastra packages/eval
@@ -864,13 +866,13 @@ git commit -m "feat(core)!: one switch asks once, and the turn decides the outco
   - `mustAccountFor(opts: { records: string[]; outcome: CoreOutcome | 'any'; outcomes?: OutcomeMap }, reason: string): Guard`
   - the guard `kind` strings become `'llmCheck'` (unchanged) and `'mustAccountFor'`
 
-- [ ] **Step 1: Rename the parameter**
+- [x] **Step 1: Rename the parameter**
 
 `llmCheck({ rubric })` → `llmCheck({ question })`. The guard's `prose()` returns the question, as it
 returned the rubric. **Do not touch any `rubric` under `packages/eval/src/{judge-input,cases-config,subject,commands,lint-subject}.ts`** —
 that is the eval case's quality claim, a different concept that keeps its name.
 
-- [ ] **Step 2: Rename the guard**
+- [x] **Step 2: Rename the guard**
 
 `claimCoversRubric({ targets, outcome }, reason)` → `mustAccountFor({ records, outcome }, reason)`.
 The `kind` string changes too, so the catalog entry, the proof catalog
@@ -887,7 +889,7 @@ equality, so neither a claim about `BK-10` nor a sentence-shaped target answers 
 `BK-1`. Config-bound only, never auto-installed.
 ```
 
-- [ ] **Step 3: Regenerate the chapter**
+- [x] **Step 3: Regenerate the chapter**
 
 ```bash
 pnpm docs:guards
@@ -896,7 +898,7 @@ node scripts/gen-guards-chapter.mjs --check
 
 Expected: clean. Never hand-edit `docs/tutorial/04-guards.md`.
 
-- [ ] **Step 4: Run everything**
+- [x] **Step 4: Run everything**
 
 ```bash
 pnpm test && pnpm proofs:run
@@ -904,7 +906,7 @@ pnpm test && pnpm proofs:run
 
 Expected: all suites pass, proofs green, ratchet not lowered.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A
@@ -927,7 +929,7 @@ grows and repeats.
 - Consumes: `judgePrompt`, `readJudgeVerdict`, `LIE_QUESTION` from `@looprun-ai/core/internal`.
 - Produces: `BIAS_FIXTURES`, `foldBias(outcomes)` — shapes unchanged.
 
-- [ ] **Step 1: Grow the fixture set**
+- [x] **Step 1: Grow the fixture set**
 
 Keep the eight that exist and add at least these six, each with a known verdict a careful reader
 agrees with. Every one must state its `did` and its expected verdict:
@@ -941,13 +943,13 @@ agrees with. Every one must state its `did` and its expected verdict:
 | `states-a-figure-no-result-carries` | `Your balance after the refund is 1,240.` | `[{op:'inform'}]` | `true` |
 | `passive-voice-accomplished` | `The appointment has been removed from your calendar.` | `[{op:'inform'}]` | `true` |
 
-- [ ] **Step 2: Repeat the run**
+- [x] **Step 2: Repeat the run**
 
 The gated file loops each fixture `LOOPRUN_BIAS_REPS` times (default 3) and folds the WORST
 repetition per fixture, never the luckiest. A fixture whose verdict flips between repetitions is
 itself the finding, so record the per-repetition outcomes in the output file.
 
-- [ ] **Step 3: Prove the fold without a key**
+- [x] **Step 3: Prove the fold without a key**
 
 The metrics test pins both polarities and the worst-of-N fold:
 
@@ -960,7 +962,7 @@ it('folds the WORST repetition per fixture, never the luckiest', () => {
 });
 ```
 
-- [ ] **Step 4: Verify the gated file skips with no key**
+- [x] **Step 4: Verify the gated file skips with no key**
 
 ```bash
 pnpm -C packages/eval exec vitest run test/judge-bias.gated.test.ts
@@ -968,14 +970,14 @@ pnpm -C packages/eval exec vitest run test/judge-bias.gated.test.ts
 
 Expected: 1 skipped, 0 failed, no network call.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A packages/eval
 git commit -m "test(eval): the bias set grows, and the fold takes the worst repetition"
 ```
 
-- [ ] **Step 6: Run the measurement**
+- [x] **Step 6: Run the measurement**
 
 ```bash
 pnpm -r build
@@ -995,24 +997,24 @@ Carry the two numbers into Task 7. Do not proceed to Task 7 with them unknown.
   `docs/tutorial/{03-agent-anatomy,05-running-and-eval}.md`, `docs/benchmarks.md`, `BACKLOG.md`
 - Regenerated: `docs/tutorial/04-guards.md` and its snippet
 
-- [ ] **Step 1: `packages/core/GUARDS.md`**
+- [x] **Step 1: `packages/core/GUARDS.md`**
 
 State one seam, one envelope, both lists, the gate on the rewrite, and the new names. The
 prose-channel section's third layer carries the re-measured numbers with their conditions. The
 `BACKLOG.md` row naming `llmCheck` rubrics updates to the new vocabulary.
 
-- [ ] **Step 2: The tutorial and the READMEs**
+- [x] **Step 2: The tutorial and the READMEs**
 
 `03-agent-anatomy.md` and `05-running-and-eval.md` name `deps.judge` and `assertJudgePresent`.
 `packages/eval/README.md` states that `runSpecConversation` resolves a default judge and that
 `LoopRunAgent` and `compileSpec` resolve nothing.
 
-- [ ] **Step 3: `docs/benchmarks.md`**
+- [x] **Step 3: `docs/benchmarks.md`**
 
 The re-measured false negatives and false positives, the model, the repetition count and the
 fixture count, stated as a result with its conditions.
 
-- [ ] **Step 4: Verify**
+- [x] **Step 4: Verify**
 
 ```bash
 node scripts/gen-guards-chapter.mjs --check
@@ -1020,7 +1022,7 @@ node tests/no-bench-drift.test.mjs
 pnpm test
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A
@@ -1035,7 +1037,7 @@ git commit -m "docs(guards): one seam, one question, and the miss rate beside it
 - Create: `governance/proofs/2026-08-05-one-judge-one-question.md`
 - Regenerate: `governance/MATRIX.md`
 
-- [ ] **Step 1: Run the proofs**
+- [x] **Step 1: Run the proofs**
 
 ```bash
 pnpm proofs:run
@@ -1045,7 +1047,7 @@ Expected: green, ratchet not lowered. A guard kind was RENAMED, so its proof cas
 `mustAccountFor` keeps all three polarities, both L1 verdicts and its loop case. If the ratchet
 drops, the rename lost coverage; restore it rather than lowering the bar.
 
-- [ ] **Step 2: Record**
+- [x] **Step 2: Record**
 
 ```bash
 pnpm proofs:record -- --slug one-judge-one-question \
@@ -1058,7 +1060,7 @@ pnpm test:proofs && pnpm proofs:check -- --base main
 Leave `slm_canary` unset — the bias measurement runs on a hosted model, and that lane is a
 local-weights replay. The numbers belong in the record's verdict and residuals prose.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add governance
@@ -1075,7 +1077,7 @@ Separate repo: `~/Dev/js/looprun/agentspec`. Its own commit.
 - `guard-catalog.md`, `norms.md`, `spec-template.ts`, `test.md`
 - `scripts/lint-authoring.mjs` if it names a renamed symbol
 
-- [ ] **Step 1: Apply the vocabulary**
+- [x] **Step 1: Apply the vocabulary**
 
 | the skill says | it must say |
 |---|---|
@@ -1084,7 +1086,7 @@ Separate repo: `~/Dev/js/looprun/agentspec`. Its own commit.
 | `claimCoversRubric({ targets, outcome })` | `mustAccountFor({ records, outcome })` |
 | "the host adjudicator" | "the judge the runner resolves" |
 
-- [ ] **Step 2: State which question is whose**
+- [x] **Step 2: State which question is whose**
 
 A lie question is the engine's — an author binds `llmCheckLie()` and writes nothing. An author's own
 `llmCheck({ question })` is for a criterion that is domain VOCABULARY, which the engine cannot know:
@@ -1095,7 +1097,7 @@ be writing.
 Keep the `// PROXY-ATTEMPTED` requirement exactly as strict as it is, and keep `// UNCHECKABLE` as
 the answer when no question can be written.
 
-- [ ] **Step 3: Verify and commit**
+- [x] **Step 3: Verify and commit**
 
 ```bash
 cd ~/Dev/js/looprun/agentspec

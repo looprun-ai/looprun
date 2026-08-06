@@ -1,5 +1,6 @@
 /**
- * THE CONSENT GATE — one rule: is there a consumed approval about THIS call?
+ * THE CONSENT GATE — one law: a destructive call that is not a schema-licensed simulation runs only
+ * on a consumed approval about THIS call.
  */
 import { describe, it, expect } from 'vitest';
 import { confirmFirst, destructiveThrottle } from '../src/guards/confirmation.js';
@@ -26,37 +27,40 @@ const ctx = (over: Partial<GuardCtx>): GuardCtx =>
     ...over,
   }) as GuardCtx;
 
-describe('confirmFirst — the acting call is gated, the simulation is not', () => {
+describe('confirmFirst — an act that is not a schema-licensed simulation needs the code', () => {
   const g = confirmFirst();
+  const sim = new Set(['cancelBooking']);
 
-  it('lets the simulation through — it is how the world raises the question', () => {
-    expect(g.check(ctx({ tool: 'cancelBooking', args: { id: 'BK-1' }, consent: [] }))).toBeNull();
+  it('lets a schema-licensed simulation through — it is how the world raises the question', () => {
+    expect(g.check(ctx({ tool: 'cancelBooking', args: { id: 'BK-1', simulate: true }, simulatableTools: sim, consent: [] }))).toBeNull();
   });
 
-  it('allows the act the user consented to', () => {
-    expect(g.check(ctx({ tool: 'cancelBooking', args: { id: 'BK-1', confirmed: true }, consent: [consented] }))).toBeNull();
+  it('gates a hallucinated simulate on a tool whose schema has none', () => {
+    expect(g.check(ctx({ tool: 'unsubscribeCustomer', args: { id: 'C-1', simulate: true }, simulatableTools: sim, consent: [] }))).not.toBeNull();
   });
 
-  it('allows it whatever else the call carries beside the record', () => {
-    expect(
-      g.check(ctx({ tool: 'cancelBooking', args: { id: 'BK-1', confirmed: true }, consent: [consented] })),
-    ).toBeNull();
+  it('gates every call when no bypass set was seated', () => {
+    expect(g.check(ctx({ tool: 'cancelBooking', args: { id: 'BK-1', simulate: true }, consent: [] }))).not.toBeNull();
   });
 
-  it('denies the act when no consent arrived', () => {
-    expect(g.check(ctx({ tool: 'cancelBooking', args: { id: 'BK-1', confirmed: true }, consent: [] }))).not.toBeNull();
+  it('allows the bare act the user consented to', () => {
+    expect(g.check(ctx({ tool: 'cancelBooking', args: { id: 'BK-1' }, simulatableTools: sim, consent: [consented] }))).toBeNull();
+  });
+
+  it('denies the bare act when no consent arrived', () => {
+    expect(g.check(ctx({ tool: 'cancelBooking', args: { id: 'BK-1' }, simulatableTools: sim, consent: [] }))).not.toBeNull();
   });
 
   it('denies an act on a record the consent does not name', () => {
-    expect(g.check(ctx({ tool: 'cancelBooking', args: { id: 'BK-12', confirmed: true }, consent: [consented] }))).not.toBeNull();
+    expect(g.check(ctx({ tool: 'cancelBooking', args: { id: 'BK-12' }, simulatableTools: sim, consent: [consented] }))).not.toBeNull();
   });
 
   it('denies an act on a different tool', () => {
-    expect(g.check(ctx({ tool: 'deleteBooking', args: { id: 'BK-1', confirmed: true }, consent: [consented] }))).not.toBeNull();
+    expect(g.check(ctx({ tool: 'deleteBooking', args: { id: 'BK-1' }, simulatableTools: sim, consent: [consented] }))).not.toBeNull();
   });
 
   it('denies when the ctx carries no consent field at all', () => {
-    expect(g.check(ctx({ tool: 'cancelBooking', args: { id: 'BK-1', confirmed: true } }))).not.toBeNull();
+    expect(g.check(ctx({ tool: 'cancelBooking', args: { id: 'BK-1' } }))).not.toBeNull();
   });
 
   it('allows an act with no record when the tool itself was consented to', () => {
@@ -67,15 +71,15 @@ describe('confirmFirst — the acting call is gated, the simulation is not', () 
       issuedTurn: 0,
       consumedTurn: 1,
     };
-    expect(confirmFirst({ flag: false }).check(ctx({ tool: 'deleteAllData', args: {}, consent: [label] }))).toBeNull();
+    expect(g.check(ctx({ tool: 'deleteAllData', args: {}, consent: [label] }))).toBeNull();
   });
 
   it('is silent when there is no tool in the ctx', () => {
-    expect(g.check(ctx({ args: { id: 'BK-1', confirmed: true }, consent: [] }))).toBeNull();
+    expect(g.check(ctx({ args: { id: 'BK-1' }, consent: [] }))).toBeNull();
   });
 
-  it('gates EVERY call of a tool that has no simulate form', () => {
-    expect(confirmFirst({ flag: false }).check(ctx({ tool: 'deleteAllData', args: {}, consent: [] }))).not.toBeNull();
+  it('gates EVERY call of a tool that cannot simulate', () => {
+    expect(g.check(ctx({ tool: 'deleteAllData', args: {}, consent: [] }))).not.toBeNull();
   });
 
   it('names no tool and no terminal in the prose the model reads', () => {
@@ -89,21 +93,26 @@ describe('confirmFirst({ when }) — the call decides, not the tool', () => {
 
   it('the protective branch runs with no consent at all', () => {
     const g = confirmFirst({ when });
-    expect(g.check(ctx({ tool: 'placeHold', args: { scope: 'asset', confirmed: true }, consent: [] }))).toBeNull();
+    expect(g.check(ctx({ tool: 'placeHold', args: { scope: 'asset' }, consent: [] }))).toBeNull();
   });
 
   it('the destructive branch is gated exactly as an unconditional tool is', () => {
     const g = confirmFirst({ when });
-    expect(g.check(ctx({ tool: 'placeHold', args: { scope: 'workspace', confirmed: true }, consent: [] }))).toMatch(
+    expect(g.check(ctx({ tool: 'placeHold', args: { scope: 'workspace' }, consent: [] }))).toMatch(
       /has not confirmed this action/,
     );
   });
 
   it('a tool with no predicate keeps the unconditional reading', () => {
     const g = confirmFirst({ when });
-    expect(g.check(ctx({ tool: 'cancelBooking', args: { confirmed: true }, consent: [] }))).toMatch(
+    expect(g.check(ctx({ tool: 'cancelBooking', args: {}, consent: [] }))).toMatch(
       /has not confirmed this action/,
     );
+  });
+
+  it('the predicate is asked before the bypass: a protective simulate call runs free', () => {
+    const g = confirmFirst({ when });
+    expect(g.check(ctx({ tool: 'placeHold', args: { scope: 'asset', simulate: true }, consent: [] }))).toBeNull();
   });
 });
 
@@ -115,39 +124,21 @@ describe('destructiveThrottle({ when }) — the cap counts destructive acts', ()
   it('a protective call is not capped by a prior protective effect', () => {
     const g = destructiveThrottle(['placeHold'], { when });
     expect(
-      g.check(
-        ctx({
-          tool: 'placeHold',
-          args: { scope: 'asset', confirmed: true },
-          observed: [ran({ scope: 'asset', confirmed: true })],
-        }),
-      ),
+      g.check(ctx({ tool: 'placeHold', args: { scope: 'asset' }, observed: [ran({ scope: 'asset' })] })),
     ).toBeNull();
   });
 
   it('a destructive call is capped by a prior destructive effect', () => {
     const g = destructiveThrottle(['placeHold'], { when });
     expect(
-      g.check(
-        ctx({
-          tool: 'placeHold',
-          args: { scope: 'workspace', confirmed: true },
-          observed: [ran({ scope: 'workspace', confirmed: true })],
-        }),
-      ),
+      g.check(ctx({ tool: 'placeHold', args: { scope: 'workspace' }, observed: [ran({ scope: 'workspace' })] })),
     ).toMatch(/already ran this turn/);
   });
 
   it('a protective effect does not count against a destructive call', () => {
     const g = destructiveThrottle(['placeHold'], { when });
     expect(
-      g.check(
-        ctx({
-          tool: 'placeHold',
-          args: { scope: 'workspace', confirmed: true },
-          observed: [ran({ scope: 'asset', confirmed: true })],
-        }),
-      ),
+      g.check(ctx({ tool: 'placeHold', args: { scope: 'workspace' }, observed: [ran({ scope: 'asset' })] })),
     ).toBeNull();
   });
 });

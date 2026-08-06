@@ -1,5 +1,7 @@
 # Consent and Elicitation — Implementation Plan
 
+> **Status:** shipped. `valueFromUser` ships in `packages/core/src/index.ts`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** a question the agent poses carries the subject it is about, and the engine — not the agent — decides what the user's reply meant. Close every consent and elicitation vector without a host seam, without an extra model, and without growing what the agent must emit.
@@ -155,41 +157,41 @@ Any task here that grows this number must remove more than it adds.
 
 **Files:** `packages/eval/` (harness), a new gated suite; Gemini Flash Lite 3.1 with thinking OFF as the subject model.
 
-- [ ] **Step 1:** the three axes as runnable scenarios, gated behind an environment variable.
-- [ ] **Step 2:** record the baseline — capacity rate, resistance verdicts, judgment accuracy on the ambiguity set — plus the per-run sheet above (assembled prompt stability, prompt size, format defects, value defects, recovery cost, refusal to close).
-- [ ] **Step 3:** the baseline numbers land in the report so a later change is attributable.
+- [x] **Step 1:** the three axes as runnable scenarios, gated behind an environment variable.
+- [x] **Step 2:** record the baseline — capacity rate, resistance verdicts, judgment accuracy on the ambiguity set — plus the per-run sheet above (assembled prompt stability, prompt size, format defects, value defects, recovery cost, refusal to close).
+- [x] **Step 3:** the baseline numbers land in the report so a later change is attributable.
 
 ### Task 2: subject on the question, and the engine renders it
 
 **Files:** `runtime/claims.ts` (`subject` on a speech intention), `runtime/terminal.ts` (schema + prose), `runtime/turn.ts` (render), `guards/confirmation.ts`, `guards/structural.ts`.
 
-- [ ] **Step 1: Failing tests** — an act on X with an open question on Y is denied; an act with no open question is denied; a declared `ask` puts a question in the delivered text.
-- [ ] **Step 2:** implement; the unbound-ask vectors flip to passing regression.
-- [ ] **Step 3:** re-run the battery — capacity must not regress.
+- [x] **Step 1: Failing tests** — an act on X with an open question on Y is denied; an act with no open question is denied; a declared `ask` puts a question in the delivered text.
+- [x] **Step 2:** implement; the unbound-ask vectors flip to passing regression.
+- [x] **Step 3:** re-run the battery — capacity must not regress.
 
 ### Task 3: the `judge` seam and the confirmation verdict
 
 **Files:** `runtime/turn.ts` (seam), `guards/confirmation.ts`, backends.
 
-- [ ] **Step 1: Failing tests** — a fake judge returning `no` denies the act; returning `yes` allows it; an absent `judge` denies.
-- [ ] **Step 2:** implement; the self-declared-ask vectors flip to passing regression.
-- [ ] **Step 3:** re-run the battery — judgment axis measured against the real model.
+- [x] **Step 1: Failing tests** — a fake judge returning `no` denies the act; returning `yes` allows it; an absent `judge` denies.
+- [x] **Step 2:** implement; the self-declared-ask vectors flip to passing regression.
+- [x] **Step 3:** re-run the battery — judgment axis measured against the real model.
 
 ### Task 4: elicitation
 
 **Files:** `guards/structural.ts` (`askedEarlier`), the containment check.
 
-- [ ] **Step 1: Failing tests** — a value absent from the user's reply is denied; a literal value is allowed with no judge call; a paraphrase is allowed only when the judge returns it.
-- [ ] **Step 2:** implement.
-- [ ] **Step 3:** re-run the battery.
+- [x] **Step 1: Failing tests** — a value absent from the user's reply is denied; a literal value is allowed with no judge call; a paraphrase is allowed only when the judge returns it.
+- [x] **Step 2:** implement.
+- [x] **Step 3:** re-run the battery.
 
 ### Task 5: shrink the protocol to pay for what was added
 
 **Files:** `runtime/terminal.ts`, `guards/catalog.ts`.
 
-- [ ] **Step 1:** capacity axis identifies where a small model actually fails.
-- [ ] **Step 2:** cut against that evidence, never against a guess.
-- [ ] **Step 3:** per-turn character count at or below the 3909 baseline, with the capacity rate no worse.
+- [x] **Step 1:** capacity axis identifies where a small model actually fails.
+- [x] **Step 2:** cut against that evidence, never against a guess.
+- [x] **Step 3:** per-turn character count at or below the 3909 baseline, with the capacity rate no worse.
 
 ## Rulings on the prose lie
 

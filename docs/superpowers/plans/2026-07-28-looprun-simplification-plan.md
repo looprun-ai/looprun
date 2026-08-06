@@ -1,5 +1,7 @@
 # Looprun Simplification & Tutorial Implementation Plan
 
+> **Status:** shipped. `LoopRunAgent` ships in `packages/core/src/validate.ts`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Shrink looprun's public API and file sizes around a single numbered tutorial (`docs/tutorial/01–06`), deleting or internalizing every concept the tutorial does not teach.
@@ -27,7 +29,7 @@
 **Interfaces:**
 - Produces: a verdict table `symbol | package | used by | verdict (public / internal / delete)` that every later task cites as the authority for cuts.
 
-- [ ] **Step 1: Enumerate exported symbols per package**
+- [x] **Step 1: Enumerate exported symbols per package**
 
 ```bash
 cd /Users/marcos/Dev/js/looprun/looprun
@@ -38,7 +40,7 @@ for p in core mastra models eval server vercel; do
 done
 ```
 
-- [ ] **Step 2: Grep each symbol across all consumers**
+- [x] **Step 2: Grep each symbol across all consumers**
 
 For every exported symbol S (skip pure types re-exported for convenience — mark them with their owning value symbol):
 
@@ -50,11 +52,11 @@ grep -rln --include='*.ts' --include='*.mjs' "\bS\b" \
 
 Classify: **public** (hit in examples/skills/scripts/looprun-bench/agentspec/yntelli), **internal** (hits only in `packages/*` outside core, i.e. backends/eval/server), **delete** (hits only in `packages/core` src/tests, or nowhere).
 
-- [ ] **Step 3: Write the inventory doc**
+- [x] **Step 3: Write the inventory doc**
 
 Table format, one row per symbol, grouped by package. Include a "pre-seeded evidence" note: `findContradictions, findDuplications, findMultiOwnerSubjects, findSubjectlessLines, findUnassessableLines, foldRow, foldPrompt, withPolarityLexicon, derivePolarity, deriveSubject, assembledPromptLines, mutatorLines, isSingleClause, DEFAULT_POLARITY_LEXICON, chainOrder, renderPromptBlocks` already measured at zero non-test usage (2026-07-28 scan) — re-verify, don't trust.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git checkout -b simplification
@@ -73,11 +75,11 @@ git commit -m "docs: symbol usage inventory for simplification"
 - Consumes: inventory verdicts (Task 1).
 - Produces: per-chapter list of the exact public symbols each chapter teaches. Union of these lists = the target public API. Tasks 3–7 converge `index.ts` files onto it.
 
-- [ ] **Step 1: Write the outline**
+- [x] **Step 1: Write the outline**
 
 One page: for each chapter `01-concepts, 02-hello-world, 03-agent-anatomy, 04-guards, 05-running-and-eval, 06-advanced` — goal (1 sentence), symbols taught (explicit list drawn from inventory "public" verdicts), example used. Every inventory "public" symbol must appear in exactly one chapter; if it fits nowhere, downgrade its verdict to internal in the inventory doc (record the change).
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add docs/tutorial/00-outline.md docs/superpowers/specs/2026-07-28-symbol-inventory.md
@@ -97,7 +99,7 @@ git commit -m "docs: tutorial outline — the public API contract"
 **Interfaces:**
 - Produces: `@looprun-ai/core` exports only inventory-"public" symbols; `@looprun-ai/core/internal` re-exports the inventory-"internal" symbols (e.g. `resolveBindings`, `resolveGuards`, `resolveMutators` if verdicts say so). Later tasks import internals from the subpath only.
 
-- [ ] **Step 1: Add the subpath**
+- [x] **Step 1: Add the subpath**
 
 `packages/core/package.json` exports gains:
 
@@ -107,19 +109,19 @@ git commit -m "docs: tutorial outline — the public API contract"
 
 `packages/core/src/internal.ts` starts as explicit re-exports of every spec.ts symbol whose verdict is "internal".
 
-- [ ] **Step 2: Cut `index.ts` down to the contract**
+- [x] **Step 2: Cut `index.ts` down to the contract**
 
 Rewrite `packages/core/src/index.ts` so its exports match exactly the Task 2 contract for core. Delete symbols with "delete" verdicts from `spec.ts` (and their tests).
 
-- [ ] **Step 3: Fix all compile errors by switching backends to the subpath**
+- [x] **Step 3: Fix all compile errors by switching backends to the subpath**
 
 ```bash
 pnpm -r build   # follow the errors; each fix is `from '@looprun-ai/core'` → `from '@looprun-ai/core/internal'`
 ```
 
-- [ ] **Step 4: Verify** — `pnpm -r build && pnpm test` green.
+- [x] **Step 4: Verify** — `pnpm -r build && pnpm test` green.
 
-- [ ] **Step 5: Commit** — `refactor(core)!: public API = tutorial contract; internals move to @looprun-ai/core/internal`
+- [x] **Step 5: Commit** — `refactor(core)!: public API = tutorial contract; internals move to @looprun-ai/core/internal`
 
 ---
 
@@ -134,9 +136,9 @@ pnpm -r build   # follow the errors; each fix is `from '@looprun-ai/core'` → `
 - Consumes: guard factory signatures unchanged from today's `guards.ts`.
 - Produces: `GUARD_CATALOG: readonly GuardCatalogEntry[]` from `catalog.ts`, exported publicly — Task 10 renders chapter 04 from it.
 
-- [ ] **Step 1: Move code, no behavior change** — cut/paste each factory into its category file; `guards/index.ts` re-exports everything; run `pnpm -C packages/core test` after each file to keep the diff honest.
+- [x] **Step 1: Move code, no behavior change** — cut/paste each factory into its category file; `guards/index.ts` re-exports everything; run `pnpm -C packages/core test` after each file to keep the diff honest.
 
-- [ ] **Step 2: Write the catalog data**
+- [x] **Step 2: Write the catalog data**
 
 ```ts
 // packages/core/src/guards/catalog.ts
@@ -150,11 +152,11 @@ export interface GuardCatalogEntry {
 export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [ /* one entry per factory above */ ];
 ```
 
-- [ ] **Step 3: Write the parity test** (extend `guard-catalog-parity.test.ts`): every exported guard factory has exactly one `GUARD_CATALOG` entry and vice versa; every `example` string contains the factory name.
+- [x] **Step 3: Write the parity test** (extend `guard-catalog-parity.test.ts`): every exported guard factory has exactly one `GUARD_CATALOG` entry and vice versa; every `example` string contains the factory name.
 
-- [ ] **Step 4: Verify** — `pnpm -r build && pnpm test` green; `wc -l packages/core/src/guards/*.ts` all ≤ 500.
+- [x] **Step 4: Verify** — `pnpm -r build && pnpm test` green; `wc -l packages/core/src/guards/*.ts` all ≤ 500.
 
-- [ ] **Step 5: Commit** — `refactor(core): split guards.ts into per-category files + GUARD_CATALOG data`
+- [x] **Step 5: Commit** — `refactor(core): split guards.ts into per-category files + GUARD_CATALOG data`
 
 ---
 
@@ -168,9 +170,9 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [ /* one entry per fa
 - Consumes: inventory verdicts for all 20+ coherence/assembled prompt symbols.
 - Produces: public assembled prompt API is at most `renderAssembledPrompt` (verdict-dependent); everything else internal or gone.
 
-- [ ] **Step 1: Apply verdicts** — delete "delete"-verdict symbols and their tests; move "internal" ones to `internal.ts`.
-- [ ] **Step 2: Verify** — `pnpm -r build && pnpm test` green; `grep -rn 'coherence' packages/*/src` returns only intentional survivors.
-- [ ] **Step 3: Commit** — `refactor(core)!: remove unused coherence queries; assembled prompt provenance goes internal`
+- [x] **Step 1: Apply verdicts** — delete "delete"-verdict symbols and their tests; move "internal" ones to `internal.ts`.
+- [x] **Step 2: Verify** — `pnpm -r build && pnpm test` green; `grep -rn 'coherence' packages/*/src` returns only intentional survivors.
+- [x] **Step 3: Commit** — `refactor(core)!: remove unused coherence queries; assembled prompt provenance goes internal`
 
 ---
 
@@ -183,9 +185,9 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [ /* one entry per fa
 **Interfaces:**
 - Produces: `@looprun-ai/core` runtime surface = result/record types only; the governed-turn machine is a backend implementation detail behind `/internal`.
 
-- [ ] **Step 1: Move exports per verdicts; fix backend imports** (`pnpm -r build` drives the error list).
-- [ ] **Step 2: Verify** — `pnpm -r build && pnpm test` green.
-- [ ] **Step 3: Commit** — `refactor(core)!: governed-turn machine becomes internal; public runtime surface is result types`
+- [x] **Step 1: Move exports per verdicts; fix backend imports** (`pnpm -r build` drives the error list).
+- [x] **Step 2: Verify** — `pnpm -r build && pnpm test` green.
+- [x] **Step 3: Commit** — `refactor(core)!: governed-turn machine becomes internal; public runtime surface is result types`
 
 ---
 
@@ -200,9 +202,9 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [ /* one entry per fa
 - Consumes: `@looprun-ai/core/internal` (Tasks 3, 6).
 - Produces: `new LoopRunAgent({ spec, world, model })` unchanged in behavior — the single teachable facade. `packages/looprun` root re-exports are updated to match.
 
-- [ ] **Step 1: Trim index exports; fix in-repo consumers; split agent.ts.**
-- [ ] **Step 2: Verify** — `pnpm -r build && pnpm test` green; `wc -l packages/mastra/src/*.ts` all ≤ 500; every `examples/*` package builds.
-- [ ] **Step 3: Commit** — `refactor(mastra)!: LoopRunAgent facade only; split agent.ts`
+- [x] **Step 1: Trim index exports; fix in-repo consumers; split agent.ts.**
+- [x] **Step 2: Verify** — `pnpm -r build && pnpm test` green; `wc -l packages/mastra/src/*.ts` all ≤ 500; every `examples/*` package builds.
+- [x] **Step 3: Commit** — `refactor(mastra)!: LoopRunAgent facade only; split agent.ts`
 
 ---
 
@@ -215,7 +217,7 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [ /* one entry per fa
 **Interfaces:**
 - Produces: every code block in tutorial chapters exists verbatim as (part of) a compiled snippet file; chapters cite their snippet file at the top.
 
-- [ ] **Step 1: Create the workspace package**
+- [x] **Step 1: Create the workspace package**
 
 ```json
 // docs/tutorial/snippets/package.json
@@ -231,8 +233,8 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [ /* one entry per fa
 
 (Match the `typescript` version reference style used by other packages in the workspace — copy from `packages/core/package.json` if there is no catalog.)
 
-- [ ] **Step 2: Seed with a trivial compiling snippet; verify** `pnpm -C docs/tutorial/snippets typecheck` passes and runs as part of `pnpm -r --if-present typecheck`.
-- [ ] **Step 3: Commit** — `chore(docs): tutorial snippet package — snippets compile or CI fails`
+- [x] **Step 2: Seed with a trivial compiling snippet; verify** `pnpm -C docs/tutorial/snippets typecheck` passes and runs as part of `pnpm -r --if-present typecheck`.
+- [x] **Step 3: Commit** — `chore(docs): tutorial snippet package — snippets compile or CI fails`
 
 ---
 
@@ -245,11 +247,11 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [ /* one entry per fa
 **Interfaces:**
 - Consumes: final public API from Tasks 3–7; symbols-per-chapter lists from `00-outline.md`.
 
-- [ ] **Step 1: Write 01-concepts** — the problem (ungoverned agent loops), the mental model (spec = map, guards = safety kit, agent = GPS), an ASCII diagram of AgentSpec → LoopRunAgent → world/tools → guards vetoing a turn. No code beyond fragments.
-- [ ] **Step 2: Write 02-hello-world** — `npm i looprun` + smallest runnable LoopRunAgent (~20 lines), copied verbatim from `snippets/02-hello-world.ts` which must typecheck.
-- [ ] **Step 3: Write 03-agent-anatomy** — AgentSpec fields (scope, tools, terminal policy, guard bindings) each shown on a small working spec from `snippets/03-agent-anatomy.ts`; one relationship diagram covering every class named in the chapter.
-- [ ] **Step 4: Verify** — `pnpm -C docs/tutorial/snippets typecheck` green; every fenced TS block in the three chapters appears in a snippet file (manual diff).
-- [ ] **Step 5: Commit** — `docs: tutorial chapters 01–03`
+- [x] **Step 1: Write 01-concepts** — the problem (ungoverned agent loops), the mental model (spec = map, guards = safety kit, agent = GPS), an ASCII diagram of AgentSpec → LoopRunAgent → world/tools → guards vetoing a turn. No code beyond fragments.
+- [x] **Step 2: Write 02-hello-world** — `npm i looprun` + smallest runnable LoopRunAgent (~20 lines), copied verbatim from `snippets/02-hello-world.ts` which must typecheck.
+- [x] **Step 3: Write 03-agent-anatomy** — AgentSpec fields (scope, tools, terminal policy, guard bindings) each shown on a small working spec from `snippets/03-agent-anatomy.ts`; one relationship diagram covering every class named in the chapter.
+- [x] **Step 4: Verify** — `pnpm -C docs/tutorial/snippets typecheck` green; every fenced TS block in the three chapters appears in a snippet file (manual diff).
+- [x] **Step 5: Commit** — `docs: tutorial chapters 01–03`
 
 ---
 
@@ -260,10 +262,10 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [ /* one entry per fa
 - Modify: root `package.json` scripts (`"docs:guards": "node scripts/gen-guards-chapter.mjs"`)
 - Consumes: `GUARD_CATALOG` from Task 4.
 
-- [ ] **Step 1: Write the generator** — `scripts/gen-guards-chapter.mjs` imports `GUARD_CATALOG` from the built `@looprun-ai/core`, renders `04-guards.md`: intro (hand-written header block preserved between `<!-- generated -->` markers), then one section per category, one subsection per guard (`summary`, `whenToUse`, `example` fenced block). Fails (exit 1) if the file on disk differs from the render — doubling as a drift test wired into root `test` script.
-- [ ] **Step 2: Fill `GUARD_CATALOG` entries for real** — every `whenToUse` must answer "which situation calls for this guard over its neighbors"; every `example` compiles inside `snippets/04-guards.ts`.
-- [ ] **Step 3: Verify** — `pnpm docs:guards` clean, snippets typecheck, `pnpm test` green.
-- [ ] **Step 4: Commit** — `docs: chapter 04 guard catalog, generated from GUARD_CATALOG`
+- [x] **Step 1: Write the generator** — `scripts/gen-guards-chapter.mjs` imports `GUARD_CATALOG` from the built `@looprun-ai/core`, renders `04-guards.md`: intro (hand-written header block preserved between `<!-- generated -->` markers), then one section per category, one subsection per guard (`summary`, `whenToUse`, `example` fenced block). Fails (exit 1) if the file on disk differs from the render — doubling as a drift test wired into root `test` script.
+- [x] **Step 2: Fill `GUARD_CATALOG` entries for real** — every `whenToUse` must answer "which situation calls for this guard over its neighbors"; every `example` compiles inside `snippets/04-guards.ts`.
+- [x] **Step 3: Verify** — `pnpm docs:guards` clean, snippets typecheck, `pnpm test` green.
+- [x] **Step 4: Commit** — `docs: chapter 04 guard catalog, generated from GUARD_CATALOG`
 
 ---
 
@@ -273,10 +275,10 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [ /* one entry per fa
 - Create: `docs/tutorial/05-running-and-eval.md`, `docs/tutorial/06-advanced.md`, `docs/tutorial/snippets/05-running-and-eval.ts`, `docs/tutorial/snippets/06-advanced.ts`
 - Sources to absorb: `docs/guides/eval-config.md`, `docs/guides/measured-loop.md` (→ 05), `docs/guides/local-models.md`, `packages/server/README.md`, `packages/vercel/README.md` content (→ 06)
 
-- [ ] **Step 1: Write 05** — `runSpecConversation` for scripted runs, `looprun-eval` CLI walkthrough (real command outputs, re-run to confirm), the measured loop.
-- [ ] **Step 2: Write 06** — OpenAI-compatible server, Vercel AI SDK adapter, local models via `looprun/models`; each with a snippet-backed minimal setup.
-- [ ] **Step 3: Verify** — snippets typecheck; CLI commands in 05 re-executed and outputs pasted from the actual run.
-- [ ] **Step 4: Commit** — `docs: tutorial chapters 05–06`
+- [x] **Step 1: Write 05** — `runSpecConversation` for scripted runs, `looprun-eval` CLI walkthrough (real command outputs, re-run to confirm), the measured loop.
+- [x] **Step 2: Write 06** — OpenAI-compatible server, Vercel AI SDK adapter, local models via `looprun/models`; each with a snippet-backed minimal setup.
+- [x] **Step 3: Verify** — snippets typecheck; CLI commands in 05 re-executed and outputs pasted from the actual run.
+- [x] **Step 4: Commit** — `docs: tutorial chapters 05–06`
 
 ---
 
@@ -287,11 +289,11 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [ /* one entry per fa
 - Modify: `README.md` (short: what looprun is, install, 10-line teaser from 02-hello-world, table of tutorial links, benchmarks link), `skills/looprun-governance/**` (update any API references to the new surface), `docs/benchmarks.md` untouched
 - Create: `.changeset/simplification-major.md` (major bump for all `@looprun-ai/*` + `looprun`), `docs/superpowers/specs/2026-07-28-migration-notes.md` (old symbol → new location table for agentspec skill, looprun-bench, yntelli — executed in those repos separately)
 
-- [ ] **Step 1: Delete superseded docs; fix every dangling link** (`grep -rn 'docs/\(overview\|getting-started\|illustrated-guide\|examples\|references\|guides\)' . --include='*.md' --include='*.ts' --include='*.json' | grep -v node_modules` must return nothing).
-- [ ] **Step 2: Rewrite README; update governance skill references.**
-- [ ] **Step 3: Write migration notes + changeset.**
-- [ ] **Step 4: Final verify** — `pnpm -r build && pnpm test && pnpm docs:guards` green; `wc -l packages/*/src/**/*.ts | sort -rn | head` shows nothing above 500.
-- [ ] **Step 5: Commit and open PR** — `git push -u origin simplification`; PR body summarizes cuts (from inventory) and links the design spec.
+- [x] **Step 1: Delete superseded docs; fix every dangling link** (`grep -rn 'docs/\(overview\|getting-started\|illustrated-guide\|examples\|references\|guides\)' . --include='*.md' --include='*.ts' --include='*.json' | grep -v node_modules` must return nothing).
+- [x] **Step 2: Rewrite README; update governance skill references.**
+- [x] **Step 3: Write migration notes + changeset.**
+- [x] **Step 4: Final verify** — `pnpm -r build && pnpm test && pnpm docs:guards` green; `wc -l packages/*/src/**/*.ts | sort -rn | head` shows nothing above 500.
+- [x] **Step 5: Commit and open PR** — `git push -u origin simplification`; PR body summarizes cuts (from inventory) and links the design spec.
 
 ---
 

@@ -1,5 +1,7 @@
 # Prose-only Ungoverned Variant Implementation Plan
 
+> **Status:** shipped. `UngovernedBundle` ships in `packages/eval/src/ungoverned.ts`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Rewrite the ungoverned variant so its system prompt is byte-identical to the governed variant's (all rule prose present) while the enforcement layer (guards, chains, mutators, exhaustionReply, destructive cross-check) is disarmed.
@@ -29,7 +31,7 @@
 - Consumes: `renderAssembledPrompt(world, spec, uploads, domain)` from `@looprun-ai/core` (already exported); `AgentSpec.surface.systemPrompt?: (world, recentUploads?) => string` (`packages/core/src/spec.ts:153`).
 - Produces: `stripGovernance(spec: AgentSpec, contract: DomainContract): UngovernedBundle` — same signature, new behavior: `bundle.spec.surface.systemPrompt` is always set and renders the governed assembled prompt bytes.
 
-- [ ] **Step 1: Rewrite the strip test to the new semantics (failing first)**
+- [x] **Step 1: Rewrite the strip test to the new semantics (failing first)**
 
 In `packages/eval/test/subject-runner.test.ts`, replace the test at lines 127–150 with:
 
@@ -77,12 +79,12 @@ import { renderAssembledPrompt } from '@looprun-ai/core';
 
 Note: the old assertions `behavior === []` / `scope === undefined` / `coreInvariants === []` are deliberately dropped from the test — under the new semantics those fields are inert (the prompt comes from the closure) and asserting them would freeze an implementation detail. The old test's discrimination test (`'forbidden call is detected (02, ungoverned variant fabricates a reservation)'`, lines 104–125) stays UNCHANGED — it proves the forbidden call still reaches the world in the ungov variant (spec test b).
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `cd /Users/marcos/Dev/js/looprun/looprun && pnpm -C packages/eval exec vitest run test/subject-runner.test.ts`
 Expected: FAIL — `stripped.spec.surface.systemPrompt` is `undefined` (current strip only copies a pre-existing override, and the toy-subject spec has none).
 
-- [ ] **Step 3: Rewrite `packages/eval/src/ungoverned.ts`**
+- [x] **Step 3: Rewrite `packages/eval/src/ungoverned.ts`**
 
 Full new file content:
 
@@ -147,12 +149,12 @@ Notes for the implementer:
 - `scope` / `behavior` / `coreInvariants` are likewise kept: prose-only fields, inert for enforcement. The disarm set is exactly the cut table: guards (all five hook arrays), chains, exhaustionReply, assertDestructiveConfirmable.
 - If `AgentSpec.controls` typing rejects `directives` passthrough, keep the destructure as `const { chains: _c, exhaustionReply: _e, ...loopControls }` — `directives` flows through the rest spread.
 
-- [ ] **Step 4: Run the eval test suite**
+- [x] **Step 4: Run the eval test suite**
 
 Run: `cd /Users/marcos/Dev/js/looprun/looprun && pnpm -C packages/eval exec vitest run && pnpm -r typecheck`
 Expected: all PASS (including the unchanged discrimination test 02 and `surface-lock.test.ts` — no export changed). If the byte-identity assertion fails, the bug is in the closure (wrong contract or spec captured), not in the test.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cd /Users/marcos/Dev/js/looprun/looprun
@@ -171,7 +173,7 @@ git commit -m "feat(eval): ungoverned variant is prose-only — byte-identical p
 - Consumes: the new `stripGovernance` semantics from Task 1.
 - Produces: nothing downstream; docs only.
 
-- [ ] **Step 1: Replace the EMPTIED/KEPT block and the fairness paragraph**
+- [x] **Step 1: Replace the EMPTIED/KEPT block and the fairness paragraph**
 
 Replace lines 654–669 (the fenced `EMPTIED/KEPT` block and the paragraph after it) with:
 
@@ -200,12 +202,12 @@ measure.
 
 Keep lines 641–652 (heading, intro sentence, code excerpt) unchanged — the excerpt's comment reads "the whole governance surface emptied"; update that one comment line in the excerpt to `/** The ungoverned control variant: the same prompt with the enforcement layer disarmed. */` and make the same one-line comment fix in `docs/tutorial/snippets/05-running-and-eval.ts` (grep for `ungovernedVariant` there) so the excerpt and its source stay in sync.
 
-- [ ] **Step 2: Verify the snippet file still typechecks (if it is part of a checked package)**
+- [x] **Step 2: Verify the snippet file still typechecks (if it is part of a checked package)**
 
 Run: `cd /Users/marcos/Dev/js/looprun/looprun && pnpm -r typecheck`
 Expected: PASS.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 cd /Users/marcos/Dev/js/looprun/looprun
@@ -225,7 +227,7 @@ git commit -m "docs(tutorial): §5.6 A/B — ungoverned variant is prose-only (s
 - Consumes: nothing from Tasks 1–2 (docs describe the released engine behavior; the skill is engine-version-agnostic — cite the semantics, not a version).
 - Produces: nothing downstream.
 
-- [ ] **Step 1: Update the T2 range table in `skill/references/test.md`**
+- [x] **Step 1: Update the T2 range table in `skill/references/test.md`**
 
 The three range rows (lines 123–125) currently define *discriminates*/*floor*/*alarm* against an ungoverned variant. Update the row DESCRIPTIONS so the meaning reads against the prose-only baseline. Exact replacement rows:
 
@@ -239,15 +241,15 @@ Line 129 ("comments against the ungoverned traces…") needs no text change — 
 
 Line 185 (fail class 9): append one clause so the row ends: `…ACCEPT with the price written down** — the ungoverned variant shares the governed prompt, so an ALARM is the check itself (not a missing rule) costing the case`.
 
-- [ ] **Step 2: Update the prediction instructions in `skill/references/evals.md`**
+- [x] **Step 2: Update the prediction instructions in `skill/references/evals.md`**
 
 Line 55 currently: "what you expect an ungoverned" (agent to do). Rewrite the sentence to predict a WELL-PROMPTED agent: e.g. `For every case, write one sentence in the case's own comment: what you expect an agent that KNOWS every rule (same prompt, no checks) to do under this pressure — where prose alone bends.` Adjust line 64's observation ("An ungoverned capable model is verbose and honest…") only if it contradicts the new baseline; keep it if it still describes observed behavior.
 
-- [ ] **Step 3: Leak-review both files**
+- [x] **Step 3: Leak-review both files**
 
 Re-read both diffs. Confirm: no machine paths, no dev/bench vocabulary ("Atlas", "bench", model nicknames), no engine version numbers. State the confirmation explicitly in the task report.
 
-- [ ] **Step 4: Commit (agentspec repo)**
+- [x] **Step 4: Commit (agentspec repo)**
 
 ```bash
 cd /Users/marcos/Dev/js/looprun/agentspec

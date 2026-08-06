@@ -1,5 +1,7 @@
 # Consent by ApprovalRequest — Implementation Plan
 
+> **Status:** shipped. `approvalMatchesCall` ships in `packages/core/src/runtime/approval-request.ts`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** consent to a destructive act becomes a token the engine issues and the user types back, so no
@@ -59,7 +61,7 @@ Spec: `docs/superpowers/specs/2026-08-05-consent-by-approval-design.md`.
 **Interfaces:**
 - Produces: `canonValue(v: string): string`, `targetMatchesValue(target: string, value: string): boolean`, `valueSpokenBy(value: string, text: string): boolean`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 // packages/core/test/matching.test.ts
@@ -107,12 +109,12 @@ describe('valueSpokenBy', () => {
 });
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `pnpm -C packages/core exec vitest run test/matching.test.ts`
 Expected: FAIL — `Failed to resolve import "../src/guards/matching.js"`.
 
-- [ ] **Step 3: Create the module**
+- [x] **Step 3: Create the module**
 
 ```ts
 // packages/core/src/guards/matching.ts
@@ -204,12 +206,12 @@ export function valueSpokenBy(value: string, text: string): boolean {
 }
 ```
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `pnpm -C packages/core exec vitest run test/matching.test.ts`
 Expected: PASS, 8 tests.
 
-- [ ] **Step 5: Point `honesty.ts` at the shared law**
+- [x] **Step 5: Point `honesty.ts` at the shared law**
 
 In `packages/core/src/guards/honesty.ts`, delete the local `LEADING_PUNCT`, `TRAILING_PUNCT`, `isAscii`,
 `foldCase`, `canonValue` and `targetMatchesValue` definitions, and add at the top of the imports:
@@ -224,12 +226,12 @@ Then re-export it so the package's public surface is unchanged — `honesty.ts` 
 export { targetMatchesValue } from './matching.js';
 ```
 
-- [ ] **Step 6: Run the core suite**
+- [x] **Step 6: Run the core suite**
 
 Run: `pnpm -C packages/core test`
 Expected: PASS — no behaviour changed, only the definition site.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add packages/core/src/guards/matching.ts packages/core/src/guards/honesty.ts packages/core/test/matching.test.ts
@@ -248,7 +250,7 @@ git commit -m "feat(core): the matching law is one module — whole-value equali
 - Consumes: `valueSpokenBy` (Task 1)
 - Produces: `ApprovalRequest`, `deriveToken(meaning: string): string`, `approvalMatchesCall(c: ApprovalRequest, tool: string, args: Record<string, unknown>): boolean`, `consumeApprovals(open: ApprovalRequest[], userText: string, turnIndex: number): ApprovalRequest[]`, `renderApprovalRequest(c: ApprovalRequest, text: EngineText): string`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 // packages/core/test/approval-request.test.ts
@@ -353,12 +355,12 @@ describe('closeApprovalsFor', () => {
 
 Add `closeApprovalsFor` to the import list at the top of this test file.
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `pnpm -C packages/core exec vitest run test/approval-request.test.ts`
 Expected: FAIL — `Failed to resolve import "../src/runtime/approval-request.js"`.
 
-- [ ] **Step 3: Create the module**
+- [x] **Step 3: Create the module**
 
 ```ts
 // packages/core/src/runtime/approval-request.ts
@@ -471,12 +473,12 @@ export function closeApprovalsFor(open: ApprovalRequest[], subject: string): voi
 }
 ```
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `pnpm -C packages/core exec vitest run test/approval-request.test.ts`
 Expected: PASS, 10 tests.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/core/src/runtime/approval-request.ts packages/core/test/approval-request.test.ts
@@ -498,7 +500,7 @@ git commit -m "feat(core): the consent approval — its token, what it licenses,
 The engine's user-facing sentences are DATA, so a host that runs its conversation in another language
 supplies them. An approval request the user cannot type is an act that can never be consented to.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 // packages/core/test/engine-text.test.ts
@@ -534,12 +536,12 @@ describe('the record speaks the declared language', () => {
 });
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `pnpm -C packages/core exec vitest run test/engine-text.test.ts`
 Expected: FAIL — `Failed to resolve import "../src/runtime/engine-text.js"`.
 
-- [ ] **Step 3: Create the pack**
+- [x] **Step 3: Create the pack**
 
 ```ts
 // packages/core/src/runtime/engine-text.ts
@@ -572,7 +574,7 @@ export function resolveEngineText(t?: Partial<EngineText>): EngineText {
 }
 ```
 
-- [ ] **Step 4: Read the closures from the pack**
+- [x] **Step 4: Read the closures from the pack**
 
 In `packages/core/src/runtime/claims.ts`:
 
@@ -617,7 +619,7 @@ export interface RenderOpts {
 grep -rn "RECORD_CLOSURE_" packages --include="*.ts" | grep -v /dist/
 ```
 
-- [ ] **Step 5: Add the domain seam**
+- [x] **Step 5: Add the domain seam**
 
 In `packages/core/src/assembled-prompt.ts`, inside `DomainContract`, after `renderClaim`:
 
@@ -630,12 +632,12 @@ In `packages/core/src/assembled-prompt.ts`, inside `DomainContract`, after `rend
 
 with `import type { EngineText } from './runtime/engine-text.js';` added to its imports.
 
-- [ ] **Step 6: Run the tests to verify they pass**
+- [x] **Step 6: Run the tests to verify they pass**
 
 Run: `pnpm -C packages/core exec vitest run test/engine-text.test.ts && pnpm -C packages/core test`
 Expected: PASS.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add packages/core/src/runtime/engine-text.ts packages/core/src/runtime/claims.ts packages/core/src/assembled-prompt.ts packages/core/test/engine-text.test.ts
@@ -660,7 +662,7 @@ git commit -m "feat(core): the engine's user-facing sentences are host-declarabl
 Issuance and consumption are the RUNTIME's, never a guard's: reading the user's text and mutating the
 store are exactly what a guard must not do, so the guard layer only ever reads the result.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 // packages/core/test/approval-action-history.test.ts
@@ -745,12 +747,12 @@ describe('the user\'s own words consume an open approval', () => {
 });
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `pnpm -C packages/core exec vitest run test/approval-action-history.test.ts`
 Expected: FAIL — `issueApprovalForVeto` is not exported.
 
-- [ ] **Step 3: Add the store to the action history**
+- [x] **Step 3: Add the store to the action history**
 
 In `packages/core/src/runtime/action-history.ts`, add to `TurnActionHistory`:
 
@@ -785,7 +787,7 @@ Seed them in `createActionHistory`:
     destructiveLabels: {},
 ```
 
-- [ ] **Step 4: Consume at turn start**
+- [x] **Step 4: Consume at turn start**
 
 In `beginTurn`, after `action history.currentUserText = userText;`, add:
 
@@ -796,7 +798,7 @@ In `beginTurn`, after `action history.currentUserText = userText;`, add:
   action history.consentThisTurn = consumeApprovals(action history.approvals, userText, turnIndex);
 ```
 
-- [ ] **Step 5: Issue from a world result**
+- [x] **Step 5: Issue from a world result**
 
 In `recordToolResult`, after the observed entry is pushed, add:
 
@@ -815,7 +817,7 @@ In `recordToolResult`, after the observed entry is pushed, add:
 using the local `resultFlags` and `tookEffect` values already computed there for the observed entry
 (read the surrounding code and reuse them rather than recomputing).
 
-- [ ] **Step 6: Add the two issuance entry points**
+- [x] **Step 6: Add the two issuance entry points**
 
 ```ts
 /**
@@ -849,7 +851,7 @@ export function issueApprovalForVeto(action history: TurnActionHistory, tool: st
 }
 ```
 
-- [ ] **Step 7: Add the ctx field**
+- [x] **Step 7: Add the ctx field**
 
 In `packages/core/src/rules.ts`, inside `GuardCtx`:
 
@@ -870,12 +872,12 @@ grep -rn "userText: action history.currentUserText" packages/core/src packages/m
 
 and add `consent: action history.consentThisTurn,` beside it in each.
 
-- [ ] **Step 8: Run the tests to verify they pass**
+- [x] **Step 8: Run the tests to verify they pass**
 
 Run: `pnpm -C packages/core exec vitest run test/approval-action-history.test.ts && pnpm -C packages/core test`
 Expected: the new file PASSES, 7 tests. The existing suite still passes.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add packages/core/src/runtime/action-history.ts packages/core/src/rules.ts packages/core/src/guards/honesty.ts packages/core/test/approval-action-history.test.ts
@@ -893,7 +895,7 @@ git commit -m "feat(core): the runtime issues consent approvals and reads the us
 **Interfaces:**
 - Consumes: `TurnActionHistory.approvalsIssuedThisTurn` (Task 4), `EngineText` (Task 3)
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 // packages/core/test/approval-render.test.ts
@@ -950,12 +952,12 @@ describe('composeDeliveryText', () => {
 The TOKEN is engine-issued and identical whatever language the sentence around it is in: the user types
 the same literal either way, and the host's declaration is what makes the instruction readable.
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `pnpm -C packages/core exec vitest run test/approval-render.test.ts`
 Expected: FAIL — `composeDeliveryText` is not exported.
 
-- [ ] **Step 3: Rewrite `composeDelivery` around a testable core**
+- [x] **Step 3: Rewrite `composeDelivery` around a testable core**
 
 In `packages/core/src/runtime/turn.ts`, replace `composeDelivery` with:
 
@@ -995,7 +997,7 @@ Add the imports it needs: `resolveEngineText` from `./engine-text.js`, `type App
 pass `text` through to `renderOperationReport` at the other two call sites in this file
 (`deriveExhaustionClosure`, `withBlankFloor`) so the closure and the floor speak the same language.
 
-- [ ] **Step 4: Extend the blank floor**
+- [x] **Step 4: Extend the blank floor**
 
 In `withBlankFloor`, a turn whose prose is blank but which ISSUED an approval request has something to deliver:
 
@@ -1007,12 +1009,12 @@ Add `action history` to its call if it is not already a parameter (it is), and u
 branch to state the rule: prose gone AND nothing changed AND nothing asked is the case with nothing to
 deliver.
 
-- [ ] **Step 5: Run the tests to verify they pass**
+- [x] **Step 5: Run the tests to verify they pass**
 
 Run: `pnpm -C packages/core exec vitest run test/approval-render.test.ts && pnpm -C packages/core test`
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add packages/core/src/runtime/turn.ts packages/core/test/approval-render.test.ts
@@ -1033,7 +1035,7 @@ git commit -m "feat(core): the delivered text carries the engine's consent quest
 - Consumes: `GuardCtx.consent` (Task 4), `approvalMatchesCall` (Task 2)
 - Produces: `confirmFirst(): Guard` — no options
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 // packages/core/test/guards-confirmation.test.ts
@@ -1095,12 +1097,12 @@ describe('confirmFirst', () => {
 });
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `pnpm -C packages/core exec vitest run test/guards-confirmation.test.ts`
 Expected: FAIL — the current `confirmFirst` reads `ctx.args[flag]` and returns null.
 
-- [ ] **Step 3: Rewrite the guard**
+- [x] **Step 3: Rewrite the guard**
 
 Replace the whole of `confirmFirst` in `packages/core/src/guards/confirmation.ts` with:
 
@@ -1146,7 +1148,7 @@ Add `import { approvalMatchesCall } from '../runtime/approval-request.js';` and 
 `canonArgs`, `askedInDeliveredTurn`, `hasAskIntent`, `isAskEvent`, `isBlankDelivery` imports that only
 those functions used (keep what `destructiveThrottle` still needs).
 
-- [ ] **Step 4: Delete the two kinds**
+- [x] **Step 4: Delete the two kinds**
 
 Delete `noActAfterAskSameTurn` and `pendingConfirmMustAsk` entirely from
 `packages/core/src/guards/confirmation.ts`, and delete `askedInDeliveredTurn` from
@@ -1154,7 +1156,7 @@ Delete `noActAfterAskSameTurn` and `pendingConfirmMustAsk` entirely from
 
 Remove their exports from `packages/core/src/guards/index.ts` and `packages/core/src/index.ts`.
 
-- [ ] **Step 5: Update the catalog**
+- [x] **Step 5: Update the catalog**
 
 In `packages/core/src/guards/catalog.ts`:
 
@@ -1174,7 +1176,7 @@ In `packages/core/src/guards/catalog.ts`:
 3. Leave `CONFIRM_CLASS_KINDS` as it stands — `confirmFirst`, `destructiveThrottle` and `precondition`
    are all still shipped kinds.
 
-- [ ] **Step 6: Run the tests to verify they pass**
+- [x] **Step 6: Run the tests to verify they pass**
 
 Run: `pnpm -C packages/core exec vitest run test/guards-confirmation.test.ts`
 Expected: PASS, 6 tests.
@@ -1182,7 +1184,7 @@ Expected: PASS, 6 tests.
 Then: `pnpm -C packages/core exec vitest run test/guard-catalog-parity.test.ts`
 Expected: PASS — the catalog names exactly the shipped kinds.
 
-- [ ] **Step 7: Pin the `ask` incentive law**
+- [x] **Step 7: Pin the `ask` incentive law**
 
 A self-declared signal is safe only where declaring it to excess costs the declarer. Append to
 `packages/core/test/laws.test.ts`:
@@ -1210,7 +1212,7 @@ If `lie-check.ts` has no `isLieCheckEligible` export, add one that returns
 `!operationRecord(did).hasOperations` — the eligibility rule the reply pipeline already applies — and use
 it at the pipeline's existing decision point so the test pins the shipped path rather than a copy.
 
-- [ ] **Step 8: Rewrite the suites that exercise the deleted kinds**
+- [x] **Step 8: Rewrite the suites that exercise the deleted kinds**
 
 Run: `pnpm -C packages/core test`
 
@@ -1219,7 +1221,7 @@ skip, never weaken. The files to expect: `test/guards-structural.test.ts`, `test
 `test/redteam/*.test.ts`, `test/proofs/*`. A red-team case that asserted "a declared ask licenses an act"
 becomes "a declared ask licenses NOTHING".
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add packages/core/src packages/core/test
@@ -1238,7 +1240,7 @@ git commit -m "feat!(core): consent is an engine-issued token, and the ask licen
 - Consumes: `deriveToken` (Task 2)
 - Produces: `AgentSpecConfig.destructiveLabels?: Record<string, string>`, `AgentSpecBase.destructiveLabels`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append to `packages/core/test/agent-spec.test.ts`:
 
@@ -1293,12 +1295,12 @@ describe('destructiveLabels', () => {
 });
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `pnpm -C packages/core exec vitest run test/agent-spec.test.ts -t destructiveLabels`
 Expected: FAIL — no throw; `destructiveLabels` is not a config key.
 
-- [ ] **Step 3: Add the config field**
+- [x] **Step 3: Add the config field**
 
 In `AgentSpecConfig`, beside `confirmMechanism`:
 
@@ -1318,7 +1320,7 @@ Add the field to the class and seat it in the constructor beside `confirmMechani
     this.destructiveLabels = { ...(cfg.destructiveLabels ?? {}) };
 ```
 
-- [ ] **Step 4: Validate it in `installBase`**
+- [x] **Step 4: Validate it in `installBase`**
 
 Right after the `strayMech` check, add:
 
@@ -1349,12 +1351,12 @@ Right after the `strayMech` check, add:
 
 with `import { deriveToken } from './runtime/approval-request.js';`.
 
-- [ ] **Step 5: Run the tests to verify they pass**
+- [x] **Step 5: Run the tests to verify they pass**
 
 Run: `pnpm -C packages/core exec vitest run test/agent-spec.test.ts`
 Expected: PASS.
 
-- [ ] **Step 6: Thread the labels to the action history**
+- [x] **Step 6: Thread the labels to the action history**
 
 Find where the runtime creates the action history for a spec conversation:
 
@@ -1370,12 +1372,12 @@ immediately after creation. Where a veto is recorded for a destructive tool, cal
 grep -rn "recordVeto(" packages/core/src packages/mastra/src | grep -v /dist/
 ```
 
-- [ ] **Step 7: Run the full suite**
+- [x] **Step 7: Run the full suite**
 
 Run: `pnpm -r typecheck && pnpm -C packages/core test && pnpm -C packages/mastra test`
 Expected: PASS.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add packages/core/src packages/core/test packages/mastra/src
@@ -1395,7 +1397,7 @@ git commit -m "feat!(core): a destructive act with no record declares the label 
 - Consumes: `valueSpokenBy` (Task 1)
 - Produces: `valueFromUser(opts: { arg: string }): Guard`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Replace the `askedEarlier` block in `packages/core/test/guards-structural.test.ts` with:
 
@@ -1449,12 +1451,12 @@ describe('valueFromUser', () => {
 });
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `pnpm -C packages/core exec vitest run test/guards-structural.test.ts`
 Expected: FAIL — `valueFromUser` is not exported.
 
-- [ ] **Step 3: Rewrite the guard**
+- [x] **Step 3: Rewrite the guard**
 
 Replace the whole of `packages/core/src/guards/structural.ts`:
 
@@ -1503,7 +1505,7 @@ export function valueFromUser(opts: { arg: string }): Guard {
 }
 ```
 
-- [ ] **Step 4: Update the exports and the catalog**
+- [x] **Step 4: Update the exports and the catalog**
 
 In `packages/core/src/guards/index.ts` and `packages/core/src/index.ts`, replace `askedEarlier` with
 `valueFromUser`.
@@ -1518,12 +1520,12 @@ In `packages/core/src/guards/catalog.ts`, replace the `askedEarlier` entry's `na
     example: `valueFromUser({ arg: 'email' })`,
 ```
 
-- [ ] **Step 5: Run the tests to verify they pass**
+- [x] **Step 5: Run the tests to verify they pass**
 
 Run: `pnpm -C packages/core exec vitest run test/guards-structural.test.ts test/guard-catalog-parity.test.ts`
 Expected: PASS.
 
-- [ ] **Step 6: Fix every remaining reference**
+- [x] **Step 6: Fix every remaining reference**
 
 Run: `pnpm -r typecheck && pnpm -r test`
 
@@ -1533,7 +1535,7 @@ Update each `askedEarlier` call site the compiler names. Find them with:
 grep -rn "askedEarlier" packages docs examples --include="*.ts" | grep -v /dist/
 ```
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add packages docs examples
@@ -1549,7 +1551,7 @@ git commit -m "feat!(core): a value recorded for the user must be the user's own
 - Modify: `docs/tutorial/01-concepts.md`, `03-agent-anatomy.md`, `04-guards.md`, `05-running-and-eval.md`, `06-advanced.md`
 - Modify: `docs/tutorial/snippets/scheduler/spec.ts`, `docs/tutorial/snippets/scheduler/tools.ts`, `docs/tutorial/snippets/scheduler-subject/evals/cases.ts`, `docs/tutorial/snippets/test/05-running-and-eval.test.ts`
 
-- [ ] **Step 1: Rewrite the guarantee section of `GUARDS.md`**
+- [x] **Step 1: Rewrite the guarantee section of `GUARDS.md`**
 
 The four rows the design's §14 states, replacing the consent rows that read "self-declared":
 
@@ -1565,7 +1567,7 @@ The four rows the design's §14 states, replacing the consent rows that read "se
 | An operational LIE in free prose | **NO** — the operation record contradicts it |
 ```
 
-- [ ] **Step 2: Rewrite the consent chapter of `GUARDS.md`**
+- [x] **Step 2: Rewrite the consent chapter of `GUARDS.md`**
 
 Replace every passage describing the ask signal, `via`, `within`, `askedInDeliveredTurn`,
 `pendingConfirmMustAsk` and `noActAfterAskSameTurn` with the shipped mechanism: the approval lifecycle
@@ -1575,7 +1577,7 @@ law, and the world/spec obligations table from the design's §12.
 Add the `ask` incentive law verbatim from the design's §10 — the two tables of what may and may not
 read a self-declared signal.
 
-- [ ] **Step 3: Update the tutorial prose**
+- [x] **Step 3: Update the tutorial prose**
 
 | File | Change |
 |---|---|
@@ -1585,14 +1587,14 @@ read a self-declared signal.
 | `05-running-and-eval.md` | the consent scenario's user turn carries the token |
 | `06-advanced.md` | the one guard reference follows the new name |
 
-- [ ] **Step 4: Update the taught domain**
+- [x] **Step 4: Update the taught domain**
 
 In `docs/tutorial/snippets/scheduler/tools.ts`, the destructive tool returns `requiresConfirmation`
 with the record under an identity key. In `spec.ts`, `confirmFirst()` takes no options; a destructive
 tool with no record declares its label in `destructiveLabels`. In the eval cases, the confirming user
 turn types the engine's token.
 
-- [ ] **Step 5: Regenerate the chapter and verify**
+- [x] **Step 5: Regenerate the chapter and verify**
 
 ```bash
 pnpm docs:guards
@@ -1602,7 +1604,7 @@ pnpm test
 
 Expected: PASS, including the chapter-in-sync check that `pnpm test` runs.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add packages/core/GUARDS.md docs/tutorial
@@ -1618,14 +1620,14 @@ git commit -m "docs: the guard chapter and the tutorial teach consent by approva
 - Modify: `skills/looprun-governance/scripts/scaffold-proof-cases.mjs`
 - Modify (separate repo, leak-reviewed per file): `~/Dev/js/looprun/agentspec/skill/references/guard-catalog.md`, `norms.md`, `spec-template.ts`, `test.md`
 
-- [ ] **Step 1: Update the governance skill**
+- [x] **Step 1: Update the governance skill**
 
 In `proof-case-authoring.md`, the consent proof case is authored as a two-turn shape: a turn that
 attempts the act and receives the approval, then a turn whose user text carries the token.
 
 In `scaffold-proof-cases.mjs`, the scaffolded consent case emits that same two-turn shape.
 
-- [ ] **Step 2: Run the governance gate**
+- [x] **Step 2: Run the governance gate**
 
 ```bash
 pnpm test:proofs
@@ -1633,14 +1635,14 @@ pnpm test:proofs
 
 Expected: PASS.
 
-- [ ] **Step 3: Commit the looprun side**
+- [x] **Step 3: Commit the looprun side**
 
 ```bash
 git add skills/looprun-governance
 git commit -m "docs(skill): a consent proof case is an approval request and the turn that answers it"
 ```
 
-- [ ] **Step 4: Update the agentspec skill**
+- [x] **Step 4: Update the agentspec skill**
 
 In the `agentspec` repo, on its own branch:
 
@@ -1651,7 +1653,7 @@ In the `agentspec` repo, on its own branch:
 | `references/spec-template.ts` | the destructive tool shape carries `destructiveLabels` |
 | `references/test.md` | a consent case types the token |
 
-- [ ] **Step 5: Lint and commit the agentspec side**
+- [x] **Step 5: Lint and commit the agentspec side**
 
 ```bash
 cd ~/Dev/js/looprun/agentspec
@@ -1660,7 +1662,7 @@ node skill/scripts/lint-authoring.mjs
 git add skill && git commit -m "docs(skill): consent is an engine-issued token"
 ```
 
-- [ ] **Step 6: Whole-repo verification**
+- [x] **Step 6: Whole-repo verification**
 
 ```bash
 cd ~/Dev/js/looprun/looprun
