@@ -21,7 +21,7 @@ import { resolveGuards, resolveMutators } from '../spec.js';
 import type { AgentSpec, ChainSpec } from '../spec.js';
 import type { DomainContract } from '../assembled-prompt.js';
 import type { AgentWorld, Guard, GuardCtx, ObservedCall, Judge } from '../rules.js';
-import { issueApprovalForVeto, recordVeto, type TurnActionHistory } from './action-history.js';
+import { issueApprovalForVeto, recordDowngradedAttempt, recordVeto, type TurnActionHistory } from './action-history.js';
 import { isTerminal } from './terminal.js';
 import {
   deriveClaimsFromActionHistory,
@@ -45,7 +45,11 @@ export interface ReplyViolation {
 
 export type PreToolVerdict =
   | { verdict: 'allow' }
-  | { verdict: 'deny'; reason: string; guard: Guard; mustCloseTurn: boolean };
+  | { verdict: 'deny'; reason: string; guard: Guard; mustCloseTurn: boolean }
+  /** A destructive act denied for consent on a tool whose declared schema can simulate: the caller
+   *  re-enters ONCE with these widened arguments and executes the simulation instead — the world
+   *  validates the act, describes it, and names the record the question binds to. */
+  | { verdict: 'downgrade'; args: Record<string, unknown> };
 
 /**
  * The result a VETOED call returns to the model.
@@ -93,13 +97,17 @@ export function governanceVeto(guardKind: string, reason: string, mustCloseTurn:
   };
 }
 
-/** Run the preTool guards for one candidate call. On deny, the veto is recorded in the action history. */
+/** Run the preTool guards for one candidate call. On deny, the veto is recorded in the action
+ *  history. `opts.canDowngrade` (default true) says whether the caller can execute a downgraded
+ *  simulation — a backend with no executor of its own (native-tools mode, or the re-entry after a
+ *  downgrade) passes false, and a consent denial then takes the veto-question route instead. */
 export async function evaluatePreTool(
   spec: AgentSpec,
   actionHistory: TurnActionHistory,
   world: AgentWorld,
   tool: string,
   args: Record<string, unknown>,
+  opts?: { canDowngrade?: boolean },
 ): Promise<PreToolVerdict> {
   const guards = resolveGuards(spec.guards.preTool, tool);
   // SAME-STEP visibility (before the guard await, synchronously): snapshot the siblings admitted
@@ -109,7 +117,8 @@ export async function evaluatePreTool(
   // recorded (now in `observed`) or removed on the veto path just below (it never ran).
   // The spec's labels are what turn a DENIAL into a question the user can read and answer, so they are
   // seated where the spec and the action history first meet — a spec that declares none leaves the action history's own
-  // map alone, and a flag-less destructive tool with no label stays permanently unconsentable.
+  // map alone, and a destructive tool that names no record and has no label stays permanently
+  // unconsentable.
   if (spec.destructiveLabels) actionHistory.destructiveLabels = spec.destructiveLabels;
   const siblingCallsThisStep = [...actionHistory.inFlightCalls];
   const selfEntry: ObservedCall = { name: tool, args, ok: true, turnIndex: actionHistory.turnIndex };
@@ -133,11 +142,22 @@ export async function evaluatePreTool(
     if (reason) {
       const selfIx = actionHistory.inFlightCalls.indexOf(selfEntry);
       if (selfIx >= 0) actionHistory.inFlightCalls.splice(selfIx, 1);
+      if (g.kind === 'confirmFirst' && (opts?.canDowngrade ?? true)
+          && actionHistory.simulatableTools?.has(tool) && args.simulate !== true) {
+        // The bare call is what made this destructive. Re-running it as a simulation costs nothing —
+        // a simulation changes nothing by construction — and it is the only way the turn produces a
+        // question the user can answer: the world validates the act, describes it, and names the
+        // record the question binds to. Not a veto: the attempt is recorded for scoring, the turn
+        // progresses.
+        recordDowngradedAttempt(actionHistory, tool, args);
+        return { verdict: 'downgrade', args: { ...args, simulate: true } };
+      }
       recordVeto(actionHistory, tool, args, `${g.dim}:${g.kind}:${tool}`);
-      // THE DENIAL IS THE QUESTION. A destructive tool the world has no simulate form for is asked about
-      // by being attempted: the gate refuses, and the refusal raises the consent question the delivered
-      // text then carries. An agent cannot choose not to ask and still act.
-      if (g.kind === 'confirmFirst') issueApprovalForVeto(actionHistory, tool);
+      // THE DENIAL IS THE QUESTION. A destructive tool that cannot simulate is asked about by being
+      // attempted: the gate refuses, and the refusal raises the consent question — about the record
+      // the call itself names — that the delivered text then carries. An agent cannot choose not to
+      // ask and still act.
+      if (g.kind === 'confirmFirst') issueApprovalForVeto(actionHistory, tool, args);
       // 2nd+ consecutive veto: the model is looping. The backend wraps `reason` in the veto
       // envelope, which carries the escalation both as prose and as a structural flag.
       return { verdict: 'deny', reason, guard: g, mustCloseTurn: actionHistory.vetoStreak >= 2 };

@@ -256,28 +256,6 @@ function compilePredicate(
 
 // ── The 'true'-string coercion seam (loader-level wrapper) ───────────────────────────────────────
 
-/**
- * NORMALIZE the confirm flag. The world's own `isConfirmed` convention treats `confirmed: 'true'`
- * (the string a JSON tool-call arg often arrives as) as confirmed; the structural
- * `confirmFirst` (via:'simulate') keys on the strict boolean `true`. Rather than push the coercion into
- * the core primitive, the loader wraps the guard's `check`, promoting a string `'true'` to boolean
- * `true` in the ctx it delegates. Minimal seam, zero core change: the only site the string matters is
- * the trigger `ctx.args.confirmed === true` (simulate MATCHING excludes the `confirmed` key, so observed
- * entries need no rewrite).
- */
-function normalizeConfirmed(guard: Guard): Guard {
-  return {
-    kind: guard.kind,
-    dim: guard.dim,
-    ...(guard.meta ? { meta: guard.meta } : {}),
-    check(ctx: GuardCtx) {
-      if (ctx.args?.confirmed !== 'true') return guard.check(ctx);
-      return guard.check({ ...ctx, args: { ...ctx.args, confirmed: true } });
-    },
-    prose: () => guard.prose(),
-  };
-}
-
 // ── The DENY POLICY — one renderer for every catalog deny, names the read, never a figure ────────
 
 /**
@@ -330,9 +308,10 @@ function installGuard(spec: AgentSpecBase, g: GuardConfig, deps: NormsDeps, outc
     case 'consentToken':
       // DENY-POLICY AUDIT: confirmFirst's deny carries no world figure and no role, so there is nothing
       // for renderDeny (which is reads-shaped) to replace — it stays on its own figure-free primitive
-      // text. What licenses the act is the consent token the engine issued for the record and the user
-      // typed back; the confirm flag only says WHICH call acts.
-      spec.addGuard('preTool', g.tools, normalizeConfirmed(confirmFirst()), { layer: 'agent', id });
+      // text. What licenses the act is the approval code the engine issued for the record and the user
+      // typed back; the acting call carries no protocol field, and only a strict boolean
+      // `simulate: true` on a schema-licensed tool bypasses the gate (a string 'true' is an act).
+      spec.addGuard('preTool', g.tools, confirmFirst(), { layer: 'agent', id });
       return;
     case 'valueFromUser':
       // DENY-POLICY AUDIT: valueFromUser's deny names only the gated ARG (structural), no figure/role.

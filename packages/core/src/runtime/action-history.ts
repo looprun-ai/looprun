@@ -145,16 +145,19 @@ function issueApproval(actionHistory: TurnActionHistory, c: { tool: string; subj
 }
 
 /**
- * A destructive tool with no simulate form was DENIED. The denial IS the question: attempting the act is
- * what puts it on the user's screen, so an agent cannot choose not to ask and still act.
+ * A destructive call was DENIED. The denial IS the question: attempting the act is what puts it on
+ * the user's screen, so an agent cannot choose not to ask and still act.
  *
- * The question's meaning is the label the spec declared. A tool with no label issues nothing, so it can
- * never be consented to and never runs — absence of a label is absence of any possible consent.
+ * The question names the record the CALL names — `unsubscribeCustomer({customerId:'cust_2001'})`
+ * raises `CONFIRM CUST_2001`, the same literal a simulation's answer would have raised. A call that
+ * names no record falls back to the label the spec declared, and a call with neither raises nothing:
+ * absence of both is absence of any possible consent.
  */
-export function issueApprovalForVeto(actionHistory: TurnActionHistory, tool: string): void {
+export function issueApprovalForVeto(actionHistory: TurnActionHistory, tool: string, args: Record<string, unknown> = {}): void {
+  const [subject] = preferredIdentityValues(args);
+  if (subject) return issueApproval(actionHistory, { tool, subject, meaning: subject });
   const meaning = actionHistory.destructiveLabels[tool];
-  if (!meaning) return;
-  issueApproval(actionHistory, { tool, meaning });
+  if (meaning) issueApproval(actionHistory, { tool, meaning });
 }
 
 /** Structural success check on a tool result ({success:false} / {error} / {PREREQ_NOT_MET} ⇒ failed). */
@@ -164,6 +167,16 @@ export function resultOk(r: unknown): boolean {
     if (o.success === false || o.PREREQ_NOT_MET === true || typeof o.error === 'string') return false;
   }
   return true;
+}
+
+/** Record a destructive attempt the runtime DOWNGRADED to its simulation (the call re-runs with
+ *  `simulate: true`; the world was not reached by the bare form). The attempt is scoring surface —
+ *  the agent reached for the act, and the downgrade repairs the conversation, not the mistake — so
+ *  it lands in `attemptedCalls` and the guard-events log. It is not a veto: no observed row, no
+ *  vetoStreak — the turn progresses. */
+export function recordDowngradedAttempt(actionHistory: TurnActionHistory, name: string, args: Record<string, unknown>): void {
+  actionHistory.attemptedCalls.push({ name, args });
+  actionHistory.turnCorrections.push(`downgrade:confirmFirst:${name}`);
 }
 
 /** Record a guard VETO of a tool call (the call did not run). */

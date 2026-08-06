@@ -15,7 +15,7 @@ import { FixtureWorld, FIXTURE_TOOL_NAMES, FIXTURE_DOMAIN } from './fixture-worl
 import type { FixturePreset } from './fixture-world.js';
 
 export type ProofPolarity = 'positive' | 'negative' | 'neutral';
-export type ProofExpect = 'veto' | 'redrive' | 'rewrite' | 'refusal' | 'pass';
+export type ProofExpect = 'veto' | 'downgrade' | 'redrive' | 'rewrite' | 'refusal' | 'pass';
 export type PartialGuardCtx = Partial<GuardCtx>;
 
 /** One conversation turn's input (structural — the backend's TurnInput shape). */
@@ -60,7 +60,7 @@ export interface GuardProof {
   target: ToolTarget;
   /** Rely on AgentSpecBase auto-install (minimal/base layer) instead of addGuard. */
   auto?: 'minimal' | 'base';
-  /** Spec config to merge (e.g. destructiveTools / confirmMechanism / lexicon for auto kinds). */
+  /** Spec config to merge (e.g. destructiveTools / destructiveLabels / lexicon for auto kinds). */
   specTweaks?: Partial<AgentSpecConfig>;
   /** 'skip' excludes this guard from the collective super-agent. Reserved for config-bound content-contract
    *  guards (e.g. mustAccountFor / claimIsGrounded / claimIsComplete, which need a per-agent `did`
@@ -124,7 +124,7 @@ export function buildIsolatedSpec(proof: GuardProof): AgentSpecBase {
 }
 
 /** Build ONE spec with EVERY non-auto proof guard installed — the collective non-interference harness.
- *  Auto kinds ride AgentSpecBase (destructiveTools + confirmMechanism + destructiveLabels). Duplicate kinds
+ *  Auto kinds ride AgentSpecBase (destructiveTools + destructiveLabels). Duplicate kinds
  *  at different targets are fine; ids are made unique by suffixing `#2`, `#3`, … */
 export function buildCollectiveSpec(proofs: GuardProof[]): AgentSpecBase {
   const spec = new AgentSpecBase({
@@ -134,7 +134,6 @@ export function buildCollectiveSpec(proofs: GuardProof[]): AgentSpecBase {
     tools: [...FIXTURE_TOOL_NAMES],
     contract: FIXTURE_DOMAIN,
     destructiveTools: ['deleteItem', 'purgeAll'],
-    confirmMechanism: { purgeAll: 'prior-ask' },
     // purgeAll acts on no identifiable record, so its consent question is built from this label.
     destructiveLabels: { purgeAll: 'delete every item' },
   });

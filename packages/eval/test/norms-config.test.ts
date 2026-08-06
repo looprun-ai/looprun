@@ -201,7 +201,7 @@ describe('loadNormsConfig — guards from data', () => {
     expect(typeof binding!.guard.check(ctxFor(5, 5))).toBe('string');
   });
 
-  it("consentToken normalizes confirmed:'true' (string) to a confirmed call", () => {
+  it("consentToken treats a string-'true' simulate as the act it is — only boolean true bypasses", () => {
     const spec = loadNormsConfig({
       id: 'x',
       persona: 'p',
@@ -209,20 +209,20 @@ describe('loadNormsConfig — guards from data', () => {
       guards: [{ kind: 'consentToken', id: 'refundConsent', tools: ['issueRefund'] }],
     });
     const binding = spec.guards.preTool.find((b) => b.id === 'agent:refundConsent')!;
-    // A string-'true' confirm with NO earlier simulate must be treated as confirmed → denied, exactly
-    // as a boolean-true confirm would be (proves the coercion reached the trigger).
     const ctx: GuardCtx = {
-      args: { confirmed: 'true', amount: 10 },
+      args: { simulate: 'true', amount: 10 },
       tool: 'issueRefund',
       world: {} as AgentWorld,
       observed: [] as ObservedCall[],
       turnIndex: 1,
       userText: '',
       history: [],
+      simulatableTools: new Set(['issueRefund']),
     };
     expect(typeof binding.guard.check(ctx)).toBe('string');
-    // control: an unconfirmed call (no simulate requirement triggered) is allowed
-    expect(binding.guard.check({ ...ctx, args: { amount: 10 } })).toBeNull();
+    // control: the strict boolean simulation on a schema-licensed tool passes — it is how the
+    // world raises the question.
+    expect(binding.guard.check({ ...ctx, args: { amount: 10, simulate: true } })).toBeNull();
   });
 
   // ── DENY POLICY: catalog denies name the read, never the figures ────────────────────────────────

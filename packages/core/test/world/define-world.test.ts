@@ -29,8 +29,8 @@ const assetSpec: WorldSpec = {
     },
     refund: {
       kind: 'write',
-      twoStep: true,
-      args: [{ name: 'bookingId', type: 'string' }, { name: 'confirmed', type: 'boolean', optional: true }],
+      simulatable: true,
+      args: [{ name: 'bookingId', type: 'string' }, { name: 'simulate', type: 'boolean', optional: true }],
       create: { entity: 'booking', id: { fixed: 'bk_refund' }, idKey: 'refundId' },
     },
     fileNote: {
@@ -147,22 +147,22 @@ describe('defineWorld — transition executor patches state (extension)', () => 
     tools: {
       cancel: {
         kind: 'transition',
-        twoStep: true,
+        simulatable: true,
         transition: { entity: 'booking', argRef: 'bookingId', to: 'cancelled', idKey: 'bookingId' },
-        args: [{ name: 'bookingId', type: 'string' }, { name: 'confirmed', type: 'boolean', optional: true }],
+        args: [{ name: 'bookingId', type: 'string' }, { name: 'simulate', type: 'boolean', optional: true }],
         gates: [{ kind: 'stateIs', entity: 'booking', argRef: 'bookingId', state: 'confirmed', error: 'NOT_CANCELLABLE' }],
       },
     },
   };
 
-  it('confirm patches the target record status and marks tookEffect', () => {
+  it('the bare acting call patches the target record status and marks tookEffect', () => {
     const w = defineWorld(cancelSpec)('default');
-    const simulate = w.exec('cancel', { bookingId: 'bk_1' }) as { requiresConfirmation?: boolean };
-    expect(simulate.requiresConfirmation).toBe(true);
-    expect(w.toolCalls.at(-1)?.tookEffect).toBe(false); // simulate is side-effect-free
+    const simulation = w.exec('cancel', { bookingId: 'bk_1', simulate: true }) as { requiresConfirmation?: boolean };
+    expect(simulation.requiresConfirmation).toBe(true);
+    expect(w.toolCalls.at(-1)?.tookEffect).toBe(false); // the simulation is side-effect-free
     expect((w.projection() as { status: { booking: Record<string, unknown> } }).status.booking.bk_1).toBe('confirmed');
 
-    const done = w.exec('cancel', { bookingId: 'bk_1', confirmed: true });
+    const done = w.exec('cancel', { bookingId: 'bk_1' });
     expect(done).toEqual({ ok: true, status: 'cancelled', bookingId: 'bk_1' });
     expect(w.toolCalls.at(-1)?.tookEffect).toBe(true);
     expect((w.projection() as { status: { booking: Record<string, unknown> } }).status.booking.bk_1).toBe('cancelled');
@@ -170,44 +170,44 @@ describe('defineWorld — transition executor patches state (extension)', () => 
 
   it('the state gate denies from the wrong state (no patch, no effect)', () => {
     const w = defineWorld(cancelSpec)('default');
-    const r = w.exec('cancel', { bookingId: 'bk_2', confirmed: true });
+    const r = w.exec('cancel', { bookingId: 'bk_2' });
     expect(r).toEqual({ ok: false, error: 'NOT_CANCELLABLE' });
     expect(w.toolCalls.at(-1)?.tookEffect).toBe(false);
     expect((w.projection() as { status: { booking: Record<string, unknown> } }).status.booking.bk_2).toBe('out');
   });
 });
 
-describe('defineWorld — two-step simulate ≡ confirm (#2)', () => {
-  it('an unconfirmed simulate is side-effect-free and simulations; confirm mints', () => {
+describe('defineWorld — simulate ≡ act (#2)', () => {
+  it('a simulate:true call is side-effect-free; the bare call mints', () => {
     const w = defineWorld(assetSpec)('default');
-    const simulate = w.exec('refund', { bookingId: 'bk_1' }) as { requiresConfirmation?: boolean };
-    expect(simulate.requiresConfirmation).toBe(true);
-    expect(w.toolCalls.at(-1)?.tookEffect).toBe(false); // no side effect on simulate
-    const confirm = w.exec('refund', { bookingId: 'bk_1', confirmed: true }) as { ok: boolean; refundId?: string };
-    expect(confirm).toEqual({ ok: true, refundId: 'bk_refund' });
+    const simulation = w.exec('refund', { bookingId: 'bk_1', simulate: true }) as { requiresConfirmation?: boolean };
+    expect(simulation.requiresConfirmation).toBe(true);
+    expect(w.toolCalls.at(-1)?.tookEffect).toBe(false); // no side effect on the simulation
+    const acted = w.exec('refund', { bookingId: 'bk_1' }) as { ok: boolean; refundId?: string };
+    expect(acted).toEqual({ ok: true, refundId: 'bk_refund' });
     expect(w.toolCalls.at(-1)?.tookEffect).toBe(true);
   });
 
-  it('simulate and confirm evaluate the SAME gates (identity)', () => {
-    // a two-step tool with a failing gate denies identically on simulate and confirm.
+  it('the simulation and the act evaluate the SAME gates (identity)', () => {
+    // a simulatable tool with a failing gate denies identically on the simulation and the act.
     const gated: WorldSpec = {
       ...assetSpec,
       tools: {
         ...assetSpec.tools,
         refund: {
           kind: 'write',
-          twoStep: true,
-          args: [{ name: 'assetId', type: 'string' }, { name: 'depositHeld', type: 'number' }, { name: 'confirmed', type: 'boolean', optional: true }],
+          simulatable: true,
+          args: [{ name: 'assetId', type: 'string' }, { name: 'depositHeld', type: 'number' }, { name: 'simulate', type: 'boolean', optional: true }],
           gates: [{ kind: 'fieldAtLeast', field: 'depositHeld', min: { ref: 'asset.requiredDeposit' }, error: 'DEPOSIT_NOT_COVERED' }],
           create: { entity: 'booking', id: { fixed: 'bk_refund' }, idKey: 'refundId' },
         },
       },
     };
     const w = defineWorld(gated)('default');
-    const simulate = w.exec('refund', { assetId: 'ast_1', depositHeld: 1 });
-    const confirm = w.exec('refund', { assetId: 'ast_1', depositHeld: 1, confirmed: true });
-    expect(simulate).toEqual({ ok: false, error: 'DEPOSIT_NOT_COVERED' });
-    expect(confirm).toEqual(simulate);
+    const simulation = w.exec('refund', { assetId: 'ast_1', depositHeld: 1, simulate: true });
+    const acted = w.exec('refund', { assetId: 'ast_1', depositHeld: 1 });
+    expect(simulation).toEqual({ ok: false, error: 'DEPOSIT_NOT_COVERED' });
+    expect(acted).toEqual(simulation);
   });
 });
 

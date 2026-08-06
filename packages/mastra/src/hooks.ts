@@ -47,12 +47,28 @@ export function makeGuardHooks(spec: AgentSpec, getSession: SessionAccessor, opt
       }
       const session = getSession();
       const args = (input ?? {}) as Record<string, unknown>;
-      const verdict = await evaluatePreTool(spec, session.actionHistory, session.world, toolName, args);
+      // In native-tools mode the tools execute themselves — there is no executor here to run a
+      // downgraded simulation with, so a consent denial takes the veto-question route instead.
+      const verdict = await evaluatePreTool(spec, session.actionHistory, session.world, toolName, args, { canDowngrade: !opts.nativeToolsMode });
       if (verdict.verdict === 'deny') {
         // The envelope, not a bare `{success:false,error}`: the model must be able to tell a GUARD
         // correction (fix and retry — the world was never called) from a WORLD refusal (a business
         // fact to report to the user).
         return { proceed: false as const, output: governanceVeto(verdict.guard.kind, verdict.reason, verdict.mustCloseTurn) };
+      }
+      if (verdict.verdict === 'downgrade') {
+        // One downgrade, never a loop: the re-entry carries `simulate: true`, so it cannot downgrade
+        // again; any other guard's denial of it stands.
+        const again = await evaluatePreTool(spec, session.actionHistory, session.world, toolName, verdict.args, { canDowngrade: false });
+        if (again.verdict === 'deny') {
+          return { proceed: false as const, output: governanceVeto(again.guard.kind, again.reason, again.mustCloseTurn) };
+        }
+        // The runtime executes the simulation itself and hands the model its result: the model asked
+        // for the act and receives `requiresConfirmation` + the simulation — which is what keeps its
+        // next sentence honest. Recorded here because a replaced call never reaches afterToolCall.
+        const output = session.world.exec(toolName, verdict.args);
+        recordToolResult(session.actionHistory, toolName, verdict.args, output, session.world);
+        return { proceed: false as const, output };
       }
       return undefined;
     },
@@ -65,9 +81,9 @@ export function makeGuardHooks(spec: AgentSpec, getSession: SessionAccessor, opt
       // empty action history would make every call read as "changed nothing". Record the call here,
       // where the runtime knows it ran and what it returned. EFFECT is derived from the RESULT, the only
       // evidence this path has: a call that succeeded and did NOT come back asking for confirmation
-      // changed something. That keeps the legitimate two-step alive (a simulate answering
-      // `requiresConfirmation` is effect-free) while a tool that mutates under `confirmed:false` — the
-      // case the throttle exists for — counts as the effect it is.
+      // changed something. That keeps the legitimate simulate-first flow alive (a simulation answering
+      // `requiresConfirmation` is effect-free) while a tool that mutates while claiming `simulate: true` —
+      // the case the throttle exists for — counts as the effect it is.
       if (opts.nativeToolsMode) {
         const ok = output !== undefined && resultOk(output);
         const pending = (output as { requiresConfirmation?: unknown } | null | undefined)?.requiresConfirmation === true;

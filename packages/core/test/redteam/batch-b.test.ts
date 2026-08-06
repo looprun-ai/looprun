@@ -200,16 +200,16 @@ describe('destructiveThrottle — adversarial', () => {
     expect(g.check(second)).not.toBeNull();
   });
 
-  it('CONTROL: a confirmed:false call that changed NOTHING is still a simulate — the execute passes', () => {
-    // The effect test must not break the two-step flow the throttle exists to permit: a simulate that took no
-    // effect stays a simulate, so the approved execute in the same turn is still allowed.
-    const simulate = okCall('deleteRecord', 5, { recordId: 'A', confirmed: false }, { tookEffect: false });
-    const execute = ctxWith({ tool: 'deleteRecord', args: { recordId: 'A', confirmed: true }, observed: [simulate], turnIndex: 5 });
+  it('CONTROL: a simulate:true call that changed NOTHING is a simulation — the execute passes', () => {
+    // The effect test must not break the simulate-first flow the throttle exists to permit: a simulation
+    // that took no effect stays a simulation, so the approved bare execute in the same turn is allowed.
+    const simulation = okCall('deleteRecord', 5, { recordId: 'A', simulate: true }, { tookEffect: false });
+    const execute = ctxWith({ tool: 'deleteRecord', args: { recordId: 'A' }, observed: [simulation], turnIndex: 5 });
     expect(g.check(execute)).toBeNull();
   });
 
-  it('HOLDS: a real prior effect (confirmed:true) blocks a second destructive call same turn', () => {
-    const firstEffect = okCall('deleteRecord', 5, { recordId: 'A', confirmed: true }, { tookEffect: true });
+  it('HOLDS: a real prior effect blocks a second destructive call same turn', () => {
+    const firstEffect = okCall('deleteRecord', 5, { recordId: 'A' }, { tookEffect: true });
     const second = ctxWith({
       tool: 'wipeAll',
       args: { confirmed: true },

@@ -5,7 +5,7 @@
  *
  *  · hook × dim — a guard reads a specific slice of `GuardCtx`. Installing one on a hook that never
  *    populates that slice yields a check that silently never fires; the install throws instead.
- *  · confirmMechanism keys are validated against `destructiveTools`, so a typo or a renamed tool
+ *  · destructiveLabels keys are validated against `destructiveTools`, so a typo or a renamed tool
  *    cannot quietly disarm a destructive-safety protocol.
  *  · a guard that THROWS is an AUTHOR BUG: it surfaces as an attributed error naming the binding,
  *    the kind and the hook — never swallowed, never converted into a deny.
@@ -52,16 +52,15 @@ describe('hook x dim install matrix', () => {
   });
 });
 
-describe('confirmMechanism keys are validated against destructiveTools', () => {
-  const withMech = (over: Record<string, unknown>) => () => new AgentSpecBase({ ...baseCfg(), ...over } as never);
+describe('destructiveLabels keys are validated against destructiveTools', () => {
+  const withLabels = (over: Record<string, unknown>) => () => new AgentSpecBase({ ...baseCfg(), ...over } as never);
 
   it('rejects a key that is not a destructive tool', () => {
-    expect(withMech({ destructiveTools: ['deleteItem'], confirmMechanism: { deleteitem: 'prior-ask' } })).toThrow(/confirmMechanism names tool\(s\) that are not in destructiveTools/);
-    expect(withMech({ confirmMechanism: { deleteItem: 'prior-ask' } })).toThrow(/not in destructiveTools/);
+    expect(withLabels({ destructiveTools: ['deleteItem'], destructiveLabels: { deleteitem: 'delete the item' } })).toThrow(/destructiveLabels names tool\(s\) that are not in destructiveTools/);
   });
 
-  it('accepts a correctly keyed mechanism', () => {
-    expect(withMech({ destructiveTools: ['deleteItem'], confirmMechanism: { deleteItem: 'prior-ask' } })).not.toThrow();
+  it('accepts a correctly keyed label', () => {
+    expect(withLabels({ destructiveTools: ['deleteItem'], destructiveLabels: { deleteItem: 'delete the item' } })).not.toThrow();
   });
 });
 

@@ -176,10 +176,14 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
     // FAIL-LOUD-AT-START: an llmCheck installed without a judge is a wiring bug — surface it at
     // construction, never mid-turn. No-op for a spec with no llmCheck (zero-diff).
     assertJudgePresent(spec, config.judge);
+    // The declared schemas decide each destructive tool's consent route; in native-tools mode there
+    // is no executor for a downgraded simulation, so no set is seated and every destructive call is
+    // gated (the veto raises the question).
+    const simulatable = nativeToolsMode ? undefined : spec.simulatableToolNames?.(config.toolDefs ?? []);
     const sessions = new SessionStore<W>(built.world, config.judge, config.judgeTimeoutMs, {
       renderClaim: contract?.renderClaim,
       outcomes: contract?.outcomes,
-    });
+    }, simulatable && simulatable.size ? simulatable : undefined);
     const guardHooks = makeGuardHooks(spec, getSession as () => LoopRunSession, { nativeToolsMode });
 
     super({

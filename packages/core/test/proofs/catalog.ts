@@ -18,7 +18,7 @@
  * | precondition                   | createMedia                | quotaRemaining() > 0                               |
  * | maxCalls                       | createItem                 | max 2 per turn (default 'turn' scope)              |
  * | noDuplicateCall                | any (auto minimal)         | —                                                  |
- * | confirmFirst                   | deleteItem(via:either) purgeAll(via:ask) (auto base) | record-bound simulate + recency (within:1) |
+ * | confirmFirst                   | deleteItem(simulatable) purgeAll(label) (auto base) | record-bound simulation + typed code |
  * | noActAfterAskSameTurn          | deleteItem, purgeAll       | —                                                  |
  * | destructiveThrottle            | deleteItem, purgeAll (auto base) | —                                            |
  * | resultInvariant                | reportStatus (postTool)    | fires when result.count === 0                      |
@@ -39,8 +39,9 @@
  *  3. Call searchItem before any createItem; always pass `title` to createItem; never call updateItem
  *     (outside forbidThisTurn's own negative case); setPrimary ids match `itm-\d+`; ≤2 createItem per
  *     turn (vary titles to dodge noDuplicateCall); listItems `page` ≤ 3.
- *  4. Destructive protocol: deleteItem first WITHOUT `confirmed` (the simulate), the SAME turn's reply asks
- *     "are you sure"; `confirmed:true` only in a LATER turn. purgeAll only after an earlier-turn ask.
+ *  4. Destructive protocol: deleteItem with `simulate:true` first (the simulation), the SAME turn's reply
+ *     asks "are you sure"; the bare acting call only in a LATER turn that typed the code. purgeAll's veto
+ *     raises its question from the declared label.
  *     At most one destructive SUCCESS per turn. Never pass `force` to deleteItem.
  *  5. Replies: no '?' except confirmation/ask replies (which say "are you sure"); never
  *     deleted/removed/purged unless the destructive action truly succeeded this turn (or the sentence is

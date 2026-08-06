@@ -79,8 +79,9 @@ export interface TransitionResult {
 export interface ToolDecl {
   kind: 'read' | 'write' | 'transition' | 'custom';
   args?: readonly ArgDecl[];
-  /** two-step simulate/confirm (spec #2): `confirmed !== true` ⇒ side-effect-free simulation. */
-  twoStep?: boolean;
+  /** The tool can simulate (spec #2): `simulate === true` ⇒ side-effect-free simulation that
+   *  validates the act and describes it; the bare call acts. */
+  simulatable?: boolean;
   gates?: readonly Gate[];
   read?: ReadResult;
   create?: CreateResult;
@@ -173,7 +174,7 @@ export interface WorldFactory {
   describe(): {
     clock: string;
     entities: string[];
-    tools: Record<string, { kind: string; twoStep: boolean; custom?: string }>;
+    tools: Record<string, { kind: string; simulatable: boolean; custom?: string }>;
     presets: string[];
     customExecutors: string[];
     derived: string[];

@@ -37,7 +37,6 @@ function spec(): AgentSpecBase {
     behavior: ['Be brief and concrete.'],
     directives: [{ id: 'd1', cond: 'no items exist', directive: 'offer to create the first one' }],
     destructiveTools: ['deleteItem', 'purgeAll'],
-    confirmMechanism: { purgeAll: 'prior-ask' },
   });
 }
 

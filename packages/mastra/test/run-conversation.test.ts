@@ -20,12 +20,12 @@ function world(): AgentWorld {
   return {
     exec(name: string, args: Record<string, unknown>) {
       if (name === 'respond') return { success: true };
-      // The two-step protocol is the WORLD's: an unconfirmed destructive call changes nothing and names
-      // the record it needs confirmation for, which is what the engine builds its question from.
-      if (name === 'deleteItem' && args.confirmed !== true) {
-        const simulate = { requiresConfirmation: true, id: args.id };
-        calls.push({ name, args, result: simulate, tookEffect: false });
-        return simulate;
+      // The simulation protocol is the WORLD's: a `simulate:true` destructive call changes nothing and
+      // names the record it needs confirmation for, which is what the engine builds its question from.
+      if (name === 'deleteItem' && args.simulate === true) {
+        const simulation = { requiresConfirmation: true, id: args.id };
+        calls.push({ name, args, result: simulation, tookEffect: false });
+        return simulation;
       }
       const result = { success: true };
       calls.push({ name, args, result, tookEffect: true });
@@ -43,29 +43,28 @@ const TOOL_DEFS = [
   {
     name: 'deleteItem',
     description: 'Delete an item (destructive).',
-    inputSchema: { type: 'object', properties: { id: { type: 'string' }, confirmed: { type: 'boolean' } } },
+    inputSchema: { type: 'object', properties: { id: { type: 'string' }, simulate: { type: 'boolean' } } },
   },
 ];
 
 describe('runSpecConversation', () => {
-  it('runs a multi-turn conversation with the confirm-first two-step across turns', async () => {
+  it('runs a multi-turn conversation with the simulate-first protocol across turns', async () => {
     const spec = new AgentSpecBase({
       id: 'cleaner',
       mode: 'CLEAN',
       persona: 'You are the cleanup agent.',
       tools: ['listItems', 'deleteItem'],
+      destructiveTools: ['deleteItem'],
       contract: CONTRACT,
     });
-    spec.addGuard('preTool', ['deleteItem'], confirmFirst(), { id: 'agent:confirmFirst' });
 
     const scripted = scriptedModel([
-      // turn 0: the model tries confirmed:true directly — vetoed; then simulations, and the world's
-      // "I need confirmation on x" is what makes the engine put the question on the screen.
-      [{ tool: 'deleteItem', args: { id: 'x', confirmed: true } }],
+      // turn 0: the model reaches for the bare act — the runtime DOWNGRADES it to its own simulation,
+      // and the world's "I need confirmation on x" is what puts the question on the screen.
       [{ tool: 'deleteItem', args: { id: 'x' } }],
       [{ tool: 'respond', args: { message: 'Delete x — are you sure?', did: [{ op: 'inform' }] } }],
-      // turn 1: the user typed the token the engine issued, so confirmed:true is now licensed.
-      [{ tool: 'deleteItem', args: { id: 'x', confirmed: true } }],
+      // turn 1: the user typed the code the engine issued, so the bare act is now licensed.
+      [{ tool: 'deleteItem', args: { id: 'x' } }],
       [{ tool: 'respond', args: { message: 'Deleted x.', did: [{ op: 'inform' }] } }],
     ]);
 
@@ -78,9 +77,9 @@ describe('runSpecConversation', () => {
     expect(res.errorMsg).toBeUndefined();
     expect(res.turnRecords).toHaveLength(2);
     expect(res.turnRecords[0].assistantFinalText).toContain('To confirm x, reply: CONFIRM X');
-    expect(res.turnRecords[0].recoveryEvents).toContain('run:confirmFirst:deleteItem');
+    expect(res.turnRecords[0].recoveryEvents).toContain('downgrade:confirmFirst:deleteItem');
     expect(res.turnRecords[1].assistantFinalText).toBe(nothingDone('Deleted x.'));
-    expect(res.turnRecords[1].recoveryEvents).toEqual([]); // confirmed:true legal after the earlier-turn simulate
+    expect(res.turnRecords[1].recoveryEvents).toEqual([]); // the bare act is legal after the typed code
     expect(res.turnRecords[1].toolCalls.map((c) => c.name)).toEqual(['deleteItem']);
   });
 

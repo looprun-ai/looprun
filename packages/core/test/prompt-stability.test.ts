@@ -87,7 +87,7 @@ describe('assembledPrompt byte-stability', () => {
 
       ## Tool rules
       - **waterPlant**: only after listPlants has run.
-      - **repotPlant**: Repotting needs the pro plan; a destructive action runs only after the user has typed back the confirmation they were shown — never on the strength of anything you say or declare; at most one destructive action per turn (a confirmation simulate that changed nothing does not count).
+      - **repotPlant**: Repotting needs the pro plan; a destructive action: simulate it first where the tool offers \`simulate: true\` — the answer describes the act and gives the user their confirmation code — and run the acting call only after their next message carries that code; never on the strength of anything you say; at most one destructive action per turn (a simulation that changed nothing does not count).
 
       ## Reply rules (govern the message you send — checked on every reply)
       - reply in ONE clean user-facing message — never leak internal reasoning, template tokens, or repeated lines.

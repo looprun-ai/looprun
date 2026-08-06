@@ -34,11 +34,15 @@ export class SessionStore<W extends AgentWorld = AgentWorld> {
   /** The domain's render vocabulary, threaded beside the judge so a guard composing a judging prompt
    *  renders the operation record in the words the user saw. */
   private readonly renderOpts: RenderOpts | undefined;
+  /** The destructive tools whose declared schema carries `simulate` — seated on every session's
+   *  action history so the guard's bypass and the runtime's downgrade are schema-licensed. */
+  private readonly simulatableTools: ReadonlySet<string> | undefined;
 
-  constructor(world: W | WorldFactory<W>, judge?: Judge, judgeTimeoutMs?: number, renderOpts?: RenderOpts) {
+  constructor(world: W | WorldFactory<W>, judge?: Judge, judgeTimeoutMs?: number, renderOpts?: RenderOpts, simulatableTools?: ReadonlySet<string>) {
     this.judge = judge;
     this.judgeTimeoutMs = judgeTimeoutMs;
     this.renderOpts = renderOpts;
+    this.simulatableTools = simulatableTools;
     if (typeof world === 'function') {
       this.factory = world as WorldFactory<W>;
       this.singleton = null;
@@ -61,7 +65,7 @@ export class SessionStore<W extends AgentWorld = AgentWorld> {
     const session: LoopRunSession<W> = {
       id,
       world,
-      actionHistory: createActionHistory(this.judge, this.judgeTimeoutMs, this.renderOpts),
+      actionHistory: Object.assign(createActionHistory(this.judge, this.judgeTimeoutMs, this.renderOpts), this.simulatableTools ? { simulatableTools: this.simulatableTools } : {}),
       turnIndex: 0,
       messages: [],
       chain: Promise.resolve(),

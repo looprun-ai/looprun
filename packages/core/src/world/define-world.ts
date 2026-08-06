@@ -38,7 +38,7 @@ export function defineWorld(spec: WorldSpec, options: DefineWorldOptions = {}): 
     clock: spec.clock,
     entities: Object.keys(spec.entities ?? {}),
     tools: Object.fromEntries(
-      Object.entries(spec.tools).map(([name, t]) => [name, { kind: t.kind, twoStep: Boolean(t.twoStep), ...(t.custom ? { custom: t.custom } : {}) }]),
+      Object.entries(spec.tools).map(([name, t]) => [name, { kind: t.kind, simulatable: Boolean(t.simulatable), ...(t.custom ? { custom: t.custom } : {}) }]),
     ),
     presets: Object.keys(spec.presets ?? {}),
     customExecutors: Object.keys(options.custom ?? {}),
@@ -144,9 +144,11 @@ function build(spec: WorldSpec, options: DefineWorldOptions, preset: string, der
       audit.push({ tool: name, outcome: 'denied', detail: denied });
       return push(toolCalls, name, args, { ok: false, error: denied }, false);
     }
-    if (tool.twoStep && received.confirmed !== true && args.confirmed !== true) {
+    if (tool.simulatable && (received.simulate === true || args.simulate === true)) {
       audit.push({ tool: name, outcome: 'simulated' });
-      // side-effect-free simulation — gates ALREADY evaluated (simulate ≡ confirm identity, #2).
+      // An explicit `simulate: true` asks; the bare call acts. Side-effect-free — gates ALREADY
+      // evaluated (simulate ≡ act identity, #2), so the simulation returns the same denial the act
+      // would and `requiresConfirmation` only where the act would succeed right now.
       return push(toolCalls, name, args, { ok: true, requiresConfirmation: true, simulationResult: simulationResultOf(tool.create, received) }, false);
     }
     return tool.transition ? runTransition(name, tool, received, args) : runCreate(name, tool, received, args);

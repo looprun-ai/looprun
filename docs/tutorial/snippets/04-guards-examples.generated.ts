@@ -46,7 +46,7 @@ export const CATALOG_EXAMPLES: ReadonlyArray<Guard | ReplyMutator> = [
   /* resultInvariant     */ resultInvariant((result) => Array.isArray(result) && result.length > 0, 'The search returned nothing — say so instead of summarising it.', 'report an empty result as empty'),
   /* consentRequired     */ consentRequired({ tools: ['storeProfile'], consentOk: (world) => world.consentOnRecord === true, reason: 'No consent on record — ask for it before storing anything.' }),
   /* confirmFirst        */ confirmFirst({ when: { placeHold: (args) => args.scope === 'workspace' } }),
-  /* destructiveThrottle */ destructiveThrottle(['cancelBooking', 'purgeAccount'], { flagless: ['purgeAccount'] }),
+  /* destructiveThrottle */ destructiveThrottle(['cancelBooking', 'purgeAccount']),
   /* claimIsGrounded     */ claimIsGrounded({ writeTools: ['createBooking', 'cancelBooking'], outcomes: { settled: 'success' } }),
   /* claimIsComplete     */ claimIsComplete({ writeTools: ['createBooking', 'cancelBooking'], outcomes: { settled: 'success' } }),
   /* mustAccountFor      */ mustAccountFor({ records: ['BK-100234'], outcome: 'success' }, 'Account for the booking you were asked about.'),

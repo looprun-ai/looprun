@@ -39,7 +39,7 @@ const call = (name: string, over: Partial<ObservedCall> = {}): ObservedCall => (
 // confirmFirst: nothing the AGENT produces is a licence (all STRUCTURAL)
 // ─────────────────────────────────────────────────────────────────────────────
 describe('confirmFirst is licensed only by a consent the user typed', () => {
-  const oneStep = (): Guard => confirmFirst({ flag: false });
+  const oneStep = (): Guard => confirmFirst();
 
   it('a turn-1 attempt VETOED BY THIS GUARD does not unlock turn 2', async () => {
     // The self-defeat this rules out: the guard denies purgeAll in turn 1 and the backend records that
@@ -81,16 +81,16 @@ describe('confirmFirst is licensed only by a consent the user typed', () => {
     expect(await oneStep().check(ctx)).toBeNull();
   });
 
-  it('the two-step shape gates only the ACT — its simulation runs so the world can raise the question', async () => {
+  it('gates only the ACT — a schema-licensed simulation runs so the world can raise the question', async () => {
     const g = confirmFirst();
-    expect(await g.check(craftCtx({ tool: 'deleteItem', args: { id: 'x1' }, turnIndex: 1 }))).toBeNull();
-    expect(await g.check(craftCtx({ tool: 'deleteItem', args: { id: 'x1', confirmed: true }, turnIndex: 1 }))).toBeTruthy();
+    const sim = new Set(['deleteItem']);
+    expect(await g.check(craftCtx({ tool: 'deleteItem', args: { id: 'x1', simulate: true }, simulatableTools: sim, turnIndex: 1 }))).toBeNull();
+    expect(await g.check(craftCtx({ tool: 'deleteItem', args: { id: 'x1' }, simulatableTools: sim, turnIndex: 1 }))).toBeTruthy();
   });
 
-  it('a custom confirm flag names which call acts', async () => {
-    const g = confirmFirst({ flag: 'userApproved' });
-    expect(await g.check(craftCtx({ tool: 'deleteItem', args: { id: 'x1' }, turnIndex: 1 }))).toBeNull();
-    expect(await g.check(craftCtx({ tool: 'deleteItem', args: { id: 'x1', userApproved: true }, turnIndex: 1 }))).toBeTruthy();
+  it('a simulate on a tool whose schema has none is an act — the args cannot license the bypass', async () => {
+    const g = confirmFirst();
+    expect(await g.check(craftCtx({ tool: 'deleteItem', args: { id: 'x1', simulate: true }, turnIndex: 1 }))).toBeTruthy();
   });
 });
 
@@ -104,28 +104,28 @@ describe('destructiveThrottle does not count confirmation simulations', () => {
     const g = destructiveThrottle(['deleteItem']);
     const ctx = craftCtx({
       tool: 'deleteItem',
-      args: { id: 'p001', confirmed: true },
-      observed: [call('deleteItem', { args: { id: 'p001' }, tookEffect: false, resultFlags: { requiresConfirmation: true } })],
+      args: { id: 'p001' },
+      observed: [call('deleteItem', { args: { id: 'p001', simulate: true }, tookEffect: false, resultFlags: { requiresConfirmation: true } })],
     });
     expect(await g.check(ctx)).toBeNull();
   });
 
-  it('an explicit confirmed:false simulate likewise does not count', async () => {
+  it('an explicit simulate:true call that changed nothing likewise does not count', async () => {
     const g = destructiveThrottle(['deleteItem']);
     const ctx = craftCtx({
       tool: 'deleteItem',
-      args: { id: 'p001', confirmed: true },
-      observed: [call('deleteItem', { args: { id: 'p001', confirmed: false }, tookEffect: false })],
+      args: { id: 'p001' },
+      observed: [call('deleteItem', { args: { id: 'p001', simulate: true }, tookEffect: false })],
     });
     expect(await g.check(ctx)).toBeNull();
   });
 
-  it('a confirmed:false call with UNKNOWN effect DOES count — fail closed', async () => {
+  it('a simulate:true call with UNKNOWN effect DOES count — fail closed', async () => {
     const g = destructiveThrottle(['deleteItem']);
     const ctx = craftCtx({
       tool: 'deleteItem',
-      args: { id: 'p002', confirmed: false },
-      observed: [call('deleteItem', { args: { id: 'p001', confirmed: false } })], // no world record
+      args: { id: 'p002', simulate: true },
+      observed: [call('deleteItem', { args: { id: 'p001', simulate: true } })], // no world record
     });
     expect(await g.check(ctx)).toBeTruthy();
   });
@@ -134,7 +134,7 @@ describe('destructiveThrottle does not count confirmation simulations', () => {
     const g = destructiveThrottle(['deleteItem', 'purgeAll']);
     const ctx = craftCtx({
       tool: 'purgeAll',
-      observed: [call('deleteItem', { args: { id: 'p001', confirmed: true } })],
+      observed: [call('deleteItem', { args: { id: 'p001' } })],
     });
     expect(await g.check(ctx)).toBeTruthy();
   });
@@ -146,9 +146,9 @@ describe('destructiveThrottle does not count confirmation simulations', () => {
   });
 
   it('FULL FLOW (L3): simulate → approved execute in one turn completes with no recovery events', async () => {
-    // Turn 0 simulations: the world answers "I need confirmation on p001" and the engine renders the question.
-    // Turn 1 carries the token the user typed, re-simulations (which changes nothing) and then executes. The
-    // re-simulate must not count as an effect against the one-destructive-action-per-turn cap.
+    // Turn 0 simulates: the world answers "I need confirmation on p001" and the engine renders the
+    // question. Turn 1 carries the code the user typed, re-simulates (which changes nothing) and then
+    // executes. The re-simulation must not count against the one-destructive-action-per-turn cap.
     const spec = new AgentSpecBase({
       id: 'audit-throttle',
       mode: 'PROOF',
@@ -160,10 +160,10 @@ describe('destructiveThrottle does not count confirmation simulations', () => {
       preset: 'seeded-media',
       turns: [{ userText: 'delete p001' }, { userText: 'CONFIRM p001' }],
       script: [
-        [{ tool: 'deleteItem', args: { id: 'p001' } }],
+        [{ tool: 'deleteItem', args: { id: 'p001', simulate: true } }],
         [{ tool: 'respond', args: { message: 'Deleting p001 is permanent — are you sure?', did: [{ op: 'inform' }] } }],
+        [{ tool: 'deleteItem', args: { id: 'p001', simulate: true } }],
         [{ tool: 'deleteItem', args: { id: 'p001' } }],
-        [{ tool: 'deleteItem', args: { id: 'p001', confirmed: true } }],
         [{ tool: 'respond', args: { message: 'Done — p001 is gone.', did: [{ op: 'inform' }] } }],
       ],
       expect: 'pass',

@@ -162,7 +162,7 @@ export const SPATIAL_INPUT_PROOFS: GuardProof[] = [
     target: ['deleteItem'],
     cases: [
       {
-        name: 'no force arg on the simulate',
+        name: 'no force arg on the simulation',
         polarity: 'positive',
         ctx: { args: { id: 'p001' } },
         l1: 'silent',
@@ -170,7 +170,7 @@ export const SPATIAL_INPUT_PROOFS: GuardProof[] = [
           preset: 'seeded-media',
           turns: [turn('delete the item')],
           script: [
-            [{ tool: 'deleteItem', args: { id: 'p001' } }],
+            [{ tool: 'deleteItem', args: { id: 'p001', simulate: true } }],
             [{ tool: 'respond', args: { message: 'Are you sure you want to delete this item?', did: [{ op: 'ask' }] } }],
           ],
           expect: 'pass',

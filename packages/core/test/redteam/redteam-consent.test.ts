@@ -143,44 +143,32 @@ describe('V4 — destructiveThrottle: one destructive effect per turn', () => {
     expect(g.check(ctx)).not.toBeNull();
   });
 
-  it('CONTROL: a same-step MULTI-SIMULATION is NOT capped — neither simulate has run yet', () => {
+  it('CONTROL: a same-step MULTI-SIMULATION is NOT capped — neither simulation has run yet', () => {
     const g = destructiveThrottle(['refund']);
-    // "Simulation refunding both orders" → two `confirmed:false` calls in ONE step. A sibling has not
-    // executed, so no world record of its effect can exist; its declared flag is the only evidence
-    // there is, and vetoing the second would deny the simulation for an effect nothing has had.
+    // "Simulate refunding both orders" → two `simulate:true` calls in ONE step. A sibling has not
+    // executed, so no world record of its effect can exist; its declared `simulate:true` is the only
+    // evidence there is, and vetoing the second would deny the simulation for an effect nothing has had.
     const ctx = baseCtx({
-      tool: 'refund', args: { id: '2', confirmed: false }, turnIndex: 0,
-      siblingCallsThisStep: [obs('refund', { id: '1', confirmed: false }, 0)],
+      tool: 'refund', args: { id: '2', simulate: true }, turnIndex: 0,
+      siblingCallsThisStep: [obs('refund', { id: '1', simulate: true }, 0)],
     });
     expect(g.check(ctx)).toBeNull();
   });
 
-  it('CONTROL: a same-step sibling that is CONFIRMED still caps the second call', () => {
+  it('CONTROL: a BARE same-step sibling is the act it will be — the second call caps', () => {
     const g = destructiveThrottle(['refund']);
-    const ctx = baseCtx({
-      tool: 'refund', args: { id: '2', confirmed: true }, turnIndex: 0,
-      siblingCallsThisStep: [obs('refund', { id: '1', confirmed: true }, 0)],
-    });
-    expect(g.check(ctx)).not.toBeNull();
-  });
-
-  it('CONTROL (final review): a simulation that OMITS the flag is a simulation — parity with confirmFirst', () => {
-    const g = destructiveThrottle(['refund']);
-    // `confirmFirst`'s simulate variant licenses "a `flag:false`/ABSENT simulate", and its flag variant returns null on
-    // `args[flag] !== true` — so an omitted flag is a not-yet-confirmed call to the consent gate. The
-    // throttle read it as an act and vetoed the second simulation of a two-booking cancel.
     const ctx = baseCtx({
       tool: 'refund', args: { id: '2' }, turnIndex: 0,
       siblingCallsThisStep: [obs('refund', { id: '1' }, 0)],
     });
-    expect(g.check(ctx)).toBeNull();
+    expect(g.check(ctx)).not.toBeNull();
   });
 
-  it('CONTROL (final review): a FLAGLESS (prior-ask) tool has no simulation shape — the first sibling caps', () => {
-    const g = destructiveThrottle(['wipe'], { flagless: ['wipe'] });
-    // A `'prior-ask'` tool carries no confirm flag at all, so "not confirmed" says nothing about it and
-    // every admitted call is an act. Without this the not-confirmed rule above would make the same-step
-    // cap permanently inert on the whole prior-ask mechanism.
+  it('CONTROL (final review): only an explicit simulate:true declares a sibling simulation', () => {
+    const g = destructiveThrottle(['wipe']);
+    // A sibling that has not run offers no world record; its own `simulate:true` is the only possible
+    // declaration. A bare sibling is an act, so the cap engages from the first one — a tool that cannot
+    // simulate is capped without any configuration.
     const ctx = baseCtx({
       tool: 'wipe', args: { id: '2' }, turnIndex: 0,
       siblingCallsThisStep: [obs('wipe', { id: '1' }, 0)],

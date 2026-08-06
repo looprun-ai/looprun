@@ -202,7 +202,7 @@ const noDuplicateCallProof: GuardProof = {
  */
 const DELETE_IS_DESTRUCTIVE = { deleteItem: (args: Record<string, unknown>) => args.soft !== true };
 
-// ── confirmFirst (auto:'base' — deleteItem simulations its record, purgeAll declares a label) ──
+// ── confirmFirst (auto:'base' — deleteItem simulates its record, purgeAll declares a label) ──
 const confirmFirstProof: GuardProof = {
   guard: 'confirmFirst',
   // The licence is a token the ENGINE issued for a record and the USER typed back. Nothing the agent
@@ -213,25 +213,24 @@ const confirmFirstProof: GuardProof = {
   auto: 'base',
   specTweaks: {
     destructiveTools: ['deleteItem', 'purgeAll'],
-    confirmMechanism: { purgeAll: 'prior-ask' },
     // purgeAll acts on no identifiable record, so its question is built from this label.
     destructiveLabels: { purgeAll: 'delete every item' },
     destructiveWhen: DELETE_IS_DESTRUCTIVE,
   },
   cases: [
     {
-      name: 'acting with no consent is denied',
+      name: 'acting with no consent never acts — a simulatable tool is downgraded to its simulation',
       polarity: 'negative',
-      ctx: { tool: 'deleteItem', args: { id: 'itm-1', confirmed: true }, consent: [], turnIndex: 1 },
+      ctx: { tool: 'deleteItem', args: { id: 'itm-1' }, consent: [], turnIndex: 1 },
       l1: 'fires',
       l3: {
         preset: 'empty',
         turns: [{ userText: 'delete item itm-1' }],
         script: [
-          [{ tool: 'deleteItem', args: { id: 'itm-1', confirmed: true } }],
+          [{ tool: 'deleteItem', args: { id: 'itm-1' } }],
           [{ tool: 'respond', args: { message: 'That deletion still needs your confirmation.', did: [{ op: 'inform' }] } }],
         ],
-        expect: 'veto',
+        expect: 'downgrade',
         tool: 'deleteItem',
       },
     },
@@ -240,7 +239,7 @@ const confirmFirstProof: GuardProof = {
       polarity: 'positive',
       ctx: {
         tool: 'deleteItem',
-        args: { id: 'itm-1', confirmed: true },
+        args: { id: 'itm-1' },
         consent: [{ tool: 'deleteItem', subject: 'itm-1', meaning: 'itm-1', token: 'CONFIRM ITM-1', issuedTurn: 0, consumedTurn: 1 }],
         turnIndex: 1,
       },
@@ -249,9 +248,9 @@ const confirmFirstProof: GuardProof = {
         preset: 'empty',
         turns: [{ userText: 'delete item itm-1' }, { userText: 'CONFIRM itm-1' }],
         script: [
-          [{ tool: 'deleteItem', args: { id: 'itm-1' } }],
+          [{ tool: 'deleteItem', args: { id: 'itm-1', simulate: true } }],
           [{ tool: 'respond', args: { message: 'That one needs your confirmation.', did: [{ op: 'cancel', target: 'itm-1', outcome: 'pending_confirmation' }] } }],
-          [{ tool: 'deleteItem', args: { id: 'itm-1', confirmed: true } }],
+          [{ tool: 'deleteItem', args: { id: 'itm-1' } }],
           [{ tool: 'respond', args: { message: 'The item was deleted as requested.', did: [{ op: 'cancel', target: 'itm-1', outcome: 'success' }] } }],
         ],
         expect: 'pass',
@@ -262,7 +261,7 @@ const confirmFirstProof: GuardProof = {
       polarity: 'negative',
       ctx: {
         tool: 'deleteItem',
-        args: { id: 'itm-2', confirmed: true },
+        args: { id: 'itm-2' },
         consent: [{ tool: 'deleteItem', subject: 'itm-1', meaning: 'itm-1', token: 'CONFIRM ITM-1', issuedTurn: 0, consumedTurn: 1 }],
         turnIndex: 1,
       },
@@ -273,7 +272,7 @@ const confirmFirstProof: GuardProof = {
       polarity: 'negative',
       ctx: {
         tool: 'deleteItem',
-        args: { id: 'itm-1', confirmed: true },
+        args: { id: 'itm-1' },
         consent: [],
         history: [
           { turnIndex: 0, userText: 'delete itm-1', reply: 'Delete item itm-1 — are you sure?', toolCalls: [], did: [{ op: 'ask' }], attemptedCalls: [], guardEvents: [] },
@@ -287,9 +286,9 @@ const confirmFirstProof: GuardProof = {
       polarity: 'negative',
       ctx: {
         tool: 'deleteItem',
-        args: { id: 'itm-1', confirmed: true },
+        args: { id: 'itm-1' },
         consent: [],
-        observed: [{ name: 'deleteItem', args: { id: 'itm-1', confirmed: true }, ok: true, turnIndex: 0, tookEffect: true }],
+        observed: [{ name: 'deleteItem', args: { id: 'itm-1' }, ok: true, turnIndex: 0, tookEffect: true }],
         turnIndex: 1,
       },
       l1: 'fires',
@@ -298,7 +297,7 @@ const confirmFirstProof: GuardProof = {
       // The SIMULATION is how the world raises the question, so it runs freely; only the acting call is gated.
       name: 'the simulation call is never gated — it is how the question gets asked',
       polarity: 'neutral',
-      ctx: { tool: 'deleteItem', args: { id: 'itm-1' }, consent: [], turnIndex: 1 },
+      ctx: { tool: 'deleteItem', args: { id: 'itm-1', simulate: true }, simulatableTools: new Set(['deleteItem']), consent: [], turnIndex: 1 },
       l1: 'silent',
     },
     {
@@ -306,13 +305,13 @@ const confirmFirstProof: GuardProof = {
       // Gating it would deny a call no consent could ever license.
       name: 'the protective branch of a predicated tool runs with no consent at all',
       polarity: 'positive',
-      ctx: { tool: 'deleteItem', args: { id: 'itm-1', soft: true, confirmed: true }, consent: [], turnIndex: 1 },
+      ctx: { tool: 'deleteItem', args: { id: 'itm-1', soft: true }, consent: [], turnIndex: 1 },
       l1: 'silent',
     },
     {
       name: 'the destructive branch of the same tool is gated exactly as an unconditional one',
       polarity: 'negative',
-      ctx: { tool: 'deleteItem', args: { id: 'itm-1', soft: false, confirmed: true }, consent: [], turnIndex: 1 },
+      ctx: { tool: 'deleteItem', args: { id: 'itm-1', soft: false }, consent: [], turnIndex: 1 },
       l1: 'fires',
     },
     {
@@ -352,13 +351,12 @@ const confirmFirstProof: GuardProof = {
 // ── destructiveThrottle (auto:'base' — at most one destructive success per turn) ──
 const destructiveThrottleProof: GuardProof = {
   guard: 'destructiveThrottle',
-  make: () => destructiveThrottle(['deleteItem', 'purgeAll'], { flagless: ['purgeAll'], when: DELETE_IS_DESTRUCTIVE }),
+  make: () => destructiveThrottle(['deleteItem', 'purgeAll'], { when: DELETE_IS_DESTRUCTIVE }),
   hook: 'preTool',
   target: ['deleteItem', 'purgeAll'],
   auto: 'base',
   specTweaks: {
     destructiveTools: ['deleteItem', 'purgeAll'],
-    confirmMechanism: { purgeAll: 'prior-ask' },
     destructiveLabels: { purgeAll: 'delete every item' },
     destructiveWhen: DELETE_IS_DESTRUCTIVE,
   },
@@ -368,7 +366,7 @@ const destructiveThrottleProof: GuardProof = {
       polarity: 'positive',
       ctx: {
         tool: 'purgeAll',
-        observed: [{ name: 'deleteItem', args: { id: 'itm-1', confirmed: true }, ok: true, turnIndex: 0 }],
+        observed: [{ name: 'deleteItem', args: { id: 'itm-1' }, ok: true, turnIndex: 0 }],
         turnIndex: 1,
       },
       l1: 'silent',
@@ -389,7 +387,7 @@ const destructiveThrottleProof: GuardProof = {
       polarity: 'negative',
       ctx: {
         tool: 'purgeAll',
-        observed: [{ name: 'deleteItem', args: { id: 'itm-1', confirmed: true }, ok: true, turnIndex: 0 }],
+        observed: [{ name: 'deleteItem', args: { id: 'itm-1' }, ok: true, turnIndex: 0 }],
         turnIndex: 0,
       },
       l1: 'fires',
@@ -399,7 +397,7 @@ const destructiveThrottleProof: GuardProof = {
         script: [
           [{ tool: 'deleteItem', args: { id: 'itm-1' } }, { tool: 'purgeAll', args: {} }],
           [{ tool: 'respond', args: { message: 'Both of those need your confirmation.', did: [{ op: 'inform' }] } }],
-          [{ tool: 'deleteItem', args: { id: 'itm-1', confirmed: true } }],
+          [{ tool: 'deleteItem', args: { id: 'itm-1' } }],
           [{ tool: 'purgeAll', args: {} }],
           [{ tool: 'respond', args: { message: 'Item itm-1 was deleted; the purge can run next turn.', did: [{ op: 'inform' }] } }],
         ],
@@ -415,8 +413,8 @@ const destructiveThrottleProof: GuardProof = {
       polarity: 'positive',
       ctx: {
         tool: 'deleteItem',
-        args: { id: 'itm-2', soft: true, confirmed: true },
-        observed: [{ name: 'deleteItem', args: { id: 'itm-1', soft: true, confirmed: true }, ok: true, tookEffect: true, turnIndex: 0 }],
+        args: { id: 'itm-2', soft: true },
+        observed: [{ name: 'deleteItem', args: { id: 'itm-1', soft: true }, ok: true, tookEffect: true, turnIndex: 0 }],
         turnIndex: 0,
       },
       l1: 'silent',
@@ -426,8 +424,8 @@ const destructiveThrottleProof: GuardProof = {
       polarity: 'negative',
       ctx: {
         tool: 'deleteItem',
-        args: { id: 'itm-2', confirmed: true },
-        observed: [{ name: 'deleteItem', args: { id: 'itm-1', confirmed: true }, ok: true, tookEffect: true, turnIndex: 0 }],
+        args: { id: 'itm-2' },
+        observed: [{ name: 'deleteItem', args: { id: 'itm-1' }, ok: true, tookEffect: true, turnIndex: 0 }],
         turnIndex: 0,
       },
       l1: 'fires',
@@ -437,7 +435,7 @@ const destructiveThrottleProof: GuardProof = {
       polarity: 'neutral',
       ctx: {
         tool: 'searchItem',
-        observed: [{ name: 'deleteItem', args: { id: 'itm-1', confirmed: true }, ok: true, turnIndex: 0 }],
+        observed: [{ name: 'deleteItem', args: { id: 'itm-1' }, ok: true, turnIndex: 0 }],
         turnIndex: 0,
       },
       l1: 'silent',

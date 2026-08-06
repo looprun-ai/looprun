@@ -332,11 +332,6 @@ export interface AgentSpecConfig {
   /** Declared follow-up completions (see {@link ChainSpec}). Absent ⇒ controls.chains stays unset. */
   chains?: ChainSpec[];
   destructiveTools?: string[];
-  /** Per destructive tool, the confirm MECHANISM the auto destructive-safety layer installs (P8a-clean —
-   *  no linguistic content). `'arg'` (default for any unlisted destructive tool) = a `confirmed:true`
-   *  flag gated on a prior-turn simulate; `'prior-ask'` = a flag-less action gated on a prior-turn ask event.
-   *  Absent ⇒ every destructive tool uses `'arg'` (byte-stable with the pre-mechanism layer). */
-  confirmMechanism?: Record<string, 'arg' | 'prior-ask'>;
   /** Per destructive tool that acts on NO identifiable record, the human-facing label its consent
    *  question is built from — what the user is agreeing to, in the words they will read. The engine
    *  derives the token from it, so two labels whose first two words agree are a construction error. A
@@ -357,9 +352,9 @@ export interface AgentSpecConfig {
 /**
  * The ONE AgentSpec class. Its constructor always installs the universal invariants (noDuplicateCall +
  * degenerationGuard) and, iff `destructiveTools` is non-empty, the destructive-safety protocol
- * (confirmFirst + destructiveThrottle) on those tools — confirmFirst keyed per-tool by
- * `cfg.confirmMechanism`. Ids and install order are byte-stable (`minimal:*` then `base:*`), which is
- * what makes the layer-sorted assembled prompt prose and the resolveBindings order deterministic.
+ * (confirmFirst + destructiveThrottle) on those tools. Ids and install order are byte-stable
+ * (`minimal:*` then `base:*`), which is what makes the layer-sorted assembled prompt prose and the
+ * resolveBindings order deterministic.
  */
 export class AgentSpecBase implements AgentSpec {
   readonly id: string;
@@ -373,7 +368,6 @@ export class AgentSpecBase implements AgentSpec {
   readonly behavior: string[];
   readonly contract?: DomainContract;
   protected readonly destructiveTools: string[];
-  protected readonly confirmMechanism: Record<string, 'arg' | 'prior-ask'>;
   readonly destructiveLabels: Record<string, string>;
   protected readonly destructiveWhen: Record<string, (args: Record<string, unknown>) => boolean>;
   private seq = 0;
@@ -421,7 +415,6 @@ export class AgentSpecBase implements AgentSpec {
     assertNoCoreOutcomeShadow(cfg.contract?.outcomes, `AgentSpec "${cfg.id}"`);
     if (cfg.contract) this.contract = cfg.contract;
     this.destructiveTools = [...(cfg.destructiveTools ?? [])];
-    this.confirmMechanism = { ...(cfg.confirmMechanism ?? {}) };
     this.destructiveLabels = { ...(cfg.destructiveLabels ?? {}) };
     this.destructiveWhen = { ...(cfg.destructiveWhen ?? {}) };
     // Install order is load-bearing (byte-stable assembled prompt): universal invariants first, destructive layer
@@ -491,27 +484,12 @@ export class AgentSpecBase implements AgentSpec {
   }
 
   /** Iff the spec declares destructiveTools: the confirm-first + throttle protocol on exactly those tools
-   *  (validated ⊆ surface). The confirm MECHANISM is per-tool (`cfg.confirmMechanism`, default `'arg'`):
-   *  the tools are partitioned so each mechanism renders its OWN prose under its own base id — arg-flag
-   *  tools → `base:confirmFirst`, prior-ask tools → `base:confirmFirstPriorAsk` — while `destructiveThrottle`
-   *  covers ALL of them. A no-op when the list is empty — every non-destructive spec is clean. */
+   *  (validated ⊆ surface), one binding each — `base:confirmFirst` gates every destructive call that is
+   *  not a schema-licensed simulation, `base:destructiveThrottle` caps the turn's effects. A no-op when
+   *  the list is empty — every non-destructive spec is clean. */
   protected installBase(): void {
     const destructive = this.destructiveTools;
-    // A `confirmMechanism` key that is NOT a destructive tool (a typo, a renamed tool, a tool the author
-    // forgot to also list in `destructiveTools`) must be a construction error: silently ignoring it leaves
-    // the tool it MEANT to key on the `'arg'` fallback. For a flag-LESS destructive tool that is a permanent no-op:
-    // `confirmFirst`'s arg mechanism returns null as soon as `args.confirmed !== true`, which is always —
-    // i.e. the destructive-confirm gate reads as installed and enforces nothing. `destructiveTools` is
-    // ⊆-validated above; the mechanism map is validated the same way, for the same reason.
-    const strayMech = Object.keys(this.confirmMechanism).filter((t) => !destructive.includes(t));
-    if (strayMech.length) {
-      throw new Error(
-        `AgentSpec "${this.id}": confirmMechanism names tool(s) that are not in destructiveTools: ${strayMech.join(', ')}. ` +
-          'The mechanism would be ignored and the tool would silently fall back to the arg mechanism (a no-op for a flag-less tool).',
-      );
-    }
-    // A label for a tool that is not destructive gates nothing — the same silent-no-op class the stray
-    // mechanism check above closes.
+    // A label for a tool that is not destructive gates nothing — a silent no-op the construction throws on.
     const strayLabel = Object.keys(this.destructiveLabels).filter((t) => !destructive.includes(t));
     if (strayLabel.length) {
       throw new Error(
@@ -545,19 +523,9 @@ export class AgentSpecBase implements AgentSpec {
     if (missing.length) {
       throw new Error(`AgentSpec "${this.id}": destructiveTools not in the tool surface: ${missing.join(', ')}.`);
     }
-    const mechOf = (t: string): 'arg' | 'prior-ask' => this.confirmMechanism[t] ?? 'arg';
-    const argTools = destructive.filter((t) => mechOf(t) === 'arg');
-    const priorAskTools = destructive.filter((t) => mechOf(t) === 'prior-ask');
     const when = this.destructiveWhen;
-    if (argTools.length) {
-      this.addGuard('preTool', argTools, confirmFirst({ when }), { layer: 'base', id: 'base:confirmFirst' });
-    }
-    if (priorAskTools.length) {
-      this.addGuard('preTool', priorAskTools, confirmFirst({ flag: false, when }), { layer: 'base', id: 'base:confirmFirstPriorAsk' });
-    }
-    // The throttle needs the mechanism split too: a `'prior-ask'` tool has no confirm flag, so it has no
-    // simulation shape and every same-step sibling of it counts as an effect.
-    this.addGuard('preTool', destructive, destructiveThrottle(destructive, { flagless: priorAskTools, when }), { layer: 'base', id: 'base:destructiveThrottle' });
+    this.addGuard('preTool', destructive, confirmFirst({ when }), { layer: 'base', id: 'base:confirmFirst' });
+    this.addGuard('preTool', destructive, destructiveThrottle(destructive, { when }), { layer: 'base', id: 'base:destructiveThrottle' });
   }
 
   /**

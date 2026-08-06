@@ -65,7 +65,6 @@ export class SchedulerSpec extends AgentSpecBase {
       persona: 'You are the calendar assistant.',
       tools: ['listEvents', 'addEvent', 'cancelEvent'],
       destructiveTools: ['cancelEvent'],
-      confirmMechanism: { cancelEvent: 'prior-ask' },
     });
   }
 }

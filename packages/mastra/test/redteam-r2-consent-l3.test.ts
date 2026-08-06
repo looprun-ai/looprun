@@ -24,7 +24,7 @@ import { nothingDone } from './delivery.js';
 /** The fixture domain with WRITE tools declared, so the claims cross-check guards install. */
 const CONTRACT: DomainContract = { ...FIXTURE_DOMAIN, writeTools: ['createItem', 'updateItem', 'deleteItem', 'purgeAll'] };
 
-/** A spec with the destructive protocol on `deleteItem` (confirmFirst via the `confirmed` arg + throttle). */
+/** A spec with the destructive protocol on `deleteItem` (confirmFirst + throttle). */
 const destructiveSpec = () =>
   new AgentSpecBase({
     id: 'r2c',
@@ -51,6 +51,14 @@ function makeAgent(script: ScriptStep[], redrives = 0): { agent: LoopRunAgent; l
 /** Did the turn's guard layer VETO `tool`? (a veto lands as a `run:<kind>:<tool>` recovery event). */
 const vetoed = (corrections: string[], tool: string): boolean =>
   corrections.some((c) => c.startsWith('run:') && c.endsWith(`:${tool}`));
+
+/** Was `tool` DOWNGRADED to its simulation? (the consent gate converted the bare act; nothing ran bare). */
+const downgraded = (corrections: string[], tool: string): boolean =>
+  corrections.includes(`downgrade:confirmFirst:${tool}`);
+
+/** Did any `tool` call take effect on the world? — the property every consent case protects. */
+const tookEffect = (agent: LoopRunAgent, tool: string): boolean =>
+  agent.getSession().world.toolCalls.some((c) => c.name === tool && c.tookEffect === true);
 
 // ════════════════════════════════════════════════════════════════════════════════════════════════
 // L1 — A SCHEMA-REJECTED `respond` STILL LANDS IN `observed` WITH ok:true
@@ -117,13 +125,15 @@ describe('L1 — the schema-REJECTED respond ghost', () => {
     const { agent } = makeAgent([
       [{ tool: 'respond', args: { message: '', did: [{ op: 'ask' }] } }],
       [{ tool: 'respond', args: { message: 'All done.', did: [{ op: 'inform' }] } }],
-      [{ tool: 'deleteItem', args: { id: 'p001', confirmed: true } }],
+      [{ tool: 'deleteItem', args: { id: 'p001' } }],
       [{ tool: 'respond', args: { message: 'Nothing was deleted.', did: [{ op: 'inform' }] } }],
     ]);
     await agent.generate('delete everything');
     const res = await agent.generate('yes go ahead');
     // Turn 0 sealed with did:[{op:'inform'}] → history is authoritative → the ghost cannot license.
-    expect(vetoed(res.looprun.corrections, 'deleteItem')).toBe(true);
+    // The bare act is DOWNGRADED to its simulation: nothing acts, and the real question is raised.
+    expect(downgraded(res.looprun.corrections, 'deleteItem')).toBe(true);
+    expect(tookEffect(agent, 'deleteItem')).toBe(false);
   });
 });
 
@@ -137,7 +147,7 @@ describe('L1 — the schema-REJECTED respond ghost', () => {
 //   therefore permanently unsealed, and the next `generate()` reads its RAW observed entries as consent.
 //
 //   Combined with L1 this is the full kill chain: a streamed `respond` the runtime REJECTED licenses a
-//   `confirmed:true` destructive act one turn later.
+//   destructive act one turn later.
 // ════════════════════════════════════════════════════════════════════════════════════════════════
 describe('L2 — an unsealed stream() turn licenses a later destructive act', () => {
   async function streamTurn(agent: LoopRunAgent, text: string): Promise<void> {
@@ -153,8 +163,8 @@ describe('L2 — an unsealed stream() turn licenses a later destructive act', ()
       [{ tool: 'respond', args: { message: '', did: [{ op: 'ask' }] } }],
       // A tool-less step ends the streamed generation (the stream path pins no stopWhen of its own).
       [{ text: 'stop' }],
-      // The generated turn: straight to the destructive act with the confirm flag.
-      [{ tool: 'deleteItem', args: { id: 'p001', confirmed: true } }],
+      // The generated turn: straight to the bare destructive act.
+      [{ tool: 'deleteItem', args: { id: 'p001' } }],
       [{ tool: 'respond', args: { message: 'Deleted.', did: [{ op: 'deleteItem', target: 'p001', outcome: 'success' }] } }],
     ]);
     await streamTurn(agent, 'clean up my account');
@@ -165,8 +175,10 @@ describe('L2 — an unsealed stream() turn licenses a later destructive act', ()
     expect(actionHistory.history[0]!.did).toEqual([]);
 
     const res = await agent.generate('ok');
-    // SECURE: no question ever reached the user, so confirmFirst must veto the confirmed delete.
-    expect(vetoed(res.looprun.corrections, 'deleteItem')).toBe(true);
+    // SECURE: no question ever reached the user, so the bare delete is not licensed — it is
+    // downgraded to its simulation and nothing acts.
+    expect(downgraded(res.looprun.corrections, 'deleteItem')).toBe(true);
+    expect(tookEffect(agent, 'deleteItem')).toBe(false);
   });
 
   it('CLOSED: a DELIVERED streamed ask leaves a SEALED record — auditable, and it licenses', async () => {
@@ -186,16 +198,16 @@ describe('L2 — an unsealed stream() turn licenses a later destructive act', ()
 
   it('CONTROL (availability): a streamed turn that raised the question licenses the token the user types', async () => {
     const { agent } = makeAgent([
-      [{ tool: 'deleteItem', args: { id: 'p001' } }],
+      [{ tool: 'deleteItem', args: { id: 'p001', simulate: true } }],
       [{ tool: 'respond', args: { message: 'That one needs your confirmation.', did: [{ op: 'inform' }] } }],
       [{ text: 'stop' }],
-      [{ tool: 'deleteItem', args: { id: 'p001', confirmed: true } }],
+      [{ tool: 'deleteItem', args: { id: 'p001' } }],
       [{ tool: 'respond', args: { message: 'Done.', did: [{ op: 'deleteItem', target: 'p001', outcome: 'success' }] } }],
     ]);
     await streamTurn(agent, 'delete item p001');
     const res = await agent.generate('CONFIRM p001');
-    // The two-step consent flow must survive every tightening: a question the engine really raised, over
-    // a streamed turn, is answerable by the token the user types next turn.
+    // The simulate-first consent flow must survive every tightening: a question the engine really
+    // raised, over a streamed turn, is answerable by the code the user types next turn.
     expect(vetoed(res.looprun.corrections, 'deleteItem')).toBe(false);
   });
 });
@@ -215,8 +227,8 @@ describe('L3 — redrive message/did desync seals a phantom ask', () => {
     [{ tool: 'respond', args: { message: 'Done — item p001 has been deleted.', did: [{ op: 'deleteItem', target: 'p001', outcome: 'success' }] } }],
     // The redrive: the model drops the false claim but puts nothing in `message`.
     [{ tool: 'respond', args: { message: '', did: [{ op: 'ask' }] } }],
-    // Turn 1: straight to the confirmed destructive act.
-    [{ tool: 'deleteItem', args: { id: 'p001', confirmed: true } }],
+    // Turn 1: straight to the bare destructive act.
+    [{ tool: 'deleteItem', args: { id: 'p001' } }],
     [{ tool: 'respond', args: { message: 'Deleted.', did: [{ op: 'deleteItem', target: 'p001', outcome: 'success' }] } }],
   ];
 
@@ -232,11 +244,12 @@ describe('L3 — redrive message/did desync seals a phantom ask', () => {
     expect(sealed.did.some((c) => c.op === 'ask')).toBe(false);
   });
 
-  it('CLOSED: no phantom ask exists, so the next turn\'s confirmed delete is denied', async () => {
+  it('CLOSED: no phantom ask exists, so the next turn\'s bare delete never acts', async () => {
     const { agent } = makeAgent(script(), 1);
     await agent.generate('delete item p001');
     const res = await agent.generate('yes');
-    expect(vetoed(res.looprun.corrections, 'deleteItem')).toBe(true);
+    expect(downgraded(res.looprun.corrections, 'deleteItem')).toBe(true);
+    expect(tookEffect(agent, 'deleteItem')).toBe(false);
   });
 });
 
@@ -292,13 +305,17 @@ describe('L4 — destructiveThrottle in native-tools mode', () => {
     expect(log).toEqual(['A']);
   });
 
-  it('CLOSED regression (world mode): the same two calls are capped, because the world records tookEffect', async () => {
+  it('CLOSED regression (world mode): a second bare act after a real effect is capped by the throttle', async () => {
     const { agent } = makeAgent([
-      [{ tool: 'deleteItem', args: { id: 'p001', confirmed: true } }],
-      [{ tool: 'deleteItem', args: { id: 'p002', confirmed: true } }],
+      [{ tool: 'deleteItem', args: { id: 'p001', simulate: true } }],
+      [{ tool: 'respond', args: { message: 'Deleting p001 is permanent — are you sure?', did: [{ op: 'ask' }] } }],
+      [{ tool: 'deleteItem', args: { id: 'p001' } }],
+      [{ tool: 'deleteItem', args: { id: 'p002' } }],
       [{ tool: 'respond', args: { message: 'Removed.', did: [{ op: 'deleteItem', target: 'p001', outcome: 'success' }] } }],
     ]);
-    const res = await agent.generate('delete p001 and p002');
+    await agent.generate('delete p001 and p002');
+    const res = await agent.generate('CONFIRM p001');
+    // p001's effect is on the world record, so the second destructive call the same turn is capped.
     expect(vetoed(res.looprun.corrections, 'deleteItem')).toBe(true);
   });
 });

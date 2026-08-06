@@ -47,6 +47,10 @@ export function expectedSignal(proof: GuardProof, l3: ProofLoopCase): string {
       const dim = requireMake(proof)().dim;
       return `${dim}:${kind}:${tool}`;
     }
+    case 'downgrade':
+      // A consent-denied act on a simulatable tool re-runs as its own simulation; the attempt is
+      // logged under this tag and the turn proceeds — neither a veto nor a clean pass.
+      return `downgrade:${kind}:${tool}`;
     case 'redrive':
       // A postTool result invariant reports via `output:${kind}:${tool}` (then joins the redrive set);
       // an onReply guard redrives via `redrive:${kind}`.

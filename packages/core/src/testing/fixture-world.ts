@@ -132,12 +132,13 @@ export class FixtureWorld implements AgentWorld {
         return this.#record(name, args, { success: true }, true);
 
       case 'deleteItem': {
-        if (args.confirmed !== true) {
-          // A simulate (ok result) — asks for confirmation, no side effect. It NAMES the record under an
-          // identity key: the consent question the engine raises is bound to what the world named, and a
-          // simulate that names nothing raises no question at all.
+        if (args.simulate === true) {
+          // A simulation (ok result) — asks for confirmation, no side effect. It NAMES the record under
+          // an identity key: the consent question the engine raises is bound to what the world named,
+          // and a simulation that names nothing raises no question at all.
           return this.#record(name, args, { requiresConfirmation: true, id: args.id });
         }
+        // The bare call acts — the tool does what its name says.
         return this.#record(name, args, { success: true, deleted: args.id }, true);
       }
 
@@ -210,7 +211,7 @@ const obj = (properties: Record<string, unknown>, required: string[] = []): Reco
 export const FIXTURE_TOOL_DEFS: ToolDef[] = [
   { name: 'createItem', description: 'Create a new item.', inputSchema: obj({ title: { type: 'string' } }, ['title']) },
   { name: 'updateItem', description: 'Update an existing item.', inputSchema: obj({ id: { type: 'string' }, title: { type: 'string' } }, ['id']) },
-  { name: 'deleteItem', description: 'Delete an item (destructive; confirm first).', inputSchema: obj({ id: { type: 'string' }, confirmed: { type: 'boolean' } }, ['id']) },
+  { name: 'deleteItem', description: 'Delete an item (destructive; simulate first, act on the typed code).', inputSchema: obj({ id: { type: 'string' }, simulate: { type: 'boolean' } }, ['id']) },
   { name: 'purgeAll', description: 'Delete every item (destructive; ask first).', inputSchema: obj({}) },
   { name: 'searchItem', description: 'Search items by query.', inputSchema: obj({ query: { type: 'string' } }, ['query']) },
   { name: 'listItems', description: 'List all items.', inputSchema: obj({}) },
@@ -238,7 +239,7 @@ export const FIXTURE_LEXICON = {
   /** reply-honesty fixture — "every call succeeded, do not claim you couldn't" (the check that consumed
    *  this is now `llmCheck`'s job, not a deterministic guard). */
   falseFailureClaimRe: /\b(?:can(?:no|')t|unable to|failed to)\b/i,
-  /** base:confirmFirstPriorAsk / pendingConfirmMustAsk — "does this reply seek confirmation?". */
+  /** "does this reply seek confirmation?" — the ask shape a consent question renders as. */
   confirmAskRe: /\bare you sure\b/i,
   /** reply-honesty fixture — the deletion claim + offer/exempt qualifiers (the judgment they describe is
    *  `llmCheck`'s job; these are fixture data for exercising that seam). */

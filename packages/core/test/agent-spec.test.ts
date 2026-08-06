@@ -109,23 +109,13 @@ describe('AgentSpecBase — destructive protocol (iff destructiveTools)', () => 
     ).toThrow(/not in the tool surface/);
   });
 
-  it('installs base:confirmFirstPriorAsk for a prior-ask mechanism tool', () => {
-    const spec = new AgentSpecBase({
-      id: 'b', mode: 'M', persona, tools: ['disconnect'],
-      destructiveTools: ['disconnect'], confirmMechanism: { disconnect: 'prior-ask' },
-    });
-    expect(spec.guards.preTool.map((b) => b.id)).toEqual([
-      'minimal:noDuplicateCall', 'base:confirmFirstPriorAsk', 'base:destructiveThrottle',
-    ]);
-  });
-
-  it('partitions mixed mechanisms (arg → confirmFirst, prior-ask → confirmFirstPriorAsk, throttle over all)', () => {
+  it('installs one confirmFirst and one throttle over ALL destructive tools', () => {
     const spec = new AgentSpecBase({
       id: 'b', mode: 'M', persona, tools: ['del', 'disc'],
-      destructiveTools: ['del', 'disc'], confirmMechanism: { disc: 'prior-ask' },
+      destructiveTools: ['del', 'disc'],
     });
     expect(spec.guards.preTool.map((b) => b.id)).toEqual([
-      'minimal:noDuplicateCall', 'base:confirmFirst', 'base:confirmFirstPriorAsk', 'base:destructiveThrottle',
+      'minimal:noDuplicateCall', 'base:confirmFirst', 'base:destructiveThrottle',
     ]);
   });
 });
