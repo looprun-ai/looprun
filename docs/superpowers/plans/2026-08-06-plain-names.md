@@ -477,7 +477,7 @@ One flow, one pair of names: the helper that asks without acting, and the field 
 
 **Interfaces:**
 - Consumes: the gate from Task 1.
-- Produces: the world helper `simulate()`; the world-result key `simulationResult`; `simulationResultOf(create, received)` in `define-world.ts`; the audit union member `outcome: 'simulated'`; the pnpm script `simulate:lie-check`.
+- Produces: the world helper `simulate()`; the world-result key `simulationResult`; `simulationResultOf(create, received)` in `define-world.ts`; the audit union member `outcome: 'simulated'`. The script `probe:lie-check` and the directory `packages/eval/probes/` keep their name.
 
 - [ ] **Step 1: See the whole surface**
 
