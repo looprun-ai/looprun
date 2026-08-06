@@ -97,6 +97,11 @@ export function governanceVeto(guardKind: string, reason: string, mustCloseTurn:
   };
 }
 
+/** Guard kinds that gate even a schema-licensed simulation — a simulation changes nothing, but a
+ *  looping simulation is still a loop. Every other preTool guard checks a rule the WORLD already
+ *  validates in full on a simulation, so the world's own answer is the enforcement. */
+export const ALWAYS_GUARD_KINDS: ReadonlySet<string> = new Set(['noDuplicateCall']);
+
 /** Run the preTool guards for one candidate call. On deny, the veto is recorded in the action
  *  history. `opts.canDowngrade` (default true) says whether the caller can execute a downgraded
  *  simulation — a backend with no executor of its own (native-tools mode, or the re-entry after a
@@ -137,7 +142,14 @@ export async function evaluatePreTool(
     notes: actionHistory.turnCorrections,
     judge: actionHistory.judge, judgeTimeoutMs: actionHistory.judgeTimeoutMs, renderOpts: actionHistory.renderOpts,
   };
-  for (const g of guards) {
+  // A schema-licensed simulation changes nothing in the world, so every preTool guard whose rule is
+  // about a WRITE is already answered in full by the world's own simulated response — the world IS
+  // the enforcement. `confirmFirst` states this bypass for itself (its own schema-licensed line); this
+  // filter extends it to every OTHER preTool guard. Only the kinds in `ALWAYS_GUARD_KINDS` still gate a
+  // simulation: a simulation changes nothing, but a LOOPING simulation is still a loop.
+  const isSimulation = args.simulate === true && actionHistory.simulatableTools?.has(tool) === true;
+  const active = isSimulation ? guards.filter((g) => ALWAYS_GUARD_KINDS.has(g.kind)) : guards;
+  for (const g of active) {
     const reason = await g.check(gctx);
     if (reason) {
       const selfIx = actionHistory.inFlightCalls.indexOf(selfEntry);
