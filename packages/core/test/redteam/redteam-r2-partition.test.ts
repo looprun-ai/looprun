@@ -403,7 +403,7 @@ describe('b4 — the shadow law is bound to ONE call site, and the config path w
     expect(() => {
       const spec = new AgentSpecBase({ id: 'norms-agent', mode: 'A', persona: 'p', tools: ['refundOrder'] });
       spec.addGuard('onReply', 'any', mustAccountFor({ records: ['ORD-9'], outcome: 'success', outcomes: SHADOW }, 'account for ORD-9'), {
-        layer: 'agent',
+        priority: 'agent',
         id: 'agent:rubric',
       });
     }).toThrow(/outcome map/i);

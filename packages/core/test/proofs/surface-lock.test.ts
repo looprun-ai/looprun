@@ -55,8 +55,8 @@ const TAUGHT_05 = ['RunResult', 'TurnInput', 'TurnRecord', 'geminiThinkingOff', 
 const TAUGHT = [...TAUGHT_03, ...TAUGHT_04, ...TAUGHT_05].sort();
 
 const RIDERS = [
-  'AgentControls', 'ChainSpec', 'GuardBinding', 'HistoryToolCall', 'HistoryTurn', 'Layer',
-  'MutatorBinding', 'ReplyMutator',
+  'AgentControls', 'ChainSpec', 'GuardBinding', 'HistoryToolCall', 'HistoryTurn',
+  'MutatorBinding', 'Priority', 'ReplyMutator',
   'SamplingSettings', 'SpatialEdge', 'SpecWarning', 'StateDirective', 'TokenUsage',
   // GuardCtx.judge is a Judge — the one seam every judging call rides, on the barrel so a
   // `declaration:true` consumer can name it.

@@ -10,7 +10,7 @@
  *              a deterministic guard-authored closure)
  *   controls → maxSteps (stop condition) · terminal (reply-only policy) · directives · exhaustionReply
  *
- * ONE class, `AgentSpecBase` — a spec is a spec. Its constructor auto-installs, layer-tagged and
+ * ONE class, `AgentSpecBase` — a spec is a spec. Its constructor auto-installs, priority-tagged and
  * addressable, exactly:
  *   - ALWAYS the invariants EVERY agent carries: noDuplicateCall (preTool, id `minimal:noDuplicateCall`)
  *     + degenerationGuard (onReply, id `minimal:degenerationGuard`, the sole minimal onReply guard — a
@@ -21,9 +21,9 @@
  *   - IFF `destructiveTools` is non-empty, the destructive-safety protocol on those tools:
  *     confirmFirst (id `base:confirmFirst`) + destructiveThrottle (id `base:destructiveThrottle`).
  * Per-tool schema guards (argRequired/argFormat) are AUTHORED explicitly by the spec — there is no
- * auto-schema layer. The `minimal:`/`base:` id namespaces are load-bearing for resolveBindings layer
- * ordering + assembled prompt prose order. resolveBindings sorts each hook agent → full → base → minimal so
- * an agent correction always wins.
+ * auto-schema layer. The `minimal:`/`base:` id namespaces are load-bearing for resolveBindings priority
+ * ordering + assembled prompt prose order. resolveBindings sorts each hook agent → changeAllowed → consent
+ * → honesty → always so an agent correction always wins.
  */
 import { claimIsComplete, claimIsGrounded, confirmFirst, degenerationGuard, destructiveThrottle, noDuplicateCall, precondition } from './guards/index.js';
 import { GuardExecutionError } from './rules.js';
@@ -35,7 +35,7 @@ import type { SamplingSettings } from './model-params.js';
 
 export type Hook = 'onInput' | 'preTool' | 'postTool' | 'onReply';
 export type ToolTarget = 'any' | string[];
-export type Layer = 'minimal' | 'base' | 'full' | 'agent';
+export type Priority = 'agent' | 'changeAllowed' | 'consent' | 'honesty' | 'always';
 
 /** true ⇒ force reply-only this turn (the protocol prose forbids declaring an `ask` intention).
  *  State-driven, per turn. */
@@ -70,7 +70,7 @@ export interface AgentScope {
 export interface MutatorBinding {
   id: string;
   mutator: ReplyMutator;
-  layer: Layer;
+  priority: Priority;
   disabled: boolean;
 }
 
@@ -88,7 +88,7 @@ export interface GuardBinding {
    */
   target: ToolTarget;
   guard: Guard;
-  layer: Layer;
+  priority: Priority;
   disabled: boolean;
 }
 
@@ -197,7 +197,8 @@ export interface AgentSpec {
 
 const TERMINAL_TOOLS = ['respond'];
 
-const LAYER_ORDER: Record<Layer, number> = { agent: 0, full: 1, base: 2, minimal: 3 };
+const PRIORITY_ORDER: Record<Priority, number> =
+  { agent: 0, changeAllowed: 1, consent: 2, honesty: 3, always: 4 };
 
 /**
  * THE HOOK×DIM MATRIX — which hook may carry which `dim`.
@@ -292,7 +293,7 @@ function attributeMutator(mutator: ReplyMutator, bindingId: string): ReplyMutato
 export function resolveBindings(bindings: GuardBinding[] | undefined, tool?: string): GuardBinding[] {
   return (bindings ?? [])
     .filter((b) => !b.disabled && (tool === undefined || b.target === 'any' || b.target.includes(tool)))
-    .sort((a, b) => LAYER_ORDER[a.layer] - LAYER_ORDER[b.layer]);
+    .sort((a, b) => PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority]);
 }
 
 export function resolveGuards(bindings: GuardBinding[] | undefined, tool?: string): Guard[] {
@@ -302,7 +303,7 @@ export function resolveGuards(bindings: GuardBinding[] | undefined, tool?: strin
 export function resolveMutators(bindings: MutatorBinding[] | undefined): ReplyMutator[] {
   return (bindings ?? [])
     .filter((b) => !b.disabled)
-    .sort((a, b) => LAYER_ORDER[a.layer] - LAYER_ORDER[b.layer])
+    .sort((a, b) => PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority])
     .map((b) => b.mutator);
 }
 
@@ -353,7 +354,7 @@ export interface AgentSpecConfig {
  * The ONE AgentSpec class. Its constructor always installs the universal invariants (noDuplicateCall +
  * degenerationGuard) and, iff `destructiveTools` is non-empty, the destructive-safety protocol
  * (confirmFirst + destructiveThrottle) on those tools. Ids and install order are byte-stable
- * (`minimal:*` then `base:*`), which is what makes the layer-sorted assembled prompt prose and the
+ * (`minimal:*` then `base:*`), which is what makes the priority-sorted assembled prompt prose and the
  * resolveBindings order deterministic.
  */
 export class AgentSpecBase implements AgentSpec {
@@ -424,13 +425,13 @@ export class AgentSpecBase implements AgentSpec {
   }
 
   protected installMinimal(): void {
-    this.addGuard('preTool', 'any', noDuplicateCall(), { layer: 'minimal', id: 'minimal:noDuplicateCall' });
+    this.addGuard('preTool', 'any', noDuplicateCall(), { priority: 'always', id: 'minimal:noDuplicateCall' });
     // Output-channel degeneration lint (a param-free artifact-shape lint — it takes no patterns).
     // FIRST among the onReply minimal guards: a degenerate reply must be re-driven before any
     // content-level check reasons about it. Its prose renders under `## Reply rules` (every hook's prose
     // lands in the assembled prompt; `target:'any'` onReply prose renders there — see assembled-prompt.ts's PROSE-RENDERING
     // RULE and GUARDS.md §2).
-    this.addGuard('onReply', 'any', degenerationGuard(), { layer: 'minimal', id: 'minimal:degenerationGuard' });
+    this.addGuard('onReply', 'any', degenerationGuard(), { priority: 'always', id: 'minimal:degenerationGuard' });
     // Two reply-level guarantees are deliberately NOT minimal guards:
     //   · Claiming inability while every call succeeded is a TEXT judgment, so it belongs to `llmCheck` —
     //     an author binds a rubric on onReply where the domain needs it, rather than injecting a regex lexicon.
@@ -447,11 +448,11 @@ export class AgentSpecBase implements AgentSpec {
     const writeTools = this.contract?.writeTools;
     if (writeTools?.length) {
       this.addGuard('onReply', 'any', claimIsGrounded({ writeTools, outcomes: this.contract?.outcomes }), {
-        layer: 'minimal',
+        priority: 'honesty',
         id: 'minimal:claimIsGrounded',
       });
       this.addGuard('onReply', 'any', claimIsComplete({ writeTools, outcomes: this.contract?.outcomes }), {
-        layer: 'minimal',
+        priority: 'honesty',
         id: 'minimal:claimIsComplete',
       });
     }
@@ -476,7 +477,7 @@ export class AgentSpecBase implements AgentSpec {
       const gated = writeTools.filter((t) => !(gate.exempt ?? []).includes(t));
       if (gated.length) {
         this.addGuard('preTool', [...gated], precondition(gate.ok, gate.reason, gate.prose), {
-          layer: 'minimal',
+          priority: 'changeAllowed',
           id: 'minimal:writeGate',
         });
       }
@@ -524,8 +525,8 @@ export class AgentSpecBase implements AgentSpec {
       throw new Error(`AgentSpec "${this.id}": destructiveTools not in the tool surface: ${missing.join(', ')}.`);
     }
     const when = this.destructiveWhen;
-    this.addGuard('preTool', destructive, confirmFirst({ when }), { layer: 'base', id: 'base:confirmFirst' });
-    this.addGuard('preTool', destructive, destructiveThrottle(destructive, { when }), { layer: 'base', id: 'base:destructiveThrottle' });
+    this.addGuard('preTool', destructive, confirmFirst({ when }), { priority: 'consent', id: 'base:confirmFirst' });
+    this.addGuard('preTool', destructive, destructiveThrottle(destructive, { when }), { priority: 'consent', id: 'base:destructiveThrottle' });
   }
 
   /**
@@ -545,7 +546,7 @@ export class AgentSpecBase implements AgentSpec {
     );
   }
 
-  addGuard(hook: Hook, target: ToolTarget, guard: Guard, opts?: { id?: string; layer?: Layer }): string {
+  addGuard(hook: Hook, target: ToolTarget, guard: Guard, opts?: { id?: string; priority?: Priority }): string {
     // BOTH directions of the hook×dim matrix (see DIM_HOOKS) are checked: a one-way check would let a
     // guard install on a hook whose GuardCtx can never satisfy it — a silent no-op that still reads as
     // coverage. Fail at construction instead.
@@ -565,22 +566,22 @@ export class AgentSpecBase implements AgentSpec {
           `${DIM_HOOK_REASON[guard.dim]}, so the check could never fire. Legal hook(s): ${legalHooks.join(' | ')}.`,
       );
     }
-    const id = opts?.id ?? `${opts?.layer ?? 'agent'}:${guard.kind}#${++this.seq}`;
+    const id = opts?.id ?? `${opts?.priority ?? 'agent'}:${guard.kind}#${++this.seq}`;
     const all = [...this.guards.onInput, ...this.guards.preTool, ...this.guards.postTool, ...this.guards.onReply];
     if (all.some((b) => b.id === id)) throw new Error(`AgentSpec guard id "${id}" already exists`);
-    this.guards[hook].push({ id, target, guard: attributeGuard(guard, hook, id), layer: opts?.layer ?? 'agent', disabled: false });
+    this.guards[hook].push({ id, target, guard: attributeGuard(guard, hook, id), priority: opts?.priority ?? 'agent', disabled: false });
     return id;
   }
 
-  addReplyCheck(guard: Guard, opts?: { id?: string; layer?: Layer }): string {
+  addReplyCheck(guard: Guard, opts?: { id?: string; priority?: Priority }): string {
     return this.addGuard('onReply', 'any', guard, opts);
   }
 
-  addMutator(mutator: ReplyMutator, opts?: { id?: string; layer?: Layer }): string {
-    const id = opts?.id ?? `${opts?.layer ?? 'agent'}:${mutator.kind}#${++this.seq}`;
+  addMutator(mutator: ReplyMutator, opts?: { id?: string; priority?: Priority }): string {
+    const id = opts?.id ?? `${opts?.priority ?? 'agent'}:${mutator.kind}#${++this.seq}`;
     const list = (this.guards.onReplyMutate ??= []);
     if (list.some((b) => b.id === id)) throw new Error(`AgentSpec mutator id "${id}" already exists`);
-    list.push({ id, mutator: attributeMutator(mutator, id), layer: opts?.layer ?? 'agent', disabled: false });
+    list.push({ id, mutator: attributeMutator(mutator, id), priority: opts?.priority ?? 'agent', disabled: false });
     return id;
   }
 

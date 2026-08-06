@@ -4,7 +4,7 @@
  * The seam has downstream consumers that DO emit declarations (`@looprun-ai/mastra` builds with
  * `declaration: true`), so `/internal`'s signatures must be just as nameable as the barrel's. Note
  * what this file does NOT re-import: the closure of these signatures also reaches `AgentSpec`,
- * `AgentWorld`, `Guard`, `GuardCtx`, `ToolDef`, `AgentControls`, `Layer` and friends — all nameable
+ * `AgentWorld`, `Guard`, `GuardCtx`, `ToolDef`, `AgentControls`, `Priority` and friends — all nameable
  * from `@looprun-ai/core`, so `/internal` deliberately does not duplicate them. This file proves
  * that "nameable from the sibling barrel" is in fact enough for declaration emit.
  */

@@ -160,7 +160,7 @@ export { GuardExecutionError } from './rules.js';
 // ── Type-closure riders — same rule as the public barrel's ───────────────────
 // The types reachable from the signatures above that NO entry point would otherwise name. The ones
 // the closure also reaches through `@looprun-ai/core` (`AgentSpec`, `AgentWorld`, `Guard`,
-// `GuardCtx`, `ToolDef`, `AgentControls`, `Layer`, …) are nameable from there and are not repeated.
+// `GuardCtx`, `ToolDef`, `AgentControls`, `Priority`, …) are nameable from there and are not repeated.
 export type { PreToolVerdict, GovernanceVeto, PostToolEnforcement, ChainPassCtx, ChainPassResult } from './runtime/turn.js';
 export type { PostToolViolation } from './runtime/action-history.js';
 export type { TurnPrompt, TurnPromptInput } from './runtime/prompt.js';

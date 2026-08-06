@@ -301,7 +301,7 @@ function installGuard(spec: AgentSpecBase, g: GuardConfig, deps: NormsDeps, outc
       // DENY POLICY: this is the one catalog kind that gates on a READ, so its deny is the rendered
       // "read X first" text — it names the read and never a figure (the leak the policy kills).
       spec.addGuard('preTool', [g.tool], withPolicyDeny(requiresBefore(g.reads), renderDeny(g.reads, DENY_SUBJECT)), {
-        layer: 'agent',
+        priority: 'agent',
         id,
       });
       return;
@@ -311,23 +311,23 @@ function installGuard(spec: AgentSpecBase, g: GuardConfig, deps: NormsDeps, outc
       // text. What licenses the act is the approval code the engine issued for the record and the user
       // typed back; the acting call carries no protocol field, and only a strict boolean
       // `simulate: true` on a schema-licensed tool bypasses the gate (a string 'true' is an act).
-      spec.addGuard('preTool', g.tools, confirmFirst(), { layer: 'agent', id });
+      spec.addGuard('preTool', g.tools, confirmFirst(), { priority: 'agent', id });
       return;
     case 'valueFromUser':
       // DENY-POLICY AUDIT: valueFromUser's deny names only the gated ARG (structural), no figure/role.
-      spec.addGuard('preTool', [g.tool], valueFromUser({ arg: g.arg }), { layer: 'agent', id });
+      spec.addGuard('preTool', [g.tool], valueFromUser({ arg: g.arg }), { priority: 'agent', id });
       return;
     case 'mustAccountFor':
       // NO DENY-POLICY WRAP: mustAccountFor's redrive text IS the author's followable coverage `reason`
       // (a coverage instruction, never a world figure). It keys on STRUCTURE (records × did outcome), so the
       // spec-level outcomes map is threaded in to resolve a domain outcome word exactly as the engine does.
-      spec.addGuard('onReply', 'any', mustAccountFor({ records: g.records, outcome: g.outcome, ...(outcomes ? { outcomes } : {}) }, g.reason), { layer: 'agent', id });
+      spec.addGuard('onReply', 'any', mustAccountFor({ records: g.records, outcome: g.outcome, ...(outcomes ? { outcomes } : {}) }, g.reason), { priority: 'agent', id });
       return;
     case 'precondition': {
       // DENY POLICY: no `reason` field exists on the config, so the deny is the author's followable
       // `prose` (the condition), never a free post-hoc string that could carry the value being gated.
       const ok = compilePredicate(g, deps);
-      spec.addGuard('preTool', [g.tool], precondition(ok, g.prose, g.prose), { layer: 'agent', id });
+      spec.addGuard('preTool', [g.tool], precondition(ok, g.prose, g.prose), { priority: 'agent', id });
       return;
     }
     case 'llmCheck': {
@@ -337,7 +337,7 @@ function installGuard(spec: AgentSpecBase, g: GuardConfig, deps: NormsDeps, outc
       const dim = g.hook === 'preTool' ? 'run' : 'behavior';
       const target = g.tools === 'any' ? 'any' : g.tools;
       spec.addGuard(g.hook, target, llmCheck({ question: g.rubric, dim, ...(g.failMode ? { failMode: g.failMode } : {}) }), {
-        layer: 'agent',
+        priority: 'agent',
         id,
       });
       return;
@@ -347,7 +347,7 @@ function installGuard(spec: AgentSpecBase, g: GuardConfig, deps: NormsDeps, outc
       // verdict. The question is the engine's, so the config chooses only WHETHER to install it and what an
       // unreachable judge means.
       spec.addGuard('onReply', 'any', llmCheckLie(g.failMode ? { failMode: g.failMode } : undefined), {
-        layer: 'agent',
+        priority: 'agent',
         id,
       });
       return;

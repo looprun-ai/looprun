@@ -127,13 +127,13 @@ describe('AgentSpecBase — minimal onReply layer (no-regex law)', () => {
   });
 });
 
-describe('layer resolution (agent wins)', () => {
-  it('sorts agent → base → minimal', () => {
+describe('priority resolution (agent wins)', () => {
+  it('sorts agent → consent → always', () => {
     const spec = new AgentSpecBase({ id: 'l', mode: 'M', persona, tools: ['deleteItem'], destructiveTools: ['deleteItem'] });
     spec.addGuard('preTool', ['deleteItem'], precondition(() => true, 'agent gate'), { id: 'agent:gate' });
-    const order = resolveBindings(spec.guards.preTool, 'deleteItem').map((b) => b.layer);
+    const order = resolveBindings(spec.guards.preTool, 'deleteItem').map((b) => b.priority);
     expect(order[0]).toBe('agent');
-    expect(order[order.length - 1]).toBe('minimal');
+    expect(order[order.length - 1]).toBe('always');
   });
 
   it('filters by tool target', () => {

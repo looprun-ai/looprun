@@ -83,5 +83,5 @@ export type { SamplingSettings } from './model-params.js';
 // (e.g. eval's config loader building the outcome map / rubric norms).
 export type { CoreOutcome, OutcomeMap } from './runtime/claims.js';
 export type { ReplyMutator, SpatialEdge, HistoryTurn, HistoryToolCall, Judge } from './rules.js';
-export type { AgentControls, ChainSpec, StateDirective, GuardBinding, MutatorBinding, Layer } from './spec.js';
+export type { AgentControls, ChainSpec, StateDirective, GuardBinding, MutatorBinding, Priority } from './spec.js';
 export type { TokenUsage } from './runtime/types.js';

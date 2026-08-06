@@ -21,7 +21,7 @@
  */
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import type { AgentSpec, AgentWorld } from '@looprun-ai/core';
+import type { AgentSpec, AgentWorld, Priority } from '@looprun-ai/core';
 import type { ReqCall, Subject, SubjectCase } from './subject.js';
 import { loadNormsConfig, NormsConfigError } from './norms-config.js';
 import { parseCasesConfig, CasesConfigError } from './cases-config.js';
@@ -47,6 +47,9 @@ export interface ValidateReport {
 }
 
 // ── Layer 1: SCHEMA ───────────────────────────────────────────────────────────────────────────────
+
+// The three priorities the old `minimal` id namespace covered — excluded from the coverage census.
+const ENGINE_UNCHOSEN = new Set<Priority>(['always', 'honesty', 'changeAllowed']);
 
 /** Parse every JSON config the subject dir ships. A subject that installs guards through TS keeps
  *  working (no `norms/*.json` = nothing to schema-check); a JSON exam is validated by its loader. */
@@ -90,7 +93,7 @@ const allGuardIds = (spec: AgentSpec): string[] => [
 const authoredGuardIds = (spec: AgentSpec): string[] => [
   ...(spec.guards.onInput ?? []), ...(spec.guards.preTool ?? []),
   ...(spec.guards.postTool ?? []), ...(spec.guards.onReply ?? []),
-].filter((b) => !b.disabled && b.layer !== 'minimal').map((b) => b.id);
+].filter((b) => !b.disabled && !ENGINE_UNCHOSEN.has(b.priority)).map((b) => b.id);
 
 function routedAgent(subject: Subject, c: SubjectCase): string | undefined {
   const explicit = subject.caseAgent?.[c.id];
