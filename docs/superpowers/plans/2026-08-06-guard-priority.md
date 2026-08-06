@@ -20,7 +20,7 @@
 - **The order, verbatim:** `{ agent: 0, changeAllowed: 1, consent: 2, honesty: 3, always: 4 }`.
 - **The seven engine ids, verbatim:** `always:noDuplicateCall` · `always:degenerationGuard` · `honesty:claimIsGrounded` · `honesty:claimIsComplete` · `consent:confirmFirst` · `consent:destructiveThrottle` · `changeAllowed:precondition`.
 - **`full` is deleted** — the union member and its order slot both go.
-- **One commit per repo.** A partial rename is worse than none: a reader then meets both vocabularies in the same file. Within `looprun`, Tasks 1–7 are separate commits on one branch; the other three repos are one commit each.
+- **One commit per repo.** A partial rename is worse than none: a reader then meets both vocabularies in the same file. Within `looprun`, Tasks 1–7 are separate commits on one branch; `agentspec` is one commit of its own.
 
 ## File Structure
 
@@ -35,6 +35,9 @@ looprun/
   packages/core/src/guards/catalog.ts          the category union, two entries, precondition prose
   packages/core/src/guards/confirmation.ts  →  packages/core/src/guards/consent.ts
   packages/core/src/guards/index.ts            the barrel's import path + its category list comment
+  packages/core/src/testing/proof.ts           the proof `auto` field: which priority auto-installs the kind
+  packages/core/test/proofs/catalog-*.ts       the `auto` values of the four constructor-installed kinds
+  skills/looprun-governance/                   the proof-case scaffold script + its authoring reference
   packages/core/GUARDS.md                      hand-written; four rows name the ids
   packages/eval/src/lint-subject.ts            the census filter + its comment, the writeGate repair
   packages/eval/src/validate.ts                the census filter (second copy)
@@ -802,7 +805,7 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 
 **Interfaces:**
 - Consumes: every name produced by Tasks 1–6.
-- Produces: `node tests/guard-priority.test.mjs [--root <path>]`, exit 0 when clean. Tasks 8–10 run it with `--root` against their own repo.
+- Produces: `node tests/guard-priority.test.mjs [--root <path>]`, exit 0 when clean. Task 8 runs it with `--root` against the agentspec repo.
 
 **What the gate can and cannot check.** It bans identifiers, not words. `layer` stays ordinary English — "the action layer", "the two-layer law", "the honesty layer" name something else entirely, in twenty-four places in the agentspec skill alone — so only its property form `.layer` is banned, and its object-literal form `layer:` is left to `pnpm typecheck`, which names every site exactly once the field is renamed. `full` is not banned at all: it is ordinary English in every repo, and Task 1 removed its only two sites by reading.
 
@@ -952,7 +955,7 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 - Modify: `skill/references/spec-template.ts:7`
 
 **Interfaces:**
-- Consumes: every name produced by Tasks 1–7. Nothing in this repo is imported by the others.
+- Consumes: every name produced by Tasks 1–7. Nothing in this repo is imported by the engine.
 - Produces: the vocabulary every future generated subject is authored in.
 
 Ten spots across three files. Run the gate from the looprun checkout with `--root` pointed here.
@@ -1039,141 +1042,6 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 
 ---
 
-## Task 9: The generated subjects in agentspec-bench
-
-**Files (in `~/Dev/js/looprun/agentspec-bench`):**
-- Modify: `subjects/atlas/evals/cases.ts` (71 occurrences — case `targets`)
-- Modify: `subjects/atlas/gen/world.ts` (32 occurrences — all `writeGate`)
-- Modify: `subjects/atlas/norms/*/spec.ts`, `subjects/atlas/norms/contract.ts`, `subjects/atlas/norms/atlas-agent.ts`
-- Modify: `subjects/atlas/norms/bundle.test.ts`, `subjects/atlas/norms/N5.thinking.md`, `subjects/atlas/norms/*/N4.thinking.md`
-- Modify: any `subjects/*/profiles/*.ts` whose `guardProse` keys name an engine id
-
-**Interfaces:**
-- Consumes: every name from Tasks 1–7, and the skill vocabulary from Task 8.
-- Produces: nothing consumed elsewhere.
-
-145 hits across 21 files. The eight `subjects/atlas/test/*/cases.jsonl` files are EXCLUDED — each records what a model did on a date, the guard ids of that moment included, and editing them makes the record disagree with the run that wrote it. The gate skips them by name.
-
-- [ ] **Step 1: Point the repo at the new engine**
-
-Run: `pnpm -C ~/Dev/js/looprun/looprun build && pnpm -C ~/Dev/js/looprun/agentspec-bench install`
-Expected: the workspace resolves `@looprun-ai/core` to the local build carrying `Priority`.
-
-- [ ] **Step 2: Rewrite the case targets**
-
-In `subjects/atlas/evals/cases.ts`, apply the seven-id map from Global Constraints to every `targets` array. Verify the count first and after:
-
-```bash
-rg -o "minimal:[a-zA-Z]+|base:[a-zA-Z]+" subjects/atlas/evals/cases.ts | sort | uniq -c
-```
-
-Expected before: `44 base:confirmFirst`, `8 base:destructiveThrottle`, `59 minimal:claimIsGrounded`, `7 minimal:claimIsComplete`, `5 minimal:writeGate`, `1 minimal:noDuplicateCall`. Expected after: no output.
-
-- [ ] **Step 3: Rewrite the contract field across the norms**
-
-Replace `writeGate` with `changeAllowed` in `subjects/atlas/gen/world.ts`, `subjects/atlas/norms/contract.ts`, `subjects/atlas/norms/atlas-agent.ts`, `subjects/atlas/norms/billing/spec.ts` and every other `norms/*/spec.ts` the search names:
-
-```bash
-rg -l "\bwriteGate\b" subjects/
-```
-
-- [ ] **Step 4: Rewrite the bundle test and the thinking logs**
-
-`subjects/atlas/norms/bundle.test.ts` asserts guard ids in its coverage ledger, and `N5.thinking.md` plus each `norms/*/N4.thinking.md` quote them in prose. Apply the same seven-id map.
-
-- [ ] **Step 5: Run the typechecker**
-
-Run: `pnpm -C ~/Dev/js/looprun/agentspec-bench typecheck`
-Expected: PASS. Any `layer:` left in a spec file is a type error here.
-
-- [ ] **Step 6: Run the subject lint — the real join-key gate**
-
-Run: `pnpm -C ~/Dev/js/looprun/agentspec-bench exec looprun-eval lint subjects/atlas --spec-laws`
-Expected: clean. This resolves every case target against the guards the bundle actually installed, so a target left on a dead id is a red run. It is the check that proves no id was missed.
-
-- [ ] **Step 7: Run the bundle test**
-
-Run: `pnpm -C ~/Dev/js/looprun/agentspec-bench test`
-Expected: PASS.
-
-- [ ] **Step 8: Run the gate against this repo**
-
-Run: `node ~/Dev/js/looprun/looprun/tests/guard-priority.test.mjs --root ~/Dev/js/looprun/agentspec-bench`
-Expected: `guard-priority: clean`.
-
-- [ ] **Step 9: Commit**
-
-```bash
-cd ~/Dev/js/looprun/agentspec-bench
-git add -A
-git commit -m "refactor!: the subjects target guards by the question each answers
-
-Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
-```
-
----
-
-## Task 10: The three domain repos
-
-**Files:**
-- `~/Dev/js/looprun/accounting` — 1 occurrence in 1 file
-- `~/Dev/js/looprun/lawfirm` — 5 occurrences in 3 files
-- `~/Dev/js/looprun/homeservices` — 5 occurrences in 4 files
-
-**Interfaces:**
-- Consumes: every name from Tasks 1–7.
-- Produces: nothing.
-
-`looprun-bench` is NOT in this plan. Each of its editions pins the engine that measured it, so an edition renames only when it is rebuilt on a post-rename engine.
-
-- [ ] **Step 1: Locate every hit in the three repos**
-
-`rg` uses Rust regex, which has no lookaround — pass `-P` so the `base:` pattern can exclude a parameter annotation:
-
-```bash
-for r in accounting lawfirm homeservices; do
-  echo "=== $r"
-  rg -nP "minimal:|\bbase:(?! )|LAYER_ORDER|\bwriteGate\b|\bLayer\b|\.layer\b|\blayer\s*:" \
-    --glob '!node_modules' --glob '!dist' ~/Dev/js/looprun/$r
-done
-```
-
-Expected: eleven lines total across eight files.
-
-- [ ] **Step 2: Apply the seven-id map and the contract-field rename**
-
-For each line the search named, apply the map from Global Constraints. A domain repo's world and persona files carry the business's own vocabulary — if a hit turns out to be a business word rather than an engine identifier, leave it and note it, because `layer` and `base` are ordinary English.
-
-- [ ] **Step 3: Typecheck each repo**
-
-```bash
-for r in accounting lawfirm homeservices; do pnpm -C ~/Dev/js/looprun/$r typecheck; done
-```
-
-Expected: PASS on all three. If a repo has no `typecheck` script, run its `build` instead.
-
-- [ ] **Step 4: Run the gate against each repo**
-
-```bash
-for r in accounting lawfirm homeservices; do
-  node ~/Dev/js/looprun/looprun/tests/guard-priority.test.mjs --root ~/Dev/js/looprun/$r
-done
-```
-
-Expected: `guard-priority: clean` three times.
-
-- [ ] **Step 5: Commit each repo separately**
-
-```bash
-for r in accounting lawfirm homeservices; do
-  cd ~/Dev/js/looprun/$r
-  git add -A
-  git commit -m "refactor!: a guard's prefix names the question it answers
-
-Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
-done
-```
-
 ---
 
 ## Acceptance
@@ -1181,17 +1049,14 @@ done
 ```
 node tests/guard-priority.test.mjs                                      clean
 node tests/guard-priority.test.mjs --root ../agentspec                  clean
-node tests/guard-priority.test.mjs --root ../agentspec-bench            clean
-node tests/guard-priority.test.mjs --root ../accounting                 clean
-node tests/guard-priority.test.mjs --root ../lawfirm                    clean
-node tests/guard-priority.test.mjs --root ../homeservices               clean
 
 pnpm test                                          in looprun          green
-pnpm typecheck                                     in every repo       green
-looprun-eval lint subjects/atlas --spec-laws       in agentspec-bench  clean
+pnpm typecheck                                     in looprun          green
 ```
 
-The lint's target check is what proves no id was missed: it resolves every case target against the guards its bundle installed, and a stale id resolves to nothing.
+The plan covers two repos: the engine and the agentspec skill. `agentspec-bench` and the three domain
+repos (`accounting`, `lawfirm`, `homeservices`) are out of scope — each pins the engine version that
+measured it, and renames on its own schedule.
 
 ## Changelog
 
