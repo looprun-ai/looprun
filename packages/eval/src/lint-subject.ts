@@ -11,7 +11,7 @@
  *
  * Both are decidable offline, against the deterministic world and the assembled specs.
  */
-import type { AgentSpec, AgentWorld, Priority } from '@looprun-ai/core';
+import type { AgentSpec, AgentWorld } from '@looprun-ai/core';
 import type { Subject, SubjectCase } from './subject.js';
 
 /** A name the lint is confident no real world declares. */
@@ -28,22 +28,20 @@ const guardIds = (spec: AgentSpec): string[] => [
   ...(spec.guards.postTool ?? []), ...(spec.guards.onReply ?? []),
 ].filter((b) => !b.disabled).map((b) => b.id);
 
-// The three priorities the old `minimal` id namespace covered — excluded from the coverage census.
-const ENGINE_UNCHOSEN = new Set<Priority>(['always', 'honesty', 'changeAllowed']);
-
 /**
  * The guards a case is expected to target: the ones this BUNDLE chose.
  *
- * The `minimal:` layer is excluded — those are the invariants the constructor installs on every spec
- * in every domain, and the engine proves them in its own suite. Demanding a per-subject case for
- * each would file the same three findings against every bundle ever generated, which is how a
- * census stops being read. `base:` stays in: the destructive protocol is installed FROM this
- * bundle's own configuration, so it is this bundle's job to exercise it.
+ * `always` is excluded — those two are the invariants the constructor installs on every spec in every
+ * domain, and the engine proves them in its own suite. Demanding a per-subject case for each would
+ * file the same finding against every bundle ever generated, which is how a census stops being read.
+ * Every other priority stays in: `consent` arrives from this bundle's `destructiveTools`, `honesty`
+ * from its `contract.writeTools`, `changeAllowed` from its `contract.changeAllowed`. Each is a
+ * declaration this bundle made, so exercising it is this bundle's job.
  */
 const authoredGuardIds = (spec: AgentSpec): string[] => [
   ...(spec.guards.onInput ?? []), ...(spec.guards.preTool ?? []),
   ...(spec.guards.postTool ?? []), ...(spec.guards.onReply ?? []),
-].filter((b) => !b.disabled && !ENGINE_UNCHOSEN.has(b.priority)).map((b) => b.id);
+].filter((b) => !b.disabled && b.priority !== 'always').map((b) => b.id);
 
 /** Which agent serves a case: the explicit routing map, else the single agent of a one-agent bundle. */
 function routedAgent(subject: Subject, c: SubjectCase): string | undefined {

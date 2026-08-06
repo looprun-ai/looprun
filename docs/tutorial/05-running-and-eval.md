@@ -421,18 +421,18 @@ finer. If a critical item must be able to fail a case on its own, say so in `eva
 the observed argument, and arguments you do not list are ignored. `{ name: 'addEvent', anyArgs: {
 start: '2026-03-02T10:15' } }` therefore says "no `addEvent` starting at 10:15", not "no `addEvent`".
 
-`targets` names the guard ids the case exercises — `agent:noDoubleBook`, `base:confirmFirst`,
-`minimal:noDuplicateCall`. It is not decoration: a guard no case targets passes in **both** variants of a
+`targets` names the guard ids the case exercises — `agent:noDoubleBook`, `consent:confirmFirst`,
+`always:noDuplicateCall`. It is not decoration: a guard no case targets passes in **both** variants of a
 discrimination run, so it reads as coverage while never having fired. §5's `lintSubject` refuses a
 case without targets, and refuses a bundle with an **authored** guard no case ON ITS OWN LANE targets —
 a guard id is not unique across specs, so a case targeting `agent:sharedGate` on the booking lane says
 nothing about the copy installed on the fleet lane. The gap is closed with a case or a preset; nothing
 records it as accepted. Where
-"authored" excludes the `minimal:` layer, the invariants `AgentSpecBase` installs on every spec in
-every domain and the engine proves in its own suite. So `minimal:noDuplicateCall` is a legal target
-(the tutorial's third case uses it, because a read-only turn is where that gate earns its keep), but
-leaving it untargeted would not have been a finding; `base:` and `agent:` ids are the ones the census
-demands.
+"authored" excludes the `always` priority, the two invariants `AgentSpecBase` installs on every spec in
+every domain and the engine proves in its own suite. So `always:noDuplicateCall` is a legal target
+(the tutorial's third case uses it, because a read-only turn is where that gate earns its keep), and
+leaving it untargeted would not have been a finding. Every other priority is demanded:
+`consent:`, `honesty:`, `changeAllowed:` and `agent:` ids all name something this bundle declared.
 
 ### `Subject` and `loadSubject`
 

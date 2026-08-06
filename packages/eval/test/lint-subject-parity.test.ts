@@ -137,6 +137,16 @@ describe('the id laws', () => {
     );
   });
 
+  it('the census demands a case for an honesty guard and for the change gate, and never for an always guard', () => {
+    const s = subject(GATED);
+    s.cases = [{ ...s.cases[0], targets: ['agent:none'] }];
+    const findings = lintSubject(s).join('\n');
+    expect(findings).toContain('honesty:claimIsGrounded');
+    expect(findings).toContain('changeAllowed:precondition');
+    expect(findings).not.toContain('always:noDuplicateCall');
+    expect(findings).not.toContain('always:degenerationGuard');
+  });
+
   it('the never-targeted message offers no way to accept the gap', () => {
     const s = subject(CONTRACT);
     const mine = s.specs.rentals as AgentSpecBase;
