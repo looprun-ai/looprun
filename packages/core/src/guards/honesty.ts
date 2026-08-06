@@ -42,6 +42,7 @@ import type { Guard, GuardCtx, ObservedCall } from '../rules.js';
 import {
   assertNoCoreOutcomeShadow,
   attestedEffect,
+  CORE_OUTCOMES,
   isActionOp,
   resolveOutcome,
   type CoreOutcome,
@@ -364,6 +365,20 @@ function isGrounded(
   }
 }
 
+/** The deny's actionable half: which core outcomes THIS claim's target COULD be declared as, given the
+ *  same action history the guard just rejected it against — so the model's next rewrite has a fact to
+ *  reach for instead of a second guess at the outcome word. */
+function declarableHint(
+  ctx: GuardCtx,
+  claim: Intention,
+  calls: ObservedCall[],
+  attempts: ReadonlyArray<{ name: string; args: unknown }>,
+  writes: ReadonlySet<string>,
+): string {
+  const declarable = CORE_OUTCOMES.filter((o) => isGrounded(ctx, claim, o, calls, attempts, writes));
+  return ` Declarable for ${claim.target ?? 'this entity'} with this turn's evidence: ${declarable.length ? declarable.join(', ') : 'none'}.`;
+}
+
 /**
  * `claimIsGrounded` — every declared ACTION must match what the action history shows happened this turn.
  *
@@ -394,7 +409,7 @@ export function claimIsGrounded(opts: { writeTools: readonly string[]; outcomes?
           return `You reported "${claim.op}"${onTarget(claim)} with an outcome the system does not recognise ("${claim.outcome ?? ''}") — report it as one of the known outcomes instead.`;
         }
         if (!isGrounded(ctx, claim, resolved, calls, attempts, writes)) {
-          return `You reported "${claim.op}"${onTarget(claim)} as ${resolved}, but nothing this turn shows that — report only what actually happened.`;
+          return `You reported "${claim.op}"${onTarget(claim)} as ${resolved}, but nothing this turn shows that — report only what actually happened.${declarableHint(ctx, claim, calls, attempts, writes)}`;
         }
       }
       return null;
