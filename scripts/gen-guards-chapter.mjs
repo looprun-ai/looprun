@@ -101,7 +101,7 @@ const CONSENT_STORY = [
   '                  No operation was carried out on this turn.',
   '',
   'turn 2   user:    "yes, CONFIRM BK-1"',
-  "         agent:   cancelBooking({ id: 'BK-1', confirmed: true })   → allowed",
+  "         agent:   cancelBooking({ id: 'BK-1' })   → the bare acting call, allowed",
   '```',
   '',
   '`"go ahead"` is a human yes and is **denied** — the question is simply asked again. That is deliberate:',

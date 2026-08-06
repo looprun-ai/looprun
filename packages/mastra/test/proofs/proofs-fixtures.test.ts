@@ -26,7 +26,7 @@ describe('FixtureWorld — deterministic', () => {
     w.exec('createItem', { title: 'a' });
     w.exec('createMedia', { prompt: 'p' });
     w.exec('deleteItem', { id: 'p001' });
-    w.exec('deleteItem', { id: 'p001', confirmed: true });
+    w.exec('deleteItem', { id: 'p001' });
     return w.toolCalls;
   };
 

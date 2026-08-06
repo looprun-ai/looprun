@@ -308,11 +308,11 @@ describe('SECTION 4 — the premature-terminal ask leak is pruned, so no cross-t
     replayBackendTerminalReconcile(steps, actionHistory);
     // (the user actually saw the forced-terminal reply — a NON-asking sign-off — not this question)
 
-    // Turn 2: the model now fires the confirmed destructive call.
+    // Turn 2: the model now fires the bare destructive act.
     beginTurn(actionHistory, 2); // observed is conversation-scoped → the leaked ask persists
     const gEither = confirmFirst();
     const gAsk = confirmFirst({ flag: false });
-    const ctxEither = base({ tool: 'deleteAccount', args: { confirmed: true, id: 5 }, observed: actionHistory.observed, turnIndex: 2 });
+    const ctxEither = base({ tool: 'deleteAccount', args: { id: 5 }, observed: actionHistory.observed, turnIndex: 2 });
     const ctxAsk = base({ tool: 'deleteAccount', args: {}, observed: actionHistory.observed, turnIndex: 2 });
 
     // SECURE: no phantom license survives the prune — both variants deny.
@@ -328,7 +328,7 @@ describe('SECTION 4 — the premature-terminal ask leak is pruned, so no cross-t
     actionHistory.observed = actionHistory.observed.filter((o) => !isAskEvent(o));
     beginTurn(actionHistory, 2);
     const g = confirmFirst();
-    const ctx = base({ tool: 'deleteAccount', args: { confirmed: true, id: 5 }, observed: actionHistory.observed, turnIndex: 2 });
+    const ctx = base({ tool: 'deleteAccount', args: { id: 5 }, observed: actionHistory.observed, turnIndex: 2 });
     expect(g.check(ctx)).not.toBeNull(); // no phantom license → denied, as intended
   });
 });

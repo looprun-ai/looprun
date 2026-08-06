@@ -418,7 +418,7 @@ spec is a spec). Its constructor auto-installs, from `cfg` alone:
 | **always** | `noDuplicateCall` (preTool `any`, `minimal:noDuplicateCall`) · `degenerationGuard()` (onReply, `minimal:degenerationGuard` — the SOLE minimal onReply guard; markup + run-away-repetition branches only, no parameters — a language-specific judgment such as self-narration is text judgment, so an author who wants one binds an `llmCheck`) |
 | `cfg.contract.writeTools` **non-empty** | `claimIsGrounded` + `claimIsComplete` (onReply, `minimal:*`) — the honesty cross-check over the world action history, fed `contract.writeTools` + `contract.outcomes` |
 | `cfg.contract.writeGate` **present** | `precondition(ok, reason, prose)` on `contract.writeTools` minus `exempt` (preTool, `minimal:writeGate`) — the domain's ONE statement of what its world refuses every write under, installed on every spec that carries a write. Declared with no `writeTools`, or with an `exempt` entry that is not a write tool, it throws at construction |
-| `cfg.destructiveTools` **non-empty** | `destructiveThrottle(destructiveTools)` (preTool, `base:destructiveThrottle`) + `confirmFirst` on exactly those tools — the per-tool `cfg.confirmMechanism[tool]` (default `'arg'`) picks the id AND which call ACTS: two-step tools → `confirmFirst()` under `base:confirmFirst`, one-step tools → `confirmFirst({ flag: false })` under `base:confirmFirstPriorAsk`. The LIST installs the protocol; `cfg.destructiveWhen[tool]` decides which CALLS of a listed tool it applies to (absent ⇒ every call). **⊆-validated** (each destructive tool must be in `cfg.tools` or the constructor throws), and `cfg.destructiveLabels`, `cfg.confirmMechanism` and `cfg.destructiveWhen` are validated the same way |
+| `cfg.destructiveTools` **non-empty** | `destructiveThrottle(destructiveTools)` (preTool, `base:destructiveThrottle`) + `confirmFirst()` on exactly those tools (`base:confirmFirst`) — one law: a destructive call that is not a schema-licensed simulation is gated on the typed approval code. The consent ROUTE is read off each tool's injected schema at run start (`simulatableToolNames`): `simulate` present → a denied bare act is downgraded to its own simulation; absent → the veto raises the question from the record the call names (label fallback). The LIST installs the protocol; `cfg.destructiveWhen[tool]` decides which CALLS of a listed tool it applies to (absent ⇒ every call). **⊆-validated** (each destructive tool must be in `cfg.tools` or the constructor throws), and `cfg.destructiveLabels` and `cfg.destructiveWhen` are validated the same way |
 
 So **2 kinds always install** (`noDuplicateCall` + `degenerationGuard`), the honesty cross-check pair
 when the contract declares `writeTools`, and **+2 more when the agent holds a destructive tool.**
@@ -672,8 +672,8 @@ turn 1   agent:   cancelBooking({ id:'BK-1' })
                   No operation was carried out on this turn.
 
 turn 2   user:    "yes, CONFIRM BK-1"
-         engine:  the token matched → the approval is consumed
-         agent:   cancelBooking({ id:'BK-1', confirmed:true })   → ALLOWED
+         engine:  the code matched → the approval is consumed
+         agent:   cancelBooking({ id:'BK-1' })   → the bare acting call, ALLOWED
 ```
 
 #### Who does what
@@ -797,22 +797,10 @@ open:
    with `tookEffect:false`.
 
    This obligation covers EXECUTED calls only. A same-step SIBLING (`siblingCallsThisStep`) has been
-   admitted but has not run, so `tookEffect` is `undefined` for it by construction and its declared
-   confirm flag is what decides — otherwise a legitimate multi-simulation ("simulation cancelling both
-   bookings" ⇒ two `confirmed:false` calls in one step) would have its second call vetoed for an effect
-   neither call has had yet. **NOT-CONFIRMED is the simulation shape**, exactly as `confirmFirst` reads it: a
-   sibling declares a simulation when `args[confirmArg] !== true`, which covers both `confirmed:false` and an
-   OMITTED flag. `AgentSpecBase` passes its `'prior-ask'` tools to the throttle as `flagless`: they carry
-   no confirm flag at all, so nothing in their args can declare a simulation and every admitted call of them
-   counts — otherwise the rule above would leave the same-step cap inert on that whole mechanism.
-
-   The residual is stated rather than hidden: a FLAG-GATED tool that MUTATES without `confirmed:true` and
-   is emitted N times in ONE step is not capped — and it is UNBOUNDED N, not merely two: the cap is per
-   recorded effect and a sibling has none, so there is no counter over admitted simulations. Nothing
-   observable separates those calls from the honest multi-simulation at admission time. What bounds the shape
-   instead: the cross-step form IS capped (the first call's effect is on record by then), `flagless` tools
-   are capped from the first sibling, and a world that honours its own two-step protocol never mutates on
-   an unconfirmed call.
+   admitted but has not run, so `tookEffect` is `undefined` for it by construction — only its own
+   explicit `simulate: true` declares a simulation, so a legitimate multi-simulation ("simulate
+   cancelling both bookings" ⇒ two `simulate:true` calls in one step) passes untouched, while a BARE
+   sibling counts as the effect it will be and the cap holds from the first one.
 
 **Sealing every turn** (`recordTurnHistory`, with the reply the user actually received) is a separate
 obligation and it is not about consent: it is what gives `ctx.history` its content, which `valueFromUser`

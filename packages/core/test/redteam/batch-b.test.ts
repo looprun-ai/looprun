@@ -40,16 +40,16 @@ const okCall = (name: string, turn: number, args: Record<string, unknown>, extra
 // confirmFirst
 // ─────────────────────────────────────────────────────────────────────────────
 describe('confirmFirst — adversarial', () => {
-  const g = confirmFirst(); // via:'either', flag:'confirmed', within:1
+  const g = confirmFirst(); // one law: the bare act is gated on the typed code
 
   it('HOLDS: an UNDER-SPECIFIED simulate (empty non-flag args) does NOT license a confirm of ANY record', () => {
-    // Attacker: turn 1 simulate deleteRecord with NO recordId (empty args except confirmed:false). Its
+    // Attacker: turn 1 simulate deleteRecord with NO recordId (empty args except simulate:true). Its
     // non-flag key set is [] and `.every()` over [] is vacuously true, so a SUBSET test would match ANY
     // confirm. Binding by set EQUALITY is what denies it: [] ≠ ['recordId'] → the simulation was not of this act.
-    const simulate = okCall('deleteRecord', 1, { confirmed: false }); // no recordId
+    const simulate = okCall('deleteRecord', 1, { simulate: true }); // no recordId
     const confirm = ctxWith({
       tool: 'deleteRecord',
-      args: { recordId: 'victim-999', confirmed: true }, // a record NEVER simulated
+      args: { recordId: 'victim-999' }, // a record NEVER simulated
       observed: [simulate],
       turnIndex: 2,
     });
@@ -57,10 +57,10 @@ describe('confirmFirst — adversarial', () => {
   });
 
   it('HOLDS: a FULLY-specified simulate of a DIFFERENT record does NOT license (simulate not a subset)', () => {
-    const simulate = okCall('deleteRecord', 1, { recordId: 'A', confirmed: false });
+    const simulate = okCall('deleteRecord', 1, { recordId: 'A', simulate: true });
     const confirm = ctxWith({
       tool: 'deleteRecord',
-      args: { recordId: 'B', confirmed: true },
+      args: { recordId: 'B' },
       observed: [simulate],
       turnIndex: 2,
     });
@@ -68,10 +68,10 @@ describe('confirmFirst — adversarial', () => {
   });
 
   it('HOLDS: a FAILED simulate (ok:false) does NOT license the confirm', () => {
-    const simulate = okCall('deleteRecord', 1, { recordId: 'A', confirmed: false }, { ok: false });
+    const simulate = okCall('deleteRecord', 1, { recordId: 'A', simulate: true }, { ok: false });
     const confirm = ctxWith({
       tool: 'deleteRecord',
-      args: { recordId: 'A', confirmed: true },
+      args: { recordId: 'A' },
       observed: [simulate],
       turnIndex: 2,
     });
@@ -79,10 +79,10 @@ describe('confirmFirst — adversarial', () => {
   });
 
   it('HOLDS: a SAME-TURN simulate does NOT license (recency lower bound diff>=1)', () => {
-    const simulate = okCall('deleteRecord', 2, { recordId: 'A', confirmed: false });
+    const simulate = okCall('deleteRecord', 2, { recordId: 'A', simulate: true });
     const confirm = ctxWith({
       tool: 'deleteRecord',
-      args: { recordId: 'A', confirmed: true },
+      args: { recordId: 'A' },
       observed: [simulate],
       turnIndex: 2,
     });
@@ -90,10 +90,10 @@ describe('confirmFirst — adversarial', () => {
   });
 
   it('HOLDS: a STALE simulate (diff 2 > within 1) does NOT license', () => {
-    const simulate = okCall('deleteRecord', 1, { recordId: 'A', confirmed: false });
+    const simulate = okCall('deleteRecord', 1, { recordId: 'A', simulate: true });
     const confirm = ctxWith({
       tool: 'deleteRecord',
-      args: { recordId: 'A', confirmed: true },
+      args: { recordId: 'A' },
       observed: [simulate],
       turnIndex: 3,
     });
@@ -109,7 +109,7 @@ describe('confirmFirst — adversarial', () => {
     };
     const confirm = ctxWith({
       tool: 'deleteRecord',
-      args: { recordId: 'victim-999', confirmed: true },
+      args: { recordId: 'victim-999' },
       history: [asked],
       turnIndex: 2,
     });
@@ -124,7 +124,7 @@ describe('confirmFirst — adversarial', () => {
     };
     const confirm = ctxWith({
       tool: 'deleteRecord',
-      args: { recordId: 'victim', confirmed: true },
+      args: { recordId: 'victim' },
       history: [asked],
       turnIndex: 2,
     });
@@ -133,10 +133,10 @@ describe('confirmFirst — adversarial', () => {
 
   it('HOLDS: an under-specified simulate does not bypass the strict record-bound variant', () => {
     const gp = confirmFirst();
-    const simulate = okCall('deleteRecord', 1, { confirmed: false });
+    const simulate = okCall('deleteRecord', 1, { simulate: true });
     const confirm = ctxWith({
       tool: 'deleteRecord',
-      args: { recordId: 'victim', confirmed: true },
+      args: { recordId: 'victim' },
       observed: [simulate],
       turnIndex: 2,
     });
@@ -176,15 +176,15 @@ describe('confirmFirst — adversarial', () => {
 describe('destructiveThrottle — adversarial', () => {
   const g = destructiveThrottle(['deleteRecord', 'wipeAll']);
 
-  it('CLOSED: two effected calls flagged confirmed:false are two EFFECTS — the second is denied', () => {
-    // Keying `isSimulate` on args.confirmed===false without consulting tookEffect would let a tool that
-    // mutates while confirmed:false (it ignores the flag semantics) produce two real effects that both
+  it('CLOSED: two effected calls claiming simulate:true are two EFFECTS — the second is denied', () => {
+    // Keying the simulation test on args.simulate===true without consulting tookEffect would let a tool
+    // that mutates while claiming simulate:true (it drops the argument) produce two real effects that both
     // look like simulations → 0 prior effects counted → the second destructive call slips the n:1 cap. A
     // call that TOOK EFFECT is an effect, whatever flags it carries.
-    const firstEffect = okCall('deleteRecord', 5, { recordId: 'A', confirmed: false }, { tookEffect: true });
+    const firstEffect = okCall('deleteRecord', 5, { recordId: 'A', simulate: true }, { tookEffect: true });
     const second = ctxWith({
       tool: 'deleteRecord',
-      args: { recordId: 'B', confirmed: false },
+      args: { recordId: 'B', simulate: true },
       observed: [firstEffect],
       turnIndex: 5,
     });
@@ -212,7 +212,7 @@ describe('destructiveThrottle — adversarial', () => {
     const firstEffect = okCall('deleteRecord', 5, { recordId: 'A' }, { tookEffect: true });
     const second = ctxWith({
       tool: 'wipeAll',
-      args: { confirmed: true },
+      args: {},
       observed: [firstEffect],
       turnIndex: 5,
     });
@@ -220,10 +220,10 @@ describe('destructiveThrottle — adversarial', () => {
   });
 
   it('HOLDS: an ok:false prior destructive call does NOT count (it never ran) — second allowed correctly', () => {
-    const failed = okCall('deleteRecord', 5, { recordId: 'A', confirmed: true }, { ok: false });
+    const failed = okCall('deleteRecord', 5, { recordId: 'A' }, { ok: false });
     const second = ctxWith({
       tool: 'deleteRecord',
-      args: { recordId: 'B', confirmed: true },
+      args: { recordId: 'B' },
       observed: [failed],
       turnIndex: 5,
     });
@@ -233,13 +233,13 @@ describe('destructiveThrottle — adversarial', () => {
   it('HOLDS: a genuine simulate (recorded tookEffect:false) does not block the approved execute', () => {
     // `tookEffect:false` is POSITIVE evidence that the simulate changed nothing — the backend records
     // it whenever the world keeps a action history. Without it the call is unverified, not effect-free.
-    const simulate = okCall('deleteRecord', 5, { recordId: 'A', confirmed: false }, {
+    const simulate = okCall('deleteRecord', 5, { recordId: 'A', simulate: true }, {
       tookEffect: false,
       resultFlags: { requiresConfirmation: true },
     });
     const execute = ctxWith({
       tool: 'deleteRecord',
-      args: { recordId: 'A', confirmed: true },
+      args: { recordId: 'A' },
       observed: [simulate],
       turnIndex: 5,
     });

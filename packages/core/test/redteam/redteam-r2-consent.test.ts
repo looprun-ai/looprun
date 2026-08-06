@@ -94,17 +94,17 @@ describe('C1 — redrive message/did desync manufactures a sealed ask the user n
     expect(hasAskIntent(did)).toBe(false);
   });
 
-  it('CLOSED: no licence is manufactured — a confirmed destructive act next turn is denied', async () => {
+  it('CLOSED: no licence is manufactured — a bare destructive act next turn is denied', async () => {
     const { did } = await runDesync();
-    const g = confirmFirst(); // default flag 'confirmed', via 'either', within 1
+    const g = confirmFirst(); // one law: the bare act is gated on the typed code
     const ctx = baseCtx({
       tool: 'deleteAcct',
-      args: { id: 'X', confirmed: true },
+      args: { id: 'X' },
       turnIndex: 1,
       history: [histTurn(0, did, 'Done — account X has been deleted.')], // the sealed turn 0
       observed: [],
     });
-    // SECURE: no question ever reached the user, so `confirmed:true` is denied.
+    // SECURE: no question ever reached the user, so the bare act is denied.
     expect(g.check(ctx)).not.toBeNull();
   });
 
@@ -129,17 +129,17 @@ describe('C1 — redrive message/did desync manufactures a sealed ask the user n
 //   isMatchingSimulate requires only that the SIMULATE's non-flag args are a SUBSET of the confirm's:
 //       Object.keys(obs.args).filter(k => k !== flag).every(k => obs.args[k] === ctx.args[k])
 //   `.every` over an EMPTY key set is vacuously true, so a simulate that simulated NOTHING (or simulated a
-//   strictly smaller record) licenses a `confirmed:true` call carrying any destructive parameter the
+//   strictly smaller record) licenses a bare acting call carrying any destructive parameter the
 //   user never saw. The simulation and the executed act are then different acts.
 // ════════════════════════════════════════════════════════════════════════════════════════════════
-describe('C2 (V1) — a partial/empty simulate licenses ANY confirmed destructive act', () => {
-  it('CLOSED: simulate {confirmed:false} does NOT license transfer{to:attacker,amount:99999,confirmed:true}', () => {
+describe('C2 (V1) — a partial/empty simulation licenses ANY bare destructive act', () => {
+  it('CLOSED: an empty simulation does NOT license transfer{to:attacker,amount:99999}', () => {
     const g = confirmFirst();
     const ctx = baseCtx({
       tool: 'transfer',
-      args: { to: 'attacker', amount: 99999, confirmed: true },
+      args: { to: 'attacker', amount: 99999 },
       turnIndex: 1,
-      observed: [obs('transfer', { confirmed: false }, 0)], // simulated NOTHING
+      observed: [obs('transfer', { simulate: true }, 0)], // simulated NOTHING
     });
     expect(g.check(ctx)).not.toBeNull();
   });
@@ -148,9 +148,9 @@ describe('C2 (V1) — a partial/empty simulate licenses ANY confirmed destructiv
     const g = confirmFirst();
     const ctx = baseCtx({
       tool: 'wipe',
-      args: { account: 'A', scope: 'EVERYTHING', confirmed: true },
+      args: { account: 'A', scope: 'EVERYTHING' },
       turnIndex: 1,
-      observed: [obs('wipe', { account: 'A', confirmed: false }, 0)], // simulated a strictly SMALLER record
+      observed: [obs('wipe', { account: 'A', simulate: true }, 0)], // simulated a strictly SMALLER record
     });
     expect(g.check(ctx)).not.toBeNull();
   });
@@ -161,9 +161,9 @@ describe('C2 (V1) — a partial/empty simulate licenses ANY confirmed destructiv
     const g = confirmFirst();
     const ctx = baseCtx({
       tool: 'wipe',
-      args: { account: 'A', confirmed: true },
+      args: { account: 'A' },
       turnIndex: 1,
-      observed: [obs('wipe', { account: 'A', scope: 'ONE', confirmed: false }, 0)],
+      observed: [obs('wipe', { account: 'A', scope: 'ONE', simulate: true }, 0)],
     });
     expect(g.check(ctx)).not.toBeNull();
   });
@@ -172,7 +172,7 @@ describe('C2 (V1) — a partial/empty simulate licenses ANY confirmed destructiv
     const g = confirmFirst();
     const ctx = baseCtx({
       tool: 'wipe',
-      args: { account: 'A', scope: 'ONE', confirmed: true },
+      args: { account: 'A', scope: 'ONE' },
       turnIndex: 1,
       consent: [{ tool: 'wipe', subject: 'A', meaning: 'A', token: 'CONFIRM A', issuedTurn: 0, consumedTurn: 1 }],
     });
@@ -183,9 +183,9 @@ describe('C2 (V1) — a partial/empty simulate licenses ANY confirmed destructiv
     const g = confirmFirst();
     const ctx = baseCtx({
       tool: 'wipe',
-      args: { account: 'B', confirmed: true },
+      args: { account: 'B' },
       turnIndex: 1,
-      observed: [obs('wipe', { account: 'A', confirmed: false }, 0)],
+      observed: [obs('wipe', { account: 'A', simulate: true }, 0)],
     });
     expect(g.check(ctx)).not.toBeNull();
   });
@@ -257,7 +257,7 @@ describe('C4 — an UNSEALED earlier turn re-opens the raw observed ask scan', (
     const g = confirmFirst();
     const ctx = baseCtx({
       tool: 'deleteAcct',
-      args: { id: 'X', confirmed: true },
+      args: { id: 'X' },
       turnIndex: 1,
       history: [], // turn 0 was never sealed
       observed: [obs('respond', { message: '', did: [{ op: 'ask' }] }, 0)], // a respond the user never received
@@ -282,7 +282,7 @@ describe('C4 — an UNSEALED earlier turn re-opens the raw observed ask scan', (
     const g = confirmFirst();
     const ctx = baseCtx({
       tool: 'deleteAcct',
-      args: { id: 'X', confirmed: true },
+      args: { id: 'X' },
       turnIndex: 1,
       history: [histTurn(0, [{ op: 'inform' }])],
       observed: [obs('respond', { message: '', did: [{ op: 'ask' }] }, 0)],
@@ -307,7 +307,7 @@ describe('C5 — a declared ask licenses nothing, whatever its message says', ()
   it('CLOSED: a sealed ask over a BLANK delivered reply licenses nothing', () => {
     const g = confirmFirst();
     const ctx = baseCtx({
-      tool: 'deleteAcct', args: { id: 'X', confirmed: true }, turnIndex: 1,
+      tool: 'deleteAcct', args: { id: 'X' }, turnIndex: 1,
       history: [histTurn(0, [{ op: 'ask' }], '\u200b \u3164\u2063')], // declared an ask, delivered nothing
     });
     expect(g.check(ctx)).not.toBeNull();
@@ -329,7 +329,7 @@ describe('C5 — a declared ask licenses nothing, whatever its message says', ()
 
     const g = confirmFirst();
     const ctx = baseCtx({
-      tool: 'deleteAcct', args: { id: 'X', confirmed: true }, turnIndex: 1,
+      tool: 'deleteAcct', args: { id: 'X' }, turnIndex: 1,
       history: [...actionHistory.history],
     });
     // SECURE: a licence must rest on a question the user could answer, not on a self-issued label.

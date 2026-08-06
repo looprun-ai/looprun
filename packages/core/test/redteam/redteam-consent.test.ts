@@ -51,19 +51,19 @@ const consentFor = (tool: string, subject?: string): GuardCtx['consent'] => [
 describe('V1 — a consent licenses the act it was given for, and nothing else', () => {
   it('CLOSED: a consent for record A does NOT license an act on record B', () => {
     const g = confirmFirst();
-    const ctx = baseCtx({ tool: 'transfer', args: { account: 'B', confirmed: true }, turnIndex: 1, consent: consentFor('transfer', 'A') });
+    const ctx = baseCtx({ tool: 'transfer', args: { account: 'B' }, turnIndex: 1, consent: consentFor('transfer', 'A') });
     expect(g.check(ctx)).not.toBeNull();
   });
 
   it('CLOSED: a consent for record BK-1 does NOT license BK-12 — the token is a whole value', () => {
     const g = confirmFirst();
-    const ctx = baseCtx({ tool: 'cancel', args: { id: 'BK-12', confirmed: true }, turnIndex: 1, consent: consentFor('cancel', 'BK-1') });
+    const ctx = baseCtx({ tool: 'cancel', args: { id: 'BK-12' }, turnIndex: 1, consent: consentFor('cancel', 'BK-1') });
     expect(g.check(ctx)).not.toBeNull();
   });
 
   it('CLOSED: a consent for one tool does NOT license another', () => {
     const g = confirmFirst();
-    const ctx = baseCtx({ tool: 'wipe', args: { account: 'A', confirmed: true }, turnIndex: 1, consent: consentFor('transfer', 'A') });
+    const ctx = baseCtx({ tool: 'wipe', args: { account: 'A' }, turnIndex: 1, consent: consentFor('transfer', 'A') });
     expect(g.check(ctx)).not.toBeNull();
   });
 
@@ -71,7 +71,7 @@ describe('V1 — a consent licenses the act it was given for, and nothing else',
     // The token names the RECORD, so a field the user never simulated cannot make it a different act:
     // what bounds the blast radius of an agreed act is destructiveThrottle, not the consent gate.
     const g = confirmFirst();
-    const ctx = baseCtx({ tool: 'wipe', args: { account: 'A', scope: 'EVERYTHING', confirmed: true }, turnIndex: 1, consent: consentFor('wipe', 'A') });
+    const ctx = baseCtx({ tool: 'wipe', args: { account: 'A', scope: 'EVERYTHING' }, turnIndex: 1, consent: consentFor('wipe', 'A') });
     expect(g.check(ctx)).toBeNull();
   });
 });
@@ -82,13 +82,13 @@ describe('V1 — a consent licenses the act it was given for, and nothing else',
 describe('V2 — the agent has no channel that licenses a destructive act', () => {
   it('CLOSED: an empty consent set denies', () => {
     const g = confirmFirst();
-    expect(g.check(baseCtx({ tool: 'transfer', args: { account: 'A', confirmed: true }, turnIndex: 1, consent: [] }))).not.toBeNull();
+    expect(g.check(baseCtx({ tool: 'transfer', args: { account: 'A' }, turnIndex: 1, consent: [] }))).not.toBeNull();
   });
 
   it('CLOSED: a sealed turn that declared an ask licenses nothing', () => {
     const g = confirmFirst();
     const ctx = baseCtx({
-      tool: 'transfer', args: { account: 'A', confirmed: true }, turnIndex: 1,
+      tool: 'transfer', args: { account: 'A' }, turnIndex: 1,
       history: [{ ...histTurn(0, true), reply: 'Transfer from A? confirm' }],
     });
     expect(g.check(ctx)).not.toBeNull();
@@ -97,15 +97,15 @@ describe('V2 — the agent has no channel that licenses a destructive act', () =
   it('CLOSED: the tool\'s own earlier successful run licenses nothing', () => {
     const g = confirmFirst();
     const ctx = baseCtx({
-      tool: 'transfer', args: { account: 'A', confirmed: true }, turnIndex: 2,
-      observed: [obs('transfer', { account: 'A', confirmed: true }, 1, { tookEffect: true })],
+      tool: 'transfer', args: { account: 'A' }, turnIndex: 2,
+      observed: [obs('transfer', { account: 'A' }, 1, { tookEffect: true })],
     });
     expect(g.check(ctx)).not.toBeNull();
   });
 
   it('CLOSED: the token the user typed for THIS record licenses the act — the two-step shape', () => {
     const g = confirmFirst();
-    const ctx = baseCtx({ tool: 'transfer', args: { account: 'A', confirmed: true }, turnIndex: 1, consent: consentFor('transfer', 'A') });
+    const ctx = baseCtx({ tool: 'transfer', args: { account: 'A' }, turnIndex: 1, consent: consentFor('transfer', 'A') });
     expect(g.check(ctx)).toBeNull();
   });
 });
@@ -121,8 +121,8 @@ describe('V4 — destructiveThrottle: one destructive effect per turn', () => {
 
   it('CLOSED: a same-STEP destructive sibling (siblingCallsThisStep) denies the second', () => {
     const g = destructiveThrottle(['refund']);
-    // The sibling declares an ACT (`confirmed:true`), so it is the one effect this turn is allowed.
-    const ctx = baseCtx({ tool: 'refund', args: { id: '2', confirmed: true }, turnIndex: 0, siblingCallsThisStep: [obs('refund', { id: '1', confirmed: true }, 0)] });
+    // A bare sibling declares the ACT, so it is the one effect this turn is allowed.
+    const ctx = baseCtx({ tool: 'refund', args: { id: '2' }, turnIndex: 0, siblingCallsThisStep: [obs('refund', { id: '1' }, 0)] });
     expect(g.check(ctx)).not.toBeNull();
   });
 
@@ -131,7 +131,7 @@ describe('V4 — destructiveThrottle: one destructive effect per turn', () => {
     // `tookEffect:false` is what the backend records for a simulate against a world that keeps a action history —
     // POSITIVE evidence that nothing changed. That evidence is REQUIRED: an unrecorded call is
     // unverified, not effect-free, so it counts against the cap.
-    const ctx = baseCtx({ tool: 'refund', args: { id: '1', confirmed: true }, turnIndex: 0, observed: [obs('refund', { id: '1', confirmed: false }, 0, { tookEffect: false, resultFlags: { requiresConfirmation: true } })] });
+    const ctx = baseCtx({ tool: 'refund', args: { id: '1' }, turnIndex: 0, observed: [obs('refund', { id: '1', simulate: true }, 0, { tookEffect: false, resultFlags: { requiresConfirmation: true } })] });
     expect(g.check(ctx)).toBeNull();
   });
 
@@ -139,7 +139,7 @@ describe('V4 — destructiveThrottle: one destructive effect per turn', () => {
     const g = destructiveThrottle(['refund']);
     // It RAN (it is in `observed`) and left no `tookEffect` — the world kept no record. Unverifiable ⇒
     // it counts. This is the native-tools/MCP shape, where no world action history exists to consult.
-    const ctx = baseCtx({ tool: 'refund', args: { id: '2', confirmed: false }, turnIndex: 0, observed: [obs('refund', { id: '1', confirmed: false }, 0)] });
+    const ctx = baseCtx({ tool: 'refund', args: { id: '2', simulate: true }, turnIndex: 0, observed: [obs('refund', { id: '1', simulate: true }, 0)] });
     expect(g.check(ctx)).not.toBeNull();
   });
 
@@ -199,11 +199,11 @@ describe('V5 — valueFromUser: the value the world records must be the value th
     expect(g.check(ctx)).not.toBeNull();
   });
 
-  it('CLOSED: the same ghost ask does NOT license a confirmed destructive act', () => {
+  it('CLOSED: the same ghost ask does NOT license a bare destructive act', () => {
     const g = confirmFirst();
     const ctx = baseCtx({
       tool: 'transfer',
-      args: { to: 'attacker', amount: 99999, confirmed: true },
+      args: { to: 'attacker', amount: 99999 },
       turnIndex: 1,
       history: [histTurn(0, false)],
       observed: [obs('respond', { message: 'Confirm? ', did: [{ op: 'ask' }] }, 0)], // ghost

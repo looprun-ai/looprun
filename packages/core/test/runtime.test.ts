@@ -83,7 +83,7 @@ describe('actionHistory', () => {
   it('recordToolResult captures ok, labels and confirmation flags', () => {
     const actionHistory = createActionHistory();
     recordToolResult(actionHistory, 'gen', { a: 1 }, { label: 'i101' });
-    recordToolResult(actionHistory, 'del', { confirmed: false }, { requiresConfirmation: true });
+    recordToolResult(actionHistory, 'del', { simulate: true }, { requiresConfirmation: true });
     recordToolResult(actionHistory, 'bad', {}, { success: false });
     expect(actionHistory.producedThisTurn).toEqual(['i101']);
     expect(actionHistory.observed[1].resultFlags?.requiresConfirmation).toBe(true);

@@ -44,7 +44,7 @@ export const isTerminalCall = (o: ObservedCall): boolean => TERMINAL_TOOLS.has(o
  * invalidated as premature. The backend prunes what it can, but falling back to a RAW `observed` ask
  * scan for a turn missing from `ctx.history` would be a silent failure mode: any host that does not seal
  * its turns would lose the whole guarantee with no signal — a host that advances the turn counter and
- * never seals would let a refused `respond` license a `confirmed:true` delete one turn later. So there
+ * never seals would let a refused `respond` license a bare destructive act one turn later. So there
  * is no fallback. Consent evidence is a DELIVERED TURN RECORD or it does not exist: a host that wants
  * its turns to license anything must seal them (`recordTurnHistory`) — fail-closed, and loud in the only
  * way that matters (the act is denied).

@@ -212,7 +212,7 @@ describe('b2 — a SPEECH intention is EVIDENCE nowhere… except `ask`, which l
   });
 
   it('an uncorroborated `ask` licenses no next-turn destructive call', () => {
-    // A destructive flag-less tool stays gated until the USER confirmed: what the agent declared about
+    // A destructive tool stays gated until the USER typed the code: what the agent declared about
     // its own previous turn is not evidence of anything.
     const verdict = confirmFirst({ flag: false }).check(
       replyCtx({ tool: 'deleteAccount', args: {}, turnIndex: 1, history: [silentTurn] }),
@@ -229,7 +229,7 @@ describe('b2 — a SPEECH intention is EVIDENCE nowhere… except `ask`, which l
 
   it('an uncorroborated `ask` unlocks nothing — consent is a token the user types, not a declaration', () => {
     const verdict = confirmFirst().check(
-      replyCtx({ tool: 'cancelBooking', args: { id: 'BK-1', confirmed: true }, turnIndex: 1, history: [silentTurn] }),
+      replyCtx({ tool: 'cancelBooking', args: { id: 'BK-1' }, turnIndex: 1, history: [silentTurn] }),
     );
     expect(verdict).not.toBeNull();
   });

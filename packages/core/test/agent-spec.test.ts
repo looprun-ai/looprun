@@ -224,8 +224,8 @@ describe('destructiveWhen — the spec declares which calls of a listed tool are
         userText: '',
         history: [],
       } as unknown as GuardCtx);
-    expect(at({ scope: 'asset', confirmed: true })).toBeNull();
-    expect(at({ scope: 'workspace', confirmed: true })).toMatch(/has not confirmed this action/);
+    expect(at({ scope: 'asset' })).toBeNull();
+    expect(at({ scope: 'workspace' })).toMatch(/has not confirmed this action/);
   });
 
   it('a predicate for a tool that is not destructive throws at construction', () => {
