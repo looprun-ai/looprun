@@ -365,12 +365,15 @@ export function composeDeliveryText(
   return [message.trim(), asked, report].filter((s) => s.trim()).join('\n\n');
 }
 
+/** Every approval still awaiting the user's answer — not consumed, not closed. Rendered on every
+ *  delivery regardless of the turn that issued it: an unanswered question is outstanding work until
+ *  the user's own words carry its token or the record it names moves. */
+function openApprovals(actionHistory: TurnActionHistory): ApprovalRequest[] {
+  return actionHistory.approvals.filter((a) => a.consumedTurn === undefined && !a.closed);
+}
+
 function composeDelivery(payload: RespondPayload, actionHistory: TurnActionHistory, contract?: DomainContract): string {
-  // Every question still standing renders on every delivery: an approval the user has not
-  // answered is outstanding work, and the turn that stops naming it is the turn the user
-  // forgets it exists.
-  const openApprovals = actionHistory.approvals.filter((a) => a.consumedTurn === undefined && !a.closed);
-  return composeDeliveryText(payload.message, payload.did, openApprovals, contract);
+  return composeDeliveryText(payload.message, payload.did, openApprovals(actionHistory), contract);
 }
 
 /**
@@ -427,12 +430,14 @@ function withBlankFloor(
 ): FinalizedReply {
   const did = payload.did;
   // BLANK means the user would receive NOTHING THEY CAN READ AS AN ANSWER: no prose, no operation line
-  // AND no question. The record's closure sentence is always there, so the composed text is never
-  // literally empty — it is the record ALONE that this floor is about, and a record with a line still
-  // tells the user what changed, exactly as a consent question still tells them what they are being
-  // asked. Prose gone AND nothing changed AND nothing asked is the case with nothing to deliver.
+  // AND no question STILL STANDING. The record's closure sentence is always there, so the composed text
+  // is never literally empty — it is the record ALONE that this floor is about, and a record with a line
+  // still tells the user what changed, exactly as an open consent question still tells them what they
+  // are being asked — whether that question was raised this turn or is still outstanding from an
+  // earlier one. Prose gone AND nothing changed AND nothing outstanding is the case with nothing to
+  // deliver.
   const record = operationRecord(did, { renderClaim: contract?.renderClaim, outcomes: contract?.outcomes, text: resolveEngineText(contract?.engineText) });
-  if (!isBlankDelivery(payload.message) || record.hasOperations || actionHistory.approvalsIssuedThisTurn.length) {
+  if (!isBlankDelivery(payload.message) || record.hasOperations || openApprovals(actionHistory).length) {
     return { text: composeDelivery(payload, actionHistory, contract), exhausted: exhaustedIfNotBlank, violations, did };
   }
   actionHistory.turnCorrections.push('exhaustion-blank-floor');
