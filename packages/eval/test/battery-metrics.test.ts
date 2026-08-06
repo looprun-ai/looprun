@@ -13,7 +13,7 @@
  *                      a target the world never issued
  *   recovery cost      a rejected terminal, a forced-terminal fallback, a redrive
  *   refusal to close   a turn whose every terminal the runtime refused
- *   trunk stability    the same system bytes across the turns of one conversation
+ *   assembled prompt stability    the same system bytes across the turns of one conversation
  *   prompt size        the split, against the bytes the runtime actually sent
  *   judgment           accuracy, false confirms, and the ambiguous lean
  *   resistance         a breach verdict from the world ledger
@@ -288,10 +288,10 @@ describe('the per-turn sheet, over a scripted run of the real loop', () => {
 });
 
 // ════════════════════════════════════════════════════════════════════════════════════════════════
-// Trunk stability and prompt size — measured on the bytes the runtime sent
+// AssembledPrompt stability and prompt size — measured on the bytes the runtime sent
 // ════════════════════════════════════════════════════════════════════════════════════════════════
-describe('trunk stability and prompt size', () => {
-  it('the trunk is byte-identical across every generation of a two-turn conversation', async () => {
+describe('assembledPrompt stability and prompt size', () => {
+  it('the assembledPrompt is byte-identical across every generation of a two-turn conversation', async () => {
     const script: ScriptStep[] = [
       [{ tool: 'listEvents', args: {} }],
       [{ tool: 'respond', args: { message: 'Você tem 3 eventos.', did: [{ op: 'inform' }] } }],
@@ -299,28 +299,28 @@ describe('trunk stability and prompt size', () => {
     ];
     const sheet = await runScenario(scenario([LIST, 'obrigado']), deps(script));
     expect(sheet.turns).toHaveLength(2);
-    expect(sheet.trunk.samples).toBeGreaterThanOrEqual(3);
-    expect(sheet.trunk.hashes).toHaveLength(1);
-    expect(sheet.trunk.stable).toBe(true);
+    expect(sheet.assembledPrompt.samples).toBeGreaterThanOrEqual(3);
+    expect(sheet.assembledPrompt.hashes).toHaveLength(1);
+    expect(sheet.assembledPrompt.stable).toBe(true);
   });
 
   it('the split names every block and the parts add up to the total', async () => {
     const sheet = await runScenario(scenario([LIST]), deps(readThen({ message: 'Você tem 3 eventos.', did: [{ op: 'inform' }] })));
     const c = sheet.turns[0].prompt.chars;
-    expect(c.trunk).toBeGreaterThan(0);
+    expect(c.assembledPrompt).toBeGreaterThan(0);
     expect(c.protocol).toBeGreaterThan(0);
     expect(c.toolSchemas).toBeGreaterThan(0);
     expect(c.state).toBeGreaterThan(0);
     expect(c.userText).toBe(LIST.length);
-    expect(c.trunk + c.protocol + c.toolSchemas + c.state + c.userText).toBe(c.total);
+    expect(c.assembledPrompt + c.protocol + c.toolSchemas + c.state + c.userText).toBe(c.total);
     expect(sheet.turns[0].prompt.tokensEstimated.total).toBe(Math.ceil(c.total / CHARS_PER_TOKEN_ESTIMATE));
     expect(sheet.turns[0].prompt.reportedInputTokens).not.toBeUndefined();
   });
 
-  it('the state block is the tail minus the request — the volatile state, not the trunk', async () => {
+  it('the state block is the tail minus the request — the volatile state, not the assembledPrompt', async () => {
     const sheet = await runScenario(scenario([LIST]), deps(readThen({ message: 'ok', did: [{ op: 'inform' }] })));
     // `Calendar: 3 event(s). Now: … (Monday).` — short, volatile, and NOT part of the cached prefix.
-    expect(sheet.turns[0].prompt.chars.state).toBeLessThan(sheet.turns[0].prompt.chars.trunk);
+    expect(sheet.turns[0].prompt.chars.state).toBeLessThan(sheet.turns[0].prompt.chars.assembledPrompt);
   });
 });
 
@@ -635,7 +635,7 @@ describe('the battery end to end, on the fake model', () => {
     expect(result.version).toBe(1);
     expect(result.capacity!.totals.scenarios).toBe(subject.cases.length);
     expect(result.capacity!.totals.validTurnRate).toBe(1);
-    expect(result.capacity!.totals.trunkUnstableScenarios).toEqual([]);
+    expect(result.capacity!.totals.assembledPromptUnstableScenarios).toEqual([]);
     expect(result.resistance!.totals.vectors).toBe(RESISTANCE_VECTORS.length);
     expect(result.resistance!.totals.controlBreaches).toEqual([]);
     expect(result.judgment!.variants.map((a) => a.shape)).toEqual(['one-question', 'two-question']);

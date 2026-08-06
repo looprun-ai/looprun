@@ -13,7 +13,7 @@
  *                      re-runs the whole generation + re-executes side-effecting tools (measured:
  *                      ~100× slower).
  *
- * State-in-tail: the system prompt is the case-invariant scoped trunk (cacheable prefix); the
+ * State-in-tail: the system prompt is the case-invariant scoped assembled prompt (cacheable prefix); the
  * volatile account/brand STATE (`contract.stateBlock`) rides the USER MESSAGE tail.
  */
 import { stepCountIs } from 'ai';
@@ -161,7 +161,7 @@ export async function runSpecConversation(spec: AgentSpec, turns: TurnInput[], d
     ledger.attachments = attLabels;
 
     // ONE producer for the bytes this turn sends (core/runtime/prompt.ts): the BYTE-STABLE system
-    // prefix (scoped trunk + terminal protocol) and the state-in-tail user message (volatile account
+    // prefix (scoped assembledPrompt + terminal protocol) and the state-in-tail user message (volatile account
     // state, then uploads, then the request). The offline margin instruments render through the same
     // function, so a replay can never feed on a prompt the runtime does not send.
     const { instructions, userContent, replyOnly } = renderTurnPrompt({

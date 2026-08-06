@@ -112,11 +112,11 @@ case or a preset — the finding names both and offers no third.
 
 Key: `--api-key-env <ENV>` (or `MODEL_API_KEY`; fallback `"local"`).
 
-## Trunk-static gate
+## AssembledPrompt-static gate
 
-Before any run with ≥2 distinct presets, each agent's trunk must be byte-identical across
+Before any run with ≥2 distinct presets, each agent's assembled prompt must be byte-identical across
 presets and all agents must share an identical head (the contract voice). A failure BLOCKS
-the run — byte-identical trunks are what a local prefix cache reuses; fix the
+the run — byte-identical assembled prompts are what a local prefix cache reuses; fix the
 spec/contract, never run cold.
 
 ## Test

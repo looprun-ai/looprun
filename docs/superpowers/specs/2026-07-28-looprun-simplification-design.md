@@ -40,8 +40,8 @@ Phase 2  REFACTOR        Per concept, one step at a time, tests green at every s
   2a  core/spec          Merge/simplify AgentSpec surface; fewer exported types
   2b  core/guards        Split guards.ts (~1.4k lines) into per-category files; the guard
                          catalog becomes data that generates tutorial chapter 04
-  2c  core/trunk +       Cut coherence queries without proven usage (candidates:
-      coherence          findContradictions, polarity lexicon, foldRow/foldTrunk as public
+  2c  core/assembled prompt +       Cut coherence queries without proven usage (candidates:
+      coherence          findContradictions, polarity lexicon, foldRow/foldPrompt as public
                          API); survivors become internal
   2d  core/runtime       Ledger / terminal protocol become internal; public API = what
                          LoopRunAgent needs

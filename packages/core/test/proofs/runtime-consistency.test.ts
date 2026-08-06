@@ -13,7 +13,7 @@
 import { describe, expect, it } from 'vitest';
 import { AgentSpecBase, custom, degenerationGuard, precondition, resultInvariant } from '../../src/index.js';
 import { GuardExecutionError } from '../../src/rules.js';
-import { renderScopedSpecTrunk } from '../../src/trunk.js';
+import { renderAssembledPrompt } from '../../src/assembled-prompt.js';
 import { resolveGuards } from '../../src/spec.js';
 import type { Dim, Guard } from '../../src/index.js';
 import { craftCtx, FIXTURE_DOMAIN, FIXTURE_TOOL_NAMES, FixtureWorld } from '../../src/testing/index.js';
@@ -93,7 +93,7 @@ describe('a guard that throws is an author bug', () => {
   it('attributes a throw in prose() at render time', () => {
     const s = spec();
     s.addGuard('preTool', ['createItem'], boom('prose'), { id: 'agent:boomProse' });
-    expect(() => renderScopedSpecTrunk(new FixtureWorld(), s, [], FIXTURE_DOMAIN)).toThrow(
+    expect(() => renderAssembledPrompt(new FixtureWorld(), s, [], FIXTURE_DOMAIN)).toThrow(
       /Guard "agent:boomProse" \(kind boomProse, hook preTool\) THREW in prose\(\)/,
     );
   });

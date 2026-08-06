@@ -15,7 +15,7 @@
  * {@link FIXTURE_LEXICON}.
  */
 import type { AgentWorld } from '../rules.js';
-import type { DomainContract } from '../trunk.js';
+import type { DomainContract } from '../assembled-prompt.js';
 import type { ToolDef } from '../runtime/types.js';
 
 export type FixturePreset = 'empty' | 'seeded-media' | 'quota-exhausted' | 'has-primary';

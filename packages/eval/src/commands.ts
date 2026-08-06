@@ -5,7 +5,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 import process from 'node:process';
-import { checkTrunkStatic, loadSubject, readDeclaredTarget, validateSubject } from './subject.js';
+import { checkPromptStatic, loadSubject, readDeclaredTarget, validateSubject } from './subject.js';
 import { validateSubjectConfig, type ValidateReport } from './validate.js';
 import { runCase, type CaseDump } from './run.js';
 import { PROVIDER_ENDPOINTS, selectModel } from './provider.js';
@@ -64,12 +64,12 @@ export async function runCommand(opts: RunCommandOptions): Promise<string> {
   const variant = ungoverned ? 'ungoverned' : 'governed';
 
   const subject = await loadSubject(opts.subject);
-  // TRUNK-STATIC gate (fundamental for local prefix-cache reuse): fail loud, do not run cold.
+  // ASSEMBLED PROMPT-STATIC gate (fundamental for local prefix-cache reuse): fail loud, do not run cold.
   const presetPair = [...new Set(subject.cases.map((c) => c.setup?.preset ?? 'default'))].slice(0, 2);
   if (presetPair.length === 2) {
-    const tf = checkTrunkStatic(subject, presetPair as [string, string]);
-    for (const f of tf) log(`TRUNK-STATIC: ${f}`);
-    if (tf.length) throw new Error('trunk-static gate failed — fix the spec/contract before running');
+    const tf = checkPromptStatic(subject, presetPair as [string, string]);
+    for (const f of tf) log(`ASSEMBLED PROMPT-STATIC: ${f}`);
+    if (tf.length) throw new Error('shared-prefix gate failed — fix the spec/contract before running');
   }
   for (const issue of validateSubject(subject)) log(`WARN subject: ${issue}`);
   const only = opts.cases?.length ? opts.cases : undefined;

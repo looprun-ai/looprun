@@ -41,7 +41,7 @@ Spec: `docs/superpowers/specs/2026-08-05-consent-by-approval-design.md`.
 | `packages/core/src/runtime/ledger.ts` (modify) | conversation-scoped approval store + issuance/consumption call sites |
 | `packages/core/src/runtime/turn.ts` (modify) | render open approvals into the delivered text |
 | `packages/core/src/runtime/claims.ts` (modify) | engine text pack for the record closures |
-| `packages/core/src/trunk.ts` (modify) | `DomainContract.engineText` |
+| `packages/core/src/assembled-prompt.ts` (modify) | `DomainContract.engineText` |
 | `packages/core/src/rules.ts` (modify) | `GuardCtx.consent` |
 | `packages/core/src/guards/confirmation.ts` (modify) | `confirmFirst` reduced to one rule; two kinds deleted |
 | `packages/core/src/guards/structural.ts` (modify) | `valueFromUser` |
@@ -489,7 +489,7 @@ git commit -m "feat(core): the consent approval — its token, what it licenses,
 
 **Files:**
 - Modify: `packages/core/src/runtime/claims.ts` (closures read from the pack)
-- Modify: `packages/core/src/trunk.ts` (`DomainContract.engineText`)
+- Modify: `packages/core/src/assembled-prompt.ts` (`DomainContract.engineText`)
 - Test: `packages/core/test/engine-text.test.ts`
 
 **Interfaces:**
@@ -619,7 +619,7 @@ grep -rn "RECORD_CLOSURE_" packages --include="*.ts" | grep -v /dist/
 
 - [ ] **Step 5: Add the domain seam**
 
-In `packages/core/src/trunk.ts`, inside `DomainContract`, after `renderClaim`:
+In `packages/core/src/assembled-prompt.ts`, inside `DomainContract`, after `renderClaim`:
 
 ```ts
   /** The engine's OWN user-facing sentences — the record closures and the consent approval. The engine
@@ -638,7 +638,7 @@ Expected: PASS.
 - [ ] **Step 7: Commit**
 
 ```bash
-git add packages/core/src/runtime/engine-text.ts packages/core/src/runtime/claims.ts packages/core/src/trunk.ts packages/core/test/engine-text.test.ts
+git add packages/core/src/runtime/engine-text.ts packages/core/src/runtime/claims.ts packages/core/src/assembled-prompt.ts packages/core/test/engine-text.test.ts
 git commit -m "feat(core): the engine's user-facing sentences are host-declarable data"
 ```
 

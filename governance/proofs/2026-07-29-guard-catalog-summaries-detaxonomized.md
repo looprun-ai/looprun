@@ -40,4 +40,4 @@ Not run for this change (report-only lane; never gates the PR).
 ## Verdict & residuals
 **PASS.**
 
-Text-only edit to GUARD_CATALOG's prose fields (packages/core/src/guards/catalog.ts) for tutorial chapter 04. No factory, check, prose or export changed; no trunk byte moves (the catalog is documentation data, read by no runtime path). Re-run at HEAD: guard-catalog-parity 11/11, surface-lock 6/6, core suite 512/512.
+Text-only edit to GUARD_CATALOG's prose fields (packages/core/src/guards/catalog.ts) for tutorial chapter 04. No factory, check, prose or export changed; no assembled prompt byte moves (the catalog is documentation data, read by no runtime path). Re-run at HEAD: guard-catalog-parity 11/11, surface-lock 6/6, core suite 512/512.

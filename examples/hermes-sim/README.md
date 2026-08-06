@@ -88,7 +88,7 @@ failures are tail events, which is why the N=10 table above is the measurement t
   pin `model` / `provider` / `base_url` per job. Everyday chat stays on the harness's normal model.
 - **Cron uses the same loop:** Hermes cron jobs run through the same agent loop as `chat -q`, so
   what this sim exercises is exactly what a cron-fired task does.
-- **What the facade ignores:** the harness's system prompt (the spec renders its own trunk) and
+- **What the facade ignores:** the harness's system prompt (the spec renders its own assembled prompt) and
   the harness's tool list (the governed agent owns its tool surface). See the
   [server README](../../packages/server/README.md) mapping law.
 - **Real tools instead of fake worlds:** register the agents with Mastra MCP tools

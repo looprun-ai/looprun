@@ -29,7 +29,7 @@ export function precondition<W extends AgentWorld = AgentWorld>(ok: (world: W) =
  *
  * PROSE≠REASON: this kind returned `reason` verbatim as its prose, so a deny
  * text written post-hoc ("the report came back empty — you cannot summarise it") was rendered into the
- * trunk as a pre-action instruction, i.e. an accusation the model reads before doing anything. `pred` is
+ * assembled prompt as a pre-action instruction, i.e. an accusation the model reads before doing anything. `pred` is
  * an opaque closure, so nothing rule-shaped can be DERIVED from the parameters — hence an optional
  * `prose` param plus a rule-shaped (not accusatory) neutral default. Prefer passing an explicit `prose`
  * that states the invariant this tool's result must hold.
@@ -84,7 +84,7 @@ export function consentRequired<W extends AgentWorld = AgentWorld>(opts: {
       return opts.consentOk(ctx.world as W) ? null : opts.reason;
     },
     // PROSE≠REASON: this kind returned `reason` verbatim, so the deny text —
-    // written post-hoc, often past-tense — was rendered into the trunk as a pre-action instruction. The
+    // written post-hoc, often past-tense — was rendered into the assembled prompt as a pre-action instruction. The
     // TOOL LIST is a real parameter, so a followable rule CAN be derived from it; `prose` overrides.
     prose: () =>
       opts.prose ??

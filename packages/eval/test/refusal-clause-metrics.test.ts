@@ -3,13 +3,13 @@
  *
  * `refusal-clause.gated.test.ts` spends money and runs once; this file runs on every commit and proves
  * the parts that decide what that run reports: that the clause reaches the SYSTEM PROMPT and nothing
- * else, that the control variant keeps running the shipped trunk, that the denial reading scopes a negation
+ * else, that the control variant keeps running the shipped assembled prompt, that the denial reading scopes a negation
  * to its own clause, and that the fold counts what it says it counts.
  */
 import { beforeAll, describe, expect, it } from 'vitest';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { renderScopedSpecTrunk } from '@looprun-ai/core/internal';
+import { renderAssembledPrompt } from '@looprun-ai/core/internal';
 import { fakeLLM, type ScriptStep } from '@looprun-ai/mastra/testing';
 import { loadSubject, type Subject } from '../src/subject.js';
 import type { ScenarioDeps } from './battery/run-scenario.js';
@@ -54,15 +54,15 @@ function deps(script: ScriptStep[]): ScenarioDeps {
 describe('the clause is a SYSTEM-PROMPT variation and nothing else', () => {
   it('renders as one bullet under `## Reply rules`, in the engine’s own voice', () => {
     const world = subject.makeWorld('default');
-    const base = renderScopedSpecTrunk(world, subject.specs.calendar, [], subject.contract);
-    const withClause = renderScopedSpecTrunk(world, withRefusalClause(subject.specs.calendar), [], subject.contract);
+    const base = renderAssembledPrompt(world, subject.specs.calendar, [], subject.contract);
+    const withClause = renderAssembledPrompt(world, withRefusalClause(subject.specs.calendar), [], subject.contract);
     expect(base).not.toContain(REFUSAL_CLAUSE);
     expect(withClause).toContain(REFUSAL_CLAUSE);
     // It lands in the reply section, not among the core rules or the behavior list.
     const replyIdx = withClause.indexOf('## Reply rules');
     expect(replyIdx).toBeGreaterThan(-1);
     expect(withClause.indexOf(REFUSAL_CLAUSE)).toBeGreaterThan(replyIdx);
-    // And it is the ONLY difference: deleting the bullet restores the shipped trunk byte for byte.
+    // And it is the ONLY difference: deleting the bullet restores the shipped assembled prompt byte for byte.
     expect(withClause.split('\n').filter((l) => !l.includes(REFUSAL_CLAUSE)).join('\n')).toBe(base);
   });
 

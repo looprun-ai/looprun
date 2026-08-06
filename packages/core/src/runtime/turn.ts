@@ -19,7 +19,7 @@
  */
 import { resolveGuards, resolveMutators } from '../spec.js';
 import type { AgentSpec, ChainSpec } from '../spec.js';
-import type { DomainContract } from '../trunk.js';
+import type { DomainContract } from '../assembled-prompt.js';
 import type { AgentWorld, Guard, GuardCtx, ObservedCall, Judge } from '../rules.js';
 import { issueApprovalForVeto, recordVeto, type TurnLedger } from './ledger.js';
 import { isTerminal } from './terminal.js';

@@ -120,8 +120,8 @@ Every run records, per scenario:
 
 | Recorded | Why it is on the sheet |
 |---|---|
-| trunk stability | same bytes across turns of one conversation; a varying trunk defeats caching and inflates cost |
-| prompt size | characters and tokens per turn, split trunk / protocol / tool schemas / state |
+| assembled prompt stability | same bytes across turns of one conversation; a varying assembled prompt defeats caching and inflates cost |
+| prompt size | characters and tokens per turn, split assembled prompt / protocol / tool schemas / state |
 | format defects | invalid JSON, missing required field, unknown key, wrong type, `did` absent or empty |
 | value defects | outcome word not in the vocabulary, speech op carrying an outcome, target naming nothing the world issued, subject not matching the act |
 | recovery cost | redrives per turn, forced-terminal fallbacks, exhaustion closures |
@@ -133,7 +133,7 @@ Baseline runs BEFORE any change here lands, or a later regression cannot be attr
 
 ## Task 0 — audit the prompt before measuring it
 
-A reduction pass aimed at a guess is waste. The audit reports, over the REAL assembled prompt: a per-block byte budget; redundancy (one rule stated in several places); conflict (two statements a model can read as contradicting, or an instruction the engine does not enforce); dead weight (text that instructs nothing actionable); ambiguity a small model plausibly fails on; and trunk stability. Every finding carries its quoted text and its measured saving.
+A reduction pass aimed at a guess is waste. The audit reports, over the REAL assembled prompt: a per-block byte budget; redundancy (one rule stated in several places); conflict (two statements a model can read as contradicting, or an instruction the engine does not enforce); dead weight (text that instructs nothing actionable); ambiguity a small model plausibly fails on; and assembled prompt stability. Every finding carries its quoted text and its measured saving.
 
 Report: `.superpowers/sdd/prompt-audit.md`.
 
@@ -156,7 +156,7 @@ Any task here that grows this number must remove more than it adds.
 **Files:** `packages/eval/` (harness), a new gated suite; Gemini Flash Lite 3.1 with thinking OFF as the subject model.
 
 - [ ] **Step 1:** the three axes as runnable scenarios, gated behind an environment variable.
-- [ ] **Step 2:** record the baseline — capacity rate, resistance verdicts, judgment accuracy on the ambiguity set — plus the per-run sheet above (trunk stability, prompt size, format defects, value defects, recovery cost, refusal to close).
+- [ ] **Step 2:** record the baseline — capacity rate, resistance verdicts, judgment accuracy on the ambiguity set — plus the per-run sheet above (assembled prompt stability, prompt size, format defects, value defects, recovery cost, refusal to close).
 - [ ] **Step 3:** the baseline numbers land in the report so a later change is attributable.
 
 ### Task 2: subject on the question, and the engine renders it

@@ -69,5 +69,5 @@ Not run for this change (report-only lane; never gates the PR).
 **PASS.** Re-run at HEAD: proofs 495/495, coverage 29/29 kinds, full suite 811 tests green.
 
 Residual: retroactive, so it attests the *state* of the branch rather than an at-the-time run. With
-`core-internal-subpath` and `trunk-fold-coherence-cut` it completes coverage of all 24 governed paths (the count the gate reports: `--diff-filter=ACMR`, so erased files are not in it)
+`core-internal-subpath` and `prompt-fold-coherence-cut` it completes coverage of all 24 governed paths (the count the gate reports: `--diff-filter=ACMR`, so erased files are not in it)
 in `main...HEAD`.

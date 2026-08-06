@@ -1,7 +1,7 @@
 /**
  * THE RECORDING WRAPPER — the battery's only source of truth for what the model was SENT.
  *
- * Prompt size and trunk stability are claims about BYTES. Re-rendering the prompt beside the run
+ * Prompt size and assembled prompt stability are claims about BYTES. Re-rendering the prompt beside the run
  * would measure a replica: the replica cannot see the message history the runtime accumulated, it
  * cannot see the redrive and forced-terminal generations at all, and it drifts silently on the next
  * refactor while still producing a number. So the battery wraps the LanguageModel itself and records

@@ -2,7 +2,7 @@
   "name": "@looprun-ai/core",
   "version": "0.12.0",
   "type": "module",
-  "description": "looprun core: the AgentSpec governance layer for LLM agents — typed deterministic guards (prose+check pairing), the byte-stable scoped trunk renderer, and the backend-agnostic governed-turn machine. Framework-free: zero runtime dependencies; backends (@looprun-ai/mastra, …) supply the loop.",
+  "description": "looprun core: the AgentSpec governance layer for LLM agents — typed deterministic guards (prose+check pairing), the byte-stable scoped assembledPrompt renderer, and the backend-agnostic governed-turn machine. Framework-free: zero runtime dependencies; backends (@looprun-ai/mastra, …) supply the loop.",
   "keywords": [
     "ai",
     "agents",

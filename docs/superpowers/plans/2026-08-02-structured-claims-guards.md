@@ -197,7 +197,7 @@ Let `calls` = `ctx.observed` entries of THIS turn that are domain tools (not ter
 ### Task 4: The did→message renderer + finalizeReply over RespondPayload
 
 **Files:**
-- Modify: `packages/core/src/runtime/claims.ts` (renderer), `packages/core/src/runtime/turn.ts`, `packages/core/src/trunk.ts` (DomainContract seam)
+- Modify: `packages/core/src/runtime/claims.ts` (renderer), `packages/core/src/runtime/turn.ts`, `packages/core/src/assembled-prompt.ts` (DomainContract seam)
 - Test: `packages/core/test/claims-render.test.ts` (new), update `packages/core/test/**` finalizeReply suites
 
 **Interfaces:**

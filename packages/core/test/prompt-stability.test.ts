@@ -1,10 +1,10 @@
 /**
- * Trunk byte-stability (state-in-tail law): the scoped trunk is BYTE-IDENTICAL across renders and
+ * AssembledPrompt byte-stability (state-in-tail law): the scoped assembled prompt is BYTE-IDENTICAL across renders and
  * across world-state mutations — volatile state never leaks into the system prompt.
  */
 import { describe, expect, it } from 'vitest';
 import { AgentSpecBase, precondition, requiresBefore } from '../src/index.js';
-import { renderScopedSpecTrunk } from '../src/trunk.js';
+import { renderAssembledPrompt } from '../src/assembled-prompt.js';
 import type { AgentWorld, DomainContract } from '../src/index.js';
 
 function fixtureWorld(state: Record<string, unknown> = {}): AgentWorld {
@@ -43,11 +43,11 @@ function fixtureSpec() {
   return spec;
 }
 
-describe('trunk byte-stability', () => {
+describe('assembledPrompt byte-stability', () => {
   it('is byte-identical across renders and world mutations', () => {
     const spec = fixtureSpec();
-    const a = renderScopedSpecTrunk(fixtureWorld({ plan: 'starter' }), spec, [], CONTRACT);
-    const b = renderScopedSpecTrunk(fixtureWorld({ plan: 'pro', extra: 42 }), spec, ['i901'], CONTRACT);
+    const a = renderAssembledPrompt(fixtureWorld({ plan: 'starter' }), spec, [], CONTRACT);
+    const b = renderAssembledPrompt(fixtureWorld({ plan: 'pro', extra: 42 }), spec, ['i901'], CONTRACT);
     expect(a).toBe(b);
   });
 
@@ -59,20 +59,20 @@ describe('trunk byte-stability', () => {
       tools: ['listPlants'],
       contract: CONTRACT,
     });
-    const viaSpec = renderScopedSpecTrunk(fixtureWorld(), spec);
-    const viaArg = renderScopedSpecTrunk(fixtureWorld(), spec, [], CONTRACT);
+    const viaSpec = renderAssembledPrompt(fixtureWorld(), spec);
+    const viaArg = renderAssembledPrompt(fixtureWorld(), spec, [], CONTRACT);
     expect(viaSpec).toBe(viaArg);
   });
 
   it('throws without any contract', () => {
     const spec = fixtureSpec();
-    expect(() => renderScopedSpecTrunk(fixtureWorld(), spec)).toThrow(/DomainContract/);
+    expect(() => renderAssembledPrompt(fixtureWorld(), spec)).toThrow(/DomainContract/);
   });
 
   // The FROZEN baseline: any renderer change must be a conscious decision (this snapshot changes).
   it('matches the frozen baseline', () => {
-    const trunk = renderScopedSpecTrunk(fixtureWorld(), fixtureSpec(), [], CONTRACT);
-    expect(trunk).toMatchInlineSnapshot(`
+    const assembledPrompt = renderAssembledPrompt(fixtureWorld(), fixtureSpec(), [], CONTRACT);
+    expect(assembledPrompt).toMatchInlineSnapshot(`
       "You are the assistant of Fixture Plants, a small plant nursery.
 
       ## Core rules (NEVER violate)

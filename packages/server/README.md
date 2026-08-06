@@ -39,7 +39,7 @@ model, so parts of the request that would fight the spec are deliberately not ho
 | `model` | routes to the registered agent | one server, N agents as N "models" |
 | last `user` message | the governed turn's input | the agent's own session is the canonical memory |
 | earlier history | **ignored** (transport-only) | harnesses compress/rewrite it; replay would desync the governed state |
-| `system` message | **discarded** | the AgentSpec renders its own trunk (byte-stable, cache-friendly) |
+| `system` message | **discarded** | the AgentSpec renders its own assembled prompt (byte-stable, cache-friendly) |
 | `tools`, `tool_choice` | **ignored** | the spec owns the tool surface; guards govern every call |
 | `temperature` etc. | **ignored** | `spec.controls.sampling` governs |
 | `stream: true` | honored (see below) | |

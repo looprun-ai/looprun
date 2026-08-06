@@ -52,7 +52,7 @@ verdicts in inventory §7.1 are about the PUBLIC barrel, which they left in Task
 module export is not dead code.
 
 ## Proof cases
-No guard was touched: no `check()`, no `prose()`, no binding, no hook, no trunk byte. The ratchet still
+No guard was touched: no `check()`, no `prose()`, no binding, no hook, no assembled prompt byte. The ratchet still
 computes **29/29 kinds** and the suite total is unchanged at 495/495 — the same numbers as the parent
 commit. No proof case was added, changed or deleted; this record exists because the diff lands in
 `packages/core/src/**`, which is a governed surface regardless of behavioral reach.

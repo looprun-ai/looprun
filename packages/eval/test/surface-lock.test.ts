@@ -56,7 +56,7 @@ const RIDERS = [
 
 /** Inventory §7.4, verdict `delete` — module-local, never on the barrel. */
 const NOT_EXPORTED = [
-  'validateSubject', 'checkTrunkStatic', 'readDeclaredTarget', 'DeclaredTarget', 'runCase',
+  'validateSubject', 'checkPromptStatic', 'readDeclaredTarget', 'DeclaredTarget', 'runCase',
   'toolCallMatches', 'evaluateInvariants', 'CaseDump', 'DumpTurn', 'DumpToolCall',
   'InvariantVerdict', 'RunCaseOptions', 'selectModel', 'SelectedModel', 'TargetSelection',
   'foldVerdicts', 'renderResultsMd', 'readJsonl', 'FoldResult', 'FoldRow', 'VerdictLine',

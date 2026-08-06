@@ -39,7 +39,7 @@ configurable about consent: the predicate decides which CALL is destructive, nev
 
 | File | Responsibility |
 |---|---|
-| `packages/core/src/trunk.ts` | MODIFY — `DomainContract.writeGate` (the type only; `DomainContract` is declared here). |
+| `packages/core/src/assembled-prompt.ts` | MODIFY — `DomainContract.writeGate` (the type only; `DomainContract` is declared here). |
 | `packages/core/src/spec.ts` | MODIFY — `cfg.destructiveWhen`; the `writeGate` install in `installMinimal`; the predicate wiring and stray-key throws in `installBase`. |
 | `packages/core/src/guards/confirmation.ts` | MODIFY — the `when` map on `confirmFirst` and on `destructiveThrottle`. |
 | `packages/core/test/guards-confirmation.test.ts` | MODIFY — the predicate's two branches on both kinds. |
@@ -62,7 +62,7 @@ the contract cannot cover, and Task 5's fixtures use the gate.
 ### Task 1: `contract.writeGate` — one world condition, one declaration
 
 **Files:**
-- Modify: `packages/core/src/trunk.ts:38-85` (the `DomainContract` interface)
+- Modify: `packages/core/src/assembled-prompt.ts:38-85` (the `DomainContract` interface)
 - Modify: `packages/core/src/spec.ts:28` (import), `packages/core/src/spec.ts:439-450` (`installMinimal`)
 - Test: `packages/core/test/write-gate.test.ts` (create)
 
@@ -81,7 +81,7 @@ Create `packages/core/test/write-gate.test.ts`:
 import { describe, it, expect } from 'vitest';
 import { AgentSpecBase } from '../src/spec.js';
 import type { AgentWorld } from '../src/world/index.js';
-import type { DomainContract } from '../src/trunk.js';
+import type { DomainContract } from '../src/assembled-prompt.js';
 
 const world = (status: string): AgentWorld => ({ status: () => status }) as unknown as AgentWorld;
 
@@ -145,7 +145,7 @@ Expected: FAIL — `minimal:writeGate` is undefined (the contract key does not e
 
 - [ ] **Step 3: Add the contract key**
 
-In `packages/core/src/trunk.ts`, inside `interface DomainContract`, directly after the `writeTools`
+In `packages/core/src/assembled-prompt.ts`, inside `interface DomainContract`, directly after the `writeTools`
 member:
 
 ```ts
@@ -154,7 +154,7 @@ member:
    *  it is a gate that misses the other two thirds on every lane at once. `exempt` names the writes
    *  that must stay usable while the condition holds — a compliance hold is the shape that needs it —
    *  and each entry must be one of {@link writeTools}, so an exemption is visible beside the rule it
-   *  suspends rather than per lane. `prose` is what the trunk renders; absent ⇒ the reason. */
+   *  suspends rather than per lane. `prose` is what the assembled prompt renders; absent ⇒ the reason. */
   writeGate?: {
     ok: (world: AgentWorld) => boolean;
     reason: string;
@@ -215,7 +215,7 @@ Expected: PASS. A spec with no `writeGate` installs exactly what it installed be
 - [ ] **Step 7: Commit**
 
 ```bash
-git add packages/core/src/trunk.ts packages/core/src/spec.ts packages/core/test/write-gate.test.ts
+git add packages/core/src/assembled-prompt.ts packages/core/src/spec.ts packages/core/test/write-gate.test.ts
 git commit -m "feat(core): the contract declares the condition its world refuses writes under"
 ```
 

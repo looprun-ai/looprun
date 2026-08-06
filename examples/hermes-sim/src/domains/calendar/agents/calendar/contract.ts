@@ -3,7 +3,7 @@
  *
  * The business-COMMON layer: shared voice, core invariants, language clause, state-render mapping,
  * and the honest-abstain closure. ONE contract object per domain, referenced by every spec
- * (trunk-static law: the voice + invariants open the trunk, byte-identical across agents).
+ * (shared-prefix law: the voice + invariants open the assembled prompt, byte-identical across agents).
  * NO per-agent role line lives here (persona-on-spec law — each spec carries its own `persona`).
  *
  * DEDUP CONTRACT (prompt-budget rule): every rule that holds for ALL calendar agents lives HERE,

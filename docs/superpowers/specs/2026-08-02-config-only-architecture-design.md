@@ -27,7 +27,7 @@ Measured evidence per class (from the run):
 ```
 skill generates ONLY   norms/<agent>.json · world.json · cases.json · campaign.json · docs (.md)
 engine executes        validate (zod + coherence) · interpret the world · install guards from
-                       the catalog · render trunk/deny/abstain by policy · run campaigns ·
+                       the catalog · render assembled prompt/deny/abstain by policy · run campaigns ·
                        build judge inputs · fold/range/cert/seal
 rule w/o primitive     "uncheckable": true → prose + judge (N4 law). NEVER generated code.
 judge                  remains a SUBAGENT of the host, following the engine-built input and a
@@ -39,7 +39,7 @@ judge                  remains a SUBAGENT of the host, following the engine-buil
 | executor | spec | increment |
 |---|---|---|
 | GuardCatalog — guards installed from config; NO regex-on-text by schema | `2026-08-02-guard-catalog-data-only-design.md` | 1 |
-| TrunkRenderer policies — deny "name the read, never the figures"; ledger-derived abstain | same spec as GuardCatalog (they ship together) | 1 |
+| AssembledPromptRenderer policies — deny "name the read, never the figures"; ledger-derived abstain | same spec as GuardCatalog (they ship together) | 1 |
 | Validate + exam-as-data — `cases.json` schema, premise/coherence checker, `judge-input` | `2026-08-02-exam-data-only-design.md` | 2 |
 | EvalExecutor — `looprun-eval campaign` end-to-end | `2026-08-02-eval-executor-design.md` | 2 |
 | WorldEngine — declarative world interpreted by the engine | `2026-08-02-world-engine-design.md` | 3 |

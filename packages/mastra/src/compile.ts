@@ -15,7 +15,7 @@ import {
   createLedger,
   finalizeReply as coreFinalizeReply,
   recordTurnHistory,
-  renderScopedSpecTrunk,
+  renderAssembledPrompt,
   terminalProtocol,
 } from '@looprun-ai/core/internal';
 import type { FinalizedReply, TurnLedger, RespondPayload } from '@looprun-ai/core/internal';
@@ -29,7 +29,7 @@ export interface CompiledSpec {
   ledger: TurnLedger;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   tools: Record<string, any>;
-  /** The byte-stable trunk + the current turn's terminal-protocol variant. */
+  /** The byte-stable assembledPrompt + the current turn's terminal-protocol variant. */
   instructions(): string;
   hooks: GuardHooks;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -77,7 +77,7 @@ export function compileSpec(
 
   const renderPrompt = spec.surface.systemPrompt
     ? (w: AgentWorld, u: string[]) => spec.surface.systemPrompt!(w, u)
-    : (w: AgentWorld, u: string[]) => renderScopedSpecTrunk(w, spec, u, contract);
+    : (w: AgentWorld, u: string[]) => renderAssembledPrompt(w, spec, u, contract);
 
   // Frozen at beginTurn (and at creation, for reads before the first turn): instructions() derives from
   // it (the reply-only protocol prose), and the host reads it at times the runtime does not control. A

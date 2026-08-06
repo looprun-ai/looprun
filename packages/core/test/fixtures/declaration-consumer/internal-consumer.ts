@@ -10,7 +10,7 @@
  */
 import {
   resolveGuards,
-  renderScopedSpecTrunk,
+  renderAssembledPrompt,
   normalizeModelParams,
   resolveModelSettings,
   createLedger,
@@ -69,8 +69,8 @@ export const seams = ARMED_SEAMS;
 export function resolve(bindings: GuardBinding[], tool: string) {
   return resolveGuards(bindings, tool);
 }
-export function trunk(w: AgentWorld, s: AgentSpec, d: DomainContract) {
-  return renderScopedSpecTrunk(w, s, [], d);
+export function assembledPrompt(w: AgentWorld, s: AgentSpec, d: DomainContract) {
+  return renderAssembledPrompt(w, s, [], d);
 }
 export function params(p: Record<string, unknown>) {
   return resolveModelSettings(normalizeModelParams(p));

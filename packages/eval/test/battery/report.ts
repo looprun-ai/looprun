@@ -62,7 +62,7 @@ function capacitySection(r: BatteryResult): string[] {
     `| exhaustion closures | ${t.exhaustionClosures} |`,
     `| terminal rejections | ${t.terminalRejections} |`,
     `| refusal to close | ${t.refusalToClose} turn(s) |`,
-    `| trunk unstable in | ${t.trunkUnstableScenarios.length ? t.trunkUnstableScenarios.join(', ') : 'no scenario'} |`,
+    `| assembledPrompt unstable in | ${t.assembledPromptUnstableScenarios.length ? t.assembledPromptUnstableScenarios.join(', ') : 'no scenario'} |`,
     `| run errors | ${t.errors.length ? t.errors.join(' · ') : 'none'} |`,
     '',
     '### Where the shape is missed',
@@ -78,12 +78,12 @@ function promptTable(sheets: readonly ScenarioSheet[]): string[] {
   const rows = sheets.flatMap((s) =>
     s.turns.map((t) => {
       const c = t.prompt.chars;
-      return `| ${s.id} | ${t.turn} | ${c.trunk} | ${c.protocol} | ${c.toolSchemas} | ${c.state} | ${c.userText} | ${c.total} | ${t.prompt.tokensEstimated.total} | ${t.prompt.reportedInputTokens ?? '—'} |`;
+      return `| ${s.id} | ${t.turn} | ${c.assembledPrompt} | ${c.protocol} | ${c.toolSchemas} | ${c.state} | ${c.userText} | ${c.total} | ${t.prompt.tokensEstimated.total} | ${t.prompt.reportedInputTokens ?? '—'} |`;
     }),
   );
   if (!rows.length) return ['No turn recorded.'];
   return [
-    '| scenario | turn | trunk | protocol | tool schemas | state | user | total | tok (est) | tok (reported in) |',
+    '| scenario | turn | assembledPrompt | protocol | tool schemas | state | user | total | tok (est) | tok (reported in) |',
     '|---|---|---|---|---|---|---|---|---|---|',
     ...rows,
   ];

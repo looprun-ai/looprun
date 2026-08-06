@@ -170,8 +170,8 @@ describe('full-context law (GuardCtx exposes the user text)', () => {
 
 describe('domain-persona law (persona lives on the spec, never the domain contract)', () => {
   it('DomainContract has no persona key', () => {
-    const trunk = readFileSync(join(CORE_SRC, 'trunk.ts'), 'utf8');
-    const block = trunk.match(/export interface DomainContract \{[\s\S]*?\n\}/)?.[0];
+    const assembledPrompt = readFileSync(join(CORE_SRC, 'assembled-prompt.ts'), 'utf8');
+    const block = assembledPrompt.match(/export interface DomainContract \{[\s\S]*?\n\}/)?.[0];
     expect(block, 'DomainContract interface not found').toBeTruthy();
     expect(block!).not.toMatch(/\bpersona\??:/);
   });

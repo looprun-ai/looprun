@@ -27,7 +27,7 @@ taken the day those commits landed.
 - `packages/core/src/index.ts` now exports exactly the **51** symbols the tutorial contract claims
   (`docs/tutorial/00-outline.md` §4, chapters 03/04/05) — down from 97 runtime values plus their types.
 - The 37 `internal`-verdict symbols move to the new **`@looprun-ai/core/internal`** subpath: the
-  guard-catalog tables, spec binding resolution, the trunk renderer, model settings, and the whole
+  guard-catalog tables, spec binding resolution, the assembled prompt renderer, model settings, and the whole
   governed-turn seam (ledger + terminal protocol + prompt renderer + turn machine). No compatibility
   promise attaches to that subpath.
 - `delete`-verdict symbols left the barrel only — **no implementation was erased** in these two
@@ -72,4 +72,4 @@ later tasks added lanes.
 
 Residual: this record is retroactive, so it attests the *state* of the branch, not an
 at-the-time run. The three branch records (this one, `guards-split-catalog`,
-`trunk-fold-coherence-cut`) together cover all 24 governed paths (the count the gate reports: `--diff-filter=ACMR`, so erased files are not in it) in `main...HEAD`.
+`prompt-fold-coherence-cut`) together cover all 24 governed paths (the count the gate reports: `--diff-filter=ACMR`, so erased files are not in it) in `main...HEAD`.

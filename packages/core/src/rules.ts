@@ -204,7 +204,7 @@ export interface ReplyMutator {
   apply(reply: string, ctx: GuardCtx): string;
 }
 
-/** A producer→consumer flow edge, rendered as a FLOW line in the trunk. */
+/** A producer→consumer flow edge, rendered as a FLOW line in the assembled prompt. */
 export interface SpatialEdge {
   from: string;
   to: string;
@@ -226,7 +226,7 @@ export interface SpatialEdge {
  *       author knows which of ~30 bindings is broken.
  * Net: it propagates OUT of `runSpecConversation`, loud and addressed. `AgentSpecBase.addGuard` /
  * `addMutator` install the wrapper, so every guard reached through a spec is covered regardless of
- * which layer calls it (backend hook, trunk renderer, or a host's own code).
+ * which layer calls it (backend hook, assembled prompt renderer, or a host's own code).
  */
 export class GuardExecutionError extends Error {
   readonly hook: string;

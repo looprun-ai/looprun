@@ -2,8 +2,8 @@
  * THE PER-RUN SHEET — the six rows the plan requires, computed for one scenario.
  *
  * ```
- *   trunk stability    same system bytes across every generation of the conversation
- *   prompt size        characters + tokens, split trunk / protocol / tool schemas / state
+ *   assembled prompt stability    same system bytes across every generation of the conversation
+ *   prompt size        characters + tokens, split assembled prompt / protocol / tool schemas / state
  *   format defects     invalid JSON · missing required · unknown key · wrong type · did absent · did empty
  *   value defects      outcome outside the vocabulary · speech op with an outcome · target the world never issued
  *   recovery cost      redrives · forced-terminal fallbacks · exhaustion closures
@@ -17,7 +17,7 @@
 import type { TurnRecord } from '@looprun-ai/core';
 import { classifyTerminal, issuedStrings, type Defect, type FormatDefectKind, type ValueDefectKind } from './defects.js';
 import { callsOfTurn, type Recorder } from './recording-model.js';
-import { estimateTokens, measureCall, trunkStability, type PromptMeasurement, type TrunkStability } from './prompt-size.js';
+import { estimateTokens, measureCall, assembledPromptStability, type PromptMeasurement, type AssembledPromptStability } from './prompt-size.js';
 
 /** One `respond` the model emitted, classified. */
 export interface TerminalSheet {
@@ -60,7 +60,7 @@ export interface ScenarioSheet {
   axis: 'capacity' | 'resistance';
   title: string;
   turns: TurnSheet[];
-  trunk: TrunkStability;
+  assembledPrompt: AssembledPromptStability;
   /** Turns whose first terminal was clean, over turns run. */
   validTurnRate: number;
   redrivesPerTurn: number;
@@ -156,7 +156,7 @@ export function buildScenarioSheet(input: BuildSheetInput): ScenarioSheet {
   const turns: TurnSheet[] = input.records.map((record, i) => {
     const userText = input.turnTexts[i] ?? record.userText;
     const calls = callsOfTurn(input.recorder, i);
-    const chars = calls.length ? measureCall(calls[0], userText) : { trunk: 0, protocol: 0, toolSchemas: 0, state: 0, userText: 0, total: 0 };
+    const chars = calls.length ? measureCall(calls[0], userText) : { assembledPrompt: 0, protocol: 0, toolSchemas: 0, state: 0, userText: 0, total: 0 };
     const terminals: TerminalSheet[] = (terminalsPerTurn[i] ?? []).map((raw) => {
       const c = classifyTerminal(raw, { issued, ...(input.outcomes ? { outcomes: input.outcomes } : {}) });
       return {
@@ -194,7 +194,7 @@ export function buildScenarioSheet(input: BuildSheetInput): ScenarioSheet {
     axis: input.axis,
     title: input.title,
     turns,
-    trunk: trunkStability(input.recorder.calls),
+    assembledPrompt: assembledPromptStability(input.recorder.calls),
     validTurnRate: turns.filter((t) => t.validTurn).length / n,
     redrivesPerTurn: turns.reduce((s, t) => s + t.recovery.redrives, 0) / n,
     refusalToClose: turns.filter((t) => !t.closedByModel).length,
@@ -217,7 +217,7 @@ export interface AxisTotals {
   exhaustionClosures: number;
   terminalRejections: number;
   refusalToClose: number;
-  trunkUnstableScenarios: string[];
+  assembledPromptUnstableScenarios: string[];
   errors: string[];
 }
 
@@ -238,7 +238,7 @@ export function totalsOf(sheets: readonly ScenarioSheet[]): AxisTotals {
     exhaustionClosures: sum((t) => t.recovery.exhaustionClosures),
     terminalRejections: sum((t) => t.recovery.terminalRejections),
     refusalToClose: turns.filter((t) => !t.closedByModel).length,
-    trunkUnstableScenarios: sheets.filter((s) => !s.trunk.stable).map((s) => s.id),
+    assembledPromptUnstableScenarios: sheets.filter((s) => !s.assembledPrompt.stable).map((s) => s.id),
     errors: sheets.filter((s) => s.error).map((s) => `${s.id}: ${s.error}`),
   };
 }

@@ -13,7 +13,7 @@
  * the guards enforcing live (agent-level hooks apply to every tool source, including MCP).
  *
  * Governance per turn (generate): session resolve → advanceTurn + ledger reset → byte-stable
- * trunk (+ terminal protocol) as per-call `instructions` → volatile state on the USER-message
+ * assembled prompt (+ terminal protocol) as per-call `instructions` → volatile state on the USER-message
  * tail → generate with toolChoice:'required' + stopWhen(terminalCalled) → forced-terminal
  * fallback → mutators → onReply checks with bounded NO-TOOLS redrive (never a processor
  * abort/retry — that re-runs side-effecting tools, measured ~100× slower) → deterministic

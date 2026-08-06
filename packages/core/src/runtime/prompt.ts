@@ -2,7 +2,7 @@
  * @looprun-ai/core — the TURN PROMPT producer: the single owner of the bytes the model receives.
  *
  * WHY THIS EXISTS. The assembly must NOT live inside the backend, where each of the two drivers would
- * fold `trunk + terminal protocol` into the instructions and `state block + uploads + user text` into
+ * fold `assembledPrompt + terminal protocol` into the instructions and `state block + uploads + user text` into
  * the message tail on its own. Two copies of one law is a drift hazard, and it is worse than ordinary
  * duplication because the drift is INVISIBLE — a wrong prompt still produces a number.
  *
@@ -15,8 +15,8 @@
  * PURE: no clock, no entropy, no I/O, no model. `world` is READ (projection + the contract's state
  * block); attachment ingestion happens in the caller, because it MUTATES the world.
  */
-import { renderScopedSpecTrunk } from '../trunk.js';
-import type { DomainContract } from '../trunk.js';
+import { renderAssembledPrompt } from '../assembled-prompt.js';
+import type { DomainContract } from '../assembled-prompt.js';
 import type { AgentSpec } from '../spec.js';
 import type { AgentWorld } from '../rules.js';
 import { terminalProtocol } from './terminal.js';
@@ -55,7 +55,7 @@ export interface TurnPromptInput {
 }
 
 export interface TurnPrompt {
-  /** The system instructions: the scoped trunk (or the spec's own override) + the terminal protocol. */
+  /** The system instructions: the scoped assembled prompt (or the spec's own override) + the terminal protocol. */
   instructions: string;
   /** The user message content: state block + uploads + user text, in that order. */
   userContent: string;
@@ -91,10 +91,10 @@ export function renderTurnPrompt(input: TurnPromptInput): TurnPrompt {
   const display = uploadDisplayLabels(labels, input.uploadUrls);
   const replyOnly = input.replyOnly ?? isReplyOnly(spec, world);
 
-  const trunk = spec.surface.systemPrompt
+  const assembledPrompt = spec.surface.systemPrompt
     ? spec.surface.systemPrompt(world, labels)
-    : renderScopedSpecTrunk(world, spec, labels, contract);
-  const instructions = trunk + (input.terminalProtocol === false ? '' : terminalProtocol(replyOnly));
+    : renderAssembledPrompt(world, spec, labels, contract);
+  const instructions = assembledPrompt + (input.terminalProtocol === false ? '' : terminalProtocol(replyOnly));
 
   if (input.instructionsOnly) {
     return { instructions, userContent: '', replyOnly, uploadDisplay: display };

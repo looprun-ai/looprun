@@ -19,7 +19,7 @@ plus the backend package (`@looprun-ai/mastra`) that enforces the hooks.
 
 Every rule is a **prose+check pair** from one `Guard` object: a deterministic `check(ctx): string | null`
 (a string = deny + correction; `null` = allow — the machine gate) and an LLM-facing `prose(): string`
-(rendered into the trunk, **never read by any check**). One object → the prompt text and the machine gate
+(rendered into the assembled prompt, **never read by any check**). One object → the prompt text and the machine gate
 can never drift apart.
 
 ## 1. The GuardCtx contract — full context
@@ -280,17 +280,17 @@ legible", and neither is indistinguishable from "the check never ran".
 Resolution order per hook: **agent → full → base → minimal** (an agent guard's correction wins over an
 inherited layer's).
 
-### The PROSE-RENDERING RULE — "no guard prose outside the trunk"
+### The PROSE-RENDERING RULE — "no guard prose outside the assembled prompt"
 
-**EVERY guard's `prose()` renders into the trunk. The HOOK decides WHERE it lands, never WHETHER it is
-shown.** `renderScopedSpecTrunk` → `ruleBlocks` reads **all four guard hooks** (`onInput`, `preTool`,
+**EVERY guard's `prose()` renders into the assembled prompt. The HOOK decides WHERE it lands, never WHETHER it is
+shown.** `renderAssembledPrompt` → `ruleBlocks` reads **all four guard hooks** (`onInput`, `preTool`,
 `postTool`, `onReply`):
 
 | binding | rendered section |
 |---|---|
 | `target` names TOOLS — **any hook** | `## Tool rules`, grouped by tool (a reply guard bound to a tool belongs with that tool) |
 | `target:'any'`, `preTool`/`postTool` | `## Global tool rules` |
-| `target:'any'`, `onInput`/`onReply` | **`## Reply rules`** (after `## Tool rules`, before `## Governance`, so the shared trunk HEAD is untouched and per-agent divergence still enters late — the trunk-static law) |
+| `target:'any'`, `onInput`/`onReply` | **`## Reply rules`** (after `## Tool rules`, before `## Governance`, so the shared assembled prompt HEAD is untouched and per-agent divergence still enters late — the shared-prefix law) |
 
 Prose is **de-duplicated globally and in order**: a string already emitted by an earlier section, or by an
 earlier hook for the SAME tool, is not repeated (keys normalize whitespace/case/terminal punctuation). Each
@@ -301,7 +301,7 @@ implicit assumption — anyone reading a spec assumes the model knows the rule w
 source of inexplicable failure later. It also carries a real cost: an invisible onReply rule can only be
 corrected by **redrive**, and redrive on a weak model degenerates into an exhaustion stub. Rendering all
 hooks is cheap where it matters: the `## Reply rules` section lands after per-agent divergence, so the
-pairwise common prefix — the cacheable trunk head — is untouched.
+pairwise common prefix — the cacheable assembled prompt head — is untouched.
 
 **`controls.directives` has exactly one purpose.** A directive is the way to express a
 *state-conditional* `IF <cond> → <directive>` line in `## Governance`. It is **not** a workaround for
@@ -323,7 +323,7 @@ violate, it is the wrong shape — write it as an onReply guard instead.**
 > **before it acts** (a followable RULE, present/imperative, derived from the guard's PARAMETERS).
 > **A guard whose prose speaks in the past tense, or accuses the model, has the wrong shape.**
 
-Why this is a defect and not a style note: because EVERY guard's prose renders into the trunk, a
+Why this is a defect and not a style note: because EVERY guard's prose renders into the assembled prompt, a
 reason-as-prose kind puts a post-hoc accusation into the model's *pre-action* instructions. A
 `## Reply rules` line of the shape:
 
@@ -435,7 +435,7 @@ onReply where the domain needs it. There is **NO auto-schema layer** —
 `argRequired`/`argFormat`/every other kind is authored explicitly by the spec at the agent layer.
 The runtime-owned terminal `respond` may never appear in `cfg.tools`
 (constructor throws) and is never guarded. A non-empty per-agent `persona` is required (persona-on-spec law: persona is per-agent, on the spec's `persona` field; a contract owns only invariants/language/stateBlock/exhaustion). The `minimal:`/`base:` id namespaces + install order are
-byte-stable, so the layer-sorted trunk prose is deterministic.
+byte-stable, so the layer-sorted assembled prompt prose is deterministic.
 
 ## 4. The kinds — where the vocabulary of record lives
 
@@ -833,7 +833,7 @@ Populated from `AgentSpecConfig`; wired by the Mastra backend unless noted.
 | `maxSteps` | `number` | 16 | tool-loop bound per turn (`stopWhen(stepCountIs)`). |
 | `redrives` | `number` | 1 | bounded no-tools onReply re-generate count before the exhaustion terminal. |
 | `terminal` | `(world: AgentWorld) => boolean` | — | **reply-only policy**: `true` ⇒ force a `respond` whose `did` declares NO `ask` intention this turn (reply-only protocol — no clarifying question). It bounds the AGENT, not the engine: a reply-only spec may hold a destructive tool and still take consent, because the confirmation question is engine-written. DISTINCT from `exhaustionReply` (the honest-closure text). |
-| `directives` | `StateDirective[]` `{id, cond, directive, when?}` | — | rendered statically into the trunk `## Governance` section as `IF <cond> → <directive>`. Render-only: the `when` runtime predicate is **reserved, not consumed** by the backend. |
+| `directives` | `StateDirective[]` `{id, cond, directive, when?}` | — | rendered statically into the assembled prompt `## Governance` section as `IF <cond> → <directive>`. Render-only: the `when` runtime predicate is **reserved, not consumed** by the backend. |
 | `chains` | `ChainSpec[]` | — | declared follow-up completions (see below). Absent/empty ⇒ zero added effect. |
 | `sampling` | `{ temperature?, topP?, maxOutputTokens?, seed? }` | — | per-agent AI-SDK call settings, merged OVER the conversation-level `modelParams` (agent wins) by `resolveModelSettings` — a creative agent at temp 0.7 beside a temp-0 admin agent in the same domain. |
 | `exhaustionReply` | `(world, okTools: string[], produced: string[], violations: string[]) => string` | the engine's own closing sentence | the CLOSING SENTENCE committed when the reply STILL violates a check after all redrives — a PURE function of verified observations (structurally unable to fabricate). Precedence: spec → contract → engine. **It supplies the sentence, never the whole closure:** the engine ALWAYS prepends the operation record it derived from the ledger, exactly as the clean path composes `message` + record. |
@@ -930,14 +930,14 @@ under `packages/core/src/*.ts` is linguistic content leaking back into the runti
 - **The pair doctrine holds from BOTH sides.** A guard is `check()` + `prose()`; neither
   half stands alone: prose-without-check collapses on weak models, and
   check-without-prose collapses even on small local models (removing the prose gains ZERO
-  speed — the byte-stable trunk is prompt-cached once per agent, so trunk prose is near-free — and only
+  speed — the byte-stable assembled prompt is prompt-cached once per agent, so assembled prompt prose is near-free — and only
   loses quality). Corollary for authors (human or the skill): a checkable rule stated in prose MUST also
   install its check — enforced at authoring time by the generator skill's spec-quality lint (Q1/Q7),
   beside the purity lint.
 
 ## 8. `behavior[]` — the LANGUAGE/JUDGEMENT layer
 
-With the PROSE-RENDERING RULE (§2), every rule that HAS a guard states itself in the trunk,
+With the PROSE-RENDERING RULE (§2), every rule that HAS a guard states itself in the assembled prompt,
 from the guard's own `prose()`. That leaves one honest job for `spec.behavior[]`:
 
 > **`behavior[]` is the LANGUAGE / JUDGEMENT layer — the prose whose rules have NO possible check.**

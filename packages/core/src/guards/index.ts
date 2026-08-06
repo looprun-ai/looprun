@@ -2,7 +2,7 @@
  * @looprun-ai/core — the typed guard-KIND library (framework-free).
  *
  * The guard vocabulary the agentspec skill authors. Each factory returns a {@link Guard}:
- * a deterministic `check()` (the machine gate) + an LLM-facing `prose()` (rendered into the trunk,
+ * a deterministic `check()` (the machine gate) + an LLM-facing `prose()` (rendered into the assembled prompt,
  * never read by the checker) — the prose+check pairing. A deterministic predicate reads tool args /
  * world state / observed calls; the ONE guard that reasons over conversation TEXT is `llmCheck`, whose
  * verdict is the judge's, never a closure-held pattern. The deterministic set is pure by

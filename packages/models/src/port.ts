@@ -30,7 +30,7 @@ export interface LocalModelSpec {
   /** Context window. */
   ctx: number;
   /**
-   * `--cache-ram` MiB — the idle-slot RAM prompt cache that keeps N distinct agent trunks warm
+   * `--cache-ram` MiB — the idle-slot RAM prompt cache that keeps N distinct agent assembled prompts warm
    * on `-np 1` (one agent state ≈ 140–210 MB). NEVER 0 for the qwen3.5/3.6 hybrid family:
    * without it every agent switch is a full re-prefill (11–22 s measured).
    */

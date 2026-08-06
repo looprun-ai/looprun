@@ -92,7 +92,7 @@ const guardSchema = z.discriminatedUnion('kind', [
       tool: z.string(),
       predicate: predicateSchema,
       // PROSE PLACEMENT LAW: precondition's own prose has no derivable default (its predicate is
-      // opaque to the trunk renderer), so it is REQUIRED here — a proseless entry fails by name.
+      // opaque to the assembled prompt renderer), so it is REQUIRED here — a proseless entry fails by name.
       // NO `reason` field: the DENY POLICY owns every deny message (see renderDeny + installGuard).
       // A config that carried a free `reason` could hand the model a figure or a role to repeat
       // without reading — the measured leak this loader forbids. `.strict()` rejects it by name.

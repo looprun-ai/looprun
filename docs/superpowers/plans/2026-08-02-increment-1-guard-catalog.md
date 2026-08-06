@@ -112,7 +112,7 @@ expect(() => loadNormsConfig(fixtureProseless)).toThrow(/prose/);
 ### Task 4: Engine-owned honest abstain
 
 **Files:**
-- Create: `buildHonestAbstain(world: AgentWorld, okTools: string[], writeTools: readonly string[]): string` in `packages/core/src/trunk.ts` (beside `DomainContract`) — or `packages/core/src/runtime/` if trunk.ts is prompt-only; decide by where `exhaustionReply` is consumed (grep `exhaustionReply` in `packages/core/src/runtime/` first).
+- Create: `buildHonestAbstain(world: AgentWorld, okTools: string[], writeTools: readonly string[]): string` in `packages/core/src/assembled-prompt.ts` (beside `DomainContract`) — or `packages/core/src/runtime/` if assembled-prompt.ts is prompt-only; decide by where `exhaustionReply` is consumed (grep `exhaustionReply` in `packages/core/src/runtime/` first).
 - Test: `packages/core/test/honest-abstain.test.ts`
 
 **Interfaces:**
@@ -160,16 +160,16 @@ it('E1: a guard-vetoed forbidden call FAILS the invariant (attempt basis)', asyn
 - Test: `packages/eval/test/norms-config.test.ts` — final test:
 
 ```ts
-it('config-built spec is trunk-byte-identical to the TS-built one', async () => {
+it('config-built spec is assembled prompt-byte-identical to the TS-built one', async () => {
   const ts = subject.specs['front-desk'];
   const cfg = loadNormsConfig(readJson('fixtures/toy-subject/norms/front-desk.json'));
   const world = subject.makeWorld('default');
-  expect(renderScopedSpecTrunk(world, cfg, [], subject.contract))
-    .toBe(renderScopedSpecTrunk(world, ts, [], subject.contract));
+  expect(renderAssembledPrompt(world, cfg, [], subject.contract))
+    .toBe(renderAssembledPrompt(world, ts, [], subject.contract));
 });
 ```
 
-- [ ] **Step 1:** author the JSON from the TS spec (guards it uses that have no catalog kind yet → `uncheckable` prose, and note the diff in the test file header). **Step 2:** iterate loader until byte-identity holds (this is the loader's acceptance proof). **Step 3:** commit — `test(eval): toy-subject norms config renders byte-identical trunk (loader acceptance)`.
+- [ ] **Step 1:** author the JSON from the TS spec (guards it uses that have no catalog kind yet → `uncheckable` prose, and note the diff in the test file header). **Step 2:** iterate loader until byte-identity holds (this is the loader's acceptance proof). **Step 3:** commit — `test(eval): toy-subject norms config renders byte-identical assembled prompt (loader acceptance)`.
 
 ---
 

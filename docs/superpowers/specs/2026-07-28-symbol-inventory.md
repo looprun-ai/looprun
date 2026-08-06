@@ -58,8 +58,8 @@ delete   ███████████████████████�
 > implementation. Most `delete` rows are still called by their own package's `src/` or exercised by its
 > own tests, and a barrel-only scan is not a liveness analysis.
 >
-> **Live example for Task 5:** all 16 coherence/trunk symbols in §4 are `delete`, yet
-> `packages/core/test/proofs/trunk-provenance.test.ts` imports and asserts on most of them. Removing the
+> **Live example for Task 5:** all 16 coherence/assembled prompt symbols in §4 are `delete`, yet
+> `packages/core/test/proofs/prompt-provenance.test.ts` imports and asserts on most of them. Removing the
 > *exports* is safe; removing the *functions* breaks that proof suite. Whoever does Task 5 must decide
 > the fate of that test explicitly, not implicitly.
 
@@ -213,31 +213,31 @@ package imports them.
 
 | symbol | where it is still used |
 |---|---|
-| `findContradictions` | `core/test/proofs/trunk-provenance.test.ts` |
-| `findDuplications` | `core/src/trunk.ts`, that proof test |
+| `findContradictions` | `core/test/proofs/prompt-provenance.test.ts` |
+| `findDuplications` | `core/src/assembled-prompt.ts`, that proof test |
 | `findMultiOwnerSubjects` | that proof test |
 | `findSubjectlessLines` | that proof test |
 | `findUnassessableLines` | **nothing** — its only other hit is a JSDoc `{@link}` in `coherence.ts:301` |
-| `foldRow` | `coherence.ts:230` (inside `foldTrunk`) |
-| `foldTrunk` | `core/src/trunk.ts`, that proof test |
+| `foldRow` | `coherence.ts:230` (inside `foldPrompt`) |
+| `foldPrompt` | `core/src/assembled-prompt.ts`, that proof test |
 | `withPolarityLexicon` | that proof test |
-| `derivePolarity` | `core/src/trunk.ts`, that proof test |
-| `deriveSubject` | `core/src/trunk.ts`, that proof test |
-| `trunkLines` | that proof test |
+| `derivePolarity` | `core/src/assembled-prompt.ts`, that proof test |
+| `deriveSubject` | `core/src/assembled-prompt.ts`, that proof test |
+| `assembledPromptLines` | that proof test |
 | `mutatorLines` | that proof test |
 | `isSingleClause` | `coherence.ts:309` and `:321` |
 | `DEFAULT_POLARITY_LEXICON` | `coherence.ts:148` (default arg of `derivePolarity`) |
-| `chainOrder` | `core/src/trunk.ts` |
-| `renderTrunkBlocks` | `core/src/trunk.ts`, that proof test |
+| `chainOrder` | `core/src/assembled-prompt.ts` |
+| `renderPromptBlocks` | `core/src/assembled-prompt.ts`, that proof test |
 
 **Exactly one — `findUnassessableLines` — is genuinely referenced nowhere.** The other fifteen are
 live code inside `core`; only their *export* is dead. (An earlier revision of this document wrongly
 claimed four of them were unreferenced anywhere; that was an artifact of the column caveat above and
 is corrected here.)
 
-**Note for Task 5:** `coherence.ts` (428 lines) exports 33 symbols. `trunk.ts` imports 7 of them
-(`derivePolarity`, `deriveSubject`, `foldTrunk`, `SubjectRule`, `TrunkBlock`, `TrunkLine`, `TrunkRow`);
-the rest are used only within `coherence.ts` itself, only by `trunk-provenance.test.ts`, or not at all.
+**Note for Task 5:** `coherence.ts` (428 lines) exports 33 symbols. `assembled-prompt.ts` imports 7 of them
+(`derivePolarity`, `deriveSubject`, `foldPrompt`, `SubjectRule`, `PromptBlock`, `PromptLine`, `PromptRow`);
+the rest are used only within `coherence.ts` itself, only by `prompt-provenance.test.ts`, or not at all.
 
 ---
 
@@ -267,7 +267,7 @@ the rest are used only within `coherence.ts` itself, only by `trunk-provenance.t
 | 3 | `packages/server` exports 13; only `createModelServer` + `TurnEvent` (+2 companion types) are consumed | same |
 | 4 | `packages/models` exports 24; 8 are public — `localModelStatus` and `geminiFlashLiteThinkOff` (consumer roots), `resolveAlias` and `LlamaCppRuntime` (the published `looprun` bin), and `localModel` + `LocalModelOptions` + `LocalModelSpec` + `ModelRuntimePort` (tutorial chapter 06, round 3). The five `QWEN*` alias constants and `MODEL_ALIASES` have **no consumer at all** | **RESOLVED in round 3**: the docs were right and the usage scan was measuring the wrong thing. Task 12 moves the local-models story into chapter 06 instead of retracting it |
 | 5 | **`coherence.ts`, `surface.ts`, `session.ts` contain raw control bytes** (`\x00`, `\x01`) in string literals, so `file(1)` calls them `data` and plain `grep` skips them without warning | any future repo-wide grep audit is silently blind to 3 files. Fix: write the separators as escape sequences instead of raw bytes. Until then, use `grep -a` |
-| 6 | **Three consumer imports name symbols that do not exist in any barrel:** `TrunkTheme` (`looprun-bench` atlas `index.ts` + `theme.ts` across several spec sets, and yntelli), `EvalCase` (`looprun-bench/.../evals/cases.ts`), `EvalConfig` (`looprun-bench/.../telecom/looprun.eval.config.ts`) — all imported from `@looprun-ai/core` / `@looprun-ai/eval` | **those consumer files cannot currently typecheck.** Any "no consumer uses X" claim drawn from `looprun-bench` is weakened accordingly: that repo is not in a compiling state against the current engine |
+| 6 | **Three consumer imports name symbols that do not exist in any barrel:** `AssembledPromptTheme` (`looprun-bench` atlas `index.ts` + `theme.ts` across several spec sets, and yntelli), `EvalCase` (`looprun-bench/.../evals/cases.ts`), `EvalConfig` (`looprun-bench/.../telecom/looprun.eval.config.ts`) — all imported from `@looprun-ai/core` / `@looprun-ai/eval` | **those consumer files cannot currently typecheck.** Any "no consumer uses X" claim drawn from `looprun-bench` is weakened accordingly: that repo is not in a compiling state against the current engine |
 | 7 | `packages/vercel` is a 25-line reserved stub whose only two exports are unused; its `createLoopRunAgent` always throws and shadows the (also unused) mastra export of the same name | worth deciding whether the package ships at all |
 | 8 | `packages/looprun` and `packages/looprun/src/core.ts` are pure `export *` facades over `@looprun-ai/core` | core's barrel shape propagates automatically — but see §3 blind spot 1: the facade is also how `validateSpec` escaped detection |
 
@@ -339,17 +339,17 @@ Read the §3 column caveat before using the third column for anything.
 | `Hook` | — | — | core | 2 | **public** | ROUND 4: first parameter of `AgentSpecBase#addGuard`, the guard-binding surface taught in tutorial 03 — (was: TASK 12: still referenced in published docs — packages/core/GUARDS.md) |
 | `ToolTarget` | — | — | core | 0 | **public** | ROUND 4: second parameter of `AgentSpecBase#addGuard` — tutorial 03 |
 | `Layer` | — | — | — | 0 | ~~delete~~ |  |
-| `renderScopedSpecTrunk` | bench, yntelli | eval, mastra | core, core#test | 1 | internal | ROUND 4: NO TUTORIAL HOME — the bring-your-own-loop seam (outline §6.4, dropped: closing the loop needs recordToolResult/resultOk/isTerminal, all internal, so a taught version would silently never fire history-keyed guards). Stays available to bench/fork authors via `@looprun-ai/core/internal` |
-| `renderTrunkBlocks` | — | — | core#test | 0 | ~~delete~~ |  |
+| `renderAssembledPrompt` | bench, yntelli | eval, mastra | core, core#test | 1 | internal | ROUND 4: NO TUTORIAL HOME — the bring-your-own-loop seam (outline §6.4, dropped: closing the loop needs recordToolResult/resultOk/isTerminal, all internal, so a taught version would silently never fire history-keyed guards). Stays available to bench/fork authors via `@looprun-ai/core/internal` |
+| `renderPromptBlocks` | — | — | core#test | 0 | ~~delete~~ |  |
 | `chainOrder` | — | — | — | 0 | ~~delete~~ |  |
 | `DomainContract` | examples | eval, eval#test, mastra, mastra#test, vercel | core, core#test | 6 | **public** |  |
-| `TrunkRenderOptions` | — | — | — | 0 | ~~delete~~ |  |
+| `PromptRenderOptions` | — | — | — | 0 | ~~delete~~ |  |
 | `GUARD_KIND_SUBJECT` | — | — | core#test | 0 | ~~delete~~ |  |
 | `derivePolarity` | — | — | core, core#test | 0 | ~~delete~~ |  |
 | `deriveSubject` | — | — | core, core#test | 0 | ~~delete~~ |  |
 | `foldRow` | — | — | — | 0 | ~~delete~~ |  |
-| `foldTrunk` | — | — | core, core#test | 0 | ~~delete~~ |  |
-| `trunkLines` | — | — | core#test | 0 | ~~delete~~ |  |
+| `foldPrompt` | — | — | core, core#test | 0 | ~~delete~~ |  |
+| `assembledPromptLines` | — | — | core#test | 0 | ~~delete~~ |  |
 | `findContradictions` | — | — | core#test | 0 | ~~delete~~ |  |
 | `findDuplications` | — | — | core#test | 0 | ~~delete~~ |  |
 | `findMultiOwnerSubjects` | — | — | core#test | 0 | ~~delete~~ |  |
@@ -359,10 +359,10 @@ Read the §3 column caveat before using the third column for anything.
 | `DEFAULT_POLARITY_LEXICON` | — | — | — | 0 | ~~delete~~ |  |
 | `withPolarityLexicon` | — | — | core#test | 0 | ~~delete~~ |  |
 | `mutatorLines` | — | — | core#test | 0 | ~~delete~~ |  |
-| `TrunkLine` | — | — | core | 0 | ~~delete~~ |  |
-| `TrunkRow` | — | — | core | 0 | ~~delete~~ |  |
-| `TrunkBlock` | — | — | core | 0 | ~~delete~~ |  |
-| `TrunkPolarity` | — | — | — | 0 | ~~delete~~ |  |
+| `PromptLine` | — | — | core | 0 | ~~delete~~ |  |
+| `PromptRow` | — | — | core | 0 | ~~delete~~ |  |
+| `PromptBlock` | — | — | core | 0 | ~~delete~~ |  |
+| `PromptPolarity` | — | — | — | 0 | ~~delete~~ |  |
 | `SubjectRule` | — | — | core | 0 | ~~delete~~ |  |
 | `NormativeLine` | — | — | core#test | 0 | ~~delete~~ |  |
 | `ContradictionFinding` | — | — | — | 0 | ~~delete~~ |  |
@@ -499,7 +499,7 @@ Read the §3 column caveat before using the third column for anything.
 | `loadSubject` | — | — | eval, eval#test | 2 | **public** | reached by `looprun-eval` bin via dynamic `await import()` (namespace access) |
 | `validateSubject` | — | — | eval, eval#test | 0 | ~~delete~~ |  |
 | `agentForCase` | — | — | eval | 1 | **public** | agentspec skill/scripts/synth-fork.mjs:113 via computed `importFromCwd('@looprun-ai/eval')` → `evalPkg.agentForCase(...)` |
-| `checkTrunkStatic` | — | — | eval, eval#test | 0 | ~~delete~~ |  |
+| `checkPromptStatic` | — | — | eval, eval#test | 0 | ~~delete~~ |  |
 | `readDeclaredTarget` | — | — | eval, eval#test | 0 | ~~delete~~ |  |
 | `Subject` | — | — | eval, eval#test | 3 | **public** | ROUND 4: return of `loadSubject`, parameter of `agentForCase` and `lintSubject` — tutorial 05 — (was: TASK 12: still referenced in published docs — packages/eval/README.md) |
 | `SubjectCase` | — | — | eval | 2 | **public** | ROUND 4: the reader authors `evals/cases` as `SubjectCase[]` — tutorial 05 subject-directory contract |
@@ -672,7 +672,7 @@ contract in both directions.
 
 | # | change | evidence |
 |---|---|---|
-| 7 | **10 core symbols public → internal**: `createLedger` `beginTurn` `resolveGuards` `evaluatePreTool` `enforcePostTool` `redriveMessage` `finalizeReply` `ReplyViolation` `renderScopedSpecTrunk` `renderTurnPrompt` | reason: **no tutorial home**. Outline §6.4 ("bring your own loop") was dropped as unteachable — closing that loop needs `recordToolResult`, `resultOk`, `isTerminal`, `terminalProtocol`, `TurnLedger`, all internal. Without `recordToolResult` the ledger's `observed` stays empty and every history-keyed guard (`confirmFirst`, `noDuplicateCall`, `requiresBefore`, `destructiveThrottle`) silently never fires — a chapter that ships a governance hole. The seam stays whole behind `@looprun-ai/core/internal` for the bench shim and the agentspec fork scripts, which is what they already are: integrators, not the tutorial's audience |
+| 7 | **10 core symbols public → internal**: `createLedger` `beginTurn` `resolveGuards` `evaluatePreTool` `enforcePostTool` `redriveMessage` `finalizeReply` `ReplyViolation` `renderAssembledPrompt` `renderTurnPrompt` | reason: **no tutorial home**. Outline §6.4 ("bring your own loop") was dropped as unteachable — closing that loop needs `recordToolResult`, `resultOk`, `isTerminal`, `terminalProtocol`, `TurnLedger`, all internal. Without `recordToolResult` the ledger's `observed` stays empty and every history-keyed guard (`confirmFirst`, `noDuplicateCall`, `requiresBefore`, `destructiveThrottle`) silently never fires — a chapter that ships a governance hole. The seam stays whole behind `@looprun-ai/core/internal` for the bench shim and the agentspec fork scripts, which is what they already are: integrators, not the tutorial's audience |
 | 8 | `core.Dim` delete → **public** | `custom({ kind, dim, check, prose })` (`guards.ts:24`) requires `dim: Dim`. Chapter 04 teaches `custom` as the escape hatch, so the vocabulary block is `Guard` `GuardCtx` `ObservedCall` `Dim` |
 | 9 | `core.Hook`, `core.ToolTarget` delete → **public** | `AgentSpecBase#addGuard(hook: Hook, target: ToolTarget, guard: Guard, opts?)` (`spec.ts:494`) is the mechanism that binds any factory to a spec — and it throws on an illegal dim×hook pairing. Chapter 03 teaches it. **`Layer` deliberately NOT promoted**: it appears only as `opts.layer`, and layers (`'minimal' | 'base' | 'full' | 'agent'`, `spec.ts:36`) are the framework's own auto-install tiers, which the tutorial does not teach the reader to set |
 | 10 | `core.AgentScope`, `core.TerminalPolicy` delete → **public** | the design assigns "scope, tools, terminal" to chapter 03; `AgentScope` is an authored `{ lane, others }` object and `TerminalPolicy` an authored `(world) => boolean`. **The other `AgentSpecConfig` field types stay non-public** (`SpatialEdge`, `StateDirective`, `ChainSpec`, `SamplingSettings`, `MutatorBinding`) because chapter 03 does not teach `flow` / `directives` / `chains` / `sampling`. The rule is stated in the outline: *a config field the tutorial teaches has its authored type public; a field it does not teach keeps its type off the barrel* |

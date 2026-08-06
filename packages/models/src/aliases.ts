@@ -7,7 +7,7 @@
  *    dequantizes q8_0 every token while the byte saving buys nothing, since weights dominate
  *    decode bandwidth).
  *  - cacheRamMiB (`--cache-ram`) is tiered: it is the idle-slot RAM prompt cache that keeps N
- *    distinct agent trunks warm across agent switches (measured: warm switch TTFT
+ *    distinct agent assembled prompts warm across agent switches (measured: warm switch TTFT
  *    0.5–0.6 s vs 11–22 s cold without it).
  *  - MTP (multi-token prediction): ON for the 35B-A3B tiers — trained MTP
  *    heads shipped (`unsloth/Qwen3.6-35B-A3B-MTP-GGUF` bakes the head into every UD quant):
@@ -21,10 +21,10 @@
  *  - ram24 (DEFAULT) — 35B UD-IQ2_XXS + MTP, 11.8 GB weights: ~56 tok/s decode, peak RSS ~20.7 GB
  *    (fits 24 GB machines) with the full 16 GB prompt cache (cap it via $LLAMA_CACHE_RAM to shrink).
  *    It matches the quality of the 21 GB Q4 build at 56% of the RAM.
- *  - ram16 — the same model tuned for 16 GB machines: ctx 24576 (fits a ~21k agent trunk), q8_0 KV,
+ *  - ram16 — the same model tuned for 16 GB machines: ctx 24576 (fits a ~21k agent assembled prompt), q8_0 KV,
  *    512 MiB cache. 13.4–13.5 GB RSS, ~44 tok/s decode.
  *  - ram8  — 8 GB machines: Qwen3.5-4B UD-Q3_K_XL + MTP (2.53 GB), ctx 24576 (fits ~21k agent
- *    trunks), q8_0 KV, 384 MiB cache. 4.62 GB RSS, ~43 tok/s decode, leaving ~3.4 GB for the OS and
+ *    assembled prompts), q8_0 KV, 384 MiB cache. 4.62 GB RSS, ~43 tok/s decode, leaving ~3.4 GB for the OS and
  *    apps. Its eval quality is far below the 35B tiers.
  */
 import { homedir } from 'node:os';
@@ -70,7 +70,7 @@ export const QWEN36_RAM24: LocalModelSpec = {
 /** RAM16 — 16 GB machines: measured 13.4–13.5 GB RSS, ~44 tok/s (q8_0 KV tax). */
 export const QWEN36_RAM16: LocalModelSpec = {
   alias: 'qwen3.6-35b-ram16',
-  note: '16 GB-machine tier: same IQ2_XXS+MTP model, ctx 24576 (fits a ~21k agent trunk), q8_0 KV, 512 MiB cache. Measured 13.4–13.5 GB RSS, ~44 tok/s.',
+  note: '16 GB-machine tier: same IQ2_XXS+MTP model, ctx 24576 (fits a ~21k agent assembledPrompt), q8_0 KV, 512 MiB cache. Measured 13.4–13.5 GB RSS, ~44 tok/s.',
   file: 'Qwen3.6-35B-A3B-UD-IQ2_XXS.gguf',
   defaultDir: home('models', 'qwen36-mtp-gguf'),
   envVar: 'QWEN36_35B_GGUF',
@@ -104,7 +104,7 @@ export const QWEN36_RAM32: LocalModelSpec = {
 /** RAM8 — 8 GB machines: measured 4.62 GB RSS, ~43 tok/s (Qwen3.5-4B + baked MTP head). */
 export const QWEN35_RAM8: LocalModelSpec = {
   alias: 'qwen3.5-4b-ram8',
-  note: '8 GB-machine tier: Qwen3.5-4B UD-Q3_K_XL + baked MTP head (2.53 GB), ctx 24576 (fits ~21k agent trunks), q8_0 KV, 384 MiB cache. Measured 4.62 GB RSS, ~43 tok/s — leaves ~3.4 GB for OS + apps. Deep-context-heavy agents can trade back: $LLAMA_KV=f16 $LLAMA_CTX=16384.',
+  note: '8 GB-machine tier: Qwen3.5-4B UD-Q3_K_XL + baked MTP head (2.53 GB), ctx 24576 (fits ~21k agent assembledPrompts), q8_0 KV, 384 MiB cache. Measured 4.62 GB RSS, ~43 tok/s — leaves ~3.4 GB for OS + apps. Deep-context-heavy agents can trade back: $LLAMA_KV=f16 $LLAMA_CTX=16384.',
   file: 'Qwen3.5-4B-UD-Q3_K_XL.gguf',
   defaultDir: home('models', 'qwen35-mtp-gguf'),
   envVar: 'QWEN35_RAM8_GGUF',

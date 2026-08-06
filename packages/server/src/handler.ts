@@ -2,7 +2,7 @@
  * The fetch-style request handler — the whole protocol facade, testable without a socket.
  *
  * Routes: GET /v1/models, POST /v1/chat/completions. Everything else 404s in OpenAI error shape.
- * Mapping law (see README): incoming `system` is DISCARDED (the spec renders its own trunk),
+ * Mapping law (see README): incoming `system` is DISCARDED (the spec renders its own assembled prompt),
  * incoming `tools`/`tool_choice`/sampling are IGNORED (the spec governs), and only the LAST
  * `user` message enters the governed turn — the agent's own session is the canonical memory.
  */

@@ -1,16 +1,16 @@
 /**
  * @looprun-ai/models — the llama.cpp ModelRuntimePort (the v0 local runtime).
  *
- * Launch profile = the measured recipe (trunk-warm law measured; MTP added):
+ * Launch profile = the measured recipe (prefix-warm law measured; MTP added):
  *   llama-server -m <gguf> --port <port> --jinja -fa on -ngl 99 --mlock --no-mmap -np 1
  *                -c <ctx> -ctk <kv> -ctv <kv> -ctxcp 64 --cache-ram <MiB> --slot-save-path <dir>
  *                [--spec-type draft-mtp]
  *  - `-np 1` keeps the shared prompt prefix permanently resident (the long-running-agent law).
  *  - `-ctxcp` (context checkpoints) + `--cache-ram` (idle-slot RAM prompt cache) are BOTH
  *    load-bearing for the qwen3.5/3.6 hybrid family: checkpoints make ANY continuation warm
- *    (even same-agent multi-turn), the RAM cache keeps N distinct agent trunks warm across
+ *    (even same-agent multi-turn), the RAM cache keeps N distinct agent assembled prompts warm across
  *    agent switches (warm switch TTFT 0.5–0.6 s vs 11–22 s cold). Never disable either.
- *  - `--slot-save-path` enables per-agent trunk STATE FILES (bake once at the trunk boundary,
+ *  - `--slot-save-path` enables per-agent assembled prompt STATE FILES (bake once at the assembled prompt boundary,
  *    restore ≈20–30 ms after any restart via POST /slots/{i}?action=save|restore). Zero cost
  *    when the /slots endpoints are unused.
  *  - `--spec-type draft-mtp` on specs with `specType` set : checkpoints with a baked

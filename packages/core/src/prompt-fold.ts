@@ -1,26 +1,26 @@
 /**
- * @looprun-ai/core — the TRUNK's attributed table and the FOLD that renders it.
+ * @looprun-ai/core — the ASSEMBLED PROMPT's attributed table and the FOLD that renders it.
  *
- * THE CAUSE-ROOT THIS FILE CLOSES. A trunk assembled by `parts.join('\n\n')` is an opaque string: at
+ * THE CAUSE-ROOT THIS FILE CLOSES. An assembled prompt assembled by `parts.join('\n\n')` is an opaque string: at
  * the instant of the join every trace of PROVENANCE dies, and nothing downstream can ask "who emitted
  * this rule?", "under which hook?", "about WHAT?".
  *
- * So the trunk is a FOLD over a typed table. {@link TrunkLine} is the atomic normative unit (who said
+ * So the assembled prompt is a FOLD over a typed table. {@link PromptLine} is the atomic normative unit (who said
  * it, in which section, under which hook/target, about WHAT, with which polarity, and the exact bytes
- * it renders as); {@link TrunkBlock}/{@link TrunkRow} carry the layout, and the fold is BYTE-STABLE
- * (trunk-static law — the cacheable prefix depends on it).
+ * it renders as); {@link PromptBlock}/{@link PromptRow} carry the layout, and the fold is BYTE-STABLE
+ * (shared-prefix law — the cacheable prefix depends on it).
  *
  * DOMAIN NEUTRALITY (P8a). This file carries no business vocabulary. `subject` is derived from the
  * GUARD KIND (runtime vocabulary — see {@link GUARD_KIND_SUBJECT}) and, for prose that has no guard
  * behind it (domain voice / core invariants / persona / behavior / directives), from an INJECTED
  * {@link SubjectRule} lexicon the host supplies — exactly the seam every language-keyed guard uses.
  *
- * This module is PRIVATE to the package: it is reachable from no entry point. `trunk.ts` is its only
+ * This module is PRIVATE to the package: it is reachable from no entry point. `assembled-prompt.ts` is its only
  * consumer.
  */
 
 /** Whether a normative line ADDS an obligation, REMOVES a permission, or merely states a fact. */
-export type TrunkPolarity = 'require' | 'forbid' | 'inform';
+export type PromptPolarity = 'require' | 'forbid' | 'inform';
 
 /** An injected subject rule: "text matching `re` is about `subject`". Business-owned (P8a). */
 export interface SubjectRule {
@@ -33,7 +33,7 @@ export interface SubjectRule {
  * is runtime vocabulary and therefore carries no business content. A kind absent from this table
  * derives `subject: null`, and that is INFORMATION, not a gap: a normative line whose subject cannot be
  * identified is a lint candidate (nothing can be said about how it interacts with the rest of the
- * trunk). `custom()` guards land there by construction — they declare a free-form kind.
+ * assembled prompt). `custom()` guards land there by construction — they declare a free-form kind.
  */
 export const GUARD_KIND_SUBJECT: Readonly<Record<string, string>> = Object.freeze({
   // spatial / run — ordering and budgets
@@ -71,7 +71,7 @@ export const GUARD_KIND_SUBJECT: Readonly<Record<string, string>> = Object.freez
  * The `require` test runs on the text with the prohibition phrases REMOVED, so "you must not X" is a
  * clean `forbid` rather than a mixed line (the `must` belongs to the `must not`).
  *
- * The marker sets are deliberately small and strong — the trunk is always rendered in English (the
+ * The marker sets are deliberately small and strong — the assembled prompt is always rendered in English (the
  * domain's language clause tells the model which language to REPLY in; it does not translate the prompt).
  */
 const FORBID_SRC = "never|must not|may not|cannot|can'?t|do not|don'?t|forbidden";
@@ -89,7 +89,7 @@ const NEGATIVE_REQUIREMENT_RE = new RegExp(
 /** Fresh /g source — a module-level /g regex would leak `lastIndex` between calls (T1 purity). */
 const FORBID_STRIP_SRC = `\\b(?:${FORBID_SRC})\\b`;
 
-export function derivePolarity(text: string): TrunkPolarity {
+export function derivePolarity(text: string): PromptPolarity {
   if (NEGATIVE_REQUIREMENT_RE.test(text)) return 'require';
   const forbids = FORBID_RE.test(text);
   const requires = REQUIRE_RE.test(text.replace(new RegExp(FORBID_STRIP_SRC, 'gi'), ' '));
@@ -115,13 +115,13 @@ export function deriveSubject(
 }
 
 /**
- * One atomic normative unit of the trunk, with its provenance.
+ * One atomic normative unit of the assembled prompt, with its provenance.
  *
- * `text` holds the EXACT bytes this unit contributes to the rendered trunk (a whole line for most
+ * `text` holds the EXACT bytes this unit contributes to the rendered assembled prompt (a whole line for most
  * sections; a single `; `-joined fragment inside a `## Tool rules` row). The fold never re-derives or
  * re-formats it — that is what makes byte-identity provable rather than hoped for.
  */
-export interface TrunkLine {
+export interface PromptLine {
   /** WHO emitted it: `domain.voice` · `domain.coreInvariants` · `domain.languageClause` · `spec.scope` ·
    *  `spec.flow` · `spec.persona` · `spec.behavior` · `spec.controls.directives` · `guard:<kind>`. */
   owner: string;
@@ -135,33 +135,33 @@ export interface TrunkLine {
   tool?: string;
   /** The normative SUBJECT in controlled vocabulary — `null` when none could be derived (a lint signal). */
   subject: string | null;
-  polarity: TrunkPolarity;
+  polarity: PromptPolarity;
   /** The exact rendered bytes of this unit. */
   text: string;
 }
 
-/** One physical line of the trunk: `prefix + lines.map(text).join(sep) + suffix`. */
-export interface TrunkRow {
+/** One physical line of the assembled prompt: `prefix + lines.map(text).join(sep) + suffix`. */
+export interface PromptRow {
   prefix: string;
   sep: string;
   suffix: string;
-  lines: TrunkLine[];
+  lines: PromptLine[];
 }
 
-/** One `\n\n`-separated part of the trunk: an optional heading plus its rows. */
-export interface TrunkBlock {
+/** One `\n\n`-separated part of the assembled prompt: an optional heading plus its rows. */
+export interface PromptBlock {
   heading: string | null;
-  rows: TrunkRow[];
+  rows: PromptRow[];
 }
 
 /** Render one row back to its exact bytes. */
-function foldRow(row: TrunkRow): string {
+function foldRow(row: PromptRow): string {
   return `${row.prefix}${row.lines.map((l) => l.text).join(row.sep)}${row.suffix}`;
 }
 
-/** THE FOLD: blocks → the trunk string. The inverse of {@link TrunkBlock} construction, and the ONLY
- *  place the trunk's bytes are produced. */
-export function foldTrunk(blocks: readonly TrunkBlock[]): string {
+/** THE FOLD: blocks → the assembled prompt string. The inverse of {@link PromptBlock} construction, and the ONLY
+ *  place the assembled prompt's bytes are produced. */
+export function foldPrompt(blocks: readonly PromptBlock[]): string {
   return blocks
     .map((b) => [...(b.heading != null ? [b.heading] : []), ...b.rows.map(foldRow)].join('\n'))
     .join('\n\n');

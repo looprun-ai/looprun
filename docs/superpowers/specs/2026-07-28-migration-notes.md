@@ -89,30 +89,30 @@ verified against the repo rather than inferred:
 | symbol | before | after | action |
 |---|---|---|---|
 | `runSpecConversation` | `@looprun-ai/mastra` | **unchanged** | none — the main entry point is intact |
-| `createLedger`, `beginTurn`, `evaluatePreTool`, `enforcePostTool`, `redriveMessage`, `finalizeReply`, `resolveGuards`, `renderScopedSpecTrunk`, `ReplyViolation` | `@looprun-ai/core` | `@looprun-ai/core/internal` | **change the specifier** — these nine are the whole "bring your own loop" seam the shim drives |
+| `createLedger`, `beginTurn`, `evaluatePreTool`, `enforcePostTool`, `redriveMessage`, `finalizeReply`, `resolveGuards`, `renderAssembledPrompt`, `ReplyViolation` | `@looprun-ai/core` | `@looprun-ai/core/internal` | **change the specifier** — these nine are the whole "bring your own loop" seam the shim drives |
 | `Guard`, `GuardCtx`, `ObservedCall` | `@looprun-ai/core` | **unchanged — public** | none. They are taught by chapter 04 and stay on the barrel (`ObservedCall` is used by `shim/src/transcript.ts`) |
 
 The nine and the three above are the *complete* set: splitting `step-handler.ts`'s import block gives
 exactly `createLedger`, `beginTurn`, `enforcePostTool`, `evaluatePreTool`, `finalizeReply`,
-`redriveMessage`, `renderScopedSpecTrunk`, `resolveGuards`, `Guard`, `GuardCtx`, `ReplyViolation`. The
+`redriveMessage`, `renderAssembledPrompt`, `resolveGuards`, `Guard`, `GuardCtx`, `ReplyViolation`. The
 bench does **not** import `renderTurnPrompt`, `recordToolResult`, `isTerminal`, `terminalProtocol` or
 `forcedTerminalPrompt` — zero occurrences repo-wide — so those need no action there.
 
 #### The three names that never existed
 
-`TrunkTheme`, `EvalConfig` and `EvalCase` have **never** been on any looprun barrel, before or after
+`AssembledPromptTheme`, `EvalConfig` and `EvalCase` have **never** been on any looprun barrel, before or after
 this release. They are not a shim problem — **the shim is clean** — and the affected sites are more
 consequential than that:
 
 | name | imported from | real sites |
 |---|---|---|
-| `TrunkTheme` | `looprun` / `@looprun-ai/core` | **the whole Atlas v0.6.0 spec set** — `benchmarks/atlas/v0.6.0/specs/*/theme.ts` + `*/index.ts` across ~20 preset directories, plus `v0.6.1/specs/atlas-r2/`, `atlas/*/harness/src/load.ts`, and `tau2-telecom/harness/telecom/src/agents/telecom/theme.ts` (94 occurrences in 39 files) |
+| `AssembledPromptTheme` | `looprun` / `@looprun-ai/core` | **the whole Atlas v0.6.0 spec set** — `benchmarks/atlas/v0.6.0/specs/*/theme.ts` + `*/index.ts` across ~20 preset directories, plus `v0.6.1/specs/atlas-r2/`, `atlas/*/harness/src/load.ts`, and `tau2-telecom/harness/telecom/src/agents/telecom/theme.ts` (94 occurrences in 39 files) |
 | `EvalConfig` | `@looprun-ai/eval` | `tau2-telecom/harness/telecom/looprun.eval.config.ts:9` (used at `:14`) |
 | `EvalCase` | `@looprun-ai/eval` | `tau2-telecom/harness/telecom/evals/cases.ts:19` (used at `:21`) |
 
 Stated plainly: **the Atlas v0.6.0 spec set — the code behind this README's `governed 96.5` headline —
 does not typecheck against any published looprun, and did not before this release either.** Every
-`theme.ts` needs `TrunkTheme` defined locally (it is a structural type; declare the shape the theme
+`theme.ts` needs `AssembledPromptTheme` defined locally (it is a structural type; declare the shape the theme
 object already satisfies), and the two τ²-telecom files need the same for `EvalConfig`/`EvalCase`.
 This is pre-existing and **not caused by the simplification** — but a maintainer reading this table
 during the migration is exactly the right person to learn it.
@@ -138,7 +138,7 @@ surface that survived.
 
 | what | disposition |
 |---|---|
-| the `coherence` guard family + its trunk section | **deleted** (-396 LOC). The trunk fold is proven byte-identical across the change |
+| the `coherence` guard family + its assembled prompt section | **deleted** (-396 LOC). The assembled prompt fold is proven byte-identical across the change |
 | `compileSpec` and the mastra compile primitives | **internal to `@looprun-ai/mastra`** — not on any barrel. Use `LoopRunAgent` or `runSpecConversation` |
 | `createOpenAiHandler` | **module-local to `@looprun-ai/server`**. The same fetch-style handler is reachable as `createModelServer(...).handler` |
 | `CaseDump` | **module-local to `@looprun-ai/eval`**. The on-disk `cases.jsonl` shape is unchanged; only the exported type name is gone |

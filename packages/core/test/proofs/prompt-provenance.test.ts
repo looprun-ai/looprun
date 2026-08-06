@@ -1,5 +1,5 @@
 /**
- * Trunk PROVENANCE — the MECHANISM proof.
+ * AssembledPrompt PROVENANCE — the MECHANISM proof.
  *
  * WHERE THIS LIVES AND WHY. The mechanism (render → attributed table → fold) is runtime code and is
  * proven HERE, on the domain-neutral fixture domain/specs, exactly like every other guard-proof: it
@@ -7,21 +7,21 @@
  * business's content, belonging to that bundle's own test lane.
  *
  * THE INVARIANT THAT GATES EVERYTHING ELSE: the fold is byte-identical to the pre-refactor join. The
- * trunk-static law, the cacheable prefix, and every certified number measured against them depend
+ * shared-prefix law, the cacheable prefix, and every certified number measured against them depend
  * on it.
  */
 import { describe, expect, it } from 'vitest';
 import { AgentSpecBase } from '../../src/spec.js';
 import { argRequired, mustAccountFor, custom, forbidThisTurn, jargonScrub, maxCalls } from '../../src/guards/index.js';
-import { renderScopedSpecTrunk, renderTrunkBlocks } from '../../src/trunk.js';
-import { GUARD_KIND_SUBJECT, derivePolarity, deriveSubject, foldTrunk } from '../../src/trunk-fold.js';
-import type { TrunkBlock, TrunkLine } from '../../src/trunk-fold.js';
+import { renderAssembledPrompt, renderPromptBlocks } from '../../src/assembled-prompt.js';
+import { GUARD_KIND_SUBJECT, derivePolarity, deriveSubject, foldPrompt } from '../../src/prompt-fold.js';
+import type { PromptBlock, PromptLine } from '../../src/prompt-fold.js';
 import { FIXTURE_DOMAIN, FIXTURE_TOOL_NAMES, FixtureWorld } from '../../src/testing/index.js';
 
 const world = new FixtureWorld('seeded-media');
 
 /** Flatten the attributed table to its lines — the view every provenance assertion reads. */
-const trunkLines = (blocks: readonly TrunkBlock[]): TrunkLine[] => blocks.flatMap((b) => b.rows.flatMap((r) => r.lines));
+const assembledPromptLines = (blocks: readonly PromptBlock[]): PromptLine[] => blocks.flatMap((b) => b.rows.flatMap((r) => r.lines));
 
 function spec(): AgentSpecBase {
   return new AgentSpecBase({
@@ -42,24 +42,24 @@ function spec(): AgentSpecBase {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-describe('the trunk is a FOLD over an attributed table (byte-identity is the arbiter)', () => {
-  it('foldTrunk(renderTrunkBlocks(...)) IS renderScopedSpecTrunk(...)', () => {
+describe('the assembledPrompt is a FOLD over an attributed table (byte-identity is the arbiter)', () => {
+  it('foldPrompt(renderPromptBlocks(...)) IS renderAssembledPrompt(...)', () => {
     const s = spec();
-    expect(foldTrunk(renderTrunkBlocks(s, FIXTURE_DOMAIN))).toBe(renderScopedSpecTrunk(world, s, [], FIXTURE_DOMAIN));
+    expect(foldPrompt(renderPromptBlocks(s, FIXTURE_DOMAIN))).toBe(renderAssembledPrompt(world, s, [], FIXTURE_DOMAIN));
   });
 
-  it('every rendered byte is accounted for by some TrunkLine (nothing is invented by the fold)', () => {
-    const trunk = renderScopedSpecTrunk(world, spec(), [], FIXTURE_DOMAIN);
-    for (const l of trunkLines(renderTrunkBlocks(spec(), FIXTURE_DOMAIN))) {
-      expect(trunk).toContain(l.text);
+  it('every rendered byte is accounted for by some PromptLine (nothing is invented by the fold)', () => {
+    const assembledPrompt = renderAssembledPrompt(world, spec(), [], FIXTURE_DOMAIN);
+    for (const l of assembledPromptLines(renderPromptBlocks(spec(), FIXTURE_DOMAIN))) {
+      expect(assembledPrompt).toContain(l.text);
     }
   });
 
   it('the subject lexicon is inert on the BYTES — it only populates provenance', () => {
     const s = spec();
-    const bare = foldTrunk(renderTrunkBlocks(s, FIXTURE_DOMAIN));
-    const withLex = foldTrunk(
-      renderTrunkBlocks(s, FIXTURE_DOMAIN, { lexicon: [{ subject: 'output-language', re: /language/i }] }),
+    const bare = foldPrompt(renderPromptBlocks(s, FIXTURE_DOMAIN));
+    const withLex = foldPrompt(
+      renderPromptBlocks(s, FIXTURE_DOMAIN, { lexicon: [{ subject: 'output-language', re: /language/i }] }),
     );
     expect(withLex).toBe(bare);
   });
@@ -67,7 +67,7 @@ describe('the trunk is a FOLD over an attributed table (byte-identity is the arb
 
 // ─────────────────────────────────────────────────────────────────────────────
 describe('provenance: owner / section / hook / target survive the render', () => {
-  const lines = trunkLines(renderTrunkBlocks(spec(), FIXTURE_DOMAIN));
+  const lines = assembledPromptLines(renderPromptBlocks(spec(), FIXTURE_DOMAIN));
   const owners = new Set(lines.map((l) => l.owner));
 
   it('names every emitting layer', () => {
@@ -87,7 +87,7 @@ describe('provenance: owner / section / hook / target survive the render', () =>
   });
 
   it('a `## Tool rules` row keeps ONE line per guard (the `; ` composition is not one opaque string)', () => {
-    const blocks = renderTrunkBlocks(spec(), FIXTURE_DOMAIN);
+    const blocks = renderPromptBlocks(spec(), FIXTURE_DOMAIN);
     const toolBlock = blocks.find((b) => b.heading === '## Tool rules')!;
     const deleteRow = toolBlock.rows.find((r) => r.prefix.includes('deleteItem'))!;
     expect(deleteRow.lines.length).toBeGreaterThan(1);
@@ -127,7 +127,7 @@ describe('subject + polarity derivation is deterministic', () => {
   });
 
   it('the markers are ENGLISH-only by design — non-English prose derives `inform`', () => {
-    // The trunk is always rendered in English (the language clause tells the model which language to
+    // The assembled prompt is always rendered in English (the language clause tells the model which language to
     // REPLY in; it does not translate the prompt), so a pt-BR line has no marker to match.
     expect(derivePolarity('nunca invente um id')).toBe('inform');
   });
@@ -137,13 +137,13 @@ describe('subject + polarity derivation is deterministic', () => {
     s.addGuard('preTool', ['createItem'], custom({
       kind: 'houseStyleRule', dim: 'input', check: () => null, prose: () => 'follow the house style',
     }));
-    const l = trunkLines(renderTrunkBlocks(s, FIXTURE_DOMAIN)).find((x) => x.owner === 'guard:houseStyleRule')!;
+    const l = assembledPromptLines(renderPromptBlocks(s, FIXTURE_DOMAIN)).find((x) => x.owner === 'guard:houseStyleRule')!;
     expect(l.subject).toBeNull();
     expect(GUARD_KIND_SUBJECT.houseStyleRule).toBeUndefined();
   });
 
   it('every guard kind installed by AgentSpecBase itself has a subject (the always-on layer is covered)', () => {
-    const auto = trunkLines(renderTrunkBlocks(spec(), FIXTURE_DOMAIN))
+    const auto = assembledPromptLines(renderPromptBlocks(spec(), FIXTURE_DOMAIN))
       .filter((l) => l.owner.startsWith('guard:'));
     expect(auto.length).toBeGreaterThan(0);
     expect(auto.filter((l) => l.subject === null).map((l) => l.owner)).toEqual([]);
@@ -152,12 +152,12 @@ describe('subject + polarity derivation is deterministic', () => {
 
 // ─────────────────────────────────────────────────────────────────────────────
 describe('a reply MUTATOR carries no prose and therefore no bytes', () => {
-  it('installing a jargonScrub leaves the rendered trunk byte-identical', () => {
+  it('installing a jargonScrub leaves the rendered assembledPrompt byte-identical', () => {
     const s = spec();
-    const before = renderScopedSpecTrunk(world, s, [], FIXTURE_DOMAIN);
+    const before = renderAssembledPrompt(world, s, [], FIXTURE_DOMAIN);
     s.addMutator(jargonScrub({ SKU: 'item code' }), { id: 'agent:jargonScrub' });
-    // A `ReplyMutator` is `{ kind, apply }` — no `prose()`, so it never enters trunk.ts's fold.
-    expect(renderScopedSpecTrunk(world, s, [], FIXTURE_DOMAIN)).toBe(before);
+    // A `ReplyMutator` is `{ kind, apply }` — no `prose()`, so it never enters assembled-prompt.ts's fold.
+    expect(renderAssembledPrompt(world, s, [], FIXTURE_DOMAIN)).toBe(before);
   });
 });
 
@@ -167,21 +167,21 @@ describe('audit finding (i): an onInput rule does NOT render under a "reply" hea
     const s = spec();
     s.addGuard('onInput', 'any', maxCalls('createItem', 2, 'too many', { scope: 'conversation' }));
     s.addReplyCheck(mustAccountFor({ records: ['L-1'], outcome: 'any' }, 'account for it'));
-    const blocks = renderTrunkBlocks(s, FIXTURE_DOMAIN);
+    const blocks = renderPromptBlocks(s, FIXTURE_DOMAIN);
     const headings = blocks.map((b) => b.heading);
     expect(headings).toContain('## Input rules (govern the incoming message — checked before you act)');
     const input = blocks.find((b) => b.heading?.startsWith('## Input rules'))!;
     expect(input.rows.flatMap((r) => r.lines).every((l) => l.hook === 'onInput')).toBe(true);
     const reply = blocks.find((b) => b.heading?.startsWith('## Reply rules'))!;
     expect(reply.rows.flatMap((r) => r.lines).every((l) => l.hook === 'onReply')).toBe(true);
-    // Trunk-static ordering: Input then Reply, both after Tool rules and before Behavior.
+    // AssembledPrompt-static ordering: Input then Reply, both after Tool rules and before Behavior.
     expect(headings.indexOf('## Tool rules')).toBeLessThan(headings.findIndex((h) => h?.startsWith('## Input rules')));
     expect(headings.findIndex((h) => h?.startsWith('## Input rules'))).toBeLessThan(headings.findIndex((h) => h?.startsWith('## Reply rules')));
   });
 
   it('BYTE-FREE for a spec with no onInput guard (every shipping bundle)', () => {
     const s = spec();
-    expect(renderTrunkBlocks(s, FIXTURE_DOMAIN).some((b) => b.heading?.startsWith('## Input rules'))).toBe(false);
+    expect(renderPromptBlocks(s, FIXTURE_DOMAIN).some((b) => b.heading?.startsWith('## Input rules'))).toBe(false);
   });
 });
 
@@ -190,7 +190,7 @@ describe('audit finding (d): the ruleSections dedup is NOT global — and the ta
   it('a prose bound to N tools renders N times, once per tool row', () => {
     const s = spec();
     s.addGuard('preTool', ['createItem', 'updateItem', 'setPrimary'], argRequired('id'));
-    const lines = trunkLines(renderTrunkBlocks(s, FIXTURE_DOMAIN)).filter((l) => l.owner === 'guard:argRequired');
+    const lines = assembledPromptLines(renderPromptBlocks(s, FIXTURE_DOMAIN)).filter((l) => l.owner === 'guard:argRequired');
     expect(lines).toHaveLength(3);
     expect(new Set(lines.map((l) => l.text)).size).toBe(1); // the SAME bytes, three times
   });
@@ -201,7 +201,7 @@ describe('audit finding (d): the ruleSections dedup is NOT global — and the ta
     const p = () => 'do the same thing';
     s.addGuard('preTool', 'any', custom({ kind: 'k1', dim: 'run', check: () => null, prose: p }));
     s.addReplyCheck(custom({ kind: 'k2', dim: 'behavior', check: () => null, prose: p }));
-    const hits = trunkLines(renderTrunkBlocks(s, FIXTURE_DOMAIN)).filter((l) => l.text === 'do the same thing');
+    const hits = assembledPromptLines(renderPromptBlocks(s, FIXTURE_DOMAIN)).filter((l) => l.text === 'do the same thing');
     expect(hits).toHaveLength(1);
     expect(hits[0].section).toBe('## Global tool rules');
   });
@@ -217,14 +217,14 @@ describe('audit finding (ii): a prose written as a full SENTENCE breaks `; ` com
       // '.', so the interior sentence break survives into the `; `-joined row.
       prose: () => 'Creating an item needs a title. Ask for one when it is missing.',
     }));
-    const blocks = renderTrunkBlocks(s, FIXTURE_DOMAIN);
+    const blocks = renderPromptBlocks(s, FIXTURE_DOMAIN);
     const rows = blocks.find((b) => b.heading === '## Tool rules')!.rows.filter((r) => r.prefix.includes('createItem'));
     const fragment = rows.flatMap((r) => r.lines).find((l) => l.owner === 'guard:sentenceProse')!;
     expect(/[.!?]\s/.test(fragment.text)).toBe(true);
   });
 
   it('a fragment-shaped prose (the correct form) carries no interior sentence break', () => {
-    const l = trunkLines(renderTrunkBlocks(spec(), FIXTURE_DOMAIN)).find((x) => x.owner === 'guard:destructiveThrottle')!;
+    const l = assembledPromptLines(renderPromptBlocks(spec(), FIXTURE_DOMAIN)).find((x) => x.owner === 'guard:destructiveThrottle')!;
     expect(/[.!?]\s/.test(l.text)).toBe(false);
   });
 });
@@ -233,17 +233,17 @@ describe('audit finding (ii): a prose written as a full SENTENCE breaks `; ` com
 describe('regressions the refactor must not introduce', () => {
   it('a spec with no scope / no flow / no directives renders without those blocks', () => {
     const s = new AgentSpecBase({ id: 'bare', mode: 'M', persona: 'p', tools: ['listItems'] });
-    const headings = renderTrunkBlocks(s, FIXTURE_DOMAIN).map((b) => b.heading);
+    const headings = renderPromptBlocks(s, FIXTURE_DOMAIN).map((b) => b.heading);
     expect(headings).not.toContain('## Scope precedence (OUTRANKS every rule below)');
     expect(headings.some((h) => h?.startsWith('## Flow'))).toBe(false);
     expect(headings.some((h) => h?.startsWith('## Governance'))).toBe(false);
-    expect(foldTrunk(renderTrunkBlocks(s, FIXTURE_DOMAIN))).toBe(renderScopedSpecTrunk(world, s, [], FIXTURE_DOMAIN));
+    expect(foldPrompt(renderPromptBlocks(s, FIXTURE_DOMAIN))).toBe(renderAssembledPrompt(world, s, [], FIXTURE_DOMAIN));
   });
 
   it('a tool-targeted onReply guard still renders under `## Tool rules`, not `## Reply rules`', () => {
     const s = spec();
     s.addGuard('onReply', ['createItem'], mustAccountFor({ records: ['L-1'], outcome: 'any' }, 'account for it'));
-    const l = trunkLines(renderTrunkBlocks(s, FIXTURE_DOMAIN)).find((x) => x.owner === 'guard:mustAccountFor')!;
+    const l = assembledPromptLines(renderPromptBlocks(s, FIXTURE_DOMAIN)).find((x) => x.owner === 'guard:mustAccountFor')!;
     expect(l.section).toBe('## Tool rules');
     expect(l.hook).toBe('onReply');
   });
@@ -251,7 +251,7 @@ describe('regressions the refactor must not introduce', () => {
   it('a forbidThisTurn binding is attributed to its own kind and tool', () => {
     const s = spec();
     s.addGuard('preTool', ['purgeAll'], forbidThisTurn('not now'));
-    const l = trunkLines(renderTrunkBlocks(s, FIXTURE_DOMAIN)).find((x) => x.owner === 'guard:forbidThisTurn')!;
+    const l = assembledPromptLines(renderPromptBlocks(s, FIXTURE_DOMAIN)).find((x) => x.owner === 'guard:forbidThisTurn')!;
     expect(l.tool).toBe('purgeAll');
     expect(l.subject).toBe('tool-forbidden');
   });

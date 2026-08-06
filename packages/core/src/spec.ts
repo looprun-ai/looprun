@@ -22,7 +22,7 @@
  *     confirmFirst (id `base:confirmFirst`) + destructiveThrottle (id `base:destructiveThrottle`).
  * Per-tool schema guards (argRequired/argFormat) are AUTHORED explicitly by the spec — there is no
  * auto-schema layer. The `minimal:`/`base:` id namespaces are load-bearing for resolveBindings layer
- * ordering + trunk prose order. resolveBindings sorts each hook agent → full → base → minimal so
+ * ordering + assembled prompt prose order. resolveBindings sorts each hook agent → full → base → minimal so
  * an agent correction always wins.
  */
 import { claimIsComplete, claimIsGrounded, confirmFirst, degenerationGuard, destructiveThrottle, noDuplicateCall, precondition } from './guards/index.js';
@@ -30,7 +30,7 @@ import { GuardExecutionError } from './rules.js';
 import { assertNoCoreOutcomeShadow } from './runtime/claims.js';
 import { approvalCode } from './runtime/approval-request.js';
 import type { AgentWorld, Dim, Guard, GuardCtx, ObservedCall, ReplyMutator, SpatialEdge } from './rules.js';
-import type { DomainContract } from './trunk.js';
+import type { DomainContract } from './assembled-prompt.js';
 import type { SamplingSettings } from './model-params.js';
 
 export type Hook = 'onInput' | 'preTool' | 'postTool' | 'onReply';
@@ -50,7 +50,7 @@ export interface StateDirective {
 }
 
 /**
- * The per-agent SCOPE declaration — the source of the `## Scope precedence` trunk block.
+ * The per-agent SCOPE declaration — the source of the `## Scope precedence` assembled prompt block.
  *
  * Authored by the generator skill ON THE SPEC (never derived by the runtime from a domain-wide
  * ownership map): scope is an agent-level fact, so the domain contract stays free of anything
@@ -81,7 +81,7 @@ export interface GuardBinding {
    *
    * CHECK: the backend resolves onInput/onReply with no tool, and `resolveBindings` short-circuits on
    * `tool === undefined`, so target is never consulted to decide whether the guard RUNS.
-   * RENDER: `trunk.ts` reads target for EVERY hook. Naming tools → `## Tool rules`, grouped by tool;
+   * RENDER: `assembled-prompt.ts` reads target for EVERY hook. Naming tools → `## Tool rules`, grouped by tool;
    * `'any'` → `## Global tool rules` (preTool/postTool), `## Input rules` (onInput) or `## Reply
    * rules` (onReply). So an onReply binding that names tools RUNS on every reply but prints its prose
    * under `## Tool rules` — use `'any'` on onInput/onReply unless that section is what you want.
@@ -152,9 +152,9 @@ export interface AgentSpec {
   /** THIS agent's persona/role line (persona-on-spec law: per-agent, owned by the spec — never a
    *  shared/global persona; the domain-common VOICE lives on the domain). Rendered as the FIRST
    *  `## Behavior` bullet — per-agent divergence as late as possible so the domain's agents share a
-   *  maximal static trunk prefix (trunk-static law). MUST be case-invariant (state-in-tail law). */
+   *  maximal static assembled prompt prefix (shared-prefix law). MUST be case-invariant (state-in-tail law). */
   persona: string;
-  /** Optional scope declaration — when present the trunk renders `## Scope precedence` ABOVE
+  /** Optional scope declaration — when present the assembled prompt renders `## Scope precedence` ABOVE
    *  `## Core rules` (position is the measured lever). Absent ⇒ no scope block at all. */
   scope?: AgentScope;
   surface: {
@@ -175,7 +175,7 @@ export interface AgentSpec {
    *  question the user can read and answer. */
   destructiveLabels?: Record<string, string>;
   /** The LANGUAGE / JUDGEMENT layer: prose whose rules have NO possible `check()` (redefined
-   *  ). Every rule that HAS a guard states itself in the trunk from that guard's own
+   *  ). Every rule that HAS a guard states itself in the assembled prompt from that guard's own
    *  `prose()` — the PROSE-RENDERING RULE renders EVERY hook now, `onInput`/`onReply` included
    *  (`## Reply rules`). So `behavior[]` is the declared residue of the proxy sweep: what stays
    *  UNCHECKABLE after a decidable proxy was attempted (tone, how much context to give, what reads
@@ -184,7 +184,7 @@ export interface AgentSpec {
    *  Rendered as `## Behavior`, after the per-agent `persona` bullet. */
   behavior: string[];
   /** Optional reference to the DOMAIN contract this spec belongs to. Domain contracts stay domain-level objects
-   *  (1 domain : N agents, byte-identical shared trunk head — trunk-static law); this field lets a
+   *  (1 domain : N agents, byte-identical shared assembled prompt head — shared-prefix law); this field lets a
    *  generated bundle point every spec at the SAME domain object so a host can construct an agent
    *  from the spec alone. A host-provided domain always overrides it. */
   contract?: DomainContract;
@@ -211,7 +211,7 @@ const LAYER_ORDER: Record<Layer, number> = { agent: 0, full: 1, base: 2, minimal
  *   · `tool`/`args` are populated ONLY on the tool hooks → a `spatial`/`input`/`run` guard installed on
  *     onReply reads `ctx.tool === undefined`; every kind that keys on the called tool bails out first.
  * A guard that cannot fire is worse than an absent one: it still reads as coverage in the spec header
- * and in the rendered trunk prose. So the matrix is enforced in BOTH directions and fails at
+ * and in the rendered assembled prompt prose. So the matrix is enforced in BOTH directions and fails at
  * construction, exactly like the risk-family kinds' misconfiguration throws.
  */
 const DIM_HOOKS: Record<Dim, readonly Hook[]> = {
@@ -358,7 +358,7 @@ export interface AgentSpecConfig {
  * degenerationGuard) and, iff `destructiveTools` is non-empty, the destructive-safety protocol
  * (confirmFirst + destructiveThrottle) on those tools — confirmFirst keyed per-tool by
  * `cfg.confirmMechanism`. Ids and install order are byte-stable (`minimal:*` then `base:*`), which is
- * what makes the layer-sorted trunk prose and the resolveBindings order deterministic.
+ * what makes the layer-sorted assembled prompt prose and the resolveBindings order deterministic.
  */
 export class AgentSpecBase implements AgentSpec {
   readonly id: string;
@@ -393,11 +393,11 @@ export class AgentSpecBase implements AgentSpec {
     this.mode = cfg.mode;
     this.persona = cfg.persona;
     if (cfg.scope) this.scope = { lane: cfg.scope.lane, others: [...cfg.scope.others] };
-    // DESIGN RULE: every agent renders its OWN scoped prompt — no shared/global persona trunk.
+    // DESIGN RULE: every agent renders its OWN scoped prompt — no shared/global personan assembled prompt.
     this.surface = {
       tools: [...cfg.tools],
       // Domain-agnostic: a spec never bakes a domain. If it ships no own renderer, the RUNTIME renders
-      // the scoped trunk with the host-injected domain (renderScopedSpecTrunk) — so the trunk carries
+      // the scoped assembled prompt with the host-injected domain (renderAssembledPrompt) — so the assembled prompt carries
       // ONLY what the spec/domain declare, and the domain skin stays outside the AgentSpec.
       // `domain` on the spec is a REFERENCE, not content.
       systemPrompt: cfg.systemPrompt,
@@ -423,7 +423,7 @@ export class AgentSpecBase implements AgentSpec {
     this.confirmMechanism = { ...(cfg.confirmMechanism ?? {}) };
     this.destructiveLabels = { ...(cfg.destructiveLabels ?? {}) };
     this.destructiveWhen = { ...(cfg.destructiveWhen ?? {}) };
-    // Install order is load-bearing (byte-stable trunk): universal invariants first, destructive layer
+    // Install order is load-bearing (byte-stable assembled prompt): universal invariants first, destructive layer
     // second.
     this.installMinimal();
     this.installBase();
@@ -434,7 +434,7 @@ export class AgentSpecBase implements AgentSpec {
     // Output-channel degeneration lint (a param-free artifact-shape lint — it takes no patterns).
     // FIRST among the onReply minimal guards: a degenerate reply must be re-driven before any
     // content-level check reasons about it. Its prose renders under `## Reply rules` (every hook's prose
-    // lands in the trunk; `target:'any'` onReply prose renders there — see trunk.ts's PROSE-RENDERING
+    // lands in the assembled prompt; `target:'any'` onReply prose renders there — see assembled-prompt.ts's PROSE-RENDERING
     // RULE and GUARDS.md §2).
     this.addGuard('onReply', 'any', degenerationGuard(), { layer: 'minimal', id: 'minimal:degenerationGuard' });
     // Two reply-level guarantees are deliberately NOT minimal guards:

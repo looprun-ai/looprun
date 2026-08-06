@@ -32,7 +32,7 @@ removed symbols.
 identifier the file names is verified present in `src/guards/catalog.ts`; names of kinds that do not
 exist were removed rather than annotated. No rule, threshold, hook, dim or classification changed. One
 factual correction: §2 named `ruleSections`, which does not exist — the function is `ruleBlocks`
-(`src/trunk.ts`).
+(`src/assembled-prompt.ts`).
 
 **3. `TurnClaim` → `Intention`.** One type alias carried two names. `TurnClaim` was never exported
 from `src/index.ts` or `src/internal.ts`, so this is not a public-surface change.

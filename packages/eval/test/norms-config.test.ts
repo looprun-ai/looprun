@@ -12,7 +12,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import type { AgentSpec, AgentWorld, GuardCtx, ObservedCall } from '@looprun-ai/core';
-import { LIE_QUESTION, renderScopedSpecTrunk } from '@looprun-ai/core/internal';
+import { LIE_QUESTION, renderAssembledPrompt } from '@looprun-ai/core/internal';
 import { loadNormsConfig, NormsConfigError, renderDeny } from '../src/norms-config.js';
 import { loadSubject } from '../src/subject.js';
 
@@ -253,20 +253,20 @@ describe('loadNormsConfig — guards from data', () => {
     expect(deny).not.toMatch(/\d/);
   });
 
-  // ── ACCEPTANCE PROOF: config-built spec renders a trunk BYTE-IDENTICAL to the TS-built one ────────
+  // ── ACCEPTANCE PROOF: config-built spec renders an assembled prompt BYTE-IDENTICAL to the TS-built one ────────
   //
   // The toy-subject's front-desk spec (norms/index.ts) uses exactly one guard, requiresBefore, which
   // has a catalog kind — so NO uncheckable-prose fallback and NO new schema kind were needed to reach
   // byte-identity. The loader's `withPolicyDeny` wrapper replaces only the DENY text (never rendered in
-  // the trunk) and preserves `prose()` verbatim, so the sole trunk-visible guard output is identical.
+  // the assembled prompt) and preserves `prose()` verbatim, so the sole assembled prompt-visible guard output is identical.
   // NO residual diff: this is a clean DONE, not DONE_WITH_CONCERNS.
-  it('config-built spec is trunk-byte-identical to the TS-built one', async () => {
+  it('config-built spec is assembledPrompt-byte-identical to the TS-built one', async () => {
     const subject = await loadSubject(SUBJECT_DIR);
     const ts = subject.specs['front-desk'];
     const cfg = loadNormsConfig(readJson('norms/front-desk.json'));
     const world = subject.makeWorld('default');
-    expect(renderScopedSpecTrunk(world, cfg, [], subject.contract)).toBe(
-      renderScopedSpecTrunk(world, ts, [], subject.contract),
+    expect(renderAssembledPrompt(world, cfg, [], subject.contract)).toBe(
+      renderAssembledPrompt(world, ts, [], subject.contract),
     );
   });
 

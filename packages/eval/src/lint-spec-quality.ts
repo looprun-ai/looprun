@@ -3,7 +3,7 @@
  *
  * THE DIVIDING LINE. What lives here is a law about the ARTIFACT the engine runs: a guard that can
  * never fire, a tool nothing can execute, a sentence that names something absent, an ordering the
- * trunk asserts and nothing enforces. Authoring conventions of the generator skill — comment
+ * assembled prompt asserts and nothing enforces. Authoring conventions of the generator skill — comment
  * markers, which layer a rule belongs to — are NOT here; they are the skill's opinions and they
  * ship with the skill.
  *
@@ -129,7 +129,7 @@ export function lintSpecQuality(specs: Record<string, AgentSpec>, toolDefs: Tool
       }
     }
 
-    // ── PROSE-ORDERING-WITHOUT-GATE — the trunk asserts an order and nothing enforces it. Either
+    // ── PROSE-ORDERING-WITHOUT-GATE — the assembled prompt asserts an order and nothing enforces it. Either
     //    install the gate (the ordering is real) or drop the claim (it is not).
     const graph = requiresGraph(spec);
     for (const { where, text } of renderedSentences(spec)) {
@@ -148,7 +148,7 @@ export function lintSpecQuality(specs: Record<string, AgentSpec>, toolDefs: Tool
     }
 
     // ── FLOW-EDGE-WITHOUT-GATE — `spec.flow` renders as the strongest ordering sentence in the whole
-    //    trunk ("do not skip a step"). An edge nothing enforces contradicts every rule that permits
+    //    assembled prompt ("do not skip a step"). An edge nothing enforces contradicts every rule that permits
     //    the downstream tool on its own, and the contradiction is invisible piece by piece.
     const gatedAny = gatedTools(spec);
     for (const edge of spec.flow ?? []) {

@@ -72,7 +72,7 @@ const INTERNAL = [
   // The guard vocabulary as DATA, read by the chapter generator (outline §6, decision 4).
   // Documentation infrastructure, deliberately NOT on the taught surface.
   'GUARD_CATALOG', 'GuardCatalogEntry',
-  'GuardBinding', 'resolveGuards', 'renderScopedSpecTrunk',
+  'GuardBinding', 'resolveGuards', 'renderAssembledPrompt',
   'normalizeModelParams', 'resolveModelSettings',
   'TokenUsage', 'RuntimeTurnRecord',
   'beginTurn', 'createLedger', 'clearDeliveredTerminal', 'pruneSupersededTerminals', 'recordTerminal', 'recordTerminalCall',

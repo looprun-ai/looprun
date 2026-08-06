@@ -7,8 +7,8 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { fakeLLM } from '@looprun-ai/mastra/testing';
-import { renderScopedSpecTrunk } from '@looprun-ai/core/internal';
-import { checkTrunkStatic, loadSubject, readDeclaredTarget, validateSubject } from '../src/subject.js';
+import { renderAssembledPrompt } from '@looprun-ai/core/internal';
+import { checkPromptStatic, loadSubject, readDeclaredTarget, validateSubject } from '../src/subject.js';
 import type { Subject } from '../src/subject.js';
 import { runCase, toolCallMatches, evaluateInvariants } from '../src/run.js';
 import { stripGovernance } from '../src/ungoverned.js';
@@ -168,9 +168,9 @@ describe('subject runner (fixture subject, scripted model)', () => {
     const spec = subject.specs['front-desk'];
     const stripped = stripGovernance(spec, subject.contract);
 
-    // PROMPT VIEW — the variant's system prompt is the governed trunk, byte for byte.
+    // PROMPT VIEW — the variant's system prompt is the governed assembled prompt, byte for byte.
     const world = subject.makeWorld('default');
-    const governedPrompt = renderScopedSpecTrunk(world, spec, [], subject.contract);
+    const governedPrompt = renderAssembledPrompt(world, spec, [], subject.contract);
     expect(stripped.spec.surface.systemPrompt).toBeDefined();
     expect(stripped.spec.surface.systemPrompt!(world, [])).toBe(governedPrompt);
     // the prose survived: rule sections present in the variant's prompt
@@ -198,8 +198,8 @@ describe('subject runner (fixture subject, scripted model)', () => {
     expect(dump.turns.flatMap((t) => t.guardEvents)).toEqual([]);
   });
 
-  it('trunk-static gate: byte-identical trunks across presets + shared head across agents', async () => {
+  it('shared-prefix gate: byte-identical assembledPrompts across presets + shared head across agents', async () => {
     const fresh = await loadSubject(SUBJECT_DIR);
-    expect(checkTrunkStatic(fresh, ['default', 'booked'])).toEqual([]);
+    expect(checkPromptStatic(fresh, ['default', 'booked'])).toEqual([]);
   });
 });

@@ -3,13 +3,13 @@
  *
  * The business-COMMON layer: shared voice, core invariants, language clause, state-render mapping,
  * and the honest-abstain closure. ONE contract object per domain, referenced by every spec
- * (trunk-static law: the voice + invariants open the trunk, byte-identical across agents).
+ * (shared-prefix law: the voice + invariants open the assembled prompt, byte-identical across agents).
  * NO per-agent role line lives here (persona-on-spec law — each spec carries its own role field).
  *
  * DEDUP CONTRACT (prompt-budget rule): every rule that holds for ALL agents of this domain lives
  * HERE, ONCE. A spec's behavior[] may only SPECIALIZE these (its tools, ids, caps) — it never
  * re-declares a contract invariant. (The domain currently has one agent; the split still follows the
- * law so a second agent inherits the same trunk head unchanged.)
+ * law so a second agent inherits the same assembled prompt head unchanged.)
  */
 import type { AgentWorld, DomainContract } from 'looprun';
 

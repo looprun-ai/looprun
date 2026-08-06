@@ -24,7 +24,7 @@ OUT of scope (different work, later session)
 Diff weight by area — this is why the modules are ordered the way they are:
 
 ```
-packages/core     +3048 −2293  ████████████████████  47 files   API + guards + trunk
+packages/core     +3048 −2293  ████████████████████  47 files   API + guards + assembled prompt
 docs/tutorial     +4255     0  ███████████████████   28 files   the new front door
 packages/mastra    +334  −149  ███                   17 files   the facade
 packages/server    +184   −20  ██                    10 files
@@ -51,7 +51,7 @@ docs (old)            0  −1121 ▼▼▼▼▼▼                 9 files   de
 | M0 | Orientation | package graph, runtime flow, where a turn actually executes | read-only | PENDING |
 | M1 | Public API contract | barrel = tutorial contract, `/internal` seam, surface locks, declaration-emit | core +78/−76, internal 100L | PENDING |
 | M2 | Guards | 1427-line file → 8 files + `GUARD_CATALOG` as data | 1782 new lines | PENDING |
-| M3 | Coherence cut & trunk fold | what was erased, the byte-invariance proof | −428 / +184 | PENDING |
+| M3 | Coherence cut & assembled prompt fold | what was erased, the byte-invariance proof | −428 / +184 | PENDING |
 | M4 | Mastra facade | `LoopRunAgent`, agent.ts split, meta mirror | 551→448 +151 | PENDING |
 | M5 | Peripheral barrels | models / eval / server / vercel surfaces | 4 packages | PENDING |
 | M6 | Tutorial + snippets | 6 chapters, compiled snippet package, generated ch04 | 4255 lines | PENDING |
@@ -117,14 +117,14 @@ the single vocabulary of record.
 
 ---
 
-## M3 — Coherence cut & trunk fold
+## M3 — Coherence cut & assembled prompt fold
 
 **Goal:** the most aggressive deletion in the PR, and the proof technique that made it safe.
 
 | Item | Detail |
 |---|---|
 | Commits | `55b8ac5` `d56dc8e` |
-| Files | deleted `packages/core/src/coherence.ts` (−428), new `packages/core/src/trunk-fold.ts` (184L), `packages/core/src/trunk.ts` |
+| Files | deleted `packages/core/src/coherence.ts` (−428), new `packages/core/src/prompt-fold.ts` (184L), `packages/core/src/assembled-prompt.ts` |
 | Show | what `findContradictions` / polarity lexicon did, and the evidence of zero usage |
 | Show | the cross-commit byte-invariance proof of the fold (sha256 `f695126…`) |
 | Question to Marcos | is the fold a concept the tutorial should teach later, or permanently internal? |

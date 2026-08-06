@@ -114,7 +114,7 @@ can never demonstrate.
 | `model` | an AI-SDK `LanguageModel`, or a Mastra router string | required. looprun never picks one |
 | `world` | the `AgentWorld` instance | required, and it is **one instance for all turns** — not a factory. `LoopRunAgent` takes the factory; this runner is one conversation by definition |
 | `toolDefs` | the `ToolDef[]` of the surface | required |
-| `contract` | a `DomainContract` override | optional — defaults to `spec.contract`. With neither, the call **throws** at once rather than rendering a prompt with no voice. The one exception is a spec carrying its own `surface.systemPrompt`, which bypasses the trunk renderer entirely — an escape hatch the spec lint rejects for generated specs, and which no chapter teaches |
+| `contract` | a `DomainContract` override | optional — defaults to `spec.contract`. With neither, the call **throws** at once rather than rendering a prompt with no voice. The one exception is a spec carrying its own `surface.systemPrompt`, which bypasses the assembled prompt renderer entirely — an escape hatch the spec lint rejects for generated specs, and which no chapter teaches |
 | `modelParams` | spread into every `generate()` of the turn | §3 — this is where pinning goes |
 | `stopOnRepeatedToolCall` | abort the turn on an identical repeated call | default false; turn it **on for local models** (chapter 06) |
 | `maxSteps` / `redrives` | loop budgets | `spec.controls` wins over both when it sets them |
@@ -518,7 +518,7 @@ Five checks hide behind that one line, and they answer five different questions:
 | function | question it answers | a finding reads like |
 |---|---|---|
 | `lintPaths(paths)` | is the spec/guard source **pure**? No clock, no entropy, no network, no LLM call; no `/g` regex used with `.test()`; no guard reading user text; no `persona:` in a contract file | `file.ts:12 [purity] banned token Date.now — guard surfaces must stay clock/entropy/network/LLM-free` |
-| `lintSpecLaws(specs)` | is each spec coherent (it runs `validateSpec`), and does it use the trunk renderer rather than its own `systemPrompt`? | `spec "scheduler": AgentSpec "scheduler": 17 tools exceed the ≤15 surface law — split the agent by TOOL-NEED (never by user intent).` |
+| `lintSpecLaws(specs)` | is each spec coherent (it runs `validateSpec`), and does it use the assembled prompt renderer rather than its own `systemPrompt`? | `spec "scheduler": AgentSpec "scheduler": 17 tools exceed the ≤15 surface law — split the agent by TOOL-NEED (never by user intent).` |
 | `lintSpecExecution(specs)` | do the assembled guards actually work together — no unsatisfiable reply pairs, no ordering cycles? It **executes** the specs' own `check()` functions over synthetic replies, so it covers `custom` guards too | `spec "scheduler": UNSAT-RISK: guard A requires "…" while guard B vetoes it (…)` · `spec "scheduler": ORDER-CYCLE: a → b → a …` |
 | `lintSpecQuality(specs, toolDefs)` | are any guards inert, bound to absent tools, or ordering something nothing enforces? | `spec "scheduler": GUARD-TARGET-OFF-SURFACE: guard agent:x targets 'y', which is on no surface — the guard can never fire` |
 | `lintSubject(subject)` | does the **exam** cover what shipped, and does the **world** tell the runtime the truth? | see below |
@@ -601,15 +601,15 @@ How the runner turns that target into a client, because it changes the numbers:
 | a `localhost` base-url | OpenAI-compatible | `pinnedDecoding({ maxOutputTokens: 2048 })` **and** the repeated-tool-call stop — the local runaway brakes, applied for you |
 | anything else | OpenAI-compatible (`--model` · `--base-url` · `--api-key-env`, else `MODEL_API_KEY`, else the literal `"local"`) | `temperature: 0` |
 
-Before any of that, `run` may refuse to start on a **trunk-static** failure: it renders each spec's
-trunk under two different presets and fails loudly if they differ, because a trunk that moves with
+Before any of that, `run` may refuse to start on a **shared-prefix** failure: it renders each spec's
+assembled prompt under two different presets and fails loudly if they differ, because an assembled prompt that moves with
 world state is a prompt prefix no cache can reuse — and a warm local run depends on exactly that
 reuse. Two limits worth knowing, because the gate is quieter than it looks:
 
 - **It only runs when the case pack declares at least two distinct presets.** A single-preset subject
   has nothing to compare, so it is not gated at all — the tutorial's subject earns the check by
   declaring `default` and `empty-calendar`.
-- With **two or more specs**, it also fails when their shared trunk *head* is under 200 bytes: every
+- With **two or more specs**, it also fails when their shared assembled prompt *head* is under 200 bytes: every
   agent of a domain must open with the same contract voice, or the cacheable prefix is per-agent
   instead of per-domain.
 

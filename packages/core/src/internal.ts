@@ -33,8 +33,8 @@ export type { GuardCatalogEntry } from './guards/catalog.js';
 export { resolveGuards } from './spec.js';
 export type { GuardBinding } from './spec.js';
 
-// The scoped trunk renderer — the bytes a spec's system prompt is made of.
-export { renderScopedSpecTrunk } from './trunk.js';
+// The scoped assembled prompt renderer — the bytes a spec's system prompt is made of.
+export { renderAssembledPrompt } from './assembled-prompt.js';
 
 // Model call settings.
 export { normalizeModelParams, resolveModelSettings } from './model-params.js';

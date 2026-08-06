@@ -4,7 +4,7 @@
  *
  * A description states the SHAPE of the call — what the tool does, what it returns, which argument
  * carries what. The POLICY around a call (the vault-folder allowlist, the confirm-first protocol)
- * is a GUARD's own prose, rendered into the trunk under "## Tool rules"; repeating it here would
+ * is a GUARD's own prose, rendered into the assembled prompt under "## Tool rules"; repeating it here would
  * state one rule twice to the same model, in the same prompt.
  */
 import type { ToolDef } from 'looprun';

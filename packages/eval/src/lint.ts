@@ -88,7 +88,7 @@ export function lintSpecLaws(specs: Record<string, AgentSpec>): string[] {
   for (const [id, spec] of Object.entries(specs ?? {})) {
     for (const w of validateSpec(spec)) out.push(`spec "${id}": ${w.message}`);
     if (spec.surface.systemPrompt) {
-      out.push(`spec "${id}": carries its own systemPrompt — generated specs must use the trunk renderer (contract + spec only)`);
+      out.push(`spec "${id}": carries its own systemPrompt — generated specs must use the assembled prompt renderer (contract + spec only)`);
     }
     // A MINTED id is positional: `${layer}:${kind}#${n}` counts installs, so inserting one guard above
     // silently re-points every case and every profile keyed on the ids below it. An explicit id is the

@@ -4,7 +4,7 @@
  * The server deliberately implements the protocol as a FACADE: the harness believes it is talking
  * to a model, while a full governed turn runs behind the endpoint. Incoming `system` messages,
  * `tools`, `tool_choice` and sampling params are therefore ignored by design — the AgentSpec owns
- * the trunk, the tool surface and the sampling (see README).
+ * the assembled prompt, the tool surface and the sampling (see README).
  */
 import type { ObservedCall } from '@looprun-ai/core';
 import type { LoopRunAgent } from '@looprun-ai/mastra';

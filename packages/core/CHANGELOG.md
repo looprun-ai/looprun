@@ -87,12 +87,12 @@
   into one version group, so the whole set moves together.
 
   **What moved rather than vanished.** `@looprun-ai/core/internal` is a new, explicitly unstable
-  subpath carrying the runtime primitives (ledger, turn machine, trunk internals, `GUARD_CATALOG`,
+  subpath carrying the runtime primitives (ledger, turn machine, assembled prompt internals, `GUARD_CATALOG`,
   `GuardExecutionError`). It exists so in-repo tooling and forks keep working; it carries no
   compatibility promise across releases.
 
-  **What was cut outright.** The `coherence` guard family and its trunk section were removed
-  (-396 LOC); the trunk fold was proven byte-identical across the change. Runtime helpers that had
+  **What was cut outright.** The `coherence` guard family and its assembled prompt section were removed
+  (-396 LOC); the assembled prompt fold was proven byte-identical across the change. Runtime helpers that had
   been exported from `@looprun-ai/core` without ever being documented or imported — including
   `uploadDisplayLabels` and `isReplyOnly` — are now module-local to `renderTurnPrompt`. Package
   `CHANGELOG.md` entries that announced them stay unedited: they are an accurate record of what those
@@ -124,7 +124,7 @@
 - 5cd50cc: `looprun-eval lint --spec-laws` gains the artifact-quality and subject laws.
 
   Nine checks over the assembled specs — a tool the model is offered and nothing executes, a guard
-  bound where it can never fire, prose naming an absent or off-surface tool, an ordering the trunk
+  bound where it can never fire, prose naming an absent or off-surface tool, an ordering the assembled prompt
   asserts and no gate enforces, a flow edge rendered as "do not skip a step" with nothing behind it,
   an irreversible-looking tool nobody declared destructive, prose written as a post-hoc accusation,
   and a seam armed with no sentence to go with it.
@@ -151,7 +151,7 @@
 
   The legacy compatibility layer is removed.
 
-  - `TrunkContract` (alias of `DomainContract`) and `FIXTURE_CONTRACT` (alias of `FIXTURE_DOMAIN`) no
+  - `AssembledPromptContract` (alias of `DomainContract`) and `FIXTURE_CONTRACT` (alias of `FIXTURE_DOMAIN`) no
     longer exist. Use the canonical names.
   - `AgentControls.escalate` and `AgentSpecConfig.toolSchemas` are removed, with the `AgentModelRef`
     and `ToolSchemaLike` types that supported them. Neither was ever read at runtime.
@@ -161,7 +161,7 @@
 
 - ed3513d: One owner for the bytes a turn sends: `renderTurnPrompt`.
 
-  The assembly was duplicated across the two drivers — each folded `trunk + terminal protocol` into
+  The assembly was duplicated across the two drivers — each folded `assembled prompt + terminal protocol` into
   the instructions and `state block + uploads + user text` into the message tail. Two copies of one
   law is a drift hazard, and this one is worse than ordinary duplication because the drift is
   invisible: a wrong prompt does not crash, it answers.

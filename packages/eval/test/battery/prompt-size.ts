@@ -1,11 +1,11 @@
 /**
- * PROMPT SIZE and TRUNK STABILITY — both read off the bytes the runtime actually sent
+ * PROMPT SIZE and ASSEMBLED PROMPT STABILITY — both read off the bytes the runtime actually sent
  * ({@link RecordedCall}), never off a re-render.
  *
  * The split the plan asks for, and where each part comes from:
  *
  * ```
- *   trunk         the system message MINUS the terminal-protocol suffix — voice, rules, guard prose
+ *   assembled prompt         the system message MINUS the terminal-protocol suffix — voice, rules, guard prose
  *   protocol      the terminal-protocol block the runtime appends (one of two known variants)
  *   tool schemas  the tool definitions the SDK sent with the call, serialized
  *   state         the state-in-tail block on the user message: everything before the request
@@ -18,7 +18,7 @@
  * run diffs the estimate against the estimate and the reported against the reported; neither is
  * compared to the other.
  *
- * TRUNK STABILITY is the strong measurement here, because it needs no estimate: the same system
+ * ASSEMBLED PROMPT STABILITY is the strong measurement here, because it needs no estimate: the same system
  * bytes across every generation of one conversation, or not.
  */
 import { createHash } from 'node:crypto';
@@ -30,12 +30,12 @@ import { lastUserTextOf, systemOf, type RecordedCall } from './recording-model.j
 export const CHARS_PER_TOKEN_ESTIMATE = 4;
 
 export interface PromptSplit {
-  trunk: number;
+  assembledPrompt: number;
   protocol: number;
   toolSchemas: number;
   state: number;
   userText: number;
-  /** trunk + protocol + toolSchemas + state + userText. */
+  /** assembledPrompt + protocol + toolSchemas + state + userText. */
   total: number;
 }
 
@@ -59,21 +59,21 @@ export function measureCall(call: RecordedCall, userText: string): PromptSplit {
   const userTextChars = tail.endsWith(userText) ? userText.length : 0;
   const state = Math.max(0, tail.length - userTextChars - (userTextChars && tail.length > userTextChars ? 2 : 0));
   const toolSchemas = JSON.stringify(call.tools ?? []).length;
-  const trunk = Math.max(0, system.length - protocol);
-  return { trunk, protocol, toolSchemas, state, userText: userTextChars, total: trunk + protocol + toolSchemas + state + userTextChars };
+  const assembledPrompt = Math.max(0, system.length - protocol);
+  return { assembledPrompt, protocol, toolSchemas, state, userText: userTextChars, total: assembledPrompt + protocol + toolSchemas + state + userTextChars };
 }
 
 /** The estimate, per block. */
 export function estimateTokens(chars: PromptSplit): PromptSplit {
   const t = (n: number) => Math.ceil(n / CHARS_PER_TOKEN_ESTIMATE);
-  return { trunk: t(chars.trunk), protocol: t(chars.protocol), toolSchemas: t(chars.toolSchemas), state: t(chars.state), userText: t(chars.userText), total: t(chars.total) };
+  return { assembledPrompt: t(chars.assembledPrompt), protocol: t(chars.protocol), toolSchemas: t(chars.toolSchemas), state: t(chars.state), userText: t(chars.userText), total: t(chars.total) };
 }
 
 /**
  * How many characters of `system` are the terminal protocol.
  *
  * The runtime appends one of exactly two blocks, so this is a suffix test against both — not a
- * pattern. A system prompt matching neither reports 0, and the trunk figure then carries the
+ * pattern. A system prompt matching neither reports 0, and the assembled prompt figure then carries the
  * protocol; the battery surfaces that as `protocol: 0`, which is visible rather than silently wrong.
  */
 function protocolLengthOf(system: string): number {
@@ -84,7 +84,7 @@ function protocolLengthOf(system: string): number {
   return 0;
 }
 
-export interface TrunkStability {
+export interface AssembledPromptStability {
   /** Every distinct system-message hash seen across the conversation, in first-seen order. */
   hashes: string[];
   /** How many generations were sampled. */
@@ -94,17 +94,17 @@ export interface TrunkStability {
 }
 
 /**
- * Trunk stability over ONE conversation: the system message of EVERY generation of the AGENT — main
+ * AssembledPrompt stability over ONE conversation: the system message of EVERY generation of the AGENT — main
  * turns, forced-terminal fallbacks and redrives alike — hashed and compared.
  *
  * Sampling every generation matters: a redrive re-renders nothing (it reuses the turn's
  * instructions), so a run whose redrive drifted would be invisible to an endpoint-only sample.
  *
  * A JUDGE call is not one of them. It is the engine asking its own closed question, deliberately
- * carrying no persona and no trunk, so counting its system text here would report a stable trunk as
+ * carrying no persona and no assembled prompt, so counting its system text here would report a stable assembled prompt as
  * unstable and hide a real drift behind a known one.
  */
-export function trunkStability(calls: readonly RecordedCall[]): TrunkStability {
+export function assembledPromptStability(calls: readonly RecordedCall[]): AssembledPromptStability {
   const hashes: string[] = [];
   const agentCalls = calls.filter((c) => !systemOf(c).includes(JUDGE_SYSTEM_INSTRUCTIONS));
   for (const call of agentCalls) {

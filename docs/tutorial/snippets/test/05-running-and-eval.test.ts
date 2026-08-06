@@ -5,13 +5,13 @@
  *
  * `scriptedModel` comes from `@looprun-ai/mastra/testing`, the test-only entry point. It is not one
  * of the 89 taught symbols and no chapter teaches it; it is here so the run costs nothing.
- * `renderScopedSpecTrunk` (from `@looprun-ai/core/internal`) is likewise test-only plumbing, used
+ * `renderAssembledPrompt` (from `@looprun-ai/core/internal`) is likewise test-only plumbing, used
  * here only to prove the ungoverned variant's prompt byte-identity — no chapter teaches it either.
  */
 import { describe, expect, it } from 'vitest';
 import { scriptedModel } from '@looprun-ai/mastra/testing';
 import { createModelServer } from '@looprun-ai/server';
-import { renderScopedSpecTrunk } from '@looprun-ai/core/internal';
+import { renderAssembledPrompt } from '@looprun-ai/core/internal';
 import {
   SCHEDULER_TURNS,
   SUBJECT_DIR,
@@ -116,9 +116,9 @@ describe('05 · the scheduler eval subject', () => {
     expect(spec.controls.exhaustionReply).toBeUndefined();
     expect(spec.assertDestructiveConfirmable).toBeUndefined();
 
-    // prompt kept byte-identical to the governed trunk: prose (rules, invariants) survives
+    // prompt kept byte-identical to the governed assembled prompt: prose (rules, invariants) survives
     const world = subject.makeWorld('default');
-    const governedPrompt = renderScopedSpecTrunk(world, original, [], subject.contract);
+    const governedPrompt = renderAssembledPrompt(world, original, [], subject.contract);
     expect(spec.surface.systemPrompt).toBeDefined();
     expect(spec.surface.systemPrompt!(world, [])).toBe(governedPrompt);
 

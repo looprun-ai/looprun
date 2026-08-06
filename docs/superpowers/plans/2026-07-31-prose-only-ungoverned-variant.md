@@ -4,7 +4,7 @@
 
 **Goal:** Rewrite the ungoverned variant so its system prompt is byte-identical to the governed variant's (all rule prose present) while the enforcement layer (guards, chains, mutators, exhaustionReply, destructive cross-check) is disarmed.
 
-**Architecture:** `stripGovernance` gains a prompt-view/loop-view split: the stripped spec's `surface.systemPrompt` becomes a closure rendering the FULL original spec + contract via `renderScopedSpecTrunk` (the runtime honors this override at `packages/core/src/runtime/prompt.ts:94` and `packages/mastra/src/compile.ts:65`), while the spec fields driving the loop stay emptied. Byte-identity between variants is asserted by test.
+**Architecture:** `stripGovernance` gains a prompt-view/loop-view split: the stripped spec's `surface.systemPrompt` becomes a closure rendering the FULL original spec + contract via `renderAssembledPrompt` (the runtime honors this override at `packages/core/src/runtime/prompt.ts:94` and `packages/mastra/src/compile.ts:65`), while the spec fields driving the loop stay emptied. Byte-identity between variants is asserted by test.
 
 **Tech Stack:** TypeScript, vitest, pnpm workspace (`packages/eval`, docs in `docs/tutorial`), agentspec skill docs (separate repo `~/Dev/js/looprun/agentspec`).
 
@@ -19,15 +19,15 @@
 
 ---
 
-### Task 1: Rewrite `stripGovernance` (prompt view = full trunk, loop view = disarmed)
+### Task 1: Rewrite `stripGovernance` (prompt view = full assembled prompt, loop view = disarmed)
 
 **Files:**
 - Modify: `packages/eval/src/ungoverned.ts`
 - Test: `packages/eval/test/subject-runner.test.ts` (the `'ungoverned variant strips the whole governance surface (guard count 0)'` test, lines 127–150)
 
 **Interfaces:**
-- Consumes: `renderScopedSpecTrunk(world, spec, uploads, domain)` from `@looprun-ai/core` (already exported); `AgentSpec.surface.systemPrompt?: (world, recentUploads?) => string` (`packages/core/src/spec.ts:153`).
-- Produces: `stripGovernance(spec: AgentSpec, contract: DomainContract): UngovernedBundle` — same signature, new behavior: `bundle.spec.surface.systemPrompt` is always set and renders the governed trunk bytes.
+- Consumes: `renderAssembledPrompt(world, spec, uploads, domain)` from `@looprun-ai/core` (already exported); `AgentSpec.surface.systemPrompt?: (world, recentUploads?) => string` (`packages/core/src/spec.ts:153`).
+- Produces: `stripGovernance(spec: AgentSpec, contract: DomainContract): UngovernedBundle` — same signature, new behavior: `bundle.spec.surface.systemPrompt` is always set and renders the governed assembled prompt bytes.
 
 - [ ] **Step 1: Rewrite the strip test to the new semantics (failing first)**
 
@@ -38,9 +38,9 @@ In `packages/eval/test/subject-runner.test.ts`, replace the test at lines 127–
     const spec = subject.specs['front-desk'];
     const stripped = stripGovernance(spec, subject.contract);
 
-    // PROMPT VIEW — the variant's system prompt is the governed trunk, byte for byte.
+    // PROMPT VIEW — the variant's system prompt is the governed assembled prompt, byte for byte.
     const world = subject.makeWorld('default');
-    const governedPrompt = renderScopedSpecTrunk(world, spec, [], subject.contract);
+    const governedPrompt = renderAssembledPrompt(world, spec, [], subject.contract);
     expect(stripped.spec.surface.systemPrompt).toBeDefined();
     expect(stripped.spec.surface.systemPrompt!(world, [])).toBe(governedPrompt);
     // the prose survived: rule sections present in the variant's prompt
@@ -72,7 +72,7 @@ In `packages/eval/test/subject-runner.test.ts`, replace the test at lines 127–
 Add the import at the top of the file (next to the existing `@looprun-ai/mastra/testing` import):
 
 ```ts
-import { renderScopedSpecTrunk } from '@looprun-ai/core';
+import { renderAssembledPrompt } from '@looprun-ai/core';
 ```
 
 Note: the old assertions `behavior === []` / `scope === undefined` / `coreInvariants === []` are deliberately dropped from the test — under the new semantics those fields are inert (the prompt comes from the closure) and asserting them would freeze an implementation detail. The old test's discrimination test (`'forbidden call is detected (02, ungoverned variant fabricates a reservation)'`, lines 104–125) stays UNCHANGED — it proves the forbidden call still reaches the world in the ungov variant (spec test b).
@@ -96,11 +96,11 @@ Full new file content:
  * enforcement premium over a well-prompted agent — not "rules exist vs. rules don't".
  *
  * Mechanically: the stripped spec's `surface.systemPrompt` is a closure over the FULL
- * original spec + contract (`renderScopedSpecTrunk`), which the runtime honors as the
+ * original spec + contract (`renderAssembledPrompt`), which the runtime honors as the
  * prompt override; the spec fields that drive the loop are emptied. Never mutates the
  * source spec/contract — returns fresh plain objects.
  */
-import { renderScopedSpecTrunk } from '@looprun-ai/core';
+import { renderAssembledPrompt } from '@looprun-ai/core';
 import type { AgentSpec, DomainContract } from '@looprun-ai/core';
 
 export interface UngovernedBundle {
@@ -124,11 +124,11 @@ export function stripGovernance(spec: AgentSpec, contract: DomainContract): Ungo
     ...(spec.scope ? { scope: spec.scope } : {}),
     surface: {
       tools: [...spec.surface.tools],
-      // PROMPT VIEW: the governed trunk, byte for byte. A pre-existing override is the
+      // PROMPT VIEW: the governed assembled prompt, byte for byte. A pre-existing override is the
       // governed variant's own prompt already — reuse it; otherwise close over the FULL spec.
       systemPrompt:
         spec.surface.systemPrompt ??
-        ((w, u = []) => renderScopedSpecTrunk(w, spec, u, contract)),
+        ((w, u = []) => renderAssembledPrompt(w, spec, u, contract)),
     },
     flow: [...spec.flow],
     // LOOP VIEW: enforcement disarmed.

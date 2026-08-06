@@ -4,8 +4,8 @@ Date: 2026-07-31 · Status: approved · Repos touched: looprun (engine), agentsp
 
 ## Problem
 
-Today's ungoverned variant (`stripGovernance`) empties `spec.guards` — and because the trunk
-renderer derives ALL rule prose from the guards ("no guard prose outside the trunk"),
+Today's ungoverned variant (`stripGovernance`) empties `spec.guards` — and because the assembled prompt
+renderer derives ALL rule prose from the guards ("no guard prose outside the assembled prompt"),
 emptying the guards deletes the **prose and the check at once**. The control variant is an
 agent that was never told the rules. No real team builds that agent: a developer without
 looprun still writes the rules into the prompt in natural language. So `governed −
@@ -30,7 +30,7 @@ governed − ungoverned = the deterministic-enforcement premium. The honest numb
 
 | mechanism | new ungov | rationale |
 |---|---|---|
-| Full trunk (voice, scope, core rules, flow, tool/reply/input rules, governance, behavior) | **ON** | the prose — the "traditional agent" |
+| Full assembled prompt (voice, scope, core rules, flow, tool/reply/input rules, governance, behavior) | **ON** | the prose — the "traditional agent" |
 | Guard hooks (veto, redrive, deny) | OFF | the check |
 | `onReplyMutate` (egress rewrite) | OFF | deterministic check with no prose |
 | `controls.chains` (forced tool order) | OFF | enforcement; the order is already prose in `## Flow` |
@@ -42,7 +42,7 @@ governed − ungoverned = the deterministic-enforcement premium. The honest numb
 
 `stripGovernance` is rewritten around **two views of the same spec**:
 
-1. **Prompt view**: render the trunk of the FULL spec (`renderScopedSpecTrunk`) and pin
+1. **Prompt view**: render the assembled prompt of the FULL spec (`renderAssembledPrompt`) and pin
    the result as the variant's system prompt via `surface.systemPrompt`. If the runtime does
    not honor a `surface.systemPrompt` override, expose that seam in
    `runSpecConversation` — verifying which is the FIRST implementation step.

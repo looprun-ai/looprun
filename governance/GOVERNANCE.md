@@ -58,7 +58,7 @@ surface:
 
 | governed surface | why |
 |---|---|
-| `packages/core/src/**` | the guard factories, spec assembly, trunk renderer, turn machine |
+| `packages/core/src/**` | the guard factories, spec assembly, assembled prompt renderer, turn machine |
 | `packages/core/GUARDS.md` | the canonical guard reference (behavior contract) |
 | `packages/mastra/src/**` | the loop that enforces guards live |
 | `skills/agentspec/**` | the generator that authors guards into user projects |

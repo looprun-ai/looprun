@@ -279,7 +279,7 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
 
 /**
  * The kinds whose `prose()` is DERIVED from their own parameters, so the `reason`/deny STRING they are
- * constructed with never reaches the trunk (the prose≠reason law — see each factory's
+ * constructed with never reaches the assembled prompt (the prose≠reason law — see each factory's
  * note). The Q11 post-hoc-accusation lint EXCLUDES these kinds' reason strings from its scan, because
  * only their derived (rule-shaped, present-tense) prose actually renders.
  */
@@ -287,7 +287,7 @@ export const DENY_ONLY_PROSE_KINDS: readonly string[] = [
   'forbidThisTurn',
   'maxCalls',
   // mustAccountFor takes an authored `reason` (the deny) but renders a DERIVED, present-tense rule
-  // (`account for <records> as <outcome>`) — the reason string never reaches the trunk.
+  // (`account for <records> as <outcome>`) — the reason string never reaches the assembled prompt.
   'mustAccountFor',
 ];
 

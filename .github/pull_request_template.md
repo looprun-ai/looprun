@@ -7,7 +7,7 @@
 ## Type of change
 
 - [ ] **Guard** — a new/changed guard kind or its behavior (`packages/core/src`, `GUARDS.md`)
-- [ ] **Runtime** — the loop / turn machine / trunk renderer (`packages/core/src`, `packages/mastra/src`)
+- [ ] **Runtime** — the loop / turn machine / assembled prompt renderer (`packages/core/src`, `packages/mastra/src`)
 - [ ] **Skill** — the `agentspec` generator (`skills/agentspec`)
 - [ ] **Docs / tooling only** — docs, examples, tests, governance tooling, CI (no guard behavior change)
 

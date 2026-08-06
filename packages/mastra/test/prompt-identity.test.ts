@@ -9,7 +9,7 @@
  * So the runtime and the instruments render through one function, and this pins that the function is
  * telling the truth. If someone reassembles the prompt inside a driver again, this test fails.
  *
- * Byte-exact, both halves: the SYSTEM message (trunk + terminal protocol) and the USER message
+ * Byte-exact, both halves: the SYSTEM message (assembledPrompt + terminal protocol) and the USER message
  * (state block → uploads → request). A near-match is a failure — the margin instrument measures a
  * single token's logprob, so one byte of drift is the whole error budget.
  */

@@ -7,7 +7,7 @@
  * enforcement premium over a well-prompted agent — not "rules exist vs. rules don't".
  *
  * Mechanically: the stripped spec's `surface.systemPrompt` is a closure over the FULL
- * original spec + contract (`renderScopedSpecTrunk`), which the runtime honors as the
+ * original spec + contract (`renderAssembledPrompt`), which the runtime honors as the
  * prompt override; the spec fields that drive the loop are emptied. Never mutates the
  * source spec/contract — returns fresh plain objects.
  *
@@ -19,7 +19,7 @@
  * variant is therefore a fully-instructed agent — it is TOLD to declare its intentions honestly, it is
  * simply never CHECKED.
  */
-import { renderScopedSpecTrunk } from '@looprun-ai/core/internal';
+import { renderAssembledPrompt } from '@looprun-ai/core/internal';
 import type { AgentSpec, DomainContract } from '@looprun-ai/core';
 
 export interface UngovernedBundle {
@@ -50,11 +50,11 @@ export function stripGovernance(spec: AgentSpec, contract: DomainContract): Ungo
     ...(spec.scope ? { scope: spec.scope } : {}),
     surface: {
       tools: [...spec.surface.tools],
-      // PROMPT VIEW: the governed trunk, byte for byte. A pre-existing override is the
+      // PROMPT VIEW: the governed assembled prompt, byte for byte. A pre-existing override is the
       // governed variant's own prompt already — reuse it; otherwise close over the FULL spec.
       systemPrompt:
         spec.surface.systemPrompt ??
-        ((w, u = []) => renderScopedSpecTrunk(w, spec, u, contract)),
+        ((w, u = []) => renderAssembledPrompt(w, spec, u, contract)),
     },
     flow: [...spec.flow],
     // LOOP VIEW: enforcement disarmed.

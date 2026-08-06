@@ -8,7 +8,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { renderScopedSpecTrunk } from '@looprun-ai/core/internal';
+import { renderAssembledPrompt } from '@looprun-ai/core/internal';
 import type { AgentSpec, AgentWorld, DomainContract, ToolDef } from '@looprun-ai/core';
 import { parseCasesConfig } from './cases-config.js';
 import { loadWorldConfig, type WorldConfigDeps } from './world-config.js';
@@ -237,25 +237,25 @@ export function agentForCase(subject: Subject, caseId: string): string {
 }
 
 /**
- * TRUNK-STATIC gate (fundamental for local serving: byte-identical trunks are what the
- * llama.cpp prefix cache reuses). The engine renders the trunk world-independently BY
- * CONSTRUCTION, so: (a) each agent's trunk must be BYTE-IDENTICAL under different presets;
+ * ASSEMBLED PROMPT-STATIC gate (fundamental for local serving: byte-identical assembled prompts are what the
+ * llama.cpp prefix cache reuses). The engine renders the assembled prompt world-independently BY
+ * CONSTRUCTION, so: (a) each agent's assembled prompt must be BYTE-IDENTICAL under different presets;
  * (b) all agents of the domain must share an identical HEAD (the contract's voice opens
- * every trunk — per-agent divergence as late as possible). Returns human-readable failures.
+ * every assembled prompt — per-agent divergence as late as possible). Returns human-readable failures.
  */
-export function checkTrunkStatic(subject: Subject, presets: [string, string]): string[] {
+export function checkPromptStatic(subject: Subject, presets: [string, string]): string[] {
   const fails: string[] = [];
-  const trunks: string[] = [];
+  const assembledPrompts: string[] = [];
   for (const [id, spec] of Object.entries(subject.specs)) {
-    const a = renderScopedSpecTrunk(subject.makeWorld(presets[0]), spec, [], subject.contract);
-    const b = renderScopedSpecTrunk(subject.makeWorld(presets[1]), spec, [], subject.contract);
-    if (a !== b) fails.push(`${id}: trunk differs across presets ${presets[0]} vs ${presets[1]} (volatile state leaked into the trunk)`);
-    trunks.push(a);
+    const a = renderAssembledPrompt(subject.makeWorld(presets[0]), spec, [], subject.contract);
+    const b = renderAssembledPrompt(subject.makeWorld(presets[1]), spec, [], subject.contract);
+    if (a !== b) fails.push(`${id}: the assembled prompt differs across presets ${presets[0]} vs ${presets[1]} (volatile state leaked into the assembled prompt)`);
+    assembledPrompts.push(a);
   }
-  if (trunks.length > 1) {
+  if (assembledPrompts.length > 1) {
     const head = (x: string, y: string) => { let i = 0; while (i < x.length && x[i] === y[i]) i++; return i; };
-    const shared = trunks.reduce((n, t) => Math.min(n, head(trunks[0], t)), trunks[0].length);
-    if (shared < 200) fails.push(`shared trunk head across agents is only ${shared} bytes — the contract voice must open every trunk identically`);
+    const shared = assembledPrompts.reduce((n, t) => Math.min(n, head(assembledPrompts[0], t)), assembledPrompts[0].length);
+    if (shared < 200) fails.push(`shared assembled prompt head across agents is only ${shared} bytes — the contract voice must open every assembled prompt identically`);
   }
   return fails;
 }

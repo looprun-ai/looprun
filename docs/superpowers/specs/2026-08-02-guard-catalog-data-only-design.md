@@ -1,4 +1,4 @@
-# Increment 1 — GuardCatalog data-only + trunk policies
+# Increment 1 — GuardCatalog data-only + assembled prompt policies
 
 Date: 2026-08-02 · Status: approved · Repo: looprun · Depends on: umbrella
 `2026-08-02-config-only-architecture-design.md`
@@ -50,7 +50,7 @@ it is authoring surface the engine should not offer to generation.
 | `attemptedEarlier`, `succeededEarlier`, `tookEffect` lookups over the ledger | per-spec `TERMINALS`/`agreedEarlier` copies (drift) |
 | `siblingCallsThisStep` staleness helper documented for all gates | case-72 same-step staleness |
 
-### 3. Trunk policies (ship together — they are what makes deny/abstain safe)
+### 3. AssembledPrompt policies (ship together — they are what makes deny/abstain safe)
 
 - **Deny renderer**: a deny NAMES THE READ that would establish the fact and never interpolates
   world figures or roles. Guard configs supply only the read name(s) and a reason id; the engine

@@ -108,7 +108,7 @@ rubric and the evidence, and none of these:
 
 | excluded | why |
 |---|---|
-| the agent's system prompt / trunk | it is the framing that produced the text being judged |
+| the agent's system prompt / assembled prompt | it is the framing that produced the text being judged |
 | the agent's persona and lane prose | "you are the rental desk" biases the judge toward the desk's reading |
 | the tool definitions | the judge decides a question about text, not about what is callable |
 | the conversation as ROLE-tagged turns | an assistant-role message reads as the judge's own prior speech |

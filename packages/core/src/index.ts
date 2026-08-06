@@ -7,15 +7,15 @@
  *
  * WHERE THE REST WENT — three destinations, not one:
  *   · `@looprun-ai/core/internal` — the 37 symbols with an `internal` verdict: the specific backend
- *     seam (spec binding resolution, the trunk renderer, model settings, and the governed-turn
+ *     seam (spec binding resolution, the assembled prompt renderer, model settings, and the governed-turn
  *     machine: ledger + terminal protocol + prompt renderer + turn functions). Sibling packages and
  *     fork authors drive the loop through it. NO compatibility promise.
  *   · the type-closure riders at the bottom of this file — see the note there.
- *   · everything else (`renderTrunkBlocks`, `chainOrder`, `resolveBindings`, `TERMINAL_TOOLS`, the
- *     trunk's attributed table in `trunk-fold.ts`, …) is now MODULE-LOCAL: reachable from no entry
+ *   · everything else (`renderPromptBlocks`, `chainOrder`, `resolveBindings`, `TERMINAL_TOOLS`, the
+ *     assembled prompt's attributed table in `prompt-fold.ts`, …) is now MODULE-LOCAL: reachable from no entry
  *     point at all. What survives there is only what the exported entry points transitively need —
- *     the coherence query layer that once ran over the trunk table was removed, and the fold that
- *     produces the trunk's bytes lives on in `trunk-fold.ts`. Do not read a symbol's absence here as
+ *     the coherence query layer that once ran over the assembled prompt table was removed, and the fold that
+ *     produces the assembled prompt's bytes lives on in `prompt-fold.ts`. Do not read a symbol's absence here as
  *     a promise that it still works elsewhere.
  */
 
@@ -30,7 +30,7 @@ export type {
   ToolTarget,
 } from './spec.js';
 export type { AgentWorld } from './rules.js';
-export type { DomainContract } from './trunk.js';
+export type { DomainContract } from './assembled-prompt.js';
 export type { ToolDef } from './runtime/types.js';
 export { validateSpec } from './validate.js';
 

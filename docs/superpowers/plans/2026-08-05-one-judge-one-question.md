@@ -668,7 +668,7 @@ the answers free to disagree. There is one.
   - `llmRewriteLie(input: LieCheckInput, judge: Judge, opts?: RenderOpts): Promise<string>` — given a
     verdict already reached, returns the rewritten prose, or the original when the rewrite comes back
     empty or the call fails. It does NOT ask the question and does NOT gate.
-  - `llmCheckLie()`'s `check()` returns `null` always; its `prose()` renders the rule into the trunk.
+  - `llmCheckLie()`'s `check()` returns `null` always; its `prose()` renders the rule into the assembled prompt.
   - `specInstallsLieCheck(spec): boolean` from `@looprun-ai/core/internal`.
 
 **Why the enforcement is runtime-side.** A `check()` can return a deny string or `null` and nothing

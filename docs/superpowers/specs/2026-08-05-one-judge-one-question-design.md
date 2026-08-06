@@ -194,7 +194,7 @@ one question per candidate payload    ← one model call, never two
 The routing is the runtime's, not the guard's: a `check()` returns a deny string or `null`, and
 rewriting is an egress concern. `llmCheckLie()` on the spec is the DECLARATION that this agent wants
 the question asked; the runtime asks it and picks the outcome. The guard's `prose()` renders into the
-trunk like every other guard's.
+assembled prompt like every other guard's.
 
 **A rewrite is the outcome only on a turn that carried out nothing**, because a rewriter handed a
 record that names an operation anchors to that entity and leaves every other claim standing — the

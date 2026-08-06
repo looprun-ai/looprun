@@ -29,7 +29,7 @@ import { driveScenario, type ScenarioDeps } from './run-scenario.js';
 
 /** The four buckets, plus the sub-split of (b) that says WHICH carried thing costs what. */
 export interface CompositionChars {
-  /** The system message — trunk + terminal protocol. Byte-identical on every call of a run. */
+  /** The system message — assembledPrompt + terminal protocol. Byte-identical on every call of a run. */
   system: number;
   /** The tool definitions the SDK sent, serialized. */
   toolSchemas: number;

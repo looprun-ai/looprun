@@ -127,7 +127,7 @@ multi-token-prediction speculative decoding (~1.4× decode, byte-identical outpu
 | tier | model · quant | weights | measured |
 |---|---|---|---|
 | **`ram24`** (DEFAULT) | Qwen3.6-35B-A3B UD-IQ2_XXS + MTP | 11.8 GB | ~56 tok/s · **peak RSS ~20.7 GB** (fits 24 GB) |
-| `ram32` (quality-max) | Qwen3.6-35B-A3B UD-Q3_K_XL + MTP | 17.2 GB | ~58 tok/s · f16 KV @ 64k ctx + 16 GB trunk cache |
+| `ram32` (quality-max) | Qwen3.6-35B-A3B UD-Q3_K_XL + MTP | 17.2 GB | ~58 tok/s · f16 KV @ 64k ctx + 16 GB assembled prompt cache |
 | `ram16` | Qwen3.6-35B-A3B UD-IQ2_XXS + MTP | 11.8 GB | ~44 tok/s · **peak RSS 13.4–13.5 GB** (q8_0 KV, 24k ctx) |
 | `ram8` | Qwen3.5-4B UD-Q3_K_XL + MTP | 2.5 GB | ~43 tok/s · **peak RSS 4.62 GB** — quality far below the 35B tiers |
 
@@ -148,7 +148,7 @@ Cloud models need none of this: pass a router string as `model` and skip this se
 | package | what |
 |---|---|
 | `looprun` | umbrella — `looprun/core`, `looprun/mastra`, `looprun/models`, `looprun/vercel` (+ the `looprun` CLI) |
-| `@looprun-ai/core` | `AgentSpec` + the 21 guard factories — the teaching surface. The trunk renderer and the governed-turn machine ship too, but on `@looprun-ai/core/internal` (no compatibility promise) |
+| `@looprun-ai/core` | `AgentSpec` + the 21 guard factories — the teaching surface. The assembled prompt renderer and the governed-turn machine ship too, but on `@looprun-ai/core/internal` (no compatibility promise) |
 | `@looprun-ai/mastra` | `LoopRunAgent` (a real Mastra Agent), `runSpecConversation`, `worldFromTools` |
 | `@looprun-ai/models` | validated local models (llama.cpp `ModelRuntimePort`) + the cloud validation model |
 | `@looprun-ai/eval` | the `looprun-eval` CLI: run / fold / cert / lint / seal (dev dependency) |

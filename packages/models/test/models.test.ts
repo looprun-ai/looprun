@@ -90,7 +90,7 @@ describe('llama.cpp launch flags (the measured recipe — MTP on the 35B tiers)'
     expect(fRam32).toContain('-c 65536');
     expect(fRam32).toContain('--spec-type draft-mtp');
     const fRam8 = launchFlags(QWEN35_RAM8, '/m/4b.gguf').join(' ');
-    expect(fRam8).toContain('-ctk q8_0 -ctv q8_0'); // 8 GB budget; ctx 24k fits ~21k trunks
+    expect(fRam8).toContain('-ctk q8_0 -ctv q8_0'); // 8 GB budget; ctx 24k fits ~21k assembledPrompts
     expect(fRam8).toContain('-c 24576'); // measured 4.62 GB RSS / ~43 tok/s
     expect(fRam8).toContain('--cache-ram 384');
     expect(fRam8).toContain('--spec-type draft-mtp'); // baked head: +20% measured on the 4B @ Q4
@@ -101,7 +101,7 @@ describe('llama.cpp launch flags (the measured recipe — MTP on the 35B tiers)'
       expect(f).toContain('--mlock --no-mmap');
       expect(f).toContain('-np 1');
       expect(f).toContain('-ctxcp 64'); // checkpoints — load-bearing for qwen3.5/3.6 hybrids
-      expect(f).toContain('--slot-save-path'); // trunk state files on by default
+      expect(f).toContain('--slot-save-path'); // assembledPrompt state files on by default
     }
   });
 

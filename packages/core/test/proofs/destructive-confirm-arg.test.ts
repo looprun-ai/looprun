@@ -4,7 +4,7 @@
  * A destructiveTool left on the DEFAULT 'arg' confirm mechanism but WITHOUT the confirm flag in its
  * schema makes the auto-installed confirmFirst a permanent no-op AND renders a "confirm first, act in a
  * later turn" ritual the tool can never honour → the model asks forever (measured: freezeAccount, one-step
- * schema, in destructiveTools — visible only by READING the rendered trunk). The schema is known
+ * schema, in destructiveTools — visible only by READING the rendered assembled prompt). The schema is known
  * only where toolDefs are injected, so the cross-check runs at run start (the backend run entry) and throws.
  *
  * Fixtures: `deleteItem` declares `confirmed` (a valid arg-mechanism destructive tool); `purgeAll` and

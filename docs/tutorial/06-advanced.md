@@ -165,7 +165,7 @@ dropped, by design:
 | `model` | routes to the registered agent | one server, N agents |
 | last `user` message | the governed turn's input | |
 | earlier history | **ignored** — transport only | harnesses compress and rewrite it; replaying it would desync the governed state, which is the agent's own |
-| `system` message | **discarded** | the spec renders its own trunk, byte-stable and cacheable |
+| `system` message | **discarded** | the spec renders its own assembled prompt, byte-stable and cacheable |
 | `tools`, `tool_choice` | **ignored** | the spec owns the surface, and guards govern every call |
 | `temperature`, … | **ignored** | `spec.controls.sampling` governs |
 | `stream: true` | honored — see below | |
@@ -216,7 +216,7 @@ ram32 (~17.2 GB) · ram8 (8 GB machines, ~2.5 GB) · qwen3.5-4b (plain fallback,
 
 One validated model family in three RAM tiers (Qwen3.6-35B-A3B with a baked multi-token-prediction
 head), plus small-RAM fallbacks. The size column is the **weights file**, not the machine's budget:
-the real footprint is weights + KV cache + the trunk cache.
+the real footprint is weights + KV cache + the assembled prompt cache.
 
 | alias | quant · weights | tier | KV · ctx | measured |
 |---|---|---|---|---|
@@ -231,7 +231,7 @@ The launch profile is measured, not defaulted: `--jinja -fa on -ngl 99 --mlock -
 Three of those are load-bearing and easy to switch off by accident:
 
 - **`-np 1`** keeps the shared prompt prefix permanently resident — the long-running-agent law.
-- **`-ctxcp` + `--cache-ram`** keep N distinct agent trunks warm across agent switches: measured warm
+- **`-ctxcp` + `--cache-ram`** keep N distinct agent assembled prompts warm across agent switches: measured warm
   TTFT 0.5–0.6 s vs 11–22 s cold. Never disable either on this model family.
 - **`--spec-type draft-mtp`** uses the trained MTP head baked into the checkpoint and exact-verifies
   every draft, so output is **byte-identical at temperature 0** at ~1.4× decode. The dense 4B has no
@@ -248,11 +248,11 @@ these tiers will be far slower than anything quoted here.
 
 **Overrides, when a machine disagrees with the profile:** `$LLAMA_BIN` (the binary), `$LLAMA_PORT`,
 `$LLAMA_KV`, `$LLAMA_CTX`, `$LLAMA_CACHE_RAM`, `$LLAMA_SLOT_SAVE_PATH` (empty disables the per-agent
-trunk state files — with them, a restore after a server restart takes ≈20–30 ms instead of a cold
+assembled prompt state files — with them, a restore after a server restart takes ≈20–30 ms instead of a cold
 prefill), `$LLAMA_SPEC_TYPE` (`''` disables MTP), and one file-path variable per alias
 (`$QWEN35_4B_GGUF`, `$QWEN36_35B_GGUF`, …). Windows and Linux take the identical flags; on a 16 GB-VRAM
 box that wants a 35B tier, add `-ncmoe N` to offload the first N layers' MoE experts to CPU. And note
-`ram16`'s 24k context fits agent trunks up to ~21k tokens — a bigger trunk needs `ram24`, or a raised
+`ram16`'s 24k context fits agent assembled prompts up to ~21k tokens — a bigger assembled prompt needs `ram24`, or a raised
 `$LLAMA_CTX` and the extra KV RAM that costs.
 
 ### 2.2 Get the weights — consent first

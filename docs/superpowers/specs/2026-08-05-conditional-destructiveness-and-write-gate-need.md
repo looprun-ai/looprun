@@ -140,7 +140,7 @@ key on a third of a condition they never write.
 
 **Open questions.** Does a lane opt out — a protective tool that must stay usable while frozen is
 real (a compliance hold is the canonical one)? An exemption LIST on the contract, or a per-spec
-override? Does the gate render prose into the trunk, and if so does every lane render the same
+override? Does the gate render prose into the assembled prompt, and if so does every lane render the same
 sentence?
 
 ## 3 · The parity law — what the lint checks depends on whether §2 lands

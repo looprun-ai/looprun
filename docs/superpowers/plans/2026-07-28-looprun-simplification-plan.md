@@ -52,7 +52,7 @@ Classify: **public** (hit in examples/skills/scripts/looprun-bench/agentspec/ynt
 
 - [ ] **Step 3: Write the inventory doc**
 
-Table format, one row per symbol, grouped by package. Include a "pre-seeded evidence" note: `findContradictions, findDuplications, findMultiOwnerSubjects, findSubjectlessLines, findUnassessableLines, foldRow, foldTrunk, withPolarityLexicon, derivePolarity, deriveSubject, trunkLines, mutatorLines, isSingleClause, DEFAULT_POLARITY_LEXICON, chainOrder, renderTrunkBlocks` already measured at zero non-test usage (2026-07-28 scan) — re-verify, don't trust.
+Table format, one row per symbol, grouped by package. Include a "pre-seeded evidence" note: `findContradictions, findDuplications, findMultiOwnerSubjects, findSubjectlessLines, findUnassessableLines, foldRow, foldPrompt, withPolarityLexicon, derivePolarity, deriveSubject, assembledPromptLines, mutatorLines, isSingleClause, DEFAULT_POLARITY_LEXICON, chainOrder, renderPromptBlocks` already measured at zero non-test usage (2026-07-28 scan) — re-verify, don't trust.
 
 - [ ] **Step 4: Commit**
 
@@ -158,19 +158,19 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [ /* one entry per fa
 
 ---
 
-### Task 5: Cut coherence, trim trunk (Phase 2c)
+### Task 5: Cut coherence, trim assembled prompt (Phase 2c)
 
 **Files:**
-- Modify: `packages/core/src/coherence.ts` (expected outcome per pre-seeded evidence: delete file, keeping only whatever `trunk.ts` imports — inline those pieces into `trunk.ts` or a private `trunk-fold.ts`), `packages/core/src/trunk.ts`, `packages/core/src/index.ts`, `packages/core/src/internal.ts`
+- Modify: `packages/core/src/coherence.ts` (expected outcome per pre-seeded evidence: delete file, keeping only whatever `assembled-prompt.ts` imports — inline those pieces into `assembled-prompt.ts` or a private `prompt-fold.ts`), `packages/core/src/assembled-prompt.ts`, `packages/core/src/index.ts`, `packages/core/src/internal.ts`
 - Delete: the coherence-query tests in `packages/core/test/` that test deleted symbols (per inventory; do not delete tests of surviving internals — move those symbols' tests to import from `/internal`)
 
 **Interfaces:**
-- Consumes: inventory verdicts for all 20+ coherence/trunk symbols.
-- Produces: public trunk API is at most `renderScopedSpecTrunk` (verdict-dependent); everything else internal or gone.
+- Consumes: inventory verdicts for all 20+ coherence/assembled prompt symbols.
+- Produces: public assembled prompt API is at most `renderAssembledPrompt` (verdict-dependent); everything else internal or gone.
 
 - [ ] **Step 1: Apply verdicts** — delete "delete"-verdict symbols and their tests; move "internal" ones to `internal.ts`.
 - [ ] **Step 2: Verify** — `pnpm -r build && pnpm test` green; `grep -rn 'coherence' packages/*/src` returns only intentional survivors.
-- [ ] **Step 3: Commit** — `refactor(core)!: remove unused coherence queries; trunk provenance goes internal`
+- [ ] **Step 3: Commit** — `refactor(core)!: remove unused coherence queries; assembled prompt provenance goes internal`
 
 ---
 
