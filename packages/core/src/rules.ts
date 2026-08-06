@@ -165,6 +165,10 @@ export interface GuardCtx {
    *  never reads text or history to decide: the runtime already did the reading, once, at turn start.
    *  Absent ⇒ empty, which is no consent. */
   consent?: ReadonlyArray<ApprovalRequest>;
+  /** The destructive tools whose declared schema carries `simulate` — the only tools whose
+   *  simulation bypass is licensed. Seated by the backend at run start from the injected tool
+   *  definitions; absent ⇒ every destructive call is gated. */
+  simulatableTools?: ReadonlySet<string>;
   /** The per-call judge TIMEOUT (ms), threaded from the registration seam beside `judge`. An llmCheck
    *  races the judge against this deadline: a HUNG (never-settling) judge would otherwise hang the turn,
    *  and `failMode` only fires on a settled rejection — so on expiry the guard treats the judge as

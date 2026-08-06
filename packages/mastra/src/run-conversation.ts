@@ -128,10 +128,10 @@ export async function runSpecConversation(spec: AgentSpec, turns: TurnInput[], d
   const getSession = () => session;
   const actionHistory = session.actionHistory;
 
-  // A destructiveTool on the 'arg' confirm mechanism whose schema lacks the confirm flag renders a
-  // two-step ritual it can never honour (the model asks forever). The schema is only known HERE, where
-  // toolDefs are injected — so the cross-check runs at run start. Throws (author bug) if mis-authored.
-  spec.assertDestructiveConfirmable?.(deps.toolDefs);
+  // A destructive tool's consent route is decided by its DECLARED schema: `simulate` present →
+  // the simulation bypass and the downgrade are licensed; absent → every call is gated. The schema
+  // is only known HERE, where toolDefs are injected — so the set is computed and seated at run start.
+  if (spec.simulatableToolNames) session.actionHistory.simulatableTools = spec.simulatableToolNames(deps.toolDefs);
 
   const mastraTools = buildWorldTools(deps.toolDefs, surface, getSession);
   const guardHooks = makeGuardHooks(spec, getSession);

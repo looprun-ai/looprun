@@ -61,7 +61,7 @@ export function stripGovernance(spec: AgentSpec, contract: DomainContract): Ungo
     guards: { onInput: [], preTool: [], postTool: [], onReply: [], onReplyMutate: [] },
     controls: { ...loopControls },
     behavior: [...spec.behavior],
-    // assertDestructiveConfirmable: omitted — the destructive-confirm cross-check is a check
+    // simulatableToolNames: omitted — the ungoverned variant installs no guards, so no bypass set is needed
   };
   strippedSpec.contract = strippedContract;
   return { spec: strippedSpec, contract: strippedContract };

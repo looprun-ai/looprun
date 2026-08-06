@@ -188,10 +188,11 @@ export interface AgentSpec {
    *  generated bundle point every spec at the SAME domain object so a host can construct an agent
    *  from the spec alone. A host-provided domain always overrides it. */
   contract?: DomainContract;
-  /** Optional runtime cross-check (implemented by AgentSpecBase): assert every `'arg'`-mechanism
-   *  destructiveTool actually carries its confirm flag in the injected tool schema. Optional so an alien
-   *  AgentSpec need not implement it; the backend calls it when present. */
-  assertDestructiveConfirmable?(toolDefs: ReadonlyArray<{ name: string; inputSchema?: { properties?: Record<string, unknown> } }>): void;
+  /** Optional route detector (implemented by AgentSpecBase): the destructive tools whose injected
+   *  schema carries a `simulate` parameter — the set that licenses the guard's simulation bypass
+   *  and the runtime's downgrade. Optional so an alien AgentSpec need not implement it; the backend
+   *  calls it when present and seats the result on the runtime. */
+  simulatableToolNames?(toolDefs: ReadonlyArray<{ name: string; inputSchema?: { properties?: Record<string, unknown> } }>): ReadonlySet<string>;
 }
 
 const TERMINAL_TOOLS = ['respond'];
@@ -560,37 +561,20 @@ export class AgentSpecBase implements AgentSpec {
   }
 
   /**
-   * A destructiveTool on the DEFAULT `'arg'` confirm mechanism must actually
-   * carry the confirm FLAG in its tool schema. `installBase` auto-installs `confirmFirst` with the
-   * default argFlag `'confirmed'`, and its prose says "call it WITHOUT confirmed first, then confirm in a
-   * LATER turn" — but if the tool's schema has no `confirmed` param, the model can NEVER pass it, so the
-   * check is a permanent no-op AND the prose is a two-step ritual the tool cannot honour → the model asks
-   * forever (a destructive tool listed with a one-step schema; an eval catches it only by
-   * READING). `installBase` runs at construction where no schema exists; this runs where the toolDefs are
-   * injected (the backend, at run start). A `'prior-ask'` tool is a zero-arg confirm — exempt by design.
-   * A predicated tool is NOT exempt: its destructive branch is gated on the same flag, so a schema
-   * without it leaves that branch asking forever.
-   * Throws (an author bug, same class as the ⊆-surface / stray-mechanism throws) naming the fix.
+   * The destructive tools whose DECLARED schema carries a `simulate` parameter — the set that
+   * licenses the guard's simulation bypass and the runtime's downgrade. Computed from the injected
+   * tool definitions (the backend, at run start: the first moment schemas exist) and seated on the
+   * runtime beside `destructiveLabels`. A destructive tool absent from this set is gated on every
+   * call, and its veto raises the approval question.
    */
-  assertDestructiveConfirmable(toolDefs: ReadonlyArray<{ name: string; inputSchema?: { properties?: Record<string, unknown> } }>): void {
-    const CONFIRM_FLAG = 'confirmed'; // = confirmFirst's default `flag`, which installBase relies on
-    const argTools = this.destructiveTools.filter((t) => (this.confirmMechanism[t] ?? 'arg') === 'arg');
-    if (!argTools.length) return;
+  simulatableToolNames(toolDefs: ReadonlyArray<{ name: string; inputSchema?: { properties?: Record<string, unknown> } }>): ReadonlySet<string> {
     const byName = new Map(toolDefs.map((d) => [d.name, d]));
-    const broken = argTools.filter((t) => {
-      const props = byName.get(t)?.inputSchema?.properties;
-      return !props || !(CONFIRM_FLAG in props);
-    });
-    if (broken.length) {
-      throw new Error(
-        `AgentSpec "${this.id}": destructiveTools on the 'arg' confirm mechanism must declare a '${CONFIRM_FLAG}' ` +
-          `flag in their schema, but ${broken.join(', ')} do not. The auto-installed confirmFirst renders a ` +
-          `"confirm first, act in a LATER turn" protocol the tool cannot honour (there is no '${CONFIRM_FLAG}' arg to ` +
-          `pass), so the model asks forever. Fix ONE of: add a '${CONFIRM_FLAG}' boolean to the tool's schema; set ` +
-          `confirmMechanism['${broken[0]}']='prior-ask' (a zero-arg, ask-in-a-prior-turn confirm); or drop it from ` +
-          `destructiveTools (and throttle it manually if it still needs rate-limiting).`,
-      );
-    }
+    return new Set(
+      this.destructiveTools.filter((t) => {
+        const props = byName.get(t)?.inputSchema?.properties;
+        return !!props && 'simulate' in props;
+      }),
+    );
   }
 
   addGuard(hook: Hook, target: ToolTarget, guard: Guard, opts?: { id?: string; layer?: Layer }): string {

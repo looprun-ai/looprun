@@ -82,6 +82,10 @@ export interface TurnActionHistory {
    *  built from. A tool absent from this map can issue no question, so it can never be consented to and
    *  never runs. */
   destructiveLabels: Record<string, string>;
+  /** The destructive tools whose declared schema carries `simulate` — the only tools whose
+   *  simulation bypass is licensed and whose denied act is downgraded. Seated by the backend at
+   *  run start from the injected tool definitions; absent ⇒ every destructive call is gated. */
+  simulatableTools?: ReadonlySet<string>;
 }
 
 /**

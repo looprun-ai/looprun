@@ -183,7 +183,7 @@ describe('subject runner (fixture subject, scripted model)', () => {
     ).toBe(0);
     expect(stripped.spec.controls.chains).toBeUndefined();
     expect(stripped.spec.controls.exhaustionReply).toBeUndefined();
-    expect(stripped.spec.assertDestructiveConfirmable).toBeUndefined();
+    expect(stripped.spec.simulatableToolNames).toBeUndefined();
     // the source spec is untouched
     expect(spec.guards.preTool.length + spec.guards.onReply.length).toBeGreaterThan(0);
 

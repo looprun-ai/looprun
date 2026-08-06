@@ -121,6 +121,7 @@ export async function evaluatePreTool(
     observed: actionHistory.observed,
     turnIndex: actionHistory.turnIndex,
     userText: actionHistory.currentUserText, consent: actionHistory.consentThisTurn,
+    simulatableTools: actionHistory.simulatableTools,
     history: actionHistory.history,
     attachmentsThisTurn: actionHistory.attachments,
     siblingCallsThisStep,

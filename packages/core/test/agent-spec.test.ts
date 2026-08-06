@@ -244,9 +244,7 @@ describe('destructiveWhen — the spec declares which calls of a listed tool are
     );
   });
 
-  it('a predicated arg-mechanism tool still owes its confirm flag', () => {
-    expect(() =>
-      build().assertDestructiveConfirmable([{ name: 'placeHold', inputSchema: { properties: { scope: {} } } }]),
-    ).toThrow(/must declare a 'confirmed' flag/);
+  it('a predicated tool without simulate in its schema is not simulatable', () => {
+    expect(build().simulatableToolNames([{ name: 'placeHold', inputSchema: { properties: { scope: {} } } }]).size).toBe(0);
   });
 });
