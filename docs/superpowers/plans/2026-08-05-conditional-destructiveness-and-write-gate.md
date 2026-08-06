@@ -910,7 +910,7 @@ and replace the final loop with:
     for (const id of authoredGuardIds(spec)) {
       if (targeted.has(key(agent, id))) continue;
       out.push(
-        `GUARD-NEVER-TARGETED: '${id}' on agent ${agent} shipped and no case on that lane targets it — a guard the exam never exercises passes in BOTH arms of a discrimination run, so it reads as coverage while never having fired. Repair one of: write a case whose preset makes it deny; give the world the preset that condition needs. A gap here cannot be accepted, only closed`,
+        `GUARD-NEVER-TARGETED: '${id}' on agent ${agent} shipped and no case on that lane targets it — a guard the exam never exercises passes in BOTH variants of a discrimination run, so it reads as coverage while never having fired. Repair one of: write a case whose preset makes it deny; give the world the preset that condition needs. A gap here cannot be accepted, only closed`,
       );
     }
   }

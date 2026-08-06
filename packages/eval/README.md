@@ -1,7 +1,7 @@
 # @looprun-ai/eval
 
 The subject runner: executes a generated subject's cases against a model target
-(governed or ungoverned arm), dumps per-case traces for the LLM judge, folds
+(governed or ungoverned variant), dumps per-case traces for the LLM judge, folds
 verdicts, and certifies against the bar.
 
 The protocol is taught in the tutorial:
@@ -28,10 +28,10 @@ Subject modules may be `.ts`/`.mts` (needs a Node version with type stripping) o
 |---|---|
 | `validate` | offline preflight — load the subject, check schema + references + premise, plus the world layers when the subject ships `gen/world.json` (preset distinguishability · probe≡confirm identity · determinism); RED blocks a run before any spend. |
 | `lint` | the artifact laws over the sources and the assembled specs; `--spec-laws --subject <dir>` adds the subject battery (see below). |
-| `run` | one arm through the governed (or `--ungoverned`) loop → `cases.jsonl` + `SUMMARY.md`. |
+| `run` | one variant through the governed (or `--ungoverned`) loop → `cases.jsonl` + `SUMMARY.md`. |
 | `judge-input` | blind per-turn judge inputs from a run dir (`--chunk N` splits into parts) — what the judge reads. |
 | `fold` | verdicts → `RESULTS.md`; `--sync <dirA> <dirB> …` forces one verdict per byte-identical transcript class across reps → `verdicts.synced.jsonl` + `SYNC.md`. |
-| `cert` | one dir → `cert.json` + `CERT.md`; `<r0> <r1> …` → `cert-band.json` + `CERT-BAND.md` (FLOOR-over-reps law); `--verdicts <file>` picks the synced set. |
+| `cert` | one dir → `cert.json` + `CERT.md`; `<r0> <r1> …` → `cert-range.json` + `CERT-RANGE.md` (FLOOR-over-reps law); `--verdicts <file>` picks the synced set. |
 | `campaign run\|status\|resume` | the orchestrated path — everything below, as one verb. |
 
 ### The hand path: run → judge → fold → cert
@@ -43,7 +43,7 @@ looprun-eval run --subject <dir> --model <id> --base-url <url> --api-key-env <EN
 looprun-eval run --subject <dir> --ungoverned    # same prompt, enforcement disarmed (prose-only baseline)
 ```
 
-`run` writes `<subject>/test/<date>-<model>-<arm>/` (override `--out`): `cases.jsonl`
+`run` writes `<subject>/test/<date>-<model>-<variant>/` (override `--out`): `cases.jsonl`
 (one case dump per line) + `SUMMARY.md`. Invariants (`requiredToolCalls` must succeed;
 `forbiddenToolCalls` fail on the ATTEMPT, even when the world refuses) are the
 deterministic gate only — never the quality verdict.
@@ -62,11 +62,11 @@ looprun-eval judge-input --dir <dir> --chunk 10                              # �
 looprun-eval fold --dump <dir>/cases.jsonl --verdicts <dir>/verdicts.jsonl   # → RESULTS.md
 looprun-eval fold --sync <r0> <r1> …                                         # → verdicts.synced.jsonl + SYNC.md
 looprun-eval cert <dir> [--bar 0.9] [--date <iso>] [--note <text>]           # → cert.json + CERT.md
-looprun-eval cert <r0> <r1> … [--verdicts verdicts.synced.jsonl]             # → cert-band.json (FLOOR law)
+looprun-eval cert <r0> <r1> … [--verdicts verdicts.synced.jsonl]             # → cert-range.json (FLOOR law)
 ```
 
 Final pass = invariants AND judge; a missing verdict counts FAIL, loudly. A single-dir
-`cert` is N=1-honest (`reps: 1`); the band form certifies only when the FLOOR over reps
+`cert` is N=1-honest (`reps: 1`); the range form certifies only when the FLOOR over reps
 clears the bar. `--date` supplies `generatedAt` (no wall-clock default).
 
 ### The orchestrated path: `campaign`
@@ -76,7 +76,7 @@ One verb runs the whole measured campaign, in place of dozens of hand invocation
 ```sh
 looprun-eval campaign run <campaign.json>    # preflight → K governed reps + control → judging PAUSE
 looprun-eval campaign status <out>           # per-phase progress from the dirs alone (no daemon)
-looprun-eval campaign resume <out>           # verify verdicts → monitor gate → fold --sync → cert band
+looprun-eval campaign resume <out>           # verify verdicts → monitor gate → fold --sync → cert range
 ```
 
 `campaign run` preflights (`validate` green + env keys present), runs K governed reps plus
@@ -84,8 +84,8 @@ the ungoverned control (each an immutable dir sealed with a `DONE` marker), writ
 `judge-input` chunks, then PAUSES with a machine-readable `judging.json` manifest for the
 host to dispatch judge subagents against. After verdicts land, `campaign resume` verifies
 the counts, gates on the always-armed monitor (an unresolved incident blocks cert), folds
-with `--sync` across the governed reps, folds the control arm to its own `RESULTS.md`
-(A/B, never in the band), and emits the `cert-band.json` — the only source of the number.
+with `--sync` across the governed reps, folds the control variant to its own `RESULTS.md`
+(A/B, never in the range), and emits the `cert-range.json` — the only source of the number.
 
 ## The subject laws `--spec-laws` adds
 

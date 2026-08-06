@@ -18,7 +18,7 @@ follow-on commits already on main (in scope, small)
        917340f 7d1f5cd                   changeset downgrade + release v0.9.0
 
 OUT of scope (different work, later session)
-       ba0f1ca 0cf8dfd                   eval cert-band feature
+       ba0f1ca 0cf8dfd                   eval cert-range feature
 ```
 
 Diff weight by area — this is why the modules are ordered the way they are:

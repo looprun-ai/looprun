@@ -131,7 +131,7 @@ describe('confirmFirst — adversarial', () => {
     expect(gp.check(confirm)).not.toBeNull();
   });
 
-  it('HOLDS: an under-specified probe does not bypass the strict record-bound arm', () => {
+  it('HOLDS: an under-specified probe does not bypass the strict record-bound variant', () => {
     const gp = confirmFirst();
     const probe = okCall('deleteRecord', 1, { confirmed: false });
     const confirm = ctxWith({

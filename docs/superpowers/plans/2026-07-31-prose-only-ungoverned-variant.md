@@ -1,17 +1,17 @@
-# Prose-only Ungoverned Arm Implementation Plan
+# Prose-only Ungoverned Variant Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Rewrite the ungoverned arm so its system prompt is byte-identical to the governed arm's (all rule prose present) while the enforcement layer (guards, chains, mutators, exhaustionReply, destructive cross-check) is disarmed.
+**Goal:** Rewrite the ungoverned variant so its system prompt is byte-identical to the governed variant's (all rule prose present) while the enforcement layer (guards, chains, mutators, exhaustionReply, destructive cross-check) is disarmed.
 
-**Architecture:** `stripGovernance` gains a prompt-view/loop-view split: the stripped spec's `surface.systemPrompt` becomes a closure rendering the FULL original spec + contract via `renderScopedSpecTrunk` (the runtime honors this override at `packages/core/src/runtime/prompt.ts:94` and `packages/mastra/src/compile.ts:65`), while the spec fields driving the loop stay emptied. Byte-identity between arms is asserted by test.
+**Architecture:** `stripGovernance` gains a prompt-view/loop-view split: the stripped spec's `surface.systemPrompt` becomes a closure rendering the FULL original spec + contract via `renderScopedSpecTrunk` (the runtime honors this override at `packages/core/src/runtime/prompt.ts:94` and `packages/mastra/src/compile.ts:65`), while the spec fields driving the loop stay emptied. Byte-identity between variants is asserted by test.
 
 **Tech Stack:** TypeScript, vitest, pnpm workspace (`packages/eval`, docs in `docs/tutorial`), agentspec skill docs (separate repo `~/Dev/js/looprun/agentspec`).
 
 ## Global Constraints
 
-- Spec: `docs/superpowers/specs/2026-07-31-prose-only-ungoverned-arm-design.md` — the cut table is normative.
-- Flag stays `--ungoverned`; arm label stays `ungoverned` in dumps. No third arm.
+- Spec: `docs/superpowers/specs/2026-07-31-prose-only-ungoverned-variant-design.md` — the cut table is normative.
+- Flag stays `--ungoverned`; variant label stays `ungoverned` in dumps. No third variant.
 - No export-surface change expected (`stripGovernance`/`UngovernedBundle` signatures unchanged); if any `packages/eval/src/index.ts` export DOES change, `test/surface-lock.test.ts` riders AND the tutorial outline spec must change in the same commit (surface-lock law).
 - Skill-repo writes (Task 3) end with an explicit leak-review confirmation: no machine paths, no dev/bench context, no internal jargon in skill artifacts.
 - Commit in looprun/agentspec but NEVER push (the user pushes).
@@ -23,7 +23,7 @@
 
 **Files:**
 - Modify: `packages/eval/src/ungoverned.ts`
-- Test: `packages/eval/test/subject-runner.test.ts` (the `'ungoverned arm strips the whole governance surface (guard count 0)'` test, lines 127–150)
+- Test: `packages/eval/test/subject-runner.test.ts` (the `'ungoverned variant strips the whole governance surface (guard count 0)'` test, lines 127–150)
 
 **Interfaces:**
 - Consumes: `renderScopedSpecTrunk(world, spec, uploads, domain)` from `@looprun-ai/core` (already exported); `AgentSpec.surface.systemPrompt?: (world, recentUploads?) => string` (`packages/core/src/spec.ts:153`).
@@ -34,16 +34,16 @@
 In `packages/eval/test/subject-runner.test.ts`, replace the test at lines 127–150 with:
 
 ```ts
-  it('ungoverned arm: prompt byte-identical to governed, enforcement disarmed', async () => {
+  it('ungoverned variant: prompt byte-identical to governed, enforcement disarmed', async () => {
     const spec = subject.specs['front-desk'];
     const stripped = stripGovernance(spec, subject.contract);
 
-    // PROMPT VIEW — the arm's system prompt is the governed trunk, byte for byte.
+    // PROMPT VIEW — the variant's system prompt is the governed trunk, byte for byte.
     const world = subject.makeWorld('default');
     const governedPrompt = renderScopedSpecTrunk(world, spec, [], subject.contract);
     expect(stripped.spec.surface.systemPrompt).toBeDefined();
     expect(stripped.spec.surface.systemPrompt!(world, [])).toBe(governedPrompt);
-    // the prose survived: rule sections present in the arm's prompt
+    // the prose survived: rule sections present in the variant's prompt
     expect(governedPrompt).toContain('## Core rules (NEVER violate)');
 
     // LOOP VIEW — the enforcement layer is disarmed (the cut table of the design spec).
@@ -63,7 +63,7 @@ In `packages/eval/test/subject-runner.test.ts`, replace the test at lines 127–
       modelId: 'scripted',
       ungoverned: true,
     });
-    expect(dump.arm).toBe('ungoverned');
+    expect(dump.variant).toBe('ungoverned');
     expect(dump.invariantVerdict.pass, JSON.stringify(dump.invariantVerdict)).toBe(true);
     expect(dump.turns.flatMap((t) => t.guardEvents)).toEqual([]);
   });
@@ -75,7 +75,7 @@ Add the import at the top of the file (next to the existing `@looprun-ai/mastra/
 import { renderScopedSpecTrunk } from '@looprun-ai/core';
 ```
 
-Note: the old assertions `behavior === []` / `scope === undefined` / `coreInvariants === []` are deliberately dropped from the test — under the new semantics those fields are inert (the prompt comes from the closure) and asserting them would freeze an implementation detail. The old test's discrimination test (`'forbidden call is detected (02, ungoverned arm fabricates a reservation)'`, lines 104–125) stays UNCHANGED — it proves the forbidden call still reaches the world in the ungov arm (spec test b).
+Note: the old assertions `behavior === []` / `scope === undefined` / `coreInvariants === []` are deliberately dropped from the test — under the new semantics those fields are inert (the prompt comes from the closure) and asserting them would freeze an implementation detail. The old test's discrimination test (`'forbidden call is detected (02, ungoverned variant fabricates a reservation)'`, lines 104–125) stays UNCHANGED — it proves the forbidden call still reaches the world in the ungov variant (spec test b).
 
 - [ ] **Step 2: Run to verify it fails**
 
@@ -88,8 +88,8 @@ Full new file content:
 
 ```ts
 /**
- * The ungoverned-arm strip — PROSE-ONLY baseline: the SAME agent with the SAME system
- * prompt (byte-identical to the governed arm — every rule rendered as prose), run with the
+ * The ungoverned-variant strip — PROSE-ONLY baseline: the SAME agent with the SAME system
+ * prompt (byte-identical to the governed variant — every rule rendered as prose), run with the
  * enforcement layer disarmed. What is removed is only the CHECKS: guard hooks (veto /
  * redrive / deny), egress mutators, `controls.chains`, `controls.exhaustionReply`, and the
  * destructive cross-check. `governed − ungoverned` therefore measures the deterministic-
@@ -125,7 +125,7 @@ export function stripGovernance(spec: AgentSpec, contract: DomainContract): Ungo
     surface: {
       tools: [...spec.surface.tools],
       // PROMPT VIEW: the governed trunk, byte for byte. A pre-existing override is the
-      // governed arm's own prompt already — reuse it; otherwise close over the FULL spec.
+      // governed variant's own prompt already — reuse it; otherwise close over the FULL spec.
       systemPrompt:
         spec.surface.systemPrompt ??
         ((w, u = []) => renderScopedSpecTrunk(w, spec, u, contract)),
@@ -157,7 +157,7 @@ Expected: all PASS (including the unchanged discrimination test 02 and `surface-
 ```bash
 cd /Users/marcos/Dev/js/looprun/looprun
 git add packages/eval/src/ungoverned.ts packages/eval/test/subject-runner.test.ts
-git commit -m "feat(eval): ungoverned arm is prose-only — byte-identical prompt, enforcement disarmed"
+git commit -m "feat(eval): ungoverned variant is prose-only — byte-identical prompt, enforcement disarmed"
 ```
 
 ---
@@ -165,7 +165,7 @@ git commit -m "feat(eval): ungoverned arm is prose-only — byte-identical promp
 ### Task 2: Tutorial §5.6 — rewrite the fairness claim to the new semantics
 
 **Files:**
-- Modify: `docs/tutorial/05-running-and-eval.md:641-669` (section `### 5.6 The A/B: stripGovernance and the ungoverned arm`)
+- Modify: `docs/tutorial/05-running-and-eval.md:641-669` (section `### 5.6 The A/B: stripGovernance and the ungoverned variant`)
 
 **Interfaces:**
 - Consumes: the new `stripGovernance` semantics from Task 1.
@@ -179,26 +179,26 @@ Replace lines 654–669 (the fenced `EMPTIED/KEPT` block and the paragraph after
    DISARMED  guard hooks (veto / redrive / deny) · egress mutators (`onReplyMutate`) ·
              `controls.chains` · `controls.exhaustionReply` · the destructive cross-check
              (`assertDestructiveConfirmable`)
-   KEPT      the ENTIRE system prompt, byte-identical to the governed arm — voice, scope,
+   KEPT      the ENTIRE system prompt, byte-identical to the governed variant — voice, scope,
              core rules, flow, tool/reply rules, governance directives, behavior, language —
              plus the tool surface, the state tail, and the remaining loop mechanics
              (terminal policy, maxSteps, sampling)
 ```
 
 ```
-It returns fresh objects and never mutates the source spec, so both arms can run in one
-process. The ungoverned arm is the *same agent with the same prompt* — a well-prompted
+It returns fresh objects and never mutates the source spec, so both variants can run in one
+process. The ungoverned variant is the *same agent with the same prompt* — a well-prompted
 traditional agent that knows every rule — minus the deterministic checks. A difference in
-the invariant gate between the arms is then attributable to ENFORCEMENT and to nothing
+the invariant gate between the variants is then attributable to ENFORCEMENT and to nothing
 else: both models read the same "never reserve for an unknown member" prose; in the
-governed arm the guard stops the violating call before it reaches the world, while in the
-ungoverned arm it arrives and the world's own refusal is the only thing left standing
+governed variant the guard stops the violating call before it reaches the world, while in the
+ungoverned variant it arrives and the world's own refusal is the only thing left standing
 between the model and the write. Same rules, same intent, two very different distances
-from the damage — and that gap, the price of relying on prose alone, is what the two arms
+from the damage — and that gap, the price of relying on prose alone, is what the two variants
 measure.
 ```
 
-Keep lines 641–652 (heading, intro sentence, code excerpt) unchanged — the excerpt's comment reads "the whole governance surface emptied"; update that one comment line in the excerpt to `/** The ungoverned control arm: the same prompt with the enforcement layer disarmed. */` and make the same one-line comment fix in `docs/tutorial/snippets/05-running-and-eval.ts` (grep for `ungovernedArm` there) so the excerpt and its source stay in sync.
+Keep lines 641–652 (heading, intro sentence, code excerpt) unchanged — the excerpt's comment reads "the whole governance surface emptied"; update that one comment line in the excerpt to `/** The ungoverned control variant: the same prompt with the enforcement layer disarmed. */` and make the same one-line comment fix in `docs/tutorial/snippets/05-running-and-eval.ts` (grep for `ungovernedVariant` there) so the excerpt and its source stay in sync.
 
 - [ ] **Step 2: Verify the snippet file still typechecks (if it is part of a checked package)**
 
@@ -210,34 +210,34 @@ Expected: PASS.
 ```bash
 cd /Users/marcos/Dev/js/looprun/looprun
 git add docs/tutorial/05-running-and-eval.md docs/tutorial/snippets/05-running-and-eval.ts
-git commit -m "docs(tutorial): §5.6 A/B — ungoverned arm is prose-only (same prompt, checks disarmed)"
+git commit -m "docs(tutorial): §5.6 A/B — ungoverned variant is prose-only (same prompt, checks disarmed)"
 ```
 
 ---
 
-### Task 3: Agentspec skill docs — band semantics under the prose-only baseline
+### Task 3: Agentspec skill docs — range semantics under the prose-only baseline
 
 **Files (repo `/Users/marcos/Dev/js/looprun/agentspec`):**
-- Modify: `skill/references/test.md` (band table lines 123–125, prediction line 129, fail class 9 line 185)
+- Modify: `skill/references/test.md` (range table lines 123–125, prediction line 129, fail class 9 line 185)
 - Modify: `skill/references/evals.md` (prediction instruction line 55, observation line 64)
 
 **Interfaces:**
 - Consumes: nothing from Tasks 1–2 (docs describe the released engine behavior; the skill is engine-version-agnostic — cite the semantics, not a version).
 - Produces: nothing downstream.
 
-- [ ] **Step 1: Update the T2 band table in `skill/references/test.md`**
+- [ ] **Step 1: Update the T2 range table in `skill/references/test.md`**
 
-The three band rows (lines 123–125) currently define *discriminates*/*floor*/*alarm* against an ungoverned arm. Update the row DESCRIPTIONS so the meaning reads against the prose-only baseline. Exact replacement rows:
+The three range rows (lines 123–125) currently define *discriminates*/*floor*/*alarm* against an ungoverned variant. Update the row DESCRIPTIONS so the meaning reads against the prose-only baseline. Exact replacement rows:
 
 ```
-| **discriminates** | ungoverned fails, governed passes — the prose alone did not hold; the CHECK held | as high as you can get it — the only band that measures the product rather than the model |
-| **floor** | both arms pass — the prose alone already holds | one per promised job, no more — regression cover; beyond that it is budget that should have gone to discrimination |
+| **discriminates** | ungoverned fails, governed passes — the prose alone did not hold; the CHECK held | as high as you can get it — the only range that measures the product rather than the model |
+| **floor** | both variants pass — the prose alone already holds | one per promised job, no more — regression cover; beyond that it is budget that should have gone to discrimination |
 | **alarm** | ungoverned PASSES, governed FAILS — enforcement itself cost the product | ZERO — governance costing the product (fail class 9 below) |
 ```
 
 Line 129 ("comments against the ungoverned traces…") needs no text change — predictions are still checked against ungoverned traces; only their meaning sharpened (covered by evals.md below).
 
-Line 185 (fail class 9): append one clause so the row ends: `…ACCEPT with the price written down** — the ungoverned arm shares the governed prompt, so an ALARM is the check itself (not a missing rule) costing the case`.
+Line 185 (fail class 9): append one clause so the row ends: `…ACCEPT with the price written down** — the ungoverned variant shares the governed prompt, so an ALARM is the check itself (not a missing rule) costing the case`.
 
 - [ ] **Step 2: Update the prediction instructions in `skill/references/evals.md`**
 
@@ -252,7 +252,7 @@ Re-read both diffs. Confirm: no machine paths, no dev/bench vocabulary ("Atlas",
 ```bash
 cd /Users/marcos/Dev/js/looprun/agentspec
 git add skill/references/test.md skill/references/evals.md
-git commit -m "test/evals: band + prediction semantics under the prose-only ungoverned baseline"
+git commit -m "test/evals: range + prediction semantics under the prose-only ungoverned baseline"
 ```
 
 ---

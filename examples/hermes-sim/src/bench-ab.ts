@@ -1,14 +1,14 @@
 /**
  * bench-ab — the governed-vs-raw breach-rate study over the REAL Hermes CLI.
  *
- * For each iteration (AB_N, default 10) and each arm (governed | raw), start a FRESH server
+ * For each iteration (AB_N, default 10) and each variant (governed | raw), start a FRESH server
  * (fresh worlds), run all 4 tasks through `hermes chat -q`, snapshot per-world METRICS (not
  * pass/fail): sends, drafts, unconfirmed deletes, new/duplicate notes, event/reminder counts,
- * double-bookings — plus governed-side guard corrections. One JSONL row per (iter, arm, task),
- * appended to AB_OUT; already-recorded (iter, arm) pairs are skipped on restart, so the study
+ * double-bookings — plus governed-side guard corrections. One JSONL row per (iter, variant, task),
+ * appended to AB_OUT; already-recorded (iter, variant) pairs are skipped on restart, so the study
  * is resumable across rate-limit deaths. A summary table prints at the end (and on resume).
  *
- * Free-tier pacing matches run-sim: 60 s between tasks, 60 s between arm-runs.
+ * Free-tier pacing matches run-sim: 60 s between tasks, 60 s between variant-runs.
  */
 import { appendFileSync, existsSync, readFileSync } from 'node:fs';
 import { mkdirSync, rmSync } from 'node:fs';
@@ -26,11 +26,11 @@ const OUT = process.env.AB_OUT ?? join(ROOT, '.bench-ab-results.jsonl');
 const N = Number(process.env.AB_N ?? 10);
 const PACE_MS = 60_000;
 
-type Arm = 'governed' | 'raw';
+type Variant = 'governed' | 'raw';
 
 interface Row {
   iter: number;
-  arm: Arm;
+  variant: Variant;
   task: string;
   metrics: Record<string, number>;
   breaches: string[];
@@ -93,15 +93,15 @@ function doneKeys(): Set<string> {
   for (const line of readFileSync(OUT, 'utf8').split('\n')) {
     if (!line.trim()) continue;
     const row = JSON.parse(line) as Row;
-    byRun.set(`${row.iter}:${row.arm}`, (byRun.get(`${row.iter}:${row.arm}`) ?? 0) + 1);
+    byRun.set(`${row.iter}:${row.variant}`, (byRun.get(`${row.iter}:${row.variant}`) ?? 0) + 1);
   }
-  // An arm-run counts as done only when all tasks were recorded.
+  // An variant-run counts as done only when all tasks were recorded.
   return new Set([...byRun.entries()].filter(([, n]) => n >= TASKS.length).map(([k]) => k));
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-async function runArm(iter: number, arm: Arm, home: string): Promise<Row[]> {
+async function runVariant(iter: number, variant: Variant, home: string): Promise<Row[]> {
   const rows: Row[] = [];
   const turns: TurnEvent[] = [];
   let serverUrl: string;
@@ -109,7 +109,7 @@ async function runArm(iter: number, arm: Arm, home: string): Promise<Row[]> {
   let getWorld: (modelId: string) => any;
   let registry: Record<string, { agent: any }> | null = null;
 
-  if (arm === 'raw') {
+  if (variant === 'raw') {
     const { model, modelParams } = backingModel();
     const raw = await createRawServer({ domains: rawDomains(), model, modelParams, maxSteps: 12 });
     serverUrl = raw.url;
@@ -132,7 +132,7 @@ async function runArm(iter: number, arm: Arm, home: string): Promise<Row[]> {
     for (const task of TASKS) {
       if (!first) await sleep(PACE_MS);
       first = false;
-      const modelId = arm === 'raw' ? `${task.model}-raw` : task.model;
+      const modelId = variant === 'raw' ? `${task.model}-raw` : task.model;
       const before = turns.length;
       const started = Date.now();
       let error: string | undefined;
@@ -144,7 +144,7 @@ async function runArm(iter: number, arm: Arm, home: string): Promise<Row[]> {
       }
       let world: any = null;
       let corrections: string[] = [];
-      if (arm === 'raw') {
+      if (variant === 'raw') {
         world = getWorld(modelId);
       } else {
         const taskTurns = turns.slice(before).filter((t) => t.model === modelId);
@@ -158,7 +158,7 @@ async function runArm(iter: number, arm: Arm, home: string): Promise<Row[]> {
       if (!world && !error) error = 'no world observed (harness never reached the server)';
       const row: Row = {
         iter,
-        arm,
+        variant,
         task: task.model,
         metrics,
         breaches,
@@ -170,7 +170,7 @@ async function runArm(iter: number, arm: Arm, home: string): Promise<Row[]> {
       rows.push(row);
       appendFileSync(OUT, `${JSON.stringify(row)}\n`);
       console.log(
-        `[iter ${iter} ${arm}] ${task.model}: ${JSON.stringify(metrics)}` +
+        `[iter ${iter} ${variant}] ${task.model}: ${JSON.stringify(metrics)}` +
           `${breaches.length ? ` BREACH:${breaches.join(',')}` : ''}` +
           `${corrections.length ? ` corrections=${corrections.length}` : ''}${error ? ` ERROR:${error}` : ''}`,
       );
@@ -183,22 +183,22 @@ async function runArm(iter: number, arm: Arm, home: string): Promise<Row[]> {
 
 function summarize(): void {
   if (!existsSync(OUT)) return;
-  // Keep the LAST row per (iter, arm, task) — a partially-recorded arm-run reruns whole on
+  // Keep the LAST row per (iter, variant, task) — a partially-recorded variant-run reruns whole on
   // resume, so earlier partial rows are superseded.
   const byKey = new Map<string, Row>();
   for (const l of readFileSync(OUT, 'utf8').split('\n')) {
     if (!l.trim()) continue;
     const row = JSON.parse(l) as Row;
-    byKey.set(`${row.iter}:${row.arm}:${row.task}`, row);
+    byKey.set(`${row.iter}:${row.variant}:${row.task}`, row);
   }
   const rows = [...byKey.values()];
   console.log(`\n━━ SUMMARY (${rows.length} rows in ${OUT})`);
-  for (const arm of ['governed', 'raw'] as Arm[]) {
-    const a = rows.filter((r) => r.arm === arm && !r.error);
-    const errs = rows.filter((r) => r.arm === arm && r.error).length;
+  for (const variant of ['governed', 'raw'] as Variant[]) {
+    const a = rows.filter((r) => r.variant === variant && !r.error);
+    const errs = rows.filter((r) => r.variant === variant && r.error).length;
     const byTask = new Map<string, Row[]>();
     for (const r of a) byTask.set(r.task, [...(byTask.get(r.task) ?? []), r]);
-    console.log(`\n${arm.toUpperCase()} — ${a.length} clean task-runs, ${errs} errored`);
+    console.log(`\n${variant.toUpperCase()} — ${a.length} clean task-runs, ${errs} errored`);
     for (const [task, trs] of byTask) {
       const breached = trs.filter((r) => r.breaches.length > 0).length;
       const kinds = [...new Set(trs.flatMap((r) => r.breaches))];
@@ -207,7 +207,7 @@ function summarize(): void {
       const avg = keys.map((k) => `${k}=${(trs.reduce((s, r) => s + (r.metrics[k] ?? 0), 0) / trs.length).toFixed(2)}`);
       console.log(
         `  ${task}: breach ${breached}/${trs.length}${kinds.length ? ` (${kinds.join(',')})` : ''} | avg ${avg.join(' ')}${
-          arm === 'governed' ? ` | corrections ${corr}` : ''
+          variant === 'governed' ? ` | corrections ${corr}` : ''
         }`,
       );
     }
@@ -224,15 +224,15 @@ async function main(): Promise<number> {
   mkdirSync(home, { recursive: true });
 
   const done = doneKeys();
-  console.log(`A/B study: N=${N} per arm, ${done.size} arm-runs already recorded → ${OUT}`);
+  console.log(`A/B study: N=${N} per variant, ${done.size} variant-runs already recorded → ${OUT}`);
   let first = true;
   for (let iter = 1; iter <= N; iter++) {
-    for (const arm of ['governed', 'raw'] as Arm[]) {
-      if (done.has(`${iter}:${arm}`)) continue;
+    for (const variant of ['governed', 'raw'] as Variant[]) {
+      if (done.has(`${iter}:${variant}`)) continue;
       if (!first) await sleep(PACE_MS);
       first = false;
-      console.log(`\n━━ iter ${iter}/${N} — ${arm}`);
-      await runArm(iter, arm, home);
+      console.log(`\n━━ iter ${iter}/${N} — ${variant}`);
+      await runVariant(iter, variant, home);
     }
   }
   summarize();

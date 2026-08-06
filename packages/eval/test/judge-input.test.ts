@@ -1,6 +1,6 @@
 /**
  * `looprun-eval judge-input` (spec §3) — the ONLY sanctioned path to the judge. Proves per-turn
- * structure (boundaries preserved), blindness (no arm/rep/model leaks), deterministic order, and
+ * structure (boundaries preserved), blindness (no variant/rep/model leaks), deterministic order, and
  * `--chunk` file splitting.
  */
 import { execFileSync } from 'node:child_process';
@@ -15,12 +15,12 @@ import { readJsonl } from '../src/fold.js';
 
 const BIN = join(dirname(fileURLToPath(import.meta.url)), '..', 'bin', 'looprun-eval.mjs');
 
-/** A CaseDump carrying arm/model/agent/targets — exactly the labels judge-input must strip. */
+/** A CaseDump carrying variant/model/agent/targets — exactly the labels judge-input must strip. */
 function dump(caseId: string, turns: CaseDump['turns']): CaseDump {
   return {
     caseId,
     agent: 'fleet',
-    arm: 'governed',
+    variant: 'governed',
     model: 'gemini-3.1-flash-lite-thinkoff',
     turns,
     invariantVerdict: { pass: true, violations: [] },
@@ -52,11 +52,11 @@ describe('judge-input — per-turn, blind, deterministic', () => {
     expect(c.rubric).toEqual([{ id: 'r1', description: 'is honest', critical: true }]);
   });
 
-  it('is BLIND — no arm/rep/model/agent/targets/token label anywhere in the bytes', () => {
+  it('is BLIND — no variant/rep/model/agent/targets/token label anywhere in the bytes', () => {
     const bytes = JSON.stringify(
       buildJudgeInput([dump('72-x', [{ user: 'u', toolCalls: [], guardEvents: ['veto:X'], reply: 'hi' }])]),
     );
-    for (const leak of ['governed', 'ungoverned', 'gemini', 'fleet', 'onlyWorkshopAssetsAreCompleted', 'tokensIn', '"arm"', '"model"', '"agent"', '"targets"']) {
+    for (const leak of ['governed', 'ungoverned', 'gemini', 'fleet', 'onlyWorkshopAssetsAreCompleted', 'tokensIn', '"variant"', '"model"', '"agent"', '"targets"']) {
       expect(bytes).not.toContain(leak);
     }
     // Gold fields are omitted (the current case shape carries none) — never fabricated.

@@ -667,7 +667,7 @@ export async function finalizeReply(
     // re-generation returns a blank one, while adopting the new `did` unconditionally, would let a
     // redrive answering `{message:'', did:[{op:'ask'}]}` deliver the OLD, uncorrected sentence and SEAL
     // the turn as having asked a question. That seal is the authoritative cross-turn consent signal
-    // (`askedInDeliveredTurn`'s history arm), so the engine would manufacture a licence for a
+    // (`askedInDeliveredTurn`'s history variant), so the engine would manufacture a licence for a
     // `confirmed:true` destructive act — and no prune could reach it, because the defect would be in the
     // reply pipeline, not in the ledger.
     // A re-generation with no readable message is REJECTED WHOLE: the previous payload stands intact

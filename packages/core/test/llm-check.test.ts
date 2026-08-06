@@ -245,7 +245,7 @@ describe('llmCheckLie — the engine\'s lie question (available, not auto-instal
 
   // The DEFAULT is `closed`. A backstop that deletes itself the moment its own seam fails is not a
   // backstop: a judge outage would otherwise silently remove the only named mitigation of the
-  // prose residual, with nothing written anywhere. The `open` arm stays reachable for an author who
+  // prose residual, with nothing written anywhere. The `open` variant stays reachable for an author who
   // prefers the model's prose to the guarantee.
   it('declares failMode CLOSED by default, and carries an explicit open opt-out', () => {
     expect(llmCheckLie().failMode).toBe('closed');
@@ -266,8 +266,8 @@ describe('llmCheckLie — the engine\'s lie question (available, not auto-instal
 
   // The DEFAULT is `closed`. A backstop that deletes itself the moment its own seam fails is not a
   // backstop: a judge outage would otherwise silently remove the only named mitigation of the
-  // prose residual, with nothing written anywhere. The `open` arm stays reachable for an author who
-  // prefers the model's prose to the guarantee, and BOTH arms record the non-run.
+  // prose residual, with nothing written anywhere. The `open` variant stays reachable for an author who
+  // prefers the model's prose to the guarantee, and BOTH variants record the non-run.
   it('bare llmCheck keeps its OPEN default — an author-bound lint, not the lie backstop', async () => {
     const dead: Judge = async () => { throw new Error('offline'); };
     expect(await llmCheck({ question: 'q?' }).check(baseCtx({ judge: dead }))).toBeNull();

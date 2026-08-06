@@ -34,25 +34,25 @@ hand computation that no instrument produced. Orchestration is deterministic wor
    machine-readable manifest (`judging.json`: input paths, expected verdict counts) for the host
    to dispatch judge subagents per the agentspec protocol. `campaign resume` continues when
    verdict files are complete.
-5. **Fold + sync + band** — fold per rep, byte-identical verdict sync across dirs, then
+5. **Fold + sync + range** — fold per rep, byte-identical verdict sync across dirs, then
    `cert r0 r1 r2` (FLOOR law). Numbers exist ONLY as instrument output.
 6. **Status** — `campaign status` prints per-phase progress (cases run / verdicts written /
    incidents) so the operator, or an active watcher, polls ONE command instead of improvising.
 
 ## Laws encoded
 
-- No hand-computed figures: the campaign's report quotes `cert-band.json` verbatim.
+- No hand-computed figures: the campaign's report quotes `cert-range.json` verbatim.
 - A rep dir is append-only after DONE; re-measurement is a NEW campaign dir (dated), old dirs are
   history.
 - Judge model/tier is the host's strongest available (recorded into the manifest for the record);
   the campaign records which model judged each rep.
-- Control arm always runs (the A/B is part of the instrument, not an option).
+- Control variant always runs (the A/B is part of the instrument, not an option).
 
 ## Testing
 
 - Scripted-model campaign end-to-end in CI (no network): preflight → runs → manifest → fake
-  verdicts → fold/sync/band; asserts immutability (second run refuses), resume, and that the
-  band file is the only number source.
+  verdicts → fold/sync/range; asserts immutability (second run refuses), resume, and that the
+  range file is the only number source.
 - Preflight failure fixtures: missing env key; dirty out dir; validate red.
 - Monitor gate: a seeded network-incident log blocks cert until marked resolved.
 

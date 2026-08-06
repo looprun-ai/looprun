@@ -243,7 +243,7 @@ describe('terminal tool definitions', () => {
 // forced-terminal path.
 // ─────────────────────────────────────────────────────────────────────────────
 describe('an empty did never delivers', () => {
-  /** The same spec/world for both arms — only the `did` differs. */
+  /** The same spec/world for both variants — only the `did` differs. */
   const emptyDidScript = (did: unknown[]): ScriptStep[] => [
     [{ tool: 'respond', args: { message: 'All done!', did } }],
     // Three more identical steps are AVAILABLE: if a rejected input were fed back to the model, the

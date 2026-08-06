@@ -11,7 +11,7 @@ import { runCase, type CaseDump } from './run.js';
 import { PROVIDER_ENDPOINTS, selectModel } from './provider.js';
 import { foldVerdicts, readJsonl, renderResultsMd, syncVerdicts, renderSyncMd, type SyncInput, type VerdictLine } from './fold.js';
 import { writeJudgeInput } from './judge-input.js';
-import { buildCert, buildCertBand, type CertBand, type CertSummary } from './cert.js';
+import { buildCert, buildCertRange, type CertRange, type CertSummary } from './cert.js';
 
 function today(): string {
   return new Date().toISOString().slice(0, 10);
@@ -61,7 +61,7 @@ export async function runCommand(opts: RunCommandOptions): Promise<string> {
   const apiKeyEnv = opts.apiKeyEnv ?? target.apiKeyEnv;
   const apiKey = (apiKeyEnv ? process.env[apiKeyEnv] : process.env.MODEL_API_KEY) ?? 'local';
   const ungoverned = opts.ungoverned === true;
-  const arm = ungoverned ? 'ungoverned' : 'governed';
+  const variant = ungoverned ? 'ungoverned' : 'governed';
 
   const subject = await loadSubject(opts.subject);
   // TRUNK-STATIC gate (fundamental for local prefix-cache reuse): fail loud, do not run cold.
@@ -83,7 +83,7 @@ export async function runCommand(opts: RunCommandOptions): Promise<string> {
 
   const date = opts.date ?? today();
   const modelSlug = modelId.replace(/[^a-zA-Z0-9.-]+/g, '_');
-  const outDir = resolve(opts.out ?? join(subject.dir, 'test', `${date}-${modelSlug}-${arm}`));
+  const outDir = resolve(opts.out ?? join(subject.dir, 'test', `${date}-${modelSlug}-${variant}`));
   mkdirSync(outDir, { recursive: true });
 
   const { model, modelParams, isLocal } = opts.modelFactory
@@ -101,12 +101,12 @@ export async function runCommand(opts: RunCommandOptions): Promise<string> {
     try {
       const dump = await runCase(subject, c, { model, modelId, ungoverned, modelParams, stopOnRepeatedToolCall: isLocal });
       dumps.push(dump);
-      log(`${arm} ${c.id} ... ${dump.invariantVerdict.pass ? 'unjudged (invariants clean)' : 'invariant-FAIL'}`);
+      log(`${variant} ${c.id} ... ${dump.invariantVerdict.pass ? 'unjudged (invariants clean)' : 'invariant-FAIL'}`);
     } catch (e) {
       dumps.push({
         caseId: c.id,
         agent: '?',
-        arm,
+        variant,
         model: modelId,
         turns: [],
         invariantVerdict: { pass: false, violations: [`run error: ${(e as Error).message}`] },
@@ -116,7 +116,7 @@ export async function runCommand(opts: RunCommandOptions): Promise<string> {
         tokensOut: 0,
         error: (e as Error).message,
       });
-      log(`${arm} ${c.id} ... ERROR ${(e as Error).message}`);
+      log(`${variant} ${c.id} ... ERROR ${(e as Error).message}`);
     }
   }
 
@@ -128,7 +128,7 @@ export async function runCommand(opts: RunCommandOptions): Promise<string> {
     return `| ${d.caseId} | ${inv} | ${needsJudge} |`;
   });
   const summary = [
-    `# Run summary — ${modelId} · ${arm} · ${date}`,
+    `# Run summary — ${modelId} · ${variant} · ${date}`,
     '',
     `Subject: ${subject.dir}`,
     `Cases: ${dumps.length} · unjudged (invariants clean): ${dumps.filter((d) => d.invariantVerdict.pass).length} · invariant-FAIL: ${dumps.filter((d) => !d.invariantVerdict.pass).length}`,
@@ -240,7 +240,7 @@ export interface JudgeInputCommandOptions {
 
 /**
  * `looprun-eval judge-input` — build the blind, per-case JSONL the judge reads (spec §3). The ONLY
- * sanctioned path to the judge: turn boundaries preserved, no arm/rep/model labels, deterministic
+ * sanctioned path to the judge: turn boundaries preserved, no variant/rep/model labels, deterministic
  * case order. Returns the paths written into the run dir.
  */
 export function judgeInputCommand(opts: JudgeInputCommandOptions): string[] {
@@ -255,7 +255,7 @@ export interface CertCommandOptions {
   bar?: number;
   date?: string;
   note?: string;
-  /** Band only: where cert-band.json + CERT-BAND.md land (default: parent of the first dir). */
+  /** Range only: where cert-range.json + CERT-RANGE.md land (default: parent of the first dir). */
   out?: string;
   /** Verdicts filename inside each run dir (default `verdicts.jsonl`). Use `verdicts.synced.jsonl`
    *  to certify off `fold --sync` output — the real drop-in wiring, no manual rename. */
@@ -264,11 +264,11 @@ export interface CertCommandOptions {
 
 /**
  * Fold + certify. One run dir → `cert.json` + `CERT.md` (reps=1, stated). Multiple dirs →
- * per-rep certs PLUS `cert-band.json` + `CERT-BAND.md`, certified only if the FLOOR clears the bar.
+ * per-rep certs PLUS `cert-range.json` + `CERT-RANGE.md`, certified only if the FLOOR clears the bar.
  */
-export function certCommand(opts: CertCommandOptions): CertSummary | CertBand {
+export function certCommand(opts: CertCommandOptions): CertSummary | CertRange {
   const shared = { model: opts.model, bar: opts.bar, generatedAt: opts.date, artifactNote: opts.note, verdictsFile: opts.verdicts };
   const dirs = [opts.dir, ...(opts.dirs ?? [])];
-  if (dirs.length > 1) return buildCertBand(dirs, { ...shared, out: opts.out });
+  if (dirs.length > 1) return buildCertRange(dirs, { ...shared, out: opts.out });
   return buildCert(opts.dir, shared);
 }

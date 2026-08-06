@@ -90,8 +90,8 @@ export const loadSchedulerSubject = (): Promise<Subject> => loadSubject(SUBJECT_
 /** Which spec a case routes to: the `CASE_AGENT` map, else the single spec of a one-spec subject. */
 export const routedAgent = (subject: Subject, caseId: string): string => agentForCase(subject, caseId);
 
-/** The ungoverned control arm: the same prompt with the enforcement layer disarmed. */
-export function ungovernedArm(subject: Subject, caseId: string) {
+/** The ungoverned control variant: the same prompt with the enforcement layer disarmed. */
+export function ungovernedVariant(subject: Subject, caseId: string) {
   const spec = subject.specs[routedAgent(subject, caseId)]!;
   return stripGovernance(spec, subject.contract);
 }

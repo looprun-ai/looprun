@@ -68,7 +68,7 @@ Cases added or rewritten for the change, beyond the standing ratchet:
 | `deriveClaimsFromLedger` | a world label colliding with a reserved SPEECH op never becomes the derived `op`; every one of the four is coerced, an ordinary label is untouched | L1, core |
 | `destructiveThrottle` | a same-step preview that OMITS the confirm flag is a preview (parity with `confirmFirst`); a CONFIRMED sibling still caps; a `flagless` (prior-ask) tool caps from the first sibling | L1, core + mastra |
 | `pendingConfirmMustAsk` | the delivered declaration is the only relay signal — a ctx that seats none fails CLOSED | L1, core |
-| `askedInDeliveredTurn` | the sealed-history-only rule, isolated at `confirmFirst`'s `via:'ask'` and `via:'either'` arms (an earlier-turn RAW observed ask licenses nothing; a sealed ask over a blank delivered reply licenses nothing) | L1, core |
+| `askedInDeliveredTurn` | the sealed-history-only rule, isolated at `confirmFirst`'s `via:'ask'` and `via:'either'` variants (an earlier-turn RAW observed ask licenses nothing; a sealed ask over a blank delivered reply licenses nothing) | L1, core |
 
 ## Results
 Recorded from `governance/.artifacts/proofs.json` (`scripts/proofs/run-proofs.mjs`):

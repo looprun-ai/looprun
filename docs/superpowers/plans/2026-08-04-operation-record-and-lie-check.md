@@ -114,7 +114,7 @@ Each of the four failure modes gets a test that fails if the mode ever returns.
 
 ---
 
-## Task 7 — the battery arm
+## Task 7 — the battery variant
 
 **Files:** `packages/eval/test/battery/`.
 
@@ -150,7 +150,7 @@ Port the measured harness so the numbers are reproducible against the engine rat
 
 | | |
 |---|---|
-| **the prompts' language** | the measured lie check was Portuguese. Everything written to a file here is English, so what ships is the translation. The question's shape carries over; its rate does not — the gated arm re-measures it. |
+| **the prompts' language** | the measured lie check was Portuguese. Everything written to a file here is English, so what ships is the translation. The question's shape carries over; its rate does not — the gated variant re-measures it. |
 | **a clean check is not a correction** | `turnCorrections` is the log of what the engine had to correct. A check that found nothing corrected nothing, so only a fired check and its rewrite are recorded. |
 | **the blank-delivery floor** | the composed text is never empty now, so the floor tests the PROSE plus the record's line count: no prose AND no line is the case with nothing to deliver. |
-| **the fake model answers the judge** | a judge call is engine machinery, so the scripted model answers it out of band and consumes no script step. A script stays about what the agent does. |
+| **the fake model answers the judge** | a judge call is engine machinery, so the scripted model answers it out of range and consumes no script step. A script stays about what the agent does. |

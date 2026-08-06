@@ -18,7 +18,7 @@
  *    that call. A call's ARGS are the agent's own text, so scanning them makes grounding circular: one
  *    permitted write plus a fabricated id in a free-text arg would ground `success` on an untouched
  *    entity. A claim of ABSENCE or NON-EFFECT (`not_found`/`failure`/`blocked`/`refused`/
- *    `pending_confirmation`/`no_op`) cannot obey it — an absent record issues no value — so those arms
+ *    `pending_confirmation`/`no_op`) cannot obey it — an absent record issues no value — so those variants
  *    read the world's own negative answer PLUS the identity-KEY args that say which entity was asked
  *    about. They can never cover a write, so they can never hide one.
  *  · IDENTITY IS KEY-SCOPED — an identity is a scalar under `id`/`label`/`<entity>Id`, never any
@@ -31,7 +31,7 @@
  *    never a token run: `BK-1` is not `BK-10`/`BK-1-EXTRA`/`xBK-1y`, and `12` is not
  *    `Order 12`. Lookalikes fail closed: no NFC folding, no cross-script case fold, no stripping of
  *    invisible format characters.
- *  · EVERY ARM NEEDS POSITIVE EVIDENCE — including `no_op`. No arm passes on absence alone, because the
+ *  · EVERY ARM NEEDS POSITIVE EVIDENCE — including `no_op`. No variant passes on absence alone, because the
  *    mere ABSENCE of a contradicting write is trivially true of an entity the turn never touched and
  *    would ground any target on an empty ledger.
  * And the PARTITION: both cross-checks iterate ACTION intentions only — a speech intention
@@ -170,7 +170,7 @@ function identityValues(v: unknown): string[] {
  * beside them. Without this, a result that names a RELATED entity ("this order's parent") would let a
  * claim on the RELATION stand for the acted-on entity: `{id:'ORD-1', parentId:'ORD-2'}` plus a second
  * `{id:'ORD-2'}` write would be covered by TWO claims on ORD-2 — injectivity satisfied, ORD-1 never
- * reported. Only the PRESENCE arms (`success` grounding and write coverage) use this: what an
+ * reported. Only the PRESENCE variants (`success` grounding and write coverage) use this: what an
  * effected write DID is to its own entity, never to the ones it merely points at.
  */
 export function preferredIdentityValues(v: unknown): string[] {
@@ -256,7 +256,7 @@ function issuedEvidence(ctx: GuardCtx, c: ObservedCall): Evidence {
  * M2 (args are never evidence) is a law about claims of PRESENCE, and it stays exactly as it was for
  * `success`. A claim that something did NOT happen cannot obey it, because an absent record issues no
  * value: the only thing that can name the subject of an empty lookup, a failed call, a refusal or a
- * pending confirmation is the LOOKUP itself. So those arms read the call's identity-key args — the
+ * pending confirmation is the LOOKUP itself. So those variants read the call's identity-key args — the
  * fabrication they buy is self-limited (they can never cover an effected write, `claimIsComplete` is
  * `success`-only), and it is bounded by the ledger: the call really happened, under that identity, and
  * the WORLD's own answer (empty / ok:false / requiresConfirmation) still has to be there. Free-text args
@@ -316,7 +316,7 @@ function onTarget(claim: Intention): string {
   return claim.target ? ` on ${claim.target}` : '';
 }
 
-/** Is this claim GROUNDED, given its resolved core outcome? One arm per grounding-table row. */
+/** Is this claim GROUNDED, given its resolved core outcome? One variant per grounding-table row. */
 function isGrounded(
   ctx: GuardCtx,
   claim: Intention,

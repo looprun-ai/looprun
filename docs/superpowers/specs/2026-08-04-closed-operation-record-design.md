@@ -311,7 +311,7 @@ ships      "Read THE MESSAGE as the person would read it. After reading it, woul
 
 Everything written to a file in this repo is English, so the Portuguese instrument cannot ship, and
 a translation is not a transcription: §6's rates are evidence for the question's SHAPE, not for the
-English wording's rate. The gated battery arm runs the shipped prompts, and its numbers are the ones
+English wording's rate. The gated battery variant runs the shipped prompts, and its numbers are the ones
 that describe what ships. The three structural failure modes do not depend on the wording — they are
 asserted, not measured.
 

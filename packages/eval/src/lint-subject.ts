@@ -3,7 +3,7 @@
  * the runtime the truth.
  *
  * These two families catch the same species of defect and it is the worst species there is: a
- * failure with no symptom. A guard no case targets passes in both arms of a discrimination run —
+ * failure with no symptom. A guard no case targets passes in both variants of a discrimination run —
  * it is not an alarm, not a failure, not anything; it is certified as coverage and never fired. A
  * world that returns its refusals as successful-looking results disarms the entire honesty layer
  * behind a green board: the guards are installed, the inventory shows them, the suite passes, and
@@ -102,7 +102,7 @@ function coverageFindings(subject: Subject): string[] {
     for (const id of authoredGuardIds(spec)) {
       if (targeted.has(key(agent, id))) continue;
       out.push(
-        `GUARD-NEVER-TARGETED: '${id}' on agent ${agent} shipped and no case on that lane targets it — a guard the exam never exercises passes in BOTH arms of a discrimination run, so it reads as coverage while never having fired. Repair one of: write a case whose preset makes it deny; give the world the preset that condition needs. A gap here cannot be accepted, only closed`,
+        `GUARD-NEVER-TARGETED: '${id}' on agent ${agent} shipped and no case on that lane targets it — a guard the exam never exercises passes in BOTH variants of a discrimination run, so it reads as coverage while never having fired. Repair one of: write a case whose preset makes it deny; give the world the preset that condition needs. A gap here cannot be accepted, only closed`,
       );
     }
   }

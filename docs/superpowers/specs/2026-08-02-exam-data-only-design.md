@@ -54,7 +54,7 @@ One verb, three layers, replacing subject-minted lints/tests:
 Builds the judge's input file from a run dir — the ONLY sanctioned path to the judge:
 - per-case JSONL: `caseId`, `rubric`, `actualReplyByTurn[]`, `actualTraceByTurn[][]` (turn
   boundaries preserved — never flattened), `goldSeq`, `goldReply`;
-- **blind**: no arm label, no rep label, no file paths hinting at arm;
+- **blind**: no variant label, no rep label, no file paths hinting at variant;
 - deterministic order (case id), so two judges of the same run see identical bytes;
 - `--chunk N` splits into `judge-input.partK.jsonl` files sized for incremental verdict writing.
 
@@ -74,7 +74,7 @@ run showed a weaker ruler fabricating 4 ALARMs on identical transcripts; sync di
 - Schema fixtures incl. every invariant/rubric shape used by coworking + atlas.
 - Premise checker: reproduce cases 19/56/59 (accept-when-should-forbid), 20/36 (multi-turn), 53
   (read-side) as fixtures — checker FIRES on each, and on none after correction.
-- judge-input: golden-file test proving per-turn structure, blindness (grep for arm strings),
+- judge-input: golden-file test proving per-turn structure, blindness (grep for variant strings),
   chunk boundaries.
 - fold sync: two dirs with one identical transcript and divergent verdicts → one final verdict,
   provenance line emitted.

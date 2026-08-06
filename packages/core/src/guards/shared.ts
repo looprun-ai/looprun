@@ -26,7 +26,7 @@ export const ranThisTurn = (ctx: GuardCtx, tool: string): boolean =>
  * at all — the reply then went to redrive and out as an exhaustion stub (the failure class measured
  * across 7 models; that class of reply-honesty check is now `llmCheck`'s job, not a deterministic
  * guard's). Guards keyed on a NAMED tool (`destructiveThrottle`, `maxCalls`, …) are unaffected — the
- * terminal name is never in their set — and `confirmFirst`'s prior-ask arm keeps reading the ask event
+ * terminal name is never in their set — and `confirmFirst`'s prior-ask variant keeps reading the ask event
  * (a `respond` whose `did` carries an `ask` intention) DELIBERATELY.
  */
 export const TERMINAL_TOOLS = new Set(['respond']);

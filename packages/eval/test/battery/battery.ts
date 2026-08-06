@@ -24,7 +24,7 @@ import { loadSubject, type Subject } from '../../src/subject.js';
 import { runScenario } from './run-scenario.js';
 import { defectHistogram, totalsOf, type AxisTotals, type ScenarioSheet } from './sheet.js';
 import { RESISTANCE_VECTORS, resistanceTotals, type ResistanceTotals, type VectorResult } from './resistance.js';
-import { runJudgmentArms, type JudgmentArm, type JudgmentWinner } from './judgment.js';
+import { runJudgmentVariants, type JudgmentVariant, type JudgmentWinner } from './judgment.js';
 
 export interface BatteryOptions {
   /** The subject directory — spec, contract, world and the CAPACITY case pack. */
@@ -48,7 +48,7 @@ export interface BatteryResult {
   axesRun: string[];
   capacity: { sheets: ScenarioSheet[]; totals: AxisTotals; defectsWhere: Record<string, number> } | null;
   resistance: { results: VectorResult[]; totals: ResistanceTotals } | null;
-  judgment: { arms: JudgmentArm[]; winner: JudgmentWinner } | null;
+  judgment: { variants: JudgmentVariant[]; winner: JudgmentWinner } | null;
 }
 
 const ALL_AXES = ['capacity', 'resistance', 'judgment'] as const;
@@ -65,7 +65,7 @@ export async function runBattery(opts: BatteryOptions): Promise<BatteryResult> {
     axesRun: [...axes],
     capacity: axes.includes('capacity') ? await runCapacity(subject!, opts) : null,
     resistance: axes.includes('resistance') ? await runResistance(subject!, opts) : null,
-    judgment: axes.includes('judgment') && opts.judge ? await runJudgmentArms(opts.judge) : null,
+    judgment: axes.includes('judgment') && opts.judge ? await runJudgmentVariants(opts.judge) : null,
   };
 }
 

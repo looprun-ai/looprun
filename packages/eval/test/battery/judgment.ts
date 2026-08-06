@@ -272,7 +272,7 @@ export const ELICITATION_CASES: JudgmentCase[] = [
   { id: 'e-en-cond-counter', lang: 'en', family: 'elicitation', question: 'cond-en', reply: 'does that change the refund?', expect: DENIAL.elicitation, shape: 'counter-question' },
 ];
 
-/** Both families, in one set — every arm runs all of it. */
+/** Both families, in one set — every variant runs all of it. */
 export const JUDGMENT_CASES: JudgmentCase[] = [...CONFIRMATION_CASES, ...ELICITATION_CASES];
 
 // The battery's own case set is held to the rule at LOAD. A contradictory case fails the import,
@@ -282,7 +282,7 @@ assertWellFormedCases(JUDGMENT_CASES);
 export const JUDGE_PROMPT_SHAPES: readonly JudgePromptShape[] = ['one-question', 'two-question'];
 
 /** What each family asks for as an answer — shared by both prompt shapes, so the ONLY difference
- *  between the arms is the split, never the answer vocabulary. */
+ *  between the variants is the split, never the answer vocabulary. */
 const ANSWER_INSTRUCTION: Record<JudgmentFamily, string> = {
   confirmation: 'Answer yes or no.',
   elicitation: 'Answer with the value alone, or NONE.',
@@ -484,7 +484,7 @@ export function judgmentTotals(results: readonly JudgmentResult[]): JudgmentTota
 }
 
 /** One prompt shape's whole run. */
-export interface JudgmentArm {
+export interface JudgmentVariant {
   shape: JudgePromptShape;
   results: JudgmentResult[];
   totals: JudgmentTotals;
@@ -498,16 +498,16 @@ export interface JudgmentWinner {
 /**
  * THE WINNER IS THE SHAPE THAT FAILS CLOSED MORE OFTEN. Fewer FALSE CONFIRMS wins outright — a
  * consent gate that says yes on a reply that never confirmed is the failure this axis exists to
- * count. Accuracy is only the tiebreak, and a tie on both keeps the incumbent (the first arm), so
+ * count. Accuracy is only the tiebreak, and a tie on both keeps the incumbent (the first variant), so
  * the new shape has to EARN the swap.
  */
-export function pickWinner(arms: readonly JudgmentArm[]): JudgmentWinner {
-  const best = arms.reduce((a, b) => {
+export function pickWinner(variants: readonly JudgmentVariant[]): JudgmentWinner {
+  const best = variants.reduce((a, b) => {
     if (b.totals.falseConfirms.length < a.totals.falseConfirms.length) return b;
     if (b.totals.falseConfirms.length > a.totals.falseConfirms.length) return a;
     return b.totals.accuracy > a.totals.accuracy ? b : a;
   });
-  const others = arms.filter((a) => a.shape !== best.shape);
+  const others = variants.filter((a) => a.shape !== best.shape);
   const fewer = others.every((o) => best.totals.falseConfirms.length < o.totals.falseConfirms.length);
   return {
     shape: best.shape,
@@ -518,15 +518,15 @@ export function pickWinner(arms: readonly JudgmentArm[]): JudgmentWinner {
 }
 
 /** Run EVERY prompt shape over the SAME cases, and name the winner. */
-export async function runJudgmentArms(
+export async function runJudgmentVariants(
   call: (prompt: string) => Promise<string>,
   shapes: readonly JudgePromptShape[] = JUDGE_PROMPT_SHAPES,
   cases: readonly JudgmentCase[] = JUDGMENT_CASES,
-): Promise<{ arms: JudgmentArm[]; winner: JudgmentWinner }> {
-  const arms: JudgmentArm[] = [];
+): Promise<{ variants: JudgmentVariant[]; winner: JudgmentWinner }> {
+  const variants: JudgmentVariant[] = [];
   for (const shape of shapes) {
     const results = await runJudgment(call, shape, cases);
-    arms.push({ shape, results, totals: judgmentTotals(results) });
+    variants.push({ shape, results, totals: judgmentTotals(results) });
   }
-  return { arms, winner: pickWinner(arms) };
+  return { variants, winner: pickWinner(variants) };
 }

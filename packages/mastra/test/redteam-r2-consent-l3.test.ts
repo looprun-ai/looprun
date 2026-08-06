@@ -84,10 +84,10 @@ describe('L1 — the schema-REJECTED respond ghost', () => {
     expect(ghosts).toEqual([]);
   });
 
-  // The well-formedness arm of the SAME refusal, through the real loop. `message` is non-blank and `did`
+  // The well-formedness variant of the SAME refusal, through the real loop. `message` is non-blank and `did`
   // is non-empty, so neither arity floor fires and the `respond` schema accepts the payload — the only
   // thing that refuses it is the PARTITION check (`inform` is a speech op and may carry no `outcome`).
-  // Until now that arm was asserted only over a bare function call, so the backend was never driven with
+  // Until now that variant was asserted only over a bare function call, so the backend was never driven with
   // the shape at all: if the hook stopped consulting it, nothing here would go red.
   it('CLOSED: a schema-LEGAL but MALFORMED did is refused at the hook, and the model is told why', async () => {
     const { agent, llm } = makeAgent([

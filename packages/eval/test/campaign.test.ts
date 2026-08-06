@@ -1,7 +1,7 @@
 /**
  * `looprun-eval campaign` (spec 2026-08-02) — the whole measured campaign as ONE verb, driven by a
  * scripted model with NO network. This is the spec's acceptance suite: preflight → runs → judging
- * manifest PAUSE → fake verdicts → fold/sync/band; immutability; resume; band-file-as-only-number;
+ * manifest PAUSE → fake verdicts → fold/sync/range; immutability; resume; range-file-as-only-number;
  * preflight failure fixtures; the monitor gate.
  */
 import { beforeEach, describe, expect, it } from 'vitest';
@@ -79,7 +79,7 @@ describe('campaign — end-to-end, scripted model, no network', () => {
     expect(manifest.judgeModel).toBe(null); // the host fills it
     expect(manifest.dirs).toHaveLength(3);
     expect(manifest.dirs.every((d: { expectedVerdicts: number }) => d.expectedVerdicts === 1)).toBe(true);
-    expect(existsSync(join(outDir, 'cert-band.json'))).toBe(false);
+    expect(existsSync(join(outDir, 'cert-range.json'))).toBe(false);
     expect(cap.lines.some((l) => /PAUSED for judging/.test(l))).toBe(true);
   });
 
@@ -89,7 +89,7 @@ describe('campaign — end-to-end, scripted model, no network', () => {
     await expect(campaignCommand({ action: 'run', config: join(dir, 'campaign.json'), modelFactory })).rejects.toThrow(/not empty|resume/);
   });
 
-  it('resume: verifies verdict counts, folds/syncs, and certifies off the band', async () => {
+  it('resume: verifies verdict counts, folds/syncs, and certifies off the range', async () => {
     const outDir = await runToPause(dir);
 
     // Resume BEFORE verdicts exist → refuses (judging incomplete).
@@ -99,15 +99,15 @@ describe('campaign — end-to-end, scripted model, no network', () => {
     const cap = logger();
     await campaignCommand({ action: 'resume', out: outDir, judgeModel: 'test-ruler', date: '2026-08-02', log: cap.log });
 
-    // The band file is written and certified (floor 100% ≥ bar 90%).
-    const band = JSON.parse(readFileSync(join(outDir, 'cert-band.json'), 'utf8'));
-    expect(band.certified).toBe(true);
-    expect(band.reps).toBe(2);
-    expect(band.floor).toBe(1);
+    // The range file is written and certified (floor 100% ≥ bar 90%).
+    const range = JSON.parse(readFileSync(join(outDir, 'cert-range.json'), 'utf8'));
+    expect(range.certified).toBe(true);
+    expect(range.reps).toBe(2);
+    expect(range.floor).toBe(1);
     // Synced verdicts were produced per governed rep and cert read them.
     expect(existsSync(join(outDir, 'r0', 'verdicts.synced.jsonl'))).toBe(true);
     expect(existsSync(join(outDir, 'SYNC.md'))).toBe(true);
-    // Control arm folded to its own RESULTS.md (A/B), never into the band.
+    // Control variant folded to its own RESULTS.md (A/B), never into the range.
     expect(existsSync(join(outDir, 'control', 'RESULTS.md'))).toBe(true);
     expect(cap.lines.some((l) => /CERTIFIED/.test(l))).toBe(true);
   });
@@ -118,17 +118,17 @@ describe('campaign — end-to-end, scripted model, no network', () => {
     seedVerdicts(outDir, 'pass');
     writeFileSync(join(outDir, 'r1', 'verdicts.jsonl'), '');
     await expect(campaignCommand({ action: 'resume', out: outDir })).rejects.toThrow(/r1 has 0 verdict\(s\), expected 1/);
-    expect(existsSync(join(outDir, 'cert-band.json'))).toBe(false);
+    expect(existsSync(join(outDir, 'cert-range.json'))).toBe(false);
   });
 
-  it('the band file is the ONLY number source — CAMPAIGN.md quotes cert-band.json verbatim', async () => {
+  it('the range file is the ONLY number source — CAMPAIGN.md quotes cert-range.json verbatim', async () => {
     const outDir = await runToPause(dir);
     seedVerdicts(outDir, 'pass');
     await campaignCommand({ action: 'resume', out: outDir, judgeModel: 'test-ruler', date: '2026-08-02' });
 
-    const bandJson = readFileSync(join(outDir, 'cert-band.json'), 'utf8').trimEnd();
+    const rangeJson = readFileSync(join(outDir, 'cert-range.json'), 'utf8').trimEnd();
     const report = readFileSync(join(outDir, 'CAMPAIGN.md'), 'utf8');
-    expect(report).toContain(bandJson); // verbatim, not recomputed
+    expect(report).toContain(rangeJson); // verbatim, not recomputed
     expect(report).toContain('judged by: test-ruler');
   });
 
@@ -136,8 +136,8 @@ describe('campaign — end-to-end, scripted model, no network', () => {
     const outDir = await runToPause(dir);
     seedVerdicts(outDir, 'FAIL');
     await expect(campaignCommand({ action: 'resume', out: outDir })).rejects.toThrow(/BELOW BAR/);
-    const band = JSON.parse(readFileSync(join(outDir, 'cert-band.json'), 'utf8'));
-    expect(band.certified).toBe(false);
+    const range = JSON.parse(readFileSync(join(outDir, 'cert-range.json'), 'utf8'));
+    expect(range.certified).toBe(false);
   });
 
   it('status: prints per-phase progress from the dirs alone', async () => {
@@ -213,11 +213,11 @@ describe('campaign — monitor gate', () => {
 
     // Cert is gated: the campaign refuses over the unresolved incident.
     await expect(campaignCommand({ action: 'resume', out: outDir })).rejects.toThrow(/unresolved incident/);
-    expect(existsSync(join(outDir, 'cert-band.json'))).toBe(false);
+    expect(existsSync(join(outDir, 'cert-range.json'))).toBe(false);
 
     // Operator marks it resolved → cert proceeds.
     writeFileSync(join(outDir, 'r0', 'MONITOR.resolved'), 'reviewed: transient network blip, re-run clean\n');
     await campaignCommand({ action: 'resume', out: outDir, date: '2026-08-02' });
-    expect(JSON.parse(readFileSync(join(outDir, 'cert-band.json'), 'utf8')).certified).toBe(true);
+    expect(JSON.parse(readFileSync(join(outDir, 'cert-range.json'), 'utf8')).certified).toBe(true);
   });
 });

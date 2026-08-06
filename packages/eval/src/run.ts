@@ -33,7 +33,7 @@ export interface InvariantVerdict {
 export interface CaseDump {
   caseId: string;
   agent: string;
-  arm: 'governed' | 'ungoverned';
+  variant: 'governed' | 'ungoverned';
   model: string;
   turns: DumpTurn[];
   invariantVerdict: InvariantVerdict;
@@ -84,7 +84,7 @@ export function toolCallMatches(call: WorldCall, req: { name: string; anyArgs?: 
  * REQUIRED = a matching call EXECUTED and succeeded (a guard-vetoed attempt never ran, so it can
  * never satisfy a requirement). FORBIDDEN = a matching call was ATTEMPTED at all, over EXECUTED ∪
  * guard-vetoed ATTEMPTS: a fabrication the world refused OR one a guard blocked before execution is
- * still a violation — this is the governed arm's deterministic premium, so the attempt the guard
+ * still a violation — this is the governed variant's deterministic premium, so the attempt the guard
  * caught must be SCORED, not lost with the call that never reached the world.
  */
 export function evaluateInvariants(
@@ -135,7 +135,7 @@ export async function runCase(subject: Subject, c: SubjectCase, opts: RunCaseOpt
   const agentId = agentForCase(subject, c.id);
   let spec: AgentSpec = subject.specs[agentId];
   let contract: DomainContract = subject.contract;
-  const arm: CaseDump['arm'] = opts.ungoverned ? 'ungoverned' : 'governed';
+  const variant: CaseDump['variant'] = opts.ungoverned ? 'ungoverned' : 'governed';
   if (opts.ungoverned) ({ spec, contract } = stripGovernance(spec, contract));
 
   const world = subject.makeWorld(c.setup?.preset ?? 'default');
@@ -166,7 +166,7 @@ export async function runCase(subject: Subject, c: SubjectCase, opts: RunCaseOpt
   return {
     caseId: c.id,
     agent: agentId,
-    arm,
+    variant,
     model: opts.modelId,
     turns,
     invariantVerdict,

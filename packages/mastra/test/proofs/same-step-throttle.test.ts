@@ -5,7 +5,7 @@
  * afterToolCall (AFTER execute). The AI SDK dispatches a step's tool calls concurrently (Promise.all),
  * so two `cancelMove(confirmed:true)` emitted in ONE step are both gated (beforeToolCall) before either
  * enters `observed` — the second never sees the first, and TWO destructive actions take effect in one
- * turn (moving case 15-cancel-bulk-throttle failed identically in the governed AND ungoverned arms).
+ * turn (moving case 15-cancel-bulk-throttle failed identically in the governed AND ungoverned variants).
  *
  * THE FIX: the backend now registers each admitted domain call synchronously on `ledger.inFlightCalls`
  * (before its guard await, so a later same-step sibling sees it) and passes the earlier siblings to the

@@ -14,7 +14,7 @@ export interface RawDomain {
   world: () => any;
   /** The governed agent's tool defs ({ name, description, inputSchema }). */
   toolDefs: Array<{ name: string; description: string; inputSchema: Record<string, unknown> }>;
-  /** Restrict to the governed spec's surface so both arms see the identical tool list. */
+  /** Restrict to the governed spec's surface so both variants see the identical tool list. */
   tools: string[];
   /** The neutral one-liner system prompt. */
   persona: string;

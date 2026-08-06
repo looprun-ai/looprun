@@ -1,5 +1,5 @@
 /** Minimal campaign fixture subject: a one-agent, one-case Fact Desk. Rubric-only (no invariants), so
- *  a reply-only scripted model passes the deterministic gate and the campaign's cert band is exercised
+ *  a reply-only scripted model passes the deterministic gate and the campaign's cert range is exercised
  *  end-to-end without a network. Self-contained: no external data. */
 import { AgentSpecBase } from '@looprun-ai/core';
 import type { AgentSpec, AgentWorld, DomainContract } from '@looprun-ai/core';

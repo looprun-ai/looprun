@@ -1,7 +1,7 @@
 /**
  * @looprun-ai/eval — `looprun-eval campaign` (spec 2026-08-02): ONE verb for the whole measured
  * campaign. Driving a campaign by hand costs dozens of bash invocations plus improvised watchers,
- * and every one of them is a place for the instrument to drift between arms.
+ * and every one of them is a place for the instrument to drift between variants.
  *
  * Orchestration is deterministic work — engine work — so it lives here, not in the operator's head:
  *
@@ -11,9 +11,9 @@
  *   campaign resume <out>           verify verdict counts → monitor gate → fold+sync → cert BAND.
  *   campaign status <out>           per-phase progress from the dirs alone (no daemon).
  *
- * Laws encoded (spec §"Laws"): no hand-computed figures (the report quotes `cert-band.json`
+ * Laws encoded (spec §"Laws"): no hand-computed figures (the report quotes `cert-range.json`
  * verbatim); a rep dir is append-only after its `DONE` marker (re-measurement is a NEW dated dir);
- * the control arm always runs (the A/B is part of the instrument).
+ * the control variant always runs (the A/B is part of the instrument).
  */
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
@@ -25,7 +25,7 @@ import { runCommand, foldCommand, certCommand, type RunCommandOptions } from './
 import { judgeInputCommand } from './commands.js';
 import { readJsonl } from './fold.js';
 import { writeMonitor, hasUnresolvedIncidents } from './monitor.js';
-import type { CertBand } from './cert.js';
+import type { CertRange } from './cert.js';
 import type { CaseDump } from './run.js';
 
 /** A campaign.json config error, with a path-qualified message (cases-config.ts convention). */
@@ -48,7 +48,7 @@ const campaignConfigSchema = z
   .object({
     subject: z.string(),
     reps: z.number().int().positive(),
-    /** The control arm. Only `ungoverned` exists today; named so the A/B is explicit, never implicit. */
+    /** The control variant. Only `ungoverned` exists today; named so the A/B is explicit, never implicit. */
     control: z.literal('ungoverned'),
     /** Inert per-rep perturbation. `user-tail` appends a neutral suffix per rep (fresh decodes). */
     perturbation: z.enum(['none', 'user-tail']).optional(),
@@ -82,7 +82,7 @@ export interface CampaignCommandOptions {
   modelFactory?: () => unknown;
   /** `resume`: the judge model label to record into the report (overrides the manifest's field). */
   judgeModel?: string;
-  /** Date stamped into the run dirs + cert band (injectable for tests). */
+  /** Date stamped into the run dirs + cert range (injectable for tests). */
   date?: string;
   log?: (line: string) => void;
 }
@@ -169,7 +169,7 @@ async function runCampaign(opts: CampaignCommandOptions, log: (l: string) => voi
   const manifestDirs = plans.map((plan) => {
     const dir = join(outDir, plan.name);
     const inputs = judgeInputCommand({ dir, chunk: cfg.chunk }).map((p) => p.slice(outDir.length + 1));
-    return { dir: plan.name, arm: plan.ungoverned ? 'control' : 'governed', inputs, expectedVerdicts: countCases(dir) };
+    return { dir: plan.name, variant: plan.ungoverned ? 'control' : 'governed', inputs, expectedVerdicts: countCases(dir) };
   });
   const manifest = {
     subject: subjectDir,
@@ -242,8 +242,8 @@ async function statusCampaign(opts: CampaignCommandOptions, log: (l: string) => 
     const inc = hasUnresolvedIncidents(dir) ? 'UNRESOLVED' : monitorIncidentCount(dir) ? 'resolved' : '0';
     log(`| ${name} | ${cases} | ${verdicts} | ${done} | ${inc} |`);
   }
-  const phase = existsSync(join(outDir, 'cert-band.json'))
-    ? 'CERTIFIED (cert-band.json written)'
+  const phase = existsSync(join(outDir, 'cert-range.json'))
+    ? 'CERTIFIED (cert-range.json written)'
     : existsSync(join(outDir, MANIFEST))
       ? 'PAUSED for judging (judging.json written)'
       : 'RUNNING';
@@ -288,7 +288,7 @@ async function resumeCampaign(opts: CampaignCommandOptions, log: (l: string) => 
     writeFileSync(join(only, 'verdicts.synced.jsonl'), readFileSync(join(only, 'verdicts.jsonl')));
   }
 
-  // 4. control arm A/B fold (its own verdicts) → control/RESULTS.md — reported, never in the band.
+  // 4. control variant A/B fold (its own verdicts) → control/RESULTS.md — reported, never in the range.
   const controlDir = join(outDir, 'control');
   foldCommand({ dump: join(controlDir, 'cases.jsonl'), verdicts: join(controlDir, 'verdicts.jsonl'), out: join(controlDir, 'RESULTS.md') });
 
@@ -301,44 +301,44 @@ async function resumeCampaign(opts: CampaignCommandOptions, log: (l: string) => 
     out: outDir,
     ...(opts.date ? { date: opts.date } : {}),
   });
-  const band = summary as CertBand;
+  const range = summary as CertRange;
 
   const judgeModel = opts.judgeModel ?? manifest.judgeModel ?? 'unrecorded';
   writeCampaignReport(outDir, judgeModel, log);
 
   const pct = (r: number) => `${(r * 100).toFixed(1)}%`;
   log(
-    `campaign ${band.certified ? 'CERTIFIED' : 'BELOW BAR'} — floor ${pct(band.floor)} ${band.certified ? '≥' : '<'} bar ${pct(band.bar)} ` +
-      `(band ${pct(band.floor)}–${pct(band.ceil)}, ${band.reps} reps) → ${join(outDir, 'CAMPAIGN.md')}`,
+    `campaign ${range.certified ? 'CERTIFIED' : 'BELOW BAR'} — floor ${pct(range.floor)} ${range.certified ? '≥' : '<'} bar ${pct(range.bar)} ` +
+      `(range ${pct(range.floor)}–${pct(range.ceil)}, ${range.reps} reps) → ${join(outDir, 'CAMPAIGN.md')}`,
   );
-  if (!band.certified) {
-    throw new CampaignRefusal(`campaign BELOW BAR: floor ${pct(band.floor)} < bar ${pct(band.bar)} — not certified`);
+  if (!range.certified) {
+    throw new CampaignRefusal(`campaign BELOW BAR: floor ${pct(range.floor)} < bar ${pct(range.bar)} — not certified`);
   }
 }
 
-/** The campaign report — quotes `cert-band.json` VERBATIM (no hand-computed figure ever appears). */
+/** The campaign report — quotes `cert-range.json` VERBATIM (no hand-computed figure ever appears). */
 function writeCampaignReport(outDir: string, judgeModel: string, log: (l: string) => void): void {
-  const bandJson = readFileSync(join(outDir, 'cert-band.json'), 'utf8');
+  const rangeJson = readFileSync(join(outDir, 'cert-range.json'), 'utf8');
   const controlNote = existsSync(join(outDir, 'control', 'RESULTS.md'))
     ? 'Control (ungoverned) A/B: see `control/RESULTS.md`.'
-    : 'Control arm: not folded.';
+    : 'Control variant: not folded.';
   const md = [
     '# Campaign report',
     '',
     `- judged by: ${judgeModel}`,
     `- ${controlNote}`,
     '',
-    'The band below is quoted verbatim from `cert-band.json` — the ONLY source of the certified',
+    'The range below is quoted verbatim from `cert-range.json` — the ONLY source of the certified',
     'number. This report computes nothing.',
     '',
     '```json',
-    bandJson.trimEnd(),
+    rangeJson.trimEnd(),
     '```',
     '',
-    'See `CERT-BAND.md` for the human-readable per-case table.',
+    'See `CERT-RANGE.md` for the human-readable per-case table.',
   ].join('\n');
   writeFileSync(join(outDir, 'CAMPAIGN.md'), md + '\n');
-  log('campaign: CAMPAIGN.md written (cert-band.json quoted verbatim)');
+  log('campaign: CAMPAIGN.md written (cert-range.json quoted verbatim)');
 }
 
 // ── shared readers ────────────────────────────────────────────────────────────────────────────────
@@ -356,7 +356,7 @@ function readCampaignCopy(outDir: string): CampaignConfig {
 
 interface Manifest {
   judgeModel: string | null;
-  dirs: Array<{ dir: string; arm: string; inputs: string[]; expectedVerdicts: number }>;
+  dirs: Array<{ dir: string; variant: string; inputs: string[]; expectedVerdicts: number }>;
 }
 
 function readManifest(outDir: string): Manifest {

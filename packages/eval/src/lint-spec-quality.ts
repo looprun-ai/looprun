@@ -188,7 +188,7 @@ export function lintSpecQuality(specs: Record<string, AgentSpec>, toolDefs: Tool
       for (const seam of ARMED_SEAMS) {
         if (seam.kind !== b.guard.kind) continue;
         if (armed[seam.seam] && !armed[seam.prose]) {
-          at('ARMED-SEAM-WITHOUT-PROSE', `guard ${b.id} arms '${seam.seam}' with no '${seam.prose}' — the pattern is a domain regex the runtime cannot put into words, so the model is vetoed by a rule it never received`);
+          at('ARMED-SEAM-WITHOUT-PROSE', `guard ${b.id} variants '${seam.seam}' with no '${seam.prose}' — the pattern is a domain regex the runtime cannot put into words, so the model is vetoed by a rule it never received`);
         }
       }
     }

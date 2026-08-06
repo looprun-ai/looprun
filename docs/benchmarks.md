@@ -128,11 +128,11 @@ unified τ³-bench repo, which still runs the τ² domains
    the skill decomposes into >1 agent — route them behind one endpoint.)
 2. **Wrap & serve.** `LoopRunAgent({ spec, tools: <telecom tools>, model: <subject> })`,
    exposed as an **OpenAI-compatible `/chat/completions` endpoint** (with tool-calling).
-3. **Run both arms:**
+3. **Run both variants:**
    - raw: `tau2 run --domain telecom --agent-llm <subject> --user-llm <strong> --num-trials K`
    - governed: `tau2 run --domain telecom --agent-llm openai/looprun --agent-base-url <url> …`
 
-   The **delta between the two arms is looprun's contribution.**
+   The **delta between the two variants is looprun's contribution.**
 4. Subject models via **LiteLLM**, all in **non-thinking** config (§2): `qwen3.5-4b` and
    `qwen3.6-35b-a3b` on our local `llama.cpp` OpenAI endpoints, and `gemini-3.1-flash-lite`
    thinking-off (`geminiFlashLiteThinkOff`). These three — and only these — are what we run;
@@ -143,8 +143,8 @@ unified τ³-bench repo, which still runs the τ² domains
 comparable with another run produced by the same engine surface. The engine renders per-field
 `description`s into **every** tool schema and carries `minLength`/`minItems` through to the wire, so
 two engine versions put different bytes in front of the model even when the subject, the tasks and the
-spec are identical. Whenever the engine version differs, **re-baseline BOTH arms** rather than pairing
-a fresh governed arm with a raw arm recorded on another engine. Neither the `no-bench-drift` gate nor
+spec are identical. Whenever the engine version differs, **re-baseline BOTH variants** rather than pairing
+a fresh governed variant with a raw variant recorded on another engine. Neither the `no-bench-drift` gate nor
 the eval seal catches this: the seal binds the subject's artifacts, not the engine's prompt/schema
 rendering.
 
@@ -158,17 +158,17 @@ Not being run now — recorded so the scope stays honest.
   *legacy*); same repo, `uv sync --extra knowledge` (`banking_knowledge` domain).
 - **IFBench** — instruction-following constraint checkers (pure JS, no sandbox).
 - **Other looprun-relevant axes with no frontier market number.** These measure exactly what
-  looprun governs, but no 2026 frontier card publishes them, so there's no reference band —
+  looprun governs, but no 2026 frontier card publishes them, so there's no reference range —
   we'd produce subject `raw → +looprun` numbers ourselves: **BFCL** irrelevance (refuse to
   fabricate a call), **SimpleQA** not-attempted rate (honest "I don't know"), **IFEval** strict
   (deterministic constraint adherence), **AgentDojo** attack-success-rate (the S-1 firewall,
   measured both ways).
 - **GPQA-Diamond** — optional **no-harm** capability check: looprun wraps the same model, so
   `+looprun ≈ raw` is the *desired* result (guards don't tax raw capability). AA independent
-  band ~91–94% across the 2026 frontier.
+  range ~91–94% across the 2026 frontier.
 
 **Reference-only AA agentic benchmarks** (read frontier scores by filtering models; no public
-code, subjects not on AA — a band, not a looprun number): **AutomationBench-AA** (zero credit
+code, subjects not on AA — a range, not a looprun number): **AutomationBench-AA** (zero credit
 when a guardrail is violated — looprun's thesis, precisely), **EnterpriseOps-Gym-AA** (multi-turn
 MCP tool use, SQL state verifiers), **AA-Omniscience** (accuracy + 1−hallucination — the
 honest-abstention axis), **Harvey LAB-AA** (agentic legal deliverables).
@@ -234,8 +234,8 @@ judgement of it.
   τ-bench [`github.com/sierra-research/tau-bench`](https://github.com/sierra-research/tau-bench)
 - **§2 τ²-Bench Telecom scores — Artificial Analysis, 23-model export read 2026-07-11** —
   <https://artificialanalysis.ai/evaluations/tau2-bench>. Subjects on the board: Qwen3.6-35B-A3B
-  95.3 / 85.1, Qwen3.5-4B 92.1 / 87.7, Gemini 3.1 Flash-Lite 31.3 (reasoning-on). Top of band:
+  95.3 / 85.1, Qwen3.5-4B 92.1 / 87.7, Gemini 3.1 Flash-Lite 31.3 (reasoning-on). Top of range:
   Fable 5 98.5, Grok 4.3 97.7, Gemini 3.1 Pro 95.6, Opus 4.8 94.4, GPT-5.6 Sol 83.3, Haiku 4.5
   54.7. See §2 for the full roster.
-- **GPQA-Diamond band** (deferred no-harm baseline) —
+- **GPQA-Diamond range** (deferred no-harm baseline) —
   <https://artificialanalysis.ai/evaluations/gpqa-diamond>

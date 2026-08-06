@@ -6,12 +6,12 @@ import { join } from 'node:path';
 import { foldVerdicts } from '../src/fold.js';
 import { certCommand, foldCommand } from '../src/commands.js';
 import type { CaseDump } from '../src/run.js';
-import type { CertBand, CertSummary } from '../src/cert.js';
+import type { CertRange, CertSummary } from '../src/cert.js';
 
 const dump = (caseId: string, pass: boolean, violations: string[] = []): CaseDump => ({
   caseId,
   agent: 'front-desk',
-  arm: 'governed',
+  variant: 'governed',
   model: 'scripted',
   turns: [],
   invariantVerdict: { pass, violations },
@@ -114,10 +114,10 @@ describe('fold + cert commands', () => {
   });
 });
 
-describe('multi-rep band (floor law)', () => {
+describe('multi-rep range (floor law)', () => {
   // One rep dir per (caseId → judge verdict) map; every case invariant-clean so the judge decides.
   function writeRep(verdictByCase: Record<string, 'pass' | 'fail'>): string {
-    const dir = mkdtempSync(join(tmpdir(), 'looprun-band-'));
+    const dir = mkdtempSync(join(tmpdir(), 'looprun-range-'));
     const ids = Object.keys(verdictByCase);
     writeFileSync(join(dir, 'cases.jsonl'), ids.map((id) => JSON.stringify(dump(id, true))).join('\n') + '\n');
     writeFileSync(
@@ -131,16 +131,16 @@ describe('multi-rep band (floor law)', () => {
     const r0 = writeRep({ '01-a': 'pass', '02-b': 'pass' }); // 100%
     const r1 = writeRep({ '01-a': 'pass', '02-b': 'pass' }); // 100%
     const r2 = writeRep({ '01-a': 'pass', '02-b': 'fail' }); // 50% ← the coin rep
-    const out = mkdtempSync(join(tmpdir(), 'looprun-band-out-'));
+    const out = mkdtempSync(join(tmpdir(), 'looprun-range-out-'));
 
-    const band = certCommand({ dir: r0, dirs: [r1, r2], bar: 0.9, out }) as CertBand;
-    expect(band).toMatchObject({ reps: 3, cases: 2, floor: 0.5, floorRep: 2, ceil: 1, ceilRep: 0, majorityRate: 1, certified: false });
-    expect(band.runDirs).toEqual([r0, r1, r2]);
-    expect(band.mean).toBeCloseTo(2.5 / 3);
-    expect(band.perCase[1]).toEqual({ caseId: '02-b', finals: ['pass', 'pass', 'FAIL'], majority: 'pass' });
+    const range = certCommand({ dir: r0, dirs: [r1, r2], bar: 0.9, out }) as CertRange;
+    expect(range).toMatchObject({ reps: 3, cases: 2, floor: 0.5, floorRep: 2, ceil: 1, ceilRep: 0, majorityRate: 1, certified: false });
+    expect(range.runDirs).toEqual([r0, r1, r2]);
+    expect(range.mean).toBeCloseTo(2.5 / 3);
+    expect(range.perCase[1]).toEqual({ caseId: '02-b', finals: ['pass', 'pass', 'FAIL'], majority: 'pass' });
 
-    // Majority is 100% but the band is BELOW BAR — the floor is the law.
-    const md = readFileSync(join(out, 'CERT-BAND.md'), 'utf8');
+    // Majority is 100% but the range is BELOW BAR — the floor is the law.
+    const md = readFileSync(join(out, 'CERT-RANGE.md'), 'utf8');
     expect(md).toContain('BELOW BAR');
     expect(md).toContain('FLOOR');
     // Each rep keeps its own N=1-honest cert.
@@ -149,15 +149,15 @@ describe('multi-rep band (floor law)', () => {
 
   it('certifies when every rep clears the bar', () => {
     const reps = [0, 1, 2].map(() => writeRep({ '01-a': 'pass', '02-b': 'pass' }));
-    const out = mkdtempSync(join(tmpdir(), 'looprun-band-out-'));
-    const band = certCommand({ dir: reps[0], dirs: reps.slice(1), bar: 0.9, out }) as CertBand;
-    expect(band).toMatchObject({ floor: 1, certified: true });
-    expect(JSON.parse(readFileSync(join(out, 'cert-band.json'), 'utf8')).certified).toBe(true);
+    const out = mkdtempSync(join(tmpdir(), 'looprun-range-out-'));
+    const range = certCommand({ dir: reps[0], dirs: reps.slice(1), bar: 0.9, out }) as CertRange;
+    expect(range).toMatchObject({ floor: 1, certified: true });
+    expect(JSON.parse(readFileSync(join(out, 'cert-range.json'), 'utf8')).certified).toBe(true);
   });
 
   it('refuses reps over different case sets', () => {
     const r0 = writeRep({ '01-a': 'pass', '02-b': 'pass' });
     const r1 = writeRep({ '01-a': 'pass', '03-c': 'pass' });
-    expect(() => certCommand({ dir: r0, dirs: [r1], out: mkdtempSync(join(tmpdir(), 'looprun-band-out-')) })).toThrow(/different case set/);
+    expect(() => certCommand({ dir: r0, dirs: [r1], out: mkdtempSync(join(tmpdir(), 'looprun-range-out-')) })).toThrow(/different case set/);
   });
 });

@@ -156,7 +156,7 @@ export function destructiveThrottle(
   //
   // NOT-CONFIRMED IS THE PREVIEW SHAPE, exactly as `confirmFirst` reads it. Keying the sibling test on
   // `confirmed === false` alone would miss a preview that simply OMITS the flag — the shape
-  // `confirmFirst`'s `'probe'` arm explicitly licenses ("a `flag:false`/absent PROBE") and the shape it
+  // `confirmFirst`'s `'probe'` variant explicitly licenses ("a `flag:false`/absent PROBE") and the shape it
   // lets through untouched (it returns null on `args[flag] !== true`). The two kinds must agree on the
   // very case the throttle's own doc claims they agree on: a model previewing two cancellations without
   // spelling `confirmed:false` had its second preview vetoed for an effect neither call had had. A

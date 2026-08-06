@@ -28,7 +28,7 @@ Measured evidence per class (from the run):
 skill generates ONLY   norms/<agent>.json · world.json · cases.json · campaign.json · docs (.md)
 engine executes        validate (zod + coherence) · interpret the world · install guards from
                        the catalog · render trunk/deny/abstain by policy · run campaigns ·
-                       build judge inputs · fold/band/cert/seal
+                       build judge inputs · fold/range/cert/seal
 rule w/o primitive     "uncheckable": true → prose + judge (N4 law). NEVER generated code.
 judge                  remains a SUBAGENT of the host, following the engine-built input and a
                        step-by-step protocol (skill-side spec) — no JudgeExecutor in the engine.

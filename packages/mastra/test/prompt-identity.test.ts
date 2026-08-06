@@ -115,7 +115,7 @@ describe('prompt identity — the runtime sends what renderTurnPrompt returns', 
 
     // State-in-tail is what makes the system prefix cacheable across turns. If volatile state leaks
     // into the system half, every turn busts the prefix cache and the margin battery's cache-state
-    // arm stops meaning anything.
+    // variant stops meaning anything.
     expect(rendered.userContent).toContain('plan=pro');
     expect(rendered.instructions).not.toContain('plan=pro');
     expect(rendered.userContent.endsWith('hi')).toBe(true);

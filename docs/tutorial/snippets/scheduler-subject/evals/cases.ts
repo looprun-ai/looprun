@@ -3,7 +3,7 @@
  *
  * Three cases, one per obligation the scheduler was written against, plus the read-only baseline:
  * every case names, in `targets`, the guard id it exists to prove. A guard no case targets passes
- * in BOTH arms of a governed/ungoverned run — it reads as coverage while never having fired, which
+ * in BOTH variants of a governed/ungoverned run — it reads as coverage while never having fired, which
  * is why `lintSubject` refuses a case without targets.
  *
  * The reference clock is 2026-03-02T09:00 (a Monday); the `default` preset holds Standup

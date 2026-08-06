@@ -166,7 +166,7 @@ describe('V4 — destructiveThrottle: one destructive effect per turn', () => {
 
   it('CONTROL (final review): a preview that OMITS the flag is a preview — parity with confirmFirst', () => {
     const g = destructiveThrottle(['refund']);
-    // `confirmFirst`'s probe arm licenses "a `flag:false`/ABSENT probe", and its flag arm returns null on
+    // `confirmFirst`'s probe variant licenses "a `flag:false`/ABSENT probe", and its flag variant returns null on
     // `args[flag] !== true` — so an omitted flag is a not-yet-confirmed call to the consent gate. The
     // throttle read it as an act and vetoed the second preview of a two-booking cancel.
     const ctx = baseCtx({

@@ -171,7 +171,7 @@
   an irreversible-looking tool nobody declared destructive, prose written as a post-hoc accusation,
   and a seam armed with no sentence to go with it.
 
-  Two subject laws, both for defects with no symptom. A guard no case targets passes in BOTH arms of
+  Two subject laws, both for defects with no symptom. A guard no case targets passes in BOTH variants of
   a discrimination run, so it is neither an alarm nor a failure — it reads as coverage and has never
   fired. A world that returns its refusals as successful-looking results leaves `ok` true, and every
   honesty kind short-circuits to null: guards installed, inventory green, suite passing, nothing able

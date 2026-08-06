@@ -8,7 +8,7 @@
  * contaminate later rounds. This verb kills all three:
  *   - per-case JSONL with the turn boundaries PRESERVED (`actualReplyByTurn`, `actualTraceByTurn`),
  *     never flattened;
- *   - BLIND — no arm label, no rep/model label, no agent/targets, nothing that hints at which arm
+ *   - BLIND — no variant label, no rep/model label, no agent/targets, nothing that hints at which variant
  *     produced the transcript, so two judges of the same run see identical bytes;
  *   - deterministic case order (by id), so the bytes are reproducible;
  *   - `--chunk N` splits into `judge-input.partK.jsonl` files sized for incremental verdict writing.
@@ -24,7 +24,7 @@ import { join } from 'node:path';
 import { readJsonl } from './fold.js';
 import type { CaseDump, DumpToolCall } from './run.js';
 
-/** One tool call in a preserved-per-turn trace. Blind by construction — no arm/model/agent. */
+/** One tool call in a preserved-per-turn trace. Blind by construction — no variant/model/agent. */
 export interface JudgeTraceCall {
   name: string;
   args: unknown;
@@ -33,7 +33,7 @@ export interface JudgeTraceCall {
   resultSummary?: string;
 }
 
-/** One case as the judge sees it — rubric + per-turn replies and traces, nothing that names the arm. */
+/** One case as the judge sees it — rubric + per-turn replies and traces, nothing that names the variant. */
 export interface JudgeInputCase {
   caseId: string;
   rubric: unknown[];

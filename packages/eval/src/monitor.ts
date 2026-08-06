@@ -1,6 +1,6 @@
 /**
  * @looprun-ai/eval — the always-armed run-dir monitor (spec §3). Arming a monitor by hand loses every
- * failure that lands before someone remembers to arm it, so it is armed by construction: every run
+ * failure that lands before someone remembers to variant it, so it is armed by construction: every run
  * dir is scanned the moment it finishes, and the campaign REFUSES to certify over an unresolved
  * incident.
  *

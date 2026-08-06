@@ -223,7 +223,7 @@ uses — not per turn. `finalizeReply` checks the initial payload, each of the `
 turn.
 
 ```
-92 cases × 3 reps × 2 arms × <rubrics per turn> × <redrives + 2>   plus the agent's own calls
+92 cases × 3 reps × 2 variants × <rubrics per turn> × <redrives + 2>   plus the agent's own calls
                                                                    plus the lie check's, where it is on
 ```
 

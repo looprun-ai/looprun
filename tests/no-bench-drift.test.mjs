@@ -128,7 +128,7 @@ if (
   console.error('vendor-neutrality SELF-TEST failed — the gate regex is broken');
   process.exit(2);
 }
-if (!REPO_WIDE.test('neurono-bench') || !REPO_WIDE.test('the s15 arm') || REPO_WIDE.test('a clean looprun sentence')) {
+if (!REPO_WIDE.test('neurono-bench') || !REPO_WIDE.test('the s15 variant') || REPO_WIDE.test('a clean looprun sentence')) {
   console.error('repo-wide SELF-TEST failed — the gate regex is broken');
   process.exit(2);
 }

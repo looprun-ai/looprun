@@ -189,7 +189,7 @@ Two neighbours from the same review, both decidable and both cheap once this mac
   id-less guard above silently re-points both, and a T3 profile keyed on it breaks the same way.
 - **the guard-target diff keyed on `(agent, guardId)`, not `guardId`.** A guard id shared across
   lanes is satisfied by any lane targeting it, so a copy that no case on ITS lane can reach reads
-  as covered. One bundle had two such guards, both inert, both passing in either arm.
+  as covered. One bundle had two such guards, both inert, both passing in either variant.
 
 ## 4 · An accepted coverage gap has two ledgers that disagree
 

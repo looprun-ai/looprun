@@ -58,7 +58,7 @@ const histTurn = (turnIndex: number, did: HistoryTurn['did'], reply = ''): Histo
 //   So a redrive that answers `{ message: '', did: [{op:'ask'}] }` produces a payload whose DELIVERED
 //   text is the OLD, pre-correction message (which poses no question at all) while the turn's verified
 //   `did` — the record `recordTurnHistory` SEALS, and therefore the ONE authoritative cross-turn ask
-//   signal (`askedInDeliveredTurn`'s history arm) — declares that the agent ASKED.
+//   signal (`askedInDeliveredTurn`'s history variant) — declares that the agent ASKED.
 //
 //   The premature-terminal prune does not reach this: it is not an undelivered `respond` in `observed`
 //   that a prune could remove. It is the SEALED history record itself, so it is authoritative BY
@@ -195,7 +195,7 @@ describe('C2 (V1) — a partial/empty probe licenses ANY confirmed destructive a
 // C3 — (round-1 V6, STILL OPEN, mine to close) via:'ask' accepts the tool's OWN prior OK run
 //
 //   `surfacedRecently = askedInDeliveredTurn(...) || observed.some(o.ok && o.name === ctx.tool && recent)`
-//   The second arm makes a SUCCESSFUL prior run of the destructive tool itself count as "the action was
+//   The second variant makes a SUCCESSFUL prior run of the destructive tool itself count as "the action was
 //   surfaced". Chained turn by turn, one ask at turn 1 licenses turn 2, whose run licenses turn 3, … —
 //   an unbounded destructive run off a single consent, and the recency law (`within`) is bridged.
 // ════════════════════════════════════════════════════════════════════════════════════════════════

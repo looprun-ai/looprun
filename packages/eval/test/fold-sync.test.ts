@@ -16,7 +16,7 @@ function dump(caseId: string, reply: string, resultSummary?: string): CaseDump {
   return {
     caseId,
     agent: 'a',
-    arm: 'governed',
+    variant: 'governed',
     model: 'm',
     turns: [{ user: 'u', toolCalls: [{ name: 'doThing', args: { x: 1 }, ok: true, tookEffect: true, ...(resultSummary !== undefined ? { resultSummary } : {}) }], guardEvents: [], reply }],
     invariantVerdict: { pass: true, violations: [] },

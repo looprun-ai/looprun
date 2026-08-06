@@ -4,7 +4,7 @@
  * The runtime delivers the LAST non-empty `respond` message, while the guard hooks record EVERY
  * terminal as an ok observation. A step of two `respond` calls — one asking "Delete X?" (an `ask`
  * intention in its `did`) and one signing off — therefore delivers only the sign-off and still leaves
- * the ok asking `respond` in the ledger — which a prior-ask confirmation arm reads as "the user was
+ * the ok asking `respond` in the ledger — which a prior-ask confirmation variant reads as "the user was
  * asked", unlocking a destructive action off a question the user never saw.
  *
  * TWO paths produce such a ghost, and each has its own detector:

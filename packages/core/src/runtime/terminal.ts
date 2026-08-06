@@ -94,7 +94,7 @@ export function prematureTerminalCalls(steps: any): Array<{ name: string; args: 
  * one. The runtime delivers the LAST non-empty `message`, while the guard hooks record EVERY terminal
  * as an ok observation. So a step of two `respond` calls — one asking a destructive question
  * (an `ask` intention in its `did`), one signing off — delivers only the sign-off and still leaves the asking `respond`
- * in the ledger. Next turn, a prior-ask confirmation arm reads that entry as "the user was asked",
+ * in the ledger. Next turn, a prior-ask confirmation variant reads that entry as "the user was asked",
  * and a destructive action unlocks off a question the user NEVER SAW. Consent recorded from an
  * undelivered message is the same class of defect as a reply grounding itself.
  *

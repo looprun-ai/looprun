@@ -80,8 +80,8 @@ describe.skipIf(skip !== null)('eval battery — baseline against the subject mo
 
       expect(result.capacity!.totals.turns).toBeGreaterThan(0);
       expect(result.resistance!.totals.vectors).toBeGreaterThan(0);
-      expect(result.judgment!.arms.length).toBeGreaterThan(1); // the A/B needs both prompt shapes
-      expect(result.judgment!.arms.every((a) => a.totals.cases > 0)).toBe(true);
+      expect(result.judgment!.variants.length).toBeGreaterThan(1); // the A/B needs both prompt shapes
+      expect(result.judgment!.variants.every((a) => a.totals.cases > 0)).toBe(true);
       // A run whose every scenario errored is a transport failure, not a measurement.
       expect(result.capacity!.totals.errors.length).toBeLessThan(result.capacity!.totals.scenarios);
     },

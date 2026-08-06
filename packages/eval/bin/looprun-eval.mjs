@@ -24,21 +24,21 @@ const HELP = `looprun-eval <command>
   validate [flags]   Schema + references + premise-coherence over a subject, offline (no spend).
                      --subject <dir> (required) [--reached-floor <ratio>] Exits 1 on any blocking issue.
   judge-input <dir>  Build the blind per-case JSONL the judge reads (turn boundaries preserved,
-                     no arm/rep labels, deterministic order). [--chunk <N>] → judge-input.partK.jsonl.
+                     no variant/rep labels, deterministic order). [--chunk <N>] → judge-input.partK.jsonl.
                      CAVEAT: the EMITTED files are blind, but a run-dir NAME you chose can still leak
-                     the arm via its path — keep dir names neutral when the path reaches the judge.
+                     the variant via its path — keep dir names neutral when the path reaches the judge.
   fold [flags]       Merge judge verdicts into RESULTS.md (final pass = invariants AND judge).
                      --dump <cases.jsonl> --verdicts <verdicts.jsonl> [--out <RESULTS.md>]
                      --sync <dir> <dir> …  Force one verdict per byte-identical transcript across run
                      dirs (mechanical, no judge) → verdicts.synced.jsonl per dir + SYNC.md.
   cert <dir> [dir…]  Fold cases.jsonl + verdicts.jsonl → cert.json + CERT.md (reps=1, stated).
-                     2+ dirs = multi-rep BAND → cert-band.json + CERT-BAND.md; certified only
-                     if the FLOOR over reps clears the bar. [--out <dir>] for the band files.
+                     2+ dirs = multi-rep BAND → cert-range.json + CERT-RANGE.md; certified only
+                     if the FLOOR over reps clears the bar. [--out <dir>] for the range files.
                      [--verdicts <file>] reads that verdicts filename per dir (default verdicts.jsonl;
                      use verdicts.synced.jsonl to certify off 'fold --sync' output).
   campaign <sub>     One verb for the whole measured campaign (preflight → reps + control → judging
                      PAUSE → fold/sync → cert BAND). Sub-verbs:
-                     run <campaign.json> [--resume]   preflight, run every arm, PAUSE with judging.json
+                     run <campaign.json> [--resume]   preflight, run every variant, PAUSE with judging.json
                      status <out-dir>                 per-phase progress from the dirs (no daemon)
                      resume <out-dir> [--judge-model <label>]  verify verdicts, monitor gate, cert BAND
   seal <subject>     Mint ship/seal.json (hash-bound) — or --verify an existing one.
@@ -147,8 +147,8 @@ async function main() {
     });
     if (moreDirs.length) {
       console.log(
-        `band ${(summary.floor * 100).toFixed(1)}%–${(summary.ceil * 100).toFixed(1)}% over ${summary.cases} case(s) × ${summary.reps} reps → ` +
-          `${summary.certified ? 'CERTIFIED' : 'BELOW BAR'} (bar ${(summary.bar * 100).toFixed(0)}% as FLOOR) → CERT-BAND.md`,
+        `range ${(summary.floor * 100).toFixed(1)}%–${(summary.ceil * 100).toFixed(1)}% over ${summary.cases} case(s) × ${summary.reps} reps → ` +
+          `${summary.certified ? 'CERTIFIED' : 'BELOW BAR'} (bar ${(summary.bar * 100).toFixed(0)}% as FLOOR) → CERT-RANGE.md`,
       );
     } else {
       console.log(

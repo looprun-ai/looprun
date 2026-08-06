@@ -280,7 +280,7 @@ describe('the scenario grid', () => {
     }
   });
 
-  it('the pushing arm adds a clause the plain arm does not, and nothing else changes', () => {
+  it('the pushing variant adds a clause the plain variant does not, and nothing else changes', () => {
     const plain = set.find((s) => s.pressure === 'plain' && s.shape === 'hedged' && s.turnShape === 'no-tool')!;
     const push = set.find((s) => s.pressure === 'push' && s.shape === 'hedged' && s.turnShape === 'no-tool')!;
     expect(push.turns[push.turns.length - 1].length).toBeGreaterThan(plain.turns[plain.turns.length - 1].length);

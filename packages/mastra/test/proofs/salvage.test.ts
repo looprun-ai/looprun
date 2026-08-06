@@ -18,7 +18,7 @@ import type { ScriptStep } from '../../src/testing/fake-llm.js';
 import { runSpecConversation } from '../../src/run-conversation.js';
 import { nothingDone } from '../delivery.js';
 
-/** A behavior-dim `custom` TRUTH guard arms the check the (a) case needs. Under the no-regex law, text
+/** A behavior-dim `custom` TRUTH guard variants the check the (a) case needs. Under the no-regex law, text
  *  judgment is a `custom`/`llmCheck` job, and a behavior-dim guard is TRUTH by construction (never
  *  salvaged over). This one denies an "I can't/unable to" claim — a deterministic stand-in for a text
  *  honesty rubric in this salvage proof. */

@@ -267,7 +267,7 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
 // ── GUARD-KIND CLASSIFICATION REGISTRIES (the single source of truth for the spec-quality lint) ────
 //
 // These three constants are the RUNTIME's OWN classification of its guard kinds — a property of how
-// each factory renders its prose / arms its seams. A spec-quality gate that re-encodes an
+// each factory renders its prose / variants its seams. A spec-quality gate that re-encodes an
 // equivalent list with no binding to this file drifts silently: rename a kind here and the gate keeps
 // classifying a name the runtime does not produce.
 //
@@ -301,7 +301,7 @@ export const CONFIRM_CLASS_KINDS: readonly string[] = ['confirmFirst', 'destruct
 /**
  * ARMED SEAMS: a guard kind that DENIES on a business-owned pattern (`seam`) whose forbidden-thing is an
  * arbitrary domain regex the runtime cannot put into words, paired with the option (`prose`) that must
- * carry the missing sentence. The Q12 armed-seam-without-prose lint fails a spec that arms `seam` without
+ * carry the missing sentence. The Q12 armed-seam-without-prose lint fails a spec that variants `seam` without
  * also passing `prose`.
  *
  * EMPTY: no guard kind denies on a business-owned pattern. Text judgment is `llmCheck`'s job, and an

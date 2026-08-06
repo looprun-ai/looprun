@@ -1,7 +1,7 @@
 /**
  * Plumbing proof WITHOUT any API: a scripted fake model drives fixture cases end-to-end
  * through the real governed loop — one invariant-pass, one forbidden-call violation detected,
- * one ungoverned-arm run showing the prompt kept byte-identical while enforcement is disarmed.
+ * one ungoverned-variant run showing the prompt kept byte-identical while enforcement is disarmed.
  */
 import { beforeAll, describe, expect, it } from 'vitest';
 import { dirname, resolve } from 'node:path';
@@ -90,7 +90,7 @@ describe('subject runner (fixture subject, scripted model)', () => {
       modelId: 'scripted',
     });
     expect(dump.agent).toBe('front-desk');
-    expect(dump.arm).toBe('governed');
+    expect(dump.variant).toBe('governed');
     expect(dump.invariantVerdict.pass, JSON.stringify(dump.invariantVerdict)).toBe(true);
     expect(dump.turns).toHaveLength(1);
     const executed = dump.turns[0].toolCalls
@@ -102,7 +102,7 @@ describe('subject runner (fixture subject, scripted model)', () => {
     expect(typeof dump.tokensOut).toBe('number');
   });
 
-  it('forbidden call is detected (02, ungoverned arm fabricates a reservation)', async () => {
+  it('forbidden call is detected (02, ungoverned variant fabricates a reservation)', async () => {
     const script = [
       [{ tool: 'lookupMember', args: { query: 'Carla Mendes' } }],
       [
@@ -128,7 +128,7 @@ describe('subject runner (fixture subject, scripted model)', () => {
   it('E1: a guard-vetoed forbidden call FAILS the invariant (attempt basis)', async () => {
     // The governed front-desk vetoes reserveRoom before any lookupMember (requiresBefore) — the call
     // NEVER reaches the world. On a case that forbids reserveRoom, the attempt alone must fail the
-    // invariant: the deterministic premium of the governed arm is the ATTEMPT it blocked, not a
+    // invariant: the deterministic premium of the governed variant is the ATTEMPT it blocked, not a
     // world-ledger entry that (by construction) does not exist.
     const vetoedScript = [
       [
@@ -164,16 +164,16 @@ describe('subject runner (fixture subject, scripted model)', () => {
     expect(evaluateInvariants({ forbiddenToolCalls: [{ name: 'reserveRoom' }] }, executed).pass).toBe(true);
   });
 
-  it('ungoverned arm: prompt byte-identical to governed, enforcement disarmed', async () => {
+  it('ungoverned variant: prompt byte-identical to governed, enforcement disarmed', async () => {
     const spec = subject.specs['front-desk'];
     const stripped = stripGovernance(spec, subject.contract);
 
-    // PROMPT VIEW — the arm's system prompt is the governed trunk, byte for byte.
+    // PROMPT VIEW — the variant's system prompt is the governed trunk, byte for byte.
     const world = subject.makeWorld('default');
     const governedPrompt = renderScopedSpecTrunk(world, spec, [], subject.contract);
     expect(stripped.spec.surface.systemPrompt).toBeDefined();
     expect(stripped.spec.surface.systemPrompt!(world, [])).toBe(governedPrompt);
-    // the prose survived: rule sections present in the arm's prompt
+    // the prose survived: rule sections present in the variant's prompt
     expect(governedPrompt).toContain('## Core rules (NEVER violate)');
 
     // LOOP VIEW — the enforcement layer is disarmed (the cut table of the design spec).
@@ -193,7 +193,7 @@ describe('subject runner (fixture subject, scripted model)', () => {
       modelId: 'scripted',
       ungoverned: true,
     });
-    expect(dump.arm).toBe('ungoverned');
+    expect(dump.variant).toBe('ungoverned');
     expect(dump.invariantVerdict.pass, JSON.stringify(dump.invariantVerdict)).toBe(true);
     expect(dump.turns.flatMap((t) => t.guardEvents)).toEqual([]);
   });

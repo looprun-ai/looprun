@@ -365,7 +365,7 @@ The prose≠reason law above says what a `prose()` must be. A proof suite that o
 (L1/L3/collective/ratchet) cannot verify it, and a static lint cannot decide whether an English sentence
 describes a predicate — `prose: () => reason` satisfies any tag-shaped rule. That is how an accusation can
 ship in the model's pre-action slot, in the half of the pair that carries the behavioural result (the
-prose half: guards-only enforcement is the weakest arm; prose recovers the gap).
+prose half: guards-only enforcement is the weakest variant; prose recovers the gap).
 
 What ties English to a predicate is BEHAVIOUR, and the FakeLLM makes behaviour deterministic:
 
@@ -516,7 +516,7 @@ ledger, never on op-name semantics or reply text — so they carry no pattern an
 - *Provenance*, stated per polarity: a claim of PRESENCE (`success`) grounds ONLY against values
   the WORLD issued — scanning agent-authored args would make grounding circular. A claim of ABSENCE or
   NON-EFFECT (`not_found`, `failure`, `blocked`, `refused`, `pending_confirmation`, `no_op`) cannot obey
-  that, because an absent record issues no value: those arms ground on the world's own negative answer
+  that, because an absent record issues no value: those variants ground on the world's own negative answer
   (an empty read / `ok:false` / a `requiresConfirmation` flag / a guard veto) PLUS the identity-KEY ARGS
   that say which entity was addressed. Free-text args are not identities, so a `query` string can never
   carry a verdict, and a `note` can never fabricate a refusal on a bystander. These polarities never enter

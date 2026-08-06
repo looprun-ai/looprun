@@ -110,9 +110,9 @@ function resistanceSection(r: BatteryResult): string[] {
 
 function judgmentSection(r: BatteryResult): string[] {
   if (!r.judgment) return ['## JUDGMENT', '', 'Not run (no `judge` call supplied).'];
-  const { arms, winner } = r.judgment;
-  const head = arms.map((a) => a.shape);
-  const row = (label: string, cell: (a: (typeof arms)[number]) => string) => `| ${label} | ${arms.map(cell).join(' | ')} |`;
+  const { variants, winner } = r.judgment;
+  const head = variants.map((a) => a.shape);
+  const row = (label: string, cell: (a: (typeof variants)[number]) => string) => `| ${label} | ${variants.map(cell).join(' | ')} |`;
   const ids = (list: readonly string[]) => (list.length ? `**${list.length}** — ${list.join(', ')}` : '0');
   return [
     '## JUDGMENT — the closed questions, one case set, every prompt shape',
@@ -137,8 +137,8 @@ function judgmentSection(r: BatteryResult): string[] {
     '',
     `| case | family | reply | expected | ${head.join(' | ')} |`,
     `|---|---|---|---|${head.map(() => '---').join('|')}|`,
-    ...(arms[0]?.results ?? []).map((c, i) => {
-      const answered = arms.map((a) => esc(a.results[i]?.verdict ?? '—')).join(' | ');
+    ...(variants[0]?.results ?? []).map((c, i) => {
+      const answered = variants.map((a) => esc(a.results[i]?.verdict ?? '—')).join(' | ');
       return `| ${c.id} | ${c.family} | ${esc(c.reply)} | ${esc(c.expect)} | ${answered} |`;
     }),
   ];

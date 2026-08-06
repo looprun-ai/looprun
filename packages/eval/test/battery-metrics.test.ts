@@ -38,7 +38,7 @@ import {
   readVerdict,
   readTwoQuestionVerdict,
   runJudgment,
-  runJudgmentArms,
+  runJudgmentVariants,
   CONFIRMATION_CASES,
   ELICITATION_CASES,
   JUDGMENT_CASES,
@@ -530,12 +530,12 @@ describe('judgment', () => {
   });
 
   it('both shapes run the SAME cases, and the winner is the one with fewer false confirms', async () => {
-    const { arms, winner } = await runJudgmentArms(async (prompt) =>
+    const { variants, winner } = await runJudgmentVariants(async (prompt) =>
       prompt.includes('a) Is A a CLEAR answer') ? 'a) no\nb) whatever' : 'yes',
     );
-    expect(arms.map((a) => a.shape)).toEqual(['one-question', 'two-question']);
-    expect(arms[0].results.map((r) => r.id)).toEqual(arms[1].results.map((r) => r.id));
-    expect(arms[1].totals.falseConfirms.length).toBeLessThan(arms[0].totals.falseConfirms.length);
+    expect(variants.map((a) => a.shape)).toEqual(['one-question', 'two-question']);
+    expect(variants[0].results.map((r) => r.id)).toEqual(variants[1].results.map((r) => r.id));
+    expect(variants[1].totals.falseConfirms.length).toBeLessThan(variants[0].totals.falseConfirms.length);
     expect(winner.shape).toBe('two-question');
     expect(winner.reason).toContain('fewest false confirms');
   });
@@ -607,14 +607,14 @@ describe('judgment', () => {
   });
 
   it('a tie on false confirms keeps the incumbent unless accuracy breaks it', () => {
-    const arm = (shape: 'one-question' | 'two-question', accuracy: number) => ({
+    const variant = (shape: 'one-question' | 'two-question', accuracy: number) => ({
       shape,
       results: [],
       totals: { ...judgmentTotals([]), accuracy },
     });
-    expect(pickWinner([arm('one-question', 0.9), arm('two-question', 0.9)]).shape).toBe('one-question');
-    expect(pickWinner([arm('one-question', 0.9), arm('two-question', 0.95)]).shape).toBe('two-question');
-    expect(pickWinner([arm('one-question', 0.9), arm('two-question', 0.95)]).reason).toContain('tied on false confirms');
+    expect(pickWinner([variant('one-question', 0.9), variant('two-question', 0.9)]).shape).toBe('one-question');
+    expect(pickWinner([variant('one-question', 0.9), variant('two-question', 0.95)]).shape).toBe('two-question');
+    expect(pickWinner([variant('one-question', 0.9), variant('two-question', 0.95)]).reason).toContain('tied on false confirms');
   });
 });
 
@@ -638,8 +638,8 @@ describe('the battery end to end, on the fake model', () => {
     expect(result.capacity!.totals.trunkUnstableScenarios).toEqual([]);
     expect(result.resistance!.totals.vectors).toBe(RESISTANCE_VECTORS.length);
     expect(result.resistance!.totals.controlBreaches).toEqual([]);
-    expect(result.judgment!.arms.map((a) => a.shape)).toEqual(['one-question', 'two-question']);
-    expect(result.judgment!.arms.every((a) => a.totals.cases === JUDGMENT_CASES.length)).toBe(true);
+    expect(result.judgment!.variants.map((a) => a.shape)).toEqual(['one-question', 'two-question']);
+    expect(result.judgment!.variants.every((a) => a.totals.cases === JUDGMENT_CASES.length)).toBe(true);
 
     const out = mkdtempSync(resolve(tmpdir(), 'looprun-battery-'));
     const written = writeBattery(result, out);

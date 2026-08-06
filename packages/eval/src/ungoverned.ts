@@ -1,6 +1,6 @@
 /**
- * The ungoverned-arm strip — PROSE-ONLY baseline: the SAME agent with the SAME system
- * prompt (byte-identical to the governed arm — every rule rendered as prose), run with the
+ * The ungoverned-variant strip — PROSE-ONLY baseline: the SAME agent with the SAME system
+ * prompt (byte-identical to the governed variant — every rule rendered as prose), run with the
  * enforcement layer disarmed. What is removed is only the CHECKS: guard hooks (veto /
  * redrive / deny), egress mutators, `controls.chains`, `controls.exhaustionReply`, and the
  * destructive cross-check. `governed − ungoverned` therefore measures the deterministic-
@@ -13,10 +13,10 @@
  *
  * THE TERMINAL SURFACE IS IDENTICAL BY CONSTRUCTION. The `respond` schema — `did` with its
  * minimum of one intention, the speech/action vocabulary, the `inform` guardrail — and the terminal
- * protocol prose are RUNTIME-owned (`terminalToolDefs` / `terminalProtocol`), so neither arm can
+ * protocol prose are RUNTIME-owned (`terminalToolDefs` / `terminalProtocol`), so neither variant can
  * carry more or less of them than the other; `controls.terminal` (the reply-only policy that decides
  * which protocol variant renders) is preserved above with the rest of `loopControls`. The ungoverned
- * arm is therefore a fully-instructed agent — it is TOLD to declare its intentions honestly, it is
+ * variant is therefore a fully-instructed agent — it is TOLD to declare its intentions honestly, it is
  * simply never CHECKED.
  */
 import { renderScopedSpecTrunk } from '@looprun-ai/core/internal';
@@ -37,7 +37,7 @@ export function stripGovernance(spec: AgentSpec, contract: DomainContract): Ungo
     // exhaustionReply: omitted — fallback of the redrive mechanism; without redrive it does not exist.
     // RENDERING SEAM KEPT (structure, not enforcement): the engine composes the delivered reply from the
     // structured `respond` (message + the operation report rendered from `did`), so preserving the domain
-    // `renderClaim` / `outcomes` / `writeTools` keeps the DELIVERED text byte-faithful to the governed arm —
+    // `renderClaim` / `outcomes` / `writeTools` keeps the DELIVERED text byte-faithful to the governed variant —
     // only the guard CHECKS are disarmed (the empty guard arrays below), never the reply-assembly shape.
     ...(contract.renderClaim ? { renderClaim: contract.renderClaim } : {}),
     ...(contract.outcomes ? { outcomes: contract.outcomes } : {}),
@@ -51,7 +51,7 @@ export function stripGovernance(spec: AgentSpec, contract: DomainContract): Ungo
     surface: {
       tools: [...spec.surface.tools],
       // PROMPT VIEW: the governed trunk, byte for byte. A pre-existing override is the
-      // governed arm's own prompt already — reuse it; otherwise close over the FULL spec.
+      // governed variant's own prompt already — reuse it; otherwise close over the FULL spec.
       systemPrompt:
         spec.surface.systemPrompt ??
         ((w, u = []) => renderScopedSpecTrunk(w, spec, u, contract)),

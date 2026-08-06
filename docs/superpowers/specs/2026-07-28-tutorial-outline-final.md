@@ -389,7 +389,7 @@ types are not in this contract (annotation rule, §0).
 | `mintSeal` | eval | seal a result set |
 | `verifySeal` | eval | verify a seal |
 | `agentForCase` | eval | which spec a case routes to |
-| `stripGovernance` | eval | the ungoverned control arm of an A/B |
+| `stripGovernance` | eval | the ungoverned control variant of an A/B |
 
 **Example used.** The scheduler subject with three cases (happy path, cancel-without-confirm, double
 booking): author `evals/cases.ts`, then `looprun-eval run` → `fold` → `cert` → `mintSeal` /
@@ -502,7 +502,7 @@ Stated so Tasks 3–7 do not have to re-derive it, and so nobody reads a gap as 
 |---|---|---|
 | inventory `internal` symbols | 38 | sibling-only or seam-only. They move behind `/internal` — including the **ten bring-your-own-loop symbols demoted by this revision** (§8, defect 2) |
 | inventory `delete` symbols | 138 | no consumer outside the defining package and no tutorial home; they leave the barrel (the implementation is a separate decision — inventory §2) |
-| option / result types of the `looprun-eval` entry points | 13 | `RunCommandOptions` `FoldCommandOptions` `CertCommandOptions` `ValidateCommandOptions` `JudgeInputCommandOptions` `ValidateReport` `CertSummary` `CertBand` `LintViolation` `FoldResult` `FoldRow` `UngovernedBundle` `VerdictLine` — every one is either an object-literal argument or an inferred result, so the annotation rule (§0) leaves them off |
+| option / result types of the `looprun-eval` entry points | 13 | `RunCommandOptions` `FoldCommandOptions` `CertCommandOptions` `ValidateCommandOptions` `JudgeInputCommandOptions` `ValidateReport` `CertSummary` `CertRange` `LintViolation` `FoldResult` `FoldRow` `UngovernedBundle` `VerdictLine` — every one is either an object-literal argument or an inferred result, so the annotation rule (§0) leaves them off |
 | authored types of **fields and options the tutorial does not teach** | 6 | `AgentSpecConfig` fields: `SpatialEdge` (`flow`) `StateDirective` (`directives`) `ChainSpec` (`chains`) `SamplingSettings` (`sampling`) `MutatorBinding` (reply mutators). Plus one **`addGuard` opts** field: `Layer` — `'minimal' | 'base' | 'full' | 'agent'` (`spec.ts:36`), the framework's own auto-install tiers, not something a reader sets. All by the taught-field rule (§0) |
 | `@looprun-ai/core/testing` (19) and `@looprun-ai/mastra/testing` (9) | 28 | a separate, deliberately test-only entry point. `GuardProof` is pointed at by the governance skill; that stays true and stays out of the six chapters |
 | `GUARD_CATALOG`, `GuardCatalogEntry` | 2 | build input for chapter 04, not API it teaches — `@looprun-ai/core/internal` (§6, decision 4) |
@@ -616,7 +616,7 @@ signatures and locked by its `surface-lock.test.ts`:
 | package | rider | forced by |
 |---|---|---|
 | `models` (2) | `RuntimeStatus` `EnsureServerResult` | `localModelStatus` returns `Promise<RuntimeStatus>`; `ModelRuntimePort.ensureServer` / `LlamaCppRuntime#ensureServer` return `EnsureServerResult` |
-| `eval` (11) | `RunCommandOptions` `FoldCommandOptions` `CertCommandOptions` `CampaignCommandOptions` `CertSummary` `CertBand` `LintViolation` `UngovernedBundle` `Seal` `SealTarget` `SealVerification` | the parameter/return types of the taught `looprun-eval` verbs — §5 keeps all of them out of the *taught* contract by the annotation rule, which is a statement about teaching, not about nameability |
+| `eval` (11) | `RunCommandOptions` `FoldCommandOptions` `CertCommandOptions` `CampaignCommandOptions` `CertSummary` `CertRange` `LintViolation` `UngovernedBundle` `Seal` `SealTarget` `SealVerification` | the parameter/return types of the taught `looprun-eval` verbs — §5 keeps all of them out of the *taught* contract by the annotation rule, which is a statement about teaching, not about nameability |
 | `server` (3) | `LoopRunResultMeta` `CompletionRequestBody` `WireMessage` | `TurnEvent.meta` is a `LoopRunResultMeta`; `ModelServerConfig.resolveSession` is `(body: CompletionRequestBody, headers: Headers) => string`, and `CompletionRequestBody.messages` is `WireMessage[]` |
 
 #### `TurnEvent.meta` — decided by Task 7b: the mirror keeps its name

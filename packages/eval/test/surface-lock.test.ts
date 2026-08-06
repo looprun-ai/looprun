@@ -50,7 +50,7 @@ const TAUGHT = [...TAUGHT_SUBJECT, ...TAUGHT_CLI].sort();
  */
 const RIDERS = [
   'RunCommandOptions', 'FoldCommandOptions', 'CertCommandOptions', 'ValidateCommandOptions', 'JudgeInputCommandOptions',
-  'CampaignCommandOptions', 'ValidateReport', 'CertSummary', 'CertBand', 'LintViolation', 'UngovernedBundle', 'Seal',
+  'CampaignCommandOptions', 'ValidateReport', 'CertSummary', 'CertRange', 'LintViolation', 'UngovernedBundle', 'Seal',
   'SealTarget', 'SealVerification', 'NormsConfig', 'WorldConfig',
 ];
 

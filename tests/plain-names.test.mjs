@@ -63,7 +63,11 @@ const ALLOW = [
   { path: 'docs/superpowers/plans/2026-08-06-plain-names.md', why: 'the plan that carries out the rename; deleted by the final task' },
 ];
 
-const SKIP_EXT = /\.(png|jpg|jpeg|gif|svg|ico|gguf|zip|lock|woff2?|tsv|csv)$/i;
+const SKIP_EXT = /\.(png|jpg|jpeg|gif|svg|ico|gguf|zip|woff2?|tsv|csv)$/i;
+
+// A lockfile is written by the package manager and names CPU architectures — `arm64`, `linux-arm`.
+// That is a fourth sense of the word, owned by hardware, and nobody reads a lockfile for vocabulary.
+const GENERATED = /(^|\/)(pnpm-lock\.yaml|package-lock\.json|yarn\.lock)$/;
 const FROZEN = /(^|\/)benchmarks\/.*\/results\//;
 const SELF = relative(ROOT, fileURLToPath(import.meta.url));
 
@@ -124,7 +128,7 @@ if (
 const hits = [];
 for (const file of walk(ROOT)) {
   const rel = relative(ROOT, file);
-  if (rel === SELF || SKIP_EXT.test(rel) || FROZEN.test(rel)) continue;
+  if (rel === SELF || SKIP_EXT.test(rel) || FROZEN.test(rel) || GENERATED.test(rel)) continue;
   let lines;
   try {
     lines = readFileSync(file, 'utf8').split('\n');

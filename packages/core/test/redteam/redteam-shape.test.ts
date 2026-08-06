@@ -315,7 +315,7 @@ describe('SECTION 4 — the premature-terminal ask leak is pruned, so no cross-t
     const ctxEither = base({ tool: 'deleteAccount', args: { confirmed: true, id: 5 }, observed: ledger.observed, turnIndex: 2 });
     const ctxAsk = base({ tool: 'deleteAccount', args: {}, observed: ledger.observed, turnIndex: 2 });
 
-    // SECURE: no phantom license survives the prune — both arms deny.
+    // SECURE: no phantom license survives the prune — both variants deny.
     expect(gEither.check(ctxEither)).not.toBeNull();
     expect(gAsk.check(ctxAsk)).not.toBeNull();
   });

@@ -146,7 +146,7 @@ describe('§1 string-leaf identity — grounding-plus-hiding', () => {
   });
 
   // ── 1.6 error envelopes ─────────────────────────────────────────────────────────────────────────
-  // MECHANISM: the `failure` arm matches any ok:false call's result values — an error SENTENCE is a
+  // MECHANISM: the `failure` variant matches any ok:false call's result values — an error SENTENCE is a
   // string leaf, so "the refund of <error text> failed" grounds. The renderer prints the error text as
   // if it were an entity: "insufficient funds: could not be completed".
   it('BREAK 1.6: an error message must not be a groundable identity', () => {
@@ -505,7 +505,7 @@ describe('§6 emptiness and not_found', () => {
     expect(grounded(ctx)).toBeTruthy();
   });
 
-  it('HELD: a WRITE can never ground not_found (the arm excludes write tools)', () => {
+  it('HELD: a WRITE can never ground not_found (the variant excludes write tools)', () => {
     const ctx = {
       did: [{ op: 'lookup', target: 'BK-1', outcome: 'not_found' }] as Intention[],
       observed: [call('cancelBooking', { bookingId: 'BK-1' }, { tookEffect: false })],

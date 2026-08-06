@@ -24,7 +24,7 @@ chapter runs many, deterministically, and then measures them.
         │                                            RunResult you can assert on      (§2)
         │
         └── looprun-eval run --subject <dir>         the same runner over a SUBJECT: N cases,
-                                                     both arms, artifacts on disk     (§5)
+                                                     both variants, artifacts on disk     (§5)
 ```
 
 They are the same governed turn — the same guards at the same hooks — reached from three depths.
@@ -413,9 +413,9 @@ Note where the invariants are read from: the **world's** ledger of executed call
 guard-vetoed attempts the runtime records the moment a guard denies a call. A call a guard vetoed
 never reached the world — but the *attempt* is still evidence of what the model tried to do, so a
 `forbiddenToolCalls` invariant fails on it too (the violation reads `forbidden call attempted
-(guard-vetoed): …`). This is deliberate: the governed arm's deterministic premium IS the attempts it
+(guard-vetoed): …`). This is deliberate: the governed variant's deterministic premium IS the attempts it
 blocks, so those attempts must be scored, not lost with the call that never executed. What the two
-arms then differ on is only whether the write *reached the world*; both are charged for attempting it.
+variants then differ on is only whether the write *reached the world*; both are charged for attempting it.
 
 `critical: true` deserves the same precision. It is metadata that rides into `cases.jsonl` for the
 judge to read; **no code branches on it** — `fold` and `cert` see one verdict per case and nothing
@@ -426,7 +426,7 @@ the observed argument, and arguments you do not list are ignored. `{ name: 'addE
 start: '2026-03-02T10:15' } }` therefore says "no `addEvent` starting at 10:15", not "no `addEvent`".
 
 `targets` names the guard ids the case exercises — `agent:noDoubleBook`, `base:confirmFirst`,
-`minimal:noDuplicateCall`. It is not decoration: a guard no case targets passes in **both** arms of a
+`minimal:noDuplicateCall`. It is not decoration: a guard no case targets passes in **both** variants of a
 discrimination run, so it reads as coverage while never having fired. §5's `lintSubject` refuses a
 case without targets, and refuses a bundle with an **authored** guard no case ON ITS OWN LANE targets —
 a guard id is not unique across specs, so a case targeting `agent:sharedGate` on the booking lane says
@@ -537,7 +537,7 @@ Its findings, and why each is a failure and not a style note:
 
 ```
    CASE-WITHOUT-TARGET       a case that names no rule cannot answer "is this rule exercised?"
-   GUARD-NEVER-TARGETED      a guard no case ON ITS LANE targets passes in BOTH arms — coverage that
+   GUARD-NEVER-TARGETED      a guard no case ON ITS LANE targets passes in BOTH variants — coverage that
                              never fired. The repair is a case or a preset; there is no third way
    PHANTOM-TARGET            a target matching no installed guard: the case proves nothing
    TARGET-ON-ANOTHER-AGENT   the guard is installed on a spec this case never routes to
@@ -586,7 +586,7 @@ Note `lintSpecExecution` is the only `async` one: it runs the guards.
 npx looprun-eval run --subject ./scheduler-subject
 npx looprun-eval run --subject <dir> --model <id> --base-url <url> --api-key-env <ENV>
 npx looprun-eval run --subject <dir> --case 01-double-book-refused    # one case, while iterating
-npx looprun-eval run --subject <dir> --ungoverned                     # the control arm
+npx looprun-eval run --subject <dir> --ungoverned                     # the control variant
 ```
 
 With no flags, the target comes from `ask/targets.json` — the tutorial subject declares
@@ -630,7 +630,7 @@ judge's, in the next step. The other status is `invariant-FAIL (…)`, with the 
 What lands on disk:
 
 ```
-   <subject>/test/<date>-<model>-<arm>/        (override with --out)
+   <subject>/test/<date>-<model>-<variant>/        (override with --out)
    ├── cases.jsonl      one case dump per line — the judge's INPUT (bulky: gitignore it yourself;
    │                    nothing in the tool does)
    ├── SUMMARY.md       per-case status + token totals
@@ -713,13 +713,13 @@ lines, and writes the claim beside them. `verifySeal` recomputes and compares.
 The judge prompt is under seal on purpose: **swapping the ruler changes the score without touching a
 single case.** That is also why the tamper above voided the seal — the file edited was the ruler.
 
-### 5.6 The A/B: `stripGovernance` and the ungoverned arm
+### 5.6 The A/B: `stripGovernance` and the ungoverned variant
 
 A number on its own says how good the model is. The comparison says what the **governance** did.
 
 ```ts
-/** The ungoverned control arm: the same prompt with the enforcement layer disarmed. */
-export function ungovernedArm(subject: Subject, caseId: string) {
+/** The ungoverned control variant: the same prompt with the enforcement layer disarmed. */
+export function ungovernedVariant(subject: Subject, caseId: string) {
   const spec = subject.specs[routedAgent(subject, caseId)]!;
   return stripGovernance(spec, subject.contract);
 }
@@ -730,21 +730,21 @@ export function ungovernedArm(subject: Subject, caseId: string) {
    DISARMED  guard hooks (veto / redrive / deny) · egress mutators (`onReplyMutate`) ·
              `controls.chains` · `controls.exhaustionReply` · the destructive cross-check
              (`assertDestructiveConfirmable`)
-   KEPT      the ENTIRE system prompt, byte-identical to the governed arm — voice, scope,
+   KEPT      the ENTIRE system prompt, byte-identical to the governed variant — voice, scope,
              core rules, flow, tool/reply rules, governance directives, behavior, language —
              plus the tool surface, the state tail, and the remaining loop mechanics
              (terminal policy, maxSteps, sampling)
 ```
 
-It returns fresh objects and never mutates the source spec, so both arms can run in one
-process. The ungoverned arm is the *same agent with the same prompt* — a well-prompted
+It returns fresh objects and never mutates the source spec, so both variants can run in one
+process. The ungoverned variant is the *same agent with the same prompt* — a well-prompted
 traditional agent that knows every rule — minus the deterministic checks. A difference in
-the invariant gate between the arms is then attributable to ENFORCEMENT and to nothing
+the invariant gate between the variants is then attributable to ENFORCEMENT and to nothing
 else: both models read the same "never reserve for an unknown member" prose; in the
-governed arm the guard stops the violating call before it reaches the world, while in the
-ungoverned arm it arrives and the world's own refusal is the only thing left standing
+governed variant the guard stops the violating call before it reaches the world, while in the
+ungoverned variant it arrives and the world's own refusal is the only thing left standing
 between the model and the write. Same rules, same intent, two very different distances
-from the damage — and that gap, the price of relying on prose alone, is what the two arms
+from the damage — and that gap, the price of relying on prose alone, is what the two variants
 measure.
 
 ### 5.7 Fix — the closed taxonomy
@@ -761,7 +761,7 @@ iterations. Cheapest and most deterministic first:
 | 5 | fabrication pattern | an existence-keyed anti-fabrication reply gate |
 | 6 | language coin | **accept as residual** — a human gate. Do not chase it with prose |
 | 7 | eval defect | fix the **eval**, and re-argue it. Never bend the spec to a broken case |
-| 8 | near-tie action coin | the graded decision rides one greedy token whose margin sits inside the noise band. Pin it with a **deterministic gate** — a guard that decides the branch — rather than editing prose blindly |
+| 8 | near-tie action coin | the graded decision rides one greedy token whose margin sits inside the noise range. Pin it with a **deterministic gate** — a guard that decides the branch — rather than editing prose blindly |
 
 After any spec or contract edit, §5.1 must stay clean before you spend on another run.
 
@@ -794,7 +794,7 @@ smoke, not a gate — chapter 06.
 
    lintPaths · lintSpecLaws · lintSpecExecution · lintSpecQuality · lintSubject   preflight, free
    runCommand → (judge) → foldCommand → certCommand → mintSeal / verifySeal       the measured loop
-   stripGovernance                                                                the control arm
+   stripGovernance                                                                the control variant
 ```
 
 You can now run a spec, measure it, and bind the number to the bytes it was measured on. Chapter 06

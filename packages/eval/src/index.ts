@@ -31,7 +31,7 @@ export { mintSeal, verifySeal } from './seal.js';
 /**
  * TYPE-CLOSURE RIDERS (outline §7) — not taught, not part of the 19, not surface anybody chose.
  * They are the transitive type closure of the value signatures above: the four `*CommandOptions`
- * `CertSummary` `CertBand` and `ValidateReport` (the `looprun-eval` verbs), `LintViolation` (`lintPaths`),
+ * `CertSummary` `CertRange` and `ValidateReport` (the `looprun-eval` verbs), `LintViolation` (`lintPaths`),
  * `UngovernedBundle` (`stripGovernance`), `SealTarget` / `Seal` / `SealVerification` (`mintSeal` / `verifySeal`).
  * The outline's §5 keeps them out of the taught contract by the annotation rule — every one is
  * either an object-literal argument or an inferred result — but a consumer building with
@@ -41,7 +41,7 @@ export { mintSeal, verifySeal } from './seal.js';
 export type { RunCommandOptions, FoldCommandOptions, CertCommandOptions, ValidateCommandOptions, JudgeInputCommandOptions } from './commands.js';
 export type { CampaignCommandOptions } from './campaign.js';
 export type { ValidateReport } from './validate.js';
-export type { CertSummary, CertBand } from './cert.js';
+export type { CertSummary, CertRange } from './cert.js';
 export type { LintViolation } from './lint.js';
 export type { UngovernedBundle } from './ungoverned.js';
 export type { Seal, SealTarget, SealVerification } from './seal.js';
