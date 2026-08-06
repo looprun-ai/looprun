@@ -230,7 +230,7 @@ describe('V5 — valueFromUser: the value the world records must be the value th
 // ════════════════════════════════════════════════════════════════════════════════════════════════
 describe('V6 — confirmFirst via:ask: own prior run self-licenses the repeat (no fresh ask)', () => {
   it('CLOSED: a prior OK deleteAll run (turn 2) does NOT license another deleteAll (turn 3)', () => {
-    const g = confirmFirst({ flag: false });
+    const g = confirmFirst();
     const ctx = baseCtx({
       tool: 'deleteAll',
       args: {},
@@ -242,7 +242,7 @@ describe('V6 — confirmFirst via:ask: own prior run self-licenses the repeat (n
   });
 
   it('CLOSED: a SINGLE ask (turn 1) does NOT bridge the recency law out to turn 3', () => {
-    const g = confirmFirst({ flag: false }); // within default 1
+    const g = confirmFirst(); // within default 1
     const ctx = baseCtx({
       tool: 'deleteAll',
       args: {},
@@ -258,7 +258,7 @@ describe('V6 — confirmFirst via:ask: own prior run self-licenses the repeat (n
   });
 
   it('CLOSED regression: a vetoed (ok:false) prior attempt does NOT self-license the repeat', () => {
-    const g = confirmFirst({ flag: false });
+    const g = confirmFirst();
     const ctx = baseCtx({
       tool: 'deleteAll', args: {}, turnIndex: 3,
       observed: [obs('deleteAll', {}, 2, { ok: false })], // prior attempt was vetoed

@@ -201,13 +201,13 @@ describe('C2 (V1) — a partial/empty simulation licenses ANY bare destructive a
 // ════════════════════════════════════════════════════════════════════════════════════════════════
 describe('C3 (V6) — via:ask self-licenses its own repeat', () => {
   it('CLOSED: a prior OK deleteAll (turn 2) does NOT license deleteAll (turn 3)', () => {
-    const g = confirmFirst({ flag: false });
+    const g = confirmFirst();
     const ctx = baseCtx({ tool: 'deleteAll', args: {}, turnIndex: 3, observed: [obs('deleteAll', {}, 2, { tookEffect: true })] });
     expect(g.check(ctx)).not.toBeNull();
   });
 
   it('CLOSED: ONE ask at turn 1 does NOT bridge the recency law out to turn 3', () => {
-    const g = confirmFirst({ flag: false }); // within = 1
+    const g = confirmFirst(); // within = 1
     const ctx = baseCtx({
       tool: 'deleteAll', args: {}, turnIndex: 3,
       history: [histTurn(1, [{ op: 'ask' }], 'Delete everything?'), histTurn(2, [{ op: 'deleteAll', outcome: 'success' }], 'Deleted.')],
@@ -218,7 +218,7 @@ describe('C3 (V6) — via:ask self-licenses its own repeat', () => {
   });
 
   it('CLOSED: the chain is BROKEN — turn 9 is not licensed by turn 8', () => {
-    const g = confirmFirst({ flag: false });
+    const g = confirmFirst();
     const ctx = baseCtx({
       tool: 'deleteAll', args: {}, turnIndex: 9,
       history: [histTurn(1, [{ op: 'ask' }], 'Delete everything?')],
@@ -228,13 +228,13 @@ describe('C3 (V6) — via:ask self-licenses its own repeat', () => {
   });
 
   it('CLOSED regression: a vetoed (ok:false) prior attempt does not self-license', () => {
-    const g = confirmFirst({ flag: false });
+    const g = confirmFirst();
     const ctx = baseCtx({ tool: 'deleteAll', args: {}, turnIndex: 3, observed: [obs('deleteAll', {}, 2, { ok: false })] });
     expect(g.check(ctx)).not.toBeNull();
   });
 
   it('CLOSED regression: the legit shape (question at turn 1 → token at turn 2) is still licensed', () => {
-    const g = confirmFirst({ flag: false });
+    const g = confirmFirst();
     const ctx = baseCtx({
       tool: 'deleteAll', args: {}, turnIndex: 2,
       consent: [{ tool: 'deleteAll', meaning: 'delete everything', token: 'CONFIRM DELETE-EVERYTHING', issuedTurn: 1, consumedTurn: 2 }],

@@ -144,7 +144,7 @@ describe('confirmFirst — adversarial', () => {
   });
 
   it('HOLDS (via:ask): a vetoed turn-1 attempt (ok:false) does NOT unlock the identical turn-2 call', () => {
-    const ga = confirmFirst({ flag: false });
+    const ga = confirmFirst();
     const vetoed = okCall('wipeAll', 1, {}, { ok: false });
     const act = ctxWith({ tool: 'wipeAll', args: {}, observed: [vetoed], turnIndex: 2 });
     expect(ga.check(act)).not.toBeNull();
@@ -154,14 +154,14 @@ describe('confirmFirst — adversarial', () => {
     // Counting a flag-less tool's own prior OK run as "surfacing" would let a second identical
     // destructive run happen in the next turn with no fresh ask — and, chained turn by turn, carry ONE
     // consent across unbounded turns, bridging the recency law. Every repeat needs its own earlier-turn ask.
-    const ga = confirmFirst({ flag: false });
+    const ga = confirmFirst();
     const priorRun = okCall('wipeAll', 1, {});
     const act = ctxWith({ tool: 'wipeAll', args: {}, observed: [priorRun], turnIndex: 2 });
     expect(ga.check(act)).not.toBeNull();
   });
 
   it('CONTROL: the legitimate two-step works — the typed token licenses the next turn', () => {
-    const ga = confirmFirst({ flag: false });
+    const ga = confirmFirst();
     const consent = {
       tool: 'wipeAll', meaning: 'delete every record', token: 'CONFIRM DELETE-EVERY',
       issuedTurn: 1, consumedTurn: 2,

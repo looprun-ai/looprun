@@ -311,7 +311,7 @@ describe('SECTION 4 — the premature-terminal ask leak is pruned, so no cross-t
     // Turn 2: the model now fires the bare destructive act.
     beginTurn(actionHistory, 2); // observed is conversation-scoped → the leaked ask persists
     const gEither = confirmFirst();
-    const gAsk = confirmFirst({ flag: false });
+    const gAsk = confirmFirst();
     const ctxEither = base({ tool: 'deleteAccount', args: { id: 5 }, observed: actionHistory.observed, turnIndex: 2 });
     const ctxAsk = base({ tool: 'deleteAccount', args: {}, observed: actionHistory.observed, turnIndex: 2 });
 

@@ -214,14 +214,14 @@ describe('b2 — a SPEECH intention is EVIDENCE nowhere… except `ask`, which l
   it('an uncorroborated `ask` licenses no next-turn destructive call', () => {
     // A destructive tool stays gated until the USER typed the code: what the agent declared about
     // its own previous turn is not evidence of anything.
-    const verdict = confirmFirst({ flag: false }).check(
+    const verdict = confirmFirst().check(
       replyCtx({ tool: 'deleteAccount', args: {}, turnIndex: 1, history: [silentTurn] }),
     );
     expect(verdict).not.toBeNull();
   });
 
   it('CONTROL — with NO ask intention declared, the same destructive call is denied', () => {
-    const verdict = confirmFirst({ flag: false }).check(
+    const verdict = confirmFirst().check(
       replyCtx({ tool: 'deleteAccount', args: {}, turnIndex: 1, history: [historyTurn({ turnIndex: 0, did: [{ op: 'inform' }] })] }),
     );
     expect(verdict).not.toBeNull();
