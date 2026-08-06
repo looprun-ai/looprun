@@ -1,4 +1,4 @@
-# Worst World, Owned Truth — Engine Implementation Plan
+# Worst World, Owned Truth — Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -8,7 +8,7 @@
 
 **Tech Stack:** TypeScript, pnpm workspaces, vitest. Spec: `docs/superpowers/specs/2026-08-06-worst-world-design.md`.
 
-**Scope:** the `looprun` repo only (engine). The agentspec skill (worst-world gen law + lint, guard ownership law, rapid-fire eval rewrite) and the atlas regeneration are separate follow-on plans (spec §Order of work, steps 2–3).
+**Scope:** two repos. `looprun` — engine (Tasks 1–9), the eval-DSL no-effect invariant (Task 10), and every doc/tutorial surface (Task 11). `agentspec` (`/Users/marcos/Dev/js/looprun/agentspec`) — the skill's gen/evals/catalog references (Tasks 12–13), the authoring lints (Task 14), and the full documentation sweep (Task 15). The atlas regeneration and its re-measurement remain a follow-on plan (spec §Order of work, step 3).
 
 ## Global Constraints
 
@@ -596,8 +596,210 @@ git commit -m "test(core): route proofs + governance record for the worst-world 
 
 ---
 
+### Task 10: The no-effect invariant in the eval DSL
+
+**Files:**
+- Modify: `packages/eval/src/cases-config.ts` (the invariants type beside `forbiddenToolCalls`)
+- Modify: `packages/eval/src/validate.ts` (the verdict computation)
+- Test: beside the eval package's existing validate tests (`packages/eval/test/` — mirror the file that exercises `forbiddenToolCalls`)
+
+**Interfaces:**
+- Consumes: the world action-history rows a run records (`tookEffect`).
+- Produces: `invariants.noEffectToolCalls?: Array<{ name: string; args?: Record<string, unknown> }>` — violated only by a matching call that TOOK EFFECT; a veto, a simulation or a failed call never counts. Task 13's evals.md recipe references it.
+
+- [ ] **Step 1: Write the failing tests**
+
+```ts
+test('noEffectToolCalls passes on a vetoed attempt of the named call', () => {
+  // trace: cancelBooking bk_1004 vetoed (attemptedCalls entry, no world row)
+  expect(verdict.pass).toBe(true);
+});
+
+test('noEffectToolCalls fails when the named call took effect', () => {
+  // trace: cancelBooking bk_1004 world row tookEffect:true
+  expect(verdict.violations[0]).toMatch(/took effect: cancelBooking/);
+});
+
+test('a simulation of the named call passes', () => {
+  // trace: cancelBooking bk_1004 simulate:true, tookEffect:false
+  expect(verdict.pass).toBe(true);
+});
+```
+
+- [ ] **Step 2: Run to verify failure** — `pnpm -F @looprun-ai/eval test` → FAIL (field unknown).
+
+- [ ] **Step 3: Implement** — add the field to the invariants type and, in `validate.ts`, one check over the world action history: a row matching name (and `args` subset, canonicalized like `forbiddenToolCalls` matches them) with `tookEffect === true` → violation `` `took effect: ${name}` ``. It reads the WORLD history only — the engine's enforcement is what it asserts, so the model's vetoed reach is invisible to it by construction.
+
+- [ ] **Step 4: Run to verify pass** — eval package suite green.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add packages/eval/src/cases-config.ts packages/eval/src/validate.ts packages/eval/test/
+git commit -m "feat(eval): a no-effect invariant asserts the engine's share without punishing the veto"
+```
+
+---
+
+### Task 11: looprun docs and tutorial say the new truth
+
+**Files:**
+- Modify: `packages/core/src/guards/catalog.ts` (the chapter source) + regenerate via `node scripts/gen-guards-chapter.mjs`
+- Modify: `docs/tutorial/04-guards.md` (if hand-written parts exist), `docs/tutorial/03-agent-anatomy.md`, `docs/tutorial/05-running-and-eval.md`, `docs/tutorial/06-advanced.md`, `docs/tutorial/01-concepts.md`
+- Modify: any hit of the stale-statement grep below (README.md, docs/benchmarks.md)
+
+**Interfaces:**
+- Consumes: everything Tasks 1–10 shipped.
+- Produces: no doc states the pre-change behavior; the AS-IS rule holds (no "used to", no history).
+
+- [ ] **Step 1: Find every stale statement**
+
+```bash
+grep -rn "every preTool guard\|guard gates\|approvalsIssuedThisTurn\|An action could not be completed" docs/ README.md packages/core/src/guards/catalog.ts | grep -v superpowers
+```
+
+- [ ] **Step 2: Write the new truths, each where the grep hit** — state, in the file's own voice:
+  - the guard gate law: "a schema-licensed simulation is a read — only the always-family gates it; the world validates it in full and answers with the same error the act would" (catalog intro + 04-guards);
+  - `publicReason`: one authored user-facing sentence a guard may carry for the closure (04-guards);
+  - the operation record: a result's `report` line renders after the outcome, and every OPEN approval renders on every delivery until answered or closed (03-agent-anatomy);
+  - the closure: composes authored sentences — the world's error message, a guard's public sentence — never raw read data (03-agent-anatomy or 06-advanced, wherever the delivery is described);
+  - the sensitive filter: `contract.sensitiveFields` (omit/mask, executor never trusted) and `contract.scrubTextFields` (well-formed classes only; names and addresses are the stated residue) (06-advanced);
+  - the exam: `noEffectToolCalls` asserts the engine's share; a consented act stopped by the throttle is the runtime working (05-running-and-eval);
+  - worst world: a fixture implements exactly the documented surface (01-concepts, where worlds are introduced).
+
+- [ ] **Step 3: Regenerate and verify** — `node scripts/gen-guards-chapter.mjs` then `pnpm test` at the root (the `--check` gate must pass); re-run the Step 1 grep → zero stale hits.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add docs/ README.md packages/core/src/guards/catalog.ts
+git commit -m "docs: the guard gate, the record, the closure and the filter as they are"
+```
+
+---
+
+### Task 12: agentspec gen.md carries the four laws
+
+**Files:**
+- Modify: `/Users/marcos/Dev/js/looprun/agentspec/skill/references/gen.md`
+
+**Interfaces:**
+- Consumes: the spec's §1–§4 laws verbatim.
+- Produces: the G-laws Task 14's lints enforce and Task 15's sweep cross-references.
+
+- [ ] **Step 1: Add the worst-world law** to the world-authoring section:
+
+> A generated world implements exactly what the tool surface documents — nothing safer. Documented behavior is mirrored faithfully; silence is modeled at its worst: raw data returned, any well-formed call executed, no simulation. Every validation, mask or refusal in `world.ts` cites the `tools.json` entry or docs line that promises it — a safety behavior with no citation is a governance responsibility smuggled into the fixture. Citation form, on the line above the behavior: `// promised: <tools.json pointer or docs line>`.
+
+- [ ] **Step 2: Add the guard ownership law** to the guards section:
+
+> A guard exists for every rule the surface does not document; a guard that duplicates a documented world error is deleted — the call (or its simulation) returns the domain error, with the figures the reply needs. A guard may carry `publicReason`: one user-facing sentence for the closure when it stops a call.
+
+- [ ] **Step 3: Add the contract declarations** to the contract section — `sensitiveFields` (omit/mask; preference order: omit wherever nothing consumes the field, mask where the user must recognize it; there is no third mode), `scrubTextFields` (free-text pattern scrub; declaring is a per-field decision — a field that legitimately carries contact data is not declared, and the acceptance is authored), the id-by-reference law (`sendSMS({customerId})`, never `sendSMS({phone})`), and the `report` authoring law: every write result and every simulation result carries one authored `report` sentence naming what changed, in the figures the result returned.
+
+- [ ] **Step 4: Verify and commit** — re-read the edited sections against spec §1–§4 (no law missing, no vocabulary drift), then:
+
+```bash
+cd /Users/marcos/Dev/js/looprun/agentspec && git add skill/references/gen.md
+git commit -m "docs(skill): gen carries the worst-world, ownership, filter and report laws"
+```
+
+---
+
+### Task 13: agentspec evals.md, guard-catalog.md and the template
+
+**Files:**
+- Modify: `/Users/marcos/Dev/js/looprun/agentspec/skill/references/evals.md` (the rapid-fire recipe, line ~211)
+- Modify: `/Users/marcos/Dev/js/looprun/agentspec/skill/references/guard-catalog.md` (the `destructiveThrottle` entry, line ~345, and the catalog intro)
+- Modify: `/Users/marcos/Dev/js/looprun/agentspec/skill/references/spec-template.ts` (contract example)
+
+**Interfaces:**
+- Consumes: Task 10's `noEffectToolCalls`, Task 12's laws.
+- Produces: the recipe every future subject's rapid-fire cases are authored from.
+
+- [ ] **Step 1: Rewrite the rapid-fire recipe in evals.md** — replace the current line's "AND a rapid-fire same-turn case" clause with:
+
+> …AND a rapid-fire same-turn case: two approval codes typed in one message. The case requires the FIRST act, asserts the second with `noEffectToolCalls` (never `forbiddenToolCalls` — the engine's veto of a consented second act is the runtime working, and an attempt invariant would score the engine's own enforcement as the model's defect), and its rubric holds the model's share: the final reply reports the second act as outstanding, taking another turn. The same rule covers a code that licensed nothing: attempting the act is what re-raises the question.
+
+- [ ] **Step 2: Rewrite the guard-catalog.md throttle entry** — append to the `destructiveThrottle` row: "The veto of a consented second act is the cap working; a case asserts it with a no-effect invariant, never as a forbidden attempt." Add to the catalog intro the gate law: "A schema-licensed simulation passes every guard but the always-family — the world validates it in full."
+
+- [ ] **Step 3: Extend spec-template.ts** — add to the contract example, with one-line comments in the template's own style:
+
+```ts
+sensitiveFields: { 'customer.phone': 'omit', 'customer.email': 'mask' },
+scrubTextFields: ['fileClaim.description'],
+```
+
+and one guard example carrying `publicReason: 'the workspace is suspended'`.
+
+- [ ] **Step 4: Verify and commit** — `node skill/scripts/lint-guard-catalog.mjs` (must pass), then:
+
+```bash
+cd /Users/marcos/Dev/js/looprun/agentspec && git add skill/references/
+git commit -m "docs(skill): rapid-fire cases assert the engine's share; the catalog states the gate law"
+```
+
+---
+
+### Task 14: agentspec lints enforce the laws
+
+**Files:**
+- Modify: `/Users/marcos/Dev/js/looprun/agentspec/skill/scripts/lint-world.mjs` (the citation rule)
+- Modify: `/Users/marcos/Dev/js/looprun/agentspec/skill/scripts/lint-authoring.mjs` (declaration checks)
+- Test: the scripts' own fixture runs (follow each script's existing self-check pattern; if none exists, run against `subjects/` in agentspec-bench as the fixture)
+
+**Interfaces:**
+- Consumes: Task 12's citation form (`// promised: <pointer>`), the contract declarations.
+- Produces: failing exit codes that gate generation.
+
+- [ ] **Step 1: The citation rule in lint-world.mjs** — every `return`/`throw` of an error object in a generated `world.ts` (match the world's own error-shape idiom, e.g. `err('CODE'` or `{ ok: false, error:`) and every masking helper call must be preceded, within 3 lines, by `// promised:`. Report each miss as `world.ts:<line>: undocumented kindness — cite the surface promise or move it to governance`.
+
+- [ ] **Step 2: The declaration checks in lint-authoring.mjs** —
+  - every `sensitiveFields` key's last segment must appear in NO tool `inputSchema` property (the id-by-reference law: a value the model must never see cannot be a value a tool asks the model to supply);
+  - every `scrubTextFields` entry must resolve to an existing free-text (`type: 'string'`) argument or result field;
+  - every destructive tool's world handler must set `report` on its success and simulation results (grep the handler for `report:`), or the lint names the tool.
+
+- [ ] **Step 3: Run both lints against the atlas fixture** — `node skill/scripts/lint-world.mjs <path-to-atlas-world>` — Expected: FAILURES on the undocumented masking and permGate (the worst-world debt this design creates is VISIBLE, which is the point; the regeneration plan pays it).
+
+- [ ] **Step 4: Commit**
+
+```bash
+cd /Users/marcos/Dev/js/looprun/agentspec && git add skill/scripts/
+git commit -m "feat(skill): lints enforce the citation and declaration laws"
+```
+
+---
+
+### Task 15: agentspec documentation sweep
+
+**Files:**
+- Modify: every hit of the Step 1 grep across `/Users/marcos/Dev/js/looprun/agentspec/skill/` (`SKILL.md`, `references/norms.md`, `references/ask.md`, `references/test.md`, `references/ship.md`, `references/debate.md`, `references/thinking-template.md`)
+
+**Interfaces:**
+- Consumes: Tasks 12–14's laws (the sweep must not contradict them).
+- Produces: one vocabulary, zero passages teaching fixture-side kindness.
+
+- [ ] **Step 1: Find every passage that teaches the old shape**
+
+```bash
+cd /Users/marcos/Dev/js/looprun/agentspec && grep -rn -i "mask\|pii\|never leaves the world\|permGate\|viewer read-only\|read-only across all writes" skill/ --include='*.md' --include='*.ts' | grep -v scripts/
+```
+
+- [ ] **Step 2: Rewrite each hit AS-IS** — a passage that told the generator to mask in the world now points at `contract.sensitiveFields` + the filter; a passage that told it to enforce roles in the world now points at the guard ownership law. No file says what the guidance used to be.
+
+- [ ] **Step 3: Verify** — re-run the Step 1 grep: remaining hits are only the NEW laws' own statements. Run `node skill/scripts/lint-guard-catalog.mjs` and `node skill/scripts/lint-stage-names.mjs` — both pass.
+
+- [ ] **Step 4: Commit**
+
+```bash
+cd /Users/marcos/Dev/js/looprun/agentspec && git add skill/
+git commit -m "docs(skill): the references teach the worst-world shape everywhere"
+```
+
+---
+
 ## Self-Review
 
-- **Spec coverage:** §2.2 → Task 1; §3.1 → Tasks 2–3; §3.3 → Tasks 4–5; §3.2 → Task 6; §4 → Tasks 7–8; measurement/governance → Task 9. §1 (worst-world gen law + lint), §2.1 (guard ownership law) and §5 (rapid-fire eval rewrite) are skill-repo work — follow-on plan by scope. No engine gap.
-- **Placeholder scan:** clean — every step carries its code or exact command.
-- **Type consistency:** `ALWAYS_GUARD_KINDS` (Tasks 1, 9), `publicReason` (Task 6 only), `SensitiveMode`/`filterSensitiveFields`/`scrubText` (Tasks 7–8), `ObservedCall.report` (Task 4) — names match across tasks.
+- **Spec coverage:** §2.2 → Task 1; §3.1 → Tasks 2–3; §3.3 → Tasks 4–5; §3.2 → Task 6; §4 → Tasks 7–8; governance → Task 9; §5 → Tasks 10 + 13; §1 + §2.1 (as skill law + lint) → Tasks 12 + 14; documentation everywhere → Tasks 11 + 15. Remaining follow-on: the atlas regeneration (spec §Order of work, step 3).
+- **Placeholder scan:** clean — every step carries its code, its exact command, or the passage to write.
+- **Type consistency:** `ALWAYS_GUARD_KINDS` (Tasks 1, 9), `publicReason` (Tasks 6, 12, 13), `SensitiveMode`/`filterSensitiveFields`/`scrubText` (Tasks 7–8, 12), `ObservedCall.report` (Tasks 4, 12, 14), `noEffectToolCalls` (Tasks 10, 13) — names match across tasks and repos.
