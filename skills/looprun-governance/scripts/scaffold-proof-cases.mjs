@@ -31,15 +31,15 @@ const KINDS = {
   argFormat: { hook: 'preTool', dim: 'input', family: 'spatialInput' },
   precondition: { hook: 'preTool', dim: 'run', family: 'runOutput' },
   maxCalls: { hook: 'preTool', dim: 'run', family: 'runOutput' },
-  noDuplicateCall: { hook: 'preTool', dim: 'run', auto: 'minimal', family: 'runOutput' },
-  confirmFirst: { hook: 'preTool', dim: 'run', auto: 'base', family: 'runOutput' },
-  destructiveThrottle: { hook: 'preTool', dim: 'run', auto: 'base', family: 'runOutput' },
+  noDuplicateCall: { hook: 'preTool', dim: 'run', auto: 'always', family: 'runOutput' },
+  confirmFirst: { hook: 'preTool', dim: 'run', auto: 'consent', family: 'runOutput' },
+  destructiveThrottle: { hook: 'preTool', dim: 'run', auto: 'consent', family: 'runOutput' },
   resultInvariant: { hook: 'postTool', dim: 'output', family: 'runOutput' },
   custom: { hook: 'preTool', dim: 'run', family: 'runOutput' },
-  emptyReply: { hook: 'onReply', dim: 'behavior', auto: 'minimal', family: 'behavior' },
+  emptyReply: { hook: 'onReply', dim: 'behavior', auto: 'always', family: 'behavior' },
   noFabricatedSuccess: { hook: 'onReply', dim: 'behavior', family: 'behavior' },
-  noFalseFailureClaim: { hook: 'onReply', dim: 'behavior', auto: 'minimal', family: 'behavior' },
-  degenerationGuard: { hook: 'onReply', dim: 'behavior', auto: 'minimal', family: 'behavior' },
+  noFalseFailureClaim: { hook: 'onReply', dim: 'behavior', auto: 'always', family: 'behavior' },
+  degenerationGuard: { hook: 'onReply', dim: 'behavior', auto: 'always', family: 'behavior' },
   destructiveClaimRequiresSuccess: { hook: 'onReply', dim: 'behavior', family: 'behavior' },
   replyMustMention: { hook: 'onReply', dim: 'behavior', skip: true, family: 'behavior' },
   replyConfirmsLabels: { hook: 'onReply', dim: 'behavior', skip: true, family: 'behavior' },
@@ -58,7 +58,7 @@ function signalHint(kind, meta) {
 function stub(kind, meta) {
   const autoLines = meta.auto
     ? `    auto: '${meta.auto}',  // constructor-installed — the spec builders rely on the AUTO instance\n` +
-      (meta.auto === 'base'
+      (meta.auto === 'consent'
         ? `    specTweaks: { destructiveTools: ['deleteItem', 'purgeAll'], confirmMechanism: { purgeAll: 'prior-ask' }, lexicon: { confirmAskRe: FIXTURE_LEXICON.confirmAskRe } },\n`
         : kind === 'noFalseFailureClaim'
           ? `    specTweaks: { lexicon: { falseFailureClaimRe: FIXTURE_LEXICON.falseFailureClaimRe } },\n`

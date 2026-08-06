@@ -193,7 +193,7 @@ export const BEHAVIOR_PROOFS: GuardProof[] = [
     make: () => degenerationGuard(),
     hook: 'onReply',
     target: 'any',
-    auto: 'minimal',
+    auto: 'always',
     cases: [
       {
         name: 'leaked think-block scaffolding',

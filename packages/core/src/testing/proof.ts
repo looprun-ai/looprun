@@ -58,8 +58,8 @@ export interface GuardProof {
   make?: () => Guard;
   hook: Hook;
   target: ToolTarget;
-  /** Rely on AgentSpecBase auto-install (minimal/base layer) instead of addGuard. */
-  auto?: 'minimal' | 'base';
+  /** Rely on AgentSpecBase auto-install at this priority instead of addGuard. */
+  auto?: 'always' | 'consent';
   /** Spec config to merge (e.g. destructiveTools / destructiveLabels / lexicon for auto kinds). */
   specTweaks?: Partial<AgentSpecConfig>;
   /** 'skip' excludes this guard from the collective super-agent. Reserved for config-bound content-contract

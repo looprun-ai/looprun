@@ -19,10 +19,10 @@ export const argRequiredProof: GuardProof = {
   make: () => argRequired('title'), // install the exact instance the proof exercises
   hook: 'preTool',               // 'onInput' | 'preTool' | 'postTool' | 'onReply'
   target: ['createItem'],        // the tool(s) this instance is scoped to, or 'any'
-  // auto?: 'minimal' | 'base'   — ONLY for constructor-auto-installed kinds (noDuplicateCall,
+  // auto?: 'always' | 'consent'  — ONLY for constructor-auto-installed kinds (noDuplicateCall,
   //   degenerationGuard, confirmFirst, destructiveThrottle): the spec builders then rely on the auto
   //   instance instead of addGuard. make() is still required.
-  // specTweaks?: Partial<AgentSpecConfig> — extra spec config the auto layer needs, e.g.
+  // specTweaks?: Partial<AgentSpecConfig> — extra spec config the auto priority needs, e.g.
   //   { destructiveTools: [...], confirmMechanism: {...}, destructiveLabels: {...} }.
   // collective?: 'skip'         — ONLY for kinds bound to ONE agent's contract: the did-vs-action history
   //   cross-check (claimIsGrounded, claimIsComplete, mustAccountFor) and the judged kinds

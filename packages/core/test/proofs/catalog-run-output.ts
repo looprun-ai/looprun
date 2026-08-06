@@ -139,13 +139,13 @@ const maxCallsProof: GuardProof = {
   ],
 };
 
-// ── noDuplicateCall (auto:'minimal' — always installed by AgentSpecBase) ─────
+// ── noDuplicateCall (auto:'always' — installed by AgentSpecBase on every spec) ─────
 const noDuplicateCallProof: GuardProof = {
   guard: 'noDuplicateCall',
   make: () => noDuplicateCall(),
   hook: 'preTool',
   target: 'any',
-  auto: 'minimal',
+  auto: 'always',
   cases: [
     {
       name: 'a different title is not a duplicate',
@@ -202,7 +202,7 @@ const noDuplicateCallProof: GuardProof = {
  */
 const DELETE_IS_DESTRUCTIVE = { deleteItem: (args: Record<string, unknown>) => args.soft !== true };
 
-// ── confirmFirst (auto:'base' — deleteItem simulates its record, purgeAll declares a label) ──
+// ── confirmFirst (auto:'consent' — deleteItem simulates its record, purgeAll declares a label) ──
 const confirmFirstProof: GuardProof = {
   guard: 'confirmFirst',
   // The licence is a token the ENGINE issued for a record and the USER typed back. Nothing the agent
@@ -210,7 +210,7 @@ const confirmFirstProof: GuardProof = {
   make: () => confirmFirst({ when: DELETE_IS_DESTRUCTIVE }),
   hook: 'preTool',
   target: ['deleteItem'],
-  auto: 'base',
+  auto: 'consent',
   specTweaks: {
     destructiveTools: ['deleteItem', 'purgeAll'],
     // purgeAll acts on no identifiable record, so its question is built from this label.
@@ -348,13 +348,13 @@ const confirmFirstProof: GuardProof = {
   ],
 };
 
-// ── destructiveThrottle (auto:'base' — at most one destructive success per turn) ──
+// ── destructiveThrottle (auto:'consent' — at most one destructive success per turn) ──
 const destructiveThrottleProof: GuardProof = {
   guard: 'destructiveThrottle',
   make: () => destructiveThrottle(['deleteItem', 'purgeAll'], { when: DELETE_IS_DESTRUCTIVE }),
   hook: 'preTool',
   target: ['deleteItem', 'purgeAll'],
-  auto: 'base',
+  auto: 'consent',
   specTweaks: {
     destructiveTools: ['deleteItem', 'purgeAll'],
     destructiveLabels: { purgeAll: 'delete every item' },
