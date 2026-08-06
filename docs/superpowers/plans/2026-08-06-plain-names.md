@@ -15,7 +15,7 @@
 - **Everything written is English.** Code, comments, docs, commit messages, string literals.
 - **One squashed commit per repo on `main`.** Work on branch `plain-names`; the per-task commits below are branch commits. A reader on `main` never meets two vocabularies in one file.
 - **Only benchmark result files keep the old words.** Any path matching `**/benchmarks/**/results/**` is excluded from the gate and is not edited. Nothing else is excluded.
-- **The seven targets, verbatim:** `ledger`→`actionHistory`, `probe`→`simulate`, `preview`→`simulationResult`, `trunk`→`assembledPrompt`, `challenge`→`confirmationRequest`, `arm`→`variant`, `band`→`range`.
+- **The seven targets, verbatim:** `ledger`→`actionHistory`, `probe`→`simulate`, `preview`→`simulationResult`, `trunk`→`assembledPrompt`, `challenge`→`approvalRequest`, `arm`→`variant`, `band`→`range`.
 - **`spec.surface.systemPrompt` keeps its name.** It is an author-supplied block, not the assembly.
 - **`ARMED_SEAMS`, `armed`, `arming`, `disarmed`, `warm`, `harm`, `alarm`, `bandwidth`, `abandon` are ordinary English and are not touched.**
 
@@ -35,23 +35,22 @@
 packages/core/src/trunk.ts                          →  assembled-prompt.ts
 packages/core/src/trunk-fold.ts                     →  prompt-fold.ts
 packages/core/src/runtime/ledger.ts                 →  action-history.ts
-packages/core/src/runtime/challenge.ts              →  confirmation-request.ts
-packages/core/test/challenge.test.ts                →  confirmation-request.test.ts
-packages/core/test/challenge-render.test.ts         →  confirmation-render.test.ts
-packages/core/test/challenge-ledger.test.ts         →  confirmation-action-history.test.ts
+packages/core/src/runtime/challenge.ts              →  approval-request.ts
+packages/core/test/challenge.test.ts                →  approval-request.test.ts
+packages/core/test/challenge-render.test.ts         →  approval-render.test.ts
+packages/core/test/challenge-ledger.test.ts         →  approval-action-history.test.ts
 packages/core/test/claims-ledger.test.ts            →  claims-action-history.test.ts
 packages/core/test/trunk-stability.test.ts          →  prompt-stability.test.ts
 packages/core/test/proofs/trunk-provenance.test.ts  →  prompt-provenance.test.ts
-packages/eval/probes/                               →  packages/eval/simulations/
-packages/eval/probes/lie-check-portability.mjs      →  simulations/lie-check-portability.mjs
+(packages/eval/probes/ is NOT renamed — see Task 4 Step 2)
 governance/proofs/2026-07-29-trunk-fold-coherence-cut.md
                             →  2026-07-29-prompt-fold-coherence-cut.md
 docs/superpowers/plans/2026-08-05-consent-by-challenge.md
-                            →  2026-08-05-consent-by-confirmation.md
+                            →  2026-08-05-consent-by-approval.md
 docs/superpowers/plans/2026-07-31-prose-only-ungoverned-arm.md
                             →  2026-07-31-prose-only-ungoverned-variant.md
 docs/superpowers/specs/2026-08-05-consent-by-challenge-design.md
-                            →  2026-08-05-consent-by-confirmation-design.md
+                            →  2026-08-05-consent-by-approval-design.md
 docs/superpowers/specs/2026-07-31-prose-only-ungoverned-arm-design.md
                             →  2026-07-31-prose-only-ungoverned-variant-design.md
 ```
@@ -143,11 +142,19 @@ const NAMES = {
   band: /\bbands?\b/i,
 };
 
-// Each entry names one line that legitimately carries a retired word, and why.
+// Each entry protects ONE sense in ONE place: a path (exact file or prefix), the word it allows,
+// and why. Allowing `probe` in the instrument's report does not also allow `ledger` there.
 const ALLOW = [
-  { file: 'docs/benchmarks.md', text: 'Gemini 3.1 Pro Preview', why: 'a third-party product name' },
-  { file: 'docs/superpowers/specs/2026-08-06-plain-names-design.md', text: '', why: 'the only spec that must name both vocabularies; deleted by the final task' },
-  { file: 'docs/superpowers/plans/2026-08-06-plain-names.md', text: '', why: 'the plan that carries out the rename; deleted by the final task' },
+  { path: 'docs/benchmarks.md', word: 'preview', text: 'Gemini 3.1 Pro Preview', why: 'a third-party product name' },
+  // `probe` also names an OFFLINE MEASURING INSTRUMENT — an experiment run against the engine, not
+  // a world answering a question. "The margin simulate" is not a phrase.
+  { path: 'packages/eval/probes/', word: 'probe', why: 'the instrument itself' },
+  { path: 'packages/eval/package.json', word: 'probe', text: 'probe:lie-check', why: 'the instrument, as a script' },
+  { path: 'packages/core/src/runtime/prompt.ts', word: 'probe', text: 'margin probe', why: 'the instrument, in prose' },
+  { path: 'packages/mastra/test/prompt-identity.test.ts', word: 'probe', text: 'margin probe', why: 'the same instrument' },
+  { path: 'docs/analysis/2026-08-04-lie-check-model-portability.md', word: 'probe', why: "the instrument's own report" },
+  { path: 'docs/superpowers/specs/2026-08-06-plain-names-design.md', why: 'the only spec that must name both vocabularies; deleted by the final task' },
+  { path: 'docs/superpowers/plans/2026-08-06-plain-names.md', why: 'the plan that carries out the rename; deleted by the final task' },
 ];
 
 const SKIP_EXT = /\.(png|jpg|jpeg|gif|svg|ico|gguf|zip|lock|woff2?)$/i;
@@ -166,8 +173,13 @@ function* walk(path) {
   }
 }
 
-function allowed(rel, text) {
-  return ALLOW.some((a) => a.file === rel && (a.text === '' || text.includes(a.text)));
+function allowed(rel, word, text) {
+  return ALLOW.some(
+    (a) =>
+      (rel === a.path || rel.startsWith(a.path)) &&
+      (a.word === undefined || a.word === word) &&
+      (a.text === undefined || text.includes(a.text)),
+  );
 }
 
 const words = ONLY ?? Object.keys(NAMES);
@@ -202,10 +214,9 @@ for (const file of walk(ROOT)) {
     continue;
   }
   lines.forEach((text, i) => {
-    if (allowed(rel, text)) return;
     for (const w of words) {
       const m = text.match(NAMES[w]);
-      if (m) hits.push(`${rel}:${i + 1}  [${w}:${m[0]}]  ${text.trim().slice(0, 120)}`);
+      if (m && !allowed(rel, w, text)) hits.push(`${rel}:${i + 1}  [${w}:${m[0]}]  ${text.trim().slice(0, 120)}`);
     }
   });
 }
@@ -356,15 +367,15 @@ git commit -m "refactor: one side of a comparison is a variant, its spread is a 
 
 ---
 
-### Task 3: `challenge` → `confirmationRequest`
+### Task 3: `challenge` → `approvalRequest`
 
 **Files:**
-- Rename: `packages/core/src/runtime/challenge.ts` → `confirmation-request.ts`
-- Rename: `packages/core/test/challenge.test.ts` → `confirmation-request.test.ts`
-- Rename: `packages/core/test/challenge-render.test.ts` → `confirmation-render.test.ts`
-- Rename: `packages/core/test/challenge-ledger.test.ts` → `confirmation-action-history.test.ts`
-- Rename: `docs/superpowers/plans/2026-08-05-consent-by-challenge.md` → `2026-08-05-consent-by-confirmation.md`
-- Rename: `docs/superpowers/specs/2026-08-05-consent-by-challenge-design.md` → `2026-08-05-consent-by-confirmation-design.md`
+- Rename: `packages/core/src/runtime/challenge.ts` → `approval-request.ts`
+- Rename: `packages/core/test/challenge.test.ts` → `approval-request.test.ts`
+- Rename: `packages/core/test/challenge-render.test.ts` → `approval-render.test.ts`
+- Rename: `packages/core/test/challenge-ledger.test.ts` → `approval-action-history.test.ts`
+- Rename: `docs/superpowers/plans/2026-08-05-consent-by-challenge.md` → `2026-08-05-consent-by-approval.md`
+- Rename: `docs/superpowers/specs/2026-08-05-consent-by-challenge-design.md` → `2026-08-05-consent-by-approval-design.md`
 - Modify: `packages/core/src/runtime/ledger.ts`, `packages/core/src/runtime/turn.ts`, `packages/core/src/internal.ts`, `packages/core/src/guards/confirmation.ts`, `packages/core/GUARDS.md`, `docs/tutorial/04-guards.md`
 
 **Interfaces:**
@@ -372,12 +383,12 @@ git commit -m "refactor: one side of a comparison is a variant, its spread is a 
 - Produces:
 
 ```ts
-export interface ConfirmationRequest { tool: string; subject?: string; meaning: string; token: string }
-export function confirmationCode(meaning: string): string
-export function confirmationMatchesCall(...): boolean
-export function consumeConfirmations(...): void
-export function closeConfirmationsFor(open: ConfirmationRequest[], subject: string): void
-export function issueConfirmationForVeto(ledger: TurnLedger, tool: string): void
+export interface ApprovalRequest { tool: string; subject?: string; meaning: string; token: string }
+export function approvalCode(meaning: string): string
+export function approvalMatchesCall(...): boolean
+export function consumeApprovals(...): void
+export function closeApprovalsFor(open: ApprovalRequest[], subject: string): void
+export function issueApprovalForVeto(ledger: TurnLedger, tool: string): void
 ```
 
 `deriveToken` keeps its name — it carries no retired word. `TurnLedger` and the parameter spelled `ledger` are untouched by this task; Task 6 renames both.
@@ -393,14 +404,14 @@ Expected: ~311 lines across 22 files.
 - [ ] **Step 2: Rename the files**
 
 ```bash
-git mv packages/core/src/runtime/challenge.ts packages/core/src/runtime/confirmation-request.ts
-git mv packages/core/test/challenge.test.ts packages/core/test/confirmation-request.test.ts
-git mv packages/core/test/challenge-render.test.ts packages/core/test/confirmation-render.test.ts
-git mv packages/core/test/challenge-ledger.test.ts packages/core/test/confirmation-action-history.test.ts
+git mv packages/core/src/runtime/challenge.ts packages/core/src/runtime/approval-request.ts
+git mv packages/core/test/challenge.test.ts packages/core/test/approval-request.test.ts
+git mv packages/core/test/challenge-render.test.ts packages/core/test/approval-render.test.ts
+git mv packages/core/test/challenge-ledger.test.ts packages/core/test/approval-action-history.test.ts
 git mv docs/superpowers/plans/2026-08-05-consent-by-challenge.md \
-       docs/superpowers/plans/2026-08-05-consent-by-confirmation.md
+       docs/superpowers/plans/2026-08-05-consent-by-approval.md
 git mv docs/superpowers/specs/2026-08-05-consent-by-challenge-design.md \
-       docs/superpowers/specs/2026-08-05-consent-by-confirmation-design.md
+       docs/superpowers/specs/2026-08-05-consent-by-approval-design.md
 ```
 
 - [ ] **Step 3: Run the code lane**
@@ -408,17 +419,17 @@ git mv docs/superpowers/specs/2026-08-05-consent-by-challenge-design.md \
 ```bash
 FILES=$(git ls-files '*.ts' '*.mjs' '*.json' | grep -v node_modules)
 sed -i '' \
-  -e 's/issueChallengeForVeto/issueConfirmationForVeto/g' \
-  -e 's/challengeMatchesCall/confirmationMatchesCall/g' \
-  -e 's/closeChallengesFor/closeConfirmationsFor/g' \
-  -e 's/consumeChallenges/consumeConfirmations/g' \
-  -e 's/challengesIssuedThisTurn/confirmationsIssuedThisTurn/g' \
-  -e 's/challengeToken/confirmationCode/g' \
-  -e 's/issueChallenge/issueConfirmation/g' \
-  -e "s|runtime/challenge\.js|runtime/confirmation-request.js|g" \
-  -e "s|\./challenge\.js|./confirmation-request.js|g" \
-  -e 's/\bChallenges\b/ConfirmationRequests/g' -e 's/\bChallenge\b/ConfirmationRequest/g' \
-  -e 's/\bchallenges\b/confirmations/g' -e 's/\bchallenge\b/confirmation/g' \
+  -e 's/issueChallengeForVeto/issueApprovalForVeto/g' \
+  -e 's/challengeMatchesCall/approvalMatchesCall/g' \
+  -e 's/closeChallengesFor/closeApprovalsFor/g' \
+  -e 's/consumeChallenges/consumeApprovals/g' \
+  -e 's/challengesIssuedThisTurn/approvalsIssuedThisTurn/g' \
+  -e 's/challengeToken/approvalCode/g' \
+  -e 's/issueChallenge/issueApproval/g' \
+  -e "s|runtime/challenge\.js|runtime/approval-request.js|g" \
+  -e "s|\./challenge\.js|./approval-request.js|g" \
+  -e 's/\bChallenges\b/ApprovalRequests/g' -e 's/\bChallenge\b/ApprovalRequest/g' \
+  -e 's/\bchallenges\b/approvals/g' -e 's/\bchallenge\b/approval/g' \
   $FILES
 ```
 
@@ -428,11 +439,11 @@ sed -i '' \
 node tests/plain-names.test.mjs --only challenge
 ```
 
-194 of the hits are `.md`. In prose the concept is **a confirmation request**; the code it carries is **a confirmation code**. One line in `docs/tutorial/04-guards.md` needs rewriting rather than substituting:
+194 of the hits are `.md`. In prose the concept is **an approval request**; the code it carries is **an approval code**. One line in `docs/tutorial/04-guards.md` needs rewriting rather than substituting:
 
 ```
 BEFORE  the engine issues a confirmation token naming the record
-AFTER   the engine opens a confirmation request naming the record, carrying the code that answers it
+AFTER   the engine opens an approval request naming the record, carrying the code that answers it
 ```
 
 - [ ] **Step 5: Regenerate and verify**
@@ -449,7 +460,7 @@ Expected: typecheck clean, all suites pass, gate prints `plain-names: clean (cha
 
 ```bash
 git add -A
-git commit -m "refactor: the runtime opens a confirmation request carrying the code that answers it"
+git commit -m "refactor: the runtime opens an approval request carrying the code that answers it"
 ```
 
 ---
@@ -461,8 +472,8 @@ One flow, one pair of names: the helper that asks without acting, and the field 
 **Files:**
 - Modify: `packages/core/src/world/define-world.ts`, `packages/core/src/world/types.ts`, `packages/core/src/spec.ts`, `packages/core/src/runtime/claims.ts`, `packages/core/src/runtime/turn.ts`, `packages/core/src/runtime/prompt.ts`, `packages/core/src/runtime/ledger.ts`, `packages/core/src/trunk.ts`
 - Modify: `packages/core/test/redteam/batch-c.test.ts:114`, `packages/mastra/test/proofs/guard-audit.test.ts:183`
-- Rename: `packages/eval/probes/` → `packages/eval/simulations/`
-- Modify: `packages/eval/package.json` (`probe:lie-check` script), `docs/tutorial/04-guards.md`, `docs/tutorial/05-running-and-eval.md`, `packages/core/GUARDS.md`, `BACKLOG.md`
+- Not renamed: `packages/eval/probes/` — the measuring instrument keeps the word
+- Modify: `docs/tutorial/04-guards.md`, `docs/tutorial/05-running-and-eval.md`, `packages/core/GUARDS.md`, `BACKLOG.md`
 
 **Interfaces:**
 - Consumes: the gate from Task 1.
@@ -476,23 +487,23 @@ node tests/plain-names.test.mjs --only probe,preview > /tmp/sim.txt; wc -l /tmp/
 
 Expected: ~438 lines.
 
-- [ ] **Step 2: Rename the directory and its script**
+- [ ] **Step 2: Leave the measuring instrument alone**
 
-```bash
-git mv packages/eval/probes packages/eval/simulations
+`packages/eval/probes/`, the script `probe:lie-check`, "the margin probe" in
+`packages/core/src/runtime/prompt.ts:9` and `packages/mastra/test/prompt-identity.test.ts`, and the
+whole of `docs/analysis/2026-08-04-lie-check-model-portability.md` name an **offline measuring
+instrument** — an experiment someone runs against the engine, not a world answering a question:
+
+```
+①  probe()                    the world helper           →  simulate()
+②  "(a probe)"                a write with no effect     →  "(a simulation)"
+③  the margin probe           AN INSTRUMENT              →  stays `probe`
+    packages/eval/probes/
 ```
 
-In `packages/eval/package.json`:
-
-```json
-"probe:lie-check": "node probes/lie-check-portability.mjs"
-```
-
-becomes
-
-```json
-"simulate:lie-check": "node simulations/lie-check-portability.mjs"
-```
+*The margin simulate* is not a phrase. Do not `git mv` that directory and do not rename that script.
+The gate's `ALLOW` already carries all five paths with `word: 'probe'`, so they report clean while
+every other `probe` still fails.
 
 - [ ] **Step 3: Run the code lane**
 
@@ -505,7 +516,7 @@ sed -i '' \
   -e 's/probeWrite/simulateWrite/g' \
   -e 's/\bpreviews\b/simulationResults/g' -e 's/\bpreview\b/simulationResult/g' \
   -e 's/\bPreview\b/SimulationResult/g' \
-  -e 's/\bprobes\b/simulations/g' -e 's/\bprobed\b/simulated/g' -e 's/\bprobe\b/simulate/g' \
+  -e 's/\bprobed\b/simulated/g' -e 's/\bprobe\b/simulate/g' \
   -e 's/\bProbe\b/Simulate/g' \
   $FILES
 ```
@@ -635,7 +646,8 @@ sed -i '' \
   -e "s|\./trunk-fold\.js|./prompt-fold.js|g" \
   -e "s|\./trunk\.js|./assembled-prompt.js|g" \
   -e "s|trunk-fold\.ts|prompt-fold.ts|g" \
-  -e 's/trunk-static/prompt-static/g' \
+  -e 's/trunk-static law/shared-prefix law/g' -e 's/trunk-static/shared-prefix/g' \
+  -e 's/trunk-warm law/prefix-warm law/g' -e 's/trunk-warm/prefix-warm/g' \
   -e 's/\btrunks\b/assembledPrompts/g' -e 's/\btrunk\b/assembledPrompt/g' \
   -e 's/\bTrunk\b/AssembledPrompt/g' \
   $FILES
@@ -647,7 +659,16 @@ sed -i '' \
 node tests/plain-names.test.mjs --only trunk
 ```
 
-155 hits are `.md`. In prose the thing is **the assembled prompt**; the law named after it is **the prompt-static law**. The file docstrings in `assembled-prompt.ts` and `prompt-fold.ts` carry most of the source-side prose — read them whole rather than substituting, because sentences like *"the domain's agents share a maximal static trunk prefix"* become *"the domain's agents share a maximal static prompt prefix"* and must still parse.
+155 hits are `.md`. In prose the thing is **the assembled prompt**.
+
+**Two laws take a name of their own, not a substitution.** `trunk` is a tree — one shared stem, one branch per agent — and the law was named after the stem. Substituting the word inverts what the law says, because the assembled prompt is the per-agent *whole* while the trunk was the shared *part*:
+
+```
+trunk-static law   →   shared-prefix law    the domain's agents share a maximal static prefix
+trunk-warm law     →   prefix-warm law      N distinct prefixes stay cached across agent switches
+```
+
+`trunk-static` appears 18 times in 12 files, including `packages/core/GUARDS.md` and the three generated `contract.ts` files under `examples/hermes-sim/src/domains/`. `trunk-warm` appears once, in `packages/models/src/llamacpp.ts:4`. `armed-seam law` keeps its name — `armed` is ordinary English. The file docstrings in `assembled-prompt.ts` and `prompt-fold.ts` carry most of the source-side prose — read them whole rather than substituting, because sentences like *"the domain's agents share a maximal static trunk prefix"* become *"the domain's agents share a maximal static prompt prefix"* and must still parse.
 
 - [ ] **Step 5: Regenerate and verify**
 
@@ -682,12 +703,12 @@ The largest slice: 1,253 `.ts` hits and 258 `.md`. It goes last inside `looprun`
 - Produces:
 
 ```ts
-export interface TurnActionHistory { ...; confirmations: ConfirmationRequest[]; confirmationsIssuedThisTurn: number }
+export interface TurnActionHistory { ...; approvals: ApprovalRequest[]; approvalsIssuedThisTurn: number }
 export function createActionHistory(judge?, judgeTimeoutMs?, renderOpts?): TurnActionHistory
 export function deriveClaimsFromActionHistory(observed, turnIndex, writeTools): RenderedClaim[]
 ```
 
-Every function in `action-history.ts` that took `ledger: TurnLedger` now takes `actionHistory: TurnActionHistory` — `beginTurn`, `vetoStormHit`, `recordVeto`, `recordToolResult`, `recordTerminalCall`, `recordTerminal`, `recordTurnHistory`, `clearDeliveredTerminal`, `pruneSupersededTerminals`, `issueConfirmationForVeto`, `issueConfirmation`.
+Every function in `action-history.ts` that took `ledger: TurnLedger` now takes `actionHistory: TurnActionHistory` — `beginTurn`, `vetoStormHit`, `recordVeto`, `recordToolResult`, `recordTerminalCall`, `recordTerminal`, `recordTurnHistory`, `clearDeliveredTerminal`, `pruneSupersededTerminals`, `issueApprovalForVeto`, `issueApproval`.
 
 - [ ] **Step 1: See the whole surface**
 
@@ -810,15 +831,15 @@ Seven concepts carry the plain word for what they are.
 
 `actionHistory` is what was done this conversation. `simulate` asks a world what would happen and
 `simulationResult` is what that answer carries. `assembledPrompt` is the prompt an agent reads.
-`confirmationRequest` is the request the runtime opens for one act on one record, carrying the code
+`approvalRequest` is the request the runtime opens for one act on one record, carrying the code
 that answers it. A `variant` is one side of a comparison and a `range` is the spread across
 repetitions.
 
 Breaking, `@looprun-ai/core`: `TurnLedger` → `TurnActionHistory`, `createLedger` →
 `createActionHistory`, `deriveClaimsFromLedger` → `deriveClaimsFromActionHistory`, `Challenge` →
-`ConfirmationRequest`, `challengeToken` → `confirmationCode`, `challengeMatchesCall` →
-`confirmationMatchesCall`, `issueChallengeForVeto` → `issueConfirmationForVeto`,
-`closeChallengesFor` → `closeConfirmationsFor`, `consumeChallenges` → `consumeConfirmations`,
+`ApprovalRequest`, `challengeToken` → `approvalCode`, `challengeMatchesCall` →
+`approvalMatchesCall`, `issueChallengeForVeto` → `issueApprovalForVeto`,
+`closeChallengesFor` → `closeApprovalsFor`, `consumeChallenges` → `consumeApprovals`,
 `renderScopedSpecTrunk` → `renderAssembledPrompt`.
 
 Breaking, `@looprun-ai/eval`: `CertBand` → `CertRange`, `CertBandOptions` → `CertRangeOptions`,
@@ -873,8 +894,8 @@ FILES=$(git ls-files '*.ts' '*.mjs' '*.json' | grep -v node_modules)
 sed -i '' \
   -e 's/renderScopedSpecTrunk/renderAssembledPrompt/g' -e 's/TrunkBlock/PromptBlock/g' \
   -e 's/deriveClaimsFromLedger/deriveClaimsFromActionHistory/g' -e 's/createLedger/createActionHistory/g' \
-  -e 's/TurnLedger/TurnActionHistory/g' -e 's/challengeToken/confirmationCode/g' \
-  -e 's/\bChallenge\b/ConfirmationRequest/g' -e 's/\bchallenge\b/confirmation/g' \
+  -e 's/TurnLedger/TurnActionHistory/g' -e 's/challengeToken/approvalCode/g' \
+  -e 's/\bChallenge\b/ApprovalRequest/g' -e 's/\bchallenge\b/approval/g' \
   -e 's/previewOf/simulationResultOf/g' -e 's/\bpreview\b/simulationResult/g' \
   -e 's/\bprobe\b/simulate/g' -e 's/\bledger\b/actionHistory/g' \
   -e 's/\btrunk\b/assembledPrompt/g' -e 's/\barm\b/variant/g' -e 's/\bband\b/range/g' \
@@ -972,22 +993,36 @@ git add -A && git commit -m "refactor!: seven concepts carry the plain word for 
 
 - [ ] **Step 1: Sweep the four subject repos**
 
-For each of `accounting`, `lawfirm`, `homeservices`, `looprun.ai`:
+**A subject repo's world is a business, and a business has its own vocabulary.** The rename retires an *engine* name; a domain's content is not engine vocabulary. `accounting` is where this bites:
+
+```
+accounting/WORLD-MODEL.md:7
+  Firm (invented, neutral): LedgerLine Accounting. Currency: USD. Locale: English.
+
+blind sed  →  "ActionHistoryLine Accounting"
+```
+
+`LedgerLine` is the invented firm's name and `ledger` in a bookkeeping sentence is the book it keeps. Both stay. So these four repos are swept by hand from the gate's output, not scripted:
 
 ```bash
 cd ../<repo>
 node ../looprun/tests/plain-names.test.mjs --root .
-FILES=$(git ls-files '*.ts' '*.mjs' '*.json' | grep -v node_modules)
-sed -i '' \
-  -e 's/\bledger\b/actionHistory/g' -e 's/\btrunk\b/assembledPrompt/g' \
-  -e 's/\bprobe\b/simulate/g' -e 's/\bpreview\b/simulationResult/g' \
-  -e 's/\bchallenge\b/confirmation/g' -e 's/\barm\b/variant/g' -e 's/\bband\b/range/g' \
-  $FILES
-node ../looprun/tests/plain-names.test.mjs --root .
-git add -A && git commit -m "refactor!: seven concepts carry the plain word for what they are"
 ```
 
-`looprun.ai` has nine occurrences, seven of them `preview`. Check each by hand before committing — a marketing page may use `preview` as an English word about the product rather than about the two-step ritual, and that is the one place the word can legitimately survive with a different meaning. If it does, add it to the gate's `ALLOW` with its reason instead of substituting.
+For each reported line, decide which it is:
+
+| the line says | it is | action |
+|---|---|---|
+| `createLedger`, `TurnLedger`, `probe()`, the `preview` key | engine vocabulary | rename per the map |
+| `LedgerLine Accounting`, a bookkeeping `ledger`, a firm's persona | the business's own words | leave, and add a path+word `ALLOW` entry |
+
+`accounting` carries 107 occurrences, `lawfirm` 102, `homeservices` 77 — most of them engine names in generated specs, which rename normally. `looprun.ai` has nine, seven of them `preview`: a marketing page may use `preview` about the product rather than about the two-step ritual, and that is a legitimate second sense. Read each of the nine before touching any.
+
+Commit each repo once the gate is clean:
+
+```bash
+git add -A && git commit -m "refactor!: seven concepts carry the plain word for what they are"
+```
 
 - [ ] **Step 2: Drop the two transition allowlist entries**
 

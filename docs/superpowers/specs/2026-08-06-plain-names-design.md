@@ -11,13 +11,17 @@ used to be.
 
 | now | becomes | what it is |
 |---|---|---|
-| `ledger` | `actionHistory` | what was done this conversation: the calls, what they returned, whether they changed anything, which confirmation requests are open and which were answered |
+| `ledger` | `actionHistory` | what was done this conversation: the calls, what they returned, whether they changed anything, which approval requests are open and which were answered |
 | `probe` | `simulate` | the helper a world uses to answer "I did nothing — here is what would happen" |
 | `preview` | `simulationResult` | the field inside that answer holding the record, the consequences and the properties of the act |
 | `trunk` | `assembledPrompt` | the prompt an agent reads, assembled from the domain's shared blocks and this agent's own |
-| `challenge` | `confirmationRequest` | the request the runtime opens for one act on one record, carrying the code that answers it |
+| `challenge` | `approvalRequest` | the request the runtime opens for one act on one record, carrying the code that answers it |
 | `arm` | `variant` | one side of a comparison: `governed` or `ungoverned` |
 | `band` | `range` | the spread across K repetitions of one case set |
+
+Two of the seven are not a whole word's worth of change. `probe` names three different things and only
+two of them are this concept; `trunk` names a law whose meaning dies with the metaphor. Both are
+settled below, under **Where a word means more than one thing**.
 
 ## Why not the obvious alternatives
 
@@ -71,6 +75,15 @@ The domain is one input, not the scope of the output — and `DomainContract` al
 so a reader meeting `domainPrompt` looks for the shared blocks and finds the whole assembly. The
 shared byte-identical prefix stays unnamed; nothing today needs to refer to it.
 
+**`confirmationRequest` saturates a namespace that is already full.** `packages/core/src` holds
+eight distinct `confirm*` names across 150 uses — `confirmed`, `confirm`, `confirmFirst`,
+`confirmation`, `confirmMechanism`, `confirmArg`, `confirmFirstPriorAsk`, `confirmAskRe` — plus the
+world-result fields `requiresConfirmation` and `confirmationPrompt` and the guard file
+`guards/confirmation.ts`. Adding six more would put fourteen `confirm*` names in one reader's way,
+which is the `conversationHistory` failure at four times the scale. `approvalRequest` is orthogonal
+to `confirmFirst` (the guard that demands one) and to `consentRequired` (the guard that reads a
+standing world flag), and it says what happens: the user **approves** the act.
+
 **`securityQuestion` names a different, established thing.** A security question is knowledge-based
 authentication — a first pet, a mother's maiden name. This is a one-time code for one act on one
 record, the shape of an SMS confirmation. A reader meeting `securityQuestion` looks for a personal
@@ -78,6 +91,77 @@ question and finds none.
 
 **`keyword` names half of it.** The concept is a request plus the code that answers it. One name for
 both leaves the request unnamed, which is the half a reader has to understand first.
+
+## Where a word means more than one thing
+
+A rename that swaps every occurrence of a word swaps the ones that meant something else too. Three
+words carry a second meaning, and each is settled here rather than left to the sweep.
+
+### `probe` names a measuring instrument as well as a helper
+
+```
+①  the world helper that asks without acting          probe()            →  simulate()
+②  a write that ran ok and took no effect             "(a probe)"        →  "(a simulation)"
+③  AN OFFLINE MEASURING INSTRUMENT                    the margin probe   →  stays `probe`
+                                                      packages/eval/probes/
+```
+
+Sense ③ is an experiment someone runs to measure the engine, not a world answering a question:
+
+```
+runtime/prompt.ts:9
+  The offline instruments (the margin probe and its fork replays) need those exact bytes
+
+pnpm -C packages/eval probe:lie-check       runs packages/eval/probes/lie-check-portability.mjs
+docs/analysis/2026-08-04-lie-check-model-portability.md      "the same probe, the same cells"
+```
+
+*The margin simulate* is not a phrase. A probe is ordinary English for an instrument that measures
+something from outside, and that is exactly what these are. `probe` survives in sense ③ — the
+directory `packages/eval/probes/`, the script `probe:lie-check`, and the prose that names them — and
+the gate allowlists those paths with that reason.
+
+### `trunk` names a law whose meaning is the metaphor
+
+`trunk` is a tree: one shared stem, one branch per agent. The law is named after the stem.
+
+```
+BEFORE   spec.ts:155
+         per-agent divergence as late as possible so the domain's agents share a maximal
+         static TRUNK prefix (trunk-static law)
+
+WRONG    …share a maximal static ASSEMBLEDPROMPT prefix (assembledPrompt-static law)
+                                  ▲
+         the assembled prompt is the per-agent WHOLE; the trunk was the shared PART
+```
+
+Substituting the word inverts what the law says. The law takes a name of its own, describing what it
+protects rather than what the metaphor called it:
+
+```
+trunk-static law   →   shared-prefix law
+  "the domain's agents share a maximal static prompt prefix (shared-prefix law)"
+```
+
+18 occurrences across 12 files, including `packages/core/GUARDS.md` and the three generated
+`contract.ts` files of `examples/hermes-sim`. The shared prefix itself stays unnamed as a value —
+only the law has a name.
+
+### `ledger` is the right word inside an accounting domain
+
+A subject repo's world is a business, and a business may keep a ledger:
+
+```
+accounting/WORLD-MODEL.md:7
+  Firm (invented, neutral): LedgerLine Accounting. Currency: USD. Locale: English.
+
+blind sweep  →  "ActionHistoryLine Accounting"
+```
+
+The rename retires an ENGINE name. A domain's own vocabulary is content, not engine vocabulary, and
+is not touched: `LedgerLine` is the invented firm's name and `ledger` in a bookkeeping sentence is
+the book it keeps. The gate allowlists a domain repo's world and persona files by path, and the
+sweep over those repos is manual rather than scripted.
 
 ## The identifier map
 
@@ -91,12 +175,12 @@ rename's unit of work.
 | `TurnLedger` | `TurnActionHistory` |
 | `createLedger` | `createActionHistory` |
 | `deriveClaimsFromLedger` | `deriveClaimsFromActionHistory` |
-| `Challenge` | `ConfirmationRequest` |
-| `challengeToken` | `confirmationCode` |
-| `challengeMatchesCall` | `confirmationMatchesCall` |
-| `issueChallengeForVeto` | `issueConfirmationForVeto` |
-| `closeChallengesFor` | `closeConfirmationsFor` |
-| `consumeChallenges` | `consumeConfirmations` |
+| `Challenge` | `ApprovalRequest` |
+| `challengeToken` | `approvalCode` |
+| `challengeMatchesCall` | `approvalMatchesCall` |
+| `issueChallengeForVeto` | `issueApprovalForVeto` |
+| `closeChallengesFor` | `closeApprovalsFor` |
+| `consumeChallenges` | `consumeApprovals` |
 | `renderScopedSpecTrunk` | `renderAssembledPrompt` |
 | `renderTrunkBlocks` | `renderPromptBlocks` |
 | `foldTrunk` | `foldPrompt` |
@@ -119,7 +203,7 @@ rename's unit of work.
 | now | becomes | where |
 |---|---|---|
 | `ledger` (parameter and field) | `actionHistory` | throughout `core` |
-| `challenges` · `challengesIssuedThisTurn` | `confirmations` · `confirmationsIssuedThisTurn` | `TurnActionHistory` |
+| `challenges` · `challengesIssuedThisTurn` | `approvals` · `approvalsIssuedThisTurn` | `TurnActionHistory` |
 | `arm` (variable, CLI label, JSON key) | `variant` | `eval` run summaries and certification records |
 | `probe()` | `simulate()` | the world helper a generated subject ships |
 | `preview` (world-result key) | `simulationResult` | `defineWorld`, every generated subject |
@@ -134,10 +218,10 @@ rename's unit of work.
 packages/core/src/trunk.ts                  →  assembled-prompt.ts
 packages/core/src/trunk-fold.ts             →  prompt-fold.ts
 packages/core/src/runtime/ledger.ts         →  action-history.ts
-packages/core/src/runtime/challenge.ts      →  confirmation-request.ts
-packages/core/test/challenge.test.ts        →  confirmation-request.test.ts
-packages/core/test/challenge-render.test.ts →  confirmation-render.test.ts
-packages/core/test/challenge-ledger.test.ts →  confirmation-action-history.test.ts
+packages/core/src/runtime/challenge.ts      →  approval-request.ts
+packages/core/test/challenge.test.ts        →  approval-request.test.ts
+packages/core/test/challenge-render.test.ts →  approval-render.test.ts
+packages/core/test/challenge-ledger.test.ts →  approval-action-history.test.ts
 packages/core/test/claims-ledger.test.ts    →  claims-action-history.test.ts
 packages/core/test/trunk-stability.test.ts  →  prompt-stability.test.ts
 packages/core/test/proofs/trunk-provenance.test.ts → prompt-provenance.test.ts
@@ -194,11 +278,11 @@ vocabulary the system uses. Their file names change with their contents:
 governance/proofs/2026-07-29-trunk-fold-coherence-cut.md
   →  2026-07-29-prompt-fold-coherence-cut.md
 docs/superpowers/plans/2026-08-05-consent-by-challenge.md
-  →  2026-08-05-consent-by-confirmation.md
+  →  2026-08-05-consent-by-approval.md
 docs/superpowers/plans/2026-07-31-prose-only-ungoverned-arm.md
   →  2026-07-31-prose-only-ungoverned-variant.md
 docs/superpowers/specs/2026-08-05-consent-by-challenge-design.md
-  →  2026-08-05-consent-by-confirmation-design.md
+  →  2026-08-05-consent-by-approval-design.md
 docs/superpowers/specs/2026-07-31-prose-only-ungoverned-arm-design.md
   →  2026-07-31-prose-only-ungoverned-variant-design.md
 ```
@@ -237,7 +321,7 @@ narrate the change.
 
 ## What makes it verifiable
 
-`scripts/check-plain-names.mjs`, run over every repo, exits non-zero on any hit:
+`tests/plain-names.test.mjs`, run over every repo, exits non-zero on any hit:
 
 ```
 STEMS      ledger  probe  preview  trunk  challenge          any suffix
@@ -252,13 +336,31 @@ EXCLUDED PATHS
   **/benchmarks/**/results/**        a number taken on a date, not prose
   node_modules/  dist/
 
-ALLOWLIST — line-level, each with its reason in the script
-  docs/benchmarks.md      "Gemini 3.1 Pro Preview"     a product name
+ALLOWLIST — each entry carries the sense it protects, in the script
+  docs/benchmarks.md               "Gemini 3.1 Pro Preview"      a product name
+  packages/eval/probes/**          probe                          an offline instrument
+  packages/eval/package.json       "probe:lie-check"              the instrument's script
+  packages/core/src/runtime/prompt.ts       "margin probe"        the instrument, named in prose
+  packages/mastra/test/prompt-identity.test.ts  "margin probe"    the same instrument
+  docs/analysis/2026-08-04-lie-check-model-portability.md  probe  the instrument's own report
+  <domain repo>/WORLD-MODEL.md · persona and world files   ledger  a business's own vocabulary
 ```
 
-Every allowlist entry is a line, not a pattern, so a new occurrence of an old name cannot hide
-behind one. The script is the acceptance test: a rename that leaves the word in a comment, a test
-title or an error string has not happened.
+Every allowlist entry names both a path and the word it protects, so allowing `probe` in the
+instrument's report does not also allow `ledger` there. The script is the acceptance test: a rename
+that leaves the word in a comment, a test title or an error string has not happened.
+
+**The two laws whose names change.** A law named after a retired word takes a name of its own rather
+than a substitution, because the metaphor is what its name meant:
+
+```
+trunk-static law   →   shared-prefix law     the domain's agents share a maximal static prefix
+trunk-warm law     →   prefix-warm law       N distinct prefixes stay cached across agent switches
+```
+
+`armed-seam law` keeps its name — `armed` is ordinary English and no rename touches it. The gate
+cannot tell a law's name from any other prose, so these two are carried explicitly by the task that
+renames `trunk`.
 
 ## Order of work
 
@@ -274,5 +376,5 @@ both.
 ```
 
 Each repo lands as one commit — a partial rename is worse than none, since a reader then meets both
-vocabularies in the same file. `scripts/check-plain-names.mjs` ships in step 1 and runs against
+vocabularies in the same file. `tests/plain-names.test.mjs` ships in step 1 and runs against
 every repo from then on.
