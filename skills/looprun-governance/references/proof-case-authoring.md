@@ -23,7 +23,7 @@ export const argRequiredProof: GuardProof = {
   //   degenerationGuard, confirmFirst, destructiveThrottle): the spec builders then rely on the auto
   //   instance instead of addGuard. make() is still required.
   // specTweaks?: Partial<AgentSpecConfig> — extra spec config the auto priority needs, e.g.
-  //   { destructiveTools: [...], confirmMechanism: {...}, destructiveLabels: {...} }.
+  //   { destructiveTools: [...], destructiveLabels: {...}, destructiveWhen: {...} }.
   // collective?: 'skip'         — ONLY for kinds bound to ONE agent's contract: the did-vs-action history
   //   cross-check (claimIsGrounded, claimIsComplete, mustAccountFor) and the judged kinds
   //   (llmCheck, llmCheckLie). Installing them over arbitrary scenarios is a category

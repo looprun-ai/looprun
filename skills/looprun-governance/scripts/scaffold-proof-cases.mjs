@@ -12,17 +12,28 @@
 import { existsSync, appendFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..', '..', '..');
 const CORE_PROOFS = join(ROOT, 'packages', 'core', 'test', 'proofs');
+// The guard vocabulary AS DATA, from the built engine — the same source the tutorial chapter is
+// generated from, so a kind cannot be in one and absent from the other.
+const CORE_INTERNAL = join(ROOT, 'packages', 'core', 'dist', 'internal.js');
 
 // kind -> { hook, dim, auto?, family } (mirrors packages/core/GUARDS.md + the catalog split).
 const FAMILY = {
   spatialInput: { file: 'catalog-spatial-input.ts', array: 'SPATIAL_INPUT_PROOFS' },
   runOutput: { file: 'catalog-run-output.ts', array: 'RUN_OUTPUT_PROOFS' },
   behavior: { file: 'catalog-behavior.ts', array: 'BEHAVIOR_PROOFS' },
+  riskFamily: { file: 'catalog-risk-families.ts', array: 'RISK_FAMILY_PROOFS' },
 };
+
+// kind -> { hook, dim, auto?, skip?, family }. `hook` and the kind SET are the catalog's, checked
+// below; `dim` picks the signal tag the L3 loop surfaces, `family` picks the file the stub belongs
+// in, `auto` names the priority whose constructor trigger installs the kind (`always` or `consent` —
+// the honesty pair is installed by the proof itself, so its instance is the one under proof), and `skip` marks a kind
+// bound to ONE agent's contract, proven isolated only.
 const KINDS = {
   requiresBefore: { hook: 'preTool', dim: 'spatial', family: 'spatialInput' },
   forbidThisTurn: { hook: 'preTool', dim: 'spatial', family: 'spatialInput' },
@@ -34,18 +45,46 @@ const KINDS = {
   noDuplicateCall: { hook: 'preTool', dim: 'run', auto: 'always', family: 'runOutput' },
   confirmFirst: { hook: 'preTool', dim: 'run', auto: 'consent', family: 'runOutput' },
   destructiveThrottle: { hook: 'preTool', dim: 'run', auto: 'consent', family: 'runOutput' },
-  resultInvariant: { hook: 'postTool', dim: 'output', family: 'runOutput' },
+  valueFromUser: { hook: 'preTool', dim: 'run', family: 'runOutput' },
   custom: { hook: 'preTool', dim: 'run', family: 'runOutput' },
-  emptyReply: { hook: 'onReply', dim: 'behavior', auto: 'always', family: 'behavior' },
-  noFabricatedSuccess: { hook: 'onReply', dim: 'behavior', family: 'behavior' },
-  noFalseFailureClaim: { hook: 'onReply', dim: 'behavior', auto: 'always', family: 'behavior' },
+  resultInvariant: { hook: 'postTool', dim: 'output', family: 'runOutput' },
+  consentRequired: { hook: 'preTool', dim: 'run', family: 'riskFamily' },
+  claimIsGrounded: { hook: 'onReply', dim: 'behavior', skip: true, family: 'behavior' },
+  claimIsComplete: { hook: 'onReply', dim: 'behavior', skip: true, family: 'behavior' },
+  mustAccountFor: { hook: 'onReply', dim: 'behavior', skip: true, family: 'behavior' },
   degenerationGuard: { hook: 'onReply', dim: 'behavior', auto: 'always', family: 'behavior' },
-  destructiveClaimRequiresSuccess: { hook: 'onReply', dim: 'behavior', family: 'behavior' },
-  replyMustMention: { hook: 'onReply', dim: 'behavior', skip: true, family: 'behavior' },
-  replyConfirmsLabels: { hook: 'onReply', dim: 'behavior', skip: true, family: 'behavior' },
-  replyMaxOccurrences: { hook: 'onReply', dim: 'behavior', skip: true, family: 'behavior' },
-  replySingleQuestion: { hook: 'onReply', dim: 'behavior', skip: true, family: 'behavior' },
+  llmCheck: { hook: 'onReply', dim: 'behavior', skip: true, family: 'behavior' },
+  llmCheckLie: { hook: 'onReply', dim: 'behavior', skip: true, family: 'behavior' },
 };
+
+// A MUTATOR rewrites the reply; it never denies, so it has no positive/negative/neutral triple to
+// scaffold. `GuardProof.hook` is a guard hook, and `onReplyMutate` is not one.
+const MUTATOR_HOOK = 'onReplyMutate';
+
+/**
+ * THE DRIFT CHECK — the catalog is the vocabulary, this table is only the scaffolding metadata it
+ * cannot carry. A kind added to the catalog with no row here scaffolds a stub with a guessed hook;
+ * a row for a kind the catalog dropped scaffolds an import that does not resolve. Either way the
+ * author pastes something that cannot compile, so both fail here instead.
+ */
+function assertKindsMatchCatalog(catalog) {
+  const scaffoldable = catalog.filter((e) => e.hook !== MUTATOR_HOOK);
+  const missing = scaffoldable.filter((e) => !KINDS[e.name]).map((e) => e.name);
+  const phantom = Object.keys(KINDS).filter((k) => !catalog.some((e) => e.name === k));
+  const wrongHook = scaffoldable
+    .filter((e) => KINDS[e.name] && KINDS[e.name].hook !== e.hook)
+    .map((e) => `${e.name} (catalog ${e.hook}, table ${KINDS[e.name].hook})`);
+  const faults = [
+    missing.length && `no row for catalog kind(s): ${missing.join(', ')}`,
+    phantom.length && `row(s) for kind(s) absent from the catalog: ${phantom.join(', ')}`,
+    wrongHook.length && `hook disagrees with the catalog: ${wrongHook.join(', ')}`,
+  ].filter(Boolean);
+  if (faults.length) {
+    console.error('scaffold: the kind table disagrees with GUARD_CATALOG —');
+    for (const f of faults) console.error(`  · ${f}`);
+    process.exit(1);
+  }
+}
 
 /** The signal tag the L3 loop surfaces for a NEGATIVE case at this hook. */
 function signalHint(kind, meta) {
@@ -59,10 +98,8 @@ function stub(kind, meta) {
   const autoLines = meta.auto
     ? `    auto: '${meta.auto}',  // constructor-installed — the spec builders rely on the AUTO instance\n` +
       (meta.auto === 'consent'
-        ? `    specTweaks: { destructiveTools: ['deleteItem', 'purgeAll'], confirmMechanism: { purgeAll: 'prior-ask' }, lexicon: { confirmAskRe: FIXTURE_LEXICON.confirmAskRe } },\n`
-        : kind === 'noFalseFailureClaim'
-          ? `    specTweaks: { lexicon: { falseFailureClaimRe: FIXTURE_LEXICON.falseFailureClaimRe } },\n`
-          : '')
+        ? `    specTweaks: { destructiveTools: ['deleteItem', 'purgeAll'] },\n`
+        : '')
     : '';
   const skipLine = meta.skip
     ? `    collective: 'skip',  // content-contract reply guard — proven isolated only (see catalog.ts)\n`
@@ -83,8 +120,8 @@ ${autoLines}${skipLine}    cases: [
           preset: 'seeded-media',
           turns: [{ userText: '<user ask>' }],
           script: [
-            // steps of {tool,args} parts, ending with a respond whose `message` is NON-empty and
-            // whose `did` declares at least one intention (an action op + honest outcome, or
+            // steps of {tool,args} parts, ending with a respond whose \`message\` is NON-empty and
+            // whose \`did\` declares at least one intention (an action op + honest outcome, or
             // inform/greet/refuse/ask)
           ],
           expect: 'pass',
@@ -115,7 +152,16 @@ ${autoLines}${skipLine}    cases: [
   },`;
 }
 
+function loadCatalog() {
+  if (!existsSync(CORE_INTERNAL)) {
+    console.error('scaffold: packages/core/dist is not built — run `pnpm -C packages/core build` first.');
+    process.exit(1);
+  }
+  return createRequire(import.meta.url)(CORE_INTERNAL).GUARD_CATALOG;
+}
+
 function main() {
+  assertKindsMatchCatalog(loadCatalog());
   const args = process.argv.slice(2);
   const write = args.includes('--write');
   const kind = args.find((a) => !a.startsWith('--'));
@@ -123,17 +169,16 @@ function main() {
   if (!kind) {
     console.error('usage: node skills/looprun-governance/scripts/scaffold-proof-cases.mjs <guardKind> [--write]');
     console.error('kinds: ' + Object.keys(KINDS).join(', '));
-    console.error('(a NEW kind not listed here: pick the family by dim and follow the same stub shape)');
     process.exit(1);
   }
-  const meta = KINDS[kind] ?? { hook: 'preTool', dim: 'run', family: 'runOutput', unknown: true };
+  const meta = KINDS[kind];
+  if (!meta) {
+    console.error(`scaffold: "${kind}" is not a guard kind. Kinds: ${Object.keys(KINDS).join(', ')}`);
+    process.exit(1);
+  }
   const family = FAMILY[meta.family];
   const text = stub(kind, meta);
   const where = `packages/core/test/proofs/${family.file} — paste INSIDE the ${family.array} array`;
-
-  if (meta.unknown) {
-    console.error(`scaffold: "${kind}" is not a known kind — emitting a generic preTool stub; adjust hook/dim/family yourself.`);
-  }
 
   if (!write) {
     process.stdout.write(text + '\n');
