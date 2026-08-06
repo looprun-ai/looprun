@@ -71,7 +71,7 @@ describe('best-attempt finalization', () => {
 
   it('delivers a true candidate that trips only a FORM contract', async () => {
     // `degenerationGuard` is the SOLE salvageable FORM contract — an artifact-shape lint, and the only
-    // shipped guard kind that reads the reply at all. It is AUTO-installed (minimal layer), so `spec()`
+    // shipped guard kind that reads the reply at all. It is AUTO-installed at the `always` priority, so `spec()`
     // already carries it; a run-away repeated-line message trips it on FORM while stating nothing false,
     // so the candidate is delivered over the generic closure.
     const s = spec();

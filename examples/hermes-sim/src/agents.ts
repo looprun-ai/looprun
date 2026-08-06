@@ -138,8 +138,8 @@ export type AgentRegistry = ReturnType<typeof buildAgents>;
 /**
  * BASELINE (the "-raw" models): the same fake worlds, tool surfaces and backing model — with
  * ZERO looprun code in the path. These configs feed the hand-rolled raw server
- * (see raw-server.ts): a plain AI-SDK tool loop, no specs, no guards (not even the minimal
- * integrity layer), no redrive. Comparing `<model>` vs `<model>-raw` isolates governance.
+ * (see raw-server.ts): a plain AI-SDK tool loop, no specs, no guards (not even the two every spec
+ * carries at the `always` priority), no redrive. Comparing `<model>` vs `<model>-raw` isolates governance.
  */
 import type { RawDomain } from './raw-server.js';
 

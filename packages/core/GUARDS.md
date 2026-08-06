@@ -410,8 +410,8 @@ the law already asks of them.
 
 ## 3. What auto-installs (single `AgentSpecBase`, zero app knowledge)
 
-There is ONE spec class, **`AgentSpecBase`** (P9 — no Minimal/Base/Full ladder; a
-spec is a spec). Its constructor auto-installs, from `cfg` alone:
+There is ONE spec class, **`AgentSpecBase`** (P9 — a spec is a spec, and what it installs is decided
+by what it declares, never by which class it extends). Its constructor auto-installs, from `cfg` alone:
 
 | trigger | auto-installs (priority · id) |
 |---|---|

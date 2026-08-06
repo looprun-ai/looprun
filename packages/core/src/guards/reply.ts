@@ -10,7 +10,8 @@ import type { Guard } from '../rules.js';
 import { escapeRe } from './shared.js';
 
 /**
- * Output-channel DEGENERATION lint — domain-neutral, always-on (Minimal layer). Catches the weak-model
+ * Output-channel DEGENERATION lint — domain-neutral, installed on every spec at the `always` priority.
+ * Catches the weak-model
  * failure class (leaked reasoning/tool markup — `<think>`, `<tool_call>`, `<tool_response>`, chat-template
  * tokens, raw `respond{` — and run-away repetition). These branches are an ARTIFACT-SHAPE lint over
  * fixed scaffolding tokens (a model-layer property, not business text judgment), so they carry NO param
