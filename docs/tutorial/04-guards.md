@@ -109,7 +109,7 @@ interface ObservedCall {
   args: Record<string, unknown>;
   ok: boolean;                                          // did the call succeed
   turnIndex: number;                                    // which turn it happened on
-  resultFlags?: { requiresConfirmation?: boolean };     // the two-step protocol's simulate
+  resultFlags?: { requiresConfirmation?: boolean };     // the simulation's asking answer
   tookEffect?: boolean;                                 // did it MUTATE the world (vs a read)
 }
 ```

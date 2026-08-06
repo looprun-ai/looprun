@@ -120,12 +120,11 @@ Those six are what a spec like the scheduler's gets — chapter 04 rows, none of
 can drift. (The blank-reply floor is not among them: it lives in the runtime's own `finalizeReply`, so
 no guard carries it — chapter 04 §3.)
 
-The box is scoped to a spec with no confirm-mechanism override. `confirmMechanism` changes it, and this
-tutorial does not teach it: it selects, per tool, between the default `'arg'` confirm (the `confirmed`
-flag) and `'prior-ask'` (a flag-less action gated on an `ask` intention in an earlier turn). It is
-domain plumbing no chapter claims — reach for the source when you need it. (The config carries no
-pattern vocabulary for reply text: a reply-honesty judgment a domain needs is an `llmCheck` rubric you
-bind on `onReply`, chapter 04.)
+The box needs no per-tool configuration: the consent route is read off each destructive tool's
+declared schema at run start — a schema that carries `simulate` gets the simulation flow, one that
+does not is gated on every call and asked about by its own veto. (The config carries no pattern
+vocabulary for reply text: a reply-honesty judgment a domain needs is an `llmCheck` rubric you bind
+on `onReply`, chapter 04.)
 
 Here is the scheduler's whole declaration:
 
@@ -228,14 +227,14 @@ Reply-only forbids the AGENT from asking. It does not forbid consent, because th
 is written and rendered by the ENGINE:
 
 ```
-   turn 1   agent:   cancelEvent({ id: 'EV-2' })          ← reply-only: it asks nothing
+   turn 1   agent:   cancelEvent({ id: 'EV-2', simulate: true })   ← reply-only: it asks nothing
             world:   { requiresConfirmation: true, id: 'EV-2' }
             screen:  The 10:00 meeting is on your calendar.
 
                      To confirm EV-2, reply: CONFIRM EV-2   ← the ENGINE wrote this line
 
    turn 2   user:    "CONFIRM EV-2"
-            agent:   cancelEvent({ id: 'EV-2', confirmed: true })   → allowed
+            agent:   cancelEvent({ id: 'EV-2' })   → the bare acting call, now licensed
 ```
 
 So a reply-only agent may hold a destructive tool and still take consent for it. What it may not do is
@@ -370,23 +369,24 @@ identical spec run against a fake world in an eval and a real one in production.
 The destructive one is worth reading closely:
 
 ```ts
-/** Destructive: `confirmed` is the flag the auto-installed `confirmFirst` gate waits for. */
+/** Destructive: `simulate: true` asks; the bare call acts, gated on the user's typed code. */
 export const cancelEventTool: ToolDef = {
   name: 'cancelEvent',
-  description: 'Cancel an event. Call it without `confirmed` first to ask the user; then again in a LATER turn, after the user answers, with `confirmed: true`.',
+  description: 'Cancel an event. Call it with `simulate: true` first to see what it does and ask the user; run the bare call only in a LATER turn, after their message carries the confirmation code.',
   inputSchema: {
     type: 'object',
-    properties: { eventId: { type: 'string' }, confirmed: { type: 'boolean' } },
+    properties: { eventId: { type: 'string' }, simulate: { type: 'boolean' } },
     required: ['eventId'],
   },
 };
 ```
 <sub>excerpt · `snippets/scheduler/tools.ts`</sub>
 
-Declaring `destructiveTools: ['cancelEvent']` installs a protocol the tool must be able to honour:
-"simulate first — which is what makes the engine ask — then act in a **later** turn, with
-`confirmed: true`". A tool with no `confirmed` in its schema cannot take the second step, so it simulations
-forever.
+Declaring `destructiveTools: ['cancelEvent']` installs the protocol: a destructive call that is not a
+schema-licensed simulation runs only on the code the user typed. The `simulate` parameter is the
+upgrade, not the requirement — a tool whose schema has none is simply gated on every call, and its
+denial is what raises the question. What the schema buys is validation before consent: the user
+confirms knowing what the act does, and is never asked to authorise something that would fail.
 
 **The protocol binds the destructive BRANCH, not the tool name.** Some tools are destructive only on
 some of their calls — a hold over one asset protects it, the same hold over a whole workspace freezes
@@ -400,14 +400,13 @@ destructiveLabels: { placeHold: 'freeze the entire workspace' },
 ```
 
 `placeHold({scope:'asset'})` now runs with nothing asked; `placeHold({scope:'workspace'})` is gated on
-the token the user types back, and counts against the one-destructive-act-per-turn cap. The predicate
+the code the user types back, and counts against the one-destructive-act-per-turn cap. The predicate
 reads the acting call's own arguments and nothing else — it says what the call IS, never who licensed
-it. A predicated tool still owes its `confirmed` flag: its destructive branch is gated on the same flag
-as any other.
+it.
 
-**Where that is caught, precisely.** The spec exposes the cross-check as
-`assertDestructiveConfirmable(toolDefs)`, and today exactly one caller runs it: chapter 05's scripted
-runner, `runSpecConversation`, which throws at run start naming the tool and the three ways out.
+**Where the route is decided, precisely.** The spec exposes the detector as
+`simulatableToolNames(toolDefs)`, and the backends run it where schemas first exist — run start —
+seating the result on the runtime.
 `new LoopRunAgent({…})` does **not** call it — so a flag-less destructive tool constructs happily and
 fails as a simulation-forever loop at run time instead. Until that changes, treat "the eval runs" as the
 gate for this particular mistake, and put the flag in the schema when you declare the tool.
@@ -597,10 +596,11 @@ And the other obligation, *never delete without asking*, appears nowhere in the 
                                ⇒ AgentSpecBase installs confirmFirst + destructiveThrottle
 ```
 
-The scheduler's smoke test exercises the **world's** half of that protocol — the unconfirmed call is
-a side-effect-free simulate, the confirmed one deletes. It does **not** exercise the `confirmFirst`
-guard: the guard's real requirement is that the simulate landed in a strictly *earlier* turn, and that
-lives in the runtime's action history across turns. Proving the guard needs a run, which is chapter 05.
+The scheduler's smoke test exercises the **world's** half of that protocol — the `simulate: true`
+call is a side-effect-free simulation, the bare one deletes. It does **not** exercise the
+`confirmFirst` guard: the guard's real requirement is that the question landed in a strictly *earlier*
+turn, and that lives in the runtime's action history across turns. Proving the guard needs a run,
+which is chapter 05.
 
 ---
 

@@ -95,7 +95,7 @@ export class SchedulerWorld implements AgentWorld {
         const eventId = str('eventId');
         const event = this.events.find((e) => e.id === eventId);
         if (!event) return { success: false, error: `unknown eventId "${eventId}" — look it up with listEvents` };
-        if (args.confirmed !== true) {
+        if (args.simulate === true) {
           return { success: true, requiresConfirmation: true, question: `Cancel "${event.label}" (${event.id})? This cannot be undone.` };
         }
         this.events = this.events.filter((e) => e.id !== eventId);

@@ -203,26 +203,22 @@ The scripted model there is `scriptedModel` from `@looprun-ai/mastra/testing`, a
 point** this tutorial does not teach: a list of scripted steps, each one LLM call. It exists so a
 governance assertion needs no key, no network and no money.
 
-### The one check that only happens here
+### The route detection that only happens here
+
+A destructive tool's consent route is decided by its DECLARED schema, and the schema is only known
+where `toolDefs` are injected — at run start. `spec.simulatableToolNames(toolDefs)` computes the set
+of destructive tools whose schema carries `simulate`, and the runtime seats it:
 
 ```
-   new LoopRunAgent({ … })      does NOT run assertDestructiveConfirmable
-   runSpecConversation(…)       DOES — at run start, and it THROWS
-                                and assertJudgePresent beside it
+   schema HAS simulate       a bare pre-consent act is DOWNGRADED to its own simulation —
+                             the world validates the act and its answer raises the question
+   schema HAS NO simulate    every call is gated, and the veto raises the question from the
+                             record the call names (the spec's label is the fallback)
 ```
 
-A tool named in `destructiveTools` is promised a two-step ritual: simulate first — which is what makes
-the engine put its confirmation question on screen — then act in a later turn with `confirmed: true`.
-If its `inputSchema` has no `confirmed` flag, the model can never complete the second step and simulations
-forever. The schema is only known where `toolDefs` are injected — which is
-here — so `spec.assertDestructiveConfirmable(deps.toolDefs)` runs at run start and throws, naming the
-tool. Constructing an agent with the same mistake succeeds and fails later as an unexplained loop.
-A tool that is destructive only on some of its calls (`destructiveWhen`, chapter 03 §6) is not exempt:
-its destructive branch is gated on the same `confirmed` flag, so a schema without it leaves that branch
-asking forever.
-
-Until that changes: **"the eval runs" is the gate for this particular mistake.** Chapter 03 §6 puts
-the flag in the schema when the tool is declared; this is why.
+No schema shape is an error: a tool that cannot simulate simply takes the veto-question route. What
+the set protects against is the hallucinated argument — `simulate: true` on a tool whose schema has
+none is an act, because a third-party executor drops the unknown argument and acts.
 
 `assertJudgePresent` runs at the same run start, for the same reason: a spec that installs an
 `llmCheck` guard needs a judge on the runtime options (`deps.judge`), and finding that out mid-turn reads

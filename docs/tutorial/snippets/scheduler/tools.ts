@@ -27,13 +27,13 @@ export const addEventTool: ToolDef = {
   },
 };
 
-/** Destructive: `confirmed` is the flag the auto-installed `confirmFirst` gate waits for. */
+/** Destructive: `simulate: true` asks; the bare call acts, gated on the user's typed code. */
 export const cancelEventTool: ToolDef = {
   name: 'cancelEvent',
-  description: 'Cancel an event. Call it without `confirmed` first to ask the user; then again in a LATER turn, after the user answers, with `confirmed: true`.',
+  description: 'Cancel an event. Call it with `simulate: true` first to see what it does and ask the user; run the bare call only in a LATER turn, after their message carries the confirmation code.',
   inputSchema: {
     type: 'object',
-    properties: { eventId: { type: 'string' }, confirmed: { type: 'boolean' } },
+    properties: { eventId: { type: 'string' }, simulate: { type: 'boolean' } },
     required: ['eventId'],
   },
 };

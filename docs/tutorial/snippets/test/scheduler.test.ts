@@ -34,10 +34,10 @@ describe('the scheduler snippet modules', () => {
     expect(world.exec('addEvent', { label: 'Backwards', start: '2026-03-03T11:00', end: '2026-03-03T10:00' }).success).toBe(false);
     expect(world.exec('addEvent', { label: 'Yesterday', start: '2026-03-01T09:00', end: '2026-03-01T10:00' }).success).toBe(false);
 
-    // Destructive: the unconfirmed call is a side-effect-free simulate.
-    expect(world.exec('cancelEvent', { eventId: 'evt_101' }).requiresConfirmation).toBe(true);
+    // Destructive: the simulate:true call is a side-effect-free simulation.
+    expect(world.exec('cancelEvent', { eventId: 'evt_101', simulate: true }).requiresConfirmation).toBe(true);
     expect(world.hasEvent('evt_101')).toBe(true);
-    expect(world.exec('cancelEvent', { eventId: 'evt_101', confirmed: true }).success).toBe(true);
+    expect(world.exec('cancelEvent', { eventId: 'evt_101' }).success).toBe(true);
     expect(world.hasEvent('evt_101')).toBe(false);
   });
 

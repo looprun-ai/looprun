@@ -32,7 +32,7 @@ export const SCHEDULER_CONTRACT: DomainContract = {
   // The HONESTY SWITCH (tutorial 03 §5, 04 §3): naming the tools that MUTATE the calendar auto-installs
   // `claimIsGrounded` + `claimIsComplete`, so every `did` this domain declares is cross-checked against
   // what the world action history actually recorded. `listEvents` is a read and is deliberately absent.
-  // The world holds up its half: `addEvent` returns the new event's `id`, a confirmed `cancelEvent`
+  // The world holds up its half: `addEvent` returns the new event's `id`, a bare `cancelEvent` act
   // returns `cancelledEventId`, and `exec` records `tookEffect` on every call.
   writeTools: ['addEvent', 'cancelEvent'],
 };
