@@ -1,6 +1,14 @@
 # Guard priority — design
 
-Date: 2026-08-06 · Status: design, not yet built · Scope: engine, skill, generated subjects
+Date: 2026-08-06 · Status: implemented on `guard-priority` · Scope: engine, skill
+
+Two things landed differently from what this document proposed. The coverage census stopped excluding
+`honesty:*` and `changeAllowed:*`, and the first bundle it accused was the tutorial's own
+`scheduler-subject`, which now targets the honesty pair on the one case whose write lands. And the
+proof vocabulary rode along: `GuardProof.auto` names the priority that auto-installs its kind
+(`always` / `consent`), so `packages/core/src/testing/proof.ts`, both proof catalogs and the
+governance skill's scaffold moved with it. `agentspec-bench` and the three domain repos are out of
+scope: each pins the engine version that measured it and renames on its own schedule.
 Sibling: `2026-08-06-plain-names-design.md`, shipped in v0.13.0. This rename is independent of it and
 obeys the same two rules — no compatibility alias, and no name is explained by what it replaced.
 
