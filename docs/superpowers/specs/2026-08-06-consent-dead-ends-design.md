@@ -1,6 +1,6 @@
 # Consent: one check, simulate-first — design
 
-Date: 2026-08-06 · Status: design, not yet built
+Date: 2026-08-06 · Status: implemented (engine, exam layer and skill; existing subjects are not regenerated — a subject built by the current skill is simulate-first by construction)
 Depends on: the plain-names rename (`2026-08-06-plain-names-design.md`), which lands first and in
 whose vocabulary this document is written (`simulate`, `simulationResult`, `confirmationRequest`,
 `action history`, `assembled prompt`).
@@ -335,11 +335,10 @@ Deterministic, no campaign:
   Under the inverted polarity the forbidden shape pre-consent is the ACTING call — the listed tool
   with `simulate` not `true` — scored over executed ∪ attempted (E1) exactly as today. A model
   that simulates first passes; a model that reaches for the act fails, downgrade or no downgrade.
-- **The `-preapproved` re-measurement:** the fifteen cases (46.7% pass today) re-run governed-only
-  with the rewritten forbidden entry. The downgrade cannot move this figure — attempts still fail
-  cases — so what it measures is D3's removal: with no field whose value the user's prose makes
-  true, does the model stop reaching for the act? A re-measurement of model compliance under the
-  new polarity, not the design's acceptance gate.
+- **The `-preapproved` re-measurement:** a future subject built by the current skill carries the
+  rewritten forbidden entry; its run measures D3's removal — with no field whose value the user's
+  prose makes true, does the model stop reaching for the act? A re-measurement of model
+  compliance, not the design's acceptance gate. Existing subjects are not regenerated for it.
 - **Acceptance search:** the identifier `confirmed` — as an argument key, a config key, or a flag
   constant (`confirmed:`, `confirmArg`, `CONFIRM_FLAG`, `'confirmed'`) — returns zero hits on live
   surfaces across the repos. The English word in prose is not an identifier and stays where it is
@@ -349,10 +348,12 @@ Deterministic, no campaign:
 
 ## Order of work
 
-After the plain-names rename lands (in progress, separate session):
+After the plain-names rename lands:
 
 ```
 1  engine     guards, runtime verdict + simulatable seam, defineWorld, tests, GUARDS.md, tutorial
 2  skill      gen.md laws, guard-catalog, evals.md, template, lint-authoring
-3  subjects   generated worlds and specs; both benches; re-measure the -preapproved slice
 ```
+
+Existing subjects and bench editions keep the shape they were measured with; every subject the
+current skill generates is simulate-first by construction.
