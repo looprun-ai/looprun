@@ -74,6 +74,7 @@ const ALLOW = [
   { path: 'docs/superpowers/specs/2026-08-06-plain-names-design.md', why: 'the only spec that names both vocabularies; deleted by the final task' },
   { path: 'docs/superpowers/plans/2026-08-06-plain-names.md', why: 'the plan that carries out the rename; deleted by the final task' },
   { path: 'docs/superpowers/specs/2026-08-06-guard-priority-design.md', word: 'ledger', why: 'the row that names the rename work still owed in the subject repos' },
+  { path: 'docs/superpowers/plans/2026-08-06-guard-priority.md', word: 'ledger', why: 'the task that names the rename work still owed in the subject repos' },
 ];
 
 const SKIP_EXT = /\.(png|jpg|jpeg|gif|svg|ico|gguf|zip|woff2?|tsv|csv)$/i;

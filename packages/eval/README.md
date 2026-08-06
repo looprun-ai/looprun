@@ -94,7 +94,7 @@ no key, no model:
 
 | finding | what it reads | what it demands |
 |---|---|---|
-| `WRITE-REFUSED-UNGATED` | each preset a case declares, compared against `default`, and every spec that carries the write | a write the world refuses BY STATE must have a spec-side gate that denies there, or the refusal reaches the model as a tool failure and the reply invents its reason. `contract.writeGate` closes it for every lane at once |
+| `WRITE-REFUSED-UNGATED` | each preset a case declares, compared against `default`, and every spec that carries the write | a write the world refuses BY STATE must have a spec-side gate that denies there, or the refusal reaches the model as a tool failure and the reply invents its reason. `contract.changeAllowed` closes it for every lane at once |
 | `TARGET-SILENT-ON-EVERY-PRESET` | the world gate a case targets, evaluated on the case's preset with an empty action history | a target must be able to DENY on a preset the case runs; a gate that is silent before the agent has done anything grades nothing |
 | `GUARD-ID-POSITIONAL` | every bound guard id on the assembled specs | an id minted from the install counter (`agent:custom#3`) re-points every case and profile that names it the moment a guard is inserted above; pass an explicit `{ id }` |
 

@@ -55,7 +55,7 @@ interface Guard {
 
 **Three names, one rule, and they line up.** The **factory** is what you call (`confirmFirst(…)`);
 it returns a **`Guard`** object; that object's **`kind`** is the runtime name (`'confirmFirst'`), and
-it is what you read back in a guard id (`base:confirmFirst`) and in a `recoveryEvents` entry
+it is what you read back in a guard id (`consent:confirmFirst`) and in a `recoveryEvents` entry
 (`run:noDoubleBook:addEvent`). The catalog below is indexed by factory name, so the name you call is
 the name you will see in the audit trail — with one deliberate exception, `custom`, whose `kind` you
 choose yourself (§6).

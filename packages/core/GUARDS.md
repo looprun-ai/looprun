@@ -413,12 +413,12 @@ the law already asks of them.
 There is ONE spec class, **`AgentSpecBase`** (P9 — no Minimal/Base/Full ladder; a
 spec is a spec). Its constructor auto-installs, from `cfg` alone:
 
-| trigger | auto-installs (layer · id) |
+| trigger | auto-installs (priority · id) |
 |---|---|
-| **always** | `noDuplicateCall` (preTool `any`, `minimal:noDuplicateCall`) · `degenerationGuard()` (onReply, `minimal:degenerationGuard` — the SOLE minimal onReply guard; markup + run-away-repetition branches only, no parameters — a language-specific judgment such as self-narration is text judgment, so an author who wants one binds an `llmCheck`) |
-| `cfg.contract.writeTools` **non-empty** | `claimIsGrounded` + `claimIsComplete` (onReply, `minimal:*`) — the honesty cross-check over the world action history, fed `contract.writeTools` + `contract.outcomes` |
-| `cfg.contract.writeGate` **present** | `precondition(ok, reason, prose)` on `contract.writeTools` minus `exempt` (preTool, `minimal:writeGate`) — the domain's ONE statement of what its world refuses every write under, installed on every spec that carries a write. Declared with no `writeTools`, or with an `exempt` entry that is not a write tool, it throws at construction |
-| `cfg.destructiveTools` **non-empty** | `destructiveThrottle(destructiveTools)` (preTool, `base:destructiveThrottle`) + `confirmFirst()` on exactly those tools (`base:confirmFirst`) — one law: a destructive call that is not a schema-licensed simulation is gated on the typed approval code. The consent ROUTE is read off each tool's injected schema at run start (`simulatableToolNames`): `simulate` present → a denied bare act is downgraded to its own simulation; absent → the veto raises the question from the record the call names (label fallback). The LIST installs the protocol; `cfg.destructiveWhen[tool]` decides which CALLS of a listed tool it applies to (absent ⇒ every call). **⊆-validated** (each destructive tool must be in `cfg.tools` or the constructor throws), and `cfg.destructiveLabels` and `cfg.destructiveWhen` are validated the same way |
+| **always** | `noDuplicateCall` (preTool `any`, `always:noDuplicateCall`) · `degenerationGuard()` (onReply, `always:degenerationGuard` — the SOLE `always` onReply guard; markup + run-away-repetition branches only, no parameters — a language-specific judgment such as self-narration is text judgment, so an author who wants one binds an `llmCheck`) |
+| `cfg.contract.writeTools` **non-empty** | `claimIsGrounded` + `claimIsComplete` (onReply, `honesty:*`) — the honesty cross-check over the world action history, fed `contract.writeTools` + `contract.outcomes` |
+| `cfg.contract.changeAllowed` **present** | `precondition(ok, reason, prose)` on `contract.writeTools` minus `exempt` (preTool, `changeAllowed:precondition`) — the domain's ONE statement of what its world refuses every write under, installed on every spec that carries a write. Declared with no `writeTools`, or with an `exempt` entry that is not a write tool, it throws at construction |
+| `cfg.destructiveTools` **non-empty** | `destructiveThrottle(destructiveTools)` (preTool, `consent:destructiveThrottle`) + `confirmFirst()` on exactly those tools (`consent:confirmFirst`) — one law: a destructive call that is not a schema-licensed simulation is gated on the typed approval code. The consent ROUTE is read off each tool's injected schema at run start (`simulatableToolNames`): `simulate` present → a denied bare act is downgraded to its own simulation; absent → the veto raises the question from the record the call names (label fallback). The LIST installs the protocol; `cfg.destructiveWhen[tool]` decides which CALLS of a listed tool it applies to (absent ⇒ every call). **⊆-validated** (each destructive tool must be in `cfg.tools` or the constructor throws), and `cfg.destructiveLabels` and `cfg.destructiveWhen` are validated the same way |
 
 So **2 kinds always install** (`noDuplicateCall` + `degenerationGuard`), the honesty cross-check pair
 when the contract declares `writeTools`, and **+2 more when the agent holds a destructive tool.**
@@ -432,10 +432,10 @@ rewrite — routed to the non-empty engine-derived exhaustion closure instead.
 Reply-honesty TEXT judgment ("did the reply claim an inability the tools do not support?") is likewise not
 a runtime kind and there is no lexicon seam to feed one: it is an `llmCheck` question an author binds on
 onReply where the domain needs it. There is **NO auto-schema layer** —
-`argRequired`/`argFormat`/every other kind is authored explicitly by the spec at the agent layer.
+`argRequired`/`argFormat`/every other kind is authored explicitly by the spec.
 The runtime-owned terminal `respond` may never appear in `cfg.tools`
-(constructor throws) and is never guarded. A non-empty per-agent `persona` is required (persona-on-spec law: persona is per-agent, on the spec's `persona` field; a contract owns only invariants/language/stateBlock/exhaustion). The `minimal:`/`base:` id namespaces + install order are
-byte-stable, so the layer-sorted assembled prompt prose is deterministic.
+(constructor throws) and is never guarded. A non-empty per-agent `persona` is required (persona-on-spec law: persona is per-agent, on the spec's `persona` field; a contract owns only invariants/language/stateBlock/exhaustion). The priority-composed id namespaces + install order are
+byte-stable, so the priority-sorted assembled prompt prose is deterministic.
 
 ## 4. The kinds — where the vocabulary of record lives
 
