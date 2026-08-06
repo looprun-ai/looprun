@@ -109,12 +109,12 @@ describe('05 · the scheduler eval subject', () => {
     const original = subject.specs.scheduler!;
     const { spec, contract } = ungovernedVariant(subject, '01-double-book-refused');
 
-    // enforcement disarmed: every guard hook empty, no chains/exhaustion reply, no destructive cross-check
+    // enforcement disarmed: every guard hook empty, no chains/exhaustion reply, no route detector
     expect(spec.guards.preTool).toEqual([]);
     expect(spec.guards.onReply).toEqual([]);
     expect(spec.controls.chains).toBeUndefined();
     expect(spec.controls.exhaustionReply).toBeUndefined();
-    expect(spec.assertDestructiveConfirmable).toBeUndefined();
+    expect(spec.simulatableToolNames).toBeUndefined();
 
     // prompt kept byte-identical to the governed assembled prompt: prose (rules, invariants) survives
     const world = subject.makeWorld('default');
