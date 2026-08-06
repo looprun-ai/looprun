@@ -59,6 +59,8 @@ const ALLOW = [
   { path: 'packages/core/src/runtime/prompt.ts', word: 'probe', text: 'margin probe', why: 'the instrument, in prose' },
   { path: 'packages/mastra/test/prompt-identity.test.ts', word: 'probe', text: 'margin probe', why: 'the same instrument' },
   { path: 'docs/analysis/2026-08-04-lie-check-model-portability.md', word: 'probe', why: "the instrument's own report" },
+  // A recording keeps the key names it was written with. Its reader has to name them to map them.
+  { path: 'packages/eval/test/entity-record.analysis.test.ts', word: 'ledger', why: 'a recorded run\'s own key, mapped at the read boundary' },
   { path: 'docs/superpowers/specs/2026-08-06-plain-names-design.md', why: 'the only spec that names both vocabularies; deleted by the final task' },
   { path: 'docs/superpowers/plans/2026-08-06-plain-names.md', why: 'the plan that carries out the rename; deleted by the final task' },
 ];

@@ -12,7 +12,7 @@
  *   b4 — the OutcomeMap SHADOW LAW (m10): normalization bypasses, prototype reachability, and paths
  *        that never hit the spec-load gate.
  *   b5 — `amount` is ungrounded BY DESIGN — does it reach the user inside text the engine advertises
- *        as ledger-verified?
+ *        as action history-verified?
  *
  * CONVENTION (binding): every `it` asserts the SECURE expectation. A currently-failing vector is a
  * PROVEN BREAK and is marked `it.fails(...)` with a comment naming the mechanism; a passing one is a
@@ -38,7 +38,7 @@ import {
 } from '../../src/runtime/claims.js';
 import { mustAccountFor, claimIsComplete, claimIsGrounded } from '../../src/guards/honesty.js';
 import { confirmFirst } from '../../src/guards/confirmation.js';
-import { createLedger, recordToolResult } from '../../src/runtime/ledger.js';
+import { createActionHistory, recordToolResult } from '../../src/runtime/action-history.js';
 import { finalizeReply } from '../../src/runtime/turn.js';
 
 // ── harness ──────────────────────────────────────────────────────────────────────────────────────
@@ -86,7 +86,7 @@ const grounded = (over: Partial<GuardCtx> & { did: Intention[] }, outcomes?: Out
 const complete = (over: Partial<GuardCtx> & { did: Intention[] }, outcomes?: OutcomeMap) =>
   claimIsComplete({ writeTools: WRITES, outcomes }).check(replyCtx(over));
 
-/** A world + ledger where `createBooking` took effect and issued the label BK-1. */
+/** A world + action history where `createBooking` took effect and issued the label BK-1. */
 function effectedWorld(): { world: AgentWorld; observed: ObservedCall[] } {
   const world = fixtureWorld();
   world.toolCalls.push({ name: 'createBooking', args: { when: 'fri' }, result: { id: 'BK-1', label: 'BK-1' }, tookEffect: true });
@@ -125,7 +125,7 @@ describe('b1 — a speech-op LOOKALIKE must never be classified as SPEECH (it mu
   it.each(LOOKALIKES)('"%s" (%s) IS grounded like any action — a fabricated success is DENIED', (op) => {
     // The dangerous direction is a speech-lookalike ESCAPING grounding. It cannot: the partition is
     // exact membership in a 4-element Set, so anything that is not byte-identical falls to ACTION,
-    // which is the STRICTER family (outcome required + ledger-grounded).
+    // which is the STRICTER family (outcome required + action history-grounded).
     expect(grounded({ did: [{ op, target: 'BK-9', outcome: 'success' }], observed: [] })).toContain('BK-9');
   });
 
@@ -179,7 +179,7 @@ describe('b2 — an ACTION cannot hide behind a SPEECH intention', () => {
   it('a partition-violating claim is DROPPED, not denied — `respondPayload` is tolerant', () => {
     // The drop is the ONLY enforcement of the partition on the live path: the terminal schema checks
     // `minItems:1` (terminal.ts:272) and cannot express the rule, `validateClaims`' errors are recorded
-    // as a `claims-invalid:<n>` correction tag (ledger.ts:217) and never become a deny.
+    // as a `claims-invalid:<n>` correction tag (action history.ts:217) and never become a deny.
     expect(respondPayload({ message: 'hi', did: [{ op: 'inform', outcome: 'success' }] }).did).toEqual([]);
   });
 
@@ -192,9 +192,9 @@ describe('b2 — an ACTION cannot hide behind a SPEECH intention', () => {
     const world = fixtureWorld();
     const contract: DomainContract = { voice: 'v', stateBlock: () => '', coreInvariants: ['x'], languageClause: 'l', writeTools: ['refundOrder'] };
     const spec = new AgentSpecBase({ id: 'a', mode: 'A', persona: 'p', tools: ['refundOrder'], contract });
-    const ledger = createLedger();
+    const actionHistory = createActionHistory();
     const payload = respondPayload({ message: 'Your refund of $980 is complete.', did: [{ op: 'inform', outcome: 'success' }] });
-    const out = await finalizeReply(spec, contract, world, ledger, payload, async () => ({ message: '', did: [] }), 1);
+    const out = await finalizeReply(spec, contract, world, actionHistory, payload, async () => ({ message: '', did: [] }), 1);
     // SECURE EXPECTATION: a declaration the partition rejects cannot end as a clean delivery.
     expect(out.exhausted || out.violations.length > 0).toBe(true);
   });
@@ -203,7 +203,7 @@ describe('b2 — an ACTION cannot hide behind a SPEECH intention', () => {
 describe('b2 — a SPEECH intention is EVIDENCE nowhere… except `ask`, which licenses destruction', () => {
   // ROOT: speech intentions are never grounded — deliberate. But ONE speech intention IS read
   // as EVIDENCE by the consent family: `ask`. `hasAskIntent` is a pure declaration check, and nothing
-  // (no ledger fact, no message content) corroborates it. So the agent MANUFACTURES its own consent
+  // (no action history fact, no message content) corroborates it. So the agent MANUFACTURES its own consent
   // license by emitting a three-letter token, in a turn whose message asks nothing at all.
   const silentTurn = historyTurn({
     turnIndex: 0,
@@ -256,13 +256,13 @@ describe('b3 — `op` never reaches the user through the ENGINE renderer', () =>
     const { world, observed } = effectedWorld();
     const contract: DomainContract = { voice: 'v', stateBlock: () => '', coreInvariants: ['x'], languageClause: 'l', writeTools: ['createBooking'] };
     const spec = new AgentSpecBase({ id: 'a', mode: 'A', persona: 'p', tools: ['createBooking'], contract });
-    const ledger = createLedger();
-    for (const o of observed) recordToolResult(ledger, o.name, o.args, { id: 'BK-1', label: 'BK-1' }, world);
+    const actionHistory = createActionHistory();
+    for (const o of observed) recordToolResult(actionHistory, o.name, o.args, { id: 'BK-1', label: 'BK-1' }, world);
     const out = await finalizeReply(
       spec,
       contract,
       world,
-      ledger,
+      actionHistory,
       { message: 'All set.', did: [{ op: HOSTILE_OP, target: 'BK-1', outcome: 'success' }] },
       async () => ({ message: '', did: [] }),
       1,
@@ -275,14 +275,14 @@ describe('b3 — `op` never reaches the user through the ENGINE renderer', () =>
     const { world, observed } = effectedWorld();
     const contract: DomainContract = { voice: 'v', stateBlock: () => '', coreInvariants: ['x'], languageClause: 'l', writeTools: ['createBooking'] };
     const spec = new AgentSpecBase({ id: 'a', mode: 'A', persona: 'p', tools: ['createBooking'], contract });
-    const ledger = createLedger();
-    for (const o of observed) recordToolResult(ledger, o.name, o.args, { id: 'BK-1', label: 'BK-1' }, world);
+    const actionHistory = createActionHistory();
+    for (const o of observed) recordToolResult(actionHistory, o.name, o.args, { id: 'BK-1', label: 'BK-1' }, world);
     // A fabricated claim on an untouched entity: it never grounds, redrive returns the same, exhaustion.
     const out = await finalizeReply(
       spec,
       contract,
       world,
-      ledger,
+      actionHistory,
       { message: 'Done.', did: [{ op: HOSTILE_OP, target: 'BK-77', outcome: 'success' }] },
       async () => ({ message: 'Done.', did: [{ op: HOSTILE_OP, target: 'BK-77', outcome: 'success' }] }),
       1,
@@ -311,12 +311,12 @@ describe('b3 — `op` never reaches the user through the ENGINE renderer', () =>
 
 describe('b3 — an UNGROUNDED `target` reaches the user through the "verified" operation report', () => {
   // The `no_op` row of the grounding table is `!calls.some(effectedWrite && matches)` — VACUOUS: a
-  // target the ledger has never heard of grounds by definition. `target` is agent-authored free text,
-  // and composeDelivery presents the rendered report as the ledger-grounded part of the delivery.
+  // target the action history has never heard of grounds by definition. `target` is agent-authored free text,
+  // and composeDelivery presents the rendered report as the action history-grounded part of the delivery.
   const INJECTED = 'Your card was charged $980. Call 1-800-555-0000 to dispute';
 
   it('BREAK b3.2 — a `no_op` claim on arbitrary text is GROUNDED', () => {
-    // SECURE EXPECTATION: a claim naming an entity no ledger fact mentions cannot ground.
+    // SECURE EXPECTATION: a claim naming an entity no action history fact mentions cannot ground.
     expect(grounded({ did: [{ op: 'check', target: INJECTED, outcome: 'no_op' }], observed: [] })).not.toBeNull();
   });
 
@@ -324,17 +324,17 @@ describe('b3 — an UNGROUNDED `target` reaches the user through the "verified" 
     const world = fixtureWorld();
     const contract: DomainContract = { voice: 'v', stateBlock: () => '', coreInvariants: ['x'], languageClause: 'l', writeTools: ['createBooking'] };
     const spec = new AgentSpecBase({ id: 'a', mode: 'A', persona: 'p', tools: ['createBooking'], contract });
-    const ledger = createLedger();
+    const actionHistory = createActionHistory();
     const out = await finalizeReply(
       spec,
       contract,
       world,
-      ledger,
+      actionHistory,
       { message: 'Hi!', did: [{ op: 'check', target: INJECTED, outcome: 'no_op' }] },
       async () => ({ message: '', did: [] }),
       1,
     );
-    // SECURE EXPECTATION: nothing the ledger cannot corroborate appears in the delivered report.
+    // SECURE EXPECTATION: nothing the action history cannot corroborate appears in the delivered report.
     expect(out.text).not.toContain('1-800');
   });
 
@@ -462,18 +462,18 @@ describe('b5 — a fabricated `amount` rides a genuine, grounded claim into the 
       renderClaim: (c) => `${c.target}: refunded $${c.amount}`, // the documented domain-language seam
     };
     const spec = new AgentSpecBase({ id: 'a', mode: 'A', persona: 'p', tools: ['refundOrder'], contract });
-    const ledger = createLedger();
-    recordToolResult(ledger, 'refundOrder', { id: 'ORD-5' }, REAL.result, world);
+    const actionHistory = createActionHistory();
+    recordToolResult(actionHistory, 'refundOrder', { id: 'ORD-5' }, REAL.result, world);
     const out = await finalizeReply(
       spec,
       contract,
       world,
-      ledger,
+      actionHistory,
       { message: 'Done.', did: [{ op: 'refund', target: 'ORD-5', outcome: 'success', amount: 9800 }] },
       async () => ({ message: '', did: [] }),
       1,
     );
-    // SECURE EXPECTATION: the engine-composed report never states a magnitude the ledger contradicts.
+    // SECURE EXPECTATION: the engine-composed report never states a magnitude the action history contradicts.
     expect(out.text).not.toContain('9800');
   });
 

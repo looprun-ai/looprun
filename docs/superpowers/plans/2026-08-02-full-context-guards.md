@@ -19,7 +19,7 @@
 
 ### Task 1: `GuardCtx.history` + real `onInput`
 
-**Files:** core `rules.ts` (GuardCtx + history type), `runtime/ledger.ts` (accumulate turns: userText/reply/toolCalls/attemptedCalls/guardEvents), `runtime/turn.ts` + mastra hooks (populate userText; onInput receives the incoming text instead of `{}`); tests in core + mastra.
+**Files:** core `rules.ts` (GuardCtx + history type), `runtime/action-history.ts` (accumulate turns: userText/reply/toolCalls/attemptedCalls/guardEvents), `runtime/turn.ts` + mastra hooks (populate userText; onInput receives the incoming text instead of `{}`); tests in core + mastra.
 
 - [ ] Failing property tests: every hook's ctx carries `history` with the full prior conversation incl. `userText`; the CURRENT turn's userText is visible to onInput (via `ctx.args.userText` or a dedicated field — pick one, document); history is read-only (frozen or typed readonly).
 - [ ] Implement; all suites green; surface riders (GuardCtx is a taught type — outline + locks).

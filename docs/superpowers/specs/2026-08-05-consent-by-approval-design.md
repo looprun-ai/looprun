@@ -147,7 +147,7 @@ to. The locale is what makes the mechanism reachable.
 
 ## 6 · Consume — the matching law
 
-One law governs three places: claim-to-ledger grounding, approval consumption, and elicited values.
+One law governs three places: claim-to-action history grounding, approval consumption, and elicited values.
 
 ```
 split the user's message on WHITESPACE      (never on punctuation)

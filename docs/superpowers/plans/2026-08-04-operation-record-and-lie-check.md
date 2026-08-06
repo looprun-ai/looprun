@@ -13,7 +13,7 @@
 |---|---|
 | **No historical narration** | comments and docs describe what the code IS. Never "was", "used to", "previously", "retired". |
 | **No domain code in the engine** | domains live only in `examples/`, isolated and didactic. |
-| **The record never reads the message** | its inputs are the verified `did` and the world ledger. A test must pin this. |
+| **The record never reads the message** | its inputs are the verified `did` and the world action history. A test must pin this. |
 | **The session list is never delivered** | it is input to the check and the rewriter only. |
 | **Fail closed on absence** | a runtime with no judge callback delivers the message unchanged with the record beneath it. It never silently skips the record. |
 | **Governance** | `pnpm proofs:run` and the proof-record gate must be green before the branch is done. |
@@ -33,7 +33,7 @@
 
 - [x] **1.1** Two closure constants, chosen by whether any action line was rendered.
 - [x] **1.2** A turn whose `did` carries only speech intentions renders the empty-case closure, not `''`.
-- [x] **1.3** Test: same `did`, same ledger, three different messages → byte-identical record.
+- [x] **1.3** Test: same `did`, same action history, three different messages → byte-identical record.
 - [x] **1.4** Test: the empty-case closure does not presuppose an operation — assert the exact sentence, since this is the whole reason there are two.
 - [x] **1.5** Every existing caller of `renderOperationReport` that branched on `''` is updated. The empty string is no longer a signal.
 

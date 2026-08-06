@@ -23,7 +23,7 @@ const fail = (error: string): ToolResult => ({ success: false, error });
 export class SecondBrainWorld implements AgentWorld {
   readonly preset: string;
   readonly seed: number;
-  /** Ledger of executed calls (host-visible; NOT the runtime's observed ledger). */
+  /** ActionHistory of executed calls (host-visible; NOT the runtime's observed action history). */
   toolCalls: Array<{ name: string; args: unknown; result?: unknown; tookEffect?: boolean }> = [];
   sseActions: unknown[] = [];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

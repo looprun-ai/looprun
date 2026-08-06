@@ -11,14 +11,14 @@
 ## Global Constraints
 
 - **Pre-1.0 law: NO retroactive compatibility.** Broken tests are REWRITTEN to the new surface or deleted — never shimmed, never skipped.
-- **No-regex law:** no guard factory takes a RegExp-typed param (grep-gate `guards-purity.test.ts` green). Target matching is whole-value / token-boundary equality over LEDGER-issued values (never authored patterns, never agent-authored args).
+- **No-regex law:** no guard factory takes a RegExp-typed param (grep-gate `guards-purity.test.ts` green). Target matching is whole-value / token-boundary equality over ACTION HISTORY-issued values (never authored patterns, never agent-authored args).
 - **Engine domain-neutral:** the four speech-op names (`inform`/`greet`/`refuse`/`ask`) are the ONLY op vocabulary in core; all action ops arrive via spec/contract. Zero business strings in `@looprun-ai/core`.
 - **Prose leak laws:** no raw tool/terminal names in user-delivered text; deny/protocol prose the user could see never names `respond`. Model-facing protocol prose MAY name `respond`/`did`/`inform` (it is instruction).
 - **The honesty guarantee is precise:** real actions are deterministically un-hideable/un-fabricable; the prose-misuse residual is addressed by the forcing function + an OPTIONAL `did × message` `llmCheck` (D6) — never claim prose lies are deterministically blocked.
 - Surface-lock riders + tutorial outline + guard-catalog parity in the SAME commit as any surface change.
 - All suites (`core`/`mastra`/`eval`/`server`/`models`) + `pnpm -r typecheck` + `node tests/no-bench-drift.test.mjs` green per commit. Commit per task; **NEVER push**; NEVER `pnpm release`.
 - agentspec commits are SEPARATE and end with the explicit leak-review confirmation.
-- Progress ledger: append to `.superpowers/sdd/progress.md` with prefix `MI-T<N>`.
+- Progress action history: append to `.superpowers/sdd/progress.md` with prefix `MI-T<N>`.
 - The red-team PoCs already on disk (`packages/core/test/redteam/redteam-{grounding,completeness,consent,shape}.test.ts`) encode the breaks as FAILING assertions. Converting each to a passing regression (guard now denies) is the acceptance signal for the matching M-fix — never delete a PoC without its fix landing.
 
 ## File Structure (locked)
@@ -26,7 +26,7 @@
 ```
 packages/core/src/runtime/claims.ts     MOD — Intention type; SPEECH_OPS const + isSpeechOp/isActionOp;
                                                validateClaims .min(1) + speech/action shape; isAskEvent
-                                               keys on an ask intent; deriveClaimsFromLedger (M5/M6);
+                                               keys on an ask intent; deriveClaimsFromActionHistory (M5/M6);
                                                isEmptyReadResult (M4); renderer (action intents only)
 packages/core/src/runtime/terminal.ts   MOD — respond schema: did minLength 1, asked field REMOVED;
                                                protocol prose enumerates ops + inform guardrail (D4);
@@ -39,7 +39,7 @@ packages/core/src/guards/confirmation.ts MOD — ask signal = ask intent (D3); p
 packages/core/src/guards/structural.ts   MOD — askedEarlier keys on HistoryTurn ask intent
 packages/core/src/runtime/turn.ts        MOD — ctx ask-intent plumbing; blank floor category strip (M9);
                                                TRUTH/FORM sets; delivery composition
-packages/core/src/runtime/ledger.ts      MOD — asked→ask-intent; HistoryTurn shape; prune premature (M8 seam)
+packages/core/src/runtime/action-history.ts      MOD — asked→ask-intent; HistoryTurn shape; prune premature (M8 seam)
 packages/core/src/rules.ts               MOD — GuardCtx/HistoryTurn: asked→ask-intent representation
 packages/core/src/guards/{catalog,llm-check}.ts MOD — did×message consistency llmCheck rubric (D6); catalog
 packages/mastra|vercel|server            MOD — respond schema (did.min(1), no asked), premature prune (M8)
@@ -70,16 +70,16 @@ export function hasAskIntent(did: Intention[]): boolean;                 // did.
 - [ ] **Step 1: Failing tests** — `validateClaims([])` is an ERROR (was valid); a single `{op:'greet'}` is VALID; `{op:'inform', outcome:'success'}` is an ERROR (speech op must not carry outcome); `{op:'refund'}` (action op, no outcome) is an ERROR; `{op:'refund', outcome:'success'}` VALID; `hasAskIntent([{op:'ask'}])` true, `hasAskIntent([{op:'greet'}])` false; the respond tool schema declares `did` minLength 1 and NO `asked` property. Re-point the redteam-shape did-shape vectors to assert the new strictness.
 - [ ] **Step 2:** Run, see fail; implement `SPEECH_OPS`/`isSpeechOp`/`isActionOp`/`hasAskIntent`; `validateClaims` mandatory-non-empty + speech/action shape rules; `RespondPayload` drops `asked`; `respondPayload` extracts did only (no asked). Terminal schema: `did` items required `[op]` (outcome conditionally required is enforced in validateClaims, not JSON-schema), `minItems: 1`, `asked` removed.
 - [ ] **Step 3: Protocol prose (D4)** in `terminal.ts`: enumerate the op families with one worked line each; the `inform` guardrail VERBATIM from the design D4 ("MUST NOT be used to assert that you performed an action … reporting a done action as inform is dishonest"). `forcedTerminalPrompt` updated (a closing respond still needs ≥1 intention; the reply-only variant uses `greet`/`inform`/`refuse`, never `ask`).
-- [ ] **Step 4:** Full core suite green (later-task guard/ledger sites re-keyed minimally to compile — asked→ask-intent is Task 2's behavioral job, but core must compile; keep mechanical). Commit `feat!(core): mandatory did (.min(1)) + speech/action intention partition + op prompt spec (MI-T1)`.
+- [ ] **Step 4:** Full core suite green (later-task guard/action history sites re-keyed minimally to compile — asked→ask-intent is Task 2's behavioral job, but core must compile; keep mechanical). Commit `feat!(core): mandatory did (.min(1)) + speech/action intention partition + op prompt spec (MI-T1)`.
 
 ### Task 2: `ask` intention replaces `asked`; consent guards re-key; premature prune (P2 + M8)
 
-**Files:** `runtime/ledger.ts`, `rules.ts`, `runtime/terminal.ts` (prematureTerminalCalls), `runtime/turn.ts`, `guards/confirmation.ts`, `guards/structural.ts`, mastra `agent.ts`/`run-conversation.ts` premature branch; tests `test/redteam/redteam-consent.test.ts` (→ regression), confirmation/structural suites.
+**Files:** `runtime/action-history.ts`, `rules.ts`, `runtime/terminal.ts` (prematureTerminalCalls), `runtime/turn.ts`, `guards/confirmation.ts`, `guards/structural.ts`, mastra `agent.ts`/`run-conversation.ts` premature branch; tests `test/redteam/redteam-consent.test.ts` (→ regression), confirmation/structural suites.
 
-**Interfaces:** Consumes `hasAskIntent`, `isAskEvent` (T1). Produces: `TurnLedger` carries the delivered turn's `did` (ask-intent derivable) — the `asked: boolean` field is removed; `HistoryTurn.did` already exists (SCG-T2), so `HistoryTurn.asked` is DELETED and readers use `hasAskIntent(turn.did)`; `GuardCtx` exposes the current turn's ask via `hasAskIntent(ctx.did)` (ctx.did populated onReply). `prematureTerminalCalls(steps): Array<{name,args}>` mirrors `supersededTerminalCalls`.
+**Interfaces:** Consumes `hasAskIntent`, `isAskEvent` (T1). Produces: `TurnActionHistory` carries the delivered turn's `did` (ask-intent derivable) — the `asked: boolean` field is removed; `HistoryTurn.did` already exists (SCG-T2), so `HistoryTurn.asked` is DELETED and readers use `hasAskIntent(turn.did)`; `GuardCtx` exposes the current turn's ask via `hasAskIntent(ctx.did)` (ctx.did populated onReply). `prematureTerminalCalls(steps): Array<{name,args}>` mirrors `supersededTerminalCalls`.
 
 - [ ] **Step 1: Failing tests** — the redteam-consent GHOST-ASK vector (M8): a premature `respond` carrying an ask intent must be PRUNED from `observed`, so next-turn `confirmFirst` does NOT license (the PoC asserts the secure denial). `pendingConfirmMustAsk`: relay satisfied iff the delivered turn's `did` has an ask intent (`ctx`), NOT a stale observed entry. `askedEarlier`: an earlier HistoryTurn with an ask intent licenses; same-turn does not; a fake/ghost ask does not survive. `confirmFirst` via ask/either keyed on ask intents.
-- [ ] **Step 2:** Implement. `pruneSupersededTerminals(ledger, prematureTerminalCalls(steps))` in BOTH backends' premature branch. `pendingConfirmMustAsk` uses `hasAskIntent(ctx.did)` authoritatively when ctx.did is defined; observed-scan fallback only for the chain/mid-turn window and reads ask intents, never the removed `asked`. Every `name==='askUser'`/`args.asked` reader tree-wide re-keyed (grep to zero).
+- [ ] **Step 2:** Implement. `pruneSupersededTerminals(action history, prematureTerminalCalls(steps))` in BOTH backends' premature branch. `pendingConfirmMustAsk` uses `hasAskIntent(ctx.did)` authoritatively when ctx.did is defined; observed-scan fallback only for the chain/mid-turn window and reads ask intents, never the removed `asked`. Every `name==='askUser'`/`args.asked` reader tree-wide re-keyed (grep to zero).
 - [ ] **Step 3:** Core + confirmation/structural suites green; the consent PoCs flip to passing regression. Commit `feat!(core): ask-intent replaces asked; consent guards + premature-ask prune (MI-T2 / P2 / M8)`.
 
 ### Task 3: honesty cross-check on action intents + matching hardening (M1/M2/M3/m10)
@@ -94,9 +94,9 @@ export function hasAskIntent(did: Intention[]): boolean;                 // did.
 
 ### Task 4: renderer/derivation + throttle + blank-floor + llmCheck backstop (M4/M5/M6/M7/M9/D6)
 
-**Files:** `runtime/claims.ts` (deriveClaimsFromLedger, isEmptyReadResult, renderer), `runtime/turn.ts` (blank floor), `guards/confirmation.ts` (destructiveThrottle), `guards/llm-check.ts`+`guards/catalog.ts`+`eval/norms-config.ts` (D6); tests `test/claims-render.test.ts`, `test/redteam/redteam-{completeness,consent,shape}.test.ts` (→ regression).
+**Files:** `runtime/claims.ts` (deriveClaimsFromActionHistory, isEmptyReadResult, renderer), `runtime/turn.ts` (blank floor), `guards/confirmation.ts` (destructiveThrottle), `guards/llm-check.ts`+`guards/catalog.ts`+`eval/norms-config.ts` (D6); tests `test/claims-render.test.ts`, `test/redteam/redteam-{completeness,consent,shape}.test.ts` (→ regression).
 
-- [ ] **Step 1: Failing tests** — `isEmptyReadResult({message:{booking:'BK-1'}})` is FALSE (a record under a status key is NOT empty — M4); `deriveClaimsFromLedger` attaches each produced label to its own call, a read's label does not shift a write's target (M5), and an effected write carrying requiresConfirmation derives as success not pending (M6); `destructiveThrottle` counts two `confirmed:false` writes that took effect as TWO effects (M7); `isBlankDelivery` treats U+2063/2062/2064/180E/3164 as blank (M9); the D6 `did×message` llmCheck rubric exists as a config-available kind (fake adjudicator: message asserting an op absent from did → deny; consistent → allow), NOT auto-installed.
+- [ ] **Step 1: Failing tests** — `isEmptyReadResult({message:{booking:'BK-1'}})` is FALSE (a record under a status key is NOT empty — M4); `deriveClaimsFromActionHistory` attaches each produced label to its own call, a read's label does not shift a write's target (M5), and an effected write carrying requiresConfirmation derives as success not pending (M6); `destructiveThrottle` counts two `confirmed:false` writes that took effect as TWO effects (M7); `isBlankDelivery` treats U+2063/2062/2064/180E/3164 as blank (M9); the D6 `did×message` llmCheck rubric exists as a config-available kind (fake adjudicator: message asserting an op absent from did → deny; consistent → allow), NOT auto-installed.
 - [ ] **Step 2:** Implement; PoCs flip green. `isEmptyReadResult`: only skip a status key whose value is scalar/boolean. Blank floor: category strip (Cf + default-ignorable) before trim.
 - [ ] **Step 3:** Core suite green; commit `feat!(core): derivation/throttle/blank-floor fixes + did×message llmCheck (MI-T4 / M4-M7,M9,D6)`.
 

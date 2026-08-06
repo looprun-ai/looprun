@@ -128,7 +128,7 @@ rather than mid-turn. `failMode` (`'open'`/`'closed'`) prices a REJECTED judge. 
 sync; an `llmCheck`'s `check` awaits, so the hooks are async-capable. Prompt-injection is acknowledged
 and priced by evals, not by blindness: the question is fixed, the channel is a verdict.
 
-**The prose channel.** `did` is grounded against the ledger. `message` beside it is free prose — an
+**The prose channel.** `did` is grounded against the action history. `message` beside it is free prose — an
 agent can declare an honest `inform` and still WRITE that it completed something. Two engine-owned
 mechanisms answer it: a record that ships on every turn with no configuration, and a check the host
 turns on.
@@ -416,7 +416,7 @@ spec is a spec). Its constructor auto-installs, from `cfg` alone:
 | trigger | auto-installs (layer · id) |
 |---|---|
 | **always** | `noDuplicateCall` (preTool `any`, `minimal:noDuplicateCall`) · `degenerationGuard()` (onReply, `minimal:degenerationGuard` — the SOLE minimal onReply guard; markup + run-away-repetition branches only, no parameters — a language-specific judgment such as self-narration is text judgment, so an author who wants one binds an `llmCheck`) |
-| `cfg.contract.writeTools` **non-empty** | `claimIsGrounded` + `claimIsComplete` (onReply, `minimal:*`) — the honesty cross-check over the world ledger, fed `contract.writeTools` + `contract.outcomes` |
+| `cfg.contract.writeTools` **non-empty** | `claimIsGrounded` + `claimIsComplete` (onReply, `minimal:*`) — the honesty cross-check over the world action history, fed `contract.writeTools` + `contract.outcomes` |
 | `cfg.contract.writeGate` **present** | `precondition(ok, reason, prose)` on `contract.writeTools` minus `exempt` (preTool, `minimal:writeGate`) — the domain's ONE statement of what its world refuses every write under, installed on every spec that carries a write. Declared with no `writeTools`, or with an `exempt` entry that is not a write tool, it throws at construction |
 | `cfg.destructiveTools` **non-empty** | `destructiveThrottle(destructiveTools)` (preTool, `base:destructiveThrottle`) + `confirmFirst` on exactly those tools — the per-tool `cfg.confirmMechanism[tool]` (default `'arg'`) picks the id AND which call ACTS: two-step tools → `confirmFirst()` under `base:confirmFirst`, one-step tools → `confirmFirst({ flag: false })` under `base:confirmFirstPriorAsk`. The LIST installs the protocol; `cfg.destructiveWhen[tool]` decides which CALLS of a listed tool it applies to (absent ⇒ every call). **⊆-validated** (each destructive tool must be in `cfg.tools` or the constructor throws), and `cfg.destructiveLabels`, `cfg.confirmMechanism` and `cfg.destructiveWhen` are validated the same way |
 
@@ -465,9 +465,9 @@ key for them).
 prose is structurally broken — a mention scan for a record id passes on a reply that says the record was
 NOT found, because polarity is unreadable by a pattern. The agent DECLARES what it did as STRUCTURE
 (`respond`'s `did: TurnClaim[]`) and three deterministic guards GROUND that declaration against the world
-ledger, which the agent does not control:
+action history, which the agent does not control:
 
-- **`claimIsGrounded`** — every ACTION intention matches the ledger: a `success` needs an effected write, `not_found`
+- **`claimIsGrounded`** — every ACTION intention matches the action history: a `success` needs an effected write, `not_found`
   an empty read, `blocked`/`refused` a veto/refusal, `no_op` a call that ADDRESSED the entity and no effected
   write on it; an undeclared outcome word is always a violation. Auto-installed when the contract declares `writeTools`.
 - **`claimIsComplete`** — every write that took effect this turn is covered by a DISTINCT `success` action
@@ -477,10 +477,10 @@ ledger, which the agent does not control:
   a call whose tool is in `contract.writeTools` and whose `tookEffect` is true, OR any
   call at all whose effect the WORLD ATTESTED. Keying it on the intersection alone would make a mutation
   through a tool the author forgot to list invisible to both cross-checks *while the guard catalog reported
-  full coverage* — the ledger row would say `tookEffect:true` and the engine would decline to use it.
+  full coverage* — the action history row would say `tookEffect:true` and the engine would decline to use it.
   `writeTools` is the domain's statement of intent (it decides whether the cross-check installs at all); it
   is a LOWER bound on the write surface, never an upper one.
-- **Attested vs INFERRED effect.** A world that keeps its own ledger (`defineWorld`, `FixtureWorld`, any
+- **Attested vs INFERRED effect.** A world that keeps its own action history (`defineWorld`, `FixtureWorld`, any
   custom world) sets `tookEffect` per executor: that is an attestation, and it is trusted for any tool name.
   The native-tools/MCP path has no executor to ask, so the runtime infers the flag from the result
   (`ok && !requiresConfirmation`) and marks the row `effectInferred: true` — that means "the call
@@ -490,7 +490,7 @@ ledger, which the agent does not control:
   a `success` requirement. Config-bound, never auto-installed.
 
 All three are TRUTH guards (never salvaged, never delivered over) and key on `target` + `outcome` vs the
-ledger, never on op-name semantics or reply text — so they carry no pattern and cannot be broken by polarity.
+action history, never on op-name semantics or reply text — so they carry no pattern and cannot be broken by polarity.
 
 **The matching laws.**
 
@@ -522,7 +522,7 @@ ledger, never on op-name semantics or reply text — so they carry no pattern an
   carry a verdict, and a `note` can never fabricate a refusal on a bystander. These polarities never enter
   the covering set, so they can never hide a write.
 - *`amount` is corroborated*: when a claim carries an `amount`, that number must appear among the
-  magnitudes of the same ledger fact that grounds the claim (the world's result for a presence claim, the
+  magnitudes of the same action history fact that grounds the claim (the world's result for a presence claim, the
   attempted args for an absence/veto claim). It is rendered by the domain seam into the block the engine
   advertises as verified, so an unchecked figure would be a fabricated number delivered as fact.
   **Limit**: the comparison is between RAW NUMBERS and knows nothing about units. A world that reports
@@ -617,7 +617,7 @@ does not carry: they are about the enforcement path, not about choosing a kind.
   an `llmCheck` question that reads the result. **If your world reports refusals as results, account for it.**
 - **`ObservedCall` carries no result payload.** A guard that needs to reason over a tool RESULT (an empty
   read, a partial write) reads it through `postTool`'s `ctx.result` (the just-returned value) or through
-  the world's own `toolCalls` ledger — never through `observed`, which holds only name/args/ok/turnIndex.
+  the world's own `toolCalls` action history — never through `observed`, which holds only name/args/ok/turnIndex.
   A reply-side judgment over results ("did the reply overstate an empty search?") is an `llmCheck` question.
 - **THE RECENCY LAW, where a licence is still a past EVENT.** An EVIDENCE guard — a past call that is
   PROOF work was done — defaults `within` **UNBOUNDED**: `requiresBefore` (a read from turn 1
@@ -696,7 +696,7 @@ is destructive on every call.
 
 #### The matching law
 
-One law decides every "is this string THAT string" verdict in the engine — claim-to-ledger grounding, the
+One law decides every "is this string THAT string" verdict in the engine — claim-to-action history grounding, the
 consent token, and a value recorded on the user's behalf:
 
 ```
@@ -789,7 +789,7 @@ open:
 2. **RECORD WHAT EACH CALL DID** on `world.toolCalls`, with `tookEffect`. `destructiveThrottle` treats an
    EXECUTED call as a SIMULATE only when the world POSITIVELY recorded that it changed nothing
    (`tookEffect === false`); a call that RAN and left no record has UNKNOWN effect and counts against the
-   one-effect-per-turn cap. Reading a world whose ledger nothing writes as "every call changed nothing"
+   one-effect-per-turn cap. Reading a world whose action history nothing writes as "every call changed nothing"
    would make the throttle inert on the whole native-tools/MCP path.
    `defineWorld` and `FixtureWorld` record every exec; native-tools mode records in the guard hook,
    deriving effect from the result (a call that succeeded and did not come back asking for confirmation
@@ -836,13 +836,13 @@ Populated from `AgentSpecConfig`; wired by the Mastra backend unless noted.
 | `directives` | `StateDirective[]` `{id, cond, directive, when?}` | — | rendered statically into the assembled prompt `## Governance` section as `IF <cond> → <directive>`. Render-only: the `when` runtime predicate is **reserved, not consumed** by the backend. |
 | `chains` | `ChainSpec[]` | — | declared follow-up completions (see below). Absent/empty ⇒ zero added effect. |
 | `sampling` | `{ temperature?, topP?, maxOutputTokens?, seed? }` | — | per-agent AI-SDK call settings, merged OVER the conversation-level `modelParams` (agent wins) by `resolveModelSettings` — a creative agent at temp 0.7 beside a temp-0 admin agent in the same domain. |
-| `exhaustionReply` | `(world, okTools: string[], produced: string[], violations: string[]) => string` | the engine's own closing sentence | the CLOSING SENTENCE committed when the reply STILL violates a check after all redrives — a PURE function of verified observations (structurally unable to fabricate). Precedence: spec → contract → engine. **It supplies the sentence, never the whole closure:** the engine ALWAYS prepends the operation record it derived from the ledger, exactly as the clean path composes `message` + record. |
+| `exhaustionReply` | `(world, okTools: string[], produced: string[], violations: string[]) => string` | the engine's own closing sentence | the CLOSING SENTENCE committed when the reply STILL violates a check after all redrives — a PURE function of verified observations (structurally unable to fabricate). Precedence: spec → contract → engine. **It supplies the sentence, never the whole closure:** the engine ALWAYS prepends the operation record it derived from the action history, exactly as the clean path composes `message` + record. |
 
 **Why the override composes rather than replaces.** Its signature receives tool names and labels, not
 claims, so it CANNOT re-render the operation record. An override that replaced the whole derived closure
 would therefore deliver a domain sentence with no account beside it: *"I could not complete this safely —
-nothing was changed."* — the natural abstain wording — would go out over a write the ledger had recorded,
-while `ledger.did` held the derived truth, and history and the user would disagree. The report is
+nothing was changed."* — the natural abstain wording — would go out over a write the action history had recorded,
+while `action history.did` held the derived truth, and history and the user would disagree. The report is
 engine-owned on every path; an override that also narrates the operations will read as duplicating it,
 which is the correct pressure — the sentence is the domain's, the account of what happened is not.
 
@@ -868,7 +868,7 @@ two levers, neither ROUTING by intent:
 
 1. A `custom` preTool veto (`run` dim): while the offer is open AND this turn has neither an ok
    engage-tool call nor the dismiss, DENY the unrelated-work toolset. The MODEL is forced to resolve the
-   offer first; deterministic code only narrows *when* the choice is due. Keys on world+ledger only — no
+   offer first; deterministic code only narrows *when* the choice is due. Keys on world+action history only — no
    tool is scoped by intent, so the intent-routing ban holds. (A guard MAY read the user text; this one
    does not NEED to — a structural gate is model-independent. If the fork genuinely needs the text, an
    `llmCheck` is the intended tool.)

@@ -147,7 +147,7 @@ const configSchema = z
     tools: z.array(z.string()),
     destructiveTools: z.array(z.string()).optional(),
     // The domain OUTCOME vocabulary: every non-core outcome word an agent may declare in a `did` claim maps
-    // to a CORE outcome (e.g. `{ settled: 'success' }`), so the ledger cross-check stays engine-owned. Loads
+    // to a CORE outcome (e.g. `{ settled: 'success' }`), so the action history cross-check stays engine-owned. Loads
     // into the DomainContract seam (`contract.outcomes`) and is threaded into the claim-coverage guard so a
     // domain outcome resolves the same way the engine's honesty core resolves it.
     outcomes: z.record(z.string(), z.enum(CORE_OUTCOME_VALUES)).optional(),
@@ -384,7 +384,7 @@ function installGuard(spec: AgentSpecBase, g: GuardConfig, deps: NormsDeps, outc
  * LIMITATION — THE HONESTY CROSS-CHECK IS NOT REACHABLE FROM THIS PATH. The spec this builds is
  * CONTRACT-LESS, and there is no `writeTools` key in the schema, so `claimIsGrounded` / `claimIsComplete`
  * never auto-install: a subject configured through a norms file runs with the consent, flow and args
- * families installed and the ledger cross-check absent entirely. Nothing about the loaded spec announces
+ * families installed and the action history cross-check absent entirely. Nothing about the loaded spec announces
  * that gap — the guard count simply comes up short. A benchmark subject that needs the cross-check must
  * be built in TypeScript with a `contract` carrying `writeTools` (see `AgentSpecBase`), not from a norms
  * config. Adding a `writeTools` key here (plus the `outcomes` map it already parses) is the fix; it is a

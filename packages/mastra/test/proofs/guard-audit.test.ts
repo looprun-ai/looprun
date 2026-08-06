@@ -99,7 +99,7 @@ describe('confirmFirst is licensed only by a consent the user typed', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 describe('destructiveThrottle does not count confirmation simulations', () => {
   // A simulate is a call the world RECORDED as having changed nothing (`tookEffect:false`), which is
-  // what every backend with a world ledger writes. An UNRECORDED call is unverified, not effect-free.
+  // what every backend with a world action history writes. An UNRECORDED call is unverified, not effect-free.
   it('THE BUG: a simulate (requiresConfirmation, ok:true) must not block the approved execute', async () => {
     const g = destructiveThrottle(['deleteItem']);
     const ctx = craftCtx({

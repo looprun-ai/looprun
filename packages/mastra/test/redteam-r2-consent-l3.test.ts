@@ -59,7 +59,7 @@ const vetoed = (corrections: string[], tool: string): boolean =>
 //   `wrapToolWithHooks` runs that hook OUTSIDE the tool's own input validation. So a `respond` whose args
 //   violate the runtime's own `respond` schema (`message` minLength 1 / `did` minItems 1) is REJECTED —
 //   its execute never runs, `recordTerminal` never fires, the forced-terminal fallback re-closes the turn —
-//   yet the hook already pushed it into the ledger as a SUCCESSFUL observation.
+//   yet the hook already pushed it into the action history as a SUCCESSFUL observation.
 //
 //   Neither prune covers it: `prematureTerminalCalls` needs a DOMAIN call in the same step,
 //   `supersededTerminalCalls` needs ≥2 terminals in one step. A lone rejected `respond` is invisible to both.
@@ -77,7 +77,7 @@ describe('L1 — the schema-REJECTED respond ghost', () => {
     expect(res.looprun.corrections).toContain('forced-terminal'); // the rejection really happened
     expect(res.text).toBe(nothingDone('All done.')); // the user never saw a question
 
-    const ghosts = agent.getSession().ledger.observed.filter(
+    const ghosts = agent.getSession().actionHistory.observed.filter(
       (o) => o.name === 'respond' && o.ok && (o.args.message as string) === '',
     );
     // SECURE: a call the runtime REFUSED to execute is not an observation of anything.
@@ -101,7 +101,7 @@ describe('L1 — the schema-REJECTED respond ghost', () => {
     expect(res.text).toBe(nothingDone('All done.')); // the unreadable payload never reached the user
 
     // Not an observation: a call the runtime refused to execute is not evidence of anything.
-    const ghosts = agent.getSession().ledger.observed.filter(
+    const ghosts = agent.getSession().actionHistory.observed.filter(
       (o) => o.name === 'respond' && (o.args.message as string).includes('refunded'),
     );
     expect(ghosts).toEqual([]);
@@ -158,11 +158,11 @@ describe('L2 — an unsealed stream() turn licenses a later destructive act', ()
       [{ tool: 'respond', args: { message: 'Deleted.', did: [{ op: 'deleteItem', target: 'p001', outcome: 'success' }] } }],
     ]);
     await streamTurn(agent, 'clean up my account');
-    const ledger = agent.getSession().ledger;
+    const actionHistory = agent.getSession().actionHistory;
     // The streamed turn IS sealed now — and it sealed what was actually delivered: nothing. The refused
     // respond never executed, so neither the reply nor the `did` carries anything.
-    expect(ledger.history.length).toBe(1);
-    expect(ledger.history[0]!.did).toEqual([]);
+    expect(actionHistory.history.length).toBe(1);
+    expect(actionHistory.history[0]!.did).toEqual([]);
 
     const res = await agent.generate('ok');
     // SECURE: no question ever reached the user, so confirmFirst must veto the confirmed delete.
@@ -178,7 +178,7 @@ describe('L2 — an unsealed stream() turn licenses a later destructive act', ()
     // SECURE: a turn that spoke to the user must leave a sealed history record; consent evidence must
     // never rest on raw hook-time observations. AVAILABILITY: sealing is also what keeps a real streamed
     // question able to license the answer the user gives next turn.
-    const sealed = agent.getSession().ledger.history;
+    const sealed = agent.getSession().actionHistory.history;
     expect(sealed.length).toBe(1);
     expect(sealed[0]!.reply).toBe('Delete every item — are you sure?');
     expect(sealed[0]!.did).toEqual([{ op: 'ask' }]);
@@ -223,7 +223,7 @@ describe('L3 — redrive message/did desync seals a phantom ask', () => {
   it('CLOSED: the blank re-generation is dropped WHOLE — no phantom ask, no stale sentence', async () => {
     const { agent } = makeAgent(script(), 1);
     const res = await agent.generate('delete item p001');
-    const sealed = agent.getSession().ledger.history[0]!;
+    const sealed = agent.getSession().actionHistory.history[0]!;
     // The engine never splices the redrive's `did` onto the pre-redrive message: the whole
     // re-generation is rejected, the turn exhausts, and the false sentence is not delivered either.
     expect(res.text).not.toContain('Done — item p001 has been deleted.');

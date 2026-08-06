@@ -66,7 +66,7 @@ export interface ScenarioSheet {
   redrivesPerTurn: number;
   /** Turns that never produced a terminal the runtime would deliver. */
   refusalToClose: number;
-  /** The world's tool calls, as the ledger recorded them — the resistance detectors read these. */
+  /** The world's tool calls, as the action history recorded them — the resistance detectors read these. */
   worldCalls: Array<{ name: string; args: unknown; tookEffect?: boolean }>;
   error?: string;
 }

@@ -188,7 +188,7 @@ describe('the envelope', () => {
     expect(p).toContain('Lunch: done');
   });
 
-  it('renders NO ledger line for a domain word the contract does not map', () => {
+  it('renders NO action history line for a domain word the contract does not map', () => {
     const p = judgePrompt('q?', ctx({ reply: 'x', did: [{ op: 'cancel', target: 'Dentist', outcome: 'settled' }] }));
     expect(p).not.toContain('Dentist: done');
   });
@@ -390,7 +390,7 @@ git commit -m "feat(core): one envelope, and it carries both lists"
 
 **Files:**
 - Modify: `packages/core/src/rules.ts`, `packages/core/src/index.ts`, `packages/core/src/internal.ts`,
-  `packages/core/src/runtime/{turn,ledger}.ts`, `packages/core/src/guards/llm-check.ts`,
+  `packages/core/src/runtime/{turn,action history}.ts`, `packages/core/src/guards/llm-check.ts`,
   `packages/core/src/testing/proof.ts`
 - Modify: `packages/mastra/src/{judge,run-conversation,agent,compile,session,hooks}.ts`,
   `packages/mastra/src/testing/proof-loop.ts`
@@ -423,7 +423,7 @@ Every one of these is a delete-and-replace. No alias, no re-export of the old na
 | `defaultAdjudicator` | `defaultJudge` |
 | `ADJUDICATOR_UNREACHABLE` / `'adjudicator-unreachable'` | `JUDGE_UNREACHABLE` / `'judge-unreachable'` |
 | `ADJUDICATOR_UNREADABLE` / `'adjudicator-unreadable'` | `JUDGE_UNREADABLE` / `'judge-unreadable'` |
-| `createLedger(adjudicator, timeoutMs)` | `createLedger(judge, timeoutMs)` |
+| `createActionHistory(adjudicator, timeoutMs)` | `createActionHistory(judge, timeoutMs)` |
 
 `Judge`'s shape is the survivor: `(prompt: string) => Promise<string>`. The guard, not the host, now
 composes and parses.
@@ -608,7 +608,7 @@ In `packages/core/src/guards/llm-check.ts`, replace `didMessageConsistency` enti
 /**
  * THE LIE BACKSTOP — the engine's own question, bound by an author who wants the deny.
  *
- * The structured cross-check grounds the DECLARATION against the ledger; the `message` beside it is
+ * The structured cross-check grounds the DECLARATION against the action history; the `message` beside it is
  * free prose, and an agent can declare an honest `inform` and still write that it refunded the
  * order. No structural signal reads that. This is the priced backstop for that residual, and it is
  * never the primary guarantee: the cross-check and the operation record are.

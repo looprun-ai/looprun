@@ -17,7 +17,7 @@ Measured evidence per class (from the run):
   test agent (415 tests) and a forensics read
 - deny messages interpolating world facts the model then repeated unread (5 cases)
 - exhaustion stub announcing a no-effect simulate as "succeeded"
-- duplicated observed-ledger predicates drifting across specs
+- duplicated observed-action history predicates drifting across specs
 - guard prose displaced into `behavior[]` when a check was rejected
 - ad-hoc judge input (flattened trace, 64k output blowup, dispatch contamination)
 - hand-computed certification numbers diverging from `looprun-eval cert`
@@ -39,7 +39,7 @@ judge                  remains a SUBAGENT of the host, following the engine-buil
 | executor | spec | increment |
 |---|---|---|
 | GuardCatalog — guards installed from config; NO regex-on-text by schema | `2026-08-02-guard-catalog-data-only-design.md` | 1 |
-| AssembledPromptRenderer policies — deny "name the read, never the figures"; ledger-derived abstain | same spec as GuardCatalog (they ship together) | 1 |
+| AssembledPromptRenderer policies — deny "name the read, never the figures"; action history-derived abstain | same spec as GuardCatalog (they ship together) | 1 |
 | Validate + exam-as-data — `cases.json` schema, premise/coherence checker, `judge-input` | `2026-08-02-exam-data-only-design.md` | 2 |
 | EvalExecutor — `looprun-eval campaign` end-to-end | `2026-08-02-eval-executor-design.md` | 2 |
 | WorldEngine — declarative world interpreted by the engine | `2026-08-02-world-engine-design.md` | 3 |

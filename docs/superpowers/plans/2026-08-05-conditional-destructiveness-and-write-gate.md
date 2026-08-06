@@ -1177,7 +1177,7 @@ git commit -m "docs(skill): a call is destructive by predicate, and one contract
 | §3 the parity law | 5 |
 | §3 the corrected preset-aware predicate | 6 |
 | §3 the two neighbours (positional id, per-lane diff) | 7 |
-| §4 the two ledgers | 7 — the absolute, and the message that names both repairs |
+| §4 the two action histories | 7 — the absolute, and the message that names both repairs |
 | propagation: the catalog is the source | 8 steps 1-2 |
 | propagation: the doc surfaces | 8 steps 3-5 |
 | propagation: the `agentspec` skill | 10 |

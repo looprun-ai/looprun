@@ -1,7 +1,7 @@
 /**
- * @looprun-ai/core runtime — the per-conversation observation LEDGER (framework-free).
+ * @looprun-ai/core runtime — the per-conversation observation ACTION HISTORY (framework-free).
  *
- * The ledger is what guards read (`ctx.observed`, `producedThisTurn`, …): the model's own verified
+ * The action history is what guards read (`ctx.observed`, `producedThisTurn`, …): the model's own verified
  * tool activity, plus the turn-structured `history` (user text included). `observed` and `history` accumulate for the whole conversation; the other
  * fields reset per turn via `beginTurn`.
  */
@@ -12,14 +12,14 @@ import { validateClaims, type Intention, type RenderOpts } from './claims.js';
 import { approvalCode, closeApprovalsFor, consumeApprovals, type ApprovalRequest } from './approval-request.js';
 import { preferredIdentityValues } from '../guards/honesty.js';
 
-/** An OUTPUT-dim (postTool) result-invariant failure OR a flowChain restate — carried on the ledger
+/** An OUTPUT-dim (postTool) result-invariant failure OR a flowChain restate — carried on the action history
  *  and JOINED into the onReply violation set so the same bounded no-tools redrive relays its text. */
 export interface PostToolViolation {
   guard: Guard;
   reason: string;
 }
 
-export interface TurnLedger {
+export interface TurnActionHistory {
   observed: ObservedCall[];
   turnIndex: number;
   producedThisTurn: string[];
@@ -29,8 +29,8 @@ export interface TurnLedger {
   /** The CURRENT turn's DELIVERED structured claim of operations — the delivered `respond`'s `did`
    *  (the last ok respond carrying a non-empty `message`, consistent with the superseded-terminal
    *  pruning). Read into the reply-side GuardCtx as `ctx.did` so the cross-check guards ground the
-   *  agent's DECLARATION against the world ledger. It is ALSO the turn's ask record — the turn posed a
-   *  question iff `hasAskIntent(ledger.did)`, never through a flag. Reset per turn. */
+   *  agent's DECLARATION against the world action history. It is ALSO the turn's ask record — the turn posed a
+   *  question iff `hasAskIntent(action history.did)`, never through a flag. Reset per turn. */
   did: Intention[];
   /** Consecutive guard-vetoed rounds this turn (reset when a call passes guards and executes). */
   vetoStreak: number;
@@ -46,7 +46,7 @@ export interface TurnLedger {
   inFlightCalls: ObservedCall[];
   /** Calls VETOED before execution this turn (guard denied them — the world never saw them). Reset per
    *  turn; surfaced on the TurnRecord as `attemptedCalls` so a FORBIDDEN invariant can fail on the
-   *  ATTEMPT the guard blocked, not only on a world-ledger entry (which, for a veto, never exists). */
+   *  ATTEMPT the guard blocked, not only on a world-action history entry (which, for a veto, never exists). */
   attemptedCalls: Array<{ name: string; args: unknown }>;
   /** The user's incoming message for the CURRENT turn (set by `beginTurn`). Read into every GuardCtx as
    *  `ctx.userText`; onInput reads it as the real incoming text. Reset per turn. */
@@ -55,7 +55,7 @@ export interface TurnLedger {
    *  beginTurn), read into every GuardCtx as the read-only `ctx.history`. A turn lands here via
    *  {@link recordTurnHistory} once its reply is finalized. */
   history: HistoryTurn[];
-  /** The judge seam (set at ledger creation from the runtime options), threaded into every GuardCtx as
+  /** The judge seam (set at action history creation from the runtime options), threaded into every GuardCtx as
    *  `ctx.judge`. Only `llmCheck` guards read it. Conversation-scoped;
    *  never reset per turn. Absent ⇒ a spec that installs an llmCheck fails loud at conversation start. */
   judge?: Judge;
@@ -93,32 +93,32 @@ export interface TurnLedger {
 export const VETO_STORM_LIMIT = 3;
 
 /** True when the turn is in a veto storm (see VETO_STORM_LIMIT). */
-export function vetoStormHit(ledger: TurnLedger): boolean {
-  return ledger.vetoStreak >= VETO_STORM_LIMIT;
+export function vetoStormHit(actionHistory: TurnActionHistory): boolean {
+  return actionHistory.vetoStreak >= VETO_STORM_LIMIT;
 }
 
-export function createLedger(judge?: Judge, judgeTimeoutMs?: number, renderOpts?: RenderOpts): TurnLedger {
+export function createActionHistory(judge?: Judge, judgeTimeoutMs?: number, renderOpts?: RenderOpts): TurnActionHistory {
   return { observed: [], turnIndex: 0, producedThisTurn: [], turnCorrections: [], attachments: [], terminalReply: '', did: [], vetoStreak: 0, postToolViolations: [], inFlightCalls: [], attemptedCalls: [], currentUserText: '', history: [], approvals: [], consentThisTurn: [], approvalsIssuedThisTurn: [], destructiveLabels: {}, ...(judge ? { judge } : {}), ...(judgeTimeoutMs !== undefined ? { judgeTimeoutMs } : {}), ...(renderOpts ? { renderOpts } : {}) };
 }
 
 /** Reset the per-turn fields (the conversation-scoped `observed` and `history` are kept). `userText` is
  *  the current turn's incoming user message ('' when the turn is not opened by a fresh user message). */
-export function beginTurn(ledger: TurnLedger, turnIndex: number, userText = ''): void {
-  ledger.turnIndex = turnIndex;
-  ledger.producedThisTurn = [];
-  ledger.turnCorrections = [];
-  ledger.attachments = [];
-  ledger.terminalReply = '';
-  ledger.did = [];
-  ledger.vetoStreak = 0;
-  ledger.postToolViolations = [];
-  ledger.inFlightCalls = [];
-  ledger.attemptedCalls = [];
-  ledger.currentUserText = userText;
-  ledger.approvalsIssuedThisTurn = [];
+export function beginTurn(actionHistory: TurnActionHistory, turnIndex: number, userText = ''): void {
+  actionHistory.turnIndex = turnIndex;
+  actionHistory.producedThisTurn = [];
+  actionHistory.turnCorrections = [];
+  actionHistory.attachments = [];
+  actionHistory.terminalReply = '';
+  actionHistory.did = [];
+  actionHistory.vetoStreak = 0;
+  actionHistory.postToolViolations = [];
+  actionHistory.inFlightCalls = [];
+  actionHistory.attemptedCalls = [];
+  actionHistory.currentUserText = userText;
+  actionHistory.approvalsIssuedThisTurn = [];
   // The user's own words are the ONLY thing that turns an open approval into consent, and they are read
   // exactly here — once per turn, by the runtime. No guard reads text.
-  ledger.consentThisTurn = consumeApprovals(ledger.approvals, userText, turnIndex);
+  actionHistory.consentThisTurn = consumeApprovals(actionHistory.approvals, userText, turnIndex);
 }
 
 /**
@@ -129,15 +129,15 @@ export function beginTurn(ledger: TurnLedger, turnIndex: number, userText = ''):
  * SUPERSEDES the old one — two open literals for one act would let the user answer a question they are
  * no longer being asked.
  */
-function issueApproval(ledger: TurnLedger, c: { tool: string; subject?: string; meaning: string }): void {
+function issueApproval(actionHistory: TurnActionHistory, c: { tool: string; subject?: string; meaning: string }): void {
   const token = approvalCode(c.meaning);
   const sameAct = (x: ApprovalRequest): boolean =>
     x.consumedTurn === undefined && !x.closed && x.tool === c.tool && x.subject === c.subject;
-  if (ledger.approvals.some((x) => sameAct(x) && x.token === token)) return;
-  for (const x of ledger.approvals) if (sameAct(x)) x.closed = true;
-  const approval: ApprovalRequest = { ...c, token, issuedTurn: ledger.turnIndex };
-  ledger.approvals.push(approval);
-  ledger.approvalsIssuedThisTurn.push(approval);
+  if (actionHistory.approvals.some((x) => sameAct(x) && x.token === token)) return;
+  for (const x of actionHistory.approvals) if (sameAct(x)) x.closed = true;
+  const approval: ApprovalRequest = { ...c, token, issuedTurn: actionHistory.turnIndex };
+  actionHistory.approvals.push(approval);
+  actionHistory.approvalsIssuedThisTurn.push(approval);
 }
 
 /**
@@ -147,10 +147,10 @@ function issueApproval(ledger: TurnLedger, c: { tool: string; subject?: string; 
  * The question's meaning is the label the spec declared. A tool with no label issues nothing, so it can
  * never be consented to and never runs — absence of a label is absence of any possible consent.
  */
-export function issueApprovalForVeto(ledger: TurnLedger, tool: string): void {
-  const meaning = ledger.destructiveLabels[tool];
+export function issueApprovalForVeto(actionHistory: TurnActionHistory, tool: string): void {
+  const meaning = actionHistory.destructiveLabels[tool];
   if (!meaning) return;
-  issueApproval(ledger, { tool, meaning });
+  issueApproval(actionHistory, { tool, meaning });
 }
 
 /** Structural success check on a tool result ({success:false} / {error} / {PREREQ_NOT_MET} ⇒ failed). */
@@ -163,32 +163,32 @@ export function resultOk(r: unknown): boolean {
 }
 
 /** Record a guard VETO of a tool call (the call did not run). */
-export function recordVeto(ledger: TurnLedger, name: string, args: Record<string, unknown>, correction: string): void {
-  ledger.observed.push({ name, args, ok: false, turnIndex: ledger.turnIndex });
+export function recordVeto(actionHistory: TurnActionHistory, name: string, args: Record<string, unknown>, correction: string): void {
+  actionHistory.observed.push({ name, args, ok: false, turnIndex: actionHistory.turnIndex });
   // The blocked ATTEMPT — surfaced to the eval layer so a FORBIDDEN invariant can fire on it (the call
-  // never reached the world, so it is invisible on the world ledger by construction).
-  ledger.attemptedCalls.push({ name, args });
-  ledger.turnCorrections.push(correction);
-  ledger.vetoStreak++;
+  // never reached the world, so it is invisible on the world action history by construction).
+  actionHistory.attemptedCalls.push({ name, args });
+  actionHistory.turnCorrections.push(correction);
+  actionHistory.vetoStreak++;
 }
 
 /** Record an EXECUTED tool call's outcome (afterToolCall): ok flag, confirmation flag, produced label. */
-export function recordToolResult(ledger: TurnLedger, name: string, args: Record<string, unknown>, output: unknown, world?: AgentWorld): void {
-  ledger.vetoStreak = 0; // an executed call passed guards — the model is not looping
+export function recordToolResult(actionHistory: TurnActionHistory, name: string, args: Record<string, unknown>, output: unknown, world?: AgentWorld): void {
+  actionHistory.vetoStreak = 0; // an executed call passed guards — the model is not looping
   const ok = output !== undefined && resultOk(output);
   const requiresConfirmation = (output as { requiresConfirmation?: unknown } | null | undefined)?.requiresConfirmation === true;
   // Same-step reconcile: this call is now in `observed` — drop its provisional in-flight sibling
   // record to avoid double-counting it against a later same-step call.
-  const inFlightIx = ledger.inFlightCalls.findIndex((o) => o.name === name && canonArgs(o.args) === canonArgs(args));
-  if (inFlightIx >= 0) ledger.inFlightCalls.splice(inFlightIx, 1);
-  // tookEffect: match this call against the world's ledger (by name+args, like the in-flight
+  const inFlightIx = actionHistory.inFlightCalls.findIndex((o) => o.name === name && canonArgs(o.args) === canonArgs(args));
+  if (inFlightIx >= 0) actionHistory.inFlightCalls.splice(inFlightIx, 1);
+  // tookEffect: match this call against the world's action history (by name+args, like the in-flight
   // reconcile above) to learn whether it MUTATED the world — so a reply-honesty check (now `llmCheck`'s
   // job) can distinguish an action-success from a read-success and NOT veto an honest "cannot do X / no
   // record found" reply on a read-only turn.
   //
   // NO RECORD ⇒ UNKNOWN, NEVER `false`. Writing `tookEffect: false` whenever a world object is present
   // but holds no matching row would conflate "the world says it changed nothing" with "nobody recorded
-  // what happened" — and a world whose ledger nothing writes (the native-tools/MCP stub) would then
+  // what happened" — and a world whose action history nothing writes (the native-tools/MCP stub) would then
   // report every mutation as effect-free, making `destructiveThrottle`'s EFFECT-BEATS-FLAGS rule inert.
   // The field is OMITTED when there is no row, and the readers treat unknown as unverified rather than
   // as "no effect".
@@ -200,38 +200,38 @@ export function recordToolResult(ledger: TurnLedger, name: string, args: Record<
   // the guard ctx and the domain `exhaustionReply` seams still read as a flat list of what was produced).
   const lbl = ok ? (output as { label?: unknown } | null | undefined)?.label : undefined;
   const producedLabel = typeof lbl === 'string' ? lbl : undefined;
-  ledger.observed.push({
+  actionHistory.observed.push({
     name,
     args,
     ok,
-    turnIndex: ledger.turnIndex,
+    turnIndex: actionHistory.turnIndex,
     ...(wtc ? { tookEffect: wtc.tookEffect === true } : {}),
-    // PROVENANCE of the effect flag rides with it: a world that keeps its own ledger ATTESTS the effect
+    // PROVENANCE of the effect flag rides with it: a world that keeps its own action history ATTESTS the effect
     // per executor, while the native-tools path INFERS it from the result. Only the attested form carries
     // "this call mutated the world" for a tool the domain never listed (see ObservedCall.effectInferred).
     ...(wtc?.effectInferred === true ? { effectInferred: true } : {}),
     ...(requiresConfirmation ? { resultFlags: { requiresConfirmation: true } } : {}),
     ...(producedLabel !== undefined ? { producedLabel } : {}),
   });
-  if (producedLabel !== undefined) ledger.producedThisTurn.push(producedLabel);
+  if (producedLabel !== undefined) actionHistory.producedThisTurn.push(producedLabel);
   // The world runs the two-step protocol itself: its "I need confirmation" answer NAMES the record, so
   // the question it raises is bound to that record and to nothing else.
   if (requiresConfirmation) {
     const [subject] = preferredIdentityValues(output);
-    if (subject) issueApproval(ledger, { tool: name, subject, meaning: subject });
+    if (subject) issueApproval(actionHistory, { tool: name, subject, meaning: subject });
   } else if (wtc?.tookEffect === true) {
     // A write that LANDED moves the record, so every open question about it stops being true and closes.
-    for (const subject of preferredIdentityValues(output)) closeApprovalsFor(ledger.approvals, subject);
+    for (const subject of preferredIdentityValues(output)) closeApprovalsFor(actionHistory.approvals, subject);
   }
 }
 
-/** Record a terminal CALL in the observed ledger. Called from the guard hooks' SYNCHRONOUS segment
+/** Record a terminal CALL in the observed action history. Called from the guard hooks' SYNCHRONOUS segment
  *  (before any await): the model runtime dispatches a step's tool calls concurrently (Promise.all)
  *  but STARTS them in emission order, so a synchronous hook-time push makes a same-step `respond`
  *  (whose `did` carries an `ask` intention) visible to a sibling destructive call's preTool checks —
  *  closing the noActAfterAskSameTurn same-step bypass. */
-export function recordTerminalCall(ledger: TurnLedger, name: string, args: Record<string, unknown>): void {
-  ledger.observed.push({ name, args, ok: true, turnIndex: ledger.turnIndex });
+export function recordTerminalCall(actionHistory: TurnActionHistory, name: string, args: Record<string, unknown>): void {
+  actionHistory.observed.push({ name, args, ok: true, turnIndex: actionHistory.turnIndex });
 }
 
 /**
@@ -240,16 +240,16 @@ export function recordTerminalCall(ledger: TurnLedger, name: string, args: Recor
  * The premature-terminal invalidation path (a terminal that shared its closing step with a domain call,
  * so its text was composed before that call's result existed) must clear the WHOLE delivered declaration,
  * not just the reply prose: an invalidated terminal's `did` is an equally-premature claim, and leaving it
- * on the ledger would let the cross-check guards ground against — or history retain — a declaration the
+ * on the action history would let the cross-check guards ground against — or history retain — a declaration the
  * user never saw. The backend calls this where core owns the invalidation seam; a single call keeps the
  * two fields in lockstep so no site can clear the text while orphaning the claims.
  *
  * It does NOT touch `observed`: the invalidated terminal's OBSERVATION is dropped by
  * {@link pruneSupersededTerminals} fed with `prematureTerminalCalls(steps)` — the backend runs both.
  */
-export function clearDeliveredTerminal(ledger: TurnLedger): void {
-  ledger.terminalReply = '';
-  ledger.did = [];
+export function clearDeliveredTerminal(actionHistory: TurnActionHistory): void {
+  actionHistory.terminalReply = '';
+  actionHistory.did = [];
 }
 
 /**
@@ -264,16 +264,16 @@ export function clearDeliveredTerminal(ledger: TurnLedger): void {
  * obtained. Returns the names actually pruned, for the turn's recovery log.
  */
 export function pruneSupersededTerminals(
-  ledger: TurnLedger,
+  actionHistory: TurnActionHistory,
   undelivered: Array<{ name: string; args: Record<string, unknown> }>,
 ): string[] {
   const pruned: string[] = [];
   for (const s of undelivered) {
-    const ix = ledger.observed.findIndex(
-      (o) => o.turnIndex === ledger.turnIndex && o.name === s.name && canonArgs(o.args) === canonArgs(s.args),
+    const ix = actionHistory.observed.findIndex(
+      (o) => o.turnIndex === actionHistory.turnIndex && o.name === s.name && canonArgs(o.args) === canonArgs(s.args),
     );
     if (ix >= 0) {
-      ledger.observed.splice(ix, 1);
+      actionHistory.observed.splice(ix, 1);
       pruned.push(s.name);
     }
   }
@@ -287,29 +287,29 @@ export function pruneSupersededTerminals(
  *  they track the exact respond the runtime delivers (the last ok respond with non-empty message,
  *  consistent with `supersededTerminalCalls`). An ill-shaped `did` is not silently dropped: the
  *  well-formed subset is stored and a `claims-invalid:<n>` correction records the defect count. */
-export function recordTerminal(ledger: TurnLedger, name: string, args: Record<string, unknown>): void {
+export function recordTerminal(actionHistory: TurnActionHistory, name: string, args: Record<string, unknown>): void {
   const text = typeof args.message === 'string' ? args.message : '';
   if (!text.trim()) return;
-  ledger.terminalReply = text;
+  actionHistory.terminalReply = text;
   const { claims, errors } = validateClaims(args.did);
-  ledger.did = claims;
-  if (errors.length) ledger.turnCorrections.push(`claims-invalid:${errors.length}`);
+  actionHistory.did = claims;
+  if (errors.length) actionHistory.turnCorrections.push(`claims-invalid:${errors.length}`);
 }
 
 /**
- * Seal the CURRENT turn into `ledger.history` once its `reply` is finalized — so the NEXT turn's guards
- * see it as read-only conversation context (user text included). Assembled purely from the ledger:
+ * Seal the CURRENT turn into `action history.history` once its `reply` is finalized — so the NEXT turn's guards
+ * see it as read-only conversation context (user text included). Assembled purely from the action history:
  *   · toolCalls  — the non-terminal calls EXECUTED this turn (a guard-vetoed call is excluded here; it
  *                  never reached the world and rides `attemptedCalls`). `result` is joined from the
- *                  world ledger when `world` is passed; `ok`/`tookEffect` come from the observed entry.
- *   · userText   — the turn's incoming message (`ledger.currentUserText`).
+ *                  world action history when `world` is passed; `ok`/`tookEffect` come from the observed entry.
+ *   · userText   — the turn's incoming message (`action history.currentUserText`).
  *   · guardEvents — the turn's recovery/correction log.
  * The pushed entry (and its arrays) is FROZEN: `ctx.history` is read-only by construction.
  */
-export function recordTurnHistory(ledger: TurnLedger, reply: string, world?: AgentWorld): void {
-  const vetoed = new Set(ledger.attemptedCalls.map((a) => a.name + '|' + canonArgs(a.args as Record<string, unknown>)));
-  const toolCalls: HistoryToolCall[] = ledger.observed
-    .filter((o) => o.turnIndex === ledger.turnIndex && !isTerminal(o.name) && !vetoed.has(o.name + '|' + canonArgs(o.args)))
+export function recordTurnHistory(actionHistory: TurnActionHistory, reply: string, world?: AgentWorld): void {
+  const vetoed = new Set(actionHistory.attemptedCalls.map((a) => a.name + '|' + canonArgs(a.args as Record<string, unknown>)));
+  const toolCalls: HistoryToolCall[] = actionHistory.observed
+    .filter((o) => o.turnIndex === actionHistory.turnIndex && !isTerminal(o.name) && !vetoed.has(o.name + '|' + canonArgs(o.args)))
     .map((o) => {
       const wtc = world?.toolCalls.find(
         (t) => t.name === o.name && canonArgs((t.args ?? {}) as Record<string, unknown>) === canonArgs(o.args),
@@ -323,17 +323,17 @@ export function recordTurnHistory(ledger: TurnLedger, reply: string, world?: Age
       }) as HistoryToolCall;
     });
   const entry: HistoryTurn = Object.freeze({
-    turnIndex: ledger.turnIndex,
-    userText: ledger.currentUserText, consent: ledger.consentThisTurn,
+    turnIndex: actionHistory.turnIndex,
+    userText: actionHistory.currentUserText, consent: actionHistory.consentThisTurn,
     reply,
     toolCalls: Object.freeze(toolCalls),
-    // The turn's DELIVERED, VERIFIED claims: finalizeReply syncs `ledger.did` to what it actually
+    // The turn's DELIVERED, VERIFIED claims: finalizeReply syncs `action history.did` to what it actually
     // delivered (the accepted/salvaged payload's did, or the engine-derived exhaustion set), so history
     // retains the grounded set — never a raw or fabricated declaration. Frozen entry-and-claim so
     // `ctx.history[n].did` is read-only by construction.
-    did: Object.freeze(ledger.did.map((c) => Object.freeze({ ...c }))),
-    attemptedCalls: Object.freeze(ledger.attemptedCalls.map((a) => Object.freeze({ ...a }))),
-    guardEvents: Object.freeze(ledger.turnCorrections.slice()),
+    did: Object.freeze(actionHistory.did.map((c) => Object.freeze({ ...c }))),
+    attemptedCalls: Object.freeze(actionHistory.attemptedCalls.map((a) => Object.freeze({ ...a }))),
+    guardEvents: Object.freeze(actionHistory.turnCorrections.slice()),
   });
-  ledger.history.push(entry);
+  actionHistory.history.push(entry);
 }

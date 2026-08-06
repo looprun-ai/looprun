@@ -19,8 +19,8 @@ describe('the call it carries', () => {
   });
 
   it('returns the model text VERBATIM — it reaches no verdict of its own', async () => {
-    const gen = async () => ({ text: 'VIOLATION: the reply claims a refund the ledger does not show' });
-    expect(await defaultJudge(gen, {})('q?')).toBe('VIOLATION: the reply claims a refund the ledger does not show');
+    const gen = async () => ({ text: 'VIOLATION: the reply claims a refund the actionHistory does not show' });
+    expect(await defaultJudge(gen, {})('q?')).toBe('VIOLATION: the reply claims a refund the actionHistory does not show');
   });
 
   it('runs the call ISOLATED — the judge system instructions, no tools, one step', async () => {

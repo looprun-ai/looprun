@@ -232,7 +232,7 @@ describe('destructiveThrottle — adversarial', () => {
 
   it('HOLDS: a genuine simulate (recorded tookEffect:false) does not block the approved execute', () => {
     // `tookEffect:false` is POSITIVE evidence that the simulate changed nothing — the backend records
-    // it whenever the world keeps a ledger. Without it the call is unverified, not effect-free.
+    // it whenever the world keeps a action history. Without it the call is unverified, not effect-free.
     const simulate = okCall('deleteRecord', 5, { recordId: 'A', confirmed: false }, {
       tookEffect: false,
       resultFlags: { requiresConfirmation: true },

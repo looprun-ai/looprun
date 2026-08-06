@@ -59,7 +59,7 @@ describe('05 · runSpecConversation over the scheduler', () => {
 
     // THE DELIVERED REPLY, both turns — the chapter's whole claim is that the user READS these.
     // Asserting only guard events let a broken flow pass: when `addEvent` took its subject under
-    // `title` (not an identity key) the vetoed attempt named nothing the ledger recognised,
+    // `title` (not an identity key) the vetoed attempt named nothing the action history recognised,
     // `claimIsGrounded` denied the honest `blocked` declaration, and the engine's exhaustion closure
     // was delivered INSTEAD of the sentence printed in the chapter — invisibly, because the four
     // recovery events still contained the one this test looked for.
@@ -145,7 +145,7 @@ describe('06 · the served agent', () => {
       const body = (await res.json()) as { choices: Array<{ message: { content: string } }>; looprun: Record<string, unknown> };
 
       expect(body.choices[0]!.message.content).toContain('Standup');
-      // The wire envelope carries the governance metadata MINUS the observed ledger (server-side only).
+      // The wire envelope carries the governance metadata MINUS the observed action history (server-side only).
       expect(Object.keys(body.looprun).sort()).toEqual(['corrections', 'exhausted', 'sessionId', 'turnIndex', 'violations']);
       expect(body.looprun.sessionId).toBe('demo');
     } finally {

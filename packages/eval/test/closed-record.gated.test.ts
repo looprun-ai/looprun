@@ -74,11 +74,11 @@ describe.skipIf(skip !== null)('the closed record and the rewrite — over the 7
           rewrite: call,
           // The eval judge is the battery's own — same closed question, same isolation, same parse — so
           // the number it produces is comparable to the one the baseline measurement reported. Its
-          // prompt reads exactly two fields off the run, `ledger` and `delivered`, and this is the pair
-          // it is handed: the run's real ledger, and the delivery the design would have shipped.
+          // prompt reads exactly two fields off the run, `action history` and `delivered`, and this is the pair
+          // it is handed: the run's real action history, and the delivery the design would have shipped.
           judge: call,
           judgePromptFor: (run, delivered) =>
-            judgePrompt({ ledger: run.ledger, delivered } as unknown as ProseLieRecord),
+            judgePrompt({ actionHistory: run.actionHistory, delivered } as unknown as ProseLieRecord),
           mechanicalUnsafe: (delivered, language, target) => assertsCompletion(delivered, language, target),
           replicates: REPLICATES,
         },

@@ -68,7 +68,7 @@ export interface DomainContract {
   /** The domain's WRITE tools — the ones that MUTATE the world (vs pure reads). The honesty cross-check
    *  (`claimIsGrounded` / `claimIsComplete`, auto-installed when this is non-empty) reads it to ground a
    *  `success` claim against an EFFECTED write and to demand every effected write be reported. Same list
-   *  `deriveClaimsFromLedger` consumes so the exhaustion closure never announces a no-effect simulate as done —
+   *  `deriveClaimsFromActionHistory` consumes so the exhaustion closure never announces a no-effect simulate as done —
    *  seated HERE so both the write surface and its {@link outcomes} map arrive together on the one domain object. */
   writeTools?: readonly string[];
   /** The world condition every write of this domain is refused under — declared ONCE, installed on
@@ -84,7 +84,7 @@ export interface DomainContract {
     exempt?: readonly string[];
   };
   /** The domain OUTCOME vocabulary: every non-core outcome word an agent may declare in a `did` claim MUST
-   *  map to a core outcome (e.g. `{ settled: 'success' }`), so the ledger cross-check stays
+   *  map to a core outcome (e.g. `{ settled: 'success' }`), so the action history cross-check stays
    *  engine-owned and never becomes semantic. Fed to `claimIsGrounded` beside {@link writeTools}. */
   outcomes?: OutcomeMap;
 }

@@ -116,19 +116,19 @@ expect(() => loadNormsConfig(fixtureProseless)).toThrow(/prose/);
 - Test: `packages/core/test/honest-abstain.test.ts`
 
 **Interfaces:**
-- Consumes: `world.toolCalls` ledger entries `{name, tookEffect}`.
+- Consumes: `world.toolCalls` action history entries `{name, tookEffect}`.
 - Produces: the default abstain string; `loadNormsConfig` wires it as the contract's `exhaustionReply` when the domain config does not opt out.
 
-- [ ] **Step 1: Failing test** — ledger with a simulate (`tookEffect: false`) for `cancelDispatch`, an effected `createBooking`, and a read `getMember`:
+- [ ] **Step 1: Failing test** — action history with a simulate (`tookEffect: false`) for `cancelDispatch`, an effected `createBooking`, and a read `getMember`:
 
 ```ts
-const s = buildHonestAbstain(worldWithLedger, ['cancelDispatch', 'createBooking', 'getMember'], ['cancelDispatch', 'createBooking']);
+const s = buildHonestAbstain(worldWithActionHistory, ['cancelDispatch', 'createBooking', 'getMember'], ['cancelDispatch', 'createBooking']);
 expect(s).not.toContain('cancelDispatch');   // no-effect WRITE never announced as succeeded
 expect(s).toContain('createBooking');        // effected write is announced
 expect(s).toContain('getMember');            // reads are announced
 ```
 
-- [ ] **Step 2: FAIL. Step 3:** implement (filter: keep a name iff not a write, or some ledger entry under it has `tookEffect === true`). **Step 4:** green + typecheck + surface-lock rider if exported publicly. **Step 5: Commit** — `feat(core): engine-owned honest abstain — a no-effect simulate is never announced as done`.
+- [ ] **Step 2: FAIL. Step 3:** implement (filter: keep a name iff not a write, or some action history entry under it has `tookEffect === true`). **Step 4:** green + typecheck + surface-lock rider if exported publicly. **Step 5: Commit** — `feat(core): engine-owned honest abstain — a no-effect simulate is never announced as done`.
 
 ---
 

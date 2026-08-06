@@ -29,13 +29,13 @@ import {
   hasAskIntent,
 } from '../../src/runtime/claims.js';
 import {
-  createLedger,
+  createActionHistory,
   beginTurn,
   recordTerminalCall,
   recordTerminal,
   clearDeliveredTerminal,
   pruneSupersededTerminals,
-} from '../../src/runtime/ledger.js';
+} from '../../src/runtime/action-history.js';
 import { prematureTerminalCalls, prematureTerminalTools, supersededTerminalCalls } from '../../src/runtime/terminal.js';
 import { finalizeReply } from '../../src/runtime/turn.js';
 import { isBlankDelivery } from '../../src/runtime/claims.js';
@@ -245,10 +245,10 @@ describe('SECTION 3 — turnCorrections leak on the reject path is telemetry-onl
     // A redrive is respond-only (activeTools:['respond']); recordVeto — the ONLY writer of attemptedCalls —
     // fires solely on a DOMAIN-tool veto, which cannot occur when no domain tool is active. So the
     // reject-path field the honesty core actually reads never accretes a phantom attempt.
-    const ledger = createLedger();
-    beginTurn(ledger, 0);
-    recordTerminalCall(ledger, 'respond', { message: 'draft', did: [{ op: 'inform' }] });
-    expect(ledger.attemptedCalls).toEqual([]); // a terminal is never a vetoed attempt
+    const actionHistory = createActionHistory();
+    beginTurn(actionHistory, 0);
+    recordTerminalCall(actionHistory, 'respond', { message: 'draft', did: [{ op: 'inform' }] });
+    expect(actionHistory.attemptedCalls).toEqual([]); // a terminal is never a vetoed attempt
   });
 });
 
@@ -260,25 +260,25 @@ describe('SECTION 3 — turnCorrections leak on the reject path is telemetry-onl
 // PREMATURE path — a SINGLE ask-intent `respond` sharing a step with a domain call — invalidates
 // the DELIVERED declaration (clearDeliveredTerminal wipes did + terminalReply); on its own that does
 // NOT prune the observed entry, because superseded requires ≥2 terminals in the step, so the ask-intent
-// `respond` would survive in the conversation-scoped ledger and read as "the user was asked" next turn.
+// `respond` would survive in the conversation-scoped action history and read as "the user was asked" next turn.
 // The backends therefore feed `prematureTerminalCalls(steps)` to the SAME prune, so both undelivered
 // paths end at the same place. These vectors are the regression.
 // ═══════════════════════════════════════════════════════════════════════════════
 describe('SECTION 4 — the premature-terminal ask leak is pruned, so no cross-turn license survives', () => {
   /** Reproduce EXACTLY the backend's post-generate terminal reconciliation (agent.ts / run-conversation.ts). */
-  function replayBackendTerminalReconcile(steps: unknown, ledger: ReturnType<typeof createLedger>) {
+  function replayBackendTerminalReconcile(steps: unknown, actionHistory: ReturnType<typeof createActionHistory>) {
     const premature = prematureTerminalTools(steps);
-    if (premature.length && ledger.terminalReply.trim()) clearDeliveredTerminal(ledger);
-    pruneSupersededTerminals(ledger, prematureTerminalCalls(steps));
-    pruneSupersededTerminals(ledger, supersededTerminalCalls(steps));
+    if (premature.length && actionHistory.terminalReply.trim()) clearDeliveredTerminal(actionHistory);
+    pruneSupersededTerminals(actionHistory, prematureTerminalCalls(steps));
+    pruneSupersededTerminals(actionHistory, supersededTerminalCalls(steps));
   }
 
   it('the premature ask-intent respond is REMOVED from observed by the invalidation path', () => {
-    const ledger = createLedger();
-    beginTurn(ledger, 1);
+    const actionHistory = createActionHistory();
+    beginTurn(actionHistory, 1);
     // Turn 1, ONE step: a domain read + an asking respond, emitted together (the premature shape).
-    recordTerminalCall(ledger, 'respond', { message: 'Delete account 5? (yes/no)', did: [{ op: 'ask' }] });
-    recordTerminal(ledger, 'respond', { message: 'Delete account 5? (yes/no)', did: [{ op: 'ask' }] });
+    recordTerminalCall(actionHistory, 'respond', { message: 'Delete account 5? (yes/no)', did: [{ op: 'ask' }] });
+    recordTerminal(actionHistory, 'respond', { message: 'Delete account 5? (yes/no)', did: [{ op: 'ask' }] });
     const steps = [{ toolCalls: [
       { toolName: 'lookupAccount', args: { id: 5 } },
       { toolName: 'respond', args: { message: 'Delete account 5? (yes/no)', did: [{ op: 'ask' }] } },
@@ -287,33 +287,33 @@ describe('SECTION 4 — the premature-terminal ask leak is pruned, so no cross-t
     expect(prematureTerminalTools(steps)).toEqual(['lookupAccount']);
     expect(supersededTerminalCalls(steps)).toEqual([]);
 
-    replayBackendTerminalReconcile(steps, ledger);
+    replayBackendTerminalReconcile(steps, actionHistory);
 
     // The delivered declaration is wiped …
-    expect(ledger.terminalReply).toBe('');
-    expect(hasAskIntent(ledger.did)).toBe(false);
+    expect(actionHistory.terminalReply).toBe('');
+    expect(hasAskIntent(actionHistory.did)).toBe(false);
     // … AND the observed ask event is gone with it — nothing left to read as consent.
-    expect(ledger.observed.filter((o) => o.ok && isAskEvent(o))).toEqual([]);
+    expect(actionHistory.observed.filter((o) => o.ok && isAskEvent(o))).toEqual([]);
   });
 
   it('CLOSED: next turn, confirmFirst DENIES deleteAccount in both shapes — no declaration is a licence', () => {
-    const ledger = createLedger();
-    beginTurn(ledger, 1);
-    recordTerminalCall(ledger, 'respond', { message: 'Delete account 5?', did: [{ op: 'ask' }] });
-    recordTerminal(ledger, 'respond', { message: 'Delete account 5?', did: [{ op: 'ask' }] });
+    const actionHistory = createActionHistory();
+    beginTurn(actionHistory, 1);
+    recordTerminalCall(actionHistory, 'respond', { message: 'Delete account 5?', did: [{ op: 'ask' }] });
+    recordTerminal(actionHistory, 'respond', { message: 'Delete account 5?', did: [{ op: 'ask' }] });
     const steps = [{ toolCalls: [
       { toolName: 'lookupAccount', args: { id: 5 } },
       { toolName: 'respond', args: { message: 'Delete account 5?', did: [{ op: 'ask' }] } },
     ] }];
-    replayBackendTerminalReconcile(steps, ledger);
+    replayBackendTerminalReconcile(steps, actionHistory);
     // (the user actually saw the forced-terminal reply — a NON-asking sign-off — not this question)
 
     // Turn 2: the model now fires the confirmed destructive call.
-    beginTurn(ledger, 2); // observed is conversation-scoped → the leaked ask persists
+    beginTurn(actionHistory, 2); // observed is conversation-scoped → the leaked ask persists
     const gEither = confirmFirst();
     const gAsk = confirmFirst({ flag: false });
-    const ctxEither = base({ tool: 'deleteAccount', args: { confirmed: true, id: 5 }, observed: ledger.observed, turnIndex: 2 });
-    const ctxAsk = base({ tool: 'deleteAccount', args: {}, observed: ledger.observed, turnIndex: 2 });
+    const ctxEither = base({ tool: 'deleteAccount', args: { confirmed: true, id: 5 }, observed: actionHistory.observed, turnIndex: 2 });
+    const ctxAsk = base({ tool: 'deleteAccount', args: {}, observed: actionHistory.observed, turnIndex: 2 });
 
     // SECURE: no phantom license survives the prune — both variants deny.
     expect(gEither.check(ctxEither)).not.toBeNull();
@@ -321,14 +321,14 @@ describe('SECTION 4 — the premature-terminal ask leak is pruned, so no cross-t
   });
 
   it('CONTROL: with the ask entry pruned by hand, confirmFirst denies just the same', () => {
-    const ledger = createLedger();
-    beginTurn(ledger, 1);
-    recordTerminalCall(ledger, 'respond', { message: 'Delete account 5?', did: [{ op: 'ask' }] });
+    const actionHistory = createActionHistory();
+    beginTurn(actionHistory, 1);
+    recordTerminalCall(actionHistory, 'respond', { message: 'Delete account 5?', did: [{ op: 'ask' }] });
     // Simulate the pruning the premature path OMITS: drop the leaked ask entry.
-    ledger.observed = ledger.observed.filter((o) => !isAskEvent(o));
-    beginTurn(ledger, 2);
+    actionHistory.observed = actionHistory.observed.filter((o) => !isAskEvent(o));
+    beginTurn(actionHistory, 2);
     const g = confirmFirst();
-    const ctx = base({ tool: 'deleteAccount', args: { confirmed: true, id: 5 }, observed: ledger.observed, turnIndex: 2 });
+    const ctx = base({ tool: 'deleteAccount', args: { confirmed: true, id: 5 }, observed: actionHistory.observed, turnIndex: 2 });
     expect(g.check(ctx)).not.toBeNull(); // no phantom license → denied, as intended
   });
 });
@@ -386,13 +386,13 @@ describe('SECTION 6 — blank-delivery floor holds against a zero-width override
       id: 'a', mode: 'M', persona: 'p', tools: [],
       exhaustionReply: () => '⁠​', // word-joiner + zero-width space: survives .trim()
     });
-    const ledger = createLedger();
-    beginTurn(ledger, 0);
+    const actionHistory = createActionHistory();
+    beginTurn(actionHistory, 0);
     // A payload that will be REJECTED by a stubbed onReply violation path is not needed here — instead
     // force the exhaustion branch by making the initial payload trip the floor AND leaving redrives at 0
     // so we reach a composed delivery. Simplest: an empty message + empty did composes to '' → floor.
     const blank: RespondPayload = { message: '', did: [] };
-    const out = await finalizeReply(spec, undefined, world(), ledger, blank, async () => blank, 0);
+    const out = await finalizeReply(spec, undefined, world(), actionHistory, blank, async () => blank, 0);
     expect(out.exhausted).toBe(true);
     // Even though the override returned a zero-width string, the floor swapped in the engine closure.
     expect(out.text.replace(/[​⁠﻿‌‍]/g, '').trim().length).toBeGreaterThan(0);
@@ -422,23 +422,23 @@ describe('SECTION 6 — blank-delivery floor holds against a zero-width override
 
   it('CLOSED: a message of exotic invisibles routes finalizeReply to the non-empty closure', async () => {
     const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona: 'p', tools: [] });
-    const ledger = createLedger();
-    beginTurn(ledger, 0);
+    const actionHistory = createActionHistory();
+    beginTurn(actionHistory, 0);
     const invisible: RespondPayload = { message: '\u2063\u3164\u180E', did: [{ op: 'inform' }] };
-    const out = await finalizeReply(spec, undefined, world(), ledger, invisible, async () => invisible, 0);
+    const out = await finalizeReply(spec, undefined, world(), actionHistory, invisible, async () => invisible, 0);
     expect(out.exhausted).toBe(true);
     expect(isBlankDelivery(out.text)).toBe(false);
-    expect(ledger.turnCorrections).toContain('exhaustion-blank-floor');
+    expect(actionHistory.turnCorrections).toContain('exhaustion-blank-floor');
   });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// SECTION 7 — `amount` is CORROBORATED against the same ledger fact that grounds the claim. An
+// SECTION 7 — `amount` is CORROBORATED against the same action history fact that grounds the claim. An
 // advisory `amount` — any finite number validateClaims accepts, read by no guard — would let a domain
 // `renderClaim` that surfaces it deliver a fabricated magnitude inside the block the engine advertises
 // as verified.
 // ═══════════════════════════════════════════════════════════════════════════════
-describe('SECTION 7 — amount is corroborated against the ledger fact that grounds the claim', () => {
+describe('SECTION 7 — amount is corroborated against the actionHistory fact that grounds the claim', () => {
   it('a fabricated amount on an otherwise-grounded claim is DENIED', () => {
     const g = claimIsGrounded({ writeTools: ['refund'] });
     const w = world({ toolCalls: [{ name: 'refund', args: { order: 'BK5', value: 5 }, result: { label: 'BK5', refunded: 5 }, tookEffect: true }] });

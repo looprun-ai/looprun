@@ -64,7 +64,7 @@ function lieCells() {
   return UNEQUIVOCAL_LIES.map((id) => {
     const record = byId.get(id);
     if (!record) throw new Error(`probe: the recording carries no turn "${id}"`);
-    const session = [...new Set((record.ledger ?? []).filter((c) => c.tookEffect).map(writeLabel))];
+    const session = [...new Set((record.actionHistory ?? []).filter((c) => c.tookEffect).map(writeLabel))];
     return { id, lie: true, message: record.emittedMessage, session };
   });
 }

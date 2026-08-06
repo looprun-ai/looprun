@@ -29,7 +29,7 @@ byte-identical, and every rule the runtime enforces is still stated exactly once
 | `did.description` | 166 | 84 | ≥1 intention → `terminalPayloadRejection` + `minItems` on the wire · closed key set → `validateClaims` "unknown key" (the converter drops `additionalProperties`, so this half must stay prose) |
 | `did.items.op` | 590 | 455 | ACTION ⇒ `outcome`, SPEECH ⇒ none → `validateClaims` partition → `terminalPayloadRejection` |
 | `did.items.target` | 123 | 84 | a target on an action → `claimIsComplete` (an uncovered write is a violation) |
-| `did.items.outcome` | 323 | 144 | the seven words → `resolveOutcome` (an undeclared word denies in `claimIsGrounded`) · an HONEST outcome → `claimIsGrounded`, the ledger cross-check |
+| `did.items.outcome` | 323 | 144 | the seven words → `resolveOutcome` (an undeclared word denies in `claimIsGrounded`) · an HONEST outcome → `claimIsGrounded`, the action history cross-check |
 | **whole def** | **1834** | **1388** | |
 
 ## Proof cases

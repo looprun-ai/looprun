@@ -18,7 +18,7 @@
  *        pnpm -C packages/eval exec vitest run test/spontaneous-lie.gated.test.ts
  * ```
  *
- * WHAT IT MEASURES — how often the model asserts an operation the ledger denies when NOTHING in the
+ * WHAT IT MEASURES — how often the model asserts an operation the action history denies when NOTHING in the
  * request invites the claim. 48 conversations, 168 user turns, over eight situations × two languages,
  * in TWO domains (the calendar subject at two variants, the refund desk at one), every turn through
  * the real loop. The three-way verdict is HAND adjudication over the full delivered

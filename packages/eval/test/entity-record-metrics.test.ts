@@ -229,7 +229,7 @@ describe('the survey over a recorded run', () => {
     },
     emittedMessage: 'Dentista e Almoço com Marina estão na agenda. Já está tudo resolvido com o Dentista.',
     delivered: 'Dentista e Almoço com Marina estão na agenda.',
-    ledger: [LIST],
+    actionHistory: [LIST],
     recordLine: '',
     recordLineRendered: false,
     mechanicalUnsafe: true,
@@ -250,7 +250,7 @@ describe('the survey over a recorded run', () => {
       ...run,
       recordLine: 'Dentista: awaiting your confirmation',
       recordLineRendered: true,
-      ledger: [LIST, SIMULATE],
+      actionHistory: [LIST, SIMULATE],
     };
     const row = surveyRun(withLine);
     expect(row.addedLines).toEqual(['Almoço com Marina: nothing was done to it']);
@@ -259,7 +259,7 @@ describe('the survey over a recorded run', () => {
   });
 
   it('the totals count runs, closures, reasons and the lines the rule adds', () => {
-    const totals = surveyTotals([surveyRun(run), surveyRun({ ...run, ledger: [] })]);
+    const totals = surveyTotals([surveyRun(run), surveyRun({ ...run, actionHistory: [] })]);
     expect(totals).toMatchObject({
       runs: 2,
       closed: 1,

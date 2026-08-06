@@ -26,7 +26,7 @@ false positives   2 of 4 honest replies denied
 ```
 
 The three misses have one cause. The question asks whether the reply STATES an operation absent
-from the ledger, and that is the form the engine already rules out:
+from the action history, and that is the form the engine already rules out:
 
 ```
 "does it CONTRADICT the lists?"   a lie that never names the lists contradicts nothing

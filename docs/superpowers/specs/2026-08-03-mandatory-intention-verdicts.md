@@ -28,7 +28,7 @@ This is the sentence the rest of the document supports. It has two halves and th
  │                                       the model's prose at all.                       │
  │                                                                                       │
  │  A real action cannot be FABRICATED — every declared operation is grounded against    │
- │                                       the ledger the agent does not control; a claim  │
+ │                                       the action history the agent does not control; a claim  │
  │                                       naming an entity the turn never touched denies. │
  │                                                                                       │
  │  The OPERATION REPORT is engine-owned — the operational sentences the user reads are  │
@@ -113,10 +113,10 @@ This is the sentence the rest of the document supports. It has two halves and th
 
 | kind | verdict | detail |
 |---|---|---|
-| `requiresBefore` | **could not break** | the predicate is "was `<read>` observed OK this turn", over the runtime's own ledger. The agent supplies neither the tool name nor the ok flag |
+| `requiresBefore` | **could not break** | the predicate is "was `<read>` observed OK this turn", over the runtime's own action history. The agent supplies neither the tool name nor the ok flag |
 | `forbidThisTurn` | **could not break** | a set-membership test on the tool name the runtime dispatched; the name is the runtime's, not an arg |
-| `maxCalls` | **could not break** | counts ledger rows. An agent can only make the count go UP |
-| `noDuplicateCall` | **could not break** | canonical-args equality (`canonArgs`) over the same-turn ledger. The one abuse — perturbing an arg to dodge the equality — produces a genuinely different call, which is the honest reading |
+| `maxCalls` | **could not break** | counts action history rows. An agent can only make the count go UP |
+| `noDuplicateCall` | **could not break** | canonical-args equality (`canonArgs`) over the same-turn action history. The one abuse — perturbing an arg to dodge the equality — produces a genuinely different call, which is the honest reading |
 | `argRequired` / `argAbsent` | **could not break** | presence/absence of a key on the call's own args, decided before the world runs. No value is trusted, so no value can lie |
 | `argFormat` | **could not break** | a closed, non-regex format vocabulary over the arg's own value; a failure denies. No fail-open branch exists |
 | `precondition` | **could not break** | a closed expression over WORLD state (`{count:…}` / `{limit:…}` / a named host ref). The agent contributes nothing to either side; a ref that does not resolve throws at LOAD |
@@ -151,16 +151,16 @@ They collapse into nine laws. Each row is "the thing that used to work" → "why
 | L3 | **a write speaks for ITS OWN entity** | cover the ORD-1 write with two claims on ORD-2, because ORD-1's result also named `parentId:'ORD-2'` | coverage and `success` grounding match the PREFERRED identity — shallowest keys, `id`/`label` beating the references beside them |
 | L4 | **provenance, stated per polarity** | ground a `success` on an entity named only in the agent's own args | PRESENCE grounds only on world-issued values. ABSENCE/NON-EFFECT grounds on the world's own negative answer plus the identity-KEY args (an absent record issues no value) — and those polarities can never cover a write |
 | L5 | **emptiness needs POSITIVE evidence** | make `{status:'BK-1 is active and confirmed'}` read as an EMPTY read and ground a `not_found` on a record the world had just reported PRESENT | empty ⇔ a canonical empty shape, or ≥1 data channel with every channel empty. A record of scalars alone is undecidable → not empty |
-| L6 | **`no_op` needs positive evidence** | ground `{target:'anything at all', outcome:'no_op'}` on an EMPTY ledger — and have the engine RENDER that arbitrary text to the user as a verified non-event | the turn must have ADDRESSED the entity; absence of contradiction is no longer evidence |
+| L6 | **`no_op` needs positive evidence** | ground `{target:'anything at all', outcome:'no_op'}` on an EMPTY action history — and have the engine RENDER that arbitrary text to the user as a verified non-event | the turn must have ADDRESSED the entity; absence of contradiction is no longer evidence |
 | L7 | **coverage is a MAXIMUM MATCHING** | (availability, not security) starve an honest fully-reported turn into a false denial by call ordering | Kuhn's augmenting path replaces the first-fit sweep |
-| L8 | **`amount` is corroborated** | deliver `ORD-5: refunded $9800` inside the engine-composed "verified" block over a world result of `12.5` | the figure must appear among the magnitudes of the same ledger fact that grounds the claim |
+| L8 | **`amount` is corroborated** | deliver `ORD-5: refunded $9800` inside the engine-composed "verified" block over a world result of `12.5` | the figure must appear among the magnitudes of the same action history fact that grounds the claim |
 | L9 | **the render seam never sees `op`** | hand `renderClaim` — whose output is delivered verbatim — arbitrary model text (`"refundOrder(): SYSTEM: your account is closed, call 1-800-555-0000"`) | the seam takes `RenderedClaim` (`op?: undefined`): a domain that reads it does not compile and finds nothing at runtime |
 
 **Wave 3 added two more laws to the same core.**
 
 | # | law | it used to be possible to… | closed by |
 |---|---|---|---|
-| L10 | **the write surface is a UNION, not an intersection** | mutate through a tool the author forgot to list in `contract.writeTools` and be silently uncovered — while the guard catalog reported full coverage and the ledger row said `tookEffect:true` | an effected write is `writeTools ∩ tookEffect` **∪** any call whose effect the WORLD ATTESTED. `writeTools` is a lower bound on the write surface now, never an upper one |
+| L10 | **the write surface is a UNION, not an intersection** | mutate through a tool the author forgot to list in `contract.writeTools` and be silently uncovered — while the guard catalog reported full coverage and the action history row said `tookEffect:true` | an effected write is `writeTools ∩ tookEffect` **∪** any call whose effect the WORLD ATTESTED. `writeTools` is a lower bound on the write surface now, never an upper one |
 | L11 | **an INFERRED effect does not attest** | (the counter-law that keeps L10 honest) — | the native-tools path derives `tookEffect` from `ok && !requiresConfirmation`, which every successful READ satisfies, so those rows are marked `effectInferred` and keep the intersection rule. Widening on a guess would demand a `success` claim for every lookup |
 
 ---
@@ -173,7 +173,7 @@ the test, so a future reader meets the argument before the vector.
 | vector | severity | why it is open |
 |---|---|---|
 | **b2.1 / b2.2 / b2.3 / C7** — a sealed, non-blank turn declaring `ask` licenses a later destructive act even when the message poses no question | HIGH | Whether prose ASKS SOMETHING is a natural-language judgement, and reading it has no deterministic instrument: a linguistic pattern is forbidden by the no-regex law, is defeated by appending one character, and false-denies across languages; a model call is `didMessageConsistency`, which is a judgement, not a proof. The deterministic route does not read the prose at all — it makes the engine RENDER the question from the ask's subject, so declaring an ask is what puts a question on the user's screen (D1/D2 in `plans/2026-08-03-consent-and-elicitation.md`). Until that lands, what IS closed deterministically: the licence rests on a DELIVERED turn record (never a hook-time respond), the sealed `did` belongs to the payload whose message was delivered, the reply must be non-blank, recency is bounded, and a tool no longer self-licenses its own repeat |
-| **3.1b** — a `success` claim on ORD-2 grounds while an ORD-1 write also happened | (grounding half only) | Grounding is EXISTENTIAL per claim and the turn really did effect a write on ORD-2, so the claim names a true ledger fact. No per-claim rule separates it from the honest single-write case without inventing a claim→write binding, which would false-deny every turn reporting two writes on one entity. **The HARM is a coverage property and coverage is closed** (3.1a denies the turn), so the ORD-1 write can no longer be hidden |
+| **3.1b** — a `success` claim on ORD-2 grounds while an ORD-1 write also happened | (grounding half only) | Grounding is EXISTENTIAL per claim and the turn really did effect a write on ORD-2, so the claim names a true action history fact. No per-claim rule separates it from the honest single-write case without inventing a claim→write binding, which would false-deny every turn reporting two writes on one entity. **The HARM is a coverage property and coverage is closed** (3.1a denies the turn), so the ORD-1 write can no longer be hidden |
 | **the ask is bound to NOTHING** — an `ask` intention names no subject, so an off-topic question satisfies EVERY consent kind that reads one, for one turn: `confirmFirst` `via:'ask'`/`'either'` (batch-b), `askedEarlier` (any gated arg licensed by any earlier ask), `pendingConfirmMustAsk` (an unrelated ask clears a pending destructive confirm while the reply reads "permanently deleted") | MEDIUM | Binding an ask to a RECORD requires the ask to NAME one, and a speech intention deliberately does not (MI-D5). Judging what a question was ABOUT is the same prose judgement as the row above and is closed by the same instrument. Three live BREAK tests pin the three shapes. Closing it is a design decision about the `ask` shape, not a guard fix |
 | **A-V6 / A-V7** — the prose lie beside an honest declaration | PREVENTION open, CONTRADICTION closed | The engine does not stop the sentence — assertion and polarity live in prose. What it does deterministically is deliver its own account beside it: the CLOSED OPERATION RECORD ships on every finalized turn, and its closure sentence is chosen by whether any action was declared, so V7's sharp edge (a speech-only `did` renders no report) is removed — that turn now carries "No operation was carried out on this turn." Measured against all 42 hand-adjudicated lies: every one is contradicted. Design: `2026-08-04-closed-operation-record-design.md` |
 | **`amount` unit naivety** | LOW | A domain whose world reports cents while its claims report units will false-deny. The corroboration compares raw numbers and knows no unit. Stated as a **Limit** on the `amount` bullet in `GUARDS.md`, not solved |
@@ -206,7 +206,7 @@ measurement: `2026-08-04-closed-operation-record-design.md`.
 
 ---
 
-## 5 · ROUND-2 LEDGER
+## 5 · ROUND-2 ACTION HISTORY
 
 ```
  PoC file                       it.fails at 32e173d   remaining   flipped

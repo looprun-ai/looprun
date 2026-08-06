@@ -2,11 +2,11 @@
  * @looprun-ai/mastra — per-conversation session state.
  *
  * One LoopRunAgent is registered ONCE (Mastra instance / Studio) while each conversation gets its
- * own world + ledger + message history, keyed by sessionId. A per-session promise-chain mutex
+ * own world + action history + message history, keyed by sessionId. A per-session promise-chain mutex
  * serializes concurrent turns of the same conversation.
  */
-import { createLedger } from '@looprun-ai/core/internal';
-import type { TurnLedger, RenderOpts } from '@looprun-ai/core/internal';
+import { createActionHistory } from '@looprun-ai/core/internal';
+import type { TurnActionHistory, RenderOpts } from '@looprun-ai/core/internal';
 import type { AgentWorld, Judge } from '@looprun-ai/core';
 
 export type WorldFactory<W extends AgentWorld = AgentWorld> = (sessionId: string) => W;
@@ -14,7 +14,7 @@ export type WorldFactory<W extends AgentWorld = AgentWorld> = (sessionId: string
 export interface LoopRunSession<W extends AgentWorld = AgentWorld> {
   id: string;
   world: W;
-  ledger: TurnLedger;
+  actionHistory: TurnActionHistory;
   turnIndex: number;
   /** Local conversation history (used when no Mastra memory is configured). */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -27,7 +27,7 @@ export class SessionStore<W extends AgentWorld = AgentWorld> {
   private readonly sessions = new Map<string, LoopRunSession<W>>();
   private readonly factory: WorldFactory<W> | null;
   private readonly singleton: W | null;
-  /** The host judge threaded into every session's ledger (llmCheck's seam). */
+  /** The host judge threaded into every session's action history (llmCheck's seam). */
   private readonly judge: Judge | undefined;
   /** The judge timeout (ms) threaded beside it (a hung judge resolves via failMode). */
   private readonly judgeTimeoutMs: number | undefined;
@@ -61,7 +61,7 @@ export class SessionStore<W extends AgentWorld = AgentWorld> {
     const session: LoopRunSession<W> = {
       id,
       world,
-      ledger: createLedger(this.judge, this.judgeTimeoutMs, this.renderOpts),
+      actionHistory: createActionHistory(this.judge, this.judgeTimeoutMs, this.renderOpts),
       turnIndex: 0,
       messages: [],
       chain: Promise.resolve(),

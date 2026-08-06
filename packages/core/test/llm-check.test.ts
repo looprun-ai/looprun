@@ -197,7 +197,7 @@ describe('assertJudgePresent — fail loud at conversation start', () => {
 
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
 // llmCheckLie — the LIE BACKSTOP. The structured cross-check grounds the DECLARATION against the
-// ledger, but the `message` is free prose beside it: an agent can declare an honest `inform` and
+// action history, but the `message` is free prose beside it: an agent can declare an honest `inform` and
 // still WRITE that it refunded €500. No structural signal reads that. This is the priced, opt-in
 // backstop — the engine's own lie question, bound by an author who wants the deny. It is NEVER
 // auto-installed and never the primary guarantee.

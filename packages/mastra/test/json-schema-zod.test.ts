@@ -8,7 +8,7 @@
  *
  * CARRIED: type/enum/required/items · description (every node) · minLength · minItems.
  * NOT carried, deliberately: pattern/format (the `argFormat` GUARD owns format, and a zod rejection
- * is an ungoverned failure path — no guard event, no deny prose, no ledger record) · maxLength /
+ * is an ungoverned failure path — no guard event, no deny prose, no action history record) · maxLength /
  * maxItems / minimum / maximum (bounds are a precondition judgment) · default · uniqueItems.
  */
 import { describe, expect, it } from 'vitest';

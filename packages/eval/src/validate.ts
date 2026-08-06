@@ -137,7 +137,7 @@ export function checkReferences(subject: Subject): { blocking: string[]; advisor
   }
 
   for (const id of authored) {
-    if (!targeted.has(id)) advisory.push(`references: guard "${id}" is targeted by no case (reverse-coverage) — justify it in the ledger or add a case`);
+    if (!targeted.has(id)) advisory.push(`references: guard "${id}" is targeted by no case (reverse-coverage) — justify it in the actionHistory or add a case`);
   }
   return { blocking, advisory };
 }

@@ -1,7 +1,7 @@
 /**
  * @looprun-ai/mastra — compileSpec: the low-level kit for devs assembling their OWN `new Agent({...})`.
  *
- * Single-conversation by design (one world, one ledger). For multi-session hosts use LoopRunAgent.
+ * Single-conversation by design (one world, one action history). For multi-session hosts use LoopRunAgent.
  *
  *   const g = compileSpec(bookkeepingSpec, { world, toolDefs })
  *   const agent = new Agent({ id: 'books', name: 'Books', model, instructions: g.instructions,
@@ -11,14 +11,14 @@
 import type { AgentSpec, AgentWorld, ToolDef, DomainContract, Judge } from '@looprun-ai/core';
 import {
   assertJudgePresent,
-  beginTurn as ledgerBeginTurn,
-  createLedger,
+  beginTurn as actionHistoryBeginTurn,
+  createActionHistory,
   finalizeReply as coreFinalizeReply,
   recordTurnHistory,
   renderAssembledPrompt,
   terminalProtocol,
 } from '@looprun-ai/core/internal';
-import type { FinalizedReply, TurnLedger, RespondPayload } from '@looprun-ai/core/internal';
+import type { FinalizedReply, TurnActionHistory, RespondPayload } from '@looprun-ai/core/internal';
 import { buildWorldTools } from './tools.js';
 import { makeGuardHooks, makeInputProcessors } from './hooks.js';
 import type { GuardHooks } from './hooks.js';
@@ -26,7 +26,7 @@ import type { LoopRunSession } from './session.js';
 import { DEFAULT_REDRIVES } from './run-conversation.js';
 
 export interface CompiledSpec {
-  ledger: TurnLedger;
+  actionHistory: TurnActionHistory;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   tools: Record<string, any>;
   /** The byte-stable assembledPrompt + the current turn's terminal-protocol variant. */
@@ -36,7 +36,7 @@ export interface CompiledSpec {
   inputProcessors?: any[];
   /** The tools active THIS turn (respects the reply-only terminal policy). */
   activeTools(): string[];
-  /** Advance the turn (world + ledger) and get the state/uploads tail for the user message. Pass
+  /** Advance the turn (world + action history) and get the state/uploads tail for the user message. Pass
    *  `userText` so onInput/guards see the real incoming text (`ctx.userText`) and it enters history. */
   beginTurn(input?: { attachments?: string[]; userText?: string }): { userMessageTail: string };
   /** Mutators → onReply checks → bounded redrive (re-generate ONE respond) → honest-abstain. Seals the
@@ -64,7 +64,7 @@ export function compileSpec(
   const session: LoopRunSession = {
     id: 'compiled',
     world,
-    ledger: createLedger(opts.judge, opts.judgeTimeoutMs, {
+    actionHistory: createActionHistory(opts.judge, opts.judgeTimeoutMs, {
       renderClaim: contract?.renderClaim,
       outcomes: contract?.outcomes,
     }),
@@ -88,9 +88,9 @@ export function compileSpec(
   const replyOnly = () => replyOnlyThisTurn;
 
   return {
-    ledger: session.ledger,
+    actionHistory: session.actionHistory,
     tools: buildWorldTools(opts.toolDefs ?? [], surface, getSession),
-    instructions: () => renderPrompt(world, session.ledger.attachments) + (terminalOn ? terminalProtocol(replyOnly()) : ''),
+    instructions: () => renderPrompt(world, session.actionHistory.attachments) + (terminalOn ? terminalProtocol(replyOnly()) : ''),
     hooks: makeGuardHooks(spec, getSession),
     inputProcessors: makeInputProcessors(spec, getSession),
     activeTools: () => [...surface, 'respond'],
@@ -101,9 +101,9 @@ export function compileSpec(
       }
       started = true;
       replyOnlyThisTurn = evalReplyOnly();
-      ledgerBeginTurn(session.ledger, session.turnIndex, input?.userText ?? '');
+      actionHistoryBeginTurn(session.actionHistory, session.turnIndex, input?.userText ?? '');
       const attLabels = (input?.attachments ?? []).map((u) => world.ingestAttachment(u));
-      session.ledger.attachments = attLabels;
+      session.actionHistory.attachments = attLabels;
       const stateBlock = contract ? contract.stateBlock(world) : '';
       const tailParts: string[] = [];
       if (stateBlock && stateBlock.trim()) tailParts.push(`## Account state\n${stateBlock}`);
@@ -111,8 +111,8 @@ export function compileSpec(
       return { userMessageTail: tailParts.join('\n\n') };
     },
     async finalizeReply(initial, redrive) {
-      const finalized = await coreFinalizeReply(spec, contract, world, session.ledger, initial, redrive, spec.controls.redrives ?? opts.redrives ?? DEFAULT_REDRIVES);
-      recordTurnHistory(session.ledger, finalized.text, world);
+      const finalized = await coreFinalizeReply(spec, contract, world, session.actionHistory, initial, redrive, spec.controls.redrives ?? opts.redrives ?? DEFAULT_REDRIVES);
+      recordTurnHistory(session.actionHistory, finalized.text, world);
       return finalized;
     },
   };

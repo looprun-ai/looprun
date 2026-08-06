@@ -330,10 +330,10 @@ behavior list.
 | `stateBlock(world)` | the volatile block, rendered onto the **user-message tail**. This is where the model learns what is currently true |
 | `coreInvariants` | domain-wide rules rendered verbatim into every agent. Nothing agent-specific belongs here — that is what `scope` and the guards' own prose are for |
 | `languageClause` | the absolute output-language rule |
-| `exhaustionReply?` | optional: the deterministic closing SENTENCE committed when a reply still violates its checks after every correction. It must be a pure function of verified observations — structurally unable to fabricate. It supplies the sentence only: the engine always prepends the operation record it derived from the ledger |
-| `writeTools?` | **the honesty switch.** The tools that MUTATE the world, as opposed to pure reads. Naming them auto-installs the cross-check pair `claimIsGrounded` + `claimIsComplete` (chapter 04 §3): a declared action the ledger cannot match is denied, and an effected write no intention covers is denied. Leave it out and there is no cross-check at all — and nothing tells you |
+| `exhaustionReply?` | optional: the deterministic closing SENTENCE committed when a reply still violates its checks after every correction. It must be a pure function of verified observations — structurally unable to fabricate. It supplies the sentence only: the engine always prepends the operation record it derived from the action history |
+| `writeTools?` | **the honesty switch.** The tools that MUTATE the world, as opposed to pure reads. Naming them auto-installs the cross-check pair `claimIsGrounded` + `claimIsComplete` (chapter 04 §3): a declared action the action history cannot match is denied, and an effected write no intention covers is denied. Leave it out and there is no cross-check at all — and nothing tells you |
 | `writeGate?` | the ONE world condition every write of the domain is refused under, stated once. It installs a `precondition` (id `minimal:writeGate`) on every agent that carries a write, so no lane can key on a third of the condition while the others key on the rest. `exempt` names the writes that must stay usable while the condition holds — a compliance hold is that shape — and each entry must be one of `writeTools`. Declaring it with no `writeTools`, or exempting a tool that is not a write, **throws** at construction |
-| `outcomes?` | optional: the domain's outcome vocabulary, mapping each non-core word an agent may declare onto one of the seven core outcomes (`{ settled: 'success' }`). The domain adds words; it never adds a way around the ledger |
+| `outcomes?` | optional: the domain's outcome vocabulary, mapping each non-core word an agent may declare onto one of the seven core outcomes (`{ settled: 'success' }`). The domain adds words; it never adds a way around the action history |
 | `renderClaim?` | optional: the domain's wording (and language) for ONE verified claim LINE in the engine-rendered operation record. It receives the VERIFIED fields only — never the agent-authored `op`. Absent ⇒ a neutral English default naming the claim's `target` |
 | `engineText?` | optional: the ENGINE's own sentences — the record's closing lines and the confirmation question. A conversation held in another language declares them, per key, because the user has to READ the instruction whose token they type back. The token itself is engine-issued and is the same literal in every language |
 
@@ -522,7 +522,7 @@ type ToolTarget = 'any' | string[];
               and not yet executed               the governance envelope { success:false,
                                                  source:'governance', guard, correction, error };
                                                  the model retries in the SAME generation
-   postTool   the call has executed        sees the result; feeds the verified ledger
+   postTool   the call has executed        sees the result; feeds the verified action history
    onReply    the reply exists             deny ⇒ bounded no-tools re-generation, then the
                                                   deterministic honest closure
 ```
@@ -600,7 +600,7 @@ And the other obligation, *never delete without asking*, appears nowhere in the 
 The scheduler's smoke test exercises the **world's** half of that protocol — the unconfirmed call is
 a side-effect-free simulate, the confirmed one deletes. It does **not** exercise the `confirmFirst`
 guard: the guard's real requirement is that the simulate landed in a strictly *earlier* turn, and that
-lives in the runtime's ledger across turns. Proving the guard needs a run, which is chapter 05.
+lives in the runtime's action history across turns. Proving the guard needs a run, which is chapter 05.
 
 ---
 

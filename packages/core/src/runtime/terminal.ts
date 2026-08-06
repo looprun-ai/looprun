@@ -7,7 +7,7 @@
  *
  * `respond` is STRUCTURED: the non-operational prose rides `message`,
  * and `did` (≥1 `Intention`, enforced by the schema) declares what the turn IS — action intentions the
- * cross-check guards ground against the world ledger, speech intentions (`inform`/`greet`/`refuse`/`ask`)
+ * cross-check guards ground against the world action history, speech intentions (`inform`/`greet`/`refuse`/`ask`)
  * that classify the message's speech act. Asking is an `ask` intention, not a flag, and not a second
  * terminal tool — there is exactly ONE terminal.
  */
@@ -64,10 +64,10 @@ export function prematureTerminalTools(steps: any): string[] {
  *
  * {@link prematureTerminalTools} answers "did a terminal ride along with DOMAIN work?" and names the
  * domain tools so the backend can invalidate the delivery. But invalidation alone leaves the premature
- * terminal's OBSERVATION in the ledger — and a premature `respond` whose `did` carried an `ask`
+ * terminal's OBSERVATION in the action history — and a premature `respond` whose `did` carried an `ask`
  * intention then reads, next turn, as "the user was asked", licensing the consent guards off a question
  * the user never saw. This returns the terminal CALLS of every step that also carried a
- * domain call, so the caller can prune them from `ledger.observed` — symmetric with
+ * domain call, so the caller can prune them from `action history.observed` — symmetric with
  * {@link supersededTerminalCalls}, and reading both toolCall shapes the same way.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -94,12 +94,12 @@ export function prematureTerminalCalls(steps: any): Array<{ name: string; args: 
  * one. The runtime delivers the LAST non-empty `message`, while the guard hooks record EVERY terminal
  * as an ok observation. So a step of two `respond` calls — one asking a destructive question
  * (an `ask` intention in its `did`), one signing off — delivers only the sign-off and still leaves the asking `respond`
- * in the ledger. Next turn, a prior-ask confirmation variant reads that entry as "the user was asked",
+ * in the action history. Next turn, a prior-ask confirmation variant reads that entry as "the user was asked",
  * and a destructive action unlocks off a question the user NEVER SAW. Consent recorded from an
  * undelivered message is the same class of defect as a reply grounding itself.
  *
  * Returns the terminals that lost the delivery contest — everything except the last one the runtime
- * would ACCEPT ({@link terminalPayloadRejection}). The caller prunes them from the ledger AFTER the generation resolves, so
+ * would ACCEPT ({@link terminalPayloadRejection}). The caller prunes them from the action history AFTER the generation resolves, so
  * within-step visibility (a sibling's preTool checks seeing the ask) is untouched; only the
  * cross-turn consent evidence is corrected.
  */
@@ -249,7 +249,7 @@ const RESPOND_DESCRIPTION = 'END the turn.';
  *   SPEECH op ⇒ no outcome     validateClaims partition     → terminalPayloadRejection
  *   the seven outcome words    resolveOutcome → an undeclared word denies in `claimIsGrounded`
  *   a `target` on an action    `claimIsComplete` (an uncovered write is a violation)
- *   an HONEST outcome          `claimIsGrounded` — the ledger cross-check, never the prose
+ *   an HONEST outcome          `claimIsGrounded` — the action history cross-check, never the prose
  *   `message` asserts no act   NOTHING deterministic (the open prose residual; the optional
  *                              `did × message` llmCheck is its only named mitigation) — so this one
  *                              rule is carried by the schema and cannot be cut.
@@ -266,7 +266,7 @@ const RESPOND_DESCRIPTION = 'END the turn.';
  *    reject at the tool boundary what the engine deliberately accepts.
  *
  * `amount` is a LEGAL claim key ({@link import('./claims.js').validateClaims} accepts it, and
- * `claimMatches` corroborates it against the ledger) that the schema deliberately does NOT advertise.
+ * `claimMatches` corroborates it against the action history) that the schema deliberately does NOT advertise.
  * Nothing REQUIRES a magnitude: the cross-check treats an absent `amount` as a pass, so the only turn
  * the field can change is one it DENIES. Advertising it spends bytes on every turn of every agent to
  * buy extra ways to fail. Removing the property changes no acceptance — the JSON-schema → zod

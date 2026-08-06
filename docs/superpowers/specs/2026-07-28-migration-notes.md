@@ -89,11 +89,11 @@ verified against the repo rather than inferred:
 | symbol | before | after | action |
 |---|---|---|---|
 | `runSpecConversation` | `@looprun-ai/mastra` | **unchanged** | none — the main entry point is intact |
-| `createLedger`, `beginTurn`, `evaluatePreTool`, `enforcePostTool`, `redriveMessage`, `finalizeReply`, `resolveGuards`, `renderAssembledPrompt`, `ReplyViolation` | `@looprun-ai/core` | `@looprun-ai/core/internal` | **change the specifier** — these nine are the whole "bring your own loop" seam the shim drives |
+| `createActionHistory`, `beginTurn`, `evaluatePreTool`, `enforcePostTool`, `redriveMessage`, `finalizeReply`, `resolveGuards`, `renderAssembledPrompt`, `ReplyViolation` | `@looprun-ai/core` | `@looprun-ai/core/internal` | **change the specifier** — these nine are the whole "bring your own loop" seam the shim drives |
 | `Guard`, `GuardCtx`, `ObservedCall` | `@looprun-ai/core` | **unchanged — public** | none. They are taught by chapter 04 and stay on the barrel (`ObservedCall` is used by `shim/src/transcript.ts`) |
 
 The nine and the three above are the *complete* set: splitting `step-handler.ts`'s import block gives
-exactly `createLedger`, `beginTurn`, `enforcePostTool`, `evaluatePreTool`, `finalizeReply`,
+exactly `createActionHistory`, `beginTurn`, `enforcePostTool`, `evaluatePreTool`, `finalizeReply`,
 `redriveMessage`, `renderAssembledPrompt`, `resolveGuards`, `Guard`, `GuardCtx`, `ReplyViolation`. The
 bench does **not** import `renderTurnPrompt`, `recordToolResult`, `isTerminal`, `terminalProtocol` or
 `forcedTerminalPrompt` — zero occurrences repo-wide — so those need no action there.
@@ -156,8 +156,8 @@ Three names carry a `delete` verdict in the symbol inventory that was **delibera
 
 | symbol | where it still lives |
 |---|---|
-| `VETO_STORM_LIMIT` | `packages/core/src/runtime/ledger.ts:45` |
-| `recordVeto` | `packages/core/src/runtime/ledger.ts:78` |
+| `VETO_STORM_LIMIT` | `packages/core/src/runtime/action-history.ts:45` |
+| `recordVeto` | `packages/core/src/runtime/action-history.ts:78` |
 | `shouldFireChain` | `packages/core/src/runtime/turn.ts:382` |
 
 They remain **module-level `export`s consumed only by tests** — off every public barrel and off

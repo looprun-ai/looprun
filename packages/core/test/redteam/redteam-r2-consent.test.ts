@@ -19,7 +19,7 @@ import { describe, expect, it } from 'vitest';
 import { AgentSpecBase, confirmFirst, valueFromUser } from '../../src/index.js';
 import type { AgentWorld, GuardCtx, DomainContract, ObservedCall, HistoryTurn } from '../../src/index.js';
 import { DEFAULT_ENGINE_TEXT } from '../../src/runtime/engine-text.js';
-import { createLedger, recordTurnHistory } from '../../src/runtime/ledger.js';
+import { createActionHistory, recordTurnHistory } from '../../src/runtime/action-history.js';
 import { finalizeReply } from '../../src/runtime/turn.js';
 import { hasAskIntent } from '../../src/runtime/claims.js';
 import type { RespondPayload } from '../../src/runtime/claims.js';
@@ -70,18 +70,18 @@ describe('C1 — redrive message/did desync manufactures a sealed ask the user n
    *  the new `did` would seal an ask the user never received. */
   async function runDesync(): Promise<{ text: string; did: HistoryTurn['did'] }> {
     const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: ['deleteAcct'], contract: CONTRACT });
-    const ledger = createLedger();
+    const actionHistory = createActionHistory();
     // Nothing ran this turn — the initial declaration of a completed deletion is ungrounded.
     const initial: RespondPayload = { message: 'Done — account X has been deleted.', did: [{ op: 'delete', target: 'X', outcome: 'success' }] };
     const out = await finalizeReply(
-      spec, CONTRACT, world(), ledger, initial,
+      spec, CONTRACT, world(), actionHistory, initial,
       // The corrected re-generation: the model drops the false claim but puts NOTHING in `message`
       // (it declares the turn as a question in `did` alone).
       async () => ({ message: '', did: [{ op: 'ask' }] }),
       1,
     );
-    recordTurnHistory(ledger, out.text, world());
-    return { text: out.text, did: ledger.history[0]!.did };
+    recordTurnHistory(actionHistory, out.text, world());
+    return { text: out.text, did: actionHistory.history[0]!.did };
   }
 
   it('CLOSED: the blank re-generation is REJECTED WHOLE — no phantom ask, no stale sentence', async () => {
@@ -110,10 +110,10 @@ describe('C1 — redrive message/did desync manufactures a sealed ask the user n
 
   it('CLOSED regression: a redrive that DOES deliver its own message keeps message and did in sync', async () => {
     const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: ['deleteAcct'], contract: CONTRACT });
-    const ledger = createLedger();
+    const actionHistory = createActionHistory();
     const initial: RespondPayload = { message: 'Done — account X has been deleted.', did: [{ op: 'delete', target: 'X', outcome: 'success' }] };
     const out = await finalizeReply(
-      spec, CONTRACT, world(), ledger, initial,
+      spec, CONTRACT, world(), actionHistory, initial,
       async () => ({ message: 'Delete account X — are you sure?', did: [{ op: 'ask' }] }),
       1,
     );
@@ -319,18 +319,18 @@ describe('C5 — a declared ask licenses nothing, whatever its message says', ()
 
   it('a sealed turn declaring ask over a pure sign-off message licenses NOTHING', async () => {
     const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: ['deleteAcct'], contract: CONTRACT });
-    const ledger = createLedger();
-    // A clean, violation-free turn: a speech-only declaration is never ledger-grounded.
+    const actionHistory = createActionHistory();
+    // A clean, violation-free turn: a speech-only declaration is never action history-grounded.
     const initial: RespondPayload = { message: 'All set. Have a good day.', did: [{ op: 'ask' }] };
-    const out = await finalizeReply(spec, CONTRACT, world(), ledger, initial, async () => initial, 1);
-    recordTurnHistory(ledger, out.text, world());
+    const out = await finalizeReply(spec, CONTRACT, world(), actionHistory, initial, async () => initial, 1);
+    recordTurnHistory(actionHistory, out.text, world());
     expect(out.violations).toEqual([]);
     expect(out.text).toBe(`All set. Have a good day.\n\n${DEFAULT_ENGINE_TEXT.recordClosureNone}`);
 
     const g = confirmFirst();
     const ctx = baseCtx({
       tool: 'deleteAcct', args: { id: 'X', confirmed: true }, turnIndex: 1,
-      history: [...ledger.history],
+      history: [...actionHistory.history],
     });
     // SECURE: a licence must rest on a question the user could answer, not on a self-issued label.
     expect(g.check(ctx)).not.toBeNull();

@@ -20,7 +20,7 @@
  *
  * WHY THE VALIDATION KEYWORDS STOP AT "NOT EMPTY". A constraint carried here is enforced LOCALLY by
  * zod before the tool executes, and that rejection is an UNGOVERNED failure path: no guard fires, no
- * governance-tagged deny prose reaches the model, no recovery event lands in the ledger. Format and
+ * governance-tagged deny prose reaches the model, no recovery event lands in the action history. Format and
  * range are exactly the judgments the governed layer is built to make — `argFormat` is the pattern
  * kind, and the tutorial's scheduler declares the SAME date-time pattern in its tool def AND in an
  * `argFormat` guard on purpose: the guard is what denies, legibly and on the record. Emptiness is the

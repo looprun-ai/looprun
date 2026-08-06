@@ -1,4 +1,4 @@
-# Guards redesign from zero — structured turn-claims + ledger cross-check
+# Guards redesign from zero — structured turn-claims + action history cross-check
 
 Date: 2026-08-02 · Status: **SUPERSEDED — historical record of the approved direction** · Repo: looprun
 (+ agentspec) · Pre-1.0: disposable.
@@ -21,7 +21,7 @@ The red-team broke text-scanning guards structurally: `replyMentions('BK-1')` pa
 (patterns are the banned fragility). The reliable guards were already the STRUCTURAL ones
 (confirmFirst-on-args, maxCalls-on-counts, requiresBefore-on-call-log). Conclusion: the reply
 prose must stop being the thing guards read. The agent DECLARES what it did, structured, and
-the engine cross-checks the declaration against the WORLD LEDGER — which the agent does not
+the engine cross-checks the declaration against the WORLD ACTION HISTORY — which the agent does not
 control. A guard that cannot be made sound this way is deleted (a guard failing 0.1% is worse
 than honest absence — user law).
 
@@ -35,18 +35,18 @@ respond({
   asked?: boolean,                 // this turn poses a question (for two-step/ask gates)
 })
 type TurnClaim = { op: string; target?: string; outcome: Outcome; amount?: number }
-type Outcome =   // CORE, domain-neutral, ledger-checkable
+type Outcome =   // CORE, domain-neutral, action history-checkable
   | 'success' | 'failure' | 'not_found' | 'blocked' | 'refused'
   | 'pending_confirmation' | 'no_op'
 ```
 
 **The user-facing operation report is RENDERED BY THE ENGINE from `did`** (verified first).
 The agent's free `message` may not assert operations — the operational sentences the user reads
-come from ledger-verified structure, so a fabricated claim cannot reach the user THROUGH THE REPORT.
+come from action history-verified structure, so a fabricated claim cannot reach the user THROUGH THE REPORT.
 (As shipped: `composeDelivery` ships the agent's `message` verbatim beside that report, so an operational
 assertion written in prose is a priced residual, never a blocked one. See the supersession note above.)
 
-### The cross-check guards (deterministic, ledger-grounded — the new honesty core)
+### The cross-check guards (deterministic, action history-grounded — the new honesty core)
 
 | guard | check (over `did` × `world.toolCalls`) |
 |---|---|
@@ -56,18 +56,18 @@ assertion written in prose is a priced residual, never a blocked one. See the su
 
 These resurrect the 8 deleted honesty guards AS DETERMINISTIC (they were fragile only because
 they scanned prose). `op` names are advisory labels; the check keys on `target` + `outcome` vs
-the ledger, never on op-name semantics.
+the action history, never on op-name semantics.
 
 ## Three-tier classification (ALL 23 guards re-derived)
 
 ```
-① STRUCTURAL / LEDGER   sound & deterministic — the default home
+① STRUCTURAL / ACTION HISTORY   sound & deterministic — the default home
    honesty (claimIsGrounded/Complete/CoversRubric) · confirmFirst · destructiveThrottle ·
    requiresBefore · precondition · consentRequired · maxCalls · noDuplicateCall · argRequired ·
    argAbsent · argFormat · resultInvariant · askedEarlier · noActAfterAskSameTurn ·
    pendingConfirmMustAsk (now: did.asked reflects a pending simulate) · forbidThisTurn
 
-② llmCheck              ONLY no-ledger-signal semantics (e.g. "gave legal advice?", "tone")
+② llmCheck              ONLY no-action history-signal semantics (e.g. "gave legal advice?", "tone")
    the honest small residual; declared explicitly per subject
 
 ③ DELETE                cannot be ① or ②, or fails a red-team break with no sound fix
@@ -87,7 +87,7 @@ observed, D5 postTool-violation persistence) are fixed in the same rewrite.
 
 - Engine owns: the `TurnClaim`/`Outcome` core, the cross-check guards, the did→message renderer.
 - agentspec extends: domain `op` vocabulary; domain outcome values that **MUST declare a
-  core-outcome mapping** (`'settled' → 'success'`) so the ledger cross-check stays engine-owned
+  core-outcome mapping** (`'settled' → 'success'`) so the action history cross-check stays engine-owned
   and never becomes semantic; domain coverage/polarity rules over the structure.
 - The no-regex law stands; no guard reads conversation text except llmCheck (②).
 
@@ -97,7 +97,7 @@ observed, D5 postTool-violation persistence) are fixed in the same rewrite.
   adversarial effort is the certification — not "tests passed".
 - A verdict "unbreakable only by removing ambiguity X" is a FINDING: structure X (→①) or delete
   the guard. "Impossible to make sound" is the signal we are hunting.
-- Attacks must include: agent lies in `did` (ledger catches) · agent omits a `did` for a real
+- Attacks must include: agent lies in `did` (action history catches) · agent omits a `did` for a real
   effected call (claimIsComplete catches) · structure correct, prose contradicts (the REPORT is
   engine-rendered, but the `message` beside it is not — this became the priced residual, not an
   impossibility) · every prior batch-a/b/c/d vector re-run against the new surface.

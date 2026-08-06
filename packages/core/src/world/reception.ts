@@ -4,7 +4,7 @@
  * Coerce `'true'`/`'false'` → boolean and numeric strings → number per the tool declaration; treat an
  * absent optional as `undefined` (the sentinel) rather than crashing; fail fast on a missing REQUIRED
  * arg (the only hard boundary — a tool call is external input). Returns a coerced VIEW used for
- * gate/create logic; the raw args are what the ledger records.
+ * gate/create logic; the raw args are what the action history records.
  */
 import type { ArgDecl } from './types.js';
 

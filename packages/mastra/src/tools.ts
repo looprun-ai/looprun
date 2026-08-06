@@ -2,7 +2,7 @@
  * @looprun-ai/mastra — tool wiring: JSON-schema ToolDefs → Mastra tools executed through the world seam.
  *
  * The terminal tool (`respond`) is runtime-owned: its execute captures the structured payload
- * (message + did) into the ACTIVE session's ledger. Domain tools route to `world.exec(name, args)`.
+ * (message + did) into the ACTIVE session's action history. Domain tools route to `world.exec(name, args)`.
  */
 import { createTool } from '@mastra/core/tools';
 import { isTerminal, normalizeTerminalToolDef, recordTerminal, terminalToolDefs } from '@looprun-ai/core/internal';
@@ -36,7 +36,7 @@ export function buildWorldTools(
         inputSchema: jsonSchemaToZodObject(def.inputSchema) as any,
         execute: async (input: unknown) => {
           const args = (input ?? {}) as Record<string, unknown>;
-          recordTerminal(getSession().ledger, def.name, args);
+          recordTerminal(getSession().actionHistory, def.name, args);
           // Protocol-owned result: the world seam never answers for a terminal. A world that
           // does not dispatch these names would return UNKNOWN_TOOL — a failure on the only
           // action that closes the turn, which turns every guard deny into a retry loop.
@@ -69,7 +69,7 @@ export function buildTerminalTools(getSession: SessionAccessor): Record<string, 
       inputSchema: jsonSchemaToZodObject(def.inputSchema) as any,
       execute: async (input: unknown) => {
         const args = (input ?? {}) as Record<string, unknown>;
-        recordTerminal(getSession().ledger, def.name, args);
+        recordTerminal(getSession().actionHistory, def.name, args);
         return { success: true };
       },
     });

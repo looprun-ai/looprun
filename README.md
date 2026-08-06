@@ -17,7 +17,7 @@ looprun adds everything that makes it safe to hand the keys to an agent:
   corrects it; when correction fails, a **deterministic honest-abstain closure** (a pure function of what
   verifiably happened) goes out instead of a fabrication.
 - **The receipt** — every reply carries the engine's own **operation record**, composed from the agent's
-  verified declaration and the world ledger, never from its prose. A turn that changed nothing says so:
+  verified declaration and the world action history, never from its prose. A turn that changed nothing says so:
 
   ```
   message   Done — I cancelled your dentist appointment on 2026-03-03 at 09:00.

@@ -191,7 +191,7 @@ Two neighbours from the same review, both decidable and both cheap once this mac
   lanes is satisfied by any lane targeting it, so a copy that no case on ITS lane can reach reads
   as covered. One bundle had two such guards, both inert, both passing in either variant.
 
-## 4 · An accepted coverage gap has two ledgers that disagree
+## 4 · An accepted coverage gap has two action histories that disagree
 
 `GUARD-NEVER-TARGETED` is an engine artifact law, and it offers no way to accept a gap. A bundle
 that records one keeps the engine red:
@@ -205,7 +205,7 @@ looprun-eval lint --spec-laws
                          lint: 2 violation(s)
 ```
 
-Two ledgers for one law, and the subject's own record does not reach the engine's. The right
+Two action histories for one law, and the subject's own record does not reach the engine's. The right
 resolution in that instance was to write the missing cases, which is what the law wants. But a gap
 that genuinely cannot be closed — a guard whose condition the exam's world offers no preset for —
 has nowhere to be recorded except a file the law does not read.
@@ -224,7 +224,7 @@ avoided by being more careful:
 | conditional destructiveness | that listing a tool denies a branch the world executes, unrecoverably — and for one shape, that neither choice available is correct |
 | the write gate | that the world refuses on three conditions, and that `workspaceFrozen()` is one |
 | the parity law | that five sibling lanes wrote a gate this one did not, and that a guard silent because the agent complied is not a phantom |
-| the two ledgers | that recording an accepted gap in the subject leaves the engine's law red |
+| the two action histories | that recording an accepted gap in the subject leaves the engine's law red |
 
 A vocabulary that requires an author to hold all four in their head is where the next bundle fails
 the same way. The first row is the sharpest: there, holding all four would not have helped, because
@@ -305,8 +305,8 @@ table is where that routing lives.
 The two neighbours of §3 are authoring-time rules before they are lint rules: every `addGuard`
 carries an explicit `{ id }`, and a guard id is reachable only from the lane that owns it.
 
-§4 is the skill's obligation whichever way the open question resolves, because the second ledger has
-no publisher. The skill names `norms/bundle.test.ts` as the bundle's own assertion file; the ledgers
+§4 is the skill's obligation whichever way the open question resolves, because the second action history has
+no publisher. The skill names `norms/bundle.test.ts` as the bundle's own assertion file; the action histories
 written inside it — the accepted-gap record, and the cross-lane record the open question compares it
 to — appear in no reference the skill ships and on no engine surface. So the design is not choosing
 between two mechanisms that exist:

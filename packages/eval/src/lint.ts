@@ -117,10 +117,10 @@ function syntheticWorld(): AgentWorld {
 }
 
 /**
- * Worst-case minimal GuardCtx: empty observed ledger, current turn, the reply populated — plus the
+ * Worst-case minimal GuardCtx: empty observed action history, current turn, the reply populated — plus the
  * MINIMUM LEGAL DECLARATION (MI): a delivered `respond` always carries at least one intention, so an
  * absent `did` is a state no onReply guard can be in. The intention is a SPEECH one (`inform`), which
- * names no ledger fact: the structured cross-checks stay silent on the synthetic ctx instead of
+ * names no action history fact: the structured cross-checks stay silent on the synthetic ctx instead of
  * reporting an ungrounded claim this simulate invented, and the differential below keeps measuring what
  * it is meant to measure — whether the required STRING itself is what a sibling guard vetoes.
  */

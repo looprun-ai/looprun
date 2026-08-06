@@ -269,7 +269,7 @@ describe('one recorded scenario, under the whole design, with no model', () => {
     recordLine: '',
     recordLineRendered: false,
     mechanicalUnsafe: true,
-    ledger: [],
+    actionHistory: [],
   };
 
   const deps = (rewritten: string, judgeWord: string) => ({

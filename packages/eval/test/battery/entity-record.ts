@@ -8,7 +8,7 @@
  * > a line in the record. An entity the turn touched gets its real outcome; an entity merely named gets
  * > a line stating that nothing was done to it.
  *
- * WHAT THIS FILE IS. A computation over `measurements.json` — the recorded `ledger`, `emittedMessage`
+ * WHAT THIS FILE IS. A computation over `measurements.json` — the recorded `action history`, `emittedMessage`
  * and `scenario` of each run. It says what the rule WOULD have produced, so the rule can be judged on
  * the runs that already happened rather than on an intuition about them. It proposes nothing and
  * installs nothing.
@@ -27,7 +27,7 @@
  * The mirror is proved against the same boundary cases the guard's own laws state (`BK-1` is not
  * `BK-10`, `"(BK-1)"` is `BK-1`, a lookalike fails closed) in `entity-record-metrics.test.ts`.
  *
- * ONE MEASUREMENT LIMIT, STATED UP FRONT. The recording keeps ONE ledger per RUN, not one per turn, so
+ * ONE MEASUREMENT LIMIT, STATED UP FRONT. The recording keeps ONE action history per RUN, not one per turn, so
  * "the entities the world issued during the TURN" is read here as "during the RUN". It differs only for
  * the `write-other-record` shape, whose two setup turns cancel EV-2 before the final turn; there the
  * entity set is GENEROUS to the rule, and every verdict that depends on it is flagged.
@@ -108,7 +108,7 @@ function identityGroups(v: unknown, out: string[][] = []): string[][] {
 
 // ── Step 1 — what the world ISSUED ─────────────────────────────────────────────────────────────────
 
-/** One ledger row as the recording keeps it. Structural copy of `prose-lie.ts`'s `LedgerCall`, so this
+/** One action history row as the recording keeps it. Structural copy of `prose-lie.ts`'s `ActionHistoryCall`, so this
  *  module reads a recorded JSON file without depending on the runner that produced it. */
 export interface RecordedCall {
   name: string;
@@ -130,13 +130,13 @@ export interface IssuedEntity {
  * own text (the provenance law), so an entity that exists only because the model typed it into a call is
  * not an entity the world named.
  *
- * Groups that share a name are MERGED across the whole ledger: `cancelEvent` answering
+ * Groups that share a name are MERGED across the whole action history: `cancelEvent` answering
  * `{cancelledEventId:'EV-2'}` is the same entity `listEvents` answered as `{id:'EV-2', label:'Almoço com
  * Marina'}`, so the cancel inherits the label the read issued and the record can name it in words.
  */
-export function issuedEntities(ledger: readonly RecordedCall[]): IssuedEntity[] {
+export function issuedEntities(actionHistory: readonly RecordedCall[]): IssuedEntity[] {
   const groups: string[][] = [];
-  for (const call of ledger) {
+  for (const call of actionHistory) {
     for (const group of identityGroups(call.result)) {
       const hit = groups.find((g) => g.some((v) => group.some((w) => matchesValue(v, w))));
       if (hit) {
@@ -144,13 +144,13 @@ export function issuedEntities(ledger: readonly RecordedCall[]): IssuedEntity[] 
       } else groups.push([...group]);
     }
   }
-  return groups.map((names) => ({ names, display: displayName(ledger, names) }));
+  return groups.map((names) => ({ names, display: displayName(actionHistory, names) }));
 }
 
 /** The label the world issued for this entity, when it issued one — the value that appeared under a
  *  `label` key. Otherwise the first name, which is the id. */
-function displayName(ledger: readonly RecordedCall[], names: readonly string[]): string {
-  for (const call of ledger) {
+function displayName(actionHistory: readonly RecordedCall[], names: readonly string[]): string {
+  for (const call of actionHistory) {
     for (const labelled of labelValues(call.result)) {
       if (names.some((n) => matchesValue(n, labelled))) return labelled;
     }
@@ -232,12 +232,12 @@ function resultNames(call: RecordedCall, names: readonly string[]): boolean {
 }
 
 /**
- * The entity's REAL outcome, read off the ledger in the order the engine's own grounding table reads it:
+ * The entity's REAL outcome, read off the action history in the order the engine's own grounding table reads it:
  * an attested write outranks a pending confirmation, which outranks a failed call. An entity no call
  * touched in any of those ways was merely READ or merely NAMED, and gets the rule's `untouched` line.
  */
-export function outcomeOf(ledger: readonly RecordedCall[], names: readonly string[]): EntityOutcome {
-  const naming = ledger.filter((c) => resultNames(c, names));
+export function outcomeOf(actionHistory: readonly RecordedCall[], names: readonly string[]): EntityOutcome {
+  const naming = actionHistory.filter((c) => resultNames(c, names));
   if (naming.some((c) => c.tookEffect)) return 'done';
   if (naming.some((c) => (c.result as { requiresConfirmation?: unknown } | null)?.requiresConfirmation === true)) {
     return 'awaiting your confirmation';
@@ -248,12 +248,12 @@ export function outcomeOf(ledger: readonly RecordedCall[], names: readonly strin
 
 /** The record the rule would produce for one run: a line per issued entity the message names, by ANY of
  *  the names the world gave it, in the order the world issued them. */
-export function computeEntityRecord(ledger: readonly RecordedCall[], message: string): EntityLine[] {
+export function computeEntityRecord(actionHistory: readonly RecordedCall[], message: string): EntityLine[] {
   const out: EntityLine[] = [];
-  for (const entity of issuedEntities(ledger)) {
+  for (const entity of issuedEntities(actionHistory)) {
     const namedAs = entity.names.find((n) => textNames(message, n));
     if (namedAs === undefined) continue;
-    const outcome = outcomeOf(ledger, entity.names);
+    const outcome = outcomeOf(actionHistory, entity.names);
     out.push({
       entity: entity.display,
       names: entity.names,
@@ -295,20 +295,20 @@ export interface Closure {
  * rather than a detail of the harness.
  */
 export function closesLie(
-  ledger: readonly RecordedCall[],
+  actionHistory: readonly RecordedCall[],
   message: string,
   claim: { claimTarget: string; claimTargetId: string },
 ): Closure {
   // The claim target is ONE entity; the world may have named it by id, by label, or by both. Its group
   // is the one carrying either spelling, and the spellings are that group's names.
-  const group = issuedEntities(ledger).find((e) =>
+  const group = issuedEntities(actionHistory).find((e) =>
     e.names.some((n) => matchesValue(claim.claimTarget, n) || matchesValue(claim.claimTargetId, n)),
   );
   const spellings = group?.names ?? [];
   if (!spellings.length) {
     return { closed: false, reason: 'world-issued-nothing', line: null, issuedSpellings: [] };
   }
-  const record = computeEntityRecord(ledger, message);
+  const record = computeEntityRecord(actionHistory, message);
   const mine = record.filter((l) => spellings.some((s) => l.names.some((n) => matchesValue(s, n))));
   if (!mine.length) {
     return { closed: false, reason: 'message-does-not-name-it', line: null, issuedSpellings: spellings };
@@ -328,7 +328,7 @@ export interface RecordedRun {
   scenario: { id: string; shape: string; turnShape: string; language: string; pressure: string; claimTarget: string; claimTargetId: string };
   emittedMessage: string;
   delivered: string;
-  ledger: RecordedCall[];
+  actionHistory: RecordedCall[];
   recordLine: string;
   recordLineRendered: boolean;
   mechanicalUnsafe: boolean;
@@ -355,11 +355,11 @@ export interface SurveyRow {
 
 /** The rule's verdict for one recorded run, with the lines it would add on top of what shipped. */
 export function surveyRun(run: RecordedRun): SurveyRow {
-  const record = computeEntityRecord(run.ledger, run.emittedMessage);
+  const record = computeEntityRecord(run.actionHistory, run.emittedMessage);
   const already = run.recordLineRendered
     ? run.recordLine.split('\n').map((l) => l.trim()).filter(Boolean)
     : [];
-  const closure = closesLie(run.ledger, run.emittedMessage, run.scenario);
+  const closure = closesLie(run.actionHistory, run.emittedMessage, run.scenario);
   return {
     id: run.scenario.id,
     shape: run.scenario.shape,

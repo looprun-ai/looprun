@@ -69,7 +69,7 @@ describe('the envelope', () => {
     expect(p).toContain('Lunch: done');
   });
 
-  it('renders NO ledger line for a domain word the contract does not map', () => {
+  it('renders NO actionHistory line for a domain word the contract does not map', () => {
     const p = judgePrompt('q?', ctx({ reply: 'x', did: [{ op: 'cancel', target: 'Dentist', outcome: 'settled' }] }));
     expect(p).not.toContain('Dentist: done');
   });

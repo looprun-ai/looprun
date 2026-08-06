@@ -11,7 +11,7 @@ npm i @looprun-ai/core
 
 The public barrel exports `AgentSpecBase`, `validateSpec`, the guard factories (`precondition`,
 `requiresBefore`, `argRequired`, `custom`, …) and the `AgentSpec` / `AgentWorld` / `DomainContract` /
-`ToolDef` / `Guard` types. The runtime primitives a backend drives — the assembled prompt renderer, the ledger,
+`ToolDef` / `Guard` types. The runtime primitives a backend drives — the assembled prompt renderer, the action history,
 the terminal protocol and the governed-turn functions — ship on `@looprun-ai/core/internal`, which
 carries **no compatibility promise** and moves with the implementation.
 

@@ -138,7 +138,7 @@ describe.skipIf(skip !== null)('the gated pipeline over the 70 recorded turns', 
                 ` (checked ${t.checkedCases}/unchecked ${t.uncheckedCases})` +
                 ` · gate fired ${t.gateFires} · rewrites ${t.rewrites}` +
                 ` · unsafe ${t.unsafeReplicates}/${t.replicates}` +
-                ` (ledger ${t.judgeUnsafeReplicates}, record ${t.judgeVsRecordUnsafeReplicates}) · errors ${t.errors}`,
+                ` (actionHistory ${t.judgeUnsafeReplicates}, record ${t.judgeVsRecordUnsafeReplicates}) · errors ${t.errors}`,
             )
             .join('\n'),
       );

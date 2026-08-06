@@ -4,14 +4,14 @@
  * REPLY PROSE IS NOT THE THING GUARDS READ. A literal mention scan for `BK-1` passes on a reply that
  * says "no record of BK-1 was found" — a text check cannot read polarity, and no better pattern fixes
  * it (patterns are the banned fragility). Instead, the agent DECLARES what it did as STRUCTURE
- * (`ctx.did: Intention[]`), and these three guards GROUND that declaration against the WORLD LEDGER — `ctx.observed` (the model's verified calls,
+ * (`ctx.did: Intention[]`), and these three guards GROUND that declaration against the WORLD ACTION HISTORY — `ctx.observed` (the model's verified calls,
  * with `tookEffect`/`ok`/`resultFlags`), `ctx.world.toolCalls` (the results those calls returned), and
  * `ctx.attemptedThisTurn` (the calls a guard VETOED before they reached the world). None of those the
  * agent controls, so a fabricated claim cannot ground.
  *
  * NO-REGEX LAW: `matches` is a comparison of a claim's `target` against the CANONICALIZED values the
- * WORLD issued for a call — ledger DATA, never an authored pattern. `op` names are advisory labels; the
- * check keys on `target` + `outcome` vs the ledger, never on op-name semantics.
+ * WORLD issued for a call — action history DATA, never an authored pattern. `op` names are advisory labels; the
+ * check keys on `target` + `outcome` vs the action history, never on op-name semantics.
  *
  * THE LAWS OF GROUNDING:
  *  · PROVENANCE — a claim of PRESENCE (`success`) grounds ONLY against values the WORLD issued for
@@ -33,9 +33,9 @@
  *    invisible format characters.
  *  · EVERY ARM NEEDS POSITIVE EVIDENCE — including `no_op`. No variant passes on absence alone, because the
  *    mere ABSENCE of a contradicting write is trivially true of an entity the turn never touched and
- *    would ground any target on an empty ledger.
+ *    would ground any target on an empty action history.
  * And the PARTITION: both cross-checks iterate ACTION intentions only — a speech intention
- * (`inform`/`greet`/`refuse`/`ask`) classifies the message and names no ledger fact, so it is never
+ * (`inform`/`greet`/`refuse`/`ask`) classifies the message and names no action history fact, so it is never
  * grounded and never covers a write (an action can therefore never hide behind an `inform`).
  */
 import type { Guard, GuardCtx, ObservedCall } from '../rules.js';
@@ -185,7 +185,7 @@ export function preferredIdentityValues(v: unknown): string[] {
 
 /** The MAGNITUDES in a structure — every finite number leaf, plus a string that IS a number (`'12.50'`).
  *  Key-blind on purpose: a magnitude is a quantity wherever it sits, and the only thing it is ever used
- *  for is corroborating a claim's `amount` against the same ledger fact that grounds the claim. */
+ *  for is corroborating a claim's `amount` against the same action history fact that grounds the claim. */
 function magnitudes(v: unknown, out: number[] = []): number[] {
   if (v === null || v === undefined) return out;
   if (Array.isArray(v)) {
@@ -207,7 +207,7 @@ function magnitudes(v: unknown, out: number[] = []): number[] {
   return out;
 }
 
-/** The RESULT the world ledger recorded for this observed call (name + canonical args), or undefined. */
+/** The RESULT the world action history recorded for this observed call (name + canonical args), or undefined. */
 function resultOf(ctx: GuardCtx, c: ObservedCall): unknown {
   const calls = Array.isArray(ctx.world?.toolCalls) ? ctx.world.toolCalls : [];
   const key = canonArgs(c.args);
@@ -231,7 +231,7 @@ function targetIn(target: string | undefined, values: string[]): boolean {
   return values.some((v) => targetMatchesValue(target, v));
 }
 
-/** One ledger fact reduced to what a claim can be checked against: the entities it names and the
+/** One action history fact reduced to what a claim can be checked against: the entities it names and the
  *  quantities it carries. */
 interface Evidence {
   identity: string[];
@@ -258,7 +258,7 @@ function issuedEvidence(ctx: GuardCtx, c: ObservedCall): Evidence {
  * value: the only thing that can name the subject of an empty lookup, a failed call, a refusal or a
  * pending confirmation is the LOOKUP itself. So those variants read the call's identity-key args — the
  * fabrication they buy is self-limited (they can never cover an effected write, `claimIsComplete` is
- * `success`-only), and it is bounded by the ledger: the call really happened, under that identity, and
+ * `success`-only), and it is bounded by the action history: the call really happened, under that identity, and
  * the WORLD's own answer (empty / ok:false / requiresConfirmation) still has to be there. Free-text args
  * are not identities, so an agent cannot launder a verdict through a `query` string (§6.2).
  */
@@ -272,7 +272,7 @@ function addressedEvidence(ctx: GuardCtx, c: ObservedCall): Evidence {
 
 /**
  * Evidence from a guard-VETOED attempt — its args, because a vetoed call never reached the world and so
- * has no result at all. The ATTEMPT is a ledger fact the guard recorded, and the identity filter is the
+ * has no result at all. The ATTEMPT is a action history fact the guard recorded, and the identity filter is the
  * same key-scoped one: `cancelBooking({bookingId:'BK-1', note:'user also mentioned BK-2'})` names BK-1
  * and NOT BK-2. Without key-scoping that free-text note would ground a fabricated `refused` on BK-2 —
  * which is not merely self-incriminating, it SUPPRESSES a rubric expectation.
@@ -282,8 +282,8 @@ function attemptEvidence(a: { name: string; args: unknown }): Evidence {
 }
 
 /**
- * `matches(claim, evidence)` — the claim's `target` names an entity in this ledger fact AND its
- * `amount`, when it carries one, is a magnitude the same ledger fact reported.
+ * `matches(claim, evidence)` — the claim's `target` names an entity in this action history fact AND its
+ * `amount`, when it carries one, is a magnitude the same action history fact reported.
  *
  * The amount check is not decoration: `amount` is rendered by the domain seam into the block the engine
  * advertises as verified, so an unchecked figure is a fabricated number delivered as fact. It is
@@ -302,7 +302,7 @@ function claimMatches(claim: Intention, ev: Evidence): boolean {
  * a write AND it took effect, OR when the WORLD ATTESTED the effect for any tool at all
  * ({@link attestedEffect}). The intersection alone would leave a mutation through a tool absent from
  * `writeTools` — a hand-maintained list, and the easiest thing in a domain to leave stale — silently
- * uncovered while the guard catalog reported full coverage: the ledger row says `tookEffect:true` and the
+ * uncovered while the guard catalog reported full coverage: the action history row says `tookEffect:true` and the
  * engine would decline to use it. `writeTools` says which calls a domain INTENDS as writes (it gates
  * whether the cross-check is installed at all, and it is what makes a `success` claim groundable on the
  * inferred-effect path); it is a LOWER BOUND on the write surface, never an upper one.
@@ -348,7 +348,7 @@ function isGrounded(
       // POSITIVE EVIDENCE + no contrary evidence: a `no_op` requires the turn to have ADDRESSED the
       // entity at all. The absence condition ALONE would be vacuous — "no effected write matches" is
       // trivially true of an entity the turn never touched, so `{target:'BK-999', outcome:'no_op'}` would
-      // ground on an EMPTY ledger and the renderer would announce it to the user as a verified
+      // ground on an EMPTY action history and the renderer would announce it to the user as a verified
       // non-event: the cheapest bypass on the surface, and the way an unattempted request would get
       // discharged with its rubric satisfied.
       return (
@@ -359,11 +359,11 @@ function isGrounded(
 }
 
 /**
- * `claimIsGrounded` — every declared ACTION must match what the ledger shows happened this turn.
+ * `claimIsGrounded` — every declared ACTION must match what the action history shows happened this turn.
  *
  * For each ACTION intention (a speech intention is skipped — it classifies the message and names
- * no ledger fact): resolve its outcome word to a core meaning (a domain word maps through `outcomes`; an
- * UNDECLARED word is a violation by construction — it can name no ledger fact), then ground it by the
+ * no action history fact): resolve its outcome word to a core meaning (a domain word maps through `outcomes`; an
+ * UNDECLARED word is a violation by construction — it can name no action history fact), then ground it by the
  * table. Auto-installed by the spec class when the domain declares its `writeTools`.
  */
 export function claimIsGrounded(opts: { writeTools: readonly string[]; outcomes?: OutcomeMap }): Guard {
@@ -394,7 +394,7 @@ export function claimIsGrounded(opts: { writeTools: readonly string[]; outcomes?
       return null;
     },
     prose: () =>
-      'every operation you report must match what actually happened this turn — the system verifies each against the tool ledger',
+      'every operation you report must match what actually happened this turn — the system verifies each against the tool actionHistory',
   };
 }
 

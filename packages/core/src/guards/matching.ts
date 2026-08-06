@@ -1,6 +1,6 @@
 /**
  * THE MATCHING LAW — the one comparison every verdict that must decide "is this string THAT string"
- * routes through: claim-to-ledger grounding, consent-token consumption, and a value the agent records on
+ * routes through: claim-to-action history grounding, consent-token consumption, and a value the agent records on
  * the user's behalf.
  *
  * Two shapes over one canonical form. {@link targetMatchesValue} compares a target to ONE value.

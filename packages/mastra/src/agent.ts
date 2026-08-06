@@ -12,7 +12,7 @@
  * Because it IS an Agent, it registers in a Mastra instance and shows up in Mastra Studio with
  * the guards enforcing live (agent-level hooks apply to every tool source, including MCP).
  *
- * Governance per turn (generate): session resolve → advanceTurn + ledger reset → byte-stable
+ * Governance per turn (generate): session resolve → advanceTurn + action history reset → byte-stable
  * assembled prompt (+ terminal protocol) as per-call `instructions` → volatile state on the USER-message
  * tail → generate with toolChoice:'required' + stopWhen(terminalCalled) → forced-terminal
  * fallback → mutators → onReply checks with bounded NO-TOOLS redrive (never a processor
@@ -126,7 +126,7 @@ export interface LoopRunResultMeta {
   corrections: string[];
   exhausted: boolean;
   violations: string[];
-  /** This turn's slice of the observed ledger. */
+  /** This turn's slice of the observed action history. */
   observed: ObservedCall[];
 }
 
@@ -215,7 +215,7 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
     this.inputProcessorsResolved = makeInputProcessors(spec, getSession as () => LoopRunSession);
   }
 
-  /** Read a session's state (world/ledger/turnIndex) — hosts and tests. */
+  /** Read a session's state (world/action history/turnIndex) — hosts and tests. */
   getSession(id = 'default'): LoopRunSession<W> {
     return this.sessions.get(id);
   }
@@ -250,7 +250,7 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private async governedTurn(session: LoopRunSession<W>, input: any, options?: LoopRunOptions): Promise<any> {
     const { spec, contract } = this;
-    const { world, ledger } = session;
+    const { world, actionHistory } = session;
     const useMemory = !!options?.memory;
 
     if (session.turnIndex > 0) world.advanceTurn();
@@ -259,11 +259,11 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
     if (userText === null && !Array.isArray(input)) {
       throw new Error('LoopRunAgent.generate: pass the user message as a string (or a messages array).');
     }
-    beginTurn(ledger, session.turnIndex, userText ?? '');
+    beginTurn(actionHistory, session.turnIndex, userText ?? '');
 
     const attUrls = options?.loopRun?.attachments ?? [];
     const attLabels = attUrls.map((u) => world.ingestAttachment(u));
-    ledger.attachments = attLabels;
+    actionHistory.attachments = attLabels;
 
     // ONE producer for the bytes this turn sends (core/runtime/prompt.ts) — the same function the
     // offline margin instruments render through, so a replay can never feed on a prompt nothing runs.
@@ -305,8 +305,8 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
 
     const repeatStop = this.stopOnRepeatedToolCall ? [repeatedToolCallStop] : [];
     const protocolOpts = this.terminalProtocolOn
-      ? { toolChoice: 'required', stopWhen: [stepCountIs(this.maxStepsResolved), terminalCalled, () => vetoStormHit(session.ledger), ...repeatStop] }
-      : { stopWhen: [stepCountIs(this.maxStepsResolved), () => vetoStormHit(session.ledger), ...repeatStop] };
+      ? { toolChoice: 'required', stopWhen: [stepCountIs(this.maxStepsResolved), terminalCalled, () => vetoStormHit(session.actionHistory), ...repeatStop] }
+      : { stopWhen: [stepCountIs(this.maxStepsResolved), () => vetoStormHit(session.actionHistory), ...repeatStop] };
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const full: any = await (Agent.prototype.generate as any).call(this, msgs, {
@@ -326,25 +326,25 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
     // tool RESULTS.
     if (this.terminalProtocolOn) {
       const premature = prematureTerminalTools(full.steps);
-      if (premature.length && ledger.terminalReply.trim()) {
+      if (premature.length && actionHistory.terminalReply.trim()) {
         // Clear the WHOLE delivered declaration (text + did): an invalidated terminal's `did` is an
         // equally-premature claim the cross-check guards must not ground against.
-        clearDeliveredTerminal(ledger);
-        ledger.turnCorrections.push(`premature-terminal:${[...new Set(premature)].join(',')}`);
+        clearDeliveredTerminal(actionHistory);
+        actionHistory.turnCorrections.push(`premature-terminal:${[...new Set(premature)].join(',')}`);
       }
       // …and drop the invalidated terminal's OBSERVATION too: clearing the captured
       // declaration leaves the hook-time `observed` push in place, where a `did` carrying an `ask`
       // intention reads — this turn and every later one — as a question the user answered. It never
       // reached them. Runs unconditionally: a premature terminal is never delivered, whatever its message.
-      const prunedPremature = pruneSupersededTerminals(ledger, prematureTerminalCalls(full.steps));
-      if (prunedPremature.length) ledger.turnCorrections.push(`premature-terminal-pruned:${[...new Set(prunedPremature)].join(',')}`);
+      const prunedPremature = pruneSupersededTerminals(actionHistory, prematureTerminalCalls(full.steps));
+      if (prunedPremature.length) actionHistory.turnCorrections.push(`premature-terminal-pruned:${[...new Set(prunedPremature)].join(',')}`);
       // Terminals that lost the delivery contest are not evidence of anything the user saw.
-      const pruned = pruneSupersededTerminals(ledger, supersededTerminalCalls(full.steps));
-      if (pruned.length) ledger.turnCorrections.push(`superseded-terminal:${[...new Set(pruned)].join(',')}`);
+      const pruned = pruneSupersededTerminals(actionHistory, supersededTerminalCalls(full.steps));
+      if (pruned.length) actionHistory.turnCorrections.push(`superseded-terminal:${[...new Set(pruned)].join(',')}`);
     }
 
     // Forced-terminal fallback (terminal protocol only).
-    if (this.terminalProtocolOn && !ledger.terminalReply.trim()) {
+    if (this.terminalProtocolOn && !actionHistory.terminalReply.trim()) {
       const fbTools = ['respond'];
       const fbMsgs = useMemory || userText === null
         ? forcedTerminalPrompt(replyOnly)
@@ -360,7 +360,7 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
         ...(useMemory ? { memory: passOpts.memory } : {}),
       });
       if (!useMemory && userText !== null && fb.response?.messages) session.messages.push(...fb.response.messages);
-      ledger.turnCorrections.push('forced-terminal');
+      actionHistory.turnCorrections.push('forced-terminal');
     }
 
     // flowChain completion — AFTER main + forced-terminal, BEFORE the onReply checks. ZERO-DIFF: gated
@@ -368,9 +368,9 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
     if (spec.controls.chains?.length) {
       const chainPass = await runChainCompletionPass(spec.controls.chains, {
         world,
-        observed: ledger.observed,
+        observed: actionHistory.observed,
         turnIndex: session.turnIndex,
-        terminalReplyPresent: ledger.terminalReply.trim().length > 0,
+        terminalReplyPresent: actionHistory.terminalReply.trim().length > 0,
         beforeToolCall: this.guardHooks.beforeToolCall,
         afterToolCall: this.guardHooks.afterToolCall,
         forceLlmCall: async (call: string) => {
@@ -387,35 +387,35 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
           if (!useMemory && userText !== null && cc.response?.messages) session.messages.push(...cc.response.messages);
         },
       });
-      if (chainPass.corrections.length) ledger.turnCorrections.push(...chainPass.corrections);
-      if (chainPass.replyViolations.length) ledger.postToolViolations.push(...chainPass.replyViolations);
+      if (chainPass.corrections.length) actionHistory.turnCorrections.push(...chainPass.corrections);
+      if (chainPass.replyViolations.length) actionHistory.postToolViolations.push(...chainPass.replyViolations);
     }
 
     // The terminal reply wins even with the protocol OFF — the terminal tools stay registered, and
     // a model that used one produced a real answer that `full.text` won't carry.
     const initialText: string = full?.tripwire
       ? String(full.tripwireReason ?? full.reason ?? '')
-      : (ledger.terminalReply || full.text || '');
+      : (actionHistory.terminalReply || full.text || '');
     // The DELIVERED terminal's structured declaration (recordTerminal seated `did`); a tripwire /
     // free-text fallback carries the empty declaration beginTurn reset.
-    const initial: RespondPayload = { message: initialText, did: ledger.did };
+    const initial: RespondPayload = { message: initialText, did: actionHistory.did };
 
     const finalized = await finalizeReply(
       spec,
       contract,
       world,
-      ledger,
+      actionHistory,
       initial,
       async (message) => {
         const reMsgs = useMemory || userText === null
           ? message
           : [...session.messages, { role: 'user', content: message }];
         // A redrive re-generates ONE respond (tools disabled except respond, toolChoice pinned) — the
-        // candidate returns as a STRUCTURED payload. It is NOT persisted: snapshot the ledger and restore
+        // candidate returns as a STRUCTURED payload. It is NOT persisted: snapshot the action history and restore
         // it, so a rejected draft's respond never enters observed/history (the recorded terminal + any
         // hook push are rolled back; finalizeReply re-seats `did` from the returned payload).
-        const obsLen = ledger.observed.length;
-        const snap = { terminalReply: ledger.terminalReply, did: ledger.did };
+        const obsLen = actionHistory.observed.length;
+        const snap = { terminalReply: actionHistory.terminalReply, did: actionHistory.did };
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const re: any = await (Agent.prototype.generate as any).call(this, reMsgs, {
           instructions,
@@ -426,9 +426,9 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
           ...this.modelParams,
           ...(useMemory ? { memory: passOpts.memory } : {}),
         });
-        ledger.observed.length = obsLen;
-        ledger.terminalReply = snap.terminalReply;
-        ledger.did = snap.did;
+        actionHistory.observed.length = obsLen;
+        actionHistory.terminalReply = snap.terminalReply;
+        actionHistory.did = snap.did;
         const args = lastTerminalArgs(re.steps);
         return args ? respondPayload(args) : { message: typeof re.text === 'string' ? re.text : '', did: [] };
       },
@@ -445,13 +445,13 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
     const meta: LoopRunResultMeta = {
       sessionId: session.id,
       turnIndex: session.turnIndex,
-      corrections: ledger.turnCorrections.slice(),
+      corrections: actionHistory.turnCorrections.slice(),
       exhausted: finalized.exhausted,
       violations: finalized.violations,
-      observed: ledger.observed.filter((o) => o.turnIndex === session.turnIndex),
+      observed: actionHistory.observed.filter((o) => o.turnIndex === session.turnIndex),
     };
     // Seal this turn into the conversation history so the NEXT turn's guards see it (user text incl.).
-    recordTurnHistory(ledger, finalized.text, world);
+    recordTurnHistory(actionHistory, finalized.text, world);
     session.turnIndex += 1;
 
     // Return the LAST Mastra result object with the governed text + looprun meta attached.
@@ -473,9 +473,9 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
     // inside the session's AsyncLocalStorage context — no shared mutable pointer, no cross-session
     // execution.
     return this.turnContext.run(session, async () => {
-      const { world, ledger } = session;
+      const { world, actionHistory } = session;
       if (session.turnIndex > 0) world.advanceTurn();
-      beginTurn(ledger, session.turnIndex);
+      beginTurn(actionHistory, session.turnIndex);
       session.turnIndex += 1;
       const { instructions } = renderTurnPrompt({
         spec: this.spec, contract: this.contract, world, userText: null,
@@ -508,7 +508,7 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
       const onFinish = async (event: any): Promise<void> => {
         if (!sealed) {
           sealed = true;
-          recordTurnHistory(ledger, ledger.terminalReply, world);
+          recordTurnHistory(actionHistory, actionHistory.terminalReply, world);
         }
         if (typeof callerOnFinish === 'function') await callerOnFinish(event);
       };

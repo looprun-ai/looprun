@@ -4,7 +4,7 @@
  * Target family: confirmFirst · destructiveThrottle · valueFromUser — the gates around a destructive
  * act. What licenses one is a token the ENGINE issued for a record and the USER typed back; the agent
  * has no channel that produces one. Source: src/guards/confirmation.ts, src/guards/structural.ts,
- * src/runtime/approval-request.ts, src/runtime/ledger.ts, src/runtime/turn.ts.
+ * src/runtime/approval-request.ts, src/runtime/action-history.ts, src/runtime/turn.ts.
  *
  * CONVENTION: every `it` asserts the SECURE expectation (the guard SHOULD deny / block). A vector whose
  * fix has NOT landed yet is marked `it.fails` (a proven BREAK, suite stays green per commit): when the
@@ -20,7 +20,7 @@
 import { describe, expect, it } from 'vitest';
 import { AgentSpecBase, confirmFirst, destructiveThrottle, valueFromUser } from '../../src/index.js';
 import type { AgentWorld, GuardCtx, DomainContract, ObservedCall, HistoryTurn } from '../../src/index.js';
-import { createLedger } from '../../src/runtime/ledger.js';
+import { createActionHistory } from '../../src/runtime/action-history.js';
 import { finalizeReply } from '../../src/runtime/turn.js';
 import type { RespondPayload } from '../../src/runtime/claims.js';
 
@@ -128,7 +128,7 @@ describe('V4 — destructiveThrottle: one destructive effect per turn', () => {
 
   it('CLOSED: a SIMULATE (requiresConfirmation) does not count — the approved execute still passes', () => {
     const g = destructiveThrottle(['refund']);
-    // `tookEffect:false` is what the backend records for a simulate against a world that keeps a ledger —
+    // `tookEffect:false` is what the backend records for a simulate against a world that keeps a action history —
     // POSITIVE evidence that nothing changed. That evidence is REQUIRED: an unrecorded call is
     // unverified, not effect-free, so it counts against the cap.
     const ctx = baseCtx({ tool: 'refund', args: { id: '1', confirmed: true }, turnIndex: 0, observed: [obs('refund', { id: '1', confirmed: false }, 0, { tookEffect: false, resultFlags: { requiresConfirmation: true } })] });
@@ -138,7 +138,7 @@ describe('V4 — destructiveThrottle: one destructive effect per turn', () => {
   it('CLOSED: a prior EXECUTED destructive call with UNKNOWN effect counts against the cap', () => {
     const g = destructiveThrottle(['refund']);
     // It RAN (it is in `observed`) and left no `tookEffect` — the world kept no record. Unverifiable ⇒
-    // it counts. This is the native-tools/MCP shape, where no world ledger exists to consult.
+    // it counts. This is the native-tools/MCP shape, where no world action history exists to consult.
     const ctx = baseCtx({ tool: 'refund', args: { id: '2', confirmed: false }, turnIndex: 0, observed: [obs('refund', { id: '1', confirmed: false }, 0)] });
     expect(g.check(ctx)).not.toBeNull();
   });

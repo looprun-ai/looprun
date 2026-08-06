@@ -15,7 +15,7 @@ A real turn, model `gemini-3.1-flash-lite` (thinking off):
 ```
 USER      "Cancele o Dentista de terça, mas não mexa em mais nada."
 
-LEDGER    no write took effect — the guard vetoed the cancellation
+ACTION HISTORY    no write took effect — the guard vetoed the cancellation
 
 did       [{ op:'inform' }]                    ← honest. No action is claimed.
 
@@ -57,7 +57,7 @@ Two mechanisms, and they answer to different standards:
 
 | | |
 |---|---|
-| **the record** | composed from the verified `did` and the world ledger, delivered on every turn. Deterministic — the same inputs give the same record, whatever the prose says. |
+| **the record** | composed from the verified `did` and the world action history, delivered on every turn. Deterministic — the same inputs give the same record, whatever the prose says. |
 | **the lie check** | a model call. A judgement, so it can miss. When it misses, the record is still there. |
 
 ---
@@ -97,11 +97,11 @@ closure   "No operation was carried out on this turn."
 
 ### The record never reads the message
 
-Its only inputs are the verified `did` and the world ledger. Replace the message with
+Its only inputs are the verified `did` and the world action history. Replace the message with
 anything and the record is byte-identical:
 
 ```
-did [{op:'inform'}]  ·  ledger: no write
+did [{op:'inform'}]  ·  action history: no write
 
 "Cancelei o Dentista."          →  "No operation was carried out on this turn."
 "Não cancelei nada."            →  "No operation was carried out on this turn."
@@ -159,7 +159,7 @@ Lunch with Marina: done
 |---|---|
 | **Session list shape** | ONE LINE PER DISTINCT ENTITY carrying its latest state — not one line per action. The same event cancelled three times is one line. |
 | **Scope** | the whole session. No turn window, never reset. |
-| **Source** | the same ledger the record is built from, accumulated rather than reset. |
+| **Source** | the same action history the record is built from, accumulated rather than reset. |
 | **When empty** | the section is omitted entirely, not printed as an empty heading. |
 
 ### Why the session list exists
@@ -266,7 +266,7 @@ HOW TO WRITE THE NEW REPLY:
 - Say nothing about an operation beyond what is true above. When nothing was carried out,
   say plainly that you have not done it, and say what you can do next.
 - Speak as yourself, about what you did and did not do. Never mention or quote a record, a
-  log, a ledger, a system, a check or a verification — the user is talking to you, not to
+  log, a action history, a system, a check or a verification — the user is talking to you, not to
   a machine — and never present the facts above as something you were told.
 - Write in the language the user used.
 - NOTHING HAPPENED ON THIS TURN. You carried out no operation at all. Your new reply may
@@ -372,8 +372,8 @@ the empty string when `did` carries no action intention, and never appends a clo
 | a turn with action intentions | renders the lines | renders the lines plus the closure |
 
 **The session list.** One line per distinct entity with its latest state, accumulated from
-the ledger across the session. The ledger already keeps every completed turn
-(`ledger.history` accumulates and is never reset), so the data is present; what does not
+the action history across the session. The action history already keeps every completed turn
+(`action history.history` accumulates and is never reset), so the data is present; what does not
 exist is the per-entity rollup.
 
 **The check and the rewrite.** Two model calls the engine composes and the agent writes no
@@ -391,7 +391,7 @@ That is the floor, and it is the same floor that catches the check's misses.
 
 ```
 the record        DETERMINISTIC — composed from the verified `did` and the world
-                  ledger, present on every finalized turn, identical whatever the
+                  action history, present on every finalized turn, identical whatever the
                   prose says. 11 of 11 lies contradicted, three runs.
 
 the lie check     A JUDGEMENT — a clear lie is caught and rewritten before delivery.

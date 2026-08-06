@@ -130,7 +130,7 @@ describe('the fold', () => {
     emittedMessage: 'x',
     recordLineRendered: false,
     recordLine: '',
-    ledgerShowsClaim: false,
+    actionHistoryShowsClaim: false,
     mechanicalUnsafe: false,
     judgeUnsafe: false,
     judgeRaw: 'NO',

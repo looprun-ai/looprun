@@ -108,7 +108,7 @@ describe('LoopRunAgent — one governed turn', () => {
     expect(res.looprun.corrections).toContain('spatial:requiresBefore:waterPlant');
     expect(world.watered).toBe(1); // the vetoed call never reached the world
     const session = agent.getSession();
-    expect(session.ledger.observed.map((o) => `${o.name}:${o.ok}`)).toEqual([
+    expect(session.actionHistory.observed.map((o) => `${o.name}:${o.ok}`)).toEqual([
       'waterPlant:false',
       'listPlants:true',
       'waterPlant:true',
@@ -233,14 +233,14 @@ describe('LoopRunAgent — sessions', () => {
     await agent.generate('a', { loopRun: { sessionId: 's1' } });
     await agent.generate('b', { loopRun: { sessionId: 's2' } });
     expect(worlds.size).toBe(2);
-    expect(agent.getSession('s1').ledger.observed.length).toBe(2);
-    expect(agent.getSession('s2').ledger.observed.length).toBe(2);
+    expect(agent.getSession('s1').actionHistory.observed.length).toBe(2);
+    expect(agent.getSession('s2').actionHistory.observed.length).toBe(2);
     expect(agent.getSession('s1').turnIndex).toBe(1);
   });
 });
 
 describe('LoopRunAgent — the premature ask leaves no ghost', () => {
-  it('prunes the invalidated premature respond from the observed ledger, so no later turn reads it as consent', async () => {
+  it('prunes the invalidated premature respond from the observed actionHistory, so no later turn reads it as consent', async () => {
     const { agent } = makeAgent([
       // ONE step carrying domain work AND an asking respond — the PREMATURE shape. Its text was composed
       // before listPlants returned, so the policy invalidates the delivery …
@@ -253,8 +253,8 @@ describe('LoopRunAgent — the premature ask leaves no ghost', () => {
     expect(res.text).toBe(nothingDone('Your plants are listed.'));
     expect(res.looprun.corrections).toContain('premature-terminal:listPlants');
     expect(res.looprun.corrections).toContain('premature-terminal-pruned:respond');
-    // THE POINT: the question the user never received is not in the ledger any consent guard reads.
-    const asks = agent.getSession().ledger.observed.filter(
+    // THE POINT: the question the user never received is not in the action history any consent guard reads.
+    const asks = agent.getSession().actionHistory.observed.filter(
       (o) => o.name === 'respond' && JSON.stringify(o.args?.did ?? []).includes('"ask"'),
     );
     expect(asks).toEqual([]);

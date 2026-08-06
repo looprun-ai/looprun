@@ -41,7 +41,7 @@ One verb, three layers, replacing subject-minted lints/tests:
 - **schema**: all three configs (norms/world/cases) parse under zod;
 - **references**: every `targets` id exists in the installed guard inventory; every preset exists;
   every agent id routes; reverse-coverage (a guard no case targets) reported with justification
-  ledger support;
+  action history support;
 - **premise coherence** (engine-owned, generalizing the run's `premise.test.ts` WITHOUT its
   hand exclusions): replay required writes in declaration order against the world; a
   state-forbidden write the world accepts ⇒ the case forbids nothing; a required write the world

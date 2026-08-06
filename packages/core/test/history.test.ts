@@ -3,18 +3,18 @@
  *
  * Property: EVERY hook's GuardCtx carries the read-only `history` (prior turns, user text included) and
  * the current turn's incoming `userText`. `onInput` sees the real incoming text, not a blind
- * `args: {}`. And `recordTurnHistory` seals a completed turn into `ledger.history`, frozen.
+ * `args: {}`. And `recordTurnHistory` seals a completed turn into `action history.history`, frozen.
  */
 import { describe, expect, it } from 'vitest';
 import { AgentSpecBase, custom } from '../src/index.js';
 import type { AgentWorld, DomainContract, GuardCtx, ReplyMutator } from '../src/index.js';
 import {
-  createLedger,
+  createActionHistory,
   beginTurn,
   recordToolResult,
   recordVeto,
   recordTurnHistory,
-} from '../src/runtime/ledger.js';
+} from '../src/runtime/action-history.js';
 import { evaluateOnInput, evaluatePreTool, finalizeReply } from '../src/runtime/turn.js';
 
 function fixtureWorld(state: Record<string, unknown> = {}): AgentWorld {
@@ -35,17 +35,17 @@ function captor(dim: 'run' | 'behavior' = 'run') {
 
 describe('recordTurnHistory', () => {
   it('seals the turn: userText, reply, executed toolCalls, vetoed attempts, guardEvents', () => {
-    const ledger = createLedger();
+    const actionHistory = createActionHistory();
     const world = fixtureWorld();
     world.toolCalls.push({ name: 'createItem', args: { name: 'Alpha' }, result: { label: 'itm-1' }, tookEffect: true });
-    beginTurn(ledger, 0, 'create Alpha and delete x1');
-    recordToolResult(ledger, 'createItem', { name: 'Alpha' }, { label: 'itm-1' }, world);
-    recordVeto(ledger, 'deleteItem', { id: 'x1' }, 'behavior:confirmFirst:deleteItem');
+    beginTurn(actionHistory, 0, 'create Alpha and delete x1');
+    recordToolResult(actionHistory, 'createItem', { name: 'Alpha' }, { label: 'itm-1' }, world);
+    recordVeto(actionHistory, 'deleteItem', { id: 'x1' }, 'behavior:confirmFirst:deleteItem');
 
-    recordTurnHistory(ledger, 'Created Alpha; I need confirmation to delete x1.', world);
+    recordTurnHistory(actionHistory, 'Created Alpha; I need confirmation to delete x1.', world);
 
-    expect(ledger.history).toHaveLength(1);
-    const t = ledger.history[0];
+    expect(actionHistory.history).toHaveLength(1);
+    const t = actionHistory.history[0];
     expect(t.turnIndex).toBe(0);
     expect(t.userText).toBe('create Alpha and delete x1');
     expect(t.reply).toBe('Created Alpha; I need confirmation to delete x1.');
@@ -57,18 +57,18 @@ describe('recordTurnHistory', () => {
   });
 
   it('excludes terminal calls from history toolCalls', () => {
-    const ledger = createLedger();
-    beginTurn(ledger, 0, 'hi');
-    ledger.observed.push({ name: 'respond', args: { message: 'hi there', did: [] }, ok: true, turnIndex: 0 });
-    recordTurnHistory(ledger, 'hi there');
-    expect(ledger.history[0].toolCalls).toEqual([]);
+    const actionHistory = createActionHistory();
+    beginTurn(actionHistory, 0, 'hi');
+    actionHistory.observed.push({ name: 'respond', args: { message: 'hi there', did: [] }, ok: true, turnIndex: 0 });
+    recordTurnHistory(actionHistory, 'hi there');
+    expect(actionHistory.history[0].toolCalls).toEqual([]);
   });
 
   it('freezes the entry and its arrays (ctx.history is read-only)', () => {
-    const ledger = createLedger();
-    beginTurn(ledger, 0, 'x');
-    recordTurnHistory(ledger, 'y');
-    const t = ledger.history[0];
+    const actionHistory = createActionHistory();
+    beginTurn(actionHistory, 0, 'x');
+    recordTurnHistory(actionHistory, 'y');
+    const t = actionHistory.history[0];
     expect(Object.isFrozen(t)).toBe(true);
     expect(Object.isFrozen(t.toolCalls)).toBe(true);
     expect(Object.isFrozen(t.attemptedCalls)).toBe(true);
@@ -76,34 +76,34 @@ describe('recordTurnHistory', () => {
   });
 
   it('accumulates across turns; beginTurn keeps history but resets currentUserText', () => {
-    const ledger = createLedger();
-    beginTurn(ledger, 0, 'first');
-    recordTurnHistory(ledger, 'r0');
-    beginTurn(ledger, 1, 'second');
-    expect(ledger.currentUserText).toBe('second');
-    expect(ledger.history).toHaveLength(1);
-    expect(ledger.history[0].userText).toBe('first');
-    recordTurnHistory(ledger, 'r1');
-    expect(ledger.history.map((t) => t.userText)).toEqual(['first', 'second']);
+    const actionHistory = createActionHistory();
+    beginTurn(actionHistory, 0, 'first');
+    recordTurnHistory(actionHistory, 'r0');
+    beginTurn(actionHistory, 1, 'second');
+    expect(actionHistory.currentUserText).toBe('second');
+    expect(actionHistory.history).toHaveLength(1);
+    expect(actionHistory.history[0].userText).toBe('first');
+    recordTurnHistory(actionHistory, 'r1');
+    expect(actionHistory.history.map((t) => t.userText)).toEqual(['first', 'second']);
   });
 });
 
 describe('every hook sees userText + prior history', () => {
   const priorTurn = () => {
-    const ledger = createLedger();
-    beginTurn(ledger, 0, 'the first thing I said');
-    recordTurnHistory(ledger, 'the first reply');
-    beginTurn(ledger, 1, 'the second thing I said');
-    return ledger;
+    const actionHistory = createActionHistory();
+    beginTurn(actionHistory, 0, 'the first thing I said');
+    recordTurnHistory(actionHistory, 'the first reply');
+    beginTurn(actionHistory, 1, 'the second thing I said');
+    return actionHistory;
   };
 
   it('onInput sees the real incoming userText (not a blind {}) + the prior history', async () => {
     const c = captor('run');
     const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona: 'p', tools: ['act'] });
     spec.addGuard('onInput', 'any', c.guard, { id: 'x:captor' });
-    const ledger = priorTurn();
+    const actionHistory = priorTurn();
 
-    await evaluateOnInput(spec, ledger, fixtureWorld());
+    await evaluateOnInput(spec, actionHistory, fixtureWorld());
 
     expect(c.seen).toHaveLength(1);
     expect(c.seen[0].userText).toBe('the second thing I said');
@@ -116,9 +116,9 @@ describe('every hook sees userText + prior history', () => {
     const c = captor('run');
     const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona: 'p', tools: ['act'] });
     spec.addGuard('preTool', ['act'], c.guard, { id: 'x:captor' });
-    const ledger = priorTurn();
+    const actionHistory = priorTurn();
 
-    await evaluatePreTool(spec, ledger, fixtureWorld(), 'act', { foo: 1 });
+    await evaluatePreTool(spec, actionHistory, fixtureWorld(), 'act', { foo: 1 });
 
     expect(c.seen[0].userText).toBe('the second thing I said');
     expect(c.seen[0].history[0].userText).toBe('the first thing I said');
@@ -130,9 +130,9 @@ describe('every hook sees userText + prior history', () => {
     const c = captor('behavior');
     const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona: 'p', tools: ['act'] });
     spec.addGuard('onReply', 'any', c.guard, { id: 'x:captor' });
-    const ledger = priorTurn();
+    const actionHistory = priorTurn();
 
-    await finalizeReply(spec, CONTRACT, fixtureWorld(), ledger, { message: 'a reply', did: [{ op: 'inform' }] }, async () => ({ message: '', did: [] }), 0);
+    await finalizeReply(spec, CONTRACT, fixtureWorld(), actionHistory, { message: 'a reply', did: [{ op: 'inform' }] }, async () => ({ message: '', did: [] }), 0);
 
     const mine = c.seen.filter((s) => s.reply === 'a reply');
     expect(mine.length).toBeGreaterThan(0);
@@ -145,9 +145,9 @@ describe('every hook sees userText + prior history', () => {
     const mutator: ReplyMutator = { kind: 'captorMutator', apply: (reply, ctx) => { seen.push(ctx); return reply; } };
     const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona: 'p', tools: ['act'] });
     spec.addMutator(mutator, { id: 'x:captorMutator' });
-    const ledger = priorTurn();
+    const actionHistory = priorTurn();
 
-    await finalizeReply(spec, CONTRACT, fixtureWorld(), ledger, { message: 'a reply', did: [{ op: 'inform' }] }, async () => ({ message: '', did: [] }), 0);
+    await finalizeReply(spec, CONTRACT, fixtureWorld(), actionHistory, { message: 'a reply', did: [{ op: 'inform' }] }, async () => ({ message: '', did: [] }), 0);
 
     expect(seen.length).toBeGreaterThan(0);
     expect(seen[0].userText).toBe('the second thing I said');

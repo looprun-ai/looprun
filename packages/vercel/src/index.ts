@@ -15,7 +15,7 @@
  *      through `respondPayload` — `message` + `did`, never a reply-text field and never a boolean
  *      `asked` flag: an intention to ask is one of the `did` entries, nothing else.
  *   5. Prune the terminals the user never saw, in the SAME place the delivery is invalidated:
- *      `pruneSupersededTerminals(ledger, prematureTerminalCalls(steps))` for a terminal that shared
+ *      `pruneSupersededTerminals(action history, prematureTerminalCalls(steps))` for a terminal that shared
  *      its step with a domain call, and the same call with `supersededTerminalCalls(steps)` for the
  *      losers of a within-step delivery contest. Skipping either leaves an `ask` intention in
  *      `observed` that licenses a consent guard off a question that was never delivered.

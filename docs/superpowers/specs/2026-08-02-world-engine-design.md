@@ -50,7 +50,7 @@ The interpreter provides ONCE, proven in the engine's own suite (never re-tested
 |---|---|
 | RECEPTION of args (sentinels, `'true'` coercion, absent-optional handling) | 27 hand entries |
 | two-step simulate/confirm (side-effect-free simulation, simulate≡confirm identity) | 13 hand branches |
-| deterministic ids/counters, audit ledger, `tookEffect` marking | hand counters + audit |
+| deterministic ids/counters, audit action history, `tookEffect` marking | hand counters + audit |
 | `projection()` incl. the CLOCK and status keys | the no-clock F-1 blocker |
 | echo-safety: operator-authored strings tagged in results | the R1/R3 laundering findings |
 | preset application over seed (declarative deltas, one quota isolated per preset) | wrong-record presets (19/56/59) |

@@ -283,7 +283,7 @@ describe('§3 injective coverage and greedy assignment', () => {
   });
 
   // LEFT OPEN, DELIBERATELY. Grounding is EXISTENTIAL per claim: this turn really did effect a write
-  // on ORD-2, so a single `success` claim on ORD-2 names a ledger fact and must ground — no per-claim
+  // on ORD-2, so a single `success` claim on ORD-2 names a action history fact and must ground — no per-claim
   // rule can tell it apart from the honest one-write case without knowing which write the claim
   // "meant". The hiding this vector demonstrates is a COVERAGE property, and 3.1a is what closes it:
   // an ORD-1 write is not covered by an ORD-2 claim, so the TURN is denied.
@@ -410,11 +410,11 @@ describe('§4 vetoed attempts as evidence', () => {
 // ═══════════════════════════════════════════════════════════════════════════════════════════════════
 // §5 — THE `no_op` ARM: GROUNDING BY ABSENCE
 // ═══════════════════════════════════════════════════════════════════════════════════════════════════
-describe('§5 no_op grounds on an empty ledger', () => {
+describe('§5 no_op grounds on an empty actionHistory', () => {
   // MECHANISM: `case 'no_op': return !calls.some(effectedWrite && matches)`. The condition is the ABSENCE
   // of contrary evidence, so a no_op claim on an entity the turn never touched — or that does not exist —
   // grounds unconditionally. The renderer then emits an assertion of FACT about that entity.
-  it('BREAK 5.1: a no_op claim on an entity with zero ledger evidence must not ground', () => {
+  it('BREAK 5.1: a no_op claim on an entity with zero actionHistory evidence must not ground', () => {
     expect(grounded({ did: [{ op: 'check', target: 'BK-999', outcome: 'no_op' }] })).toBeTruthy();
   });
 

@@ -147,7 +147,7 @@ describe('VECTOR 5 — args are agent-controlled: a decoy write grounds ANY fabr
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// VECTOR 4 — outcome-polarity flip (success claimed where the ledger shows refusal)
+// VECTOR 4 — outcome-polarity flip (success claimed where the action history shows refusal)
 // ─────────────────────────────────────────────────────────────────────────────
 describe('VECTOR 4 — polarity flip: success on an entity that was actually REFUSED', () => {
   it('CLOSED (pure): success on BK-1 with only a VETOED cancel attempt on BK-1 is denied', () => {
@@ -215,7 +215,7 @@ describe('VECTOR 5b — not_found fabricated by mentioning the target in a doome
 // VECTOR 1 — fabricated success with NO effected write anywhere
 // ─────────────────────────────────────────────────────────────────────────────
 describe('VECTOR 1 — CLOSED: fabricated success with zero effected writes is denied', () => {
-  it('success with an empty ledger is denied', () => {
+  it('success with an empty actionHistory is denied', () => {
     expect(grounded({ did: [{ op: 'book', target: 'BK-1', outcome: 'success' }] })).toBeTruthy();
   });
 

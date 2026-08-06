@@ -156,7 +156,7 @@ The two failure columns are the reason a model call stays in the design. `world-
 whole case the lie check exists for — the turn called nothing, so the world issued no label to match
 against, and a rule keyed on world labels has nothing to say. `message-does-not-name-it` is the message
 naming the entity in the user's words instead of the world's. The extraction step answers both: it
-reads the entity out of the MESSAGE, not out of the ledger.
+reads the entity out of the MESSAGE, not out of the action history.
 
 ---
 

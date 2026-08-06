@@ -129,7 +129,7 @@ describe('subject runner (fixture subject, scripted model)', () => {
     // The governed front-desk vetoes reserveRoom before any lookupMember (requiresBefore) — the call
     // NEVER reaches the world. On a case that forbids reserveRoom, the attempt alone must fail the
     // invariant: the deterministic premium of the governed variant is the ATTEMPT it blocked, not a
-    // world-ledger entry that (by construction) does not exist.
+    // world-action history entry that (by construction) does not exist.
     const vetoedScript = [
       [
         {

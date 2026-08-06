@@ -75,8 +75,8 @@ const INTERNAL = [
   'GuardBinding', 'resolveGuards', 'renderAssembledPrompt',
   'normalizeModelParams', 'resolveModelSettings',
   'TokenUsage', 'RuntimeTurnRecord',
-  'beginTurn', 'createLedger', 'clearDeliveredTerminal', 'pruneSupersededTerminals', 'recordTerminal', 'recordTerminalCall',
-  'recordToolResult', 'recordTurnHistory', 'resultOk', 'TurnLedger', 'vetoStormHit',
+  'beginTurn', 'createActionHistory', 'clearDeliveredTerminal', 'pruneSupersededTerminals', 'recordTerminal', 'recordTerminalCall',
+  'recordToolResult', 'recordTurnHistory', 'resultOk', 'TurnActionHistory', 'vetoStormHit',
   'forcedTerminalPrompt', 'isTerminal', 'normalizeTerminalToolDef', 'prematureTerminalTools',
   // The backends prune the PREMATURE (invalidated, never-delivered) terminal from `observed`, so an
   // ask the user never saw cannot license consent; the calls come from here.
@@ -95,7 +95,7 @@ const INTERNAL = [
   // the exhaustion closure; `RespondPayload`/`RenderOpts` ride the surface. The backend seam needs
   // `respondPayload` (args → structured payload for the redrive/fallback re-generation) and
   // `lastTerminalArgs` (the respond call's args from a result's steps).
-  'renderOperationReport', 'deriveClaimsFromLedger', 'RespondPayload', 'RenderOpts', 'respondPayload',
+  'renderOperationReport', 'deriveClaimsFromActionHistory', 'RespondPayload', 'RenderOpts', 'respondPayload',
   // The turn's OPERATION RECORD as an object. The record is what the reader holds beside the prose, so
   // its exact wording is part of the seam — and the wording itself is the host-declarable text pack,
   // because an approval request the user cannot read is an act they can never consent to.

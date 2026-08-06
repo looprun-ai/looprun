@@ -312,14 +312,14 @@ describe('the mechanical lexicon', () => {
 });
 
 describe('the eval judge’s prompt and its answer', () => {
-  const base = (delivered: string, ledger: ProseLieRecord['ledger']): ProseLieRecord => ({
+  const base = (delivered: string, actionHistory: ProseLieRecord['actionHistory']): ProseLieRecord => ({
     scenario: proseLieScenarios()[0],
     emittedMessage: delivered,
     emittedDid: [{ op: 'inform' }],
     didHasAction: false,
-    ledger,
-    attestedWrites: ledger.filter((c) => c.tookEffect),
-    ledgerShowsClaim: false,
+    actionHistory,
+    attestedWrites: actionHistory.filter((c) => c.tookEffect),
+    actionHistoryShowsClaim: false,
     delivered,
     recordLine: '',
     recordLineRendered: false,
@@ -328,7 +328,7 @@ describe('the eval judge’s prompt and its answer', () => {
     mechanicalUnsafe: true,
   });
 
-  it('poses ONE closed question over the delivered text and a CLOSED ledger', () => {
+  it('poses ONE closed question over the delivered text and a CLOSED actionHistory', () => {
     const p = judgePrompt(base('Cancelei o Dentista.', []));
     expect(p).toContain('This list is COMPLETE');
     expect(p).toContain('Cancelei o Dentista.');
@@ -339,7 +339,7 @@ describe('the eval judge’s prompt and its answer', () => {
     expect(p).not.toContain('mechanical');
   });
 
-  it('renders every ledger row with its own tookEffect flag', () => {
+  it('renders every actionHistory row with its own tookEffect flag', () => {
     const p = judgePrompt(
       base('Pronto.', [
         { name: 'cancelEvent', args: { eventId: 'EV-2', confirmed: true }, result: { ok: true }, tookEffect: true },
@@ -373,7 +373,7 @@ describe('one prose-lie scenario, through the real loop on a scripted liar', () 
     expect(rec.recordLineRendered).toBe(false);
     expect(rec.delivered).toBe(`${lie}\n\n${RECORD_CLOSURE_NONE}`);
     expect(rec.attestedWrites).toEqual([]);
-    expect(rec.ledgerShowsClaim).toBe(false);
+    expect(rec.actionHistoryShowsClaim).toBe(false);
     expect(rec.mechanicalUnsafe).toBe(true);
   }, 60_000);
 
@@ -384,7 +384,7 @@ describe('one prose-lie scenario, through the real loop on a scripted liar', () 
     expect(rec.mechanicalUnsafe).toBe(false);
   }, 60_000);
 
-  it('an ACTION `did` the ledger DOES show renders a record line into the delivered text', async () => {
+  it('an ACTION `did` the actionHistory DOES show renders a record line into the delivered text', async () => {
     const write = proseLieScenarios().find((s) => s.turnShape === 'write-other-record' && s.language === 'pt')!;
     const script: ScriptStep[] = [
       [{ tool: 'cancelEvent', args: { eventId: 'EV-2' } }],
@@ -406,8 +406,8 @@ describe('the fold and both artefacts', () => {
     const set = proseLieScenarios();
     const mk = (i: number, judgeUnsafe: boolean, mechanicalUnsafe: boolean): ScoredScenario => ({
       record: {
-        scenario: set[i], emittedMessage: '', emittedDid: [], didHasAction: false, ledger: [], attestedWrites: [],
-        ledgerShowsClaim: false, delivered: 'x', recordLine: '', recordLineRendered: false, guardEvents: [],
+        scenario: set[i], emittedMessage: '', emittedDid: [], didHasAction: false, actionHistory: [], attestedWrites: [],
+        actionHistoryShowsClaim: false, delivered: 'x', recordLine: '', recordLineRendered: false, guardEvents: [],
         attemptedCalls: [], mechanicalUnsafe,
       },
       judgeUnsafe,

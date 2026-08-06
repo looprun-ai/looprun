@@ -1,6 +1,6 @@
 /**
  * The ORDERS subject's case pack — the minimum `validateSubject` needs to see a well-formed subject,
- * one case per ledger shape the spontaneous-lie measurement drives through this world.
+ * one case per action history shape the spontaneous-lie measurement drives through this world.
  *
  * The measurement itself does NOT run these: it drives its own scripts through `runSpecConversation`.
  * They exist so this fixture is a real subject rather than a directory shaped like one.

@@ -35,7 +35,7 @@ import {
 import type { Intention, Judge } from '../../src/internal.js';
 import type { HistoryTurn } from '../../src/rules.js';
 import { DEFAULT_ENGINE_TEXT } from '../../src/runtime/engine-text.js';
-import { createLedger, recordToolResult, recordTurnHistory } from '../../src/runtime/ledger.js';
+import { createActionHistory, recordToolResult, recordTurnHistory } from '../../src/runtime/action-history.js';
 import { composeDeliveryText, finalizeReply } from '../../src/runtime/turn.js';
 
 const RECORD_CLOSURE_SOME = DEFAULT_ENGINE_TEXT.recordClosureSome;
@@ -58,23 +58,23 @@ const specOf = (): AgentSpecBase => {
   return spec;
 };
 
-/** A write that TOOK EFFECT, aligned across the world ledger and the observed entry. */
-function effectWrite(ledger: ReturnType<typeof createLedger>, world: AgentWorld, label: string): void {
+/** A write that TOOK EFFECT, aligned across the world action history and the observed entry. */
+function effectWrite(actionHistory: ReturnType<typeof createActionHistory>, world: AgentWorld, label: string): void {
   const args = { eventId: label };
   world.toolCalls.push({ name: 'cancelEvent', args, result: { id: label, label }, tookEffect: true });
-  recordToolResult(ledger, 'cancelEvent', args, { id: label, label }, world);
+  recordToolResult(actionHistory, 'cancelEvent', args, { id: label, label }, world);
 }
 
 /** A call the world RAN, with the result it returned — the evidence a non-success claim grounds on. */
 function landCall(
-  ledger: ReturnType<typeof createLedger>,
+  actionHistory: ReturnType<typeof createActionHistory>,
   world: AgentWorld,
   name: string,
   result: Record<string, unknown>,
 ): void {
   const args = { eventId: 'EV-2' };
   world.toolCalls.push({ name, args, result, tookEffect: false });
-  recordToolResult(ledger, name, args, result, world);
+  recordToolResult(actionHistory, name, args, result, world);
 }
 
 /** A judge that records every prompt it is handed and answers from a queue. */
@@ -99,13 +99,13 @@ const FIRES = 'VIOLATION: the reader would believe an operation that never happe
 const P = (message: string, did: Intention[] = [{ op: 'inform' }]) => ({ message, did });
 
 const run = (
-  ledger: ReturnType<typeof createLedger>,
+  actionHistory: ReturnType<typeof createActionHistory>,
   world: AgentWorld,
   payload: { message: string; did: Intention[] },
   judge?: Judge,
 ) => {
-  if (judge) ledger.judge = judge;
-  return finalizeReply(specOf(), CONTRACT, world, ledger, payload, async () => payload, 0);
+  if (judge) actionHistory.judge = judge;
+  return finalizeReply(specOf(), CONTRACT, world, actionHistory, payload, async () => payload, 0);
 };
 
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
@@ -119,12 +119,12 @@ const run = (
 describe('MODE 1 — an action was carried out, so the outcome is the deny', () => {
   it('IMPOSSIBLE: a turn whose record names an operation is never handed to the rewriter', async () => {
     const world = fixtureWorld();
-    const ledger = createLedger();
-    effectWrite(ledger, world, 'EV-2');
+    const actionHistory = createActionHistory();
+    effectWrite(actionHistory, world, 'EV-2');
     const { judge, prompts } = recordingJudge([FIRES, REWRITE]);
     const did: Intention[] = [{ op: 'cancel', target: 'EV-2', outcome: 'success' }];
 
-    const out = await run(ledger, world, { message: LIE, did }, judge);
+    const out = await run(actionHistory, world, { message: LIE, did }, judge);
 
     // One prompt only: the question. A second prompt would be the rewrite this turn may not take.
     expect(prompts).toHaveLength(1);
@@ -136,7 +136,7 @@ describe('MODE 1 — an action was carried out, so the outcome is the deny', () 
     const { judge, prompts } = recordingJudge([FIRES, REWRITE]);
     const did: Intention[] = [{ op: 'cancel', target: 'EV-2', outcome: 'blocked' }];
 
-    const out = await run(createLedger(), fixtureWorld(), { message: LIE, did }, judge);
+    const out = await run(createActionHistory(), fixtureWorld(), { message: LIE, did }, judge);
 
     expect(prompts).toHaveLength(1);
     expect(out.violations).toContain('llmCheckLie');
@@ -145,7 +145,7 @@ describe('MODE 1 — an action was carried out, so the outcome is the deny', () 
   it('CONTROL: a speech-only turn takes the REWRITE — the question, then the rewrite', async () => {
     const { judge, prompts } = recordingJudge([FIRES, REWRITE]);
 
-    const out = await run(createLedger(), fixtureWorld(), P(LIE), judge);
+    const out = await run(createActionHistory(), fixtureWorld(), P(LIE), judge);
 
     expect(prompts).toHaveLength(2);
     expect(out.text).toContain(REWRITE);
@@ -154,7 +154,7 @@ describe('MODE 1 — an action was carried out, so the outcome is the deny', () 
   it('CONTROL: an answer of NONE spends exactly one call and delivers the prose', async () => {
     const { judge, prompts } = recordingJudge(['NONE']);
 
-    const out = await run(createLedger(), fixtureWorld(), P(LIE), judge);
+    const out = await run(createActionHistory(), fixtureWorld(), P(LIE), judge);
 
     expect(prompts).toHaveLength(1);
     expect(out.text).toContain(LIE);
@@ -163,9 +163,9 @@ describe('MODE 1 — an action was carried out, so the outcome is the deny', () 
   it('IMPOSSIBLE: a spec that does not bind llmCheckLie makes ZERO judge calls', async () => {
     const { judge, prompts } = recordingJudge([FIRES, REWRITE]);
     const bare = new AgentSpecBase({ id: 'bare', mode: 'M', persona: 'p', tools: ['cancelEvent', 'getEvent'], contract: CONTRACT });
-    const ledger = createLedger(judge);
+    const actionHistory = createActionHistory(judge);
 
-    await finalizeReply(bare, CONTRACT, fixtureWorld(), ledger, P(LIE), async () => P(LIE), 0);
+    await finalizeReply(bare, CONTRACT, fixtureWorld(), actionHistory, P(LIE), async () => P(LIE), 0);
 
     expect(prompts).toEqual([]);
   });
@@ -182,7 +182,7 @@ describe('MODE 2 — a detected lie must be rewritten, and the rewrite must ship
   it('IMPOSSIBLE: VIOLATION → the delivered prose is the rewrite, and the lie is gone', async () => {
     const { judge } = recordingJudge([FIRES, REWRITE]);
 
-    const out = await run(createLedger(), fixtureWorld(), P(LIE), judge);
+    const out = await run(createActionHistory(), fixtureWorld(), P(LIE), judge);
 
     expect(out.text).toBe(`${REWRITE}\n\n${RECORD_CLOSURE_NONE}`);
     expect(out.text).not.toContain(LIE);
@@ -190,20 +190,20 @@ describe('MODE 2 — a detected lie must be rewritten, and the rewrite must ship
 
   it('the rewrite touches the PROSE only — the verified declaration is delivered untouched', async () => {
     const { judge } = recordingJudge([FIRES, REWRITE]);
-    const ledger = createLedger();
+    const actionHistory = createActionHistory();
     const did: Intention[] = [{ op: 'inform' }];
 
-    const out = await run(ledger, fixtureWorld(), { message: LIE, did }, judge);
+    const out = await run(actionHistory, fixtureWorld(), { message: LIE, did }, judge);
 
     expect(out.did).toEqual(did);
-    expect(ledger.did).toEqual(did);
-    expect(ledger.turnCorrections).toContain('lie-check:rewritten');
+    expect(actionHistory.did).toEqual(did);
+    expect(actionHistory.turnCorrections).toContain('lie-check:rewritten');
   });
 
   it('an empty rewrite is not a delivery — the original stands under the record that denies it', async () => {
     const { judge } = recordingJudge([FIRES, '   ']);
 
-    const out = await run(createLedger(), fixtureWorld(), P(LIE), judge);
+    const out = await run(createActionHistory(), fixtureWorld(), P(LIE), judge);
 
     expect(out.text).toBe(`${LIE}\n\n${RECORD_CLOSURE_NONE}`);
   });
@@ -220,13 +220,13 @@ describe('MODE 3 — every other turn delivers the message and the record as the
     const honest = 'The dentist appointment is still on your calendar. Shall I cancel it?';
     const { judge } = recordingJudge(['NONE']);
 
-    const out = await run(createLedger(), fixtureWorld(), P(honest), judge);
+    const out = await run(createActionHistory(), fixtureWorld(), P(honest), judge);
 
     expect(out.text).toBe(`${honest}\n\n${RECORD_CLOSURE_NONE}`);
   });
 
   it('IMPOSSIBLE: NO JUDGE → the same delivery, and no throw', async () => {
-    const out = await run(createLedger(), fixtureWorld(), P(LIE));
+    const out = await run(createActionHistory(), fixtureWorld(), P(LIE));
 
     expect(out.text).toBe(`${LIE}\n\n${RECORD_CLOSURE_NONE}`);
     expect(out.exhausted).toBe(false);
@@ -237,7 +237,7 @@ describe('MODE 3 — every other turn delivers the message and the record as the
       throw new Error('judge unreachable');
     };
 
-    const out = await run(createLedger(), fixtureWorld(), P(LIE), throwing);
+    const out = await run(createActionHistory(), fixtureWorld(), P(LIE), throwing);
 
     // A backstop that deletes itself the moment its own seam fails is not a backstop. The lie does not
     // ship; the turn spends its redrives and delivers the engine's own closure instead.
@@ -249,7 +249,7 @@ describe('MODE 3 — every other turn delivers the message and the record as the
   it('IMPOSSIBLE: a judge that answers no readable verdict is read as NONE — the safe direction', async () => {
     const { judge } = recordingJudge(['I am not sure what you are asking.']);
 
-    const out = await run(createLedger(), fixtureWorld(), P(LIE), judge);
+    const out = await run(createActionHistory(), fixtureWorld(), P(LIE), judge);
 
     expect(out.text).toBe(`${LIE}\n\n${RECORD_CLOSURE_NONE}`);
   });
@@ -265,15 +265,15 @@ describe('MODE 3 — every other turn delivers the message and the record as the
 describe('MODE 4 — what an earlier turn did is shown to the check', () => {
   it('the session list carries the earlier turn\'s entity into both prompts', async () => {
     const world = fixtureWorld();
-    const ledger = createLedger();
-    effectWrite(ledger, world, 'Lunch with Marina');
-    ledger.did = [{ op: 'cancel', target: 'Lunch with Marina', outcome: 'success' }];
-    recordTurnHistory(ledger, 'Cancelled.', world);
-    ledger.turnIndex = 1;
-    ledger.did = [];
+    const actionHistory = createActionHistory();
+    effectWrite(actionHistory, world, 'Lunch with Marina');
+    actionHistory.did = [{ op: 'cancel', target: 'Lunch with Marina', outcome: 'success' }];
+    recordTurnHistory(actionHistory, 'Cancelled.', world);
+    actionHistory.turnIndex = 1;
+    actionHistory.did = [];
 
     const { judge, prompts } = recordingJudge(['NONE']);
-    await run(ledger, world, P('Your lunch with Marina was cancelled.'), judge);
+    await run(actionHistory, world, P('Your lunch with Marina was cancelled.'), judge);
 
     expect(prompts[0]).toContain(SESSION_HEADING);
     expect(prompts[0]).toContain('Lunch with Marina: done');
@@ -285,15 +285,15 @@ describe('MODE 4 — what an earlier turn did is shown to the check', () => {
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
 describe('INVARIANT — the record is never absent from a finalized turn', () => {
   it('IMPOSSIBLE: a speech-only turn, a rewritten turn and an acting turn all carry a record', async () => {
-    const speech = await run(createLedger(), fixtureWorld(), P('Hello.'));
+    const speech = await run(createActionHistory(), fixtureWorld(), P('Hello.'));
 
     const { judge } = recordingJudge([FIRES, REWRITE]);
-    const rewritten = await run(createLedger(), fixtureWorld(), P(LIE), judge);
+    const rewritten = await run(createActionHistory(), fixtureWorld(), P(LIE), judge);
 
     const world = fixtureWorld();
-    const ledger = createLedger();
-    effectWrite(ledger, world, 'EV-2');
-    const acting = await run(ledger, world, { message: 'Done.', did: [{ op: 'cancel', target: 'EV-2', outcome: 'success' }] });
+    const actionHistory = createActionHistory();
+    effectWrite(actionHistory, world, 'EV-2');
+    const acting = await run(actionHistory, world, { message: 'Done.', did: [{ op: 'cancel', target: 'EV-2', outcome: 'success' }] });
 
     expect(speech.text.endsWith(RECORD_CLOSURE_NONE)).toBe(true);
     expect(rewritten.text.endsWith(RECORD_CLOSURE_NONE)).toBe(true);
@@ -311,15 +311,15 @@ describe('INVARIANT — the record is never absent from a finalized turn', () =>
 describe('INVARIANT — the session list never reaches the delivered text', () => {
   it('IMPOSSIBLE: neither the heading nor an earlier turn\'s line appears in the delivery', async () => {
     const world = fixtureWorld();
-    const ledger = createLedger();
-    effectWrite(ledger, world, 'Lunch with Marina');
-    ledger.did = [{ op: 'cancel', target: 'Lunch with Marina', outcome: 'success' }];
-    recordTurnHistory(ledger, 'Cancelled.', world);
-    ledger.turnIndex = 1;
-    ledger.did = [];
+    const actionHistory = createActionHistory();
+    effectWrite(actionHistory, world, 'Lunch with Marina');
+    actionHistory.did = [{ op: 'cancel', target: 'Lunch with Marina', outcome: 'success' }];
+    recordTurnHistory(actionHistory, 'Cancelled.', world);
+    actionHistory.turnIndex = 1;
+    actionHistory.did = [];
 
     const { judge } = recordingJudge([FIRES, REWRITE]);
-    const out = await run(ledger, world, P('Thanks!'), judge);
+    const out = await run(actionHistory, world, P('Thanks!'), judge);
 
     expect(out.text).not.toContain(SESSION_HEADING);
     expect(out.text).not.toContain('Lunch with Marina');
@@ -400,15 +400,15 @@ describe('the session list', () => {
 // session's own account, so a reply about an earlier turn's action has something to be true against.
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
 
-type Ledger = ReturnType<typeof createLedger>;
+type ActionHistory = ReturnType<typeof createActionHistory>;
 
 /**
- * What the turn carried out — the axis eligibility is computed from. Each row carries the LEDGER
+ * What the turn carried out — the axis eligibility is computed from. Each row carries the ACTION HISTORY
  * EVIDENCE its declaration needs, so every cell reaches the algorithm instead of stopping at the
  * cross-check: an ungrounded declaration is a different mechanism's job, and a sweep full of them
  * would be measuring that one.
  */
-const DECLARATIONS: Array<{ id: string; did: Intention[]; seed: (l: Ledger, w: AgentWorld) => void }> = [
+const DECLARATIONS: Array<{ id: string; did: Intention[]; seed: (l: ActionHistory, w: AgentWorld) => void }> = [
   { id: 'speech:inform', did: [{ op: 'inform' }], seed: () => {} },
   { id: 'speech:greet', did: [{ op: 'greet' }], seed: () => {} },
   { id: 'speech:refuse', did: [{ op: 'refuse' }], seed: () => {} },
@@ -503,17 +503,17 @@ describe('THE WHOLE INPUT SPACE — the four failure modes over every combinatio
             const cell = `${decl.id} · ${j.id} · ${sess.id} · ${msg.id}`;
 
             const world = fixtureWorld();
-            const ledger = createLedger();
+            const actionHistory = createActionHistory();
             // The SESSION: one completed turn per entity it already carried out.
             for (const entity of sess.entities) {
-              effectWrite(ledger, world, entity);
-              ledger.did = [{ op: 'cancel', target: entity, outcome: 'success' }];
-              recordTurnHistory(ledger, 'Cancelled.', world);
-              ledger.turnIndex += 1;
+              effectWrite(actionHistory, world, entity);
+              actionHistory.did = [{ op: 'cancel', target: entity, outcome: 'success' }];
+              recordTurnHistory(actionHistory, 'Cancelled.', world);
+              actionHistory.turnIndex += 1;
             }
-            ledger.did = [];
+            actionHistory.did = [];
             // THIS turn's evidence, so the declaration grounds and the cell reaches the algorithm.
-            decl.seed(ledger, world);
+            decl.seed(actionHistory, world);
 
             const prompts: string[] = [];
             let judge: Judge | undefined;
@@ -527,12 +527,12 @@ describe('THE WHOLE INPUT SPACE — the four failure modes over every combinatio
             }
 
             const payload = { message: msg.text, did: decl.did };
-            const out = await run(ledger, world, payload, judge);
+            const out = await run(actionHistory, world, payload, judge);
 
             const record = operationRecord(decl.did, { outcomes: CONTRACT.outcomes });
             // The expected deliveries come from the SHIPPED composer, so a cell whose evidence also
             // raises a consent question is scored against the text the user really receives.
-            const asked = ledger.approvalsIssuedThisTurn;
+            const asked = actionHistory.approvalsIssuedThisTurn;
             const asIs = composeDeliveryText(msg.text, decl.did, asked, CONTRACT);
             const asRewritten = composeDeliveryText(REWRITE, decl.did, asked, CONTRACT);
             const wasRewritten = out.text === asRewritten;

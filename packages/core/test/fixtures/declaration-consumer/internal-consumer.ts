@@ -13,7 +13,7 @@ import {
   renderAssembledPrompt,
   normalizeModelParams,
   resolveModelSettings,
-  createLedger,
+  createActionHistory,
   beginTurn,
   resultOk,
   recordToolResult,
@@ -34,7 +34,7 @@ import {
   enforcePostTool,
   redriveMessage,
   renderOperationReport,
-  deriveClaimsFromLedger,
+  deriveClaimsFromActionHistory,
   clearDeliveredTerminal,
   finalizeReply,
   governanceVeto,
@@ -46,7 +46,7 @@ import {
 } from '@looprun-ai/core/internal';
 import type {
   GuardBinding,
-  TurnLedger,
+  TurnActionHistory,
   TokenUsage,
   RuntimeTurnRecord,
   ReplyViolation,
@@ -57,8 +57,8 @@ import type {
 import type { AgentSpec, AgentWorld, DomainContract } from '@looprun-ai/core';
 
 // ── Inferred returns across every seam ───────────────────────────────────────
-export const ledger = createLedger();
-export const stormed = vetoStormHit(ledger);
+export const actionHistory = createActionHistory();
+export const stormed = vetoStormHit(actionHistory);
 export const defs = terminalToolDefs();
 export const protocol = terminalProtocol(true);
 export const forced = forcedTerminalPrompt(false);
@@ -75,13 +75,13 @@ export function assembledPrompt(w: AgentWorld, s: AgentSpec, d: DomainContract) 
 export function params(p: Record<string, unknown>) {
   return resolveModelSettings(normalizeModelParams(p));
 }
-export function preTool(spec: AgentSpec, l: TurnLedger, w: AgentWorld, tool: string, args: Record<string, unknown>) {
+export function preTool(spec: AgentSpec, l: TurnActionHistory, w: AgentWorld, tool: string, args: Record<string, unknown>) {
   return evaluatePreTool(spec, l, w, tool, args);
 }
-export function onInput(spec: AgentSpec, l: TurnLedger, w: AgentWorld) {
+export function onInput(spec: AgentSpec, l: TurnActionHistory, w: AgentWorld) {
   return evaluateOnInput(spec, l, w);
 }
-export function postTool(spec: AgentSpec, l: TurnLedger, w: AgentWorld, tool: string) {
+export function postTool(spec: AgentSpec, l: TurnActionHistory, w: AgentWorld, tool: string) {
   return enforcePostTool(resolveGuards(spec.guards.postTool, tool), {
     world: w,
     observed: l.observed,
@@ -105,11 +105,11 @@ export function prompt(spec: AgentSpec, w: AgentWorld, d: DomainContract) {
 export function redrive(v: ReplyViolation[]) {
   return redriveMessage(v);
 }
-export function report(l: TurnLedger, d: DomainContract, opts?: RenderOpts) {
-  const did = deriveClaimsFromLedger(l.observed, 0, d.writeTools ?? []);
+export function report(l: TurnActionHistory, d: DomainContract, opts?: RenderOpts) {
+  const did = deriveClaimsFromActionHistory(l.observed, 0, d.writeTools ?? []);
   return renderOperationReport(did, opts);
 }
-export function clearTerminal(l: TurnLedger): void {
+export function clearTerminal(l: TurnActionHistory): void {
   clearDeliveredTerminal(l);
 }
 export function premature(steps: unknown) {
@@ -119,8 +119,8 @@ export function superseded(steps: unknown) {
   return supersededTerminalCalls(steps);
 }
 
-// ── Ledger writers + the remaining values, so nothing is unreferenced ────────
-export function record(l: TurnLedger, w: AgentWorld): void {
+// ── ActionHistory writers + the remaining values, so nothing is unreferenced ────────
+export function record(l: TurnActionHistory, w: AgentWorld): void {
   beginTurn(l, 0);
   recordToolResult(l, 'addEvent', {}, { ok: true }, w);
   recordTerminal(l, 'respond', {});

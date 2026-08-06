@@ -196,8 +196,8 @@ function build(spec: WorldSpec, options: DefineWorldOptions, preset: string, der
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
-function push(ledger: WorldCall[], name: string, args: Record<string, unknown>, result: unknown, tookEffect: boolean, echo?: WorldCall['echo']): unknown {
-  ledger.push({ name, args, result, tookEffect, ...(echo ? { echo } : {}) });
+function push(actionHistory: WorldCall[], name: string, args: Record<string, unknown>, result: unknown, tookEffect: boolean, echo?: WorldCall['echo']): unknown {
+  actionHistory.push({ name, args, result, tookEffect, ...(echo ? { echo } : {}) });
   return result;
 }
 

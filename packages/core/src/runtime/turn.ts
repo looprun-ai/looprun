@@ -8,9 +8,9 @@
  * The reply pipeline (finalizeReply) works over the STRUCTURED respond payload (message + did):
  * mutators (message only) → onReply checks (over the payload — claims guards read did, degeneration reads
  * message) → bounded NO-TOOLS redrive (the backend re-generates a whole respond payload) → salvage → a
- * deterministic exhaustion closure the engine DERIVES from the world ledger. The delivered text is
+ * deterministic exhaustion closure the engine DERIVES from the world action history. The delivered text is
  * COMPOSED: `message` + the engine-rendered OPERATION RECORD of the verified `did`, on every turn —
- * so the operational sentences the user reads come from ledger-grounded structure, never the agent's
+ * so the operational sentences the user reads come from action history-grounded structure, never the agent's
  * free prose, and a claim the prose makes always arrives beside the engine's own account of what
  * changed. On a turn where nothing was carried out, that account is also what gates the LIE CHECK: one
  * closed question to the backend's `judge`, and a rewrite of the prose when it answers yes.
@@ -21,10 +21,10 @@ import { resolveGuards, resolveMutators } from '../spec.js';
 import type { AgentSpec, ChainSpec } from '../spec.js';
 import type { DomainContract } from '../assembled-prompt.js';
 import type { AgentWorld, Guard, GuardCtx, ObservedCall, Judge } from '../rules.js';
-import { issueApprovalForVeto, recordVeto, type TurnLedger } from './ledger.js';
+import { issueApprovalForVeto, recordVeto, type TurnActionHistory } from './action-history.js';
 import { isTerminal } from './terminal.js';
 import {
-  deriveClaimsFromLedger,
+  deriveClaimsFromActionHistory,
   isBlankDelivery,
   operationRecord,
   renderOperationReport,
@@ -93,10 +93,10 @@ export function governanceVeto(guardKind: string, reason: string, mustCloseTurn:
   };
 }
 
-/** Run the preTool guards for one candidate call. On deny, the veto is recorded in the ledger. */
+/** Run the preTool guards for one candidate call. On deny, the veto is recorded in the action history. */
 export async function evaluatePreTool(
   spec: AgentSpec,
-  ledger: TurnLedger,
+  actionHistory: TurnActionHistory,
   world: AgentWorld,
   tool: string,
   args: Record<string, unknown>,
@@ -108,53 +108,53 @@ export async function evaluatePreTool(
   // await, so this ordering is deterministic. `selfEntry` is reconciled out when the result is
   // recorded (now in `observed`) or removed on the veto path just below (it never ran).
   // The spec's labels are what turn a DENIAL into a question the user can read and answer, so they are
-  // seated where the spec and the ledger first meet — a spec that declares none leaves the ledger's own
+  // seated where the spec and the action history first meet — a spec that declares none leaves the action history's own
   // map alone, and a flag-less destructive tool with no label stays permanently unconsentable.
-  if (spec.destructiveLabels) ledger.destructiveLabels = spec.destructiveLabels;
-  const siblingCallsThisStep = [...ledger.inFlightCalls];
-  const selfEntry: ObservedCall = { name: tool, args, ok: true, turnIndex: ledger.turnIndex };
-  ledger.inFlightCalls.push(selfEntry);
+  if (spec.destructiveLabels) actionHistory.destructiveLabels = spec.destructiveLabels;
+  const siblingCallsThisStep = [...actionHistory.inFlightCalls];
+  const selfEntry: ObservedCall = { name: tool, args, ok: true, turnIndex: actionHistory.turnIndex };
+  actionHistory.inFlightCalls.push(selfEntry);
   const gctx: GuardCtx = {
     args,
     tool,
     world,
-    observed: ledger.observed,
-    turnIndex: ledger.turnIndex,
-    userText: ledger.currentUserText, consent: ledger.consentThisTurn,
-    history: ledger.history,
-    attachmentsThisTurn: ledger.attachments,
+    observed: actionHistory.observed,
+    turnIndex: actionHistory.turnIndex,
+    userText: actionHistory.currentUserText, consent: actionHistory.consentThisTurn,
+    history: actionHistory.history,
+    attachmentsThisTurn: actionHistory.attachments,
     siblingCallsThisStep,
-    notes: ledger.turnCorrections,
-    judge: ledger.judge, judgeTimeoutMs: ledger.judgeTimeoutMs, renderOpts: ledger.renderOpts,
+    notes: actionHistory.turnCorrections,
+    judge: actionHistory.judge, judgeTimeoutMs: actionHistory.judgeTimeoutMs, renderOpts: actionHistory.renderOpts,
   };
   for (const g of guards) {
     const reason = await g.check(gctx);
     if (reason) {
-      const selfIx = ledger.inFlightCalls.indexOf(selfEntry);
-      if (selfIx >= 0) ledger.inFlightCalls.splice(selfIx, 1);
-      recordVeto(ledger, tool, args, `${g.dim}:${g.kind}:${tool}`);
+      const selfIx = actionHistory.inFlightCalls.indexOf(selfEntry);
+      if (selfIx >= 0) actionHistory.inFlightCalls.splice(selfIx, 1);
+      recordVeto(actionHistory, tool, args, `${g.dim}:${g.kind}:${tool}`);
       // THE DENIAL IS THE QUESTION. A destructive tool the world has no simulate form for is asked about
       // by being attempted: the gate refuses, and the refusal raises the consent question the delivered
       // text then carries. An agent cannot choose not to ask and still act.
-      if (g.kind === 'confirmFirst') issueApprovalForVeto(ledger, tool);
+      if (g.kind === 'confirmFirst') issueApprovalForVeto(actionHistory, tool);
       // 2nd+ consecutive veto: the model is looping. The backend wraps `reason` in the veto
       // envelope, which carries the escalation both as prose and as a structural flag.
-      return { verdict: 'deny', reason, guard: g, mustCloseTurn: ledger.vetoStreak >= 2 };
+      return { verdict: 'deny', reason, guard: g, mustCloseTurn: actionHistory.vetoStreak >= 2 };
     }
   }
   return { verdict: 'allow' };
 }
 
 /** Run the onInput guards (before any LLM call). Returns the refusal reason, or null to proceed. */
-export async function evaluateOnInput(spec: AgentSpec, ledger: TurnLedger, world: AgentWorld): Promise<string | null> {
+export async function evaluateOnInput(spec: AgentSpec, actionHistory: TurnActionHistory, world: AgentWorld): Promise<string | null> {
   const guards = resolveGuards(spec.guards.onInput);
   // onInput: `args` is empty (no tool); the guard reads the REAL incoming user text via `userText`
   // plus the prior `history`.
-  const gctx: GuardCtx = { args: {}, world, observed: ledger.observed, turnIndex: ledger.turnIndex, userText: ledger.currentUserText, consent: ledger.consentThisTurn, history: ledger.history, notes: ledger.turnCorrections, judge: ledger.judge, judgeTimeoutMs: ledger.judgeTimeoutMs, renderOpts: ledger.renderOpts };
+  const gctx: GuardCtx = { args: {}, world, observed: actionHistory.observed, turnIndex: actionHistory.turnIndex, userText: actionHistory.currentUserText, consent: actionHistory.consentThisTurn, history: actionHistory.history, notes: actionHistory.turnCorrections, judge: actionHistory.judge, judgeTimeoutMs: actionHistory.judgeTimeoutMs, renderOpts: actionHistory.renderOpts };
   for (const g of guards) {
     const reason = await g.check(gctx);
     if (reason) {
-      ledger.turnCorrections.push(`onInput:${g.kind}`);
+      actionHistory.turnCorrections.push(`onInput:${g.kind}`);
       return reason;
     }
   }
@@ -201,24 +201,24 @@ export function assertJudgePresent(spec: AgentSpec, judge: Judge | undefined): v
 }
 
 /** Apply the deterministic egress mutators (e.g. jargonScrub) to the reply text. */
-function applyMutators(spec: AgentSpec, ledger: TurnLedger, world: AgentWorld, text: string): string {
+function applyMutators(spec: AgentSpec, actionHistory: TurnActionHistory, world: AgentWorld, text: string): string {
   let out = text;
   for (const m of resolveMutators(spec.guards.onReplyMutate)) {
     const mctx: GuardCtx = {
       args: {},
       world,
-      observed: ledger.observed,
-      turnIndex: ledger.turnIndex,
-      userText: ledger.currentUserText, consent: ledger.consentThisTurn,
-      history: ledger.history,
+      observed: actionHistory.observed,
+      turnIndex: actionHistory.turnIndex,
+      userText: actionHistory.currentUserText, consent: actionHistory.consentThisTurn,
+      history: actionHistory.history,
       reply: out,
-      producedThisTurn: ledger.producedThisTurn,
-      did: ledger.did,
-      judge: ledger.judge, judgeTimeoutMs: ledger.judgeTimeoutMs, renderOpts: ledger.renderOpts,
+      producedThisTurn: actionHistory.producedThisTurn,
+      did: actionHistory.did,
+      judge: actionHistory.judge, judgeTimeoutMs: actionHistory.judgeTimeoutMs, renderOpts: actionHistory.renderOpts,
     };
     const next = m.apply(out, mctx);
     if (next !== out) {
-      ledger.turnCorrections.push(`mutate:${m.kind}`);
+      actionHistory.turnCorrections.push(`mutate:${m.kind}`);
       out = next;
     }
   }
@@ -228,26 +228,26 @@ function applyMutators(spec: AgentSpec, ledger: TurnLedger, world: AgentWorld, t
 /** Run the onReply guard checks against a candidate reply. */
 async function checkReply(
   spec: AgentSpec,
-  ledger: TurnLedger,
+  actionHistory: TurnActionHistory,
   world: AgentWorld,
   text: string,
 ): Promise<ReplyViolation[]> {
   const rctx: GuardCtx = {
     args: {},
     world,
-    observed: ledger.observed,
-    turnIndex: ledger.turnIndex,
-    userText: ledger.currentUserText, consent: ledger.consentThisTurn,
-    history: ledger.history,
+    observed: actionHistory.observed,
+    turnIndex: actionHistory.turnIndex,
+    userText: actionHistory.currentUserText, consent: actionHistory.consentThisTurn,
+    history: actionHistory.history,
     reply: text,
-    producedThisTurn: ledger.producedThisTurn,
-    attachmentsThisTurn: ledger.attachments,
-    notes: ledger.turnCorrections,
-    did: ledger.did,
+    producedThisTurn: actionHistory.producedThisTurn,
+    attachmentsThisTurn: actionHistory.attachments,
+    notes: actionHistory.turnCorrections,
+    did: actionHistory.did,
     // This turn's guard-vetoed attempts — so claimIsGrounded can ground a blocked/refused claim against
-    // the call the guard stopped (invisible on the world ledger by construction).
-    attemptedThisTurn: ledger.attemptedCalls,
-    judge: ledger.judge, judgeTimeoutMs: ledger.judgeTimeoutMs, renderOpts: ledger.renderOpts,
+    // the call the guard stopped (invisible on the world action history by construction).
+    attemptedThisTurn: actionHistory.attemptedCalls,
+    judge: actionHistory.judge, judgeTimeoutMs: actionHistory.judgeTimeoutMs, renderOpts: actionHistory.renderOpts,
   };
   const out: ReplyViolation[] = [];
   for (const g of resolveGuards(spec.guards.onReply)) {
@@ -258,7 +258,7 @@ async function checkReply(
 }
 
 /** The output of {@link enforcePostTool}: LLM-facing `output:${kind}:${tool}` correction tags (for the
- *  observed-call ledger / a turn's `recoveryEvents`) plus the `{ guard, reason }` pairs that JOIN the
+ *  observed-call action history / a turn's `recoveryEvents`) plus the `{ guard, reason }` pairs that JOIN the
  *  onReply violation set — so the SAME bounded no-tools redrive relays each correction to the model. The
  *  tool has already executed, so a failing result invariant can only be reported/repaired in the reply,
  *  never vetoed. */
@@ -271,7 +271,7 @@ export interface PostToolEnforcement {
  * OUTPUT-dim (postTool) enforcement — the `spec.guards.postTool` hook. Runs each
  * already-resolved result-invariant guard against `ctx` (whose `ctx.result` carries the tool RESULT) and
  * collects, for every guard that FAILS, (a) an `output:${kind}:${tool}` correction tag and (b) the
- * `{ guard, reason }` pair. PURE: no I/O, no ledger mutation — the caller records the corrections and
+ * `{ guard, reason }` pair. PURE: no I/O, no action history mutation — the caller records the corrections and
  * joins the violations into the reply-violation set. `guards === []` ⇒ empty arrays (the zero-diff path).
  */
 export async function enforcePostTool(guards: Guard[], ctx: GuardCtx): Promise<PostToolEnforcement> {
@@ -301,7 +301,7 @@ const EXHAUSTION_NOTHING = 'I could not complete this safely — nothing was cha
 
 /**
  * The DELIVERED text: the agent's `message`, then the CONSENT QUESTIONS this turn raised, then the
- * engine-rendered OPERATION RECORD of the (already ledger-grounded) `did`.
+ * engine-rendered OPERATION RECORD of the (already action history-grounded) `did`.
  *
  * ```
  *   Your booking BK-1 carries an 80.00 fee.     ← the agent's prose
@@ -332,30 +332,30 @@ export function composeDeliveryText(
   return [message.trim(), asked, report].filter((s) => s.trim()).join('\n\n');
 }
 
-function composeDelivery(payload: RespondPayload, ledger: TurnLedger, contract?: DomainContract): string {
-  return composeDeliveryText(payload.message, payload.did, ledger.approvalsIssuedThisTurn, contract);
+function composeDelivery(payload: RespondPayload, actionHistory: TurnActionHistory, contract?: DomainContract): string {
+  return composeDeliveryText(payload.message, payload.did, actionHistory.approvalsIssuedThisTurn, contract);
 }
 
 /**
  * The engine-DERIVED exhaustion closure, used when the redrive loop exhausts. The engine builds the TRUE
- * claims from the world ledger ({@link deriveClaimsFromLedger}) — the model never produced a groundable
+ * claims from the world action history ({@link deriveClaimsFromActionHistory}) — the model never produced a groundable
  * declaration, so the engine authors one it can stand behind — renders their operation REPORT, and pairs it
  * with one honest SENTENCE keyed on whether anything actually landed.
  *
  * Report and sentence are returned SEPARATELY because an `exhaustionReply` override may replace the
  * sentence and may NEVER replace the report (see {@link finalizeReply}).
  *
- * The derived `did` is never empty: a turn on which the ledger shows nothing to report is still a DELIVERED
+ * The derived `did` is never empty: a turn on which the action history shows nothing to report is still a DELIVERED
  * turn, and no delivered turn may carry zero intentions — the closure is prose, so the engine declares it
  * as the speech act it is (`inform`, which renders no operation line).
  */
 function deriveExhaustionClosure(
-  ledger: TurnLedger,
+  actionHistory: TurnActionHistory,
   writeTools: readonly string[],
   contract?: DomainContract,
 ): { report: string; sentence: string; text: string; did: Intention[] } {
-  const fromLedger = deriveClaimsFromLedger(ledger.observed, ledger.turnIndex, writeTools);
-  const did: Intention[] = fromLedger.length ? fromLedger : [{ op: 'inform' }];
+  const fromActionHistory = deriveClaimsFromActionHistory(actionHistory.observed, actionHistory.turnIndex, writeTools);
+  const did: Intention[] = fromActionHistory.length ? fromActionHistory : [{ op: 'inform' }];
   const report = renderOperationReport(did, { renderClaim: contract?.renderClaim, outcomes: contract?.outcomes, text: resolveEngineText(contract?.engineText) });
   const landed = did.some((c) => c.outcome === 'success');
   const sentence = landed ? EXHAUSTION_PARTIAL : EXHAUSTION_NOTHING;
@@ -384,7 +384,7 @@ function withBlankFloor(
   payload: RespondPayload,
   violations: string[],
   exhaustedIfNotBlank: boolean,
-  ledger: TurnLedger,
+  actionHistory: TurnActionHistory,
   writeTools: readonly string[],
   contract: DomainContract | undefined,
 ): FinalizedReply {
@@ -395,12 +395,12 @@ function withBlankFloor(
   // tells the user what changed, exactly as a consent question still tells them what they are being
   // asked. Prose gone AND nothing changed AND nothing asked is the case with nothing to deliver.
   const record = operationRecord(did, { renderClaim: contract?.renderClaim, outcomes: contract?.outcomes, text: resolveEngineText(contract?.engineText) });
-  if (!isBlankDelivery(payload.message) || record.hasOperations || ledger.approvalsIssuedThisTurn.length) {
-    return { text: composeDelivery(payload, ledger, contract), exhausted: exhaustedIfNotBlank, violations, did };
+  if (!isBlankDelivery(payload.message) || record.hasOperations || actionHistory.approvalsIssuedThisTurn.length) {
+    return { text: composeDelivery(payload, actionHistory, contract), exhausted: exhaustedIfNotBlank, violations, did };
   }
-  ledger.turnCorrections.push('exhaustion-blank-floor');
-  const derived = deriveExhaustionClosure(ledger, writeTools, contract);
-  ledger.did = derived.did;
+  actionHistory.turnCorrections.push('exhaustion-blank-floor');
+  const derived = deriveExhaustionClosure(actionHistory, writeTools, contract);
+  actionHistory.did = derived.did;
   return { text: derived.text, exhausted: true, violations, did: derived.did };
 }
 
@@ -453,24 +453,24 @@ async function askLieQuestion(
   spec: AgentSpec,
   world: AgentWorld,
   payload: RespondPayload,
-  ledger: TurnLedger,
+  actionHistory: TurnActionHistory,
   contract: DomainContract | undefined,
 ): Promise<LieVerdict> {
   const guard = lieCheckGuard(spec);
-  const judge = ledger.judge;
+  const judge = actionHistory.judge;
   if (!judge || !guard) return NO_LIE;
   const failMode = guard.failMode ?? 'closed';
   const opts = { renderClaim: contract?.renderClaim, outcomes: contract?.outcomes };
   const ctx: GuardCtx = {
     args: {},
     world,
-    observed: ledger.observed,
-    turnIndex: ledger.turnIndex,
-    userText: ledger.currentUserText,
-    history: ledger.history,
+    observed: actionHistory.observed,
+    turnIndex: actionHistory.turnIndex,
+    userText: actionHistory.currentUserText,
+    history: actionHistory.history,
     reply: payload.message,
     did: payload.did,
-    notes: ledger.turnCorrections,
+    notes: actionHistory.turnCorrections,
     renderOpts: opts,
   };
   let answer: string;
@@ -480,8 +480,8 @@ async function askLieQuestion(
     // The judge REJECTED — failMode prices it. A backstop that deletes itself the moment its own seam
     // fails is not a backstop: install it, break the judge, and the only named mitigation of the prose
     // residual is gone with nothing recorded. Two facts, two markers.
-    ledger.turnCorrections.push(JUDGE_UNREACHABLE);
-    ledger.turnCorrections.push(`llmcheck-unreachable:${failMode}`);
+    actionHistory.turnCorrections.push(JUDGE_UNREACHABLE);
+    actionHistory.turnCorrections.push(`llmcheck-unreachable:${failMode}`);
     return failMode === 'closed' ? { deny: CLOSED_FAIL_DENY, rewrite: false } : NO_LIE;
   }
   // SETTLED WITHOUT A VERDICT. A call that answered nothing, or answered something that is not a
@@ -489,11 +489,11 @@ async function askLieQuestion(
   // every reply in the session. `failMode` does not fire here: it prices a REJECTION, and this call
   // did not reject.
   if (!answer.trim()) {
-    ledger.turnCorrections.push(JUDGE_UNREACHABLE);
+    actionHistory.turnCorrections.push(JUDGE_UNREACHABLE);
     return NO_LIE;
   }
   const { violation, readable } = readJudgeVerdict(answer);
-  if (!readable) ledger.turnCorrections.push(JUDGE_UNREADABLE);
+  if (!readable) actionHistory.turnCorrections.push(JUDGE_UNREADABLE);
   if (!violation) return NO_LIE;
   return isChecked(operationRecord(payload.did, opts))
     ? { deny: null, rewrite: true }
@@ -511,17 +511,17 @@ async function askLieQuestion(
 async function withLieRewrite(
   payload: RespondPayload,
   verdict: LieVerdict,
-  ledger: TurnLedger,
+  actionHistory: TurnActionHistory,
   contract: DomainContract | undefined,
 ): Promise<RespondPayload> {
-  const judge = ledger.judge;
+  const judge = actionHistory.judge;
   if (!verdict.rewrite || !judge) return payload;
   const message = await llmRewriteLie(
-    { message: payload.message, did: payload.did, history: ledger.history, userText: ledger.currentUserText },
+    { message: payload.message, did: payload.did, history: actionHistory.history, userText: actionHistory.currentUserText },
     judge,
     { renderClaim: contract?.renderClaim, outcomes: contract?.outcomes },
   );
-  ledger.turnCorrections.push(message === payload.message ? 'lie-check:fired' : 'lie-check:rewritten');
+  actionHistory.turnCorrections.push(message === payload.message ? 'lie-check:fired' : 'lie-check:rewritten');
   return message === payload.message ? payload : { ...payload, message };
 }
 
@@ -560,7 +560,7 @@ const FORM_GUARD_KINDS: ReadonlySet<string> = new Set([
 const TRUTH_GUARD_KINDS: ReadonlySet<string> = new Set([
   'llmCheck',
   // The cross-check honesty core: each grounds the agent's structured declaration against the
-  // world ledger, so a candidate one of them vetoes can make the user believe something false about
+  // world action history, so a candidate one of them vetoes can make the user believe something false about
   // what happened — never salvaged, never delivered over.
   'claimIsGrounded',
   'claimIsComplete',
@@ -579,7 +579,7 @@ export interface FinalizedReply {
   exhausted: boolean;
   violations: string[];
   /** The turn's DELIVERED, VERIFIED claims — the accepted/salvaged payload's `did`, or the engine-derived
-   *  set on exhaustion. `finalizeReply` also syncs `ledger.did` to this, so `recordTurnHistory`
+   *  set on exhaustion. `finalizeReply` also syncs `action history.did` to this, so `recordTurnHistory`
    *  retains the grounded set (T2 left history storing the RAW declaration; this is the verified one). */
   did: Intention[];
 }
@@ -612,21 +612,21 @@ const DECLARATION_GUARD: Guard = {
   prose: () => 'every reply declares what you did — at least one intention, always',
 };
 
-/** Sync the ledger's reply-side declaration to `payload` and run the onReply checks against it — the ONE
+/** Sync the action history's reply-side declaration to `payload` and run the onReply checks against it — the ONE
  *  place `ctx.did` (read by the claims cross-check guards, and by the consent guards as the turn's
  *  AUTHORITATIVE ask record) and `ctx.reply` (the message, read by degenerationGuard) are seated,
  *  so a candidate payload is checked as a whole. The engine's own declaration floor runs FIRST, ahead of
  *  every installed guard: an undeclared payload is a protocol failure, not a content judgment. */
 async function checkPayload(
   spec: AgentSpec,
-  ledger: TurnLedger,
+  actionHistory: TurnActionHistory,
   world: AgentWorld,
   payload: RespondPayload,
   contract?: DomainContract,
 ): Promise<{ violations: ReplyViolation[]; lie: LieVerdict }> {
-  ledger.did = payload.did;
-  const checked = await checkReply(spec, ledger, world, payload.message);
-  const lie = await askLieQuestion(spec, world, payload, ledger, contract);
+  actionHistory.did = payload.did;
+  const checked = await checkReply(spec, actionHistory, world, payload.message);
+  const lie = await askLieQuestion(spec, world, payload, actionHistory, contract);
   const denied = lie.deny ? [...checked, { guard: LIE_GUARD, reason: lie.deny }] : checked;
   const violations = payload.did.length
     ? denied
@@ -638,47 +638,47 @@ async function checkPayload(
  * The whole reply pipeline over the STRUCTURED payload: mutators (message only) → onReply checks (over the
  * payload) → up to `maxRedrives` NO-TOOLS re-generations (each returns a fresh {@link RespondPayload}) →
  * salvage → the engine-derived exhaustion closure if still violating. The delivered text is COMPOSED
- * (message + rendered operation report of the verified `did`); the returned `did` (and `ledger.did`) is the
+ * (message + rendered operation report of the verified `did`); the returned `did` (and `action history.did`) is the
  * verified set history must keep.
  */
 export async function finalizeReply(
   spec: AgentSpec,
   contract: DomainContract | undefined,
   world: AgentWorld,
-  ledger: TurnLedger,
+  actionHistory: TurnActionHistory,
   initial: RespondPayload,
   redrive: (message: string) => Promise<RespondPayload>,
   maxRedrives: number,
 ): Promise<FinalizedReply> {
   // Mutators touch the MESSAGE only; seat the declaration first so their ctx (and the checks') read it.
-  ledger.did = initial.did;
-  let payload: RespondPayload = { ...initial, message: applyMutators(spec, ledger, world, initial.message) };
+  actionHistory.did = initial.did;
+  let payload: RespondPayload = { ...initial, message: applyMutators(spec, actionHistory, world, initial.message) };
 
-  let checked = await checkPayload(spec, ledger, world, payload, contract);
+  let checked = await checkPayload(spec, actionHistory, world, payload, contract);
   let violations = checked.violations;
   // OUTPUT-dim postTool violations + flowChain restates (accrued in the backend's afterToolCall / chain
   // pass) join the reply-violation set so the SAME bounded no-tools redrive relays their correction text —
   // a report/repair of an already-run result, never a veto. Empty ⇒ `violations` untouched (zero-diff).
-  if (ledger.postToolViolations.length) violations = [...ledger.postToolViolations, ...violations];
+  if (actionHistory.postToolViolations.length) violations = [...actionHistory.postToolViolations, ...violations];
   for (let r = 0; r < maxRedrives && violations.length; r++) {
     const next = await redrive(redriveMessage(violations));
-    for (const v of violations) ledger.turnCorrections.push(`redrive:${v.guard.kind}`);
+    for (const v of violations) actionHistory.turnCorrections.push(`redrive:${v.guard.kind}`);
     // MESSAGE AND `did` COME FROM THE SAME PAYLOAD — never spliced. Keeping the PREVIOUS message when a
     // re-generation returns a blank one, while adopting the new `did` unconditionally, would let a
     // redrive answering `{message:'', did:[{op:'ask'}]}` deliver the OLD, uncorrected sentence and SEAL
     // the turn as having asked a question. That seal is the authoritative cross-turn consent signal
     // (`askedInDeliveredTurn`'s history variant), so the engine would manufacture a licence for a
     // `confirmed:true` destructive act — and no prune could reach it, because the defect would be in the
-    // reply pipeline, not in the ledger.
+    // reply pipeline, not in the action history.
     // A re-generation with no readable message is REJECTED WHOLE: the previous payload stands intact
     // (message AND did), the redrive counts as spent, and the turn falls through to salvage / the
     // engine-derived exhaustion closure — the honest outcome for a model that said nothing.
     if (isBlankDelivery(next.message)) {
-      ledger.turnCorrections.push('redrive-empty:kept-previous');
+      actionHistory.turnCorrections.push('redrive-empty:kept-previous');
       continue;
     }
-    payload = { message: applyMutators(spec, ledger, world, next.message), did: next.did };
-    checked = await checkPayload(spec, ledger, world, payload, contract);
+    payload = { message: applyMutators(spec, actionHistory, world, next.message), did: next.did };
+    checked = await checkPayload(spec, actionHistory, world, payload, contract);
     violations = checked.violations;
   }
 
@@ -689,60 +689,60 @@ export async function finalizeReply(
     // this turn — and that whole payload re-passes every onReply check (the claims guards INCLUDED, so a
     // fabricated `did` is never salvaged), surface it instead of the generic closure. Purity holds: the
     // salvage is a verified observation (ok call args), re-validated by the same deterministic checks.
-    const lastRespond = [...ledger.observed].reverse().find(
-      (o) => o.turnIndex === ledger.turnIndex && o.ok && o.name === 'respond' && typeof o.args?.message === 'string' && (o.args.message as string).trim().length > 0,
+    const lastRespond = [...actionHistory.observed].reverse().find(
+      (o) => o.turnIndex === actionHistory.turnIndex && o.ok && o.name === 'respond' && typeof o.args?.message === 'string' && (o.args.message as string).trim().length > 0,
     );
     if (lastRespond) {
       const candidate = respondPayload(lastRespond.args as Record<string, unknown>);
-      const candidateText = composeDelivery(candidate, ledger, contract);
-      if (candidateText.trim() === composeDelivery(payload, ledger, contract).trim()) {
-        ledger.turnCorrections.push('salvage-miss:same-text');
+      const candidateText = composeDelivery(candidate, actionHistory, contract);
+      if (candidateText.trim() === composeDelivery(payload, actionHistory, contract).trim()) {
+        actionHistory.turnCorrections.push('salvage-miss:same-text');
       } else {
-        const cand = await checkPayload(spec, ledger, world, candidate, contract);
+        const cand = await checkPayload(spec, actionHistory, world, candidate, contract);
         const candViolations = cand.violations;
         if (candViolations.length === 0) {
-          ledger.turnCorrections.push('exhaustion-salvage');
-          ledger.did = candidate.did;
-          const delivered = await withLieRewrite(candidate, cand.lie, ledger, contract);
-          return withBlankFloor(delivered, finalViolations, true, ledger, contract?.writeTools ?? [], contract);
+          actionHistory.turnCorrections.push('exhaustion-salvage');
+          actionHistory.did = candidate.did;
+          const delivered = await withLieRewrite(candidate, cand.lie, actionHistory, contract);
+          return withBlankFloor(delivered, finalViolations, true, actionHistory, contract?.writeTools ?? [], contract);
         }
         if (candViolations.every((v) => isFormViolation(v.guard))) {
-          ledger.turnCorrections.push(`salvage:form-only:${candViolations.map((v) => v.guard.kind).join(',')}`);
-          ledger.did = candidate.did;
-          const delivered = await withLieRewrite(candidate, cand.lie, ledger, contract);
-          return withBlankFloor(delivered, finalViolations, true, ledger, contract?.writeTools ?? [], contract);
+          actionHistory.turnCorrections.push(`salvage:form-only:${candViolations.map((v) => v.guard.kind).join(',')}`);
+          actionHistory.did = candidate.did;
+          const delivered = await withLieRewrite(candidate, cand.lie, actionHistory, contract);
+          return withBlankFloor(delivered, finalViolations, true, actionHistory, contract?.writeTools ?? [], contract);
         }
-        ledger.turnCorrections.push(`salvage-miss:checks:${candViolations.map((v) => v.guard.kind).join(',')}`);
+        actionHistory.turnCorrections.push(`salvage-miss:checks:${candViolations.map((v) => v.guard.kind).join(',')}`);
       }
     } else {
-      ledger.turnCorrections.push('salvage-miss:no-terminal-observed');
+      actionHistory.turnCorrections.push('salvage-miss:no-terminal-observed');
     }
     // DOMAIN-only evidence for the OVERRIDE seams (their signature predates the structured payload): the
     // turn's non-terminal ok tool names + produced labels. A turn-closing terminal is the runtime's own
     // delivery mechanism, not something that "landed", so it is filtered here.
-    const okTools = ledger.observed
-      .filter((o) => o.turnIndex === ledger.turnIndex && o.ok && !isTerminal(o.name))
+    const okTools = actionHistory.observed
+      .filter((o) => o.turnIndex === actionHistory.turnIndex && o.ok && !isTerminal(o.name))
       .map((o) => o.name);
-    ledger.turnCorrections.push('exhaustion-terminal');
+    actionHistory.turnCorrections.push('exhaustion-terminal');
     // Override seams keep their old signature + evidence; only the DEFAULT is the engine-derived closure.
     // The verified `did` history keeps is ALWAYS the engine-derived truth — an override changes the
     // wording, not the record of what happened.
-    const derived = deriveExhaustionClosure(ledger, contract?.writeTools ?? [], contract);
+    const derived = deriveExhaustionClosure(actionHistory, contract?.writeTools ?? [], contract);
     const overrideText = spec.controls.exhaustionReply
-      ? spec.controls.exhaustionReply(world, okTools, ledger.producedThisTurn, finalViolations)
+      ? spec.controls.exhaustionReply(world, okTools, actionHistory.producedThisTurn, finalViolations)
       : contract?.exhaustionReply
-        ? contract.exhaustionReply(world, okTools, ledger.producedThisTurn, finalViolations)
+        ? contract.exhaustionReply(world, okTools, actionHistory.producedThisTurn, finalViolations)
         : '';
     // COMPOSE, NEVER REPLACE. Letting an override discard the WHOLE derived closure, report included,
-    // would put the user and the ledger in disagreement: the override signature cannot re-render the
+    // would put the user and the action history in disagreement: the override signature cannot re-render the
     // report, so a domain whose override says "nothing was changed" (the natural abstain wording) would
-    // deliver exactly that over a write the ledger recorded, while `ledger.did` kept the derived truth.
+    // deliver exactly that over a write the action history recorded, while `action history.did` kept the derived truth.
     // The override supplies the closing SENTENCE;
     // the engine always prepends the verified operation report, exactly as `composeDelivery` does on the
     // clean path. The blank floor holds UNCONDITIONALLY: a blank override falls back to the engine's own
     // sentence rather than delivering the report alone.
     const sentence = overrideText && !isBlankDelivery(overrideText) ? overrideText : derived.sentence;
-    ledger.did = derived.did;
+    actionHistory.did = derived.did;
     return { text: closureText(derived.report, sentence), exhausted: true, violations: finalViolations, did: derived.did };
   }
 
@@ -750,9 +750,9 @@ export async function finalizeReply(
   // declaration (it passed the claims cross-check), so it becomes the turn's `did` in history. The blank
   // floor still applies here — a zero-width `message` + empty `did` composes to a blank the schema
   // `minLength` accepts, and a mutator can rewrite an otherwise-fine `message` to `''` after the checks.
-  ledger.did = payload.did;
-  const delivered = await withLieRewrite(payload, checked.lie, ledger, contract);
-  return withBlankFloor(delivered, [], false, ledger, contract?.writeTools ?? [], contract);
+  actionHistory.did = payload.did;
+  const delivered = await withLieRewrite(payload, checked.lie, actionHistory, contract);
+  return withBlankFloor(delivered, [], false, actionHistory, contract?.writeTools ?? [], contract);
 }
 
 // ── flowChain completion (controls.chains) ────────────────────────────────────────────────────────
@@ -773,7 +773,7 @@ const chainRestateReason = (call: string): string =>
  * (c) `when` is absent or returns true. `when` is spec-authored business code — it reads ONLY
  * (world, observed) by its signature, never the user text (a chain that forked on intent would be the
  * banned intent-based routing). Evaluate it per-chain AT execution time, in
- * order: a 'direct' chain appends to `observed`, so a later chain sees the updated ledger.
+ * order: a 'direct' chain appends to `observed`, so a later chain sees the updated action history.
  */
 export function shouldFireChain(
   chain: ChainSpec,
@@ -793,7 +793,7 @@ export function shouldFireChain(
  *  backend supplies the REAL guard hooks + a `forceLlmCall` that drives one pinned micro-generate. */
 export interface ChainPassCtx {
   world: AgentWorld;
-  /** The live per-turn ledger of observed calls (mutated by afterToolCall/forceLlmCall as chains run). */
+  /** The live per-turn action history of observed calls (mutated by afterToolCall/forceLlmCall as chains run). */
   observed: ObservedCall[];
   turnIndex: number;
   /** Whether a terminal reply already exists (post-fallback) — gates the restate reply-accounting. */
@@ -807,11 +807,11 @@ export interface ChainPassCtx {
   forceLlmCall: (call: string) => Promise<void>;
 }
 
-/** What the pass hands back to the backend (applied to the ledger by the caller). */
+/** What the pass hands back to the backend (applied to the action history by the caller). */
 export interface ChainPassResult {
   /** turnCorrections to append: `chain:${call}` / `chain-vetoed:${call}` / `chain-failed:${call}`. */
   corrections: string[];
-  /** Reply-accounting violations to JOIN into the ledger's postToolViolations (the redrive consumes them). */
+  /** Reply-accounting violations to JOIN into the action history's postToolViolations (the redrive consumes them). */
   replyViolations: ReplyViolation[];
   /** extraCalls to add — llm-mode chains only (a real generate); a direct chain runs NO LLM. */
   llmCalls: number;

@@ -1,5 +1,5 @@
 /**
- * RED-TEAM — the completeness cluster: claimIsComplete + deriveClaimsFromLedger + the did→message
+ * RED-TEAM — the completeness cluster: claimIsComplete + deriveClaimsFromActionHistory + the did→message
  * renderer. GOAL: make the FORBIDDEN THING pass — a real action (a write that tookEffect this turn)
  * hidden from the user, yet the honesty core reports "all reported".
  *
@@ -12,10 +12,10 @@ import { describe, expect, it } from 'vitest';
 import type { GuardCtx, ObservedCall } from '../../src/rules.js';
 import type { Intention } from '../../src/runtime/claims.js';
 import { claimIsComplete, claimIsGrounded } from '../../src/guards/honesty.js';
-import { deriveClaimsFromLedger, renderOperationReport } from '../../src/runtime/claims.js';
-import { createLedger, beginTurn, recordToolResult } from '../../src/runtime/ledger.js';
+import { deriveClaimsFromActionHistory, renderOperationReport } from '../../src/runtime/claims.js';
+import { createActionHistory, beginTurn, recordToolResult } from '../../src/runtime/action-history.js';
 
-/** A world whose `toolCalls` carry the RESULT (and tookEffect) the ledger observed for a call. */
+/** A world whose `toolCalls` carry the RESULT (and tookEffect) the action history observed for a call. */
 function worldWith(
   toolCalls: Array<{ name: string; args: unknown; result?: unknown; tookEffect?: boolean }>,
 ): GuardCtx['world'] {
@@ -77,7 +77,7 @@ describe('VECTOR 1 — targetless success claim hides all effected writes [CLOSE
     const reason = claimIsComplete({ writeTools: WRITES }).check(
       replyCtx({ did, observed: twoWritesDifferentTargets, world: twoWritesWorld }),
     );
-    // A claim that names no entity names no ledger fact: coverage now requires `claim.target`.
+    // A claim that names no entity names no action history fact: coverage now requires `claim.target`.
     expect(reason).toBeTruthy();
   });
 
@@ -151,7 +151,7 @@ describe('VECTOR 2 — one claim covers two writes to the same target [CLOSED by
 });
 
 // ─────────────────────────────────────────────────────────────────────────────────────────────
-// VECTOR 4 — deriveClaimsFromLedger positional label misalignment (exhaustion path) [CLOSED]
+// VECTOR 4 — deriveClaimsFromActionHistory positional label misalignment (exhaustion path) [CLOSED]
 //
 // recordToolResult pushes ANY ok call's string `label` into producedThisTurn — READS INCLUDED. A derive
 // loop consuming `produced[labelIx++]` for EFFECTED WRITES ONLY, positionally, lets a read that emitted
@@ -164,16 +164,16 @@ describe('VECTOR 4 — read label shifts a write target on the derive path [CLOS
       { name: 'lookupOrder', args: { q: 'blue widget' }, result: { label: 'SEARCH-RESULT', items: [1] }, tookEffect: false },
       { name: 'refundOrder', args: { order: 'ORD-9' }, result: { ok: true }, tookEffect: true },
     ]);
-    const ledger = createLedger();
-    beginTurn(ledger, 0);
+    const actionHistory = createActionHistory();
+    beginTurn(actionHistory, 0);
     // A READ that happens to emit a label (nothing forbids it) …
-    recordToolResult(ledger, 'lookupOrder', { q: 'blue widget' }, { label: 'SEARCH-RESULT', items: [1] }, world);
+    recordToolResult(actionHistory, 'lookupOrder', { q: 'blue widget' }, { label: 'SEARCH-RESULT', items: [1] }, world);
     // … then the WRITE that took effect but emitted no label of its own.
-    recordToolResult(ledger, 'refundOrder', { order: 'ORD-9' }, { ok: true }, world);
+    recordToolResult(actionHistory, 'refundOrder', { order: 'ORD-9' }, { ok: true }, world);
 
-    expect(ledger.producedThisTurn).toEqual(['SEARCH-RESULT']); // the read's label is still recorded …
+    expect(actionHistory.producedThisTurn).toEqual(['SEARCH-RESULT']); // the read's label is still recorded …
 
-    const derived = deriveClaimsFromLedger(ledger.observed, 0, ['refundOrder']);
+    const derived = deriveClaimsFromActionHistory(actionHistory.observed, 0, ['refundOrder']);
     // … but the derive path reads each call's OWN label, so the nameless refund stays nameless.
     expect(derived).toEqual([{ op: 'operation', outcome: 'success' }]);
     expect(renderOperationReport(derived)).toBe('One action completed.\nNothing else was changed on this turn.'); // generic, never the wrong entity
@@ -184,7 +184,7 @@ describe('VECTOR 4 — read label shifts a write target on the derive path [CLOS
       call('lookupOrder', { q: 'x' }, { tookEffect: false, producedLabel: 'SEARCH-RESULT' }), // a read WITH a label
       call('refundOrder', { order: 'ORD-9' }, { tookEffect: true }),                          // the write, unlabelled
     ];
-    const derived = deriveClaimsFromLedger(observed, 0, ['refundOrder']);
+    const derived = deriveClaimsFromActionHistory(observed, 0, ['refundOrder']);
     expect(derived[0].target).toBeUndefined();
   });
 
@@ -193,7 +193,7 @@ describe('VECTOR 4 — read label shifts a write target on the derive path [CLOS
       call('lookupOrder', { q: 'x' }, { tookEffect: false, producedLabel: 'SEARCH-RESULT' }),
       call('refundOrder', { order: 'ORD-9' }, { tookEffect: true, producedLabel: 'REFUND-9' }),
     ];
-    const derived = deriveClaimsFromLedger(observed, 0, ['refundOrder']);
+    const derived = deriveClaimsFromActionHistory(observed, 0, ['refundOrder']);
     expect(derived).toEqual([{ op: 'REFUND-9', target: 'REFUND-9', outcome: 'success' }]);
   });
 
@@ -203,7 +203,7 @@ describe('VECTOR 4 — read label shifts a write target on the derive path [CLOS
 });
 
 // ─────────────────────────────────────────────────────────────────────────────────────────────
-// VECTOR 3 — deriveClaimsFromLedger mis-buckets an EFFECTED write as pending_confirmation [CLOSED]
+// VECTOR 3 — deriveClaimsFromActionHistory mis-buckets an EFFECTED write as pending_confirmation [CLOSED]
 //
 // A derive loop that checks `resultFlags.requiresConfirmation` FIRST and `continue`s — BEFORE the
 // `tookEffect` branch — makes a write that BOTH took effect AND carried the confirmation flag render
@@ -219,7 +219,7 @@ describe('VECTOR 3 — effected write + confirmation flag mis-bucketed as pendin
         resultFlags: { requiresConfirmation: true },
       }),
     ];
-    const derived = deriveClaimsFromLedger(observed, 0, ['refundOrder']);
+    const derived = deriveClaimsFromActionHistory(observed, 0, ['refundOrder']);
     // The refund LANDED, so the engine's own account says so — no "awaiting your confirmation" over a
     // change the world already made.
     expect(derived).toEqual([{ op: 'REFUND-7', target: 'REFUND-7', outcome: 'success' }]);
@@ -230,7 +230,7 @@ describe('VECTOR 3 — effected write + confirmation flag mis-bucketed as pendin
     const observed: ObservedCall[] = [
       call('refundOrder', { order: 'ORD-7' }, { tookEffect: false, resultFlags: { requiresConfirmation: true } }),
     ];
-    const derived = deriveClaimsFromLedger(observed, 0, ['refundOrder']);
+    const derived = deriveClaimsFromActionHistory(observed, 0, ['refundOrder']);
     expect(derived).toEqual([{ op: 'operation', outcome: 'pending_confirmation' }]);
   });
 
@@ -241,7 +241,7 @@ describe('VECTOR 3 — effected write + confirmation flag mis-bucketed as pendin
 // ─────────────────────────────────────────────────────────────────────────────────────────────
 // VECTOR 5 — salvage re-validation strictness (CLOSED)
 //
-// finalizeReply's salvage runs `checkPayload(spec, ledger, world, candidate)` — the SAME onReply guard
+// finalizeReply's salvage runs `checkPayload(spec, action history, world, candidate)` — the SAME onReply guard
 // set (claimIsComplete/claimIsGrounded included) as the main path — and delivers the salvaged candidate
 // only when `candViolations.length === 0`, OR when EVERY violation is a FORM violation. claimIsComplete
 // and claimIsGrounded are in TRUTH_GUARD_KINDS, so isFormViolation is false for them: a candidate whose

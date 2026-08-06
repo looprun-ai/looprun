@@ -111,7 +111,7 @@ export function evaluateInvariants(
   return { pass: violations.length === 0, violations };
 }
 
-/** Map a TurnRecord's calls onto the world ledger slice to recover ok/tookEffect per call. */
+/** Map a TurnRecord's calls onto the world action history slice to recover ok/tookEffect per call. */
 function dumpTurn(record: TurnRecord, worldCalls: WorldCall[], cursor: { i: number }): DumpTurn {
   const toolCalls: DumpToolCall[] = record.toolCalls.map((tc) => {
     const w = worldCalls[cursor.i];
@@ -151,7 +151,7 @@ export async function runCase(subject: Subject, c: SubjectCase, opts: RunCaseOpt
   const worldCalls = world.toolCalls as WorldCall[];
   const cursor = { i: 0 };
   const turns = res.turnRecords.map((r) => dumpTurn(r, worldCalls, cursor));
-  // Guard-vetoed attempts never reach the world ledger — collect them from the turn records so the
+  // Guard-vetoed attempts never reach the world action history — collect them from the turn records so the
   // FORBIDDEN invariants can fire on the attempt the guard blocked (E1).
   const attemptedCalls: WorldCall[] = res.turnRecords.flatMap((r) => (r.attemptedCalls ?? []).map((a) => ({ name: a.name, args: a.args })));
   const invariantVerdict = evaluateInvariants(c.expectations?.invariants, worldCalls, attemptedCalls);

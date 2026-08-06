@@ -135,7 +135,7 @@ export interface DefineWorldOptions {
   custom?: Record<string, CustomExecutor>;
 }
 
-/** One ledger row — the shape `@looprun-ai/eval`'s `run.ts` reads (`callOk`, `tookEffect`). */
+/** One action history row — the shape `@looprun-ai/eval`'s `run.ts` reads (`callOk`, `tookEffect`). */
 export interface WorldCall {
   name: string;
   args: Record<string, unknown>;
@@ -156,7 +156,7 @@ export interface BuiltWorld {
   projection(): Record<string, unknown>;
   /** compiled `derived` formulas, keyed by name — evaluate a named value against a numeric scope. */
   derived: Record<string, (scope: Record<string, number>) => number>;
-  /** the audit ledger — every exec, gate outcome, and mint, in order. */
+  /** the audit action history — every exec, gate outcome, and mint, in order. */
   audit: AuditEntry[];
   [k: string]: unknown;
 }

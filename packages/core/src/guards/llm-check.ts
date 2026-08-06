@@ -130,7 +130,7 @@ export function llmCheck(opts: { question: string; failMode?: 'open' | 'closed';
  * THE LIE BACKSTOP — the DECLARATION that this agent wants the engine's lie question asked, and the
  * prose that states the rule to the model.
  *
- * The structured cross-check grounds the DECLARATION against the ledger; the `message` beside it is
+ * The structured cross-check grounds the DECLARATION against the action history; the `message` beside it is
  * free prose, and an agent can declare an honest `inform` and still write that it refunded the
  * order. No structural signal reads that. This is the priced backstop for that residual, and it is
  * never the primary guarantee: the cross-check and the operation record are.

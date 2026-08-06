@@ -2,9 +2,9 @@
  * THE CROSS-CHECK GUARDS — the deterministic honesty core.
  *
  * The agent DECLARES what it did as STRUCTURE (`ctx.did`), and these three guards ground that
- * declaration against the WORLD LEDGER — which the agent does not control. No guard here reads reply
+ * declaration against the WORLD ACTION HISTORY — which the agent does not control. No guard here reads reply
  * prose; every verdict is a comparison of a `Intention` against `ctx.observed` / `ctx.world.toolCalls`
- * / `ctx.attemptedThisTurn` (LEDGER DATA, never authored patterns — the no-regex law).
+ * / `ctx.attemptedThisTurn` (ACTION HISTORY DATA, never authored patterns — the no-regex law).
  *
  * One `describe` block per row of the grounding table, plus the attack vectors:
  * fabricated success, hidden effected write, honest not_found on an empty read, a no-effect simulate with
@@ -16,7 +16,7 @@ import type { GuardCtx, ObservedCall } from '../src/rules.js';
 import type { OutcomeMap, Intention } from '../src/runtime/claims.js';
 import { claimIsGrounded, claimIsComplete, mustAccountFor, isEmptyReadResult, targetMatchesValue } from '../src/guards/honesty.js';
 
-/** A world whose `toolCalls` carry the RESULT the ledger observed for a call (name + args keyed). */
+/** A world whose `toolCalls` carry the RESULT the action history observed for a call (name + args keyed). */
 function worldWith(toolCalls: Array<{ name: string; args: unknown; result?: unknown; tookEffect?: boolean }>): GuardCtx['world'] {
   return {
     exec: () => ({ success: true }),
@@ -182,7 +182,7 @@ describe('claimIsGrounded', () => {
 
     it('only WORLD-ISSUED values ground: the target in an agent-authored ARG is not evidence', () => {
       // The write really took effect, and its args name BK-1 — but the args are the AGENT's own text.
-      // The world's result says nothing about BK-1, so the claim has no ledger fact behind it.
+      // The world's result says nothing about BK-1, so the claim has no action history fact behind it.
       const ctx = {
         did,
         observed: [call('createBooking', { note: 'about BK-1' }, { tookEffect: true })],
@@ -336,7 +336,7 @@ describe('claimIsGrounded', () => {
 
     it('a no_op on an entity the turn NEVER ADDRESSED does not ground (the vacuous row is closed)', () => {
       // `no_op` is the one row a bare ABSENCE of contrary evidence would satisfy: without this, any
-      // target grounds on an empty ledger and the renderer announces it as a verified non-event.
+      // target grounds on an empty action history and the renderer announces it as a verified non-event.
       expect(grounded({ did: [{ op: 'check', target: 'BK-999', outcome: 'no_op' }] })).toBeTruthy();
       const ctx = {
         did: [{ op: 'check', target: 'BK-2', outcome: 'no_op' }] as Intention[],
@@ -413,7 +413,7 @@ describe('claimIsGrounded', () => {
   });
 
   describe('the cross-check applies to ACTION intents only', () => {
-    it('a SPEECH intention is never grounded (it carries no outcome and names no ledger fact)', () => {
+    it('a SPEECH intention is never grounded (it carries no outcome and names no actionHistory fact)', () => {
       for (const op of ['inform', 'greet', 'refuse', 'ask']) {
         expect(grounded({ did: [{ op }] })).toBeNull();
       }
@@ -483,7 +483,7 @@ describe('claimIsComplete', () => {
     expect(complete(ctx)).toBeNull();
   });
 
-  it('a TARGETLESS claim covers nothing: "some action succeeded" names no ledger fact', () => {
+  it('a TARGETLESS claim covers nothing: "some action succeeded" names no actionHistory fact', () => {
     const ctx = {
       did: [{ op: 'book', outcome: 'success' }] as Intention[],
       observed: [call('createBooking', { bookingId: 'BK-1' }, { tookEffect: true })],

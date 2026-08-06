@@ -25,7 +25,7 @@ became one, carrying the two clauses that are load-bearing:
 > op, which is verified.
 
 The PROHIBITION (`inform` may not stand in for a performed action) and the REPLACEMENT with its
-reason (the action's own op, which the ledger cross-check verifies). What was dropped restated the
+reason (the action's own op, which the action history cross-check verifies). What was dropped restated the
 same rule in other words — "for conveying information or answering a question" is what the word
 means, and "reporting a done action as `inform` is dishonest" is the prohibition again.
 

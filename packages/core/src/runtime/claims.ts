@@ -4,11 +4,11 @@
  * PROSE IS NOT THE THING GUARDS READ: a literal mention scan for `BK-1` passes on a reply that says
  * BK-1 was NOT found, because a text check cannot read polarity. So the agent DECLARES what it did as
  * STRUCTURE (`did: Intention[]`), and the cross-check guards ground that declaration against the
- * world ledger — which the agent does not control. This module owns the domain-neutral vocabulary of
+ * world action history — which the agent does not control. This module owns the domain-neutral vocabulary of
  * that structure: the core outcome set, the claim shape + its STRICT validation, the domain→core
  * outcome resolution, and the tolerant extraction of one `respond` call's payload.
  *
- * Type-only imports: this is the spine every later layer (ledger plumbing, cross-check guards, renderer,
+ * Type-only imports: this is the spine every later layer (action history plumbing, cross-check guards, renderer,
  * and the agentspec domain extension) depends on, so it stays a pure leaf at RUNTIME — the single
  * `ObservedCall` import below is `import type` (erased by the compiler), so no runtime cycle forms even
  * though `rules.ts` names `Intention` from here.
@@ -16,7 +16,7 @@
 import type { ObservedCall } from '../rules.js';
 import { resolveEngineText, type EngineText } from './engine-text.js';
 
-/** The CORE, domain-neutral, ledger-checkable outcome vocabulary. Every claim ultimately means one of
+/** The CORE, domain-neutral, action history-checkable outcome vocabulary. Every claim ultimately means one of
  *  these; a domain outcome word MUST map to one (see {@link OutcomeMap} / {@link resolveOutcome}). */
 export type CoreOutcome =
   | 'success'
@@ -48,7 +48,7 @@ export function isCoreOutcome(s: string): s is CoreOutcome {
 /**
  * The RESERVED, engine-core, domain-neutral SPEECH ops. An intention whose `op` is one of these
  * is a SPEECH act: it classifies the `message`'s speech act, is NOT backed by a tool, is NOT grounded
- * against the world ledger, and carries NO action `outcome`/`amount`. Every other op is an ACTION op —
+ * against the world action history, and carries NO action `outcome`/`amount`. Every other op is an ACTION op —
  * domain-declared, backed by a write, and REQUIRED to carry an `outcome`. A domain may not redefine
  * these four names.
  */
@@ -75,7 +75,7 @@ export function isActionOp(op: string): boolean {
  * Two disjoint families keyed off `op` (see {@link SPEECH_OPS}): a SPEECH intention (`inform`/`greet`/
  * `refuse`/`ask`) classifies the `message`'s speech act and carries NO `outcome`/`amount`; an ACTION
  * intention (any other `op`) is backed by a write and MUST carry an `outcome`. `op` is an ADVISORY label —
- * the cross-check NEVER keys on its semantics; grounding is `target` + `outcome` against the ledger.
+ * the cross-check NEVER keys on its semantics; grounding is `target` + `outcome` against the action history.
  * `outcome` (ACTION only) is a {@link CoreOutcome} or a domain word declared in the spec's {@link OutcomeMap};
  * `target` is the entity label/id acted on; `amount` an optional magnitude (ACTION only). `outcome` is
  * OPTIONAL at the type level (speech ops carry none); {@link validateClaims} enforces the partition rule.
@@ -88,7 +88,7 @@ export interface Intention {
 }
 
 /** Domain outcome vocabulary: every non-core outcome word MUST map to a {@link CoreOutcome}, so the
- *  ledger cross-check stays engine-owned and never becomes semantic. */
+ *  action history cross-check stays engine-owned and never becomes semantic. */
 export type OutcomeMap = Readonly<Record<string, CoreOutcome>>;
 
 /**
@@ -195,7 +195,7 @@ export function isBlankDelivery(text: string): boolean {
 
 /**
  * STRUCTURAL validation of a raw `did` value — SHAPE + the speech/action PARTITION, never grounding
- * against the ledger (that is the guards' job). Exhaustive typed checks, NOT `typeof`/`trim` guesses,
+ * against the action history (that is the guards' job). Exhaustive typed checks, NOT `typeof`/`trim` guesses,
  * which a hostile shape walks straight through:
  *   · `did` MUST be a NON-EMPTY array — an empty `did` is an error: every respond declares ≥1
  *     intention, and there is no "honest empty" turn.
@@ -269,7 +269,7 @@ export interface RespondPayload {
  * TOLERANT extraction of a `respond` call's args into a {@link RespondPayload} — never throws. A missing
  * or non-string `message` becomes `''`, and a missing/empty/ill-shaped `did` becomes `[]` (only the
  * well-formed intentions survive; the strict mandatory-non-empty rejection is {@link validateClaims}' job
- * at the ledger/guard boundary).
+ * at the action history/guard boundary).
  */
 export function respondPayload(args: Record<string, unknown>): RespondPayload {
   return {
@@ -293,7 +293,7 @@ export function respondPayload(args: Record<string, unknown>): RespondPayload {
  *  · {@link supersededTerminalCalls} computed "the delivered one" as the last terminal with a non-empty
  *    message, which for a step whose LAST terminal is refused pruned the entry the user actually got.
  *
- * Both now ask this one function, so the ledger's notion of "delivered" cannot drift from the
+ * Both now ask this one function, so the action history's notion of "delivered" cannot drift from the
  * runtime's notion of "accepted". The message floor is {@link isBlankDelivery} — STRICTER than the
  * schema's `minLength`, deliberately: a zero-width message satisfies `minLength` and renders as
  * nothing.
@@ -383,7 +383,7 @@ export interface RenderOpts {
 /**
  * What the DOMAIN render seam is allowed to see: the fields of an intention that the cross-check guards
  * VERIFIED — the `target` the world named, the `outcome` word (already resolved through the domain map,
- * so it is declared vocabulary), and the `amount` (corroborated against the same ledger fact that
+ * so it is declared vocabulary), and the `amount` (corroborated against the same action history fact that
  * grounded the claim). The advisory `op` is NOT among them.
  *
  * `op` is free, agent-authored text. The engine default line never renders it, and `renderOperationReport`
@@ -439,9 +439,9 @@ export interface OperationRecord {
 
 /**
  * Build the user-facing OPERATION RECORD from a VERIFIED `did` — the operational sentences the user reads
- * come from ledger-grounded structure, never from the agent's free prose, so a fabricated claim cannot
+ * come from action history-grounded structure, never from the agent's free prose, so a fabricated claim cannot
  * reach the user. One line per claim; a claim whose outcome does not resolve to a core meaning names no
- * ledger fact and is skipped (it never survives the cross-check guards, so this is defensive only). A
+ * action history fact and is skipped (it never survives the cross-check guards, so this is defensive only). A
  * domain overrides the wording per-claim via {@link RenderOpts.renderClaim}.
  *
  * The record ALWAYS closes with a sentence, and the two sentences are not interchangeable — see
@@ -476,7 +476,7 @@ export function renderOperationReport(did: Intention[], opts?: RenderOpts): stri
 }
 
 /**
- * Derive the TRUE claims from the world ledger — the engine's own honest account of what this turn did,
+ * Derive the TRUE claims from the world action history — the engine's own honest account of what this turn did,
  * used when the redrive loop exhausts (the model never produced a groundable declaration, so the engine
  * builds one it CAN stand behind). For each of THIS turn's observed calls:
  *   · a WRITE that TOOK EFFECT → `success` (its OWN produced label as `target`, when it issued one)
@@ -505,7 +505,7 @@ export function renderOperationReport(did: Intention[], opts?: RenderOpts): stri
  * world-issued evidence of WHICH ENTITY was touched, so it stays as `target`; a colliding `op` falls back
  * to the neutral `'operation'`, which is what a labelless write already uses.
  */
-export function deriveClaimsFromLedger(
+export function deriveClaimsFromActionHistory(
   observed: ObservedCall[],
   turnIndex: number,
   writeTools: readonly string[],

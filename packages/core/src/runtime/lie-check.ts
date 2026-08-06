@@ -6,7 +6,7 @@
  *
  * ```
  *   USER      "Cancel Tuesday's dentist, but change nothing else."
- *   LEDGER    no write took effect — the guard vetoed the cancellation
+ *   ACTION HISTORY    no write took effect — the guard vetoed the cancellation
  *   did       [{ op:'inform' }]                     honest: no action is claimed
  *   message   "I cancelled the dentist appointment on 2026-03-03, 09:00–10:00."
  *             ↑ the user reads this and believes the appointment is gone
@@ -130,7 +130,7 @@ export function rewritePrompt(
     '- Say nothing about an operation beyond what is true above. When nothing was carried out, say plainly',
     '  that you have not done it, and say what you can do next.',
     '- Speak as yourself, about what you did and did not do. Never mention or quote a record, a log, a',
-    '  ledger, a system, a check or a verification — the user is talking to you, not to a machine — and',
+    '  actionHistory, a system, a check or a verification — the user is talking to you, not to a machine — and',
     '  never present the facts above as something you were told.',
     '- Write in the language the user used.',
     '- NOTHING HAPPENED ON THIS TURN. You carried out no operation at all. Your new reply may not state',

@@ -5,7 +5,7 @@
 **Goal:** consent to a destructive act becomes a token the engine issues and the user types back, so no
 agent declaration licenses anything.
 
-**Architecture:** a conversation-scoped approval store on the ledger; the RUNTIME issues approvals
+**Architecture:** a conversation-scoped approval store on the action history; the RUNTIME issues approvals
 (from a `requiresConfirmation` result, or from a vetoed destructive call), renders them into the
 delivered text, and marks them consumed by scanning the user's incoming message. Guards stay pure —
 `confirmFirst` reads the consumed set off the ctx and never touches text or state.
@@ -38,7 +38,7 @@ Spec: `docs/superpowers/specs/2026-08-05-consent-by-approval-design.md`.
 |---|---|
 | `packages/core/src/guards/matching.ts` (create) | the ONE matching law: canonical value form, whole-value equality, contiguous-token containment |
 | `packages/core/src/runtime/approval-request.ts` (create) | the approval model: issue, match, consume, render |
-| `packages/core/src/runtime/ledger.ts` (modify) | conversation-scoped approval store + issuance/consumption call sites |
+| `packages/core/src/runtime/action-history.ts` (modify) | conversation-scoped approval store + issuance/consumption call sites |
 | `packages/core/src/runtime/turn.ts` (modify) | render open approvals into the delivered text |
 | `packages/core/src/runtime/claims.ts` (modify) | engine text pack for the record closures |
 | `packages/core/src/assembled-prompt.ts` (modify) | `DomainContract.engineText` |
@@ -118,7 +118,7 @@ Expected: FAIL — `Failed to resolve import "../src/guards/matching.js"`.
 // packages/core/src/guards/matching.ts
 /**
  * THE MATCHING LAW — the one comparison every verdict that must decide "is this string THAT string"
- * routes through: claim-to-ledger grounding, consent-token consumption, and a value the agent records
+ * routes through: claim-to-action history grounding, consent-token consumption, and a value the agent records
  * on the user's behalf.
  *
  * Two shapes, one canonical form. `targetMatchesValue` compares a target to ONE value. `valueSpokenBy`
@@ -647,15 +647,15 @@ git commit -m "feat(core): the engine's user-facing sentences are host-declarabl
 ### Task 4: The approval store, issuance and consumption
 
 **Files:**
-- Modify: `packages/core/src/runtime/ledger.ts`
+- Modify: `packages/core/src/runtime/action-history.ts`
 - Modify: `packages/core/src/rules.ts` (`GuardCtx.consent`)
-- Test: `packages/core/test/approval-ledger.test.ts`
+- Test: `packages/core/test/approval-action-history.test.ts`
 
 **Interfaces:**
 - Consumes: `ApprovalRequest`, `approvalCode`, `consumeApprovals` (Task 2)
-- Produces: `TurnLedger.approvals: ApprovalRequest[]`, `TurnLedger.consentThisTurn: ApprovalRequest[]`,
-  `TurnLedger.approvalsIssuedThisTurn: ApprovalRequest[]`, `TurnLedger.destructiveLabels: Record<string, string>`,
-  `issueApprovalForVeto(ledger, tool)`; `GuardCtx.consent?: ReadonlyArray<ApprovalRequest>`
+- Produces: `TurnActionHistory.approvals: ApprovalRequest[]`, `TurnActionHistory.consentThisTurn: ApprovalRequest[]`,
+  `TurnActionHistory.approvalsIssuedThisTurn: ApprovalRequest[]`, `TurnActionHistory.destructiveLabels: Record<string, string>`,
+  `issueApprovalForVeto(action history, tool)`; `GuardCtx.consent?: ReadonlyArray<ApprovalRequest>`
 
 Issuance and consumption are the RUNTIME's, never a guard's: reading the user's text and mutating the
 store are exactly what a guard must not do, so the guard layer only ever reads the result.
@@ -663,96 +663,96 @@ store are exactly what a guard must not do, so the guard layer only ever reads t
 - [ ] **Step 1: Write the failing test**
 
 ```ts
-// packages/core/test/approval-ledger.test.ts
+// packages/core/test/approval-action-history.test.ts
 import { describe, it, expect } from 'vitest';
-import { createLedger, beginTurn, recordToolResult, issueApprovalForVeto } from '../src/runtime/ledger.js';
+import { createActionHistory, beginTurn, recordToolResult, issueApprovalForVeto } from '../src/runtime/action-history.js';
 
 describe('a world result that requires confirmation issues an approval request', () => {
   it('names the record the world issued', () => {
-    const ledger = createLedger();
-    beginTurn(ledger, 0, 'cancel BK-1');
-    recordToolResult(ledger, 'cancelBooking', { id: 'BK-1' }, {
+    const action history = createActionHistory();
+    beginTurn(action history, 0, 'cancel BK-1');
+    recordToolResult(action history, 'cancelBooking', { id: 'BK-1' }, {
       ok: true,
       requiresConfirmation: true,
       id: 'BK-1',
     });
-    expect(ledger.approvals).toHaveLength(1);
-    expect(ledger.approvals[0]).toMatchObject({ tool: 'cancelBooking', subject: 'BK-1', token: 'CONFIRM BK-1' });
-    expect(ledger.approvalsIssuedThisTurn).toHaveLength(1);
+    expect(action history.approvals).toHaveLength(1);
+    expect(action history.approvals[0]).toMatchObject({ tool: 'cancelBooking', subject: 'BK-1', token: 'CONFIRM BK-1' });
+    expect(action history.approvalsIssuedThisTurn).toHaveLength(1);
   });
 
   it('issues one approval per record, never a duplicate for an already-open one', () => {
-    const ledger = createLedger();
-    beginTurn(ledger, 0, 'cancel BK-1');
+    const action history = createActionHistory();
+    beginTurn(action history, 0, 'cancel BK-1');
     const result = { ok: true, requiresConfirmation: true, id: 'BK-1' };
-    recordToolResult(ledger, 'cancelBooking', { id: 'BK-1' }, result);
-    recordToolResult(ledger, 'cancelBooking', { id: 'BK-1' }, result);
-    expect(ledger.approvals).toHaveLength(1);
+    recordToolResult(action history, 'cancelBooking', { id: 'BK-1' }, result);
+    recordToolResult(action history, 'cancelBooking', { id: 'BK-1' }, result);
+    expect(action history.approvals).toHaveLength(1);
   });
 });
 
 describe('a vetoed destructive call issues an approval request from its declared label', () => {
   it('uses the label the spec declared', () => {
-    const ledger = createLedger();
-    ledger.destructiveLabels = { deleteAllData: 'delete all of your data' };
-    beginTurn(ledger, 0, 'wipe everything');
-    issueApprovalForVeto(ledger, 'deleteAllData');
-    expect(ledger.approvals[0]).toMatchObject({
+    const action history = createActionHistory();
+    action history.destructiveLabels = { deleteAllData: 'delete all of your data' };
+    beginTurn(action history, 0, 'wipe everything');
+    issueApprovalForVeto(action history, 'deleteAllData');
+    expect(action history.approvals[0]).toMatchObject({
       tool: 'deleteAllData',
       meaning: 'delete all of your data',
       token: 'CONFIRM DELETE-ALL',
     });
-    expect(ledger.approvals[0]!.subject).toBeUndefined();
+    expect(action history.approvals[0]!.subject).toBeUndefined();
   });
 
   it('issues nothing for a tool with no declared label', () => {
-    const ledger = createLedger();
-    beginTurn(ledger, 0, 'wipe everything');
-    issueApprovalForVeto(ledger, 'deleteAllData');
-    expect(ledger.approvals).toHaveLength(0);
+    const action history = createActionHistory();
+    beginTurn(action history, 0, 'wipe everything');
+    issueApprovalForVeto(action history, 'deleteAllData');
+    expect(action history.approvals).toHaveLength(0);
   });
 });
 
 describe('the user\'s own words consume an open approval', () => {
   it('records the consumption on the turn that carried the token', () => {
-    const ledger = createLedger();
-    ledger.destructiveLabels = { deleteAllData: 'delete all of your data' };
-    beginTurn(ledger, 0, 'wipe everything');
-    issueApprovalForVeto(ledger, 'deleteAllData');
-    beginTurn(ledger, 1, 'ok, CONFIRM DELETE-ALL');
-    expect(ledger.consentThisTurn).toHaveLength(1);
-    expect(ledger.approvals[0]!.consumedTurn).toBe(1);
+    const action history = createActionHistory();
+    action history.destructiveLabels = { deleteAllData: 'delete all of your data' };
+    beginTurn(action history, 0, 'wipe everything');
+    issueApprovalForVeto(action history, 'deleteAllData');
+    beginTurn(action history, 1, 'ok, CONFIRM DELETE-ALL');
+    expect(action history.consentThisTurn).toHaveLength(1);
+    expect(action history.approvals[0]!.consumedTurn).toBe(1);
   });
 
   it('carries no consent on a turn whose message is a human yes', () => {
-    const ledger = createLedger();
-    ledger.destructiveLabels = { deleteAllData: 'delete all of your data' };
-    beginTurn(ledger, 0, 'wipe everything');
-    issueApprovalForVeto(ledger, 'deleteAllData');
-    beginTurn(ledger, 1, 'go ahead');
-    expect(ledger.consentThisTurn).toEqual([]);
+    const action history = createActionHistory();
+    action history.destructiveLabels = { deleteAllData: 'delete all of your data' };
+    beginTurn(action history, 0, 'wipe everything');
+    issueApprovalForVeto(action history, 'deleteAllData');
+    beginTurn(action history, 1, 'go ahead');
+    expect(action history.consentThisTurn).toEqual([]);
   });
 
   it('keeps an approval request open across an unrelated turn', () => {
-    const ledger = createLedger();
-    ledger.destructiveLabels = { deleteAllData: 'delete all of your data' };
-    beginTurn(ledger, 0, 'wipe everything');
-    issueApprovalForVeto(ledger, 'deleteAllData');
-    beginTurn(ledger, 1, 'wait, what does that remove?');
-    beginTurn(ledger, 2, 'CONFIRM DELETE-ALL');
-    expect(ledger.consentThisTurn).toHaveLength(1);
+    const action history = createActionHistory();
+    action history.destructiveLabels = { deleteAllData: 'delete all of your data' };
+    beginTurn(action history, 0, 'wipe everything');
+    issueApprovalForVeto(action history, 'deleteAllData');
+    beginTurn(action history, 1, 'wait, what does that remove?');
+    beginTurn(action history, 2, 'CONFIRM DELETE-ALL');
+    expect(action history.consentThisTurn).toHaveLength(1);
   });
 });
 ```
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-Run: `pnpm -C packages/core exec vitest run test/approval-ledger.test.ts`
+Run: `pnpm -C packages/core exec vitest run test/approval-action-history.test.ts`
 Expected: FAIL — `issueApprovalForVeto` is not exported.
 
-- [ ] **Step 3: Add the store to the ledger**
+- [ ] **Step 3: Add the store to the action history**
 
-In `packages/core/src/runtime/ledger.ts`, add to `TurnLedger`:
+In `packages/core/src/runtime/action-history.ts`, add to `TurnActionHistory`:
 
 ```ts
   /** Every consent approval this CONVERSATION has issued — open and consumed alike. Conversation-scoped:
@@ -776,7 +776,7 @@ with `import { approvalCode, closeApprovalsFor, consumeApprovals, type ApprovalR
 `preferredIdentityValues` from `honesty.ts` for this (it is the one place that decides what identity a
 world result issued, and the approval's subject must be that same value).
 
-Seed them in `createLedger`:
+Seed them in `createActionHistory`:
 
 ```ts
     approvals: [],
@@ -787,13 +787,13 @@ Seed them in `createLedger`:
 
 - [ ] **Step 4: Consume at turn start**
 
-In `beginTurn`, after `ledger.currentUserText = userText;`, add:
+In `beginTurn`, after `action history.currentUserText = userText;`, add:
 
 ```ts
-  ledger.approvalsIssuedThisTurn = [];
+  action history.approvalsIssuedThisTurn = [];
   // The user's own words are the ONLY thing that turns an open approval into consent, and they are read
   // exactly here — once per turn, by the runtime. No guard reads text.
-  ledger.consentThisTurn = consumeApprovals(ledger.approvals, userText, turnIndex);
+  action history.consentThisTurn = consumeApprovals(action history.approvals, userText, turnIndex);
 ```
 
 - [ ] **Step 5: Issue from a world result**
@@ -805,10 +805,10 @@ In `recordToolResult`, after the observed entry is pushed, add:
   // record, so the approval it issues is bound to that record and to nothing else.
   if (resultFlags?.requiresConfirmation) {
     const [subject] = preferredIdentityValues(output);
-    if (subject) issueApproval(ledger, { tool: name, subject, meaning: subject });
+    if (subject) issueApproval(action history, { tool: name, subject, meaning: subject });
   } else if (tookEffect) {
     // A write that LANDED moves the record, so every open question about it stops being true and closes.
-    for (const subject of preferredIdentityValues(output)) closeApprovalsFor(ledger.approvals, subject);
+    for (const subject of preferredIdentityValues(output)) closeApprovalsFor(action history.approvals, subject);
   }
 ```
 
@@ -826,15 +826,15 @@ using the local `resultFlags` and `tookEffect` values already computed there for
  * about the same act SUPERSEDES the old one — two open literals for one act would let the user answer a
  * question they are no longer being asked.
  */
-function issueApproval(ledger: TurnLedger, c: { tool: string; subject?: string; meaning: string }): void {
+function issueApproval(action history: TurnActionHistory, c: { tool: string; subject?: string; meaning: string }): void {
   const token = approvalCode(c.meaning);
   const sameAct = (x: ApprovalRequest): boolean =>
     x.consumedTurn === undefined && !x.closed && x.tool === c.tool && x.subject === c.subject;
-  if (ledger.approvals.some((x) => sameAct(x) && x.token === token)) return;
-  for (const x of ledger.approvals) if (sameAct(x)) x.closed = true;
-  const approval: ApprovalRequest = { ...c, token, issuedTurn: ledger.turnIndex };
-  ledger.approvals.push(approval);
-  ledger.approvalsIssuedThisTurn.push(approval);
+  if (action history.approvals.some((x) => sameAct(x) && x.token === token)) return;
+  for (const x of action history.approvals) if (sameAct(x)) x.closed = true;
+  const approval: ApprovalRequest = { ...c, token, issuedTurn: action history.turnIndex };
+  action history.approvals.push(approval);
+  action history.approvalsIssuedThisTurn.push(approval);
 }
 
 /**
@@ -842,10 +842,10 @@ function issueApproval(ledger: TurnLedger, c: { tool: string; subject?: string; 
  * the act is what puts it on the user's screen. Its meaning is the label the spec declared; a tool with
  * no label issues nothing, so it can never be consented to and never runs.
  */
-export function issueApprovalForVeto(ledger: TurnLedger, tool: string): void {
-  const meaning = ledger.destructiveLabels[tool];
+export function issueApprovalForVeto(action history: TurnActionHistory, tool: string): void {
+  const meaning = action history.destructiveLabels[tool];
   if (!meaning) return;
-  issueApproval(ledger, { tool, meaning });
+  issueApproval(action history, { tool, meaning });
 }
 ```
 
@@ -865,20 +865,20 @@ with `import type { ApprovalRequest } from './runtime/approval-request.js';`.
 Thread it wherever the runtime builds a `GuardCtx` — find the sites with:
 
 ```bash
-grep -rn "userText: ledger.currentUserText" packages/core/src packages/mastra/src | grep -v /dist/
+grep -rn "userText: action history.currentUserText" packages/core/src packages/mastra/src | grep -v /dist/
 ```
 
-and add `consent: ledger.consentThisTurn,` beside it in each.
+and add `consent: action history.consentThisTurn,` beside it in each.
 
 - [ ] **Step 8: Run the tests to verify they pass**
 
-Run: `pnpm -C packages/core exec vitest run test/approval-ledger.test.ts && pnpm -C packages/core test`
+Run: `pnpm -C packages/core exec vitest run test/approval-action-history.test.ts && pnpm -C packages/core test`
 Expected: the new file PASSES, 7 tests. The existing suite still passes.
 
 - [ ] **Step 9: Commit**
 
 ```bash
-git add packages/core/src/runtime/ledger.ts packages/core/src/rules.ts packages/core/src/guards/honesty.ts packages/core/test/approval-ledger.test.ts
+git add packages/core/src/runtime/action-history.ts packages/core/src/rules.ts packages/core/src/guards/honesty.ts packages/core/test/approval-action-history.test.ts
 git commit -m "feat(core): the runtime issues consent approvals and reads the user's answer"
 ```
 
@@ -891,7 +891,7 @@ git commit -m "feat(core): the runtime issues consent approvals and reads the us
 - Test: `packages/core/test/approval-render.test.ts`
 
 **Interfaces:**
-- Consumes: `TurnLedger.approvalsIssuedThisTurn` (Task 4), `EngineText` (Task 3)
+- Consumes: `TurnActionHistory.approvalsIssuedThisTurn` (Task 4), `EngineText` (Task 3)
 
 - [ ] **Step 1: Write the failing test**
 
@@ -985,13 +985,13 @@ export function composeDeliveryText(
   return [message.trim(), ask, report].filter((s) => s.trim()).join('\n\n');
 }
 
-function composeDelivery(payload: RespondPayload, ledger: TurnLedger, contract?: DomainContract): string {
-  return composeDeliveryText(payload.message, payload.did, ledger.approvalsIssuedThisTurn, contract);
+function composeDelivery(payload: RespondPayload, action history: TurnActionHistory, contract?: DomainContract): string {
+  return composeDeliveryText(payload.message, payload.did, action history.approvalsIssuedThisTurn, contract);
 }
 ```
 
 Add the imports it needs: `resolveEngineText` from `./engine-text.js`, `type ApprovalRequest` from
-`./approval-request.js`. Update the two `composeDelivery(payload, contract)` call sites to pass `ledger`, and
+`./approval-request.js`. Update the two `composeDelivery(payload, contract)` call sites to pass `action history`, and
 pass `text` through to `renderOperationReport` at the other two call sites in this file
 (`deriveExhaustionClosure`, `withBlankFloor`) so the closure and the floor speak the same language.
 
@@ -1000,10 +1000,10 @@ pass `text` through to `renderOperationReport` at the other two call sites in th
 In `withBlankFloor`, a turn whose prose is blank but which ISSUED an approval request has something to deliver:
 
 ```ts
-  if (!isBlankDelivery(payload.message) || record.hasOperations || ledger.approvalsIssuedThisTurn.length) {
+  if (!isBlankDelivery(payload.message) || record.hasOperations || action history.approvalsIssuedThisTurn.length) {
 ```
 
-Add `ledger` to its call if it is not already a parameter (it is), and update the comment above the
+Add `action history` to its call if it is not already a parameter (it is), and update the comment above the
 branch to state the rule: prose gone AND nothing changed AND nothing asked is the case with nothing to
 deliver.
 
@@ -1354,17 +1354,17 @@ with `import { deriveToken } from './runtime/approval-request.js';`.
 Run: `pnpm -C packages/core exec vitest run test/agent-spec.test.ts`
 Expected: PASS.
 
-- [ ] **Step 6: Thread the labels to the ledger**
+- [ ] **Step 6: Thread the labels to the action history**
 
-Find where the runtime creates the ledger for a spec conversation:
+Find where the runtime creates the action history for a spec conversation:
 
 ```bash
-grep -rn "createLedger(" packages/core/src packages/mastra/src | grep -v /dist/
+grep -rn "createActionHistory(" packages/core/src packages/mastra/src | grep -v /dist/
 ```
 
-At each site that has the spec to hand, set `ledger.destructiveLabels = spec.destructiveLabels ?? {};`
+At each site that has the spec to hand, set `action history.destructiveLabels = spec.destructiveLabels ?? {};`
 immediately after creation. Where a veto is recorded for a destructive tool, call
-`issueApprovalForVeto(ledger, name)` — find the veto site with:
+`issueApprovalForVeto(action history, name)` — find the veto site with:
 
 ```bash
 grep -rn "recordVeto(" packages/core/src packages/mastra/src | grep -v /dist/

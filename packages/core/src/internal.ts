@@ -10,7 +10,7 @@
  *   1. the sibling packages (`@looprun-ai/mastra`, `/eval`, `/server`, `/models`) that implement the
  *      loop this package deliberately does not own;
  *   2. fork and benchmark authors driving the governed turn themselves — the "bring your own loop"
- *      seam (outline §6, decision 3): ledger + terminal protocol + prompt renderer + turn machine.
+ *      seam (outline §6, decision 3): action history + terminal protocol + prompt renderer + turn machine.
  *      Closing that loop needs all four, which is exactly why the seam stays whole here instead of
  *      being taught in pieces.
  *
@@ -55,7 +55,7 @@ export type {
 export type { TokenUsage, RuntimeTurnRecord } from './runtime/types.js';
 
 export {
-  createLedger,
+  createActionHistory,
   beginTurn,
   resultOk,
   recordToolResult,
@@ -65,17 +65,17 @@ export {
   pruneSupersededTerminals,
   clearDeliveredTerminal,
   vetoStormHit,
-} from './runtime/ledger.js';
-export type { TurnLedger } from './runtime/ledger.js';
+} from './runtime/action-history.js';
+export type { TurnActionHistory } from './runtime/action-history.js';
 
-// The structured-claim RENDERER + ledger derivation: the engine renders the user-facing
-// operation report from the VERIFIED `did`, and derives the true claims from the ledger for the
+// The structured-claim RENDERER + action history derivation: the engine renders the user-facing
+// operation report from the VERIFIED `did`, and derives the true claims from the action history for the
 // exhaustion closure. Backends consume both; `RespondPayload`/`RenderOpts` ride finalizeReply's/the
 // renderer's signature so a declaration:true consumer can name them.
 export {
   renderOperationReport,
   operationRecord,
-  deriveClaimsFromLedger,
+  deriveClaimsFromActionHistory,
   respondPayload,
   terminalPayloadRejection,
   // The shadow-law assertion, exported so the CONFIG path can enforce it at its own door and report
@@ -162,5 +162,5 @@ export { GuardExecutionError } from './rules.js';
 // the closure also reaches through `@looprun-ai/core` (`AgentSpec`, `AgentWorld`, `Guard`,
 // `GuardCtx`, `ToolDef`, `AgentControls`, `Layer`, …) are nameable from there and are not repeated.
 export type { PreToolVerdict, GovernanceVeto, PostToolEnforcement, ChainPassCtx, ChainPassResult } from './runtime/turn.js';
-export type { PostToolViolation } from './runtime/ledger.js';
+export type { PostToolViolation } from './runtime/action-history.js';
 export type { TurnPrompt, TurnPromptInput } from './runtime/prompt.js';

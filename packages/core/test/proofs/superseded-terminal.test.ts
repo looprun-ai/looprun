@@ -4,7 +4,7 @@
  * The runtime delivers the LAST non-empty `respond` message, while the guard hooks record EVERY
  * terminal as an ok observation. A step of two `respond` calls — one asking "Delete X?" (an `ask`
  * intention in its `did`) and one signing off — therefore delivers only the sign-off and still leaves
- * the ok asking `respond` in the ledger — which a prior-ask confirmation variant reads as "the user was
+ * the ok asking `respond` in the action history — which a prior-ask confirmation variant reads as "the user was
  * asked", unlocking a destructive action off a question the user never saw.
  *
  * TWO paths produce such a ghost, and each has its own detector:
@@ -12,11 +12,11 @@
  *   · the PREMATURE step (a terminal beside DOMAIN work)   → `prematureTerminalCalls`
  * `prematureTerminalTools` answers a third question — "which domain tools rode along?" — used to
  * INVALIDATE the delivery. The three must not be collapsed into one; this file pins the boundaries,
- * and that BOTH ghost paths end at the same ledger prune.
+ * and that BOTH ghost paths end at the same action history prune.
  */
 import { describe, expect, it } from 'vitest';
 import { prematureTerminalCalls, prematureTerminalTools, supersededTerminalCalls } from '../../src/runtime/terminal.js';
-import { createLedger, pruneSupersededTerminals, recordTerminalCall } from '../../src/runtime/ledger.js';
+import { createActionHistory, pruneSupersededTerminals, recordTerminalCall } from '../../src/runtime/action-history.js';
 
 /** DELIVERY = the last terminal the runtime would ACCEPT (`terminalPayloadRejection`), not merely the
  *  last with a non-empty message. Every fixture below therefore carries a
@@ -37,7 +37,7 @@ describe('supersededTerminalCalls', () => {
     ]);
     // Both are `respond` now — the loser is identified by its message, not its name.
     expect(out.map((o) => o.name)).toEqual(['respond']);
-    // The args ride along so the caller can match the exact ledger entry to prune.
+    // The args ride along so the caller can match the exact action history entry to prune.
     expect(out[0]?.args.message).toBe('Delete record r_1?');
     expect(out[0]?.args.did).toEqual([{ op: 'ask' }]);
   });
@@ -137,12 +137,12 @@ describe('prematureTerminalCalls', () => {
 
   it('THE CLOSURE: the premature ask leaves NO ghost in observed after the prune', () => {
     const steps = [step(['deleteAcct', { id: 'X' }], ['respond', { message: 'Delete account X?', did: [{ op: 'ask' }] }])];
-    const ledger = createLedger();
+    const actionHistory = createActionHistory();
     // What the backend's hook-time record leaves behind (the ask is visible to same-step siblings).
-    recordTerminalCall(ledger, 'respond', { message: 'Delete account X?', did: [{ op: 'ask' }] });
-    expect(ledger.observed).toHaveLength(1);
-    const pruned = pruneSupersededTerminals(ledger, prematureTerminalCalls(steps));
+    recordTerminalCall(actionHistory, 'respond', { message: 'Delete account X?', did: [{ op: 'ask' }] });
+    expect(actionHistory.observed).toHaveLength(1);
+    const pruned = pruneSupersededTerminals(actionHistory, prematureTerminalCalls(steps));
     expect(pruned).toEqual(['respond']);
-    expect(ledger.observed).toEqual([]);
+    expect(actionHistory.observed).toEqual([]);
   });
 });

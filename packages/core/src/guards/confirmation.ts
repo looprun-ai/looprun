@@ -142,7 +142,7 @@ export function destructiveThrottle(
   //
   // UNKNOWN EFFECT IS NOT A SIMULATE. Reading `tookEffect !== true` would treat "the world has no record of
   // this call" exactly like "the world says it changed nothing" — and in native-tools/MCP mode NOTHING
-  // writes the world ledger, so every call would read as not-effected and the EFFECT-BEATS-FLAGS rule
+  // writes the world action history, so every call would read as not-effected and the EFFECT-BEATS-FLAGS rule
   // above would be permanently INERT: a third-party tool that mutates while carrying `confirmed:false`
   // would classify as a simulate and slip the n:1 cap. A call that RAN and left no record of its effect is
   // unverifiable, so it counts.

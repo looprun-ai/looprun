@@ -110,7 +110,7 @@ export interface ChainSpec {
   after: string;
   /** The follow-up tool that must exist this turn; forced when missing. */
   call: string;
-  /** Deterministic trigger — a PURE function of (world, observed) [full-conversation ledger; each
+  /** Deterministic trigger — a PURE function of (world, observed) [full-conversation action history; each
    *  ObservedCall carries `turnIndex`, so scope to this turn yourself if needed]. NO user text. Absent ⇒
    *  always fire (when `after` ran OK this turn and `call` is missing). */
   when?: (world: AgentWorld, observed: ObservedCall[]) => boolean;
@@ -140,7 +140,7 @@ export interface AgentControls {
    *  domain/default sentence.
    *
    *  IT SUPPLIES THE SENTENCE, NOT THE WHOLE CLOSURE: the engine ALWAYS prepends the operation report it
-   *  derived from the ledger, exactly as the clean path composes `message` + report. An override that
+   *  derived from the action history, exactly as the clean path composes `message` + report. An override that
    *  narrates the operations itself will read as duplicating that report — write the abstain sentence and
    *  let the account of what happened stay engine-owned. */
   exhaustionReply?: (world: AgentWorld, okTools: string[], produced: string[], violations: string[]) => string;
@@ -171,7 +171,7 @@ export interface AgentSpec {
   };
   controls: AgentControls;
   /** Per destructive tool that acts on no identifiable record, the human-facing label its consent
-   *  question is built from. The runtime seats it on the ledger, which is what turns a denial into a
+   *  question is built from. The runtime seats it on the action history, which is what turns a denial into a
    *  question the user can read and answer. */
   destructiveLabels?: Record<string, string>;
   /** The LANGUAGE / JUDGEMENT layer: prose whose rules have NO possible `check()` (redefined
@@ -444,7 +444,7 @@ export class AgentSpecBase implements AgentSpec {
     //     included) routes an empty composed delivery to the non-empty engine-derived closure, because the
     //     respond schema's `message` minLength cannot decide it (a zero-width message satisfies it).
     // THE HONESTY CROSS-CHECK: when the domain declares its WRITE surface, ground the agent's
-    // structured declaration (`ctx.did`) against the world ledger — every reported operation must match
+    // structured declaration (`ctx.did`) against the world action history — every reported operation must match
     // what happened (`claimIsGrounded`) and every write that took effect must be reported
     // (`claimIsComplete`). Both are TRUTH guards (never salvaged/delivered over). Gated on `writeTools`
     // because grounding a `success`/`no_op` claim is meaningless without knowing which calls MUTATE: a

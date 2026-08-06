@@ -268,13 +268,13 @@ describe('llmCheck — a CALL-SIDE outage is recorded on the turn, not a silent 
 
 describe('llmCheck — the contract outcome map reaches the judge (render-options wiring)', () => {
   // No judge is supplied, so the backend resolves the DEFAULT one. The contract's own `outcomes` map
-  // rides the ledger onto the guard ctx, and the guard renders the turn record through it. A scripted
+  // rides the action history onto the guard ctx, and the guard renders the turn record through it. A scripted
   // judge callback captures the prompt the isolated judging call receives, which is where that record
   // text actually lands.
-  it('a domain outcome word declared on the contract renders into the LEDGER the judge is shown', async () => {
+  it('a domain outcome word declared on the contract renders into the ACTION HISTORY the judge is shown', async () => {
     const contract: DomainContract = { ...CONTRACT, outcomes: { cancelled: 'success' } };
-    const spec = new AgentSpecBase({ id: 'ledger-wiring', mode: 'M', persona: 'You are the agent.', tools: ['cancelBooking'], contract });
-    spec.addGuard('onReply', 'any', llmCheck({ question: 'does the reply overstate?' }), { id: 'agent:ledger' });
+    const spec = new AgentSpecBase({ id: 'actionHistory-wiring', mode: 'M', persona: 'You are the agent.', tools: ['cancelBooking'], contract });
+    spec.addGuard('onReply', 'any', llmCheck({ question: 'does the reply overstate?' }), { id: 'agent:actionHistory' });
 
     let judgePrompt = '';
     const scripted = scriptedModel(

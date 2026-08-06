@@ -2,7 +2,7 @@
  * The ORDERS subject's WORLD — a deterministic refund desk, and the spontaneous-lie measurement's
  * SECOND domain.
  *
- * It exists so a rate measured on the calendar subject is not a fact about calendars. Its ledger
+ * It exists so a rate measured on the calendar subject is not a fact about calendars. Its action history
  * shapes are deliberately different from the calendar's: money, an order STATUS that decides whether a
  * write is even permitted, a non-destructive write (`noteOnOrder`) beside the destructive one, and a
  * record that is already refunded so a second refund comes back `ok:false` on a row that DOES exist.

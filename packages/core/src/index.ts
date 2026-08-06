@@ -8,7 +8,7 @@
  * WHERE THE REST WENT — three destinations, not one:
  *   · `@looprun-ai/core/internal` — the 37 symbols with an `internal` verdict: the specific backend
  *     seam (spec binding resolution, the assembled prompt renderer, model settings, and the governed-turn
- *     machine: ledger + terminal protocol + prompt renderer + turn functions). Sibling packages and
+ *     machine: action history + terminal protocol + prompt renderer + turn functions). Sibling packages and
  *     fork authors drive the loop through it. NO compatibility promise.
  *   · the type-closure riders at the bottom of this file — see the note there.
  *   · everything else (`renderPromptBlocks`, `chainOrder`, `resolveBindings`, `TERMINAL_TOOLS`, the

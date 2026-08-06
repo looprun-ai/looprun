@@ -19,7 +19,7 @@ import {
   valueFromUser,
 } from '../../src/index.js';
 import { terminalToolDefs } from '../../src/runtime/terminal.js';
-import { createLedger } from '../../src/runtime/ledger.js';
+import { createActionHistory } from '../../src/runtime/action-history.js';
 import { finalizeReply } from '../../src/runtime/turn.js';
 import type { GuardCtx, ObservedCall, AgentWorld } from '../../src/rules.js';
 import type { RespondPayload } from '../../src/runtime/claims.js';
@@ -71,10 +71,10 @@ describe('blank-delivery floor', () => {
   });
   it('CLOSED by the engine FLOOR: a zero-width-only message routes finalizeReply to the non-empty closure', async () => {
     const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona: 'p', tools: [] });
-    const ledger = createLedger();
+    const actionHistory = createActionHistory();
     // U+200B (zero-width space) + U+2060 (word joiner) — survives .trim() as a non-empty string.
     const zeroWidth: RespondPayload = { message: '\u200B\u2060', did: [{ op: 'inform' }] };
-    const out = await finalizeReply(spec, undefined, fixtureWorld(), ledger, zeroWidth, async () => zeroWidth, 1);
+    const out = await finalizeReply(spec, undefined, fixtureWorld(), actionHistory, zeroWidth, async () => zeroWidth, 1);
     expect(out.exhausted).toBe(true);
     expect(out.text.trim().length).toBeGreaterThan(0);
   });

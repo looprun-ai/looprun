@@ -1,5 +1,5 @@
 /**
- * CORE CLAIMS module — the structural spine the cross-check guards, the ledger plumbing and the
+ * CORE CLAIMS module — the structural spine the cross-check guards, the action history plumbing and the
  * did→message renderer all build on. These tests pin the EXACT names and the strict shape law:
  * `validateClaims` is exhaustive typed checking, never a `typeof`/`trim` guess, and `resolveOutcome`
  * lets core meaning win over any domain shadow.

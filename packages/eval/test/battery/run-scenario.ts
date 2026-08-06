@@ -7,7 +7,7 @@
  *
  * What it does that `runCase` does not, and why it is a separate function rather than a flag on
  * `runCase`: the battery needs the RAW terminal payloads and the RAW prompts. `runCase` returns a
- * `CaseDump` shaped for the LLM judge — it keeps the ledger's cleaned `did` and drops the message
+ * `CaseDump` shaped for the LLM judge — it keeps the action history's cleaned `did` and drops the message
  * history, which is exactly the evidence a shape measurement is about. Adding a second return shape
  * to the shipped case runner to serve a gated instrument would put battery concerns in the published
  * package, so the instrument brings its own thin driver and shares everything below it.
@@ -44,7 +44,7 @@ export interface DrivenScenario {
 
 /**
  * Drive one conversation through `runSpecConversation` and hand back the RAW material: the world (its
- * ledger), the recorder (every prompt and its per-call token count) and the run result. Every battery
+ * action history), the recorder (every prompt and its per-call token count) and the run result. Every battery
  * instrument folds this same drive rather than each opening its own conversation, so two instruments
  * can never disagree about what the loop does.
  */

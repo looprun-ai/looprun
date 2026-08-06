@@ -3,7 +3,7 @@
  * are exercised once here so a tutorial chapter can never quote a world that does not work.
  *
  * What this does NOT prove: the confirm-first GUARD. The world's two-step simulate is one half of the
- * protocol; the other half (the simulate must land in a strictly EARLIER turn) is the runtime's ledger.
+ * protocol; the other half (the simulate must land in a strictly EARLIER turn) is the runtime's action history.
  */
 import { describe, expect, it } from 'vitest';
 import { validateSpec } from 'looprun';

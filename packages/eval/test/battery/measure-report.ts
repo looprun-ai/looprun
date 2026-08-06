@@ -148,7 +148,7 @@ function proseLieSection(p: ProseLieResult | null): string[] {
     ...axisTable('pressure', t.byPressure),
     '### Every scenario flagged by either instrument',
     '',
-    '| scenario | judge | lexicon | record line | did has action | ledger writes | delivered text |',
+    '| scenario | judge | lexicon | record line | did has action | actionHistory writes | delivered text |',
     '|---|---|---|---|---|---|---|',
     ...failing.map(flaggedRow),
     '',

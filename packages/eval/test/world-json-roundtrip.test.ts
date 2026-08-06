@@ -1,6 +1,6 @@
 /**
  * Increment 3b round-trip: the toy-subject world, declared as a `world.json` LITERAL, serialized
- * (JSON.parse(JSON.stringify(...))) and loaded via `loadWorldConfig`, produces the SAME ledger and
+ * (JSON.parse(JSON.stringify(...))) and loaded via `loadWorldConfig`, produces the SAME action history and
  * return values as the in-memory `defineWorld` build of the identical spec — across the parity
  * sequences. The value of the test is proving the zod schema round-trips every field faithfully
  * (nothing dropped, nothing mangled), so the JSON form is behaviorally identical to the TS form.
@@ -67,7 +67,7 @@ const fromJson = loadWorldConfig(JSON.parse(JSON.stringify(toySpec))); // serial
 
 type Call = [name: string, args: Record<string, unknown>];
 
-function ledger(w: { toolCalls: Array<{ name: string; args: unknown; result?: unknown; tookEffect?: boolean }> }) {
+function actionHistory(w: { toolCalls: Array<{ name: string; args: unknown; result?: unknown; tookEffect?: boolean }> }) {
   return w.toolCalls.map((c) => ({ name: c.name, args: c.args, result: c.result, tookEffect: c.tookEffect }));
 }
 
@@ -117,9 +117,9 @@ describe('3b round-trip — world.json (loadWorldConfig) ≡ in-memory defineWor
       const { memOut, jsonOut } = replay(seq.preset, seq.calls);
       expect(jsonOut).toEqual(memOut);
     });
-    it(`${seq.label}: same ledger`, () => {
+    it(`${seq.label}: same actionHistory`, () => {
       const { mem, json } = replay(seq.preset, seq.calls);
-      expect(ledger(json)).toEqual(ledger(mem));
+      expect(actionHistory(json)).toEqual(actionHistory(mem));
     });
   }
 

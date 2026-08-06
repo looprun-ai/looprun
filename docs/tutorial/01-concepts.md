@@ -107,7 +107,7 @@ other, so neither can lie about the other.
 
 ```
    a guard sees:  the tool being called · its arguments · world state ·
-                  the ledger of calls already verified this conversation
+                  the action history of calls already verified this conversation
 
    the user's message ────── ✂ ────── structurally absent
 ```
@@ -158,7 +158,7 @@ type you can bind to, and `confirmFirst` is one row of chapter 04's catalog:
    │        ▼                                                            │
    │   the model asks instead:  "Cancel Dentist, Wed 15:00?"             │
    │        ▼                                                            │
-   │   ③ postTool ──► the verified outcome enters the ledger             │
+   │   ③ postTool ──► the verified outcome enters the action history             │
    │        ▼                                                            │
    │   ④ onReply checks ──► a reply that claims a cancellation that      │
    │        │               never happened is re-generated (no tools);   │

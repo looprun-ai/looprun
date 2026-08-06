@@ -177,7 +177,7 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [ /* one entry per fa
 ### Task 6: Runtime goes internal (Phase 2d)
 
 **Files:**
-- Modify: `packages/core/src/index.ts` (runtime exports shrink to the types a LoopRunAgent user sees in results: `TurnRecord`, `RunResult`, `TokenUsage`, `ToolDef` — final list from the Task 2 contract), `packages/core/src/internal.ts` (gains ledger/terminal/prompt machinery: `createLedger`, `beginTurn`, `recordVeto`, `recordToolResult`, `recordTerminal`, `recordTerminalCall`, `pruneSupersededTerminals`, `vetoStormHit`, `VETO_STORM_LIMIT`, `terminalProtocol`, `forcedTerminalPrompt`, `terminalToolDefs`, `TERMINAL_TOOLS`, `isTerminal`, …)
+- Modify: `packages/core/src/index.ts` (runtime exports shrink to the types a LoopRunAgent user sees in results: `TurnRecord`, `RunResult`, `TokenUsage`, `ToolDef` — final list from the Task 2 contract), `packages/core/src/internal.ts` (gains action history/terminal/prompt machinery: `createActionHistory`, `beginTurn`, `recordVeto`, `recordToolResult`, `recordTerminal`, `recordTerminalCall`, `pruneSupersededTerminals`, `vetoStormHit`, `VETO_STORM_LIMIT`, `terminalProtocol`, `forcedTerminalPrompt`, `terminalToolDefs`, `TERMINAL_TOOLS`, `isTerminal`, …)
 - Modify: import sites in `packages/mastra/src/*`, `packages/eval/src/*`, `packages/server/src/*`
 
 **Interfaces:**

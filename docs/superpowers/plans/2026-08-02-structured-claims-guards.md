@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Rebuild the guard layer from zero on structured turn-claims: the agent DECLARES its operations (`did: TurnClaim[]`) through one structured terminal (`respond`), the engine cross-checks the declaration against the world ledger it controls, and the user-facing operation report is ENGINE-RENDERED from verified claims — fabrication cannot reach the user.
+**Goal:** Rebuild the guard layer from zero on structured turn-claims: the agent DECLARES its operations (`did: TurnClaim[]`) through one structured terminal (`respond`), the engine cross-checks the declaration against the world action history it controls, and the user-facing operation report is ENGINE-RENDERED from verified claims — fabrication cannot reach the user.
 
 **Architecture:** Spec `docs/superpowers/specs/2026-08-02-structured-claims-guards-redesign.md` is normative. Engine owns the `TurnClaim`/`CoreOutcome` core, the three cross-check guards, and the did→message renderer; agentspec extends only vocabulary (domain `op` names + domain outcomes that MUST declare a core-outcome mapping). Tier ③ reply-text guards are DELETED with their breaks recorded. A re-chartered red-team certifies by FAILING to break.
 
@@ -11,22 +11,22 @@
 ## Global Constraints
 
 - **Pre-1.0 law: NO retroactive compatibility.** Old TS bundles, sims, and measured numbers are disposable. Broken tests are REWRITTEN to the new surface or deleted — never shimmed, never skipped.
-- **No-regex law:** no guard factory takes a RegExp-typed param (grep-gate `guards-purity.test.ts` stays green). Claim `target` matching uses literal equality/substring over LEDGER VALUES (data the world produced), never authored patterns.
+- **No-regex law:** no guard factory takes a RegExp-typed param (grep-gate `guards-purity.test.ts` stays green). Claim `target` matching uses literal equality/substring over ACTION HISTORY VALUES (data the world produced), never authored patterns.
 - **No guard reads conversation text except `llmCheck`.** The cross-check guards read `did` × `world.toolCalls`/`observed` — structure, not prose.
 - **Engine stays domain-neutral:** zero business strings in `@looprun-ai/core`; domain vocabulary (op names, outcome words, render templates) arrives via spec/contract seams.
 - **Prose leak laws:** no raw tool/terminal names in user-delivered text; deny reasons never name `respond` (say "close the turn"/"your final message").
 - Surface-lock riders + tutorial outline + guard-catalog parity in the SAME commit as any surface change (`test/guard-catalog-parity.test.ts`, `scripts/gen-guards-chapter.mjs`).
 - All suites (`pnpm -C packages/core test`, `-C packages/mastra test`, `-C packages/eval test`) + `pnpm -r typecheck` + `node tests/no-bench-drift.test.mjs` green per commit. Commit per task; **NEVER push**.
 - agentspec commits are SEPARATE and end with the explicit leak-review confirmation (no dev-context strings in generated artifacts).
-- Progress ledger: append to `.superpowers/sdd/progress.md` with prefix `SCG-T<N>`.
+- Progress action history: append to `.superpowers/sdd/progress.md` with prefix `SCG-T<N>`.
 
 ## File Structure (locked)
 
 ```
 packages/core/src/runtime/claims.ts        NEW  — TurnClaim/CoreOutcome types, outcome resolution,
-                                                  claim↔ledger matching, deriveClaimsFromLedger, renderer
+                                                  claim↔action history matching, deriveClaimsFromActionHistory, renderer
 packages/core/src/runtime/terminal.ts      MOD  — replyToUser/askUser → ONE `respond` terminal
-packages/core/src/runtime/ledger.ts        MOD  — record did/asked; HistoryTurn.did
+packages/core/src/runtime/action-history.ts        MOD  — record did/asked; HistoryTurn.did
 packages/core/src/runtime/turn.ts          MOD  — finalizeReply over RespondPayload; renderer wiring;
                                                   claims-derived exhaustion closure
 packages/core/src/rules.ts                 MOD  — GuardCtx.did/asked; HistoryTurn.did
@@ -135,22 +135,22 @@ Strictness law (red-team batches a/b: `typeof`/`trim` guesses broke arg guards):
   - `prematureTerminalTools` unchanged in logic (respond sharing a step with a domain call still invalidates).
   - `supersededTerminalCalls` simplifies: multiple `respond` calls in one step → all but the delivered one (last with non-empty `message`) are pruned. Key on `args.message` now, not `args.text`.
   - `normalizeTerminalToolDef` / `terminalToolDefs` follow the one-contract shape.
-- [ ] **Step 4: Fix every core test that referenced `replyToUser`/`askUser`** — REWRITE to `respond` (asked:true where the old test used askUser). No skips. Run `pnpm -C packages/core test`; expect green except suites owned by later tasks (list them in the report if any fail for later-task reasons — they should not: core compiles as a unit, so ledger/turn call-sites must be minimally re-keyed HERE to keep the package green; keep those edits mechanical, the behavioral rewrite is T2/T4).
+- [ ] **Step 4: Fix every core test that referenced `replyToUser`/`askUser`** — REWRITE to `respond` (asked:true where the old test used askUser). No skips. Run `pnpm -C packages/core test`; expect green except suites owned by later tasks (list them in the report if any fail for later-task reasons — they should not: core compiles as a unit, so action history/turn call-sites must be minimally re-keyed HERE to keep the package green; keep those edits mechanical, the behavioral rewrite is T2/T4).
 - [ ] **Step 5: Commit** `feat!(core): structured respond terminal + TurnClaim/CoreOutcome core (SCG-T1)`.
 
-### Task 2: Ledger + GuardCtx plumbing — claims become first-class turn state
+### Task 2: ActionHistory + GuardCtx plumbing — claims become first-class turn state
 
 **Files:**
-- Modify: `packages/core/src/runtime/ledger.ts`, `packages/core/src/rules.ts`
-- Test: `packages/core/test/claims-ledger.test.ts` (new)
+- Modify: `packages/core/src/runtime/action-history.ts`, `packages/core/src/rules.ts`
+- Test: `packages/core/test/claims-action-history.test.ts` (new)
 
 **Interfaces:**
 - Consumes: `RespondPayload`, `respondPayload`, `validateClaims`, `isAskEvent` from T1.
-- Produces: `TurnLedger.did: TurnClaim[]` + `TurnLedger.asked: boolean` (the CURRENT turn's delivered declaration, set when the delivered respond is chosen); `GuardCtx.did?: TurnClaim[]`, `GuardCtx.asked?: boolean` (populated for onReply/postTool ctx); `HistoryTurn.did: ReadonlyArray<TurnClaim>`; `recordTurnHistory` stores the VERIFIED claims (post-cross-check, as delivered).
+- Produces: `TurnActionHistory.did: TurnClaim[]` + `TurnActionHistory.asked: boolean` (the CURRENT turn's delivered declaration, set when the delivered respond is chosen); `GuardCtx.did?: TurnClaim[]`, `GuardCtx.asked?: boolean` (populated for onReply/postTool ctx); `HistoryTurn.did: ReadonlyArray<TurnClaim>`; `recordTurnHistory` stores the VERIFIED claims (post-cross-check, as delivered).
 
-- [ ] **Step 1: Failing tests:** a respond call recorded via `recordTerminalCall` surfaces `did`/`asked` on the ledger; `beginTurn` resets them; `recordTurnHistory` freezes claims into `history[n].did`; onReply GuardCtx built by `finalizeReply`'s check path carries `did`/`asked` (assert via a simulate guard capturing its ctx).
+- [ ] **Step 1: Failing tests:** a respond call recorded via `recordTerminalCall` surfaces `did`/`asked` on the action history; `beginTurn` resets them; `recordTurnHistory` freezes claims into `history[n].did`; onReply GuardCtx built by `finalizeReply`'s check path carries `did`/`asked` (assert via a simulate guard capturing its ctx).
 - [ ] **Step 2: Implement.** `observed` keeps respond entries exactly as terminals are kept today (ok:true, args intact) so `isAskEvent` works over `observed` — the pruning of superseded responds keeps working via T1's rewrite.
-- [ ] **Step 3: All core suites green; commit** `feat(core): claims in the turn ledger + GuardCtx.did/asked + history (SCG-T2)`.
+- [ ] **Step 3: All core suites green; commit** `feat(core): claims in the turn action history + GuardCtx.did/asked + history (SCG-T2)`.
 
 ### Task 3: The cross-check guards — the deterministic honesty core
 
@@ -171,7 +171,7 @@ claimCoversRubric(opts: { targets: string[]; outcome: CoreOutcome | 'any' }, rea
 
 **Check semantics (the spec's table, made exact — this is the heart of the plan):**
 
-Let `calls` = `ctx.observed` entries of THIS turn that are domain tools (not terminals), `writes` = those whose name ∈ writeTools, `attempts` = this turn's guard-vetoed attempts (from `ctx.notes`/ledger veto records — expose vetoed attempts on GuardCtx if not already readable: add `attemptedThisTurn: ReadonlyArray<{name: string; args: unknown}>` to GuardCtx in this task, populated from the ledger's veto record). `matches(claim, call)` = claim.target is undefined, OR the target string appears (case-insensitive literal equality or substring) in the canonicalized `call.args` values or `call.result` values — values are LEDGER DATA, never authored patterns.
+Let `calls` = `ctx.observed` entries of THIS turn that are domain tools (not terminals), `writes` = those whose name ∈ writeTools, `attempts` = this turn's guard-vetoed attempts (from `ctx.notes`/action history veto records — expose vetoed attempts on GuardCtx if not already readable: add `attemptedThisTurn: ReadonlyArray<{name: string; args: unknown}>` to GuardCtx in this task, populated from the action history's veto record). `matches(claim, call)` = claim.target is undefined, OR the target string appears (case-insensitive literal equality or substring) in the canonicalized `call.args` values or `call.result` values — values are ACTION HISTORY DATA, never authored patterns.
 
 `claimIsGrounded` — for each claim, resolve outcome via the map; then:
 | resolved | grounded iff |
@@ -192,7 +192,7 @@ Let `calls` = `ctx.observed` entries of THIS turn that are domain tools (not ter
 - [ ] **Step 2: Implement.** All three are TRUTH guards: add their kinds to `TRUTH_GUARD_KINDS` in turn.ts (never salvaged over, never delivered over).
 - [ ] **Step 3: Auto-install** `claimIsGrounded` + `claimIsComplete` in the spec class where `noDuplicateCall`/`emptyReply`-class always-on guards are installed today (find the site in `spec.ts` — the outline calls it the auto-installed set), fed by the contract's writeTools + the spec's outcome map (add `outcomes?: OutcomeMap` to the spec/contract seam — pick the seam where `writeTools` already lives so both arrive together; document the choice in the task report). `claimCoversRubric` is config-bound only (per-case norms), never auto-installed.
 - [ ] **Step 4: Catalog entries** for the three kinds (category `'honesty'` — the section is repopulated, deterministically this time); parity test green; regenerate ch04.
-- [ ] **Step 5: Commit** `feat(core): claim cross-check guards — grounded/complete/coversRubric over the world ledger (SCG-T3)`.
+- [ ] **Step 5: Commit** `feat(core): claim cross-check guards — grounded/complete/coversRubric over the world action history (SCG-T3)`.
 
 ### Task 4: The did→message renderer + finalizeReply over RespondPayload
 
@@ -207,18 +207,18 @@ Let `calls` = `ctx.observed` entries of THIS turn that are domain tools (not ter
 // claims.ts
 export interface RenderOpts { renderClaim?: (c: TurnClaim, core: CoreOutcome) => string; outcomes?: OutcomeMap }
 export function renderOperationReport(did: TurnClaim[], opts?: RenderOpts): string;
-export function deriveClaimsFromLedger(observed: ObservedCall[], turnIndex: number, writeTools: readonly string[], produced: string[]): TurnClaim[];
+export function deriveClaimsFromActionHistory(observed: ObservedCall[], turnIndex: number, writeTools: readonly string[], produced: string[]): TurnClaim[];
 // turn.ts — the redrive callback now returns a payload, not a string:
-finalizeReply(spec, contract, world, ledger, initial: RespondPayload,
+finalizeReply(spec, contract, world, action history, initial: RespondPayload,
   redrive: (message: string) => Promise<RespondPayload>, maxRedrives): Promise<FinalizedReply>
 ```
 
 - `DomainContract` gains optional `renderClaim` (+ `outcomes` if T3 seated the map here) — the domain's wording (and language) for one verified claim; engine default is a neutral English line per core outcome (e.g. success → `"${target ?? op}: done"`, not_found → `"${target ?? op}: no record found"`, pending_confirmation → `"${target ?? op}: awaiting your confirmation"`). No tool names, no the-word-`respond`, ever.
 - **Delivery composition:** delivered text = `message` when `did` is empty; else `message + '\n\n' + renderOperationReport(verifiedDid)`. The mutators (jargonScrub) apply to `message` only; onReply checks run BEFORE composition against the payload (claims guards read `ctx.did`; degenerationGuard reads `ctx.reply` = message).
-- **Redrive:** violations (claims + llmCheck + postTool) feed the same bounded no-tools redrive; the backend's redrive re-generates one `respond` payload (message + did + asked) with the correction appended. The model can FIX its declaration; the ledger cannot be argued with.
-- **Exhaustion closure (replaces `defaultExhaustionReply`/`buildHonestAbstain`):** when redrives exhaust, the engine DERIVES the true claims itself — `deriveClaimsFromLedger` maps each this-turn domain call to a claim (write+tookEffect→success with produced label as target; write ok:false→failure; requiresConfirmation→pending_confirmation; reads contribute nothing) — and delivers `renderOperationReport(derived)` + one engine sentence ("I could not safely finish the rest — how would you like to proceed?" / nothing-landed variant). This CLOSES the "Abstain tool-name leak" backlog row: produced labels, never tool names; a name with no produced label renders as a generic "one action completed".
+- **Redrive:** violations (claims + llmCheck + postTool) feed the same bounded no-tools redrive; the backend's redrive re-generates one `respond` payload (message + did + asked) with the correction appended. The model can FIX its declaration; the action history cannot be argued with.
+- **Exhaustion closure (replaces `defaultExhaustionReply`/`buildHonestAbstain`):** when redrives exhaust, the engine DERIVES the true claims itself — `deriveClaimsFromActionHistory` maps each this-turn domain call to a claim (write+tookEffect→success with produced label as target; write ok:false→failure; requiresConfirmation→pending_confirmation; reads contribute nothing) — and delivers `renderOperationReport(derived)` + one engine sentence ("I could not safely finish the rest — how would you like to proceed?" / nothing-landed variant). This CLOSES the "Abstain tool-name leak" backlog row: produced labels, never tool names; a name with no produced label renders as a generic "one action completed".
 - **Salvage:** re-keyed to the last ok `respond` observation; the salvage candidate is its full payload re-validated by the same checks (claims guards included — a fabricated did is never salvaged; that is the point of the redesign).
-- [ ] **Step 1: Failing tests:** composition (empty did → message alone; non-empty → message+report); renderer never emits a tool name (feed claims derived from a ledger whose produced labels differ from tool names; assert no tool name in output); exhaustion path delivers ledger-derived truth (simulate-only turn → "nothing was changed" shape, no fabricated success); redrive receives correction text and its returned payload is re-checked; salvage rejects a payload whose did fails claimIsGrounded.
+- [ ] **Step 1: Failing tests:** composition (empty did → message alone; non-empty → message+report); renderer never emits a tool name (feed claims derived from a action history whose produced labels differ from tool names; assert no tool name in output); exhaustion path delivers action history-derived truth (simulate-only turn → "nothing was changed" shape, no fabricated success); redrive receives correction text and its returned payload is re-checked; salvage rejects a payload whose did fails claimIsGrounded.
 - [ ] **Step 2: Implement; rewrite the existing finalizeReply/exhaustion/salvage tests to the payload surface.** All core suites green.
 - [ ] **Step 3: Commit** `feat!(core): engine-rendered operation report + claims-derived exhaustion closure (SCG-T4)`.
 
@@ -247,7 +247,7 @@ finalizeReply(spec, contract, world, ledger, initial: RespondPayload,
 
 **Files (in `~/Dev/js/looprun/agentspec`):** guard-catalog.md, authoring norms/laws, generator templates, R1 red-team charter refs — locate via the repo's own index; commits stay in agentspec.
 
-- [ ] **Step 1:** Rewrite the guard catalog to the new surface: the cross-check trio + tier ① kinds + llmCheck + custom; deleted kinds removed with their replacement named ("reply coverage → claimCoversRubric over `did`"). Document the MAPPING LAW verbatim: *every domain outcome DECLARES its core outcome (`'settled' → 'success'`); domain adds words, never a way to escape the ledger.* Templates generate the outcome map beside writeTools; norms teach `did` authoring (one claim per attempted operation, honest outcomes, reads only when the user asked for the lookup).
+- [ ] **Step 1:** Rewrite the guard catalog to the new surface: the cross-check trio + tier ① kinds + llmCheck + custom; deleted kinds removed with their replacement named ("reply coverage → claimCoversRubric over `did`"). Document the MAPPING LAW verbatim: *every domain outcome DECLARES its core outcome (`'settled' → 'success'`); domain adds words, never a way to escape the action history.* Templates generate the outcome map beside writeTools; norms teach `did` authoring (one claim per attempted operation, honest outcomes, reads only when the user asked for the lookup).
 - [ ] **Step 2:** R1 charter re-scope: the red-team hunts (a) claims that can pass ungrounded, (b) effected writes that can hide from `did`, (c) rubric polarity escapes — text-scanning findings are extinct by construction.
 - [ ] **Step 3:** Leak-review over every touched artifact (no "SCG", no bench/session vocabulary, no engine-internal names in generated-facing text) — end the report with the explicit leak-review confirmation. Commit in agentspec: `feat!: structured-claims guard vocabulary — outcome mapping law, catalog + norms rewrite`.
 

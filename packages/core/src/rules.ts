@@ -47,7 +47,7 @@ export interface ObservedCall {
   tookEffect?: boolean;
   /** Was `tookEffect` INFERRED by the runtime rather than ATTESTED by the world?
    *
-   *  A world that keeps its own ledger (`defineWorld`, `FixtureWorld`, any custom world) sets `tookEffect`
+   *  A world that keeps its own action history (`defineWorld`, `FixtureWorld`, any custom world) sets `tookEffect`
    *  per executor — it is a deliberate statement that THIS call mutated the world, and it is trustworthy
    *  for any tool name. The native-tools/MCP path has no executor to ask: the tool ran itself, so the
    *  runtime derives the flag from the RESULT (`ok && !requiresConfirmation`), which is really "the call
@@ -56,7 +56,7 @@ export interface ObservedCall {
    *  inferring path; absent everywhere else. */
   effectInferred?: boolean;
   /** The LABEL this call's own result issued (a world-issued noun for what it produced/touched), when it
-   *  issued one. Attached PER CALL so the engine's derived account (`deriveClaimsFromLedger`) names the
+   *  issued one. Attached PER CALL so the engine's derived account (`deriveClaimsFromActionHistory`) names the
    *  entity the acting call itself named — the conversation-wide `producedThisTurn` array is a positional
    *  stream that includes READ labels, and consuming it positionally made a read's label shift onto a
    *  write's derived target. */
@@ -65,7 +65,7 @@ export interface ObservedCall {
 
 /** One EXECUTED tool call as it is retained in the conversation `history` (a guard-vetoed attempt is
  *  NOT here — it rides `HistoryTurn.attemptedCalls`). `result` is present only when the backend that
- *  built the turn had the world result to hand; the framework-free ledger keeps `ok`/`tookEffect`. */
+ *  built the turn had the world result to hand; the framework-free action history keeps `ok`/`tookEffect`. */
 export interface HistoryToolCall {
   name: string;
   args: Record<string, unknown>;
@@ -86,7 +86,7 @@ export interface HistoryTurn {
   toolCalls: ReadonlyArray<HistoryToolCall>;
   /** The turn's DELIVERED structured claim of operations (the delivered `respond`'s `did`). Retained so
    *  a later turn's guards can read what the agent DECLARED it did. Frozen with the entry. Task 4 will
-   *  feed this the VERIFIED (post-cross-check) set; for now it is what the ledger held at seal time.
+   *  feed this the VERIFIED (post-cross-check) set; for now it is what the action history held at seal time.
    *  This is ALSO the ask record: a turn posed a question iff `hasAskIntent(did)`, never through a flag,
    *  and a SEALED turn is the authoritative answer for its own `turnIndex`. */
   did: ReadonlyArray<Intention>;
@@ -134,7 +134,7 @@ export interface GuardCtx {
   result?: unknown;
   notes?: string[];
   /** The CURRENT turn's structured claim of operations, extracted from the delivered `respond`'s `did`
-   *  and grounded against the ledger by the cross-check guards. Populated on the REPLY-side ctx —
+   *  and grounded against the action history by the cross-check guards. Populated on the REPLY-side ctx —
    *  the onReply checks, the postTool result-invariants and the egress mutators — so a guard reads the
    *  agent's DECLARATION, not its prose. Absent on preTool/onInput (no delivered respond exists yet).
    *  It carries the turn's ASK too: `hasAskIntent(ctx.did)`, never a flag.
@@ -142,9 +142,9 @@ export interface GuardCtx {
    *  observed scan, which can still hold a terminal the user never received. */
   did?: Intention[];
   /** THIS turn's guard-VETOED attempts — the calls a preTool guard blocked before they reached the world
-   *  (the ledger's `attemptedCalls`, reset per turn). Populated on the reply-side ctx beside {@link did}
+   *  (the action history's `attemptedCalls`, reset per turn). Populated on the reply-side ctx beside {@link did}
    *  so `claimIsGrounded` can ground a `blocked`/`refused` claim against the attempt the guard stopped —
-   *  which, by construction, appears on NO world-ledger entry. Absent on preTool/onInput. */
+   *  which, by construction, appears on NO world-action history entry. Absent on preTool/onInput. */
   attemptedThisTurn?: ReadonlyArray<{ name: string; args: unknown }>;
   /** SAME-STEP siblings emitted EARLIER in this model step and still in flight (admitted by their
    *  preTool guards but not yet in `observed` — a domain tool lands in `observed` only in

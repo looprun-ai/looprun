@@ -15,7 +15,7 @@ is still shipped verbatim, so it CAN carry an assertion the structure does not (
 below); what mandatory declaration removes is the ability to do so by accident.
 
 The guarantee is precise (not overclaimed): a REAL action can never be hidden or fabricated
-(deterministic — structure + ledger check). An operational LIE in prose is not deterministically
+(deterministic — structure + action history check). An operational LIE in prose is not deterministically
 blocked, but mandatory declaration turns it into an explicit self-contradiction — the model is
 FORCED to classify its own output, so it cannot lie "by accident"; a deliberate lie is a
 mislabel a `did × message` `llmCheck` catches. `did` empty was the cover for the accidental case;
@@ -31,10 +31,10 @@ and `validateClaims` (`claims.ts`). An empty `did` is rejected at the schema bou
 ### D2 — the intention `op` vocabulary is partitioned
 `Intention = { op, target?, outcome?, amount? }`. Two disjoint families:
 - **SPEECH ops** — engine-core, domain-neutral, RESERVED: `inform`, `greet`, `refuse`, `ask`.
-  A speech act, NOT backed by a tool; NOT grounded against the ledger; carries no action outcome.
+  A speech act, NOT backed by a tool; NOT grounded against the action history; carries no action outcome.
   It classifies the `message`'s speech act.
 - **ACTION ops** — domain-declared, backed by a tool/write; MUST carry an `outcome` (core or
-  domain-mapped); grounded by `claimIsGrounded`/`claimIsComplete` against the ledger.
+  domain-mapped); grounded by `claimIsGrounded`/`claimIsComplete` against the action history.
 
 Partition rule: an intention is SPEECH iff `op ∈ {inform, greet, refuse, ask}`, else ACTION. The
 four speech-op names are reserved core vocabulary a domain may not redefine.
@@ -54,14 +54,14 @@ and the four reserved SPEECH ops, which carry none. `inform` gets an explicit gu
 
 The guardrail carries exactly two clauses because both are load-bearing: the PROHIBITION (`inform`
 may not stand in for a performed action) and its REPLACEMENT plus the reason (the action's own op,
-which the ledger cross-check verifies). The other speech ops are named, not glossed — `greet`,
+which the action history cross-check verifies). The other speech ops are named, not glossed — `greet`,
 `refuse` and `ask` mean what the words mean, and only `ask` carries a consequence worth stating (the
 ONE question, posed in `message`). Every line here is read on every turn of every agent, so a
 sentence earns its place by being one the model needs to READ: a rule a guard enforces is
 discoverable from the correction the model gets back.
 
 ### D5 — the honesty cross-check applies to ACTION intents only
-`claimIsGrounded` grounds each ACTION intent against the ledger (unchanged mechanism). Speech
+`claimIsGrounded` grounds each ACTION intent against the action history (unchanged mechanism). Speech
 intents render/classify but are not tool-checked. `claimIsComplete` still forces every effected
 write to be covered by an ACTION intent with a `success`-resolving outcome — so a real action can
 NEVER hide behind an `inform`/`greet` (the uncovered write fires the guard). The renderer emits the
@@ -85,9 +85,9 @@ Each red-team PoC becomes a permanent regression test.
   spends each claim once (occurrence, not existence).
 - **M4** `isEmptyReadResult` skips status-like keys before the nested-object check → only skip a
   status key whose value is a scalar/boolean.
-- **M5** `deriveClaimsFromLedger` positional label misalignment → attach each produced label to its
+- **M5** `deriveClaimsFromActionHistory` positional label misalignment → attach each produced label to its
   own call; reads do not feed the write-label stream.
-- **M6** `deriveClaimsFromLedger` branch order → check `tookEffect` before `requiresConfirmation`.
+- **M6** `deriveClaimsFromActionHistory` branch order → check `tookEffect` before `requiresConfirmation`.
 - **M7** `destructiveThrottle` `isSimulate` keys on `confirmed:false` → a write that `tookEffect` is an
   effect regardless of the flag.
 - **M8** premature-terminal ask leak → add `prematureTerminalCalls(steps)` + prune from `observed`

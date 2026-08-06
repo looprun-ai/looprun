@@ -1,5 +1,5 @@
 /**
- * A world expressed DECLARATIVELY via `defineWorld` produces the SAME ledger
+ * A world expressed DECLARATIVELY via `defineWorld` produces the SAME action history
  * (name/args/result/tookEffect) as the equivalent hand-written world for identical call sequences,
  * on every preset. This is what lets a hand-written world be replaced by a spec without any
  * observable change to what the engine records.
@@ -66,8 +66,8 @@ const makeToy = defineWorld(toySpec);
 
 type Call = [name: string, args: Record<string, unknown>];
 
-/** Ledger slice the eval reader (`run.ts` callOk/dumpTurn) actually consumes. */
-function ledger(w: { toolCalls: Array<{ name: string; args: unknown; result?: unknown; tookEffect?: boolean }> }) {
+/** ActionHistory slice the eval reader (`run.ts` callOk/dumpTurn) actually consumes. */
+function actionHistory(w: { toolCalls: Array<{ name: string; args: unknown; result?: unknown; tookEffect?: boolean }> }) {
   return w.toolCalls.map((c) => ({ name: c.name, args: c.args, result: c.result, tookEffect: c.tookEffect }));
 }
 
@@ -128,9 +128,9 @@ describe('increment 3a acceptance — declarative toy world ≡ hand ToyWorld', 
       expect(declOut).toEqual(handOut);
     });
 
-    it(`${seq.label}: same ledger`, () => {
+    it(`${seq.label}: same actionHistory`, () => {
       const { hand, decl } = replay(seq.preset, seq.calls);
-      expect(ledger(decl)).toEqual(ledger(hand));
+      expect(actionHistory(decl)).toEqual(actionHistory(hand));
     });
   }
 });

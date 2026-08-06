@@ -9,7 +9,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { AgentSpecBase, custom, llmCheck, resultInvariant } from '../../src/index.js';
 import type { Judge, AgentWorld, GuardCtx, DomainContract, ObservedCall } from '../../src/index.js';
 import { JUDGE_UNREACHABLE, JUDGE_UNREADABLE } from '../../src/internal.js';
-import { createLedger, recordToolResult } from '../../src/runtime/ledger.js';
+import { createActionHistory, recordToolResult } from '../../src/runtime/action-history.js';
 import { evaluatePreTool, finalizeReply } from '../../src/runtime/turn.js';
 import type { RespondPayload } from '../../src/runtime/claims.js';
 
@@ -34,9 +34,9 @@ describe('D1 — llmCheck failMode:open + unreachable judge = forbidden reply DE
     const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: ['save'], contract: CONTRACT });
     const judge: Judge = async () => { throw new Error('model offline'); };
     spec.addGuard('onReply', 'any', llmCheck({ question: 'Does the reply claim something the world never did?' }), { id: 'agent:honesty' });
-    const ledger = createLedger(judge);
+    const actionHistory = createActionHistory(judge);
     const forbidden = 'Done! I transferred $5,000 to the account.'; // false success — world did nothing
-    const out = await finalizeReply(spec, CONTRACT, world(), ledger, P(forbidden), async () => P(forbidden), 1);
+    const out = await finalizeReply(spec, CONTRACT, world(), actionHistory, P(forbidden), async () => P(forbidden), 1);
     // The truth guard was disabled by the outage; the false-success reply is delivered verbatim.
     expect(out.text).toBe(`${forbidden}\n\nNo operation was carried out on this turn.`);
     expect(out.exhausted).toBe(false);
@@ -65,12 +65,12 @@ describe('D2 — an answer that reaches no verdict allows even in failMode:close
     const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: ['save'], contract: CONTRACT });
     const judge: Judge = async () => 'VIOLATION:';
     spec.addGuard('onReply', 'any', llmCheck({ question: 'q?', failMode: 'closed' }), { id: 'agent:honesty' });
-    const ledger = createLedger(judge);
+    const actionHistory = createActionHistory(judge);
     const forbidden = 'Done! Money moved.';
-    const out = await finalizeReply(spec, CONTRACT, world(), ledger, P(forbidden), async () => P(forbidden), 1);
+    const out = await finalizeReply(spec, CONTRACT, world(), actionHistory, P(forbidden), async () => P(forbidden), 1);
     expect(out.text).toBe(`${forbidden}\n\nNo operation was carried out on this turn.`); // reasonless verdict = silent allow
     expect(out.violations).toHaveLength(0);
-    expect(ledger.turnCorrections).toContain(JUDGE_UNREADABLE);
+    expect(actionHistory.turnCorrections).toContain(JUDGE_UNREADABLE);
   });
 
   it('a judge that THROWS → failMode governs (closed denies, open allows) — this one HOLDS', async () => {
@@ -87,16 +87,16 @@ describe('D3 — a THROWING custom guard is NOT swallowed as allow (propagates; 
   it('preTool: a throwing guard makes evaluatePreTool REJECT (never returns verdict:allow)', async () => {
     const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: ['wipe'], contract: CONTRACT });
     spec.addGuard('preTool', ['wipe'], custom({ kind: 'boom', dim: 'run', check: () => { throw new Error('kaboom'); }, prose: () => 'p' }), { id: 'agent:boom' });
-    const ledger = createLedger();
-    await expect(evaluatePreTool(spec, ledger, world(), 'wipe', {})).rejects.toThrow(/kaboom/);
+    const actionHistory = createActionHistory();
+    await expect(evaluatePreTool(spec, actionHistory, world(), 'wipe', {})).rejects.toThrow(/kaboom/);
     // Crucially it did NOT resolve to { verdict:'allow' } — a throw is not a silent pass at the core layer.
   });
 
   it('onReply: a throwing guard makes finalizeReply REJECT (not a silent delivery)', async () => {
     const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: ['save'], contract: CONTRACT });
     spec.addGuard('onReply', 'any', custom({ kind: 'boom', dim: 'behavior', check: () => { throw new Error('kaboom'); }, prose: () => 'p' }), { id: 'agent:boom' });
-    const ledger = createLedger();
-    await expect(finalizeReply(spec, CONTRACT, world(), ledger, P('hi'), async () => P('hi'), 1)).rejects.toThrow(/kaboom/);
+    const actionHistory = createActionHistory();
+    await expect(finalizeReply(spec, CONTRACT, world(), actionHistory, P('hi'), async () => P('hi'), 1)).rejects.toThrow(/kaboom/);
   });
 });
 
@@ -113,12 +113,12 @@ describe('D4 — a paired-gate guard reading ctx.observed is BYPASSED by same-st
       prose: () => 'p',
     });
     spec.addGuard('preTool', ['B'], pairGate, { id: 'agent:pair' });
-    const ledger = createLedger();
+    const actionHistory = createActionHistory();
     // Same step: A's preTool runs and is admitted (pushed to inFlightCalls, NOT observed until execute).
-    const va = await evaluatePreTool(spec, ledger, world(), 'A', {});
+    const va = await evaluatePreTool(spec, actionHistory, world(), 'A', {});
     expect(va.verdict).toBe('allow');
     // B's preTool runs BEFORE A's afterToolCall records A into observed (concurrent same-step dispatch).
-    const vb = await evaluatePreTool(spec, ledger, world(), 'B', {});
+    const vb = await evaluatePreTool(spec, actionHistory, world(), 'B', {});
     expect(vb.verdict).toBe('allow'); // BREAK: A is invisible via observed; the pairing is defeated.
     // The seam the guard SHOULD read carries A — the information is available, just not on observed.
     // (siblingCallsThisStep is the runtime's provided channel; ctx.observed is not it.)
@@ -132,9 +132,9 @@ describe('D4 — a paired-gate guard reading ctx.observed is BYPASSED by same-st
       prose: () => 'p',
     });
     spec.addGuard('preTool', ['B'], pairGate, { id: 'agent:pair' });
-    const ledger = createLedger();
-    await evaluatePreTool(spec, ledger, world(), 'A', {});
-    const vb = await evaluatePreTool(spec, ledger, world(), 'B', {});
+    const actionHistory = createActionHistory();
+    await evaluatePreTool(spec, actionHistory, world(), 'A', {});
+    const vb = await evaluatePreTool(spec, actionHistory, world(), 'B', {});
     expect(vb.verdict).toBe('deny');
   });
 });
@@ -145,15 +145,15 @@ describe('D4 — a paired-gate guard reading ctx.observed is BYPASSED by same-st
 describe('D5 — a postTool result-invariant violation is relayed ONCE then DROPPED; an unfaithful reply ships (BREAK)', () => {
   it('regenerated reply IGNORES the postTool correction → delivered as success (exhausted:false, no violations)', async () => {
     const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: ['charge'], contract: CONTRACT });
-    const ledger = createLedger();
+    const actionHistory = createActionHistory();
     // A postTool invariant failed: the charge did not actually settle. It joins the redrive set…
-    ledger.postToolViolations.push({
+    actionHistory.postToolViolations.push({
       guard: resultInvariant(() => false, 'The charge did NOT settle — tell the user it failed.'),
       reason: 'The charge did NOT settle — tell the user it failed.',
     });
     // …the model's regenerated reply still falsely claims success and mentions nothing of the failure.
     const liar = 'All set — your card was charged successfully.';
-    const out = await finalizeReply(spec, CONTRACT, world(), ledger, P(liar), async () => P(liar), 1);
+    const out = await finalizeReply(spec, CONTRACT, world(), actionHistory, P(liar), async () => P(liar), 1);
     expect(out.text).toBe(`${liar}\n\nNo operation was carried out on this turn.`); // false success reaches the user
     expect(out.exhausted).toBe(false);  // treated as clean — the postTool violation is not carried here
     expect(out.violations).toHaveLength(0);
@@ -170,8 +170,8 @@ describe('D6 — short-circuit ordering only changes the CORRECTION shown, never
     const critical = custom({ kind: 'safety', dim: 'run', check: () => 'Destructive action needs confirmation.', prose: () => 'p' });
     spec.addGuard('preTool', ['wipe'], benign, { id: 'agent:benign' });
     spec.addGuard('preTool', ['wipe'], critical, { id: 'agent:critical' });
-    const ledger = createLedger();
-    const v = await evaluatePreTool(spec, ledger, world(), 'wipe', {});
+    const actionHistory = createActionHistory();
+    const v = await evaluatePreTool(spec, actionHistory, world(), 'wipe', {});
     expect(v.verdict).toBe('deny'); // blocked regardless of which guard fired first
   });
 });
@@ -185,8 +185,8 @@ describe('D7 — checkReply RE-RUNS on the regenerated reply, so a redrive canno
     let calls = 0;
     const judge: Judge = async () => 'VIOLATION: still dishonest';
     spec.addGuard('onReply', 'any', llmCheck({ question: 'honest?' }), { id: 'agent:honesty' });
-    const ledger = createLedger(judge);
-    const out = await finalizeReply(spec, CONTRACT, world(), ledger, P('lie v1'), async () => { calls++; return P('lie v2'); }, 1);
+    const actionHistory = createActionHistory(judge);
+    const out = await finalizeReply(spec, CONTRACT, world(), actionHistory, P('lie v1'), async () => { calls++; return P('lie v2'); }, 1);
     expect(calls).toBe(1);
     expect(out.exhausted).toBe(true);           // never delivered the dishonest text
     expect(out.text).not.toBe('lie v2');

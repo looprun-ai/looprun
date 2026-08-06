@@ -73,11 +73,11 @@ import {
   candidateByKey,
   handLabelOf,
   isAskRouted,
-  ledgerRecord,
+  actionHistoryRecord,
   readVerdict,
   writeLabel,
   type HandLabel,
-  type LedgerCall,
+  type ActionHistoryCall,
 } from './lie-question.js';
 
 const RECORD_CLOSURE_SOME = DEFAULT_ENGINE_TEXT.recordClosureSome;
@@ -105,8 +105,8 @@ export function recordOf(run: PipelineInput): ClosedRecord {
  * recording carries the world calls instead, so each effected call becomes the turn that carried it
  * out. One call, one turn, in the order the world saw them — which is what the fold reads.
  */
-function historyOf(ledger: readonly LedgerCall[]): HistoryTurn[] {
-  return ledger
+function historyOf(actionHistory: readonly ActionHistoryCall[]): HistoryTurn[] {
+  return actionHistory
     .filter((c) => c.tookEffect)
     .map((c, i) => ({
       turnIndex: i,
@@ -121,7 +121,7 @@ function historyOf(ledger: readonly LedgerCall[]): HistoryTurn[] {
 
 /** The session list of a run — one place, so the check and the rewriter share it. */
 export function sessionOf(run: PipelineInput): SessionRecord {
-  return sessionRecord(historyOf(run.ledger));
+  return sessionRecord(historyOf(run.actionHistory));
 }
 
 // ── The one question, asked twice ──────────────────────────────────────────────────────────────────
@@ -193,14 +193,14 @@ export function pipelineRewritePrompt(
  * TWO REGISTROS, because they are not the same thing on this set:
  *
  * ```
- *   the LEDGER    what the world actually changed. The reference the standing question is measured
+ *   the ACTION HISTORY    what the world actually changed. The reference the standing question is measured
  *                 against in `lie-question.ts`, and the one that answers "did it happen".
  *   the RECORD    the closed record the pipeline itself appends, built from the turn's DECLARATION.
  *                 On `write-other-record` turns the declaration omits a write the world made, so a
  *                 delivery that truthfully names that write is inconsistent with its own record.
  * ```
  *
- * The bar is stated over the LEDGER: "an operation that did not happen" is a fact about the world.
+ * The bar is stated over the ACTION HISTORY: "an operation that did not happen" is a fact about the world.
  * The record reading is kept beside it because the gap between the two is itself a finding.
  */
 export function judgePromptFor(registro: string, delivery: string): string {
@@ -219,7 +219,7 @@ export function readAnswer(text: string): boolean {
  * entities its writes report. These are the event names a reply may carry, and a rewrite that drops
  * one has taken a true fact away from the user.
  */
-export function worldLabels(ledger: readonly LedgerCall[]): string[] {
+export function worldLabels(actionHistory: readonly ActionHistoryCall[]): string[] {
   const found: string[] = [];
   const walk = (node: unknown): void => {
     if (Array.isArray(node)) {
@@ -232,7 +232,7 @@ export function worldLabels(ledger: readonly LedgerCall[]): string[] {
       else walk(value);
     }
   };
-  ledger.forEach((call) => walk(call.result));
+  actionHistory.forEach((call) => walk(call.result));
   return [...new Set(found)];
 }
 
@@ -261,7 +261,7 @@ export function droppedQuestion(before: string, after: string): boolean {
  *
  * An agent saying in its own voice that it carried out no operation is honest speech. It is the turn's
  * whole truth, and the design asks for exactly that sentence. Only a reply that NAMES the bookkeeping —
- * a record, a log, a ledger, a system, a check, a verification, matched by {@link citesRecord} — or that
+ * a record, a log, a action history, a system, a check, a verification, matched by {@link citesRecord} — or that
  * frames the facts as reported TO it is handing the user machinery.
  */
 const TOLD_FRAMING =
@@ -289,7 +289,7 @@ export interface PipelineInput {
   emittedMessage: string;
   emittedDid: { op: string }[];
   recordLine: string;
-  ledger: LedgerCall[];
+  actionHistory: ActionHistoryCall[];
 }
 
 /** One pass of the whole pipeline over one turn. */
@@ -307,7 +307,7 @@ export interface PipelineReplicate {
   prose: string;
   /** That prose with the closed record appended — what the user would have received. */
   delivery: string;
-  /** The judge against the LEDGER — what the world actually changed. */
+  /** The judge against the ACTION HISTORY — what the world actually changed. */
   judgeRaw: string;
   judgeUnsafe: boolean;
   /** The judge against the CLOSED RECORD the delivery itself carries. */
@@ -341,10 +341,10 @@ export interface PipelineCase {
   /**
    * The WHOLE CONVERSATION's world calls, folded — the judge's second reference. It is NOT the
    * per-turn record's counterpart: a multi-turn scenario cancels the lunch in a SETUP turn, and the
-   * measured turn ("Obrigado.") effects nothing, so a ledger line with no matching record line is
+   * measured turn ("Obrigado.") effects nothing, so a action history line with no matching record line is
    * ordinary and means nothing on its own.
    */
-  ledgerRecordText: string;
+  actionHistoryRecordText: string;
   /**
    * THE BRANCH. The record carries no action line — no action was carried out — so this turn goes
    * through the lie check. A turn whose record names an operation is UNCHECKED and ships as it stands.
@@ -361,7 +361,7 @@ export interface PipelineCase {
   /** How many replicates produced a rewrite the user received. Equal to {@link gateFires} minus
    *  errored gates — a rewrite that is made is a rewrite that ships. */
   rewrites: number;
-  /** How many replicates the judge flagged on the FINAL delivery, against the LEDGER. */
+  /** How many replicates the judge flagged on the FINAL delivery, against the ACTION HISTORY. */
   judgeUnsafeCount: number;
   /** The same, against the closed record the delivery carries. */
   judgeVsRecordUnsafeCount: number;
@@ -402,8 +402,8 @@ export async function runReplicate(
   replicate: number,
   deps: PipelineDeps,
 ): Promise<PipelineReplicate> {
-  const labels = worldLabels(run.ledger);
-  const ledgerText = ledgerRecord(run.ledger);
+  const labels = worldLabels(run.actionHistory);
+  const actionHistoryText = actionHistoryRecord(run.actionHistory);
   const checked = isChecked(record);
   const blank: Omit<PipelineReplicate, 'error'> = {
     replicate,
@@ -457,7 +457,7 @@ export async function runReplicate(
   let judgeRaw: string;
   let judgeVsRecordRaw: string;
   try {
-    judgeRaw = await deps.judge(judgePromptFor(ledgerText, delivery));
+    judgeRaw = await deps.judge(judgePromptFor(actionHistoryText, delivery));
     judgeVsRecordRaw = await deps.judge(judgePromptFor(record.text, delivery));
   } catch (e) {
     return {
@@ -514,7 +514,7 @@ export function foldCase(
     emittedMessage: run.emittedMessage,
     userTurns: run.scenario.turns,
     record,
-    ledgerRecordText: ledgerRecord(run.ledger),
+    actionHistoryRecordText: actionHistoryRecord(run.actionHistory),
     recordIsEmpty: !record.hasOperations,
     recordContradictsClaim: recordContradicts(record, run.scenario),
     replicates: ordered,
@@ -542,7 +542,7 @@ export interface LabelTotals {
   /** Cases the gate fired on in every replicate, and in none. */
   gateFiredAll: number;
   gateFiredNone: number;
-  /** Replicates whose FINAL delivery the judge still flagged against the LEDGER. */
+  /** Replicates whose FINAL delivery the judge still flagged against the ACTION HISTORY. */
   judgeUnsafeReplicates: number;
   /** The same, against the closed record the delivery carries. */
   judgeVsRecordUnsafeReplicates: number;
@@ -609,7 +609,7 @@ export function isDamaged(c: PipelineCase): boolean {
 export interface PipelineExperiment {
   gatePromptShape: string;
   rewritePromptShape: string;
-  /** The judge's wording. One shape; the REGISTRO block is the ledger in one reading, the closed
+  /** The judge's wording. One shape; the REGISTRO block is the action history in one reading, the closed
    *  record in the other. */
   judgePromptShape: string;
   replicates: number;

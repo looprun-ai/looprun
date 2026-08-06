@@ -117,7 +117,7 @@
   into one version group, so the whole set moves together.
 
   **What moved rather than vanished.** `@looprun-ai/core/internal` is a new, explicitly unstable
-  subpath carrying the runtime primitives (ledger, turn machine, assembled prompt internals, `GUARD_CATALOG`,
+  subpath carrying the runtime primitives (action history, turn machine, assembled prompt internals, `GUARD_CATALOG`,
   `GuardExecutionError`). It exists so in-repo tooling and forks keep working; it carries no
   compatibility promise across releases.
 

@@ -7,7 +7,7 @@ Date: 2026-08-02 · Status: approved · Repo: looprun · Depends on: umbrella
 
 Generated bundles install guards through free TypeScript (`custom()` + hand regexes). The Atlas
 run measured 9 defective regexes, deny messages leaking world facts, an exhaustion stub that
-fabricated a success, and byte-identical observed-ledger predicates drifting across specs. All of
+fabricated a success, and byte-identical observed-action history predicates drifting across specs. All of
 it is authoring surface the engine should not offer to generation.
 
 ## Deliverables
@@ -46,8 +46,8 @@ it is authoring surface the engine should not offer to generation.
 | primitive | replaces (measured defect) |
 |---|---|
 | `askedEarlier` — a terminal `askUser` (or an ask-classified reply, see §4) occurred in an EARLIER turn, optionally about `arg` | CONDITION_ASK_RE (case 72, two failed rounds) |
-| `consentToken` (config kind) — SHIPPED as structural earlier-simulate inference: the confirmed call is admitted only when an EARLIER-turn simulate over the SAME (tool, args-hash) is found in the ledger. No literal token is minted or carried; the (tool, args-hash) match over prior turns IS the consent signal. Closes the case-35 class ("one yes spent on another act"). A future strengthening could mint and carry an actual token bound to (tool, args-hash) — that variant requires a tool-contract change (the tool must accept and echo the token) and is NOT shipped. | the case-35 class ("one yes spent on another act") — closes it structurally |
-| `attemptedEarlier`, `succeededEarlier`, `tookEffect` lookups over the ledger | per-spec `TERMINALS`/`agreedEarlier` copies (drift) |
+| `consentToken` (config kind) — SHIPPED as structural earlier-simulate inference: the confirmed call is admitted only when an EARLIER-turn simulate over the SAME (tool, args-hash) is found in the action history. No literal token is minted or carried; the (tool, args-hash) match over prior turns IS the consent signal. Closes the case-35 class ("one yes spent on another act"). A future strengthening could mint and carry an actual token bound to (tool, args-hash) — that variant requires a tool-contract change (the tool must accept and echo the token) and is NOT shipped. | the case-35 class ("one yes spent on another act") — closes it structurally |
+| `attemptedEarlier`, `succeededEarlier`, `tookEffect` lookups over the action history | per-spec `TERMINALS`/`agreedEarlier` copies (drift) |
 | `siblingCallsThisStep` staleness helper documented for all gates | case-72 same-step staleness |
 
 ### 3. AssembledPrompt policies (ship together — they are what makes deny/abstain safe)
@@ -55,14 +55,14 @@ it is authoring surface the engine should not offer to generation.
 - **Deny renderer**: a deny NAMES THE READ that would establish the fact and never interpolates
   world figures or roles. Guard configs supply only the read name(s) and a reason id; the engine
   renders. Kills the "deny hands the model unread facts" class (cases 39/47/49/77/83).
-- **Exhaustion abstain**: derived from the ledger — a WRITE is announced as done only when
+- **Exhaustion abstain**: derived from the action history — a WRITE is announced as done only when
   `tookEffect === true`; reads list as reads. Never authored per-subject. Kills the lying stub
   (case 04).
 
 ### 4. Text classification WITHOUT regex
 
 Where a rule genuinely needs "is this reply an ask / a claim", the engine offers ONLY:
-- structural signals first (`askUser` terminal, simulate presence, ledger effects);
+- structural signals first (`askUser` terminal, simulate presence, action history effects);
 - if a reply-text judgment is unavoidable, it is a JUDGE matter (`uncheckable` + rubric) — the
   deterministic layer never string-matches. `pendingConfirmMustAsk`'s replyToUser-regex branch is
   slated for removal; the `askUser` branch remains. **DEFERRED (not removed in increment 1):**

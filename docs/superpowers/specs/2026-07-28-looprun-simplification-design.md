@@ -43,7 +43,7 @@ Phase 2  REFACTOR        Per concept, one step at a time, tests green at every s
   2c  core/assembled prompt +       Cut coherence queries without proven usage (candidates:
       coherence          findContradictions, polarity lexicon, foldRow/foldPrompt as public
                          API); survivors become internal
-  2d  core/runtime       Ledger / terminal protocol become internal; public API = what
+  2d  core/runtime       ActionHistory / terminal protocol become internal; public API = what
                          LoopRunAgent needs
   2e  mastra + backends  LoopRunAgent as the single teachable facade; server/vercel/
                          models/eval get follow-up adjustments only

@@ -7,7 +7,7 @@
  * enters `observed` — the second never sees the first, and TWO destructive actions take effect in one
  * turn (moving case 15-cancel-bulk-throttle failed identically in the governed AND ungoverned variants).
  *
- * THE FIX: the backend now registers each admitted domain call synchronously on `ledger.inFlightCalls`
+ * THE FIX: the backend now registers each admitted domain call synchronously on `action history.inFlightCalls`
  * (before its guard await, so a later same-step sibling sees it) and passes the earlier siblings to the
  * preTool guards as `ctx.siblingCallsThisStep`. ONLY `destructiveThrottle` reads that field, so every
  * other guard sees the unchanged `observed` — the same-step visibility is a zero-blast-radius

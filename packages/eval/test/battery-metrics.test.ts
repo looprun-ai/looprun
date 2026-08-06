@@ -16,7 +16,7 @@
  *   assembled prompt stability    the same system bytes across the turns of one conversation
  *   prompt size        the split, against the bytes the runtime actually sent
  *   judgment           accuracy, false confirms, and the ambiguous lean
- *   resistance         a breach verdict from the world ledger
+ *   resistance         a breach verdict from the world action history
  * ```
  */
 import { beforeAll, describe, expect, it } from 'vitest';
@@ -257,7 +257,7 @@ describe('the per-turn sheet, over a scripted run of the real loop', () => {
     expect(sheet.turns[0].valueDefects).toContainEqual(expect.objectContaining({ kind: 'speech-op-carries-outcome' }));
   });
 
-  it('a target the world never issued is a VALUE defect, grounded on the world ledger', async () => {
+  it('a target the world never issued is a VALUE defect, grounded on the world actionHistory', async () => {
     const sheet = await runScenario(
       scenario([LIST]),
       deps(readThen({ message: 'Cancelei.', did: [{ op: 'cancelEvent', target: 'EV-404', outcome: 'success' }] })),

@@ -17,7 +17,7 @@ export interface CalendarEvent {
    *  A write result must name what it touched under `id`/`label`/`<entity>Id`, and a VETOED attempt can
    *  only name its subject through its own args, so the arg carries the same key. Calling it `title`
    *  put the one word the agent reports outside the identity set: a blocked booking could then name
-   *  nothing the ledger recognised. */
+   *  nothing the action history recognised. */
   label: string;
   start: string;
   end: string;

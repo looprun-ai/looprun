@@ -207,7 +207,7 @@ key that is looprun's:
 
 | `loopRun.*` | what it does |
 |---|---|
-| `sessionId` | the conversation key. Picks (or creates) the world, the turn counter and the ledger of verified calls. Defaults to the memory thread id, else `'default'` |
+| `sessionId` | the conversation key. Picks (or creates) the world, the turn counter and the action history of verified calls. Defaults to the memory thread id, else `'default'` |
 | `attachments` | URLs to ingest into the world this turn |
 
 The session is what makes multi-turn governance possible at all: a rule like "the user must have typed

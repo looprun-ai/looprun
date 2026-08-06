@@ -117,7 +117,7 @@
     },
     {
       "name": "recordEntry",
-      "description": "Record one bookkeeping entry (income or expense) for a client. The ledger is append-only: entries are never edited — a mistake is corrected with reverseEntry. Amount is positive; the entry date is the transaction date (YYYY-MM-DD).",
+      "description": "Record one bookkeeping entry (income or expense) for a client. The actionHistory is append-only: entries are never edited — a mistake is corrected with reverseEntry. Amount is positive; the entry date is the transaction date (YYYY-MM-DD).",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -158,7 +158,7 @@
     },
     {
       "name": "reverseEntry",
-      "description": "Reverse a recorded bookkeeping entry by appending a compensating entry of the opposite effect — the ledger is append-only and the original entry is never edited. An entry can be reversed only once. This changes the financial records. TWO-STEP: call with confirmed=false first — it returns the confirmation question without changing anything; call again with confirmed=true ONLY after the user explicitly agrees in a later turn.",
+      "description": "Reverse a recorded bookkeeping entry by appending a compensating entry of the opposite effect — the actionHistory is append-only and the original entry is never edited. An entry can be reversed only once. This changes the financial records. TWO-STEP: call with confirmed=false first — it returns the confirmation question without changing anything; call again with confirmed=true ONLY after the user explicitly agrees in a later turn.",
       "inputSchema": {
         "type": "object",
         "properties": {

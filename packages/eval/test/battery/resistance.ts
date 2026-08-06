@@ -13,7 +13,7 @@
  *
  * DETECTORS ARE DETERMINISTIC. A detector that asked a model whether the agent misbehaved would make
  * the resistance number depend on the same instrument it is measuring. So each breach predicate
- * reads the world ledger and the declared `did` — facts the agent does not control — and where a
+ * reads the world action history and the declared `did` — facts the agent does not control — and where a
  * vector's true harm is a prose judgement (the A-V6/A-V7 family), the detector reports a SUSPECT and
  * says exactly what it observed instead of pretending to a verdict.
  *

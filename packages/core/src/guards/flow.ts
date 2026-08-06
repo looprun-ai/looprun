@@ -144,8 +144,8 @@ function describeResultShape(result: unknown): string {
   return 'came back with exactly the result you already have';
 }
 
-/** The RESULT the world ledger recorded for the last call of `tool` with the canonical args `key`, or
- *  `undefined` when the host's ledger carries none (ObservedCall itself holds no payload). Pure read. */
+/** The RESULT the world action history recorded for the last call of `tool` with the canonical args `key`, or
+ *  `undefined` when the host's action history carries none (ObservedCall itself holds no payload). Pure read. */
 function priorResultOf(ctx: GuardCtx, tool: string, key: string): unknown {
   const calls = Array.isArray(ctx.world?.toolCalls) ? ctx.world.toolCalls : [];
   for (let i = calls.length - 1; i >= 0; i -= 1) {

@@ -44,9 +44,11 @@ const present = existsSync(RECORDING);
 describe.skipIf(!present)('the per-entity record, over the recorded scenarios', () => {
   it('computes the rule’s record for every recorded run and writes the survey', () => {
     const raw = JSON.parse(readFileSync(RECORDING, 'utf8')) as {
-      proseLie: { scored: Array<{ record: RecordedRun }> };
+      proseLie: { scored: Array<{ record: RecordedRun & { ledger?: RecordedRun['actionHistory'] } }> };
     };
-    const runs = raw.proseLie.scored.map((s) => s.record);
+    // A recording is a run taken on a date, and it keeps the key names it was written with. The
+    // reader maps them onto the current shape rather than editing the record.
+    const runs = raw.proseLie.scored.map((s) => ({ ...s.record, actionHistory: s.record.actionHistory ?? s.record.ledger ?? [] }));
     expect(runs.length).toBeGreaterThan(0);
 
     const rows: SurveyRow[] = runs.map(surveyRun);

@@ -27,7 +27,7 @@ mandatory intention + red-team hardening: did .min(1) with a speech/action parti
 | base `f4d3b6b` | 23 | — |
 | HEAD | 23 | — |
 | **OUT** | 4 | `emptyReply` · `replyMentions` · `replySingleQuestion` · `replyMaxOccurrences` — the tier-③ reply-TEXT kinds, deleted under the no-regex law |
-| **IN** | 4 | `claimIsGrounded` · `claimIsComplete` · `claimCoversRubric` (the deterministic ledger cross-check — this branch's headline change) · `didMessageConsistency` (the pre-baked, never-auto-installed adjudicator) |
+| **IN** | 4 | `claimIsGrounded` · `claimIsComplete` · `claimCoversRubric` (the deterministic action history cross-check — this branch's headline change) · `didMessageConsistency` (the pre-baked, never-auto-installed adjudicator) |
 
 The swap is net zero on the count, so **the catalog did not shrink on this branch**. Verified with
 `git show f4d3b6b:packages/core/src/guards/catalog.ts` (23) against HEAD (23).
@@ -65,7 +65,7 @@ Cases added or rewritten for the change, beyond the standing ratchet:
 | surface | case | level |
 |---|---|---|
 | `respond` payload | a schema-legal but MALFORMED `did` (a speech op carrying an `outcome`) is refused at the guard hook and the validation error is handed back to the model | L3, mastra |
-| `deriveClaimsFromLedger` | a world label colliding with a reserved SPEECH op never becomes the derived `op`; every one of the four is coerced, an ordinary label is untouched | L1, core |
+| `deriveClaimsFromActionHistory` | a world label colliding with a reserved SPEECH op never becomes the derived `op`; every one of the four is coerced, an ordinary label is untouched | L1, core |
 | `destructiveThrottle` | a same-step simulation that OMITS the confirm flag is a simulation (parity with `confirmFirst`); a CONFIRMED sibling still caps; a `flagless` (prior-ask) tool caps from the first sibling | L1, core + mastra |
 | `pendingConfirmMustAsk` | the delivered declaration is the only relay signal — a ctx that seats none fails CLOSED | L1, core |
 | `askedInDeliveredTurn` | the sealed-history-only rule, isolated at `confirmFirst`'s `via:'ask'` and `via:'either'` variants (an earlier-turn RAW observed ask licenses nothing; a sealed ask over a blank delivered reply licenses nothing) | L1, core |

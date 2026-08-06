@@ -58,7 +58,7 @@ const alwaysFails = () =>
 // 1 — the exhaustion closure is built from DOMAIN evidence only
 // ─────────────────────────────────────────────────────────────────────────────
 describe('exhaustion evidence', () => {
-  // The engine-DERIVED default closure (deriveClaimsFromLedger + renderOperationReport + the
+  // The engine-DERIVED default closure (deriveClaimsFromActionHistory + renderOperationReport + the
   // EXHAUSTION_NOTHING/PARTIAL sentence) has properties — names no tool, surfaces world labels,
   // "nothing was changed" when empty — that are proven at
   // the unit level in core (`test/claims-render.test.ts` + `test/runtime.test.ts` blank-floor cases); the

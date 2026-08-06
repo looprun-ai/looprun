@@ -2,7 +2,7 @@
  * @looprun-ai/mastra — governance → Mastra primitives.
  *
  * preTool guards ride `hooks.beforeToolCall` ({ proceed:false, output } veto — the model sees the
- * correction and retries within the SAME generation, no extra round-trip). The observed ledger is
+ * correction and retries within the SAME generation, no extra round-trip). The observed action history is
  * fed by `hooks.afterToolCall`. Mastra applies hooks to ALL tool sources (assigned, toolsets,
  * client, MCP), so guards also govern native/MCP tools with zero extra wiring.
  */
@@ -18,7 +18,7 @@ export interface GuardHooks {
 
 export interface GuardHookOptions {
   /** NATIVE-TOOLS mode (incl. MCP): the tools execute themselves and the synthesized world keeps no
-   *  ledger of its own, so `afterToolCall` writes the call into `world.toolCalls`. Without it the
+   *  action history of its own, so `afterToolCall` writes the call into `world.toolCalls`. Without it the
    *  world's record is permanently empty and every effect reads as unverifiable. */
   nativeToolsMode?: boolean;
 }
@@ -36,18 +36,18 @@ export function makeGuardHooks(spec: AgentSpec, getSession: SessionAccessor, opt
         // a GOVERNED correction the model can act on.
         const rejection = terminalPayloadRejection(args);
         if (rejection) {
-          getSession().ledger.turnCorrections.push('terminal-rejected');
+          getSession().actionHistory.turnCorrections.push('terminal-rejected');
           return { proceed: false as const, output: governanceVeto('terminalPayload', rejection, false) };
         }
         // SYNCHRONOUS segment (no await above): record the terminal call at HOOK time so a same-step
         // sibling call's preTool checks can see it — see recordTerminalCall's doc for the concurrency
         // rationale. The terminal tool's execute captures the reply text and does NOT push again.
-        recordTerminalCall(getSession().ledger, toolName, args);
+        recordTerminalCall(getSession().actionHistory, toolName, args);
         return undefined;
       }
       const session = getSession();
       const args = (input ?? {}) as Record<string, unknown>;
-      const verdict = await evaluatePreTool(spec, session.ledger, session.world, toolName, args);
+      const verdict = await evaluatePreTool(spec, session.actionHistory, session.world, toolName, args);
       if (verdict.verdict === 'deny') {
         // The envelope, not a bare `{success:false,error}`: the model must be able to tell a GUARD
         // correction (fix and retry — the world was never called) from a WORLD refusal (a business
@@ -59,10 +59,10 @@ export function makeGuardHooks(spec: AgentSpec, getSession: SessionAccessor, opt
     async afterToolCall({ toolName, input, output }) {
       if (isTerminal(toolName)) return;
       const session = getSession();
-      const { ledger, world } = session;
+      const { actionHistory, world } = session;
       const args = (input ?? {}) as Record<string, unknown>;
-      // NATIVE-TOOLS mode: the tool executed ITSELF, so nothing has written the world's ledger — and an
-      // empty ledger would make every call read as "changed nothing". Record the call here,
+      // NATIVE-TOOLS mode: the tool executed ITSELF, so nothing has written the world's action history — and an
+      // empty action history would make every call read as "changed nothing". Record the call here,
       // where the runtime knows it ran and what it returned. EFFECT is derived from the RESULT, the only
       // evidence this path has: a call that succeeded and did NOT come back asking for confirmation
       // changed something. That keeps the legitimate two-step alive (a simulate answering
@@ -77,9 +77,9 @@ export function makeGuardHooks(spec: AgentSpec, getSession: SessionAccessor, opt
         // instead of applying the attested-effect law to a guess.
         world.toolCalls.push({ name: toolName, args, result: output, tookEffect: ok && !pending, effectInferred: true });
       }
-      recordToolResult(ledger, toolName, args, output, world);
+      recordToolResult(actionHistory, toolName, args, output, world);
       // OUTPUT-dim (postTool) result invariants — this is where the postTool hook fires. ZERO-DIFF: a spec
-      // with no postTool guards short-circuits here (no ctx built, no ledger writes). The tool already
+      // with no postTool guards short-circuits here (no ctx built, no action history writes). The tool already
       // executed — enforcement records an `output:…` correction + joins the reply-violation set so the
       // bounded no-tools redrive relays it (a report/repair, never a veto). Mastra AWAITS afterToolCall
       // but DISCARDS its return, so the guard cannot rewrite the model-visible result mid-generate.
@@ -87,16 +87,16 @@ export function makeGuardHooks(spec: AgentSpec, getSession: SessionAccessor, opt
       const postGuards = resolveGuards(spec.guards.postTool, toolName);
       if (!postGuards.length) return;
       const gctx: GuardCtx = {
-        args, tool: toolName, world, observed: ledger.observed, turnIndex: ledger.turnIndex,
-        userText: ledger.currentUserText, consent: ledger.consentThisTurn, history: ledger.history,
-        attachmentsThisTurn: ledger.attachments, result: output,
-        did: ledger.did,
-        notes: ledger.turnCorrections,
-        judge: ledger.judge, judgeTimeoutMs: ledger.judgeTimeoutMs, renderOpts: ledger.renderOpts,
+        args, tool: toolName, world, observed: actionHistory.observed, turnIndex: actionHistory.turnIndex,
+        userText: actionHistory.currentUserText, consent: actionHistory.consentThisTurn, history: actionHistory.history,
+        attachmentsThisTurn: actionHistory.attachments, result: output,
+        did: actionHistory.did,
+        notes: actionHistory.turnCorrections,
+        judge: actionHistory.judge, judgeTimeoutMs: actionHistory.judgeTimeoutMs, renderOpts: actionHistory.renderOpts,
       };
       const { corrections, violations } = await enforcePostTool(postGuards, gctx);
-      if (corrections.length) ledger.turnCorrections.push(...corrections);
-      if (violations.length) ledger.postToolViolations.push(...violations);
+      if (corrections.length) actionHistory.turnCorrections.push(...corrections);
+      if (violations.length) actionHistory.postToolViolations.push(...violations);
     },
   };
 }
@@ -133,7 +133,7 @@ export function makeInputProcessors(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       async processInput(a: any) {
         const session: LoopRunSession = getSession();
-        const reason = await evaluateOnInput(spec, session.ledger, session.world);
+        const reason = await evaluateOnInput(spec, session.actionHistory, session.world);
         if (reason) a.abort(reason);
         return a.messages;
       },

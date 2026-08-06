@@ -147,10 +147,10 @@ SDKs ignore and an integration test can assert on — but not all of it:
 ```
    onTurn(event)          sessionId · turnIndex · corrections · exhausted · violations · observed
    response.looprun       sessionId · turnIndex · corrections · exhausted · violations
-                          └─ `observed`, the turn's slice of the call ledger, is NOT on the wire
+                          └─ `observed`, the turn's slice of the call action history, is NOT on the wire
 ```
 
-The ledger stays server-side on purpose: it carries every tool call with its arguments, which is
+The action history stays server-side on purpose: it carries every tool call with its arguments, which is
 domain data the caller of a *model* endpoint has no business receiving. If you need it, take it in
 `onTurn`. `corrections` is the same vocabulary as chapter 05's `TurnRecord.recoveryEvents`: this is
 how you see, in production, that a rule fired.
@@ -495,7 +495,7 @@ What needs a `stateView`, and what does not:
 
 | guards | need a `stateView`? |
 |---|---|
-| everything keyed on the ledger of recorded calls — `requiresBefore`, `noDuplicateCall`, `destructiveThrottle`, `maxCalls`, the argument guards, reply checks over observed activity — plus `confirmFirst` and `valueFromUser`, which read the consent and the user's own words off the ctx | **no.** The hooks feed the ledger and the runtime seats the rest; it is there either way |
+| everything keyed on the action history of recorded calls — `requiresBefore`, `noDuplicateCall`, `destructiveThrottle`, `maxCalls`, the argument guards, reply checks over observed activity — plus `confirmFirst` and `valueFromUser`, which read the consent and the user's own words off the ctx | **no.** The hooks feed the action history and the runtime seats the rest; it is there either way |
 | `precondition` and custom guards that read *domain* state, and `contract.stateBlock` | **yes** — those accessors have to come from somewhere |
 
 > **`refresh()` is fire-and-forget.** `advanceTurn()` calls it as `void view.refresh?.()` — it does

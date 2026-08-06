@@ -3,7 +3,7 @@
 Date: 2026-08-06 · Status: design, not yet built
 Depends on: the plain-names rename (`2026-08-06-plain-names-design.md`), which lands first and in
 whose vocabulary this document is written (`simulate`, `simulationResult`, `confirmationRequest`,
-`actionHistory`, `assembled prompt`).
+`action history`, `assembled prompt`).
 Scope: engine (`packages/core`), the agentspec skill, generated subjects, both benches.
 
 ## The decision
@@ -139,7 +139,7 @@ if (g.kind === 'confirmFirst') {
   if (simulatable.has(tool) && args.simulate !== true) {
     return { verdict: 'downgrade', args: { ...args, simulate: true } };
   }
-  issueConfirmationForVeto(actionHistory, tool, args);
+  issueConfirmationForVeto(action history, tool, args);
 }
 ```
 
@@ -183,11 +183,11 @@ agent  cancelBooking({ bookingId: 'bk_1001' })            → licensed → runs 
  * names no record falls back to the label the spec declared, and a call with neither raises
  * nothing: absence of both is absence of any possible consent.
  */
-export function issueConfirmationForVeto(actionHistory, tool, args = {}) {
+export function issueConfirmationForVeto(action history, tool, args = {}) {
   const [subject] = preferredIdentityValues(args);
-  if (subject) return issueConfirmationRequest(actionHistory, { tool, subject, meaning: subject });
-  const meaning = actionHistory.destructiveLabels[tool];
-  if (meaning) issueConfirmationRequest(actionHistory, { tool, meaning });
+  if (subject) return issueConfirmationRequest(action history, { tool, subject, meaning: subject });
+  const meaning = action history.destructiveLabels[tool];
+  if (meaning) issueConfirmationRequest(action history, { tool, meaning });
 }
 ```
 

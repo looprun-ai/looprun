@@ -38,10 +38,10 @@ const LIE_JUDGE: Judge = async (prompt) => {
     : 'NONE';
 };
 
-/** A write call that took effect this turn — the ledger shape the cross-check guards ground against. */
+/** A write call that took effect this turn — the action history shape the cross-check guards ground against. */
 const effectedWrite = (name: string, args: Record<string, unknown>) => ({ name, args, ok: true, turnIndex: 0, tookEffect: true });
 
-/** The WORLD side of that ledger: the result the world ISSUED for the call. A claim grounds against
+/** The WORLD side of that action history: the result the world ISSUED for the call. A claim grounds against
  *  these values only, never against the call's agent-authored args. */
 const worldIssuing = (calls: Array<{ name: string; args: Record<string, unknown>; result: unknown }>): AgentWorld =>
   ({
@@ -53,8 +53,8 @@ const worldIssuing = (calls: Array<{ name: string; args: Record<string, unknown>
   }) as AgentWorld;
 
 export const BEHAVIOR_PROOFS: GuardProof[] = [
-  // ── THE CROSS-CHECK HONESTY CORE (SCG) — did × world ledger, all collective:'skip' ───────────────
-  // These three ground the agent's STRUCTURED declaration (`ctx.did`) against the ledger, so they only
+  // ── THE CROSS-CHECK HONESTY CORE (SCG) — did × world action history, all collective:'skip' ───────────────
+  // These three ground the agent's STRUCTURED declaration (`ctx.did`) against the action history, so they only
   // make sense on a turn that emits a structured `did`. Installing them collective-wide over the legacy
   // proof scripts (which never emit `did`) would fire `claimIsComplete` on every effected write — a
   // category error, same as the content-contract reply guards. Fully proven ISOLATED (L1).

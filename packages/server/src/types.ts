@@ -26,7 +26,7 @@ export interface LoopRunResultMeta {
   corrections: string[];
   exhausted: boolean;
   violations: string[];
-  /** This turn's slice of the observed ledger. */
+  /** This turn's slice of the observed action history. */
   observed: ObservedCall[];
 }
 

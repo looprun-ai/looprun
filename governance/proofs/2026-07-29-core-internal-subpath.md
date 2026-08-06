@@ -28,7 +28,7 @@ taken the day those commits landed.
   (`docs/tutorial/00-outline.md` §4, chapters 03/04/05) — down from 97 runtime values plus their types.
 - The 37 `internal`-verdict symbols move to the new **`@looprun-ai/core/internal`** subpath: the
   guard-catalog tables, spec binding resolution, the assembled prompt renderer, model settings, and the whole
-  governed-turn seam (ledger + terminal protocol + prompt renderer + turn machine). No compatibility
+  governed-turn seam (action history + terminal protocol + prompt renderer + turn machine). No compatibility
   promise attaches to that subpath.
 - `delete`-verdict symbols left the barrel only — **no implementation was erased** in these two
   commits (the inventory's §2 rule). In-repo consumers (mastra, eval) and the core/mastra tests were

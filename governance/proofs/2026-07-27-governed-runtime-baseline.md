@@ -24,7 +24,7 @@ against an earlier one. Every record after this one states what it changes relat
 Under proof at this point:
 
 - the typed guard catalog (`packages/core/src/guards.ts`) and its runtime-owned kind classification;
-- the turn machine (`packages/core/src/runtime/`): ledger, preTool / postTool / onInput / onReply
+- the turn machine (`packages/core/src/runtime/`): action history, preTool / postTool / onInput / onReply
   evaluation, the bounded no-tools redrive and the deterministic honest-abstain closure;
 - the terminal protocol: terminal tool DEFINITIONS authored by the runtime (a host-supplied one is
   normalised to the protocol contract), the forced-terminal fallback, the TERMINAL-ONLY closing

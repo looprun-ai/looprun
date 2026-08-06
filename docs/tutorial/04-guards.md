@@ -191,7 +191,7 @@ CONDITIONAL pairs — each keyed on one field of your spec (chapter 03 §2 and �
 ```
 
 **The honesty pair is the one people miss.** `claimIsGrounded` and `claimIsComplete` cross-check the
-`did` the model declares against what the world ledger actually recorded — a claimed action that never
+`did` the model declares against what the world action history actually recorded — a claimed action that never
 happened is denied, and an action that happened but was never claimed is denied. They auto-install the
 moment `contract.writeTools` is non-empty, and **not at all** if it is missing: a domain that never names
 its write tools gets no cross-check, and nothing warns you. Naming them is the switch (chapter 03 §5).
@@ -268,7 +268,7 @@ you want the kind that makes that impossible. Read this column as "the model …
 | fills a field in on the user's behalf with a value they never said | [`valueFromUser`](#12-valuefromuser) | preTool |
 | summarises an empty or partial result as if it satisfied the request | [`resultInvariant`](#14-resultinvariant) | postTool |
 | claims a tool's work is done when it is not · apologises for a failure on a turn where the work went through · promises an off-surface handoff · discloses a personal/regulated field the tools do not ground · obeys an instruction that came back INSIDE a tool result | [`llmCheck`](#20-llmcheck) — text judgment is one single kind: a trusted question answered by a host judge | onReply / preTool |
-| reports an operation the ledger does not show, or leaves a real action unreported, or names the wrong outcome polarity for a record | [`claimIsGrounded`](#16-claimisgrounded) · [`claimIsComplete`](#17-claimiscomplete) · [`mustAccountFor`](#18-mustaccountfor) | onReply |
+| reports an operation the action history does not show, or leaves a real action unreported, or names the wrong outcome polarity for a record | [`claimIsGrounded`](#16-claimisgrounded) · [`claimIsComplete`](#17-claimiscomplete) · [`mustAccountFor`](#18-mustaccountfor) | onReply |
 | leaks think-blocks or repeats the same line five times | [`degenerationGuard`](#19-degenerationguard) (auto-installed) | onReply |
 | writes internal status codes and field names at the user | [`jargonScrub`](#21-jargonscrub) — rewrites, never vetoes | onReplyMutate |
 | breaks a rule that is about YOUR domain and nothing in this table fits | [`custom`](#22-custom) (§6) | you choose |
@@ -283,7 +283,7 @@ reading only one row will pick the wrong kind:
 | `requiresBefore` · `precondition` | which call came first, vs what state the world is in |
 | `forbidThisTurn` · `noDuplicateCall` | the first call is illegitimate, vs only the repeat is |
 | `confirmFirst` · `consentRequired` | the user typed the engine's confirmation token · a standing flag in the WORLD |
-| `claimIsGrounded` · `claimIsComplete` · `mustAccountFor` | every claim matches the ledger · every effected write is claimed · a per-case record appears with the required outcome polarity |
+| `claimIsGrounded` · `claimIsComplete` · `mustAccountFor` | every claim matches the action history · every effected write is claimed · a per-case record appears with the required outcome polarity |
 
 **Text judgment is one kind, not a cluster.** There is no family of reply-text kinds to pick between:
 every rule of the form "the reply lied" — invented success, a false failure, an off-surface claim, an
@@ -291,7 +291,7 @@ ungrounded regulated figure — is ONE `llmCheck` rubric ("does the reply claim 
 not actually complete this turn?"), answered by a host judge over the envelope the hook fills. No guard
 factory takes a `RegExp`, so a reply-honesty rule is never a pattern you tune. The structural honesty
 signals are their own kinds (`resultInvariant` on the tool result, `destructiveThrottle`/`confirmFirst`
-on the call), and the ledger cross-check is `claimIsGrounded`/`claimIsComplete`.
+on the call), and the action history cross-check is `claimIsGrounded`/`claimIsComplete`.
 
 ### `canonArgs` — the fingerprint `noDuplicateCall` compares
 
@@ -553,7 +553,7 @@ The reply text is in `ctx.reply` and no tool can run any more. A deny costs a bo
 
 | factory | file | what it enforces |
 |---|---|---|
-| [`claimIsGrounded`](#14-claimisgrounded) | `honesty.ts` | Every operation the agent declares in `did` must match the world ledger: a `success` needs a write that took effect, `not_found` an empty read, `blocked`/`refused` a veto or world refusal, `no_op` a call that addressed the entity and no effected write on it — an undeclared outcome word is always a violation. |
+| [`claimIsGrounded`](#14-claimisgrounded) | `honesty.ts` | Every operation the agent declares in `did` must match the world actionHistory: a `success` needs a write that took effect, `not_found` an empty read, `blocked`/`refused` a veto or world refusal, `no_op` a call that addressed the entity and no effected write on it — an undeclared outcome word is always a violation. |
 | [`claimIsComplete`](#15-claimiscomplete) | `honesty.ts` | Every write that TOOK EFFECT this turn must be covered by a DISTINCT `success` ACTION intention in `did` that NAMES the entity — no silent action hidden from the user. |
 | [`mustAccountFor`](#16-mustaccountfor) | `honesty.ts` | Each configured target must appear in `did` with the required outcome polarity (or any polarity when `outcome: 'any'`). |
 | [`degenerationGuard`](#17-degenerationguard) | `reply.ts` | Catches leaked reasoning or tool markup, chat-template tokens and run-away line repetition in the reply. |
@@ -562,9 +562,9 @@ The reply text is in `ctx.reply` and no tool can run any more. A deny costs a bo
 
 #### 14. `claimIsGrounded`
 
-Every operation the agent declares in `did` must match the world ledger: a `success` needs a write that took effect, `not_found` an empty read, `blocked`/`refused` a veto or world refusal, `no_op` a call that addressed the entity and no effected write on it — an undeclared outcome word is always a violation.
+Every operation the agent declares in `did` must match the world actionHistory: a `success` needs a write that took effect, `not_found` an empty read, `blocked`/`refused` a veto or world refusal, `no_op` a call that addressed the entity and no effected write on it — an undeclared outcome word is always a violation.
 
-**When to reach for it.** Always on when the domain declares its `writeTools` (the spec class auto-installs it, fed by `contract.writeTools` + `contract.outcomes`). It is the ledger cross-check: it keys on `target` + `outcome` against verified calls, never on op-name semantics or reply text, so a fabricated success cannot ground. It checks ACTION intentions only — a speech intention (`inform`/`greet`/`refuse`/`ask`) names no ledger fact. A `target` matches an IDENTITY the ledger carries — a scalar under `id`/`label`/`<entity>Id`, never a status word, a note or a sentence — by WHOLE-VALUE equality, so `BK-1` never grounds against `BK-10` and `12` never stands for `Order 12`. A `success` matches only what the WORLD issued for the write (its own entity, not the ones its result references); a claim of absence or non-effect (`not_found`/`failure`/`blocked`/`refused`/`pending_confirmation`/`no_op`) matches the world's negative answer plus the identity-key ARGS that name the entity asked about, because an absent record issues no value of its own. An `amount`, when declared, must appear among the magnitudes of that same ledger fact. A domain outcome word must map to a core outcome via the contract's outcome map or it reads as undeclared.
+**When to reach for it.** Always on when the domain declares its `writeTools` (the spec class auto-installs it, fed by `contract.writeTools` + `contract.outcomes`). It is the actionHistory cross-check: it keys on `target` + `outcome` against verified calls, never on op-name semantics or reply text, so a fabricated success cannot ground. It checks ACTION intentions only — a speech intention (`inform`/`greet`/`refuse`/`ask`) names no actionHistory fact. A `target` matches an IDENTITY the actionHistory carries — a scalar under `id`/`label`/`<entity>Id`, never a status word, a note or a sentence — by WHOLE-VALUE equality, so `BK-1` never grounds against `BK-10` and `12` never stands for `Order 12`. A `success` matches only what the WORLD issued for the write (its own entity, not the ones its result references); a claim of absence or non-effect (`not_found`/`failure`/`blocked`/`refused`/`pending_confirmation`/`no_op`) matches the world's negative answer plus the identity-key ARGS that name the entity asked about, because an absent record issues no value of its own. An `amount`, when declared, must appear among the magnitudes of that same actionHistory fact. A domain outcome word must map to a core outcome via the contract's outcome map or it reads as undeclared.
 
 ```ts
 claimIsGrounded({ writeTools: ['createBooking', 'cancelBooking'], outcomes: { settled: 'success' } })
@@ -614,7 +614,7 @@ llmCheck({ question: 'Did the user, in an earlier turn, explicitly authorise THI
 
 The lie backstop: the judge answers the engine's own pre-baked question asking whether the message would leave the reader believing a change is done that neither list carries.
 
-**When to reach for it.** The structured cross-check grounds the DECLARATION against the ledger, but the message beside it is free prose — an agent can declare an honest `inform` and still write that it completed something. Install this where the stakes justify a model call per reply (money, health). It is NOT auto-installed and it is never the primary guarantee: the structured cross-check grounds the declaration, and the operation record ships under every delivery so a claim the turn cannot back arrives contradicted. This is a third layer over both. It carries `failMode: 'closed'`, unlike a bare `llmCheck`, and that denies on a REJECTED judge — the resolved default included. THE AVAILABILITY COST IS REAL: while the judging endpoint is down every candidate reply is denied, so each turn spends its redrives and then delivers the engine-derived closure ("I could not complete this safely — nothing was changed.") in place of the model's own prose. Every non-run is recorded, `judge-unreachable` beside `llmcheck-unreachable:closed`. An author who would rather ship the model's prose than hold the guarantee opts out explicitly with `llmCheckLie({ failMode: 'open' })`.
+**When to reach for it.** The structured cross-check grounds the DECLARATION against the actionHistory, but the message beside it is free prose — an agent can declare an honest `inform` and still write that it completed something. Install this where the stakes justify a model call per reply (money, health). It is NOT auto-installed and it is never the primary guarantee: the structured cross-check grounds the declaration, and the operation record ships under every delivery so a claim the turn cannot back arrives contradicted. This is a third layer over both. It carries `failMode: 'closed'`, unlike a bare `llmCheck`, and that denies on a REJECTED judge — the resolved default included. THE AVAILABILITY COST IS REAL: while the judging endpoint is down every candidate reply is denied, so each turn spends its redrives and then delivers the engine-derived closure ("I could not complete this safely — nothing was changed.") in place of the model's own prose. Every non-run is recorded, `judge-unreachable` beside `llmcheck-unreachable:closed`. An author who would rather ship the model's prose than hold the guarantee opts out explicitly with `llmCheckLie({ failMode: 'open' })`.
 
 ```ts
 llmCheckLie()

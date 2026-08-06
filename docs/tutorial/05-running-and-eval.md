@@ -409,7 +409,7 @@ The two halves of an expectation are not the same kind of claim:
                 reads it
 ```
 
-Note where the invariants are read from: the **world's** ledger of executed calls, PLUS the
+Note where the invariants are read from: the **world's** action history of executed calls, PLUS the
 guard-vetoed attempts the runtime records the moment a guard denies a call. A call a guard vetoed
 never reached the world — but the *attempt* is still evidence of what the model tried to do, so a
 `forbiddenToolCalls` invariant fails on it too (the violation reads `forbidden call attempted
@@ -556,7 +556,7 @@ Its findings, and why each is a failure and not a style note:
 The last two read the SUBJECT'S OWN PRESETS: `WRITE-REFUSED-UNGATED` compares each declared preset
 against `default` (a write the world carries out on one and refuses on the other is refused BY STATE),
 and `TARGET-SILENT-ON-EVERY-PRESET` evaluates the targeted gate on the case's declared preset with an
-empty ledger. Both are decidable offline — no key, no model.
+empty action history. Both are decidable offline — no key, no model.
 
 The parity finding has one repair that closes it for every lane at once: `contract.writeGate`
 (chapter 03 §5). Six per-lane `precondition`s close it too; the declaration exists so that they do not
