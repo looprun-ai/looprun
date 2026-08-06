@@ -256,12 +256,12 @@ describe('L3 — redrive message/did desync seals a phantom ask', () => {
 // ════════════════════════════════════════════════════════════════════════════════════════════════
 // L4 — destructiveThrottle's "EFFECT BEATS FLAGS" rule is INERT IN NATIVE-TOOLS MODE
 //
-//   `isSimulate(o) = o.tookEffect !== true && (requiresConfirmation || args[confirmArg] === false)`.
+//   The simulation test reads `tookEffect` beside the declared flags.
 //   `tookEffect` is computed in `recordToolResult` by matching the call against `world.toolCalls` — but in
 //   NATIVE-TOOLS mode (`LoopRunAgent({ tools })`, the MCP path) the world is the `worldFromTools` stub,
 //   whose `toolCalls` array NOTHING ever writes to. So `tookEffect` is `false` for EVERY call, the
 //   `tookEffect !== true` clause is permanently satisfied, and the throttle degenerates to a pure-flag
-//   test: a tool that MUTATES while carrying `confirmed:false` is classified as a simulate and the
+//   test: a tool that MUTATES while claiming `simulate: true` is classified as a simulation and the
 //   one-effect-per-turn cap never engages.
 // ════════════════════════════════════════════════════════════════════════════════════════════════
 describe('L4 — destructiveThrottle in native-tools mode', () => {
@@ -270,7 +270,7 @@ describe('L4 — destructiveThrottle in native-tools mode', () => {
     return createTool({
       id: 'wipe',
       description: 'Wipe an account.',
-      inputSchema: z.object({ account: z.string(), confirmed: z.boolean().optional() }),
+      inputSchema: z.object({ account: z.string(), simulate: z.boolean().optional() }),
       execute: async (input: unknown) => {
         const a = (input ?? {}) as { account?: string };
         log.push(String(a.account)); // the mutation really happened
@@ -293,11 +293,11 @@ describe('L4 — destructiveThrottle in native-tools mode', () => {
     });
   }
 
-  it('CLOSED: two mutating wipe{confirmed:false} calls — the n:1 cap engages on the second', async () => {
+  it('CLOSED: two mutating wipe{simulate:true} calls — the n:1 cap engages on the second', async () => {
     const log: string[] = [];
     const agent = nativeAgent([
-      [{ tool: 'wipe', args: { account: 'A', confirmed: false } }],
-      [{ tool: 'wipe', args: { account: 'B', confirmed: false } }],
+      [{ tool: 'wipe', args: { account: 'A', simulate: true } }],
+      [{ tool: 'wipe', args: { account: 'B', simulate: true } }],
       [{ tool: 'respond', args: { message: 'Both accounts are gone.', did: [{ op: 'inform' }] } }],
     ], log);
     await agent.generate('wipe A and B');

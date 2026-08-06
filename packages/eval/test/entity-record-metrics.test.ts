@@ -48,7 +48,7 @@ const SIMULATE: RecordedCall = {
 
 const CANCELLED: RecordedCall = {
   name: 'cancelEvent',
-  args: { eventId: 'EV-2', confirmed: true },
+  args: { eventId: 'EV-2' },
   result: { ok: true, cancelledEventId: 'EV-2', cancelledLabel: 'Almoço com Marina' },
   tookEffect: true,
 };

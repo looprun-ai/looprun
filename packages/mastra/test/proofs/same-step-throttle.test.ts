@@ -171,7 +171,7 @@ describe('full loop — a same-step bulk destructive is throttled to ONE effect'
       script: [
         [{ tool: 'deleteItem', args: { id: 'p001' } }],
         [{ tool: 'respond', args: { message: 'Deleting p001 is permanent — are you sure?', did: [{ op: 'inform' }] } }],
-        [{ tool: 'deleteItem', args: { id: 'p001', confirmed: true } }],
+        [{ tool: 'deleteItem', args: { id: 'p001' } }],
         [{ tool: 'respond', args: { message: 'Done — p001 is gone.', did: [{ op: 'inform' }] } }],
       ],
       expect: 'pass',
