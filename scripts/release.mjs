@@ -5,7 +5,8 @@
  *   1. preflight   git clean + on main + npm login + gh auth + pending changesets
  *   2. version     `changeset version` (linked group bumps looprun + @looprun-ai/* together),
  *                  then aligns the private root package.json to the umbrella version
- *   3. gates       pnpm -r build + typecheck + test, then the no-bench-drift gate
+ *   3. gates       pnpm -r build + typecheck + test, then the three repo-wide gates:
+ *                  the guards chapter matches the catalog, no bench drift, no retired name
  *   4. commit+tag  chore(release): vX.Y.Z  +  tag vX.Y.Z
  *   5. publish     pnpm -r publish --access public   (already-published versions are skipped,
  *                  so a failed run is safe to re-run; npm 2FA prompts inline or use --otp=CODE)
@@ -102,7 +103,7 @@ console.log(`  npm: ${npmUser} · branch: ${branch}`);
 
 // ---------- 3 (early in dry-run). gates ----------
 const gates = () => {
-  step('gates: clean + build + typecheck + test + drift');
+  step('gates: clean + build + typecheck + test + guards chapter + drift + plain names');
   // CLEAN FIRST, ALWAYS. `tsc` only ever ADDS to `dist/` — it never removes an output whose source
   // is gone, so a `dist/` carried over from an earlier layout keeps shipping orphan modules and maps
   // that `npm pack` happily lists. The published tarball is built from whatever sits in `dist/`, so
@@ -111,7 +112,9 @@ const gates = () => {
   run('pnpm -r --if-present build');
   run('pnpm -r --if-present typecheck');
   run('pnpm -r --if-present test');
+  run('node scripts/gen-guards-chapter.mjs --check');
   run('node tests/no-bench-drift.test.mjs');
+  run('node tests/plain-names.test.mjs');
 };
 
 if (DRY) {
