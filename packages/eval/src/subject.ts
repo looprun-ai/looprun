@@ -21,6 +21,10 @@ export interface ReqCall {
   name: string;
   /** Shallow subset match: every key/value here must strictly equal the observed call's arg. */
   anyArgs?: Record<string, unknown>;
+  /** Match only the ACTING shape — a call whose args do not carry `simulate: true`. This is how an
+   *  invariant names the destructive act itself: a simulation neither satisfies a required act nor
+   *  violates a forbidden one. */
+  acting?: boolean;
 }
 
 export interface CaseInvariants {

@@ -171,9 +171,9 @@ function replay(world: AgentWorld, call: ReqCall): WriteVerdict {
   return 'read';
 }
 
-/** A consent-timing entry — the two-step protocol's own business (`confirmed:true`), never a premise
- *  defect. Skipped, not fired. */
-const isConsentTiming = (call: ReqCall): boolean => call.anyArgs?.confirmed === true;
+/** A consent-timing entry — the destructive act itself (`acting: true`), the consent protocol's own
+ *  business and never a premise defect. Skipped, not fired. */
+const isConsentTiming = (call: ReqCall): boolean => call.acting === true;
 
 /** The declared REQUIRED args per tool, read from each toolDef's `inputSchema.required`. A tool with
  *  no `required` array contributes an empty set (nothing to under-specify). */
@@ -314,7 +314,7 @@ interface RawArg {
   optional?: boolean;
 }
 interface RawTool {
-  twoStep?: boolean;
+  simulatable?: boolean;
   args?: RawArg[];
   custom?: string;
 }
@@ -326,11 +326,11 @@ interface RawWorld {
 const NON_CONFIRM_TYPES = new Set(['string', 'number', 'boolean']);
 
 /** Synthesize a minimal, type-correct arg set for a tool so RECEPTION never throws on a missing
- *  required arg. `confirmed` is excluded (the two-step simulate/confirm lever the identity check drives). */
+ *  required arg. `simulate` is excluded (the simulation/act lever the identity check drives). */
 function synthArgs(args: RawArg[] | undefined, includeOptional: boolean): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const a of args ?? []) {
-    if (a.name === 'confirmed') continue;
+    if (a.name === 'simulate') continue;
     if (a.optional && !includeOptional) continue;
     if (!NON_CONFIRM_TYPES.has(a.type)) continue;
     out[a.name] = a.type === 'number' ? 1 : a.type === 'boolean' ? false : 'x';
@@ -351,7 +351,7 @@ const stable = (v: unknown): string => JSON.stringify(v);
  * The three world layers over a subject that ships `gen/world.json`:
  *   1. PRESET DISTINGUISHABILITY — every declared preset (other than `default`) yields a projection
  *      DIFFERENT from default's; an indistinguishable preset is dead wiring (the wrong-record class).
- *   2. SIMULATE≡CONFIRM IDENTITY — for every `twoStep` tool, a simulate and a confirm resolve the SAME gate
+ *   2. SIMULATE≡ACT IDENTITY — for every `simulatable` tool, the simulation and the act resolve the SAME gate
  *      decision (mechanical, via the 3a machinery: gates run before the two-step branch).
  *   3. DETERMINISM — the same preset + the same call sequence yields a deep-equal projection, run twice
  *      (catches a `custom` executor that reaches for a clock or RNG).
@@ -394,18 +394,18 @@ export function checkWorldModel(subjectDir: string): string[] {
     }
   }
 
-  // 2. Simulate ≡ confirm identity, per twoStep tool.
+  // 2. Simulation ≡ act identity, per simulatable tool.
   for (const [name, tool] of Object.entries(tools)) {
-    if (!tool.twoStep) continue;
+    if (!tool.simulatable) continue;
     const args = synthArgs(tool.args, true);
     try {
-      const simulate = gateDecision(factory('default').exec(name, args));
-      const confirm = gateDecision(factory('default').exec(name, { ...args, confirmed: true }));
-      if (simulate !== confirm) {
-        issues.push(`world: twoStep tool "${name}" breaks simulate≡confirm identity — simulate gate decision ${JSON.stringify(simulate)} ≠ confirm ${JSON.stringify(confirm)}`);
+      const simulation = gateDecision(factory('default').exec(name, { ...args, simulate: true }));
+      const act = gateDecision(factory('default').exec(name, args));
+      if (simulation !== act) {
+        issues.push(`world: simulatable tool "${name}" breaks simulate≡act identity — simulation gate decision ${JSON.stringify(simulation)} ≠ act ${JSON.stringify(act)}`);
       }
     } catch (e) {
-      issues.push(`world: twoStep tool "${name}" threw during the simulate≡confirm check: ${(e as Error).message}`);
+      issues.push(`world: simulatable tool "${name}" threw during the simulate≡act check: ${(e as Error).message}`);
     }
   }
 

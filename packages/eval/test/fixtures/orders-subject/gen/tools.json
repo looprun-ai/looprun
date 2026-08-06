@@ -18,12 +18,12 @@
   },
   {
     "name": "refundOrder",
-    "description": "Refund an order. Call it without `confirmed` first to surface what would be refunded; then again in a LATER turn, after the customer answers, with `confirmed: true`.",
+    "description": "Refund an order. Call it with `simulate: true` first to surface what would be refunded; run the bare call only in a LATER turn, after their message carries the confirmation code.",
     "inputSchema": {
       "type": "object",
       "properties": {
         "orderId": { "type": "string", "description": "the order number, e.g. `OR-1001`" },
-        "confirmed": { "type": "boolean" }
+        "simulate": { "type": "boolean" }
       },
       "required": ["orderId"]
     }

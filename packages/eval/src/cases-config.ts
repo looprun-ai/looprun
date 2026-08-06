@@ -28,7 +28,7 @@ export class CasesConfigError extends Error {
 }
 
 const reqCallSchema = z
-  .object({ tool: z.string(), anyArgs: z.record(z.string(), z.unknown()).optional() })
+  .object({ tool: z.string(), anyArgs: z.record(z.string(), z.unknown()).optional(), acting: z.boolean().optional() })
   .strict();
 
 const invariantsSchema = z
@@ -74,8 +74,8 @@ function toSubjectCase(c: z.infer<typeof caseSchema>): SubjectCase {
       ...(hasInv
         ? {
             invariants: {
-              ...(inv?.required ? { requiredToolCalls: inv.required.map((r) => ({ name: r.tool, ...(r.anyArgs ? { anyArgs: r.anyArgs } : {}) })) } : {}),
-              ...(inv?.forbidden ? { forbiddenToolCalls: inv.forbidden.map((r) => ({ name: r.tool, ...(r.anyArgs ? { anyArgs: r.anyArgs } : {}) })) } : {}),
+              ...(inv?.required ? { requiredToolCalls: inv.required.map((r) => ({ name: r.tool, ...(r.anyArgs ? { anyArgs: r.anyArgs } : {}), ...(r.acting ? { acting: true } : {}) })) } : {}),
+              ...(inv?.forbidden ? { forbiddenToolCalls: inv.forbidden.map((r) => ({ name: r.tool, ...(r.anyArgs ? { anyArgs: r.anyArgs } : {}), ...(r.acting ? { acting: true } : {}) })) } : {}),
             },
           }
         : {}),

@@ -1,6 +1,6 @@
 /**
  * `looprun-eval validate` world layers (`checkWorldModel`). Drives the three checks off a
- * `gen/world.json` written to a temp dir: preset distinguishability, simulate≡confirm identity, and
+ * `gen/world.json` written to a temp dir: preset distinguishability, simulate≡act identity, and
  * determinism. A subject WITHOUT a world.json yields no world issues — a TS world is not validated
  * from a spec.
  */
@@ -10,7 +10,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { checkWorldModel } from '../src/validate.js';
 
-/** A well-formed asset world: two distinguishable presets, one twoStep tool. */
+/** A well-formed asset world: two distinguishable presets, one simulatable tool. */
 const goodWorld = {
   clock: '2026-07-01',
   entities: {
@@ -31,8 +31,8 @@ const goodWorld = {
     },
     refund: {
       kind: 'write',
-      twoStep: true,
-      args: [{ name: 'bookingId', type: 'string' }, { name: 'confirmed', type: 'boolean', optional: true }],
+      simulatable: true,
+      args: [{ name: 'bookingId', type: 'string' }, { name: 'simulate', type: 'boolean', optional: true }],
       create: { entity: 'booking', id: { fixed: 'bk_refund' }, idKey: 'refundId' },
     },
   },

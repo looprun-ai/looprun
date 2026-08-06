@@ -9,7 +9,7 @@
  *
  * Deterministic by construction: fixed seeds per preset, no clock, no counter that a caller can move.
  *
- * `refundOrder` is the CONSENT-GATED act: called without `confirmed: true` it reports what WOULD be
+ * `refundOrder` is the CONSENT-GATED act: called with `simulate: true` it reports what WOULD be
  * refunded and changes nothing; called with it, it refunds and attests the effect (`tookEffect`).
  */
 import type { AgentWorld } from '@looprun-ai/core';
@@ -93,8 +93,8 @@ export class OrdersWorld implements AgentWorld {
         if (found.status === 'refunded') {
           return push({ ok: false, error: 'already refunded', orderId: id, refundedLabel: found.item }, false);
         }
-        // The SIMULATE half: no `confirmed` ⇒ report what would go, change nothing.
-        if (args.confirmed !== true) {
+        // The SIMULATION: `simulate: true` ⇒ report what would go, change nothing. The bare call acts.
+        if (args.simulate === true) {
           return push({ ok: true, requiresConfirmation: true, order: { ...found } }, false);
         }
         found.status = 'refunded';

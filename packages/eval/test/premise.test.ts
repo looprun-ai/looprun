@@ -143,12 +143,12 @@ describe('premise coherence — fires on the three defect shapes', () => {
     expect(r.blocking.join('\n')).toMatch(/required write.*REFUSED.*can never pass/);
   });
 
-  it('consent-timing (confirmed:true) forbidden entries are the two-step business — skipped, not fired', () => {
-    const twoStep = single('two-step', {
-      expectations: { invariants: { forbiddenToolCalls: [{ name: 'chargeDeposit', anyArgs: { confirmed: true } }] } },
+  it('consent-timing (acting) forbidden entries are the consent protocol business — skipped, not fired', () => {
+    const actingCase = single('acting', {
+      expectations: { invariants: { forbiddenToolCalls: [{ name: 'chargeDeposit', acting: true }] } },
     });
     // chargeDeposit is always ACCEPTED by the world, so without the consent-timing skip this would fire.
-    const r = checkPremiseCoherence(mkSubject([twoStep]));
+    const r = checkPremiseCoherence(mkSubject([actingCase]));
     expect(r.blocking).toEqual([]);
   });
 

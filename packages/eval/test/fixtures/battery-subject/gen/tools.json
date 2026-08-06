@@ -27,12 +27,12 @@
   },
   {
     "name": "cancelEvent",
-    "description": "Cancel an event. Call it without `confirmed` first to surface what would be cancelled; then again in a LATER turn, after the user answers, with `confirmed: true`.",
+    "description": "Cancel an event. Call it with `simulate: true` first to surface what would be cancelled; run the bare call only in a LATER turn, after their message carries the confirmation code.",
     "inputSchema": {
       "type": "object",
       "properties": {
         "eventId": { "type": "string" },
-        "confirmed": { "type": "boolean" }
+        "simulate": { "type": "boolean" }
       },
       "required": ["eventId"]
     }

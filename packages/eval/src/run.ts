@@ -68,11 +68,14 @@ function callOk(call: WorldCall): boolean {
   return !(r && typeof r === 'object' && r.ok === false);
 }
 
-/** name + every key/value in `anyArgs` strictly equal in the call's args (shallow subset match). */
-export function toolCallMatches(call: WorldCall, req: { name: string; anyArgs?: Record<string, unknown> }): boolean {
+/** name + every key/value in `anyArgs` strictly equal in the call's args (shallow subset match).
+ *  `acting: true` additionally requires the call NOT to carry `simulate: true` — the acting shape,
+ *  so a simulation never matches an invariant about the act. */
+export function toolCallMatches(call: WorldCall, req: { name: string; anyArgs?: Record<string, unknown>; acting?: boolean }): boolean {
   if (call.name !== req.name) return false;
-  if (!req.anyArgs) return true;
   const args = (call.args ?? {}) as Record<string, unknown>;
+  if (req.acting && args.simulate === true) return false;
+  if (!req.anyArgs) return true;
   for (const [k, expected] of Object.entries(req.anyArgs)) {
     if (args[k] !== expected) return false;
   }

@@ -92,7 +92,7 @@ const toolSchema = z
   .object({
     kind: z.enum(['read', 'write', 'transition', 'custom']),
     args: z.array(argSchema).optional(),
-    twoStep: z.boolean().optional(),
+    simulatable: z.boolean().optional(),
     gates: z.array(gateSchema).optional(),
     read: readResultSchema.optional(),
     create: createResultSchema.optional(),
