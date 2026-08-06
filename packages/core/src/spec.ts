@@ -426,13 +426,13 @@ export class AgentSpecBase implements AgentSpec {
     this.destructiveTools = [...(cfg.destructiveTools ?? [])];
     this.destructiveLabels = { ...(cfg.destructiveLabels ?? {}) };
     this.destructiveWhen = { ...(cfg.destructiveWhen ?? {}) };
-    // Install order is load-bearing (byte-stable assembled prompt): universal invariants first, destructive layer
-    // second.
-    this.installMinimal();
-    this.installBase();
+    // Install order is load-bearing (byte-stable assembled prompt): the universal invariants and the
+    // contract's own gates first, the consent protocol second.
+    this.installUniversalAndContractGuards();
+    this.installConsentProtocol();
   }
 
-  protected installMinimal(): void {
+  protected installUniversalAndContractGuards(): void {
     this.addGuard('preTool', 'any', noDuplicateCall(), { priority: 'always', id: 'always:noDuplicateCall' });
     // Output-channel degeneration lint (a param-free artifact-shape lint — it takes no patterns).
     // FIRST among the onReply engine guards: a degenerate reply must be re-driven before any
@@ -496,7 +496,7 @@ export class AgentSpecBase implements AgentSpec {
    *  (validated ⊆ surface), one binding each — `consent:confirmFirst` gates every destructive call that is
    *  not a schema-licensed simulation, `consent:destructiveThrottle` caps the turn's effects. A no-op when
    *  the list is empty — every non-destructive spec is clean. */
-  protected installBase(): void {
+  protected installConsentProtocol(): void {
     const destructive = this.destructiveTools;
     // A label for a tool that is not destructive gates nothing — a silent no-op the construction throws on.
     const strayLabel = Object.keys(this.destructiveLabels).filter((t) => !destructive.includes(t));
