@@ -1,5 +1,18 @@
 # @looprun-ai/server
 
+## 0.15.0
+
+### Minor Changes
+
+- Release (minor).
+
+### Patch Changes
+
+- Updated dependencies [9de3396]
+- Updated dependencies
+  - @looprun-ai/core@0.15.0
+  - @looprun-ai/mastra@0.15.0
+
 ## 0.14.0
 
 ### Minor Changes
