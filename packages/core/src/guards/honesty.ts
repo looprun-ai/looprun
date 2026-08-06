@@ -338,7 +338,13 @@ function isGrounded(
     case 'refused':
       return (
         attempts.some((a) => claimMatches(claim, attemptEvidence(a))) ||
-        calls.some((c) => c.ok === false && addressed(c))
+        calls.some((c) => c.ok === false && addressed(c)) ||
+        // REFUSAL BY RULE: the turn read the entity and changed nothing — the refusal is the spec's own
+        // law speaking, and demanding a vetoed attempt or a failed call as its proof would order the
+        // model to reach for the very act it is refusing. An effected write on the entity still refutes
+        // it: reading the record and then acting on it is not a rule-grounded no-op.
+        (calls.some((c) => isRead(c) && c.ok && addressed(c)) &&
+          !calls.some((c) => effectedWrite(c) && targetIn(claim.target, addressedEvidence(ctx, c).identity)))
       );
     case 'not_found':
       return calls.some((c) => isRead(c) && c.ok && isEmptyReadResult(resultOf(ctx, c)) && addressed(c));
