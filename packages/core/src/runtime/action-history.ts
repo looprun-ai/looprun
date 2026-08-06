@@ -217,6 +217,10 @@ export function recordToolResult(actionHistory: TurnActionHistory, name: string,
   // the guard ctx and the domain `exhaustionReply` seams still read as a flat list of what was produced).
   const lbl = ok ? (output as { label?: unknown } | null | undefined)?.label : undefined;
   const producedLabel = typeof lbl === 'string' ? lbl : undefined;
+  // The result's own sentence about what it did — authored in the world/tool, rendered
+  // verbatim under the delivery so the fact arrives even when the prose forgets it.
+  const rep = (output as { report?: unknown } | null | undefined)?.report;
+  const report = typeof rep === 'string' && rep.trim() !== '' ? rep : undefined;
   actionHistory.observed.push({
     name,
     args,
@@ -229,6 +233,7 @@ export function recordToolResult(actionHistory: TurnActionHistory, name: string,
     ...(wtc?.effectInferred === true ? { effectInferred: true } : {}),
     ...(requiresConfirmation ? { resultFlags: { requiresConfirmation: true } } : {}),
     ...(producedLabel !== undefined ? { producedLabel } : {}),
+    ...(report !== undefined ? { report } : {}),
   });
   if (producedLabel !== undefined) actionHistory.producedThisTurn.push(producedLabel);
   // The world runs the two-step protocol itself: its "I need confirmation" answer NAMES the record, so

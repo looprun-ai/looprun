@@ -61,6 +61,10 @@ export interface ObservedCall {
    *  stream that includes READ labels, and consuming it positionally made a read's label shift onto a
    *  write's derived target. */
   producedLabel?: string;
+  /** The result's OWN authored sentence about what it did, when it issued one — a non-empty string
+   *  `report` on the result. Carried onto the engine-derived claim ({@link deriveClaimsFromActionHistory})
+   *  and rendered after the outcome word in the operation record. */
+  report?: string;
 }
 
 /** One EXECUTED tool call as it is retained in the conversation `history` (a guard-vetoed attempt is

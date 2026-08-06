@@ -85,6 +85,10 @@ export interface Intention {
   target?: string;
   outcome?: string;
   amount?: number;
+  /** The result's OWN sentence about what it did — authored in the world/tool, carried onto an
+   *  ENGINE-DERIVED claim (never a key an agent may declare in `did`; {@link validateClaims} rejects
+   *  it) so a fact the world stated survives to the delivery even when the agent's prose forgets it. */
+  report?: string;
 }
 
 /** Domain outcome vocabulary: every non-core outcome word MUST map to a {@link CoreOutcome}, so the
@@ -456,9 +460,12 @@ export function operationRecord(did: Intention[], opts?: RenderOpts): OperationR
     const core = resolveOutcome(claim.outcome ?? '', opts?.outcomes);
     if (core === null) continue;
     // The seam is handed a NARROWED claim — never the advisory, agent-authored `op` (see RenderedClaim).
-    const line = opts?.renderClaim
+    const rendered = opts?.renderClaim
       ? opts.renderClaim({ target: claim.target, outcome: claim.outcome, amount: claim.amount }, core)
       : defaultClaimLine(claim, core);
+    // The result's own report SENTENCE rides after the outcome word, whichever wording produced the
+    // line — the fact reaches the user even when the domain seam's or engine's wording omits it.
+    const line = rendered && claim.report ? `${rendered} — ${claim.report}` : rendered;
     if (line && line.trim()) lines.push(line.trim());
   }
   const hasOperations = lines.length > 0;
@@ -524,17 +531,17 @@ export function deriveClaimsFromActionHistory(
       // named) but never becomes the `op` — see the partition note above.
       claims.push(
         label
-          ? { op: isSpeechOp(label) ? 'operation' : label, target: label, outcome: 'success' }
-          : { op: 'operation', outcome: 'success' },
+          ? { op: isSpeechOp(label) ? 'operation' : label, target: label, outcome: 'success', ...(o.report !== undefined ? { report: o.report } : {}) }
+          : { op: 'operation', outcome: 'success', ...(o.report !== undefined ? { report: o.report } : {}) },
       );
       continue;
     }
     if (o.resultFlags?.requiresConfirmation === true) {
-      claims.push({ op: 'operation', outcome: 'pending_confirmation' });
+      claims.push({ op: 'operation', outcome: 'pending_confirmation', ...(o.report !== undefined ? { report: o.report } : {}) });
       continue;
     }
     if (o.ok === false) {
-      claims.push({ op: 'operation', outcome: 'failure' });
+      claims.push({ op: 'operation', outcome: 'failure', ...(o.report !== undefined ? { report: o.report } : {}) });
       continue;
     }
     // a write that ran ok but took no effect (a simulate) changed nothing → no claim.
