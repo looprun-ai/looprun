@@ -77,7 +77,7 @@ export interface DomainContract {
    *  that must stay usable while the condition holds — a compliance hold is the shape that needs it —
    *  and each entry must be one of {@link writeTools}, so an exemption is visible beside the rule it
    *  suspends rather than per lane. `prose` is what the assembled prompt renders; absent ⇒ the reason. */
-  writeGate?: {
+  changeAllowed?: {
     ok: (world: AgentWorld) => boolean;
     reason: string;
     prose?: string;

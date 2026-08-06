@@ -464,21 +464,21 @@ export class AgentSpecBase implements AgentSpec {
         id: 'honesty:claimIsComplete',
       });
     }
-    // THE WRITE GATE: the domain states ONCE what its world refuses every write under, and it installs
+    // THE CHANGE GATE: the domain states ONCE what its world refuses every write under, and it installs
     // on every spec that carries a write. Declared per lane it is six chances to key on a third of the
     // condition; declared here there is one predicate and no lane can diverge from it.
-    const gate = this.contract?.writeGate;
+    const gate = this.contract?.changeAllowed;
     if (gate) {
       if (!writeTools?.length) {
         throw new Error(
-          `AgentSpec "${this.id}": contract.writeGate is declared with no contract.writeTools — the gate has no ` +
+          `AgentSpec "${this.id}": contract.changeAllowed is declared with no contract.writeTools — the gate has no ` +
             'surface to install on and would enforce nothing.',
         );
       }
       const strayExempt = (gate.exempt ?? []).filter((t) => !writeTools.includes(t));
       if (strayExempt.length) {
         throw new Error(
-          `AgentSpec "${this.id}": contract.writeGate.exempt names tool(s) that are not in contract.writeTools: ${strayExempt.join(', ')}. ` +
+          `AgentSpec "${this.id}": contract.changeAllowed.exempt names tool(s) that are not in contract.writeTools: ${strayExempt.join(', ')}. ` +
             'An exemption from a gate that never covered the tool reads as a decision nobody made.',
         );
       }

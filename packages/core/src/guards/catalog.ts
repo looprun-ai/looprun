@@ -108,7 +108,7 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
     hook: 'preTool',
     summary: 'The call is allowed only while a predicate over the host world holds.',
     whenToUse:
-      'A gate whose discriminator lives in WORLD state, not in this call — the predicate never sees the acting call\'s arguments. If the discriminator is in the args, use `custom` instead. A condition EVERY lane of the domain refuses writes under belongs on `contract.writeGate` instead — declared once, installed on every spec that carries a write. `precondition` stays the gate for what one lane alone refuses on.',
+      'A gate whose discriminator lives in WORLD state, not in this call — the predicate never sees the acting call\'s arguments. If the discriminator is in the args, use `custom` instead. A condition EVERY lane of the domain refuses writes under belongs on `contract.changeAllowed` instead — declared once, installed on every spec that carries a write. `precondition` stays the gate for what one lane alone refuses on.',
     example: `precondition((world) => world.accountActive === true, 'This account is closed — you cannot act on it.', 'act on an account only while it is open')`,
   },
   {

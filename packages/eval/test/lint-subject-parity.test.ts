@@ -56,7 +56,7 @@ const subject = (contract: DomainContract): Subject => {
 
 const GATED: DomainContract = {
   ...CONTRACT,
-  writeGate: {
+  changeAllowed: {
     ok: (w) => (w as unknown as { status(): string }).status() !== 'suspended',
     reason: 'This workspace is suspended.',
   },

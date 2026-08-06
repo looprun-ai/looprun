@@ -29,11 +29,11 @@ const spec = (c: DomainContract) =>
     contract: c,
   });
 
-describe('contract.writeGate', () => {
+describe('contract.changeAllowed', () => {
   it('installs one preTool gate on the write tools', () => {
     const s = spec(
       contract({
-        writeGate: {
+        changeAllowed: {
           ok: (w) => (w as unknown as { status(): string }).status() !== 'suspended',
           reason: 'This workspace is suspended.',
         },
@@ -51,7 +51,7 @@ describe('contract.writeGate', () => {
   it('an exempt write keeps running while the gate denies the rest', () => {
     const s = spec(
       contract({
-        writeGate: {
+        changeAllowed: {
           ok: (w) => (w as unknown as { status(): string }).status() !== 'suspended',
           reason: 'This workspace is suspended.',
           exempt: ['placeHold'],
@@ -63,13 +63,13 @@ describe('contract.writeGate', () => {
 
   it('an exempt tool that is not a write tool throws at construction', () => {
     expect(() =>
-      spec(contract({ writeGate: { ok: () => true, reason: 'r', exempt: ['getBooking'] } })),
-    ).toThrow(/writeGate\.exempt names tool\(s\) that are not in contract\.writeTools: getBooking/);
+      spec(contract({ changeAllowed: { ok: () => true, reason: 'r', exempt: ['getBooking'] } })),
+    ).toThrow(/changeAllowed\.exempt names tool\(s\) that are not in contract\.writeTools: getBooking/);
   });
 
   it('a gate with no write surface throws at construction', () => {
-    expect(() => spec(contract({ writeTools: [], writeGate: { ok: () => true, reason: 'r' } }))).toThrow(
-      /writeGate is declared with no contract\.writeTools/,
+    expect(() => spec(contract({ writeTools: [], changeAllowed: { ok: () => true, reason: 'r' } }))).toThrow(
+      /changeAllowed is declared with no contract\.writeTools/,
     );
   });
 });

@@ -247,7 +247,7 @@ function targetSilenceFindings(subject: Subject): string[] {
  * THE PARITY LAW. A world refuses a write under some condition; a preset is that condition made
  * reachable. Every lane that carries the write must have a spec-side gate that denies on that preset —
  * otherwise the refusal reaches the model as a tool failure and the lane's prose invents the reason.
- * One declaration satisfies it for every lane (`contract.writeGate`); six copies satisfy it too, and
+ * One declaration satisfies it for every lane (`contract.changeAllowed`); six copies satisfy it too, and
  * that is the shape this law exists to make unnecessary rather than to forbid.
  */
 function parityFindings(subject: Subject): string[] {
@@ -274,7 +274,7 @@ function parityFindings(subject: Subject): string[] {
         if (anyGateDenies(spec, world, tool)) continue;
         out.push(
           `WRITE-REFUSED-UNGATED: preset '${preset}' refuses '${tool}' and agent ${agent} carries it with no gate that denies there — ` +
-            'the refusal reaches the model as a tool failure and the reply invents its reason. Declare contract.writeGate, or gate the lane on the same condition',
+            'the refusal reaches the model as a tool failure and the reply invents its reason. Declare contract.changeAllowed, or gate the lane on the same condition',
         );
       }
     }
