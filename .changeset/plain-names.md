@@ -1,6 +1,6 @@
 ---
-'@looprun-ai/core': major
-'@looprun-ai/eval': major
+'@looprun-ai/core': minor
+'@looprun-ai/eval': minor
 ---
 
 Seven concepts carry the plain word for what they are.
