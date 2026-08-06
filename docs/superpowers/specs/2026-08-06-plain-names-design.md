@@ -2,7 +2,7 @@
 
 Date: 2026-08-06 · Status: design, not yet built · Scope: every repo, no exception
 
-Six concepts carry names written for the people who built the engine. This renames them
+Seven concepts carry names written for the people who built the engine. This renames them
 everywhere — source, types, tests, docs, guard text, CLI output, the skill, generated subjects.
 Nothing keeps the old name, and nothing anywhere says what a name used to be.
 
@@ -10,29 +10,46 @@ Nothing keeps the old name, and nothing anywhere says what a name used to be.
 
 | now | becomes | what it is |
 |---|---|---|
-| `ledger` | `conversationRecord` | what happened this conversation: the calls, what they returned, whether they changed anything, which confirmation requests are open and which were answered |
-| `probe` | `dryRun` | the call that asks what would happen and changes nothing |
-| `preview` | `wouldChange` | the field inside a dry run's answer describing what the act would do |
+| `ledger` | `actionHistory` | what was done this conversation: the calls, what they returned, whether they changed anything, which confirmation requests are open and which were answered |
+| `probe` | `simulate` | the helper a world uses to answer "I did nothing — here is what would happen" |
+| `preview` | `simulationResult` | the field inside that answer holding the record, the consequences and the properties of the act |
 | `trunk` | `systemPrompt` | the assembled prompt an agent reads: voice, rules, tool rules, current state |
-| `challenge` | `confirmationRequest` | the question the runtime opens for one act on one record |
-| `challenge.token` | `confirmationCode` | the word the user types back to answer it |
-
-`arm` and `band` stay: both already read plainly in the measurement docs where they live.
+| `challenge` | `confirmationRequest` | the request the runtime opens for one act on one record, carrying the code that answers it |
+| `arm` | `variant` | one side of a comparison: `governed` or `ungoverned` |
+| `band` | `range` | the spread across K repetitions of one case set |
 
 ## Why not the obvious alternatives
 
-**`ledger` → `conversationHistory` collides.** `GuardCtx.history` already exists and is a different
-thing: the prior turns' messages. Two names built on "history", one holding messages and one holding
-effects, rebuilds the confusion this rename exists to remove. `conversationRecord` sits beside
-`history` without competing with it.
+**`conversationHistory` collides.** `GuardCtx.history` already exists and holds the prior turns'
+messages. Two names built on "history", one for messages and one for effects, rebuilds the confusion
+this rename exists to remove. `actionHistory` sits beside `history` and the pair reads apart:
+messages against actions.
 
-**`trunk` → `fixedPrompt` is inaccurate.** It is re-rendered every turn with the world's current
-state, so nothing about it is fixed. `spec.surface.systemPrompt` already carries the assembled
-result; naming the renderer `renderSystemPrompt` closes the gap between the thing and its builder.
+**`dryRun` is trade vocabulary.** It reads as nothing to someone who has not met it. `simulate` is
+the word a person outside the codebase already uses — *simulate the cancellation and tell me what
+happens* — and it needs no gloss.
 
-**`challenge` → `keyword` names half of it.** The concept is a question plus the word that answers
-it. One name for both leaves the question unnamed, which is the half a reader has to understand
-first.
+**`simResult` abbreviates.** An abbreviation is jargon in miniature, which is what this rename
+removes. Six characters buy a name nobody has to decode.
+
+**`newData` and `expectedData` mislead.** Nothing was created and nothing was stored:
+`dispatchVoided: false` does not mean a dispatch was voided and returned false, it means no dispatch
+would be voided if the act ran. A name suggesting data was produced is the most expensive
+misreading available at this point in the flow, because it is exactly what the confirmation exists to
+prevent. `simulationResult` pairs with `simulate`, and the pair states its own tense.
+
+**`fixedPrompt` is inaccurate.** The prompt is re-rendered every turn with the world's current state
+— today's date, whether the workspace is frozen, how many bookings are live. `spec.surface.systemPrompt`
+already carries the assembled result; naming the renderer `renderSystemPrompt` closes the gap between
+the thing and its builder.
+
+**`securityQuestion` names a different, established thing.** A security question is knowledge-based
+authentication — a first pet, a mother's maiden name. This is a one-time code for one act on one
+record, the shape of an SMS confirmation. A reader meeting `securityQuestion` looks for a personal
+question and finds none.
+
+**`keyword` names half of it.** The concept is a request plus the code that answers it. One name for
+both leaves the request unnamed, which is the half a reader has to understand first.
 
 ## The rename, concretely
 
@@ -48,12 +65,15 @@ Surfaces, in the order a reader meets them:
 
 1. **Guard text a user reads** — deny reasons, guard prose, the confirmation question itself.
 2. **`packages/core/GUARDS.md`** and the tutorial chapters.
-3. **Public types and exported functions** — `Ledger`, `issueChallenge`, `renderScopedSpecTrunk`,
-   `probe()`, the `preview` key of a world result, `challengeToken`, `challengeMatchesCall`.
+3. **Public types and exported functions** — `Ledger`, `issueChallenge`, `issueChallengeForVeto`,
+   `challengeToken`, `challengeMatchesCall`, `renderScopedSpecTrunk`, `renderTrunkBlocks`, the
+   `probe()` helper a generated world ships, and the `preview` key of a world result.
 4. **Internal source** — variables, comments, test names.
-5. **CLI output** — `looprun-eval` messages that name any of the six.
+5. **CLI output** — `looprun-eval` messages that name any of the seven.
 6. **The `agentspec` skill** — references, templates, lint rule names and messages.
 7. **Generated subjects** — the world helper `probe()`, the `preview` key, every spec comment.
+8. **Measurement artefacts** — `arm` and `band` in run summaries, certification records and the
+   campaign runner's output.
 
 ## Two rules this rename obeys
 
@@ -62,7 +82,7 @@ deprecated. An alias would keep both names alive in search results and in every 
 which is the cost this change exists to remove.
 
 **No name is explained by what it replaced.** No comment, doc, changelog entry or commit body says
-"formerly the ledger" or "renamed from probe". A reader meeting `conversationRecord` learns what it
+"formerly the ledger" or "renamed from probe". A reader meeting `actionHistory` learns what it
 is, not what it was. The changelog states the new vocabulary and the breaking surface; it does not
 narrate the change.
 
@@ -71,7 +91,7 @@ narrate the change.
 The rename is complete when a search for each old name over every repo returns nothing:
 
 ```
-ledger · probe · preview · trunk · challenge     →  0 hits, case-insensitive, all repos
+ledger · probe · preview · trunk · challenge · arm · band   →  0 hits, case-insensitive, all repos
 ```
 
 That is one command and it is the acceptance test. A rename that leaves the word in a comment, a
