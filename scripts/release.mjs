@@ -5,8 +5,9 @@
  *   1. preflight   git clean + on main + npm login + gh auth + pending changesets
  *   2. version     `changeset version` (linked group bumps looprun + @looprun-ai/* together),
  *                  then aligns the private root package.json to the umbrella version
- *   3. gates       pnpm -r build + typecheck + test, then the three repo-wide gates:
- *                  the guards chapter matches the catalog, no bench drift, no retired name
+ *   3. gates       pnpm -r build + typecheck + test, then the four repo-wide gates: the guards
+ *                  chapter matches the catalog, no bench drift, no retired plain name, no retired
+ *                  guard identifier
  *   4. commit+tag  chore(release): vX.Y.Z  +  tag vX.Y.Z
  *   5. publish     pnpm -r publish --access public   (already-published versions are skipped,
  *                  so a failed run is safe to re-run; npm 2FA prompts inline or use --otp=CODE)
@@ -115,6 +116,7 @@ const gates = () => {
   run('node scripts/gen-guards-chapter.mjs --check');
   run('node tests/no-bench-drift.test.mjs');
   run('node tests/plain-names.test.mjs');
+  run('node tests/guard-priority.test.mjs');
 };
 
 if (DRY) {
