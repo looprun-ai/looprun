@@ -1,10 +1,11 @@
 # Plain names — design
 
-Date: 2026-08-06 · Status: design, not yet built · Scope: every repo, no exception
+Date: 2026-08-06 · Status: design, not yet built
 
-Seven concepts carry names written for the people who built the engine. This renames them
-everywhere — source, types, tests, docs, guard text, CLI output, the skill, generated subjects.
-Nothing keeps the old name, and nothing anywhere says what a name used to be.
+Seven concepts carry names written for the people who built the engine. This renames them across
+every live surface — source, types, tests, docs, guard text, CLI output, the skill, generated
+subjects, measurement tooling. Nothing keeps the old name, and nothing anywhere says what a name
+used to be.
 
 ## The names
 
@@ -13,7 +14,7 @@ Nothing keeps the old name, and nothing anywhere says what a name used to be.
 | `ledger` | `actionHistory` | what was done this conversation: the calls, what they returned, whether they changed anything, which confirmation requests are open and which were answered |
 | `probe` | `simulate` | the helper a world uses to answer "I did nothing — here is what would happen" |
 | `preview` | `simulationResult` | the field inside that answer holding the record, the consequences and the properties of the act |
-| `trunk` | `systemPrompt` | the assembled prompt an agent reads: voice, rules, tool rules, current state |
+| `trunk` | `assembledPrompt` | the prompt an agent reads, assembled from the domain's shared blocks and this agent's own |
 | `challenge` | `confirmationRequest` | the request the runtime opens for one act on one record, carrying the code that answers it |
 | `arm` | `variant` | one side of a comparison: `governed` or `ungoverned` |
 | `band` | `range` | the spread across K repetitions of one case set |
@@ -38,10 +39,37 @@ would be voided if the act ran. A name suggesting data was produced is the most 
 misreading available at this point in the flow, because it is exactly what the confirmation exists to
 prevent. `simulationResult` pairs with `simulate`, and the pair states its own tense.
 
-**`fixedPrompt` is inaccurate.** The prompt is re-rendered every turn with the world's current state
-— today's date, whether the workspace is frozen, how many bookings are live. `spec.surface.systemPrompt`
-already carries the assembled result; naming the renderer `renderSystemPrompt` closes the gap between
-the thing and its builder.
+**`systemPrompt` is taken.** `spec.surface.systemPrompt` is an optional function an author writes,
+producing ONE block. The assembled prompt contains it:
+
+```
+spec.surface.systemPrompt?(world, uploads) → string     one block an author writes
+                    │
+                    └── rendered INTO ──┐
+                                        ▼
+renderScopedSpecTrunk(world, spec, uploads, domain) → string
+   voice · scope precedence · core rules · tool rules · behavior · state mapping
+```
+
+Giving both the same name is the `conversationHistory` failure again. `assembledPrompt` states the
+one thing a reader must know: it is not written, it is assembled. `spec.surface.systemPrompt` keeps
+its name and meaning.
+
+**`domainPrompt` names the wrong scope.** The renderer takes a per-agent `AgentSpec` and a shared
+`DomainContract` and returns a per-agent string. Two agents of one domain get two different strings:
+
+```
+DomainContract "hermes"      voice · coreInvariants · languageClause      byte-identical
+       │
+       ├── spec 'inbox-triage'   persona: "…email assistant: summarize, clean up and answer…"
+       └── spec 'calendar'       persona: "…calendar assistant: manage their events…"
+                                          ▲
+                          different output from the same domain
+```
+
+The domain is one input, not the scope of the output — and `DomainContract` already owns the word,
+so a reader meeting `domainPrompt` looks for the shared blocks and finds the whole assembly. The
+shared byte-identical prefix stays unnamed; nothing today needs to refer to it.
 
 **`securityQuestion` names a different, established thing.** A security question is knowledge-based
 authentication — a first pet, a mother's maiden name. This is a one-time code for one act on one
@@ -51,28 +79,128 @@ question and finds none.
 **`keyword` names half of it.** The concept is a request plus the code that answers it. One name for
 both leaves the request unnamed, which is the half a reader has to understand first.
 
-## The rename, concretely
+## The identifier map
+
+Every exported name, file name and literal value that carries one of the seven. This list is the
+rename's unit of work.
+
+**`@looprun-ai/core` — exported surface**
+
+| now | becomes |
+|---|---|
+| `TurnLedger` | `TurnActionHistory` |
+| `createLedger` | `createActionHistory` |
+| `deriveClaimsFromLedger` | `deriveClaimsFromActionHistory` |
+| `Challenge` | `ConfirmationRequest` |
+| `challengeToken` | `confirmationCode` |
+| `challengeMatchesCall` | `confirmationMatchesCall` |
+| `issueChallengeForVeto` | `issueConfirmationForVeto` |
+| `closeChallengesFor` | `closeConfirmationsFor` |
+| `consumeChallenges` | `consumeConfirmations` |
+| `renderScopedSpecTrunk` | `renderAssembledPrompt` |
+| `renderTrunkBlocks` | `renderPromptBlocks` |
+| `foldTrunk` | `foldPrompt` |
+| `checkTrunkStatic` | `checkPromptStatic` |
+| `TrunkBlock` · `TrunkRow` · `TrunkLine` | `PromptBlock` · `PromptRow` · `PromptLine` |
+| `TrunkPolarity` | `PromptPolarity` |
+| `TrunkRenderOptions` | `PromptRenderOptions` |
+
+**`@looprun-ai/eval` — exported surface**
+
+| now | becomes |
+|---|---|
+| `CertBand` | `CertRange` |
+| `CertBandOptions` | `CertRangeOptions` |
+| `buildCertBand` | `buildCertRange` |
+| `renderCertBandMd` | `renderCertRangeMd` |
+
+**Fields, literals and generated keys**
+
+| now | becomes | where |
+|---|---|---|
+| `ledger` (parameter and field) | `actionHistory` | throughout `core` |
+| `challenges` · `challengesIssuedThisTurn` | `confirmations` · `confirmationsIssuedThisTurn` | `TurnActionHistory` |
+| `arm` (variable, CLI label, JSON key) | `variant` | `eval` run summaries and certification records |
+| `probe()` | `simulate()` | the world helper a generated subject ships |
+| `preview` (world-result key) | `simulationResult` | `defineWorld`, every generated subject |
+| `previewOf(...)` | `simulationResultOf(...)` | `world/define-world.ts` |
+| `outcome: 'preview'` | `outcome: 'simulated'` | the audit outcome union in `world/types.ts` |
+| `cert-band.json` · `CERT-BAND.md` | `cert-range.json` · `CERT-RANGE.md` | certification output |
+
+**File names**
 
 ```
-looprun            ~1,450 occurrences across ~150 files
-agentspec skill      ~130
-agentspec-bench    ~1,260   (a generated subject, regenerated or swept)
-                   ───────
-                   ~2,840
+packages/core/src/trunk.ts                  →  assembled-prompt.ts
+packages/core/src/trunk-fold.ts             →  prompt-fold.ts
+packages/core/src/runtime/ledger.ts         →  action-history.ts
+packages/core/src/runtime/challenge.ts      →  confirmation-request.ts
+packages/core/test/challenge.test.ts        →  confirmation-request.test.ts
+packages/core/test/challenge-render.test.ts →  confirmation-render.test.ts
+packages/core/test/challenge-ledger.test.ts →  confirmation-action-history.test.ts
+packages/core/test/claims-ledger.test.ts    →  claims-action-history.test.ts
+packages/core/test/trunk-stability.test.ts  →  prompt-stability.test.ts
+packages/core/test/proofs/trunk-provenance.test.ts → prompt-provenance.test.ts
 ```
+
+**Not renamed.** `ARMED_SEAMS` and every `armed` / `arming` / `disarmed` is about a seam being
+armed, not about a comparison variant. `spec.surface.systemPrompt` keeps its name.
+
+## The prose the rename rewrites
+
+`preview` names two things: the field, and the two-step ritual's first call. Both go.
+
+```
+BEFORE   05-running-and-eval.md:214
+         A tool named in `destructiveTools` is promised a two-step ritual: preview first —
+         which is what makes the second call meaningful
+
+AFTER    A tool named in `destructiveTools` is promised a two-step ritual: simulate first —
+         which is what makes the second call meaningful
+
+BEFORE   04-guards.md:357   a tool with no preview form is denied, and the denial raises the question
+AFTER                       a tool with no simulate form is denied, and the denial raises the question
+```
+
+`ledger.ts:144` and `turn.ts:136` carry the same phrase in comments and both change with it. The
+ritual has one name end to end: **simulate first, then act**.
+
+## The rename, concretely
+
+Measured with `grep -rniE "\b<word>"` over `.ts` `.md` `.json` `.mjs` `.js`, excluding
+`node_modules` and `dist`:
+
+```
+repo               live surface   frozen records
+──────────────────────────────────────────────────
+looprun                  3,074            —
+agentspec                  285            —
+looprun-bench            1,174        4,381
+agentspec-bench            518          139
+accounting                 107            —
+lawfirm                    102            —
+homeservices                77            —
+looprun.ai                   9            —
+──────────────────────────────────────────────────
+                         5,346        4,520
+```
+
+**Frozen records are not renamed.** A result file under `benchmarks/atlas/v0.6.0/results/` is a
+measurement taken on a date; editing its words after the fact makes it disagree with the run that
+wrote it. The same holds for the dated design records under `docs/superpowers/specs/**` and
+`docs/superpowers/plans/**`, and for the proof records under `governance/proofs/**`. These four
+paths keep the words they were written with and are excluded from the acceptance search.
+`governance/MATRIX.md` is live and is renamed.
 
 Surfaces, in the order a reader meets them:
 
 1. **Guard text a user reads** — deny reasons, guard prose, the confirmation question itself.
 2. **`packages/core/GUARDS.md`** and the tutorial chapters.
-3. **Public types and exported functions** — `Ledger`, `issueChallenge`, `issueChallengeForVeto`,
-   `challengeToken`, `challengeMatchesCall`, `renderScopedSpecTrunk`, `renderTrunkBlocks`, the
-   `probe()` helper a generated world ships, and the `preview` key of a world result.
-4. **Internal source** — variables, comments, test names.
+3. **Public types and exported functions** — the identifier map above.
+4. **Internal source** — variables, comments, test names, file names.
 5. **CLI output** — `looprun-eval` messages that name any of the seven.
 6. **The `agentspec` skill** — references, templates, lint rule names and messages.
-7. **Generated subjects** — the world helper `probe()`, the `preview` key, every spec comment.
-8. **Measurement artefacts** — `arm` and `band` in run summaries, certification records and the
+7. **Generated subjects** — the world helper, the world-result key, every spec comment.
+8. **Measurement artefacts** — `variant` and `range` in run summaries, certification records and the
    campaign runner's output.
 
 ## Two rules this rename obeys
@@ -88,20 +216,45 @@ narrate the change.
 
 ## What makes it verifiable
 
-The rename is complete when a search for each old name over every repo returns nothing:
+`scripts/check-plain-names.mjs`, run over every repo, exits non-zero on any hit:
 
 ```
-ledger · probe · preview · trunk · challenge · arm · band   →  0 hits, case-insensitive, all repos
+STEMS      ledger  probe  preview  trunk  challenge          any suffix
+NARROW     arms?   bands?                                    exact word only
 ```
 
-That is one command and it is the acceptance test. A rename that leaves the word in a comment, a
-test title or an error string has not happened.
+`arm` and `band` are matched as whole words with no suffix, because `armed`, `arming`, `disarmed`,
+`warm`, `harm`, `alarm`, `bandwidth` and `abandon` are ordinary English this rename does not touch.
+
+```
+EXCLUDED PATHS
+  **/benchmarks/**/results/**        a measurement is data, not vocabulary
+  docs/superpowers/specs/**          dated design records
+  docs/superpowers/plans/**          dated design records
+  governance/proofs/**               dated proof records
+  node_modules/  dist/
+
+ALLOWLIST — line-level, each with its reason in the script
+  docs/benchmarks.md      "Gemini 3.1 Pro Preview"     a product name
+```
+
+Every allowlist entry is a line, not a pattern, so a new occurrence of an old name cannot hide
+behind one. The script is the acceptance test: a rename that leaves the word in a comment, a test
+title or an error string has not happened.
 
 ## Order of work
 
 The engine first, because everything else quotes it. Then the skill, whose references teach the
-names to every future subject. Then the bench, which is a generated artefact and can be swept
-mechanically or regenerated.
+names to every future subject. Then the four generated subjects and the two benches, which quote
+both.
+
+```
+1  looprun          engine, tests, docs, CLI, governance/MATRIX.md
+2  agentspec        references, templates, lint rules and messages
+3  agentspec-bench · looprun-bench     live source, subjects, tooling
+4  accounting · lawfirm · homeservices · looprun.ai    generated specs
+```
 
 Each repo lands as one commit — a partial rename is worse than none, since a reader then meets both
-vocabularies in the same file.
+vocabularies in the same file. `scripts/check-plain-names.mjs` ships in step 1 and runs against
+every repo from then on.
