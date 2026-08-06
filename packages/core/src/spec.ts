@@ -12,16 +12,23 @@
  *
  * ONE class, `AgentSpecBase` — a spec is a spec. Its constructor auto-installs, priority-tagged and
  * addressable, exactly:
- *   - ALWAYS the invariants EVERY agent carries: noDuplicateCall (preTool, id `minimal:noDuplicateCall`)
- *     + degenerationGuard (onReply, id `minimal:degenerationGuard`, the sole minimal onReply guard — a
+ *   - ALWAYS the invariants EVERY agent carries: noDuplicateCall (preTool, id `always:noDuplicateCall`)
+ *     + degenerationGuard (onReply, id `always:degenerationGuard`, the sole `always` onReply guard — a
  *     param-free artifact-shape lint). The non-empty-reply guarantee is ENGINE-OWNED rather than a guard:
  *     `finalizeReply` routes a blank delivery (zero-width included) to the non-empty engine-derived
  *     closure, because the respond schema's `message` minLength cannot decide it (a zero-width message
  *     satisfies it). Reply-honesty TEXT judgment is an `llmCheck` an author binds where the domain needs it;
  *   - IFF `destructiveTools` is non-empty, the destructive-safety protocol on those tools:
- *     confirmFirst (id `base:confirmFirst`) + destructiveThrottle (id `base:destructiveThrottle`).
+ *     confirmFirst (id `consent:confirmFirst`) + destructiveThrottle (id `consent:destructiveThrottle`).
+ *
+ * AN ENGINE-INSTALLED GUARD'S ID IS ITS PRIORITY AND ITS KIND — `always:noDuplicateCall`,
+ * `changeAllowed:precondition`, `consent:confirmFirst`. The composition is unique only while each
+ * priority carries distinct kinds, and `addGuard`'s duplicate-id throw is what holds it there: a second
+ * `precondition` installed at `changeAllowed` composes the same id twice and fails at construction.
+ * `agent` is exempt — an author-added guard with no explicit id is minted `agent:${kind}#${seq}`, and
+ * the counter is what lets one author install `precondition` six times.
  * Per-tool schema guards (argRequired/argFormat) are AUTHORED explicitly by the spec — there is no
- * auto-schema layer. The `minimal:`/`base:` id namespaces are load-bearing for resolveBindings priority
+ * auto-schema layer. The id namespaces are load-bearing for resolveBindings priority
  * ordering + assembled prompt prose order. resolveBindings sorts each hook agent → changeAllowed → consent
  * → honesty → always so an agent correction always wins.
  */
@@ -354,7 +361,8 @@ export interface AgentSpecConfig {
  * The ONE AgentSpec class. Its constructor always installs the universal invariants (noDuplicateCall +
  * degenerationGuard) and, iff `destructiveTools` is non-empty, the destructive-safety protocol
  * (confirmFirst + destructiveThrottle) on those tools. Ids and install order are byte-stable
- * (`minimal:*` then `base:*`), which is what makes the priority-sorted assembled prompt prose and the
+ * (the `always` invariants, then the `consent` pair), which is what makes the priority-sorted
+ * assembled prompt prose and the
  * resolveBindings order deterministic.
  */
 export class AgentSpecBase implements AgentSpec {
@@ -425,14 +433,14 @@ export class AgentSpecBase implements AgentSpec {
   }
 
   protected installMinimal(): void {
-    this.addGuard('preTool', 'any', noDuplicateCall(), { priority: 'always', id: 'minimal:noDuplicateCall' });
+    this.addGuard('preTool', 'any', noDuplicateCall(), { priority: 'always', id: 'always:noDuplicateCall' });
     // Output-channel degeneration lint (a param-free artifact-shape lint — it takes no patterns).
-    // FIRST among the onReply minimal guards: a degenerate reply must be re-driven before any
+    // FIRST among the onReply engine guards: a degenerate reply must be re-driven before any
     // content-level check reasons about it. Its prose renders under `## Reply rules` (every hook's prose
     // lands in the assembled prompt; `target:'any'` onReply prose renders there — see assembled-prompt.ts's PROSE-RENDERING
     // RULE and GUARDS.md §2).
-    this.addGuard('onReply', 'any', degenerationGuard(), { priority: 'always', id: 'minimal:degenerationGuard' });
-    // Two reply-level guarantees are deliberately NOT minimal guards:
+    this.addGuard('onReply', 'any', degenerationGuard(), { priority: 'always', id: 'always:degenerationGuard' });
+    // Two reply-level guarantees are deliberately NOT engine guards:
     //   · Claiming inability while every call succeeded is a TEXT judgment, so it belongs to `llmCheck` —
     //     an author binds a rubric on onReply where the domain needs it, rather than injecting a regex lexicon.
     //   · The non-empty reply floor is ENGINE-OWNED: `finalizeReply`'s blank-delivery floor (zero-width
@@ -449,11 +457,11 @@ export class AgentSpecBase implements AgentSpec {
     if (writeTools?.length) {
       this.addGuard('onReply', 'any', claimIsGrounded({ writeTools, outcomes: this.contract?.outcomes }), {
         priority: 'honesty',
-        id: 'minimal:claimIsGrounded',
+        id: 'honesty:claimIsGrounded',
       });
       this.addGuard('onReply', 'any', claimIsComplete({ writeTools, outcomes: this.contract?.outcomes }), {
         priority: 'honesty',
-        id: 'minimal:claimIsComplete',
+        id: 'honesty:claimIsComplete',
       });
     }
     // THE WRITE GATE: the domain states ONCE what its world refuses every write under, and it installs
@@ -478,15 +486,15 @@ export class AgentSpecBase implements AgentSpec {
       if (gated.length) {
         this.addGuard('preTool', [...gated], precondition(gate.ok, gate.reason, gate.prose), {
           priority: 'changeAllowed',
-          id: 'minimal:writeGate',
+          id: 'changeAllowed:precondition',
         });
       }
     }
   }
 
   /** Iff the spec declares destructiveTools: the confirm-first + throttle protocol on exactly those tools
-   *  (validated ⊆ surface), one binding each — `base:confirmFirst` gates every destructive call that is
-   *  not a schema-licensed simulation, `base:destructiveThrottle` caps the turn's effects. A no-op when
+   *  (validated ⊆ surface), one binding each — `consent:confirmFirst` gates every destructive call that is
+   *  not a schema-licensed simulation, `consent:destructiveThrottle` caps the turn's effects. A no-op when
    *  the list is empty — every non-destructive spec is clean. */
   protected installBase(): void {
     const destructive = this.destructiveTools;
@@ -525,8 +533,8 @@ export class AgentSpecBase implements AgentSpec {
       throw new Error(`AgentSpec "${this.id}": destructiveTools not in the tool surface: ${missing.join(', ')}.`);
     }
     const when = this.destructiveWhen;
-    this.addGuard('preTool', destructive, confirmFirst({ when }), { priority: 'consent', id: 'base:confirmFirst' });
-    this.addGuard('preTool', destructive, destructiveThrottle(destructive, { when }), { priority: 'consent', id: 'base:destructiveThrottle' });
+    this.addGuard('preTool', destructive, confirmFirst({ when }), { priority: 'consent', id: 'consent:confirmFirst' });
+    this.addGuard('preTool', destructive, destructiveThrottle(destructive, { when }), { priority: 'consent', id: 'consent:destructiveThrottle' });
   }
 
   /**

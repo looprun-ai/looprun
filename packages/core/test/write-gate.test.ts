@@ -39,7 +39,7 @@ describe('contract.writeGate', () => {
         },
       }),
     );
-    const gate = s.guards.preTool.find((b) => b.id === 'minimal:writeGate');
+    const gate = s.guards.preTool.find((b) => b.id === 'changeAllowed:precondition');
     expect(gate).toBeDefined();
     expect(gate!.target).toEqual(['createBooking', 'placeHold']);
     expect(gate!.guard.check(ctx({ tool: 'createBooking', world: world('suspended') }))).toBe(
@@ -58,7 +58,7 @@ describe('contract.writeGate', () => {
         },
       }),
     );
-    expect(s.guards.preTool.find((b) => b.id === 'minimal:writeGate')!.target).toEqual(['createBooking']);
+    expect(s.guards.preTool.find((b) => b.id === 'changeAllowed:precondition')!.target).toEqual(['createBooking']);
   });
 
   it('an exempt tool that is not a write tool throws at construction', () => {

@@ -1,10 +1,11 @@
-/** The ONE AgentSpec class + guard-binding semantics (the Minimal/Base/Full ladder is collapsed). */
+/** The ONE AgentSpec class + guard-binding semantics (one class, priority-tagged bindings). */
 import { describe, expect, it } from 'vitest';
 import {
   AgentSpecBase,
   custom,
   precondition,
   confirmFirst,
+  noDuplicateCall,
 } from '../src/index.js';
 import { resolveBindings, resolveGuards } from '../src/spec.js';
 import type { AgentWorld, GuardCtx, ObservedCall, DomainContract } from '../src/index.js';
@@ -23,16 +24,16 @@ function fixtureWorld(state: Record<string, unknown> = {}): AgentWorld {
 }
 
 describe('AgentSpecBase — universal invariants', () => {
-  it('installs the minimal invariants (every spec)', () => {
+  it('installs the always invariants (every spec)', () => {
     const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: ['water'] });
-    expect(spec.guards.preTool.map((b) => b.id)).toContain('minimal:noDuplicateCall');
-    expect(spec.guards.onReply.map((b) => b.id)).toContain('minimal:degenerationGuard');
+    expect(spec.guards.preTool.map((b) => b.id)).toContain('always:noDuplicateCall');
+    expect(spec.guards.onReply.map((b) => b.id)).toContain('always:degenerationGuard');
   });
 
-  it('a non-destructive spec installs ONLY the minimal layer (no base:* ids)', () => {
+  it('a non-destructive spec installs no consent guard', () => {
     const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: ['water'] });
-    expect(spec.guards.preTool.map((b) => b.id)).toEqual(['minimal:noDuplicateCall']);
-    expect(spec.guards.preTool.every((b) => !b.id.startsWith('base:'))).toBe(true);
+    expect(spec.guards.preTool.map((b) => b.id)).toEqual(['always:noDuplicateCall']);
+    expect(spec.guards.preTool.every((b) => !b.id.startsWith('consent:'))).toBe(true);
   });
 
   it('rejects terminal tools in the surface', () => {
@@ -99,8 +100,8 @@ describe('AgentSpecBase — destructive protocol (iff destructiveTools)', () => 
   it('installs confirmFirst + destructiveThrottle on destructive tools, in byte-stable order', () => {
     const spec = new AgentSpecBase({ id: 'b', mode: 'M', persona, tools: ['deleteItem'], destructiveTools: ['deleteItem'] });
     const ids = spec.guards.preTool.map((b) => b.id);
-    // minimal installs first, then base.
-    expect(ids).toEqual(['minimal:noDuplicateCall', 'base:confirmFirst', 'base:destructiveThrottle']);
+    // the always invariant installs first, then the consent pair.
+    expect(ids).toEqual(['always:noDuplicateCall', 'consent:confirmFirst', 'consent:destructiveThrottle']);
   });
 
   it('rejects destructive tools outside the surface', () => {
@@ -115,15 +116,27 @@ describe('AgentSpecBase — destructive protocol (iff destructiveTools)', () => 
       destructiveTools: ['del', 'disc'],
     });
     expect(spec.guards.preTool.map((b) => b.id)).toEqual([
-      'minimal:noDuplicateCall', 'base:confirmFirst', 'base:destructiveThrottle',
+      'always:noDuplicateCall', 'consent:confirmFirst', 'consent:destructiveThrottle',
     ]);
   });
 });
 
-describe('AgentSpecBase — minimal onReply layer (no-regex law)', () => {
+describe('AgentSpecBase — the always onReply guard (no-regex law)', () => {
   it('installs exactly degenerationGuard — the empty-reply floor is the ENGINE FLOOR in finalizeReply, not a guard and not the schema', () => {
     const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona, tools: ['x'] });
-    expect(spec.guards.onReply.map((b) => b.id)).toEqual(['minimal:degenerationGuard']);
+    expect(spec.guards.onReply.map((b) => b.id)).toEqual(['always:degenerationGuard']);
+  });
+});
+
+describe('the engine id rule', () => {
+  it('an engine id is its priority and its kind, and a repeat of the pair throws', () => {
+    const spec = new AgentSpecBase({ id: 'b', mode: 'M', persona, tools: ['deleteItem'], destructiveTools: ['deleteItem'] });
+    const engine = [...spec.guards.preTool, ...spec.guards.onReply].filter((b) => b.priority !== 'agent');
+    for (const b of engine) expect(b.id).toBe(`${b.priority}:${b.guard.kind}`);
+    expect(new Set(engine.map((b) => b.id)).size).toBe(engine.length);
+    expect(() =>
+      spec.addGuard('preTool', 'any', noDuplicateCall(), { priority: 'always', id: 'always:noDuplicateCall' }),
+    ).toThrow('AgentSpec guard id "always:noDuplicateCall" already exists');
   });
 });
 
@@ -212,7 +225,7 @@ describe('destructiveWhen — the spec declares which calls of a listed tool are
 
   it('the protective branch is allowed and the destructive branch is gated', () => {
     const s = build();
-    const gate = s.guards.preTool.find((b) => b.id === 'base:confirmFirst')!;
+    const gate = s.guards.preTool.find((b) => b.id === 'consent:confirmFirst')!;
     const at = (args: Record<string, unknown>) =>
       gate.guard.check({
         tool: 'placeHold',

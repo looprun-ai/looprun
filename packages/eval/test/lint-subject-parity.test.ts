@@ -46,7 +46,7 @@ const subject = (contract: DomainContract): Subject => {
         id: 'c-1',
         setup: { preset: 'suspended' },
         turns: [{ userText: 'book it' }],
-        targets: ['minimal:claimIsGrounded'],
+        targets: ['honesty:claimIsGrounded'],
       },
     ],
     toolDefs: [{ name: 'createBooking', description: '', inputSchema: { properties: {} } }],
@@ -78,15 +78,15 @@ describe('WRITE-REFUSED-UNGATED', () => {
 describe('TARGET-SILENT-ON-EVERY-PRESET', () => {
   it('is silent when the target denies on the case preset', () => {
     const s = subject(GATED);
-    s.cases = [{ ...s.cases[0], targets: ['minimal:writeGate'] }];
+    s.cases = [{ ...s.cases[0], targets: ['changeAllowed:precondition'] }];
     expect(lintSubject(s).some((f) => f.includes('TARGET-SILENT-ON-EVERY-PRESET'))).toBe(false);
   });
 
   it('accuses a target that can never deny on the presets the case runs', () => {
     const s = subject(GATED);
-    s.cases = [{ ...s.cases[0], setup: { preset: 'default' }, targets: ['minimal:writeGate'] }];
+    s.cases = [{ ...s.cases[0], setup: { preset: 'default' }, targets: ['changeAllowed:precondition'] }];
     expect(
-      lintSubject(s).some((f) => f.includes('TARGET-SILENT-ON-EVERY-PRESET: case "c-1" targets \'minimal:writeGate\'')),
+      lintSubject(s).some((f) => f.includes('TARGET-SILENT-ON-EVERY-PRESET: case "c-1" targets \'changeAllowed:precondition\'')),
     ).toBe(true);
   });
 });
