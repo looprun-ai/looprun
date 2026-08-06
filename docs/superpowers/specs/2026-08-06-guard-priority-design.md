@@ -159,6 +159,23 @@ The name must also stay domain-agnostic: the engine mints ONE id for every domai
 behind it is the domain's own. `changeAllowed:precondition` says the engine's two facts — the
 question the guard answers and the check it performs — and says nothing the engine cannot know.
 
+**The rule produces a unique id only while each engine priority carries distinct kinds**, and what
+holds it there is a check `addGuard` already performs:
+
+```ts
+if (all.some((b) => b.id === id)) throw new Error(`AgentSpec guard id "${id}" already exists`);
+```
+
+A second `precondition` installed at `changeAllowed` composes the id `changeAllowed:precondition`
+twice and hits that line at construction, so the collision is loud rather than silent. The rule is
+therefore an invariant to STATE, not a check to add — and the sentence stating it belongs beside the
+seven installs, because a reader who does not know the id is composed cannot see what the throw
+protects.
+
+`agent` is exempt by construction: an author-added guard with no explicit `{ id }` is minted
+`agent:${kind}#${++this.seq}`, and the counter is what lets one author install `precondition` six
+times without a collision.
+
 ## The one place the rename changes behaviour
 
 Two lines decide which guards the coverage census demands a case for:
@@ -341,6 +358,11 @@ EXCLUDED PATHS         **/results/**                       a number taken on a d
                        node_modules/  dist/
 ```
 
+**`full` is not on that list, and the gate cannot put it there.** The word is ordinary English in
+every repo — a full refund, a full sweep, a full context — so a gate that banned it would fire on
+prose it does not own. Its removal is a single line in `PRIORITY_ORDER` plus its member in the union,
+and step 1 below carries it as a named item rather than as a side effect of retyping the union.
+
 `CHANGELOG.md` is read by the gate the way a benchmark result is — not at all. A dated release note
 keeps the names its release shipped, and the record of a breaking rename IS the pair of names:
 
@@ -356,9 +378,15 @@ names to every future subject. Then the subjects, which quote both.
 
 ```
 1  looprun          Layer → Priority, LAYER_ORDER → PRIORITY_ORDER, the binding field, the seven
-                    ids, contract.writeGate → contract.changeAllowed, the catalog's
-                    confirmation → consent, delete `full`, the census rule, GUARDS.md, tutorial
-                    03 · 04 · 05 and the tutorial snippet; the grep gate ships here
+                    ids and the invariant that keeps them unique, contract.writeGate →
+                    contract.changeAllowed, the catalog's confirmation → consent, the census rule,
+                    GUARDS.md, tutorial 03 · 04 · 05 and the tutorial snippet; the grep gate
+                    ships here.
+                    `full` is its OWN item, checked by reading rather than by the gate: the union
+                    member (`spec.ts:38`) and its order slot (`spec.ts:200`) both go. Two dated
+                    design records quote the whole union — `2026-07-28-symbol-inventory.md` and
+                    `2026-07-28-tutorial-outline-final.md` — and the gate reaches those through
+                    `Layer`, which they also name.
 2  agentspec        guard-catalog.md, norms.md, spec-template.ts
 3  agentspec-bench  case targets, profile keys, bundle-test ledgers, gen/world.ts, thinking logs
 4  accounting · lawfirm · homeservices    eleven hits across eight files
