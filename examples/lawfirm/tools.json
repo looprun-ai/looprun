@@ -59,12 +59,12 @@
     },
     {
       "name": "closeMatter",
-      "description": "Close a matter (ends all work on it; cannot be undone). DESTRUCTIVE, two-step: call with confirmed=false first — it returns the confirmation question without closing; call with confirmed=true ONLY after the user explicitly agrees in a later turn. Fails when the matter has unbilled time entries — report the amount and ask the user how to proceed (billing is the user's decision) — or when it is already closed; a call that would fail also fails as a probe.",
+      "description": "Close a matter (ends all work on it; cannot be undone). DESTRUCTIVE, two-step: call with confirmed=false first — it returns the confirmation question without closing; call with confirmed=true ONLY after the user explicitly agrees in a later turn. Fails when the matter has unbilled time entries — report the amount and ask the user how to proceed (billing is the user's decision) — or when it is already closed; a call that would fail also fails as a simulate.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "matterId": { "type": "string", "pattern": "^m_[0-9]+$", "description": "The matter to close." },
-          "confirmed": { "type": "boolean", "description": "false = probe (returns the confirmation question, no effect); true = execute after explicit user agreement. Omitted is treated as false (fail-safe)." }
+          "confirmed": { "type": "boolean", "description": "false = simulate (returns the confirmation question, no effect); true = execute after explicit user agreement. Omitted is treated as false (fail-safe)." }
         },
         "required": ["matterId"]
       }
@@ -152,12 +152,12 @@
     },
     {
       "name": "cancelDeadline",
-      "description": "Cancel a PENDING deadline (removes it from the docket; cannot be undone). DESTRUCTIVE, two-step: call with confirmed=false first — it returns the confirmation question without cancelling; call with confirmed=true ONLY after the user explicitly agrees in a later turn. A FILED deadline is immutable and can never be cancelled; a call that would fail also fails as a probe.",
+      "description": "Cancel a PENDING deadline (removes it from the docket; cannot be undone). DESTRUCTIVE, two-step: call with confirmed=false first — it returns the confirmation question without cancelling; call with confirmed=true ONLY after the user explicitly agrees in a later turn. A FILED deadline is immutable and can never be cancelled; a call that would fail also fails as a simulate.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "deadlineId": { "type": "string", "pattern": "^dl_[0-9]+$", "description": "The deadline to cancel." },
-          "confirmed": { "type": "boolean", "description": "false = probe (returns the confirmation question, no effect); true = execute after explicit user agreement. Omitted is treated as false (fail-safe)." }
+          "confirmed": { "type": "boolean", "description": "false = simulate (returns the confirmation question, no effect); true = execute after explicit user agreement. Omitted is treated as false (fail-safe)." }
         },
         "required": ["deadlineId"]
       }

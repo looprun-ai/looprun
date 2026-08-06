@@ -1,18 +1,18 @@
 /**
- * Signal-mechanics probes — verifies HOW each guard hook surfaces in a turnRecord when driven by the
+ * Signal-mechanics simulations — verifies HOW each guard hook surfaces in a turnRecord when driven by the
  * scripted model, so proof authors can rely on these conventions:
  *
  *  - preTool veto     → recoveryEvents `${dim}:${kind}:${tool}` (call lands ok:false; the model sees a
  *                       failure result and continues with the NEXT script step).
  *  - onReply redrive  → recoveryEvents `redrive:${kind}`; the redrive re-generates ONE respond
  *                       (respond-only, toolChoice pinned) — a correction step returning a plain
- *                       `{ text: '…' }` part falls back to that text, which is what these probes use.
+ *                       `{ text: '…' }` part falls back to that text, which is what these simulations use.
  *  - postTool report  → recoveryEvents `output:${kind}:${tool}` AND the violation joins the same
  *                       redrive set (so a clean `{ text }` step clears it in one redrive).
  *  - onInput refusal  → recoveryEvents `onInput:${kind}`; the turn is tripwired (no domain tool calls).
  *  - empty terminal   → a `respond` with EMPTY message does not set the terminal reply → the runtime
  *                       forces a terminal (`forced-terminal` tag) BEFORE the onReply checks; scripts
- *                       should always close with a NON-empty `respond` unless probing that path.
+ *                       should always close with a NON-empty `respond` unless simulating that path.
  */
 import { describe, expect, it } from 'vitest';
 import { custom, resultInvariant } from '@looprun-ai/core';

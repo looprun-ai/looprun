@@ -333,7 +333,7 @@ export interface AgentSpecConfig {
   destructiveTools?: string[];
   /** Per destructive tool, the confirm MECHANISM the auto destructive-safety layer installs (P8a-clean —
    *  no linguistic content). `'arg'` (default for any unlisted destructive tool) = a `confirmed:true`
-   *  flag gated on a prior-turn probe; `'prior-ask'` = a flag-less action gated on a prior-turn ask event.
+   *  flag gated on a prior-turn simulate; `'prior-ask'` = a flag-less action gated on a prior-turn ask event.
    *  Absent ⇒ every destructive tool uses `'arg'` (byte-stable with the pre-mechanism layer). */
   confirmMechanism?: Record<string, 'arg' | 'prior-ask'>;
   /** Per destructive tool that acts on NO identifiable record, the human-facing label its consent
@@ -555,7 +555,7 @@ export class AgentSpecBase implements AgentSpec {
       this.addGuard('preTool', priorAskTools, confirmFirst({ flag: false, when }), { layer: 'base', id: 'base:confirmFirstPriorAsk' });
     }
     // The throttle needs the mechanism split too: a `'prior-ask'` tool has no confirm flag, so it has no
-    // preview shape and every same-step sibling of it counts as an effect.
+    // simulation shape and every same-step sibling of it counts as an effect.
     this.addGuard('preTool', destructive, destructiveThrottle(destructive, { flagless: priorAskTools, when }), { layer: 'base', id: 'base:destructiveThrottle' });
   }
 

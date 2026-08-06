@@ -4,7 +4,7 @@
  * what the guard ACTUALLY does. A test named "BREAK" asserts the guard WRONGLY returns null (allow) on a
  * call that should be denied — a CONFIRMED bypass. A test named "HOLDS" asserts the guard correctly denies.
  *
- * Guard source is NOT modified; this only probes behaviour.
+ * Guard source is NOT modified; this only simulations behaviour.
  */
 import { describe, expect, it } from 'vitest';
 import type { GuardCtx, HistoryTurn, ObservedCall } from '../../src/rules.js';
@@ -42,59 +42,59 @@ const okCall = (name: string, turn: number, args: Record<string, unknown>, extra
 describe('confirmFirst — adversarial', () => {
   const g = confirmFirst(); // via:'either', flag:'confirmed', within:1
 
-  it('HOLDS: an UNDER-SPECIFIED probe (empty non-flag args) does NOT license a confirm of ANY record', () => {
-    // Attacker: turn 1 probe deleteRecord with NO recordId (empty args except confirmed:false). Its
+  it('HOLDS: an UNDER-SPECIFIED simulate (empty non-flag args) does NOT license a confirm of ANY record', () => {
+    // Attacker: turn 1 simulate deleteRecord with NO recordId (empty args except confirmed:false). Its
     // non-flag key set is [] and `.every()` over [] is vacuously true, so a SUBSET test would match ANY
-    // confirm. Binding by set EQUALITY is what denies it: [] ≠ ['recordId'] → the preview was not of this act.
-    const probe = okCall('deleteRecord', 1, { confirmed: false }); // no recordId
+    // confirm. Binding by set EQUALITY is what denies it: [] ≠ ['recordId'] → the simulation was not of this act.
+    const simulate = okCall('deleteRecord', 1, { confirmed: false }); // no recordId
     const confirm = ctxWith({
       tool: 'deleteRecord',
-      args: { recordId: 'victim-999', confirmed: true }, // a record NEVER previewed
-      observed: [probe],
+      args: { recordId: 'victim-999', confirmed: true }, // a record NEVER simulated
+      observed: [simulate],
       turnIndex: 2,
     });
     expect(g.check(confirm)).not.toBeNull();
   });
 
-  it('HOLDS: a FULLY-specified probe of a DIFFERENT record does NOT license (probe not a subset)', () => {
-    const probe = okCall('deleteRecord', 1, { recordId: 'A', confirmed: false });
+  it('HOLDS: a FULLY-specified simulate of a DIFFERENT record does NOT license (simulate not a subset)', () => {
+    const simulate = okCall('deleteRecord', 1, { recordId: 'A', confirmed: false });
     const confirm = ctxWith({
       tool: 'deleteRecord',
       args: { recordId: 'B', confirmed: true },
-      observed: [probe],
+      observed: [simulate],
       turnIndex: 2,
     });
     expect(g.check(confirm)).not.toBeNull();
   });
 
-  it('HOLDS: a FAILED probe (ok:false) does NOT license the confirm', () => {
-    const probe = okCall('deleteRecord', 1, { recordId: 'A', confirmed: false }, { ok: false });
+  it('HOLDS: a FAILED simulate (ok:false) does NOT license the confirm', () => {
+    const simulate = okCall('deleteRecord', 1, { recordId: 'A', confirmed: false }, { ok: false });
     const confirm = ctxWith({
       tool: 'deleteRecord',
       args: { recordId: 'A', confirmed: true },
-      observed: [probe],
+      observed: [simulate],
       turnIndex: 2,
     });
     expect(g.check(confirm)).not.toBeNull();
   });
 
-  it('HOLDS: a SAME-TURN probe does NOT license (recency lower bound diff>=1)', () => {
-    const probe = okCall('deleteRecord', 2, { recordId: 'A', confirmed: false });
+  it('HOLDS: a SAME-TURN simulate does NOT license (recency lower bound diff>=1)', () => {
+    const simulate = okCall('deleteRecord', 2, { recordId: 'A', confirmed: false });
     const confirm = ctxWith({
       tool: 'deleteRecord',
       args: { recordId: 'A', confirmed: true },
-      observed: [probe],
+      observed: [simulate],
       turnIndex: 2,
     });
     expect(g.check(confirm)).not.toBeNull();
   });
 
-  it('HOLDS: a STALE probe (diff 2 > within 1) does NOT license', () => {
-    const probe = okCall('deleteRecord', 1, { recordId: 'A', confirmed: false });
+  it('HOLDS: a STALE simulate (diff 2 > within 1) does NOT license', () => {
+    const simulate = okCall('deleteRecord', 1, { recordId: 'A', confirmed: false });
     const confirm = ctxWith({
       tool: 'deleteRecord',
       args: { recordId: 'A', confirmed: true },
-      observed: [probe],
+      observed: [simulate],
       turnIndex: 3,
     });
     expect(g.check(confirm)).not.toBeNull();
@@ -116,7 +116,7 @@ describe('confirmFirst — adversarial', () => {
     expect(g.check(confirm)).not.toBeNull();
   });
 
-  it('HOLDS (via:probe): an unrelated ask does NOT license — only a record-bound probe does', () => {
+  it('HOLDS (via:simulate): an unrelated ask does NOT license — only a record-bound simulate does', () => {
     const gp = confirmFirst();
     const asked: HistoryTurn = {
       turnIndex: 1, userText: 'chat', reply: 'unrelated', toolCalls: [],
@@ -131,13 +131,13 @@ describe('confirmFirst — adversarial', () => {
     expect(gp.check(confirm)).not.toBeNull();
   });
 
-  it('HOLDS: an under-specified probe does not bypass the strict record-bound variant', () => {
+  it('HOLDS: an under-specified simulate does not bypass the strict record-bound variant', () => {
     const gp = confirmFirst();
-    const probe = okCall('deleteRecord', 1, { confirmed: false });
+    const simulate = okCall('deleteRecord', 1, { confirmed: false });
     const confirm = ctxWith({
       tool: 'deleteRecord',
       args: { recordId: 'victim', confirmed: true },
-      observed: [probe],
+      observed: [simulate],
       turnIndex: 2,
     });
     expect(gp.check(confirm)).not.toBeNull();
@@ -177,9 +177,9 @@ describe('destructiveThrottle — adversarial', () => {
   const g = destructiveThrottle(['deleteRecord', 'wipeAll']);
 
   it('CLOSED: two effected calls flagged confirmed:false are two EFFECTS — the second is denied', () => {
-    // Keying `isProbe` on args.confirmed===false without consulting tookEffect would let a tool that
+    // Keying `isSimulate` on args.confirmed===false without consulting tookEffect would let a tool that
     // mutates while confirmed:false (it ignores the flag semantics) produce two real effects that both
-    // look like probes → 0 prior effects counted → the second destructive call slips the n:1 cap. A
+    // look like simulations → 0 prior effects counted → the second destructive call slips the n:1 cap. A
     // call that TOOK EFFECT is an effect, whatever flags it carries.
     const firstEffect = okCall('deleteRecord', 5, { recordId: 'A', confirmed: false }, { tookEffect: true });
     const second = ctxWith({
@@ -192,7 +192,7 @@ describe('destructiveThrottle — adversarial', () => {
   });
 
   it('CLOSED: an effected write that ALSO returned requiresConfirmation counts as an effect', () => {
-    // The other half of the same hole: `resultFlags.requiresConfirmation` alone would mark a call a probe.
+    // The other half of the same hole: `resultFlags.requiresConfirmation` alone would mark a call a simulate.
     // A world that both mutates and asks (a "done, but confirm the rest" shape) must not buy a free
     // second destructive call. tookEffect is the authority.
     const firstEffect = okCall('deleteRecord', 5, { recordId: 'A' }, { tookEffect: true, resultFlags: { requiresConfirmation: true } });
@@ -200,11 +200,11 @@ describe('destructiveThrottle — adversarial', () => {
     expect(g.check(second)).not.toBeNull();
   });
 
-  it('CONTROL: a confirmed:false call that changed NOTHING is still a probe — the execute passes', () => {
-    // The effect test must not break the two-step flow the throttle exists to permit: a probe that took no
-    // effect stays a probe, so the approved execute in the same turn is still allowed.
-    const probe = okCall('deleteRecord', 5, { recordId: 'A', confirmed: false }, { tookEffect: false });
-    const execute = ctxWith({ tool: 'deleteRecord', args: { recordId: 'A', confirmed: true }, observed: [probe], turnIndex: 5 });
+  it('CONTROL: a confirmed:false call that changed NOTHING is still a simulate — the execute passes', () => {
+    // The effect test must not break the two-step flow the throttle exists to permit: a simulate that took no
+    // effect stays a simulate, so the approved execute in the same turn is still allowed.
+    const simulate = okCall('deleteRecord', 5, { recordId: 'A', confirmed: false }, { tookEffect: false });
+    const execute = ctxWith({ tool: 'deleteRecord', args: { recordId: 'A', confirmed: true }, observed: [simulate], turnIndex: 5 });
     expect(g.check(execute)).toBeNull();
   });
 
@@ -230,17 +230,17 @@ describe('destructiveThrottle — adversarial', () => {
     expect(g.check(second)).toBeNull(); // correct: nothing effected yet
   });
 
-  it('HOLDS: a genuine probe (recorded tookEffect:false) does not block the approved execute', () => {
-    // `tookEffect:false` is POSITIVE evidence that the probe changed nothing — the backend records
+  it('HOLDS: a genuine simulate (recorded tookEffect:false) does not block the approved execute', () => {
+    // `tookEffect:false` is POSITIVE evidence that the simulate changed nothing — the backend records
     // it whenever the world keeps a ledger. Without it the call is unverified, not effect-free.
-    const probe = okCall('deleteRecord', 5, { recordId: 'A', confirmed: false }, {
+    const simulate = okCall('deleteRecord', 5, { recordId: 'A', confirmed: false }, {
       tookEffect: false,
       resultFlags: { requiresConfirmation: true },
     });
     const execute = ctxWith({
       tool: 'deleteRecord',
       args: { recordId: 'A', confirmed: true },
-      observed: [probe],
+      observed: [simulate],
       turnIndex: 5,
     });
     expect(g.check(execute)).toBeNull();

@@ -23,9 +23,9 @@ function world(): AgentWorld {
       // The two-step protocol is the WORLD's: an unconfirmed destructive call changes nothing and names
       // the record it needs confirmation for, which is what the engine builds its question from.
       if (name === 'deleteItem' && args.confirmed !== true) {
-        const probe = { requiresConfirmation: true, id: args.id };
-        calls.push({ name, args, result: probe, tookEffect: false });
-        return probe;
+        const simulate = { requiresConfirmation: true, id: args.id };
+        calls.push({ name, args, result: simulate, tookEffect: false });
+        return simulate;
       }
       const result = { success: true };
       calls.push({ name, args, result, tookEffect: true });
@@ -59,7 +59,7 @@ describe('runSpecConversation', () => {
     spec.addGuard('preTool', ['deleteItem'], confirmFirst(), { id: 'agent:confirmFirst' });
 
     const scripted = scriptedModel([
-      // turn 0: the model tries confirmed:true directly — vetoed; then probes, and the world's
+      // turn 0: the model tries confirmed:true directly — vetoed; then simulations, and the world's
       // "I need confirmation on x" is what makes the engine put the question on the screen.
       [{ tool: 'deleteItem', args: { id: 'x', confirmed: true } }],
       [{ tool: 'deleteItem', args: { id: 'x' } }],
@@ -80,7 +80,7 @@ describe('runSpecConversation', () => {
     expect(res.turnRecords[0].assistantFinalText).toContain('To confirm x, reply: CONFIRM X');
     expect(res.turnRecords[0].recoveryEvents).toContain('run:confirmFirst:deleteItem');
     expect(res.turnRecords[1].assistantFinalText).toBe(nothingDone('Deleted x.'));
-    expect(res.turnRecords[1].recoveryEvents).toEqual([]); // confirmed:true legal after the earlier-turn probe
+    expect(res.turnRecords[1].recoveryEvents).toEqual([]); // confirmed:true legal after the earlier-turn simulate
     expect(res.turnRecords[1].toolCalls.map((c) => c.name)).toEqual(['deleteItem']);
   });
 

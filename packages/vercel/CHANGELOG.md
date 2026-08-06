@@ -18,7 +18,7 @@
 - 5635d4c: Consent to a destructive act is a token the engine issues and the user types back.
 
   A call that answers `requiresConfirmation` names its record and the engine opens a question bound to it;
-  a destructive tool with no preview form is denied, and the denial opens a question from the label the
+  a destructive tool with no simulate form is denied, and the denial opens a question from the label the
   spec declared. The engine renders the question into the delivered text, the runtime reads the next
   incoming message once and marks the question consumed if the user's own words carry its token, and
   `confirmFirst` allows the act only when a consumed question is about that call. No model participates in
@@ -26,7 +26,7 @@
 
   **Breaking changes**
 
-  - `confirmFirst` takes one option, `flag`, and it says which call ACTS — the preview runs freely because
+  - `confirmFirst` takes one option, `flag`, and it says which call ACTS — the simulation runs freely because
     it is how the world raises the question. `flag: false` is the one-step shape. `via` and `within` are
     gone.
   - `noActAfterAskSameTurn` and `pendingConfirmMustAsk` are removed. A token can only arrive in a user
@@ -292,7 +292,7 @@
     **minimal context** (`buildForceCloseMessages`) — the turn's user tail (incl. the account-state
     block) + a compact digest of THIS turn's fresh successful tool results (`digestTurnToolResults`,
     resultOk-filtered, terminals skipped, capped 600/2400 chars) + the steering line — not the whole
-    transcript, the probe-proven short-context regime for a tiny model. New pure exports:
+    transcript, the simulate-proven short-context regime for a tiny model. New pure exports:
     `ingestStructuredObject`, `digestTurnToolResults`, `buildForceCloseMessages`.
 
   **Governed-turn hardening (guards-v2)** — four refinements to the reply/confirm guards; all
@@ -306,7 +306,7 @@
   - `pendingConfirmMustAsk` is now **resolution-aware** and takes an optional `{ confirmArg }` (default
     `confirmed`) — a pending `requiresConfirmation` need not be re-asked when the SAME tool ran OK with
     the confirm flag set on the SAME record (canonical args minus that flag) later in the turn (the legal
-    probe→approved-execute tail). Record identity is domain-neutral (canonical args, no id regex).
+    simulate→approved-execute tail). Record identity is domain-neutral (canonical args, no id regex).
   - `confirmFirst` gains a per-tool **mechanism**: `confirmFirst(opts?: string | { argFlag?, mechanism? })`.
     `'arg'` (default) is today's confirm-flag gate; `'prior-ask'` gates a flag-less destructive tool on a
     prior-turn `askUser` (ask, wait, act only in a LATER turn). `AgentSpecConfig.confirmMechanism?:

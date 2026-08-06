@@ -285,7 +285,7 @@ export function confirmFirst(opts?: {
       // so a gate on it denies a call no consent can ever license. A tool with no entry here is
       // destructive on every call, which is what a bare list means.
       if (when?.[tool] && !when[tool](ctx.args)) return null;
-      // A preview changes nothing and is how the question gets asked; only the acting call is gated.
+      // A simulation changes nothing and is how the question gets asked; only the acting call is gated.
       if (flag !== false && ctx.args[flag] !== true) return null;
 ```
 
@@ -388,7 +388,7 @@ Fold the predicate into the effect test (`packages/core/src/guards/confirmation.
 
 ```ts
   const isEffectAmong = (pending: readonly ObservedCall[]) => (o: ObservedCall): boolean =>
-    set.has(o.name) && isDestructive(o.name, o.args) && !(pending.includes(o) ? pendingIsProbe(o) : executedIsProbe(o));
+    set.has(o.name) && isDestructive(o.name, o.args) && !(pending.includes(o) ? pendingIsSimulate(o) : executedIsSimulate(o));
 ```
 
 And short-circuit the gated call itself (`packages/core/src/guards/confirmation.ts:152`):
@@ -1001,7 +1001,7 @@ three new findings under `lintSubject` with what each one reads (the subject's p
 - [ ] **Step 5: `packages/eval/README.md` and `BACKLOG.md`**
 
 README: `--spec-laws` covers the parity law, the target-silence law and the positional-id law, and
-what each needs from the subject. `BACKLOG.md:13` (the probe-parity row): the execution-based half is
+what each needs from the subject. `BACKLOG.md:13` (the simulate-parity row): the execution-based half is
 the same question this law answers, and the row states which part remains.
 
 - [ ] **Step 6: Verify the docs gate**

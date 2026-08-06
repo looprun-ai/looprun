@@ -88,7 +88,7 @@ Each red-team PoC becomes a permanent regression test.
 - **M5** `deriveClaimsFromLedger` positional label misalignment → attach each produced label to its
   own call; reads do not feed the write-label stream.
 - **M6** `deriveClaimsFromLedger` branch order → check `tookEffect` before `requiresConfirmation`.
-- **M7** `destructiveThrottle` `isProbe` keys on `confirmed:false` → a write that `tookEffect` is an
+- **M7** `destructiveThrottle` `isSimulate` keys on `confirmed:false` → a write that `tookEffect` is an
   effect regardless of the flag.
 - **M8** premature-terminal ask leak → add `prematureTerminalCalls(steps)` + prune from `observed`
   in the premature branch (both backends), symmetric with the superseded prune. (Also `ctx.asked`—

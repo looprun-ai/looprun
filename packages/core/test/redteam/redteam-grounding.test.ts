@@ -219,7 +219,7 @@ describe('VECTOR 1 — CLOSED: fabricated success with zero effected writes is d
     expect(grounded({ did: [{ op: 'book', target: 'BK-1', outcome: 'success' }] })).toBeTruthy();
   });
 
-  it('success against a probe write (tookEffect:false) is denied', () => {
+  it('success against a simulate write (tookEffect:false) is denied', () => {
     const ctx = {
       did: [{ op: 'book', target: 'BK-1', outcome: 'success' }] as Intention[],
       observed: [call('createBooking', { bookingId: 'BK-1' }, { tookEffect: false })],

@@ -3,7 +3,7 @@
  *
  * A generated subject emits ONLY the object literal described here; the builder
  * (`define-world.ts`) supplies the machinery, so no world hand-writes it:
- * RECEPTION, two-step probes, deterministic ids, projection, audit, presets, gates, and the
+ * RECEPTION, two-step simulations, deterministic ids, projection, audit, presets, gates, and the
  * quarantined `custom` escape hatch.
  */
 
@@ -79,7 +79,7 @@ export interface TransitionResult {
 export interface ToolDecl {
   kind: 'read' | 'write' | 'transition' | 'custom';
   args?: readonly ArgDecl[];
-  /** two-step probe/confirm (spec #2): `confirmed !== true` ⇒ side-effect-free preview. */
+  /** two-step simulate/confirm (spec #2): `confirmed !== true` ⇒ side-effect-free simulation. */
   twoStep?: boolean;
   gates?: readonly Gate[];
   read?: ReadResult;
@@ -163,7 +163,7 @@ export interface BuiltWorld {
 
 export interface AuditEntry {
   tool: string;
-  outcome: 'ok' | 'denied' | 'preview' | 'unknown-tool' | 'custom';
+  outcome: 'ok' | 'denied' | 'simulated' | 'unknown-tool' | 'custom';
   detail?: string;
 }
 

@@ -111,7 +111,7 @@ describe('jargonScrub', () => {
   });
   // BREAK: key wrapped in parens — boundary next to '(' / ')' fails.
   it('BREAK paren-key: "(beta)" is never rewritten', () => {
-    const m = jargonScrub({ '(beta)': 'preview' });
+    const m = jargonScrub({ '(beta)': 'early access' });
     expect(m.apply('This is the (beta) release.', rctx('') as GuardCtx)).toContain('(beta)');
   });
 });

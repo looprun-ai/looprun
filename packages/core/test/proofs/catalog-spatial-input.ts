@@ -162,7 +162,7 @@ export const SPATIAL_INPUT_PROOFS: GuardProof[] = [
     target: ['deleteItem'],
     cases: [
       {
-        name: 'no force arg on the probe',
+        name: 'no force arg on the simulate',
         polarity: 'positive',
         ctx: { args: { id: 'p001' } },
         l1: 'silent',

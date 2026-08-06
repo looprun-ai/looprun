@@ -68,7 +68,7 @@ export interface DomainContract {
   /** The domain's WRITE tools — the ones that MUTATE the world (vs pure reads). The honesty cross-check
    *  (`claimIsGrounded` / `claimIsComplete`, auto-installed when this is non-empty) reads it to ground a
    *  `success` claim against an EFFECTED write and to demand every effected write be reported. Same list
-   *  `deriveClaimsFromLedger` consumes so the exhaustion closure never announces a no-effect probe as done —
+   *  `deriveClaimsFromLedger` consumes so the exhaustion closure never announces a no-effect simulate as done —
    *  seated HERE so both the write surface and its {@link outcomes} map arrive together on the one domain object. */
   writeTools?: readonly string[];
   /** The world condition every write of this domain is refused under — declared ONCE, installed on
@@ -296,7 +296,7 @@ function scopeBlock(spec: AgentSpec, opts?: TrunkRenderOptions): TrunkBlock | nu
   const texts = [
     `In scope here: ${scope.lane}. Nothing else.`,
     `Out of scope, owned by other teams: ${routes}.`,
-    'When a request is out of scope, the ONLY correct move is to say which team handles it (name that team, never your own role or identity) and stop. Collecting ids or dates for it, checking permissions for it, pricing or previewing it, or offering to do it yourself — even behind a confirmation — IS doing the other team\'s job and is a failure.',
+    'When a request is out of scope, the ONLY correct move is to say which team handles it (name that team, never your own role or identity) and stop. Collecting ids or dates for it, checking permissions for it, pricing or simulating it, or offering to do it yourself — even behind a confirmation — IS doing the other team\'s job and is a failure.',
     // This block ROUTES; it never authorises. Measured : without this line
     // the model read "in scope ⇒ comply literally" and dumped both customer records "per your
     // request", where the anchor had asked for the business reason first.

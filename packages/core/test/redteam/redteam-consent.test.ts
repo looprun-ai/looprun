@@ -68,7 +68,7 @@ describe('V1 — a consent licenses the act it was given for, and nothing else',
   });
 
   it('CLOSED: an act carrying extra destructive fields is still licensed — the record is what was agreed', () => {
-    // The token names the RECORD, so a field the user never previewed cannot make it a different act:
+    // The token names the RECORD, so a field the user never simulated cannot make it a different act:
     // what bounds the blast radius of an agreed act is destructiveThrottle, not the consent gate.
     const g = confirmFirst();
     const ctx = baseCtx({ tool: 'wipe', args: { account: 'A', scope: 'EVERYTHING', confirmed: true }, turnIndex: 1, consent: consentFor('wipe', 'A') });
@@ -126,9 +126,9 @@ describe('V4 — destructiveThrottle: one destructive effect per turn', () => {
     expect(g.check(ctx)).not.toBeNull();
   });
 
-  it('CLOSED: a PROBE (requiresConfirmation) does not count — the approved execute still passes', () => {
+  it('CLOSED: a SIMULATE (requiresConfirmation) does not count — the approved execute still passes', () => {
     const g = destructiveThrottle(['refund']);
-    // `tookEffect:false` is what the backend records for a probe against a world that keeps a ledger —
+    // `tookEffect:false` is what the backend records for a simulate against a world that keeps a ledger —
     // POSITIVE evidence that nothing changed. That evidence is REQUIRED: an unrecorded call is
     // unverified, not effect-free, so it counts against the cap.
     const ctx = baseCtx({ tool: 'refund', args: { id: '1', confirmed: true }, turnIndex: 0, observed: [obs('refund', { id: '1', confirmed: false }, 0, { tookEffect: false, resultFlags: { requiresConfirmation: true } })] });
@@ -143,11 +143,11 @@ describe('V4 — destructiveThrottle: one destructive effect per turn', () => {
     expect(g.check(ctx)).not.toBeNull();
   });
 
-  it('CONTROL: a same-step MULTI-PREVIEW is NOT capped — neither probe has run yet', () => {
+  it('CONTROL: a same-step MULTI-SIMULATION is NOT capped — neither simulate has run yet', () => {
     const g = destructiveThrottle(['refund']);
-    // "Preview refunding both orders" → two `confirmed:false` calls in ONE step. A sibling has not
+    // "Simulation refunding both orders" → two `confirmed:false` calls in ONE step. A sibling has not
     // executed, so no world record of its effect can exist; its declared flag is the only evidence
-    // there is, and vetoing the second would deny the preview for an effect nothing has had.
+    // there is, and vetoing the second would deny the simulation for an effect nothing has had.
     const ctx = baseCtx({
       tool: 'refund', args: { id: '2', confirmed: false }, turnIndex: 0,
       siblingCallsThisStep: [obs('refund', { id: '1', confirmed: false }, 0)],
@@ -164,11 +164,11 @@ describe('V4 — destructiveThrottle: one destructive effect per turn', () => {
     expect(g.check(ctx)).not.toBeNull();
   });
 
-  it('CONTROL (final review): a preview that OMITS the flag is a preview — parity with confirmFirst', () => {
+  it('CONTROL (final review): a simulation that OMITS the flag is a simulation — parity with confirmFirst', () => {
     const g = destructiveThrottle(['refund']);
-    // `confirmFirst`'s probe variant licenses "a `flag:false`/ABSENT probe", and its flag variant returns null on
+    // `confirmFirst`'s simulate variant licenses "a `flag:false`/ABSENT simulate", and its flag variant returns null on
     // `args[flag] !== true` — so an omitted flag is a not-yet-confirmed call to the consent gate. The
-    // throttle read it as an act and vetoed the second preview of a two-booking cancel.
+    // throttle read it as an act and vetoed the second simulation of a two-booking cancel.
     const ctx = baseCtx({
       tool: 'refund', args: { id: '2' }, turnIndex: 0,
       siblingCallsThisStep: [obs('refund', { id: '1' }, 0)],
@@ -176,7 +176,7 @@ describe('V4 — destructiveThrottle: one destructive effect per turn', () => {
     expect(g.check(ctx)).toBeNull();
   });
 
-  it('CONTROL (final review): a FLAGLESS (prior-ask) tool has no preview shape — the first sibling caps', () => {
+  it('CONTROL (final review): a FLAGLESS (prior-ask) tool has no simulation shape — the first sibling caps', () => {
     const g = destructiveThrottle(['wipe'], { flagless: ['wipe'] });
     // A `'prior-ask'` tool carries no confirm flag at all, so "not confirmed" says nothing about it and
     // every admitted call is an act. Without this the not-confirmed rule above would make the same-step

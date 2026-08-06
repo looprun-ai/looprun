@@ -7,9 +7,9 @@ Depends on: increments 1–2 (schemas, validate)
 
 The world is the largest generated artifact (Atlas: 2,014 hand-written TS lines) and produced the
 run's costliest defects: a state block with no clock, presets seeding the wrong records, operator
-text echoed back through results, probe/confirm asymmetries — each found only by an independent
+text echoed back through results, simulate/confirm asymmetries — each found only by an independent
 test agent (415 tests), a forensics read, or a burned measurement round. Every generated world
-re-implements the same machinery: RECEPTION, two-step probes, deterministic ids, projection,
+re-implements the same machinery: RECEPTION, two-step simulations, deterministic ids, projection,
 audit. Machinery is engine work; only the DOMAIN is per-subject.
 
 ## Deliverable — `world.json` + interpreter
@@ -49,14 +49,14 @@ The interpreter provides ONCE, proven in the engine's own suite (never re-tested
 | machinery | replaces (measured defect) |
 |---|---|
 | RECEPTION of args (sentinels, `'true'` coercion, absent-optional handling) | 27 hand entries |
-| two-step probe/confirm (side-effect-free preview, probe≡confirm identity) | 13 hand branches |
+| two-step simulate/confirm (side-effect-free simulation, simulate≡confirm identity) | 13 hand branches |
 | deterministic ids/counters, audit ledger, `tookEffect` marking | hand counters + audit |
 | `projection()` incl. the CLOCK and status keys | the no-clock F-1 blocker |
 | echo-safety: operator-authored strings tagged in results | the R1/R3 laundering findings |
 | preset application over seed (declarative deltas, one quota isolated per preset) | wrong-record presets (19/56/59) |
 | a `custom` executor escape hatch (named TS function registered by the HOST, not generated) | genuinely irreducible logic, quarantined and reviewed |
 
-`validate` (increment 2a) gains world layers: preset distinguishability, probe≡confirm identity,
+`validate` (increment 2a) gains world layers: preset distinguishability, simulate≡confirm identity,
 determinism (same preset+calls ⇒ byte-identical projection) — properties checked mechanically,
 replacing the independent world-test agent for generated worlds.
 
@@ -69,7 +69,7 @@ replacing the independent world-test agent for generated worlds.
 
 ## Testing
 
-- Interpreter suite: RECEPTION/probe/determinism/projection/echo-safety property tests.
+- Interpreter suite: RECEPTION/simulate/determinism/projection/echo-safety property tests.
 - Atlas-as-fixture: re-express a 10-tool slice of the Atlas domain declaratively; byte-compare
   projections against the frozen hand world for identical call sequences.
 - Reproductions: the no-clock defect (projection always carries the clock), the wrong-record

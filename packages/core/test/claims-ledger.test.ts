@@ -109,7 +109,7 @@ describe('GuardCtx carries the declaration on the reply-side hooks', () => {
   it('the onReply ctx built by finalizeReply exposes the ledger did (ask intention included)', async () => {
     let captured: GuardCtx | undefined;
     const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona: 'p', tools: [] });
-    spec.addReplyCheck(custom({ kind: 'probe', dim: 'behavior', check: (ctx) => { captured = ctx; return null; }, prose: () => '' }), { id: 'agent:probe' });
+    spec.addReplyCheck(custom({ kind: 'simulate', dim: 'behavior', check: (ctx) => { captured = ctx; return null; }, prose: () => '' }), { id: 'agent:simulate' });
     const ledger = createLedger();
     beginTurn(ledger, 0, 'refund 7');
     recordTerminal(ledger, 'respond', { message: 'Done.', did: [{ op: 'refund', outcome: 'success' }, { op: 'ask' }] });

@@ -173,7 +173,7 @@
           },
           "confirmed": {
             "type": "boolean",
-            "description": "false/absent = probe (no effect); true = execute after user confirmation."
+            "description": "false/absent = simulate (no effect); true = execute after user confirmation."
           }
         },
         "required": [
@@ -317,7 +317,7 @@
           },
           "confirmed": {
             "type": "boolean",
-            "description": "false/absent = probe (no effect, returns the confirmation question); true = send after user confirmation."
+            "description": "false/absent = simulate (no effect, returns the confirmation question); true = send after user confirmation."
           }
         },
         "required": [
@@ -352,7 +352,7 @@
           },
           "confirmed": {
             "type": "boolean",
-            "description": "false/absent = probe (no effect, returns the confirmation question); true = execute after user confirmation."
+            "description": "false/absent = simulate (no effect, returns the confirmation question); true = execute after user confirmation."
           }
         },
         "required": [
@@ -377,7 +377,7 @@
           },
           "confirmed": {
             "type": "boolean",
-            "description": "false/absent = probe (no effect); true = execute after user confirmation."
+            "description": "false/absent = simulate (no effect); true = execute after user confirmation."
           }
         },
         "required": [
@@ -449,7 +449,7 @@
           },
           "confirmed": {
             "type": "boolean",
-            "description": "false/absent = probe (no effect); true = execute after user confirmation."
+            "description": "false/absent = simulate (no effect); true = execute after user confirmation."
           }
         },
         "required": [
@@ -486,7 +486,7 @@
           },
           "confirmed": {
             "type": "boolean",
-            "description": "false/absent = probe (no effect); true = submit after user confirmation."
+            "description": "false/absent = simulate (no effect); true = submit after user confirmation."
           }
         },
         "required": [

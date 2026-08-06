@@ -7,7 +7,7 @@
  * / `ctx.attemptedThisTurn` (LEDGER DATA, never authored patterns — the no-regex law).
  *
  * One `describe` block per row of the grounding table, plus the attack vectors:
- * fabricated success, hidden effected write, honest not_found on an empty read, a no-effect probe with
+ * fabricated success, hidden effected write, honest not_found on an empty read, a no-effect simulate with
  * a no_op claim, a domain outcome word mapping to a core outcome, an undeclared outcome word, and the
  * rubric polarity in BOTH directions.
  */
@@ -154,7 +154,7 @@ describe('claimIsGrounded', () => {
       expect(grounded({ did })).toBeTruthy();
     });
 
-    it('a write that did NOT take effect (a probe) does not ground a success claim', () => {
+    it('a write that did NOT take effect (a simulate) does not ground a success claim', () => {
       const ctx = {
         did,
         observed: [call('createBooking', { bookingId: 'BK-1' }, { tookEffect: false })],
@@ -304,7 +304,7 @@ describe('claimIsGrounded', () => {
   });
 
   describe('row: no_op ⇔ NO write in calls with tookEffect===true and matches', () => {
-    it('a no_op claim grounds when the write only PROBED (tookEffect:false)', () => {
+    it('a no_op claim grounds when the write only SIMULATED (tookEffect:false)', () => {
       const ctx = {
         did: [{ op: 'cancel', target: 'BK-1', outcome: 'no_op' }] as Intention[],
         observed: [call('cancelBooking', { bookingId: 'BK-1' }, { tookEffect: false })],
@@ -556,7 +556,7 @@ describe('claimIsComplete', () => {
     expect(complete(ctx)).toBeTruthy();
   });
 
-  it('a probe (tookEffect:false) needs no claim', () => {
+  it('a simulate (tookEffect:false) needs no claim', () => {
     const ctx = {
       did: [] as Intention[],
       observed: [call('cancelBooking', { bookingId: 'BK-1' }, { tookEffect: false })],

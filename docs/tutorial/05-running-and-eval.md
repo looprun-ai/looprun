@@ -211,9 +211,9 @@ governance assertion needs no key, no network and no money.
                                 and assertJudgePresent beside it
 ```
 
-A tool named in `destructiveTools` is promised a two-step ritual: preview first — which is what makes
+A tool named in `destructiveTools` is promised a two-step ritual: simulate first — which is what makes
 the engine put its confirmation question on screen — then act in a later turn with `confirmed: true`.
-If its `inputSchema` has no `confirmed` flag, the model can never complete the second step and previews
+If its `inputSchema` has no `confirmed` flag, the model can never complete the second step and simulations
 forever. The schema is only known where `toolDefs` are injected — which is
 here — so `spec.assertDestructiveConfirmable(deps.toolDefs)` runs at run start and throws, naming the
 tool. Constructing an agent with the same mistake succeeds and fails later as an unexplained loop.

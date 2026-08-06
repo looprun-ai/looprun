@@ -81,7 +81,7 @@ and optionally an `l3` loop block. A case with no `ctx` is L3-only (skipped at L
 |---|---|---|---|
 | **positive** | the compliant flow the guard MUST allow | `silent` | `expect: 'pass'` |
 | **negative** | the violation the guard MUST catch | `fires` | `veto` / `redrive` / `refusal` |
-| **neutral** | the look-alike that must be left alone (status talk, unrelated tool, resolved probe) | `silent` | — |
+| **neutral** | the look-alike that must be left alone (status talk, unrelated tool, resolved simulate) | `silent` | — |
 
 The neutral case is where most guard regressions (false-fires) are actually caught.
 

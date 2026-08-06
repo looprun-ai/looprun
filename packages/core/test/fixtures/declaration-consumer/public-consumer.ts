@@ -56,7 +56,7 @@ import type {
 } from '@looprun-ai/core';
 
 // Subclassing drags the ENTIRE class surface into the emitted declaration — constructor parameter,
-// every field, every method signature. This one export is the densest probe in the file.
+// every field, every method signature. This one export is the densest simulate in the file.
 export class SchedulerSpec extends AgentSpecBase {
   constructor() {
     super({

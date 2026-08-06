@@ -70,7 +70,7 @@ function deps(script: ScriptStep[]): ScenarioDeps {
   };
 }
 
-const scenario = (turns: string[]) => ({ id: 'probe', title: 'probe', axis: 'capacity' as const, turns });
+const scenario = (turns: string[]) => ({ id: 'simulate', title: 'simulate', axis: 'capacity' as const, turns });
 
 /** A turn that reads the calendar and then closes with the given respond payload. */
 const readThen = (args: Record<string, unknown>): ScriptStep[] => [

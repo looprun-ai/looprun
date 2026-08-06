@@ -1,6 +1,6 @@
 /**
  * `defineWorld` machinery — the property tests the spec §Testing demands, run ONCE in the engine's
- * own suite so no generated subject re-tests them: RECEPTION, probe≡confirm, unknown-preset throw,
+ * own suite so no generated subject re-tests them: RECEPTION, simulate≡confirm, unknown-preset throw,
  * echo-safety tagging, determinism, and the clock-carrying projection.
  */
 import { describe, expect, it } from 'vitest';
@@ -157,9 +157,9 @@ describe('defineWorld — transition executor patches state (extension)', () => 
 
   it('confirm patches the target record status and marks tookEffect', () => {
     const w = defineWorld(cancelSpec)('default');
-    const probe = w.exec('cancel', { bookingId: 'bk_1' }) as { requiresConfirmation?: boolean };
-    expect(probe.requiresConfirmation).toBe(true);
-    expect(w.toolCalls.at(-1)?.tookEffect).toBe(false); // probe is side-effect-free
+    const simulate = w.exec('cancel', { bookingId: 'bk_1' }) as { requiresConfirmation?: boolean };
+    expect(simulate.requiresConfirmation).toBe(true);
+    expect(w.toolCalls.at(-1)?.tookEffect).toBe(false); // simulate is side-effect-free
     expect((w.projection() as { status: { booking: Record<string, unknown> } }).status.booking.bk_1).toBe('confirmed');
 
     const done = w.exec('cancel', { bookingId: 'bk_1', confirmed: true });
@@ -177,19 +177,19 @@ describe('defineWorld — transition executor patches state (extension)', () => 
   });
 });
 
-describe('defineWorld — two-step probe ≡ confirm (#2)', () => {
-  it('an unconfirmed probe is side-effect-free and previews; confirm mints', () => {
+describe('defineWorld — two-step simulate ≡ confirm (#2)', () => {
+  it('an unconfirmed simulate is side-effect-free and simulations; confirm mints', () => {
     const w = defineWorld(assetSpec)('default');
-    const probe = w.exec('refund', { bookingId: 'bk_1' }) as { requiresConfirmation?: boolean };
-    expect(probe.requiresConfirmation).toBe(true);
-    expect(w.toolCalls.at(-1)?.tookEffect).toBe(false); // no side effect on probe
+    const simulate = w.exec('refund', { bookingId: 'bk_1' }) as { requiresConfirmation?: boolean };
+    expect(simulate.requiresConfirmation).toBe(true);
+    expect(w.toolCalls.at(-1)?.tookEffect).toBe(false); // no side effect on simulate
     const confirm = w.exec('refund', { bookingId: 'bk_1', confirmed: true }) as { ok: boolean; refundId?: string };
     expect(confirm).toEqual({ ok: true, refundId: 'bk_refund' });
     expect(w.toolCalls.at(-1)?.tookEffect).toBe(true);
   });
 
-  it('probe and confirm evaluate the SAME gates (identity)', () => {
-    // a two-step tool with a failing gate denies identically on probe and confirm.
+  it('simulate and confirm evaluate the SAME gates (identity)', () => {
+    // a two-step tool with a failing gate denies identically on simulate and confirm.
     const gated: WorldSpec = {
       ...assetSpec,
       tools: {
@@ -204,10 +204,10 @@ describe('defineWorld — two-step probe ≡ confirm (#2)', () => {
       },
     };
     const w = defineWorld(gated)('default');
-    const probe = w.exec('refund', { assetId: 'ast_1', depositHeld: 1 });
+    const simulate = w.exec('refund', { assetId: 'ast_1', depositHeld: 1 });
     const confirm = w.exec('refund', { assetId: 'ast_1', depositHeld: 1, confirmed: true });
-    expect(probe).toEqual({ ok: false, error: 'DEPOSIT_NOT_COVERED' });
-    expect(confirm).toEqual(probe);
+    expect(simulate).toEqual({ ok: false, error: 'DEPOSIT_NOT_COVERED' });
+    expect(confirm).toEqual(simulate);
   });
 });
 

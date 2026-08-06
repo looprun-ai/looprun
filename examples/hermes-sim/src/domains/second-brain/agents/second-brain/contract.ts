@@ -57,10 +57,10 @@ export const SECOND_BRAIN_CONTRACT: DomainContract = {
     // The two-step SHAPE (confirmed:false first, the user's explicit go-ahead in a LATER turn, one
     // destructive act per turn) is the confirmFirst + destructiveThrottle prose under "## Tool
     // rules", and a pending confirmation is relayed by the engine's own question. What
-    // stays here is what those cannot say: the probe is side-effect-free, and never re-probe.
+    // stays here is what those cannot say: the simulate is side-effect-free, and never re-simulate.
     'Confirm before you delete. Calling noteDelete without confirmed:true is a side-effect-free ' +
-      'probe: relay the exact confirmation question it returns and STOP. Once the user has agreed, ' +
-      'call it again with confirmed:true — never re-probe.',
+      'simulate: relay the exact confirmation question it returns and STOP. Once the user has agreed, ' +
+      'call it again with confirmed:true — never re-simulate.',
     'The vault stays deduplicated: when filing something that may already be in the vault, search first ' +
       '(vaultSearch); when a matching note already exists, report its note id and offer to tag or ' +
       'update it instead of creating a twin.',

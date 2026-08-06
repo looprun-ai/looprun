@@ -14,8 +14,8 @@
  * augmentation. The cross-step path (observed) is untouched.
  *
  * These proofs pin BOTH directions: the guard now counts a same-step sibling effect (mutation-provable —
- * revert the guard change and the first `it` goes green→red), and every legal cancel flow (probe,
- * probe→execute, single cancel) still passes.
+ * revert the guard change and the first `it` goes green→red), and every legal cancel flow (simulate,
+ * simulate→execute, single cancel) still passes.
  */
 import { describe, it, expect } from 'vitest';
 import { destructiveThrottle } from '@looprun-ai/core';
@@ -47,13 +47,13 @@ describe('destructiveThrottle counts a same-STEP sibling effect', () => {
     expect(await g.check(ctx)).toBeTruthy();
   });
 
-  // WHAT COUNTS AS A PROBE DEPENDS ON WHETHER THE CALL HAS RUN. A same-step
+  // WHAT COUNTS AS A SIMULATE DEPENDS ON WHETHER THE CALL HAS RUN. A same-step
   // sibling has NOT executed, so `tookEffect` is `undefined` for every one of them BY CONSTRUCTION — the
-  // world cannot have recorded an effect that has not happened. The EXECUTED rule ("a probe is a call the
+  // world cannot have recorded an effect that has not happened. The EXECUTED rule ("a simulate is a call the
   // world recorded as changing nothing") therefore cannot be applied here: it would count every admitted
-  // destructive sibling and veto the honest MULTI-PREVIEW pinned two tests below. For a call that has not
+  // destructive sibling and veto the honest MULTI-SIMULATION pinned two tests below. For a call that has not
   // run, its declared flags are the only evidence that exists.
-  it('a same-step sibling PROBE (confirmed:false) does NOT throttle — a probe changes nothing', async () => {
+  it('a same-step sibling SIMULATE (confirmed:false) does NOT throttle — a simulate changes nothing', async () => {
     const g = destructiveThrottle(['cancelMove']);
     const ctx = craftCtx({
       tool: 'cancelMove',
@@ -63,7 +63,7 @@ describe('destructiveThrottle counts a same-STEP sibling effect', () => {
     expect(await g.check(ctx)).toBeNull();
   });
 
-  it('a same-step sibling that requiresConfirmation (probe result) does NOT throttle', async () => {
+  it('a same-step sibling that requiresConfirmation (simulate result) does NOT throttle', async () => {
     const g = destructiveThrottle(['cancelMove']);
     const ctx = craftCtx({
       tool: 'cancelMove',
@@ -73,10 +73,10 @@ describe('destructiveThrottle counts a same-STEP sibling effect', () => {
     expect(await g.check(ctx)).toBeNull();
   });
 
-  it('CONTROL: a same-step MULTI-PREVIEW passes — two probes in one step are not an effect', async () => {
-    // "Preview cancelling both of my bookings" is a legal request, and the model answers it with two
+  it('CONTROL: a same-step MULTI-SIMULATION passes — two simulations in one step are not an effect', async () => {
+    // "Simulation cancelling both of my bookings" is a legal request, and the model answers it with two
     // `confirmed:false` calls in ONE step. Neither has run when the second is gated, so neither can have
-    // an effect on record; vetoing the second would deny the preview for an effect nothing has had.
+    // an effect on record; vetoing the second would deny the simulation for an effect nothing has had.
     const g = destructiveThrottle(['cancelMove']);
     const ctx = craftCtx({
       tool: 'cancelMove',
@@ -97,8 +97,8 @@ describe('destructiveThrottle counts a same-STEP sibling effect', () => {
     expect(await g.check(ctx)).toBeTruthy();
   });
 
-  it('a same-step sibling that OMITS the flag is a preview too — parity with confirmFirst', async () => {
-    // `confirmFirst` licenses "a `flag:false`/ABSENT probe" and returns null on any `flag !== true`, so an
+  it('a same-step sibling that OMITS the flag is a simulation too — parity with confirmFirst', async () => {
+    // `confirmFirst` licenses "a `flag:false`/ABSENT simulate" and returns null on any `flag !== true`, so an
     // omitted flag is a not-yet-confirmed call to the consent gate. Keying the throttle on
     // `confirmed === false` alone made the two kinds disagree on exactly the case they claim to agree on.
     const g = destructiveThrottle(['cancelMove']);
@@ -110,7 +110,7 @@ describe('destructiveThrottle counts a same-STEP sibling effect', () => {
     expect(await g.check(ctx)).toBeNull();
   });
 
-  it('CONTROL: a FLAGLESS (prior-ask) tool has no preview shape — the first sibling throttles', async () => {
+  it('CONTROL: a FLAGLESS (prior-ask) tool has no simulation shape — the first sibling throttles', async () => {
     // `AgentSpecBase` passes its `'prior-ask'` tools as `flagless`: they carry no confirm flag at all, so
     // "not confirmed" says nothing about them and every admitted call is an act. Without this, the
     // not-confirmed rule above would leave the same-step cap inert on the whole prior-ask mechanism.
@@ -123,7 +123,7 @@ describe('destructiveThrottle counts a same-STEP sibling effect', () => {
     expect(await g.check(ctx)).toBeTruthy();
   });
 
-  it('CONTROL: the legal CROSS-STEP two-step tail still passes — a recorded probe, then the execute', async () => {
+  it('CONTROL: the legal CROSS-STEP two-step tail still passes — a recorded simulate, then the execute', async () => {
     const g = destructiveThrottle(['cancelMove']);
     const ctx = craftCtx({
       tool: 'cancelMove',
@@ -177,7 +177,7 @@ describe('full loop — a same-step bulk destructive is throttled to ONE effect'
     });
 
   it('turn-1 emits TWO deleteItem(confirmed:true) in one step → the SECOND is vetoed by the throttle', async () => {
-    // Turn 0 probes BOTH records, so the engine raises a question for each. Turn 1's message carries
+    // Turn 0 simulations BOTH records, so the engine raises a question for each. Turn 1's message carries
     // both tokens, then emits both confirmed deletes in a SINGLE scripted step (one array = one model
     // response = one concurrent dispatch) — both are consent-licensed, so the SECOND effect is caught by
     // destructiveThrottle, which is what this proof pins.

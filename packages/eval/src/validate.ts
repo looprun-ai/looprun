@@ -326,7 +326,7 @@ interface RawWorld {
 const NON_CONFIRM_TYPES = new Set(['string', 'number', 'boolean']);
 
 /** Synthesize a minimal, type-correct arg set for a tool so RECEPTION never throws on a missing
- *  required arg. `confirmed` is excluded (the two-step probe/confirm lever the identity check drives). */
+ *  required arg. `confirmed` is excluded (the two-step simulate/confirm lever the identity check drives). */
 function synthArgs(args: RawArg[] | undefined, includeOptional: boolean): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const a of args ?? []) {
@@ -338,8 +338,8 @@ function synthArgs(args: RawArg[] | undefined, includeOptional: boolean): Record
   return out;
 }
 
-/** The gate DECISION a call resolved to: the deny error string, or null when gates passed (preview or
- *  effect). Probe and confirm must land the SAME decision — that IS probe≡confirm identity. */
+/** The gate DECISION a call resolved to: the deny error string, or null when gates passed (simulation or
+ *  effect). Simulate and confirm must land the SAME decision — that IS simulate≡confirm identity. */
 function gateDecision(result: unknown): string | null {
   const r = (result && typeof result === 'object' ? result : {}) as Record<string, unknown>;
   return r.ok === false ? String(r.error ?? 'DENIED') : null;
@@ -351,7 +351,7 @@ const stable = (v: unknown): string => JSON.stringify(v);
  * The three world layers over a subject that ships `gen/world.json`:
  *   1. PRESET DISTINGUISHABILITY — every declared preset (other than `default`) yields a projection
  *      DIFFERENT from default's; an indistinguishable preset is dead wiring (the wrong-record class).
- *   2. PROBE≡CONFIRM IDENTITY — for every `twoStep` tool, a probe and a confirm resolve the SAME gate
+ *   2. SIMULATE≡CONFIRM IDENTITY — for every `twoStep` tool, a simulate and a confirm resolve the SAME gate
  *      decision (mechanical, via the 3a machinery: gates run before the two-step branch).
  *   3. DETERMINISM — the same preset + the same call sequence yields a deep-equal projection, run twice
  *      (catches a `custom` executor that reaches for a clock or RNG).
@@ -394,18 +394,18 @@ export function checkWorldModel(subjectDir: string): string[] {
     }
   }
 
-  // 2. Probe ≡ confirm identity, per twoStep tool.
+  // 2. Simulate ≡ confirm identity, per twoStep tool.
   for (const [name, tool] of Object.entries(tools)) {
     if (!tool.twoStep) continue;
     const args = synthArgs(tool.args, true);
     try {
-      const probe = gateDecision(factory('default').exec(name, args));
+      const simulate = gateDecision(factory('default').exec(name, args));
       const confirm = gateDecision(factory('default').exec(name, { ...args, confirmed: true }));
-      if (probe !== confirm) {
-        issues.push(`world: twoStep tool "${name}" breaks probe≡confirm identity — probe gate decision ${JSON.stringify(probe)} ≠ confirm ${JSON.stringify(confirm)}`);
+      if (simulate !== confirm) {
+        issues.push(`world: twoStep tool "${name}" breaks simulate≡confirm identity — simulate gate decision ${JSON.stringify(simulate)} ≠ confirm ${JSON.stringify(confirm)}`);
       }
     } catch (e) {
-      issues.push(`world: twoStep tool "${name}" threw during the probe≡confirm check: ${(e as Error).message}`);
+      issues.push(`world: twoStep tool "${name}" threw during the simulate≡confirm check: ${(e as Error).message}`);
     }
   }
 

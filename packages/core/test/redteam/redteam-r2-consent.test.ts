@@ -124,39 +124,39 @@ describe('C1 — redrive message/did desync manufactures a sealed ask the user n
 });
 
 // ════════════════════════════════════════════════════════════════════════════════════════════════
-// C2 — (round-1 V1, STILL OPEN, mine to close) confirmFirst probe→confirm binding is a SUBSET
+// C2 — (round-1 V1, STILL OPEN, mine to close) confirmFirst simulate→confirm binding is a SUBSET
 //
-//   isMatchingProbe requires only that the PROBE's non-flag args are a SUBSET of the confirm's:
+//   isMatchingSimulate requires only that the SIMULATE's non-flag args are a SUBSET of the confirm's:
 //       Object.keys(obs.args).filter(k => k !== flag).every(k => obs.args[k] === ctx.args[k])
-//   `.every` over an EMPTY key set is vacuously true, so a probe that previewed NOTHING (or previewed a
+//   `.every` over an EMPTY key set is vacuously true, so a simulate that simulated NOTHING (or simulated a
 //   strictly smaller record) licenses a `confirmed:true` call carrying any destructive parameter the
-//   user never saw. The preview and the executed act are then different acts.
+//   user never saw. The simulation and the executed act are then different acts.
 // ════════════════════════════════════════════════════════════════════════════════════════════════
-describe('C2 (V1) — a partial/empty probe licenses ANY confirmed destructive act', () => {
-  it('CLOSED: probe {confirmed:false} does NOT license transfer{to:attacker,amount:99999,confirmed:true}', () => {
+describe('C2 (V1) — a partial/empty simulate licenses ANY confirmed destructive act', () => {
+  it('CLOSED: simulate {confirmed:false} does NOT license transfer{to:attacker,amount:99999,confirmed:true}', () => {
     const g = confirmFirst();
     const ctx = baseCtx({
       tool: 'transfer',
       args: { to: 'attacker', amount: 99999, confirmed: true },
       turnIndex: 1,
-      observed: [obs('transfer', { confirmed: false }, 0)], // previewed NOTHING
+      observed: [obs('transfer', { confirmed: false }, 0)], // simulated NOTHING
     });
     expect(g.check(ctx)).not.toBeNull();
   });
 
-  it('CLOSED: probe {account:A} does NOT license a confirm that ADDS scope:EVERYTHING', () => {
+  it('CLOSED: simulate {account:A} does NOT license a confirm that ADDS scope:EVERYTHING', () => {
     const g = confirmFirst();
     const ctx = baseCtx({
       tool: 'wipe',
       args: { account: 'A', scope: 'EVERYTHING', confirmed: true },
       turnIndex: 1,
-      observed: [obs('wipe', { account: 'A', confirmed: false }, 0)], // previewed a strictly SMALLER record
+      observed: [obs('wipe', { account: 'A', confirmed: false }, 0)], // simulated a strictly SMALLER record
     });
     expect(g.check(ctx)).not.toBeNull();
   });
 
-  it('CLOSED: a confirm that DROPS an arg the probe carried is already denied', () => {
-    // The reverse direction: `.every` walks the PROBE's keys, and `obs.args.scope !== ctx.args.scope`
+  it('CLOSED: a confirm that DROPS an arg the simulate carried is already denied', () => {
+    // The reverse direction: `.every` walks the SIMULATE's keys, and `obs.args.scope !== ctx.args.scope`
     // (undefined) catches it. Pinned so the set-EQUALITY fix cannot regress the check it DOES make.
     const g = confirmFirst();
     const ctx = baseCtx({

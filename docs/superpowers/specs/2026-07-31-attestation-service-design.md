@@ -42,7 +42,7 @@ Mandatory with every attestation request:
 - Structural counts: agents / tools / cases / guards
 - Per-case verdict: pass/fail/exhausted + fail class + firing guard (case id HASHED)
 - Guard-fire census for the whole run (fires per guard, mute guards)
-- Margin/probe outcomes (oscillating cases, rounds)
+- Margin/simulate outcomes (oscillating cases, rounds)
 - Serving config: model, quant, RAM tier, spec ON/off, measured tok/s
 
 What it answers: dominant fail classes per model/version/tier; guard hygiene census;

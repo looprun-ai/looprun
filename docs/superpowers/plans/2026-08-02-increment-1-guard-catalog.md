@@ -18,7 +18,7 @@
 
 ---
 
-### Task 1: Structural primitives — `askedEarlier` + `confirmedNeedsEarlierProbe` (consent binding)
+### Task 1: Structural primitives — `askedEarlier` + `confirmedNeedsEarlierSimulate` (consent binding)
 
 **Files:**
 - Create: `packages/core/src/guards/structural.ts`
@@ -27,7 +27,7 @@
 
 **Interfaces:**
 - Consumes: `GuardCtx` (`packages/core/src/rules.ts:45`) — fields `observed: ObservedCall[]`, `args`, `turnIndex`; `Guard` shape as returned by `custom()` (`packages/core/src/guards/custom.ts:4`). Read both files FIRST and mirror their exact option/return shapes.
-- Produces: `askedEarlier(opts: { tool: string; arg?: string }): Guard` and `confirmedNeedsEarlierProbe(opts: { tools: string[] }): Guard` — exported from `@looprun-ai/core` (public) for Task 2's loader.
+- Produces: `askedEarlier(opts: { tool: string; arg?: string }): Guard` and `confirmedNeedsEarlierSimulate(opts: { tools: string[] }): Guard` — exported from `@looprun-ai/core` (public) for Task 2's loader.
 
 - [ ] **Step 1: Write the failing tests** — build a minimal fake `GuardCtx` (plain object with `observed`, `args`, `turnIndex`) and assert:
 
@@ -40,23 +40,23 @@ expect(g.check(ctxWith({ observed: [ask(2)], turnIndex: 2, args: { condition: 'g
 // absent arg → not this guard's business
 expect(g.check(ctxWith({ observed: [], turnIndex: 2, args: {} }))).toBeNull();
 
-// confirmedNeedsEarlierProbe: the case-35 reproduction
-const c = confirmedNeedsEarlierProbe({ tools: ['chargeDeposit', 'payInvoice'] });
-// confirmed call with NO earlier-turn probe of the SAME tool+args-subset → deny
-expect(c.check(ctxConfirmed('chargeDeposit', { bookingId: 'bk_1', confirmed: true }, [probe('payInvoice', 1)], 2))).toMatch(/preview|probe|confirm/i);
-// probe of the same tool with matching args in an EARLIER turn → allow
-expect(c.check(ctxConfirmed('chargeDeposit', { bookingId: 'bk_1', confirmed: true }, [probe('chargeDeposit', 1, { bookingId: 'bk_1' })], 2))).toBeNull();
-// same-turn probe → deny (consent must arrive in a LATER message)
-expect(c.check(ctxConfirmed('chargeDeposit', { bookingId: 'bk_1', confirmed: true }, [probe('chargeDeposit', 2, { bookingId: 'bk_1' })], 2))).toMatch(/later/i);
+// confirmedNeedsEarlierSimulate: the case-35 reproduction
+const c = confirmedNeedsEarlierSimulate({ tools: ['chargeDeposit', 'payInvoice'] });
+// confirmed call with NO earlier-turn simulate of the SAME tool+args-subset → deny
+expect(c.check(ctxConfirmed('chargeDeposit', { bookingId: 'bk_1', confirmed: true }, [simulate('payInvoice', 1)], 2))).toMatch(/simulation|simulate|confirm/i);
+// simulate of the same tool with matching args in an EARLIER turn → allow
+expect(c.check(ctxConfirmed('chargeDeposit', { bookingId: 'bk_1', confirmed: true }, [simulate('chargeDeposit', 1, { bookingId: 'bk_1' })], 2))).toBeNull();
+// same-turn simulate → deny (consent must arrive in a LATER message)
+expect(c.check(ctxConfirmed('chargeDeposit', { bookingId: 'bk_1', confirmed: true }, [simulate('chargeDeposit', 2, { bookingId: 'bk_1' })], 2))).toMatch(/later/i);
 ```
 
-where `ask(turn)` = `{ name: 'askUser', ok: true, turnIndex: turn, args: { text: 'q?' } }` and `probe(tool, turn, args?)` = `{ name: tool, ok: true, turnIndex: turn, args: { ...args, confirmed: false } }`.
+where `ask(turn)` = `{ name: 'askUser', ok: true, turnIndex: turn, args: { text: 'q?' } }` and `simulate(tool, turn, args?)` = `{ name: tool, ok: true, turnIndex: turn, args: { ...args, confirmed: false } }`.
 
 - [ ] **Step 2: Run to verify failure** — `pnpm -C packages/core test` (or the package's test script) → FAIL: module not found.
-- [ ] **Step 3: Implement** `structural.ts` via the existing `custom()` factory. `askedEarlier`: fires only when `ctx.args[arg]` is present; exemption = any `observed` entry with `name === 'askUser' && ok && turnIndex < ctx.turnIndex`. Deny text (policy): `Ask the operator for <arg> first — record it only after they answer.` `confirmedNeedsEarlierProbe`: fires on `ctx.args.confirmed === true` for a listed tool; exemption = an observed SAME-tool call with `args.confirmed !== true`, `ok`, `turnIndex < ctx.turnIndex`, and every non-`confirmed` key of the probe's args strictly equal in the confirmed call's args. Prose (rendered): one agreement covers one act; the preview and the go-ahead live in different messages.
+- [ ] **Step 3: Implement** `structural.ts` via the existing `custom()` factory. `askedEarlier`: fires only when `ctx.args[arg]` is present; exemption = any `observed` entry with `name === 'askUser' && ok && turnIndex < ctx.turnIndex`. Deny text (policy): `Ask the operator for <arg> first — record it only after they answer.` `confirmedNeedsEarlierSimulate`: fires on `ctx.args.confirmed === true` for a listed tool; exemption = an observed SAME-tool call with `args.confirmed !== true`, `ok`, `turnIndex < ctx.turnIndex`, and every non-`confirmed` key of the simulate's args strictly equal in the confirmed call's args. Prose (rendered): one agreement covers one act; the simulation and the go-ahead live in different messages.
 - [ ] **Step 4: Tests green** — same command, plus `pnpm -r typecheck`.
 - [ ] **Step 5: Surface-lock riders + tutorial outline** for the two new core exports, SAME commit.
-- [ ] **Step 6: Commit** — `feat(core): structural guards — askedEarlier + confirmedNeedsEarlierProbe (no text matching)`.
+- [ ] **Step 6: Commit** — `feat(core): structural guards — askedEarlier + confirmedNeedsEarlierSimulate (no text matching)`.
 
 ---
 
@@ -87,7 +87,7 @@ expect(() => loadNormsConfig(fixtureProseless)).toThrow(/prose/);
 ```
 
 - [ ] **Step 2: Verify failure** — `pnpm -C packages/eval exec vitest run test/norms-config.test.ts` → FAIL.
-- [ ] **Step 3: Implement** — zod schema per the spec's shape (`id`, `persona`, `tools`, `destructiveTools`, `guards[]` as a discriminated union on `kind` ∈ {`requiresBefore`, `consentToken` → installs `confirmedNeedsEarlierProbe`, `askedEarlier`, `precondition` with the closed expression predicate}, `uncheckable[]`, `behavior[]`, `scope`). Use `.strict()` on every object so unknown keys — including any pattern-ish key — fail loudly. The `precondition` predicate compiles the closed expression (`op`, `left`, `right` over `{count|limit|field|arg}` refs) into a world predicate; unknown refs throw at LOAD time, not run time.
+- [ ] **Step 3: Implement** — zod schema per the spec's shape (`id`, `persona`, `tools`, `destructiveTools`, `guards[]` as a discriminated union on `kind` ∈ {`requiresBefore`, `consentToken` → installs `confirmedNeedsEarlierSimulate`, `askedEarlier`, `precondition` with the closed expression predicate}, `uncheckable[]`, `behavior[]`, `scope`). Use `.strict()` on every object so unknown keys — including any pattern-ish key — fail loudly. The `precondition` predicate compiles the closed expression (`op`, `left`, `right` over `{count|limit|field|arg}` refs) into a world predicate; unknown refs throw at LOAD time, not run time.
 - [ ] **Step 4: Green** + typecheck.
 - [ ] **Step 5: Commit** — `feat(eval): norms-config schema + loader — guards from data, regex structurally impossible`.
 
@@ -119,7 +119,7 @@ expect(() => loadNormsConfig(fixtureProseless)).toThrow(/prose/);
 - Consumes: `world.toolCalls` ledger entries `{name, tookEffect}`.
 - Produces: the default abstain string; `loadNormsConfig` wires it as the contract's `exhaustionReply` when the domain config does not opt out.
 
-- [ ] **Step 1: Failing test** — ledger with a probe (`tookEffect: false`) for `cancelDispatch`, an effected `createBooking`, and a read `getMember`:
+- [ ] **Step 1: Failing test** — ledger with a simulate (`tookEffect: false`) for `cancelDispatch`, an effected `createBooking`, and a read `getMember`:
 
 ```ts
 const s = buildHonestAbstain(worldWithLedger, ['cancelDispatch', 'createBooking', 'getMember'], ['cancelDispatch', 'createBooking']);
@@ -128,7 +128,7 @@ expect(s).toContain('createBooking');        // effected write is announced
 expect(s).toContain('getMember');            // reads are announced
 ```
 
-- [ ] **Step 2: FAIL. Step 3:** implement (filter: keep a name iff not a write, or some ledger entry under it has `tookEffect === true`). **Step 4:** green + typecheck + surface-lock rider if exported publicly. **Step 5: Commit** — `feat(core): engine-owned honest abstain — a no-effect probe is never announced as done`.
+- [ ] **Step 2: FAIL. Step 3:** implement (filter: keep a name iff not a write, or some ledger entry under it has `tookEffect === true`). **Step 4:** green + typecheck + surface-lock rider if exported publicly. **Step 5: Commit** — `feat(core): engine-owned honest abstain — a no-effect simulate is never announced as done`.
 
 ---
 

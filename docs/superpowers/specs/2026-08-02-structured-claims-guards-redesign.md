@@ -65,7 +65,7 @@ the ledger, never on op-name semantics.
    honesty (claimIsGrounded/Complete/CoversRubric) · confirmFirst · destructiveThrottle ·
    requiresBefore · precondition · consentRequired · maxCalls · noDuplicateCall · argRequired ·
    argAbsent · argFormat · resultInvariant · askedEarlier · noActAfterAskSameTurn ·
-   pendingConfirmMustAsk (now: did.asked reflects a pending probe) · forbidThisTurn
+   pendingConfirmMustAsk (now: did.asked reflects a pending simulate) · forbidThisTurn
 
 ② llmCheck              ONLY no-ledger-signal semantics (e.g. "gave legal advice?", "tone")
    the honest small residual; declared explicitly per subject

@@ -138,7 +138,7 @@ export const BEHAVIOR_PROOFS: GuardProof[] = [
         l1: 'silent',
       },
       {
-        name: 'a probe (tookEffect:false) needs no claim',
+        name: 'a simulate (tookEffect:false) needs no claim',
         polarity: 'neutral',
         ctx: { did: [], observed: [{ name: 'deleteItem', args: { id: 'itm-1' }, ok: true, turnIndex: 0, tookEffect: false }], turnIndex: 0 },
         l1: 'silent',

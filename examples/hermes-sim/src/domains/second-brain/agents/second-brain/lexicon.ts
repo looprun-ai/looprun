@@ -10,12 +10,12 @@
  *   noFalseFailureClaim({ claimRe: FALSE_FAILURE_CLAIM_RE })  (auto-installed via cfg.lexicon.falseFailureClaimRe)
  *
  * CONFIRM_LANG_RE is confirm-LANGUAGE only, with no bare `?` — the destructive-claim check's
- * probe-relay exemption. A bare question mark ("…deleted! Anything else?") must NOT bypass a
+ * simulate-relay exemption. A bare question mark ("…deleted! Anything else?") must NOT bypass a
  * declarative claim.
  */
 
 
-/** Confirm-LANGUAGE only (no bare `?`) — the destructive-claim check's probe-relay exemption. */
+/** Confirm-LANGUAGE only (no bare `?`) — the destructive-claim check's simulate-relay exemption. */
 export const CONFIRM_LANG_RE = /\b(?:confirm|are you sure|do you want|would you like|shall i|proceed|go ahead)\b/i;
 
 /** An offer / conditional wrapping a destructive verb — "if you want", "I can", "shall I", "let me

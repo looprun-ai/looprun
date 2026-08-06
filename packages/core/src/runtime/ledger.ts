@@ -141,7 +141,7 @@ function issueApproval(ledger: TurnLedger, c: { tool: string; subject?: string; 
 }
 
 /**
- * A destructive tool with no preview form was DENIED. The denial IS the question: attempting the act is
+ * A destructive tool with no simulate form was DENIED. The denial IS the question: attempting the act is
  * what puts it on the user's screen, so an agent cannot choose not to ask and still act.
  *
  * The question's meaning is the label the spec declared. A tool with no label issues nothing, so it can

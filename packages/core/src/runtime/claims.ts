@@ -482,7 +482,7 @@ export function renderOperationReport(did: Intention[], opts?: RenderOpts): stri
  *   · a WRITE that TOOK EFFECT → `success` (its OWN produced label as `target`, when it issued one)
  *   · a WRITE that did NOT take effect but carries a pending-confirmation result flag → `pending_confirmation`
  *   · a WRITE that ran but returned `ok:false` → `failure`
- *   · a WRITE that ran ok yet took NO effect (a probe) → contributes NOTHING (it changed nothing)
+ *   · a WRITE that ran ok yet took NO effect (a simulate) → contributes NOTHING (it changed nothing)
  *   · a READ (any non-write, incl. the runtime terminal) → contributes NOTHING
  *
  * EFFECT WINS OVER FLAGS: `tookEffect` is tested FIRST, so a write that BOTH landed and carried
@@ -537,7 +537,7 @@ export function deriveClaimsFromLedger(
       claims.push({ op: 'operation', outcome: 'failure' });
       continue;
     }
-    // a write that ran ok but took no effect (a probe) changed nothing → no claim.
+    // a write that ran ok but took no effect (a simulate) changed nothing → no claim.
   }
   return claims;
 }

@@ -16,7 +16,7 @@ Measured evidence per class (from the run):
 - world defects: missing clock, wrong presets, operator-text echo — found only by an independent
   test agent (415 tests) and a forensics read
 - deny messages interpolating world facts the model then repeated unread (5 cases)
-- exhaustion stub announcing a no-effect probe as "succeeded"
+- exhaustion stub announcing a no-effect simulate as "succeeded"
 - duplicated observed-ledger predicates drifting across specs
 - guard prose displaced into `behavior[]` when a check was rejected
 - ad-hoc judge input (flattened trace, 64k output blowup, dispatch contamination)

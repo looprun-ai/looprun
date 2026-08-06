@@ -65,7 +65,7 @@ export function makeGuardHooks(spec: AgentSpec, getSession: SessionAccessor, opt
       // empty ledger would make every call read as "changed nothing". Record the call here,
       // where the runtime knows it ran and what it returned. EFFECT is derived from the RESULT, the only
       // evidence this path has: a call that succeeded and did NOT come back asking for confirmation
-      // changed something. That keeps the legitimate two-step alive (a probe answering
+      // changed something. That keeps the legitimate two-step alive (a simulate answering
       // `requiresConfirmation` is effect-free) while a tool that mutates under `confirmed:false` — the
       // case the throttle exists for — counts as the effect it is.
       if (opts.nativeToolsMode) {

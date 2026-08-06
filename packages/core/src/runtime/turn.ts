@@ -133,7 +133,7 @@ export async function evaluatePreTool(
       const selfIx = ledger.inFlightCalls.indexOf(selfEntry);
       if (selfIx >= 0) ledger.inFlightCalls.splice(selfIx, 1);
       recordVeto(ledger, tool, args, `${g.dim}:${g.kind}:${tool}`);
-      // THE DENIAL IS THE QUESTION. A destructive tool the world has no preview form for is asked about
+      // THE DENIAL IS THE QUESTION. A destructive tool the world has no simulate form for is asked about
       // by being attempted: the gate refuses, and the refusal raises the consent question the delivered
       // text then carries. An agent cannot choose not to ask and still act.
       if (g.kind === 'confirmFirst') issueApprovalForVeto(ledger, tool);
@@ -296,7 +296,7 @@ export function redriveMessage(violations: ReplyViolation[]): string {
 /** The engine's exhaustion sentence when SOMETHING landed this turn (an effected write). The rendered
  *  operation report of the derived claims precedes it, so this is the honest tail. */
 const EXHAUSTION_PARTIAL = 'I could not safely finish the rest — how would you like to proceed?';
-/** The engine's exhaustion sentence when NOTHING landed (a probe-only / read-only / all-refused turn). */
+/** The engine's exhaustion sentence when NOTHING landed (a simulate-only / read-only / all-refused turn). */
 const EXHAUSTION_NOTHING = 'I could not complete this safely — nothing was changed. Could you rephrase or add detail?';
 
 /**

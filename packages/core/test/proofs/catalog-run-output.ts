@@ -202,7 +202,7 @@ const noDuplicateCallProof: GuardProof = {
  */
 const DELETE_IS_DESTRUCTIVE = { deleteItem: (args: Record<string, unknown>) => args.soft !== true };
 
-// ── confirmFirst (auto:'base' — deleteItem previews its record, purgeAll declares a label) ──
+// ── confirmFirst (auto:'base' — deleteItem simulations its record, purgeAll declares a label) ──
 const confirmFirstProof: GuardProof = {
   guard: 'confirmFirst',
   // The licence is a token the ENGINE issued for a record and the USER typed back. Nothing the agent
@@ -295,8 +295,8 @@ const confirmFirstProof: GuardProof = {
       l1: 'fires',
     },
     {
-      // The PREVIEW is how the world raises the question, so it runs freely; only the acting call is gated.
-      name: 'the preview call is never gated — it is how the question gets asked',
+      // The SIMULATION is how the world raises the question, so it runs freely; only the acting call is gated.
+      name: 'the simulation call is never gated — it is how the question gets asked',
       polarity: 'neutral',
       ctx: { tool: 'deleteItem', args: { id: 'itm-1' }, consent: [], turnIndex: 1 },
       l1: 'silent',

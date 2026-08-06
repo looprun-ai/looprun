@@ -26,10 +26,10 @@ const ctx = (over: Partial<GuardCtx>): GuardCtx =>
     ...over,
   }) as GuardCtx;
 
-describe('confirmFirst — the acting call is gated, the preview is not', () => {
+describe('confirmFirst — the acting call is gated, the simulation is not', () => {
   const g = confirmFirst();
 
-  it('lets the preview through — it is how the world raises the question', () => {
+  it('lets the simulation through — it is how the world raises the question', () => {
     expect(g.check(ctx({ tool: 'cancelBooking', args: { id: 'BK-1' }, consent: [] }))).toBeNull();
   });
 
@@ -74,7 +74,7 @@ describe('confirmFirst — the acting call is gated, the preview is not', () => 
     expect(g.check(ctx({ args: { id: 'BK-1', confirmed: true }, consent: [] }))).toBeNull();
   });
 
-  it('gates EVERY call of a tool that has no preview form', () => {
+  it('gates EVERY call of a tool that has no simulate form', () => {
     expect(confirmFirst({ flag: false }).check(ctx({ tool: 'deleteAllData', args: {}, consent: [] }))).not.toBeNull();
   });
 

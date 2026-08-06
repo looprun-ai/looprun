@@ -625,7 +625,7 @@ does not carry: they are about the enforcement path, not about choosing a kind.
   consent is not an event the agent can point back to but a literal the user has to type, and consuming
   it closes it.
 - **NOTHING THE AGENT EMITS IS A LICENCE.** Not a declared `ask`, not the tool's own prior successful
-  run, not a vetoed attempt, not a probe. Admitting the tool's own prior run would chain turn by turn
+  run, not a vetoed attempt, not a simulate. Admitting the tool's own prior run would chain turn by turn
   into a self-sustaining licence — turn 1 licenses turn 2, turn 2's run licenses turn 3 — one consent
   authorising an unbounded destructive run. Admitting a vetoed attempt would be worse: a call denied BY
   THIS VERY GUARD lands in `observed` with `ok:false`, so the gate would defeat itself in two turns.
@@ -651,7 +651,7 @@ screen and the USER writes back, and the agent has no channel that produces one.
 ```
  ①  the world raises it   a call that answers requiresConfirmation NAMES its record, and the engine
                           opens a question bound to that record
- ②  the denial raises it  a destructive tool with NO preview form is denied, and the denial opens a
+ ②  the denial raises it  a destructive tool with NO simulate form is denied, and the denial opens a
                           question built from the label the spec declared
  ③  the engine renders    the question goes into the delivered text, between the agent's prose and the
                           operation record — the agent writes no part of it
@@ -687,7 +687,7 @@ turn 2   user:    "yes, CONFIRM BK-1"
 
 `confirmFirst` takes two options, and neither is about licensing: `flag` says WHICH call acts, `when` says
 WHICH calls are destructive. A
-two-step tool distinguishes its preview from its act by an argument, and the preview must run — it is how
+two-step tool distinguishes its simulation from its act by an argument, and the simulation must run — it is how
 the world raises the question. `flag: false` is the one-step shape, where every call acts and every call is
 gated. `when` is a pure predicate over the acting call's own arguments, keyed by tool:
 `placeHold({scope:'asset'})` is an act the world carries out with no question raised, while
@@ -767,7 +767,7 @@ No model participates in a consent decision.
 
 | obligation | when |
 |---|---|
-| a preview form that answers `requiresConfirmation` and names its record under an identity key | a two-step destructive tool |
+| a simulate form that answers `requiresConfirmation` and names its record under an identity key | a two-step destructive tool |
 | a `destructiveLabels` entry — the human-facing words the question is built from | a destructive tool that acts on no identifiable record, including one whose destructive branch names a record its arguments never carry (a hold over a whole workspace is that shape: listed, predicated, and labelled) |
 | `engineText`, the engine's own sentences | a conversation held in a language other than English |
 
@@ -787,29 +787,29 @@ open:
    empty `userText` (the stream path, a caller-managed message array) simply never carries consent, so
    every gated act is denied.
 2. **RECORD WHAT EACH CALL DID** on `world.toolCalls`, with `tookEffect`. `destructiveThrottle` treats an
-   EXECUTED call as a PROBE only when the world POSITIVELY recorded that it changed nothing
+   EXECUTED call as a SIMULATE only when the world POSITIVELY recorded that it changed nothing
    (`tookEffect === false`); a call that RAN and left no record has UNKNOWN effect and counts against the
    one-effect-per-turn cap. Reading a world whose ledger nothing writes as "every call changed nothing"
    would make the throttle inert on the whole native-tools/MCP path.
    `defineWorld` and `FixtureWorld` record every exec; native-tools mode records in the guard hook,
    deriving effect from the result (a call that succeeded and did not come back asking for confirmation
-   changed something). A custom world that logs only mutations will see its probes counted — record them
+   changed something). A custom world that logs only mutations will see its simulations counted — record them
    with `tookEffect:false`.
 
    This obligation covers EXECUTED calls only. A same-step SIBLING (`siblingCallsThisStep`) has been
    admitted but has not run, so `tookEffect` is `undefined` for it by construction and its declared
-   confirm flag is what decides — otherwise a legitimate multi-preview ("preview cancelling both
+   confirm flag is what decides — otherwise a legitimate multi-simulation ("simulation cancelling both
    bookings" ⇒ two `confirmed:false` calls in one step) would have its second call vetoed for an effect
-   neither call has had yet. **NOT-CONFIRMED is the preview shape**, exactly as `confirmFirst` reads it: a
-   sibling declares a preview when `args[confirmArg] !== true`, which covers both `confirmed:false` and an
+   neither call has had yet. **NOT-CONFIRMED is the simulation shape**, exactly as `confirmFirst` reads it: a
+   sibling declares a simulation when `args[confirmArg] !== true`, which covers both `confirmed:false` and an
    OMITTED flag. `AgentSpecBase` passes its `'prior-ask'` tools to the throttle as `flagless`: they carry
-   no confirm flag at all, so nothing in their args can declare a preview and every admitted call of them
+   no confirm flag at all, so nothing in their args can declare a simulation and every admitted call of them
    counts — otherwise the rule above would leave the same-step cap inert on that whole mechanism.
 
    The residual is stated rather than hidden: a FLAG-GATED tool that MUTATES without `confirmed:true` and
    is emitted N times in ONE step is not capped — and it is UNBOUNDED N, not merely two: the cap is per
-   recorded effect and a sibling has none, so there is no counter over admitted previews. Nothing
-   observable separates those calls from the honest multi-preview at admission time. What bounds the shape
+   recorded effect and a sibling has none, so there is no counter over admitted simulations. Nothing
+   observable separates those calls from the honest multi-simulation at admission time. What bounds the shape
    instead: the cross-step form IS capped (the first call's effect is on record by then), `flagless` tools
    are capped from the first sibling, and a world that honours its own two-step protocol never mutates on
    an unconfirmed call.

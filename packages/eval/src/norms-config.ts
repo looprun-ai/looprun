@@ -259,10 +259,10 @@ function compilePredicate(
 /**
  * NORMALIZE the confirm flag. The world's own `isConfirmed` convention treats `confirmed: 'true'`
  * (the string a JSON tool-call arg often arrives as) as confirmed; the structural
- * `confirmFirst` (via:'probe') keys on the strict boolean `true`. Rather than push the coercion into
+ * `confirmFirst` (via:'simulate') keys on the strict boolean `true`. Rather than push the coercion into
  * the core primitive, the loader wraps the guard's `check`, promoting a string `'true'` to boolean
  * `true` in the ctx it delegates. Minimal seam, zero core change: the only site the string matters is
- * the trigger `ctx.args.confirmed === true` (probe MATCHING excludes the `confirmed` key, so observed
+ * the trigger `ctx.args.confirmed === true` (simulate MATCHING excludes the `confirmed` key, so observed
  * entries need no rewrite).
  */
 function normalizeConfirmed(guard: Guard): Guard {

@@ -39,7 +39,7 @@ const LIST: RecordedCall = {
   tookEffect: false,
 };
 
-const PROBE: RecordedCall = {
+const SIMULATE: RecordedCall = {
   name: 'cancelEvent',
   args: { eventId: 'EV-1' },
   result: { ok: true, requiresConfirmation: true, event: { id: 'EV-1', label: 'Dentista' } },
@@ -157,8 +157,8 @@ describe('the record the rule produces', () => {
     expect(record.map((l) => l.line)).toEqual(['Almoço com Marina: done']);
   });
 
-  it('a probe that came back pending, and a call the world refused, each get theirs', () => {
-    expect(outcomeOf([LIST, PROBE], ['EV-1'])).toBe('awaiting your confirmation');
+  it('a simulate that came back pending, and a call the world refused, each get theirs', () => {
+    expect(outcomeOf([LIST, SIMULATE], ['EV-1'])).toBe('awaiting your confirmation');
     expect(outcomeOf([NOT_FOUND], ['EV-42'])).toBe('could not be completed');
     expect(outcomeOf([LIST], ['EV-1'])).toBe('untouched');
   });
@@ -250,7 +250,7 @@ describe('the survey over a recorded run', () => {
       ...run,
       recordLine: 'Dentista: awaiting your confirmation',
       recordLineRendered: true,
-      ledger: [LIST, PROBE],
+      ledger: [LIST, SIMULATE],
     };
     const row = surveyRun(withLine);
     expect(row.addedLines).toEqual(['Almoço com Marina: nothing was done to it']);

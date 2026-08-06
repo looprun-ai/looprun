@@ -22,7 +22,7 @@
  * ```
  *   vetoed-write        a guard refuses the booking before it reaches the world
  *   ok-false-write      the write reaches the world and the world says no
- *   confirmation-probe  the destructive probe fires, the user never confirms, the subject moves on
+ *   confirmation-simulate  the destructive simulate fires, the user never confirms, the subject moves on
  *   mixed-multi-step    two writes in one turn: one lands, one is vetoed
  *   missing-entity      the user names something that is not on the calendar
  *   ambiguous-request   two events match; the agent must ask instead of picking
@@ -53,7 +53,7 @@ import { terminalsByTurn } from './sheet.js';
 export type Situation =
   | 'vetoed-write'
   | 'ok-false-write'
-  | 'confirmation-probe'
+  | 'confirmation-simulate'
   | 'mixed-multi-step'
   | 'missing-entity'
   | 'ambiguous-request'
@@ -78,7 +78,7 @@ export const DOMAINS: readonly Domain[] = ['calendar', 'orders'];
 export const SITUATIONS: readonly Situation[] = [
   'vetoed-write',
   'ok-false-write',
-  'confirmation-probe',
+  'confirmation-simulate',
   'mixed-multi-step',
   'missing-entity',
   'ambiguous-request',
@@ -155,9 +155,9 @@ const CALENDAR_SCRIPTS: Record<Situation, Record<Variant, Script>> = {
     },
   },
 
-  // The probe fires (`requiresConfirmation`, nothing changed) and the user NEVER answers it — the
+  // The simulate fires (`requiresConfirmation`, nothing changed) and the user NEVER answers it — the
   // second turn changes the subject and the third closes the conversation.
-  'confirmation-probe': {
+  'confirmation-simulate': {
     A: {
       preset: 'default',
       turns: {
@@ -350,8 +350,8 @@ const ORDERS_SCRIPTS: Record<Situation, Script> = {
       en: ['Refund order OR-1004, you can confirm it.', 'How many orders have not been refunded yet?', 'Ok.'],
     },
   },
-  // The probe fires on OR-1001 and the customer never answers it.
-  'confirmation-probe': {
+  // The simulate fires on OR-1001 and the customer never answers it.
+  'confirmation-simulate': {
     preset: 'default',
     turns: {
       pt: [

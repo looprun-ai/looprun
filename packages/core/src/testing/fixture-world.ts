@@ -133,9 +133,9 @@ export class FixtureWorld implements AgentWorld {
 
       case 'deleteItem': {
         if (args.confirmed !== true) {
-          // A probe (ok result) — asks for confirmation, no side effect. It NAMES the record under an
+          // A simulate (ok result) — asks for confirmation, no side effect. It NAMES the record under an
           // identity key: the consent question the engine raises is bound to what the world named, and a
-          // probe that names nothing raises no question at all.
+          // simulate that names nothing raises no question at all.
           return this.#record(name, args, { requiresConfirmation: true, id: args.id });
         }
         return this.#record(name, args, { success: true, deleted: args.id }, true);

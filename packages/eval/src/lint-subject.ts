@@ -145,8 +145,8 @@ function worldFindings(subject: Subject): string[] {
   // THE REFUSAL-AS-RESULT TRAP. The honesty kinds default to "the call executed", not "the action
   // took effect". A world that RETURNS its refusal instead of failing leaves `ok` true, and every
   // one of them short-circuits to null. Nothing else in the battery can see this.
-  const probe = tryPreset(subject.makeWorld, 'default');
-  const world = probe.world;
+  const simulate = tryPreset(subject.makeWorld, 'default');
+  const world = simulate.world;
   if (world) {
     const writes = (subject.toolDefs ?? []).map((t) => t.name).filter((n) => WRITE_NAME_RE.test(n));
     for (const name of writes) {

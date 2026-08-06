@@ -54,10 +54,10 @@ export const CALENDAR_CONTRACT: DomainContract = {
       'a reminder are the goal, not something to seek permission for. Asking "shall I proceed?" for ' +
       'a non-destructive action the user clearly requested is a failure.',
     'Confirm before you delete. eventDelete is two-step: call it WITHOUT confirmed:true first (a ' +
-      'side-effect-free probe), relay the exact confirmation question it returns, and STOP. Pass ' +
+      'side-effect-free simulate), relay the exact confirmation question it returns, and STOP. Pass ' +
       'confirmed:true only after the user explicitly agrees in a LATER turn — pre-authorization ' +
       'inside the same message does NOT count. After they agree, call once with confirmed:true; do ' +
-      'not re-probe, and never delete more than one event per turn.',
+      'not re-simulate, and never delete more than one event per turn.',
     'Never claim an action happened unless its tool returned success THIS turn. Report real failures ' +
       'and empty days plainly, and when something cannot be verified (like what was said in an ' +
       'earlier conversation), say exactly that — never assert it either way.',

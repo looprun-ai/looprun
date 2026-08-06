@@ -81,7 +81,7 @@ describe('confirmFirst is licensed only by a consent the user typed', () => {
     expect(await oneStep().check(ctx)).toBeNull();
   });
 
-  it('the two-step shape gates only the ACT — its preview runs so the world can raise the question', async () => {
+  it('the two-step shape gates only the ACT — its simulation runs so the world can raise the question', async () => {
     const g = confirmFirst();
     expect(await g.check(craftCtx({ tool: 'deleteItem', args: { id: 'x1' }, turnIndex: 1 }))).toBeNull();
     expect(await g.check(craftCtx({ tool: 'deleteItem', args: { id: 'x1', confirmed: true }, turnIndex: 1 }))).toBeTruthy();
@@ -95,12 +95,12 @@ describe('confirmFirst is licensed only by a consent the user typed', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// destructiveThrottle must not count the PROBE, which would make an exemption dead code
+// destructiveThrottle must not count the SIMULATE, which would make an exemption dead code
 // ─────────────────────────────────────────────────────────────────────────────
-describe('destructiveThrottle does not count confirmation probes', () => {
-  // A probe is a call the world RECORDED as having changed nothing (`tookEffect:false`), which is
+describe('destructiveThrottle does not count confirmation simulations', () => {
+  // A simulate is a call the world RECORDED as having changed nothing (`tookEffect:false`), which is
   // what every backend with a world ledger writes. An UNRECORDED call is unverified, not effect-free.
-  it('THE BUG: a probe (requiresConfirmation, ok:true) must not block the approved execute', async () => {
+  it('THE BUG: a simulate (requiresConfirmation, ok:true) must not block the approved execute', async () => {
     const g = destructiveThrottle(['deleteItem']);
     const ctx = craftCtx({
       tool: 'deleteItem',
@@ -110,7 +110,7 @@ describe('destructiveThrottle does not count confirmation probes', () => {
     expect(await g.check(ctx)).toBeNull();
   });
 
-  it('an explicit confirmed:false probe likewise does not count', async () => {
+  it('an explicit confirmed:false simulate likewise does not count', async () => {
     const g = destructiveThrottle(['deleteItem']);
     const ctx = craftCtx({
       tool: 'deleteItem',
@@ -145,10 +145,10 @@ describe('destructiveThrottle does not count confirmation probes', () => {
     expect(await g.check(ctx)).toBeTruthy();
   });
 
-  it('FULL FLOW (L3): probe → approved execute in one turn completes with no recovery events', async () => {
-    // Turn 0 probes: the world answers "I need confirmation on p001" and the engine renders the question.
-    // Turn 1 carries the token the user typed, re-probes (which changes nothing) and then executes. The
-    // re-probe must not count as an effect against the one-destructive-action-per-turn cap.
+  it('FULL FLOW (L3): simulate → approved execute in one turn completes with no recovery events', async () => {
+    // Turn 0 simulations: the world answers "I need confirmation on p001" and the engine renders the question.
+    // Turn 1 carries the token the user typed, re-simulations (which changes nothing) and then executes. The
+    // re-simulate must not count as an effect against the one-destructive-action-per-turn cap.
     const spec = new AgentSpecBase({
       id: 'audit-throttle',
       mode: 'PROOF',
@@ -180,7 +180,7 @@ describe('destructiveThrottle does not count confirmation probes', () => {
 describe('jargonScrub escapes its keys', () => {
   it('THE BUG: a key with regex metacharacters must not throw at construction', () => {
     expect(() => jargonScrub({ 'C++': 'C plus plus' })).not.toThrow();
-    expect(() => jargonScrub({ '(beta)': 'preview' })).not.toThrow();
+    expect(() => jargonScrub({ '(beta)': 'early access' })).not.toThrow();
     expect(() => jargonScrub({ 'a*b': 'ab', 'x[1]': 'x one', 'q?': 'q' })).not.toThrow();
   });
 

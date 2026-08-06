@@ -838,7 +838,7 @@ function issueApproval(ledger: TurnLedger, c: { tool: string; subject?: string; 
 }
 
 /**
- * PATH (b): a destructive tool with no preview form was denied. The denial IS the question — attempting
+ * PATH (b): a destructive tool with no simulate form was denied. The denial IS the question — attempting
  * the act is what puts it on the user's screen. Its meaning is the label the spec declared; a tool with
  * no label issues nothing, so it can never be consented to and never runs.
  */
@@ -1121,7 +1121,7 @@ Replace the whole of `confirmFirst` in `packages/core/src/guards/confirmation.ts
  *   user types       "cancel the BK-12"      → denied; BK-12 is not BK-1
  * ```
  *
- * A denial is what PUTS the question on the user's screen for a tool the world has no preview form for,
+ * A denial is what PUTS the question on the user's screen for a tool the world has no simulate form for,
  * so attempting the act is what asks for permission to do it.
  */
 export function confirmFirst(): Guard {

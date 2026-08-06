@@ -26,8 +26,8 @@ function effectWrite(ledger: ReturnType<typeof createLedger>, world: AgentWorld,
   recordToolResult(ledger, name, args, { id: label, label }, world);
 }
 
-/** Seed a WRITE that RAN OK but changed nothing (a probe: tookEffect false). */
-function probeWrite(ledger: ReturnType<typeof createLedger>, world: AgentWorld, name: string, args: Record<string, unknown>): void {
+/** Seed a WRITE that RAN OK but changed nothing (a simulate: tookEffect false). */
+function simulateWrite(ledger: ReturnType<typeof createLedger>, world: AgentWorld, name: string, args: Record<string, unknown>): void {
   world.toolCalls.push({ name, args, result: { success: true }, tookEffect: false });
   recordToolResult(ledger, name, args, { success: true }, world);
 }
@@ -78,11 +78,11 @@ describe('renderOperationReport — one neutral English line per verified claim'
 });
 
 describe('deriveClaimsFromLedger — the engine derives TRUTH from the world ledger', () => {
-  it('effected write → success with the produced label as target; a read + a probe contribute nothing', () => {
+  it('effected write → success with the produced label as target; a read + a simulate contribute nothing', () => {
     const ledger = createLedger();
     const world = fixtureWorld();
     effectWrite(ledger, world, 'createBooking', { slot: 1 }, 'BK-1'); // effected
-    probeWrite(ledger, world, 'createBooking', { slot: 2 });          // probe, no effect
+    simulateWrite(ledger, world, 'createBooking', { slot: 2 });          // simulate, no effect
     recordToolResult(ledger, 'getMember', { id: 7 }, { name: 'Ana' }); // a read
     const derived = deriveClaimsFromLedger(ledger.observed, 0, ['createBooking']);
     expect(derived).toEqual([{ op: 'BK-1', target: 'BK-1', outcome: 'success' }]);
@@ -235,12 +235,12 @@ describe('finalizeReply — the claims-derived exhaustion closure never fabricat
     expect(ledger.did).toEqual(out.did); // history retains the derived truth
   });
 
-  it('a probe-only turn → the "nothing was changed" shape, no fabricated success', async () => {
+  it('a simulate-only turn → the "nothing was changed" shape, no fabricated success', async () => {
     const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona: 'p', tools: ['createBooking'], contract: BOOKING_CONTRACT });
     spec.addReplyCheck(custom({ kind: 'alwaysDeny', dim: 'behavior', check: () => 'nope', prose: () => '' }), { id: 'agent:deny' });
     const ledger = createLedger();
     const world = fixtureWorld();
-    probeWrite(ledger, world, 'createBooking', { slot: 9 }); // ran, changed nothing
+    simulateWrite(ledger, world, 'createBooking', { slot: 9 }); // ran, changed nothing
     const out = await finalizeReply(spec, BOOKING_CONTRACT, world, ledger, P('Working on it.'), async () => P('Working on it.'), 0);
     expect(out.exhausted).toBe(true);
     expect(out.text).toBe('No operation was carried out on this turn.\n\nI could not complete this safely — nothing was changed. Could you rephrase or add detail?');

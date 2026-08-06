@@ -36,8 +36,8 @@ and it falls inside the recency window. Any non-blank sentence carries a license
 ```
 ┌─ ISSUE ──────────────────────────────────────────────────────────────┐
 │ (c) the world returns requiresConfirmation → approval over the      │
-│     record the probe touched                                         │
-│ (b) a guard denies a tool with no probe    → the denial IS the       │
+│     record the simulate touched                                         │
+│ (b) a guard denies a tool with no simulate    → the denial IS the       │
 │     approval                                                        │
 └──────────────────────────────────────────────────────────────────────┘
         ↓ the engine renders, in the locale the host declares
@@ -71,8 +71,8 @@ Two triggers, covering the two shapes a destructive tool takes.
 
 | Path | Trigger | Record |
 |---|---|---|
-| `(c)` | a call whose result carries `requiresConfirmation` | the probe's own args |
-| `(b)` | a guard denial on a tool that has no preview form | none — see §4 |
+| `(c)` | a call whose result carries `requiresConfirmation` | the simulate's own args |
+| `(b)` | a guard denial on a tool that has no simulate form | none — see §4 |
 
 There is no path in which the agent asks for an approval request. Attempting the act is what produces the
 question; an agent that never attempts never asks, and never acts.
@@ -201,7 +201,7 @@ that exact literal, and that consuming it closes it.
 one rule:  is there an open approval on this record, consumed by the user's own words?
 ```
 
-The `via` / `within` / `flag` options and the probe-equality machinery are removed. A probe still
+The `via` / `within` / `flag` options and the simulate-equality machinery are removed. A simulate still
 issues the approval — it no longer licenses anything by itself.
 
 ---
@@ -270,7 +270,7 @@ via / within / flag      on confirmFirst
 
 | Obligation | Owner |
 |---|---|
-| a destructive tool with a preview form returns `requiresConfirmation` and names its record | world |
+| a destructive tool with a simulate form returns `requiresConfirmation` and names its record | world |
 | a destructive tool with no record declares a `label` | spec |
 | the host declares the conversation's locale | host |
 | a write result names what it touched under an identity key | world (unchanged) |

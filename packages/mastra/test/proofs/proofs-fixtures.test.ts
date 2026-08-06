@@ -55,10 +55,10 @@ describe('FixtureWorld — deterministic', () => {
 
 describe('resultOk — fixture tool result shapes', () => {
   const w = new FixtureWorld('seeded-media');
-  it('ok results pass, failure/probe shapes classify correctly', () => {
+  it('ok results pass, failure/simulate shapes classify correctly', () => {
     expect(resultOk(w.exec('createItem', { title: 'a' }))).toBe(true);
     expect(resultOk(w.exec('listItems', {}))).toBe(true);
-    // a deleteItem probe is an OK result (requiresConfirmation), not a failure
+    // a deleteItem simulate is an OK result (requiresConfirmation), not a failure
     expect(resultOk(w.exec('deleteItem', { id: 'p001' }))).toBe(true);
     // quota-exhausted createMedia → { success:false } → failure
     const exhausted = new FixtureWorld('quota-exhausted');

@@ -3,7 +3,7 @@
  * into a factory producing worlds that implement the engine's `AgentWorld` seam.
  *
  * The machinery it supplies, so a subject never hand-writes it: RECEPTION (`reception.ts`), two-step
- * probe/confirm, deterministic ids/counters + audit + `tookEffect` marking, `projection()` carrying
+ * simulate/confirm, deterministic ids/counters + audit + `tookEffect` marking, `projection()` carrying
  * the clock, echo-safety tagging, preset application over seed, transition gates (`gates.ts`), and a
  * quarantined `custom` executor escape hatch. Everything is deterministic: no clock read, no RNG.
  *
@@ -145,9 +145,9 @@ function build(spec: WorldSpec, options: DefineWorldOptions, preset: string, der
       return push(toolCalls, name, args, { ok: false, error: denied }, false);
     }
     if (tool.twoStep && received.confirmed !== true && args.confirmed !== true) {
-      audit.push({ tool: name, outcome: 'preview' });
-      // side-effect-free preview — gates ALREADY evaluated (probe ≡ confirm identity, #2).
-      return push(toolCalls, name, args, { ok: true, requiresConfirmation: true, preview: previewOf(tool.create, received) }, false);
+      audit.push({ tool: name, outcome: 'simulated' });
+      // side-effect-free simulation — gates ALREADY evaluated (simulate ≡ confirm identity, #2).
+      return push(toolCalls, name, args, { ok: true, requiresConfirmation: true, simulationResult: simulationResultOf(tool.create, received) }, false);
     }
     return tool.transition ? runTransition(name, tool, received, args) : runCreate(name, tool, received, args);
   }
@@ -259,7 +259,7 @@ function tagEcho(tool: ToolDecl, received: Record<string, unknown>): WorldCall['
   return Object.keys(operator).length > 0 ? { operator, agent } : undefined;
 }
 
-function previewOf(create: CreateResult | undefined, received: Record<string, unknown>): Record<string, unknown> {
+function simulationResultOf(create: CreateResult | undefined, received: Record<string, unknown>): Record<string, unknown> {
   const fields = create?.store ?? [];
   return Object.fromEntries(fields.map((f) => [f, received[f]]));
 }

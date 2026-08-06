@@ -76,7 +76,7 @@ generated bundle did exactly that for `updateMemberRole`, and a remediation did 
 a second axis:
 
 ```ts
-confirmFirst({ flag })          // WHICH call acts — the preview runs freely
+confirmFirst({ flag })          // WHICH call acts — the simulation runs freely
 confirmFirst({ flag, when })    // WHEN this call is destructive — a pure predicate over its args
 ```
 
@@ -270,7 +270,7 @@ about the CALL        two questions: WHICH call acts (flag), WHEN it is destruct
 | 3 | `packages/eval/src/**` — the entry point that owns the parity law | the preset-aware predicate reads the world's presets, so the law lands in `lintSubject(subject)` or `lintSpecExecution(specs)`, not in `lintSpecQuality(specs, toolDefs)`, which never sees a preset |
 | 3 | `docs/tutorial/05-running-and-eval.md` — the preflight lint table | that table publishes what each lint receives; the law's row states its inputs, and the violation string each new law prints |
 | 3 | `packages/eval/README.md` | what `--spec-laws` covers |
-| 3 | `BACKLOG.md` — the probe-parity lint row | the parity law's execution half and that row are one question: a check that must RUN the flow rather than read it |
+| 3 | `BACKLOG.md` — the simulate-parity lint row | the parity law's execution half and that row are one question: a check that must RUN the flow rather than read it |
 | 4 | `docs/tutorial/05-running-and-eval.md` — `lintSubject`'s findings, the `GUARD-NEVER-TARGETED` line | whether a gap can be accepted at all, and if so what the subject writes to accept it |
 | 4 | `packages/eval/src/lint-subject.ts` — the violation string | it names the defect; if a declaration is readable, it names the escape too |
 | — | `docs/tutorial/04-guards.md` | regenerated for §1 and §2 through the catalog, hand-edited for neither |

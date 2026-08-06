@@ -129,7 +129,7 @@ export const TOOL_DEFS: ToolDef[] = [
         },
         confirmed: {
           type: 'boolean',
-          description: 'false/absent = probe (no effect, returns the confirmation question); true = delete after user confirmation.',
+          description: 'false/absent = simulate (no effect, returns the confirmation question); true = delete after user confirmation.',
         },
       },
       required: ['eventId'],

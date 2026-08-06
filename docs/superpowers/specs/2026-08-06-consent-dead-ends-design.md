@@ -76,7 +76,7 @@ simulationResult         the result field that CARRIES it      ← plain-names
 outcome: 'simulated'     the audit row that RECORDS it         ← plain-names
 ```
 
-The inverted polarity also matches how real APIs behave (default acts; `dry_run: true` previews)
+The inverted polarity also matches how real APIs behave (default acts; `dry_run: true` simulations)
 and makes the tool honest: `cancelBooking({ bookingId })` cancels — the call does what its name
 says.
 
@@ -268,7 +268,7 @@ The `confirmArg` and `flagless` options are deleted. What declares a simulation:
 
 A bare sibling counts as an effect. This closes the residual the current guard documents: N bare
 mutations of a flag-gated tool in ONE step were uncountable (indistinguishable from a
-multi-preview when the preview shape was flag-ABSENCE); with the simulation shape being an explicit
+multi-simulation when the simulation shape was flag-ABSENCE); with the simulation shape being an explicit
 `simulate: true`, the cap holds from the first sibling. The legal multi-simulation (two
 `simulate: true` siblings in one step) still passes: simulations are not effects.
 
@@ -293,8 +293,8 @@ The skill currently teaches the flag polarity and the mechanism split; every pas
 | surface | today | becomes |
 |---|---|---|
 | `gen.md` G-law (49–51) | "give every destructive tool a `confirmed` boolean; a one-step tool MUST be declared `'prior-ask'`" | "a destructive tool needs NOTHING — the attempt becomes the question. Where the API can simulate, give it a `simulate` boolean: the user then confirms knowing what the act does, and never authorizes what would fail" |
-| `gen.md` probe-validity law (249) | keyed on `confirmed:false` | the simulate-validity law, keyed on `simulate: true` |
-| `gen.md` check 6, probe×confirm parity (293) | probe returns the same error the confirmed call would | simulate×act parity, same substance |
+| `gen.md` simulate-validity law (249) | keyed on `confirmed:false` | the simulate-validity law, keyed on `simulate: true` |
+| `gen.md` check 6, simulate×confirm parity (293) | simulate returns the same error the confirmed call would | simulate×act parity, same substance |
 | `gen.md` emend-via-proxy | "add `confirmed`/two-step" | "add `simulate`" — a proxy-added simulation is describe-only (it cannot validate what the real API hides); it may also translate `simulate: true` to a real API's own dry-run shape |
 | `guard-catalog.md` (51–53, 342) | the `confirmMechanism` partition, `flag: false`, `base:confirmFirstPriorAsk` | one entry, one law: a destructive call that is not a schema-licensed simulation requires the code |
 | `evals.md` coverage (211) | "a dedicated two-step confirm case" per destructive tool | one case per ROUTE the subject's tools expose: Route A (downgrade) and Route B (veto-question) |

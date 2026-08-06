@@ -121,7 +121,7 @@ function syntheticWorld(): AgentWorld {
  * MINIMUM LEGAL DECLARATION (MI): a delivered `respond` always carries at least one intention, so an
  * absent `did` is a state no onReply guard can be in. The intention is a SPEECH one (`inform`), which
  * names no ledger fact: the structured cross-checks stay silent on the synthetic ctx instead of
- * reporting an ungrounded claim this probe invented, and the differential below keeps measuring what
+ * reporting an ungrounded claim this simulate invented, and the differential below keeps measuring what
  * it is meant to measure — whether the required STRING itself is what a sibling guard vetoes.
  */
 function syntheticReplyCtx(reply: string): GuardCtx {
@@ -150,7 +150,7 @@ async function runCheck(b: GuardBinding, reply: string): Promise<{ violation: st
  *
  * SCOPE: the requirer keys on STRUCTURE (a `did` target), while the vetoers that can
  * contradict it are the text-reading ones (`llmCheck` rubrics, `custom` behavior checks, mutable
- * reply prose) — the required target still has to be SAYABLE. So the probe embeds the target in the
+ * reply prose) — the required target still has to be SAYABLE. So the simulate embeds the target in the
  * reply text; it is not claiming the coverage rule itself is text-matched.
  */
 async function unsatReplyFindings(id: string, spec: AgentSpec): Promise<string[]> {
@@ -164,14 +164,14 @@ async function unsatReplyFindings(id: string, spec: AgentSpec): Promise<string[]
       for (const y of bindings) {
         if (y.id === x.id) continue;
         const base = await runCheck(y, BASELINE_REPLY);
-        const probe = await runCheck(y, withString);
-        if (probe.threw && !reportedThrows.has(y.id)) {
+        const simulate = await runCheck(y, withString);
+        if (simulate.threw && !reportedThrows.has(y.id)) {
           reportedThrows.add(y.id);
-          out.push(`spec "${id}": UNSAT-RISK: guard ${y.id} check() THREW while probing "${s}" (required by ${x.id}): ${probe.threw}`);
+          out.push(`spec "${id}": UNSAT-RISK: guard ${y.id} check() THREW while simulating "${s}" (required by ${x.id}): ${simulate.threw}`);
           continue;
         }
-        if (probe.violation && !base.violation) {
-          out.push(`spec "${id}": UNSAT-RISK: guard ${x.id} requires "${s}" while guard ${y.id} vetoes it (${probe.violation})`);
+        if (simulate.violation && !base.violation) {
+          out.push(`spec "${id}": UNSAT-RISK: guard ${x.id} requires "${s}" while guard ${y.id} vetoes it (${simulate.violation})`);
         }
       }
     }

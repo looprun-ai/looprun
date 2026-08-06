@@ -97,7 +97,7 @@ export class BatteryWorld implements AgentWorld {
         const id = String(args.eventId ?? '');
         const found = this.events.find((e) => e.id === id);
         if (!found) return push({ ok: false, error: 'no such event', eventId: id }, false);
-        // The PROBE half: no `confirmed` ⇒ report what would go, change nothing.
+        // The SIMULATE half: no `confirmed` ⇒ report what would go, change nothing.
         if (args.confirmed !== true) return push({ ok: true, requiresConfirmation: true, event: { ...found } }, false);
         this.events = this.events.filter((e) => e.id !== id);
         return push({ ok: true, cancelledEventId: id, cancelledLabel: found.label }, true);

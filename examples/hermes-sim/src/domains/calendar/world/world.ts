@@ -5,7 +5,7 @@
  * the same as guards). The fixed REFERENCE_NOW constant (a Monday, 09:00) drives ALL relative-date
  * resolution; datetimes are naive ISO `YYYY-MM-DDTHH:mm` strings compared lexicographically, and
  * the only datetime arithmetic (reminder fire times) is pure integer civil-date math. Destructive
- * probes (`confirmed` absent/false) are side-effect-free and return
+ * simulations (`confirmed` absent/false) are side-effect-free and return
  * `{ success: true, requiresConfirmation: true, question }`. `advanceTurn()` only increments the
  * turn counter — it never auto-finishes a user-gated two-step action.
  */

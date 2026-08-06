@@ -243,12 +243,12 @@ describe('L3 — redrive message/did desync seals a phantom ask', () => {
 // ════════════════════════════════════════════════════════════════════════════════════════════════
 // L4 — destructiveThrottle's "EFFECT BEATS FLAGS" rule is INERT IN NATIVE-TOOLS MODE
 //
-//   `isProbe(o) = o.tookEffect !== true && (requiresConfirmation || args[confirmArg] === false)`.
+//   `isSimulate(o) = o.tookEffect !== true && (requiresConfirmation || args[confirmArg] === false)`.
 //   `tookEffect` is computed in `recordToolResult` by matching the call against `world.toolCalls` — but in
 //   NATIVE-TOOLS mode (`LoopRunAgent({ tools })`, the MCP path) the world is the `worldFromTools` stub,
 //   whose `toolCalls` array NOTHING ever writes to. So `tookEffect` is `false` for EVERY call, the
 //   `tookEffect !== true` clause is permanently satisfied, and the throttle degenerates to a pure-flag
-//   test: a tool that MUTATES while carrying `confirmed:false` is classified as a probe and the
+//   test: a tool that MUTATES while carrying `confirmed:false` is classified as a simulate and the
 //   one-effect-per-turn cap never engages.
 // ════════════════════════════════════════════════════════════════════════════════════════════════
 describe('L4 — destructiveThrottle in native-tools mode', () => {

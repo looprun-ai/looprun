@@ -81,7 +81,7 @@ const CONSENT_STORY = [
   '',
   '```',
   '   ①  the world raises it   your tool answers requiresConfirmation and NAMES its record',
-  '   ②  or the denial does    a tool with no preview form is denied, and the denial raises the question',
+  '   ②  or the denial does    a tool with no simulate form is denied, and the denial raises the question',
   '                            from the label your spec declared',
   '   ③  the engine renders    the question lands in the delivered text, between the agent prose and the',
   '                            operation record',

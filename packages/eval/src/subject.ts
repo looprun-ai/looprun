@@ -174,7 +174,7 @@ const WORLD_SEAMS = ['exec', 'advanceTurn', 'ingestAttachment'] as const;
 /**
  * Structural preflight — no LLM calls. Returns issue strings (empty = clean): duplicate case
  * ids, cases with no turns or no expectations, spec-surface or invariant tool names with no
- * toolDef, CASE_AGENT routes to unknown specs/cases, and world-seam holes (one world probed
+ * toolDef, CASE_AGENT routes to unknown specs/cases, and world-seam holes (one world simulated
  * per distinct preset). Reported as warnings by the CLI; a broken reference would otherwise
  * surface only mid-run as a confusing model/world error.
  */
@@ -208,7 +208,7 @@ export function validateSubject(subject: Subject): string[] {
     if (!seen.has(caseId)) issues.push(`CASE_AGENT: "${caseId}" is not a known case`);
   }
 
-  // World seams: one world per distinct preset, probed structurally.
+  // World seams: one world per distinct preset, simulated structurally.
   const presets = [...new Set(subject.cases.map((c) => c.setup?.preset ?? 'default'))];
   for (const preset of presets) {
     try {

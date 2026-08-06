@@ -49,7 +49,7 @@ the row above will fix one and leave the other broken:
 | `skill/scripts/extract-fork.mjs` | `:184` `await importFromCwd('@looprun-ai/core')` | `:210`, `:222` |
 
 Both resolve the package **at runtime from the user's cwd**, so neither fails at build time — they
-fail on the user's machine, mid-phase. `skill/scripts/margin-probe.mjs:35` and
+fail on the user's machine, mid-phase. `skill/scripts/margin-simulate.mjs:35` and
 `skill/references/test.md:236` cite the name in prose and want the same edit for accuracy.
 
 Two further **reference corrections** are owed in that repo, independent of the specifier change:

@@ -126,7 +126,7 @@ describe('the scenario grid', () => {
     const world = orders.makeWorld('default') as unknown as { exec: (n: string, a: Record<string, unknown>) => Record<string, unknown> };
     // The row exists and is already refunded: the WORLD says no, without a guard being involved.
     expect(world.exec('refundOrder', { orderId: 'OR-1004', confirmed: true })).toMatchObject({ ok: false, error: 'already refunded' });
-    // The probe half changes nothing.
+    // The simulate half changes nothing.
     expect(world.exec('refundOrder', { orderId: 'OR-1001' })).toMatchObject({ ok: true, requiresConfirmation: true });
     // The confirmed refund attests its effect.
     expect(world.exec('refundOrder', { orderId: 'OR-1001', confirmed: true })).toMatchObject({ ok: true, refundedOrderId: 'OR-1001' });

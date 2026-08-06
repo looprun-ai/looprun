@@ -209,7 +209,7 @@ describe('loadNormsConfig — guards from data', () => {
       guards: [{ kind: 'consentToken', id: 'refundConsent', tools: ['issueRefund'] }],
     });
     const binding = spec.guards.preTool.find((b) => b.id === 'agent:refundConsent')!;
-    // A string-'true' confirm with NO earlier probe must be treated as confirmed → denied, exactly
+    // A string-'true' confirm with NO earlier simulate must be treated as confirmed → denied, exactly
     // as a boolean-true confirm would be (proves the coercion reached the trigger).
     const ctx: GuardCtx = {
       args: { confirmed: 'true', amount: 10 },
@@ -221,7 +221,7 @@ describe('loadNormsConfig — guards from data', () => {
       history: [],
     };
     expect(typeof binding.guard.check(ctx)).toBe('string');
-    // control: an unconfirmed call (no probe requirement triggered) is allowed
+    // control: an unconfirmed call (no simulate requirement triggered) is allowed
     expect(binding.guard.check({ ...ctx, args: { amount: 10 } })).toBeNull();
   });
 

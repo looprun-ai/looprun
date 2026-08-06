@@ -3,7 +3,7 @@
  *
  * A pure in-memory world: NO I/O, NO clock, NO randomness (the guard-purity lints apply to worlds
  * the same as guards). All timestamps are fixed reference strings; new note ids mint monotonically
- * from a counter. The destructive probe (`confirmed` absent/false on noteDelete) is side-effect-free
+ * from a counter. The destructive simulate (`confirmed` absent/false on noteDelete) is side-effect-free
  * and returns `{ success: true, requiresConfirmation: true, question }`. `advanceTurn()` only
  * increments the turn counter — it never auto-finishes a user-gated two-step action.
  */

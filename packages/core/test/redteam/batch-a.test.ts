@@ -55,7 +55,7 @@ describe('requiresBefore — attack recency / failed-dep smuggle', () => {
     expect(gw.check(ctx)).not.toBeNull(); // must be denied
   });
 
-  it('BREAK-PROBE: with UNBOUNDED default, a FUTURE-turn dep satisfies (no >=0 guard when within==null)', () => {
+  it('BREAK-SIMULATE: with UNBOUNDED default, a FUTURE-turn dep satisfies (no >=0 guard when within==null)', () => {
     // within==null skips the turn-delta clause entirely → any ok dep, even from a later turnIndex, counts.
     const ctx = base({ tool: 'write', observed: [oc({ name: 'readRecord', ok: true, turnIndex: 7 })], turnIndex: 2 });
     // Assert ACTUAL behaviour (allow). Whether this is exploitable depends on whether observed can ever
@@ -168,16 +168,16 @@ describe('argRequired — attack empty/blank/container shapes', () => {
   it('HOLDS: null → denied', () => expect(g.check(base({ args: { title: null } }))).not.toBeNull());
   it('HOLDS: undefined → denied', () => expect(g.check(base({ args: { title: undefined } }))).not.toBeNull());
 
-  it('BREAK-PROBE: empty ARRAY [] passes a required-field gate (prose says "non-empty")', () => {
+  it('BREAK-SIMULATE: empty ARRAY [] passes a required-field gate (prose says "non-empty")', () => {
     // v==null false, not a string → empty=false → ALLOWED. An empty list satisfies "required".
     expect(g.check(base({ args: { title: [] } }))).toBeNull();
   });
 
-  it('BREAK-PROBE: empty OBJECT {} passes a required-field gate', () => {
+  it('BREAK-SIMULATE: empty OBJECT {} passes a required-field gate', () => {
     expect(g.check(base({ args: { title: {} } }))).toBeNull();
   });
 
-  it('BREAK-PROBE: zero-width/unicode-blank string ("\\u200B") passes (trim() does not strip it)', () => {
+  it('BREAK-SIMULATE: zero-width/unicode-blank string ("\\u200B") passes (trim() does not strip it)', () => {
     expect(g.check(base({ args: { title: '​' } }))).toBeNull();
   });
 
@@ -201,10 +201,10 @@ describe('argAbsent — attack null/undefined smuggle', () => {
     expect(g.check(base({ args: { secret: 0 } }))).not.toBeNull();
     expect(g.check(base({ args: { secret: false } }))).not.toBeNull();
   });
-  it('BREAK-PROBE: key present with value null bypasses (field IS present but != null is false)', () => {
+  it('BREAK-SIMULATE: key present with value null bypasses (field IS present but != null is false)', () => {
     expect(g.check(base({ args: { secret: null } }))).toBeNull();
   });
-  it('BREAK-PROBE: key present with value undefined bypasses', () => {
+  it('BREAK-SIMULATE: key present with value undefined bypasses', () => {
     expect(g.check(base({ args: { secret: undefined } }))).toBeNull();
   });
 });
@@ -220,29 +220,29 @@ describe('argFormat — attack non-string bypass + anchoring', () => {
     expect(g.check(base({ args: { id: '123' } }))).toBeNull();
   });
 
-  it('BREAK-PROBE: a NON-STRING value (number) entirely bypasses format validation', () => {
+  it('BREAK-SIMULATE: a NON-STRING value (number) entirely bypasses format validation', () => {
     // typeof v !== 'string' → return null. A malformed-by-type id is unchecked.
     expect(g.check(base({ args: { id: 12.5 } }))).toBeNull();
   });
-  it('BREAK-PROBE: an ARRAY value bypasses format validation', () => {
+  it('BREAK-SIMULATE: an ARRAY value bypasses format validation', () => {
     expect(g.check(base({ args: { id: ['drop table'] } }))).toBeNull();
   });
-  it('BREAK-PROBE: an OBJECT value bypasses format validation', () => {
+  it('BREAK-SIMULATE: an OBJECT value bypasses format validation', () => {
     expect(g.check(base({ args: { id: { $ne: null } } }))).toBeNull();
   });
 
-  it('BREAK-PROBE: empty string bypasses argFormat alone (delegated to argRequired; gap if used solo)', () => {
+  it('BREAK-SIMULATE: empty string bypasses argFormat alone (delegated to argRequired; gap if used solo)', () => {
     expect(g.check(base({ args: { id: '' } }))).toBeNull();
   });
 
-  it('BREAK-PROBE: UNANCHORED author pattern matches a substring (injection tail slips through)', () => {
+  it('BREAK-SIMULATE: UNANCHORED author pattern matches a substring (injection tail slips through)', () => {
     const gu = argFormat('id', '[0-9]+'); // author forgot ^...$
     expect(gu.check(base({ args: { id: '123; DROP TABLE users' } }))).toBeNull(); // matches substring → allowed
   });
 
   it('HOLDS: $ without /m — a trailing-newline payload is correctly DENIED by ^\\w+$', () => {
     const gm = argFormat('name', '^\\w+$');
-    // Probed the classic JS anchor gap: it does NOT apply here — \w excludes \n and non-multiline $
+    // Checked the classic JS anchor gap: it does NOT apply here — \w excludes \n and non-multiline $
     // does not match before a trailing newline, so "safe\n" is denied. Anchored patterns hold.
     expect(gm.check(base({ args: { name: 'safe\n' } }))).not.toBeNull();
   });

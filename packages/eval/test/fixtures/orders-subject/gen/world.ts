@@ -93,7 +93,7 @@ export class OrdersWorld implements AgentWorld {
         if (found.status === 'refunded') {
           return push({ ok: false, error: 'already refunded', orderId: id, refundedLabel: found.item }, false);
         }
-        // The PROBE half: no `confirmed` ⇒ report what would go, change nothing.
+        // The SIMULATE half: no `confirmed` ⇒ report what would go, change nothing.
         if (args.confirmed !== true) {
           return push({ ok: true, requiresConfirmation: true, order: { ...found } }, false);
         }

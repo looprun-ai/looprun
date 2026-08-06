@@ -19,7 +19,7 @@
 - 5635d4c: Consent to a destructive act is a token the engine issues and the user types back.
 
   A call that answers `requiresConfirmation` names its record and the engine opens a question bound to it;
-  a destructive tool with no preview form is denied, and the denial opens a question from the label the
+  a destructive tool with no simulate form is denied, and the denial opens a question from the label the
   spec declared. The engine renders the question into the delivered text, the runtime reads the next
   incoming message once and marks the question consumed if the user's own words carry its token, and
   `confirmFirst` allows the act only when a consumed question is about that call. No model participates in
@@ -27,7 +27,7 @@
 
   **Breaking changes**
 
-  - `confirmFirst` takes one option, `flag`, and it says which call ACTS — the preview runs freely because
+  - `confirmFirst` takes one option, `flag`, and it says which call ACTS — the simulation runs freely because
     it is how the world raises the question. `flag: false` is the one-step shape. `via` and `within` are
     gone.
   - `noActAfterAskSameTurn` and `pendingConfirmMustAsk` are removed. A token can only arrive in a user

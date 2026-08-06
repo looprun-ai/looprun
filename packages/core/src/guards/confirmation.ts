@@ -24,16 +24,16 @@ import { approvalMatchesCall } from '../runtime/approval-request.js';
  * only the user can type.
  *
  * WHAT IS GATED is decided by `flag`, and that is the whole of the configuration. A two-step tool
- * distinguishes its PREVIEW from its ACT by an argument, and the preview must run — it is how the world
+ * distinguishes its SIMULATION from its ACT by an argument, and the simulation must run — it is how the world
  * raises the question in the first place:
  *
  * ```
- *   deleteItem({id:'itm-1'})                   preview → the world answers "I need confirmation on itm-1"
+ *   deleteItem({id:'itm-1'})                   simulation → the world answers "I need confirmation on itm-1"
  *                                                      → the engine raises the question
  *   deleteItem({id:'itm-1', confirmed:true})   act     → gated on the token
  * ```
  *
- * `flag: false` is the one-step shape: the tool has no preview form, so EVERY call acts and every call is
+ * `flag: false` is the one-step shape: the tool has no simulate form, so EVERY call acts and every call is
  * gated. There the DENIAL is what raises the question, from the label the spec declared — attempting the
  * act is what asks permission for it, and an agent that never attempts never acts.
  *
@@ -64,7 +64,7 @@ export function confirmFirst(opts?: {
       // so a gate on it denies a call no consent can ever license. A tool with no entry here is
       // destructive on every call, which is what a bare list means.
       if (when?.[tool] && !when[tool](ctx.args)) return null;
-      // A preview changes nothing and is how the question gets asked; only the acting call is gated.
+      // A simulation changes nothing and is how the question gets asked; only the acting call is gated.
       if (flag !== false && ctx.args[flag] !== true) return null;
       const licensed = (ctx.consent ?? []).some((c) => approvalMatchesCall(c, tool, ctx.args));
       return licensed
@@ -81,37 +81,37 @@ export function confirmFirst(opts?: {
 /**
  * At most ONE destructive action that TOOK EFFECT per turn.
  *
- * PROBES DO NOT COUNT. A two-step destructive tool is called twice in the
- * legal same-turn tail of an approved flow: first the PROBE (no confirm flag / `confirmed:false`), which
+ * SIMULATES DO NOT COUNT. A two-step destructive tool is called twice in the
+ * legal same-turn tail of an approved flow: first the SIMULATE (no confirm flag / `confirmed:false`), which
  * returns `requiresConfirmation` and lands in `observed` with **`ok:true`** — it succeeded at asking,
- * it just did not delete anything — then the approved `confirmed:true` execute. Counting the probe made
+ * it just did not delete anything — then the approved `confirmed:true` execute. Counting the simulate made
  * this throttle deny that second call, which in turn made `pendingConfirmMustAsk`'s explicitly-documented
- * "probe→approved-execute in the SAME turn" exemption DEAD CODE: the flow it exempts could never occur.
+ * "simulate→approved-execute in the SAME turn" exemption DEAD CODE: the flow it exempts could never occur.
  * The two kinds now agree on what "already acted" means.
  *
- * EFFECT BEATS FLAGS: a call that `tookEffect` is an EFFECT, whatever flags it carries. Keying the probe
+ * EFFECT BEATS FLAGS: a call that `tookEffect` is an EFFECT, whatever flags it carries. Keying the simulate
  * test on `confirmed:false` / `requiresConfirmation` without consulting `tookEffect` would let a tool that
  * mutates while carrying `confirmed:false` (it ignores or omits the flag's semantics) produce two real
- * destructive effects that BOTH classify as probes — the throttle would count zero prior effects and the
- * second call would slip the n:1 cap. The flags describe an INTENT to preview; `tookEffect` is the world's
+ * destructive effects that BOTH classify as simulations — the throttle would count zero prior effects and the
+ * second call would slip the n:1 cap. The flags describe an INTENT to simulation; `tookEffect` is the world's
  * own record of what happened, so it is the authority.
  *
- * WHAT COUNTS AS A PROBE DEPENDS ON WHETHER THE CALL HAS RUN — because that decides what evidence can
+ * WHAT COUNTS AS A SIMULATE DEPENDS ON WHETHER THE CALL HAS RUN — because that decides what evidence can
  * exist at all:
- *   · an EXECUTED call (in `observed`) is a probe when the world RECORDED that it changed nothing
- *     (`tookEffect === false`) AND its flags declare a preview. A call that ran and left NO record is
+ *   · an EXECUTED call (in `observed`) is a simulate when the world RECORDED that it changed nothing
+ *     (`tookEffect === false`) AND its flags declare a simulation. A call that ran and left NO record is
  *     unverifiable and counts (see below).
  *   · a same-step SIBLING (`siblingCallsThisStep`) has been admitted but has NOT run, so `tookEffect` is
  *     `undefined` by construction and its declared flags are the only evidence there is.
  * `confirmArg` (default `confirmed`) matches the sibling kinds' parameterisation (`confirmFirst`'s
  * `argFlag`, `pendingConfirmMustAsk`'s `confirmArg`). `flagless` names the destructive tools that run the
- * `'prior-ask'` mechanism instead: they carry no confirm flag at all, so they have no preview shape of
+ * `'prior-ask'` mechanism instead: they carry no confirm flag at all, so they have no simulation shape of
  * their own and EVERY call of them counts as an effect. `AgentSpecBase` passes the mechanism split it
  * already computes; a hand-installed throttle that omits `flagless` treats every listed tool as
  * flag-gated.
  *
  * BUILT ON `maxCalls`' COUNTING MACHINERY (2026-08-02): this is `maxCalls` with `n:1`, `scope:'turn'`, a
- * tool-SET match (minus probes), and the same-step sibling candidates folded in — it shares
+ * tool-SET match (minus simulations), and the same-step sibling candidates folded in — it shares
  * `countOkCalls`, the one place that decides what an "already-succeeded" call is. No API or behaviour
  * change; the existing throttle proofs pass unchanged (that IS the acceptance).
  */
@@ -132,48 +132,48 @@ export function destructiveThrottle(
   const isDestructive = (name: string, args: Record<string, unknown> | undefined): boolean =>
     !when?.[name] || when[name](args ?? {});
   // The `'prior-ask'` tools: no confirm flag exists on them, so nothing they can put in their args
-  // declares a preview and every call is an act.
+  // declares a simulation and every call is an act.
   const flagless = new Set(opts?.flagless ?? []);
-  // The caller's DECLARED intent to preview. A flag is not evidence of what happened — it is what the
+  // The caller's DECLARED intent to simulation. A flag is not evidence of what happened — it is what the
   // model said it was about to do.
-  const flagsDeclarePreview = (o: ObservedCall): boolean =>
+  const flagsDeclareSimulation = (o: ObservedCall): boolean =>
     o.resultFlags?.requiresConfirmation === true || o.args?.[confirmArg] === false;
-  // An EXECUTED call is a probe only when the world POSITIVELY recorded that it changed nothing.
+  // An EXECUTED call is a simulate only when the world POSITIVELY recorded that it changed nothing.
   //
-  // UNKNOWN EFFECT IS NOT A PROBE. Reading `tookEffect !== true` would treat "the world has no record of
+  // UNKNOWN EFFECT IS NOT A SIMULATE. Reading `tookEffect !== true` would treat "the world has no record of
   // this call" exactly like "the world says it changed nothing" — and in native-tools/MCP mode NOTHING
   // writes the world ledger, so every call would read as not-effected and the EFFECT-BEATS-FLAGS rule
   // above would be permanently INERT: a third-party tool that mutates while carrying `confirmed:false`
-  // would classify as a probe and slip the n:1 cap. A call that RAN and left no record of its effect is
+  // would classify as a simulate and slip the n:1 cap. A call that RAN and left no record of its effect is
   // unverifiable, so it counts.
-  const executedIsProbe = (o: ObservedCall): boolean => o.tookEffect === false && flagsDeclarePreview(o);
+  const executedIsSimulate = (o: ObservedCall): boolean => o.tookEffect === false && flagsDeclareSimulation(o);
   // A same-step SIBLING has been admitted but has NOT executed, so it has no world record BY
   // CONSTRUCTION — `tookEffect` is `undefined` for every one of them, always. Applying the executed rule
-  // here would count every admitted destructive sibling, which denies a legitimate MULTI-PREVIEW: an
-  // agent asked to preview cancelling two bookings emits two `cancel({confirmed:false})` in ONE step,
+  // here would count every admitted destructive sibling, which denies a legitimate MULTI-SIMULATION: an
+  // agent asked to simulation cancelling two bookings emits two `cancel({confirmed:false})` in ONE step,
   // and the second would be vetoed for an effect neither call has had yet. For a call
   // that has not run, its declared flags are the only evidence that exists, so they decide.
   //
-  // NOT-CONFIRMED IS THE PREVIEW SHAPE, exactly as `confirmFirst` reads it. Keying the sibling test on
-  // `confirmed === false` alone would miss a preview that simply OMITS the flag — the shape
-  // `confirmFirst`'s `'probe'` variant explicitly licenses ("a `flag:false`/absent PROBE") and the shape it
+  // NOT-CONFIRMED IS THE SIMULATION SHAPE, exactly as `confirmFirst` reads it. Keying the sibling test on
+  // `confirmed === false` alone would miss a simulation that simply OMITS the flag — the shape
+  // `confirmFirst`'s `'simulate'` variant explicitly licenses ("a `flag:false`/absent SIMULATE") and the shape it
   // lets through untouched (it returns null on `args[flag] !== true`). The two kinds must agree on the
-  // very case the throttle's own doc claims they agree on: a model previewing two cancellations without
-  // spelling `confirmed:false` had its second preview vetoed for an effect neither call had had. A
-  // sibling declares a preview when it is NOT CONFIRMED.
+  // very case the throttle's own doc claims they agree on: a model simulating two cancellations without
+  // spelling `confirmed:false` had its second simulation vetoed for an effect neither call had had. A
+  // sibling declares a simulation when it is NOT CONFIRMED.
   //
   // RESIDUAL, stated rather than hidden: a flag-gated tool that MUTATES without `confirmed:true` and is
   // emitted N times in ONE step is not capped — the cap is per-step-effect and there is no counter here,
   // so it is UNBOUNDED N, not merely two. Nothing observable distinguishes those calls from an honest
-  // multi-preview at admission time. What DOES bound the shape: the cross-step form is capped (by then
+  // multi-simulation at admission time. What DOES bound the shape: the cross-step form is capped (by then
   // the first call's effect is on record), `flagless` tools are capped from the first sibling, and the
   // world's own two-step protocol never mutates on an unconfirmed call.
-  const pendingIsProbe = (o: ObservedCall): boolean =>
+  const pendingIsSimulate = (o: ObservedCall): boolean =>
     !flagless.has(o.name) && o.args?.[confirmArg] !== true;
-  // An EFFECT = a listed destructive tool that ran OK and is not a probe. (The `ok` + turn-window part is
-  // applied by `countOkCalls`; this predicate carries only the set-membership + not-a-probe test.)
+  // An EFFECT = a listed destructive tool that ran OK and is not a simulate. (The `ok` + turn-window part is
+  // applied by `countOkCalls`; this predicate carries only the set-membership + not-a-simulate test.)
   const isEffectAmong = (pending: readonly ObservedCall[]) => (o: ObservedCall): boolean =>
-    set.has(o.name) && isDestructive(o.name, o.args) && !(pending.includes(o) ? pendingIsProbe(o) : executedIsProbe(o));
+    set.has(o.name) && isDestructive(o.name, o.args) && !(pending.includes(o) ? pendingIsSimulate(o) : executedIsSimulate(o));
   return {
     kind: 'destructiveThrottle',
     dim: 'run',
@@ -184,8 +184,8 @@ export function destructiveThrottle(
       // destructive sibling emitted earlier in the SAME step that the backend admitted but has not yet
       // pushed to `observed` (a same-step concurrency gap — two `Promise.all`-dispatched calls are both
       // gated before either lands). A sibling admitted by its preTool guards WILL take effect, so it
-      // counts exactly like an observed effect — unless its own args declare it a preview, which is the
-      // only evidence a call that has not run can offer (see `pendingIsProbe`).
+      // counts exactly like an observed effect — unless its own args declare it a simulation, which is the
+      // only evidence a call that has not run can offer (see `pendingIsSimulate`).
       const pending = ctx.siblingCallsThisStep ?? [];
       const candidates = ctx.siblingCallsThisStep ? [...ctx.observed, ...pending] : ctx.observed;
       const isEffect = isEffectAmong(pending);
@@ -195,6 +195,6 @@ export function destructiveThrottle(
       const prior = candidates.find((o) => o.turnIndex === ctx.turnIndex && o.ok && isEffect(o))!;
       return `A destructive action (${prior.name}) already ran this turn — do NOT chain another destructive call. Reply to the user first.`;
     },
-    prose: () => 'at most one destructive action per turn (a confirmation probe that changed nothing does not count)',
+    prose: () => 'at most one destructive action per turn (a confirmation simulate that changed nothing does not count)',
   };
 }

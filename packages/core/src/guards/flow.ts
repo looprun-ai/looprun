@@ -10,7 +10,7 @@ import { TERMINAL_TOOLS } from './shared.js';
  * SUCCESSFUL (`ok`) calls among `candidates` that satisfy `match`, within a budget WINDOW:
  *  - `scope: 'turn'` — only calls of the current turn (`o.turnIndex === turnIndex`);
  *  - `scope: 'conversation'` — every turn.
- * `maxCalls` counts one tool by name; `destructiveThrottle` counts a tool SET minus its probes — both
+ * `maxCalls` counts one tool by name; `destructiveThrottle` counts a tool SET minus its simulations — both
  * deny once the count reaches their `n` (1 for the throttle). One place decides what "already acted"
  * means, so the two kinds can never drift apart on it.
  */

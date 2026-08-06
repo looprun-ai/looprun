@@ -3,7 +3,7 @@ date: 2026-08-03
 slug: mandatory-intention
 change_kind: runtime
 target: —
-summary: mandatory intention + red-team hardening: did .min(1) with a speech/action partition on op, the asked boolean retired for an ask INTENTION, key-scoped identity and whole-value matching in the honesty cross-check, consent evidence bound to sealed delivered turns, and the final-review perimeter pass (derived-claim speech filter, throttle probe parity, pendingConfirmMustAsk observed-scan fallback deleted). GUARD_CATALOG size is UNCHANGED at 23 kinds — four reply-text kinds OUT (emptyReply, replyMentions, replySingleQuestion, replyMaxOccurrences), four cross-check/adjudicated kinds IN (claimIsGrounded, claimIsComplete, claimCoversRubric, didMessageConsistency).
+summary: mandatory intention + red-team hardening: did .min(1) with a speech/action partition on op, the asked boolean retired for an ask INTENTION, key-scoped identity and whole-value matching in the honesty cross-check, consent evidence bound to sealed delivered turns, and the final-review perimeter pass (derived-claim speech filter, throttle simulate parity, pendingConfirmMustAsk observed-scan fallback deleted). GUARD_CATALOG size is UNCHANGED at 23 kinds — four reply-text kinds OUT (emptyReply, replyMentions, replySingleQuestion, replyMaxOccurrences), four cross-check/adjudicated kinds IN (claimIsGrounded, claimIsComplete, claimCoversRubric, didMessageConsistency).
 isolated: 152/152
 collective: 36/36
 coverage: 22/22
@@ -13,12 +13,12 @@ verdict: PASS
 suite_cmd: pnpm proofs:run
 ---
 
-# Proof record — mandatory intention + red-team hardening: did .min(1) with a speech/action partition on op, the asked boolean retired for an ask INTENTION, key-scoped identity and whole-value matching in the honesty cross-check, consent evidence bound to sealed delivered turns, and the final-review perimeter pass (derived-claim speech filter, throttle probe parity, pendingConfirmMustAsk observed-scan fallback deleted). GUARD_CATALOG size is UNCHANGED at 23 kinds — four reply-text kinds OUT (emptyReply, replyMentions, replySingleQuestion, replyMaxOccurrences), four cross-check/adjudicated kinds IN (claimIsGrounded, claimIsComplete, claimCoversRubric, didMessageConsistency).
+# Proof record — mandatory intention + red-team hardening: did .min(1) with a speech/action partition on op, the asked boolean retired for an ask INTENTION, key-scoped identity and whole-value matching in the honesty cross-check, consent evidence bound to sealed delivered turns, and the final-review perimeter pass (derived-claim speech filter, throttle simulate parity, pendingConfirmMustAsk observed-scan fallback deleted). GUARD_CATALOG size is UNCHANGED at 23 kinds — four reply-text kinds OUT (emptyReply, replyMentions, replySingleQuestion, replyMaxOccurrences), four cross-check/adjudicated kinds IN (claimIsGrounded, claimIsComplete, claimCoversRubric, didMessageConsistency).
 
 **Scope:** `runtime` · **Date:** 2026-08-03 · **Verdict:** PASS
 
 ## What changed
-mandatory intention + red-team hardening: did .min(1) with a speech/action partition on op, the asked boolean retired for an ask INTENTION, key-scoped identity and whole-value matching in the honesty cross-check, consent evidence bound to sealed delivered turns, and the final-review perimeter pass (derived-claim speech filter, throttle probe parity, pendingConfirmMustAsk observed-scan fallback deleted). GUARD_CATALOG size is UNCHANGED at 23 kinds — four reply-text kinds OUT (emptyReply, replyMentions, replySingleQuestion, replyMaxOccurrences), four cross-check/adjudicated kinds IN (claimIsGrounded, claimIsComplete, claimCoversRubric, didMessageConsistency).
+mandatory intention + red-team hardening: did .min(1) with a speech/action partition on op, the asked boolean retired for an ask INTENTION, key-scoped identity and whole-value matching in the honesty cross-check, consent evidence bound to sealed delivered turns, and the final-review perimeter pass (derived-claim speech filter, throttle simulate parity, pendingConfirmMustAsk observed-scan fallback deleted). GUARD_CATALOG size is UNCHANGED at 23 kinds — four reply-text kinds OUT (emptyReply, replyMentions, replySingleQuestion, replyMaxOccurrences), four cross-check/adjudicated kinds IN (claimIsGrounded, claimIsComplete, claimCoversRubric, didMessageConsistency).
 
 ### Catalog delta — stated exactly
 
@@ -66,7 +66,7 @@ Cases added or rewritten for the change, beyond the standing ratchet:
 |---|---|---|
 | `respond` payload | a schema-legal but MALFORMED `did` (a speech op carrying an `outcome`) is refused at the guard hook and the validation error is handed back to the model | L3, mastra |
 | `deriveClaimsFromLedger` | a world label colliding with a reserved SPEECH op never becomes the derived `op`; every one of the four is coerced, an ordinary label is untouched | L1, core |
-| `destructiveThrottle` | a same-step preview that OMITS the confirm flag is a preview (parity with `confirmFirst`); a CONFIRMED sibling still caps; a `flagless` (prior-ask) tool caps from the first sibling | L1, core + mastra |
+| `destructiveThrottle` | a same-step simulation that OMITS the confirm flag is a simulation (parity with `confirmFirst`); a CONFIRMED sibling still caps; a `flagless` (prior-ask) tool caps from the first sibling | L1, core + mastra |
 | `pendingConfirmMustAsk` | the delivered declaration is the only relay signal — a ctx that seats none fails CLOSED | L1, core |
 | `askedInDeliveredTurn` | the sealed-history-only rule, isolated at `confirmFirst`'s `via:'ask'` and `via:'either'` variants (an earlier-turn RAW observed ask licenses nothing; a sealed ask over a blank delivered reply licenses nothing) | L1, core |
 
@@ -95,5 +95,5 @@ Residuals carried by this change, all documented in `packages/core/GUARDS.md` an
 | the `message` beside a declaration is free prose | an operational assertion written there is not deterministically blocked. Priced by the mandatory declaration (the lie becomes a self-contradiction beside the engine's verified report) plus the optional `didMessageConsistency` adjudicator |
 | an `ask` may not POSE a question | judging prose needs a pattern (banned) or a model call. Same instrument prices it |
 | an `ask` is bound to NOTHING | an ask intention names no subject, so an off-topic question satisfies every consent kind that reads one, for one turn. Binding it is the same prose judgement as the row above |
-| a flag-gated tool that MUTATES without `confirmed:true`, emitted N times in ONE step, is not capped | nothing observable separates it from an honest multi-preview at admission time. The cross-step form IS capped, and `flagless` tools cap from the first sibling |
+| a flag-gated tool that MUTATES without `confirmed:true`, emitted N times in ONE step, is not capped | nothing observable separates it from an honest multi-simulation at admission time. The cross-step form IS capped, and `flagless` tools cap from the first sibling |
 | the eval `norms-config` path cannot install the honesty cross-check | it builds a contract-less spec and its schema has no `writeTools` key. Stated in the loader's own source; adding the key is a config-surface change, not folded in here |

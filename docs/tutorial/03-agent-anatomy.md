@@ -384,8 +384,8 @@ export const cancelEventTool: ToolDef = {
 <sub>excerpt · `snippets/scheduler/tools.ts`</sub>
 
 Declaring `destructiveTools: ['cancelEvent']` installs a protocol the tool must be able to honour:
-"preview first — which is what makes the engine ask — then act in a **later** turn, with
-`confirmed: true`". A tool with no `confirmed` in its schema cannot take the second step, so it previews
+"simulate first — which is what makes the engine ask — then act in a **later** turn, with
+`confirmed: true`". A tool with no `confirmed` in its schema cannot take the second step, so it simulations
 forever.
 
 **The protocol binds the destructive BRANCH, not the tool name.** Some tools are destructive only on
@@ -409,7 +409,7 @@ as any other.
 `assertDestructiveConfirmable(toolDefs)`, and today exactly one caller runs it: chapter 05's scripted
 runner, `runSpecConversation`, which throws at run start naming the tool and the three ways out.
 `new LoopRunAgent({…})` does **not** call it — so a flag-less destructive tool constructs happily and
-fails as a preview-forever loop at run time instead. Until that changes, treat "the eval runs" as the
+fails as a simulation-forever loop at run time instead. Until that changes, treat "the eval runs" as the
 gate for this particular mistake, and put the flag in the schema when you declare the tool.
 
 Keep the schema and the rules in one source. The scheduler's date-time pattern lives once, in
@@ -598,8 +598,8 @@ And the other obligation, *never delete without asking*, appears nowhere in the 
 ```
 
 The scheduler's smoke test exercises the **world's** half of that protocol — the unconfirmed call is
-a side-effect-free probe, the confirmed one deletes. It does **not** exercise the `confirmFirst`
-guard: the guard's real requirement is that the probe landed in a strictly *earlier* turn, and that
+a side-effect-free simulate, the confirmed one deletes. It does **not** exercise the `confirmFirst`
+guard: the guard's real requirement is that the simulate landed in a strictly *earlier* turn, and that
 lives in the runtime's ledger across turns. Proving the guard needs a run, which is chapter 05.
 
 ---

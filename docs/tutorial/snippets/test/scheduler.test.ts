@@ -2,8 +2,8 @@
  * The snippets are honest at runtime too, not only at the type level: the shared scheduler modules
  * are exercised once here so a tutorial chapter can never quote a world that does not work.
  *
- * What this does NOT prove: the confirm-first GUARD. The world's two-step probe is one half of the
- * protocol; the other half (the probe must land in a strictly EARLIER turn) is the runtime's ledger.
+ * What this does NOT prove: the confirm-first GUARD. The world's two-step simulate is one half of the
+ * protocol; the other half (the simulate must land in a strictly EARLIER turn) is the runtime's ledger.
  */
 import { describe, expect, it } from 'vitest';
 import { validateSpec } from 'looprun';
@@ -34,7 +34,7 @@ describe('the scheduler snippet modules', () => {
     expect(world.exec('addEvent', { label: 'Backwards', start: '2026-03-03T11:00', end: '2026-03-03T10:00' }).success).toBe(false);
     expect(world.exec('addEvent', { label: 'Yesterday', start: '2026-03-01T09:00', end: '2026-03-01T10:00' }).success).toBe(false);
 
-    // Destructive: the unconfirmed call is a side-effect-free probe.
+    // Destructive: the unconfirmed call is a side-effect-free simulate.
     expect(world.exec('cancelEvent', { eventId: 'evt_101' }).requiresConfirmation).toBe(true);
     expect(world.hasEvent('evt_101')).toBe(true);
     expect(world.exec('cancelEvent', { eventId: 'evt_101', confirmed: true }).success).toBe(true);

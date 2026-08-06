@@ -1,6 +1,6 @@
 /**
  * `looprun-eval validate` world layers (`checkWorldModel`). Drives the three checks off a
- * `gen/world.json` written to a temp dir: preset distinguishability, probe≡confirm identity, and
+ * `gen/world.json` written to a temp dir: preset distinguishability, simulate≡confirm identity, and
  * determinism. A subject WITHOUT a world.json yields no world issues — a TS world is not validated
  * from a spec.
  */

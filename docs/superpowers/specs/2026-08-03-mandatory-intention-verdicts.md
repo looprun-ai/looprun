@@ -102,8 +102,8 @@ This is the sentence the rest of the document supports. It has two halves and th
 
 | kind | verdict | detail |
 |---|---|---|
-| `confirmFirst` | **BROKEN, 3×, 2 fixed + 1 residual** | r2/C3 probe→confirm binding was a SUBSET (now set EQUALITY); r2/C4 `via:'ask'` self-licensed its repeat (variant RETIRED); r2/b2.1-b2.2 the licensing `ask` is self-declared — **residual, see §3** |
-| `destructiveThrottle` | **BROKEN, 2×, both fixed** | r2/C6 `tookEffect` was INERT in native-tools mode (unknown ≠ probe; the native path now records); same-step siblings now always count |
+| `confirmFirst` | **BROKEN, 3×, 2 fixed + 1 residual** | r2/C3 simulate→confirm binding was a SUBSET (now set EQUALITY); r2/C4 `via:'ask'` self-licensed its repeat (variant RETIRED); r2/b2.1-b2.2 the licensing `ask` is self-declared — **residual, see §3** |
+| `destructiveThrottle` | **BROKEN, 2×, both fixed** | r2/C6 `tookEffect` was INERT in native-tools mode (unknown ≠ simulate; the native path now records); same-step siblings now always count |
 | `pendingConfirmMustAsk` | **BROKEN, 1×, partially fixed** | r2/b2.3 a bare `ask` satisfied it while the message said "done". The BLANK-message variant is closed; whether a non-blank message poses a question — **and whether the question was about the pending act** — is the §3 residual. Its observed-scan fallback is DELETED: the delivered `ctx.did` is the only relay signal, and a ctx that seats none fails closed |
 | `noActAfterAskSameTurn` | **could not break** | it reads THIS turn's observed ask event and denies a domain call after it — a same-turn ordering fact with no agent-controlled input beyond the ask itself, which can only make the guard FIRE, never stay silent |
 | `askedEarlier` | **BROKEN, 1×, fixed + the §3 residual** | r2/C2 it read the RAW `observed` array, so a respond the user never received armed it; the raw-observed variant was DELETED — the licence now rests on a SEALED, non-blank delivered turn. It routes through the same `askedInDeliveredTurn` as `confirmFirst`, so it inherits BOTH §3 ask residuals: the self-declared ask, and the ask bound to nothing (an earlier question on ANY topic licenses recording ANY gated argument — it enforces the two-turn rhythm, not relevance) |
@@ -225,7 +225,7 @@ b2.2, b2.3, C7) and one is 3.1b's grounding half. Each carries its argument in t
 | wave | commit | charter |
 |---|---|---|
 | 1 | `55c2f40` | the matching core — identity, boundary, provenance, emptiness, `amount`, the render seam |
-| 2 | `8a777fd` | consent + turn sealing — the delivered-turn record, probe equality, terminal acceptance, native-mode effect |
+| 2 | `8a777fd` | consent + turn sealing — the delivered-turn record, simulate equality, terminal acceptance, native-mode effect |
 | 3 | this commit | declaration validity, the write surface, the exhaustion report, the llmCheck fail mode, the shadow-law call sites |
 
 ---

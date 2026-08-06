@@ -109,7 +109,7 @@ interface ObservedCall {
   args: Record<string, unknown>;
   ok: boolean;                                          // did the call succeed
   turnIndex: number;                                    // which turn it happened on
-  resultFlags?: { requiresConfirmation?: boolean };     // the two-step protocol's probe
+  resultFlags?: { requiresConfirmation?: boolean };     // the two-step protocol's simulate
   tookEffect?: boolean;                                 // did it MUTATE the world (vs a read)
 }
 ```
@@ -354,7 +354,7 @@ screen and the USER writes back:
 
 ```
    ①  the world raises it   your tool answers requiresConfirmation and NAMES its record
-   ②  or the denial does    a tool with no preview form is denied, and the denial raises the question
+   ②  or the denial does    a tool with no simulate form is denied, and the denial raises the question
                             from the label your spec declared
    ③  the engine renders    the question lands in the delivered text, between the agent prose and the
                             operation record
@@ -406,7 +406,7 @@ A call has been proposed and not yet executed. A deny returns to the model AS th
 | [`precondition`](#8-precondition) | `world.ts` | The call is allowed only while a predicate over the host world holds. |
 | [`consentRequired`](#9-consentrequired) | `world.ts` | A set of writes may run only while the world says this person's consent is on record. |
 | [`confirmFirst`](#10-confirmfirst) | `confirmation.ts` | A destructive tool runs only on a turn whose incoming message carried the engine-issued confirmation token for THIS record. The tool's own arguments decide which of its calls are destructive. |
-| [`destructiveThrottle`](#11-destructivethrottle) | `confirmation.ts` | At most one destructive action that TOOK EFFECT per turn (a probe does not count; a call that RAN with no world record of its effect does). |
+| [`destructiveThrottle`](#11-destructivethrottle) | `confirmation.ts` | At most one destructive action that TOOK EFFECT per turn (a simulate does not count; a call that RAN with no world record of its effect does). |
 | [`valueFromUser`](#12-valuefromuser) | `structural.ts` | A field the agent fills in on the user's behalf must carry the value the user actually said. |
 
 #### 1. `requiresBefore`
@@ -503,7 +503,7 @@ consentRequired({ tools: ['storeProfile'], consentOk: (world) => world.consentOn
 
 A destructive tool runs only on a turn whose incoming message carried the engine-issued confirmation token for THIS record. The tool's own arguments decide which of its calls are destructive.
 
-**When to reach for it.** The user must have agreed before this call runs, and the agreement has to be THEIRS: the engine issues a confirmation token naming the record, renders it into the delivered text, and this gate allows the act only on a turn whose incoming message carried that token back. There is nothing to configure, because there is no declaration to trust — the agent has no channel through which to produce a consent. Its neighbours answer different questions: `destructiveThrottle` caps the blast radius of a turn that IS confirmed, and `consentRequired` reads a standing world flag rather than the conversation. A denial is also what RAISES the question for a tool the world has no preview form for, so attempting the act is what asks permission for it — and such a tool needs a declared label on the spec, or it can issue no question and never runs. A tool that is destructive on one branch and protective on another declares `destructiveWhen` on the spec: the predicate reads the acting call's arguments and says which calls the protocol applies to. It licenses nothing — consent is still the token the user typed.
+**When to reach for it.** The user must have agreed before this call runs, and the agreement has to be THEIRS: the engine issues a confirmation token naming the record, renders it into the delivered text, and this gate allows the act only on a turn whose incoming message carried that token back. There is nothing to configure, because there is no declaration to trust — the agent has no channel through which to produce a consent. Its neighbours answer different questions: `destructiveThrottle` caps the blast radius of a turn that IS confirmed, and `consentRequired` reads a standing world flag rather than the conversation. A denial is also what RAISES the question for a tool the world has no simulate form for, so attempting the act is what asks permission for it — and such a tool needs a declared label on the spec, or it can issue no question and never runs. A tool that is destructive on one branch and protective on another declares `destructiveWhen` on the spec: the predicate reads the acting call's arguments and says which calls the protocol applies to. It licenses nothing — consent is still the token the user typed.
 
 ```ts
 confirmFirst({ when: { placeHold: (args) => args.scope === 'workspace' } })
@@ -511,9 +511,9 @@ confirmFirst({ when: { placeHold: (args) => args.scope === 'workspace' } })
 
 #### 11. `destructiveThrottle`
 
-At most one destructive action that TOOK EFFECT per turn (a probe does not count; a call that RAN with no world record of its effect does).
+At most one destructive action that TOOK EFFECT per turn (a simulate does not count; a call that RAN with no world record of its effect does).
 
-**When to reach for it.** Auto-installed alongside `confirmFirst`. It is the blast-radius cap, not a consent gate: it stops chained destructive calls in one turn even when each one is individually confirmed. A same-step call that is NOT confirmed reads as a preview and does not count (so a legitimate multi-preview is not vetoed) — which means a tool with NO confirm flag needs `flagless`, or its same-step cap never engages. `AgentSpecBase` passes its `prior-ask` tools automatically; pass them yourself when you install this by hand. It shares the spec's `destructiveWhen` predicates, so the cap counts destructive acts: three protective calls in one turn are three legitimate calls, and the second destructive one is still stopped.
+**When to reach for it.** Auto-installed alongside `confirmFirst`. It is the blast-radius cap, not a consent gate: it stops chained destructive calls in one turn even when each one is individually confirmed. A same-step call that is NOT confirmed reads as a simulation and does not count (so a legitimate multi-simulation is not vetoed) — which means a tool with NO confirm flag needs `flagless`, or its same-step cap never engages. `AgentSpecBase` passes its `prior-ask` tools automatically; pass them yourself when you install this by hand. It shares the spec's `destructiveWhen` predicates, so the cap counts destructive acts: three protective calls in one turn are three legitimate calls, and the second destructive one is still stopped.
 
 ```ts
 destructiveThrottle(['cancelBooking', 'purgeAccount'], { flagless: ['purgeAccount'] })

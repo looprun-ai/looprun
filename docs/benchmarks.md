@@ -65,7 +65,7 @@ Full exported roster — score, output tokens, cost and time per task from the s
 |---:|---|---|---:|---:|---:|---:|
 | 1 | Claude Fable 5 | 💡 with fallback | 98.5 | 4k | $2.97 | 0.7 |
 | 2 | Grok 4.3 | 💡 high | 97.7 | 4k | $0.28 | 0.6 |
-| 3 | Gemini 3.1 Pro Preview | 💡 | 95.6 | 6k | $0.40 | 0.7 |
+| 3 | Gemini 3.1 Pro Simulation | 💡 | 95.6 | 6k | $0.40 | 0.7 |
 | 4 | DeepSeek V4 Flash | 💡 high | 95.6 | 4k | $0.04 | — |
 | 5 | Gemini 3.5 Flash | 💡 | 95.3 | 7k | $0.47 | 0.8 |
 | 6 | Qwen3.6-35B-A3B | 💡 thinking-on | 95.3 | 6k | $0.12 | 0.6 |
