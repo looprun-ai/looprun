@@ -21,7 +21,7 @@
 - 5635d4c: Consent to a destructive act is a token the engine issues and the user types back.
 
   A call that answers `requiresConfirmation` names its record and the engine opens a question bound to it;
-  a destructive tool with no simulate form is denied, and the denial opens a question from the label the
+  a destructive tool with no preview form is denied, and the denial opens a question from the label the
   spec declared. The engine renders the question into the delivered text, the runtime reads the next
   incoming message once and marks the question consumed if the user's own words carry its token, and
   `confirmFirst` allows the act only when a consumed question is about that call. No model participates in
@@ -29,7 +29,7 @@
 
   **Breaking changes**
 
-  - `confirmFirst` takes one option, `flag`, and it says which call ACTS — the simulation runs freely because
+  - `confirmFirst` takes one option, `flag`, and it says which call ACTS — the preview runs freely because
     it is how the world raises the question. `flag: false` is the one-step shape. `via` and `within` are
     gone.
   - `noActAfterAskSameTurn` and `pendingConfirmMustAsk` are removed. A token can only arrive in a user
@@ -117,12 +117,12 @@
   into one version group, so the whole set moves together.
 
   **What moved rather than vanished.** `@looprun-ai/core/internal` is a new, explicitly unstable
-  subpath carrying the runtime primitives (action history, turn machine, assembled prompt internals, `GUARD_CATALOG`,
+  subpath carrying the runtime primitives (ledger, turn machine, trunk internals, `GUARD_CATALOG`,
   `GuardExecutionError`). It exists so in-repo tooling and forks keep working; it carries no
   compatibility promise across releases.
 
-  **What was cut outright.** The `coherence` guard family and its assembled prompt section were removed
-  (-396 LOC); the assembled prompt fold was proven byte-identical across the change. Runtime helpers that had
+  **What was cut outright.** The `coherence` guard family and its trunk section were removed
+  (-396 LOC); the trunk fold was proven byte-identical across the change. Runtime helpers that had
   been exported from `@looprun-ai/core` without ever being documented or imported — including
   `uploadDisplayLabels` and `isReplyOnly` — are now module-local to `renderTurnPrompt`. Package
   `CHANGELOG.md` entries that announced them stay unedited: they are an accurate record of what those
@@ -373,7 +373,7 @@
   Validated: bench target case 0/3 → 3/3 (N=3, zero regression) + live production eval 10/10.
 
   Also confirms v0.2.0 already shipped both prior-ask disjunct fixes (earlier-turn attempt +
-  lexicon-matched replyToUser simulate) — this release is docs/skill only, no runtime code change.
+  lexicon-matched replyToUser probe) — this release is docs/skill only, no runtime code change.
 
 - Updated dependencies [1f46c90]
   - @looprun-ai/core@0.2.1
@@ -419,7 +419,7 @@
     **minimal context** (`buildForceCloseMessages`) — the turn's user tail (incl. the account-state
     block) + a compact digest of THIS turn's fresh successful tool results (`digestTurnToolResults`,
     resultOk-filtered, terminals skipped, capped 600/2400 chars) + the steering line — not the whole
-    transcript, the simulate-proven short-context regime for a tiny model. New pure exports:
+    transcript, the probe-proven short-context regime for a tiny model. New pure exports:
     `ingestStructuredObject`, `digestTurnToolResults`, `buildForceCloseMessages`.
 
   **Governed-turn hardening (guards-v2)** — four refinements to the reply/confirm guards; all
@@ -433,7 +433,7 @@
   - `pendingConfirmMustAsk` is now **resolution-aware** and takes an optional `{ confirmArg }` (default
     `confirmed`) — a pending `requiresConfirmation` need not be re-asked when the SAME tool ran OK with
     the confirm flag set on the SAME record (canonical args minus that flag) later in the turn (the legal
-    simulate→approved-execute tail). Record identity is domain-neutral (canonical args, no id regex).
+    probe→approved-execute tail). Record identity is domain-neutral (canonical args, no id regex).
   - `confirmFirst` gains a per-tool **mechanism**: `confirmFirst(opts?: string | { argFlag?, mechanism? })`.
     `'arg'` (default) is today's confirm-flag gate; `'prior-ask'` gates a flag-less destructive tool on a
     prior-turn `askUser` (ask, wait, act only in a LATER turn). `AgentSpecConfig.confirmMechanism?:

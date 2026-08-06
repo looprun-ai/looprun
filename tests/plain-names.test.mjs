@@ -85,9 +85,12 @@ const GENERATED = /(^|\/)(pnpm-lock\.yaml|package-lock\.json|yarn\.lock)$/;
 // make every diff against upstream a conflict.
 const VENDOR = /(^|\/)vendor\//;
 
-// A run is a number taken on a date: a result directory, or a JSON-lines stream of recorded turns.
-// Editing one after the fact makes it disagree with the run that wrote it.
-const FROZEN = /(^|\/)benchmarks\/.*\/results\/|\.jsonl$/;
+// A record is written on a date and never edited: a result directory, a JSON-lines stream of
+// recorded turns, or a CHANGELOG entry. Rewriting one makes it disagree with what it recorded — a
+// v0.7.0 entry describing an `assembledPrompt` names an API that release did not have. A changelog
+// is also the ONE place a breaking rename must name both vocabularies, because a consumer with no
+// `TurnLedger → TurnActionHistory` line has no migration to follow.
+const FROZEN = /(^|\/)benchmarks\/.*\/results\/|\.jsonl$|(^|\/)CHANGELOG\.md$/;
 const SELF = relative(ROOT, fileURLToPath(import.meta.url));
 
 function* walk(path) {

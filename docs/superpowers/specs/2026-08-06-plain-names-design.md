@@ -314,10 +314,21 @@ Surfaces, in the order a reader meets them:
 deprecated. An alias would keep both names alive in search results and in every reader's vocabulary,
 which is the cost this change exists to remove.
 
-**No name is explained by what it replaced.** No comment, doc, changelog entry or commit body says
-"formerly the ledger" or "renamed from probe". A reader meeting `actionHistory` learns what it
-is, not what it was. The changelog states the new vocabulary and the breaking surface; it does not
-narrate the change.
+**No name is explained by what it replaced.** No comment, doc or commit body says "formerly the
+ledger" or "renamed from probe". A reader meeting `actionHistory` learns what it is, not what it was.
+
+**The changelog is the one exception, and it is not an exception at all.** A release note is a dated
+record, and the record of a breaking rename IS the pair of names:
+
+```
+Breaking, @looprun-ai/core: TurnLedger → TurnActionHistory, createLedger → createActionHistory,
+Challenge → ApprovalRequest, renderScopedSpecTrunk → renderAssembledPrompt.
+```
+
+Without that line a consumer on the old version has no migration to follow. And because every
+entry is dated, an OLD entry keeps the names its release shipped: a v0.7.0 note describing an
+`assembledPrompt` would name an API that release did not have. `CHANGELOG.md` is therefore read by
+the gate the way a benchmark result is — not at all.
 
 ## What makes it verifiable
 
