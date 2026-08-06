@@ -126,6 +126,7 @@ rename's unit of work.
 | `previewOf(...)` | `simulationResultOf(...)` | `world/define-world.ts` |
 | `outcome: 'preview'` | `outcome: 'simulated'` | the audit outcome union in `world/types.ts` |
 | `cert-band.json` · `CERT-BAND.md` | `cert-range.json` · `CERT-RANGE.md` | certification output |
+| `jargonScrub({ '(beta)': 'preview' })` | `jargonScrub({ '(beta)': 'early access' })` | test fixture data; the map is arbitrary and the word goes |
 
 **File names**
 
@@ -170,26 +171,46 @@ Measured with `grep -rniE "\b<word>"` over `.ts` `.md` `.json` `.mjs` `.js`, exc
 `node_modules` and `dist`:
 
 ```
-repo               live surface   frozen records
+repo               renamed   measurement records
 ──────────────────────────────────────────────────
-looprun                  3,074            —
-agentspec                  285            —
-looprun-bench            1,174        4,381
-agentspec-bench            518          139
-accounting                 107            —
-lawfirm                    102            —
-homeservices                77            —
-looprun.ai                   9            —
+looprun              4,243            —
+agentspec              285            —
+looprun-bench        1,174        4,381
+agentspec-bench        657            —
+accounting             107            —
+lawfirm                102            —
+homeservices            77            —
+looprun.ai               9            —
 ──────────────────────────────────────────────────
-                         5,346        4,520
+                     6,654        4,381
 ```
 
-**Frozen records are not renamed.** A result file under `benchmarks/atlas/v0.6.0/results/` is a
-measurement taken on a date; editing its words after the fact makes it disagree with the run that
-wrote it. The same holds for the dated design records under `docs/superpowers/specs/**` and
-`docs/superpowers/plans/**`, and for the proof records under `governance/proofs/**`. These four
-paths keep the words they were written with and are excluded from the acceptance search.
-`governance/MATRIX.md` is live and is renamed.
+**Dated design records, plans and proof records are renamed like everything else.** A spec under
+`docs/superpowers/specs/`, a plan under `docs/superpowers/plans/`, a proof under
+`governance/proofs/` — each is prose someone reads to understand the system, so each carries the
+vocabulary the system uses. Their file names change with their contents:
+
+```
+governance/proofs/2026-07-29-trunk-fold-coherence-cut.md
+  →  2026-07-29-prompt-fold-coherence-cut.md
+docs/superpowers/plans/2026-08-05-consent-by-challenge.md
+  →  2026-08-05-consent-by-confirmation.md
+docs/superpowers/plans/2026-07-31-prose-only-ungoverned-arm.md
+  →  2026-07-31-prose-only-ungoverned-variant.md
+docs/superpowers/specs/2026-08-05-consent-by-challenge-design.md
+  →  2026-08-05-consent-by-confirmation-design.md
+docs/superpowers/specs/2026-07-31-prose-only-ungoverned-arm-design.md
+  →  2026-07-31-prose-only-ungoverned-variant-design.md
+```
+
+**One measurement record is excluded, and only one.** A result file under
+`benchmarks/atlas/v0.6.0/results/` is a number taken on a date, not prose anyone reads for
+vocabulary; editing its words after the fact makes it disagree with the run that wrote it. Those
+files are excluded from the search by path and nothing else is.
+
+**This design document is the last file to go.** It is the only place that has to name both
+vocabularies at once, and it stops being true the moment the rename lands. The final commit of step
+1 deletes it and the plan derived from it, so no file left in the tree says what a name used to be.
 
 Surfaces, in the order a reader meets them:
 
@@ -228,10 +249,7 @@ NARROW     arms?   bands?                                    exact word only
 
 ```
 EXCLUDED PATHS
-  **/benchmarks/**/results/**        a measurement is data, not vocabulary
-  docs/superpowers/specs/**          dated design records
-  docs/superpowers/plans/**          dated design records
-  governance/proofs/**               dated proof records
+  **/benchmarks/**/results/**        a number taken on a date, not prose
   node_modules/  dist/
 
 ALLOWLIST — line-level, each with its reason in the script
