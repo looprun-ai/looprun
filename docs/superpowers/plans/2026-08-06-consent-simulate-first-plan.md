@@ -499,7 +499,7 @@ describe('destructiveThrottle — one effect per turn; simulations are free', ()
 - [ ] **Step 2: Run — expect FAIL.**
 
 - [ ] **Step 3: Implement.** Delete `confirmArg` and `flagless` (options, locals, doc mentions).
-  The two probe tests become:
+  The two simulate tests become:
 
 ```ts
 // The caller's DECLARED simulation: an explicit `simulate: true`, or a result that came back
