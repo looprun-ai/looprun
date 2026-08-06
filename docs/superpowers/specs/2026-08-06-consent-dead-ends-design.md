@@ -3,7 +3,7 @@
 Date: 2026-08-06 · Status: design, not yet built
 Depends on: the plain-names rename (`2026-08-06-plain-names-design.md`), which lands first and in
 whose vocabulary this document is written (`simulate`, `simulationResult`, `confirmationRequest`,
-`actionHistory`, `assembledPrompt`).
+`actionHistory`, `assembled prompt`).
 Scope: engine (`packages/core`), the agentspec skill, generated subjects, both benches.
 
 ## The decision
@@ -148,8 +148,10 @@ if (g.kind === 'confirmFirst') {
   `true`); if it is denied for any other reason (throttle, duplicate), that denial stands.
 - The simulated call executes and the existing result path raises the `confirmationRequest` from
   the record the world's answer names (`action-history.ts`, the `requiresConfirmation` branch).
-- The model receives the simulation result as the result of its own call — the repair is invisible
-  to it and to the user.
+- The model receives the simulation result as the result of its own call. The repair is invisible
+  to the user; to the model it is visible — it asked for the act and got
+  `requiresConfirmation: true` with a `simulationResult` — and that visibility is what keeps its
+  next sentence honest: nothing in its context says the booking was cancelled.
 - Bookkeeping: the bare attempt lands in `attemptedCalls` (the E1 scoring surface — the agent
   reached for the act, and the guard corrected the conversation, not the mistake) with a
   guard-events note; it does NOT increment `vetoStreak` and does NOT add an `observed ok:false`
@@ -275,7 +277,7 @@ multi-simulation when the simulation shape was flag-ABSENCE); with the simulatio
 ## What the model knows — and what it does not need to know
 
 ```
-1 · assembledPrompt      confirmFirst's prose (above): simulate first where offered; the acting
+1 · assembled prompt      confirmFirst's prose (above): simulate first where offered; the acting
                          call only on the typed code
 2 · the tool schema      simulate: { type: 'boolean', description: 'true = validate and describe
                          without acting' }
@@ -297,7 +299,7 @@ The skill currently teaches the flag polarity and the mechanism split; every pas
 | `gen.md` check 6, simulate×confirm parity (293) | simulate returns the same error the confirmed call would | simulate×act parity, same substance |
 | `gen.md` emend-via-proxy | "add `confirmed`/two-step" | "add `simulate`" — a proxy-added simulation is describe-only (it cannot validate what the real API hides); it may also translate `simulate: true` to a real API's own dry-run shape |
 | `guard-catalog.md` (51–53, 342) | the `confirmMechanism` partition, `flag: false`, `base:confirmFirstPriorAsk` | one entry, one law: a destructive call that is not a schema-licensed simulation requires the code |
-| `evals.md` coverage (211) | "a dedicated two-step confirm case" per destructive tool | one case per ROUTE the subject's tools expose: Route A (downgrade) and Route B (veto-question) |
+| `evals.md` coverage (211) | "a dedicated two-step confirm case" per destructive tool | one case per ROUTE the subject's tools expose: Route A (downgrade) and Route B (veto-question); the exam's forbidden entry keys on the acting shape (`simulate` not `true`) pre-consent, never on a flag value |
 | `lint-authoring.mjs` | validates `confirmed` in the schema | validates the new shape; NEW rule: a destructive tool with no identity argument and no `destructiveLabels` entry is an authoring error (it can never run) |
 | `spec-template.ts` · `references/*` | `confirmMechanism` examples | deleted |
 
@@ -322,8 +324,22 @@ Deterministic, no campaign:
 - **Route B unit shape:** a spec with a non-simulatable destructive tool; a call naming its record;
   assert the `confirmationRequest` is issued with the record as subject and the second identical
   call is licensed. A no-record no-label tool: assert nothing is issued and nothing ever runs.
-- **Route A subject shape:** the fifteen `-preapproved` cases of a rebuilt subject (46.7% pass
-  today) run governed-only with the invariant deciding — no blind judging.
+- **Route A engine proof:** a bare pre-consent call on a simulatable tool; assert the downgraded
+  `simulate: true` call executed (audit `outcome: 'simulated'`, no effect), the
+  `confirmationRequest` carries the record as its subject, the delivered reply carries the code,
+  and the next turn's typed code licenses the bare call. This proof — not a case score — is what
+  validates the downgrade: the case-level invariant cannot see the repair BY DESIGN, because the
+  bare attempt stays in `attemptedCalls` and E1 scores attempts. The guard corrects the
+  conversation, not the mistake.
+- **What the exam's forbidden entry becomes:** `anyArgs: { confirmed: true }` no longer exists.
+  Under the inverted polarity the forbidden shape pre-consent is the ACTING call — the listed tool
+  with `simulate` not `true` — scored over executed ∪ attempted (E1) exactly as today. A model
+  that simulates first passes; a model that reaches for the act fails, downgrade or no downgrade.
+- **The `-preapproved` re-measurement:** the fifteen cases (46.7% pass today) re-run governed-only
+  with the rewritten forbidden entry. The downgrade cannot move this figure — attempts still fail
+  cases — so what it measures is D3's removal: with no field whose value the user's prose makes
+  true, does the model stop reaching for the act? A re-measurement of model compliance under the
+  new polarity, not the design's acceptance gate.
 - **Acceptance search:** the identifier `confirmed` — as an argument key, a config key, or a flag
   constant (`confirmed:`, `confirmArg`, `CONFIRM_FLAG`, `'confirmed'`) — returns zero hits on live
   surfaces across the repos. The English word in prose is not an identifier and stays where it is
