@@ -405,8 +405,8 @@ A call has been proposed and not yet executed. A deny returns to the model AS th
 | [`argFormat`](#7-argformat) | `args.ts` | A present, non-empty string argument must match the given pattern; absent or empty is left to `argRequired`. |
 | [`precondition`](#8-precondition) | `world.ts` | The call is allowed only while a predicate over the host world holds. |
 | [`consentRequired`](#9-consentrequired) | `world.ts` | A set of writes may run only while the world says this person's consent is on record. |
-| [`confirmFirst`](#10-confirmfirst) | `confirmation.ts` | A destructive tool runs only on a turn whose incoming message carried the engine-issued confirmation token for THIS record. The tool's own arguments decide which of its calls are destructive. |
-| [`destructiveThrottle`](#11-destructivethrottle) | `confirmation.ts` | At most one destructive action that TOOK EFFECT per turn (a simulate does not count; a call that RAN with no world record of its effect does). |
+| [`confirmFirst`](#10-confirmfirst) | `consent.ts` | A destructive tool runs only on a turn whose incoming message carried the engine-issued confirmation token for THIS record. The tool's own arguments decide which of its calls are destructive. |
+| [`destructiveThrottle`](#11-destructivethrottle) | `consent.ts` | At most one destructive action that TOOK EFFECT per turn (a simulate does not count; a call that RAN with no world record of its effect does). |
 | [`valueFromUser`](#12-valuefromuser) | `structural.ts` | A field the agent fills in on the user's behalf must carry the value the user actually said. |
 
 #### 1. `requiresBefore`
@@ -483,7 +483,7 @@ argFormat('bookingId', '^BK-\\d{6}$')
 
 The call is allowed only while a predicate over the host world holds.
 
-**When to reach for it.** A gate whose discriminator lives in WORLD state, not in this call — the predicate never sees the acting call's arguments. If the discriminator is in the args, use `custom` instead. A condition EVERY lane of the domain refuses writes under belongs on `contract.writeGate` instead — declared once, installed on every spec that carries a write. `precondition` stays the gate for what one lane alone refuses on.
+**When to reach for it.** A gate whose discriminator lives in WORLD state, not in this call — the predicate never sees the acting call's arguments. If the discriminator is in the args, use `custom` instead. A condition EVERY lane of the domain refuses writes under belongs on `contract.changeAllowed` instead — declared once, installed on every spec that carries a write. `precondition` stays the gate for what one lane alone refuses on.
 
 ```ts
 precondition((world) => world.accountActive === true, 'This account is closed — you cannot act on it.', 'act on an account only while it is open')

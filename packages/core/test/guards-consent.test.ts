@@ -3,7 +3,7 @@
  * on a consumed approval about THIS call.
  */
 import { describe, it, expect } from 'vitest';
-import { confirmFirst, destructiveThrottle } from '../src/guards/confirmation.js';
+import { confirmFirst, destructiveThrottle } from '../src/guards/consent.js';
 import type { ApprovalRequest } from '../src/runtime/approval-request.js';
 import type { GuardCtx, ObservedCall } from '../src/rules.js';
 

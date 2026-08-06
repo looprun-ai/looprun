@@ -18,7 +18,7 @@
  * (guards-purity.test.ts) fails CI on any re-introduced RegExp-typed factory param.
  *
  * ONE KIND PER CATEGORY FILE, one import site. The categories are the tutorial's own sections
- * (`docs/superpowers/specs/2026-07-28-tutorial-outline-final.md` §4): flow · args · world · confirmation · honesty · reply · custom.
+ * (`docs/superpowers/specs/2026-07-28-tutorial-outline-final.md` §4): flow · args · world · consent · honesty · reply · custom.
  * `catalog.ts` holds the same vocabulary as DATA (`GUARD_CATALOG`) plus the runtime's kind
  * classification registries; `shared.ts` holds the module-local helpers and is exported by nobody.
  */
@@ -31,7 +31,7 @@ export { precondition, resultInvariant, consentRequired } from './world.js';
 export {
   confirmFirst,
   destructiveThrottle,
-} from './confirmation.js';
+} from './consent.js';
 export { llmCheck, llmCheckLie } from './llm-check.js';
 export { claimIsGrounded, claimIsComplete, mustAccountFor, isEmptyReadResult } from './honesty.js';
 export { degenerationGuard, jargonScrub } from './reply.js';

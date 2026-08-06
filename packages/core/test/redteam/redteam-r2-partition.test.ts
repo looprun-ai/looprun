@@ -37,7 +37,7 @@ import {
   type Intention,
 } from '../../src/runtime/claims.js';
 import { mustAccountFor, claimIsComplete, claimIsGrounded } from '../../src/guards/honesty.js';
-import { confirmFirst } from '../../src/guards/confirmation.js';
+import { confirmFirst } from '../../src/guards/consent.js';
 import { createActionHistory, recordToolResult } from '../../src/runtime/action-history.js';
 import { finalizeReply } from '../../src/runtime/turn.js';
 

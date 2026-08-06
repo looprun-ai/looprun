@@ -16,7 +16,7 @@
 
 export interface GuardCatalogEntry {
   name: string;            // factory name, e.g. 'confirmFirst'
-  category: 'flow' | 'args' | 'world' | 'confirmation' | 'honesty' | 'reply' | 'structural' | 'custom' | 'llm-check';
+  category: 'flow' | 'args' | 'world' | 'consent' | 'honesty' | 'reply' | 'structural' | 'custom' | 'llm-check';
   /**
    * The hook the runtime INSTALLS the kind on — the axis the agentspec reference catalog is
    * organized by, and the one the generated chapter groups by. It is not computed from the factory's
@@ -130,10 +130,10 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
     example: `consentRequired({ tools: ['storeProfile'], consentOk: (world) => world.consentOnRecord === true, reason: 'No consent on record — ask for it before storing anything.' })`,
   },
 
-  // ── confirmation ───────────────────────────────────────────────────────────
+  // ── consent ───────────────────────────────────────────────────────────
   {
     name: 'confirmFirst',
-    category: 'confirmation',
+    category: 'consent',
     hook: 'preTool',
     summary: 'A destructive tool runs only on a turn whose incoming message carried the engine-issued confirmation token for THIS record. The tool\'s own arguments decide which of its calls are destructive.',
     whenToUse:
@@ -142,7 +142,7 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
   },
   {
     name: 'destructiveThrottle',
-    category: 'confirmation',
+    category: 'consent',
     hook: 'preTool',
     summary: 'At most one destructive action that TOOK EFFECT per turn (a simulate does not count; a call that RAN with no world record of its effect does).',
     whenToUse:

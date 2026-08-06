@@ -1,5 +1,5 @@
 /**
- * CONFIRMATION guards — the consent family: the gate that reads the user's typed confirmation, and the
+ * CONSENT guards — the gate that reads the user's typed confirmation, and the
  * one-destructive-action-per-turn throttle that caps a turn which HAS been confirmed.
  */
 import type { Guard, ObservedCall } from '../rules.js';

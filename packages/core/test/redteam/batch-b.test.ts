@@ -11,7 +11,7 @@ import type { GuardCtx, HistoryTurn, ObservedCall } from '../../src/rules.js';
 import {
   confirmFirst,
   destructiveThrottle,
-} from '../../src/guards/confirmation.js';
+} from '../../src/guards/consent.js';
 import { precondition, resultInvariant, consentRequired } from '../../src/guards/world.js';
 
 function ctxWith(partial: Partial<GuardCtx> & { turnIndex: number }): GuardCtx {
