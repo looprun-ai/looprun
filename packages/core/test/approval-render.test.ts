@@ -3,9 +3,9 @@
  */
 import { describe, it, expect } from 'vitest';
 import { composeDeliveryText } from '../src/runtime/turn.js';
-import type { Challenge } from '../src/runtime/challenge.js';
+import type { ApprovalRequest } from '../src/runtime/approval-request.js';
 
-const challenge: Challenge = {
+const approval: ApprovalRequest = {
   tool: 'cancelBooking',
   subject: 'BK-1',
   meaning: 'BK-1',
@@ -15,7 +15,7 @@ const challenge: Challenge = {
 
 describe('composeDeliveryText', () => {
   it('puts the question between the prose and the record', () => {
-    expect(composeDeliveryText('Your booking BK-1 carries a fee.', [{ op: 'inform' }], [challenge])).toBe(
+    expect(composeDeliveryText('Your booking BK-1 carries a fee.', [{ op: 'inform' }], [approval])).toBe(
       'Your booking BK-1 carries a fee.\n\n' +
         'To confirm BK-1, reply: CONFIRM BK-1\n\n' +
         'No operation was carried out on this turn.',
@@ -29,23 +29,23 @@ describe('composeDeliveryText', () => {
   });
 
   it('renders one line per question raised this turn', () => {
-    const second: Challenge = { ...challenge, subject: 'BK-2', meaning: 'BK-2', token: 'CONFIRM BK-2' };
-    const text = composeDeliveryText('Two bookings carry fees.', [{ op: 'inform' }], [challenge, second]);
+    const second: ApprovalRequest = { ...approval, subject: 'BK-2', meaning: 'BK-2', token: 'CONFIRM BK-2' };
+    const text = composeDeliveryText('Two bookings carry fees.', [{ op: 'inform' }], [approval, second]);
     expect(text).toContain('To confirm BK-1, reply: CONFIRM BK-1');
     expect(text).toContain('To confirm BK-2, reply: CONFIRM BK-2');
   });
 
   it('delivers the question even when the prose is blank', () => {
-    expect(composeDeliveryText('', [{ op: 'inform' }], [challenge])).toBe(
+    expect(composeDeliveryText('', [{ op: 'inform' }], [approval])).toBe(
       'To confirm BK-1, reply: CONFIRM BK-1\n\nNo operation was carried out on this turn.',
     );
   });
 
   it('speaks the sentences the host declared, around the same token', () => {
-    const text = composeDeliveryText('Pronto.', [{ op: 'inform' }], [challenge], {
+    const text = composeDeliveryText('Pronto.', [{ op: 'inform' }], [approval], {
       engineText: {
         recordClosureNone: 'Nenhuma operacao foi realizada neste turno.',
-        challenge: (meaning, token) => `Para confirmar ${meaning}, responda: ${token}`,
+        approval: (meaning, token) => `Para confirmar ${meaning}, responda: ${token}`,
       },
     });
     expect(text).toBe(
@@ -59,7 +59,7 @@ describe('composeDeliveryText', () => {
     const text = composeDeliveryText(
       'Done.',
       [{ op: 'cancel', target: 'BK-2', outcome: 'success' }],
-      [challenge],
+      [approval],
     );
     expect(text).toBe(
       'Done.\n\n' +

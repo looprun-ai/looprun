@@ -1,18 +1,18 @@
-# Consent by Challenge — Implementation Plan
+# Consent by ApprovalRequest — Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** consent to a destructive act becomes a token the engine issues and the user types back, so no
 agent declaration licenses anything.
 
-**Architecture:** a conversation-scoped challenge store on the ledger; the RUNTIME issues challenges
+**Architecture:** a conversation-scoped approval store on the ledger; the RUNTIME issues approvals
 (from a `requiresConfirmation` result, or from a vetoed destructive call), renders them into the
 delivered text, and marks them consumed by scanning the user's incoming message. Guards stay pure —
 `confirmFirst` reads the consumed set off the ctx and never touches text or state.
 
 **Tech Stack:** TypeScript, pnpm workspace, vitest.
 
-Spec: `docs/superpowers/specs/2026-08-05-consent-by-challenge-design.md`.
+Spec: `docs/superpowers/specs/2026-08-05-consent-by-approval-design.md`.
 
 ## Global Constraints
 
@@ -37,9 +37,9 @@ Spec: `docs/superpowers/specs/2026-08-05-consent-by-challenge-design.md`.
 | File | Responsibility |
 |---|---|
 | `packages/core/src/guards/matching.ts` (create) | the ONE matching law: canonical value form, whole-value equality, contiguous-token containment |
-| `packages/core/src/runtime/challenge.ts` (create) | the challenge model: issue, match, consume, render |
-| `packages/core/src/runtime/ledger.ts` (modify) | conversation-scoped challenge store + issuance/consumption call sites |
-| `packages/core/src/runtime/turn.ts` (modify) | render open challenges into the delivered text |
+| `packages/core/src/runtime/approval-request.ts` (create) | the approval model: issue, match, consume, render |
+| `packages/core/src/runtime/ledger.ts` (modify) | conversation-scoped approval store + issuance/consumption call sites |
+| `packages/core/src/runtime/turn.ts` (modify) | render open approvals into the delivered text |
 | `packages/core/src/runtime/claims.ts` (modify) | engine text pack for the record closures |
 | `packages/core/src/trunk.ts` (modify) | `DomainContract.engineText` |
 | `packages/core/src/rules.ts` (modify) | `GuardCtx.consent` |
@@ -238,29 +238,29 @@ git commit -m "feat(core): the matching law is one module — whole-value equali
 
 ---
 
-### Task 2: The challenge model
+### Task 2: The approval model
 
 **Files:**
-- Create: `packages/core/src/runtime/challenge.ts`
-- Test: `packages/core/test/challenge.test.ts`
+- Create: `packages/core/src/runtime/approval-request.ts`
+- Test: `packages/core/test/approval-request.test.ts`
 
 **Interfaces:**
 - Consumes: `valueSpokenBy` (Task 1)
-- Produces: `Challenge`, `deriveToken(meaning: string): string`, `challengeMatchesCall(c: Challenge, tool: string, args: Record<string, unknown>): boolean`, `consumeChallenges(open: Challenge[], userText: string, turnIndex: number): Challenge[]`, `renderChallenge(c: Challenge, text: EngineText): string`
+- Produces: `ApprovalRequest`, `deriveToken(meaning: string): string`, `approvalMatchesCall(c: ApprovalRequest, tool: string, args: Record<string, unknown>): boolean`, `consumeApprovals(open: ApprovalRequest[], userText: string, turnIndex: number): ApprovalRequest[]`, `renderApprovalRequest(c: ApprovalRequest, text: EngineText): string`
 
 - [ ] **Step 1: Write the failing test**
 
 ```ts
-// packages/core/test/challenge.test.ts
+// packages/core/test/approval-request.test.ts
 import { describe, it, expect } from 'vitest';
 import {
   deriveToken,
-  challengeMatchesCall,
-  consumeChallenges,
-  type Challenge,
-} from '../src/runtime/challenge.js';
+  approvalMatchesCall,
+  consumeApprovals,
+  type ApprovalRequest,
+} from '../src/runtime/approval-request.js';
 
-const withRecord = (): Challenge => ({
+const withRecord = (): ApprovalRequest => ({
   tool: 'cancelBooking',
   subject: 'BK-1',
   meaning: 'BK-1',
@@ -268,7 +268,7 @@ const withRecord = (): Challenge => ({
   issuedTurn: 0,
 });
 
-const withLabel = (): Challenge => ({
+const withLabel = (): ApprovalRequest => ({
   tool: 'deleteAllData',
   meaning: 'delete all of your data',
   token: 'CONFIRM DELETE-ALL',
@@ -289,28 +289,28 @@ describe('deriveToken', () => {
   });
 });
 
-describe('challengeMatchesCall', () => {
-  it('matches a record challenge when an arg carries the subject', () => {
-    expect(challengeMatchesCall(withRecord(), 'cancelBooking', { id: 'BK-1' })).toBe(true);
+describe('approvalMatchesCall', () => {
+  it('matches a record approval when an arg carries the subject', () => {
+    expect(approvalMatchesCall(withRecord(), 'cancelBooking', { id: 'BK-1' })).toBe(true);
   });
 
-  it('rejects a record challenge when the arg names another record', () => {
-    expect(challengeMatchesCall(withRecord(), 'cancelBooking', { id: 'BK-12' })).toBe(false);
+  it('rejects a record approval when the arg names another record', () => {
+    expect(approvalMatchesCall(withRecord(), 'cancelBooking', { id: 'BK-12' })).toBe(false);
   });
 
-  it('rejects a record challenge on a different tool', () => {
-    expect(challengeMatchesCall(withRecord(), 'deleteBooking', { id: 'BK-1' })).toBe(false);
+  it('rejects a record approval on a different tool', () => {
+    expect(approvalMatchesCall(withRecord(), 'deleteBooking', { id: 'BK-1' })).toBe(false);
   });
 
-  it('matches a label challenge on the tool alone', () => {
-    expect(challengeMatchesCall(withLabel(), 'deleteAllData', {})).toBe(true);
+  it('matches a label approval on the tool alone', () => {
+    expect(approvalMatchesCall(withLabel(), 'deleteAllData', {})).toBe(true);
   });
 });
 
-describe('consumeChallenges', () => {
-  it('consumes the challenge whose token the user typed', () => {
+describe('consumeApprovals', () => {
+  it('consumes the approval whose token the user typed', () => {
     const open = [withRecord(), withLabel()];
-    const consumed = consumeChallenges(open, 'yes, CONFIRM BK-1', 3);
+    const consumed = consumeApprovals(open, 'yes, CONFIRM BK-1', 3);
     expect(consumed.map((c) => c.token)).toEqual(['CONFIRM BK-1']);
     expect(open[0]!.consumedTurn).toBe(3);
     expect(open[1]!.consumedTurn).toBeUndefined();
@@ -318,52 +318,52 @@ describe('consumeChallenges', () => {
 
   it('consumes nothing on a human yes that is not the token', () => {
     const open = [withRecord()];
-    expect(consumeChallenges(open, 'go ahead', 3)).toEqual([]);
+    expect(consumeApprovals(open, 'go ahead', 3)).toEqual([]);
     expect(open[0]!.consumedTurn).toBeUndefined();
   });
 
-  it('never consumes a challenge twice', () => {
+  it('never consumes an approval request twice', () => {
     const open = [withRecord()];
-    consumeChallenges(open, 'CONFIRM BK-1', 3);
-    expect(consumeChallenges(open, 'CONFIRM BK-1', 4)).toEqual([]);
+    consumeApprovals(open, 'CONFIRM BK-1', 3);
+    expect(consumeApprovals(open, 'CONFIRM BK-1', 4)).toEqual([]);
     expect(open[0]!.consumedTurn).toBe(3);
   });
 });
 
-describe('closeChallengesFor', () => {
-  it('closes an open challenge on a record that changed', () => {
+describe('closeApprovalsFor', () => {
+  it('closes an open approval on a record that changed', () => {
     const open = [withRecord()];
-    closeChallengesFor(open, 'BK-1');
+    closeApprovalsFor(open, 'BK-1');
     expect(open[0]!.closed).toBe(true);
   });
 
-  it('leaves a challenge on another record open', () => {
+  it('leaves an approval request on another record open', () => {
     const open = [withRecord()];
-    closeChallengesFor(open, 'BK-2');
+    closeApprovalsFor(open, 'BK-2');
     expect(open[0]!.closed).toBeUndefined();
   });
 
-  it('never consumes a closed challenge', () => {
+  it('never consumes a closed approval', () => {
     const open = [withRecord()];
-    closeChallengesFor(open, 'BK-1');
-    expect(consumeChallenges(open, 'CONFIRM BK-1', 3)).toEqual([]);
+    closeApprovalsFor(open, 'BK-1');
+    expect(consumeApprovals(open, 'CONFIRM BK-1', 3)).toEqual([]);
   });
 });
 ```
 
-Add `closeChallengesFor` to the import list at the top of this test file.
+Add `closeApprovalsFor` to the import list at the top of this test file.
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-Run: `pnpm -C packages/core exec vitest run test/challenge.test.ts`
-Expected: FAIL — `Failed to resolve import "../src/runtime/challenge.js"`.
+Run: `pnpm -C packages/core exec vitest run test/approval-request.test.ts`
+Expected: FAIL — `Failed to resolve import "../src/runtime/approval-request.js"`.
 
 - [ ] **Step 3: Create the module**
 
 ```ts
-// packages/core/src/runtime/challenge.ts
+// packages/core/src/runtime/approval-request.ts
 /**
- * THE CONSENT CHALLENGE — the engine's own question about a destructive act, and the literal the user
+ * THE CONSENT APPROVAL REQUEST — the engine's own question about a destructive act, and the literal the user
  * types back to agree to it.
  *
  * The agent writes no part of it: it does not compose the sentence, it does not name what the act
@@ -379,10 +379,10 @@ Expected: FAIL — `Failed to resolve import "../src/runtime/challenge.js"`.
  */
 import { targetMatchesValue, valueSpokenBy } from '../guards/matching.js';
 
-/** One pending consent question. `subject` is the record identity the world issued; a challenge for an
+/** One pending consent question. `subject` is the record identity the world issued; an approval request for an
  *  act on NO identifiable record carries none and is keyed on its tool alone. */
-export interface Challenge {
-  /** The destructive tool this challenge licenses. */
+export interface ApprovalRequest {
+  /** The destructive tool this approval licenses. */
   tool: string;
   /** The record identity the world issued for the act, when the act names one. */
   subject?: string;
@@ -391,11 +391,11 @@ export interface Challenge {
   /** The literal the user types back. */
   token: string;
   issuedTurn: number;
-  /** The turn on which the user's own words carried the token. A challenge licenses its act only on
+  /** The turn on which the user's own words carried the token. An approval request licenses its act only on
    *  that turn: consent is single use, and the act it consents to belongs to the message that gave it. */
   consumedTurn?: number;
   /** The question no longer stands: the record it names has changed, or a newer question about the same
-   *  record replaced it. A closed challenge can never be consumed — the user would be agreeing to a
+   *  record replaced it. A closed approval can never be consumed — the user would be agreeing to a
    *  sentence that is no longer true of the world. */
   closed?: boolean;
 }
@@ -416,18 +416,18 @@ export function deriveToken(meaning: string): string {
   return words.join('-').toUpperCase();
 }
 
-/** The full literal for a challenge: the prefix and the derived token. */
-export function challengeToken(meaning: string): string {
+/** The full literal for an approval request: the prefix and the derived token. */
+export function approvalCode(meaning: string): string {
   return `${TOKEN_PREFIX} ${deriveToken(meaning)}`;
 }
 
 /**
- * Does this challenge license THIS call? A challenge that names a record licenses a call on that record
+ * Does this approval license THIS call? An approval request that names a record licenses a call on that record
  * of that tool — one of the call's own argument values must BE the subject, by whole-value equality. A
- * challenge with no record licenses its tool, which is the only thing it can be about.
+ * approval with no record licenses its tool, which is the only thing it can be about.
  */
-export function challengeMatchesCall(
-  c: Challenge,
+export function approvalMatchesCall(
+  c: ApprovalRequest,
   tool: string,
   args: Record<string, unknown>,
 ): boolean {
@@ -439,16 +439,16 @@ export function challengeMatchesCall(
 }
 
 /**
- * Mark every OPEN challenge whose token the user's message carries, and return the ones just consumed.
- * Consumption is single use: an already-consumed challenge is never consumed again, so one typed token
+ * Mark every OPEN approval whose token the user's message carries, and return the ones just consumed.
+ * Consumption is single use: an already-consumed approval is never consumed again, so one typed token
  * licenses one act.
  */
-export function consumeChallenges(
-  open: Challenge[],
+export function consumeApprovals(
+  open: ApprovalRequest[],
   userText: string,
   turnIndex: number,
-): Challenge[] {
-  const consumed: Challenge[] = [];
+): ApprovalRequest[] {
+  const consumed: ApprovalRequest[] = [];
   for (const c of open) {
     if (c.consumedTurn !== undefined || c.closed) continue;
     if (!valueSpokenBy(c.token, userText)) continue;
@@ -463,7 +463,7 @@ export function consumeChallenges(
  * the world; once that sentence stops being true of it, the agreement they were asked for is not the
  * one they would be giving.
  */
-export function closeChallengesFor(open: Challenge[], subject: string): void {
+export function closeApprovalsFor(open: ApprovalRequest[], subject: string): void {
   for (const c of open) {
     if (c.consumedTurn !== undefined || c.closed) continue;
     if (c.subject !== undefined && targetMatchesValue(c.subject, subject)) c.closed = true;
@@ -473,14 +473,14 @@ export function closeChallengesFor(open: Challenge[], subject: string): void {
 
 - [ ] **Step 4: Run the test to verify it passes**
 
-Run: `pnpm -C packages/core exec vitest run test/challenge.test.ts`
+Run: `pnpm -C packages/core exec vitest run test/approval-request.test.ts`
 Expected: PASS, 10 tests.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add packages/core/src/runtime/challenge.ts packages/core/test/challenge.test.ts
-git commit -m "feat(core): the consent challenge — its token, what it licenses, and single-use consumption"
+git add packages/core/src/runtime/approval-request.ts packages/core/test/approval-request.test.ts
+git commit -m "feat(core): the consent approval — its token, what it licenses, and single-use consumption"
 ```
 
 ---
@@ -496,7 +496,7 @@ git commit -m "feat(core): the consent challenge — its token, what it licenses
 - Produces: `EngineText`, `DEFAULT_ENGINE_TEXT`, `resolveEngineText(t?: Partial<EngineText>): EngineText`; `RenderOpts` gains `text?: EngineText`; `DomainContract` gains `engineText?: Partial<EngineText>`
 
 The engine's user-facing sentences are DATA, so a host that runs its conversation in another language
-supplies them. A challenge the user cannot type is an act that can never be consented to.
+supplies them. An approval request the user cannot type is an act that can never be consented to.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -517,8 +517,8 @@ describe('resolveEngineText', () => {
     expect(t.recordClosureSome).toBe(DEFAULT_ENGINE_TEXT.recordClosureSome);
   });
 
-  it('renders the challenge sentence from the meaning and the token', () => {
-    expect(DEFAULT_ENGINE_TEXT.challenge('BK-1', 'CONFIRM BK-1')).toBe(
+  it('renders the approval sentence from the meaning and the token', () => {
+    expect(DEFAULT_ENGINE_TEXT.approval('BK-1', 'CONFIRM BK-1')).toBe(
       'To confirm BK-1, reply: CONFIRM BK-1',
     );
   });
@@ -547,7 +547,7 @@ Expected: FAIL — `Failed to resolve import "../src/runtime/engine-text.js"`.
  * THE ENGINE'S USER-FACING SENTENCES.
  *
  * Everything the engine itself puts on the user's screen lives here, so a host whose conversation runs
- * in another language declares them and the engine speaks it. The consent challenge is the reason this
+ * in another language declares them and the engine speaks it. The consent approval is the reason this
  * is not cosmetic: the user must TYPE the token back, and a token they cannot read is an act they can
  * never agree to.
  */
@@ -557,13 +557,13 @@ export interface EngineText {
   /** Closes a record that names none. */
   recordClosureNone: string;
   /** The consent question: what the user is agreeing to, and the literal that agrees to it. */
-  challenge: (meaning: string, token: string) => string;
+  approval: (meaning: string, token: string) => string;
 }
 
 export const DEFAULT_ENGINE_TEXT: EngineText = Object.freeze({
   recordClosureSome: 'Nothing else was changed on this turn.',
   recordClosureNone: 'No operation was carried out on this turn.',
-  challenge: (meaning: string, token: string) => `To confirm ${meaning}, reply: ${token}`,
+  approval: (meaning: string, token: string) => `To confirm ${meaning}, reply: ${token}`,
 });
 
 /** The pack a render call uses: the host's sentences where it declared them, the engine's elsewhere. */
@@ -622,7 +622,7 @@ grep -rn "RECORD_CLOSURE_" packages --include="*.ts" | grep -v /dist/
 In `packages/core/src/trunk.ts`, inside `DomainContract`, after `renderClaim`:
 
 ```ts
-  /** The engine's OWN user-facing sentences — the record closures and the consent challenge. The engine
+  /** The engine's OWN user-facing sentences — the record closures and the consent approval. The engine
    *  puts these on the user's screen itself, so a conversation held in another language declares them
    *  here. Absent ⇒ the engine's English defaults. Partial: what is not declared falls back per key. */
   engineText?: Partial<EngineText>;
@@ -644,18 +644,18 @@ git commit -m "feat(core): the engine's user-facing sentences are host-declarabl
 
 ---
 
-### Task 4: The challenge store, issuance and consumption
+### Task 4: The approval store, issuance and consumption
 
 **Files:**
 - Modify: `packages/core/src/runtime/ledger.ts`
 - Modify: `packages/core/src/rules.ts` (`GuardCtx.consent`)
-- Test: `packages/core/test/challenge-ledger.test.ts`
+- Test: `packages/core/test/approval-ledger.test.ts`
 
 **Interfaces:**
-- Consumes: `Challenge`, `challengeToken`, `consumeChallenges` (Task 2)
-- Produces: `TurnLedger.challenges: Challenge[]`, `TurnLedger.consentThisTurn: Challenge[]`,
-  `TurnLedger.challengesIssuedThisTurn: Challenge[]`, `TurnLedger.destructiveLabels: Record<string, string>`,
-  `issueChallengeForVeto(ledger, tool)`; `GuardCtx.consent?: ReadonlyArray<Challenge>`
+- Consumes: `ApprovalRequest`, `approvalCode`, `consumeApprovals` (Task 2)
+- Produces: `TurnLedger.approvals: ApprovalRequest[]`, `TurnLedger.consentThisTurn: ApprovalRequest[]`,
+  `TurnLedger.approvalsIssuedThisTurn: ApprovalRequest[]`, `TurnLedger.destructiveLabels: Record<string, string>`,
+  `issueApprovalForVeto(ledger, tool)`; `GuardCtx.consent?: ReadonlyArray<ApprovalRequest>`
 
 Issuance and consumption are the RUNTIME's, never a guard's: reading the user's text and mutating the
 store are exactly what a guard must not do, so the guard layer only ever reads the result.
@@ -663,11 +663,11 @@ store are exactly what a guard must not do, so the guard layer only ever reads t
 - [ ] **Step 1: Write the failing test**
 
 ```ts
-// packages/core/test/challenge-ledger.test.ts
+// packages/core/test/approval-ledger.test.ts
 import { describe, it, expect } from 'vitest';
-import { createLedger, beginTurn, recordToolResult, issueChallengeForVeto } from '../src/runtime/ledger.js';
+import { createLedger, beginTurn, recordToolResult, issueApprovalForVeto } from '../src/runtime/ledger.js';
 
-describe('a world result that requires confirmation issues a challenge', () => {
+describe('a world result that requires confirmation issues an approval request', () => {
   it('names the record the world issued', () => {
     const ledger = createLedger();
     beginTurn(ledger, 0, 'cancel BK-1');
@@ -676,68 +676,68 @@ describe('a world result that requires confirmation issues a challenge', () => {
       requiresConfirmation: true,
       id: 'BK-1',
     });
-    expect(ledger.challenges).toHaveLength(1);
-    expect(ledger.challenges[0]).toMatchObject({ tool: 'cancelBooking', subject: 'BK-1', token: 'CONFIRM BK-1' });
-    expect(ledger.challengesIssuedThisTurn).toHaveLength(1);
+    expect(ledger.approvals).toHaveLength(1);
+    expect(ledger.approvals[0]).toMatchObject({ tool: 'cancelBooking', subject: 'BK-1', token: 'CONFIRM BK-1' });
+    expect(ledger.approvalsIssuedThisTurn).toHaveLength(1);
   });
 
-  it('issues one challenge per record, never a duplicate for an already-open one', () => {
+  it('issues one approval per record, never a duplicate for an already-open one', () => {
     const ledger = createLedger();
     beginTurn(ledger, 0, 'cancel BK-1');
     const result = { ok: true, requiresConfirmation: true, id: 'BK-1' };
     recordToolResult(ledger, 'cancelBooking', { id: 'BK-1' }, result);
     recordToolResult(ledger, 'cancelBooking', { id: 'BK-1' }, result);
-    expect(ledger.challenges).toHaveLength(1);
+    expect(ledger.approvals).toHaveLength(1);
   });
 });
 
-describe('a vetoed destructive call issues a challenge from its declared label', () => {
+describe('a vetoed destructive call issues an approval request from its declared label', () => {
   it('uses the label the spec declared', () => {
     const ledger = createLedger();
     ledger.destructiveLabels = { deleteAllData: 'delete all of your data' };
     beginTurn(ledger, 0, 'wipe everything');
-    issueChallengeForVeto(ledger, 'deleteAllData');
-    expect(ledger.challenges[0]).toMatchObject({
+    issueApprovalForVeto(ledger, 'deleteAllData');
+    expect(ledger.approvals[0]).toMatchObject({
       tool: 'deleteAllData',
       meaning: 'delete all of your data',
       token: 'CONFIRM DELETE-ALL',
     });
-    expect(ledger.challenges[0]!.subject).toBeUndefined();
+    expect(ledger.approvals[0]!.subject).toBeUndefined();
   });
 
   it('issues nothing for a tool with no declared label', () => {
     const ledger = createLedger();
     beginTurn(ledger, 0, 'wipe everything');
-    issueChallengeForVeto(ledger, 'deleteAllData');
-    expect(ledger.challenges).toHaveLength(0);
+    issueApprovalForVeto(ledger, 'deleteAllData');
+    expect(ledger.approvals).toHaveLength(0);
   });
 });
 
-describe('the user\'s own words consume an open challenge', () => {
+describe('the user\'s own words consume an open approval', () => {
   it('records the consumption on the turn that carried the token', () => {
     const ledger = createLedger();
     ledger.destructiveLabels = { deleteAllData: 'delete all of your data' };
     beginTurn(ledger, 0, 'wipe everything');
-    issueChallengeForVeto(ledger, 'deleteAllData');
+    issueApprovalForVeto(ledger, 'deleteAllData');
     beginTurn(ledger, 1, 'ok, CONFIRM DELETE-ALL');
     expect(ledger.consentThisTurn).toHaveLength(1);
-    expect(ledger.challenges[0]!.consumedTurn).toBe(1);
+    expect(ledger.approvals[0]!.consumedTurn).toBe(1);
   });
 
   it('carries no consent on a turn whose message is a human yes', () => {
     const ledger = createLedger();
     ledger.destructiveLabels = { deleteAllData: 'delete all of your data' };
     beginTurn(ledger, 0, 'wipe everything');
-    issueChallengeForVeto(ledger, 'deleteAllData');
+    issueApprovalForVeto(ledger, 'deleteAllData');
     beginTurn(ledger, 1, 'go ahead');
     expect(ledger.consentThisTurn).toEqual([]);
   });
 
-  it('keeps a challenge open across an unrelated turn', () => {
+  it('keeps an approval request open across an unrelated turn', () => {
     const ledger = createLedger();
     ledger.destructiveLabels = { deleteAllData: 'delete all of your data' };
     beginTurn(ledger, 0, 'wipe everything');
-    issueChallengeForVeto(ledger, 'deleteAllData');
+    issueApprovalForVeto(ledger, 'deleteAllData');
     beginTurn(ledger, 1, 'wait, what does that remove?');
     beginTurn(ledger, 2, 'CONFIRM DELETE-ALL');
     expect(ledger.consentThisTurn).toHaveLength(1);
@@ -747,41 +747,41 @@ describe('the user\'s own words consume an open challenge', () => {
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-Run: `pnpm -C packages/core exec vitest run test/challenge-ledger.test.ts`
-Expected: FAIL — `issueChallengeForVeto` is not exported.
+Run: `pnpm -C packages/core exec vitest run test/approval-ledger.test.ts`
+Expected: FAIL — `issueApprovalForVeto` is not exported.
 
 - [ ] **Step 3: Add the store to the ledger**
 
 In `packages/core/src/runtime/ledger.ts`, add to `TurnLedger`:
 
 ```ts
-  /** Every consent challenge this CONVERSATION has issued — open and consumed alike. Conversation-scoped:
-   *  a challenge stays open until the user's words carry its token, a newer challenge on the same record
+  /** Every consent approval this CONVERSATION has issued — open and consumed alike. Conversation-scoped:
+   *  an approval request stays open until the user's words carry its token, a newer approval on the same record
    *  supersedes it, or the record it names changes. There is no turn window; what bounds a stale token is
    *  that consuming it requires typing that exact literal, and consuming it closes it. */
-  challenges: Challenge[];
-  /** The challenges the CURRENT turn's incoming message consumed — the whole of what licenses a
+  approvals: ApprovalRequest[];
+  /** The approvals the CURRENT turn's incoming message consumed — the whole of what licenses a
    *  destructive act on this turn. Read into every GuardCtx as `ctx.consent`. Reset per turn. */
-  consentThisTurn: Challenge[];
-  /** The challenges ISSUED on the current turn — the ones the delivered text must carry, so the user can
+  consentThisTurn: ApprovalRequest[];
+  /** The approvals ISSUED on the current turn — the ones the delivered text must carry, so the user can
    *  see the question they are being asked. Reset per turn. */
-  challengesIssuedThisTurn: Challenge[];
+  approvalsIssuedThisTurn: ApprovalRequest[];
   /** Per destructive tool that acts on NO identifiable record, the human-facing label the spec declared.
-   *  A tool absent from this map can issue no challenge, so it can never be consented to. */
+   *  A tool absent from this map can issue no approval, so it can never be consented to. */
   destructiveLabels: Record<string, string>;
 ```
 
-with `import { challengeToken, closeChallengesFor, consumeChallenges, type Challenge } from './challenge.js';` and
+with `import { approvalCode, closeApprovalsFor, consumeApprovals, type ApprovalRequest } from './approval-request.js';` and
 `import { preferredIdentityValues } from '../guards/honesty.js';` — export
 `preferredIdentityValues` from `honesty.ts` for this (it is the one place that decides what identity a
-world result issued, and the challenge's subject must be that same value).
+world result issued, and the approval's subject must be that same value).
 
 Seed them in `createLedger`:
 
 ```ts
-    challenges: [],
+    approvals: [],
     consentThisTurn: [],
-    challengesIssuedThisTurn: [],
+    approvalsIssuedThisTurn: [],
     destructiveLabels: {},
 ```
 
@@ -790,10 +790,10 @@ Seed them in `createLedger`:
 In `beginTurn`, after `ledger.currentUserText = userText;`, add:
 
 ```ts
-  ledger.challengesIssuedThisTurn = [];
-  // The user's own words are the ONLY thing that turns an open challenge into consent, and they are read
+  ledger.approvalsIssuedThisTurn = [];
+  // The user's own words are the ONLY thing that turns an open approval into consent, and they are read
   // exactly here — once per turn, by the runtime. No guard reads text.
-  ledger.consentThisTurn = consumeChallenges(ledger.challenges, userText, turnIndex);
+  ledger.consentThisTurn = consumeApprovals(ledger.approvals, userText, turnIndex);
 ```
 
 - [ ] **Step 5: Issue from a world result**
@@ -802,13 +802,13 @@ In `recordToolResult`, after the observed entry is pushed, add:
 
 ```ts
   // PATH (c): the world runs the two-step protocol itself. Its "I need confirmation" answer names the
-  // record, so the challenge it issues is bound to that record and to nothing else.
+  // record, so the approval it issues is bound to that record and to nothing else.
   if (resultFlags?.requiresConfirmation) {
     const [subject] = preferredIdentityValues(output);
-    if (subject) issueChallenge(ledger, { tool: name, subject, meaning: subject });
+    if (subject) issueApproval(ledger, { tool: name, subject, meaning: subject });
   } else if (tookEffect) {
     // A write that LANDED moves the record, so every open question about it stops being true and closes.
-    for (const subject of preferredIdentityValues(output)) closeChallengesFor(ledger.challenges, subject);
+    for (const subject of preferredIdentityValues(output)) closeApprovalsFor(ledger.approvals, subject);
   }
 ```
 
@@ -819,22 +819,22 @@ using the local `resultFlags` and `tookEffect` values already computed there for
 
 ```ts
 /**
- * Open a challenge.
+ * Open an approval request.
  *
  * An identical open one is left alone: a second identical question would render twice and consume once,
  * and the record's own question is asked once and stays asked until it is answered. A DIFFERENT question
  * about the same act SUPERSEDES the old one — two open literals for one act would let the user answer a
  * question they are no longer being asked.
  */
-function issueChallenge(ledger: TurnLedger, c: { tool: string; subject?: string; meaning: string }): void {
-  const token = challengeToken(c.meaning);
-  const sameAct = (x: Challenge): boolean =>
+function issueApproval(ledger: TurnLedger, c: { tool: string; subject?: string; meaning: string }): void {
+  const token = approvalCode(c.meaning);
+  const sameAct = (x: ApprovalRequest): boolean =>
     x.consumedTurn === undefined && !x.closed && x.tool === c.tool && x.subject === c.subject;
-  if (ledger.challenges.some((x) => sameAct(x) && x.token === token)) return;
-  for (const x of ledger.challenges) if (sameAct(x)) x.closed = true;
-  const challenge: Challenge = { ...c, token, issuedTurn: ledger.turnIndex };
-  ledger.challenges.push(challenge);
-  ledger.challengesIssuedThisTurn.push(challenge);
+  if (ledger.approvals.some((x) => sameAct(x) && x.token === token)) return;
+  for (const x of ledger.approvals) if (sameAct(x)) x.closed = true;
+  const approval: ApprovalRequest = { ...c, token, issuedTurn: ledger.turnIndex };
+  ledger.approvals.push(approval);
+  ledger.approvalsIssuedThisTurn.push(approval);
 }
 
 /**
@@ -842,10 +842,10 @@ function issueChallenge(ledger: TurnLedger, c: { tool: string; subject?: string;
  * the act is what puts it on the user's screen. Its meaning is the label the spec declared; a tool with
  * no label issues nothing, so it can never be consented to and never runs.
  */
-export function issueChallengeForVeto(ledger: TurnLedger, tool: string): void {
+export function issueApprovalForVeto(ledger: TurnLedger, tool: string): void {
   const meaning = ledger.destructiveLabels[tool];
   if (!meaning) return;
-  issueChallenge(ledger, { tool, meaning });
+  issueApproval(ledger, { tool, meaning });
 }
 ```
 
@@ -854,13 +854,13 @@ export function issueChallengeForVeto(ledger: TurnLedger, tool: string): void {
 In `packages/core/src/rules.ts`, inside `GuardCtx`:
 
 ```ts
-  /** The consent challenges the CURRENT turn's incoming message consumed. The whole licensing surface for
+  /** The consent approvals the CURRENT turn's incoming message consumed. The whole licensing surface for
    *  a destructive act: a guard asks whether one of these is about the call in front of it, and never
    *  reads text or history to decide. Absent ⇒ empty (no consent arrived). */
-  consent?: ReadonlyArray<Challenge>;
+  consent?: ReadonlyArray<ApprovalRequest>;
 ```
 
-with `import type { Challenge } from './runtime/challenge.js';`.
+with `import type { ApprovalRequest } from './runtime/approval-request.js';`.
 
 Thread it wherever the runtime builds a `GuardCtx` — find the sites with:
 
@@ -872,36 +872,36 @@ and add `consent: ledger.consentThisTurn,` beside it in each.
 
 - [ ] **Step 8: Run the tests to verify they pass**
 
-Run: `pnpm -C packages/core exec vitest run test/challenge-ledger.test.ts && pnpm -C packages/core test`
+Run: `pnpm -C packages/core exec vitest run test/approval-ledger.test.ts && pnpm -C packages/core test`
 Expected: the new file PASSES, 7 tests. The existing suite still passes.
 
 - [ ] **Step 9: Commit**
 
 ```bash
-git add packages/core/src/runtime/ledger.ts packages/core/src/rules.ts packages/core/src/guards/honesty.ts packages/core/test/challenge-ledger.test.ts
-git commit -m "feat(core): the runtime issues consent challenges and reads the user's answer"
+git add packages/core/src/runtime/ledger.ts packages/core/src/rules.ts packages/core/src/guards/honesty.ts packages/core/test/approval-ledger.test.ts
+git commit -m "feat(core): the runtime issues consent approvals and reads the user's answer"
 ```
 
 ---
 
-### Task 5: Render the challenge into the delivered text
+### Task 5: Render the approval into the delivered text
 
 **Files:**
 - Modify: `packages/core/src/runtime/turn.ts`
-- Test: `packages/core/test/challenge-render.test.ts`
+- Test: `packages/core/test/approval-render.test.ts`
 
 **Interfaces:**
-- Consumes: `TurnLedger.challengesIssuedThisTurn` (Task 4), `EngineText` (Task 3)
+- Consumes: `TurnLedger.approvalsIssuedThisTurn` (Task 4), `EngineText` (Task 3)
 
 - [ ] **Step 1: Write the failing test**
 
 ```ts
-// packages/core/test/challenge-render.test.ts
+// packages/core/test/approval-render.test.ts
 import { describe, it, expect } from 'vitest';
 import { composeDeliveryText } from '../src/runtime/turn.js';
-import type { Challenge } from '../src/runtime/challenge.js';
+import type { ApprovalRequest } from '../src/runtime/approval-request.js';
 
-const challenge: Challenge = {
+const approval: ApprovalRequest = {
   tool: 'cancelBooking',
   subject: 'BK-1',
   meaning: 'BK-1',
@@ -910,32 +910,32 @@ const challenge: Challenge = {
 };
 
 describe('composeDeliveryText', () => {
-  it('puts the challenge between the prose and the record', () => {
-    expect(composeDeliveryText('Your booking BK-1 carries a fee.', [{ op: 'inform' }], [challenge])).toBe(
+  it('puts the approval between the prose and the record', () => {
+    expect(composeDeliveryText('Your booking BK-1 carries a fee.', [{ op: 'inform' }], [approval])).toBe(
       'Your booking BK-1 carries a fee.\n\n' +
         'To confirm BK-1, reply: CONFIRM BK-1\n\n' +
         'No operation was carried out on this turn.',
     );
   });
 
-  it('delivers the record alone when no challenge was issued', () => {
+  it('delivers the record alone when no approval was issued', () => {
     expect(composeDeliveryText('All set.', [{ op: 'inform' }], [])).toBe(
       'All set.\n\nNo operation was carried out on this turn.',
     );
   });
 
-  it('renders one line per challenge issued this turn', () => {
-    const second: Challenge = { ...challenge, subject: 'BK-2', meaning: 'BK-2', token: 'CONFIRM BK-2' };
-    const text = composeDeliveryText('Two bookings carry fees.', [{ op: 'inform' }], [challenge, second]);
+  it('renders one line per approval issued this turn', () => {
+    const second: ApprovalRequest = { ...approval, subject: 'BK-2', meaning: 'BK-2', token: 'CONFIRM BK-2' };
+    const text = composeDeliveryText('Two bookings carry fees.', [{ op: 'inform' }], [approval, second]);
     expect(text).toContain('To confirm BK-1, reply: CONFIRM BK-1');
     expect(text).toContain('To confirm BK-2, reply: CONFIRM BK-2');
   });
 
   it('speaks the sentences the host declared', () => {
-    const text = composeDeliveryText('Pronto.', [{ op: 'inform' }], [challenge], {
+    const text = composeDeliveryText('Pronto.', [{ op: 'inform' }], [approval], {
       engineText: {
         recordClosureNone: 'Nenhuma operação foi realizada neste turno.',
-        challenge: (meaning, token) => `Para confirmar ${meaning}, responda: ${token}`,
+        approval: (meaning, token) => `Para confirmar ${meaning}, responda: ${token}`,
       },
     });
     expect(text).toBe(
@@ -952,7 +952,7 @@ the same literal either way, and the host's declaration is what makes the instru
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-Run: `pnpm -C packages/core exec vitest run test/challenge-render.test.ts`
+Run: `pnpm -C packages/core exec vitest run test/approval-render.test.ts`
 Expected: FAIL — `composeDeliveryText` is not exported.
 
 - [ ] **Step 3: Rewrite `composeDelivery` around a testable core**
@@ -961,7 +961,7 @@ In `packages/core/src/runtime/turn.ts`, replace `composeDelivery` with:
 
 ```ts
 /**
- * The DELIVERED text: the agent's `message`, then the CHALLENGES this turn issued, then the engine's
+ * The DELIVERED text: the agent's `message`, then the APPROVAL REQUESTS this turn issued, then the engine's
  * OPERATION RECORD. The two engine blocks are the parts the agent does not write — the question it must
  * not be able to reframe, and the account of what changed it must not be able to soften.
  *
@@ -972,7 +972,7 @@ In `packages/core/src/runtime/turn.ts`, replace `composeDelivery` with:
 export function composeDeliveryText(
   message: string,
   did: Intention[],
-  challenges: readonly Challenge[],
+  approvals: readonly ApprovalRequest[],
   contract?: Pick<DomainContract, 'renderClaim' | 'outcomes' | 'engineText'>,
 ): string {
   const text = resolveEngineText(contract?.engineText);
@@ -981,26 +981,26 @@ export function composeDeliveryText(
     outcomes: contract?.outcomes,
     text,
   });
-  const ask = challenges.map((c) => text.challenge(c.meaning, c.token)).join('\n');
+  const ask = approvals.map((c) => text.approval(c.meaning, c.token)).join('\n');
   return [message.trim(), ask, report].filter((s) => s.trim()).join('\n\n');
 }
 
 function composeDelivery(payload: RespondPayload, ledger: TurnLedger, contract?: DomainContract): string {
-  return composeDeliveryText(payload.message, payload.did, ledger.challengesIssuedThisTurn, contract);
+  return composeDeliveryText(payload.message, payload.did, ledger.approvalsIssuedThisTurn, contract);
 }
 ```
 
-Add the imports it needs: `resolveEngineText` from `./engine-text.js`, `type Challenge` from
-`./challenge.js`. Update the two `composeDelivery(payload, contract)` call sites to pass `ledger`, and
+Add the imports it needs: `resolveEngineText` from `./engine-text.js`, `type ApprovalRequest` from
+`./approval-request.js`. Update the two `composeDelivery(payload, contract)` call sites to pass `ledger`, and
 pass `text` through to `renderOperationReport` at the other two call sites in this file
 (`deriveExhaustionClosure`, `withBlankFloor`) so the closure and the floor speak the same language.
 
 - [ ] **Step 4: Extend the blank floor**
 
-In `withBlankFloor`, a turn whose prose is blank but which ISSUED a challenge has something to deliver:
+In `withBlankFloor`, a turn whose prose is blank but which ISSUED an approval request has something to deliver:
 
 ```ts
-  if (!isBlankDelivery(payload.message) || record.hasOperations || ledger.challengesIssuedThisTurn.length) {
+  if (!isBlankDelivery(payload.message) || record.hasOperations || ledger.approvalsIssuedThisTurn.length) {
 ```
 
 Add `ledger` to its call if it is not already a parameter (it is), and update the comment above the
@@ -1009,13 +1009,13 @@ deliver.
 
 - [ ] **Step 5: Run the tests to verify they pass**
 
-Run: `pnpm -C packages/core exec vitest run test/challenge-render.test.ts && pnpm -C packages/core test`
+Run: `pnpm -C packages/core exec vitest run test/approval-render.test.ts && pnpm -C packages/core test`
 Expected: PASS.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add packages/core/src/runtime/turn.ts packages/core/test/challenge-render.test.ts
+git add packages/core/src/runtime/turn.ts packages/core/test/approval-render.test.ts
 git commit -m "feat(core): the delivered text carries the engine's consent question"
 ```
 
@@ -1030,7 +1030,7 @@ git commit -m "feat(core): the delivered text carries the engine's consent quest
 - Test: `packages/core/test/guards-confirmation.test.ts` (rewrite the confirm-family cases)
 
 **Interfaces:**
-- Consumes: `GuardCtx.consent` (Task 4), `challengeMatchesCall` (Task 2)
+- Consumes: `GuardCtx.consent` (Task 4), `approvalMatchesCall` (Task 2)
 - Produces: `confirmFirst(): Guard` — no options
 
 - [ ] **Step 1: Write the failing test**
@@ -1039,10 +1039,10 @@ git commit -m "feat(core): the delivered text carries the engine's consent quest
 // packages/core/test/guards-confirmation.test.ts
 import { describe, it, expect } from 'vitest';
 import { confirmFirst } from '../src/guards/confirmation.js';
-import type { Challenge } from '../src/runtime/challenge.js';
+import type { ApprovalRequest } from '../src/runtime/approval-request.js';
 import type { GuardCtx } from '../src/rules.js';
 
-const consented: Challenge = {
+const consented: ApprovalRequest = {
   tool: 'cancelBooking',
   subject: 'BK-1',
   meaning: 'BK-1',
@@ -1109,13 +1109,13 @@ Replace the whole of `confirmFirst` in `packages/core/src/guards/confirmation.ts
  * A destructive tool runs only on a turn whose incoming message carried the engine's consent token for
  * THIS record.
  *
- * The guard is a pure read of `ctx.consent` — the challenges the runtime already matched against the
+ * The guard is a pure read of `ctx.consent` — the approvals the runtime already matched against the
  * user's own words. It reads no text, keeps no state, and accepts no declaration: an agent has no
  * channel through which to produce a consent, because consent is a literal only the engine issued and
  * only the user can type.
  *
  * ```
- *   open challenge   CONFIRM BK-1
+ *   open approval   CONFIRM BK-1
  *   user types       "yes, CONFIRM BK-1"     → cancelBooking({id:'BK-1'}) runs
  *   user types       "go ahead"              → denied; the question is asked again
  *   user types       "cancel the BK-12"      → denied; BK-12 is not BK-1
@@ -1131,7 +1131,7 @@ export function confirmFirst(): Guard {
     check(ctx) {
       if (!ctx.tool) return null;
       const consent = ctx.consent ?? [];
-      const licensed = consent.some((c) => challengeMatchesCall(c, ctx.tool!, ctx.args));
+      const licensed = consent.some((c) => approvalMatchesCall(c, ctx.tool!, ctx.args));
       return licensed
         ? null
         : 'The user has not confirmed this action. Do not run it — reply to them, and run it only after their next message carries the confirmation they were asked for.';
@@ -1142,7 +1142,7 @@ export function confirmFirst(): Guard {
 }
 ```
 
-Add `import { challengeMatchesCall } from '../runtime/challenge.js';` and delete the now-unused
+Add `import { approvalMatchesCall } from '../runtime/approval-request.js';` and delete the now-unused
 `canonArgs`, `askedInDeliveredTurn`, `hasAskIntent`, `isAskEvent`, `isBlankDelivery` imports that only
 those functions used (keep what `destructiveThrottle` still needs).
 
@@ -1332,7 +1332,7 @@ Right after the `strayMech` check, add:
       );
     }
     // Two labels that derive the SAME token would give the user one literal for two different acts:
-    // typing it would consent to whichever challenge is open, which is not what they read.
+    // typing it would consent to whichever approval is open, which is not what they read.
     const byToken = new Map<string, string>();
     for (const [tool, label] of Object.entries(this.destructiveLabels)) {
       const token = `CONFIRM ${deriveToken(label)}`;
@@ -1347,7 +1347,7 @@ Right after the `strayMech` check, add:
     }
 ```
 
-with `import { deriveToken } from './runtime/challenge.js';`.
+with `import { deriveToken } from './runtime/approval-request.js';`.
 
 - [ ] **Step 5: Run the tests to verify they pass**
 
@@ -1364,7 +1364,7 @@ grep -rn "createLedger(" packages/core/src packages/mastra/src | grep -v /dist/
 
 At each site that has the spec to hand, set `ledger.destructiveLabels = spec.destructiveLabels ?? {};`
 immediately after creation. Where a veto is recorded for a destructive tool, call
-`issueChallengeForVeto(ledger, name)` — find the veto site with:
+`issueApprovalForVeto(ledger, name)` — find the veto site with:
 
 ```bash
 grep -rn "recordVeto(" packages/core/src packages/mastra/src | grep -v /dist/
@@ -1568,7 +1568,7 @@ The four rows the design's §14 states, replacing the consent rows that read "se
 - [ ] **Step 2: Rewrite the consent chapter of `GUARDS.md`**
 
 Replace every passage describing the ask signal, `via`, `within`, `askedInDeliveredTurn`,
-`pendingConfirmMustAsk` and `noActAfterAskSameTurn` with the shipped mechanism: the challenge lifecycle
+`pendingConfirmMustAsk` and `noActAfterAskSameTurn` with the shipped mechanism: the approval lifecycle
 (issue from a `requiresConfirmation` result or a denial, render, consume, single use), the one matching
 law, and the world/spec obligations table from the design's §12.
 
@@ -1581,7 +1581,7 @@ read a self-declared signal.
 |---|---|
 | `01-concepts.md` | consent is introduced as a token the engine issues and the user types back |
 | `03-agent-anatomy.md` | the `did` op list keeps `ask`, described as a speech classification that licenses nothing |
-| `04-guards.md` | the confirm-gate lesson is the challenge lifecycle; `confirmFirst()` takes no options |
+| `04-guards.md` | the confirm-gate lesson is the approval lifecycle; `confirmFirst()` takes no options |
 | `05-running-and-eval.md` | the consent scenario's user turn carries the token |
 | `06-advanced.md` | the one guard reference follows the new name |
 
@@ -1606,7 +1606,7 @@ Expected: PASS, including the chapter-in-sync check that `pnpm test` runs.
 
 ```bash
 git add packages/core/GUARDS.md docs/tutorial
-git commit -m "docs: the guard chapter and the tutorial teach consent by challenge"
+git commit -m "docs: the guard chapter and the tutorial teach consent by approval"
 ```
 
 ---
@@ -1621,7 +1621,7 @@ git commit -m "docs: the guard chapter and the tutorial teach consent by challen
 - [ ] **Step 1: Update the governance skill**
 
 In `proof-case-authoring.md`, the consent proof case is authored as a two-turn shape: a turn that
-attempts the act and receives the challenge, then a turn whose user text carries the token.
+attempts the act and receives the approval, then a turn whose user text carries the token.
 
 In `scaffold-proof-cases.mjs`, the scaffolded consent case emits that same two-turn shape.
 
@@ -1637,7 +1637,7 @@ Expected: PASS.
 
 ```bash
 git add skills/looprun-governance
-git commit -m "docs(skill): a consent proof case is a challenge and the turn that answers it"
+git commit -m "docs(skill): a consent proof case is an approval request and the turn that answers it"
 ```
 
 - [ ] **Step 4: Update the agentspec skill**
@@ -1647,7 +1647,7 @@ In the `agentspec` repo, on its own branch:
 | File | Change |
 |---|---|
 | `references/guard-catalog.md` | the `confirmFirst` entry takes no options; the two deleted kinds go; `askedEarlier` becomes `valueFromUser` |
-| `references/norms.md` | the consent norm is the challenge; the world/spec obligations gain the label |
+| `references/norms.md` | the consent norm is the approval; the world/spec obligations gain the label |
 | `references/spec-template.ts` | the destructive tool shape carries `destructiveLabels` |
 | `references/test.md` | a consent case types the token |
 

@@ -4,7 +4,7 @@
  * Target family: confirmFirst · destructiveThrottle · valueFromUser — the gates around a destructive
  * act. What licenses one is a token the ENGINE issued for a record and the USER typed back; the agent
  * has no channel that produces one. Source: src/guards/confirmation.ts, src/guards/structural.ts,
- * src/runtime/challenge.ts, src/runtime/ledger.ts, src/runtime/turn.ts.
+ * src/runtime/approval-request.ts, src/runtime/ledger.ts, src/runtime/turn.ts.
  *
  * CONVENTION: every `it` asserts the SECURE expectation (the guard SHOULD deny / block). A vector whose
  * fix has NOT landed yet is marked `it.fails` (a proven BREAK, suite stays green per commit): when the

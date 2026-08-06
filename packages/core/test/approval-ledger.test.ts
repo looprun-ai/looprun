@@ -1,20 +1,20 @@
 /**
- * THE CHALLENGE STORE — who issues a consent question, and what turns it into consent.
+ * THE APPROVAL REQUEST STORE — who issues a consent question, and what turns it into consent.
  *
  * Both are the RUNTIME's: reading the user's text and mutating the store are exactly what a guard must
  * not do, so the guard layer only ever reads the result.
  */
 import { describe, it, expect } from 'vitest';
-import { beginTurn, createLedger, issueChallengeForVeto, recordToolResult } from '../src/runtime/ledger.js';
+import { beginTurn, createLedger, issueApprovalForVeto, recordToolResult } from '../src/runtime/ledger.js';
 
-describe('a world result that requires confirmation issues a challenge', () => {
+describe('a world result that requires confirmation issues an approval request', () => {
   it('names the record the world issued', () => {
     const ledger = createLedger();
     beginTurn(ledger, 0, 'cancel BK-1');
     recordToolResult(ledger, 'cancelBooking', { id: 'BK-1' }, { requiresConfirmation: true, id: 'BK-1' });
-    expect(ledger.challenges).toHaveLength(1);
-    expect(ledger.challenges[0]).toMatchObject({ tool: 'cancelBooking', subject: 'BK-1', token: 'CONFIRM BK-1' });
-    expect(ledger.challengesIssuedThisTurn).toHaveLength(1);
+    expect(ledger.approvals).toHaveLength(1);
+    expect(ledger.approvals[0]).toMatchObject({ tool: 'cancelBooking', subject: 'BK-1', token: 'CONFIRM BK-1' });
+    expect(ledger.approvalsIssuedThisTurn).toHaveLength(1);
   });
 
   it('asks one question per act, however many times the act is attempted', () => {
@@ -23,45 +23,45 @@ describe('a world result that requires confirmation issues a challenge', () => {
     const result = { requiresConfirmation: true, id: 'BK-1' };
     recordToolResult(ledger, 'cancelBooking', { id: 'BK-1' }, result);
     recordToolResult(ledger, 'cancelBooking', { id: 'BK-1' }, result);
-    expect(ledger.challenges).toHaveLength(1);
+    expect(ledger.approvals).toHaveLength(1);
   });
 
   it('issues nothing when the world named no record', () => {
     const ledger = createLedger();
     beginTurn(ledger, 0, 'cancel it');
     recordToolResult(ledger, 'cancelBooking', {}, { requiresConfirmation: true });
-    expect(ledger.challenges).toHaveLength(0);
+    expect(ledger.approvals).toHaveLength(0);
   });
 });
 
-describe('a vetoed destructive call issues a challenge from its declared label', () => {
+describe('a vetoed destructive call issues an approval request from its declared label', () => {
   it('uses the label the spec declared', () => {
     const ledger = createLedger();
     ledger.destructiveLabels = { deleteAllData: 'delete all of your data' };
     beginTurn(ledger, 0, 'wipe everything');
-    issueChallengeForVeto(ledger, 'deleteAllData');
-    expect(ledger.challenges[0]).toMatchObject({
+    issueApprovalForVeto(ledger, 'deleteAllData');
+    expect(ledger.approvals[0]).toMatchObject({
       tool: 'deleteAllData',
       meaning: 'delete all of your data',
       token: 'CONFIRM DELETE-ALL',
     });
-    expect(ledger.challenges[0]!.subject).toBeUndefined();
+    expect(ledger.approvals[0]!.subject).toBeUndefined();
   });
 
   it('issues nothing for a tool with no declared label', () => {
     const ledger = createLedger();
     beginTurn(ledger, 0, 'wipe everything');
-    issueChallengeForVeto(ledger, 'deleteAllData');
-    expect(ledger.challenges).toHaveLength(0);
+    issueApprovalForVeto(ledger, 'deleteAllData');
+    expect(ledger.approvals).toHaveLength(0);
   });
 });
 
-describe("the user's own words consume an open challenge", () => {
+describe("the user's own words consume an open approval", () => {
   const armed = () => {
     const ledger = createLedger();
     ledger.destructiveLabels = { deleteAllData: 'delete all of your data' };
     beginTurn(ledger, 0, 'wipe everything');
-    issueChallengeForVeto(ledger, 'deleteAllData');
+    issueApprovalForVeto(ledger, 'deleteAllData');
     return ledger;
   };
 
@@ -69,7 +69,7 @@ describe("the user's own words consume an open challenge", () => {
     const ledger = armed();
     beginTurn(ledger, 1, 'ok, CONFIRM DELETE-ALL');
     expect(ledger.consentThisTurn).toHaveLength(1);
-    expect(ledger.challenges[0]!.consumedTurn).toBe(1);
+    expect(ledger.approvals[0]!.consumedTurn).toBe(1);
   });
 
   it('carries no consent on a turn whose message is a human yes', () => {
@@ -78,7 +78,7 @@ describe("the user's own words consume an open challenge", () => {
     expect(ledger.consentThisTurn).toEqual([]);
   });
 
-  it('keeps a challenge open across an unrelated turn', () => {
+  it('keeps an approval request open across an unrelated turn', () => {
     const ledger = armed();
     beginTurn(ledger, 1, 'wait, what does that remove?');
     expect(ledger.consentThisTurn).toEqual([]);
@@ -103,7 +103,7 @@ describe('a write that lands closes the question about its record', () => {
     recordToolResult(ledger, 'cancelBooking', { id: 'BK-1' }, { requiresConfirmation: true, id: 'BK-1' });
     world.toolCalls.push({ name: 'cancelBooking', args: { id: 'BK-1' }, tookEffect: true });
     recordToolResult(ledger, 'cancelBooking', { id: 'BK-1' }, { id: 'BK-1' }, world as never);
-    expect(ledger.challenges[0]!.closed).toBe(true);
+    expect(ledger.approvals[0]!.closed).toBe(true);
     beginTurn(ledger, 1, 'CONFIRM BK-1');
     expect(ledger.consentThisTurn).toEqual([]);
   });

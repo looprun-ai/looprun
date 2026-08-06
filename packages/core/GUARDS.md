@@ -28,7 +28,7 @@ A `check()` reads ONLY `GuardCtx`, and that ctx carries the WHOLE conversation �
 `world` (host-injected read/exec seam), `observed` (the conversation's `ObservedCall[]`, each carrying
 `turnIndex`/`ok`/`resultFlags`), `turnIndex`, `reply`, `producedThisTurn`, `attachmentsThisTurn`,
 `result` (postTool only), `notes`, **`userText`** (the current turn's incoming message, verbatim),
-**`consent`** (the consent challenges this turn's message consumed — see §4) and
+**`consent`** (the consent approvals this turn's message consumed — see §4) and
 **`history`** (every prior turn, turn-structured and read-only: `userText`/`reply`/`toolCalls`/
 `attemptedCalls`/`guardEvents`). **A guard is NOT blind to the user's text**: a guard is deterministic
 code, so "influence" does not apply to it. What a blindness rule would try to buy is bought by two
@@ -656,8 +656,8 @@ screen and the USER writes back, and the agent has no channel that produces one.
  ③  the engine renders    the question goes into the delivered text, between the agent's prose and the
                           operation record — the agent writes no part of it
  ④  the user answers      the runtime reads the incoming message ONCE, at turn start, and marks the
-                          challenge consumed if their words carry its token
- ⑤  confirmFirst allows   the act runs iff a consumed challenge is about THIS call
+                          approval consumed if their words carry its token
+ ⑤  confirmFirst allows   the act runs iff a consumed approval is about THIS call
 ```
 
 The turn, end to end:
@@ -672,7 +672,7 @@ turn 1   agent:   cancelBooking({ id:'BK-1' })
                   No operation was carried out on this turn.
 
 turn 2   user:    "yes, CONFIRM BK-1"
-         engine:  the token matched → the challenge is consumed
+         engine:  the token matched → the approval is consumed
          agent:   cancelBooking({ id:'BK-1', confirmed:true })   → ALLOWED
 ```
 
@@ -783,7 +783,7 @@ Two obligations, both load-bearing — a backend that skips either fails CLOSED 
 open:
 
 1. **CALL `beginTurn` WITH THE INCOMING MESSAGE.** It is the one place the user's text is read for
-   consent: an open challenge becomes consent there, or nowhere. A backend that opens a turn with an
+   consent: an open approval becomes consent there, or nowhere. A backend that opens a turn with an
    empty `userText` (the stream path, a caller-managed message array) simply never carries consent, so
    every gated act is denied.
 2. **RECORD WHAT EACH CALL DID** on `world.toolCalls`, with `tookEffect`. `destructiveThrottle` treats an

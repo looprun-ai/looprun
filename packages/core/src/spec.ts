@@ -28,7 +28,7 @@
 import { claimIsComplete, claimIsGrounded, confirmFirst, degenerationGuard, destructiveThrottle, noDuplicateCall, precondition } from './guards/index.js';
 import { GuardExecutionError } from './rules.js';
 import { assertNoCoreOutcomeShadow } from './runtime/claims.js';
-import { challengeToken } from './runtime/challenge.js';
+import { approvalCode } from './runtime/approval-request.js';
 import type { AgentWorld, Dim, Guard, GuardCtx, ObservedCall, ReplyMutator, SpatialEdge } from './rules.js';
 import type { DomainContract } from './trunk.js';
 import type { SamplingSettings } from './model-params.js';
@@ -529,7 +529,7 @@ export class AgentSpecBase implements AgentSpec {
     // typing it would consent to whichever question is open, which is not the one they read.
     const byToken = new Map<string, string>();
     for (const [tool, label] of Object.entries(this.destructiveLabels)) {
-      const token = challengeToken(label);
+      const token = approvalCode(label);
       const owner = byToken.get(token);
       if (owner) {
         throw new Error(

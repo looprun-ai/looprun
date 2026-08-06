@@ -1,12 +1,12 @@
 /**
- * THE CONSENT GATE — one rule: is there a consumed challenge about THIS call?
+ * THE CONSENT GATE — one rule: is there a consumed approval about THIS call?
  */
 import { describe, it, expect } from 'vitest';
 import { confirmFirst, destructiveThrottle } from '../src/guards/confirmation.js';
-import type { Challenge } from '../src/runtime/challenge.js';
+import type { ApprovalRequest } from '../src/runtime/approval-request.js';
 import type { GuardCtx, ObservedCall } from '../src/rules.js';
 
-const consented: Challenge = {
+const consented: ApprovalRequest = {
   tool: 'cancelBooking',
   subject: 'BK-1',
   meaning: 'BK-1',
@@ -60,7 +60,7 @@ describe('confirmFirst — the acting call is gated, the preview is not', () => 
   });
 
   it('allows an act with no record when the tool itself was consented to', () => {
-    const label: Challenge = {
+    const label: ApprovalRequest = {
       tool: 'deleteAllData',
       meaning: 'delete all of your data',
       token: 'CONFIRM DELETE-ALL',

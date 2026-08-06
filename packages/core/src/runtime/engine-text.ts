@@ -4,7 +4,7 @@
  * Everything the engine itself puts on the user's screen lives here, so a host whose conversation runs in
  * another language declares them and the engine speaks it.
  *
- * The consent challenge is why this is not cosmetic — the user must TYPE the token back, so they have to
+ * The consent approval is why this is not cosmetic — the user must TYPE the token back, so they have to
  * be able to READ the instruction that asks for it. A user who cannot read the instruction answers in
  * their own words, every one of which is denied, and the act can never be consented to at all.
  *
@@ -33,13 +33,13 @@ export interface EngineText {
    */
   recordClosureNone: string;
   /** The consent question: what the user is agreeing to, and the literal that agrees to it. */
-  challenge: (meaning: string, token: string) => string;
+  approval: (meaning: string, token: string) => string;
 }
 
 export const DEFAULT_ENGINE_TEXT: EngineText = Object.freeze({
   recordClosureSome: 'Nothing else was changed on this turn.',
   recordClosureNone: 'No operation was carried out on this turn.',
-  challenge: (meaning: string, token: string) => `To confirm ${meaning}, reply: ${token}`,
+  approval: (meaning: string, token: string) => `To confirm ${meaning}, reply: ${token}`,
 });
 
 /** The pack a render call uses: the host's sentences where it declared them, the engine's elsewhere. */

@@ -4,7 +4,7 @@
  */
 import type { Guard, ObservedCall } from '../rules.js';
 import { countOkCalls } from './flow.js';
-import { challengeMatchesCall } from '../runtime/challenge.js';
+import { approvalMatchesCall } from '../runtime/approval-request.js';
 
 /**
  * A destructive tool ACTS only on a turn whose incoming message carried the engine's consent token for
@@ -18,7 +18,7 @@ import { challengeMatchesCall } from '../runtime/challenge.js';
  *   user types  "delete itm-12"        → denied; itm-12 is not itm-1
  * ```
  *
- * WHAT LICENSES is a PURE READ of `ctx.consent` — the challenges the runtime already matched against the
+ * WHAT LICENSES is a PURE READ of `ctx.consent` — the approvals the runtime already matched against the
  * user's own words. The guard reads no text, keeps no state, and accepts no declaration: the agent has no
  * channel through which to produce a consent, because a consent is a literal only the engine issued and
  * only the user can type.
@@ -66,7 +66,7 @@ export function confirmFirst(opts?: {
       if (when?.[tool] && !when[tool](ctx.args)) return null;
       // A preview changes nothing and is how the question gets asked; only the acting call is gated.
       if (flag !== false && ctx.args[flag] !== true) return null;
-      const licensed = (ctx.consent ?? []).some((c) => challengeMatchesCall(c, tool, ctx.args));
+      const licensed = (ctx.consent ?? []).some((c) => approvalMatchesCall(c, tool, ctx.args));
       return licensed
         ? null
         : 'The user has not confirmed this action. Do not run it — reply to them, and run it only after ' +

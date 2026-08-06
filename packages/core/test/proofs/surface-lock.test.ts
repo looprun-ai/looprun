@@ -98,7 +98,7 @@ const INTERNAL = [
   'renderOperationReport', 'deriveClaimsFromLedger', 'RespondPayload', 'RenderOpts', 'respondPayload',
   // The turn's OPERATION RECORD as an object. The record is what the reader holds beside the prose, so
   // its exact wording is part of the seam — and the wording itself is the host-declarable text pack,
-  // because a challenge the user cannot read is an act they can never consent to.
+  // because an approval request the user cannot read is an act they can never consent to.
   'operationRecord', 'OperationRecord', 'EngineText', 'DEFAULT_ENGINE_TEXT', 'resolveEngineText',
   // What the SESSION has already done — one line per entity, its latest state. Input to the lie check
   // and the rewriter; never delivered.

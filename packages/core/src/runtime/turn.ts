@@ -21,7 +21,7 @@ import { resolveGuards, resolveMutators } from '../spec.js';
 import type { AgentSpec, ChainSpec } from '../spec.js';
 import type { DomainContract } from '../trunk.js';
 import type { AgentWorld, Guard, GuardCtx, ObservedCall, Judge } from '../rules.js';
-import { issueChallengeForVeto, recordVeto, type TurnLedger } from './ledger.js';
+import { issueApprovalForVeto, recordVeto, type TurnLedger } from './ledger.js';
 import { isTerminal } from './terminal.js';
 import {
   deriveClaimsFromLedger,
@@ -36,7 +36,7 @@ import { isChecked, llmRewriteLie, LIE_QUESTION } from './lie-check.js';
 import { CLOSED_FAIL_DENY } from '../guards/llm-check.js';
 import { judgePrompt, readJudgeVerdict, JUDGE_UNREACHABLE, JUDGE_UNREADABLE } from './judge-prompt.js';
 import { resolveEngineText } from './engine-text.js';
-import type { Challenge } from './challenge.js';
+import type { ApprovalRequest } from './approval-request.js';
 
 export interface ReplyViolation {
   guard: Guard;
@@ -136,7 +136,7 @@ export async function evaluatePreTool(
       // THE DENIAL IS THE QUESTION. A destructive tool the world has no preview form for is asked about
       // by being attempted: the gate refuses, and the refusal raises the consent question the delivered
       // text then carries. An agent cannot choose not to ask and still act.
-      if (g.kind === 'confirmFirst') issueChallengeForVeto(ledger, tool);
+      if (g.kind === 'confirmFirst') issueApprovalForVeto(ledger, tool);
       // 2nd+ consecutive veto: the model is looping. The backend wraps `reason` in the veto
       // envelope, which carries the escalation both as prose and as a structural flag.
       return { verdict: 'deny', reason, guard: g, mustCloseTurn: ledger.vetoStreak >= 2 };
@@ -323,17 +323,17 @@ const EXHAUSTION_NOTHING = 'I could not complete this safely — nothing was cha
 export function composeDeliveryText(
   message: string,
   did: Intention[],
-  challenges: readonly Challenge[],
+  approvals: readonly ApprovalRequest[],
   contract?: Pick<DomainContract, 'renderClaim' | 'outcomes' | 'engineText'>,
 ): string {
   const text = resolveEngineText(contract?.engineText);
   const report = renderOperationReport(did, { renderClaim: contract?.renderClaim, outcomes: contract?.outcomes, text });
-  const asked = challenges.map((c) => text.challenge(c.meaning, c.token)).join('\n');
+  const asked = approvals.map((c) => text.approval(c.meaning, c.token)).join('\n');
   return [message.trim(), asked, report].filter((s) => s.trim()).join('\n\n');
 }
 
 function composeDelivery(payload: RespondPayload, ledger: TurnLedger, contract?: DomainContract): string {
-  return composeDeliveryText(payload.message, payload.did, ledger.challengesIssuedThisTurn, contract);
+  return composeDeliveryText(payload.message, payload.did, ledger.approvalsIssuedThisTurn, contract);
 }
 
 /**
@@ -395,7 +395,7 @@ function withBlankFloor(
   // tells the user what changed, exactly as a consent question still tells them what they are being
   // asked. Prose gone AND nothing changed AND nothing asked is the case with nothing to deliver.
   const record = operationRecord(did, { renderClaim: contract?.renderClaim, outcomes: contract?.outcomes, text: resolveEngineText(contract?.engineText) });
-  if (!isBlankDelivery(payload.message) || record.hasOperations || ledger.challengesIssuedThisTurn.length) {
+  if (!isBlankDelivery(payload.message) || record.hasOperations || ledger.approvalsIssuedThisTurn.length) {
     return { text: composeDelivery(payload, ledger, contract), exhausted: exhaustedIfNotBlank, violations, did };
   }
   ledger.turnCorrections.push('exhaustion-blank-floor');

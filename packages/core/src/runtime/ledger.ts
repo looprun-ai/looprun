@@ -9,7 +9,7 @@ import type { AgentWorld, Guard, ObservedCall, HistoryTurn, HistoryToolCall, Jud
 import { canonArgs } from '../guards/index.js';
 import { isTerminal } from './terminal.js';
 import { validateClaims, type Intention, type RenderOpts } from './claims.js';
-import { challengeToken, closeChallengesFor, consumeChallenges, type Challenge } from './challenge.js';
+import { approvalCode, closeApprovalsFor, consumeApprovals, type ApprovalRequest } from './approval-request.js';
 import { preferredIdentityValues } from '../guards/honesty.js';
 
 /** An OUTPUT-dim (postTool) result-invariant failure OR a flowChain restate — carried on the ledger
@@ -66,18 +66,18 @@ export interface TurnLedger {
    *  as `ctx.renderOpts` so a guard composing a judging prompt renders the operation record in the words
    *  the user saw. Conversation-scoped; never reset per turn. */
   renderOpts?: RenderOpts;
-  /** Every consent challenge this CONVERSATION has issued — open, consumed and closed alike.
-   *  Conversation-scoped: a challenge stays open until the user's own words carry its token, a newer
+  /** Every consent approval this CONVERSATION has issued — open, consumed and closed alike.
+   *  Conversation-scoped: an approval request stays open until the user's own words carry its token, a newer
    *  question about the same act supersedes it, or the record it names changes. There is no turn window;
    *  what bounds a stale token is that consuming it requires typing that exact literal, and consuming it
    *  closes it. */
-  challenges: Challenge[];
-  /** The challenges the CURRENT turn's incoming message consumed — the WHOLE licensing surface for a
+  approvals: ApprovalRequest[];
+  /** The approvals the CURRENT turn's incoming message consumed — the WHOLE licensing surface for a
    *  destructive act. Read into every GuardCtx as `ctx.consent`. Reset per turn. */
-  consentThisTurn: Challenge[];
-  /** The challenges ISSUED on the current turn — the questions the delivered text must carry, so the
+  consentThisTurn: ApprovalRequest[];
+  /** The approvals ISSUED on the current turn — the questions the delivered text must carry, so the
    *  user sees what they are being asked. Reset per turn. */
-  challengesIssuedThisTurn: Challenge[];
+  approvalsIssuedThisTurn: ApprovalRequest[];
   /** Per destructive tool that acts on NO identifiable record, the human-facing label its question is
    *  built from. A tool absent from this map can issue no question, so it can never be consented to and
    *  never runs. */
@@ -98,7 +98,7 @@ export function vetoStormHit(ledger: TurnLedger): boolean {
 }
 
 export function createLedger(judge?: Judge, judgeTimeoutMs?: number, renderOpts?: RenderOpts): TurnLedger {
-  return { observed: [], turnIndex: 0, producedThisTurn: [], turnCorrections: [], attachments: [], terminalReply: '', did: [], vetoStreak: 0, postToolViolations: [], inFlightCalls: [], attemptedCalls: [], currentUserText: '', history: [], challenges: [], consentThisTurn: [], challengesIssuedThisTurn: [], destructiveLabels: {}, ...(judge ? { judge } : {}), ...(judgeTimeoutMs !== undefined ? { judgeTimeoutMs } : {}), ...(renderOpts ? { renderOpts } : {}) };
+  return { observed: [], turnIndex: 0, producedThisTurn: [], turnCorrections: [], attachments: [], terminalReply: '', did: [], vetoStreak: 0, postToolViolations: [], inFlightCalls: [], attemptedCalls: [], currentUserText: '', history: [], approvals: [], consentThisTurn: [], approvalsIssuedThisTurn: [], destructiveLabels: {}, ...(judge ? { judge } : {}), ...(judgeTimeoutMs !== undefined ? { judgeTimeoutMs } : {}), ...(renderOpts ? { renderOpts } : {}) };
 }
 
 /** Reset the per-turn fields (the conversation-scoped `observed` and `history` are kept). `userText` is
@@ -115,29 +115,29 @@ export function beginTurn(ledger: TurnLedger, turnIndex: number, userText = ''):
   ledger.inFlightCalls = [];
   ledger.attemptedCalls = [];
   ledger.currentUserText = userText;
-  ledger.challengesIssuedThisTurn = [];
-  // The user's own words are the ONLY thing that turns an open challenge into consent, and they are read
+  ledger.approvalsIssuedThisTurn = [];
+  // The user's own words are the ONLY thing that turns an open approval into consent, and they are read
   // exactly here — once per turn, by the runtime. No guard reads text.
-  ledger.consentThisTurn = consumeChallenges(ledger.challenges, userText, turnIndex);
+  ledger.consentThisTurn = consumeApprovals(ledger.approvals, userText, turnIndex);
 }
 
 /**
- * Open a consent challenge.
+ * Open a consent approval.
  *
  * An identical open one is left alone: a second identical question would render twice and be answered
  * once, and one act asks one question until it is answered. A DIFFERENT question about the same act
  * SUPERSEDES the old one — two open literals for one act would let the user answer a question they are
  * no longer being asked.
  */
-function issueChallenge(ledger: TurnLedger, c: { tool: string; subject?: string; meaning: string }): void {
-  const token = challengeToken(c.meaning);
-  const sameAct = (x: Challenge): boolean =>
+function issueApproval(ledger: TurnLedger, c: { tool: string; subject?: string; meaning: string }): void {
+  const token = approvalCode(c.meaning);
+  const sameAct = (x: ApprovalRequest): boolean =>
     x.consumedTurn === undefined && !x.closed && x.tool === c.tool && x.subject === c.subject;
-  if (ledger.challenges.some((x) => sameAct(x) && x.token === token)) return;
-  for (const x of ledger.challenges) if (sameAct(x)) x.closed = true;
-  const challenge: Challenge = { ...c, token, issuedTurn: ledger.turnIndex };
-  ledger.challenges.push(challenge);
-  ledger.challengesIssuedThisTurn.push(challenge);
+  if (ledger.approvals.some((x) => sameAct(x) && x.token === token)) return;
+  for (const x of ledger.approvals) if (sameAct(x)) x.closed = true;
+  const approval: ApprovalRequest = { ...c, token, issuedTurn: ledger.turnIndex };
+  ledger.approvals.push(approval);
+  ledger.approvalsIssuedThisTurn.push(approval);
 }
 
 /**
@@ -147,10 +147,10 @@ function issueChallenge(ledger: TurnLedger, c: { tool: string; subject?: string;
  * The question's meaning is the label the spec declared. A tool with no label issues nothing, so it can
  * never be consented to and never runs — absence of a label is absence of any possible consent.
  */
-export function issueChallengeForVeto(ledger: TurnLedger, tool: string): void {
+export function issueApprovalForVeto(ledger: TurnLedger, tool: string): void {
   const meaning = ledger.destructiveLabels[tool];
   if (!meaning) return;
-  issueChallenge(ledger, { tool, meaning });
+  issueApproval(ledger, { tool, meaning });
 }
 
 /** Structural success check on a tool result ({success:false} / {error} / {PREREQ_NOT_MET} ⇒ failed). */
@@ -218,10 +218,10 @@ export function recordToolResult(ledger: TurnLedger, name: string, args: Record<
   // the question it raises is bound to that record and to nothing else.
   if (requiresConfirmation) {
     const [subject] = preferredIdentityValues(output);
-    if (subject) issueChallenge(ledger, { tool: name, subject, meaning: subject });
+    if (subject) issueApproval(ledger, { tool: name, subject, meaning: subject });
   } else if (wtc?.tookEffect === true) {
     // A write that LANDED moves the record, so every open question about it stops being true and closes.
-    for (const subject of preferredIdentityValues(output)) closeChallengesFor(ledger.challenges, subject);
+    for (const subject of preferredIdentityValues(output)) closeApprovalsFor(ledger.approvals, subject);
   }
 }
 

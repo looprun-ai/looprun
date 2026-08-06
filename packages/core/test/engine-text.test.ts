@@ -16,8 +16,8 @@ describe('resolveEngineText', () => {
     expect(t.recordClosureSome).toBe(DEFAULT_ENGINE_TEXT.recordClosureSome);
   });
 
-  it('renders the challenge sentence from the meaning and the token', () => {
-    expect(DEFAULT_ENGINE_TEXT.challenge('BK-1', 'CONFIRM BK-1')).toBe('To confirm BK-1, reply: CONFIRM BK-1');
+  it('renders the approval sentence from the meaning and the token', () => {
+    expect(DEFAULT_ENGINE_TEXT.approval('BK-1', 'CONFIRM BK-1')).toBe('To confirm BK-1, reply: CONFIRM BK-1');
   });
 });
 

@@ -1,4 +1,4 @@
-# Consent by Challenge — Design
+# Consent by ApprovalRequest — Design
 
 Consent to a destructive act is a token the ENGINE issues and the USER types back. The agent
 neither writes the question, nor names what it authorizes, nor reports the answer.
@@ -35,10 +35,10 @@ and it falls inside the recency window. Any non-blank sentence carries a license
 
 ```
 ┌─ ISSUE ──────────────────────────────────────────────────────────────┐
-│ (c) the world returns requiresConfirmation → challenge over the      │
+│ (c) the world returns requiresConfirmation → approval over the      │
 │     record the probe touched                                         │
 │ (b) a guard denies a tool with no probe    → the denial IS the       │
-│     challenge                                                        │
+│     approval                                                        │
 └──────────────────────────────────────────────────────────────────────┘
         ↓ the engine renders, in the locale the host declares
 ┌─ SCREEN ─────────────────────────────────────────────────────────────┐
@@ -74,18 +74,18 @@ Two triggers, covering the two shapes a destructive tool takes.
 | `(c)` | a call whose result carries `requiresConfirmation` | the probe's own args |
 | `(b)` | a guard denial on a tool that has no preview form | none — see §4 |
 
-There is no path in which the agent asks for a challenge. Attempting the act is what produces the
+There is no path in which the agent asks for an approval request. Attempting the act is what produces the
 question; an agent that never attempts never asks, and never acts.
 
 ---
 
 ## 4 · Meaning and token
 
-A challenge carries two things: what the user is agreeing to, and the literal that expresses the
+An approval request carries two things: what the user is agreeing to, and the literal that expresses the
 agreement.
 
 ```
-challenge = (meaning, token)
+approval = (meaning, token)
 
 with a record      meaning comes from the WORLD    token: CONFIRM BK-1
 without a record   meaning comes from the SPEC     token: CONFIRM DELETE-ALL
@@ -128,7 +128,7 @@ meaning is fixed before the conversation starts, by the world or by the spec, or
 
 ## 5 · Rendering and language
 
-The challenge is engine-authored text the user must type back, so it renders in the locale the host
+The approval is engine-authored text the user must type back, so it renders in the locale the host
 declares. The operation record renders in the same locale, from the same declaration.
 
 ```
@@ -139,7 +139,7 @@ locale pt    Para confirmar, responda: CONFIRMAR BK-1
              Nenhuma operação foi realizada neste turno.
 ```
 
-A challenge whose token the user cannot produce is a permanently blocked act: an English token in a
+An approval request whose token the user cannot produce is a permanently blocked act: an English token in a
 conversation held in another language is never typed, and the destructive act can never be consented
 to. The locale is what makes the mechanism reachable.
 
@@ -147,7 +147,7 @@ to. The locale is what makes the mechanism reachable.
 
 ## 6 · Consume — the matching law
 
-One law governs three places: claim-to-ledger grounding, challenge consumption, and elicited values.
+One law governs three places: claim-to-ledger grounding, approval consumption, and elicited values.
 
 ```
 split the user's message on WHITESPACE      (never on punctuation)
@@ -176,17 +176,17 @@ substring: "BK-1" occurs inside "BK-12"   → CONSENT ACCEPTED
            the user authorized BK-12; the engine released BK-1
 ```
 
-**Consent fails closed.** `"go ahead"` is a human yes and is denied. A challenge that is not consumed
+**Consent fails closed.** `"go ahead"` is a human yes and is denied. An approval request that is not consumed
 is re-emitted.
 
 ---
 
-## 7 · Life of a challenge
+## 7 · Life of an approval request
 
 ```
 open        from issue
-consumed    single use — a second act on the same record needs a new challenge
-superseded  a new challenge on the same record invalidates the previous one
+consumed    single use — a second act on the same record needs a new approval
+superseded  a new approval on the same record invalidates the previous one
 invalidated the record changed
 ```
 
@@ -198,11 +198,11 @@ that exact literal, and that consuming it closes it.
 ## 8 · What `confirmFirst` becomes
 
 ```
-one rule:  is there an open challenge on this record, consumed by the user's own words?
+one rule:  is there an open approval on this record, consumed by the user's own words?
 ```
 
 The `via` / `within` / `flag` options and the probe-equality machinery are removed. A probe still
-issues the challenge — it no longer licenses anything by itself.
+issues the approval — it no longer licenses anything by itself.
 
 ---
 
@@ -287,8 +287,8 @@ counts are occurrences of `confirmFirst`, `askedEarlier`, `noActAfterAskSameTurn
 
 | Surface | Hits | What it needs |
 |---|---|---|
-| `packages/core/GUARDS.md` | 21 | the canonical chapter: challenge lifecycle, the matching law as one law, the `ask` incentive law, the new world/spec obligations, the acceptance table |
-| `docs/tutorial/04-guards.md` | 33 | the confirm-gate lesson is rewritten around the challenge; regenerated by `pnpm docs:guards`, verified by `pnpm test` |
+| `packages/core/GUARDS.md` | 21 | the canonical chapter: approval lifecycle, the matching law as one law, the `ask` incentive law, the new world/spec obligations, the acceptance table |
+| `docs/tutorial/04-guards.md` | 33 | the confirm-gate lesson is rewritten around the approval; regenerated by `pnpm docs:guards`, verified by `pnpm test` |
 | `docs/tutorial/03-agent-anatomy.md` | 7 | the `did` op list and what `ask` is for |
 | `docs/tutorial/01-concepts.md` | 4 | consent introduced as an engine-issued token |
 | `docs/tutorial/05-running-and-eval.md` | 2 | consent scenarios in the eval walkthrough |
@@ -298,7 +298,7 @@ counts are occurrences of `confirmFirst`, `askedEarlier`, `noActAfterAskSameTurn
 | `docs/tutorial/snippets/scheduler-subject/evals/cases.ts` | 1 | the consent case carries a token reply |
 | `docs/tutorial/snippets/test/05-running-and-eval.test.ts` | 1 | follows the case |
 | `skills/looprun-governance/references/proof-case-authoring.md` | 1 | how a consent proof case is authored |
-| `skills/looprun-governance/scripts/scaffold-proof-cases.mjs` | 3 | scaffolds a challenge-consuming turn |
+| `skills/looprun-governance/scripts/scaffold-proof-cases.mjs` | 3 | scaffolds an approval request-consuming turn |
 
 `packages/core/test/guard-catalog-parity.test.ts` holds the catalog to the shipped kinds; the two
 kinds that leave and the options that leave move through it.

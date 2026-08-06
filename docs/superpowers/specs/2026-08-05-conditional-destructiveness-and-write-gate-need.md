@@ -24,7 +24,7 @@ updateMemberRole(role:'owner')       escalation       world answers requiresConf
 ```
 
 Listing such a tool denies the protective branch, and the denial is **unrecoverable**: the world
-raised no question for that branch, so no challenge exists and none ever will. Measured:
+raised no question for that branch, so no approval exists and none ever will. Measured:
 
 ```
 placeHold({scope:'asset', confirmed:true})

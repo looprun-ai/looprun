@@ -532,7 +532,7 @@ describe('THE WHOLE INPUT SPACE — the four failure modes over every combinatio
             const record = operationRecord(decl.did, { outcomes: CONTRACT.outcomes });
             // The expected deliveries come from the SHIPPED composer, so a cell whose evidence also
             // raises a consent question is scored against the text the user really receives.
-            const asked = ledger.challengesIssuedThisTurn;
+            const asked = ledger.approvalsIssuedThisTurn;
             const asIs = composeDeliveryText(msg.text, decl.did, asked, CONTRACT);
             const asRewritten = composeDeliveryText(REWRITE, decl.did, asked, CONTRACT);
             const wasRewritten = out.text === asRewritten;

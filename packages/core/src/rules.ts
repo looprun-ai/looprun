@@ -12,7 +12,7 @@
  * is domain-neutral.
  */
 import type { Intention, RenderOpts } from './runtime/claims.js';
-import type { Challenge } from './runtime/challenge.js';
+import type { ApprovalRequest } from './runtime/approval-request.js';
 
 /** The five enforcement dims (taxonomy metadata; the structural key is the hook it maps to). */
 export type Dim = 'spatial' | 'input' | 'run' | 'output' | 'behavior';
@@ -160,11 +160,11 @@ export interface GuardCtx {
    *  the augmentation is zero-blast-radius. Absent while an `llmCheck` is installed is caught loud at
    *  conversation start (`assertJudgePresent`), never mid-turn. */
   judge?: Judge;
-  /** The consent challenges the CURRENT turn's incoming message consumed — the WHOLE licensing surface
+  /** The consent approvals the CURRENT turn's incoming message consumed — the WHOLE licensing surface
    *  for a destructive act. A guard asks whether one of these is about the call in front of it, and
    *  never reads text or history to decide: the runtime already did the reading, once, at turn start.
    *  Absent ⇒ empty, which is no consent. */
-  consent?: ReadonlyArray<Challenge>;
+  consent?: ReadonlyArray<ApprovalRequest>;
   /** The per-call judge TIMEOUT (ms), threaded from the registration seam beside `judge`. An llmCheck
    *  races the judge against this deadline: a HUNG (never-settling) judge would otherwise hang the turn,
    *  and `failMode` only fires on a settled rejection — so on expiry the guard treats the judge as
