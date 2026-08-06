@@ -38,11 +38,10 @@ const NAMES = {
   '.layer': /\.layer\b/,
 };
 
-// Each entry protects ONE sense in ONE place: a path (exact file or directory prefix), the name it
-// allows, and why. Allowing `Layer` in the validator does not also allow `writeGate` there.
-const ALLOW = [
-  { path: 'packages/eval/src/validate.ts', name: 'Layer', why: 'the validator\'s own four numbered stages' },
-];
+// No name is allowed anywhere. An entry here would protect ONE sense in ONE path — a file where the
+// letters spell ordinary English rather than the identifier — and no such file exists: every English
+// sense that collided was rewritten to the word it actually meant.
+const ALLOW = [];
 
 const SKIP_DIR = new Set(['node_modules', 'dist', 'results', 'coverage']);
 const EXT = new Set(['.ts', '.tsx', '.js', '.mjs', '.cjs', '.json', '.md', '.sh']);
@@ -73,17 +72,15 @@ function* walk(dir) {
 const allowed = (rel, name) =>
   ALLOW.some((a) => rel.startsWith(a.path) && (a.name === undefined || a.name === name));
 
-// SELF-TEST: a gate that cannot fail is no law. Each name must catch the retired identifier and
-// leave the English phrase that shares its letters alone.
+// SELF-TEST: a gate that cannot fail is no law. Only the three names whose regex draws a LINE are
+// tested — each must catch the identifier and spare the English phrase that shares its letters. The
+// other three are plain substrings with no English collision, so there is no line to prove.
 const SELF_TEST = [
-  ['minimal: prefix', 'targets: [\'minimal:noDuplicateCall\']', true],
-  ['base: prefix', 'targets: [\'base:confirmFirst\']', true],
+  ['base: prefix', "targets: ['base:confirmFirst']", true],
   ['base: prefix', 'function f(base: string) {}', false],
-  ['LAYER_ORDER', 'LAYER_ORDER[a.layer]', true],
-  ['writeGate', 'contract.writeGate', true],
-  ['Layer', 'const PRIORITY_ORDER: Record<Layer, number>', true],
+  ['Layer', 'Record<Layer, number>', true],
   ['Layer', 'the honesty layer of the prompt', false],
-  ['.layer', 'b.layer !== \'minimal\'', true],
+  ['.layer', 'sort by b.layer', true],
   ['.layer', 'the action layer', false],
 ];
 for (const [name, sample, shouldHit] of SELF_TEST) {

@@ -201,14 +201,13 @@ const SECTION_INPUT = '## Input rules (govern the incoming message — checked b
  * AFTER `## Tool rules` and BEFORE `## Governance`, so per-agent divergence still enters as late as
  * possible.
  *
- * DE-DUPLICATION IS **NOT** GLOBAL. The doc comment used to
- * claim "de-duplication is global and order-respecting"; the code never implemented that. Two separate
- * mechanisms exist and neither spans the whole assembled prompt:
+ * DE-DUPLICATION IS **NOT** GLOBAL. Two separate mechanisms exist and neither spans the whole
+ * assembled prompt:
  *   · `emitted` — shared by `## Global tool rules` → `## Input rules` → `## Reply rules`, in that
  *     order. Genuinely order-respecting, but it covers only the `target:'any'` sections.
  *   · `seenForTool` — a FRESH set per tool in `## Tool rules`. It suppresses a repeat within ONE tool's
  *     row and nothing more, so a prose bound to five tools renders five times, once per row.
- * The claim was corrected rather than the code, and the arbiter is byte-identity: a truly global dedup
+ * The arbiter is byte-identity: a truly global dedup
  * would delete the 2nd–5th copies of every multi-tool binding's prose, changing the assembled prompt's bytes and
  * therefore the cacheable prefix and every certified number measured against it. The resulting
  * duplication is visible in the attributed table: every copy carries its own owner/tool provenance

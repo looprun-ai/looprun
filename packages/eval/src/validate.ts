@@ -46,7 +46,7 @@ export interface ValidateReport {
   advisory: string[];
 }
 
-// ── Layer 1: SCHEMA ───────────────────────────────────────────────────────────────────────────────
+// ── Stage 1: SCHEMA ───────────────────────────────────────────────────────────────────────────────
 
 /** Parse every JSON config the subject dir ships. A subject that installs guards through TS keeps
  *  working (no `norms/*.json` = nothing to schema-check); a JSON exam is validated by its loader. */
@@ -80,7 +80,7 @@ export function checkSchema(subjectDir: string): string[] {
   return issues;
 }
 
-// ── Layer 2: REFERENCES ─────────────────────────────────────────────────────────────────────────
+// ── Stage 2: REFERENCES ─────────────────────────────────────────────────────────────────────────
 
 const allGuardIds = (spec: AgentSpec): string[] => [
   ...(spec.guards.onInput ?? []), ...(spec.guards.preTool ?? []),
@@ -142,7 +142,7 @@ export function checkReferences(subject: Subject): { blocking: string[]; advisor
   return { blocking, advisory };
 }
 
-// ── Layer 3: PREMISE COHERENCE ───────────────────────────────────────────────────────────────────
+// ── Stage 3: PREMISE COHERENCE ───────────────────────────────────────────────────────────────────
 
 type WriteVerdict = 'accepted' | 'refused' | 'read';
 
@@ -305,7 +305,7 @@ export function checkPremiseCoherence(subject: Subject, opts: ValidateOptions = 
 
 const argNote = (call: ReqCall): string => (call.anyArgs && Object.keys(call.anyArgs).length ? ` (${JSON.stringify(call.anyArgs)})` : '');
 
-// ── Layer 4: WORLD MODEL (spec §3b) — only when the subject ships gen/world.json ─────────────────────
+// ── Stage 4: WORLD MODEL (spec §3b) — only when the subject ships gen/world.json ─────────────────────
 
 /** The raw world.json shape the world layers introspect (tool/arg/preset structure). */
 interface RawArg {
