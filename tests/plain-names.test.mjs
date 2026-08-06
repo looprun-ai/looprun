@@ -4,7 +4,8 @@
  * names may not survive in any file a person reads: source, types, tests, docs, guard text, CLI
  * output, generated subjects, measurement tooling.
  *
- * A benchmark result file is a number taken on a date, not prose anyone reads for vocabulary, so a
+ * Three things keep the old words: a run taken on a date, vendored third-party source, and a phrase
+ * where the word is ordinary English — an out-of-band channel, the margin probe, a lockfile's arm64.
  * path under `benchmarks/<...>/results/` is excluded. Nothing else is.
  *
  * Run: node tests/plain-names.test.mjs [--root <path>] [--only ledger,probe]
@@ -78,7 +79,14 @@ const SKIP_EXT = /\.(png|jpg|jpeg|gif|svg|ico|gguf|zip|woff2?|tsv|csv)$/i;
 // A lockfile is written by the package manager and names CPU architectures — `arm64`, `linux-arm`.
 // That is a fourth sense of the word, owned by hardware, and nobody reads a lockfile for vocabulary.
 const GENERATED = /(^|\/)(pnpm-lock\.yaml|package-lock\.json|yarn\.lock)$/;
-const FROZEN = /(^|\/)benchmarks\/.*\/results\//;
+
+// Vendored third-party source carries its authors' vocabulary, not ours, and rewriting it would
+// make every diff against upstream a conflict.
+const VENDOR = /(^|\/)vendor\//;
+
+// A run is a number taken on a date: a result directory, or a JSON-lines stream of recorded turns.
+// Editing one after the fact makes it disagree with the run that wrote it.
+const FROZEN = /(^|\/)benchmarks\/.*\/results\/|\.jsonl$/;
 const SELF = relative(ROOT, fileURLToPath(import.meta.url));
 
 function* walk(path) {
@@ -93,16 +101,18 @@ function* walk(path) {
   }
 }
 
-// The offline measuring instrument is named on every line that invokes or describes it. A phrase
-// allows its word wherever it appears, because the instrument is one thing across every repo.
-const INSTRUMENT = [
+// A phrase where a retired word is ordinary English or names something else entirely. It allows its
+// word wherever it appears, because the thing it names is one thing across every repo.
+const PHRASES = [
   { word: 'probe', text: 'margin-probe' },
   { word: 'probe', text: 'margin probe' },
   { word: 'probe', text: 'probes-within-probes' },
+  // An out-of-band channel is one outside the normal route — ordinary English, not a score range.
+  { word: 'band', text: 'out-of-band' },
 ];
 
 function allowed(rel, word, text) {
-  if (INSTRUMENT.some((i) => i.word === word && text.includes(i.text))) return true;
+  if (PHRASES.some((i) => i.word === word && text.includes(i.text))) return true;
   return ALLOW.some(
     (a) =>
       (rel === a.path || rel.startsWith(a.path)) &&
@@ -147,7 +157,7 @@ if (
 const hits = [];
 for (const file of walk(ROOT)) {
   const rel = relative(ROOT, file);
-  if (rel === SELF || SKIP_EXT.test(rel) || FROZEN.test(rel) || GENERATED.test(rel)) continue;
+  if (rel === SELF || SKIP_EXT.test(rel) || FROZEN.test(rel) || GENERATED.test(rel) || VENDOR.test(rel)) continue;
   let lines;
   try {
     lines = readFileSync(file, 'utf8').split('\n');
