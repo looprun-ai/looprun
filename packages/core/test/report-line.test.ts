@@ -93,4 +93,15 @@ describe('operationRecord — a claim carrying a report renders it after the out
     const out = operationRecord(did, { renderClaim: (c, core) => `${c.target} reembolsado (${core})` }).text;
     expect(out).toContain('ORD-5 reembolsado (success) — charged 50 USD');
   });
+
+  it('a target-less failure report drops the engine default line own period before joining', () => {
+    const did: Intention[] = [{ op: 'operation', outcome: 'failure', report: 'slot already taken' }];
+    expect(operationRecord(did).text).toContain('could not be completed — slot already taken');
+  });
+
+  it('a domain renderClaim line keeps ITS OWN punctuation — never mutated to join a report', () => {
+    const did: Intention[] = [{ op: 'refund', target: 'BK-1', outcome: 'success', report: 'charged 50 EUR' }];
+    const out = operationRecord(did, { renderClaim: (c) => `${c.target} confirmado.` }).text;
+    expect(out).toContain('BK-1 confirmado. — charged 50 EUR');
+  });
 });

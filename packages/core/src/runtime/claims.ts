@@ -85,9 +85,12 @@ export interface Intention {
   target?: string;
   outcome?: string;
   amount?: number;
-  /** The result's OWN sentence about what it did — authored in the world/tool, carried onto an
-   *  ENGINE-DERIVED claim (never a key an agent may declare in `did`; {@link validateClaims} rejects
-   *  it) so a fact the world stated survives to the delivery even when the agent's prose forgets it. */
+  /** The AUTHORED sentence riding this claim, when one exists: a non-empty `report` string on the
+   *  result; else, for a `failure` claim derived from an EXECUTED call that returned `ok:false`, the
+   *  result's own `message` string; else, for a `failure` claim derived from a VETOED call, the
+   *  vetoing guard's `publicReason`. Carried onto an ENGINE-DERIVED claim only (never a key an agent
+   *  may declare in `did`; {@link validateClaims} rejects it) so the fact survives to the delivery
+   *  even when the agent's prose forgets it. */
   report?: string;
 }
 
@@ -467,10 +470,12 @@ export function operationRecord(did: Intention[], opts?: RenderOpts): OperationR
     // line — the fact reaches the user even when the domain seam's or engine's wording omits it. On a
     // `failure` claim this is either the world result's own `message` or, for a vetoed call, the
     // vetoing guard's `publicReason`; never raw read data (see ObservedCall.report). A target-less
-    // default line ends its own sentence with a period ("An action could not be completed."); that
-    // period is dropped before the authored sentence joins it, so the two read as one sentence rather
-    // than two — a targeted line never carries one, so this is a no-op there.
-    const line = rendered && claim.report ? `${rendered.replace(/\.$/, '')} — ${claim.report}` : rendered;
+    // ENGINE default line ends its own sentence with a period ("An action could not be completed.");
+    // that period is dropped before the authored sentence joins it, so the two read as one sentence
+    // rather than two. This strips ONLY the engine's own wording — a domain's `renderClaim` line is
+    // NEVER mutated (its punctuation, like every other character of it, is the domain's to choose).
+    const base = opts?.renderClaim ? rendered : rendered.replace(/\.$/, '');
+    const line = rendered && claim.report ? `${base} — ${claim.report}` : rendered;
     if (line && line.trim()) lines.push(line.trim());
   }
   const hasOperations = lines.length > 0;
