@@ -174,9 +174,13 @@ export function recordDowngradedAttempt(actionHistory: TurnActionHistory, name: 
   actionHistory.turnCorrections.push(`downgrade:confirmFirst:${name}`);
 }
 
-/** Record a guard VETO of a tool call (the call did not run). */
-export function recordVeto(actionHistory: TurnActionHistory, name: string, args: Record<string, unknown>, correction: string): void {
-  actionHistory.observed.push({ name, args, ok: false, turnIndex: actionHistory.turnIndex });
+/** Record a guard VETO of a tool call (the call did not run). `publicReason` is the vetoing guard's
+ *  own authored sentence, when it declared one — it rides the observed row as `report`, the same
+ *  field an executed call's own result carries, so the exhaustion closure's failure line composes
+ *  it exactly as it would a world-authored one. */
+export function recordVeto(actionHistory: TurnActionHistory, name: string, args: Record<string, unknown>, correction: string, publicReason?: string): void {
+  const report = typeof publicReason === 'string' && publicReason.trim() !== '' ? publicReason : undefined;
+  actionHistory.observed.push({ name, args, ok: false, turnIndex: actionHistory.turnIndex, ...(report !== undefined ? { report } : {}) });
   // The blocked ATTEMPT — surfaced to the eval layer so a FORBIDDEN invariant can fire on it (the call
   // never reached the world, so it is invisible on the world action history by construction).
   actionHistory.attemptedCalls.push({ name, args });
@@ -213,9 +217,18 @@ export function recordToolResult(actionHistory: TurnActionHistory, name: string,
   const lbl = ok ? (output as { label?: unknown } | null | undefined)?.label : undefined;
   const producedLabel = typeof lbl === 'string' ? lbl : undefined;
   // The result's own sentence about what it did — authored in the world/tool, rendered
-  // verbatim under the delivery so the fact arrives even when the prose forgets it.
+  // verbatim under the delivery so the fact arrives even when the prose forgets it. A call that
+  // FAILED falls back to the result's own `message` when it set no `report`: `report` narrates a
+  // success, `message` explains a failure, and either is authored text the closure may carry —
+  // never a raw field the world happened to include.
   const rep = (output as { report?: unknown } | null | undefined)?.report;
-  const report = typeof rep === 'string' && rep.trim() !== '' ? rep : undefined;
+  const msg = (output as { message?: unknown } | null | undefined)?.message;
+  const report =
+    typeof rep === 'string' && rep.trim() !== ''
+      ? rep
+      : !ok && typeof msg === 'string' && msg.trim() !== ''
+        ? msg
+        : undefined;
   actionHistory.observed.push({
     name,
     args,

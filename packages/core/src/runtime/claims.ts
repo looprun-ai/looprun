@@ -463,9 +463,14 @@ export function operationRecord(did: Intention[], opts?: RenderOpts): OperationR
     const rendered = opts?.renderClaim
       ? opts.renderClaim({ target: claim.target, outcome: claim.outcome, amount: claim.amount }, core)
       : defaultClaimLine(claim, core);
-    // The result's own report SENTENCE rides after the outcome word, whichever wording produced the
-    // line — the fact reaches the user even when the domain seam's or engine's wording omits it.
-    const line = rendered && claim.report ? `${rendered} — ${claim.report}` : rendered;
+    // The claim's own AUTHORED sentence rides after the outcome word, whichever wording produced the
+    // line — the fact reaches the user even when the domain seam's or engine's wording omits it. On a
+    // `failure` claim this is either the world result's own `message` or, for a vetoed call, the
+    // vetoing guard's `publicReason`; never raw read data (see ObservedCall.report). A target-less
+    // default line ends its own sentence with a period ("An action could not be completed."); that
+    // period is dropped before the authored sentence joins it, so the two read as one sentence rather
+    // than two — a targeted line never carries one, so this is a no-op there.
+    const line = rendered && claim.report ? `${rendered.replace(/\.$/, '')} — ${claim.report}` : rendered;
     if (line && line.trim()) lines.push(line.trim());
   }
   const hasOperations = lines.length > 0;

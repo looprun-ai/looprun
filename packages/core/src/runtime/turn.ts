@@ -164,7 +164,7 @@ export async function evaluatePreTool(
         recordDowngradedAttempt(actionHistory, tool, args);
         return { verdict: 'downgrade', args: { ...args, simulate: true } };
       }
-      recordVeto(actionHistory, tool, args, `${g.dim}:${g.kind}:${tool}`);
+      recordVeto(actionHistory, tool, args, `${g.dim}:${g.kind}:${tool}`, g.publicReason);
       // THE DENIAL IS THE QUESTION. A destructive tool that cannot simulate is asked about by being
       // attempted: the gate refuses, and the refusal raises the consent question — about the record
       // the call itself names — that the delivered text then carries. An agent cannot choose not to
