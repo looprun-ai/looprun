@@ -411,13 +411,16 @@ function deriveExhaustionClosure(
   const report = renderOperationReport(did, { renderClaim: contract?.renderClaim, outcomes: contract?.outcomes, text: resolveEngineText(contract?.engineText) });
   const landed = did.some((c) => c.outcome === 'success');
   const sentence = landed ? EXHAUSTION_PARTIAL : EXHAUSTION_NOTHING;
-  return { report, sentence, text: closureText(report, sentence), did };
+  return { report, sentence, text: closureText(report, sentence, contract), did };
 }
 
 /** The closure's delivered shape: the VERIFIED operation report first, the closing sentence after — the
- *  same order (and the same separator) {@link composeDelivery} uses on the clean path. */
-function closureText(report: string, sentence: string): string {
-  return [report, sentence].filter((s) => s.trim()).join('\n\n');
+ *  same order (and the same separator) {@link composeDelivery} uses on the clean path, through the same
+ *  free-text net: a closure is a delivery, and a domain-authored closing sentence carries prose exactly
+ *  like the agent's own. */
+function closureText(report: string, sentence: string, contract?: Pick<DomainContract, 'scrubTextFields'>): string {
+  const composed = [report, sentence].filter((s) => s.trim()).join('\n\n');
+  return contract?.scrubTextFields?.length ? scrubText(composed) : composed;
 }
 
 /**
@@ -797,7 +800,7 @@ export async function finalizeReply(
     // sentence rather than delivering the report alone.
     const sentence = overrideText && !isBlankDelivery(overrideText) ? overrideText : derived.sentence;
     actionHistory.did = derived.did;
-    return { text: closureText(derived.report, sentence), exhausted: true, violations: finalViolations, did: derived.did };
+    return { text: closureText(derived.report, sentence, contract), exhausted: true, violations: finalViolations, did: derived.did };
   }
 
   // Clean delivery: compose message + the verified operation report; the accepted payload IS the verified

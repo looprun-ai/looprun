@@ -24,6 +24,11 @@ const BASE: DomainContract = {
 
 /** The domain that named its free text: a claim description is prose, so it is scrubbed. */
 const SCRUBBING: DomainContract = { ...BASE, scrubTextFields: ['fileClaim.description'] };
+/** The same domain, closing an exhausted turn in its own words — words that carry an address. */
+const CLOSING: DomainContract = {
+  ...SCRUBBING,
+  exhaustionReply: () => 'I could not finish this. Write to ops@x.example and we will pick it up.',
+};
 /** The same domain with nothing declared — the acceptance is authored, and it is this absence. */
 const PLAIN: DomainContract = { ...BASE };
 
@@ -93,5 +98,26 @@ describe('the delivered turn carries the scrubbed text', () => {
     );
     expect(finalized.text).not.toMatch(/@x\.example/);
     expect(finalized.text).toContain('I filed the claim and copied •••.');
+  });
+
+  it('the exhaustion closure passes through the same net', async () => {
+    const spec = new AgentSpecBase({
+      id: 'claims',
+      mode: 'M',
+      persona: 'You are the claims agent.',
+      tools: ['fileClaim'],
+      contract: CLOSING,
+    });
+    const actionHistory = createActionHistory();
+    beginTurn(actionHistory, 0, 'file it');
+    // A payload declaring NO intention violates the declaration floor on every pass, so the redrive
+    // exhausts and the turn closes in the domain's own sentence.
+    const undeclared: RespondPayload = { message: 'Filed.', did: [] };
+    const finalized = await finalizeReply(spec, CLOSING, fixtureWorld(), actionHistory, undeclared, async () => undeclared, 1);
+    expect(finalized.exhausted).toBe(true);
+    expect(finalized.text).not.toMatch(/@x\.example/);
+    expect(finalized.text).toBe(
+      'No operation was carried out on this turn.\n\nI could not finish this. Write to ••• and we will pick it up.',
+    );
   });
 });

@@ -8,26 +8,52 @@
  *     after the guards allow the call and before the world receives it, so the value the executor
  *     stores and the value the action history records are the same clean text. The guards judge the
  *     REQUEST as it was written; the scrub runs on the call they admitted.
- *   · the RESULT on its way BACK — a field the contract declared is omitted or masked before the
- *     model reads the result and before the action history records it.
+ *   · the RESULT on its way BACK — a field the contract declared sensitive is omitted or masked, and
+ *     a result field it declared FREE TEXT is pattern-scrubbed, before the model reads the result and
+ *     before the action history records it.
  *
  * A contract that declares neither gets its own value back, untouched and unwalked.
  */
 import { filterSensitiveFields, scrubText } from '@looprun-ai/core/internal';
 import type { DomainContract } from '@looprun-ai/core';
 
+/** Dot-suffix match over a value's path, the rule `sensitiveFields` uses: a declaration of the same
+ *  length or shorter matches when it ends the path, so `'getClaim.notes'` reaches that tool's `notes`
+ *  and a bare `'notes'` reaches every `notes` at any depth of any call's result. */
+function suffixMatcher(declared: readonly string[]): (path: readonly string[]) => boolean {
+  const rules = declared.map((p) => p.split('.'));
+  return (path) => rules.some((r) => r.length <= path.length && r.every((p, i) => p === path[path.length - r.length + i]));
+}
+
+/** Immutable deep walk: a NEW result whose declared free-text STRING fields are pattern-scrubbed. The
+ *  walk starts at the call's own name, so a declaration may name the tool the field belongs to. */
+function scrubResultText(tool: string, value: unknown, declared: readonly string[]): unknown {
+  const matches = suffixMatcher(declared);
+  const walk = (v: unknown, path: string[]): unknown => {
+    if (typeof v === 'string') return matches(path) ? scrubText(v) : v;
+    if (Array.isArray(v)) return v.map((x) => walk(x, path));
+    if (v === null || typeof v !== 'object') return v;
+    return Object.fromEntries(Object.entries(v as Record<string, unknown>).map(([k, x]) => [k, walk(x, [...path, k])]));
+  };
+  return walk(value, [tool]);
+}
+
 /**
- * The result a tool returned, with `contract.sensitiveFields` applied.
+ * The result a tool returned, with the contract's two result declarations applied: `sensitiveFields`
+ * removes or masks the field it named, `scrubTextFields` scrubs the free text inside the field it
+ * named.
  *
  * ```
- *   filterToolResult({ phone: '555-0199', email: 'ops@x.example' }, contract)
- *   → { email: 'o•••@x.example' }        // sensitiveFields: { phone: 'omit', email: 'mask' }
+ *   filterToolResult('getClaim', { phone: '555-0199', notes: 'mail ops@x.example' }, contract)
+ *   → { notes: 'mail •••' }
+ *   // sensitiveFields: { phone: 'omit' }, scrubTextFields: ['getClaim.notes']
  * ```
  */
-export function filterToolResult(output: unknown, contract?: DomainContract): unknown {
+export function filterToolResult(tool: string, output: unknown, contract?: DomainContract): unknown {
   const fields = contract?.sensitiveFields;
-  if (!fields || !Object.keys(fields).length) return output;
-  return filterSensitiveFields(output, fields);
+  const declared = contract?.scrubTextFields;
+  const filtered = fields && Object.keys(fields).length ? filterSensitiveFields(output, fields) : output;
+  return declared?.length ? scrubResultText(tool, filtered, declared) : filtered;
 }
 
 /**

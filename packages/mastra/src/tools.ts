@@ -55,10 +55,11 @@ export function buildWorldTools(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       inputSchema: jsonSchemaToZodObject(def.inputSchema) as any,
       // The result crosses back INTO the runtime here, and this is the value the model reads: the
-      // contract's declared fields are gone from it before that happens. (The arguments were scrubbed
-      // one step earlier, in the guard hook that admitted the call.)
+      // contract's declared fields are gone from it, and its declared free text is scrubbed, before
+      // that happens. (The arguments were scrubbed one step earlier, in the guard hook that admitted
+      // the call.)
       execute: async (input: unknown) =>
-        filterToolResult(await getSession().world.exec(def.name, (input ?? {}) as Record<string, unknown>), contract),
+        filterToolResult(def.name, await getSession().world.exec(def.name, (input ?? {}) as Record<string, unknown>), contract),
     });
   }
   return tools;

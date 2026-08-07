@@ -23,7 +23,7 @@ const CONTRACT: DomainContract = {
   coreInvariants: ['Never invent data.'],
   languageClause: "## Output language (ABSOLUTE)\nReply in the user's language.",
   sensitiveFields: { phone: 'omit', email: 'mask' },
-  scrubTextFields: ['fileClaim.description'],
+  scrubTextFields: ['fileClaim.description', 'getClaim.notes', 'getClaim.report'],
 };
 
 /** The same domain with nothing declared — the reference for what an undeclared field still carries. */
@@ -31,6 +31,7 @@ const PLAIN: DomainContract = { ...CONTRACT, sensitiveFields: undefined, scrubTe
 
 const TOOL_DEFS = [
   { name: 'getCustomer', description: 'Read a customer.', inputSchema: { type: 'object', properties: {} } },
+  { name: 'getClaim', description: 'Read a claim.', inputSchema: { type: 'object', properties: {} } },
   {
     name: 'fileClaim',
     description: 'File a claim.',
@@ -53,7 +54,14 @@ function fixtureWorld(): FixtureWorld {
       const result =
         name === 'getCustomer'
           ? { id: 'c1', phone: '555-0199', email: 'ops@x.example' }
-          : { success: true };
+          : name === 'getClaim'
+            ? {
+                id: 'CL-1',
+                notes: 'reached them at ops@x.example',
+                report: 'Read CL-1, logged for ops@x.example.',
+                reference: 'audit@y.example',
+              }
+            : { success: true };
       calls.push({ name, args, result, tookEffect: name !== 'getCustomer' });
       return result;
     },
@@ -70,7 +78,7 @@ const claimsSpec = (contract: DomainContract) =>
     id: 'claims',
     mode: 'M',
     persona: 'You are the claims agent.',
-    tools: ['getCustomer', 'fileClaim'],
+    tools: ['getCustomer', 'getClaim', 'fileClaim'],
     contract,
     behavior: ['Read the customer, then file the claim.'],
   });
@@ -87,6 +95,26 @@ describe('a raw executor result never reaches the model', () => {
     const seenByModel = JSON.stringify(scripted.received[1]);
     expect(seenByModel).not.toContain('555-0199');
     expect(seenByModel).toContain('o•••@x.example');
+  });
+
+  it('scrubs the free text inside a declared result field, for the model and for the record', async () => {
+    const scripted = scriptedModel([
+      [{ tool: 'getClaim', args: {} }],
+      [{ tool: 'respond', args: { message: 'I read the claim.', did: [{ op: 'inform' }] } }],
+    ]);
+    const agent = new LoopRunAgent({ spec: claimsSpec(CONTRACT), world: fixtureWorld(), toolDefs: TOOL_DEFS, model: scripted.model });
+    await agent.generate('read CL-1');
+
+    const seenByModel = JSON.stringify(scripted.received[1]);
+    expect(seenByModel).not.toContain('ops@x.example');
+    expect(seenByModel).toContain('reached them at •••');
+    // `report` is the result's own sentence, and it is the part of a result the action history KEEPS
+    // and the closure can deliver — so the record holds the scrubbed form.
+    const read = agent.getSession().actionHistory.observed.find((o) => o.name === 'getClaim');
+    expect(read?.report).toBe('Read CL-1, logged for •••.');
+    // A field the contract never named keeps its content: the acceptance is authored, and it is this
+    // absence.
+    expect(seenByModel).toContain('audit@y.example');
   });
 
   it('carries the whole result when the contract declares no sensitive field', async () => {

@@ -72,7 +72,7 @@ export function makeGuardHooks(spec: AgentSpec, getSession: SessionAccessor, opt
         // for the act and receives `requiresConfirmation` + the simulation — which is what keeps its
         // next sentence honest. Recorded here because a replaced call never reaches afterToolCall.
         const simulated = scrubToolArgs(toolName, verdict.args, opts.contract);
-        const output = filterToolResult(await session.world.exec(toolName, simulated), opts.contract);
+        const output = filterToolResult(toolName, await session.world.exec(toolName, simulated), opts.contract);
         recordToolResult(session.actionHistory, toolName, simulated, output, session.world);
         return { proceed: false as const, output };
       }
@@ -91,7 +91,7 @@ export function makeGuardHooks(spec: AgentSpec, getSession: SessionAccessor, opt
       // world seam already came back filtered; a native tool executed itself, and a chain the runtime
       // forced called the world directly — for those, this is the first point the result meets engine
       // code, and the filter is idempotent over the one that was already filtered.
-      const output = filterToolResult(executed, opts.contract);
+      const output = filterToolResult(toolName, executed, opts.contract);
       // NATIVE-TOOLS mode: the tool executed ITSELF, so nothing has written the world's action history — and an
       // empty action history would make every call read as "changed nothing". Record the call here,
       // where the runtime knows it ran and what it returned. EFFECT is derived from the RESULT, the only
