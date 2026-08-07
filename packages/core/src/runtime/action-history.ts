@@ -75,9 +75,6 @@ export interface TurnActionHistory {
   /** The approvals the CURRENT turn's incoming message consumed — the WHOLE licensing surface for a
    *  destructive act. Read into every GuardCtx as `ctx.consent`. Reset per turn. */
   consentThisTurn: ApprovalRequest[];
-  /** The approvals ISSUED on the current turn — the questions the delivered text must carry, so the
-   *  user sees what they are being asked. Reset per turn. */
-  approvalsIssuedThisTurn: ApprovalRequest[];
   /** Per destructive tool that acts on NO identifiable record, the human-facing label its question is
    *  built from. A tool absent from this map can issue no question, so it can never be consented to and
    *  never runs. */
@@ -102,7 +99,7 @@ export function vetoStormHit(actionHistory: TurnActionHistory): boolean {
 }
 
 export function createActionHistory(judge?: Judge, judgeTimeoutMs?: number, renderOpts?: RenderOpts): TurnActionHistory {
-  return { observed: [], turnIndex: 0, producedThisTurn: [], turnCorrections: [], attachments: [], terminalReply: '', did: [], vetoStreak: 0, postToolViolations: [], inFlightCalls: [], attemptedCalls: [], currentUserText: '', history: [], approvals: [], consentThisTurn: [], approvalsIssuedThisTurn: [], destructiveLabels: {}, ...(judge ? { judge } : {}), ...(judgeTimeoutMs !== undefined ? { judgeTimeoutMs } : {}), ...(renderOpts ? { renderOpts } : {}) };
+  return { observed: [], turnIndex: 0, producedThisTurn: [], turnCorrections: [], attachments: [], terminalReply: '', did: [], vetoStreak: 0, postToolViolations: [], inFlightCalls: [], attemptedCalls: [], currentUserText: '', history: [], approvals: [], consentThisTurn: [], destructiveLabels: {}, ...(judge ? { judge } : {}), ...(judgeTimeoutMs !== undefined ? { judgeTimeoutMs } : {}), ...(renderOpts ? { renderOpts } : {}) };
 }
 
 /** Reset the per-turn fields (the conversation-scoped `observed` and `history` are kept). `userText` is
@@ -119,7 +116,6 @@ export function beginTurn(actionHistory: TurnActionHistory, turnIndex: number, u
   actionHistory.inFlightCalls = [];
   actionHistory.attemptedCalls = [];
   actionHistory.currentUserText = userText;
-  actionHistory.approvalsIssuedThisTurn = [];
   // The user's own words are the ONLY thing that turns an open approval into consent, and they are read
   // exactly here — once per turn, by the runtime. No guard reads text.
   actionHistory.consentThisTurn = consumeApprovals(actionHistory.approvals, userText, turnIndex);
@@ -141,7 +137,6 @@ function issueApproval(actionHistory: TurnActionHistory, c: { tool: string; subj
   for (const x of actionHistory.approvals) if (sameAct(x)) x.closed = true;
   const approval: ApprovalRequest = { ...c, token, issuedTurn: actionHistory.turnIndex };
   actionHistory.approvals.push(approval);
-  actionHistory.approvalsIssuedThisTurn.push(approval);
 }
 
 /**
