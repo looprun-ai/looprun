@@ -88,13 +88,24 @@ export interface DomainContract {
    *  map to a core outcome (e.g. `{ settled: 'success' }`), so the action history cross-check stays
    *  engine-owned and never becomes semantic. Fed to `claimIsGrounded` beside {@link writeTools}. */
   outcomes?: OutcomeMap;
-  /** Fields no result may carry into the model's context: `'omit'` deletes, `'mask'` keeps a
-   *  recognizable masked form. Dot-suffix paths over result keys. The executor is not trusted to hide
-   *  anything — this filter runs on our side of the boundary. */
+  /** Fields a result may not carry: `'omit'` deletes, `'mask'` keeps a recognizable masked form.
+   *  Dot-suffix paths over result keys. The executor is not trusted to hide anything — this filter
+   *  runs on our side of the boundary — and HOW FAR it reaches is decided by the seam the tool
+   *  executes on:
+   *
+   *    · the WORLD seam — the filter runs inside the tool's own `execute`, so the value the model
+   *      runtime receives is the filtered one, and the record is filtered with it.
+   *    · a SELF-EXECUTING tool (native, MCP) — its `execute` returns straight to the model runtime,
+   *      which no engine code sits in front of. The filter reaches the action history and therefore
+   *      everything composed from it: the operation record, the closure, the judge envelope, the
+   *      sealed turn. The model's own view of that one result is the tool's. */
   sensitiveFields?: Record<string, SensitiveMode>;
   /** Free-text fields (dot-suffix over tool argument and result keys) whose CONTENT is
    *  pattern-scrubbed: emails, Luhn-valid card numbers, conservative phone shapes. A field that
-   *  legitimately carries contact data is simply not declared — the acceptance is authored and visible. */
+   *  legitimately carries contact data is simply not declared — the acceptance is authored and visible.
+   *  On ARGUMENTS the reach is the same on every seam: the scrub rewrites the argument object the
+   *  executor is about to receive, so the raw value never leaves the process. On RESULTS it follows
+   *  {@link sensitiveFields}. */
   scrubTextFields?: string[];
 }
 

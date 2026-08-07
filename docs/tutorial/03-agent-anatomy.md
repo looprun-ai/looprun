@@ -335,7 +335,7 @@ behavior list.
 | `outcomes?` | optional: the domain's outcome vocabulary, mapping each non-core word an agent may declare onto one of the seven core outcomes (`{ settled: 'success' }`). The domain adds words; it never adds a way around the action history |
 | `renderClaim?` | optional: the domain's wording (and language) for ONE verified claim LINE in the engine-rendered operation record. It receives the VERIFIED fields only — never the agent-authored `op`. Absent ⇒ a neutral English default naming the claim's `target` |
 | `engineText?` | optional: the ENGINE's own sentences — the record's closing lines and the confirmation question. A conversation held in another language declares them, per key, because the user has to READ the instruction whose token they type back. The token itself is engine-issued and is the same literal in every language |
-| `sensitiveFields?` | optional: the result fields no call may carry into the model's context, each mapped to `'omit'` (delete it) or `'mask'` (keep a recognizable stub, `o•••@northside.example`). The keys are dot-suffix paths over result keys: `'customer.phone'` reaches that `phone` at any depth, a bare `'phone'` reaches every one |
+| `sensitiveFields?` | optional: the result fields a call may not carry, each mapped to `'omit'` (delete it) or `'mask'` (keep a recognizable stub, `o•••@northside.example`). The keys are dot-suffix paths over result keys: `'customer.phone'` reaches that `phone` at any depth, a bare `'phone'` reaches every one. How far the removal reaches is decided by the seam the tool executes on, not by this declaration — see below |
 | `scrubTextFields?` | optional: the free-text fields — dot-suffix over tool ARGUMENT and result keys — whose content is pattern-scrubbed to `•••`. A field that legitimately carries contact data is simply left undeclared, so every acceptance is authored and visible in the contract |
 
 `stateBlock` is also the first place you will meet the cast in §7. Note the seed: `REFERENCE_NOW` is
@@ -345,8 +345,27 @@ a fixed clock constant, because a tutorial world that reads `Date.now()` cannot 
 
 `sensitiveFields` and `scrubTextFields` are enforced on **looprun's** side of the tool boundary, not
 inside your tool. A tool that promises to hide a field is a promise nothing checks; the filter runs
-where the value crosses into the runtime, so the same declaration binds a world you wrote, a native
-tool that executed itself and an MCP server you do not own (chapter 06 §3).
+where the value crosses into the runtime, so one declaration binds a world you wrote, a native tool
+that executed itself and an MCP server you do not own (chapter 06 §3).
+
+**What that buys is not the same on both seams, and the difference is worth knowing before you rely
+on it.** Arguments are identical either way: the scrub rewrites the object the executor is about to
+receive, so the raw value never leaves the process. Results split:
+
+```
+   the WORLD seam            the filter runs inside the tool's own execute — the value that
+   (toolDefs + world.exec)   reaches the MODEL is already filtered, and so is the record
+
+   a SELF-EXECUTING tool     its execute returns straight to the model runtime, and no engine
+   (native, MCP)             code sits in that path. The filter reaches the ACTION HISTORY and
+                             therefore everything built from it — the operation record, the
+                             closure, the judge envelope, the sealed turn. That one result, as
+                             the model reads it, is the tool's own
+```
+
+So on a self-executing surface the declaration governs what is **recorded, delivered and judged**,
+not what the model momentarily saw. A field that must never reach the model at all belongs behind a
+tool you own — Path A of chapter 06 §3 — which is the certified path for exactly this reason.
 
 They answer two different questions:
 

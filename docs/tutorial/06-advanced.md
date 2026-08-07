@@ -447,13 +447,24 @@ binds to an MCP tool with zero extra wiring: the model emits the call → the `p
 denial returns as the governance veto envelope (chapter 01 §4) and the model retries → otherwise the
 MCP tool's own `execute` performs the remote request → `postTool` records the verified outcome.
 
-**The sensitive-data filter binds here too, and this is the path it was designed for.** An MCP server
-you do not own is exactly the executor that cannot be trusted to hide a field, so
-`contract.sensitiveFields` and `contract.scrubTextFields` (chapter 03 §5) run on looprun's side of the
-boundary: the declared arguments are scrubbed on the object the remote tool is about to receive, and
-the declared result fields are omitted, masked or scrubbed at the moment the result crosses back — before
-the model reads it and before the action history records it. The remote server is never asked to
-cooperate, and it is never given the raw value to begin with.
+**The sensitive-data filter binds here too — and on this seam it governs the RECORD.**
+`contract.sensitiveFields` and `contract.scrubTextFields` (chapter 03 §5) run on looprun's side of
+the boundary, so the remote server is never asked to cooperate. What each half reaches:
+
+```
+   ARGUMENTS   scrubbed in place on the object the remote tool is about to receive — the raw
+               value never leaves the process, exactly as on the world seam
+
+   the RESULT   filtered before the ACTION HISTORY records it, so the operation record, the
+               closure, the judge envelope and the sealed turn all carry the filtered copy.
+               A self-executing tool returns to the model runtime through its own execute,
+               and no engine code sits in that path — so that one result, as the model reads
+               it, is the tool's own
+```
+
+That is a real difference from Path A, where the filter runs inside the tool looprun wraps and the
+model therefore reads the filtered result. A field that must never enter the model's context at all
+is a reason to put the tool behind a world you own.
 
 ### `worldFromTools` + `StateView` — state without execution
 

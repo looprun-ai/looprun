@@ -30,11 +30,13 @@ looprun adds everything that makes it safe to hand the keys to an agent:
   closure — each line carries the AUTHORED sentence its call arrived with: the world's own error
   message, or the sentence the guard that stopped it declared. Never a field lifted out of a result,
   and never wording composed at run time.
-- **The data that never arrives** — a domain declares the result fields no model may see
-  (`sensitiveFields`: omitted or masked) and the free-text fields whose contents are pattern-scrubbed
-  (`scrubTextFields`: emails, card numbers, phone shapes). Both run on looprun's side of the tool
-  boundary, so the same declaration binds a world you wrote and an MCP server you do not own — the
-  executor is never asked to be trustworthy.
+- **The data that stays out** — a domain declares the result fields to strip (`sensitiveFields`:
+  omitted or masked) and the free-text fields whose contents are pattern-scrubbed (`scrubTextFields`:
+  emails, card numbers, phone shapes). Both run on looprun's side of the tool boundary, so the
+  executor is never asked to be trustworthy: arguments are scrubbed before the tool receives them, and
+  a tool routed through a world you wrote hands the model the filtered result. Where the tool executes
+  itself (native, MCP) the filter governs the record and everything composed from it — what is
+  delivered, judged and sealed.
 - **The judgment call** — an `llmCheck` guard binds a question to a genuine judgement call, answered by a
   judge under an isolated call (no persona, no tools, no memory) that `runSpecConversation` resolves
   to the turn's own model by default — `LoopRunAgent` and `compileSpec` register nothing and fail loud
