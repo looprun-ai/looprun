@@ -101,7 +101,7 @@ describe('operationRecord — a claim carrying a report renders it after the out
 
   it('a domain renderClaim line keeps ITS OWN punctuation — never mutated to join a report', () => {
     const did: Intention[] = [{ op: 'refund', target: 'BK-1', outcome: 'success', report: 'charged 50 EUR' }];
-    const out = operationRecord(did, { renderClaim: (c) => `${c.target} confirmado.` }).text;
-    expect(out).toContain('BK-1 confirmado. — charged 50 EUR');
+    const out = operationRecord(did, { renderClaim: (c) => `${c.target} confirmed.` }).text;
+    expect(out).toContain('BK-1 confirmed. — charged 50 EUR');
   });
 });
