@@ -447,6 +447,14 @@ binds to an MCP tool with zero extra wiring: the model emits the call → the `p
 denial returns as the governance veto envelope (chapter 01 §4) and the model retries → otherwise the
 MCP tool's own `execute` performs the remote request → `postTool` records the verified outcome.
 
+**The sensitive-data filter binds here too, and this is the path it was designed for.** An MCP server
+you do not own is exactly the executor that cannot be trusted to hide a field, so
+`contract.sensitiveFields` and `contract.scrubTextFields` (chapter 03 §5) run on looprun's side of the
+boundary: the declared arguments are scrubbed on the object the remote tool is about to receive, and
+the declared result fields are omitted, masked or scrubbed at the moment the result crosses back — before
+the model reads it and before the action history records it. The remote server is never asked to
+cooperate, and it is never given the raw value to begin with.
+
 ### `worldFromTools` + `StateView` — state without execution
 
 What Path B lacks is a world, and two things still want state: guards that read domain state, and

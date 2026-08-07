@@ -329,15 +329,64 @@ behavior list.
 | `stateBlock(world)` | the volatile block, rendered onto the **user-message tail**. This is where the model learns what is currently true |
 | `coreInvariants` | domain-wide rules rendered verbatim into every agent. Nothing agent-specific belongs here — that is what `scope` and the guards' own prose are for |
 | `languageClause` | the absolute output-language rule |
-| `exhaustionReply?` | optional: the deterministic closing SENTENCE committed when a reply still violates its checks after every correction. It must be a pure function of verified observations — structurally unable to fabricate. It supplies the sentence only: the engine always prepends the operation record it derived from the action history |
+| `exhaustionReply?` | optional: the deterministic closing SENTENCE committed when a reply still violates its checks after every correction. It must be a pure function of verified observations — structurally unable to fabricate. It supplies the sentence only: the engine always prepends the operation record it derived from the action history. Being domain-authored text, it crosses the free-text net below on its way out, exactly as the agent's own prose does |
 | `writeTools?` | **the honesty switch.** The tools that MUTATE the world, as opposed to pure reads. Naming them auto-installs the cross-check pair `claimIsGrounded` + `claimIsComplete` (chapter 04 §3): a declared action the action history cannot match is denied, and an effected write no intention covers is denied. Leave it out and there is no cross-check at all — and nothing tells you |
 | `changeAllowed?` | the ONE world condition every write of the domain is refused under, stated once. It installs a `precondition` (id `changeAllowed:precondition`) on every agent that carries a write, so no lane can key on a third of the condition while the others key on the rest. `exempt` names the writes that must stay usable while the condition holds — a compliance hold is that shape — and each entry must be one of `writeTools`. Declaring it with no `writeTools`, or exempting a tool that is not a write, **throws** at construction |
 | `outcomes?` | optional: the domain's outcome vocabulary, mapping each non-core word an agent may declare onto one of the seven core outcomes (`{ settled: 'success' }`). The domain adds words; it never adds a way around the action history |
 | `renderClaim?` | optional: the domain's wording (and language) for ONE verified claim LINE in the engine-rendered operation record. It receives the VERIFIED fields only — never the agent-authored `op`. Absent ⇒ a neutral English default naming the claim's `target` |
 | `engineText?` | optional: the ENGINE's own sentences — the record's closing lines and the confirmation question. A conversation held in another language declares them, per key, because the user has to READ the instruction whose token they type back. The token itself is engine-issued and is the same literal in every language |
+| `sensitiveFields?` | optional: the result fields no call may carry into the model's context, each mapped to `'omit'` (delete it) or `'mask'` (keep a recognizable stub, `o•••@northside.example`). The keys are dot-suffix paths over result keys: `'customer.phone'` reaches that `phone` at any depth, a bare `'phone'` reaches every one |
+| `scrubTextFields?` | optional: the free-text fields — dot-suffix over tool ARGUMENT and result keys — whose content is pattern-scrubbed to `•••`. A field that legitimately carries contact data is simply left undeclared, so every acceptance is authored and visible in the contract |
 
 `stateBlock` is also the first place you will meet the cast in §7. Note the seed: `REFERENCE_NOW` is
 a fixed clock constant, because a tutorial world that reads `Date.now()` cannot be replayed.
+
+### The two filters — the executor is never trusted
+
+`sensitiveFields` and `scrubTextFields` are enforced on **looprun's** side of the tool boundary, not
+inside your tool. A tool that promises to hide a field is a promise nothing checks; the filter runs
+where the value crosses into the runtime, so the same declaration binds a world you wrote, a native
+tool that executed itself and an MCP server you do not own (chapter 06 §3).
+
+They answer two different questions:
+
+```
+   sensitiveFields    a field you NAMED on purpose        phone, ssn, cardNumber
+                      omitted or masked whole, whatever value it holds
+
+   scrubTextFields    a field whose purpose is PROSE      notes, description
+                      the field stays; contact data INSIDE it is replaced
+```
+
+```
+   contract   sensitiveFields: { 'customer.phone': 'omit' }
+              scrubTextFields: ['getClaim.notes']
+
+   getClaim returns   { customer: { phone: '555-0199', name: 'Ana' },
+                        notes: 'call ops@x.example about +1 415 555 0199' }
+
+   the model reads    { customer: { name: 'Ana' },
+                        notes: 'call ••• about •••' }
+```
+
+The scrub catches **well-formed classes only**: email addresses, Luhn-valid card numbers, and
+conservative phone shapes (a leading country code, or three or more separator-joined digit groups —
+so an invoice total or an ISO date is never mistaken for one). **Names and street addresses are the
+stated residue.** No pattern here claims to catch them; a domain that must not disclose a name names
+the field in `sensitiveFields` instead.
+
+On the way out, the free-text net runs over the **model-authored prose and nothing else** — an email
+the user typed and the reply repeated back, a number the model carried out of a result it read.
+Declaring `scrubTextFields` at all is what switches it on: the delivery net is not per-field, because
+the reply is one string and the drift it catches has no field name. The
+engine's own blocks are already composed from the filtered record and go out verbatim, which is not a
+nicety: a record id can be shaped exactly like a phone number, and the confirmation token is matched
+against the literal the question stored.
+
+```
+   whole delivery scrubbed   To confirm •••, reply: CONFIRM •••     ← the act can never be confirmed
+   engine blocks verbatim    To confirm 2026-0801-77, reply: CONFIRM 2026-0801-77
+```
 
 ---
 

@@ -176,6 +176,31 @@ type you can bind to, and `confirmFirst` is one row of chapter 04's catalog:
    └─────────────────────────────────────────────────────────────────────┘
 ```
 
+### A fixture world is the worst world the surface allows
+
+Chapter 05 runs the same spec against a **fixture** world — a hand-written stand-in for the real
+executor, so a governance claim can be proven without a live system. One law decides what goes in it:
+
+```
+   the tool surface DOCUMENTS the behavior   →  the fixture implements it faithfully
+   the surface is SILENT                     →  the fixture assumes the WORST: it returns the
+                                                raw record, executes any well-formed call,
+                                                and offers no simulation
+   the business needs more than that         →  a guard owns it — that is the part that ships
+```
+
+A fixture that is kinder than the surface measures an agent nobody will ever run. Say the real
+booking API documents no permission check, and the fixture adds one anyway:
+
+```
+   fixture refuses  cancelBooking({ id: 'BK-1' }) by a viewer   →  the eval passes
+   production runs  the same call against the real API          →  the booking is gone
+```
+
+The guard that was supposed to own that rule was never written, because the fixture hid the gap.
+Worse, the *ungoverned* comparison run inherits the same kindness, so both variants tie and the
+governance premium the eval exists to measure disappears.
+
 ### The veto is a *tagged* result, not a generic failure
 
 A tool result can mean two very different things, and confusing them is how governance text ends up

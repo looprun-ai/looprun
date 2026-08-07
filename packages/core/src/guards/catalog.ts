@@ -68,7 +68,7 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
     hook: 'preTool',
     summary: 'Denies a call whose tool and canonical arguments already succeeded earlier in the same turn.',
     whenToUse:
-      'Always on (the spec class auto-installs it): it stops the same-turn retry loop where a model re-reads an identical query hoping for a different answer. Cross-turn repeats stay legal — a later turn is a genuine refresh.',
+      'Always on (the spec class auto-installs it): it stops the same-turn retry loop where a model re-reads an identical query hoping for a different answer. Cross-turn repeats stay legal — a later turn is a genuine refresh. It is also the ONE kind that still gates a schema-licensed simulation, which every other `preTool` gate lets through: a simulation changes nothing, but a looping simulation is still a loop.',
     example: `noDuplicateCall()`,
   },
 

@@ -43,7 +43,8 @@ const SECTIONS = [
     hook: 'preTool',
     title: '`preTool` — before the call runs',
     blurb:
-      'A call has been proposed and not yet executed. A deny returns to the model AS the tool result, in the governance envelope, and the model retries inside the same generation — so the correction text is written as an instruction. Nothing has happened to the world yet, which is why every gate that must PREVENT something lives here.',
+      'A call has been proposed and not yet executed. A deny returns to the model AS the tool result, in the governance envelope, and the model retries inside the same generation — so the correction text is written as an instruction. Nothing has happened to the world yet, which is why every gate that must PREVENT something lives here.\n\n' +
+      'One call shape is judged differently, and it is a law of the hook rather than of any one kind: a SCHEMA-LICENSED SIMULATION — `simulate: true` on a tool whose DECLARED schema carries the parameter — passes every gate here except the always-family (`noDuplicateCall`). Every other rule on this hook is a rule about a WRITE, and a simulation writes nothing: the world validates the simulated call in full and answers with the same error the act would, so the world\'s own answer IS the enforcement, carrying the figures a guard\'s text never has. The always-family still applies because a simulation changes nothing but a LOOPING simulation is still a loop. The licence is the schema, never the call: `simulate: true` on a tool whose schema has no such parameter is an act, because a third-party executor drops the unknown argument and acts.',
   },
   {
     hook: 'postTool',
@@ -84,7 +85,8 @@ const CONSENT_STORY = [
   '   ②  or the denial does    a tool with no simulate form is denied, and the denial raises the question',
   '                            from the label your spec declared',
   '   ③  the engine renders    the question lands in the delivered text, between the agent prose and the',
-  '                            operation record',
+  '                            operation record — and lands again on EVERY later delivery while it is',
+  '                            still open, so an unanswered question is never lost to a change of subject',
   '   ④  the user answers      their next message either carries the token or does not',
   '   ⑤  confirmFirst allows   the act runs iff a consumed question is about THIS call',
   '```',
