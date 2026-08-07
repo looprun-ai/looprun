@@ -1,6 +1,6 @@
 {
   "name": "@looprun-ai/eval",
-  "version": "0.15.0",
+  "version": "0.16.0",
   "type": "module",
   "description": "looprun eval harness: run a generated subject's cases against a model target (governed or ungoverned variant), dump per-case traces for the LLM judge, fold verdicts, and certify against the bar.",
   "keywords": [
