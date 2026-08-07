@@ -25,7 +25,7 @@
 
 export { custom } from './custom.js';
 export { valueFromUser } from './structural.js';
-export { requiresBefore, forbidThisTurn, maxCalls, canonArgs, noDuplicateCall } from './flow.js';
+export { requiresBefore, forbidThisTurn, maxCalls, canonArgs, keepWrittenArgs, noDuplicateCall } from './flow.js';
 export { argRequired, argAbsent, argFormat } from './args.js';
 export { precondition, resultInvariant, consentRequired } from './world.js';
 export {

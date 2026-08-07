@@ -6,7 +6,8 @@
  *
  *   · the RESULT a tool returns is filtered before the model reads it;
  *   · the free-text ARGUMENT a call carries is scrubbed before the world stores it, and the action
- *     history records the same clean text the world received.
+ *     history records the same clean text the world received — while the call still fingerprints as
+ *     the model WROTE it, so its repeat within the turn is still recognized as a repeat.
  *
  * The scripted model's `received` is the prompt the LLM was actually given — the tool-result message
  * included — so "what the model saw" is asserted against the real bytes, not against a stand-in.
@@ -178,6 +179,28 @@ describe('a declared free-text argument is scrubbed before the executor', () => 
     await agent.generate('file it');
 
     expect(world.received[0]).toEqual({ description: 'call +1 415 555 0199' });
+  });
+});
+
+describe('a scrubbed argument leaves the loop gate armed', () => {
+  it('vetoes the repeat of a call whose declared free text was scrubbed on the first one', async () => {
+    const written = { description: 'boom cracked — call +1 415 555 0199' };
+    const scripted = scriptedModel([
+      [{ tool: 'fileClaim', args: written }],
+      [{ tool: 'fileClaim', args: written }],
+      [{ tool: 'respond', args: { message: 'I filed the claim.', did: [{ op: 'inform' }] } }],
+    ]);
+    const world = fixtureWorld();
+    const agent = new LoopRunAgent({ spec: claimsSpec(CONTRACT), world, toolDefs: TOOL_DEFS, model: scripted.model });
+    await agent.generate('file it');
+
+    // The repeat never crossed the seam: the world ran the call once, and the record holds the first
+    // one as done and the second as refused.
+    expect(world.received).toEqual([{ description: 'boom cracked — call •••' }]);
+    const filed = agent.getSession().actionHistory.observed.filter((o) => o.name === 'fileClaim');
+    expect(filed.map((o) => o.ok)).toEqual([true, false]);
+    // And the model was handed the repeat detector's correction, not a second success.
+    expect(JSON.stringify(scripted.received[2])).toContain('noDuplicateCall');
   });
 });
 

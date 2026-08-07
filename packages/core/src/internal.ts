@@ -106,6 +106,9 @@ export type { SessionRecord } from './runtime/session-record.js';
 // `DomainContract` name what a backend must run these over.
 export { filterSensitiveFields, scrubText, maskValue } from './runtime/sensitive-filter.js';
 export type { SensitiveMode } from './runtime/sensitive-filter.js';
+// A backend that rewrites an argument in place keeps the written form's fingerprint on the object
+// first, so the repeat detector still recognizes the same call sent twice.
+export { keepWrittenArgs } from './guards/index.js';
 
 // THE LIE CHECK and the rewrite it gates. `Judge` rides finalizeReply's signature, so a
 // `declaration: true` consumer can name the callback it supplies; the prompts and the pass itself are

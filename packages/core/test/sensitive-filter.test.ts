@@ -20,6 +20,21 @@ describe('filterSensitiveFields', () => {
     expect((out as any).customer.email).toBe('o•••@northside.example');
   });
 
+  it('mask replaces a non-string value with the bare stub', () => {
+    const out = filterSensitiveFields({ customer: { phone: 4155550199 } }, { 'customer.phone': 'mask' });
+    expect((out as any).customer.phone).toBe('•••');
+    expect(JSON.stringify(out)).not.toContain('4155550199');
+  });
+
+  it('mask replaces a whole container without descending into it', () => {
+    const out = filterSensitiveFields(
+      { customer: { contact: { phone: '555-0199', lines: ['555-0199'] } } },
+      { 'customer.contact': 'mask' },
+    );
+    expect((out as any).customer.contact).toBe('•••');
+    expect(JSON.stringify(out)).not.toContain('555-0199');
+  });
+
   it('inputs are never mutated', () => {
     const input = { customer: { phone: '555-0199' } };
     filterSensitiveFields(input, { 'customer.phone': 'omit' });

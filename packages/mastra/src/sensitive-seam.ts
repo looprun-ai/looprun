@@ -14,7 +14,7 @@
  *
  * A contract that declares neither gets its own value back, untouched and unwalked.
  */
-import { filterSensitiveFields, scrubText } from '@looprun-ai/core/internal';
+import { filterSensitiveFields, keepWrittenArgs, scrubText } from '@looprun-ai/core/internal';
 import type { DomainContract } from '@looprun-ai/core';
 
 /** Dot-suffix match over a value's path, the rule `sensitiveFields` uses: a declaration of the same
@@ -69,6 +69,11 @@ export function filterToolResult(tool: string, output: unknown, contract?: Domai
  * `'fileClaim.description'` names that call's own argument, `'claim.description'` reaches the field
  * inside whatever container carries it, and a bare `'description'` reaches every depth of every call.
  *
+ * THE WRITTEN FORM'S FINGERPRINT IS KEPT ON THE OBJECT before the rewrite, because the guards judge the
+ * call as the model wrote it while the record holds the clean text: a repeat of the same call arrives
+ * raw and would otherwise fingerprint differently from the row that recorded it, and the repeat
+ * detector would read one call sent twice as two different calls.
+ *
  * ```
  *   scrubToolArgs('fileClaim', { claim: { description: 'boom cracked — call +1 415 555 0199' } }, contract)
  *   → { claim: { description: 'boom cracked — call •••' } }   // scrubTextFields: ['claim.description']
@@ -81,6 +86,7 @@ export function scrubToolArgs(
 ): Record<string, unknown> {
   const declared = contract?.scrubTextFields;
   if (!declared?.length) return args;
+  keepWrittenArgs(args);
   const matches = suffixMatcher(declared);
   const walk = (container: Record<string, unknown> | unknown[], path: string[]) => {
     // An array index is not part of the path — the same rule the result walk follows, so one

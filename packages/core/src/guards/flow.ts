@@ -105,7 +105,38 @@ export function maxCalls(
   };
 }
 
-/** Key-order-independent canonical fingerprint of a call's args. */
+/** Where an argument object carries the fingerprint of the form the model WROTE it in. */
+const WRITTEN_FINGERPRINT = Symbol.for('looprun.writtenArgsFingerprint');
+
+/**
+ * Keep the fingerprint of `args` as it stands NOW on the object itself, before anything rewrites it.
+ *
+ * The sensitive-data seam rewrites a declared free-text argument in place, and the action history then
+ * records the rewritten object. A repeat of the same call arrives written the way the model wrote it,
+ * so without this the two forms fingerprint differently and the repeat reads as new work:
+ *
+ * ```
+ *   written  { description: 'boom — call +1 415 555 0199' }   ← what the repeat detector is handed
+ *   recorded { description: 'boom — call •••' }               ← what the record holds
+ * ```
+ *
+ * The property is symbol-keyed and non-enumerable, so no walk, serialization or equality over the
+ * arguments sees it — {@link canonArgs} keeps answering with the VALUES the object holds, which is what
+ * pairs a recorded call with the world's own row for it.
+ */
+export function keepWrittenArgs(args: Record<string, unknown>): void {
+  Object.defineProperty(args, WRITTEN_FINGERPRINT, { value: canonArgs(args), configurable: true });
+}
+
+/** The fingerprint of a call in the form it was WRITTEN in: the kept one when the object was rewritten
+ *  after the model sent it, its own values otherwise. This is the form two sendings of the same call
+ *  agree on. */
+function writtenArgs(v: Record<string, unknown>): string {
+  const kept = (v as Record<symbol, unknown>)[WRITTEN_FINGERPRINT];
+  return typeof kept === 'string' ? kept : canonArgs(v);
+}
+
+/** Key-order-independent canonical fingerprint of a call's args, over the values it holds. */
 export function canonArgs(v: unknown): string {
   if (Array.isArray(v)) return `[${v.map(canonArgs).join(',')}]`;
   if (v && typeof v === 'object') {
@@ -162,17 +193,23 @@ export function noDuplicateCall(): Guard {
     dim: 'run',
     check(ctx) {
       if (!ctx.tool) return null;
-      const key = canonArgs(ctx.args);
-      const dupOk = ctx.observed.some(
-        (o) => o.turnIndex === ctx.turnIndex && o.ok && o.name === ctx.tool && canonArgs(o.args) === key,
+      // MATCHED ON THE WRITTEN FORM, so a call whose declared free text the sensitive-data seam
+      // rewrote still answers to the arguments the model sent — otherwise the record holds
+      // `'call •••'`, the repeat arrives as `'call +1 415 555 0199'`, and one call sent twice reads as
+      // two different calls.
+      const key = writtenArgs(ctx.args);
+      const dup = ctx.observed.find(
+        (o) => o.turnIndex === ctx.turnIndex && o.ok && o.name === ctx.tool && writtenArgs(o.args) === key,
       );
-      if (!dupOk) return null;
+      if (!dup) return null;
       // A TERMINAL duplicate is not a data re-read — naming the runtime-owned tool back at the model
       // would leak an internal name into a correction it can act on in plain terms (TASK 3 lint).
       if (TERMINAL_TOOLS.has(ctx.tool)) {
         return 'You already sent that exact message to the user this turn — do not send it a second time; end the turn.';
       }
-      const shape = describeResultShape(priorResultOf(ctx, ctx.tool, key));
+      // The world's own row holds the arguments the executor received, so the prior result is looked up
+      // by the VALUES the matched call was recorded with.
+      const shape = describeResultShape(priorResultOf(ctx, ctx.tool, canonArgs(dup.args)));
       return `You already called ${ctx.tool} with these EXACT arguments this turn and it ${shape} — running it again returns the same thing. Work with what came back: if it came back empty, THAT is the answer — say so instead of retrying, and never retry the same arguments hoping for a different result.`;
     },
     // PROSE↔CHECK ALIGNMENT: the check is TURN-scoped (`o.turnIndex ===

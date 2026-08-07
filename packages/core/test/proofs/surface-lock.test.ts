@@ -109,6 +109,9 @@ const INTERNAL = [
   // The sensitive-data filter: pure functions over a tool result or free text, run on our side of the
   // boundary before either reaches the model's context.
   'filterSensitiveFields', 'scrubText', 'maskValue', 'SensitiveMode',
+  // The written form's fingerprint, kept on an argument object before the seam rewrites it in place —
+  // what keeps the repeat detector reading a scrubbed call and its repeat as the same call.
+  'keepWrittenArgs',
   // The lie check and the rewrite it gates. The prompts and the pass ride the seam so the
   // gated measurement suite exercises the shipped instrument rather than a copy of it (`Judge` itself
   // is public, and rides finalizeReply's signature).

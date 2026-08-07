@@ -17,13 +17,16 @@
 
 export type SensitiveMode = 'omit' | 'mask';
 
+/** The stub a removal leaves behind: enough to say "a value was here", never enough to carry it. */
+const MASKED = '•••';
+
 /** `s[0]•••` with the domain preserved for an email-shaped value: `'o•••@northside.example'`. A
  *  value with no `@` masks to its first character plus the same three dots, so the shape stays
  *  recognizable as "a value was here" without carrying any of it. */
 export function maskValue(s: string): string {
   const at = s.indexOf('@');
-  if (at > 0) return `${s[0]}•••${s.slice(at)}`;
-  return s.length > 0 ? `${s[0]}•••` : s;
+  if (at > 0) return `${s[0]}${MASKED}${s.slice(at)}`;
+  return s.length > 0 ? `${s[0]}${MASKED}` : s;
 }
 
 /**
@@ -33,12 +36,19 @@ export function maskValue(s: string): string {
  * result (array indices are not part of the path, so the same rule reaches a `phone` inside
  * `items[].customer.phone` too); a bare `'phone'` matches any `phone` key at any depth.
  *
+ * A masked field is masked WHATEVER IT HOLDS. Only a string has a shape worth preserving, so only a
+ * string keeps its first character and its domain; every other value — a number, a list, a nested
+ * object — becomes the bare stub, and the walk stops there rather than descending into it.
+ *
  * ```
  *   filterSensitiveFields(
  *     { customer: { phone: '555-0199', name: 'Ana' } },
  *     { 'customer.phone': 'omit' },
  *   )
  *   → { customer: { name: 'Ana' } }
+ *
+ *   filterSensitiveFields({ phone: 4155550199 }, { phone: 'mask' })
+ *   → { phone: '•••' }
  * ```
  */
 export function filterSensitiveFields(value: unknown, fields: Record<string, SensitiveMode>): unknown {
@@ -54,7 +64,11 @@ export function filterSensitiveFields(value: unknown, fields: Record<string, Sen
     for (const [k, x] of Object.entries(v as Record<string, unknown>)) {
       const hit = matches([...path, k]);
       if (hit?.mode === 'omit') continue;
-      out[k] = hit?.mode === 'mask' && typeof x === 'string' ? maskValue(x) : walk(x, [...path, k]);
+      if (hit?.mode === 'mask') {
+        out[k] = typeof x === 'string' ? maskValue(x) : MASKED;
+        continue;
+      }
+      out[k] = walk(x, [...path, k]);
     }
     return out;
   };
@@ -102,9 +116,9 @@ function luhnValid(run: string): boolean {
  */
 export function scrubText(text: string): string {
   const scrubOne = (part: string): string =>
-    part.replace(EMAIL, '•••').replace(PHONE, (m) => (DATE_SHAPE.test(m) ? m : '•••'));
+    part.replace(EMAIL, MASKED).replace(PHONE, (m) => (DATE_SHAPE.test(m) ? m : MASKED));
   return text
     .split(CARD_SPLIT)
-    .map((part, i) => (i % 2 === 1 ? (luhnValid(part) ? '•••' : part) : scrubOne(part)))
+    .map((part, i) => (i % 2 === 1 ? (luhnValid(part) ? MASKED : part) : scrubOne(part)))
     .join('');
 }
