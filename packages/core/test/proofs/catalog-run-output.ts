@@ -192,6 +192,44 @@ const noDuplicateCallProof: GuardProof = {
       },
       l1: 'silent',
     },
+    {
+      // A schema-licensed simulation changes nothing, so the runtime lets it past every preTool guard
+      // except this always-family one: a simulation changes nothing, but a LOOPING simulation is still a
+      // loop, and the loop is what this guard is about.
+      name: 'a repeated identical simulation is still gated',
+      polarity: 'negative',
+      ctx: {
+        tool: 'deleteItem',
+        args: { id: 'itm-1', simulate: true },
+        simulatableTools: new Set(['deleteItem']),
+        observed: [{ name: 'deleteItem', args: { id: 'itm-1', simulate: true }, ok: true, turnIndex: 0 }],
+        turnIndex: 0,
+      },
+      l1: 'fires',
+      l3: {
+        preset: 'empty',
+        turns: [{ userText: 'delete item itm-1' }],
+        script: [
+          [{ tool: 'deleteItem', args: { id: 'itm-1', simulate: true } }],
+          [{ tool: 'deleteItem', args: { id: 'itm-1', simulate: true } }],
+          [{ tool: 'respond', args: { message: 'Deleting itm-1 — are you sure?', did: [{ op: 'cancel', target: 'itm-1', outcome: 'pending_confirmation' }, { op: 'ask' }] } }],
+        ],
+        expect: 'veto',
+        tool: 'deleteItem',
+      },
+    },
+    {
+      name: 'a simulation of another record is not a duplicate of the first',
+      polarity: 'neutral',
+      ctx: {
+        tool: 'deleteItem',
+        args: { id: 'itm-2', simulate: true },
+        simulatableTools: new Set(['deleteItem']),
+        observed: [{ name: 'deleteItem', args: { id: 'itm-1', simulate: true }, ok: true, turnIndex: 0 }],
+        turnIndex: 0,
+      },
+      l1: 'silent',
+    },
   ],
 };
 
@@ -439,6 +477,27 @@ const destructiveThrottleProof: GuardProof = {
         turnIndex: 0,
       },
       l1: 'silent',
+    },
+    {
+      // The cap counts ACTS. A schema-licensed simulation is not one — it changes nothing and the world
+      // validates it in full — so the turn that already spent its single destructive act can still ask
+      // about the next record. L3-only: the cap is applied by the runtime, which is where a simulation
+      // is recognised as a read; the check itself only ever sees acting calls.
+      name: 'a simulation after the turn\'s one destructive act still runs',
+      polarity: 'positive',
+      l1: 'silent',
+      l3: {
+        preset: 'empty',
+        turns: [{ userText: 'delete item itm-1' }, { userText: 'CONFIRM itm-1' }],
+        script: [
+          [{ tool: 'deleteItem', args: { id: 'itm-1', simulate: true } }],
+          [{ tool: 'respond', args: { message: 'That one needs your confirmation.', did: [{ op: 'cancel', target: 'itm-1', outcome: 'pending_confirmation' }] } }],
+          [{ tool: 'deleteItem', args: { id: 'itm-1' } }],
+          [{ tool: 'deleteItem', args: { id: 'itm-2', simulate: true } }],
+          [{ tool: 'respond', args: { message: 'The item was deleted as requested; itm-2 needs your confirmation too — are you sure?', did: [{ op: 'cancel', target: 'itm-1', outcome: 'success' }, { op: 'cancel', target: 'itm-2', outcome: 'pending_confirmation' }, { op: 'ask' }] } }],
+        ],
+        expect: 'pass',
+      },
     },
   ],
 };

@@ -99,6 +99,73 @@ export const BEHAVIOR_PROOFS: GuardProof[] = [
         ctx: { did: [], observed: [], turnIndex: 0 },
         l1: 'silent',
       },
+      {
+        // REFUSAL BY RULE. A `refused` claim grounds on a successful read that ADDRESSED the entity with
+        // no effected write on it: the refusal is the spec's own law speaking, and demanding a vetoed
+        // attempt as its proof would order the model to reach for the very act it is refusing.
+        name: 'a refusal grounded by a read that addressed the entity and changed nothing',
+        polarity: 'positive',
+        ctx: {
+          did: [{ op: 'delete', target: 'itm-1', outcome: 'refused' }],
+          observed: [{ name: 'searchItem', args: { id: 'itm-1' }, ok: true, turnIndex: 0 }],
+          world: worldIssuing([{ name: 'searchItem', args: { id: 'itm-1' }, result: { id: 'itm-1', title: 'Alpha' } }]),
+          turnIndex: 0,
+        },
+        l1: 'silent',
+        l3: {
+          preset: 'empty',
+          turns: [turn('delete p001')],
+          script: [
+            [{ tool: 'searchItem', args: { query: 'items' } }],
+            [{ tool: 'respond', args: { message: 'That item is protected by the rules I work under, so nothing was changed.', did: [{ op: 'delete', target: 'p001', outcome: 'refused' }] } }],
+          ],
+          expect: 'pass',
+        },
+      },
+      {
+        name: 'an effected write on the entity refutes the refusal',
+        polarity: 'negative',
+        ctx: {
+          did: [{ op: 'delete', target: 'itm-1', outcome: 'refused' }],
+          observed: [
+            { name: 'searchItem', args: { id: 'itm-1' }, ok: true, turnIndex: 0 },
+            effectedWrite('deleteItem', { id: 'itm-1' }),
+          ],
+          world: worldIssuing([
+            { name: 'searchItem', args: { id: 'itm-1' }, result: { id: 'itm-1', title: 'Alpha' } },
+            { name: 'deleteItem', args: { id: 'itm-1' }, result: { id: 'itm-1' } },
+          ]),
+          turnIndex: 0,
+        },
+        l1: 'fires',
+      },
+      {
+        name: 'a refusal on an entity no read addressed',
+        polarity: 'negative',
+        ctx: {
+          did: [{ op: 'delete', target: 'itm-1', outcome: 'refused' }],
+          observed: [{ name: 'searchItem', args: { id: 'itm-9' }, ok: true, turnIndex: 0 }],
+          world: worldIssuing([{ name: 'searchItem', args: { id: 'itm-9' }, result: { id: 'itm-9', title: 'Iota' } }]),
+          turnIndex: 0,
+        },
+        l1: 'fires',
+      },
+      {
+        // The look-alike of the refuting write: a call on the target that took NO effect. A simulation
+        // is a read, so the refusal it precedes still stands.
+        name: 'a simulation on the entity leaves the grounded refusal alone',
+        polarity: 'neutral',
+        ctx: {
+          did: [{ op: 'delete', target: 'itm-1', outcome: 'refused' }],
+          observed: [
+            { name: 'searchItem', args: { id: 'itm-1' }, ok: true, turnIndex: 0 },
+            { name: 'deleteItem', args: { id: 'itm-1', simulate: true }, ok: true, turnIndex: 0, tookEffect: false },
+          ],
+          world: worldIssuing([{ name: 'searchItem', args: { id: 'itm-1' }, result: { id: 'itm-1', title: 'Alpha' } }]),
+          turnIndex: 0,
+        },
+        l1: 'silent',
+      },
     ],
   },
   {
