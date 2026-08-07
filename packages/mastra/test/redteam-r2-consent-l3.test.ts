@@ -305,7 +305,13 @@ describe('L4 — destructiveThrottle in native-tools mode', () => {
     expect(log).toEqual(['A']);
   });
 
-  it('CLOSED regression (world mode): a second bare act after a real effect is capped by the throttle', async () => {
+  // The UNCONSENTED second act (world mode). `CONFIRM p001` licenses p001 and nothing else, so the
+  // bare `deleteItem({id:'p002'})` that follows the real p001 delete is an act no code covers. The
+  // consent gate converts it into the question it should have been: the world simulates p002, the
+  // approval for p002 opens, and the turn's ONE destructive effect stays p001's. The cap holds
+  // because no second effect is ever produced — a simulation is a read, and a read cannot spend the
+  // turn's single act.
+  it('CLOSED: an UNCONSENTED second act after a real effect becomes its question — one effect lands', async () => {
     const { agent } = makeAgent([
       [{ tool: 'deleteItem', args: { id: 'p001', simulate: true } }],
       [{ tool: 'respond', args: { message: 'Deleting p001 is permanent — are you sure?', did: [{ op: 'ask' }] } }],
@@ -315,7 +321,20 @@ describe('L4 — destructiveThrottle in native-tools mode', () => {
     ]);
     await agent.generate('delete p001 and p002');
     const res = await agent.generate('CONFIRM p001');
-    // p001's effect is on the world record, so the second destructive call the same turn is capped.
-    expect(vetoed(res.looprun.corrections, 'deleteItem')).toBe(true);
+
+    // The bare p002 act never ran bare: the consent gate downgraded it to its simulation.
+    expect(downgraded(res.looprun.corrections, 'deleteItem')).toBe(true);
+
+    // THE INVARIANT: at most ONE destructive EFFECT lands per turn. The world's own record is the
+    // authority — p001 is the single effect, and the p002 attempt is on file as the read it became.
+    const record = agent.getSession().world.toolCalls.filter((c) => c.name === 'deleteItem');
+    expect(record.filter((c) => c.tookEffect === true)).toHaveLength(1);
+    expect(record.find((c) => c.tookEffect === true)!.args).toEqual({ id: 'p001' });
+    expect(record.some((c) => (c.args as { id: string }).id === 'p002' && c.tookEffect === true)).toBe(false);
+
+    // …and p002 is not silently dropped: its question STANDS, with the literal the user types back.
+    const open = agent.getSession().actionHistory.approvals.filter((a) => !a.closed && a.consumedTurn === undefined);
+    expect(open.map((a) => ({ tool: a.tool, subject: a.subject, token: a.token })))
+      .toEqual([{ tool: 'deleteItem', subject: 'p002', token: 'CONFIRM P002' }]);
   });
 });
