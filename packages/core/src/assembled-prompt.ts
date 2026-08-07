@@ -315,7 +315,7 @@ function scopeBlock(spec: AgentSpec, opts?: PromptRenderOptions): PromptBlock | 
   const texts = [
     `In scope here: ${scope.lane}. Nothing else.`,
     `Out of scope, owned by other teams: ${routes}.`,
-    'When a request is out of scope, the ONLY correct move is to say which team handles it (name that team, never your own role or identity) and stop. Collecting ids or dates for it, checking permissions for it, pricing or simulating it, or offering to do it yourself — even behind a confirmation — IS doing the other team\'s job and is a failure.',
+    'When a request is out of scope, the ONLY correct move is to say which team handles it (name that team, never your own role or identity) and stop. Collecting ids or dates for it, checking permissions for it, pricing or drafting it, or offering to do it yourself — even behind a confirmation — IS doing the other team\'s job and is a failure.',
     // This block ROUTES; it never authorises. Measured : without this line
     // the model read "in scope ⇒ comply literally" and dumped both customer records "per your
     // request", where the anchor had asked for the business reason first.

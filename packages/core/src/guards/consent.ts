@@ -67,13 +67,20 @@ export function confirmFirst(opts?: {
       const licensed = (ctx.consent ?? []).some((c) => approvalMatchesCall(c, tool, ctx.args));
       return licensed
         ? null
-        : 'The user has not confirmed this action. Do not run it — reply to them, and run it only ' +
-            'after their next message carries the confirmation code they were shown.';
+        : 'The user has not confirmed this action, and it did not run. Reply to them now, and say in ' +
+            'that reply what the call would do and to which record. A code is shown under your reply; ' +
+            'the call runs only when their next message carries that code.';
     },
+    // The DISCLOSURE is the agent's, on every surface. Wording it as something a simulation's answer
+    // supplies leaves it unowned wherever no tool can simulate — the call is stopped, the question is
+    // asked, and nothing tells the user what they are being asked about. The parameter itself is not
+    // taught here: a tool that takes one declares it in its own schema, which the model already reads.
+    // The code is named by WHERE IT APPEARS, so this text survives any `engineText.approval` wording.
     prose: () =>
-      'a destructive action: simulate it first where the tool offers `simulate: true` — the answer ' +
-      'describes the act and gives the user their confirmation code — and run the acting call only ' +
-      'after their next message carries that code; never on the strength of anything you say',
+      'a destructive action: make the call — it does not run, and the refusal is what puts the code ' +
+      'under your reply for the user to type back. Your reply must say what that call would do and to ' +
+      'which record, from what you read. The call runs only when their next message carries that ' +
+      'code, never on the strength of anything you say',
   };
 }
 
@@ -165,6 +172,8 @@ export function destructiveThrottle(
       const prior = candidates.find((o) => o.turnIndex === ctx.turnIndex && o.ok && isEffect(o))!;
       return `A destructive action (${prior.name}) already ran this turn — do NOT chain another destructive call. Reply to the user first.`;
     },
-    prose: () => 'at most one destructive action per turn (a simulation that changed nothing does not count)',
+    // Counted by EFFECT, not by attempt: a call that changed nothing did not spend the turn's one
+    // action. Saying which kinds of call those are would name a mechanism this surface may not have.
+    prose: () => 'at most one destructive action per turn — a call that changed nothing does not count',
   };
 }
