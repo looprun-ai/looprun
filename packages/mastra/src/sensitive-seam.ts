@@ -59,17 +59,19 @@ export function filterToolResult(tool: string, output: unknown, contract?: Domai
 /**
  * Every STRING argument the contract declared free text, pattern-scrubbed IN the argument object the
  * call carries — the SAME object the guards registered in flight, the executor receives and the
- * action history records. One object is what keeps those three views of the call identical: a copy
- * would leave the world holding clean text while the record still matched on the raw form, and the
- * effect attestation that pairs them by arguments would stop pairing. The object is returned for the
- * caller's convenience; it is never a new one.
+ * action history records, at every depth: a nested container is rewritten in place too. One object is
+ * what keeps those three views of the call identical: a copy would leave the world holding clean text
+ * while the record still matched on the raw form, and the effect attestation that pairs them by
+ * arguments would stop pairing. The object is returned for the caller's convenience; it is never a
+ * new one.
  *
- * A declaration matches by argument key (`'description'`) or by the call it belongs to
- * (`'fileClaim.description'`), so the same key on another tool is only reached by the bare form.
+ * The declaration reads as a dot-suffix over the argument path, the same rule the result side uses:
+ * `'fileClaim.description'` names that call's own argument, `'claim.description'` reaches the field
+ * inside whatever container carries it, and a bare `'description'` reaches every depth of every call.
  *
  * ```
- *   scrubToolArgs('fileClaim', { description: 'boom cracked — call +1 415 555 0199' }, contract)
- *   → { description: 'boom cracked — call •••' }   // scrubTextFields: ['fileClaim.description']
+ *   scrubToolArgs('fileClaim', { claim: { description: 'boom cracked — call +1 415 555 0199' } }, contract)
+ *   → { claim: { description: 'boom cracked — call •••' } }   // scrubTextFields: ['claim.description']
  * ```
  */
 export function scrubToolArgs(
@@ -79,7 +81,23 @@ export function scrubToolArgs(
 ): Record<string, unknown> {
   const declared = contract?.scrubTextFields;
   if (!declared?.length) return args;
-  const isFreeText = (key: string) => declared.some((f) => f === key || f === `${tool}.${key}`);
-  for (const [k, v] of Object.entries(args)) if (typeof v === 'string' && isFreeText(k)) args[k] = scrubText(v);
+  const matches = suffixMatcher(declared);
+  const walk = (container: Record<string, unknown> | unknown[], path: string[]) => {
+    // An array index is not part of the path — the same rule the result walk follows, so one
+    // declaration reaches a field however many rows carry it.
+    const entries: [string | number, unknown][] = Array.isArray(container)
+      ? container.map((v, i) => [i, v])
+      : Object.entries(container);
+    for (const [key, v] of entries) {
+      const here = Array.isArray(container) ? path : [...path, key as string];
+      if (typeof v === 'string') {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        if (matches(here)) (container as any)[key] = scrubText(v);
+      } else if (v !== null && typeof v === 'object') {
+        walk(v as Record<string, unknown> | unknown[], here);
+      }
+    }
+  };
+  walk(args, [tool]);
   return args;
 }

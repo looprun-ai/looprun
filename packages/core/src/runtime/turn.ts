@@ -355,9 +355,8 @@ const EXHAUSTION_NOTHING = 'I could not complete this safely — nothing was cha
  * with nothing standing against it.
  *
  * A contract that declares `scrubTextFields` names free text as a place contact data drifts into. The
- * composed delivery is the LAST place that drift can be caught: whatever the agent wrote — an address
- * copied out of a result, an email the user typed and the prose repeated — is pattern-scrubbed here
- * before it leaves.
+ * agent's PROSE is the last place that drift can be caught, so it passes through the scrub here — an
+ * address copied out of a result, an email the user typed and the prose repeated.
  *
  * ```
  *   composeDeliveryText('I will write to ops@x.example.', [{ op: 'inform' }], [], contract)
@@ -373,8 +372,25 @@ export function composeDeliveryText(
   const text = resolveEngineText(contract?.engineText);
   const report = renderOperationReport(did, { renderClaim: contract?.renderClaim, outcomes: contract?.outcomes, text });
   const asked = approvals.map((c) => text.approval(c.meaning, c.token)).join('\n');
-  const composed = [message.trim(), asked, report].filter((s) => s.trim()).join('\n\n');
-  return contract?.scrubTextFields?.length ? scrubText(composed) : composed;
+  return [authoredProse(message.trim(), contract), asked, report].filter((s) => s.trim()).join('\n\n');
+}
+
+/**
+ * AUTHORED prose through the free-text net — and nothing else through it.
+ *
+ * The net runs on the text a MODEL or a DOMAIN wrote: the agent's message, a contract's closing
+ * sentence. It never runs on the engine's own blocks, which are composed from the already-filtered
+ * record: the approval question, the operation report, the derived closure. A record id can be shaped
+ * exactly like a phone number, and the consent token is matched against the LITERAL the approval
+ * stores —
+ *
+ * ```
+ *   scrubbed as a whole:   'To confirm •••, reply: CONFIRM •••'      the act can never be confirmed
+ *   engine blocks intact:  'To confirm 2026-0801-77, reply: CONFIRM 2026-0801-77'
+ * ```
+ */
+function authoredProse(text: string, contract?: Pick<DomainContract, 'scrubTextFields'>): string {
+  return contract?.scrubTextFields?.length ? scrubText(text) : text;
 }
 
 /** Every approval still awaiting the user's answer — not consumed, not closed. Rendered on every
@@ -411,16 +427,15 @@ function deriveExhaustionClosure(
   const report = renderOperationReport(did, { renderClaim: contract?.renderClaim, outcomes: contract?.outcomes, text: resolveEngineText(contract?.engineText) });
   const landed = did.some((c) => c.outcome === 'success');
   const sentence = landed ? EXHAUSTION_PARTIAL : EXHAUSTION_NOTHING;
-  return { report, sentence, text: closureText(report, sentence, contract), did };
+  return { report, sentence, text: closureText(report, sentence), did };
 }
 
 /** The closure's delivered shape: the VERIFIED operation report first, the closing sentence after — the
- *  same order (and the same separator) {@link composeDelivery} uses on the clean path, through the same
- *  free-text net: a closure is a delivery, and a domain-authored closing sentence carries prose exactly
- *  like the agent's own. */
-function closureText(report: string, sentence: string, contract?: Pick<DomainContract, 'scrubTextFields'>): string {
-  const composed = [report, sentence].filter((s) => s.trim()).join('\n\n');
-  return contract?.scrubTextFields?.length ? scrubText(composed) : composed;
+ *  same order (and the same separator) {@link composeDelivery} uses on the clean path. Both parts arrive
+ *  ready to deliver: the report is engine-rendered from the filtered record, and a domain-authored
+ *  sentence passed the free-text net where it entered. */
+function closureText(report: string, sentence: string): string {
+  return [report, sentence].filter((s) => s.trim()).join('\n\n');
 }
 
 /**
@@ -797,10 +812,12 @@ export async function finalizeReply(
     // The override supplies the closing SENTENCE;
     // the engine always prepends the verified operation report, exactly as `composeDelivery` does on the
     // clean path. The blank floor holds UNCONDITIONALLY: a blank override falls back to the engine's own
-    // sentence rather than delivering the report alone.
-    const sentence = overrideText && !isBlankDelivery(overrideText) ? overrideText : derived.sentence;
+    // sentence rather than delivering the report alone. A closure is a delivery, so the sentence a
+    // DOMAIN authored crosses the free-text net here, exactly as the agent's own prose does — while the
+    // engine's report and its own derived sentence are delivered as rendered.
+    const sentence = overrideText && !isBlankDelivery(overrideText) ? authoredProse(overrideText, contract) : derived.sentence;
     actionHistory.did = derived.did;
-    return { text: closureText(derived.report, sentence, contract), exhausted: true, violations: finalViolations, did: derived.did };
+    return { text: closureText(derived.report, sentence), exhausted: true, violations: finalViolations, did: derived.did };
   }
 
   // Clean delivery: compose message + the verified operation report; the accepted payload IS the verified

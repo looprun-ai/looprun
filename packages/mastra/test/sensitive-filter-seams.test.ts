@@ -23,7 +23,7 @@ const CONTRACT: DomainContract = {
   coreInvariants: ['Never invent data.'],
   languageClause: "## Output language (ABSOLUTE)\nReply in the user's language.",
   sensitiveFields: { phone: 'omit', email: 'mask' },
-  scrubTextFields: ['fileClaim.description', 'getClaim.notes', 'getClaim.report'],
+  scrubTextFields: ['fileClaim.description', 'claim.description', 'getClaim.notes', 'getClaim.report'],
 };
 
 /** The same domain with nothing declared — the reference for what an undeclared field still carries. */
@@ -35,7 +35,13 @@ const TOOL_DEFS = [
   {
     name: 'fileClaim',
     description: 'File a claim.',
-    inputSchema: { type: 'object', properties: { description: { type: 'string' } } },
+    inputSchema: {
+      type: 'object',
+      properties: {
+        description: { type: 'string' },
+        claim: { type: 'object', properties: { description: { type: 'string' } } },
+      },
+    },
   },
 ];
 
@@ -144,6 +150,21 @@ describe('a declared free-text argument is scrubbed before the executor', () => 
     expect(filed?.args).toEqual({ description: 'boom cracked — call •••' });
     // Recorded against the SAME arguments the world stored, so the call still pairs with the world's
     // own row and keeps its attested effect.
+    expect(filed?.tookEffect).toBe(true);
+  });
+
+  it('reaches a declared field nested inside an argument container', async () => {
+    const scripted = scriptedModel([
+      [{ tool: 'fileClaim', args: { claim: { description: 'boom cracked — call +1 415 555 0199' } } }],
+      [{ tool: 'respond', args: { message: 'I filed the claim.', did: [{ op: 'inform' }] } }],
+    ]);
+    const world = fixtureWorld();
+    const agent = new LoopRunAgent({ spec: claimsSpec(CONTRACT), world, toolDefs: TOOL_DEFS, model: scripted.model });
+    await agent.generate('file it');
+
+    expect(world.received[0]).toEqual({ claim: { description: 'boom cracked — call •••' } });
+    const filed = agent.getSession().actionHistory.observed.find((o) => o.name === 'fileClaim');
+    expect(filed?.args).toEqual({ claim: { description: 'boom cracked — call •••' } });
     expect(filed?.tookEffect).toBe(true);
   });
 

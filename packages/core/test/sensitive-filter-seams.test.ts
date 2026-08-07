@@ -40,6 +40,17 @@ const APPROVAL: ApprovalRequest = {
   issuedTurn: 0,
 };
 
+/** A record id with the shape a phone number has: separator-joined digit groups. The user must be able
+ *  to type this back exactly, so the engine's question and record carry it as stored. */
+const DIGIT_ID = '2026-0801-77';
+const DIGIT_APPROVAL: ApprovalRequest = {
+  tool: 'cancelClaim',
+  subject: DIGIT_ID,
+  meaning: DIGIT_ID,
+  token: `CONFIRM ${DIGIT_ID}`,
+  issuedTurn: 0,
+};
+
 function fixtureWorld(): AgentWorld {
   return { exec: () => ({}), advanceTurn: () => {}, ingestAttachment: (u: string) => u, toolCalls: [], sseActions: [] };
 }
@@ -68,6 +79,27 @@ describe('the composed delivery is the final net', () => {
       'Reach me at •••.\n\n' +
         'To confirm CL-1, reply: CONFIRM CL-1\n\n' +
         'CL-2: done\nNothing else was changed on this turn.',
+    );
+  });
+
+  it('keeps a question whose record id is shaped like a phone number typeable', () => {
+    const text = composeDeliveryText('Call me on +1 415 555 0199.', [{ op: 'inform' }], [DIGIT_APPROVAL], SCRUBBING);
+    // The token the user must type back is stored literally, and consent matches that literal — a
+    // question delivered with the id scrubbed names an act nobody can ever confirm.
+    expect(text).toContain(`To confirm ${DIGIT_ID}, reply: CONFIRM ${DIGIT_ID}`);
+    expect(text).toContain('Call me on •••.');
+  });
+
+  it('keeps a record line whose subject is shaped like a phone number', () => {
+    const text = composeDeliveryText(
+      'Also reach me on +1 415 555 0199.',
+      [{ op: 'cancel', target: DIGIT_ID, outcome: 'success' }],
+      [],
+      SCRUBBING,
+    );
+    expect(text).toBe(
+      'Also reach me on •••.\n\n' +
+        `${DIGIT_ID}: done\nNothing else was changed on this turn.`,
     );
   });
 });
