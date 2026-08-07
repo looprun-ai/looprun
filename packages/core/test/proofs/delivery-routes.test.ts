@@ -5,7 +5,7 @@
  *
  *   · THE RESULT'S OWN SENTENCE — a `report` string on a tool result renders after the outcome word in
  *     the operation record (`bk_1001: done — removed tech_4003`), so the fact survives a reply that
- *     forgot it. A result with no report renders the line byte for byte as it always did.
+ *     forgot it. A result with no report renders the outcome word alone.
  *   · EVERY OPEN QUESTION — an approval that is neither consumed nor closed renders on EVERY delivery,
  *     whatever turn raised it, and the blank-delivery floor counts a standing question as something to
  *     deliver.
@@ -39,7 +39,7 @@ describe('the operation record and the result report', () => {
     expect(operationRecord(did).text).toContain('bk_1001: done — removed tech_4003');
   });
 
-  it('negative — a result with no report renders the line unchanged', () => {
+  it('negative — a result with no report renders the outcome word alone', () => {
     const withReport: Intention[] = [{ op: 'cancel', target: 'bk_1001', outcome: 'success', report: 'removed tech_4003' }];
     const without: Intention[] = [{ op: 'cancel', target: 'bk_1001', outcome: 'success' }];
     expect(operationRecord(without).text).toBe(operationRecord(withReport).text.replace(' — removed tech_4003', ''));
