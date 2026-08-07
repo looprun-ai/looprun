@@ -56,7 +56,7 @@ describe('a vetoed call closure line', () => {
 });
 
 describe('no authored sentence', () => {
-  it('renders the line exactly as before', () => {
+  it('a result carrying neither message nor report renders the engine default line alone', () => {
     const actionHistory = createActionHistory();
     recordToolResult(actionHistory, 'scheduleMaintenance', { assetId: 'ast_genr01' }, { error: 'ASSET_IN_MAINTENANCE' });
     const derived = deriveClaimsFromActionHistory(actionHistory.observed, 0, ['scheduleMaintenance']);
@@ -64,7 +64,7 @@ describe('no authored sentence', () => {
     expect(closure).toContain('An action could not be completed.');
   });
 
-  it('a plain guard denial with no publicReason renders the line exactly as before', async () => {
+  it('a plain guard denial with no publicReason renders the engine default line alone', async () => {
     const guard: Guard = { kind: 'precondition', dim: 'run', check: () => 'not allowed right now', prose: () => '' };
     const spec = new AgentSpecBase({ id: 'a', mode: 'M', persona: 'p', tools: ['createBooking'] });
     spec.addGuard('preTool', ['createBooking'], guard, { id: 'x:plainDeny' });

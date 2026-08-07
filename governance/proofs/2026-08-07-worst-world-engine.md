@@ -3,7 +3,7 @@ date: 2026-08-07
 slug: worst-world-engine
 change_kind: runtime
 target: —
-summary: Worst-world engine laws: a schema-licensed simulation passes every guard outside the always-family; refusal by rule grounds on a read that changed nothing; the grounded deny names the declarable outcomes; the result report and every open approval ride the delivery; closure failure lines carry authored sentences; the sensitive-data filter runs at the executor, argument and delivery seams
+summary: "Worst-world engine laws: a schema-licensed simulation passes every guard outside the always-family; refusal by rule grounds on a read that changed nothing; the grounded deny names the declarable outcomes; the result report and every open approval ride the delivery; closure failure lines carry authored sentences; the sensitive-data filter runs at the executor, argument and delivery seams"
 isolated: 151/151
 collective: 34/34
 coverage: 20/20

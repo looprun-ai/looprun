@@ -2,8 +2,8 @@
  * The tool result's own REPORT sentence rides the operation record: `recordToolResult` extracts a
  * string `report` off the result onto the observed entry, `deriveClaimsFromActionHistory` carries it
  * onto the derived claim, and `operationRecord` renders it after the outcome word — so the fact
- * reaches the user even when the reply's prose forgets it. A result with no `report` renders exactly
- * as before.
+ * reaches the user even when the reply's prose forgets it. A result with no `report` renders the
+ * outcome word alone.
  */
 import { describe, expect, it } from 'vitest';
 import type { AgentWorld } from '../src/index.js';
@@ -81,7 +81,7 @@ describe('operationRecord — a claim carrying a report renders it after the out
     expect(operationRecord(did).text).toMatch(/bk_1001: awaiting your confirmation — charges 3000 USD deposit/);
   });
 
-  it('a result without report renders exactly as before', () => {
+  it('a result with no report renders the outcome word alone', () => {
     const did: Intention[] = [{ op: 'cancel', target: 'bk_1001', outcome: 'success' }];
     const text = operationRecord(did).text;
     expect(text).toContain('bk_1001: done');
@@ -90,8 +90,8 @@ describe('operationRecord — a claim carrying a report renders it after the out
 
   it('a domain renderClaim override still gets the report appended', () => {
     const did: Intention[] = [{ op: 'refund', target: 'ORD-5', outcome: 'success', report: 'charged 50 USD' }];
-    const out = operationRecord(did, { renderClaim: (c, core) => `${c.target} reembolsado (${core})` }).text;
-    expect(out).toContain('ORD-5 reembolsado (success) — charged 50 USD');
+    const out = operationRecord(did, { renderClaim: (c, core) => `${c.target} refunded (${core})` }).text;
+    expect(out).toContain('ORD-5 refunded (success) — charged 50 USD');
   });
 
   it('a target-less failure report drops the engine default line own period before joining', () => {

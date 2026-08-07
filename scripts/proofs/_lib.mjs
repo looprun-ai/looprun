@@ -39,7 +39,11 @@ export function parseFrontmatter(text, name = '<string>') {
       throw new Error(`${name}: malformed frontmatter line (no ':'): ${line.trim().slice(0, 60)}`);
     }
     const key = line.slice(0, idx).trim();
-    const value = line.slice(idx + 1).trim();
+    const raw = line.slice(idx + 1).trim();
+    // A value that itself contains `: ` is quoted, so the file stays readable by a strict YAML parser;
+    // the quotes are the file's syntax and never part of the value.
+    const quoted = raw.length > 1 && ((raw.startsWith('"') && raw.endsWith('"')) || (raw.startsWith("'") && raw.endsWith("'")));
+    const value = quoted ? raw.slice(1, -1) : raw;
     if (!key) throw new Error(`${name}: malformed frontmatter line (empty key): ${line.trim().slice(0, 60)}`);
     data[key] = value;
   }

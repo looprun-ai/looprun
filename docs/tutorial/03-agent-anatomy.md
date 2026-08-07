@@ -388,6 +388,12 @@ They answer two different questions:
                         notes: 'call ••• about •••' }
 ```
 
+**They do not share a path grammar, and nothing tells you when you mix them up.** A
+`scrubTextFields` entry may open with the TOOL's name — `'getClaim.notes'` — because that walk starts
+at the call. A `sensitiveFields` key may not: its walk starts at the result itself, so
+`'getCustomer.phone': 'omit'` matches nothing and the phone ships in full; the key that removes it is
+`'customer.phone'`, or the bare `'phone'`.
+
 The scrub catches **well-formed classes only**: email addresses, Luhn-valid card numbers, and
 conservative phone shapes (a leading country code, or three or more separator-joined digit groups —
 so an invoice total or an ISO date is never mistaken for one). **Names and street addresses are the

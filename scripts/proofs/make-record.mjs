@@ -106,12 +106,19 @@ const proofCases = docsOnly
   : `Author positive / negative / neutral cases for the affected guard(s), plus ≥1 L3 loop case and the
 collective non-interference check. See \`skills/looprun-governance/references/proof-case-authoring.md\`.`;
 
+/** A frontmatter value carrying `: ` needs quotes to stay readable by a strict YAML parser; the
+ *  double quotes inside it become single ones, so the scalar closes where it should. */
+function quoteScalar(v) {
+  const s = String(v);
+  return s.includes(': ') ? `"${s.replace(/"/g, "'")}"` : s;
+}
+
 const body = `---
 date: ${date}
 slug: ${o.slug}
 change_kind: ${change_kind}
 target: ${target}
-summary: ${o.change}
+summary: ${quoteScalar(o.change)}
 isolated: ${isolated}
 collective: ${collective}
 coverage: ${coverage}
