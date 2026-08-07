@@ -1,7 +1,20 @@
 # Worst world, owned truth — design
 
-Date: 2026-08-06 · Status: design, approved in discussion · Scope: engine (`packages/core`), the
-agentspec skill (gen, evals), generated subjects (regeneration), both benches.
+Date: 2026-08-06 · Status: implemented on `main` (engine and skill repos) · Scope: engine
+(`packages/core`), the agentspec skill (gen, evals, lints).
+
+Three things landed differently from what this document proposed. The delivery funnel scrubs only
+the model-authored prose — the engine's own blocks (approval questions, record lines, the closure)
+compose from the already-filtered record and ship verbatim, because a net over the whole composed
+text eats a digit-shaped approval token and leaves the act unconfirmable. The filter's guarantee is
+seam-scoped: the world seam filters inside the tool, before the model reads the result; a
+self-executing tool (native, MCP) returns straight to the model runtime, so there the declarations
+bind the record and every delivery composed from it. And `noDuplicateCall` matches a scrubbed call
+by its written form, so the loop gate fires on a repeat whose declared free-text argument the seam
+rewrote. Atlas regeneration and re-measurement are out of scope: the lints already price that debt
+on the shipped subject (`lint-world` 285, `lint-authoring` 17), and the regeneration plan owns it —
+starting with the reconciliation of `WRITE-REFUSED-UNGATED` against the guard ownership law, which
+give opposite verdicts on an ungated documented refusal.
 Siblings: `2026-08-06-consent-dead-ends-design.md` (shipped, v0.14.0) — this design keeps its
 vocabulary (`simulate`, `simulationResult`, approval code) and extends its direction: the schema
 tells the truth, the engine owns what it knows, and the exam measures the model.
@@ -215,10 +228,6 @@ simulate-first semantics: it keys on the acting shape, never on a simulation.
   composition; report-line and open-approval rendering; filter omit/mask/scrub cases including a
   free-text scrub of a stored argument. Fresh proof records; `check-record-required` gates.
 - **Gen lint:** the citation rule (§1) and the per-field declarations (§4) validated at authoring.
-- **Regeneration:** atlas rebuilds under the current skill (simulate-first polarity, worst world,
-  derived guard surface, rewritten rapid-fire cases). The `-preapproved`, rapid-fire, mirror-guard
-  and disclosure classes re-measure on the rebuilt subject; expected flips are recorded in
-  `agentspec-bench/docs/analysis/2026-08-06-t3r1-gov-failures-vs-fixes.md`.
 
 ## Order of work
 
@@ -227,5 +236,4 @@ simulate-first semantics: it keys on the acting shape, never on a simulation.
             report/approval rendering · sensitive filter (fields, scrub, funnel)
 2  skill    gen worst-world law + lint · guard ownership law · contract declarations ·
             evals rapid-fire rewrite
-3  subject  atlas regeneration + re-measurement
 ```

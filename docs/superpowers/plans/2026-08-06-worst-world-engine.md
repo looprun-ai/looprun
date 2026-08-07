@@ -8,7 +8,7 @@
 
 **Tech Stack:** TypeScript, pnpm workspaces, vitest. Spec: `docs/superpowers/specs/2026-08-06-worst-world-design.md`.
 
-**Scope:** two repos. `looprun` — engine (Tasks 1–9), the eval-DSL no-effect invariant (Task 10), and every doc/tutorial surface (Task 11). `agentspec` (`/Users/marcos/Dev/js/looprun/agentspec`) — the skill's gen/evals/catalog references (Tasks 12–13), the authoring lints (Task 14), and the full documentation sweep (Task 15). The atlas regeneration and its re-measurement remain a follow-on plan (spec §Order of work, step 3).
+**Scope:** two repos. `looprun` — engine (Tasks 1–9), the eval-DSL no-effect invariant (Task 10), and every doc/tutorial surface (Task 11). `agentspec` (`/Users/marcos/Dev/js/looprun/agentspec`) — the skill's gen/evals/catalog references (Tasks 12–13), the authoring lints (Task 14), and the full documentation sweep (Task 15). The atlas regeneration and its re-measurement are their own plan, outside this one's scope.
 
 ## Global Constraints
 
@@ -800,6 +800,6 @@ git commit -m "docs(skill): the references teach the worst-world shape everywher
 
 ## Self-Review
 
-- **Spec coverage:** §2.2 → Task 1; §3.1 → Tasks 2–3; §3.3 → Tasks 4–5; §3.2 → Task 6; §4 → Tasks 7–8; governance → Task 9; §5 → Tasks 10 + 13; §1 + §2.1 (as skill law + lint) → Tasks 12 + 14; documentation everywhere → Tasks 11 + 15. Remaining follow-on: the atlas regeneration (spec §Order of work, step 3).
+- **Spec coverage:** §2.2 → Task 1; §3.1 → Tasks 2–3; §3.3 → Tasks 4–5; §3.2 → Task 6; §4 → Tasks 7–8; governance → Task 9; §5 → Tasks 10 + 13; §1 + §2.1 (as skill law + lint) → Tasks 12 + 14; documentation everywhere → Tasks 11 + 15. The atlas regeneration is its own plan, outside this one's scope.
 - **Placeholder scan:** clean — every step carries its code, its exact command, or the passage to write.
 - **Type consistency:** `ALWAYS_GUARD_KINDS` (Tasks 1, 9), `publicReason` (Tasks 6, 12, 13), `SensitiveMode`/`filterSensitiveFields`/`scrubText` (Tasks 7–8, 12), `ObservedCall.report` (Tasks 4, 12, 14), `noEffectToolCalls` (Tasks 10, 13) — names match across tasks and repos.
