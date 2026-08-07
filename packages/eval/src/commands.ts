@@ -114,6 +114,7 @@ export async function runCommand(opts: RunCommandOptions): Promise<string> {
         targets: c.targets ?? [],
         tokensIn: 0,
         tokensOut: 0,
+        tokensCacheRead: null,
         error: (e as Error).message,
       });
       log(`${variant} ${c.id} ... ERROR ${(e as Error).message}`);
@@ -133,7 +134,14 @@ export async function runCommand(opts: RunCommandOptions): Promise<string> {
     `Subject: ${subject.dir}`,
     `Cases: ${dumps.length} · unjudged (invariants clean): ${dumps.filter((d) => d.invariantVerdict.pass).length} · invariant-FAIL: ${dumps.filter((d) => !d.invariantVerdict.pass).length}`,
     `STATUS TAXONOMY: 'unjudged' is NOT 'pass' — the judge decides quality (fold); invariant-FAIL is deterministic.`,
-    `Tokens: in ${dumps.reduce((n, d) => n + (d.tokensIn ?? 0), 0)} · out ${dumps.reduce((n, d) => n + (d.tokensOut ?? 0), 0)}`,
+    `Tokens: in ${dumps.reduce((n, d) => n + (d.tokensIn ?? 0), 0)} · out ${dumps.reduce((n, d) => n + (d.tokensOut ?? 0), 0)}` +
+      (() => {
+        const reported = dumps.filter((d) => d.tokensCacheRead != null);
+        if (!reported.length) return ' · cache-read UNREPORTED by the provider';
+        const read = reported.reduce((n, d) => n + (d.tokensCacheRead ?? 0), 0);
+        const inOf = reported.reduce((n, d) => n + (d.tokensIn ?? 0), 0);
+        return ` · cache-read ${read} (${inOf ? ((read / inOf) * 100).toFixed(1) : '0.0'}% of in, over ${reported.length} case(s))`;
+      })(),
     '',
     '| case | status | needs-judge |',
     '|---|---|---|',

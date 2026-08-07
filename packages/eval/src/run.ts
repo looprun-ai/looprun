@@ -41,6 +41,9 @@ export interface CaseDump {
   targets: string[];
   tokensIn: number;
   tokensOut: number;
+  /** Of `tokensIn`, the part the provider served from its prefix cache. Null when the provider
+   *  reports no cached count, which is not the same as a measured zero. */
+  tokensCacheRead: number | null;
   error?: string;
 }
 
@@ -168,9 +171,13 @@ export async function runCase(subject: Subject, c: SubjectCase, opts: RunCaseOpt
 
   let tokensIn = 0;
   let tokensOut = 0;
+  // A provider that reports nothing leaves this null all the way to the summary: a zero printed for a
+  // silent provider reads as "the cache was cold", which is a different fact from "unreported".
+  let tokensCacheRead: number | null = null;
   for (const r of res.turnRecords) {
     tokensIn += r.tokens?.input ?? 0;
     tokensOut += r.tokens?.output ?? 0;
+    if (r.tokens?.cacheRead != null) tokensCacheRead = (tokensCacheRead ?? 0) + r.tokens.cacheRead;
   }
 
   return {
@@ -184,6 +191,7 @@ export async function runCase(subject: Subject, c: SubjectCase, opts: RunCaseOpt
     targets: c.targets ?? [],
     tokensIn,
     tokensOut,
+    tokensCacheRead,
     ...(res.errorMsg ? { error: res.errorMsg } : {}),
   };
 }
