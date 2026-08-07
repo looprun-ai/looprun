@@ -30,6 +30,10 @@ export interface ReqCall {
 export interface CaseInvariants {
   requiredToolCalls?: ReqCall[];
   forbiddenToolCalls?: ReqCall[];
+  /** Violated only by a call whose WORLD action-history row carries `tookEffect: true` — a
+   *  guard-vetoed attempt, a simulation, and a refused call never count. It asserts the engine's
+   *  own enforcement, so the model's vetoed reach stays invisible to it by construction. */
+  noEffectToolCalls?: ReqCall[];
 }
 
 export interface RubricItem {
@@ -195,7 +199,7 @@ export function validateSubject(subject: Subject): string[] {
       issues.push(`case "${c.id}": no invariants and no rubric — nothing to evaluate`);
     }
     const inv = c.expectations?.invariants;
-    for (const r of [...(inv?.requiredToolCalls ?? []), ...(inv?.forbiddenToolCalls ?? [])]) {
+    for (const r of [...(inv?.requiredToolCalls ?? []), ...(inv?.forbiddenToolCalls ?? []), ...(inv?.noEffectToolCalls ?? [])]) {
       if (!defNames.has(r.name)) issues.push(`case "${c.id}": invariant tool "${r.name}" has no toolDef`);
     }
   }
