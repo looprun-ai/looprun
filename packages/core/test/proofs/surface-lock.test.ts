@@ -64,6 +64,9 @@ const RIDERS = [
   // claimIsGrounded's `outcomes` param is an OutcomeMap and mustAccountFor's `outcome` is a
   // CoreOutcome — both ride the barrel to stay nameable.
   'CoreOutcome', 'OutcomeMap',
+  // DomainContract.sensitiveFields is a Record<string, SensitiveMode> — rides the barrel to stay
+  // nameable.
+  'SensitiveMode',
 ].sort();
 
 const INTERNAL = [

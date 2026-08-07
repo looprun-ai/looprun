@@ -119,6 +119,12 @@ export function readUsage(t: TurnRecord) {
 export function readObserved(ctx: GuardCtx) {
   return ctx.observed;
 }
+export function readSensitiveFields(c: DomainContract) {
+  return c.sensitiveFields;
+}
+export function readScrubTextFields(c: DomainContract) {
+  return c.scrubTextFields;
+}
 
 // ── The whole factory catalog: emits every parameter type of every guard ─────
 export const catalog = {
