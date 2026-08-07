@@ -85,6 +85,13 @@ export interface Intention {
   target?: string;
   outcome?: string;
   amount?: number;
+  /** The AUTHORED sentence riding this claim, when one exists: a non-empty `report` string on the
+   *  result; else, for a `failure` claim derived from an EXECUTED call that returned `ok:false`, the
+   *  result's own `message` string; else, for a `failure` claim derived from a VETOED call, the
+   *  vetoing guard's `publicReason`. Carried onto an ENGINE-DERIVED claim only (never a key an agent
+   *  may declare in `did`; {@link validateClaims} rejects it) so the fact survives to the delivery
+   *  even when the agent's prose forgets it. */
+  report?: string;
 }
 
 /** Domain outcome vocabulary: every non-core outcome word MUST map to a {@link CoreOutcome}, so the
@@ -456,9 +463,19 @@ export function operationRecord(did: Intention[], opts?: RenderOpts): OperationR
     const core = resolveOutcome(claim.outcome ?? '', opts?.outcomes);
     if (core === null) continue;
     // The seam is handed a NARROWED claim — never the advisory, agent-authored `op` (see RenderedClaim).
-    const line = opts?.renderClaim
+    const rendered = opts?.renderClaim
       ? opts.renderClaim({ target: claim.target, outcome: claim.outcome, amount: claim.amount }, core)
       : defaultClaimLine(claim, core);
+    // The claim's own AUTHORED sentence rides after the outcome word, whichever wording produced the
+    // line — the fact reaches the user even when the domain seam's or engine's wording omits it. On a
+    // `failure` claim this is either the world result's own `message` or, for a vetoed call, the
+    // vetoing guard's `publicReason`; never raw read data (see ObservedCall.report). A target-less
+    // ENGINE default line ends its own sentence with a period ("An action could not be completed.");
+    // that period is dropped before the authored sentence joins it, so the two read as one sentence
+    // rather than two. This strips ONLY the engine's own wording — a domain's `renderClaim` line is
+    // NEVER mutated (its punctuation, like every other character of it, is the domain's to choose).
+    const base = opts?.renderClaim ? rendered : rendered.replace(/\.$/, '');
+    const line = rendered && claim.report ? `${base} — ${claim.report}` : rendered;
     if (line && line.trim()) lines.push(line.trim());
   }
   const hasOperations = lines.length > 0;
@@ -524,17 +541,17 @@ export function deriveClaimsFromActionHistory(
       // named) but never becomes the `op` — see the partition note above.
       claims.push(
         label
-          ? { op: isSpeechOp(label) ? 'operation' : label, target: label, outcome: 'success' }
-          : { op: 'operation', outcome: 'success' },
+          ? { op: isSpeechOp(label) ? 'operation' : label, target: label, outcome: 'success', ...(o.report !== undefined ? { report: o.report } : {}) }
+          : { op: 'operation', outcome: 'success', ...(o.report !== undefined ? { report: o.report } : {}) },
       );
       continue;
     }
     if (o.resultFlags?.requiresConfirmation === true) {
-      claims.push({ op: 'operation', outcome: 'pending_confirmation' });
+      claims.push({ op: 'operation', outcome: 'pending_confirmation', ...(o.report !== undefined ? { report: o.report } : {}) });
       continue;
     }
     if (o.ok === false) {
-      claims.push({ op: 'operation', outcome: 'failure' });
+      claims.push({ op: 'operation', outcome: 'failure', ...(o.report !== undefined ? { report: o.report } : {}) });
       continue;
     }
     // a write that ran ok but took no effect (a simulate) changed nothing → no claim.

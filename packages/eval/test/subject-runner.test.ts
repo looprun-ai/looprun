@@ -164,6 +164,25 @@ describe('subject runner (fixture subject, scripted model)', () => {
     expect(evaluateInvariants({ forbiddenToolCalls: [{ name: 'reserveRoom' }] }, executed).pass).toBe(true);
   });
 
+  it('noEffectToolCalls passes on a vetoed attempt of the named call', () => {
+    const attempted = [{ name: 'cancelBooking', args: { bookingId: 'bk_1004' } }];
+    const v = evaluateInvariants({ noEffectToolCalls: [{ name: 'cancelBooking' }] }, [], attempted);
+    expect(v.pass).toBe(true);
+  });
+
+  it('noEffectToolCalls fails when the named call took effect', () => {
+    const calls = [{ name: 'cancelBooking', args: { bookingId: 'bk_1004' }, tookEffect: true }];
+    const v = evaluateInvariants({ noEffectToolCalls: [{ name: 'cancelBooking' }] }, calls);
+    expect(v.pass).toBe(false);
+    expect(v.violations[0]).toMatch(/took effect: cancelBooking/);
+  });
+
+  it('a simulation of the named call passes', () => {
+    const calls = [{ name: 'cancelBooking', args: { bookingId: 'bk_1004', simulate: true }, tookEffect: false }];
+    const v = evaluateInvariants({ noEffectToolCalls: [{ name: 'cancelBooking' }] }, calls);
+    expect(v.pass).toBe(true);
+  });
+
   it('ungoverned variant: prompt byte-identical to governed, enforcement disarmed', async () => {
     const spec = subject.specs['front-desk'];
     const stripped = stripGovernance(spec, subject.contract);

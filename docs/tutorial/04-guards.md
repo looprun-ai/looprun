@@ -29,7 +29,7 @@ This chapter is the rest of the vocabulary:
    §3  the ones you already have                what AgentSpecBase installs before your code runs
    §4  finding the right one                    symptom → kind, the confusable pairs, canonArgs
    §5  THE CATALOG                              21 factories, grouped by hook — generated
-   §5b what ships with every reply              the operation record and the lie check — no guard
+   §5b what ships with every reply              the record, the standing question, the lie check
    §6  writing your own                         custom, and the five rules a reviewer looks for
 ```
 
@@ -49,6 +49,7 @@ interface Guard {
   check(ctx: GuardCtx): string | null | Promise<string | null>;   // deny text, or null to allow
   prose(): string;                                          // the same rule, for the system prompt
   meta?: { before?: string[]; requiredStrings?: string[] } & Record<string, unknown>;
+  publicReason?: string;                                    // one authored sentence for the USER
 }
 ```
 <sub>signature, from `looprun`</sub>
@@ -66,6 +67,24 @@ failure this whole design exists to make impossible.
 
 `check` returns the **correction**, not a log line: that string is what the model reads, so write it
 as an instruction ("do not book it — name the clash and ask what to do"). Returning `null` allows.
+
+`publicReason` is the other audience: **one sentence for the USER**, carried when this guard is what
+stopped a call. The reply the model would have written may never be delivered — a turn that exhausts
+its checks goes out as the engine's closure instead — and a correction addressed to the model reads
+as nonsense in a delivered reply. So the closure's failure line carries the authored sentence
+verbatim, after a dash:
+
+```
+   check()        'Do not cancel it — the booking has already started. Say so and offer to shorten it.'
+   publicReason   'A booking that has already started cannot be cancelled.'
+
+   delivered      An action could not be completed — A booking that has already started cannot be
+                  cancelled.
+```
+
+Declare it and the sentence is yours; omit it and the closure keeps its generic failure line. Nothing
+composes one at run time, because a composed sentence about a rule is exactly the fabrication the
+closure exists to prevent.
 
 ### `GuardCtx` — everything a check may read
 
@@ -111,6 +130,7 @@ interface ObservedCall {
   turnIndex: number;                                    // which turn it happened on
   resultFlags?: { requiresConfirmation?: boolean };     // the simulation's asking answer
   tookEffect?: boolean;                                 // did it MUTATE the world (vs a read)
+  report?: string;                                      // the AUTHORED sentence riding this call
 }
 ```
 <sub>signature, from `looprun`</sub>
@@ -120,6 +140,11 @@ turn" expressible, which is the whole of `confirmFirst`. `ok` separates a call t
 that succeeded. `tookEffect` separates a write that landed from a pure read or a refused write — it is
 what lets `destructiveThrottle` count only actions that MUTATED the world, and what an `llmCheck` reply
 rubric keys on so it never faults an honest "I could not find it" on a read-only turn.
+
+`report` is the one field a check never has to compute: it is whatever AUTHORED sentence this call
+already came with — the result's own `report` string, or, when an executed call came back `ok: false`,
+its `message`, or, when a guard vetoed it, that guard's `publicReason`. One slot, three authors, and
+raw read data is never one of them.
 
 One name in `observed` is runtime-owned rather than yours: the terminal `respond` is pushed in with
 `ok: true` (its `did` is what makes a turn's `ask` intention visible to a sibling call's checks), so
@@ -357,7 +382,8 @@ screen and the USER writes back:
    ②  or the denial does    a tool with no simulate form is denied, and the denial raises the question
                             from the label your spec declared
    ③  the engine renders    the question lands in the delivered text, between the agent prose and the
-                            operation record
+                            operation record — and lands again on EVERY later delivery while it is
+                            still open, so an unanswered question is never lost to a change of subject
    ④  the user answers      their next message either carries the token or does not
    ⑤  confirmFirst allows   the act runs iff a consumed question is about THIS call
 ```
@@ -393,6 +419,8 @@ as whole words — so an invented value is denied, and so is a paraphrase of a r
 ### `preTool` — before the call runs
 
 A call has been proposed and not yet executed. A deny returns to the model AS the tool result, in the governance envelope, and the model retries inside the same generation — so the correction text is written as an instruction. Nothing has happened to the world yet, which is why every gate that must PREVENT something lives here.
+
+One call shape is judged differently, and it is a law of the hook rather than of any one kind: a SCHEMA-LICENSED SIMULATION — `simulate: true` on a tool whose DECLARED schema carries the parameter — passes every gate here except the always-family (`noDuplicateCall`). Every other rule on this hook is a rule about a WRITE, and a simulation writes nothing: the world validates the simulated call in full and answers with the same error the act would, so the world's own answer IS the enforcement, carrying the figures a guard's text never has. The always-family still applies because a simulation changes nothing but a LOOPING simulation is still a loop. The licence is the schema, never the call: `simulate: true` on a tool whose schema has no such parameter is an act, because a third-party executor drops the unknown argument and acts.
 
 | factory | file | what it enforces |
 |---|---|---|
@@ -443,7 +471,7 @@ maxCalls('sendEmail', 1, 'You already emailed this person.', { scope: 'conversat
 
 Denies a call whose tool and canonical arguments already succeeded earlier in the same turn.
 
-**When to reach for it.** Always on (the spec class auto-installs it): it stops the same-turn retry loop where a model re-reads an identical query hoping for a different answer. Cross-turn repeats stay legal — a later turn is a genuine refresh.
+**When to reach for it.** Always on (the spec class auto-installs it): it stops the same-turn retry loop where a model re-reads an identical query hoping for a different answer. Cross-turn repeats stay legal — a later turn is a genuine refresh. It is also the ONE kind that still gates a schema-licensed simulation, which every other `preTool` gate lets through: a simulation changes nothing, but a looping simulation is still a loop.
 
 ```ts
 noDuplicateCall()
@@ -553,7 +581,7 @@ The reply text is in `ctx.reply` and no tool can run any more. A deny costs a bo
 
 | factory | file | what it enforces |
 |---|---|---|
-| [`claimIsGrounded`](#14-claimisgrounded) | `honesty.ts` | Every operation the agent declares in `did` must match the world actionHistory: a `success` needs a write that took effect, `not_found` an empty read, `blocked`/`refused` a veto or world refusal, `no_op` a call that addressed the entity and no effected write on it — an undeclared outcome word is always a violation. |
+| [`claimIsGrounded`](#14-claimisgrounded) | `honesty.ts` | Every operation the agent declares in `did` must match the world actionHistory: a `success` needs a write that took effect, `not_found` an empty read, `blocked`/`refused` a veto, a world refusal, or a successful read that addressed the entity with no effected write on it, `no_op` a call that addressed the entity and no effected write on it — an undeclared outcome word is always a violation. |
 | [`claimIsComplete`](#15-claimiscomplete) | `honesty.ts` | Every write that TOOK EFFECT this turn must be covered by a DISTINCT `success` ACTION intention in `did` that NAMES the entity — no silent action hidden from the user. |
 | [`mustAccountFor`](#16-mustaccountfor) | `honesty.ts` | Each configured target must appear in `did` with the required outcome polarity (or any polarity when `outcome: 'any'`). |
 | [`degenerationGuard`](#17-degenerationguard) | `reply.ts` | Catches leaked reasoning or tool markup, chat-template tokens and run-away line repetition in the reply. |
@@ -562,7 +590,7 @@ The reply text is in `ctx.reply` and no tool can run any more. A deny costs a bo
 
 #### 14. `claimIsGrounded`
 
-Every operation the agent declares in `did` must match the world actionHistory: a `success` needs a write that took effect, `not_found` an empty read, `blocked`/`refused` a veto or world refusal, `no_op` a call that addressed the entity and no effected write on it — an undeclared outcome word is always a violation.
+Every operation the agent declares in `did` must match the world actionHistory: a `success` needs a write that took effect, `not_found` an empty read, `blocked`/`refused` a veto, a world refusal, or a successful read that addressed the entity with no effected write on it, `no_op` a call that addressed the entity and no effected write on it — an undeclared outcome word is always a violation.
 
 **When to reach for it.** Always on when the domain declares its `writeTools` (the spec class auto-installs it, fed by `contract.writeTools` + `contract.outcomes`). It is the actionHistory cross-check: it keys on `target` + `outcome` against verified calls, never on op-name semantics or reply text, so a fabricated success cannot ground. It checks ACTION intentions only — a speech intention (`inform`/`greet`/`refuse`/`ask`) names no actionHistory fact. A `target` matches an IDENTITY the actionHistory carries — a scalar under `id`/`label`/`<entity>Id`, never a status word, a note or a sentence — by WHOLE-VALUE equality, so `BK-1` never grounds against `BK-10` and `12` never stands for `Order 12`. A `success` matches only what the WORLD issued for the write (its own entity, not the ones its result references); a claim of absence or non-effect (`not_found`/`failure`/`blocked`/`refused`/`pending_confirmation`/`no_op`) matches the world's negative answer plus the identity-key ARGS that name the entity asked about, because an absent record issues no value of its own. An `amount`, when declared, must appear among the magnitudes of that same actionHistory fact. A domain outcome word must map to a core outcome via the contract's outcome map or it reads as undeclared.
 
@@ -662,7 +690,8 @@ custom({ kind: 'imageQuotaLeft', dim: 'run', check: (ctx) => (ctx.world.imageQuo
 
 ## 5b. What ships with every reply, without a guard
 
-No guard reads prose. Two engine-owned things do, on every turn, and you install neither.
+No guard reads prose. Three engine-owned things ship beside it on every turn anyway, and you install
+none of them.
 
 ### The operation record — deterministic
 
@@ -683,6 +712,47 @@ record    No operation was carried out on this turn.
 
 Two sentences and not one, because over an empty list "nothing else was changed" would presuppose that
 something was — and confirm the lie.
+
+**A line carries its authored sentence.** Where the engine derives the record from the action history
+itself — the closure, which is the one delivery the model's own words did not survive — each line
+renders the `report` its call arrived with, after the outcome word, behind a dash. The word says
+*what* the outcome was; the sentence says *why*, in the words of whoever is entitled to say it:
+
+```
+   the world answered   { success: false, message: 'That window is already held by facilities.' }
+   the record says      An action could not be completed — That window is already held by facilities.
+
+   the world answered   { label: 'bk_1001', report: 'removed tech_4003; 2026-07-10 freed' }
+   the record says      bk_1001: done — removed tech_4003; 2026-07-10 freed
+```
+
+The sentence is never assembled at run time and is never a field lifted out of a result. It is the
+world's own `message`, or a guard's `publicReason` (§1) — authored text either way, which is what
+makes it safe to put in front of a user on the turn the model's prose was thrown away.
+
+### The standing question — every open approval, every delivery
+
+A confirmation question is outstanding work, not a turn-scoped notification. Every approval that the
+user has not answered and that has not been closed renders on **every** delivery until one of those
+two things happens:
+
+```
+   turn 1   agent        cancelEvent({ eventId: 'EV-2' })   → the question is raised
+
+   turn 2   user says    "what else is on Wednesday?"
+            delivered    You have Dentist at 15:00.
+
+                         To confirm EV-2, reply: CONFIRM EV-2     ← still open, so still asked
+
+                         No operation was carried out on this turn.
+
+   turn 3   user says    "CONFIRM EV-2"                            → consumed; it stops rendering
+```
+
+A question that appeared once and then vanished would leave the user holding a token for an act
+nothing is still offering to do. The blank-reply floor counts a standing question too: a turn whose
+prose came back empty and whose record has no lines still has something the user can read and act on,
+so it is delivered rather than replaced by the closure.
 
 ### The lie check — a judgement
 
@@ -797,8 +867,9 @@ You are not expected to catch it; you are expected to fix the guard, which is wh
 
 ```
    Guard         kind · dim · check(ctx) → deny string | null · prose() → the prompt line
+                 publicReason → the one sentence the USER reads when this guard stops a call
    GuardCtx      args · tool · world · observed · turnIndex · userText · consent · history · reply · result · judge
-   ObservedCall  name · args · ok · turnIndex · resultFlags · tookEffect
+   ObservedCall  name · args · ok · turnIndex · resultFlags · tookEffect · report
    Dim           spatial | input | run | output | behavior  → which hooks are legal
    canonArgs     the key-order-independent call fingerprint — `noDuplicateCall` keys on it
 

@@ -22,11 +22,19 @@ Every rule is a **prose+check pair** from one `Guard` object: a deterministic `c
 (rendered into the assembled prompt, **never read by any check**). One object → the prompt text and the machine gate
 can never drift apart.
 
+A guard may carry a third string, and it has a third audience: **`publicReason`** — one authored
+sentence for the USER, carried onto the vetoed call's `ObservedCall.report` and rendered by the
+operation record after the outcome word (`An action could not be completed — <sentence>`). `check()`
+addresses the model and reads as nonsense in a delivered reply; `prose()` states the rule in the
+abstract. The closure ships after every reply check is exhausted, which is the one delivery the
+model's own words did not survive, so only AUTHORED text may ride it — the runtime composes no
+sentence of its own, and a guard that declares none leaves the generic failure line standing.
+
 ## 1. The GuardCtx contract — full context
 
 A `check()` reads ONLY `GuardCtx`, and that ctx carries the WHOLE conversation — `args`, `tool`,
 `world` (host-injected read/exec seam), `observed` (the conversation's `ObservedCall[]`, each carrying
-`turnIndex`/`ok`/`resultFlags`), `turnIndex`, `reply`, `producedThisTurn`, `attachmentsThisTurn`,
+`turnIndex`/`ok`/`resultFlags`/`report`), `turnIndex`, `reply`, `producedThisTurn`, `attachmentsThisTurn`,
 `result` (postTool only), `notes`, **`userText`** (the current turn's incoming message, verbatim),
 **`consent`** (the consent approvals this turn's message consumed — see §4) and
 **`history`** (every prior turn, turn-structured and read-only: `userText`/`reply`/`toolCalls`/
@@ -270,7 +278,7 @@ legible", and neither is indistinguishable from "the check never ran".
 | Hook | Fires (backend primitive) | What a deny/violation does |
 |---|---|---|
 | `onInput` | before ANY model call, each turn (`inputProcessors` → `processInput`) | `a.abort(reason)` ⇒ the turn is REFUSED, no LLM call. Sees the REAL incoming `ctx.userText` plus `history`. Empty by default. |
-| `preTool` | before a tool executes (`hooks.beforeToolCall`) | **VETO before execution** — returns `{ proceed:false, output:{success:false,error:correction} }`; the tool NEVER runs; the model self-corrects next step. |
+| `preTool` | before a tool executes (`hooks.beforeToolCall`) | **VETO before execution** — returns `{ proceed:false, output:{success:false,error:correction} }`; the tool NEVER runs; the model self-corrects next step. A SCHEMA-LICENSED SIMULATION (`args.simulate === true` on a tool in `actionHistory.simulatableTools`) is filtered to `ALWAYS_GUARD_KINDS` (`noDuplicateCall`) before the loop: every other rule on this hook is a rule about a WRITE, the world validates the simulated call in full and answers with the same error the act would, so the world's answer IS the enforcement. The always-family survives because a looping simulation is still a loop. |
 | `postTool` | after a tool returns (`hooks.afterToolCall` → `enforcePostTool`) | The tool ALREADY executed. A failing invariant does **NOT** rewrite the result — its `{g,reason}` **joins the onReply redrive set** (an `output:${kind}:${tool}` correction is recorded), so the SAME bounded no-tools redrive relays the correction. Report/repair, never a veto. |
 | `onReply` | on the committed terminal reply | Checked AFTER the mutators. Each violation drives a **bounded NO-TOOLS re-generate** (`toolChoice:'none'`), up to `controls.redrives` (default 1). On exhaustion the runner commits a deterministic guard-authored honest closure (`exhaustionReply`) — never the violating reply. |
 | `onReplyMutate` | on the terminal reply text, before the onReply checks | Not a gate — a **deterministic egress rewrite** (`ReplyMutator.apply`, no LLM). The onReply checks then see the scrubbed reply. |
@@ -726,6 +734,12 @@ closed      the record it names changed, so the sentence it asks is no longer tr
 
 There is no turn window. What bounds a stale token is that consuming it requires typing that exact
 literal, and that consuming it closes it.
+
+**An OPEN question renders on EVERY delivery** — not only the one that raised it. `composeDelivery`
+reads the approvals that are neither consumed nor closed, whatever turn issued them, so a user who
+changes the subject still sees what they are being asked. The blank-delivery floor counts a standing
+question as deliverable content for the same reason: prose gone AND record empty AND nothing
+outstanding is the only case with nothing to deliver.
 
 #### What the ask intention is FOR
 

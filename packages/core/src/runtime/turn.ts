@@ -36,6 +36,7 @@ import { isChecked, llmRewriteLie, LIE_QUESTION } from './lie-check.js';
 import { CLOSED_FAIL_DENY } from '../guards/llm-check.js';
 import { judgePrompt, readJudgeVerdict, JUDGE_UNREACHABLE, JUDGE_UNREADABLE } from './judge-prompt.js';
 import { resolveEngineText } from './engine-text.js';
+import { scrubText } from './sensitive-filter.js';
 import type { ApprovalRequest } from './approval-request.js';
 
 export interface ReplyViolation {
@@ -97,6 +98,11 @@ export function governanceVeto(guardKind: string, reason: string, mustCloseTurn:
   };
 }
 
+/** Guard kinds that gate even a schema-licensed simulation — a simulation changes nothing, but a
+ *  looping simulation is still a loop. Every other preTool guard checks a rule the WORLD already
+ *  validates in full on a simulation, so the world's own answer is the enforcement. */
+export const ALWAYS_GUARD_KINDS: ReadonlySet<string> = new Set(['noDuplicateCall']);
+
 /** Run the preTool guards for one candidate call. On deny, the veto is recorded in the action
  *  history. `opts.canDowngrade` (default true) says whether the caller can execute a downgraded
  *  simulation — a backend with no executor of its own (native-tools mode, or the re-entry after a
@@ -137,7 +143,14 @@ export async function evaluatePreTool(
     notes: actionHistory.turnCorrections,
     judge: actionHistory.judge, judgeTimeoutMs: actionHistory.judgeTimeoutMs, renderOpts: actionHistory.renderOpts,
   };
-  for (const g of guards) {
+  // A schema-licensed simulation changes nothing in the world, so every preTool guard whose rule is
+  // about a WRITE is already answered in full by the world's own simulated response — the world IS
+  // the enforcement. `confirmFirst` states this bypass for itself (its own schema-licensed line); this
+  // filter extends it to every OTHER preTool guard. Only the kinds in `ALWAYS_GUARD_KINDS` still gate a
+  // simulation: a simulation changes nothing, but a LOOPING simulation is still a loop.
+  const isSimulation = args.simulate === true && actionHistory.simulatableTools?.has(tool) === true;
+  const active = isSimulation ? guards.filter((g) => ALWAYS_GUARD_KINDS.has(g.kind)) : guards;
+  for (const g of active) {
     const reason = await g.check(gctx);
     if (reason) {
       const selfIx = actionHistory.inFlightCalls.indexOf(selfEntry);
@@ -152,7 +165,7 @@ export async function evaluatePreTool(
         recordDowngradedAttempt(actionHistory, tool, args);
         return { verdict: 'downgrade', args: { ...args, simulate: true } };
       }
-      recordVeto(actionHistory, tool, args, `${g.dim}:${g.kind}:${tool}`);
+      recordVeto(actionHistory, tool, args, `${g.dim}:${g.kind}:${tool}`, g.publicReason);
       // THE DENIAL IS THE QUESTION. A destructive tool that cannot simulate is asked about by being
       // attempted: the gate refuses, and the refusal raises the consent question — about the record
       // the call itself names — that the delivered text then carries. An agent cannot choose not to
@@ -340,21 +353,55 @@ const EXHAUSTION_NOTHING = 'I could not complete this safely — nothing was cha
  * speech carries the empty-case closure — the sentence that denies whatever operation the prose beside
  * it may have claimed. There is no branch here that can omit it: a delivery with no record is a claim
  * with nothing standing against it.
+ *
+ * A contract that declares `scrubTextFields` names free text as a place contact data drifts into. The
+ * agent's PROSE is the last place that drift can be caught, so it passes through the scrub here — an
+ * address copied out of a result, an email the user typed and the prose repeated.
+ *
+ * ```
+ *   composeDeliveryText('I will write to ops@x.example.', [{ op: 'inform' }], [], contract)
+ *   → 'I will write to •••.\n\nNo operation was carried out on this turn.'
+ * ```
  */
 export function composeDeliveryText(
   message: string,
   did: Intention[],
   approvals: readonly ApprovalRequest[],
-  contract?: Pick<DomainContract, 'renderClaim' | 'outcomes' | 'engineText'>,
+  contract?: Pick<DomainContract, 'renderClaim' | 'outcomes' | 'engineText' | 'scrubTextFields'>,
 ): string {
   const text = resolveEngineText(contract?.engineText);
   const report = renderOperationReport(did, { renderClaim: contract?.renderClaim, outcomes: contract?.outcomes, text });
   const asked = approvals.map((c) => text.approval(c.meaning, c.token)).join('\n');
-  return [message.trim(), asked, report].filter((s) => s.trim()).join('\n\n');
+  return [authoredProse(message.trim(), contract), asked, report].filter((s) => s.trim()).join('\n\n');
+}
+
+/**
+ * AUTHORED prose through the free-text net — and nothing else through it.
+ *
+ * The net runs on the text a MODEL or a DOMAIN wrote: the agent's message, a contract's closing
+ * sentence. It never runs on the engine's own blocks, which are composed from the already-filtered
+ * record: the approval question, the operation report, the derived closure. A record id can be shaped
+ * exactly like a phone number, and the consent token is matched against the LITERAL the approval
+ * stores —
+ *
+ * ```
+ *   scrubbed as a whole:   'To confirm •••, reply: CONFIRM •••'      the act can never be confirmed
+ *   engine blocks intact:  'To confirm 2026-0801-77, reply: CONFIRM 2026-0801-77'
+ * ```
+ */
+function authoredProse(text: string, contract?: Pick<DomainContract, 'scrubTextFields'>): string {
+  return contract?.scrubTextFields?.length ? scrubText(text) : text;
+}
+
+/** Every approval still awaiting the user's answer — not consumed, not closed. Rendered on every
+ *  delivery regardless of the turn that issued it: an unanswered question is outstanding work until
+ *  the user's own words carry its token or the record it names moves. */
+function openApprovals(actionHistory: TurnActionHistory): ApprovalRequest[] {
+  return actionHistory.approvals.filter((a) => a.consumedTurn === undefined && !a.closed);
 }
 
 function composeDelivery(payload: RespondPayload, actionHistory: TurnActionHistory, contract?: DomainContract): string {
-  return composeDeliveryText(payload.message, payload.did, actionHistory.approvalsIssuedThisTurn, contract);
+  return composeDeliveryText(payload.message, payload.did, openApprovals(actionHistory), contract);
 }
 
 /**
@@ -384,7 +431,9 @@ function deriveExhaustionClosure(
 }
 
 /** The closure's delivered shape: the VERIFIED operation report first, the closing sentence after — the
- *  same order (and the same separator) {@link composeDelivery} uses on the clean path. */
+ *  same order (and the same separator) {@link composeDelivery} uses on the clean path. Both parts arrive
+ *  ready to deliver: the report is engine-rendered from the filtered record, and a domain-authored
+ *  sentence passed the free-text net where it entered. */
 function closureText(report: string, sentence: string): string {
   return [report, sentence].filter((s) => s.trim()).join('\n\n');
 }
@@ -411,12 +460,14 @@ function withBlankFloor(
 ): FinalizedReply {
   const did = payload.did;
   // BLANK means the user would receive NOTHING THEY CAN READ AS AN ANSWER: no prose, no operation line
-  // AND no question. The record's closure sentence is always there, so the composed text is never
-  // literally empty — it is the record ALONE that this floor is about, and a record with a line still
-  // tells the user what changed, exactly as a consent question still tells them what they are being
-  // asked. Prose gone AND nothing changed AND nothing asked is the case with nothing to deliver.
+  // AND no question STILL STANDING. The record's closure sentence is always there, so the composed text
+  // is never literally empty — it is the record ALONE that this floor is about, and a record with a line
+  // still tells the user what changed, exactly as an open consent question still tells them what they
+  // are being asked — whether that question was raised this turn or is still outstanding from an
+  // earlier one. Prose gone AND nothing changed AND nothing outstanding is the case with nothing to
+  // deliver.
   const record = operationRecord(did, { renderClaim: contract?.renderClaim, outcomes: contract?.outcomes, text: resolveEngineText(contract?.engineText) });
-  if (!isBlankDelivery(payload.message) || record.hasOperations || actionHistory.approvalsIssuedThisTurn.length) {
+  if (!isBlankDelivery(payload.message) || record.hasOperations || openApprovals(actionHistory).length) {
     return { text: composeDelivery(payload, actionHistory, contract), exhausted: exhaustedIfNotBlank, violations, did };
   }
   actionHistory.turnCorrections.push('exhaustion-blank-floor');
@@ -761,8 +812,10 @@ export async function finalizeReply(
     // The override supplies the closing SENTENCE;
     // the engine always prepends the verified operation report, exactly as `composeDelivery` does on the
     // clean path. The blank floor holds UNCONDITIONALLY: a blank override falls back to the engine's own
-    // sentence rather than delivering the report alone.
-    const sentence = overrideText && !isBlankDelivery(overrideText) ? overrideText : derived.sentence;
+    // sentence rather than delivering the report alone. A closure is a delivery, so the sentence a
+    // DOMAIN authored crosses the free-text net here, exactly as the agent's own prose does — while the
+    // engine's report and its own derived sentence are delivered as rendered.
+    const sentence = overrideText && !isBlankDelivery(overrideText) ? authoredProse(overrideText, contract) : derived.sentence;
     actionHistory.did = derived.did;
     return { text: closureText(derived.report, sentence), exhausted: true, violations: finalViolations, did: derived.did };
   }

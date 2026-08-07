@@ -261,6 +261,7 @@ function attributeGuard(guard: Guard, hook: Hook, bindingId: string): Guard {
     dim: guard.dim,
     ...(guard.meta ? { meta: guard.meta } : {}),
     ...(guard.failMode ? { failMode: guard.failMode } : {}),
+    ...(guard.publicReason ? { publicReason: guard.publicReason } : {}),
     check(ctx: GuardCtx) {
       try {
         const out = guard.check(ctx);

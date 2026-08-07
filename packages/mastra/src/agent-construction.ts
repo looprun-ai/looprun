@@ -103,7 +103,7 @@ export function resolveConstruction<W extends AgentWorld = AgentWorld>(
     for (const t of nativeActiveNames) admitted[t] = config.tools![t];
     tools = { ...admitted, ...buildTerminalTools(getSession) };
   } else {
-    tools = buildWorldTools(config.toolDefs ?? [], surface, getSession);
+    tools = buildWorldTools(config.toolDefs ?? [], surface, getSession, contract);
   }
 
   // Certification drift gate: fingerprint the RESOLVED active surface (post-intersection, with

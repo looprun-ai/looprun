@@ -38,8 +38,8 @@ describe('Route A — downgrade, simulation, code, act', () => {
     recordToolResult(h, 'deleteItem', v.args, output, world);
     // The simulation changed nothing and raised the question about the record the world named.
     expect(world.toolCalls.at(-1)?.tookEffect).toBe(false);
-    expect(h.approvalsIssuedThisTurn).toHaveLength(1);
-    expect(h.approvalsIssuedThisTurn[0].subject).toBe('p001');
+    expect(h.approvals.filter((a) => a.issuedTurn === h.turnIndex)).toHaveLength(1);
+    expect(h.approvals[0].subject).toBe('p001');
     // The bare attempt is scoring surface; the turn did not become a veto.
     expect(h.attemptedCalls).toEqual([{ name: 'deleteItem', args: { id: 'p001' } }]);
     expect(h.vetoStreak).toBe(0);
@@ -86,8 +86,8 @@ describe('Route B — the veto raises the question from the call', () => {
     beginTurn(h, 0, 'remove cust_2001 from the list');
     const v = await evaluatePreTool(spec, h, world, 'unsubscribeCustomer', { customerId: 'cust_2001' });
     expect(v.verdict).toBe('deny');
-    expect(h.approvalsIssuedThisTurn).toHaveLength(1);
-    expect(h.approvalsIssuedThisTurn[0].subject).toBe('cust_2001');
+    expect(h.approvals.filter((a) => a.issuedTurn === h.turnIndex)).toHaveLength(1);
+    expect(h.approvals[0].subject).toBe('cust_2001');
     expect(world.toolCalls).toHaveLength(0); // the world was never reached
 
     beginTurn(h, 1, h.approvals[0].token);

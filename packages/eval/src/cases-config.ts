@@ -32,7 +32,11 @@ const reqCallSchema = z
   .strict();
 
 const invariantsSchema = z
-  .object({ required: z.array(reqCallSchema).optional(), forbidden: z.array(reqCallSchema).optional() })
+  .object({
+    required: z.array(reqCallSchema).optional(),
+    forbidden: z.array(reqCallSchema).optional(),
+    noEffect: z.array(reqCallSchema).optional(),
+  })
   .strict();
 
 const rubricItemSchema = z
@@ -65,7 +69,7 @@ export interface ParsedCases {
 
 function toSubjectCase(c: z.infer<typeof caseSchema>): SubjectCase {
   const inv = c.invariants;
-  const hasInv = inv && (inv.required?.length || inv.forbidden?.length);
+  const hasInv = inv && (inv.required?.length || inv.forbidden?.length || inv.noEffect?.length);
   return {
     id: c.id,
     ...(c.setup ? { setup: c.setup } : {}),
@@ -76,6 +80,7 @@ function toSubjectCase(c: z.infer<typeof caseSchema>): SubjectCase {
             invariants: {
               ...(inv?.required ? { requiredToolCalls: inv.required.map((r) => ({ name: r.tool, ...(r.anyArgs ? { anyArgs: r.anyArgs } : {}), ...(r.acting ? { acting: true } : {}) })) } : {}),
               ...(inv?.forbidden ? { forbiddenToolCalls: inv.forbidden.map((r) => ({ name: r.tool, ...(r.anyArgs ? { anyArgs: r.anyArgs } : {}), ...(r.acting ? { acting: true } : {}) })) } : {}),
+              ...(inv?.noEffect ? { noEffectToolCalls: inv.noEffect.map((r) => ({ name: r.tool, ...(r.anyArgs ? { anyArgs: r.anyArgs } : {}), ...(r.acting ? { acting: true } : {}) })) } : {}),
             },
           }
         : {}),

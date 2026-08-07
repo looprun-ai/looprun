@@ -68,7 +68,7 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
     hook: 'preTool',
     summary: 'Denies a call whose tool and canonical arguments already succeeded earlier in the same turn.',
     whenToUse:
-      'Always on (the spec class auto-installs it): it stops the same-turn retry loop where a model re-reads an identical query hoping for a different answer. Cross-turn repeats stay legal — a later turn is a genuine refresh.',
+      'Always on (the spec class auto-installs it): it stops the same-turn retry loop where a model re-reads an identical query hoping for a different answer. Cross-turn repeats stay legal — a later turn is a genuine refresh. It is also the ONE kind that still gates a schema-licensed simulation, which every other `preTool` gate lets through: a simulation changes nothing, but a looping simulation is still a loop.',
     example: `noDuplicateCall()`,
   },
 
@@ -165,7 +165,7 @@ export const GUARD_CATALOG: readonly GuardCatalogEntry[] = [
     category: 'honesty',
     hook: 'onReply',
     summary:
-      'Every operation the agent declares in `did` must match the world actionHistory: a `success` needs a write that took effect, `not_found` an empty read, `blocked`/`refused` a veto or world refusal, `no_op` a call that addressed the entity and no effected write on it — an undeclared outcome word is always a violation.',
+      'Every operation the agent declares in `did` must match the world actionHistory: a `success` needs a write that took effect, `not_found` an empty read, `blocked`/`refused` a veto, a world refusal, or a successful read that addressed the entity with no effected write on it, `no_op` a call that addressed the entity and no effected write on it — an undeclared outcome word is always a violation.',
     whenToUse:
       'Always on when the domain declares its `writeTools` (the spec class auto-installs it, fed by `contract.writeTools` + `contract.outcomes`). It is the actionHistory cross-check: it keys on `target` + `outcome` against verified calls, never on op-name semantics or reply text, so a fabricated success cannot ground. It checks ACTION intentions only — a speech intention (`inform`/`greet`/`refuse`/`ask`) names no actionHistory fact. A `target` matches an IDENTITY the actionHistory carries — a scalar under `id`/`label`/`<entity>Id`, never a status word, a note or a sentence — by WHOLE-VALUE equality, so `BK-1` never grounds against `BK-10` and `12` never stands for `Order 12`. A `success` matches only what the WORLD issued for the write (its own entity, not the ones its result references); a claim of absence or non-effect (`not_found`/`failure`/`blocked`/`refused`/`pending_confirmation`/`no_op`) matches the world\'s negative answer plus the identity-key ARGS that name the entity asked about, because an absent record issues no value of its own. An `amount`, when declared, must appear among the magnitudes of that same actionHistory fact. A domain outcome word must map to a core outcome via the contract\'s outcome map or it reads as undeclared.',
     example: `claimIsGrounded({ writeTools: ['createBooking', 'cancelBooking'], outcomes: { settled: 'success' } })`,

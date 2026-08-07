@@ -75,9 +75,6 @@ export interface TurnActionHistory {
   /** The approvals the CURRENT turn's incoming message consumed — the WHOLE licensing surface for a
    *  destructive act. Read into every GuardCtx as `ctx.consent`. Reset per turn. */
   consentThisTurn: ApprovalRequest[];
-  /** The approvals ISSUED on the current turn — the questions the delivered text must carry, so the
-   *  user sees what they are being asked. Reset per turn. */
-  approvalsIssuedThisTurn: ApprovalRequest[];
   /** Per destructive tool that acts on NO identifiable record, the human-facing label its question is
    *  built from. A tool absent from this map can issue no question, so it can never be consented to and
    *  never runs. */
@@ -102,7 +99,7 @@ export function vetoStormHit(actionHistory: TurnActionHistory): boolean {
 }
 
 export function createActionHistory(judge?: Judge, judgeTimeoutMs?: number, renderOpts?: RenderOpts): TurnActionHistory {
-  return { observed: [], turnIndex: 0, producedThisTurn: [], turnCorrections: [], attachments: [], terminalReply: '', did: [], vetoStreak: 0, postToolViolations: [], inFlightCalls: [], attemptedCalls: [], currentUserText: '', history: [], approvals: [], consentThisTurn: [], approvalsIssuedThisTurn: [], destructiveLabels: {}, ...(judge ? { judge } : {}), ...(judgeTimeoutMs !== undefined ? { judgeTimeoutMs } : {}), ...(renderOpts ? { renderOpts } : {}) };
+  return { observed: [], turnIndex: 0, producedThisTurn: [], turnCorrections: [], attachments: [], terminalReply: '', did: [], vetoStreak: 0, postToolViolations: [], inFlightCalls: [], attemptedCalls: [], currentUserText: '', history: [], approvals: [], consentThisTurn: [], destructiveLabels: {}, ...(judge ? { judge } : {}), ...(judgeTimeoutMs !== undefined ? { judgeTimeoutMs } : {}), ...(renderOpts ? { renderOpts } : {}) };
 }
 
 /** Reset the per-turn fields (the conversation-scoped `observed` and `history` are kept). `userText` is
@@ -119,7 +116,6 @@ export function beginTurn(actionHistory: TurnActionHistory, turnIndex: number, u
   actionHistory.inFlightCalls = [];
   actionHistory.attemptedCalls = [];
   actionHistory.currentUserText = userText;
-  actionHistory.approvalsIssuedThisTurn = [];
   // The user's own words are the ONLY thing that turns an open approval into consent, and they are read
   // exactly here — once per turn, by the runtime. No guard reads text.
   actionHistory.consentThisTurn = consumeApprovals(actionHistory.approvals, userText, turnIndex);
@@ -141,7 +137,6 @@ function issueApproval(actionHistory: TurnActionHistory, c: { tool: string; subj
   for (const x of actionHistory.approvals) if (sameAct(x)) x.closed = true;
   const approval: ApprovalRequest = { ...c, token, issuedTurn: actionHistory.turnIndex };
   actionHistory.approvals.push(approval);
-  actionHistory.approvalsIssuedThisTurn.push(approval);
 }
 
 /**
@@ -179,9 +174,13 @@ export function recordDowngradedAttempt(actionHistory: TurnActionHistory, name: 
   actionHistory.turnCorrections.push(`downgrade:confirmFirst:${name}`);
 }
 
-/** Record a guard VETO of a tool call (the call did not run). */
-export function recordVeto(actionHistory: TurnActionHistory, name: string, args: Record<string, unknown>, correction: string): void {
-  actionHistory.observed.push({ name, args, ok: false, turnIndex: actionHistory.turnIndex });
+/** Record a guard VETO of a tool call (the call did not run). `publicReason` is the vetoing guard's
+ *  own authored sentence, when it declared one — it rides the observed row as `report`, the same
+ *  field an executed call's own result carries, so the exhaustion closure's failure line composes
+ *  it exactly as it would a world-authored one. */
+export function recordVeto(actionHistory: TurnActionHistory, name: string, args: Record<string, unknown>, correction: string, publicReason?: string): void {
+  const report = typeof publicReason === 'string' && publicReason.trim() !== '' ? publicReason : undefined;
+  actionHistory.observed.push({ name, args, ok: false, turnIndex: actionHistory.turnIndex, ...(report !== undefined ? { report } : {}) });
   // The blocked ATTEMPT — surfaced to the eval layer so a FORBIDDEN invariant can fire on it (the call
   // never reached the world, so it is invisible on the world action history by construction).
   actionHistory.attemptedCalls.push({ name, args });
@@ -217,6 +216,19 @@ export function recordToolResult(actionHistory: TurnActionHistory, name: string,
   // the guard ctx and the domain `exhaustionReply` seams still read as a flat list of what was produced).
   const lbl = ok ? (output as { label?: unknown } | null | undefined)?.label : undefined;
   const producedLabel = typeof lbl === 'string' ? lbl : undefined;
+  // The result's own sentence about what it did — authored in the world/tool, rendered
+  // verbatim under the delivery so the fact arrives even when the prose forgets it. A call that
+  // FAILED falls back to the result's own `message` when it set no `report`: `report` narrates a
+  // success, `message` explains a failure, and either is authored text the closure may carry —
+  // never a raw field the world happened to include.
+  const rep = (output as { report?: unknown } | null | undefined)?.report;
+  const msg = (output as { message?: unknown } | null | undefined)?.message;
+  const report =
+    typeof rep === 'string' && rep.trim() !== ''
+      ? rep
+      : !ok && typeof msg === 'string' && msg.trim() !== ''
+        ? msg
+        : undefined;
   actionHistory.observed.push({
     name,
     args,
@@ -229,6 +241,7 @@ export function recordToolResult(actionHistory: TurnActionHistory, name: string,
     ...(wtc?.effectInferred === true ? { effectInferred: true } : {}),
     ...(requiresConfirmation ? { resultFlags: { requiresConfirmation: true } } : {}),
     ...(producedLabel !== undefined ? { producedLabel } : {}),
+    ...(report !== undefined ? { report } : {}),
   });
   if (producedLabel !== undefined) actionHistory.producedThisTurn.push(producedLabel);
   // The world runs the two-step protocol itself: its "I need confirmation" answer NAMES the record, so

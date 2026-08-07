@@ -14,7 +14,7 @@ describe('a world result that requires confirmation issues an approval request',
     recordToolResult(actionHistory, 'cancelBooking', { id: 'BK-1' }, { requiresConfirmation: true, id: 'BK-1' });
     expect(actionHistory.approvals).toHaveLength(1);
     expect(actionHistory.approvals[0]).toMatchObject({ tool: 'cancelBooking', subject: 'BK-1', token: 'CONFIRM BK-1' });
-    expect(actionHistory.approvalsIssuedThisTurn).toHaveLength(1);
+    expect(actionHistory.approvals.filter((a) => a.issuedTurn === actionHistory.turnIndex)).toHaveLength(1);
   });
 
   it('asks one question per act, however many times the act is attempted', () => {

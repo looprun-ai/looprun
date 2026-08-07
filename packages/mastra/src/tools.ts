@@ -6,17 +6,21 @@
  */
 import { createTool } from '@mastra/core/tools';
 import { isTerminal, normalizeTerminalToolDef, recordTerminal, terminalToolDefs } from '@looprun-ai/core/internal';
-import type { ToolDef } from '@looprun-ai/core';
+import type { DomainContract, ToolDef } from '@looprun-ai/core';
 import type { LoopRunSession } from './session.js';
 import { jsonSchemaToZodObject } from './json-schema-zod.js';
+import { filterToolResult } from './sensitive-seam.js';
 
 export type SessionAccessor = () => LoopRunSession;
 
-/** Build the Mastra tool map for a spec surface: domain tools (world.exec) + the terminal tools. */
+/** Build the Mastra tool map for a spec surface: domain tools (world.exec) + the terminal tools.
+ *  `contract` carries the declarations this seam enforces on the way BACK: a result field the domain
+ *  named sensitive is omitted or masked before the model reads it. */
 export function buildWorldTools(
   toolDefs: ToolDef[],
   surface: ReadonlySet<string>,
   getSession: SessionAccessor,
+  contract?: DomainContract,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): Record<string, any> {
   // A terminal def belongs to the PROTOCOL, never to the host: normalize whatever was declared
@@ -50,7 +54,12 @@ export function buildWorldTools(
       description: def.description,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       inputSchema: jsonSchemaToZodObject(def.inputSchema) as any,
-      execute: async (input: unknown) => getSession().world.exec(def.name, (input ?? {}) as Record<string, unknown>),
+      // The result crosses back INTO the runtime here, and this is the value the model reads: the
+      // contract's declared fields are gone from it, and its declared free text is scrubbed, before
+      // that happens. (The arguments were scrubbed one step earlier, in the guard hook that admitted
+      // the call.)
+      execute: async (input: unknown) =>
+        filterToolResult(def.name, await getSession().world.exec(def.name, (input ?? {}) as Record<string, unknown>), contract),
     });
   }
   return tools;

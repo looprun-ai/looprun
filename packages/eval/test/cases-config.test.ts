@@ -24,6 +24,7 @@ const validJson = {
       invariants: {
         required: [{ tool: 'reserveRoom', anyArgs: { memberId: 'mem_ana' } }],
         forbidden: [{ tool: 'registerVisitor' }],
+        noEffect: [{ tool: 'reserveRoom', anyArgs: { memberId: 'mem_zz9' } }],
       },
       rubric: [{ id: 'r1', description: 'confirms with the id', critical: true }],
       targets: ['agent:reserveRequiresLookup'],
@@ -41,6 +42,7 @@ describe('cases.json schema + loader', () => {
     expect(c.setup?.preset).toBe('default');
     expect(c.expectations?.invariants?.requiredToolCalls).toEqual([{ name: 'reserveRoom', anyArgs: { memberId: 'mem_ana' } }]);
     expect(c.expectations?.invariants?.forbiddenToolCalls).toEqual([{ name: 'registerVisitor' }]);
+    expect(c.expectations?.invariants?.noEffectToolCalls).toEqual([{ name: 'reserveRoom', anyArgs: { memberId: 'mem_zz9' } }]);
     expect(c.expectations?.rubric?.[0]).toEqual({ id: 'r1', description: 'confirms with the id', critical: true });
     expect(c.targets).toEqual(['agent:reserveRequiresLookup']);
   });

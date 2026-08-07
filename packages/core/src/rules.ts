@@ -61,6 +61,12 @@ export interface ObservedCall {
    *  stream that includes READ labels, and consuming it positionally made a read's label shift onto a
    *  write's derived target. */
   producedLabel?: string;
+  /** The AUTHORED sentence riding this call, when one exists: a non-empty `report` string on the
+   *  result; else, for an EXECUTED call that returned `ok:false`, its own `message` string; else,
+   *  for a VETOED call, the vetoing guard's `publicReason`. Carried onto the engine-derived claim
+   *  ({@link deriveClaimsFromActionHistory}) and rendered after the outcome word in the operation
+   *  record. */
+  report?: string;
 }
 
 /** One EXECUTED tool call as it is retained in the conversation `history` (a guard-vetoed attempt is
@@ -200,6 +206,10 @@ export interface Guard {
    *  `before` (requiresBefore's dep list), `requiredStrings` (strings a reply guard demands).
    *  Purely additive metadata — never read by the runtime's enforcement path. */
   meta?: { before?: string[]; requiredStrings?: string[] } & Record<string, unknown>;
+  /** One user-facing sentence for the delivery when this guard stops a call. Authored in the
+   *  spec, never composed at runtime — the closure ships after the reply checks are exhausted,
+   *  so only authored text may ride it. Absent: the closure keeps its generic failure line. */
+  publicReason?: string;
 }
 
 /** A deterministic egress TRANSFORM on the final reply (no LLM call), applied before the onReply checks. */

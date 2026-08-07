@@ -7,9 +7,10 @@
  * client, MCP), so guards also govern native/MCP tools with zero extra wiring.
  */
 import { evaluatePreTool, evaluateOnInput, enforcePostTool, governanceVeto, isTerminal, recordTerminalCall, recordToolResult, resolveGuards, resultOk, terminalPayloadRejection } from '@looprun-ai/core/internal';
-import type { AgentSpec, GuardCtx } from '@looprun-ai/core';
+import type { AgentSpec, DomainContract, GuardCtx } from '@looprun-ai/core';
 import type { LoopRunSession } from './session.js';
 import type { SessionAccessor } from './tools.js';
+import { filterToolResult, scrubToolArgs } from './sensitive-seam.js';
 
 export interface GuardHooks {
   beforeToolCall(ctx: { toolName: string; input: unknown }): Promise<void | { proceed: false; output: unknown }>;
@@ -21,6 +22,10 @@ export interface GuardHookOptions {
    *  action history of its own, so `afterToolCall` writes the call into `world.toolCalls`. Without it the
    *  world's record is permanently empty and every effect reads as unverifiable. */
   nativeToolsMode?: boolean;
+  /** The domain contract whose `sensitiveFields` / `scrubTextFields` this seam enforces: declared
+   *  free-text arguments are scrubbed on the admitted call, declared result fields are gone before the
+   *  result is recorded. A contract that declares neither leaves every value untouched. */
+  contract?: DomainContract;
 }
 
 export function makeGuardHooks(spec: AgentSpec, getSession: SessionAccessor, opts: GuardHookOptions = {}): GuardHooks {
@@ -66,17 +71,27 @@ export function makeGuardHooks(spec: AgentSpec, getSession: SessionAccessor, opt
         // The runtime executes the simulation itself and hands the model its result: the model asked
         // for the act and receives `requiresConfirmation` + the simulation — which is what keeps its
         // next sentence honest. Recorded here because a replaced call never reaches afterToolCall.
-        const output = session.world.exec(toolName, verdict.args);
-        recordToolResult(session.actionHistory, toolName, verdict.args, output, session.world);
+        const simulated = scrubToolArgs(toolName, verdict.args, opts.contract);
+        const output = filterToolResult(toolName, await session.world.exec(toolName, simulated), opts.contract);
+        recordToolResult(session.actionHistory, toolName, simulated, output, session.world);
         return { proceed: false as const, output };
       }
+      // ALLOWED — and this is the last point before dispatch. The declared free-text arguments are
+      // scrubbed on the very object the executor is about to receive and the action history will
+      // record, so no raw note reaches either.
+      scrubToolArgs(toolName, args, opts.contract);
       return undefined;
     },
-    async afterToolCall({ toolName, input, output }) {
+    async afterToolCall({ toolName, input, output: executed }) {
       if (isTerminal(toolName)) return;
       const session = getSession();
       const { actionHistory, world } = session;
       const args = (input ?? {}) as Record<string, unknown>;
+      // NOTHING RAW IS RECORDED, whichever path executed the call. A domain tool routed through the
+      // world seam already came back filtered; a native tool executed itself, and a chain the runtime
+      // forced called the world directly — for those, this is the first point the result meets engine
+      // code, and the filter is idempotent over the one that was already filtered.
+      const output = filterToolResult(toolName, executed, opts.contract);
       // NATIVE-TOOLS mode: the tool executed ITSELF, so nothing has written the world's action history — and an
       // empty action history would make every call read as "changed nothing". Record the call here,
       // where the runtime knows it ran and what it returned. EFFECT is derived from the RESULT, the only
