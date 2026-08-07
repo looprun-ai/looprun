@@ -87,7 +87,7 @@ describe('assembledPrompt byte-stability', () => {
 
       ## Tool rules
       - **waterPlant**: only after listPlants has run.
-      - **repotPlant**: Repotting needs the pro plan; a destructive action: you ask for it by CALLING it — the call is refused, and that refusal is what puts the code under your reply for the user to type back. Asking in your own words instead issues no code, and the act can then never be confirmed. Your reply must say what that call would do and to which record, from what you read. The call runs when their next message carries that code, never on the strength of anything you say; at most one destructive action per turn — a call that changed nothing does not count.
+      - **repotPlant**: Repotting needs the pro plan; a destructive action: make the call — it does not run, and the refusal is what puts the code under your reply for the user to type back. Your reply must say what that call would do and to which record, from what you read. The call runs only when their next message carries that code, never on the strength of anything you say; at most one destructive action per turn — a call that changed nothing does not count.
 
       ## Reply rules (govern the message you send — checked on every reply)
       - reply in ONE clean user-facing message — never leak internal reasoning, template tokens, or repeated lines.

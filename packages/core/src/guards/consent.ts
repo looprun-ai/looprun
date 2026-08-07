@@ -76,16 +76,11 @@ export function confirmFirst(opts?: {
     // asked, and nothing tells the user what they are being asked about. The parameter itself is not
     // taught here: a tool that takes one declares it in its own schema, which the model already reads.
     // The code is named by WHERE IT APPEARS, so this text survives any `engineText.approval` wording.
-    //
-    // THE COST OF NOT CALLING IS NAMED. A code is minted from the arguments of an attempt, so an agent
-    // that asks in its own words mints none: the user answers with a code nobody issued, it licenses
-    // nothing, and the act can never be reached.
     prose: () =>
-      'a destructive action: you ask for it by CALLING it — the call is refused, and that refusal is ' +
-      'what puts the code under your reply for the user to type back. Asking in your own words instead ' +
-      'issues no code, and the act can then never be confirmed. Your reply must say what that call ' +
-      'would do and to which record, from what you read. The call runs when their next message carries ' +
-      'that code, never on the strength of anything you say',
+      'a destructive action: make the call — it does not run, and the refusal is what puts the code ' +
+      'under your reply for the user to type back. Your reply must say what that call would do and to ' +
+      'which record, from what you read. The call runs only when their next message carries that ' +
+      'code, never on the strength of anything you say',
   };
 }
 
