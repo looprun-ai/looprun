@@ -103,6 +103,9 @@ const INTERNAL = [
   // What the SESSION has already done — one line per entity, its latest state. Input to the lie check
   // and the rewriter; never delivered.
   'sessionRecord', 'SessionRecord', 'SESSION_HEADING',
+  // The sensitive-data filter: pure functions over a tool result or free text, run on our side of the
+  // boundary before either reaches the model's context.
+  'filterSensitiveFields', 'scrubText', 'maskValue', 'SensitiveMode',
   // The lie check and the rewrite it gates. The prompts and the pass ride the seam so the
   // gated measurement suite exercises the shipped instrument rather than a copy of it (`Judge` itself
   // is public, and rides finalizeReply's signature).

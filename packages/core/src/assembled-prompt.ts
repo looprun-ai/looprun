@@ -27,6 +27,7 @@ import type { AgentSpec, GuardBinding, Hook } from './spec.js';
 import type { AgentWorld } from './rules.js';
 import type { CoreOutcome, OutcomeMap, RenderedClaim } from './runtime/claims.js';
 import type { EngineText } from './runtime/engine-text.js';
+import type { SensitiveMode } from './runtime/sensitive-filter.js';
 import { derivePolarity, deriveSubject, foldPrompt } from './prompt-fold.js';
 import type { SubjectRule, PromptBlock, PromptLine, PromptRow } from './prompt-fold.js';
 
@@ -87,6 +88,14 @@ export interface DomainContract {
    *  map to a core outcome (e.g. `{ settled: 'success' }`), so the action history cross-check stays
    *  engine-owned and never becomes semantic. Fed to `claimIsGrounded` beside {@link writeTools}. */
   outcomes?: OutcomeMap;
+  /** Fields no result may carry into the model's context: `'omit'` deletes, `'mask'` keeps a
+   *  recognizable masked form. Dot-suffix paths over result keys. The executor is not trusted to hide
+   *  anything — this filter runs on our side of the boundary. */
+  sensitiveFields?: Record<string, SensitiveMode>;
+  /** Free-text fields (dot-suffix over tool argument and result keys) whose CONTENT is
+   *  pattern-scrubbed: emails, Luhn-valid card numbers, conservative phone shapes. A field that
+   *  legitimately carries contact data is simply not declared — the acceptance is authored and visible. */
+  scrubTextFields?: string[];
 }
 
 /**
