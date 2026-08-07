@@ -36,6 +36,7 @@ import { isChecked, llmRewriteLie, LIE_QUESTION } from './lie-check.js';
 import { CLOSED_FAIL_DENY } from '../guards/llm-check.js';
 import { judgePrompt, readJudgeVerdict, JUDGE_UNREACHABLE, JUDGE_UNREADABLE } from './judge-prompt.js';
 import { resolveEngineText } from './engine-text.js';
+import { scrubText } from './sensitive-filter.js';
 import type { ApprovalRequest } from './approval-request.js';
 
 export interface ReplyViolation {
@@ -352,17 +353,28 @@ const EXHAUSTION_NOTHING = 'I could not complete this safely — nothing was cha
  * speech carries the empty-case closure — the sentence that denies whatever operation the prose beside
  * it may have claimed. There is no branch here that can omit it: a delivery with no record is a claim
  * with nothing standing against it.
+ *
+ * A contract that declares `scrubTextFields` names free text as a place contact data drifts into. The
+ * composed delivery is the LAST place that drift can be caught: whatever the agent wrote — an address
+ * copied out of a result, an email the user typed and the prose repeated — is pattern-scrubbed here
+ * before it leaves.
+ *
+ * ```
+ *   composeDeliveryText('I will write to ops@x.example.', [{ op: 'inform' }], [], contract)
+ *   → 'I will write to •••.\n\nNo operation was carried out on this turn.'
+ * ```
  */
 export function composeDeliveryText(
   message: string,
   did: Intention[],
   approvals: readonly ApprovalRequest[],
-  contract?: Pick<DomainContract, 'renderClaim' | 'outcomes' | 'engineText'>,
+  contract?: Pick<DomainContract, 'renderClaim' | 'outcomes' | 'engineText' | 'scrubTextFields'>,
 ): string {
   const text = resolveEngineText(contract?.engineText);
   const report = renderOperationReport(did, { renderClaim: contract?.renderClaim, outcomes: contract?.outcomes, text });
   const asked = approvals.map((c) => text.approval(c.meaning, c.token)).join('\n');
-  return [message.trim(), asked, report].filter((s) => s.trim()).join('\n\n');
+  const composed = [message.trim(), asked, report].filter((s) => s.trim()).join('\n\n');
+  return contract?.scrubTextFields?.length ? scrubText(composed) : composed;
 }
 
 /** Every approval still awaiting the user's answer — not consumed, not closed. Rendered on every

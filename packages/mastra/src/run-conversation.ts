@@ -133,8 +133,8 @@ export async function runSpecConversation(spec: AgentSpec, turns: TurnInput[], d
   // is only known HERE, where toolDefs are injected — so the set is computed and seated at run start.
   if (spec.simulatableToolNames) session.actionHistory.simulatableTools = spec.simulatableToolNames(deps.toolDefs);
 
-  const mastraTools = buildWorldTools(deps.toolDefs, surface, getSession);
-  const guardHooks = makeGuardHooks(spec, getSession);
+  const mastraTools = buildWorldTools(deps.toolDefs, surface, getSession, contract);
+  const guardHooks = makeGuardHooks(spec, getSession, { contract });
   const inputProcessors = makeInputProcessors(spec, getSession);
 
   let currentSystemPrompt = '';

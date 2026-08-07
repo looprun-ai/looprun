@@ -184,7 +184,7 @@ export class LoopRunAgent<W extends AgentWorld = AgentWorld> extends Agent {
       renderClaim: contract?.renderClaim,
       outcomes: contract?.outcomes,
     }, simulatable && simulatable.size ? simulatable : undefined);
-    const guardHooks = makeGuardHooks(spec, getSession as () => LoopRunSession, { nativeToolsMode });
+    const guardHooks = makeGuardHooks(spec, getSession as () => LoopRunSession, { nativeToolsMode, contract });
 
     super({
       id: config.id ?? spec.id,
