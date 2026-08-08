@@ -1,14 +1,29 @@
 /**
- * THE CONTRACT WRITE GATE — one declaration installs the state gate on every spec that writes.
+ * THE CONTRACT WRITE GATE — one `writeTools` binding at priority `changeAllowed` installs the state
+ * gate on every spec that writes.
  */
 import { describe, it, expect } from 'vitest';
 import { AgentSpecBase } from '../src/spec.js';
+import { precondition } from '../src/guards/index.js';
 import type { AgentWorld, DomainContract, GuardCtx } from '../src/index.js';
 
 const world = (status: string): AgentWorld => ({ status: () => status }) as unknown as AgentWorld;
 
 const ctx = (over: Partial<GuardCtx>): GuardCtx =>
   ({ args: {}, world: world('active'), observed: [], turnIndex: 0, userText: '', history: [], ...over }) as GuardCtx;
+
+const writeGate = (exempt?: string[]): NonNullable<DomainContract['guards']>[number] => ({
+  hook: 'preTool',
+  target: 'writeTools',
+  ...(exempt ? { exempt } : {}),
+  guard: precondition(
+    (w) => (w as unknown as { status(): string }).status() !== 'suspended',
+    'This workspace is suspended.',
+    { prose: 'nothing changes while the workspace is suspended' },
+  ),
+  id: 'changeAllowed:precondition',
+  priority: 'changeAllowed',
+});
 
 const contract = (over: Partial<DomainContract> = {}): DomainContract =>
   ({
@@ -29,18 +44,12 @@ const spec = (c: DomainContract) =>
     contract: c,
   });
 
-describe('contract.changeAllowed', () => {
+describe('the changeAllowed write-gate binding', () => {
   it('installs one preTool gate on the write tools', () => {
-    const s = spec(
-      contract({
-        changeAllowed: {
-          ok: (w) => (w as unknown as { status(): string }).status() !== 'suspended',
-          reason: 'This workspace is suspended.',
-        },
-      }),
-    );
+    const s = spec(contract({ guards: [writeGate()] }));
     const gate = s.guards.preTool.find((b) => b.id === 'changeAllowed:precondition');
     expect(gate).toBeDefined();
+    expect(gate!.priority).toBe('changeAllowed');
     expect(gate!.target).toEqual(['createBooking', 'placeHold']);
     expect(gate!.guard.check(ctx({ tool: 'createBooking', world: world('suspended') }))).toBe(
       'This workspace is suspended.',
@@ -49,27 +58,18 @@ describe('contract.changeAllowed', () => {
   });
 
   it('an exempt write keeps running while the gate denies the rest', () => {
-    const s = spec(
-      contract({
-        changeAllowed: {
-          ok: (w) => (w as unknown as { status(): string }).status() !== 'suspended',
-          reason: 'This workspace is suspended.',
-          exempt: ['placeHold'],
-        },
-      }),
-    );
+    const s = spec(contract({ guards: [writeGate(['placeHold'])] }));
     expect(s.guards.preTool.find((b) => b.id === 'changeAllowed:precondition')!.target).toEqual(['createBooking']);
   });
 
   it('an exempt tool that is not a write tool throws at construction', () => {
-    expect(() =>
-      spec(contract({ changeAllowed: { ok: () => true, reason: 'r', exempt: ['getBooking'] } })),
-    ).toThrow(/changeAllowed\.exempt names tool\(s\) that are not in contract\.writeTools: getBooking/);
+    expect(() => spec(contract({ guards: [writeGate(['getBooking'])] }))).toThrow(
+      /exempts tool\(s\) not in writeTools: getBooking/,
+    );
   });
 
-  it('a gate with no write surface throws at construction', () => {
-    expect(() => spec(contract({ writeTools: [], changeAllowed: { ok: () => true, reason: 'r' } }))).toThrow(
-      /changeAllowed is declared with no contract\.writeTools/,
-    );
+  it('a gate whose write surface misses the lane installs nothing', () => {
+    const s = spec(contract({ writeTools: [], guards: [writeGate()] }));
+    expect(s.guards.preTool.some((b) => b.id === 'changeAllowed:precondition')).toBe(false);
   });
 });

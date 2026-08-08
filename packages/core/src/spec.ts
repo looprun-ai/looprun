@@ -27,17 +27,20 @@
  * `precondition` installed at `changeAllowed` composes the same id twice and fails at construction.
  * `agent` is exempt — an author-added guard with no explicit id is minted `agent:${kind}#${seq}`, and
  * the counter is what lets one author install `precondition` six times.
+ * `tool:` is the PROVENANCE namespace of a contract-declared binding (`contract.guards`): the author
+ * writes the id, the prefix records that the rule came from the domain contract, and nothing anywhere
+ * whitelists the namespace — an id is only ever checked for uniqueness.
  * Per-tool schema guards (argRequired/argFormat) are AUTHORED explicitly by the spec — there is no
  * auto-schema layer. The id namespaces are load-bearing for resolveBindings priority
  * ordering + assembled prompt prose order. resolveBindings sorts each hook agent → changeAllowed → consent
  * → honesty → always so an agent correction always wins.
  */
-import { claimIsComplete, claimIsGrounded, confirmFirst, degenerationGuard, destructiveThrottle, noDuplicateCall, precondition } from './guards/index.js';
+import { claimIsComplete, claimIsGrounded, confirmFirst, degenerationGuard, destructiveThrottle, noDuplicateCall } from './guards/index.js';
 import { GuardExecutionError } from './rules.js';
 import { assertNoCoreOutcomeShadow } from './runtime/claims.js';
 import { approvalCode } from './runtime/approval-request.js';
 import type { AgentWorld, Dim, Guard, GuardCtx, ObservedCall, ReplyMutator, SpatialEdge } from './rules.js';
-import type { DomainContract } from './assembled-prompt.js';
+import type { ContractGuardBinding, DomainContract } from './assembled-prompt.js';
 import type { SamplingSettings } from './model-params.js';
 
 export type Hook = 'onInput' | 'preTool' | 'postTool' | 'onReply';
@@ -465,32 +468,43 @@ export class AgentSpecBase implements AgentSpec {
         id: 'honesty:claimIsComplete',
       });
     }
-    // THE CHANGE GATE: the domain states ONCE what its world refuses every write under, and it installs
-    // on every spec that carries a write. Declared per lane it is six chances to key on a third of the
-    // condition; declared here there is one predicate and no lane can diverge from it.
-    const gate = this.contract?.changeAllowed;
-    if (gate) {
-      if (!writeTools?.length) {
-        throw new Error(
-          `AgentSpec "${this.id}": contract.changeAllowed is declared with no contract.writeTools — the gate has no ` +
-            'surface to install on and would enforce nothing.',
-        );
-      }
-      const strayExempt = (gate.exempt ?? []).filter((t) => !writeTools.includes(t));
-      if (strayExempt.length) {
-        throw new Error(
-          `AgentSpec "${this.id}": contract.changeAllowed.exempt names tool(s) that are not in contract.writeTools: ${strayExempt.join(', ')}. ` +
-            'An exemption from a gate that never covered the tool reads as a decision nobody made.',
-        );
-      }
-      const gated = writeTools.filter((t) => !(gate.exempt ?? []).includes(t));
-      if (gated.length) {
-        this.addGuard('preTool', [...gated], precondition(gate.ok, gate.reason, { prose: gate.prose }), {
-          priority: 'changeAllowed',
-          id: 'changeAllowed:precondition',
-        });
-      }
+    // THE CONTRACT'S TOOL GUARDS: the domain states each rule ONCE, and every lane that carries the
+    // rule's target installs it at construction. The domain-wide write gate is one of these — a
+    // `precondition` bound to 'writeTools' at priority 'changeAllowed' — so no lane can key on a third
+    // of the condition.
+    this.installContractBindings();
+  }
+
+  protected installContractBindings(): void {
+    for (const b of this.contract?.guards ?? []) {
+      const target = this.resolveContractTarget(b);
+      if (!target.length) continue;
+      this.addGuard(b.hook, target, b.guard, { id: b.id, priority: b.priority ?? 'agent' });
     }
+  }
+
+  /** A named set expands to a literal string[] here — `ToolTarget` never carries a set name, because
+   *  `resolveBindings`' `target.includes(tool)` on a string is a SUBSTRING match and would attach the
+   *  guard to a tool nobody bound it to. */
+  private resolveContractTarget(b: ContractGuardBinding): string[] {
+    const exempt = b.exempt ?? [];
+    if (Array.isArray(b.target)) {
+      if (exempt.length) {
+        throw new Error(
+          `AgentSpec "${this.id}": binding "${b.id}" carries exempt with a literal target — exempt only withdraws names from a named set.`,
+        );
+      }
+      return b.target.filter((t) => this.surface.tools.includes(t));
+    }
+    const set = b.target === 'writeTools' ? [...(this.contract?.writeTools ?? [])] : [...this.destructiveTools];
+    const stray = exempt.filter((t) => !set.includes(t));
+    if (stray.length) {
+      throw new Error(
+        `AgentSpec "${this.id}": binding "${b.id}" exempts tool(s) not in ${b.target}: ${stray.join(', ')}. ` +
+          'An exemption from a gate that never covered the tool reads as a decision nobody made.',
+      );
+    }
+    return set.filter((t) => this.surface.tools.includes(t) && !exempt.includes(t));
   }
 
   /** Iff the spec declares destructiveTools: the confirm-first + throttle protocol on exactly those tools

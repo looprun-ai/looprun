@@ -67,6 +67,9 @@ const RIDERS = [
   // DomainContract.sensitiveFields is a Record<string, SensitiveMode> — rides the barrel to stay
   // nameable.
   'SensitiveMode',
+  // DomainContract.guards is a ContractGuardBinding[] whose target may name a DeclaredToolSet —
+  // both ride the barrel to stay nameable.
+  'ContractGuardBinding', 'DeclaredToolSet',
 ].sort();
 
 const INTERNAL = [

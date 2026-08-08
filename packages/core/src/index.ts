@@ -30,7 +30,7 @@ export type {
   ToolTarget,
 } from './spec.js';
 export type { AgentWorld } from './rules.js';
-export type { DomainContract } from './assembled-prompt.js';
+export type { ContractGuardBinding, DeclaredToolSet, DomainContract } from './assembled-prompt.js';
 export type { ToolDef } from './runtime/types.js';
 export { validateSpec } from './validate.js';
 
