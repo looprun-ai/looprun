@@ -585,9 +585,9 @@ against `default` (a write the world carries out on one and refuses on the other
 and `TARGET-SILENT-ON-EVERY-PRESET` evaluates the targeted gate on the case's declared preset with an
 empty action history. Both are decidable offline — no key, no model.
 
-The parity finding has one repair that closes it for every lane at once: `contract.changeAllowed`
-(chapter 03 §5). Six per-lane `precondition`s close it too; the declaration exists so that they do not
-have to.
+The parity finding has one repair that closes it for every lane at once: a `writeTools` binding at
+priority `changeAllowed` on `contract.guards` (chapter 03 §5). Six per-lane `precondition`s close it
+too; the declaration exists so that they do not have to.
 
 The programmatic form is the same five calls:
 

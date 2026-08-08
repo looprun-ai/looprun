@@ -285,24 +285,32 @@ legible", and neither is indistinguishable from "the check never ran".
 
 `addGuard(hook, target, guard)` with `target: 'any' | string[]`. A `preTool` gate may not hold a
 `behavior`- or `output`-dim guard (the constructor throws) — those belong on `onReply`/`postTool`.
-Resolution order per hook: **agent → full → base → minimal** (an agent guard's correction wins over an
-inherited layer's).
+Resolution order per hook: **agent → changeAllowed → consent → honesty → always** (an agent guard's
+correction wins over an engine-installed one).
 
-### The PROSE-RENDERING RULE — "no guard prose outside the assembled prompt"
+### The PROSE-RENDERING RULE — "no guard prose the model cannot read"
 
-**EVERY guard's `prose()` renders into the assembled prompt. The HOOK decides WHERE it lands, never WHETHER it is
-shown.** `renderAssembledPrompt` → `ruleBlocks` reads **all four guard hooks** (`onInput`, `preTool`,
-`postTool`, `onReply`):
+**EVERY guard's `prose()` reaches the model. The binding's TARGET decides WHERE it lands, never WHETHER
+it is shown.** All four guard hooks (`onInput`, `preTool`, `postTool`, `onReply`) are read:
 
-| binding | rendered section |
+| binding | rendered where |
 |---|---|
-| `target` names TOOLS — **any hook** | `## Tool rules`, grouped by tool (a reply guard bound to a tool belongs with that tool) |
+| `target` names TOOLS — **any hook** | the tool's **own description** (`composeToolDescription`): one `- ` bullet per rule under the fixed heading `RULES YOU MUST FOLLOW TO CALL THIS TOOL`, in priority order — beside the schema, at the moment of choosing the call (a reply guard bound to a tool belongs with that tool) |
 | `target:'any'`, `preTool`/`postTool` | `## Global tool rules` |
-| `target:'any'`, `onInput`/`onReply` | **`## Reply rules`** (after `## Tool rules`, before `## Governance`, so the shared assembled prompt HEAD is untouched and per-agent divergence still enters late — the shared-prefix law) |
+| `target:'any'`, `onInput`/`onReply` | **`## Input rules`** / **`## Reply rules`** (after `## Global tool rules`, before `## Governance`, so the shared assembled prompt HEAD is untouched and per-agent divergence still enters late — the shared-prefix law) |
 
-Prose is **de-duplicated globally and in order**: a string already emitted by an earlier section, or by an
-earlier hook for the SAME tool, is not repeated (keys normalize whitespace/case/terminal punctuation). Each
+Prose is **de-duplicated in order within each channel**: the `target:'any'` sections share one
+order-respecting set (a string already emitted by an earlier section is not repeated), and each tool's
+description de-duplicates its own bullets (`composeToolDescription`), so a prose bound to five tools
+renders five times — once per description. Keys normalize whitespace/case/terminal punctuation, and each
 rendered line strips the prose's own terminal `.`/`;` so the renderer's separators never double up.
+
+**Engine prose names no mechanism a surface may lack.** `prose()` is **nullary** — it cannot see the
+tool schema — so a clause conditional on a parameter would render on surfaces that have none. The
+confirmFirst prose is the shape this law forces: it says *make the call — it does not run, and the
+refusal is what puts the code under your reply*, never *pass `simulate: true` first*, because on a
+surface whose schema carries no `simulate` the second wording instructs a call the executor would
+silently act on.
 
 **WHY every hook renders.** A doctrine under which `onInput`/`onReply` prose is never rendered creates an
 implicit assumption — anyone reading a spec assumes the model knows the rule written there — which is a
@@ -425,7 +433,7 @@ by what it declares, never by which class it extends). Its constructor auto-inst
 |---|---|
 | **always** | `noDuplicateCall` (preTool `any`, `always:noDuplicateCall`) · `degenerationGuard()` (onReply, `always:degenerationGuard` — the SOLE `always` onReply guard; markup + run-away-repetition branches only, no parameters — a language-specific judgment such as self-narration is text judgment, so an author who wants one binds an `llmCheck`) |
 | `cfg.contract.writeTools` **non-empty** | `claimIsGrounded` + `claimIsComplete` (onReply, `honesty:*`) — the honesty cross-check over the world action history, fed `contract.writeTools` + `contract.outcomes` |
-| `cfg.contract.changeAllowed` **present** | `precondition(ok, reason, prose)` on `contract.writeTools` minus `exempt` (preTool, `changeAllowed:precondition`) — the domain's ONE statement of what its world refuses every write under, installed on every spec that carries a write. Declared with no `writeTools`, or with an `exempt` entry that is not a write tool, it throws at construction |
+| `cfg.contract.guards` **non-empty** | every `ContractGuardBinding` whose resolved target the lane carries — the contract declares each rule ONCE (hook, target, guard, id, priority) and every installing lane resolves the named sets against its own declarations: `'writeTools'` = `contract.writeTools ∩ lane.tools − exempt`, `'destructiveTools'` = `lane.destructiveTools − exempt`. An empty resolution installs nothing; an `exempt` entry outside its named set, or beside a literal target, throws at construction. The domain-wide write gate is the canonical binding: a `precondition` on `'writeTools'` at priority `changeAllowed`, id `changeAllowed:precondition` |
 | `cfg.destructiveTools` **non-empty** | `destructiveThrottle(destructiveTools)` (preTool, `consent:destructiveThrottle`) + `confirmFirst()` on exactly those tools (`consent:confirmFirst`) — one law: a destructive call that is not a schema-licensed simulation is gated on the typed approval code. The consent ROUTE is read off each tool's injected schema at run start (`simulatableToolNames`): `simulate` present → a denied bare act is downgraded to its own simulation; absent → the veto raises the question from the record the call names (label fallback). The LIST installs the protocol; `cfg.destructiveWhen[tool]` decides which CALLS of a listed tool it applies to (absent ⇒ every call). **⊆-validated** (each destructive tool must be in `cfg.tools` or the constructor throws), and `cfg.destructiveLabels` and `cfg.destructiveWhen` are validated the same way |
 
 So **2 kinds always install** (`noDuplicateCall` + `degenerationGuard`), the honesty cross-check pair
