@@ -234,6 +234,10 @@ export function recordToolResult(actionHistory: TurnActionHistory, name: string,
     args,
     ok,
     turnIndex: actionHistory.turnIndex,
+    // The result rides the row itself, so every reader sees it on BOTH execution paths: a world
+    // action history exists only where a world executed the call, and a self-executing tool leaves
+    // none. A FAILED call carries no result — a refusal grounds nothing.
+    ...(ok ? { result: output } : {}),
     ...(wtc ? { tookEffect: wtc.tookEffect === true } : {}),
     // PROVENANCE of the effect flag rides with it: a world that keeps its own action history ATTESTS the effect
     // per executor, while the native-tools path INFERS it from the result. Only the attested form carries

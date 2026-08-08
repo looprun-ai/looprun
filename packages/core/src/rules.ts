@@ -39,6 +39,17 @@ export interface ObservedCall {
   args: Record<string, unknown>;
   ok: boolean;
   turnIndex: number;
+  /** What this call RETURNED, on a call that SUCCEEDED — absent on a failure, where the result is a
+   *  refusal and grounds nothing. Written by the one hook that receives a tool's output on either
+   *  execution path: a world executed the call, or the tool executed itself and there is no world
+   *  action history to join against. A guard reading `ctx.observed` sees this turn's results with the
+   *  same reach `ctx.history` gives it for every sealed turn.
+   *
+   *  ```
+   *    getAsset({assetId:'ast_1'}) → {asset:{id:'ast_1',name:'Light Tower'}}
+   *    observed row                  { name:'getAsset', ok:true, result:{asset:{…}} }
+   *  ``` */
+  result?: unknown;
   resultFlags?: { requiresConfirmation?: boolean };
   /** Did this call MUTATE the world (a write that took effect), vs a pure read / a refused write? Threaded
    *  from the world's `toolCalls[].tookEffect` by the backend. Lets a reply-honesty check tell "an ACTION
