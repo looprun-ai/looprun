@@ -2,7 +2,7 @@
  * THE PARITY LAW — a condition the world refuses a write under is a condition some spec gates.
  */
 import { describe, it, expect } from 'vitest';
-import { AgentSpecBase } from '@looprun-ai/core';
+import { AgentSpecBase, precondition } from '@looprun-ai/core';
 import type { DomainContract } from '@looprun-ai/core';
 import { lintSubject } from '../src/lint-subject.js';
 import type { Subject } from '../src/subject.js';
@@ -56,10 +56,19 @@ const subject = (contract: DomainContract): Subject => {
 
 const GATED: DomainContract = {
   ...CONTRACT,
-  changeAllowed: {
-    ok: (w) => (w as unknown as { status(): string }).status() !== 'suspended',
-    reason: 'This workspace is suspended.',
-  },
+  guards: [
+    {
+      hook: 'preTool',
+      target: 'writeTools',
+      guard: precondition(
+        (w) => (w as unknown as { status(): string }).status() !== 'suspended',
+        'This workspace is suspended.',
+        { prose: 'nothing changes while the workspace is suspended' },
+      ),
+      id: 'changeAllowed:precondition',
+      priority: 'changeAllowed',
+    },
+  ],
 };
 
 describe('WRITE-REFUSED-UNGATED', () => {

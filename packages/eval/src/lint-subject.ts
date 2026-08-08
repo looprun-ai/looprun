@@ -35,8 +35,8 @@ const guardIds = (spec: AgentSpec): string[] => [
  * domain, and the engine proves them in its own suite. Demanding a per-subject case for each would
  * file the same finding against every bundle ever generated, which is how a census stops being read.
  * Every other priority stays in: `consent` arrives from this bundle's `destructiveTools`, `honesty`
- * from its `contract.writeTools`, `changeAllowed` from its `contract.changeAllowed`. Each is a
- * declaration this bundle made, so exercising it is this bundle's job.
+ * from its `contract.writeTools`, `changeAllowed` from the bundle's own `contract.guards` binding at
+ * that priority. Each is a declaration this bundle made, so exercising it is this bundle's job.
  */
 const authoredGuardIds = (spec: AgentSpec): string[] => [
   ...(spec.guards.onInput ?? []), ...(spec.guards.preTool ?? []),
@@ -245,8 +245,9 @@ function targetSilenceFindings(subject: Subject): string[] {
  * THE PARITY LAW. A world refuses a write under some condition; a preset is that condition made
  * reachable. Every lane that carries the write must have a spec-side gate that denies on that preset —
  * otherwise the refusal reaches the model as a tool failure and the lane's prose invents the reason.
- * One declaration satisfies it for every lane (`contract.changeAllowed`); six copies satisfy it too, and
- * that is the shape this law exists to make unnecessary rather than to forbid.
+ * One declaration satisfies it for every lane (a `writeTools` binding at priority `changeAllowed` on
+ * `contract.guards`); six copies satisfy it too, and that is the shape this law exists to make
+ * unnecessary rather than to forbid.
  */
 function parityFindings(subject: Subject): string[] {
   const out: string[] = [];
@@ -272,7 +273,7 @@ function parityFindings(subject: Subject): string[] {
         if (anyGateDenies(spec, world, tool)) continue;
         out.push(
           `WRITE-REFUSED-UNGATED: preset '${preset}' refuses '${tool}' and agent ${agent} carries it with no gate that denies there — ` +
-            'the refusal reaches the model as a tool failure and the reply invents its reason. Declare contract.changeAllowed, or gate the lane on the same condition',
+            'the refusal reaches the model as a tool failure and the reply invents its reason. Declare a writeTools binding at priority changeAllowed on contract.guards, or gate the lane on the same condition',
         );
       }
     }
