@@ -34,7 +34,7 @@ describe('hook x dim install matrix', () => {
     expect(() => spec().addReplyCheck(resultInvariant(() => false, 'result must be ok'))).toThrow(/cannot be installed on 'onReply'/);
     expect(() => spec().addGuard('onInput', 'any', resultInvariant(() => false, 'nope'))).toThrow(/ctx\.result/);
     // A precondition decides a pending CALL — there is none at reply time.
-    expect(() => spec().addReplyCheck(precondition(() => false, 'denied', 'the condition'))).toThrow(/cannot be installed on 'onReply'/);
+    expect(() => spec().addReplyCheck(precondition(() => false, 'denied', { prose: 'the condition' }))).toThrow(/cannot be installed on 'onReply'/);
     // A reply check reads ctx.reply — preTool, postTool and onInput have none.
     expect(() => spec().addGuard('postTool', ['createItem'], degenerationGuard())).toThrow(/ctx\.reply/);
     expect(() => spec().addGuard('onInput', 'any', degenerationGuard())).toThrow(/ctx\.reply/);
@@ -46,7 +46,7 @@ describe('hook x dim install matrix', () => {
   });
 
   it('accepts every legal combination', () => {
-    expect(() => spec().addGuard('preTool', ['createItem'], precondition(() => true, 'denied', 'the condition'))).not.toThrow();
+    expect(() => spec().addGuard('preTool', ['createItem'], precondition(() => true, 'denied', { prose: 'the condition' }))).not.toThrow();
     expect(() => spec().addGuard('postTool', ['createItem'], resultInvariant(() => true, 'result must be ok'))).not.toThrow();
     expect(() => spec().addReplyCheck(degenerationGuard())).not.toThrow();
   });

@@ -4,20 +4,24 @@
  */
 import type { Guard, AgentWorld } from '../rules.js';
 
-/** Generic state precondition: the call is allowed only while `ok(world)` holds. `prose` states the
+/** Generic state precondition: the call is allowed only while `ok(world)` holds. `opts.prose` states the
  *  CONDITION (always-rendered), separate from the deny `reason` (fires only when the condition is false).
  *
  *  The `prose ?? reason` fallback is the ONE knowingly-retained prose≠reason residue. `ok` is an opaque closure, so unlike `consentRequired` (which has a tool list) there is no
  *  parameter to derive a rule from, and a neutral default would be so generic it would tell the model
  *  nothing about WHICH condition gates the call — strictly worse than the author's own `reason`.
  *  GUARDS.md puts 2-arg `precondition` on notice under the law: write `reason` as a followable rule, or
- *  pass `prose`. */
-export function precondition<W extends AgentWorld = AgentWorld>(ok: (world: W) => boolean, reason: string, prose?: string): Guard {
+ *  pass `opts.prose`. */
+export function precondition<W extends AgentWorld = AgentWorld>(
+  ok: (world: W) => boolean,
+  reason: string,
+  opts?: { prose?: string },
+): Guard {
   return {
     kind: 'precondition',
     dim: 'run',
     check: (ctx) => (ok(ctx.world as W) ? null : reason),
-    prose: () => prose ?? reason,
+    prose: () => opts?.prose ?? reason,
   };
 }
 
@@ -27,17 +31,16 @@ export function precondition<W extends AgentWorld = AgentWorld>(ok: (world: W) =
  * Post-execution result invariant: the tool ALREADY ran; if `pred(result, world)` is false the violation
  * joins the onReply redrive set (it never rewrites the result).
  *
- * PROSE≠REASON: this kind returned `reason` verbatim as its prose, so a deny
- * text written post-hoc ("the report came back empty — you cannot summarise it") was rendered into the
- * assembled prompt as a pre-action instruction, i.e. an accusation the model reads before doing anything. `pred` is
- * an opaque closure, so nothing rule-shaped can be DERIVED from the parameters — hence an optional
- * `prose` param plus a rule-shaped (not accusatory) neutral default. Prefer passing an explicit `prose`
- * that states the invariant this tool's result must hold.
+ * PROSE≠REASON: `reason` is the deny text, written post-hoc ("the report came back empty — you cannot
+ * summarise it"), and rendering it as a pre-action instruction would put an accusation in front of a model
+ * that has done nothing yet. `pred` is an opaque closure, so nothing rule-shaped can be DERIVED from the
+ * parameters — hence `opts.prose` plus a rule-shaped (not accusatory) neutral default. Prefer passing an
+ * explicit `opts.prose` that states the invariant this tool's result must hold.
  */
 export function resultInvariant<W extends AgentWorld = AgentWorld>(
   pred: (result: unknown, world: W) => boolean,
   reason: string,
-  prose?: string,
+  opts?: { prose?: string },
 ): Guard {
   return {
     kind: 'resultInvariant',
@@ -46,7 +49,7 @@ export function resultInvariant<W extends AgentWorld = AgentWorld>(
       if (ctx.result === undefined) return null;
       return pred(ctx.result, ctx.world as W) ? null : reason;
     },
-    prose: () => prose ?? 'report a tool result only as it actually came back — when it does not hold what the request needed, say so plainly instead of presenting it as complete',
+    prose: () => opts?.prose ?? 'report a tool result only as it actually came back — when it does not hold what the request needed, say so plainly instead of presenting it as complete',
   };
 }
 

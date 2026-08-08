@@ -33,8 +33,11 @@ export function countOkCalls(
  * not a license that unlocks a new act — so `within` defaults to **UNBOUNDED**: a read from turn 1
  * legitimately grounds a turn-3 write. Pass `within` to bound it (`currentTurnIndex − depTurnIndex ≤ within`)
  * only when the domain genuinely wants the evidence to be fresh.
+ *
+ * `prose()` is the DERIVED sequencing rule (prose≠reason law) — pass `opts.prose` to override it with
+ * the author's own wording; the deny text and the check are untouched by the override.
  */
-export function requiresBefore(deps: string[], opts?: { within?: number }): Guard {
+export function requiresBefore(deps: string[], opts?: { within?: number; prose?: string }): Guard {
   const within = opts?.within;
   const ranWithin = (ctx: GuardCtx, dep: string): boolean =>
     ctx.observed.some(
@@ -51,7 +54,7 @@ export function requiresBefore(deps: string[], opts?: { within?: number }): Guar
       const missing = deps.filter((d) => !ranWithin(ctx, d));
       return missing.length ? `Do ${missing.join(' then ')} FIRST — it must run before this tool.` : null;
     },
-    prose: () => `only after ${deps.join(' → ')} has run`,
+    prose: () => opts?.prose ?? `only after ${deps.join(' → ')} has run`,
   };
 }
 
@@ -60,19 +63,19 @@ export function requiresBefore(deps: string[], opts?: { within?: number }): Guar
  *
  * PROSE/REASON SPLIT (see GUARDS.md "the prose≠reason law"): `reason` is the DENY text
  * (post-hoc, read only when the model already violated); `prose()` returns a followable RULE derived
- * from the guard's parameters, read BEFORE acting. Pass `prose` to override the derived default.
+ * from the guard's parameters, read BEFORE acting. Pass `opts.prose` to override the derived default.
  *
  * PROSE↔CHECK ALIGNMENT: the derived prose states an UNCONDITIONAL ban, not "do not call this tool
  * AGAIN in this turn" — the latter describes a repeat-detector, and this kind is not one. `check` is
  * `() => reason`, unconditional and turn-logic-free: the FIRST call is denied too. This kind is the hard
  * "not now" on a tool; the repeat-detector is `noDuplicateCall`.
  */
-export function forbidThisTurn(reason: string, prose?: string): Guard {
+export function forbidThisTurn(reason: string, opts?: { prose?: string }): Guard {
   return {
     kind: 'forbidThisTurn',
     dim: 'spatial',
     check: () => reason,
-    prose: () => prose ?? 'do not call this tool in this turn — not even once',
+    prose: () => opts?.prose ?? 'do not call this tool in this turn — not even once',
   };
 }
 

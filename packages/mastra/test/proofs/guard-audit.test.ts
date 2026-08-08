@@ -210,7 +210,7 @@ describe('resultInvariant and consentRequired do not render `reason` as prose', 
   });
 
   it('resultInvariant: an explicit prose override wins', () => {
-    const g = resultInvariant(() => true, accusation, 'report a summary only when the report has rows');
+    const g = resultInvariant(() => true, accusation, { prose: 'report a summary only when the report has rows' });
     expect(g.prose()).toBe('report a summary only when the report has rows');
   });
 

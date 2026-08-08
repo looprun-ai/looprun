@@ -485,7 +485,7 @@ export class AgentSpecBase implements AgentSpec {
       }
       const gated = writeTools.filter((t) => !(gate.exempt ?? []).includes(t));
       if (gated.length) {
-        this.addGuard('preTool', [...gated], precondition(gate.ok, gate.reason, gate.prose), {
+        this.addGuard('preTool', [...gated], precondition(gate.ok, gate.reason, { prose: gate.prose }), {
           priority: 'changeAllowed',
           id: 'changeAllowed:precondition',
         });

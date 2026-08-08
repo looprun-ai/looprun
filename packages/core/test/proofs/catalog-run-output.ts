@@ -19,7 +19,7 @@ const preconditionProof: GuardProof = {
     precondition(
       (w) => (w as any).quotaRemaining() > 0,
       'The media quota is exhausted — do not generate more media; explain the limit instead.',
-      'only while media quota remains',
+      { prose: 'only while media quota remains' },
     ),
   hook: 'preTool',
   target: ['createMedia'],

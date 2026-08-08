@@ -327,7 +327,7 @@ function installGuard(spec: AgentSpecBase, g: GuardConfig, deps: NormsDeps, outc
       // DENY POLICY: no `reason` field exists on the config, so the deny is the author's followable
       // `prose` (the condition), never a free post-hoc string that could carry the value being gated.
       const ok = compilePredicate(g, deps);
-      spec.addGuard('preTool', [g.tool], precondition(ok, g.prose, g.prose), { priority: 'agent', id });
+      spec.addGuard('preTool', [g.tool], precondition(ok, g.prose, { prose: g.prose }), { priority: 'agent', id });
       return;
     }
     case 'llmCheck': {
