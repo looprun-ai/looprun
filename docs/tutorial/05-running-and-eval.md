@@ -529,6 +529,7 @@ deterministic invariant gate.
 | `looprun-eval cert` | `certCommand({ dir, model?, bar?, date?, note? })` → `CertSummary` | eval |
 | `looprun-eval seal` | `mintSeal(dir, { targets, bar, date?, note? })` / `verifySeal(dir)` | eval |
 | `looprun-eval lint [paths…]` | `lintPaths(paths)` → `LintViolation[]` | eval |
+| `looprun-eval validate` | `validateCommand({ subject, reachedFloor? })` → `ValidateReport` | eval |
 | `…--spec-laws --subject <dir>` | `lintSpecLaws` · `lintSpecExecution` · `lintSpecQuality` · `lintSubject` | eval |
 
 ### 5.1 Preflight: five lints, no model, no spend
@@ -606,6 +607,37 @@ export async function preflight(subject: Subject): Promise<string[]> {
 <sub>excerpt · `snippets/05-running-and-eval.ts` — asserted empty in the snippets' test suite</sub>
 
 Note `lintSpecExecution` is the only `async` one: it runs the guards.
+
+`validate` is the second offline pass, and it asks a different question: not "is the source coherent"
+but "does the exam stand up when the world is actually built and the tools actually run". Five layers,
+all blocking:
+
+```
+schema       every norms/*.json and evals/cases.json parses under its own loader
+references   every target names a guard, every preset constructs, every case routes
+premise      each case's required writes replayed: can this case ever pass, and does its
+             forbidden entry actually forbid anything?
+world        preset distinguishability · simulate ≡ act identity · determinism
+disclosure   every contract.disclose slot resolves against a seeded record
+```
+
+The disclosure layer draws one distinction, and it is the whole point of running it offline:
+
+```
+{getInvoice.invoice.amountRefunded}      the field is called `refunded` — resolves in no preset,
+                                          against no seeded record        → BLOCKING
+
+{getClaim.claim.settlementAmount}=null   the field exists; this claim is under review and has
+                                          no settlement yet               → renders NA, passes
+```
+
+A failure names the tool, the slot and the fields the results DO carry, so the fix is usually the
+field name:
+
+```
+disclosure: "retireAsset" slot {getAsset.asset.serial} resolves in no preset —
+"getAsset" results carry: asset.id, asset.name, asset.status
+```
 
 ### 5.2 Run — screen the cases
 

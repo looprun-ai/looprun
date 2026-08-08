@@ -577,6 +577,19 @@ are what the ENGINE puts on the user's screen, so a conversation held in another
 to TYPE the consent token back, so an instruction they cannot read is an act that can never be agreed
 to. The TOKEN itself is engine-issued and identical whatever language the sentence around it is in.
 
+**An open approval contributes TWO engine blocks, not one.** The domain's `contract.disclose` entry for
+that tool is printed directly above its question — what agreeing would do, with `{readTool.path}` slots
+filled from the calls this conversation actually made. A tool with no entry carries its question alone.
+
+```
+Cancelling BK-1 releases the room and forfeits the 80.00 deposit.   ← contract.disclose.cancelBooking
+To confirm BK-1, reply: CONFIRM BK-1                                ← engineText.approval
+```
+
+A slot binds to the read whose RESULT names the approval's subject, so a second call of the same read
+about a different record cannot rename the act's target; a slot nothing grounds renders
+`contract.discloseMissing` (default `NA`), and the sentence is never dropped.
+
 **The domain render seam (`contract.renderClaim`) never receives the `op`.** It is handed the VERIFIED
 fields only — `target`, `outcome`, `amount` — because its output is delivered to the user verbatim and
 `op` is free agent-authored text. The parameter type (`RenderedClaim`) types `op` as `undefined`, so a
@@ -683,6 +696,7 @@ turn 1   agent:   cancelBooking({ id:'BK-1' })
          world:   { requiresConfirmation: true, id: 'BK-1' }
          screen:  Your booking BK-1 carries an 80.00 fee.
 
+                  Cancelling BK-1 releases the room and forfeits the 80.00 deposit.
                   To confirm BK-1, reply: CONFIRM BK-1
 
                   No operation was carried out on this turn.

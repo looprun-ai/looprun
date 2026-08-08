@@ -395,6 +395,7 @@ turn 1   agent:   cancelBooking({ id: 'BK-1' })
          world:   { requiresConfirmation: true, id: 'BK-1' }
          screen:  Your booking BK-1 carries an 80.00 fee.
 
+                  Cancelling BK-1 releases the room and forfeits the 80.00 deposit.
                   To confirm BK-1, reply: CONFIRM BK-1
 
                   No operation was carried out on this turn.
@@ -402,6 +403,11 @@ turn 1   agent:   cancelBooking({ id: 'BK-1' })
 turn 2   user:    "yes, CONFIRM BK-1"
          agent:   cancelBooking({ id: 'BK-1' })   → the bare acting call, allowed
 ```
+
+Two engine blocks stand under the prose, and the agent wrote neither. The first is
+`contract.disclose.cancelBooking` — what agreeing would do, with its slots filled from the booking
+this turn read (chapter 03). The second is the question. A tool the domain discloses nothing about
+carries its question alone.
 
 `"go ahead"` is a human yes and is **denied** — the question is simply asked again. That is deliberate:
 consent fails closed, because the alternative is a model deciding what a person meant.

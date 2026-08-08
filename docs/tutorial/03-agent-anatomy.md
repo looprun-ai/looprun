@@ -335,11 +335,55 @@ behavior list.
 | `outcomes?` | optional: the domain's outcome vocabulary, mapping each non-core word an agent may declare onto one of the seven core outcomes (`{ settled: 'success' }`). The domain adds words; it never adds a way around the action history |
 | `renderClaim?` | optional: the domain's wording (and language) for ONE verified claim LINE in the engine-rendered operation record. It receives the VERIFIED fields only — never the agent-authored `op`. Absent ⇒ a neutral English default naming the claim's `target` |
 | `engineText?` | optional: the ENGINE's own sentences — the record's closing lines and the confirmation question. A conversation held in another language declares them, per key, because the user has to READ the instruction whose token they type back. The token itself is engine-issued and is the same literal in every language |
+| `disclose?` | optional: one sentence per destructive tool, printed by the engine directly ABOVE that tool's own consent question — what agreeing to the act would do. `{readTool.path}` slots are filled from the turn's own reads, and the agent writes no part of it. See below |
+| `discloseMissing?` | optional: what an unresolved `disclose` slot renders. Default `NA`. The sentence is never dropped and never renders an empty gap, so it has to read correctly with the marker standing in any slot: `settlement: NA`, never `settles at NA` |
 | `sensitiveFields?` | optional: the result fields a call may not carry, each mapped to `'omit'` (delete it) or `'mask'` (keep a recognizable stub, `o•••@northside.example`). The keys are dot-suffix paths over result keys: `'customer.phone'` reaches that `phone` at any depth, a bare `'phone'` reaches every one. How far the removal reaches is decided by the seam the tool executes on, not by this declaration — see below |
 | `scrubTextFields?` | optional: the free-text fields — dot-suffix over tool ARGUMENT and result keys — whose content is pattern-scrubbed to `•••`. A field that legitimately carries contact data is simply left undeclared, so every acceptance is authored and visible in the contract |
 
 `stateBlock` is also the first place you will meet the cast in §7. Note the seed: `REFERENCE_NOW` is
 a fixed clock constant, because a tutorial world that reads `Date.now()` cannot be replayed.
+
+### The three seams that put domain words on the screen
+
+They are told apart by WHEN, not by what they say:
+
+```
+disclose      before the act    what agreeing to this would do
+renderClaim   after the act     what one verified claim did
+engineText    around both       the engine's own sentences, and their language
+```
+
+`disclose` is one string per tool, and the engine fills its slots from the records the turn read:
+
+```ts
+  disclose: {
+    cancelBooking: 'Cancelling {getBooking.booking.id} releases the room and forfeits the '
+                 + '{getBooking.booking.deposit} deposit.',
+  },
+```
+
+```
+getBooking({id:'BK-1'}) → { booking: { id: 'BK-1', deposit: '80.00' } }
+
+  Cancelling BK-1 releases the room and forfeits the 80.00 deposit.
+  To confirm BK-1, reply: CONFIRM BK-1
+```
+
+A slot binds to the read whose RESULT names the record the question is about — never simply to the
+latest call of that read, because one read tool commonly answers about two records in a turn:
+
+```
+the act is updateMemberRole(mem_1004 → owner)
+
+  getMember({memberId:'mem_1004'})  → Sam Whitfield      the person being promoted
+  getMember({})                     → Dana Okafor        the acting user
+
+  subject-bound   "Promoting Sam Whitfield to owner…"    what the user is being asked
+```
+
+A slot that resolves to nothing renders `discloseMissing`. A slot naming a field no result ever
+carries is a different thing — an authoring typo — and `looprun-eval validate` fails on it offline
+(chapter 05 §5.1).
 
 ### The two filters — the executor is never trusted
 
