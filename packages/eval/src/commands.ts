@@ -161,19 +161,19 @@ export interface ValidateCommandOptions {
 }
 
 /**
- * `looprun-eval validate` — schema + references + premise coherence over a subject, offline (no
- * model, no spend). Returns the full report; a non-empty schema / references / premise layer means
- * the subject is not fit to run. Advisory lines (reverse-coverage) are reported but never blocking.
+ * `looprun-eval validate` — schema + references + premise coherence + world model + disclosure slots
+ * over a subject, offline (no model, no spend). Returns the full report; a non-empty layer means the
+ * subject is not fit to run. Advisory lines (reverse-coverage) are reported but never blocking.
  */
 export async function validateCommand(opts: ValidateCommandOptions): Promise<ValidateReport & { ok: boolean }> {
   const log = opts.log ?? ((l: string) => process.stderr.write(l + '\n'));
   const subject = await loadSubject(opts.subject);
   const report = validateSubjectConfig(opts.subject, subject, { reachedFloor: opts.reachedFloor });
-  for (const layer of ['schema', 'references', 'premise', 'world'] as const) {
+  for (const layer of ['schema', 'references', 'premise', 'world', 'disclosure'] as const) {
     for (const line of report[layer]) log(line);
   }
   for (const line of report.advisory) log(`ADVISORY ${line}`);
-  const blocking = report.schema.length + report.references.length + report.premise.length + report.world.length;
+  const blocking = report.schema.length + report.references.length + report.premise.length + report.world.length + report.disclosure.length;
   log(blocking ? `validate: ${blocking} blocking issue(s) · ${report.advisory.length} advisory` : `validate: clean · ${report.advisory.length} advisory`);
   return { ...report, ok: blocking === 0 };
 }

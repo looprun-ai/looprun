@@ -200,7 +200,7 @@ async function preflight(
     throw new CampaignRefusal(`preflight: subject failed to load: ${(e as Error).message}`);
   }
   const report = validateSubjectConfig(subjectDir, subject);
-  const blocking = [...report.schema, ...report.references, ...report.premise];
+  const blocking = [...report.schema, ...report.references, ...report.premise, ...report.disclosure];
   for (const line of report.advisory) log(`preflight: ADVISORY ${line}`);
   if (report.advisory.length) log(`preflight: ${report.advisory.length} advisory line(s) (non-blocking)`);
   if (blocking.length) {

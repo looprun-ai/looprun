@@ -18,6 +18,10 @@
  *                    chains the replayer cannot construct (multi-turn) are SKIPPED LOUDLY and counted
  *                    against a reached-verdict FLOOR — because pass-by-inability is exactly how a
  *                    real defect survives a green board.
+ *   4. DISCLOSURE  — every `contract.disclose` slot resolves against a real seeded record, in at
+ *                    least one declared preset. A path naming a field no result ever carries is an
+ *                    author's typo and fails here; a field that exists and is empty on one record is
+ *                    a data condition the engine renders as its placeholder, and passes.
  */
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -42,6 +46,8 @@ export interface ValidateReport {
   premise: string[];
   /** World-model layers (spec §3b) — run ONLY when the subject ships `gen/world.json`; empty otherwise. */
   world: string[];
+  /** Disclosure slots — every `contract.disclose` slot resolves against a seeded record. */
+  disclosure: string[];
   /** Advisory-only lines (reverse-coverage) — reported, but not a failure. */
   advisory: string[];
 }
@@ -435,6 +441,170 @@ export function checkWorldModel(subjectDir: string): string[] {
   return issues;
 }
 
+// ── Stage 5: DISCLOSURE SLOTS ────────────────────────────────────────────────────────────────────
+
+/** `{` identifier (`.` identifier)* `}` — the grammar the engine renders. */
+const DISCLOSE_SLOT = /\{([A-Za-z_$][A-Za-z0-9_$]*(?:\.[A-Za-z_$][A-Za-z0-9_$]*)*)\}/g;
+
+/** How many distinct identity values one preset contributes before the sweep stops widening. */
+const IDENTITY_CAP = 200;
+/** How many field paths a failure line offers back to the author. */
+const OFFERED_FIELDS = 8;
+
+/** Structural success on a replayed read — the shape the engine's own check keys on. */
+function structurallyOk(r: unknown): boolean {
+  if (r === undefined) return false;
+  if (r && typeof r === 'object') {
+    const o = r as Record<string, unknown>;
+    if (o.ok === false || o.success === false || o.PREREQ_NOT_MET === true || typeof o.error === 'string') return false;
+  }
+  return true;
+}
+
+/** Every distinct string a preset's projection carries — the identity values a read can be invoked
+ *  with. A world exposing no `projection()` contributes none, and the layer stands down for it. */
+function projectionStrings(world: AgentWorld): string[] {
+  const project = (world as { projection?: unknown }).projection;
+  if (typeof project !== 'function') return [];
+  const seen = new Set<string>();
+  const visit = (v: unknown): void => {
+    if (seen.size >= IDENTITY_CAP) return;
+    if (typeof v === 'string') {
+      if (v.trim()) seen.add(v);
+      return;
+    }
+    if (Array.isArray(v)) return void v.forEach(visit);
+    if (v !== null && typeof v === 'object') return void Object.values(v as Record<string, unknown>).forEach(visit);
+  };
+  visit((project as () => unknown).call(world));
+  return [...seen];
+}
+
+/** One tool's declared arg shape: which args are required, and each declared type. */
+function argShape(subject: Subject, tool: string): { required: string[]; types: Record<string, string> } | undefined {
+  const def = subject.toolDefs?.find((d) => d.name === tool);
+  if (!def) return undefined;
+  const schema = def.inputSchema as { required?: unknown; properties?: Record<string, { type?: unknown }> } | undefined;
+  const required = Array.isArray(schema?.required) ? schema.required.filter((x): x is string => typeof x === 'string') : [];
+  const types: Record<string, string> = {};
+  for (const [k, v] of Object.entries(schema?.properties ?? {})) types[k] = typeof v?.type === 'string' ? v.type : 'string';
+  return { required, types };
+}
+
+/** The dot paths a result carries down to its value leaves — what a failure line offers instead. */
+function leafPaths(v: unknown, prefix = '', out: string[] = []): string[] {
+  if (out.length >= 40) return out;
+  if (v === null || typeof v !== 'object') {
+    if (prefix) out.push(prefix);
+    return out;
+  }
+  if (Array.isArray(v)) {
+    if (v.length) leafPaths(v[0], prefix ? `${prefix}[0]` : '[0]', out);
+    return out;
+  }
+  for (const [k, val] of Object.entries(v as Record<string, unknown>)) leafPaths(val, prefix ? `${prefix}.${k}` : k, out);
+  return out;
+}
+
+/** Walk a dot path over a result; a step off a non-object yields nothing. */
+function walkPath(result: unknown, steps: readonly string[]): unknown {
+  let current = result;
+  for (const step of steps) {
+    if (current === null || typeof current !== 'object') return undefined;
+    current = (current as Record<string, unknown>)[step];
+  }
+  return current;
+}
+
+/**
+ * Every `contract.disclose` slot resolves against a real seeded record, in at least one declared preset.
+ *
+ * THE RECEPTION TRAP this avoids: a read invoked without its schema-required args refuses at
+ * RECEPTION in every preset — `getAsset({})` errors everywhere — and that refusal says nothing about
+ * the slot. So each read is invoked once per identity value the preset's projection carries, with
+ * every schema-required string argument set to that value; a path is proven by any result that comes
+ * back structurally ok.
+ *
+ * ```
+ *   {getInvoice.invoice.amountRefunded}      the field is called `refunded` — resolves in no preset,
+ *                                            against no seeded record.            → FAILS here
+ *   {getClaim.claim.settlementAmount}=null   the field exists; this claim is under review and has
+ *                                            no settlement yet.                   → renders 'NA'
+ * ```
+ *
+ * A slot whose read tool sits on no lane carrying the disclosed tool is the same class of error: the
+ * read can never have happened, so the slot always renders the placeholder.
+ */
+export function checkDisclosureSlots(subject: Subject): string[] {
+  const disclose = subject.contract?.disclose;
+  if (!disclose || !Object.keys(disclose).length) return [];
+
+  const issues: string[] = [];
+  const presets = [...new Set([...(subject.cases ?? []).map((c) => c.setup?.preset ?? 'default'), 'default'])];
+
+  for (const [tool, template] of Object.entries(disclose)) {
+    // The lanes that carry the disclosed tool — the only surfaces a slot's read could have run on.
+    const lanes = Object.values(subject.specs ?? {}).filter((s) => s.surface.tools.includes(tool));
+    const reachable = new Set(lanes.flatMap((s) => s.surface.tools));
+
+    for (const match of template.matchAll(DISCLOSE_SLOT)) {
+      const [readTool, ...steps] = match[1].split('.');
+      if (lanes.length && !reachable.has(readTool)) {
+        issues.push(
+          `disclosure: "${tool}" slot ${match[0]} names read tool "${readTool}", which is on no lane carrying "${tool}" — the read can never have happened, so the slot always renders the placeholder`,
+        );
+        continue;
+      }
+      const shape = argShape(subject, readTool);
+      if (!shape) {
+        issues.push(`disclosure: "${tool}" slot ${match[0]} names read tool "${readTool}", which has no toolDef`);
+        continue;
+      }
+      if (!steps.length) {
+        issues.push(`disclosure: "${tool}" slot ${match[0]} walks no path — a slot renders a value, and "${readTool}"'s whole result is a record`);
+        continue;
+      }
+
+      let resolved = false;
+      const carried = new Set<string>();
+      for (const preset of presets) {
+        if (resolved) break;
+        let world: AgentWorld;
+        try {
+          world = subject.makeWorld(preset);
+        } catch {
+          continue; // a preset that throws is the references layer's finding, not this one's
+        }
+        for (const identity of projectionStrings(world)) {
+          const args: Record<string, unknown> = {};
+          for (const key of shape.required) {
+            const type = shape.types[key] ?? 'string';
+            args[key] = type === 'number' ? 1 : type === 'boolean' ? false : identity;
+          }
+          let result: unknown;
+          try {
+            result = world.exec(readTool, args);
+          } catch {
+            continue;
+          }
+          if (!structurallyOk(result)) continue;
+          for (const p of leafPaths(result)) carried.add(p);
+          if (walkPath(result, steps) !== undefined) {
+            resolved = true;
+            break;
+          }
+        }
+      }
+
+      if (!resolved) {
+        const offer = [...carried].sort().slice(0, OFFERED_FIELDS).join(', ') || '(no result came back ok in any preset)';
+        issues.push(`disclosure: "${tool}" slot ${match[0]} resolves in no preset — "${readTool}" results carry: ${offer}`);
+      }
+    }
+  }
+  return issues;
+}
+
 // ── Orchestration ────────────────────────────────────────────────────────────────────────────────
 
 /** Run all three layers. `subjectDir` feeds the schema layer (JSON on disk); `subject` is the loaded
@@ -447,6 +617,7 @@ export function validateSubjectConfig(subjectDir: string, subject: Subject, opts
     references: references.blocking,
     premise: premise.blocking,
     world: checkWorldModel(subjectDir),
+    disclosure: checkDisclosureSlots(subject),
     advisory: [...references.advisory, ...premise.advisory],
   };
 }
