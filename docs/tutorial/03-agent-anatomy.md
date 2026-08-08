@@ -613,11 +613,12 @@ past it" is not a failure mode here. Two laws bound that: never scope tools by w
 rule that genuinely needs to judge conversation text is an `llmCheck` (chapter 04).
 
 **`ToolTarget` — which tools it applies to:** an array of tool names, or `'any'`. It has a second
-job most people meet by accident: it decides where the rule's prose is *printed*. Naming tools files
-the prose under `## Tool rules`, grouped per tool; `'any'` files it under `## Global tool rules`,
-`## Input rules` or `## Reply rules` depending on the hook. On `onInput`/`onReply` the target is
-ignored by the check but not by the renderer — so use `'any'` there unless that section is genuinely
-where you want the text.
+job most people meet by accident: it decides where the rule's prose is *printed*. Naming tools puts
+the prose in each named tool's **own description**, as a bullet under
+`RULES YOU MUST FOLLOW TO CALL THIS TOOL`; `'any'` files it in the assembled prompt under
+`## Global tool rules`, `## Input rules` or `## Reply rules` depending on the hook. On
+`onInput`/`onReply` the target is ignored by the check but not by the renderer — so use `'any'`
+there unless the tool description is genuinely where you want the text.
 
 Here is "never double-book", bound:
 
