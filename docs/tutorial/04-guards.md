@@ -128,6 +128,7 @@ interface ObservedCall {
   args: Record<string, unknown>;
   ok: boolean;                                          // did the call succeed
   turnIndex: number;                                    // which turn it happened on
+  result?: unknown;                                     // what it returned, on a call that succeeded
   resultFlags?: { requiresConfirmation?: boolean };     // the simulation's asking answer
   tookEffect?: boolean;                                 // did it MUTATE the world (vs a read)
   report?: string;                                      // the AUTHORED sentence riding this call
@@ -404,10 +405,10 @@ turn 2   user:    "yes, CONFIRM BK-1"
          agent:   cancelBooking({ id: 'BK-1' })   → the bare acting call, allowed
 ```
 
-Two engine blocks stand under the prose, and the agent wrote neither. The first is
-`contract.disclose.cancelBooking` — what agreeing would do, with its slots filled from the booking
-this turn read (chapter 03). The second is the question. A tool the domain discloses nothing about
-carries its question alone.
+Two engine blocks stand under the prose, and the agent wrote neither. The first is the domain's
+`contract.disclose.cancelBooking` — what agreeing would do, with its `{readTool.path}` slots filled from
+the booking this turn read (chapter 03). The second is the question. A tool the domain discloses nothing
+about carries its question alone.
 
 `"go ahead"` is a human yes and is **denied** — the question is simply asked again. That is deliberate:
 consent fails closed, because the alternative is a model deciding what a person meant.
@@ -416,7 +417,8 @@ consent fails closed, because the alternative is a model deciding what a person 
 an identity key. A tool that acts on no identifiable record declares `destructiveLabels` — the words the
 question is built from — and without one it can raise no question, so it never runs. A conversation in
 another language declares `engineText`, because the user has to be able to READ the instruction they are
-being asked to type back.
+being asked to type back, and `disclose` beside it, because the sentence above that instruction is read
+by the same person.
 
 **`valueFromUser` is the sibling, one moment earlier.** Consent is about an ACT; `valueFromUser` is about
 a VALUE your agent fills in on the user's behalf. It allows only what the person actually said, compared
