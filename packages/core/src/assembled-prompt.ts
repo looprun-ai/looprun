@@ -90,6 +90,31 @@ export interface DomainContract {
    *  {@link renderClaim}, which words one CLAIM; this words what the engine says around them, and the
    *  consent question is the part that has to be readable — the user types its token back. */
   engineText?: Partial<EngineText>;
+  /** What agreeing to a destructive act WOULD DO, one sentence per tool, printed by the engine
+   *  directly above that tool's own consent question. The agent writes no part of it.
+   *
+   *  A `{readTool.path}` slot is filled from the latest successful call of `readTool` in this
+   *  conversation whose RESULT names the approval's subject — never simply the latest call, because
+   *  one read tool commonly answers about two records in a turn:
+   *
+   *  ```
+   *    disclose: { retireAsset: 'Retiring {getAsset.asset.id} ({getAsset.asset.name}) takes it out '
+   *                           + 'of the rentable fleet for good.' }
+   *
+   *    getAsset({assetId:'ast_ltwr01'}) → {asset:{id:'ast_ltwr01',name:'Allmand Light Tower'}}
+   *
+   *    → Retiring ast_ltwr01 (Allmand Light Tower) takes it out of the rentable fleet for good.
+   *      To confirm ast_ltwr01, reply: CONFIRM AST_LTWR01
+   *  ```
+   *
+   *  A slot that resolves to nothing renders {@link discloseMissing}; the sentence is never dropped
+   *  and never renders an empty gap, so it has to read correctly with the marker standing in any slot
+   *  (`settlement: NA`, not `settles at NA`). Slot grammar is `{` identifier (`.` identifier)* `}`;
+   *  any other brace pair renders literally. Distinct from {@link renderClaim}, which words an act
+   *  that HAPPENED — this words one that has not. */
+  disclose?: Record<string, string>;
+  /** What an unresolved {@link disclose} slot renders. Default `'NA'`. */
+  discloseMissing?: string;
   /** The domain's WRITE tools — the ones that MUTATE the world (vs pure reads). The honesty cross-check
    *  (`claimIsGrounded` / `claimIsComplete`, auto-installed when this is non-empty) reads it to ground a
    *  `success` claim against an EFFECTED write and to demand every effected write be reported. Same list
