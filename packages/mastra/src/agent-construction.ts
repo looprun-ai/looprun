@@ -6,13 +6,21 @@
  * instructions and the pass-through Agent options. Everything here runs ONCE, at construction,
  * and nothing here touches a turn; `agent.ts` keeps the governed-turn machine.
  *
- * The order of the checks is load-bearing and preserved verbatim from the pre-split constructor:
+ * The native/world split is about EXECUTION only — a native tool executes itself, a world tool routes
+ * through `world.exec` — and BOTH paths declare their surface in `toolDefs` (gen/tools.json): that
+ * file is what guard prose and certification compose from. In native mode the file is RECONCILED
+ * against the live host tools before anything composes from it (`reconcileNativeSurface`), while the
+ * certification drift gate below keeps fingerprinting the LIVE schemas — the file describes the host,
+ * the seal describes the certified surface, and neither check can stand in for the other.
+ *
+ * The order of the checks is load-bearing:
  * contract → mode exclusivity → world presence → spec warnings → surface intersection →
- * tool build → certification drift gate → static instructions.
+ * reconciliation + tool build → certification drift gate → static instructions.
  */
 import { validateSpec } from '@looprun-ai/core';
 import type { AgentWorld, DomainContract } from '@looprun-ai/core';
-import { renderTurnPrompt } from '@looprun-ai/core/internal';
+import { composeToolDescription, renderTurnPrompt } from '@looprun-ai/core/internal';
+import { reconcileNativeSurface } from './reconcile-surface.js';
 import type { LoopRunAgentConfig } from './agent.js';
 import type { WorldFactory } from './session.js';
 import { buildTerminalTools, buildWorldTools } from './tools.js';
@@ -53,11 +61,17 @@ export function resolveConstruction<W extends AgentWorld = AgentWorld>(
   if (!contract && !spec.surface.systemPrompt) {
     throw new Error(`LoopRunAgent "${spec.id}": no contract — pass config.contract or set spec.contract.`);
   }
-  if (config.tools && (config.world || config.toolDefs)) {
-    throw new Error(`LoopRunAgent "${spec.id}": pass EITHER native tools (tools[+stateView]) OR world+toolDefs — not both.`);
+  if (config.tools && config.world) {
+    throw new Error(`LoopRunAgent "${spec.id}": pass EITHER native tools (tools+toolDefs[+stateView]) OR world+toolDefs — not both.`);
   }
   if (!config.tools && !config.world) {
     throw new Error(`LoopRunAgent "${spec.id}": a world (or native tools) is required.`);
+  }
+  if (config.tools && !config.toolDefs?.length) {
+    throw new Error(
+      `LoopRunAgent "${spec.id}": native tools require toolDefs — the declared surface (gen/tools.json) is ` +
+        'what guard prose and certification compose from. Produce it with the surface intake step and pass it here.',
+    );
   }
   const warnings = validateSpec(spec);
   if (warnings.length) {
@@ -98,9 +112,17 @@ export function resolveConstruction<W extends AgentWorld = AgentWorld>(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let tools: Record<string, any>;
   if (nativeToolsMode) {
+    // The declared surface file must describe THIS host before anything composes from it.
+    reconcileNativeSurface(config.toolDefs!, config.tools!, nativeActiveNames, spec.id);
+    // The wrap: the host's own `execute` (a native tool executes itself), the COMPOSED description —
+    // the declared business sentence plus the prose of every binding that targets the tool. This is
+    // the only channel a tool-scoped rule reaches the model through on this path.
+    const defByName = new Map(config.toolDefs!.map((d) => [d.name, d]));
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const admitted: Record<string, any> = {};
-    for (const t of nativeActiveNames) admitted[t] = config.tools![t];
+    for (const t of nativeActiveNames) {
+      admitted[t] = { ...config.tools![t], description: composeToolDescription(defByName.get(t)!, spec) };
+    }
     tools = { ...admitted, ...buildTerminalTools(getSession) };
   } else {
     tools = buildWorldTools(config.toolDefs ?? [], surface, getSession, spec, contract);

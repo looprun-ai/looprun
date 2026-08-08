@@ -283,7 +283,12 @@ describe('LoopRunAgent — review regressions', () => {
     const spec = new AgentSpecBase({
       id: 'searcher', mode: 'M', persona: 'You are the search agent.', tools: ['search'], contract: CONTRACT,
     });
-    const agent = new LoopRunAgent({ spec, tools: { search }, model: scripted.model });
+    const agent = new LoopRunAgent({
+      spec,
+      tools: { search },
+      toolDefs: [{ name: 'search', description: 'Search.', inputSchema: { type: 'object', properties: { q: { type: 'string' } } } }],
+      model: scripted.model,
+    });
     const res = await agent.generate('find x');
     expect(executed).toBe(true);
     expect(res.text).toBe(nothingDone('Found it.'));

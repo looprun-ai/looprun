@@ -286,7 +286,17 @@ describe('L4 — destructiveThrottle in native-tools mode', () => {
     } as never);
     spec.addGuard('preTool', ['wipe'], destructiveThrottle(['wipe']), { id: 'agent:throttle' });
     return new LoopRunAgent({
-      spec, tools: { wipe: wipeTool(log) }, contract: FIXTURE_DOMAIN,
+      spec, tools: { wipe: wipeTool(log) },
+      toolDefs: [{
+        name: 'wipe',
+        description: 'Wipe an account.',
+        inputSchema: {
+          type: 'object',
+          properties: { account: { type: 'string' }, simulate: { type: 'boolean' } },
+          required: ['account'],
+        },
+      }],
+      contract: FIXTURE_DOMAIN,
       // Native mode has no world: the state reads FIXTURE_DOMAIN.stateBlock makes come from the view.
       stateView: { itemCount: () => 0, hasPrimary: () => false, quotaRemaining: () => 100 },
       model: fakeLLM(script).model, redrives: 0,

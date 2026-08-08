@@ -48,7 +48,8 @@
     "node": ">=22"
   },
   "dependencies": {
-    "@looprun-ai/core": "workspace:^"
+    "@looprun-ai/core": "workspace:^",
+    "zod-to-json-schema": "^3.25.2"
   },
   "peerDependencies": {
     "@mastra/core": "^1.42.0",
