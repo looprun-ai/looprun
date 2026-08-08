@@ -65,8 +65,18 @@ no domain fact, and a fact with nowhere to live ends up duplicated in `## Behavi
 ```
 
 `check` is untouched. A call that passes no `prose` renders the derived sentence, so no existing
-subject moves a byte. This matches the override already carried by `forbidThisTurn`, `precondition`
-and the two kinds in `guards/world.ts`.
+subject moves a byte.
+
+The override already exists on four kinds and arrives two different ways:
+
+```
+positional   forbidThisTurn(reason, prose?)        precondition(ok, reason, prose?)
+in opts      maxCalls(…, { scope, prose })         requiresBefore(…, { within, prose })   ← new
+```
+
+Both forms are normalised to `opts.prose` in the same change. `flow.ts` breaks either way, the
+package is pre-1.0, and a single convention is what makes "pass `prose` to override the derived
+default" a rule an author can follow without checking each signature.
 
 ### 3.2 · The contract declares tool guards with the spec's own verb
 
@@ -74,10 +84,16 @@ One verb, one shape, two scopes. `DomainContract` gains a binding list whose ent
 quadruple `addGuard` takes.
 
 ```ts
+/** The only sets a binding may name. `writeTools` is a contract field; `destructiveTools` is
+ *  declared per lane (`AgentSpecConfig.destructiveTools`) and resolves against the INSTALLING
+ *  lane, which is what makes a contract-level "every destructive tool" binding mean the right
+ *  thing on each desk. */
+export type DeclaredToolSet = 'writeTools' | 'destructiveTools';
+
 export interface ContractGuardBinding {
   hook: Hook;
-  /** Literal tool names, or the NAME of a set the contract declares (`writeTools`,
-   *  `destructiveTools`). A named set is expanded before it becomes a ToolTarget — see §3.3. */
+  /** Literal tool names, or the name of a declared set. A named set is expanded before it
+   *  becomes a ToolTarget — see §3.3. */
   target: string[] | DeclaredToolSet;
   guard: Guard;
   id: string;
@@ -89,6 +105,17 @@ export interface ContractGuardBinding {
 
 A lane installs a contract binding when — and only when — its own `tools` surface intersects the
 resolved target. A lane without `retireAsset` receives nothing.
+
+`writeTools` and `destructiveTools` resolve from different places, and the difference is load-bearing:
+
+```
+'writeTools'        contract.writeTools ∩ lane.tools − exempt      one list, domain-wide
+'destructiveTools'  lane.destructiveTools            − exempt      already lane-scoped
+```
+
+`DomainContract` declares no `destructiveTools` field and gains none. A desk decides which of its own
+tools are destructive — `placeHold` is destructive at workspace scope and not at booking scope — so a
+domain-wide list would be a claim no desk could honour.
 
 ### 3.3 · A named set expands at install time — it never becomes a `ToolTarget`
 
@@ -128,6 +155,12 @@ that set". With §3.2 it does.
 The `exempt ⊆ writeTools` validation moves onto the binding, where every named-set binding gets it
 rather than one field alone.
 
+**A migration detail that moves bytes.** Today the install skips the lane intersection —
+`writeTools.filter(t => !exempt.includes(t))` — and §3.2's rule intersects. The CHECK is unchanged,
+because it matches on the tool actually called, but the installed `target` array shrinks to the
+lane's own surface. Any stability test that reads installed bindings will move, and must be updated
+to the new arrays rather than relaxed.
+
 ### 3.5 · Priority: nothing new, nothing moves
 
 **No priority tier is added.** A contract-declared guard is authored governance of the same nature as a
@@ -148,8 +181,11 @@ body — so contract bindings precede lane bindings deterministically.
 
 **The id namespace is provenance, not mechanism.** `resolveBindings` sorts on `binding.priority`; it
 never reads the id. Contract-declared guards mint ids under `tool:` (`tool:terminalExitReadsTheAsset`)
-so a reader can tell a domain guard from a lane guard. `validate` learns `tool:` as a legitimate
-namespace alongside `agent:` and the engine tiers.
+so a reader can tell a domain guard from a lane guard.
+
+No namespace whitelist exists anywhere and none is added. `looprun-eval validate` resolves a case
+target against the assembled inventory — `if (!inventory.has(t))` — so a `tool:` id validates the
+moment its binding exists. There is nothing to teach it.
 
 ### 3.6 · The prose lands in the tool description
 
@@ -174,22 +210,33 @@ that tool, `; `-joined in priority order — the same order `## Tool rules` used
                     machine off these books entirely, so say that from the record before you put the
                     act up
                   - nothing in this workspace changes while it is suspended
-                  - a destructive action: make the call, read the approvalRequest back, and put the
-                    operator's approval code on the retry"
+                  - a destructive action: make the call — it does not run, and the refusal is what
+                    puts the code under your reply for the user to type back. Your reply must say
+                    what that call would do and to which record, from what you read. The call runs
+                    only when their next message carries that code, never on the strength of
+                    anything you say
+                  - at most one destructive action per turn — a call that changed nothing does not
+                    count"
 }
 ```
+
+Every rule line is a `prose()` return value verbatim. The composer quotes; it never paraphrases, and
+it never names an engine identifier — the consent line above says "the code under your reply", not
+`approvalRequest`, for the reason §5 legislates.
 
 The business sentence and the governance sentence stay distinguishable — the heading is the boundary —
 while sitting where the model reads them at the instant it decides to call.
 
 ### 3.7 · `## Tool rules` leaves the system prompt
 
-Nothing is duplicated. `assembled-prompt.ts` stops emitting `SECTION_TOOL`; the per-tool `seenForTool`
-de-duplication that section owned goes with it. `## Global tool rules` (`target: 'any'`) stays: it
+Nothing is duplicated. `assembled-prompt.ts` stops emitting `SECTION_TOOL`. The per-tool `seenForTool`
+de-duplication that section owned is not deleted — it MOVES into `composeToolDescription`, which needs
+it for the same reason the section did: two bindings whose `prose()` returns identical bytes for one
+tool would otherwise print the sentence twice. `## Global tool rules` (`target: 'any'`) stays: it
 governs every tool and has no single description to live in.
 
-The PROSE-RENDERING RULE holds — every guard's prose still reaches the model. The routing table gains
-one row:
+The PROSE-RENDERING RULE holds on both execution paths, which is what §3.9 is for. The routing table
+gains one row:
 
 ```
 target names TOOLS, preTool/postTool   → the tool's own description      ← changed
@@ -199,12 +246,68 @@ target === 'any', onInput              → `## Input rules`
 target === 'any', onReply              → `## Reply rules`
 ```
 
-### 3.8 · The seal hashes the composed surface
+### 3.8 · The seal keeps hashing inputs
 
-`looprun-eval seal` hashes the subject's tool surface. After §3.6 the model reads a description the
-raw `tools.json` no longer states, so a seal over the raw file would certify a surface that does not
-exist. The seal hashes the COMPOSED description — still a deterministic function of two sealed inputs
-(`tools.json` + the contract's bindings), because `prose()` is nullary.
+`looprun-eval seal` reads bytes: `sealedFiles` already covers both halves of the composition —
+`gen/tools.json` and `norms/**`, where the bindings live — and `prose()` is nullary, so the composed
+description is a deterministic function of two sealed inputs. Hashing it as an OUTPUT would add
+nothing a change to either input does not already void.
+
+It would also cost something real. Today the seal is byte reading; hashing the output makes it
+IMPORT and execute subject code to resolve bindings. And the argument would not stop at tools: the
+assembled prompt is composed from sealed inputs the same way and is not hashed as an output either.
+The seal treats both channels alike — inputs only.
+
+The runtime drift gate is unaffected. `surfaceFingerprint` covers resolved names plus schemas, and
+§3.6 changes descriptions, not schemas.
+
+### 3.9 · Native tools declare their surface in `tools.json` like everything else
+
+Both execution paths compose the same way. There is no second rule for MCP.
+
+Today they diverge, and §3.6 alone would make the divergence a hole. A native host hands over ready
+tools and the engine admits them whole:
+
+```ts
+// packages/mastra/src/agent-construction.ts:103
+for (const t of nativeActiveNames) admitted[t] = config.tools![t];   // pure passthrough
+```
+
+With `## Tool rules` gone, a host that registers `cancelBooking` natively gets `confirmFirst` VETOING
+the call while its prose reaches the model nowhere — the invisible rule the PROSE-RENDERING RULE
+exists to forbid, correctable only by redrive.
+
+**The surface is read from the MCP server ONCE and written to `gen/tools.json`.** From then on the
+declared surface is a file, identical in kind on both paths, and the engine composes from it. What
+stays native is EXECUTION.
+
+```
+                        declares the surface        executes the call
+world seam              gen/tools.json              world.exec(name, args)
+native / MCP            gen/tools.json              the host's own tool
+```
+
+Three consequences, each a real change:
+
+```
+agent-construction:56   `tools && toolDefs` THROWS today. Native + toolDefs becomes the
+                        normal case: the error narrows to `tools && world`.
+
+agent-construction:103  the passthrough becomes a wrap — the host's `execute` is kept,
+                        `description` is replaced by composeToolDescription(def, spec).
+
+agent-construction:115  `schemaOf` reads `toolDefs` on both paths, so surfaceFingerprint
+                        stops branching on the mode.
+```
+
+The read is a pipeline step, not a runtime one: a surface fetched per run is a surface nobody sealed.
+It belongs beside G1 intake, where a given `tools.json` is already the input, and the resulting file
+is sha-pinned like any other. A host tool whose live schema has drifted from the pinned file is
+exactly what the drift gate is for.
+
+The skill law of §6.2 holds unchanged here: the descriptions are the business's own words. The
+pipeline transcribes what MCP reports and writes no governance into the file — the governance arrives
+at compose time, from the bindings.
 
 ## 4 · Subject changes — `subjects/atlas`
 
@@ -342,7 +445,7 @@ The engine source carries all four strings. What the bench MEASURES with does no
 |---|---|
 | `looprun` · `packages/core/src/{guards/consent.ts, assembled-prompt.ts}` | committed — `0a45d6b` |
 | `looprun` · `packages/core/test/prompt-stability.test.ts` | committed — `0a45d6b`, asserts string 1 |
-| `looprun` · `packages/eval/src/{run.ts, commands.ts}` cache-read column (§2) | modified, uncommitted |
+| `looprun` · `packages/eval/src/{run.ts, commands.ts}` cache-read column (§2) | committed — `cf303d6` |
 | `agentspec-bench` · `subjects/atlas/norms/{claims,rentals,workspace}/spec.ts` | committed — `16ace49` |
 | `agentspec-bench` · `node_modules/.pnpm/@looprun-ai+core@0.16.0/…/dist/**` | hand-copied build — **not distributable** |
 | `agentspec-bench` · `package.json` | `"@looprun-ai/core": "0.16.0"` — the npm tarball still ships the OLD text |
@@ -387,6 +490,8 @@ a doc nor a comment narrates the change or cites the evidence behind a rule.
 | `GUARDS.md` §2 | the PROSE-RENDERING routing table (§3.7); the prose≠reason law is unchanged and must not be restated |
 | `docs/reference` on `DomainContract` | `changeAllowed` is gone as a field; the binding list and named sets are documented |
 | `packages/core/src/spec.ts` header | the id-namespace paragraph gains `tool:`; the priority table is unchanged and must stay unchanged in the prose |
+| `packages/core/src/spec.ts` — `GuardBinding.target` JSDoc | it currently routes the reader to `## Tool rules` ("prints its prose under `## Tool rules`") and states the onInput/onReply caveat in those terms. Both halves are rewritten to §3.7's table |
+| `packages/mastra/src/agent-construction.ts` header | the native/world split is about EXECUTION only; both paths declare their surface in `tools.json` (§3.9) |
 | `packages/core/src/assembled-prompt.ts` header | the section list drops `Tool rules`; the shared-prefix law paragraph now states where tool prose lives |
 | `GUARDS.md` — a new law on prose | engine prose names no mechanism a surface may lack. A guard's `prose()` is nullary and cannot see the schema, so a clause conditional on a parameter renders on surfaces that have none (§5) |
 
@@ -489,7 +594,7 @@ so anyone can recompute it; running 19 costs two cases and risks nothing.
 3  report per case: r2 verdict → r4 verdict, and the cause for every one still failing
 ```
 
-**What the step can and cannot say.** 17 cases at N=1 is a diagnostic, not a band. It answers whether
+**What the step can and cannot say.** 19 cases at N=1 is a diagnostic, not a band. It answers whether
 the named cause moved. It does not produce a rate, a premium or a certificate, and no seal is minted
 from it.
 
