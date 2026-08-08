@@ -19,6 +19,7 @@ const dump = (caseId: string, pass: boolean, violations: string[] = []): CaseDum
   targets: [],
   tokensIn: 1,
   tokensOut: 1,
+  tokensCacheRead: null,
 });
 
 function writeRunDir(): { dir: string; dumps: CaseDump[] } {

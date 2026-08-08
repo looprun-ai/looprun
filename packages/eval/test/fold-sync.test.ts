@@ -24,6 +24,7 @@ function dump(caseId: string, reply: string, resultSummary?: string): CaseDump {
     targets: [],
     tokensIn: 0,
     tokensOut: 0,
+    tokensCacheRead: null,
   };
 }
 

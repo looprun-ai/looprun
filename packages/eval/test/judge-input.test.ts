@@ -28,6 +28,7 @@ function dump(caseId: string, turns: CaseDump['turns']): CaseDump {
     targets: ['agent:onlyWorkshopAssetsAreCompleted'],
     tokensIn: 100,
     tokensOut: 50,
+    tokensCacheRead: null,
   };
 }
 
