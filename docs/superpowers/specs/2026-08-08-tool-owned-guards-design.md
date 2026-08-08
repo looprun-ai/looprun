@@ -1,5 +1,10 @@
 # Tool-owned guards — design spec
 
+> **CLOSED — 2026-08-08.** Implemented and released as **v0.17.0**
+> (plan: `docs/superpowers/plans/2026-08-08-tool-owned-guards.md`, executed in full; proof record:
+> `governance/proofs/2026-08-08-tool-owned-guard-bindings.md`). §6.2 shipped as `agentspec`
+> `b9eb9ca`; §4 landed on `agentspec-bench` `main`.
+
 A guard that governs a tool belongs to the tool, is declared once for the domain, and reaches the
 model in the tool's own description. This spec covers the engine change, the subject change, the
 documentation and skill review that follow from it, and the measurement that closes it.

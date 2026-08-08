@@ -1,5 +1,12 @@
 # Tool-Owned Guards Implementation Plan
 
+> **CLOSED — 2026-08-08.** All 9 tasks executed inline and merged to `main`; released as
+> **v0.17.0** (tag on origin). Proof record:
+> `governance/proofs/2026-08-08-tool-owned-guard-bindings.md`. Follow-ons from the out-of-scope
+> table: the agentspec skill shipped (`agentspec` `b9eb9ca`); the atlas work lives on
+> `agentspec-bench` `main` (`80f7372` and below), with the `0.17.0` dependency pins still
+> uncommitted there at closing time.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** A guard that governs a tool is declared once on the domain contract and reaches the model in the tool's own description, on both execution paths (world seam and native/MCP).
@@ -49,7 +56,7 @@
   - `precondition<W>(ok: (world: W) => boolean, reason: string, opts?: { prose?: string }): Guard`
   - `resultInvariant<W>(pred: (result: unknown, world: W) => boolean, reason: string, opts?: { prose?: string }): Guard`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 // packages/core/test/prose-override.test.ts
@@ -83,12 +90,12 @@ describe('opts.prose overrides the derived prose on every kind that accepts it',
 });
 ```
 
-- [ ] **Step 2: Run it to verify it fails**
+- [x] **Step 2: Run it to verify it fails**
 
 Run: `pnpm -C packages/core exec vitest run test/prose-override.test.ts`
 Expected: FAIL — `requiresBefore` rejects the second argument shape / `forbidThisTurn` treats the object as a string.
 
-- [ ] **Step 3: Change the four factories**
+- [x] **Step 3: Change the four factories**
 
 In `flow.ts`:
 
@@ -111,19 +118,19 @@ export function forbidThisTurn(reason: string, opts?: { prose?: string }): Guard
 
 In `world.ts`, same shape: `precondition(ok, reason, opts?: { prose?: string })` with `prose: () => opts?.prose ?? reason`, and `resultInvariant(pred, reason, opts?: { prose?: string })` with `prose: () => opts?.prose ?? '<existing neutral default>'`. Update each factory's JSDoc to say "pass `opts.prose` to override" — never narrating that the signature changed.
 
-- [ ] **Step 4: Update every call site**
+- [x] **Step 4: Update every call site**
 
 `packages/core/src/spec.ts:488`: `precondition(gate.ok, gate.reason, { prose: gate.prose })`.
 `packages/eval/src/norms-config.ts` precondition compiler: wrap the third argument the same way.
 `packages/core/src/guards/catalog.ts`: the `signature`/`example` strings for the four kinds.
 Then `grep -rn "precondition(\|forbidThisTurn(\|resultInvariant(" packages/*/src packages/*/test` and convert every call passing a 3rd positional string to `{ prose: ... }` (calls with 2 args are untouched).
 
-- [ ] **Step 5: Run the full core + eval + mastra suites**
+- [x] **Step 5: Run the full core + eval + mastra suites**
 
 Run: `pnpm -C packages/core build && pnpm -C packages/core test && pnpm -C packages/eval test && pnpm -C packages/mastra test`
 Expected: PASS (including `guard-catalog-parity.test.ts`).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add -A packages
@@ -159,7 +166,7 @@ export interface ContractGuardBinding {
 // DomainContract loses:  changeAllowed
 ```
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```ts
 // packages/core/test/contract-bindings.test.ts
@@ -227,12 +234,12 @@ guards: [{
 
 Target-array assertions change to the INTERSECTED arrays (migration note, spec §3.4) — update the expected values, never relax the assertion.
 
-- [ ] **Step 2: Run to verify the new tests fail**
+- [x] **Step 2: Run to verify the new tests fail**
 
 Run: `pnpm -C packages/core exec vitest run test/contract-bindings.test.ts test/change-allowed.test.ts`
 Expected: FAIL — `guards` is not a `DomainContract` property; `changeAllowed` removal breaks the old construction.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 In `assembled-prompt.ts`: add the two types beside `DomainContract` (import `Hook`, `Priority` types from `./spec.js`, `Guard` from `./rules.js`), add `guards?: ContractGuardBinding[]` with a JSDoc stating the resolution rule verbatim from spec §3.2 (`'writeTools'` = contract-wide ∩ lane − exempt; `'destructiveTools'` = lane-declared − exempt; a lane whose surface misses the whole target installs nothing). Delete `changeAllowed`.
 
@@ -274,12 +281,12 @@ private resolveContractTarget(b: ContractGuardBinding): string[] {
 
 Call `this.installContractBindings()` at the end of `installUniversalAndContractGuards` (contract bindings enter during `super()`, before any lane `addGuard`, which is what makes insertion order within the `agent` tier deterministic). Export both types from `index.ts`. Update the `spec.ts` header: the id-namespace list gains `tool:` as the contract-binding provenance namespace; the priority table prose stays byte-identical. Update `catalog.ts:111` to advise "a `writeTools` binding on `contract.guards`" instead of `contract.changeAllowed`.
 
-- [ ] **Step 4: Run core suite; update stability expectations**
+- [x] **Step 4: Run core suite; update stability expectations**
 
 Run: `pnpm -C packages/core build && pnpm -C packages/core test`
 Expected: contract-bindings + change-allowed PASS. Any stability test reading installed `changeAllowed:precondition` targets moves to the intersected arrays — update expected values only.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A packages/core
@@ -298,21 +305,21 @@ git commit -m "feat(core)!: the contract declares tool guards as bindings, and c
 - Consumes: `ContractGuardBinding` and `DomainContract.guards` from Task 2.
 - Produces: nothing new — the lint's finding ids and report shape are unchanged.
 
-- [ ] **Step 1: Update the parity test fixture to the binding form and run it**
+- [x] **Step 1: Update the parity test fixture to the binding form and run it**
 
 Change any fixture contract carrying `changeAllowed: {...}` to the §3.4 binding (same shape as Task 2's rewrite). Run: `pnpm -C packages/eval exec vitest run test/lint-subject-parity.test.ts`
 Expected: FAIL — the lint still reads `contract.changeAllowed`.
 
-- [ ] **Step 2: Update the lint**
+- [x] **Step 2: Update the lint**
 
 Detection: a domain-wide write gate exists when `contract.guards?.some((g) => g.priority === 'changeAllowed')` (the id stays `changeAllowed:precondition` by convention, but the PRIORITY is the load-bearing marker — an author may rename the id). Advisory text at line 275 becomes: `'…Declare a writeTools binding at priority changeAllowed on contract.guards, or gate the lane on the same condition'`. The header comment at line 38 states the new source of truth.
 
-- [ ] **Step 3: Run the eval suite**
+- [x] **Step 3: Run the eval suite**
 
 Run: `pnpm -C packages/eval test`
 Expected: PASS.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add -A packages/eval
@@ -339,7 +346,7 @@ export const TOOL_RULES_HEADING = 'RULES YOU MUST FOLLOW TO CALL THIS TOOL';
 export function composeToolDescription(def: { name: string; description: string }, spec: AgentSpec): string;
 ```
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 // packages/core/test/tool-description.test.ts
@@ -384,12 +391,12 @@ describe('composeToolDescription', () => {
 });
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `pnpm -C packages/core exec vitest run test/tool-description.test.ts`
 Expected: FAIL — `composeToolDescription` is not exported.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 Move `proseKey`/`proseText` (with their JSDoc) from `assembled-prompt.ts` into `prompt-fold.ts` as exports; `assembled-prompt.ts` imports them. Then:
 
@@ -430,12 +437,12 @@ export function composeToolDescription(def: { name: string; description: string 
 
 Export both from `index.ts`.
 
-- [ ] **Step 4: Run the core suite**
+- [x] **Step 4: Run the core suite**
 
 Run: `pnpm -C packages/core build && pnpm -C packages/core test`
 Expected: PASS (`## Tool rules` still renders — it leaves in Task 7).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A packages/core
@@ -455,7 +462,7 @@ git commit -m "feat(core): composeToolDescription puts a tool's guard prose in i
 - Consumes: `composeToolDescription(def, spec)` from Task 4.
 - Produces: `buildWorldTools(toolDefs: ToolDef[], surface: ReadonlySet<string>, getSession: SessionAccessor, spec: AgentSpec, contract?: DomainContract): Record<string, any>` — `spec` is the new 4th parameter; `contract` moves to 5th.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 // packages/mastra/test/tool-description-seam.test.ts
@@ -480,21 +487,21 @@ describe('buildWorldTools', () => {
 });
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `pnpm -C packages/core build && pnpm -C packages/mastra exec vitest run test/tool-description-seam.test.ts`
 Expected: FAIL — `buildWorldTools` has no `spec` parameter / description lacks the heading.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `tools.ts`: signature `buildWorldTools(toolDefs, surface, getSession, spec: AgentSpec, contract?: DomainContract)`; in the DOMAIN-tool branch only, `description: composeToolDescription(def, spec)` (the terminal branch keeps `def.description` — terminals are protocol-owned and no binding may target them). `agent-construction.ts`: `buildWorldTools(config.toolDefs ?? [], surface, getSession, spec, contract)`.
 
-- [ ] **Step 4: Run the mastra suite**
+- [x] **Step 4: Run the mastra suite**
 
 Run: `pnpm -C packages/mastra test`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A packages/mastra
@@ -530,7 +537,7 @@ export function reconcileNativeSurface(
 export function schemaProjection(schema: unknown): unknown;
 ```
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```ts
 // packages/mastra/test/native-surface.test.ts
@@ -574,12 +581,12 @@ describe('reconcileNativeSurface', () => {
 });
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `pnpm -C packages/mastra exec vitest run test/native-surface.test.ts`
 Expected: FAIL — module does not exist.
 
-- [ ] **Step 3: Implement `reconcile-surface.ts`**
+- [x] **Step 3: Implement `reconcile-surface.ts`**
 
 ```ts
 import { zodToJsonSchema } from 'zod-to-json-schema';
@@ -637,7 +644,7 @@ export function reconcileNativeSurface(
 }
 ```
 
-- [ ] **Step 4: Extend the test for construction, then wire `agent-construction.ts`**
+- [x] **Step 4: Extend the test for construction, then wire `agent-construction.ts`**
 
 Add to `native-surface.test.ts` (construct `LoopRunAgent`/the exported constructor the existing mastra tests use — follow `packages/mastra/test/governance-extras.test.ts` for the minimal native construction shape):
 
@@ -680,12 +687,12 @@ if (nativeToolsMode) {
 
 The fingerprint branch (`schemaOf` reading `config.tools![name]?.inputSchema` in native mode) is NOT touched — it is the drift gate against the CERTIFIED surface and must keep reading the live schema. Update the module header comment: the native/world split is about EXECUTION only; both paths declare their surface in `tools.json`.
 
-- [ ] **Step 5: Run the mastra suite**
+- [x] **Step 5: Run the mastra suite**
 
 Run: `pnpm -C packages/mastra test`
 Expected: PASS, including every pre-existing native-mode test updated to pass `toolDefs`.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add -A packages/mastra
@@ -708,7 +715,7 @@ git commit -m "feat(mastra)!: native mode declares its surface in toolDefs, reco
 - Consumes: `composeToolDescription` (Task 4) — the test asserts the rule lives there and only there.
 - Produces: the assembled prompt sections are exactly: voice · scope · core rules · flow · `## Global tool rules` · `## Input rules` · `## Reply rules` · governance · behavior · language.
 
-- [ ] **Step 1: Write the failing assertions**
+- [x] **Step 1: Write the failing assertions**
 
 In `prompt-stability.test.ts` add:
 
@@ -723,25 +730,25 @@ test('a tool-targeted rule renders in the tool description and nowhere in the as
 });
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `pnpm -C packages/core exec vitest run test/prompt-stability.test.ts`
 Expected: FAIL — the prompt still contains `## Tool rules`.
 
-- [ ] **Step 3: Implement the removal**
+- [x] **Step 3: Implement the removal**
 
 In `ruleBlocks`: delete the toolRows loop, `toolBlock`, the `all` array, `SECTION_TOOL`, and `composedRow`. Return `[globalBlock, inputBlock, replyBlock]`. Rewrite the PROSE-RENDERING RULE comment to the §3.7 routing table verbatim (five rows, tool-targeted → the tool's own description) and state that per-tool de-duplication lives in `composeToolDescription`. In `prompt-fold.ts` delete `PromptLine.tool` and the two `## Tool rules` comment mentions; in `spec.ts` rewrite the `GuardBinding.target` JSDoc: CHECK half unchanged, RENDER half now routes tool-naming targets to the tool's own description via `composeToolDescription`. Module header of `assembled-prompt.ts`: the section list drops Tool rules; the shared-prefix paragraph states where tool prose lives.
 
-- [ ] **Step 4: Update the moved tests and the tutorial**
+- [x] **Step 4: Update the moved tests and the tutorial**
 
 `prompt-provenance.test.ts`: remove/replace assertions over `tool`-attributed lines; provenance for tool rules is now asserted through `composeToolDescription` output. `docs/tutorial/03-agent-anatomy.md`: the assembled-prompt walkthrough shows the new section list and one composed description under `RULES YOU MUST FOLLOW TO CALL THIS TOOL`.
 
-- [ ] **Step 5: Run the full repo suite**
+- [x] **Step 5: Run the full repo suite**
 
 Run: `pnpm -C packages/core build && pnpm test`
 Expected: PASS — including the root `gen-guards-chapter.mjs --check`, `tests/plain-names.test.mjs`, `tests/guard-priority.test.mjs`; update any of them that renders `## Tool rules`, never relax.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add -A packages/core packages/mastra docs/tutorial tests scripts
@@ -762,21 +769,21 @@ git commit -m "feat(core)!: tool-scoped prose lives in the tool description — 
 - Consumes: the shipped shapes from Tasks 1–7 — every documented signature is copied from the source, not from this plan.
 - Produces: nothing — docs only.
 
-- [ ] **Step 1: Locate every stale mention**
+- [x] **Step 1: Locate every stale mention**
 
 Run: `grep -rn "changeAllowed\|## Tool rules\|Tool rules" README.md GUARDS.md docs --include="*.md" | grep -v superpowers`
 Expected: a hit list; every hit is rewritten in the steps below.
 
-- [ ] **Step 2: Rewrite each artifact AS-IS**
+- [x] **Step 2: Rewrite each artifact AS-IS**
 
 Each doc states the current system only: the binding list, the named sets and their resolution places, the routing table with the description row, the new prose law. No doc narrates that a section was removed or a field replaced.
 
-- [ ] **Step 3: Regenerate and check**
+- [x] **Step 3: Regenerate and check**
 
 Run: `pnpm -C packages/core build && pnpm docs:guards && pnpm test`
 Expected: PASS; `git diff` shows only intended doc changes.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add README.md GUARDS.md docs
@@ -794,20 +801,20 @@ git commit -m "docs: tool guards are contract bindings and their prose lives in 
 - Consumes: everything above.
 - Produces: a green board and the proof record the merge gate requires.
 
-- [ ] **Step 1: Full build + full suite**
+- [x] **Step 1: Full build + full suite**
 
 Run: `pnpm build && pnpm test`
 Expected: PASS across packages plus the three root checks.
 
-- [ ] **Step 2: The §6.3 no-rule-twice check**
+- [x] **Step 2: The §6.3 no-rule-twice check**
 
 For the tutorial/fixture spec with tool-targeted bindings, assert (already covered by Task 7's stability test — re-run and confirm): no `proseKey` appears in both the assembled prompt and a composed description. Run: `pnpm -C packages/core exec vitest run test/prompt-stability.test.ts` — PASS.
 
-- [ ] **Step 3: Governance proof record**
+- [x] **Step 3: Governance proof record**
 
 This change touches guards and the guard runtime — invoke the `looprun-governance` skill and follow it to produce/refresh the deterministic proof record before merge (`check-record-required` gate, MATRIX.md).
 
-- [ ] **Step 4: Commit anything the skill produced**
+- [x] **Step 4: Commit anything the skill produced**
 
 ```bash
 git add -A
