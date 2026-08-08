@@ -287,23 +287,50 @@ world seam              gen/tools.json              world.exec(name, args)
 native / MCP            gen/tools.json              the host's own tool
 ```
 
-Three consequences, each a real change:
+**`toolDefs` becomes REQUIRED in native mode.** This is a breaking change, taken deliberately: the
+alternative is a native agent whose tool rules render nowhere, and the only way to serve that agent
+would be to keep `## Tool rules` alive as a mode-conditional fallback — the duplication this whole
+change removes. A construction with `tools` and no `toolDefs` throws and names the pipeline step
+that produces the file.
 
 ```
-agent-construction:56   `tools && toolDefs` THROWS today. Native + toolDefs becomes the
-                        normal case: the error narrows to `tools && world`.
+agent-construction:56   `tools && toolDefs` THROWS today. It becomes the REQUIRED pairing:
+                        the error narrows to `tools && world`, and a new error fires on
+                        `tools` without `toolDefs`.
 
-agent-construction:103  the passthrough becomes a wrap — the host's `execute` is kept,
-                        `description` is replaced by composeToolDescription(def, spec).
-
-agent-construction:115  `schemaOf` reads `toolDefs` on both paths, so surfaceFingerprint
-                        stops branching on the mode.
+agent-construction:103  the passthrough becomes a wrap. The host's `execute` is kept; the
+                        `description` the model reads comes from composeToolDescription.
 ```
 
 The read is a pipeline step, not a runtime one: a surface fetched per run is a surface nobody sealed.
 It belongs beside G1 intake, where a given `tools.json` is already the input, and the resulting file
-is sha-pinned like any other. A host tool whose live schema has drifted from the pinned file is
-exactly what the drift gate is for.
+is sha-pinned like any other.
+
+#### The file is a CLAIM about the host, and native mode must reconcile it
+
+On the world seam the claim is enforced by construction — the world implements exactly `tools.json`,
+and `world.test` plus `lint-world` fail when it does not. Native mode has no such enforcement: the
+live MCP tool is the host's, and it can rename an argument, add a field or gain a capability after
+the file was pinned. Two distinct checks are needed, and they answer different questions.
+
+```
+RECONCILIATION   does the file describe THIS host, right now?
+                 at construction: the `toolDefs` names must equal `nativeActiveNames`, and each
+                 inputSchema must equal the live tool's. A mismatch throws, because the model
+                 would otherwise read one schema while the host validates another.
+
+DRIFT GATE       does the host still match what was CERTIFIED?
+                 `surfaceFingerprint` keeps reading the LIVE schema in native mode —
+                 `config.tools[name]?.inputSchema`, unchanged.
+```
+
+Making `schemaOf` read `toolDefs` on both paths would fingerprint the file against the certified hash
+of the same file: a tautology that can never fire, deleting the only detector of the exact event the
+gate exists for — *"an MCP server adds a capability, a schema gains a field"*. The mode branch at
+`agent-construction:115` stays.
+
+With reconciliation in front of it, the two are consistent rather than redundant: reconciliation
+proves file ≡ live host at startup, and the fingerprint proves live host ≡ certified surface.
 
 The skill law of §6.2 holds unchanged here: the descriptions are the business's own words. The
 pipeline transcribes what MCP reports and writes no governance into the file — the governance arrives
