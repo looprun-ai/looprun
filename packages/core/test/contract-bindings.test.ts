@@ -21,16 +21,16 @@ const lane = (contract: DomainContract, tools: string[], destructiveTools: strin
 
 describe('contract guard bindings', () => {
   test('a named set expands to a plain string[] at install time (never a ToolTarget string)', () => {
-    const c = contractWith([{ hook: 'preTool', target: 'writeTools', guard: precondition(() => true, 'frozen'), id: 'tool:writeGate' }]);
+    const c = contractWith([{ hook: 'preTool', target: 'writeTools', guard: precondition(() => true, 'frozen'), id: 'tool:frozenWrites' }]);
     const spec = lane(c, ['cancelBooking', 'getBooking']);
-    const b = spec.guards.preTool.find((x) => x.id === 'tool:writeGate')!;
+    const b = spec.guards.preTool.find((x) => x.id === 'tool:frozenWrites')!;
     expect(Array.isArray(b.target)).toBe(true);
     expect(b.target).toEqual(['cancelBooking']); // ∩ lane surface
   });
   test('an empty intersection installs nothing', () => {
-    const c = contractWith([{ hook: 'preTool', target: 'writeTools', guard: precondition(() => true, 'frozen'), id: 'tool:writeGate' }]);
+    const c = contractWith([{ hook: 'preTool', target: 'writeTools', guard: precondition(() => true, 'frozen'), id: 'tool:frozenWrites' }]);
     const spec = lane(c, ['getBooking']);
-    expect(spec.guards.preTool.some((x) => x.id === 'tool:writeGate')).toBe(false);
+    expect(spec.guards.preTool.some((x) => x.id === 'tool:frozenWrites')).toBe(false);
   });
   test('destructiveTools resolves from the INSTALLING lane', () => {
     const c = contractWith([{ hook: 'preTool', target: 'destructiveTools', guard: requiresBefore(['getAsset']), id: 'tool:readFirst' }]);
@@ -39,9 +39,9 @@ describe('contract guard bindings', () => {
     expect(b.target).toEqual(['retireAsset']);
   });
   test('exempt names withdrawn from the set; a stray exempt throws', () => {
-    const ok = contractWith([{ hook: 'preTool', target: 'writeTools', exempt: ['getQuoteWrite'], guard: precondition(() => true, 'frozen'), id: 'tool:writeGate' }]);
-    expect(lane(ok, ['cancelBooking', 'getQuoteWrite']).guards.preTool.find((x) => x.id === 'tool:writeGate')!.target).toEqual(['cancelBooking']);
-    const stray = contractWith([{ hook: 'preTool', target: 'writeTools', exempt: ['notAWrite'], guard: precondition(() => true, 'frozen'), id: 'tool:writeGate' }]);
+    const ok = contractWith([{ hook: 'preTool', target: 'writeTools', exempt: ['getQuoteWrite'], guard: precondition(() => true, 'frozen'), id: 'tool:frozenWrites' }]);
+    expect(lane(ok, ['cancelBooking', 'getQuoteWrite']).guards.preTool.find((x) => x.id === 'tool:frozenWrites')!.target).toEqual(['cancelBooking']);
+    const stray = contractWith([{ hook: 'preTool', target: 'writeTools', exempt: ['notAWrite'], guard: precondition(() => true, 'frozen'), id: 'tool:frozenWrites' }]);
     expect(() => lane(stray, ['cancelBooking'])).toThrow(/notAWrite/);
   });
   test('exempt with a literal target throws', () => {

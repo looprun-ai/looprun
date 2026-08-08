@@ -511,10 +511,10 @@ argFormat('bookingId', '^BK-\\d{6}$')
 
 The call is allowed only while a predicate over the host world holds.
 
-**When to reach for it.** A gate whose discriminator lives in WORLD state, not in this call — the predicate never sees the acting call's arguments. If the discriminator is in the args, use `custom` instead. A condition EVERY lane of the domain refuses writes under belongs on `contract.changeAllowed` instead — declared once, installed on every spec that carries a write. `precondition` stays the gate for what one lane alone refuses on.
+**When to reach for it.** A gate whose discriminator lives in WORLD state, not in this call — the predicate never sees the acting call's arguments. If the discriminator is in the args, use `custom` instead. A condition EVERY lane of the domain refuses writes under belongs on `contract.guards` as a `writeTools` binding at priority `changeAllowed` instead — declared once, installed on every spec that carries a write. `precondition` stays the gate for what one lane alone refuses on.
 
 ```ts
-precondition((world) => world.accountActive === true, 'This account is closed — you cannot act on it.', 'act on an account only while it is open')
+precondition((world) => world.accountActive === true, 'This account is closed — you cannot act on it.', { prose: 'act on an account only while it is open' })
 ```
 
 #### 9. `consentRequired`
@@ -572,7 +572,7 @@ A post-execution check on the tool RESULT: when the predicate fails, the violati
 **When to reach for it.** The call already ran and cannot be undone, but its result must not be reported as if it satisfied the request — an empty report, a partial write. It never vetoes the call; it corrects the reply.
 
 ```ts
-resultInvariant((result) => Array.isArray(result) && result.length > 0, 'The search returned nothing — say so instead of summarising it.', 'report an empty result as empty')
+resultInvariant((result) => Array.isArray(result) && result.length > 0, 'The search returned nothing — say so instead of summarising it.', { prose: 'report an empty result as empty' })
 ```
 
 ### `onReply` — the reply exists, and has not been sent

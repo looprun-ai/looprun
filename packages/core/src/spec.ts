@@ -91,10 +91,11 @@ export interface GuardBinding {
    *
    * CHECK: the backend resolves onInput/onReply with no tool, and `resolveBindings` short-circuits on
    * `tool === undefined`, so target is never consulted to decide whether the guard RUNS.
-   * RENDER: `assembled-prompt.ts` reads target for EVERY hook. Naming tools → `## Tool rules`, grouped by tool;
-   * `'any'` → `## Global tool rules` (preTool/postTool), `## Input rules` (onInput) or `## Reply
-   * rules` (onReply). So an onReply binding that names tools RUNS on every reply but prints its prose
-   * under `## Tool rules` — use `'any'` on onInput/onReply unless that section is what you want.
+   * RENDER: the target routes the prose. Naming tools (any hook) → the tool's OWN description
+   * (`composeToolDescription`); `'any'` → `## Global tool rules` (preTool/postTool), `## Input rules`
+   * (onInput) or `## Reply rules` (onReply). So an onReply binding that names tools RUNS on every
+   * reply but prints its prose in those tools' descriptions — use `'any'` on onInput/onReply unless
+   * that placement is what you want.
    */
   target: ToolTarget;
   guard: Guard;

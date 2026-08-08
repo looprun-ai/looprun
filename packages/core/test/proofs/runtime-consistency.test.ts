@@ -14,6 +14,7 @@ import { describe, expect, it } from 'vitest';
 import { AgentSpecBase, custom, degenerationGuard, precondition, resultInvariant } from '../../src/index.js';
 import { GuardExecutionError } from '../../src/rules.js';
 import { renderAssembledPrompt } from '../../src/assembled-prompt.js';
+import { composeToolDescription } from '../../src/tool-description.js';
 import { resolveGuards } from '../../src/spec.js';
 import type { Dim, Guard } from '../../src/index.js';
 import { craftCtx, FIXTURE_DOMAIN, FIXTURE_TOOL_NAMES, FixtureWorld } from '../../src/testing/index.js';
@@ -89,9 +90,17 @@ describe('a guard that throws is an author bug', () => {
     );
   });
 
-  it('attributes a throw in prose() at render time', () => {
+  it('attributes a throw in prose() at composition time (a tool-targeted binding)', () => {
     const s = spec();
     s.addGuard('preTool', ['createItem'], boom('prose'), { id: 'agent:boomProse' });
+    expect(() => composeToolDescription({ name: 'createItem', description: 'Create an item.' }, s)).toThrow(
+      /Guard "agent:boomProse" \(kind boomProse, hook preTool\) THREW in prose\(\)/,
+    );
+  });
+
+  it("attributes a throw in prose() at render time (a target:'any' binding)", () => {
+    const s = spec();
+    s.addGuard('preTool', 'any', boom('prose'), { id: 'agent:boomProse' });
     expect(() => renderAssembledPrompt(new FixtureWorld(), s, [], FIXTURE_DOMAIN)).toThrow(
       /Guard "agent:boomProse" \(kind boomProse, hook preTool\) THREW in prose\(\)/,
     );

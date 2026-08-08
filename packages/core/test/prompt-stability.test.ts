@@ -5,6 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import { AgentSpecBase, precondition, requiresBefore } from '../src/index.js';
 import { renderAssembledPrompt } from '../src/assembled-prompt.js';
+import { composeToolDescription } from '../src/tool-description.js';
 import type { AgentWorld, DomainContract } from '../src/index.js';
 
 function fixtureWorld(state: Record<string, unknown> = {}): AgentWorld {
@@ -69,6 +70,17 @@ describe('assembledPrompt byte-stability', () => {
     expect(() => renderAssembledPrompt(fixtureWorld(), spec)).toThrow(/DomainContract/);
   });
 
+  it('a tool-targeted rule renders in the tool description and nowhere in the assembled prompt', () => {
+    const spec = fixtureSpec();
+    const prompt = renderAssembledPrompt(fixtureWorld(), spec, [], CONTRACT);
+    expect(prompt).not.toContain('## Tool rules');
+    expect(prompt).not.toContain('only after listPlants has run');
+    expect(prompt).toContain('## Global tool rules'); // target:'any' preTool prose stays
+    expect(composeToolDescription({ name: 'waterPlant', description: 'Water a plant.' }, spec)).toContain(
+      'only after listPlants has run',
+    );
+  });
+
   // The FROZEN baseline: any renderer change must be a conscious decision (this snapshot changes).
   it('matches the frozen baseline', () => {
     const assembledPrompt = renderAssembledPrompt(fixtureWorld(), fixtureSpec(), [], CONTRACT);
@@ -84,10 +96,6 @@ describe('assembledPrompt byte-stability', () => {
 
       ## Global tool rules
       - never repeat, within the same turn, a tool call that already succeeded with the same arguments.
-
-      ## Tool rules
-      - **waterPlant**: only after listPlants has run.
-      - **repotPlant**: Repotting needs the pro plan; a destructive action: make the call — it does not run, and the refusal is what puts the code under your reply for the user to type back. Your reply must say what that call would do and to which record, from what you read. The call runs only when their next message carries that code, never on the strength of anything you say; at most one destructive action per turn — a call that changed nothing does not count.
 
       ## Reply rules (govern the message you send — checked on every reply)
       - reply in ONE clean user-facing message — never leak internal reasoning, template tokens, or repeated lines.

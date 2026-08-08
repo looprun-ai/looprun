@@ -2,7 +2,7 @@
  * @looprun-ai/core — the DOMAIN-NEUTRAL assembled prompt renderer + the `DomainContract` interface (framework-free).
  *
  * This file contains ZERO business content — it is pure assembly machinery. Every business string
- * comes from a GENERATED artifact with exactly one owner: the AgentSpec (persona / Flow / Tool rules /
+ * comes from a GENERATED artifact with exactly one owner: the AgentSpec (persona / Flow / rule sections /
  * Governance / Behavior — per-agent) or the host-injected `DomainContract` (voice / core invariants /
  * language / state-render mapping — common to a business's agents). The per-agent persona (role line,
  * persona-on-spec law) lives on `spec.persona` and renders as the FIRST Behavior bullet; the shared
@@ -69,8 +69,8 @@ export interface DomainContract {
   stateBlock(world: AgentWorld): string;
   /** The "## Core rules (NEVER violate)" invariants — DOMAIN-wide and rendered verbatim into every
    *  agent of the domain. Nothing agent-specific belongs here (agent scope lives on `spec.scope`;
-   *  per-tool protocol prose is already emitted, scoped to the owner, by that tool's guards under
-   *  "## Tool rules"). */
+   *  per-tool protocol prose is already composed, scoped to the owner, into that tool's own
+   *  description by `composeToolDescription`). */
   coreInvariants: string[];
   /** The final "## Output language (ABSOLUTE)" clause. */
   languageClause: string;
@@ -165,14 +165,13 @@ function line(
   owner: string,
   section: string | null,
   text: string,
-  opts?: { guardKind?: string; hook?: Hook; target?: 'any' | readonly string[]; tool?: string; lexicon?: readonly SubjectRule[] },
+  opts?: { guardKind?: string; hook?: Hook; target?: 'any' | readonly string[]; lexicon?: readonly SubjectRule[] },
 ): PromptLine {
   return {
     owner,
     section,
     ...(opts?.hook ? { hook: opts.hook } : {}),
     ...(opts?.target ? { target: opts.target } : {}),
-    ...(opts?.tool ? { tool: opts.tool } : {}),
     subject: deriveSubject(text, { guardKind: opts?.guardKind, lexicon: opts?.lexicon }),
     polarity: derivePolarity(text),
     text,
@@ -182,13 +181,9 @@ function line(
 /** A row that is exactly one line, with an optional bullet prefix / terminal punctuation. */
 const row = (l: PromptLine, prefix = '', suffix = ''): PromptRow => ({ prefix, sep: '', suffix, lines: [l] });
 
-/** A row whose content is several `; `-joined normative fragments (the `## Tool rules` shape). */
-const composedRow = (prefix: string, lines: PromptLine[], suffix: string): PromptRow => ({ prefix, sep: '; ', suffix, lines });
-
 // ── Sections ─────────────────────────────────────────────────────────────────
 
 const SECTION_GLOBAL_TOOL = '## Global tool rules';
-const SECTION_TOOL = '## Tool rules';
 const SECTION_REPLY = '## Reply rules (govern the message you send — checked on every reply)';
 /**
  * `onInput` prose gets its OWN heading, separate from `## Reply rules`. The reply heading tells the
@@ -198,24 +193,25 @@ const SECTION_REPLY = '## Reply rules (govern the message you send — checked o
  * class as prose that misdescribes its check (the prose≠reason law).
  *
  * BYTE-FREE for every shipping bundle: no generated bundle installs an `onInput` guard, so this block
- * is absent and the assembled prompt is unchanged. It is placed immediately BEFORE `## Reply rules` (after
- * `## Tool rules`, before `## Governance`) so the shared-prefix ordering is untouched.
+ * is absent and the assembled prompt is unchanged. It is placed immediately BEFORE `## Reply rules`
+ * (after `## Global tool rules`, before `## Governance`) so the shared-prefix ordering is untouched.
  */
 const SECTION_INPUT = '## Input rules (govern the incoming message — checked before you act)';
 
 /**
- * THE PROSE-RENDERING RULE ("no guard prose outside the assembled prompt").
+ * THE PROSE-RENDERING RULE ("no guard prose the model cannot read").
  *
- * EVERY guard's `prose()` renders into the assembled prompt. The HOOK decides WHERE it lands, never WHETHER it is
- * shown. Before this, only `preTool`/`postTool` rendered, so an `onInput`/`onReply` rule existed in the
- * spec but was invisible to the model — an implicit assumption (a spec reader assumes the model knows the
- * rule written there) and a measured defect (an invisible onReply rule can only be corrected by redrive,
- * and redrive on a weak model degenerates into an exhaustion stub).
+ * EVERY guard's `prose()` reaches the model. The binding's TARGET decides WHERE it lands, never
+ * WHETHER it is shown:
  *
- *   - binding `target` names TOOLS (any hook)      → `## Tool rules`, grouped by tool
+ *   - binding `target` names TOOLS (any hook)      → the tool's OWN description (`composeToolDescription`)
  *   - binding `target === 'any'`, preTool/postTool → `## Global tool rules`
  *   - binding `target === 'any'`, onInput          → `## Input rules`
  *   - binding `target === 'any'`, onReply          → `## Reply rules`
+ *
+ * The assembled prompt therefore carries ONLY the `target:'any'` sections; a tool-scoped rule lives
+ * beside the schema of the one tool it governs, where the model reads it at the moment of choosing
+ * the call. Per-tool de-duplication lives in `composeToolDescription`.
  *
  * `onReplyMutate` carries NO prose BY CONSTRUCTION — a `ReplyMutator` is `{ kind, apply }` with no
  * `prose()`: it is not a rule the model must follow but a deterministic egress rewrite that cannot fail
@@ -223,20 +219,15 @@ const SECTION_INPUT = '## Input rules (govern the incoming message — checked b
  * GUARDS.md §2.
  *
  * Section ORDER keeps the assembled prompt head static (shared-prefix law): the reply/input sections are placed
- * AFTER `## Tool rules` and BEFORE `## Governance`, so per-agent divergence still enters as late as
+ * AFTER `## Global tool rules` and BEFORE `## Governance`, so per-agent divergence still enters as late as
  * possible.
  *
- * DE-DUPLICATION IS **NOT** GLOBAL. Two separate mechanisms exist and neither spans the whole
- * assembled prompt:
- *   · `emitted` — shared by `## Global tool rules` → `## Input rules` → `## Reply rules`, in that
- *     order. Genuinely order-respecting, but it covers only the `target:'any'` sections.
- *   · `seenForTool` — a FRESH set per tool in `## Tool rules`. It suppresses a repeat within ONE tool's
- *     row and nothing more, so a prose bound to five tools renders five times, once per row.
- * The arbiter is byte-identity: a truly global dedup
- * would delete the 2nd–5th copies of every multi-tool binding's prose, changing the assembled prompt's bytes and
- * therefore the cacheable prefix and every certified number measured against it. The resulting
- * duplication is visible in the attributed table: every copy carries its own owner/tool provenance
- * (`prompt-fold.ts`), so a caller can count it per subject rather than infer it from the bytes.
+ * DE-DUPLICATION here is `emitted` — shared by `## Global tool rules` → `## Input rules` →
+ * `## Reply rules`, in that order. It covers only the `target:'any'` sections this renderer emits;
+ * a tool description's rules are de-duplicated per tool, in `composeToolDescription`, so a prose
+ * bound to five tools renders five times, once per description. The arbiter is byte-identity: every
+ * emitted copy carries its own owner provenance (`prompt-fold.ts`), so a caller can count
+ * duplication per subject rather than infer it from the bytes.
  */
 function ruleBlocks(spec: AgentSpec, opts?: PromptRenderOptions): PromptBlock[] {
   const lexicon = opts?.lexicon;
@@ -246,7 +237,6 @@ function ruleBlocks(spec: AgentSpec, opts?: PromptRenderOptions): PromptBlock[] 
   ];
   const inputBindings = resolveBindings(spec.guards.onInput).map((b) => ({ ...b, hook: 'onInput' as Hook }));
   const replyBindings = resolveBindings(spec.guards.onReply).map((b) => ({ ...b, hook: 'onReply' as Hook }));
-  const all = [...toolHookBindings, ...inputBindings, ...replyBindings];
 
   const emitted = new Set<string>();
 
@@ -273,31 +263,10 @@ function ruleBlocks(spec: AgentSpec, opts?: PromptRenderOptions): PromptBlock[] 
   };
 
   const globalBlock = anySection(toolHookBindings, SECTION_GLOBAL_TOOL);
-
-  // Tool-targeted bindings from ANY hook (a reply guard bound to a tool belongs with that tool).
-  const toolRows: PromptRow[] = [];
-  for (const tool of spec.surface.tools) {
-    const scoped = all.filter((b) => b.target !== 'any' && b.target.includes(tool));
-    const seenForTool = new Set<string>();
-    const fragments: PromptLine[] = [];
-    for (const b of scoped) {
-      const p = b.guard.prose();
-      if (!p?.trim() || seenForTool.has(proseKey(p))) continue;
-      seenForTool.add(proseKey(p));
-      fragments.push(
-        line(`guard:${b.guard.kind}`, SECTION_TOOL, proseText(p), {
-          guardKind: b.guard.kind, hook: b.hook, target: b.target, tool, lexicon,
-        }),
-      );
-    }
-    if (fragments.length) toolRows.push(composedRow(`- **${tool}**: `, fragments, '.'));
-  }
-  const toolBlock: PromptBlock | null = toolRows.length ? { heading: SECTION_TOOL, rows: toolRows } : null;
-
   const inputBlock = anySection(inputBindings, SECTION_INPUT);
   const replyBlock = anySection(replyBindings, SECTION_REPLY);
 
-  return [globalBlock, toolBlock, inputBlock, replyBlock].filter((b): b is PromptBlock => b !== null);
+  return [globalBlock, inputBlock, replyBlock].filter((b): b is PromptBlock => b !== null);
 }
 
 /** The `## Scope precedence` block — rendered VERBATIM from the spec's own `scope` declaration (the
@@ -400,8 +369,10 @@ export function renderPromptBlocks(spec: AgentSpec, domain: DomainContract, opts
 /**
  * The SCOPED spec assembled prompt — the BYTE-STABLE system prompt: the domain's shared VOICE (byte-identical
  * across the domain's agents — shared-prefix law) + the domain's core invariants + the spec's Flow /
- * Tool rules / Reply rules / Governance / Behavior (the spec's per-agent persona/role line renders as the FIRST
- * Behavior bullet — per-agent divergence as late as possible) + the domain's language clause.
+ * Global tool rules / Input rules / Reply rules / Governance / Behavior (the spec's per-agent persona/role
+ * line renders as the FIRST Behavior bullet — per-agent divergence as late as possible) + the domain's
+ * language clause. Tool-scoped guard prose is NOT here — it lives in each tool's own description
+ * (`composeToolDescription`).
  * NO account/brand state (that rides the user message tail — brand-in-tail). `_uploads` is accepted
  * for signature compatibility but not rendered (upload labels also ride the user message).
  *

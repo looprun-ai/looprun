@@ -42,7 +42,7 @@ every turn and `cache-read` would have stayed at ~20 000 while `in` rose. It ros
 times the added input: the padding both cached itself and pushed the whole prefix past the provider's
 implicit-cache size floor, so previously-uncached text started hitting cache too.
 
-The probe ADDED text; the fusion MOVES it, so it is roughly byte-neutral. What the probe establishes
+The measurement ADDED text; the fusion MOVES it, so it is roughly byte-neutral. What it establishes
 is only the fact that was open: the tools block is cached.
 
 **The instrument.** `EvalCaseDump` carries `tokensCacheRead: number | null` — summed from
@@ -549,7 +549,7 @@ subject       world.test · bundle.test · premise.test green
               lint-authoring · lint-world clean
               looprun-eval validate clean
 prompt        no rule text appears in two places (§6.3)
-cache         a 5-case probe reports cache-read ≥ the pre-change baseline
+cache         a 5-case measurement reports cache-read ≥ the pre-change baseline
 ```
 
 ## 8 · Final step — remediation measured on the failure set only
@@ -584,7 +584,7 @@ aimed at the second.
 contains `simulat`.
 
 ```
-r1-a pass 52 · r2-a pass 57                      +5, the band move the previous fix bought
+r1-a pass 52 · r2-a pass 57                      +5, the range move the previous fix bought
 confabulated in r1                31
   16  FAIL → FAIL                                the confabulation went, the case failed the same
    3  pass → FAIL                                regressed
@@ -607,7 +607,7 @@ confabulated in r1                31
                                     95-two-cancellations-one-turn
 ```
 
-19, not 17. The pass/fail computation reproduces the +5 band move exactly, so the transition counts are
+19, not 17. The pass/fail computation reproduces the +5 range move exactly, so the transition counts are
 sound; the difference is the confabulation classifier. `simulat` over the r1 replies admits 31 cases
 where the earlier count admitted 28, and all three extra land in FAIL → FAIL. The rule above is stated
 so anyone can recompute it; running 19 costs two cases and risks nothing.
@@ -621,7 +621,7 @@ so anyone can recompute it; running 19 costs two cases and risks nothing.
 3  report per case: r2 verdict → r4 verdict, and the cause for every one still failing
 ```
 
-**What the step can and cannot say.** 19 cases at N=1 is a diagnostic, not a band. It answers whether
+**What the step can and cannot say.** 19 cases at N=1 is a diagnostic, not a range. It answers whether
 the named cause moved. It does not produce a rate, a premium or a certificate, and no seal is minted
 from it.
 

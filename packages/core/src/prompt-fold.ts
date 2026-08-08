@@ -129,9 +129,9 @@ export function proseText(s: string): string {
 /**
  * One atomic normative unit of the assembled prompt, with its provenance.
  *
- * `text` holds the EXACT bytes this unit contributes to the rendered assembled prompt (a whole line for most
- * sections; a single `; `-joined fragment inside a `## Tool rules` row). The fold never re-derives or
- * re-formats it — that is what makes byte-identity provable rather than hoped for.
+ * `text` holds the EXACT bytes this unit contributes to the rendered assembled prompt (a whole
+ * line). The fold never re-derives or re-formats it — that is what makes byte-identity provable
+ * rather than hoped for.
  */
 export interface PromptLine {
   /** WHO emitted it: `domain.voice` · `domain.coreInvariants` · `domain.languageClause` · `spec.scope` ·
@@ -143,8 +143,6 @@ export interface PromptLine {
   hook?: string;
   /** For guard-owned lines: the binding's tool target (`'any'` or the tool list). */
   target?: 'any' | readonly string[];
-  /** For a `## Tool rules` fragment: the tool whose row it renders in. */
-  tool?: string;
   /** The normative SUBJECT in controlled vocabulary — `null` when none could be derived (a lint signal). */
   subject: string | null;
   polarity: PromptPolarity;

@@ -823,5 +823,5 @@ git commit -m "chore(core): proof record for the tool-owned guard bindings"
 | §4 — atlas: 17 bindings move to `norms/contract.ts`; case targets renamed to `tool:` ids; `looprun-eval validate` clean | `agentspec-bench` | engine released |
 | §6.2 — agentspec skill: norms.md, guard-catalog.md, gen.md, test.md, lint-authoring.mjs (two new findings) | `agentspec` repo | engine released |
 | §5.1 — release `0.17.0`, move the bench pin off the hand-copied `dist` | `looprun` + `agentspec-bench` | Tasks 1–9 merged |
-| §7 cache gate — 5-case probe, cache-read ≥ pre-change baseline | `agentspec-bench` | subject migrated |
+| §7 cache gate — 5-case measurement, cache-read ≥ pre-change baseline | `agentspec-bench` | subject migrated |
 | §8 — the 19-case remediation run (`r4-remediation`), same judge as r1/r2 | `agentspec-bench` | subject migrated |

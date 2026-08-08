@@ -14,6 +14,7 @@ import { describe, expect, it } from 'vitest';
 import { AgentSpecBase } from '../../src/spec.js';
 import { argRequired, mustAccountFor, custom, forbidThisTurn, jargonScrub, maxCalls } from '../../src/guards/index.js';
 import { renderAssembledPrompt, renderPromptBlocks } from '../../src/assembled-prompt.js';
+import { composeToolDescription, TOOL_RULES_HEADING } from '../../src/tool-description.js';
 import { GUARD_KIND_SUBJECT, derivePolarity, deriveSubject, foldPrompt } from '../../src/prompt-fold.js';
 import type { PromptBlock, PromptLine } from '../../src/prompt-fold.js';
 import { FIXTURE_DOMAIN, FIXTURE_TOOL_NAMES, FixtureWorld } from '../../src/testing/index.js';
@@ -77,21 +78,20 @@ describe('provenance: owner / section / hook / target survive the render', () =>
   });
 
   it('a guard-owned line carries its hook and target', () => {
-    const confirm = lines.find((l) => l.owner === 'guard:confirmFirst');
-    expect(confirm?.hook).toBe('preTool');
-    expect(confirm?.target).not.toBe('any');
+    const noDup = lines.find((l) => l.owner === 'guard:noDuplicateCall');
+    expect(noDup?.hook).toBe('preTool');
+    expect(noDup?.target).toBe('any');
     const reply = lines.find((l) => l.owner === 'guard:degenerationGuard');
     expect(reply?.hook).toBe('onReply');
     expect(reply?.target).toBe('any');
   });
 
-  it('a `## Tool rules` row keeps ONE line per guard (the `; ` composition is not one opaque string)', () => {
-    const blocks = renderPromptBlocks(spec(), FIXTURE_DOMAIN);
-    const toolBlock = blocks.find((b) => b.heading === '## Tool rules')!;
-    const deleteRow = toolBlock.rows.find((r) => r.prefix.includes('deleteItem'))!;
-    expect(deleteRow.lines.length).toBeGreaterThan(1);
-    expect(deleteRow.lines.every((l) => l.owner.startsWith('guard:'))).toBe(true);
-    expect(deleteRow.lines.every((l) => l.tool === 'deleteItem')).toBe(true);
+  it('a tool-targeted binding renders in the tool description, never in the table', () => {
+    expect(lines.some((l) => l.owner === 'guard:confirmFirst')).toBe(false);
+    const composed = composeToolDescription({ name: 'deleteItem', description: 'Delete an item.' }, spec());
+    expect(composed).toContain(TOOL_RULES_HEADING);
+    expect(composed).toMatch(/- .*make the call — it does not run/);                 // consent:confirmFirst
+    expect(composed).toMatch(/- at most one destructive action per turn/);          // consent:destructiveThrottle
   });
 });
 
@@ -133,7 +133,7 @@ describe('subject + polarity derivation is deterministic', () => {
 
   it('a custom() guard has a free-form kind and therefore NO subject — a lint signal, not a gap', () => {
     const s = spec();
-    s.addGuard('preTool', ['createItem'], custom({
+    s.addGuard('preTool', 'any', custom({
       kind: 'houseStyleRule', dim: 'input', check: () => null, prose: () => 'follow the house style',
     }));
     const l = assembledPromptLines(renderPromptBlocks(s, FIXTURE_DOMAIN)).find((x) => x.owner === 'guard:houseStyleRule')!;
@@ -173,8 +173,8 @@ describe('audit finding (i): an onInput rule does NOT render under a "reply" hea
     expect(input.rows.flatMap((r) => r.lines).every((l) => l.hook === 'onInput')).toBe(true);
     const reply = blocks.find((b) => b.heading?.startsWith('## Reply rules'))!;
     expect(reply.rows.flatMap((r) => r.lines).every((l) => l.hook === 'onReply')).toBe(true);
-    // AssembledPrompt-static ordering: Input then Reply, both after Tool rules and before Behavior.
-    expect(headings.indexOf('## Tool rules')).toBeLessThan(headings.findIndex((h) => h?.startsWith('## Input rules')));
+    // AssembledPrompt-static ordering: Input then Reply, both after Global tool rules and before Behavior.
+    expect(headings.indexOf('## Global tool rules')).toBeLessThan(headings.findIndex((h) => h?.startsWith('## Input rules')));
     expect(headings.findIndex((h) => h?.startsWith('## Input rules'))).toBeLessThan(headings.findIndex((h) => h?.startsWith('## Reply rules')));
   });
 
@@ -185,13 +185,14 @@ describe('audit finding (i): an onInput rule does NOT render under a "reply" hea
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-describe('audit finding (d): the ruleSections dedup is NOT global — and the table proves it', () => {
-  it('a prose bound to N tools renders N times, once per tool row', () => {
+describe('audit finding (d): the ruleSections dedup is NOT global — and the composition proves it', () => {
+  it('a prose bound to N tools renders N times, once per tool description', () => {
     const s = spec();
     s.addGuard('preTool', ['createItem', 'updateItem', 'setPrimary'], argRequired('id'));
-    const lines = assembledPromptLines(renderPromptBlocks(s, FIXTURE_DOMAIN)).filter((l) => l.owner === 'guard:argRequired');
-    expect(lines).toHaveLength(3);
-    expect(new Set(lines.map((l) => l.text)).size).toBe(1); // the SAME bytes, three times
+    const rendered = ['createItem', 'updateItem', 'setPrimary'].map((t) =>
+      composeToolDescription({ name: t, description: `${t}.` }, s),
+    );
+    for (const d of rendered) expect(d).toContain('- always pass a real, non-empty "id"'); // the SAME bytes, three times
   });
 
   it('the `target:any` sections DO share one order-respecting dedup set', () => {
@@ -207,24 +208,22 @@ describe('audit finding (d): the ruleSections dedup is NOT global — and the ta
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-describe('audit finding (ii): a prose written as a full SENTENCE breaks `; ` composition', () => {
-  it('the composed row is detectable as malformed — a fragment carrying sentence punctuation', () => {
+describe('audit finding (ii): a rule renders as its OWN bullet — sentence-shaped prose composes cleanly', () => {
+  it('a multi-sentence prose is one bullet, interior punctuation intact', () => {
     const s = spec();
     s.addGuard('preTool', ['createItem'], custom({
       kind: 'sentenceProse', dim: 'run', check: () => null,
-      // A complete sentence with internal terminal punctuation: `proseText` only strips the TRAILING
-      // '.', so the interior sentence break survives into the `; `-joined row.
+      // `proseText` only strips the TRAILING '.'; the interior sentence break is legal inside a bullet.
       prose: () => 'Creating an item needs a title. Ask for one when it is missing.',
     }));
-    const blocks = renderPromptBlocks(s, FIXTURE_DOMAIN);
-    const rows = blocks.find((b) => b.heading === '## Tool rules')!.rows.filter((r) => r.prefix.includes('createItem'));
-    const fragment = rows.flatMap((r) => r.lines).find((l) => l.owner === 'guard:sentenceProse')!;
-    expect(/[.!?]\s/.test(fragment.text)).toBe(true);
+    const composed = composeToolDescription({ name: 'createItem', description: 'Create an item.' }, s);
+    expect(composed).toContain('- Creating an item needs a title. Ask for one when it is missing');
   });
 
-  it('a fragment-shaped prose (the correct form) carries no interior sentence break', () => {
-    const l = assembledPromptLines(renderPromptBlocks(spec(), FIXTURE_DOMAIN)).find((x) => x.owner === 'guard:destructiveThrottle')!;
-    expect(/[.!?]\s/.test(l.text)).toBe(false);
+  it('a fragment-shaped prose renders as one bullet with no interior sentence break', () => {
+    const composed = composeToolDescription({ name: 'deleteItem', description: 'Delete an item.' }, spec());
+    const throttle = composed.split('\n').find((l) => l.startsWith('- at most one destructive action'))!;
+    expect(/[.!?]\s/.test(throttle)).toBe(false);
   });
 });
 
@@ -239,19 +238,19 @@ describe('regressions the refactor must not introduce', () => {
     expect(foldPrompt(renderPromptBlocks(s, FIXTURE_DOMAIN))).toBe(renderAssembledPrompt(world, s, [], FIXTURE_DOMAIN));
   });
 
-  it('a tool-targeted onReply guard still renders under `## Tool rules`, not `## Reply rules`', () => {
+  it('a tool-targeted onReply guard renders in that tool description, never under `## Reply rules`', () => {
     const s = spec();
     s.addGuard('onReply', ['createItem'], mustAccountFor({ records: ['L-1'], outcome: 'any' }, 'account for it'));
-    const l = assembledPromptLines(renderPromptBlocks(s, FIXTURE_DOMAIN)).find((x) => x.owner === 'guard:mustAccountFor')!;
-    expect(l.section).toBe('## Tool rules');
-    expect(l.hook).toBe('onReply');
+    expect(assembledPromptLines(renderPromptBlocks(s, FIXTURE_DOMAIN)).some((x) => x.owner === 'guard:mustAccountFor')).toBe(false);
+    const composed = composeToolDescription({ name: 'createItem', description: 'Create an item.' }, s);
+    expect(composed).toContain(TOOL_RULES_HEADING);
   });
 
-  it('a forbidThisTurn binding is attributed to its own kind and tool', () => {
+  it('a forbidThisTurn binding lands in its tool description with its derived rule', () => {
     const s = spec();
     s.addGuard('preTool', ['purgeAll'], forbidThisTurn('not now'));
-    const l = assembledPromptLines(renderPromptBlocks(s, FIXTURE_DOMAIN)).find((x) => x.owner === 'guard:forbidThisTurn')!;
-    expect(l.tool).toBe('purgeAll');
-    expect(l.subject).toBe('tool-forbidden');
+    expect(assembledPromptLines(renderPromptBlocks(s, FIXTURE_DOMAIN)).some((x) => x.owner === 'guard:forbidThisTurn')).toBe(false);
+    const composed = composeToolDescription({ name: 'purgeAll', description: 'Purge everything.' }, s);
+    expect(composed).toContain('- do not call this tool in this turn — not even once');
   });
 });

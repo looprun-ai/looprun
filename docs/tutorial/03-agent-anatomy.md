@@ -301,7 +301,7 @@ One contract, N agents. It opens every agent's prompt **byte-identically**, whic
    │  ## Scope precedence                 │ (spec.scope)              │
    │  ## Core rules (NEVER violate)       ┘ domain.coreInvariants     │
    │  ## Flow                               spec.flow, if declared    │
-   │  ## Tool rules / ## Reply rules …      every guard's prose()     │
+   │  ## Global tool rules / ## Reply …     target:'any' guard prose  │
    │  ## Governance                                                    │
    │  ## Behavior                           persona FIRST, then       │
    │                                        spec.behavior            │
@@ -659,8 +659,11 @@ Three things to take from that even before chapter 04 explains the API:
 2. **The `check()` returns the correction text**, or `null` to allow. That string reaches the model
    inside the **governance veto envelope**, which is deliberately *not* the same shape as a world
    refusal (chapter 01 §4) — so it is written as an instruction, not as a log line.
-3. **`prose()` is the same rule for the prompt**, and it is what appears under `## Tool rules` for
-   `addEvent`. Two renderings, one object (chapter 01 §3).
+3. **`prose()` is the same rule for the model to read**, and because the binding targets `addEvent`
+   it lands in `addEvent`'s **own tool description**, as a bullet under the fixed heading
+   `RULES YOU MUST FOLLOW TO CALL THIS TOOL` — beside the schema, at the moment of choosing the
+   call. (`target: 'any'` prose renders in the assembled prompt instead: `## Global tool rules`,
+   `## Input rules`, `## Reply rules`.) Two renderings, one object (chapter 01 §3).
 
 And the other obligation, *never delete without asking*, appears nowhere in the constructor:
 
