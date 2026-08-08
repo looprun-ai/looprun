@@ -36,10 +36,10 @@ the tool's full rules echoed onto every tool RESULT            not stated
 an onReply llmCheck demanding it                               the turn died in redrive exhaustion
 ```
 
-Four arms of an engine-rendered sentence, injected into the real transcripts and re-judged:
+Four variants of an engine-rendered sentence, injected into the real transcripts and re-judged:
 
 ```
-arm                                              passes both judge passes
+variant                                          passes both judge passes
 nothing (the measured r4 run)                          0/18
 a per-tool sentence, weakly authored                   1/18
 a per-tool sentence, authored against what the         3/18
@@ -193,9 +193,14 @@ runtime. This is the difference between an author's typo and a data condition:
 ```
 
 `looprun-eval validate` already builds every preset and executes tools (`subject.makeWorld(preset)`,
-`world.exec(...)`). The check reuses that machinery: for every `disclose` entry, for every slot, build
-each declared preset, execute the named read tool, and walk the path. A slot that resolves in NO
-preset is a blocking issue naming the tool, the slot and the fields the result does carry.
+`world.exec(...)`). The check reuses that machinery, under one rule the premise layer already lives
+by: a read invoked without its schema-required args refuses at RECEPTION, and a reception refusal
+proves nothing about the slot — `getAsset({})` returns an error in every preset, which must not read
+as "the slot never resolves". So, for every `disclose` entry, for every slot: build each declared
+preset, invoke the named read tool once per identity value the preset's projection carries (each
+schema-required string arg tried with that value), and walk the path over every result that comes
+back structurally ok. A slot that resolves in NO preset, across every seeded record, is a blocking
+issue naming the tool, the slot and the fields the results do carry.
 
 A slot whose read tool is not on the surface of any lane that carries the disclose's tool is the same
 class of error and fails the same way.
@@ -217,7 +222,34 @@ class of error and fails the same way.
   discloseMissing?: string;
 ```
 
-### 4.2 · The render site
+### 4.2 · The observed row gains the result
+
+The renderer reads the read's RESULT from the conversation's observed calls, and today the observed
+row does not carry it — `name`, `args`, `ok` and flags only. The result survives elsewhere on one
+path only: `world.toolCalls[].result` where the world executes the call, and NOWHERE on the
+native-tools/MCP path, where the tool runs itself and the stub world records nothing.
+
+The seam that sees the output on BOTH paths is `recordToolResult` — the `afterToolCall` hook hands
+it the output whether a world executed the call or the tool ran itself. One line stores it:
+
+```diff
+  actionHistory.observed.push({
+    name,
+    args,
+    ok,
+    turnIndex: actionHistory.turnIndex,
++   ...(ok ? { result: output } : {}),
+```
+
+`ObservedCall` gains the optional field. Two consequences, both wanted:
+
+- disclosure reads ONE uniform store, and the native path serves it exactly as the world path does
+- `ctx.observed` rows expose the result to guards on the turn it happened — `ctx.history` already
+  exposes it for every sealed turn, so this closes an asymmetry rather than opening a new surface
+
+Memory is bounded by the conversation, the same bound `history` already pays.
+
+### 4.3 · The render site
 
 `packages/core/src/runtime/turn.ts:374`, inside `composeDeliveryText`:
 
@@ -230,10 +262,11 @@ class of error and fails the same way.
 ```
 
 `composeDeliveryText`'s `contract` parameter widens to include `disclose` and `discloseMissing`. It
-gains one argument: the turn's action history, which is where the observed reads live. Every caller is
-inside the same module and passes what it already holds.
+gains one argument: the turn's action history, whose observed rows carry each successful call's
+result (§4.2). Every caller is inside the same module and passes what it already holds —
+`composeDelivery` already receives the action history today.
 
-### 4.3 · The renderer
+### 4.4 · The renderer
 
 A new module, `packages/core/src/runtime/disclosure.ts`, exporting one function:
 
@@ -251,7 +284,7 @@ observed calls.
 ```
 1  template = contract?.disclose?.[approval.tool]      absent → return null
 2  for each {readTool.path}:
-     candidates = observed calls, this CONVERSATION, name === readTool, ok
+     candidates = observed rows, this CONVERSATION, name === readTool, ok, carrying a result
      bound      = candidates whose result deep-contains approval.subject
      value      = walk `path` over the LAST bound candidate's result
      render       value == null || bound is empty  →  discloseMissing ?? 'NA'
@@ -259,10 +292,13 @@ observed calls.
 3  return the rendered sentence
 ```
 
+Both execution paths serve this identically: the observed row's result is written by the same hook
+whether a world executed the call or the tool ran itself (§4.2).
+
 Slot syntax is `{` `identifier` (`.` `identifier`)* `}`. A brace pair that does not match that shape
 renders literally — the engine never guesses at a malformed slot.
 
-### 4.4 · What does NOT change
+### 4.5 · What does NOT change
 
 ```
 approvalCode(c.meaning)   untouched. The token stays derived from the SUBJECT, so `CONFIRM
@@ -270,7 +306,8 @@ approvalCode(c.meaning)   untouched. The token stays derived from the SUBJECT, s
                           would compose the token, and one typed word would retire two machines.
 Guard.prose()             untouched, nullary, model-facing.
 renderClaim               untouched. It words an act that HAPPENED; disclosure words one that has not.
-the world                 untouched. It authors no prose and gains no field.
+the world                 untouched. It authors no prose and gains no field. The renderer never
+                          reads it — the result it needs rides the observed row (§4.2).
 ```
 
 ---
@@ -280,8 +317,10 @@ the world                 untouched. It authors no prose and gains no field.
 Every artifact below is reviewed and rewritten to state what the system IS. No doc narrates the
 change and no comment cites the evidence behind a rule.
 
-There is no `GUARDS.md` and no `docs/reference` in this repository. The reference for a contract field
-is its own JSDoc plus the tutorial; both are listed below and both are mandatory.
+There is no `docs/reference` in this repository. The reference for a contract field is its own JSDoc
+plus the tutorial; both are listed below and both are mandatory. `packages/core/GUARDS.md` exists but
+is the guard runtime's maintainer internals — it is in the table only for its delivered-reply
+passages, which enumerate the engine blocks a delivery carries.
 
 | artifact | what changes |
 |---|---|
@@ -292,6 +331,8 @@ is its own JSDoc plus the tutorial; both are listed below and both are mandatory
 | `governance/MATRIX.md` | the row for what reaches the user, if it enumerates the user-facing surfaces |
 | `packages/core/src/assembled-prompt.ts` — `DomainContract` JSDoc | the two new fields, the slot grammar, the binding rule, the placeholder. This IS the reference. |
 | `packages/core/src/runtime/turn.ts` header | `composeDeliveryText` renders two things per approval, not one |
+| `packages/core/src/rules.ts` — `ObservedCall` JSDoc | the `result` field: what it carries, that one hook writes it on both execution paths, and that guards may read it |
+| `packages/core/GUARDS.md` | its delivered-reply passages: the engine blocks per approval are the disclosure and the question, not the question alone |
 | `packages/core/src/runtime/disclosure.ts` | its own header states the binding rule and why latest-wins is wrong, with the two-`getMember` example |
 
 The three user-facing seams, stated once wherever they are introduced:
@@ -309,15 +350,17 @@ engineText    around both       the engine's own sentences, and their language
 The `agentspec` skill is updated in the same working session as the engine. A skill that still
 teaches the old contract generates subjects the new engine cannot serve.
 
+Paths are relative to the `agentspec` repository root; the skill lives under `skill/`.
+
 | artifact | what changes |
 |---|---|
-| `references/norms.md` | N2 authoring: `disclose` is declared per destructive tool. The decision test: *does the user need to know this BEFORE agreeing?* |
-| `references/norms.md` (authoring law) | a sentence must read correctly with the placeholder in every slot — `settlement: NA`, never `settles at NA` |
-| `references/norms.md` (authoring law) | a slot names a read the tool's own `requiresBefore` already demands, so the read is guaranteed to have happened |
-| `references/gen.md` | unchanged — verify, do not assume. The world gains nothing. |
-| `references/test.md` | `validate`'s new blocking issue and how to read it |
-| `scripts/lint-authoring.mjs` — `DESTRUCTIVE-WITHOUT-DISCLOSURE` | a tool on `destructiveTools` with no `disclose` entry: the user is asked to agree to something nobody described |
-| `scripts/lint-authoring.mjs` — `DISCLOSURE-SLOT-NOT-REQUIRED` | a slot naming a read tool that no `requiresBefore` on the same tool demands. The read is then optional, so the slot renders `NA` on any turn the agent skipped it — and the author cannot see that from the sentence. |
+| `skill/references/norms.md` | N2 authoring: `disclose` is declared per destructive tool. The decision test: *does the user need to know this BEFORE agreeing?* |
+| `skill/references/norms.md` (authoring law) | a sentence must read correctly with the placeholder in every slot — `settlement: NA`, never `settles at NA` |
+| `skill/references/norms.md` (authoring law) | a slot names a read the tool's own `requiresBefore` already demands, so the read is guaranteed to have happened |
+| `skill/references/gen.md` | unchanged — verify, do not assume. The world gains nothing. |
+| `skill/references/test.md` | `validate`'s new blocking issue and how to read it |
+| `skill/scripts/lint-authoring.mjs` — `DESTRUCTIVE-WITHOUT-DISCLOSURE` | a tool on `destructiveTools` with no `disclose` entry: the user is asked to agree to something nobody described |
+| `skill/scripts/lint-authoring.mjs` — `DISCLOSURE-SLOT-NOT-REQUIRED` | a slot naming a read tool that no `requiresBefore` on the same tool demands. The read is then optional, so the slot renders `NA` on any turn the agent skipped it — and the author cannot see that from the sentence. |
 
 ---
 
@@ -330,16 +373,20 @@ engine        pnpm test green across packages, including a new disclosure.test.t
                 · an approval with no subject rendering every slot as the placeholder
                 · a malformed brace rendering literally
                 · no disclose entry rendering nothing at all
+                · the native path: a result stored by the hook (no world log) serving the slot
 eval          validate fails on a slot that resolves in no preset, and names the real fields
+governance    the diff touches packages/core/src/, so the PR gate (check-record-required) demands
+              a governance/proofs/*.md with verdict: PASS in the same change — authored via the
+              looprun-governance skill
 subject       lint-world clean · lint-authoring clean · world/bundle/premise tests green
               validate clean
 measurement   the 19-case remediation set, governed, judged twice with the SAME ruler.
-              Baseline to beat: 1/19. The engine-rendered arm measured 9/18 on the failing
+              Baseline to beat: 1/19. The engine-rendered variant measured 9/18 on the failing
               subset, which is 10/19 on the full set. A run that lands materially below that
               means the implementation diverged from what was measured.
 ```
 
-The measurement is a diagnostic, not a band. It answers whether the named cause moved. It produces no
+The measurement is a diagnostic, not a range. It answers whether the named cause moved. It produces no
 rate, no premium and no certificate, and no seal is minted from it.
 
 ---

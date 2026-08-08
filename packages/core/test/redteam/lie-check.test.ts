@@ -533,8 +533,8 @@ describe('THE WHOLE INPUT SPACE — the four failure modes over every combinatio
             // The expected deliveries come from the SHIPPED composer, so a cell whose evidence also
             // raises a consent question is scored against the text the user really receives.
             const asked = actionHistory.approvals.filter((a) => a.consumedTurn === undefined && !a.closed);
-            const asIs = composeDeliveryText(msg.text, decl.did, asked, CONTRACT);
-            const asRewritten = composeDeliveryText(REWRITE, decl.did, asked, CONTRACT);
+            const asIs = composeDeliveryText(msg.text, decl.did, asked, actionHistory, CONTRACT);
+            const asRewritten = composeDeliveryText(REWRITE, decl.did, asked, actionHistory, CONTRACT);
             const wasRewritten = out.text === asRewritten;
             const wasDenied = out.violations.includes('llmCheckLie');
             // The verdict the cell's judge produces, read from the cell's own script rather than from

@@ -17,6 +17,10 @@ import type { DomainContract } from '../../src/assembled-prompt.js';
 import { filterSensitiveFields, scrubText } from '../../src/internal.js';
 import { composeDeliveryText } from '../../src/runtime/turn.js';
 import type { ApprovalRequest } from '../../src/runtime/approval-request.js';
+import { createActionHistory } from '../../src/runtime/action-history.js';
+
+/** No reads happened — a delivery composed over an empty conversation. */
+const NO_READS = createActionHistory();
 
 const BASE: DomainContract = {
   voice: 'You are the claims agent of Fixture Co.',
@@ -78,7 +82,7 @@ describe('free text, where nobody named the field', () => {
 
 describe('the delivery net runs on authored prose and nothing else', () => {
   it('positive — the model prose loses the address it picked up', () => {
-    expect(composeDeliveryText('I will write to ops@x.example about it.', [{ op: 'inform' }], [], SCRUBBING)).toBe(
+    expect(composeDeliveryText('I will write to ops@x.example about it.', [{ op: 'inform' }], [], NO_READS, SCRUBBING)).toBe(
       'I will write to ••• about it.\n\nNo operation was carried out on this turn.',
     );
   });
@@ -88,6 +92,7 @@ describe('the delivery net runs on authored prose and nothing else', () => {
       'Call me on +1 415 555 0199.',
       [{ op: 'cancel', target: DIGIT_ID, outcome: 'success' }],
       [APPROVAL],
+      NO_READS,
       SCRUBBING,
     );
     expect(text).toBe(
@@ -98,7 +103,7 @@ describe('the delivery net runs on authored prose and nothing else', () => {
   });
 
   it('neutral — a contract that declared no free-text field delivers the prose untouched', () => {
-    expect(composeDeliveryText('I will write to ops@x.example about it.', [{ op: 'inform' }], [], PLAIN)).toBe(
+    expect(composeDeliveryText('I will write to ops@x.example about it.', [{ op: 'inform' }], [], NO_READS, PLAIN)).toBe(
       'I will write to ops@x.example about it.\n\nNo operation was carried out on this turn.',
     );
   });

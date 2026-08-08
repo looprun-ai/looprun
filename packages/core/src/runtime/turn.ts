@@ -36,6 +36,7 @@ import { isChecked, llmRewriteLie, LIE_QUESTION } from './lie-check.js';
 import { CLOSED_FAIL_DENY } from '../guards/llm-check.js';
 import { judgePrompt, readJudgeVerdict, JUDGE_UNREACHABLE, JUDGE_UNREADABLE } from './judge-prompt.js';
 import { resolveEngineText } from './engine-text.js';
+import { renderDisclosure } from './disclosure.js';
 import { scrubText } from './sensitive-filter.js';
 import type { ApprovalRequest } from './approval-request.js';
 
@@ -334,20 +335,24 @@ const EXHAUSTION_PARTIAL = 'I could not safely finish the rest — how would you
 const EXHAUSTION_NOTHING = 'I could not complete this safely — nothing was changed. Could you rephrase or add detail?';
 
 /**
- * The DELIVERED text: the agent's `message`, then the CONSENT QUESTIONS this turn raised, then the
- * engine-rendered OPERATION RECORD of the (already action history-grounded) `did`.
+ * The DELIVERED text: the agent's `message`, then the CONSENT QUESTIONS this turn raised — each under
+ * the domain's own sentence about what agreeing would do — then the engine-rendered OPERATION RECORD
+ * of the (already action history-grounded) `did`.
  *
  * ```
  *   Your booking BK-1 carries an 80.00 fee.     ← the agent's prose
  *
+ *   Cancelling BK-1 releases the room and       ← the engine's disclosure
+ *   forfeits the 80.00 deposit.
  *   To confirm BK-1, reply: CONFIRM BK-1        ← the engine's question
  *
  *   No operation was carried out on this turn.  ← the engine's account
  * ```
  *
- * The two engine blocks are the parts the agent does not write: the question it must not be able to
- * reframe, and the account of what changed it must not be able to soften. This is the ONE place either
- * enters the delivered text.
+ * The engine blocks are the parts the agent does not write: what agreeing does, the question it must
+ * not be able to reframe, and the account of what changed it must not be able to soften. This is the
+ * ONE place any of them enters the delivered text. An approval whose tool the domain discloses nothing
+ * about carries its question alone.
  *
  * EVERY delivery carries the record, with no exception and no configuration. A turn that declared only
  * speech carries the empty-case closure — the sentence that denies whatever operation the prose beside
@@ -359,7 +364,7 @@ const EXHAUSTION_NOTHING = 'I could not complete this safely — nothing was cha
  * address copied out of a result, an email the user typed and the prose repeated.
  *
  * ```
- *   composeDeliveryText('I will write to ops@x.example.', [{ op: 'inform' }], [], contract)
+ *   composeDeliveryText('I will write to ops@x.example.', [{ op: 'inform' }], [], actionHistory, contract)
  *   → 'I will write to •••.\n\nNo operation was carried out on this turn.'
  * ```
  */
@@ -367,11 +372,14 @@ export function composeDeliveryText(
   message: string,
   did: Intention[],
   approvals: readonly ApprovalRequest[],
-  contract?: Pick<DomainContract, 'renderClaim' | 'outcomes' | 'engineText' | 'scrubTextFields'>,
+  actionHistory: TurnActionHistory,
+  contract?: Pick<DomainContract, 'renderClaim' | 'outcomes' | 'engineText' | 'scrubTextFields' | 'disclose' | 'discloseMissing'>,
 ): string {
   const text = resolveEngineText(contract?.engineText);
   const report = renderOperationReport(did, { renderClaim: contract?.renderClaim, outcomes: contract?.outcomes, text });
-  const asked = approvals.map((c) => text.approval(c.meaning, c.token)).join('\n');
+  const asked = approvals
+    .map((c) => [renderDisclosure(c, contract, actionHistory), text.approval(c.meaning, c.token)].filter(Boolean).join('\n'))
+    .join('\n\n');
   return [authoredProse(message.trim(), contract), asked, report].filter((s) => s.trim()).join('\n\n');
 }
 
@@ -401,7 +409,7 @@ function openApprovals(actionHistory: TurnActionHistory): ApprovalRequest[] {
 }
 
 function composeDelivery(payload: RespondPayload, actionHistory: TurnActionHistory, contract?: DomainContract): string {
-  return composeDeliveryText(payload.message, payload.did, openApprovals(actionHistory), contract);
+  return composeDeliveryText(payload.message, payload.did, openApprovals(actionHistory), actionHistory, contract);
 }
 
 /**

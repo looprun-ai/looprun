@@ -15,6 +15,9 @@ import { composeDeliveryText, finalizeReply } from '../src/runtime/turn.js';
 import type { ApprovalRequest } from '../src/runtime/approval-request.js';
 import type { RespondPayload } from '../src/runtime/claims.js';
 
+/** No reads happened — a delivery composed over an empty conversation. */
+const NO_READS = createActionHistory();
+
 const BASE: DomainContract = {
   voice: 'You are the claims agent of Fixture Co.',
   stateBlock: () => '',
@@ -57,24 +60,24 @@ function fixtureWorld(): AgentWorld {
 
 describe('the composed delivery is the final net', () => {
   it('scrubs an address the prose picked up', () => {
-    const text = composeDeliveryText('I will write to ops@x.example about it.', [{ op: 'inform' }], [], SCRUBBING);
+    const text = composeDeliveryText('I will write to ops@x.example about it.', [{ op: 'inform' }], [], NO_READS, SCRUBBING);
     expect(text).not.toMatch(/@x\.example/);
     expect(text).toBe('I will write to ••• about it.\n\nNo operation was carried out on this turn.');
   });
 
   it('scrubs a phone number the user typed and the prose repeated', () => {
-    const text = composeDeliveryText('Noted your number +1 415 555 0199.', [{ op: 'inform' }], [], SCRUBBING);
+    const text = composeDeliveryText('Noted your number +1 415 555 0199.', [{ op: 'inform' }], [], NO_READS, SCRUBBING);
     expect(text).not.toContain('415');
     expect(text).toContain('Noted your number •••.');
   });
 
   it('leaves the prose untouched when the contract declares no free-text field', () => {
-    const text = composeDeliveryText('I will write to ops@x.example about it.', [{ op: 'inform' }], [], PLAIN);
+    const text = composeDeliveryText('I will write to ops@x.example about it.', [{ op: 'inform' }], [], NO_READS, PLAIN);
     expect(text).toBe('I will write to ops@x.example about it.\n\nNo operation was carried out on this turn.');
   });
 
   it('leaves the engine question and the operation record intact', () => {
-    const text = composeDeliveryText('Reach me at ops@x.example.', [{ op: 'cancel', target: 'CL-2', outcome: 'success' }], [APPROVAL], SCRUBBING);
+    const text = composeDeliveryText('Reach me at ops@x.example.', [{ op: 'cancel', target: 'CL-2', outcome: 'success' }], [APPROVAL], NO_READS, SCRUBBING);
     expect(text).toBe(
       'Reach me at •••.\n\n' +
         'To confirm CL-1, reply: CONFIRM CL-1\n\n' +
@@ -83,7 +86,7 @@ describe('the composed delivery is the final net', () => {
   });
 
   it('keeps a question whose record id is shaped like a phone number typeable', () => {
-    const text = composeDeliveryText('Call me on +1 415 555 0199.', [{ op: 'inform' }], [DIGIT_APPROVAL], SCRUBBING);
+    const text = composeDeliveryText('Call me on +1 415 555 0199.', [{ op: 'inform' }], [DIGIT_APPROVAL], NO_READS, SCRUBBING);
     // The token the user must type back is stored literally, and consent matches that literal — a
     // question delivered with the id scrubbed names an act nobody can ever confirm.
     expect(text).toContain(`To confirm ${DIGIT_ID}, reply: CONFIRM ${DIGIT_ID}`);
@@ -95,6 +98,7 @@ describe('the composed delivery is the final net', () => {
       'Also reach me on +1 415 555 0199.',
       [{ op: 'cancel', target: DIGIT_ID, outcome: 'success' }],
       [],
+      NO_READS,
       SCRUBBING,
     );
     expect(text).toBe(

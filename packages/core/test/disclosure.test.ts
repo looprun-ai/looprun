@@ -4,6 +4,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { renderDisclosure } from '../src/runtime/disclosure.js';
+import { composeDeliveryText } from '../src/runtime/turn.js';
 import { createActionHistory, recordToolResult, type TurnActionHistory } from '../src/runtime/action-history.js';
 import type { ApprovalRequest } from '../src/runtime/approval-request.js';
 
@@ -109,5 +110,48 @@ describe('renderDisclosure', () => {
       { name: 'getAsset', args: { assetId: 'ast_x' }, result: { asset: { id: 'ast_x' } } },
     ]);
     expect(renderDisclosure(approvalFor('retireAsset', 'ast_x'), contract, actionHistory)).toBe('Retiring NA is final.');
+  });
+});
+
+describe('the delivered text', () => {
+  const approval: ApprovalRequest = {
+    tool: 'retireAsset',
+    subject: 'ast_ltwr01',
+    meaning: 'ast_ltwr01',
+    token: 'CONFIRM AST_LTWR01',
+    issuedTurn: 0,
+  };
+
+  it('prints the disclosure directly above the question it belongs to', () => {
+    const actionHistory = historyWith([
+      { name: 'getAsset', args: { assetId: 'ast_ltwr01' }, result: { asset: { id: 'ast_ltwr01', name: 'Allmand Light Tower' } } },
+    ]);
+    expect(
+      composeDeliveryText('I have reviewed the record for ast_ltwr01.', [{ op: 'inform' }], [approval], actionHistory, CONTRACT),
+    ).toBe(
+      'I have reviewed the record for ast_ltwr01.\n\n' +
+        'Retiring ast_ltwr01 (Allmand Light Tower) takes it out of the rentable fleet for good.\n' +
+        'To confirm ast_ltwr01, reply: CONFIRM AST_LTWR01\n\n' +
+        'No operation was carried out on this turn.',
+    );
+  });
+
+  it('keeps a question whose tool the domain discloses nothing about', () => {
+    const other: ApprovalRequest = { tool: 'cancelBooking', subject: 'BK-1', meaning: 'BK-1', token: 'CONFIRM BK-1', issuedTurn: 0 };
+    const text = composeDeliveryText('One act is pending.', [{ op: 'inform' }], [other], createActionHistory(), CONTRACT);
+    expect(text).toContain('To confirm BK-1, reply: CONFIRM BK-1');
+    expect(text).not.toContain('NA');
+  });
+
+  it('separates two disclosed acts with a blank line', () => {
+    const second: ApprovalRequest = { tool: 'purgeArchive', meaning: 'the archive', token: 'CONFIRM THE-ARCHIVE', issuedTurn: 0 };
+    const actionHistory = historyWith([
+      { name: 'getAsset', args: { assetId: 'ast_ltwr01' }, result: { asset: { id: 'ast_ltwr01', name: 'Allmand Light Tower' } } },
+    ]);
+    const text = composeDeliveryText('Pending.', [{ op: 'inform' }], [approval, second], actionHistory, CONTRACT);
+    expect(text).toContain(
+      'To confirm ast_ltwr01, reply: CONFIRM AST_LTWR01\n\n'
+        + 'Emptying the archive cannot be undone.\nTo confirm the archive, reply: CONFIRM THE-ARCHIVE',
+    );
   });
 });

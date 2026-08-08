@@ -53,6 +53,8 @@ const NAMES = {
 // allows, and why. Allowing `probe` in the instrument's report does not also allow `ledger` there.
 const ALLOW = [
   { path: 'docs/benchmarks.md', word: 'preview', text: 'Pro Preview', why: 'a third-party product name' },
+  { path: 'docs/superpowers/specs/2026-08-08-disclosure-design.md', word: 'preview', text: 'gemini-3.1-pro-preview', why: 'a third-party model id' },
+  { path: 'docs/superpowers/plans/2026-08-08-disclosure.md', word: 'preview', text: 'gemini-3.1-pro-preview', why: 'a third-party model id' },
   // `probe` also names an OFFLINE MEASURING INSTRUMENT — an experiment run against the engine, not
   // a world answering a question. "The margin simulate" is not a phrase.
   { path: 'packages/eval/probes/', word: 'probe', why: 'the instrument itself' },
