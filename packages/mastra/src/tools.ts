@@ -5,8 +5,8 @@
  * (message + did) into the ACTIVE session's action history. Domain tools route to `world.exec(name, args)`.
  */
 import { createTool } from '@mastra/core/tools';
-import { isTerminal, normalizeTerminalToolDef, recordTerminal, terminalToolDefs } from '@looprun-ai/core/internal';
-import type { DomainContract, ToolDef } from '@looprun-ai/core';
+import { composeToolDescription, isTerminal, normalizeTerminalToolDef, recordTerminal, terminalToolDefs } from '@looprun-ai/core/internal';
+import type { AgentSpec, DomainContract, ToolDef } from '@looprun-ai/core';
 import type { LoopRunSession } from './session.js';
 import { jsonSchemaToZodObject } from './json-schema-zod.js';
 import { filterToolResult } from './sensitive-seam.js';
@@ -14,12 +14,16 @@ import { filterToolResult } from './sensitive-seam.js';
 export type SessionAccessor = () => LoopRunSession;
 
 /** Build the Mastra tool map for a spec surface: domain tools (world.exec) + the terminal tools.
- *  `contract` carries the declarations this seam enforces on the way BACK: a result field the domain
- *  named sensitive is omitted or masked before the model reads it. */
+ *  `spec` is what a DOMAIN tool's description composes from: the declared business sentence plus the
+ *  prose of every binding that targets the tool (`composeToolDescription`). Terminal tools keep their
+ *  protocol-owned description — no binding may target them. `contract` carries the declarations this
+ *  seam enforces on the way BACK: a result field the domain named sensitive is omitted or masked
+ *  before the model reads it. */
 export function buildWorldTools(
   toolDefs: ToolDef[],
   surface: ReadonlySet<string>,
   getSession: SessionAccessor,
+  spec: AgentSpec,
   contract?: DomainContract,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): Record<string, any> {
@@ -51,7 +55,7 @@ export function buildWorldTools(
     }
     tools[def.name] = createTool({
       id: def.name,
-      description: def.description,
+      description: composeToolDescription(def, spec),
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       inputSchema: jsonSchemaToZodObject(def.inputSchema) as any,
       // The result crosses back INTO the runtime here, and this is the value the model reads: the

@@ -89,7 +89,7 @@ export function compileSpec(
 
   return {
     actionHistory: session.actionHistory,
-    tools: buildWorldTools(opts.toolDefs ?? [], surface, getSession, contract),
+    tools: buildWorldTools(opts.toolDefs ?? [], surface, getSession, spec, contract),
     instructions: () => renderPrompt(world, session.actionHistory.attachments) + (terminalOn ? terminalProtocol(replyOnly()) : ''),
     hooks: makeGuardHooks(spec, getSession, { contract }),
     inputProcessors: makeInputProcessors(spec, getSession),
