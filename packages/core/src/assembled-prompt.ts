@@ -28,7 +28,7 @@ import type { AgentWorld, Guard } from './rules.js';
 import type { CoreOutcome, OutcomeMap, RenderedClaim } from './runtime/claims.js';
 import type { EngineText } from './runtime/engine-text.js';
 import type { SensitiveMode } from './runtime/sensitive-filter.js';
-import { derivePolarity, deriveSubject, foldPrompt } from './prompt-fold.js';
+import { derivePolarity, deriveSubject, foldPrompt, proseKey, proseText } from './prompt-fold.js';
 import type { SubjectRule, PromptBlock, PromptLine, PromptRow } from './prompt-fold.js';
 
 export type { SubjectRule, PromptBlock, PromptLine, PromptRow } from './prompt-fold.js';
@@ -157,18 +157,6 @@ export function chainOrder(edges: { from: string; to: string }[]): string[] {
     cur = succ.get(cur);
   }
   return order;
-}
-
-/** Normalized dedup key for a rendered prose string (trailing punctuation / whitespace / case-insensitive). */
-function proseKey(s: string): string {
-  return proseText(s).replace(/\s+/g, ' ').toLowerCase();
-}
-
-/** A prose string as it is rendered: trimmed, with its own terminal punctuation stripped so the
- *  renderer's own separator (`;` between a tool's rules, `.` at end of line) never doubles up. Some
- *  kinds return their deny `reason` verbatim as `prose()` and those strings are written as sentences. */
-function proseText(s: string): string {
-  return s.trim().replace(/[.;]+$/, '');
 }
 
 // ── PromptLine / PromptRow constructors ────────────────────────────────────────

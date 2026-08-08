@@ -114,6 +114,18 @@ export function deriveSubject(
   return null;
 }
 
+/** Normalized dedup key for a rendered prose string (trailing punctuation / whitespace / case-insensitive). */
+export function proseKey(s: string): string {
+  return proseText(s).replace(/\s+/g, ' ').toLowerCase();
+}
+
+/** A prose string as it is rendered: trimmed, with its own terminal punctuation stripped so the
+ *  renderer's own separator (a `- ` bullet line, `.` at end of line) never doubles up. Some
+ *  kinds return their deny `reason` verbatim as `prose()` and those strings are written as sentences. */
+export function proseText(s: string): string {
+  return s.trim().replace(/[.;]+$/, '');
+}
+
 /**
  * One atomic normative unit of the assembled prompt, with its provenance.
  *

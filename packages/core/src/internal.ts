@@ -35,6 +35,7 @@ export type { GuardBinding } from './spec.js';
 
 // The scoped assembled prompt renderer — the bytes a spec's system prompt is made of.
 export { renderAssembledPrompt } from './assembled-prompt.js';
+export { composeToolDescription, TOOL_RULES_HEADING } from './tool-description.js';
 
 // Model call settings.
 export { normalizeModelParams, resolveModelSettings } from './model-params.js';

@@ -79,6 +79,9 @@ const INTERNAL = [
   // Documentation infrastructure, deliberately NOT on the taught surface.
   'GUARD_CATALOG', 'GuardCatalogEntry',
   'GuardBinding', 'resolveGuards', 'renderAssembledPrompt',
+  // the composed tool description — the channel a tool-scoped rule reaches the model through; a
+  // backend seam beside `renderAssembledPrompt`, not a taught symbol.
+  'composeToolDescription', 'TOOL_RULES_HEADING',
   'normalizeModelParams', 'resolveModelSettings',
   'TokenUsage', 'RuntimeTurnRecord',
   'beginTurn', 'createActionHistory', 'clearDeliveredTerminal', 'pruneSupersededTerminals', 'recordTerminal', 'recordTerminalCall',
