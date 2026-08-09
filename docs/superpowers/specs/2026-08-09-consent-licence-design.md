@@ -620,6 +620,36 @@ called once per record. `transferAsset` has two records but only `getAsset` is r
 **The lint (§7.2) tightens with it.** A slot with no prefix, on a tool whose call carries more than
 one identity-bearing argument, is a finding: it will bind by luck.
 
+### 4.9 · The claim names the field it read the record from
+
+`Intention.target` was a bare string, and proving it meant scanning a result for keys that LOOK like
+identifiers. The agent knows the field it read — it just was never asked.
+
+```
+target: 'bk_1001'                    →   targetName:  'bookingId'
+                                         targetValue: 'bk_1001'
+```
+
+`supportsTarget` reads exactly `result[targetName]` and compares. With no `targetName` the value must
+simply be among what the act returned or was called with. Either way no key is chosen by its shape,
+so a world naming its field `transferredTo` is served like one naming it `targetWorkspaceId`.
+
+Every reader of `claim.target` moves to `claim.targetValue`: `renderClaim`, the operation record line,
+`session-record`, the deny text.
+
+**OPEN — the record shape.** One act commonly touches several records:
+
+```
+cancelBooking returns { bookingId:'bk_1001', assetFreed:'ast_excv01' }
+```
+
+The honest declaration is a RECORD, `{ bookingId:'bk_1001', assetFreed:'ast_excv01' }`, not one pair.
+It was tried and withdrawn: `gemini-3.1-flash-lite` sent `target: {}` — an empty object it did not
+know how to fill — and separately invented an outcome word (`not_performed_due_to_throttle`) for a
+throttled second act. Neither failure is the shape's fault; both are a weak model meeting a changed
+vocabulary. The pair ships; the record stays open, and whoever takes it must measure the model's
+ability to fill it before assuming it will.
+
 ## 5 · The exam reads the screen
 
 A literal derived from the call cannot be written into a case, so the scripted user stops predicting
