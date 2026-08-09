@@ -236,10 +236,18 @@ any_other_question             none. Speech is not an operation and no action-hi
                                can prove a question.
 ```
 
-**Why `any_other_question` is not a back door**, and this is the decision the user made explicitly:
-`claimIsComplete` is unchanged and independent — every write that TOOK EFFECT must still be reported
-by a claim resolving to `success` that names its record. An agent that declares
-`any_other_question` over an act that landed still fails, on the other rule.
+**What holds `any_other_question` honest.** Not another rule — the engine's own operation record.
+Every write that took effect prints a line under the message, derived from what the engine recorded,
+whatever the agent declared:
+
+```
+"I have a question about the deposit."      the agent, declaring any_other_question
+charged on bk_1001                          the ENGINE, from the effect it attested
+Nothing else was changed on this turn.
+```
+
+An agent that acts and then declares a question does not hide the act; it contradicts the line
+beneath its own sentence.
 
 ### 3.5 · The exhaustion route prints what is standing
 
@@ -354,8 +362,9 @@ Two changes in one place. The outcome word splits, and the PROOF stops being a s
 -        case 'pending_confirmation':
 -            return calls.some((c) => c.resultFlags?.requiresConfirmation === true && addressed(c));
 +        case 'any_other_question':
-+            // Speech, not an operation: nothing the engine recorded can prove a question.
-+            // `claimIsComplete` still demands every effected write be reported — no back door.
++            // Speech, not an operation: nothing the engine recorded can prove a question. What keeps
++            // it honest is the operation record the engine prints from its own facts — an act that
++            // landed appears there whatever the agent declared.
 +            return true;
 ```
 
@@ -379,6 +388,44 @@ calls.
 **The deny text keeps its actionable half.** `declarableHint` today lists the outcomes a claim COULD
 have taken; it now reads the derived entry and names the one true outcome for that write, which is
 strictly more useful.
+
+### 4.3b · `claimIsComplete` is removed, and the identity machinery goes with it
+
+`claimIsComplete` demanded that every write which TOOK EFFECT be covered by a `success` claim naming
+its record, assigned by a maximum matching over identity evidence. **It is deleted.**
+
+What it protected against is already on the screen. The operation record is derived from what the
+engine recorded, not from what the agent declared, so an unreported write prints its own line:
+
+```
+"I cancelled the booking."          the agent — one act declared
+charged on bk_1001                  the ENGINE — the act the agent omitted
+cancelled on bk_1001                the ENGINE
+Nothing else was changed on this turn.
+```
+
+The agent can no longer be forced to SAY it, and its prose can contradict the block beneath. That is
+the accepted cost: a rule that read field names is worse than prose that disagrees with a record the
+operator can read.
+
+**Everything it was the last caller of dies with it.** After §4.3 and this removal, no source file
+references any of:
+
+```
+guards/honesty.ts     isIdentityKey · identityHits · identityValues · preferredIdentityValues
+                      issuedEvidence · addressedEvidence · attemptEvidence
+                      claimMatches · targetMatchesValue · targetIn · magnitudes
+                      declarableHint's identity half
+runtime/…             the `subject` field on ApprovalRequest
+```
+
+`magnitudes` is checked separately: if an `amount` cross-check survives elsewhere it stays, otherwise
+it goes too. The gate in §7 is mechanical — a grep for `isIdentityKey` across `packages/` returns
+nothing.
+
+**The spec class stops auto-installing it.** `claimIsGrounded` is still installed from
+`contract.writeTools`; its sibling is gone, and `guards/catalog.ts` loses that entry, which
+regenerates `GUARDS.md` and the tutorial.
 
 ### 4.4 · `runtime/action-history.ts` — the approval carries the call
 
@@ -674,7 +721,8 @@ engine     pnpm test green, plus new tests pinning:
              · the same call written with keys in either order gets ONE literal
              · a literal licenses only its own call's arguments
              · a vetoed attempt grounds tool_called_request_approval
-             · any_other_question grounds, and an effected write still fails claimIsComplete
+             · any_other_question grounds, and an effected write still prints its own record line
+             · no source file references isIdentityKey or any of its consumers
              · the exhaustion route prints a standing question
 subject    world/bundle/premise tests green · both lints clean · validate clean
 exam       no case carries a literal CONFIRM
