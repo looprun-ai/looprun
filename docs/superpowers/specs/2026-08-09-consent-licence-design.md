@@ -650,6 +650,62 @@ throttled second act. Neither failure is the shape's fault; both are a weak mode
 vocabulary. The pair ships; the record stays open, and whoever takes it must measure the model's
 ability to fill it before assuming it will.
 
+### 4.10 · The disclosure speaks twice, and the slot says which
+
+A sentence is routed by its own first path step. Nothing else declares the timing.
+
+```
+{getBooking.booking.assetName}   the step names a READ  →  the read's result   →  BEFORE the act
+{cancelBooking.assetFreed}       the step names the ACT →  the call's result   →  AFTER the act
+```
+
+`disclose[tool]` accepts a string or a list, so one tool carries both:
+
+```ts
+cancelBooking: [
+  'Cancelling {getBooking.booking.id} frees {getBooking.booking.assetName} and voids any dispatch on it.',
+  '{cancelBooking.bookingId} is cancelled and {cancelBooking.assetFreed} is free again; '
+    + '{cancelBooking.depositStillHeld} of deposit is still held.',
+],
+```
+
+BEFORE sentences render above the open question, as they already did. AFTER sentences render beside
+the operation record, once per write that TOOK EFFECT this turn, filled from that call's own result —
+`composeDeliveryText` gains the action history to reach them.
+
+**A slot step may be an index.** `{listHolds.holds.0.id}` reaches the first row of a list; `walk`
+already resolved it and only the grammar refused. The cost is real and visible: an empty list renders
+the marker for every step of that path, so a sentence naming a row reads `NA for NA` when there is no
+row.
+
+### 4.11 · A refusal rule belongs in the tool's own prose
+
+Three cases turned on this and nothing else. Where an act must be REFUSED rather than put up for
+agreement, the rule goes in the author prose of that tool's read-order guard, which lands in the
+tool description:
+
+```
+issueRefund     what can go back is what was PAID minus what has ALREADY been refunded — work that
+                subtraction and refuse an amount above it instead of putting it up for agreement;
+                and while any hold stands on the account, refuse outright
+chargeDeposit   report the float limit and what is left of it, refuse a charge above it, and name
+                the ways out: a higher plan tier, or releasing a deposit already held
+```
+
+The disclosure could not do this: it renders only when a question is RAISED, and in these cases no
+question should be raised at all. The template also cannot compute — `2930 − 1000` is the model's
+arithmetic, and telling it to do the subtraction is what made it do it.
+
+### 4.12 · Two fields to retire from `RenderedClaim`
+
+```
+amount    business specificity — no other part of the engine needs a loose number, and it exists
+          because this domain moves money
+outcome   rename to `status`
+```
+
+Noted here so the port carries them; neither is measured by this spec.
+
 ## 5 · The exam reads the screen
 
 A literal derived from the call cannot be written into a case, so the scripted user stops predicting
@@ -723,6 +779,36 @@ measuring it. The two sets barely overlap — they attack different things.
 
 **One case still exhausts, identically in all three reps** — `25-change-plan-confirm`, on
 `redrive:claimIsComplete`, which is a different rule and a separate investigation.
+
+### 6.1 · Iterated to sixteen
+
+The consent work alone reaches 7. The rest came from the disclosure, authored and fixed one failing
+case at a time:
+
+```
+r4   1/19   nothing
+r5   7/19   consent: the licence is the call, the word splits, the vetoed attempt proves it
+r7   6/19   + honesty stops matching identities
+r8  10/19   + the contract declares what each act would do
+r9  12/19   + a single call of a read tool binds a slot on its own
+r10 13/19   + a slot step may be an index; the refund cap rule in the tool's prose
+r11 15/19   + the hold rule and the float rule in their tools' prose
+r12 16/19   + the sentence that speaks AFTER the act
+```
+
+**The three that remain share one shape**: each asks for a figure in a turn LATER than the one that
+produced it.
+
+```
+turn 2   chargeDeposit runs   →  "500 charged, 500 now held of 3000"   the sentence renders here
+turn 3   nothing runs         →  nothing renders
+         the rubric wants     →  "500 is already held"
+         the desk says        →  "0 is held"
+```
+
+A sentence tied to an act cannot carry it. That is the third tense — what stays true after the act —
+and it belongs to `stateBlock`, which today carries only the three conditions that disqualify a whole
+turn. Out of scope here, and drafted separately.
 
 ---
 
