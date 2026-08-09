@@ -558,38 +558,67 @@ disagree.
 `closeApprovalsFor` changes shape with it: `(approvals, tool, args)`, closing every open approval
 whose `tool` and `canonArgs(args)` match.
 
-### 4.8 · `runtime/disclosure.ts` — one binding is left OPEN
+### 4.8 · `runtime/disclosure.ts` — the slot declares which record it is about
 
-The disclosure declares two of the three things a slot needs, and the third is still elected:
+The disclosure declared two of the three things a slot needs and elected the third. With `subject`
+gone, the third is declared too, in the same place and by the same author.
 
 ```
+{sourceId:getCustomer.customer.name}
+ └───┬──┘ └────┬────┘ └─────┬─────┘
+ which record   which read    where inside its result
+
 {getAsset.asset.name}
- └──┬───┘ └───┬────┘
- DECLARED   DECLARED       which read tool · where inside its result
-
-slotValue(..., approval.subject)      ELECTED — and `subject` is what §4.4 removes
+ no prefix → the single call of that tool, as today
 ```
 
-`slotValue` uses `subject` only to pick WHICH call of `getAsset` fills the slot, when the turn made
-several. With the approval no longer carrying a subject, that choice needs a new basis, and this spec
-DOES NOT DECIDE IT. The candidates, and what each costs:
+The prefix names an ARGUMENT of the destructive call. The engine reads its value and uses it exactly
+where `subject` was used — nothing else in `slotValue` changes:
 
 ```
-any argument value of the call      two reads of one tool can both match; the last wins,
-                                    and it can be the wrong one
-the LAST successful call            the case the disclosure header argues against, with the
-                                    two-`getMember` example
-declare it, like the path           the author writes which argument the read is keyed on —
-                                    the disclosure's own answer to "do not guess", applied
-                                    to the third thing
+1  value    = args['sourceId']                 → 'cust_2001'
+2  candidates = observed calls of getCustomer   (already how it works)
+3  bind     = the one whose result carries that value as a whole string
+4  walk     = result.customer.name             → 'Redline'
 ```
 
-Measured today, no atlas case exercises the ambiguity: it needs one destructive tool with two records
-AND the same read tool called once per record. A constructed case is
-`mergeCustomers({sourceId, targetId})` with `getCustomer` read twice, where the sentence would name
-the customer being absorbed INTO rather than the one being absorbed.
+**The grammar gains an optional prefix.** Today a `:` matches nothing and the brace pair renders
+verbatim, which is the engine's own rule for a shape it does not recognise:
 
-**Until this is decided, the disclosure cannot be ported.** Everything else in this spec can.
+```diff
+-const SLOT = /\{([A-Za-z_$][A-Za-z0-9_$]*(?:\.[A-Za-z_$][A-Za-z0-9_$]*)*)\}/g;
++/** `{` [ argument `:` ] readTool ( `.` step )* `}`. The optional prefix names an argument of the
++ *  destructive call; the slot then binds to the read that carries THAT argument's value. Without it
++ *  the slot binds as before. Any other shape is not a slot and renders verbatim. */
++const SLOT = /\{(?:([A-Za-z_$][A-Za-z0-9_$]*):)?([A-Za-z_$][A-Za-z0-9_$]*(?:\.[A-Za-z_$][A-Za-z0-9_$]*)*)\}/g;
+```
+
+```diff
+-    const value = slotValue(actionHistory.observed, readTool, steps, approval.subject);
++    const keyed = arg === undefined ? undefined : approval.args?.[arg];
++    const value = slotValue(actionHistory.observed, readTool, steps, keyed);
+```
+
+`slotValue` keeps its body. When `keyed` is `undefined` — no prefix — it stops filtering by value and
+takes the single call of that read tool, and the marker renders when there is none or more than one.
+
+**Why the prefix exists.** One read tool commonly answers about two records of the SAME destructive
+call:
+
+```
+mergeCustomers({ sourceId:'cust_2001', targetId:'cust_2002' })
+  getCustomer(cust_2001) → Redline        the one being absorbed
+  getCustomer(cust_2002) → Northgate      the one absorbing
+
+  no prefix   both calls match → the last wins → "Northgate will be absorbed"   WRONG
+  {sourceId:…} binds to cust_2001         → "Redline will be absorbed"          right
+```
+
+No atlas case exercises this today: it needs a destructive tool with two records AND the same read
+called once per record. `transferAsset` has two records but only `getAsset` is read.
+
+**The lint (§7.2) tightens with it.** A slot with no prefix, on a tool whose call carries more than
+one identity-bearing argument, is a finding: it will bind by luck.
 
 ## 5 · The exam reads the screen
 
