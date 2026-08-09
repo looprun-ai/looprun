@@ -136,41 +136,72 @@ enforced, not an instruction.
 
 ## 3 · The design
 
-### 3.1 · The licence is the call
+### 3.1 · `subject` stays, and holds the records — plural
 
-An approval carries the canonical form of the call's arguments and licenses exactly that call.
-Nothing is inferred from an argument's name.
-
-```
-ApprovalRequest    tool     the destructive tool
-                   params   canonArgs(args) — key-order-independent, already in the engine
-                   meaning  what the user READS
-                   token    the literal the user TYPES
-```
-
-`canonArgs` (`guards/flow.ts`) sorts keys and already backs `noDuplicateCall`, so the same call
-written two ways is one licence:
+**`ApprovalRequest.subject` is not removed.** The disclosure shipped in `main` binds its slots to it,
+`closeApprovalsFor` keys on it, and the simulate route mints by it. It keeps its name and its job, and
+stops being a single elected record:
 
 ```
-{assetId, targetWorkspaceId}  →  {"assetId":"ast_ltwr01","targetWorkspaceId":"ws_denver02"}
-{targetWorkspaceId, assetId}  →  the same string, therefore the same licence
+                 BEFORE                          AFTER
+subject          one record, elected by walking   EVERY identity value the call carries
+                 the argument names in insertion  ['ast_ltwr01', 'ws_denver02']
+                 order and taking the first hit
 ```
 
-### 3.2 · The literal
+There is no new field. Every consumer keeps working, with one word of adjustment each:
+
+| consumer | before | after |
+|---|---|---|
+| `approvalMatchesCall` — the licence | some argument equals the elected record | the call carries **every** value |
+| `disclosure.ts` `slotValue` — which read fills a slot | the read naming the elected record | the read naming **any** of them |
+| `closeApprovalsFor` — the question stops standing | the moved record equals it | the moved record is **any** of them |
+
+**The defect disappears rather than being fixed.** There is no election left to get wrong. And the
+licence tightens for free: a question shown for `ast_ltwr01 → ws_denver02` no longer licenses sending
+that machine anywhere else.
+
+`identityHits` (`guards/honesty.ts`) already produces the list; `preferredIdentityValues` is the
+helper that discarded all but the first, and consent stops calling it. `sameAct` inside
+`issueApproval` compares the list canonically (sorted, joined) so key order cannot split one question
+into two.
+
+### 3.2 · Three things, three jobs — and the literal is the smallest of them
+
+The operator says *"send the Allmand Light Tower to the Denver yard."* They never typed `ast_ltwr01`;
+the agent looked it up. So the internal codes belong in the LICENCE, not in what the operator reads
+or types.
+
+```
+what the engine STORES    the records of the call        ast_ltwr01, ws_denver02
+what the operator READS   human words, from the reads    "the Allmand Light Tower leaves this
+                                                          fleet for good and goes to Denver"
+what the operator TYPES   a short gesture                CONFIRM TRANSFER-7F3A
+what the literal LICENSES that call and nothing else
+```
 
 ```
 CONFIRM <CODE>-<HASH4>
-        │       └── four uppercase hex of a stable 32-bit hash of `params`
+        │       └── four uppercase hex of a stable 32-bit hash of the call's canonical arguments
         └── the declared code, else the tool name uppercased
 ```
 
-The hash is not decoration. Two open questions on the SAME tool for different records — case
-`98-two-retirements-one-turn` — would otherwise share one literal, and one typed word would license
-both. It is deterministic: same call, same literal, every run.
+**Why a hash and not the records.** `CONFIRM AST_LTWR01-WS_DENVER02` is long and, worse, it asks the
+operator to copy internal codes they never used and may not recognise. The engine already separates
+`meaning` (read) from `token` (typed) — the readable half is `meaning`, and it is carried by the
+disclosure sentence, in the domain's own words.
+
+**Why not a slice of the id.** `CONFIRM RETIRE-TRLR` reads well on one argument and stops reading well
+the moment a call carries several, or two calls differ only deep in the record.
+
+**Derived, not drawn.** The suffix is a function of the call: the same call yields the same literal on
+every run, so a test reproduces and a repeated question is recognised as the same question. Two
+similar calls — `98-two-retirements-one-turn` — yield different literals, which is the whole reason
+the suffix exists.
 
 **A literal a case cannot predict is the point.** The author has no way to know the arguments the
-model will send, exactly as a real user has no way to know them before reading the screen. §5 changes
-the exam to read the screen.
+model will send, exactly as a real operator has no way to know them before reading the screen. §5
+changes the exam to read the screen.
 
 ### 3.3 · `destructiveLabels` gains a shape
 
@@ -295,8 +326,9 @@ once the word said what it required — before any correction ran.
  function issueApproval(actionHistory, c) {
 -    const token = approvalCode(c.meaning);
 -    const sameAct = (x) => … && x.tool === c.tool && x.subject === c.subject;
-+    const token = `CONFIRM ${c.code ?? c.tool.toUpperCase()}-${shortHash(c.params ?? '')}`;
-+    const sameAct = (x) => … && x.tool === c.tool && x.params === c.params;
++    const token = `CONFIRM ${c.code ?? c.tool.toUpperCase()}-${shortHash(canonArgs(c.args ?? {}))}`;
++    const key = (s) => [...(s ?? [])].sort().join(' ');
++    const sameAct = (x) => … && x.tool === c.tool && key(x.subject) === key(c.subject);
 ```
 
 ```diff
@@ -307,33 +339,41 @@ once the word said what it required — before any correction ran.
 -    const meaning = actionHistory.destructiveLabels[tool];
 -    if (meaning)
 -        issueApproval(actionHistory, { tool, meaning });
-+    // The question is about THIS CALL. Its licence is the call's own canonical arguments; what the user
-+    // READS is the declared label, or the tool's own name when the domain declared none. Nothing here
-+    // guesses which argument the act is "really" about.
++    // The question is about THIS CALL. `subject` is EVERY record the call names — no election, so
++    // nothing can elect the wrong one. What the operator READS is the declared label or the tool's
++    // own name; the disclosure sentence above the question carries the human words.
 +    const cfg = actionHistory.destructiveLabels[tool];
 +    const meaning = typeof cfg === 'string' ? cfg : (cfg?.label ?? tool);
 +    const code = typeof cfg === 'string' ? undefined : cfg?.code;
-+    issueApproval(actionHistory, { tool, params: canonArgs(args), meaning, code: code ?? tool.toUpperCase() });
++    issueApproval(actionHistory, {
++        tool, args, subject: identityValues(args), meaning, code: code ?? tool.toUpperCase(),
++    });
  }
 ```
 
+`identityValues` is `identityHits` without the "keep only the first" step that
+`preferredIdentityValues` applies — export it from `guards/honesty.ts` beside its sibling.
 `preferredIdentityValues` keeps its other callers; only consent stops using it. `deriveToken` and
 `approvalCode` become dead on this path — remove them if nothing else calls them.
+
+`ApprovalRequest.subject` becomes `string[]`, and `args` is stored so the literal can be derived and
+so a future check can reason about the call. Update the interface's JSDoc: it no longer says "the
+record identity the world issued", it says "every record the call names".
 
 ### 4.5 · `runtime/approval-request.ts` — matching
 
 ```diff
-+import { canonArgs } from '../guards/flow.js';
  export function approvalMatchesCall(c, tool, args) {
-+    // The approval licenses ONE call: this tool with THESE arguments. `params` is the key-order-independent
-+    // canonical form, so the same call written two ways is the same licence, and a different record is a
-+    // different licence. Nothing is inferred from an argument's NAME.
++    // The approval licenses ONE call: this tool naming EVERY record the question was about. A question
++    // shown for `ast_ltwr01 → ws_denver02` therefore does not license sending that machine elsewhere,
++    // and nothing is inferred from an argument's NAME.
      if (c.tool !== tool) return false;
 -    const subject = c.subject;
 -    if (subject === undefined) return true;
 -    return Object.values(args).some((v) => typeof v === 'string' && targetMatchesValue(subject, v));
-+    if (c.params === undefined) return true;
-+    return c.params === canonArgs(args);
++    if (!c.subject?.length) return true;
++    const present = new Set(Object.values(args).filter((v) => typeof v === 'string'));
++    return c.subject.every((s) => present.has(s));
  }
 ```
 
@@ -342,23 +382,96 @@ from `guards/` may need `canonArgs` moved to a shared module rather than re-expo
 
 ### 4.6 · `runtime/turn.ts` — the exhaustion route
 
+The diff below was written against a build that predates the disclosure. On `main` the clean route
+already composes TWO things per approval (`turn.ts:381`):
+
+```ts
+.map((c) => [renderDisclosure(c, contract, actionHistory), text.approval(c.meaning, c.token)]
+  .filter(Boolean).join('\n'))
+```
+
+Copying only `text.approval` into the exhaustion route would recreate two routes that disagree —
+which IS Defect B, in a new place. **Extract one per-approval renderer and call it from both.**
+
 ```diff
++/** ONE approval, as the operator reads it: what agreeing would do, then the literal that agrees.
++ *  Both delivery routes call this — a second copy is how the two routes drifted apart before. */
++function renderApproval(c, contract, actionHistory) {
++    const text = resolveEngineText(contract?.engineText);
++    return [renderDisclosure(c, contract, actionHistory), text.approval(c.meaning, c.token)]
++        .filter(Boolean).join('\n');
++}
+
 -function closureText(report, sentence) {
 -    return [report, sentence].filter((s) => s.trim()).join('\n\n');
-+function closureText(report, sentence, approvals = [], contract) {
-+    // A question still standing is outstanding work: the exhaustion route must print it exactly
-+    // as withBlankFloor's route already preserves it. It goes LAST, so the closing sentence reads
-+    // as answered by the line beneath it.
-+    const text = resolveEngineText(contract?.engineText);
-+    const asked = approvals.map((c) => text.approval(c.meaning, c.token)).join('\n');
++function closureText(report, sentence, approvals = [], contract, actionHistory) {
++    // A question still standing is outstanding work: the exhaustion route prints it exactly as the
++    // clean route does. It goes LAST, so the closing sentence reads as answered by the line beneath.
++    const asked = approvals.map((c) => renderApproval(c, contract, actionHistory)).join('\n\n');
 +    return [report, sentence, asked].filter((s) => s.trim()).join('\n\n');
  }
 ```
 
+`composeDeliveryText`'s own `.map(...)` at `turn.ts:381` collapses to `renderApproval` too, so the
+two routes are the same code and cannot drift again.
+
 ```diff
 -        return { text: closureText(derived.report, sentence), exhausted: true, … };
-+        return { text: closureText(derived.report, sentence, openApprovals(actionHistory), contract), exhausted: true, … };
++        return { text: closureText(derived.report, sentence, openApprovals(actionHistory), contract, actionHistory), exhausted: true, … };
 ```
+
+### 4.7 · The OTHER two places that key on `subject`
+
+Both are in `runtime/action-history.ts`, inside `recordToolResult`, and both must mint or match the
+same way the veto route does. Leaving either as it is reproduces Defect B — two paths that mean the
+same thing and disagree.
+
+```diff
+  // the SIMULATE route: the world answered `requiresConfirmation`, so the question is raised here
+  if (requiresConfirmation) {
+-    const [subject] = preferredIdentityValues(output);
+-    if (subject) issueApproval(actionHistory, { tool: name, subject, meaning: subject });
++    // `recordToolResult` holds the call's own args — mint from THEM, exactly as the veto route does,
++    // rather than from whatever identities the RESULT happens to carry.
++    const cfg = actionHistory.destructiveLabels[name];
++    const meaning = typeof cfg === 'string' ? cfg : (cfg?.label ?? name);
++    const code = typeof cfg === 'string' ? undefined : cfg?.code;
++    issueApproval(actionHistory, {
++      tool: name, args, subject: identityValues(args), meaning, code: code ?? name.toUpperCase(),
++    });
+  }
+```
+
+```diff
+  } else if (wtc?.tookEffect === true) {
+-    for (const subject of preferredIdentityValues(output)) closeApprovalsFor(actionHistory.approvals, subject);
++    // A question stops standing when ANY record it names has moved — the act it described is no
++    // longer true of the world, whichever of its records changed.
++    for (const moved of identityValues(output)) closeApprovalsFor(actionHistory.approvals, moved);
+  }
+```
+
+`closeApprovalsFor` itself changes from `a.subject === subject` to `a.subject?.includes(subject)`.
+
+### 4.8 · `runtime/disclosure.ts` — one word
+
+```diff
+-    const value = slotValue(actionHistory.observed, readTool, steps, approval.subject);
++    // `subject` is now every record the call names. A slot binds to the read naming ANY of them —
++    // which is strictly less guessing than binding to one elected record.
++    const value = slotValue(actionHistory.observed, readTool, steps, approval.subject);
+```
+
+`slotValue`'s last parameter becomes `string[]` and its inner test becomes "the result carries any of
+these as a whole string value". Its header comment — which today explains why a slot binds to the
+subject rather than to the latest call, with the two-`getMember` example — stays true and gains one
+line: there is no longer an elected record to get wrong.
+
+**A residual, stated so it is not discovered later.** With several records, a slot can bind to a read
+about the WRONG one — a read of the destination workspace rather than of the machine. The defence is
+already in `2026-08-08-disclosure-design.md`: a slot names a read tool that a `requiresBefore` on the
+same tool demands, so only the intended read competes. This spec promotes that from guidance to a
+lint (§7.2).
 
 `deriveExhaustionClosure`'s own `closureText(report, sentence)` keeps the default `[]` and stays
 correct: its text is consumed only on `withBlankFloor`'s blank branch, which is reached only when
@@ -425,10 +538,17 @@ The six cases that turned: `15`, `16`, `20`, `21`, `36`, `95`. None regressed in
 engine minted literals the new exam could not match. Report r5 against r5's own control, never
 against r1–r4.
 
-**Still failing, and out of scope:** the remaining 12 cases mostly demand a FIGURE read from a record
-(`$200 settlement`, `2930 paid`, `tech_4001 on 2026-07-15`). That is the subject of
-`2026-08-08-disclosure-design.md`, which measured 9 of 18 by transcript injection and is not
-implemented.
+**The measured build predates the disclosure, and the disclosure is already shipped.** These numbers
+come from a hand-patched `0.17.0` in the bench; `main` has since gained the disclosure seam
+(`71ef09c` … `cf40bcf`) and the tool-owned guard bindings. Port onto `main` as it stands — §4.6, §4.7
+and §4.8 exist precisely because the code moved under this spec. The `1 → 7` measures the three
+consent defects and does not transfer to a different build unchanged.
+
+**Still failing, and separate:** the remaining 12 cases mostly demand a FIGURE read from a record
+(`$200 settlement`, `2930 paid`, `tech_4001 on 2026-07-15`). That is what the disclosure sentence
+carries, and `2026-08-08-disclosure-design.md` measured 9 of 18 for it by transcript injection. Its
+ENGINE is in `main`; what has not happened is the atlas authoring of `disclose` entries and a run
+measuring it. The two sets barely overlap — they attack different things.
 
 **One case still exhausts, identically in all three reps** — `25-change-plan-confirm`, on
 `redrive:claimIsComplete`, which is a different rule and a separate investigation.
@@ -455,6 +575,20 @@ subjects the new engine cannot serve.
 | `packages/core/src/runtime/action-history.ts` header | how the literal is composed, and why the hash exists |
 | `packages/core/src/guards/honesty.ts` header | the grounding table's two new rows |
 | `packages/core/src/runtime/claims.ts` header | the outcome vocabulary |
+| `packages/core/src/runtime/disclosure.ts` header | `subject` is plural; a slot binds to the read naming any of the call's records |
+| `governance/proofs/2026-08-09-consent-licence.md` | the proof record. Changing `claimIsGrounded`'s table is a guard change, and every prior guard change shipped one (`2026-08-07-worst-world-engine`, `2026-08-08-disclosure`, `2026-08-08-tool-owned-guard-bindings`) |
+
+**Three more sites carry the old outcome word** and are easy to miss because they are not where the
+vocabulary is defined:
+
+```
+packages/eval/src/norms-config.ts:34     CORE_OUTCOME_VALUES
+packages/core/src/guards/catalog.ts:170  the claimIsGrounded catalog entry
+                                          → regenerates GUARDS.md and tutorial 04
+agentspec-bench subjects/atlas/
+  norms/contract.ts:149                   `if (core === 'pending_confirmation')` in renderClaim
+  norms/N2.thinking.md                    the outcome-map reasoning
+```
 
 ### 7.2 · `agentspec` — immediately after the engine
 
@@ -465,6 +599,7 @@ subjects the new engine cannot serve.
 | `references/guard-catalog.md` | `confirmFirst`'s entry: the veto mints the licence for THAT call |
 | `references/test.md` | reading a run where the control shows `(no code was shown)` |
 | `scripts/lint-authoring.mjs` | a case whose `userText` carries a literal `CONFIRM …` is a finding — it cannot know it |
+| `scripts/lint-authoring.mjs` | a `disclose` slot naming a read tool that no `requiresBefore` on the same tool demands is a finding. With `subject` plural a slot could otherwise bind to a read about the wrong record (§4.8) |
 
 ### 7.3 · The gates
 
