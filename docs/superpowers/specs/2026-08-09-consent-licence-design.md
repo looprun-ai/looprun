@@ -136,63 +136,63 @@ enforced, not an instruction.
 
 ## 3 · The design
 
-### 3.1 · `subject` stays, and holds the records — plural
+### 3.1 · No record is elected, because none needs to be
 
-**`ApprovalRequest.subject` is not removed.** The disclosure shipped in `main` binds its slots to it,
-`closeApprovalsFor` keys on it, and the simulate route mints by it. It keeps its name and its job, and
-stops being a single elected record:
+**`isIdentityKey` leaves the consent path entirely, and nothing replaces it.** The helper decides
+what a record is by the SHAPE OF THE FIELD NAME — `id`, `label`, anything ending in `Id` or `_id` —
+and a world is free to call its field `transferredTo`, `asset` or `booking`. It then does the same
+thing everywhere: keeps the shallowest hits and takes the first.
 
 ```
-                 BEFORE                          AFTER
-subject          one record, elected by walking   EVERY identity value the call carries
-                 the argument names in insertion  ['ast_ltwr01', 'ws_denver02']
-                 order and taking the first hit
+issueApprovalForVeto     transferAsset({assetId, targetWorkspaceId})
+  BEFORE                   elects one, by whichever key the model serialized first
+  AFTER                    no election. The licence IS the call.
 ```
 
-There is no new field. Every consumer keeps working, with one word of adjustment each:
+The approval carries the call itself:
 
-| consumer | before | after |
-|---|---|---|
-| `approvalMatchesCall` — the licence | some argument equals the elected record | the call carries **every** value |
-| `disclosure.ts` `slotValue` — which read fills a slot | the read naming the elected record | the read naming **any** of them |
-| `closeApprovalsFor` — the question stops standing | the moved record equals it | the moved record is **any** of them |
+```
+ApprovalRequest    tool   the destructive tool
+                   args   the call's arguments, and their canonical form
+                   meaning  what the operator READS
+                   token    the literal the operator TYPES
+```
 
-**The defect disappears rather than being fixed.** There is no election left to get wrong. And the
-licence tightens for free: a question shown for `ast_ltwr01 → ws_denver02` no longer licenses sending
-that machine anywhere else.
+`approvalMatchesCall` becomes an equality on `canonArgs`, which is key-order independent and already
+backs `noDuplicateCall`:
 
-`identityHits` (`guards/honesty.ts`) already produces the list; `preferredIdentityValues` is the
-helper that discarded all but the first, and consent stops calling it. `sameAct` inside
-`issueApproval` compares the list canonically (sorted, joined) so key order cannot split one question
-into two.
+```
+{assetId, targetWorkspaceId}  →  {"assetId":"ast_ltwr01","targetWorkspaceId":"ws_denver02"}
+{targetWorkspaceId, assetId}  →  the same string, therefore the same licence
+```
+
+A question shown for one machine and one destination licenses THAT transfer and no other. Nothing is
+guessed, so nothing can be guessed wrong — and a world that names its field `transferredTo` is no
+longer punished for it.
 
 ### 3.2 · Three things, three jobs — and the literal is the smallest of them
 
 The operator says *"send the Allmand Light Tower to the Denver yard."* They never typed `ast_ltwr01`;
-the agent looked it up. So the internal codes belong in the LICENCE, not in what the operator reads
-or types.
+the agent read the catalogue and matched the name. So internal codes belong in the LICENCE, not in
+what the operator reads or types.
 
 ```
-what the engine STORES    the records of the call        ast_ltwr01, ws_denver02
+what the engine STORES    the call                       transferAsset({assetId, targetWorkspaceId})
 what the operator READS   human words, from the reads    "the Allmand Light Tower leaves this
-                                                          fleet for good and goes to Denver"
-what the operator TYPES   a short gesture                CONFIRM TRANSFER-7F3A
+                                                          fleet for good"
+what the operator TYPES   a short gesture                CONFIRM TRANSFERASSET-5465
 what the literal LICENSES that call and nothing else
 ```
 
 ```
 CONFIRM <CODE>-<HASH4>
-        │       └── four uppercase hex of a stable 32-bit hash of the call's canonical arguments
+        │       └── four uppercase hex of a stable 32-bit hash of `canonArgs(args)`
         └── the declared code, else the tool name uppercased
 ```
 
-**Why a hash and not the records.** `CONFIRM AST_LTWR01-WS_DENVER02` is long and, worse, it asks the
-operator to copy internal codes they never used and may not recognise. The engine already separates
-`meaning` (read) from `token` (typed) — the readable half is `meaning`, and it is carried by the
-disclosure sentence, in the domain's own words.
-
-**Why not a slice of the id.** `CONFIRM RETIRE-TRLR` reads well on one argument and stops reading well
-the moment a call carries several, or two calls differ only deep in the record.
+**Why a hash and not the records.** `CONFIRM AST_LTWR01-WS_DENVER02` is long and asks the operator to
+copy internal codes they never used. The readable half is `meaning`, and the disclosure sentence
+above the question carries the human words.
 
 **Derived, not drawn.** The suffix is a function of the call: the same call yields the same literal on
 every run, so a test reproduces and a repeated question is recognised as the same question. Two
@@ -248,6 +248,60 @@ so the closing sentence reads as answered by the line beneath it.
 
 ---
 
+### 3.6 · Honesty is checked against what the engine DERIVED, not against strings
+
+The rejection stays. `claimIsGrounded` still refuses a reply whose declaration is not grounded, and
+the turn is still redriven. What changes is the PROOF.
+
+```
+BEFORE   the agent declares      → the engine tries to PROVE the declaration by matching
+                                   the declared record against identities it finds in the
+                                   result — which is why it needed the name convention
+
+AFTER    the engine already KNOWS what each call did → it DERIVES the truth and compares
+```
+
+The engine derives an outcome per write, from facts it recorded itself:
+
+```
+call                        what the engine holds        derives
+cancelBooking, vetoed       the veto                     blocked
+issueRefund, ok:false       the error in the result      failure
+chargeDeposit, tookEffect   the attested effect          success
+```
+
+Both sides are now the engine's own structured lists, and the link between them is the CALL, by
+position — never a string:
+
+```
+the agent declared   [ { cancelBooking, success },  { issueRefund, success } ]
+the engine derived   [ { cancelBooking, blocked },  { issueRefund, failure } ]
+                                        ────┬────                  ────┬────
+                                          diverged                  diverged
+                                    → NOT GROUNDED → the reply is REJECTED
+```
+
+```
+1st write of the turn  ↔  1st ACTION declaration
+2nd write of the turn  ↔  2nd ACTION declaration
+```
+
+`deriveClaimsFromActionHistory` already builds that derived list — it is what the exhaustion closure
+delivers when the model never produces a groundable declaration. This makes it the checker as well as
+the fallback.
+
+**`target` stops being evidence.** It remains in the declaration and remains what the operator reads,
+but nothing is proved by comparing it to anything. `issuedEvidence`, `addressedEvidence`,
+`claimMatches`, `identityValues` and `preferredIdentityValues` leave the honesty path with it.
+
+**What this gives up, stated plainly.** The old check could catch a claim that named the WRONG record
+while getting the outcome right — "cancelled bk_1002" when bk_1001 was cancelled. Positional matching
+cannot see that. What it gains is that the operator reads the engine's own line under the message —
+`not carried out on bk_1001` — which contradicts a wrong record in the same screen, without the
+engine having to interpret anything.
+
+---
+
 ## 4 · The implementation, verbatim
 
 Measured as a patched build of `@looprun-ai/core@0.17.0` and `@looprun-ai/mastra@0.17.0` in
@@ -292,28 +346,41 @@ Measured as a patched build of `@looprun-ai/core@0.17.0` and `@looprun-ai/mastra
 This line is load-bearing. In the probe the agent called the destructive tool on its FIRST attempt
 once the word said what it required — before any correction ran.
 
-### 4.3 · `guards/honesty.ts` — grounding
+### 4.3 · `guards/honesty.ts` — grounding stops matching identities
+
+Two changes in one place. The outcome word splits, and the PROOF stops being a string comparison.
 
 ```diff
 -        case 'pending_confirmation':
 -            return calls.some((c) => c.resultFlags?.requiresConfirmation === true && addressed(c));
 +        case 'any_other_question':
-+            // Speech, not an operation: no action-history fact can prove a question. `claimIsComplete`
-+            // still demands every effected write be reported, so this is no back door.
++            // Speech, not an operation: nothing the engine recorded can prove a question.
++            // `claimIsComplete` still demands every effected write be reported — no back door.
 +            return true;
-+        case 'tool_called_request_approval':
-+            // TWO ROUTES raise the question: the world answering `requiresConfirmation` on a
-+            // simulatable tool, and the consent guard VETOING the bare call. A vetoed attempt never
-+            // reaches the world, so demanding a world result makes this word unprovable on every
-+            // surface that declares no `simulate`.
-+            return attempts.some((a) => claimMatches(claim, attemptEvidence(a)))
-+                || calls.some((c) => c.resultFlags?.requiresConfirmation === true && addressed(c));
 ```
 
-`attempts` is `ctx.attemptedThisTurn ?? []` and `attemptEvidence` is already in scope — the
-`blocked`/`refused` case has used both since before this change.
+Every other case collapses into one comparison against the engine's own derived account:
 
-### 4.4 · `runtime/action-history.ts` — the licence and the literal
+```diff
+-  // one variant per grounding-table row, each matching the claim's `target` against the
+-  // identities a call carries
+-  switch (resolved) { case 'success': … case 'failure': … case 'blocked': … }
++  // The engine already knows what each write did. Compare the agent's Nth ACTION declaration
++  // against the Nth derived one, by POSITION. No field name is read, so no naming convention
++  // decides whether an honest declaration is believed.
++  const derived = deriveClaimsFromActionHistory(ctx, writes);
++  return derived[index]?.outcome === resolved;
+```
+
+`isIdentityKey`, `identityHits`, `identityValues`, `preferredIdentityValues`, `issuedEvidence`,
+`addressedEvidence` and `claimMatches` leave this file with the switch. Delete what nothing else
+calls.
+
+**The deny text keeps its actionable half.** `declarableHint` today lists the outcomes a claim COULD
+have taken; it now reads the derived entry and names the one true outcome for that write, which is
+strictly more useful.
+
+### 4.4 · `runtime/action-history.ts` — the approval carries the call
 
 ```diff
 +/** Four uppercase hex of a stable 32-bit hash — the per-call half of a consent literal, so two open
@@ -326,9 +393,9 @@ once the word said what it required — before any correction ran.
  function issueApproval(actionHistory, c) {
 -    const token = approvalCode(c.meaning);
 -    const sameAct = (x) => … && x.tool === c.tool && x.subject === c.subject;
-+    const token = `CONFIRM ${c.code ?? c.tool.toUpperCase()}-${shortHash(canonArgs(c.args ?? {}))}`;
-+    const key = (s) => [...(s ?? [])].sort().join(' ');
-+    const sameAct = (x) => … && x.tool === c.tool && key(x.subject) === key(c.subject);
++    const canon = canonArgs(c.args ?? {});
++    const token = `CONFIRM ${c.code ?? c.tool.toUpperCase()}-${shortHash(canon)}`;
++    const sameAct = (x) => … && x.tool === c.tool && canonArgs(x.args ?? {}) === canon;
 ```
 
 ```diff
@@ -339,46 +406,35 @@ once the word said what it required — before any correction ran.
 -    const meaning = actionHistory.destructiveLabels[tool];
 -    if (meaning)
 -        issueApproval(actionHistory, { tool, meaning });
-+    // The question is about THIS CALL. `subject` is EVERY record the call names — no election, so
-+    // nothing can elect the wrong one. What the operator READS is the declared label or the tool's
-+    // own name; the disclosure sentence above the question carries the human words.
++    // The question is about THIS CALL. No record is elected, so none can be elected wrongly, and a
++    // world naming its field `transferredTo` is no longer invisible. What the operator READS is the
++    // declared label or the tool's own name; the disclosure sentence carries the human words.
 +    const cfg = actionHistory.destructiveLabels[tool];
 +    const meaning = typeof cfg === 'string' ? cfg : (cfg?.label ?? tool);
 +    const code = typeof cfg === 'string' ? undefined : cfg?.code;
-+    issueApproval(actionHistory, {
-+        tool, args, subject: identityValues(args), meaning, code: code ?? tool.toUpperCase(),
-+    });
++    issueApproval(actionHistory, { tool, args, meaning, code: code ?? tool.toUpperCase() });
  }
 ```
 
-`identityValues` is `identityHits` without the "keep only the first" step that
-`preferredIdentityValues` applies — export it from `guards/honesty.ts` beside its sibling.
-`preferredIdentityValues` keeps its other callers; only consent stops using it. `deriveToken` and
-`approvalCode` become dead on this path — remove them if nothing else calls them.
-
-`ApprovalRequest.subject` becomes `string[]`, and `args` is stored so the literal can be derived and
-so a future check can reason about the call. Update the interface's JSDoc: it no longer says "the
-record identity the world issued", it says "every record the call names".
+`ApprovalRequest.subject` is replaced by `args`. Every destructive tool can now raise a question — the
+old "a tool with neither a record nor a label can never be consented to" case is gone. `deriveToken`
+and `approvalCode` become dead on this path.
 
 ### 4.5 · `runtime/approval-request.ts` — matching
 
 ```diff
  export function approvalMatchesCall(c, tool, args) {
-+    // The approval licenses ONE call: this tool naming EVERY record the question was about. A question
-+    // shown for `ast_ltwr01 → ws_denver02` therefore does not license sending that machine elsewhere,
-+    // and nothing is inferred from an argument's NAME.
++    // The approval licenses ONE call. `canonArgs` is key-order independent, so the same call written
++    // two ways is one licence and a different destination is a different licence. No argument NAME
++    // is read.
      if (c.tool !== tool) return false;
 -    const subject = c.subject;
 -    if (subject === undefined) return true;
 -    return Object.values(args).some((v) => typeof v === 'string' && targetMatchesValue(subject, v));
-+    if (!c.subject?.length) return true;
-+    const present = new Set(Object.values(args).filter((v) => typeof v === 'string'));
-+    return c.subject.every((s) => present.has(s));
++    if (c.args === undefined) return true;
++    return canonArgs(c.args) === canonArgs(args);
  }
 ```
-
-`ApprovalRequest.subject` is replaced by `params`. Check the import direction: `runtime/` importing
-from `guards/` may need `canonArgs` moved to a shared module rather than re-exported.
 
 ### 4.6 · `runtime/turn.ts` — the exhaustion route
 
@@ -422,62 +478,71 @@ two routes are the same code and cannot drift again.
 
 ### 4.7 · The OTHER two places that key on `subject`
 
-Both are in `runtime/action-history.ts`, inside `recordToolResult`, and both must mint or match the
-same way the veto route does. Leaving either as it is reproduces Defect B — two paths that mean the
-same thing and disagree.
+Both are in `runtime/action-history.ts`, inside `recordToolResult`, and both must stop electing a
+record. Leaving either as it is reproduces Defect B — two paths that mean the same thing and
+disagree.
 
 ```diff
   // the SIMULATE route: the world answered `requiresConfirmation`, so the question is raised here
   if (requiresConfirmation) {
 -    const [subject] = preferredIdentityValues(output);
 -    if (subject) issueApproval(actionHistory, { tool: name, subject, meaning: subject });
-+    // `recordToolResult` holds the call's own args — mint from THEM, exactly as the veto route does,
-+    // rather than from whatever identities the RESULT happens to carry.
++    // Mint from the call's own ARGS, exactly as the veto route does. The world's result is the
++    // wrong source twice over: it is written by each domain as it likes — a real result named its
++    // destination `transferredTo` and the elector could not see it — and a record that appears only
++    // in the result will not appear in the next call, so a licence built from it could never match.
 +    const cfg = actionHistory.destructiveLabels[name];
 +    const meaning = typeof cfg === 'string' ? cfg : (cfg?.label ?? name);
 +    const code = typeof cfg === 'string' ? undefined : cfg?.code;
-+    issueApproval(actionHistory, {
-+      tool: name, args, subject: identityValues(args), meaning, code: code ?? name.toUpperCase(),
-+    });
++    issueApproval(actionHistory, { tool: name, args, meaning, code: code ?? name.toUpperCase() });
   }
 ```
 
 ```diff
   } else if (wtc?.tookEffect === true) {
 -    for (const subject of preferredIdentityValues(output)) closeApprovalsFor(actionHistory.approvals, subject);
-+    // A question stops standing when ANY record it names has moved — the act it described is no
-+    // longer true of the world, whichever of its records changed.
-+    for (const moved of identityValues(output)) closeApprovalsFor(actionHistory.approvals, moved);
++    // A question stops standing when the call it describes has run. The engine knows WHICH call ran
++    // — it is this one — so the question closes by its own arguments, not by a record scraped out of
++    // the result.
++    closeApprovalsFor(actionHistory.approvals, name, args);
   }
 ```
 
-`closeApprovalsFor` itself changes from `a.subject === subject` to `a.subject?.includes(subject)`.
+`closeApprovalsFor` changes shape with it: `(approvals, tool, args)`, closing every open approval
+whose `tool` and `canonArgs(args)` match.
 
-### 4.8 · `runtime/disclosure.ts` — one word
+### 4.8 · `runtime/disclosure.ts` — one binding is left OPEN
 
-```diff
--    const value = slotValue(actionHistory.observed, readTool, steps, approval.subject);
-+    // `subject` is now every record the call names. A slot binds to the read naming ANY of them —
-+    // which is strictly less guessing than binding to one elected record.
-+    const value = slotValue(actionHistory.observed, readTool, steps, approval.subject);
+The disclosure declares two of the three things a slot needs, and the third is still elected:
+
+```
+{getAsset.asset.name}
+ └──┬───┘ └───┬────┘
+ DECLARED   DECLARED       which read tool · where inside its result
+
+slotValue(..., approval.subject)      ELECTED — and `subject` is what §4.4 removes
 ```
 
-`slotValue`'s last parameter becomes `string[]` and its inner test becomes "the result carries any of
-these as a whole string value". Its header comment — which today explains why a slot binds to the
-subject rather than to the latest call, with the two-`getMember` example — stays true and gains one
-line: there is no longer an elected record to get wrong.
+`slotValue` uses `subject` only to pick WHICH call of `getAsset` fills the slot, when the turn made
+several. With the approval no longer carrying a subject, that choice needs a new basis, and this spec
+DOES NOT DECIDE IT. The candidates, and what each costs:
 
-**A residual, stated so it is not discovered later.** With several records, a slot can bind to a read
-about the WRONG one — a read of the destination workspace rather than of the machine. The defence is
-already in `2026-08-08-disclosure-design.md`: a slot names a read tool that a `requiresBefore` on the
-same tool demands, so only the intended read competes. This spec promotes that from guidance to a
-lint (§7.2).
+```
+any argument value of the call      two reads of one tool can both match; the last wins,
+                                    and it can be the wrong one
+the LAST successful call            the case the disclosure header argues against, with the
+                                    two-`getMember` example
+declare it, like the path           the author writes which argument the read is keyed on —
+                                    the disclosure's own answer to "do not guess", applied
+                                    to the third thing
+```
 
-`deriveExhaustionClosure`'s own `closureText(report, sentence)` keeps the default `[]` and stays
-correct: its text is consumed only on `withBlankFloor`'s blank branch, which is reached only when
-`openApprovals(...).length` is zero.
+Measured today, no atlas case exercises the ambiguity: it needs one destructive tool with two records
+AND the same read tool called once per record. A constructed case is
+`mergeCustomers({sourceId, targetId})` with `getCustomer` read twice, where the sentence would name
+the customer being absorbed INTO rather than the one being absorbed.
 
----
+**Until this is decided, the disclosure cannot be ported.** Everything else in this spec can.
 
 ## 5 · The exam reads the screen
 
