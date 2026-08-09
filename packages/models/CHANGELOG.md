@@ -1,5 +1,17 @@
 # @looprun-ai/models
 
+## 0.18.0
+
+### Minor Changes
+
+- Release (minor).
+
+### Patch Changes
+
+- Updated dependencies [cf40bcf]
+- Updated dependencies
+  - @looprun-ai/core@0.18.0
+
 ## 0.17.0
 
 ### Minor Changes

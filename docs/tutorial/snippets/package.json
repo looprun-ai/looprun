@@ -1,6 +1,6 @@
 {
   "name": "@looprun-internal/tutorial-snippets",
-  "version": "0.0.10",
+  "version": "0.0.11",
   "private": true,
   "type": "module",
   "description": "Every code block in docs/tutorial/ lives here as a compiled file: the snippets compile against the published `looprun` facade, or CI fails.",
