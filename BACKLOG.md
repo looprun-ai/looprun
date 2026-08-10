@@ -37,6 +37,7 @@ done — a pending item that quietly disappears is the failure this file exists 
 | **A wording judgement is not a question for a judge** | One hermes-sim spec routes the WORDING of a decline to text judgement. A model marking its own homework is most biased on judgements of quality, which is the class this falls in — the structural veto already exists and the wording rule buys a model call for the least reliable answer it can give. | Rule wording judgements out of the guard surface in the skill, or state the cost where an author would bind one. |
 | **`looprun-bench` still speaks the retired vocabulary** | `looprun`, `agentspec` and `agentspec-bench` name the seven concepts plainly, and `tests/plain-names.test.mjs` holds them there. `looprun-bench` pins one engine per edition — `0.2.1` for tau2-telecom, `0.6.0` and `0.6.1` for atlas — because an edition is reproducible against the engine that measured it. A swept tree fails typecheck with `Module '@looprun-ai/core' has no exported member 'createActionHistory'`, so renaming an existing edition would mean re-measuring it. | Rename an edition only when a new one is built on a post-rename engine. Spec: `docs/superpowers/specs/2026-08-06-plain-names-design.md`. |
 | **A required read is a veto, and a veto is a hope** | `requiresBefore` states the reads an act owes and DENIES the act when one is missing — it forces nothing. What makes an agent read first is `prose()`, which puts the rule in the assembled prompt. That works on the subject model measured (its whole family denies once across a 100-case exam) and is a property of that model, not of the guard. See below. | Evaluate whether a required read should be FORCED, on the `{verdict:'downgrade'}` precedent, and what it costs to carry an LLM seam to the preTool door. |
+| **Cost per governed conversation is unverified against a real workload** | Measured on the atlas exam: R$0.031 per conversation of 1.53 turns, R$0.020 per turn, 15.5k input tokens per turn. Nobody has checked what that becomes on a conversation of ten or twenty turns, where every turn resends the whole transcript, nor how much of the per-turn input is the static assembled prefix that a cache should be absorbing — the measured cache-read is 19.6% of input. | Measure a long conversation, split per-turn input into static prefix vs transcript, and state the cost curve. See below. |
 
 ---
 
@@ -109,3 +110,42 @@ The forced pass fires on OPEN APPROVALS. An agent that skips the read is stopped
 exists, so the pass has nothing to fire on: the agent that most needed the forced read is the one
 that never reaches it. Whatever shape this takes, the two mechanisms must not be able to disarm each
 other.
+
+
+---
+
+## Cost per governed conversation is unverified against a real workload
+
+### What is measured
+
+The atlas exam, `gemini-3.1-flash-lite`, 2496 conversations run between 4 and 10 August 2026, priced
+at the published paid-tier rates ($0.25/M input, $0.025/M cached input, $1.50/M output):
+
+```
+per conversation (1.53 turns)   23,752 input · 224 output   R$ 0.031
+per turn                        15,524 input                R$ 0.020
+cache-read share of input                                        19.6%
+```
+
+The engine's own overhead is part of that: a 100-case exam is 153 turns but 183 generations — 14
+redrives, 12 forced terminals, 4 forced reads — plus 291 tool calls, each a round-trip that resends
+the conversation.
+
+### What is not measured, and why it matters
+
+**The atlas conversation is 1.53 turns.** A support desk conversation is ten or twenty. Every turn
+resends the whole transcript, so per-turn input grows with the conversation while the static
+assembled prefix stays put. Nobody has measured where that curve goes, and the exam cannot answer it:
+its cases are too short to show the slope.
+
+**The cache is absorbing a fifth of the input.** The assembled prompt is case-invariant by design —
+the shared-prefix law exists for exactly this — yet only 19.6% of input tokens came back as
+cache-read. Either the prefix is not being cached, or it is being invalidated per turn. Whichever it
+is, it is the largest lever on the number above, and it is unexamined.
+
+### The comparison that has not been made
+
+At R$0.031 a conversation, ten thousand conversations a day is R$300/day. Whether that is cheap or
+expensive is a question about the workload it replaces, not about the model — and no such comparison
+exists in this tree. The figure most likely to mislead is the DEVELOPMENT one: 2496 conversations in
+a week was 42 exam runs, which is a measurement habit, not a production load.
