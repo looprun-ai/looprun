@@ -1,7 +1,7 @@
 # A report that hides nothing passes, and the result decides whether a disclosure is printed
 
-**Date** 2026-08-10 · **Scope** `looprun`, `agentspec-bench/subjects/atlas` ·
-**Status** RECORD, not a spec — nothing here is owed.
+**Date** 2026-08-10 · **Scope** `looprun`, `agentspec-bench/subjects/atlas`, `agentspec` ·
+**Status** RECORD · CLOSED — engine, docs, subject and skill shipped; nothing here is owed.
 
 Three engine changes and the contract changes they enable, all in the source. What follows is the measurement that
 justified them, the diffs verbatim, every doc the change touched, the skill, and what the build
@@ -276,11 +276,14 @@ does not exercise it. Nothing in §1.2 is attributed to the exam number.
 
 ## 6 · The skill
 
-`agentspec` teaches the contract a domain author writes. The `disclose` reference gains the read
+`agentspec` teaches the contract a domain author writes. The `disclose` reference carries the read
 tense: a sentence may be authored for a READ tool, and it is printed on the turn that read it. The
-authoring rule that a sentence must read correctly with `NA` standing in a slot now applies to
-`before` alone — an `after` sentence is silent rather than marked, so it is written for the result
-that grounds it and needs no marker-safe phrasing.
+authoring rule that a sentence must read correctly with `NA` standing in a slot applies to `before`
+and `later` — the two tenses the engine marks rather than drops — while an `after` sentence is
+silent rather than marked, so it is written for the result that grounds it and needs no marker-safe
+phrasing. The `before`-slot lint keeps its `requiresBefore` binding, with its message restated on
+the forced read: the forcing backstops an open question on an agent that holds the tool, and is not
+a licence to drop the demand the author can see offline.
 
 ## 7 · The reads a consent question owes are FORCED, never asked for
 
@@ -368,6 +371,8 @@ looprun          09d3cce  fix(core)!: a report that hides nothing passes, and th
 agentspec-bench  5521217  feat(atlas)!: a refusal carries the figures and the role the record holds
                  2dd0889  feat(atlas)!: the plan figures ride the read, so a refusal states them
                  e4ef18f  fix(atlas)!: the consent question stops stating figures nobody read
+agentspec        b394f24  docs(skill): a read carries a sentence, and the marker belongs to before
+                          and later
 ```
 
 2012 tests pass across the monorepo; four failures predate this work and are unchanged by it. The
