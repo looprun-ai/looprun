@@ -104,9 +104,9 @@ describe('VECTOR 2 — matches() substring collision: short target grounds again
 // ─────────────────────────────────────────────────────────────────────────────
 describe('VECTOR 5 — args are agent-controlled: a decoy write grounds ANY fabricated success target', () => {
   // The most dangerous break. The agent does ONE genuine, allowed write (addNote on ORD-999) and stuffs
-  // the fabricated target string into a free-text field of THAT write's args. claimMatchesCall scans
-  // leafValues(c.args), so the agent's own string grounds its own claim. The write is about ORD-999; the
-  // claim is success on "BK-1" — an entity never touched, possibly one the agent was REFUSED on.
+  // the fabricated target string into a free-text field of THAT write's args. supportsClaim scans
+  // extractValues(act.args), so the agent's own string grounds its own claim. The write is about ORD-999;
+  // the claim is success on "BK-1" — an entity never touched, possibly one the agent was REFUSED on.
   const did: Intention[] = [{ op: 'cancel booking', target: 'BK-1', outcome: 'success' }];
   const ctx = {
     did,

@@ -434,7 +434,7 @@ by what it declares, never by which class it extends). Its constructor auto-inst
 | **always** | `noDuplicateCall` (preTool `any`, `always:noDuplicateCall`) · `degenerationGuard()` (onReply, `always:degenerationGuard` — the SOLE `always` onReply guard; markup + run-away-repetition branches only, no parameters — a language-specific judgment such as self-narration is text judgment, so an author who wants one binds an `llmCheck`) |
 | `cfg.contract.writeTools` **non-empty** | `claimIsGrounded` + `claimIsComplete` (onReply, `honesty:*`) — the honesty cross-check over the world action history, fed `contract.writeTools` + `contract.outcomes` |
 | `cfg.contract.guards` **non-empty** | every `ContractGuardBinding` whose resolved target the lane carries — the contract declares each rule ONCE (hook, target, guard, id, priority) and every installing lane resolves the named sets against its own declarations: `'writeTools'` = `contract.writeTools ∩ lane.tools − exempt`, `'destructiveTools'` = `lane.destructiveTools − exempt`. An empty resolution installs nothing; an `exempt` entry outside its named set, or beside a literal target, throws at construction. The domain-wide write gate is the canonical binding: a `precondition` on `'writeTools'` at priority `changeAllowed`, id `changeAllowed:precondition` |
-| `cfg.destructiveTools` **non-empty** | `destructiveThrottle(destructiveTools)` (preTool, `consent:destructiveThrottle`) + `confirmFirst()` on exactly those tools (`consent:confirmFirst`) — one law: a destructive call that is not a schema-licensed simulation is gated on the typed approval code. The consent ROUTE is read off each tool's injected schema at run start (`simulatableToolNames`): `simulate` present → a denied bare act is downgraded to its own simulation; absent → the veto raises the question from the record the call names (label fallback). The LIST installs the protocol; `cfg.destructiveWhen[tool]` decides which CALLS of a listed tool it applies to (absent ⇒ every call). **⊆-validated** (each destructive tool must be in `cfg.tools` or the constructor throws), and `cfg.destructiveLabels` and `cfg.destructiveWhen` are validated the same way |
+| `cfg.destructiveTools` **non-empty** | `destructiveThrottle(destructiveTools)` (preTool, `consent:destructiveThrottle`) + `confirmFirst()` on exactly those tools (`consent:confirmFirst`) — one law: a destructive call that is not a schema-licensed simulation is gated on the typed approval code. The consent ROUTE is read off each tool's injected schema at run start (`simulatableToolNames`): `simulate` present → a denied bare act is downgraded to its own simulation; absent → the veto raises the question, minted from the call's own arguments and worded with the declared label (tool-name fallback). The LIST installs the protocol; `cfg.destructiveWhen[tool]` decides which CALLS of a listed tool it applies to (absent ⇒ every call). **⊆-validated** (each destructive tool must be in `cfg.tools` or the constructor throws), and `cfg.destructiveLabels` and `cfg.destructiveWhen` are validated the same way |
 
 So **2 kinds always install** (`noDuplicateCall` + `degenerationGuard`), the honesty cross-check pair
 when the contract declares `writeTools`, and **+2 more when the agent holds a destructive tool.**
@@ -483,12 +483,13 @@ NOT found, because polarity is unreadable by a pattern. The agent DECLARES what 
 (`respond`'s `did: TurnClaim[]`) and three deterministic guards GROUND that declaration against the world
 action history, which the agent does not control:
 
-- **`claimIsGrounded`** — every ACTION intention matches the action history: a `success` needs an effected write, `not_found`
-  an empty read, `blocked`/`refused` a veto/refusal, `no_op` a call that ADDRESSED the entity and no effected
-  write on it; an undeclared outcome word is always a violation. Auto-installed when the contract declares `writeTools`.
-- **`claimIsComplete`** — every write that took effect this turn is covered by a DISTINCT `success` action
-  intention that NAMES the entity (no silent action, and none hidden behind a vague or duplicated claim).
-  Auto-installed alongside.
+- **`claimIsGrounded`** — every ACTION intention SPENDS one act of the engine-derived list: a vetoed
+  attempt supports `tool_called_request_approval`/`blocked`/`refused`, a failed call
+  `failure`/`blocked`/`refused`, a landed call `success`, a call that changed nothing `no_op`; an
+  undeclared outcome word is always a violation, and a declaration that finds no act left describes
+  something that did not happen. Auto-installed when the contract declares `writeTools`.
+- **`claimIsComplete`** — every act that took effect this turn has a declaration at its position,
+  reporting it as what it actually was (no silent action). Auto-installed alongside.
 - **What counts as "a write that took effect"** — the UNION of two authorities, never their intersection:
   a call whose tool is in `contract.writeTools` and whose `tookEffect` is true, OR any
   call at all whose effect the WORLD ATTESTED. Keying it on the intersection alone would make a mutation
@@ -505,18 +506,22 @@ action history, which the agent does not control:
   outcome polarity. Polarity is a FIELD, so a reply saying "no record of BK-1 was found" can never satisfy
   a `success` requirement. Config-bound, never auto-installed.
 
-All three are TRUTH guards (never salvaged, never delivered over) and key on `target` + `outcome` vs the
-action history, never on op-name semantics or reply text — so they carry no pattern and cannot be broken by polarity.
+All three are TRUTH guards (never salvaged, never delivered over) and key on the declared `outcome`
+(and, when present, `targetName`/`targetValue`) vs the derived act list, never on op-name semantics or
+reply text — so they carry no pattern and cannot be broken by polarity.
 
 **The matching laws.**
 
-- *Identity is KEY-SCOPED*: an identity is a SCALAR under an identity key — `id`, `label`, `<entity>Id`,
-  `<entity>_id` — whatever its type. Strings and numbers on the same footing: `{ id: 5 }` and
-  `{ id: 'ORD-1' }` both name an entity, while `{ refunded: 500 }`, `{ count: 5 }`, `{ status: 'refunded' }`
-  and `{ note: 'for customer jane' }` name none. Admitting every STRING leaf would let a
-  status word, a note fragment, a tag or one word of the world's own sentence BOTH ground a claim and
-  COVER the write it hid — the user reads `refunded: done` and is never told which order.
-- *Boundary*: WHOLE-VALUE equality after canonicalization (trim, case-fold, strip EDGE punctuation) —
+- *No key is chosen by its shape*: the engine elects no identity out of a structure, so how a world
+  names its fields cannot decide whether an honest declaration is believed. The agent POINTS —
+  `targetName` names the field it read the record from, `targetValue` holds the value — and the engine
+  looks exactly there. With no `targetName`, the value must simply be among the scalars the act
+  returned or was called with, compared as whole stringified values. **Limit, stated plainly**: a
+  scalar that is not the record — a status word, a note token, a sibling id — is accepted where the
+  record's own value belongs; what contradicts a wrong record on the user's screen is the operation
+  record line the engine derives from the act itself.
+- *Boundary (rubric coverage)*: `mustAccountFor` compares its configured record against a claim's
+  `target` by WHOLE-VALUE equality after canonicalization (trim, case-fold, strip EDGE punctuation) —
   never a substring, and never a token RUN either. `BK-1` is not `BK-10`/`BK-12345`/`BK-1-EXTRA`/
   `xBK-1y`; `12` is not `Order 12` (one word of a name must not stand for the entity, since it stands
   equally for `Invoice 12`).
@@ -525,22 +530,10 @@ action history, never on op-name semantics or reply text — so they carry no pa
   A `target` carrying any invisible format character is rejected outright by `validateClaims`.
   **Limit**: the comparison is case-FOLDED within a script, so ids that differ only by case (`ab-1` vs
   `AB-1`) collide — a domain whose ids are case-sensitive must not rely on case alone to distinguish them.
-- *A write speaks for ITS OWN entity*: `success` grounding and write COVERAGE match a result's PREFERRED
-  identity — the shallowest identity keys, `id`/`label` winning over the `<entity>Id` references beside
-  them. `{ id:'ORD-1', parentId:'ORD-2' }` therefore means ORD-1 and only ORD-1; otherwise two claims on
-  the RELATED entity would cover two writes and the acted-on one would vanish from the report.
-- *Provenance*, stated per polarity: a claim of PRESENCE (`success`) grounds ONLY against values
-  the WORLD issued — scanning agent-authored args would make grounding circular. A claim of ABSENCE or
-  NON-EFFECT (`not_found`, `failure`, `blocked`, `refused`, `pending_confirmation`, `no_op`) cannot obey
-  that, because an absent record issues no value: those variants ground on the world's own negative answer
-  (an empty read / `ok:false` / a `requiresConfirmation` flag / a guard veto) PLUS the identity-KEY ARGS
-  that say which entity was addressed. Free-text args are not identities, so a `query` string can never
-  carry a verdict, and a `note` can never fabricate a refusal on a bystander. These polarities never enter
-  the covering set, so they can never hide a write.
 - *`amount` is corroborated*: when a claim carries an `amount`, that number must appear among the
-  magnitudes of the same action history fact that grounds the claim (the world's result for a presence claim, the
-  attempted args for an absence/veto claim). It is rendered by the domain seam into the block the engine
-  advertises as verified, so an unchecked figure would be a fabricated number delivered as fact.
+  magnitudes of the RESULT of the act that grounds the claim. It is rendered by the domain seam into
+  the block the engine advertises as verified, so an unchecked figure would be a fabricated number
+  delivered as fact.
   **Limit**: the comparison is between RAW NUMBERS and knows nothing about units. A world that reports
   cents (`{ amount: 1250 }`) while the domain's claims report currency units (`amount: 12.5`) false-denies
   every honest claim. Report the figure in the same unit on both sides, or do not carry `amount`.
@@ -549,9 +542,7 @@ action history, never on op-name semantics or reply text — so they carry no pa
 
 | requirement | why |
 |---|---|
-| every WRITE result carries `id` or `label` (or `<entity>Id`) naming what it touched | it is the only thing a `success` claim can match, and the only way an effected write can be covered |
-| the identity value EQUALS the entity name the agent will report (`"BK-1"`, or `"Booking BK-1"` if that is the whole name) | matching is whole-value; an id embedded in a longer label does not match |
-| every READ takes the entity under an identity-key ARG (`{ bookingId: 'BK-1' }`, not `{ query: '…' }`) | a `not_found`/`no_op` has no other way to name its subject |
+| every WRITE result carries the VALUE of the record it touched, under whatever field the world calls it | `targetValue` must appear among the act's scalars for the claim to ground, and the field is what the agent's `targetName` points at |
 | an EMPTY read returns a data channel — `data: []` (or `found: false`) | emptiness needs positive evidence; a result whose only field is a status sentence is undecidable and fails closed |
 | write results report their magnitudes when the domain renders `amount` | the figure is checked against them |
 | the world records `tookEffect: true` for a call that CHANGED something and `false` for one that did not — **including reads** | it is an ATTESTATION, and the write surface is keyed on it: a read recorded as effectful will be demanded in the report; a mutation recorded as effect-free can be hidden |
@@ -559,36 +550,26 @@ action history, never on op-name semantics or reply text — so they carry no pa
 A domain that does none of this is not silently degraded — the cross-check finds nothing to match, the
 guard fires, the turn redrives and the engine closure delivers. Fail-closed by design.
 
-**The fail-closed edges of the identity-key rule** (an adapter/world author's checklist — each one is a
-world that must be re-shaped, never a guard to relax):
-
-| world result | grounds an identity? | why |
-|---|---|---|
-| `{ id: 5 }`, `{ orderId: 5 }`, `{ order_id: 5 }`, `{ id: 'ORD-1' }` | ✅ | a scalar under a singular identity key |
-| `{ orderIds: [5, 6] }` | ❌ | a PLURAL key is not an identity key — return one result per entity, or a string id |
-| `5` (a bare scalar result) | ❌ | nothing names it; wrap it (`{ id: 5 }`) |
-| `{ ORDER_ID: 5 }` | ❌ | the key match is exact-cased on the documented spellings — use `orderId`/`order_id` |
-| `{ status: 'ORD-1 refunded' }` | ❌ | a SENTENCE is prose, not an identity — put the id under `id`/`label` |
-| `{ id: 'ORD-1', parentId: 'ORD-2' }` | ✅ ORD-1 only | a write speaks for its own entity, not the ones it references |
-
 **The engine's own sentences are `contract.engineText`.** The record closures and the consent question
 are what the ENGINE puts on the user's screen, so a conversation held in another language declares them
 (`Partial<EngineText>`, falling back per key to the engine's English). It is not cosmetic: the user has
 to TYPE the consent token back, so an instruction they cannot read is an act that can never be agreed
 to. The TOKEN itself is engine-issued and identical whatever language the sentence around it is in.
 
-**An open approval contributes TWO engine blocks, not one.** The domain's `contract.disclose` entry for
-that tool is printed directly above its question — what agreeing would do, with `{readTool.path}` slots
-filled from the calls this conversation actually made. A tool with no entry carries its question alone.
+**An open approval contributes TWO engine blocks, not one.** The domain's `contract.disclose` entry
+speaks in three tenses (`{ before, after, later }`), and it is the `before` sentence that is printed
+directly above the tool's question — what agreeing would do, with `{readTool.path}` slots filled from
+the calls this conversation actually made. A tool with no entry carries its question alone.
 
 ```
-Cancelling BK-1 releases the room and forfeits the 80.00 deposit.   ← contract.disclose.cancelBooking
-To confirm BK-1, reply: CONFIRM BK-1                                ← engineText.approval
+Cancelling BK-1 releases the room and forfeits the 80.00 deposit.   ← contract.disclose.cancelBooking.before
+To confirm cancelling a booking, reply: CONFIRM CANCELBOOKING-3F7A  ← engineText.approval
 ```
 
-A slot binds to the read whose RESULT names the approval's subject, so a second call of the same read
-about a different record cannot rename the act's target; a slot nothing grounds renders
-`contract.discloseMissing` (default `NA`), and the sentence is never dropped.
+A `before` slot binds to the read whose RESULT names one of the call's own argument values — a second
+call of the same read about an unrelated record cannot rename the act's target — and a SINGLE call of
+the read tool binds the slot on its own; a slot nothing grounds renders `contract.discloseMissing`
+(default `NA`), and the sentence is never dropped.
 
 **The domain render seam (`contract.renderClaim`) never receives the `op`.** It is handed the VERIFIED
 fields only — `target`, `outcome`, `amount` — because its output is delivered to the user verbatim and
@@ -600,7 +581,7 @@ action can never hide behind an `inform`.
 
 **The SHADOW LAW — every door, not one.** A domain `outcomes` map may not key a core outcome word in
 any casing, WIDTH or accent form: the key is folded (NFKD → strip combining marks → strip invisibles → trim
-→ lowercase) before the test, so `Success`, `ＳＵＣＣＥＳＳ` and `PENDİNG_CONFIRMATION` are all refused — each
+→ lowercase) before the test, so `Success`, `ＳＵＣＣＥＳＳ` and `FAİLURE` are all refused — each
 reads as the core word to a human reviewing the vocabulary, which is exactly the lie the law exists to stop.
 And it is enforced wherever the map ENTERS, not only at the spec constructor: `AgentSpecBase`,
 `claimIsGrounded`, `claimIsComplete`, `mustAccountFor`, and `packages/eval`'s config loader (which builds
@@ -658,15 +639,17 @@ does not carry: they are about the enforcement path, not about choosing a kind.
   into a self-sustaining licence — turn 1 licenses turn 2, turn 2's run licenses turn 3 — one consent
   authorising an unbounded destructive run. Admitting a vetoed attempt would be worse: a call denied BY
   THIS VERY GUARD lands in `observed` with `ok:false`, so the gate would defeat itself in two turns.
-- **A CONSENT NAMES ITS RECORD.** The token carries the identity the world issued, compared by
-  whole-value equality, so a consent given for `BK-1` never reaches `BK-12` and a consent for one tool
-  never reaches another.
+- **A CONSENT NAMES ITS CALL.** The approval stores the call's own arguments and its literal is derived
+  from them (`CONFIRM <CODE>-<HASH4>`, the hash over the canonical args), so a consent given for one
+  call never licenses a call whose arguments differ — `BK-1` never reaches `BK-12`, and a consent for
+  one tool never reaches another. The acting call may ADD what the world's own protocol needs (a
+  `confirmed` flag, an idempotency key); every argument the user was shown must still be there,
+  unchanged, and the runtime strips only its own literal when the model echoes it into an argument.
 - **Misconfiguration that would make a safety kind INERT throws at CONSTRUCTION, never at check
   time.** `consentRequired` on empty `tools` (or a blank `reason`, whose falsy deny value would read as
   "allowed"); a `destructiveLabels` entry for a tool that is not destructive; a `destructiveWhen`
   predicate for a tool that is not destructive, which would gate nothing because the protocol it
-  modifies was never installed there; two labels whose first two
-  words agree, which derive ONE token for two different acts. A tool that is destructive only on some
+  modifies was never installed there. A tool that is destructive only on some
   of its calls IS on `destructiveTools`, so its label is legal and its predicate has a protocol to
   narrow. An inert safety guard still reads as
   coverage in a spec header, which is worse than an absent one — so it breaks the build. An `llmCheck`
@@ -678,10 +661,11 @@ Ask-before-you-act is not a thing the agent declares. It is a literal the ENGINE
 screen and the USER writes back, and the agent has no channel that produces one.
 
 ```
- ①  the world raises it   a call that answers requiresConfirmation NAMES its record, and the engine
-                          opens a question bound to that record
- ②  the denial raises it  a destructive tool with NO simulate form is denied, and the denial opens a
-                          question built from the label the spec declared
+ ①  the world raises it   a call answers requiresConfirmation, and the engine opens a question minted
+                          from the CALL's own arguments
+ ②  the denial raises it  a destructive tool with NO simulate form is denied, and the denial opens the
+                          same question from the same call — the declared label is the words the user
+                          reads, never the licence
  ③  the engine renders    the question goes into the delivered text, between the agent's prose and the
                           operation record — the agent writes no part of it
  ④  the user answers      the runtime reads the incoming message ONCE, at turn start, and marks the
@@ -697,11 +681,11 @@ turn 1   agent:   cancelBooking({ id:'BK-1' })
          screen:  Your booking BK-1 carries an 80.00 fee.
 
                   Cancelling BK-1 releases the room and forfeits the 80.00 deposit.
-                  To confirm BK-1, reply: CONFIRM BK-1
+                  To confirm cancelling a booking, reply: CONFIRM CANCELBOOKING-3F7A
 
                   No operation was carried out on this turn.
 
-turn 2   user:    "yes, CONFIRM BK-1"
+turn 2   user:    "yes, CONFIRM CANCELBOOKING-3F7A"
          engine:  the code matched → the approval is consumed
          agent:   cancelBooking({ id:'BK-1' })   → the bare acting call, ALLOWED
 ```
@@ -726,8 +710,8 @@ is destructive on every call.
 
 #### The matching law
 
-One law decides every "is this string THAT string" verdict in the engine — claim-to-action history grounding, the
-consent token, and a value recorded on the user's behalf:
+One law decides every "is this string THAT string" verdict in the engine — rubric coverage
+(`mustAccountFor`), the consent token, and a value recorded on the user's behalf:
 
 ```
 against ONE value        canonical forms EQUAL — trimmed, case-folded, edge punctuation stripped
@@ -738,9 +722,9 @@ against a PERSON'S text  the value's tokens appear CONTIGUOUS, each equal as a W
 Substring matching is the failure it exists to prevent:
 
 ```
-user says   "cancel the BK-12"
-pending     CONFIRM BK-1
-substring   "BK-1" occurs inside "BK-12"  → consent accepted for the wrong record
+user says   "yes — CONFIRM CANCELBOOKING-25581"
+pending     CONFIRM CANCELBOOKING-2558
+substring   "…-2558" occurs inside "…-25581"  → consent accepted for a literal never typed
 ```
 
 Consent fails CLOSED. `"go ahead"` is a human yes and is denied; the question is simply asked again.
@@ -749,9 +733,9 @@ Consent fails CLOSED. `"go ahead"` is a human yes and is denied; the question is
 
 ```
 open        from the moment it is raised
-consumed    single use — a second act on the same record needs a new question
+consumed    single use — a second act of the same call needs a new question
 superseded  a different question about the same act closes the previous one
-closed      the record it names changed, so the sentence it asks is no longer true
+closed      the call it licenses has run, so the question it asks is answered
 ```
 
 There is no turn window. What bounds a stale token is that consuming it requires typing that exact
@@ -803,12 +787,12 @@ No model participates in a consent decision.
 
 | obligation | when |
 |---|---|
-| a simulate form that answers `requiresConfirmation` and names its record under an identity key | a two-step destructive tool |
-| a `destructiveLabels` entry — the human-facing words the question is built from | a destructive tool that acts on no identifiable record, including one whose destructive branch names a record its arguments never carry (a hold over a whole workspace is that shape: listed, predicated, and labelled) |
+| a simulate form that answers `requiresConfirmation` | a two-step destructive tool |
+| a `destructiveLabels` entry — the human-facing words the question is worded with | every destructive tool: without one the question is worded with the tool's own name, which is a tool name on the user's screen |
 | `engineText`, the engine's own sentences | a conversation held in a language other than English |
 
-A destructive tool with neither a record nor a label can raise no question, so it can never be consented
-to and never runs. Absence of a label is absence of any possible consent.
+Every destructive tool can raise a question — the licence is minted from the call itself, so no record
+naming and no label is needed for consent to be POSSIBLE; the label decides only what the user reads.
 
 Two labels whose first two words agree derive the same token and are a construction error: one typed
 literal would consent to either act, which is not what the user read.

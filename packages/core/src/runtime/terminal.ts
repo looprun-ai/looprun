@@ -265,8 +265,9 @@ const RESPOND_DESCRIPTION = 'END the turn.';
  *    OWN outcome word (`resolveOutcome` through the contract's `OutcomeMap`), and an `enum` would
  *    reject at the tool boundary what the engine deliberately accepts.
  *
- * `amount` is a LEGAL claim key ({@link import('./claims.js').validateClaims} accepts it, and
- * `claimMatches` corroborates it against the action history) that the schema deliberately does NOT advertise.
+ * `amount` is a LEGAL claim key ({@link import('./claims.js').validateClaims} accepts it, and the
+ * honesty cross-check corroborates it against the act that grounds the claim) that the schema
+ * deliberately does NOT advertise.
  * Nothing REQUIRES a magnitude: the cross-check treats an absent `amount` as a pass, so the only turn
  * the field can change is one it DENIES. Advertising it spends bytes on every turn of every agent to
  * buy extra ways to fail. Removing the property changes no acceptance — the JSON-schema → zod

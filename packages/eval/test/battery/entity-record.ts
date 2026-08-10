@@ -13,10 +13,8 @@
  * the runs that already happened rather than on an intuition about them. It proposes nothing and
  * installs nothing.
  *
- * TWO MIRRORS, STATED RATHER THAN HIDDEN. The guard core's identity extraction and its boundary
- * predicate live in `packages/core/src/guards/honesty.ts` as MODULE-PRIVATE functions (`identityValues`,
- * `canonValue`, `targetMatchesValue` — only `targetMatchesValue` is exported from the module, and no
- * barrel re-exports it), so this file MIRRORS them rather than importing them:
+ * SELF-CONTAINED PREDICATES, STATED RATHER THAN HIDDEN. The experiment needs a notion of "the entities
+ * the world issued" and a comparison boundary, and it carries both as instruments of its own:
  *
  * ```
  *   isIdentityKey    id · label · <entity>Id · <entity>_id            — key-scoped identity
@@ -24,8 +22,9 @@
  *   matchesValue     WHOLE-VALUE equality of the canonical forms      — never a substring
  * ```
  *
- * The mirror is proved against the same boundary cases the guard's own laws state (`BK-1` is not
- * `BK-10`, `"(BK-1)"` is `BK-1`, a lookalike fails closed) in `entity-record-metrics.test.ts`.
+ * The comparison pair matches the engine's boundary (`canonValue`/`targetMatchesValue` in
+ * `packages/core/src/guards/matching.ts`). The key-scoped identity election is this experiment's rule
+ * alone: the engine elects no identity out of a structure — it reads the field a claim points at.
  *
  * ONE MEASUREMENT LIMIT, STATED UP FRONT. The recording keeps ONE action history per RUN, not one per turn, so
  * "the entities the world issued during the TURN" is read here as "during the RUN". It differs only for
@@ -33,9 +32,9 @@
  * entity set is GENEROUS to the rule, and every verdict that depends on it is flagged.
  */
 
-// ── The mirrors ────────────────────────────────────────────────────────────────────────────────────
+// ── The instruments ────────────────────────────────────────────────────────────────────────────────────
 
-/** Mirror of `honesty.ts`'s `isIdentityKey`: the world names entities under these keys and nowhere else. */
+/** The experiment's key-scoped identity election: the rule under test reads entities under these keys. */
 function isIdentityKey(key: string): boolean {
   return key === 'id' || key === 'label' || key.endsWith('Id') || key.endsWith('_id');
 }
@@ -70,7 +69,7 @@ export function matchesValue(target: string, value: string): boolean {
   return t === canonValue(value);
 }
 
-/** Mirror of `honesty.ts`'s `identityValues`: every scalar under an identity key, at any depth. */
+/** Every scalar under an identity key, at any depth — the entity set the rule under test reads. */
 export function identityValues(v: unknown, key?: string, out: string[] = []): string[] {
   if (v === null || v === undefined) return out;
   if (Array.isArray(v)) {

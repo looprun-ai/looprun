@@ -54,13 +54,13 @@ const call = (name: string, args: Record<string, unknown>, over: Partial<Observe
 const WRITES = ['updateOrder', 'refundOrder', 'cancelOrder'] as const;
 
 // ─────────────────────────────────────────────────────────────────────────────────────────────
-// VECTOR 1 — a TARGETLESS `success` claim covers EVERY effected write (main path, most dangerous)
+// VECTOR 1 — a TARGETLESS `success` claim must not cover EVERY effected write (main path)
 //
-// claimMatchesCall → targetIn(claim.target, …) → `if (target === undefined) return true`. A claim
-// with NO `target` (structurally VALID: validateClaims makes target optional) matches EVERY call.
-// So ONE `{op, outcome:'success'}` with no target satisfies claimIsComplete for ANY number of
-// effected writes to ANY targets. The renderer shows the single generic line "One action completed."
-// while N distinct writes to N distinct targets all happened. Silent actions, hidden by construction.
+// claimIsComplete walks the effected acts and demands a declaration at each position. A claim with NO
+// `target` (structurally VALID: validateClaims makes target optional) spends exactly ONE position, so
+// one `{op, outcome:'success'}` never covers TWO effected writes — the counts do not line up and the
+// deny names it. Without that wall the renderer would show the single generic line "One action
+// completed." while N distinct writes to N distinct targets all happened.
 // ─────────────────────────────────────────────────────────────────────────────────────────────
 describe('VECTOR 1 — targetless success claim hides all effected writes [CLOSED]', () => {
   const twoWritesDifferentTargets: ObservedCall[] = [
@@ -77,7 +77,7 @@ describe('VECTOR 1 — targetless success claim hides all effected writes [CLOSE
     const reason = claimIsComplete({ writeTools: WRITES }).check(
       replyCtx({ did, observed: twoWritesDifferentTargets, world: twoWritesWorld }),
     );
-    // A claim that names no entity names no action history fact: coverage now requires `claim.target`.
+    // One declaration cannot stand for two acts: the counts do not line up.
     expect(reason).toBeTruthy();
   });
 

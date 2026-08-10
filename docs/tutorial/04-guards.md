@@ -383,9 +383,10 @@ Ask-before-you-act is not a thing your agent declares. It is a literal the ENGIN
 screen and the USER writes back:
 
 ```
-   ①  the world raises it   your tool answers requiresConfirmation and NAMES its record
-   ②  or the denial does    a tool with no simulate form is denied, and the denial raises the question
-                            from the label your spec declared
+   ①  the world raises it   your tool answers requiresConfirmation, and the engine mints the question
+                            from the CALL it was asked with
+   ②  or the denial does    a tool with no simulate form is denied, and the denial mints the same
+                            question from the same call
    ③  the engine renders    the question lands in the delivered text, between the agent prose and the
                             operation record — and lands again on EVERY later delivery while it is
                             still open, so an unanswered question is never lost to a change of subject
@@ -594,8 +595,8 @@ The reply text is in `ctx.reply` and no tool can run any more. A deny costs a bo
 
 | factory | file | what it enforces |
 |---|---|---|
-| [`claimIsGrounded`](#14-claimisgrounded) | `honesty.ts` | Every operation the agent declares in `did` must match the world actionHistory: a `success` needs a write that took effect, `not_found` an empty read, `blocked`/`refused` a veto, a world refusal, or a successful read that addressed the entity with no effected write on it, `no_op` a call that addressed the entity and no effected write on it — an undeclared outcome word is always a violation. |
-| [`claimIsComplete`](#15-claimiscomplete) | `honesty.ts` | Every write that TOOK EFFECT this turn must be covered by a DISTINCT `success` ACTION intention in `did` that NAMES the entity — no silent action hidden from the user. |
+| [`claimIsGrounded`](#14-claimisgrounded) | `honesty.ts` | Every operation the agent declares in `did` must match an act the turn actually performed: a `success` needs a call that took effect, `not_found` an empty read, `blocked`/`refused` a veto, a world refusal, or a read-only turn that addressed the record, `no_op` a call that changed nothing — an undeclared outcome word is always a violation. |
+| [`claimIsComplete`](#15-claimiscomplete) | `honesty.ts` | Every act that TOOK EFFECT this turn must have a declaration at its position in `did`, reporting it as what it actually was — no silent action hidden from the user. |
 | [`mustAccountFor`](#16-mustaccountfor) | `honesty.ts` | Each configured target must appear in `did` with the required outcome polarity (or any polarity when `outcome: 'any'`). |
 | [`degenerationGuard`](#17-degenerationguard) | `reply.ts` | Catches leaked reasoning or tool markup, chat-template tokens and run-away line repetition in the reply. |
 | [`llmCheck`](#18-llmcheck) | `llm-check.ts` | An LLM-judged guard: the registered judge answers a trusted question over the evidence the guard fences into the prompt, and its verdict becomes the deny. |
@@ -603,9 +604,9 @@ The reply text is in `ctx.reply` and no tool can run any more. A deny costs a bo
 
 #### 14. `claimIsGrounded`
 
-Every operation the agent declares in `did` must match the world actionHistory: a `success` needs a write that took effect, `not_found` an empty read, `blocked`/`refused` a veto, a world refusal, or a successful read that addressed the entity with no effected write on it, `no_op` a call that addressed the entity and no effected write on it — an undeclared outcome word is always a violation.
+Every operation the agent declares in `did` must match an act the turn actually performed: a `success` needs a call that took effect, `not_found` an empty read, `blocked`/`refused` a veto, a world refusal, or a read-only turn that addressed the record, `no_op` a call that changed nothing — an undeclared outcome word is always a violation.
 
-**When to reach for it.** Always on when the domain declares its `writeTools` (the spec class auto-installs it, fed by `contract.writeTools` + `contract.outcomes`). It is the actionHistory cross-check, and it walks a DERIVED LIST: the engine builds, in order, what each act of the turn honestly supports — a vetoed attempt supports `tool_called_request_approval`/`blocked`/`refused`, a failed call `failure`/`blocked`/`refused`, a landed call `success`, a call that changed nothing `no_op`. Each declaration SPENDS one act that supports it, so a fabricated extra finds no act left. It checks ACTION intentions only — a speech intention names no actionHistory fact, and `any_other_question` is never tool-checked because nothing recorded can prove a question. A `targetValue` must appear among the values the spent act carried; when the agent also names the field in `targetName`, the engine looks exactly there. No key is chosen by its shape. An `amount`, when declared, must appear among the magnitudes of that same act. A turn that only READ can still declare `blocked`/`refused`/`no_op` on a record it addressed, and `not_found` when the read came back empty. A domain outcome word must map to a core outcome via the contract's outcome map or it reads as undeclared.
+**When to reach for it.** Always on when the domain declares its `writeTools` (the spec class auto-installs it, fed by `contract.writeTools` + `contract.outcomes`). It is the actionHistory cross-check, and it walks a DERIVED LIST: the engine builds, in order, what each act of the turn honestly supports — a vetoed attempt supports `tool_called_request_approval`/`blocked`/`refused`, a failed call `failure`/`blocked`/`refused`, a landed call `success`, a call that changed nothing `no_op`. Each declaration SPENDS one act that supports it, so a fabricated extra finds no act left. It checks ACTION intentions only — a speech intention (`inform`/`greet`/`refuse`/`ask`) names no actionHistory fact, and `any_other_question` is never tool-checked because nothing recorded can prove a question. A `targetValue` must appear among the values the spent act carried; when the agent also names the field in `targetName`, the engine looks exactly there. No key is chosen by its shape. An `amount`, when declared, must appear among the magnitudes of that same act. A turn that only READ can still declare `blocked`/`refused`/`no_op` on a record it addressed, and `not_found` when the read came back empty. A domain outcome word must map to a core outcome via the contract's outcome map or it reads as undeclared.
 
 ```ts
 claimIsGrounded({ writeTools: ['createBooking', 'cancelBooking'], outcomes: { settled: 'success' } })
@@ -613,7 +614,7 @@ claimIsGrounded({ writeTools: ['createBooking', 'cancelBooking'], outcomes: { se
 
 #### 15. `claimIsComplete`
 
-Every write that TOOK EFFECT this turn must be covered by a DISTINCT `success` ACTION intention in `did` that NAMES the entity — no silent action hidden from the user.
+Every act that TOOK EFFECT this turn must have a declaration at its position in `did`, reporting it as what it actually was — no silent action hidden from the user.
 
 **When to reach for it.** Auto-installed alongside `claimIsGrounded` (same `writeTools` + `outcomes`). Its mirror is `claimIsGrounded`: one derived list, walked in both directions. That one walks the DECLARATIONS and asks whether each matches an act — no lying. This walks the ACTS that TOOK EFFECT and asks whether each has a declaration at its position, reporting it as what it actually was — no hiding. A vetoed attempt changed nothing, so it is not counted here; that half is `claimIsGrounded`'s. Both resolve a domain outcome word through the same `OutcomeMap`, so a mapped word (e.g. `settled` → `success`) reports an act exactly like the literal word does. It names no tool in its deny.
 

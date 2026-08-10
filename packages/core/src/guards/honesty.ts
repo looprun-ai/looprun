@@ -4,38 +4,43 @@
  * REPLY PROSE IS NOT THE THING GUARDS READ. A literal mention scan for `BK-1` passes on a reply that
  * says "no record of BK-1 was found" — a text check cannot read polarity, and no better pattern fixes
  * it (patterns are the banned fragility). Instead, the agent DECLARES what it did as STRUCTURE
- * (`ctx.did: Intention[]`), and these three guards GROUND that declaration against the WORLD ACTION HISTORY — `ctx.observed` (the model's verified calls,
- * with `tookEffect`/`ok`/`resultFlags`), `ctx.world.toolCalls` (the results those calls returned), and
- * `ctx.attemptedThisTurn` (the calls a guard VETOED before they reached the world). None of those the
- * agent controls, so a fabricated claim cannot ground.
+ * (`ctx.did: Intention[]`), and these guards compare that declaration against WHAT THE ENGINE DERIVED
+ * from records of its own: `ctx.observed` (the model's verified calls, with `tookEffect`/`ok`/
+ * `resultFlags`), `ctx.world.toolCalls` (the results those calls returned), and `ctx.attemptedThisTurn`
+ * (the calls a guard VETOED before they reached the world). None of those the agent controls, so a
+ * fabricated claim cannot ground.
  *
- * NO-REGEX LAW: `matches` is a comparison of a claim's `target` against the CANONICALIZED values the
- * WORLD issued for a call — action history DATA, never an authored pattern. `op` names are advisory labels; the
- * check keys on `target` + `outcome` vs the action history, never on op-name semantics.
+ * THE DERIVED ACT LIST is the one source both directions read. Each act of the turn — every vetoed
+ * attempt and every write that ran — carries the set of outcome words it honestly supports:
+ *
+ * ```
+ *   a vetoed attempt              tool_called_request_approval · blocked · refused
+ *   the world asked to confirm    tool_called_request_approval
+ *   the call failed               failure · blocked · refused
+ *   the call took effect          success
+ *   the call changed nothing      no_op
+ * ```
  *
  * THE LAWS OF GROUNDING:
- *  · PROVENANCE — a claim of PRESENCE (`success`) grounds ONLY against values the WORLD issued for
- *    that call. A call's ARGS are the agent's own text, so scanning them makes grounding circular: one
- *    permitted write plus a fabricated id in a free-text arg would ground `success` on an untouched
- *    entity. A claim of ABSENCE or NON-EFFECT (`not_found`/`failure`/`blocked`/`refused`/
- *    `pending_confirmation`/`no_op`) cannot obey it — an absent record issues no value — so those variants
- *    read the world's own negative answer PLUS the identity-KEY args that say which entity was asked
- *    about. They can never cover a write, so they can never hide one.
- *  · IDENTITY IS KEY-SCOPED — an identity is a scalar under `id`/`label`/`<entity>Id`, never any
- *    string leaf. With every string an "identity", a status word, a note fragment, a tag or one word of
- *    the world's own sentence would both GROUND a claim and COVER the write, satisfying "no silent
- *    action" with a claim that never names the entity while the user reads "refunded: done".
- *  · A WRITE SPEAKS FOR ITS OWN ENTITY — coverage and `success` match a result's PREFERRED
- *    identity (shallowest `id`/`label`), never the related entities it references.
- *  · BOUNDARY — the comparison is WHOLE-VALUE equality after canonicalization, never a substring and
- *    never a token run: `BK-1` is not `BK-10`/`BK-1-EXTRA`/`xBK-1y`, and `12` is not
- *    `Order 12`. Lookalikes fail closed: no NFC folding, no cross-script case fold, no stripping of
- *    invisible format characters.
- *  · EVERY ARM NEEDS POSITIVE EVIDENCE — including `no_op`. No variant passes on absence alone, because the
- *    mere ABSENCE of a contradicting write is trivially true of an entity the turn never touched and
- *    would ground any target on an empty action history.
- * And the PARTITION: both cross-checks iterate ACTION intentions only — a speech intention
- * (`inform`/`greet`/`refuse`/`ask`) classifies the message and names no action history fact, so it is never
+ *  · NO KEY IS CHOSEN BY ITS SHAPE — nothing here elects an identity out of a structure by field
+ *    name, so how a world names its fields cannot decide whether an honest declaration is believed.
+ *    The agent POINTS instead: `targetName` names the field it read the record from, `targetValue`
+ *    holds the value, and the engine looks exactly there. With no `targetName`, the value must be
+ *    among the scalars the act returned or was called with. The cost is real and accepted: a scalar
+ *    that is not the record — a status word, a sibling id — is accepted where the record's own value
+ *    belongs.
+ *  · EACH DECLARATION SPENDS ONE ACT — a claim grounds on an act whose outcome set carries its word
+ *    and whose data supports its target, and that act is then spent. A declaration that finds no act
+ *    left describes something that did not happen; an act with no declaration left is a silent action.
+ *  · A READ-ONLY TURN MAY STILL SPEAK BY RULE — `blocked`/`refused`/`no_op` when the turn ADDRESSED
+ *    the record through a read, plus `not_found` when a read came back empty. Demanding a vetoed
+ *    attempt as proof of a refusal would order the model to reach for the very act it is refusing.
+ *  · `any_other_question` IS NEVER TOOL-CHECKED — speech is not an operation, and nothing the engine
+ *    recorded can prove a question.
+ *  · AN `amount` IS CORROBORATED against the magnitudes of the same act that grounds the claim — an
+ *    unchecked figure is a fabricated number delivered inside a block advertised as verified.
+ * And the PARTITION: the cross-checks iterate ACTION intentions only — a speech intention
+ * (`inform`/`greet`/`refuse`/`ask`) classifies the message and names no recorded fact, so it is never
  * grounded and never covers a write (an action can therefore never hide behind an `inform`).
  */
 import type { Guard, GuardCtx, ObservedCall } from '../rules.js';
@@ -115,75 +120,6 @@ export function isEmptyReadResult(result: unknown): boolean {
   return dataChannels > 0;
 }
 
-/**
- * Is this record key an ENTITY-IDENTITY key — the structural `id`/`label` the engine already speaks,
- * plus the `<entity>Id` / `<entity>_id` convention? Domain-neutral by construction: no business word
- * appears here, only the shape of an identifier field. A NUMBER is admitted into the identity set ONLY
- * under such a key (`{ id: 5 }`, `{ orderId: 5 }`), so a numeric-id domain stays groundable while
- * `{ count: 5 }` / `{ code: 200 }` / `{ refunded: 500 }` never name an entity.
- */
-function isIdentityKey(key: string): boolean {
-  return key === 'id' || key === 'label' || key.endsWith('Id') || key.endsWith('_id');
-}
-
-/** One identity-key scalar leaf: its key, its nesting depth, and its stringified value. */
-interface IdentityHit {
-  key: string;
-  depth: number;
-  value: string;
-}
-
-/**
- * Every IDENTITY leaf in a structure — KEY-SCOPED: a scalar under an {@link isIdentityKey} key, at any
- * depth, whatever its type. Strings and numbers on the SAME footing.
- *
- * KEY-SCOPING IS WHAT MAKES AN IDENTITY AN IDENTITY: the world names entities under
- * `id`/`label`/`<entity>Id`, and everything else it says is prose or magnitude. Admitting every STRING
- * leaf under any key instead would make a status word, a note fragment, a tag, or a word of the world's
- * own sentence an "identity" — so `{id:'ORD-1', status:'refunded'}` would let a claim on
- * `target:'refunded'` BOTH ground and COVER the ORD-1 write, satisfying the "no silent action" law with
- * a claim that never names the entity while the user reads "refunded: done".
- */
-function identityHits(v: unknown, key: string | undefined, depth: number, out: IdentityHit[]): IdentityHit[] {
-  if (v === null || v === undefined) return out;
-  if (Array.isArray(v)) {
-    for (const x of v) identityHits(x, key, depth, out);
-    return out;
-  }
-  if (typeof v === 'object') {
-    for (const [k, val] of Object.entries(v as Record<string, unknown>)) identityHits(val, k, depth + 1, out);
-    return out;
-  }
-  if (key !== undefined && isIdentityKey(key)) out.push({ key, depth, value: String(v) });
-  return out;
-}
-
-/** ALL identity values of a structure (any identity key, any depth) — the set a claim of ABSENCE or
- *  NON-EFFECT is matched against, and the set that says "this turn addressed that entity". */
-function identityValues(v: unknown): string[] {
-  return identityHits(v, undefined, 0, []).map((h) => h.value);
-}
-
-/**
- * The PREFERRED identity of a result — the one entity this call is ABOUT.
- *
- * The SHALLOWEST identity keys win, and among those `id`/`label` win over the `<entity>Id` references
- * beside them. Without this, a result that names a RELATED entity ("this order's parent") would let a
- * claim on the RELATION stand for the acted-on entity: `{id:'ORD-1', parentId:'ORD-2'}` plus a second
- * `{id:'ORD-2'}` write would be covered by TWO claims on ORD-2 — injectivity satisfied, ORD-1 never
- * reported. Only the PRESENCE variants (`success` grounding and write coverage) use this: what an
- * effected write DID is to its own entity, never to the ones it merely points at.
- */
-export function preferredIdentityValues(v: unknown): string[] {
-  const hits = identityHits(v, undefined, 0, []);
-  if (!hits.length) return [];
-  let minDepth = hits[0]!.depth;
-  for (const h of hits) if (h.depth < minDepth) minDepth = h.depth;
-  const shallowest = hits.filter((h) => h.depth === minDepth);
-  const own = shallowest.filter((h) => h.key === 'id' || h.key === 'label');
-  return (own.length ? own : shallowest).map((h) => h.value);
-}
-
 /** The MAGNITUDES in a structure — every finite number leaf, plus a string that IS a number (`'12.50'`).
  *  Key-blind on purpose: a magnitude is a quantity wherever it sits, and the only thing it is ever used
  *  for is corroborating a claim's `amount` against the same action history fact that grounds the claim. */
@@ -225,76 +161,6 @@ function resultOf(ctx: GuardCtx, c: ObservedCall): unknown {
  * from, and because the honesty verdicts below are the reason it is written the way it is.
  */
 export { targetMatchesValue } from './matching.js';
-
-/** Does `target` match any of these values by {@link targetMatchesValue}? `undefined` ⇒ always. */
-function targetIn(target: string | undefined, values: string[]): boolean {
-  if (target === undefined) return true;
-  return values.some((v) => targetMatchesValue(target, v));
-}
-
-/** One action history fact reduced to what a claim can be checked against: the entities it names and the
- *  quantities it carries. */
-interface Evidence {
-  identity: string[];
-  magnitude: number[];
-}
-
-/**
- * PRESENCE evidence — what the world ISSUED as this call's OWN identity (its result's
- * {@link preferredIdentityValues}) and the magnitudes it reported. The set a `success` claim, and write
- * coverage, are matched against: an effected write speaks for the entity it acted on, never for the ones
- * its result merely references.
- */
-function issuedEvidence(ctx: GuardCtx, c: ObservedCall): Evidence {
-  const r = resultOf(ctx, c);
-  return { identity: preferredIdentityValues(r), magnitude: magnitudes(r) };
-}
-
-/**
- * ABSENCE / NON-EFFECT evidence — everything this call ADDRESSED: the identity values the world issued
- * PLUS the identity-KEY args of the call itself.
- *
- * M2 (args are never evidence) is a law about claims of PRESENCE, and it stays exactly as it was for
- * `success`. A claim that something did NOT happen cannot obey it, because an absent record issues no
- * value: the only thing that can name the subject of an empty lookup, a failed call, a refusal or a
- * pending confirmation is the LOOKUP itself. So those variants read the call's identity-key args — the
- * fabrication they buy is self-limited (they can never cover an effected write, `claimIsComplete` is
- * `success`-only), and it is bounded by the action history: the call really happened, under that identity, and
- * the WORLD's own answer (empty / ok:false / requiresConfirmation) still has to be there. Free-text args
- * are not identities, so an agent cannot launder a verdict through a `query` string (§6.2).
- */
-function addressedEvidence(ctx: GuardCtx, c: ObservedCall): Evidence {
-  const r = resultOf(ctx, c);
-  return {
-    identity: [...identityValues(r), ...identityValues(c.args)],
-    magnitude: [...magnitudes(r), ...magnitudes(c.args)],
-  };
-}
-
-/**
- * Evidence from a guard-VETOED attempt — its args, because a vetoed call never reached the world and so
- * has no result at all. The ATTEMPT is a action history fact the guard recorded, and the identity filter is the
- * same key-scoped one: `cancelBooking({bookingId:'BK-1', note:'user also mentioned BK-2'})` names BK-1
- * and NOT BK-2. Without key-scoping that free-text note would ground a fabricated `refused` on BK-2 —
- * which is not merely self-incriminating, it SUPPRESSES a rubric expectation.
- */
-function attemptEvidence(a: { name: string; args: unknown }): Evidence {
-  return { identity: identityValues(a.args), magnitude: magnitudes(a.args) };
-}
-
-/**
- * `matches(claim, evidence)` — the claim's `target` names an entity in this action history fact AND its
- * `amount`, when it carries one, is a magnitude the same action history fact reported.
- *
- * The amount check is not decoration: `amount` is rendered by the domain seam into the block the engine
- * advertises as verified, so an unchecked figure is a fabricated number delivered as fact. It is
- * corroborated against the SAME fact that grounds the claim — a presence claim against what
- * the world issued, an absence/attempt claim against what was attempted.
- */
-function claimMatches(claim: Intention, ev: Evidence): boolean {
-  if (!targetIn(claim.target, ev.identity)) return false;
-  return claim.amount === undefined || ev.magnitude.includes(claim.amount);
-}
 
 /**
  * Did this call EFFECT A WRITE this turn — the one notion both cross-checks key on.

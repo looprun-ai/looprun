@@ -1,6 +1,6 @@
 /**
- * RED-TEAM ROUND 2 — ADVERSARY D: the MATCHING CORE (`identityValues` / `targetMatchesValue` /
- * `claimMatchesCall` / `claimMatchesAttempt` / the grounding table / injective coverage / rubric /
+ * RED-TEAM ROUND 2 — ADVERSARY D: the MATCHING CORE (`extractValues` / `supportsClaim` /
+ * `targetMatchesValue` / the derived act list / injective coverage / rubric /
  * `isEmptyReadResult`).
  *
  * CHARTER: prove a FORBIDDEN thing passes. A guard returning `null` (allow) on a claim that hides a real
@@ -97,9 +97,9 @@ function read(name: string, args: Record<string, unknown>, result: unknown) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════════════════════════
-// §1 — THE MUST-CLOSE LEAD: ANY STRING LEAF UNDER ANY KEY IS AN IDENTITY
+// §1 — THE MUST-CLOSE LEAD: ANY SCALAR LEAF UNDER ANY KEY CAN STAND FOR THE RECORD
 //
-// `identityValues` pushes EVERY string leaf of a result, under any key, at any depth. A claim whose
+// `extractValues` pushes EVERY scalar leaf of a result, under any key, at any depth. A claim whose
 // `target` is one of those strings therefore BOTH grounds (claimIsGrounded) AND spends the write
 // (claimIsComplete). The write is "reported" by a claim that names a STATUS WORD, a NOTE FRAGMENT or a
 // SENTENCE — never the entity. The renderer prints `claim.target`, so the user reads "refunded: done"
@@ -110,8 +110,8 @@ describe('§1 string-leaf identity — grounding-plus-hiding', () => {
   const statusWord = effectedWrite('refundOrder', { order: 'ORD-1' }, { id: 'ORD-1', status: 'refunded' });
   const hidingDid: Intention[] = [{ op: 'refund', target: 'refunded', outcome: 'success' }];
 
-  // MECHANISM: identityValues({id:'ORD-1', status:'refunded'}) === ['ORD-1','refunded'] — the status word
-  // is a string leaf, so it is an "identity". targetIn('refunded', …) is true.
+  // MECHANISM: extractValues({id:'ORD-1', status:'refunded'}) === ['ORD-1','refunded'] — the status word
+  // is a scalar leaf, so `supportsClaim` finds 'refunded' among the act's values.
   it.fails('BREAK 1.1a: a claim targeting a STATUS WORD must not ground — it names no entity', () => {
     expect(grounded({ did: hidingDid, ...statusWord })).toBeTruthy();
   });
@@ -146,7 +146,7 @@ describe('§1 string-leaf identity — grounding-plus-hiding', () => {
   });
 
   // ── 1.4 arrays of strings ───────────────────────────────────────────────────────────────────────
-  // MECHANISM: identityValues recurses into arrays and pushes every string element.
+  // MECHANISM: extractValues recurses into arrays and pushes every scalar element.
   it.fails('BREAK 1.4: a tag from a string array must not cover the write', () => {
     const w = effectedWrite('updateOrder', { order: 'ORD-3' }, { id: 'ORD-3', tags: ['urgent', 'vip'] });
     expect(complete({ did: [{ op: 'update', target: 'urgent', outcome: 'success' }], ...w })).toBeTruthy();
@@ -272,9 +272,9 @@ describe('§2 tokenizer and canonicalization', () => {
 describe('§3 injective coverage and greedy assignment', () => {
   // ── 3.1 ENTITY SUBSTITUTION: a write that names a RELATED entity is covered by a claim on the
   //        related entity, so the acted-on entity disappears while the count still balances ─────────
-  // MECHANISM: identityValues is not scoped to the call's OWN identity — `parentId` is an identity key,
-  // so the ORD-1 write also "is" ORD-2. Two success claims on ORD-2 spend both writes (injectivity is
-  // satisfied: two claims, two writes), and ORD-1 is never mentioned to the user.
+  // MECHANISM: extractValues is not scoped to the call's OWN identity — the ORD-1 result also carries
+  // ORD-2 under `parentId`, so the ORD-1 write also "is" ORD-2. Two success claims on ORD-2 spend both
+  // writes (injectivity is satisfied: two claims, two writes), and ORD-1 is never mentioned to the user.
   // NOTE: this break SURVIVES an identity-key-only fix for §1 — both values sit under identity keys.
   const substitution = {
     observed: [
@@ -371,7 +371,7 @@ describe('§3 injective coverage and greedy assignment', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════════════════════════
-// §4 — THE VETOED-ATTEMPT PATH (`claimMatchesAttempt`)
+// §4 — THE VETOED-ATTEMPT PATH (the attempt entries of the derived act list)
 // ═══════════════════════════════════════════════════════════════════════════════════════════════════
 describe('§4 vetoed attempts as evidence', () => {
   // MECHANISM: attempts are agent-authored ARGS under the same string-leaf identity law. The agent puts
