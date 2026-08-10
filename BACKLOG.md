@@ -36,3 +36,76 @@ done — a pending item that quietly disappears is the failure this file exists 
 | **Engine-owned question: disclosure with no grounding** | The generic half — "does the reply state a value that appears in no result?" — is engine-answerable. The domain half — WHICH fields count as personal — is not, and a medical desk and a rental desk disagree. Splitting the two is the design work. | Decide the split before designing; the generic half may fold into the grounding question rather than become its own. |
 | **A wording judgement is not a question for a judge** | One hermes-sim spec routes the WORDING of a decline to text judgement. A model marking its own homework is most biased on judgements of quality, which is the class this falls in — the structural veto already exists and the wording rule buys a model call for the least reliable answer it can give. | Rule wording judgements out of the guard surface in the skill, or state the cost where an author would bind one. |
 | **`looprun-bench` still speaks the retired vocabulary** | `looprun`, `agentspec` and `agentspec-bench` name the seven concepts plainly, and `tests/plain-names.test.mjs` holds them there. `looprun-bench` pins one engine per edition — `0.2.1` for tau2-telecom, `0.6.0` and `0.6.1` for atlas — because an edition is reproducible against the engine that measured it. A swept tree fails typecheck with `Module '@looprun-ai/core' has no exported member 'createActionHistory'`, so renaming an existing edition would mean re-measuring it. | Rename an edition only when a new one is built on a post-rename engine. Spec: `docs/superpowers/specs/2026-08-06-plain-names-design.md`. |
+| **A required read is a veto, and a veto is a hope** | `requiresBefore` states the reads an act owes and DENIES the act when one is missing — it forces nothing. What makes an agent read first is `prose()`, which puts the rule in the assembled prompt. That works on the subject model measured (its whole family denies once across a 100-case exam) and is a property of that model, not of the guard. See below. | Evaluate whether a required read should be FORCED, on the `{verdict:'downgrade'}` precedent, and what it costs to carry an LLM seam to the preTool door. |
+
+---
+
+## A required read is a veto, and a veto is a hope
+
+### What the engine knows, and what it does with it
+
+`requiresBefore(['getInvoice'])` on `voidInvoice` says the invoice must be read before it can be
+voided. When the agent skips the read, the guard returns a sentence:
+
+```ts
+check(ctx) {
+  const missing = deps.filter((d) => !ranWithin(ctx, d));
+  return missing.length ? `Do ${missing.join(' then ')} FIRST — it must run before this tool.` : null;
+}
+```
+
+The call is denied. Nothing is read. Whether the read then happens is the agent's choice.
+
+### Why that reads as working today
+
+Across the 100-case atlas exam the whole `requiresBefore` family denies **once**: the agent reads
+first, every time, because `prose()` renders the rule in the system prompt and the agent meets it
+before it plans. That number describes `gemini-3.1-flash-lite`. Another model that ignores the line
+gets the deny — and there is no second mechanism behind it.
+
+### The measured cost of relying on the agent
+
+The same requirement was built once as a deny that also told the agent what to do next: *call
+`getInvoice` now, and then make this exact call again — BOTH steps on this turn, before you reply.*
+On the four cases that needed it:
+
+```
+                              09      10      14      95
+told to read and re-call      FAIL    ok      ok      FAIL
+```
+
+Two of the four read the tool and then replied. The turn ended with the act never put to the user at
+all — worse than what the deny was meant to prevent. A more imperative wording changed nothing.
+
+### What a forced call looks like, and why it is not simply reused here
+
+`runDisclosureCompletionPass` forces a read on the seam `flowChain` already uses — one generation,
+one tool, `toolChoice: 'required'` — and it works on all four. It runs AFTER the turn generates, on
+open approvals, and it cannot be moved to the preTool door as it stands:
+
+```
+evaluatePreTool lives in framework-free core   → no LLM seam reaches it
+forcing the read mid-veto does not run the act → the agent still has to re-attempt,
+                                                  which is the defect above
+```
+
+There is a precedent for the engine re-entering a call it stopped. `evaluatePreTool` already returns
+`{ verdict: 'downgrade', args }`, and the caller re-enters the same call with those arguments. A
+`{ verdict: 'readFirst', call }` would follow the same shape — run the read, then re-admit the
+original call — but the caller (`hooks.ts`) holds no agent handle, so the seam has to be threaded.
+
+### The trap to avoid while evaluating
+
+Declaring the missing `requiresBefore` bindings makes the forced pass fire zero times, which looks
+like a saving and is not one. The two guards run in priority order and a preTool loop returns on the
+first deny:
+
+```
+0 agent      requiresBefore   ← denies here
+2 consent    confirmFirst     ← never reached, so no approval is issued
+```
+
+The forced pass fires on OPEN APPROVALS. An agent that skips the read is stopped before any approval
+exists, so the pass has nothing to fire on: the agent that most needed the forced read is the one
+that never reaches it. Whatever shape this takes, the two mechanisms must not be able to disarm each
+other.
