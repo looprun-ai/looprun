@@ -1,6 +1,7 @@
 # Mandatory intention + red-team hardening — design addendum
 
-Date: 2026-08-03 · Status: user-approved · Extends `2026-08-02-structured-claims-guards-redesign.md`
+Date: 2026-08-03 · Status: CLOSED — shipped. `hasAskIntent` lives in `packages/core/src/rules.ts`.
+· Extends `2026-08-02-structured-claims-guards-redesign.md`
 · Repo: looprun (+ agentspec) · Pre-1.0: disposable.
 
 ## Why this addendum

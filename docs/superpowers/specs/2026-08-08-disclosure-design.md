@@ -1,5 +1,10 @@
 # Disclosure — the engine says what the act would do
 
+> **CLOSED.** Shipped on `main` in both repos. `contract.disclose` / `contract.discloseMissing` are
+> in `packages/core/src/assembled-prompt.ts`; the renderer is
+> `packages/core/src/runtime/disclosure.ts`. Authoring the slots on the atlas subject rides the
+> atlas regeneration, tracked in `BACKLOG.md`.
+
 A destructive act reaches the user as a question. The question names the record and nothing else, so
 what the act WOULD DO is left to the model's own prose — and the model does not say it. This spec
 gives the domain one field that puts that sentence on the user's screen, filled from the records the

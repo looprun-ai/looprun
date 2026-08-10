@@ -1,5 +1,8 @@
 # Symbol usage inventory — looprun simplification (Phase 0)
 
+> **RECORD, not a spec.** Nothing here is owed. This is the scan every cut in the simplification
+> cited, kept so an audit can retrace which symbol went where.
+
 **Scan date:** 2026-07-28 · **Revised:** 2026-07-29 after two independent reviews **and the Task 2
 tutorial outline** (see §9) · **Branch:** `worktree-simplification`
 

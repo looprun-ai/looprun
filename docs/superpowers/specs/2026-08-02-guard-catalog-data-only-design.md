@@ -1,7 +1,8 @@
 # Increment 1 — GuardCatalog data-only + assembled prompt policies
 
-Date: 2026-08-02 · Status: approved · Repo: looprun · Depends on: umbrella
-`2026-08-02-config-only-architecture-design.md`
+Date: 2026-08-02 · Status: CLOSED — shipped. `GUARD_CATALOG` is data in
+`packages/core/src/guards/catalog.ts`; `loadNormsConfig` installs from it. · Repo: looprun ·
+Depends on: umbrella `2026-08-02-config-only-architecture-design.md`
 
 ## Problem
 

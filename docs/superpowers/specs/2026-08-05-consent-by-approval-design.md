@@ -1,5 +1,8 @@
 # Consent by ApprovalRequest — Design
 
+> **CLOSED.** Shipped on `main`. `ApprovalRequest`, `deriveToken`, `approvalMatchesCall` and
+> `consumeApprovals` live in `packages/core/src/runtime/approval-request.ts`.
+
 Consent to a destructive act is a token the ENGINE issues and the USER types back. The agent
 neither writes the question, nor names what it authorizes, nor reports the answer.
 

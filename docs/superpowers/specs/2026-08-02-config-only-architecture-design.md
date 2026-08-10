@@ -1,6 +1,8 @@
 # Config-only generation architecture — umbrella design
 
-Date: 2026-08-02 · Status: approved (direction) · Repos: looprun (engine), agentspec (skill)
+Date: 2026-08-02 · Status: CLOSED — the umbrella. Every increment under it shipped; a subject is
+data, loaded by `loadNormsConfig`, `loadCasesConfig` and `defineWorld`. · Repos: looprun (engine),
+agentspec (skill)
 
 ## Root cause this answers
 

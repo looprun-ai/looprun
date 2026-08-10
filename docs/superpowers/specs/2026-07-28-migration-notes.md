@@ -1,5 +1,8 @@
 # Migration notes — the simplification release
 
+> **RECORD, not a spec.** Nothing here is owed. It states what the release changes for a consumer
+> outside this repo, and §4 carries the two decisions the user owned, settled.
+
 **Date:** 2026-07-29 · **Branch:** `worktree-simplification` · **Scope:** consumers outside this repo
 **Companions:** [`2026-07-28-looprun-simplification-design.md`](2026-07-28-looprun-simplification-design.md) ·
 [`2026-07-28-symbol-inventory.md`](2026-07-28-symbol-inventory.md) ·
@@ -168,30 +171,26 @@ and should read the verdict as **intentionally unrealized**, not as missed work.
 
 ---
 
-## 4. DECISIONS — carried forward, NOT made by this release
+## 4. DECISIONS — the two the user owned, and how they stand
 
-These are the two open items from the tutorial outline's §6 decision table. They were scheduled for
-Task 12 and are **user decisions**; Task 12 deliberately did not settle them. Reproduced verbatim:
+Both decisions from the tutorial outline's §6 table are settled.
 
-> **Decision 5 — Import specifiers** · owner: Task 12
->
-> **Import specifiers:** 02 `looprun/mastra` · 03 `looprun` · 04 `looprun` · 05 `looprun/mastra` +
-> `looprun` + `looprun/models` + **`@looprun-ai/eval`** · 06 **`@looprun-ai/server`** +
-> `looprun/models` + `looprun/mastra`. The facade publishes only `.` `./core` `./mastra` `./models`
-> `./vercel`. **Open: add `looprun/eval` + `looprun/server` facades** so the tutorial uses one
-> package name throughout?
+**Decision 5 — import specifiers.** The `looprun` facade publishes `.` `./core` `./mastra`
+`./models` `./vercel` and nothing more. Chapters 05 and 06 name `@looprun-ai/eval` and
+`@looprun-ai/server` directly, and 06 carries a callout saying so:
 
-> **Decision 6 — `@looprun-ai/vercel` fate** · owner: Task 12
->
-> **`@looprun-ai/vercel` is excluded from the tutorial** (non-functional stub). Package fate — ship,
-> fix or drop — is a Task 12 decision to surface to the user.
+```ts
+// chapter 05
+import { runCampaign } from '@looprun-ai/eval';
+// chapter 02
+import { createLoopRunAgent } from 'looprun/mastra';
+```
 
-**Status of each, as left by Task 12:**
+The tutorial therefore writes two package names, and that is the accepted shape: a facade subpath
+that exists only to smooth a tutorial sentence is a second name for one thing.
 
-| # | what Task 12 did | what is still owed |
-|---|---|---|
-| 5 | **Nothing.** Chapters 05 and 06 name `@looprun-ai/eval` and `@looprun-ai/server` directly, and 06 says so explicitly in a callout that cites this decision. Adding the two facade subpaths would change the specifier in the tutorial and nothing else — no code moves | **NEEDS USER DECISION**: add `looprun/eval` + `looprun/server`, or keep the direct package names |
-| 6 | **Left as-is.** `@looprun-ai/vercel` still ships as a reserved stub: `createLoopRunAgent()` throws, `VercelBackendConfig` is a type, and the README documents the three-glue-point backend seam. Task 12 added the missing note that those seam primitives live on `@looprun-ai/core/internal`. It is listed in the README package table as "reserved" | **NEEDS USER DECISION**: ship the stub as-is, implement the backend, or drop the package before the major release |
-
-Both ride the same major bump either way — decision 5 only **adds** subpaths, and decision 6 changes
-a package that has never had a working implementation.
+**Decision 6 — `@looprun-ai/vercel`.** It ships as a reserved stub. `createLoopRunAgent()` throws,
+`VercelBackendConfig` is a type, the README package table lists it as "reserved", and the seam
+primitives it names live on `@looprun-ai/core/internal`. The tutorial covers Mastra only and says
+why, in `docs/tutorial/06-advanced.md`. Implementing the backend is a `BACKLOG.md` item and a launch
+gate for the landing page — not a tutorial change.

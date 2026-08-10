@@ -1,5 +1,10 @@
 # Disclosure Implementation Plan
 
+> **CLOSED.** Shipped on `main` in both repos. `contract.disclose` / `contract.discloseMissing` are
+> in `packages/core/src/assembled-prompt.ts`; the renderer is
+> `packages/core/src/runtime/disclosure.ts`. The atlas authoring and the 19-case measurement stay
+> outside this plan.
+>
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** One engine-rendered sentence per destructive tool, printed directly above that tool's own consent question, with `{readTool.path}` slots filled from the turn's own reads.

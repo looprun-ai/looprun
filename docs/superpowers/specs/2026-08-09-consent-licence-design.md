@@ -1,5 +1,10 @@
 # Consent — the question is about the call, and the agent can say so
 
+> **CLOSED.** Shipped on `main`. The build is recorded in
+> `2026-08-10-consent-licence-implementation.md`. The vectors this design does not close are pinned
+> as `it.fails` red-team cases under `packages/core/test/redteam/`; the atlas findings ride the atlas
+> regeneration, tracked in `BACKLOG.md`.
+
 Three defects stop a destructive act from ever reaching the user's agreement. Each was measured on
 real traces, each has a verified root cause in the engine, and all three are fixed in the source.
 This spec carries the design and its decisions; the build itself — the diffs verbatim, the full

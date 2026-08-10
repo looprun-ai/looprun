@@ -1,5 +1,10 @@
 # Guard Priority Implementation Plan
 
+> **CLOSED.** Shipped on `main`. `Priority` and its five values live in `packages/core/src/spec.ts`;
+> the contract field is `writeTools` bound at priority `changeAllowed`
+> (`packages/core/src/assembled-prompt.ts`); the catalog category is `consent`
+> (`packages/core/src/guards/catalog.ts`).
+>
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Rename the guard binding's `layer` to `priority`, so a guard id's prefix names the question that guard answers instead of a class hierarchy that no longer exists.

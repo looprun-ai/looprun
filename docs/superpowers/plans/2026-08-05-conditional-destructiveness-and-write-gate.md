@@ -1,5 +1,11 @@
 # Conditional Destructiveness and the Contract Write Gate — Implementation Plan
 
+> **CLOSED.** Shipped on `main`. The write gate is `contract.writeTools` bound at priority
+> `changeAllowed` (`packages/core/src/assembled-prompt.ts`), the per-call predicate is
+> `cfg.destructiveWhen` (`packages/core/src/spec.ts`) shared by `confirmFirst` and
+> `destructiveThrottle` (`packages/core/src/guards/catalog.ts`), and the two artifact laws are
+> `WRITE-REFUSED-UNGATED` and `GUARD-NEVER-TARGETED` (`packages/eval/src/lint-subject.ts`).
+>
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Make a call — not a tool — the unit of destructiveness, make one world condition one

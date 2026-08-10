@@ -1,6 +1,7 @@
 # Full-context guards — design (firewall retired)
 
-Date: 2026-08-02 · Status: approved (direction + both rulings) · Repo: looprun ·
+Date: 2026-08-02 · Status: CLOSED — shipped. `llmCheck` lives in
+`packages/core/src/guards/llm-check.ts`. · Repo: looprun ·
 Pre-1.0 law: NO retroactive compatibility — old bundles/numbers are disposable; nothing in
 this design defers to them.
 

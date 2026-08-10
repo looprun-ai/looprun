@@ -1,6 +1,7 @@
 # Prose-only ungoverned variant — design
 
-Date: 2026-07-31 · Status: approved · Repos touched: looprun (engine), agentspec (skill docs)
+Date: 2026-07-31 · Status: CLOSED — shipped. `UngovernedBundle` lives in
+`packages/eval/src/ungoverned.ts`. · Repos touched: looprun (engine), agentspec (skill docs)
 
 ## Problem
 

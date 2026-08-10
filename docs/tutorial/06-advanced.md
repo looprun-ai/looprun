@@ -13,9 +13,8 @@ whose tools execute themselves. Thirteen symbols, from three specifiers.
 **Imports.** **`@looprun-ai/server`** · `looprun/models` · `looprun/mastra`.
 
 > Like `@looprun-ai/eval` in chapter 05, the server package is named directly: the `looprun` facade
-> publishes `.`, `./core`, `./mastra`, `./models` and `./vercel`, and there is **no `looprun/server`
-> subpath**. Whether a `looprun/server` subpath lands is not decided; if it does, only the specifier
-> changes, nothing else.
+> publishes `.`, `./core`, `./mastra`, `./models` and `./vercel`, there is **no `looprun/server`
+> subpath**, and none is planned.
 >
 > ```bash
 > npm i @looprun-ai/server

@@ -1,5 +1,9 @@
 # Worst World, Owned Truth — Implementation Plan
 
+> **CLOSED.** Shipped on `main` (engine and skill repos). The sensitive-data seam is
+> `packages/core/src/runtime/sensitive-filter.ts`, driven by `contract.sensitiveFields` and
+> `contract.scrubTextFields`. The atlas regeneration and its re-measurement stay outside this plan.
+>
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Make a schema-licensed simulation pass the guard gate as a read, make a rule-grounded refusal declarable, render the engine's knowledge (report lines, open approvals, authored error sentences) under every delivery, and filter sensitive data at the executor boundary.

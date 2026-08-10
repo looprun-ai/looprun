@@ -1,5 +1,8 @@
 # MANDATORY INTENTION — PER-GUARD VERDICTS
 
+> **RECORD, not a spec.** Nothing here is owed. One verdict per guard, kept as the acceptance
+> artifact of the mandatory-intention design.
+
 **The acceptance artifact of MI-T7.** Four adversaries ran against the mandatory-intention design over
 two rounds; three fix waves landed. For every guard in `GUARD_CATALOG` this document records one of two
 verdicts, and nothing else:

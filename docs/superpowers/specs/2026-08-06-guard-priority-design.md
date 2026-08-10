@@ -1,6 +1,8 @@
 # Guard priority — design
 
-Date: 2026-08-06 · Status: implemented on `guard-priority` · Scope: engine, skill
+Date: 2026-08-06 · Status: CLOSED — shipped on `main`. `Priority` and its five values live in
+`packages/core/src/spec.ts`. One question stays open by choice and is tracked in `BACKLOG.md`:
+where `agent` sits relative to `changeAllowed`. · Scope: engine, skill
 
 Two things landed differently from what this document proposed. The coverage census stopped excluding
 `honesty:*` and `changeAllowed:*`, and the first bundle it accused was the tutorial's own

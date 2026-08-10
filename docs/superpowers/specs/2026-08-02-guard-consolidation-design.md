@@ -1,6 +1,7 @@
 # Guard consolidation + recency law — design
 
-Date: 2026-08-02 · Status: user-ruled (4 explicit rulings) · Repo: looprun (+ agentspec refs)
+Date: 2026-08-02 · Status: CLOSED — shipped. The consolidated kinds are the entries of
+`GUARD_CATALOG` in `packages/core/src/guards/catalog.ts`. · Repo: looprun (+ agentspec refs)
 Governing principle (user ruling): **clarity of understanding ALWAYS wins** — explicit params
 over clever compact forms; fewer kinds is not the goal.
 

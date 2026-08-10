@@ -1,5 +1,9 @@
 # Attestation service — design
 
+> **NOT SCHEDULED.** An idea, kept for the day it is wanted. No code implements it: there is no
+> `attest` command, no service, no keys. `BACKLOG.md` carries the one line that points here; nothing
+> else in the tree depends on this document.
+
 Third-party certification layer on top of the local SHIP seal. Free at launch: the service
 exists to gather the telemetry that drives looprun's quality engineering.
 

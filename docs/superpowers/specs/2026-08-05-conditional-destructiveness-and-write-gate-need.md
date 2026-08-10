@@ -1,6 +1,9 @@
 # Conditional destructiveness, the contract write gate, and the parity law — the need
 
-Date: 2026-08-05 · Status: the need, and the propagation it owes · Owner: to brainstorm
+Date: 2026-08-05 · Status: CLOSED — shipped. The per-call predicate is `cfg.destructiveWhen`
+(`packages/core/src/spec.ts`); the write gate is `contract.writeTools` at priority `changeAllowed`
+(`packages/core/src/assembled-prompt.ts`); the parity law is `WRITE-REFUSED-UNGATED`
+(`packages/eval/src/lint-subject.ts`).
 
 Four gaps found by a generated subject's T1 review, each confirmed by execution against the
 running engine, and each producing a defect a careful author could not have avoided. They are one

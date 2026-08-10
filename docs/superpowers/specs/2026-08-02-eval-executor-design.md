@@ -1,7 +1,7 @@
 # Increment 2b — EvalExecutor (`looprun-eval campaign`)
 
-Date: 2026-08-02 · Status: approved · Repo: looprun · Depends on: increment 2a (validate,
-judge-input, fold-sync)
+Date: 2026-08-02 · Status: CLOSED — shipped. `runCampaign` lives in `packages/eval/src/campaign.ts`.
+· Repo: looprun · Depends on: increment 2a (validate, judge-input, fold-sync)
 
 ## Problem
 

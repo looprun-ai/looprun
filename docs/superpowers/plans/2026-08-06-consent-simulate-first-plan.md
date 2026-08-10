@@ -1,5 +1,9 @@
 # Consent: One Check, Simulate-First — Implementation Plan
 
+> **CLOSED.** Shipped on `main` in v0.14.0. The approval request and its matching live in
+> `packages/core/src/runtime/approval-request.ts`; the `downgrade` verdict is in
+> `packages/core/src/runtime/turn.ts`.
+>
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Invert the destructive-tool polarity (bare call acts, `simulate: true` simulates), collapse the two consent mechanisms into one schema-detected check, and close both consent dead ends (Route A downgrade, Route B veto-raises-the-question).

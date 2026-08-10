@@ -1,6 +1,7 @@
 # The operation record and the lie check
 
-**Status:** implemented on `operation-record-and-lie-check`
+**Status:** CLOSED — shipped on `main`. The lie check lives in
+`packages/core/src/runtime/lie-check.ts`; the record rides every finalized delivery.
 **Self-contained:** this document does not depend on any other spec or plan
 
 ---

@@ -1,6 +1,9 @@
 # One judge, one question — the design
 
-Date: 2026-08-05 · Status: design, approved in dialogue · Owner: to plan
+Date: 2026-08-05 · Status: CLOSED — shipped. `llmCheck({ question })` lives in
+`packages/core/src/guards/llm-check.ts`; the envelope and the verdict reader are
+`packages/core/src/runtime/judge-prompt.ts`. Which questions the ENGINE should own, rather than each
+domain author writing its own, is carried in `BACKLOG.md`.
 
 ## What is wrong
 

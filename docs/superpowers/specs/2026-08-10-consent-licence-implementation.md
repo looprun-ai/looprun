@@ -1,6 +1,7 @@
 # The consent licence, the derived act list, and the disclosure that speaks three times
 
-**Date** 2026-08-10 · **Scope** `looprun`, `agentspec`, `agentspec-bench/subjects/atlas`
+**Date** 2026-08-10 · **Scope** `looprun`, `agentspec`, `agentspec-bench/subjects/atlas` ·
+**Status** RECORD, not a spec — nothing here is owed.
 
 This spec records a build that is IN THE SOURCE. The design it implements is
 [2026-08-09-consent-licence-design.md](2026-08-09-consent-licence-design.md); what follows is the

@@ -35,11 +35,10 @@ is a "test mode": there is no second, cheaper runtime hiding behind them.
 helpers) · `looprun/models` (the cloud validation model) · **`@looprun-ai/eval`** (the subject and
 the CLI verbs).
 
-> **`@looprun-ai/eval` is a scoped package name, and that is deliberate — for now.** The `looprun`
-> facade publishes `.`, `./core`, `./mastra`, `./models` and `./vercel`, and **no `looprun/eval`
-> subpath exists**. So this chapter's eval imports name the package directly. Whether a
-> `looprun/eval` subpath (and a `looprun/server` one, chapter 06) lands is not decided; if it does,
-> only the specifier changes, nothing about the code.
+> **`@looprun-ai/eval` is a scoped package name, and that is deliberate.** The `looprun` facade
+> publishes `.`, `./core`, `./mastra`, `./models` and `./vercel`; there is **no `looprun/eval`
+> subpath** and none is planned. A subpath that exists only to smooth a sentence would be a second
+> name for one package, so this chapter's eval imports name the package directly.
 >
 > ```bash
 > npm i -D @looprun-ai/eval    # dev-only: nothing in the runtime imports it

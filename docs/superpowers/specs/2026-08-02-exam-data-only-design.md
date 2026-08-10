@@ -1,6 +1,7 @@
 # Increment 2a — exam as data (`cases.json`) + validate + judge-input
 
-Date: 2026-08-02 · Status: approved · Repo: looprun · Depends on: increment 1 (guard ids for
+Date: 2026-08-02 · Status: CLOSED — shipped. The exam loader is
+`packages/eval/src/cases-config.ts`. · Repo: looprun · Depends on: increment 1 (guard ids for
 `targets`)
 
 ## Problem

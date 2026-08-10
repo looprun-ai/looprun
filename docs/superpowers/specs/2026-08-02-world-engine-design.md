@@ -1,7 +1,8 @@
 # Increment 3 — WorldEngine (declarative world interpreted by the engine)
 
-Date: 2026-08-02 · Status: approved (direction; largest increment, staged) · Repo: looprun ·
-Depends on: increments 1–2 (schemas, validate)
+Date: 2026-08-02 · Status: CLOSED — shipped. `defineWorld` lives in
+`packages/core/src/world/define-world.ts`. · Repo: looprun · Depends on: increments 1–2 (schemas,
+validate)
 
 ## Problem
 

@@ -1,7 +1,7 @@
 # Looprun Simplification & Tutorial — Design
 
 **Date:** 2026-07-28
-**Status:** Approved (design); implementation plan to follow
+**Status:** CLOSED — shipped. `LoopRunAgent` lives in `packages/core/src/validate.ts`.
 **Breaking:** Yes — no backward compatibility. Known consumers (agentspec skill, looprun-bench, yntelli webapps) migrate together.
 
 ## Goal

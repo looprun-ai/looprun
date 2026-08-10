@@ -1,5 +1,9 @@
 # Same-Model Adjudicator Implementation Plan
 
+> **CLOSED.** Shipped on `main`. The prompt envelope and the verdict reader live in
+> `packages/core/src/runtime/judge-prompt.ts`; the isolated same-model call is
+> `packages/mastra/src/judge.ts`.
+>
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Make `llmCheck` reachable by default — the engine composes the judging prompt, the backend

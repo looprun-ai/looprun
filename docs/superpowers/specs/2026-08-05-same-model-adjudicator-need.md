@@ -1,6 +1,8 @@
 # The same-model adjudicator — the need
 
-Date: 2026-08-05 · Status: the need, and the propagation it owes · Owner: to brainstorm
+Date: 2026-08-05 · Status: CLOSED — shipped. The prompt envelope and the verdict reader are
+`packages/core/src/runtime/judge-prompt.ts`; the isolated same-model call is
+`packages/mastra/src/judge.ts`.
 
 ## What is missing
 
