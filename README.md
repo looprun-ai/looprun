@@ -8,11 +8,13 @@ looprun adds everything that makes it safe to hand the keys to an agent:
 - **The map** — an `AgentSpec`: which tools, in what order, under which state conditions, with what persona and behavior.
 - **The safety kit** — typed **deterministic guards** (seatbelt, airbag, speed limiter): every rule is a
   machine-checked `check()` paired with the LLM-facing `prose()` rendered into the prompt. A check reads
-  tool arguments, world state, the agent's own verified actions and the reply it just drafted —
-  **never the user's text**. That firewall *is* the guarantee, not a limitation: a user request only becomes
-  real by turning into a tool call or a reply, and those are exactly what the guards inspect — so no
-  phrasing ("ignore your rules", "the manager already approved it") can flip a verdict, and the same guard
-  holds on any model, in any language.
+  tool arguments, world state, the agent's own verified actions, the reply it just drafted — and the
+  user's text only as a string to **search, never to interpret**: matching is whole-token, contiguous
+  and whole-value equal, so the only thing a message can hand a guard is a literal — the engine-minted
+  `CONFIRM …` consent code, or the exact value an argument recorded on the user's behalf must carry.
+  That matching law *is* the guarantee: no phrasing ("ignore your rules", "the manager already
+  approved it") carries such a literal, so none can flip a verdict, and the same guard holds on any
+  model, in any language.
 - **The GPS with course-correction** — when the reply violates its checks, a bounded no-tools *redrive*
   corrects it; when correction fails, a **deterministic honest-abstain closure** (a pure function of what
   verifiably happened) goes out instead of a fabrication.
