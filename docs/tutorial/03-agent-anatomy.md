@@ -336,8 +336,8 @@ behavior list.
 | `outcomes?` | optional: the domain's outcome vocabulary, mapping each non-core word an agent may declare onto one of the seven core outcomes (`{ settled: 'success' }`). The domain adds words; it never adds a way around the action history |
 | `renderClaim?` | optional: the domain's wording (and language) for ONE verified claim LINE in the engine-rendered operation record. It receives the VERIFIED fields only — never the agent-authored `op`. Absent ⇒ a neutral English default naming the claim's `target` |
 | `engineText?` | optional: the ENGINE's own sentences — the record's closing lines and the confirmation question. A conversation held in another language declares them, per key, because the user has to READ the instruction whose token they type back. The token itself is engine-issued and is the same literal in every language |
-| `disclose?` | optional: per destructive tool, up to three sentences the engine prints — `before` (above the consent question, from the turn's own reads), `after` (at the act, from its own result) and `later` (in the operation record, from an earlier turn). The agent writes no part of any of them. See below |
-| `discloseMissing?` | optional: what an unresolved `disclose` slot renders. Default `NA`. The sentence is never dropped and never renders an empty gap, so it has to read correctly with the marker standing in any slot: `settlement: NA`, never `settles at NA` |
+| `disclose?` | optional: per tool, up to three sentences the engine prints — `before` (above the consent question, from the turn's own reads), `after` (at the call, from its own result) and `later` (in the operation record, from an earlier turn). `after` is offered every ok call including READS, so a turn that refuses and runs no act can still state the figures behind the refusal. The agent writes no part of any of them. See below |
+| `discloseMissing?` | optional: what an unresolved `before` slot renders. Default `NA`. A `before` sentence is never dropped and never renders an empty gap, so it has to read correctly with the marker standing in any slot: `settlement: NA`, never `settles at NA` |
 | `sensitiveFields?` | optional: the result fields a call may not carry, each mapped to `'omit'` (delete it) or `'mask'` (keep a recognizable stub, `o•••@northside.example`). The keys are dot-suffix paths over result keys: `'customer.phone'` reaches that `phone` at any depth, a bare `'phone'` reaches every one. How far the removal reaches is decided by the seam the tool executes on, not by this declaration — see below |
 | `scrubTextFields?` | optional: the free-text fields — dot-suffix over tool ARGUMENT and result keys — whose content is pattern-scrubbed to `•••`. A field that legitimately carries contact data is simply left undeclared, so every acceptance is authored and visible in the contract |
 
@@ -397,7 +397,21 @@ Several calls and no name match is genuinely ambiguous, and the marker says so.
 
 In `after` and `later` the slot's first step names the TOOL and the rest is the path into its result.
 
-A slot that resolves to nothing renders `discloseMissing`. A slot naming a field no result ever
+`after` is offered EVERY ok call of the turn, reads included, and THE RESULT DECIDES whether it is
+printed: a sentence whose slots the result does not all fill is silent. So a refused call states
+nothing — its result holds no act to describe — and a sentence written for a READ is printed on the
+turn that read it, which is the only place the engine can speak when the reply refuses:
+
+```
+disclose: { getPlanUsage: { after: 'This workspace uses {getPlanUsage.seatsUsed} of '
+                                 + '{getPlanUsage.seatCap} seats.' } }
+
+the reply refuses an invite over the seat cap
+  → I cannot invite them: the workspace is at its seat cap.
+    This workspace uses 2 of 2 seats.
+```
+
+A `before` slot that resolves to nothing renders `discloseMissing`. A slot naming a field no result ever
 carries is a different thing — an authoring typo — and `looprun-eval validate` fails on it offline
 (chapter 05 §5.1).
 

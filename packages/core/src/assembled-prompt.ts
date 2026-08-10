@@ -114,16 +114,23 @@ export interface DomainContract {
    *  `before` sits above the consent question and is filled from the READS this conversation made:
    *  a `{readTool.path}` slot takes the latest successful call of `readTool` whose RESULT carries one
    *  of the values the licensed call carries — never simply the latest call, because one read tool
-   *  commonly answers about two records in a turn. `after` sits at the act and is filled from that
-   *  act's OWN result. `later` rides the operation record and is filled from the most recent earlier
-   *  turn in which that act took effect. In `after` and `later` the slot's first step names the tool
-   *  and the rest is the path into its result.
+   *  commonly answers about two records in a turn. A `before` slot that resolves to nothing renders
+   *  {@link discloseMissing}, so the sentence has to read correctly with the marker standing in any
+   *  slot (`settlement: NA`, not `settles at NA`).
    *
-   *  A slot that resolves to nothing renders {@link discloseMissing}; the sentence is never dropped
-   *  and never renders an empty gap, so it has to read correctly with the marker standing in any slot
-   *  (`settlement: NA`, not `settles at NA`). Slot grammar is `{` identifier (`.` step)* `}`, where a
-   *  step may be an index (`holds.0.id`); any other brace pair renders literally. Distinct from
-   *  {@link renderClaim}, which words an act the model DECLARED — this words the act itself. */
+   *  `after` is offered EVERY ok call of the turn, READS INCLUDED, and is filled from that call's own
+   *  result. THE RESULT DECIDES WHETHER IT IS PRINTED: a sentence whose slots the result does not all
+   *  fill is silent, so a refused call — whose result holds nothing to describe — states nothing, and
+   *  a domain that writes a sentence for a read gets it printed on the turn that read it. That turn
+   *  is the only place the engine can speak when the reply refuses and no act ever runs.
+   *
+   *  `later` rides the operation record and is filled from the most recent earlier turn in which that
+   *  act took effect. In `after` and `later` the slot's first step names the tool and the rest is the
+   *  path into its result.
+   *
+   *  Slot grammar is `{` identifier (`.` step)* `}`, where a step may be an index (`holds.0.id`); any
+   *  other brace pair renders literally. Distinct from {@link renderClaim}, which words an act the
+   *  model DECLARED — this words the act itself. */
   disclose?: Record<string, { before?: string; after?: string; later?: string }>;
   /** What an unresolved {@link disclose} slot renders. Default `'NA'`. */
   discloseMissing?: string;
