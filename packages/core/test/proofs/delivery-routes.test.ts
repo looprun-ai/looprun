@@ -76,23 +76,25 @@ describe('the open approvals on a delivery', () => {
   }
 
   it('positive — a question raised an earlier turn renders again on this one', async () => {
-    const out = await deliver('open-question', standingQuestion(), 'Here is what I can tell you.');
-    expect(out.text).toContain('To confirm bk_1001, reply: CONFIRM BK_1001');
+    const actionHistory = standingQuestion();
+    const out = await deliver('open-question', actionHistory, 'Here is what I can tell you.');
+    expect(out.text).toContain(`reply: ${actionHistory.approvals[0]!.token}`);
   });
 
   it('negative — a question the user answered renders nothing', async () => {
     const actionHistory = createActionHistory();
     beginTurn(actionHistory, 0, 'charge the deposit for bk_1001');
     recordToolResult(actionHistory, 'chargeDeposit', { id: 'bk_1001' }, { requiresConfirmation: true, id: 'bk_1001' });
-    beginTurn(actionHistory, 1, 'CONFIRM BK_1001');
+    beginTurn(actionHistory, 1, actionHistory.approvals[0]!.token);
 
     const out = await deliver('answered-question', actionHistory, 'Done.');
-    expect(out.text).not.toContain('CONFIRM BK_1001');
+    expect(out.text).not.toContain('reply: CONFIRM');
   });
 
   it('neutral — a blank turn beside a standing question delivers the question, not the exhaustion closure', async () => {
-    const out = await deliver('blank-floor', standingQuestion(), '');
-    expect(out.text).toContain('To confirm bk_1001, reply: CONFIRM BK_1001');
+    const actionHistory = standingQuestion();
+    const out = await deliver('blank-floor', actionHistory, '');
+    expect(out.text).toContain(`reply: ${actionHistory.approvals[0]!.token}`);
     expect(out.exhausted).toBe(false);
   });
 });

@@ -31,7 +31,8 @@ const CORE_OUTCOME_VALUES = [
   'not_found',
   'blocked',
   'refused',
-  'pending_confirmation',
+  'tool_called_request_approval',
+  'any_other_question',
   'no_op',
 ] as const satisfies readonly CoreOutcome[];
 

@@ -9,9 +9,9 @@ import type { GuardCtx, ObservedCall } from '../src/rules.js';
 
 const consented: ApprovalRequest = {
   tool: 'cancelBooking',
-  subject: 'BK-1',
-  meaning: 'BK-1',
-  token: 'CONFIRM BK-1',
+  args: { id: 'BK-1' },
+  meaning: 'cancelling a booking',
+  token: 'CONFIRM CANCELBOOKING-0001',
   issuedTurn: 0,
   consumedTurn: 1,
 };
@@ -63,11 +63,11 @@ describe('confirmFirst — an act that is not a schema-licensed simulation needs
     expect(g.check(ctx({ tool: 'cancelBooking', args: { id: 'BK-1' } }))).not.toBeNull();
   });
 
-  it('allows an act with no record when the tool itself was consented to', () => {
+  it('allows the act when the consent stored no call — it licenses its tool', () => {
     const label: ApprovalRequest = {
       tool: 'deleteAllData',
       meaning: 'delete all of your data',
-      token: 'CONFIRM DELETE-ALL',
+      token: 'CONFIRM DELETEALLDATA-0001',
       issuedTurn: 0,
       consumedTurn: 1,
     };

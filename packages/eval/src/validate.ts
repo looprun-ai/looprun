@@ -542,7 +542,11 @@ export function checkDisclosureSlots(subject: Subject): string[] {
   const issues: string[] = [];
   const presets = [...new Set([...(subject.cases ?? []).map((c) => c.setup?.preset ?? 'default'), 'default'])];
 
-  for (const [tool, template] of Object.entries(disclose)) {
+  for (const [tool, tenses] of Object.entries(disclose)) {
+    // `before` is the only tense whose slots name a READ tool; `after`/`later` read the act's own
+    // result, so there is no read to reach.
+    const template = tenses.before;
+    if (!template) continue;
     // The lanes that carry the disclosed tool — the only surfaces a slot's read could have run on.
     const lanes = Object.values(subject.specs ?? {}).filter((s) => s.surface.tools.includes(tool));
     const reachable = new Set(lanes.flatMap((s) => s.surface.tools));

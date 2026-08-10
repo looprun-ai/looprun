@@ -165,7 +165,7 @@ describe('L2 — an unsealed stream() turn licenses a later destructive act', ()
       [{ text: 'stop' }],
       // The generated turn: straight to the bare destructive act.
       [{ tool: 'deleteItem', args: { id: 'p001' } }],
-      [{ tool: 'respond', args: { message: 'Deleted.', did: [{ op: 'deleteItem', target: 'p001', outcome: 'success' }] } }],
+      [{ tool: 'respond', args: { message: 'Deleted.', did: [{ op: 'deleteItem', targetValue: 'p001', outcome: 'success' }] } }],
     ]);
     await streamTurn(agent, 'clean up my account');
     const actionHistory = agent.getSession().actionHistory;
@@ -202,10 +202,10 @@ describe('L2 — an unsealed stream() turn licenses a later destructive act', ()
       [{ tool: 'respond', args: { message: 'That one needs your confirmation.', did: [{ op: 'inform' }] } }],
       [{ text: 'stop' }],
       [{ tool: 'deleteItem', args: { id: 'p001' } }],
-      [{ tool: 'respond', args: { message: 'Done.', did: [{ op: 'deleteItem', target: 'p001', outcome: 'success' }] } }],
+      [{ tool: 'respond', args: { message: 'Done.', did: [{ op: 'deleteItem', targetValue: 'p001', outcome: 'success' }] } }],
     ]);
     await streamTurn(agent, 'delete item p001');
-    const res = await agent.generate('CONFIRM p001');
+    const res = await agent.generate(agent.getSession().actionHistory.approvals[0]!.token);
     // The simulate-first consent flow must survive every tightening: a question the engine really
     // raised, over a streamed turn, is answerable by the code the user types next turn.
     expect(vetoed(res.looprun.corrections, 'deleteItem')).toBe(false);
@@ -224,12 +224,12 @@ describe('L2 — an unsealed stream() turn licenses a later destructive act', ()
 describe('L3 — redrive message/did desync seals a phantom ask', () => {
   const script = (): ScriptStep[] => [
     // Turn 0: a fabricated completion claim — nothing ran, so claimIsGrounded vetoes it and a redrive fires.
-    [{ tool: 'respond', args: { message: 'Done — item p001 has been deleted.', did: [{ op: 'deleteItem', target: 'p001', outcome: 'success' }] } }],
+    [{ tool: 'respond', args: { message: 'Done — item p001 has been deleted.', did: [{ op: 'deleteItem', targetValue: 'p001', outcome: 'success' }] } }],
     // The redrive: the model drops the false claim but puts nothing in `message`.
     [{ tool: 'respond', args: { message: '', did: [{ op: 'ask' }] } }],
     // Turn 1: straight to the bare destructive act.
     [{ tool: 'deleteItem', args: { id: 'p001' } }],
-    [{ tool: 'respond', args: { message: 'Deleted.', did: [{ op: 'deleteItem', target: 'p001', outcome: 'success' }] } }],
+    [{ tool: 'respond', args: { message: 'Deleted.', did: [{ op: 'deleteItem', targetValue: 'p001', outcome: 'success' }] } }],
   ];
 
   it('CLOSED: the blank re-generation is dropped WHOLE — no phantom ask, no stale sentence', async () => {
@@ -327,10 +327,10 @@ describe('L4 — destructiveThrottle in native-tools mode', () => {
       [{ tool: 'respond', args: { message: 'Deleting p001 is permanent — are you sure?', did: [{ op: 'ask' }] } }],
       [{ tool: 'deleteItem', args: { id: 'p001' } }],
       [{ tool: 'deleteItem', args: { id: 'p002' } }],
-      [{ tool: 'respond', args: { message: 'Removed.', did: [{ op: 'deleteItem', target: 'p001', outcome: 'success' }] } }],
+      [{ tool: 'respond', args: { message: 'Removed.', did: [{ op: 'deleteItem', targetValue: 'p001', outcome: 'success' }] } }],
     ]);
     await agent.generate('delete p001 and p002');
-    const res = await agent.generate('CONFIRM p001');
+    const res = await agent.generate(agent.getSession().actionHistory.approvals[0]!.token);
 
     // The bare p002 act never ran bare: the consent gate downgraded it to its simulation.
     expect(downgraded(res.looprun.corrections, 'deleteItem')).toBe(true);
@@ -344,7 +344,8 @@ describe('L4 — destructiveThrottle in native-tools mode', () => {
 
     // …and p002 is not silently dropped: its question STANDS, with the literal the user types back.
     const open = agent.getSession().actionHistory.approvals.filter((a) => !a.closed && a.consumedTurn === undefined);
-    expect(open.map((a) => ({ tool: a.tool, subject: a.subject, token: a.token })))
-      .toEqual([{ tool: 'deleteItem', subject: 'p002', token: 'CONFIRM P002' }]);
+    expect(open).toHaveLength(1);
+    expect(open[0]).toMatchObject({ tool: 'deleteItem', args: { id: 'p002' } });
+    expect(open[0].token).toMatch(/^CONFIRM DELETEITEM-[0-9A-F]{4}$/);
   });
 });

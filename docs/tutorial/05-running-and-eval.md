@@ -186,7 +186,7 @@ Design review: not permitted
 Nothing else was changed on this turn.
 ```
 
-The agent declared `{ op: 'addEvent', target: 'Design review', outcome: 'blocked' }`, the cross-check
+The agent declared `{ op: 'addEvent', targetValue: 'Design review', outcome: 'blocked' }`, the cross-check
 matched it against the vetoed attempt, and the engine told the user the booking did not happen. The
 closing sentence is always there, and it is the reason the record works as an account rather than a
 list: it says the lines above are the WHOLE of what changed, so every operation they do not name is
@@ -618,7 +618,7 @@ references   every target names a guard, every preset constructs, every case rou
 premise      each case's required writes replayed: can this case ever pass, and does its
              forbidden entry actually forbid anything?
 world        preset distinguishability · simulate ≡ act identity · determinism
-disclosure   every contract.disclose slot resolves against a seeded record
+disclosure   every contract.disclose  slot resolves against a seeded record
 ```
 
 The disclosure layer draws one distinction, and it is the whole point of running it offline:

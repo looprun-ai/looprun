@@ -146,7 +146,7 @@ describe('full loop — a same-step bulk destructive is throttled to ONE effect'
     // destructiveThrottle, which is what this proof pins.
     const res = await runProofLoop(spec(), {
       preset: 'seeded-media',
-      turns: [{ userText: 'delete p001 and p002' }, { userText: 'CONFIRM p001 and CONFIRM p002' }],
+      turns: [{ userText: 'delete p001 and p002' }, { userText: '{{CODE1}} and {{CODE2}}' }],
       script: [
         [{ tool: 'deleteItem', args: { id: 'p001', simulate: true } }],
         [{ tool: 'deleteItem', args: { id: 'p002', simulate: true } }],
@@ -167,7 +167,7 @@ describe('full loop — a same-step bulk destructive is throttled to ONE effect'
   it('REGRESSION: a single confirmed delete in turn 1 is NOT throttled', async () => {
     const res = await runProofLoop(spec(), {
       preset: 'seeded-media',
-      turns: [{ userText: 'delete p001' }, { userText: 'CONFIRM p001' }],
+      turns: [{ userText: 'delete p001' }, { userText: '{{CODE1}}' }],
       script: [
         [{ tool: 'deleteItem', args: { id: 'p001' } }],
         [{ tool: 'respond', args: { message: 'Deleting p001 is permanent — are you sure?', did: [{ op: 'inform' }] } }],

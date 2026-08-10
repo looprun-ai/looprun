@@ -8,12 +8,13 @@ import { describe, it, expect } from 'vitest';
 import { beginTurn, createActionHistory, issueApprovalForVeto, recordToolResult } from '../src/runtime/action-history.js';
 
 describe('a world result that requires confirmation issues an approval request', () => {
-  it('names the record the world issued', () => {
+  it('stores the call the world was asked to confirm', () => {
     const actionHistory = createActionHistory();
     beginTurn(actionHistory, 0, 'cancel BK-1');
     recordToolResult(actionHistory, 'cancelBooking', { id: 'BK-1' }, { requiresConfirmation: true, id: 'BK-1' });
     expect(actionHistory.approvals).toHaveLength(1);
-    expect(actionHistory.approvals[0]).toMatchObject({ tool: 'cancelBooking', subject: 'BK-1', token: 'CONFIRM BK-1' });
+    expect(actionHistory.approvals[0]).toMatchObject({ tool: 'cancelBooking', args: { id: 'BK-1' } });
+    expect(actionHistory.approvals[0]!.token).toMatch(/^CONFIRM CANCELBOOKING-[0-9A-F]{4}$/);
     expect(actionHistory.approvals.filter((a) => a.issuedTurn === actionHistory.turnIndex)).toHaveLength(1);
   });
 
@@ -26,11 +27,12 @@ describe('a world result that requires confirmation issues an approval request',
     expect(actionHistory.approvals).toHaveLength(1);
   });
 
-  it('issues nothing when the world named no record', () => {
+  it('asks an answerable question even for a call that carries no arguments', () => {
     const actionHistory = createActionHistory();
     beginTurn(actionHistory, 0, 'cancel it');
     recordToolResult(actionHistory, 'cancelBooking', {}, { requiresConfirmation: true });
-    expect(actionHistory.approvals).toHaveLength(0);
+    expect(actionHistory.approvals).toHaveLength(1);
+    expect(actionHistory.approvals[0]!.token).toMatch(/^CONFIRM CANCELBOOKING-[0-9A-F]{4}$/);
   });
 });
 
@@ -43,16 +45,16 @@ describe('a vetoed destructive call issues an approval request from its declared
     expect(actionHistory.approvals[0]).toMatchObject({
       tool: 'deleteAllData',
       meaning: 'delete all of your data',
-      token: 'CONFIRM DELETE-ALL',
     });
-    expect(actionHistory.approvals[0]!.subject).toBeUndefined();
+    expect(actionHistory.approvals[0]!.token).toMatch(/^CONFIRM DELETEALLDATA-[0-9A-F]{4}$/);
   });
 
-  it('issues nothing for a tool with no declared label', () => {
+  it('words the question with the tool name when the spec declared no label', () => {
     const actionHistory = createActionHistory();
     beginTurn(actionHistory, 0, 'wipe everything');
     issueApprovalForVeto(actionHistory, 'deleteAllData');
-    expect(actionHistory.approvals).toHaveLength(0);
+    expect(actionHistory.approvals).toHaveLength(1);
+    expect(actionHistory.approvals[0]!.meaning).toBe('deleteAllData');
   });
 });
 
@@ -64,10 +66,12 @@ describe("the user's own words consume an open approval", () => {
     issueApprovalForVeto(actionHistory, 'deleteAllData');
     return actionHistory;
   };
+  /** The literal the engine minted — derived from the call, so the test reads it rather than spells it. */
+  const literal = (h: ReturnType<typeof armed>): string => h.approvals[0]!.token;
 
   it('records the consumption on the turn that carried the token', () => {
     const actionHistory = armed();
-    beginTurn(actionHistory, 1, 'ok, CONFIRM DELETE-ALL');
+    beginTurn(actionHistory, 1, `ok, ${literal(actionHistory)}`);
     expect(actionHistory.consentThisTurn).toHaveLength(1);
     expect(actionHistory.approvals[0]!.consumedTurn).toBe(1);
   });
@@ -82,29 +86,30 @@ describe("the user's own words consume an open approval", () => {
     const actionHistory = armed();
     beginTurn(actionHistory, 1, 'wait, what does that remove?');
     expect(actionHistory.consentThisTurn).toEqual([]);
-    beginTurn(actionHistory, 2, 'CONFIRM DELETE-ALL');
+    beginTurn(actionHistory, 2, literal(actionHistory));
     expect(actionHistory.consentThisTurn).toHaveLength(1);
   });
 
   it('licenses one act per typed token', () => {
     const actionHistory = armed();
-    beginTurn(actionHistory, 1, 'CONFIRM DELETE-ALL');
+    beginTurn(actionHistory, 1, literal(actionHistory));
     expect(actionHistory.consentThisTurn).toHaveLength(1);
-    beginTurn(actionHistory, 2, 'CONFIRM DELETE-ALL');
+    beginTurn(actionHistory, 2, literal(actionHistory));
     expect(actionHistory.consentThisTurn).toEqual([]);
   });
 });
 
-describe('a write that lands closes the question about its record', () => {
-  it('leaves an unanswered question unanswerable once the record moved', () => {
+describe('a call that lands closes the question about it', () => {
+  it('leaves an unanswered question unanswerable once the call took effect', () => {
     const world = { toolCalls: [] as Array<{ name: string; args: unknown; result?: unknown; tookEffect?: boolean }> };
     const actionHistory = createActionHistory();
     beginTurn(actionHistory, 0, 'cancel BK-1');
     recordToolResult(actionHistory, 'cancelBooking', { id: 'BK-1' }, { requiresConfirmation: true, id: 'BK-1' });
+    const token = actionHistory.approvals[0]!.token;
     world.toolCalls.push({ name: 'cancelBooking', args: { id: 'BK-1' }, tookEffect: true });
     recordToolResult(actionHistory, 'cancelBooking', { id: 'BK-1' }, { id: 'BK-1' }, world as never);
     expect(actionHistory.approvals[0]!.closed).toBe(true);
-    beginTurn(actionHistory, 1, 'CONFIRM BK-1');
+    beginTurn(actionHistory, 1, token);
     expect(actionHistory.consentThisTurn).toEqual([]);
   });
 });

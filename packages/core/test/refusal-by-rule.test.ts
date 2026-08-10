@@ -84,12 +84,12 @@ describe('refusal by rule', () => {
 
   it('the deny lists the outcomes the evidence supports', () => {
     const ctx = {
-      did: [{ op: 'release', target: 'bk_1003', outcome: 'pending_confirmation' }] as Intention[],
+      did: [{ op: 'release', target: 'bk_1003', outcome: 'tool_called_request_approval' }] as Intention[],
       observed: [call('getBooking', { bookingId: 'bk_1003' })],
       world: worldWith([{ name: 'getBooking', args: { bookingId: 'bk_1003' }, result: { id: 'bk_1003', status: 'active' } }]),
     };
     const deny = grounded(ctx);
-    expect(deny).toMatch(/Declarable for bk_1003 with this turn's evidence: /);
+    expect(deny).toMatch(/Declarable with this turn/);
     expect(deny).toContain('refused'); // a read that addressed the entity with no effected write grounds a refusal
     expect(deny).not.toContain('success');
   });

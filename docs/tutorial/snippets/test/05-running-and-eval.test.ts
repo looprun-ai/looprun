@@ -43,7 +43,7 @@ describe('05 · runSpecConversation over the scheduler', () => {
           tool: 'respond',
           args: {
             message: 'That clashes with Standup (10:00–10:30). Move it or replace it?',
-            did: [{ op: 'addEvent', target: 'Design review', outcome: 'blocked' }, { op: 'ask' }],
+            did: [{ op: 'addEvent', targetValue: 'Design review', outcome: 'blocked' }, { op: 'ask' }],
           },
         },
       ],

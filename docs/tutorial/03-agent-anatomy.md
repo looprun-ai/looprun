@@ -154,9 +154,9 @@ Field by field, the ones that carry a rule:
 | `id` / `mode` | both **required**. `id` names the agent; `mode` is a free-form label echoed into eval records and case routing. It is near-vestigial today — nothing in the runtime branches on it — but it is not optional, so pick something stable and move on |
 | `persona` | lives on the **spec**, never on the shared domain contract — one line, per agent, rendered as late as possible so agents of the same domain share a maximal cacheable prompt prefix |
 | `tools` | the surface, declared. ≤15, and the terminal tool (`respond`) is runtime-owned — naming it **throws** at construction |
-| `destructiveTools` | a declaration, not a comment: it *installs* the confirm-first protocol on exactly those tools. A tool here that acts on no identifiable record also needs a `destructiveLabels` entry — the words its confirmation question is built from — or it can raise no question and never runs |
+| `destructiveTools` | a declaration, not a comment: it *installs* the confirm-first protocol on exactly those tools. Every tool here also owes a `destructiveLabels` entry — the words its confirmation question is built from — or the question is worded with the tool's own name |
 | `destructiveWhen?` | per listed tool whose destructiveness lives in its ARGUMENTS, the predicate that says which calls the protocol applies to (`{ placeHold: (args) => args.scope === 'workspace' }`). The tool stays on the list — that is what installs the protocol and what makes its label legal — and the protective branch runs untouched. A listed tool with no predicate is destructive on every call. A predicate for a tool that is not on the list **throws** at construction |
-| `destructiveLabels` | per destructive tool with no record of its own, the human-facing words the engine's confirmation question is built from (`{ emptyBin: 'empty the compost bin' }` → the user replies `CONFIRM EMPTY-THE`). Two labels whose first two words agree derive one token for two acts and **throw** at construction |
+| `destructiveLabels` | per destructive tool, the human-facing words the engine's confirmation question is built from (`{ emptyBin: 'emptying the compost bin' }` → *To confirm emptying the compost bin, reply: CONFIRM EMPTYBIN-7F3A*). The label says WHAT the act is; the literal is derived from the CALL, so two calls of the same tool on different records ask for two different literals |
 | `behavior` | the **uncheckable residue only**. A line here that restates a rule some guard already enforces is two copies of one rule with only one wired to a check — guaranteed drift, and the spec lint flags it |
 
 That last row is the discipline the whole design rests on. The behavior bullet above survives the
@@ -231,9 +231,10 @@ is written and rendered by the ENGINE:
             world:   { requiresConfirmation: true, id: 'EV-2' }
             screen:  The 10:00 meeting is on your calendar.
 
-                     To confirm EV-2, reply: CONFIRM EV-2   ← the ENGINE wrote this line
+                     To confirm cancelling an event, reply: CONFIRM CANCELEVENT-3F7A
+                                                            ↑ the ENGINE wrote this line
 
-   turn 2   user:    "CONFIRM EV-2"
+   turn 2   user:    "CONFIRM CANCELEVENT-3F7A"
             agent:   cancelEvent({ id: 'EV-2' })   → the bare acting call, now licensed
 ```
 
@@ -335,7 +336,7 @@ behavior list.
 | `outcomes?` | optional: the domain's outcome vocabulary, mapping each non-core word an agent may declare onto one of the seven core outcomes (`{ settled: 'success' }`). The domain adds words; it never adds a way around the action history |
 | `renderClaim?` | optional: the domain's wording (and language) for ONE verified claim LINE in the engine-rendered operation record. It receives the VERIFIED fields only — never the agent-authored `op`. Absent ⇒ a neutral English default naming the claim's `target` |
 | `engineText?` | optional: the ENGINE's own sentences — the record's closing lines and the confirmation question. A conversation held in another language declares them, per key, because the user has to READ the instruction whose token they type back. The token itself is engine-issued and is the same literal in every language |
-| `disclose?` | optional: one sentence per destructive tool, printed by the engine directly ABOVE that tool's own consent question — what agreeing to the act would do. `{readTool.path}` slots are filled from the turn's own reads, and the agent writes no part of it. See below |
+| `disclose?` | optional: per destructive tool, up to three sentences the engine prints — `before` (above the consent question, from the turn's own reads), `after` (at the act, from its own result) and `later` (in the operation record, from an earlier turn). The agent writes no part of any of them. See below |
 | `discloseMissing?` | optional: what an unresolved `disclose` slot renders. Default `NA`. The sentence is never dropped and never renders an empty gap, so it has to read correctly with the marker standing in any slot: `settlement: NA`, never `settles at NA` |
 | `sensitiveFields?` | optional: the result fields a call may not carry, each mapped to `'omit'` (delete it) or `'mask'` (keep a recognizable stub, `o•••@northside.example`). The keys are dot-suffix paths over result keys: `'customer.phone'` reaches that `phone` at any depth, a bare `'phone'` reaches every one. How far the removal reaches is decided by the seam the tool executes on, not by this declaration — see below |
 | `scrubTextFields?` | optional: the free-text fields — dot-suffix over tool ARGUMENT and result keys — whose content is pattern-scrubbed to `•••`. A field that legitimately carries contact data is simply left undeclared, so every acceptance is authored and visible in the contract |
@@ -353,12 +354,21 @@ renderClaim   after the act     what one verified claim did
 engineText    around both       the engine's own sentences, and their language
 ```
 
-`disclose` is one string per tool, and the engine fills its slots from the records the turn read:
+`disclose` speaks in three tenses per tool, and the domain authors whichever ones its act needs:
+
+```
+before   above the consent question, from the READS      "…forfeits the 80.00 deposit."
+after    at the act, from the ACT'S OWN result           "BK-1 is cancelled; 80.00 was forfeited."
+later    in the operation record, from an EARLIER turn   "BK-1 was already cancelled."
+```
 
 ```ts
   disclose: {
-    cancelBooking: 'Cancelling {getBooking.booking.id} releases the room and forfeits the '
-                 + '{getBooking.booking.deposit} deposit.',
+    cancelBooking: {
+      before: 'Cancelling {getBooking.booking.id} releases the room and forfeits the '
+            + '{getBooking.booking.deposit} deposit.',
+      after: '{cancelBooking.bookingId} is cancelled and the room is back on the calendar.',
+    },
   },
 ```
 
@@ -366,20 +376,26 @@ engineText    around both       the engine's own sentences, and their language
 getBooking({id:'BK-1'}) → { booking: { id: 'BK-1', deposit: '80.00' } }
 
   Cancelling BK-1 releases the room and forfeits the 80.00 deposit.
-  To confirm BK-1, reply: CONFIRM BK-1
+  To confirm cancelling a booking, reply: CONFIRM CANCELBOOKING-3F7A
 ```
 
-A slot binds to the read whose RESULT names the record the question is about — never simply to the
-latest call of that read, because one read tool commonly answers about two records in a turn:
+In `before`, a slot binds to the read whose RESULT names a record the CALL carries — never simply to
+the latest call of that read, because one read tool commonly answers about two records in a turn:
 
 ```
-the act is updateMemberRole(mem_1004 → owner)
+the act is updateMemberRole({memberId:'mem_1004', role:'owner'})
 
   getMember({memberId:'mem_1004'})  → Sam Whitfield      the person being promoted
   getMember({})                     → Dana Okafor        the acting user
 
-  subject-bound   "Promoting Sam Whitfield to owner…"    what the user is being asked
+  call-bound   "Promoting Sam Whitfield to owner…"       what the user is being asked
 ```
+
+When no read names one of the call's records — a read that answers about a related entity, such as a
+technician's schedule for a booking — a SINGLE call of that tool is unambiguous and stands on its own.
+Several calls and no name match is genuinely ambiguous, and the marker says so.
+
+In `after` and `later` the slot's first step names the TOOL and the rest is the path into its result.
 
 A slot that resolves to nothing renders `discloseMissing`. A slot naming a field no result ever
 carries is a different thing — an authoring typo — and `looprun-eval validate` fails on it offline
@@ -454,7 +470,7 @@ against the literal the question stored.
 
 ```
    whole delivery scrubbed   To confirm •••, reply: CONFIRM •••     ← the act can never be confirmed
-   engine blocks verbatim    To confirm 2026-0801-77, reply: CONFIRM 2026-0801-77
+   engine blocks verbatim    To confirm voiding an invoice, reply: CONFIRM VOIDINVOICE-77A1
 ```
 
 ---
@@ -514,7 +530,7 @@ makes its `destructiveLabels` entry legal) and declares which calls it applies t
 ```ts
 destructiveTools: ['placeHold'],
 destructiveWhen: { placeHold: (args) => args.scope === 'workspace' },
-destructiveLabels: { placeHold: 'freeze the entire workspace' },
+destructiveLabels: { placeHold: 'freezing the entire workspace' },
 ```
 
 `placeHold({scope:'asset'})` now runs with nothing asked; `placeHold({scope:'workspace'})` is gated on

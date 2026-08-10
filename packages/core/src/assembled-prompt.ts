@@ -90,29 +90,41 @@ export interface DomainContract {
    *  {@link renderClaim}, which words one CLAIM; this words what the engine says around them, and the
    *  consent question is the part that has to be readable — the user types its token back. */
   engineText?: Partial<EngineText>;
-  /** What agreeing to a destructive act WOULD DO, one sentence per tool, printed by the engine
-   *  directly above that tool's own consent question. The agent writes no part of it.
+  /** What an act DOES, in the domain's own sentence, printed by the engine. The agent writes no part
+   *  of it — it cannot soften the sentence and it cannot leave it out.
    *
-   *  A `{readTool.path}` slot is filled from the latest successful call of `readTool` in this
-   *  conversation whose RESULT names the approval's subject — never simply the latest call, because
-   *  one read tool commonly answers about two records in a turn:
+   *  Three tenses per tool, each optional:
    *
    *  ```
-   *    disclose: { retireAsset: 'Retiring {getAsset.asset.id} ({getAsset.asset.name}) takes it out '
-   *                           + 'of the rentable fleet for good.' }
+   *    disclose: {
+   *      retireAsset: {
+   *        before: 'Retiring {getAsset.asset.id} ({getAsset.asset.name}) takes it out of the '
+   *              + 'rentable fleet for good.',
+   *        after:  '{retireAsset.assetId} is retired and no longer rentable.',
+   *        later:  '{retireAsset.assetId} was retired earlier in this conversation.',
+   *      },
+   *    }
    *
    *    getAsset({assetId:'ast_ltwr01'}) → {asset:{id:'ast_ltwr01',name:'Allmand Light Tower'}}
    *
    *    → Retiring ast_ltwr01 (Allmand Light Tower) takes it out of the rentable fleet for good.
-   *      To confirm ast_ltwr01, reply: CONFIRM AST_LTWR01
+   *      To confirm retiring an asset, reply: CONFIRM RETIREASSET-7F3A
    *  ```
+   *
+   *  `before` sits above the consent question and is filled from the READS this conversation made:
+   *  a `{readTool.path}` slot takes the latest successful call of `readTool` whose RESULT carries one
+   *  of the values the licensed call carries — never simply the latest call, because one read tool
+   *  commonly answers about two records in a turn. `after` sits at the act and is filled from that
+   *  act's OWN result. `later` rides the operation record and is filled from the most recent earlier
+   *  turn in which that act took effect. In `after` and `later` the slot's first step names the tool
+   *  and the rest is the path into its result.
    *
    *  A slot that resolves to nothing renders {@link discloseMissing}; the sentence is never dropped
    *  and never renders an empty gap, so it has to read correctly with the marker standing in any slot
-   *  (`settlement: NA`, not `settles at NA`). Slot grammar is `{` identifier (`.` identifier)* `}`;
-   *  any other brace pair renders literally. Distinct from {@link renderClaim}, which words an act
-   *  that HAPPENED — this words one that has not. */
-  disclose?: Record<string, string>;
+   *  (`settlement: NA`, not `settles at NA`). Slot grammar is `{` identifier (`.` step)* `}`, where a
+   *  step may be an index (`holds.0.id`); any other brace pair renders literally. Distinct from
+   *  {@link renderClaim}, which words an act the model DECLARED — this words the act itself. */
+  disclose?: Record<string, { before?: string; after?: string; later?: string }>;
   /** What an unresolved {@link disclose} slot renders. Default `'NA'`. */
   discloseMissing?: string;
   /** The domain's WRITE tools — the ones that MUTATE the world (vs pure reads). The honesty cross-check

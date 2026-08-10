@@ -113,7 +113,7 @@ function historyOf(actionHistory: readonly ActionHistoryCall[]): HistoryTurn[] {
       userText: '',
       reply: '',
       toolCalls: [],
-      did: [{ op: 'operation', target: writeLabel(c), outcome: 'success' }],
+      did: [{ op: 'operation', targetValue: writeLabel(c), outcome: 'success' }],
       attemptedCalls: [],
       guardEvents: [],
     }));
@@ -691,7 +691,7 @@ export function foldExperiment(cases: readonly PipelineCase[], replicates: numbe
   };
   const sampleSession = sessionRecord([
     { turnIndex: 0, userText: '', reply: '', toolCalls: [], attemptedCalls: [], guardEvents: [],
-      did: [{ op: 'operation', target: '<entity>', outcome: 'success' }] },
+      did: [{ op: 'operation', targetValue: '<entity>', outcome: 'success' }] },
   ]);
 
   const withRecords = cases.flatMap((c) => c.replicates.map((r) => ({ c, r })));

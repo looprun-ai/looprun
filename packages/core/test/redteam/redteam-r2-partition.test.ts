@@ -156,15 +156,15 @@ describe('b1 — a speech-op LOOKALIKE must never be classified as SPEECH (it mu
 describe('b2 — an ACTION cannot hide behind a SPEECH intention', () => {
   it('an effected write declared only as `inform` is DENIED by completeness', () => {
     const { world, observed } = effectedWorld();
-    expect(complete({ did: [{ op: 'inform' }], world, observed })).toContain('did not report');
+    expect(complete({ did: [{ op: 'inform' }], world, observed })).toContain('does not report');
   });
 
   it('a SPEECH intention carrying a target still covers NOTHING', () => {
     const { world, observed } = effectedWorld();
     // `target` is legal on a speech intention (validateClaims only bars outcome/amount), so the
     // obvious dodge is a targeted `inform`. isActionOp gates coverage, so it buys nothing.
-    expect(validateClaims([{ op: 'inform', target: 'BK-1' }]).errors).toEqual([]);
-    expect(complete({ did: [{ op: 'inform', target: 'BK-1' }], world, observed })).toContain('did not report');
+    expect(validateClaims([{ op: 'inform', targetValue: 'BK-1' }]).errors).toEqual([]);
+    expect(complete({ did: [{ op: 'inform', target: 'BK-1' }], world, observed })).toContain('does not report');
   });
 
   it('a speech op carrying an outcome is REJECTED, so it can never be spent as coverage', () => {
@@ -360,8 +360,8 @@ describe('b4 — shadow-law normalization', () => {
   });
 
   it('CLOSED b4.2 — a combining-mark core key is caught (NFKD + mark strip)', () => {
-    // 'PENDİNG_CONFIRMATION' (Turkish dotted İ) NFKD-folds to the core word and reads as it to a human.
-    expect(() => assertNoCoreOutcomeShadow({ 'PENDİNG_CONFIRMATION': 'success' } as OutcomeMap, 's')).toThrow();
+    // 'ANY_OTHER_QUESTİON' (Turkish dotted İ) NFKD-folds to the core word and reads as it to a human.
+    expect(() => assertNoCoreOutcomeShadow({ 'ANY_OTHER_QUESTİON': 'success' } as OutcomeMap, 's')).toThrow();
   });
 
   it('CLOSED: a core outcome always wins over a map entry, whatever the map says', () => {

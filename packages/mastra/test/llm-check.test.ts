@@ -159,7 +159,7 @@ describe('llmCheck — case 35: two acts, one yes (structure alone cannot close 
   it('the SECOND act is ACCOUNTED FOR when an earlier turn carried it out → no redrive', async () => {
     const scripted = scriptedModel([
       [{ tool: 'cancelBooking', args: { id: 'dentist' } }],
-      [{ tool: 'respond', args: { message: 'The dentist appointment is cancelled.', did: [{ op: 'cancel', target: 'Dentist appointment', outcome: 'success' }] } }],
+      [{ tool: 'respond', args: { message: 'The dentist appointment is cancelled.', did: [{ op: 'cancel', targetValue: 'Dentist appointment', outcome: 'success' }] } }],
       [{ tool: 'cancelBooking', args: { id: '3pm' } }],
       [{ tool: 'respond', args: { message: 'Done — I also cancelled the dentist appointment for you.', did: [{ op: 'inform' }] } }],
     ]);
@@ -278,7 +278,7 @@ describe('llmCheck — the contract outcome map reaches the judge (render-option
 
     let judgePrompt = '';
     const scripted = scriptedModel(
-      [[{ tool: 'respond', args: { message: 'Your dentist appointment is cancelled.', did: [{ op: 'cancel', target: 'Dentist appointment', outcome: 'cancelled' }] } }]],
+      [[{ tool: 'respond', args: { message: 'Your dentist appointment is cancelled.', did: [{ op: 'cancel', targetValue: 'Dentist appointment', outcome: 'cancelled' }] } }]],
       { judge: (prompt) => { judgePrompt = prompt; return 'NONE'; } },
     );
     const res = await runSpecConversation(spec, [{ userText: 'cancel my dentist appointment' }], {

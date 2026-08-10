@@ -7,12 +7,17 @@
  * the question on the user's screen.
  *
  * ```
- *   world says      cancelBooking → requiresConfirmation on BK-1
- *   engine renders  To confirm BK-1, reply: CONFIRM BK-1
- *   user types      "yes, CONFIRM BK-1"        → cancelBooking({id:'BK-1'}) runs
- *   user types      "go ahead"                 → denied; the question is asked again
- *   user types      "cancel the BK-12"         → denied; BK-12 is not BK-1
+ *   agent calls     cancelBooking({bookingId:'bk_1001'})
+ *   engine vetoes   and stores THAT CALL, arguments and all
+ *   engine renders  To confirm cancelling a dispatch, reply: CONFIRM CANCELBOOKING-3F7A
+ *   user types      "yes, CONFIRM CANCELBOOKING-3F7A"  → that same call runs
+ *   user types      "go ahead"                         → denied; the question is asked again
+ *   agent calls     cancelBooking({bookingId:'bk_1002'})  → a DIFFERENT call, a different question
  * ```
+ *
+ * THE LICENCE IS THE CALL. Nothing about the call is elected as its subject — the engine stores the whole
+ * call, and the literal is derived from all of it. Two calls that differ in any argument are two acts and
+ * ask two questions, so a consent given for one can never reach the other.
  *
  * WHY THE ENGINE OWNS THE MEANING. If the token stood for nothing on its own, the sentence around it
  * would have to come from the agent, and the agent would be free to misframe what agreeing does:
@@ -23,19 +28,19 @@
  *   user     "CONFIRM 1"                       → everything is deleted
  * ```
  *
- * So an approval request always carries a MEANING fixed before the conversation started — the record identity the
- * world issued, or the label the spec declared — and the token is derived from it.
+ * So an approval request always carries a MEANING fixed before the conversation started — the label the
+ * spec declared for the act — while the literal is derived from the call the agent actually made.
  */
-import { targetMatchesValue, valueSpokenBy } from '../guards/matching.js';
+import { valueSpokenBy } from '../guards/matching.js';
+import { canonArgs } from '../guards/flow.js';
 
 /** One pending consent question. */
 export interface ApprovalRequest {
   /** The destructive tool this approval licenses. */
   tool: string;
-  /** The record identity the world issued for the act. Absent when the act names no identifiable
-   *  record, in which case the approval is keyed on its tool alone. */
-  subject?: string;
-  /** What the user is agreeing to, in words: the world's record identity, or the spec's declared label. */
+  /** The exact call the question was raised on. The licence covers these arguments and no others. */
+  args?: Record<string, unknown>;
+  /** What the user is agreeing to, in words: the label the spec declared for this act. */
   meaning: string;
   /** The literal the user types back. */
   token: string;
@@ -43,39 +48,24 @@ export interface ApprovalRequest {
   /** The turn on which the user's own words carried the token. An approval request licenses its act only on that
    *  turn: consent is single use, and the act it consents to belongs to the message that gave it. */
   consumedTurn?: number;
-  /** The question no longer stands: the record it names has changed, or a newer question about the same
-   *  act replaced it. A closed approval can never be consumed — the user would be agreeing to a sentence
+  /** The question no longer stands: the call it names has taken effect, or a newer question about the same
+   *  call replaced it. A closed approval can never be consumed — the user would be agreeing to a sentence
    *  that is no longer true of the world. */
   closed?: boolean;
-}
-
-/** The first word of every consent token. Keeping it to one word keeps the whole literal to two, which
- *  is what a person can retype from memory rather than copy. */
-const TOKEN_PREFIX = 'CONFIRM';
-
-/** The distinguishing part of a token, DERIVED from a meaning: its first two words, upper-cased and
- *  hyphen-joined. Deterministic, so the same act always asks for the same literal. */
-export function deriveToken(meaning: string): string {
-  const words: string[] = [];
-  for (const raw of meaning.trim().split(/\s+/u)) {
-    const w = raw.replace(/^[^\p{L}\p{N}]+/u, '').replace(/[^\p{L}\p{N}]+$/u, '');
-    if (w) words.push(w);
-    if (words.length === 2) break;
-  }
-  return words.join('-').toUpperCase();
-}
-
-/** The full literal an approval request asks for: the prefix and the derived part. */
-export function approvalCode(meaning: string): string {
-  return `${TOKEN_PREFIX} ${deriveToken(meaning)}`;
 }
 
 /**
  * Does this approval license THIS call?
  *
- * An approval request that names a record licenses a call of that tool on that record — one of the call's own
- * argument values must BE the subject, by whole-value equality, so a consent given for `BK-1` never
- * reaches `BK-12`. An approval request with no record licenses its tool, which is the only thing it can be about.
+ * Every argument the user was shown must still be there, unchanged. An argument the model added on the
+ * retry is not part of what was agreed to, and {@link stripToLicensed} removes it before the call runs —
+ * so an extra field can neither widen a licence nor invalidate one.
+ *
+ * ```
+ *   licensed   payInvoice {invoiceId:'inv_7001', amount:2930}
+ *   retried    payInvoice {invoiceId:'inv_7001', amount:2930, idempotencyKey:'CBBD'}  → licensed
+ *   retried    payInvoice {invoiceId:'inv_7001', amount:500}                          → NOT licensed
+ * ```
  */
 export function approvalMatchesCall(
   c: ApprovalRequest,
@@ -83,9 +73,46 @@ export function approvalMatchesCall(
   args: Record<string, unknown>,
 ): boolean {
   if (c.tool !== tool) return false;
-  const subject = c.subject;
-  if (subject === undefined) return true;
-  return Object.values(args).some((v) => typeof v === 'string' && targetMatchesValue(subject, v));
+  if (c.args === undefined) return true;
+  return Object.entries(c.args).every(([k, v]) => canonArgs(args[k]) === canonArgs(v));
+}
+
+/**
+ * THE LITERAL IS AN ANSWER, NOT A VALUE — remove it from the call it licenses.
+ *
+ * A model that reads `CONFIRM PAYINVOICE-CBBD` off the screen sees a short code beside an optional
+ * field and fills the field with it. The act then carries an argument the user never agreed to, and the
+ * licence is for a call that no longer exists:
+ *
+ * ```
+ *   licensed   payInvoice {invoiceId:'inv_7001', amount:2930}
+ *   the model  payInvoice {invoiceId:'inv_7001', amount:2930, idempotencyKey:'CBBD'}
+ *   what runs  payInvoice {invoiceId:'inv_7001', amount:2930}
+ * ```
+ *
+ * ONLY the engine's own literal is removed. A field the WORLD's protocol needs — its own
+ * `confirmed: true`, the schema's `simulate` — is the domain speaking, not the model copying, and it
+ * passes through untouched.
+ */
+export function stripToLicensed(
+  approvals: readonly ApprovalRequest[],
+  tool: string,
+  args: Record<string, unknown>,
+): void {
+  const c = approvals.find(
+    (x) =>
+      x.tool === tool &&
+      x.args !== undefined &&
+      Object.entries(x.args).every(([k, v]) => canonArgs(args[k]) === canonArgs(v)),
+  );
+  if (!c?.args) return;
+  const licensed = c.args;
+  const parts = c.token.split(/[\s-]+/).filter((w) => w.length >= 3);
+  for (const [k, v] of Object.entries(args)) {
+    if (k in licensed) continue;
+    if (typeof v !== 'string') continue;
+    if (parts.some((w) => w.toUpperCase() === v.toUpperCase())) delete args[k];
+  }
 }
 
 /**
@@ -110,13 +137,18 @@ export function consumeApprovals(
 }
 
 /**
- * Close every open question about a record whose state has moved. The user was asked to agree to a
+ * Close every open question about a call that has taken effect. The user was asked to agree to a
  * sentence about the world; once that sentence stops being true of it, the agreement it asks for is not
  * the one they would be giving.
  */
-export function closeApprovalsFor(open: ApprovalRequest[], subject: string): void {
+export function closeApprovalsForCall(
+  open: ApprovalRequest[],
+  tool: string,
+  args: Record<string, unknown>,
+): void {
+  const canon = canonArgs(args);
   for (const c of open) {
     if (c.consumedTurn !== undefined || c.closed) continue;
-    if (c.subject !== undefined && targetMatchesValue(c.subject, subject)) c.closed = true;
+    if (c.tool === tool && canonArgs(c.args ?? {}) === canon) c.closed = true;
   }
 }

@@ -284,16 +284,28 @@ const DID_ITEM_SCHEMA: Record<string, unknown> = {
         '`inform` NEVER asserts an action you performed — a performed action is declared as that ' +
         "action's op, which is verified.",
     },
-    target: {
+    targetName: {
       type: 'string',
-      description: 'The record acted on, named as the tool result names it. Required on an ACTION entry.',
+      minLength: 1,
+      description:
+        'ACTION entries only — the FIELD NAME the tool result used for the record you acted on, ' +
+        'e.g. "bookingId". Copy the name from the result, do not invent one.',
+    },
+    targetValue: {
+      type: 'string',
+      minLength: 1,
+      description:
+        'ACTION entries only — the value at that field, e.g. "bk_1001". It must appear at ' +
+        '`targetName` in what the tool actually returned.',
     },
     outcome: {
       type: 'string',
       minLength: 1,
       description:
         'ACTION entries only — what really happened, as one of: `success`, `failure`, `blocked`, ' +
-        '`refused`, `pending_confirmation`, `not_found`, `no_op`.',
+        '`refused`, `tool_called_request_approval` (you CALLED the tool and it came back asking the ' +
+        'user to approve), `any_other_question` (you are asking the user something — no call needed), ' +
+        '`not_found`, `no_op`.',
     },
   },
   required: ['op'],

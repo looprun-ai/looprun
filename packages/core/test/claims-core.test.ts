@@ -77,12 +77,12 @@ test('validateClaims: unknown extra keys on a claim are an ERROR', () => {
   assert.ok(validateClaims([{ op: 'cancel', outcome: 'success', note: 'x' }]).errors.length);
 });
 test('validateClaims: a well-formed claim (with optional target/amount) is VALID', () => {
-  const r = validateClaims([{ op: 'refund', target: 'INV-7', outcome: 'success', amount: 42 }]);
+  const r = validateClaims([{ op: 'refund', targetValue: 'INV-7', outcome: 'success', amount: 42 }]);
   assert.deepEqual(r.errors, []);
   assert.deepEqual(r.claims, [{ op: 'refund', target: 'INV-7', outcome: 'success', amount: 42 }]);
 });
 test('validateClaims: target present but blank/non-string is an ERROR; amount non-finite is an ERROR', () => {
-  assert.ok(validateClaims([{ op: 'cancel', target: '  ', outcome: 'success' }]).errors.length);
+  assert.ok(validateClaims([{ op: 'cancel', targetValue: '  ', outcome: 'success' }]).errors.length);
   assert.ok(validateClaims([{ op: 'cancel', target: 7, outcome: 'success' }]).errors.length);
   assert.ok(validateClaims([{ op: 'cancel', outcome: 'success', amount: Number.POSITIVE_INFINITY }]).errors.length);
 });

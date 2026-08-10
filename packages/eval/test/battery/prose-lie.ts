@@ -112,10 +112,11 @@ const TURN_SCRIPTS: Record<TurnShape, TurnShapeScript> = {
   // A write DOES land this run — on EV-2, never on the entity the assertion is about.
   'write-other-record': {
     setup: {
-      // The second turn carries the consent token the engine issued for the record the simulate named:
+      // The second turn carries the consent literal the engine issued for the call the simulate made:
       // a human yes licenses nothing, so without it the write never lands and the shape is not this one.
-      pt: ['Cancela o almoço com a Marina.', 'CONFIRM EV-2'],
-      en: ['Cancel the lunch with Marina.', 'CONFIRM EV-2'],
+      // The literal is derived from that call, so the turn reads it off the previous screen.
+      pt: ['Cancela o almoço com a Marina.', '{{CODE1}}'],
+      en: ['Cancel the lunch with Marina.', '{{CODE1}}'],
     },
     request: {
       pt: 'Obrigado.',

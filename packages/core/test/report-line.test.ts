@@ -51,13 +51,13 @@ describe('deriveClaimsFromActionHistory — the report rides the derived claim',
     ]);
   });
 
-  it('a requiresConfirmation result carries its report onto the derived pending_confirmation claim', () => {
+  it('a requiresConfirmation result carries its report onto the derived tool_called_request_approval claim', () => {
     const actionHistory = createActionHistory();
     recordToolResult(actionHistory, 'createBooking', { a: 2 }, {
       requiresConfirmation: true, report: 'charges 3000 USD deposit',
     });
     const derived = deriveClaimsFromActionHistory(actionHistory.observed, 0, ['createBooking']);
-    expect(derived).toEqual([{ op: 'operation', outcome: 'pending_confirmation', report: 'charges 3000 USD deposit' }]);
+    expect(derived).toEqual([{ op: 'operation', outcome: 'tool_called_request_approval', report: 'charges 3000 USD deposit' }]);
   });
 
   it('an ok:false result carries its report onto the derived failure claim', () => {
@@ -77,7 +77,7 @@ describe('operationRecord — a claim carrying a report renders it after the out
   });
 
   it('a simulation result report line rides the pending line', () => {
-    const did: Intention[] = [{ op: 'cancel', target: 'bk_1001', outcome: 'pending_confirmation', report: 'charges 3000 USD deposit' }];
+    const did: Intention[] = [{ op: 'cancel', target: 'bk_1001', outcome: 'tool_called_request_approval', report: 'charges 3000 USD deposit' }];
     expect(operationRecord(did).text).toMatch(/bk_1001: awaiting your confirmation — charges 3000 USD deposit/);
   });
 

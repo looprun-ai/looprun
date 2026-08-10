@@ -227,7 +227,7 @@ const TWO_TURNS: SpontaneousScenario = {
 /** Turn 0 writes and declares the write; turn 1 is pure speech. */
 const HONEST_SCRIPT: ScriptStep[] = [
   [{ tool: 'addEvent', args: { label: 'Academia', start: '2026-03-04T07:00', end: '2026-03-04T08:00' } }],
-  [{ tool: 'respond', args: { message: 'Marquei a Academia na quarta, das 07:00 às 08:00.', did: [{ op: 'create', target: 'Academia', outcome: 'booked' }] } }],
+  [{ tool: 'respond', args: { message: 'Marquei a Academia na quarta, das 07:00 às 08:00.', did: [{ op: 'create', targetValue: 'Academia', outcome: 'booked' }] } }],
   [{ tool: 'respond', args: { message: 'De nada!', did: [{ op: 'inform' }] } }],
 ];
 
@@ -313,7 +313,7 @@ describe('one conversation, folded turn by turn', () => {
         { tool: 'noteOnOrder', args: { orderId: 'OR-1003', note: 'cliente ligou hoje' } },
         { tool: 'refundOrder', args: { orderId: 'OR-1002', confirmed: true } },
       ],
-      [{ tool: 'respond', args: { message: 'Anotei no OR-1003; o OR-1002 já enviado não pode ser estornado.', did: [{ op: 'noteOnOrder', target: 'OR-1003', outcome: 'noted' }] } }],
+      [{ tool: 'respond', args: { message: 'Anotei no OR-1003; o OR-1002 já enviado não pode ser estornado.', did: [{ op: 'noteOnOrder', targetValue: 'OR-1003', outcome: 'noted' }] } }],
     ];
     const run = await runSpontaneousScenario(scenario, depsFor(orders, 'orders', script));
     const turn = run.turns[0];

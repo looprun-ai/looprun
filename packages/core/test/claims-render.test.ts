@@ -44,7 +44,7 @@ describe('renderOperationReport — one neutral English line per verified claim'
     const did: Intention[] = [
       { op: 'book', target: 'BK-1', outcome: 'success' },
       { op: 'look', target: 'ORD-9', outcome: 'not_found' },
-      { op: 'cancel', target: 'BK-2', outcome: 'pending_confirmation' },
+      { op: 'cancel', target: 'BK-2', outcome: 'tool_called_request_approval' },
     ];
     expect(renderOperationReport(did)).toBe('BK-1: done\nORD-9: no record found\nBK-2: awaiting your confirmation\nNothing else was changed on this turn.');
   });
@@ -88,12 +88,12 @@ describe('deriveClaimsFromActionHistory — the engine derives TRUTH from the wo
     expect(derived).toEqual([{ op: 'BK-1', target: 'BK-1', outcome: 'success' }]);
   });
 
-  it('a write that returned ok:false → failure; a requiresConfirmation flag → pending_confirmation', () => {
+  it('a write that returned ok:false → failure; a requiresConfirmation flag → tool_called_request_approval', () => {
     const actionHistory = createActionHistory();
     recordToolResult(actionHistory, 'createBooking', { a: 1 }, { success: false });
     recordToolResult(actionHistory, 'createBooking', { a: 2 }, { requiresConfirmation: true });
     const derived = deriveClaimsFromActionHistory(actionHistory.observed, 0, ['createBooking']);
-    expect(derived).toEqual([{ op: 'operation', outcome: 'failure' }, { op: 'operation', outcome: 'pending_confirmation' }]);
+    expect(derived).toEqual([{ op: 'operation', outcome: 'failure' }, { op: 'operation', outcome: 'tool_called_request_approval' }]);
   });
 
   // ── each produced label belongs to the CALL that produced it ──────────────────────────────────
@@ -267,7 +267,7 @@ describe('finalizeReply — redrive returns a whole payload, re-checked against 
       1,
     );
     expect(seen).toHaveLength(1);
-    expect(seen[0]).toContain('report every action that takes effect'); // the claimIsComplete correction
+    expect(seen[0]).toContain('took effect this turn that your reply does not report'); // the claimIsComplete correction
     expect(out.exhausted).toBe(false);
     expect(out.text).toBe('Booked your slot.\n\nBK-1: done\nNothing else was changed on this turn.');
     expect(out.did).toEqual([{ op: 'book', target: 'BK-1', outcome: 'success' }]);
@@ -280,12 +280,12 @@ describe('finalizeReply — salvage re-validates the FULL payload, so a fabricat
     const actionHistory = createActionHistory();
     const world = fixtureWorld(); // NO effected write — nothing grounds a success on BK-9
     // A prior ok respond in the action history fabricated a success it never made.
-    recordTerminalCall(actionHistory, 'respond', { message: 'Done! Booked BK-9.', did: [{ op: 'book', target: 'BK-9', outcome: 'success' }] });
+    recordTerminalCall(actionHistory, 'respond', { message: 'Done! Booked BK-9.', did: [{ op: 'book', targetValue: 'BK-9', outcome: 'success' }] });
     // The current (different) payload also fabricates → claimIsGrounded fires → we reach the salvage branch.
     const out = await finalizeReply(
       spec, BOOKING_CONTRACT, world, actionHistory,
-      P('Retrying.', [{ op: 'book', target: 'BK-9', outcome: 'success' }]),
-      async () => P('Retrying.', [{ op: 'book', target: 'BK-9', outcome: 'success' }]),
+      P('Retrying.', [{ op: 'book', targetValue: 'BK-9', outcome: 'success' }]),
+      async () => P('Retrying.', [{ op: 'book', targetValue: 'BK-9', outcome: 'success' }]),
       0,
     );
     expect(out.exhausted).toBe(true);

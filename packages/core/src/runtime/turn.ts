@@ -36,7 +36,8 @@ import { isChecked, llmRewriteLie, LIE_QUESTION } from './lie-check.js';
 import { CLOSED_FAIL_DENY } from '../guards/llm-check.js';
 import { judgePrompt, readJudgeVerdict, JUDGE_UNREACHABLE, JUDGE_UNREADABLE } from './judge-prompt.js';
 import { resolveEngineText } from './engine-text.js';
-import { renderDisclosure } from './disclosure.js';
+import { stripToLicensed } from './approval-request.js';
+import { renderAfterAct, renderDisclosure, renderLater } from './disclosure.js';
 import { scrubText } from './sensitive-filter.js';
 import type { ApprovalRequest } from './approval-request.js';
 
@@ -150,6 +151,9 @@ export async function evaluatePreTool(
   // filter extends it to every OTHER preTool guard. Only the kinds in `ALWAYS_GUARD_KINDS` still gate a
   // simulation: a simulation changes nothing, but a LOOPING simulation is still a loop.
   const isSimulation = args.simulate === true && actionHistory.simulatableTools?.has(tool) === true;
+  // The user agreed to a CALL, not to that call plus whatever the retry added. Anything the model
+  // appended after the question was raised is dropped before any guard sees it.
+  stripToLicensed(actionHistory.consentThisTurn ?? [], tool, args);
   const active = isSimulation ? guards.filter((g) => ALWAYS_GUARD_KINDS.has(g.kind)) : guards;
   for (const g of active) {
     const reason = await g.check(gctx);
@@ -377,10 +381,28 @@ export function composeDeliveryText(
 ): string {
   const text = resolveEngineText(contract?.engineText);
   const report = renderOperationReport(did, { renderClaim: contract?.renderClaim, outcomes: contract?.outcomes, text });
-  const asked = approvals
-    .map((c) => [renderDisclosure(c, contract, actionHistory), text.approval(c.meaning, c.token)].filter(Boolean).join('\n'))
-    .join('\n\n');
-  return [authoredProse(message.trim(), contract), asked, report].filter((s) => s.trim()).join('\n\n');
+  const asked = approvals.map((c) => renderApproval(c, contract, actionHistory)).join('\n\n');
+  // What each act DID, in the domain's own sentence, filled from that call's own result. The model is
+  // not in this path either: it cannot soften the line or leave it out.
+  const after = (actionHistory?.observed ?? [])
+    .filter((c) => c.turnIndex === actionHistory.turnIndex && c.tookEffect === true && 'result' in c)
+    .map((c) => renderAfterAct(c.name, c.result, contract))
+    .filter((t) => t.trim())
+    .join('\n');
+  // `later` rides the operation record: what an act of an earlier turn left standing.
+  const standing = renderLater(actionHistory, contract);
+  const account = [after, standing, report].filter((x) => x.trim()).join('\n');
+  return [authoredProse(message.trim(), contract), asked, account].filter((s) => s.trim()).join('\n\n');
+}
+
+/** ONE approval as the operator reads it — used by BOTH delivery routes, so they cannot drift. */
+function renderApproval(
+  c: ApprovalRequest,
+  contract: Pick<DomainContract, 'engineText' | 'disclose' | 'discloseMissing'> | undefined,
+  actionHistory: TurnActionHistory,
+): string {
+  const text = resolveEngineText(contract?.engineText);
+  return [renderDisclosure(c, contract, actionHistory), text.approval(c.meaning, c.token)].filter(Boolean).join('\n');
 }
 
 /**
@@ -435,15 +457,24 @@ function deriveExhaustionClosure(
   const report = renderOperationReport(did, { renderClaim: contract?.renderClaim, outcomes: contract?.outcomes, text: resolveEngineText(contract?.engineText) });
   const landed = did.some((c) => c.outcome === 'success');
   const sentence = landed ? EXHAUSTION_PARTIAL : EXHAUSTION_NOTHING;
-  return { report, sentence, text: closureText(report, sentence), did };
+  return { report, sentence, text: closureText(report, sentence, openApprovals(actionHistory), contract, actionHistory), did };
 }
 
 /** The closure's delivered shape: the VERIFIED operation report first, the closing sentence after — the
  *  same order (and the same separator) {@link composeDelivery} uses on the clean path. Both parts arrive
  *  ready to deliver: the report is engine-rendered from the filtered record, and a domain-authored
  *  sentence passed the free-text net where it entered. */
-function closureText(report: string, sentence: string): string {
-  return [report, sentence].filter((s) => s.trim()).join('\n\n');
+function closureText(
+  report: string,
+  sentence: string,
+  approvals: readonly ApprovalRequest[],
+  contract: Pick<DomainContract, 'engineText' | 'disclose' | 'discloseMissing'> | undefined,
+  actionHistory: TurnActionHistory,
+): string {
+  // A turn that ran out of steps still owes the user the question its attempt raised. Dropping it here
+  // would leave a standing consent question the user can never answer.
+  const asked = approvals.map((c) => renderApproval(c, contract, actionHistory)).join('\n\n');
+  return [report, sentence, asked].filter((s) => s.trim()).join('\n\n');
 }
 
 /**
@@ -825,7 +856,12 @@ export async function finalizeReply(
     // engine's report and its own derived sentence are delivered as rendered.
     const sentence = overrideText && !isBlankDelivery(overrideText) ? authoredProse(overrideText, contract) : derived.sentence;
     actionHistory.did = derived.did;
-    return { text: closureText(derived.report, sentence), exhausted: true, violations: finalViolations, did: derived.did };
+    return {
+      text: closureText(derived.report, sentence, openApprovals(actionHistory), contract, actionHistory),
+      exhausted: true,
+      violations: finalViolations,
+      did: derived.did,
+    };
   }
 
   // Clean delivery: compose message + the verified operation report; the accepted payload IS the verified

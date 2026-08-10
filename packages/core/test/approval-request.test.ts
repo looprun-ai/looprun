@@ -1,118 +1,136 @@
 /**
- * THE CONSENT APPROVAL REQUEST — what its token is, what it licenses, and when it stops licensing.
+ * THE CONSENT APPROVAL REQUEST — what its literal licenses, and when it stops licensing.
+ *
+ * The licence IS the call: nothing about it is elected as its subject, so two calls that differ in any
+ * argument are two acts asking two questions.
  */
 import { describe, it, expect } from 'vitest';
 import {
   approvalMatchesCall,
-  approvalCode,
-  closeApprovalsFor,
+  closeApprovalsForCall,
   consumeApprovals,
-  deriveToken,
+  stripToLicensed,
   type ApprovalRequest,
 } from '../src/runtime/approval-request.js';
 
-const withRecord = (): ApprovalRequest => ({
-  tool: 'cancelBooking',
-  subject: 'BK-1',
-  meaning: 'BK-1',
-  token: 'CONFIRM BK-1',
+const forCall = (tool: string, args: Record<string, unknown>): ApprovalRequest => ({
+  tool,
+  args,
+  meaning: 'cancelling a dispatch',
+  token: 'CONFIRM CANCELBOOKING-3F7A',
   issuedTurn: 0,
 });
 
-const withLabel = (): ApprovalRequest => ({
+const toolOnly = (): ApprovalRequest => ({
   tool: 'deleteAllData',
   meaning: 'delete all of your data',
-  token: 'CONFIRM DELETE-ALL',
+  token: 'CONFIRM DELETEALLDATA-A1B2',
   issuedTurn: 0,
-});
-
-describe('deriveToken', () => {
-  it('takes the first two words, upper-cased and hyphen-joined', () => {
-    expect(deriveToken('delete all of your data')).toBe('DELETE-ALL');
-  });
-
-  it('takes the whole meaning when it is a single word', () => {
-    expect(deriveToken('BK-1')).toBe('BK-1');
-  });
-
-  it('ignores surrounding punctuation and extra spaces', () => {
-    expect(deriveToken('  close   the account.  ')).toBe('CLOSE-THE');
-  });
-});
-
-describe('approvalCode', () => {
-  it('prefixes the derived part', () => {
-    expect(approvalCode('delete all of your data')).toBe('CONFIRM DELETE-ALL');
-  });
 });
 
 describe('approvalMatchesCall', () => {
-  it('matches a record approval when an arg carries the subject', () => {
-    expect(approvalMatchesCall(withRecord(), 'cancelBooking', { id: 'BK-1' })).toBe(true);
+  it('licenses the same call', () => {
+    expect(approvalMatchesCall(forCall('cancelBooking', { id: 'BK-1' }), 'cancelBooking', { id: 'BK-1' })).toBe(true);
   });
 
-  it('rejects a record approval when the arg names another record', () => {
-    expect(approvalMatchesCall(withRecord(), 'cancelBooking', { id: 'BK-12' })).toBe(false);
+  it('does not reach a call on another record', () => {
+    expect(approvalMatchesCall(forCall('cancelBooking', { id: 'BK-1' }), 'cancelBooking', { id: 'BK-12' })).toBe(false);
   });
 
-  it('rejects a record approval on a different tool', () => {
-    expect(approvalMatchesCall(withRecord(), 'deleteBooking', { id: 'BK-1' })).toBe(false);
+  it('does not reach another tool', () => {
+    expect(approvalMatchesCall(forCall('cancelBooking', { id: 'BK-1' }), 'deleteBooking', { id: 'BK-1' })).toBe(false);
   });
 
-  it('matches a label approval on the tool alone', () => {
-    expect(approvalMatchesCall(withLabel(), 'deleteAllData', {})).toBe(true);
+  it('does not reach a call that CHANGED an argument the user was shown', () => {
+    const c = forCall('payInvoice', { invoiceId: 'inv_7001', amount: 2930 });
+    expect(approvalMatchesCall(c, 'payInvoice', { invoiceId: 'inv_7001', amount: 500 })).toBe(false);
   });
 
-  it('rejects a label approval on a different tool', () => {
-    expect(approvalMatchesCall(withLabel(), 'deleteBookings', {})).toBe(false);
+  it('still licenses a call that ADDED an argument the user was never shown', () => {
+    const c = forCall('payInvoice', { invoiceId: 'inv_7001', amount: 2930 });
+    expect(approvalMatchesCall(c, 'payInvoice', { invoiceId: 'inv_7001', amount: 2930, idempotencyKey: 'CBBD' })).toBe(true);
+  });
+
+  it('ignores the order the arguments arrive in', () => {
+    const c = forCall('payInvoice', { invoiceId: 'inv_7001', amount: 2930 });
+    expect(approvalMatchesCall(c, 'payInvoice', { amount: 2930, invoiceId: 'inv_7001' })).toBe(true);
+  });
+
+  it('an approval that stored no call licenses its tool', () => {
+    expect(approvalMatchesCall(toolOnly(), 'deleteAllData', { scope: 'everything' })).toBe(true);
+  });
+});
+
+describe('stripToLicensed', () => {
+  /** The approval whose literal is `CONFIRM PAYINVOICE-CBBD` — the code a model reads off the screen. */
+  const paid = (): ApprovalRequest => ({
+    tool: 'payInvoice',
+    args: { invoiceId: 'inv_7001', amount: 2930 },
+    meaning: 'recording a payment',
+    token: 'CONFIRM PAYINVOICE-CBBD',
+    issuedTurn: 0,
+  });
+
+  it('removes the literal the model copied into an argument', () => {
+    const args: Record<string, unknown> = { invoiceId: 'inv_7001', amount: 2930, idempotencyKey: 'CBBD' };
+    stripToLicensed([paid()], 'payInvoice', args);
+    expect(args).toEqual({ invoiceId: 'inv_7001', amount: 2930 });
+  });
+
+  it("removes it whatever the model called the field, and whatever the case", () => {
+    const args: Record<string, unknown> = { invoiceId: 'inv_7001', amount: 2930, reference: 'cbbd' };
+    stripToLicensed([paid()], 'payInvoice', args);
+    expect(args).toEqual({ invoiceId: 'inv_7001', amount: 2930 });
+  });
+
+  it("leaves a field the WORLD's own protocol needs — that is the domain speaking, not the model copying", () => {
+    const args: Record<string, unknown> = { invoiceId: 'inv_7001', amount: 2930, confirmed: true };
+    stripToLicensed([paid()], 'payInvoice', args);
+    expect(args).toEqual({ invoiceId: 'inv_7001', amount: 2930, confirmed: true });
+  });
+
+  it('leaves a call no approval licenses exactly as it came', () => {
+    const args: Record<string, unknown> = { invoiceId: 'inv_9999', reference: 'CBBD' };
+    stripToLicensed([paid()], 'payInvoice', args);
+    expect(args).toEqual({ invoiceId: 'inv_9999', reference: 'CBBD' });
   });
 });
 
 describe('consumeApprovals', () => {
-  it('consumes the approval whose token the user typed', () => {
-    const open = [withRecord(), withLabel()];
-    const consumed = consumeApprovals(open, 'yes, CONFIRM BK-1', 3);
-    expect(consumed.map((c) => c.token)).toEqual(['CONFIRM BK-1']);
-    expect(open[0]!.consumedTurn).toBe(3);
-    expect(open[1]!.consumedTurn).toBeUndefined();
+  it('consumes the approval whose literal the user typed', () => {
+    const open = [forCall('cancelBooking', { id: 'BK-1' })];
+    expect(consumeApprovals(open, 'yes — CONFIRM CANCELBOOKING-3F7A', 2)).toHaveLength(1);
+    expect(open[0].consumedTurn).toBe(2);
   });
 
-  it('consumes nothing on a human yes that is not the token', () => {
-    const open = [withRecord()];
-    expect(consumeApprovals(open, 'go ahead', 3)).toEqual([]);
-    expect(open[0]!.consumedTurn).toBeUndefined();
-  });
-
-  it('never consumes an approval request twice', () => {
-    const open = [withRecord()];
-    consumeApprovals(open, 'CONFIRM BK-1', 3);
-    expect(consumeApprovals(open, 'CONFIRM BK-1', 4)).toEqual([]);
-    expect(open[0]!.consumedTurn).toBe(3);
-  });
-});
-
-describe('closeApprovalsFor', () => {
-  it('closes an open approval on a record that changed', () => {
-    const open = [withRecord()];
-    closeApprovalsFor(open, 'BK-1');
-    expect(open[0]!.closed).toBe(true);
-  });
-
-  it('leaves an approval request on another record open', () => {
-    const open = [withRecord()];
-    closeApprovalsFor(open, 'BK-2');
-    expect(open[0]!.closed).toBeUndefined();
-  });
-
-  it('leaves an approval request that names no record open', () => {
-    const open = [withLabel()];
-    closeApprovalsFor(open, 'BK-1');
-    expect(open[0]!.closed).toBeUndefined();
+  it('licenses one act per typed literal', () => {
+    const open = [forCall('cancelBooking', { id: 'BK-1' })];
+    consumeApprovals(open, 'CONFIRM CANCELBOOKING-3F7A', 2);
+    expect(consumeApprovals(open, 'CONFIRM CANCELBOOKING-3F7A', 3)).toHaveLength(0);
   });
 
   it('never consumes a closed approval', () => {
-    const open = [withRecord()];
-    closeApprovalsFor(open, 'BK-1');
-    expect(consumeApprovals(open, 'CONFIRM BK-1', 3)).toEqual([]);
+    const open = [{ ...forCall('cancelBooking', { id: 'BK-1' }), closed: true }];
+    expect(consumeApprovals(open, 'CONFIRM CANCELBOOKING-3F7A', 2)).toHaveLength(0);
+  });
+});
+
+describe('closeApprovalsForCall', () => {
+  it('closes the question about a call that took effect', () => {
+    const open = [forCall('cancelBooking', { id: 'BK-1' })];
+    closeApprovalsForCall(open, 'cancelBooking', { id: 'BK-1' });
+    expect(open[0].closed).toBe(true);
+  });
+
+  it('leaves the question about another call open', () => {
+    const open = [forCall('cancelBooking', { id: 'BK-1' })];
+    closeApprovalsForCall(open, 'cancelBooking', { id: 'BK-2' });
+    expect(open[0].closed).toBeUndefined();
+  });
+
+  it('leaves an approval that stored no call open', () => {
+    const open = [toolOnly()];
+    closeApprovalsForCall(open, 'deleteAllData', { scope: 'everything' });
+    expect(open[0].closed).toBeUndefined();
   });
 });

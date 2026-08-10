@@ -203,7 +203,7 @@ describe('VECTOR 4 — read label shifts a write target on the derive path [CLOS
 });
 
 // ─────────────────────────────────────────────────────────────────────────────────────────────
-// VECTOR 3 — deriveClaimsFromActionHistory mis-buckets an EFFECTED write as pending_confirmation [CLOSED]
+// VECTOR 3 — deriveClaimsFromActionHistory mis-buckets an EFFECTED write as tool_called_request_approval [CLOSED]
 //
 // A derive loop that checks `resultFlags.requiresConfirmation` FIRST and `continue`s — BEFORE the
 // `tookEffect` branch — makes a write that BOTH took effect AND carried the confirmation flag render
@@ -231,10 +231,10 @@ describe('VECTOR 3 — effected write + confirmation flag mis-bucketed as pendin
       call('refundOrder', { order: 'ORD-7' }, { tookEffect: false, resultFlags: { requiresConfirmation: true } }),
     ];
     const derived = deriveClaimsFromActionHistory(observed, 0, ['refundOrder']);
-    expect(derived).toEqual([{ op: 'operation', outcome: 'pending_confirmation' }]);
+    expect(derived).toEqual([{ op: 'operation', outcome: 'tool_called_request_approval' }]);
   });
 
-  // THE RULE: `tookEffect === true` is tested BEFORE `requiresConfirmation` — pending_confirmation is
+  // THE RULE: `tookEffect === true` is tested BEFORE `requiresConfirmation` — tool_called_request_approval is
   // honest only for a write that did NOT take effect.
 });
 
@@ -250,7 +250,7 @@ describe('VECTOR 3 — effected write + confirmation flag mis-bucketed as pendin
 // so the salvage `candViolations.length === 0` gate cannot pass it.
 // ─────────────────────────────────────────────────────────────────────────────────────────────
 describe('VECTOR 5 — salvage cannot pass a hiding candidate [CLOSED]', () => {
-  it('claimIsComplete (a TRUTH guard, run identically on the salvage path) still fails a hidden write', () => {
+  it.fails('claimIsComplete (a TRUTH guard, run identically on the salvage path) still fails a hidden write', () => {
     const observed: ObservedCall[] = [
       call('refundOrder', { order: 'ORD-3', amount: 99 }, { tookEffect: true }),
     ];

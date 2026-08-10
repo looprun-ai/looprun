@@ -225,35 +225,39 @@ its write tools gets no cross-check, and nothing warns you. Naming them is the s
 ### What a `did` entry may carry
 
 The declaration those two guards read is a closed shape. The `respond` call carries the user-facing
-`message` plus `did`, an array of at least one intention, and an intention has **exactly four legal
+`message` plus `did`, an array of at least one intention, and an intention has **exactly five legal
 keys**:
 
 ```
-   op        what this intention IS — a domain operation, or one of the four speech
-             words `inform` · `greet` · `refuse` · `ask`
-   target    the record the operation acted on
-   outcome   what really happened, on ACTION entries only
-   amount    an optional magnitude
+   op            what this intention IS — a domain operation, or one of the four speech
+                 words `inform` · `greet` · `refuse` · `ask`
+   targetName    the FIELD NAME the tool result used for the record, e.g. "bookingId"
+   targetValue   the value at that field, e.g. "bk_1001"
+   outcome       what really happened, on ACTION entries only
+   amount        an optional magnitude
 ```
 
-A fifth key is a validation error, not an ignored extra: the runtime refuses the whole reply and
-tells the model which key it could not read. Three rules decide what goes in the four:
+The record is named in TWO parts because the engine never guesses which field holds it. The agent
+points at the field it read the record from, and the engine looks exactly there — no key is chosen by
+its shape, so nothing depends on a field being called `id`.
+
+A sixth key is a validation error, not an ignored extra: the runtime refuses the whole reply and
+tells the model which key it could not read. Three rules decide what goes in the five:
 
 | rule | the payload |
 |---|---|
-| **`target` is required on a completed action**, named the way the tool result named it | `{ op: 'cancelEvent', target: 'evt_102', outcome: 'success' }` — `claimIsComplete` passes over a claim with no `target`, so an action without one covers nothing and the write reads as silent |
-| **`success` means a write that took effect.** Every other outcome names what really happened | `{ op: 'addEvent', target: 'Design review', outcome: 'blocked' }` — the clash gate vetoed the call, so `blocked` is the honest word and `claimIsGrounded` matches it against the vetoed attempt |
+| **`targetValue` is required on a completed action**, named the way the tool result named it | `{ op: 'cancelEvent', targetName: 'eventId', targetValue: 'evt_102', outcome: 'success' }` — the value must appear at that field in what the tool actually returned |
+| **`success` means a write that took effect.** Every other outcome names what really happened | `{ op: 'addEvent', targetValue: 'Design review', outcome: 'blocked' }` — the clash gate vetoed the call, so `blocked` is the honest word and `claimIsGrounded` matches it against the vetoed attempt |
 | **A lookup is not an action.** It changes nothing, so it produces no entry — the answer lives in `message` | *"You have Standup at 10:00 and Dentist on Wednesday at 15:00."* declared as `[{ op: 'inform' }]`. Declaring that read as `outcome: 'success'` is vetoed: no write took effect |
 
 The one exception to the third rule is a search **the user asked for** that came back empty. That is
 an answer the user must see, so it is an entry with `outcome: 'not_found'` — and it grounds only when
-the read tool took the entity under an identity-key argument, because an absent record issues no
-value of its own to match:
+a read of that turn came back EMPTY, because an absent record issues no value of its own to match:
 
 ```
    user     "Is booking BK-1 still on file?"
    call     getBooking({ bookingId: 'BK-1' })  →  { data: [] }      ← empty, and it names BK-1
-   did      [{ op: 'lookup', target: 'BK-1', outcome: 'not_found' }]
+   did      [{ op: 'lookup', targetValue: 'BK-1', outcome: 'not_found' }]
 ```
 
 A read the agent ran for its own benefit — the `listEvents` it needed before booking — is not that
@@ -397,25 +401,26 @@ turn 1   agent:   cancelBooking({ id: 'BK-1' })
          screen:  Your booking BK-1 carries an 80.00 fee.
 
                   Cancelling BK-1 releases the room and forfeits the 80.00 deposit.
-                  To confirm BK-1, reply: CONFIRM BK-1
+                  To confirm cancelling a booking, reply: CONFIRM CANCELBOOKING-3F7A
 
                   No operation was carried out on this turn.
 
-turn 2   user:    "yes, CONFIRM BK-1"
+turn 2   user:    "yes, CONFIRM CANCELBOOKING-3F7A"
          agent:   cancelBooking({ id: 'BK-1' })   → the bare acting call, allowed
 ```
 
 Two engine blocks stand under the prose, and the agent wrote neither. The first is the domain's
-`contract.disclose.cancelBooking` — what agreeing would do, with its `{readTool.path}` slots filled from
-the booking this turn read (chapter 03). The second is the question. A tool the domain discloses nothing
-about carries its question alone.
+`contract.disclose.cancelBooking.before` — what agreeing would do, with its `{readTool.path}` slots filled
+from the booking this turn read (chapter 03). The second is the question, worded with the act's declared
+label and carrying a literal derived from the CALL — so cancelling BK-2 asks for a different literal. A
+tool the domain discloses nothing about carries its question alone.
 
 `"go ahead"` is a human yes and is **denied** — the question is simply asked again. That is deliberate:
 consent fails closed, because the alternative is a model deciding what a person meant.
 
-**What you owe the engine.** A two-step tool returns `requiresConfirmation` and names its record under
-an identity key. A tool that acts on no identifiable record declares `destructiveLabels` — the words the
-question is built from — and without one it can raise no question, so it never runs. A conversation in
+**What you owe the engine.** A two-step tool returns `requiresConfirmation`. Every destructive tool
+declares a `destructiveLabels` entry — the words the question is built from — and without one the
+question is worded with the tool's own name, which is a tool name on the user's screen. A conversation in
 another language declares `engineText`, because the user has to be able to READ the instruction they are
 being asked to type back, and `disclose` beside it, because the sentence above that instruction is read
 by the same person.
@@ -600,7 +605,7 @@ The reply text is in `ctx.reply` and no tool can run any more. A deny costs a bo
 
 Every operation the agent declares in `did` must match the world actionHistory: a `success` needs a write that took effect, `not_found` an empty read, `blocked`/`refused` a veto, a world refusal, or a successful read that addressed the entity with no effected write on it, `no_op` a call that addressed the entity and no effected write on it — an undeclared outcome word is always a violation.
 
-**When to reach for it.** Always on when the domain declares its `writeTools` (the spec class auto-installs it, fed by `contract.writeTools` + `contract.outcomes`). It is the actionHistory cross-check: it keys on `target` + `outcome` against verified calls, never on op-name semantics or reply text, so a fabricated success cannot ground. It checks ACTION intentions only — a speech intention (`inform`/`greet`/`refuse`/`ask`) names no actionHistory fact. A `target` matches an IDENTITY the actionHistory carries — a scalar under `id`/`label`/`<entity>Id`, never a status word, a note or a sentence — by WHOLE-VALUE equality, so `BK-1` never grounds against `BK-10` and `12` never stands for `Order 12`. A `success` matches only what the WORLD issued for the write (its own entity, not the ones its result references); a claim of absence or non-effect (`not_found`/`failure`/`blocked`/`refused`/`pending_confirmation`/`no_op`) matches the world's negative answer plus the identity-key ARGS that name the entity asked about, because an absent record issues no value of its own. An `amount`, when declared, must appear among the magnitudes of that same actionHistory fact. A domain outcome word must map to a core outcome via the contract's outcome map or it reads as undeclared.
+**When to reach for it.** Always on when the domain declares its `writeTools` (the spec class auto-installs it, fed by `contract.writeTools` + `contract.outcomes`). It is the actionHistory cross-check, and it walks a DERIVED LIST: the engine builds, in order, what each act of the turn honestly supports — a vetoed attempt supports `tool_called_request_approval`/`blocked`/`refused`, a failed call `failure`/`blocked`/`refused`, a landed call `success`, a call that changed nothing `no_op`. Each declaration SPENDS one act that supports it, so a fabricated extra finds no act left. It checks ACTION intentions only — a speech intention names no actionHistory fact, and `any_other_question` is never tool-checked because nothing recorded can prove a question. A `targetValue` must appear among the values the spent act carried; when the agent also names the field in `targetName`, the engine looks exactly there. No key is chosen by its shape. An `amount`, when declared, must appear among the magnitudes of that same act. A turn that only READ can still declare `blocked`/`refused`/`no_op` on a record it addressed, and `not_found` when the read came back empty. A domain outcome word must map to a core outcome via the contract's outcome map or it reads as undeclared.
 
 ```ts
 claimIsGrounded({ writeTools: ['createBooking', 'cancelBooking'], outcomes: { settled: 'success' } })
@@ -610,7 +615,7 @@ claimIsGrounded({ writeTools: ['createBooking', 'cancelBooking'], outcomes: { se
 
 Every write that TOOK EFFECT this turn must be covered by a DISTINCT `success` ACTION intention in `did` that NAMES the entity — no silent action hidden from the user.
 
-**When to reach for it.** Auto-installed alongside `claimIsGrounded` (same `writeTools` + `outcomes`). Its mirror is `claimIsGrounded`: that one stops a claim with no matching effect, this one stops an effect with no matching claim — both resolve a domain outcome word through the same `OutcomeMap`, so a mapped word (e.g. `settled` → `success`) covers a write exactly like the literal word does. Coverage is per-entity and INJECTIVE — assigned as a maximum matching, so claim order never starves an honest turn: a claim with no `target` covers nothing, a speech intention covers nothing, and two writes on the same entity need two claims. A write is covered only through the identity the world issued for IT (`{id:'ORD-1', parentId:'ORD-2'}` is ORD-1). It names the unreported action by the world-issued produced label, never by the tool name.
+**When to reach for it.** Auto-installed alongside `claimIsGrounded` (same `writeTools` + `outcomes`). Its mirror is `claimIsGrounded`: one derived list, walked in both directions. That one walks the DECLARATIONS and asks whether each matches an act — no lying. This walks the ACTS that TOOK EFFECT and asks whether each has a declaration at its position, reporting it as what it actually was — no hiding. A vetoed attempt changed nothing, so it is not counted here; that half is `claimIsGrounded`'s. Both resolve a domain outcome word through the same `OutcomeMap`, so a mapped word (e.g. `settled` → `success`) reports an act exactly like the literal word does. It names no tool in its deny.
 
 ```ts
 claimIsComplete({ writeTools: ['createBooking', 'cancelBooking'], outcomes: { settled: 'success' } })
@@ -750,11 +755,12 @@ two things happens:
    turn 2   user says    "what else is on Wednesday?"
             delivered    You have Dentist at 15:00.
 
-                         To confirm EV-2, reply: CONFIRM EV-2     ← still open, so still asked
+                         To confirm cancelling an event, reply: CONFIRM CANCELEVENT-3F7A
+                                                                  ↑ still open, so still asked
 
                          No operation was carried out on this turn.
 
-   turn 3   user says    "CONFIRM EV-2"                            → consumed; it stops rendering
+   turn 3   user says    "CONFIRM CANCELEVENT-3F7A"                → consumed; it stops rendering
 ```
 
 A question that appeared once and then vanished would leave the user holding a token for an act

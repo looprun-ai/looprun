@@ -50,7 +50,7 @@ describe('the downgrade verdict', () => {
     const v = await evaluatePreTool(spec, h, world, 'unsubscribeCustomer', { customerId: 'cust_2001' });
     expect(v.verdict).toBe('deny');
     expect(h.approvals).toHaveLength(1);
-    expect(h.approvals[0].subject).toBe('cust_2001');
+    expect(h.approvals[0].args).toEqual({ customerId: 'cust_2001' });
   });
 
   it('canDowngrade:false routes the simulatable tool through the veto-question path too', async () => {
@@ -58,7 +58,7 @@ describe('the downgrade verdict', () => {
     const v = await evaluatePreTool(spec, h, world, 'cancelBooking', { bookingId: 'bk_1001' }, { canDowngrade: false });
     expect(v.verdict).toBe('deny');
     expect(h.approvals).toHaveLength(1);
-    expect(h.approvals[0].subject).toBe('bk_1001');
+    expect(h.approvals[0].args).toEqual({ bookingId: 'bk_1001' });
   });
 });
 

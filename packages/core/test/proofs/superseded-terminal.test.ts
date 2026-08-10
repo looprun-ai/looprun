@@ -66,7 +66,7 @@ describe('supersededTerminalCalls', () => {
     // The old notion ("last non-empty message wins") classified it as delivered and pruned the entry for
     // the message the user ACTUALLY got.
     const emptyDid = supersededTerminalCalls([
-      step(['respond', { message: 'Done — record r_1 removed.', did: [{ op: 'delete', target: 'r_1', outcome: 'success' }] }],
+      step(['respond', { message: 'Done — record r_1 removed.', did: [{ op: 'delete', targetValue: 'r_1', outcome: 'success' }] }],
            ['respond', { message: 'Are you sure?', did: [] }]),
     ]);
     expect(emptyDid.map((o) => o.args.message)).toEqual(['Are you sure?']);

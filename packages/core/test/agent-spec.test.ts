@@ -177,7 +177,7 @@ describe('destructiveLabels — the question a recordless act asks', () => {
     ).toThrow(/not in destructiveTools/);
   });
 
-  it('rejects two labels whose derived tokens collide', () => {
+  it('accepts two acts whose labels read alike — the literal carries the tool, so they cannot collide', () => {
     expect(
       () =>
         new AgentSpecBase({
@@ -188,7 +188,7 @@ describe('destructiveLabels — the question a recordless act asks', () => {
             deleteEverything: 'delete all of your bookings',
           },
         }),
-    ).toThrow(/CONFIRM DELETE-ALL/);
+    ).not.toThrow();
   });
 
   it('accepts labels whose derived tokens differ', () => {

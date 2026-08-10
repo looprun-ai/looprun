@@ -44,7 +44,7 @@ describe('an approval issued last turn and still open', () => {
       0,
     );
 
-    expect(out.text).toContain('To confirm bk_1001, reply: CONFIRM BK_1001');
+    expect(out.text).toContain(`reply: ${actionHistory.approvals[0]!.token}`);
   });
 });
 
@@ -54,7 +54,7 @@ describe('a consumed or closed approval', () => {
     beginTurn(actionHistory, 0, 'charge the deposit for bk_1001');
     recordToolResult(actionHistory, 'chargeDeposit', { id: 'bk_1001' }, { requiresConfirmation: true, id: 'bk_1001' });
 
-    beginTurn(actionHistory, 1, 'CONFIRM BK_1001');
+    beginTurn(actionHistory, 1, actionHistory.approvals[0]!.token);
     expect(actionHistory.consentThisTurn).toHaveLength(1);
 
     const out = await finalizeReply(
@@ -67,7 +67,7 @@ describe('a consumed or closed approval', () => {
       0,
     );
 
-    expect(out.text).not.toContain('CONFIRM BK_1001');
+    expect(out.text).not.toContain('reply: CONFIRM');
   });
 
   it('renders nothing once the record it names moves and closes the question', async () => {
@@ -92,7 +92,7 @@ describe('a consumed or closed approval', () => {
       0,
     );
 
-    expect(out.text).not.toContain('CONFIRM BK_1001');
+    expect(out.text).not.toContain('reply: CONFIRM');
   });
 });
 
@@ -115,7 +115,7 @@ describe('the blank-delivery floor and a still-open approval', () => {
       0,
     );
 
-    expect(out.text).toContain('To confirm bk_1001, reply: CONFIRM BK_1001');
+    expect(out.text).toContain(`reply: ${actionHistory.approvals[0]!.token}`);
     expect(out.text).not.toContain('I could not complete this safely');
     expect(out.exhausted).toBe(false);
   });

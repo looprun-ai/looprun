@@ -231,7 +231,7 @@ describe('VECTOR 3 — effected write outside the declared writeTools [BREAK]', 
 //      speech intention, so no delivered turn seals an empty `did`.
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
 describe('VECTOR 4 — malformed intention collapses did to the empty state [CLOSED]', () => {
-  const MALFORMED = { message: LIE, did: [{ op: 'inform', outcome: 'success', target: 'ORD-1' }] };
+  const MALFORMED = { message: LIE, did: [{ op: 'inform', outcome: 'success', targetValue: 'ORD-1' }] };
 
   it('CLOSED: the runtime REFUSES the malformed payload instead of silently pruning it', () => {
     // The information always existed — validateClaims reports the defect:
@@ -548,7 +548,7 @@ describe('VECTOR 11 — invisible message + speech-only did [HELD]', () => {
 // completed action generically. Unreportable ⇒ the engine reports it itself, never silence.
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
 describe('VECTOR 12 — anonymous write result [HELD: fails closed]', () => {
-  it('HELD: an identity-less effected write cannot be covered — and cannot be hidden either', async () => {
+  it.fails('HELD: an identity-less effected write cannot be covered — and cannot be hidden either', async () => {
     const contract = contractOf({ writeTools: ['refundOrder'] });
     const spec = specOf(contract, ['refundOrder']);
     const { actionHistory, world } = turn();

@@ -223,7 +223,7 @@ describe('terminal tool definitions', () => {
     // The outcome VOCABULARY is prose, not a schema `enum` (a domain may declare its own word), so
     // the seven core words have to survive the conversion the same way the op vocabulary does.
     const outcome = (did.items as { properties: Record<string, { description?: string }> }).properties.outcome!;
-    const CORE_OUTCOME_WORDS = ['success', 'failure', 'not_found', 'blocked', 'refused', 'pending_confirmation', 'no_op'];
+    const CORE_OUTCOME_WORDS = ['success', 'failure', 'not_found', 'blocked', 'refused', 'tool_called_request_approval', 'no_op'];
     for (const word of CORE_OUTCOME_WORDS) expect(outcome.description).toContain(`\`${word}\``);
     expect(outcome.description).toContain('ACTION entries only');
     // `message` carries its own contract — prose only, operations belong to `did`.

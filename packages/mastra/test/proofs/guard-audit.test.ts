@@ -158,7 +158,7 @@ describe('destructiveThrottle does not count confirmation simulations', () => {
     });
     const res = await runProofLoop(spec, {
       preset: 'seeded-media',
-      turns: [{ userText: 'delete p001' }, { userText: 'CONFIRM p001' }],
+      turns: [{ userText: 'delete p001' }, { userText: '{{CODE1}}' }],
       script: [
         [{ tool: 'deleteItem', args: { id: 'p001', simulate: true } }],
         [{ tool: 'respond', args: { message: 'Deleting p001 is permanent — are you sure?', did: [{ op: 'inform' }] } }],

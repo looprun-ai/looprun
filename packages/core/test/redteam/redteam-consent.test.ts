@@ -21,6 +21,7 @@ import { describe, expect, it } from 'vitest';
 import { AgentSpecBase, confirmFirst, destructiveThrottle, valueFromUser } from '../../src/index.js';
 import type { AgentWorld, GuardCtx, DomainContract, ObservedCall, HistoryTurn } from '../../src/index.js';
 import { createActionHistory } from '../../src/runtime/action-history.js';
+import { stripToLicensed } from '../../src/runtime/approval-request.js';
 import { finalizeReply } from '../../src/runtime/turn.js';
 import type { RespondPayload } from '../../src/runtime/claims.js';
 
@@ -44,14 +45,15 @@ const histTurn = (turnIndex: number, posedAsk: boolean): HistoryTurn => ({
 // ════════════════════════════════════════════════════════════════════════════════════════════════
 // VECTOR 1 — a consent must not travel: not to another record, not to another tool
 // ════════════════════════════════════════════════════════════════════════════════════════════════
-const consentFor = (tool: string, subject?: string): GuardCtx['consent'] => [
-  { tool, ...(subject === undefined ? {} : { subject }), meaning: subject ?? tool, token: `CONFIRM ${(subject ?? tool).toUpperCase()}`, issuedTurn: 0, consumedTurn: 1 },
+/** A consent given for one CALL — the licence is the call, so `args` is what it stores. */
+const consentFor = (tool: string, args?: Record<string, unknown>): GuardCtx['consent'] => [
+  { tool, ...(args === undefined ? {} : { args }), meaning: tool, token: `CONFIRM ${tool.toUpperCase()}-0001`, issuedTurn: 0, consumedTurn: 1 },
 ];
 
 describe('V1 — a consent licenses the act it was given for, and nothing else', () => {
   it('CLOSED: a consent for record A does NOT license an act on record B', () => {
     const g = confirmFirst();
-    const ctx = baseCtx({ tool: 'transfer', args: { account: 'B' }, turnIndex: 1, consent: consentFor('transfer', 'A') });
+    const ctx = baseCtx({ tool: 'transfer', args: { account: 'B' }, turnIndex: 1, consent: consentFor('transfer', { account: 'A' }) });
     expect(g.check(ctx)).not.toBeNull();
   });
 
@@ -63,16 +65,19 @@ describe('V1 — a consent licenses the act it was given for, and nothing else',
 
   it('CLOSED: a consent for one tool does NOT license another', () => {
     const g = confirmFirst();
-    const ctx = baseCtx({ tool: 'wipe', args: { account: 'A' }, turnIndex: 1, consent: consentFor('transfer', 'A') });
+    const ctx = baseCtx({ tool: 'wipe', args: { account: 'A' }, turnIndex: 1, consent: consentFor('transfer', { account: 'A' }) });
     expect(g.check(ctx)).not.toBeNull();
   });
 
-  it('CLOSED: an act carrying extra destructive fields is still licensed — the record is what was agreed', () => {
-    // The token names the RECORD, so a field the user never simulated cannot make it a different act:
-    // what bounds the blast radius of an agreed act is destructiveThrottle, not the consent gate.
+  it('CLOSED: an act carrying an extra field is still licensed — the record is what was agreed', () => {
+    // The licence covers the arguments the user saw; a field beside them does not make it another act.
+    // What bounds the blast radius of an agreed act is destructiveThrottle, not the consent gate.
     const g = confirmFirst();
-    const ctx = baseCtx({ tool: 'wipe', args: { account: 'A', scope: 'EVERYTHING' }, turnIndex: 1, consent: consentFor('wipe', 'A') });
-    expect(g.check(ctx)).toBeNull();
+    const args: Record<string, unknown> = { account: 'A', scope: 'EVERYTHING' };
+    const consent = consentFor('wipe', { account: 'A' })!;
+    stripToLicensed(consent, 'wipe', args);
+    expect(args).toEqual({ account: 'A', scope: 'EVERYTHING' });
+    expect(g.check(baseCtx({ tool: 'wipe', args, turnIndex: 1, consent }))).toBeNull();
   });
 });
 
@@ -105,7 +110,7 @@ describe('V2 — the agent has no channel that licenses a destructive act', () =
 
   it('CLOSED: the token the user typed for THIS record licenses the act — the two-step shape', () => {
     const g = confirmFirst();
-    const ctx = baseCtx({ tool: 'transfer', args: { account: 'A' }, turnIndex: 1, consent: consentFor('transfer', 'A') });
+    const ctx = baseCtx({ tool: 'transfer', args: { account: 'A' }, turnIndex: 1, consent: consentFor('transfer', { account: 'A' }) });
     expect(g.check(ctx)).toBeNull();
   });
 });

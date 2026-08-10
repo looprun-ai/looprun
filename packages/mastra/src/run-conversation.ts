@@ -153,7 +153,13 @@ export async function runSpecConversation(spec: AgentSpec, turns: TurnInput[], d
 
   for (let i = 0; i < turns.length; i++) {
     if (i > 0) world.advanceTurn();
-    const userText = turns[i].userText;
+    // A scripted user reads the screen: {{CODE1}}/{{CODE2}} stand for the consent literals the PREVIOUS
+    // reply put in front of them, in the order they were shown.
+    const shown = (turnRecords[turnRecords.length - 1]?.assistantFinalText ?? '').match(/CONFIRM [A-Z0-9_-]+/g) ?? [];
+    const userText = turns[i].userText.replace(
+      /\{\{CODE(\d*)\}\}/g,
+      (_m, n: string) => shown[(n ? Number(n) : 1) - 1] ?? '(no code was shown)',
+    );
     beginTurn(actionHistory, i, userText);
 
     const attUrls = (turns[i].attachments ?? []) as string[];

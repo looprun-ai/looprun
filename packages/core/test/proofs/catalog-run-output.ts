@@ -212,7 +212,7 @@ const noDuplicateCallProof: GuardProof = {
         script: [
           [{ tool: 'deleteItem', args: { id: 'itm-1', simulate: true } }],
           [{ tool: 'deleteItem', args: { id: 'itm-1', simulate: true } }],
-          [{ tool: 'respond', args: { message: 'Deleting itm-1 — are you sure?', did: [{ op: 'cancel', target: 'itm-1', outcome: 'pending_confirmation' }, { op: 'ask' }] } }],
+          [{ tool: 'respond', args: { message: 'Deleting itm-1 — are you sure?', did: [{ op: 'cancel', targetValue: 'itm-1', outcome: 'tool_called_request_approval' }, { op: 'ask' }] } }],
         ],
         expect: 'veto',
         tool: 'deleteItem',
@@ -278,18 +278,18 @@ const confirmFirstProof: GuardProof = {
       ctx: {
         tool: 'deleteItem',
         args: { id: 'itm-1' },
-        consent: [{ tool: 'deleteItem', subject: 'itm-1', meaning: 'itm-1', token: 'CONFIRM ITM-1', issuedTurn: 0, consumedTurn: 1 }],
+        consent: [{ tool: 'deleteItem', args: { id: 'itm-1' }, meaning: 'deleting an item', token: 'CONFIRM DELETEITEM-0001', issuedTurn: 0, consumedTurn: 1 }],
         turnIndex: 1,
       },
       l1: 'silent',
       l3: {
         preset: 'empty',
-        turns: [{ userText: 'delete item itm-1' }, { userText: 'CONFIRM itm-1' }],
+        turns: [{ userText: 'delete item itm-1' }, { userText: '{{CODE1}}' }],
         script: [
           [{ tool: 'deleteItem', args: { id: 'itm-1', simulate: true } }],
-          [{ tool: 'respond', args: { message: 'That one needs your confirmation.', did: [{ op: 'cancel', target: 'itm-1', outcome: 'pending_confirmation' }] } }],
+          [{ tool: 'respond', args: { message: 'That one needs your confirmation.', did: [{ op: 'cancel', targetValue: 'itm-1', outcome: 'tool_called_request_approval' }] } }],
           [{ tool: 'deleteItem', args: { id: 'itm-1' } }],
-          [{ tool: 'respond', args: { message: 'The item was deleted as requested.', did: [{ op: 'cancel', target: 'itm-1', outcome: 'success' }] } }],
+          [{ tool: 'respond', args: { message: 'The item was deleted as requested.', did: [{ op: 'cancel', targetValue: 'itm-1', outcome: 'success' }] } }],
         ],
         expect: 'pass',
       },
@@ -300,7 +300,7 @@ const confirmFirstProof: GuardProof = {
       ctx: {
         tool: 'deleteItem',
         args: { id: 'itm-2' },
-        consent: [{ tool: 'deleteItem', subject: 'itm-1', meaning: 'itm-1', token: 'CONFIRM ITM-1', issuedTurn: 0, consumedTurn: 1 }],
+        consent: [{ tool: 'deleteItem', args: { id: 'itm-1' }, meaning: 'deleting an item', token: 'CONFIRM DELETEITEM-0001', issuedTurn: 0, consumedTurn: 1 }],
         turnIndex: 1,
       },
       l1: 'fires',
@@ -373,7 +373,7 @@ const confirmFirstProof: GuardProof = {
       l1: 'silent',
       l3: {
         preset: 'empty',
-        turns: [{ userText: 'purge everything' }, { userText: 'CONFIRM DELETE-EVERY' }],
+        turns: [{ userText: 'purge everything' }, { userText: '{{CODE1}}' }],
         script: [
           [{ tool: 'purgeAll', args: {} }],
           [{ tool: 'respond', args: { message: 'That needs your confirmation.', did: [{ op: 'inform' }] } }],
@@ -410,7 +410,7 @@ const destructiveThrottleProof: GuardProof = {
       l1: 'silent',
       l3: {
         preset: 'empty',
-        turns: [{ userText: 'purge everything' }, { userText: 'CONFIRM DELETE-EVERY' }],
+        turns: [{ userText: 'purge everything' }, { userText: '{{CODE1}}' }],
         script: [
           [{ tool: 'purgeAll', args: {} }],
           [{ tool: 'respond', args: { message: 'That one needs your confirmation.', did: [{ op: 'inform' }] } }],
@@ -431,7 +431,7 @@ const destructiveThrottleProof: GuardProof = {
       l1: 'fires',
       l3: {
         preset: 'empty',
-        turns: [{ userText: 'delete item itm-1 and purge everything' }, { userText: 'CONFIRM itm-1 and CONFIRM DELETE-EVERY' }],
+        turns: [{ userText: 'delete item itm-1 and purge everything' }, { userText: '{{CODE1}} and {{CODE2}}' }],
         script: [
           [{ tool: 'deleteItem', args: { id: 'itm-1' } }, { tool: 'purgeAll', args: {} }],
           [{ tool: 'respond', args: { message: 'Both of those need your confirmation.', did: [{ op: 'inform' }] } }],
@@ -488,13 +488,13 @@ const destructiveThrottleProof: GuardProof = {
       l1: 'silent',
       l3: {
         preset: 'empty',
-        turns: [{ userText: 'delete item itm-1' }, { userText: 'CONFIRM itm-1' }],
+        turns: [{ userText: 'delete item itm-1' }, { userText: '{{CODE1}}' }],
         script: [
           [{ tool: 'deleteItem', args: { id: 'itm-1', simulate: true } }],
-          [{ tool: 'respond', args: { message: 'That one needs your confirmation.', did: [{ op: 'cancel', target: 'itm-1', outcome: 'pending_confirmation' }] } }],
+          [{ tool: 'respond', args: { message: 'That one needs your confirmation.', did: [{ op: 'cancel', targetValue: 'itm-1', outcome: 'tool_called_request_approval' }] } }],
           [{ tool: 'deleteItem', args: { id: 'itm-1' } }],
           [{ tool: 'deleteItem', args: { id: 'itm-2', simulate: true } }],
-          [{ tool: 'respond', args: { message: 'The item was deleted as requested; itm-2 needs your confirmation too — are you sure?', did: [{ op: 'cancel', target: 'itm-1', outcome: 'success' }, { op: 'cancel', target: 'itm-2', outcome: 'pending_confirmation' }, { op: 'ask' }] } }],
+          [{ tool: 'respond', args: { message: 'The item was deleted as requested; itm-2 needs your confirmation too — are you sure?', did: [{ op: 'cancel', targetValue: 'itm-1', outcome: 'success' }, { op: 'cancel', targetValue: 'itm-2', outcome: 'tool_called_request_approval' }, { op: 'ask' }] } }],
         ],
         expect: 'pass',
       },

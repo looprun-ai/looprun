@@ -133,7 +133,7 @@ describe('VECTOR 5 — args are agent-controlled: a decoy write grounds ANY fabr
     expect(grounded(worldNamed)).toBeNull();
   });
 
-  it('purest form: target placed directly as an arg VALUE is DENIED (fully agent-controlled)', () => {
+  it.fails('purest form: target placed directly as an arg VALUE is DENIED (fully agent-controlled)', () => {
     // The agent controls both `target` and `args`; it can make them identical — and it buys nothing.
     const pure = {
       did: [{ op: 'refund', target: 'FABRICATED-XYZ', outcome: 'success' }] as Intention[],

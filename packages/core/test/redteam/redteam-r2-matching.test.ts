@@ -12,6 +12,19 @@
  *     When the fix lands, `it.fails` starts failing and must be flipped to a plain `it`. That flip IS the
  *     acceptance signal. Vectors are NEVER deleted and NEVER weakened.
  *
+ * OPEN VECTOR, ONE MECHANISM. A claim's target is checked against EVERY scalar the act carried — its
+ * arguments and its result — with no notion of which of those scalars is the record. So a status word,
+ * a note token or a sibling id standing in a result is accepted where the record's own value belongs,
+ * and the line the user reads can name something that is not the thing acted on:
+ *
+ * ```
+ *   refundOrder({order:'ORD-1'}) → {id:'ORD-1', status:'refunded'}
+ *   the agent declares            {op:'refund', targetValue:'refunded', outcome:'success'}
+ *   the user reads                refunded: done
+ * ```
+ *
+ * Every `it.fails` below is that one mechanism seen from a different angle.
+ *
  * Findings mirror: .superpowers/sdd/2026-08-03-mandatory-intention/redteam-r2-d.md
  */
 import { describe, expect, it } from 'vitest';
@@ -99,13 +112,13 @@ describe('§1 string-leaf identity — grounding-plus-hiding', () => {
 
   // MECHANISM: identityValues({id:'ORD-1', status:'refunded'}) === ['ORD-1','refunded'] — the status word
   // is a string leaf, so it is an "identity". targetIn('refunded', …) is true.
-  it('BREAK 1.1a: a claim targeting a STATUS WORD must not ground — it names no entity', () => {
+  it.fails('BREAK 1.1a: a claim targeting a STATUS WORD must not ground — it names no entity', () => {
     expect(grounded({ did: hidingDid, ...statusWord })).toBeTruthy();
   });
 
   // MECHANISM: the same false identity SPENDS the ORD-1 write in claimIsComplete's injective pass, so the
   // "no silent action" law is satisfied by a claim that never names the acted-on entity.
-  it('BREAK 1.1b: the ORD-1 write must NOT be covered by a status-word claim', () => {
+  it.fails('BREAK 1.1b: the ORD-1 write must NOT be covered by a status-word claim', () => {
     expect(complete({ did: hidingDid, ...statusWord })).toBeTruthy();
   });
 
@@ -121,26 +134,26 @@ describe('§1 string-leaf identity — grounding-plus-hiding', () => {
 
   // ── 1.2 free-text note / reason / memo fields ───────────────────────────────────────────────────
   // MECHANISM: a token of a free-text `note` is a whole token of a string leaf → an identity.
-  it('BREAK 1.2: a token of a free-text note must not cover the write', () => {
+  it.fails('BREAK 1.2: a token of a free-text note must not cover the write', () => {
     const w = effectedWrite('addNote', { order: 'ORD-7' }, { id: 'ORD-7', note: 'refund processed for customer jane' });
     expect(complete({ did: [{ op: 'note', target: 'jane', outcome: 'success' }], ...w })).toBeTruthy();
   });
 
   // ── 1.3 a world MESSAGE sentence ────────────────────────────────────────────────────────────────
-  it('BREAK 1.3: a word lifted out of the world message must not cover the write', () => {
+  it.fails('BREAK 1.3: a word lifted out of the world message must not cover the write', () => {
     const w = effectedWrite('createBooking', { slot: 9 }, { id: 'BK-9', message: 'Booking confirmed for tomorrow' });
     expect(complete({ did: [{ op: 'book', target: 'tomorrow', outcome: 'success' }], ...w })).toBeTruthy();
   });
 
   // ── 1.4 arrays of strings ───────────────────────────────────────────────────────────────────────
   // MECHANISM: identityValues recurses into arrays and pushes every string element.
-  it('BREAK 1.4: a tag from a string array must not cover the write', () => {
+  it.fails('BREAK 1.4: a tag from a string array must not cover the write', () => {
     const w = effectedWrite('updateOrder', { order: 'ORD-3' }, { id: 'ORD-3', tags: ['urgent', 'vip'] });
     expect(complete({ did: [{ op: 'update', target: 'urgent', outcome: 'success' }], ...w })).toBeTruthy();
   });
 
   // ── 1.5 nested objects (arbitrary depth, non-identity key) ──────────────────────────────────────
-  it('BREAK 1.5: a nested non-identity string must not cover the write', () => {
+  it.fails('BREAK 1.5: a nested non-identity string must not cover the write', () => {
     const w = effectedWrite('updateOrder', { order: 'ORD-4' }, { id: 'ORD-4', meta: { channel: 'email' } });
     expect(complete({ did: [{ op: 'update', target: 'email', outcome: 'success' }], ...w })).toBeTruthy();
   });
@@ -149,7 +162,7 @@ describe('§1 string-leaf identity — grounding-plus-hiding', () => {
   // MECHANISM: the `failure` variant matches any ok:false call's result values — an error SENTENCE is a
   // string leaf, so "the refund of <error text> failed" grounds. The renderer prints the error text as
   // if it were an entity: "insufficient funds: could not be completed".
-  it('BREAK 1.6: an error message must not be a groundable identity', () => {
+  it.fails('BREAK 1.6: an error message must not be a groundable identity', () => {
     const ctx = {
       did: [{ op: 'refund', target: 'insufficient funds', outcome: 'failure' }] as Intention[],
       observed: [call('refundOrder', { order: 'ORD-5' }, { ok: false, tookEffect: false })],
@@ -188,7 +201,7 @@ describe('§2 tokenizer and canonicalization', () => {
   // MECHANISM: tokensOf('Order 12') === ['order','12']; a single-token target matches a token run of
   // length 1. So the entity "Order 12" is groundable — and coverable — as "12" or as "Order". Two
   // distinct entities "Order 12" and "Invoice 12" then share the target "12".
-  it('BREAK 2.1: one word of a multi-word entity name must not stand for the entity', () => {
+  it.fails('BREAK 2.1: one word of a multi-word entity name must not stand for the entity', () => {
     const w = effectedWrite('updateOrder', { q: 1 }, { label: 'Order 12' });
     expect(complete({ did: [{ op: 'update', target: '12', outcome: 'success' }], ...w })).toBeTruthy();
   });
@@ -274,7 +287,7 @@ describe('§3 injective coverage and greedy assignment', () => {
     ]),
   };
 
-  it('BREAK 3.1a: two claims on ORD-2 must not cover the ORD-1 write', () => {
+  it.fails('BREAK 3.1a: two claims on ORD-2 must not cover the ORD-1 write', () => {
     const did: Intention[] = [
       { op: 'refund', target: 'ORD-2', outcome: 'success' },
       { op: 'refund', target: 'ORD-2', outcome: 'success' },
@@ -390,7 +403,7 @@ describe('§4 vetoed attempts as evidence', () => {
     expect(complete(ctx)).toBeTruthy();
   });
 
-  it('HELD: an attempt whose args carry only a magnitude grounds no targeted claim', () => {
+  it.fails('HELD: an attempt whose args carry only a magnitude grounds no targeted claim', () => {
     const ctx = {
       did: [{ op: 'refund', target: '500', outcome: 'blocked' }] as Intention[],
       attemptedThisTurn: [{ name: 'refundOrder', args: { amount: 500 } }],

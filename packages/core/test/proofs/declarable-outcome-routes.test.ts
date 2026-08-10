@@ -6,8 +6,8 @@
  * second guess at the outcome word:
  *
  * ```
- *   Declarable for bk_1003 with this turn's evidence: blocked, refused, no_op.
- *   Declarable for bk_9999 with this turn's evidence: none.
+ *   Declarable with this turn's evidence: blocked, refused, no_op.
+ *   Declarable with this turn's evidence: none.
  * ```
  *
  * The list is computed by the grounding rules themselves — never authored, never a subset chosen by
@@ -58,20 +58,20 @@ describe('negative — the deny carries the declarable list', () => {
   it('states the whole sentence, outcomes in the core order', () => {
     expect(deny([{ op: 'release', target: 'bk_1003', outcome: 'success' }])).toBe(
       'You reported "release" on bk_1003 as success, but nothing this turn shows that — report only what actually happened.' +
-        " Declarable for bk_1003 with this turn's evidence: blocked, refused, no_op.",
+        " Declarable with this turn's evidence: blocked, refused, no_op.",
     );
   });
 
   it('says `none` when the evidence of the turn would ground no outcome at all', () => {
     expect(deny([{ op: 'release', target: 'bk_9999', outcome: 'success' }])).toBe(
       'You reported "release" on bk_9999 as success, but nothing this turn shows that — report only what actually happened.' +
-        " Declarable for bk_9999 with this turn's evidence: none.",
+        " Declarable with this turn's evidence: none.",
     );
   });
 
-  it('names the entity generically when the claim carries no target', () => {
+  it('the hint reads the same whether or not the claim named a record', () => {
     const message = deny([{ op: 'release', outcome: 'not_found' }]);
-    expect(message).toContain(" Declarable for this entity with this turn's evidence: ");
+    expect(message).toContain(" Declarable with this turn's evidence: ");
   });
 });
 

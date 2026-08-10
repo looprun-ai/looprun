@@ -9,8 +9,7 @@ import type { AgentWorld, Guard, ObservedCall, HistoryTurn, HistoryToolCall, Jud
 import { canonArgs } from '../guards/index.js';
 import { isTerminal } from './terminal.js';
 import { validateClaims, type Intention, type RenderOpts } from './claims.js';
-import { approvalCode, closeApprovalsFor, consumeApprovals, type ApprovalRequest } from './approval-request.js';
-import { preferredIdentityValues } from '../guards/honesty.js';
+import { closeApprovalsForCall, consumeApprovals, type ApprovalRequest } from './approval-request.js';
 
 /** An OUTPUT-dim (postTool) result-invariant failure OR a flowChain restate — carried on the action history
  *  and JOINED into the onReply violation set so the same bounded no-tools redrive relays its text. */
@@ -129,30 +128,49 @@ export function beginTurn(actionHistory: TurnActionHistory, turnIndex: number, u
  * SUPERSEDES the old one — two open literals for one act would let the user answer a question they are
  * no longer being asked.
  */
-function issueApproval(actionHistory: TurnActionHistory, c: { tool: string; subject?: string; meaning: string }): void {
-  const token = approvalCode(c.meaning);
+function issueApproval(
+  actionHistory: TurnActionHistory,
+  c: { tool: string; args: Record<string, unknown>; meaning: string; code: string },
+): void {
+  const canon = canonArgs(c.args);
+  const token = `CONFIRM ${c.code}-${shortHash(canon)}`;
   const sameAct = (x: ApprovalRequest): boolean =>
-    x.consumedTurn === undefined && !x.closed && x.tool === c.tool && x.subject === c.subject;
+    x.consumedTurn === undefined && !x.closed && x.tool === c.tool && canonArgs(x.args ?? {}) === canon;
   if (actionHistory.approvals.some((x) => sameAct(x) && x.token === token)) return;
   for (const x of actionHistory.approvals) if (sameAct(x)) x.closed = true;
-  const approval: ApprovalRequest = { ...c, token, issuedTurn: actionHistory.turnIndex };
+  const { code: _code, ...rest } = c;
+  const approval: ApprovalRequest = { ...rest, token, issuedTurn: actionHistory.turnIndex };
   actionHistory.approvals.push(approval);
+}
+
+/** The call's own fingerprint, four hexadecimal characters wide. Deterministic, so the same call
+ *  always asks for the same literal, and short enough for a person to retype from the screen. */
+function shortHash(canon: string): string {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < canon.length; i += 1) {
+    h ^= canon.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h.toString(16).toUpperCase().padStart(8, '0').slice(0, 4);
+}
+
+/** The act in words and the act in a literal. The label the spec declared is what the user reads; the
+ *  tool's own name is what the literal carries, so two tools can never ask for the same literal. */
+function actWords(actionHistory: TurnActionHistory, tool: string): { meaning: string; code: string } {
+  return { meaning: actionHistory.destructiveLabels[tool] ?? tool, code: tool.toUpperCase() };
 }
 
 /**
  * A destructive call was DENIED. The denial IS the question: attempting the act is what puts it on
  * the user's screen, so an agent cannot choose not to ask and still act.
  *
- * The question names the record the CALL names — `unsubscribeCustomer({customerId:'cust_2001'})`
- * raises `CONFIRM CUST_2001`, the same literal a simulation's answer would have raised. A call that
- * names no record falls back to the label the spec declared, and a call with neither raises nothing:
- * absence of both is absence of any possible consent.
+ * The question is about the CALL — `unsubscribeCustomer({customerId:'cust_2001'})` raises
+ * `CONFIRM UNSUBSCRIBECUSTOMER-9C41`, and a call on a different customer raises a different literal.
+ * Nothing about the call is elected as its subject, so no argument's name decides what the user is
+ * agreeing to.
  */
 export function issueApprovalForVeto(actionHistory: TurnActionHistory, tool: string, args: Record<string, unknown> = {}): void {
-  const [subject] = preferredIdentityValues(args);
-  if (subject) return issueApproval(actionHistory, { tool, subject, meaning: subject });
-  const meaning = actionHistory.destructiveLabels[tool];
-  if (meaning) issueApproval(actionHistory, { tool, meaning });
+  issueApproval(actionHistory, { tool, args, ...actWords(actionHistory, tool) });
 }
 
 /** Structural success check on a tool result ({success:false} / {error} / {PREREQ_NOT_MET} ⇒ failed). */
@@ -248,14 +266,17 @@ export function recordToolResult(actionHistory: TurnActionHistory, name: string,
     ...(report !== undefined ? { report } : {}),
   });
   if (producedLabel !== undefined) actionHistory.producedThisTurn.push(producedLabel);
-  // The world runs the two-step protocol itself: its "I need confirmation" answer NAMES the record, so
-  // the question it raises is bound to that record and to nothing else.
+  // The world runs the two-step protocol itself: its "I need confirmation" answer is about the call it
+  // just received, so the question it raises is bound to that call and to nothing else.
   if (requiresConfirmation) {
-    const [subject] = preferredIdentityValues(output);
-    if (subject) issueApproval(actionHistory, { tool: name, subject, meaning: subject });
+    // The question is about the ACT, not about the dry run that raised it. `simulate` is the schema's
+    // own marker for a rehearsal, so it is not part of what the user is agreeing to — leaving it in
+    // would licence a call the agent will never make again.
+    const { simulate: _rehearsal, ...act } = args;
+    issueApproval(actionHistory, { tool: name, args: act, ...actWords(actionHistory, name) });
   } else if (wtc?.tookEffect === true) {
-    // A write that LANDED moves the record, so every open question about it stops being true and closes.
-    for (const subject of preferredIdentityValues(output)) closeApprovalsFor(actionHistory.approvals, subject);
+    // A call that LANDED moves the record, so the question about it stops being true and closes.
+    closeApprovalsForCall(actionHistory.approvals, name, args);
   }
 }
 

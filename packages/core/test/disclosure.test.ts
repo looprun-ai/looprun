@@ -10,16 +10,16 @@ import type { ApprovalRequest } from '../src/runtime/approval-request.js';
 
 const CONTRACT = {
   disclose: {
-    retireAsset: 'Retiring {getAsset.asset.id} ({getAsset.asset.name}) takes it out of the rentable fleet for good.',
-    updateMemberRole: 'Promoting {getMember.member.name} to owner gives them billing control.',
-    purgeArchive: 'Emptying the archive cannot be undone.',
+    retireAsset: { before: 'Retiring {getAsset.asset.id} ({getAsset.asset.name}) takes it out of the rentable fleet for good.' },
+    updateMemberRole: { before: 'Promoting {getMember.member.name} to owner gives them billing control.' },
+    purgeArchive: { before: 'Emptying the archive cannot be undone.' },
   },
 };
 
-const approvalFor = (tool: string, subject?: string): ApprovalRequest => ({
+const approvalFor = (tool: string, ...records: string[]): ApprovalRequest => ({
   tool,
-  ...(subject !== undefined ? { subject } : {}),
-  meaning: subject ?? tool,
+  args: Object.fromEntries(records.map((r, i) => [`arg${i}`, r])),
+  meaning: tool,
   token: 'CONFIRM X',
   issuedTurn: 0,
 });
@@ -33,7 +33,7 @@ function historyWith(calls: Array<{ name: string; args: Record<string, unknown>;
 }
 
 describe('renderDisclosure', () => {
-  it('fills a slot from the read whose result names the subject', () => {
+  it('fills a slot from the read whose result names a record the call carries', () => {
     const actionHistory = historyWith([
       { name: 'getAsset', args: { assetId: 'ast_ltwr01' }, result: { asset: { id: 'ast_ltwr01', name: 'Allmand Light Tower' } } },
     ]);
@@ -42,7 +42,7 @@ describe('renderDisclosure', () => {
     );
   });
 
-  it('binds to the SUBJECT, not to the latest call of the same read', () => {
+  it('binds to the record the CALL carries, not to the latest call of the same read', () => {
     const actionHistory = historyWith([
       { name: 'getMember', args: { memberId: 'mem_1004' }, result: { member: { id: 'mem_1004', name: 'Sam Whitfield' } } },
       { name: 'getMember', args: {}, result: { member: { id: 'mem_1001', name: 'Dana Okafor' } } },
@@ -61,11 +61,21 @@ describe('renderDisclosure', () => {
     );
   });
 
-  it('renders every slot as the placeholder when the approval names no record', () => {
+  it('a SINGLE call of the read tool binds a slot on its own', () => {
     const actionHistory = historyWith([
       { name: 'getAsset', args: { assetId: 'ast_ltwr01' }, result: { asset: { id: 'ast_ltwr01', name: 'Allmand Light Tower' } } },
     ]);
     expect(renderDisclosure(approvalFor('retireAsset'), CONTRACT, actionHistory)).toBe(
+      'Retiring ast_ltwr01 (Allmand Light Tower) takes it out of the rentable fleet for good.',
+    );
+  });
+
+  it('renders the placeholder when SEVERAL reads ran and none names a record of the call', () => {
+    const actionHistory = historyWith([
+      { name: 'getAsset', args: { assetId: 'ast_a' }, result: { asset: { id: 'ast_a', name: 'A' } } },
+      { name: 'getAsset', args: { assetId: 'ast_b' }, result: { asset: { id: 'ast_b', name: 'B' } } },
+    ]);
+    expect(renderDisclosure(approvalFor('retireAsset', 'ast_zzz'), CONTRACT, actionHistory)).toBe(
       'Retiring NA (NA) takes it out of the rentable fleet for good.',
     );
   });
@@ -78,7 +88,7 @@ describe('renderDisclosure', () => {
   });
 
   it('renders a malformed brace literally', () => {
-    const contract = { disclose: { retireAsset: 'Retiring { getAsset.asset.id } is final; {} is not a slot.' } };
+    const contract = { disclose: { retireAsset: { before: 'Retiring { getAsset.asset.id } is final; {} is not a slot.' } } };
     expect(renderDisclosure(approvalFor('retireAsset', 'ast_x'), contract, createActionHistory())).toBe(
       'Retiring { getAsset.asset.id } is final; {} is not a slot.',
     );
@@ -105,7 +115,7 @@ describe('renderDisclosure', () => {
   });
 
   it('renders the placeholder when the path lands on a record rather than a value', () => {
-    const contract = { disclose: { retireAsset: 'Retiring {getAsset.asset} is final.' } };
+    const contract = { disclose: { retireAsset: { before: 'Retiring {getAsset.asset} is final.' } } };
     const actionHistory = historyWith([
       { name: 'getAsset', args: { assetId: 'ast_x' }, result: { asset: { id: 'ast_x' } } },
     ]);
@@ -116,7 +126,7 @@ describe('renderDisclosure', () => {
 describe('the delivered text', () => {
   const approval: ApprovalRequest = {
     tool: 'retireAsset',
-    subject: 'ast_ltwr01',
+    args: { assetId: 'ast_ltwr01' },
     meaning: 'ast_ltwr01',
     token: 'CONFIRM AST_LTWR01',
     issuedTurn: 0,
@@ -137,9 +147,9 @@ describe('the delivered text', () => {
   });
 
   it('keeps a question whose tool the domain discloses nothing about', () => {
-    const other: ApprovalRequest = { tool: 'cancelBooking', subject: 'BK-1', meaning: 'BK-1', token: 'CONFIRM BK-1', issuedTurn: 0 };
+    const other: ApprovalRequest = { tool: 'cancelBooking', args: { bookingId: 'BK-1' }, meaning: 'a booking', token: 'CONFIRM CANCELBOOKING-0001', issuedTurn: 0 };
     const text = composeDeliveryText('One act is pending.', [{ op: 'inform' }], [other], createActionHistory(), CONTRACT);
-    expect(text).toContain('To confirm BK-1, reply: CONFIRM BK-1');
+    expect(text).toContain('To confirm a booking, reply: CONFIRM CANCELBOOKING-0001');
     expect(text).not.toContain('NA');
   });
 

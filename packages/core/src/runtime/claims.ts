@@ -24,7 +24,10 @@ export type CoreOutcome =
   | 'not_found'
   | 'blocked'
   | 'refused'
-  | 'pending_confirmation'
+  /** The agent CALLED the tool and it came back asking the user to approve. */
+  | 'tool_called_request_approval'
+  /** The agent is asking the user something. No call is involved, so nothing recorded can prove it. */
+  | 'any_other_question'
   | 'no_op';
 
 /** The core outcomes as a runtime value — iteration + membership. Frozen: it is the vocabulary of record. */
@@ -34,13 +37,14 @@ export const CORE_OUTCOMES: readonly CoreOutcome[] = Object.freeze([
   'not_found',
   'blocked',
   'refused',
-  'pending_confirmation',
+  'tool_called_request_approval',
+  'any_other_question',
   'no_op',
 ]);
 
 const CORE_OUTCOME_SET: ReadonlySet<string> = new Set(CORE_OUTCOMES);
 
-/** True when `s` is one of the seven core outcome words. */
+/** True when `s` is one of the core outcome words. */
 export function isCoreOutcome(s: string): s is CoreOutcome {
   return CORE_OUTCOME_SET.has(s);
 }
@@ -82,7 +86,12 @@ export function isActionOp(op: string): boolean {
  */
 export interface Intention {
   op: string;
+  /** The value at {@link targetName} — the record acted on, e.g. `'bk_1001'`. */
   target?: string;
+  /** The FIELD NAME the tool result used for that record, e.g. `'bookingId'`. When the agent names it,
+   *  the engine looks exactly there; without it the value must simply be among what the act returned or
+   *  was called with. Either way no key is chosen by its shape. */
+  targetName?: string;
   outcome?: string;
   amount?: number;
   /** The AUTHORED sentence riding this claim, when one exists: a non-empty `report` string on the
@@ -163,7 +172,7 @@ function isNonEmptyString(v: unknown): v is string {
   return typeof v === 'string' && v.trim().length > 0;
 }
 
-const CLAIM_KEYS: ReadonlySet<string> = new Set(['op', 'target', 'outcome', 'amount']);
+const CLAIM_KEYS: ReadonlySet<string> = new Set(['op', 'targetName', 'targetValue', 'outcome', 'amount']);
 
 /**
  * The INVISIBLE characters, as a CHARACTER CLASS rather than a list.
@@ -232,9 +241,12 @@ export function validateClaims(did: unknown): { claims: Intention[]; errors: str
       if (!CLAIM_KEYS.has(key)) local.push(`did[${i}] has unknown key "${key}"`);
     }
     if (!isNonEmptyString(rec.op)) local.push(`did[${i}].op must be a non-empty string`);
-    if ('target' in rec) {
-      if (!isNonEmptyString(rec.target)) local.push(`did[${i}].target must be a non-empty string when present`);
-      else if (INVISIBLE_RE.test(rec.target)) local.push(`did[${i}].target must not contain invisible formatting characters`);
+    if ('targetValue' in rec) {
+      if (!isNonEmptyString(rec.targetValue)) local.push(`did[${i}].targetValue must be a non-empty string when present`);
+      else if (INVISIBLE_RE.test(rec.targetValue)) local.push(`did[${i}].targetValue must not contain invisible formatting characters`);
+    }
+    if ('targetName' in rec && !isNonEmptyString(rec.targetName)) {
+      local.push(`did[${i}].targetName must be a non-empty string when present`);
     }
     // The outcome/amount rules depend on the op partition, so they apply only once `op` is a valid string.
     const opStr = isNonEmptyString(rec.op) ? rec.op : undefined;
@@ -254,7 +266,8 @@ export function validateClaims(did: unknown): { claims: Intention[]; errors: str
       return;
     }
     const claim: Intention = { op: rec.op as string };
-    if ('target' in rec) claim.target = rec.target as string;
+    if ('targetValue' in rec) claim.target = rec.targetValue as string;
+    if ('targetName' in rec) claim.targetName = rec.targetName as string;
     if ('outcome' in rec) claim.outcome = rec.outcome as string;
     if ('amount' in rec) claim.amount = rec.amount as number;
     claims.push(claim);
@@ -416,8 +429,10 @@ function defaultClaimLine(claim: Intention, core: CoreOutcome): string {
       return t ? `${t}: done` : 'One action completed.';
     case 'not_found':
       return t ? `${t}: no record found` : 'No matching record was found.';
-    case 'pending_confirmation':
+    case 'tool_called_request_approval':
       return t ? `${t}: awaiting your confirmation` : 'Awaiting your confirmation.';
+    case 'any_other_question':
+      return t ? `${t}: a question for you` : 'A question for you.';
     case 'failure':
       return t ? `${t}: could not be completed` : 'An action could not be completed.';
     case 'blocked':
@@ -497,14 +512,14 @@ export function renderOperationReport(did: Intention[], opts?: RenderOpts): stri
  * used when the redrive loop exhausts (the model never produced a groundable declaration, so the engine
  * builds one it CAN stand behind). For each of THIS turn's observed calls:
  *   · a WRITE that TOOK EFFECT → `success` (its OWN produced label as `target`, when it issued one)
- *   · a WRITE that did NOT take effect but carries a pending-confirmation result flag → `pending_confirmation`
+ *   · a WRITE that did NOT take effect but carries a pending-confirmation result flag → `tool_called_request_approval`
  *   · a WRITE that ran but returned `ok:false` → `failure`
  *   · a WRITE that ran ok yet took NO effect (a simulate) → contributes NOTHING (it changed nothing)
  *   · a READ (any non-write, incl. the runtime terminal) → contributes NOTHING
  *
  * EFFECT WINS OVER FLAGS: `tookEffect` is tested FIRST, so a write that BOTH landed and carried
  * `requiresConfirmation` never renders as "awaiting your confirmation" — that would tell the user an
- * action is still pending their OK when the world had already made the change. `pending_confirmation` is
+ * action is still pending their OK when the world had already made the change. `tool_called_request_approval` is
  * honest only for a write that did not take effect.
  *
  * LABELS ARE PER CALL: each claim reads `o.producedLabel` — the label THAT call's own result issued. The
@@ -547,7 +562,7 @@ export function deriveClaimsFromActionHistory(
       continue;
     }
     if (o.resultFlags?.requiresConfirmation === true) {
-      claims.push({ op: 'operation', outcome: 'pending_confirmation', ...(o.report !== undefined ? { report: o.report } : {}) });
+      claims.push({ op: 'operation', outcome: 'tool_called_request_approval', ...(o.report !== undefined ? { report: o.report } : {}) });
       continue;
     }
     if (o.ok === false) {

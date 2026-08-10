@@ -27,11 +27,12 @@ function makeWorld(): AgentWorld {
   } as unknown as AgentWorld;
 }
 
-const subjectWith = (disclose: Record<string, string>): Subject =>
+const subjectWith = (before: Record<string, string>): Subject =>
   ({
     dir: '/toy',
     specs: { fleet: { id: 'fleet', surface: { tools: ['getAsset', 'retireAsset'] } } },
-    contract: { voice: '', stateBlock: () => '', coreInvariants: [], languageClause: '', disclose },
+    contract: { voice: '', stateBlock: () => '', coreInvariants: [], languageClause: '',
+      disclose: Object.fromEntries(Object.entries(before).map(([tool, text]) => [tool, { before: text }])) },
     caseAgent: {},
     cases: [{ id: 'c1', turns: [{ userText: 'hi' }] }],
     toolDefs: [

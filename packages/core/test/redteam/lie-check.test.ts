@@ -435,7 +435,7 @@ const DECLARATIONS: Array<{ id: string; did: Intention[]; seed: (l: ActionHistor
   },
   {
     id: 'action:pending',
-    did: [{ op: 'cancel', target: 'EV-2', outcome: 'pending_confirmation' }],
+    did: [{ op: 'cancel', target: 'EV-2', outcome: 'tool_called_request_approval' }],
     seed: (l, w) => landCall(l, w, 'cancelEvent', { requiresConfirmation: true, id: 'EV-2' }),
   },
   {

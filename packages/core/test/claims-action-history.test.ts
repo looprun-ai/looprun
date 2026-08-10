@@ -21,10 +21,11 @@ describe('claims in the turn actionHistory', () => {
   it('a delivered respond surfaces did on the actionHistory', () => {
     const actionHistory = createActionHistory();
     beginTurn(actionHistory, 0, 'refund order 7');
+    const wire = [{ op: 'refund', targetValue: 'order-7', outcome: 'success', amount: 50 }];
     const did = [{ op: 'refund', target: 'order-7', outcome: 'success', amount: 50 }];
     // The real terminal-recording PAIR: recordTerminalCall (hook time) then recordTerminal (execute).
-    recordTerminalCall(actionHistory, 'respond', { message: 'Done.', did });
-    recordTerminal(actionHistory, 'respond', { message: 'Done.', did });
+    recordTerminalCall(actionHistory, 'respond', { message: 'Done.', did: wire });
+    recordTerminal(actionHistory, 'respond', { message: 'Done.', did: wire });
     expect(actionHistory.did).toEqual(did);
     expect(hasAskIntent(actionHistory.did)).toBe(false);
   });
@@ -81,7 +82,7 @@ describe('recordTurnHistory retains the claims as delivered, frozen', () => {
   it('stores the turn declaration into history[n].did and freezes it', () => {
     const actionHistory = createActionHistory();
     beginTurn(actionHistory, 0, 'refund 7');
-    recordTerminal(actionHistory, 'respond', { message: 'Done.', did: [{ op: 'refund', target: 'o7', outcome: 'success' }] });
+    recordTerminal(actionHistory, 'respond', { message: 'Done.', did: [{ op: 'refund', targetValue: 'o7', outcome: 'success' }] });
     recordTurnHistory(actionHistory, 'Done.');
     const h = actionHistory.history[0];
     expect(h.did).toEqual([{ op: 'refund', target: 'o7', outcome: 'success' }]);

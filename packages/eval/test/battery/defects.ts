@@ -43,7 +43,8 @@ export const CORE_OUTCOMES: readonly string[] = Object.freeze([
   'not_found',
   'blocked',
   'refused',
-  'pending_confirmation',
+  'tool_called_request_approval',
+  'any_other_question',
   'no_op',
 ]);
 
@@ -85,7 +86,7 @@ export interface TerminalClassification {
 }
 
 /** The exact key set one `did` entry may carry (mirrors the engine's `CLAIM_KEYS`). */
-const CLAIM_KEYS = new Set(['op', 'target', 'outcome', 'amount']);
+const CLAIM_KEYS = new Set(['op', 'targetName', 'targetValue', 'outcome', 'amount']);
 
 export interface ClassifyContext {
   /** The domain outcome map — a non-core word is legal only when it maps here. */
@@ -173,8 +174,11 @@ function classifyEntry(
     return;
   }
 
-  if ('target' in rec && typeof rec.target !== 'string') {
-    format.push({ kind: 'wrong-type', at: `${at}.target`, detail: `expected string, got ${typeName(rec.target)}` });
+  if ('targetValue' in rec && typeof rec.targetValue !== 'string') {
+    format.push({ kind: 'wrong-type', at: `${at}.targetValue`, detail: `expected string, got ${typeName(rec.targetValue)}` });
+  }
+  if ('targetName' in rec && typeof rec.targetName !== 'string') {
+    format.push({ kind: 'wrong-type', at: `${at}.targetName`, detail: `expected string, got ${typeName(rec.targetName)}` });
   }
   if ('amount' in rec && !(typeof rec.amount === 'number' && Number.isFinite(rec.amount))) {
     format.push({ kind: 'wrong-type', at: `${at}.amount`, detail: `expected a finite number, got ${typeName(rec.amount)}` });
@@ -203,8 +207,8 @@ function classifyEntry(
     }
   }
 
-  if (typeof rec.target === 'string' && rec.target.trim() && !isIssued(rec.target, ctx.issued)) {
-    value.push({ kind: 'target-not-issued', at: `${at}.target`, detail: `${quote(rec.target)} names nothing the world returned this conversation` });
+  if (typeof rec.targetValue === 'string' && rec.targetValue.trim() && !isIssued(rec.targetValue, ctx.issued)) {
+    value.push({ kind: 'target-not-issued', at: `${at}.targetValue`, detail: `${quote(rec.targetValue)} names nothing the world returned this conversation` });
   }
 }
 

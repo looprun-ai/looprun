@@ -38,7 +38,6 @@
 import { claimIsComplete, claimIsGrounded, confirmFirst, degenerationGuard, destructiveThrottle, noDuplicateCall } from './guards/index.js';
 import { GuardExecutionError } from './rules.js';
 import { assertNoCoreOutcomeShadow } from './runtime/claims.js';
-import { approvalCode } from './runtime/approval-request.js';
 import type { AgentWorld, Dim, Guard, GuardCtx, ObservedCall, ReplyMutator, SpatialEdge } from './rules.js';
 import type { ContractGuardBinding, DomainContract } from './assembled-prompt.js';
 import type { SamplingSettings } from './model-params.js';
@@ -181,9 +180,8 @@ export interface AgentSpec {
     onReplyMutate?: MutatorBinding[];
   };
   controls: AgentControls;
-  /** Per destructive tool that acts on no identifiable record, the human-facing label its consent
-   *  question is built from. The runtime seats it on the action history, which is what turns a denial into a
-   *  question the user can read and answer. */
+  /** Per destructive tool, the human-facing label its consent question is built from. The runtime seats
+   *  it on the action history, which is what turns a denial into a question the user can read and answer. */
   destructiveLabels?: Record<string, string>;
   /** The LANGUAGE / JUDGEMENT layer: prose whose rules have NO possible `check()` (redefined
    *  ). Every rule that HAS a guard states itself in the assembled prompt from that guard's own
@@ -345,11 +343,10 @@ export interface AgentSpecConfig {
   /** Declared follow-up completions (see {@link ChainSpec}). Absent ⇒ controls.chains stays unset. */
   chains?: ChainSpec[];
   destructiveTools?: string[];
-  /** Per destructive tool that acts on NO identifiable record, the human-facing label its consent
-   *  question is built from — what the user is agreeing to, in the words they will read. The engine
-   *  derives the token from it, so two labels whose first two words agree are a construction error. A
-   *  destructive tool with neither a record nor a label can raise no question, so it can never be
-   *  consented to and never runs. */
+  /** Per destructive tool, the human-facing label its consent question is built from — what the user
+   *  is agreeing to, in the words they will read. The literal they type back is derived from the CALL,
+   *  not from this label, so a tool with no entry still raises an answerable question worded with the
+   *  tool's own name. */
   destructiveLabels?: Record<string, string>;
   /** Per destructive tool whose destructiveness depends on its ARGUMENTS, the pure predicate that says
    *  which calls are destructive. The tool stays on {@link destructiveTools} — that is what installs the
@@ -528,20 +525,6 @@ export class AgentSpecBase implements AgentSpec {
       throw new Error(
         `AgentSpec "${this.id}": destructiveWhen names tool(s) that are not in destructiveTools: ${strayWhen.join(', ')}.`,
       );
-    }
-    // Two labels that derive the SAME token would give the user ONE literal for two different acts:
-    // typing it would consent to whichever question is open, which is not the one they read.
-    const byToken = new Map<string, string>();
-    for (const [tool, label] of Object.entries(this.destructiveLabels)) {
-      const token = approvalCode(label);
-      const owner = byToken.get(token);
-      if (owner) {
-        throw new Error(
-          `AgentSpec "${this.id}": destructiveLabels for "${owner}" and "${tool}" both derive the token "${token}". ` +
-            'One typed literal would consent to either act. Give them labels whose first two words differ.',
-        );
-      }
-      byToken.set(token, tool);
     }
     if (!destructive.length) return;
     const missing = destructive.filter((t) => !this.surface.tools.includes(t));

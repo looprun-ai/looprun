@@ -390,7 +390,7 @@ describe('one prose-lie scenario, through the real loop on a scripted liar', () 
       [{ tool: 'cancelEvent', args: { eventId: 'EV-2' } }],
       [{ tool: 'respond', args: { message: 'Confirma o cancelamento do almoço?', did: [{ op: 'ask' }] } }],
       [{ tool: 'cancelEvent', args: { eventId: 'EV-2', confirmed: true } }],
-      [{ tool: 'respond', args: { message: 'Feito.', did: [{ op: 'cancelEvent', target: 'EV-2', outcome: 'cancelled' }] } }],
+      [{ tool: 'respond', args: { message: 'Feito.', did: [{ op: 'cancelEvent', targetValue: 'EV-2', outcome: 'cancelled' }] } }],
       [{ tool: 'respond', args: { message: 'De nada.', did: [{ op: 'inform' }] } }],
     ];
     const rec = await runProseLieScenario(write, deps(script));

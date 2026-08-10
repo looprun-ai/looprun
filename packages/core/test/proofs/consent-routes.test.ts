@@ -39,7 +39,8 @@ describe('Route A — downgrade, simulation, code, act', () => {
     // The simulation changed nothing and raised the question about the record the world named.
     expect(world.toolCalls.at(-1)?.tookEffect).toBe(false);
     expect(h.approvals.filter((a) => a.issuedTurn === h.turnIndex)).toHaveLength(1);
-    expect(h.approvals[0].subject).toBe('p001');
+    // The question is about the ACT, not about the rehearsal that raised it.
+    expect(h.approvals[0].args).toEqual({ id: 'p001' });
     // The bare attempt is scoring surface; the turn did not become a veto.
     expect(h.attemptedCalls).toEqual([{ name: 'deleteItem', args: { id: 'p001' } }]);
     expect(h.vetoStreak).toBe(0);
@@ -87,7 +88,7 @@ describe('Route B — the veto raises the question from the call', () => {
     const v = await evaluatePreTool(spec, h, world, 'unsubscribeCustomer', { customerId: 'cust_2001' });
     expect(v.verdict).toBe('deny');
     expect(h.approvals.filter((a) => a.issuedTurn === h.turnIndex)).toHaveLength(1);
-    expect(h.approvals[0].subject).toBe('cust_2001');
+    expect(h.approvals[0].args).toEqual({ customerId: 'cust_2001' });
     expect(world.toolCalls).toHaveLength(0); // the world was never reached
 
     beginTurn(h, 1, h.approvals[0].token);
@@ -110,7 +111,7 @@ describe('Route B — the veto raises the question from the call', () => {
     expect(other.verdict).toBe('deny');
   });
 
-  it('no record and no label: no question can be born and the tool never runs', async () => {
+  it('a call with no arguments still raises an answerable question', async () => {
     const spec = new AgentSpecBase({
       id: 'route-b3', mode: 'PROOF', persona: 'You are the proof agent.',
       tools: ['purgeAllLogs'], destructiveTools: ['purgeAllLogs'],
@@ -121,11 +122,14 @@ describe('Route B — the veto raises the question from the call', () => {
     beginTurn(h, 0, 'purge the logs');
     const v = await evaluatePreTool(spec, h, world, 'purgeAllLogs', {});
     expect(v.verdict).toBe('deny');
-    expect(h.approvals).toHaveLength(0);
-    // Whatever the user types later, there is no code to consume and every later call is denied.
-    beginTurn(h, 1, 'CONFIRM PURGE yes I am sure');
+    expect(h.approvals).toHaveLength(1);
+    // A human "yes" is not the literal, so the act stays denied.
+    beginTurn(h, 1, 'yes I am sure');
     expect(h.consentThisTurn).toHaveLength(0);
-    const later = await evaluatePreTool(spec, h, world, 'purgeAllLogs', {});
-    expect(later.verdict).toBe('deny');
+    expect((await evaluatePreTool(spec, h, world, 'purgeAllLogs', {})).verdict).toBe('deny');
+    // The literal the engine minted is what licenses it.
+    beginTurn(h, 2, h.approvals[0].token);
+    expect(h.consentThisTurn).toHaveLength(1);
+    expect((await evaluatePreTool(spec, h, world, 'purgeAllLogs', {})).verdict).toBe('allow');
   });
 });

@@ -70,13 +70,13 @@ describe('runSpecConversation', () => {
 
     const res = await runSpecConversation(
       spec,
-      [{ userText: 'delete x' }, { userText: 'CONFIRM x' }],
+      [{ userText: 'delete x' }, { userText: '{{CODE1}}' }],
       { model: scripted.model, world: world(), toolDefs: TOOL_DEFS },
     );
 
     expect(res.errorMsg).toBeUndefined();
     expect(res.turnRecords).toHaveLength(2);
-    expect(res.turnRecords[0].assistantFinalText).toContain('To confirm x, reply: CONFIRM X');
+    expect(res.turnRecords[0].assistantFinalText).toMatch(/reply: CONFIRM DELETEITEM-[0-9A-F]{4}/);
     expect(res.turnRecords[0].recoveryEvents).toContain('downgrade:confirmFirst:deleteItem');
     expect(res.turnRecords[1].assistantFinalText).toBe(nothingDone('Deleted x.'));
     expect(res.turnRecords[1].recoveryEvents).toEqual([]); // the bare act is legal after the typed code

@@ -51,7 +51,7 @@ describe('L3 · claim cross-check on a governed turn', () => {
   it('delivers an HONEST declaration and renders its operation report', async () => {
     const res = await run([
       CREATE,
-      [{ tool: 'respond', args: { message: 'All set.', did: [{ op: 'createItem', target: 'p001', outcome: 'success' }] } }],
+      [{ tool: 'respond', args: { message: 'All set.', did: [{ op: 'createItem', targetValue: 'p001', outcome: 'success' }] } }],
     ]);
 
     expect(res.looprun.violations).toEqual([]);
@@ -64,7 +64,7 @@ describe('L3 · claim cross-check on a governed turn', () => {
   it('denies a FABRICATED target — the world never issued p999', async () => {
     const res = await run([
       CREATE,
-      [{ tool: 'respond', args: { message: 'Created p999.', did: [{ op: 'createItem', target: 'p999', outcome: 'success' }] } }],
+      [{ tool: 'respond', args: { message: 'Created p999.', did: [{ op: 'createItem', targetValue: 'p999', outcome: 'success' }] } }],
     ]);
 
     expect(res.looprun.violations).toContain('claimIsGrounded');
@@ -76,7 +76,7 @@ describe('L3 · claim cross-check on a governed turn', () => {
   it('denies a BOUNDARY-COLLISION target — p0011 is not the p001 the world created', async () => {
     const res = await run([
       CREATE,
-      [{ tool: 'respond', args: { message: 'Done.', did: [{ op: 'createItem', target: 'p0011', outcome: 'success' }] } }],
+      [{ tool: 'respond', args: { message: 'Done.', did: [{ op: 'createItem', targetValue: 'p0011', outcome: 'success' }] } }],
     ]);
 
     expect(res.looprun.violations).toContain('claimIsGrounded');

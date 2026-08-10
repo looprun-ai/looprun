@@ -317,66 +317,97 @@ function onTarget(claim: Intention): string {
   return claim.target ? ` on ${claim.target}` : '';
 }
 
-/** Is this claim GROUNDED, given its resolved core outcome? One variant per grounding-table row. */
-function isGrounded(
+/**
+ * WHAT THE ENGINE DERIVED for each ACT of this turn, in order: every vetoed attempt, and every write
+ * that ran. Each entry is the set of outcome words that act honestly supports.
+ *
+ * No field name is read and no identity is elected. An act is what the runtime recorded about it:
+ *
+ * ```
+ *   a vetoed attempt              tool_called_request_approval · blocked · refused
+ *   the world asked to confirm    tool_called_request_approval
+ *   the call failed               failure · blocked · refused
+ *   the call took effect          success
+ *   the call changed nothing      no_op
+ * ```
+ */
+function derivedActs(
   ctx: GuardCtx,
-  claim: Intention,
-  resolved: CoreOutcome,
-  calls: ObservedCall[],
+  calls: readonly ObservedCall[],
   attempts: ReadonlyArray<{ name: string; args: unknown }>,
   writes: ReadonlySet<string>,
-): boolean {
-  const issued = (c: ObservedCall) => claimMatches(claim, issuedEvidence(ctx, c));
-  const addressed = (c: ObservedCall) => claimMatches(claim, addressedEvidence(ctx, c));
-  const effectedWrite = (c: ObservedCall) => isEffectedWrite(c, writes);
-  const isRead = (c: ObservedCall) => !writes.has(c.name) && !attestedEffect(c);
-  switch (resolved) {
-    case 'success':
-      return calls.some((c) => effectedWrite(c) && issued(c));
-    case 'failure':
-      return calls.some((c) => c.ok === false && addressed(c));
-    case 'blocked':
-    case 'refused':
-      return (
-        attempts.some((a) => claimMatches(claim, attemptEvidence(a))) ||
-        calls.some((c) => c.ok === false && addressed(c)) ||
-        // REFUSAL BY RULE: the turn read the entity and changed nothing — the refusal is the spec's own
-        // law speaking, and demanding a vetoed attempt or a failed call as its proof would order the
-        // model to reach for the very act it is refusing. An effected write on the entity still refutes
-        // it: reading the record and then acting on it is not a rule-grounded no-op.
-        (calls.some((c) => isRead(c) && c.ok && addressed(c)) &&
-          !calls.some((c) => effectedWrite(c) && targetIn(claim.target, addressedEvidence(ctx, c).identity)))
-      );
-    case 'not_found':
-      return calls.some((c) => isRead(c) && c.ok && isEmptyReadResult(resultOf(ctx, c)) && addressed(c));
-    case 'pending_confirmation':
-      return calls.some((c) => c.resultFlags?.requiresConfirmation === true && addressed(c));
-    case 'no_op':
-      // POSITIVE EVIDENCE + no contrary evidence: a `no_op` requires the turn to have ADDRESSED the
-      // entity at all. The absence condition ALONE would be vacuous — "no effected write matches" is
-      // trivially true of an entity the turn never touched, so `{target:'BK-999', outcome:'no_op'}` would
-      // ground on an EMPTY action history and the renderer would announce it to the user as a verified
-      // non-event: the cheapest bypass on the surface, and the way an unattempted request would get
-      // discharged with its rubric satisfied.
-      return (
-        calls.some((c) => addressed(c)) &&
-        !calls.some((c) => effectedWrite(c) && targetIn(claim.target, addressedEvidence(ctx, c).identity))
-      );
+): DerivedAct[] {
+  const acts: DerivedAct[] = [];
+  for (const a of attempts) {
+    acts.push({ outcomes: new Set(['tool_called_request_approval', 'blocked', 'refused']), args: a.args, result: undefined });
   }
+  for (const c of calls) {
+    if (!isEffectedWrite(c, writes) && !writes.has(c.name)) continue;
+    // A SIMULATION is a rehearsal: it changed nothing, so there is no act to declare and none to hide.
+    if ((c.args as Record<string, unknown> | undefined)?.simulate === true) continue;
+    // The result rides the observed row on every runtime path and lives on the world's own action
+    // history besides; `resultOf` reads whichever exists, so a domain that keeps only one is served.
+    const of = (o: readonly CoreOutcome[]): DerivedAct => ({ outcomes: new Set(o), args: c.args, result: c.result ?? resultOf(ctx, c) });
+    if (c.resultFlags?.requiresConfirmation === true) acts.push(of(['tool_called_request_approval']));
+    else if (c.ok === false) acts.push(of(['failure', 'blocked', 'refused']));
+    else if (c.tookEffect === true) acts.push(of(['success']));
+    else acts.push(of(['no_op']));
+  }
+  return acts;
 }
 
-/** The deny's actionable half: which core outcomes THIS claim's target COULD be declared as, given the
- *  same action history the guard just rejected it against — so the model's next rewrite has a fact to
- *  reach for instead of a second guess at the outcome word. */
-function declarableHint(
-  ctx: GuardCtx,
-  claim: Intention,
-  calls: ObservedCall[],
-  attempts: ReadonlyArray<{ name: string; args: unknown }>,
-  writes: ReadonlySet<string>,
-): string {
-  const declarable = CORE_OUTCOMES.filter((o) => isGrounded(ctx, claim, o, calls, attempts, writes));
-  return ` Declarable for ${claim.target ?? 'this entity'} with this turn's evidence: ${declarable.length ? declarable.join(', ') : 'none'}.`;
+/** One act as the engine derived it: what it could honestly be called, and the record it touched. */
+interface DerivedAct {
+  outcomes: Set<CoreOutcome>;
+  args: unknown;
+  result: unknown;
+}
+
+/** EVERY scalar the structure holds, as strings. No key is inspected, so how a world names its fields
+ *  cannot decide whether an honest declaration is believed. */
+function extractValues(v: unknown, out: string[] = []): string[] {
+  if (v === null || v === undefined) return out;
+  if (Array.isArray(v)) {
+    for (const x of v) extractValues(x, out);
+    return out;
+  }
+  if (typeof v === 'object') {
+    for (const x of Object.values(v as Record<string, unknown>)) extractValues(x, out);
+    return out;
+  }
+  out.push(String(v));
+  return out;
+}
+
+/**
+ * Does this act's record support the target the agent named?
+ *
+ * The agent names the FIELD it read the record from, so the engine looks exactly there. With no field
+ * named, the value must simply be among what the act returned or was called with. Either way, no key is
+ * chosen by its shape — the agent points, the engine reads.
+ */
+function supportsClaim(act: DerivedAct, claim: Intention): boolean {
+  // `amount` is rendered into the block the engine advertises as verified, so an unchecked figure is a
+  // fabricated number delivered as fact. It is corroborated against the SAME act that carries the target.
+  if (claim.amount !== undefined && !magnitudes(act.result).includes(claim.amount)) return false;
+  if (claim.target === undefined) return true;
+  const where =
+    claim.targetName === undefined
+      ? [...extractValues(act.result), ...extractValues(act.args)]
+      : [
+          ...extractValues((act.result as Record<string, unknown> | undefined)?.[claim.targetName]),
+          ...extractValues((act.args as Record<string, unknown> | undefined)?.[claim.targetName]),
+        ];
+  return where.includes(String(claim.target));
+}
+
+/** The deny's actionable half: what the turn's REMAINING acts could honestly be called, plus whatever a
+ *  turn that only read may say by rule — read off the same list the check walks, so the hint and the
+ *  check can never disagree. */
+function declarableHint(acts: readonly DerivedAct[], byRule: readonly CoreOutcome[]): string {
+  const fromActs = acts.flatMap((a) => [...a.outcomes]);
+  const words = CORE_OUTCOMES.filter((o) => fromActs.includes(o) || byRule.includes(o));
+  return ` Declarable with this turn's evidence: ${words.length ? words.join(', ') : 'none'}.`;
 }
 
 /**
@@ -400,6 +431,11 @@ export function claimIsGrounded(opts: { writeTools: readonly string[]; outcomes?
       if (!did.length) return null;
       const calls = domainCallsThisTurn(ctx);
       const attempts = ctx.attemptedThisTurn ?? [];
+      const acts = derivedActs(ctx, calls, attempts, writes);
+      // A turn that only READ can still honestly report a refusal by rule or an absence: the refusal is
+      // the spec's own law speaking, and demanding a vetoed attempt as its proof would order the model
+      // to reach for the very act it is refusing.
+      const readOnly = !acts.length && calls.some((c) => !writes.has(c.name) && c.ok);
       for (const claim of did) {
         if (!isActionOp(claim.op)) continue; // a speech intention is not tool-checked
         // `outcome` is optional on Intention (speech ops carry none); an ACTION intention always carries
@@ -408,9 +444,36 @@ export function claimIsGrounded(opts: { writeTools: readonly string[]; outcomes?
         if (resolved === null) {
           return `You reported "${claim.op}"${onTarget(claim)} with an outcome the system does not recognise ("${claim.outcome ?? ''}") — report it as one of the known outcomes instead.`;
         }
-        if (!isGrounded(ctx, claim, resolved, calls, attempts, writes)) {
-          return `You reported "${claim.op}"${onTarget(claim)} as ${resolved}, but nothing this turn shows that — report only what actually happened.${declarableHint(ctx, claim, calls, attempts, writes)}`;
+        // Speech is not an operation: nothing the engine recorded can prove a question.
+        if (resolved === 'any_other_question') continue;
+        // A turn that only READ can honestly report a refusal by rule or a non-event. An ABSENCE is
+        // stricter: the read has to have come back with nothing, or "no record found" would be sayable
+        // about a record the same turn just displayed as active.
+        // POSITIVE EVIDENCE FIRST. The turn must have ADDRESSED the record at all, or `{target:'BK-999',
+        // outcome:'no_op'}` would ground on an empty history and the renderer would announce it to the
+        // user as a verified non-event.
+        const addressed =
+          claim.target === undefined ||
+          calls.some(
+            (c) =>
+              !writes.has(c.name) &&
+              c.ok &&
+              [...extractValues(c.result ?? resultOf(ctx, c)), ...extractValues(c.args)].includes(String(claim.target)),
+          );
+        const emptyRead = calls.some((c) => !writes.has(c.name) && c.ok && isEmptyReadResult(c.result ?? resultOf(ctx, c)));
+        const ruleWords: CoreOutcome[] =
+          readOnly && addressed ? (emptyRead ? ['blocked', 'refused', 'not_found', 'no_op'] : ['blocked', 'refused', 'no_op']) : [];
+        const byRule = ruleWords.includes(resolved);
+        // Each declaration SPENDS one act, whichever act supports it — the order the agent reports in is
+        // its own. A declaration that finds no act left describes something that did not happen, which is
+        // how a fabricated extra fails.
+        const at = acts.findIndex((a) => a.outcomes.has(resolved) && supportsClaim(a, claim));
+        if (at >= 0) {
+          acts.splice(at, 1);
+          continue;
         }
+        if (byRule) continue;
+        return `You reported "${claim.op}"${onTarget(claim)} as ${resolved}, but nothing this turn shows that — report only what actually happened.${declarableHint(acts, ruleWords)}`;
       }
       return null;
     },
@@ -420,21 +483,21 @@ export function claimIsGrounded(opts: { writeTools: readonly string[]; outcomes?
 }
 
 /**
- * `claimIsComplete` — no silent action: every write that TOOK EFFECT this turn must be reported.
+ * `claimIsComplete` — no silent action: every act that TOOK EFFECT this turn must be reported.
  *
- * A write is COVERED by an ACTION intention that (a) resolves to `success` through the same `OutcomeMap`
- * `claimIsGrounded` uses — so a domain word like `'settled'` covers exactly like the literal word (the
- * mapping law: the two cross-checks can never disagree on the same claim) — (b) NAMES a `target`, and
- * (c) matches that write's PREFERRED identity. Coverage is INJECTIVE: each write SPENDS a distinct
- * claim, so two writes on the same entity need two claims and a vague "one action succeeded" covers
- * nothing at all. An unreported write is named by its produced label (the call's own result label) when
- * the world issued one, else by a generic phrase — never by the tool name (prose-leak law).
- * Auto-installed alongside `claimIsGrounded`.
+ * THE SAME LIST, THE OTHER DIRECTION. `claimIsGrounded` walks the DECLARATIONS and asks whether each one
+ * matches an act — no lying. This walks the ACTS and asks whether each one has a declaration at its
+ * position — no hiding. One derived list, compared both ways; no field name is read and no identity is
+ * compared.
  *
- * The assignment is a MAXIMUM MATCHING, not a first-fit sweep. First-fit is order-dependent: a write
- * whose result names two entities can spend the claim a later write needs, starving it and DENYING an
- * honest, fully reported turn even though a perfect assignment exists. A matching can never cover more
- * writes than there are claims, so it removes false denials and weakens nothing.
+ * ```
+ *   two writes landed, one declaration    → an operation took effect that the reply does not report
+ *   one write landed, declared `success`  → clean
+ *   one write landed, declared `no_op`    → they do not line up
+ * ```
+ *
+ * Only what LANDED is counted. A vetoed attempt changed nothing, so there is nothing to hide about it —
+ * that half is `claimIsGrounded`'s. Auto-installed alongside `claimIsGrounded`.
  */
 export function claimIsComplete(opts: { writeTools: readonly string[]; outcomes?: OutcomeMap }): Guard {
   assertNoCoreOutcomeShadow(opts.outcomes, 'claimIsComplete'); // m10 at this door (r2/b4.5)
@@ -443,54 +506,22 @@ export function claimIsComplete(opts: { writeTools: readonly string[]; outcomes?
     kind: 'claimIsComplete',
     dim: 'behavior',
     check(ctx) {
-      const effected = domainCallsThisTurn(ctx).filter((c) => isEffectedWrite(c, writes));
-      if (!effected.length) return null;
-      // The claims that CAN cover a write: action intentions that resolve to success and name a target.
-      const covering = (ctx.did ?? []).filter(
-        (claim) =>
-          isActionOp(claim.op) &&
-          claim.target !== undefined &&
-          resolveOutcome(claim.outcome ?? '', opts.outcomes) === 'success',
-      );
-      const candidates = effected.map((c) => {
-        const ev = issuedEvidence(ctx, c);
-        return covering.flatMap((claim, i) => (claimMatches(claim, ev) ? [i] : []));
-      });
-      const takenBy = new Array<number>(covering.length).fill(-1); // claim index → the write holding it
-      const claimOf = new Array<number>(effected.length).fill(-1); // write index → the claim it spent
-      // Kuhn's augmenting path: seat write `w`, re-seating an already-seated write when that frees the
-      // claim `w` needs. `seen` stops one search revisiting a claim, which bounds it and guarantees
-      // termination; ≤ a handful of writes per turn, so the cost is nil.
-      const seat = (w: number, seen: Set<number>): boolean => {
-        for (const ci of candidates[w] ?? []) {
-          if (seen.has(ci)) continue;
-          seen.add(ci);
-          if (takenBy[ci] === -1 || seat(takenBy[ci]!, seen)) {
-            takenBy[ci] = w;
-            claimOf[w] = ci;
-            return true;
-          }
-        }
-        return false;
-      };
-      for (let w = 0; w < effected.length; w += 1) seat(w, new Set<number>());
-      const uncovered = claimOf.indexOf(-1);
-      if (uncovered === -1) return null;
-      const label = producedLabel(ctx, effected[uncovered]!);
-      return label
-        ? `You completed ${label} this turn but did not report it — report every action that takes effect so the user knows.`
-        : 'You completed an action you did not report this turn — report every action that takes effect so the user knows.';
+      const calls = domainCallsThisTurn(ctx);
+      const acts = derivedActs(ctx, calls.filter((c) => isEffectedWrite(c, writes)), [], writes);
+      if (!acts.length) return null;
+      const declared = (ctx.did ?? []).filter((c) => isActionOp(c.op));
+      for (let i = 0; i < acts.length; i += 1) {
+        const claim = declared[i];
+        if (claim && acts[i].outcomes.has(resolveOutcome(claim.outcome ?? '', opts.outcomes) as CoreOutcome)) continue;
+        return claim === undefined
+          ? 'An operation took effect this turn that your reply does not report — report every act that happened, naming the record it touched.'
+          : `You reported ${declared.length} operation(s) but ${acts.length} happened, and they do not line up — report each act as what it actually was, in the order you did them.`;
+      }
+      return null;
     },
     prose: () =>
       'report every action that takes effect this turn — the user must never be left unaware of something you did',
   };
-}
-
-/** The label the world issued for this call (its result `label`), if any — never the tool name. */
-function producedLabel(ctx: GuardCtx, c: ObservedCall): string | null {
-  const r = resultOf(ctx, c);
-  const lbl = (r as { label?: unknown } | null | undefined)?.label;
-  return typeof lbl === 'string' && lbl.trim() ? lbl : null;
 }
 
 /**
