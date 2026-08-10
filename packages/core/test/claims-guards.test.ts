@@ -528,26 +528,74 @@ describe('claimIsComplete', () => {
     expect(complete(ctx)).toBeTruthy();
   });
 
-  it('says an act took effect that the reply does not report', () => {
-    const ctx = {
-      did: [] as Intention[],
-      observed: [call('createBooking', { bookingId: 'BK-1' }, { tookEffect: true })],
-      world: worldWith([{ name: 'createBooking', args: { bookingId: 'BK-1' }, tookEffect: true, result: { label: 'Booking BK-1' } }]),
-    };
-    const reason = complete(ctx) ?? '';
-    expect(reason).toMatch(/took effect this turn that your reply does not report/);
-    expect(reason).not.toContain('createBooking');
-  });
-
-  it('says the same when the world issued no label — the tool name never leaks', () => {
+  it('names the tool whose act went unreported, and the word to report it as', () => {
     const ctx = {
       did: [] as Intention[],
       observed: [call('createBooking', { bookingId: 'BK-1' }, { tookEffect: true })],
       world: worldWith([{ name: 'createBooking', args: { bookingId: 'BK-1' }, tookEffect: true }]),
     };
     const reason = complete(ctx) ?? '';
-    expect(reason).toMatch(/took effect this turn that your reply does not report/);
-    expect(reason).not.toContain('createBooking');
+    expect(reason).toContain('Nothing in your report accounts for what createBooking did this turn');
+    expect(reason).toContain("Declarable with this turn's evidence: success.");
+  });
+
+  it('THE ORDER IS THE AGENT\'S OWN — a complete report that leads with the outcome asked about passes', () => {
+    const observed = [
+      call('generateQuote', { assetId: 'AST-1' }, { tookEffect: true }),
+      call('createBooking', { assetId: 'AST-1' }, { ok: false }),
+    ];
+    const world = worldWith([
+      { name: 'generateQuote', args: { assetId: 'AST-1' }, tookEffect: true },
+      { name: 'createBooking', args: { assetId: 'AST-1' }, ok: false },
+    ]);
+    const declaredLast = [
+      { op: 'book', target: 'AST-1', outcome: 'blocked' },
+      { op: 'quote', target: 'QT-1', outcome: 'success' },
+    ] as Intention[];
+    const declaredFirst = [declaredLast[1], declaredLast[0]] as Intention[];
+    expect(complete({ did: declaredLast, observed, world })).toBeNull();
+    expect(complete({ did: declaredFirst, observed, world })).toBeNull();
+  });
+
+  it('a report short by one act is still hiding, whatever the order', () => {
+    const ctx = {
+      did: [{ op: 'book', target: 'BK-1', outcome: 'success' }] as Intention[],
+      observed: [
+        call('createBooking', { bookingId: 'BK-1' }, { tookEffect: true }),
+        call('chargeDeposit', { bookingId: 'BK-1' }, { tookEffect: true }),
+      ],
+      world: worldWith([
+        { name: 'createBooking', args: { bookingId: 'BK-1' }, tookEffect: true },
+        { name: 'chargeDeposit', args: { bookingId: 'BK-1' }, tookEffect: true },
+      ]),
+    };
+    expect(complete(ctx)).toContain('chargeDeposit');
+  });
+
+  it('carries no fact the world returned — only the tool the agent called and the word for it', () => {
+    const ctx = {
+      did: [] as Intention[],
+      observed: [call('chargeDeposit', { bookingId: 'BK-1' }, { tookEffect: true })],
+      world: worldWith([
+        { name: 'chargeDeposit', args: { bookingId: 'BK-1' }, tookEffect: true, result: { label: 'Deposit on BK-1', amount: 4200, receipt: 'rc_88' } },
+      ]),
+    };
+    const reason = complete(ctx) ?? '';
+    expect(reason).toContain('chargeDeposit');
+    expect(reason).not.toContain('Deposit on BK-1');
+    expect(reason).not.toContain('4200');
+    expect(reason).not.toContain('rc_88');
+  });
+
+  it('a wrong word for the only act is still unaccounted for, and the deny names the right one', () => {
+    const ctx = {
+      did: [{ op: 'book', target: 'BK-1', outcome: 'failure' }] as Intention[],
+      observed: [call('createBooking', { bookingId: 'BK-1' }, { tookEffect: true })],
+      world: worldWith([{ name: 'createBooking', args: { bookingId: 'BK-1' }, tookEffect: true }]),
+    };
+    const reason = complete(ctx) ?? '';
+    expect(reason).toContain('Nothing in your report accounts for what createBooking did this turn');
+    expect(reason).toContain("Declarable with this turn's evidence: success.");
   });
 
   it('a non-success claim does not cover an effected write', () => {

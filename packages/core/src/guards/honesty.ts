@@ -178,7 +178,7 @@ function isEffectedWrite(c: ObservedCall, writes: ReadonlySet<string>): boolean 
   return attestedEffect(c) || (writes.has(c.name) && c.tookEffect === true);
 }
 
-/** ` on <target>` when the claim names one, else '' — for the deny messages (no tool names leak). */
+/** ` on <target>` when the claim names one, else '' — for the deny messages. */
 function onTarget(claim: Intention): string {
   return claim.target ? ` on ${claim.target}` : '';
 }
@@ -205,7 +205,7 @@ function derivedActs(
 ): DerivedAct[] {
   const acts: DerivedAct[] = [];
   for (const a of attempts) {
-    acts.push({ outcomes: new Set(['tool_called_request_approval', 'blocked', 'refused']), args: a.args, result: undefined });
+    acts.push({ name: a.name, outcomes: new Set(['tool_called_request_approval', 'blocked', 'refused']), args: a.args, result: undefined });
   }
   for (const c of calls) {
     if (!isEffectedWrite(c, writes) && !writes.has(c.name)) continue;
@@ -213,7 +213,7 @@ function derivedActs(
     if ((c.args as Record<string, unknown> | undefined)?.simulate === true) continue;
     // The result rides the observed row on every runtime path and lives on the world's own action
     // history besides; `resultOf` reads whichever exists, so a domain that keeps only one is served.
-    const of = (o: readonly CoreOutcome[]): DerivedAct => ({ outcomes: new Set(o), args: c.args, result: c.result ?? resultOf(ctx, c) });
+    const of = (o: readonly CoreOutcome[]): DerivedAct => ({ name: c.name, outcomes: new Set(o), args: c.args, result: c.result ?? resultOf(ctx, c) });
     if (c.resultFlags?.requiresConfirmation === true) acts.push(of(['tool_called_request_approval']));
     else if (c.ok === false) acts.push(of(['failure', 'blocked', 'refused']));
     else if (c.tookEffect === true) acts.push(of(['success']));
@@ -222,8 +222,15 @@ function derivedActs(
   return acts;
 }
 
-/** One act as the engine derived it: what it could honestly be called, and the record it touched. */
+/**
+ * One act as the engine derived it: what it could honestly be called, and the record it touched.
+ *
+ * `name` is the tool the agent itself reached for. A deny may say it: the agent made that call this
+ * turn, so naming it tells the agent nothing it did not already do. A WORLD FACT is the thing a deny
+ * must never carry — a figure or a record the agent would then state to the user without ever reading it.
+ */
 interface DerivedAct {
+  name: string;
   outcomes: Set<CoreOutcome>;
   args: unknown;
   result: unknown;
@@ -352,15 +359,22 @@ export function claimIsGrounded(opts: { writeTools: readonly string[]; outcomes?
  * `claimIsComplete` — no silent action: every act that TOOK EFFECT this turn must be reported.
  *
  * THE SAME LIST, THE OTHER DIRECTION. `claimIsGrounded` walks the DECLARATIONS and asks whether each one
- * matches an act — no lying. This walks the ACTS and asks whether each one has a declaration at its
- * position — no hiding. One derived list, compared both ways; no field name is read and no identity is
- * compared.
+ * matches an act — no lying. This walks the ACTS and asks whether each one is accounted for by a
+ * declaration — no hiding. One derived list, compared both ways, and BOTH DIRECTIONS SPEND: a declaration
+ * covers one act, whichever act carries its word, and is then gone. No field name is read and no identity
+ * is elected.
  *
  * ```
- *   two writes landed, one declaration    → an operation took effect that the reply does not report
- *   one write landed, declared `success`  → clean
- *   one write landed, declared `no_op`    → they do not line up
+ *   two writes landed, one declaration                  → nothing accounts for what the second one did
+ *   one write landed, declared `success`                → clean
+ *   one write landed, declared `no_op`                  → nothing accounts for what it did
+ *   quote landed then booking blocked, reported the
+ *   booking first and the quote second                  → clean
  * ```
+ *
+ * THE ORDER OF THE REPORT IS THE AGENT'S OWN. Hiding is an act with no declaration left to cover it;
+ * a complete report that leads with the outcome the user asked about hides nothing, and rejecting it
+ * spends the turn's one correction on a rewrite that adds no truth.
  *
  * Only what LANDED is counted. A vetoed attempt changed nothing, so there is nothing to hide about it —
  * that half is `claimIsGrounded`'s. Auto-installed alongside `claimIsGrounded`.
@@ -376,12 +390,21 @@ export function claimIsComplete(opts: { writeTools: readonly string[]; outcomes?
       const acts = derivedActs(ctx, calls.filter((c) => isEffectedWrite(c, writes)), [], writes);
       if (!acts.length) return null;
       const declared = (ctx.did ?? []).filter((c) => isActionOp(c.op));
-      for (let i = 0; i < acts.length; i += 1) {
-        const claim = declared[i];
-        if (claim && acts[i].outcomes.has(resolveOutcome(claim.outcome ?? '', opts.outcomes) as CoreOutcome)) continue;
-        return claim === undefined
-          ? 'An operation took effect this turn that your reply does not report — report every act that happened, naming the record it touched.'
-          : `You reported ${declared.length} operation(s) but ${acts.length} happened, and they do not line up — report each act as what it actually was, in the order you did them.`;
+      const spent = new Set<number>();
+      for (const act of acts) {
+        const at = declared.findIndex(
+          (c, i) => !spent.has(i) && act.outcomes.has(resolveOutcome(c.outcome ?? '', opts.outcomes) as CoreOutcome),
+        );
+        if (at >= 0) {
+          spent.add(at);
+          continue;
+        }
+        // THE DENY NAMES THE ACT IT FOUND. A correction the agent cannot act on is a correction that
+        // spends a redrive and changes nothing: told only that "an operation" went unreported, an agent
+        // that ran three calls has to guess which one, and the turn ends on the exhaustion closure.
+        // Both halves here are the agent's own — the tool it called, and the word the engine derived
+        // for it — so the deny carries no fact the agent has not already seen.
+        return `Nothing in your report accounts for what ${act.name} did this turn — report every act that happened as what it actually was, naming the record it touched.${declarableHint([act], [])}`;
       }
       return null;
     },

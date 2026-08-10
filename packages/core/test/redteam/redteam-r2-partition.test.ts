@@ -156,7 +156,7 @@ describe('b1 — a speech-op LOOKALIKE must never be classified as SPEECH (it mu
 describe('b2 — an ACTION cannot hide behind a SPEECH intention', () => {
   it('an effected write declared only as `inform` is DENIED by completeness', () => {
     const { world, observed } = effectedWorld();
-    expect(complete({ did: [{ op: 'inform' }], world, observed })).toContain('does not report');
+    expect(complete({ did: [{ op: 'inform' }], world, observed })).toContain('Nothing in your report accounts for what createBooking did');
   });
 
   it('a SPEECH intention carrying a target still covers NOTHING', () => {
@@ -164,7 +164,7 @@ describe('b2 — an ACTION cannot hide behind a SPEECH intention', () => {
     // `target` is legal on a speech intention (validateClaims only bars outcome/amount), so the
     // obvious dodge is a targeted `inform`. isActionOp gates coverage, so it buys nothing.
     expect(validateClaims([{ op: 'inform', targetValue: 'BK-1' }]).errors).toEqual([]);
-    expect(complete({ did: [{ op: 'inform', target: 'BK-1' }], world, observed })).toContain('does not report');
+    expect(complete({ did: [{ op: 'inform', target: 'BK-1' }], world, observed })).toContain('Nothing in your report accounts for what createBooking did');
   });
 
   it('a speech op carrying an outcome is REJECTED, so it can never be spent as coverage', () => {

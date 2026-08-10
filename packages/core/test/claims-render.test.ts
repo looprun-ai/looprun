@@ -267,7 +267,7 @@ describe('finalizeReply — redrive returns a whole payload, re-checked against 
       1,
     );
     expect(seen).toHaveLength(1);
-    expect(seen[0]).toContain('took effect this turn that your reply does not report'); // the claimIsComplete correction
+    expect(seen[0]).toContain('Nothing in your report accounts for what createBooking did this turn'); // the claimIsComplete correction
     expect(out.exhausted).toBe(false);
     expect(out.text).toBe('Booked your slot.\n\nBK-1: done\nNothing else was changed on this turn.');
     expect(out.did).toEqual([{ op: 'book', target: 'BK-1', outcome: 'success' }]);
