@@ -80,6 +80,7 @@ const ALLOW = [
   { path: 'docs/superpowers/specs/2026-08-06-worst-world-design.md', word: 'preview', why: 'the English noun: what a simulation shows the user before the act' },
   { path: 'docs/superpowers/specs/2026-08-09-consent-licence-design.md', word: 'probe', why: 'the instrument it names: `subjects/atlas/test/claim-probe.mts`, an onReply guard that logs and denies nothing' },
   { path: 'docs/superpowers/specs/2026-08-09-consent-licence-design.md', word: 'preview', text: 'gemini-3.1-pro-preview', why: 'a third-party model id' },
+  { path: 'docs/superpowers/specs/2026-08-10-consent-licence-implementation.md', word: 'preview', text: 'gemini-3.1-pro-preview', why: 'a third-party model id' },
 ];
 
 const SKIP_EXT = /\.(png|jpg|jpeg|gif|svg|ico|gguf|zip|woff2?|tsv|csv)$/i;

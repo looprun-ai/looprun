@@ -182,8 +182,10 @@ field and the schema's `simulate` untouched.
 ## 3 · Honesty walks a derived list
 
 The old grounding table matched a claim's `target` against identity values picked out by key name —
-`id`, `label`, `<entity>Id`. That convention is gone. In its place the engine derives, in order,
-what each act of the turn honestly supports.
+`id`, `label`, `<entity>Id`. That convention is gone, and the machinery that carried it — the
+key-scoped identity election and the per-polarity evidence builders — left `guards/honesty.ts` with
+it (`targetMatchesValue` stays: the rubric guard and the session record compare through it). In its
+place the engine derives, in order, what each act of the turn honestly supports.
 
 `packages/core/src/guards/honesty.ts:334`
 
@@ -383,6 +385,12 @@ against its own control, never against `r1`–`r4`.
 | `docs/tutorial/snippets/test/05-running-and-eval.test.ts` | the scripted payload crosses the wire, so it carries `targetValue` |
 | `packages/eval/src/norms-config.ts` | the mirrored outcome vocabulary |
 | `packages/eval/src/validate.ts` | `checkDisclosureSlots` reads `before` alone — `after`/`later` name no read |
+| `packages/core/src/guards/honesty.ts` header | the derived-act laws; the key-scoped identity election and its evidence builders are gone from the file |
+| `packages/core/GUARDS.md` | the honesty core states the derived list; the consent story mints from the call; the matching laws point with `targetName`/`targetValue` |
+| `scripts/gen-guards-chapter.mjs` | the consent walkthrough template matches the shipped contract, so `docs:guards` regenerates the chapter without reverting it |
+| `governance/proofs/2026-08-10-consent-licence.md` · `governance/MATRIX.md` | the proof record (388/388, PASS) and its matrix row |
+| `.changeset/consent-licence.md` | the minor release entry for `core` + `mastra` + `eval` |
+| `docs/superpowers/specs/2026-08-09-consent-licence-design.md` | the design spec states the shipped shapes — the spend-walk, `claimIsComplete` kept, the subset licence with `stripToLicensed`, plain-string labels, the subjects binding, the three tenses |
 
 ## 8 · The skill
 
@@ -390,11 +398,13 @@ Updated in the same session, in `~/Dev/js/looprun/agentspec/skill`:
 
 | file | what changed |
 |---|---|
-| `references/norms.md` | the outcome vocabulary; the five `did` keys and the two-part record; the three tenses of `disclose`; the label law |
-| `references/guard-catalog.md` | the derived list; no field name decides anything; each act is spent once |
+| `references/norms.md` | the outcome vocabulary; the five `did` keys and the two-part record; the three tenses of `disclose`; the label law; the worked transcripts carry the call-derived literal |
+| `references/guard-catalog.md` | the derived list; no field name decides anything; each act is spent once; the veto mints from the call and labels cannot collide |
+| `references/evals.md` | a consent answer is `{{CODE1}}`/`{{CODE2}}` — the literals the previous reply showed — never a spelled `CONFIRM …` |
+| `references/test.md` | the consent hunt items match the licence-is-the-call law; reading a control turn that shows `(no code was shown)` |
 | `references/spec-template.ts` | a label for every destructive tool, with the literal shown |
-| `scripts/lint-authoring.mjs` | `discloseEntries` parses `{ before, after, later }`; `DISCLOSURE-SLOT-NOT-REQUIRED` applies to `before` alone |
-| `scripts/test/fixtures/**` | both contract fixtures carry the new shape |
+| `scripts/lint-authoring.mjs` | `discloseEntries` parses `{ before, after, later }`; `DISCLOSURE-SLOT-NOT-REQUIRED` applies to `before` alone; `CONSENT-LITERAL-IN-CASE` — a case `userText` spelling a `CONFIRM` literal is a finding |
+| `scripts/test/fixtures/**` | both contract fixtures carry the new shape; `consent-literal/` pins the case lint both ways |
 
 ---
 
@@ -416,12 +426,36 @@ named above it. They are the price of the rule that no key is chosen by its shap
 needs a notion of "the record acted on" that does not read a key name — a decision this spec does not
 take.
 
+**The disclosure binding carries the same blindness.** A `before` slot binds to the read whose result
+names one of the call's argument values — and EVERY scalar of the args counts as one, so a plain-word
+argument (`role:'owner'`) is a "record". A read about a DIFFERENT person that happens to carry the
+same word matches too, and the last match wins:
+
+```
+updateMemberRole({ memberId:'mem_1004', role:'owner' })
+  getMember(mem_1004)  →  Sam Whitfield                        the person being promoted
+  getMember({})        →  Dana Okafor … role:'owner'           the acting user, read LAST
+
+  rendered              "Promoting Dana Okafor to owner…"      the wrong person, in a
+                                                               privilege-escalation question
+```
+
+One `it.fails` vector holds it open in `packages/core/test/disclosure.test.ts`. No atlas case
+exercises the shape — it needs a destructive call whose args carry a non-record word AND a read of the
+same tool about another entity carrying that word. Closing it needs the same undecided notion as
+above: which argument values are records, without reading a key name.
+
 ---
 
 ## 10 · The state of the build
 
 ```
-looprun          the source · 2002 tests green (14 skipped) across six packages and the tutorial snippets
-agentspec        skill references and lints updated · 24 lint tests green
-agentspec-bench  atlas: 30 bundle tests green · 19/19 on r16
+looprun          the source · 2003 tests green (14 skipped) across six packages and the tutorial
+                 snippets · proofs 388/388 · governance record PASS with its MATRIX row · the minor
+                 changeset staged
+agentspec        skill references and lints updated · 25 lint tests green
+agentspec-bench  atlas: 30 bundle tests green · 19/19 on r16 · `lint-authoring` over the subject
+                 still reports 48 findings (31 CONTRACT-NAMES-A-TOOL, 15 DISCLOSURE-SLOT-NOT-REQUIRED,
+                 2 DESTRUCTIVE-WITHOUT-DISCLOSURE) — the disclose authoring and the lints have not
+                 been reconciled
 ```
