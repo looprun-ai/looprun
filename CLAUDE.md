@@ -7,7 +7,8 @@ so the law below is restated here, where a clone can read it.
 ## NO EXTERNAL MODEL, EVER — the agent in the session IS the judge
 
 No file in this repository calls a third-party model API. Not for judging a run, not for scoring a
-transcript, not for a quick check, not for a probe, and not "just this once" behind a script.
+transcript, not for a quick check, not for an exploratory call, and not "just this once" behind a
+script.
 
 | Forbidden | Required |
 |---|---|
