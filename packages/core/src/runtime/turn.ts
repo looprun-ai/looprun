@@ -382,10 +382,14 @@ export function composeDeliveryText(
   const text = resolveEngineText(contract?.engineText);
   const report = renderOperationReport(did, { renderClaim: contract?.renderClaim, outcomes: contract?.outcomes, text });
   const asked = approvals.map((c) => renderApproval(c, contract, actionHistory)).join('\n\n');
-  // What each act DID, in the domain's own sentence, filled from that call's own result. The model is
-  // not in this path either: it cannot soften the line or leave it out.
+  // What each CALL of this turn did, in the domain's own sentence, filled from that call's own
+  // result. The model is not in this path either: it cannot soften the line or leave it out.
+  // EVERY ok call is offered, reads included — `renderAfterAct` prints only the sentences whose
+  // slots the result actually fills, so a refused call and a read the domain wrote nothing for
+  // both come back empty. A turn that refuses runs no act at all, and binding this to an effect
+  // would leave the engine silent exactly where the operator needs the figures behind the refusal.
   const after = (actionHistory?.observed ?? [])
-    .filter((c) => c.turnIndex === actionHistory.turnIndex && c.tookEffect === true && 'result' in c)
+    .filter((c) => c.turnIndex === actionHistory.turnIndex && c.ok !== false && !isTerminal(c.name) && 'result' in c)
     .map((c) => renderAfterAct(c.name, c.result, contract))
     .filter((t) => t.trim())
     .join('\n');

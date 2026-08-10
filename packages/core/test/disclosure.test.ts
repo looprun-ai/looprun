@@ -187,3 +187,41 @@ describe('the delivered text', () => {
     );
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// `after` — the RESULT decides, not the call. A sentence is printed when the result carries a value
+// for every slot it names; a refused call and an unmatched read leave the engine silent.
+// ─────────────────────────────────────────────────────────────────────────────
+describe('the sentence a call carries at the act', () => {
+  const AFTER = {
+    disclose: {
+      payInvoice: { after: '{payInvoice.paid} recorded against {payInvoice.invoiceId}: {payInvoice.balanceDue} still due.' },
+      getPlanUsage: { after: 'This workspace uses {getPlanUsage.seatsUsed} of {getPlanUsage.seatCap} seats.' },
+    },
+  };
+
+  it('prints the sentence when the result fills every slot it names', () => {
+    const actionHistory = historyWith([
+      { name: 'payInvoice', args: { invoiceId: 'INV-1' }, result: { paid: 900, invoiceId: 'INV-1', balanceDue: 0 } },
+    ]);
+    expect(composeDeliveryText('Paid.', [{ op: 'pay', target: 'INV-1', outcome: 'success' }], [], actionHistory, AFTER))
+      .toContain('900 recorded against INV-1: 0 still due.');
+  });
+
+  it('SAYS NOTHING when the call was refused — a slot that resolves to nothing is not a fact', () => {
+    const actionHistory = historyWith([
+      { name: 'payInvoice', args: { invoiceId: 'INV-1' }, result: { ok: false, error: 'ACCOUNT_HOLD' } },
+    ]);
+    const text = composeDeliveryText('It did not go through.', [{ op: 'pay', target: 'INV-1', outcome: 'blocked' }], [], actionHistory, AFTER);
+    expect(text).not.toContain('recorded against');
+    expect(text).not.toContain('NA');
+  });
+
+  it('A READ CARRIES ONE TOO — the only place the engine can speak on a turn that refuses', () => {
+    const actionHistory = historyWith([
+      { name: 'getPlanUsage', args: {}, result: { seatsUsed: 2, seatCap: 2, plan: 'starter' } },
+    ]);
+    expect(composeDeliveryText('No seats left.', [{ op: 'invite', outcome: 'blocked' }], [], actionHistory, AFTER))
+      .toContain('This workspace uses 2 of 2 seats.');
+  });
+});

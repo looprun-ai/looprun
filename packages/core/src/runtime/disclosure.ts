@@ -133,14 +133,39 @@ function fillFrom(sentence: string, result: unknown, missing: string): string {
   });
 }
 
-/** `after` — what THIS turn's act did, from its own result. */
+/** Does this result carry a value for EVERY slot the sentence names? */
+function fillsEverySlot(sentence: string, result: unknown): boolean {
+  for (const m of sentence.matchAll(SLOT)) {
+    const v = walk(result, m[1].split('.').slice(1));
+    if (v === null || v === undefined || typeof v === 'object') return false;
+  }
+  return true;
+}
+
+/**
+ * `after` — what THIS call did, from its own result.
+ *
+ * THE RESULT DECIDES, NOT THE CALL. A sentence is printed when the result carries a value for every
+ * slot it names, and is silent otherwise — so what the engine states is always a fact:
+ *
+ * ```
+ *   payInvoice returned the payment      "2930 recorded against inv_7001: it is now paid…"
+ *   payInvoice was refused               (silent — the result holds no payment to describe)
+ *   getPlanUsage returned the usage      "…using 6 of 15 seats and 2 of 40 bookings."
+ * ```
+ *
+ * A READ is served by the same rule: a domain that authors a sentence for one gets it printed on the
+ * turn that read it, which is the only place the engine can speak when the turn refuses and no act
+ * ever runs.
+ */
 export function renderAfterAct(
   tool: string,
   result: unknown,
   contract: Pick<DomainContract, 'disclose' | 'discloseMissing'> | undefined,
 ): string {
   const template = contract?.disclose?.[tool]?.after;
-  return template ? fillFrom(template, result, contract?.discloseMissing ?? MISSING) : '';
+  if (!template || !fillsEverySlot(template, result)) return '';
+  return fillFrom(template, result, contract?.discloseMissing ?? MISSING);
 }
 
 /** `later` — what an act of an EARLIER turn left standing, from the most recent one that took effect.

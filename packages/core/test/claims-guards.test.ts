@@ -542,11 +542,11 @@ describe('claimIsComplete', () => {
   it('THE ORDER IS THE AGENT\'S OWN — a complete report that leads with the outcome asked about passes', () => {
     const observed = [
       call('generateQuote', { assetId: 'AST-1' }, { tookEffect: true }),
-      call('createBooking', { assetId: 'AST-1' }, { ok: false }),
+      call('createBooking', { assetId: 'AST-1' }, { tookEffect: false }),
     ];
     const world = worldWith([
       { name: 'generateQuote', args: { assetId: 'AST-1' }, tookEffect: true },
-      { name: 'createBooking', args: { assetId: 'AST-1' }, ok: false },
+      { name: 'createBooking', args: { assetId: 'AST-1' }, tookEffect: false },
     ]);
     const declaredLast = [
       { op: 'book', target: 'AST-1', outcome: 'blocked' },
