@@ -1,5 +1,17 @@
 # @looprun-ai/vercel
 
+## 0.19.0
+
+### Minor Changes
+
+- Release (minor).
+
+### Patch Changes
+
+- Updated dependencies [c1df614]
+- Updated dependencies
+  - @looprun-ai/core@0.19.0
+
 ## 0.18.0
 
 ### Minor Changes
