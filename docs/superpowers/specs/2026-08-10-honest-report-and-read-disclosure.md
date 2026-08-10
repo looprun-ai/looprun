@@ -353,6 +353,25 @@ renders its marker, because forcing a tool onto an agent that was not given it i
 approval issued from the world's own `requiresConfirmation` result, not from the consent veto, so its
 disclosure is composed on a path this pass does not sit on. No tool in this subject takes that route.
 
+**A sequence guard is not a second route to the same guarantee.** `requiresBefore(['getInvoice'])`
+states the same requirement and is obeyed: across the 100-case exam its whole family denies ONCE,
+because `prose()` puts the rule in the assembled prompt and the agent reads it before it plans.
+Declared on `payInvoice`/`voidInvoice`/`cancelBooking`, it makes the forced pass fire zero times —
+the agent reads on its own.
+
+It was NOT declared, and the reason is the order in which the two guards run:
+
+```
+priority   0 agent          requiresBefore   ← denies here
+           2 consent        confirmFirst     ← never reached
+```
+
+A preTool loop returns on the FIRST deny. An agent that skips the read is stopped by the sequence
+guard, so `confirmFirst` never runs, no approval is issued, and the pass that would have forced the
+read has no open question to fire on. The declaration therefore trades a guarantee for compliance —
+and compliance is exactly what is not available from the agent that needed the guarantee. Measured
+compliance on one subject model is not a property of the mechanism.
+
 **Three exam failures need a read that never entered the turn at all.** `62` needs the customer
 record, `80` needs `listBookings`, `100` needs `listMembers`. Those reads ground no disclosure, so
 nothing names them for the pass to force; two of the three are the run's dirty invariants.
