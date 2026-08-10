@@ -52,6 +52,28 @@ describe('renderDisclosure', () => {
     );
   });
 
+  // MECHANISM: the binding reads EVERY scalar of the call's args as a record, so a plain-word argument
+  // (`role:'owner'`) counts as one. A read about a DIFFERENT person that happens to carry that word is
+  // then a match too, and the LAST match wins — the sentence names the acting user instead of the
+  // person acted on, in a privilege-escalation question. An `it.fails` here is the open vector; when
+  // the binding closes it, this flips to a plain `it` and stays as the regression.
+  it.fails('BREAK: a non-record arg value must not bind the slot to a read about someone else', () => {
+    const actionHistory = historyWith([
+      { name: 'getMember', args: { memberId: 'mem_1004' }, result: { member: { id: 'mem_1004', name: 'Sam Whitfield' } } },
+      { name: 'getMember', args: {}, result: { member: { id: 'mem_1001', name: 'Dana Okafor', role: 'owner' } } },
+    ]);
+    const approval: ApprovalRequest = {
+      tool: 'updateMemberRole',
+      args: { memberId: 'mem_1004', role: 'owner' },
+      meaning: 'updateMemberRole',
+      token: 'CONFIRM X',
+      issuedTurn: 0,
+    };
+    expect(renderDisclosure(approval, CONTRACT, actionHistory)).toBe(
+      'Promoting Sam Whitfield to owner gives them billing control.',
+    );
+  });
+
   it('renders the placeholder when the bound result carries no value at the path', () => {
     const actionHistory = historyWith([
       { name: 'getAsset', args: { assetId: 'ast_ltwr01' }, result: { asset: { id: 'ast_ltwr01', name: null } } },
