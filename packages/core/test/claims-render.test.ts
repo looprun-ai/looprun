@@ -284,8 +284,8 @@ describe('finalizeReply — salvage re-validates the FULL payload, so a fabricat
     // The current (different) payload also fabricates → claimIsGrounded fires → we reach the salvage branch.
     const out = await finalizeReply(
       spec, BOOKING_CONTRACT, world, actionHistory,
-      P('Retrying.', [{ op: 'book', targetValue: 'BK-9', outcome: 'success' }]),
-      async () => P('Retrying.', [{ op: 'book', targetValue: 'BK-9', outcome: 'success' }]),
+      P('Retrying.', [{ op: 'book', target: 'BK-9', outcome: 'success' }]),
+      async () => P('Retrying.', [{ op: 'book', target: 'BK-9', outcome: 'success' }]),
       0,
     );
     expect(out.exhausted).toBe(true);

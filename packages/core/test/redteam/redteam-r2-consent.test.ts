@@ -174,7 +174,7 @@ describe('C2 (V1) — a partial/empty simulation licenses ANY bare destructive a
       tool: 'wipe',
       args: { account: 'A', scope: 'ONE' },
       turnIndex: 1,
-      consent: [{ tool: 'wipe', subject: 'A', meaning: 'A', token: 'CONFIRM A', issuedTurn: 0, consumedTurn: 1 }],
+      consent: [{ tool: 'wipe', args: { account: 'A' }, meaning: 'A', token: 'CONFIRM A', issuedTurn: 0, consumedTurn: 1 }],
     });
     expect(g.check(ctx)).toBeNull();
   });

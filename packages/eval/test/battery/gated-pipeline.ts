@@ -691,7 +691,7 @@ export function foldExperiment(cases: readonly PipelineCase[], replicates: numbe
   };
   const sampleSession = sessionRecord([
     { turnIndex: 0, userText: '', reply: '', toolCalls: [], attemptedCalls: [], guardEvents: [],
-      did: [{ op: 'operation', targetValue: '<entity>', outcome: 'success' }] },
+      did: [{ op: 'operation', target: '<entity>', outcome: 'success' }] },
   ]);
 
   const withRecords = cases.flatMap((c) => c.replicates.map((r) => ({ c, r })));

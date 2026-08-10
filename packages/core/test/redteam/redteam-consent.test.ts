@@ -59,7 +59,7 @@ describe('V1 — a consent licenses the act it was given for, and nothing else',
 
   it('CLOSED: a consent for record BK-1 does NOT license BK-12 — the token is a whole value', () => {
     const g = confirmFirst();
-    const ctx = baseCtx({ tool: 'cancel', args: { id: 'BK-12' }, turnIndex: 1, consent: consentFor('cancel', 'BK-1') });
+    const ctx = baseCtx({ tool: 'cancel', args: { id: 'BK-12' }, turnIndex: 1, consent: consentFor('cancel', { id: 'BK-1' }) });
     expect(g.check(ctx)).not.toBeNull();
   });
 

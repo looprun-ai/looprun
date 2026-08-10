@@ -11,7 +11,7 @@ const NO_READS = createActionHistory();
 
 const approval: ApprovalRequest = {
   tool: 'cancelBooking',
-  subject: 'BK-1',
+  args: { bookingId: 'BK-1' },
   meaning: 'BK-1',
   token: 'CONFIRM BK-1',
   issuedTurn: 0,
@@ -33,7 +33,7 @@ describe('composeDeliveryText', () => {
   });
 
   it('renders one line per question raised this turn', () => {
-    const second: ApprovalRequest = { ...approval, subject: 'BK-2', meaning: 'BK-2', token: 'CONFIRM BK-2' };
+    const second: ApprovalRequest = { ...approval, args: { bookingId: 'BK-2' }, meaning: 'BK-2', token: 'CONFIRM BK-2' };
     const text = composeDeliveryText('Two bookings carry fees.', [{ op: 'inform' }], [approval, second], NO_READS);
     expect(text).toContain('To confirm BK-1, reply: CONFIRM BK-1');
     expect(text).toContain('To confirm BK-2, reply: CONFIRM BK-2');

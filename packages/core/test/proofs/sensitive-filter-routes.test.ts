@@ -37,7 +37,7 @@ const PLAIN: DomainContract = { ...BASE };
 const DIGIT_ID = '2026-0801-77';
 const APPROVAL: ApprovalRequest = {
   tool: 'cancelClaim',
-  subject: DIGIT_ID,
+  args: { claimId: DIGIT_ID },
   meaning: DIGIT_ID,
   token: `CONFIRM ${DIGIT_ID}`,
   issuedTurn: 0,
