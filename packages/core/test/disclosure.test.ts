@@ -3,10 +3,11 @@
  * printed above that tool's consent question.
  */
 import { describe, it, expect } from 'vitest';
-import { renderDisclosure } from '../src/runtime/disclosure.js';
+import { renderDisclosure, unreadDisclosureSources } from '../src/runtime/disclosure.js';
 import { composeDeliveryText } from '../src/runtime/turn.js';
 import { createActionHistory, recordToolResult, type TurnActionHistory } from '../src/runtime/action-history.js';
 import type { ApprovalRequest } from '../src/runtime/approval-request.js';
+import type { ObservedCall } from '../src/rules.js';
 
 const CONTRACT = {
   disclose: {
@@ -223,5 +224,37 @@ describe('the sentence a call carries at the act', () => {
     ]);
     expect(composeDeliveryText('No seats left.', [{ op: 'invite', outcome: 'blocked' }], [], actionHistory, AFTER))
       .toContain('This workspace uses 2 of 2 seats.');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// The question is not put on a sentence the engine cannot fill: a `before` names the reads its
+// figures come from, and a read that NEVER RAN is the one kind of gap the agent can close.
+// ─────────────────────────────────────────────────────────────────────────────
+describe('the reads a consent question owes', () => {
+  const C = {
+    disclose: {
+      voidInvoice: { before: 'Voiding {getInvoice.invoice.id} cancels a document of {getInvoice.invoice.total}; a voided invoice is closed for good.' },
+      purgeArchive: { before: 'Emptying the archive cannot be undone.' },
+    },
+  };
+  const ran = (name: string, result: unknown) => ({ name, args: {}, ok: true, turnIndex: 0, result }) as ObservedCall;
+
+  it('names the read the sentence needs when nothing called it', () => {
+    expect(unreadDisclosureSources('voidInvoice', C, [])).toEqual(['getInvoice']);
+  });
+
+  it('names NOTHING once that read has come back — an empty field is not a missing call', () => {
+    expect(unreadDisclosureSources('voidInvoice', C, [ran('getInvoice', { invoice: { id: 'INV-1' } })])).toEqual([]);
+  });
+
+  it('a read that FAILED is still a read that never answered', () => {
+    const failed = { name: 'getInvoice', args: {}, ok: false, turnIndex: 0 } as ObservedCall;
+    expect(unreadDisclosureSources('voidInvoice', C, [failed])).toEqual(['getInvoice']);
+  });
+
+  it('a sentence with no slots owes no read, and a tool with no sentence owes none either', () => {
+    expect(unreadDisclosureSources('purgeArchive', C, [])).toEqual([]);
+    expect(unreadDisclosureSources('cancelBooking', C, [])).toEqual([]);
   });
 });

@@ -3,7 +3,7 @@
 **Date** 2026-08-10 · **Scope** `looprun`, `agentspec-bench/subjects/atlas` ·
 **Status** RECORD, not a spec — nothing here is owed.
 
-Two engine changes and one contract change, all in the source. What follows is the measurement that
+Three engine changes and the contract changes they enable, all in the source. What follows is the measurement that
 justified them, the diffs verbatim, every doc the change touched, the skill, and what the build
 still does not do.
 
@@ -22,6 +22,10 @@ run directory (under subjects/atlas/test/)   final    what the run carried
                                                       sentences · the ENGINE change did not load
 2026-08-10-r24-full                          85/100   the same, with eval and mastra resolving
                                                       the local core, and the plan figures on the read
+2026-08-10-r27-full                          85/100   four `before` sentences rewritten so they name
+                                                      no figure the turn cannot fill · 15 → 4 markers
+2026-08-10-r32-full                          85/100   the reads a consent question owes are FORCED
+                                                      · 4 → 0 markers
 ```
 
 ### 1.1 · The run that measured nothing
@@ -278,38 +282,91 @@ authoring rule that a sentence must read correctly with `NA` standing in a slot 
 `before` alone — an `after` sentence is silent rather than marked, so it is written for the result
 that grounds it and needs no marker-safe phrasing.
 
-## 7 · What this build does NOT do
+## 7 · The reads a consent question owes are FORCED, never asked for
 
-**`before` still prints `NA`.** Fifteen turns of the r24 exam carry a consent question whose sentence
-states a non-fact:
+A `before` sentence names the reads its figures come from. When one never ran, the operator was asked
+to agree to an act described by a marker where the record belongs:
 
 ```
 Voiding NA cancels a document of NA; a voided invoice is closed for good.
 To confirm voiding an invoice, reply: CONFIRM VOIDINVOICE-DCB7
 ```
 
-The same rule would silence it, and silencing it would take the domain's warning with it — `a voided
-invoice is closed for good` is true whether or not the total was read. Whether an unfillable
-disclosure should suppress the sentence, suppress the clause, or refuse the consent altogether is
-open.
+**Telling the agent to read is not a mechanism.** Built first as a preTool veto — refuse the act,
+issue no approval, tell the agent to read and call again — it was measured on the four cases that
+print the marker: the agent read and then replied, and two of the four ended with the act never put
+to the user at all. That is worse than the marker.
 
-**The `NA` marks a read that never happened.** In the case above the model called `getBooking`, never
-`getInvoice`. `looprun-eval validate` already reports the same 27 slots offline. Whether the engine
-should demand the read before it will ask for consent is open.
+```
+                              09      10      14      95
+as a veto, agent must comply  FAIL    ok      ok      FAIL
+as a forced call              ok      ok      ok      ok
+```
 
-**Three exam failures need a read that never happened.** `62` needs the customer record, `80` needs
-`listBookings`, `100` needs `listMembers`. No disclosure reaches a fact that never entered the turn;
-two of the three are the run's dirty invariants.
+The engine already drew the distinction, in `run-conversation.ts`'s own words: *veto guards only
+BLOCK a wrong call; a chain deterministically COMPLETES a required missing follow-up.* The
+requirement is the second kind, and `flowChain`'s `'llm'` mode is the machinery — a single-tool
+generation the provider cannot decline.
 
-## 8 · The state of the build
+`packages/core/src/runtime/turn.ts`:
+
+```ts
+export async function runDisclosureCompletionPass(
+  actionHistory: TurnActionHistory,
+  contract: Pick<DomainContract, 'disclose'> | undefined,
+  surface: readonly string[],
+  forceLlmCall: (call: string) => Promise<void>,
+): Promise<{ corrections: string[]; llmCalls: number }>
+```
+
+`packages/mastra/src/run-conversation.ts`, after the chain pass and before the reply is composed —
+the only window in which a read still reaches `renderDisclosure`:
+
+```ts
+{ activeTools: [call], toolChoice: 'required', stopWhen: [stepCountIs(1)], hooks: guardHooks, ...genParams }
+```
+
+Three limits are deliberate. Only a read that NEVER RAN is forced, so a field the record leaves empty
+cannot demand a call that would change nothing. Only a tool the acting agent HOLDS is forced — the
+desk that owns the read is a different agent, and the marker is the honest outcome there. And the
+pass BLOCKS NOTHING: the question was already raised and its code already issued, so a read that
+fails leaves the marker standing and the operator sees exactly what the engine could not learn.
+
+The forced call runs through the same `guardHooks` as any other, so governance is not bypassable by
+this route.
+
+```
+turns printing `NA`   r24: 15   r27: 4   r32: 0
+```
+
+## 8 · What this build does NOT do
+
+**A marker still stands where a read came back empty.** Forcing a call closes the gap the agent could
+close; it cannot fill a field the record leaves null. `looprun-eval validate` reports 26 such slots
+offline, and each one is an authoring question for the domain — the sentence names a figure the world
+does not always hold.
+
+**A read the acting agent does not hold is never forced.** A `before` that names another desk's tool
+renders its marker, because forcing a tool onto an agent that was not given it is a surface breach.
+
+**The simulate route is untouched.** A destructive tool whose schema carries `simulate` has its
+approval issued from the world's own `requiresConfirmation` result, not from the consent veto, so its
+disclosure is composed on a path this pass does not sit on. No tool in this subject takes that route.
+
+**Three exam failures need a read that never entered the turn at all.** `62` needs the customer
+record, `80` needs `listBookings`, `100` needs `listMembers`. Those reads ground no disclosure, so
+nothing names them for the pass to force; two of the three are the run's dirty invariants.
+
+## 9 · The state of the build
 
 ```
 looprun          09d3cce  fix(core)!: a report that hides nothing passes, and the deny names the act
                  08fce66  fix(core)!: the result decides whether a disclosure is printed, not the call
 agentspec-bench  5521217  feat(atlas)!: a refusal carries the figures and the role the record holds
                  2dd0889  feat(atlas)!: the plan figures ride the read, so a refusal states them
+                 e4ef18f  fix(atlas)!: the consent question stops stating figures nobody read
 ```
 
-2005 tests pass across the monorepo; four failures predate this work and are unchanged by it. The
-bench is pinned to the published `0.19.0`; `r24` ran against the local build, which is stated in its
-`JUDGE.md`.
+2012 tests pass across the monorepo; four failures predate this work and are unchanged by it. The
+bench is pinned to the published `0.19.0`; every run from `r24` on ran against the local build, which
+each run's `JUDGE.md` states.

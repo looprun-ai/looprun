@@ -134,6 +134,7 @@ const INTERNAL = [
   'enforcePostTool', 'evaluateOnInput', 'evaluatePreTool',
   'finalizeReply', 'FinalizedReply', 'governanceVeto', 'redriveMessage', 'ReplyViolation',
   'runChainCompletionPass',
+  'runDisclosureCompletionPass',
   // the fail-loud-at-start judge gate for llmCheck specs.
   'assertJudgePresent', 'specInstallsLlmCheck', 'specInstallsLieCheck',
   // catchable by class across the package boundary

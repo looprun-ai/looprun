@@ -35,6 +35,7 @@ import {
   resolveModelSettings,
   respondPayload,
   runChainCompletionPass,
+  runDisclosureCompletionPass,
   supersededTerminalCalls,
   vetoStormHit,
   renderTurnPrompt,
@@ -266,6 +267,30 @@ export async function runSpecConversation(spec: AgentSpec, turns: TurnInput[], d
         if (chainPass.replyViolations.length) actionHistory.postToolViolations.push(...chainPass.replyViolations);
         extraCalls += chainPass.llmCalls;
       }
+
+      // The reads an OPEN consent question owes — FORCED on the same seam a chain uses, so the
+      // sentence above that question renders from the record instead of a marker. It runs after the
+      // chain pass and BEFORE the reply is composed, which is the only window in which a read still
+      // reaches `renderDisclosure`. ZERO-DIFF: no open approval, or every read already made ⇒ no work.
+      const disclosurePass = await runDisclosureCompletionPass(
+        actionHistory,
+        contract,
+        spec.surface.tools,
+        async (call: string) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const dc: any = await (agent.generate as any)(
+            [...messages, { role: 'user', content: `Call ${call} now for the record the pending action is about, so the user can be told what they are agreeing to. Do not reply in text.` }],
+            // FORCING: single active tool + toolChoice:'required' — the portable form (the named
+            // `{ type:'tool', toolName }` form is ignored by some servers and degrades to free text).
+            // ONE step: the read is for the ENGINE's sentence, not for the model to reason over, and a
+            // second step only produces the same call again for `noDuplicateCall` to veto.
+            { activeTools: [call], toolChoice: 'required', stopWhen: [stepCountIs(1)], hooks: guardHooks, ...genParams },
+          );
+          if (dc.response?.messages) messages.push(...dc.response.messages);
+        },
+      );
+      if (disclosurePass.corrections.length) actionHistory.turnCorrections.push(...disclosurePass.corrections);
+      extraCalls += disclosurePass.llmCalls;
 
       const initialText: string = full?.tripwire ? String(full.tripwireReason ?? full.reason ?? '') : (actionHistory.terminalReply || full.text || '');
       // The DELIVERED terminal's structured declaration (recordTerminal seated `did`); a tripwire /

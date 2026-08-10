@@ -125,6 +125,31 @@ export function renderDisclosure(
   });
 }
 
+/**
+ * The read tools a tool's `before` sentence names that this conversation has NOT called.
+ *
+ * A slot resolves to nothing for two reasons and only ONE of them is the agent's to fix:
+ *
+ * ```
+ *   the read never ran               getInvoice was never called   → the agent can call it
+ *   the read ran and holds no value  settlementAmount is null      → calling it again changes nothing
+ * ```
+ *
+ * Only the first kind is named here. Demanding the second would order the agent to make a call that
+ * cannot satisfy the demand, and the turn would never close.
+ */
+export function unreadDisclosureSources(
+  tool: string,
+  contract: Pick<DomainContract, 'disclose'> | undefined,
+  observed: readonly ObservedCall[],
+): string[] {
+  const template = contract?.disclose?.[tool]?.before;
+  if (!template) return [];
+  const named = new Set<string>();
+  for (const m of template.matchAll(SLOT)) named.add(m[1].split('.')[0]);
+  return [...named].filter((t) => !observed.some((c) => c.name === t && c.ok && 'result' in c));
+}
+
 /** Fill a sentence from ONE result: every slot's first step names the source and is dropped. */
 function fillFrom(sentence: string, result: unknown, missing: string): string {
   return sentence.replace(SLOT, (_literal, path: string) => {

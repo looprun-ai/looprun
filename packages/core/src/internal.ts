@@ -150,6 +150,7 @@ export {
   finalizeReply,
   governanceVeto,
   runChainCompletionPass,
+  runDisclosureCompletionPass,
   assertJudgePresent,
   specInstallsLlmCheck,
   specInstallsLieCheck,

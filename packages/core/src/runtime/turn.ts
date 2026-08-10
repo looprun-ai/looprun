@@ -37,7 +37,7 @@ import { CLOSED_FAIL_DENY } from '../guards/llm-check.js';
 import { judgePrompt, readJudgeVerdict, JUDGE_UNREACHABLE, JUDGE_UNREADABLE } from './judge-prompt.js';
 import { resolveEngineText } from './engine-text.js';
 import { stripToLicensed } from './approval-request.js';
-import { renderAfterAct, renderDisclosure, renderLater } from './disclosure.js';
+import { renderAfterAct, renderDisclosure, renderLater, unreadDisclosureSources } from './disclosure.js';
 import { scrubText } from './sensitive-filter.js';
 import type { ApprovalRequest } from './approval-request.js';
 
@@ -983,4 +983,63 @@ export async function runChainCompletionPass(
     if (ctx.terminalReplyPresent) replyViolations.push({ guard: CHAIN_RESTATE_GUARD, reason: chainRestateReason(chain.call) });
   }
   return { corrections, replyViolations, llmCalls };
+}
+
+/**
+ * THE READS AN OPEN CONSENT QUESTION OWES — forced, never asked for.
+ *
+ * A `before` disclosure names the reads its figures come from. When one of them never ran, the
+ * operator is asked to agree to an act described by a marker where the record belongs:
+ *
+ * ```
+ *   Voiding NA cancels a document of NA; a voided invoice is closed for good.
+ *   To confirm voiding an invoice, reply: CONFIRM VOIDINVOICE-DCB7
+ * ```
+ *
+ * TELLING THE AGENT TO READ IS NOT A MECHANISM. Measured on this door, an agent told to read and
+ * re-call reads and then replies, and the turn ends with the act never put to the user at all —
+ * strictly worse than the marker. So the engine does not ask: it forces the call, on the same seam
+ * `flowChain` uses (`activeTools: [call]` + `toolChoice: 'required'`), and the model supplies only
+ * the arguments, which are the one thing it alone knows.
+ *
+ * IT BLOCKS NOTHING. The question was already raised and its code already issued; this pass runs
+ * between the turn's generation and the composition of its reply, so the read lands in `observed`
+ * in time for the sentence to render filled. A read that fails leaves the marker standing — the
+ * operator sees exactly what the engine could not learn.
+ *
+ * ONLY A READ THAT NEVER RAN IS FORCED. A field the record leaves empty is not a missing call, and
+ * calling again would change nothing — see {@link unreadDisclosureSources}.
+ */
+export async function runDisclosureCompletionPass(
+  actionHistory: TurnActionHistory,
+  contract: Pick<DomainContract, 'disclose'> | undefined,
+  surface: readonly string[],
+  forceLlmCall: (call: string) => Promise<void>,
+): Promise<{ corrections: string[]; llmCalls: number }> {
+  const corrections: string[] = [];
+  let llmCalls = 0;
+  const open = actionHistory.approvals.filter((a) => a.consumedTurn === undefined && !a.closed);
+  if (!open.length) return { corrections, llmCalls };
+  const needed = new Set<string>();
+  for (const a of open) {
+    for (const read of unreadDisclosureSources(a.tool, contract, actionHistory.observed)) {
+      // A tool this agent does not hold cannot be forced onto it; the desk that owns the read is a
+      // different agent, and the marker is the honest outcome.
+      if (surface.includes(read)) needed.add(read);
+    }
+  }
+  for (const call of needed) {
+    try {
+      await forceLlmCall(call);
+      llmCalls += 1;
+    } catch {
+      corrections.push(`disclosure-failed:${call}`);
+      continue;
+    }
+    const landed = actionHistory.observed.some(
+      (o) => o.name === call && o.ok && 'result' in o && o.turnIndex === actionHistory.turnIndex,
+    );
+    corrections.push(landed ? `disclosure-read:${call}` : `disclosure-failed:${call}`);
+  }
+  return { corrections, llmCalls };
 }
