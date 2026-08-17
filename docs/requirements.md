@@ -144,72 +144,47 @@ Stated as behavior; the design chooses the homes, every mechanism gets a signatu
 
 ## R9-EX · Construction — the canonical host wirings
 
-The two shapes every host dev writes. Both are the SAME class swap (R9.5); the difference is
-only where the tools execute.
+The shapes every host dev writes. All are the SAME class swap (R9.5); the difference is
+only where the tools execute — the surface card's KIND says it, and the config is ONE
+form on every path.
 
-**Path A — deterministic world (exams, fixtures, declarative domains):**
+**Local — deterministic world (exams, fixtures, declarative domains):**
 
 ```ts
-const agent = new LoopRunAgent({
-  spec,                                   // card 1 — the agent
-  contract,                               // card 2 — the domain
-  world: (sessionId) => buildWorld(),     // declarative world; executes + attests every call
-  toolDefs,                               // the tool surface as data
-  model: 'google/gemini-2.5-flash',
+const hotel = world({
+  records:     { booking: [{ id: 'bk_1', room: 'Blue Room', day: 'Friday' }] },
+  reads:       { listBookings: { list: 'booking' } },
+  destructive: { cancelBooking: { remove: 'booking', label: 'cancel a booking' } },
 });
+const agent = new LoopRunAgent({ spec, contract, world: hotel, model: 'google/gemini-2.5-flash' });
 ```
 
-**Path B — the company's live tools over MCP (the most common production case):**
+**Live — the company's tools over MCP (the most common production case):**
 
 ```ts
-import { MCPClient } from '@mastra/mcp';
-
-// The HOST owns the connection and the credentials — env/headers, never the cards (R3.8).
-const mcp = new MCPClient({
-  servers: {
-    calendar: {
-      url: new URL('https://mcp.acme.com/calendar'),
-      requestInit: { headers: { Authorization: `Bearer ${process.env.ACME_MCP_TOKEN}` } },
-    },
-  },
-});
+// The generated, sealed surface module exports the BLOCKS — no URL, no secret inside it:
+import { calendarSurface } from './gen/calendar-surface.js';   // blocks + seal, gate-approved as code
 
 const agent = new LoopRunAgent({
-  spec,                                   // card 1
-  contract,                               // card 2
-  tools: await mcp.listTools(),           // the live host tools; each executes itself,
-                                          //   authenticated by closure
-  toolDefs,                               // the CERTIFIED intake (gen/tools.json) — reconciled
-                                          //   against the live host at construction (R3.8)
-  expectedSurfaceHash: CERT.hash,         // certification drift gate: mismatch → throw
+  spec, contract,
+  world: mcpWorld({
+    mcp: { url: 'https://mcp.acme.com/calendar',               // the HOST's connection —
+           headers: { Authorization: `Bearer ${process.env.ACME_MCP_TOKEN}` } },   // env/closure,
+    ...calendarSurface,                                        //   never the cards (R3.8)
+  }),
   model: 'google/gemini-2.5-flash',
 });
 
 await agent.generate('delete the 3pm meeting');   // from here on, plain Mastra
 ```
 
-What the author never writes: an executor, a port, a hook, a loop. What construction enforces
-before any turn runs: surface reconciliation, deny-by-default intersection, the certification
-fingerprint (all R3.8 — the fingerprint gate is OPTIONAL: omitted, the agent runs uncertified;
-present, a mismatch throws because the seal is void).
+**Native — live host tools without MCP:** the same blocks via `liveWorld({ tools, …blocks })`.
 
-**Path B sugar — the connection passed directly (the engine builds the client):**
-
-```ts
-const agent = new LoopRunAgent({
-  spec,
-  contract,
-  mcp: {
-    url: 'https://mcp.acme.com/calendar',
-    headers: { Authorization: `Bearer ${process.env.ACME_MCP_TOKEN}` },  // still host env —
-  },                                                                     //   never the cards
-  toolDefs,                                 // the certified intake — same R3.8 gates
-  model: 'google/gemini-2.5-flash',
-});
-```
-
-Sugar over Path B, nothing more: the engine constructs the MCP client and lists the tools
-itself; the three R3.8 gates and the host-owned credential rule are unchanged by it.
+What the author never writes: an executor, a port, a hook, a loop, a fact table. What
+construction enforces before any turn runs: surface reconciliation, deny-by-default
+intersection, the seal fingerprint (all R3.8 — the seal is OPTIONAL: omitted, the agent
+runs uncertified; present, a mismatch throws because the seal is void; it covers the
+blocks only, never the host's connection).
 
 ## R10 · The measurement gate
 

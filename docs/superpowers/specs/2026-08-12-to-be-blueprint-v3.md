@@ -133,8 +133,10 @@ export interface DomainContract {
   disclose?: Readonly<Record<string, Disclose>>;
   /** Rewrites of the outgoing reply — a guard decides, a rewrite rewrites (§5.2). Omitted = []. */
   rewrites?: readonly Rewrite[];
-  /** Field names masked at every seam — results, args, stored acts, delivered text. Omitted = []. */
-  secrets?: readonly string[];
+  /** THE ONE HOME of what is secret — a business fact, so it lives on the business card.
+   *  Field names or dotted paths, masked at every seam — results, args, stored acts,
+   *  delivered text; the object form picks 'omit'. Omitted = []. */
+  secrets?: readonly (string | { readonly path: string; readonly mode: 'omit' | 'mask' })[];
   /** Named overrides for engine sentences and the user-facing status words. Omitted = the engine pack. */
   wording?: Wording;
   /** Bounded-everything ceilings. Omitted = { calls: 10, destructive: 1, retries: 2, questionTurns: 3 }. */
@@ -264,7 +266,6 @@ const hotel = world({
 import { hotelSurface } from './gen/hotel-surface.js';
 //   = { reads: { listBookings: {} },
 //       destructive: { cancelBooking: { label: 'cancel a booking', target: 'id',
-//                                       secrets: [{ path: 'guest.cpf', mode: 'mask' }],
 //                                       proxy: { of: 'cb_cancel', args: { bookingRef: 'id' } } } },
 //       seal: 'sha256:…' }
 const hotel = mcpWorld({
@@ -279,8 +280,9 @@ const agent = new LoopRunAgent({ spec, contract, world: hotel, model: 'google/ge
 
 - **Two sibling factories, not one factory with a mode:** the block ENTRY shapes differ —
   local entries carry the action forms (`list` · `remove` · …); remote entries carry
-  `label` / `target` / `secrets` / `proxy` / `simulation` / `does` — and two factories
-  give clean types and clean errors. `liveWorld({ tools, …blocks })` is the third
+  `label` / `target` / `proxy` / `simulation` / `does` — and two factories give clean
+  types and clean errors. What is SECRET is a business fact and lives ONLY on the
+  contract card (`contract.secrets`, §3) — no surface entry declares it. `liveWorld({ tools, …blocks })` is the third
   sibling, for native host tools (same entry shape as `mcpWorld`).
 - **Deny-by-default:** a live tool absent from every block does not exist for the agent —
   the exclusion is reported STRUCTURALLY at construction (R3.8).
@@ -522,7 +524,7 @@ live in the contract leaf — `StepInput` carries the first — and are re-expor
 authors). Types + doc comments only. Collaborators: contract leaf.
 
 **`facts.ts`** (module, ~100 lines) — the engine-internal `SurfaceFacts` and `ToolFact`
-(name · label · does · effect · target · schema · simulation · secrets · proxy), plus
+(name · label · does · effect · target · schema · simulation · proxy), plus
 `factsFromWorld(card: WorldCard | McpWorldCard | LiveWorldCard): SurfaceFacts` — the one
 derivation that keeps every surface kind on a single fact truth. No authoring name exists
 for these types (§4). Collaborators: contract leaf, world vocabulary.
@@ -577,7 +579,10 @@ swapTerms({ CANC_PEND: 'waiting to be cancelled' })        // TRANSLATES a decla
 ```
 
 A factory derives `rule` and `deny` from the SAME parameters, so prose/check parity is
-structural for every catalog guard (R6.3). `lieCheck` is only the judged half — the
+structural for every catalog guard (R6.3). A factory also MINTS its guard's `name` as
+`kind:tool` (`'maxCalls:sendEmail'`); a second factory of the same kind on the same tool
+collides, and `GUARD_NAME_DUP` names the fix — the optional `{ name }` every factory
+accepts. `lieCheck` is only the judged half — the
 structural lie floor lives in `HonestyCheck`, always on, free. The census counts **20
 named guard species**: the 8 deterministic factories · the 4 judged factories · 2 auto
 from each schema (`argRequired` — a whitespace-only value counts as MISSING; `argFormat`
@@ -873,7 +878,7 @@ Private: the compiled disclose bindings. Collaborators: CanonicalCall, Wordings,
 contract leaf.
 
 **`Masker`** (class, ~120 lines) — sensitive data at every seam (R5.5): declared field
-names (contract `secrets` + surface per-tool `secrets`) masked structurally on results,
+names and paths (the contract's `secrets` — the ONE home) masked structurally on results,
 recorded args, and stored acts — masking runs once, on record, so history, honesty,
 disclosure, delivery and the wire read safe data by construction; a raw copy never exists
 downstream of the recording seam (the executor alone receives real args — it must
@@ -1015,8 +1020,7 @@ card, no regexes, no clock (custom executors pass OUTSIDE the card; a `LiveWorld
 tools execute themselves by nature and sit outside this law). The sibling cards live
 here too: `McpWorldCard` / `mcpWorld(card)` and `LiveWorldCard` /
 `liveWorld(card)` — the SAME effect blocks, remote entries carrying `label` / `target` /
-`secrets` / `proxy` / `simulation` / `does`, with no action forms, no `records`, no
-`gates`. `factsFromWorld` (§5.2) derives the same engine-internal `SurfaceFacts` from all
+`proxy` / `simulation` / `does`, with no action forms, no `records`, no `gates`. `factsFromWorld` (§5.2) derives the same engine-internal `SurfaceFacts` from all
 three card kinds. Collaborators: contract leaf.
 
 **`WorldBuilder`** (class, ~200 lines) — interprets a `WorldCard` into a per-session
@@ -1863,7 +1867,7 @@ change (— = not authoring-visible).
 | R3.2 | PASS | §4: the `mcpWorld` module generated + approved as code review; no silent rewrite — proxies/excludes are gate exits | skill gate doc |
 | R3.3 | PASS | §4 the surface entry's `does` (sanitized description) + `proxy` rename AND compose forms + `simulation` (the tool's OWN parameter); `HostToolPort` wire mapping incl. composed reads (§5.5) | skill proxy rules |
 | R3.4 | PASS | §8 R5.4: no simulation declared → plain `hold`; consent creates the two-step | — |
-| R3.5 | PASS | §4 surface entries (effect by BLOCK; target/label/does/secrets declared); §10 inversion 1 | skill surface schema |
+| R3.5 | PASS | §4 surface entries (effect by BLOCK; target/label/does declared; secrets on the contract, §3); §10 inversion 1 | skill surface schema |
 | R3.6 | PASS | `StatusClerk.grade` derivation table (§5.3); `Done`→`Status`+`Reason`; snapshot-diff verify; `simulationRevoked` per session (the set in `Session`'s stores); thrown-write = `unknown`, thrown-read = `TurnFailure`, never `refused` | — |
 | R3.7 | PASS | `Question.code` carries no tool name (§5.1); questions worded from `label` (§2 output) | tutorial lesson 4 |
 | R3.8 | PASS | §4 (credentials host env/closure; three gates); `SurfaceGate` canonical fingerprint + structural exclusions (§5.2) | skill: certification |
