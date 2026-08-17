@@ -1,1 +1,176 @@
-export {};
+/** The dependency-free contract leaf (L0): every crossing type, closed unions only;
+ *  one home per shape. This module imports NOTHING. */
+
+export type Json = string | number | boolean | null | readonly Json[] | { readonly [k: string]: Json };
+export type Effect = 'read' | 'write' | 'destructive';       // 'destructive' = irreversible act of any kind
+export type Done = 'yes' | 'no' | 'unknown';                 // the executor's whole vocabulary
+export type Status = 'done' | 'not-done' | 'unknown';        // THE user-facing word, engine-derived
+export type Reason = 'held' | 'refused' | 'blocked';         // why not-done
+export type ReportWord = 'done' | 'held' | 'refused' | 'blocked' | 'unknown';   // the model's closing vocabulary
+export type Evidence = 'executor' | 'diff' | 'engine';       // who grounded the status
+export type QuestionClose = 'declined' | 'superseded' | 'expired' | 'vetoed';
+export type QuestionState = 'open' | 'consumed' | { readonly closed: QuestionClose };
+export interface Msg { readonly role: 'user' | 'assistant'; readonly text: string }
+export interface ToolAnswer { readonly result: Json; readonly done: Done }
+export interface Patch { readonly entity: string; readonly id: string; readonly set: Readonly<Record<string, Json>> }
+
+/** The call as the executor receives it: the tool name and the coerced REAL args — nothing else.
+ *  A simulation downgrade exists only as the tool's OWN declared parameter set inside args.
+ *  No other field exists: no options, no flags, no attestation override. */
+export interface ReadyCall { readonly tool: string; readonly args: Readonly<Record<string, Json>> }
+
+/** The frozen data form of a canonical call. Where it is RECORDED or DELIVERED (Act.call,
+ *  Question.call), args are masked; the executable form lives only in engine-private state. */
+export interface CanonicalCallData { readonly tool: string;
+                                     readonly args: Readonly<Record<string, Json>>;
+                                     readonly key: string }
+
+export type Verdict =
+  | { readonly kind: 'allow' }
+  | { readonly kind: 'refuse'; readonly guardName: string; readonly detail: string }
+  | { readonly kind: 'hold' }                                 // consent, no simulation declared: hold-and-ask
+  | { readonly kind: 'simulate' }                             // consent, simulation declared: preview, then the question
+  | { readonly kind: 'restate'; readonly actId: string }      // duplicate call: the first result restated
+  | { readonly kind: 'owe'; readonly reads: readonly OwedRead[] };   // rule-owed reads the ENGINE performs
+export interface OwedRead { readonly alias: string; readonly tool: string; readonly args: Readonly<Record<string, Json>> }
+export type Correction =
+  | { readonly kind: 'redrive'; readonly guardName: string; readonly detail: string }
+  | { readonly kind: 'earlyFinish' } | { readonly kind: 'staleFinish' } | { readonly kind: 'forcedFinish' }
+  | { readonly kind: 'recordCorrected'; readonly actId: string; readonly said: Done }   // snapshot diff overruled the executor
+  | { readonly kind: 'simulationRevoked'; readonly tool: string }
+  | { readonly kind: 'judgeUnreadable'; readonly guardName: string };
+export interface Act {
+  readonly id: string;                        // engine-minted
+  readonly turn: number;
+  readonly origin: 'model' | 'engine' | 'licence';
+  readonly call: CanonicalCallData;           // masked on record — the ONLY stored form
+  readonly effect: Effect;
+  readonly said: Done | null;                 // the executor's own word; null = the call never reached it
+  readonly status: Status;                    // the engine's word, derived — never guessed
+  readonly reason: Reason | null;             // set exactly when status is 'not-done'
+  readonly evidence: Evidence;
+  readonly sentence: string;                  // the record line the user reads
+  readonly result: Json;                      // masked; on a held call with simulation: the preview result
+  readonly questionId: string | null;         // the consent question this act raised or served
+}
+export interface ReportLine { readonly tool: string; readonly target: string; readonly word: ReportWord }
+export interface FinishPayload { readonly message: string; readonly report: readonly ReportLine[] }
+export interface RawCall { readonly tool: string; readonly args: Readonly<Record<string, unknown>> }
+export interface ToolCard { readonly name: string; readonly does: string; readonly schema: Json }
+                                              // does = the declared does + the tool's contract-guard
+                                              //   sentences — the prose channel
+export interface StepInput { readonly system: string; readonly messages: readonly Msg[];
+                             readonly tools: readonly ToolCard[]; readonly forceFinish: boolean;
+                             readonly llmParams: LlmParams }
+export interface ModelStep { readonly calls: readonly RawCall[]; readonly text: string }
+export interface Question {
+  readonly id: string;
+  readonly code: string;                      // 'CONFIRM 7Q4MX' — crypto entropy + per-issuance nonce,
+                                              //   unique among open codes, NO tool name
+  readonly call: CanonicalCallData;           // the held call, masked display form; the executable
+                                              //   call lives in ConsentDesk private state
+  readonly sentence: string;                  // label + filled before-tense — what the user is agreeing to
+  readonly state: QuestionState;
+  readonly bornAtTurn: number;
+}
+export interface TurnRecord {
+  readonly turn: number;
+  readonly servedBy: string;                  // which certified target answered
+  readonly userText: string;
+  readonly acts: readonly Act[];
+  readonly questions: { readonly issued: readonly Question[]; readonly consumed: readonly string[];
+                        readonly closed: readonly { readonly id: string; readonly why: QuestionClose }[] };
+  readonly finish: FinishPayload | null;
+  readonly corrections: readonly Correction[];
+  readonly text: string;                      // the composed delivery
+  readonly closedBy: 'model' | 'engine';
+}
+export class TurnFailure extends Error {      // typed, loud; a failed turn seals NOTHING
+  readonly kind: 'provider-auth' | 'provider-quota' | 'network' | 'executor' | 'construction';
+  readonly detail: string;
+  constructor(kind: TurnFailure['kind'], detail: string) {
+    super(`${kind}: ${detail}`);
+    this.name = 'TurnFailure';
+    this.kind = kind;
+    this.detail = detail;
+  }
+}
+export class CardError extends Error {        // every problem at once
+  readonly problems: readonly { readonly code: string; readonly sentence: string }[];
+  constructor(problems: CardError['problems']) {
+    super(problems.map(p => `${p.code}: ${p.sentence}`).join('\n'));
+    this.name = 'CardError';
+    this.problems = problems;
+  }
+}
+export interface InputCtx  { readonly userText: string;
+                             readonly turnActs: readonly Act[]; readonly pastActs: readonly Act[] }
+export interface CallCtx   { readonly call: CanonicalCallData; readonly effect: Effect;
+                             readonly consented: boolean;      // true only on the engine-fed licensed call
+                             readonly state: StateSnapshot | null;   // frozen; null on a stateless surface
+                             readonly userText: string;
+                             readonly turnActs: readonly Act[]; readonly pastActs: readonly Act[] }
+export interface ResultCtx { readonly call: CanonicalCallData; readonly result: Json;
+                             readonly state: StateSnapshot | null;
+                             readonly userText: string;
+                             readonly turnActs: readonly Act[]; readonly pastActs: readonly Act[] }
+export interface ReplyCtx  { readonly message: string; readonly report: readonly ReportLine[];
+                             readonly userText: string;
+                             readonly turnActs: readonly Act[]; readonly pastActs: readonly Act[] }
+                                              // every ctx carries the user's text as a string for
+                                              //   EXACT-LITERAL search — whole-token, contiguous,
+                                              //   whole-value equal; a guard never interprets it.
+                                              //   A state predicate on a stateless surface is a
+                                              //   construction error, never a silent null-pass
+export type StateSnapshot = { readonly [entity: string]: { readonly [id: string]: Readonly<Record<string, Json>> } };
+export interface InstalledGuard { readonly name: string; readonly rule: string;
+                                  readonly home: 'spec' | 'contract' | 'engine';
+                                  readonly on: 'input' | 'preTool' | 'postTool' | 'reply';
+                                  readonly tools: readonly string[];
+                                  readonly kind: string;     // the species: 'onlyAfter' · 'argRequired'
+                                                             //   · 'custom' · 'judged' · 'prose' · …
+                                  readonly judged: boolean;
+                                  readonly judgePolicy: 'passOnFails' | 'denyOnFails' | null;
+                                  readonly installedBecause: string }
+export interface Rewrite { readonly name: string;
+                           apply(text: string): string }     // a rewrite rewrites the outgoing reply;
+                                                             //   it never decides
+export interface GuardCensus { readonly guards: readonly InstalledGuard[];        // band order
+                               readonly rewrites: readonly { readonly name: string;
+                                 readonly kind: 'purgePattern' | 'maskPattern' | 'swapTerms' }[];
+                               readonly limits: { readonly calls: number; readonly destructive: number;
+                                                  readonly retries: number; readonly questionTurns: number } }
+                                              // the census carries ALL governance: the installed
+                                              //   guards, the rewrites as their own section, and
+                                              //   the resolved limits
+export type EngineSentenceKey = 'approvalInstruction' | 'exhaustionClosure' | 'unknownStatus'
+                              | 'questionExpired' | 'questionSuperseded' | 'deniedByGuard';
+export type RoutingStrategy = 'sequential' | 'random' | 'rate-limit' | 'backup-only' | 'round-robin';
+export interface ModelTarget { readonly id: string; readonly provider: string;
+                               readonly keyEnv: string | null;
+                               readonly tier: 'cloud' | { readonly local: string };   // declared, never inferred
+                               readonly certified: boolean }
+export type ModelChoice = string | { readonly targets: readonly string[]; readonly strategy: RoutingStrategy };
+export type ProviderPreset = 'gemini:thinking-off';   // closed union; grows only by measured addition
+export interface LlmParams { readonly temperature?: number; readonly topP?: number;
+                             readonly maxOutputTokens?: number; readonly preset?: ProviderPreset }
+                                              // ONE home: authors read it on the spec card,
+                                              //   cards.ts re-exports it
+export interface ServingHandle { readonly baseUrl: string; readonly servedModel: string;
+                                 stop(): Promise<void> }
+export interface TierSpec { readonly alias: string;
+                            readonly speculative: 'none' | 'draft-mtp';   // MTP where it pays, measured
+                            readonly kv: 'f16' | 'q8_0';                  // f16 the law, q8_0 the RAM hatch
+                            readonly ctx: number;                          // sized to fit the assembled prompt
+                            readonly cacheRam: number; readonly slots: number }   // warm-prompt sizing
+
+/** Engine-internal tool truth — one fact per declared tool. No authoring name exists
+ *  for this shape; cards/facts.ts re-exports it for the compile layer, the way
+ *  LlmParams is re-exported for authors. */
+export interface ToolFact { readonly name: string; readonly label: string | null;
+                            readonly does: string; readonly effect: Effect;
+                            readonly target: string | null; readonly schema: Json;
+                            readonly simulation: { readonly arg: string; readonly value: Json } | null;
+                            readonly proxy: string | null }
+/** The whole declared surface as facts, keyed by tool name. */
+export interface SurfaceFacts { readonly tools: Readonly<Record<string, ToolFact>> }
