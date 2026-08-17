@@ -378,7 +378,7 @@ export interface ToolCard { readonly name: string; readonly does: string; readon
                                               //   sentences — the R6.1 prose channel
 export interface StepInput { readonly system: string; readonly messages: readonly Msg[];
                              readonly tools: readonly ToolCard[]; readonly forceFinish: boolean;
-                             readonly sampling: Sampling }
+                             readonly llmParams: LlmParams }
 export interface ModelStep { readonly calls: readonly RawCall[]; readonly text: string }
 export interface Question {
   readonly id: string;
@@ -409,19 +409,39 @@ export class TurnFailure extends Error {      // R2.10 — typed, loud; a failed
 export class CardError extends Error {        // R1.6 — every problem at once
   readonly problems: readonly { readonly code: string; readonly sentence: string }[];
 }
-export interface CallView  { readonly call: CanonicalCallData; readonly effect: Effect;
+export interface InputCtx  { readonly userText: string;
+                             readonly turnActs: readonly Act[]; readonly pastActs: readonly Act[] }
+export interface CallCtx   { readonly call: CanonicalCallData; readonly effect: Effect;
                              readonly consented: boolean;      // true only on the engine-fed licensed call
+                             readonly state: StateSnapshot | null;   // frozen; null on a stateless surface
+                             readonly userText: string;
                              readonly turnActs: readonly Act[]; readonly pastActs: readonly Act[] }
-export interface ReplyView { readonly message: string; readonly report: readonly ReportLine[];
+export interface ResultCtx { readonly call: CanonicalCallData; readonly result: Json;
+                             readonly state: StateSnapshot | null;
+                             readonly userText: string;
                              readonly turnActs: readonly Act[]; readonly pastActs: readonly Act[] }
-                                              // views carry acts and model output only — never user
-                                              //   text; judged questions reach history via Judge (R6.5)
+export interface ReplyCtx  { readonly message: string; readonly report: readonly ReportLine[];
+                             readonly userText: string;
+                             readonly turnActs: readonly Act[]; readonly pastActs: readonly Act[] }
+                                              // every ctx carries the user's text as a string for
+                                              //   EXACT-LITERAL search — whole-token, contiguous,
+                                              //   whole-value equal; a guard never interprets it
+                                              //   (R6.5). A state predicate on a stateless surface
+                                              //   is a construction error, never a silent null-pass
 export type StateSnapshot = { readonly [entity: string]: { readonly [id: string]: Readonly<Record<string, Json>> } };
-export interface InstalledRule { readonly name: string; readonly say: string;
-                                 readonly home: 'agent' | 'domain' | 'engine';
-                                 readonly on: 'call' | 'reply'; readonly tools: readonly string[];
-                                 readonly judged: boolean; readonly fails: 'open' | 'closed';
-                                 readonly installedBecause: string }
+export interface InstalledGuard { readonly name: string; readonly rule: string;
+                                  readonly home: 'spec' | 'contract' | 'engine';
+                                  readonly on: 'input' | 'preTool' | 'postTool' | 'reply';
+                                  readonly tools: readonly string[];
+                                  readonly kind: string;     // the species: 'onlyAfter' · 'argRequired'
+                                                             //   · 'custom' · 'judged' · 'prose' · …
+                                  readonly judged: boolean;
+                                  readonly judgePolicy: 'passOnFails' | 'denyOnFails' | null;
+                                  readonly installedBecause: string }
+export interface Rewrite { readonly name: string;
+                           apply(text: string): string }     // a rewrite rewrites the outgoing reply;
+                                                             //   it never decides (§5.2: purgePattern ·
+                                                             //   maskPattern · swapTerms)
 export type EngineSentenceKey = 'approvalInstruction' | 'exhaustionClosure' | 'unknownStatus'
                               | 'questionExpired' | 'questionSuperseded' | 'deniedByRule';
 export type RoutingStrategy = 'sequential' | 'random' | 'rate-limit' | 'backup-only' | 'round-robin';
@@ -431,8 +451,8 @@ export interface ModelTarget { readonly id: string; readonly provider: string;
                                readonly certified: boolean }
 export type ModelChoice = string | { readonly targets: readonly string[]; readonly strategy: RoutingStrategy };
 export type ProviderPreset = 'gemini:thinking-off';   // closed union; grows only by measured addition (R7.4)
-export interface Sampling { readonly temperature?: number; readonly topP?: number;
-                            readonly maxOutputTokens?: number; readonly preset?: ProviderPreset }
+export interface LlmParams { readonly temperature?: number; readonly topP?: number;
+                             readonly maxOutputTokens?: number; readonly preset?: ProviderPreset }
                                               // ONE home (R2.5): §3 shows it to authors, cards.ts re-exports it
 export interface ServingHandle { readonly baseUrl: string; readonly servedModel: string;
                                  stop(): Promise<void> }
@@ -472,9 +492,8 @@ class CanonicalCall {
   readonly tool: string;
   readonly args: Readonly<Record<string, Json>>;     // coerced, key-order-free — the executable form
   readonly key: string;                              // sorted-key canonical form of { tool, args }
-  static of(tool: string, raw: Record<string, unknown>, decl: IntakeTool):
+  static of(tool: string, raw: Record<string, unknown>, decl: ToolFact):
     CanonicalCall | { readonly badArg: string };     // rejects non-coercible values loudly
-  keyWithout(volatile: readonly string[]): string;   // licence identity minus DECLARED volatile args
   data(masker: (v: unknown) => Json): CanonicalCallData;   // the masked record/display form
   equals(other: CanonicalCall): boolean;
 }
