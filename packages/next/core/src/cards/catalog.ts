@@ -14,12 +14,14 @@ export interface SeedGuard extends Guard {
 function installed(seed: SeedGuard, home: 'spec' | 'contract' | 'engine',
   checks: { readonly deny: (ctx: CallCtx) => string | null;
             readonly owe?: (ctx: CallCtx) => readonly OwedRead[] | null;
-            readonly restate?: (ctx: CallCtx) => string | null }): CompiledGuard {
+            readonly restate?: (ctx: CallCtx) => string | null },
+  installedBecause?: string): CompiledGuard {
   const tools = seed.tool === undefined ? [] : typeof seed.tool === 'string' ? [seed.tool] : [...seed.tool];
   return {
     name: seed.name, rule: seed.rule, home, on: seed.on, tools, kind: seed.kind,
     judged: false, judgePolicy: null,
-    installedBecause: home === 'engine' ? 'the always-on floor' : `declared on the ${home} card`,
+    installedBecause: installedBecause
+      ?? (home === 'engine' ? 'the always-on floor' : `declared on the ${home} card`),
     deny: ctx => checks.deny(ctx as CallCtx),
     ...(checks.owe ? { owe: checks.owe } : {}),
     ...(checks.restate ? { restate: checks.restate } : {})
@@ -67,6 +69,48 @@ export function onlyAfter(tool: string, prerequisite: string): SeedGuard {
           return `${prerequisite} has not succeeded yet this conversation`;
         }
       });
+    }
+  };
+}
+
+/** The always-on floor: the same call never executes twice — the first completed
+ *  act's result answers every identical re-proposal. */
+export function noDuplicateCall(): SeedGuard {
+  return {
+    name: 'noDuplicateCall',
+    rule: 'Never run the same call twice; the first result answers it.',
+    on: 'preTool',
+    kind: 'noDuplicateCall',
+    compile(home) {
+      return installed(this, home, {
+        deny: () => null,
+        restate: ctx => {
+          const first = [...ctx.pastActs, ...ctx.turnActs]
+            .find(a => a.call.key === ctx.call.key && (a.status === 'done' || a.status === 'unknown'));
+          return first ? first.id : null;
+        }
+      });
+    }
+  };
+}
+
+/** Schema-auto: the declared required arg must arrive, and a whitespace-only value
+ *  counts as MISSING. */
+export function argRequired(tool: string, arg: string): SeedGuard {
+  return {
+    name: `argRequired:${tool}:${arg}`,
+    rule: `Send '${arg}' on every ${tool} call.`,
+    tool,
+    on: 'preTool',
+    kind: 'argRequired',
+    compile(home) {
+      return installed(this, home, {
+        deny: ctx => {
+          const value = ctx.call.args[arg];
+          const missing = value === undefined || (typeof value === 'string' && value.trim() === '');
+          return missing ? `'${arg}' is required and missing` : null;
+        }
+      }, `the declared schema requires '${arg}'`);
     }
   };
 }

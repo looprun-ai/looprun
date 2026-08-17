@@ -4,6 +4,7 @@ import type { ToolFact } from '../../src/contract/vocabulary.js';
 import type { ModelPort, RecordsPort } from '../../src/contract/ports.js';
 import type { CompiledAgent, CompiledGuard, Guard } from '../../src/cards/cards.js';
 import { DEFAULT_LIMITS, type Limits } from '../../src/cards/cards.js';
+import { argRequired, noDuplicateCall } from '../../src/cards/catalog.js';
 import { Engine } from '../../src/run/engine.js';
 import { ModelSeat } from '../../src/run/model-seat.js';
 import { HostileToolPort, type ToolBehavior } from './hostile-tool-port.js';
@@ -28,6 +29,22 @@ export const BOOKING_FACTS = {
 } as const;
 
 export const BOOKING_SURFACE = { tools: BOOKING_FACTS } as const;
+
+/** AgentFactory's auto derivation, performed by hand: the floor + one argRequired
+ *  per schema-required arg, installed after the declared guards. */
+export function bookingFloor(): CompiledGuard[] {
+  const derived: CompiledGuard[] = [noDuplicateCall().compile('engine', BOOKING_SURFACE)];
+  for (const toolFact of Object.values(BOOKING_FACTS)) {
+    const schema = toolFact.schema;
+    if (schema === null || typeof schema !== 'object' || Array.isArray(schema)) continue;
+    const required = (schema as { readonly [k: string]: Json }).required;
+    if (!Array.isArray(required)) continue;
+    for (const arg of required) {
+      if (typeof arg === 'string') derived.push(argRequired(toolFact.name, arg).compile('engine', BOOKING_SURFACE));
+    }
+  }
+  return derived;
+}
 
 /** The hand-performed AgentFactory derivation: wrap an authored Guard as an installed row. */
 export function install(guard: Guard, home: 'spec' | 'contract' | 'engine', kind: string,
