@@ -27,6 +27,8 @@ export const BOOKING_FACTS = {
     does: 'Sends one email.' })
 } as const;
 
+export const BOOKING_SURFACE = { tools: BOOKING_FACTS } as const;
+
 /** The hand-performed AgentFactory derivation: wrap an authored Guard as an installed row. */
 export function install(guard: Guard, home: 'spec' | 'contract' | 'engine', kind: string,
   extras: Pick<CompiledGuard, 'owe' | 'restate'> = {}): CompiledGuard {
