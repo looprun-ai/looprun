@@ -5,7 +5,7 @@ import { BOOKING_SURFACE, install, testEngine } from '../fixtures/compiled-agent
 
 // P10 · R1.5 — guards() returns THE SAME guard objects the phase checks iterate;
 // the census is never a parallel copy.
-test('the census rows are the very objects the rulebook runs, in band order', () => {
+test('the census rows are the very objects the rulebook runs, in priority order', () => {
   const inputGuard = install(
     { name: 'no-shouting', rule: 'Read the text calmly.', on: 'input', deny: () => null },
     'spec', 'custom');

@@ -34,7 +34,7 @@ test('an uncertified target cannot enter the seat', () => {
     .toThrow(CardError);
 });
 
-test('a local-tier target arms the brakes: pinned decoding, hard output cap', async () => {
+test('a local-tier target turns on the brakes: pinned decoding, hard output cap', async () => {
   const model = new ScriptedModel([finishStep('Nothing to do.')]);
   const { engine } = testEngine({
     model,

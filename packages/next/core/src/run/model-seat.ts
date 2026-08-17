@@ -1,7 +1,7 @@
 /** The model seat: a SET of certified targets with a declared routing strategy.
  *  Only certified targets may enter the set. Switches only BETWEEN turn attempts,
  *  never mid-turn; every turn record names the serving model. A target declared
- *  local arms the runaway brakes: pinned decoding and a hard output-token cap. */
+ *  local turns on the runaway brakes: pinned decoding and a hard output-token cap. */
 import type { LlmParams, ModelChoice, ModelTarget, TurnFailure } from '../contract/vocabulary.js';
 import { CardError } from '../contract/vocabulary.js';
 import type { ModelPort } from '../contract/ports.js';

@@ -29,7 +29,7 @@ export type Verdict =
   | { readonly kind: 'allow' }
   | { readonly kind: 'refuse'; readonly guardName: string; readonly detail: string }
   | { readonly kind: 'hold' }                                 // consent, no simulation declared: hold-and-ask
-  | { readonly kind: 'simulate' }                             // consent, simulation declared: preview, then the question
+  | { readonly kind: 'simulate' }                             // consent, simulation declared: simulated run, then the question
   | { readonly kind: 'restate'; readonly actId: string }      // duplicate call: the first result restated
   | { readonly kind: 'owe'; readonly reads: readonly OwedRead[] };   // rule-owed reads the ENGINE performs
 export interface OwedRead { readonly alias: string; readonly tool: string; readonly args: Readonly<Record<string, Json>> }
@@ -50,7 +50,7 @@ export interface Act {
   readonly reason: Reason | null;             // set exactly when status is 'not-done'
   readonly evidence: Evidence;
   readonly sentence: string;                  // the record line the user reads
-  readonly result: Json;                      // masked; on a held call with simulation: the preview result
+  readonly result: Json;                      // masked; on a held call with simulation: the simulated result
   readonly questionId: string | null;         // the consent question this act raised or served
 }
 export interface ReportLine { readonly tool: string; readonly target: string; readonly word: ReportWord }
@@ -135,7 +135,7 @@ export interface InstalledGuard { readonly name: string; readonly rule: string;
 export interface Rewrite { readonly name: string;
                            apply(text: string): string }     // a rewrite rewrites the outgoing reply;
                                                              //   it never decides
-export interface GuardCensus { readonly guards: readonly InstalledGuard[];        // band order
+export interface GuardCensus { readonly guards: readonly InstalledGuard[];        // priority order
                                readonly rewrites: readonly { readonly name: string;
                                  readonly kind: 'purgePattern' | 'maskPattern' | 'swapTerms' }[];
                                readonly limits: { readonly calls: number; readonly destructive: number;
