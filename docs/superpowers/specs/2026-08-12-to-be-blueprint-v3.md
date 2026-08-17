@@ -1286,7 +1286,7 @@ class ExamRunner {
 //              turns: (string | { approve: { tool: string } } | { decline: true })[], rubric }
 // CaseDump = { case: ExamCase['id'], variant, records: readonly TurnRecord[], servedBy: string }
 ```
-Private: none. Collaborators: LoopRunAgent, ControlStrip, SubjectLoader, targets,
+Private: none. Collaborators: LoopRunAgent, UngovernedAgent, SubjectLoader, targets,
 contract leaf.
 
 **`lints.ts`** (module, ~200 lines) — the guard-coverage census keyed on each guard's REAL
@@ -1357,7 +1357,7 @@ class Certifier {
 Private: none. Collaborators: Folder, Monitor, SubjectLoader, Seal.
 
 **`Seal`** (module, ~80 lines) — the SHIP seal: sha256 over EVERY governed artifact —
-cards, world card, intake, cases, norms — enumerated from the subject manifest, not a
+cards, surface card, cases, norms — enumerated from the subject manifest, not a
 hand-kept list; verify voids on any post-certification change (a world file outside the
 seal is a hole). `export function seal(subjectDir: string): SealRecord` ·
 `export function verify(subjectDir: string, s: SealRecord): readonly string[]`.
@@ -1442,7 +1442,7 @@ backend seam.
   L2  COMPILE      AgentFactory · CardCheck · SurfaceGate · catalog ·
        (core/cards)       Wordings · factsFromWorld
                           │
-  L1  CARDS +      cards.ts · intake.ts · world.ts          (types + factories, no logic)
+  L1  CARDS +      cards.ts · facts.ts · world.ts           (types + factories, no logic)
       WORLD VOCAB         │
   L0  CONTRACT     vocabulary.ts · ports.ts · CanonicalCall        (imports NOTHING)
       LEAF
