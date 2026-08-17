@@ -1047,8 +1047,8 @@ Private: none. Collaborators: contract leaf.
 
 **`LoopRunAgent`** (class, ~200 lines) — IS a `@mastra/core` Agent (R9.5): same class
 contract, same `generate`/`stream` call shape, registrable in `new Mastra({ agents })`,
-Studio, workflows. A dev swaps the class; construction takes the two cards (§4's three
-paths); everything downstream keeps working. The constructor's key set is CLOSED (no index
+Studio, workflows. A dev swaps the class; construction takes the two cards plus the
+surface card (§4); everything downstream keeps working. The constructor's key set is CLOSED (no index
 signature — R2.8/R2.3): there is no `hooks`, no `toolChoice`, no `instructions`
 passthrough — the only calls that stop working are the ones R2.3 forbids. A failed turn
 rejects with `TurnFailure` (R2.10). The same two-card class swap is reserved for the other
@@ -1059,9 +1059,7 @@ touching L0–L4.
 ```typescript
 type LoopRunConfig = {                       // the constructor's whole, CLOSED key set
   spec: AgentSpec; contract?: DomainContract; model: string | ModelChoice;
-  world?: WorldCard;
-  tools?: Readonly<Record<string, LiveTool>>; mcp?: { url: string; headers?: Record<string, string> };
-  intake?: CertifiedIntake; certification?: string;
+  world: WorldCard | McpWorldCard | LiveWorldCard;   // the surface card — ONE key, every path
 };
 class LoopRunAgent extends Agent {
   constructor(cfg: LoopRunConfig);
@@ -1069,43 +1067,57 @@ class LoopRunAgent extends Agent {
   stream(text: string, opts?: { session?: string }): Promise<MastraStream>;
                                             // governed run-to-completion, then the composed
                                             //   delivery streams; same serializing queue
-  rules(): readonly InstalledRule[];        // Engine.rules() — the list IS the code (R1.5)
+  guards(): readonly InstalledGuard[];      // Engine.guards() — the list IS the code (R1.5)
   excluded(): readonly string[];            // structural deny-by-default exclusions (R3.8)
+  endSession(id: string): void;
+}
+
+/** The explicit ungoverned twin — a DELIVERABLE of the skill (the gov × ungov comparison
+ *  is part of the product), not an eval-private trick: same closed config, byte-identical
+ *  prompt, every guard taught in prose and DISARMED in execution. The class NAME is what
+ *  states the disarming — ungoverned is never an option on the governed class (R2.3). */
+class UngovernedAgent extends Agent {
+  constructor(cfg: LoopRunConfig);
+  generate(text: string, opts?: { session?: string }): Promise<MastraResult & { loopRun: TurnRecord }>;
+  guards(): readonly InstalledGuard[];      // the same census; the class is the disarming
   endSession(id: string): void;
 }
 ```
 Private: the Engine. Collaborators: Engine (core), AgentAssembly, `@mastra/core`.
 
-**`AgentAssembly`** (module, ~150 lines) — construction resolution, one shot: Path A
-builds the world and derives the intake 1:1 (`intakeFromWorld`); Path B describes the live
-host tools, runs `IntakeGate` (reconcile · deny-by-default · certification), builds
-`HostToolPort`; Path B sugar first builds the MCP client via `McpConnect`. Returns the
+**`AgentAssembly`** (module, ~150 lines) — construction resolution, one shot, keyed by
+the surface card's kind: a `world` card builds the local world and derives the facts
+(`factsFromWorld`); an `mcpWorld` card first builds the MCP client via `McpConnect`; a
+`liveWorld` card takes the host's tools directly — the live kinds run `SurfaceGate`
+(reconcile · deny-by-default · certification) and build `HostToolPort`. Returns the
 `EngineConfig`; never names a port in its public type. The composition module — it may
 import L2/L3 to build the Engine, and only the facade imports it (§6).
 `export function assemble(cfg: LoopRunConfig): Promise<EngineConfig>`.
-Collaborators: IntakeGate, WorldBuilder, HostToolPort, McpConnect, MastraModelPort,
+Collaborators: SurfaceGate, WorldBuilder, HostToolPort, McpConnect, MastraModelPort,
 ModelSeat, contract leaf.
 
 **`MastraModelPort`** (class, ~130 lines) — one generation step over the host framework
-behind `ModelPort.step`; structurally cannot loop (R2.3). Per-agent sampling verifiably
-reaches the provider (R7.4); provider execution modes ship here as NAMED presets in each
-provider's own dialect (`gemini:thinking-off` via its thinking-budget knob — a knob other
-providers do not have), each with a wire test proving delivery. Throws `TurnFailure` on
-provider errors — raw provider text never reaches user-facing prose (R2.10).
+behind `ModelPort.step`; structurally cannot loop (R2.3). Per-agent `llmParams`
+verifiably reach the provider (R7.4); provider execution modes ship here as NAMED presets
+in each provider's own dialect (`gemini:thinking-off` via its thinking-budget knob — a
+knob other providers do not have), each with a wire test proving delivery. Throws
+`TurnFailure` on provider errors — raw provider text never reaches user-facing prose
+(R2.10).
 
 ```typescript
 class MastraModelPort implements ModelPort {
-  constructor(target: ModelTarget, sampling: Sampling);
+  constructor(target: ModelTarget, llmParams: LlmParams);
   step(input: StepInput): Promise<ModelStep>;
 }
 ```
-Private: the provider client and sampling. Collaborators: ports, contract leaf,
+Private: the provider client and llmParams. Collaborators: ports, contract leaf,
 AI-SDK provider.
 
 **`HostToolPort`** (class, ~130 lines) — native/MCP tools behind `ToolPort.call`: each
 tool executes itself, authenticated by closure (R3.8 — credentials never enter the
-governed layer). Applies the intake's declared `proxy` mapping — a rename maps back to the
-real call; a `compose` proxy executes its existing reads and merges the results (R3.3).
+governed layer). Applies the surface card's declared `proxy` mapping — a rename maps back
+to the real call; a `compose` proxy executes its existing reads and merges the results
+(R3.3).
 Its answer law is protocol facts only: a tool-level error result answers `done:'no'` with
 the failure (the tool itself answered); a transport failure after send on a write answers
 `done:'unknown'`; a clean result on a write answers `done:'unknown'` unless the tool's
@@ -1114,7 +1126,7 @@ vocabulary.
 
 ```typescript
 class HostToolPort implements ToolPort {
-  constructor(admitted: CertifiedIntake, live: Readonly<Record<string, LiveTool>>);
+  constructor(admitted: SurfaceFacts, live: Readonly<Record<string, LiveTool>>);
   call(call: ReadyCall): Promise<ToolAnswer>;
 }
 ```
@@ -1229,14 +1241,14 @@ DECLARED per target (`ModelTarget`) — never inferred from an id's spelling or 
 literal. `export function loadTargets(path: string): readonly ModelTarget[]`.
 Collaborators: contract leaf.
 
-**`SubjectLoader`** (class, ~150 lines) — loads a subject directory (cards, world card,
-intake, cases, targets) with structural preflight and the byte-identical prompt-static
+**`SubjectLoader`** (class, ~150 lines) — loads a subject directory (cards, surface
+card, cases, targets) with structural preflight and the byte-identical prompt-static
 gate across ALL presets; records run provenance: WHICH engine build every package
 resolved, verified before any run counts (R4·TEST).
 
 ```typescript
 class SubjectLoader {
-  static load(dir: string): Promise<Subject>;      // Subject = { spec, contract, world, intake, cases, targets }
+  static load(dir: string): Promise<Subject>;      // Subject = { spec, contract, world, cases, targets }
   static provenance(): Readonly<Record<string, string>>;   // package → resolved build id
 }
 ```
@@ -1245,7 +1257,7 @@ Private: none. Collaborators: core, targets.
 **`Validator`** (class, ~200 lines) — the offline `validate` (R4·TEST, zero spend):
 schema, references, premise-coherence replay on a FRESH world instance per phase and per
 case, disclosure-slot derivability, world laws for every preset (incl. the R5.8
-emended-row check: a world tool whose only documentation source is an emended intake row
+emendation check: a world tool whose only documentation source is a pipeline emendation
 is rejected) — static gates cover EVERY preset, no silent sampling, and the same blocking
 set in every entry point.
 
@@ -1261,13 +1273,14 @@ scripted multi-turn cases through the REAL path — it constructs a `LoopRunAgen
 per case and calls `generate`, the same facade hosts call; no second loop exists to drive.
 The typed approve step reads the open question's code from the previous
 `TurnRecord.questions` (typed field, random per run — a case can never regex it out of
-prose). Runs the governed variant and the `control` variant (via `ControlStrip`); the RED
+prose). Runs the governed variant and the `ungoverned` variant — the ungoverned one
+through the same public `UngovernedAgent` class every host can construct; the RED
 battery (R10.6) runs in both variants like any case; cases carry
 `split: 'fix' | 'held-out'` (R10.7).
 
 ```typescript
 class ExamRunner {
-  runCase(subject: Subject, c: ExamCase, variant: 'governed' | 'control', target: ModelTarget): Promise<CaseDump>;
+  runCase(subject: Subject, c: ExamCase, variant: 'governed' | 'ungoverned', target: ModelTarget): Promise<CaseDump>;
 }
 // ExamCase = { id, split: 'fix' | 'held-out', red?: AttackClass,
 //              turns: (string | { approve: { tool: string } } | { decline: true })[], rubric }
@@ -1276,21 +1289,15 @@ class ExamRunner {
 Private: none. Collaborators: LoopRunAgent, ControlStrip, SubjectLoader, targets,
 contract leaf.
 
-**`ControlStrip`** (module, ~60 lines) — builds the control variant through
-`controlCompile` (§5.2), the eval-only deep-path import the §6 lint reserves to this
-package: the same agent with every rule's enforcement disarmed and the byte-identical
-prompt; ONE name (`control`) everywhere in the pipeline — no alias. No facade or public
-constructor can reach that entry (R2.3).
-`export function controlAgent(subject: Subject, target: ModelTarget): LoopRunAgent`.
-Collaborators: LoopRunAgent, controlCompile (core, deep path).
-
-**`lints.ts`** (module, ~200 lines) — the guard-coverage census keyed on each rule's REAL
-`installedBecause` condition (every installed rule has a case that makes it FIRE; an
-exclusion keyed on a label cannot certify a never-fired rule as covered), the purity lint
-over `deny` sources (no I/O, no clock, no randomness, no model call), the prose-residue
-lint (a prose rule restating a checked rule is rejected — R6.8), and the NAME GATE: the
-retired-identifier ban of §11 with an EMPTY allowlist, running on every build and release.
-`export function census(rules, dumps): readonly CensusFinding[]` ·
+**`lints.ts`** (module, ~200 lines) — the guard-coverage census keyed on each guard's REAL
+`installedBecause` condition (every installed guard has a case that makes it FIRE; an
+exclusion keyed on a label cannot certify a never-fired guard as covered), the purity lint
+over `deny` sources (no I/O, no clock, no randomness, no model call, NO REGEX — regex
+lives only inside `blockPattern` / `purgePattern` / `maskPattern`), the prose-residue
+lint (a prose guard restating a checked guard is rejected — R6.8), and the NAME GATE: the
+retired-identifier ban of §11 with an EMPTY allowlist and WHOLE-IDENTIFIER matching,
+running on every build and release.
+`export function census(guards, dumps): readonly CensusFinding[]` ·
 `export function purity(subjectDir): readonly Finding[]` ·
 `export function nameGate(repoRoot): readonly Finding[]`.
 Collaborators: core, SubjectLoader.
@@ -1357,7 +1364,7 @@ seal is a hole). `export function seal(subjectDir: string): SealRecord` ·
 Collaborators: none.
 
 **`Campaign`** (class, ~180 lines) — the phases end to end: validate → run (governed +
-control, K reps) → monitor → judge inputs → PAUSE for the in-session judge → fold/sync →
+ungoverned, K reps) → monitor → judge inputs → PAUSE for the in-session judge → fold/sync →
 certify → seal; a campaign rep is byte-equivalent to the hand-run verbs.
 
 ```typescript
@@ -1404,8 +1411,9 @@ export interface CampaignReport { readonly runDirs: readonly string[];
 
 **R4 serving map:** ASK → `targets.ts` · GEN → `world.ts` / `WorldBuilder` / `PatchDesk` ·
 EVALS → `ExamRunner` (typed approve step; census in `lints.ts`) · NORMS → `cards.ts` (§3) ·
-TEST → `Validator` / `ControlStrip` / `JudgeInputBuilder` / `Folder` / `Monitor` /
-`SubjectLoader` provenance / `Certifier` margin discipline · SHIP → `Certifier` + `Seal`.
+TEST → `Validator` / `UngovernedAgent` (the ungoverned variant) / `JudgeInputBuilder` /
+`Folder` / `Monitor` / `SubjectLoader` provenance / `Certifier` margin discipline ·
+SHIP → `Certifier` + `Seal`.
 
 ---
 
@@ -1418,7 +1426,7 @@ backend seam.
 ```
   HOSTS            dev's Mastra app          curl / OpenAI SDK          pipeline scripts
                           │                          │                          │
-  L5  FACADES      LoopRunAgent (mastra)      Server/WireHandler (server)  ExamRunner/Campaign (eval)
+  L5  FACADES      LoopRunAgent · UngovernedAgent (mastra)   Server/WireHandler (server)  ExamRunner/Campaign (eval)
                    [reserved facade slots: @looprun-ai/vercel · @looprun-ai/langchain —
                     each IS its framework's Agent over the same Engine composition (R9.5)]
                           │                          │                          │
@@ -1431,8 +1439,8 @@ backend seam.
                    FinishDesk · Judge · DeliveryWriter · Session · ModelSeat
                    WorldBuilder · WorldGates · PatchDesk (core/world)
                           │
-  L2  COMPILE      Compiler (+ controlCompile) · CardCheck · IntakeGate · catalog ·
-       (core/cards)       Wordings · intakeFromWorld
+  L2  COMPILE      AgentFactory · CardCheck · SurfaceGate · catalog ·
+       (core/cards)       Wordings · factsFromWorld
                           │
   L1  CARDS +      cards.ts · intake.ts · world.ts          (types + factories, no logic)
       WORLD VOCAB         │
@@ -1445,8 +1453,7 @@ Rules of the picture: every arrow points downward only; port implementations
 leaf plus their own package's data modules; `AgentAssembly` is the composition module —
 it may import L2/L3, and only its facade imports it; L3 reaches L4 implementations ONLY
 through the L0 port interfaces; no module at any layer imports `Turn` except `Engine`;
-only facades import `Engine`; the `controlCompile` deep-path import is allowed to
-`@looprun-ai/eval` alone.
+only facades import `Engine`.
 
 ---
 
@@ -1474,7 +1481,7 @@ call is still governed.
    │        └─► Question: open → consumed     exactly ONE question matches (unique codes)
    │
    │ 2  CallRunner.run(ConsentDesk.held(id), 'licence')       APPROVAL IS NEVER A BYPASS:
-   │        ├─ Rulebook.checkCall({consented: true})   agent rules → contract rules →
+   │        ├─ Rulebook.checkPreTool({consented: true})   spec guards → contract guards →
    │        │                                          consent band (licence pre-satisfied;
    │        │                                          the destructive throttle still counts) →
    │        │                                          honesty → universal — any can still refuse
@@ -1504,11 +1511,13 @@ call is still governed.
    │             restate  → the first result restated, no re-execution
    │
    │ 5  finish: FinishDesk.parse → Rulebook.checkReply (incl. HonestyCheck bipartite +
-   │        structural lie check) → Judge.run(judged, view, history) via ModelSeat.port()
+   │        structural lie check) → Judge.run(declared judged guards, ctx, history)
+   │        via ModelSeat.port()
    │        violations? the FULL set → PromptWriter.correction → redrive (≤ limits.retries)
    │        exhausted → FinishDesk.closure(acts)  — pure function of the records
    │
    │ 6  DeliveryWriter.compose(prose, acts, open questions, closed questions)
+   │        — masker first, then the contract's rewrites, over already-approved text
    │ 7  Session.seal(draft) ──► TurnRecord (frozen)      ← the ONLY commit point;
    ▼                                                        a TurnFailure skips 7: nothing seals
  TurnRecord { text, acts, questions, finish, corrections, servedBy }
