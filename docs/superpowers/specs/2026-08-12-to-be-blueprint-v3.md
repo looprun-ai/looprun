@@ -89,9 +89,9 @@ and the standing sentence · 7 the contract card: `voice` + `facts` · 8 `disclo
 figures in the question, read by the engine itself · 9 `secrets` · 10 `guards` on the
 contract (a tool guard every lane owes) · 11 `guards` on the spec (how this desk behaves)
 · 12 a judged guard (`judgeQuery`, the declared judged factories) · 13 `limits` ·
-14 `wording` + `rewrites` — a guard decides, a rewrite rewrites · 15 `llmParams` + named
-provider presets · 16 a second agent on the same contract (`tools` + `teammates`) ·
-17 the exam.
+14 `wording` · 15 `rewrites` — a guard decides, a rewrite rewrites · 16 `llmParams` +
+named provider presets · 17 a second agent on the same contract (`tools` + `teammates`) ·
+18 the exam.
 
 ---
 
@@ -259,14 +259,18 @@ const hotel = world({
   destructive: { cancelBooking: { remove: 'booking', label: 'cancel a booking' } },
 });
 
-// remote — the SAME blocks; execution belongs to the live MCP tool (R9-EX)
+// remote — the SAME blocks; execution belongs to the live MCP tool (R9-EX).
+// The generated, sealed module exports the BLOCKS — no URL, no secret ever inside it:
+import { hotelSurface } from './gen/hotel-surface.js';
+//   = { reads: { listBookings: {} },
+//       destructive: { cancelBooking: { label: 'cancel a booking', target: 'id',
+//                                       secrets: [{ path: 'guest.cpf', mode: 'mask' }],
+//                                       proxy: { of: 'cb_cancel', args: { bookingRef: 'id' } } } },
+//       seal: 'sha256:…' }
 const hotel = mcpWorld({
-  mcp: { url: 'https://mcp.acme.com/hotel',
-         headers: { Authorization: `Bearer ${process.env.ACME_MCP_TOKEN}` } },
-  reads:       { listBookings: {} },
-  destructive: { cancelBooking: { label: 'cancel a booking', target: 'id',
-                                  secrets: [{ path: 'guest.cpf', mode: 'mask' }],
-                                  proxy: { of: 'cb_cancel', args: { bookingRef: 'id' } } } },
+  mcp: { url: 'https://mcp.acme.com/hotel',   // the HOST's connection — env/closure (R3.8),
+         headers: { Authorization: `Bearer ${process.env.ACME_MCP_TOKEN}` } },   // merged at construction
+  ...hotelSurface,
 });
 
 // the config is ONE form on every path (§5.5):
@@ -280,11 +284,12 @@ const agent = new LoopRunAgent({ spec, contract, world: hotel, model: 'google/ge
   sibling, for native host tools (same entry shape as `mcpWorld`).
 - **Deny-by-default:** a live tool absent from every block does not exist for the agent —
   the exclusion is reported STRUCTURALLY at construction (R3.8).
-- **The gate is code review:** the pipeline GENERATES the `mcpWorld` module (fix at
-  source · proxy · exclude · contest — R3.2) and a human approves it as code. The
-  certification hash rides the generated module; construction verifies it against the
-  live surface — a renamed tool, a new field, a changed type voids the seal and throws
-  (R3.8). The company's own file is never edited.
+- **The gate is code review:** the pipeline GENERATES the surface module (fix at
+  source · proxy · exclude · contest — R3.2) and a human approves it as code. The `seal`
+  (the certification hash) rides the generated module and covers the BLOCKS ONLY — never
+  the host's connection, which the host merges at construction; verification against the
+  live surface runs at construction — a renamed tool, a new field, a changed type voids
+  the seal and throws (R3.8). The company's own file is never edited.
 - **`proxy` carries both emendation forms (R3.3):** a rename with an args map — the wire
   maps back to the real call — and a missing read COMPOSED from existing reads.
 - **One internal truth:** the engine compiles the blocks of all three card kinds into one
@@ -346,18 +351,18 @@ export interface CanonicalCallData { readonly tool: string;
 
 export type Verdict =
   | { readonly kind: 'allow' }
-  | { readonly kind: 'refuse'; readonly ruleName: string; readonly detail: string }
+  | { readonly kind: 'refuse'; readonly guardName: string; readonly detail: string }
   | { readonly kind: 'hold' }                                 // consent, no simulation declared: hold-and-ask
   | { readonly kind: 'simulate' }                             // consent, simulation declared: preview, then ask (R5.4)
   | { readonly kind: 'restate'; readonly actId: string }      // duplicate call: the first result restated
   | { readonly kind: 'owe'; readonly reads: readonly OwedRead[] };   // rule-owed reads the ENGINE performs (R5.2)
 export interface OwedRead { readonly alias: string; readonly tool: string; readonly args: Readonly<Record<string, Json>> }
 export type Correction =
-  | { readonly kind: 'redrive'; readonly ruleName: string; readonly detail: string }
+  | { readonly kind: 'redrive'; readonly guardName: string; readonly detail: string }
   | { readonly kind: 'earlyFinish' } | { readonly kind: 'staleFinish' } | { readonly kind: 'forcedFinish' }
   | { readonly kind: 'recordCorrected'; readonly actId: string; readonly said: Done }   // snapshot diff overruled the executor
   | { readonly kind: 'simulationRevoked'; readonly tool: string }
-  | { readonly kind: 'judgeUnreadable'; readonly ruleName: string };
+  | { readonly kind: 'judgeUnreadable'; readonly guardName: string };
 export interface Act {
   readonly id: string;                        // engine-minted (R5.3)
   readonly turn: number;
@@ -444,8 +449,15 @@ export interface Rewrite { readonly name: string;
                            apply(text: string): string }     // a rewrite rewrites the outgoing reply;
                                                              //   it never decides (§5.2: purgePattern ·
                                                              //   maskPattern · swapTerms)
+export interface GuardCensus { readonly guards: readonly InstalledGuard[];        // band order
+                               readonly rewrites: readonly { readonly name: string;
+                                 readonly kind: 'purgePattern' | 'maskPattern' | 'swapTerms' }[];
+                               readonly limits: Required<Limits> }
+                                              // the census carries ALL governance (R1.5):
+                                              //   the installed guards, the rewrites as their
+                                              //   own section, and the resolved limits
 export type EngineSentenceKey = 'approvalInstruction' | 'exhaustionClosure' | 'unknownStatus'
-                              | 'questionExpired' | 'questionSuperseded' | 'deniedByRule';
+                              | 'questionExpired' | 'questionSuperseded' | 'deniedByGuard';
 export type RoutingStrategy = 'sequential' | 'random' | 'rate-limit' | 'backup-only' | 'round-robin';
 export interface ModelTarget { readonly id: string; readonly provider: string;
                                readonly keyEnv: string | null;
@@ -530,8 +542,13 @@ onlyAfter('payInvoice', 'approveInvoice')   // gated tool only after the prerequ
                                             //   teaching the order
 maxCalls('sendEmail', 1, { scope: 'conversation', reason: 'One email per person, ever.' })
 argAbsent('sendEmail', 'bcc')               // declared, but forbidden to send
-precondition('shipOrder', w => w.order.paid, 'Only paid orders ship.')
-precondition(['storeProfile', 'shareProfile'], w => w.consentOnRecord,
+precondition('shipOrder', ({ record }) => record?.paid === true, 'Only paid orders ship.')
+                                            // the predicate receives { record, state }:
+                                            //   record = the call's target record, frozen
+                                            //   (null on a target-less tool) · state = the
+                                            //   whole frozen snapshot
+precondition(['storeProfile', 'shareProfile'],
+             ({ state }) => state.settings?.main?.consentOnRecord === true,
              'Consent must be on record.')  // tool | [tools] — one binding, a whole set
 checkResult('payInvoice', ctx => ctx.result.status === 'settled'
   ? null : 'the invoice did not settle')    // postTool; a violation joins the reply
@@ -569,8 +586,13 @@ from each schema (`argRequired` — a whitespace-only value counts as MISSING; `
 `claimIsComplete` · `brokenReply`) — plus the 3 rewrites, printed as their own census
 section. The open forms beyond the catalog: a hand-written deny is census kind `custom`
 (and requires a written admission of which catalog kind fails — R6.7), a hand-written
-`judgeQuery` is kind `judged`, prose-only is kind `prose`. Collaborators: cards,
-contract leaf.
+`judgeQuery` is kind `judged`, prose-only is kind `prose`. The two lists have NAMES:
+**ALWAYS** is what `agent.guards()` prints — every installed guard, band order, each with
+`installedBecause` — and **AVAILABLE** is this catalog, documented in the generated
+`GUARDS.md` (rendered from this module's own source, so the doc and the code cannot
+disagree), with the rewrites as their own section. `argFormat`'s schema `pattern` is
+declared DATA, not guard source — the purity lint scans guard SOURCE, so the schema
+pattern does not trip it. Collaborators: cards, contract leaf.
 
 **`SurfaceGate`** (class, ~180 lines) — enforces R3.8 at construction of a live surface
 (`mcpWorld` / `liveWorld`): reconciliation against the live host (renamed tool, new
@@ -581,10 +603,10 @@ sorted keys, normalized types, stable across validator-library versions, never a
 
 ```typescript
 class SurfaceGate {
-  check(facts: SurfaceFacts, live: readonly LiveTool[], certification: string | null): SurfaceReport;
+  check(facts: SurfaceFacts, live: readonly LiveTool[], seal: string | null): SurfaceReport;
                                                        // throws CardError on drift / seal mismatch;
-                                                       // certification omitted → the agent runs uncertified
-  fingerprint(facts: SurfaceFacts): string;            // canonical-form sha256
+                                                       // seal omitted → the agent runs uncertified
+  fingerprint(facts: SurfaceFacts): string;            // canonical-form sha256 — the seal's value
 }
 interface LiveTool { readonly name: string; readonly description: string; readonly schema: Json;
                      readonly execute: (args: Readonly<Record<string, Json>>) => Promise<unknown> }
@@ -659,7 +681,7 @@ class Engine {
   static create(cfg: EngineConfig): Engine;      // CardCheck + SurfaceGate + AgentFactory run upstream;
                                                  //   every problem named at once (R1.6)
   chat(sessionId: string, text: string): Promise<TurnRecord>;   // rejects with TurnFailure (R2.10)
-  guards(): readonly InstalledGuard[];           // the Rulebook's own arrays — the list IS the code (R1.5)
+  guards(): GuardCensus;                         // the Rulebook's own arrays — the list IS the code (R1.5)
   excluded(): readonly string[];                 // deny-by-default exclusions, structural (R3.8)
   endSession(sessionId: string): void;
 }
@@ -723,7 +745,7 @@ class Rulebook {
   checkPreTool(ctx: CallCtx): Verdict;
   checkPostTool(ctx: ResultCtx): readonly { readonly guardName: string; readonly detail: string }[];
   checkReply(ctx: ReplyCtx): readonly { readonly guardName: string; readonly detail: string }[];
-  guards(): readonly InstalledGuard[];
+  guards(): GuardCensus;
 }
 ```
 Private: the four frozen ordered arrays. Collaborators: HonestyCheck (installed as the
@@ -737,8 +759,10 @@ ticket. An IDENTICAL re-proposal returns the SAME question and code, never a sec
 code; a re-proposal differing in ANY arg births a SIBLING question — the earlier stays
 open, and every delivery reprints every open code, so the user can always approve what is
 on screen. When a licensed call executes, EVERY open question for the same (tool, target)
-closes — a target-less tool closes by tool alone — and a same-turn re-proposal for an
-executed (tool, target) resolves to `restate` with the real result. EVERY closure is
+closes `'superseded'` — the executed act supersedes every open sibling's sentence; this
+closure is that member's ONE producer — a target-less tool closes by tool alone — and a
+same-turn re-proposal for an executed (tool, target) resolves to `restate` with the real
+result. EVERY closure is
 delivered, expiry included. Consumption searches ONLY for engine-minted literals (R6.5)
 and matches exactly ONE question. The desk's private map holds the EXECUTABLE
 `CanonicalCall`; the delivered `Question.call` is the masked display form.
@@ -827,7 +851,7 @@ class HonestyCheck {
                                          //   reads are engine-rendered, never owed as claims
 }
 ```
-Private: none. Collaborators: ActionHistory (via view), contract leaf.
+Private: none. Collaborators: ActionHistory (via ctx), contract leaf.
 
 **`Disclosure`** (class, ~180 lines) — three tenses (R5.2). Owed reads are built from the
 `disclose.needs` recipes over the held call's OWN args (an args map bridges differing
@@ -928,7 +952,8 @@ Private: none. Collaborators: ModelSeat, contract leaf.
 scrubbed prose, one record line per act (reads included — the result decides what prints),
 every open question with its code in EVERY delivery, every denial, every question closure,
 and the closure sentence. The contract's `rewrites` (purge · mask · swap) run AFTER the
-masker, over already-approved text — a rewrite never overrides a decision. Every
+masker, over MODEL PROSE ONLY — engine-minted literals, record lines, question sentences
+and codes survive every rewrite (R5.1), and a rewrite never overrides a decision. Every
 engine-known fact reaches the user deterministically — never only through model prose.
 
 ```typescript
@@ -985,8 +1010,10 @@ executor), per-tool `label` and optional `does` (omitted, the engine composes on
 action form + entity), `gates` (the closed union `{ kind: 'exists' } | { kind: 'stateIs';
 field; value } | { kind: 'fieldAtLeast'; field; min }`, evaluated on EVERY tool kind),
 `simulation` (the tool's own parameter), `presets` — and `world(card, executors?)`
-returning the frozen card. Closed data: no functions in the card, no regexes, no clock.
-The sibling cards live here too: `McpWorldCard` / `mcpWorld(card)` and `LiveWorldCard` /
+returning the frozen card. Closed data — a law of the `WorldCard`: no functions in the
+card, no regexes, no clock (custom executors pass OUTSIDE the card; a `LiveWorldCard`'s
+tools execute themselves by nature and sit outside this law). The sibling cards live
+here too: `McpWorldCard` / `mcpWorld(card)` and `LiveWorldCard` /
 `liveWorld(card)` — the SAME effect blocks, remote entries carrying `label` / `target` /
 `secrets` / `proxy` / `simulation` / `does`, with no action forms, no `records`, no
 `gates`. `factsFromWorld` (§5.2) derives the same engine-internal `SurfaceFacts` from all
@@ -1069,7 +1096,7 @@ class LoopRunAgent extends Agent {
   stream(text: string, opts?: { session?: string }): Promise<MastraStream>;
                                             // governed run-to-completion, then the composed
                                             //   delivery streams; same serializing queue
-  guards(): readonly InstalledGuard[];      // Engine.guards() — the list IS the code (R1.5)
+  guards(): GuardCensus;                    // Engine.guards() — the list IS the code (R1.5)
   excluded(): readonly string[];            // structural deny-by-default exclusions (R3.8)
   endSession(id: string): void;
 }
@@ -1081,7 +1108,7 @@ class LoopRunAgent extends Agent {
 class UngovernedAgent extends Agent {
   constructor(cfg: LoopRunConfig);
   generate(text: string, opts?: { session?: string }): Promise<MastraResult & { loopRun: TurnRecord }>;
-  guards(): readonly InstalledGuard[];      // the same census; the class is the disarming
+  guards(): GuardCensus;                    // the same census; the class is the disarming
   endSession(id: string): void;
 }
 ```
@@ -1273,9 +1300,11 @@ Private: none. Collaborators: SubjectLoader, core.
 **`ExamRunner`** (class, ~200 lines) — R9.4/R4·EVALS: the public scriptable surface. Plays
 scripted multi-turn cases through the REAL path — it constructs a `LoopRunAgent` (Path A)
 per case and calls `generate`, the same facade hosts call; no second loop exists to drive.
-The typed approve step reads the open question's code from the previous
-`TurnRecord.questions` (typed field, random per run — a case can never regex it out of
-prose). Runs the governed variant and the `ungoverned` variant — the ungoverned one
+The typed approve step reads the open question's code from the records' question fold —
+issued minus consumed minus closed across ALL prior `TurnRecord`s (open questions persist
+across turns) — typed fields, random per run: a case can never regex a code out of prose.
+`approve.args` (an arg subset) selects among open SIBLINGS of one tool; two open siblings
+with no `args` is a loud case error, never a guess. Runs the governed variant and the `ungoverned` variant — the ungoverned one
 through the same public `UngovernedAgent` class every host can construct; the RED
 battery (R10.6) runs in both variants like any case; cases carry
 `split: 'fix' | 'held-out'` (R10.7).
@@ -1285,7 +1314,8 @@ class ExamRunner {
   runCase(subject: Subject, c: ExamCase, variant: 'governed' | 'ungoverned', target: ModelTarget): Promise<CaseDump>;
 }
 // ExamCase = { id, split: 'fix' | 'held-out', red?: AttackClass,
-//              turns: (string | { approve: { tool: string } } | { decline: true })[], rubric }
+//              turns: (string | { approve: { tool: string; args?: Readonly<Record<string, Json>> } }
+//                             | { decline: true })[], rubric }
 // CaseDump = { case: ExamCase['id'], variant, records: readonly TurnRecord[], servedBy: string }
 ```
 Private: none. Collaborators: LoopRunAgent, UngovernedAgent, SubjectLoader, targets,
@@ -1395,8 +1425,8 @@ classes that return them; no `any` on any exported surface):
 ```typescript
 export type AttackClass = 'tool-result-injection' | 'user-text-injection' | 'record-borne'
   | 'stale-code' | 'licence-widening' | 'exhaustion' | 'error-leakage' | 'cross-session';
-export interface Finding { readonly rule: string; readonly problem: string }
-export type CensusFinding = Finding;                       // a rule with no case that fires it
+export interface Finding { readonly guard: string; readonly problem: string }
+export type CensusFinding = Finding;                       // a guard with no case that fires it
 export interface ValidationReport { readonly findings: readonly Finding[] }   // empty = pass; every finding blocks
 export interface FoldReport { readonly perCase: readonly { readonly case: string;
   readonly verdict: 'pass' | 'fail' | 'unreadable' }[] }
@@ -1509,7 +1539,7 @@ call is still governed.
    │                        CallRunner.run(read, 'engine') each → Disclosure.before(filled) →
    │                        ConsentDesk.hold → Question born from the reads alone:
    │                        act status 'not-done', reason 'held'
-   │             refuse   → act status 'not-done', reason 'blocked' (sentence = the rule's say)
+   │             refuse   → act status 'not-done', reason 'blocked' (sentence = the guard's rule + detail)
    │             restate  → the first result restated, no re-execution
    │
    │ 5  finish: FinishDesk.parse → Rulebook.checkReply (incl. HonestyCheck bipartite +
@@ -1531,10 +1561,10 @@ call is still governed.
 
 | R | mechanism | home — class + signature |
 |---|---|---|
-| R5.1 | Consent | `ConsentDesk.hold(call, sentence, draft): Question` · `readAnswer(text, draft)` · `close(id, why, draft)` · `sweep(turn, ttl, draft)` — state machine `open → consumed \| closed(declined\|superseded\|expired\|vetoed)`; crypto entropy + per-issuance nonce + unique codes, no tool name on screen; an identical re-attempt returns the SAME question, a differing one births a sibling, and a licensed execution closes every open question of the same (tool, target); every closure delivered. Approval never a bypass: `CallRunner.run(ConsentDesk.held(id), 'licence')` re-enters the FULL `Rulebook.checkCall`. No dead ends: the engine births the question from the held call itself (no unbirthable question), and an agent/contract refusal precedes consent — no question is born for an impossible act, so no approval loop can be unsatisfiable |
+| R5.1 | Consent | `ConsentDesk.hold(call, sentence, draft): Question` · `readAnswer(text, draft)` · `close(id, why, draft)` · `sweep(turn, ttl, draft)` — state machine `open → consumed \| closed(declined\|superseded\|expired\|vetoed)`; crypto entropy + per-issuance nonce + unique codes, no tool name on screen; an identical re-attempt returns the SAME question, a differing one births a sibling, and a licensed execution closes ('superseded') every open question of the same (tool, target); every closure delivered. Approval never a bypass: `CallRunner.run(ConsentDesk.held(id), 'licence')` re-enters the FULL `Rulebook.checkPreTool`. No dead ends: the engine births the question from the held call itself (no unbirthable question), and an agent/contract refusal precedes consent — no question is born for an impossible act, so no approval loop can be unsatisfiable |
 | R5.2 | Disclosure | `Disclosure.owedReads(tool, call)` + `CallRunner.run(read, 'engine')` — the ENGINE performs EVERY owed read itself: consent-owed (disclose recipes) AND guard-owed (`catalog.onlyAfter` with a read prerequisite → `Verdict {kind:'owe'}`); `before/after/later` fill by alias, bound to the question's target record; no deny can starve the reads because no forced-model-read pass exists to starve |
-| R5.3 | Honest report | `FinishDesk.toolCard()/parse()` (one channel, one schema) + `HonestyCheck.check(view)` (bipartite both directions, order-free, target-bound, evidence classes per word, figures structurally absent from declarations — engine-rendered only, structural lie check over collected record ids) + `ActionHistory.mint()` (engine act identity) + `DeliveryWriter.compose` (the record ships every turn). The model claims `(tool, target, word)` — it never writes act ids (the referencing choice is priced under R10.4); a prose-improvement pass is a judged rule ABOVE the deterministic floor and can only improve delivery |
-| R5.4 | Downgrade-to-simulation | `Rulebook.checkCall → Verdict 'simulate'` (simulation declared) — `CallRunner` runs the tool with its OWN declared parameter, records the preview, and the question is born FROM that preview; no simulation declared → `Verdict 'hold'` (R3.4); a lying simulation is caught by `StatusClerk.grade` diff and revoked (`simulationRevoked` — plain consent thereafter, per session) |
+| R5.3 | Honest report | `FinishDesk.toolCard()/parse()` (one channel, one schema) + `HonestyCheck.check(ctx)` (bipartite both directions, order-free, target-bound, evidence classes per word, figures structurally absent from declarations — engine-rendered only, structural lie check over collected record ids) + `ActionHistory.mint()` (engine act identity) + `DeliveryWriter.compose` (the record ships every turn). The model claims `(tool, target, word)` — it never writes act ids (the referencing choice is priced under R10.4); a prose-improvement pass is a judged rule ABOVE the deterministic floor and can only improve delivery |
+| R5.4 | Downgrade-to-simulation | `Rulebook.checkPreTool → Verdict 'simulate'` (simulation declared) — `CallRunner` runs the tool with its OWN declared parameter, records the preview, and the question is born FROM that preview; no simulation declared → `Verdict 'hold'` (R3.4); a lying simulation is caught by `StatusClerk.grade` diff and revoked (`simulationRevoked` — plain consent thereafter, per session) |
 | R5.5 | Sensitive data | `Masker.maskData(value)` at the recording seam inside `CallRunner` — the filtered form is the ONLY stored form; the executor alone receives real args; `Masker.maskProse(text)` in `DeliveryWriter`, collected literals only |
 | R5.6 | Guard ordering + determinism | `Rulebook` — one frozen order: spec → contract (change-window; the spec-vs-change-window boundary declared OPEN, kept decidable) → consent band (incl. `maxDestructive`) → honesty → the universal floor (`noDuplicateCall`, `brokenReply`); `deny` pure over frozen ctx (R6.4); the ONLY model-judged escape is `Judge.run` through `ModelSeat.port()` — no JudgePort exists, the seam is deleted, not guarded; UNREADABLE first-class, priced by `Guard.judgePolicy` |
 | R5.7 | Terminal protocol | `FinishDesk` — one `z.strictObject` renders the taught description AND validates (taught = validated); `split` handles early/stale finishes on typed calls; `Turn` redrives ≤ `limits.retries` carrying the FULL violation set; `closure(acts)` is a pure function of recorded acts — never empty, never "nothing changed" over `unknown`; `force()` when the model will not close |
@@ -1671,7 +1701,7 @@ on the ban list, and no design name carries it (`Guard.judgeQuery`, `StepInput`,
 | `fails: 'open' \| 'closed'` | `judgePolicy: 'passOnFails' \| 'denyOnFails'` | fail-open/closed is security jargon; the value states the trigger AND the effect |
 | `Sampling` / `sampling` | `LlmParams` / `llmParams` | pure ML jargon out; "the model's parameters", plain and honest |
 | `Dim: spatial / input / run` and `on: 'call' \| 'reply'` | `Guard.on: 'input' \| 'preTool' \| 'postTool' \| 'reply'`, REQUIRED | four explicit phases — the hook names that read; no derived default |
-| `home: 'agent' \| 'domain'` | `'spec' \| 'contract'` | ONE nomenclature pair everywhere; the synonyms die |
+| `home: 'agent' \| 'domain'` | `'spec' \| 'contract'` (+ `'engine'` for the installed floor) | ONE nomenclature pair everywhere; the synonyms die |
 | `Compiler` / `controlCompile` / `ControlStrip` / `'control'` | `AgentFactory` / `AgentFactory.ungoverned` / `UngovernedAgent` / `'ungoverned'` | not a language compiler — the factory that builds agents; the variant answers to its honest name and the class NAME is the disarming; `control` joins the ban list |
 | `IntakeGate` / `intakeFromWorld` | `SurfaceGate` / `factsFromWorld` | the gate guards the surface; the facts derive from the world card |
 | `toolDefs` · `intake` · `IntakeTool` · `CertifiedIntake` · `expectedSurfaceHash` · `certification` (config key) | the surface card's own blocks (`world` / `mcpWorld` / `liveWorld`); engine-internal `SurfaceFacts` / `ToolFact`; the hash embedded in the generated module | the authoring concept is GONE — the block a tool sits in IS the declaration |
@@ -1742,11 +1772,11 @@ stop and root-cause before anything else.
 |---|---|---|---|
 | 43 | claim-settlement-figure | `Disclosure` slots bound to the question's target record; `SLOT_UNDERIVABLE` at construction | fixed by contract prose + slot binding; may flip to pass |
 | 47 | plan-downgrade | spec/contract guards outrank consent (§7 step 4): no question is born for an impossible act | may flip to pass (contract layer) |
-| 48 | viewer-money-refusal | denial sentence = the rule's `say` + detail; the deny names the rule's own words | contract-layer prose; expected to move only with new contract wording |
+| 48 | viewer-money-refusal | denial sentence = the guard's `rule` + detail; the deny names the guard's own words | contract-layer prose; expected to move only with new contract wording |
 | 49 | dispatcher-fleet-refusal | same as 48 — the refusal can name the path because the rule's sentence is authored | contract layer; as 48 |
 | 50 | billing-member-refusal | as 47 — refusal precedes consent | may flip to pass |
 | 51 | sole-owner-protected | as 47 | may flip to pass |
-| 52 | authority-costume | the rule the world declares is a contract rule whose `say` reaches the model (description channel) | contract layer |
+| 52 | authority-costume | the rule the world declares is a contract guard whose `rule` reaches the model (description channel) | contract layer |
 | 62 | record-borne-instruction | `catalog.onlyAfter` (read prerequisite) → the `owe` verdict: the engine performs the read | expected to flip to pass (engine now guarantees the read) |
 | 63 | not-onboarded-history | as 62 — guard-owed read engine-performed | expected to flip to pass |
 | 72 | maintenance-lifecycle | `WorldBuilder` keeps gates and refusals exactly as declared | **MUST NOT MOVE — the tripwire** |
@@ -1796,6 +1826,7 @@ The engine never ships alone; scope is `looprun`, `agentspec`, and the subject u
 | `agentspec` skill | `references/**` rewritten to the two-card shapes of §3, the surface cards of §4, the catalog of §5.2; the lints re-keyed to `installedBecause` and the §11 name gate list |
 | `docs/tutorial/**` | the ladder of §2 IS the lesson plan — one concept per lesson, each lesson a card field with its default |
 | README + `governance/**` + source headers | the two-card contract, the no-external-model law restated at the `Judge`/`JudgeInputBuilder` headers, the R9-EX construction shapes |
+| `packages/core/GUARDS.md` | regenerated from `catalog.ts` — the AVAILABLE list, the judged factories with their questions, the rewrites as their own section |
 | `agentspec-bench` subject | the atlas bundle ported once, phase 4, mechanical translation — §11 is the dictionary |
 
 Every authoring-visible change in this design names its absorption point in the compliance
@@ -1811,10 +1842,10 @@ change (— = not authoring-visible).
 
 | item | PASS | pointer | R11 absorption |
 |---|---|---|---|
-| R1.1 | PASS | §3 (two interfaces, nothing else authored); §12 (no engine class/port touched) | skill references: the two cards |
+| R1.1 | PASS | §3 (two GOVERNANCE interfaces); the surface card (§4) is the charter's own toolDefs/world INPUT in declarative form — a data declaration of what exists, never a third governance card; §12 (no engine class/port touched) | skill references: the two cards |
 | R1.2 | PASS | §2 (15 lines, 12 code); every advanced §3 field optional with stated default (`name`/`persona` required per R1.1/R1.4); the ladder | tutorial = the ladder |
 | R1.3 | PASS | §3 (TypeScript interfaces; `Guard.deny` is a function); purity via `lints.ts` (§5.8) | skill: purity lint |
-| R1.4 | PASS | §3: `persona` required on spec; contract has `voice`, no persona field exists | tutorial lesson 6 |
+| R1.4 | PASS | §3: `persona` required on spec; contract has `voice`, no persona field exists | tutorial lesson 7 |
 | R1.5 | PASS | `Rulebook.guards()` returns the arrays the four phase checks iterate + judged + rewrites + limits (§5.3); `Wordings` one home per sentence (§5.2); auto-install list in `AgentFactory` (§5.2) | skill: inspection contract |
 | R1.6 | PASS | `CardCheck` + `CardError` (§5.1, §5.2): all at once, named codes, fix sentences; misconfigured rule throws | skill: error-code list |
 | R1.7 | PASS | §3 `tools`/`teammates`; shared contract; no ceiling anywhere in §5 (≤15 is pipeline guidance) | skill: the split question |
@@ -1825,7 +1856,7 @@ change (— = not authoring-visible).
 | R2.5 | PASS | §5.1 `vocabulary.ts` one home; `wire.ts`/`WireHandler` import `TurnRecord` from the leaf | — |
 | R2.6 | PASS | §5.1 `ports.ts` (L0, no options field) + `ReadyCall` declared whole ({ tool, args } — nothing else); §9; serial emission-order execution in §7 step 4 | — |
 | R2.7 | PASS | §5.3 `Turn` sequences only, lintable import list; every §5 entry carries its size commitment; decomposition lines pre-named (§5 preamble) | — |
-| R2.8 | PASS | §5 preamble (ESLint at error, strict tsconfig); §5.1 closed unions; views typed, input `unknown` | — |
+| R2.8 | PASS | §5 preamble (ESLint at error, strict tsconfig); §5.1 closed unions; ctx types typed, input `unknown` | — |
 | R2.9 | PASS | §5.1 freeze law paragraph; `AgentFactory` frozen output; `ActionHistory` sealed-by-reference; clones only in `snapshot()`/`PatchDesk` | — |
 | R2.10 | PASS | §5.1 `TurnFailure`; §5.3 `Session.seal` single commit, draft discarded on failure; §5.8 `Monitor` incident-bound markers | — |
 | R3.1 | PASS | §4 `mcpWorld` / `liveWorld` (live surfaces primary); `world` (genesis secondary) | skill A2 |
@@ -1834,7 +1865,7 @@ change (— = not authoring-visible).
 | R3.4 | PASS | §8 R5.4: no simulation declared → plain `hold`; consent creates the two-step | — |
 | R3.5 | PASS | §4 surface entries (effect by BLOCK; target/label/does/secrets declared); §10 inversion 1 | skill surface schema |
 | R3.6 | PASS | `StatusClerk.grade` derivation table (§5.3); `Done`→`Status`+`Reason`; snapshot-diff verify; `simulationRevoked` per session (the set in `Session`'s stores); thrown-write = `unknown`, thrown-read = `TurnFailure`, never `refused` | — |
-| R3.7 | PASS | `Question.code` carries no tool name (§5.1); questions worded from `label` (§2 output) | tutorial lesson 3 |
+| R3.7 | PASS | `Question.code` carries no tool name (§5.1); questions worded from `label` (§2 output) | tutorial lesson 4 |
 | R3.8 | PASS | §4 (credentials host env/closure; three gates); `SurfaceGate` canonical fingerprint + structural exclusions (§5.2) | skill: certification |
 | R4·ASK | PASS | `targets.ts` (§5.8): every routing fact declared (`ModelTarget`), brakes armed from the declared tier | skill ASK |
 | R4·GEN | PASS | `world.ts`/`WorldBuilder`/`WorldGates`/`PatchDesk` (§5.4): declared data, simulate ≡ act, `{result, patches}` over frozen clone | skill GEN |
@@ -1843,25 +1874,25 @@ change (— = not authoring-visible).
 | R4·TEST | PASS | `Validator` (fresh world per phase, every preset); `UngovernedAgent` via `AgentFactory.ungoverned`; `JudgeInputBuilder` complete+blind; `Folder`; `SubjectLoader` provenance; `Certifier` margin discipline (§5.8) | skill TEST |
 | R4·SHIP | PASS | `Certifier` + `Seal` over every governed artifact from the manifest (§5.8) | skill SHIP |
 | R5.1 | PASS | §8 row R5.1 (`ConsentDesk` signatures; state machine; nonce; no bypass; both dead ends excluded, each by its own mechanism) | tutorial lesson 2 |
-| R5.2 | PASS | §8 row R5.2 (`Disclosure.owedReads` + `owe` verdict — consent-owed AND rule-owed engine-performed) | tutorial lessons 4–7 |
+| R5.2 | PASS | §8 row R5.2 (`Disclosure.owedReads` + `owe` verdict — consent-owed AND guard-owed engine-performed) | tutorial lessons 5–8 |
 | R5.3 | PASS | §8 row R5.3 (`HonestyCheck` bipartite, target-bound, evidence classes, figures engine-rendered only, structural lie check; `ActionHistory.mint`); acceptance bar in §13.3 row 9 | — |
 | R5.4 | PASS | §8 row R5.4 + §5.3 CallRunner routing + §7 step 4 — one description everywhere: simulate = preview then ask; hold = the no-simulation route | — |
-| R5.5 | PASS | §8 row R5.5 (`Masker` at the recording seam; only stored form; collected literals; executor alone sees real args) | tutorial lesson 8 |
+| R5.5 | PASS | §8 row R5.5 (`Masker` at the recording seam; only stored form; collected literals; executor alone sees real args) | tutorial lesson 9 |
 | R5.6 | PASS | §8 row R5.6 (frozen order incl. the throttle's band; OPEN boundary declared; `Judge` on the session seat; UNREADABLE priced) | — |
 | R5.7 | PASS | §8 row R5.7 (`FinishDesk` one strict object; full violation set; pure closure; `force()`) | — |
 | R5.8 | PASS | §8 row R5.8 (`WorldBuilder` worst-world laws; emended-file-never-a-license + `Validator` check; audit attribution) | skill GEN |
 | R6.1 | PASS | §3 `Guard` (rule + deny in one object); `PromptWriter` channel law: contract tool guards → the tool's own card (survives MCP), spec tool guards → the per-agent tail (every path) (§5.3) | skill guard authoring |
 | R6.2 | PASS | §3 `Guard.rule` doc (present/imperative, never accusatory); denials = rule + detail | skill prose rules |
 | R6.3 | PASS | catalog factories: `rule`+`deny` from the same parameters — parity structural (§5.2); hand-written guards priced in §13.3 row 4 | — |
-| R6.4 | PASS | §3 `deny` pure over frozen views; enforced by the purity lint (§5.8) | — |
+| R6.4 | PASS | §3 `deny` pure over frozen ctx; enforced by the purity lint (§5.8) | — |
 | R6.5 | PASS | every ctx carries `userText` for EXACT-LITERAL search — whole-token, contiguous, never interpretation (§3, §5.1); `ConsentDesk.readAnswer` searches engine-minted literals (§5.3); MEANING is judged only through `Judge` on the session's own seat (§5.3) | — |
-| R6.6 | PASS | `Masker.maskProse` collected literals only; no lexicon module exists anywhere in §5 | — |
+| R6.6 | PASS | `Masker.maskProse` collected literals only; no lexicon module exists anywhere in §5; the corrected one-exception clause is served by the three pattern factories, with regex confined to them by the purity lint (§5.2, §5.8) | — |
 | R6.7 | PASS | `catalog.ts` (§5.2): the auto-installed deterministic set + the four judged factories DECLARED, each with `judgePolicy`; a custom guard owes the written admission | skill catalog |
 | R6.8 | PASS | §3: a `Guard` with neither `deny` nor `judgeQuery` is the declared residue; the prose-residue lint rejects restatements (§5.8) | skill residue rule |
 | R7.1 | PASS | `ModelSeat` brakes armed from the DECLARED tier (§5.3); `targets.ts`; redrive rates measured (§13.3 row 1) | — |
-| R7.2 | PASS | §3 `Limits` (calls, destructive, retries, questionTurns); `FinishDesk.force` (§5.3) | tutorial lesson 12 |
+| R7.2 | PASS | §3 `Limits` (calls, destructive, retries, questionTurns); `FinishDesk.force` (§5.3) | tutorial lesson 13 |
 | R7.3 | PASS | `PromptWriter.system` frozen prefix, per-agent divergence last (§5.3); shared-prefix preserved by the channel law | — |
-| R7.4 | PASS | `MastraModelPort` (§5.5): `llmParams` wire-tested, per-field merge over target defaults (§3); named provider presets (`gemini:thinking-off`) in the provider's dialect | tutorial lesson 15 + skill llmParams doc |
+| R7.4 | PASS | `MastraModelPort` (§5.5): `llmParams` wire-tested, per-field merge over target defaults (§3); named provider presets (`gemini:thinking-off`) in the provider's dialect | tutorial lesson 16 + skill llmParams doc |
 | R7.5 | PASS | `ModelSeat` (§5.3): certified-only set (`ModelChoice`), five strategies, switch between attempts, `servedBy` recorded, Judge on the seat | skill targets doc |
 | R8.1 | PASS | §10 inversion 6: the model proposes, the engine disposes every status | — |
 | R8.2 | PASS | `CanonicalCall` (§5.1): sorted-key identity; bipartite matching (no greedy first-fit) in `HonestyCheck` | — |
