@@ -25,19 +25,19 @@ conversation-global = one `DomainContract` — and both cards carry only WORDS: 
 voice, rule sentences, disclosure sentences, a masked-field list, wording overrides. A
 tool's governance facts (effect class, target argument, simulation parameter, sensitive
 paths, user-facing label) live in the table of the surface that executes the tool: the
-declarative world's own data blocks in Path A, the pipeline-generated, gate-approved
-certified intake in Path B. In production the author writes NO tool anything.
+`world` card's own data blocks locally, the `mcpWorld` card's SAME blocks over a live
+MCP surface (§4). In production the author writes NO tool anything.
 
 The two rejected drafts died on structural properties this design makes unrepresentable:
 v1's per-tool authoring burden cannot exist because the cards have no per-tool objects at
-all, and v2's confusing checks split cannot exist because there is exactly ONE rule field
-name (`rules`), ONE rule shape (`Rule`), on both cards — a check, a judged question, and a
-prose rule are three strengths of the same sentence, and the only placement question is
-one a child can answer: *is this about how MY desk behaves (agent card) or about what a
-tool does for everyone (domain card)?*
+all, and v2's confusing checks split cannot exist because there is exactly ONE guard field
+name (`guards`), ONE guard shape (`Guard`), on both cards — a check, a judged question,
+and a prose rule are three strengths of the same sentence, and the only placement question
+is one a child can answer: *is this about how MY desk behaves (the spec card) or about
+what a tool does for everyone (the contract card)?*
 
 The engine underneath is a straight line of named desks. The `Turn` sequences and decides
-nothing; every decision belongs to exactly one small desk (the `Rulebook` decides rules,
+nothing; every decision belongs to exactly one small desk (the `Rulebook` decides guards,
 the `ConsentDesk` decides questions, the `StatusClerk` decides what a call's answer means,
 the `FinishDesk` decides what a valid closing looks like). Because each desk answers one
 question, each desk is small — every engine class commits to ~200 lines or less. Four
@@ -109,12 +109,12 @@ export interface AgentSpec {
   tools?: readonly string[];
   /** Other lanes, for hand-offs: agent name → what that desk handles. Omitted = single-agent domain. */
   teammates?: Readonly<Record<string, string>>;
-  /** Rules about how THIS desk works. Highest priority (R5.6). Omitted = []. */
-  rules?: readonly Rule[];
-  /** Sampling that verifiably reaches the provider, incl. named provider presets (R7.4).
-   *  Merges PER FIELD over the target's declared defaults — a partial object overrides only
-   *  the fields it names. Omitted = the target's defaults. */
-  sampling?: Sampling;
+  /** Guards about how THIS desk works. Highest priority (R5.6). Omitted = []. */
+  guards?: readonly Guard[];
+  /** The model's parameters, verifiably delivered to the provider, incl. named provider
+   *  presets (R7.4). Merges PER FIELD over the target's declared defaults — a partial
+   *  object overrides only the fields it names. Omitted = the target's defaults. */
+  llmParams?: LlmParams;
 }
 
 /** CARD 2 — everything conversation-global = one DomainContract. Everything about THE BUSINESS. */
@@ -125,10 +125,12 @@ export interface DomainContract {
   voice?: string;
   /** Domain truths stated in every agent's prompt. Omitted = []. */
   facts?: readonly string[];
-  /** Rules about TOOLS and the whole conversation — what ANY lane would owe. Run after agent rules (R5.6). Omitted = []. */
-  rules?: readonly Rule[];
+  /** Guards about TOOLS and the whole conversation — what ANY lane would owe. Run after spec guards (R5.6). Omitted = []. */
+  guards?: readonly Guard[];
   /** Per-tool disclosure sentences, three tenses, keyed by tool name. Omitted = engine sentences from the label. */
   disclose?: Readonly<Record<string, Disclose>>;
+  /** Rewrites of the outgoing reply — a guard decides, a rewrite rewrites (§5.2). Omitted = []. */
+  rewrites?: readonly Rewrite[];
   /** Field names masked at every seam — results, args, stored acts, delivered text. Omitted = []. */
   secrets?: readonly string[];
   /** Named overrides for engine sentences and the user-facing status words. Omitted = the engine pack. */
@@ -137,29 +139,41 @@ export interface DomainContract {
   limits?: Limits;
 }
 
-/** THE ONE RULE SHAPE — both cards, three strengths of the same thing:
- *    prose-only      { say }               the declared residue (R6.8)
- *    machine-checked { say, deny }         a pure function refuses (R6.4)
- *    model-judged    { say, judge }        only when no check can decide (R5.6)
- *  `deny` and `judge` are exclusive; declaring both throws at construction (R1.6). */
-export interface Rule {
-  /** Unique among the card's rules — the census and the inspection list key on it. Required. */
+/** THE ONE GUARD SHAPE — both cards, three strengths of the same thing:
+ *    prose-only      { rule }                  the declared residue (R6.8)
+ *    deterministic   { rule, deny }            a pure function refuses (R6.4)
+ *    judged          { rule, judgeQuery }      only when no check can decide (R5.6)
+ *  `deny` and `judgeQuery` are exclusive; declaring both throws at construction (R1.6). */
+export interface Guard {
+  /** Unique among the card's guards — the census keys on it. Required. */
   name: string;
-  /** THE sentence — the prompt, the denial, and rules() all print this one string (R1.5, R6.1).
+  /** THE sentence — the prompt, the denial, and guards() all print this one string (R1.5, R6.1).
    *  Present/imperative, never accusatory (R6.2). Required. */
-  say: string;
-  /** Exact declared tool names this rule covers (Set membership, never substring). Omitted = the whole conversation. */
+  rule: string;
+  /** Exact declared tool names this guard covers (Set membership, never substring). Omitted = the whole conversation. */
   tool?: string | readonly string[];
-  /** When it runs. Omitted = 'call' when `tool` is named, else 'reply'. */
-  on?: 'call' | 'reply';
-  /** Pure check over the frozen typed view; returns the specific detail for THIS violation
-   *  (appended to `say` in the denial), null = allow. */
-  deny?: (view: CallView | ReplyView) => string | null;
-  /** A yes/no question answered by the session's OWN model (R5.6). */
-  judge?: string;
-  /** Pricing when the judged answer is UNREADABLE. Omitted = 'closed' (deny). */
-  fails?: 'open' | 'closed';
+  /** REQUIRED — the phase of the turn this guard runs in. Factories fill it themselves;
+   *  only a hand-written guard types it. */
+  on: 'input' | 'preTool' | 'postTool' | 'reply';
+  /** Pure check over the frozen typed ctx; returns the specific detail for THIS violation
+   *  (appended to `rule` in the denial), null = allow. */
+  deny?: (ctx: InputCtx | CallCtx | ResultCtx | ReplyCtx) => string | null;
+  /** A yes/no question answered by the session's OWN model (R5.6). Its phase is 'reply' —
+   *  construction validates. */
+  judgeQuery?: string;
+  /** What an UNREADABLE judged answer does. Only beside judgeQuery. Omitted = 'denyOnFails'. */
+  judgePolicy?: 'passOnFails' | 'denyOnFails';
 }
+
+/** The four phases of `on`, in turn order:
+ *    'input'      the user's text just arrived        (the pattern-block home)
+ *    'preTool'    before a tool call runs
+ *    'postTool'   after the tool ran, over its result (checkResult's home)
+ *    'reply'      the reply is ready                  (judged guards live here)
+ *  Every ctx carries `userText` — the user's text as a string to search for EXACT
+ *  LITERALS (whole-token, contiguous, whole-value equal), never to interpret (R6.5).
+ *  CallCtx/ResultCtx also carry `state` — the frozen records snapshot where a
+ *  RecordsPort exists (§5.1). */
 
 /** Disclosure for one tool — sentences, not code. Slots are {alias.path} over engine-performed reads. */
 export interface Disclose {
@@ -195,7 +209,7 @@ export interface Limits {
 }
 
 /** Declared in the contract leaf (vocabulary.ts) — StepInput carries it; re-exported for authors. */
-export interface Sampling {
+export interface LlmParams {
   temperature?: number;      // delivered to the provider or the build fails its wire test (R7.4)
   topP?: number;
   maxOutputTokens?: number;  // a LOCAL-tier target arms this as a brake from the tier (R7.1)
@@ -203,26 +217,29 @@ export interface Sampling {
 }
 ```
 
-**Where checks, judged rules, and prose rules live — and why this home cannot confuse.**
-There is exactly one field name, `rules`, with one shape, on both cards. The home is
-picked by one question a six-year-old can answer: **who is the rule about?**
+**Where deterministic checks, judged questions, and prose rules live — and why this home
+cannot confuse.** There is exactly one field name, `guards`, with one shape, on both
+cards. The home is picked by one question a six-year-old can answer: **who is the guard
+about?**
 
-| the rule is about… | home | example |
+| the guard is about… | home | example |
 |---|---|---|
-| a tool anyone could call | `contract.rules` | `readFirst('cancelBooking', 'getBooking')` — every lane owes it |
-| how this one desk behaves | `spec.rules` | `{ name: 'no-prices', say: 'The concierge never discusses prices.', deny: … }` |
+| a tool anyone could call | `contract.guards` | `onlyAfter('cancelBooking', 'getBooking')` — every lane owes it |
+| how this one desk behaves | `spec.guards` | `{ name: 'no-prices', rule: 'The concierge never discusses prices.', on: 'reply', deny: … }` |
 
-There is no `checks` field and no `judged` field: a `Rule` with `deny` is deterministic, a
-`Rule` with `judge` is answered on the session's own model, a `Rule` with neither is the
-declared prose residue (R6.8). One concept, three degrees, zero new names. The R5.6
-priority order falls straight out of the homes: `spec.rules` → `contract.rules` (the
+There is no `checks` field and no `judged` field: a `Guard` with `deny` is deterministic,
+a `Guard` with `judgeQuery` is answered on the session's own model, a `Guard` with neither
+is the declared prose residue (R6.8). One concept, three degrees, zero new names. The R5.6
+priority order falls straight out of the homes: `spec.guards` → `contract.guards` (the
 change-window level — the agent-vs-change-window boundary stays declared OPEN and
-decidable) → consent → honesty → universal, and `agent.rules()` prints that exact order.
+decidable) → consent → honesty → the universal floor, and `agent.guards()` prints that
+exact order.
 
-A contract rule may name a certified-intake tool: `readFirst('cancelBooking', …)` is legal
+A contract guard may name a live-surface tool: `onlyAfter('cancelBooking', …)` is legal
 whether `cancelBooking` is a world tool or a company MCP tool — the NORMS binding for a
-generated surface is authored on the contract card, once, and rendered into that tool's
-own description (§5 `PromptWriter`). No rule is ever written into the intake file.
+live surface is authored on the contract card, once, and rendered into that tool's own
+description (§5 `PromptWriter`). No guard is ever written into the generated `mcpWorld`
+module.
 
 ---
 
