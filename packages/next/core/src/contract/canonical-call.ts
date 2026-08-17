@@ -44,7 +44,7 @@ function coerce(value: unknown, declaredType: Json | undefined): Json | undefine
 }
 
 /** Canonical JSON: object keys deep-sorted, arrays order-significant. */
-function canonicalJson(value: Json): string {
+export function canonicalJson(value: Json): string {
   if (value === null || typeof value !== 'object') return JSON.stringify(value);
   if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
   const obj = value as { readonly [k: string]: Json };
