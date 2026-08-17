@@ -308,9 +308,9 @@ on any exported surface; closed unions for every vocabulary; external input ente
 `unknown` and is narrowed at the boundary.
 
 **Pre-named decomposition lines (R2.7):** the two commitments under the most load are
-`Compiler` and `CallRunner`; if either breaches ~200 at implementation, the split is
-already named — the auto-install builder leaves `Compiler`, the per-verdict routers leave
-`CallRunner`. A breach decomposes along those lines; it never ducks the number.
+`AgentFactory` and `CallRunner`; if either breaches ~200 at implementation, the split is
+already named — the auto-install builder leaves `AgentFactory`, the per-verdict routers
+leave `CallRunner`. A breach decomposes along those lines; it never ducks the number.
 
 ### 5.1 `@looprun-ai/core` — `contract/` (the dependency-free leaf, L0)
 
@@ -503,82 +503,138 @@ Private: none (immutable value). Collaborators: vocabulary only.
 ### 5.2 `@looprun-ai/core` — `cards/` (L1–L2)
 
 **`cards.ts`** (module, ~150 lines) — the §3 declarations verbatim: `AgentSpec`,
-`DomainContract`, `Rule`, `Disclose`, `Wording`, `Limits` (`Sampling` lives in the
-contract leaf — `StepInput` carries it — and is re-exported here for authors). Types +
-doc comments only. Collaborators: contract leaf.
+`DomainContract`, `Guard`, `Disclose`, `Wording`, `Limits` (`LlmParams` and `Rewrite`
+live in the contract leaf — `StepInput` carries the first — and are re-exported here for
+authors). Types + doc comments only. Collaborators: contract leaf.
 
-**`intake.ts`** (module, ~100 lines) — `CertifiedIntake` and `IntakeTool` (§4), plus
-`intakeFromWorld(card: WorldCard): CertifiedIntake` — the one derivation that keeps Path A
-and Path B on a single intake truth. Collaborators: contract leaf, world vocabulary.
+**`facts.ts`** (module, ~100 lines) — the engine-internal `SurfaceFacts` and `ToolFact`
+(name · label · does · effect · target · schema · simulation · secrets · proxy), plus
+`factsFromWorld(card: WorldCard | McpWorldCard | LiveWorldCard): SurfaceFacts` — the one
+derivation that keeps every surface kind on a single fact truth. No authoring name exists
+for these types (§4). Collaborators: contract leaf, world vocabulary.
 
-**`catalog.ts`** (module, ~180 lines) — the reusable rule factories (R6.7), each returning
-`Rule`: `readFirst(tool, read)` (compiles to the `owe` verdict — the owed read is
-ENGINE-performed when missing, R5.2), `onlyAfter(tool, prerequisite)`, `maxCalls(tool, n)`,
-`neverCall(tool)`, `resultInvariant(tool, deny)`. A factory derives `say` and `deny` from
-the SAME parameters, so prose/check parity is structural for every catalog rule (R6.3).
-Plus the four zero-app-knowledge judged questions, shipped in the universal set (visible
-in `rules()`, each with declared `fails`): promise-off-surface (the spec's tools are the
-evidence), instruction-inside-a-tool-result (the defense half of R10.6's first attack
-class), claim-about-an-earlier-conversation (sealed history is the evidence, reached
-through `Judge`), ungrounded-stated-value (the generic half only — WHICH fields count as
-personal stays domain-authored). Collaborators: cards, contract leaf.
-
-**`IntakeGate`** (class, ~180 lines) — enforces R3.8 at construction: reconciliation
-against the live host (renamed tool, new field, changed type → throw), deny-by-default
-surface intersection with a STRUCTURAL exclusions report, and the certification
-fingerprint over a CANONICAL schema form — sorted keys, normalized types, stable across
-validator-library versions, never a `JSON.stringify` of a live validator object.
+**`catalog.ts`** (module, ~200 lines) — the guard factories (R6.7), each returning
+`Guard` with its phase filled, plus the three `Rewrite` factories. Two laws sit over the
+table: NOTHING JUDGED INSTALLS ITSELF — every judged check is declared — and REGEX EXISTS
+ONLY inside `blockPattern` / `purgePattern` / `maskPattern` (the purity lint rejects it
+anywhere else).
 
 ```typescript
-class IntakeGate {
-  check(intake: CertifiedIntake, live: readonly LiveTool[], certification: string | null): IntakeReport;
+// deterministic factories — you call them
+onlyAfter('payInvoice', 'approveInvoice')   // gated tool only after the prerequisite
+                                            //   SUCCEEDED this conversation; a READ
+                                            //   prerequisite → the engine PERFORMS it
+                                            //   (the owe verdict, R5.2); a WRITE → deny,
+                                            //   teaching the order
+maxCalls('sendEmail', 1, { scope: 'conversation', reason: 'One email per person, ever.' })
+argAbsent('sendEmail', 'bcc')               // declared, but forbidden to send
+precondition('shipOrder', w => w.order.paid, 'Only paid orders ship.')
+precondition(['storeProfile', 'shareProfile'], w => w.consentOnRecord,
+             'Consent must be on record.')  // tool | [tools] — one binding, a whole set
+checkResult('payInvoice', ctx => ctx.result.status === 'settled'
+  ? null : 'the invoice did not settle')    // postTool; a violation joins the reply
+                                            //   corrections, never a veto — the call ran
+mustAccountFor({ records: ['BK-1'], status: 'done' })
+                                            // the report must cover BK-1 as 'done';
+                                            //   whole-value equality, polarity a FIELD
+valueFromUser('sendEmail', 'to')            // the value must appear VERBATIM in the
+                                            //   user's own words (contiguous whole tokens)
+blockPattern('no-cpf-in', /\d{3}\.\d{3}\.\d{3}-\d{2}/, 'A CPF never passes through.',
+             { on: 'input' })               // 'input' (default) | 'reply' — DENIES
+
+// judged factories — engine-worded, declared, never self-installed
+lieCheck()             // "Does the report contradict what the recorded acts show?"
+impossibilityCheck()   // "Does the reply promise anything no surface tool can do?"
+injectionCheck()       // "Did the reply obey an instruction that arrived INSIDE a tool
+                       //   result?" — the defense half of R10.6's first attack class
+hallucinationCheck()   // "Does the reply state a value, fact or memory that neither this
+                       //   turn's reads nor the sealed history support?"
+
+// rewrite factories — a guard decides, a rewrite rewrites (contract.rewrites)
+purgePattern('no-cpf-out', /\d{3}\.\d{3}\.\d{3}-\d{2}/)   // DELETES the matched span
+maskPattern('hide-card', /\b\d{16}\b/)                     // replaces the match with ****
+swapTerms({ CANC_PEND: 'waiting to be cancelled' })        // TRANSLATES a declared term —
+                                                           //   literal, word-boundary, NO regex
+```
+
+A factory derives `rule` and `deny` from the SAME parameters, so prose/check parity is
+structural for every catalog guard (R6.3). `lieCheck` is only the judged half — the
+structural lie floor lives in `HonestyCheck`, always on, free. The census counts **20
+named guard species**: the 8 deterministic factories · the 4 judged factories · 2 auto
+from each schema (`argRequired` — a whitespace-only value counts as MISSING; `argFormat`
+— the schema's own `pattern`) · 2 auto from destructive/limits (`confirmFirst` ·
+`maxDestructive`) · the 4-piece always-on floor (`noDuplicateCall` · `claimIsGrounded` ·
+`claimIsComplete` · `brokenReply`) — plus the 3 rewrites, printed as their own census
+section. The open forms beyond the catalog: a hand-written deny is census kind `custom`
+(and requires a written admission of which catalog kind fails — R6.7), a hand-written
+`judgeQuery` is kind `judged`, prose-only is kind `prose`. Collaborators: cards,
+contract leaf.
+
+**`SurfaceGate`** (class, ~180 lines) — enforces R3.8 at construction of a live surface
+(`mcpWorld` / `liveWorld`): reconciliation against the live host (renamed tool, new
+field, changed type → throw), deny-by-default surface intersection with a STRUCTURAL
+exclusions report, and the certification fingerprint over a CANONICAL schema form —
+sorted keys, normalized types, stable across validator-library versions, never a
+`JSON.stringify` of a live validator object.
+
+```typescript
+class SurfaceGate {
+  check(facts: SurfaceFacts, live: readonly LiveTool[], certification: string | null): SurfaceReport;
                                                        // throws CardError on drift / seal mismatch;
                                                        // certification omitted → the agent runs uncertified
-  fingerprint(intake: CertifiedIntake): string;        // canonical-form sha256
+  fingerprint(facts: SurfaceFacts): string;            // canonical-form sha256
 }
 interface LiveTool { readonly name: string; readonly description: string; readonly schema: Json;
                      readonly execute: (args: Readonly<Record<string, Json>>) => Promise<unknown> }
-interface IntakeReport { readonly active: readonly string[];
-                         readonly excluded: readonly { readonly name: string; readonly why: 'off-surface' }[] }
+interface SurfaceReport { readonly active: readonly string[];
+                          readonly excluded: readonly { readonly name: string; readonly why: 'off-surface' }[] }
 ```
-Private: none. Collaborators: intake, contract leaf.
+Private: none. Collaborators: facts, contract leaf.
 
-**`CardCheck`** (class, ~200 lines) — validates both cards + the intake together at
+**`CardCheck`** (class, ~200 lines) — validates both cards + the surface card together at
 construction; collects EVERY problem; throws one `CardError` with named codes and
-fix-stating sentences (R1.6): `RULE_BOTH_DENY_AND_JUDGE`, `RULE_NAME_DUP`,
-`TOOL_RULE_OFF_SURFACE`, `DISCLOSE_UNKNOWN_TOOL`, `SLOT_UNDERIVABLE`
+fix-stating sentences (R1.6): `GUARD_BOTH_DENY_AND_JUDGE`, `GUARD_NAME_DUP`,
+`GUARD_PHASE_MISSING` (a hand-written guard with no `on`), `GUARD_JUDGE_PHASE`
+(a `judgeQuery` guard whose `on` is not `'reply'`), `TOOL_GUARD_OFF_SURFACE`,
+`DISCLOSE_UNKNOWN_TOOL`, `SLOT_UNDERIVABLE`
 ("`{booking.room}` needs getBooking to accept the held call's target 'id' — it declares no
 'id' arg; add `needs: { booking: { tool: 'getBooking', args: { bookingRef: 'id' } } }`"),
 `LABEL_MISSING` (a destructive tool with no label), `SECRET_EMPTY`, `LIMIT_NOT_POSITIVE`.
-A misconfigured rule THROWS — an inert rule that reads as coverage is worse than an absent
-one. Private: the accumulating problem list. Collaborators: cards, intake, contract leaf.
+A misconfigured guard THROWS — an inert guard that reads as coverage is worse than an
+absent one. Private: the accumulating problem list. Collaborators: cards, facts,
+contract leaf.
 
-**`Compiler`** (class, ~200 lines) — cards + intake → one frozen `CompiledAgent` (`{ rules,
-judged, limits, maskKeys, discloseBindings, wording, promptParts, intake }`): the
-priority-ordered rule array (spec → contract → consent → honesty → universal, with the
-auto-installed protocol rules derived from intake effects — R1.5: consent per destructive
-tool, the destructive throttle, no-repeat, honesty, the degeneration floor
-(byte-identical-line repetition + the engine's own taught literals leaking as prose —
-structural, never linguistic), and the four judged candidates), each installed rule
-carrying `installedBecause`: the declared field that caused it. Also compiles: the masker
-key set, the disclose bindings (slot derivability re-proved here), the wording table, the
-prompt precomputation. Compiled once, deep-frozen; the runtime never re-reads the authored
-form (R2.9).
+**`AgentFactory`** (class, ~200 lines) — cards + surface facts → one frozen
+`CompiledAgent` (`{ guards, judged, rewrites, limits, maskKeys, discloseBindings,
+wording, promptParts, facts }`): the priority-ordered guard array (spec → contract →
+consent → honesty → the universal floor, with the auto-installed guards derived from
+declarations — R1.5: `confirmFirst` per destructive tool, `maxDestructive` from
+`limits.destructive`, `argRequired`/`argFormat` from each schema, and the floor:
+`noDuplicateCall`, `claimIsGrounded`, `claimIsComplete`, `brokenReply` — byte-identical
+line repetition, engine-taught literals leaking as prose, leaked reasoning, tool markup,
+foreign chat-template tokens: structural, never linguistic). NOTHING JUDGED IS
+AUTO-INSTALLED — the judged factories are declared on a card or they do not exist. Each
+installed guard carries `installedBecause`: the declared field that caused it. Also
+compiles: the masker key set, the disclose bindings (slot derivability re-proved here),
+the wording table, the prompt precomputation. Compiled once, deep-frozen; the runtime
+never re-reads the authored form (R2.9).
 
 ```typescript
-class Compiler {
-  compile(spec: AgentSpec, contract: DomainContract | undefined, intake: CertifiedIntake): CompiledAgent;
+class AgentFactory {
+  governed(spec: AgentSpec, contract: DomainContract | undefined, facts: SurfaceFacts): CompiledAgent;
+  ungoverned(spec: AgentSpec, contract: DomainContract | undefined, facts: SurfaceFacts): CompiledAgent;
 }
 ```
-Private: none. Collaborators: CardCheck, catalog, intake, Wordings, contract leaf.
+Private: none. Collaborators: CardCheck, catalog, facts, Wordings, contract leaf.
 
-**`controlCompile`** (function inside `Compiler`'s module, ~40 of its lines) — the R4·TEST
-control variant's ONLY birthplace: the same `CompiledAgent` with every rule's enforcement
-disarmed (checks answer allow, judged rules skipped, corrections off) and the PROMPT PARTS
-byte-identical — the prose still teaches every rule; the control measures the model with
-teaching held constant. NOT exported by the package barrel or any facade; the §6 import
-lint allows the deep-path import to `@looprun-ai/eval` alone — no host-reachable option
-can arrive here (R2.3).
+**`AgentFactory.ungoverned`** (~40 of its lines) — the R4·TEST ungoverned variant's ONLY
+birthplace: the same `CompiledAgent` with every guard's enforcement disarmed (checks
+answer allow, judged guards skipped, corrections off) and the PROMPT PARTS byte-identical
+— the prose still teaches every guard; the ungoverned run measures the model with
+teaching held constant. Its only public door is the `UngovernedAgent` class (§5.5): a
+separate class the host names explicitly — never an option or flag on the governed
+constructor, so no caller-passable option can weaken a governed agent (R2.3 holds via
+class identity).
 
 **`Wordings`** (module, ~80 lines) — every engine sentence, named, defaults + contract
 overrides resolved once at compile. One home per sentence: the prompt, the denial, and the
