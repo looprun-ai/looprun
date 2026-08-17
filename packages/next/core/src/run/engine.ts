@@ -3,6 +3,7 @@
  *  CLOSED key set — no index signature, no options object, no field through which
  *  governance weakens. */
 import type { GuardCensus, TurnRecord } from '../contract/vocabulary.js';
+import { TurnFailure } from '../contract/vocabulary.js';
 import { deepFreeze } from '../contract/freeze.js';
 import type { ToolPort, RecordsPort } from '../contract/ports.js';
 import type { CompiledAgent } from '../cards/cards.js';
@@ -50,7 +51,8 @@ export class Engine {
     return new Engine(deps, rulebook);
   }
 
-  /** Rejects with TurnFailure; a failed turn seals nothing. */
+  /** Rejects with TurnFailure; a failed turn seals nothing. The seat reroutes
+   *  between attempts only — the failed attempt ends before the cursor moves. */
   chat(sessionId: string, text: string): Promise<TurnRecord> {
     let session = this.sessions.get(sessionId);
     if (!session) {
@@ -58,7 +60,10 @@ export class Engine {
       this.sessions.set(sessionId, session);
     }
     const live = session;
-    return live.enter(() => new Turn(this.deps).run(live, text));
+    return live.enter(() => new Turn(this.deps).run(live, text)).catch((failure: unknown) => {
+      if (failure instanceof TurnFailure) this.deps.seat.reroute(failure);
+      throw failure;
+    });
   }
 
   /** The Rulebook's own arrays — the list IS the code. */
