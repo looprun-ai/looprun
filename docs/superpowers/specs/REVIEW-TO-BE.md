@@ -1,0 +1,29 @@
+# TO-BE Blueprint v3 — User Review Notes
+
+Observations collected while the user reviews
+`docs/superpowers/specs/2026-08-12-to-be-blueprint-v3.md`. No changes are applied during
+the review; each note is a candidate edit to resolve after the walkthrough ends.
+
+**RESOLUTION: every row (1–17) is resolved by
+`2026-08-17-review-to-be-resolution-design.md` — its §12 maps each row to the section
+that settles it. The rows below are the raw ledger; the design doc is the verdict.**
+
+| # | Section | Observation | Status |
+|---|---|---|---|
+| 1 | §4 | The user dislikes the name `intake` (for the certified tool record, ex-`toolDefs`). A better name is wanted; none chosen yet. | OPEN |
+| 2 | §5.1/§5.3 | The blueprint does not state where AS-IS `degenerationGuard` and `jargonScrub` land. Reading says finish redrives/brakes and wording overrides respectively — the mapping must be made explicit. | OPEN |
+| 3 | §5 | Concern: with guards split across declarations, catalog factories, installed bands and Rule forms, the author may not see WHICH rules run on their agent. `agent.rules()` is the answer the design gives — verify it prints the complete census (all bands, ordered, with `installedBecause`) and that the tutorial teaches it early enough. | OPEN |
+| 4 | §3, §5 | Use ONE nomenclature pair everywhere: `spec` and `contract` only. Kill the agent/domain synonyms (e.g. `InstalledRule.home: 'agent' \| 'domain'` should say `'spec' \| 'contract'`). | OPEN |
+| 5 | §3 | Rename `Rule` → `Guard` (the market-standard term). Field renames wanted: `say` is confusing ("say what?") — `prompt` suggested; `deny`'s `view` parameter name says nothing about what it exposes; `judge`'s meaning (a question the session model answers) is not readable from the name alone. | OPEN |
+| 6 | §5.2, eval | `control` / `controlCompile` are terrible names — use `UNGOVERNED` / an `ungoverned*` compile name. (Note: §11 currently BANS `ungoverned` in the name gate; reversing this inverts that register row.) | OPEN |
+| 7 | §3 | The deny parameter is a read-only snapshot — the user reads it as a context/status; a name like `context`/`ctx` communicates better than `view`. | OPEN |
+| 8 | §3 | Suggestion `judge` → `judgeAsk`. Conflict: the token `ask` sits in the §11 name-gate ban list (from `Rule.ask`); adopting `judgeAsk` requires amending that register row or picking another name that says "a question the session model answers". | OPEN |
+| 9 | §3 | Guard phases are unclear. `on: 'call'` does not say whether it runs before or after the call (it runs BEFORE). The AS-IS hook names (`preTool`, `postTool`, `onReply`) are much easier to understand — prefer explicit phase names over the derived `on` field. Also unresolved: where an input-phase concern (e.g. PII on the user's text) lives in the TO-BE. | OPEN |
+| 10 | §5.2 | `resultInvariant` fails the six-year-old test — a child will never understand the name. Rename to something plain (what it does: "after the tool ran, its result must satisfy this, or the reply gets corrected"). | OPEN |
+| 11 | §3 | `sampling` is a terrible name — pure ML jargon; a child reads nothing from it. SYSTEMIC FINDING: the review keeps hitting names that fail the golden rule the blueprint itself claims (`intake`, `sampling`, `resultInvariant`, `view`, `control`, `say`). The fix is not per-name patching: run ONE naming sweep over the ENTIRE authoring surface, applying the six-year-old test to every exported name and field, before any implementation. | OPEN |
+| 12 | §3 | `Sampling` → `LlmParams` (user's chosen name): the type becomes `LlmParams`, the spec field `llmParams` (or `llm`) — "the model's parameters", plain and honest. | DECIDED |
+| 13 | §3, §5.3 vs charter R6.5 | RULING: guards ALWAYS read the user's text — as a string to search for exact literals, never to interpret (main's doctrine in tutorial 01 and README stands). Charter R6.5 was contrary and is CORRECTED at requirements.md:111. Still contrary inside v3, to correct at application: `CallView`/`ReplyView` gain the user's text (~L425), the Judge section's "deterministic denies never see user text" (~L832), compliance row R6.5 (~L1744), and `valueFromUser` returns to the catalog (v3 had silently deleted it). The ConsentDesk minted-literal statements stay true and untouched. | DECIDED |
+| 14 | §5.8, §11 | RULING: the banned-names gate STAYS (`lints.ts` nameGate, empty allowlist — every §11 retired identifier is a build failure anywhere in the repo). The review's renames amend the register rows: `control` joins the ban list, `ungoverned` leaves it; every old name retired by the sweep joins it. | DECIDED |
+| 15 | §5.2, §13.1 | LAW (user ruling): a guard NEVER uses a regex — over ANY text, not only the user's. The ONE exception: the dedicated pattern factories (`blockPattern` deny on input/reply · `purgePattern` delete from reply · `maskPattern` asterisk in reply) — regex exists ONLY inside them; the purity lint rejects it anywhere else, no warning door. Charter R6.6 and the requirements checklist row carry the exception. | DECIDED |
+| 16 | §5.2, §5.5, §5.8, §6 | RULING: the ungoverned agent is a FIRST-CLASS code deliverable of the skill, instantiable by hosts — not eval-exclusive. Design: a separate explicit class beside the governed one, never an option/flag on the governed constructor (R2.3's "no caller-passable option weakens governance" holds via class identity); the prompt stays byte-identical; eval uses the same public door. v3's "controlCompile unreachable from any facade" posture is replaced. | DECIDED |
+| 17 | process | RULING: the fixing spec carries the full verification repertoire that produced v3 (independent designers → adversarial judges → synthesis → compliance verifiers → re-verify), now WITH the six-year-old naming lens that was missing; the amended blueprint passes through it before any implementation. | DECIDED |
