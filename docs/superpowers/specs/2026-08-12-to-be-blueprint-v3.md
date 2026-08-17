@@ -657,7 +657,7 @@ class Engine {
   static create(cfg: EngineConfig): Engine;      // CardCheck + IntakeGate + Compiler run upstream;
                                                  //   every problem named at once (R1.6)
   chat(sessionId: string, text: string): Promise<TurnRecord>;   // rejects with TurnFailure (R2.10)
-  rules(): readonly InstalledRule[];             // the Rulebook's own arrays — the list IS the code (R1.5)
+  guards(): readonly InstalledGuard[];           // the Rulebook's own arrays — the list IS the code (R1.5)
   excluded(): readonly string[];                 // deny-by-default exclusions, structural (R3.8)
   endSession(sessionId: string): void;
 }
@@ -666,9 +666,11 @@ Private: the session map, the frozen `CompiledAgent`, the collaborator set. Coll
 every run/ class below (composition only), cards/ classes, contract leaf.
 
 **`Turn`** (class, ~180 lines) — THE one turn machine. Sequences only, decides nothing
-(R2.7); imports only its declared collaborators (lintable). The walk: consume typed codes
-→ licensed calls → sweep expiries → model loop (serial per-call execution in emission
-order — engine-enforced, R2.6) → finish checks and bounded redrives → compose → seal. All
+(R2.7); imports only its declared collaborators (lintable). The walk: input guards over
+the arrived text (a deny answers the turn with the guard's own sentence — no model call)
+→ consume typed codes → licensed calls → sweep expiries → model loop (serial per-call
+execution in emission order — engine-enforced, R2.6) → finish checks and bounded redrives
+→ compose (masker, then rewrites) → seal. All
 mutation goes to the `TurnDraft`; `Session.seal` commits atomically; a `TurnFailure`
 discards the draft so a retry starts clean (R2.10).
 
@@ -683,14 +685,14 @@ contract leaf.
 
 **`CallRunner`** (class, ~200 lines) — everything between a proposed call and a recorded
 act, for all three origins (`model`, `engine`, `licence`) through the SAME method: coerce
-against the intake schema (`CanonicalCall.of`), canonical identity, Rulebook verdict,
+against the declared schema (`CanonicalCall.of`), canonical identity, Rulebook verdict,
 route by verdict kind, StatusClerk grading, masking on record (`call.data(mask)` +
 `maskData(result)` — the stored form is the only stored form, R5.5). The verdict routes:
 
 ```typescript
 class CallRunner {
   run(raw: RawCall, origin: 'model' | 'engine' | 'licence', draft: TurnDraft): Promise<Act>;
-  // refuse   → recorded denial: status 'not-done', reason 'blocked', sentence = say + detail
+  // refuse   → recorded denial: status 'not-done', reason 'blocked', sentence = rule + detail
   // owe      → the owed reads run engine-side (origin 'engine'), then re-check the call
   // simulate → the tool runs with its OWN declared simulation parameter set → the preview
   //            is recorded on the held act → disclosure reads → question born FROM the
@@ -705,29 +707,36 @@ Constructed per turn over the session's stores (§7). Private: none. Collaborato
 Rulebook, ConsentDesk, Disclosure, StatusClerk, Masker, ActionHistory, ToolPort,
 contract leaf.
 
-**`Rulebook`** (class, ~150 lines) — the ordered deterministic rule pipe (R5.6): two
-frozen arrays built at compile (call rules, reply rules); first non-allow verdict wins on
-calls; ALL violations collected on replies. Pure — judged rules are not here (they run in
-`Judge`). The inspection list IS the code: `rules()` returns the same arrays `checkCall`
-AND `checkReply` iterate, plus judged rules and resolved limits — ALL governance counted,
-never a parallel copy (R1.5).
+**`Rulebook`** (class, ~150 lines) — the ordered deterministic guard pipe (R5.6): four
+frozen arrays built at compile, one per phase; first non-allow verdict wins on
+input/preTool; postTool and reply collect ALL violations (a postTool violation joins the
+reply corrections — the call already ran). Pure — judged guards are not here (they run in
+`Judge`). The census IS the code: `guards()` returns the same arrays the four phase
+checks iterate, plus judged guards, the rewrites section and resolved limits — ALL
+governance counted, never a parallel copy (R1.5).
 
 ```typescript
 class Rulebook {
-  checkCall(view: CallView): Verdict;
-  checkReply(view: ReplyView): readonly { readonly ruleName: string; readonly detail: string }[];
-  rules(): readonly InstalledRule[];
+  checkInput(ctx: InputCtx): Verdict;
+  checkPreTool(ctx: CallCtx): Verdict;
+  checkPostTool(ctx: ResultCtx): readonly { readonly guardName: string; readonly detail: string }[];
+  checkReply(ctx: ReplyCtx): readonly { readonly guardName: string; readonly detail: string }[];
+  guards(): readonly InstalledGuard[];
 }
 ```
-Private: the two frozen ordered arrays. Collaborators: HonestyCheck (installed as the
-honesty-priority reply rule), contract leaf.
+Private: the four frozen ordered arrays. Collaborators: HonestyCheck (installed as the
+honesty-priority reply guard), contract leaf.
 
 **`ConsentDesk`** (class, ~200 lines) — the question lifecycle as the named state machine
 `open → consumed | closed(declined | superseded | expired | vetoed)` (R5.1). Codes carry
 real crypto entropy, no tool name (R3.7), are unique among open questions (re-drawn on
 collision), and a per-issuance nonce means a stale quoted code can never consume a newer
-ticket. One open question per canonical call (dedupe by `keyWithout(volatile)` — a
-re-attempt returns the SAME question and code, never a second live code). EVERY closure is
+ticket. An IDENTICAL re-proposal returns the SAME question and code, never a second live
+code; a re-proposal differing in ANY arg births a SIBLING question — the earlier stays
+open, and every delivery reprints every open code, so the user can always approve what is
+on screen. When a licensed call executes, EVERY open question for the same (tool, target)
+closes — a target-less tool closes by tool alone — and a same-turn re-proposal for an
+executed (tool, target) resolves to `restate` with the real result. EVERY closure is
 delivered, expiry included. Consumption searches ONLY for engine-minted literals (R6.5)
 and matches exactly ONE question. The desk's private map holds the EXECUTABLE
 `CanonicalCall`; the delivered `Question.call` is the masked display form.
@@ -804,11 +813,14 @@ is itself valid proof approval was asked (a `held` act supports a `held` line). 
 home of the STRUCTURAL lie check: record ids the engine collected from the turn's own
 reads and acts (declared values, never a shape guess — R6.6) that the finish message
 states as done are set-differenced against recorded done acts, deterministically — a lie
-living only in prose is caught with the prose-improvement pass off.
+living only in prose is caught with the prose-improvement pass off. The census shows the
+band as its two rows — `claimIsGrounded` (no lying) and `claimIsComplete` (no hiding) —
+one bipartite matcher underneath; `lieCheck()` is the JUDGED half, a declared factory
+(§5.2), never installed here.
 
 ```typescript
 class HonestyCheck {
-  check(view: ReplyView): readonly { readonly ruleName: 'honesty'; readonly detail: string }[];
+  check(ctx: ReplyCtx): readonly { readonly guardName: 'honesty'; readonly detail: string }[];
   static mustClaim(act: Act): boolean;   // write/destructive statuses + refused/held/blocked/unknown;
                                          //   reads are engine-rendered, never owed as claims
 }
@@ -855,10 +867,10 @@ Private: the declared key set and the collected-literal set. Collaborators: cont
 cache-shaped (R7.3) — business-common blocks first (voice, facts, contract rules, tool
 cards), per-agent divergence as late as possible (persona, agent rules, teammates); the
 state block and the open questions ride the tail. Channel law (R6.1 × R7.3): a CONTRACT
-tool rule's `say` renders into the tool's own card (`ToolCard.does` = the intake's `does`
-+ the rule sentences) — the channel that survives native/MCP mode, byte-shared across the
-domain's agents; an AGENT tool rule's `say` renders into the per-agent tail — present on
-every execution path, and the shared prefix stays byte-identical.
+tool guard's `rule` renders into the tool's own card (`ToolCard.does` = the declared
+`does` + the guard sentences) — the channel that survives native/MCP mode, byte-shared
+across the domain's agents; a SPEC tool guard's `rule` renders into the per-agent tail —
+present on every execution path, and the shared prefix stays byte-identical.
 
 ```typescript
 class PromptWriter {
@@ -892,19 +904,19 @@ class FinishDesk {
 Private: the one schema object. Collaborators: Wordings, contract leaf.
 
 **`Judge`** (class, ~120 lines) — the ONLY model-judged escape (R5.6): composes each
-`judge` question into a one-step, closed-format yes/no and sends it through the session's
+`judgeQuery` into a one-step, closed-format yes/no and sends it through the session's
 OWN `ModelSeat.port()` — the judge seam is deleted, not guarded: no JudgePort exists, so
 no interface can carry a third-party endpoint. The composed question may quote the sealed
-history (how the claim-about-an-earlier-conversation candidate reaches its evidence);
-deterministic denies never see user text — the views carry acts and model output only
-(R6.5). The answer format is fixed tokens — schema-enforced where the backend has
-structured output, convention-parsed elsewhere; UNREADABLE is a first-class verdict priced
-by the rule's declared `fails`.
+history (how `hallucinationCheck` reaches its evidence);
+guards read the user's text only as EXACT LITERALS — judging MEANING happens here, on
+the session's own seat (R6.5). The answer format is fixed tokens — schema-enforced where
+the backend has structured output, convention-parsed elsewhere; UNREADABLE is a
+first-class verdict priced by the guard's declared `judgePolicy`.
 
 ```typescript
 class Judge {
-  run(rules: readonly InstalledRule[], view: ReplyView, history: readonly Msg[]):
-    Promise<readonly { readonly ruleName: string; readonly verdict: 'violation' | 'none' | 'unreadable';
+  run(guards: readonly InstalledGuard[], ctx: ReplyCtx, history: readonly Msg[]):
+    Promise<readonly { readonly guardName: string; readonly verdict: 'violation' | 'none' | 'unreadable';
                        readonly detail: string | null }[]>;
 }
 ```
@@ -913,8 +925,9 @@ Private: none. Collaborators: ModelSeat, contract leaf.
 **`DeliveryWriter`** (class, ~150 lines) — composes the delivered text: the model's
 scrubbed prose, one record line per act (reads included — the result decides what prints),
 every open question with its code in EVERY delivery, every denial, every question closure,
-and the closure sentence. Every engine-known fact reaches the user deterministically —
-never only through model prose.
+and the closure sentence. The contract's `rewrites` (purge · mask · swap) run AFTER the
+masker, over already-approved text — a rewrite never overrides a decision. Every
+engine-known fact reaches the user deterministically — never only through model prose.
 
 ```typescript
 class DeliveryWriter {
@@ -1507,12 +1520,12 @@ call is still governed.
 
 | R | mechanism | home — class + signature |
 |---|---|---|
-| R5.1 | Consent | `ConsentDesk.hold(call, sentence, draft): Question` · `readAnswer(text, draft)` · `close(id, why, draft)` · `sweep(turn, ttl, draft)` — state machine `open → consumed \| closed(declined\|superseded\|expired\|vetoed)`; crypto entropy + per-issuance nonce + unique codes, no tool name on screen; one open question per canonical call (`keyWithout(volatile)`); every closure delivered. Approval never a bypass: `CallRunner.run(ConsentDesk.held(id), 'licence')` re-enters the FULL `Rulebook.checkCall`. No dead ends: the engine births the question from the held call itself (no unbirthable question), and an agent/contract refusal precedes consent — no question is born for an impossible act, so no approval loop can be unsatisfiable |
-| R5.2 | Disclosure | `Disclosure.owedReads(tool, call)` + `CallRunner.run(read, 'engine')` — the ENGINE performs EVERY owed read itself: consent-owed (disclose recipes) AND rule-owed (`catalog.readFirst` → `Verdict {kind:'owe'}`); `before/after/later` fill by alias, bound to the question's target record; no deny can starve the reads because no forced-model-read pass exists to starve |
+| R5.1 | Consent | `ConsentDesk.hold(call, sentence, draft): Question` · `readAnswer(text, draft)` · `close(id, why, draft)` · `sweep(turn, ttl, draft)` — state machine `open → consumed \| closed(declined\|superseded\|expired\|vetoed)`; crypto entropy + per-issuance nonce + unique codes, no tool name on screen; an identical re-attempt returns the SAME question, a differing one births a sibling, and a licensed execution closes every open question of the same (tool, target); every closure delivered. Approval never a bypass: `CallRunner.run(ConsentDesk.held(id), 'licence')` re-enters the FULL `Rulebook.checkCall`. No dead ends: the engine births the question from the held call itself (no unbirthable question), and an agent/contract refusal precedes consent — no question is born for an impossible act, so no approval loop can be unsatisfiable |
+| R5.2 | Disclosure | `Disclosure.owedReads(tool, call)` + `CallRunner.run(read, 'engine')` — the ENGINE performs EVERY owed read itself: consent-owed (disclose recipes) AND guard-owed (`catalog.onlyAfter` with a read prerequisite → `Verdict {kind:'owe'}`); `before/after/later` fill by alias, bound to the question's target record; no deny can starve the reads because no forced-model-read pass exists to starve |
 | R5.3 | Honest report | `FinishDesk.toolCard()/parse()` (one channel, one schema) + `HonestyCheck.check(view)` (bipartite both directions, order-free, target-bound, evidence classes per word, figures structurally absent from declarations — engine-rendered only, structural lie check over collected record ids) + `ActionHistory.mint()` (engine act identity) + `DeliveryWriter.compose` (the record ships every turn). The model claims `(tool, target, word)` — it never writes act ids (the referencing choice is priced under R10.4); a prose-improvement pass is a judged rule ABOVE the deterministic floor and can only improve delivery |
 | R5.4 | Downgrade-to-simulation | `Rulebook.checkCall → Verdict 'simulate'` (simulation declared) — `CallRunner` runs the tool with its OWN declared parameter, records the preview, and the question is born FROM that preview; no simulation declared → `Verdict 'hold'` (R3.4); a lying simulation is caught by `StatusClerk.grade` diff and revoked (`simulationRevoked` — plain consent thereafter, per session) |
 | R5.5 | Sensitive data | `Masker.maskData(value)` at the recording seam inside `CallRunner` — the filtered form is the ONLY stored form; the executor alone receives real args; `Masker.maskProse(text)` in `DeliveryWriter`, collected literals only |
-| R5.6 | Rule ordering + determinism | `Rulebook` — one frozen order: agent → contract (change-window; the agent-vs-change-window boundary declared OPEN, kept decidable) → consent band (incl. the destructive throttle) → honesty → universal (no-repeat, degeneration floor); `deny` pure over frozen views (R6.4); the ONLY model-judged escape is `Judge.run` through `ModelSeat.port()` — no JudgePort exists, the seam is deleted, not guarded; UNREADABLE first-class, priced by `Rule.fails` |
+| R5.6 | Guard ordering + determinism | `Rulebook` — one frozen order: spec → contract (change-window; the spec-vs-change-window boundary declared OPEN, kept decidable) → consent band (incl. `maxDestructive`) → honesty → the universal floor (`noDuplicateCall`, `brokenReply`); `deny` pure over frozen ctx (R6.4); the ONLY model-judged escape is `Judge.run` through `ModelSeat.port()` — no JudgePort exists, the seam is deleted, not guarded; UNREADABLE first-class, priced by `Guard.judgePolicy` |
 | R5.7 | Terminal protocol | `FinishDesk` — one `z.strictObject` renders the taught description AND validates (taught = validated); `split` handles early/stale finishes on typed calls; `Turn` redrives ≤ `limits.retries` carrying the FULL violation set; `closure(acts)` is a pure function of recorded acts — never empty, never "nothing changed" over `unknown`; `force()` when the model will not close |
 | R5.8 | Worst-world | `WorldBuilder.build(card)` — only the BUSINESS-documented surface exists; an intake emendation is never a license for a world behavior (`Validator` rejects it); gates on every kind (`WorldGates`); simulate ≡ act shared path; `PatchDesk.runCustom` (frozen clone in, patches out, applied gated + audited); rendered truth via `DeliveryWriter`; every change attributable in `BuiltWorld.audit()` |
 
