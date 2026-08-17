@@ -1610,7 +1610,7 @@ GAIN    the author cannot forget the field (there is none), and spelling decides
 ```
 DEFECT  cancelBooking({ id, confirmed: true }) → DENIED — 'confirmed' invokes simulation
         AND signals approval; tools artificially grow a parameter; prose fills the field
-NOW     the surface entry declares simulation: { arg: 'dryRun', on: true } — the tool's OWN name;
+NOW     the surface entry declares simulation: { arg: 'dryRun', value: true } — the tool's OWN name;
         the engine downgrades an unapproved destructive call by setting THAT parameter;
         the acting call is clean, with NO field to fill
 GAIN    no invented parameter, no prose-fillable approval; a surface with no dry-run still
@@ -1729,7 +1729,7 @@ on the ban list, and no design name carries it (`Guard.judgeQuery`, `StepInput`,
 | `stateView` / `modelParams` / `terminalProtocol` / `stopOnRepeatedToolCall` / `redrives` | deleted / `llmParams` / engine-owned (`FinishDesk`) / brake in `ModelSeat` + the floor / `limits.retries` | constructor fields name purposes; mechanisms the author never wires have no constructor field |
 | `tookEffect` / `effectInferred` | `Act.said` (the executor's word) + `Act.status` + `Act.evidence` | who attested is in the fields: the executor said, the engine derived, the evidence names the grounding (R8.4) |
 | `internal.ts` | does not exist | the ports are the only backend seam; there is no everything-barrel to promise nothing about |
-| `probe` / taught-generic `dryRun` | the surface entry's `simulation: { arg, on }` — the tool's OWN parameter name | the engine's canonical word never enters a tool schema |
+| `probe` / taught-generic `dryRun` / `simulation.on` | the surface entry's `simulation: { arg, value }` — the tool's OWN parameter name, and `value` never collides with the guard-phase field `on` | the engine's canonical word never enters a tool schema |
 
 ---
 
