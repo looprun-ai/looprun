@@ -10,7 +10,7 @@ function field(value: Json | undefined, key: string): Json | undefined {
   return (value as { readonly [k: string]: Json })[key];
 }
 
-function isJson(value: unknown): value is Json {
+export function isJson(value: unknown): value is Json {
   if (value === null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return true;
   if (Array.isArray(value)) return value.every(isJson);
   if (typeof value === 'object') return Object.values(value as Record<string, unknown>).every(isJson);
