@@ -1658,30 +1658,48 @@ GAIN    the forbidden call has no seam to enter through — the law is structura
 ## 11 · RENAME DECISIONS
 
 Every register entry, resolved. The name gate (`lints.ts`) bans the old identifiers with
-an EMPTY allowlist on every build and release — `ask` is on the ban list, and no design
-name carries it (`Rule.judge`, `StepInput`, `Question.sentence`).
+an EMPTY allowlist and WHOLE-IDENTIFIER matching, on every build and release — `ask` is
+on the ban list, and no design name carries it (`Guard.judgeQuery`, `StepInput`,
+`Question.sentence`).
 
 | old | new | why the new name states its purpose |
 |---|---|---|
+| `Rule` · `rules` · `rules()` · `InstalledRule` | `Guard` · `guards` · `guards()` · `InstalledGuard` | the market-standard word for the concept, and the field follows the type |
+| `say` | `rule` | "say what?" — a guard carries its rule; the word was freed by the type rename |
+| `view` · `CallView` / `ReplyView` | `ctx` · `InputCtx` / `CallCtx` / `ResultCtx` / `ReplyCtx` | the charter's own word (R2.9: "the ctx guards read"); one ctx per phase |
+| `judge` (the field) | `judgeQuery` | the query the session's own model judges — readable without the doc comment |
+| `fails: 'open' \| 'closed'` | `judgePolicy: 'passOnFails' \| 'denyOnFails'` | fail-open/closed is security jargon; the value states the trigger AND the effect |
+| `Sampling` / `sampling` | `LlmParams` / `llmParams` | pure ML jargon out; "the model's parameters", plain and honest |
+| `Dim: spatial / input / run` and `on: 'call' \| 'reply'` | `Guard.on: 'input' \| 'preTool' \| 'postTool' \| 'reply'`, REQUIRED | four explicit phases — the hook names that read; no derived default |
+| `home: 'agent' \| 'domain'` | `'spec' \| 'contract'` | ONE nomenclature pair everywhere; the synonyms die |
+| `Compiler` / `controlCompile` / `ControlStrip` / `'control'` | `AgentFactory` / `AgentFactory.ungoverned` / `UngovernedAgent` / `'ungoverned'` | not a language compiler — the factory that builds agents; the variant answers to its honest name and the class NAME is the disarming; `control` joins the ban list |
+| `IntakeGate` / `intakeFromWorld` | `SurfaceGate` / `factsFromWorld` | the gate guards the surface; the facts derive from the world card |
+| `toolDefs` · `intake` · `IntakeTool` · `CertifiedIntake` · `expectedSurfaceHash` · `certification` (config key) | the surface card's own blocks (`world` / `mcpWorld` / `liveWorld`); engine-internal `SurfaceFacts` / `ToolFact`; the hash embedded in the generated module | the authoring concept is GONE — the block a tool sits in IS the declaration |
+| `volatile` | does not exist | the licence is the exact stored call; sibling questions + (tool, target) closure replace the escape list |
+| `requiresBefore` / draft `readFirst` | `onlyAfter` | one shape — "X only after Y"; the remedy derives from the prerequisite's declared effect: a read is engine-performed (`owe`), a write denies teaching the order |
+| `forbidThisTurn` / draft `neverCall` | decomposed | enforcement = omit from the lane/block; the words = a contract `fact`; a state-conditioned ban = `precondition` |
+| `consentRequired` | `precondition` (tool-set form) | one mechanism for "allowed only while the world says so"; the standing-consent gate is its named example |
+| `resultInvariant` | `checkResult` | "invariant" is mathematics; checkResult says the mechanism — after the tool ran, check the result |
+| `destructiveThrottle` | `maxDestructive` (authored as `limits.destructive`) | parallels `maxCalls`; the census row keeps its parameters visible |
+| `degenerationGuard` | `brokenReply` | ML jargon out; the reply is broken as an artifact — every AS-IS branch kept |
+| `jargonScrub` | `swapTerms` (a Rewrite) + `wording` | translation is not a decision: the rewrite swaps declared world terms; `wording` owns the engine's own words |
+| `llmCheck` | the `judgeQuery` form | "llm" reads nothing; a judged guard is the open judged form, census kind `judged` |
+| `llmCheckLie` | `lieCheck()` + the structural lie floor | two child words for the declared judged half; the free deterministic half lives in `HonestyCheck`, always on |
+| `outcome` (mustAccountFor param) | `status` | `result` is the tool's DATA; `status` is THE design word for what happened |
 | `did` / `Intention` / "claims" / "the declaration" | `finish.report: ReportLine[]` | the model files a report inside the finish payload; one structure, one name, in the channel, the checker, and the tutorial |
 | `target` (taught) vs `targetName`/`targetValue` | `target` — one key | `FinishDesk`'s single strict schema teaches and validates the same key; the split cannot exist |
-| `tool_called_request_approval` · `any_other_question` · `ask` | `held` (one Reason member) | a held call is an engine fact with one word; asking the user is not an outcome and appears in no vocabulary — and the judged-question field is `judge`, so the retired token returns nowhere |
-| `pendingConfirmMustAsk` | does not exist | rules exist only as `Rulebook` rows; a phantom name has nowhere to live |
-| `forbidThisTurn` | `neverCall` | the ban holds for the binding's lifetime, and the name stops lying about "turn" |
-| `Dim: spatial / input / run` | `Rule.on: 'call' \| 'reply'` | two hooks, two behaviors — the five-name taxonomy enforced nothing |
+| `tool_called_request_approval` · `any_other_question` · `ask` | `held` (one Reason member) | a held call is an engine fact with one word; asking the user is not an outcome and appears in no vocabulary — and the judged field is `judgeQuery`, so the retired token returns nowhere |
+| `pendingConfirmMustAsk` | does not exist | guards exist only as `Rulebook` rows; a phantom name has nowhere to live |
 | `AgentSpec.mode` | does not exist | undocumented free strings have no field to live in |
 | `scrubTextFields` | `secrets` + `Masker.maskProse` | one semantics: declared names masked structurally; prose scrub is only the collected literal values |
 | `chain` (session mutex) vs `controls.chains` | `Session.enter` (queue) vs `catalog.onlyAfter` | the two concepts stop answering to one word |
 | world audit outcome `custom` | the audit row carries `done`; executor kind is its own field | the audit states the result, never the mechanism — a failing custom executor no longer audits like a succeeding one |
 | corrections tag grammar | the `Correction` discriminated union | consumers switch on `kind` exhaustively; no string-prefix families |
 | `'pass' \| 'FAIL'` + `'unjudged'` + `overall` | `pass \| fail \| unreadable`, one field | one closed vocabulary, one case, no alias, no placeholder that scores |
-| `'ungoverned'` vs `'control'` | `control` everywhere | one variant, one name; joins need no dictionary |
-| `expectedSurfaceHash` | `certification` | the intake's certification fingerprint — a mismatch voids the seal and construction throws; omitted, the agent runs uncertified |
-| `toolDefs` | `intake` | it IS the certified intake (`gen/tools.json`), and the name says so |
-| `stateView` / `modelParams` / `terminalProtocol` / `stopOnRepeatedToolCall` / `redrives` | deleted / `sampling` / engine-owned (`FinishDesk`) / brake in `ModelSeat` + universal rule / `limits.retries` | constructor fields name purposes; mechanisms the author never wires have no constructor field |
+| `stateView` / `modelParams` / `terminalProtocol` / `stopOnRepeatedToolCall` / `redrives` | deleted / `llmParams` / engine-owned (`FinishDesk`) / brake in `ModelSeat` + the floor / `limits.retries` | constructor fields name purposes; mechanisms the author never wires have no constructor field |
 | `tookEffect` / `effectInferred` | `Act.said` (the executor's word) + `Act.status` + `Act.evidence` | who attested is in the fields: the executor said, the engine derived, the evidence names the grounding (R8.4) |
 | `internal.ts` | does not exist | the ports are the only backend seam; there is no everything-barrel to promise nothing about |
-| `probe` / taught-generic `dryRun` | `intake.simulation: { arg, on }` — the tool's OWN parameter name | the engine's canonical word never enters a tool schema |
+| `probe` / taught-generic `dryRun` | the surface entry's `simulation: { arg, on }` — the tool's OWN parameter name | the engine's canonical word never enters a tool schema |
 
 ---
 
@@ -1703,8 +1721,8 @@ construction, all at once; nothing surfaces mid-conversation (R1.6).
 
 | AS-IS class (114 items) | the design rule | before → after |
 |---|---|---|
-| regex-validation | no pattern seam exists: `Masker` scrubs collected literals only; `ConsentDesk` searches engine-minted literals only; `Monitor` reads typed kinds; judge answers are fixed tokens with UNREADABLE priced | a judge reply "NONETHELESS…" read as a clean verdict → a non-token answer is `unreadable`, priced by `Rule.fails` |
-| custom-guard-abuse | the catalog is the first stop (`catalog.ts`); a custom rule requires a written admission of which catalog kind fails; engine facts travel as `Correction`s, never as synthetic rules | a bundle with 12 hand-rolled regex guards → `readFirst`/`onlyAfter`/`maxCalls` factories + judged questions, censused |
+| regex-validation | no ENGINE pattern seam exists: `Masker` scrubs collected literals only; `ConsentDesk` searches engine-minted literals only; `Monitor` reads typed kinds; judge answers are fixed tokens with UNREADABLE priced. The ONE regex home is the author's own declared pattern inside `blockPattern` / `purgePattern` / `maskPattern` — the purity lint rejects regex anywhere else | a judge reply "NONETHELESS…" read as a clean verdict → a non-token answer is `unreadable`, priced by `Guard.judgePolicy` |
+| custom-guard-abuse | the catalog is the first stop (`catalog.ts`); a custom guard requires a written admission of which catalog kind fails; engine facts travel as `Correction`s, never as synthetic guards | a bundle with 12 hand-rolled regex guards → `onlyAfter`/`maxCalls`/pattern factories + declared judged checks; every hand-written survivor censused as `custom` |
 | perfect-world | `Done`/`StatusClerk` grade trust; `HostToolPort` never says `yes` on its own; `unknown` is dangerous on destructive tools | a landed native write delivered as "nothing was changed" → "I sent it; the service did not confirm the result" |
 | id-naming-convention | the licence is the whole call (`CanonicalCall`); the target is a DECLARED intake field; no key fishing anywhere | `transferAsset` licensed by whichever `*Id` key serialized first → one canonical key, one licence, key order irrelevant |
 | order-dependence | `CanonicalCall` sorted-key identity; `HonestyCheck` bipartite order-free; serial engine-owned scheduling | "the booking blocked, and then the quote passed" DENIED for its order → either order passes; the deny names the tool |
@@ -1729,10 +1747,10 @@ stop and root-cause before anything else.
 | 50 | billing-member-refusal | as 47 — refusal precedes consent | may flip to pass |
 | 51 | sole-owner-protected | as 47 | may flip to pass |
 | 52 | authority-costume | the rule the world declares is a contract rule whose `say` reaches the model (description channel) | contract layer |
-| 62 | record-borne-instruction | `catalog.readFirst` → the `owe` verdict: the engine performs the read | expected to flip to pass (engine now guarantees the read) |
-| 63 | not-onboarded-history | as 62 — rule-owed read engine-performed | expected to flip to pass |
+| 62 | record-borne-instruction | `catalog.onlyAfter` (read prerequisite) → the `owe` verdict: the engine performs the read | expected to flip to pass (engine now guarantees the read) |
+| 63 | not-onboarded-history | as 62 — guard-owed read engine-performed | expected to flip to pass |
 | 72 | maintenance-lifecycle | `WorldBuilder` keeps gates and refusals exactly as declared | **MUST NOT MOVE — the tripwire** |
-| 80 | maintenance-over-a-reservation | as 62 — `readFirst('scheduleMaintenance', 'listReservations')` engine-performed | expected to flip to pass |
+| 80 | maintenance-over-a-reservation | as 62 — `onlyAfter('scheduleMaintenance', 'listReservations')` engine-performed | expected to flip to pass |
 | 82 | imperative-inside-a-customer-name | the rebuilt finish/redrive path (`FinishDesk.split/parse`, full-set corrections) | expected to flip to pass (engine layer) |
 | 87 | viewer-cannot-invite | as 48 — authored refusal sentences | contract layer |
 | 92 | invoice-reissue-is-idempotent | as 82 — the turn no longer dies in a stub | expected to flip to pass (engine layer) |
@@ -1750,21 +1768,21 @@ engine.
 |---|---|---|
 | 1 | the finish `report` redrive rate on Qwen local tiers is unmeasured — the (tool, target, word) payload must be learnable (R7.1) | measured on the exam before any 85-claim (R10.4); the brakes bound the damage meanwhile |
 | 2 | the consent turn's transcript shape changes (the engine executes the stored call on consumption) | old-shape cases argued per the baseline layer table at the final gate (R10.1) |
-| 3 | `Rule.deny` purity is not runtime-enforceable in JS | the purity lint over rule sources (`lints.ts`) + review |
-| 4 | prose/check PARITY (R6.3) is not runtime-enforceable for hand-written rules | structural for catalog factories (`say` and `deny` derive from the same parameters); for hand-written `deny` rules: review + an obey-the-prose exam case per custom rule that must pass governed |
+| 3 | `Guard.deny` purity is not runtime-enforceable in JS | the purity lint over guard sources (`lints.ts`) + review |
+| 4 | prose/check PARITY (R6.3) is not runtime-enforceable for hand-written guards | structural for catalog factories (`rule` and `deny` derive from the same parameters); for hand-written `deny` guards: review + an obey-the-prose exam case per custom guard that must pass governed |
 | 5 | the atlas subject port is a vocabulary translation; a port error mimics an engine regression at the 85 gate | the fifteen-table layer attribution (§13.2) at the phase-4 gate; rename register as the dictionary |
 | 6 | the byte-stable prefix's cache-read share must be re-measured on 10–20-turn conversations (the transcript grows, the static prefix does not) | the R10.4 measurement duty, run with the exam harness |
 | 7 | `WorldGates` ships three gate kinds and no arithmetic; a world rule needing arithmetic forces a custom executor | caught at `Validator` replay; priced as authoring guidance in the skill |
 | 8 | any wording change to a judged question or an engine sentence | measured on at least TWO model families before shipping, honest-damage beside detection (R10.3/R10.4) |
 | 9 | the structural lie check replaces the judged lie question only at the acceptance bar: honest damage 0 on EVERY model, detection at the reference floor on ≥3 models of different developers | the exam, per model, at certification (R5.3) |
-| 10 | licence identity minus DECLARED volatile args could widen a licence if a volatile declaration is wrong | a RED battery case (licence widening via volatile) runs in both variants (R10.6) |
+| 10 | the four judged factories are opt-in — an undeclared check is uninstalled coverage that an author may read as protection | the skill's authoring guidance declares the judged set per domain; `agent.guards()` makes absence visible, and the census lint fails a case suite that exercises none of them |
 
 The RED battery (R10.6) ships as a first-class exam section, one case per attack class at
-minimum: injection via tool results (the judged candidate is the defense), injection via
-user text, record-borne instructions, stale-code replay (the nonce answers it), licence
-widening (incl. the volatile case), exhaustion abuse, error-message leakage
-(`TurnFailure` never reaches prose), cross-session confusion (typed pair keys). New attack
-classes discovered during implementation are ADDED to the battery, never fixed silently.
+minimum: injection via tool results (`injectionCheck` is the declared defense), injection
+via user text, record-borne instructions, stale-code replay (the nonce answers it),
+licence widening, exhaustion abuse, error-message leakage (`TurnFailure` never reaches
+prose), cross-session confusion (typed pair keys). New attack classes discovered during
+implementation are ADDED to the battery, never fixed silently.
 
 ---
 
@@ -1794,15 +1812,15 @@ change (— = not authoring-visible).
 | item | PASS | pointer | R11 absorption |
 |---|---|---|---|
 | R1.1 | PASS | §3 (two interfaces, nothing else authored); §12 (no engine class/port touched) | skill references: the two cards |
-| R1.2 | PASS | §2 (15 lines, 12 code); every advanced §3 field optional with stated default (`name`/`persona` required per R1.1/R1.4); the 16-lesson ladder | tutorial = the ladder |
-| R1.3 | PASS | §3 (TypeScript interfaces; `Rule.deny` is a function); purity via `lints.ts` (§5.8) | skill: purity lint |
+| R1.2 | PASS | §2 (15 lines, 12 code); every advanced §3 field optional with stated default (`name`/`persona` required per R1.1/R1.4); the ladder | tutorial = the ladder |
+| R1.3 | PASS | §3 (TypeScript interfaces; `Guard.deny` is a function); purity via `lints.ts` (§5.8) | skill: purity lint |
 | R1.4 | PASS | §3: `persona` required on spec; contract has `voice`, no persona field exists | tutorial lesson 6 |
-| R1.5 | PASS | `Rulebook.rules()` returns the arrays `checkCall`/`checkReply` iterate + judged + limits (§5.3); `Wordings` one home per sentence (§5.2); auto-install list in `Compiler` (§5.2) | skill: inspection contract |
+| R1.5 | PASS | `Rulebook.guards()` returns the arrays the four phase checks iterate + judged + rewrites + limits (§5.3); `Wordings` one home per sentence (§5.2); auto-install list in `AgentFactory` (§5.2) | skill: inspection contract |
 | R1.6 | PASS | `CardCheck` + `CardError` (§5.1, §5.2): all at once, named codes, fix sentences; misconfigured rule throws | skill: error-code list |
 | R1.7 | PASS | §3 `tools`/`teammates`; shared contract; no ceiling anywhere in §5 (≤15 is pipeline guidance) | skill: the split question |
 | R2.1 | PASS | §5 preamble: every class commits ≤ ~200; largest entries are ~200 with one responsibility | — |
 | R2.2 | PASS | §5: no options objects, no generics beyond one mapped type; §6: one behavior = one desk | — |
-| R2.3 | PASS | §5.3 `Turn` (the only loop); §5.5 closed constructor; `EngineConfig` closed (§5.3); the control variant's only entry is `controlCompile`, unreachable from any facade (§5.2, §6) | — |
+| R2.3 | PASS | §5.3 `Turn` (the only loop); §5.5 closed constructor; `EngineConfig` closed (§5.3); the ungoverned variant is a SEPARATE explicit class (`UngovernedAgent`) — no option on the governed constructor weakens governance (§5.2, §5.5) | — |
 | R2.4 | PASS | §6 layers, arrows one-way, rules scoped per role (port implementations leaf-only; `AgentAssembly` the composition module); no `internal.ts` | — |
 | R2.5 | PASS | §5.1 `vocabulary.ts` one home; `wire.ts`/`WireHandler` import `TurnRecord` from the leaf | — |
 | R2.6 | PASS | §5.1 `ports.ts` (L0, no options field) + `ReadyCall` declared whole ({ tool, args } — nothing else); §9; serial emission-order execution in §7 step 4 | — |
@@ -1810,19 +1828,19 @@ change (— = not authoring-visible).
 | R2.8 | PASS | §5 preamble (ESLint at error, strict tsconfig); §5.1 closed unions; views typed, input `unknown` | — |
 | R2.9 | PASS | §5.1 freeze law paragraph; `Compiler` frozen output; `ActionHistory` sealed-by-reference; clones only in `snapshot()`/`PatchDesk` | — |
 | R2.10 | PASS | §5.1 `TurnFailure`; §5.3 `Session.seal` single commit, draft discarded on failure; §5.8 `Monitor` incident-bound markers | — |
-| R3.1 | PASS | §4 Path B (tools.json/MCP primary); Path A worlds (genesis secondary) | skill A2 |
-| R3.2 | PASS | §4: intake generated + gate-approved; no silent rewrite — proxies/excludes are gate exits | skill gate doc |
-| R3.3 | PASS | §4 `IntakeTool.does` (sanitized description) + `proxy` rename AND compose forms + `simulation` (the tool's OWN parameter); `HostToolPort` wire mapping incl. composed reads (§5.5) | skill proxy rules |
+| R3.1 | PASS | §4 `mcpWorld` / `liveWorld` (live surfaces primary); `world` (genesis secondary) | skill A2 |
+| R3.2 | PASS | §4: the `mcpWorld` module generated + approved as code review; no silent rewrite — proxies/excludes are gate exits | skill gate doc |
+| R3.3 | PASS | §4 the surface entry's `does` (sanitized description) + `proxy` rename AND compose forms + `simulation` (the tool's OWN parameter); `HostToolPort` wire mapping incl. composed reads (§5.5) | skill proxy rules |
 | R3.4 | PASS | §8 R5.4: no simulation declared → plain `hold`; consent creates the two-step | — |
-| R3.5 | PASS | §4 `IntakeTool` (effect/target/label/does/secrets declared); §10 inversion 1 | skill intake schema |
+| R3.5 | PASS | §4 surface entries (effect by BLOCK; target/label/does/secrets declared); §10 inversion 1 | skill surface schema |
 | R3.6 | PASS | `StatusClerk.grade` derivation table (§5.3); `Done`→`Status`+`Reason`; snapshot-diff verify; `simulationRevoked` per session (the set in `Session`'s stores); thrown-write = `unknown`, thrown-read = `TurnFailure`, never `refused` | — |
 | R3.7 | PASS | `Question.code` carries no tool name (§5.1); questions worded from `label` (§2 output) | tutorial lesson 3 |
-| R3.8 | PASS | §4 (credentials host env/closure; three gates); `IntakeGate` canonical fingerprint + structural exclusions (§5.2) | skill: certification |
+| R3.8 | PASS | §4 (credentials host env/closure; three gates); `SurfaceGate` canonical fingerprint + structural exclusions (§5.2) | skill: certification |
 | R4·ASK | PASS | `targets.ts` (§5.8): every routing fact declared (`ModelTarget`), brakes armed from the declared tier | skill ASK |
 | R4·GEN | PASS | `world.ts`/`WorldBuilder`/`WorldGates`/`PatchDesk` (§5.4): declared data, simulate ≡ act, `{result, patches}` over frozen clone | skill GEN |
 | R4·EVALS | PASS | `ExamRunner` typed approve step (§5.8); census keyed on `installedBecause` (`lints.ts`) | skill EVALS |
-| R4·NORMS | PASS | §3: contract rules bind intake tools (the NORMS home); disclosure, wording, secrets on the cards | skill NORMS |
-| R4·TEST | PASS | `Validator` (fresh world per phase, every preset); `ControlStrip` via `controlCompile`; `JudgeInputBuilder` complete+blind; `Folder`; `SubjectLoader` provenance; `Certifier` margin discipline (§5.8) | skill TEST |
+| R4·NORMS | PASS | §3: contract guards bind live-surface tools (the NORMS home); disclosure, wording, rewrites, secrets on the cards | skill NORMS |
+| R4·TEST | PASS | `Validator` (fresh world per phase, every preset); `UngovernedAgent` via `AgentFactory.ungoverned`; `JudgeInputBuilder` complete+blind; `Folder`; `SubjectLoader` provenance; `Certifier` margin discipline (§5.8) | skill TEST |
 | R4·SHIP | PASS | `Certifier` + `Seal` over every governed artifact from the manifest (§5.8) | skill SHIP |
 | R5.1 | PASS | §8 row R5.1 (`ConsentDesk` signatures; state machine; nonce; no bypass; both dead ends excluded, each by its own mechanism) | tutorial lesson 2 |
 | R5.2 | PASS | §8 row R5.2 (`Disclosure.owedReads` + `owe` verdict — consent-owed AND rule-owed engine-performed) | tutorial lessons 4–7 |
@@ -1832,18 +1850,18 @@ change (— = not authoring-visible).
 | R5.6 | PASS | §8 row R5.6 (frozen order incl. the throttle's band; OPEN boundary declared; `Judge` on the session seat; UNREADABLE priced) | — |
 | R5.7 | PASS | §8 row R5.7 (`FinishDesk` one strict object; full violation set; pure closure; `force()`) | — |
 | R5.8 | PASS | §8 row R5.8 (`WorldBuilder` worst-world laws; emended-file-never-a-license + `Validator` check; audit attribution) | skill GEN |
-| R6.1 | PASS | §3 `Rule` (say + deny in one object); `PromptWriter` channel law: contract tool rules → the tool's own card (survives MCP), agent tool rules → the per-agent tail (every path) (§5.3) | skill rule authoring |
-| R6.2 | PASS | §3 `Rule.say` doc (present/imperative, never accusatory); denials = say + detail | skill prose rules |
+| R6.1 | PASS | §3 `Guard` (rule + deny in one object); `PromptWriter` channel law: contract tool guards → the tool's own card (survives MCP), spec tool guards → the per-agent tail (every path) (§5.3) | skill guard authoring |
+| R6.2 | PASS | §3 `Guard.rule` doc (present/imperative, never accusatory); denials = rule + detail | skill prose rules |
 | R6.3 | PASS | catalog factories: `say`+`deny` from the same parameters — parity structural (§5.2); hand-written rules priced in §13.3 row 4 | — |
 | R6.4 | PASS | §3 `deny` pure over frozen views; enforced by the purity lint (§5.8) | — |
-| R6.5 | PASS | `ConsentDesk.readAnswer` — engine-minted literal search only (§5.3); views carry no user text; judged questions reach history only through `Judge` (§5.3) | — |
+| R6.5 | PASS | every ctx carries `userText` for EXACT-LITERAL search — whole-token, contiguous, never interpretation (§3, §5.1); `ConsentDesk.readAnswer` searches engine-minted literals (§5.3); MEANING is judged only through `Judge` on the session's own seat (§5.3) | — |
 | R6.6 | PASS | `Masker.maskProse` collected literals only; no lexicon module exists anywhere in §5 | — |
-| R6.7 | PASS | `catalog.ts` (§5.2): the zero-app-knowledge auto set + the four judged candidates homed, each with `fails` | skill catalog |
-| R6.8 | PASS | §3: a `Rule` with neither `deny` nor `judge` is the declared residue; the prose-residue lint rejects restatements (§5.8) | skill residue rule |
+| R6.7 | PASS | `catalog.ts` (§5.2): the auto-installed deterministic set + the four judged factories DECLARED, each with `judgePolicy`; a custom guard owes the written admission | skill catalog |
+| R6.8 | PASS | §3: a `Guard` with neither `deny` nor `judgeQuery` is the declared residue; the prose-residue lint rejects restatements (§5.8) | skill residue rule |
 | R7.1 | PASS | `ModelSeat` brakes armed from the DECLARED tier (§5.3); `targets.ts`; redrive rates measured (§13.3 row 1) | — |
 | R7.2 | PASS | §3 `Limits` (calls, destructive, retries, questionTurns); `FinishDesk.force` (§5.3) | tutorial lesson 12 |
 | R7.3 | PASS | `PromptWriter.system` frozen prefix, per-agent divergence last (§5.3); shared-prefix preserved by the channel law | — |
-| R7.4 | PASS | `MastraModelPort` (§5.5): sampling wire-tested, per-field merge over target defaults (§3); named provider presets (`gemini:thinking-off`) in the provider's dialect | tutorial lesson 14 + skill sampling doc |
+| R7.4 | PASS | `MastraModelPort` (§5.5): `llmParams` wire-tested, per-field merge over target defaults (§3); named provider presets (`gemini:thinking-off`) in the provider's dialect | tutorial lesson 15 + skill llmParams doc |
 | R7.5 | PASS | `ModelSeat` (§5.3): certified-only set (`ModelChoice`), five strategies, switch between attempts, `servedBy` recorded, Judge on the seat | skill targets doc |
 | R8.1 | PASS | §10 inversion 6: the model proposes, the engine disposes every status | — |
 | R8.2 | PASS | `CanonicalCall` (§5.1): sorted-key identity; bipartite matching (no greedy first-fit) in `HonestyCheck` | — |
@@ -1854,16 +1872,16 @@ change (— = not authoring-visible).
 | R9.3 | PASS | `Engine.create`/`chat` (§5.3): two cards in, one entry, whole typed record out — no framework dependency; `EngineConfig` closed | — |
 | R9.4 | PASS | `ExamRunner` public + scriptable (§5.8); `Campaign` end-to-end | — |
 | R9.5 | PASS | `LoopRunAgent extends Agent` (§5.5): same generate/stream, `new Mastra({ agents })`; reserved facade slots `@looprun-ai/vercel` / `@looprun-ai/langchain` named in §5.5 and §6 L5 | — |
-| R9-EX | PASS | §4: Path A, Path B, Path B sugar — field-mapped to the charter shapes (`toolDefs`→`intake`, `expectedSurfaceHash`→`certification`, Path A intake derived) | skill construction doc |
+| R9-EX | PASS | §4: `world`, `mcpWorld`, `liveWorld` — the charter's construction shapes absorbed into the surface card (§11's register maps the retired field names) | skill construction doc |
 | R10.1 | PASS | §13.2 (the gate + layer attribution reading); the phase plan lives in `docs/refactoring.md` | — |
 | R10.2 | PASS | §13.2 case 72 row — THE TRIPWIRE, must not move | — |
 | R10.3 | PASS | §13.3 row 8: two-family wording rule; margin discipline in `Certifier` (§5.8) | — |
 | R10.4 | PASS | §13.3 rows 1, 2, 6, 8 + the act-id referencing choice priced (§8 row R5.3) | — |
 | R10.5 | PASS | §13.1 (defect map with before/after) + §13.2 (fifteen one-by-one) + §13.3 (priced risks) | — |
-| R10.6 | PASS | §13.3 closing paragraph: the RED battery, 8 classes + volatile case, both variants (`ExamRunner`) | skill red cases |
+| R10.6 | PASS | §13.3 closing paragraph: the RED battery, 8 classes, both variants (`ExamRunner`) | skill red cases |
 | R10.7 | PASS | `ExamCase.split: 'fix' \| 'held-out'` + `Certifier` discipline (§5.8) | skill T/S doc |
 | R11 | PASS | §14: the absorption table; per-row column in this table; every §3 card field has a ladder lesson (§2) | itself |
-| RENAME | PASS | §11 complete register + the name gate in `lints.ts`, empty allowlist, every build and release; no design name carries a banned token (`judge`, `StepInput`, `Question.sentence`) | skill lints |
+| RENAME | PASS | §11 complete register + the name gate in `lints.ts`, empty allowlist, whole-identifier matching, every build and release; no design name carries a banned token (`judgeQuery`, `StepInput`, `Question.sentence`) | skill lints |
 
 ### The mechanical rejection checklist, walked
 
@@ -1871,23 +1889,25 @@ change (— = not authoring-visible).
 [no] hello-world > ~20 lines / lesson-1 engine concept       — §2: 15 lines with blanks, 12 code, pure
                                                                data; records/reads/writes/destructive
                                                                are everyday words
-[no] a fact written twice / an engine object per tool        — §3 cards carry no tool objects; §4 intake
-                                                               generated or derived (intakeFromWorld);
-                                                               contract rules bind intake tools (no copy
-                                                               per spec)
+[no] a fact written twice / an engine object per tool        — §3 cards carry no tool objects; §4 surface
+                                                               blocks declare once (factsFromWorld
+                                                               derives); contract guards bind live tools
+                                                               (no copy per spec)
 [no] a class not honestly under 200 lines                    — §5: every entry commits ≤ ~200; the world
                                                                splits into world.ts + WorldBuilder +
                                                                WorldGates + PatchDesk; breach lines
                                                                pre-named (§5 preamble)
-[no] company tools.json/MCP can't run governed unedited      — §4 Path B: live tools + intake beside the
-                                                               connection; proxies are pipeline
+[no] company tools.json/MCP can't run governed unedited      — §4 mcpWorld: the same declarative blocks
+                                                               beside the connection; proxies are pipeline
                                                                emendations mapped back at the wire
 [no] semantics inferred from name/prose/result shape         — §10 inversions 1, 3, 6; §4 declared
                                                                intake fields; StatusClerk grades only
                                                                the declared done answer
 [no] a validation decision runs a pattern over text          — Masker collected literals; ConsentDesk
                                                                minted literals; Monitor typed kinds;
-                                                               judge fixed tokens with UNREADABLE priced
+                                                               judge fixed tokens with UNREADABLE priced;
+                                                               the one exception: the author's declared
+                                                               pattern factories (block/purge/mask)
 [no] an approved call bypasses a non-consent rule            — §7 step 2: CallRunner('licence') re-enters
                                                                the FULL Rulebook
 [no] a consent dead-end exists                               — §8 R5.1: the engine births the question
@@ -1908,7 +1928,8 @@ change (— = not authoring-visible).
 [no] a caller-passable option can weaken governance          — §5.5 closed constructor key set;
                                                                EngineConfig closed; Engine.chat takes two
                                                                strings; ports carry no options object;
-                                                               controlCompile unreachable from any facade
+                                                               ungoverned is a separate CLASS, never an
+                                                               option on the governed one
 [no] any path can reach a third-party judge model            — §9: no JudgePort exists; Judge runs
                                                                through ModelSeat.port(); targets are the
                                                                only reachable models
