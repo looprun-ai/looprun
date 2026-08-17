@@ -76,20 +76,22 @@ console.log((await agent.generate('Please cancel booking bk_1.')).text);
 `destructive`, the consent protocol installs itself (R1.5): the engine holds the call,
 words the question from the declared `label` (the tool name never appears on the user's
 screen — R3.7), prints the one-time code itself, and only the typed code releases exactly
-that call — which still passes every other rule. The spec omits `tools`, so this agent's
+that call — which still passes every other guard. The spec omits `tools`, so this agent's
 lane is the whole surface (the single-agent default). No contract card yet — the tutorial
-adds it at lesson 6. Production swaps `world:` for `mcp: { url, headers }` plus the
-certified `intake` (§4).
+adds it later in the ladder. Production swaps `world(...)` for `mcpWorld(...)` (§4) — the
+config line does not change.
 
-The tutorial progression this hello world opens (R1.2, one concept per lesson — the
-16-lesson ladder): 1 hello agent · 2 a `destructive` tool is the whole consent setup ·
-3 `label` — the user's words for the act · 4 `disclose.before` — what this exact call
-would do · 5 `disclose.after` + `disclose.later` — the record line and the standing
-sentence · 6 the contract card: `voice` + `facts` · 7 `disclose.needs` — figures in the
-question, read by the engine itself · 8 `secrets` · 9 `rules` on the contract (a tool
-rule every lane owes) · 10 `rules` on the spec (how this desk behaves) · 11 a judged rule
-(`judge`) · 12 `limits` · 13 `wording` · 14 `sampling` + named provider presets · 15 a
-second agent on the same contract (`tools` + `teammates`) · 16 `agent.rules()` + the exam.
+The tutorial progression this hello world opens (R1.2, one concept per lesson):
+1 hello agent · 2 a `destructive` tool is the whole consent setup · 3 `agent.guards()` —
+read what you installed · 4 `label` — the user's words for the act · 5 `disclose.before`
+— what this exact call would do · 6 `disclose.after` + `disclose.later` — the record line
+and the standing sentence · 7 the contract card: `voice` + `facts` · 8 `disclose.needs` —
+figures in the question, read by the engine itself · 9 `secrets` · 10 `guards` on the
+contract (a tool guard every lane owes) · 11 `guards` on the spec (how this desk behaves)
+· 12 a judged guard (`judgeQuery`, the declared judged factories) · 13 `limits` ·
+14 `wording` + `rewrites` — a guard decides, a rewrite rewrites · 15 `llmParams` + named
+provider presets · 16 a second agent on the same contract (`tools` + `teammates`) ·
+17 the exam.
 
 ---
 
@@ -1686,10 +1688,10 @@ name carries it (`Rule.judge`, `StepInput`, `Question.sentence`).
 ## 12 · WHAT THE AUTHOR NEVER SEES — the construction chain
 
 One paragraph a maintainer can hold: `new LoopRunAgent(cfg)` → `AgentAssembly.assemble`
-resolves the path (world → `intakeFromWorld`; tools/mcp → `IntakeGate` reconcile +
-deny-by-default + certification) → `Engine.create` over the closed `EngineConfig` runs
-downstream of `CardCheck` (every problem at once, named codes) and `Compiler` (one frozen
-`CompiledAgent`) → per session, `Session` holds `ActionHistory`/`ConsentDesk`/`Masker`/the
+resolves the surface card (world → `factsFromWorld`; mcpWorld/liveWorld → `SurfaceGate`
+reconcile + deny-by-default + certification) → `Engine.create` over the closed
+`EngineConfig` runs downstream of `CardCheck` (every problem at once, named codes) and
+`AgentFactory` (one frozen `CompiledAgent`) → per session, `Session` holds `ActionHistory`/`ConsentDesk`/`Masker`/the
 world instance → per turn, `Turn` sequences the desks. Spec mistakes surface at
 construction, all at once; nothing surfaces mid-conversation (R1.6).
 
@@ -1774,7 +1776,7 @@ The engine never ships alone; scope is `looprun`, `agentspec`, and the subject u
 | artifact | what absorbs the change |
 |---|---|
 | `agentspec` skill | `references/**` rewritten to the two-card shapes of §3, the intake row of §4, the catalog of §5.2; the lints re-keyed to `installedBecause` and the §11 name gate list |
-| `docs/tutorial/**` | the 16-lesson ladder of §2 IS the lesson plan — one concept per lesson, each lesson a card field with its default |
+| `docs/tutorial/**` | the ladder of §2 IS the lesson plan — one concept per lesson, each lesson a card field with its default |
 | README + `governance/**` + source headers | the two-card contract, the no-external-model law restated at the `Judge`/`JudgeInputBuilder` headers, the R9-EX construction shapes |
 | `agentspec-bench` subject | the atlas bundle ported once, phase 4, mechanical translation — §11 is the dictionary |
 
