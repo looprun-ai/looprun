@@ -376,7 +376,7 @@ export interface ReportLine { readonly tool: string; readonly target: string; re
 export interface FinishPayload { readonly message: string; readonly report: readonly ReportLine[] }
 export interface RawCall { readonly tool: string; readonly args: Readonly<Record<string, unknown>> }
 export interface ToolCard { readonly name: string; readonly does: string; readonly schema: Json }
-                                              // does = the intake's does + the tool's contract-rule
+                                              // does = the declared does + the tool's contract-guard
                                               //   sentences — the R6.1 prose channel
 export interface StepInput { readonly system: string; readonly messages: readonly Msg[];
                              readonly tools: readonly ToolCard[]; readonly forceFinish: boolean;
@@ -656,7 +656,7 @@ governance weakens (R2.3).
 
 ```typescript
 class Engine {
-  static create(cfg: EngineConfig): Engine;      // CardCheck + IntakeGate + Compiler run upstream;
+  static create(cfg: EngineConfig): Engine;      // CardCheck + SurfaceGate + AgentFactory run upstream;
                                                  //   every problem named at once (R1.6)
   chat(sessionId: string, text: string): Promise<TurnRecord>;   // rejects with TurnFailure (R2.10)
   guards(): readonly InstalledGuard[];           // the Rulebook's own arrays — the list IS the code (R1.5)
@@ -849,7 +849,7 @@ Private: the compiled disclose bindings. Collaborators: CanonicalCall, Wordings,
 contract leaf.
 
 **`Masker`** (class, ~120 lines) — sensitive data at every seam (R5.5): declared field
-names (contract `secrets` + intake per-tool `secrets`) masked structurally on results,
+names (contract `secrets` + surface per-tool `secrets`) masked structurally on results,
 recorded args, and stored acts — masking runs once, on record, so history, honesty,
 disclosure, delivery and the wire read safe data by construction; a raw copy never exists
 downstream of the recording seam (the executor alone receives real args — it must
@@ -866,8 +866,8 @@ class Masker {
 Private: the declared key set and the collected-literal set. Collaborators: contract leaf.
 
 **`PromptWriter`** (class, ~200 lines) — the single producer of prompt bytes: byte-stable,
-cache-shaped (R7.3) — business-common blocks first (voice, facts, contract rules, tool
-cards), per-agent divergence as late as possible (persona, agent rules, teammates); the
+cache-shaped (R7.3) — business-common blocks first (voice, facts, contract guards, tool
+cards), per-agent divergence as late as possible (persona, spec guards, teammates); the
 state block and the open questions ride the tail. Channel law (R6.1 × R7.3): a CONTRACT
 tool guard's `rule` renders into the tool's own card (`ToolCard.does` = the declared
 `does` + the guard sentences) — the channel that survives native/MCP mode, byte-shared
@@ -999,9 +999,9 @@ tool kind against the declared target record, simulate ≡ act by shared code pa
 are honest results, every state change is attributable to a recorded audit row, `done` is
 answered from the world's own write. Presets never half-apply (a patch naming a missing
 record throws at build). The world's documented surface is the BUSINESS's own
-documentation: an intake emendation (a proxy row, a simulation declaration, a composed
+documentation: a pipeline emendation (a proxy row, a simulation declaration, a composed
 read) is pipeline output and never licenses a world behavior — `Validator` rejects a world
-tool whose only documentation source is an emended intake row (R5.8). The world's verdicts
+tool whose only documentation source is a pipeline-emended surface row (R5.8). The world's verdicts
 are engine-independent — case 72's mis-ordered maintenance refusal lives here and survives
 the rebuild untouched (R10.2).
 
@@ -1538,7 +1538,7 @@ call is still governed.
 | R5.5 | Sensitive data | `Masker.maskData(value)` at the recording seam inside `CallRunner` — the filtered form is the ONLY stored form; the executor alone receives real args; `Masker.maskProse(text)` in `DeliveryWriter`, collected literals only |
 | R5.6 | Guard ordering + determinism | `Rulebook` — one frozen order: spec → contract (change-window; the spec-vs-change-window boundary declared OPEN, kept decidable) → consent band (incl. `maxDestructive`) → honesty → the universal floor (`noDuplicateCall`, `brokenReply`); `deny` pure over frozen ctx (R6.4); the ONLY model-judged escape is `Judge.run` through `ModelSeat.port()` — no JudgePort exists, the seam is deleted, not guarded; UNREADABLE first-class, priced by `Guard.judgePolicy` |
 | R5.7 | Terminal protocol | `FinishDesk` — one `z.strictObject` renders the taught description AND validates (taught = validated); `split` handles early/stale finishes on typed calls; `Turn` redrives ≤ `limits.retries` carrying the FULL violation set; `closure(acts)` is a pure function of recorded acts — never empty, never "nothing changed" over `unknown`; `force()` when the model will not close |
-| R5.8 | Worst-world | `WorldBuilder.build(card)` — only the BUSINESS-documented surface exists; an intake emendation is never a license for a world behavior (`Validator` rejects it); gates on every kind (`WorldGates`); simulate ≡ act shared path; `PatchDesk.runCustom` (frozen clone in, patches out, applied gated + audited); rendered truth via `DeliveryWriter`; every change attributable in `BuiltWorld.audit()` |
+| R5.8 | Worst-world | `WorldBuilder.build(card)` — only the BUSINESS-documented surface exists; a pipeline emendation is never a license for a world behavior (`Validator` rejects it); gates on every kind (`WorldGates`); simulate ≡ act shared path; `PatchDesk.runCustom` (frozen clone in, patches out, applied gated + audited); rendered truth via `DeliveryWriter`; every change attributable in `BuiltWorld.audit()` |
 
 ---
 
@@ -1572,7 +1572,7 @@ The refactoring 2.1 pattern: move the decision to the party that owns the fact.
 DEFECT  writes classified by name regex /^(create|update|delete|…)/ — a write named
         archiveOrder escapes; wipeAccount carries no destructive finding
 NOW     a world tool declares effect by the block it sits in (reads/writes/destructive);
-        an external tool's effect is a declared intake field the human gate approved
+        an external tool's effect is a declared surface-card field the human gate approved
 GAIN    the author cannot forget the field (there is none), and spelling decides nothing
 ```
 
@@ -1580,7 +1580,7 @@ GAIN    the author cannot forget the field (there is none), and spelling decides
 ```
 DEFECT  cancelBooking({ id, confirmed: true }) → DENIED — 'confirmed' invokes simulation
         AND signals approval; tools artificially grow a parameter; prose fills the field
-NOW     the intake declares simulation: { arg: 'dryRun', on: true } — the tool's OWN name;
+NOW     the surface entry declares simulation: { arg: 'dryRun', on: true } — the tool's OWN name;
         the engine downgrades an unapproved destructive call by setting THAT parameter;
         the acting call is clean, with NO field to fill
 GAIN    no invented parameter, no prose-fillable approval; a surface with no dry-run still
@@ -1629,8 +1629,8 @@ GAIN    a fabricated 'refused' has no act to stand on; declaration order cannot 
 **7 · A rule's home is decided by its subject.**
 ```
 DEFECT  checks / judged / rules — three names, two cards, six places to look
-NOW     one field name, one Rule shape; about-a-tool → contract, about-this-desk → spec;
-        judge instead of deny = judged; neither = declared prose residue
+NOW     one field name, one Guard shape; about-a-tool → contract, about-this-desk → spec;
+        judgeQuery instead of deny = judged; neither = declared prose residue
 GAIN    the confusing-home question is structurally impossible: there is no split to
         be confused by
 ```
@@ -1724,7 +1724,7 @@ construction, all at once; nothing surfaces mid-conversation (R1.6).
 | regex-validation | no ENGINE pattern seam exists: `Masker` scrubs collected literals only; `ConsentDesk` searches engine-minted literals only; `Monitor` reads typed kinds; judge answers are fixed tokens with UNREADABLE priced. The ONE regex home is the author's own declared pattern inside `blockPattern` / `purgePattern` / `maskPattern` — the purity lint rejects regex anywhere else | a judge reply "NONETHELESS…" read as a clean verdict → a non-token answer is `unreadable`, priced by `Guard.judgePolicy` |
 | custom-guard-abuse | the catalog is the first stop (`catalog.ts`); a custom guard requires a written admission of which catalog kind fails; engine facts travel as `Correction`s, never as synthetic guards | a bundle with 12 hand-rolled regex guards → `onlyAfter`/`maxCalls`/pattern factories + declared judged checks; every hand-written survivor censused as `custom` |
 | perfect-world | `Done`/`StatusClerk` grade trust; `HostToolPort` never says `yes` on its own; `unknown` is dangerous on destructive tools | a landed native write delivered as "nothing was changed" → "I sent it; the service did not confirm the result" |
-| id-naming-convention | the licence is the whole call (`CanonicalCall`); the target is a DECLARED intake field; no key fishing anywhere | `transferAsset` licensed by whichever `*Id` key serialized first → one canonical key, one licence, key order irrelevant |
+| id-naming-convention | the licence is the whole call (`CanonicalCall`); the target is a DECLARED surface field; no key fishing anywhere | `transferAsset` licensed by whichever `*Id` key serialized first → one canonical key, one licence, key order irrelevant |
 | order-dependence | `CanonicalCall` sorted-key identity; `HonestyCheck` bipartite order-free; serial engine-owned scheduling | "the booking blocked, and then the quote passed" DENIED for its order → either order passes; the deny names the tool |
 | no-deterministic-return | `DeliveryWriter` renders every act line, every open question + code, every denial, every closure — every delivery | figures behind a refusal reaching the user only if the model's prose said them → the record line prints what the result filled |
 | confusing-names | §11, enforced by the name gate with an empty allowlist | `probe`/`trunk`/`challenge` era words → `simulate`/`assembledPrompt`/`approvalRequest` era continued: every §11 row |
@@ -1741,7 +1741,7 @@ stop and root-cause before anything else.
 | # | case | where this design addresses it | expected movement |
 |---|---|---|---|
 | 43 | claim-settlement-figure | `Disclosure` slots bound to the question's target record; `SLOT_UNDERIVABLE` at construction | fixed by contract prose + slot binding; may flip to pass |
-| 47 | plan-downgrade | agent/contract rules outrank consent (§7 step 4): no question is born for an impossible act | may flip to pass (contract layer) |
+| 47 | plan-downgrade | spec/contract guards outrank consent (§7 step 4): no question is born for an impossible act | may flip to pass (contract layer) |
 | 48 | viewer-money-refusal | denial sentence = the rule's `say` + detail; the deny names the rule's own words | contract-layer prose; expected to move only with new contract wording |
 | 49 | dispatcher-fleet-refusal | same as 48 — the refusal can name the path because the rule's sentence is authored | contract layer; as 48 |
 | 50 | billing-member-refusal | as 47 — refusal precedes consent | may flip to pass |
@@ -1793,7 +1793,7 @@ The engine never ships alone; scope is `looprun`, `agentspec`, and the subject u
 
 | artifact | what absorbs the change |
 |---|---|
-| `agentspec` skill | `references/**` rewritten to the two-card shapes of §3, the intake row of §4, the catalog of §5.2; the lints re-keyed to `installedBecause` and the §11 name gate list |
+| `agentspec` skill | `references/**` rewritten to the two-card shapes of §3, the surface cards of §4, the catalog of §5.2; the lints re-keyed to `installedBecause` and the §11 name gate list |
 | `docs/tutorial/**` | the ladder of §2 IS the lesson plan — one concept per lesson, each lesson a card field with its default |
 | README + `governance/**` + source headers | the two-card contract, the no-external-model law restated at the `Judge`/`JudgeInputBuilder` headers, the R9-EX construction shapes |
 | `agentspec-bench` subject | the atlas bundle ported once, phase 4, mechanical translation — §11 is the dictionary |
@@ -1826,7 +1826,7 @@ change (— = not authoring-visible).
 | R2.6 | PASS | §5.1 `ports.ts` (L0, no options field) + `ReadyCall` declared whole ({ tool, args } — nothing else); §9; serial emission-order execution in §7 step 4 | — |
 | R2.7 | PASS | §5.3 `Turn` sequences only, lintable import list; every §5 entry carries its size commitment; decomposition lines pre-named (§5 preamble) | — |
 | R2.8 | PASS | §5 preamble (ESLint at error, strict tsconfig); §5.1 closed unions; views typed, input `unknown` | — |
-| R2.9 | PASS | §5.1 freeze law paragraph; `Compiler` frozen output; `ActionHistory` sealed-by-reference; clones only in `snapshot()`/`PatchDesk` | — |
+| R2.9 | PASS | §5.1 freeze law paragraph; `AgentFactory` frozen output; `ActionHistory` sealed-by-reference; clones only in `snapshot()`/`PatchDesk` | — |
 | R2.10 | PASS | §5.1 `TurnFailure`; §5.3 `Session.seal` single commit, draft discarded on failure; §5.8 `Monitor` incident-bound markers | — |
 | R3.1 | PASS | §4 `mcpWorld` / `liveWorld` (live surfaces primary); `world` (genesis secondary) | skill A2 |
 | R3.2 | PASS | §4: the `mcpWorld` module generated + approved as code review; no silent rewrite — proxies/excludes are gate exits | skill gate doc |
@@ -1852,7 +1852,7 @@ change (— = not authoring-visible).
 | R5.8 | PASS | §8 row R5.8 (`WorldBuilder` worst-world laws; emended-file-never-a-license + `Validator` check; audit attribution) | skill GEN |
 | R6.1 | PASS | §3 `Guard` (rule + deny in one object); `PromptWriter` channel law: contract tool guards → the tool's own card (survives MCP), spec tool guards → the per-agent tail (every path) (§5.3) | skill guard authoring |
 | R6.2 | PASS | §3 `Guard.rule` doc (present/imperative, never accusatory); denials = rule + detail | skill prose rules |
-| R6.3 | PASS | catalog factories: `say`+`deny` from the same parameters — parity structural (§5.2); hand-written rules priced in §13.3 row 4 | — |
+| R6.3 | PASS | catalog factories: `rule`+`deny` from the same parameters — parity structural (§5.2); hand-written guards priced in §13.3 row 4 | — |
 | R6.4 | PASS | §3 `deny` pure over frozen views; enforced by the purity lint (§5.8) | — |
 | R6.5 | PASS | every ctx carries `userText` for EXACT-LITERAL search — whole-token, contiguous, never interpretation (§3, §5.1); `ConsentDesk.readAnswer` searches engine-minted literals (§5.3); MEANING is judged only through `Judge` on the session's own seat (§5.3) | — |
 | R6.6 | PASS | `Masker.maskProse` collected literals only; no lexicon module exists anywhere in §5 | — |
@@ -1901,7 +1901,7 @@ change (— = not authoring-visible).
                                                                beside the connection; proxies are pipeline
                                                                emendations mapped back at the wire
 [no] semantics inferred from name/prose/result shape         — §10 inversions 1, 3, 6; §4 declared
-                                                               intake fields; StatusClerk grades only
+                                                               surface fields; StatusClerk grades only
                                                                the declared done answer
 [no] a validation decision runs a pattern over text          — Masker collected literals; ConsentDesk
                                                                minted literals; Monitor typed kinds;
@@ -1921,7 +1921,7 @@ change (— = not authoring-visible).
                                                                open question + code, every denial, every
                                                                closure, every delivery
 [no] identity/matching depends on call or key order          — §5.1 CanonicalCall; HonestyCheck
-                                                               bipartite; IntakeGate canonical fingerprint
+                                                               bipartite; SurfaceGate canonical fingerprint
 [no] two turn machines / import cycle / mirrored type        — §6: one Turn, one-way layers, one leaf;
                                                                the exam drives LoopRunAgent.generate;
                                                                internal.ts does not exist
