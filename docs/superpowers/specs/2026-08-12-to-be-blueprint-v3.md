@@ -83,9 +83,9 @@ config line does not change.
 
 The tutorial progression this hello world opens (R1.2, one concept per lesson):
 1 hello agent · 2 a `destructive` tool is the whole consent setup · 3 `agent.guards()` —
-read what you installed · 4 `label` — the user's words for the act · 5 `disclose.before`
-— what this exact call would do · 6 `disclose.after` + `disclose.later` — the record line
-and the standing sentence · 7 the contract card: `voice` + `facts` · 8 `disclose.needs` —
+read what you installed · 4 `label` — the user's words for the act · 5 `disclosure.before`
+— what this exact call would do · 6 `disclosure.after` + `disclosure.later` — the record line
+and the standing sentence · 7 the contract card: `voice` + `facts` · 8 `disclosure.needs` —
 figures in the question, read by the engine itself · 9 `secrets` · 10 `guards` on the
 contract (a tool guard every lane owes) · 11 `guards` on the spec (how this desk behaves)
 · 12 a judged guard (`judgeQuery`, the declared judged factories) · 13 `limits` ·
@@ -130,7 +130,7 @@ export interface DomainContract {
   /** Guards about TOOLS and the whole conversation — what ANY lane would owe. Run after spec guards (R5.6). Omitted = []. */
   guards?: readonly Guard[];
   /** Per-tool disclosure sentences, three tenses, keyed by tool name. Omitted = engine sentences from the label. */
-  disclose?: Readonly<Record<string, Disclose>>;
+  disclosure?: Readonly<Record<string, Disclosure>>;
   /** Rewrites of the outgoing reply — a guard decides, a rewrite rewrites (§5.2). Omitted = []. */
   rewrites?: readonly Rewrite[];
   /** THE ONE HOME of what is secret — a business fact, so it lives on the business card.
@@ -180,7 +180,7 @@ export interface Guard {
  *  RecordsPort exists (§5.1). */
 
 /** Disclosure for one tool — sentences, not code. Slots are {alias.path} over engine-performed reads. */
-export interface Disclose {
+export interface Disclosure {
   /** Reads the ENGINE performs itself on the held call's own args: alias → read tool
    *  (an args map when the read's arg names differ from the held call's). Omitted = {}. */
   needs?: Readonly<Record<string, string | { tool: string; args: Readonly<Record<string, string>> }>>;
@@ -519,7 +519,7 @@ Private: none (immutable value). Collaborators: vocabulary only.
 ### 5.2 `@looprun-ai/core` — `cards/` (L1–L2)
 
 **`cards.ts`** (module, ~150 lines) — the §3 declarations verbatim: `AgentSpec`,
-`DomainContract`, `Guard`, `Disclose`, `Wording`, `Limits` (`LlmParams` and `Rewrite`
+`DomainContract`, `Guard`, `Disclosure`, `Wording`, `Limits` (`LlmParams` and `Rewrite`
 live in the contract leaf — `StepInput` carries the first — and are re-exported here for
 authors). Types + doc comments only. Collaborators: contract leaf.
 
@@ -625,7 +625,7 @@ construction; collects EVERY problem; throws one `CardError` with named codes an
 fix-stating sentences (R1.6): `GUARD_BOTH_DENY_AND_JUDGE`, `GUARD_NAME_DUP`,
 `GUARD_PHASE_MISSING` (a hand-written guard with no `on`), `GUARD_JUDGE_PHASE`
 (a `judgeQuery` guard whose `on` is not `'reply'`), `TOOL_GUARD_OFF_SURFACE`,
-`DISCLOSE_UNKNOWN_TOOL`, `SLOT_UNDERIVABLE`
+`DISCLOSURE_UNKNOWN_TOOL`, `SLOT_UNDERIVABLE`
 ("`{booking.room}` needs getBooking to accept the held call's target 'id' — it declares no
 'id' arg; add `needs: { booking: { tool: 'getBooking', args: { bookingRef: 'id' } } }`"),
 `LABEL_MISSING` (a destructive tool with no label), `SECRET_EMPTY`, `LIMIT_NOT_POSITIVE`.
@@ -634,7 +634,7 @@ absent one. Private: the accumulating problem list. Collaborators: cards, facts,
 contract leaf.
 
 **`AgentFactory`** (class, ~200 lines) — cards + surface facts → one frozen
-`CompiledAgent` (`{ guards, judged, rewrites, limits, maskKeys, discloseBindings,
+`CompiledAgent` (`{ guards, judged, rewrites, limits, maskKeys, disclosureBindings,
 wording, promptParts, facts }`): the priority-ordered guard array (spec → contract →
 consent → honesty → the universal floor, with the auto-installed guards derived from
 declarations — R1.5: `confirmFirst` per destructive tool, `maxDestructive` from
@@ -644,7 +644,7 @@ line repetition, engine-taught literals leaking as prose, leaked reasoning, tool
 foreign chat-template tokens: structural, never linguistic). NOTHING JUDGED IS
 AUTO-INSTALLED — the judged factories are declared on a card or they do not exist. Each
 installed guard carries `installedBecause`: the declared field that caused it. Also
-compiles: the masker key set, the disclose bindings (slot derivability re-proved here),
+compiles: the masker key set, the disclosure bindings (slot derivability re-proved here),
 the wording table, the prompt precomputation. Compiled once, deep-frozen; the runtime
 never re-reads the authored form (R2.9).
 
@@ -733,7 +733,7 @@ class CallRunner {
 }
 ```
 Constructed per turn over the session's stores (§7). Private: none. Collaborators:
-Rulebook, ConsentDesk, Disclosure, StatusClerk, Masker, ActionHistory, ToolPort,
+Rulebook, ConsentDesk, DisclosureDesk, StatusClerk, Masker, ActionHistory, ToolPort,
 contract leaf.
 
 **`Rulebook`** (class, ~150 lines) — the ordered deterministic guard pipe (R5.6): four
@@ -858,8 +858,8 @@ class HonestyCheck {
 ```
 Private: none. Collaborators: ActionHistory (via ctx), contract leaf.
 
-**`Disclosure`** (class, ~180 lines) — three tenses (R5.2). Owed reads are built from the
-`disclose.needs` recipes over the held call's OWN args (an args map bridges differing
+**`DisclosureDesk`** (class, ~180 lines) — three tenses (R5.2). Owed reads are built from the
+`disclosure.needs` recipes over the held call's OWN args (an args map bridges differing
 names — validated at compile, `SLOT_UNDERIVABLE`) and performed by the ENGINE via
 `CallRunner.run(read, 'engine')` — recorded, masked, origin `engine`; never requested from
 the model, so no deny can starve them (there is no forced-model-read pass to starve).
@@ -867,14 +867,14 @@ Slots fill by alias, bound to the question's target record by construction, neve
 last-read-wins. A slot no read can fill is a construction error, never a shipped NA.
 
 ```typescript
-class Disclosure {
+class DisclosureDesk {
   owedReads(tool: string, call: CanonicalCall): readonly OwedRead[];
   before(tool: string, call: CanonicalCall, reads: ReadonlyMap<string, Act>): string;
   after(act: Act): string | null;
   later(act: Act, turn: number): string | null;
 }
 ```
-Private: the compiled disclose bindings. Collaborators: CanonicalCall, Wordings,
+Private: the compiled disclosure bindings. Collaborators: CanonicalCall, Wordings,
 contract leaf.
 
 **`Masker`** (class, ~120 lines) — sensitive data at every seam (R5.5): declared field
@@ -1500,7 +1500,7 @@ call is still governed.
 
 ```
  LoopRunAgent ──holds──► Engine ──holds──► ModelSeat · Rulebook · Judge · FinishDesk
-                           │                Disclosure · StatusClerk · PromptWriter · Wordings
+                           │                DisclosureDesk · StatusClerk · PromptWriter · Wordings
                            └─holds per session─► Session ──holds──► ConsentDesk · ActionHistory
                                                                     Masker · revoked-simulation set
                                                                     world: ToolPort
@@ -1536,11 +1536,11 @@ call is still governed.
    │             allow    → execute → grade → record
    │             owe      → the owed reads run engine-side (origin 'engine'), then re-check
    │             simulate → the tool runs with its OWN declared parameter → preview recorded
-   │                        → Disclosure.owedReads → Disclosure.before(filled) →
+   │                        → DisclosureDesk.owedReads → DisclosureDesk.before(filled) →
    │                        ConsentDesk.hold → Question born FROM the preview:
    │                        act status 'not-done', reason 'held', result = the preview
-   │             hold     → (no simulation declared) Disclosure.owedReads →
-   │                        CallRunner.run(read, 'engine') each → Disclosure.before(filled) →
+   │             hold     → (no simulation declared) DisclosureDesk.owedReads →
+   │                        CallRunner.run(read, 'engine') each → DisclosureDesk.before(filled) →
    │                        ConsentDesk.hold → Question born from the reads alone:
    │                        act status 'not-done', reason 'held'
    │             refuse   → act status 'not-done', reason 'blocked' (sentence = the guard's rule + detail)
@@ -1566,7 +1566,7 @@ call is still governed.
 | R | mechanism | home — class + signature |
 |---|---|---|
 | R5.1 | Consent | `ConsentDesk.hold(call, sentence, draft): Question` · `readAnswer(text, draft)` · `close(id, why, draft)` · `sweep(turn, ttl, draft)` — state machine `open → consumed \| closed(declined\|superseded\|expired\|vetoed)`; crypto entropy + per-issuance nonce + unique codes, no tool name on screen; an identical re-attempt returns the SAME question, a differing one births a sibling, and a licensed execution closes ('superseded') every open question of the same (tool, target); every closure delivered. Approval never a bypass: `CallRunner.run(ConsentDesk.held(id), 'licence')` re-enters the FULL `Rulebook.checkPreTool`. No dead ends: the engine births the question from the held call itself (no unbirthable question), and an agent/contract refusal precedes consent — no question is born for an impossible act, so no approval loop can be unsatisfiable |
-| R5.2 | Disclosure | `Disclosure.owedReads(tool, call)` + `CallRunner.run(read, 'engine')` — the ENGINE performs EVERY owed read itself: consent-owed (disclose recipes) AND guard-owed (`catalog.onlyAfter` with a read prerequisite → `Verdict {kind:'owe'}`); `before/after/later` fill by alias, bound to the question's target record; no deny can starve the reads because no forced-model-read pass exists to starve |
+| R5.2 | Disclosure | `DisclosureDesk.owedReads(tool, call)` + `CallRunner.run(read, 'engine')` — the ENGINE performs EVERY owed read itself: consent-owed (disclosure recipes) AND guard-owed (`catalog.onlyAfter` with a read prerequisite → `Verdict {kind:'owe'}`); `before/after/later` fill by alias, bound to the question's target record; no deny can starve the reads because no forced-model-read pass exists to starve |
 | R5.3 | Honest report | `FinishDesk.toolCard()/parse()` (one channel, one schema) + `HonestyCheck.check(ctx)` (bipartite both directions, order-free, target-bound, evidence classes per word, figures structurally absent from declarations — engine-rendered only, structural lie check over collected record ids) + `ActionHistory.mint()` (engine act identity) + `DeliveryWriter.compose` (the record ships every turn). The model claims `(tool, target, word)` — it never writes act ids (the referencing choice is priced under R10.4); a prose-improvement pass is a judged rule ABOVE the deterministic floor and can only improve delivery |
 | R5.4 | Downgrade-to-simulation | `Rulebook.checkPreTool → Verdict 'simulate'` (simulation declared) — `CallRunner` runs the tool with its OWN declared parameter, records the preview, and the question is born FROM that preview; no simulation declared → `Verdict 'hold'` (R3.4); a lying simulation is caught by `StatusClerk.grade` diff and revoked (`simulationRevoked` — plain consent thereafter, per session) |
 | R5.5 | Sensitive data | `Masker.maskData(value)` at the recording seam inside `CallRunner` — the filtered form is the ONLY stored form; the executor alone receives real args; `Masker.maskProse(text)` in `DeliveryWriter`, collected literals only |
@@ -1645,7 +1645,7 @@ GAIN    "the call and nothing else" is a construction property; a wider retry is
 ```
 DEFECT  the engine denies, then hopes the model reads next — measured: 2 of 4
         told-to-read turns ended with the act never put to the user
-NOW     Disclosure.owedReads and the 'owe' verdict build concrete calls from the held
+NOW     DisclosureDesk.owedReads and the 'owe' verdict build concrete calls from the held
         call's OWN args; the engine runs them (origin 'engine', recorded, masked)
 GAIN    a consent question can never show another record's figures; the starved read and
         the deny-and-hope shape are unrepresentable
@@ -1702,6 +1702,7 @@ on the ban list, and no design name carries it (`Guard.judgeQuery`, `StepInput`,
 | `say` | `rule` | "say what?" — a guard carries its rule; the word was freed by the type rename |
 | `view` · `CallView` / `ReplyView` | `ctx` · `InputCtx` / `CallCtx` / `ResultCtx` / `ReplyCtx` | the charter's own word (R2.9: "the ctx guards read"); one ctx per phase |
 | `judge` (the field) | `judgeQuery` | the query the session's own model judges — readable without the doc comment |
+| `disclose` (field) · `Disclose` (type) · `Disclosure` (class) | `disclosure` · `Disclosure` · `DisclosureDesk` | every card field is a NOUN — the lone verb dies; the engine desk takes the desk suffix, and no identifier holds two jobs |
 | `fails: 'open' \| 'closed'` | `judgePolicy: 'passOnFails' \| 'denyOnFails'` | fail-open/closed is security jargon; the value states the trigger AND the effect |
 | `Sampling` / `sampling` | `LlmParams` / `llmParams` | pure ML jargon out; "the model's parameters", plain and honest |
 | `Dim: spatial / input / run` and `on: 'call' \| 'reply'` | `Guard.on: 'input' \| 'preTool' \| 'postTool' \| 'reply'`, REQUIRED | four explicit phases — the hook names that read; no derived default |
@@ -1878,7 +1879,7 @@ change (— = not authoring-visible).
 | R4·TEST | PASS | `Validator` (fresh world per phase, every preset); `UngovernedAgent` via `AgentFactory.ungoverned`; `JudgeInputBuilder` complete+blind; `Folder`; `SubjectLoader` provenance; `Certifier` margin discipline (§5.8) | skill TEST |
 | R4·SHIP | PASS | `Certifier` + `Seal` over every governed artifact from the manifest (§5.8) | skill SHIP |
 | R5.1 | PASS | §8 row R5.1 (`ConsentDesk` signatures; state machine; nonce; no bypass; both dead ends excluded, each by its own mechanism) | tutorial lesson 2 |
-| R5.2 | PASS | §8 row R5.2 (`Disclosure.owedReads` + `owe` verdict — consent-owed AND guard-owed engine-performed) | tutorial lessons 5–8 |
+| R5.2 | PASS | §8 row R5.2 (`DisclosureDesk.owedReads` + `owe` verdict — consent-owed AND guard-owed engine-performed) | tutorial lessons 5–8 |
 | R5.3 | PASS | §8 row R5.3 (`HonestyCheck` bipartite, target-bound, evidence classes, figures engine-rendered only, structural lie check; `ActionHistory.mint`); acceptance bar in §13.3 row 9 | — |
 | R5.4 | PASS | §8 row R5.4 + §5.3 CallRunner routing + §7 step 4 — one description everywhere: simulate = preview then ask; hold = the no-simulation route | — |
 | R5.5 | PASS | §8 row R5.5 (`Masker` at the recording seam; only stored form; collected literals; executor alone sees real args) | tutorial lesson 9 |
