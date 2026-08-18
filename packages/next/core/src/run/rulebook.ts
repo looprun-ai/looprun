@@ -6,6 +6,7 @@
 import type { GuardCensus, InputCtx, CallCtx, ResultCtx, ReplyCtx, Verdict } from '../contract/vocabulary.js';
 import type { CompiledAgent, CompiledGuard } from '../cards/cards.js';
 import { deepFreeze } from '../contract/freeze.js';
+import { HonestyCheck } from './honesty-check.js';
 
 export interface Violation { readonly guardName: string; readonly detail: string }
 
@@ -22,8 +23,28 @@ export class Rulebook {
     this.input = phase('input');
     this.preTool = phase('preTool');
     this.postTool = phase('postTool');
-    this.reply = phase('reply');
+    this.reply = deepFreeze(this.withHonesty(compiled, phase('reply')));
     this.limits = compiled.limits;
+  }
+
+  /** The honesty floor rides the reply walk at honesty priority — after the declared
+   *  rows, before the engine floor; one bipartite matcher, two census rows. */
+  private withHonesty(compiled: CompiledAgent,
+                      reply: readonly CompiledGuard[]): readonly CompiledGuard[] {
+    const matcher = new HonestyCheck(compiled.facts);
+    const row = (name: 'claimIsGrounded' | 'claimIsComplete', rule: string): CompiledGuard => ({
+      name, rule, home: 'engine', on: 'reply', tools: [], kind: name,
+      judged: false, judgePolicy: null, installedBecause: 'the always-on floor',
+      deny: ctx => matcher.check(ctx as ReplyCtx).find(v => v.guardName === name)?.detail ?? null
+    });
+    const floorAt = reply.findIndex(g => g.home === 'engine');
+    const rows = [
+      row('claimIsGrounded', 'The report claims only what the recorded acts show.'),
+      row('claimIsComplete', 'The report accounts for every act this turn performed.')
+    ];
+    return floorAt === -1
+      ? [...reply, ...rows]
+      : [...reply.slice(0, floorAt), ...rows, ...reply.slice(floorAt)];
   }
 
   /** A guard covering specific tools skips a call to any other tool — Set membership. */
