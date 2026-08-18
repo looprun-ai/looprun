@@ -106,6 +106,20 @@ export class CallRunner {
       case 'hold': {
         const targetRaw = fact.target !== null ? call.args[fact.target] : undefined;
         const targetValue = typeof targetRaw === 'string' ? targetRaw : null;
+        // A call re-held THIS TURN restates at once: the standing question is the
+        // answer, no disclosure re-runs, and the record tells the model to stop
+        // asking and close the turn.
+        const heldBefore = draft.acts.find(a => a.reason === 'held'
+          && a.call.tool === call.tool
+          && (targetValue === null || a.call.args[fact.target ?? ''] === targetValue));
+        if (heldBefore) {
+          return this.record(draft, {
+            origin, call: call.data(v => this.deps.masker.maskData(v)), effect: fact.effect,
+            said: null, status: 'not-done', reason: 'held', evidence: 'engine',
+            sentence: `${this.head(call, fact)} — not-done (already held; the question stands — stop retrying and close the turn)`,
+            result: null
+          }, undefined, heldBefore.questionId);
+        }
         // The declared reads run FIRST — origin engine, recorded — so the
         // before-tense can describe the already-fixed target.
         const reads = new Map<string, Act>();
