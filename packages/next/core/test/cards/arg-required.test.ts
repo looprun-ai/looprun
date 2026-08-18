@@ -1,6 +1,6 @@
 import { test, expect } from 'vitest';
 import { ScriptedModel, callStep, finishStep } from '../fixtures/scripted-model.js';
-import { bookingFloor, testEngine } from '../fixtures/compiled-agents.js';
+import { testEngine } from '../fixtures/compiled-agents.js';
 
 test('a whitespace-only required arg counts as MISSING and refuses loudly', async () => {
   const model = new ScriptedModel([
@@ -8,7 +8,7 @@ test('a whitespace-only required arg counts as MISSING and refuses loudly', asyn
     finishStep('I could not send the email.',
       [{ tool: 'sendEmail', target: 'unknown', word: 'blocked' }])
   ]);
-  const { engine, port } = testEngine({ model, guards: bookingFloor() });
+  const { engine, port } = testEngine({ model });
 
   const r = await engine.chat('s1', 'send the email');
 
@@ -22,7 +22,7 @@ test('a non-coercible value refuses loudly, naming the arg — never a silent dr
     callStep('getBooking', { id: { nested: true } }),
     finishStep('I could not read that booking.')
   ]);
-  const { engine, port } = testEngine({ model, guards: bookingFloor() });
+  const { engine, port } = testEngine({ model });
 
   const r = await engine.chat('s1', 'check the booking');
 

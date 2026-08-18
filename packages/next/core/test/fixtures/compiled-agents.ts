@@ -3,8 +3,8 @@ import { deepFreeze } from '../../src/contract/freeze.js';
 import type { ToolFact } from '../../src/contract/vocabulary.js';
 import type { ModelPort, RecordsPort } from '../../src/contract/ports.js';
 import type { CompiledAgent, CompiledGuard, Guard } from '../../src/cards/cards.js';
-import { DEFAULT_LIMITS, type Limits } from '../../src/cards/cards.js';
-import { argRequired, noDuplicateCall } from '../../src/cards/catalog.js';
+import type { Limits } from '../../src/cards/cards.js';
+import { AgentFactory } from '../../src/cards/agent-factory.js';
 import { Engine } from '../../src/run/engine.js';
 import { ModelSeat } from '../../src/run/model-seat.js';
 import { HostileToolPort, type ToolBehavior } from './hostile-tool-port.js';
@@ -30,23 +30,9 @@ export const BOOKING_FACTS = {
 
 export const BOOKING_SURFACE = { tools: BOOKING_FACTS } as const;
 
-/** AgentFactory's auto derivation, performed by hand: the floor + one argRequired
- *  per schema-required arg, installed after the declared guards. */
-export function bookingFloor(): CompiledGuard[] {
-  const derived: CompiledGuard[] = [noDuplicateCall().compile('engine', BOOKING_SURFACE)];
-  for (const toolFact of Object.values(BOOKING_FACTS)) {
-    const schema = toolFact.schema;
-    if (schema === null || typeof schema !== 'object' || Array.isArray(schema)) continue;
-    const required = (schema as { readonly [k: string]: Json }).required;
-    if (!Array.isArray(required)) continue;
-    for (const arg of required) {
-      if (typeof arg === 'string') derived.push(argRequired(toolFact.name, arg).compile('engine', BOOKING_SURFACE));
-    }
-  }
-  return derived;
-}
-
-/** The hand-performed AgentFactory derivation: wrap an authored Guard as an installed row. */
+/** The harness bridge: wrap a hand-written proof Guard as an installed row. The
+ *  factory is the one production birthplace; proofs that pin one hand guard use
+ *  this wrap instead of authoring a whole card. */
 export function install(guard: Guard, home: 'spec' | 'contract' | 'engine', kind: string,
   extras: Pick<CompiledGuard, 'owe' | 'restate'> = {}): CompiledGuard {
   const tools = guard.tool === undefined ? [] : typeof guard.tool === 'string' ? [guard.tool] : [...guard.tool];
@@ -60,19 +46,17 @@ export function install(guard: Guard, home: 'spec' | 'contract' | 'engine', kind
   };
 }
 
+/** The factory builds the base; proof-supplied compiled guards splice in FRONT of
+ *  the factory's consent + floor rows, keeping the priority picture. */
 export function bookingAgent(guards: readonly CompiledGuard[] = [],
                              limits: Partial<Limits> = {},
                              facts: SurfaceFacts = BOOKING_SURFACE): CompiledAgent {
-  return deepFreeze({
-    guards,
-    limits: { ...DEFAULT_LIMITS, ...limits },
-    promptParts: {
-      persona: 'You are the booking desk.',
-      voice: 'Warm, brief, concrete.',
-      facts: ['Bookings live in the records store.']
-    },
-    facts
-  });
+  const base = new AgentFactory().governed(
+    { name: 'booking-desk', persona: 'You are the booking desk.', limits },
+    { name: 'bookings', voice: 'Warm, brief, concrete.',
+      facts: ['Bookings live in the records store.'] },
+    facts);
+  return deepFreeze({ ...base, guards: [...guards, ...base.guards] });
 }
 
 export const OK_BEHAVIORS: Readonly<Record<string, ToolBehavior>> = {

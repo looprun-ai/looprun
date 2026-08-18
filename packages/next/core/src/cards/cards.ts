@@ -1,7 +1,7 @@
 /** The L1 card types: the authoring guard shape, the limits, and the compiled forms
  *  the machine runs on. Types and constants only — no logic. */
 import type { Act, InputCtx, CallCtx, ResultCtx, ReplyCtx, InstalledGuard, OwedRead } from '../contract/vocabulary.js';
-import type { EngineSentenceKey, LlmParams, Reason, Rewrite, Status, SurfaceFacts } from '../contract/vocabulary.js';
+import type { EngineSentenceKey, LlmParams, Reason, ResolvedWording, Rewrite, Status, SurfaceFacts } from '../contract/vocabulary.js';
 
 export type { LlmParams, Rewrite } from '../contract/vocabulary.js';
 
@@ -118,6 +118,9 @@ export interface CompiledGuard extends InstalledGuard {
   owe?(ctx: CallCtx): readonly OwedRead[] | null;
   /** Non-null = the id of the earlier act whose result answers this duplicate call. */
   restate?(ctx: CallCtx): string | null;
+  /** Non-null = the consent sentence: the call holds for approval; the ConsentDesk
+   *  owns the question lifecycle — the guard only declares. */
+  hold?(ctx: CallCtx): string | null;
 }
 
 /** The prompt raw material an agent compiles to. */
@@ -125,10 +128,28 @@ export interface PromptParts { readonly persona: string;
                                readonly voice: string | null;
                                readonly facts: readonly string[] }
 
-/** The frozen compiled agent the Engine runs. Hand-built until AgentFactory exists;
- *  guards arrive priority-ordered: spec → contract → the engine floor. */
+/** One compiled secret path; 'mask' replaces the value with ****, 'omit' drops the key. */
+export interface MaskKey { readonly path: readonly string[]; readonly mode: 'omit' | 'mask' }
+
+/** One tool's compiled disclosure: needs recipes normalized to the object form
+ *  (read arg → held arg), the three tense sentences resolved or null. */
+export interface DisclosureBinding {
+  readonly needs: Readonly<Record<string, { readonly tool: string;
+    readonly args: Readonly<Record<string, string>> }>>;
+  readonly before: string | null;
+  readonly after: string | null;
+  readonly later: string | null;
+}
+
+/** The frozen compiled agent the Engine runs — AgentFactory is its one birthplace;
+ *  guards arrive priority-ordered: spec → contract → consent → the engine floor. */
 export interface CompiledAgent { readonly guards: readonly CompiledGuard[];
+                                 readonly judged: readonly InstalledGuard[];
+                                 readonly rewrites: readonly Rewrite[];
                                  readonly limits: Required<Limits>;
+                                 readonly maskKeys: readonly MaskKey[];
+                                 readonly disclosureBindings: Readonly<Record<string, DisclosureBinding>>;
+                                 readonly wording: ResolvedWording;
                                  readonly promptParts: PromptParts;
                                  readonly facts: SurfaceFacts }
 

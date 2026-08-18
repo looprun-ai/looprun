@@ -1,13 +1,10 @@
 /** Every engine sentence, named; defaults + contract overrides resolved ONCE at
  *  compile. One home per sentence: the prompt, the denial, and the inspection row
  *  read the same string. */
-import type { EngineSentenceKey, Reason, Status } from '../contract/vocabulary.js';
+import type { EngineSentenceKey, Reason, ResolvedWording, Status } from '../contract/vocabulary.js';
 import type { Wording } from './cards.js';
 
-export interface ResolvedWording {
-  readonly status: Readonly<Record<Status | Reason, string>>;
-  readonly sentence: Readonly<Record<EngineSentenceKey, string>>;
-}
+export type { ResolvedWording } from '../contract/vocabulary.js';
 
 const STATUS_PACK: Record<Status | Reason, string> = {
   done: 'done',

@@ -17,7 +17,9 @@ test('the census rows are the very objects the rulebook runs, in priority order'
   const first = engine.guards();
   const second = engine.guards();
 
-  expect(first.guards.map(g => g.name)).toEqual(['no-shouting', 'onlyAfter:cancelBooking', 'maxCalls:sendEmail']);
+  expect(first.guards.slice(0, 3).map(g => g.name))
+    .toEqual(['no-shouting', 'onlyAfter:cancelBooking', 'maxCalls:sendEmail']);
+  expect(first.guards.slice(3).every(g => g.home === 'engine')).toBe(true);
   first.guards.forEach((g, i) => expect(second.guards[i]).toBe(g));
   expect(first.guards[1]).toBe(only);
   expect(first.guards[2]).toBe(max);

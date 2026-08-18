@@ -87,6 +87,94 @@ export function onlyAfter(tool: string, prerequisite: string): SeedGuard {
   };
 }
 
+/** Consent, auto from the surface: a destructive call runs only on a consumed
+ *  licence — otherwise it HOLDS for approval with the tool's label as the sentence.
+ *  The desk owns the question lifecycle; the guard only declares. */
+export function confirmFirst(tool: string, label: string): SeedGuard {
+  return {
+    name: `confirmFirst:${tool}`,
+    rule: `${label} runs only after your approval.`,
+    tool,
+    on: 'preTool',
+    kind: 'confirmFirst',
+    compile(home) {
+      const row = installedAt<CallCtx>(this, home, () => null,
+        'declared destructive on the surface');
+      return { ...row, hold: (ctx: CallCtx) =>
+        ctx.consented ? null : `${label} runs only after your approval.` };
+    }
+  };
+}
+
+/** Auto from limits.destructive: done and unknown both count — fail-closed. */
+export function maxDestructive(limit: number): SeedGuard {
+  return {
+    name: 'maxDestructive',
+    rule: `At most ${String(limit)} destructive act(s) per turn.`,
+    on: 'preTool',
+    kind: 'maxDestructive',
+    compile(home) {
+      return installedAt<CallCtx>(this, home, ctx => {
+        if (ctx.effect !== 'destructive') return null;
+        const spent = ctx.turnActs.filter(a =>
+          a.effect === 'destructive' && (a.status === 'done' || a.status === 'unknown')).length;
+        return spent >= limit
+          ? `this turn already carries ${String(spent)} destructive act(s)` : null;
+      }, `limits.destructive is ${String(limit)}`);
+    }
+  };
+}
+
+/** Schema-auto where the schema declares its own pattern: the declared pattern is
+ *  DATA; this factory is its one evaluator. */
+export function argFormat(tool: string, arg: string, pattern: string): SeedGuard {
+  const matcher = new RegExp(`^(?:${pattern})$`);
+  return {
+    name: `argFormat:${tool}:${arg}`,
+    rule: `Send '${arg}' on ${tool} in its declared format.`,
+    tool,
+    on: 'preTool',
+    kind: 'argFormat',
+    compile(home) {
+      return installedAt<CallCtx>(this, home, ctx => {
+        const value = ctx.call.args[arg];
+        if (value === undefined) return null;
+        return typeof value === 'string' && matcher.test(value)
+          ? null : `'${arg}' does not match the declared format`;
+      }, `the declared schema patterns '${arg}'`);
+    }
+  };
+}
+
+/** The always-on floor: structural reply damage — byte-identical line repetition,
+ *  engine-taught literals leaking as prose, tool markup, foreign chat-template
+ *  tokens. Structural, never linguistic. */
+export function brokenReply(): SeedGuard {
+  const LEAKS = ['TOOL RESULTS (engine record):', '<tool_call>', '</tool_call>', '<|'];
+  return {
+    name: 'brokenReply',
+    rule: 'The reply is plain prose — no tool markup, no repeated lines, no engine literals.',
+    on: 'reply',
+    kind: 'brokenReply',
+    compile(home) {
+      return installedAt<ReplyCtx>(this, home, ctx => {
+        for (const leak of LEAKS) {
+          if (ctx.message.includes(leak)) return `the reply carries the literal '${leak}'`;
+        }
+        const counts = new Map<string, number>();
+        for (const line of ctx.message.split('\n')) {
+          const trimmed = line.trim();
+          if (trimmed === '') continue;
+          const n = (counts.get(trimmed) ?? 0) + 1;
+          counts.set(trimmed, n);
+          if (n >= 3) return 'the reply repeats a byte-identical line';
+        }
+        return null;
+      });
+    }
+  };
+}
+
 /** The always-on floor: the same call never executes twice — the first completed
  *  act's result answers every identical re-proposal. */
 export function noDuplicateCall(): SeedGuard {

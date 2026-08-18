@@ -146,6 +146,12 @@ export interface GuardCensus { readonly guards: readonly InstalledGuard[];      
 export type EngineSentenceKey = 'approvalInstruction' | 'exhaustionClosure' | 'unknownStatus'
                               | 'questionExpired' | 'questionSuperseded' | 'questionDeclined'
                               | 'deniedByGuard' | 'simulatedResult';
+/** The fully-resolved wording table: every engine sentence and every user-facing
+ *  status word present, defaults filled — the table never carries a hole. */
+export interface ResolvedWording {
+  readonly status: Readonly<Record<Status | Reason, string>>;
+  readonly sentence: Readonly<Record<EngineSentenceKey, string>>;
+}
 export type RoutingStrategy = 'sequential' | 'random' | 'rate-limit' | 'backup-only' | 'round-robin';
 export interface ModelTarget { readonly id: string; readonly provider: string;
                                readonly keyEnv: string | null;
