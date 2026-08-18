@@ -29,6 +29,13 @@ function render(template: string, values: Readonly<Record<string, Json>>): strin
   for (const c of template) {
     if (c === '{') { slot = ''; continue; }
     if (c === '}' && slot !== null) {
+      // A {result.*} slot before the call has run has nothing to say yet: it
+      // rides through literally and is filled when the executed result exists.
+      if (slot.startsWith('result.') && !('result' in values)) {
+        out += `{${slot}}`;
+        slot = null;
+        continue;
+      }
       const value = lookup(values, slot.split('.'));
       if (value === undefined || value === null) {
         throw new TurnFailure('construction',
@@ -60,6 +67,12 @@ export class DisclosureDesk {
       args: Object.fromEntries(Object.entries(recipe.args)
         .map(([readArg, heldArg]) => [readArg, call.args[heldArg] ?? null]))
     }));
+  }
+
+  /** Fills the {result.*} slots of an already-rendered tense with the executed
+   *  call's masked result. */
+  withResult(text: string | null, result: Json): string | null {
+    return text === null ? null : render(text, { result });
   }
 
   /** All three tenses rendered at once, over the reads and the held call's args. */

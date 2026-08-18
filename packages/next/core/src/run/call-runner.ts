@@ -96,10 +96,16 @@ export class CallRunner {
         const first = draft.acts.find(a => a.id === verdict.actId)
           ?? history.pastActs().find(a => a.id === verdict.actId);
         if (!first) throw new TurnFailure('construction', `restate points at unknown act '${verdict.actId}'`);
+        // A restated write carries its outcome in words: the consumed question's
+        // after-tense, filled from the first result, answers the re-proposal.
+        const outcome = first.status === 'done'
+          ? this.deps.disclosure.withResult(this.deps.consent.afterText(call.key), first.result)
+          : null;
         return this.record(draft, {
           origin, call: call.data(v => this.deps.masker.maskData(v)), effect: fact.effect, said: first.said,
           status: first.status, reason: first.reason, evidence: 'engine',
-          sentence: `${this.head(call, fact)} — ${first.status} (already ran; first result restated)`,
+          sentence: `${this.head(call, fact)} — ${first.status} (already ran; first result restated)${
+            outcome === null ? '' : `. ${outcome}`}`,
           result: first.result
         });
       }
@@ -197,7 +203,9 @@ export class CallRunner {
     const grade = clerk.grade(input, fact.effect, before, after, draft);
     draft.corrections.push(...grade.corrections);
     const afterTense = origin === 'licence' && grade.status === 'done'
-      ? this.deps.consent.afterText(call.key) : null;
+      ? this.deps.disclosure.withResult(this.deps.consent.afterText(call.key),
+          this.deps.masker.maskData(result))
+      : null;
     const act = this.record(draft, {
       origin, call: call.data(v => this.deps.masker.maskData(v)), effect: fact.effect, said: grade.said,
       status: grade.status, reason: grade.reason, evidence: grade.evidence,
