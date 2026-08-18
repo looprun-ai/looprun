@@ -194,7 +194,9 @@ export interface ToolFact { readonly name: string; readonly label: string | null
                             readonly destructiveWhen: ConsentWhen | null;   // the destructive branch; null = every call
                             readonly proxy: string | { readonly compose: readonly string[] } | null }
 /** The whole declared surface as facts, keyed by tool name. */
-export interface SurfaceFacts { readonly tools: Readonly<Record<string, ToolFact>> }
+export interface SurfaceFacts { readonly tools: Readonly<Record<string, ToolFact>>;
+                                /** null = the whole snapshot rides the tail. */
+                                readonly tail?: readonly string[] | null }
 
 /** The world vocabulary — crossing types for the three surface-card kinds.
  *  world/world.ts re-exports them for authors, the way cards.ts re-exports LlmParams;
@@ -227,6 +229,11 @@ export interface WorldCard { readonly records: StateSnapshot;
                              readonly reads?: Readonly<Record<string, WorldToolEntry>>;
                              readonly writes?: Readonly<Record<string, WorldToolEntry>>;
                              readonly destructive?: Readonly<Record<string, WorldToolEntry>>;
+                             /** Entities the STATE TAIL shows the model every turn —
+                              *  what disqualifies whole turns and no read answers.
+                              *  Omitted = every entity (small worlds). Everything
+                              *  else stays behind the reads. */
+                             readonly tail?: readonly string[];
                              readonly presets?: Readonly<Record<string, readonly Patch[]>> }
 /** One typed approval: the tool whose open question this turn licenses; args only
  *  to split open SIBLINGS of one tool — a code is never extracted from prose. */

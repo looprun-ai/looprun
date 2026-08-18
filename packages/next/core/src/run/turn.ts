@@ -120,7 +120,11 @@ export class Turn {
 
     for (;;) {
       const raw = this.deps.recordsPort?.snapshot() ?? null;
-      const state = raw === null ? null : masker.maskState(raw);
+      const visible = compiled.facts.tail ?? null;
+      const shown = raw === null ? null
+        : visible === null ? raw
+        : Object.fromEntries(Object.entries(raw).filter(([entity]) => visible.includes(entity)));
+      const state = shown === null ? null : masker.maskState(shown);
       const tail = pw.tail(userText, state, desk.open());
       const stepInput = deepFreeze({
         system: tail === '' ? pw.system() : `${pw.system()}\n${tail}`,
