@@ -10,6 +10,7 @@ import type { ToolPort, RecordsPort } from '../contract/ports.js';
 import type { CompiledAgent } from '../cards/cards.js';
 import { CallRunner } from './call-runner.js';
 import { DisclosureDesk } from './disclosure-desk.js';
+import { Judge } from './judge.js';
 import type { Masker } from './masker.js';
 import type { Rulebook } from './rulebook.js';
 import type { StatusClerk } from './status-clerk.js';
@@ -149,8 +150,9 @@ export class Turn {
       }
 
       if (finish !== null) {
-        const closed = this.tryFinish(finish, draft, messages, history.pastActs(),
-          desk.open(), desk.laterTexts(draft.turn));
+        const judge = new Judge(port, seat.llmParams({}));
+        const closed = await this.tryFinish(finish, draft, messages, history.pastActs(),
+          desk.open(), desk.laterTexts(draft.turn), judge);
         if (closed === 'sealed') return session.seal(draft);
         retriesUsed += 1;
         if (retriesUsed > compiled.limits.retries) return this.engineClose(session, draft);
@@ -165,11 +167,14 @@ export class Turn {
     }
   }
 
-  /** 'sealed' = the finish landed clean · 'redrive' = correction sent. */
-  private tryFinish(finish: RawCall, draft: TurnDraft, messages: Msg[],
-                    pastActs: readonly Act[], open: readonly Question[],
-                    notes: readonly string[]): 'sealed' | 'redrive' {
-    const { rulebook, finishDesk: fd, deliveryWriter: dw, promptWriter: pw } = this.deps;
+  /** 'sealed' = the finish landed clean · 'redrive' = correction sent. The reply
+   *  pipe: deterministic checks (honesty included) → the judged pass on the
+   *  session's own seat → rewrites → prose scrub → compose. */
+  private async tryFinish(finish: RawCall, draft: TurnDraft, messages: Msg[],
+                          pastActs: readonly Act[], open: readonly Question[],
+                          notes: readonly string[],
+                          judge: Judge): Promise<'sealed' | 'redrive'> {
+    const { compiled, rulebook, finishDesk: fd, deliveryWriter: dw, promptWriter: pw } = this.deps;
     const parsed = fd.parse(finish.args);
     if (!parsed.ok) {
       messages.push({ role: 'user', text: pw.correction([parsed.detail]) });
@@ -179,7 +184,22 @@ export class Turn {
       message: parsed.finish.message, report: parsed.finish.report,
       userText: draft.userText, turnActs: [...draft.acts], pastActs
     });
-    const violations = rulebook.checkReply(replyCtx);
+    const violations = [...rulebook.checkReply(replyCtx)];
+    if (violations.length === 0 && compiled.judged.length > 0) {
+      for (const v of await judge.run(compiled.judged, replyCtx, messages)) {
+        if (v.verdict === 'violation') {
+          violations.push({ guardName: v.guardName, detail: v.detail ?? '' });
+        }
+        if (v.verdict === 'unreadable') {
+          draft.corrections.push({ kind: 'judgeUnreadable', guardName: v.guardName });
+          const policy = compiled.judged.find(g => g.name === v.guardName)?.judgePolicy;
+          if (policy !== 'passOnFails') {
+            violations.push({ guardName: v.guardName,
+              detail: 'the judge answer was unreadable — treated as a violation' });
+          }
+        }
+      }
+    }
     if (violations.length > 0) {
       for (const v of violations) draft.corrections.push({ kind: 'redrive', guardName: v.guardName, detail: v.detail });
       messages.push({ role: 'user', text: pw.correction(violations.map(v => v.detail)) });
@@ -187,8 +207,9 @@ export class Turn {
     }
     draft.finish = parsed.finish;
     draft.closedBy = 'model';
-    draft.text = this.deps.masker.maskProse(
-      dw.compose(parsed.finish.message, draft.acts, open, draft.closed, notes));
+    let text = dw.compose(parsed.finish.message, draft.acts, open, draft.closed, notes);
+    for (const rewrite of compiled.rewrites) text = rewrite.apply(text);
+    draft.text = this.deps.masker.maskProse(text);
     return 'sealed';
   }
 
@@ -197,8 +218,10 @@ export class Turn {
     draft.corrections.push({ kind: 'forcedFinish' });
     draft.closedBy = 'engine';
     draft.finish = null;
-    draft.text = this.deps.masker.maskProse(dw.compose(fd.closure(draft.acts), draft.acts,
-      session.consent.open(), draft.closed, session.consent.laterTexts(draft.turn)));
+    let text = dw.compose(fd.closure(draft.acts), draft.acts,
+      session.consent.open(), draft.closed, session.consent.laterTexts(draft.turn));
+    for (const rewrite of this.deps.compiled.rewrites) text = rewrite.apply(text);
+    draft.text = this.deps.masker.maskProse(text);
     return session.seal(draft);
   }
 }

@@ -4,10 +4,10 @@
  *  the disclosure bindings (slot derivability re-proved by CardCheck), the resolved
  *  wording, and the prompt raw material. NOTHING JUDGED IS AUTO-INSTALLED. Compiled
  *  once, deep-frozen; the runtime never re-reads the authored form. */
-import type { InstalledGuard, Json, SurfaceFacts, ToolFact } from '../contract/vocabulary.js';
+import type { Json, SurfaceFacts, ToolFact } from '../contract/vocabulary.js';
 import { deepFreeze } from '../contract/freeze.js';
 import type { AgentSpec, CompiledAgent, CompiledGuard, Disclosure, DisclosureBinding,
-              DomainContract, Guard, MaskKey } from './cards.js';
+              DomainContract, Guard, JudgedGuard, MaskKey } from './cards.js';
 import { DEFAULT_LIMITS } from './cards.js';
 import { CardCheck } from './card-check.js';
 import { argFormat, argRequired, brokenReply, confirmFirst, maxDestructive,
@@ -93,12 +93,15 @@ export class AgentFactory {
 
     const limits = { ...DEFAULT_LIMITS, ...contract?.limits, ...spec.limits };
     const guards: CompiledGuard[] = [];
-    const judged: InstalledGuard[] = [];
+    const judged: JudgedGuard[] = [];
 
     const declare = (list: readonly Guard[], home: 'spec' | 'contract'): void => {
       for (const g of list) {
         if (g.judgeQuery !== undefined) {
-          judged.push(installHandWritten(g, home));
+          const tools = g.tool === undefined ? [] : typeof g.tool === 'string' ? [g.tool] : [...g.tool];
+          judged.push({ name: g.name, rule: g.rule, home, on: g.on, tools, kind: 'judged',
+            judged: true, judgePolicy: g.judgePolicy ?? 'denyOnFails',
+            installedBecause: `declared on the ${home} card`, judgeQuery: g.judgeQuery });
           continue;
         }
         guards.push(isSeed(g) ? g.compile(home, lane) : installHandWritten(g, home));

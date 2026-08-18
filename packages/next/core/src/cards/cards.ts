@@ -131,6 +131,9 @@ export interface PromptParts { readonly persona: string;
 /** One compiled secret path; 'mask' replaces the value with ****, 'omit' drops the key. */
 export interface MaskKey { readonly path: readonly string[]; readonly mode: 'omit' | 'mask' }
 
+/** A declared judged guard as the Judge runs it: the census row plus its question. */
+export interface JudgedGuard extends InstalledGuard { readonly judgeQuery: string }
+
 /** One tool's compiled disclosure: needs recipes normalized to the object form
  *  (read arg → held arg), the three tense sentences resolved or null. */
 export interface DisclosureBinding {
@@ -144,7 +147,7 @@ export interface DisclosureBinding {
 /** The frozen compiled agent the Engine runs — AgentFactory is its one birthplace;
  *  guards arrive priority-ordered: spec → contract → consent → the engine floor. */
 export interface CompiledAgent { readonly guards: readonly CompiledGuard[];
-                                 readonly judged: readonly InstalledGuard[];
+                                 readonly judged: readonly JudgedGuard[];
                                  readonly rewrites: readonly Rewrite[];
                                  readonly limits: Required<Limits>;
                                  readonly maskKeys: readonly MaskKey[];
