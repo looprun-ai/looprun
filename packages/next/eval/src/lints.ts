@@ -26,14 +26,28 @@ function subjectSources(dir: string): readonly { rel: string; text: string }[] {
   return out;
 }
 
+const PATTERN_HOMES = new Set(['blockPattern', 'purgePattern', 'maskPattern']);
+
+/** A regex is lawful only as the pattern ARGUMENT of one of the three pattern
+ *  factories — the pattern is that rewrite's own data; everywhere else it is a
+ *  finding. */
+function insidePatternHome(node: ts.Node): boolean {
+  for (let at: ts.Node | undefined = node.parent; at !== undefined; at = at.parent) {
+    if (ts.isCallExpression(at) && ts.isIdentifier(at.expression)
+      && PATTERN_HOMES.has(at.expression.text)) return true;
+  }
+  return false;
+}
+
 export function purity(subjectDir: string): readonly LintFinding[] {
   const findings: LintFinding[] = [];
   for (const f of subjectSources(subjectDir)) {
     const sf = ts.createSourceFile(f.rel, f.text, ts.ScriptTarget.ES2022, true);
     const visit = (node: ts.Node): void => {
-      if (ts.isRegularExpressionLiteral(node)
+      if ((ts.isRegularExpressionLiteral(node)
         || (ts.isNewExpression(node) && ts.isIdentifier(node.expression)
-            && node.expression.text === 'RegExp')) {
+            && node.expression.text === 'RegExp'))
+        && !insidePatternHome(node)) {
         const { line } = sf.getLineAndCharacterOfPosition(node.getStart(sf));
         findings.push({ code: 'SUBJECT_REGEX',
           sentence: `${f.rel}:${line + 1} — a subject carries no regex; patterns live in the engine catalog` });

@@ -36,7 +36,7 @@ interface ExamCase {
   readonly id: string;
   readonly split: 'fix' | 'held-out';
   readonly agent?: string;
-  readonly red?: string;                       // attack class, when the case is a red probe row
+  readonly red?: string;                       // attack class, when the case is a red attack row
   readonly turns: readonly (string
     | { readonly approve: { readonly tool: string; readonly args?: Readonly<Record<string, Json>> } }
     | { readonly decline: true })[];
@@ -83,4 +83,12 @@ non-obvious translation lands as a MAPPING.md row. Sub-tasks, each committed in 
 
 | planned | built | why |
 |---|---|---|
-| _(filled during execution)_ | | |
+| ExamCase = id/split/agent/red/turns/rubric | + `preset`, `covers`, `invariants` (required/noEffect matchers), multi-approve turns | the AS-IS cases carry all four; dropping any would change what the exam measures |
+| Patch = set only | make / set / remove union; Store validates all-then-applies | the AS-IS presets create and delete records |
+| entries carry form-derived schemas | entries may declare `schema`, `target` and `when` (conditional consent); coercion and perform honor them; CustomExecutor gained the refusal channel | the atlas tools have rich args, three conditionally-consented writes, and a world whose whole point is honest coded refusals |
+| the port is hand translation | the DATA half is generated (`tools/atlas-next-port/emit.ts`: records, 21 preset diffs, 100 cases, tool schemas); the LOGIC half runs the old handlers on a mutable view whose diff becomes patches (world-kit) | mechanical means zero transcription drift; the view adapter keeps the old logic line-for-line readable |
+| the subject imports next-core normally | the bench file-links ONLY next-core (a workspace:* dep cannot file-link); eval's vitest inlines the linked TS; plain node cannot strip-type node_modules — the 4b verbs need a dist build | pnpm + node type-stripping limits |
+| purity: no regex anywhere in a subject | a regex is lawful as the pattern ARGUMENT of block/purge/maskPattern | the pattern is the rewrite's own data; the law says regex lives only in those homes |
+| prose-residue lint in Task 4 | DEFERRED — purity, name gate, census and the prompt proof shipped; prose-residue lands with 4b's lint pass | it needs the compiled-guard census wiring the runner half exercises |
+| one onlyAfter per tool | a second onlyAfter on one tool takes a named override (`onlyAfter:issueRefund:holds`) | the factory mints kind:tool names; two declarations on one tool collide |
+| disclose rows verbatim | write-result slots re-sourced to args + engine reads; read-tool disclose rows dropped (MAPPING 18) | the after-tense renders at hold time, before any result exists |
