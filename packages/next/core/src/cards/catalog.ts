@@ -3,7 +3,7 @@
  *  derives rule and deny from the SAME parameters, so prose/check parity is
  *  structural. A factory MINTS its guard's name as kind:tool. Regex exists ONLY
  *  inside blockPattern, purgePattern and maskPattern. */
-import type { Act, CallCtx, InputCtx, Json, OwedRead, ReplyCtx, ReportWord, ResultCtx,
+import type { Act, CallCtx, ConsentWhen, InputCtx, Json, OwedRead, ReplyCtx, ReportWord, ResultCtx,
               Rewrite, StateSnapshot, SurfaceFacts } from '../contract/vocabulary.js';
 import { TurnFailure } from '../contract/vocabulary.js';
 import type { CompiledGuard, Guard, GuardCtx } from './cards.js';
@@ -90,18 +90,22 @@ export function onlyAfter(tool: string, prerequisite: string): SeedGuard {
 /** Consent, auto from the surface: a destructive call runs only on a consumed
  *  licence — otherwise it HOLDS for approval with the tool's label as the sentence.
  *  The desk owns the question lifecycle; the guard only declares. */
-export function confirmFirst(tool: string, label: string): SeedGuard {
+export function confirmFirst(tool: string, label: string, when?: ConsentWhen): SeedGuard {
   return {
     name: `confirmFirst:${tool}`,
-    rule: `${label} runs only after your approval.`,
+    rule: when === undefined
+      ? `${label} runs only after your approval.`
+      : `${label} runs only after your approval; any other ${tool} call is an ordinary write.`,
     tool,
     on: 'preTool',
     kind: 'confirmFirst',
     compile(home) {
       const row = installedAt<CallCtx>(this, home, () => null,
         'declared destructive on the surface');
+      const matches = (ctx: CallCtx): boolean => when === undefined
+        || when.oneOf.some((v: Json) => JSON.stringify(v) === JSON.stringify(ctx.call.args[when.arg]));
       return { ...row, hold: (ctx: CallCtx) =>
-        ctx.consented ? null : `${label} runs only after your approval.` };
+        !matches(ctx) || ctx.consented ? null : `${label} runs only after your approval.` };
     }
   };
 }

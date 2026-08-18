@@ -112,7 +112,8 @@ export class AgentFactory {
 
     for (const fact of Object.values(lane.tools)) {
       if (fact.effect === 'destructive') {
-        guards.push(confirmFirst(fact.name, fact.label ?? fact.name).compile('engine', lane));
+        guards.push(confirmFirst(fact.name, fact.label ?? fact.name,
+          fact.destructiveWhen ?? undefined).compile('engine', lane));
       }
     }
     guards.push(maxDestructive(limits.destructive).compile('engine', lane));

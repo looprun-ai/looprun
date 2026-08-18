@@ -191,6 +191,7 @@ export interface ToolFact { readonly name: string; readonly label: string | null
                             readonly entity: string | null;   // the records table the tool acts on
                             readonly schema: Json;
                             readonly simulation: { readonly arg: string; readonly value: Json } | null;
+                            readonly destructiveWhen: ConsentWhen | null;   // the destructive branch; null = every call
                             readonly proxy: string | { readonly compose: readonly string[] } | null }
 /** The whole declared surface as facts, keyed by tool name. */
 export interface SurfaceFacts { readonly tools: Readonly<Record<string, ToolFact>> }
@@ -207,9 +208,18 @@ export type Gate = { readonly kind: 'exists' }
 /** The action forms a world tool can take, as data; 'run' names a custom executor. */
 export type ActionForm = 'list' | 'get' | 'make' | 'set' | 'remove' | 'run';
 /** One declared world tool: the form, the entity it acts on, and its user-facing words. */
+/** The one destructive-branch declaration: a call whose named arg carries one of
+ *  the listed values is the destructive branch (holds for consent); any other call
+ *  of the same tool runs as a write. */
+export interface ConsentWhen { readonly arg: string; readonly oneOf: readonly Json[] }
 export interface WorldToolEntry { readonly form: ActionForm; readonly entity: string;
                                   readonly label: string; readonly does?: string;
                                   readonly gates?: readonly Gate[];
+                                  /** Declared args; omitted = the form's own schema. */
+                                  readonly schema?: Json;
+                                  /** The target arg; omitted = the form's own. */
+                                  readonly target?: string;
+                                  readonly when?: ConsentWhen;
                                   readonly simulation?: true }
 /** The declarative world: records + the three effect blocks + presets. Closed data —
  *  no functions, no regexes, no clock inside the card; custom executors pass OUTSIDE. */
@@ -253,6 +263,7 @@ export interface ExamCase { readonly id: string;
  *  block executes the listed live reads and merges their results in order. */
 export interface RemoteToolEntry { readonly label: string; readonly target?: string;
                                    readonly proxy?: string | { readonly compose: readonly string[] };
+                                   readonly when?: ConsentWhen;
                                    readonly simulation?: true;
                                    readonly does?: string; readonly schema?: Json }
 /** The MCP sibling: the same effect blocks over remote entries — no records, no gates. */

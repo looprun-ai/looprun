@@ -89,11 +89,14 @@ export class BuiltWorld {
    *  array where a scalar is declared is a refusal naming the arg. */
   private coerce(entry: WorldToolEntry, args: ReadyCall['args']): Record<string, Json> | string {
     const out: Record<string, Json> = { ...args };
-    if (TARGETED.has(entry.form)) {
-      const id = args.id;
-      if (id === undefined) return `The call is missing its 'id' argument.`;
-      if (typeof id === 'object' && id !== null) return `The 'id' argument is not a plain value.`;
-      out.id = typeof id === 'string' ? id : String(id);
+    // The target arg is the entry's own word: the declared target, or the form's
+    // 'id' when the entry declares neither a target nor its own schema.
+    const targetArg = entry.target ?? (entry.schema === undefined ? 'id' : null);
+    if (TARGETED.has(entry.form) && targetArg !== null) {
+      const id = args[targetArg];
+      if (id === undefined) return `The call is missing its '${targetArg}' argument.`;
+      if (typeof id === 'object' && id !== null) return `The '${targetArg}' argument is not a plain value.`;
+      out[targetArg] = typeof id === 'string' ? id : String(id);
     }
     if ('simulate' in args) {
       const s = args.simulate;
@@ -106,7 +109,9 @@ export class BuiltWorld {
 
   /** The one shared act path — a simulated run walks it against a throwaway store. */
   private perform(entry: WorldToolEntry, tool: string, ready: ReadyCall, store: Store): ToolAnswer {
-    const id = typeof ready.args.id === 'string' ? ready.args.id : null;
+    const targetArg = entry.target ?? (entry.schema === undefined ? 'id' : null);
+    const raw = targetArg === null ? undefined : ready.args[targetArg];
+    const id = typeof raw === 'string' ? raw : null;
     const record = id === null ? null : store.get(entry.entity, id);
 
     const gateSentence = evaluateGates(entry.gates ?? [], record);
