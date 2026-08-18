@@ -82,6 +82,9 @@ const ALLOW = [
   { path: 'docs/superpowers/specs/2026-08-09-consent-licence-design.md', word: 'preview', text: 'gemini-3.1-pro-preview', why: 'a third-party model id' },
   { path: 'docs/superpowers/specs/2026-08-10-consent-licence-implementation.md', word: 'preview', text: 'gemini-3.1-pro-preview', why: 'a third-party model id' },
   { path: 'packages/next/core/test/lint/name-gate.test.ts', word: 'probe', text: "'probe'", why: 'the rename register bans the retired identifier by listing it' },
+  { path: 'packages/next/core/test/lint/name-gate.test.ts', word: 'preview', text: "'preview'", why: 'the rename register bans the retired identifier by listing it' },
+  { path: 'docs/superpowers/specs/2026-08-18-to-be-phase-2-build-design.md', word: 'preview', text: "'preview'", why: 'the design quotes the banned token it retires' },
+  { path: 'docs/superpowers/plans/2026-08-18-to-be-phase-2-build.md', word: 'preview', text: "'preview'", why: 'the plan quotes the banned token it retires' },
 ];
 
 const SKIP_EXT = /\.(png|jpg|jpeg|gif|svg|ico|gguf|zip|woff2?|tsv|csv)$/i;

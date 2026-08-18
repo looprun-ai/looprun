@@ -33,7 +33,7 @@ extensions on relative imports), vitest 2, zod, eslint 9 + typescript-eslint.
 | point | phase-2 form | why |
 |---|---|---|
 | world card types (`Gate`, `ActionForm`, `WorldToolEntry`, `WorldCard`, `RemoteToolEntry`, `McpWorldCard`, `LiveWorldCard`, `AuditRow`, `DeclaredWorld`) | declared at L0 `contract/vocabulary.ts`, re-exported by `world/world.ts` | `cards/facts.ts` (`factsFromWorld`) may not import `world/` under the layer law — the `LlmParams` precedent: crossing types live in the leaf |
-| honesty band installation | the `Rulebook` constructor inserts the two honesty rows (backed by `run/honesty-check.ts`) between the contract band and the engine floor; `AgentFactory` does not install them | the matcher is run-layer; `cards/` may not import `run/`; the census still prints spec → contract → consent → honesty → floor with `installedBecause: 'the always-on floor'` |
+| honesty row installation | the `Rulebook` constructor inserts the two honesty rows (backed by `run/honesty-check.ts`) between the contract rows and the engine floor; `AgentFactory` does not install them | the matcher is run-layer; `cards/` may not import `run/`; the census still prints spec → contract → consent → honesty → floor with `installedBecause: 'the always-on floor'` |
 | consent auto-guard shape | `confirmFirst` compiles to a `CompiledGuard` carrying `hold?(ctx: CallCtx): string \| null` (the consent sentence) — the owe/restate channel precedent; `CallRunner` routes `hold` through the per-session `ConsentDesk` | licence state is run-side; the guard declares, the desk owns the lifecycle |
 | licensed execution | a consumed approval executes ENGINE-side at turn start: `CallRunner.run(desk.held(id), 'licence', draft)` before the model loop — the model narrates an already-recorded act | the desk holds the EXECUTABLE `CanonicalCall`; re-asking the model to re-emit it would let a paraphrase drift the args |
 | world tool arg schemas | derived from the action form: `list` → `{}` · `get`/`remove` → `{ id }` required · `set` → `{ id, set }` · `make` → `{ fields }` · `run` → `{ id }`; a tool declared `simulation: true` additionally accepts optional boolean `simulate` | the `WorldCard` declares no schemas — the form is the schema's truth |
@@ -474,7 +474,7 @@ test('M1 — hold, approve by code, licensed execution, siblings superseded', as
 
 **Files:**
 - Create: `src/run/honesty-check.ts`
-- Modify: `src/run/rulebook.ts` (the constructor inserts the two honesty rows into the reply band, between contract and floor)
+- Modify: `src/run/rulebook.ts` (the constructor inserts the two honesty rows into the reply phase array, between contract and floor)
 - Test: `test/run/honesty-check.test.ts`, `test/cases/m3-honesty.test.ts`
 
 **Interfaces (produces):** blueprint L862–867 —

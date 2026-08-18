@@ -243,7 +243,7 @@ turn N
 │   EVERY closure is delivered, expiry included
 ├─ input guards
 ├─ model loop — CallRunner per call, in emission order:
-│   ├─ spec → contract bands  (deny / owe / micro-step)
+│   ├─ spec → contract guard rows  (deny / owe / micro-step)
 │   ├─● CONSENT (destructive):
 │   │   no licence → the disclosure's owedReads run FIRST (origin
 │   │   'engine', declared rename) → before-tense with slots filled

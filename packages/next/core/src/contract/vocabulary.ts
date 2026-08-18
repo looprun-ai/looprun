@@ -144,7 +144,8 @@ export interface GuardCensus { readonly guards: readonly InstalledGuard[];      
                                               //   guards, the rewrites as their own section, and
                                               //   the resolved limits
 export type EngineSentenceKey = 'approvalInstruction' | 'exhaustionClosure' | 'unknownStatus'
-                              | 'questionExpired' | 'questionSuperseded' | 'deniedByGuard';
+                              | 'questionExpired' | 'questionSuperseded' | 'questionDeclined'
+                              | 'deniedByGuard' | 'simulatedResult';
 export type RoutingStrategy = 'sequential' | 'random' | 'rate-limit' | 'backup-only' | 'round-robin';
 export interface ModelTarget { readonly id: string; readonly provider: string;
                                readonly keyEnv: string | null;
@@ -174,3 +175,50 @@ export interface ToolFact { readonly name: string; readonly label: string | null
                             readonly proxy: string | null }
 /** The whole declared surface as facts, keyed by tool name. */
 export interface SurfaceFacts { readonly tools: Readonly<Record<string, ToolFact>> }
+
+/** The world vocabulary — crossing types for the three surface-card kinds.
+ *  world/world.ts re-exports them for authors, the way cards.ts re-exports LlmParams;
+ *  cards/facts.ts derives SurfaceFacts from them without importing world/. */
+
+/** A declared precondition on a tool's target record, evaluated on EVERY tool kind.
+ *  A missing record is a refusal with the gate's sentence, never a silent pass. */
+export type Gate = { readonly kind: 'exists' }
+                 | { readonly kind: 'stateIs'; readonly field: string; readonly value: Json }
+                 | { readonly kind: 'fieldAtLeast'; readonly field: string; readonly min: number };
+/** The action forms a world tool can take, as data; 'run' names a custom executor. */
+export type ActionForm = 'list' | 'get' | 'make' | 'set' | 'remove' | 'run';
+/** One declared world tool: the form, the entity it acts on, and its user-facing words. */
+export interface WorldToolEntry { readonly form: ActionForm; readonly entity: string;
+                                  readonly label: string; readonly does?: string;
+                                  readonly gates?: readonly Gate[];
+                                  readonly simulation?: true }
+/** The declarative world: records + the three effect blocks + presets. Closed data —
+ *  no functions, no regexes, no clock inside the card; custom executors pass OUTSIDE. */
+export interface WorldCard { readonly records: StateSnapshot;
+                             readonly reads?: Readonly<Record<string, WorldToolEntry>>;
+                             readonly writes?: Readonly<Record<string, WorldToolEntry>>;
+                             readonly destructive?: Readonly<Record<string, WorldToolEntry>>;
+                             readonly presets?: Readonly<Record<string, readonly Patch[]>> }
+/** One remote tool on an MCP or live surface: words and bindings, no action form. */
+export interface RemoteToolEntry { readonly label: string; readonly target?: string;
+                                   readonly proxy?: string; readonly simulation?: true;
+                                   readonly does?: string; readonly schema?: Json }
+/** The MCP sibling: the same effect blocks over remote entries — no records, no gates. */
+export interface McpWorldCard { readonly reads?: Readonly<Record<string, RemoteToolEntry>>;
+                                readonly writes?: Readonly<Record<string, RemoteToolEntry>>;
+                                readonly destructive?: Readonly<Record<string, RemoteToolEntry>> }
+/** The live sibling: tools that execute themselves on a named host. */
+export interface LiveWorldCard extends McpWorldCard { readonly host: string }
+/** One row of the world's own audit trail: the row states the result; the mechanism
+ *  is its own field. */
+export interface AuditRow { readonly call: ReadyCall; readonly done: Done;
+                            readonly executor: 'declared' | 'custom' }
+/** A custom executor: coerced args + a deep-frozen records CLONE + the id mint; its
+ *  patches apply through the shared gated, audited path — never directly. */
+export type CustomExecutor = (ctx: { readonly args: Readonly<Record<string, Json>>;
+                                     readonly records: StateSnapshot;
+                                     readonly mintId: (entity: string) => string })
+                          => { readonly result: Json; readonly patches: readonly Patch[] };
+/** A validated, frozen world declaration: the card plus its custom executors. */
+export interface DeclaredWorld { readonly card: WorldCard;
+                                 readonly executors: Readonly<Record<string, CustomExecutor>> }

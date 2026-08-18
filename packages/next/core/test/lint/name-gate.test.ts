@@ -15,7 +15,7 @@ const BANNED = new Set([
   'destructiveThrottle', 'degenerationGuard', 'jargonScrub', 'llmCheck',
   'llmCheckLie', 'ask', 'control', 'ControlStrip', 'controlCompile',
   'stateView', 'modelParams', 'terminalProtocol', 'stopOnRepeatedToolCall',
-  'redrives', 'tookEffect', 'effectInferred', 'probe', 'dryRun',
+  'redrives', 'tookEffect', 'effectInferred', 'probe', 'dryRun', 'preview',
   'sampling', 'Sampling', 'internal'
 ]);
 

@@ -2,19 +2,30 @@ import { test, expect } from 'vitest';
 import ts from 'typescript';
 import { srcFiles } from './walk.js';
 
-/** Charter R6.6: a guard never uses a regex — and in phase 1 the pattern factories
- *  do not exist, so the exception set is EMPTY: no regex literal and no RegExp
- *  construction anywhere in src/. */
-test('no regex literal or RegExp construction exists in src', () => {
+/** Charter R6.6: a guard never uses a regex. The ONE lawful regex home is the three
+ *  pattern factories in cards/catalog.ts — blockPattern, purgePattern, maskPattern;
+ *  a regex literal or RegExp construction anywhere else in src/ is a build failure. */
+const REGEX_HOMES = new Set(['blockPattern', 'purgePattern', 'maskPattern']);
+
+function insideRegexHome(node: ts.Node, rel: string): boolean {
+  if (!rel.endsWith('cards/catalog.ts')) return false;
+  for (let p: ts.Node | undefined = node; p !== undefined; p = p.parent) {
+    if (ts.isFunctionDeclaration(p) && p.name !== undefined && REGEX_HOMES.has(p.name.text)) return true;
+  }
+  return false;
+}
+
+test('a regex exists only inside the three pattern factories', () => {
   const hits: string[] = [];
   for (const f of srcFiles()) {
     const sf = ts.createSourceFile(f.rel, f.text, ts.ScriptTarget.ES2022, true);
     const visit = (node: ts.Node): void => {
-      if (node.kind === ts.SyntaxKind.RegularExpressionLiteral) {
+      if (node.kind === ts.SyntaxKind.RegularExpressionLiteral && !insideRegexHome(node, f.rel)) {
         hits.push(`${f.rel} — regex literal`);
       }
       if ((ts.isNewExpression(node) || ts.isCallExpression(node))
-        && ts.isIdentifier(node.expression) && node.expression.text === 'RegExp') {
+        && ts.isIdentifier(node.expression) && node.expression.text === 'RegExp'
+        && !insideRegexHome(node, f.rel)) {
         hits.push(`${f.rel} — RegExp construction`);
       }
       node.forEachChild(visit);

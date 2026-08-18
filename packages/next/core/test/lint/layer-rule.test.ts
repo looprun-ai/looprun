@@ -2,9 +2,11 @@ import { test, expect } from 'vitest';
 import { srcFiles, type SourceFile } from './walk.js';
 
 /** The §6 layer law, downward-only: contract (L0) imports NOTHING outside itself,
- *  cards (L1–L2) import contract only, run (L3) imports contract + cards. No src
- *  file imports test/. Only engine.ts imports turn; nothing in src imports engine.
- *  The one bare specifier the package allows itself is zod. */
+ *  cards (L1–L2) import contract only, world imports contract only, run (L3) imports
+ *  contract + cards — never world: the machine reaches a BuiltWorld through the
+ *  ToolPort/RecordsPort seams it implements. No src file imports test/. Only
+ *  engine.ts imports turn; nothing in src imports engine. The one bare specifier
+ *  the package allows itself is zod. */
 
 function importsOf(f: SourceFile): readonly string[] {
   const specs: string[] = [];
@@ -19,7 +21,8 @@ test('every src import points downward in the layer picture', () => {
   const bad: string[] = [];
   for (const f of srcFiles()) {
     const layer = f.rel.includes('/contract/') ? 'contract'
-      : f.rel.includes('/cards/') ? 'cards' : 'run';
+      : f.rel.includes('/cards/') ? 'cards'
+      : f.rel.includes('/world/') ? 'world' : 'run';
     for (const spec of importsOf(f)) {
       const ok =
         spec === 'zod' ? layer === 'run'
