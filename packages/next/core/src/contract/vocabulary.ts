@@ -16,7 +16,13 @@ export interface ChatMsg { readonly role: 'user' | 'assistant'; readonly text: s
 export interface ActsMsg { readonly role: 'acts'; readonly acts: readonly Act[] }
 export type Msg = ChatMsg | ActsMsg;
 export interface ToolAnswer { readonly result: Json; readonly done: Done }
-export interface Patch { readonly entity: string; readonly id: string; readonly set: Readonly<Record<string, Json>> }
+/** One world change: set fields on an existing record, make a new record whole,
+ *  or remove one. A set/remove naming a missing record refuses; a make naming an
+ *  existing one refuses — patches validate all-then-apply, never half. */
+export type Patch =
+  | { readonly entity: string; readonly id: string; readonly set: Readonly<Record<string, Json>> }
+  | { readonly entity: string; readonly id: string; readonly make: Readonly<Record<string, Json>> }
+  | { readonly entity: string; readonly id: string; readonly remove: true };
 
 /** The call as the executor receives it: the tool name and the coerced REAL args — nothing else.
  *  A simulation downgrade exists only as the tool's OWN declared parameter set inside args.

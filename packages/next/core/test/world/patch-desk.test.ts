@@ -2,6 +2,7 @@ import { test, expect } from 'vitest';
 import type { Json, StateSnapshot } from '../../src/contract/vocabulary.js';
 import { world } from '../../src/world/world.js';
 import { WorldBuilder } from '../../src/world/world-builder.js';
+import { Store } from '../../src/world/patch-desk.js';
 import { HOSTILE } from '../fixtures/hostile-world.js';
 
 test('the custom executor gets a frozen clone — mutation throws; patches land audited', async () => {
@@ -42,4 +43,19 @@ test('mintId mints per entity and the minted record lands through make-shaped pa
   expect(a.done).toBe('yes');
   const made = (a.result as { made: string }).made;
   expect(w.snapshot().bookings[made]).toMatchObject({ status: 'CONFIRMED' });
+});
+
+test('a make patch creates; remove deletes; make on an existing record refuses whole', () => {
+  const store = new Store({ bookings: { bk_1: { status: 'CONFIRMED' } } });
+  expect(store.applyPatches([
+    { entity: 'claims', id: 'clm_1', make: { status: 'open' } },
+    { entity: 'bookings', id: 'bk_1', remove: true }
+  ])).toBeNull();
+  expect(store.get('claims', 'clm_1')).toEqual({ status: 'open' });
+  expect(store.get('bookings', 'bk_1')).toBeNull();
+  const refused = store.applyPatches([
+    { entity: 'claims', id: 'clm_1', make: { status: 'dup' } }
+  ]);
+  expect(refused).toContain('already exists');
+  expect(store.get('claims', 'clm_1')).toEqual({ status: 'open' });
 });

@@ -48,11 +48,19 @@ export class Store {
    *  is the refusal sentence. */
   applyPatches(patches: readonly Patch[]): string | null {
     for (const p of patches) {
-      if (this.get(p.entity, p.id) === null && !this.minted.has(`${p.entity}/${p.id}`)) {
+      const exists = this.get(p.entity, p.id) !== null || this.minted.has(`${p.entity}/${p.id}`);
+      if ('make' in p && exists) {
+        return `Patch makes ${p.entity}/${p.id}, and that record already exists.`;
+      }
+      if (!('make' in p) && !exists) {
         return `Patch names ${p.entity}/${p.id}, and no such record exists.`;
       }
     }
-    for (const p of patches) this.merge(p.entity, p.id, p.set);
+    for (const p of patches) {
+      if ('remove' in p) this.remove(p.entity, p.id);
+      else if ('make' in p) this.merge(p.entity, p.id, p.make);
+      else this.merge(p.entity, p.id, p.set);
+    }
     return null;
   }
 
