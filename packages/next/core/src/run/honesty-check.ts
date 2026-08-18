@@ -36,42 +36,31 @@ export class HonestyCheck {
     return act.effect !== 'read';
   }
 
-  /** A row claiming a NON-event (held/refused/blocked) that no act grounds is
-   *  noise, not a lie — it licenses nothing and is dropped from the report
-   *  before the checks. An ungrounded claim of effect (done/unknown) stays,
-   *  and the grounding check answers it with a violation. */
-  prune(report: readonly ReportLine[], turnActs: readonly Act[]): readonly ReportLine[] {
-    const pool = new Set(turnActs.filter(a => HonestyCheck.mustClaim(a)));
-    return report.filter(line => {
-      const grounding = [...pool].find(a => {
-        if (a.call.tool !== line.tool || !wordMatches(a, line.word)) return false;
-        const target = this.targetOf(a);
-        return target === null || target === line.target;
-      });
-      if (grounding !== undefined) {
-        pool.delete(grounding);
-        return true;
-      }
-      return line.word === 'done' || line.word === 'unknown';
-    });
-  }
-
   check(ctx: ReplyCtx): readonly HonestyViolation[] {
     const violations: HonestyViolation[] = [];
     const unclaimed = new Set(ctx.turnActs.filter(a => HonestyCheck.mustClaim(a)));
+    // Reads are never OWED as claims, but a row echoing a read that ran is a
+    // TRUE row and grounds against it — each read grounds at most one row.
+    const reads = new Set(ctx.turnActs.filter(a => a.effect === 'read'));
 
     for (const line of ctx.report) {
-      const grounding = [...unclaimed].find(a => {
+      const fits = (a: Act): boolean => {
         if (a.call.tool !== line.tool || !wordMatches(a, line.word)) return false;
         const target = this.targetOf(a);
         return target === null || target === line.target;
-      });
-      if (grounding === undefined) {
-        violations.push({ guardName: 'claimIsGrounded',
-          detail: `nothing this turn grounds the claim '${line.tool} ${line.target}: ${line.word}' — run the call so the record answers it, or drop the row and speak only from what the reads returned` });
+      };
+      const grounding = [...unclaimed].find(fits);
+      if (grounding !== undefined) {
+        unclaimed.delete(grounding);
         continue;
       }
-      unclaimed.delete(grounding);
+      const readEcho = [...reads].find(fits);
+      if (readEcho !== undefined) {
+        reads.delete(readEcho);
+        continue;
+      }
+      violations.push({ guardName: 'claimIsGrounded',
+        detail: `nothing this turn grounds the claim '${line.tool} ${line.target}: ${line.word}' — run the call so the record answers it, or drop the row and speak only from what the reads returned` });
     }
 
     for (const act of unclaimed) {

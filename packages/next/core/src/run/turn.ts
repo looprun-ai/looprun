@@ -9,7 +9,6 @@ import { deepFreeze } from '../contract/freeze.js';
 import type { ToolPort, RecordsPort } from '../contract/ports.js';
 import type { CompiledAgent } from '../cards/cards.js';
 import { CallRunner } from './call-runner.js';
-import { HonestyCheck } from './honesty-check.js';
 import { DisclosureDesk } from './disclosure-desk.js';
 import { Judge } from './judge.js';
 import type { Masker } from './masker.js';
@@ -192,10 +191,8 @@ export class Turn {
       messages.push({ role: 'user', text: pw.correction([parsed.detail]) });
       return 'redrive';
     }
-    const report = new HonestyCheck(compiled.facts)
-      .prune(parsed.finish.report, draft.acts);
     const replyCtx = deepFreeze({
-      message: parsed.finish.message, report,
+      message: parsed.finish.message, report: parsed.finish.report,
       userText: draft.userText, turnActs: [...draft.acts], pastActs
     });
     const violations = [...rulebook.checkReply(replyCtx)];
@@ -216,10 +213,14 @@ export class Turn {
     }
     if (violations.length > 0) {
       for (const v of violations) draft.corrections.push({ kind: 'redrive', guardName: v.guardName, detail: v.detail });
+      // The model EDITS its rejected finish rather than regenerating blind: the
+      // attempt rides back as its own words, the correction names what to change.
+      messages.push({ role: 'assistant', text: `My finish attempt:\n${parsed.finish.message}\nreport: ${
+        parsed.finish.report.map(r => `${r.tool} ${r.target}: ${r.word}`).join(' · ') || '(no rows)'}` });
       messages.push({ role: 'user', text: pw.correction(violations.map(v => v.detail)) });
       return 'redrive';
     }
-    draft.finish = { ...parsed.finish, report };
+    draft.finish = parsed.finish;
     draft.closedBy = 'model';
     let text = dw.compose(parsed.finish.message, draft.acts, open, draft.closed, notes);
     for (const rewrite of compiled.rewrites) text = rewrite.apply(text);
