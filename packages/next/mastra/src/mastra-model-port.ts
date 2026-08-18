@@ -121,6 +121,11 @@ export class MastraModelPort {
         const assistant = r.response.messages.find(m => m.role === 'assistant');
         if (assistant !== undefined) this.replay.set(callsKey(calls), assistant);
       }
+      usageTotals.steps += 1;
+      const tokenCount = (v: unknown): number => typeof v === 'number' ? v
+        : isRecord(v) && typeof v.total === 'number' ? v.total : 0;
+      usageTotals.inputTokens += tokenCount(r.usage.inputTokens);
+      usageTotals.outputTokens += tokenCount(r.usage.outputTokens);
       return { calls, text: r.text };
     } catch (e: unknown) {
       throw new TurnFailure('network', firstLine(e));
@@ -131,4 +136,18 @@ export class MastraModelPort {
 function firstLine(e: unknown): string {
   const message = e instanceof Error ? e.message : typeof e === 'string' ? e : 'provider call failed';
   return message.split('\n')[0];
+}
+
+/** Process-wide usage totals, as the PROVIDER reports them — the campaign driver
+ *  reads and resets them around a run. */
+const usageTotals = { steps: 0, inputTokens: 0, outputTokens: 0 };
+
+export function readUsageTotals(): { steps: number; inputTokens: number; outputTokens: number } {
+  return { ...usageTotals };
+}
+
+export function resetUsageTotals(): void {
+  usageTotals.steps = 0;
+  usageTotals.inputTokens = 0;
+  usageTotals.outputTokens = 0;
 }

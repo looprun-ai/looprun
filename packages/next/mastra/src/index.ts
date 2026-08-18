@@ -8,3 +8,4 @@ export type { Assembled, LoopRunConfig, LoopRunModel } from './agent-assembly.js
 export { MastraModelPort } from './mastra-model-port.js';
 export { HostToolPort } from './host-tool-port.js';
 export { connect } from './mcp-connect.js';
+export { readUsageTotals, resetUsageTotals } from './mastra-model-port.js';

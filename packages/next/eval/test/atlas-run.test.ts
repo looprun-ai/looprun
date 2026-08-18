@@ -2,6 +2,7 @@ import { test } from 'vitest';
 import { existsSync, mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
+import { readUsageTotals, resetUsageTotals } from '@looprun-ai/next-mastra';
 import { SubjectLoader } from '../src/subject-loader.js';
 import { ExamRunner } from '../src/exam-runner.js';
 import { buildJudgeInputs } from '../src/judge-inputs.js';
@@ -24,6 +25,7 @@ test.skipIf(RUN === '' || !existsSync(ATLAS))('atlas run', { timeout: 0 }, async
     ? ['governed', 'ungoverned'] as const : ['governed'] as const;
   const wanted = RUN === 'all' ? subject.cases : subject.cases.filter(c => c.id === RUN);
   const runner = new ExamRunner();
+  resetUsageTotals();
 
   for (const c of wanted) {
     for (const variant of variants) {
@@ -35,4 +37,7 @@ test.skipIf(RUN === '' || !existsSync(ATLAS))('atlas run', { timeout: 0 }, async
   }
   buildJudgeInputs(runDir, id => subject.cases.find(c => c.id === id)?.rubric ?? '');
   process.stdout.write(`monitor clean: ${String(scan(runDir).clean)}\n`);
+  const usage = readUsageTotals();
+  process.stdout.write(`usage: steps=${String(usage.steps)}`
+    + ` in=${String(usage.inputTokens)} out=${String(usage.outputTokens)}\n`);
 });
