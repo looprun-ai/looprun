@@ -144,6 +144,12 @@ export class Turn {
       if (draft.acts.length > actsBefore) {
         messages.push({ role: 'acts', acts: draft.acts.slice(actsBefore) });
       }
+      // A newly raised question closes the turn from the engine's side: the ask
+      // IS the turn's outcome, and every further model step would be spent
+      // re-proposing the very call the question already carries.
+      if (draft.acts.slice(actsBefore).some(a => a.reason === 'held' && a.questionId !== null)) {
+        return this.engineClose(session, draft);
+      }
 
       if (finish !== null) {
         const judge = new Judge(port, seat.llmParams({}));
