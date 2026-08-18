@@ -10,7 +10,11 @@ export type ReportWord = 'done' | 'held' | 'refused' | 'blocked' | 'unknown';   
 export type Evidence = 'executor' | 'diff' | 'engine';       // who grounded the status
 export type QuestionClose = 'declined' | 'superseded' | 'expired' | 'vetoed';
 export type QuestionState = 'open' | 'consumed' | { readonly closed: QuestionClose };
-export interface Msg { readonly role: 'user' | 'assistant'; readonly text: string }
+export interface ChatMsg { readonly role: 'user' | 'assistant'; readonly text: string }
+/** What this turn's calls did, typed — the seat renders it in its own dialect
+ *  (native tool messages on a provider seat; ignored by a scripted seat). */
+export interface ActsMsg { readonly role: 'acts'; readonly acts: readonly Act[] }
+export type Msg = ChatMsg | ActsMsg;
 export interface ToolAnswer { readonly result: Json; readonly done: Done }
 export interface Patch { readonly entity: string; readonly id: string; readonly set: Readonly<Record<string, Json>> }
 

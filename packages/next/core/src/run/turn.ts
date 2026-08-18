@@ -110,9 +110,7 @@ export class Turn {
       }
     }
     if (draft.acts.length > 0) {
-      const lines = draft.acts.map(a =>
-        a.result === null ? a.sentence : `${a.sentence}\n${JSON.stringify(a.result)}`);
-      messages.push({ role: 'user', text: `TOOL RESULTS (engine record):\n${lines.join('\n')}` });
+      messages.push({ role: 'acts', acts: [...draft.acts] });
     }
     desk.sweep(draft.turn, compiled.limits.questionTurns, draft);
 
@@ -144,9 +142,7 @@ export class Turn {
       // The model SEES what its calls did — results and denials alike — so it can
       // react within this turn's own ceilings.
       if (draft.acts.length > actsBefore) {
-        const lines = draft.acts.slice(actsBefore).map(a =>
-          a.result === null ? a.sentence : `${a.sentence}\n${JSON.stringify(a.result)}`);
-        messages.push({ role: 'user', text: `TOOL RESULTS (engine record):\n${lines.join('\n')}` });
+        messages.push({ role: 'acts', acts: draft.acts.slice(actsBefore) });
       }
 
       if (finish !== null) {

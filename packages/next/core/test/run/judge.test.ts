@@ -34,5 +34,6 @@ test('the judge step is closed-format: no tools, no forced finish, the query quo
   expect(seen.tools).toEqual([]);
   expect(seen.forceFinish).toBe(false);
   expect(seen.system).toContain('YES');
-  expect(seen.messages.at(-1)?.text).toContain('All done.');
+  const judgeLast = seen.messages.at(-1);
+  expect(judgeLast?.role === 'acts' ? '' : judgeLast?.text).toContain('All done.');
 });

@@ -47,7 +47,8 @@ test('the micro-step pays the debt: single-tool surface, model-filled args, engi
 
   const micro = model.seen[1];
   expect(micro.tools.map(t => t.name)).toEqual(['getBooking']);
-  expect(micro.messages.at(-1)?.text).toContain('call getBooking now');
+  const microLast = micro.messages.at(-1);
+  expect(microLast?.role === 'acts' ? '' : microLast?.text).toContain('call getBooking now');
   expect(micro.system).toContain('STATE: ');
   expect(micro.system).toContain('c_42');
   expect(port.log).toEqual([
@@ -97,7 +98,9 @@ test('a micro-step that fills nothing refuses the gated call — the turn still 
   expect(r.closedBy).toBe('model');
   expect(r.text).toContain('Run getBooking before cancelBooking.');
   const finishInput = model.seen.at(-1);
-  expect(finishInput?.messages.some(m => m.text.includes('Run getBooking before cancelBooking.'))).toBe(true);
+  expect(finishInput?.messages.some(m => m.role === 'acts'
+    ? m.acts.some(a => a.sentence.includes('Run getBooking before cancelBooking.'))
+    : m.text.includes('Run getBooking before cancelBooking.'))).toBe(true);
 });
 
 test('a paid read that FAILS refuses the gated call with the rule — never a dead turn', async () => {

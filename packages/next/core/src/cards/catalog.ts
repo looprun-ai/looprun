@@ -150,7 +150,7 @@ export function argFormat(tool: string, arg: string, pattern: string): SeedGuard
  *  engine-taught literals leaking as prose, tool markup, foreign chat-template
  *  tokens. Structural, never linguistic. */
 export function brokenReply(): SeedGuard {
-  const LEAKS = ['TOOL RESULTS (engine record):', '<tool_call>', '</tool_call>', '<|'];
+  const LEAKS = ['<tool_call>', '</tool_call>', '<|'];
   return {
     name: 'brokenReply',
     rule: 'The reply is plain prose — no tool markup, no repeated lines, no engine literals.',
