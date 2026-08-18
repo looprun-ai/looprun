@@ -104,8 +104,14 @@ export function confirmFirst(tool: string, label: string, when?: ConsentWhen): S
         'declared destructive on the surface');
       const matches = (ctx: CallCtx): boolean => when === undefined
         || when.oneOf.some((v: Json) => JSON.stringify(v) === JSON.stringify(ctx.call.args[when.arg]));
+      // A re-proposal of a call that already RAN this conversation is a duplicate,
+      // not a fresh ask — the hold steps aside and the duplicate guard restates.
+      const alreadyRan = (ctx: CallCtx): boolean =>
+        [...ctx.pastActs, ...ctx.turnActs].some(a => a.call.key === ctx.call.key
+          && (a.status === 'done' || a.status === 'unknown'));
       return { ...row, hold: (ctx: CallCtx) =>
-        !matches(ctx) || ctx.consented ? null : `${label} runs only after your approval.` };
+        !matches(ctx) || ctx.consented || alreadyRan(ctx)
+          ? null : `${label} runs only after your approval.` };
     }
   };
 }
