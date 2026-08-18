@@ -42,3 +42,12 @@ the skill, re-author, repeat — the reference never moves.
 ## Open rows (filled during the phase-5 fix loop)
 
 _(every PORT/APPEAL bin decision lands here as a lesson the skill must teach)_
+
+| # | lesson the skill must teach | born from |
+|---|---|---|
+| 1 | The ask names its concrete object: a consent `before` sentence carries the amount, target id, destination or scope the call moves — `{args.*}` slots exist for exactly this. An ask that says "the settlement" where the record says "200" fails the operator. | slice 2-3 fix loop |
+| 2 | `{result.*}` slots in `after`: rendered at execution and on every restate of the executed act — the sentence states what the call RETURNED (new caps, new balance), never what the author hoped. | case 25 |
+| 3 | `cap: { arg, at, refusal }` on a disclosure entry: when the call's named arg exceeds what an owed read answered, the engine refuses with the declared sentence and never asks — the desk never asks about an act the records rule out. | case 39 |
+| 4 | The finish report's word vocabulary is taught by legend, including `no_tool_called` — the agent's own word for a decision to act in words only, legal only when NO act of that tool and target exists in the turn. | cases 34/37/38/40 |
+| 5 | Desk personas carry the desk's conduct on illegal figures and lane naming: refuse an amount the records rule out in words, and name the owning desk (Billing, Field Operations) by its label. | slice 4 fix loop |
+| 6 | A read from an earlier turn runs fresh — never author around a cached read; the record may have moved (a deposit charged between turns invalidates the balance read). | case 36 |
