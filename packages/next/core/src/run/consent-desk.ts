@@ -50,6 +50,23 @@ export class ConsentDesk {
     const key = call.key;
     const existing = this.working.get(key);
     if (existing !== undefined && existing.state === 'open') return existing.question;
+    // ONE standing question per (tool, target): a re-proposal that differs only
+    // in its other arguments REPLACES the executable call under the SAME code —
+    // the operator approves the act on the record, and the newest proposal is
+    // what a licence runs. A target-less (label-bound) question works the same
+    // way per tool: the label licenses the act whatever the arguments are.
+    for (const [priorKey, row] of this.working) {
+      if (row.state !== 'open' || row.question.call.tool !== call.tool
+        || row.targetValue !== targetValue) continue;
+      const question: Question = deepFreeze({
+        ...row.question, call: this.maskArgs(call), sentence
+      });
+      this.working.delete(priorKey);
+      this.working.set(key, { ...row, question,
+        executable: call.data(v => (isJson(v) ? v : null)),
+        after: tenses.after, later: tenses.later });
+      return question;
+    }
     const question: Question = deepFreeze({
       id: `q_${randomBytes(4).toString('hex')}`,
       code: this.mintCode(),
