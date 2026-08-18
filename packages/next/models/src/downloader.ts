@@ -34,7 +34,7 @@ export class Downloader {
   }
 
   /** The installed file path; a hash mismatch deletes the partial and throws. */
-  async fetch(row: Pick<LocalTier, 'url' | 'sha256' | 'file'>): Promise<string> {
+  async pull(row: Pick<LocalTier, 'url' | 'sha256' | 'file'>): Promise<string> {
     mkdirSync(this.into, { recursive: true });
     const installed = join(this.into, row.file);
     if (existsSync(installed)) return installed;

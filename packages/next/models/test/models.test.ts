@@ -48,13 +48,13 @@ test('the downloader resumes mid-file and verifies sha256 before the rename', as
   try {
     const into = mkdtempSync(join(tmpdir(), 'models-'));
     writeFileSync(join(into, 'a.gguf.partial'), body.subarray(0, 10));
-    const path = await new Downloader(into).fetch({ url: served.url,
+    const path = await new Downloader(into).pull({ url: served.url,
       sha256: createHash('sha256').update(body).digest('hex'), file: 'a.gguf' });
     expect(path.endsWith('a.gguf')).toBe(true);
     expect(served.rangesSeen).toEqual(['bytes=10-']);
 
     const bad = mkdtempSync(join(tmpdir(), 'models-'));
-    await expect(new Downloader(bad).fetch({ url: served.url,
+    await expect(new Downloader(bad).pull({ url: served.url,
       sha256: 'not-the-artifact', file: 'b.gguf' })).rejects.toThrow('sha256 mismatch');
   } finally { served.close(); }
 });
