@@ -42,7 +42,11 @@ export function world(card: WorldCard,
     }
   }
   if (problems.length > 0) throw new CardError(problems);
-  return deepFreeze({ card: structuredClone(card), executors: { ...executors } });
+  // The note is a function and survives the clone by reattachment — the DATA
+  // half of the card is deep-copied, the note rides as declared.
+  const { note, ...data } = card;
+  return deepFreeze({ card: { ...structuredClone(data), ...(note !== undefined ? { note } : {}) },
+    executors: { ...executors } });
 }
 
 /** Freezes an MCP surface card — remote entries, no records, no gates. */
