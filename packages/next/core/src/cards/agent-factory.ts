@@ -89,7 +89,8 @@ export class AgentFactory {
     new CardCheck().check(spec, contract, facts);
     const lane = spec.tools === undefined ? facts
       : { tools: Object.fromEntries(Object.entries(facts.tools)
-          .filter(([name]) => spec.tools?.includes(name))) };
+          .filter(([name]) => spec.tools?.includes(name))),
+          tail: facts.tail ?? null };
 
     const limits = { ...DEFAULT_LIMITS, ...contract?.limits, ...spec.limits };
     const guards: CompiledGuard[] = [];
