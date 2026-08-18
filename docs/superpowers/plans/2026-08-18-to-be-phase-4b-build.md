@@ -48,4 +48,8 @@
 
 | planned | built | why |
 |---|---|---|
-| _(filled during execution)_ | | |
+| `Downloader.fetch` | `Downloader.pull` | `fetch` is a banned network identifier under the tree lint; the word belongs to the browser primitive |
+| server/src the one network door | models/src is the second lawful `node:http` door | local serving and artifact pulls are the package's purpose |
+| judge inputs keyed by case id | rows carry a BLIND `r###` key; `rowKey(runDir)` maps back outside the judge file | a case id repeated across variants would leak which rows pair up |
+| consent turns identical across variants | on the ungoverned twin an approve/decline turn plays as the operator's plain word — no question exists to quote | the twin never issues a code; the message weight stays comparable |
+| runner writes failures.jsonl only | the dump also carries its own `failure` field | fold and certify price a failed case without re-joining files |

@@ -81,7 +81,11 @@ export class ExamRunner {
     let failure: CaseDump['failure'] = null;
 
     for (const turn of c.turns) {
+      // The ungoverned twin never issues a question, so a consent turn plays as
+      // the operator's plain word — the same message weight, no code to type.
       const text = typeof turn === 'string' ? turn
+        : variant === 'ungoverned'
+          ? ('decline' in turn ? 'No — do not.' : 'Yes — go ahead.')
         : 'decline' in turn ? declineText(openQuestions(records), c.id)
         : approvalText(Array.isArray(turn.approve) ? turn.approve : [turn.approve],
             openQuestions(records), c.id);
