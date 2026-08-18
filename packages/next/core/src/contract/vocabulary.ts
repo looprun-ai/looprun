@@ -120,6 +120,8 @@ export interface CallCtx   { readonly call: CanonicalCallData; readonly effect: 
                              readonly consented: boolean;      // true only on the engine-fed licensed call
                              readonly state: StateSnapshot | null;   // frozen; null on a stateless surface
                              readonly userText: string;
+                             // every message the operator has sent, this turn included
+                             readonly userTexts: readonly string[];
                              readonly turnActs: readonly Act[]; readonly pastActs: readonly Act[] }
 export interface ResultCtx { readonly call: CanonicalCallData; readonly result: Json;
                              readonly state: StateSnapshot | null;

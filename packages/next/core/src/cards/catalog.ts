@@ -156,6 +156,47 @@ export function argFormat(tool: string, arg: string, pattern: string): SeedGuard
   };
 }
 
+/** The always-on floor: an id-shaped argument value the conversation never
+ *  produced is a GUESS — a well-formed guess is still a fabrication. Grounded =
+ *  the operator typed it (any turn) or a recorded act carried it (result or
+ *  args). Id-shaped = lowercase prefix, underscore, alnum suffix with a digit —
+ *  enum words like a policy topic carry no digit and stay untouched. */
+export function groundedIds(): SeedGuard {
+  const isIdShaped = (v: string): boolean => {
+    const at = v.indexOf('_');
+    if (at <= 0 || at >= v.length - 1) return false;
+    for (const ch of v.slice(0, at)) {
+      if (ch < 'a' || ch > 'z') return false;
+    }
+    let digit = false;
+    for (const ch of v.slice(at + 1)) {
+      const alpha = ch >= 'a' && ch <= 'z';
+      const num = ch >= '0' && ch <= '9';
+      if (!alpha && !num) return false;
+      if (num) digit = true;
+    }
+    return digit;
+  };
+  return {
+    name: 'groundedIds',
+    rule: 'An identifier you did not read and were not given is a guess — look it up or ask for it.',
+    on: 'preTool',
+    kind: 'groundedIds',
+    compile(home) {
+      return installedAt<CallCtx>(this, home, ctx => {
+        for (const [arg, v] of Object.entries(ctx.call.args)) {
+          if (typeof v !== 'string' || !isIdShaped(v)) continue;
+          const grounded = ctx.userTexts.some(t => t.includes(v))
+            || [...ctx.pastActs, ...ctx.turnActs].some(a =>
+              JSON.stringify(a.result).includes(v) || JSON.stringify(a.call.args).includes(v));
+          if (!grounded) return `'${v}' in '${arg}' appears in no result and no message`;
+        }
+        return null;
+      }, 'the always-on floor');
+    }
+  };
+}
+
 /** The always-on floor: structural reply damage — byte-identical line repetition,
  *  engine-taught literals leaking as prose, tool markup, foreign chat-template
  *  tokens. Structural, never linguistic. */

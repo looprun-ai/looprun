@@ -10,7 +10,7 @@ import type { AgentSpec, CompiledAgent, CompiledGuard, Disclosure, DisclosureBin
               DomainContract, Guard, JudgedGuard, MaskKey } from './cards.js';
 import { DEFAULT_LIMITS } from './cards.js';
 import { CardCheck } from './card-check.js';
-import { argFormat, argRequired, brokenReply, confirmFirst, maxDestructive,
+import { argFormat, argRequired, brokenReply, confirmFirst, groundedIds, maxDestructive,
          noDuplicateCall, type SeedGuard } from './catalog.js';
 import { resolveWording } from './wordings.js';
 
@@ -118,6 +118,7 @@ export class AgentFactory {
     }
     guards.push(maxDestructive(limits.destructive).compile('engine', lane));
     guards.push(noDuplicateCall().compile('engine', lane));
+    guards.push(groundedIds().compile('engine', lane));
     for (const fact of Object.values(lane.tools)) {
       const { properties, required } = schemaOf(fact);
       for (const arg of required) {

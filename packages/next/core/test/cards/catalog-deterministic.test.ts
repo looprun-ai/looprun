@@ -12,7 +12,7 @@ const STATE: StateSnapshot = HOSTILE.card.records;
 function callCtx(tool: string, args: Record<string, string>,
                  state: StateSnapshot | null = STATE, userText = ''): CallCtx {
   return { call: { tool, args, key: JSON.stringify({ args, tool }) }, effect: 'destructive',
-           consented: false, state, userText, turnActs: [], pastActs: [] };
+           consented: false, state, userText, userTexts: [userText], turnActs: [], pastActs: [] };
 }
 
 function replyCtx(message: string, report: ReplyCtx['report'] = []): ReplyCtx {

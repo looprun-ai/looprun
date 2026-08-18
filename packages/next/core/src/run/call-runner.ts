@@ -239,7 +239,9 @@ export class CallRunner {
                   state: StateSnapshot | null, draft: TurnDraft): CallCtx {
     return deepFreeze({
       call: call.data(mask), effect: fact.effect, consented: origin === 'licence',
-      state, userText: draft.userText, turnActs: [...draft.acts],
+      state, userText: draft.userText,
+      userTexts: [draft.userText, ...this.deps.history.sealed().map(r => r.userText)],
+      turnActs: [...draft.acts],
       pastActs: this.deps.history.pastActs()
     });
   }

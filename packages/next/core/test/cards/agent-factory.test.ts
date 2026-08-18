@@ -82,7 +82,7 @@ test('ungoverned: promptParts and facts byte-identical; every check answers allo
   expect(u.judged).toEqual([]);
   expect(u.rewrites).toEqual([]);
   const ctx = { call: { tool: 'cancelBooking', args: { id: 'bk_9' }, key: 'k' },
-    effect: 'destructive' as const, consented: false, state: null, userText: '',
+    effect: 'destructive' as const, consented: false, state: null, userText: '', userTexts: [],
     turnActs: [], pastActs: [] };
   for (const guard of u.guards) {
     expect(guard.deny(ctx)).toBeNull();
