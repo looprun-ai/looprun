@@ -17,7 +17,7 @@ const MISMATCHED = {
     getBooking: fact({ name: 'getBooking', effect: 'read', target: 'bookingRef',
       schema: { type: 'object', properties: { bookingRef: { type: 'string' } }, required: ['bookingRef'] },
       does: 'Reads one booking by its reference.' }),
-    cancelBooking: fact({ name: 'cancelBooking', effect: 'destructive', target: 'id',
+    cancelBooking: fact({ name: 'cancelBooking', effect: 'write', target: 'id',
       label: 'Cancel the booking',
       schema: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'] },
       does: 'Cancels one booking by id.' })

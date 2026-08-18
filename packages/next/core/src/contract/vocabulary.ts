@@ -28,8 +28,8 @@ export interface CanonicalCallData { readonly tool: string;
 export type Verdict =
   | { readonly kind: 'allow' }
   | { readonly kind: 'refuse'; readonly guardName: string; readonly detail: string }
-  | { readonly kind: 'hold' }                                 // consent, no simulation declared: hold-and-ask
-  | { readonly kind: 'simulate' }                             // consent, simulation declared: simulated run, then the question
+  | { readonly kind: 'hold'; readonly guardName: string;    // consent: hold-and-ask; a declared
+      readonly sentence: string }                           //   simulation rides the hold route
   | { readonly kind: 'restate'; readonly actId: string }      // duplicate call: the first result restated
   | { readonly kind: 'owe'; readonly reads: readonly OwedRead[] };   // rule-owed reads the ENGINE performs
 export interface OwedRead { readonly alias: string; readonly tool: string; readonly args: Readonly<Record<string, Json>> }

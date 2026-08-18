@@ -21,7 +21,7 @@ function idSchema(): Json {
 export const BOOKING_FACTS = {
   getBooking: fact({ name: 'getBooking', effect: 'read', target: 'id', schema: idSchema(),
     does: 'Reads one booking by id.' }),
-  cancelBooking: fact({ name: 'cancelBooking', effect: 'destructive', target: 'id', schema: idSchema(),
+  cancelBooking: fact({ name: 'cancelBooking', effect: 'write', target: 'id', schema: idSchema(),
     label: 'Cancel the booking', does: 'Cancels one booking by id.' }),
   sendEmail: fact({ name: 'sendEmail', effect: 'write', target: 'to',
     schema: { type: 'object', properties: { to: { type: 'string' }, bcc: { type: 'string' } }, required: ['to'] },

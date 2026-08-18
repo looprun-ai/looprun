@@ -12,6 +12,7 @@ import type { CompiledAgent } from '../cards/cards.js';
 import type { Rulebook } from './rulebook.js';
 import type { GradeInput, StatusClerk } from './status-clerk.js';
 import type { ActionHistory } from './action-history.js';
+import type { ConsentDesk } from './consent-desk.js';
 import type { TurnDraft } from './session.js';
 
 /** The record-seam masker; the Masker collaborator replaces the function, not the seam. */
@@ -24,6 +25,8 @@ export interface CallRunnerDeps {
   readonly history: ActionHistory;
   readonly toolPort: ToolPort;
   readonly recordsPort: RecordsPort | null;
+  /** The per-session question desk; the hold route issues through it. */
+  readonly consent: ConsentDesk;
   /** ONE forced micro-step on the session's own seat: the model fills the owed
    *  read's args over a single-tool surface. null = the model produced no usable
    *  call. The Turn supplies it — model I/O stays the sequencer's job. */
@@ -90,6 +93,18 @@ export class CallRunner {
           result: first.result
         });
       }
+      case 'hold': {
+        const targetRaw = fact.target !== null ? call.args[fact.target] : undefined;
+        const targetValue = typeof targetRaw === 'string' ? targetRaw : null;
+        const question = this.deps.consent.hold(call, targetValue, verdict.sentence, draft);
+        const grade = clerk.grade({ verdict, actId: '' }, fact.effect, state, state, draft);
+        return this.record(draft, {
+          origin, call: call.data(mask), effect: fact.effect, said: grade.said,
+          status: grade.status, reason: grade.reason, evidence: grade.evidence,
+          sentence: `${this.head(call, fact)} — not-done (held for your approval)`,
+          result: null
+        }, undefined, question.id);
+      }
       case 'owe': {
         if (!mayOwe) return this.refuseUnpaidDebt(call, fact, origin, state, draft);
         for (const read of verdict.reads) {
@@ -103,8 +118,6 @@ export class CallRunner {
         }
         return this.runChecked(raw, origin, draft, false);
       }
-      default:
-        throw new TurnFailure('construction', `verdict '${verdict.kind}' has no phase-1 route`);
     }
   }
 
@@ -174,8 +187,9 @@ export class CallRunner {
     return printable !== null ? `${call.tool}(${printable})` : `${call.tool}()`;
   }
 
-  private record(draft: TurnDraft, act: Omit<Act, 'id' | 'turn' | 'questionId'>, id?: string): Act {
+  private record(draft: TurnDraft, act: Omit<Act, 'id' | 'turn' | 'questionId'>,
+                 id?: string, questionId: string | null = null): Act {
     return this.deps.history.add({ ...act, id: id ?? this.deps.history.mint(),
-      turn: draft.turn, questionId: null }, draft);
+      turn: draft.turn, questionId }, draft);
   }
 }

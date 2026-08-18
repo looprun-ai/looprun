@@ -39,6 +39,9 @@ export class StatusClerk {
       if (effect === 'read') throw new TurnFailure('executor', input.threw);
       return { said: null, status: 'unknown', reason: null, evidence: 'engine', corrections: [] };
     }
+    if (input.verdict.kind === 'hold') {
+      return { said: null, status: 'not-done', reason: 'held', evidence: 'engine', corrections: [] };
+    }
     return { said: null, status: 'not-done', reason: 'blocked', evidence: 'engine', corrections: [] };
   }
 }

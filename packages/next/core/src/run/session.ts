@@ -4,7 +4,9 @@
  *  changes; a discarded draft leaves no trace. */
 import type { Act, Correction, FinishPayload, Question, QuestionClose, TurnRecord } from '../contract/vocabulary.js';
 import { deepFreeze } from '../contract/freeze.js';
+import { isJson } from '../contract/canonical-call.js';
 import type { ActionHistory } from './action-history.js';
+import { ConsentDesk } from './consent-desk.js';
 
 /** The one mutable work area of a turn, private to it and folded by seal. */
 export interface TurnDraft {
@@ -27,6 +29,10 @@ export interface TurnDraft {
 export class Session {
   readonly id: string;
   readonly history: ActionHistory;
+  /** The question lifecycle; the delivered display form is masked at the desk door. */
+  readonly consent = new ConsentDesk(call => call.data(v => (isJson(v) ? v : null)));
+  /** Tools whose simulation mutated state — they fall back to plain consent here. */
+  readonly revokedSimulations = new Set<string>();
   private turnIndex = 1;
   private tail: Promise<unknown> = Promise.resolve();
 
@@ -42,8 +48,9 @@ export class Session {
     return result;
   }
 
-  /** The work area; discarded on failure. */
+  /** The work area; discarded on failure. The desk starts a fresh overlay with it. */
   draft(): TurnDraft {
+    this.consent.beginTurn();
     return { turn: this.turnIndex, userText: '', servedBy: '', acts: [], corrections: [],
              issued: [], consumed: [], closed: [], finish: null, closedBy: 'model', text: '',
              microTried: [] };
@@ -62,6 +69,7 @@ export class Session {
       closedBy: draft.closedBy
     });
     this.history.sealTurn(record);
+    this.consent.commit();
     this.turnIndex += 1;
     return record;
   }

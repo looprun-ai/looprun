@@ -50,6 +50,10 @@ export class Rulebook {
         const reads = guard.owe(ctx);
         if (reads !== null) return { kind: 'owe', reads };
       }
+      if (guard.hold) {
+        const sentence = guard.hold(ctx);
+        if (sentence !== null) return { kind: 'hold', guardName: guard.name, sentence };
+      }
       const detail = guard.deny(ctx);
       if (detail !== null) return { kind: 'refuse', guardName: guard.name, detail };
     }
