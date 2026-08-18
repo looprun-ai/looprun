@@ -91,6 +91,18 @@ export class DisclosureDesk {
     return text === null ? null : render(text, { result });
   }
 
+  /** The after-tense of an ordinary done call, rendered from its own args and
+   *  result. A sentence these two cannot fill is silent — never an error. */
+  afterOf(tool: string, call: CanonicalCallData, result: Json): string | null {
+    const binding = this.bindings[tool];
+    if (binding === undefined || binding.after === null) return null;
+    try {
+      return render(binding.after, { args: call.args, result });
+    } catch {
+      return null;
+    }
+  }
+
   /** All three tenses rendered at once, over the reads and the held call's args. */
   tenses(tool: string, call: CanonicalCallData, reads: ReadonlyMap<string, Act>): Tenses {
     const binding = this.bindings[tool];

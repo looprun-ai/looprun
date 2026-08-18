@@ -214,10 +214,16 @@ export class CallRunner {
     const after = recordsPort?.snapshot() ?? null;
     const grade = clerk.grade(input, fact.effect, before, after, draft);
     draft.corrections.push(...grade.corrections);
-    const afterTense = origin === 'licence' && grade.status === 'done'
-      ? this.deps.disclosure.withResult(this.deps.consent.afterText(call.key),
-          this.deps.masker.maskData(result))
-      : null;
+    // The after-tense is offered on EVERY done call, reads included: the licence
+    // path replays the consumed question's rendered text; an ordinary call
+    // renders from its own args and result, and a sentence the result cannot
+    // fill is silent — a refused call holds nothing to describe.
+    const afterTense = grade.status !== 'done' ? null
+      : origin === 'licence'
+        ? this.deps.disclosure.withResult(this.deps.consent.afterText(call.key),
+            this.deps.masker.maskData(result))
+        : this.deps.disclosure.afterOf(call.tool,
+            call.data(v => this.deps.masker.maskData(v)), this.deps.masker.maskData(result));
     const act = this.record(draft, {
       origin, call: call.data(v => this.deps.masker.maskData(v)), effect: fact.effect, said: grade.said,
       status: grade.status, reason: grade.reason, evidence: grade.evidence,
