@@ -199,7 +199,11 @@ export interface ToolFact { readonly name: string; readonly label: string | null
 /** The whole declared surface as facts, keyed by tool name. */
 export interface SurfaceFacts { readonly tools: Readonly<Record<string, ToolFact>>;
                                 /** null = the whole snapshot rides the tail. */
-                                readonly tail?: readonly string[] | null }
+                                readonly tail?: readonly string[] | null;
+                                /** The state NOTE: when declared, it replaces the
+                                 *  record dump — the world speaks its whole-turn
+                                 *  conditions in sentences, identifiers withheld. */
+                                readonly note?: ((records: StateSnapshot) => string) | null }
 
 /** The world vocabulary — crossing types for the three surface-card kinds.
  *  world/world.ts re-exports them for authors, the way cards.ts re-exports LlmParams;
@@ -237,6 +241,11 @@ export interface WorldCard { readonly records: StateSnapshot;
                               *  Omitted = every entity (small worlds). Everything
                               *  else stays behind the reads. */
                              readonly tail?: readonly string[];
+                             /** Renders the turn-head state note from the live records:
+                              *  only what disqualifies a whole turn and what no read
+                              *  answers, never an identifier. Declared = the note rides
+                              *  the tail instead of any record dump. */
+                             readonly note?: (records: StateSnapshot) => string;
                              readonly presets?: Readonly<Record<string, readonly Patch[]>> }
 /** One typed approval: the tool whose open question this turn licenses; args only
  *  to split open SIBLINGS of one tool — a code is never extracted from prose. */

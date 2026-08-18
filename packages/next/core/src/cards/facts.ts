@@ -77,5 +77,6 @@ export function factsFromWorld(w: DeclaredWorld | McpWorldCard | LiveWorldCard):
       for (const [name, entry] of Object.entries(block ?? {})) tools[name] = remoteFact(name, entry, effect);
     }
   }
-  return deepFreeze({ tools, tail: 'card' in w ? w.card.tail ?? null : null });
+  return deepFreeze({ tools, tail: 'card' in w ? w.card.tail ?? null : null,
+    note: 'card' in w ? w.card.note ?? null : null });
 }

@@ -50,9 +50,10 @@ export class PromptWriter {
   }
 
   /** Only the tail varies across turns. */
-  tail(userText: string, state: StateSnapshot | null, open: readonly Question[]): string {
+  tail(userText: string, state: StateSnapshot | string | null, open: readonly Question[]): string {
     const parts: string[] = [];
-    if (state !== null) parts.push(`STATE: ${JSON.stringify(state)}`);
+    if (typeof state === 'string') { if (state !== '') parts.push(`STATE: ${state}`); }
+    else if (state !== null) parts.push(`STATE: ${JSON.stringify(state)}`);
     for (const q of open) parts.push(`OPEN QUESTION [${q.code}]: ${q.sentence}`);
     return parts.join('\n');
   }

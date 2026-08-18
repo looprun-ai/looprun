@@ -78,7 +78,9 @@ export class Turn {
         + `Choose the arguments from the conversation, the state, and the held call `
         + `${held.tool} ${JSON.stringify(held.args)}, and call ${read.tool} now — nothing else.`;
       const microRaw = this.deps.recordsPort?.snapshot() ?? null;
-      const microState = microRaw === null ? null : masker.maskState(microRaw);
+      const microNote = this.deps.compiled.facts.note ?? null;
+      const microState = microRaw === null ? null
+        : microNote !== null ? microNote(microRaw) : masker.maskState(microRaw);
       const microTail = pw.tail(userText, microState, desk.open());
       const step = await port.step(deepFreeze({
         system: microTail === '' ? pw.system() : `${pw.system()}\n${microTail}`,
@@ -120,11 +122,15 @@ export class Turn {
 
     for (;;) {
       const raw = this.deps.recordsPort?.snapshot() ?? null;
+      // The declared NOTE outranks any record dump: the world speaks its
+      // whole-turn conditions in sentences, identifiers withheld.
+      const note = compiled.facts.note ?? null;
       const visible = compiled.facts.tail ?? null;
       const shown = raw === null ? null
         : visible === null ? raw
         : Object.fromEntries(Object.entries(raw).filter(([entity]) => visible.includes(entity)));
-      const state = shown === null ? null : masker.maskState(shown);
+      const state = raw !== null && note !== null ? note(raw)
+        : shown === null ? null : masker.maskState(shown);
       const tail = pw.tail(userText, state, desk.open());
       const stepInput = deepFreeze({
         system: tail === '' ? pw.system() : `${pw.system()}\n${tail}`,
