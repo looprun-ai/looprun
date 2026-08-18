@@ -39,6 +39,7 @@ function actMessages(acts: readonly Act[], base: number,
     out.push({ role: 'user', content: engineActs.map(a =>
       `[record] ${a.sentence}\n${JSON.stringify(a.result)}`).join('\n') });
   }
+  void base;
   if (modelActs.length === 0) return out;
   const cached = replay.get(callsKey(modelActs.map(a => ({ tool: a.call.tool, args: a.call.args }))));
   if (cached !== undefined && Array.isArray(cached.content)) {
@@ -52,12 +53,11 @@ function actMessages(acts: readonly Act[], base: number,
       return out;
     }
   }
-  out.push({ role: 'assistant', content: modelActs.map((a, i) => ({
-    type: 'tool-call' as const, toolCallId: `act_${base + i}`,
-    toolName: a.call.tool, input: a.call.args })) });
-  out.push({ role: 'tool', content: modelActs.map((a, i) => ({
-    type: 'tool-result' as const, toolCallId: `act_${base + i}`, toolName: a.call.tool,
-    output: { type: 'json' as const, value: resultValue(a) } })) });
+  // No original assistant message to replay — a synthetic functionCall would
+  // arrive without its reasoning signature, which strict providers reject. The
+  // acts ride as record lines instead.
+  out.push({ role: 'user', content: modelActs.map(a =>
+    `[record] ${a.sentence}\n${JSON.stringify(a.result)}`).join('\n') });
   return out;
 }
 
