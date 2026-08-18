@@ -1,5 +1,5 @@
 {
-  "name": "@looprun-ai/next-core",
+  "name": "@looprun-ai/next-mastra",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -13,10 +13,13 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "test": "vitest run",
-    "gate": "tsc --noEmit && eslint . && vitest run"
+    "test": "vitest run --passWithNoTests",
+    "gate": "tsc --noEmit && eslint . && vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@looprun-ai/next-core": "workspace:*",
+    "@mastra/core": "^1.42.0",
+    "ai": "^6.0.0",
     "zod": "^3.24.0"
   },
   "devDependencies": {

@@ -5,8 +5,9 @@ import { srcFiles, type SourceFile } from './walk.js';
  *  cards (L1–L2) import contract only, world imports contract only, run (L3) imports
  *  contract + cards — never world: the machine reaches a BuiltWorld through the
  *  ToolPort/RecordsPort seams it implements. No src file imports test/. Only
- *  engine.ts imports turn; nothing in src imports engine. The one bare specifier
- *  the package allows itself is zod. */
+ *  engine.ts imports turn; nothing in src imports engine except the export barrel
+ *  (src/index.ts), which re-exports the public surface for the facade packages and
+ *  composes nothing. The one bare specifier the package allows itself is zod. */
 
 function importsOf(f: SourceFile): readonly string[] {
   const specs: string[] = [];
@@ -20,6 +21,14 @@ function importsOf(f: SourceFile): readonly string[] {
 test('every src import points downward in the layer picture', () => {
   const bad: string[] = [];
   for (const f of srcFiles()) {
+    if (f.rel.endsWith('src/index.ts')) {
+      for (const spec of importsOf(f)) {
+        if (!spec.startsWith('./')) bad.push(`${f.rel} imports ${spec} — the barrel re-exports src only`);
+        if (spec.includes('test/')) bad.push(`${f.rel} imports test code`);
+        if (spec.endsWith('/turn.js')) bad.push(`${f.rel} imports turn — only engine composes it`);
+      }
+      continue;
+    }
     const layer = f.rel.includes('/contract/') ? 'contract'
       : f.rel.includes('/cards/') ? 'cards'
       : f.rel.includes('/world/') ? 'world' : 'run';
