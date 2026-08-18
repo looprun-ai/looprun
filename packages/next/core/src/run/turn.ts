@@ -43,8 +43,6 @@ export class Turn {
     draft.userText = userText;
     draft.servedBy = seat.serving();
     const port = seat.port();
-    const runner = new CallRunner({ compiled, rulebook, clerk: this.deps.clerk, history,
-      toolPort: this.deps.toolPort, recordsPort: this.deps.recordsPort });
 
     const inputCtx = deepFreeze({ userText, turnActs: [...draft.acts], pastActs: history.pastActs() });
     const inputVerdict = rulebook.checkInput(inputCtx);
@@ -62,6 +60,28 @@ export class Turn {
       ]),
       { role: 'user', text: userText }
     ];
+
+    // The owed-read micro-step: same frozen system prefix, the conversation so far,
+    // and a SINGLE tool on the surface — the model fills the args, and can do
+    // nothing else.
+    const microStep = async (read: { tool: string }, held: { tool: string; args: unknown }):
+      Promise<RawCall | null> => {
+      const card = pw.toolCards().find(t => t.name === read.tool);
+      if (!card) return null;
+      const instruction = `A rule requires ${read.tool} to run before ${held.tool}. `
+        + `Choose the arguments from the conversation and the held call `
+        + `${held.tool} ${JSON.stringify(held.args)}, and call ${read.tool} now — nothing else.`;
+      const step = await port.step(deepFreeze({
+        system: pw.system(),
+        messages: [...messages, { role: 'user' as const, text: instruction }],
+        tools: [card],
+        forceFinish: false,
+        llmParams: seat.llmParams({})
+      }));
+      return step.calls.find(c => c.tool === read.tool) ?? null;
+    };
+    const runner = new CallRunner({ compiled, rulebook, clerk: this.deps.clerk, history,
+      toolPort: this.deps.toolPort, recordsPort: this.deps.recordsPort, microStep });
 
     let callsUsed = 0;
     let retriesUsed = 0;
@@ -81,10 +101,18 @@ export class Turn {
       const { domain, finish, corrections } = fd.split(step.calls);
       draft.corrections.push(...corrections);
 
+      const actsBefore = draft.acts.length;
       for (const call of domain) {
         if (callsUsed >= compiled.limits.calls) { forced = true; continue; }
         callsUsed += 1;
         await runner.run(call, 'model', draft);
+      }
+      // The model SEES what its calls did — results and denials alike — so it can
+      // react within this turn's own ceilings.
+      if (draft.acts.length > actsBefore) {
+        const lines = draft.acts.slice(actsBefore).map(a =>
+          a.result === null ? a.sentence : `${a.sentence}\n${JSON.stringify(a.result)}`);
+        messages.push({ role: 'user', text: `TOOL RESULTS (engine record):\n${lines.join('\n')}` });
       }
 
       if (finish !== null) {

@@ -19,6 +19,9 @@ export interface TurnDraft {
   finish: FinishPayload | null;
   closedBy: 'model' | 'engine';
   text: string;
+  /** Prerequisite tools whose micro-step yielded no call this turn — the debt is
+   *  asked of the model at most once per turn. */
+  readonly microTried: string[];
 }
 
 export class Session {
@@ -42,7 +45,8 @@ export class Session {
   /** The work area; discarded on failure. */
   draft(): TurnDraft {
     return { turn: this.turnIndex, userText: '', servedBy: '', acts: [], corrections: [],
-             issued: [], consumed: [], closed: [], finish: null, closedBy: 'model', text: '' };
+             issued: [], consumed: [], closed: [], finish: null, closedBy: 'model', text: '',
+             microTried: [] };
   }
 
   seal(draft: TurnDraft): TurnRecord {

@@ -14,7 +14,8 @@ const clerk = new StatusClerk();
 
 function draft(): TurnDraft {
   return { turn: 1, userText: '', servedBy: '', acts: [], corrections: [],
-           issued: [], consumed: [], closed: [], finish: null, closedBy: 'model', text: '' };
+           issued: [], consumed: [], closed: [], finish: null, closedBy: 'model', text: '',
+           microTried: [] };
 }
 
 const answer = (done: 'yes' | 'no' | 'unknown') => ({ answer: { result: null, done }, actId: 'a1' });

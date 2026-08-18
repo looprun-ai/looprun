@@ -2,7 +2,7 @@
  *  AND compiles its own species semantics — a caller never hand-rolls them. A factory
  *  derives rule and deny from the SAME parameters, so prose/check parity is
  *  structural. A factory MINTS its guard's name as kind:tool. */
-import type { Act, CallCtx, OwedRead, Json, SurfaceFacts } from '../contract/vocabulary.js';
+import type { Act, CallCtx, OwedRead, SurfaceFacts } from '../contract/vocabulary.js';
 import type { CompiledGuard, Guard } from './cards.js';
 
 /** An authored guard that carries its own AgentFactory derivation. */
@@ -33,19 +33,17 @@ function completedActs(ctx: CallCtx, tool: string): readonly Act[] {
     .filter(a => a.call.tool === tool && (a.status === 'done' || a.status === 'unknown'));
 }
 
-function schemaPropertyNames(schema: Json): readonly string[] {
-  if (schema === null || typeof schema !== 'object' || Array.isArray(schema)) return [];
-  const properties = (schema as { readonly [k: string]: Json }).properties;
-  if (properties === null || typeof properties !== 'object' || Array.isArray(properties)) return [];
-  return Object.keys(properties);
-}
-
 /** The gated tool runs only after the prerequisite SUCCEEDED this conversation. A
- *  READ prerequisite is engine-performed (the owe verdict); a WRITE prerequisite
- *  denies, teaching the order. */
+ *  READ prerequisite raises the owe verdict: the engine pays the debt with ONE
+ *  forced micro-step where the session's own model fills the read's args over a
+ *  single-tool surface — the engine never derives another call's arguments. A WRITE
+ *  prerequisite denies, teaching the order. A read already attempted this turn
+ *  without success denies the same way — the debt is paid at most once per turn. */
 export function onlyAfter(tool: string, prerequisite: string): SeedGuard {
   const satisfied = (ctx: CallCtx): boolean =>
     [...ctx.pastActs, ...ctx.turnActs].some(a => a.call.tool === prerequisite && a.status === 'done');
+  const attemptedThisTurn = (ctx: CallCtx): boolean =>
+    ctx.turnActs.some(a => a.call.tool === prerequisite && a.status !== 'done');
   return {
     name: `onlyAfter:${tool}`,
     rule: `Run ${prerequisite} before ${tool}.`,
@@ -57,15 +55,15 @@ export function onlyAfter(tool: string, prerequisite: string): SeedGuard {
       const isRead = prereqFact?.effect === 'read';
       return installed(this, home, {
         owe: ctx => {
-          if (!isRead || satisfied(ctx)) return null;
-          const wanted = new Set(schemaPropertyNames(prereqFact.schema));
-          const args = Object.fromEntries(
-            Object.entries(ctx.call.args).filter(([k]) => wanted.has(k)));
-          return [{ alias: prerequisite, tool: prerequisite, args }];
+          if (!isRead || satisfied(ctx) || attemptedThisTurn(ctx)) return null;
+          return [{ alias: prerequisite, tool: prerequisite, args: {} }];
         },
         deny: ctx => {
           if (satisfied(ctx)) return null;
-          if (isRead) return null;
+          if (isRead) {
+            return attemptedThisTurn(ctx)
+              ? `${prerequisite} did not succeed this conversation` : null;
+          }
           return `${prerequisite} has not succeeded yet this conversation`;
         }
       });

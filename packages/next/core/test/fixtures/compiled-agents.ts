@@ -1,4 +1,4 @@
-import type { Json, ModelTarget } from '../../src/contract/vocabulary.js';
+import type { Json, ModelTarget, SurfaceFacts } from '../../src/contract/vocabulary.js';
 import { deepFreeze } from '../../src/contract/freeze.js';
 import type { ToolFact } from '../../src/contract/vocabulary.js';
 import type { ModelPort, RecordsPort } from '../../src/contract/ports.js';
@@ -61,7 +61,8 @@ export function install(guard: Guard, home: 'spec' | 'contract' | 'engine', kind
 }
 
 export function bookingAgent(guards: readonly CompiledGuard[] = [],
-                             limits: Partial<Limits> = {}): CompiledAgent {
+                             limits: Partial<Limits> = {},
+                             facts: SurfaceFacts = BOOKING_SURFACE): CompiledAgent {
   return deepFreeze({
     guards,
     limits: { ...DEFAULT_LIMITS, ...limits },
@@ -70,7 +71,7 @@ export function bookingAgent(guards: readonly CompiledGuard[] = [],
       voice: 'Warm, brief, concrete.',
       facts: ['Bookings live in the records store.']
     },
-    facts: { tools: BOOKING_FACTS }
+    facts
   });
 }
 
@@ -92,6 +93,7 @@ export function testEngine(opts: {
   model: ModelPort;
   guards?: readonly CompiledGuard[];
   limits?: Partial<Limits>;
+  facts?: SurfaceFacts;
   behaviors?: Readonly<Record<string, ToolBehavior>>;
   records?: RecordsPort | null;
   targets?: readonly ModelTarget[];
@@ -101,7 +103,7 @@ export function testEngine(opts: {
   const targets = opts.targets ?? scriptedTargets(1);
   const seat = ModelSeat.create(targets, opts.choice ?? targets[0].id, () => opts.model);
   const engine = Engine.create({
-    compiled: bookingAgent(opts.guards ?? [], opts.limits ?? {}),
+    compiled: bookingAgent(opts.guards ?? [], opts.limits ?? {}, opts.facts ?? BOOKING_SURFACE),
     toolPort: port,
     recordsPort: opts.records ?? null,
     seat

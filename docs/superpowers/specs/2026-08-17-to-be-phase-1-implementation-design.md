@@ -109,7 +109,11 @@ Three consequences of this cut, stated so no task discovers them mid-build:
    The phase-1 walk: input guards → model loop → finish checks and bounded redrives →
    compose → seal. The consent steps of the full walk (consume typed codes, licensed
    calls, sweep expiries) and the `hold`/`simulate` verdict routes arrive WITH ConsentDesk
-   in phase 2. Phase-1 `CallRunner` routes `refuse` · `owe` · `restate` · `allow`.
+   in phase 2. Phase-1 `CallRunner` routes `refuse` · `owe` · `restate` · `allow`. The
+   `owe` route pays the debt with ONE forced micro-step — single-tool surface, the
+   session's own seat fills the read's args; the engine never derives another call's
+   arguments — and an unpaid debt refuses with the owning rule, so the turn always
+   answers the user.
    Phase-1 `DeliveryWriter` composes record lines, denials and the closure — the Masker
    collaborator and the rewrites arrive in phase 2.
 
@@ -254,7 +258,7 @@ the law it verifies:
 | P1 | a scripted turn seals `[toolCall, toolResult, reply]` in order, complete `TurnRecord` | R2.7 |
 | P2 | duplicate call → `restate`: first result reprinted, executor NOT called again | R8.2 |
 | P3 | `refuse` → act not-done/blocked with the guard's sentence in the delivery; the model continues the turn | R5.6 |
-| P4 | `owe` → reads run origin `'engine'`, recorded, BEFORE the call's re-check | R5.2 |
+| P4 | `owe` → the read is model-filled via ONE forced single-tool micro-step, runs origin `'engine'`, recorded BEFORE the call's re-check; an unpaid debt refuses and the turn still answers | R5.2 |
 | P5 | the StatusClerk table: `yes`→done · `no`→refused · `unknown`→unknown (never "nothing changed") · throw on read→`TurnFailure` · throw on write→unknown · veto→blocked · snapshot diff over the RecordsPort stub: a state change under `done:'no'` corrects the act to done and mints `recordCorrected` | R3.6 |
 | P6 | `TurnFailure` mid-turn discards the draft: zero partial acts sealed, clean retry | R2.10 |
 | P7 | `system()` byte-identical across turns; only the tail varies | R7.3 |

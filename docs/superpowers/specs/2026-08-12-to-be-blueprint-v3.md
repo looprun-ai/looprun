@@ -117,6 +117,10 @@ export interface AgentSpec {
    *  presets (R7.4). Merges PER FIELD over the target's declared defaults — a partial
    *  object overrides only the fields it names. Omitted = the target's defaults. */
   llmParams?: LlmParams;
+  /** This desk's ceilings, merged PER FIELD over the contract's limits — the spec wins,
+   *  the same merge llmParams uses. A heavy desk gets more calls than its neighbour in
+   *  the same domain. Omitted = the contract's limits. */
+  limits?: Limits;
 }
 
 /** CARD 2 — everything conversation-global = one DomainContract. Everything about THE BUSINESS. */
@@ -539,9 +543,12 @@ anywhere else).
 // deterministic factories — you call them
 onlyAfter('payInvoice', 'approveInvoice')   // gated tool only after the prerequisite
                                             //   SUCCEEDED this conversation; a READ
-                                            //   prerequisite → the engine PERFORMS it
-                                            //   (the owe verdict, R5.2); a WRITE → deny,
-                                            //   teaching the order
+                                            //   prerequisite → the owe verdict: ONE
+                                            //   forced micro-step on the session's own
+                                            //   seat fills the read's args over a
+                                            //   single-tool surface (R5.2) — the engine
+                                            //   never derives another call's arguments;
+                                            //   a WRITE → deny, teaching the order
 maxCalls('sendEmail', 1, { scope: 'conversation', reason: 'One email per person, ever.' })
 argAbsent('sendEmail', 'bcc')               // declared, but forbidden to send
 precondition('shipOrder', ({ record }) => record?.paid === true, 'Only paid orders ship.')
@@ -722,7 +729,10 @@ route by verdict kind, StatusClerk grading, masking on record (`call.data(mask)`
 class CallRunner {
   run(raw: RawCall, origin: 'model' | 'engine' | 'licence', draft: TurnDraft): Promise<Act>;
   // refuse   → recorded denial: status 'not-done', reason 'blocked', sentence = rule + detail
-  // owe      → the owed reads run engine-side (origin 'engine'), then re-check the call
+  // owe      → each owed read is filled by ONE forced micro-step (single-tool surface,
+  //            the session's own seat), runs engine-side (origin 'engine'), then the
+  //            call re-checks once; an unpaid debt refuses with the owning rule —
+  //            the turn always answers
   // simulate → the tool runs with its OWN declared simulation parameter set → the preview
   //            is recorded on the held act → disclosure reads → question born FROM the
   //            preview: status 'not-done', reason 'held', result = the preview (R5.4)
@@ -863,6 +873,9 @@ Private: none. Collaborators: ActionHistory (via ctx), contract leaf.
 names — validated at compile, `SLOT_UNDERIVABLE`) and performed by the ENGINE via
 `CallRunner.run(read, 'engine')` — recorded, masked, origin `engine`; never requested from
 the model, so no deny can starve them (there is no forced-model-read pass to starve).
+This is the ONLY place the engine derives call arguments, and only as a declared rename
+of the frozen held call's own values — describing an already-fixed target; a call whose
+args would take intent is model-filled (`catalog.onlyAfter`'s forced micro-step).
 Slots fill by alias, bound to the question's target record by construction, never
 last-read-wins. A slot no read can fill is a construction error, never a shipped NA.
 

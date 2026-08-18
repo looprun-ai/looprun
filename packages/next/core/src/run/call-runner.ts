@@ -2,7 +2,7 @@
  *  the SAME method: coerce against the declared schema, canonical identity, Rulebook
  *  verdict, route by verdict kind, StatusClerk grading, masking on record — the
  *  stored form is the only stored form. */
-import type { Act, CallCtx, Json, RawCall, StateSnapshot } from '../contract/vocabulary.js';
+import type { Act, CallCtx, CanonicalCallData, Json, OwedRead, RawCall, StateSnapshot } from '../contract/vocabulary.js';
 import { TurnFailure } from '../contract/vocabulary.js';
 import type { ToolFact } from '../contract/vocabulary.js';
 import type { ToolPort, RecordsPort } from '../contract/ports.js';
@@ -24,6 +24,10 @@ export interface CallRunnerDeps {
   readonly history: ActionHistory;
   readonly toolPort: ToolPort;
   readonly recordsPort: RecordsPort | null;
+  /** ONE forced micro-step on the session's own seat: the model fills the owed
+   *  read's args over a single-tool surface. null = the model produced no usable
+   *  call. The Turn supplies it — model I/O stays the sequencer's job. */
+  readonly microStep: (read: OwedRead, held: CanonicalCallData) => Promise<RawCall | null>;
 }
 
 export class CallRunner {
@@ -87,9 +91,15 @@ export class CallRunner {
         });
       }
       case 'owe': {
-        if (!mayOwe) throw new TurnFailure('construction', `owed reads did not satisfy the guard on ${call.tool}`);
+        if (!mayOwe) return this.refuseUnpaidDebt(call, fact, origin, state, draft);
         for (const read of verdict.reads) {
-          await this.runChecked({ tool: read.tool, args: read.args }, 'engine', draft, false);
+          if (draft.microTried.includes(read.tool)) continue;
+          const filled = await this.deps.microStep(read, ctx.call);
+          if (filled === null || filled.tool !== read.tool) {
+            draft.microTried.push(read.tool);
+            continue;
+          }
+          await this.runChecked(filled, 'engine', draft, false);
         }
         return this.runChecked(raw, origin, draft, false);
       }
@@ -129,6 +139,23 @@ export class CallRunner {
       }
     }
     return act;
+  }
+
+  /** The debt could not be paid this turn: the act refuses with the owning rule —
+   *  the turn goes on and the delivery carries the sentence; never a dead turn. */
+  private refuseUnpaidDebt(call: CanonicalCall, fact: ToolFact, origin: Act['origin'],
+                           state: StateSnapshot | null, draft: TurnDraft): Act {
+    const owner = this.deps.rulebook.guards().guards.find(g =>
+      g.on === 'preTool' && (g.tools.length === 0 || g.tools.includes(call.tool)) && 'owe' in g);
+    const grade = this.deps.clerk.grade(
+      { verdict: { kind: 'refuse', guardName: owner?.name ?? 'onlyAfter', detail: '' }, actId: '' },
+      fact.effect, state, state, draft);
+    return this.record(draft, {
+      origin, call: call.data(mask), effect: fact.effect, said: grade.said,
+      status: grade.status, reason: grade.reason, evidence: grade.evidence,
+      sentence: `${this.head(call, fact)} — not-done (${owner?.rule ?? ''} The required read did not succeed this conversation.)`,
+      result: null
+    });
   }
 
   private callCtx(call: CanonicalCall, fact: ToolFact, origin: Act['origin'],
