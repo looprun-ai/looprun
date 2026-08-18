@@ -77,7 +77,7 @@ export class HonestyCheck {
         continue;
       }
       violations.push({ guardName: 'claimIsGrounded',
-        detail: `nothing this turn grounds the claim '${line.tool} ${line.target}: ${line.word}' — run the call so the record answers it, or drop the row and speak only from what the reads returned` });
+        detail: `nothing this turn grounds the claim '${line.tool} ${line.target}: ${line.word}' — run the call so the record answers it, or claim it as no_tool_called if you chose to act in words only` });
     }
 
     for (const act of unclaimed) {
