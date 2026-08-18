@@ -13,26 +13,61 @@ import { TurnFailure } from '@looprun-ai/next-core';
 const isRecord = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v);
 
-function actMessages(acts: readonly Act[], base: number): ModelMessage[] {
-  const calls = acts.map((a, i) => ({
-    type: 'tool-call' as const, toolCallId: `act_${base + i}`,
-    toolName: a.call.tool, input: a.call.args
-  }));
-  const results = acts.map((a, i) => ({
-    type: 'tool-result' as const, toolCallId: `act_${base + i}`, toolName: a.call.tool,
-    output: { type: 'json' as const,
-      value: { sentence: a.sentence, status: a.status,
-               result: a.result } as unknown as JSONValue }
-  }));
-  return [{ role: 'assistant', content: calls }, { role: 'tool', content: results }];
+/** The identity of one step's model calls — the key the signature cache joins on. */
+function callsKey(calls: readonly { tool: string; args: unknown }[]): string {
+  return JSON.stringify(calls.map(c => [c.tool, c.args]));
 }
 
-function toMessages(messages: StepInput['messages']): ModelMessage[] {
+interface ToolCallPartLike { type: string; toolCallId: string; toolName: string }
+
+function resultValue(a: Act): JSONValue {
+  return { sentence: a.sentence, status: a.status,
+           result: a.result } as unknown as JSONValue;
+}
+
+/** Acts render in the provider's own dialect. A step the MODEL made replays the
+ *  provider's ORIGINAL assistant message — its tool-call ids and its reasoning
+ *  signatures ride along, which providers demanding a thought signature require.
+ *  An engine-origin act (a licensed execution) has no model call to replay, so
+ *  it rides as a compact user-visible record line. */
+function actMessages(acts: readonly Act[], base: number,
+                     replay: ReadonlyMap<string, ModelMessage>): ModelMessage[] {
+  const modelActs = acts.filter(a => a.origin === 'model');
+  const engineActs = acts.filter(a => a.origin !== 'model');
+  const out: ModelMessage[] = [];
+  if (engineActs.length > 0) {
+    out.push({ role: 'user', content: engineActs.map(a =>
+      `[record] ${a.sentence}\n${JSON.stringify(a.result)}`).join('\n') });
+  }
+  if (modelActs.length === 0) return out;
+  const cached = replay.get(callsKey(modelActs.map(a => ({ tool: a.call.tool, args: a.call.args }))));
+  if (cached !== undefined && Array.isArray(cached.content)) {
+    const parts = (cached.content as ToolCallPartLike[]).filter(p => p.type === 'tool-call');
+    if (parts.length === modelActs.length) {
+      out.push(cached);
+      out.push({ role: 'tool', content: modelActs.map((a, i) => ({
+        type: 'tool-result' as const, toolCallId: parts[i].toolCallId,
+        toolName: parts[i].toolName, output: { type: 'json' as const, value: resultValue(a) }
+      })) });
+      return out;
+    }
+  }
+  out.push({ role: 'assistant', content: modelActs.map((a, i) => ({
+    type: 'tool-call' as const, toolCallId: `act_${base + i}`,
+    toolName: a.call.tool, input: a.call.args })) });
+  out.push({ role: 'tool', content: modelActs.map((a, i) => ({
+    type: 'tool-result' as const, toolCallId: `act_${base + i}`, toolName: a.call.tool,
+    output: { type: 'json' as const, value: resultValue(a) } })) });
+  return out;
+}
+
+function toMessages(messages: StepInput['messages'],
+                    replay: ReadonlyMap<string, ModelMessage>): ModelMessage[] {
   const out: ModelMessage[] = [];
   let actCount = 0;
   for (const m of messages) {
     if (m.role === 'acts') {
-      out.push(...actMessages(m.acts, actCount));
+      out.push(...actMessages(m.acts, actCount, replay));
       actCount += m.acts.length;
     } else {
       out.push({ role: m.role, content: m.text });
@@ -44,6 +79,9 @@ function toMessages(messages: StepInput['messages']): ModelMessage[] {
 export class MastraModelPort {
   private readonly resolved: Promise<LanguageModel>;
   private readonly params: LlmParams;
+  /** The provider's own assistant messages, keyed by the calls they carried —
+   *  replayed so reasoning signatures survive the engine's typed record. */
+  private readonly replay = new Map<string, ModelMessage>();
 
   constructor(model: MastraModelConfig, params: LlmParams) {
     this.resolved = resolveModelConfig(model).then(m => {
@@ -69,7 +107,8 @@ export class MastraModelPort {
     const params: LlmParams = { ...this.params, ...input.llmParams };
     try {
       const r = await generateText({
-        model, system: input.system, messages: toMessages(input.messages), tools, toolChoice,
+        model, system: input.system, messages: toMessages(input.messages, this.replay),
+        tools, toolChoice,
         temperature: params.temperature, topP: params.topP,
         maxOutputTokens: params.maxOutputTokens,
         ...(params.preset === 'gemini:thinking-off'
@@ -78,6 +117,10 @@ export class MastraModelPort {
       const calls: RawCall[] = r.toolCalls.map(c => ({
         tool: c.toolName, args: isRecord(c.input) ? c.input : {}
       }));
+      if (calls.length > 0) {
+        const assistant = r.response.messages.find(m => m.role === 'assistant');
+        if (assistant !== undefined) this.replay.set(callsKey(calls), assistant);
+      }
       return { calls, text: r.text };
     } catch (e: unknown) {
       throw new TurnFailure('network', firstLine(e));
