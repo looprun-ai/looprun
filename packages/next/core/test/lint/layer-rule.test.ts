@@ -30,6 +30,8 @@ const FACADE_LANES: Readonly<Record<string, (spec: string) => boolean>> = {
     || spec === '@looprun-ai/next-mastra' || spec.startsWith('node:'),
   eval: spec => spec.startsWith('./') || spec === '@looprun-ai/next-core'
     || spec === '@looprun-ai/next-mastra' || spec === 'zod' || spec === 'typescript'
+    || spec.startsWith('node:'),
+  models: spec => spec.startsWith('./') || spec === '@looprun-ai/next-core'
     || spec.startsWith('node:')
 };
 

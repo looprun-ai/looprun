@@ -309,6 +309,28 @@ importers:
         specifier: ^2.0.0
         version: 2.1.9(@types/node@22.20.1)
 
+  packages/next/models:
+    dependencies:
+      '@looprun-ai/next-core':
+        specifier: workspace:*
+        version: link:../core
+    devDependencies:
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.20.1
+      eslint:
+        specifier: ^9.0.0
+        version: 9.39.5
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      typescript-eslint:
+        specifier: ^8.0.0
+        version: 8.67.0(eslint@9.39.5)(typescript@5.9.3)
+      vitest:
+        specifier: ^2.0.0
+        version: 2.1.9(@types/node@22.20.1)
+
   packages/next/server:
     dependencies:
       '@looprun-ai/next-core':
