@@ -366,14 +366,29 @@ function isTokenChar(c: string): boolean {
     || c === '@' || c === '.' || c === '_' || c === '-' || c === '+';
 }
 
+/** Sentence punctuation glues to a word's edges; inside a token it is real
+ *  ('ops@redlinecon.com'), at the edges it is the sentence's ('ws_denver02.'). */
+function trimEdges(token: string): string {
+  let from = 0;
+  let to = token.length;
+  while (from < to && (token[from] === '.' || token[from] === '-' || token[from] === '+')) from += 1;
+  while (to > from && (token[to - 1] === '.' || token[to - 1] === '-' || token[to - 1] === '+')) to -= 1;
+  return token.slice(from, to);
+}
+
 function tokens(text: string): readonly string[] {
   const out: string[] = [];
   let current = '';
+  const push = (): void => {
+    const trimmed = trimEdges(current);
+    if (trimmed !== '') out.push(trimmed);
+    current = '';
+  };
   for (const c of text) {
     if (isTokenChar(c)) current += c;
-    else if (current !== '') { out.push(current); current = ''; }
+    else if (current !== '') push();
   }
-  if (current !== '') out.push(current);
+  if (current !== '') push();
   return out;
 }
 

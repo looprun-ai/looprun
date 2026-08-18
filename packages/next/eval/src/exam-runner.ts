@@ -29,13 +29,18 @@ function argsSubset(subset: Readonly<Record<string, Json>> | undefined,
   return Object.entries(subset).every(([k, v]) => JSON.stringify(args[k]) === JSON.stringify(v));
 }
 
-function approvalText(refs: readonly ApproveRef[],
-                      open: readonly Question[], caseId: string): string {
+function approvalText(refs: readonly ApproveRef[], open: readonly Question[],
+                      everIssued: readonly Question[], caseId: string): string {
   const codes = refs.map(ref => {
     const matches = open.filter(q => q.call.tool === ref.tool
       && argsSubset(ref.args, q.call.args));
     if (matches.length === 0) {
-      throw new Error(`case ${caseId}: no open question holds '${ref.tool}'`);
+      // The old template replayed the FIRST issued code even after consumption —
+      // a stale approval the engine answers with "nothing was licensed".
+      const stale = [...everIssued].reverse().find(q => q.call.tool === ref.tool
+        && argsSubset(ref.args, q.call.args));
+      if (stale) return stale.code;
+      throw new Error(`case ${caseId}: no question ever held '${ref.tool}'`);
     }
     if (matches.length > 1 && ref.args === undefined) {
       throw new Error(`case ${caseId}: two open siblings of '${ref.tool}' and no args to split them`);
@@ -105,7 +110,7 @@ export class ExamRunner {
             ? ('decline' in turn ? 'No — do not.' : 'Yes — go ahead.')
           : 'decline' in turn ? declineText(openQuestions(records), c.id)
           : approvalText(Array.isArray(turn.approve) ? turn.approve : [turn.approve],
-              openQuestions(records), c.id);
+              openQuestions(records), records.flatMap(r => r.questions.issued), c.id);
         const out = await (agent as LoopRunAgent).generate(text, { session: c.id });
         records.push(out.loopRun);
       } catch (e: unknown) {
