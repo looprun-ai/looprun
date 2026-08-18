@@ -133,6 +133,18 @@ export class CallRunner {
           reads.set(owed.alias,
             await this.runChecked({ tool: owed.tool, args: owed.args }, 'engine', draft, false));
         }
+        // The declared cap outranks the ask: a call whose arg exceeds what the
+        // owed read answered is refused with the record's own figures — the
+        // desk never asks about an act the records rule out.
+        const capSentence = this.deps.disclosure.overCap(call.tool, ctx.call, reads);
+        if (capSentence !== null) {
+          return this.record(draft, {
+            origin, call: call.data(v => this.deps.masker.maskData(v)), effect: fact.effect,
+            said: null, status: 'not-done', reason: 'blocked', evidence: 'engine',
+            sentence: `${this.head(call, fact)} — not-done (${capSentence})`,
+            result: null
+          }, undefined, null, 'cap');
+        }
         const tenses = this.deps.disclosure.tenses(call.tool, ctx.call, reads);
         let sentence = tenses.before ?? verdict.sentence;
         sentence += await this.simulatedLine(call, fact, draft);

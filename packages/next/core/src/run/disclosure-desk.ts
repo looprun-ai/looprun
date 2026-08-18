@@ -69,6 +69,22 @@ export class DisclosureDesk {
     }));
   }
 
+  /** The declared cap, checked over the owed reads: when the call's named arg
+   *  exceeds the value the read answered, the refusal sentence comes back
+   *  rendered — the call never runs and never asks. Null = within the cap,
+   *  no cap declared, or the arg is absent from the call. */
+  overCap(tool: string, call: CanonicalCallData, reads: ReadonlyMap<string, Act>): string | null {
+    const binding = this.bindings[tool];
+    if (binding === undefined || binding.cap === null) return null;
+    const argValue = call.args[binding.cap.arg];
+    if (typeof argValue !== 'number') return null;
+    const values: Record<string, Json> = { args: call.args };
+    for (const [alias, act] of reads) values[alias] = act.result;
+    const limit = lookup(values, binding.cap.at.split('.'));
+    if (typeof limit !== 'number' || argValue <= limit) return null;
+    return render(binding.cap.refusal, values);
+  }
+
   /** Fills the {result.*} slots of an already-rendered tense with the executed
    *  call's masked result. */
   withResult(text: string | null, result: Json): string | null {

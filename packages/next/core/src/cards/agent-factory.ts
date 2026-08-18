@@ -67,7 +67,8 @@ function compileDisclosure(disclosure: Readonly<Record<string, Disclosure>>,
         needs[alias] = { tool: recipe.tool, args: { ...recipe.args } };
       }
     }
-    out[tool] = { needs, before: d.before ?? null, after: d.after ?? null, later: d.later ?? null };
+    out[tool] = { needs, before: d.before ?? null, after: d.after ?? null,
+      later: d.later ?? null, cap: d.cap ?? null };
   }
   return out;
 }

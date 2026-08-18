@@ -36,6 +36,10 @@ export interface Disclosure {
   after?: string;
   /** Standing sentence in later turns while the act stays relevant. Omitted = none. */
   later?: string;
+  /** Refuse the call outright when its named arg exceeds what an owed read
+   *  answered: arg = the call's own arg, at = an {alias.path} over the needs
+   *  reads, refusal = the refusal sentence, slots included. Omitted = no cap. */
+  cap?: { readonly arg: string; readonly at: string; readonly refusal: string };
 }
 
 /** CARD 2 — everything conversation-global = one DomainContract. */
@@ -135,13 +139,17 @@ export interface MaskKey { readonly path: readonly string[]; readonly mode: 'omi
 export interface JudgedGuard extends InstalledGuard { readonly judgeQuery: string }
 
 /** One tool's compiled disclosure: needs recipes normalized to the object form
- *  (read arg → held arg), the three tense sentences resolved or null. */
+ *  (read arg → held arg), the three tense sentences resolved or null, and the
+ *  optional cap — refuse the call outright when its named arg exceeds what an
+ *  owed read answered, saying the declared sentence with the record's figures. */
 export interface DisclosureBinding {
   readonly needs: Readonly<Record<string, { readonly tool: string;
     readonly args: Readonly<Record<string, string>> }>>;
   readonly before: string | null;
   readonly after: string | null;
   readonly later: string | null;
+  readonly cap: { readonly arg: string; readonly at: string;
+                  readonly refusal: string } | null;
 }
 
 /** The frozen compiled agent the Engine runs — AgentFactory is its one birthplace;
