@@ -59,3 +59,19 @@ test('a make patch creates; remove deletes; make on an existing record refuses w
   expect(refused).toContain('already exists');
   expect(store.get('claims', 'clm_1')).toEqual({ status: 'open' });
 });
+
+test('an executor refusal prices done no — a refusing tool never reads as done', async () => {
+  const declared = world({ records: { bookings: { bk_1: { status: 'OUT' } } },
+    writes: { closeBooking: { form: 'run', entity: 'bookings', label: 'Close the booking' } } },
+    { closeBooking: ctx => {
+      const id = typeof ctx.args.id === 'string' ? ctx.args.id : '';
+      const record = ctx.records.bookings[id];
+      return record?.status === 'RETURNED'
+        ? { result: { closed: id }, patches: [] }
+        : { refuse: `booking ${id} has not been returned` };
+    } });
+  const w = new WorldBuilder().build(declared);
+  const refusedAnswer = await w.call({ tool: 'closeBooking', args: { id: 'bk_1' } });
+  expect(refusedAnswer.done).toBe('no');
+  expect(JSON.stringify(refusedAnswer.result)).toContain('not been returned');
+});

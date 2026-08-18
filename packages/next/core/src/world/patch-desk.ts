@@ -73,6 +73,7 @@ export class PatchDesk {
   runCustom(executor: CustomExecutor, call: ReadyCall, store: Store): ToolAnswer {
     const out = executor({ args: call.args, records: store.snapshot(),
                            mintId: e => store.mintId(e) });
+    if ('refuse' in out) return { result: { refused: out.refuse }, done: 'no' };
     const refused = store.applyPatches(out.patches);
     if (refused !== null) return { result: { refused }, done: 'no' };
     return { result: out.result, done: 'yes' };

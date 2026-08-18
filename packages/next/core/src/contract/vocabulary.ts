@@ -277,11 +277,13 @@ export interface LiveWorldCard extends McpWorldCard { readonly host: string }
 export interface AuditRow { readonly call: ReadyCall; readonly done: Done;
                             readonly executor: 'declared' | 'custom' }
 /** A custom executor: coerced args + a deep-frozen records CLONE + the id mint; its
- *  patches apply through the shared gated, audited path — never directly. */
+ *  patches apply through the shared gated, audited path — never directly. A refusal
+ *  is its own channel and prices done:'no' — a refusing tool never reads as done. */
 export type CustomExecutor = (ctx: { readonly args: Readonly<Record<string, Json>>;
                                      readonly records: StateSnapshot;
                                      readonly mintId: (entity: string) => string })
-                          => { readonly result: Json; readonly patches: readonly Patch[] };
+                          => { readonly result: Json; readonly patches: readonly Patch[] }
+                           | { readonly refuse: Json };
 /** A validated, frozen world declaration: the card plus its custom executors. */
 export interface DeclaredWorld { readonly card: WorldCard;
                                  readonly executors: Readonly<Record<string, CustomExecutor>> }
