@@ -239,16 +239,19 @@ export function brokenReply(): SeedGuard {
 export function noDuplicateCall(): SeedGuard {
   return {
     name: 'noDuplicateCall',
-    rule: 'Never run the same call twice; the first result answers it.',
+    rule: 'Never run the same call twice in a turn; the first result answers it. A write never re-runs; a read from an earlier turn runs fresh — the record may have moved.',
     on: 'preTool',
     kind: 'noDuplicateCall',
     compile(home) {
       return installed(this, home, {
         deny: () => null,
         restate: ctx => {
-          const first = [...ctx.pastActs, ...ctx.turnActs]
-            .find(a => a.call.key === ctx.call.key && (a.status === 'done' || a.status === 'unknown'));
-          return first ? first.id : null;
+          const landed = (a: Act) => a.call.key === ctx.call.key
+            && (a.status === 'done' || a.status === 'unknown');
+          const sameTurn = ctx.turnActs.find(landed);
+          if (sameTurn) return sameTurn.id;
+          const past = ctx.pastActs.find(landed);
+          return past !== undefined && past.effect !== 'read' ? past.id : null;
         }
       });
     }

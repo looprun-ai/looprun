@@ -48,7 +48,7 @@ export class HonestyCheck {
       });
       if (grounding === undefined) {
         violations.push({ guardName: 'claimIsGrounded',
-          detail: `nothing this turn grounds the claim '${line.tool} ${line.target}: ${line.word}'` });
+          detail: `nothing this turn grounds the claim '${line.tool} ${line.target}: ${line.word}' — run the call so the record answers it, or drop the row and speak only from what the reads returned` });
         continue;
       }
       unclaimed.delete(grounding);
