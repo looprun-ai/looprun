@@ -1,7 +1,7 @@
 /** The L1 card types: the authoring guard shape, the limits, and the compiled forms
  *  the machine runs on. Types and constants only — no logic. */
 import type { Act, InputCtx, CallCtx, ResultCtx, ReplyCtx, InstalledGuard, OwedRead } from '../contract/vocabulary.js';
-import type { SurfaceFacts } from '../contract/vocabulary.js';
+import type { EngineSentenceKey, Reason, Status, SurfaceFacts } from '../contract/vocabulary.js';
 
 export type { LlmParams, Rewrite } from '../contract/vocabulary.js';
 
@@ -30,6 +30,13 @@ export interface Guard {
   judgeQuery?: string;
   /** What an UNREADABLE judged answer does. Only beside judgeQuery. Omitted = 'denyOnFails'. */
   judgePolicy?: 'passOnFails' | 'denyOnFails';
+}
+
+/** Named overrides for engine sentences and the user-facing status words. Omitted
+ *  keys keep the engine pack. */
+export interface Wording {
+  readonly status?: Readonly<Partial<Record<Status | Reason, string>>>;
+  readonly sentence?: Readonly<Partial<Record<EngineSentenceKey, string>>>;
 }
 
 export interface Limits {
