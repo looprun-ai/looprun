@@ -27,6 +27,11 @@ function coerce(value: unknown, declaredType: Json | undefined): Json | undefine
       if (typeof value === 'string' && value.trim() !== '' && Number.isFinite(Number(value))) return Number(value);
       return undefined;
     }
+    case 'integer': {
+      const asNumber = typeof value === 'number' ? value
+        : typeof value === 'string' && value.trim() !== '' ? Number(value) : NaN;
+      return Number.isInteger(asNumber) ? asNumber : undefined;
+    }
     case 'boolean': {
       if (typeof value === 'boolean') return value;
       if (value === 'true') return true;
