@@ -26,7 +26,7 @@ async function post(url: string, key: string | null, body: unknown): Promise<Res
   });
 }
 
-const ask = (session: string, text = 'hi') =>
+const turnBody = (session: string, text = 'hi') =>
   ({ model: 'hotel', session, messages: [{ role: 'user', content: text }] });
 
 test('models list, envelope, 401 and 404 — the whole non-stream wire', async () => {
@@ -40,10 +40,10 @@ test('models list, envelope, 401 and 404 — the whole non-stream wire', async (
     expect(models.status).toBe(200);
     expect(JSON.stringify(await models.json())).toContain('"hotel"');
 
-    expect((await post(server.url, null, ask('s1'))).status).toBe(401);
-    expect((await post(server.url, 'k1', { ...ask('s1'), model: 'ghost' })).status).toBe(404);
+    expect((await post(server.url, null, turnBody('s1'))).status).toBe(401);
+    expect((await post(server.url, 'k1', { ...turnBody('s1'), model: 'ghost' })).status).toBe(404);
 
-    const ok = await post(server.url, 'k1', ask('s1'));
+    const ok = await post(server.url, 'k1', turnBody('s1'));
     expect(ok.status).toBe(200);
     const env = await ok.json() as { choices: [{ message: { content: string } }];
       usage: { estimated: boolean }; meta: { loopRun: TurnRecord } };
@@ -59,8 +59,8 @@ test('the same caller session under two credentials never merges', async () => {
     auth: { apiKeys: ['k1', 'k2'] }
   });
   try {
-    await post(server.url, 'k1', ask('shared'));
-    const other = await post(server.url, 'k2', ask('shared'));
+    await post(server.url, 'k1', turnBody('shared'));
+    const other = await post(server.url, 'k2', turnBody('shared'));
     const env = await other.json() as { meta: { loopRun: TurnRecord } };
     expect(env.meta.loopRun.turn).toBe(1);
   } finally { await server.close(); }
@@ -72,7 +72,7 @@ test('a failed turn is a typed HTTP failure, never a 200', async () => {
     auth: { apiKeys: ['k1'] }
   });
   try {
-    const failed = await post(server.url, 'k1', ask('s1'));
+    const failed = await post(server.url, 'k1', turnBody('s1'));
     expect(failed.status).toBe(502);
     const body = await failed.json() as { error: { type: string; message: string } };
     expect(body.error.type).toContain('turn_failure');
@@ -85,7 +85,7 @@ test('stream: true answers SSE of the COMPLETED turn ending in DONE', async () =
     auth: { apiKeys: ['k1'] }
   });
   try {
-    const res = await post(server.url, 'k1', { ...ask('s1'), stream: true });
+    const res = await post(server.url, 'k1', { ...turnBody('s1'), stream: true });
     expect(res.headers.get('content-type')).toContain('text/event-stream');
     const raw = await res.text();
     expect(raw.trim().endsWith('data: [DONE]')).toBe(true);
@@ -100,9 +100,9 @@ test('the TTL sweep ends idle sessions — the next turn starts fresh', async ()
     sessionTtlMs: 60
   });
   try {
-    await post(server.url, 'k1', ask('s1'));
+    await post(server.url, 'k1', turnBody('s1'));
     await new Promise(resolve => setTimeout(resolve, 250));
-    const later = await post(server.url, 'k1', ask('s1'));
+    const later = await post(server.url, 'k1', turnBody('s1'));
     const env = await later.json() as { meta: { loopRun: TurnRecord } };
     expect(env.meta.loopRun.turn).toBe(1);
   } finally { await server.close(); }

@@ -14,7 +14,12 @@ interface Ready { readonly engine: Engine; readonly assembled: Assembled }
 
 /** The one delivery, streamed AFTER the turn governed to completion. */
 async function* deliver(text: string): AsyncGenerator<string> {
-  for (const chunk of text.split(/(?<= )/)) yield chunk;
+  let chunk = '';
+  for (const ch of text) {
+    chunk += ch;
+    if (ch === ' ') { yield chunk; chunk = ''; }
+  }
+  if (chunk !== '') yield chunk;
   await Promise.resolve();
 }
 

@@ -236,4 +236,14 @@ test('tool results ride as a typed acts message, never as user-role text', async
 
 | planned | built | why |
 |---|---|---|
-| _(filled during execution)_ | | |
+| McpConnect over `@mastra/mcp` | over `@modelcontextprotocol/sdk` directly | the SDK is the protocol's own client and already in the tree; one less wrapper |
+| proxy = rename only | `RemoteToolEntry.proxy` grew the compose form; `ToolFact.proxy` carries it; SurfaceGate resolves renames and validates composed reads | the blueprint's compose law needs a data home |
+| SurfaceGate compares every schema | drift is skipped when the card declared none (the empty schema); the assembly then ADOPTS the live schema into the facts | an undeclared schema declares nothing to drift from; the model and the gate share one truth |
+| a compose entry with no schema | a compose proxy carries an AUTHORED schema on its card entry | deny-undeclared-args blocks every arg of a schema that declares nothing — the virtual read's args are authored |
+| `LoopRunConfig` = spec/contract/model/world | + `mcp` (host-env door, required for mcpWorld), `live` (required for liveWorld), `seal`, `preset` | the host env owns connection facts; the cards never carry them |
+| typed `generate`/`stream` overrides | each carries one described ts-expect-error narrowing the host base's generic surface; callers stay fully typed, zero `any` | the base returns its own generic FullOutput; the governed door returns the record |
+| `guards()`/`excluded()` any time | they need construction settled — a turn awaits it; before that they throw a construction sentence | assembly is async behind the closed constructor (the MCP door awaits the wire) |
+| HostToolPort answer law as planned | + a rejection on a read answers 'no', on a write answers 'unknown' (the send's fate is unknowable); MCP `isError` results answer 'no' | the plan named the clean paths; the rejection paths follow the same protocol-facts law |
+| tree lints unchanged | three lanes: the core export barrel (may name engine), the facade packages (their own import law), the wire door (`node:http` in server/src only) | the lints scan the whole `packages/next` border; the new packages needed their lawful lanes stated |
+| ScriptedModel in eval (4b) | promoted to core src in phase 3; fixtures keep only step sugar | the scripted member of ModelChoice lives below the mastra layer |
+| llmParams via constructor only | MastraModelPort merges the spec card's params UNDER `StepInput.llmParams` per field | the seat's brakes (local caps) must win over the card |
