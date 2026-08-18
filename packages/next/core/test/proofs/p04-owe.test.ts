@@ -3,6 +3,7 @@ import { onlyAfter } from '../../src/cards/catalog.js';
 import { fact } from '../fixtures/compiled-agents.js';
 import { ScriptedModel, callStep, finishStep } from '../fixtures/scripted-model.js';
 import { BOOKING_SURFACE, testEngine } from '../fixtures/compiled-agents.js';
+import { RecordsPortStub } from '../fixtures/records-port-stub.js';
 
 // P4 · R5.2 — owe: the engine pays the owed read with ONE forced micro-step where
 // the session's own model fills the args over a single-tool surface; the read runs
@@ -30,13 +31,15 @@ const MISMATCHED_BEHAVIORS = {
 
 test('the micro-step pays the debt: single-tool surface, model-filled args, engine origin, order kept', async () => {
   const guard = onlyAfter('cancelBooking', 'getBooking').compile('contract', MISMATCHED);
+  const records = new RecordsPortStub();
+  records.set('bookings', 'bk_9', { status: 'CONFIRMED', customer: 'c_42' });
   const model = new ScriptedModel([
     callStep('cancelBooking', { id: 'bk_9' }),
     callStep('getBooking', { bookingRef: 'bk_9' }),
     finishStep('Cancelled bk_9.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'done' }])
   ]);
   const { engine, port } = testEngine({
-    model, guards: [guard], facts: MISMATCHED, behaviors: MISMATCHED_BEHAVIORS
+    model, guards: [guard], facts: MISMATCHED, behaviors: MISMATCHED_BEHAVIORS, records
   });
 
   const r = await engine.chat('s1', 'cancel booking bk_9');
@@ -44,6 +47,8 @@ test('the micro-step pays the debt: single-tool surface, model-filled args, engi
   const micro = model.seen[1];
   expect(micro.tools.map(t => t.name)).toEqual(['getBooking']);
   expect(micro.messages.at(-1)?.text).toContain('call getBooking now');
+  expect(micro.system).toContain('STATE: ');
+  expect(micro.system).toContain('c_42');
   expect(port.log).toEqual([
     { tool: 'getBooking', args: { bookingRef: 'bk_9' } },
     { tool: 'cancelBooking', args: { id: 'bk_9' } }

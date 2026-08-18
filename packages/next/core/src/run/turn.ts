@@ -61,18 +61,20 @@ export class Turn {
       { role: 'user', text: userText }
     ];
 
-    // The owed-read micro-step: same frozen system prefix, the conversation so far,
-    // and a SINGLE tool on the surface — the model fills the args, and can do
-    // nothing else.
+    // The owed-read micro-step: same frozen system prefix, the same state tail the
+    // main steps carry, the conversation so far, and a SINGLE tool on the surface —
+    // the model fills the args, and can do nothing else.
     const microStep = async (read: { tool: string }, held: { tool: string; args: unknown }):
       Promise<RawCall | null> => {
       const card = pw.toolCards().find(t => t.name === read.tool);
       if (!card) return null;
       const instruction = `A rule requires ${read.tool} to run before ${held.tool}. `
-        + `Choose the arguments from the conversation and the held call `
+        + `Choose the arguments from the conversation, the state, and the held call `
         + `${held.tool} ${JSON.stringify(held.args)}, and call ${read.tool} now — nothing else.`;
+      const microState = this.deps.recordsPort?.snapshot() ?? null;
+      const microTail = pw.tail(userText, microState, []);
       const step = await port.step(deepFreeze({
-        system: pw.system(),
+        system: microTail === '' ? pw.system() : `${pw.system()}\n${microTail}`,
         messages: [...messages, { role: 'user' as const, text: instruction }],
         tools: [card],
         forceFinish: false,
