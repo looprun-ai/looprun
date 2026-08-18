@@ -1,9 +1,65 @@
 /** The L1 card types: the authoring guard shape, the limits, and the compiled forms
  *  the machine runs on. Types and constants only — no logic. */
 import type { Act, InputCtx, CallCtx, ResultCtx, ReplyCtx, InstalledGuard, OwedRead } from '../contract/vocabulary.js';
-import type { EngineSentenceKey, Reason, Status, SurfaceFacts } from '../contract/vocabulary.js';
+import type { EngineSentenceKey, LlmParams, Reason, Rewrite, Status, SurfaceFacts } from '../contract/vocabulary.js';
 
 export type { LlmParams, Rewrite } from '../contract/vocabulary.js';
+
+/** CARD 1 — one agent = one AgentSpec. Everything about HOW THIS DESK BEHAVES. */
+export interface AgentSpec {
+  /** The agent's name — records, errors, the exam, the server's /v1/models row. Required. */
+  name: string;
+  /** Who this agent is; the first prompt line. Required — the contract carries NO persona. */
+  persona: string;
+  /** This agent's lane: tool NAMES from the surface. Omitted = every surface tool. */
+  tools?: readonly string[];
+  /** Other lanes, for hand-offs: agent name → what that desk handles. Omitted = single-agent domain. */
+  teammates?: Readonly<Record<string, string>>;
+  /** Guards about how THIS desk works. Highest priority. Omitted = []. */
+  guards?: readonly Guard[];
+  /** The model's parameters, merged PER FIELD over the target's declared defaults. */
+  llmParams?: LlmParams;
+  /** This desk's ceilings, merged PER FIELD over the contract's limits — the spec wins. */
+  limits?: Limits;
+}
+
+/** Disclosure for one tool — sentences, not code. Slots are {alias.path} over
+ *  engine-performed reads. */
+export interface Disclosure {
+  /** Reads the ENGINE performs itself on the held call's own args: alias → read tool
+   *  (an args map when the read's arg names differ from the held call's). Omitted = {}. */
+  needs?: Readonly<Record<string, string | { readonly tool: string;
+    readonly args: Readonly<Record<string, string>> }>>;
+  /** Before-tense, shown on the consent question. Omitted = engine sentence from the label. */
+  before?: string;
+  /** After-tense: the record line once the act ran. Omitted = engine sentence. */
+  after?: string;
+  /** Standing sentence in later turns while the act stays relevant. Omitted = none. */
+  later?: string;
+}
+
+/** CARD 2 — everything conversation-global = one DomainContract. */
+export interface DomainContract {
+  /** The domain's name. Required. */
+  name: string;
+  /** Shared business tone, one sentence — never a persona. Omitted = none. */
+  voice?: string;
+  /** Domain truths stated in every agent's prompt. Omitted = []. */
+  facts?: readonly string[];
+  /** Guards about TOOLS and the whole conversation. Run after spec guards. Omitted = []. */
+  guards?: readonly Guard[];
+  /** Per-tool disclosure sentences, three tenses, keyed by tool name. */
+  disclosure?: Readonly<Record<string, Disclosure>>;
+  /** Rewrites of the outgoing reply — a guard decides, a rewrite rewrites. Omitted = []. */
+  rewrites?: readonly Rewrite[];
+  /** THE ONE HOME of what is secret. Field names or dotted paths, masked at every
+   *  seam; the object form picks 'omit'. Omitted = []. */
+  secrets?: readonly (string | { readonly path: string; readonly mode: 'omit' | 'mask' })[];
+  /** Named overrides for engine sentences and status words. Omitted = the engine pack. */
+  wording?: Wording;
+  /** Bounded-everything ceilings. Omitted = the engine defaults. */
+  limits?: Limits;
+}
 
 /** THE ONE GUARD SHAPE — both cards, three strengths of the same thing:
  *    prose-only      { rule }                  the declared residue

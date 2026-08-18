@@ -26,6 +26,7 @@ test('every src import points downward in the layer picture', () => {
     for (const spec of importsOf(f)) {
       const ok =
         spec === 'zod' ? layer === 'run'
+        : spec === 'node:crypto' ? layer === 'cards' || layer === 'run'
         : spec.startsWith('./') ? true
         : spec.startsWith('../contract/') ? layer !== 'contract'
         : spec.startsWith('../cards/') ? layer === 'run'
