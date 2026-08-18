@@ -54,13 +54,15 @@ export class Validator {
       const agent = c.agent ?? Object.keys(subject.specs)[0];
       for (const turn of c.turns) {
         if (typeof turn === 'string' || 'decline' in turn) continue;
-        const tool = turn.approve.tool;
-        if (facts.tools[tool] === undefined) {
-          findings.push({ code: 'CASE_APPROVE_TOOL_UNKNOWN',
-            sentence: `Case '${c.id}' approves '${tool}', which the surface does not declare.` });
-        } else if (!holdsFor(agent, tool)) {
-          findings.push({ code: 'CASE_APPROVE_NOT_HELD',
-            sentence: `Case '${c.id}' approves '${tool}', but nothing on agent '${agent}' ever holds it.` });
+        const refs = Array.isArray(turn.approve) ? turn.approve : [turn.approve];
+        for (const ref of refs) {
+          if (facts.tools[ref.tool] === undefined) {
+            findings.push({ code: 'CASE_APPROVE_TOOL_UNKNOWN',
+              sentence: `Case '${c.id}' approves '${ref.tool}', which the surface does not declare.` });
+          } else if (!holdsFor(agent, ref.tool)) {
+            findings.push({ code: 'CASE_APPROVE_NOT_HELD',
+              sentence: `Case '${c.id}' approves '${ref.tool}', but nothing on agent '${agent}' ever holds it.` });
+          }
         }
       }
     }

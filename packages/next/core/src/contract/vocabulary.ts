@@ -218,18 +218,33 @@ export interface WorldCard { readonly records: StateSnapshot;
                              readonly writes?: Readonly<Record<string, WorldToolEntry>>;
                              readonly destructive?: Readonly<Record<string, WorldToolEntry>>;
                              readonly presets?: Readonly<Record<string, readonly Patch[]>> }
-/** One scripted exam turn: user text, a typed approval (args only to split open
- *  siblings — a code is never extracted from prose), or a typed decline. */
+/** One typed approval: the tool whose open question this turn licenses; args only
+ *  to split open SIBLINGS of one tool — a code is never extracted from prose. */
+export interface ApproveRef { readonly tool: string;
+                              readonly args?: Readonly<Record<string, Json>> }
+/** One scripted exam turn: user text, one or several typed approvals (several =
+ *  one message licensing several open questions), or a typed decline. */
 export type ExamTurn = string
-  | { readonly approve: { readonly tool: string; readonly args?: Readonly<Record<string, Json>> } }
+  | { readonly approve: ApproveRef | readonly ApproveRef[] }
   | { readonly decline: true };
+/** A deterministic act matcher: the named call happened (required) or took no
+ *  effect (noEffect), with an args subset when the case pins one. */
+export interface ToolMatcher { readonly name: string;
+                               readonly anyArgs?: Readonly<Record<string, Json>> }
 /** One exam case: the turns, the split discipline, and the rubric the in-session
- *  judge reads. `agent` names the desk on a multi-agent subject; `red` names the
- *  attack class when the case is an adversarial row. */
+ *  judge reads. `agent` names the desk on a multi-agent subject; `preset` names
+ *  the world scenario; `covers` names the guards this case exists to fire (the
+ *  census key); `invariants` are checked deterministically against the records;
+ *  `red` names the attack class when the case is an adversarial row. */
 export interface ExamCase { readonly id: string;
                             readonly split: 'fix' | 'held-out';
                             readonly agent?: string;
+                            readonly preset?: string;
                             readonly red?: string;
+                            readonly covers?: readonly string[];
+                            readonly invariants?: {
+                              readonly requiredToolCalls?: readonly ToolMatcher[];
+                              readonly noEffectToolCalls?: readonly ToolMatcher[] };
                             readonly turns: readonly ExamTurn[];
                             readonly rubric: string }
 
