@@ -22,14 +22,28 @@ export class SurfaceGate {
   check(facts: SurfaceFacts, live: readonly LiveTool[], seal: string | null): SurfaceReport {
     const problems: { code: string; sentence: string }[] = [];
     const liveByName = new Map(live.map(t => [t.name, t]));
+    const emptySchema = canonicalJson({ type: 'object', properties: {}, required: [] });
     for (const fact of Object.values(facts.tools)) {
-      const hosted = liveByName.get(fact.name);
+      if (typeof fact.proxy === 'object' && fact.proxy !== null) {
+        for (const name of fact.proxy.compose) {
+          if (!liveByName.has(name)) {
+            problems.push({ code: 'SURFACE_TOOL_MISSING',
+              sentence: `Composed read '${name}' of '${fact.name}' is not served by the live host.` });
+          }
+        }
+        continue;
+      }
+      const hostedName = typeof fact.proxy === 'string' ? fact.proxy : fact.name;
+      const hosted = liveByName.get(hostedName);
       if (hosted === undefined) {
         problems.push({ code: 'SURFACE_TOOL_MISSING',
           sentence: `Declared tool '${fact.name}' is not served by the live host.` });
         continue;
       }
-      if (canonicalJson(hosted.schema) !== canonicalJson(fact.schema)) {
+      // A card that declares no schema declares nothing to drift from — the live
+      // schema is the truth and the assembly adopts it.
+      if (canonicalJson(fact.schema) !== emptySchema
+          && canonicalJson(hosted.schema) !== canonicalJson(fact.schema)) {
         problems.push({ code: 'SURFACE_DRIFT',
           sentence: `Tool '${fact.name}' drifted: the live schema differs from the declared one.` });
       }

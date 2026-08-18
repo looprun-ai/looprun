@@ -64,12 +64,15 @@ export class MastraModelPort {
     const finishName = input.tools.at(-1)?.name;
     const toolChoice: ToolChoice<ToolSet> = input.forceFinish && finishName !== undefined
       ? { type: 'tool', toolName: finishName } : 'auto';
+    // Per-field merge: the constructor carries the spec card's params; the engine's
+    // own word for this step (the seat's brakes included) wins.
+    const params: LlmParams = { ...this.params, ...input.llmParams };
     try {
       const r = await generateText({
         model, system: input.system, messages: toMessages(input.messages), tools, toolChoice,
-        temperature: this.params.temperature, topP: this.params.topP,
-        maxOutputTokens: this.params.maxOutputTokens,
-        ...(this.params.preset === 'gemini:thinking-off'
+        temperature: params.temperature, topP: params.topP,
+        maxOutputTokens: params.maxOutputTokens,
+        ...(params.preset === 'gemini:thinking-off'
           ? { providerOptions: { google: { thinkingConfig: { thinkingBudget: 0 } } } } : {})
       });
       const calls: RawCall[] = r.toolCalls.map(c => ({
