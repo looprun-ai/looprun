@@ -10,6 +10,9 @@ import { canonicalJson } from '../contract/canonical-call.js';
 
 export interface LiveTool { readonly name: string; readonly description: string;
                             readonly schema: Json;
+                            /** The tool's protocol attests effect on a clean write —
+                             *  the only way a write's answer is ever 'yes'. */
+                            readonly attests?: true;
                             readonly execute: (args: Readonly<Record<string, Json>>) => Promise<unknown> }
 export interface SurfaceReport { readonly active: readonly string[];
                                  readonly excluded: readonly { readonly name: string;

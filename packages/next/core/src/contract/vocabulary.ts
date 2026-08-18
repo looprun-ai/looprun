@@ -184,7 +184,7 @@ export interface ToolFact { readonly name: string; readonly label: string | null
                             readonly entity: string | null;   // the records table the tool acts on
                             readonly schema: Json;
                             readonly simulation: { readonly arg: string; readonly value: Json } | null;
-                            readonly proxy: string | null }
+                            readonly proxy: string | { readonly compose: readonly string[] } | null }
 /** The whole declared surface as facts, keyed by tool name. */
 export interface SurfaceFacts { readonly tools: Readonly<Record<string, ToolFact>> }
 
@@ -211,9 +211,12 @@ export interface WorldCard { readonly records: StateSnapshot;
                              readonly writes?: Readonly<Record<string, WorldToolEntry>>;
                              readonly destructive?: Readonly<Record<string, WorldToolEntry>>;
                              readonly presets?: Readonly<Record<string, readonly Patch[]>> }
-/** One remote tool on an MCP or live surface: words and bindings, no action form. */
+/** One remote tool on an MCP or live surface: words and bindings, no action form.
+ *  proxy as a string is a declared RENAME to the real live tool; proxy as a compose
+ *  block executes the listed live reads and merges their results in order. */
 export interface RemoteToolEntry { readonly label: string; readonly target?: string;
-                                   readonly proxy?: string; readonly simulation?: true;
+                                   readonly proxy?: string | { readonly compose: readonly string[] };
+                                   readonly simulation?: true;
                                    readonly does?: string; readonly schema?: Json }
 /** The MCP sibling: the same effect blocks over remote entries — no records, no gates. */
 export interface McpWorldCard { readonly reads?: Readonly<Record<string, RemoteToolEntry>>;

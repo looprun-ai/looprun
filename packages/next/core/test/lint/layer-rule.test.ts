@@ -18,9 +18,29 @@ function importsOf(f: SourceFile): readonly string[] {
   return specs;
 }
 
+/** The facade packages sit above core in the §6 picture: mastra (L5) may import the
+ *  core package by NAME plus its own host framework; server (L6) may import core and
+ *  the mastra facade by name and node builtins — never a framework, never a relative
+ *  path escaping its own src. */
+const FACADE_LANES: Readonly<Record<string, (spec: string) => boolean>> = {
+  mastra: spec => spec.startsWith('./') || spec === '@looprun-ai/next-core'
+    || spec === 'ai' || spec.startsWith('@mastra/') || spec === 'zod' || spec.startsWith('node:'),
+  server: spec => spec.startsWith('./') || spec === '@looprun-ai/next-core'
+    || spec === '@looprun-ai/next-mastra' || spec.startsWith('node:')
+};
+
 test('every src import points downward in the layer picture', () => {
   const bad: string[] = [];
   for (const f of srcFiles()) {
+    const pkg = f.rel.split('/')[0];
+    const lane = FACADE_LANES[pkg];
+    if (lane) {
+      for (const spec of importsOf(f)) {
+        if (!lane(spec)) bad.push(`${f.rel} imports ${spec}`);
+        if (spec.includes('test/') || spec.startsWith('..')) bad.push(`${f.rel} escapes its src`);
+      }
+      continue;
+    }
     if (f.rel.endsWith('src/index.ts')) {
       for (const spec of importsOf(f)) {
         if (!spec.startsWith('./')) bad.push(`${f.rel} imports ${spec} — the barrel re-exports src only`);
