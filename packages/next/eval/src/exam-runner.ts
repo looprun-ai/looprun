@@ -93,12 +93,14 @@ export class ExamRunner {
         const out = await agent.generate(text, { session: c.id });
         records.push(out.loopRun);
       } catch (e: unknown) {
-        if (!(e instanceof TurnFailure)) throw e;
-        failure = { kind: e.kind, detail: e.detail };
+        // A failed case never kills the campaign: every error is an incident row.
+        const kind = e instanceof TurnFailure ? e.kind : 'construction';
+        const detail = e instanceof TurnFailure ? e.detail
+          : e instanceof Error ? e.message.split('\n')[0] : 'unknown failure';
+        failure = { kind, detail };
         const hash = createHash('sha256')
-          .update(`${c.id}|${variant}|${e.kind}|${e.detail}`).digest('hex').slice(0, 16);
-        appendLine(runDir, 'failures.jsonl',
-          { case: c.id, variant, kind: e.kind, detail: e.detail, hash });
+          .update(`${c.id}|${variant}|${kind}|${detail}`).digest('hex').slice(0, 16);
+        appendLine(runDir, 'failures.jsonl', { case: c.id, variant, kind, detail, hash });
         break;
       }
     }
