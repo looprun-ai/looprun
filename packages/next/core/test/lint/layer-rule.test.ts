@@ -27,7 +27,9 @@ const FACADE_LANES: Readonly<Record<string, (spec: string) => boolean>> = {
     || spec === 'ai' || spec.startsWith('@mastra/') || spec.startsWith('@modelcontextprotocol/sdk/')
     || spec === 'zod' || spec.startsWith('node:'),
   server: spec => spec.startsWith('./') || spec === '@looprun-ai/next-core'
-    || spec === '@looprun-ai/next-mastra' || spec.startsWith('node:')
+    || spec === '@looprun-ai/next-mastra' || spec.startsWith('node:'),
+  eval: spec => spec.startsWith('./') || spec === '@looprun-ai/next-core'
+    || spec === '@looprun-ai/next-mastra' || spec === 'zod' || spec.startsWith('node:')
 };
 
 test('every src import points downward in the layer picture', () => {
