@@ -182,13 +182,21 @@ export function groundedIds(): SeedGuard {
     rule: 'An identifier you did not read and were not given is a guess — look it up or ask for it.',
     on: 'preTool',
     kind: 'groundedIds',
-    compile(home) {
+    compile(home, facts) {
+      // Grounding sources are what the model actually SAW: the operator's
+      // messages, the recorded acts, and the state tail's visible entities.
+      const visibleState = (state: StateSnapshot): string => {
+        const tail = facts.tail ?? null;
+        return JSON.stringify(tail === null ? state
+          : Object.fromEntries(Object.entries(state).filter(([entity]) => tail.includes(entity))));
+      };
       return installedAt<CallCtx>(this, home, ctx => {
         for (const [arg, v] of Object.entries(ctx.call.args)) {
           if (typeof v !== 'string' || !isIdShaped(v)) continue;
           const grounded = ctx.userTexts.some(t => t.includes(v))
             || [...ctx.pastActs, ...ctx.turnActs].some(a =>
-              JSON.stringify(a.result).includes(v) || JSON.stringify(a.call.args).includes(v));
+              JSON.stringify(a.result).includes(v) || JSON.stringify(a.call.args).includes(v))
+            || (ctx.state !== null && visibleState(ctx.state).includes(v));
           if (!grounded) return `'${v}' in '${arg}' appears in no result and no message`;
         }
         return null;

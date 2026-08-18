@@ -110,6 +110,9 @@ export class AgentFactory {
     declare(spec.guards ?? [], 'spec');
     declare(contract?.guards ?? [], 'contract');
 
+    // Groundedness outranks consent: an id nobody produced refuses before it is
+    // ever put up for approval.
+    guards.push(groundedIds().compile('engine', lane));
     for (const fact of Object.values(lane.tools)) {
       if (fact.effect === 'destructive') {
         guards.push(confirmFirst(fact.name, fact.label ?? fact.name,
@@ -118,7 +121,6 @@ export class AgentFactory {
     }
     guards.push(maxDestructive(limits.destructive).compile('engine', lane));
     guards.push(noDuplicateCall().compile('engine', lane));
-    guards.push(groundedIds().compile('engine', lane));
     for (const fact of Object.values(lane.tools)) {
       const { properties, required } = schemaOf(fact);
       for (const arg of required) {
