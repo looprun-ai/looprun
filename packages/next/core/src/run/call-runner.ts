@@ -2,17 +2,19 @@
  *  the SAME method: coerce against the declared schema, canonical identity, Rulebook
  *  verdict, route by verdict kind, StatusClerk grading, masking on record — the
  *  stored form is the only stored form. */
-import type { Act, CallCtx, CanonicalCallData, Json, OwedRead, RawCall, StateSnapshot } from '../contract/vocabulary.js';
+import type { Act, CallCtx, CanonicalCallData, Json, OwedRead, RawCall, StateSnapshot,
+              ToolAnswer } from '../contract/vocabulary.js';
 import { TurnFailure } from '../contract/vocabulary.js';
 import type { ToolFact } from '../contract/vocabulary.js';
 import type { ToolPort, RecordsPort } from '../contract/ports.js';
-import { CanonicalCall, isJson } from '../contract/canonical-call.js';
+import { CanonicalCall, canonicalJson, isJson } from '../contract/canonical-call.js';
 import { deepFreeze } from '../contract/freeze.js';
 import type { CompiledAgent } from '../cards/cards.js';
 import type { Rulebook } from './rulebook.js';
 import type { GradeInput, StatusClerk } from './status-clerk.js';
 import type { ActionHistory } from './action-history.js';
 import type { ConsentDesk } from './consent-desk.js';
+import type { DisclosureDesk } from './disclosure-desk.js';
 import type { TurnDraft } from './session.js';
 
 /** The record-seam masker; the Masker collaborator replaces the function, not the seam. */
@@ -27,6 +29,10 @@ export interface CallRunnerDeps {
   readonly recordsPort: RecordsPort | null;
   /** The per-session question desk; the hold route issues through it. */
   readonly consent: ConsentDesk;
+  /** The compiled disclosure recipes; the hold route reads and renders through it. */
+  readonly disclosure: DisclosureDesk;
+  /** Tools whose simulation mutated state this session — plain consent for them. */
+  readonly revoked: Set<string>;
   /** ONE forced micro-step on the session's own seat: the model fills the owed
    *  read's args over a single-tool surface. null = the model produced no usable
    *  call. The Turn supplies it — model I/O stays the sequencer's job. */
@@ -96,7 +102,18 @@ export class CallRunner {
       case 'hold': {
         const targetRaw = fact.target !== null ? call.args[fact.target] : undefined;
         const targetValue = typeof targetRaw === 'string' ? targetRaw : null;
-        const question = this.deps.consent.hold(call, targetValue, verdict.sentence, draft);
+        // The declared reads run FIRST — origin engine, recorded — so the
+        // before-tense can describe the already-fixed target.
+        const reads = new Map<string, Act>();
+        for (const owed of this.deps.disclosure.owedReads(call.tool, ctx.call)) {
+          reads.set(owed.alias,
+            await this.runChecked({ tool: owed.tool, args: owed.args }, 'engine', draft, false));
+        }
+        const tenses = this.deps.disclosure.tenses(call.tool, ctx.call, reads);
+        let sentence = tenses.before ?? verdict.sentence;
+        sentence += await this.simulatedLine(call, fact, draft);
+        const question = this.deps.consent.hold(call, targetValue, sentence, draft,
+          { after: tenses.after, later: tenses.later });
         const grade = clerk.grade({ verdict, actId: '' }, fact.effect, state, state, draft);
         return this.record(draft, {
           origin, call: call.data(mask), effect: fact.effect, said: grade.said,
@@ -121,6 +138,30 @@ export class CallRunner {
     }
   }
 
+  /** The simulated run on hold: the tool's OWN parameter, the act's shared path,
+   *  snapshots around it. A mutating simulation revokes itself for the session and
+   *  the question falls back to the plain sentence. */
+  private async simulatedLine(call: CanonicalCall, fact: ToolFact, draft: TurnDraft): Promise<string> {
+    if (fact.simulation === null || this.deps.revoked.has(call.tool)) return '';
+    const { recordsPort, toolPort, compiled } = this.deps;
+    const before = recordsPort?.snapshot() ?? null;
+    let answer: ToolAnswer | null = null;
+    try {
+      answer = await toolPort.call({ tool: call.tool,
+        args: { ...call.args, [fact.simulation.arg]: fact.simulation.value } });
+    } catch {
+      answer = null;
+    }
+    const after = recordsPort?.snapshot() ?? null;
+    if (before !== null && after !== null && canonicalJson(before) !== canonicalJson(after)) {
+      draft.corrections.push({ kind: 'simulationRevoked', tool: call.tool });
+      this.deps.revoked.add(call.tool);
+      return '';
+    }
+    if (answer === null || answer.done === 'no') return '';
+    return `\n${compiled.wording.sentence.simulatedResult} ${JSON.stringify(mask(answer.result))}`;
+  }
+
   private async execute(call: CanonicalCall, fact: ToolFact, origin: Act['origin'],
                         before: StateSnapshot | null, draft: TurnDraft): Promise<Act> {
     const { clerk, recordsPort, toolPort, rulebook } = this.deps;
@@ -137,10 +178,15 @@ export class CallRunner {
     const after = recordsPort?.snapshot() ?? null;
     const grade = clerk.grade(input, fact.effect, before, after, draft);
     draft.corrections.push(...grade.corrections);
+    const afterTense = origin === 'licence' && grade.status === 'done'
+      ? this.deps.consent.afterText(call.key) : null;
     const act = this.record(draft, {
       origin, call: call.data(mask), effect: fact.effect, said: grade.said,
       status: grade.status, reason: grade.reason, evidence: grade.evidence,
-      sentence: `${this.head(call, fact)} — ${grade.status}`, result: mask(result)
+      sentence: afterTense === null
+        ? `${this.head(call, fact)} — ${grade.status}`
+        : `${this.head(call, fact)} — ${grade.status}. ${afterTense}`,
+      result: mask(result)
     }, id);
     if ('answer' in input && grade.status === 'done') {
       const resultCtx = deepFreeze({

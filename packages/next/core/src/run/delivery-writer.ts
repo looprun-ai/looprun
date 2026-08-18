@@ -6,10 +6,12 @@ import type { Act, Question, QuestionClose } from '../contract/vocabulary.js';
 
 export class DeliveryWriter {
   compose(message: string, acts: readonly Act[], open: readonly Question[],
-          closed: readonly { readonly id: string; readonly why: QuestionClose }[]): string {
+          closed: readonly { readonly id: string; readonly why: QuestionClose }[],
+          notes: readonly string[] = []): string {
     const lines: string[] = [];
     if (message !== '') lines.push(message);
     for (const act of acts) lines.push(act.sentence);
+    for (const note of notes) lines.push(note);
     for (const q of open) lines.push(`[${q.code}] ${q.sentence}`);
     for (const c of closed) lines.push(`Question ${c.id} closed: ${c.why}.`);
     return lines.join('\n');

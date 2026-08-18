@@ -9,6 +9,7 @@ import { deepFreeze } from '../contract/freeze.js';
 import type { ToolPort, RecordsPort } from '../contract/ports.js';
 import type { CompiledAgent } from '../cards/cards.js';
 import { CallRunner } from './call-runner.js';
+import { DisclosureDesk } from './disclosure-desk.js';
 import type { Rulebook } from './rulebook.js';
 import type { StatusClerk } from './status-clerk.js';
 import type { ModelSeat } from './model-seat.js';
@@ -85,7 +86,8 @@ export class Turn {
     };
     const runner = new CallRunner({ compiled, rulebook, clerk: this.deps.clerk, history,
       toolPort: this.deps.toolPort, recordsPort: this.deps.recordsPort,
-      consent: desk, microStep });
+      consent: desk, disclosure: new DisclosureDesk(compiled.disclosureBindings),
+      revoked: session.revokedSimulations, microStep });
 
     // A consumed approval executes ENGINE-side, before the model speaks: the desk
     // holds the executable call, so a paraphrase can never drift the args. The
@@ -96,6 +98,7 @@ export class Turn {
       const held = desk.held(q.id);
       const act = await runner.run({ tool: held.tool, args: held.args }, 'licence', draft);
       if (act.status === 'done' || act.status === 'unknown') {
+        desk.markExecuted(q.id, draft.turn);
         const fact = compiled.facts.tools[held.tool];
         const targetRaw = fact?.target != null ? held.args[fact.target] : undefined;
         desk.closeSiblings(held.tool, typeof targetRaw === 'string' ? targetRaw : null, q.id, draft);
@@ -141,7 +144,8 @@ export class Turn {
       }
 
       if (finish !== null) {
-        const closed = this.tryFinish(finish, draft, messages, history.pastActs(), desk.open());
+        const closed = this.tryFinish(finish, draft, messages, history.pastActs(),
+          desk.open(), desk.laterTexts(draft.turn));
         if (closed === 'sealed') return session.seal(draft);
         retriesUsed += 1;
         if (retriesUsed > compiled.limits.retries) return this.engineClose(session, draft);
@@ -158,8 +162,8 @@ export class Turn {
 
   /** 'sealed' = the finish landed clean · 'redrive' = correction sent. */
   private tryFinish(finish: RawCall, draft: TurnDraft, messages: Msg[],
-                    pastActs: readonly Act[],
-                    open: readonly Question[]): 'sealed' | 'redrive' {
+                    pastActs: readonly Act[], open: readonly Question[],
+                    notes: readonly string[]): 'sealed' | 'redrive' {
     const { rulebook, finishDesk: fd, deliveryWriter: dw, promptWriter: pw } = this.deps;
     const parsed = fd.parse(finish.args);
     if (!parsed.ok) {
@@ -178,7 +182,7 @@ export class Turn {
     }
     draft.finish = parsed.finish;
     draft.closedBy = 'model';
-    draft.text = dw.compose(parsed.finish.message, draft.acts, open, draft.closed);
+    draft.text = dw.compose(parsed.finish.message, draft.acts, open, draft.closed, notes);
     return 'sealed';
   }
 
@@ -188,7 +192,7 @@ export class Turn {
     draft.closedBy = 'engine';
     draft.finish = null;
     draft.text = dw.compose(fd.closure(draft.acts), draft.acts,
-      session.consent.open(), draft.closed);
+      session.consent.open(), draft.closed, session.consent.laterTexts(draft.turn));
     return session.seal(draft);
   }
 }

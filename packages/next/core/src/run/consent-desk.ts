@@ -18,6 +18,11 @@ interface Stored {
   readonly executable: CanonicalCallData;
   readonly targetValue: string | null;
   readonly state: 'open' | 'consumed' | { readonly closed: QuestionClose };
+  /** The rendered after/later tenses, filled at hold time from the engine reads. */
+  readonly after: string | null;
+  readonly later: string | null;
+  /** The turn the licensed act executed in; null while unexecuted. */
+  readonly executedAtTurn: number | null;
 }
 
 export class ConsentDesk {
@@ -39,7 +44,9 @@ export class ConsentDesk {
   }
 
   hold(call: CanonicalCall, targetValue: string | null, sentence: string,
-       draft: TurnDraft): Question {
+       draft: TurnDraft, tenses: { readonly after: string | null;
+                                   readonly later: string | null }
+                       = { after: null, later: null }): Question {
     const key = call.key;
     const existing = this.working.get(key);
     if (existing !== undefined && existing.state === 'open') return existing.question;
@@ -52,10 +59,31 @@ export class ConsentDesk {
       bornAtTurn: draft.turn
     });
     this.working.set(key, {
-      question, executable: call.data(v => (isJson(v) ? v : null)), targetValue, state: 'open'
+      question, executable: call.data(v => (isJson(v) ? v : null)), targetValue, state: 'open',
+      after: tenses.after, later: tenses.later, executedAtTurn: null
     });
     draft.issued.push(question);
     return question;
+  }
+
+  /** The after-tense of the consumed question a licensed call answers, by canonical key. */
+  afterText(key: string): string | null {
+    const stored = this.working.get(key);
+    return stored !== undefined && stored.state === 'consumed' ? stored.after : null;
+  }
+
+  markExecuted(id: string, turn: number): void {
+    for (const [key, stored] of this.working) {
+      if (stored.question.id === id) this.working.set(key, { ...stored, executedAtTurn: turn });
+    }
+  }
+
+  /** Standing later-tense sentences of acts executed in EARLIER turns. */
+  laterTexts(turn: number): readonly string[] {
+    return [...this.working.values()]
+      .filter(s => s.state === 'consumed' && s.later !== null
+        && s.executedAtTurn !== null && s.executedAtTurn < turn)
+      .map(s => s.later ?? '');
   }
 
   /** Approve and decline literals searched EXACTLY; each match settles one question. */

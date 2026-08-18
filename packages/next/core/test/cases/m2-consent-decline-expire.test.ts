@@ -23,7 +23,7 @@ test('M2 — the decline literal closes the question and the world stays untouch
   expect(r2.questions.closed).toEqual([{ id: r1.questions.issued[0].id, why: 'declined' }]);
   expect(r2.text.toLowerCase()).toContain('declined');
   expect(world.snapshot().bookings.bk_9).toBeDefined();
-  expect(world.audit()).toHaveLength(0);
+  expect(world.audit().every(row => row.call.args.simulate === true)).toBe(true);
 });
 
 test('M2 — an ignored question expires by the sweep, delivered; a stale code consumes nothing', async () => {
@@ -49,5 +49,6 @@ test('M2 — an ignored question expires by the sweep, delivered; a stale code c
   const r3 = await engine.chat('s1', `approve ${code}`);
   expect(r3.questions.consumed).toHaveLength(0);
   expect(r3.acts).toHaveLength(0);
-  expect(world.audit()).toHaveLength(0);
+  expect(world.audit().every(row => row.call.args.simulate === true)).toBe(true);
+  expect(world.snapshot().bookings.bk_9).toBeDefined();
 });
