@@ -2,7 +2,7 @@
  *  the whole compile per agent (CardCheck speaks through it), world laws for EVERY
  *  preset on a fresh build, and the case-turn walk. Every finding blocks; the same
  *  blocking set at every entry point. */
-import type { CompiledAgent } from '@looprun-ai/next-core';
+import type { ApproveRef, CompiledAgent } from '@looprun-ai/next-core';
 import { AgentFactory, CardError, factsFromWorld, WorldBuilder } from '@looprun-ai/next-core';
 import type { Subject } from './subject-loader.js';
 
@@ -54,7 +54,9 @@ export class Validator {
       const agent = c.agent ?? Object.keys(subject.specs)[0];
       for (const turn of c.turns) {
         if (typeof turn === 'string' || 'decline' in turn) continue;
-        const refs = Array.isArray(turn.approve) ? turn.approve : [turn.approve];
+        const approve = turn.approve;
+        const refs: readonly ApproveRef[] = Array.isArray(approve)
+          ? approve as readonly ApproveRef[] : [approve as ApproveRef];
         for (const ref of refs) {
           if (facts.tools[ref.tool] === undefined) {
             findings.push({ code: 'CASE_APPROVE_TOOL_UNKNOWN',
