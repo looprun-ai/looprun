@@ -15,9 +15,11 @@ import type { GradeInput, StatusClerk } from './status-clerk.js';
 import type { ActionHistory } from './action-history.js';
 import type { ConsentDesk } from './consent-desk.js';
 import type { DisclosureDesk } from './disclosure-desk.js';
+import type { Masker } from './masker.js';
 import type { TurnDraft } from './session.js';
 
-/** The record-seam masker; the Masker collaborator replaces the function, not the seam. */
+/** The guard-ctx identity form: guards check the REAL args; masking happens at the
+ *  record seam through the Masker. */
 const mask = (v: unknown): Json => (isJson(v) ? v : null);
 
 export interface CallRunnerDeps {
@@ -29,6 +31,8 @@ export interface CallRunnerDeps {
   readonly recordsPort: RecordsPort | null;
   /** The per-session question desk; the hold route issues through it. */
   readonly consent: ConsentDesk;
+  /** The record-seam masker: stored calls, results and the simulated line. */
+  readonly masker: Masker;
   /** The compiled disclosure recipes; the hold route reads and renders through it. */
   readonly disclosure: DisclosureDesk;
   /** Tools whose simulation mutated state this session — plain consent for them. */
@@ -82,7 +86,7 @@ export class CallRunner {
         const rule = rulebook.guards().guards.find(g => g.name === verdict.guardName)?.rule ?? '';
         const grade = clerk.grade({ verdict, actId: '' }, fact.effect, state, state, draft);
         return this.record(draft, {
-          origin, call: call.data(mask), effect: fact.effect, said: grade.said,
+          origin, call: call.data(v => this.deps.masker.maskData(v)), effect: fact.effect, said: grade.said,
           status: grade.status, reason: grade.reason, evidence: grade.evidence,
           sentence: `${this.head(call, fact)} — not-done (${rule} ${verdict.detail})`.trimEnd(),
           result: null
@@ -93,7 +97,7 @@ export class CallRunner {
           ?? history.pastActs().find(a => a.id === verdict.actId);
         if (!first) throw new TurnFailure('construction', `restate points at unknown act '${verdict.actId}'`);
         return this.record(draft, {
-          origin, call: call.data(mask), effect: fact.effect, said: first.said,
+          origin, call: call.data(v => this.deps.masker.maskData(v)), effect: fact.effect, said: first.said,
           status: first.status, reason: first.reason, evidence: 'engine',
           sentence: `${this.head(call, fact)} — ${first.status} (already ran; first result restated)`,
           result: first.result
@@ -116,7 +120,7 @@ export class CallRunner {
           { after: tenses.after, later: tenses.later });
         const grade = clerk.grade({ verdict, actId: '' }, fact.effect, state, state, draft);
         return this.record(draft, {
-          origin, call: call.data(mask), effect: fact.effect, said: grade.said,
+          origin, call: call.data(v => this.deps.masker.maskData(v)), effect: fact.effect, said: grade.said,
           status: grade.status, reason: grade.reason, evidence: grade.evidence,
           sentence: `${this.head(call, fact)} — not-done (held for your approval)`,
           result: null
@@ -159,7 +163,7 @@ export class CallRunner {
       return '';
     }
     if (answer === null || answer.done === 'no') return '';
-    return `\n${compiled.wording.sentence.simulatedResult} ${JSON.stringify(mask(answer.result))}`;
+    return `\n${compiled.wording.sentence.simulatedResult} ${JSON.stringify(this.deps.masker.maskData(answer.result))}`;
   }
 
   private async execute(call: CanonicalCall, fact: ToolFact, origin: Act['origin'],
@@ -181,12 +185,12 @@ export class CallRunner {
     const afterTense = origin === 'licence' && grade.status === 'done'
       ? this.deps.consent.afterText(call.key) : null;
     const act = this.record(draft, {
-      origin, call: call.data(mask), effect: fact.effect, said: grade.said,
+      origin, call: call.data(v => this.deps.masker.maskData(v)), effect: fact.effect, said: grade.said,
       status: grade.status, reason: grade.reason, evidence: grade.evidence,
       sentence: afterTense === null
         ? `${this.head(call, fact)} — ${grade.status}`
         : `${this.head(call, fact)} — ${grade.status}. ${afterTense}`,
-      result: mask(result)
+      result: this.deps.masker.maskData(result)
     }, id);
     if ('answer' in input && grade.status === 'done') {
       const resultCtx = deepFreeze({
@@ -210,7 +214,7 @@ export class CallRunner {
       { verdict: { kind: 'refuse', guardName: owner?.name ?? 'onlyAfter', detail: '' }, actId: '' },
       fact.effect, state, state, draft);
     return this.record(draft, {
-      origin, call: call.data(mask), effect: fact.effect, said: grade.said,
+      origin, call: call.data(v => this.deps.masker.maskData(v)), effect: fact.effect, said: grade.said,
       status: grade.status, reason: grade.reason, evidence: grade.evidence,
       sentence: `${this.head(call, fact)} — not-done (${owner?.rule ?? ''} The required read did not succeed this conversation.)`,
       result: null

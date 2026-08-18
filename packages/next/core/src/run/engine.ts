@@ -10,6 +10,7 @@ import type { CompiledAgent } from '../cards/cards.js';
 import { ActionHistory } from './action-history.js';
 import { DeliveryWriter } from './delivery-writer.js';
 import { FinishDesk } from './finish-desk.js';
+import { Masker } from './masker.js';
 import type { ModelSeat } from './model-seat.js';
 import { PromptWriter } from './prompt-writer.js';
 import { Rulebook } from './rulebook.js';
@@ -44,6 +45,7 @@ export class Engine {
       recordsPort: cfg.recordsPort,
       rulebook,
       clerk: new StatusClerk(),
+      masker: new Masker(compiled.maskKeys),
       promptWriter: new PromptWriter(compiled),
       finishDesk: new FinishDesk(),
       deliveryWriter: new DeliveryWriter()
@@ -56,7 +58,8 @@ export class Engine {
   chat(sessionId: string, text: string): Promise<TurnRecord> {
     let session = this.sessions.get(sessionId);
     if (!session) {
-      session = new Session(sessionId, new ActionHistory());
+      session = new Session(sessionId, new ActionHistory(),
+        call => call.data(v => this.deps.masker.maskData(v)));
       this.sessions.set(sessionId, session);
     }
     const live = session;

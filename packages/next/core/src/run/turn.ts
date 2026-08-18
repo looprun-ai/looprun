@@ -10,6 +10,7 @@ import type { ToolPort, RecordsPort } from '../contract/ports.js';
 import type { CompiledAgent } from '../cards/cards.js';
 import { CallRunner } from './call-runner.js';
 import { DisclosureDesk } from './disclosure-desk.js';
+import type { Masker } from './masker.js';
 import type { Rulebook } from './rulebook.js';
 import type { StatusClerk } from './status-clerk.js';
 import type { ModelSeat } from './model-seat.js';
@@ -25,6 +26,7 @@ export interface TurnDeps {
   readonly recordsPort: RecordsPort | null;
   readonly rulebook: Rulebook;
   readonly clerk: StatusClerk;
+  readonly masker: Masker;
   readonly promptWriter: PromptWriter;
   readonly finishDesk: FinishDesk;
   readonly deliveryWriter: DeliveryWriter;
@@ -38,7 +40,7 @@ export class Turn {
   }
 
   async run(session: Session, userText: string): Promise<TurnRecord> {
-    const { compiled, seat, rulebook, promptWriter: pw, finishDesk: fd, deliveryWriter: dw } = this.deps;
+    const { compiled, seat, rulebook, masker, promptWriter: pw, finishDesk: fd, deliveryWriter: dw } = this.deps;
     const history = session.history;
     const desk = session.consent;
     const draft = session.draft();
@@ -51,7 +53,8 @@ export class Turn {
     if (inputVerdict.kind === 'refuse') {
       const rule = rulebook.guards().guards.find(g => g.name === inputVerdict.guardName)?.rule ?? '';
       draft.closedBy = 'engine';
-      draft.text = dw.compose(`${rule} ${inputVerdict.detail}`.trim(), draft.acts, desk.open(), draft.closed);
+      draft.text = masker.maskProse(
+        dw.compose(`${rule} ${inputVerdict.detail}`.trim(), draft.acts, desk.open(), draft.closed));
       return session.seal(draft);
     }
 
@@ -73,7 +76,8 @@ export class Turn {
       const instruction = `A rule requires ${read.tool} to run before ${held.tool}. `
         + `Choose the arguments from the conversation, the state, and the held call `
         + `${held.tool} ${JSON.stringify(held.args)}, and call ${read.tool} now — nothing else.`;
-      const microState = this.deps.recordsPort?.snapshot() ?? null;
+      const microRaw = this.deps.recordsPort?.snapshot() ?? null;
+      const microState = microRaw === null ? null : masker.maskState(microRaw);
       const microTail = pw.tail(userText, microState, desk.open());
       const step = await port.step(deepFreeze({
         system: microTail === '' ? pw.system() : `${pw.system()}\n${microTail}`,
@@ -86,7 +90,7 @@ export class Turn {
     };
     const runner = new CallRunner({ compiled, rulebook, clerk: this.deps.clerk, history,
       toolPort: this.deps.toolPort, recordsPort: this.deps.recordsPort,
-      consent: desk, disclosure: new DisclosureDesk(compiled.disclosureBindings),
+      consent: desk, masker, disclosure: new DisclosureDesk(compiled.disclosureBindings),
       revoked: session.revokedSimulations, microStep });
 
     // A consumed approval executes ENGINE-side, before the model speaks: the desk
@@ -116,7 +120,8 @@ export class Turn {
     let forced = false;
 
     for (;;) {
-      const state = this.deps.recordsPort?.snapshot() ?? null;
+      const raw = this.deps.recordsPort?.snapshot() ?? null;
+      const state = raw === null ? null : masker.maskState(raw);
       const tail = pw.tail(userText, state, desk.open());
       const stepInput = deepFreeze({
         system: tail === '' ? pw.system() : `${pw.system()}\n${tail}`,
@@ -182,7 +187,8 @@ export class Turn {
     }
     draft.finish = parsed.finish;
     draft.closedBy = 'model';
-    draft.text = dw.compose(parsed.finish.message, draft.acts, open, draft.closed, notes);
+    draft.text = this.deps.masker.maskProse(
+      dw.compose(parsed.finish.message, draft.acts, open, draft.closed, notes));
     return 'sealed';
   }
 
@@ -191,8 +197,8 @@ export class Turn {
     draft.corrections.push({ kind: 'forcedFinish' });
     draft.closedBy = 'engine';
     draft.finish = null;
-    draft.text = dw.compose(fd.closure(draft.acts), draft.acts,
-      session.consent.open(), draft.closed, session.consent.laterTexts(draft.turn));
+    draft.text = this.deps.masker.maskProse(dw.compose(fd.closure(draft.acts), draft.acts,
+      session.consent.open(), draft.closed, session.consent.laterTexts(draft.turn)));
     return session.seal(draft);
   }
 }

@@ -4,7 +4,8 @@
  *  changes; a discarded draft leaves no trace. */
 import type { Act, Correction, FinishPayload, Question, QuestionClose, TurnRecord } from '../contract/vocabulary.js';
 import { deepFreeze } from '../contract/freeze.js';
-import { isJson } from '../contract/canonical-call.js';
+import type { CanonicalCallData } from '../contract/vocabulary.js';
+import { isJson, type CanonicalCall } from '../contract/canonical-call.js';
 import type { ActionHistory } from './action-history.js';
 import { ConsentDesk } from './consent-desk.js';
 
@@ -30,15 +31,18 @@ export class Session {
   readonly id: string;
   readonly history: ActionHistory;
   /** The question lifecycle; the delivered display form is masked at the desk door. */
-  readonly consent = new ConsentDesk(call => call.data(v => (isJson(v) ? v : null)));
+  readonly consent: ConsentDesk;
   /** Tools whose simulation mutated state — they fall back to plain consent here. */
   readonly revokedSimulations = new Set<string>();
   private turnIndex = 1;
   private tail: Promise<unknown> = Promise.resolve();
 
-  constructor(id: string, history: ActionHistory) {
+  constructor(id: string, history: ActionHistory,
+              maskCall: (call: CanonicalCall) => CanonicalCallData
+                = call => call.data(v => (isJson(v) ? v : null))) {
     this.id = id;
     this.history = history;
+    this.consent = new ConsentDesk(maskCall);
   }
 
   /** The serializing queue: a failed job never poisons the next entry. */
