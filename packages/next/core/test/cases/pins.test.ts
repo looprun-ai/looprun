@@ -1,5 +1,6 @@
 import { test, expect } from 'vitest';
-import { ScriptedModel, callStep, finishStep } from '../fixtures/scripted-model.js';
+import { ScriptedModel } from '../../src/run/scripted-model.js';
+import { callStep, finishStep } from '../fixtures/scripted-model.js';
 import { maskPattern, precondition } from '../../src/cards/catalog.js';
 import { AgentFactory } from '../../src/cards/agent-factory.js';
 import { factsFromWorld } from '../../src/cards/facts.js';

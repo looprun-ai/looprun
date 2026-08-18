@@ -1,6 +1,6 @@
 import { test, expect } from 'vitest';
 import { maxCalls, onlyAfter } from '../../src/cards/catalog.js';
-import { ScriptedModel } from '../fixtures/scripted-model.js';
+import { ScriptedModel } from '../../src/run/scripted-model.js';
 import { BOOKING_SURFACE, install, testEngine } from '../fixtures/compiled-agents.js';
 
 // P10 · R1.5 — guards() returns THE SAME guard objects the phase checks iterate;

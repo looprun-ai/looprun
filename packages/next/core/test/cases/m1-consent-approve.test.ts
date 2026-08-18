@@ -1,5 +1,6 @@
 import { test, expect } from 'vitest';
-import { ScriptedModel, callStep, finishStep } from '../fixtures/scripted-model.js';
+import { ScriptedModel } from '../../src/run/scripted-model.js';
+import { callStep, finishStep } from '../fixtures/scripted-model.js';
 import { caseRig } from '../fixtures/case-rig.js';
 
 // M1 — the consent lifecycle end to end through the author door: a destructive call

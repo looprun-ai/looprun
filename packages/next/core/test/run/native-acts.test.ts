@@ -1,5 +1,6 @@
 import { test, expect } from 'vitest';
-import { ScriptedModel, callStep, finishStep } from '../fixtures/scripted-model.js';
+import { ScriptedModel } from '../../src/run/scripted-model.js';
+import { callStep, finishStep } from '../fixtures/scripted-model.js';
 import { caseRig } from '../fixtures/case-rig.js';
 
 // The engine never composes tool results as prose: what a call did rides the

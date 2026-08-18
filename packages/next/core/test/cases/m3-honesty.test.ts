@@ -1,5 +1,6 @@
 import { test, expect } from 'vitest';
-import { ScriptedModel, callStep, finishStep } from '../fixtures/scripted-model.js';
+import { ScriptedModel } from '../../src/run/scripted-model.js';
+import { callStep, finishStep } from '../fixtures/scripted-model.js';
 import { caseRig } from '../fixtures/case-rig.js';
 
 // M3 — the honesty floor end to end: the first finish LIES (a claim for work that

@@ -2,7 +2,7 @@ import { test, expect } from 'vitest';
 import type { ReplyCtx } from '../../src/contract/vocabulary.js';
 import type { JudgedGuard } from '../../src/cards/cards.js';
 import { Judge } from '../../src/run/judge.js';
-import { ScriptedModel } from '../fixtures/scripted-model.js';
+import { ScriptedModel } from '../../src/run/scripted-model.js';
 
 function judgedRow(name: string, policy: 'passOnFails' | 'denyOnFails' = 'denyOnFails'): JudgedGuard {
   return { name, rule: `${name} rule.`, home: 'spec', on: 'reply', tools: [], kind: 'judged',

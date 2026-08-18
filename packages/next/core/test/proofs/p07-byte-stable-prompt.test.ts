@@ -1,6 +1,7 @@
 import { test, expect } from 'vitest';
 import { onlyAfter } from '../../src/cards/catalog.js';
-import { ScriptedModel, callStep, finishStep } from '../fixtures/scripted-model.js';
+import { ScriptedModel } from '../../src/run/scripted-model.js';
+import { callStep, finishStep } from '../fixtures/scripted-model.js';
 import { BOOKING_SURFACE, install, testEngine } from '../fixtures/compiled-agents.js';
 import { RecordsPortStub } from '../fixtures/records-port-stub.js';
 

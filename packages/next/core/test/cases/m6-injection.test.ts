@@ -1,5 +1,6 @@
 import { test, expect } from 'vitest';
-import { ScriptedModel, callStep, finishStep } from '../fixtures/scripted-model.js';
+import { ScriptedModel } from '../../src/run/scripted-model.js';
+import { callStep, finishStep } from '../fixtures/scripted-model.js';
 import { injectionCheck } from '../../src/cards/catalog.js';
 import { caseRig } from '../fixtures/case-rig.js';
 

@@ -1,5 +1,6 @@
 import { test, expect } from 'vitest';
-import { ScriptedModel, callStep, finishStep } from '../fixtures/scripted-model.js';
+import { ScriptedModel } from '../../src/run/scripted-model.js';
+import { callStep, finishStep } from '../fixtures/scripted-model.js';
 import { testEngine } from '../fixtures/compiled-agents.js';
 
 // P8 · R7.2 — forced finish on exhaustion; the closure is a pure function of the

@@ -1,5 +1,6 @@
 import { test, expect } from 'vitest';
-import { ScriptedModel, callStep, finishStep } from '../fixtures/scripted-model.js';
+import { ScriptedModel } from '../../src/run/scripted-model.js';
+import { callStep, finishStep } from '../fixtures/scripted-model.js';
 import { testEngine } from '../fixtures/compiled-agents.js';
 
 // P12 · R8.3 — two concurrent chat calls on one session serialize; the second turn

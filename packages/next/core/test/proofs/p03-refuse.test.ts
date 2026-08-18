@@ -1,6 +1,7 @@
 import { test, expect } from 'vitest';
 import { maxCalls } from '../../src/cards/catalog.js';
-import { ScriptedModel, callStep, finishStep } from '../fixtures/scripted-model.js';
+import { ScriptedModel } from '../../src/run/scripted-model.js';
+import { callStep, finishStep } from '../fixtures/scripted-model.js';
 import { BOOKING_SURFACE, testEngine } from '../fixtures/compiled-agents.js';
 
 // P3 · R5.6 — refuse: the act records not-done/blocked with the guard's sentence in

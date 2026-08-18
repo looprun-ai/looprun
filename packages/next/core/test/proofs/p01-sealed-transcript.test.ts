@@ -1,5 +1,6 @@
 import { test, expect } from 'vitest';
-import { ScriptedModel, callStep, finishStep } from '../fixtures/scripted-model.js';
+import { ScriptedModel } from '../../src/run/scripted-model.js';
+import { callStep, finishStep } from '../fixtures/scripted-model.js';
 import { testEngine } from '../fixtures/compiled-agents.js';
 
 // P1 · R2.7 — a scripted turn seals [toolCall, toolResult, reply] in order, in a

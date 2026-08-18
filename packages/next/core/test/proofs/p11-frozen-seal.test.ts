@@ -1,6 +1,7 @@
 import { test, expect } from 'vitest';
 import type { Act, InputCtx } from '../../src/contract/vocabulary.js';
-import { ScriptedModel, callStep, finishStep } from '../fixtures/scripted-model.js';
+import { ScriptedModel } from '../../src/run/scripted-model.js';
+import { callStep, finishStep } from '../fixtures/scripted-model.js';
 import { install, testEngine } from '../fixtures/compiled-agents.js';
 
 // P11 · R2.9 — the sealed TurnRecord and every ctx travel deep-frozen (mutation

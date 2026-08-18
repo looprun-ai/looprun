@@ -1,5 +1,6 @@
 import { test, expect } from 'vitest';
-import { ScriptedModel, callStep, finishStep } from '../fixtures/scripted-model.js';
+import { ScriptedModel } from '../../src/run/scripted-model.js';
+import { callStep, finishStep } from '../fixtures/scripted-model.js';
 import { testEngine } from '../fixtures/compiled-agents.js';
 
 test('a whitespace-only required arg counts as MISSING and refuses loudly', async () => {

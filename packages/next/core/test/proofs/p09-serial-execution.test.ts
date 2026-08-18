@@ -3,7 +3,8 @@ import type { ReadyCall, ToolAnswer } from '../../src/contract/vocabulary.js';
 import type { ToolPort } from '../../src/contract/ports.js';
 import { ModelSeat } from '../../src/run/model-seat.js';
 import { Engine } from '../../src/run/engine.js';
-import { ScriptedModel, finishStep } from '../fixtures/scripted-model.js';
+import { ScriptedModel } from '../../src/run/scripted-model.js';
+import { finishStep } from '../fixtures/scripted-model.js';
 import { bookingAgent, scriptedTargets } from '../fixtures/compiled-agents.js';
 
 // P9 · R2.6 — two calls in one step execute serially, in emission order: the second

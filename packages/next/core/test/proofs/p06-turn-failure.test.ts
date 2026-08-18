@@ -1,7 +1,8 @@
 import { test, expect } from 'vitest';
 import { TurnFailure, CardError } from '../../src/contract/vocabulary.js';
 import { ModelSeat } from '../../src/run/model-seat.js';
-import { ScriptedModel, callStep, finishStep } from '../fixtures/scripted-model.js';
+import { ScriptedModel } from '../../src/run/scripted-model.js';
+import { callStep, finishStep } from '../fixtures/scripted-model.js';
 import { scriptedTargets, testEngine } from '../fixtures/compiled-agents.js';
 
 // P6 · R2.10 — a TurnFailure mid-turn discards the draft: zero partial acts sealed,
