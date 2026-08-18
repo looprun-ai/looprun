@@ -140,6 +140,11 @@ export class Turn {
       const actsBefore = draft.acts.length;
       for (const call of domain) {
         if (callsUsed >= compiled.limits.calls) { forced = true; continue; }
+        // The FIRST question ends the exchange: later calls in the same emission
+        // never run — one ask, one answer, one turn.
+        if (draft.acts.slice(actsBefore).some(a => a.reason === 'held' && a.questionId !== null)) {
+          break;
+        }
         callsUsed += 1;
         await runner.run(call, 'model', draft);
       }

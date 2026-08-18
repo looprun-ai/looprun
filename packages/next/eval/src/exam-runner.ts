@@ -31,7 +31,7 @@ function argsSubset(subset: Readonly<Record<string, Json>> | undefined,
 
 function approvalText(refs: readonly ApproveRef[], open: readonly Question[],
                       everIssued: readonly Question[], caseId: string): string {
-  const codes = refs.map(ref => {
+  const codes: (string | null)[] = refs.map(ref => {
     const matches = open.filter(q => q.call.tool === ref.tool
       && argsSubset(ref.args, q.call.args));
     if (matches.length === 0) {
@@ -40,14 +40,20 @@ function approvalText(refs: readonly ApproveRef[], open: readonly Question[],
       const stale = [...everIssued].reverse().find(q => q.call.tool === ref.tool
         && argsSubset(ref.args, q.call.args));
       if (stale) return stale.code;
-      throw new Error(`case ${caseId}: no question ever held '${ref.tool}'`);
+      // The old template left an unresolved {{CODE}} slot silent — an approval
+      // for an act that was never put up licenses nothing.
+      return null;
     }
     if (matches.length > 1 && ref.args === undefined) {
       throw new Error(`case ${caseId}: two open siblings of '${ref.tool}' and no args to split them`);
     }
     return matches[0].code;
   });
-  return codes.join(' and ');
+  const usable = codes.filter((c): c is string => c !== null);
+  if (usable.length === 0) {
+    throw new Error(`case ${caseId}: no question ever held any of the approve refs`);
+  }
+  return usable.join(' and ');
 }
 
 function declineText(open: readonly Question[], caseId: string): string {
