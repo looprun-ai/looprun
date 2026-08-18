@@ -28,7 +28,7 @@ function readAct(result: Act['result']): Act {
   return { id: 'a1', turn: 1, origin: 'engine',
     call: { tool: 'getBooking', args: { bookingRef: 'bk_9' }, key: 'r' },
     effect: 'read', said: 'yes', status: 'done', reason: null, evidence: 'executor',
-    sentence: 'getBooking(bk_9) — done', result, questionId: null };
+    sentence: 'getBooking(bk_9) — done', result, questionId: null, guard: null };
 }
 
 test('owedReads is the declared rename of the frozen held call — nothing else', () => {

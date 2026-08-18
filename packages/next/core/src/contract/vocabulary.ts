@@ -56,6 +56,7 @@ export interface Act {
   readonly sentence: string;                  // the record line the user reads
   readonly result: Json;                      // masked; on a held call with simulation: the simulated result
   readonly questionId: string | null;         // the consent question this act raised or served
+  readonly guard: string | null;              // the guard whose verdict shaped this act; null = none
 }
 export interface ReportLine { readonly tool: string; readonly target: string; readonly word: ReportWord }
 export interface FinishPayload { readonly message: string; readonly report: readonly ReportLine[] }

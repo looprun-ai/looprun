@@ -1,23 +1,11 @@
 import { test, expect } from 'vitest';
 import ts from 'typescript';
+import { RETIRED_NAMES } from '../../src/contract/rename-register.js';
 import { sourceFiles } from './walk.js';
 
-/** The §11 rename register: every retired identifier is a build failure anywhere in
- *  packages/next. Whole-identifier matching over real code identifiers — string
- *  literals and comments never trip the gate, so this register lists itself safely.
- *  Register rows that ban a field-in-context only (AgentSpec.mode, the world-audit
- *  outcome) are enforced by the field's absence from the types, not by token scan. */
-const BANNED = new Set([
-  'say', 'view', 'CallView', 'ReplyView', 'InstalledRule', 'ruleName',
-  'intake', 'IntakeGate', 'IntakeTool', 'CertifiedIntake', 'intakeFromWorld',
-  'toolDefs', 'expectedSurfaceHash', 'volatile', 'requiresBefore', 'readFirst',
-  'forbidThisTurn', 'neverCall', 'consentRequired', 'resultInvariant',
-  'destructiveThrottle', 'degenerationGuard', 'jargonScrub', 'llmCheck',
-  'llmCheckLie', 'ask', 'control', 'ControlStrip', 'controlCompile',
-  'stateView', 'modelParams', 'terminalProtocol', 'stopOnRepeatedToolCall',
-  'redrives', 'tookEffect', 'effectInferred', 'probe', 'dryRun', 'preview',
-  'sampling', 'Sampling', 'internal'
-]);
+// The register itself lives in the contract leaf — subjects and the eval lints
+// consume the same rows this gate enforces.
+const BANNED = new Set(RETIRED_NAMES);
 
 test('no retired identifier from the rename register exists in the tree', () => {
   const hits: string[] = [];

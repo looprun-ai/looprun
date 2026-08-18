@@ -2,6 +2,7 @@
  *  (cards + world), and the engine. Facade packages import from here by name. */
 export * from './contract/vocabulary.js';
 export * from './contract/ports.js';
+export { RETIRED_NAMES } from './contract/rename-register.js';
 export { world, mcpWorld, liveWorld } from './world/world.js';
 export { WorldBuilder, BuiltWorld } from './world/world-builder.js';
 export { AgentFactory } from './cards/agent-factory.js';

@@ -26,7 +26,7 @@ function mock(onCapture: (o: GenOpts) => void,
 }
 
 const ACT: Act = {
-  id: 'a1', turn: 1, origin: 'model',
+  id: 'a1', turn: 1, origin: 'model', guard: null,
   call: { tool: 'getBooking', args: { id: 'bk_9' }, key: 'getBooking|{"id":"bk_9"}' },
   effect: 'read', said: 'yes', status: 'done', reason: null, evidence: 'executor',
   sentence: 'getBooking — done', result: { status: 'CONFIRMED', day: 'Tuesday' },

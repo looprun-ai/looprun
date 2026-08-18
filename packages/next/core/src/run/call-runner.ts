@@ -90,7 +90,7 @@ export class CallRunner {
           status: grade.status, reason: grade.reason, evidence: grade.evidence,
           sentence: `${this.head(call, fact)} — not-done (${rule} ${verdict.detail})`.trimEnd(),
           result: null
-        });
+        }, undefined, null, verdict.guardName);
       }
       case 'restate': {
         const first = draft.acts.find(a => a.id === verdict.actId)
@@ -124,7 +124,7 @@ export class CallRunner {
           status: grade.status, reason: grade.reason, evidence: grade.evidence,
           sentence: `${this.head(call, fact)} — not-done (held for your approval)`,
           result: null
-        }, undefined, question.id);
+        }, undefined, question.id, verdict.guardName);
       }
       case 'owe': {
         if (!mayOwe) return this.refuseUnpaidDebt(call, fact, origin, state, draft);
@@ -237,9 +237,10 @@ export class CallRunner {
     return printable !== null ? `${call.tool}(${printable})` : `${call.tool}()`;
   }
 
-  private record(draft: TurnDraft, act: Omit<Act, 'id' | 'turn' | 'questionId'>,
-                 id?: string, questionId: string | null = null): Act {
+  private record(draft: TurnDraft, act: Omit<Act, 'id' | 'turn' | 'questionId' | 'guard'>,
+                 id?: string, questionId: string | null = null,
+                 guard: string | null = null): Act {
     return this.deps.history.add({ ...act, id: id ?? this.deps.history.mint(),
-      turn: draft.turn, questionId }, draft);
+      turn: draft.turn, questionId, guard }, draft);
   }
 }
