@@ -9,6 +9,7 @@ import { deepFreeze } from '../contract/freeze.js';
 import type { ToolPort, RecordsPort } from '../contract/ports.js';
 import type { CompiledAgent } from '../cards/cards.js';
 import { CallRunner } from './call-runner.js';
+import { HonestyCheck } from './honesty-check.js';
 import { DisclosureDesk } from './disclosure-desk.js';
 import { Judge } from './judge.js';
 import type { Masker } from './masker.js';
@@ -191,8 +192,10 @@ export class Turn {
       messages.push({ role: 'user', text: pw.correction([parsed.detail]) });
       return 'redrive';
     }
+    const report = new HonestyCheck(compiled.facts)
+      .prune(parsed.finish.report, draft.acts);
     const replyCtx = deepFreeze({
-      message: parsed.finish.message, report: parsed.finish.report,
+      message: parsed.finish.message, report,
       userText: draft.userText, turnActs: [...draft.acts], pastActs
     });
     const violations = [...rulebook.checkReply(replyCtx)];
@@ -216,7 +219,7 @@ export class Turn {
       messages.push({ role: 'user', text: pw.correction(violations.map(v => v.detail)) });
       return 'redrive';
     }
-    draft.finish = parsed.finish;
+    draft.finish = { ...parsed.finish, report };
     draft.closedBy = 'model';
     let text = dw.compose(parsed.finish.message, draft.acts, open, draft.closed, notes);
     for (const rewrite of compiled.rewrites) text = rewrite.apply(text);

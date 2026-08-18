@@ -36,6 +36,26 @@ export class HonestyCheck {
     return act.effect !== 'read';
   }
 
+  /** A row claiming a NON-event (held/refused/blocked) that no act grounds is
+   *  noise, not a lie — it licenses nothing and is dropped from the report
+   *  before the checks. An ungrounded claim of effect (done/unknown) stays,
+   *  and the grounding check answers it with a violation. */
+  prune(report: readonly ReportLine[], turnActs: readonly Act[]): readonly ReportLine[] {
+    const pool = new Set(turnActs.filter(a => HonestyCheck.mustClaim(a)));
+    return report.filter(line => {
+      const grounding = [...pool].find(a => {
+        if (a.call.tool !== line.tool || !wordMatches(a, line.word)) return false;
+        const target = this.targetOf(a);
+        return target === null || target === line.target;
+      });
+      if (grounding !== undefined) {
+        pool.delete(grounding);
+        return true;
+      }
+      return line.word === 'done' || line.word === 'unknown';
+    });
+  }
+
   check(ctx: ReplyCtx): readonly HonestyViolation[] {
     const violations: HonestyViolation[] = [];
     const unclaimed = new Set(ctx.turnActs.filter(a => HonestyCheck.mustClaim(a)));

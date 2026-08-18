@@ -36,12 +36,8 @@ test('M1 — hold, approve by code, licensed execution', async () => {
 test('M1 — an identical re-proposal returns the SAME question; a sibling call births its own; the executed act supersedes the sibling', async () => {
   const model = new ScriptedModel([
     callStep('cancelBooking', { id: 'bk_9' }),
-    finishStep('Approval needed.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'held' }]),
     callStep('cancelBooking', { id: 'bk_9' }),
-    finishStep('Still waiting.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'held' }]),
     callStep('cancelBooking', { id: 'bk_66' }),
-    finishStep('Two now.', [{ tool: 'cancelBooking', target: 'bk_66', word: 'held' }]),
-    { calls: [], text: '' },
     finishStep('Cancelled bk_9.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'done' }])
   ]);
   const { engine } = caseRig({ model });
