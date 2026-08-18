@@ -13,7 +13,7 @@ export type {
   AgentSpec, DomainContract, CompiledAgent, CompiledGuard, Guard, GuardCtx,
   JudgedGuard, Limits, Disclosure, DisclosureBinding, MaskKey, Wording, PromptParts
 } from './cards/cards.js';
-export { onlyAfter, precondition, valueFromUser, checkResult, mustAccountFor,
+export { onlyAfter, precondition, valueFromUser, checkResult, mustAccountFor, argFormat,
          argAbsent, blockPattern, purgePattern, maskPattern, swapTerms, maxCalls,
          lieCheck, impossibilityCheck, injectionCheck, hallucinationCheck }
   from './cards/catalog.js';
