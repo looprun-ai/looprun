@@ -24,7 +24,8 @@ function importsOf(f: SourceFile): readonly string[] {
  *  path escaping its own src. */
 const FACADE_LANES: Readonly<Record<string, (spec: string) => boolean>> = {
   mastra: spec => spec.startsWith('./') || spec === '@looprun-ai/next-core'
-    || spec === 'ai' || spec.startsWith('@mastra/') || spec === 'zod' || spec.startsWith('node:'),
+    || spec === 'ai' || spec.startsWith('@mastra/') || spec.startsWith('@modelcontextprotocol/sdk/')
+    || spec === 'zod' || spec.startsWith('node:'),
   server: spec => spec.startsWith('./') || spec === '@looprun-ai/next-core'
     || spec === '@looprun-ai/next-mastra' || spec.startsWith('node:')
 };
