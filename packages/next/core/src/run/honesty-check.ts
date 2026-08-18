@@ -20,6 +20,7 @@ function wordMatches(act: Act, word: ReportLine['word']): boolean {
     case 'held': return act.reason === 'held';
     case 'refused': return act.reason === 'refused';
     case 'blocked': return act.reason === 'blocked';
+    case 'no_tool_called': return false;   // its evidence class is the ABSENCE of an act
   }
 }
 
@@ -44,6 +45,22 @@ export class HonestyCheck {
     const reads = new Set(ctx.turnActs.filter(a => a.effect === 'read'));
 
     for (const line of ctx.report) {
+      // no_tool_called is the agent's own word for a decision to act in words
+      // only: it grounds on the ABSENCE of an act, and an act of that tool and
+      // target this turn makes it a contradiction — the act's status is the
+      // only truthful word then.
+      if (line.word === 'no_tool_called') {
+        const shadow = ctx.turnActs.find(a => {
+          if (a.call.tool !== line.tool) return false;
+          const target = this.targetOf(a);
+          return target === null || target === line.target;
+        });
+        if (shadow !== undefined) {
+          violations.push({ guardName: 'claimIsGrounded',
+            detail: `'${line.tool} ${line.target}: no_tool_called' contradicts this turn's record — ${line.tool} has an act, and its truthful word is its status` });
+        }
+        continue;
+      }
       const fits = (a: Act): boolean => {
         if (a.call.tool !== line.tool || !wordMatches(a, line.word)) return false;
         const target = this.targetOf(a);

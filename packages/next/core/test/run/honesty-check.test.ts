@@ -61,3 +61,16 @@ test('matching is order-free and one act grounds one claim', () => {
   ], [a1]));
   expect(doubled.some(x => x.guardName === 'claimIsGrounded')).toBe(true);
 });
+
+test('no_tool_called grounds on absence — an act of that tool and target makes it a contradiction', () => {
+  const clean = checker.check(ctx([{ tool: 'compRoom', target: 'bk_9', word: 'no_tool_called' }], []));
+  expect(clean).toHaveLength(0);
+
+  const ran = act('compRoom', 'bk_9', 'done', null);
+  const v = checker.check(ctx(
+    [{ tool: 'compRoom', target: 'bk_9', word: 'no_tool_called' },
+     { tool: 'compRoom', target: 'bk_9', word: 'done' }], [ran]));
+  expect(v).toHaveLength(1);
+  expect(v[0].guardName).toBe('claimIsGrounded');
+  expect(v[0].detail).toContain('contradicts');
+});

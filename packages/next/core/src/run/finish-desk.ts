@@ -7,7 +7,25 @@
 import { z } from 'zod';
 import type { Act, Correction, FinishPayload, Json, RawCall, ToolCard } from '../contract/vocabulary.js';
 
-const REPORT_WORDS = ['done', 'held', 'refused', 'blocked', 'unknown'] as const;
+const REPORT_WORDS = ['done', 'held', 'refused', 'blocked', 'unknown', 'no_tool_called'] as const;
+
+/** Every word taught with its evidence class — the model picks by the legend,
+ *  never by guessing what a word means. */
+const WORD_LEGEND: Readonly<Record<(typeof REPORT_WORDS)[number], string>> = {
+  done: 'the call ran and took effect',
+  held: 'the call is held for approval',
+  refused: 'the call ran and the system said no',
+  blocked: 'a rule stopped the call',
+  unknown: 'the call ran; the outcome is unclear',
+  no_tool_called: 'you chose to answer in words only — no call was made for this'
+};
+
+const FIELD_LEGEND: Readonly<Record<string, string>> = {
+  message: 'the user-facing closing message',
+  tool: 'the tool the line is about — called, or deliberately not called',
+  target: 'the record id the line is about, exactly as the records name it; empty when none',
+  word: 'what happened, per the legend'
+};
 
 const finishSchema = z.strictObject({
   message: z.string().min(1),
@@ -28,13 +46,18 @@ export class FinishDesk {
     for (const key of Object.keys(finishSchema.shape)) {
       properties[key] = key === 'report'
         ? { type: 'array', items: { type: 'object', properties: Object.fromEntries(
-            Object.keys(reportShape).map(k => [k, { type: 'string' }])) } }
-        : { type: 'string' };
+            Object.keys(reportShape).map(k => [k, {
+              type: 'string',
+              ...(FIELD_LEGEND[k] !== undefined ? { description: FIELD_LEGEND[k] } : {}),
+              ...(k === 'word' ? { enum: [...REPORT_WORDS] } : {})
+            }])) } }
+        : { type: 'string',
+            ...(FIELD_LEGEND[key] !== undefined ? { description: FIELD_LEGEND[key] } : {}) };
     }
     return {
       name: FINISH_TOOL,
-      does: `Close the turn: a user-facing message plus one report line per claimed act `
-        + `(tool, target, word — one of ${REPORT_WORDS.join(' | ')}).`,
+      does: `Close the turn: a user-facing message plus one report line per claimed act. Words: `
+        + REPORT_WORDS.map(w => `${w} = ${WORD_LEGEND[w]}`).join('; ') + '.',
       schema: { type: 'object', properties, required: Object.keys(finishSchema.shape) }
     };
   }

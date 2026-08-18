@@ -6,7 +6,8 @@ export type Effect = 'read' | 'write' | 'destructive';       // 'destructive' = 
 export type Done = 'yes' | 'no' | 'unknown';                 // the executor's whole vocabulary
 export type Status = 'done' | 'not-done' | 'unknown';        // THE user-facing word, engine-derived
 export type Reason = 'held' | 'refused' | 'blocked';         // why not-done
-export type ReportWord = 'done' | 'held' | 'refused' | 'blocked' | 'unknown';   // the model's closing vocabulary
+export type ReportWord = 'done' | 'held' | 'refused' | 'blocked' | 'unknown'
+  | 'no_tool_called';                         // the model's closing vocabulary; no_tool_called = a decision to act in words only
 export type Evidence = 'executor' | 'diff' | 'engine';       // who grounded the status
 export type QuestionClose = 'declined' | 'superseded' | 'expired' | 'vetoed';
 export type QuestionState = 'open' | 'consumed' | { readonly closed: QuestionClose };
