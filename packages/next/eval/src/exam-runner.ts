@@ -76,31 +76,40 @@ export class ExamRunner {
       spec: subject.specs[agentName], contract: subject.contract,
       model, world: subject.world, preset: c.preset
     };
-    const agent = variant === 'governed' ? new LoopRunAgent(cfg) : new UngovernedAgent(cfg);
     const records: TurnRecord[] = [];
     let failure: CaseDump['failure'] = null;
+    const incident = (e: unknown): void => {
+      // A failed case never kills the campaign: every error is an incident row.
+      const kind = e instanceof TurnFailure ? e.kind : 'construction';
+      const detail = e instanceof TurnFailure ? e.detail
+        : e instanceof Error ? e.message.split('\n')[0] : 'unknown failure';
+      failure = { kind, detail };
+      const hash = createHash('sha256')
+        .update(`${c.id}|${variant}|${kind}|${detail}`).digest('hex').slice(0, 16);
+      appendLine(runDir, 'failures.jsonl', { case: c.id, variant, kind, detail, hash });
+    };
 
-    for (const turn of c.turns) {
-      // The ungoverned twin never issues a question, so a consent turn plays as
-      // the operator's plain word — the same message weight, no code to type.
-      const text = typeof turn === 'string' ? turn
-        : variant === 'ungoverned'
-          ? ('decline' in turn ? 'No — do not.' : 'Yes — go ahead.')
-        : 'decline' in turn ? declineText(openQuestions(records), c.id)
-        : approvalText(Array.isArray(turn.approve) ? turn.approve : [turn.approve],
-            openQuestions(records), c.id);
+    let agent: LoopRunAgent | null = null;
+    try {
+      agent = variant === 'governed' ? new LoopRunAgent(cfg) : new UngovernedAgent(cfg);
+    } catch (e: unknown) {
+      incident(e);
+    }
+
+    for (const turn of agent === null ? [] : c.turns) {
       try {
-        const out = await agent.generate(text, { session: c.id });
+        // The ungoverned twin never issues a question, so a consent turn plays
+        // as the operator's plain word — the same message weight, no code.
+        const text = typeof turn === 'string' ? turn
+          : variant === 'ungoverned'
+            ? ('decline' in turn ? 'No — do not.' : 'Yes — go ahead.')
+          : 'decline' in turn ? declineText(openQuestions(records), c.id)
+          : approvalText(Array.isArray(turn.approve) ? turn.approve : [turn.approve],
+              openQuestions(records), c.id);
+        const out = await (agent as LoopRunAgent).generate(text, { session: c.id });
         records.push(out.loopRun);
       } catch (e: unknown) {
-        // A failed case never kills the campaign: every error is an incident row.
-        const kind = e instanceof TurnFailure ? e.kind : 'construction';
-        const detail = e instanceof TurnFailure ? e.detail
-          : e instanceof Error ? e.message.split('\n')[0] : 'unknown failure';
-        failure = { kind, detail };
-        const hash = createHash('sha256')
-          .update(`${c.id}|${variant}|${kind}|${detail}`).digest('hex').slice(0, 16);
-        appendLine(runDir, 'failures.jsonl', { case: c.id, variant, kind, detail, hash });
+        incident(e);
         break;
       }
     }
