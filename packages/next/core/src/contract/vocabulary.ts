@@ -170,7 +170,9 @@ export interface TierSpec { readonly alias: string;
  *  LlmParams is re-exported for authors. */
 export interface ToolFact { readonly name: string; readonly label: string | null;
                             readonly does: string; readonly effect: Effect;
-                            readonly target: string | null; readonly schema: Json;
+                            readonly target: string | null;   // the arg naming the record id
+                            readonly entity: string | null;   // the records table the tool acts on
+                            readonly schema: Json;
                             readonly simulation: { readonly arg: string; readonly value: Json } | null;
                             readonly proxy: string | null }
 /** The whole declared surface as facts, keyed by tool name. */

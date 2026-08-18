@@ -38,6 +38,7 @@ function declaredFact(name: string, entry: WorldToolEntry, effect: Effect): Tool
     does: entry.does ?? `${entry.label} (${entry.form} on ${entry.entity}).`,
     effect,
     target: targeted ? 'id' : null,
+    entity: entry.entity,
     schema: formSchema(entry),
     simulation: entry.simulation === true ? { arg: 'simulate', value: true } : null,
     proxy: null
@@ -51,6 +52,7 @@ function remoteFact(name: string, entry: RemoteToolEntry, effect: Effect): ToolF
     does: entry.does ?? `${entry.label}.`,
     effect,
     target: entry.target ?? null,
+    entity: null,
     schema: entry.schema ?? EMPTY_SCHEMA,
     simulation: entry.simulation === true ? { arg: 'simulate', value: true } : null,
     proxy: entry.proxy ?? null

@@ -10,7 +10,7 @@ import { ModelSeat } from '../../src/run/model-seat.js';
 import { HostileToolPort, type ToolBehavior } from './hostile-tool-port.js';
 
 export function fact(partial: Partial<ToolFact> & { name: string; effect: ToolFact['effect'] }): ToolFact {
-  return { label: null, does: `runs ${partial.name}`, target: null,
+  return { label: null, does: `runs ${partial.name}`, target: null, entity: null,
     schema: { type: 'object', properties: {}, required: [] }, simulation: null, proxy: null, ...partial };
 }
 
