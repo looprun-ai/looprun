@@ -211,6 +211,21 @@ export interface WorldCard { readonly records: StateSnapshot;
                              readonly writes?: Readonly<Record<string, WorldToolEntry>>;
                              readonly destructive?: Readonly<Record<string, WorldToolEntry>>;
                              readonly presets?: Readonly<Record<string, readonly Patch[]>> }
+/** One scripted exam turn: user text, a typed approval (args only to split open
+ *  siblings — a code is never extracted from prose), or a typed decline. */
+export type ExamTurn = string
+  | { readonly approve: { readonly tool: string; readonly args?: Readonly<Record<string, Json>> } }
+  | { readonly decline: true };
+/** One exam case: the turns, the split discipline, and the rubric the in-session
+ *  judge reads. `agent` names the desk on a multi-agent subject; `red` names the
+ *  attack class when the case is an adversarial row. */
+export interface ExamCase { readonly id: string;
+                            readonly split: 'fix' | 'held-out';
+                            readonly agent?: string;
+                            readonly red?: string;
+                            readonly turns: readonly ExamTurn[];
+                            readonly rubric: string }
+
 /** One remote tool on an MCP or live surface: words and bindings, no action form.
  *  proxy as a string is a declared RENAME to the real live tool; proxy as a compose
  *  block executes the listed live reads and merges their results in order. */

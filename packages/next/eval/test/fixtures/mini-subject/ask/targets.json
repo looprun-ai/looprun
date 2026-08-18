@@ -1,0 +1,2 @@
+{ "targets": [{ "provider": "google", "model": "gemini-3.1-flash-lite",
+                "keyEnv": "GOOGLE_GENERATIVE_AI_API_KEY" }] }
