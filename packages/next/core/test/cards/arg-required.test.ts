@@ -7,7 +7,7 @@ test('a whitespace-only required arg counts as MISSING and refuses loudly', asyn
   const model = new ScriptedModel([
     callStep('sendEmail', { to: '   ' }),
     finishStep('I could not send the email.',
-      [{ tool: 'sendEmail', target: 'unknown', word: 'blocked' }])
+      [{ tool: 'sendEmail', target: 'unknown', word: 'refused' }])
   ]);
   const { engine, port } = testEngine({ model });
 

@@ -7,15 +7,14 @@
 import { z } from 'zod';
 import type { Act, Correction, FinishPayload, Json, RawCall, ToolCard } from '../contract/vocabulary.js';
 
-const REPORT_WORDS = ['done', 'held', 'refused', 'blocked', 'unknown', 'no_tool_called'] as const;
+const REPORT_WORDS = ['done', 'held', 'refused', 'unknown', 'no_tool_called'] as const;
 
 /** Every word taught with its evidence class — the model picks by the legend,
  *  never by guessing what a word means. */
 const WORD_LEGEND: Readonly<Record<(typeof REPORT_WORDS)[number], string>> = {
   done: 'the call ran and took effect',
   held: 'the call is held for approval',
-  refused: 'the call ran and the system said no',
-  blocked: 'a rule stopped the call',
+  refused: 'the call ran and was turned down — by the system or by a rule',
   unknown: 'the call ran; the outcome is unclear',
   no_tool_called: 'you chose to answer in words only — no call was made for this'
 };

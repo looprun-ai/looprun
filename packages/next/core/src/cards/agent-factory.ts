@@ -10,7 +10,7 @@ import type { AgentSpec, CompiledAgent, CompiledGuard, Disclosure, DisclosureBin
               DomainContract, Guard, JudgedGuard, MaskKey } from './cards.js';
 import { DEFAULT_LIMITS } from './cards.js';
 import { CardCheck } from './card-check.js';
-import { argFormat, argRequired, brokenReply, confirmFirst, groundedIds, maxDestructive,
+import { argFormat, argRequired, brokenReply, confirmFirst, groundedDates, groundedIds, maxDestructive,
          noDuplicateCall, type SeedGuard } from './catalog.js';
 import { resolveWording } from './wordings.js';
 
@@ -91,7 +91,7 @@ export class AgentFactory {
     const lane = spec.tools === undefined ? facts
       : { tools: Object.fromEntries(Object.entries(facts.tools)
           .filter(([name]) => spec.tools?.includes(name))),
-          tail: facts.tail ?? null };
+          tail: facts.tail ?? null, note: facts.note ?? null };
 
     const limits = { ...DEFAULT_LIMITS, ...contract?.limits, ...spec.limits };
     const guards: CompiledGuard[] = [];
@@ -115,6 +115,7 @@ export class AgentFactory {
     // Groundedness outranks consent: an id nobody produced refuses before it is
     // ever put up for approval.
     guards.push(groundedIds().compile('engine', lane));
+    guards.push(groundedDates().compile('engine', lane));
     for (const fact of Object.values(lane.tools)) {
       if (fact.effect === 'destructive') {
         guards.push(confirmFirst(fact.name, fact.label ?? fact.name,

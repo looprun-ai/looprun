@@ -205,6 +205,38 @@ export function groundedIds(): SeedGuard {
   };
 }
 
+/** A date on a WRITE must be one somebody gave the model: the operator's
+ *  messages, the recorded acts, or the state note. A read may compute a range
+ *  freely; a write stamps only a date that exists somewhere. */
+export function groundedDates(): SeedGuard {
+  const isDateShaped = (v: string): boolean => {
+    if (v.length !== 10 || v[4] !== '-' || v[7] !== '-') return false;
+    return [...v].every((ch, i) => i === 4 || i === 7 || (ch >= '0' && ch <= '9'));
+  };
+  return {
+    name: 'groundedDates',
+    rule: 'A date you were not given and did not read is a guess — a write carries only a date from the operator, the records, or the state note.',
+    on: 'preTool',
+    kind: 'groundedDates',
+    compile(home, facts) {
+      return installedAt<CallCtx>(this, home, ctx => {
+        const fact = facts.tools[ctx.call.tool];
+        if (fact === undefined || fact.effect === 'read') return null;
+        for (const [arg, v] of Object.entries(ctx.call.args)) {
+          if (typeof v !== 'string' || !isDateShaped(v)) continue;
+          const note = facts.note != null && ctx.state !== null ? facts.note(ctx.state) : '';
+          const grounded = ctx.userTexts.some(t => t.includes(v))
+            || [...ctx.pastActs, ...ctx.turnActs].some(a =>
+              JSON.stringify(a.result).includes(v) || JSON.stringify(a.call.args).includes(v))
+            || note.includes(v);
+          if (!grounded) return `'${v}' in '${arg}' is a date nobody gave you — the operator's words, the records and the state note hold the only dates there are`;
+        }
+        return null;
+      }, 'the always-on floor');
+    }
+  };
+}
+
 /** The always-on floor: structural reply damage — byte-identical line repetition,
  *  engine-taught literals leaking as prose, tool markup, foreign chat-template
  *  tokens. Structural, never linguistic. */

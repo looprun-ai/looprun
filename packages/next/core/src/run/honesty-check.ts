@@ -1,6 +1,7 @@
 /** The honest-report rule: exact bipartite matching of the report against the
  *  turn's acts, both directions, order-free. Every line is target-bound; every word
- *  has a defined evidence class — refused and blocked require the recorded reason.
+ *  has a defined evidence class — refused covers every terminal denial, by the
+ *  system or by a rule; the act's own reason keeps the fine grain.
  *  A declaration is (tool, target, word) with NO figure field, so a declared figure
  *  cannot exist to corroborate — figures reach the user only through engine-rendered
  *  record lines. Hiding = a leftover must-claim act; lying = a claim matching no
@@ -18,8 +19,7 @@ function wordMatches(act: Act, word: ReportLine['word']): boolean {
     case 'done': return act.status === 'done';
     case 'unknown': return act.status === 'unknown';
     case 'held': return act.reason === 'held';
-    case 'refused': return act.reason === 'refused';
-    case 'blocked': return act.reason === 'blocked';
+    case 'refused': return act.reason === 'refused' || act.reason === 'blocked';
     case 'no_tool_called': return false;   // its evidence class is the ABSENCE of an act
   }
 }
@@ -87,7 +87,7 @@ export class HonestyCheck {
       const wordOf = (a: Act): ReportLine['word'] =>
         a.status === 'done' ? 'done'
         : a.status === 'unknown' ? 'unknown'
-        : a.reason ?? 'blocked';
+        : a.reason === 'held' ? 'held' : 'refused';
       violations.push({ guardName: 'claimIsGrounded',
         detail: sameCall !== undefined
           ? `the word is wrong on '${line.tool} ${line.target}: ${line.word}' — that call's truthful word this turn is '${wordOf(sameCall)}'; write { tool: '${line.tool}', target: '${line.target}', word: '${wordOf(sameCall)}' }`

@@ -33,12 +33,13 @@ test('a leftover must-claim act is hiding — the denial names the tool and targ
   expect(v[0].detail).toContain('bk_9');
 });
 
-test('the word carries an evidence class — refused needs a recorded refusal', () => {
+test('refused covers every terminal denial; a held act never grounds it', () => {
   const blocked = act('compRoom', 'bk_9', 'not-done', 'blocked');
-  const v = checker.check(ctx([{ tool: 'compRoom', target: 'bk_9', word: 'refused' }], [blocked]));
-  expect(v.some(x => x.guardName === 'claimIsGrounded')).toBe(true);
-  const ok = checker.check(ctx([{ tool: 'compRoom', target: 'bk_9', word: 'blocked' }], [blocked]));
+  const ok = checker.check(ctx([{ tool: 'compRoom', target: 'bk_9', word: 'refused' }], [blocked]));
   expect(ok).toEqual([]);
+  const held = act('compRoom', 'bk_9', 'not-done', 'held');
+  const v = checker.check(ctx([{ tool: 'compRoom', target: 'bk_9', word: 'refused' }], [held]));
+  expect(v.some(x => x.guardName === 'claimIsGrounded')).toBe(true);
 });
 
 test('a held act supports a held line; reads are never owed as claims', () => {

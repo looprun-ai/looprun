@@ -82,7 +82,7 @@ test('a micro-step that fills nothing refuses the gated call — the turn still 
     callStep('cancelBooking', { id: 'bk_9' }),
     { calls: [], text: 'I am not sure which booking.' },
     finishStep('I could not cancel bk_9 — I could not read it first.',
-      [{ tool: 'cancelBooking', target: 'bk_9', word: 'blocked' }])
+      [{ tool: 'cancelBooking', target: 'bk_9', word: 'refused' }])
   ]);
   const { engine, port } = testEngine({
     model, guards: [guard], facts: MISMATCHED, behaviors: MISMATCHED_BEHAVIORS
@@ -110,7 +110,7 @@ test('a paid read that FAILS refuses the gated call with the rule — never a de
     callStep('cancelBooking', { id: 'bk_9' }),
     callStep('getBooking', { bookingRef: 'bk_9' }),
     finishStep('I could not cancel bk_9.',
-      [{ tool: 'cancelBooking', target: 'bk_9', word: 'blocked' }])
+      [{ tool: 'cancelBooking', target: 'bk_9', word: 'refused' }])
   ]);
   const { engine } = testEngine({
     model, guards: [guard], facts: MISMATCHED,

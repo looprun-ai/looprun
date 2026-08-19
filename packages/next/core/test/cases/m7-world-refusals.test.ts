@@ -30,7 +30,7 @@ test('M7 — a contract precondition vetoes before consent even asks', async () 
   const model = new ScriptedModel([
     callStep('cancelBooking', { id: 'bk_9' }),
     finishStep('The invoice is unpaid, so I cannot cancel.',
-      [{ tool: 'cancelBooking', target: 'bk_9', word: 'blocked' }])
+      [{ tool: 'cancelBooking', target: 'bk_9', word: 'refused' }])
   ]);
   const { engine } = caseRig({ model, contract: { guards: [
     precondition('cancelBooking',
