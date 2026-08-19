@@ -26,7 +26,10 @@ test.skipIf(RUN === '' || !existsSync(ATLAS))('atlas run', { timeout: 0 }, async
   const wanted = RUN === 'all' ? subject.cases
     : RUN.startsWith('first:') ? subject.cases.slice(0, Number(RUN.slice(6)))
     : RUN.startsWith('range:')
-      ? subject.cases.slice(Number(RUN.split(':')[1]) - 1, Number(RUN.split(':')[2]))
+      ? subject.cases.filter(c => {
+          const n = Number.parseInt(c.id, 10);
+          return n >= Number(RUN.split(':')[1]) && n <= Number(RUN.split(':')[2]);
+        })
     : subject.cases.filter(c => RUN.split(',').includes(c.id));
   const runner = new ExamRunner();
   resetUsageTotals();
