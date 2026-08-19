@@ -67,6 +67,19 @@ test('the card empty sentence speaks instead, rendered over the held args', () =
     .toBe('Booking bk_9 carries no room to cancel.');
 });
 
+test('a digits step reaches into a list — the first row fills the slot', () => {
+  const listed = new AgentFactory().governed(
+    { name: 'a', persona: 'p' },
+    { name: 'd', disclosure: { getBooking: {
+        after: 'Room {result.rows.0.room} stands first.' } } },
+    MISMATCHED);
+  const listedDesk = new DisclosureDesk(listed.disclosureBindings);
+  expect(listedDesk.afterOf('getBooking', { tool: 'getBooking', args: {}, key: 'k' },
+    { rows: [{ room: '12' }, { room: '7' }] })).toBe('Room 12 stands first.');
+  expect(listedDesk.afterOf('getBooking', { tool: 'getBooking', args: {}, key: 'k' },
+    { rows: [] })).toBeNull();
+});
+
 test('emptyRefusal stays silent while every tense fills', () => {
   const reads = new Map([['booking', readAct({ room: '12', day: 'Tuesday' })]]);
   expect(desk.emptyRefusal('cancelBooking', HELD, reads)).toBeNull();

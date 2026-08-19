@@ -18,7 +18,13 @@ export interface Tenses { readonly before: string | null;
 function lookup(values: Readonly<Record<string, Json>>, path: readonly string[]): Json | undefined {
   let current: Json | undefined = values[path[0]];
   for (const step of path.slice(1)) {
-    if (typeof current !== 'object' || current === null || Array.isArray(current)) return undefined;
+    if (typeof current !== 'object' || current === null) return undefined;
+    // A digits step reaches into a list: {result.holds.0.id} is the first row's id.
+    if (Array.isArray(current)) {
+      if (step.length === 0 || [...step].some(c => c < '0' || c > '9')) return undefined;
+      current = current[Number(step)];
+      continue;
+    }
     current = (current as { readonly [k: string]: Json })[step];
   }
   return current;

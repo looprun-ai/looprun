@@ -77,6 +77,19 @@ export class BuiltWorld {
     return Promise.resolve(answer);
   }
 
+  /** The rehearsal: the shared act path against a throwaway copy of the store.
+   *  Pure executors make it always safe; no audit row — the engine records the
+   *  outcome as its own act. */
+  rehearse(call: ReadyCall): Promise<ToolAnswer> {
+    const found = findEntry(this.declared, call.tool);
+    if (found === null) return Promise.resolve(refusal(`No such tool: ${call.tool}.`));
+    const coerced = this.coerce(found.entry, call.args);
+    if (typeof coerced === 'string') return Promise.resolve(refusal(coerced));
+    const ready: ReadyCall = { tool: call.tool, args: coerced };
+    return Promise.resolve(this.perform(found.entry, call.tool, ready,
+      new Store(this.store.snapshot())));
+  }
+
   snapshot(): StateSnapshot {
     return this.store.snapshot();
   }

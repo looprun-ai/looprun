@@ -18,6 +18,21 @@ import type { DisclosureDesk } from './disclosure-desk.js';
 import type { Masker } from './masker.js';
 import type { TurnDraft } from './session.js';
 
+/** The world's refusal in words: the refusal's own detail sentence when it
+ *  carries one, the honest {refused} sentence otherwise, the raw result last. */
+function refusedSentence(result: Json): string {
+  if (typeof result === 'object' && result !== null && !Array.isArray(result)) {
+    const refused = (result as { readonly [k: string]: Json }).refused;
+    if (typeof refused === 'string') return refused;
+    if (typeof refused === 'object' && refused !== null && !Array.isArray(refused)) {
+      const detail = (refused as { readonly [k: string]: Json }).detail;
+      if (typeof detail === 'string') return detail;
+    }
+    if (refused !== undefined) return JSON.stringify(refused);
+  }
+  return JSON.stringify(result);
+}
+
 /** The guard-ctx identity form: guards check the REAL args; masking happens at the
  *  record seam through the Masker. */
 const mask = (v: unknown): Json => (isJson(v) ? v : null);
@@ -157,9 +172,21 @@ export class CallRunner {
             result: null
           }, undefined, null, 'empty');
         }
+        // The rehearsal outranks the ask: the held call runs against a throwaway
+        // copy of the world first, and a refusal there IS the answer — the desk
+        // never asks about an act the world would refuse.
+        const rehearsed = await this.rehearse(call, fact, draft);
+        if (rehearsed.refusal !== null) {
+          return this.record(draft, {
+            origin, call: call.data(v => this.deps.masker.maskData(v)), effect: fact.effect,
+            said: null, status: 'not-done', reason: 'blocked', evidence: 'engine',
+            sentence: `${this.head(call, fact)} — not-done (${rehearsed.refusal})`,
+            result: null
+          }, undefined, null, 'rehearsal');
+        }
         const tenses = this.deps.disclosure.tenses(call.tool, ctx.call, reads);
         let sentence = tenses.before ?? verdict.sentence;
-        sentence += await this.simulatedLine(call, fact, draft);
+        sentence += rehearsed.line;
         const question = this.deps.consent.hold(call, targetValue, sentence, draft,
           { after: tenses.after, later: tenses.later });
         const grade = clerk.grade({ verdict, actId: '' }, fact.effect, state, state, draft);
@@ -186,12 +213,29 @@ export class CallRunner {
     }
   }
 
-  /** The simulated run on hold: the tool's OWN parameter, the act's shared path,
-   *  snapshots around it. A mutating simulation revokes itself for the session and
-   *  the question falls back to the plain sentence. */
-  private async simulatedLine(call: CanonicalCall, fact: ToolFact, draft: TurnDraft): Promise<string> {
-    if (fact.simulation === null || this.deps.revoked.has(call.tool)) return '';
-    const { recordsPort, toolPort, compiled } = this.deps;
+  /** The rehearsal on hold. A world with a rehearse seam answers directly — pure
+   *  executors over a throwaway copy, invisible to the model. A tool that instead
+   *  declares its OWN simulate parameter is called with it, snapshots around it;
+   *  a mutating simulation revokes itself for the session and the question falls
+   *  back to the plain sentence. Either way a refusal cancels the ask, and a tool
+   *  that declares simulation carries its successful result on the question. */
+  private async rehearse(call: CanonicalCall, fact: ToolFact, draft: TurnDraft):
+    Promise<{ refusal: string | null; line: string }> {
+    const answer = await this.rehearsalAnswer(call, fact, draft);
+    if (answer === null) return { refusal: null, line: '' };
+    if (answer.done === 'no') return { refusal: refusedSentence(answer.result), line: '' };
+    if (fact.simulation === null) return { refusal: null, line: '' };
+    return { refusal: null, line: `\n${this.deps.compiled.wording.sentence.simulatedResult} ${
+      JSON.stringify(this.deps.masker.maskData(answer.result))}` };
+  }
+
+  private async rehearsalAnswer(call: CanonicalCall, fact: ToolFact,
+                                draft: TurnDraft): Promise<ToolAnswer | null> {
+    const { recordsPort, toolPort } = this.deps;
+    if (toolPort.rehearse !== undefined) {
+      return toolPort.rehearse({ tool: call.tool, args: call.args });
+    }
+    if (fact.simulation === null || this.deps.revoked.has(call.tool)) return null;
     const before = recordsPort?.snapshot() ?? null;
     let answer: ToolAnswer | null = null;
     try {
@@ -204,10 +248,9 @@ export class CallRunner {
     if (before !== null && after !== null && canonicalJson(before) !== canonicalJson(after)) {
       draft.corrections.push({ kind: 'simulationRevoked', tool: call.tool });
       this.deps.revoked.add(call.tool);
-      return '';
+      return null;
     }
-    if (answer === null || answer.done === 'no') return '';
-    return `\n${compiled.wording.sentence.simulatedResult} ${JSON.stringify(this.deps.masker.maskData(answer.result))}`;
+    return answer;
   }
 
   private async execute(call: CanonicalCall, fact: ToolFact, origin: Act['origin'],

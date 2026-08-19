@@ -37,7 +37,7 @@ test('M1 — an identical re-proposal returns the SAME question; a sibling call 
   const model = new ScriptedModel([
     callStep('cancelBooking', { id: 'bk_9' }),
     callStep('cancelBooking', { id: 'bk_9' }),
-    callStep('cancelBooking', { id: 'bk_66' }),
+    callStep('cancelBooking', { id: 'bk_7' }),
     finishStep('Cancelled bk_9.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'done' }])
   ]);
   const { engine } = caseRig({ model });
@@ -49,7 +49,7 @@ test('M1 — an identical re-proposal returns the SAME question; a sibling call 
   expect(r2.questions.issued).toHaveLength(0);          // same question, no second live code
   expect(r2.text).toContain(first.code);                // every delivery reprints the open code
 
-  const r3 = await engine.chat('s1', 'and the maintenance one too');
+  const r3 = await engine.chat('s1', 'and the Friday one too');
   expect(r3.questions.issued).toHaveLength(1);          // a sibling question, its own code
   const sibling = r3.questions.issued[0];
   expect(sibling.code).not.toBe(first.code);
