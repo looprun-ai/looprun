@@ -260,8 +260,11 @@ export type ExamTurn = string
   | { readonly approve: ApproveRef | readonly ApproveRef[] }
   | { readonly decline: true };
 /** A deterministic act matcher: the named call happened (required) or took no
- *  effect (noEffect), with an args subset when the case pins one. */
+ *  effect (noEffect), with an args subset when the case pins one. `anyOf` widens
+ *  a required call to alternative reads that ground the same fact — the
+ *  requirement is the grounding, never one path to it. */
 export interface ToolMatcher { readonly name: string;
+                               readonly anyOf?: readonly string[];
                                readonly anyArgs?: Readonly<Record<string, Json>> }
 /** One exam case: the turns, the split discipline, and the rubric the in-session
  *  judge reads. `agent` names the desk on a multi-agent subject; `preset` names

@@ -11,6 +11,7 @@ import type { AgentSpec, CompiledAgent, CompiledGuard, Disclosure, DisclosureBin
 import { DEFAULT_LIMITS } from './cards.js';
 import { CardCheck } from './card-check.js';
 import { argFormat, argRequired, brokenReply, confirmFirst, groundedDates, groundedIds, maxDestructive,
+         questionAnswered,
          noDuplicateCall, type SeedGuard } from './catalog.js';
 import { resolveWording } from './wordings.js';
 
@@ -138,6 +139,7 @@ export class AgentFactory {
       }
     }
     guards.push(brokenReply().compile('engine', lane));
+    guards.push(questionAnswered().compile('engine', lane));
 
     const armedGuards = armed ? guards : guards.map(g => ({
       ...g,

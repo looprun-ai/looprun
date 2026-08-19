@@ -63,6 +63,17 @@ test('matching is order-free and one act grounds one claim', () => {
   expect(doubled.some(x => x.guardName === 'claimIsGrounded')).toBe(true);
 });
 
+test('a second row for an already-accounted act teaches drop-the-row, never its own echo', () => {
+  const a1 = act('compRoom', 'bk_9', 'done', null);
+  const v = checker.check(ctx([
+    { tool: 'compRoom', target: 'bk_9', word: 'done' },
+    { tool: 'compRoom', target: 'bk_9', word: 'done' }
+  ], [a1]));
+  expect(v).toHaveLength(1);
+  expect(v[0].detail).toContain('drop this row');
+  expect(v[0].detail).not.toContain('truthful word');
+});
+
 test('no_tool_called grounds on absence — an act of that tool and target makes it a contradiction', () => {
   const clean = checker.check(ctx([{ tool: 'compRoom', target: 'bk_9', word: 'no_tool_called' }], []));
   expect(clean).toHaveLength(0);

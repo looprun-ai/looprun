@@ -240,6 +240,30 @@ export function groundedDates(): SeedGuard {
   };
 }
 
+/** A user question is answered in words: a turn whose user text carries a
+ *  question mark never seals on an empty message or on a bare roll-call of tool
+ *  names ("Completed: getMember, fileClaim…"). The record lines state what ran;
+ *  the question still needs the reply's own words. The check reads punctuation
+ *  and the lane's own tool identifiers — never the language. */
+export function questionAnswered(): SeedGuard {
+  return {
+    name: 'questionAnswered',
+    rule: 'A question in the user\'s message is answered in your own words — an empty message or a bare list of call names answers nothing.',
+    on: 'reply',
+    kind: 'questionAnswered',
+    compile(home, facts) {
+      const toolNames = new Set(Object.keys(facts.tools));
+      return installedAt<ReplyCtx>(this, home, ctx => {
+        if (!ctx.userText.includes('?')) return null;
+        const content = tokens(ctx.message).filter(w => !toolNames.has(w));
+        return content.length <= 1
+          ? 'the user asked a question; answer it in your own words — a list of calls is not an answer'
+          : null;
+      });
+    }
+  };
+}
+
 /** The always-on floor: structural reply damage — byte-identical line repetition,
  *  engine-taught literals leaking as prose, tool markup, foreign chat-template
  *  tokens. Structural, never linguistic. */

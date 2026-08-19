@@ -66,10 +66,12 @@ function declineText(open: readonly Question[], caseId: string): string {
 function checkInvariants(c: ExamCase, records: readonly TurnRecord[]): string[] {
   const failures: string[] = [];
   const acts = records.flatMap(r => r.acts);
-  const took = (m: ToolMatcher) => acts.some(a => a.call.tool === m.name
+  const took = (m: ToolMatcher) => acts.some(a =>
+    (m.anyOf !== undefined ? m.anyOf.includes(a.call.tool) : a.call.tool === m.name)
     && (a.status === 'done' || a.status === 'unknown') && argsSubset(m.anyArgs, a.call.args));
   for (const m of c.invariants?.requiredToolCalls ?? []) {
-    if (!took(m)) failures.push(`required call missing: ${m.name} ${JSON.stringify(m.anyArgs ?? {})}`);
+    if (!took(m)) failures.push(`required call missing: ${
+      m.anyOf !== undefined ? `any of ${m.anyOf.join('|')}` : m.name} ${JSON.stringify(m.anyArgs ?? {})}`);
   }
   for (const m of c.invariants?.noEffectToolCalls ?? []) {
     const effected = acts.some(a => a.call.tool === m.name && a.status === 'done'

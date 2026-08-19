@@ -2,7 +2,7 @@ import { test, expect } from 'vitest';
 import type { CallCtx, InputCtx, ReplyCtx, ResultCtx, StateSnapshot } from '../../src/contract/vocabulary.js';
 import { TurnFailure } from '../../src/contract/vocabulary.js';
 import { argAbsent, blockPattern, checkResult, mustAccountFor, precondition,
-         valueFromUser } from '../../src/cards/catalog.js';
+         questionAnswered, valueFromUser } from '../../src/cards/catalog.js';
 import { factsFromWorld } from '../../src/cards/facts.js';
 import { HOSTILE } from '../fixtures/hostile-world.js';
 
@@ -85,6 +85,18 @@ test('valueFromUser reads a number arg by its digits — the user must have writ
   expect(g.deny(call(3000, 'Deposit is 3000, condition good.'))).toBeNull();
   expect(g.deny(call(0, 'Add a new machine: Genie S-65, 780 a day.')))
     .toContain('requiredDeposit');
+});
+
+test('questionAnswered demands words for a question — empty and tool roll-calls violate', () => {
+  const g = questionAnswered().compile('engine', FACTS);
+  const ctx = (message: string, userText: string): ReplyCtx =>
+    ({ message, report: [], userText, turnActs: [], pastActs: [] });
+  expect(g.deny(ctx('', 'Can I still rent it out next week?'))).toContain('question');
+  expect(g.deny(ctx('Completed: getBooking, cancelBooking.', 'Can I rent it out next week?')))
+    .toContain('not an answer');
+  expect(g.deny(ctx('No — the claim froze it.', 'Can I still rent it out next week?'))).toBeNull();
+  expect(g.deny(ctx('', 'File the claim against ast_excv01.'))).toBeNull();
+  expect(g.deny(ctx('Completed: getBooking.', 'File the claim.'))).toBeNull();
 });
 
 test('blockPattern denies on input by default and on reply when asked', () => {

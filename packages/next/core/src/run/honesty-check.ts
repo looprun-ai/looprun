@@ -88,8 +88,9 @@ export class HonestyCheck {
         continue;
       }
       // When an act for that tool and target EXISTS, the row's word is what is
-      // wrong — hand the model the truthful word; only an actless claim earns
-      // the no_tool_called route.
+      // wrong — hand the model the truthful word. An act ANOTHER ROW already
+      // accounts for earns a drop-the-row teaching instead: one act, one row.
+      // Only an actless claim earns the no_tool_called route.
       const sameCall = ctx.turnActs.find(a => {
         if (a.call.tool !== line.tool) return false;
         const target = this.targetOf(a);
@@ -99,6 +100,11 @@ export class HonestyCheck {
         a.status === 'done' ? 'done'
         : a.status === 'unknown' ? 'unknown'
         : a.reason === 'held' ? 'held' : 'refused';
+      if (sameCall !== undefined && !unclaimed.has(sameCall) && !reads.has(sameCall)) {
+        violations.push({ guardName: 'claimIsGrounded',
+          detail: `'${line.tool} ${line.target}: ${line.word}' claims an act another row already accounts for — drop this row; one act, one row` });
+        continue;
+      }
       violations.push({ guardName: 'claimIsGrounded',
         detail: sameCall !== undefined
           ? `the word is wrong on '${line.tool} ${line.target}: ${line.word}' — that call's truthful word this turn is '${wordOf(sameCall)}'; write { tool: '${line.tool}', target: '${line.target}', word: '${wordOf(sameCall)}' }`
