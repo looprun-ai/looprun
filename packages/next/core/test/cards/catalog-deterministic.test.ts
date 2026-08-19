@@ -77,6 +77,16 @@ test('valueFromUser passes only a value the user wrote as contiguous whole token
     'reach ana@example.com'))).toContain('to');
 });
 
+test('valueFromUser reads a number arg by its digits — the user must have written them', () => {
+  const g = valueFromUser('registerAsset', 'requiredDeposit').compile('contract', FACTS);
+  const call = (deposit: number, userText: string): CallCtx =>
+    ({ ...callCtx('registerAsset', {}, STATE, userText),
+       call: { tool: 'registerAsset', args: { requiredDeposit: deposit }, key: 'k' } });
+  expect(g.deny(call(3000, 'Deposit is 3000, condition good.'))).toBeNull();
+  expect(g.deny(call(0, 'Add a new machine: Genie S-65, 780 a day.')))
+    .toContain('requiredDeposit');
+});
+
 test('blockPattern denies on input by default and on reply when asked', () => {
   const input = blockPattern('no-cpf-in', /\d{3}\.\d{3}\.\d{3}-\d{2}/,
     'A CPF never passes through.').compile('contract', FACTS);

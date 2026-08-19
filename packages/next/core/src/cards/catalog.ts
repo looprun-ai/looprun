@@ -441,7 +441,8 @@ export function valueFromUser(tool: string, arg: string): SeedGuard {
     kind: 'valueFromUser',
     compile(home) {
       return installedAt<CallCtx>(this, home, ctx => {
-        const value = ctx.call.args[arg];
+        const raw = ctx.call.args[arg];
+        const value = typeof raw === 'number' ? String(raw) : raw;
         if (typeof value !== 'string' || value === '') {
           return `'${arg}' must be a value the user wrote`;
         }
