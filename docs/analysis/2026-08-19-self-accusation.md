@@ -30,3 +30,20 @@ atlas-next-port/`; engine paths under `looprun/packages/next/core/src/`.
 
 _(appended after the fleet runs: NEW mechanical shames found here mean
 Phase 0 failed, and the failure is recorded beside each finding.)_
+
+## The fleet's answer
+
+Phase 0 FAILED by its own criterion. The fleet sealed mechanical shames this
+dossier never declared:
+
+| finding | seal |
+|---|---|
+| `world-kit.ts` admin caps row `money: true` against the old world's `money: false`, twinned in `world.ts` capsOf | REVERT — applied |
+| `INVOICE_STATUSES` dropped `draft` and `overdue` | REVERT — applied |
+| the needs-fed tense family that crashes LOUD on a null record field (cards.ts:161/175/210) | on the arbitration table |
+| `soleOwnerProtected` denies a re-roling the world accepts | on the arbitration table |
+| `verdicts.jsonl` rows unjoinable to the blind-row shape; no `JUDGE.md` anywhere | RESHAPE — JUDGE.md applied; re-key pending |
+| the A4 engine seams: greedy honesty matcher, micro-step tail leak, starvable owed reads, tokenless valueFromUser pass, stale consent question | RESHAPE — all applied |
+
+Each finding stands recorded here beside the failure it proves: the
+self-accusation under-declared, and the fleet earned its cost.
