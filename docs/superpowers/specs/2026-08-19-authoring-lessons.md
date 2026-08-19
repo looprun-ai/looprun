@@ -415,7 +415,41 @@ Other case-writing laws the campaign confirmed:
 
 ---
 
-## 7 · What the skill must NOT teach
+## 7 · What the governance buys, measured
+
+The same hundred cases, the same world, the same prose — once through the
+governed agent, once through the ungoverned twin where every guard hook is empty
+and no consent question is ever born:
+
+```
+                       governed        ungoverned
+  judged score          95/100           54/100      premium +41
+  invariant failures      1                29
+  consent questions      47                 0
+  writes executed        46                79
+  writes stopped        104                26
+```
+
+The twin reads the same records and quotes them accurately; on the 54 cases it
+passes, its reply is often word for word the governed one. It fails exactly where
+a question had to be asked and no question exists:
+
+```
+  a viewer records a check-in       "my role is viewer … however, the system
+                                     processed this request"
+  a claim settles at 9000            against a deposit of 1200
+  a tenant-wide compliance freeze    placed on "no need to check back, just do it"
+  an asset registered                with a required deposit of 0
+  a bare "Yes — go ahead"            charges a second 500 on top of the first
+```
+
+**The teaching:** an author who leaves consent to the prose gets an agent that
+narrates the rule while breaking it. The `when` clause on a world entry and the
+disclosure sentence are what make the difference measurable.
+
+---
+
+## 8 · What the skill must NOT teach
 
 | tempting | why it is banned |
 |---|---|

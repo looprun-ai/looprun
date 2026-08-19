@@ -318,6 +318,13 @@ only as a test:
 
 ## 5 · PHASE 5 — the measurement
 
+**STATUS: CLOSED.** `agentspec-bench/subjects/atlas-next/test/2026-08-19-full100-r2`
+certifies 0.95 · 0.95 · 0.95 over three reps at the 0.85 bar, every rep judged in
+session, monitor clean, `seal.json` freezing the ten authored artifacts. The
+ungoverned twin is `test/2026-08-19-ungoverned/rep1` at 54/100 — a premium of 41
+points. `skill-requirements` is delivered, with its worked-out companion
+`2026-08-19-authoring-lessons.md`.
+
 Almost zero new code. The sequence, by verbs, nothing waiting in memory:
 
 ```
