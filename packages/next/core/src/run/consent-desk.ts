@@ -23,6 +23,8 @@ interface Stored {
   readonly later: string | null;
   /** The turn the licensed act executed in; null while unexecuted. */
   readonly executedAtTurn: number | null;
+  /** The sentence the licensed act sealed with — the record's own words. */
+  readonly outcome?: string | null;
 }
 
 export class ConsentDesk {
@@ -94,10 +96,21 @@ export class ConsentDesk {
     return stored !== undefined && stored.state === 'consumed' ? stored.after : null;
   }
 
-  markExecuted(id: string, turn: number): void {
+  markExecuted(id: string, turn: number, outcome: string | null = null): void {
     for (const [key, stored] of this.working) {
-      if (stored.question.id === id) this.working.set(key, { ...stored, executedAtTurn: turn });
+      if (stored.question.id === id) {
+        this.working.set(key, { ...stored, executedAtTurn: turn, outcome });
+      }
     }
+  }
+
+  /** A consumed code arriving again is answered by the record: the sentence the
+   *  licensed act sealed with, restated — never a dead turn. */
+  staleAnswers(userText: string): readonly string[] {
+    return [...this.working.values()]
+      .filter(s => s.state === 'consumed' && userText.includes(s.question.code))
+      .map(s => `${s.question.code} was already answered — ${
+        s.outcome ?? 'the act it licensed stands on the record'}`);
   }
 
   /** Standing later-tense sentences of acts executed in EARLIER turns. */

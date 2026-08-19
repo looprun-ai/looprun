@@ -109,7 +109,7 @@ export class Turn {
       const held = desk.held(q.id);
       const act = await runner.run({ tool: held.tool, args: held.args }, 'licence', draft);
       if (act.status === 'done' || act.status === 'unknown') {
-        desk.markExecuted(q.id, draft.turn);
+        desk.markExecuted(q.id, draft.turn, act.sentence);
         const fact = compiled.facts.tools[held.tool];
         const targetRaw = fact?.target != null ? held.args[fact.target] : undefined;
         desk.closeSiblings(held.tool, typeof targetRaw === 'string' ? targetRaw : null, q.id, draft);
@@ -175,7 +175,7 @@ export class Turn {
       if (finish !== null) {
         const judge = new Judge(port, seat.llmParams({}));
         const closed = await this.tryFinish(finish, draft, messages, history.pastActs(),
-          desk.open(), desk.laterTexts(draft.turn), judge);
+          desk.open(), [...desk.staleAnswers(userText), ...desk.laterTexts(draft.turn)], judge);
         if (closed === 'sealed') return session.seal(draft);
         retriesUsed += 1;
         if (retriesUsed > compiled.limits.retries) return this.engineClose(session, draft);
@@ -248,7 +248,8 @@ export class Turn {
     draft.closedBy = 'engine';
     draft.finish = null;
     let text = dw.compose(fd.closure(draft.acts), draft.acts,
-      session.consent.open(), draft.closed, session.consent.laterTexts(draft.turn));
+      session.consent.open(), draft.closed,
+      [...session.consent.staleAnswers(draft.userText), ...session.consent.laterTexts(draft.turn)]);
     for (const rewrite of this.deps.compiled.rewrites) text = rewrite.apply(text);
     draft.text = this.deps.masker.maskProse(text);
     return session.seal(draft);
