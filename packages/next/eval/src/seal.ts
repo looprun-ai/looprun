@@ -1,6 +1,8 @@
-/** The SHIP seal: sha256 over EVERY governed artifact, enumerated from a walk of
- *  the subject directory — never a hand-kept list. verify answers the changed
- *  paths; any answer voids the seal. */
+/** The SHIP seal: sha256 over EVERY authored artifact of the subject, enumerated
+ *  from a walk of the subject directory — never a hand-kept list. The run
+ *  evidence under `test/` is the MEASUREMENT, not the reference, and stays
+ *  outside the seal: a later run must not void what an earlier one certified.
+ *  verify answers the changed paths; any answer voids the seal. */
 import { createHash } from 'node:crypto';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
@@ -14,6 +16,7 @@ function walk(dir: string, rel = ''): readonly string[] {
   for (const entry of readdirSync(dir, { withFileTypes: true }).sort((a, b) =>
     a.name.localeCompare(b.name))) {
     if (entry.name === 'node_modules') continue;
+    if (rel === '' && entry.name === 'test') continue;
     const childRel = rel === '' ? entry.name : `${rel}/${entry.name}`;
     if (entry.isDirectory()) out.push(...walk(join(dir, entry.name), childRel));
     else out.push(childRel);

@@ -21,8 +21,9 @@ test.skipIf(RUN === '' || !existsSync(ATLAS))('atlas run', { timeout: 0 }, async
   const rep = process.env.RUN_ATLAS_REP ?? 'rep1';
   const runDir = join(ATLAS, 'test', stamp, rep);
   mkdirSync(runDir, { recursive: true });
-  const variants = (process.env.RUN_ATLAS_VARIANT ?? 'governed') === 'both'
-    ? ['governed', 'ungoverned'] as const : ['governed'] as const;
+  const asked = process.env.RUN_ATLAS_VARIANT ?? 'governed';
+  const variants = asked === 'both' ? (['governed', 'ungoverned'] as const)
+    : asked === 'ungoverned' ? (['ungoverned'] as const) : (['governed'] as const);
   const wanted = RUN === 'all' ? subject.cases
     : RUN.startsWith('first:') ? subject.cases.slice(0, Number(RUN.slice(6)))
     : RUN.startsWith('range:')
