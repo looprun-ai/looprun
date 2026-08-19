@@ -81,7 +81,11 @@ export class DisclosureDesk {
     const values: Record<string, Json> = { args: call.args };
     for (const [alias, act] of reads) values[alias] = act.result;
     const limit = lookup(values, binding.cap.at.split('.'));
-    if (typeof limit !== 'number' || argValue <= limit) return null;
+    if (typeof limit !== 'number') {
+      throw new TurnFailure('construction',
+        `cap path '${binding.cap.at}' answered no number — the read does not serve the declared limit`);
+    }
+    if (argValue <= limit) return null;
     return render(binding.cap.refusal, values);
   }
 

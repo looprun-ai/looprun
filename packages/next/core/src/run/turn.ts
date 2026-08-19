@@ -79,8 +79,12 @@ export class Turn {
         + `${held.tool} ${JSON.stringify(held.args)}, and call ${read.tool} now — nothing else.`;
       const microRaw = this.deps.recordsPort?.snapshot() ?? null;
       const microNote = this.deps.compiled.facts.note ?? null;
-      const microState = microRaw === null ? null
-        : microNote !== null ? microNote(microRaw) : masker.maskState(microRaw);
+      const microVisible = this.deps.compiled.facts.tail ?? null;
+      const microShown = microRaw === null ? null
+        : microVisible === null ? microRaw
+        : Object.fromEntries(Object.entries(microRaw).filter(([e]) => microVisible.includes(e)));
+      const microState = microRaw !== null && microNote !== null ? microNote(microRaw)
+        : microShown === null ? null : masker.maskState(microShown);
       const microTail = pw.tail(userText, microState, desk.open());
       const step = await port.step(deepFreeze({
         system: microTail === '' ? pw.system() : `${pw.system()}\n${microTail}`,
@@ -145,6 +149,8 @@ export class Turn {
 
       const actsBefore = draft.acts.length;
       for (const call of domain) {
+        // A forced turn has one move left — the finish; disobedient calls never run.
+        if (forced) break;
         if (callsUsed >= compiled.limits.calls) { forced = true; continue; }
         // The FIRST question ends the exchange: later calls in the same emission
         // never run — one ask, one answer, one turn.

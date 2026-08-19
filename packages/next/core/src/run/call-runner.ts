@@ -238,7 +238,7 @@ export class CallRunner {
         userText: draft.userText, turnActs: [...draft.acts], pastActs: this.deps.history.pastActs()
       });
       for (const violation of rulebook.checkPostTool(resultCtx)) {
-        draft.corrections.push({ kind: 'redrive', guardName: violation.guardName, detail: violation.detail });
+        draft.corrections.push({ kind: 'postToolFinding', guardName: violation.guardName, detail: violation.detail });
       }
     }
     return act;

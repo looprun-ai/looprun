@@ -49,7 +49,12 @@ export class ConsentDesk {
                        = { after: null, later: null }): Question {
     const key = call.key;
     const existing = this.working.get(key);
-    if (existing !== undefined && existing.state === 'open') return existing.question;
+    if (existing !== undefined && existing.state === 'open') {
+      const question: Question = deepFreeze({ ...existing.question, sentence });
+      this.working.set(key, { ...existing, question,
+        after: tenses.after, later: tenses.later });
+      return question;
+    }
     // ONE standing question per (tool, target): a re-proposal that differs only
     // in its other arguments REPLACES the executable call under the SAME code —
     // the operator approves the act on the record, and the newest proposal is

@@ -1,8 +1,9 @@
 /** The guard factories: each returns the authored Guard shape with its phase filled
  *  AND compiles its own species semantics — a caller never hand-rolls them. A factory
  *  derives rule and deny from the SAME parameters, so prose/check parity is
- *  structural. A factory MINTS its guard's name as kind:tool. Regex exists ONLY
- *  inside blockPattern, purgePattern and maskPattern. */
+ *  structural. A factory MINTS its guard's name as kind:tool. Author regex exists
+ *  ONLY inside blockPattern, purgePattern and maskPattern; argFormat evaluates the
+ *  schema's own declared pattern. */
 import type { Act, CallCtx, ConsentWhen, InputCtx, Json, OwedRead, ReplyCtx, ReportWord, ResultCtx,
               Rewrite, StateSnapshot, SurfaceFacts } from '../contract/vocabulary.js';
 import { TurnFailure } from '../contract/vocabulary.js';
@@ -443,6 +444,9 @@ export function valueFromUser(tool: string, arg: string): SeedGuard {
           return `'${arg}' must be a value the user wrote`;
         }
         const need = tokens(value);
+        if (need.length === 0) {
+          return `'${arg}' carries no word the user could have written`;
+        }
         const have = tokens(ctx.userText);
         for (let i = 0; i + need.length <= have.length; i += 1) {
           if (need.every((t, j) => have[i + j] === t)) return null;

@@ -49,7 +49,7 @@ export class HonestyCheck {
       // correction names the mistake, or the model drops the row.
       if (this.facts.tools[line.tool] === undefined) {
         violations.push({ guardName: 'claimIsGrounded',
-          detail: `no tool named '${line.tool}' exists on this surface — name the tool exactly as the surface names it, or drop the row; a turn where you made no calls sends an EMPTY report` });
+          detail: `no tool named '${line.tool}' exists on this surface — name the tool exactly as the surface names it, or drop the row; a turn with no acts on the record sends an EMPTY report` });
         continue;
       }
       // no_tool_called is the agent's own word for a decision to act in words
@@ -73,7 +73,11 @@ export class HonestyCheck {
         const target = this.targetOf(a);
         return target === null || target === line.target;
       };
-      const grounding = [...unclaimed].find(fits);
+      // A specific-target act pairs before a target-less one, so a wildcard
+      // act can never consume the slot an exact pairing needs.
+      const pool = [...unclaimed];
+      const grounding = pool.find(a => fits(a) && this.targetOf(a) === line.target)
+        ?? pool.find(fits);
       if (grounding !== undefined) {
         unclaimed.delete(grounding);
         continue;
