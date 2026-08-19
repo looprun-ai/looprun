@@ -42,3 +42,13 @@ dossier never declared:
 
 Each finding stands recorded here beside the failure it proves: the
 self-accusation under-declared, and the fleet earned its cost.
+
+## The arbitration — the five hard decisions, ruled by the operator
+
+| # | the fleet's seal | ruling | what stands now |
+|---|---|---|---|
+| B1 | the resolveClaim ask speaks the model's settlementAmount as a deed ("takes 9000 out of the deposit held" over a 1200 deposit) | REWORD | the ask settles the figure against the deposit: "settles it at {args.settlementAmount} against the deposit held on {bookingId}"; the excess-goes-outside sentence carries the truth — validated 2026-08-19-b1-slice |
+| B2 | personas grew into paragraphs; revert the conduct sentences | REJECTED | every conduct sentence is a plain domain truth and several carry rubric rows the baseline passes; the paragraph is the sum, not the complexity |
+| B3 | resolveClaim's when-clause lets deny run unconfirmed | REJECTED | the consent question is born where a figure needs checking or the loss has no way back; deny has neither — the same line placeHold and updateMemberRole draw |
+| B4 | the needs-fed tenses crash the turn on a null record field | REBUILT | an ask that cannot name its object refuses the call: the card's `empty` sentence ({args.*} only) or the engine's plain default "the records hold nothing for this call to act on" — never a dead turn, never the old subject's 'NA' placeholder — validated 2026-08-19-b4-slice |
+| B5 | the dispatch lane has no card mirror of the world's permission gate | ADDED | dispatchGate on [dispatchTechnician, cancelDispatch], roles owner/admin/dispatcher, in the shape of its three siblings — closes the consent-question-for-a-forbidden-act seam on cancelDispatch — validated 2026-08-19-b5-slice |
