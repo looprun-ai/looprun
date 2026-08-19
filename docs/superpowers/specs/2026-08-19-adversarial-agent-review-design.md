@@ -87,7 +87,9 @@ provides. Structure:
 - **Mechanical verdicts**: applied directly, gates green, committed.
 - **SHOUT list**: presented to the user one table, arbitrated before any
   edit.
-- After application: every affected case re-runs AND is judged (L4) under
+- After application: the re-run set is the FULL 70 whenever a card, world
+  or core edit landed (any of those shifts every prompt); a projection-only
+  edit re-runs just the cases it names. Every re-run is judged (L4) under
   the absolute superset bar, before cases 71–100 run.
 
 ## Sequencing
