@@ -4,8 +4,9 @@
  *  model, so no deny can starve them. This is the ONLY place the engine derives call
  *  arguments, and only as a declared rename of the frozen held call's own values —
  *  a call whose args would take intent is model-filled. Slots fill by alias, bound
- *  to the question's target record by construction. A slot no read filled is LOUD —
- *  compile proved derivability, so a hole here is an executor lie. */
+ *  to the question's target record by construction. A slot the reads answer nothing
+ *  for REFUSES the call — an ask that cannot name its object is never asked; the
+ *  card's empty sentence speaks, or the engine's plain default. */
 import type { Act, CanonicalCallData, Json, OwedRead } from '../contract/vocabulary.js';
 import { TurnFailure } from '../contract/vocabulary.js';
 import type { CompiledAgent } from '../cards/cards.js';
@@ -87,6 +88,28 @@ export class DisclosureDesk {
     }
     if (argValue <= limit) return null;
     return render(binding.cap.refusal, values);
+  }
+
+  /** The empty-record refusal: when a declared tense finds no value in the
+   *  reads and the held call's args, the ask cannot be written — the call is
+   *  refused with the card's own empty sentence ({args.*} slots only) or the
+   *  engine's plain default. Null = every tense fills. */
+  emptyRefusal(tool: string, call: CanonicalCallData,
+               reads: ReadonlyMap<string, Act>): string | null {
+    const binding = this.bindings[tool];
+    if (binding === undefined) return null;
+    const values: Record<string, Json> = { args: call.args };
+    for (const [alias, act] of reads) values[alias] = act.result;
+    try {
+      for (const tense of [binding.before, binding.after, binding.later]) {
+        if (tense !== null) render(tense, values);
+      }
+      return null;
+    } catch {
+      return binding.empty !== null
+        ? render(binding.empty, { args: call.args })
+        : 'the records hold nothing for this call to act on';
+    }
   }
 
   /** Fills the {result.*} slots of an already-rendered tense with the executed

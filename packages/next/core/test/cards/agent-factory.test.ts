@@ -54,7 +54,8 @@ test('secrets compile to mask keys; disclosure needs normalize to resolved recip
   ]);
   expect(c.disclosureBindings.cancelBooking).toEqual({
     needs: { booking: { tool: 'getBooking', args: { id: 'id' } } },
-    before: 'Cancelling {booking.room} is permanent.', after: null, later: null, cap: null
+    before: 'Cancelling {booking.room} is permanent.', after: null, later: null, cap: null,
+    empty: null
   });
 });
 

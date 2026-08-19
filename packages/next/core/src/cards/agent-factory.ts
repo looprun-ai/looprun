@@ -68,7 +68,7 @@ function compileDisclosure(disclosure: Readonly<Record<string, Disclosure>>,
       }
     }
     out[tool] = { needs, before: d.before ?? null, after: d.after ?? null,
-      later: d.later ?? null, cap: d.cap ?? null };
+      later: d.later ?? null, cap: d.cap ?? null, empty: d.empty ?? null };
   }
   return out;
 }

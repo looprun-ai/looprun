@@ -40,6 +40,10 @@ export interface Disclosure {
    *  answered: arg = the call's own arg, at = an {alias.path} over the needs
    *  reads, refusal = the refusal sentence, slots included. Omitted = no cap. */
   cap?: { readonly arg: string; readonly at: string; readonly refusal: string };
+  /** The refusal sentence when a declared tense finds no value in the reads —
+   *  the record carries nothing for this act to act on. Slots {args.*} only.
+   *  Omitted = the engine's plain sentence. */
+  empty?: string;
 }
 
 /** CARD 2 — everything conversation-global = one DomainContract. */
@@ -152,6 +156,7 @@ export interface DisclosureBinding {
   readonly later: string | null;
   readonly cap: { readonly arg: string; readonly at: string;
                   readonly refusal: string } | null;
+  readonly empty: string | null;
 }
 
 /** The frozen compiled agent the Engine runs — AgentFactory is its one birthplace;

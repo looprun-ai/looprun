@@ -145,6 +145,18 @@ export class CallRunner {
             result: null
           }, undefined, null, 'cap');
         }
+        // An ask that cannot name its object is never asked: when a declared
+        // tense finds no value in the reads, the call is refused — the card's
+        // empty sentence speaks, or the engine's plain default.
+        const emptySentence = this.deps.disclosure.emptyRefusal(call.tool, ctx.call, reads);
+        if (emptySentence !== null) {
+          return this.record(draft, {
+            origin, call: call.data(v => this.deps.masker.maskData(v)), effect: fact.effect,
+            said: null, status: 'not-done', reason: 'blocked', evidence: 'engine',
+            sentence: `${this.head(call, fact)} — not-done (${emptySentence})`,
+            result: null
+          }, undefined, null, 'empty');
+        }
         const tenses = this.deps.disclosure.tenses(call.tool, ctx.call, reads);
         let sentence = tenses.before ?? verdict.sentence;
         sentence += await this.simulatedLine(call, fact, draft);

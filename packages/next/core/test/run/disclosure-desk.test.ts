@@ -46,9 +46,31 @@ test('the three tenses fill slots from the reads and the held args', () => {
   expect(t.later).toBe('Booking bk_9 stays cancelled.');
 });
 
-test('a slot no read filled is LOUD — compile proved derivability, so this is an executor lie', () => {
+test('a slot the reads answer nothing for refuses the call with the plain default', () => {
   const reads = new Map([['booking', readAct({ day: 'Tuesday' })]]);
+  expect(desk.emptyRefusal('cancelBooking', HELD, reads))
+    .toBe('the records hold nothing for this call to act on');
   expect(() => desk.tenses('cancelBooking', HELD, reads)).toThrow(TurnFailure);
+});
+
+test('the card empty sentence speaks instead, rendered over the held args', () => {
+  const withEmpty = new AgentFactory().governed(
+    { name: 'a', persona: 'p' },
+    { name: 'd', disclosure: { cancelBooking: {
+        needs: { booking: { tool: 'getBooking', args: { bookingRef: 'id' } } },
+        before: 'Cancelling {booking.room} on {booking.day} is permanent.',
+        empty: 'Booking {args.id} carries no room to cancel.' } } },
+    MISMATCHED);
+  const emptyDesk = new DisclosureDesk(withEmpty.disclosureBindings);
+  const reads = new Map([['booking', readAct({ day: 'Tuesday' })]]);
+  expect(emptyDesk.emptyRefusal('cancelBooking', HELD, reads))
+    .toBe('Booking bk_9 carries no room to cancel.');
+});
+
+test('emptyRefusal stays silent while every tense fills', () => {
+  const reads = new Map([['booking', readAct({ room: '12', day: 'Tuesday' })]]);
+  expect(desk.emptyRefusal('cancelBooking', HELD, reads)).toBeNull();
+  expect(desk.emptyRefusal('unknownTool', HELD, new Map())).toBeNull();
 });
 
 test('a tool with no binding owes nothing and renders nothing', () => {
