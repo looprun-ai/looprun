@@ -158,7 +158,8 @@ export class AgentFactory {
       promptParts: {
         persona: spec.persona,
         voice: contract?.voice ?? null,
-        facts: [...contract?.facts ?? []]
+        facts: [...contract?.facts ?? []],
+        teammates: spec.teammates ?? null
       },
       facts: lane
     };

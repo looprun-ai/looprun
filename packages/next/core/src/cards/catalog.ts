@@ -194,10 +194,12 @@ export function groundedIds(): SeedGuard {
       return installedAt<CallCtx>(this, home, ctx => {
         for (const [arg, v] of Object.entries(ctx.call.args)) {
           if (typeof v !== 'string' || !isIdShaped(v)) continue;
+          const note = facts.note != null && ctx.state !== null ? facts.note(ctx.state) : '';
           const grounded = ctx.userTexts.some(t => t.includes(v))
             || [...ctx.pastActs, ...ctx.turnActs].some(a =>
               JSON.stringify(a.result).includes(v) || JSON.stringify(a.call.args).includes(v))
-            || (ctx.state !== null && visibleState(ctx.state).includes(v));
+            || (ctx.state !== null && visibleState(ctx.state).includes(v))
+            || note.includes(v);
           if (!grounded) return `'${v}' in '${arg}' appears in no result and no message`;
         }
         return null;

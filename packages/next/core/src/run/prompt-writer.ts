@@ -24,6 +24,13 @@ export class PromptWriter {
       if (p.voice !== null) lines.push(p.voice);
       for (const factLine of p.facts) lines.push(`FACT: ${factLine}`);
       lines.push(p.persona);
+      // The desk knows its colleagues: one line per teammate, by name.
+      if (p.teammates !== null && Object.keys(p.teammates).length > 0) {
+        lines.push('OTHER DESKS:');
+        for (const [name, covers] of Object.entries(p.teammates)) {
+          lines.push(`- ${name}: ${covers}`);
+        }
+      }
       const specRules = this.compiled.guards
         .filter(g => g.home === 'spec')
         .map(g => `RULE: ${g.rule}`);

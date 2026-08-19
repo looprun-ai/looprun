@@ -14,7 +14,7 @@ const REPORT_WORDS = ['done', 'held', 'refused', 'unknown', 'no_tool_called'] as
 const WORD_LEGEND: Readonly<Record<(typeof REPORT_WORDS)[number], string>> = {
   done: 'the call ran and took effect',
   held: 'the call is held for approval',
-  refused: 'the call ran and was turned down — by the system or by a rule',
+  refused: 'the call was turned down — either a rule stopped it before it ran, or it ran and the system said no',
   unknown: 'the call ran; the outcome is unclear',
   no_tool_called: 'you chose to answer in words only — no call was made for this'
 };

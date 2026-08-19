@@ -130,7 +130,9 @@ export interface CompiledGuard extends InstalledGuard {
 /** The prompt raw material an agent compiles to. */
 export interface PromptParts { readonly persona: string;
                                readonly voice: string | null;
-                               readonly facts: readonly string[] }
+                               readonly facts: readonly string[];
+                               /** Other desks by name: label → what that desk handles. */
+                               readonly teammates: Readonly<Record<string, string>> | null }
 
 /** One compiled secret path; 'mask' replaces the value with ****, 'omit' drops the key. */
 export interface MaskKey { readonly path: readonly string[]; readonly mode: 'omit' | 'mask' }
