@@ -23,6 +23,8 @@ interface Stored {
   readonly later: string | null;
   /** The turn the licensed act executed in; null while unexecuted. */
   readonly executedAtTurn: number | null;
+  /** The turn the user's answer consumed the question in; null while open. */
+  readonly consumedAtTurn: number | null;
   /** The sentence the licensed act sealed with — the record's own words. */
   readonly outcome?: string | null;
 }
@@ -84,7 +86,7 @@ export class ConsentDesk {
     });
     this.working.set(key, {
       question, executable: call.data(v => (isJson(v) ? v : null)), targetValue, state: 'open',
-      after: tenses.after, later: tenses.later, executedAtTurn: null
+      after: tenses.after, later: tenses.later, executedAtTurn: null, consumedAtTurn: null
     });
     draft.issued.push(question);
     return question;
@@ -104,11 +106,13 @@ export class ConsentDesk {
     }
   }
 
-  /** A consumed code arriving again is answered by the record: the sentence the
-   *  licensed act sealed with, restated — never a dead turn. */
-  staleAnswers(userText: string): readonly string[] {
+  /** A code consumed in an EARLIER turn arriving again is answered by the record:
+   *  the sentence the licensed act sealed with, restated — never a dead turn. The
+   *  code consumed this turn already has its answer beside it on this reply. */
+  staleAnswers(userText: string, turn: number): readonly string[] {
     return [...this.working.values()]
-      .filter(s => s.state === 'consumed' && userText.includes(s.question.code))
+      .filter(s => s.state === 'consumed' && userText.includes(s.question.code)
+        && s.consumedAtTurn !== null && s.consumedAtTurn < turn)
       .map(s => `${s.question.code} was already answered — ${
         s.outcome ?? 'the act it licensed stands on the record'}`);
   }
@@ -137,7 +141,7 @@ export class ConsentDesk {
         continue;
       }
       if (userText.includes(stored.question.code)) {
-        this.working.set(key, { ...stored, state: 'consumed' });
+        this.working.set(key, { ...stored, state: 'consumed', consumedAtTurn: draft.turn });
         draft.consumed.push(stored.question.id);
         consumed.push(stored.question);
       }
