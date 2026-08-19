@@ -35,12 +35,12 @@ test('precondition resolves the record from the tool OWN entity — two entities
   expect(g.deny(callCtx('cancelBooking', { id: 'x_1' }, twoEntities))).toBeNull();
 });
 
-test('precondition denies with the reason while the record fails the check', () => {
+test('precondition denies while the record fails the check — the rule alone is the denial', () => {
   const g = precondition('cancelBooking',
     ({ state }) => state.invoices?.inv_1?.paid === true,
     'The invoice must be paid first.').compile('contract', FACTS);
   const verdict = g.deny(callCtx('cancelBooking', { id: 'bk_9' }));
-  expect(verdict).toContain('precondition');
+  expect(verdict).toBe('');
   expect(g.rule).toBe('The invoice must be paid first.');
 });
 

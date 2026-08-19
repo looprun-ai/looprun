@@ -88,7 +88,7 @@ export class CallRunner {
         return this.record(draft, {
           origin, call: call.data(v => this.deps.masker.maskData(v)), effect: fact.effect, said: grade.said,
           status: grade.status, reason: grade.reason, evidence: grade.evidence,
-          sentence: `${this.head(call, fact)} — not-done (${rule} ${verdict.detail})`.trimEnd(),
+          sentence: `${this.head(call, fact)} — not-done (${`${rule} ${verdict.detail}`.trim()})`,
           result: null
         }, undefined, null, verdict.guardName);
       }

@@ -97,9 +97,13 @@ export class ConsentDesk {
 
   /** Standing later-tense sentences of acts executed in EARLIER turns. */
   laterTexts(turn: number): readonly string[] {
-    return [...this.working.values()]
+    const rows = [...this.working.values()];
+    const superseded = (s: Stored): boolean => rows.some(o => o !== s
+      && o.executable.tool === s.executable.tool && o.targetValue === s.targetValue
+      && o.question.bornAtTurn > s.question.bornAtTurn);
+    return rows
       .filter(s => s.state === 'consumed' && s.later !== null
-        && s.executedAtTurn !== null && s.executedAtTurn < turn)
+        && s.executedAtTurn !== null && s.executedAtTurn < turn && !superseded(s))
       .map(s => s.later ?? '');
   }
 

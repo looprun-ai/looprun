@@ -353,7 +353,7 @@ export function precondition(tool: string | readonly string[],
         const idValue = f?.target !== null && f?.target !== undefined ? ctx.call.args[f.target] : undefined;
         const record = f?.entity !== null && f?.entity !== undefined && typeof idValue === 'string'
           ? state[f.entity]?.[idValue] ?? null : null;
-        return check({ record, state }) ? null : 'the declared precondition does not hold';
+        return check({ record, state }) ? null : '';
       });
     }
   };
