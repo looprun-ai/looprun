@@ -45,6 +45,13 @@ export class HonestyCheck {
     const reads = new Set(ctx.turnActs.filter(a => a.effect === 'read'));
 
     for (const line of ctx.report) {
+      // A row naming a tool that exists nowhere on the surface is a ghost: the
+      // correction names the mistake, or the model drops the row.
+      if (this.facts.tools[line.tool] === undefined) {
+        violations.push({ guardName: 'claimIsGrounded',
+          detail: `no tool named '${line.tool}' exists on this surface — name the tool exactly as the surface names it, or drop the row` });
+        continue;
+      }
       // no_tool_called is the agent's own word for a decision to act in words
       // only: it grounds on the ABSENCE of an act, and an act of that tool and
       // target this turn makes it a contradiction — the act's status is the

@@ -205,7 +205,9 @@ export class Turn {
     if (violations.length === 0 && compiled.judged.length > 0) {
       for (const v of await judge.run(compiled.judged, replyCtx, messages)) {
         if (v.verdict === 'violation') {
-          violations.push({ guardName: v.guardName, detail: v.detail ?? '' });
+          // The redrive must TEACH: the guard's own rule is the correction.
+          const rule = compiled.judged.find(g => g.name === v.guardName)?.rule ?? '';
+          violations.push({ guardName: v.guardName, detail: v.detail ?? rule });
         }
         if (v.verdict === 'unreadable') {
           draft.corrections.push({ kind: 'judgeUnreadable', guardName: v.guardName });
