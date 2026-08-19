@@ -77,6 +77,9 @@ export function factsFromWorld(w: DeclaredWorld | McpWorldCard | LiveWorldCard):
       for (const [name, entry] of Object.entries(block ?? {})) tools[name] = remoteFact(name, entry, effect);
     }
   }
-  return deepFreeze({ tools, tail: 'card' in w ? w.card.tail ?? null : null,
-    note: 'card' in w ? w.card.note ?? null : null });
+  // A declared note means NOTHING rides the tail for free: the note carries
+  // sentences, never records, so the grounding floor sees no visible entities
+  // unless the card also names them.
+  const tail = 'card' in w ? w.card.tail ?? (w.card.note ? [] : null) : null;
+  return deepFreeze({ tools, tail, note: 'card' in w ? w.card.note ?? null : null });
 }
