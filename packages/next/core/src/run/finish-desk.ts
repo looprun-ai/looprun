@@ -21,6 +21,7 @@ const WORD_LEGEND: Readonly<Record<(typeof REPORT_WORDS)[number], string>> = {
 
 const FIELD_LEGEND: Readonly<Record<string, string>> = {
   message: 'the user-facing closing message',
+  report: 'one line per act you claim; a turn where you made no calls sends an EMPTY list',
   tool: 'the tool the line is about — called, or deliberately not called',
   target: 'the record id the line is about, exactly as the records name it; empty when none',
   word: 'what happened, per the legend'
