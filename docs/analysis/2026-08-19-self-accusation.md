@@ -28,11 +28,6 @@ atlas-next-port/`; engine paths under `looprun/packages/next/core/src/`.
 
 ## The fleet's answer
 
-_(appended after the fleet runs: NEW mechanical shames found here mean
-Phase 0 failed, and the failure is recorded beside each finding.)_
-
-## The fleet's answer
-
 Phase 0 FAILED by its own criterion. The fleet sealed mechanical shames this
 dossier never declared:
 
