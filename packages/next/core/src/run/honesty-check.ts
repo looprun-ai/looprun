@@ -76,8 +76,22 @@ export class HonestyCheck {
         reads.delete(readEcho);
         continue;
       }
+      // When an act for that tool and target EXISTS, the row's word is what is
+      // wrong — hand the model the truthful word; only an actless claim earns
+      // the no_tool_called route.
+      const sameCall = ctx.turnActs.find(a => {
+        if (a.call.tool !== line.tool) return false;
+        const target = this.targetOf(a);
+        return target === null || target === line.target;
+      });
+      const wordOf = (a: Act): ReportLine['word'] =>
+        a.status === 'done' ? 'done'
+        : a.status === 'unknown' ? 'unknown'
+        : a.reason ?? 'blocked';
       violations.push({ guardName: 'claimIsGrounded',
-        detail: `nothing this turn grounds the claim '${line.tool} ${line.target}: ${line.word}' — run the call so the record answers it, or, if you chose to act in words only, replace that row with exactly { tool: '${line.tool}', target: '${line.target}', word: 'no_tool_called' } and keep your message` });
+        detail: sameCall !== undefined
+          ? `the word is wrong on '${line.tool} ${line.target}: ${line.word}' — that call's truthful word this turn is '${wordOf(sameCall)}'; write { tool: '${line.tool}', target: '${line.target}', word: '${wordOf(sameCall)}' }`
+          : `nothing this turn grounds the claim '${line.tool} ${line.target}: ${line.word}' — run the call so the record answers it, or, if you chose to act in words only, replace that row with exactly { tool: '${line.tool}', target: '${line.target}', word: 'no_tool_called' } and keep your message` });
     }
 
     for (const act of unclaimed) {
