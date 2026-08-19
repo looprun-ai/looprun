@@ -1,5 +1,14 @@
 # Adversarial agent review — accuse, defend, judge
 
+> **STATUS: CLOSED (2026-08-19).** Phase 0 dossier written (Phase 0 FAILED by
+> its own criterion — the fleet sealed shames the dossier never declared);
+> 15-agent fleet run; mechanical seals applied; the five hard decisions ruled
+> by the operator and recorded in
+> `docs/analysis/2026-08-19-self-accusation.md` §The arbitration.
+> Validation: `2026-08-19-full-r1` judged 67/70, zero parity breaks against
+> the v0.20 baseline (61/70 on the range), +6 bonus wins — accepted under the
+> absolute superset bar.
+
 The standing process for running an adversarial agent fleet over the current
 agent: the atlas-next subject, the next-engine laws, and the exam projection
 rules, all at once. The fleet exists to answer one question about every rule,

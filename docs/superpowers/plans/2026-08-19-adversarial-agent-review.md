@@ -1,5 +1,11 @@
 # Adversarial Agent Review Implementation Plan
 
+> **STATUS: CLOSED (2026-08-19).** All phases delivered: dossier, fleet,
+> mechanical seals, the five ruled arbitrations (recorded in
+> `docs/analysis/2026-08-19-self-accusation.md` §The arbitration), and the
+> full-70 re-judgment (`2026-08-19-full-r1`: 67/70, zero parity breaks —
+> accepted).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. The Workflow tool belongs to the session agent — Tasks 2–4 run inline, never in a subagent.
 
 **Goal:** Run the accuse–defend–judge fleet over the current agent (subject + engine + projections), apply its verdicts under the mixed rule, and re-judge the full 70 under the absolute superset bar.
