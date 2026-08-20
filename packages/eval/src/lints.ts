@@ -579,3 +579,30 @@ export function promptLines(compiled: {
     ...Object.values(compiled.facts.tools).map(f => f.does)
   ];
 }
+
+/** What each contract guard COSTS in rendered bytes. A contract rule is copied into the card of
+ *  every tool it names, in every desk whose lane holds that tool: a two-line sentence over eight
+ *  acts across three desks is twenty-four copies the model reads on every turn. The rule's own
+ *  length is the multiplier, so the cheapest edit is always the longest rule on the widest guard. */
+export function ruleCopies(desks: readonly {
+  readonly guards: readonly { readonly name: string; readonly home: string;
+                              readonly rule: string; readonly tools: readonly string[] }[];
+  readonly facts: { readonly tools: Readonly<Record<string, unknown>> };
+}[]): readonly string[] {
+  const bytes = new Map<string, number>();
+  const copies = new Map<string, number>();
+  const length = new Map<string, number>();
+  for (const desk of desks)
+    for (const guard of desk.guards) {
+      if (guard.home !== 'contract') continue;
+      const inLane = guard.tools.filter(tool => desk.facts.tools[tool] !== undefined).length;
+      if (inLane === 0) continue;
+      bytes.set(guard.name, (bytes.get(guard.name) ?? 0) + guard.rule.length * inLane);
+      copies.set(guard.name, (copies.get(guard.name) ?? 0) + inLane);
+      length.set(guard.name, guard.rule.length);
+    }
+  return [...bytes.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([name, total]) =>
+      `${String(total).padStart(6)} B  ${name} — ${length.get(name) ?? 0} B × ${copies.get(name) ?? 0} copies`);
+}

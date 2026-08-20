@@ -1,9 +1,10 @@
-import { test, expect } from 'vitest';
+import { describe, expect, test } from 'vitest';
 import { mkdtempSync, writeFileSync, mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { GuardCensus, TurnRecord } from '@looprun-ai/core';
 import { census, nameGate, purity } from '../src/lints.js';
+import { ruleCopies } from '../src/lints.js';
 
 function subjectDirWith(code: string): string {
   const dir = mkdtempSync(join(tmpdir(), 'lint-subject-'));
@@ -310,4 +311,30 @@ export const contract = { name: 'atlas', guards: [
     rule: 'A refund is capped by the statement: paid minus already refunded.' }
 ] };`);
   expect(doubleStated(dir)).toEqual([]);
+});
+
+describe('ruleCopies', () => {
+  const desk = (tools: readonly string[], guards: readonly unknown[]) => ({
+    guards, facts: { tools: Object.fromEntries(tools.map(n => [n, {}])) }
+  });
+
+  test('charges a rule once per act it names, in every lane that holds the act', () => {
+    const wide = { name: 'wide', home: 'contract', rule: 'x'.repeat(100), tools: ['a', 'b'] };
+    const rows = ruleCopies([desk(['a', 'b'], [wide]), desk(['a'], [wide])] as never);
+    expect(rows).toEqual(['   300 B  wide — 100 B × 3 copies']);
+  });
+
+  test('ignores a guard whose acts are outside the lane', () => {
+    const guard = { name: 'elsewhere', home: 'contract', rule: 'x'.repeat(50), tools: ['z'] };
+    expect(ruleCopies([desk(['a'], [guard])] as never)).toEqual([]);
+  });
+
+  test('ranks the widest, longest rule first', () => {
+    const rows = ruleCopies([desk(['a', 'b', 'c'], [
+      { name: 'narrow', home: 'contract', rule: 'x'.repeat(200), tools: ['a'] },
+      { name: 'broad', home: 'contract', rule: 'x'.repeat(90), tools: ['a', 'b', 'c'] }
+    ])] as never);
+    expect(rows[0]).toContain('broad');
+    expect(rows[1]).toContain('narrow');
+  });
 });
