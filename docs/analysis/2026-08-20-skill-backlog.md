@@ -142,3 +142,28 @@ The primary evidence is the trail: 54 tool calls and 1.4 MB of transcript before
 written, including reads of `call-runner.ts`, `rulebook.ts`, `masker.ts`, `turn.ts` and
 `vocabulary.ts`. **Every one of those is a page that failed to answer**, and gap D above is the
 same finding seen from the cost side.
+
+---
+
+## Deferred by the declaration spec
+
+`docs/superpowers/specs/2026-08-20-declaration-and-emitter-design.md` §7.2 admits none of these.
+Each is real and verified against the engine; none moves one of that spec's four bars, and none is
+a defect where something wrong passes the gate. The next spec opens from this section.
+
+| id | what | why it waits |
+|---|---|---|
+| X1 | `S2` as a phase | its whole content is "never run it" — four deletions, no bar |
+| X2 | `debate.md` — wire it or delete it | orphaned, and the decision is a product one |
+| X3 | `local-performance.md` + `judge-ruler.md` — link or delete | reachable from nowhere; nine grading rules, and no bar measures them |
+| X4 | `extract-fork.mjs`, `synth-fork.mjs` | named by no page, in either repo |
+| X5 | `local-performance.md`'s parenthetical title | wording |
+| R8 | `sync` and `census` signatures | tooling documentation |
+| R9 | `ask/targets.json`'s schema | no authoring reaches it |
+| R11 | status words — six renameable, five installed, one renders | wording, and no bar sees it |
+| R12 | `resume.md`'s dead pointers | only the missing G3 cell is admitted; the rest of the page waits |
+| G-H | case 48 cannot be satisfied by a tool-need split | an exam-design problem, not an authoring one |
+| B1b | the SEMANTIC half of the byte analysis | it needs a reader per sentence and a judged run to prove "no loss" — its own spec, opening from the numbers the declaration spec produces |
+| B5 | the remaining gaps of the two blind authorings | folded into B1b |
+
+The ten rows the audit marked LEAVE ALONE are not here: no action is the finding.

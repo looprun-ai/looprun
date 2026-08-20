@@ -265,7 +265,107 @@ Updated in the same working session as the engine, never after.
 
 ---
 
-## 7 · What this design cannot claim
+## 7 · What this spec covers, and what it does not
+
+Every finding has an id: `D`/`R`/`C`/`X`/`F` from `docs/analysis/2026-08-20-skill-adversarial.md`,
+`B` from `docs/analysis/2026-08-20-skill-backlog.md`, `G` from the two blind authorings recorded
+there. **Every id appears in exactly one of the two columns below.** An id in neither is a
+tracking defect, and §7.3 says how that is caught.
+
+### 7.1 · IN — this spec and its plan
+
+Admitted on one of two tests: it moves a bar in §3, or it is a defect where something WRONG
+passes the gate.
+
+| id | what | admitted because |
+|---|---|---|
+| F1 | emit the card scaffolding; the author writes sentences | speed — the core of this spec |
+| F2 | one conduct-law text per law, emitted onto every desk | speed |
+| F3 | the four N6 hand-judgements become verbs | speed · gate integrity |
+| F4 | one gate list, not three | speed · gate integrity — NORMS exits on the shortest |
+| F5 | delete the six duplications | speed — the reading path |
+| D1 D2 D3 D4 D6 | the five duplications F5 names | speed |
+| D5 | the `covers` grammar is a fossil | gate integrity |
+| C1 | `destructiveDisclosed` | determinism — a destructive act with no `before` |
+| C2 | `capPaths` | gate integrity — a cap whose path never resolves |
+| C3 | `coversResolve` | gate integrity — three keys resolving to nothing, certified |
+| C4 | `floorRedeclared` | determinism — a card redeclaring what the engine installs |
+| C5 | `conductComplete` | determinism — a conduct law missing from a desk |
+| C6 | `approvable` | gate integrity — a case covering a guard that cannot fire on its preset |
+| C11 | the N6 snippet does not run as printed | speed — the author debugs the page |
+| C12 | the repo's declared lints do not exist | gate integrity |
+| R1 | the certification bar — 0.95, and `ship.md` says otherwise | gate integrity — a ship page certifying below the bar |
+| R2 | the conduct laws are six | applied this session, `93eb895` |
+| R3 | the template's guard home | the template is what an author copies |
+| R4 | the `WHY` map's minted names | gate integrity — the drift that produced seven findings |
+| R5 | `cap.at` — the alias root | a check whose path never resolves |
+| R6 R7 | a `gates` entry has no `detail`; `fail(CODE)` is `{ refuse }` | both blind authors were misled |
+| R10 | the resume panel has no G3 cell | a resumed run skips a phase and authors a broken subject |
+| R13 | N1's input is the world card | speed |
+| R14 | `SKILL.md`'s paths | speed |
+| R15 | `ask.md` — English | house law, admitted regardless of any bar |
+| F6 | fix the panel and the four stale headers | merged with R10 — same defect, same edit |
+| C7 C8 C9 C10 | wire the verbs that already exist | gate integrity — verbs shipped and called by no gate line |
+| X6 | the two byte totals stop being a hand count | speed |
+| B2 | `boilerplate` wired into the gate | tokens — 2 728 B on one subject, unreachable by `echoes` |
+| B3 | a wide rule is licensed — `overWide` | tokens |
+| B4 | `echoes` excludes generated lines | gate integrity — a row the author cannot act on |
+| G-A | `covers` has no stated grammar | same defect as D5 and C3 |
+| G-B | `{args.*}` over an optional argument | both authors found it by running the world |
+| G-C | a nested argument has no rung | the ladder cannot reach a writable value |
+| G-D | the four guard contexts are named nowhere | speed — the excursion two authors made |
+| G-E | `promptLines` is a superset | gate integrity — rows between lines never read together |
+| G-F | `precondition` names itself after all its tools | a stale mechanism sentence |
+| G-G | the surface count is 54, not 31 | an author sizing its work from the wrong number |
+| B1a | the DETERMINISTIC half of the byte analysis | tokens |
+
+### 7.2 · OUT — the next spec
+
+Not admitted: each is real and verified, and none moves a bar or lets a defect through the gate.
+They are ceremony, dead pointers, and unowned files.
+
+| id | what | why it waits |
+|---|---|---|
+| X1 | `S2` as a phase | its whole content is "never run it" — four deletions, no bar |
+| X2 | `debate.md` — wire it or delete it | orphaned, and the decision is a product one |
+| X3 | `local-performance.md` + `judge-ruler.md` — link or delete | reachable from nowhere; the judging rules matter and no bar measures them |
+| X4 | `extract-fork.mjs`, `synth-fork.mjs` | named by no page, in either repo |
+| X5 | `local-performance.md`'s parenthetical title | wording |
+| R8 | `sync` and `census` signatures | tooling documentation |
+| R9 | `ask/targets.json`'s schema | no authoring reaches it |
+| R11 | status words — six renameable, five installed, one renders | wording, and no bar sees it |
+| R12 | `resume.md`'s dead pointers | resume is not measured by any bar. Only the missing G3 cell is admitted above, because a run resuming without it authors a broken subject; the rest of the page waits |
+| G-H | case 48 cannot be satisfied by a tool-need split | an exam-design problem, not an authoring one |
+| B1b | the SEMANTIC half of the byte analysis | it needs a reader per sentence and a judged run to prove "no loss". It is its own spec, and it opens from the numbers this one produces |
+| B5 | the remaining gaps of the two authorings | folded into B1b and the next spec |
+| — | the ten LEAVE ALONE rows | the audit judged them load-bearing; no action is the finding |
+
+### 7.3 · How this is tracked
+
+Three registers, and an id lives in exactly one of them at a time.
+
+```
+  docs/analysis/2026-08-20-skill-adversarial.md    the AUDIT — never edited again.
+                                                   It is the record of what was found.
+
+  docs/superpowers/plans/<this spec>.md            the IN column. One task per id, or one
+                                                   task naming several ids. A task's
+                                                   checkbox IS the item's status.
+
+  docs/analysis/2026-08-20-skill-backlog.md        the OUT column, in a section named
+                                                   "deferred by the declaration spec",
+                                                   each id with its one-line reason.
+                                                   The next spec opens from that section.
+```
+
+The closing check is mechanical: every id in §7.1 appears in the plan, every id in §7.2 appears in
+the backlog's deferred section, and the two sets do not intersect. A script over the three files
+answers it, and it is the last task of the plan — an id in neither register is the tracking defect
+this section exists to prevent.
+
+---
+
+## 8 · What this design cannot claim
 
 The Atlas is the only subject that exists, and it was authored by hand by the same agent that
 writes these pages. A score on it measures the skill against that agent's own knowledge, not
