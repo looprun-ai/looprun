@@ -789,13 +789,17 @@ export function boilerplate(lines: readonly string[], minRun = 40): readonly str
  *  each of its contract guards' rules glued into one string, so the assembled card is useless
  *  as an echo unit: it pairs against everything and never against itself. */
 export function promptLines(compiled: {
-  readonly guards: readonly { readonly home: string; readonly rule: string }[];
+  readonly guards: readonly { readonly home: string; readonly rule: string;
+                              readonly tools?: readonly string[] }[];
   readonly facts: { readonly tools: Readonly<Record<string, { readonly does: string }>> };
-}, system: string): readonly string[] {
+}, system: string, options?: { readonly skipGenerated?: boolean }): readonly string[] {
+  const lane = compiled.facts.tools;
+  const inLane = (rule: { readonly tools?: readonly string[] }): boolean =>
+    (rule.tools ?? []).some(tool => lane[tool] !== undefined);
   return [
     ...system.split('\n'),
-    ...compiled.guards.filter(g => g.home === 'contract').map(g => g.rule),
-    ...Object.values(compiled.facts.tools).map(f => f.does)
+    ...compiled.guards.filter(g => g.home === 'contract' && inLane(g)).map(g => g.rule),
+    ...(options?.skipGenerated === true ? [] : Object.values(lane).map(f => f.does))
   ];
 }
 

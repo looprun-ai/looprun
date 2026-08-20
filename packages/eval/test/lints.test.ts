@@ -651,3 +651,25 @@ describe('approvable', () => {
     expect(found.map(f => f.code)).toEqual(['CASE_CANNOT_FIRE']);
   });
 });
+
+import { promptLines } from '../src/lints.js';
+
+describe('promptLines', () => {
+  test('a contract rule whose acts are outside the lane is not a line this desk reads', () => {
+    const compiled = {
+      guards: [{ home: 'contract', rule: 'about issueRefund', tools: ['issueRefund'] },
+               { home: 'contract', rule: 'about cancelBooking', tools: ['cancelBooking'] }],
+      facts: { tools: { issueRefund: { does: 'refund' } } }
+    };
+    expect(promptLines(compiled as never, 'SYS')).toEqual(['SYS', 'about issueRefund', 'refund']);
+  });
+
+  test('skipGenerated drops the world sentences, keeping only what the cards author', () => {
+    const compiled = {
+      guards: [{ home: 'contract', rule: 'authored', tools: ['a'] }],
+      facts: { tools: { a: { does: 'the world wrote this' } } }
+    };
+    expect(promptLines(compiled as never, 'SYS', { skipGenerated: true }))
+      .toEqual(['SYS', 'authored']);
+  });
+});
