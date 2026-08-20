@@ -8,10 +8,11 @@ import { ExamRunner } from '../src/exam-runner.js';
 import { buildJudgeInputs } from '../src/judge-inputs.js';
 import { scan } from '../src/monitor.js';
 
-// The phase-5 driver — env-gated, real subject model, never in CI.
+// The measurement driver — env-gated, real subject model, never in CI.
 //   RUN_ATLAS=<case-id>|all  RUN_ATLAS_REP=rep1  RUN_ATLAS_VARIANT=governed|both
+//   RUN_ATLAS_SUBJECT=atlas-next|atlas-skill — which authored subject is measured
 const ATLAS = join(fileURLToPath(import.meta.url),
-  '../../../../../agentspec-bench/subjects/atlas-next');
+  `../../../../../agentspec-bench/subjects/${process.env.RUN_ATLAS_SUBJECT ?? 'atlas-next'}`);
 const MODEL = 'google/gemini-3.1-flash-lite';
 const RUN = process.env.RUN_ATLAS ?? '';
 

@@ -99,9 +99,9 @@ the `agentspec` freeze stamp live.
 
 ## Task 5 — the examples
 
-- [x] `examples/hermes-sim`: removed from `pnpm-workspace.yaml`, `package.json` renamed to
-      `package.frozen.json`, README carrying the stamp: authored against the previous
-      engine, regenerated in its own phase.
+- [x] `examples/hermes-sim`: `examples/*` no longer names a workspace member, so nothing
+      there is built, typechecked or tested; its README carries the FROZEN stamp — authored
+      against the previous surface, regenerated in its own phase.
 - [x] The six README-only examples are KEPT: each is a seed for the skill — a purpose
       sentence and a tool surface — and none of them references the engine at all.
 
