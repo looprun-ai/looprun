@@ -1590,7 +1590,7 @@ git add skill && git commit -m "docs(skill): one bar, one panel, the loader's ow
 
 ## Task 18: TIER 1 — the hotel, end to end
 
-Closes: the spec's §4 TIER 1. Nothing reaches the Atlas until this is green.
+Closes: the spec's §4 TIER 1. Task 19 does not start until this is green.
 
 **Files:**
 - Create: `agentspec-bench/subjects/hotel/declaration.yaml`, `agentspec-bench/subjects/hotel/world.ts`
@@ -1868,18 +1868,22 @@ git add README.md docs packages/emit/README.md && git commit -m "docs: where a r
 
 ## Self-review
 
-**Spec coverage.** §1 measurement → Tasks 17, 18 re-measure it. §2 shape → Tasks 8–11. §3.1
-mechanisms → Tasks 1, 2, 4, 5, 6, 12, 15. §3.2 bars → Task 18. §4 tiers → Tasks 17, 18. §5
-implementation → Tasks 1–11. §6 documentation → Task 20. §7 skill → Tasks 12–16. §8 registers →
-Task 19.
+**Spec coverage.** §1 measurement → Tasks 7, 18, 19 re-measure it. §2 shape → Tasks 9–12. §3.1
+mechanisms → Tasks 1, 2, 4, 5, 6, 7, 13, 16. §3.2 bars → Task 19. §4 tiers → Tasks 18, 19. §5
+implementation → Tasks 1–12. §6 documentation → Task 21. §7 skill → Tasks 13–17. §8 registers →
+Task 20.
 
 **Ids with no task.** Every id in §8.1 appears in a task's "Closes:" line, and Task 19 asserts it
 mechanically rather than by inspection.
 
-**Type consistency.** `runGate(subjectDir, subject)` is defined in Task 7 and called by the file
-Task 11 emits. `promptLines(compiled, system, options?)` is widened in Task 6 and used by Task 15's
-snippet. `Declaration` is defined in Task 8 and consumed unchanged by Tasks 9, 10, 11.
+**Type consistency.** `runGate(subjectDir, subject)` is defined in Task 8 and called by the gate
+file Task 12 emits. `promptLines(compiled, system, options?)` is widened in Task 6 and used by
+Task 16's snippet. `Declaration` is defined in Task 9 and consumed unchanged by Tasks 10, 11, 12.
+`guardsWithTools(sf, lists)` is added in Task 2 and reused by Tasks 3 and 4. `declaredMap(sources,
+name)` generalises the shipped `licences()` helper in Task 2; `unlicensed` passes `'WHY'` and
+`overWide` passes `'WIDE'`. `byteOrigin` in Task 7 and `seamCovered` in Task 3 both take
+`SurfaceFacts`, never a subject directory alone.
 
-**A risk this plan carries.** Task 18's wall-clock bar is a target set against one measured
+**A risk this plan carries.** Task 19's wall-clock bar is a target set against one measured
 authoring, not a prediction. If the emitted path lands at twelve minutes rather than nine, the
 finding is the number, and the decision on whether nine was the right bar is the user's.
