@@ -245,6 +245,36 @@ const toolsOf = (arg: ts.Expression | undefined,
   return tools;
 };
 
+type GuardLiteral = { readonly name: string | null; readonly tools: readonly string[] | null;
+                      readonly ruled: boolean; readonly decides: boolean };
+
+/** An object literal read once: its name, the tools it reaches, whether it states a rule of its
+ *  own, and whether a spread or a hand-written check decides it. Tools come from a direct `tool`
+ *  property when the literal states its own, or — when a spread carries a factory's own check
+ *  into the literal — from that factory call's own first argument, the tool it was handed. */
+function guardLiteral(node: ts.ObjectLiteralExpression,
+                      lists: ReadonlyMap<string, readonly string[]>): GuardLiteral {
+  let name: string | null = null, ruled = false, decides = false;
+  let tools: readonly string[] | null = null;
+  for (const property of node.properties) {
+    if (ts.isSpreadAssignment(property)) {
+      decides = true;
+      if (tools === null && ts.isCallExpression(property.expression))
+        tools = toolsOf(property.expression.arguments[0], lists);
+      continue;
+    }
+    const key = property.name !== undefined && ts.isIdentifier(property.name)
+      ? property.name.text : null;
+    if (key === null) continue;
+    if (key === 'deny' || key === 'judgeQuery') decides = true;
+    if (!ts.isPropertyAssignment(property)) continue;
+    if (key === 'name' && ts.isStringLiteral(property.initializer)) name = property.initializer.text;
+    if (key === 'rule') ruled = true;
+    if (key === 'tool') tools = toolsOf(property.initializer, lists);
+  }
+  return { name, tools, ruled, decides };
+}
+
 /** Two shapes reach the same place: a `prose(name, rule, tool)` call, and an object literal
  *  naming itself with a string, carrying a rule, and carrying neither `deny` nor `judgeQuery`.
  *  A factory's own output is neither — it names itself through a spread, or carries a check. */
@@ -259,27 +289,39 @@ function proseRules(sf: ts.SourceFile,
         rules.push({ name: first.text, tools: toolsOf(node.arguments[2], lists), node });
     }
     if (ts.isObjectLiteralExpression(node)) {
-      let name: string | null = null, ruled = false, decides = false;
-      let tools: readonly string[] | null = null;
-      for (const property of node.properties) {
-        // A spread carries a factory's own check into this literal, so the literal states a
-        // sharpened rule over a mechanism — never a rule standing on its own.
-        if (ts.isSpreadAssignment(property)) { decides = true; continue; }
-        const key = property.name !== undefined && ts.isIdentifier(property.name)
-          ? property.name.text : null;
-        if (key === null) continue;
-        if (key === 'deny' || key === 'judgeQuery') decides = true;
-        if (!ts.isPropertyAssignment(property)) continue;
-        if (key === 'name' && ts.isStringLiteral(property.initializer)) name = property.initializer.text;
-        if (key === 'rule') ruled = true;
-        if (key === 'tool') tools = toolsOf(property.initializer, lists);
-      }
-      if (name !== null && ruled && !decides) rules.push({ name, tools, node });
+      const literal = guardLiteral(node, lists);
+      if (literal.name !== null && literal.ruled && !literal.decides)
+        rules.push({ name: literal.name, tools: literal.tools, node });
     }
     node.forEachChild(visit);
   };
   visit(sf);
   return rules;
+}
+
+type GuardWithTools = { readonly name: string; readonly tools: readonly string[]; readonly node: ts.Node };
+
+/** Every guard a card declares, whichever shape it was written in — prose-only or
+ *  factory-decided, spread or written by hand — with the acts it reaches resolved to a plain
+ *  list. A guard whose acts cannot be resolved reaches none. */
+function guardsWithTools(sf: ts.SourceFile,
+                         lists: ReadonlyMap<string, readonly string[]>): readonly GuardWithTools[] {
+  const guards: GuardWithTools[] = [];
+  const visit = (node: ts.Node): void => {
+    if (ts.isCallExpression(node) && ts.isIdentifier(node.expression)
+      && node.expression.text === 'prose') {
+      const first = node.arguments[0];
+      if (first !== undefined && ts.isStringLiteral(first))
+        guards.push({ name: first.text, tools: toolsOf(node.arguments[2], lists) ?? [], node });
+    }
+    if (ts.isObjectLiteralExpression(node)) {
+      const literal = guardLiteral(node, lists);
+      if (literal.name !== null) guards.push({ name: literal.name, tools: literal.tools ?? [], node });
+    }
+    node.forEachChild(visit);
+  };
+  visit(sf);
+  return guards;
 }
 
 /** The tool surface a loaded subject actually offers. A world card that builds its three
@@ -481,15 +523,17 @@ function literalText(node: ts.Expression): string | null {
 }
 
 const LICENCES = new Set(['noSuchAct', 'aboutARead', 'conduct']);
+const WIDE_LICENCES = new Set(['oneLawEveryAct', 'sameRefusal']);
 
-/** What a subject declares as the reason each prose-only rule exists. A licence is one of the
- *  three the surface proves, or `measured:<case>` when a judged run bought it. */
-function licences(sources: readonly Source[]): ReadonlyMap<string, string> {
+/** A module-local map declared by NAME — `export const <name> = { ... }` — read as string keys
+ *  to string values. Two closed sets are read through this one walk: `WHY` names the reason a
+ *  prose-only rule exists, `WIDE` names the licence a rule needs to span more than one act. */
+function declaredMap(sources: readonly Source[], name: string): ReadonlyMap<string, string> {
   const out = new Map<string, string>();
   for (const f of sources) {
     const visit = (node: ts.Node): void => {
       if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name)
-        && node.name.text === 'WHY' && node.initializer !== undefined) {
+        && node.name.text === name && node.initializer !== undefined) {
         const object = unwrap(node.initializer);
         if (ts.isObjectLiteralExpression(object))
           for (const property of object.properties) {
@@ -511,7 +555,7 @@ function licences(sources: readonly Source[]): ReadonlyMap<string, string> {
 export function unlicensed(subjectDir: string): readonly LintFinding[] {
   const sources = subjectSources(subjectDir);
   const lists = namedToolLists(sources);
-  const why = licences(sources);
+  const why = declaredMap(sources, 'WHY');
   const findings: LintFinding[] = [];
   for (const f of sources) {
     const sf = parse(f);
@@ -524,6 +568,36 @@ export function unlicensed(subjectDir: string): readonly LintFinding[] {
       } else if (!LICENCES.has(claim) && !claim.startsWith('measured:')) {
         findings.push({ code: 'PROSE_LICENCE_UNKNOWN',
           sentence: `${at} — prose rule '${rule.name}' claims '${claim}', which is not one of noSuchAct, aboutARead, conduct or measured:<case>` });
+      }
+    }
+  }
+  return findings;
+}
+
+/** A contract rule is stamped on the card of every act it names, in every lane holding that act.
+ *  A rule over five acts is five copies of one sentence, and it can only say what all five share.
+ *  Naming more than one act therefore costs a licence: `oneLawEveryAct` when the sentence is true
+ *  and useful on each, `sameRefusal` when the acts share the refusal word for word. A rule that
+ *  claims neither is a rule that splits, one act at a time. */
+export function overWide(subjectDir: string): readonly LintFinding[] {
+  const sources = subjectSources(subjectDir);
+  const lists = namedToolLists(sources);
+  const licences = declaredMap(sources, 'WIDE');
+  const findings: LintFinding[] = [];
+  for (const f of sources) {
+    const sf = parse(f);
+    for (const guard of guardsWithTools(sf, lists)) {
+      if (guard.tools.length < 2) continue;
+      const at = `${f.rel}:${sf.getLineAndCharacterOfPosition(guard.node.getStart(sf)).line + 1}`;
+      const claim = licences.get(guard.name);
+      if (claim === undefined) {
+        findings.push({ code: 'RULE_WIDE_UNLICENSED',
+          sentence: `${at} — '${guard.name}' names ${guard.tools.length} acts, so its sentence is `
+            + `stamped that many times. WIDE names why: oneLawEveryAct, or sameRefusal. `
+            + `Neither? Split it, one act at a time.` });
+      } else if (!WIDE_LICENCES.has(claim)) {
+        findings.push({ code: 'RULE_WIDE_LICENCE_UNKNOWN',
+          sentence: `${at} — '${guard.name}' claims '${claim}', which is neither oneLawEveryAct nor sameRefusal.` });
       }
     }
   }

@@ -392,6 +392,54 @@ describe('inertChecks', () => {
 });
 
 import { boilerplate, echoes } from '../src/lints.js';
+import { overWide } from '../src/lints.js';
+
+describe('overWide', () => {
+  const write = (body: string): string => {
+    const dir = mkdtempSync(join(tmpdir(), 'wide-'));
+    writeFileSync(join(dir, 'cards.ts'), body);
+    return dir;
+  };
+
+  test('a rule over two acts with no licence is a finding', () => {
+    const dir = write(`
+      const CONTRACT = { guards: [
+        { ...onlyAfter(['payInvoice', 'issueRefund'], 'getInvoice'), name: 'moneyReadsTheInvoice' }
+      ] };
+    `);
+    const found = overWide(dir);
+    expect(found.map(f => f.code)).toEqual(['RULE_WIDE_UNLICENSED']);
+    expect(found[0].sentence).toContain('moneyReadsTheInvoice');
+    expect(found[0].sentence).toContain('2 acts');
+  });
+
+  test('a declared licence clears it', () => {
+    const dir = write(`
+      export const WIDE = { moneyReadsTheInvoice: 'sameRefusal' } as const;
+      const CONTRACT = { guards: [
+        { ...onlyAfter(['payInvoice', 'issueRefund'], 'getInvoice'), name: 'moneyReadsTheInvoice' }
+      ] };
+    `);
+    expect(overWide(dir)).toEqual([]);
+  });
+
+  test('a licence outside the closed set is a finding', () => {
+    const dir = write(`
+      export const WIDE = { moneyReadsTheInvoice: 'itIsFine' } as const;
+      const CONTRACT = { guards: [
+        { ...onlyAfter(['payInvoice', 'issueRefund'], 'getInvoice'), name: 'moneyReadsTheInvoice' }
+      ] };
+    `);
+    expect(overWide(dir).map(f => f.code)).toEqual(['RULE_WIDE_LICENCE_UNKNOWN']);
+  });
+
+  test('a rule over one act asks nothing', () => {
+    const dir = write(`
+      const CONTRACT = { guards: [{ ...onlyAfter('issueRefund', 'getInvoice'), name: 'refundReads' }] };
+    `);
+    expect(overWide(dir)).toEqual([]);
+  });
+});
 
 describe('boilerplate', () => {
   test('prices a repeated run by the lines beyond the first that carry it', () => {
