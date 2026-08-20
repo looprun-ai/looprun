@@ -296,9 +296,23 @@ export function surfaceOf(subject: Subject): readonly string[] {
 /** Which card a guard sits on, read from the source: the engine renders a SPEC guard's rule
  *  into the system prefix and a CONTRACT guard's rule only into the cards of the tools it
  *  names, so the home decides whether a rule is read at all. */
-function homeOf(sf: ts.SourceFile, at: number): 'spec' | 'contract' {
-  const text = sf.getFullText().slice(0, at);
-  return text.lastIndexOf('DomainContract') > text.lastIndexOf('AgentSpec') ? 'contract' : 'spec';
+/** The card a guard sits on, read from the object that declares it: an AgentSpec carries a
+ *  persona and a DomainContract does not, so the enclosing card names itself whatever order the
+ *  file is written in. A guard the walk cannot place is left uncharged — the render phase catches
+ *  a rule that reaches no prompt by printing the prompt. */
+function homeOf(node: ts.Node): 'spec' | 'contract' {
+  for (let at: ts.Node | undefined = node; at !== undefined; at = at.parent) {
+    if (!ts.isObjectLiteralExpression(at)) continue;
+    let guards = false, persona = false;
+    for (const property of at.properties) {
+      const key = property.name !== undefined && ts.isIdentifier(property.name)
+        ? property.name.text : null;
+      if (key === 'guards') guards = true;
+      if (key === 'persona') persona = true;
+    }
+    if (guards) return persona ? 'spec' : 'contract';
+  }
+  return 'spec';
 }
 
 export function pairing(subjectDir: string, declared?: Iterable<string>): readonly LintFinding[] {
@@ -315,7 +329,7 @@ export function pairing(subjectDir: string, declared?: Iterable<string>): readon
     const sf = parse(f);
     for (const rule of proseRules(sf, lists)) {
       const at = `${f.rel}:${sf.getLineAndCharacterOfPosition(rule.node.getStart(sf)).line + 1}`;
-      const home = homeOf(sf, rule.node.getStart(sf));
+      const home = homeOf(rule.node);
       if (home === 'spec') continue;                      // the system prefix carries it, always
       if (rule.tools === null || rule.tools.length === 0) {
         findings.push({ code: 'RULE_NEVER_RENDERED',

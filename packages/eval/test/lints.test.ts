@@ -53,8 +53,8 @@ test('census: an installed guard with no dump that fires it is a finding', () =>
 
 import { pairing, pairingTable } from '../src/lints.js';
 
-/** A subject small enough to read: three tools in their effect blocks, one factory, one
- *  disclosure ceiling and the prose helper. */
+/** A subject small enough to read: three tools in their effect blocks, a desk carrying the law
+ *  that names no act, a contract carrying the law about one act, one factory and one ceiling. */
 const CARD = `
 export const w = {
   records: {},
@@ -64,11 +64,17 @@ export const w = {
 };
 const prose = (name, rule, tool) =>
   tool === undefined ? { name, rule, on: 'reply' } : { name, rule, on: 'reply', tool };
+export const billing = {
+  name: 'billing',
+  persona: 'You are the billing desk.',
+  guards: [
+    prose('noWriteOffs', 'No operation on this surface writes off a charge.')
+  ]
+};
 export const contract = {
   guards: [
     onlyAfter('payInvoice', 'getInvoice'),
-    prose('payFromTheRecord', 'A payment lands on the invoice the read returned.', ['payInvoice']),
-    prose('noWriteOffs', 'No operation on this surface writes off a charge.')
+    prose('payFromTheRecord', 'A payment lands on the invoice the read returned.', ['payInvoice'])
   ],
   disclosure: {
     payInvoice: { cap: { arg: 'amount', at: 'getInvoice.invoice.balanceDue', refusal: 'Too much.' } }
@@ -219,4 +225,19 @@ test('pairing: a rule that names no act is not charged for', () => {
   const codes = pairing(subjectDirWith(CARDS)).map(f => f.code);
   expect(codes).not.toContain('PROSE_RESIDUE_UNDECLARED');
   expect(codes).not.toContain('PROSE_TOOL_UNCHECKED');
+});
+
+test('pairing: the home is read from the card, not from the order the file is written in', () => {
+  const specLast = subjectDirWith(`
+export const w = { records: {},
+  writes: { issueRefund: { form: 'set', entity: 'invoices', label: 'Refund an invoice' } } };
+const prose = (name, rule, tool) =>
+  tool === undefined ? { name, rule, on: 'reply' } : { name, rule, on: 'reply', tool };
+export const contract = { name: 'atlas', guards: [
+  prose('refundCapFromTheRecord', 'A refund is capped by the statement.', ['issueRefund'])
+] };
+export const billing = { name: 'billing', persona: 'You are the billing desk.', guards: [
+  prose('declareHonestly', 'Say what ran and what did not.')
+] };`);
+  expect(pairing(specLast)).toEqual([]);
 });
