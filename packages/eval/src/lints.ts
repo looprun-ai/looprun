@@ -847,14 +847,19 @@ export interface ByteOrigin {
   readonly worldSentences: number;   // the `does` a GEN phase wrote, once per card that carries it
   readonly schemas: number;          // argument descriptions and JSON structure
   readonly contractRules: number;    // the sentences NORMS wrote
-  readonly lanes: readonly string[]; // one row per act, its lane count, and what that costs
+  readonly lanes: readonly string[]; // one row per act: its lane count, and what its world
+                                     // sentence costs across those stamps
 }
 
 /** What each slice of the prompt costs, and who wrote it. A world `does` sentence is authored in
  *  the GEN phase and stamped on the card of every desk holding that act; a schema carries the
  *  argument descriptions someone wrote beside its types; a contract rule is the NORMS phase's own.
+ *  The card's own name and JSON frame, and the engine's finish card, sit outside the four slices,
+ *  so the four sum under the rendered prompt.
+ *
  *  The lane rows price the desk split: an act in six lanes sends its card six times, and the split
- *  that decides it is made without counting a byte. */
+ *  that decides it is made without counting a byte. A row charges that act's world sentence once
+ *  per lane holding it — the sentence's stamps, not the whole card's. */
 export function byteOrigin(desks: readonly CompiledDesk[], facts: SurfaceFacts): ByteOrigin {
   let systemPrefixes = 0;
   let worldSentences = 0;
@@ -878,7 +883,7 @@ export function byteOrigin(desks: readonly CompiledDesk[], facts: SurfaceFacts):
   const lanes = Object.values(facts.tools)
     .map(fact => ({ act: fact.name, does: fact.does.length, cards: held.get(fact.name) ?? 0 }))
     .sort((a, b) => b.does * b.cards - a.does * a.cards)
-    .map(r => `${String(r.does * r.cards).padStart(6)} B  ${r.act} — ${r.does} B `
+    .map(r => `${String(r.does * r.cards).padStart(6)} B  ${r.act} — ${r.does} B does `
       + `× ${r.cards} lane${r.cards === 1 ? '' : 's'}`);
   return { systemPrefixes, worldSentences, schemas, contractRules, lanes };
 }
