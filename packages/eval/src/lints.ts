@@ -6,7 +6,8 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import ts from 'typescript';
-import type { GuardCensus, TurnRecord } from '@looprun-ai/core';
+import type { GuardCensus, TurnRecord, WorldCard } from '@looprun-ai/core';
+import type { Subject } from './subject-loader.js';
 import { RETIRED_NAMES } from '@looprun-ai/core';
 
 export interface LintFinding { readonly code: string; readonly sentence: string }
@@ -279,6 +280,9 @@ function proseRules(sf: ts.SourceFile,
       let name: string | null = null, ruled = false, decides = false;
       let tools: readonly string[] | null = null;
       for (const property of node.properties) {
+        // A spread carries a factory's own check into this literal, so the literal states a
+        // sharpened rule over a mechanism — never a rule standing on its own.
+        if (ts.isSpreadAssignment(property)) { decides = true; continue; }
         const key = property.name !== undefined && ts.isIdentifier(property.name)
           ? property.name.text : null;
         if (key === null) continue;
@@ -299,9 +303,24 @@ function proseRules(sf: ts.SourceFile,
 /** Shorter than this and a residue reason is a label, not a justification a reviewer weighs. */
 const A_REASON = 20;
 
-export function pairing(subjectDir: string): readonly LintFinding[] {
+/** The tool surface a loaded subject actually offers. A world card that builds its three
+ *  effect blocks in code says nothing to a reader of its source, so a caller holding the
+ *  loaded card hands it over and the pairing reads membership from the truth. */
+export function surfaceOf(subject: Subject): readonly string[] {
+  const world = subject.world as { readonly card?: WorldCard };
+  const card = world.card;
+  if (card === undefined) return [];
+  return [...Object.keys(card.reads ?? {}), ...Object.keys(card.writes ?? {}),
+          ...Object.keys(card.destructive ?? {})];
+}
+
+export function pairing(subjectDir: string, declared?: Iterable<string>): readonly LintFinding[] {
   const sources = subjectSources(subjectDir);
-  const surface = toolSurface(sources);
+  const fromSource = toolSurface(sources);
+  const surface = declared === undefined ? fromSource : new Set(declared);
+  // An empty surface read from source means the card spells no block out, so membership is
+  // unknowable here and only the CHECK on a named act can be judged.
+  const membershipKnown = surface.size > 0;
   const checks = checksByTool(sources, factoryNames(sources));
   const reasons = residue(sources);
   const lists = namedToolLists(sources);
@@ -321,7 +340,7 @@ export function pairing(subjectDir: string): readonly LintFinding[] {
         continue;
       }
       for (const tool of rule.tools) {
-        if (!surface.has(tool)) findings.push({ code: 'PROSE_TOOL_UNKNOWN',
+        if (membershipKnown && !surface.has(tool)) findings.push({ code: 'PROSE_TOOL_UNKNOWN',
           sentence: `${at} — prose rule '${rule.name}' names '${tool}', which is on no effect block` });
         else if (!checks.has(tool)) findings.push({ code: 'PROSE_TOOL_UNCHECKED',
           sentence: `${at} — prose rule '${rule.name}' names '${tool}', which carries no deterministic guard and no cap` });

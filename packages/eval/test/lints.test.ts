@@ -190,3 +190,37 @@ export const contract = { guards: [
 ] };`);
   expect(pairing(dir).map(f => f.code)).toContain('PROSE_TOOL_UNCHECKED');
 });
+
+test('pairing: a sharpened factory guard is a check, not a prose rule', () => {
+  const dir = subjectDirWith(`
+export const w = { records: {},
+  reads: { getInvoice: { form: 'get', entity: 'invoices', label: 'Look up an invoice' } },
+  writes: { issueRefund: { form: 'set', entity: 'invoices', label: 'Refund an invoice' } } };
+const RESIDUE = {};
+export const contract = { guards: [
+  { ...onlyAfter('issueRefund', 'getInvoice'),
+    name: 'refundReadsTheInvoice',
+    rule: 'Read the invoice before a refund: what can go back is paid minus refunded.' }
+] };`);
+  expect(pairing(dir)).toEqual([]);
+});
+
+test('pairing: a card that builds its effect blocks in code is judged on its checks only', () => {
+  const built = `
+const READS = ['getInvoice'];
+export const w = { records: {},
+  reads: Object.fromEntries(READS.map(n => [n, { form: 'get', entity: 'invoices', label: n }])),
+  writes: Object.fromEntries([['issueRefund', { form: 'set', entity: 'invoices', label: 'r' }]]) };
+const prose = (name, rule, tool) =>
+  tool === undefined ? { name, rule, on: 'reply' } : { name, rule, on: 'reply', tool };
+const RESIDUE = {};
+export const contract = { guards: [
+  onlyAfter('issueRefund', 'getInvoice'),
+  prose('refundCapFromTheRecord', 'A refund is capped by the record.', ['issueRefund'])
+] };`;
+  // membership is unknowable from the source, so a named act is judged on its check alone
+  expect(pairing(subjectDirWith(built))).toEqual([]);
+  // and the caller that holds the loaded card gets the membership check back
+  expect(pairing(subjectDirWith(built), ['getInvoice']).map(f => f.code))
+    .toContain('PROSE_TOOL_UNKNOWN');
+});
