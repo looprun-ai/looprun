@@ -54,6 +54,22 @@ excursion is a page that failed to answer, and it is paid in minutes.
                                                       objects, factory wiring, `as const`
 ```
 
+### Who wrote each prompt byte
+
+Every byte this campaign optimised is one slice. The other 86% was read by no lint, and a quarter
+of it is authored prose sitting in a directory named `generated/`.
+
+```
+  world `does`      25 313   25%   54 sentences, AUTHORED in the GEN phase
+  schema            27 331   27%   106 authored argument descriptions + JSON structure
+  system prefixes   29 943   30%   personas, facts, voice, conduct laws
+  contract rules    14 255   14%   ← the only slice any lint has measured
+```
+
+Two acts sit in all six lanes and forty-two sit in one: 53 acts occupy 84 card slots, and every
+byte of a six-lane act is sent six times. The desk split decides that, and N1 splits by tool-need
+without pricing it.
+
 ### What the gate does not catch
 
 ```
@@ -200,9 +216,35 @@ carry more sentences, and paying for them is correct when the determinism is rea
 
 ---
 
-## 4 · The implementation
+## 4 · How this is tested — the small subject first
 
-### 4.1 · `packages/emit` — new package in `looprun`
+The Atlas is thirty-one acts over six desks and one authoring of it costs half an hour. Nothing
+reaches it until a five-act surface has proved the same path.
+
+```
+  TIER 0   fixtures            every emitter refusal of §2.2, and every new verb
+                               red before green. No subject, no model.
+
+  TIER 1   the HOTEL           docs/tutorial/snippets/hotel — three reads, one write,
+           5 acts · 1 desk     one destructive act, and an exam.ts that already ships
+                               three cases with rubrics and invariants.
+                               declaration.yaml → emit → gate → judged run.
+                               Minutes, and three cases of model spend.
+
+  TIER 2   the ATLAS           the four bars of §3.2. Entered only when TIER 1 is green.
+           31 acts · 6 desks
+```
+
+The hotel is not a toy for this: its own `exam.ts:11` declares `covers: ['consent:cancelBooking',
+…]` while the engine mints `confirmFirst:cancelBooking` at `catalog.ts:96`. The tutorial that
+teaches people ships a key resolving to nothing, so `coversResolve` has a red fixture waiting for
+it in the file it must protect.
+
+---
+
+## 5 · The implementation
+
+### 5.1 · `packages/emit` — new package in `looprun`
 
 ```
   packages/emit/src/
@@ -217,7 +259,7 @@ It depends on `@looprun-ai/core` for `factsFromWorld`, the factory signatures an
 on `@looprun-ai/eval` for the verbs the emitted gate calls. This is the relationship the lints
 already have: the tool lives in the engine, the skill's pages invoke it.
 
-### 4.2 · `packages/eval` — three verbs
+### 5.2 · `packages/eval` — three verbs
 
 ```
   boilerplate(lines, minRun)        packages/eval/boilerplate.mjs exists and is called by
@@ -228,7 +270,7 @@ already have: the tool lives in the engine, the skill's pages invoke it.
                                     sentence an operator needs, stays the author's
 ```
 
-### 4.3 · `packages/core` — one fix
+### 5.3 · `packages/core` — one fix
 
 `cards/agent-factory.ts:65` — already applied this session: a desk compiles only the disclosures
 for acts in its own lane, so a contract disclosing an act one desk cannot perform no longer
@@ -236,7 +278,7 @@ crashes every other desk.
 
 ---
 
-## 5 · The documentation
+## 6 · The documentation
 
 | doc | what changes |
 |---|---|
@@ -249,7 +291,7 @@ crashes every other desk.
 
 ---
 
-## 6 · The skill
+## 7 · The skill
 
 Updated in the same working session as the engine, never after.
 
@@ -265,14 +307,14 @@ Updated in the same working session as the engine, never after.
 
 ---
 
-## 7 · What this spec covers, and what it does not
+## 8 · What this spec covers, and what it does not
 
 Every finding has an id: `D`/`R`/`C`/`X`/`F` from `docs/analysis/2026-08-20-skill-adversarial.md`,
 `B` from `docs/analysis/2026-08-20-skill-backlog.md`, `G` from the two blind authorings recorded
 there. **Every id appears in exactly one of the two columns below.** An id in neither is a
 tracking defect, and §7.3 says how that is caught.
 
-### 7.1 · IN — this spec and its plan
+### 8.1 · IN — this spec and its plan
 
 Admitted on one of two tests: it moves a bar in §3, or it is a defect where something WRONG
 passes the gate.
@@ -296,7 +338,7 @@ passes the gate.
 | C12 | the repo's declared lints do not exist | gate integrity |
 | R1 | the certification bar — 0.95, and `ship.md` says otherwise | gate integrity — a ship page certifying below the bar |
 | R2 | the conduct laws are six | applied this session, `93eb895` |
-| R3 | the template's guard home | the template is what an author copies |
+| R3 | the template the skill hands an author is RED under two lints the skill's own gate requires empty — seven findings converge on it | it is the first thing an author copies, and it fails the gate on arrival |
 | R4 | the `WHY` map's minted names | gate integrity — the drift that produced seven findings |
 | R5 | `cap.at` — the alias root | a check whose path never resolves |
 | R6 R7 | a `gates` entry has no `detail`; `fail(CODE)` is `{ refuse }` | both blind authors were misled |
@@ -336,8 +378,11 @@ passes the gate.
 | U1 | the GEN phase authors 54 `does` sentences, unmeasured | 25% of the prompt, no lint |
 | U2 | the GEN phase authors 106 argument descriptions, unmeasured | same channel |
 | U3 | the desk split prices no byte — two acts sit in all six lanes | every byte of a six-lane act is paid six times |
+| W1 | "An invariant names the REQUIREMENT, not one path to it" is a verbatim heading in two files | survived refutation and appears in no item of the audit's own fix list |
+| W2 | `gen.md`'s form/argument line omits `make`, the one form whose argument is not the target | same — a survivor the consolidation dropped |
+| W3 | the unfillable-tense law is unconditional in one home and conditional in the other | same |
 
-### 7.2 · OUT — the next spec
+### 8.2 · OUT — the next spec
 
 Not admitted: each is real and verified, and none moves a bar or lets a defect through the gate.
 They are ceremony, dead pointers, and unowned files.
@@ -358,7 +403,7 @@ They are ceremony, dead pointers, and unowned files.
 | B5 | the remaining gaps of the two authorings | folded into B1b and the next spec |
 | — | the ten LEAVE ALONE rows | the audit judged them load-bearing; no action is the finding |
 
-### 7.3 · How this is tracked
+### 8.3 · How this is tracked
 
 Three registers, and an id lives in exactly one of them at a time.
 
@@ -370,20 +415,28 @@ Three registers, and an id lives in exactly one of them at a time.
                                                    task naming several ids. A task's
                                                    checkbox IS the item's status.
 
+  docs/analysis/2026-08-20-finding-trace.md        the MAP — all eighty surviving findings,
+                                                   read one by one, each against the item
+                                                   that carries it. Three text heuristics
+                                                   failed to recover it; it was built by hand.
+
   docs/analysis/2026-08-20-skill-backlog.md        the OUT column, in a section named
                                                    "deferred by the declaration spec",
                                                    each id with its one-line reason.
                                                    The next spec opens from that section.
 ```
 
-The closing check is mechanical: every id in §7.1 appears in the plan, every id in §7.2 appears in
-the backlog's deferred section, and the two sets do not intersect. A script over the three files
-answers it, and it is the last task of the plan — an id in neither register is the tracking defect
-this section exists to prevent.
+The closing check is mechanical: every id in §8.1 appears in the plan, every id in §8.2 appears in
+the backlog's deferred section, every one of the eighty findings in the map carries an id from one
+of the two, and the two sets do not intersect.
+
+The check reads ids from the FIRST COLUMN of a table row, never from free text. An earlier reading
+scanned the whole row and reported `S2` as a duplicate, because the row describing the SHIP
+sub-stage `S2` contains that literal. A checker that reads prose invents its own defects.
 
 ---
 
-## 8 · What this design cannot claim
+## 9 · What this design cannot claim
 
 The Atlas is the only subject that exists, and it was authored by hand by the same agent that
 writes these pages. A score on it measures the skill against that agent's own knowledge, not
