@@ -1,6 +1,6 @@
 # Render-first authoring — design
 
-Date: 2026-08-20 · Status: OPEN · Scope: the `agentspec` skill's shape, one lint verb in
+Date: 2026-08-20 · Status: OPEN — measured at 87/100 against a bar of 95; eleven rows remain, three of which the reference fails too · Scope: the `agentspec` skill's shape, one lint verb in
 `packages/eval`, and the measurements that close it. `packages/core` is not touched.
 
 The agentspec skill's own gate is the Atlas: an agent that has read only its pages authors the
