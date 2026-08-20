@@ -312,7 +312,7 @@ Updated in the same working session as the engine, never after.
 Every finding has an id: `D`/`R`/`C`/`X`/`F` from `docs/analysis/2026-08-20-skill-adversarial.md`,
 `B` from `docs/analysis/2026-08-20-skill-backlog.md`, `G` from the two blind authorings recorded
 there. **Every id appears in exactly one of the two columns below.** An id in neither is a
-tracking defect, and §7.3 says how that is caught.
+tracking defect, and §8.3 says how that is caught.
 
 ### 8.1 · IN — this spec and its plan
 
