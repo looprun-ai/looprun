@@ -127,17 +127,23 @@ emit: consent per destructive tool, `groundedIds`, `groundedDates`, `noDuplicate
 
 ### 3.2 · The pairing ledger
 
-A prose rule declares the acts it governs. The helper the subject carries:
+A prose rule declares the acts it reaches, in the field the engine already carries for exactly
+that: `Guard.tool` — *"exact declared tool names this guard covers"*. On a `reply`-phase guard
+it is a pure declaration. `checkReply` collects with no tool in hand, so the `covers` filter
+never runs and the rule fires on every reply; what `tool` does is put the acts in the census.
 
 ```typescript
-/** A rule the prompt states in the operator's words. `governs` names the tools whose acts this
- *  law reaches; each of them carries the check that refuses. A law no tool acts on is residue,
- *  and the residue set is declared once by name. */
-const prose = (name: string, rule: string, governs: readonly string[]): Guard =>
-  ({ name, rule, on: 'reply' });
+/** A rule the prompt states in the operator's words. `tool` names the acts this law reaches,
+ *  and each of them carries the check that refuses. A law no call can break is residue. */
+const prose = (name: string, rule: string, tool?: readonly string[]): Guard =>
+  tool === undefined ? { name, rule, on: 'reply' } : { name, rule, on: 'reply', tool };
 
-/** Laws this surface states and no call can break, because no tool performs the act. */
-const RESIDUE = ['noWriteOffs', 'offSurfacePromises'] as const;
+/** Laws this surface states and no call can break, because no tool performs the act.
+ *  The sentence is the justification a reviewer reads and the lint requires. */
+const RESIDUE = {
+  noWriteOffs: 'No tool on this surface writes off a charge, so no call can break this rule.',
+  offSurfacePromises: 'A promise is words; no call carries one.'
+} as const;
 ```
 
 Authored, that reads:
@@ -150,26 +156,44 @@ prose('refundCapFromTheRecord',
 
 prose('noWriteOffs',
       'No operation on this surface writes off a charge. When one is asked for, say that no '
-    + 'such operation exists rather than naming a team to ask.',
-      [])                                 // in RESIDUE — no tool acts on it
+    + 'such operation exists rather than naming a team to ask.')
+                                          // no tool — its reason sits in RESIDUE
 ```
 
-A new lint verb in `packages/eval` reads the subject's source and reports findings the way
-`purity` and `nameGate` do — statically, over the directory, with no key, no model and no
-network:
+Two new verbs in `packages/eval`, both static over the directory, with no key, no model and no
+network — the same shape as `purity` and `nameGate`. The first reports findings:
 
 | finding | what it means |
 |---|---|
-| `PROSE_UNLEDGERED` | a `prose(` call with no third argument |
-| `PROSE_GOVERNS_UNKNOWN_TOOL` | a named tool is not on the surface |
-| `PROSE_GOVERNS_UNCHECKED_TOOL` | a named tool carries no deterministic guard and no `cap` — the sentence stands where a check should |
-| `PROSE_RESIDUE_UNDECLARED` | an empty `governs` and the name is not in `RESIDUE` |
-| `PROSE_INLINE` | a `{ name, rule, on }` literal without `deny` or `judgeQuery`, written outside the helper |
+| `PROSE_TOOL_UNKNOWN` | a declared tool is on no effect block of the world card |
+| `PROSE_TOOL_UNCHECKED` | a declared tool carries no deterministic guard and no `cap` — the sentence stands where a check should |
+| `PROSE_RESIDUE_UNDECLARED` | a prose rule declares no tool and its name is not in `RESIDUE` |
+| `PROSE_RESIDUE_UNEXPLAINED` | a `RESIDUE` entry whose reason is not a sentence |
 
-The last row is what keeps the ledger honest: an author who writes the object literal by hand
-bypasses the helper, so the lint refuses the literal.
+There is no finding for writing the guard as an object literal instead of through the helper.
+Both carry `tool`, so both are read the same way, and a rule that declares nothing is caught by
+`PROSE_RESIDUE_UNDECLARED` whichever shape it took.
 
-The verb joins `references/check-subject.test.ts`, which calls engine lints and re-implements
+The second verb emits the justification table, read from the card rather than maintained beside
+it, so it cannot go stale:
+
+```
+  prose rule                 reaches            what carries it              why nothing stronger
+  ────────────────────────────────────────────────────────────────────────────────────────────
+  refundCapFromTheRecord     issueRefund        onlyAfter · cap              —
+  terminalMoney              voidInvoice        moneyGate                    —
+                             releaseDeposit     precondition                 —
+  ────────────────────────────────────────────────────────────────────────────────────────────
+  noWriteOffs                —                  nothing                      no tool on this
+                                                                             surface does it
+  offSurfacePromises         —                  nothing                      a promise is words
+```
+
+The rows above the line are generated from the guards. The rows below are the residue, and they
+are the only lines an author writes — which is where the justification matters and the only
+place it cannot be derived.
+
+Both verbs join `references/check-subject.test.ts`, which calls engine lints and re-implements
 none of them.
 
 ### 3.3 · The eighteen lessons, generalised, with their figures kept
@@ -240,7 +264,7 @@ change the engine's authoring surface, so its four sections are:
 | section | contents |
 |---|---|
 | the measurement | §1 — both subjects, the 31/31 coverage, the missing cap, the nine unused factories |
-| the implementation | one lint verb in `packages/eval` and its barrel export; `references/check-subject.test.ts` gains the call |
+| the implementation | two verbs in `packages/eval` — the findings and the table — and their barrel exports; `references/check-subject.test.ts` gains the call |
 | the documentation | `docs/tutorial/04-guards.md` carries the same act-keyed ladder, so an engine user and a skill author read one truth |
 | the skill | `references/guard-catalog.md` rewritten as the catalog and the ladder; `references/norms.md` N1 and N4 point at it and stop restating it; `references/gen.md` gains the surface interview |
 
@@ -276,6 +300,6 @@ The skill stays frozen until level 2 passes in the session that measures it.
 | risk | size and mitigation |
 |---|---|
 | No measurement shows this reaching 95. The reference reached 95 with 50 prose rules and 31/31 coverage; this design changes the pairing, not the coverage, so the reference's own shape satisfies it — but the causal claim is untested until level 2 runs. | high · the gate is the test, and nothing is stamped before it |
-| The lint is static analysis over a convention. An author who writes the literal by hand escapes the ledger. | medium · `PROSE_INLINE` refuses the bare literal, so the escape costs a finding |
-| `PROSE_GOVERNS_UNCHECKED_TOOL` can fire on a legitimate rule about a READ, which correctly carries no deterministic guard. | medium · the finding names the tool, and a read named in `governs` is the author's mistake: a law about a read shapes words, so its `governs` is empty and its name belongs in `RESIDUE` |
+| The lint reads the source, so a guard assembled at run time from values it computes is invisible to it. | low · a card is closed data; a guard whose tools are computed rather than written is already outside what the validator accepts |
+| `PROSE_TOOL_UNCHECKED` can fire on a legitimate rule about a READ, which correctly carries no deterministic guard. | medium · the finding names the tool, and a read in `tool` is the author's mistake: a law about a read shapes words, so it declares no tool and its name belongs in `RESIDUE` |
 | Generalising eighteen lessons into ten businesses costs the reader the coherence of one worked domain. | low · the figures stay, and one domain per lesson keeps each example whole |
