@@ -318,6 +318,13 @@ passes the gate.
 | G-F | `precondition` names itself after all its tools | a stale mechanism sentence |
 | G-G | the surface count is 54, not 31 | an author sizing its work from the wrong number |
 | B1a | the DETERMINISTIC half of the byte analysis | tokens |
+| B6 | the speed bar | resolved in §3.2 as 1.5 min per desk; the twenty-fold reading is refuted in §8 |
+| S1 | `subject.ts` emitted | three fixed lines an author should never type |
+| S2e | `check-subject.test.ts` emitted | the one gate list, generated from the verbs it runs |
+| S3 | `gen/SEAM.md` emitted | every gate and every `refuse` in the world, paired; the third column stays the author's |
+| S4 | the `covers` keys emitted from the compiled census | gate integrity — closes D5, C3 and G-A at the source |
+| S5 | the `WHY` map emitted from the declaration's own law names | gate integrity — closes R4 |
+| S6 | the expected census emitted, and the gate compares it to what compiled | determinism — a guard that vanishes is caught |
 
 ### 7.2 · OUT — the next spec
 

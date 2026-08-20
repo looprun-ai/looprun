@@ -167,3 +167,9 @@ a defect where something wrong passes the gate. The next spec opens from this se
 | B5 | the remaining gaps of the two blind authorings | folded into B1b |
 
 The ten rows the audit marked LEAVE ALONE are not here: no action is the finding.
+
+`B6` — the twenty-fold speed bar — is not deferred: the declaration spec §3.2 replaces it with 1.5
+minutes per desk, and §8 records why twenty-fold was refused. An adversarial pass raised thirty-seven
+speed proposals against these pages and every one was refuted; the arithmetic behind the refusal is
+that the business sentences an author must write are ~9 200 output tokens, which is roughly two
+minutes of pure decode before any reading, deliberation or gate pass.
