@@ -154,3 +154,39 @@ export const contract = { guards: [
 ] };`);
   expect(pairing(dir)).toEqual([]);
 });
+
+test('pairing: a named tool list resolves on both sides — the gate and the rule', () => {
+  const dir = subjectDirWith(`
+export const w = { records: {}, reads: {}, writes: {},
+  destructive: {
+    payInvoice:  { form: 'set',    entity: 'invoices', label: 'Pay an invoice' },
+    voidInvoice: { form: 'remove', entity: 'invoices', label: 'void an invoice' }
+  } };
+const prose = (name, rule, tool) =>
+  tool === undefined ? { name, rule, on: 'reply' } : { name, rule, on: 'reply', tool };
+const RESIDUE = {} satisfies Record<string, string>;
+const MONEY_TOOLS = ['payInvoice', 'voidInvoice'] as const;
+function moneyGate() {
+  return { ...precondition(MONEY_TOOLS, ctx => true, 'Moving money needs the capability.'),
+           name: 'moneyGate' };
+}
+export const contract = { guards: [
+  moneyGate(),
+  prose('terminalMoney', 'Money that has moved does not come back.', MONEY_TOOLS)
+] };`);
+  expect(pairing(dir)).toEqual([]);
+});
+
+test('pairing: an act named through a list that no gate covers is still reported', () => {
+  const dir = subjectDirWith(`
+export const w = { records: {}, reads: {}, writes: {},
+  destructive: { voidInvoice: { form: 'remove', entity: 'invoices', label: 'void an invoice' } } };
+const prose = (name, rule, tool) =>
+  tool === undefined ? { name, rule, on: 'reply' } : { name, rule, on: 'reply', tool };
+const RESIDUE = {};
+const MONEY_TOOLS = ['voidInvoice'];
+export const contract = { guards: [
+  prose('terminalMoney', 'Money that has moved does not come back.', MONEY_TOOLS)
+] };`);
+  expect(pairing(dir).map(f => f.code)).toContain('PROSE_TOOL_UNCHECKED');
+});

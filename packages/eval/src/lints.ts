@@ -159,11 +159,9 @@ function checksByTool(sources: readonly Source[],
     if (at === undefined) byTool.set(tool, [mechanism]);
     else if (!at.includes(mechanism)) at.push(mechanism);
   };
+  const lists = namedToolLists(sources);
   const take = (arg: ts.Expression | undefined, mechanism: string): void => {
-    if (arg === undefined) return;
-    if (ts.isStringLiteral(arg)) note(arg.text, mechanism);
-    else if (ts.isArrayLiteralExpression(arg))
-      for (const element of arg.elements) if (ts.isStringLiteral(element)) note(element.text, mechanism);
+    for (const tool of toolsOf(arg, lists) ?? []) note(tool, mechanism);
   };
   for (const f of sources) {
     const visit = (node: ts.Node): void => {
@@ -171,7 +169,8 @@ function checksByTool(sources: readonly Source[],
         && factories.has(node.expression.text)) {
         const mechanism = node.expression.text;
         take(node.arguments[0], mechanism);
-        for (const arg of node.arguments) if (ts.isArrayLiteralExpression(arg)) take(arg, mechanism);
+        for (const arg of node.arguments)
+          if (ts.isArrayLiteralExpression(arg) || ts.isIdentifier(arg)) take(arg, mechanism);
       }
       if (ts.isPropertyAssignment(node) && ts.isIdentifier(node.name) && node.name.text === 'cap') {
         const keyed = node.parent.parent;
@@ -191,7 +190,7 @@ function residue(sources: readonly Source[]): ReadonlyMap<string, string> {
     const visit = (node: ts.Node): void => {
       if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name)
         && node.name.text === 'RESIDUE' && node.initializer !== undefined) {
-        const object = ts.isAsExpression(node.initializer) ? node.initializer.expression : node.initializer;
+        const object = unwrap(node.initializer);
         if (ts.isObjectLiteralExpression(object))
           for (const property of object.properties) {
             if (!ts.isPropertyAssignment(property)) continue;
@@ -221,24 +220,60 @@ function literalText(node: ts.Expression): string | null {
 type ProseRule = { readonly name: string; readonly tools: readonly string[] | null;
                    readonly node: ts.Node };
 
-const toolsOf = (arg: ts.Expression | undefined): readonly string[] | null => {
+/** `as const`, `satisfies` and a wrapping paren are punctuation around the value. */
+const unwrap = (node: ts.Expression): ts.Expression =>
+  ts.isAsExpression(node) || ts.isSatisfiesExpression(node) || ts.isParenthesizedExpression(node)
+    ? unwrap(node.expression) : node;
+
+/** An author names a group of tools once and reaches for that name in the gate and in the rule
+ *  it teaches. Both readings resolve the name to the same list. */
+function namedToolLists(sources: readonly Source[]): ReadonlyMap<string, readonly string[]> {
+  const lists = new Map<string, readonly string[]>();
+  for (const f of sources) {
+    const visit = (node: ts.Node): void => {
+      if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.initializer !== undefined) {
+        const value = unwrap(node.initializer);
+        if (ts.isArrayLiteralExpression(value)) {
+          const names = value.elements.filter(ts.isStringLiteral).map(element => element.text);
+          if (names.length > 0 && names.length === value.elements.length)
+            lists.set(node.name.text, names);
+        }
+      }
+      node.forEachChild(visit);
+    };
+    visit(parse(f));
+  }
+  return lists;
+}
+
+const toolsOf = (arg: ts.Expression | undefined,
+                 lists: ReadonlyMap<string, readonly string[]>): readonly string[] | null => {
   if (arg === undefined) return null;
-  if (ts.isStringLiteral(arg)) return [arg.text];
-  if (!ts.isArrayLiteralExpression(arg)) return null;
-  return arg.elements.filter(ts.isStringLiteral).map(element => element.text);
+  const value = unwrap(arg);
+  if (ts.isStringLiteral(value)) return [value.text];
+  if (ts.isIdentifier(value)) return lists.get(value.text) ?? null;
+  if (!ts.isArrayLiteralExpression(value)) return null;
+  const tools: string[] = [];
+  for (const element of value.elements) {
+    if (ts.isStringLiteral(element)) tools.push(element.text);
+    else if (ts.isSpreadElement(element) && ts.isIdentifier(element.expression))
+      tools.push(...(lists.get(element.expression.text) ?? []));
+  }
+  return tools;
 };
 
 /** Two shapes reach the same place: a `prose(name, rule, tool)` call, and an object literal
  *  naming itself with a string, carrying a rule, and carrying neither `deny` nor `judgeQuery`.
  *  A factory's own output is neither — it names itself through a spread, or carries a check. */
-function proseRules(sf: ts.SourceFile): readonly ProseRule[] {
+function proseRules(sf: ts.SourceFile,
+                    lists: ReadonlyMap<string, readonly string[]>): readonly ProseRule[] {
   const rules: ProseRule[] = [];
   const visit = (node: ts.Node): void => {
     if (ts.isCallExpression(node) && ts.isIdentifier(node.expression)
       && node.expression.text === 'prose') {
       const first = node.arguments[0];
       if (first !== undefined && ts.isStringLiteral(first))
-        rules.push({ name: first.text, tools: toolsOf(node.arguments[2]), node });
+        rules.push({ name: first.text, tools: toolsOf(node.arguments[2], lists), node });
     }
     if (ts.isObjectLiteralExpression(node)) {
       let name: string | null = null, ruled = false, decides = false;
@@ -251,7 +286,7 @@ function proseRules(sf: ts.SourceFile): readonly ProseRule[] {
         if (!ts.isPropertyAssignment(property)) continue;
         if (key === 'name' && ts.isStringLiteral(property.initializer)) name = property.initializer.text;
         if (key === 'rule') ruled = true;
-        if (key === 'tool') tools = toolsOf(property.initializer);
+        if (key === 'tool') tools = toolsOf(property.initializer, lists);
       }
       if (name !== null && ruled && !decides) rules.push({ name, tools, node });
     }
@@ -269,6 +304,7 @@ export function pairing(subjectDir: string): readonly LintFinding[] {
   const surface = toolSurface(sources);
   const checks = checksByTool(sources, factoryNames(sources));
   const reasons = residue(sources);
+  const lists = namedToolLists(sources);
   const findings: LintFinding[] = [];
 
   for (const [name, reason] of reasons)
@@ -277,7 +313,7 @@ export function pairing(subjectDir: string): readonly LintFinding[] {
 
   for (const f of sources) {
     const sf = parse(f);
-    for (const rule of proseRules(sf)) {
+    for (const rule of proseRules(sf, lists)) {
       const at = `${f.rel}:${sf.getLineAndCharacterOfPosition(rule.node.getStart(sf)).line + 1}`;
       if (rule.tools === null || rule.tools.length === 0) {
         if (!reasons.has(rule.name)) findings.push({ code: 'PROSE_RESIDUE_UNDECLARED',
@@ -301,9 +337,10 @@ export function pairingTable(subjectDir: string): string {
   const sources = subjectSources(subjectDir);
   const checks = checksByTool(sources, factoryNames(sources));
   const reasons = residue(sources);
+  const lists = namedToolLists(sources);
   const carried: string[] = [], residual: string[] = [];
   for (const f of sources)
-    for (const rule of proseRules(parse(f))) {
+    for (const rule of proseRules(parse(f), lists)) {
       if (rule.tools === null || rule.tools.length === 0) {
         residual.push(`| ${rule.name} | — | nothing | ${reasons.get(rule.name) ?? '(undeclared)'} |`);
         continue;
