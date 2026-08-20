@@ -390,3 +390,28 @@ describe('inertChecks', () => {
     expect(found[0].sentence).toContain('closeBooking');
   });
 });
+
+import { boilerplate, echoes } from '../src/lints.js';
+
+describe('boilerplate', () => {
+  test('prices a repeated run by the lines beyond the first that carry it', () => {
+    const tail = ' Read the member record and name a member whose role can do it.';
+    const rows = boilerplate([`Money moves on the money capability.${tail}`,
+                              `Dispatch runs on the crew capability.${tail}`,
+                              `The registry changes on the fleet capability.${tail}`], 30);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toContain('2 lines beyond the first');
+    expect(rows[0]).toContain('Read the member record');
+  });
+
+  test('a run shorter than the floor is not a row', () => {
+    expect(boilerplate(['alpha beta gamma', 'alpha beta delta'], 30)).toEqual([]);
+  });
+
+  test('rare-word pairing cannot see what this sees', () => {
+    const lines = ['a b c the shared closing sentence every line repeats verbatim here',
+                   'd e f the shared closing sentence every line repeats verbatim here'];
+    expect(echoes(lines).length).toBe(0);
+    expect(boilerplate(lines, 30).length).toBe(1);
+  });
+});

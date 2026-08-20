@@ -566,6 +566,42 @@ export function echoes(prompt: string | readonly string[], floor = 5): readonly 
   return rows.sort((a, b) => b.shared.length - a.shared.length).map(r => r.row);
 }
 
+/** The longest run two texts share, by extending every matching start. Quadratic in the pair,
+ *  which is fine: a subject has hundreds of rules, not millions. */
+function longestShared(a: string, b: string): string {
+  let best = '';
+  for (let i = 0; i < a.length; i += 1) {
+    for (let j = 0; j < b.length; j += 1) {
+      let n = 0;
+      while (i + n < a.length && j + n < b.length && a[i + n] === b[j + n]) n += 1;
+      if (n > best.length) best = a.slice(i, i + n);
+    }
+  }
+  return best;
+}
+
+/** Two lines of one prompt carrying the same wording. The cost is the run's length times the
+ *  lines beyond the first that repeat it: a closing sentence shared by eight rules, stamped on
+ *  every act each rule names, is paid once per stamp and teaches once. A rare-word pairing
+ *  cannot see it — the words are in every line, so none of them is rare. */
+export function boilerplate(lines: readonly string[], minRun = 40): readonly string[] {
+  const kept = lines.map(l => l.trim()).filter(l => l.length > 0);
+  const carriers = new Map<string, Set<number>>();
+  for (let i = 0; i < kept.length; i += 1)
+    for (let j = i + 1; j < kept.length; j += 1) {
+      const run = longestShared(kept[i], kept[j]).trim();
+      if (run.length < minRun) continue;
+      const held = carriers.get(run) ?? new Set<number>();
+      held.add(i); held.add(j);
+      carriers.set(run, held);
+    }
+  return [...carriers.entries()]
+    .map(([run, lineNumbers]) => ({ run, cost: run.length * (lineNumbers.size - 1), lineNumbers }))
+    .sort((a, b) => b.cost - a.cost)
+    .map(r => `${String(r.cost).padStart(6)} B  ${r.run.length} chars × ${r.lineNumbers.size - 1} `
+      + `lines beyond the first\n         "${r.run.slice(0, 96)}"`);
+}
+
 /** Every line the model reads, as SEPARATE units. A tool card renders its own sentence and
  *  each of its contract guards' rules glued into one string, so the assembled card is useless
  *  as an echo unit: it pairs against everything and never against itself. */
