@@ -784,15 +784,64 @@ The sentence tells the model what to do. The check makes it true whatever the mo
 A rule stated only as a sentence is a wish.
 ```
 
-- [ ] **Step 3: Verify the snippets still compile and pass**
+- [ ] **Step 3: One shape of `prose`, in both repos**
+
+`docs/tutorial/04-guards.md:33` and `docs/tutorial/snippets/hotel/cards.ts:9` declare a
+two-argument helper. The skill declares a three-argument one. Two shapes under one name is a
+second truth about the same thing, so the tutorial's takes the ledger too.
+
+In `docs/tutorial/snippets/hotel/cards.ts`, replace lines 6–9:
+
+```typescript
+/** A prose-only guard: no check can decide it, so it rides the prompt as the sentence it is
+ *  and `agent.guards()` prints it beside every other guard. `governs` names the tools whose
+ *  acts this law reaches — each of them carries the check that refuses. A law no tool acts on
+ *  is residue, and the residue set is declared once by name. */
+const prose = (name: string, rule: string, governs: readonly string[]): Guard =>
+  ({ name, rule, on: 'reply' });
+
+/** Laws this hotel states and no call can break, because no tool performs the act. */
+const RESIDUE = ['no-promises'] as const;
+```
+
+and the call at line 49:
+
+```typescript
+    prose('no-promises',
+      'Never promise an upgrade or a discount; the front desk decides those.',
+      [])
+```
+
+Make the same two replacements in `docs/tutorial/04-guards.md:33` and its worked call, and add
+the sentence that explains the empty ledger:
+
+```markdown
+`no-promises` governs no act: no tool on this surface promises anything, so the rule shapes
+words only. Its ledger is empty and its name sits in `RESIDUE`, which is how an author says
+"nothing enforces this, and I know it".
+```
+
+- [ ] **Step 4: The snippet obeys its own lesson**
+
+Append to `docs/tutorial/snippets/test/hotel.test.ts`:
+
+```typescript
+import { proseLedger } from '@looprun-ai/eval';
+
+test('the hotel snippet passes the ledger lint the lesson teaches', () => {
+  expect(proseLedger(new URL('../hotel', import.meta.url).pathname)).toEqual([]);
+});
+```
+
+- [ ] **Step 5: Verify the snippets still compile and pass**
 
 ```bash
 cd /Users/marcos/Dev/js/looprun/looprun && npx vitest run docs/tutorial/snippets/test/hotel.test.ts
 ```
 
-Expected: PASS — 5 tests.
+Expected: PASS — 6 tests.
 
-- [ ] **Step 4: Run the repo gate**
+- [ ] **Step 6: Run the repo gate**
 
 ```bash
 cd /Users/marcos/Dev/js/looprun/looprun && pnpm build && pnpm typecheck && pnpm test
@@ -800,11 +849,12 @@ cd /Users/marcos/Dev/js/looprun/looprun && pnpm build && pnpm typecheck && pnpm 
 
 Expected: exit 0.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
 cd /Users/marcos/Dev/js/looprun/looprun
-git add docs/tutorial/04-guards.md
+git add docs/tutorial/04-guards.md docs/tutorial/snippets/hotel/cards.ts \
+        docs/tutorial/snippets/test/hotel.test.ts
 git commit -m "docs(tutorial): a rule is a sentence and a check, together"
 ```
 
