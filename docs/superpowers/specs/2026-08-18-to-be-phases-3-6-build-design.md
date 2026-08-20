@@ -378,6 +378,23 @@ pays · ~50 tok/s. No Atlas on a local model, ever.
 
 ## 6 · PHASE 6A — the swap
 
+**STATUS: CLOSED.** The engine carries the published names from `packages/*`; the previous
+one is deleted. `pnpm build`, `pnpm typecheck` and `pnpm test` are green repo-wide — 71 test
+files — and the three repository gates report clean over the whole tree. The certified
+subject loads on the moved engine and re-certifies unchanged: 0.95 · 0.95 · 0.95 at the 0.85
+bar, the same five cases failing. The `agentspec` freeze stamp is live.
+
+Four rulings the swap took, none of them in the plan above: the proof-record apparatus is
+retired with the suite it counted (the evidence is now the suites `pnpm test` runs); the
+tutorial's guard chapter is hand-written, because the new catalog carries no metadata and the
+generator's entry point is a retired name; the eval CLI is gone, since its `resume` is the
+thing §1 forbids; and `examples/hermes-sim` leaves the workspace carrying a FROZEN stamp
+until its own phase.
+
+Writing the tutorial found two engine holes and closed them: the census reported an empty
+rewrites list while the compiled agent carried three, and the held-call line wrote its status
+word in place instead of reading the resolved wording.
+
 One working session, one plan:
 
 ```

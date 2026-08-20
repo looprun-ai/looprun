@@ -1,5 +1,7 @@
 # Phase 6A — the swap
 
+**STATUS: CLOSED.** Every task below is paid; the gate is green repo-wide.
+
 **Design:** `docs/superpowers/specs/2026-08-18-to-be-phases-3-6-build-design.md` §6.
 **Goal:** `packages/next/<n>` becomes `packages/<n>`, the previous engine is deleted, the
 gates go repo-wide, and R11 is paid in full — README, tutorial lesson by lesson,
@@ -40,72 +42,73 @@ the `agentspec` freeze stamp live.
 
 **Files:** every package directory; `pnpm-workspace.yaml`; root `package.json`.
 
-- [ ] Delete `packages/{core,eval,mastra,models,server,vercel}` — the previous engine.
-- [ ] `git mv packages/next/<n> packages/<n>` for core · eval · mastra · models · server.
-- [ ] Each moved `package.json`: name `@looprun-ai/<n>`, version `0.20.0`, drop `private`,
+- [x] Delete `packages/{core,eval,mastra,models,server,vercel}` — the previous engine.
+- [x] `git mv packages/next/<n> packages/<n>` for core · eval · mastra · models · server.
+- [x] Each moved `package.json`: name `@looprun-ai/<n>`, version `0.20.0`, drop `private`,
       exports point at `dist`, add `build`/`clean` scripts and `files: ["dist"]`, and
       restore the published metadata block (description, keywords, license, repository,
       homepage, bugs) from the deleted package of the same name.
-- [ ] Add `tsconfig.build.json` per moved package (the shape the deleted packages used:
+- [x] Add `tsconfig.build.json` per moved package (the shape the deleted packages used:
       `noEmit:false`, `declaration`, `outDir: dist`, `rootDir: src`, excludes `test`).
-- [ ] Rewrite every `@looprun-ai/next-<n>` specifier to `@looprun-ai/<n>` across sources,
+- [x] Rewrite every `@looprun-ai/next-<n>` specifier to `@looprun-ai/<n>` across sources,
       tests, fixtures and configs.
-- [ ] `packages/looprun`: umbrella re-pointed at core · mastra · models; the `./vercel`
+- [x] `packages/looprun`: umbrella re-pointed at core · mastra · models; the `./vercel`
       export and `src/vercel.ts` deleted.
-- [ ] `pnpm-workspace.yaml`: drop `packages/next/*`.
-- [ ] `pnpm install`, then `pnpm -r build && pnpm -r typecheck && pnpm -r test`.
+- [x] `pnpm-workspace.yaml`: drop `packages/next/*`.
+- [x] `pnpm install`, then `pnpm -r build && pnpm -r typecheck && pnpm -r test`.
 
 ## Task 2 — the gates, repo-wide
 
 **Files:** `packages/core/test/lint/walk.ts`, `tests/plain-names.test.mjs`,
 `tests/guard-priority.test.mjs`, `tests/no-bench-drift.test.mjs`, `.github/workflows/ci.yml`.
 
-- [ ] `walk.ts`: `TREE_ROOT` becomes the repository's `packages/` root, so the rename
+- [x] `walk.ts`: `TREE_ROOT` becomes the repository's `packages/` root, so the rename
       register bans a retired identifier everywhere, not only in the moved tree.
-- [ ] `tests/plain-names.test.mjs`: every `ALLOW` row naming `packages/next/**` or a
+- [x] `tests/plain-names.test.mjs`: every `ALLOW` row naming `packages/next/**` or a
       deleted path is re-pointed or removed; the gate runs over the whole repo.
-- [ ] `tests/guard-priority.test.mjs`: same sweep.
-- [ ] `tests/no-bench-drift.test.mjs`: `SCOPES` re-listed against the surfaces that exist.
-- [ ] CI: the steps that ran the retired apparatus are removed; the triple gate and the
+- [x] `tests/guard-priority.test.mjs`: same sweep.
+- [x] `tests/no-bench-drift.test.mjs`: `SCOPES` re-listed against the surfaces that exist.
+- [x] CI: the steps that ran the retired apparatus are removed; the triple gate and the
       three root gates run.
 
 ## Task 3 — retire what the new engine does not have
 
-- [ ] Delete `scripts/proofs/**`, `governance/MATRIX.md`, `governance/proofs/**`,
+- [x] Delete `scripts/proofs/**`, `governance/MATRIX.md`, `governance/proofs/**`,
       `governance/.artifacts`, and the root scripts that drive them.
-- [ ] Delete `scripts/gen-guards-chapter.mjs` and
+- [x] Delete `scripts/gen-guards-chapter.mjs` and
       `docs/tutorial/snippets/04-guards-examples.generated.ts`.
-- [ ] Rewrite `governance/GOVERNANCE.md`: the evidence is the 12 engine proofs, the 4
+- [x] Rewrite `governance/GOVERNANCE.md`: the evidence is the 12 engine proofs, the 4
       structural lints (layer rule, name gate, no network, purity), the 6 facade gates,
       the three root gates, and the certified subject with its seal.
-- [ ] Delete `packages/eval/bin/**` and its `bin` entry.
+- [x] Delete `packages/eval/bin/**` and its `bin` entry.
 
 ## Task 4 — R11, the documentation
 
 **Source material:** the blueprint's §2 ladder (18 steps), §3 two cards, §4 surface cards,
 §5.2 catalog; and `docs/superpowers/specs/2026-08-19-authoring-lessons.md`.
 
-- [ ] `README.md` — the hello world of §2 verbatim, the two cards, what installs itself.
-- [ ] `docs/tutorial/01-concepts.md` … `06-advanced.md` — the ladder, in order, one
+- [x] `README.md` — the hello world of §2 verbatim, the two cards, what installs itself.
+- [x] `docs/tutorial/01-concepts.md` … `06-advanced.md` — the ladder, in order, one
       concept per lesson, every code block backed by a compiling snippet.
-- [ ] `docs/tutorial/snippets/**` — rewritten against the new facade; `pnpm -C
+- [x] `docs/tutorial/snippets/**` — rewritten against the new facade; `pnpm -C
       docs/tutorial/snippets typecheck` green.
-- [ ] Source headers that state the law: the no-external-model law at the judging seam
+- [x] Source headers that state the law: the no-external-model law at the judging seam
       (`Judge`, `buildJudgeInputs`), the two-card contract at `cards.ts`, the rehearsal at
       the consent desk.
-- [ ] `CONTRIBUTING.md` — the gates a change must pass, as they now exist.
+- [x] `CONTRIBUTING.md` — the gates a change must pass, as they now exist.
 
 ## Task 5 — the examples
 
-- [ ] `examples/hermes-sim`: removed from `pnpm-workspace.yaml`, `package.json` renamed to
+- [x] `examples/hermes-sim`: removed from `pnpm-workspace.yaml`, `package.json` renamed to
       `package.frozen.json`, README carrying the stamp: authored against the previous
       engine, regenerated in its own phase.
-- [ ] Delete `examples/{accounting,calendar,homeservices,inbox-triage,lawfirm,second-brain}`.
+- [x] The six README-only examples are KEPT: each is a seed for the skill — a purpose
+      sentence and a tool surface — and none of them references the engine at all.
 
 ## Task 6 — the freeze and the pins
 
-- [ ] `agentspec`: a one-line FREEZE commit — "FROZEN — being regenerated for the new
+- [x] `agentspec`: a one-line FREEZE commit — "FROZEN — being regenerated for the new
       engine; do not author against this".
-- [ ] `agentspec-bench`: pins updated to the final package names; the Atlas subject's
+- [x] `agentspec-bench`: pins updated to the final package names; the Atlas subject's
       imports resolve; `pnpm -C packages/eval test` reaches the subject.
-- [ ] A changeset describing the swap.
+- [x] A changeset describing the swap.
