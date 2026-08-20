@@ -125,7 +125,7 @@ emit: consent per destructive tool, `groundedIds`, `groundedDates`, `noDuplicate
 `argRequired` per declared argument, `maxDestructive`, `claimIsGrounded`, `claimIsComplete`,
 `brokenReply`, `questionAnswered`.
 
-### 3.2 · The pairing ledger
+### 3.2 · The pairing
 
 A prose rule declares the acts it reaches, in the field the engine already carries for exactly
 that: `Guard.tool` — *"exact declared tool names this guard covers"*. On a `reply`-phase guard
@@ -232,12 +232,12 @@ utility, insurer.
 
 Authored is not done. Two seams close in v1.
 
-**With the domain — the rules ledger.** N1 already takes `gen/DOCS-DIGEST.md` as input, and N4
+**With the domain — the rule list.** N1 already takes `gen/DOCS-DIGEST.md` as input, and N4
 walks it. The skill states what happens when that file is thin or absent: the surface itself is
 interviewed, because every gate a tool can hit is a rule somebody wrote. Each gate in the world
 card, each refusal `detail`, each declared-but-forbidden argument and each ceiling a read
 returns is a candidate rule, and the sweep walks that list as it walks the digest's. The skill
-teaches how to build the ledger; it never carries one business's ledger in its pages.
+teaches how to build the list; it never carries one business's rules in its pages.
 
 **With the engine — the rehearsal.** After N5 the skill runs the static gate, reads the
 findings, fixes, and then exercises a handful of cases against the world before declaring the

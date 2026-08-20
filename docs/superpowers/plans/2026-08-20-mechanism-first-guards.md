@@ -32,15 +32,15 @@ Three working trees are involved. Every path below is relative to one of them.
 
 | file | repo | responsibility |
 |---|---|---|
-| `packages/eval/src/lints.ts` | looprun | gains `proseLedger`, `proseTable` and their four static readers, beside `purity`, `nameGate` and `census` |
-| `packages/eval/src/index.ts` | looprun | exports `proseLedger` and `proseTable` |
-| `packages/eval/test/lints.test.ts` | looprun | gains the `proseLedger` and `proseTable` cases |
+| `packages/eval/src/lints.ts` | looprun | gains `pairing`, `pairingTable` and their four static readers, beside `purity`, `nameGate` and `census` |
+| `packages/eval/src/index.ts` | looprun | exports `pairing` and `pairingTable` |
+| `packages/eval/test/lints.test.ts` | looprun | gains the `pairing` and `pairingTable` cases |
 | `docs/tutorial/04-guards.md` | looprun | carries the act-keyed ladder, so an engine user and a skill author read one truth |
 | `skill/references/guard-catalog.md` | agentspec | THE catalog: the ladder, every factory, the floor, and the eighteen lessons |
 | `skill/references/norms.md` | agentspec | N1 and N4 point at the catalog; N4 teaches the `prose` helper and `RESIDUE` |
 | `skill/references/gen.md` | agentspec | gains the surface interview for a thin or absent digest |
 | `skill/references/spec-template.ts` | agentspec | carries the `prose` helper and the `RESIDUE` declaration |
-| `skill/references/check-subject.test.ts` | agentspec | calls `proseLedger` beside `purity` and `nameGate` |
+| `skill/references/check-subject.test.ts` | agentspec | calls `pairing` beside `purity` and `nameGate` |
 | `subjects/atlas-skill/cards.ts` | bench | re-authored from the rewritten skill |
 
 ---
@@ -70,7 +70,7 @@ read from the source with the TypeScript AST, the same way `purity` and `nameGat
 Append to `packages/eval/test/lints.test.ts`:
 
 ```typescript
-import { proseLedger, proseTable } from '../src/lints.js';
+import { pairing, pairingTable } from '../src/lints.js';
 
 /** A subject small enough to read: three tools in their effect blocks, one factory, one
  *  disclosure ceiling, the prose helper and a declared residue with its reason. */
@@ -96,45 +96,45 @@ export const contract = {
 };
 `;
 
-test('proseLedger: a rule over a checked act, and an explained residue, are clean', () => {
-  expect(proseLedger(subjectDirWith(CARD))).toEqual([]);
+test('pairing: a rule over a checked act, and an explained residue, are clean', () => {
+  expect(pairing(subjectDirWith(CARD))).toEqual([]);
 });
 
-test('proseLedger: a rule naming a tool off the surface, and one naming an unchecked act', () => {
+test('pairing: a rule naming a tool off the surface, and one naming an unchecked act', () => {
   const off = subjectDirWith(CARD.replace(`['payInvoice'])`, `['refundInvoice'])`));
-  expect(proseLedger(off).map(f => f.code)).toContain('PROSE_TOOL_UNKNOWN');
+  expect(pairing(off).map(f => f.code)).toContain('PROSE_TOOL_UNKNOWN');
   const unchecked = subjectDirWith(CARD.replace(`['payInvoice'])`, `['voidInvoice'])`));
-  expect(proseLedger(unchecked).map(f => f.code)).toContain('PROSE_TOOL_UNCHECKED');
+  expect(pairing(unchecked).map(f => f.code)).toContain('PROSE_TOOL_UNCHECKED');
 });
 
-test('proseLedger: a rule that names no act and no reason is a finding', () => {
+test('pairing: a rule that names no act and no reason is a finding', () => {
   const dir = subjectDirWith(CARD.replace(
     `const RESIDUE = { noWriteOffs: 'No tool on this surface writes off a charge, so no call can break it.' };`,
     `const RESIDUE = {};`));
-  expect(proseLedger(dir).map(f => f.code)).toContain('PROSE_RESIDUE_UNDECLARED');
+  expect(pairing(dir).map(f => f.code)).toContain('PROSE_RESIDUE_UNDECLARED');
 });
 
-test('proseLedger: a residue reason too short to weigh is a finding', () => {
+test('pairing: a residue reason too short to weigh is a finding', () => {
   const dir = subjectDirWith(CARD.replace(
     `'No tool on this surface writes off a charge, so no call can break it.'`, `'n/a'`));
-  expect(proseLedger(dir).map(f => f.code)).toContain('PROSE_RESIDUE_UNEXPLAINED');
+  expect(pairing(dir).map(f => f.code)).toContain('PROSE_RESIDUE_UNEXPLAINED');
 });
 
-test('proseLedger: a guard written as an object literal is read the same way', () => {
+test('pairing: a guard written as an object literal is read the same way', () => {
   const dir = subjectDirWith(`${CARD}
 export const extra = { name: 'quietly', rule: 'A rule with no check.', on: 'reply',
                        tool: ['voidInvoice'] };`);
-  expect(proseLedger(dir).map(f => f.code)).toContain('PROSE_TOOL_UNCHECKED');
+  expect(pairing(dir).map(f => f.code)).toContain('PROSE_TOOL_UNCHECKED');
 });
 
-test('proseLedger: a deterministic guard is not a prose rule, whatever shape it takes', () => {
+test('pairing: a deterministic guard is not a prose rule, whatever shape it takes', () => {
   const dir = subjectDirWith(`${CARD}
 export const spread = { ...onlyAfter('payInvoice', 'getInvoice'), rule: 'Read it first.' };
 export const named = { ...precondition('payInvoice', c => true, 'Only while open.'), name: 'openOnly' };`);
-  expect(proseLedger(dir)).toEqual([]);
+  expect(pairing(dir)).toEqual([]);
 });
 
-test('proseLedger: a factory reached through a local wrapper still checks its tools', () => {
+test('pairing: a factory reached through a local wrapper still checks its tools', () => {
   const dir = subjectDirWith(`
 export const w = { records: {}, reads: {}, writes: {},
   destructive: { voidInvoice: { form: 'remove', entity: 'invoices', label: 'void an invoice' } } };
@@ -148,11 +148,11 @@ export const contract = { guards: [
   capabilityGate('moneyGate', ['voidInvoice'], ['owner'], 'Voiding needs the money capability.'),
   prose('terminalMoney', 'A voided invoice does not come back.', ['voidInvoice'])
 ] };`);
-  expect(proseLedger(dir)).toEqual([]);
+  expect(pairing(dir)).toEqual([]);
 });
 
-test('proseTable: the residue row carries the reason, and a checked row names its mechanism', () => {
-  const table = proseTable(subjectDirWith(CARD));
+test('pairingTable: the residue row carries the reason, and a checked row names its mechanism', () => {
+  const table = pairingTable(subjectDirWith(CARD));
   expect(table).toContain('payFromTheRecord');
   expect(table).toContain('onlyAfter');
   expect(table).toContain('No tool on this surface writes off a charge');
@@ -165,7 +165,7 @@ test('proseTable: the residue row carries the reason, and a checked row names it
 cd /Users/marcos/Dev/js/looprun/looprun/packages/eval && npx vitest run test/lints.test.ts
 ```
 
-Expected: every new test FAILS naming `proseLedger` or `proseTable` as not exported.
+Expected: every new test FAILS naming `pairing` or `pairingTable` as not exported.
 
 - [ ] **Step 3: Write the three readers**
 
@@ -309,7 +309,7 @@ function residue(sources: readonly Source[]): ReadonlyMap<string, string> {
 cd /Users/marcos/Dev/js/looprun/looprun/packages/eval && npx vitest run test/lints.test.ts
 ```
 
-Expected: the new tests still FAIL naming `proseLedger`; the three existing tests (`purity`, `nameGate`, `census`) still PASS.
+Expected: the new tests still FAIL naming `pairing`; the three existing tests (`purity`, `nameGate`, `census`) still PASS.
 
 - [ ] **Step 5: Commit**
 
@@ -321,7 +321,7 @@ git commit -m "feat(eval): a subject's tool surface, the mechanisms on each act,
 
 ---
 
-### Task 2: `proseLedger` and `proseTable`
+### Task 2: `pairing` and `pairingTable`
 
 **Files:**
 - Modify: `packages/eval/src/lints.ts` (append after `residue`)
@@ -331,8 +331,8 @@ git commit -m "feat(eval): a subject's tool surface, the mechanisms on each act,
 **Interfaces:**
 - Consumes: `Source`, `parse`, `toolSurface`, `factoryNames`, `checksByTool`, `residue`, `subjectSources`, `LintFinding` — all from Task 1 and the existing file.
 - Produces, exported from `@looprun-ai/eval`:
-  - `proseLedger(subjectDir: string): readonly LintFinding[]` — Task 3 calls it
-  - `proseTable(subjectDir: string): string` — the skill's N4 writes its output into the thinking log
+  - `pairing(subjectDir: string): readonly LintFinding[]` — Task 3 calls it
+  - `pairingTable(subjectDir: string): string` — the skill's N4 writes its output into the thinking log
 
 - [ ] **Step 1: Write the prose reader and the two verbs**
 
@@ -387,7 +387,7 @@ function proseRules(sf: ts.SourceFile): readonly ProseRule[] {
 /** Shorter than this and a residue reason is a label, not a justification a reviewer weighs. */
 const A_REASON = 20;
 
-export function proseLedger(subjectDir: string): readonly LintFinding[] {
+export function pairing(subjectDir: string): readonly LintFinding[] {
   const sources = subjectSources(subjectDir);
   const surface = toolSurface(sources);
   const checks = checksByTool(sources, factoryNames(sources));
@@ -420,7 +420,7 @@ export function proseLedger(subjectDir: string): readonly LintFinding[] {
 
 /** The justification table, read from the card. The rows above the rule are derived; the rows
  *  below it are the residue, and their reason is the only line an author writes. */
-export function proseTable(subjectDir: string): string {
+export function pairingTable(subjectDir: string): string {
   const sources = subjectSources(subjectDir);
   const checks = checksByTool(sources, factoryNames(sources));
   const reasons = residue(sources);
@@ -451,7 +451,7 @@ export { census, nameGate, purity } from './lints.js';
 with:
 
 ```typescript
-export { census, nameGate, proseLedger, proseTable, purity } from './lints.js';
+export { census, nameGate, pairing, pairingTable, purity } from './lints.js';
 ```
 
 - [ ] **Step 3: Run the tests to verify they pass**
@@ -470,7 +470,7 @@ cd /Users/marcos/Dev/js/looprun/looprun && pnpm build && pnpm typecheck && pnpm 
 
 Expected: exit 0. `pnpm build` must run before `pnpm typecheck`, because the generators and the typecheck read `packages/core/dist`.
 
-**Do NOT add `proseLedger` to `packages/eval/test/atlas-gate.test.ts:22`.** That test lints the
+**Do NOT add `pairing` to `packages/eval/test/atlas-gate.test.ts:22`.** That test lints the
 certified reference, which is the measuring stick and does not change. It runs `purity` and
 `nameGate` and that is the whole list.
 
@@ -490,7 +490,7 @@ git commit -m "feat(eval): a prose rule names the acts it reaches, and the lint 
 - Modify: `agentspec/skill/references/check-subject.test.ts`
 
 **Interfaces:**
-- Consumes: `proseLedger(subjectDir: string): readonly LintFinding[]` from Task 2.
+- Consumes: `pairing(subjectDir: string): readonly LintFinding[]` from Task 2.
 - Produces: nothing further consumes this.
 
 - [ ] **Step 1: Add the call**
@@ -504,7 +504,7 @@ import { SubjectLoader, Validator, nameGate, purity } from '@looprun-ai/eval';
 with:
 
 ```typescript
-import { SubjectLoader, Validator, nameGate, proseLedger, purity } from '@looprun-ai/eval';
+import { SubjectLoader, Validator, nameGate, pairing, purity } from '@looprun-ai/eval';
 ```
 
 and replace line 28:
@@ -517,7 +517,7 @@ with:
 
 ```typescript
   expect(nameGate(SUBJECT)).toEqual([]);
-  expect(proseLedger(SUBJECT)).toEqual([]);
+  expect(pairing(SUBJECT)).toEqual([]);
 ```
 
 - [ ] **Step 2: Verify it runs against a real subject**
@@ -528,7 +528,7 @@ cp /Users/marcos/Dev/js/looprun/agentspec/skill/references/check-subject.test.ts
 npx vitest run subjects/atlas-next/check-subject.test.ts
 ```
 
-Expected: FAIL on `proseLedger`, with `PROSE_RESIDUE_UNDECLARED` findings — the reference's prose rules declare no `tool` and it has no `RESIDUE`. This is the lint proving it reads a real subject. Record the finding count.
+Expected: FAIL on `pairing`, with `PROSE_RESIDUE_UNDECLARED` findings — the reference's prose rules declare no `tool` and it has no `RESIDUE`. This is the lint proving it reads a real subject. Record the finding count.
 
 - [ ] **Step 3: Remove the copy**
 
@@ -541,7 +541,7 @@ cd /Users/marcos/Dev/js/looprun/agentspec-bench && rm subjects/atlas-next/check-
 ```bash
 cd /Users/marcos/Dev/js/looprun/agentspec
 git add skill/references/check-subject.test.ts
-git commit -m "feat(skill): the static gate reads the prose ledger"
+git commit -m "feat(skill): the static gate reads the prose pairing"
 ```
 
 ---
@@ -593,9 +593,9 @@ A prose rule that names an act carrying no check is a sentence standing where a 
 belongs. The static gate reports it as `PROSE_TOOL_UNCHECKED`.
 ```
 
-- [ ] **Step 3: Add the ledger section**
+- [ ] **Step 3: Add the pairing section**
 
-Append a new `## 4 · The ledger` carrying the helper, the residue declaration and the five findings — copy §3.2 of the design spec verbatim, including both worked `prose(...)` calls and the findings table. Add one sentence the spec does not carry, because it is the mistake an author makes first:
+Append a new `## 6 · The pairing` carrying the helper, the residue declaration and the five findings — copy §3.2 of the design spec verbatim, including both worked `prose(...)` calls and the findings table. Add one sentence the spec does not carry, because it is the mistake an author makes first:
 
 ```markdown
 `tool` names ACTS. A read carries no deterministic guard and never should, so a law about what
@@ -638,7 +638,7 @@ git commit -m "docs(skill): the catalog routes a rule by what it does to a call"
 
 **Files:**
 - Modify: `agentspec/skill/references/guard-catalog.md` (the `## 3 · Eighteen lessons` section)
-- Read: `looprun/docs/superpowers/specs/2026-08-19-authoring-lessons.md` §6 — the ledger of eighteen
+- Read: `looprun/docs/superpowers/specs/2026-08-19-authoring-lessons.md` §6 — the pairing of eighteen
 
 **Interfaces:**
 - Consumes: the section headings from Task 4.
@@ -712,7 +712,7 @@ git commit -m "docs(skill): eighteen lessons, each with the turn and the figures
 - Modify: `agentspec/skill/references/spec-template.ts`
 
 **Interfaces:**
-- Consumes: the section headings from Task 4 (`## 1 · The ladder`, `## 4 · The ledger`).
+- Consumes: the section headings from Task 4 (`## 1 · The ladder`, `## 6 · The pairing`).
 - Produces: nothing further consumes this.
 
 - [ ] **Step 1: N1 points at the ladder**
@@ -730,12 +730,12 @@ At the end of the N1 bullet list in `norms.md`, before the A7 paragraph, add:
 In `norms.md`, replace the fenced routing diagram under `## N4 — the guards sweep` (the block beginning `can a pure function over the typed ctx decide it?`) with:
 
 ```markdown
-Every rule the ledger states is walked once, and routed by [guard-catalog.md](guard-catalog.md)
+Every rule the pairing states is walked once, and routed by [guard-catalog.md](guard-catalog.md)
 §1 — the question is what the rule DOES to a call. The catalog is the only place that question
 is answered; this page does not restate it.
 ```
 
-- [ ] **Step 3: N4 teaches the ledger instead of the bare helper**
+- [ ] **Step 3: N4 teaches the pairing instead of the bare helper**
 
 In `norms.md`, replace the `### Helper functions are normal` block's `prose` snippet:
 
@@ -770,7 +770,7 @@ rule naming no act whose name is absent from `RESIDUE`. See [guard-catalog.md](g
 And add the closing line of N4, which is where the justification lands:
 
 ```markdown
-**N4 closes with the table.** Write `proseTable(subjectDir)`'s output into
+**N4 closes with the table.** Write `pairingTable(subjectDir)`'s output into
 `norms/N4.thinking.md`. It is read from the card, so it cannot drift from it: every prose rule,
 the acts it reaches, the mechanism carrying each, and — for the residue — the reason nothing
 stronger exists. The residue rows are the only lines anyone writes by hand, and across subjects
@@ -802,7 +802,7 @@ The interview produces the same artefact as the digest — a list of rules — a
 same way. What the skill never carries is one business's list.
 ```
 
-- [ ] **Step 5: `spec-template.ts` carries the ledger shape**
+- [ ] **Step 5: `spec-template.ts` carries the pairing shape**
 
 In `agentspec/skill/references/spec-template.ts`, add beside the other helpers:
 
@@ -872,7 +872,7 @@ A rule stated only as a sentence is a wish.
 
 `docs/tutorial/04-guards.md:33` and `docs/tutorial/snippets/hotel/cards.ts:9` declare a
 two-argument helper. The skill declares a three-argument one. Two shapes under one name is a
-second truth about the same thing, so the tutorial's takes the ledger too.
+second truth about the same thing, so the tutorial's takes the pairing too.
 
 In `docs/tutorial/snippets/hotel/cards.ts`, replace lines 6–9:
 
@@ -897,7 +897,7 @@ and the call at line 49:
 ```
 
 Make the same two replacements in `docs/tutorial/04-guards.md:33` and its worked call, and add
-the sentence that explains the empty ledger:
+the sentence that explains the empty pairing:
 
 ```markdown
 `no-promises` reaches no act: no tool on this surface promises anything, so the rule shapes
@@ -910,10 +910,10 @@ author says "nothing enforces this, I know it, and here is why".
 Append to `docs/tutorial/snippets/test/hotel.test.ts`:
 
 ```typescript
-import { proseLedger } from '@looprun-ai/eval';
+import { pairing } from '@looprun-ai/eval';
 
-test('the hotel snippet passes the ledger lint the lesson teaches', () => {
-  expect(proseLedger(new URL('../hotel', import.meta.url).pathname)).toEqual([]);
+test('the hotel snippet passes the pairing lint the lesson teaches', () => {
+  expect(pairing(new URL('../hotel', import.meta.url).pathname)).toEqual([]);
 });
 ```
 
@@ -950,12 +950,12 @@ git commit -m "docs(tutorial): a rule is a sentence and a check, together"
 - Modify: `bench/subjects/atlas-skill/cards.ts`
 
 **Interfaces:**
-- Consumes: the rewritten skill pages from Tasks 4–6, and `proseLedger` from Task 2.
+- Consumes: the rewritten skill pages from Tasks 4–6, and `pairing` from Task 2.
 - Produces: a subject Task 9 runs.
 
 **What must NOT change:** `subjects/atlas-skill/world.ts`, `generated/**`, `world-kit.ts` and `cases.ts` are ported data. Moving them moves the measuring stick and voids the comparison.
 
-- [ ] **Step 1: Build the rules ledger from the surface**
+- [ ] **Step 1: Build the rule list from the surface**
 
 Following `gen.md`'s surface interview, walk `subjects/atlas-skill/world.ts` and write the rule list to `subjects/atlas-skill/gen/RULES.md`: every gate, every refusal `detail`, every ceiling a read returns, every declared-but-forbidden argument, every role the records carry, and every operation the cases expect that no tool performs.
 
