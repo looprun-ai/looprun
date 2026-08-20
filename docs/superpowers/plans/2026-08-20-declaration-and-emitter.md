@@ -1474,7 +1474,11 @@ Four checklist lines become calls: `inertChecks`, `profile`, `unlicensed`, `pair
 X6 — the two byte totals stay, and the author stops counting them. The snippet already computes
 `pw.system().length` and the sum over `pw.toolCards()`.
 
-- [ ] **Step 5: Three rows the render gate never had**
+- [ ] **Step 5: Three rows the render gate never had, and the four byte slices**
+
+Task 7's `byteOrigin` returns the four slice numbers — systemPrefixes, worldSentences, schemas,
+contractRules — and the lane rows. N6's snippet prints them per subject beside the two totals it
+already prints. The author reads them; nothing gates on them.
 
 V7 — the 2x line says "tool-card bytes" and the snippet prints `name → does`; a card also carries a
 schema the model reads. Counting schemas puts every desk far past 2x. State which of the two the
