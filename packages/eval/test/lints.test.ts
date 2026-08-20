@@ -224,3 +224,21 @@ export const contract = { guards: [
   expect(pairing(subjectDirWith(built), ['getInvoice']).map(f => f.code))
     .toContain('PROSE_TOOL_UNKNOWN');
 });
+
+test('pairing: a guard written by hand refuses as surely as a factory does', () => {
+  const dir = subjectDirWith(`
+export const w = { records: {},
+  reads: { checkAvailability: { form: 'get', entity: 'assets', label: 'Check availability' } },
+  writes: {} };
+const prose = (name, rule, tool) =>
+  tool === undefined ? { name, rule, on: 'reply' } : { name, rule, on: 'reply', tool };
+const RESIDUE = {};
+export const contract = { guards: [
+  { name: 'availabilityAnswerReadsTheAccount', on: 'postTool', tool: ['checkAvailability'],
+    rule: 'An availability answer states the account condition the flag does not carry.',
+    deny: ctx => null },
+  prose('catalogStatusIsNotAvailability', 'A catalog status is not an availability answer.',
+        ['checkAvailability'])
+] };`);
+  expect(pairing(dir)).toEqual([]);
+});

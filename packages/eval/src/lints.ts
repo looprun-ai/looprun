@@ -173,6 +173,20 @@ function checksByTool(sources: readonly Source[],
         for (const arg of node.arguments)
           if (ts.isArrayLiteralExpression(arg) || ts.isIdentifier(arg)) take(arg, mechanism);
       }
+      // A guard an author wrote by hand refuses just as a factory's does: a literal carrying
+      // `deny` or `judgeQuery` is a check on every tool it declares.
+      if (ts.isObjectLiteralExpression(node)) {
+        let kind: string | null = null;
+        let declared: ts.Expression | undefined;
+        for (const property of node.properties) {
+          const key = property.name !== undefined && ts.isIdentifier(property.name)
+            ? property.name.text : null;
+          if (key === 'deny') kind = 'deny';
+          if (key === 'judgeQuery') kind = 'judged';
+          if (key === 'tool' && ts.isPropertyAssignment(property)) declared = property.initializer;
+        }
+        if (kind !== null) take(declared, kind);
+      }
       if (ts.isPropertyAssignment(node) && ts.isIdentifier(node.name) && node.name.text === 'cap') {
         const keyed = node.parent.parent;
         if (ts.isPropertyAssignment(keyed) && ts.isIdentifier(keyed.name)) note(keyed.name.text, 'cap');
