@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { GuardCensus, TurnRecord } from '@looprun-ai/core';
 import { census, nameGate, purity } from '../src/lints.js';
-import { ruleCopies } from '../src/lints.js';
+import { inertChecks, ruleCopies } from '../src/lints.js';
 
 function subjectDirWith(code: string): string {
   const dir = mkdtempSync(join(tmpdir(), 'lint-subject-'));
@@ -336,5 +336,57 @@ describe('ruleCopies', () => {
     ])] as never);
     expect(rows[0]).toContain('broad');
     expect(rows[1]).toContain('narrow');
+  });
+});
+
+describe('inertChecks', () => {
+  const write = (body: string): string => {
+    const dir = mkdtempSync(join(tmpdir(), 'inert-'));
+    writeFileSync(join(dir, 'cards.ts'), body);
+    return dir;
+  };
+
+  test('a record test over an act with no target can never fire', () => {
+    const dir = write(`
+      const CONTRACT = { guards: [
+        precondition(['closeBooking'], ({ record }) => record !== null && record.paid === true, 'x')
+      ] };
+    `);
+    const found = inertChecks(dir, { closeBooking: { target: null, entity: 'auditLog' } });
+    expect(found.map(f => f.code)).toEqual(['CHECK_INERT']);
+    expect(found[0].sentence).toContain("declares 'closeBooking' with no target argument");
+  });
+
+  test('a state-only predicate over the same act is left alone', () => {
+    const dir = write(`
+      const CONTRACT = { guards: [
+        precondition(['closeBooking'], ({ state }) => state.tenant.live === true, 'x')
+      ] };
+    `);
+    expect(inertChecks(dir, { closeBooking: { target: null, entity: 'auditLog' } })).toEqual([]);
+  });
+
+  test('a record test over an act that carries a target is left alone', () => {
+    const dir = write(`
+      const CONTRACT = { guards: [
+        precondition(['cancelBooking'], ({ record }) => record !== null, 'x')
+      ] };
+    `);
+    expect(inertChecks(dir, { cancelBooking: { target: 'bookingId', entity: 'bookings' } })).toEqual([]);
+  });
+
+  test('a named list is followed, and only the acts that lack a target are charged', () => {
+    const dir = write(`
+      const ACTS = ['closeBooking', 'cancelBooking'];
+      const CONTRACT = { guards: [
+        precondition(ACTS, ({ record }) => record !== null, 'x')
+      ] };
+    `);
+    const found = inertChecks(dir, {
+      closeBooking: { target: null, entity: 'auditLog' },
+      cancelBooking: { target: 'bookingId', entity: 'bookings' }
+    });
+    expect(found).toHaveLength(1);
+    expect(found[0].sentence).toContain('closeBooking');
   });
 });

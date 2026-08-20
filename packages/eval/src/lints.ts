@@ -606,3 +606,62 @@ export function ruleCopies(desks: readonly {
     .map(([name, total]) =>
       `${String(total).padStart(6)} B  ${name} — ${length.get(name) ?? 0} B × ${copies.get(name) ?? 0} copies`);
 }
+
+/** A `precondition` whose predicate reads `record` over an act that can never carry one. The
+ *  engine resolves `record` from the acting tool's OWN entity and target argument: when the
+ *  surface declares the act without a `target`, or without an `entity`, the predicate is handed
+ *  `record: null` on every call and a record test passes silently. The guard compiles, sits in
+ *  the census, and refuses nothing.
+ *
+ *  A predicate that reads only `state` is correct over such an act — a tenant gate over every
+ *  write is exactly that — so only a predicate that names `record` is charged. */
+export function inertChecks(subjectDir: string,
+                            facts: Readonly<Record<string, {
+                              readonly target?: string | null;
+                              readonly entity?: string | null }>>): readonly LintFinding[] {
+  const sources = subjectSources(subjectDir);
+  const lists = namedToolLists(sources);
+  const findings: LintFinding[] = [];
+
+  const readsRecord = (node: ts.Expression): boolean => {
+    if (!ts.isArrowFunction(node) && !ts.isFunctionExpression(node)) return false;
+    const parameter = node.parameters[0];
+    if (parameter !== undefined && ts.isObjectBindingPattern(parameter.name)) {
+      const bound = parameter.name.elements.some(element =>
+        ts.isIdentifier(element.name) && element.name.text === 'record');
+      if (!bound) return false;
+    }
+    let found = false;
+    const walk = (at: ts.Node): void => {
+      if (ts.isIdentifier(at) && at.text === 'record') found = true;
+      at.forEachChild(walk);
+    };
+    walk(node.body);
+    return found;
+  };
+
+  for (const f of sources) {
+    const sf = parse(f);
+    const visit = (node: ts.Node): void => {
+      if (ts.isCallExpression(node) && ts.isIdentifier(node.expression)
+        && node.expression.text === 'precondition' && node.arguments.length >= 2
+        && readsRecord(node.arguments[1])) {
+        const line = sf.getLineAndCharacterOfPosition(node.getStart(sf)).line + 1;
+        for (const tool of toolsOf(node.arguments[0], lists) ?? []) {
+          const fact = facts[tool];
+          if (fact === undefined) continue;
+          const missing = fact.target === null || fact.target === undefined ? 'target argument'
+            : fact.entity === null || fact.entity === undefined ? 'entity' : null;
+          if (missing === null) continue;
+          findings.push({ code: 'CHECK_INERT',
+            sentence: `${f.rel}:${line} — the precondition over '${tool}' reads \`record\`, and the surface `
+              + `declares '${tool}' with no ${missing}, so \`record\` is null on every call and the test `
+              + `always passes. Read the id off \`call.args\` in a hand-written deny, or test \`state\` alone.` });
+        }
+      }
+      node.forEachChild(visit);
+    };
+    visit(sf);
+  }
+  return findings;
+}
