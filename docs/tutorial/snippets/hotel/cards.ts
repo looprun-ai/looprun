@@ -3,10 +3,16 @@
 import type { AgentSpec, DomainContract, Guard } from 'looprun';
 import { onlyAfter, precondition, valueFromUser, maskPattern, swapTerms } from 'looprun';
 
-/** A prose-only guard: no check can decide it, so it rides the prompt as the sentence
- *  it is and `agent.guards()` prints it beside every other guard. Three lines of your
- *  own is all a helper like this needs to be. */
-const prose = (name: string, rule: string): Guard => ({ name, rule, on: 'reply' });
+/** A prose-only guard: no check can decide it, so it rides the prompt as the sentence it is
+ *  and `agent.guards()` prints it beside every other guard. `tool` names the acts this law
+ *  reaches — each of them carries the check that refuses. A law no call can break is residue. */
+const prose = (name: string, rule: string, tool?: readonly string[]): Guard =>
+  tool === undefined ? { name, rule, on: 'reply' } : { name, rule, on: 'reply', tool };
+
+/** Laws this hotel states and no call can break, because no tool performs the act. */
+const RESIDUE = {
+  'no-promises': 'No tool on this surface promises anything, so no call can break this rule.'
+} as const;
 
 /** Lesson 2 — the whole first agent. Name and persona are the only required fields;
  *  omitting `tools` gives this desk the whole surface. */

@@ -4,6 +4,7 @@
 import { test, expect } from 'vitest';
 import { LoopRunAgent } from 'looprun';
 import type { ModelStep } from 'looprun';
+import { pairing } from '@looprun-ai/eval';
 import { hotel, gatedHotel } from '../hotel/world.js';
 import { concierge, hotelContract } from '../hotel/cards.js';
 
@@ -114,4 +115,8 @@ test('lesson 6 — a world gate refuses a checked-in booking, whatever the user 
 
   const act = reply.loopRun.acts.find(a => a.call.tool === 'cancelBooking');
   expect(act?.status).not.toBe('done');
+});
+
+test('the hotel snippet passes the pairing lint the lesson teaches', () => {
+  expect(pairing(new URL('../hotel', import.meta.url).pathname)).toEqual([]);
 });
