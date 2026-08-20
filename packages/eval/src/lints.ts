@@ -604,6 +604,86 @@ export function overWide(subjectDir: string): readonly LintFinding[] {
   return findings;
 }
 
+export interface SeamRow { readonly act: string; readonly code: string; readonly guard: string | null }
+
+const REFUSAL_CALLS = new Set(['fail', 'gateFail']);
+
+/** The act a refusal sits under: the nearest ENCLOSING property whose key is a declared tool. A
+ *  handler is written as `cancelBooking: (w, a) => ...`, so the key above the call IS the act it
+ *  refuses on. A refusal in a helper no act keys reaches no act here. */
+function enclosingAct(node: ts.Node, declared: ReadonlySet<string>): string | null {
+  for (let at: ts.Node | undefined = node.parent; at !== undefined; at = at.parent) {
+    if (!ts.isPropertyAssignment(at)) continue;
+    if (!ts.isIdentifier(at.name) && !ts.isStringLiteral(at.name)) continue;
+    if (declared.has(at.name.text)) return at.name.text;
+  }
+  return null;
+}
+
+/** The code a declared gate refuses with: its kind, and the field it tests when it names one. */
+function gateCode(node: ts.ObjectLiteralExpression): string | null {
+  let kind: string | null = null, field: string | null = null;
+  for (const property of node.properties) {
+    if (!ts.isPropertyAssignment(property)) continue;
+    if (!ts.isIdentifier(property.name) && !ts.isStringLiteral(property.name)) continue;
+    const value = unwrap(property.initializer);
+    if (!ts.isStringLiteral(value)) continue;
+    if (property.name.text === 'kind') kind = value.text;
+    if (property.name.text === 'field') field = value.text;
+  }
+  return kind === null ? null : field === null ? kind : `${kind}:${field}`;
+}
+
+/** Every refusal the WORLD can emit, paired to the card guard that refuses earlier in words. A
+ *  `fail(CODE)` inside a handler and a `gates` entry on an act are the two shapes; the act is the
+ *  enclosing property name of the handler, or the key the gate sits under. A row whose guard is
+ *  null is a refusal the operator meets as a bare code. */
+export function seamCovered(subjectDir: string,
+                            facts: { readonly tools: Readonly<Record<string, unknown>> }): readonly SeamRow[] {
+  const sources = subjectSources(subjectDir);
+  const lists = namedToolLists(sources);
+  const declared = new Set(Object.keys(facts.tools));
+  const speaksFor = new Map<string, string>();
+  for (const f of sources)
+    for (const guard of guardsWithTools(parse(f), lists))
+      for (const tool of guard.tools) if (!speaksFor.has(tool)) speaksFor.set(tool, guard.name);
+
+  const rows = new Map<string, SeamRow>();
+  const add = (act: string, code: string): void => {
+    const key = `${act}|${code}`;
+    if (!rows.has(key)) rows.set(key, { act, code, guard: speaksFor.get(act) ?? null });
+  };
+  for (const f of sources) {
+    const visit = (node: ts.Node): void => {
+      if (ts.isCallExpression(node) && ts.isIdentifier(node.expression)
+        && REFUSAL_CALLS.has(node.expression.text)) {
+        const first = node.arguments[0];
+        if (first !== undefined && ts.isStringLiteral(first)) {
+          const act = enclosingAct(node, declared);
+          if (act !== null) add(act, first.text);
+        }
+      }
+      if (ts.isPropertyAssignment(node) && ts.isIdentifier(node.name) && node.name.text === 'gates'
+        && ts.isArrayLiteralExpression(node.initializer)) {
+        const keyed = node.parent.parent;
+        if (ts.isPropertyAssignment(keyed)
+          && (ts.isIdentifier(keyed.name) || ts.isStringLiteral(keyed.name))
+          && declared.has(keyed.name.text)) {
+          for (const element of node.initializer.elements) {
+            const value = unwrap(element);
+            if (!ts.isObjectLiteralExpression(value)) continue;
+            const code = gateCode(value);
+            if (code !== null) add(keyed.name.text, code);
+          }
+        }
+      }
+      node.forEachChild(visit);
+    };
+    visit(parse(f));
+  }
+  return [...rows.values()];
+}
+
 /** Two lines of one prompt that carry the same law. A line's DISTINCTIVE tokens are the ones
  *  few other lines use; when two lines share enough of them they are saying one thing twice,
  *  and the prompt pays for both every turn. This searches and never interprets: it counts

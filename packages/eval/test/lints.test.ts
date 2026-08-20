@@ -463,3 +463,38 @@ describe('boilerplate', () => {
     expect(boilerplate(lines, 30).length).toBe(1);
   });
 });
+
+import { seamCovered } from '../src/lints.js';
+
+describe('seamCovered', () => {
+  const write = (world: string, cards: string): string => {
+    const dir = mkdtempSync(join(tmpdir(), 'seam-'));
+    writeFileSync(join(dir, 'world.ts'), world);
+    writeFileSync(join(dir, 'cards.ts'), cards);
+    return dir;
+  };
+
+  test('a fail code with no guard over its act is an uncovered row', () => {
+    const dir = write(
+      `const H = { cancelBooking: (w, a) => fail('BOOKING_ALREADY_OUT') };`,
+      `const CONTRACT = { guards: [] };`);
+    const rows = seamCovered(dir, { tools: { cancelBooking: {} } } as never);
+    expect(rows).toEqual([{ act: 'cancelBooking', code: 'BOOKING_ALREADY_OUT', guard: null }]);
+  });
+
+  test('a guard over that act claims the row', () => {
+    const dir = write(
+      `const H = { cancelBooking: (w, a) => fail('BOOKING_ALREADY_OUT') };`,
+      `const CONTRACT = { guards: [{ name: 'cancelBeforeItGoesOut', tool: ['cancelBooking'], on: 'preTool', deny: () => null }] };`);
+    const rows = seamCovered(dir, { tools: { cancelBooking: {} } } as never);
+    expect(rows[0].guard).toBe('cancelBeforeItGoesOut');
+  });
+
+  test('a gates entry is a row too', () => {
+    const dir = write(
+      `const W = { destructive: { cancelBooking: { gates: [{ kind: 'stateIs', field: 'status', value: 'CONFIRMED' }] } } };`,
+      `const CONTRACT = { guards: [] };`);
+    const rows = seamCovered(dir, { tools: { cancelBooking: {} } } as never);
+    expect(rows.map(r => r.code)).toContain('stateIs:status');
+  });
+});
