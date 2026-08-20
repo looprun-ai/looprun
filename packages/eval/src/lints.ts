@@ -406,6 +406,24 @@ export function census(guards: GuardCensus,
     sentence: `Guard '${g.name}' is installed but no dump shows it firing.` }));
 }
 
+/** The source with every comment blanked, so a count of calls never counts a doc comment
+ *  that spells one out. Lengths are preserved so an offset still points where it pointed. */
+function stripComments(text: string): string {
+  const out = [...text];
+  let inBlock = false, inLine = false;
+  for (let at = 0; at < out.length; at += 1) {
+    if (inLine) { if (out[at] === '\n') inLine = false; else out[at] = ' '; continue; }
+    if (inBlock) {
+      if (out[at] === '*' && out[at + 1] === '/') { out[at] = ' '; out[at + 1] = ' '; at += 1; inBlock = false; }
+      else if (out[at] !== '\n') out[at] = ' ';
+      continue;
+    }
+    if (out[at] === '/' && out[at + 1] === '/') { inLine = true; out[at] = ' '; }
+    else if (out[at] === '/' && out[at + 1] === '*') { inBlock = true; out[at] = ' '; out[at + 1] = ' '; at += 1; }
+  }
+  return out.join('');
+}
+
 export interface CardProfile { readonly bytes: number; readonly checks: number;
                                readonly acting: number; readonly actingChecked: number;
                                readonly unchecked: readonly string[];
@@ -419,9 +437,10 @@ export function profile(subjectDir: string, acting: Iterable<string>): CardProfi
   const cards = sources.filter(f => f.rel.endsWith('cards.ts'));
   const bytes = cards.reduce((n, f) => n + f.text.length, 0);
   const proseCalls = (text: string): number => {
+    const bare = stripComments(text);
     let n = 0;
-    for (let at = text.indexOf('prose('); at !== -1; at = text.indexOf('prose(', at + 1)) {
-      const before = at === 0 ? ' ' : text[at - 1];
+    for (let at = bare.indexOf('prose('); at !== -1; at = bare.indexOf('prose(', at + 1)) {
+      const before = at === 0 ? ' ' : bare[at - 1];
       if (!((before >= 'a' && before <= 'z') || (before >= 'A' && before <= 'Z'))) n += 1;
     }
     return n;
@@ -515,8 +534,9 @@ export function unlicensed(subjectDir: string): readonly LintFinding[] {
  *  few other lines use; when two lines share enough of them they are saying one thing twice,
  *  and the prompt pays for both every turn. This searches and never interprets: it counts
  *  shared words, and the author decides whether the law behind them is the same. */
-export function echoes(prompt: string, floor = 5): readonly string[] {
-  const lines = prompt.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+export function echoes(prompt: string | readonly string[], floor = 5): readonly string[] {
+  const lines = (typeof prompt === 'string' ? prompt.split('\n') : prompt)
+    .map(l => l.trim()).filter(l => l.length > 0);
   const tokensOf = (line: string): ReadonlySet<string> => {
     const out = new Set<string>();
     let word = '';
@@ -530,7 +550,10 @@ export function echoes(prompt: string, floor = 5): readonly string[] {
   const bags = lines.map(tokensOf);
   const spread = new Map<string, number>();
   for (const bag of bags) for (const token of bag) spread.set(token, (spread.get(token) ?? 0) + 1);
-  const common = Math.ceil(lines.length / 3);
+  // A token is DISTINCTIVE when almost no other line uses it. The ceiling is absolute, not a
+  // share of the prompt: on a long prompt a word used in eighty lines is the domain's vocabulary,
+  // and pairing two lines on it says nothing.
+  const common = Math.min(4, Math.ceil(lines.length / 3));
   const rows: { shared: string[]; row: string }[] = [];
   for (let i = 0; i < bags.length; i += 1)
     for (let j = i + 1; j < bags.length; j += 1) {
@@ -541,4 +564,18 @@ export function echoes(prompt: string, floor = 5): readonly string[] {
       rows.push({ shared, row: `${shared.length} shared: ${shared.sort().join(' ')}\n     A  ${shorten(lines[i])}\n     B  ${shorten(lines[j])}` });
     }
   return rows.sort((a, b) => b.shared.length - a.shared.length).map(r => r.row);
+}
+
+/** Every line the model reads, as SEPARATE units. A tool card renders its own sentence and
+ *  each of its contract guards' rules glued into one string, so the assembled card is useless
+ *  as an echo unit: it pairs against everything and never against itself. */
+export function promptLines(compiled: {
+  readonly guards: readonly { readonly home: string; readonly rule: string }[];
+  readonly facts: { readonly tools: Readonly<Record<string, { readonly does: string }>> };
+}, system: string): readonly string[] {
+  return [
+    ...system.split('\n'),
+    ...compiled.guards.filter(g => g.home === 'contract').map(g => g.rule),
+    ...Object.values(compiled.facts.tools).map(f => f.does)
+  ];
 }
