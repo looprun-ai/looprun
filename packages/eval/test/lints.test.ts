@@ -525,3 +525,101 @@ describe('seamCovered', () => {
     expect(rows.map(r => r.code)).toContain('stateIs:status');
   });
 });
+
+import { destructiveDisclosed } from '../src/lints.js';
+
+describe('destructiveDisclosed', () => {
+  const write = (body: string): string => {
+    const dir = mkdtempSync(join(tmpdir(), 'disclosed-'));
+    writeFileSync(join(dir, 'cards.ts'), body);
+    return dir;
+  };
+
+  test('a destructive act with no before is a finding', () => {
+    const dir = write(`const CONTRACT = { disclosure: { cancelBooking: { after: 'done' } } };`);
+    const found = destructiveDisclosed(dir, { tools: { cancelBooking: { effect: 'destructive' } } } as never);
+    expect(found.map(f => f.code)).toEqual(['DISCLOSURE_BEFORE_MISSING']);
+    expect(found[0].sentence).toContain('carries only its label');
+  });
+
+  test('a write with no before asks nothing', () => {
+    const dir = write(`const CONTRACT = { disclosure: {} };`);
+    expect(destructiveDisclosed(dir, { tools: { moveBooking: { effect: 'write' } } } as never)).toEqual([]);
+  });
+});
+
+import { capPaths } from '../src/lints.js';
+
+describe('capPaths', () => {
+  const write = (body: string): string => {
+    const dir = mkdtempSync(join(tmpdir(), 'cap-'));
+    writeFileSync(join(dir, 'cards.ts'), body);
+    return dir;
+  };
+
+  test('a cap rooted on a tool name with no needs alias is a finding', () => {
+    const dir = write(`const CONTRACT = { disclosure: { issueRefund: {
+      needs: { invoice: 'getInvoice' }, before: 'x',
+      cap: { at: 'getInvoice.refundable', not: 'above' } } } };`);
+    const found = capPaths(dir);
+    expect(found.map(f => f.code)).toEqual(['CAP_PATH_UNROOTED']);
+    expect(found[0].sentence).toContain("'getInvoice' is a read, not an alias");
+    expect(found[0].sentence).toContain("invoice.refundable");
+  });
+
+  test('a cap rooted on a declared alias asks nothing', () => {
+    const dir = write(`const CONTRACT = { disclosure: { issueRefund: {
+      needs: { invoice: 'getInvoice' }, before: 'x',
+      cap: { at: 'invoice.refundable', not: 'above' } } } };`);
+    expect(capPaths(dir)).toEqual([]);
+  });
+});
+
+import { floorRedeclared } from '../src/lints.js';
+
+describe('floorRedeclared', () => {
+  const write = (body: string): string => {
+    const dir = mkdtempSync(join(tmpdir(), 'floor-'));
+    writeFileSync(join(dir, 'cards.ts'), body);
+    return dir;
+  };
+
+  test('a card declaring what the engine installs is a finding', () => {
+    const dir = write(`const CONTRACT = { guards: [{ name: 'noDuplicateCall', on: 'preTool', deny: () => null }] };`);
+    expect(floorRedeclared(dir).map(f => f.code)).toEqual(['FLOOR_REDECLARED']);
+  });
+
+  test('an authored name the engine does not install asks nothing', () => {
+    const dir = write(`const CONTRACT = { guards: [{ name: 'refundReadsTheInvoice', on: 'preTool', deny: () => null }] };`);
+    expect(floorRedeclared(dir)).toEqual([]);
+  });
+});
+
+import { conductComplete } from '../src/lints.js';
+
+describe('conductComplete', () => {
+  const write = (body: string): string => {
+    const dir = mkdtempSync(join(tmpdir(), 'conduct-'));
+    writeFileSync(join(dir, 'cards.ts'), body);
+    return dir;
+  };
+
+  test('a law on some specs and not others is a finding', () => {
+    const dir = write(`
+      export const billing = { name: 'billing', persona: 'p', guards: [prose('declareHonestly', 'x')] };
+      export const claims  = { name: 'claims',  persona: 'p', guards: [] };
+    `);
+    const found = conductComplete(dir);
+    expect(found.map(f => f.code)).toEqual(['CONDUCT_INCOMPLETE']);
+    expect(found[0].sentence).toContain('claims');
+    expect(found[0].sentence).toContain('declareHonestly');
+  });
+
+  test('a law on every spec asks nothing', () => {
+    const dir = write(`
+      export const billing = { name: 'billing', persona: 'p', guards: [prose('declareHonestly', 'x')] };
+      export const claims  = { name: 'claims',  persona: 'p', guards: [prose('declareHonestly', 'y')] };
+    `);
+    expect(conductComplete(dir)).toEqual([]);
+  });
+});

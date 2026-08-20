@@ -884,3 +884,189 @@ export function inertChecks(subjectDir: string,
   }
   return findings;
 }
+
+type DisclosureEntry = { readonly hasBefore: boolean; readonly needs: ReadonlyMap<string, string>;
+                         readonly capAt: string | null };
+
+/** Every entry a subject's own `disclosure` map declares, read straight from source: whether the
+ *  entry carries `before`, its `needs` aliases resolved to the tool name each one reads, and the
+ *  `cap.at` path when the entry carries a cap. */
+function disclosureEntries(sources: readonly Source[]): ReadonlyMap<string, DisclosureEntry> {
+  const readNeeds = (init: ts.Expression): ReadonlyMap<string, string> => {
+    const needs = new Map<string, string>();
+    const value = unwrap(init);
+    if (!ts.isObjectLiteralExpression(value)) return needs;
+    for (const alias of value.properties) {
+      if (!ts.isPropertyAssignment(alias)) continue;
+      const key = ts.isIdentifier(alias.name) || ts.isStringLiteral(alias.name) ? alias.name.text : null;
+      const recipe = unwrap(alias.initializer);
+      if (key === null) continue;
+      if (ts.isStringLiteral(recipe)) { needs.set(key, recipe.text); continue; }
+      if (!ts.isObjectLiteralExpression(recipe)) continue;
+      for (const p of recipe.properties) {
+        if (!ts.isPropertyAssignment(p)) continue;
+        const propKey = ts.isIdentifier(p.name) || ts.isStringLiteral(p.name) ? p.name.text : null;
+        const tool = propKey === 'tool' ? literalText(unwrap(p.initializer)) : null;
+        if (tool !== null) needs.set(key, tool);
+      }
+    }
+    return needs;
+  };
+  const out = new Map<string, DisclosureEntry>();
+  for (const f of sources) {
+    const visit = (node: ts.Node): void => {
+      if (ts.isPropertyAssignment(node) && ts.isIdentifier(node.name) && node.name.text === 'disclosure'
+        && ts.isObjectLiteralExpression(node.initializer)) {
+        for (const entry of node.initializer.properties) {
+          if (!ts.isPropertyAssignment(entry) || !ts.isObjectLiteralExpression(entry.initializer)) continue;
+          const tool = ts.isIdentifier(entry.name) || ts.isStringLiteral(entry.name) ? entry.name.text : null;
+          if (tool === null) continue;
+          let hasBefore = false, capAt: string | null = null, needs: ReadonlyMap<string, string> = new Map();
+          for (const property of entry.initializer.properties) {
+            if (!ts.isPropertyAssignment(property)) continue;
+            const key = ts.isIdentifier(property.name) || ts.isStringLiteral(property.name)
+              ? property.name.text : null;
+            if (key === 'before') hasBefore = true;
+            if (key === 'needs') needs = readNeeds(property.initializer);
+            if (key === 'cap' && ts.isObjectLiteralExpression(property.initializer)) {
+              for (const p of property.initializer.properties) {
+                if (!ts.isPropertyAssignment(p)) continue;
+                const capKey = ts.isIdentifier(p.name) || ts.isStringLiteral(p.name) ? p.name.text : null;
+                if (capKey === 'at') capAt = literalText(unwrap(p.initializer));
+              }
+            }
+          }
+          out.set(tool, { hasBefore, needs, capAt });
+        }
+      }
+      node.forEachChild(visit);
+    };
+    visit(parse(f));
+  }
+  return out;
+}
+
+/** Every tool whose fact carries `effect: 'destructive'` must have a disclosure entry that
+ *  carries a `before`: the words the consent question renders. Without one the question asks
+ *  with only the tool's own label — no amount, no record, nothing that cannot be undone named. */
+export function destructiveDisclosed(subjectDir: string,
+                                     facts: { readonly tools: Readonly<Record<string,
+                                       { readonly effect?: string }>> }): readonly LintFinding[] {
+  const entries = disclosureEntries(subjectSources(subjectDir));
+  const findings: LintFinding[] = [];
+  for (const [tool, fact] of Object.entries(facts.tools)) {
+    if (fact.effect !== 'destructive') continue;
+    if (entries.get(tool)?.hasBefore === true) continue;
+    findings.push({ code: 'DISCLOSURE_BEFORE_MISSING',
+      sentence: `Destructive act '${tool}' has no disclosure 'before', so the consent question `
+        + `carries only its label: no amount, no record, nothing that cannot be undone.` });
+  }
+  return findings;
+}
+
+/** A `cap.at` path reads as `{alias}.{...}` over the reads `needs` names — an alias the same
+ *  entry declares, never the read's own tool name. A path rooted on the tool binds to nothing
+ *  the engine ever produced, and the call it was meant to hold dies at the cap instead. */
+export function capPaths(subjectDir: string): readonly LintFinding[] {
+  const findings: LintFinding[] = [];
+  for (const [tool, entry] of disclosureEntries(subjectSources(subjectDir))) {
+    if (entry.capAt === null) continue;
+    const dot = entry.capAt.indexOf('.');
+    const root = dot === -1 ? entry.capAt : entry.capAt.slice(0, dot);
+    if (entry.needs.has(root)) continue;
+    const rest = dot === -1 ? '' : entry.capAt.slice(dot + 1);
+    const alias = [...entry.needs].find(([, name]) => name === root)?.[0];
+    const corrected = alias === undefined ? null : rest === '' ? alias : `${alias}.${rest}`;
+    findings.push({ code: 'CAP_PATH_UNROOTED',
+      sentence: alias === undefined
+        ? `disclosure.${tool}.cap.at '${entry.capAt}' is rooted on '${root}', which needs declares no alias for`
+        : `disclosure.${tool}.cap.at '${entry.capAt}' is rooted on '${root}', but '${root}' is a read, not `
+          + `an alias; needs names '${alias}' for it — root the cap at '${corrected}'` });
+  }
+  return findings;
+}
+
+/** The floor: the guard names the engine installs on its own, never authored on a card. Eight —
+ *  confirmFirst, groundedIds, groundedDates, noDuplicateCall, argRequired, maxDestructive,
+ *  brokenReply, questionAnswered — are pushed by AgentFactory's compile() in
+ *  packages/core/src/cards/agent-factory.ts; the remaining two — claimIsGrounded and
+ *  claimIsComplete, the honesty floor — are installed by Rulebook in
+ *  packages/core/src/run/rulebook.ts. A card that authors any of these, bare or prefixed with a
+ *  colon, shadows a guard the engine installs itself. */
+const FLOOR_NAMES = new Set(['confirmFirst', 'groundedIds', 'groundedDates', 'noDuplicateCall',
+  'argRequired', 'maxDestructive', 'brokenReply', 'questionAnswered', 'claimIsGrounded', 'claimIsComplete']);
+
+export function floorRedeclared(subjectDir: string): readonly LintFinding[] {
+  const sources = subjectSources(subjectDir);
+  const lists = namedToolLists(sources);
+  const findings: LintFinding[] = [];
+  for (const f of sources) {
+    const sf = parse(f);
+    for (const guard of guardsWithTools(sf, lists)) {
+      const bare = guard.name.split(':')[0];
+      if (!FLOOR_NAMES.has(bare)) continue;
+      const at = `${f.rel}:${sf.getLineAndCharacterOfPosition(guard.node.getStart(sf)).line + 1}`;
+      findings.push({ code: 'FLOOR_REDECLARED',
+        sentence: `${at} — '${guard.name}' redeclares the engine floor guard '${bare}'; the engine `
+          + `installs it itself and an authored guard of the same name shadows it.` });
+    }
+  }
+  return findings;
+}
+
+type SpecLaws = { readonly spec: string; readonly laws: ReadonlySet<string> };
+
+/** Every object literal carrying a `persona` — a spec — read as its own `name` and the
+ *  `prose(...)` names its `guards` array declares: the conduct laws that spec teaches. */
+function specConduct(sources: readonly Source[]): readonly SpecLaws[] {
+  const specs: SpecLaws[] = [];
+  for (const f of sources) {
+    const visit = (node: ts.Node): void => {
+      if (ts.isObjectLiteralExpression(node)) {
+        let hasPersona = false, name: string | null = null, guardsNode: ts.Expression | undefined;
+        for (const property of node.properties) {
+          if (!ts.isPropertyAssignment(property)) continue;
+          const key = ts.isIdentifier(property.name) || ts.isStringLiteral(property.name)
+            ? property.name.text : null;
+          if (key === 'persona') hasPersona = true;
+          if (key === 'name' && ts.isStringLiteral(property.initializer)) name = property.initializer.text;
+          if (key === 'guards') guardsNode = property.initializer;
+        }
+        if (hasPersona && name !== null) {
+          const laws = new Set<string>();
+          if (guardsNode !== undefined) {
+            const walk = (at: ts.Node): void => {
+              if (ts.isCallExpression(at) && ts.isIdentifier(at.expression) && at.expression.text === 'prose') {
+                const first = at.arguments[0];
+                if (first !== undefined && ts.isStringLiteral(first)) laws.add(first.text);
+              }
+              at.forEachChild(walk);
+            };
+            walk(guardsNode);
+          }
+          specs.push({ spec: name, laws });
+        }
+      }
+      node.forEachChild(visit);
+    };
+    visit(parse(f));
+  }
+  return specs;
+}
+
+/** A conduct law a `prose(...)` call teaches on some specs and not others: the desks that never
+ *  read it never learn it, and a caller cannot tell whether that gap was decided or forgotten. */
+export function conductComplete(subjectDir: string): readonly LintFinding[] {
+  const specs = specConduct(subjectSources(subjectDir));
+  const allLaws = new Set<string>();
+  for (const spec of specs) for (const law of spec.laws) allLaws.add(law);
+  const findings: LintFinding[] = [];
+  for (const law of allLaws) {
+    const missing = specs.filter(spec => !spec.laws.has(law)).map(spec => spec.spec);
+    if (missing.length === 0) continue;
+    findings.push({ code: 'CONDUCT_INCOMPLETE',
+      sentence: `'${law}' is a conduct law taught on some specs and missing from ${missing.join(', ')}; `
+        + `a desk that never reads it never learns it.` });
+  }
+  return findings;
+}
