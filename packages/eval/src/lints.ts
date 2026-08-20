@@ -6,9 +6,10 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import ts from 'typescript';
-import type { ExamCase, GuardCensus, TurnRecord, WorldCard } from '@looprun-ai/core';
+import type { CompiledAgent, ExamCase, GuardCensus, PromptParts, SurfaceFacts,
+              TurnRecord, WorldCard } from '@looprun-ai/core';
 import type { Subject } from './subject-loader.js';
-import { RETIRED_NAMES } from '@looprun-ai/core';
+import { PromptWriter, RETIRED_NAMES } from '@looprun-ai/core';
 
 export interface LintFinding { readonly code: string; readonly sentence: string }
 
@@ -828,6 +829,58 @@ export function ruleCopies(desks: readonly {
     .sort((a, b) => b[1] - a[1])
     .map(([name, total]) =>
       `${String(total).padStart(6)} B  ${name} — ${length.get(name) ?? 0} B × ${copies.get(name) ?? 0} copies`);
+}
+
+/** The desk shape the prompt accounting reads: the compiled guards with their home and the acts
+ *  they name, the lane's own facts, and the parts the system prefix renders from. A desk carrying
+ *  no prompt parts renders no prefix. */
+export interface CompiledDesk {
+  readonly guards: readonly { readonly home: string; readonly rule: string;
+                              readonly tools: readonly string[] }[];
+  readonly facts: { readonly tools: Readonly<Record<string, { readonly does: string;
+                                                              readonly schema: unknown }>> };
+  readonly promptParts?: PromptParts;
+}
+
+export interface ByteOrigin {
+  readonly systemPrefixes: number;   // personas, facts, voice, conduct laws
+  readonly worldSentences: number;   // the `does` a GEN phase wrote, once per card that carries it
+  readonly schemas: number;          // argument descriptions and JSON structure
+  readonly contractRules: number;    // the sentences NORMS wrote
+  readonly lanes: readonly string[]; // one row per act, its lane count, and what that costs
+}
+
+/** What each slice of the prompt costs, and who wrote it. A world `does` sentence is authored in
+ *  the GEN phase and stamped on the card of every desk holding that act; a schema carries the
+ *  argument descriptions someone wrote beside its types; a contract rule is the NORMS phase's own.
+ *  The lane rows price the desk split: an act in six lanes sends its card six times, and the split
+ *  that decides it is made without counting a byte. */
+export function byteOrigin(desks: readonly CompiledDesk[], facts: SurfaceFacts): ByteOrigin {
+  let systemPrefixes = 0;
+  let worldSentences = 0;
+  let schemas = 0;
+  let contractRules = 0;
+  const held = new Map<string, number>();
+  for (const desk of desks) {
+    const lane = desk.facts.tools;
+    if (desk.promptParts !== undefined)
+      systemPrefixes += new PromptWriter(desk as CompiledAgent).system().length;
+    for (const [act, fact] of Object.entries(lane)) {
+      worldSentences += fact.does.length;
+      schemas += JSON.stringify(fact.schema).length;
+      held.set(act, (held.get(act) ?? 0) + 1);
+    }
+    for (const guard of desk.guards) {
+      if (guard.home !== 'contract') continue;
+      contractRules += guard.rule.length * guard.tools.filter(act => lane[act] !== undefined).length;
+    }
+  }
+  const lanes = Object.values(facts.tools)
+    .map(fact => ({ act: fact.name, does: fact.does.length, cards: held.get(fact.name) ?? 0 }))
+    .sort((a, b) => b.does * b.cards - a.does * a.cards)
+    .map(r => `${String(r.does * r.cards).padStart(6)} B  ${r.act} — ${r.does} B `
+      + `× ${r.cards} lane${r.cards === 1 ? '' : 's'}`);
+  return { systemPrefixes, worldSentences, schemas, contractRules, lanes };
 }
 
 /** A `precondition` whose predicate reads `record` over an act that can never carry one. The

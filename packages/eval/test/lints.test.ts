@@ -673,3 +673,30 @@ describe('promptLines', () => {
       .toEqual(['SYS', 'authored']);
   });
 });
+
+import { byteOrigin } from '../src/lints.js';
+
+describe('byteOrigin', () => {
+  test('a world sentence is charged once per card that carries it', () => {
+    const facts = { tools: { getAsset: { name: 'getAsset', does: 'x'.repeat(100), schema: {} } } };
+    const desk = { guards: [], facts };
+    const origin = byteOrigin([desk, desk] as never, facts as never);
+    expect(origin.worldSentences).toBe(200);
+  });
+
+  test('a contract rule is charged apart from the sentence the world wrote', () => {
+    const facts = { tools: { getAsset: { name: 'getAsset', does: 'world', schema: {} } } };
+    const desk = { guards: [{ home: 'contract', rule: 'authored', tools: ['getAsset'] }], facts };
+    const origin = byteOrigin([desk] as never, facts as never);
+    expect(origin.worldSentences).toBe(5);
+    expect(origin.contractRules).toBe(8);
+  });
+
+  test('an act in more than one lane is a row naming what it costs', () => {
+    const facts = { tools: { getAsset: { name: 'getAsset', does: 'x'.repeat(50), schema: {} } } };
+    const desk = { guards: [], facts };
+    const origin = byteOrigin([desk, desk, desk] as never, facts as never);
+    expect(origin.lanes[0]).toContain('getAsset');
+    expect(origin.lanes[0]).toContain('3 lanes');
+  });
+});
