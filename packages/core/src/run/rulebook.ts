@@ -16,6 +16,7 @@ export class Rulebook {
   private readonly postTool: readonly CompiledGuard[];
   private readonly reply: readonly CompiledGuard[];
   private readonly limits: CompiledAgent['limits'];
+  private readonly rewrites: CompiledAgent['rewrites'];
 
   constructor(compiled: CompiledAgent) {
     const phase = (on: CompiledGuard['on']): readonly CompiledGuard[] =>
@@ -25,6 +26,7 @@ export class Rulebook {
     this.postTool = phase('postTool');
     this.reply = deepFreeze(this.withHonesty(compiled, phase('reply')));
     this.limits = compiled.limits;
+    this.rewrites = compiled.rewrites;
   }
 
   /** The honesty floor rides the reply walk at honesty priority — after the declared
@@ -103,7 +105,7 @@ export class Rulebook {
   guards(): GuardCensus {
     return {
       guards: [...this.input, ...this.preTool, ...this.postTool, ...this.reply],
-      rewrites: [],
+      rewrites: this.rewrites.map(r => ({ name: r.name, kind: r.kind })),
       limits: this.limits
     };
   }

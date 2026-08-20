@@ -2,185 +2,145 @@
 
 **A governance layer for AI agents, on top of the framework you already use.**
 
-Your agent framework is the car — the engine that runs the *think → call tool → reply* loop.
-looprun adds everything that makes it safe to hand the keys to an agent:
-
-- **The map** — an `AgentSpec`: which tools, in what order, under which state conditions, with what persona and behavior.
-- **The safety kit** — typed **deterministic guards** (seatbelt, airbag, speed limiter): every rule is a
-  machine-checked `check()` paired with the LLM-facing `prose()` rendered into the prompt. A check reads
-  tool arguments, world state, the agent's own verified actions, the reply it just drafted — and the
-  user's text only as a string to **search, never to interpret**: matching is whole-token, contiguous
-  and whole-value equal, so the only thing a message can hand a guard is a literal — the engine-minted
-  `CONFIRM …` consent code, or the exact value an argument recorded on the user's behalf must carry.
-  That matching law *is* the guarantee: no phrasing ("ignore your rules", "the manager already
-  approved it") carries such a literal, so none can flip a verdict, and the same guard holds on any
-  model, in any language.
-- **The GPS with course-correction** — when the reply violates its checks, a bounded no-tools *redrive*
-  corrects it; when correction fails, a **deterministic honest-abstain closure** (a pure function of what
-  verifiably happened) goes out instead of a fabrication.
-- **The receipt** — every reply carries the engine's own **operation record**, composed from the agent's
-  verified declaration and the world action history, never from its prose. A turn that changed nothing says so:
-
-  ```
-  message   Done — I cancelled your dentist appointment on 2026-03-03 at 09:00.
-  record    No operation was carried out on this turn.
-  ```
-
-  The engine does not stop that sentence; it makes sure the reader never gets it alone. On a turn that
-  carried out nothing it also asks one closed question and rewrites the prose when the answer says the
-  reader would be misled. Where the record is derived — the turn whose reply was replaced by the honest
-  closure — each line carries the AUTHORED sentence its call arrived with: the world's own error
-  message, or the sentence the guard that stopped it declared. Never a field lifted out of a result,
-  and never wording composed at run time.
-- **The data that stays out** — a domain declares the result fields to strip (`sensitiveFields`:
-  omitted or masked) and the free-text fields whose contents are pattern-scrubbed (`scrubTextFields`:
-  emails, card numbers, phone shapes). Both run on looprun's side of the tool boundary, so the
-  executor is never asked to be trustworthy: arguments are scrubbed before the tool receives them, and
-  a tool routed through a world you wrote hands the model the filtered result. Where the tool executes
-  itself (native, MCP) the filter governs the record and everything composed from it — what is
-  delivered, judged and sealed.
-- **The judgment call** — an `llmCheck` guard binds a question to a genuine judgement call, answered by a
-  judge under an isolated call (no persona, no tools, no memory) that `runSpecConversation` resolves
-  to the turn's own model by default — `LoopRunAgent` and `compileSpec` register nothing and fail loud
-  until the host supplies one. It is a separate, measured layer, not a substitute for the deterministic
-  guards above — binding a question never makes the prose channel deterministic, and its miss rate is a
-  stated, per-model number, not a proof.
-- **The map generator** — the **agentspec** skill (private beta, developed in its own repo) interviews you:
-  **one mandatory question** — the purpose, in one sentence — and generates the specs, the domain
-  contract, the tool world **and the eval set that certifies them**. Writing a spec by hand is a fully
-  supported path, and it is the path the tutorial teaches.
-
-looprun is **framework-agnostic by construction**: the spec, the guards and the governed-turn machine are
-framework-free in `@looprun-ai/core`, and a thin *backend* binds them to a host framework. Mastra is the
-backend that ships today — the governed agent is a **genuine Mastra `Agent`**, registers in your Mastra
-instance and shows up in Mastra Studio with the guards enforcing live. The Vercel AI SDK backend is the
-next seam (`@looprun-ai/vercel` — reserved, factory still throws). Anything else can already call a
-governed agent over HTTP: `@looprun-ai/server` exposes it behind an OpenAI-compatible
-`/v1/chat/completions` endpoint.
-
-## Install
+You write three cards. The engine holds every destructive act for a human's word, says what
+agreeing would do in the domain's own words, and seals what happened into a record nobody can
+edit — including the model.
 
 ```bash
-npm i looprun @mastra/core ai zod        # the library + the Mastra backend's peers
+npm install looprun
 ```
 
-That is everything needed to *run* a governed agent. To **certify** one, add the dev toolchain:
+```typescript
+import { LoopRunAgent, world } from 'looprun';
 
-```bash
-npm i -D @looprun-ai/eval mastra typescript tsx      # the certification CLI + the dev runtime
-npx looprun init                                     # environment check (+ optional local-model download)
-```
-
-`looprun` is the umbrella: it bundles core + mastra + models and installs the `looprun` CLI.
-`@looprun-ai/eval` is deliberately **outside** it — the certification harness is a dev tool, nothing
-imports it at runtime, and shipping it into production dependencies buys nothing.
-
-## Hello world
-
-A governed agent answering a real turn, in about twenty lines
-([chapter 02](docs/tutorial/02-hello-world.md) builds it line by line):
-
-```ts
-import { LoopRunAgent } from 'looprun/mastra'
-import { helloSchedulerSpec } from './scheduler/hello-spec.js'
-import { listEventsTool } from './scheduler/tools.js'
-import { SchedulerWorld } from './scheduler/world.js'
+const hotel = world({
+  records: { bookings: { bk_1: { room: 'Blue Room', day: 'Friday', status: 'CONFIRMED' } } },
+  reads:       { getBooking:    { form: 'get',    entity: 'bookings', label: 'Look up one booking' } },
+  destructive: { cancelBooking: { form: 'remove', entity: 'bookings', label: 'cancel a booking' } }
+});
 
 const agent = new LoopRunAgent({
-  spec: helloSchedulerSpec,             // the spec carries its guards, persona and domain contract
-  world: () => new SchedulerWorld(),    // a factory: one world per session
-  toolDefs: [listEventsTool],
-  model: 'google/gemini-3.1-flash-lite',// any Mastra router string or AI-SDK model — trivial swap
-})
+  spec: { name: 'concierge', persona: 'A friendly hotel concierge who manages room bookings.' },
+  world: hotel,
+  model: 'google/gemini-2.5-flash'
+});
 
-const result = await agent.generate('What is on my calendar this week?', {
-  loopRun: { sessionId: 'demo' },
-})
-console.log(result.text)                // the governed reply
+console.log((await agent.generate('Please cancel booking bk_1.')).text);
 ```
 
-`result.looprun` carries what the safety kit did on that turn: vetoes, redrives, violations and the
-tool calls the agent actually made.
-
-## The tutorial
-
-`docs/tutorial/` is the only guide: six chapters, one running example — a calendar assistant grown
-from a single purpose sentence into a certified agent. Every code block is compiled in CI against the
-published packages, so nothing here can drift from what ships.
-
-| # | chapter | what you get |
-|---|---|---|
-| 01 | [Concepts](docs/tutorial/01-concepts.md) | the mental model — the three nouns every later chapter hangs off, and why the architecture is shaped this way. No code |
-| 02 | [Hello world](docs/tutorial/02-hello-world.md) | a governed agent answering a real turn, in about twenty lines. Three symbols |
-| 03 | [Agent anatomy](docs/tutorial/03-agent-anatomy.md) | what a spec declares, what a world provides, where the tool surface comes from, and how a rule binds to a moment in the turn |
-| 04 | [Guards](docs/tutorial/04-guards.md) | the complete rule vocabulary — 21 factories, what each prevents, one example each — and how to write your own |
-| 05 | [Running and eval](docs/tutorial/05-running-and-eval.md) | running a spec over a scripted conversation, and turning "it seemed fine" into a number you can re-run |
-| 06 | [Advanced](docs/tutorial/06-advanced.md) | the same agent served over HTTP, run on a local model with no cloud key, and driven by a host whose tools execute themselves |
-
-## Certify
-
-```bash
-npx looprun-eval run  --subject <dir>     # runs the cases against the real loop → <subject>/test/<run>/
-npx looprun-eval fold --dump <run>/cases.jsonl --verdicts <run>/verdicts.jsonl   # → RESULTS.md
-npx looprun-eval cert <run>               # ≥90% bar → cert.json + CERT.md
+```
+Nothing changed.
+cancelBooking(bk_1) — not-done (awaiting approval)
+[CONFIRM 355ec2] cancel a booking runs only after your approval.
 ```
 
-The invariant gate auto-fails deterministic violations and every case dumps a trace; the LLM judge
-grades them and `fold` merges the verdicts. `cert.json` and `CERT.md` are the artifact: the model,
-the case count, the final pass rate, the bar it was measured against and `reps: 1` stated explicitly —
-the full protocol is [chapter 05](docs/tutorial/05-running-and-eval.md).
+Twelve lines of code, and nothing about consent is in them. `cancelBooking` sits under
+`destructive`; that single fact installs the hold, the wording, the one-time code, and the
+rule that only a later message carrying that code releases **that one call**.
 
-## Local models
+---
 
-Local models are a supported target — three run tiers of one validated model (plus a small-RAM fallback) run on
-[llama.cpp](https://github.com/ggml-org/llama.cpp) with measured flags, including lossless
-multi-token-prediction speculative decoding (~1.4× decode, byte-identical output at temp 0):
+## The whole authoring surface
 
-| tier | model · quant | weights | measured |
-|---|---|---|---|
-| **`ram24`** (DEFAULT) | Qwen3.6-35B-A3B UD-IQ2_XXS + MTP | 11.8 GB | ~56 tok/s · **peak RSS ~20.7 GB** (fits 24 GB) |
-| `ram32` (quality-max) | Qwen3.6-35B-A3B UD-Q3_K_XL + MTP | 17.2 GB | ~58 tok/s · f16 KV @ 64k ctx + 16 GB assembled prompt cache |
-| `ram16` | Qwen3.6-35B-A3B UD-IQ2_XXS + MTP | 11.8 GB | ~44 tok/s · **peak RSS 13.4–13.5 GB** (q8_0 KV, 24k ctx) |
-| `ram8` | Qwen3.5-4B UD-Q3_K_XL + MTP | 2.5 GB | ~43 tok/s · **peak RSS 4.62 GB** — quality far below the 35B tiers |
+```
+  the WORLD CARD     what exists, and what a tool DOES to it
+                     records · reads · writes · destructive
 
-```ts
-import { localModel } from 'looprun/models'
+  the AGENT SPEC     how ONE desk behaves
+                     name · persona · tools · teammates · guards · llmParams · limits
 
-model: await localModel('ram24')       // ram8 · ram16 · ram24 (default) · ram32
+  the DOMAIN         what the BUSINESS is — every desk answers to it
+  CONTRACT           voice · facts · guards · disclosure · secrets · rewrites ·
+                     wording · limits
 ```
 
-The weights are a separate, explicit download (`npx looprun models pull ram24`) — GGUF files are
-2.5–17 GB, so they are not in the npm package and looprun never fetches them behind your back.
-Cloud models need none of this: pass a router string as `model` and skip this section entirely.
-[Chapter 06](docs/tutorial/06-advanced.md) has the tiers, the `llama-server` requirement (build
-**≥ b9780**) and the CLI in full.
+There is no fourth thing. No hooks, no loop, no return protocol, no tool plumbing.
 
-## Packages
+## What the engine does that you did not write
 
-| package | what |
+| | |
 |---|---|
-| `looprun` | umbrella — `looprun/core`, `looprun/mastra`, `looprun/models`, `looprun/vercel` (+ the `looprun` CLI) |
-| `@looprun-ai/core` | `AgentSpec` + the 21 guard factories — the teaching surface. The assembled prompt renderer and the governed-turn machine ship too, but on `@looprun-ai/core/internal` (no compatibility promise) |
-| `@looprun-ai/mastra` | `LoopRunAgent` (a real Mastra Agent), `runSpecConversation`, `worldFromTools` |
-| `@looprun-ai/models` | validated local models (llama.cpp `ModelRuntimePort`) + the cloud validation model |
-| `@looprun-ai/eval` | the `looprun-eval` CLI: run / fold / cert / lint / seal (dev dependency) |
-| `@looprun-ai/server` | OpenAI-compatible `/v1/chat/completions` server for governed agents |
-| `@looprun-ai/vercel` | reserved (also `looprun/vercel`) — the Vercel AI SDK backend seam. The contract is documented in its README; the primitives it names live on `@looprun-ai/core/internal`. Factory still throws |
+| **Consent** | every destructive call is held; the approval arrives in a later message, carries a code the engine minted, and licenses exactly that call |
+| **Disclosure** | the consent question states what THIS call would do, with figures the engine read itself: *"Cancelling Blue Room on Friday is permanent, and 240 stays owed."* |
+| **The floor** | fabricated identifiers and dates, duplicate calls, half-filled arguments, a reply that claims what the acts do not show — all refused without you declaring anything |
+| **The record** | one row per act, in a closed vocabulary — `done` · `held` · `refused` · `unknown` · `not-done` — chosen by the engine from what the world answered, never from the model's prose |
+| **Honest closure** | a turn that ran out of room closes with what verifiably happened, never with a fabrication |
 
-## Benchmarks
+## A guard is one sentence
 
-| Benchmark | Question it answers | Scale | Headline (governed vs ungoverned) | Where |
-|---|---|---|---|---|
-| **τ²-Bench Telecom** | Does adding the looprun protocol lift a raw model on a public agent benchmark? | paired: raw model vs model + looprun protocol | in progress | [looprun-bench](https://github.com/looprun-ai/looprun-bench) |
+The sentence is what the model is told, what the person is told when a call is refused, and
+what `agent.guards()` prints. One string, three jobs — they cannot drift apart.
 
-Benchmark editions are pinned to looprun releases (current edition: **v0.6.0**). Method and full
-results: [docs/benchmarks.md](docs/benchmarks.md).
+```typescript
+{ ...onlyAfter('cancelBooking', 'getInvoice'),
+  rule: 'Read the booking\'s invoice before cancelling, so the guest hears what stays owed.' }
+```
 
-## Credits
+When the model skips the read, the engine collects it itself in one forced micro-step, and
+what comes back is that same sentence:
 
-looprun's generation-and-evaluation methodology — debate-validated synthetic policies and eval sets,
-iterated against a measured bar — is based on **BARRED: Synthetic Training of Custom Policy Guardrails
-via Asymmetric Debate** (arXiv:2604.25203v1, https://arxiv.org/abs/2604.25203; reference implementation:
-https://github.com/plurai-ai/BARRED).
+```
+cancelBooking(bk_1) — not-done (Read the booking's invoice before cancelling, so the guest
+  hears what stays owed. getInvoice did not succeed this conversation)
+```
 
-Apache-2.0 © LoopRun Team
+## Framework-agnostic by construction
+
+`@looprun-ai/core` is the engine and knows about no framework. `@looprun-ai/mastra` binds it to
+Mastra, where `LoopRunAgent` **is** a genuine `@mastra/core` Agent: it registers in your Mastra
+instance and shows up in Studio with the guards enforcing live. Anything else can call a
+governed agent over HTTP — `@looprun-ai/server` puts it behind an OpenAI-compatible
+`/v1/chat/completions` endpoint.
+
+| package | what it is |
+|---|---|
+| `looprun` | the umbrella: the cards, the world, and the Mastra-hosted agent under one name |
+| `@looprun-ai/core` | the engine — framework-free |
+| `@looprun-ai/mastra` | `LoopRunAgent` and its ungoverned twin |
+| `@looprun-ai/server` | governed agents behind an OpenAI-compatible endpoint |
+| `@looprun-ai/eval` | verbs over a run directory: run, watch, judge, fold, certify, seal |
+| `@looprun-ai/models` | the validated local tiers on llama.cpp |
+
+## Measuring it
+
+`@looprun-ai/eval` runs an exam of authored cases against your model and certifies the result
+against a bar. `UngovernedAgent` is the same cards, the same world, the same prompt with every
+guard hook empty — the only honest way to say what the governance is worth. On a hundred-case
+exam of a rental-operations domain:
+
+```
+                       governed        ungoverned
+  judged score          95/100           54/100
+  invariant failures      1                29
+  consent questions      47                 0
+  writes executed        46                79
+  writes stopped        104                26
+```
+
+**The judge is the person and the agent doing the work.** No file in this repository calls a
+third-party model API — not to judge a run, not to score a transcript. `buildJudgeInputs`
+writes blind rows to disk and a human-and-agent pair writes the verdicts back. The only model
+a run reaches is the subject under test.
+
+## Learn it
+
+```
+ docs/tutorial/01-concepts.md            the three things you write
+ docs/tutorial/02-hello-world.md         consent, for free
+ docs/tutorial/03-disclosure.md          what agreeing would do
+ docs/tutorial/04-guards.md              the catalog and the three strengths
+ docs/tutorial/05-the-domain-card.md     secrets, limits, wording, a second desk
+ docs/tutorial/06-running-and-measuring.md   the exam, the verbs, the twin
+```
+
+Every code block in that tutorial is a compiled file under `docs/tutorial/snippets/`, run by
+the test suite — a lesson that drifts from the engine fails the build.
+
+## What proves it
+
+`governance/GOVERNANCE.md` — 12 engine proofs, 4 structural lints, 7 facade gates, the eval
+verb proofs and 3 repository gates, all of them running under `pnpm test`.
+
+---
+
+Apache-2.0 · [looprun.ai](https://looprun.ai) · Node ≥ 22

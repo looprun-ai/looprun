@@ -149,12 +149,14 @@ export interface InstalledGuard { readonly name: string; readonly rule: string;
                                   readonly judged: boolean;
                                   readonly judgePolicy: 'passOnFails' | 'denyOnFails' | null;
                                   readonly installedBecause: string }
+export type RewriteKind = 'purgePattern' | 'maskPattern' | 'swapTerms';
 export interface Rewrite { readonly name: string;
+                           readonly kind: RewriteKind;       // the factory that minted it
                            apply(text: string): string }     // a rewrite rewrites the outgoing reply;
                                                              //   it never decides
 export interface GuardCensus { readonly guards: readonly InstalledGuard[];        // priority order
                                readonly rewrites: readonly { readonly name: string;
-                                 readonly kind: 'purgePattern' | 'maskPattern' | 'swapTerms' }[];
+                                 readonly kind: RewriteKind }[];
                                readonly limits: { readonly calls: number; readonly destructive: number;
                                                   readonly retries: number; readonly questionTurns: number } }
                                               // the census carries ALL governance: the installed

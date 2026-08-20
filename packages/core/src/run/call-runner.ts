@@ -193,7 +193,7 @@ export class CallRunner {
         return this.record(draft, {
           origin, call: call.data(v => this.deps.masker.maskData(v)), effect: fact.effect, said: grade.said,
           status: grade.status, reason: grade.reason, evidence: grade.evidence,
-          sentence: `${this.head(call, fact)} — not-done (held for your approval)`,
+          sentence: `${this.head(call, fact)} — not-done (${this.deps.compiled.wording.status.held})`,
           result: null
         }, undefined, question.id, verdict.guardName);
       }

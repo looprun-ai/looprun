@@ -1,5 +1,10 @@
 /** The L1 card types: the authoring guard shape, the limits, and the compiled forms
- *  the machine runs on. Types and constants only — no logic. */
+ *  the machine runs on. Types and constants only — no logic.
+ *
+ *  THE WHOLE AUTHORING SURFACE IS TWO CARDS. An AgentSpec says how one desk behaves;
+ *  a DomainContract says what the business is. Everything else an author writes is
+ *  the world card, where the block a tool sits in IS its effect declaration — a tool
+ *  under `destructive` needs no other field for the engine to hold it for consent. */
 import type { Act, InputCtx, CallCtx, ResultCtx, ReplyCtx, InstalledGuard, OwedRead } from '../contract/vocabulary.js';
 import type { EngineSentenceKey, LlmParams, Reason, ResolvedWording, Rewrite, Status, SurfaceFacts } from '../contract/vocabulary.js';
 

@@ -535,14 +535,14 @@ export function hallucinationCheck(): Guard {
 export function purgePattern(name: string, pattern: RegExp): Rewrite {
   const global = pattern.flags.includes('g') ? pattern
     : new RegExp(pattern.source, `${pattern.flags}g`);
-  return { name, apply: text => text.replace(global, '') };
+  return { name, kind: 'purgePattern', apply: text => text.replace(global, '') };
 }
 
 /** Replaces every match with **** in the outgoing reply. */
 export function maskPattern(name: string, pattern: RegExp): Rewrite {
   const global = pattern.flags.includes('g') ? pattern
     : new RegExp(pattern.source, `${pattern.flags}g`);
-  return { name, apply: text => text.replace(global, '****') };
+  return { name, kind: 'maskPattern', apply: text => text.replace(global, '****') };
 }
 
 function isIdentChar(c: string): boolean {
@@ -553,6 +553,7 @@ function isIdentChar(c: string): boolean {
 export function swapTerms(terms: Readonly<Record<string, string>>): Rewrite {
   return {
     name: `swapTerms:${Object.keys(terms).join('+')}`,
+    kind: 'swapTerms',
     apply: text => {
       let out = '';
       let token = '';

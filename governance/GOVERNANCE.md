@@ -104,7 +104,7 @@ earlier certification.
 
 | gate | what it refuses |
 |---|---|
-| `plain-names` | a retired name (`ledger`, `probe`, `preview`, `trunk`, `challenge`, `arm`, `band`) in any file a person reads |
+| `plain-names` | any of the seven retired names — the words the engine replaced with plainer ones — in a file a person reads |
 | `guard-priority` | a retired guard identifier — the old prefixes and the old field that carried priority |
 | `no-bench-drift` | a reference to the research harness this engine came from, and any term tied to one vendor's agent product |
 
