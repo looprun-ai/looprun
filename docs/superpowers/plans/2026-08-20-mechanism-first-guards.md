@@ -15,6 +15,7 @@
 - **No external model, ever** — no file calls a third-party model API. The agent in the session reads the transcripts and writes the verdicts. The only model any run may reach is the subject under test named in `ask/targets.json`.
 - **No compatibility shims** — these packages are pre-1.0. Rename and delete the old name in the same commit.
 - **`packages/core` is not touched.** The engine's authoring surface stays exactly as it is.
+- **The plain-names gate is a law.** `tests/plain-names.test.mjs` retires seven words — `ledger`, `probe`, `preview`, `trunk`, `challenge`, `arm`, `band` — and catches them inside camelCase (`createLedger`, `bandJson`). They may not survive in any file a person reads, in EITHER repo; only `docs/superpowers/` is allowlisted. Check a new identifier against the gate before naming anything.
 - Guard catalog examples use **varied, non-Atlas businesses and keep their figures**: freight, pharmacy, school registrar, card operations, clinic, lender, warehouse, courier, utility, insurer.
 - The gate is **≥ 95 of 100, with all one hundred rows judged**; cases 43 and 87 are the only forgiveness, because the certified reference fails them too.
 
@@ -522,10 +523,15 @@ with:
 
 - [ ] **Step 2: Verify it runs against a real subject**
 
+`agentspec-bench` carries no vitest, so the verb runs from `packages/eval`, which does:
+
 ```bash
-cd /Users/marcos/Dev/js/looprun/agentspec-bench
-cp /Users/marcos/Dev/js/looprun/agentspec/skill/references/check-subject.test.ts subjects/atlas-next/
-npx vitest run subjects/atlas-next/check-subject.test.ts
+pnpm build
+node -e "
+const { pairing } = require('node:module').createRequire('$PWD/')('./packages/eval/dist/lints.js');
+const found = pairing('/Users/marcos/Dev/js/looprun/agentspec-bench/subjects/atlas-next');
+console.log(found.length, [...new Set(found.map(f => f.code))].join(' '));
+"
 ```
 
 Expected: FAIL on `pairing`, with `PROSE_RESIDUE_UNDECLARED` findings — the reference's prose rules declare no `tool` and it has no `RESIDUE`. This is the lint proving it reads a real subject. Record the finding count.
@@ -979,13 +985,39 @@ issueRefund: {
 
 - [ ] **Step 3: Run the static gate**
 
+`SubjectLoader` needs a runner that resolves TypeScript, and `agentspec-bench` has none. Write
+the gate as a throwaway inside `packages/eval`, run it, and delete it:
+
 ```bash
-cd /Users/marcos/Dev/js/looprun/agentspec-bench
-cp /Users/marcos/Dev/js/looprun/agentspec/skill/references/check-subject.test.ts subjects/atlas-skill/
-npx vitest run subjects/atlas-skill/check-subject.test.ts
+cd /Users/marcos/Dev/js/looprun/looprun/packages/eval
+cat > test/skill-gate.tmp.test.ts <<'EOF'
+import { test, expect } from 'vitest';
+import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
+import { SubjectLoader } from '../src/subject-loader.js';
+import { Validator } from '../src/validator.js';
+import { nameGate, pairing, purity } from '../src/lints.js';
+
+const SUBJECT = join(fileURLToPath(import.meta.url),
+  '../../../../../agentspec-bench/subjects/atlas-skill');
+
+test('the re-authored subject loads, validates and passes every static lint', async () => {
+  const subject = await SubjectLoader.load(SUBJECT);
+  expect(Object.keys(subject.specs)).toHaveLength(6);
+  expect(subject.cases).toHaveLength(100);
+  expect(SubjectLoader.promptProof(subject).size).toBe(1);
+  expect(new Validator().run(subject).findings).toEqual([]);
+  expect(purity(SUBJECT)).toEqual([]);
+  expect(nameGate(SUBJECT)).toEqual([]);
+  expect(pairing(SUBJECT)).toEqual([]);
+});
+EOF
+npx vitest run test/skill-gate.tmp.test.ts
+rm test/skill-gate.tmp.test.ts
 ```
 
-Expected: PASS. Every finding is fixed in `cards.ts`, never by widening the lint.
+Expected: PASS. Every finding is fixed in `cards.ts`, never by widening the lint. The file is
+deleted whether it passed or not — it names one subject and is not a suite the repo keeps.
 
 - [ ] **Step 4: Rehearse before declaring it done**
 
@@ -1004,7 +1036,6 @@ Expected: 10 of 10. Anything less is diagnosed and fixed in the skill first, the
 
 ```bash
 cd /Users/marcos/Dev/js/looprun/agentspec-bench
-rm subjects/atlas-skill/check-subject.test.ts
 git add subjects/atlas-skill/cards.ts subjects/atlas-skill/gen/RULES.md \
         subjects/atlas-skill/test/2026-08-20-ladder-slice
 git commit -m "feat(atlas-skill): the guards re-authored through the ladder"
