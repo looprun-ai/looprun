@@ -54,7 +54,7 @@ test('census: an installed guard with no dump that fires it is a finding', () =>
 import { pairing, pairingTable } from '../src/lints.js';
 
 /** A subject small enough to read: three tools in their effect blocks, one factory, one
- *  disclosure ceiling, the prose helper and a declared residue with its reason. */
+ *  disclosure ceiling and the prose helper. */
 const CARD = `
 export const w = {
   records: {},
@@ -64,7 +64,6 @@ export const w = {
 };
 const prose = (name, rule, tool) =>
   tool === undefined ? { name, rule, on: 'reply' } : { name, rule, on: 'reply', tool };
-const RESIDUE = { noWriteOffs: 'No tool on this surface writes off a charge, so no call can break it.' };
 export const contract = {
   guards: [
     onlyAfter('payInvoice', 'getInvoice'),
@@ -76,37 +75,6 @@ export const contract = {
   }
 };
 `;
-
-test('pairing: a rule over a checked act, and an explained residue, are clean', () => {
-  expect(pairing(subjectDirWith(CARD))).toEqual([]);
-});
-
-test('pairing: a rule naming a tool off the surface, and one naming an unchecked act', () => {
-  const off = subjectDirWith(CARD.replace(`['payInvoice'])`, `['refundInvoice'])`));
-  expect(pairing(off).map(f => f.code)).toContain('PROSE_TOOL_UNKNOWN');
-  const unchecked = subjectDirWith(CARD.replace(`['payInvoice'])`, `['voidInvoice'])`));
-  expect(pairing(unchecked).map(f => f.code)).toContain('PROSE_TOOL_UNCHECKED');
-});
-
-test('pairing: a rule that names no act and no reason is a finding', () => {
-  const dir = subjectDirWith(CARD.replace(
-    `const RESIDUE = { noWriteOffs: 'No tool on this surface writes off a charge, so no call can break it.' };`,
-    `const RESIDUE = {};`));
-  expect(pairing(dir).map(f => f.code)).toContain('PROSE_RESIDUE_UNDECLARED');
-});
-
-test('pairing: a residue reason too short to weigh is a finding', () => {
-  const dir = subjectDirWith(CARD.replace(
-    `'No tool on this surface writes off a charge, so no call can break it.'`, `'n/a'`));
-  expect(pairing(dir).map(f => f.code)).toContain('PROSE_RESIDUE_UNEXPLAINED');
-});
-
-test('pairing: a guard written as an object literal is read the same way', () => {
-  const dir = subjectDirWith(`${CARD}
-export const extra = { name: 'quietly', rule: 'A rule with no check.', on: 'reply',
-                       tool: ['voidInvoice'] };`);
-  expect(pairing(dir).map(f => f.code)).toContain('PROSE_TOOL_UNCHECKED');
-});
 
 test('pairing: a deterministic guard is not a prose rule, whatever shape it takes', () => {
   const dir = subjectDirWith(`${CARD}
@@ -121,7 +89,6 @@ export const w = { records: {}, reads: {}, writes: {},
   destructive: { voidInvoice: { form: 'remove', entity: 'invoices', label: 'void an invoice' } } };
 const prose = (name, rule, tool) =>
   tool === undefined ? { name, rule, on: 'reply' } : { name, rule, on: 'reply', tool };
-const RESIDUE = {};
 function capabilityGate(name, tools, roles, sentence) {
   return { ...precondition(tools, ctx => true, sentence), name };
 }
@@ -132,27 +99,11 @@ export const contract = { guards: [
   expect(pairing(dir)).toEqual([]);
 });
 
-test('pairingTable: the residue row carries the reason, and a checked row names its mechanism', () => {
+test('pairingTable: a row over an act names its mechanism, a row over none names its channel', () => {
   const table = pairingTable(subjectDirWith(CARD));
   expect(table).toContain('payFromTheRecord');
   expect(table).toContain('onlyAfter');
-  expect(table).toContain('No tool on this surface writes off a charge');
-});
-
-test('pairing: a residue reason wrapped across lines is one reason', () => {
-  const dir = subjectDirWith(`
-export const w = { records: {}, reads: {}, writes: {},
-  destructive: { voidInvoice: { form: 'remove', entity: 'invoices', label: 'void an invoice' } } };
-const prose = (name, rule, tool) =>
-  tool === undefined ? { name, rule, on: 'reply' } : { name, rule, on: 'reply', tool };
-const RESIDUE = {
-  noWriteOffs: 'No tool on this surface writes off a charge, so no call can break '
-             + 'this rule at all.'
-};
-export const contract = { guards: [
-  prose('noWriteOffs', 'No operation on this surface writes off a charge.')
-] };`);
-  expect(pairing(dir)).toEqual([]);
+  expect(table).toContain('| noWriteOffs | — | the system prefix | on a spec, read every turn |');
 });
 
 test('pairing: a named tool list resolves on both sides — the gate and the rule', () => {
@@ -164,7 +115,6 @@ export const w = { records: {}, reads: {}, writes: {},
   } };
 const prose = (name, rule, tool) =>
   tool === undefined ? { name, rule, on: 'reply' } : { name, rule, on: 'reply', tool };
-const RESIDUE = {} satisfies Record<string, string>;
 const MONEY_TOOLS = ['payInvoice', 'voidInvoice'] as const;
 function moneyGate() {
   return { ...precondition(MONEY_TOOLS, ctx => true, 'Moving money needs the capability.'),
@@ -177,26 +127,11 @@ export const contract = { guards: [
   expect(pairing(dir)).toEqual([]);
 });
 
-test('pairing: an act named through a list that no gate covers is still reported', () => {
-  const dir = subjectDirWith(`
-export const w = { records: {}, reads: {}, writes: {},
-  destructive: { voidInvoice: { form: 'remove', entity: 'invoices', label: 'void an invoice' } } };
-const prose = (name, rule, tool) =>
-  tool === undefined ? { name, rule, on: 'reply' } : { name, rule, on: 'reply', tool };
-const RESIDUE = {};
-const MONEY_TOOLS = ['voidInvoice'];
-export const contract = { guards: [
-  prose('terminalMoney', 'Money that has moved does not come back.', MONEY_TOOLS)
-] };`);
-  expect(pairing(dir).map(f => f.code)).toContain('PROSE_TOOL_UNCHECKED');
-});
-
 test('pairing: a sharpened factory guard is a check, not a prose rule', () => {
   const dir = subjectDirWith(`
 export const w = { records: {},
   reads: { getInvoice: { form: 'get', entity: 'invoices', label: 'Look up an invoice' } },
   writes: { issueRefund: { form: 'set', entity: 'invoices', label: 'Refund an invoice' } } };
-const RESIDUE = {};
 export const contract = { guards: [
   { ...onlyAfter('issueRefund', 'getInvoice'),
     name: 'refundReadsTheInvoice',
@@ -205,7 +140,7 @@ export const contract = { guards: [
   expect(pairing(dir)).toEqual([]);
 });
 
-test('pairing: a card that builds its effect blocks in code is judged on its checks only', () => {
+test('pairing: a card that builds its effect blocks in code hands its surface to the caller', () => {
   const built = `
 const READS = ['getInvoice'];
 export const w = { records: {},
@@ -213,12 +148,11 @@ export const w = { records: {},
   writes: Object.fromEntries([['issueRefund', { form: 'set', entity: 'invoices', label: 'r' }]]) };
 const prose = (name, rule, tool) =>
   tool === undefined ? { name, rule, on: 'reply' } : { name, rule, on: 'reply', tool };
-const RESIDUE = {};
-export const contract = { guards: [
+export const contract: DomainContract = { guards: [
   onlyAfter('issueRefund', 'getInvoice'),
   prose('refundCapFromTheRecord', 'A refund is capped by the record.', ['issueRefund'])
 ] };`;
-  // membership is unknowable from the source, so a named act is judged on its check alone
+  // membership is unknowable from the source, so a named act stands
   expect(pairing(subjectDirWith(built))).toEqual([]);
   // and the caller that holds the loaded card gets the membership check back
   expect(pairing(subjectDirWith(built), ['getInvoice']).map(f => f.code))
@@ -232,7 +166,6 @@ export const w = { records: {},
   writes: {} };
 const prose = (name, rule, tool) =>
   tool === undefined ? { name, rule, on: 'reply' } : { name, rule, on: 'reply', tool };
-const RESIDUE = {};
 export const contract = { guards: [
   { name: 'availabilityAnswerReadsTheAccount', on: 'postTool', tool: ['checkAvailability'],
     rule: 'An availability answer states the account condition the flag does not carry.',
@@ -241,4 +174,49 @@ export const contract = { guards: [
         ['checkAvailability'])
 ] };`);
   expect(pairing(dir)).toEqual([]);
+});
+
+const CARDS = `
+export const w = { records: {},
+  reads: { getInvoice: { form: 'get', entity: 'invoices', label: 'Look up an invoice' } },
+  writes: { issueRefund: { form: 'set', entity: 'invoices', label: 'Refund an invoice' } } };
+const prose = (name, rule, tool) =>
+  tool === undefined ? { name, rule, on: 'reply' } : { name, rule, on: 'reply', tool };
+export const billing: AgentSpec = { name: 'billing', persona: 'You are the billing desk.',
+  guards: [ prose('declareHonestly', 'Say what ran, what did not, and why.') ] };
+export const contract: DomainContract = { name: 'atlas', guards: [
+  prose('refundCapFromTheRecord', 'A refund is capped by the statement.', ['issueRefund'])
+] };`;
+
+test('pairing: a rule on a spec renders in the system prefix, so it needs no tool', () => {
+  expect(pairing(subjectDirWith(CARDS))).toEqual([]);
+});
+
+test('pairing: a contract rule naming no tool renders nowhere', () => {
+  const dir = subjectDirWith(CARDS.replace(
+    `prose('refundCapFromTheRecord', 'A refund is capped by the statement.', ['issueRefund'])`,
+    `prose('refundCapFromTheRecord', 'A refund is capped by the statement.')`));
+  const found = pairing(dir);
+  expect(found.map(f => f.code)).toContain('RULE_NEVER_RENDERED');
+  expect(found[0].sentence).toContain('refundCapFromTheRecord');
+});
+
+test('pairing: a contract rule naming a tool off the surface is a finding', () => {
+  const dir = subjectDirWith(CARDS.replace(`['issueRefund'])`, `['waiveFee'])`));
+  expect(pairing(dir).map(f => f.code)).toContain('PROSE_TOOL_UNKNOWN');
+});
+
+test('pairing: a judged guard on the contract, or without a tool, is a finding', () => {
+  const onContract = subjectDirWith(`${CARDS}
+export const judged = { name: 'noLies', rule: 'Never claim an act that did not run.',
+  on: 'reply', judgeQuery: 'Does the reply claim an act the record does not show?' };
+export const contract2: DomainContract = { name: 'atlas', guards: [judged] };`);
+  const codes = pairing(onContract).map(f => f.code);
+  expect(codes).toContain('JUDGED_UNSCOPED');
+});
+
+test('pairing: a rule that names no act is not charged for', () => {
+  const codes = pairing(subjectDirWith(CARDS)).map(f => f.code);
+  expect(codes).not.toContain('PROSE_RESIDUE_UNDECLARED');
+  expect(codes).not.toContain('PROSE_TOOL_UNCHECKED');
 });

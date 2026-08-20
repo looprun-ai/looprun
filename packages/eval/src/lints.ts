@@ -198,38 +198,6 @@ function checksByTool(sources: readonly Source[],
   return byTool;
 }
 
-/** The laws a subject states and no call can break, each with the reason a reviewer weighs. */
-function residue(sources: readonly Source[]): ReadonlyMap<string, string> {
-  const reasons = new Map<string, string>();
-  for (const f of sources) {
-    const visit = (node: ts.Node): void => {
-      if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name)
-        && node.name.text === 'RESIDUE' && node.initializer !== undefined) {
-        const object = unwrap(node.initializer);
-        if (ts.isObjectLiteralExpression(object))
-          for (const property of object.properties) {
-            if (!ts.isPropertyAssignment(property)) continue;
-            if (!ts.isIdentifier(property.name) && !ts.isStringLiteral(property.name)) continue;
-            const reason = literalText(property.initializer);
-            if (reason !== null) reasons.set(property.name.text, reason);
-          }
-      }
-      node.forEachChild(visit);
-    };
-    visit(parse(f));
-  }
-  return reasons;
-}
-
-/** A sentence long enough to be worth writing is a sentence an author wraps across lines, so a
- *  reason is read through its concatenation: 'a ' + 'b' is one string, not two. */
-function literalText(node: ts.Expression): string | null {
-  if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) return node.text;
-  if (!ts.isBinaryExpression(node) || node.operatorToken.kind !== ts.SyntaxKind.PlusToken) return null;
-  const left = literalText(node.left), right = literalText(node.right);
-  return left === null || right === null ? null : left + right;
-}
-
 /** A rule the prompt states and no function decides — whichever shape it was written in.
  *  `tools` is null when the rule declares none: it reaches no act at all. */
 type ProseRule = { readonly name: string; readonly tools: readonly string[] | null;
@@ -314,9 +282,6 @@ function proseRules(sf: ts.SourceFile,
   return rules;
 }
 
-/** Shorter than this and a residue reason is a label, not a justification a reviewer weighs. */
-const A_REASON = 20;
-
 /** The tool surface a loaded subject actually offers. A world card that builds its three
  *  effect blocks in code says nothing to a reader of its source, so a caller holding the
  *  loaded card hands it over and the pairing reads membership from the truth. */
@@ -328,54 +293,74 @@ export function surfaceOf(subject: Subject): readonly string[] {
           ...Object.keys(card.destructive ?? {})];
 }
 
+/** Which card a guard sits on, read from the source: the engine renders a SPEC guard's rule
+ *  into the system prefix and a CONTRACT guard's rule only into the cards of the tools it
+ *  names, so the home decides whether a rule is read at all. */
+function homeOf(sf: ts.SourceFile, at: number): 'spec' | 'contract' {
+  const text = sf.getFullText().slice(0, at);
+  return text.lastIndexOf('DomainContract') > text.lastIndexOf('AgentSpec') ? 'contract' : 'spec';
+}
+
 export function pairing(subjectDir: string, declared?: Iterable<string>): readonly LintFinding[] {
   const sources = subjectSources(subjectDir);
   const fromSource = toolSurface(sources);
   const surface = declared === undefined ? fromSource : new Set(declared);
   // An empty surface read from source means the card spells no block out, so membership is
-  // unknowable here and only the CHECK on a named act can be judged.
+  // unknowable here and an act a rule names stands.
   const membershipKnown = surface.size > 0;
-  const checks = checksByTool(sources, factoryNames(sources));
-  const reasons = residue(sources);
   const lists = namedToolLists(sources);
   const findings: LintFinding[] = [];
-
-  for (const [name, reason] of reasons)
-    if (reason.trim().length < A_REASON) findings.push({ code: 'PROSE_RESIDUE_UNEXPLAINED',
-      sentence: `RESIDUE names '${name}' with no reason a reviewer can weigh` });
 
   for (const f of sources) {
     const sf = parse(f);
     for (const rule of proseRules(sf, lists)) {
       const at = `${f.rel}:${sf.getLineAndCharacterOfPosition(rule.node.getStart(sf)).line + 1}`;
+      const home = homeOf(sf, rule.node.getStart(sf));
+      if (home === 'spec') continue;                      // the system prefix carries it, always
       if (rule.tools === null || rule.tools.length === 0) {
-        if (!reasons.has(rule.name)) findings.push({ code: 'PROSE_RESIDUE_UNDECLARED',
-          sentence: `${at} — prose rule '${rule.name}' names no act, and RESIDUE does not say why` });
+        findings.push({ code: 'RULE_NEVER_RENDERED',
+          sentence: `${at} — '${rule.name}' is on the contract and names no tool, so it renders in no prompt; put it on the specs that owe it` });
         continue;
       }
-      for (const tool of rule.tools) {
+      for (const tool of rule.tools)
         if (membershipKnown && !surface.has(tool)) findings.push({ code: 'PROSE_TOOL_UNKNOWN',
-          sentence: `${at} — prose rule '${rule.name}' names '${tool}', which is on no effect block` });
-        else if (!checks.has(tool)) findings.push({ code: 'PROSE_TOOL_UNCHECKED',
-          sentence: `${at} — prose rule '${rule.name}' names '${tool}', which carries no deterministic guard and no cap` });
-      }
+          sentence: `${at} — '${rule.name}' names '${tool}', which is on no effect block` });
     }
+    const visit = (node: ts.Node): void => {
+      if (ts.isObjectLiteralExpression(node)) {
+        let judged = false, tools: readonly string[] | null = null, name = '(unnamed)';
+        for (const property of node.properties) {
+          const key = property.name !== undefined && ts.isIdentifier(property.name)
+            ? property.name.text : null;
+          if (key === 'judgeQuery') judged = true;
+          if (!ts.isPropertyAssignment(property)) continue;
+          if (key === 'tool') tools = toolsOf(property.initializer, lists);
+          if (key === 'name' && ts.isStringLiteral(property.initializer)) name = property.initializer.text;
+        }
+        if (judged && (tools === null || tools.length === 0)) {
+          const line = sf.getLineAndCharacterOfPosition(node.getStart(sf)).line + 1;
+          findings.push({ code: 'JUDGED_UNSCOPED',
+            sentence: `${f.rel}:${line} — judged guard '${name}' names no tool, so it runs on every reply; a YES redrives the turn and past the retry ceiling the engine deletes the desk's answer` });
+        }
+      }
+      node.forEachChild(visit);
+    };
+    visit(sf);
   }
   return findings;
 }
 
-/** The justification table, read from the card. The rows above the rule are derived; the rows
- *  below it are the residue, and their reason is the only line an author writes. */
+/** The justification table, read from the card. A rule that names an act is carried by the
+ *  mechanisms on that act; a rule that names none is carried by the channel it renders in. */
 export function pairingTable(subjectDir: string): string {
   const sources = subjectSources(subjectDir);
   const checks = checksByTool(sources, factoryNames(sources));
-  const reasons = residue(sources);
   const lists = namedToolLists(sources);
   const carried: string[] = [], residual: string[] = [];
   for (const f of sources)
     for (const rule of proseRules(parse(f), lists)) {
       if (rule.tools === null || rule.tools.length === 0) {
-        residual.push(`| ${rule.name} | — | nothing | ${reasons.get(rule.name) ?? '(undeclared)'} |`);
+        residual.push(`| ${rule.name} | — | the system prefix | on a spec, read every turn |`);
         continue;
       }
       const mechanisms = [...new Set(rule.tools.flatMap(t => checks.get(t) ?? []))];
