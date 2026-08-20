@@ -77,6 +77,136 @@ export function nameGate(subjectDir: string): readonly LintFinding[] {
   return findings;
 }
 
+type Source = { readonly rel: string; readonly text: string };
+
+const parse = (f: Source): ts.SourceFile =>
+  ts.createSourceFile(f.rel, f.text, ts.ScriptTarget.ES2022, true);
+
+const EFFECT_BLOCKS = new Set(['reads', 'writes', 'destructive']);
+
+/** The tool surface: the keys of the world card's three effect blocks. The block a tool sits
+ *  in IS its effect declaration. `limits.destructive` is a number, so an object literal is
+ *  required before the keys count. */
+function toolSurface(sources: readonly Source[]): ReadonlySet<string> {
+  const tools = new Set<string>();
+  for (const f of sources) {
+    const visit = (node: ts.Node): void => {
+      if (ts.isPropertyAssignment(node) && ts.isIdentifier(node.name)
+        && EFFECT_BLOCKS.has(node.name.text)
+        && ts.isObjectLiteralExpression(node.initializer)) {
+        for (const entry of node.initializer.properties) {
+          if (!ts.isPropertyAssignment(entry)) continue;
+          if (ts.isIdentifier(entry.name) || ts.isStringLiteral(entry.name)) tools.add(entry.name.text);
+        }
+      }
+      node.forEachChild(visit);
+    };
+    visit(parse(f));
+  }
+  return tools;
+}
+
+const DETERMINISTIC_FACTORIES = ['onlyAfter', 'precondition', 'valueFromUser', 'argFormat',
+  'argAbsent', 'checkResult', 'mustAccountFor', 'maxCalls', 'blockPattern'];
+
+function callsAny(node: ts.Node, names: ReadonlySet<string>): boolean {
+  let found = false;
+  const visit = (at: ts.Node): void => {
+    if (found) return;
+    if (ts.isCallExpression(at) && ts.isIdentifier(at.expression) && names.has(at.expression.text))
+      found = true;
+    else at.forEachChild(visit);
+  };
+  visit(node);
+  return found;
+}
+
+/** A subject wraps factories in named helpers, so a helper whose body reaches a factory IS a
+ *  factory for this reading. The set grows until it stops growing. */
+function factoryNames(sources: readonly Source[]): ReadonlySet<string> {
+  const known = new Set(DETERMINISTIC_FACTORIES);
+  const locals: { name: string; body: ts.Node }[] = [];
+  for (const f of sources) {
+    const visit = (node: ts.Node): void => {
+      if (ts.isFunctionDeclaration(node) && node.name !== undefined && node.body !== undefined)
+        locals.push({ name: node.name.text, body: node.body });
+      if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.initializer !== undefined
+        && (ts.isArrowFunction(node.initializer) || ts.isFunctionExpression(node.initializer)))
+        locals.push({ name: node.name.text, body: node.initializer.body });
+      node.forEachChild(visit);
+    };
+    visit(parse(f));
+  }
+  for (let grew = true; grew;) {
+    grew = false;
+    for (const local of locals) {
+      if (known.has(local.name) || !callsAny(local.body, known)) continue;
+      known.add(local.name);
+      grew = true;
+    }
+  }
+  return known;
+}
+
+/** Tool → the mechanisms that refuse on it. A factory call names its tool first, or names
+ *  several inside an array; a disclosure entry carrying a `cap` refuses at a figure a read
+ *  returned, which is a mechanism on the tool that entry is keyed by. */
+function checksByTool(sources: readonly Source[],
+                      factories: ReadonlySet<string>): ReadonlyMap<string, readonly string[]> {
+  const byTool = new Map<string, string[]>();
+  const note = (tool: string, mechanism: string): void => {
+    const at = byTool.get(tool);
+    if (at === undefined) byTool.set(tool, [mechanism]);
+    else if (!at.includes(mechanism)) at.push(mechanism);
+  };
+  const take = (arg: ts.Expression | undefined, mechanism: string): void => {
+    if (arg === undefined) return;
+    if (ts.isStringLiteral(arg)) note(arg.text, mechanism);
+    else if (ts.isArrayLiteralExpression(arg))
+      for (const element of arg.elements) if (ts.isStringLiteral(element)) note(element.text, mechanism);
+  };
+  for (const f of sources) {
+    const visit = (node: ts.Node): void => {
+      if (ts.isCallExpression(node) && ts.isIdentifier(node.expression)
+        && factories.has(node.expression.text)) {
+        const mechanism = node.expression.text;
+        take(node.arguments[0], mechanism);
+        for (const arg of node.arguments) if (ts.isArrayLiteralExpression(arg)) take(arg, mechanism);
+      }
+      if (ts.isPropertyAssignment(node) && ts.isIdentifier(node.name) && node.name.text === 'cap') {
+        const keyed = node.parent.parent;
+        if (ts.isPropertyAssignment(keyed) && ts.isIdentifier(keyed.name)) note(keyed.name.text, 'cap');
+      }
+      node.forEachChild(visit);
+    };
+    visit(parse(f));
+  }
+  return byTool;
+}
+
+/** The laws a subject states and no call can break, each with the reason a reviewer weighs. */
+function residue(sources: readonly Source[]): ReadonlyMap<string, string> {
+  const reasons = new Map<string, string>();
+  for (const f of sources) {
+    const visit = (node: ts.Node): void => {
+      if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name)
+        && node.name.text === 'RESIDUE' && node.initializer !== undefined) {
+        const object = ts.isAsExpression(node.initializer) ? node.initializer.expression : node.initializer;
+        if (ts.isObjectLiteralExpression(object))
+          for (const property of object.properties) {
+            if (!ts.isPropertyAssignment(property)) continue;
+            if (!ts.isIdentifier(property.name) && !ts.isStringLiteral(property.name)) continue;
+            if (ts.isStringLiteral(property.initializer))
+              reasons.set(property.name.text, property.initializer.text);
+          }
+      }
+      node.forEachChild(visit);
+    };
+    visit(parse(f));
+  }
+  return reasons;
+}
+
 /** Fired = an act attributes the guard, or a reply correction names it. */
 export function census(guards: GuardCensus,
                        dumps: readonly TurnRecord[]): readonly LintFinding[] {

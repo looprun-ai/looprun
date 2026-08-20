@@ -50,3 +50,91 @@ test('census: an installed guard with no dump that fires it is a finding', () =>
   expect(findings.map(f => f.sentence).join(' ')).toContain('neverFires');
   expect(findings.map(f => f.sentence).join(' ')).not.toContain('confirmFirst');
 });
+
+import { proseLedger, proseTable } from '../src/lints.js';
+
+/** A subject small enough to read: three tools in their effect blocks, one factory, one
+ *  disclosure ceiling, the prose helper and a declared residue with its reason. */
+const CARD = `
+export const w = {
+  records: {},
+  reads: { getInvoice: { form: 'get', entity: 'invoices', label: 'Look up an invoice' } },
+  writes: { payInvoice: { form: 'set', entity: 'invoices', label: 'Pay an invoice' } },
+  destructive: { voidInvoice: { form: 'remove', entity: 'invoices', label: 'void an invoice' } }
+};
+const prose = (name, rule, tool) =>
+  tool === undefined ? { name, rule, on: 'reply' } : { name, rule, on: 'reply', tool };
+const RESIDUE = { noWriteOffs: 'No tool on this surface writes off a charge, so no call can break it.' };
+export const contract = {
+  guards: [
+    onlyAfter('payInvoice', 'getInvoice'),
+    prose('payFromTheRecord', 'A payment lands on the invoice the read returned.', ['payInvoice']),
+    prose('noWriteOffs', 'No operation on this surface writes off a charge.')
+  ],
+  disclosure: {
+    payInvoice: { cap: { arg: 'amount', at: 'getInvoice.invoice.balanceDue', refusal: 'Too much.' } }
+  }
+};
+`;
+
+test('proseLedger: a rule over a checked act, and an explained residue, are clean', () => {
+  expect(proseLedger(subjectDirWith(CARD))).toEqual([]);
+});
+
+test('proseLedger: a rule naming a tool off the surface, and one naming an unchecked act', () => {
+  const off = subjectDirWith(CARD.replace(`['payInvoice'])`, `['refundInvoice'])`));
+  expect(proseLedger(off).map(f => f.code)).toContain('PROSE_TOOL_UNKNOWN');
+  const unchecked = subjectDirWith(CARD.replace(`['payInvoice'])`, `['voidInvoice'])`));
+  expect(proseLedger(unchecked).map(f => f.code)).toContain('PROSE_TOOL_UNCHECKED');
+});
+
+test('proseLedger: a rule that names no act and no reason is a finding', () => {
+  const dir = subjectDirWith(CARD.replace(
+    `const RESIDUE = { noWriteOffs: 'No tool on this surface writes off a charge, so no call can break it.' };`,
+    `const RESIDUE = {};`));
+  expect(proseLedger(dir).map(f => f.code)).toContain('PROSE_RESIDUE_UNDECLARED');
+});
+
+test('proseLedger: a residue reason too short to weigh is a finding', () => {
+  const dir = subjectDirWith(CARD.replace(
+    `'No tool on this surface writes off a charge, so no call can break it.'`, `'n/a'`));
+  expect(proseLedger(dir).map(f => f.code)).toContain('PROSE_RESIDUE_UNEXPLAINED');
+});
+
+test('proseLedger: a guard written as an object literal is read the same way', () => {
+  const dir = subjectDirWith(`${CARD}
+export const extra = { name: 'quietly', rule: 'A rule with no check.', on: 'reply',
+                       tool: ['voidInvoice'] };`);
+  expect(proseLedger(dir).map(f => f.code)).toContain('PROSE_TOOL_UNCHECKED');
+});
+
+test('proseLedger: a deterministic guard is not a prose rule, whatever shape it takes', () => {
+  const dir = subjectDirWith(`${CARD}
+export const spread = { ...onlyAfter('payInvoice', 'getInvoice'), rule: 'Read it first.' };
+export const named = { ...precondition('payInvoice', c => true, 'Only while open.'), name: 'openOnly' };`);
+  expect(proseLedger(dir)).toEqual([]);
+});
+
+test('proseLedger: a factory reached through a local wrapper still checks its tools', () => {
+  const dir = subjectDirWith(`
+export const w = { records: {}, reads: {}, writes: {},
+  destructive: { voidInvoice: { form: 'remove', entity: 'invoices', label: 'void an invoice' } } };
+const prose = (name, rule, tool) =>
+  tool === undefined ? { name, rule, on: 'reply' } : { name, rule, on: 'reply', tool };
+const RESIDUE = {};
+function capabilityGate(name, tools, roles, sentence) {
+  return { ...precondition(tools, ctx => true, sentence), name };
+}
+export const contract = { guards: [
+  capabilityGate('moneyGate', ['voidInvoice'], ['owner'], 'Voiding needs the money capability.'),
+  prose('terminalMoney', 'A voided invoice does not come back.', ['voidInvoice'])
+] };`);
+  expect(proseLedger(dir)).toEqual([]);
+});
+
+test('proseTable: the residue row carries the reason, and a checked row names its mechanism', () => {
+  const table = proseTable(subjectDirWith(CARD));
+  expect(table).toContain('payFromTheRecord');
+  expect(table).toContain('onlyAfter');
+  expect(table).toContain('No tool on this surface writes off a charge');
+});
