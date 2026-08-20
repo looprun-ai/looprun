@@ -418,7 +418,15 @@ export function profile(subjectDir: string, acting: Iterable<string>): CardProfi
   const checks = checksByTool(sources, factoryNames(sources));
   const cards = sources.filter(f => f.rel.endsWith('cards.ts'));
   const bytes = cards.reduce((n, f) => n + f.text.length, 0);
-  const prose = cards.reduce((n, f) => n + (f.text.match(/\bprose\(/g) ?? []).length, 0);
+  const proseCalls = (text: string): number => {
+    let n = 0;
+    for (let at = text.indexOf('prose('); at !== -1; at = text.indexOf('prose(', at + 1)) {
+      const before = at === 0 ? ' ' : text[at - 1];
+      if (!((before >= 'a' && before <= 'z') || (before >= 'A' && before <= 'Z'))) n += 1;
+    }
+    return n;
+  };
+  const prose = cards.reduce((n, f) => n + proseCalls(f.text), 0);
   const actingTools = [...acting];
   const unchecked = actingTools.filter(tool => !checks.has(tool));
   let total = 0;
@@ -437,11 +445,100 @@ export function doubleStated(subjectDir: string): readonly string[] {
   const rows: string[] = [];
   for (const f of sources)
     for (const rule of proseRules(parse(f), lists)) {
-      if (homeOf(rule.node) === 'spec') continue;
       for (const tool of rule.tools ?? []) {
         const on = checks.get(tool);
         if (on !== undefined) rows.push(`${tool}: ${on.join(' · ')}  +  prose '${rule.name}'`);
       }
     }
   return [...new Set(rows)].sort();
+}
+
+/** A sentence an author wraps across lines is one string: fold the concatenation. */
+function literalText(node: ts.Expression): string | null {
+  if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) return node.text;
+  if (!ts.isBinaryExpression(node) || node.operatorToken.kind !== ts.SyntaxKind.PlusToken) return null;
+  const left = literalText(node.left), right = literalText(node.right);
+  return left === null || right === null ? null : left + right;
+}
+
+const LICENCES = new Set(['noSuchAct', 'aboutARead', 'conduct']);
+
+/** What a subject declares as the reason each prose-only rule exists. A licence is one of the
+ *  three the surface proves, or `measured:<case>` when a judged run bought it. */
+function licences(sources: readonly Source[]): ReadonlyMap<string, string> {
+  const out = new Map<string, string>();
+  for (const f of sources) {
+    const visit = (node: ts.Node): void => {
+      if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name)
+        && node.name.text === 'WHY' && node.initializer !== undefined) {
+        const object = unwrap(node.initializer);
+        if (ts.isObjectLiteralExpression(object))
+          for (const property of object.properties) {
+            if (!ts.isPropertyAssignment(property)) continue;
+            if (!ts.isIdentifier(property.name) && !ts.isStringLiteral(property.name)) continue;
+            const value = literalText(property.initializer);
+            if (value !== null) out.set(property.name.text, value);
+          }
+      }
+      node.forEachChild(visit);
+    };
+    visit(parse(f));
+  }
+  return out;
+}
+
+/** A prose-only rule with no licence, or one claiming a reason outside the closed set. Prose is
+ *  the residue: what is left when no check decides it, and each one says which kind it is. */
+export function unlicensed(subjectDir: string): readonly LintFinding[] {
+  const sources = subjectSources(subjectDir);
+  const lists = namedToolLists(sources);
+  const why = licences(sources);
+  const findings: LintFinding[] = [];
+  for (const f of sources) {
+    const sf = parse(f);
+    for (const rule of proseRules(sf, lists)) {
+      const at = `${f.rel}:${sf.getLineAndCharacterOfPosition(rule.node.getStart(sf)).line + 1}`;
+      const claim = why.get(rule.name);
+      if (claim === undefined) {
+        findings.push({ code: 'PROSE_UNLICENSED',
+          sentence: `${at} — prose rule '${rule.name}' claims no reason. WHY names one: noSuchAct, aboutARead, conduct, or measured:<case>` });
+      } else if (!LICENCES.has(claim) && !claim.startsWith('measured:')) {
+        findings.push({ code: 'PROSE_LICENCE_UNKNOWN',
+          sentence: `${at} — prose rule '${rule.name}' claims '${claim}', which is not one of noSuchAct, aboutARead, conduct or measured:<case>` });
+      }
+    }
+  }
+  return findings;
+}
+
+/** Two lines of one prompt that carry the same law. A line's DISTINCTIVE tokens are the ones
+ *  few other lines use; when two lines share enough of them they are saying one thing twice,
+ *  and the prompt pays for both every turn. This searches and never interprets: it counts
+ *  shared words, and the author decides whether the law behind them is the same. */
+export function echoes(prompt: string, floor = 5): readonly string[] {
+  const lines = prompt.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+  const tokensOf = (line: string): ReadonlySet<string> => {
+    const out = new Set<string>();
+    let word = '';
+    for (const character of `${line.toLowerCase()} `) {
+      if (character >= 'a' && character <= 'z') { word += character; continue; }
+      if (word.length >= 4) out.add(word);
+      word = '';
+    }
+    return out;
+  };
+  const bags = lines.map(tokensOf);
+  const spread = new Map<string, number>();
+  for (const bag of bags) for (const token of bag) spread.set(token, (spread.get(token) ?? 0) + 1);
+  const common = Math.ceil(lines.length / 3);
+  const rows: { shared: string[]; row: string }[] = [];
+  for (let i = 0; i < bags.length; i += 1)
+    for (let j = i + 1; j < bags.length; j += 1) {
+      const shared = [...bags[i]].filter(token =>
+        bags[j].has(token) && (spread.get(token) ?? 0) <= common);
+      if (shared.length < floor) continue;
+      const shorten = (line: string): string => line.length <= 64 ? line : `${line.slice(0, 61)}...`;
+      rows.push({ shared, row: `${shared.length} shared: ${shared.sort().join(' ')}\n     A  ${shorten(lines[i])}\n     B  ${shorten(lines[j])}` });
+    }
+  return rows.sort((a, b) => b.shared.length - a.shared.length).map(r => r.row);
 }

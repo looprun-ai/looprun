@@ -59,6 +59,9 @@ function compileDisclosure(disclosure: Readonly<Record<string, Disclosure>>,
   const out: Record<string, DisclosureBinding> = {};
   for (const [tool, d] of Object.entries(disclosure)) {
     const held = facts.tools[tool];
+    // The contract discloses every act the BUSINESS holds; a desk compiles only the acts in
+    // its own lane. A sentence about an act this desk cannot perform binds to nothing.
+    if (held === undefined) continue;
     const needs: Record<string, { tool: string; args: Record<string, string> }> = {};
     for (const [alias, recipe] of Object.entries(d.needs ?? {})) {
       if (typeof recipe === 'string') {

@@ -20,4 +20,5 @@ export { onlyAfter, precondition, valueFromUser, checkResult, mustAccountFor, ar
 export { Engine } from './run/engine.js';
 export type { EngineConfig } from './run/engine.js';
 export { ModelSeat } from './run/model-seat.js';
+export { PromptWriter } from './run/prompt-writer.js';
 export { ScriptedModel } from './run/scripted-model.js';
