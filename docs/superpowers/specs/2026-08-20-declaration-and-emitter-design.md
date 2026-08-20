@@ -325,6 +325,17 @@ passes the gate.
 | S4 | the `covers` keys emitted from the compiled census | gate integrity — closes D5, C3 and G-A at the source |
 | S5 | the `WHY` map emitted from the declaration's own law names | gate integrity — closes R4 |
 | S6 | the expected census emitted, and the gate compares it to what compiled | determinism — a guard that vanishes is caught |
+| V1 | which messages a word-check may search | two authors wrote their own tokeniser to resolve it |
+| V2 | a guard deliberately not written has nowhere to be recorded | an unchecked act reads as an oversight |
+| V3 | `secrets` and a rewrite are enforced and read by nobody | the channel lines ask about guards only |
+| V4 | G3 walks `gates`, and a world may have none | the seam table is empty by construction |
+| V5 | an argument-dependent capability fits no licence | the catalog prescribes a shape `unlicensed` flags |
+| V6 | a `needs` read no read on the surface can answer | the operator approves a lift without reading it |
+| V7 | the 2x ratio line is unmeasurable as written | each author picked its own reading |
+| V8 | which card a shared gate belongs on — 29 copies or six | the arithmetic is taught nowhere |
+| U1 | the GEN phase authors 54 `does` sentences, unmeasured | 25% of the prompt, no lint |
+| U2 | the GEN phase authors 106 argument descriptions, unmeasured | same channel |
+| U3 | the desk split prices no byte — two acts sit in all six lanes | every byte of a six-lane act is paid six times |
 
 ### 7.2 · OUT — the next spec
 

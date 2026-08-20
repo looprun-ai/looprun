@@ -173,3 +173,45 @@ minutes per desk, and §8 records why twenty-fold was refused. An adversarial pa
 speed proposals against these pages and every one was refuted; the arithmetic behind the refusal is
 that the business sentences an author must write are ~9 200 output tokens, which is roughly two
 minutes of pure decode before any reading, deliberation or gate pass.
+
+---
+
+## 7 · Where a page told an author two things
+
+Reported by the three blind authorings, each verified against the engine. None is in §5, and each
+cost its author a decision it had to make alone.
+
+| id | the two things | what it cost |
+|---|---|---|
+| V1 | which messages a word-check may search. `valueFromUser` reads `ctx.userText` — THIS turn — and the catalog also states that a check searches `ctx.userTexts`, every message, for an exact literal | an author wrote its own tokeniser searching every message and folding case, and could not tell from the pages whether that is the shape the skill wants |
+| V2 | a guard deliberately NOT written has nowhere to be recorded. `onlyAfter` pins ONE prerequisite, and where two reads both ground a value, pinning one fails a run that grounded it through the other | the guard was dropped, correctly, and no gate line or artifact records the decision — the next reader sees an unchecked act |
+| V3 | `secrets` and a rewrite are enforced and read by nobody. The N6 channel lines are written about Guards, so nothing asks where a law enforced at the seam is taught | "a card number is never spoken back" was enforced twice and appeared in no prompt; the author left it unread rather than pay for a prose copy, and no page says which is right |
+| V4 | G3's interview says to walk "each `gates` entry on a world card". A world whose refusals are all `fail(CODE)` inside custom executors has no `gates` at all | the author walked the handlers instead and said so; the page does not tell you to, and the seam table for such a world is empty by construction |
+| V5 | a capability that depends on an ARGUMENT. §2's "four shapes the ladder has no rung for" sends it to prose over the act; §7 then requires every prose rule to claim one of four licences, and this fits none | `unlicensed` would flag the shape the catalog prescribes. Two authors wrote a hand `deny` over `CallCtx` instead |
+| V6 | a `needs` read that no read on the surface can answer. N5 law 1 requires the read to answer from the held call's own argument; `releaseHold` takes a `holdId` and no read on this surface accepts one | the ask names `{args.holdId}` and a count, and cannot quote that hold's own recorded reason — the operator approves a lift without reading what it lifts |
+| V7 | how a tool card is measured. The 2x ratio line says "tool-card bytes"; the N6 snippet prints `name → does`, and a card also carries the schema the model reads | counting schemas puts every desk far past 2x, so the line is unmeasurable as written and each author picked its own reading |
+| V8 | which card a shared gate belongs on. The closing checklist says a `deny` over a shared tool is declared once on the contract; §1 says a behaviour law goes on every spec that owes it. A tenant gate is both | on the contract it renders 29 copies (5 249 B, the top `ruleCopies` row); on six specs it would render six (~1 100 B) and raise every prefix. The arithmetic that decides it is taught nowhere |
+
+## 8 · The prompt bytes nobody has measured
+
+Every byte this campaign optimised is the **contract-rule** slice. The other 86% was never read by
+a lint, and a quarter of it is authored prose living in a directory named `generated/`.
+
+```
+  100 489 B of prompt, by who wrote it
+
+  world `does`      25 313   25%   54 sentences, AUTHORED in the GEN phase
+  schema            27 331   27%   106 authored argument descriptions + JSON structure
+  system prefixes   29 943   30%   personas, facts, voice, conduct laws
+  contract rules    14 255   14%   ← the only slice measured so far
+```
+
+| id | what | why it matters |
+|---|---|---|
+| U1 | the GEN phase authors 54 `does` sentences and no gate counts a byte of them | they render into every card of every desk holding the act — 25% of the prompt, written in a phase with no byte lesson and no lint |
+| U2 | the GEN phase authors 106 argument descriptions inside the tool schemas | same channel, same silence |
+| U3 | the desk split is a token lever nobody measures. 53 acts occupy 84 card slots: 42 acts sit in one lane, and two sit in all six | every byte of a six-lane act is paid six times, and N1 splits by tool-need without pricing it |
+
+A correction to §1 of this register: it called the `does` sentences and the schemas "structurally
+unavoidable" and "never authored". Both halves are wrong — they are prose somebody wrote, and the
+only thing making them look mechanical is the directory they sit in.
