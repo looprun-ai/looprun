@@ -1,6 +1,6 @@
 # Mechanism-first guards — design
 
-Date: 2026-08-20 · Status: OPEN · Scope: the `agentspec` skill, and one lint verb in
+Date: 2026-08-20 · Status: OPEN — measured at 69/100 against a bar of 95; the ladder is amended and not yet re-measured · Scope: the `agentspec` skill, and one lint verb in
 `packages/eval`. The engine's authoring surface is not touched.
 
 The agentspec skill authors a subject from its own pages. Measured against the certified
