@@ -138,3 +138,19 @@ test('pairingTable: the residue row carries the reason, and a checked row names 
   expect(table).toContain('onlyAfter');
   expect(table).toContain('No tool on this surface writes off a charge');
 });
+
+test('pairing: a residue reason wrapped across lines is one reason', () => {
+  const dir = subjectDirWith(`
+export const w = { records: {}, reads: {}, writes: {},
+  destructive: { voidInvoice: { form: 'remove', entity: 'invoices', label: 'void an invoice' } } };
+const prose = (name, rule, tool) =>
+  tool === undefined ? { name, rule, on: 'reply' } : { name, rule, on: 'reply', tool };
+const RESIDUE = {
+  noWriteOffs: 'No tool on this surface writes off a charge, so no call can break '
+             + 'this rule at all.'
+};
+export const contract = { guards: [
+  prose('noWriteOffs', 'No operation on this surface writes off a charge.')
+] };`);
+  expect(pairing(dir)).toEqual([]);
+});

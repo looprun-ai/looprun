@@ -196,8 +196,8 @@ function residue(sources: readonly Source[]): ReadonlyMap<string, string> {
           for (const property of object.properties) {
             if (!ts.isPropertyAssignment(property)) continue;
             if (!ts.isIdentifier(property.name) && !ts.isStringLiteral(property.name)) continue;
-            if (ts.isStringLiteral(property.initializer))
-              reasons.set(property.name.text, property.initializer.text);
+            const reason = literalText(property.initializer);
+            if (reason !== null) reasons.set(property.name.text, reason);
           }
       }
       node.forEachChild(visit);
@@ -205,6 +205,15 @@ function residue(sources: readonly Source[]): ReadonlyMap<string, string> {
     visit(parse(f));
   }
   return reasons;
+}
+
+/** A sentence long enough to be worth writing is a sentence an author wraps across lines, so a
+ *  reason is read through its concatenation: 'a ' + 'b' is one string, not two. */
+function literalText(node: ts.Expression): string | null {
+  if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) return node.text;
+  if (!ts.isBinaryExpression(node) || node.operatorToken.kind !== ts.SyntaxKind.PlusToken) return null;
+  const left = literalText(node.left), right = literalText(node.right);
+  return left === null || right === null ? null : left + right;
 }
 
 /** A rule the prompt states and no function decides — whichever shape it was written in.
