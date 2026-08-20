@@ -88,3 +88,26 @@ test('a destructive tool with no label is LABEL_MISSING', () => {
 test('clean cards over the hostile surface pass silently', () => {
   expect(() => check(SPEC, { name: 'grandhotel', secrets: ['cardNumber'] })).not.toThrow();
 });
+
+test('a judged guard on a spec, with or without a tool, is lawful', () => {
+  expect(() => check({ ...SPEC, guards: [{ name: 'noLies',
+    rule: 'Never claim an act that did not run.', on: 'reply',
+    judgeQuery: 'Does the reply claim an act the record does not show?' }] })).not.toThrow();
+});
+
+test('a judged guard on the contract runs on every desk, and construction refuses it', () => {
+  try {
+    check(SPEC, { name: 'grandhotel', guards: [{ name: 'noLies',
+            rule: 'Never claim an act that did not run.', on: 'reply', tool: 'cancelBooking',
+            judgeQuery: 'Does the reply claim an act the record does not show?' }] });
+    throw new Error('expected CardError');
+  } catch (e) {
+    expect((e as CardError).problems.map(p => p.code)).toContain('GUARD_JUDGE_ON_CONTRACT');
+  }
+});
+
+test('a judged guard on the spec, naming its tool, is lawful', () => {
+  expect(() => check({ ...SPEC, guards: [{ name: 'noLies',
+    rule: 'Never claim an act that did not run.', on: 'reply', tool: 'cancelBooking',
+    judgeQuery: 'Does the reply claim an act the record does not show?' }] })).not.toThrow();
+});

@@ -55,6 +55,11 @@ export class CardCheck {
         problems.push({ code: 'GUARD_JUDGE_PHASE',
           sentence: `Guard '${g.name}' is judged, so its 'on' must be 'reply'.` });
       }
+      if (g.judgeQuery !== undefined && home === 'contract') {
+        problems.push({ code: 'GUARD_JUDGE_ON_CONTRACT',
+          sentence: `Guard '${g.name}' is judged and sits on the contract, so it runs on every reply of every desk. `
+            + `Declare it on the spec that owes the judgement.` });
+      }
       const tools = g.tool === undefined ? [] : typeof g.tool === 'string' ? [g.tool] : g.tool;
       for (const t of tools) {
         if (facts.tools[t] === undefined) {
