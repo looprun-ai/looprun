@@ -11,7 +11,7 @@ import { seal } from '../src/seal.js';
 // Folds every rep of the stamp, certifies at the bar, and seals the subject;
 // the certification and the seal land beside the reps.
 const ATLAS = join(fileURLToPath(import.meta.url),
-  '../../../../../../agentspec-bench/subjects/atlas-next');
+  '../../../../../agentspec-bench/subjects/atlas-next');
 const STAMP = process.env.CERTIFY_ATLAS ?? '';
 
 test.skipIf(STAMP === '' || !existsSync(ATLAS))('atlas certify', { timeout: 0 }, () => {

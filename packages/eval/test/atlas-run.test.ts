@@ -11,7 +11,7 @@ import { scan } from '../src/monitor.js';
 // The phase-5 driver — env-gated, real subject model, never in CI.
 //   RUN_ATLAS=<case-id>|all  RUN_ATLAS_REP=rep1  RUN_ATLAS_VARIANT=governed|both
 const ATLAS = join(fileURLToPath(import.meta.url),
-  '../../../../../../agentspec-bench/subjects/atlas-next');
+  '../../../../../agentspec-bench/subjects/atlas-next');
 const MODEL = 'google/gemini-3.1-flash-lite';
 const RUN = process.env.RUN_ATLAS ?? '';
 

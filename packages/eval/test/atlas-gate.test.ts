@@ -10,7 +10,7 @@ import { nameGate, purity } from '../src/lints.js';
 // compiles for every desk, keeps the prompt byte-identical across all presets,
 // validates with zero findings and passes the static lints.
 const ATLAS = join(fileURLToPath(import.meta.url),
-  '../../../../../../agentspec-bench/subjects/atlas-next');
+  '../../../../../agentspec-bench/subjects/atlas-next');
 
 test.skipIf(!existsSync(ATLAS))('the ported atlas subject validates and lints clean', async () => {
   const subject = await SubjectLoader.load(ATLAS);
