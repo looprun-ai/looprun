@@ -497,4 +497,31 @@ describe('seamCovered', () => {
     const rows = seamCovered(dir, { tools: { cancelBooking: {} } } as never);
     expect(rows.map(r => r.code)).toContain('stateIs:status');
   });
+
+  test('a code handed to a validator is a row, though the emit site computes it', () => {
+    const dir = write(
+      `const H = { cancelBooking: (w, a) => {
+         const st = optString(a.status, { allowed: BOOKING_STATUSES, code: 'INVALID_BOOKING_STATUS' });
+         if ('error' in st) return fail(st.error);
+       } };`,
+      `const CONTRACT = { guards: [] };`);
+    const rows = seamCovered(dir, { tools: { cancelBooking: {} } } as never);
+    expect(rows).toEqual([{ act: 'cancelBooking', code: 'INVALID_BOOKING_STATUS', guard: null }]);
+  });
+
+  test('a handler written as a method keys its act just as a property does', () => {
+    const dir = write(
+      `const H = { cancelBooking(w, a) { return fail('BOOKING_ALREADY_OUT'); } };`,
+      `const CONTRACT = { guards: [] };`);
+    const rows = seamCovered(dir, { tools: { cancelBooking: {} } } as never);
+    expect(rows).toEqual([{ act: 'cancelBooking', code: 'BOOKING_ALREADY_OUT', guard: null }]);
+  });
+
+  test('gates behind an as-const still name the act they sit under', () => {
+    const dir = write(
+      `const W = { destructive: { cancelBooking: { gates: [{ kind: 'stateIs', field: 'status', value: 'CONFIRMED' }] } as const } };`,
+      `const CONTRACT = { guards: [] };`);
+    const rows = seamCovered(dir, { tools: { cancelBooking: {} } } as never);
+    expect(rows.map(r => r.code)).toContain('stateIs:status');
+  });
 });

@@ -608,16 +608,36 @@ export interface SeamRow { readonly act: string; readonly code: string; readonly
 
 const REFUSAL_CALLS = new Set(['fail', 'gateFail']);
 
-/** The act a refusal sits under: the nearest ENCLOSING property whose key is a declared tool. A
- *  handler is written as `cancelBooking: (w, a) => ...`, so the key above the call IS the act it
- *  refuses on. A refusal in a helper no act keys reaches no act here. */
+/** The act a refusal sits under: the nearest ENCLOSING key the surface declares. A handler is
+ *  written as `cancelBooking: (w, a) => ...` or as the method `cancelBooking(w, a) { ... }`, and
+ *  either way the key above the call IS the act it refuses on. A refusal inside a helper that no
+ *  act keys reaches no act here. */
 function enclosingAct(node: ts.Node, declared: ReadonlySet<string>): string | null {
   for (let at: ts.Node | undefined = node.parent; at !== undefined; at = at.parent) {
-    if (!ts.isPropertyAssignment(at)) continue;
-    if (!ts.isIdentifier(at.name) && !ts.isStringLiteral(at.name)) continue;
-    if (declared.has(at.name.text)) return at.name.text;
+    if (!ts.isPropertyAssignment(at) && !ts.isMethodDeclaration(at)) continue;
+    const key = at.name;
+    if (!ts.isIdentifier(key) && !ts.isStringLiteral(key)) continue;
+    if (declared.has(key.text)) return key.text;
   }
   return null;
+}
+
+/** The code a world hands a validator instead of naming at the emit site: `code: 'X'` on the
+ *  option literal a call READS as an argument. The validator refuses with that code and the emit
+ *  site passes it on, so the act the call sits under can emit it. */
+function optionCode(node: ts.PropertyAssignment): string | null {
+  if (!ts.isIdentifier(node.name) && !ts.isStringLiteral(node.name)) return null;
+  if (node.name.text !== 'code') return null;
+  const value = unwrap(node.initializer);
+  if (!ts.isStringLiteral(value)) return null;
+  let at: ts.Node = node.parent;
+  if (!ts.isObjectLiteralExpression(at)) return null;
+  while (at.parent !== undefined && (ts.isAsExpression(at.parent)
+    || ts.isSatisfiesExpression(at.parent) || ts.isParenthesizedExpression(at.parent))) at = at.parent;
+  const call = at.parent;
+  if (call === undefined || !ts.isCallExpression(call)) return null;
+  const held = at;
+  return call.arguments.some(argument => argument === held) ? value.text : null;
 }
 
 /** The code a declared gate refuses with: its kind, and the field it tests when it names one. */
@@ -634,10 +654,13 @@ function gateCode(node: ts.ObjectLiteralExpression): string | null {
   return kind === null ? null : field === null ? kind : `${kind}:${field}`;
 }
 
-/** Every refusal the WORLD can emit, paired to the card guard that refuses earlier in words. A
- *  `fail(CODE)` inside a handler and a `gates` entry on an act are the two shapes; the act is the
- *  enclosing property name of the handler, or the key the gate sits under. A row whose guard is
- *  null is a refusal the operator meets as a bare code. */
+/** The refusals a WORLD spells out, paired to the card guard that refuses earlier in words. Three
+ *  shapes make a row: a literal code at the emit site — `fail('CODE')` or `gateFail('CODE')` — a
+ *  literal `code: 'CODE'` option a validator call is handed, and a `gates` entry on an act, whose
+ *  code is the gate's `kind:field`. A code the emit site computes, as `fail(id.error)` does, offers
+ *  no literal to read and makes no row. The act is the nearest enclosing key the surface declares,
+ *  and the row set is one row per distinct act-and-code pair. A row whose guard is null is a
+ *  refusal the operator meets as a bare code. */
 export function seamCovered(subjectDir: string,
                             facts: { readonly tools: Readonly<Record<string, unknown>> }): readonly SeamRow[] {
   const sources = subjectSources(subjectDir);
@@ -663,19 +686,25 @@ export function seamCovered(subjectDir: string,
           if (act !== null) add(act, first.text);
         }
       }
-      if (ts.isPropertyAssignment(node) && ts.isIdentifier(node.name) && node.name.text === 'gates'
-        && ts.isArrayLiteralExpression(node.initializer)) {
-        const keyed = node.parent.parent;
-        if (ts.isPropertyAssignment(keyed)
-          && (ts.isIdentifier(keyed.name) || ts.isStringLiteral(keyed.name))
-          && declared.has(keyed.name.text)) {
-          for (const element of node.initializer.elements) {
+      if (ts.isPropertyAssignment(node)) {
+        const option = optionCode(node);
+        if (option !== null) {
+          const act = enclosingAct(node, declared);
+          if (act !== null) add(act, option);
+        }
+      }
+      if (ts.isPropertyAssignment(node)
+        && (ts.isIdentifier(node.name) || ts.isStringLiteral(node.name))
+        && node.name.text === 'gates') {
+        const listed = unwrap(node.initializer);
+        const act = enclosingAct(node, declared);
+        if (ts.isArrayLiteralExpression(listed) && act !== null)
+          for (const element of listed.elements) {
             const value = unwrap(element);
             if (!ts.isObjectLiteralExpression(value)) continue;
             const code = gateCode(value);
-            if (code !== null) add(keyed.name.text, code);
+            if (code !== null) add(act, code);
           }
-        }
       }
       node.forEachChild(visit);
     };
