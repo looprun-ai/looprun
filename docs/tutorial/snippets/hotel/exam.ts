@@ -8,7 +8,7 @@ export const cases: readonly ExamCase[] = [
   {
     id: 'cancel-asks-first',
     split: 'fix',
-    covers: ['consent:cancelBooking', 'onlyAfter:cancelBooking'],
+    covers: ['confirmFirst:cancelBooking', 'onlyAfter:cancelBooking'],
     turns: ['Please cancel booking bk_1.'],
     invariants: {
       requiredToolCalls: [{ name: 'getInvoice' }],

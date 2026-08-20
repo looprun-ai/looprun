@@ -623,3 +623,31 @@ describe('conductComplete', () => {
     expect(conductComplete(dir)).toEqual([]);
   });
 });
+
+import { approvable, coversResolve } from '../src/lints.js';
+
+describe('coversResolve', () => {
+  test('a key naming nothing the census carries is a finding', () => {
+    const found = coversResolve(
+      [{ id: 'cancel-asks-first', covers: ['consent:cancelBooking', 'onlyAfter:cancelBooking'] } as never],
+      new Set(['confirmFirst:cancelBooking', 'onlyAfter:cancelBooking']));
+    expect(found.map(f => f.code)).toEqual(['COVERS_UNRESOLVED']);
+    expect(found[0].sentence).toContain('consent:cancelBooking');
+    expect(found[0].sentence).toContain('confirmFirst:cancelBooking');
+  });
+
+  test('every key resolving asks nothing', () => {
+    expect(coversResolve([{ id: 'x', covers: ['onlyAfter:cancelBooking'] } as never],
+                         new Set(['onlyAfter:cancelBooking']))).toEqual([]);
+  });
+});
+
+describe('approvable', () => {
+  test('a case covering a guard its preset cannot trip is a finding', () => {
+    const found = approvable(
+      [{ id: 'move-confirmed', preset: 'everyoneCheckedIn',
+         covers: ['precondition:moveBooking'] } as never],
+      { presetLeavesGuardInert: () => true } as never);
+    expect(found.map(f => f.code)).toEqual(['CASE_CANNOT_FIRE']);
+  });
+});

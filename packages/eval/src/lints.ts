@@ -6,7 +6,7 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import ts from 'typescript';
-import type { GuardCensus, TurnRecord, WorldCard } from '@looprun-ai/core';
+import type { ExamCase, GuardCensus, TurnRecord, WorldCard } from '@looprun-ai/core';
 import type { Subject } from './subject-loader.js';
 import { RETIRED_NAMES } from '@looprun-ai/core';
 
@@ -1067,6 +1067,85 @@ export function conductComplete(subjectDir: string): readonly LintFinding[] {
     findings.push({ code: 'CONDUCT_INCOMPLETE',
       sentence: `'${law}' is a conduct law taught on some specs and missing from ${missing.join(', ')}; `
         + `a desk that never reads it never learns it.` });
+  }
+  return findings;
+}
+
+/** The smallest number of single-character edits — insert, delete, substitute — that turns `a`
+ *  into `b`. Classic two-row dynamic programming: a `covers` key is compared to a census name
+ *  character by character, never pattern-matched. */
+function editDistance(a: string, b: string): number {
+  let previous = Array.from({ length: b.length + 1 }, (_, index) => index);
+  for (let i = 1; i <= a.length; i += 1) {
+    const current = [i];
+    for (let j = 1; j <= b.length; j += 1) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      current.push(Math.min(previous[j] + 1, current[j - 1] + 1, previous[j - 1] + cost));
+    }
+    previous = current;
+  }
+  return previous[b.length];
+}
+
+/** The census name closest to `key` by edit distance, among names the case does not already
+ *  claim elsewhere in its own `covers` list — a name the case already declares is not a fix for a
+ *  different entry, it would just collapse two distinct requirements into one. An empty census
+ *  names nothing back. */
+function closestCensusName(key: string, censusNames: ReadonlySet<string>,
+                           alreadyClaimed: ReadonlySet<string>): string | null {
+  let best: string | null = null;
+  let bestDistance = Number.POSITIVE_INFINITY;
+  for (const name of censusNames) {
+    if (alreadyClaimed.has(name)) continue;
+    const distance = editDistance(key, name);
+    if (distance < bestDistance) { bestDistance = distance; best = name; }
+  }
+  return best;
+}
+
+/** A case's `covers` key names the guard the case exercises, spelled exactly as the census carries
+ *  it. The census is what `Engine.guards()` returns — the compiled agent's rows plus the honesty
+ *  rows the Rulebook injects, which is why a key must be read from the engine and never composed
+ *  by hand from a category and a tool. A key naming nothing measures nothing, and a subject whose
+ *  keys all resolve to nothing still certifies. */
+export function coversResolve(cases: readonly ExamCase[],
+                              censusNames: ReadonlySet<string>): readonly LintFinding[] {
+  const findings: LintFinding[] = [];
+  for (const c of cases) {
+    const claimed = new Set(c.covers ?? []);
+    for (const key of c.covers ?? []) {
+      if (censusNames.has(key)) continue;
+      const suggestion = closestCensusName(key, censusNames, claimed);
+      findings.push({ code: 'COVERS_UNRESOLVED',
+        sentence: `case '${c.id}' covers '${key}', which the census carries no guard named`
+          + (suggestion === null ? '.' : ` — the closest census name is '${suggestion}'.`) });
+    }
+  }
+  return findings;
+}
+
+/** What `approvable` needs from a built world: whether a case's preset leaves the named guard
+ *  inert — its `deny` unable to return non-null in any state that preset reaches. The caller
+ *  builds this from the world it has already loaded and run the preset against; `approvable`
+ *  never builds a world or runs a case itself. */
+export interface ApprovabilitySubject {
+  readonly presetLeavesGuardInert: (preset: string | undefined, guardName: string) => boolean;
+}
+
+/** A case covers a guard to prove the guard can fire; a preset that leaves the guard inert makes
+ *  the case measure nothing, whether or not its `covers` key spells the guard's name right. This
+ *  is the half of the exam's promise that `coversResolve` does not reach: a key can resolve to a
+ *  real guard and the case can still never trip it. */
+export function approvable(cases: readonly ExamCase[],
+                           subject: ApprovabilitySubject): readonly LintFinding[] {
+  const findings: LintFinding[] = [];
+  for (const c of cases) {
+    for (const guardName of c.covers ?? []) {
+      if (!subject.presetLeavesGuardInert(c.preset, guardName)) continue;
+      findings.push({ code: 'CASE_CANNOT_FIRE',
+        sentence: `case '${c.id}' covers '${guardName}', but preset '${c.preset ?? '(default)'}' `
+          + `leaves that guard inert — the case can run to completion without it ever firing.` });
+    }
   }
   return findings;
 }
