@@ -1568,12 +1568,18 @@ W2 — `gen.md:61-62` omits `make`, the one form whose argument is not the targe
 W3 — the unfillable-tense law is unconditional at `norms.md:301` and conditional at `:325`; the
 engine refuses the held call, so the unconditional reading wins.
 
-- [ ] **Step 9: The thinking log names its real consumers**
+- [ ] **Step 9: The skill's gate-file template calls the one gate**
+
+`agentspec/skill/references/check-subject.test.ts` calls three verbs one at a time; the gate is
+`runGate` from `@looprun-ai/eval`, and the emitted gate file calls it alone. Rewrite the template
+to the one-gate shape Task 12's `writeGateFile` emits.
+
+- [ ] **Step 10: The thinking log names its real consumers**
 
 `thinking-template.md:22-23` claims three consumers and one exists. Name the real ones: the next
 stage reads §Saw and §Decided, EVALS collects §Seeds, and a resumed run reads all four.
 
-- [ ] **Step 10: Verify no contradiction survives**
+- [ ] **Step 11: Verify no contradiction survives**
 
 ```bash
 cd /Users/marcos/Dev/js/looprun/agentspec/skill
@@ -1584,7 +1590,7 @@ grep -rniE "[à-ú]" references/ask.md
 
 Expected: one count everywhere, no gate `detail`, no non-English character.
 
-- [ ] **Step 11: Commit**
+- [ ] **Step 12: Commit**
 
 ```bash
 git add skill && git commit -m "docs(skill): one bar, one panel, the loader's own paths, and the three the audit dropped"
