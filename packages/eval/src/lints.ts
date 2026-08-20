@@ -207,6 +207,106 @@ function residue(sources: readonly Source[]): ReadonlyMap<string, string> {
   return reasons;
 }
 
+/** A rule the prompt states and no function decides — whichever shape it was written in.
+ *  `tools` is null when the rule declares none: it reaches no act at all. */
+type ProseRule = { readonly name: string; readonly tools: readonly string[] | null;
+                   readonly node: ts.Node };
+
+const toolsOf = (arg: ts.Expression | undefined): readonly string[] | null => {
+  if (arg === undefined) return null;
+  if (ts.isStringLiteral(arg)) return [arg.text];
+  if (!ts.isArrayLiteralExpression(arg)) return null;
+  return arg.elements.filter(ts.isStringLiteral).map(element => element.text);
+};
+
+/** Two shapes reach the same place: a `prose(name, rule, tool)` call, and an object literal
+ *  naming itself with a string, carrying a rule, and carrying neither `deny` nor `judgeQuery`.
+ *  A factory's own output is neither — it names itself through a spread, or carries a check. */
+function proseRules(sf: ts.SourceFile): readonly ProseRule[] {
+  const rules: ProseRule[] = [];
+  const visit = (node: ts.Node): void => {
+    if (ts.isCallExpression(node) && ts.isIdentifier(node.expression)
+      && node.expression.text === 'prose') {
+      const first = node.arguments[0];
+      if (first !== undefined && ts.isStringLiteral(first))
+        rules.push({ name: first.text, tools: toolsOf(node.arguments[2]), node });
+    }
+    if (ts.isObjectLiteralExpression(node)) {
+      let name: string | null = null, ruled = false, decides = false;
+      let tools: readonly string[] | null = null;
+      for (const property of node.properties) {
+        const key = property.name !== undefined && ts.isIdentifier(property.name)
+          ? property.name.text : null;
+        if (key === null) continue;
+        if (key === 'deny' || key === 'judgeQuery') decides = true;
+        if (!ts.isPropertyAssignment(property)) continue;
+        if (key === 'name' && ts.isStringLiteral(property.initializer)) name = property.initializer.text;
+        if (key === 'rule') ruled = true;
+        if (key === 'tool') tools = toolsOf(property.initializer);
+      }
+      if (name !== null && ruled && !decides) rules.push({ name, tools, node });
+    }
+    node.forEachChild(visit);
+  };
+  visit(sf);
+  return rules;
+}
+
+/** Shorter than this and a residue reason is a label, not a justification a reviewer weighs. */
+const A_REASON = 20;
+
+export function pairing(subjectDir: string): readonly LintFinding[] {
+  const sources = subjectSources(subjectDir);
+  const surface = toolSurface(sources);
+  const checks = checksByTool(sources, factoryNames(sources));
+  const reasons = residue(sources);
+  const findings: LintFinding[] = [];
+
+  for (const [name, reason] of reasons)
+    if (reason.trim().length < A_REASON) findings.push({ code: 'PROSE_RESIDUE_UNEXPLAINED',
+      sentence: `RESIDUE names '${name}' with no reason a reviewer can weigh` });
+
+  for (const f of sources) {
+    const sf = parse(f);
+    for (const rule of proseRules(sf)) {
+      const at = `${f.rel}:${sf.getLineAndCharacterOfPosition(rule.node.getStart(sf)).line + 1}`;
+      if (rule.tools === null || rule.tools.length === 0) {
+        if (!reasons.has(rule.name)) findings.push({ code: 'PROSE_RESIDUE_UNDECLARED',
+          sentence: `${at} — prose rule '${rule.name}' names no act, and RESIDUE does not say why` });
+        continue;
+      }
+      for (const tool of rule.tools) {
+        if (!surface.has(tool)) findings.push({ code: 'PROSE_TOOL_UNKNOWN',
+          sentence: `${at} — prose rule '${rule.name}' names '${tool}', which is on no effect block` });
+        else if (!checks.has(tool)) findings.push({ code: 'PROSE_TOOL_UNCHECKED',
+          sentence: `${at} — prose rule '${rule.name}' names '${tool}', which carries no deterministic guard and no cap` });
+      }
+    }
+  }
+  return findings;
+}
+
+/** The justification table, read from the card. The rows above the rule are derived; the rows
+ *  below it are the residue, and their reason is the only line an author writes. */
+export function pairingTable(subjectDir: string): string {
+  const sources = subjectSources(subjectDir);
+  const checks = checksByTool(sources, factoryNames(sources));
+  const reasons = residue(sources);
+  const carried: string[] = [], residual: string[] = [];
+  for (const f of sources)
+    for (const rule of proseRules(parse(f))) {
+      if (rule.tools === null || rule.tools.length === 0) {
+        residual.push(`| ${rule.name} | — | nothing | ${reasons.get(rule.name) ?? '(undeclared)'} |`);
+        continue;
+      }
+      const mechanisms = [...new Set(rule.tools.flatMap(t => checks.get(t) ?? []))];
+      carried.push(`| ${rule.name} | ${rule.tools.join(' · ')} | `
+        + `${mechanisms.length === 0 ? 'nothing' : mechanisms.join(' · ')} | — |`);
+    }
+  return ['| prose rule | reaches | what carries it | why nothing stronger |',
+          '|---|---|---|---|', ...carried, ...residual].join('\n');
+}
+
 /** Fired = an act attributes the guard, or a reply correction names it. */
 export function census(guards: GuardCensus,
                        dumps: readonly TurnRecord[]): readonly LintFinding[] {
