@@ -11,7 +11,7 @@ below), pass the amended blueprint through the §11 adversarial verification, an
 section-grouped into tasks that mirror THE SPEC's §10 application map; each task ends with
 a scoped dead-name check; a global sweep simulates the name gate by hand; a 3-judge
 adversarial workflow verifies the result before the final commit. No engine code — the
-engine build stays behind `docs/refactoring.md` phase 1.
+engine build stays behind `docs/superpowers/refactoring.md` phase 1.
 
 **Tech Stack:** Markdown, git, grep; the Workflow tool for the verification judges.
 
@@ -447,7 +447,7 @@ git commit -m "docs(spec): REVIEW-TO-BE rows stamped RESOLVED against the design
 ### Task 11: Adversarial verification, fixes, final commit
 
 **Files:**
-- Read: the amended blueprint, THE SPEC, `docs/requirements.md`
+- Read: the amended blueprint, THE SPEC, `docs/superpowers/requirements.md`
 - Modify: the blueprint (fixes only)
 
 - [ ] **Step 1: Launch the three judges (one Workflow, parallel)**
@@ -458,7 +458,7 @@ Each judge reads the amended blueprint + its authority and returns findings
 - **golden-rule judge** — authority: the GOLDEN RULE. The six-year-old test on EVERY
   authoring-surface name and field in the amended blueprint, including the plan-proposed
   internal names (`SurfaceGate`, `factsFromWorld`, `SurfaceFacts`, `ToolFact`).
-- **charter judge** — authority: `docs/requirements.md` (R6.5/R6.6 as corrected).
+- **charter judge** — authority: `docs/superpowers/requirements.md` (R6.5/R6.6 as corrected).
   Row-by-row: does any amended section violate a charter row; is any §15 pointer now
   false.
 - **atlas judge** — authority: §13.2. The fifteen rows still hold under the amendments;

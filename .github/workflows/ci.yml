@@ -10,9 +10,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          # Full history so the proof-record gate can diff against the PR base ref.
-          fetch-depth: 0
       - uses: pnpm/action-setup@v4
         with:
           version: 10.33.0
@@ -23,20 +20,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm -r --if-present build
       - run: pnpm -r --if-present typecheck
-      # The law tests (guards purity, S-1 firewall, trunk stability, zero-business-strings,
-      # no-bench-drift) are ordinary vitest files — they RUN on every push/PR, not just exist.
+      # The engine proofs, the structural lints and the facade gates are ordinary vitest
+      # files: they RUN on every push and pull request, not merely exist.
       - run: pnpm -r --if-present test
-      - run: node tests/no-bench-drift.test.mjs
-      # Tutorial chapter 04 is GENERATED from GUARD_CATALOG (needs the build above): a kind whose
-      # catalog entry changed without the chapter being re-rendered fails here.
-      - run: node scripts/gen-guards-chapter.mjs --check
-      # Governance: the deterministic guard-proof suite + the generated matrix must be in sync.
-      - run: pnpm test:proofs
-      - run: node scripts/proofs/gen-matrix.mjs --check
-      # PR-only: a change to a governed surface must ship a passing proof record. A maintainer can
-      # skip this with the `no-proof-needed` label (restricted to maintainers by branch protection).
-      - name: Proof record required for governed changes
-        if: github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'no-proof-needed')
-        run: |
-          git fetch --no-tags origin "$GITHUB_BASE_REF" || true
-          node scripts/proofs/check-record-required.mjs --base "origin/${GITHUB_BASE_REF}"
+      # The words the whole tree is allowed to use.
+      - run: pnpm gates

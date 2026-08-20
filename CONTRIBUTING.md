@@ -1,7 +1,7 @@
 # Contributing to looprun
 
-Thanks for helping build looprun. This guide covers dev setup, the governance model, and the exact
-order to add or change a guard.
+Thanks for helping build looprun. This guide covers dev setup, what has to stay green, and the
+order to add a law to the engine.
 
 ## Dev setup
 
@@ -9,78 +9,54 @@ Requirements: **Node ≥ 22** and **pnpm** (see `packageManager` in `package.jso
 
 ```bash
 pnpm install
-pnpm -r --if-present build
-pnpm -r --if-present typecheck
-pnpm test            # all package tests + the law tests
-pnpm test:proofs     # the deterministic guard-proof suite
+pnpm build          # every package to dist
+pnpm typecheck
+pnpm test           # every package suite, then the repository gates
 ```
 
-Everything in this repo is written in **English** — code, docs, records, comments.
+`pnpm test` is the whole bar: the 12 engine proofs, the 4 structural lints, the 7 facade gates, the
+eval verb proofs, and the three repository gates. CI runs exactly these commands and nothing else.
 
-## The governance model (TL;DR)
+Everything written to a file in this repository is **English** — code, identifiers, comments, docs,
+commit messages, and the prose the engine puts in a prompt.
 
-looprun's guards are deterministic (`check()` = machine gate, `prose()` = the same rule in the prompt).
-To keep them trustworthy, **a change to a governed surface ships with a passing proof record**:
+## What proves a change
 
-- **Governed** (needs a record): `packages/core/src/**`, `packages/core/GUARDS.md`,
-  `packages/mastra/src/**`.
-- **Not governed** (no record): docs, examples, tests-only (any `/test/` path), the governance tooling
-  (`governance/**`, `scripts/**`, `skills/looprun-governance/**`), CI (`.github/**`), changesets, lockfiles,
-  manifests.
+There is no separate paperwork. The suites are the record, and
+[`governance/GOVERNANCE.md`](governance/GOVERNANCE.md) says what each one asserts.
 
-A record is one file at `governance/proofs/YYYY-MM-DD-<slug>.md`, indexed in `governance/MATRIX.md`.
-Full policy: [`governance/GOVERNANCE.md`](governance/GOVERNANCE.md). The `governance` skill automates the
-scaffold → run → record loop (`skills/looprun-governance/SKILL.md`).
+| you changed | what has to change with it |
+|---|---|
+| a law of the turn machine | the proof in `packages/core/test/proofs/` that states it |
+| the shape of the source (layers, names, purity, network) | the lint in `packages/core/test/lint/` that draws the line |
+| a door a host uses (facade, HTTP, MCP, live world) | the gate in `packages/{mastra,server}/test/gate/` |
+| the authoring surface — a card field, a guard factory, a disclosure tense | the tutorial lesson that teaches it, and the compiling snippet under it |
+| the measuring instrument | the verb's test in `packages/eval/test/` |
 
-## Add a guard (TDD order)
+## Add a law to the engine (test first)
 
-Author the proof **before** the implementation — the proof cases are the spec.
+The proof is the specification. Write it before the implementation.
 
-1. **Author proof cases FIRST** in `packages/core/test/proofs/` — a `GuardProof` catalog entry for the
-   new kind with **positive / negative / neutral** L1 cases plus at least one **L3 loop** case (and the
-   collective non-interference expectation). See
-   [`skills/looprun-governance/references/proof-case-authoring.md`](skills/looprun-governance/references/proof-case-authoring.md).
-2. **Implement** the guard in the matching `packages/core/src/guards/<category>.ts` until the cases pass.
-3. **Add the catalog entry**: a `GUARD_CATALOG` row in `packages/core/src/guards/catalog.ts` (name,
-   category, hook, summary, when-to-use, a compilable example), then `pnpm docs:guards` to regenerate
-   the tutorial's guard chapter and its compiled examples. The catalog is the vocabulary of record;
-   `packages/core/GUARDS.md` is maintainer internals and carries no kind list.
-4. **Run the suite**: `pnpm test:proofs` (green, ratchet not lowered).
-5. **Generate the record**:
-   ```bash
-   pnpm proofs:run
-   pnpm proofs:record -- --slug <kebab> --change "<one-liner>" --scope guard:<kind>
-   ```
-6. **Commit the record + `governance/MATRIX.md`** together with your code.
+```
+ 1 │ write the proof beside the twelve: packages/core/test/proofs/p13-<name>.test.ts
+ 2 │ run it — it must FAIL, and the failure must be the one you predicted
+ 3 │ implement until it passes, and until every other suite still passes
+ 4 │ if the law is visible to an author, the tutorial lesson changes in the same commit
+ 5 │ add a changeset: pnpm changeset
+```
 
-Changing an existing guard, the runtime, or the `agentspec` skill? Same loop — update/extend the proof
-cases for the affected kind(s), then run + record with the matching `--scope`
-(`guard:<kind>` · `runtime` · `skill`).
+A proof runs against a **scripted model** and a **fixture world** — no API key, no network, no
+clock. That is what makes it a durable statement about behaviour instead of a flaky snapshot.
 
-## Running proofs
+## Two laws that bind every contribution
 
-Proofs run against a **deterministic scripted fake LLM** and a **fixture world** — **no API keys, no
-network**. That is what makes a proof a durable statement about behavior rather than a flaky snapshot.
-`pnpm proofs:run` writes a summary to `governance/.artifacts/proofs.json` (gitignored) and fails if any
-proof is red or the coverage ratchet dropped.
+| law | what it forbids |
+|---|---|
+| **no external model, ever** | no file in this repository calls a third-party model API — not to judge a run, not to score a transcript, not for one exploratory call behind a script. The agent in the session reads the transcripts and writes the verdicts. The one model any run may reach is the subject under test, named in that subject's `ask/targets.json` |
+| **the source states what IS** | a comment or a doc says what the system does today and shows an example of it. It never narrates a change, and it never cites the test or the measurement behind a rule. Git is the record of change; the source is the record of state |
 
-## The SLM canary (optional, maintainers)
+## Before you open a pull request
 
-`pnpm proofs:canary` is an **optional, report-only** lane that replays the same scenarios against a
-**real small local model** — it NEVER gates a PR. **Contributors do not need it**: it requires local
-model weights, so on a machine without them it prints `canary skipped …` and exits 0. Maintainers with
-the weights run it to sanity-check that guard prose holds up in front of a live small model; the result
-lands in the proof record's advisory `slm_canary` field. See
-[`governance/GOVERNANCE.md`](governance/GOVERNANCE.md#slm-canary-lane-implemented--report-only-never-gates).
-
-## The `no-proof-needed` escape hatch
-
-A governed-path diff that genuinely cannot change guard behavior (a comment, a docstring in a `src`
-file) can be exempted: a **maintainer** applies the `no-proof-needed` label to the PR and CI skips the
-gate. It is maintainer-restricted on purpose — use it deliberately, not to route around a real change.
-
-## Before you open a PR
-
-- `pnpm test:proofs` green; `node tests/no-bench-drift.test.mjs` clean; `pnpm proofs:matrix` committed.
-- Fill in `.github/pull_request_template.md` (Summary / Type of change / Governance checklist / matrix row).
-- Links: [`governance/GOVERNANCE.md`](governance/GOVERNANCE.md) · [`governance/MATRIX.md`](governance/MATRIX.md).
+- `pnpm build && pnpm typecheck && pnpm test` green from a clean install.
+- A changeset describing the change for the release notes.
+- Fill in `.github/pull_request_template.md`.

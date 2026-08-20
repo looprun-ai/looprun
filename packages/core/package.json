@@ -2,7 +2,7 @@
   "name": "@looprun-ai/core",
   "version": "0.20.0",
   "type": "module",
-  "description": "looprun core: the AgentSpec governance layer for LLM agents — typed deterministic guards (prose+check pairing), the byte-stable scoped assembledPrompt renderer, and the backend-agnostic governed-turn machine. Framework-free: zero runtime dependencies; backends (@looprun-ai/mastra, …) supply the loop.",
+  "description": "looprun core: the two-card engine. An AgentSpec says how one desk behaves, a DomainContract says what the business is, and a world card declares its records under reads, writes and destructive. The engine holds every destructive call for consent, states what agreeing would do, and seals every turn into a record nobody can edit.",
   "keywords": [
     "ai",
     "agents",
@@ -10,7 +10,7 @@
     "governance",
     "guardrails",
     "agentspec",
-    "deterministic",
+    "consent",
     "guards"
   ],
   "license": "Apache-2.0",
@@ -28,14 +28,6 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
-    },
-    "./internal": {
-      "types": "./dist/internal.d.ts",
-      "default": "./dist/internal.js"
-    },
-    "./testing": {
-      "types": "./dist/testing/index.d.ts",
-      "default": "./dist/testing/index.js"
     }
   },
   "files": [
@@ -45,15 +37,21 @@
     "clean": "rm -rf dist",
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
     "test": "vitest run",
-    "test:proofs": "vitest run test/proofs --passWithNoTests"
+    "gate": "tsc --noEmit && eslint . && vitest run"
   },
-  "engines": {
-    "node": ">=22"
+  "dependencies": {
+    "zod": "^3.24.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
+    "eslint": "^9.0.0",
     "typescript": "^5.7.0",
+    "typescript-eslint": "^8.0.0",
     "vitest": "^2.0.0"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }

@@ -1,7 +1,5 @@
 packages:
   - 'packages/*'
-  - 'packages/next/*'
-  - 'examples/*'
-  # Every tutorial code block lives here as a compiled file
-  # (docs/superpowers/specs/2026-07-28-tutorial-outline-final.md §2).
+  # Every tutorial code block lives here as a compiled file: the snippets compile
+  # against the published facade, or the gate fails.
   - 'docs/tutorial/snippets'

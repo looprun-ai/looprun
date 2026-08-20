@@ -1,8 +1,4 @@
 {
   "extends": "../../tsconfig.base.json",
-  "compilerOptions": {
-    "types": ["node"]
-  },
-  "include": ["src/**/*.ts", "test/**/*.ts", "canary/**/*.ts", "vitest.canary.config.ts"],
-  "exclude": ["node_modules", "dist"]
+  "include": ["src", "test"]
 }

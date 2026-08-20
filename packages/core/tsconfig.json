@@ -1,8 +1,4 @@
 {
   "extends": "../../tsconfig.base.json",
-  "compilerOptions": {
-    "types": ["node"]
-  },
-  "include": ["src/**/*.ts", "test/**/*.ts"],
-  "exclude": ["node_modules", "dist", "test/fixtures"]
+  "include": ["src", "test"]
 }

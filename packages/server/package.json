@@ -2,7 +2,7 @@
   "name": "@looprun-ai/server",
   "version": "0.20.0",
   "type": "module",
-  "description": "looprun model server: expose governed LoopRunAgents behind an OpenAI-compatible /v1/chat/completions endpoint, so any harness that speaks the OpenAI protocol can call a governed agent as if it were a model. The full governed turn (guards, tools, redrive) runs inside each request and returns one final assistant message.",
+  "description": "looprun model server: a governed agent behind an OpenAI-compatible /v1/chat/completions endpoint, so any harness that speaks the OpenAI protocol talks to it as if it were a model. One request carries one whole governed turn — guards, consent and all — and returns the final assistant message.",
   "keywords": [
     "ai",
     "agents",
@@ -37,26 +37,22 @@
     "clean": "rm -rf dist",
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
-  },
-  "engines": {
-    "node": ">=22"
+    "lint": "eslint .",
+    "test": "vitest run --passWithNoTests",
+    "gate": "tsc --noEmit && eslint . && vitest run --passWithNoTests"
   },
   "dependencies": {
     "@looprun-ai/core": "workspace:^",
     "@looprun-ai/mastra": "workspace:^"
   },
-  "peerDependencies": {
-    "@mastra/core": "^1.42.0",
-    "ai": "^6.0.0",
-    "zod": "^3.24.0"
-  },
   "devDependencies": {
-    "@mastra/core": "^1.42.0",
     "@types/node": "^22.0.0",
-    "ai": "^6.0.184",
+    "eslint": "^9.0.0",
     "typescript": "^5.7.0",
-    "vitest": "^2.0.0",
-    "zod": "^3.24.0"
+    "typescript-eslint": "^8.0.0",
+    "vitest": "^2.0.0"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }

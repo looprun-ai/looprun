@@ -2,7 +2,7 @@
 
 The TO-BE design itself is `2026-08-12-to-be-blueprint-v3.md` (amended, adversarially
 verified). The execution shape — fresh build, five phases, per-phase gates, the old engine
-alive until the final swap — is `docs/refactoring.md`. This document designs the BUILD of
+alive until the final swap — is `docs/superpowers/refactoring.md`. This document designs the BUILD of
 phase 1 and fixes the cross-phase decisions every later phase inherits. Phases 2–5 each
 get their own build design when their turn comes, informed by what the prior gate revealed.
 
@@ -59,7 +59,7 @@ physically unable to survive the deletion commit.
 
 ### 1.4 Docs and skill are untouched during phases 1–4
 
-`docs/refactoring.md`'s own law: the R11 skill+tutorial update is paid ONCE, at the swap.
+`docs/superpowers/refactoring.md`'s own law: the R11 skill+tutorial update is paid ONCE, at the swap.
 During the build phases the only documents that change are the specs and plans under
 `docs/superpowers/`. README, `docs/tutorial/**`, `GUARDS.md` generation, and the
 `agentspec` skill all update in the swap move, against the finished engine.
@@ -68,7 +68,7 @@ During the build phases the only documents that change are the specs and plans u
 
 ## 2 · THE PHASE-1 CUT
 
-`docs/refactoring.md` names phase 1 "contract leaf + ports + THE one turn machine".
+`docs/superpowers/refactoring.md` names phase 1 "contract leaf + ports + THE one turn machine".
 In blueprint classes, the exact border:
 
 ```

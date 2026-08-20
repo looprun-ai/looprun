@@ -2,7 +2,7 @@
   "name": "looprun",
   "version": "0.20.0",
   "type": "module",
-  "description": "looprun — a governance layer for LLM agents on top of agent frameworks (Mastra first). AgentSpec (the map) + deterministic typed guards (the safety kit) + redrive/honest-abstain (the GPS) + a generator skill. `import { LoopRunAgent } from 'looprun/mastra'`.",
+  "description": "looprun — a governance layer for LLM agents on top of agent frameworks (Mastra first). Two cards say what the agent is and what the business is; a world card declares its records; every destructive call is held for consent. `import { LoopRunAgent, world } from \"looprun\"`.",
   "keywords": [
     "ai",
     "agents",
@@ -41,10 +41,6 @@
     "./models": {
       "types": "./dist/models.d.ts",
       "default": "./dist/models.js"
-    },
-    "./vercel": {
-      "types": "./dist/vercel.d.ts",
-      "default": "./dist/vercel.js"
     }
   },
   "bin": {
@@ -65,8 +61,7 @@
   "dependencies": {
     "@looprun-ai/core": "workspace:^",
     "@looprun-ai/mastra": "workspace:^",
-    "@looprun-ai/models": "workspace:^",
-    "@looprun-ai/vercel": "workspace:^"
+    "@looprun-ai/models": "workspace:^"
   },
   "peerDependencies": {
     "@mastra/core": "^1.42.0",

@@ -1,7 +1,0 @@
-[
-  {
-    "name": "lookupFact",
-    "description": "Look up a grounded fact.",
-    "parameters": { "type": "object", "properties": { "q": { "type": "string" } } }
-  }
-]

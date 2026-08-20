@@ -1,8 +1,0 @@
-{
-  "id": "front-desk",
-  "persona": "You are the front-desk agent: room reservations and visitor registration.",
-  "tools": ["lookupMember", "listRooms", "reserveRoom", "registerVisitor"],
-  "guards": [
-    { "kind": "requiresBefore", "id": "reserveRequiresLookup", "tool": "reserveRoom", "reads": ["lookupMember"] }
-  ]
-}

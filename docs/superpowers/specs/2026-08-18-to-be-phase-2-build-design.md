@@ -33,7 +33,7 @@ Live-surface EXECUTION is out: `McpWorldCard` / `LiveWorldCard` land as vocabula
 `LiveTool` arrays). The host adapters that make a live surface run are phase 3.
 
 R11 stays deferred to the swap: no tutorial, README, governance or skill file changes in
-this phase — the execution shape in `docs/refactoring.md` pays R11 once, when the old
+this phase — the execution shape in `docs/superpowers/refactoring.md` pays R11 once, when the old
 engine dies.
 
 ## 2 · BUILD ORDER — world → compile → desks

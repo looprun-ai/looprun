@@ -1,5 +1,11 @@
 # hermes-sim — the REAL harness against governed agents-as-models
 
+> **FROZEN.** This example is authored against the engine's previous authoring surface and is not
+> a member of the workspace: it is not built, typechecked or tested by `pnpm test`. It is
+> regenerated against the two-card surface in its own phase, and nothing here is a guide to
+> authoring today — the tutorial is.
+
+
 End-to-end integration sim for [`@looprun-ai/server`](../../packages/server): the real
 **Hermes-Agent** harness (NousResearch, Python) talks to looprun agents exposed as
 OpenAI-compatible models. No Hermes code is modified — the integration is config-only. No real

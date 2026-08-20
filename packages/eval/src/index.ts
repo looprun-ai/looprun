@@ -1,47 +1,10 @@
-/**
- * @looprun-ai/eval — the public API: exactly the 24 eval rows of `docs/superpowers/specs/2026-07-28-tutorial-outline-final.md` §4
- * (chapter 05 — the subject directory contract, then the measured loop). `loadWorldConfig` (increment
- * 3b) is the newest subject-contract row — the `world.json` sibling of `loadNormsConfig`.
- *
- * Thirteen of them are ALSO reached by the published `looprun-eval` bin, which does
- * `await import('@looprun-ai/eval')` and calls them off the namespace — the package, not the module
- * files. That makes the bin a second, independent reason those thirteen stay here: `runCommand`
- * `foldCommand` `certCommand` `validateCommand` `judgeInputCommand` `mintSeal` `verifySeal` `lintPaths`
- * `loadSubject` `lintSpecLaws` `lintSpecExecution` `lintSpecQuality` `lintSubject`.
- *
- * Eval has NO `/internal` subpath: the case runner, the fold/cert internals, the provider selection
- * and the lint primitives stay module-local — in-package code and this package's tests import
- * `./run.js`, `./fold.js`, `./cert.js`, `./provider.js`, `./lint.js`, `./seal.js` and `./subject.js`
- * directly. Locked by `packages/eval/test/surface-lock.test.ts`.
- */
-export { loadSubject, agentForCase } from './subject.js';
-export type { Subject, SubjectCase, CaseTurn, CaseInvariants, ReqCall, RubricItem } from './subject.js';
-export { loadNormsConfig } from './norms-config.js';
-export type { NormsConfig } from './norms-config.js';
-export { loadWorldConfig } from './world-config.js';
-export type { WorldConfig } from './world-config.js';
-export { stripGovernance } from './ungoverned.js';
-export { runCommand, foldCommand, certCommand, validateCommand, judgeInputCommand } from './commands.js';
-export { campaignCommand } from './campaign.js';
-export { lintPaths, lintSpecLaws, lintSpecExecution } from './lint.js';
-export { lintSpecQuality } from './lint-spec-quality.js';
-export { lintSubject } from './lint-subject.js';
-export { mintSeal, verifySeal } from './seal.js';
-
-/**
- * TYPE-CLOSURE RIDERS (outline §7) — not taught, not part of the 19, not surface anybody chose.
- * They are the transitive type closure of the value signatures above: the four `*CommandOptions`
- * `CertSummary` `CertRange` and `ValidateReport` (the `looprun-eval` verbs), `LintViolation` (`lintPaths`),
- * `UngovernedBundle` (`stripGovernance`), `SealTarget` / `Seal` / `SealVerification` (`mintSeal` / `verifySeal`).
- * The outline's §5 keeps them out of the taught contract by the annotation rule — every one is
- * either an object-literal argument or an inferred result — but a consumer building with
- * `declaration: true` must still be able to NAME them (`TS4023`/`TS2742`). `JudgeInputCommandOptions`
- * (the `looprun-eval judge-input` verb) rides here for the same reason.
- */
-export type { RunCommandOptions, FoldCommandOptions, CertCommandOptions, ValidateCommandOptions, JudgeInputCommandOptions } from './commands.js';
-export type { CampaignCommandOptions } from './campaign.js';
-export type { ValidateReport } from './validate.js';
-export type { CertSummary, CertRange } from './cert.js';
-export type { LintViolation } from './lint.js';
-export type { UngovernedBundle } from './ungoverned.js';
-export type { Seal, SealTarget, SealVerification } from './seal.js';
+/** The public surface of @looprun-ai/eval — the static half: targets,
+ *  the subject loader, the zero-spend validator, the lints and the census. */
+export { loadTargets } from './targets.js';
+export type { DeclaredTarget } from './targets.js';
+export { SubjectLoader } from './subject-loader.js';
+export type { Subject } from './subject-loader.js';
+export { Validator } from './validator.js';
+export type { ValidationFinding, ValidationReport } from './validator.js';
+export { census, nameGate, purity } from './lints.js';
+export type { LintFinding } from './lints.js';

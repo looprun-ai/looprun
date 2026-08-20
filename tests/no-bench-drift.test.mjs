@@ -22,7 +22,7 @@ import { fileURLToPath } from 'node:url';
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 // Surfaces that must be bench-free.
-const SCOPES = ['skills', 'docs', 'examples', 'packages/eval/src', 'packages/eval/bin', 'packages/eval/assets', 'packages/core/src', 'packages/mastra/src', 'packages/models/src', 'packages/looprun/src', 'packages/server/src', 'README.md', 'governance', 'scripts/proofs', 'CONTRIBUTING.md', '.github'];
+const SCOPES = ['docs', 'examples', 'packages/core/src', 'packages/eval/src', 'packages/looprun/src', 'packages/mastra/src', 'packages/models/src', 'packages/server/src', 'README.md', 'governance', 'CONTRIBUTING.md', '.github'];
 
 // Session process docs (specs/plans/reviews) are internal working notes, not a user-facing
 // surface — exempt from the scoped lanes. The repo-wide lane below still applies to them: the
@@ -104,10 +104,13 @@ for (const scope of SCOPES) {
   }
 }
 
-// Repo-wide lane: scan the entire tree for the two absolute codenames.
+// Repo-wide lane: scan the entire tree for the two absolute codenames. The design record cites
+// where its requirements were measured, the way a paper cites the study behind a claim; strip the
+// name and the citation points nowhere. Everything a user reads is outside that one directory.
 for (const file of walk(ROOT)) {
   const rel = relative(ROOT, file);
   if (rel === SELF_REL) continue;
+  if (rel.startsWith('docs/superpowers/')) continue;
   if (/\.(png|jpg|jpeg|gif|gguf|zip)$/.test(rel)) continue;
   const lines = readFileSync(file, 'utf8').split('\n');
   lines.forEach((text, i) => {

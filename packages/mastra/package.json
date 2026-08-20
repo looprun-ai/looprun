@@ -2,7 +2,7 @@
   "name": "@looprun-ai/mastra",
   "version": "0.20.0",
   "type": "module",
-  "description": "looprun on Mastra: LoopRunAgent — a genuine @mastra/core Agent compiled from an AgentSpec, with deterministic guard enforcement (beforeToolCall veto), the terminal protocol, bounded no-tools redrive and honest-abstain exhaustion. Studio-compatible.",
+  "description": "looprun on Mastra: LoopRunAgent IS a @mastra/core Agent built from the two cards and a world, so `new Mastra({ agents })` and generate/stream work unchanged while every destructive call passes through consent. UngovernedAgent is the same agent with every guard hook empty — the twin a measurement compares against.",
   "keywords": [
     "ai",
     "agents",
@@ -28,10 +28,6 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
-    },
-    "./testing": {
-      "types": "./dist/testing/index.d.ts",
-      "default": "./dist/testing/index.js"
     }
   },
   "files": [
@@ -41,28 +37,25 @@
     "clean": "rm -rf dist",
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "test:proofs": "vitest run test/proofs --passWithNoTests"
-  },
-  "engines": {
-    "node": ">=22"
+    "lint": "eslint .",
+    "test": "vitest run --passWithNoTests",
+    "gate": "tsc --noEmit && eslint . && vitest run --passWithNoTests"
   },
   "dependencies": {
     "@looprun-ai/core": "workspace:^",
-    "zod-to-json-schema": "^3.25.2"
-  },
-  "peerDependencies": {
     "@mastra/core": "^1.42.0",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "ai": "^6.0.0",
     "zod": "^3.24.0"
   },
   "devDependencies": {
-    "@looprun-ai/models": "workspace:^",
-    "@mastra/core": "^1.42.0",
     "@types/node": "^22.0.0",
-    "ai": "^6.0.184",
+    "eslint": "^9.0.0",
     "typescript": "^5.7.0",
-    "vitest": "^2.0.0",
-    "zod": "^3.24.0"
+    "typescript-eslint": "^8.0.0",
+    "vitest": "^2.0.0"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }

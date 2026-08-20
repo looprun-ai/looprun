@@ -9,7 +9,7 @@ this document is kept only as the record of the rejected direction.
 High-level TO-BE design for the looprun engine: a class-based, strongly typed TypeScript
 architecture with clear single responsibilities, shallow dependencies, and no inference —
 built so the defect classes documented in
-[`docs/analysis/2026-08-12-blueprint-as-is.md`](../../analysis/2026-08-12-blueprint-as-is.md)
+[`docs/superpowers/2026-08-12-blueprint-as-is.md`](../../analysis/2026-08-12-blueprint-as-is.md)
 are **unrepresentable in the types**, not merely reviewed away.
 
 Scope: blueprint only. No implementation, no migration plan, no compatibility shims

@@ -2,7 +2,7 @@
   "name": "@looprun-ai/eval",
   "version": "0.20.0",
   "type": "module",
-  "description": "looprun eval harness: run a generated subject's cases against a model target (governed or ungoverned variant), dump per-case traces for the LLM judge, fold verdicts, and certify against the bar.",
+  "description": "looprun eval: verbs over a run directory. Load a subject, validate it, run its cases governed or ungoverned, scan the dumps for incidents, build blind judge inputs, fold the verdicts back, certify against a bar and seal the authored subject. The run directory is the only state — there is nothing to resume.",
   "keywords": [
     "ai",
     "agents",
@@ -31,41 +31,30 @@
       "default": "./dist/index.js"
     }
   },
-  "bin": {
-    "looprun-eval": "bin/looprun-eval.mjs"
-  },
   "files": [
-    "dist",
-    "bin"
+    "dist"
   ],
   "scripts": {
     "clean": "rm -rf dist",
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "probe:lie-check": "node probes/lie-check-portability.mjs"
-  },
-  "engines": {
-    "node": ">=22"
+    "lint": "eslint .",
+    "test": "vitest run --passWithNoTests",
+    "gate": "tsc --noEmit && eslint . && vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@ai-sdk/google": "^3.0.0",
-    "@ai-sdk/openai": "^3.0.0",
     "@looprun-ai/core": "workspace:^",
-    "@looprun-ai/mastra": "workspace:^"
-  },
-  "peerDependencies": {
-    "@mastra/core": "^1.42.0",
-    "ai": "^6.0.0",
+    "@looprun-ai/mastra": "workspace:^",
+    "typescript": "^5.7.0",
     "zod": "^3.24.0"
   },
   "devDependencies": {
-    "@looprun-ai/models": "workspace:^",
-    "@mastra/core": "^1.42.0",
     "@types/node": "^22.0.0",
-    "ai": "^6.0.184",
-    "typescript": "^5.7.0",
-    "vitest": "^2.0.0",
-    "zod": "^3.24.0"
+    "eslint": "^9.0.0",
+    "typescript-eslint": "^8.0.0",
+    "vitest": "^2.0.0"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }

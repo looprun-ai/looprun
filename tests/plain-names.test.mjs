@@ -52,18 +52,16 @@ const NAMES = {
 // Each entry protects ONE sense in ONE place: a path (exact file or directory prefix), the word it
 // allows, and why. Allowing `probe` in the instrument's report does not also allow `ledger` there.
 const ALLOW = [
+  // ── the design record ────────────────────────────────────────────────────────────────────────
+  // `docs/superpowers/` holds the charter, the blueprints, the specs, the plans and the reviews of
+  // the work itself. A spec that retires a word has to write that word down to retire it, and the
+  // rejected blueprints are kept exactly as they were rejected. Nobody reads this tree to learn
+  // the vocabulary — every surface that teaches it is outside this one directory.
+  { path: 'docs/superpowers/', why: 'the design record: it names the retired vocabulary in order to retire it' },
   { path: 'docs/benchmarks.md', word: 'preview', text: 'Pro Preview', why: 'a third-party product name' },
-  { path: 'docs/superpowers/specs/2026-08-08-disclosure-design.md', word: 'preview', text: 'gemini-3.1-pro-preview', why: 'a third-party model id' },
-  { path: 'docs/superpowers/plans/2026-08-08-disclosure.md', word: 'preview', text: 'gemini-3.1-pro-preview', why: 'a third-party model id' },
   // `probe` also names an OFFLINE MEASURING INSTRUMENT — an experiment run against the engine, not
   // a world answering a question. "The margin simulate" is not a phrase.
-  { path: 'packages/eval/probes/', word: 'probe', why: 'the instrument itself' },
-  { path: 'packages/eval/package.json', word: 'probe', text: 'probe:lie-check', why: 'the instrument, as a script' },
-  { path: 'packages/core/src/runtime/prompt.ts', word: 'probe', text: 'margin probe', why: 'the instrument, in prose' },
-  { path: 'packages/mastra/test/prompt-identity.test.ts', word: 'probe', text: 'margin probe', why: 'the same instrument' },
   { path: 'docs/analysis/2026-08-04-lie-check-model-portability.md', word: 'probe', why: "the instrument's own report" },
-  // A recording keeps the key names it was written with. Its reader has to name them to map them.
-  { path: 'packages/eval/test/entity-record.analysis.test.ts', word: 'ledger', why: 'a recorded run\'s own key, mapped at the read boundary' },
   // ── the agentspec skill (gate this repo with --root ../agentspec) ────────────────────────────
   { path: 'skill/scripts/margin-probe.mjs', word: 'probe', why: 'the instrument itself' },
   { path: 'skill/scripts/serve-local.sh', word: 'probe', why: 'the instrument, in its serving recipe' },
@@ -73,20 +71,10 @@ const ALLOW = [
   { path: 'README.md', word: 'arm', text: 'silently arm the agent', why: 'the verb: to make live' },
   { path: 'docs/superpowers/specs/2026-08-02-judge-protocol-and-authoring-laws-design.md', word: 'arm', text: 'arms the monitor', why: 'the verb: to make live' },
   { path: 'BACKLOG.md', why: 'the row that tracks the repos still to rename, and the senses that survive in them' },
-  { path: 'docs/superpowers/specs/2026-08-06-plain-names-design.md', why: 'the only spec that names both vocabularies; deleted by the final task' },
-  { path: 'docs/superpowers/plans/2026-08-06-plain-names.md', why: 'the plan that carries out the rename; deleted by the final task' },
-  { path: 'docs/superpowers/specs/2026-08-06-guard-priority-design.md', word: 'ledger', why: 'the row that names the rename work still owed in the subject repos' },
-  { path: 'docs/superpowers/plans/2026-08-06-guard-priority.md', word: 'ledger', why: 'the task that names the rename work still owed in the subject repos' },
-  { path: 'docs/superpowers/specs/2026-08-06-worst-world-design.md', word: 'preview', why: 'the English noun: what a simulation shows the user before the act' },
-  { path: 'docs/superpowers/specs/2026-08-09-consent-licence-design.md', word: 'probe', why: 'the instrument it names: `subjects/atlas/test/claim-probe.mts`, an onReply guard that logs and denies nothing' },
-  { path: 'docs/superpowers/specs/2026-08-09-consent-licence-design.md', word: 'preview', text: 'gemini-3.1-pro-preview', why: 'a third-party model id' },
-  { path: 'docs/superpowers/specs/2026-08-10-consent-licence-implementation.md', word: 'preview', text: 'gemini-3.1-pro-preview', why: 'a third-party model id' },
-  { path: 'packages/next/core/test/lint/name-gate.test.ts', word: 'probe', text: "'probe'", why: 'the rename register bans the retired identifier by listing it' },
-  { path: 'packages/next/core/test/lint/name-gate.test.ts', word: 'preview', text: "'preview'", why: 'the rename register bans the retired identifier by listing it' },
-  { path: 'packages/next/core/src/contract/rename-register.ts', word: 'preview', text: "'preview'", why: 'the register lists the tokens it retires' },
-  { path: 'packages/next/core/src/contract/rename-register.ts', word: 'probe', text: "'probe'", why: 'the register lists the tokens it retires' },
-  { path: 'docs/superpowers/specs/2026-08-18-to-be-phase-2-build-design.md', word: 'preview', text: "'preview'", why: 'the design quotes the banned token it retires' },
-  { path: 'docs/superpowers/plans/2026-08-18-to-be-phase-2-build.md', word: 'preview', text: "'preview'", why: 'the plan quotes the banned token it retires' },
+  { path: 'packages/core/test/lint/name-gate.test.ts', word: 'probe', text: "'probe'", why: 'the rename register bans the retired identifier by listing it' },
+  { path: 'packages/core/test/lint/name-gate.test.ts', word: 'preview', text: "'preview'", why: 'the rename register bans the retired identifier by listing it' },
+  { path: 'packages/core/src/contract/rename-register.ts', word: 'preview', text: "'preview'", why: 'the register lists the tokens it retires' },
+  { path: 'packages/core/src/contract/rename-register.ts', word: 'probe', text: "'probe'", why: 'the register lists the tokens it retires' },
 ];
 
 const SKIP_EXT = /\.(png|jpg|jpeg|gif|svg|ico|gguf|zip|woff2?|tsv|csv)$/i;

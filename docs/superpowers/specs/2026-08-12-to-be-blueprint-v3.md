@@ -1,6 +1,6 @@
 # looprun — TO-BE Architecture Blueprint v3: Cards Carry Words, Surfaces Carry Tools
 
-The TO-BE design for the looprun engine, governed by `docs/requirements.md` and by the rule
+The TO-BE design for the looprun engine, governed by `docs/superpowers/requirements.md` and by the rule
 that outranks every other quality:
 
 > **THE GOLDEN RULE.** Creating an agent is so easy a 6-year-old could do it, and the
@@ -1922,7 +1922,7 @@ change (— = not authoring-visible).
 | R9.4 | PASS | `ExamRunner` public + scriptable (§5.8); `Campaign` end-to-end | — |
 | R9.5 | PASS | `LoopRunAgent extends Agent` (§5.5): same generate/stream, `new Mastra({ agents })`; reserved facade slots `@looprun-ai/vercel` / `@looprun-ai/langchain` named in §5.5 and §6 L5 | — |
 | R9-EX | PASS | §4: `world`, `mcpWorld`, `liveWorld` — the charter's construction shapes absorbed into the surface card (§11's register maps the retired field names) | skill construction doc |
-| R10.1 | PASS | §13.2 (the gate + layer attribution reading); the phase plan lives in `docs/refactoring.md` | — |
+| R10.1 | PASS | §13.2 (the gate + layer attribution reading); the phase plan lives in `docs/superpowers/refactoring.md` | — |
 | R10.2 | PASS | §13.2 case 72 row — THE TRIPWIRE, must not move | — |
 | R10.3 | PASS | §13.3 row 8: two-family wording rule; margin discipline in `Certifier` (§5.8) | — |
 | R10.4 | PASS | §13.3 rows 1, 2, 6, 8 + the act-id referencing choice priced (§8 row R5.3) | — |

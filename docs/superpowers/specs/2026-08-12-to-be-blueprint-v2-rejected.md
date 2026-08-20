@@ -13,7 +13,7 @@ Scope: blueprint only — no implementation, no migration plan, no compatibility
 (pre-1.0, no external consumers). Validation gate: the Atlas exam in `agentspec-bench`
 scores **≥ 85/100** on the rebuilt engine, or the moved case is argued ill-formed.
 The AS-IS record this design answers is
-[`docs/analysis/2026-08-12-blueprint-as-is.md`](../../analysis/2026-08-12-blueprint-as-is.md).
+[`docs/superpowers/2026-08-12-blueprint-as-is.md`](../../analysis/2026-08-12-blueprint-as-is.md).
 
 ---
 

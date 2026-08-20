@@ -2,7 +2,7 @@
 
 The amendments the v3 blueprint (`2026-08-12-to-be-blueprint-v3.md`) receives before any
 implementation. This document resolves every row of `REVIEW-TO-BE.md` (1–17) and the
-decisions taken while resolving them. The charter `docs/requirements.md` governs
+decisions taken while resolving them. The charter `docs/superpowers/requirements.md` governs
 (R6.5/R6.6 already corrected in place); the GOLDEN RULE outranks everything:
 
 > Creating an agent is so easy a 6-year-old could do it, and the engine code underneath
@@ -441,12 +441,12 @@ The amended blueprint passes through the same adversarial repertoire that produc
 2  adversarial verification, three judges in parallel:
      · golden-rule judge — the six-year-old test on EVERY name and field,
        the lens v3's verification lacked
-     · charter-mechanical judge — row-by-row against docs/requirements.md
+     · charter-mechanical judge — row-by-row against docs/superpowers/requirements.md
        (including corrected R6.5/R6.6)
      · atlas judge — the fifteen-case preservation map, case 72 tripwire intact
 3  compliance re-verification of the full §15 table
 4  every finding fixed inline; re-verify the fixes
-5  only then: docs/refactoring.md phase 1
+5  only then: docs/superpowers/refactoring.md phase 1
 ```
 
 ---

@@ -1,185 +1,126 @@
-# Governance — the proof process for looprun's guard runtime
+# Governance — what proves this engine behaves
 
-looprun ships a **deterministic guard layer**: every rule is a `check()` (the machine gate) paired
-with a `prose()` (the same rule, rendered into the prompt). The value of that layer is only as good as
-our confidence that a guard **still does exactly what it claims** after every change. This document is
-the process that manufactures that confidence: a **proof** for each guard, re-run on every push, plus a
-computed coverage floor that cannot silently drop.
+looprun holds every destructive call for a human's word, states what agreeing would do, and seals
+what happened into a record nobody can edit. A claim like that is worth exactly as much as the
+evidence behind it, and the evidence is code that runs on every push.
 
-The one-line rule: **a change to a governed surface ships with a passing proof record, or it does not
-ship.**
+**The one-line rule: a change to a governed surface ships with its suites green, or it does not
+ship.** There is no separate paperwork to file — the suites below ARE the record.
 
-## Why proofs (not just tests)
-
-Ordinary tests answer "did this pass on my machine?" A guard runtime needs a stronger, standing answer:
-"for guard *X*, here is the compliant flow it MUST allow, the violation it MUST catch, and the
-look-alike it must leave alone — and all three are green, in isolation and when *X* runs beside every other guard." Because the guards
-are pure by construction (no clock, no entropy, no network, no model call inside a `check()`), that
-answer is fully deterministic — the same inputs always produce the same verdict, so a proof is a
-durable statement about behavior, not a flaky snapshot.
-
-## The proof model
-
-A **GuardProof** describes one guard as a small, deterministic bundle of cases run over a scripted fake
-LLM and a fixture world (no API keys, no network). Every guard carries all three polarities:
-
-| polarity | meaning |
-|---|---|
-| **positive** | a compliant scenario the guard MUST allow (`check()` returns `null`; the loop passes clean) |
-| **negative** | a violation the guard MUST catch (`check()` returns a correction; the loop vetoes/redrives) |
-| **neutral** | a look-alike the guard must LEAVE ALONE (attempt-keyed / status talk / unrelated tool) |
-
-Proofs run at two levels, plus a collective level:
-
-- **L1 — pure-check** (`packages/core/test/proofs/`): the guard's `check(ctx)` is exercised directly
-  over crafted `GuardCtx` values. Both verdicts are proven: `null` on the positive/neutral cases, a
-  deny/correction string on the negative case. Test ids read `L1 · <guard> · …`.
-- **L3 — full loop** (`packages/mastra/test/proofs/`): the guard is installed on a real governed turn
-  driven by a scripted fake LLM, and the observable effect is asserted — a `preTool` veto, an `onReply`
-  redrive, a `postTool` report, an `onInput` refusal. Test ids read `L3 · <guard> · …`.
-- **Collective non-interference**: the guard is proven to still fire (and to NOT fire spuriously) when
-  it runs inside a super-agent carrying the full guard set — a guard must not be neutralized or
-  triggered by its neighbors. Test ids read `collective · <guard> · …`.
-
-### The coverage ratchet
-
-A per-kind ratchet (`proof completeness · <kind>` describes) asserts that **every** exported guard kind
-has a complete proof: all three polarities, both L1 verdicts, and at least one L3 loop case. Coverage is
-**computed from the proofs themselves** — the number of kinds whose `proof completeness · <kind>`
-describe fully passes — so there is no stored counter to forge and no way to add a guard without adding
-its proof. Mutators (e.g. the egress reply mutator) are covered through the proven-mutators list. The
-floor never goes down: `pnpm proofs:run` fails if any completeness describe is red.
-
-## What requires a proof record
-
-A **proof record** (`governance/proofs/YYYY-MM-DD-<slug>.md`) is the human-readable receipt that the
-proof suite was run and passed for a change. It is **required** when a change touches a governed
-surface:
-
-| governed surface | why |
-|---|---|
-| `packages/core/src/**` | the guard factories, spec assembly, assembled prompt renderer, turn machine |
-| `packages/core/GUARDS.md` | the canonical guard reference (behavior contract) |
-| `packages/mastra/src/**` | the loop that enforces guards live |
-| `skills/agentspec/**` | the generator that authors guards into user projects |
-
-It is **not** required for changes that cannot alter guard behavior:
-
-- docs (`docs/**`, `README.md`, any `README.md`), examples (`examples/**`)
-- tests only (any path under a `/test/` directory)
-- the governance tooling itself (`governance/**`, `scripts/**`, `skills/looprun-governance/**`), CI (`.github/**`)
-- changeset entries (`.changeset/**`), lockfiles, `package.json` manifests
-
-The gate (`scripts/proofs/check-record-required.mjs`) encodes exactly these rules — exclusions are
-evaluated first, so a test file or a doc under a governed package never trips it.
-
-## The record workflow (3 commands)
-
-```bash
-pnpm proofs:run                       # run the suite → governance/.artifacts/proofs.json
-pnpm proofs:record -- \               # write the record + regenerate MATRIX.md
-  --slug add-arg-format --change "argFormat: reject malformed handles" --scope guard:argFormat
-pnpm proofs:matrix                    # (implied by :record) regenerate the index
+```
+  pnpm build && pnpm typecheck && pnpm test
+     │
+     ├── 12 engine proofs      one law of the turn machine each
+     ├──  4 structural lints   the shape of the source itself
+     ├──  7 facade gates       the same laws through the doors a host uses
+     ├──    eval verb proofs   the measuring instrument, proven on fixtures
+     └──  3 repository gates   the words the whole tree is allowed to use
 ```
 
-Then commit the new `governance/proofs/*.md` **and** the regenerated `governance/MATRIX.md`. The verdict
-in the record is `PASS` iff every proof passed; a `FAIL` record does not satisfy the gate.
+---
 
-The record frontmatter is a flat `key: value` contract (documented in `governance/proofs/README.md` and
-`skills/looprun-governance/references/record-format.md`) so it parses without a YAML library and never merge-
-conflicts (one file per change).
+## 1 · The twelve engine proofs
 
-## The `no-proof-needed` escape hatch
+`packages/core/test/proofs/` — one file per law, each driven by a scripted model over a fixture
+world. No API key, no network, no clock: the same inputs always produce the same verdict.
 
-Some governed-path diffs genuinely cannot change guard behavior (a comment fix in `guards.ts`, a
-docstring in a `src` file). A **maintainer** may apply the `no-proof-needed` label to the PR; the CI gate
-step is skipped when the label is present. The label is restricted to maintainers (see Branch
-protection) precisely so it is a deliberate, auditable act — never the default path.
-
-## SLM canary lane (IMPLEMENTED — report-only, never gates)
-
-The proofs run against a **scripted fake LLM** for determinism. The canary is the additive lane that
-replays the SAME governed scenarios against a **real small local model** — no script, the model decides
-— to catch cases where a guard's prose reads cleanly to a deterministic check but confuses a live small
-model. It answers: *with a real small model behaving naturally, do governed turns still end compliant?*
-
-It is **NON-DETERMINISTIC by nature and NEVER gates a PR** — a red canary is a signal, not a failure.
-
-### How to run
-
-```bash
-pnpm proofs:canary                 # default model: ram24 (35B default tier, 24 GB machines)
-pnpm proofs:canary --model ram8    # Qwen3.5-4B, ~2.5 GB, 8 GB machines
-pnpm proofs:canary --model ram16   # 35B tuned for 16 GB machines
-pnpm proofs:canary --model ram32   # 35B quality-max, 32 GB machines
-```
-
-The wrapper checks **model availability first**. On a machine WITHOUT the weights (e.g. a contributor's
-laptop, or CI) it prints `canary skipped (model <alias> not available locally)`, writes a
-`{ skipped: true }` artifact, and **exits 0** — a skipped canary is never a failure. When the model IS
-available it builds one collective spec, replays every governed scenario through the real
-`runSpecConversation` loop (single-threaded, sequential — one shared server), and writes
-`governance/.artifacts/canary.json` (gitignored). The scenarios live in the isolated
-`packages/mastra/canary/*.canary.ts` lane behind its own `vitest.canary.config.ts`, so they never run in
-`pnpm test` or `pnpm test:proofs`.
-
-### Outcome taxonomy & pass rate
-
-Each scenario lands in exactly one bucket:
-
-| outcome | meaning |
+| proof | the law it pays |
 |---|---|
-| **caught** | the runtime intervened (a guard veto/redrive/refusal/report, a forced-terminal, or a reply mutator) and the governed turn still closed |
-| **clean** | zero recovery events — the model behaved on its own |
-| **exhausted** | the guards caught it but the model never produced a compliant reply, so honest-abstain fired (`exhaustion-terminal` / `exhaustion-salvage`) |
-| **error** | the run threw / set `errorMsg` |
+| P1 | a scripted turn seals `[toolCall, toolResult, reply]` in order, in a complete record |
+| P2 | a duplicate call restates the first result within its turn — it never re-executes |
+| P3 | a refused call records not-done/blocked carrying the guard's own sentence |
+| P4 | an owed read is paid by ONE forced micro-step; unpaid debt refuses, never a dead turn |
+| P5 | the whole grading table: the engine derives the user-facing word from what happened |
+| P6 | a turn failure discards the draft — zero partial acts are sealed |
+| P7 | the system prefix is byte-identical across turns; only the tail varies |
+| P8 | exhaustion forces one finish step; a model that still will not finish is closed by the engine |
+| P9 | two calls in one step execute serially, in emission order |
+| P10 | `guards()` returns the same guard objects the phase checks iterate — the census cannot drift |
+| P11 | the sealed record and every ctx travel deep-frozen; mutation throws |
+| P12 | two concurrent chats on one session serialize in arrival order |
 
-**Pass rate = `(caught + clean + exhausted) / total`.** All three are COMPLIANT outcomes — the governed
-turn ended safely — so only **`error`** counts as a failure. Each scenario is a vitest `it` that asserts
-only `outcome !== 'error'`; everything else is data.
+What a proof looks like, whole — P1, in the shape every one of them takes:
 
-### Recorded in the proof record
+```typescript
+const r = await engine.chat('s1', 'check booking bk_1001');
 
-When a `governance/.artifacts/canary.json` exists and was not skipped, `pnpm proofs:record` prefills the
-record's `slm_canary` field with `"<passRate> (model <alias>, advisory)"` (an explicit `--slm` flag
-overrides it); otherwise the field stays `n/a`.
-
-### Hardware & scheduling
-
-The canary runs **only where the model weights exist** — typically a maintainer's machine, not a hosted
-CI runner (local models do not fit hosted runners, which is why there is deliberately **no GitHub
-workflow** for it). Scheduled canary runs are a future option via a **self-hosted runner** with the
-weights present; until then it is a manual, maintainer-run command.
-
-## Branch protection (repo settings — not committable here)
-
-These live in GitHub repo settings (Settings → Branches → `main`) and cannot be set from the tree.
-A maintainer applies them with ONE command (idempotent, needs `gh` auth with repo admin):
-
-```bash
-bash scripts/proofs/setup-branch-protection.sh
+expect(port.log).toEqual([{ tool: 'getBooking', args: { id: 'bk_1001' } }]);
+expect(r.acts[0]).toMatchObject({
+  origin: 'model', effect: 'read', said: 'yes', status: 'done', reason: null,
+  evidence: 'executor', call: { tool: 'getBooking', args: { id: 'bk_1001' } }
+});
+expect(r.closedBy).toBe('model');
 ```
 
-What it configures (documented here so the process is complete and auditable):
+## 2 · The four structural lints
 
-- **Require the `ci` status check** to pass before merge (it runs the proof suite, the matrix `--check`,
-  and the proof-record gate).
-- **Require ≥1 approving review**.
-- **Require review from Code Owners** (`.github/CODEOWNERS` routes the governed surfaces —
-  `packages/core/src/`, `packages/core/GUARDS.md`, `packages/mastra/src/`, `skills/agentspec/` —
-  AND the law-making machinery — `governance/`, `scripts/proofs/`, `skills/looprun-governance/`,
-  the drift lint, `.github/` — to `@marcosluizfp`, so neither a guard change nor a change to the
-  gate itself merges on a single non-owner approval).
-- **Restrict the `no-proof-needed` label** to maintainers (Settings → labels / repository roles) so the
-  escape hatch cannot be self-applied by a contributor.
-- **No force-push to `main`** and no branch deletion.
-- `enforce_admins` stays **false** on purpose: admins keep direct-push for day-to-day maintainer work;
-  the law binds contributors. Flip it in the script when the maintainer team grows.
+`packages/core/test/lint/` — these read the source as source. They fail a build for a shape, not
+for a behavior, which is why they catch what a runtime test cannot.
 
-## Reference
+| lint | what it refuses |
+|---|---|
+| `layer-rule` | an import pointing the wrong way in the layer picture: contract imports nothing, cards import contract, the machine reaches a world only through the ports, and only a facade imports the engine |
+| `name-gate` | any identifier on the rename register, anywhere in the packages tree |
+| `no-network` | a network primitive reached from the engine — `fetch`, an http client, a socket. The declared doors are the server package (the wire is its purpose) and the models package (loopback serving) |
+| `purity` | a regex outside the three pattern factories and `argFormat` — a guard decides by reading typed values, not by matching prose |
 
-- The matrix of every record: [`MATRIX.md`](MATRIX.md) (generated)
-- The record format: [`proofs/README.md`](proofs/README.md)
-- How to author a proof + run the loop: the `looprun-governance` skill (`skills/looprun-governance/SKILL.md`)
-- The guard contract every proof is written against: [`../packages/core/GUARDS.md`](../packages/core/GUARDS.md)
-- Contributor workflow: [`../CONTRIBUTING.md`](../CONTRIBUTING.md)
+## 3 · The seven facade gates
+
+The same laws, exercised through the doors a host actually uses, so a law cannot hold in the engine
+and leak at the seam.
+
+| gate | the door |
+|---|---|
+| G1 | consent through the public `LoopRunAgent` class: the call is held, the question carries a code, the code releases exactly that call |
+| G2 | the same consent case over HTTP — the code rides the OpenAI-compatible envelope |
+| G3 | an `mcpWorld` card against an in-process MCP server, reconciled by the surface gate |
+| G4 | a `liveWorld` card through the facade: the done law and the declared proxies |
+| G5 | the native tool-result law: a hostile note planted in a result changes nothing |
+| G6 | the ungoverned twin through the public class — byte-identical prompt, no guards |
+| G7 | the composition doors the server types against |
+
+## 4 · The measuring instrument
+
+`packages/eval` is the harness a measurement runs through, and it is proven like anything else:
+the loader, the validator, the lints, the runner, the monitor, the judge-input builder, the folder,
+the certifier and the seal each carry their own tests over fixture subjects.
+
+Two laws bind a measurement, and both are structural rather than advisory:
+
+| law | how it holds |
+|---|---|
+| **the judge is the agent in the session** | no file in this repository calls a third-party model API. `buildJudgeInputs` writes blind rows to disk; a person and their agent read them and write verdicts back. There is no judge model to configure |
+| **the subject under test is the only model any run may reach** | it is named in the subject's `ask/targets.json`, and the loader refuses a run that names anything else |
+
+A certification is a fact about named run directories: a case passes a repetition when its governed
+dump sealed clean AND the folded verdict says pass; an unresolved monitor incident voids the whole
+certification. `seal()` freezes the authored subject — the cards, the world, the cases, the
+generated data, the mapping — and never the run evidence beside it, so a later run cannot void an
+earlier certification.
+
+## 5 · The three repository gates
+
+`pnpm gates` — the words the whole tree is allowed to use.
+
+| gate | what it refuses |
+|---|---|
+| `plain-names` | a retired name (`ledger`, `probe`, `preview`, `trunk`, `challenge`, `arm`, `band`) in any file a person reads |
+| `guard-priority` | a retired guard identifier — the old prefixes and the old field that carried priority |
+| `no-bench-drift` | a reference to the research harness this engine came from, and any term tied to one vendor's agent product |
+
+Each gate carries a self-test: a lint that cannot fail is no law, so every one of them proves it
+still fires before it reports clean.
+
+---
+
+## What a contributor does
+
+```
+ 1 │ change the code
+ 2 │ pnpm build && pnpm typecheck && pnpm test    ← the suites above, all of them
+ 3 │ if a law changed, the proof that states it changes in the same commit
+ 4 │ if the authoring surface changed, the tutorial lesson that teaches it changes too
+```
+
+A new law arrives as a new proof file beside the twelve. A new door arrives as a new gate beside
+the seven. Nothing is proven by a document; documents state what the proofs assert.

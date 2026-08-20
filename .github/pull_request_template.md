@@ -4,30 +4,21 @@
 
 <!-- What does this change do, and why? -->
 
-## Type of change
+## What it touches
 
-- [ ] **Guard** — a new/changed guard kind or its behavior (`packages/core/src`, `GUARDS.md`)
-- [ ] **Runtime** — the loop / turn machine / assembled prompt renderer (`packages/core/src`, `packages/mastra/src`)
-- [ ] **Skill** — the `agentspec` generator (`skills/agentspec`)
-- [ ] **Docs / tooling only** — docs, examples, tests, governance tooling, CI (no guard behavior change)
+- [ ] **A law of the turn machine** — the engine (`packages/core/src/run`, `packages/core/src/cards`)
+- [ ] **A door** — the facade, the wire, a world seam (`packages/mastra`, `packages/server`)
+- [ ] **The authoring surface** — a card field, a guard factory, a disclosure tense
+- [ ] **The measuring instrument** — `packages/eval`
+- [ ] **Docs or tooling only** — no behaviour changes
 
-## Governance checklist
+## The evidence
 
-<!-- Required for Guard / Runtime / Skill changes. Docs-tooling-only PRs check the last box and skip the rest. -->
+- [ ] The proof, lint or gate that states the changed law changed in this same commit
+- [ ] `pnpm build && pnpm typecheck && pnpm test` green from a clean install
+- [ ] If the authoring surface changed: the tutorial lesson and its compiling snippet changed too
+- [ ] A changeset describes the change (`pnpm changeset`)
 
-- [ ] Proof cases added — **positive + negative + neutral** for each affected guard (or **N/A**, explain)
-- [ ] `pnpm test:proofs` is green
-- [ ] The coverage ratchet was **not lowered** (`proof completeness · <kind>` still complete)
-- [ ] Proof record committed via `pnpm proofs:record` (`governance/proofs/*.md`, `verdict: PASS`)
-- [ ] `governance/MATRIX.md` regenerated (`pnpm proofs:matrix`) and committed
-- [ ] If a guard kind changed: its `GUARD_CATALOG` entry in `packages/core/src/guards/catalog.ts` added/updated and `pnpm docs:guards` re-run (the parity test enforces the entry; the drift gate enforces the regeneration)
-- [ ] Drift lint clean (`node tests/no-bench-drift.test.mjs`)
-- [ ] Docs-tooling-only change — no proof record needed
+## Anything a reviewer should look at first
 
-## Paste the generated matrix row
-
-<!-- Copy the row for this record from governance/MATRIX.md (or write N/A for docs-tooling-only). -->
-
-```
-| Date | Record | Change | Scope | Isolated | Collective | Coverage | SLM canary | Verdict |
-```
+<!-- The file to read first, the case that used to fail, the number that moved. -->
