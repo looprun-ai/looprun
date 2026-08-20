@@ -88,7 +88,7 @@ test('lesson 4 — the census carries the authored guards, the engine floor, and
   const census = agent.guards();
   const names = census.guards.map(g => g.name);
 
-  // authored on the contract card
+  // authored on the concierge spec, where the system prefix carries its sentence
   expect(names).toContain('no-promises');
   // installed by the engine itself — an author never declares these
   expect(names).toContain('questionAnswered');

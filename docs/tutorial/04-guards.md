@@ -15,6 +15,20 @@ export interface Guard {
 }
 ```
 
+## Where a rule is read
+
+| the rule is on | it renders as | how often |
+|---|---|---|
+| an `AgentSpec` | a `RULE:` line in that desk's system prefix | once, every turn, before the desk decides anything |
+| a `DomainContract`, with `tool` | a sentence appended to the card of EACH tool it names | once per named tool |
+| a `DomainContract`, with no `tool` | nothing | it is enforced and read by nobody |
+| any guard with `judgeQuery` | nothing | its rule reaches no prompt at all |
+
+This is the first thing to know about a guard, before any factory. A rule on the spec is read
+every turn. A rule on the contract is read only inside the cards of the tools it names. A rule on
+the contract that names no tool is enforced and read by nobody — which is a working guard and a
+silent one.
+
 ## Three strengths of the same thing
 
 ```
@@ -30,20 +44,22 @@ A prose-only guard is a real guard. It appears in the census, it rides the promp
 the honest shape for a rule no function can evaluate:
 
 ```typescript
-const prose = (name: string, rule: string, tool?: readonly string[]): Guard =>
-  tool === undefined ? { name, rule, on: 'reply' } : { name, rule, on: 'reply', tool };
+const prose = (name: string, rule: string): Guard => ({ name, rule, on: 'reply' });
 
-/** Laws this hotel states and no call can break, because no tool performs the act. */
-const RESIDUE = {
-  'no-promises': 'No tool on this surface promises anything, so no call can break this rule.'
-} as const;
-
-prose('no-promises', 'Never promise an upgrade or a discount; the front desk decides those.')
+export const concierge: AgentSpec = {
+  name: 'concierge',
+  persona: 'A friendly hotel concierge who manages room bookings.',
+  guards: [
+    prose('no-promises',
+      'Never promise an upgrade or a discount; the front desk decides those.')
+  ]
+};
 ```
 
 `no-promises` reaches no act: no tool on this surface promises anything, so the rule shapes
-words only. It declares no `tool`, and its name and reason sit in `RESIDUE` — which is how an
-author says "nothing enforces this, I know it, and here is why".
+words only. That is why it sits on the **spec** — the system prefix carries it into every turn
+this desk takes. On the contract, naming no tool, the same sentence would reach no prompt at
+all: a guard the census prints and no model ever reads.
 
 ## The two homes
 
@@ -89,7 +105,9 @@ the rest.
 | only shapes the WORDS of the report | `prose` | a tone rule: a refusal states the one condition standing, not a list of everything that could have stood |
 
 **The last row is the last row.** A rule reaches it only after the sixteen above have been
-tried, and the act it reaches is named in `Guard.tool`, which the static gate reads.
+tried. A prose rule on the contract names the act it reaches in `Guard.tool`, which the static
+gate reads; on the spec it names none, because the system prefix carries it whatever the turn
+touches.
 
 ## The catalog
 

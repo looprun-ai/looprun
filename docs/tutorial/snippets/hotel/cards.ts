@@ -4,21 +4,20 @@ import type { AgentSpec, DomainContract, Guard } from 'looprun';
 import { onlyAfter, precondition, valueFromUser, maskPattern, swapTerms } from 'looprun';
 
 /** A prose-only guard: no check can decide it, so it rides the prompt as the sentence it is
- *  and `agent.guards()` prints it beside every other guard. `tool` names the acts this law
- *  reaches — each of them carries the check that refuses. A law no call can break is residue. */
-const prose = (name: string, rule: string, tool?: readonly string[]): Guard =>
-  tool === undefined ? { name, rule, on: 'reply' } : { name, rule, on: 'reply', tool };
-
-/** Laws this hotel states and no call can break, because no tool performs the act. */
-const RESIDUE = {
-  'no-promises': 'No tool on this surface promises anything, so no call can break this rule.'
-} as const;
+ *  and `agent.guards()` prints it beside every other guard. It names no tool, so it belongs on
+ *  a spec, where the system prefix carries it into every turn that desk takes. */
+const prose = (name: string, rule: string): Guard => ({ name, rule, on: 'reply' });
 
 /** Lesson 2 — the whole first agent. Name and persona are the only required fields;
- *  omitting `tools` gives this desk the whole surface. */
+ *  omitting `tools` gives this desk the whole surface. The conduct rule sits here, on the
+ *  spec, because the system prefix is what this desk reads before it decides anything. */
 export const concierge: AgentSpec = {
   name: 'concierge',
-  persona: 'A friendly hotel concierge who manages room bookings.'
+  persona: 'A friendly hotel concierge who manages room bookings.',
+  guards: [
+    prose('no-promises',
+      'Never promise an upgrade or a discount; the front desk decides those.')
+  ]
 };
 
 /** Lesson 5 — the same desk with a lane of its own, a teammate, and its own ceilings. */
@@ -51,9 +50,7 @@ export const hotelContract: DomainContract = {
       rule: 'Read the booking\'s invoice before cancelling, so the guest hears what stays owed.' },
     precondition('moveBooking',
       ({ record }) => record !== null && record.status === 'CONFIRMED',
-      'Move a booking only while it is still confirmed.'),
-    prose('no-promises',
-      'Never promise an upgrade or a discount; the front desk decides those.')
+      'Move a booking only while it is still confirmed.')
   ],
   disclosure: {
     cancelBooking: {
