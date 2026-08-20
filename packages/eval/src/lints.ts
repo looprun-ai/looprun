@@ -426,3 +426,22 @@ export function profile(subjectDir: string, acting: Iterable<string>): CardProfi
   return { bytes, checks: total, acting: actingTools.length,
            actingChecked: actingTools.length - unchecked.length, unchecked, prose };
 }
+
+/** Every act that carries BOTH a check and a separate prose sentence. Each row is a question
+ *  only the author can answer: are these two the same law? When they are, the check's own rule
+ *  is where it belongs and the prose is a copy. When they are not, both stay. */
+export function doubleStated(subjectDir: string): readonly string[] {
+  const sources = subjectSources(subjectDir);
+  const checks = checksByTool(sources, factoryNames(sources));
+  const lists = namedToolLists(sources);
+  const rows: string[] = [];
+  for (const f of sources)
+    for (const rule of proseRules(parse(f), lists)) {
+      if (homeOf(rule.node) === 'spec') continue;
+      for (const tool of rule.tools ?? []) {
+        const on = checks.get(tool);
+        if (on !== undefined) rows.push(`${tool}: ${on.join(' · ')}  +  prose '${rule.name}'`);
+      }
+    }
+  return [...new Set(rows)].sort();
+}

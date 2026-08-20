@@ -51,7 +51,7 @@ test('census: an installed guard with no dump that fires it is a finding', () =>
   expect(findings.map(f => f.sentence).join(' ')).not.toContain('confirmFirst');
 });
 
-import { pairing, pairingTable, profile } from '../src/lints.js';
+import { doubleStated, pairing, pairingTable, profile } from '../src/lints.js';
 
 /** A subject small enough to read: three tools in their effect blocks, a desk carrying the law
  *  that names no act, a contract carrying the law about one act, one factory and one ceiling. */
@@ -284,4 +284,30 @@ export const contract = { name: 'atlas', guards: [ onlyAfter('issueRefund', 'get
   expect(p.actingChecked).toBe(1);
   expect(p.unchecked).toEqual(['voidStatement']);
   expect(p.checks).toBeGreaterThan(0);
+});
+
+test('doubleStated: an act carrying both a check and a separate prose sentence is a question', () => {
+  const dir = subjectDirWith(`
+export const w = { records: {},
+  reads: { getStatement: { form: 'get', entity: 'accounts', label: 'Look up a statement' } },
+  writes: { issueRefund: { form: 'set', entity: 'accounts', label: 'Refund an account' } } };
+const prose = (name, rule, tool) =>
+  tool === undefined ? { name, rule, on: 'reply' } : { name, rule, on: 'reply', tool };
+export const contract = { name: 'atlas', guards: [
+  onlyAfter('issueRefund', 'getStatement'),
+  prose('refundCapFromTheRecord', 'A refund is capped by the statement.', ['issueRefund'])
+] };`);
+  expect(doubleStated(dir)).toEqual(["issueRefund: onlyAfter  +  prose 'refundCapFromTheRecord'"]);
+});
+
+test('doubleStated: a spread factory is one guard, so it asks nothing', () => {
+  const dir = subjectDirWith(`
+export const w = { records: {},
+  reads: { getStatement: { form: 'get', entity: 'accounts', label: 'Look up a statement' } },
+  writes: { issueRefund: { form: 'set', entity: 'accounts', label: 'Refund an account' } } };
+export const contract = { name: 'atlas', guards: [
+  { ...onlyAfter('issueRefund', 'getStatement'), name: 'refundCap',
+    rule: 'A refund is capped by the statement: paid minus already refunded.' }
+] };`);
+  expect(doubleStated(dir)).toEqual([]);
 });
