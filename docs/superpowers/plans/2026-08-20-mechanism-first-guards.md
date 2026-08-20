@@ -565,7 +565,7 @@ git commit -m "feat(skill): the static gate reads the prose pairing"
 
 - [ ] **Step 1: Replace the choosing table with the ladder**
 
-Replace the whole of the current `## 4 · Choosing, in one table` and the current `## 1 · The factories` with a single `## 1 · The ladder`. It opens with the question and then carries every row of the table in §3.1 of `docs/superpowers/specs/2026-08-20-mechanism-first-guards-design.md` — sixteen rows, one per mechanism, each with its worked example. Copy the examples verbatim from the spec; they are already written in ten different businesses and already carry their figures.
+Replace the whole of the current `## 4 · Choosing, in one table` and the current `## 1 · The factories` with a single `## 1 · The ladder`. It opens with the question and then carries every row of the table in §3.1 of `docs/superpowers/specs/2026-08-20-mechanism-first-guards-design.md` — seventeen rows: sixteen mechanisms, and prose last, each with its worked example. Copy the examples verbatim from the spec; they are already written in ten different businesses and already carry their figures.
 
 The section ends with the sentence that makes the last row the last row:
 
