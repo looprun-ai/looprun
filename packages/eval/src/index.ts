@@ -9,7 +9,8 @@ export { SubjectLoader } from './subject-loader.js';
 export type { Subject } from './subject-loader.js';
 export { Validator } from './validator.js';
 export type { ValidationFinding, ValidationReport } from './validator.js';
-export { census, nameGate, pairing, pairingTable, purity, surfaceOf } from './lints.js';
+export { census, nameGate, pairing, pairingTable, profile, purity, surfaceOf } from './lints.js';
+export type { CardProfile } from './lints.js';
 export type { LintFinding } from './lints.js';
 
 export { ExamRunner } from './exam-runner.js';

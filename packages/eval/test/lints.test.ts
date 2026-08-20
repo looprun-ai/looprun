@@ -51,7 +51,7 @@ test('census: an installed guard with no dump that fires it is a finding', () =>
   expect(findings.map(f => f.sentence).join(' ')).not.toContain('confirmFirst');
 });
 
-import { pairing, pairingTable } from '../src/lints.js';
+import { pairing, pairingTable, profile } from '../src/lints.js';
 
 /** A subject small enough to read: three tools in their effect blocks, a desk carrying the law
  *  that names no act, a contract carrying the law about one act, one factory and one ceiling. */
@@ -191,7 +191,9 @@ const prose = (name, rule, tool) =>
 export const billing: AgentSpec = { name: 'billing', persona: 'You are the billing desk.',
   guards: [ prose('declareHonestly', 'Say what ran, what did not, and why.') ] };
 export const contract: DomainContract = { name: 'atlas', guards: [
-  prose('refundCapFromTheRecord', 'A refund is capped by the statement.', ['issueRefund'])
+  { ...onlyAfter('issueRefund', 'getInvoice'),
+    name: 'refundCapFromTheRecord',
+    rule: 'A refund is capped by the statement: paid minus already refunded.' }
 ] };`;
 
 test('pairing: a rule on a spec renders in the system prefix, so it needs no tool', () => {
@@ -199,8 +201,7 @@ test('pairing: a rule on a spec renders in the system prefix, so it needs no too
 });
 
 test('pairing: a contract rule naming no tool renders nowhere', () => {
-  const dir = subjectDirWith(CARDS.replace(
-    `prose('refundCapFromTheRecord', 'A refund is capped by the statement.', ['issueRefund'])`,
+  const dir = subjectDirWith(CARDS.replace(/\{ \.\.\.onlyAfter[\s\S]*?refunded\.' \}/,
     `prose('refundCapFromTheRecord', 'A refund is capped by the statement.')`));
   const found = pairing(dir);
   expect(found.map(f => f.code)).toContain('RULE_NEVER_RENDERED');
@@ -208,7 +209,8 @@ test('pairing: a contract rule naming no tool renders nowhere', () => {
 });
 
 test('pairing: a contract rule naming a tool off the surface is a finding', () => {
-  const dir = subjectDirWith(CARDS.replace(`['issueRefund'])`, `['waiveFee'])`));
+  const dir = subjectDirWith(CARDS.replace(/\{ \.\.\.onlyAfter[\s\S]*?refunded\.' \}/,
+    `prose('refundCapFromTheRecord', 'A refund is capped.', ['waiveFee'])`));
   expect(pairing(dir).map(f => f.code)).toContain('PROSE_TOOL_UNKNOWN');
 });
 
@@ -234,10 +236,52 @@ export const w = { records: {},
 const prose = (name, rule, tool) =>
   tool === undefined ? { name, rule, on: 'reply' } : { name, rule, on: 'reply', tool };
 export const contract = { name: 'atlas', guards: [
-  prose('refundCapFromTheRecord', 'A refund is capped by the statement.', ['issueRefund'])
+  { ...onlyAfter('issueRefund', 'getStatement'),
+    name: 'refundCapFromTheRecord',
+    rule: 'A refund is capped by the statement: paid minus already refunded.' }
 ] };
 export const billing = { name: 'billing', persona: 'You are the billing desk.', guards: [
   prose('declareHonestly', 'Say what ran and what did not.')
 ] };`);
   expect(pairing(specLast)).toEqual([]);
+});
+
+test('pairing: a law about an act that nothing refuses is a finding', () => {
+  const dir = subjectDirWith(`
+export const w = { records: {},
+  reads: { getStatement: { form: 'get', entity: 'accounts', label: 'Look up a statement' } },
+  writes: { issueRefund: { form: 'set', entity: 'accounts', label: 'Refund an account' } } };
+const prose = (name, rule, tool) =>
+  tool === undefined ? { name, rule, on: 'reply' } : { name, rule, on: 'reply', tool };
+export const contract = { name: 'atlas', guards: [
+  prose('refundCapFromTheRecord', 'A refund is capped by the statement.', ['issueRefund'])
+] };`);
+  expect(pairing(dir).map(f => f.code)).toContain('ACT_WITHOUT_CHECK');
+});
+
+test('pairing: the same law spread onto the factory that enforces it is clean', () => {
+  const dir = subjectDirWith(`
+export const w = { records: {},
+  reads: { getStatement: { form: 'get', entity: 'accounts', label: 'Look up a statement' } },
+  writes: { issueRefund: { form: 'set', entity: 'accounts', label: 'Refund an account' } } };
+export const contract = { name: 'atlas', guards: [
+  { ...onlyAfter('issueRefund', 'getStatement'),
+    name: 'refundCapFromTheRecord',
+    rule: 'A refund is capped by the statement: paid minus already refunded.' }
+] };`);
+  expect(pairing(dir)).toEqual([]);
+});
+
+test('profile: an acting tool with no check is named', () => {
+  const dir = subjectDirWith(`
+export const w = { records: {},
+  reads: { getStatement: { form: 'get', entity: 'accounts', label: 'Look up a statement' } },
+  writes: { issueRefund: { form: 'set', entity: 'accounts', label: 'Refund an account' },
+            voidStatement: { form: 'remove', entity: 'accounts', label: 'void a statement' } } };
+export const contract = { name: 'atlas', guards: [ onlyAfter('issueRefund', 'getStatement') ] };`);
+  const p = profile(dir, ['issueRefund', 'voidStatement']);
+  expect(p.acting).toBe(2);
+  expect(p.actingChecked).toBe(1);
+  expect(p.unchecked).toEqual(['voidStatement']);
+  expect(p.checks).toBeGreaterThan(0);
 });

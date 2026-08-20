@@ -323,6 +323,7 @@ export function pairing(subjectDir: string, declared?: Iterable<string>): readon
   // unknowable here and an act a rule names stands.
   const membershipKnown = surface.size > 0;
   const lists = namedToolLists(sources);
+  const checks = checksByTool(sources, factoryNames(sources));
   const findings: LintFinding[] = [];
 
   for (const f of sources) {
@@ -336,9 +337,15 @@ export function pairing(subjectDir: string, declared?: Iterable<string>): readon
           sentence: `${at} — '${rule.name}' is on the contract and names no tool, so it renders in no prompt; put it on the specs that owe it` });
         continue;
       }
-      for (const tool of rule.tools)
-        if (membershipKnown && !surface.has(tool)) findings.push({ code: 'PROSE_TOOL_UNKNOWN',
-          sentence: `${at} — '${rule.name}' names '${tool}', which is on no effect block` });
+      for (const tool of rule.tools) {
+        if (membershipKnown && !surface.has(tool)) {
+          findings.push({ code: 'PROSE_TOOL_UNKNOWN',
+            sentence: `${at} — '${rule.name}' names '${tool}', which is on no effect block` });
+        } else if (!checks.has(tool)) {
+          findings.push({ code: 'ACT_WITHOUT_CHECK',
+            sentence: `${at} — '${rule.name}' states a law about '${tool}' and nothing refuses that call. Spread the factory that enforces it and sharpen its rule, or say why no check can` });
+        }
+      }
     }
     const visit = (node: ts.Node): void => {
       if (ts.isObjectLiteralExpression(node)) {
@@ -397,4 +404,25 @@ export function census(guards: GuardCensus,
   }
   return guards.guards.filter(g => !fired.has(g.name)).map(g => ({ code: 'GUARD_NEVER_FIRED',
     sentence: `Guard '${g.name}' is installed but no dump shows it firing.` }));
+}
+
+export interface CardProfile { readonly bytes: number; readonly checks: number;
+                               readonly acting: number; readonly actingChecked: number;
+                               readonly unchecked: readonly string[];
+                               readonly prose: number }
+
+/** What a subject's cards cost and what they enforce, counted against its own surface. Acting
+ *  tools are the ones a caller names as changing a record; every one of them owes a check. */
+export function profile(subjectDir: string, acting: Iterable<string>): CardProfile {
+  const sources = subjectSources(subjectDir);
+  const checks = checksByTool(sources, factoryNames(sources));
+  const cards = sources.filter(f => f.rel.endsWith('cards.ts'));
+  const bytes = cards.reduce((n, f) => n + f.text.length, 0);
+  const prose = cards.reduce((n, f) => n + (f.text.match(/\bprose\(/g) ?? []).length, 0);
+  const actingTools = [...acting];
+  const unchecked = actingTools.filter(tool => !checks.has(tool));
+  let total = 0;
+  for (const names of checks.values()) total += names.length;
+  return { bytes, checks: total, acting: actingTools.length,
+           actingChecked: actingTools.length - unchecked.length, unchecked, prose };
 }
