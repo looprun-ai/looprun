@@ -49,6 +49,9 @@ export const concierge: AgentSpec = {
 `persona` is who this desk is, and it is the first line of the prompt. `tools` is omitted, so
 this desk gets the whole surface — the single-agent default.
 
+Those two fields are all a desk needs to run. The file this quotes carries one more field on
+`concierge` — a `guards` array, which [lesson 4](04-guards.md) is about.
+
 ## Step 2 — a `destructive` tool is the whole consent setup
 
 `cancelBooking` sits under `destructive`. That one fact installs the entire protocol:
