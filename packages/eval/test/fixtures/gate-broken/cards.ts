@@ -1,11 +1,12 @@
 /** A subject written wrong on purpose: one defect for every verb the gate composes, so the gate's
  *  list over this directory has one row per verb and a verb the gate drops takes its row with it.
- *  The gate PARSES these files and never imports them, so the helpers here only have to carry the
- *  shapes a reader of the source meets on a real card.
+ *  The gate PARSES the guards and the disclosure out of this source and DERIVES the acts from the
+ *  world card, so the helpers here only have to carry the shapes a reader meets on a real card.
  *
  *  The one defect this directory cannot carry is a retired identifier: the tree-wide name gate
  *  walks every file under packages/, fixtures included, so a retired name checked in here would
  *  fail the tree. That verb is proved on a directory written at run time. */
+import { world } from '@looprun-ai/core';
 
 interface Held { readonly record: { readonly status: string } | null }
 
@@ -26,14 +27,15 @@ const precondition = (tool: string, holds: (held: Held) => boolean): Check => ({
 /** purity: a subject carries no regex — patterns live in the engine catalog. */
 export const orderIdShape = /^ord_[0-9]+$/;
 
-export const ordersWorld = {
+/** 'openOrder' creates a record, so it names no target argument and acts on no existing row. */
+export const ordersWorld = world({
   records: { orders: { ord_7: { status: 'OPEN', total: 120 } } },
   reads: { getOrder: { form: 'get', entity: 'orders', label: 'Look up an order' } },
   writes: { refundOrder: { form: 'set', entity: 'orders', label: 'Refund an order' },
-            closeOrder: { form: 'set', entity: 'orders', label: 'Close an order' } },
+            openOrder: { form: 'make', entity: 'orders', label: 'Open an order' } },
   destructive: { deleteOrder: { form: 'remove', entity: 'orders', label: 'Delete an order' } },
   presets: { quiet: [{ entity: 'orders', id: 'ord_7', set: { status: 'CLOSED' } }] }
-};
+});
 
 /** conductComplete: one desk teaches a law the other never reads.
  *  unlicensed: neither rule claims a reason, and no WHY map names one. */
@@ -56,10 +58,10 @@ export const ordersContract = {
     // pairing: a contract rule about an act nothing refuses.
     prose('refundFromTheRecord', 'A refund lands on the order the read returned.', ['refundOrder']),
     // overWide: two acts, one sentence, and no WIDE map naming why.
-    prose('sameCareEitherWay', 'State what changed before you close.', ['refundOrder', 'closeOrder']),
-    // inertChecks: the surface declares 'closeOrder' with no target argument, so `record` is null
-    // on every call and this test always passes.
-    precondition('closeOrder', ({ record }) => record !== null)
+    prose('sameCareEitherWay', 'State what changed before you answer.', ['refundOrder', 'openOrder']),
+    // inertChecks: 'openOrder' creates the record, so `record` is null on every call and this
+    // test always passes.
+    precondition('openOrder', ({ record }) => record !== null)
   ],
   disclosure: {
     // destructiveDisclosed: a destructive act with no 'before' asks with only its own label.

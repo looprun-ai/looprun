@@ -10,6 +10,9 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { ExamCase } from '@looprun-ai/core';
 import { runGate, type GateSubject } from '../src/gate.js';
+import { ordersWorld as BROKEN_WORLD } from './fixtures/gate-broken/cards.js';
+import { ordersContract, ordersDesk, ordersWorld as SOUND_WORLD,
+         returnsDesk } from './fixtures/gate-sound/cards.js';
 
 const FIXTURE_DIR = fileURLToPath(new URL('./fixtures/gate-broken', import.meta.url));
 const SOUND_DIR = fileURLToPath(new URL('./fixtures/gate-sound', import.meta.url));
@@ -23,24 +26,26 @@ const BROKEN_CASES: readonly ExamCase[] = [
 ];
 
 const FIXTURE_SUBJECT: GateSubject = {
-  facts: { tools: {
-    getOrder: { effect: 'read', target: 'orderId', entity: 'orders' },
-    refundOrder: { effect: 'write', target: 'orderId', entity: 'orders' },
-    closeOrder: { effect: 'write', target: null, entity: 'orders' },
-    deleteOrder: { effect: 'destructive', target: 'orderId', entity: 'orders' }
-  } },
+  world: BROKEN_WORLD,
   cases: BROKEN_CASES,
   censusNames: new Set(['confirmFirst:deleteOrder']),
   presetLeavesGuardInert: (preset, guardName) =>
     preset === 'quiet' && guardName === 'confirmFirst:deleteOrder'
 };
 
+/** The census the sound subject is spelled against is the fixture's OWN guard names, read off the
+ *  same literals the verbs parse — a second list written by hand would agree with the cases
+ *  whatever either one said. */
+const SOUND_CENSUS = new Set([...ordersDesk.guards, ...returnsDesk.guards, ...ordersContract.guards]
+  .map(guard => guard.name));
+
 const SOUND_SUBJECT: GateSubject = {
-  facts: { tools: { getOrder: { effect: 'read', target: 'orderId', entity: 'orders' } } },
-  cases: [{ id: 'sound-01', split: 'fix', turns: ['is ord_7 open?'],
-            covers: ['precondition:getOrder'],
-            rubric: 'The reply states the order status from the read, nothing invented.' }],
-  censusNames: new Set(['precondition:getOrder']),
+  world: SOUND_WORLD,
+  cases: [{ id: 'sound-01', split: 'fix', turns: ['close ord_7'],
+            covers: ['precondition:closeOrder'],
+            rubric: 'The close runs only on an order the read returned as open.' }],
+  censusNames: SOUND_CENSUS,
+  // This world declares no preset, so nothing silences the check the case covers.
   presetLeavesGuardInert: () => false
 };
 
@@ -67,12 +72,18 @@ describe('runGate', () => {
   });
 
   test('a sound subject returns an empty list', () => {
+    // The sound fixture declares what the broken one gets wrong — a licensed rule over a checked
+    // act, a live precondition, a disclosed destructive act, a rooted cap — so the empty list is
+    // every verb clearing a populated walk, not every verb finding nothing to walk.
+    expect(SOUND_CENSUS.has('precondition:closeOrder')).toBe(true);
     expect(runGate(SOUND_DIR, SOUND_SUBJECT)).toEqual([]);
   });
 
   test('the retired-name verb is in the gate', () => {
     const dir = mkdtempSync(join(tmpdir(), 'gate-retired-'));
     writeFileSync(join(dir, 'cards.ts'), 'export const toolDefs = [];\n');
-    expect(runGate(dir, {}).map(f => f.code)).toContain('SUBJECT_RETIRED_NAME');
+    const bare: GateSubject = { world: {}, cases: [], censusNames: null,
+                                presetLeavesGuardInert: null };
+    expect(runGate(dir, bare).map(f => f.code)).toContain('SUBJECT_RETIRED_NAME');
   });
 });
