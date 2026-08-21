@@ -652,6 +652,43 @@ describe('approvable', () => {
   });
 });
 
+import { world } from '@looprun-ai/core';
+import { presetsDeclared } from '../src/lints.js';
+
+/** The hotel's own case: a scenario where the Friday guest has already checked in, and a card
+ *  that carries the booking it names. `presets` is what decides the verb; the rest is the
+ *  smallest card a world builds from. */
+const hotelCard = (presets?: Readonly<Record<string, readonly unknown[]>>) => world({
+  records: { bookings: { bk_1: { room: 'Blue Room', day: 'Friday', status: 'CONFIRMED' } } },
+  reads: { getBooking: { form: 'get', entity: 'bookings', label: 'Look up one booking' } },
+  destructive: { cancelBooking: { form: 'remove', entity: 'bookings', label: 'cancel a booking' } },
+  ...(presets === undefined ? {} : { presets })
+} as never);
+
+const CHECKED_IN_CASE = [{ id: 'checked-in-booking-refuses', preset: 'everyoneCheckedIn',
+                           turns: ['Cancel bk_1 — the guest never showed up.'] }] as never;
+
+describe('presetsDeclared', () => {
+  test('a case naming a preset the card does not declare is a finding', () => {
+    const found = presetsDeclared(CHECKED_IN_CASE, hotelCard());
+    expect(found.map(f => f.code)).toEqual(['CASE_PRESET_UNKNOWN']);
+    expect(found[0].sentence).toBe(
+      "case 'checked-in-booking-refuses' names preset 'everyoneCheckedIn', and the world card "
+      + 'declares no such preset — the case constructs nothing and every rubric row goes unanswered.');
+  });
+
+  test('the same case over a card that carries the preset asks nothing', () => {
+    expect(presetsDeclared(CHECKED_IN_CASE, hotelCard({
+      everyoneCheckedIn: [{ entity: 'bookings', id: 'bk_1', set: { status: 'CHECKED_IN' } }]
+    }))).toEqual([]);
+  });
+
+  test('a case naming no preset is walked past', () => {
+    expect(presetsDeclared([{ id: 'cancel-asks-first', turns: ['Please cancel booking bk_1.'] }] as never,
+                           hotelCard())).toEqual([]);
+  });
+});
+
 import { promptLines } from '../src/lints.js';
 
 describe('promptLines', () => {

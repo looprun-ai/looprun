@@ -3,8 +3,8 @@ import type { AgentSpec, DeclaredWorld, DomainContract, ExamCase, LiveWorldCard,
               McpWorldCard } from '@looprun-ai/core';
 import { AgentFactory, factsFromWorld, Rulebook } from '@looprun-ai/core';
 import { approvable, capPaths, conductComplete, coversResolve, destructiveDisclosed,
-         floorRedeclared, inertChecks, nameGate, overWide, pairing, purity, unlicensed,
-         type LintFinding } from './lints.js';
+         floorRedeclared, inertChecks, nameGate, overWide, pairing, presetsDeclared, purity,
+         unlicensed, type LintFinding } from './lints.js';
 
 /** What the gate needs beyond the directory. Every field is REQUIRED, and the two a subject
  *  directory cannot answer on its own take an explicit `null` to opt out: a caller with no census
@@ -73,6 +73,9 @@ export function runGate(subjectDir: string, subject: GateSubject): readonly Lint
     ...capPaths(subjectDir),
     ...inertChecks(subjectDir, facts.tools),
     ...destructiveDisclosed(subjectDir, facts),
+    // The scenario a case names is read off the card the gate already holds, so this verb needs
+    // nothing a subject directory cannot answer and takes no opt-out.
+    ...presetsDeclared(cases, subject.world),
     ...(censusNames === null ? [] : coversResolve(cases, censusNames)),
     ...(presetLeavesGuardInert === null ? [] : approvable(cases, { presetLeavesGuardInert }))
   ];

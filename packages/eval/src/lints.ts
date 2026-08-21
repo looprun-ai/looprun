@@ -6,8 +6,8 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import ts from 'typescript';
-import type { CompiledAgent, ExamCase, GuardCensus, PromptParts, SurfaceFacts,
-              TurnRecord, WorldCard } from '@looprun-ai/core';
+import type { CompiledAgent, DeclaredWorld, ExamCase, GuardCensus, LiveWorldCard, McpWorldCard,
+              PromptParts, SurfaceFacts, TurnRecord, WorldCard } from '@looprun-ai/core';
 import type { Subject } from './subject-loader.js';
 import { PromptWriter, RETIRED_NAMES } from '@looprun-ai/core';
 
@@ -1182,6 +1182,25 @@ export function coversResolve(cases: readonly ExamCase[],
         sentence: `case '${c.id}' covers '${key}', which the census carries no guard named`
           + (suggestion === null ? '.' : ` — the closest census name is '${suggestion}'.`) });
     }
+  }
+  return findings;
+}
+
+/** A case's `preset` names a scenario the world card declares. A preset the card does not carry is
+ *  refused by the world builder before a single turn is taken, so the case constructs nothing and
+ *  spends a model call to learn it. This is the half of the exam's promise no other verb reaches:
+ *  `coversResolve` reads the guard names a case claims and never the scenario it claims them in,
+ *  and `approvable` cannot see the gap at all — it walks a case's `covers` keys, and a case that
+ *  declares none is walked past in silence. */
+export function presetsDeclared(cases: readonly ExamCase[],
+                                world: DeclaredWorld | McpWorldCard | LiveWorldCard): readonly LintFinding[] {
+  const declared = new Set('card' in world ? Object.keys(world.card.presets ?? {}) : []);
+  const findings: LintFinding[] = [];
+  for (const c of cases) {
+    if (c.preset === undefined || declared.has(c.preset)) continue;
+    findings.push({ code: 'CASE_PRESET_UNKNOWN',
+      sentence: `case '${c.id}' names preset '${c.preset}', and the world card declares no such `
+        + `preset — the case constructs nothing and every rubric row goes unanswered.` });
   }
   return findings;
 }

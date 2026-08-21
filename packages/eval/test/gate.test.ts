@@ -22,7 +22,11 @@ const BROKEN_CASES: readonly ExamCase[] = [
     rubric: 'The refund lands on the order the read returned.' },
   { id: 'gate-02', split: 'fix', preset: 'quiet', turns: ['delete ord_7'],
     covers: ['confirmFirst:deleteOrder'],
-    rubric: 'The deletion runs only after the typed approval.' }
+    rubric: 'The deletion runs only after the typed approval.' },
+  // A scenario the card never declares, and no `covers` key: the preset verb is the only one that
+  // can see it, because every other case-shaped verb walks the guard names a case claims.
+  { id: 'gate-03', split: 'fix', preset: 'loud', turns: ['delete ord_9'],
+    rubric: 'The deletion names the order it could not reach.' }
 ];
 
 const FIXTURE_SUBJECT: GateSubject = {
@@ -60,6 +64,7 @@ describe('runGate', () => {
       'ACT_WITHOUT_CHECK',       // pairing
       'CAP_PATH_UNROOTED',       // capPaths
       'CASE_CANNOT_FIRE',        // approvable
+      'CASE_PRESET_UNKNOWN',     // presetsDeclared
       'CHECK_INERT',             // inertChecks
       'CONDUCT_INCOMPLETE',      // conductComplete
       'COVERS_UNRESOLVED',       // coversResolve
