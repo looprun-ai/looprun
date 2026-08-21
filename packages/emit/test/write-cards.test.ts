@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
 import { describe, expect, test } from 'vitest';
 import { writeCards } from '../src/index.js';
-import type { Declaration } from '../src/index.js';
+import type { Declaration, DeclaredGuard } from '../src/index.js';
 import { decl, FACTS, soundDeclaration } from './helpers.js';
 
 const TREE_ROOT = join(dirname(fileURLToPath(import.meta.url)), '../../..');
@@ -277,6 +277,36 @@ describe('writeCards', () => {
       .toThrow('declares args.in');
     expect(() => writeCards(gate({ reads: 'record', is: 'open' }), FACTS))
       .toThrow('declares args.is and no args.field');
+  });
+
+  test('a forbidden argument is emitted as the check that refuses the call carrying it', () => {
+    const out = writeCards(decl({ guards: [{ name: 'noSilentOverride', acts: ['getInvoice'],
+      factory: 'argAbsent', args: { arg: 'invoiceId' } }] }), FACTS);
+    expect(out).toContain("{ ...argAbsent('getInvoice', 'invoiceId'),");
+    expect(out).toContain("name: 'noSilentOverride' }");
+    expect(out).toContain("import { argAbsent } from '@looprun-ai/core';");
+  });
+
+  test('a result check emits the field it reads and the helper that reads it', () => {
+    const out = writeCards(decl({ guards: [{ name: 'refundReallyLanded', acts: ['issueRefund'],
+      factory: 'checkResult', args: { field: 'settled', is: true },
+      rule: 'When the refund did not settle, say so and name what the result carries instead of reporting it paid.' }] }), FACTS);
+    expect(out).toContain("{ ...checkResult('issueRefund', ctx =>");
+    expect(out).toContain("resultField(ctx.result, 'settled') === true ? null : ''),");
+    expect(out).toContain('const resultField = (result: Json, field: string): Json | undefined =>');
+    expect(out).toContain('Json, ');
+  });
+
+  test('a result check states the field it reads and its law, and refuses without them', () => {
+    const check = (guard: Partial<DeclaredGuard>): Declaration =>
+      decl({ guards: [{ name: 'refundReallyLanded', acts: ['issueRefund'], factory: 'checkResult',
+        args: { field: 'settled', is: true }, rule: 'Say what the result carries.', ...guard }] });
+    expect(() => writeCards(check({ args: {} }), FACTS))
+      .toThrow('declare args.field and the value that field owes');
+    expect(() => writeCards(check({ args: { is: true } }), FACTS))
+      .toThrow('declares args.is and no args.field');
+    expect(() => writeCards(check({ rule: undefined }), FACTS))
+      .toThrow('declare the `rule` it states');
   });
 
   test('a role gate emits one precondition over the acting record, and the walk beside it', () => {

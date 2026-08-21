@@ -70,10 +70,18 @@ const LAWFUL_ARGS: Readonly<Record<DeclaredGuard['factory'], readonly string[]>>
   role: ['anchor', 'by', 'from', 'field', 'in'],
   valueFromUser: ['arg'],
   argFormat: ['arg', 'pattern'],
+  argAbsent: ['arg'],
   cap: ['calls', 'scope'],
+  checkResult: ['field', 'is', 'in'],
   prose: [],
   deny: []
 };
+
+/** The factories whose law is the declaration's own sentence: the check refuses with it, or it
+ *  states the correction the reply owes. A factory that mints its sentence from its own
+ *  configuration is not here — a `rule` beside it overrides that sentence and is optional. */
+const OWES_RULE: ReadonlySet<DeclaredGuard['factory']> =
+  new Set(['precondition', 'role', 'cap', 'checkResult', 'prose']);
 
 function checkArgs(guard: DeclaredGuard): void {
   const lawful = LAWFUL_ARGS[guard.factory];
@@ -247,6 +255,20 @@ function roleLines(guard: DeclaredGuard): readonly string[] {
     `${quote(ruleOf(guard))})`];
 }
 
+/** A check over the result the act came back with: the field the declaration reads off it and the
+ *  value that field owes. The call already ran, so the check never vetoes — it hands back the
+ *  violation and the `rule` states the correction the reply owes, which is the whole of what a
+ *  reader is given. */
+function checkResultLines(guard: DeclaredGuard, act: string): readonly string[] {
+  const field = testedField(guard);
+  if (field === null) {
+    throw new Error(`contract.guards '${guard.name}' declares factory 'checkResult', which reads `
+      + `one field of the result — declare args.field and the value that field owes`);
+  }
+  const test = fieldTest(guard, `resultField(ctx.result, ${quote(field)})`);
+  return [`checkResult(${quote(act)}, ctx =>`, `${test} ? null : '')`];
+}
+
 /** A ceiling on how many times one act runs. The count is that act's own completed calls, so a
  *  ceiling covers exactly one act. */
 function capLines(guard: DeclaredGuard, act: string): readonly string[] {
@@ -280,6 +302,7 @@ function factoryCall(guard: DeclaredGuard): { readonly imported: string | null;
       + `that guard by hand on the card`);
   }
   checkArgs(guard);
+  if (OWES_RULE.has(guard.factory)) ruleOf(guard);
   switch (guard.factory) {
     case 'onlyAfter':
       return { imported: 'onlyAfter',
@@ -291,6 +314,11 @@ function factoryCall(guard: DeclaredGuard): { readonly imported: string | null;
       return { imported: 'argFormat',
         lines: [`argFormat(${quote(act)}, ${quote(stringArg(guard, 'arg'))}, `
           + `${quote(stringArg(guard, 'pattern'))})`] };
+    case 'argAbsent':
+      return { imported: 'argAbsent',
+        lines: [`argAbsent(${quote(act)}, ${quote(stringArg(guard, 'arg'))})`] };
+    case 'checkResult':
+      return { imported: 'checkResult', lines: checkResultLines(guard, act) };
     case 'precondition':
       return { imported: 'precondition', lines: preconditionLines(guard) };
     case 'role':
@@ -479,14 +507,14 @@ export function writeCards(declaration: Declaration, facts: SurfaceFacts): strin
   const teaches = declaration.desks.some(desk => Object.keys(desk.conduct).length > 0)
     || declaration.contract.guards.some(guard => guard.factory === 'prose');
   const gatesOnRole = declaration.contract.guards.some(guard => guard.factory === 'role');
-  const helpers = [
-    ...(teaches ? [
+  const readsResults = declaration.contract.guards.some(guard => guard.factory === 'checkResult');
+  const helperBlocks: readonly (readonly string[])[] = [
+    ...(teaches ? [[
       '/** A rule the prompt states in plain words, on the desk that owes it: it renders into the',
       ' *  system prefix of that desk, and the desk reads it before it decides anything. */',
       'const prose = (name: string, rule: string): Guard => ({ name, rule, on: \'reply\' });'
-    ] : []),
-    ...(gatesOnRole ? [
-      ...(teaches ? [''] : []),
+    ]] : []),
+    ...(gatesOnRole ? [[
       '/** The value one field of the acting record carries. The first row of the anchor entity',
       ' *  names who is acting through a field of its own, that name keys a row of the entity the',
       ' *  actors live in, and the field asked for is read off that row. A step the records do not',
@@ -499,10 +527,21 @@ export function writeCards(declaration: Declaration, facts: SurfaceFacts): strin
       '  const value = record?.[field];',
       '  return typeof value === \'string\' ? value : \'\';',
       '};'
-    ] : [])
+    ]] : []),
+    ...(readsResults ? [[
+      '/** A result that is a block of named fields — the one shape a field can be read off. */',
+      'const isFieldBlock = (value: Json): value is { readonly [k: string]: Json } =>',
+      '  typeof value === \'object\' && value !== null && !Array.isArray(value);',
+      '',
+      '/** The value one field of a result carries. A result that is not a block of fields, and a',
+      ' *  field a result does not carry, both answer undefined — which no declared value equals. */',
+      'const resultField = (result: Json, field: string): Json | undefined =>',
+      '  isFieldBlock(result) ? result[field] : undefined;'
+    ]] : [])
   ];
+  const helpers = helperBlocks.flatMap((block, at) => at === 0 ? [...block] : ['', ...block]);
   const types = ['AgentSpec', 'DomainContract', ...(teaches ? ['Guard'] : []),
-    ...(gatesOnRole ? ['StateSnapshot'] : [])];
+    ...(readsResults ? ['Json'] : []), ...(gatesOnRole ? ['StateSnapshot'] : [])];
   const imported = declaration.contract.guards.map(guard => factoryCall(guard).imported)
     .filter((name): name is string => name !== null);
   const factories = [...new Set(imported)].sort();
