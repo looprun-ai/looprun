@@ -209,6 +209,21 @@ test('pairing: a contract rule naming no tool renders nowhere', () => {
   expect(found[0].sentence).toContain('refundCapFromTheRecord');
 });
 
+test('pairing: a prose rule spread into a literal reaches the acts that literal names', () => {
+  const dir = subjectDirWith(`
+export const w = { records: {},
+  reads: { getInvoice: { form: 'get', entity: 'invoices', label: 'Look up an invoice' } },
+  writes: { issueRefund: { form: 'set', entity: 'invoices', label: 'Refund an invoice' } } };
+const prose = (name, rule) => ({ name, rule, on: 'reply' });
+export const contract = { guards: [
+  { ...onlyAfter('issueRefund', 'getInvoice'), name: 'refundReadsTheInvoice',
+    rule: 'Read the invoice before a refund.' },
+  { ...prose('roleRefusalNamesWhoCan', 'Name the role the member record states.'),
+    tool: ['issueRefund'] }
+] };`);
+  expect(pairing(dir).map(f => f.code)).not.toContain('RULE_NEVER_RENDERED');
+});
+
 test('pairing: a contract rule naming a tool off the surface is a finding', () => {
   const dir = subjectDirWith(CARDS.replace(/\{ \.\.\.onlyAfter[\s\S]*?refunded\.' \}/,
     `prose('refundCapFromTheRecord', 'A refund is capped.', ['waiveFee'])`));
@@ -423,6 +438,32 @@ describe('overWide', () => {
     expect(overWide(dir)).toEqual([]);
   });
 
+  test('a prose rule spread into a literal over two acts is stamped twice, and pays for it', () => {
+    const dir = write(`
+      const prose = (name, rule) => ({ name, rule, on: 'reply' });
+      const CONTRACT = { guards: [
+        { ...prose('roleRefusalNamesWhoCan', 'Name the role the member record states.'),
+          tool: ['payInvoice', 'issueRefund'] }
+      ] };
+    `);
+    const found = overWide(dir);
+    expect(found.map(f => f.code)).toEqual(['RULE_WIDE_UNLICENSED']);
+    expect(found[0].sentence).toContain('roleRefusalNamesWhoCan');
+    expect(found[0].sentence).toContain('2 acts');
+  });
+
+  test('a declared licence clears the prose rule spread into a literal', () => {
+    const dir = write(`
+      export const WIDE = { roleRefusalNamesWhoCan: 'oneLawEveryAct' } as const;
+      const prose = (name, rule) => ({ name, rule, on: 'reply' });
+      const CONTRACT = { guards: [
+        { ...prose('roleRefusalNamesWhoCan', 'Name the role the member record states.'),
+          tool: ['payInvoice', 'issueRefund'] }
+      ] };
+    `);
+    expect(overWide(dir)).toEqual([]);
+  });
+
   test('a licence outside the closed set is a finding', () => {
     const dir = write(`
       export const WIDE = { moneyReadsTheInvoice: 'itIsFine' } as const;
@@ -604,9 +645,10 @@ describe('conductComplete', () => {
     return dir;
   };
 
-  test('a law on some specs and not others is a finding', () => {
+  test('a law two specs teach and a third never reads is a finding', () => {
     const dir = write(`
       export const billing = { name: 'billing', persona: 'p', guards: [prose('declareHonestly', 'x')] };
+      export const fleet   = { name: 'fleet',   persona: 'p', guards: [prose('declareHonestly', 'y')] };
       export const claims  = { name: 'claims',  persona: 'p', guards: [] };
     `);
     const found = conductComplete(dir);
@@ -619,6 +661,15 @@ describe('conductComplete', () => {
     const dir = write(`
       export const billing = { name: 'billing', persona: 'p', guards: [prose('declareHonestly', 'x')] };
       export const claims  = { name: 'claims',  persona: 'p', guards: [prose('declareHonestly', 'y')] };
+    `);
+    expect(conductComplete(dir)).toEqual([]);
+  });
+
+  test('a law one spec alone teaches is that desk\'s own', () => {
+    const dir = write(`
+      export const fleet   = { name: 'fleet',   persona: 'p',
+        guards: [prose('declareHonestly', 'x'), prose('registryFiguresAreGiven', 'z')] };
+      export const billing = { name: 'billing', persona: 'p', guards: [prose('declareHonestly', 'y')] };
     `);
     expect(conductComplete(dir)).toEqual([]);
   });

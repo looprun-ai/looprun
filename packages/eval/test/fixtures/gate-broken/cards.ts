@@ -37,11 +37,17 @@ export const ordersWorld = world({
   presets: { quiet: [{ entity: 'orders', id: 'ord_7', set: { status: 'CLOSED' } }] }
 });
 
-/** conductComplete: one desk teaches a law the other never reads.
+/** conductComplete: two desks teach a law the third never reads.
  *  unlicensed: neither rule claims a reason, and no WHY map names one. */
 export const ordersDesk = {
   name: 'ordersDesk',
   persona: 'You are the orders desk.',
+  guards: [prose('answerFromTheRecord', 'Every figure you state comes from a read on this turn.')]
+};
+
+export const refundsDesk = {
+  name: 'refundsDesk',
+  persona: 'You are the refunds desk.',
   guards: [prose('answerFromTheRecord', 'Every figure you state comes from a read on this turn.')]
 };
 

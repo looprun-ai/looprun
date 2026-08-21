@@ -246,6 +246,26 @@ const toolsOf = (arg: ts.Expression | undefined,
   return tools;
 };
 
+/** The acts a `prose(...)` call reaches. A three-argument call names them itself. A two-argument
+ *  call spread into a guard literal takes the acts THAT literal states — `{ ...prose(name, rule),
+ *  tool: ['checkOutAsset', 'cancelBooking'] }` is one rule stamped on two cards, and the sentence
+ *  the desk reads is the same either way. */
+function toolsOfProse(call: ts.CallExpression,
+                      lists: ReadonlyMap<string, readonly string[]>): readonly string[] | null {
+  const own = toolsOf(call.arguments[2], lists);
+  if (own !== null) return own;
+  const spread = call.parent;
+  if (spread === undefined || !ts.isSpreadAssignment(spread)
+    || !ts.isObjectLiteralExpression(spread.parent)) return null;
+  for (const property of spread.parent.properties) {
+    if (!ts.isPropertyAssignment(property)) continue;
+    const key = ts.isIdentifier(property.name) || ts.isStringLiteral(property.name)
+      ? property.name.text : null;
+    if (key === 'tool') return toolsOf(property.initializer, lists);
+  }
+  return null;
+}
+
 type GuardLiteral = { readonly name: string | null; readonly tools: readonly string[] | null;
                       readonly ruled: boolean; readonly decides: boolean };
 
@@ -287,7 +307,7 @@ function proseRules(sf: ts.SourceFile,
       && node.expression.text === 'prose') {
       const first = node.arguments[0];
       if (first !== undefined && ts.isStringLiteral(first))
-        rules.push({ name: first.text, tools: toolsOf(node.arguments[2], lists), node });
+        rules.push({ name: first.text, tools: toolsOfProse(node, lists), node });
     }
     if (ts.isObjectLiteralExpression(node)) {
       const literal = guardLiteral(node, lists);
@@ -313,7 +333,7 @@ function guardsWithTools(sf: ts.SourceFile,
       && node.expression.text === 'prose') {
       const first = node.arguments[0];
       if (first !== undefined && ts.isStringLiteral(first))
-        guards.push({ name: first.text, tools: toolsOf(node.arguments[2], lists) ?? [], node });
+        guards.push({ name: first.text, tools: toolsOfProse(node, lists) ?? [], node });
     }
     if (ts.isObjectLiteralExpression(node)) {
       const literal = guardLiteral(node, lists);
@@ -1116,19 +1136,22 @@ function specConduct(sources: readonly Source[]): readonly SpecLaws[] {
   return specs;
 }
 
-/** A conduct law a `prose(...)` call teaches on some specs and not others: the desks that never
- *  read it never learn it, and a caller cannot tell whether that gap was decided or forgotten. */
+/** A conduct law a `prose(...)` call teaches on MORE THAN ONE spec is the house's, and a house law
+ *  every spec owes: the desks that never read it never learn it, and a caller cannot tell whether
+ *  that gap was decided or forgotten. A law exactly one spec teaches is that desk's own — the fleet
+ *  desk's law about the figures a registry row waits for is not a law the billing desk owes. */
 export function conductComplete(subjectDir: string): readonly LintFinding[] {
   const specs = specConduct(subjectSources(subjectDir));
   const allLaws = new Set<string>();
   for (const spec of specs) for (const law of spec.laws) allLaws.add(law);
   const findings: LintFinding[] = [];
   for (const law of allLaws) {
+    const teaching = specs.filter(spec => spec.laws.has(law));
     const missing = specs.filter(spec => !spec.laws.has(law)).map(spec => spec.spec);
-    if (missing.length === 0) continue;
+    if (missing.length === 0 || teaching.length < 2) continue;
     findings.push({ code: 'CONDUCT_INCOMPLETE',
-      sentence: `'${law}' is a conduct law taught on some specs and missing from ${missing.join(', ')}; `
-        + `a desk that never reads it never learns it.` });
+      sentence: `'${law}' is a conduct law ${teaching.length} specs teach and ${missing.join(', ')} `
+        + `never read; a law more than one desk teaches is the house's, and every desk owes it.` });
   }
   return findings;
 }
