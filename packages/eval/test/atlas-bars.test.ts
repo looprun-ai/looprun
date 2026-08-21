@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { AgentFactory, factsFromWorld, PromptWriter } from '@looprun-ai/core';
 import { doubleStated, echoes, pairing, profile, promptLines, unlicensed } from '../src/lints.js';
 
-const SUBJECTS = ['atlas-next', 'atlas-render-handfixed', 'atlas-render2'] as const;
+const SUBJECTS = ['atlas-next', 'atlas-render-handfixed', 'atlas-render2', 'atlas-emit'] as const;
 const ACTING_EFFECTS = ['write', 'destructive'];
 
 describe('the Atlas bars', () => {
