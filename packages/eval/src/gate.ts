@@ -4,7 +4,8 @@ import type { AgentSpec, DeclaredWorld, DomainContract, ExamCase, LiveWorldCard,
 import { AgentFactory, factsFromWorld, Rulebook } from '@looprun-ai/core';
 import { approvable, capPaths, conductComplete, coversResolve, destructiveDisclosed,
          floorRedeclared, inertChecks, nameGate, overWide, pairing, presetsDeclared, purity,
-         unlicensed, type LintFinding } from './lints.js';
+         readsOrdered, requiredReadsDisclosed, unlicensed, unspokenChecks,
+         type LintFinding } from './lints.js';
 
 /** What the gate needs beyond the directory. Every field is REQUIRED, and the two a subject
  *  directory cannot answer on its own take an explicit `null` to opt out: a caller with no census
@@ -75,10 +76,15 @@ export function runGate(subjectDir: string, subject: GateSubject): readonly Lint
     ...conductComplete(subjectDir),
     ...capPaths(subjectDir),
     ...inertChecks(subjectDir, facts.tools),
-    ...destructiveDisclosed(subjectDir, facts),
+    ...unspokenChecks(subjectDir),
+    ...destructiveDisclosed(subjectDir, facts, cases),
     // The scenario a case names is read off the card the gate already holds, so this verb needs
     // nothing a subject directory cannot answer and takes no opt-out.
     ...presetsDeclared(cases, subject.world),
+    // What the exam already makes derivable, enforced instead of taught: a read a case requires
+    // is a read an act is ordered behind, and a read a case requires answers in figures.
+    ...readsOrdered(subjectDir, cases, facts),
+    ...requiredReadsDisclosed(subjectDir, cases, facts),
     ...(censusNames === null ? [] : coversResolve(cases, censusNames)),
     ...(presetLeavesGuardInert === null ? [] : approvable(cases, { presetLeavesGuardInert }))
   ];

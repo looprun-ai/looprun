@@ -33,7 +33,8 @@ export const ordersWorld = world({
   reads: { getOrder: { form: 'get', entity: 'orders', label: 'Look up an order' } },
   writes: { refundOrder: { form: 'set', entity: 'orders', label: 'Refund an order' },
             openOrder: { form: 'make', entity: 'orders', label: 'Open an order' } },
-  destructive: { deleteOrder: { form: 'remove', entity: 'orders', label: 'Delete an order' } },
+  destructive: { deleteOrder: { form: 'remove', entity: 'orders', label: 'Delete an order' },
+                 purgeOrder: { form: 'remove', entity: 'orders', label: 'Purge an order' } },
   presets: { quiet: [{ entity: 'orders', id: 'ord_7', set: { status: 'CLOSED' } }] }
 });
 
@@ -72,9 +73,17 @@ export const ordersContract = {
   disclosure: {
     // destructiveDisclosed: a destructive act with no 'before' asks with only its own label.
     // capPaths: the cap is rooted on the read's tool name instead of the alias needs declares.
+    // unspokenChecks: the cap refuses at a figure and no sentence on this card states the ceiling.
     deleteOrder: {
       needs: { order: { tool: 'getOrder' } },
       cap: { at: 'getOrder.total', ceiling: 500 }
+    },
+    // destructiveDisclosed: the consent question a case actually renders, written entirely out of
+    // the author's own words — no figure off the held call, none off a read.
+    purgeOrder: {
+      before: 'This cannot be undone.'
     }
+    // requiredReadsDisclosed: 'getOrder' is a read a case requires, and nothing here speaks what
+    // it returned.
   }
 };

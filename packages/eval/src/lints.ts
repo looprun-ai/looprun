@@ -6,8 +6,9 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import ts from 'typescript';
-import type { CompiledAgent, DeclaredWorld, ExamCase, GuardCensus, LiveWorldCard, McpWorldCard,
-              PromptParts, SurfaceFacts, TurnRecord, WorldCard } from '@looprun-ai/core';
+import type { ApproveRef, CompiledAgent, DeclaredWorld, ExamCase, ExamTurn, GuardCensus,
+              LiveWorldCard, McpWorldCard, PromptParts, SurfaceFacts, TurnRecord,
+              WorldCard } from '@looprun-ai/core';
 import type { Subject } from './subject-loader.js';
 import { PromptWriter, RETIRED_NAMES } from '@looprun-ai/core';
 
@@ -203,14 +204,23 @@ function checksByTool(sources: readonly Source[],
 }
 
 /** A rule the prompt states and no function decides — whichever shape it was written in.
- *  `tools` is null when the rule declares none: it reaches no act at all. */
+ *  `tools` is null when the rule declares none: it reaches no act at all. `rule` is the
+ *  sentence itself when the source spells it out as a literal. */
 type ProseRule = { readonly name: string; readonly tools: readonly string[] | null;
-                   readonly node: ts.Node };
+                   readonly rule: string | null; readonly node: ts.Node };
 
 /** `as const`, `satisfies` and a wrapping paren are punctuation around the value. */
 const unwrap = (node: ts.Expression): ts.Expression =>
   ts.isAsExpression(node) || ts.isSatisfiesExpression(node) || ts.isParenthesizedExpression(node)
     ? unwrap(node.expression) : node;
+
+/** A sentence an author wraps across lines is one string: fold the concatenation. */
+function literalText(node: ts.Expression): string | null {
+  if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) return node.text;
+  if (!ts.isBinaryExpression(node) || node.operatorToken.kind !== ts.SyntaxKind.PlusToken) return null;
+  const left = literalText(node.left), right = literalText(node.right);
+  return left === null || right === null ? null : left + right;
+}
 
 /** An author names a group of tools once and reaches for that name in the gate and in the rule
  *  it teaches. Both readings resolve the name to the same list. */
@@ -270,7 +280,8 @@ function toolsOfProse(call: ts.CallExpression,
 }
 
 type GuardLiteral = { readonly name: string | null; readonly tools: readonly string[] | null;
-                      readonly ruled: boolean; readonly decides: boolean };
+                      readonly ruled: boolean; readonly decides: boolean;
+                      readonly rule: string | null };
 
 /** An object literal read once: its name, the tools it reaches, whether it states a rule of its
  *  own, and whether a spread or a hand-written check decides it. Tools come from a direct `tool`
@@ -279,7 +290,7 @@ type GuardLiteral = { readonly name: string | null; readonly tools: readonly str
 function guardLiteral(node: ts.ObjectLiteralExpression,
                       lists: ReadonlyMap<string, readonly string[]>): GuardLiteral {
   let name: string | null = null, ruled = false, decides = false;
-  let tools: readonly string[] | null = null;
+  let tools: readonly string[] | null = null, rule: string | null = null;
   for (const property of node.properties) {
     if (ts.isSpreadAssignment(property)) {
       decides = true;
@@ -293,10 +304,10 @@ function guardLiteral(node: ts.ObjectLiteralExpression,
     if (key === 'deny' || key === 'judgeQuery') decides = true;
     if (!ts.isPropertyAssignment(property)) continue;
     if (key === 'name' && ts.isStringLiteral(property.initializer)) name = property.initializer.text;
-    if (key === 'rule') ruled = true;
+    if (key === 'rule') { ruled = true; rule = literalText(unwrap(property.initializer)); }
     if (key === 'tool') tools = toolsOf(property.initializer, lists);
   }
-  return { name, tools, ruled, decides };
+  return { name, tools, ruled, decides, rule };
 }
 
 /** Two shapes reach the same place: a `prose(name, rule, tool)` call, and an object literal
@@ -309,13 +320,15 @@ function proseRules(sf: ts.SourceFile,
     if (ts.isCallExpression(node) && ts.isIdentifier(node.expression)
       && node.expression.text === 'prose') {
       const first = node.arguments[0];
+      const second = node.arguments[1];
       if (first !== undefined && ts.isStringLiteral(first))
-        rules.push({ name: first.text, tools: toolsOfProse(node, lists), node });
+        rules.push({ name: first.text, tools: toolsOfProse(node, lists),
+                     rule: second === undefined ? null : literalText(unwrap(second)), node });
     }
     if (ts.isObjectLiteralExpression(node)) {
       const literal = guardLiteral(node, lists);
       if (literal.name !== null && literal.ruled && !literal.decides)
-        rules.push({ name: literal.name, tools: literal.tools, node });
+        rules.push({ name: literal.name, tools: literal.tools, rule: literal.rule, node });
     }
     node.forEachChild(visit);
   };
@@ -548,30 +561,183 @@ export function profile(subjectDir: string, acting: Iterable<string>): CardProfi
            actingChecked: actingTools.length - unchecked.length, unchecked, prose };
 }
 
-/** Every act that carries BOTH a check and a separate prose sentence. Each row is a question
- *  only the author can answer: are these two the same law? When they are, the check's own rule
- *  is where it belongs and the prose is a copy. When they are not, both stay. */
+/** One sentence with its layout forgotten: an author wraps a rule to fit a column, and two
+ *  copies of one law differ only in where the line broke. */
+function oneLine(text: string): string {
+  const words: string[] = [];
+  let word = '';
+  for (const character of `${text} `) {
+    if (character === ' ' || character === '\n' || character === '\t') {
+      if (word !== '') words.push(word);
+      word = '';
+    } else word += character;
+  }
+  return words.join(' ');
+}
+
+/** Two sentences carrying the same words: identical once the line breaks are forgotten, or one
+ *  quoted whole inside the other. Anything short of that is two sentences about one act, which
+ *  is what a card looks like when a check states its own law and a prose rule states the rest. */
+function sameWords(a: string, b: string): boolean {
+  const left = oneLine(a), right = oneLine(b);
+  if (left === '' || right === '') return false;
+  return left.includes(right) || right.includes(left);
+}
+
+type CheckRule = { readonly name: string; readonly rule: string; readonly tools: readonly string[] };
+
+/** Every guard that DECIDES and spells its sentence out in the source: the shape a duplicate can
+ *  be compared against. A factory's own minted sentence appears nowhere in the source, so a prose
+ *  rule can never be its verbatim copy. */
+function checkRules(sf: ts.SourceFile,
+                    lists: ReadonlyMap<string, readonly string[]>): readonly CheckRule[] {
+  const rules: CheckRule[] = [];
+  const visit = (node: ts.Node): void => {
+    if (ts.isObjectLiteralExpression(node)) {
+      const literal = guardLiteral(node, lists);
+      if (literal.name !== null && literal.decides && literal.rule !== null)
+        rules.push({ name: literal.name, rule: literal.rule, tools: literal.tools ?? [] });
+    }
+    node.forEachChild(visit);
+  };
+  visit(sf);
+  return rules;
+}
+
+/** Every act carrying a check and a prose rule that say the SAME WORDS — one law written twice,
+ *  paid for on every turn the card renders. Each row is a question only the author can answer:
+ *  which home keeps the sentence? The check's `rule` is the one the desk reads at the refusal, so
+ *  it is usually the copy that stays.
+ *
+ *  Two DIFFERENT sentences on one act are not a row: a check states the law it decides, and a
+ *  prose rule beside it states what no check can reach — the cover a silent mechanism needs. */
 export function doubleStated(subjectDir: string): readonly string[] {
   const sources = subjectSources(subjectDir);
-  const checks = checksByTool(sources, factoryNames(sources));
   const lists = namedToolLists(sources);
+  const checks: CheckRule[] = [];
+  for (const f of sources) checks.push(...checkRules(parse(f), lists));
   const rows: string[] = [];
   for (const f of sources)
     for (const rule of proseRules(parse(f), lists)) {
-      for (const tool of rule.tools ?? []) {
-        const on = checks.get(tool);
-        if (on !== undefined) rows.push(`${tool}: ${on.join(' · ')}  +  prose '${rule.name}'`);
-      }
+      if (rule.rule === null) continue;
+      for (const tool of rule.tools ?? [])
+        for (const check of checks) {
+          if (!check.tools.includes(tool) || !sameWords(check.rule, rule.rule)) continue;
+          rows.push(`${tool}: '${check.name}' and prose '${rule.name}' carry the same sentence`);
+        }
     }
   return [...new Set(rows)].sort();
 }
 
-/** A sentence an author wraps across lines is one string: fold the concatenation. */
-function literalText(node: ts.Expression): string | null {
-  if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) return node.text;
-  if (!ts.isBinaryExpression(node) || node.operatorToken.kind !== ts.SyntaxKind.PlusToken) return null;
-  const left = literalText(node.left), right = literalText(node.right);
-  return left === null || right === null ? null : left + right;
+/** The factories whose MINTED sentence already states the whole law, so a card that adds nothing
+ *  has still said it:
+ *    onlyAfter       'Run <prerequisite> before <tool>.'      — the order, both names in it
+ *    valueFromUser   "Send <tool>'s '<arg>' only as the user wrote it."
+ *    argAbsent       "Never send '<arg>' on <tool>."
+ *    argFormat       "Send '<arg>' on <tool> in its declared format." — the format is the schema's
+ *                    own declared pattern, and the schema rides the same card the sentence does
+ *    mustAccountFor  'The report must account for <records> as <status>.' — the records and the
+ *                    status word are both in it; it names no tool and reaches no act at all */
+const SELF_STATING_FACTORIES = new Set(['onlyAfter', 'valueFromUser', 'argAbsent', 'argFormat',
+  'mustAccountFor']);
+
+/** The factories that take the law as an ARGUMENT — `precondition`'s reason, `choiceFromUser`'s
+ *  rule, `maxCalls`'s reason, `blockPattern`'s rule. The words are the author's, so an act one of
+ *  these names is an act somebody has written a sentence about. */
+const AUTHORED_RULE_ARG: ReadonlyMap<string, number> = new Map([
+  ['precondition', 2], ['choiceFromUser', 3], ['maxCalls', 2], ['blockPattern', 2]]);
+
+/** What is left of the deterministic catalog once the self-stating factories and the ones handed
+ *  their law are taken out: a factory that refuses on an act and mints a sentence naming no law. */
+const SILENT_FACTORIES = new Set(DETERMINISTIC_FACTORIES.filter(name =>
+  !SELF_STATING_FACTORIES.has(name) && !AUTHORED_RULE_ARG.has(name)));
+
+/** Whether the argument at that position carries words: a sentence, or the `reason` of an options
+ *  object the factory reads its wording out of. */
+function authoredWords(call: ts.CallExpression, index: number): boolean {
+  const argument = call.arguments[index];
+  if (argument === undefined) return false;
+  const value = unwrap(argument);
+  if (literalText(value) !== null) return true;
+  if (!ts.isObjectLiteralExpression(value)) return false;
+  for (const property of value.properties) {
+    if (!ts.isPropertyAssignment(property)) continue;
+    const key = ts.isIdentifier(property.name) || ts.isStringLiteral(property.name)
+      ? property.name.text : null;
+    if (key === 'reason' && literalText(unwrap(property.initializer)) !== null) return true;
+  }
+  return false;
+}
+
+/** Every act some sentence in the source speaks about: a prose rule that names it, a guard literal
+ *  that declares its own `rule`, or a factory handed the law as an argument. A guard whose whole
+ *  sentence was minted by a factory speaks that factory's law and no other, so it is not counted
+ *  here — it cannot stand as the words behind a different mechanism on the same act. */
+function spokenActs(sources: readonly Source[],
+                    lists: ReadonlyMap<string, readonly string[]>): ReadonlySet<string> {
+  const spoken = new Set<string>();
+  for (const f of sources) {
+    const sf = parse(f);
+    for (const rule of proseRules(sf, lists)) for (const tool of rule.tools ?? []) spoken.add(tool);
+    const visit = (node: ts.Node): void => {
+      if (ts.isObjectLiteralExpression(node)) {
+        const literal = guardLiteral(node, lists);
+        if (literal.ruled) for (const tool of literal.tools ?? []) spoken.add(tool);
+      }
+      if (ts.isCallExpression(node) && ts.isIdentifier(node.expression)) {
+        const index = AUTHORED_RULE_ARG.get(node.expression.text);
+        if (index !== undefined && authoredWords(node, index))
+          for (const tool of toolsOf(node.arguments[0], lists) ?? []) spoken.add(tool);
+      }
+      node.forEachChild(visit);
+    };
+    visit(sf);
+  }
+  return spoken;
+}
+
+/** A check that refuses on an act whose law no sentence on the card states. Two mechanisms can
+ *  reach an act without saying anything: `checkResult`, whose minted sentence says only that a
+ *  declared check exists, and a disclosure `cap`, which refuses at a figure and appears in no rule
+ *  at all. Either one meets the desk as a refusal it was never taught, and the operator as a limit
+ *  nobody wrote down.
+ *
+ *  A prose rule naming the act is lawful cover, not a copy: the check decides, the sentence teaches,
+ *  and only sentences that say the SAME WORDS are a duplicate — which is what `doubleStated` reads. */
+export function unspokenChecks(subjectDir: string): readonly LintFinding[] {
+  const sources = subjectSources(subjectDir);
+  const lists = namedToolLists(sources);
+  const spoken = spokenActs(sources, lists);
+  const findings: LintFinding[] = [];
+  for (const f of sources) {
+    const sf = parse(f);
+    const visit = (node: ts.Node): void => {
+      if (ts.isCallExpression(node) && ts.isIdentifier(node.expression)
+        && SILENT_FACTORIES.has(node.expression.text)) {
+        const at = `${f.rel}:${sf.getLineAndCharacterOfPosition(node.getStart(sf)).line + 1}`;
+        const factory = node.expression.text;
+        for (const tool of toolsOf(node.arguments[0], lists) ?? []) {
+          if (spoken.has(tool)) continue;
+          findings.push({ code: 'CHECK_UNSPOKEN',
+            sentence: `${at} — the ${factory} check on '${tool}' states no law: its sentence says `
+              + `only that a declared check exists, and nothing on this card tells the desk what `
+              + `that check wants. Give the guard a rule that states it, or write the prose that `
+              + `does.` });
+        }
+      }
+      node.forEachChild(visit);
+    };
+    visit(sf);
+  }
+  for (const [tool, entry] of disclosureEntries(sources)) {
+    if (entry.capAt === null || spoken.has(tool)) continue;
+    findings.push({ code: 'CHECK_UNSPOKEN',
+      sentence: `disclosure.${tool}.cap refuses at a figure and no sentence on this card states `
+        + `that ceiling: the desk proposes the call, and the operator meets a limit nobody wrote `
+        + `down. Give the guard on '${tool}' a rule that states the ceiling, or write the prose `
+        + `that does.` });
+  }
+  return findings;
 }
 
 const LICENCES = new Set(['noSuchAct', 'aboutARead', 'conduct']);
@@ -998,12 +1164,13 @@ export function inertChecks(subjectDir: string,
   return findings;
 }
 
-type DisclosureEntry = { readonly hasBefore: boolean; readonly needs: ReadonlyMap<string, string>;
+type DisclosureEntry = { readonly before: string | null; readonly after: string | null;
+                         readonly needs: ReadonlyMap<string, string>;
                          readonly capAt: string | null };
 
-/** Every entry a subject's own `disclosure` map declares, read straight from source: whether the
- *  entry carries `before`, its `needs` aliases resolved to the tool name each one reads, and the
- *  `cap.at` path when the entry carries a cap. */
+/** Every entry a subject's own `disclosure` map declares, read straight from source: the `before`
+ *  and `after` sentences as written, its `needs` aliases resolved to the tool name each one reads,
+ *  and the `cap.at` path when the entry carries a cap. */
 function disclosureEntries(sources: readonly Source[]): ReadonlyMap<string, DisclosureEntry> {
   const readNeeds = (init: ts.Expression): ReadonlyMap<string, string> => {
     const needs = new Map<string, string>();
@@ -1034,12 +1201,14 @@ function disclosureEntries(sources: readonly Source[]): ReadonlyMap<string, Disc
           if (!ts.isPropertyAssignment(entry) || !ts.isObjectLiteralExpression(entry.initializer)) continue;
           const tool = ts.isIdentifier(entry.name) || ts.isStringLiteral(entry.name) ? entry.name.text : null;
           if (tool === null) continue;
-          let hasBefore = false, capAt: string | null = null, needs: ReadonlyMap<string, string> = new Map();
+          let before: string | null = null, after: string | null = null;
+          let capAt: string | null = null, needs: ReadonlyMap<string, string> = new Map();
           for (const property of entry.initializer.properties) {
             if (!ts.isPropertyAssignment(property)) continue;
             const key = ts.isIdentifier(property.name) || ts.isStringLiteral(property.name)
               ? property.name.text : null;
-            if (key === 'before') hasBefore = true;
+            if (key === 'before') before = literalText(unwrap(property.initializer)) ?? '';
+            if (key === 'after') after = literalText(unwrap(property.initializer)) ?? '';
             if (key === 'needs') needs = readNeeds(property.initializer);
             if (key === 'cap' && ts.isObjectLiteralExpression(property.initializer)) {
               for (const p of property.initializer.properties) {
@@ -1049,7 +1218,7 @@ function disclosureEntries(sources: readonly Source[]): ReadonlyMap<string, Disc
               }
             }
           }
-          out.set(tool, { hasBefore, needs, capAt });
+          out.set(tool, { before, after, needs, capAt });
         }
       }
       node.forEachChild(visit);
@@ -1059,20 +1228,175 @@ function disclosureEntries(sources: readonly Source[]): ReadonlyMap<string, Disc
   return out;
 }
 
+/** The acts one scripted turn licenses. A turn is the operator's text, a typed decline, or one or
+ *  several approvals — and a single approval is the shape carrying `tool` itself. */
+function approvedBy(turn: ExamTurn): readonly ApproveRef[] {
+  if (typeof turn === 'string' || !('approve' in turn)) return [];
+  return 'tool' in turn.approve ? [turn.approve] : turn.approve;
+}
+
+/** The acts an exam's turns hand a typed approval to: the case names the tool it licenses, so the
+ *  consent question for that act is a question the exam actually renders. */
+function approvedActs(cases: readonly ExamCase[]): ReadonlyMap<string, string> {
+  const byAct = new Map<string, string>();
+  for (const c of cases)
+    for (const turn of c.turns)
+      for (const ref of approvedBy(turn)) if (!byAct.has(ref.tool)) byAct.set(ref.tool, c.id);
+  return byAct;
+}
+
+/** A slot the engine fills from something other than the author's own typing: `{args.…}` over the
+ *  held call's own arguments, or `{alias.…}` over a read the entry's `needs` performs. A sentence
+ *  carrying neither states only what the author already knew when they wrote it. */
+function carriesFigure(sentence: string, needs: ReadonlyMap<string, string>): boolean {
+  if (sentence.includes('{args.')) return true;
+  for (const alias of needs.keys()) if (sentence.includes(`{${alias}.`)) return true;
+  return false;
+}
+
 /** Every tool whose fact carries `effect: 'destructive'` must have a disclosure entry that
  *  carries a `before`: the words the consent question renders. Without one the question asks
- *  with only the tool's own label — no amount, no record, nothing that cannot be undone named. */
+ *  with only the tool's own label — no amount, no record, nothing that cannot be undone named.
+ *
+ *  A `before` an exam actually renders owes one thing more. An act a case approves has its consent
+ *  question read by the operator of that case, and a question written entirely out of the author's
+ *  own words asks about nothing: the sentence has to carry a figure the engine fills — an
+ *  `{args.…}` off the held call, or an `{alias.…}` off a read `needs` performs. */
 export function destructiveDisclosed(subjectDir: string,
                                      facts: { readonly tools: Readonly<Record<string,
-                                       { readonly effect?: string }>> }): readonly LintFinding[] {
+                                       { readonly effect?: string }>> },
+                                     cases: readonly ExamCase[]): readonly LintFinding[] {
   const entries = disclosureEntries(subjectSources(subjectDir));
+  const approved = approvedActs(cases);
   const findings: LintFinding[] = [];
   for (const [tool, fact] of Object.entries(facts.tools)) {
     if (fact.effect !== 'destructive') continue;
-    if (entries.get(tool)?.hasBefore === true) continue;
-    findings.push({ code: 'DISCLOSURE_BEFORE_MISSING',
-      sentence: `Destructive act '${tool}' has no disclosure 'before', so the consent question `
-        + `carries only its label: no amount, no record, nothing that cannot be undone.` });
+    const entry = entries.get(tool) ?? { before: null, after: null, needs: new Map(), capAt: null };
+    if (entry.before === null) {
+      findings.push({ code: 'DISCLOSURE_BEFORE_MISSING',
+        sentence: `Destructive act '${tool}' has no disclosure 'before', so the consent question `
+          + `carries only its label: no amount, no record, nothing that cannot be undone.` });
+      continue;
+    }
+    const approvedBy = approved.get(tool);
+    if (approvedBy === undefined || carriesFigure(entry.before, entry.needs)) continue;
+    const aliases = [...entry.needs.keys()];
+    findings.push({ code: 'DISCLOSURE_BEFORE_UNFIGURED',
+      sentence: `case '${approvedBy}' approves '${tool}' and its disclosure 'before' carries no `
+        + `figure: every word of the question is the author's, and none of it is the record's. `
+        + `Put an {args.…} slot in it`
+        + (aliases.length === 0
+          ? `, or declare a needs read and quote what it returns.`
+          : `, or a slot over one of this entry's needs aliases (${aliases.join(', ')}).`) });
+  }
+  return findings;
+}
+
+/** Every read a case's `requiredToolCalls` names, with the first case that requires it. The exam
+ *  says these reads have to happen; what the card does about that is what the two verbs below ask. */
+function requiredReads(cases: readonly ExamCase[],
+                       facts: { readonly tools: Readonly<Record<string, { readonly effect?: string }>> })
+                       : ReadonlyMap<string, string> {
+  const byRead = new Map<string, string>();
+  for (const c of cases)
+    for (const matcher of c.invariants?.requiredToolCalls ?? []) {
+      if (facts.tools[matcher.name]?.effect !== 'read') continue;
+      if (!byRead.has(matcher.name)) byRead.set(matcher.name, c.id);
+    }
+  return byRead;
+}
+
+/** The acts a case takes: the tools its turns hand an approval to, and every required call the
+ *  surface declares as changing a record. A case that takes none is a case of reads only. */
+function actingToolsOf(c: ExamCase,
+                       facts: { readonly tools: Readonly<Record<string, { readonly effect?: string }>> })
+                       : readonly string[] {
+  const acts = new Set<string>();
+  for (const turn of c.turns) for (const ref of approvedBy(turn)) acts.add(ref.tool);
+  for (const matcher of c.invariants?.requiredToolCalls ?? []) {
+    const effect = facts.tools[matcher.name]?.effect;
+    if (effect !== undefined && effect !== 'read') acts.add(matcher.name);
+  }
+  return [...acts];
+}
+
+/** The order the cards declare: `${act}|${prerequisite}` for every `onlyAfter` a card spreads. The
+ *  acts are the guard literal's own `tool` when it declares one — a spread whose literal names four
+ *  acts binds the factory's prerequisite to all four — and the factory's first argument otherwise. */
+function orderPairs(sources: readonly Source[],
+                    lists: ReadonlyMap<string, readonly string[]>): ReadonlySet<string> {
+  const pairs = new Set<string>();
+  for (const f of sources) {
+    const visit = (node: ts.Node): void => {
+      if (ts.isCallExpression(node) && ts.isIdentifier(node.expression)
+        && node.expression.text === 'onlyAfter') {
+        const prerequisite = node.arguments[1] === undefined
+          ? null : literalText(unwrap(node.arguments[1]));
+        const spread = node.parent;
+        const held = spread !== undefined && ts.isSpreadAssignment(spread)
+          && ts.isObjectLiteralExpression(spread.parent)
+          ? guardLiteral(spread.parent, lists).tools : null;
+        const acts = held ?? toolsOf(node.arguments[0], lists) ?? [];
+        if (prerequisite !== null) for (const act of acts) pairs.add(`${act}|${prerequisite}`);
+      }
+      node.forEachChild(visit);
+    };
+    visit(parse(f));
+  }
+  return pairs;
+}
+
+/** A read the exam requires is a read the CARD owes, not a read a rubric hopes for. When a case
+ *  names an act, the order between that act and the read is a `onlyAfter` the cards declare: the
+ *  engine then refuses the act until the read has succeeded, and the exam measures a rule instead
+ *  of a habit. A matcher's `anyOf` widens the requirement to alternative reads that ground the same
+ *  fact, so an order behind ANY of them satisfies it.
+ *
+ *  A case that takes no act at all is left alone: the reads it requires are owed by the flow of the
+ *  conversation, and there is no act for an order to sit in front of. */
+export function readsOrdered(subjectDir: string, cases: readonly ExamCase[],
+                             facts: { readonly tools: Readonly<Record<string,
+                               { readonly effect?: string }>> }): readonly LintFinding[] {
+  const sources = subjectSources(subjectDir);
+  const pairs = orderPairs(sources, namedToolLists(sources));
+  const findings: LintFinding[] = [];
+  for (const c of cases) {
+    const acting = actingToolsOf(c, facts);
+    if (acting.length === 0) continue;
+    for (const matcher of c.invariants?.requiredToolCalls ?? []) {
+      if (facts.tools[matcher.name]?.effect !== 'read') continue;
+      const grounds = [matcher.name, ...(matcher.anyOf ?? [])];
+      if (acting.some(act => grounds.some(read => pairs.has(`${act}|${read}`)))) continue;
+      findings.push({ code: 'REQUIRED_READ_UNORDERED',
+        sentence: `case '${c.id}' requires '${matcher.name}' and no card orders it: of the acts `
+          + `this case takes — ${acting.join(' · ')} — not one runs only after that read. Spread `
+          + `onlyAfter onto the act that owes it, or drop '${matcher.name}' from the case's `
+          + `requiredToolCalls.` });
+    }
+  }
+  return findings;
+}
+
+/** A read the exam requires answers in figures, and the figures reach the operator through the
+ *  read's own `after` sentence — a `{result.…}` slot the engine fills from what the call returned.
+ *  A required read with no such slot is a call the case counts and nobody speaks: the desk may
+ *  repeat what it saw, or may not, and the exam cannot tell those two apart. */
+export function requiredReadsDisclosed(subjectDir: string, cases: readonly ExamCase[],
+                                       facts: { readonly tools: Readonly<Record<string,
+                                         { readonly effect?: string }>> }): readonly LintFinding[] {
+  const entries = disclosureEntries(subjectSources(subjectDir));
+  const findings: LintFinding[] = [];
+  for (const [read, caseId] of requiredReads(cases, facts)) {
+    const after = entries.get(read)?.after ?? null;
+    if (after !== null && after.includes('{result.')) continue;
+    findings.push({ code: 'READ_RESULT_UNSPOKEN',
+      sentence: after === null
+        ? `case '${caseId}' requires '${read}', and disclosure.${read} carries no 'after': what the `
+          + `read returned reaches the operator only if the desk chooses to repeat it. Give it an `
+          + `after sentence carrying a {result.…} slot.`
+        : `case '${caseId}' requires '${read}', and disclosure.${read}.after carries no {result.…} `
+          + `slot: it names the read without stating one figure the read returned. Put the figures `
+          + `the case turns on into that sentence.` });
   }
   return findings;
 }

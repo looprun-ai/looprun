@@ -26,7 +26,15 @@ const BROKEN_CASES: readonly ExamCase[] = [
   // A scenario the card never declares, and no `covers` key: the preset verb is the only one that
   // can see it, because every other case-shaped verb walks the guard names a case claims.
   { id: 'gate-03', split: 'fix', preset: 'loud', turns: ['delete ord_9'],
-    rubric: 'The deletion names the order it could not reach.' }
+    rubric: 'The deletion names the order it could not reach.' },
+  // A read the exam requires, an act that takes it, and a card that neither orders the read in
+  // front of the act nor speaks what it returned.
+  { id: 'gate-04', split: 'fix', turns: ['refund ord_7'],
+    invariants: { requiredToolCalls: [{ name: 'getOrder' }, { name: 'refundOrder' }] },
+    rubric: 'The refund states the total the read returned.' },
+  // A typed approval, so the consent question this act renders is one the exam actually shows.
+  { id: 'gate-05', split: 'fix', turns: ['purge ord_7', { approve: { tool: 'purgeOrder' } }],
+    rubric: 'The purge states what it takes away.' }
 ];
 
 const FIXTURE_SUBJECT: GateSubject = {
@@ -47,6 +55,7 @@ const SOUND_SUBJECT: GateSubject = {
   world: SOUND_WORLD,
   cases: [{ id: 'sound-01', split: 'fix', turns: ['close ord_7'],
             covers: ['precondition:closeOrder'],
+            invariants: { requiredToolCalls: [{ name: 'getOrder' }, { name: 'closeOrder' }] },
             rubric: 'The close runs only on an order the read returned as open.' }],
   censusNames: SOUND_CENSUS,
   // This world declares no preset, so nothing silences the check the case covers.
@@ -66,11 +75,15 @@ describe('runGate', () => {
       'CASE_CANNOT_FIRE',        // approvable
       'CASE_PRESET_UNKNOWN',     // presetsDeclared
       'CHECK_INERT',             // inertChecks
+      'CHECK_UNSPOKEN',          // unspokenChecks
       'CONDUCT_INCOMPLETE',      // conductComplete
       'COVERS_UNRESOLVED',       // coversResolve
-      'DISCLOSURE_BEFORE_MISSING', // destructiveDisclosed
+      'DISCLOSURE_BEFORE_MISSING',   // destructiveDisclosed
+      'DISCLOSURE_BEFORE_UNFIGURED', // destructiveDisclosed
       'FLOOR_REDECLARED',        // floorRedeclared
       'PROSE_UNLICENSED',        // unlicensed
+      'READ_RESULT_UNSPOKEN',    // requiredReadsDisclosed
+      'REQUIRED_READ_UNORDERED', // readsOrdered
       'RULE_WIDE_UNLICENSED',    // overWide
       'SUBJECT_REGEX'            // purity
     ]);

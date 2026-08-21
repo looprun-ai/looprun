@@ -9,7 +9,7 @@ export { SubjectLoader } from './subject-loader.js';
 export type { Subject } from './subject-loader.js';
 export { Validator } from './validator.js';
 export type { ValidationFinding, ValidationReport } from './validator.js';
-export { approvable, boilerplate, byteOrigin, capPaths, census, conductComplete, coversResolve, destructiveDisclosed, doubleStated, echoes, floorRedeclared, inertChecks, nameGate, overWide, pairing, pairingTable, presetsDeclared, profile, promptLines, ruleCopies, purity, seamCovered, surfaceOf, unlicensed } from './lints.js';
+export { approvable, boilerplate, byteOrigin, capPaths, census, conductComplete, coversResolve, destructiveDisclosed, doubleStated, echoes, floorRedeclared, inertChecks, nameGate, overWide, pairing, pairingTable, presetsDeclared, profile, promptLines, readsOrdered, requiredReadsDisclosed, ruleCopies, purity, seamCovered, surfaceOf, unlicensed, unspokenChecks } from './lints.js';
 export type { ApprovabilitySubject } from './lints.js';
 export type { ByteOrigin, CompiledDesk } from './lints.js';
 export type { CardProfile } from './lints.js';

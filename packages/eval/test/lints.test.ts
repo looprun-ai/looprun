@@ -2,7 +2,7 @@ import { describe, expect, test } from 'vitest';
 import { mkdtempSync, writeFileSync, mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { GuardCensus, TurnRecord } from '@looprun-ai/core';
+import type { ExamCase, GuardCensus, TurnRecord } from '@looprun-ai/core';
 import { census, nameGate, purity } from '../src/lints.js';
 import { inertChecks, ruleCopies } from '../src/lints.js';
 
@@ -349,7 +349,7 @@ export const contract = { name: 'atlas', guards: [ onlyAfter('issueRefund', 'get
   expect(p.checks).toBeGreaterThan(0);
 });
 
-test('doubleStated: an act carrying both a check and a separate prose sentence is a question', () => {
+test('doubleStated: a check and a prose rule carrying the same sentence is one law written twice', () => {
   const dir = subjectDirWith(`
 export const w = { records: {},
   reads: { getStatement: { form: 'get', entity: 'accounts', label: 'Look up a statement' } },
@@ -357,10 +357,28 @@ export const w = { records: {},
 const prose = (name, rule, tool) =>
   tool === undefined ? { name, rule, on: 'reply' } : { name, rule, on: 'reply', tool };
 export const contract = { name: 'atlas', guards: [
-  onlyAfter('issueRefund', 'getStatement'),
-  prose('refundCapFromTheRecord', 'A refund is capped by the statement.', ['issueRefund'])
+  { ...onlyAfter('issueRefund', 'getStatement'), name: 'refundCap',
+    rule: 'A refund is capped by the statement: paid minus already refunded.' },
+  prose('refundCapFromTheRecord',
+    'A refund is capped by the statement: paid minus already refunded.', ['issueRefund'])
 ] };`);
-  expect(doubleStated(dir)).toEqual(["issueRefund: onlyAfter  +  prose 'refundCapFromTheRecord'"]);
+  expect(doubleStated(dir))
+    .toEqual(["issueRefund: 'refundCap' and prose 'refundCapFromTheRecord' carry the same sentence"]);
+});
+
+test('doubleStated: a prose rule saying something else on the same act is cover, not a copy', () => {
+  const dir = subjectDirWith(`
+export const w = { records: {},
+  reads: { getStatement: { form: 'get', entity: 'accounts', label: 'Look up a statement' } },
+  writes: { issueRefund: { form: 'set', entity: 'accounts', label: 'Refund an account' } } };
+const prose = (name, rule, tool) =>
+  tool === undefined ? { name, rule, on: 'reply' } : { name, rule, on: 'reply', tool };
+export const contract = { name: 'atlas', guards: [
+  { ...onlyAfter('issueRefund', 'getStatement'), name: 'refundCap',
+    rule: 'A refund is capped by the statement: paid minus already refunded.' },
+  prose('refundNamesTheAccount', 'State the account a refund lands on.', ['issueRefund'])
+] };`);
+  expect(doubleStated(dir)).toEqual([]);
 });
 
 test('doubleStated: a spread factory is one guard, so it asks nothing', () => {
@@ -623,16 +641,48 @@ describe('destructiveDisclosed', () => {
     return dir;
   };
 
+  const DESTRUCTIVE = { tools: { cancelBooking: { effect: 'destructive' } } } as never;
+  const APPROVES: readonly ExamCase[] = [{ id: 'c-01', split: 'fix', rubric: 'r',
+    turns: ['cancel bk_9', { approve: { tool: 'cancelBooking' } }] }];
+
   test('a destructive act with no before is a finding', () => {
     const dir = write(`const CONTRACT = { disclosure: { cancelBooking: { after: 'done' } } };`);
-    const found = destructiveDisclosed(dir, { tools: { cancelBooking: { effect: 'destructive' } } } as never);
+    const found = destructiveDisclosed(dir, DESTRUCTIVE, []);
     expect(found.map(f => f.code)).toEqual(['DISCLOSURE_BEFORE_MISSING']);
     expect(found[0].sentence).toContain('carries only its label');
   });
 
+  const WRITE_ONLY = { tools: { moveBooking: { effect: 'write' } } } as never;
+
   test('a write with no before asks nothing', () => {
     const dir = write(`const CONTRACT = { disclosure: {} };`);
-    expect(destructiveDisclosed(dir, { tools: { moveBooking: { effect: 'write' } } } as never)).toEqual([]);
+    expect(destructiveDisclosed(dir, WRITE_ONLY, [])).toEqual([]);
+  });
+
+  test('an approved act whose before carries no figure is a finding naming the case', () => {
+    const dir = write(`const CONTRACT = { disclosure: { cancelBooking: {
+      needs: { booking: { tool: 'getBooking', args: { bookingId: 'bookingId' } } },
+      before: 'This cancellation cannot be undone.' } } };`);
+    const found = destructiveDisclosed(dir, DESTRUCTIVE, APPROVES);
+    expect(found.map(f => f.code)).toEqual(['DISCLOSURE_BEFORE_UNFIGURED']);
+    expect(found[0].sentence).toContain("case 'c-01' approves 'cancelBooking'");
+    expect(found[0].sentence).toContain('needs aliases (booking)');
+  });
+
+  test('a figure off the held call, or off a needs alias, answers it', () => {
+    const args = write(`const CONTRACT = { disclosure: { cancelBooking: {
+      before: 'Cancelling {args.bookingId} frees the machine.' } } };`);
+    expect(destructiveDisclosed(args, DESTRUCTIVE, APPROVES)).toEqual([]);
+    const alias = write(`const CONTRACT = { disclosure: { cancelBooking: {
+      needs: { booking: { tool: 'getBooking', args: { bookingId: 'bookingId' } } },
+      before: 'Cancelling frees {booking.booking.assetName}.' } } };`);
+    expect(destructiveDisclosed(alias, DESTRUCTIVE, APPROVES)).toEqual([]);
+  });
+
+  test('an act no case approves is asked for by nobody, so the figure is not owed', () => {
+    const dir = write(`const CONTRACT = { disclosure: { cancelBooking: {
+      before: 'This cancellation cannot be undone.' } } };`);
+    expect(destructiveDisclosed(dir, DESTRUCTIVE, [])).toEqual([]);
   });
 });
 
@@ -839,5 +889,137 @@ describe('byteOrigin', () => {
     const origin = byteOrigin([desk, desk, desk] as never, facts as never);
     expect(origin.lanes[0]).toContain('getAsset');
     expect(origin.lanes[0]).toContain('3 lanes');
+  });
+});
+
+import { readsOrdered, requiredReadsDisclosed, unspokenChecks } from '../src/lints.js';
+
+describe('unspokenChecks', () => {
+  const write = (body: string): string => {
+    const dir = mkdtempSync(join(tmpdir(), 'unspoken-'));
+    writeFileSync(join(dir, 'cards.ts'), body);
+    return dir;
+  };
+
+  test('a result check on an act no sentence names is a finding', () => {
+    const dir = write(`const CONTRACT = { guards: [
+      { ...checkResult('issueRefund', r => null), name: 'refundLanded' } ] };`);
+    const found = unspokenChecks(dir);
+    expect(found.map(f => f.code)).toEqual(['CHECK_UNSPOKEN']);
+    expect(found[0].sentence).toContain("the checkResult check on 'issueRefund' states no law");
+  });
+
+  test('the guard\'s own rule, or a prose rule naming the act, is the law in words', () => {
+    const ruled = write(`const CONTRACT = { guards: [
+      { ...checkResult('issueRefund', r => null), name: 'refundLanded',
+        rule: 'A refund lands on the invoice the read returned, and on no other.' } ] };`);
+    expect(unspokenChecks(ruled)).toEqual([]);
+    const covered = write(`
+      const prose = (name, rule, tool) => ({ name, rule, on: 'reply', tool });
+      const CONTRACT = { guards: [
+        { ...checkResult('issueRefund', r => null), name: 'refundLanded' },
+        prose('refundsAreFinal', 'Money paid out does not come back.', ['issueRefund']) ] };`);
+    expect(unspokenChecks(covered)).toEqual([]);
+  });
+
+  test('a cap refuses at a figure, so a card that states no ceiling is a finding', () => {
+    const dir = write(`const CONTRACT = { disclosure: { issueRefund: {
+      needs: { invoice: 'getInvoice' }, before: 'Refunding {args.amount}.',
+      cap: { arg: 'amount', at: 'invoice.refundable', refusal: 'Too much.' } } } };`);
+    const found = unspokenChecks(dir);
+    expect(found.map(f => f.code)).toEqual(['CHECK_UNSPOKEN']);
+    expect(found[0].sentence).toContain('disclosure.issueRefund.cap refuses at a figure');
+  });
+
+  test('a factory whose minted sentence states the whole law is never charged', () => {
+    const dir = write(`const CONTRACT = { guards: [
+      { ...onlyAfter('issueRefund', 'getInvoice'), name: 'refundReadsTheInvoice' },
+      { ...valueFromUser('fileClaim', 'description'), name: 'theOperatorsWord' } ] };`);
+    expect(unspokenChecks(dir)).toEqual([]);
+  });
+});
+
+const REFUND_FACTS = { tools: {
+  getInvoice: { effect: 'read' }, listInvoices: { effect: 'read' },
+  issueRefund: { effect: 'destructive' } } } as never;
+
+describe('readsOrdered', () => {
+  const write = (body: string): string => {
+    const dir = mkdtempSync(join(tmpdir(), 'ordered-'));
+    writeFileSync(join(dir, 'cards.ts'), body);
+    return dir;
+  };
+
+  const refundCase = (required: readonly unknown[]): readonly ExamCase[] =>
+    [{ id: 'refund-01', split: 'fix', rubric: 'r',
+       turns: ['refund inv_9', { approve: { tool: 'issueRefund' } }],
+       invariants: { requiredToolCalls: required } } as ExamCase];
+
+  test('a required read no act is ordered behind is a finding naming the case and the acts', () => {
+    const dir = write(`const CONTRACT = { guards: [] };`);
+    const found = readsOrdered(dir, refundCase([{ name: 'getInvoice' }]), REFUND_FACTS);
+    expect(found.map(f => f.code)).toEqual(['REQUIRED_READ_UNORDERED']);
+    expect(found[0].sentence).toContain("case 'refund-01' requires 'getInvoice'");
+    expect(found[0].sentence).toContain('issueRefund');
+  });
+
+  test('the order the cards declare answers it', () => {
+    const dir = write(`const CONTRACT = { guards: [ onlyAfter('issueRefund', 'getInvoice') ] };`);
+    expect(readsOrdered(dir, refundCase([{ name: 'getInvoice' }]), REFUND_FACTS)).toEqual([]);
+  });
+
+  test('a guard literal naming its own acts binds the prerequisite to every one of them', () => {
+    const dir = write(`const CONTRACT = { guards: [
+      { ...onlyAfter('voidInvoice', 'getInvoice'), name: 'moneyReadsTheInvoice',
+        tool: ['voidInvoice', 'issueRefund'] } ] };`);
+    expect(readsOrdered(dir, refundCase([{ name: 'getInvoice' }]), REFUND_FACTS)).toEqual([]);
+  });
+
+  test('anyOf widens the requirement, so an order behind either read answers it', () => {
+    const dir = write(`const CONTRACT = { guards: [ onlyAfter('issueRefund', 'listInvoices') ] };`);
+    expect(readsOrdered(dir, refundCase([{ name: 'getInvoice', anyOf: ['listInvoices'] }]),
+                        REFUND_FACTS)).toEqual([]);
+  });
+
+  test('a case that takes no act owes its reads to the flow, and the verb skips it', () => {
+    const dir = write(`const CONTRACT = { guards: [] };`);
+    const reading: readonly ExamCase[] = [{ id: 'read-01', split: 'fix', rubric: 'r',
+      turns: ['what does inv_9 say?'],
+      invariants: { requiredToolCalls: [{ name: 'getInvoice' }] } }];
+    expect(readsOrdered(dir, reading, REFUND_FACTS)).toEqual([]);
+  });
+});
+
+describe('requiredReadsDisclosed', () => {
+  const write = (body: string): string => {
+    const dir = mkdtempSync(join(tmpdir(), 'read-after-'));
+    writeFileSync(join(dir, 'cards.ts'), body);
+    return dir;
+  };
+
+  const CASES: readonly ExamCase[] = [{ id: 'refund-01', split: 'fix', rubric: 'r',
+    turns: ['refund inv_9'],
+    invariants: { requiredToolCalls: [{ name: 'getInvoice' }, { name: 'issueRefund' }] } }];
+
+  test('a required read with no disclosure entry is a finding naming the read and the case', () => {
+    const dir = write(`const CONTRACT = { disclosure: {} };`);
+    const found = requiredReadsDisclosed(dir, CASES, REFUND_FACTS);
+    expect(found.map(f => f.code)).toEqual(['READ_RESULT_UNSPOKEN']);
+    expect(found[0].sentence).toContain("case 'refund-01' requires 'getInvoice'");
+    expect(found[0].sentence).toContain("disclosure.getInvoice carries no 'after'");
+  });
+
+  test('an after that states no figure the read returned is a finding', () => {
+    const dir = write(`const CONTRACT = { disclosure: { getInvoice: {
+      after: 'The invoice was read.' } } };`);
+    const found = requiredReadsDisclosed(dir, CASES, REFUND_FACTS);
+    expect(found.map(f => f.code)).toEqual(['READ_RESULT_UNSPOKEN']);
+    expect(found[0].sentence).toContain('carries no {result.…} slot');
+  });
+
+  test('an after carrying a result slot answers it, and the act beside it is no read', () => {
+    const dir = write(`const CONTRACT = { disclosure: { getInvoice: {
+      after: '{result.amountPaid} was paid and {result.refundable} can still go back.' } } };`);
+    expect(requiredReadsDisclosed(dir, CASES, REFUND_FACTS)).toEqual([]);
   });
 });

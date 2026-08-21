@@ -21,6 +21,13 @@ const precondition = (tool: string, holds: (held: Held) => boolean): Check => ({
   deny: held => holds(held) ? null : 'the order is not open, so it cannot be closed'
 });
 
+/** The gated act runs only after the prerequisite succeeded — the shape the engine's own factory
+ *  mints, so the order a case requires is one the cards declare. */
+const onlyAfter = (tool: string, prerequisite: string): Check => ({
+  name: `onlyAfter:${tool}`, tool: [tool],
+  deny: () => `${prerequisite} has not succeeded yet this conversation`
+});
+
 /** The reason each prose-only rule exists: one of noSuchAct, aboutARead, conduct, measured:<case>. */
 export const WHY = {
   answerFromTheRecord: 'conduct',
@@ -52,9 +59,19 @@ export const ordersContract = {
   name: 'orders',
   guards: [
     prose('closeOnlyWhatYouRead', 'A close lands on the order the read returned.', ['closeOrder']),
-    precondition('closeOrder', ({ record }) => record?.status === 'OPEN')
+    precondition('closeOrder', ({ record }) => record?.status === 'OPEN'),
+    onlyAfter('closeOrder', 'getOrder'),
+    // The ceiling the cap refuses at, said in the words the desk reads before it proposes the
+    // call: a check that decides carries its own law, so nothing here is a prose rule.
+    { name: 'deleteWhatTheReadReturned', on: 'preTool', tool: ['deleteOrder'],
+      rule: 'An order is deleted only once a read has returned it, and never above the total that '
+        + 'read shows — over the ceiling, state the figure and delete nothing.',
+      deny: (held: Held) => held.record === null ? 'no read returned this order' : null }
   ],
   disclosure: {
+    getOrder: {
+      after: 'Order {result.id} is {result.status} and carries a total of {result.total}.'
+    },
     deleteOrder: {
       before: 'You are about to delete order {order.id}, and a deletion cannot be undone.',
       needs: { order: { tool: 'getOrder' } },
