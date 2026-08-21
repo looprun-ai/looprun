@@ -90,6 +90,7 @@ the rest.
 | requires a read to have happened first | `onlyAfter` | a school registrar: `issueTranscript` only after `getFeeBalance`, and the rule carries the subtraction — 1,250 charged, 900 paid, 350 standing |
 | holds a number under a figure a read returned | `cap` (disclosure) | a pharmacy counter: `dispense(rx_4471, quantity)` capped at `getPrescription.rx.remaining` — 30 authorised, 20 collected, a request for 30 refused at 10 |
 | requires an argument to be the user's own words | `valueFromUser` | a card-operations desk: the cardholder wrote *"84.90 at a petrol station"* and the model sent `amount: 89.40` |
+| requires a CHOICE to be grounded in the operator's words | `choiceFromUser` | a printworks counter: the customer asked for *"the matt stock"* and the model sent `finish: gloss` — nobody writes a flag, so the words the option is stated in are what the check searches for |
 | requires an argument to match a declared shape | `argFormat` | an insurer: `policyId` is `POL-` and eight digits, so `POL-2291` is a well-formed guess, not an identifier |
 | forbids an argument from arriving at all | `argAbsent` | a clinic: `bookAppointment` declares `overrideCapacity`, and no desk may send it |
 | checks the RESULT after the call ran | `checkResult` | a statements desk: `sendStatement` returns `delivered: false, bounce: 'mailbox_full'`, and the reply corrects itself instead of reporting success |
@@ -119,6 +120,7 @@ machine can never disagree. Use one instead of hand-writing a `deny` wherever it
 | `onlyAfter(tool, prerequisite)` | two tool names | the act until the prerequisite SUCCEEDED this conversation | acting on a figure nobody read |
 | `precondition(tool, check, rule)` | `({ record, state }) => boolean` | while the records fail the check | asking about an act the records already rule out |
 | `valueFromUser(tool, arg)` | tool + arg name | a value the user never wrote, matched as whole tokens | the model inventing an amount, an address, a date |
+| `choiceFromUser(tool, arg, terms, rule)` | each value the argument may carry → the words it is stated in | a choice no message of the conversation states in any of its words | the model picking an option the operator never chose |
 | `argFormat(tool, arg, pattern)` | a pattern string | a value the declared shape rejects | a well-formed guess passing as an identifier |
 | `argAbsent(tool, arg)` | tool + arg name | the call when the forbidden argument arrives | a banned field being used anyway |
 | `checkResult(tool, check)` | `(ctx) => string \| null` over the RESULT | after execution, into the reply's corrections | reporting a success the result does not show |

@@ -69,6 +69,7 @@ const LAWFUL_ARGS: Readonly<Record<DeclaredGuard['factory'], readonly string[]>>
   precondition: ['reads', 'field', 'is', 'in'],
   role: ['anchor', 'by', 'from', 'field', 'in'],
   valueFromUser: ['arg'],
+  choiceFromUser: ['arg', 'terms'],
   argFormat: ['arg', 'pattern'],
   argAbsent: ['arg'],
   cap: ['calls', 'scope'],
@@ -95,6 +96,7 @@ const ACT_SHAPE: Readonly<Record<DeclaredGuard['factory'], 'all' | 'first' | 'no
   precondition: 'all',
   role: 'all',
   valueFromUser: 'first',
+  choiceFromUser: 'first',
   argFormat: 'first',
   argAbsent: 'first',
   cap: 'first',
@@ -108,8 +110,13 @@ const ACT_SHAPE: Readonly<Record<DeclaredGuard['factory'], 'all' | 'first' | 'no
 /** The factories whose law is the declaration's own sentence: the check refuses with it, or it
  *  states the correction the reply owes. A factory that mints its sentence from its own
  *  configuration is not here — a `rule` beside it overrides that sentence and is optional. */
-const OWES_RULE: ReadonlySet<DeclaredGuard['factory']> =
-  new Set(['precondition', 'role', 'cap', 'checkResult', 'blockPattern', 'prose']);
+const OWES_RULE: ReadonlySet<DeclaredGuard['factory']> = new Set(['precondition', 'role',
+  'choiceFromUser', 'cap', 'checkResult', 'blockPattern', 'prose']);
+
+/** The factories handed the declared sentence inside the call itself. Every other factory mints
+ *  its own, and a `rule` declared beside one of those is emitted as a field of the literal. */
+const TAKES_RULE: ReadonlySet<DeclaredGuard['factory']> = new Set(['precondition', 'role',
+  'choiceFromUser', 'cap', 'blockPattern']);
 
 function checkArgs(guard: DeclaredGuard): void {
   const lawful = LAWFUL_ARGS[guard.factory];
@@ -288,6 +295,32 @@ function roleLines(guard: DeclaredGuard): readonly string[] {
     `${quote(ruleOf(guard))})`];
 }
 
+/** The words each value of a choice is stated in, as the card carries them: every value the
+ *  argument may carry, mapped to one or more words the operator's own message would say it with.
+ *  A value with an empty list — or a word that is blank — can never be grounded, so it is refused
+ *  by the key that carries it: the act it covers would refuse every call for the whole
+ *  conversation. */
+function choiceTerms(guard: DeclaredGuard): string {
+  const declared = guard.args?.terms;
+  if (typeof declared !== 'object' || declared === null || Array.isArray(declared)
+    || Object.keys(declared).length === 0) {
+    throw new Error(`contract.guards '${guard.name}' declares factory 'choiceFromUser', whose `
+      + `configuration is args.terms — each value the argument may carry, mapped to one or more `
+      + `words the operator states it in, which this declaration does not carry`);
+  }
+  const pairs = Object.entries(declared as Readonly<Record<string, unknown>>);
+  for (const [value, words] of pairs) {
+    const stated = Array.isArray(words) && words.length > 0
+      && words.every(word => typeof word === 'string' && word.trim() !== '');
+    if (stated) continue;
+    throw new Error(`contract.guards '${guard.name}' declares args.terms.${value}, and a value is `
+      + `grounded by the words the operator writes for it — declare a list of one or more words, `
+      + `each one a word a message can carry`);
+  }
+  return `{ ${pairs.map(([value, words]) =>
+    `${key(value)}: ${list(words as readonly string[])}`).join(', ')} }`;
+}
+
 /** A check over the result the act came back with: the field the declaration reads off it and the
  *  value that field owes. The call already ran, so the check never vetoes — it hands back the
  *  violation and the `rule` states the correction the reply owes, which is the whole of what a
@@ -381,6 +414,10 @@ function factoryCall(guard: DeclaredGuard): { readonly imported: string | null;
     case 'valueFromUser':
       return { imported: 'valueFromUser',
         lines: [`valueFromUser(${quote(act)}, ${quote(stringArg(guard, 'arg'))})`] };
+    case 'choiceFromUser':
+      return { imported: 'choiceFromUser',
+        lines: [`choiceFromUser(${quote(act)}, ${quote(stringArg(guard, 'arg'))},`,
+          `${choiceTerms(guard)},`, `${quote(ruleOf(guard))})`] };
     case 'argFormat':
       return { imported: 'argFormat',
         lines: [`argFormat(${quote(act)}, ${quote(stringArg(guard, 'arg'))}, `
@@ -422,8 +459,9 @@ function guardLines(guard: DeclaredGuard, depth: number): readonly string[] {
   if (shape === 'none' || (shape === 'first' && guard.acts.length > 1)) {
     fields.push(`tool: ${list(guard.acts)}`);
   }
-  const takesRule = shape === 'all' || guard.factory === 'cap' || guard.factory === 'blockPattern';
-  if (guard.rule !== undefined && !takesRule) fields.push(`rule: ${quote(guard.rule)}`);
+  if (guard.rule !== undefined && !TAKES_RULE.has(guard.factory)) {
+    fields.push(`rule: ${quote(guard.rule)}`);
+  }
   const [head, ...rest] = call.lines;
   const lines = commaJoin([
     [indent(depth, `{ ...${head}`), ...rest.map(line => indent(depth + 2, line))],

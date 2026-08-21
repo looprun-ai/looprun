@@ -484,6 +484,41 @@ export function valueFromUser(tool: string, arg: string): SeedGuard {
   };
 }
 
+/** A CHOICE the operator must have STATED: an argument carrying an option — a flag, a grade, a
+ *  class — is never grounded by its own text, because nobody writes `true`. `terms` maps each
+ *  value the argument may carry to the words that state it, and the check searches every message
+ *  the operator has sent this conversation, case folded, for one of them as a plain substring —
+ *  the choice may have been made several turns before the call. A value `terms` carries no words
+ *  for refuses: it is an option this rule does not know. */
+export function choiceFromUser(tool: string, arg: string,
+  terms: Readonly<Record<string, readonly string[]>>, rule: string): SeedGuard {
+  return {
+    name: `choiceFromUser:${tool}`,
+    rule,
+    tool,
+    on: 'preTool',
+    kind: 'choiceFromUser',
+    compile(home) {
+      return installedAt<CallCtx>(this, home, ctx => {
+        const raw = ctx.call.args[arg];
+        if (raw === undefined) return null;
+        const value = typeof raw === 'string' ? raw
+          : typeof raw === 'number' || typeof raw === 'boolean' ? String(raw) : null;
+        if (value === null) return `'${arg}' carries a block of values, and a choice is one value`;
+        if (!Object.hasOwn(terms, value)) {
+          return `'${arg}' arrived as '${value}', and this rule carries no words for that option`;
+        }
+        const said = ctx.userTexts.map(text => text.toLowerCase());
+        const stated = terms[value].some(term => {
+          const word = term.toLowerCase();
+          return said.some(text => text.includes(word));
+        });
+        return stated ? null : '';
+      });
+    }
+  };
+}
+
 /** The declared pattern DENIES — on the arriving text by default, on the reply when
  *  asked. The ONE lawful home of an author regex beside the two rewrite factories. */
 export function blockPattern(name: string, pattern: RegExp, rule: string,

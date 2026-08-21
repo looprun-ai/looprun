@@ -1,7 +1,7 @@
 import { test, expect } from 'vitest';
-import type { CallCtx, InputCtx, ReplyCtx, ResultCtx, StateSnapshot } from '../../src/contract/vocabulary.js';
+import type { CallCtx, InputCtx, Json, ReplyCtx, ResultCtx, StateSnapshot } from '../../src/contract/vocabulary.js';
 import { TurnFailure } from '../../src/contract/vocabulary.js';
-import { argAbsent, blockPattern, checkResult, mustAccountFor, precondition,
+import { argAbsent, blockPattern, checkResult, choiceFromUser, mustAccountFor, precondition,
          questionAnswered, valueFromUser } from '../../src/cards/catalog.js';
 import { factsFromWorld } from '../../src/cards/facts.js';
 import { HOSTILE } from '../fixtures/hostile-world.js';
@@ -9,10 +9,11 @@ import { HOSTILE } from '../fixtures/hostile-world.js';
 const FACTS = factsFromWorld(HOSTILE);
 const STATE: StateSnapshot = HOSTILE.card.records;
 
-function callCtx(tool: string, args: Record<string, string>,
-                 state: StateSnapshot | null = STATE, userText = ''): CallCtx {
+function callCtx(tool: string, args: Record<string, Json>,
+                 state: StateSnapshot | null = STATE, userText = '',
+                 userTexts: readonly string[] = [userText]): CallCtx {
   return { call: { tool, args, key: JSON.stringify({ args, tool }) }, effect: 'destructive',
-           consented: false, state, userText, userTexts: [userText], turnActs: [], pastActs: [] };
+           consented: false, state, userText, userTexts, turnActs: [], pastActs: [] };
 }
 
 function replyCtx(message: string, report: ReplyCtx['report'] = []): ReplyCtx {
@@ -85,6 +86,44 @@ test('valueFromUser reads a number arg by its digits — the user must have writ
   expect(g.deny(call(3000, 'Deposit is 3000, condition good.'))).toBeNull();
   expect(g.deny(call(0, 'Add a new machine: Genie S-65, 780 a day.')))
     .toContain('requiredDeposit');
+});
+
+const DELIVERY = { true: ['delivered', 'drop it off'], false: ['collect', 'pick it up'] };
+const RULE = 'Send whether delivery is included only as the customer chose it.';
+
+test('choiceFromUser passes a choice the user stated this turn', () => {
+  const g = choiceFromUser('compRoom', 'includeDelivery', DELIVERY, RULE)
+    .compile('contract', FACTS);
+  expect(g.deny(callCtx('compRoom', { includeDelivery: true }, STATE,
+    'Have it Delivered on Friday.'))).toBeNull();
+  expect(g.rule).toBe(RULE);
+});
+
+test('choiceFromUser reads every message of the conversation, not the current one alone', () => {
+  const g = choiceFromUser('compRoom', 'includeDelivery', DELIVERY, RULE)
+    .compile('contract', FACTS);
+  expect(g.deny(callCtx('compRoom', { includeDelivery: false }, STATE, 'Go ahead.',
+    ['I will collect it myself.', 'Room 12, Friday.', 'Go ahead.']))).toBeNull();
+});
+
+test('choiceFromUser refuses a choice nobody stated — the rule alone is the denial', () => {
+  const g = choiceFromUser('compRoom', 'includeDelivery', DELIVERY, RULE)
+    .compile('contract', FACTS);
+  expect(g.deny(callCtx('compRoom', { includeDelivery: true }, STATE,
+    'Book room 12 for Friday.'))).toBe('');
+});
+
+test('choiceFromUser refuses a value it carries no words for', () => {
+  const g = choiceFromUser('compRoom', 'includeDelivery', DELIVERY, RULE)
+    .compile('contract', FACTS);
+  expect(g.deny(callCtx('compRoom', { includeDelivery: 'maybe' }, STATE, 'Deliver it.')))
+    .toContain('carries no words for that option');
+});
+
+test('choiceFromUser passes a call the argument never arrives on', () => {
+  const g = choiceFromUser('compRoom', 'includeDelivery', DELIVERY, RULE)
+    .compile('contract', FACTS);
+  expect(g.deny(callCtx('compRoom', { id: 'bk_9' }, STATE, 'Comp room 12.'))).toBeNull();
 });
 
 test('questionAnswered demands words for a question — empty and tool roll-calls violate', () => {

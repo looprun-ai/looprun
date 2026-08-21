@@ -111,8 +111,8 @@ function surfaceKeys(sources: readonly Source[], blocks: ReadonlySet<string>): R
   return tools;
 }
 
-const DETERMINISTIC_FACTORIES = ['onlyAfter', 'precondition', 'valueFromUser', 'argFormat',
-  'argAbsent', 'checkResult', 'mustAccountFor', 'maxCalls', 'blockPattern'];
+const DETERMINISTIC_FACTORIES = ['onlyAfter', 'precondition', 'valueFromUser', 'choiceFromUser',
+  'argFormat', 'argAbsent', 'checkResult', 'mustAccountFor', 'maxCalls', 'blockPattern'];
 
 function callsAny(node: ts.Node, names: ReadonlySet<string>): boolean {
   let found = false;
