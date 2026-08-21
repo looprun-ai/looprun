@@ -1,49 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { checkAgainstSurface } from '../src/index.js';
-import type { Declaration, DeclaredDisclosure, DeclaredGuard } from '../src/index.js';
-
-const FACTS = { tools: {
-  issueRefund: { name: 'issueRefund', effect: 'destructive', target: 'invoiceId', entity: 'invoices', schema: {} },
-  getInvoice:  { name: 'getInvoice',  effect: 'read', target: 'invoiceId', entity: 'invoices', schema: { properties: { invoiceId: {} } } },
-  closeBooking:{ name: 'closeBooking',effect: 'write', target: null, entity: 'auditLog', schema: {} }
-} } as never;
-
-/** A guard set, disclosure map and desk pair that together fit FACTS with no gaps: the
- *  destructive act is disclosed with a `before`, its disclosure alias resolves against the
- *  read it names, every guard names a real act, a `precondition` reading a record sits over
- *  an act that has a target, and both desks teach the same conduct laws. */
-const SOUND_GUARDS: readonly DeclaredGuard[] = [
-  { name: 'confirmBeforeRefund', acts: ['issueRefund'], factory: 'onlyAfter' },
-  { name: 'confirmInvoiceKnown', acts: ['getInvoice'], factory: 'precondition', args: { reads: 'record' } }
-];
-const SOUND_DISCLOSURE: Readonly<Record<string, DeclaredDisclosure>> = {
-  issueRefund: { needs: { invoice: 'getInvoice' }, before: 'Say the invoice total before refunding it.' }
-};
-const SOUND_DESKS: Declaration['desks'] = [
-  { name: 'a', persona: 'p', tools: ['issueRefund', 'getInvoice'], conduct: { declareHonestly: 'x', oneQuestion: 'y' } },
-  { name: 'b', persona: 'p', tools: ['getInvoice'], conduct: { declareHonestly: 'x', oneQuestion: 'y' } }
-];
-
-function decl(overrides: {
-  readonly guards?: readonly DeclaredGuard[];
-  readonly disclosure?: Readonly<Record<string, DeclaredDisclosure>>;
-  readonly desks?: Declaration['desks'];
-} = {}): Declaration {
-  return {
-    contract: {
-      name: 'sound-contract',
-      voice: 'Warm, brief, and exact about dates and money.',
-      facts: [],
-      guards: overrides.guards ?? SOUND_GUARDS,
-      disclosure: overrides.disclosure ?? SOUND_DISCLOSURE
-    },
-    desks: overrides.desks ?? SOUND_DESKS
-  };
-}
-
-function soundDeclaration(): Declaration {
-  return decl();
-}
+import { decl, FACTS, soundDeclaration } from './helpers.js';
 
 describe('checkAgainstSurface', () => {
   test('an act the surface does not declare', () => {

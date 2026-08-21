@@ -1,0 +1,291 @@
+/** The emitter of a subject's `cards.ts`: one declaration in, every line of the two cards out.
+ *  The emitter writes the braces, the imports, the licence maps and the factory calls; every
+ *  human-readable sentence in what it writes is a sentence the declaration carries. A field the
+ *  declaration leaves empty is emitted empty, and a rule the emitter cannot compose from declared
+ *  words is an error naming what is missing — never a sentence of the emitter's own. */
+import type { SurfaceFacts } from '@looprun-ai/core';
+import type { Declaration, DeclaredDisclosure, DeclaredGuard } from './declaration.js';
+
+/** A string literal for the emitted file: single-quoted, the way a card is hand-written, with
+ *  the backslash, the quote and the line breaks a sentence may carry escaped. */
+function quote(text: string): string {
+  let out = '\'';
+  for (const ch of text) {
+    if (ch === '\\') out += '\\\\';
+    else if (ch === '\'') out += '\\\'';
+    else if (ch === '\n') out += '\\n';
+    else if (ch === '\r') out += '\\r';
+    else out += ch;
+  }
+  return `${out}'`;
+}
+
+/** A name that can stand bare as an object key: letters, digits, `_` and `$`, never opening on
+ *  a digit. Anything else — a desk called `front-desk` — is emitted quoted. */
+function isPlainName(name: string): boolean {
+  if (name.length === 0) return false;
+  let first = true;
+  for (const ch of name) {
+    const letter = (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || ch === '_' || ch === '$';
+    const digit = ch >= '0' && ch <= '9';
+    if (!letter && !(digit && !first)) return false;
+    first = false;
+  }
+  return true;
+}
+
+const key = (name: string): string => isPlainName(name) ? name : quote(name);
+
+const list = (values: readonly string[]): string => `[${values.map(quote).join(', ')}]`;
+
+const indent = (depth: number, line: string): string => `${'  '.repeat(depth)}${line}`;
+
+/** Several fields as one body: a comma after each block but the last, on that block's own last
+ *  line. Nothing here carries a trailing comma, so the emitted file reads as a hand-written one. */
+function commaJoin(blocks: readonly (readonly string[])[]): readonly string[] {
+  return blocks.flatMap((block, at) => at === blocks.length - 1
+    ? [...block]
+    : [...block.slice(0, -1), `${block[block.length - 1]},`]);
+}
+
+function stringArg(guard: DeclaredGuard, name: string): string {
+  const value = guard.args?.[name];
+  if (typeof value !== 'string') {
+    throw new Error(`contract.guards '${guard.name}' declares factory '${guard.factory}', whose `
+      + `configuration is args.${name} — a string this declaration does not carry`);
+  }
+  return value;
+}
+
+function ruleOf(guard: DeclaredGuard): string {
+  if (guard.rule === undefined) {
+    throw new Error(`contract.guards '${guard.name}' declares factory '${guard.factory}', which `
+      + `refuses in the card's own words — declare the \`rule\` it refuses with`);
+  }
+  return guard.rule;
+}
+
+/** A `precondition` reading the record: the acts it covers, the check its declared reading
+ *  compiles to, and the sentence it refuses with. */
+function preconditionLines(guard: DeclaredGuard): readonly string[] {
+  if (guard.args?.reads !== 'record') {
+    throw new Error(`contract.guards '${guard.name}' declares factory 'precondition' with a `
+      + `reading this emitter has no check for — the one it writes is \`reads: record\``);
+  }
+  const acts = guard.acts.length === 1 ? quote(guard.acts[0]) : list(guard.acts);
+  return [`precondition(${acts}, ({ record }) => record !== null,`, `${quote(ruleOf(guard))})`];
+}
+
+/** A ceiling on how many times one act runs. The count is that act's own completed calls, so a
+ *  ceiling covers exactly one act. */
+function capLines(guard: DeclaredGuard, act: string): readonly string[] {
+  if (guard.acts.length > 1) {
+    throw new Error(`contract.guards '${guard.name}' declares factory 'cap' over `
+      + `${String(guard.acts.length)} acts, and a ceiling counts one act's own calls — declare `
+      + `one guard per act`);
+  }
+  const calls = guard.args?.calls;
+  if (typeof calls !== 'number') {
+    throw new Error(`contract.guards '${guard.name}' declares factory 'cap', whose configuration `
+      + `is args.calls — a number this declaration does not carry`);
+  }
+  return [`maxCalls(${quote(act)}, ${String(calls)}, { scope: ${quote(stringArg(guard, 'scope'))},`,
+    `reason: ${quote(ruleOf(guard))} })`];
+}
+
+/** The call one declared guard is emitted from: the factory it imports, and the lines of the
+ *  call itself. A factory configured from one act takes the first act the guard names and the
+ *  rest arrive as the guard's own `tool` scope; `precondition` takes them all itself. */
+function factoryCall(guard: DeclaredGuard): { readonly imported: string;
+                                              readonly lines: readonly string[] } {
+  const [act] = guard.acts;
+  if (act === undefined) throw new Error(`contract.guards '${guard.name}' names no act`);
+  switch (guard.factory) {
+    case 'onlyAfter':
+      return { imported: 'onlyAfter',
+        lines: [`onlyAfter(${quote(act)}, ${quote(stringArg(guard, 'after'))})`] };
+    case 'valueFromUser':
+      return { imported: 'valueFromUser',
+        lines: [`valueFromUser(${quote(act)}, ${quote(stringArg(guard, 'arg'))})`] };
+    case 'argFormat':
+      return { imported: 'argFormat',
+        lines: [`argFormat(${quote(act)}, ${quote(stringArg(guard, 'arg'))}, `
+          + `${quote(stringArg(guard, 'pattern'))})`] };
+    case 'precondition':
+      return { imported: 'precondition', lines: preconditionLines(guard) };
+    case 'cap':
+      return { imported: 'maxCalls', lines: capLines(guard, act) };
+    case 'deny':
+      throw new Error(`contract.guards '${guard.name}' declares factory 'deny', and a deny is a `
+        + `check written in code — declare the law as a 'precondition' over the records, or write `
+        + `that guard by hand on the card`);
+  }
+}
+
+/** One guard as the card carries it: the factory call spread into a literal that names itself
+ *  with the declared name, scopes itself to every act the guard names, and states the declared
+ *  rule where the factory does not already take it. */
+function guardLines(guard: DeclaredGuard, depth: number): readonly string[] {
+  const call = factoryCall(guard);
+  const fields = [`name: ${quote(guard.name)}`];
+  if (guard.acts.length > 1 && guard.factory !== 'precondition') fields.push(`tool: ${list(guard.acts)}`);
+  const takesRule = guard.factory === 'precondition' || guard.factory === 'cap';
+  if (guard.rule !== undefined && !takesRule) fields.push(`rule: ${quote(guard.rule)}`);
+  const [head, ...rest] = call.lines;
+  const lines = commaJoin([
+    [indent(depth, `{ ...${head}`), ...rest.map(line => indent(depth + 2, line))],
+    ...fields.map(field => [indent(depth + 1, field)])
+  ]);
+  return [...lines.slice(0, -1), `${lines[lines.length - 1]} }`];
+}
+
+/** One disclosure entry: the reads the engine performs on the held call's own args, and the
+ *  tenses the declaration states for them. An alias is emitted as the recipe it is — the read,
+ *  and the argument of the held call it answers from — so the card states it rather than leaving
+ *  it derived. */
+function disclosureLines(act: string, entry: DeclaredDisclosure, facts: SurfaceFacts,
+  depth: number): readonly string[] {
+  if (entry.cap !== undefined) {
+    throw new Error(`contract.disclosure.${act} declares a cap, and a cap refuses ONE argument of `
+      + `the held call with a sentence of its own — this declaration carries neither`);
+  }
+  const target = facts.tools[act]?.target ?? null;
+  const aliases = Object.entries(entry.needs ?? {});
+  const recipe = (read: string): string => target === null ? quote(read)
+    : `{ tool: ${quote(read)}, args: { ${key(target)}: ${quote(target)} } }`;
+  const needs = aliases.length === 0 ? [] : [[
+    indent(depth + 1, 'needs: {'),
+    ...commaJoin(aliases.map(([alias, read]) => [indent(depth + 2, `${key(alias)}: ${recipe(read)}`)])),
+    indent(depth + 1, '}')
+  ]];
+  const tenses = [
+    ...(entry.before === undefined ? [] : [[indent(depth + 1, `before: ${quote(entry.before)}`)]]),
+    ...(entry.after === undefined ? [] : [[indent(depth + 1, `after: ${quote(entry.after)}`)]])
+  ];
+  return [
+    indent(depth, `${key(act)}: {`),
+    ...commaJoin([...needs, ...tenses]),
+    indent(depth, '}')
+  ];
+}
+
+function contractLines(declaration: Declaration, facts: SurfaceFacts): readonly string[] {
+  const { contract } = declaration;
+  const block = (open: string, body: readonly string[], close: string): readonly string[] =>
+    body.length === 0 ? [indent(1, `${open}${close}`)]
+      : [indent(1, open), ...body, indent(1, close)];
+  const fields = [
+    [indent(1, `name: ${quote(contract.name)}`)],
+    [indent(1, `voice: ${quote(contract.voice)}`)],
+    block('facts: [', commaJoin(contract.facts.map(fact => [indent(2, quote(fact))])), ']'),
+    block('guards: [', commaJoin(contract.guards.map(guard => guardLines(guard, 2))), ']'),
+    block('disclosure: {', commaJoin(Object.entries(contract.disclosure)
+      .map(([act, entry]) => disclosureLines(act, entry, facts, 2))), '}'),
+    ...(contract.secrets === undefined ? [] : [[indent(1, `secrets: ${list(contract.secrets)}`)]]),
+    ...(contract.limits === undefined ? [] : [[indent(1, `limits: { ${Object.entries(contract.limits)
+      .map(([name, value]) => `${key(name)}: ${String(value)}`).join(', ')} }`)]])
+  ];
+  return ['export const CONTRACT: DomainContract = {', ...commaJoin(fields), '};'];
+}
+
+/** One desk as its own AgentSpec: who it is, the lane it acts in, the desks it hands work to,
+ *  and the conduct laws it teaches — one `prose` call per law, in the declaration's own order. */
+function deskLines(desk: Declaration['desks'][number], depth: number): readonly string[] {
+  const teammates = Object.entries(desk.teammates ?? {});
+  const laws = Object.entries(desk.conduct);
+  const fields = [
+    [indent(depth + 1, `name: ${quote(desk.name)}`)],
+    [indent(depth + 1, `persona: ${quote(desk.persona)}`)],
+    [indent(depth + 1, `tools: ${list(desk.tools)}`)],
+    ...(teammates.length === 0 ? [] : [[
+      indent(depth + 1, 'teammates: {'),
+      ...commaJoin(teammates.map(([name, does]) => [indent(depth + 2, `${key(name)}: ${quote(does)}`)])),
+      indent(depth + 1, '}')
+    ]]),
+    [indent(depth + 1, 'llmParams: { temperature: 0 }')],
+    ...(laws.length === 0 ? [] : [[
+      indent(depth + 1, 'guards: ['),
+      ...commaJoin(laws.map(([name, rule]) =>
+        [indent(depth + 2, `prose(${quote(name)}, ${quote(rule)})`)])),
+      indent(depth + 1, ']')
+    ]])
+  ];
+  return [indent(depth, `${key(desk.name)}: {`), ...commaJoin(fields), indent(depth, '}')];
+}
+
+/** A licence map, keyed by the name it licenses. Emitted only when the declaration has something
+ *  to license: an empty map licenses nothing and would sit in the file as a dead export. */
+function licenceLines(name: string, comment: readonly string[],
+  entries: readonly (readonly [string, string])[]): readonly string[] {
+  if (entries.length === 0) return [];
+  return ['', ...comment, `export const ${name} = {`,
+    ...commaJoin(entries.map(([law, licence]) => [indent(1, `${key(law)}: ${quote(licence)}`)])),
+    '} as const;'];
+}
+
+/** Every conduct law any desk teaches, in the order the declaration states them, each claiming
+ *  the one licence a conduct law has: it is about how a desk answers, and no check decides it. */
+function conductLicences(declaration: Declaration): readonly (readonly [string, string])[] {
+  const laws: string[] = [];
+  for (const desk of declaration.desks) {
+    for (const law of Object.keys(desk.conduct)) if (!laws.includes(law)) laws.push(law);
+  }
+  return laws.map(law => [law, 'conduct'] as const);
+}
+
+/** A section rule across the file: the label, then a line out to the same column every other
+ *  section reaches. */
+function divider(label: string): string {
+  const head = `// ── ${label} `;
+  return `${head}${'─'.repeat(Math.max(3, 80 - head.length))}`;
+}
+
+/** One declaration and the surface it is declared against, in; the whole text of `cards.ts`, out.
+ *  The order is the order a reader needs it in: what the file is, the imports it uses, the prose
+ *  helper, the licence maps, the DomainContract, and one AgentSpec per desk under the SPECS map
+ *  the subject door re-exports. */
+export function writeCards(declaration: Declaration, facts: SurfaceFacts): string {
+  const contract = contractLines(declaration, facts);
+  const desks = commaJoin(declaration.desks.map(desk => deskLines(desk, 1)));
+  const teaches = declaration.desks.some(desk => Object.keys(desk.conduct).length > 0);
+  const factories = [...new Set(declaration.contract.guards.map(g => factoryCall(g).imported))].sort();
+  const wide = declaration.contract.guards
+    .flatMap(guard => guard.wide === undefined ? [] : [[guard.name, guard.wide] as const]);
+
+  return [
+    `/** ${declaration.contract.name} — the two cards of this business: one DomainContract that`,
+    ' *  says what the business is, and one AgentSpec per desk that says how that desk behaves.',
+    ' *  Written by the looprun emitter from the declaration beside the world card, so every',
+    ' *  sentence here is a sentence that declaration carries. Tool plumbing lives on the world',
+    ' *  card. */',
+    `import type { AgentSpec, DomainContract${teaches ? ', Guard' : ''} } from '@looprun-ai/core';`,
+    ...(factories.length === 0 ? [] : [`import { ${factories.join(', ')} } from '@looprun-ai/core';`]),
+    ...(teaches ? [
+      '',
+      divider('helpers'),
+      '',
+      '/** A rule the prompt states in plain words, on the desk that owes it: it renders into the',
+      ' *  system prefix of that desk, and the desk reads it before it decides anything. */',
+      'const prose = (name: string, rule: string): Guard => ({ name, rule, on: \'reply\' });'
+    ] : []),
+    ...licenceLines('WHY', [
+      '/** Why each prose rule exists. Every name prose() mints appears here, claiming one of',
+      ' *  noSuchAct, aboutARead, conduct or measured:<case>. The set is closed. */'
+    ], conductLicences(declaration)),
+    ...licenceLines('WIDE', [
+      '/** Why a rule names more than one act: its sentence is stamped on the card of every act it',
+      ' *  names, so naming several costs a licence — oneLawEveryAct, or sameRefusal. */'
+    ], wide),
+    '',
+    divider('CARD 2 — the business'),
+    '',
+    ...contract,
+    '',
+    divider('CARD 1 — one desk each'),
+    '',
+    'export const SPECS: Readonly<Record<string, AgentSpec>> = {',
+    ...desks,
+    '};',
+    ''
+  ].join('\n');
+}
