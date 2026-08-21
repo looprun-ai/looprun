@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
 import { describe, expect, test } from 'vitest';
 import { writeCards } from '../src/index.js';
-import type { Declaration, DeclaredGuard } from '../src/index.js';
+import type { Declaration, DeclaredGuard, DeclaredRewrite } from '../src/index.js';
 import { decl, FACTS, soundDeclaration } from './helpers.js';
 
 const TREE_ROOT = join(dirname(fileURLToPath(import.meta.url)), '../../..');
@@ -328,6 +328,52 @@ describe('writeCards', () => {
       .toThrow('args.records');
     expect(() => writeCards(law({ records: ['inv_2201'], status: 'settled' }), FACTS))
       .toThrow('declares args.status');
+  });
+
+  test('a blocked seam emits the pattern as data, the text it reads and its own sentence', () => {
+    const out = writeCards(decl({ guards: [{ name: 'seam:cardNumber', acts: ['issueRefund'],
+      factory: 'blockPattern', args: { pattern: '[0-9]{13,19}', on: 'reply' },
+      rule: 'A card number never goes out in a reply; say the last four the record carries and stop.' }] }), FACTS);
+    expect(out).toContain("{ ...blockPattern('seam:cardNumber', new RegExp('[0-9]{13,19}'),");
+    expect(out).toContain("{ on: 'reply' }),");
+    expect(out).toContain("tool: ['issueRefund'] }");
+    // The factory is handed the name, so the literal never states it a second time.
+    expect(out).not.toContain("name: 'seam:cardNumber'");
+    expect(out).toContain("import { blockPattern } from '@looprun-ai/core';");
+  });
+
+  test('a blocked seam states which text it reads, and its sentence, or it is refused', () => {
+    const seam = (guard: Partial<DeclaredGuard>): Declaration =>
+      decl({ guards: [{ name: 'seam:cardNumber', acts: ['issueRefund'], factory: 'blockPattern',
+        args: { pattern: '[0-9]{13,19}', on: 'reply' }, rule: 'Say the last four and stop.', ...guard }] });
+    expect(() => writeCards(seam({ args: { pattern: '[0-9]{13,19}' } }), FACTS)).toThrow('args.on');
+    expect(() => writeCards(seam({ args: { pattern: '[0-9]{13,19}', on: 'result' } }), FACTS)).toThrow('args.on');
+    expect(() => writeCards(seam({ rule: undefined }), FACTS)).toThrow('declare the `rule` it states');
+  });
+
+  test('the contract carries its rewrites as the data each kind is configured from', () => {
+    const declaration = decl();
+    const out = writeCards({ ...declaration, contract: { ...declaration.contract, rewrites: [
+      { kind: 'maskPattern', name: 'taxNumber', pattern: '[A-Z]{2}[0-9]{9}' },
+      { kind: 'purgePattern', name: 'internalNote', pattern: 'INTERNAL:[^\\n]*' },
+      { kind: 'swapTerms', terms: { invoice: 'statement', refund: 'reimbursement' } }
+    ] } }, FACTS);
+    expect(out).toContain("    maskPattern('taxNumber', new RegExp('[A-Z]{2}[0-9]{9}')),");
+    expect(out).toContain("    purgePattern('internalNote', new RegExp('INTERNAL:[^\\\\n]*')),");
+    expect(out).toContain("    swapTerms({ invoice: 'statement', refund: 'reimbursement' })");
+    expect(out).toContain("import { maskPattern, onlyAfter, precondition, purgePattern, swapTerms } from '@looprun-ai/core';");
+  });
+
+  test('a rewrite missing what its kind is configured from is refused by its index', () => {
+    const declaration = decl();
+    const withRewrites = (rewrites: readonly DeclaredRewrite[]): Declaration =>
+      ({ ...declaration, contract: { ...declaration.contract, rewrites } });
+    expect(() => writeCards(withRewrites([{ kind: 'maskPattern', name: 'taxNumber' }]), FACTS))
+      .toThrow("contract.rewrites[0] declares kind 'maskPattern' and no pattern");
+    expect(() => writeCards(withRewrites([{ kind: 'swapTerms', terms: {} }]), FACTS))
+      .toThrow("contract.rewrites[0] declares kind 'swapTerms'");
+    expect(() => writeCards(withRewrites([{ kind: 'swapTerms', name: 'x', terms: { a: 'b' } }]), FACTS))
+      .toThrow('contract.rewrites[0] declares name');
   });
 
   test('a role gate emits one precondition over the acting record, and the walk beside it', () => {

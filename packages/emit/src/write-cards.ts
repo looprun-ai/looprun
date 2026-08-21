@@ -5,7 +5,7 @@
  *  words is an error naming what is missing — never a sentence of the emitter's own. */
 import type { SurfaceFacts } from '@looprun-ai/core';
 import type { Declaration, DeclaredCap, DeclaredDisclosure, DeclaredGuard,
-  DeclaredNeed } from './declaration.js';
+  DeclaredNeed, DeclaredRewrite } from './declaration.js';
 
 /** A string literal for the emitted file: single-quoted, the way a card is hand-written, with
  *  the backslash, the quote and the line breaks a sentence may carry escaped. */
@@ -74,8 +74,17 @@ const LAWFUL_ARGS: Readonly<Record<DeclaredGuard['factory'], readonly string[]>>
   cap: ['calls', 'scope'],
   checkResult: ['field', 'is', 'in'],
   mustAccountFor: ['records', 'status'],
+  blockPattern: ['pattern', 'on'],
   prose: [],
   deny: []
+};
+
+/** What each rewrite is configured from. A rewrite edits the outgoing reply and decides nothing,
+ *  so a key outside its own list configures nothing, exactly as a foreign guard argument does. */
+const LAWFUL_REWRITE: Readonly<Record<DeclaredRewrite['kind'], readonly string[]>> = {
+  maskPattern: ['name', 'pattern'],
+  purgePattern: ['name', 'pattern'],
+  swapTerms: ['terms']
 };
 
 /** How a factory is pointed at the acts a guard names. `all` — the call takes every one of them;
@@ -91,6 +100,7 @@ const ACT_SHAPE: Readonly<Record<DeclaredGuard['factory'], 'all' | 'first' | 'no
   cap: 'first',
   checkResult: 'first',
   mustAccountFor: 'none',
+  blockPattern: 'none',
   prose: 'none',
   deny: 'none'
 };
@@ -99,7 +109,7 @@ const ACT_SHAPE: Readonly<Record<DeclaredGuard['factory'], 'all' | 'first' | 'no
  *  states the correction the reply owes. A factory that mints its sentence from its own
  *  configuration is not here — a `rule` beside it overrides that sentence and is optional. */
 const OWES_RULE: ReadonlySet<DeclaredGuard['factory']> =
-  new Set(['precondition', 'role', 'cap', 'checkResult', 'prose']);
+  new Set(['precondition', 'role', 'cap', 'checkResult', 'blockPattern', 'prose']);
 
 function checkArgs(guard: DeclaredGuard): void {
   const lawful = LAWFUL_ARGS[guard.factory];
@@ -287,6 +297,20 @@ function checkResultLines(guard: DeclaredGuard, act: string): readonly string[] 
   return [`checkResult(${quote(act)}, ctx =>`, `${test} ? null : '')`];
 }
 
+/** A seam the declared pattern refuses at: the text it reads — `input` for the arriving message,
+ *  `reply` for the outgoing one — the pattern itself as data, and the sentence the block refuses
+ *  with. The factory is handed the guard's own name, so it mints the census row itself. */
+function blockLines(guard: DeclaredGuard): readonly string[] {
+  const seam = guard.args?.on;
+  if (seam !== 'input' && seam !== 'reply') {
+    throw new Error(`contract.guards '${guard.name}' declares factory 'blockPattern', whose `
+      + `configuration is args.on — the text the block reads, 'input' for the message arriving or `
+      + `'reply' for the one going out, which this declaration does not carry`);
+  }
+  return [`blockPattern(${quote(guard.name)}, new RegExp(${quote(stringArg(guard, 'pattern'))}),`,
+    `${quote(ruleOf(guard))}, { on: ${quote(seam)} })`];
+}
+
 /** The words a report closes a record with. A status outside them is a row the engine's own
  *  vocabulary never writes, so the guard would look for a word no report can carry. */
 const REPORT_WORDS: readonly string[] = ['done', 'held', 'refused', 'unknown', 'no_tool_called'];
@@ -367,6 +391,8 @@ function factoryCall(guard: DeclaredGuard): { readonly imported: string | null;
       return { imported: 'maxCalls', lines: capLines(guard, act) };
     case 'mustAccountFor':
       return { imported: 'mustAccountFor', lines: accountLines(guard) };
+    case 'blockPattern':
+      return { imported: 'blockPattern', lines: blockLines(guard) };
     case 'prose':
       return { imported: null, lines: [`prose(${quote(guard.name)}, ${quote(ruleOf(guard))})`] };
   }
@@ -383,11 +409,13 @@ function guardLines(guard: DeclaredGuard, depth: number): readonly string[] {
     return [indent(depth, `{ ...${call.lines[0]}, tool: ${list(guard.acts)} }`)];
   }
   const shape = ACT_SHAPE[guard.factory];
-  const fields = [`name: ${quote(guard.name)}`];
+  // A factory handed the guard's own name mints the census row itself, so the literal around it
+  // states only what the call does not already carry.
+  const fields = guard.factory === 'blockPattern' ? [] : [`name: ${quote(guard.name)}`];
   if (shape === 'none' || (shape === 'first' && guard.acts.length > 1)) {
     fields.push(`tool: ${list(guard.acts)}`);
   }
-  const takesRule = shape === 'all' || guard.factory === 'cap';
+  const takesRule = shape === 'all' || guard.factory === 'cap' || guard.factory === 'blockPattern';
   if (guard.rule !== undefined && !takesRule) fields.push(`rule: ${quote(guard.rule)}`);
   const [head, ...rest] = call.lines;
   const lines = commaJoin([
@@ -456,6 +484,36 @@ function disclosureLines(act: string, entry: DeclaredDisclosure, facts: SurfaceF
   ];
 }
 
+/** One rewrite as the card carries it. A pattern rewrite is its name and the pattern it acts on —
+ *  the pattern is that rewrite's own DATA, which is why the card may carry one at all. A term swap
+ *  is the pairs themselves: the word the business does not use, and the word it does. */
+function rewriteCall(rewrite: DeclaredRewrite, at: number): string {
+  const lawful = LAWFUL_REWRITE[rewrite.kind];
+  for (const declared of Object.keys(rewrite)) {
+    if (declared === 'kind' || lawful.includes(declared)) continue;
+    throw new Error(`contract.rewrites[${String(at)}] declares ${declared}, and kind `
+      + `'${rewrite.kind}' is configured from ${lawful.join(' and ')} — drop it, or declare the `
+      + `rewrite whose kind reads it`);
+  }
+  if (rewrite.kind === 'swapTerms') {
+    const pairs = Object.entries(rewrite.terms ?? {});
+    if (pairs.length === 0) {
+      throw new Error(`contract.rewrites[${String(at)}] declares kind 'swapTerms', whose `
+        + `configuration is terms — one or more pairs of the word the business does not use and `
+        + `the word it does, which this declaration does not carry`);
+    }
+    return `swapTerms({ ${pairs.map(([from, to]) => `${key(from)}: ${quote(to)}`).join(', ')} })`;
+  }
+  const missing = [...(rewrite.name === undefined ? ['name'] : []),
+                   ...(rewrite.pattern === undefined ? ['pattern'] : [])];
+  if (missing.length > 0 || rewrite.name === undefined || rewrite.pattern === undefined) {
+    throw new Error(`contract.rewrites[${String(at)}] declares kind '${rewrite.kind}' and no `
+      + `${missing.join(' and no ')} — a pattern rewrite is a name the census carries and the `
+      + `pattern it acts on`);
+  }
+  return `${rewrite.kind}(${quote(rewrite.name)}, new RegExp(${quote(rewrite.pattern)}))`;
+}
+
 function contractLines(declaration: Declaration, facts: SurfaceFacts): readonly string[] {
   const { contract } = declaration;
   const block = (open: string, body: readonly string[], close: string): readonly string[] =>
@@ -468,6 +526,8 @@ function contractLines(declaration: Declaration, facts: SurfaceFacts): readonly 
     block('guards: [', commaJoin(contract.guards.map(guard => guardLines(guard, 2))), ']'),
     block('disclosure: {', commaJoin(Object.entries(contract.disclosure)
       .map(([act, entry]) => disclosureLines(act, entry, facts, 2))), '}'),
+    ...(contract.rewrites === undefined ? [] : [block('rewrites: [',
+      commaJoin(contract.rewrites.map((rewrite, at) => [indent(2, rewriteCall(rewrite, at))])), ']')]),
     ...(contract.secrets === undefined ? [] : [[indent(1, `secrets: ${list(contract.secrets)}`)]]),
     ...(contract.limits === undefined ? [] : [[indent(1, `limits: { ${Object.entries(contract.limits)
       .map(([name, value]) => `${key(name)}: ${String(value)}`).join(', ')} }`)]])
@@ -586,8 +646,11 @@ export function writeCards(declaration: Declaration, facts: SurfaceFacts): strin
   const helpers = helperBlocks.flatMap((block, at) => at === 0 ? [...block] : ['', ...block]);
   const types = ['AgentSpec', 'DomainContract', ...(teaches ? ['Guard'] : []),
     ...(readsResults ? ['Json'] : []), ...(gatesOnRole ? ['StateSnapshot'] : [])];
-  const imported = declaration.contract.guards.map(guard => factoryCall(guard).imported)
-    .filter((name): name is string => name !== null);
+  const imported = [
+    ...declaration.contract.guards.map(guard => factoryCall(guard).imported)
+      .filter((name): name is string => name !== null),
+    ...(declaration.contract.rewrites ?? []).map(rewrite => rewrite.kind)
+  ];
   const factories = [...new Set(imported)].sort();
   const wide = declaration.contract.guards
     .flatMap(guard => guard.wide === undefined ? [] : [[guard.name, guard.wide] as const]);

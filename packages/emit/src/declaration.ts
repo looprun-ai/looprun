@@ -6,7 +6,7 @@ export interface DeclaredGuard {
   readonly name: string;
   readonly acts: readonly string[];
   readonly factory: 'onlyAfter' | 'precondition' | 'role' | 'valueFromUser' | 'argFormat'
-    | 'argAbsent' | 'cap' | 'checkResult' | 'mustAccountFor' | 'prose' | 'deny';
+    | 'argAbsent' | 'cap' | 'checkResult' | 'mustAccountFor' | 'blockPattern' | 'prose' | 'deny';
   readonly args?: Readonly<Record<string, unknown>>;
   readonly rule?: string;
   readonly wide?: 'oneLawEveryAct' | 'sameRefusal';
@@ -43,6 +43,16 @@ export interface DeclaredDisclosure {
   readonly cap?: DeclaredCap;
 }
 
+/** One edit of the outgoing reply, as data. A rewrite decides nothing — it rewrites what the desk
+ *  already wrote. `maskPattern` and `purgePattern` are a name and the pattern they act on;
+ *  `swapTerms` is the pairs themselves, and mints its own name from them. */
+export interface DeclaredRewrite {
+  readonly kind: 'maskPattern' | 'purgePattern' | 'swapTerms';
+  readonly name?: string;
+  readonly pattern?: string;
+  readonly terms?: Readonly<Record<string, string>>;
+}
+
 export interface Declaration {
   readonly contract: {
     readonly name: string;
@@ -50,6 +60,7 @@ export interface Declaration {
     readonly facts: readonly string[];
     readonly guards: readonly DeclaredGuard[];
     readonly disclosure: Readonly<Record<string, DeclaredDisclosure>>;
+    readonly rewrites?: readonly DeclaredRewrite[];
     readonly secrets?: readonly string[];
     readonly limits?: Readonly<Record<string, number>>;
   };
@@ -62,7 +73,8 @@ export interface Declaration {
   }[];
 }
 
-const FACTORIES: ReadonlySet<DeclaredGuard['factory']> = new Set(['onlyAfter', 'precondition', 'role', 'valueFromUser', 'argFormat', 'argAbsent', 'cap', 'checkResult', 'mustAccountFor', 'prose', 'deny']);
+const FACTORIES: ReadonlySet<DeclaredGuard['factory']> = new Set(['onlyAfter', 'precondition', 'role', 'valueFromUser', 'argFormat', 'argAbsent', 'cap', 'checkResult', 'mustAccountFor', 'blockPattern', 'prose', 'deny']);
+const REWRITE_KINDS: ReadonlySet<DeclaredRewrite['kind']> = new Set(['maskPattern', 'purgePattern', 'swapTerms']);
 const WIDE_KINDS: ReadonlySet<NonNullable<DeclaredGuard['wide']>> = new Set(['oneLawEveryAct', 'sameRefusal']);
 
 function fail(path: string, line: number, detail: string): never {
@@ -273,12 +285,35 @@ function readGuards(seq: YAMLSeq, path: string, lineCounter: LineCounter): reado
   });
 }
 
+function readRewrite(map: YAMLMap, path: string, lineCounter: LineCounter): DeclaredRewrite {
+  const kind = requireEnum(map, 'kind', REWRITE_KINDS, path, lineCounter);
+  const name = readOptionalString(map, 'name', path, lineCounter);
+  const pattern = readOptionalString(map, 'pattern', path, lineCounter);
+  const termsMap = readOptionalMap(map, 'terms', path, lineCounter);
+  return {
+    kind,
+    ...(name === undefined ? {} : { name }),
+    ...(pattern === undefined ? {} : { pattern }),
+    ...(termsMap === undefined ? {} : { terms: asStringRecord(termsMap, field(path, 'terms'), lineCounter) })
+  };
+}
+
+function readRewrites(seq: YAMLSeq, path: string, lineCounter: LineCounter): readonly DeclaredRewrite[] {
+  const fallback = lineAt(seq, lineCounter, 1);
+  return seq.items.map((item, i) => {
+    const itemPath = `${path}[${i}]`;
+    if (!isMap(item)) fail(itemPath, lineAt(item as Node, lineCounter, fallback), 'must be a mapping');
+    return readRewrite(item, itemPath, lineCounter);
+  });
+}
+
 function readContract(map: YAMLMap, path: string, lineCounter: LineCounter): Declaration['contract'] {
   const name = requireString(map, 'name', path, lineCounter);
   const voice = requireString(map, 'voice', path, lineCounter);
   const facts = asStringArray(requireSeq(map, 'facts', path, lineCounter), field(path, 'facts'), lineCounter);
   const guards = readGuards(requireSeq(map, 'guards', path, lineCounter), field(path, 'guards'), lineCounter);
   const disclosure = readDisclosure(requireMap(map, 'disclosure', path, lineCounter), field(path, 'disclosure'), lineCounter);
+  const rewritesSeq = readOptionalSeq(map, 'rewrites', path, lineCounter);
   const secretsSeq = readOptionalSeq(map, 'secrets', path, lineCounter);
   const limitsMap = readOptionalMap(map, 'limits', path, lineCounter);
   return {
@@ -287,6 +322,7 @@ function readContract(map: YAMLMap, path: string, lineCounter: LineCounter): Dec
     facts,
     guards,
     disclosure,
+    ...(rewritesSeq === undefined ? {} : { rewrites: readRewrites(rewritesSeq, field(path, 'rewrites'), lineCounter) }),
     ...(secretsSeq === undefined ? {} : { secrets: asStringArray(secretsSeq, field(path, 'secrets'), lineCounter) }),
     ...(limitsMap === undefined ? {} : { limits: asNumberRecord(limitsMap, field(path, 'limits'), lineCounter) })
   };
