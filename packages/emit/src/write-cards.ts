@@ -136,6 +136,13 @@ function factoryCall(guard: DeclaredGuard): { readonly imported: string;
                                               readonly lines: readonly string[] } {
   const [act] = guard.acts;
   if (act === undefined) throw new Error(`contract.guards '${guard.name}' names no act`);
+  // The factory is read before its configuration: a factory this emitter cannot write is the
+  // author's answer, and the keys it would have read are beside the point.
+  if (guard.factory === 'deny') {
+    throw new Error(`contract.guards '${guard.name}' declares factory 'deny', and a deny is a `
+      + `check written in code — declare the law as a 'precondition' over the records, or write `
+      + `that guard by hand on the card`);
+  }
   checkArgs(guard);
   switch (guard.factory) {
     case 'onlyAfter':
@@ -152,10 +159,6 @@ function factoryCall(guard: DeclaredGuard): { readonly imported: string;
       return { imported: 'precondition', lines: preconditionLines(guard) };
     case 'cap':
       return { imported: 'maxCalls', lines: capLines(guard, act) };
-    case 'deny':
-      throw new Error(`contract.guards '${guard.name}' declares factory 'deny', and a deny is a `
-        + `check written in code — declare the law as a 'precondition' over the records, or write `
-        + `that guard by hand on the card`);
   }
 }
 

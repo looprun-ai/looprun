@@ -56,6 +56,31 @@ function checkGuardActsExist(declaration: Declaration, facts: SurfaceFacts): rea
   return refusals;
 }
 
+/** The arguments that name an ACT rather than configure one. A factory is pointed at the act it
+ *  covers through `acts`, and some are pointed at a second act through their configuration — the
+ *  prerequisite `onlyAfter` waits for. Both name the same namespace, `facts.tools`. */
+const ACT_ARGS: Readonly<Record<string, readonly string[]>> = { onlyAfter: ['after'] };
+
+/** Every act a guard's CONFIGURATION names exists on the surface. A prerequisite spelled one
+ *  letter off is never a call anyone can make, so the guard it configures denies the act it
+ *  covers on every turn for the whole conversation, and no lint downstream sees it: the act does
+ *  carry a check, and the check is simply unsatisfiable. */
+function checkGuardArgActsExist(declaration: Declaration, facts: SurfaceFacts): readonly string[] {
+  const toolNames = Object.keys(facts.tools);
+  const refusals: string[] = [];
+  declaration.contract.guards.forEach((guard, guardIndex) => {
+    for (const argName of ACT_ARGS[guard.factory] ?? []) {
+      const named = guard.args?.[argName];
+      if (typeof named !== 'string' || facts.tools[named] !== undefined) continue;
+      const near = closestToolName(named, toolNames);
+      const suggestion = near === null ? '' : ` — did you mean '${near}'?`;
+      refusals.push(`contract.guards[${guardIndex}].args.${argName} names '${named}', `
+        + `and the surface declares no such act${suggestion}`);
+    }
+  });
+  return refusals;
+}
+
 /** Every destructive act carries a disclosure with a `before` sentence — a destructive act
  *  with nothing declared before it runs is not disclosed, it is silent. */
 function checkDestructiveDisclosed(declaration: Declaration, facts: SurfaceFacts): readonly string[] {
@@ -149,14 +174,15 @@ function checkDisclosureNeedsResolvable(declaration: Declaration, facts: Surface
 }
 
 /** Every refusal the emitter owes when a declaration does not fit the world's surface: a
- *  guard naming an act no tool declares, a destructive act with nothing disclosed before it
- *  runs, a `precondition` reading a record over an act with no target, a conduct law some
- *  desks never teach, a disclosure `needs` alias naming a tool that does not exist, and a
- *  disclosure alias whose read cannot answer the call it is held for. An empty array means
- *  the declaration is safe to emit against `facts`. */
+ *  guard naming an act no tool declares, a guard whose configuration names one, a destructive
+ *  act with nothing disclosed before it runs, a `precondition` reading a record over an act with
+ *  no target, a conduct law some desks never teach, a disclosure `needs` alias naming a tool that
+ *  does not exist, and a disclosure alias whose read cannot answer the call it is held for. An
+ *  empty array means the declaration is safe to emit against `facts`. */
 export function checkAgainstSurface(declaration: Declaration, facts: SurfaceFacts): readonly string[] {
   return [
     ...checkGuardActsExist(declaration, facts),
+    ...checkGuardArgActsExist(declaration, facts),
     ...checkDestructiveDisclosed(declaration, facts),
     ...checkPreconditionTarget(declaration, facts),
     ...checkConductUniform(declaration),

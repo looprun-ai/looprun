@@ -183,6 +183,12 @@ describe('writeCards', () => {
     expect(() => writeCards(declaration, FACTS)).toThrow('letters, digits and hyphens');
   });
 
+  test('a factory this emitter cannot write is answered before its arguments are read', () => {
+    const declaration = decl({ guards: [{ name: 'refundNeedsAHuman', acts: ['issueRefund'],
+      factory: 'deny', args: { after: 'getInvoice' }, rule: 'A refund is put to a person first.' }] });
+    expect(() => writeCards(declaration, FACTS)).toThrow('a deny is a check written in code');
+  });
+
   test('an argument no factory reads is refused, with the factory and the keys it does read', () => {
     const declaration = decl({ guards: [{ name: 'refundReadsTheInvoice', acts: ['issueRefund'],
       factory: 'onlyAfter', args: { after: 'getInvoice', pattern: '^inv_' } }] });

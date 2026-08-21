@@ -1,6 +1,7 @@
 /** The one gate over a subject: every verb that answers with findings, one list, one answer. */
-import type { DeclaredWorld, ExamCase, LiveWorldCard, McpWorldCard } from '@looprun-ai/core';
-import { factsFromWorld } from '@looprun-ai/core';
+import type { AgentSpec, DeclaredWorld, DomainContract, ExamCase, LiveWorldCard,
+              McpWorldCard } from '@looprun-ai/core';
+import { AgentFactory, factsFromWorld, Rulebook } from '@looprun-ai/core';
 import { approvable, capPaths, conductComplete, coversResolve, destructiveDisclosed,
          floorRedeclared, inertChecks, nameGate, overWide, pairing, purity, unlicensed,
          type LintFinding } from './lints.js';
@@ -22,6 +23,33 @@ export interface GateSubject {
    *  reaches. The caller builds this from the world it has already run the preset against.
    *  `null` opts out. */
   readonly presetLeavesGuardInert: ((preset: string | undefined, guardName: string) => boolean) | null;
+}
+
+/** The cards a census is read off: one desk each, the business they share, and the world whose
+ *  acts decide which floor guards the engine installs. */
+export interface CensusSubject {
+  readonly specs: Readonly<Record<string, AgentSpec>>;
+  readonly contract: DomainContract | undefined;
+  readonly world: DeclaredWorld | McpWorldCard | LiveWorldCard;
+}
+
+/** THE census a `covers` key is spelled against: every guard name the engine installs across the
+ *  desks of one subject. The engine answers it — the compiled rows come from AgentFactory and the
+ *  honesty rows from the Rulebook that injects them, exactly as a live turn walks them. Nothing
+ *  here keeps a list of guard names, so a row the engine adds arrives here the day it is added.
+ *
+ *  The union across desks is the answer because a case names the guard it means to trip and the
+ *  desk it runs on is the case's own business. */
+export function censusFor(subject: CensusSubject): ReadonlySet<string> {
+  const facts = factsFromWorld(subject.world);
+  const factory = new AgentFactory();
+  const names = new Set<string>();
+  for (const desk of Object.values(subject.specs)) {
+    for (const guard of new Rulebook(factory.governed(desk, subject.contract, facts)).guards().guards) {
+      names.add(guard.name);
+    }
+  }
+  return names;
 }
 
 /** The static gate: every verb, one list, one answer. It runs in under a second on a thirty-act

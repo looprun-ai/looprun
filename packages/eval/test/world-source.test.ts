@@ -39,6 +39,28 @@ describe('factsFromSource', () => {
     expect(Object.keys(facts.tools)).toEqual(['getBooking']);
   });
 
+  test('a file stating two world cards is refused, and both are named', () => {
+    const path = join(mkdtempSync(join(tmpdir(), 'world-')), 'world.ts');
+    writeFileSync(path, [
+      'import { world } from \'@looprun-ai/core\';',
+      'export const hotel = world({ records: {},',
+      '  destructive: { cancelBooking: { form: \'remove\', entity: \'bookings\', label: \'cancel\' } } });',
+      'export const gatedHotel = world({ records: {},',
+      '  destructive: { cancelBooking: { form: \'remove\', entity: \'bookings\', label: \'cancel\',',
+      '    gates: [{ kind: \'stateIs\', field: \'status\', value: \'CONFIRMED\' }] } } });',
+      ''
+    ].join('\n'));
+    expect(() => factsFromSource(path)).toThrow('states 2 world cards — hotel, gatedHotel');
+  });
+
+  test('an effect block outside the world card is not the surface', () => {
+    const facts = factsFromSource(worldFile(`{
+      records: { archive: { old: { reads: { ghostAct: { form: 'get', entity: 'x', label: 'y' } } } } },
+      reads: { getBooking: { form: 'get', entity: 'bookings', label: 'Look up one booking' } }
+    }`));
+    expect(Object.keys(facts.tools)).toEqual(['getBooking']);
+  });
+
   test('an act whose entry the file computes is not on the surface this reads', () => {
     const facts = factsFromSource(worldFile(`{
       records: {},

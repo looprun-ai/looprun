@@ -70,25 +70,57 @@ function blockEntries(node: ts.ObjectLiteralExpression): Readonly<Record<string,
   return out;
 }
 
-/** The surface facts a world FILE declares. The effect a tool carries is the block it sits in,
- *  and the block is found wherever it is written: a card assembled into a variable and passed to
- *  `world()` states its acts in the same three keys. `limits: { destructive: 1 }` names a number,
- *  never a block, so an object literal is required before any key counts as an act. */
-export function factsFromSource(worldPath: string): SurfaceFacts {
-  const source = ts.createSourceFile(worldPath, readFileSync(worldPath, 'utf8'),
-    ts.ScriptTarget.ES2022, true);
-  const card: Record<string, Readonly<Record<string, Json>>> = {};
+/** The name a world card is declared under, for a sentence an author can act on: the variable it
+ *  is assigned to, or the position of the call when it is assigned to nothing. */
+function cardName(call: ts.CallExpression, at: number): string {
+  const parent = call.parent;
+  if (parent !== undefined && ts.isVariableDeclaration(parent) && ts.isIdentifier(parent.name)) {
+    return parent.name.text;
+  }
+  return `the world card at position ${String(at + 1)}`;
+}
+
+/** Every `world( ... )` call the file states, in the order they are written. */
+function worldCalls(source: ts.SourceFile): readonly ts.CallExpression[] {
+  const calls: ts.CallExpression[] = [];
   const visit = (node: ts.Node): void => {
-    if (ts.isPropertyAssignment(node)
-      && (ts.isIdentifier(node.name) || ts.isStringLiteral(node.name))
-      && EFFECT_BLOCKS.has(node.name.text)) {
-      const block = unwrap(node.initializer);
-      if (ts.isObjectLiteralExpression(block)) {
-        card[node.name.text] = { ...card[node.name.text], ...blockEntries(block) };
-      }
-    }
+    if (ts.isCallExpression(node) && ts.isIdentifier(node.expression)
+      && node.expression.text === 'world') calls.push(node);
     node.forEachChild(visit);
   };
   visit(source);
+  return calls;
+}
+
+/** The surface facts a world FILE declares. The effect a tool carries is the block it sits in, and
+ *  the blocks read are the ones written DIRECTLY on the card handed to `world()` — a `reads` key
+ *  nested deeper belongs to something else, and `limits: { destructive: 1 }` names a number rather
+ *  than a block.
+ *
+ *  One file states one surface. A file stating two world cards is refused by name: the two are
+ *  different worlds, and a surface merged out of both is neither of them. */
+export function factsFromSource(worldPath: string): SurfaceFacts {
+  const source = ts.createSourceFile(worldPath, readFileSync(worldPath, 'utf8'),
+    ts.ScriptTarget.ES2022, true);
+  const calls = worldCalls(source);
+  if (calls.length > 1) {
+    const names = calls.map((call, at) => cardName(call, at));
+    throw new Error(`${worldPath} states ${String(calls.length)} world cards — `
+      + `${names.join(', ')} — and a subject runs on one: leave the card this subject's acts `
+      + 'belong to and move the others into their own file');
+  }
+
+  const card: Record<string, Readonly<Record<string, Json>>> = {};
+  const [spec] = calls;
+  const literal = spec === undefined ? undefined : unwrap(spec.arguments[0] ?? spec);
+  if (literal !== undefined && ts.isObjectLiteralExpression(literal)) {
+    for (const property of literal.properties) {
+      if (!ts.isPropertyAssignment(property)) continue;
+      if (!ts.isIdentifier(property.name) && !ts.isStringLiteral(property.name)) continue;
+      if (!EFFECT_BLOCKS.has(property.name.text)) continue;
+      const block = unwrap(property.initializer);
+      if (ts.isObjectLiteralExpression(block)) card[property.name.text] = blockEntries(block);
+    }
+  }
   return factsFromWorld({ card: { records: {}, ...card } as unknown as WorldCard, executors: {} });
 }

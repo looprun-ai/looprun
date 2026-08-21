@@ -29,9 +29,10 @@ export function writeSubject(): string {
   ].join('\n');
 }
 
-/** The static gate, as a test that runs beside the subject. It reads the subject through its own
- *  door and asks the engine everything: the census a case's `covers` key is spelled against comes
- *  from the compiled desks themselves, so a guard renamed on the card is renamed here with it. */
+/** The static gate, as a test that runs beside the subject. Every answer in it comes from the
+ *  engine: the verbs from `runGate`, and the census a case's `covers` key is spelled against from
+ *  `censusFor`, which walks the compiled desks and the honesty rows the Rulebook injects. This
+ *  file names no guard of its own, so a row the engine adds or renames arrives here with it. */
 export function writeGateFile(): string {
   return [
     '/** THE STATIC GATE of this subject: every verb, one list, one answer. Run it from this',
@@ -40,30 +41,17 @@ export function writeGateFile(): string {
     ' *  the first time the engine tightens a rule the copy keeps blessing what the engine now',
     ' *  refuses. Nothing here spends anything: no key, no model, no network. */',
     'import { expect, test } from \'vitest\';',
-    'import { AgentFactory, factsFromWorld } from \'@looprun-ai/core\';',
-    'import { runGate } from \'@looprun-ai/eval\';',
+    'import { censusFor, runGate } from \'@looprun-ai/eval\';',
     'import { cases } from \'./cases.js\';',
     'import { contract, specs, subjectWorld } from \'./subject.js\';',
     '',
     'const SUBJECT = new URL(\'.\', import.meta.url).pathname;',
     '',
-    '/** The guard names a case\'s `covers` key is spelled against: every row the engine compiles',
-    ' *  for every desk, and the two rows of the honesty floor that ride each reply walk. */',
-    'function censusNames(): ReadonlySet<string> {',
-    '  const facts = factsFromWorld(subjectWorld);',
-    '  const factory = new AgentFactory();',
-    '  const names = new Set([\'claimIsGrounded\', \'claimIsComplete\']);',
-    '  for (const desk of Object.values(specs)) {',
-    '    for (const guard of factory.governed(desk, contract, facts).guards) names.add(guard.name);',
-    '  }',
-    '  return names;',
-    '}',
-    '',
     'test(\'the subject passes every verb of the static gate\', () => {',
     '  expect(runGate(SUBJECT, {',
     '    world: subjectWorld,',
     '    cases,',
-    '    censusNames: censusNames(),',
+    '    censusNames: censusFor({ specs, contract, world: subjectWorld }),',
     '    // Whether a preset leaves a covered guard unable to refuse is read off a world already',
     '    // built and run against that preset, and this file builds none: that verb sits out.',
     '    presetLeavesGuardInert: null',
