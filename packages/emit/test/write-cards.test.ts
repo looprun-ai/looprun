@@ -485,6 +485,91 @@ describe('writeCards', () => {
     expect(() => writeCards(declaration, FACTS)).toThrow('declare the `rule` it states');
   });
 
+  test('a declaration reaching every mechanism the engine offers compiles as one card', () => {
+    const declaration: Declaration = {
+      contract: {
+        name: 'harbour-chandlery',
+        voice: 'Plain, brief, and exact about stock and money.',
+        facts: ['An order is picked from one bay and never split across two.'],
+        guards: [
+          { name: 'refundReadsTheInvoice', acts: ['issueRefund'], factory: 'onlyAfter',
+            args: { after: 'getInvoice' } },
+          { name: 'refundWhileTheInvoiceStands', acts: ['issueRefund'], factory: 'precondition',
+            args: { reads: 'record', field: 'settled', is: false },
+            rule: 'A settled invoice takes no refund; read what it carries and say that instead.' },
+          { name: 'invoiceIsOnFile', acts: ['getInvoice'], factory: 'precondition',
+            args: { reads: 'record' },
+            rule: 'The invoice named is not on file; read the number back and stop there.' },
+          { name: 'tool:moneyGate', acts: ['issueRefund', 'closeBooking'], factory: 'role',
+            wide: 'oneLawEveryAct',
+            args: { anchor: 'counters', by: 'actingClerkId', from: 'clerks', field: 'grade',
+                    in: ['keeper', 'ledger'] },
+            rule: 'Moving money needs the ledger capability; read the clerk record and name a clerk whose grade can.' },
+          { name: 'amountAsTheCustomerSaidIt', acts: ['issueRefund'], factory: 'valueFromUser',
+            args: { arg: 'invoiceId' } },
+          { name: 'invoiceIdInItsShape', acts: ['getInvoice'], factory: 'argFormat',
+            args: { arg: 'invoiceId', pattern: 'inv_[0-9]{4}' } },
+          { name: 'noOverrideOnALookup', acts: ['getInvoice'], factory: 'argAbsent',
+            args: { arg: 'invoiceId' } },
+          { name: 'oneRefundPerTurn', acts: ['issueRefund'], factory: 'cap',
+            args: { calls: 1, scope: 'turn' },
+            rule: 'One refund goes out per turn; a second is owed and takes another turn.' },
+          { name: 'refundReallyLanded', acts: ['issueRefund'], factory: 'checkResult',
+            args: { field: 'settled', is: true },
+            rule: 'When the refund did not settle, say so and name what the result carries.' },
+          { name: 'everyInvoiceAnswered', acts: ['getInvoice'], factory: 'mustAccountFor',
+            args: { records: ['inv_2201'], status: 'refused' } },
+          { name: 'seam:cardNumber', acts: ['issueRefund'], factory: 'blockPattern',
+            args: { pattern: '[0-9]{13,19}', on: 'reply' },
+            rule: 'A card number never goes out in a reply; say the last four the record carries.' },
+          { name: 'closingIsSpokenNotAssumed', acts: ['closeBooking'], factory: 'prose',
+            rule: 'A closing note states the figures the invoice carries, never a figure from memory.' }
+        ],
+        disclosure: {
+          issueRefund: {
+            needs: { invoice: 'getInvoice' },
+            before: 'Refunding {invoice.invoice.total} cannot be taken back once it is put through.',
+            after: 'The refund of {result.paid} went out; {result.stillHeld} stays on the invoice.',
+            later: 'The refund on {args.invoiceId} is still the open piece of this order.',
+            cap: { arg: 'invoiceId', at: 'invoice.invoice.refundable', not: 'above',
+                   refusal: 'A refund of {args.invoiceId} cannot go out: {invoice.invoice.refundable} is what is left.' },
+            empty: 'The invoice {args.invoiceId} carries no amount to refund, so nothing goes up.'
+          }
+        },
+        rewrites: [
+          { kind: 'maskPattern', name: 'taxNumber', pattern: '[A-Z]{2}[0-9]{9}' },
+          { kind: 'purgePattern', name: 'internalNote', pattern: 'INTERNAL:[^\\n]*' },
+          { kind: 'swapTerms', terms: { invoice: 'statement' } }
+        ],
+        secrets: ['email'],
+        wording: { status: { held: 'waiting on you' },
+                   sentence: { deniedByGuard: 'A rule of this house stopped that.' } },
+        limits: { calls: 8, destructive: 1 }
+      },
+      desks: [
+        { name: 'counter', persona: 'You are the chandlery counter: orders, invoices and refunds.',
+          tools: ['issueRefund', 'getInvoice', 'closeBooking'],
+          conduct: { declareHonestly: 'Say what ran and what did not, and the condition that stopped it.' },
+          judged: [{ factory: 'lieCheck', acts: ['issueRefund'] },
+                   { factory: 'hallucinationCheck', acts: ['getInvoice'] }] }
+      ]
+    };
+    const out = writeCards(declaration, FACTS);
+    const dir = mkdtempSync(join(tmpdir(), 'cards-'));
+    writeFileSync(join(dir, 'cards.ts'), out);
+    expect(typecheck(dir)).toEqual([]);
+
+    // Every declared mechanism reaches the card under the name the engine imports it by.
+    for (const factory of ['onlyAfter', 'precondition', 'valueFromUser', 'argFormat', 'argAbsent',
+      'maxCalls', 'checkResult', 'mustAccountFor', 'blockPattern', 'maskPattern', 'purgePattern',
+      'swapTerms', 'lieCheck', 'hallucinationCheck']) {
+      expect(out, `${factory} reaches no line of the card`).toContain(`${factory}(`);
+    }
+    for (const field of ['rewrites: [', 'wording: {', 'later: ', 'empty: ', 'secrets: ', 'limits: ']) {
+      expect(out, `${field} reaches no line of the card`).toContain(field);
+    }
+  });
+
   test('an argument no factory reads is refused, with the factory and the keys it does read', () => {
     const declaration = decl({ guards: [{ name: 'refundReadsTheInvoice', acts: ['issueRefund'],
       factory: 'onlyAfter', args: { after: 'getInvoice', pattern: '^inv_' } }] });
