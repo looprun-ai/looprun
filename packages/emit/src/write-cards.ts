@@ -103,6 +103,48 @@ function ruleOf(guard: DeclaredGuard): string {
   return guard.rule;
 }
 
+/** The first template slot a sentence still carries, or null. A slot is `<` followed by a
+ *  letter and a closing `>` — the shape the skill's conduct TEMPLATEs use for the parts an
+ *  author must replace with the domain's own nouns. */
+function unfilledSlot(sentence: string): string | null {
+  for (let at = sentence.indexOf('<'); at !== -1; at = sentence.indexOf('<', at + 1)) {
+    const close = sentence.indexOf('>', at + 1);
+    if (close === -1) return null;
+    const head = sentence.charAt(at + 1).toLowerCase();
+    if (head >= 'a' && head <= 'z' && close - at <= 82) return sentence.slice(at, close + 1);
+  }
+  return null;
+}
+
+/** Every sentence the declaration states, by its YAML path. A sentence still carrying a
+ *  template slot is a template nobody filled — the law would read as boilerplate on every desk
+ *  that states it — so the emitter refuses it by name. */
+function refuseUnfilledSlots(declaration: Declaration): void {
+  const sites: (readonly [string, string])[] = [
+    ['contract.voice', declaration.contract.voice],
+    ...declaration.contract.facts.map((fact, i) => [`contract.facts[${String(i)}]`, fact] as const),
+    ...declaration.contract.guards.flatMap(guard =>
+      guard.rule === undefined ? [] : [[`contract.guards '${guard.name}' rule`, guard.rule] as const]),
+    ...Object.entries(declaration.contract.disclosure).flatMap(([act, entry]) => [
+      ...(entry.before === undefined ? [] : [[`contract.disclosure.${act}.before`, entry.before] as const]),
+      ...(entry.after === undefined ? [] : [[`contract.disclosure.${act}.after`, entry.after] as const]),
+      ...(entry.cap?.refusal === undefined ? [] : [[`contract.disclosure.${act}.cap.refusal`, entry.cap.refusal] as const])
+    ]),
+    ...declaration.desks.flatMap(desk => [
+      [`desks '${desk.name}' persona`, desk.persona] as const,
+      ...Object.entries(desk.conduct).map(([law, sentence]) =>
+        [`desks '${desk.name}' conduct.${law}`, sentence] as const)
+    ])
+  ];
+  for (const [path, sentence] of sites) {
+    const slot = unfilledSlot(sentence);
+    if (slot !== null) {
+      throw new Error(`${path} still carries the template slot '${slot}' — fill it with this `
+        + `domain's own nouns before emitting`);
+    }
+  }
+}
+
 /** A `precondition` reading the record: the acts it covers, the check its declared reading
  *  compiles to, and the sentence it refuses with. */
 function preconditionLines(guard: DeclaredGuard): readonly string[] {
@@ -337,6 +379,7 @@ export function writeCards(declaration: Declaration, facts: SurfaceFacts): strin
       + `written into the header comment of the file this emits — declare a name of letters, `
       + `digits and hyphens`);
   }
+  refuseUnfilledSlots(declaration);
   const contract = contractLines(declaration, facts);
   const desks = commaJoin(declaration.desks.map(desk => deskLines(desk, 1)));
   const teaches = declaration.desks.some(desk => Object.keys(desk.conduct).length > 0)
