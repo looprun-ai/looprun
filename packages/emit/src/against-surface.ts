@@ -12,7 +12,7 @@ function schemaArgs(fact: ToolFact | undefined): readonly string[] {
 }
 
 /** The smallest number of single-character edits — insert, delete, substitute — that turns
- *  `a` into `b`, used only to name a near-miss act in a refusal sentence. */
+ *  `a` into `b`, used only to name a near miss in a refusal sentence. */
 function editDistance(a: string, b: string): number {
   let previous = Array.from({ length: b.length + 1 }, (_, index) => index);
   for (let i = 1; i <= a.length; i += 1) {
@@ -26,13 +26,13 @@ function editDistance(a: string, b: string): number {
   return previous[b.length];
 }
 
-/** The declared tool name closest to `name` by edit distance, or null when the surface
- *  declares no tool at all. Used for both a guard's `acts` and a disclosure's `needs` —
- *  both point at the same namespace, `facts.tools`. */
-function closestToolName(name: string, toolNames: readonly string[]): string | null {
+/** The candidate closest to `name` by edit distance, or null when there are no candidates. Every
+ *  refusal that names a near miss reads it from here: a tool name against the surface's acts, an
+ *  argument name against one act's own schema. */
+function closestName(name: string, candidates: readonly string[]): string | null {
   let best: string | null = null;
   let bestDistance = Number.POSITIVE_INFINITY;
-  for (const candidate of toolNames) {
+  for (const candidate of candidates) {
     const distance = editDistance(name, candidate);
     if (distance < bestDistance) { bestDistance = distance; best = candidate; }
   }
@@ -47,7 +47,7 @@ function checkGuardActsExist(declaration: Declaration, facts: SurfaceFacts): rea
   declaration.contract.guards.forEach((guard, guardIndex) => {
     guard.acts.forEach((act, actIndex) => {
       if (facts.tools[act] !== undefined) return;
-      const near = closestToolName(act, toolNames);
+      const near = closestName(act, toolNames);
       const suggestion = near === null ? '' : ` — did you mean '${near}'?`;
       refusals.push(`contract.guards[${guardIndex}].acts[${actIndex}] names '${act}', `
         + `and the surface declares no such act${suggestion}`);
@@ -72,10 +72,46 @@ function checkGuardArgActsExist(declaration: Declaration, facts: SurfaceFacts): 
     for (const argName of ACT_ARGS[guard.factory] ?? []) {
       const named = guard.args?.[argName];
       if (typeof named !== 'string' || facts.tools[named] !== undefined) continue;
-      const near = closestToolName(named, toolNames);
+      const near = closestName(named, toolNames);
       const suggestion = near === null ? '' : ` — did you mean '${near}'?`;
       refusals.push(`contract.guards[${guardIndex}].args.${argName} names '${named}', `
         + `and the surface declares no such act${suggestion}`);
+    }
+  });
+  return refusals;
+}
+
+/** The arguments that name an ARGUMENT OF THE ACT rather than a second act. Both factories that
+ *  read one read it off the arriving call, so the name is spelled against that act's own schema. */
+const SCHEMA_ARGS: Readonly<Record<string, readonly string[]>> = {
+  valueFromUser: ['arg'],
+  argFormat: ['arg']
+};
+
+/** Every argument a guard's CONFIGURATION names is an argument the act itself declares. A guard
+ *  pointed at an argument outside the act's schema reads `undefined` on every arriving call, and
+ *  both factories that read one refuse when they find nothing there — so the guard denies its own
+ *  act for the whole conversation, and no lint downstream sees it: the act does carry a check, and
+ *  the check can never pass. */
+function checkGuardArgsOnSchema(declaration: Declaration, facts: SurfaceFacts): readonly string[] {
+  const refusals: string[] = [];
+  declaration.contract.guards.forEach((guard, guardIndex) => {
+    for (const argName of SCHEMA_ARGS[guard.factory] ?? []) {
+      const named = guard.args?.[argName];
+      if (typeof named !== 'string') continue;
+      for (const act of guard.acts) {
+        const fact = facts.tools[act];
+        if (fact === undefined) continue;
+        const declared = schemaArgs(fact);
+        if (declared.includes(named)) continue;
+        const accepts = declared.length === 0 ? 'no argument at all'
+          : declared.map(arg => `'${arg}'`).join(', ');
+        const near = closestName(named, declared);
+        const suggestion = near === null ? '' : ` Did you mean '${near}'?`;
+        refusals.push(`contract.guards[${guardIndex}].args.${argName} names '${named}', `
+          + `and '${act}' accepts ${accepts} — pointed at an argument its act does not carry, `
+          + `the guard refuses every call of it.${suggestion}`);
+      }
     }
   });
   return refusals;
@@ -138,7 +174,7 @@ function checkDisclosureNeedsToolExists(declaration: Declaration, facts: Surface
   for (const [actName, entry] of Object.entries(declaration.contract.disclosure)) {
     for (const [alias, readName] of Object.entries(entry.needs ?? {})) {
       if (facts.tools[readName] !== undefined) continue;
-      const near = closestToolName(readName, toolNames);
+      const near = closestName(readName, toolNames);
       const suggestion = near === null ? '' : ` — did you mean '${near}'?`;
       refusals.push(`contract.disclosure.${actName}.needs.${alias} names '${readName}', `
         + `and the surface declares no such tool${suggestion}`);
@@ -174,15 +210,17 @@ function checkDisclosureNeedsResolvable(declaration: Declaration, facts: Surface
 }
 
 /** Every refusal the emitter owes when a declaration does not fit the world's surface: a
- *  guard naming an act no tool declares, a guard whose configuration names one, a destructive
- *  act with nothing disclosed before it runs, a `precondition` reading a record over an act with
- *  no target, a conduct law some desks never teach, a disclosure `needs` alias naming a tool that
- *  does not exist, and a disclosure alias whose read cannot answer the call it is held for. An
- *  empty array means the declaration is safe to emit against `facts`. */
+ *  guard naming an act no tool declares, a guard whose configuration names one, a guard whose
+ *  configuration names an argument its act's schema does not declare, a destructive act with
+ *  nothing disclosed before it runs, a `precondition` reading a record over an act with no target,
+ *  a conduct law some desks never teach, a disclosure `needs` alias naming a tool that does not
+ *  exist, and a disclosure alias whose read cannot answer the call it is held for. An empty array
+ *  means the declaration is safe to emit against `facts`. */
 export function checkAgainstSurface(declaration: Declaration, facts: SurfaceFacts): readonly string[] {
   return [
     ...checkGuardActsExist(declaration, facts),
     ...checkGuardArgActsExist(declaration, facts),
+    ...checkGuardArgsOnSchema(declaration, facts),
     ...checkDestructiveDisclosed(declaration, facts),
     ...checkPreconditionTarget(declaration, facts),
     ...checkConductUniform(declaration),

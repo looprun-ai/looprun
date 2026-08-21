@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { checkAgainstSurface } from '../src/index.js';
+import type { Declaration, DeclaredGuard } from '../src/index.js';
 import { decl, FACTS, soundDeclaration } from './helpers.js';
 
 describe('checkAgainstSurface', () => {
@@ -37,6 +38,43 @@ describe('checkAgainstSurface', () => {
 
   test('a sound declaration refuses nothing', () => {
     expect(checkAgainstSurface(soundDeclaration(), FACTS)).toEqual([]);
+  });
+
+  // The hotel's own shape: `moveBooking` is `form: 'set'`, whose derived schema is `{ id, set }`,
+  // and a law about the day the guest chose has no argument on that act to hold on to.
+  const HOTEL = { tools: {
+    moveBooking: { name: 'moveBooking', effect: 'write', target: 'id', entity: 'bookings',
+      schema: { properties: { id: {}, set: {} } } },
+    cancelBooking: { name: 'cancelBooking', effect: 'destructive', target: 'id', entity: 'bookings',
+      schema: { properties: { id: {} } } }
+  } } as never;
+  const hotelDecl = (guards: readonly DeclaredGuard[]): Declaration => decl({
+    guards,
+    disclosure: { cancelBooking: { before: 'Cancelling this booking cannot be taken back.' } },
+    desks: [{ name: 'concierge', persona: 'p', tools: ['moveBooking', 'cancelBooking'],
+              conduct: { declareHonestly: 'x' } }]
+  });
+
+  test('valueFromUser pointed at an argument the act does not declare', () => {
+    expect(checkAgainstSurface(hotelDecl([
+      { name: 'valueFromUser:moveBooking', acts: ['moveBooking'], factory: 'valueFromUser',
+        args: { arg: 'day' } }]), HOTEL))
+      .toEqual([expect.stringContaining("contract.guards[0].args.arg names 'day', and 'moveBooking' "
+        + "accepts 'id', 'set' — pointed at an argument its act does not carry, the guard refuses "
+        + "every call of it.")]);
+  });
+
+  test('argFormat pointed at an argument the act does not declare names the near miss', () => {
+    const refusals = checkAgainstSurface(hotelDecl([
+      { name: 'argFormat:cancelBooking', acts: ['cancelBooking'], factory: 'argFormat',
+        args: { arg: 'ids', pattern: 'bk_[0-9]+' } }]), HOTEL);
+    expect(refusals).toEqual([expect.stringContaining("Did you mean 'id'?")]);
+  });
+
+  test('a guard configured from an argument the act does declare passes', () => {
+    expect(checkAgainstSurface(hotelDecl([
+      { name: 'valueFromUser:moveBooking', acts: ['moveBooking'], factory: 'valueFromUser',
+        args: { arg: 'id' } }]), HOTEL)).toEqual([]);
   });
 
   test('a disclosure needs alias naming a tool that does not exist, held act target null', () => {
