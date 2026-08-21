@@ -11,6 +11,16 @@ function schemaArgs(fact: ToolFact | undefined): readonly string[] {
   return Object.keys(properties);
 }
 
+/** The arguments an act's JSON schema REQUIRES. A schema with no `required` list requires
+ *  nothing, so every argument it declares is one a caller may leave out. */
+function requiredSchemaArgs(fact: ToolFact | undefined): readonly string[] {
+  const schema = fact?.schema;
+  if (typeof schema !== 'object' || schema === null || Array.isArray(schema)) return [];
+  const required = (schema as { readonly required?: Json }).required;
+  if (!Array.isArray(required)) return [];
+  return required.filter((name): name is string => typeof name === 'string');
+}
+
 /** The smallest number of single-character edits — insert, delete, substitute — that turns
  *  `a` into `b`, used only to name a near miss in a refusal sentence. */
 function editDistance(a: string, b: string): number {
@@ -152,9 +162,11 @@ function checkPreconditionTarget(declaration: Declaration, facts: SurfaceFacts):
   return refusals;
 }
 
-/** Every desk teaches the same conduct laws — a law taught on one desk and silent on
- *  another is a rule the user hears from one seat and never learns at the next. */
-function checkConductUniform(declaration: Declaration): readonly string[] {
+/** A conduct law more than one desk teaches is the house's, and every desk owes a house law: a
+ *  rule the user hears from one seat and never at the next reads as a rule that stopped applying.
+ *  A law exactly one desk teaches is that desk's own — the fleet desk's law about the figures a
+ *  registry row waits for is not a law the billing desk owes. */
+function checkConductShared(declaration: Declaration): readonly string[] {
   const desks = declaration.desks;
   const allLaws = new Set<string>();
   for (const desk of desks) for (const law of Object.keys(desk.conduct)) allLaws.add(law);
@@ -162,11 +174,10 @@ function checkConductUniform(declaration: Declaration): readonly string[] {
   for (const law of allLaws) {
     const teaching = desks.filter(desk => desk.conduct[law] !== undefined);
     const silent = desks.filter(desk => desk.conduct[law] === undefined);
-    if (silent.length === 0) continue;
-    const desksWord = teaching.length === 1 ? 'desk' : 'desks';
-    refusals.push(`desks[*].conduct: '${law}' is on ${teaching.length} ${desksWord} `
-      + `and missing from ${silent.map(desk => desk.name).join(', ')} — `
-      + `give every desk the same conduct laws.`);
+    if (silent.length === 0 || teaching.length < 2) continue;
+    refusals.push(`desks[*].conduct: '${law}' is on ${teaching.length} desks `
+      + `and missing from ${silent.map(desk => desk.name).join(', ')} — a law more than one desk `
+      + `teaches is the house's, and every desk owes it.`);
   }
   return refusals;
 }
@@ -178,7 +189,8 @@ function checkDisclosureNeedsToolExists(declaration: Declaration, facts: Surface
   const toolNames = Object.keys(facts.tools);
   const refusals: string[] = [];
   for (const [actName, entry] of Object.entries(declaration.contract.disclosure)) {
-    for (const [alias, readName] of Object.entries(entry.needs ?? {})) {
+    for (const [alias, need] of Object.entries(entry.needs ?? {})) {
+      const readName = typeof need === 'string' ? need : need.tool;
       if (facts.tools[readName] !== undefined) continue;
       const near = closestName(readName, toolNames);
       const suggestion = near === null ? '' : ` — did you mean '${near}'?`;
@@ -189,26 +201,44 @@ function checkDisclosureNeedsToolExists(declaration: Declaration, facts: Surface
   return refusals;
 }
 
-/** A disclosure `needs` alias points at a read whose schema can accept the destructive
- *  act's own target argument — a read that only accepts a different id can never fill in
- *  the record the destructive act is about, and an act with no target at all leaves no id
- *  for any read to accept. Skips an alias whose tool does not exist: that gap is named by
- *  checkDisclosureNeedsToolExists, not repeated here as a schema mismatch. */
+/** A disclosure `needs` alias names a read the engine can actually run for the held call, and
+ *  each of the two forms answers that differently.
+ *
+ *  An alias naming the read ALONE is answered from the held call's own target, so the read has to
+ *  accept that target argument: a read that only accepts a different id can never fill in the
+ *  record the held act is about, and an act with no target at all leaves no id for any read to
+ *  accept. An alias STATING its args names what the read is handed, so it stands when the args it
+ *  states fill everything that read requires — a read whose every argument is optional is
+ *  answered by `args: {}` and serves any act, whatever id the act itself is about.
+ *
+ *  Skips an alias whose tool does not exist: that gap is named by checkDisclosureNeedsToolExists,
+ *  not repeated here as a schema mismatch. */
 function checkDisclosureNeedsResolvable(declaration: Declaration, facts: SurfaceFacts): readonly string[] {
   const refusals: string[] = [];
   for (const [actName, entry] of Object.entries(declaration.contract.disclosure)) {
     const held = facts.tools[actName];
     if (held === undefined) continue;
-    for (const [alias, readName] of Object.entries(entry.needs ?? {})) {
-      const read = facts.tools[readName];
+    for (const [alias, need] of Object.entries(entry.needs ?? {})) {
+      const read = facts.tools[typeof need === 'string' ? need : need.tool];
       if (read === undefined) continue;
+      if (typeof need !== 'string') {
+        const unfilled = requiredSchemaArgs(read).filter(arg => !(arg in need.args));
+        if (unfilled.length === 0) continue;
+        const stated = Object.keys(need.args);
+        const requires = unfilled.map(arg => `'${arg}'`).join(', ');
+        refusals.push(`contract.disclosure.${actName}.needs.${alias} hands ${need.tool} `
+          + `${stated.length === 0 ? 'no argument at all' : stated.map(arg => `'${arg}'`).join(', ')}, `
+          + `and ${need.tool} requires ${requires} — state ${requires} in args, or point `
+          + `needs.${alias} at a read whose every argument is optional.`);
+        continue;
+      }
       const readArgs = schemaArgs(read);
       const target = held.target;
       if (target !== null && readArgs.includes(target)) continue;
       const accepts = readArgs.length === 0 ? 'nothing' : readArgs.map(arg => `'${arg}'`).join(', ');
-      refusals.push(`contract.disclosure.${actName}.needs.${alias} names ${readName}: `
-        + `${actName} needs ${readName} to accept the held call's target '${String(target)}', `
-        + `and ${readName} only accepts ${accepts} `
+      refusals.push(`contract.disclosure.${actName}.needs.${alias} names ${need}: `
+        + `${actName} needs ${need} to accept the held call's target '${String(target)}', `
+        + `and ${need} only accepts ${accepts} `
         + `— repoint needs.${alias} at a read that accepts '${String(target)}', or give ${actName} a target.`);
     }
   }
@@ -219,9 +249,9 @@ function checkDisclosureNeedsResolvable(declaration: Declaration, facts: Surface
  *  guard naming an act no tool declares, a guard whose configuration names one, a guard whose
  *  configuration names an argument its act's schema does not declare, a destructive act with
  *  nothing disclosed before it runs, a `precondition` reading a record over an act with no target,
- *  a conduct law some desks never teach, a disclosure `needs` alias naming a tool that does not
- *  exist, and a disclosure alias whose read cannot answer the call it is held for. An empty array
- *  means the declaration is safe to emit against `facts`. */
+ *  a house conduct law some desks never teach, a disclosure `needs` alias naming a tool that does
+ *  not exist, and a disclosure alias whose read cannot answer the call it is held for. An empty
+ *  array means the declaration is safe to emit against `facts`. */
 export function checkAgainstSurface(declaration: Declaration, facts: SurfaceFacts): readonly string[] {
   return [
     ...checkGuardActsExist(declaration, facts),
@@ -229,7 +259,7 @@ export function checkAgainstSurface(declaration: Declaration, facts: SurfaceFact
     ...checkGuardArgsOnSchema(declaration, facts),
     ...checkDestructiveDisclosed(declaration, facts),
     ...checkPreconditionTarget(declaration, facts),
-    ...checkConductUniform(declaration),
+    ...checkConductShared(declaration),
     ...checkDisclosureNeedsToolExists(declaration, facts),
     ...checkDisclosureNeedsResolvable(declaration, facts)
   ];

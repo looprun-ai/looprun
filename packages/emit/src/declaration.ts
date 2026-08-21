@@ -5,7 +5,8 @@ import type { Node, Pair, YAMLMap, YAMLSeq } from 'yaml';
 export interface DeclaredGuard {
   readonly name: string;
   readonly acts: readonly string[];
-  readonly factory: 'onlyAfter' | 'precondition' | 'valueFromUser' | 'argFormat' | 'cap' | 'deny';
+  readonly factory: 'onlyAfter' | 'precondition' | 'valueFromUser' | 'argFormat' | 'cap' | 'prose'
+    | 'deny';
   readonly args?: Readonly<Record<string, unknown>>;
   readonly rule?: string;
   readonly wide?: 'oneLawEveryAct' | 'sameRefusal';
@@ -25,8 +26,18 @@ export interface DeclaredCap {
   readonly refusal?: string;
 }
 
+/** One read the engine performs to fill a disclosure sentence. The read alone names it in the
+ *  short form, and the held call's own target is what it is answered from. The full form states
+ *  the read and the arguments it takes — `{ tool: listHolds, args: {} }` for a read that takes
+ *  none, and `{ tool: getBooking, args: { bookingId: bookingId } }` when the read's own argument
+ *  names it differently from the held call's. */
+export type DeclaredNeed = string | {
+  readonly tool: string;
+  readonly args: Readonly<Record<string, string>>;
+};
+
 export interface DeclaredDisclosure {
-  readonly needs?: Readonly<Record<string, string>>;
+  readonly needs?: Readonly<Record<string, DeclaredNeed>>;
   readonly before?: string;
   readonly after?: string;
   readonly cap?: DeclaredCap;
@@ -51,7 +62,7 @@ export interface Declaration {
   }[];
 }
 
-const FACTORIES: ReadonlySet<DeclaredGuard['factory']> = new Set(['onlyAfter', 'precondition', 'valueFromUser', 'argFormat', 'cap', 'deny']);
+const FACTORIES: ReadonlySet<DeclaredGuard['factory']> = new Set(['onlyAfter', 'precondition', 'valueFromUser', 'argFormat', 'cap', 'prose', 'deny']);
 const WIDE_KINDS: ReadonlySet<NonNullable<DeclaredGuard['wide']>> = new Set(['oneLawEveryAct', 'sameRefusal']);
 
 function fail(path: string, line: number, detail: string): never {
@@ -189,13 +200,37 @@ function readCap(map: YAMLMap, path: string, lineCounter: LineCounter): Declared
   };
 }
 
+/** One alias of a `needs` map: a read named on its own, or the mapping that states the read and
+ *  the args it is answered from. The args map is required in that form and may be empty — a read
+ *  taking no argument at all is answered by `args: {}`. */
+function readNeed(value: Node | null, path: string, lineCounter: LineCounter,
+  fallback: number): DeclaredNeed {
+  if (isScalar(value) && typeof value.value === 'string') return value.value;
+  if (!isMap(value)) {
+    fail(path, lineAt(value, lineCounter, fallback),
+      'must be a read, or a mapping of the read `tool` and the `args` it is answered from');
+  }
+  return {
+    tool: requireString(value, 'tool', path, lineCounter),
+    args: asStringRecord(requireMap(value, 'args', path, lineCounter), field(path, 'args'), lineCounter)
+  };
+}
+
+function asNeedsRecord(map: YAMLMap, path: string, lineCounter: LineCounter): Readonly<Record<string, DeclaredNeed>> {
+  const fallback = lineAt(map, lineCounter, 1);
+  return Object.fromEntries(map.items.map(pair => {
+    const key = keyOf(pair);
+    return [key, readNeed(pair.value as Node | null, field(path, key), lineCounter, fallback)];
+  }));
+}
+
 function readDisclosureEntry(map: YAMLMap, path: string, lineCounter: LineCounter): DeclaredDisclosure {
   const needsMap = readOptionalMap(map, 'needs', path, lineCounter);
   const before = readOptionalString(map, 'before', path, lineCounter);
   const after = readOptionalString(map, 'after', path, lineCounter);
   const capMap = readOptionalMap(map, 'cap', path, lineCounter);
   return {
-    ...(needsMap === undefined ? {} : { needs: asStringRecord(needsMap, field(path, 'needs'), lineCounter) }),
+    ...(needsMap === undefined ? {} : { needs: asNeedsRecord(needsMap, field(path, 'needs'), lineCounter) }),
     ...(before === undefined ? {} : { before }),
     ...(after === undefined ? {} : { after }),
     ...(capMap === undefined ? {} : { cap: readCap(capMap, field(path, 'cap'), lineCounter) })

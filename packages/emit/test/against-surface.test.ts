@@ -20,11 +20,20 @@ describe('checkAgainstSurface', () => {
       .toEqual([expect.stringContaining("declares no target")]);
   });
 
-  test('a conduct law missing from one desk', () => {
+  test('a conduct law two desks teach and a third never reads', () => {
     expect(checkAgainstSurface(decl({ desks: [
       { name: 'a', persona: 'p', tools: ['issueRefund'], conduct: { declareHonestly: 'x', oneQuestion: 'y' } },
-      { name: 'b', persona: 'p', tools: ['getInvoice'],  conduct: { declareHonestly: 'x' } }] }), FACTS))
-      .toEqual([expect.stringContaining("'oneQuestion' is on 1 desk and missing from b")]);
+      { name: 'b', persona: 'p', tools: ['getInvoice'],  conduct: { declareHonestly: 'x', oneQuestion: 'y' } },
+      { name: 'c', persona: 'p', tools: ['getInvoice'],  conduct: { declareHonestly: 'x' } }] }), FACTS))
+      .toEqual([expect.stringContaining("'oneQuestion' is on 2 desks and missing from c")]);
+  });
+
+  test('a conduct law one desk alone teaches is that desk\'s own', () => {
+    expect(checkAgainstSurface(decl({ desks: [
+      { name: 'a', persona: 'p', tools: ['issueRefund'],
+        conduct: { declareHonestly: 'x', registryFiguresAreGiven: 'The deposit is the operator\'s figure.' } },
+      { name: 'b', persona: 'p', tools: ['getInvoice'], conduct: { declareHonestly: 'x' } }] }), FACTS))
+      .toEqual([]);
   });
 
   test('a disclosure alias whose read cannot answer from the held call', () => {
@@ -34,6 +43,43 @@ describe('checkAgainstSurface', () => {
         getInvoice: { name: 'getInvoice', effect: 'read', target: 'holdId', entity: 'holds', schema: { properties: { holdId: {} } } }
       } } as never))
       .toEqual([expect.stringContaining("needs getInvoice to accept")]);
+  });
+
+  // A read whose every argument is optional answers any act: `listHolds` declares two arguments
+  // and requires neither. A read that requires the id it reads by answers only a binding that
+  // states that id.
+  const READS = { tools: {
+    ...(FACTS as never as { tools: Record<string, unknown> }).tools,
+    listHolds: { name: 'listHolds', effect: 'read', target: null, entity: 'holds',
+                 schema: { properties: { scope: {}, assetId: {} } } },
+    getInvoice: { name: 'getInvoice', effect: 'read', target: 'invoiceId', entity: 'invoices',
+                  schema: { properties: { invoiceId: {} }, required: ['invoiceId'] } }
+  } } as never;
+
+  test('a needs alias binding a read whose every argument is optional', () => {
+    expect(checkAgainstSurface(decl({ disclosure: { issueRefund: {
+      needs: { freezes: { tool: 'listHolds', args: {} } },
+      before: 'Say what stands frozen before refunding.' } } }), READS)).toEqual([]);
+  });
+
+  test('a needs alias whose binding leaves a required argument of the read unfilled', () => {
+    expect(checkAgainstSurface(decl({ disclosure: { issueRefund: {
+      needs: { invoice: { tool: 'getInvoice', args: {} } },
+      before: 'Say the invoice total before refunding it.' } } }), READS))
+      .toEqual([expect.stringContaining("getInvoice requires 'invoiceId'")]);
+  });
+
+  test('a needs alias whose binding fills the argument the read requires', () => {
+    expect(checkAgainstSurface(decl({ disclosure: { issueRefund: {
+      needs: { invoice: { tool: 'getInvoice', args: { invoiceId: 'invoiceId' } } },
+      before: 'Say the invoice total before refunding it.' } } }), READS)).toEqual([]);
+  });
+
+  test('a prose guard naming an act the surface does not declare', () => {
+    expect(checkAgainstSurface(decl({ guards: [{ name: 'roleRefusalNamesWhoCan',
+      acts: ['issueRefund', 'closeBookng'], factory: 'prose',
+      rule: 'Name the role the record states, then a member whose role can act.' }] }), FACTS))
+      .toEqual([expect.stringContaining("the surface declares no such act")]);
   });
 
   test('a sound declaration refuses nothing', () => {

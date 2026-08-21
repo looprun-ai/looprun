@@ -142,6 +142,67 @@ describe('writeCards', () => {
     expect(typecheck(dir)).toEqual([]);
   });
 
+  test('a needs alias states the read and the args it is answered from', () => {
+    const out = writeCards(decl({ disclosure: { issueRefund: {
+      needs: { freezes: { tool: 'listHolds', args: {} },
+               invoice: { tool: 'getInvoice', args: { invoiceId: 'invoiceId' } } },
+      before: 'Say the invoice total before refunding it.' } } }), FACTS);
+    expect(out).toContain("freezes: { tool: 'listHolds', args: {} }");
+    expect(out).toContain("invoice: { tool: 'getInvoice', args: { invoiceId: 'invoiceId' } }");
+  });
+
+  test('a read is disclosed with the tense the declaration states for it', () => {
+    const out = writeCards(decl({ disclosure: {
+      issueRefund: { before: 'A refund pays money out and does not come back.' },
+      getInvoice: { after: 'The invoice carries {result.total}, and {result.balanceDue} is still due.' }
+    } }), FACTS);
+    expect(out).toContain('getInvoice: {');
+    expect(out).toContain("after: 'The invoice carries {result.total}, and {result.balanceDue} is still due.'");
+  });
+
+  test('a contract prose rule is emitted as its sentence and the acts it is stamped on', () => {
+    const rule = 'Name the role the member record states, then a member whose role can act.';
+    const out = writeCards(decl({ guards: [
+      { name: 'confirmBeforeRefund', acts: ['issueRefund'], factory: 'onlyAfter',
+        args: { after: 'getInvoice' } },
+      { name: 'roleRefusalNamesWhoCan', acts: ['issueRefund', 'getInvoice'], factory: 'prose',
+        wide: 'oneLawEveryAct', rule }] }), FACTS);
+    expect(out).toContain(`{ ...prose('roleRefusalNamesWhoCan', '${rule}'), `
+      + "tool: ['issueRefund', 'getInvoice'] }");
+    // `prose` is the card's own helper, so the engine import names the factories and not it.
+    expect(out).toContain("import { onlyAfter } from '@looprun-ai/core';");
+    expect(out).toContain("roleRefusalNamesWhoCan: 'conduct'");
+    expect(out).toContain("roleRefusalNamesWhoCan: 'oneLawEveryAct'");
+
+    const dir = mkdtempSync(join(tmpdir(), 'cards-'));
+    writeFileSync(join(dir, 'cards.ts'), out);
+    expect(typecheck(dir)).toEqual([]);
+  });
+
+  test('a contract prose rule brings the helper the card writes it with', () => {
+    const out = writeCards(decl({
+      guards: [{ name: 'roleRefusalNamesWhoCan', acts: ['issueRefund'], factory: 'prose',
+                 rule: 'Name the role the member record states.' }],
+      desks: [{ name: 'a', persona: 'p', tools: ['issueRefund'], conduct: {} }] }), FACTS);
+    expect(out).toContain("const prose = (name: string, rule: string): Guard =>");
+    expect(out).toContain("import type { AgentSpec, DomainContract, Guard } from '@looprun-ai/core';");
+  });
+
+  test('the WHY map opens on the house laws, then the contract prose, then a desk\'s own', () => {
+    const out = writeCards(decl({
+      guards: [{ name: 'roleRefusalNamesWhoCan', acts: ['issueRefund'], factory: 'prose',
+                 rule: 'Name the role the member record states.' }],
+      desks: [
+        { name: 'a', persona: 'p', tools: ['issueRefund'],
+          conduct: { declareHonestly: 'x', registryFiguresAreGiven: 'z' } },
+        { name: 'b', persona: 'p', tools: ['getInvoice'], conduct: { declareHonestly: 'x' } }] }), FACTS);
+    expect(out).toContain(['export const WHY = {',
+      "  declareHonestly: 'conduct',",
+      "  roleRefusalNamesWhoCan: 'conduct',",
+      "  registryFiguresAreGiven: 'conduct'",
+      '} as const;'].join('\n'));
+  });
+
   test('a declared ceiling is emitted as the ceiling the engine enforces', () => {
     const out = writeCards(decl({ disclosure: { issueRefund: {
       needs: { invoice: 'getInvoice' },
