@@ -73,8 +73,26 @@ const LAWFUL_ARGS: Readonly<Record<DeclaredGuard['factory'], readonly string[]>>
   argAbsent: ['arg'],
   cap: ['calls', 'scope'],
   checkResult: ['field', 'is', 'in'],
+  mustAccountFor: ['records', 'status'],
   prose: [],
   deny: []
+};
+
+/** How a factory is pointed at the acts a guard names. `all` — the call takes every one of them;
+ *  `first` — the call takes the first, and the rest arrive as the guard's own `tool` scope;
+ *  `none` — the call takes no act at all, so every act the guard names arrives as that scope. */
+const ACT_SHAPE: Readonly<Record<DeclaredGuard['factory'], 'all' | 'first' | 'none'>> = {
+  onlyAfter: 'first',
+  precondition: 'all',
+  role: 'all',
+  valueFromUser: 'first',
+  argFormat: 'first',
+  argAbsent: 'first',
+  cap: 'first',
+  checkResult: 'first',
+  mustAccountFor: 'none',
+  prose: 'none',
+  deny: 'none'
 };
 
 /** The factories whose law is the declaration's own sentence: the check refuses with it, or it
@@ -269,6 +287,28 @@ function checkResultLines(guard: DeclaredGuard, act: string): readonly string[] 
   return [`checkResult(${quote(act)}, ctx =>`, `${test} ? null : '')`];
 }
 
+/** The words a report closes a record with. A status outside them is a row the engine's own
+ *  vocabulary never writes, so the guard would look for a word no report can carry. */
+const REPORT_WORDS: readonly string[] = ['done', 'held', 'refused', 'unknown', 'no_tool_called'];
+
+/** The records a report must account for, and the word it must account for them with. The check
+ *  reads the report's own rows — whole-value equality on the target — so both are data. */
+function accountLines(guard: DeclaredGuard): readonly string[] {
+  const records = guard.args?.records;
+  if (!Array.isArray(records) || records.length === 0
+    || !records.every(record => typeof record === 'string')) {
+    throw new Error(`contract.guards '${guard.name}' declares factory 'mustAccountFor', whose `
+      + `configuration is args.records — a list of one or more records the report must account `
+      + `for, which this declaration does not carry`);
+  }
+  const status = guard.args?.status;
+  if (typeof status !== 'string' || !REPORT_WORDS.includes(status)) {
+    throw new Error(`contract.guards '${guard.name}' declares args.status, and a report closes a `
+      + `record with one of ${REPORT_WORDS.join(', ')} — no other word is a row the engine writes`);
+  }
+  return [`mustAccountFor({ records: ${list(records)}, status: ${quote(status)} })`];
+}
+
 /** A ceiling on how many times one act runs. The count is that act's own completed calls, so a
  *  ceiling covers exactly one act. */
 function capLines(guard: DeclaredGuard, act: string): readonly string[] {
@@ -325,6 +365,8 @@ function factoryCall(guard: DeclaredGuard): { readonly imported: string | null;
       return { imported: 'precondition', lines: roleLines(guard) };
     case 'cap':
       return { imported: 'maxCalls', lines: capLines(guard, act) };
+    case 'mustAccountFor':
+      return { imported: 'mustAccountFor', lines: accountLines(guard) };
     case 'prose':
       return { imported: null, lines: [`prose(${quote(guard.name)}, ${quote(ruleOf(guard))})`] };
   }
@@ -340,10 +382,12 @@ function guardLines(guard: DeclaredGuard, depth: number): readonly string[] {
   if (guard.factory === 'prose') {
     return [indent(depth, `{ ...${call.lines[0]}, tool: ${list(guard.acts)} }`)];
   }
+  const shape = ACT_SHAPE[guard.factory];
   const fields = [`name: ${quote(guard.name)}`];
-  const takesActs = guard.factory === 'precondition' || guard.factory === 'role';
-  if (guard.acts.length > 1 && !takesActs) fields.push(`tool: ${list(guard.acts)}`);
-  const takesRule = takesActs || guard.factory === 'cap';
+  if (shape === 'none' || (shape === 'first' && guard.acts.length > 1)) {
+    fields.push(`tool: ${list(guard.acts)}`);
+  }
+  const takesRule = shape === 'all' || guard.factory === 'cap';
   if (guard.rule !== undefined && !takesRule) fields.push(`rule: ${quote(guard.rule)}`);
   const [head, ...rest] = call.lines;
   const lines = commaJoin([

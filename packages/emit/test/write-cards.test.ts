@@ -309,6 +309,27 @@ describe('writeCards', () => {
       .toThrow('declare the `rule` it states');
   });
 
+  test('a report law emits the records it names and the word it owes them', () => {
+    const out = writeCards(decl({ guards: [{ name: 'everyInvoiceAccountedFor',
+      acts: ['issueRefund'], factory: 'mustAccountFor',
+      args: { records: ['inv_2201', 'inv_2202'], status: 'refused' } }] }), FACTS);
+    expect(out).toContain(
+      "{ ...mustAccountFor({ records: ['inv_2201', 'inv_2202'], status: 'refused' }),");
+    expect(out).toContain("name: 'everyInvoiceAccountedFor',");
+    // The factory takes no act, so one act still arrives as the scope the census reads.
+    expect(out).toContain("tool: ['issueRefund'] }");
+  });
+
+  test('a report law over no record, or a word no report writes, is refused by its path', () => {
+    const law = (args: Readonly<Record<string, unknown>>): Declaration =>
+      decl({ guards: [{ name: 'everyInvoiceAccountedFor', acts: ['issueRefund'],
+        factory: 'mustAccountFor', args }] });
+    expect(() => writeCards(law({ records: [], status: 'refused' }), FACTS))
+      .toThrow('args.records');
+    expect(() => writeCards(law({ records: ['inv_2201'], status: 'settled' }), FACTS))
+      .toThrow('declares args.status');
+  });
+
   test('a role gate emits one precondition over the acting record, and the walk beside it', () => {
     const declaration = decl({ guards: [{ name: 'tool:moneyGate',
       acts: ['issueRefund', 'closeBooking'], factory: 'role',
