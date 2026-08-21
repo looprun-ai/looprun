@@ -65,6 +65,14 @@ export interface DeclaredWording {
   readonly sentence?: Readonly<Record<string, string>>;
 }
 
+/** One judged check on a desk: the question the session's OWN model answers about that desk's
+ *  reply, and the acts it is asked about. The four take no configuration — the question IS the
+ *  factory — so a declaration states which one, and the acts that scope it. */
+export interface DeclaredJudged {
+  readonly factory: 'lieCheck' | 'impossibilityCheck' | 'injectionCheck' | 'hallucinationCheck';
+  readonly acts: readonly string[];
+}
+
 export interface Declaration {
   readonly contract: {
     readonly name: string;
@@ -83,11 +91,13 @@ export interface Declaration {
     readonly tools: readonly string[];
     readonly teammates?: Readonly<Record<string, string>>;
     readonly conduct: Readonly<Record<string, string>>;
+    readonly judged?: readonly DeclaredJudged[];
   }[];
 }
 
 const FACTORIES: ReadonlySet<DeclaredGuard['factory']> = new Set(['onlyAfter', 'precondition', 'role', 'valueFromUser', 'argFormat', 'argAbsent', 'cap', 'checkResult', 'mustAccountFor', 'blockPattern', 'prose', 'deny']);
 const REWRITE_KINDS: ReadonlySet<DeclaredRewrite['kind']> = new Set(['maskPattern', 'purgePattern', 'swapTerms']);
+const JUDGED_FACTORIES: ReadonlySet<DeclaredJudged['factory']> = new Set(['lieCheck', 'impossibilityCheck', 'injectionCheck', 'hallucinationCheck']);
 const WIDE_KINDS: ReadonlySet<NonNullable<DeclaredGuard['wide']>> = new Set(['oneLawEveryAct', 'sameRefusal']);
 
 function fail(path: string, line: number, detail: string): never {
@@ -356,18 +366,32 @@ function readContract(map: YAMLMap, path: string, lineCounter: LineCounter): Dec
   };
 }
 
+function readJudged(seq: YAMLSeq, path: string, lineCounter: LineCounter): readonly DeclaredJudged[] {
+  const fallback = lineAt(seq, lineCounter, 1);
+  return seq.items.map((item, i) => {
+    const itemPath = `${path}[${i}]`;
+    if (!isMap(item)) fail(itemPath, lineAt(item as Node, lineCounter, fallback), 'must be a mapping');
+    return {
+      factory: requireEnum(item, 'factory', JUDGED_FACTORIES, itemPath, lineCounter),
+      acts: asStringArray(requireSeq(item, 'acts', itemPath, lineCounter), field(itemPath, 'acts'), lineCounter)
+    };
+  });
+}
+
 function readDesk(map: YAMLMap, path: string, lineCounter: LineCounter): Declaration['desks'][number] {
   const name = requireString(map, 'name', path, lineCounter);
   const persona = requireString(map, 'persona', path, lineCounter);
   const tools = asStringArray(requireSeq(map, 'tools', path, lineCounter), field(path, 'tools'), lineCounter);
   const conduct = asStringRecord(requireMap(map, 'conduct', path, lineCounter), field(path, 'conduct'), lineCounter);
   const teammatesMap = readOptionalMap(map, 'teammates', path, lineCounter);
+  const judgedSeq = readOptionalSeq(map, 'judged', path, lineCounter);
   return {
     name,
     persona,
     tools,
     conduct,
-    ...(teammatesMap === undefined ? {} : { teammates: asStringRecord(teammatesMap, field(path, 'teammates'), lineCounter) })
+    ...(teammatesMap === undefined ? {} : { teammates: asStringRecord(teammatesMap, field(path, 'teammates'), lineCounter) }),
+    ...(judgedSeq === undefined ? {} : { judged: readJudged(judgedSeq, field(path, 'judged'), lineCounter) })
   };
 }
 

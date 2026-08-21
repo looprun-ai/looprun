@@ -1,5 +1,5 @@
 export { readDeclaration } from './declaration.js';
-export type { Declaration, DeclaredCap, DeclaredDisclosure, DeclaredGuard,
+export type { Declaration, DeclaredCap, DeclaredDisclosure, DeclaredGuard, DeclaredJudged,
   DeclaredNeed, DeclaredRewrite, DeclaredWording } from './declaration.js';
 export { checkAgainstSurface } from './against-surface.js';
 export { writeCards } from './write-cards.js';

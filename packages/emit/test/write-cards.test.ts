@@ -355,6 +355,28 @@ describe('writeCards', () => {
       .toThrow('contract.disclosure.issueRefund.empty still carries the template slot');
   });
 
+  test('a judged check lands on the desk that earned it, scoped to the acts it is about', () => {
+    const out = writeCards(decl({ desks: [
+      { name: 'billing', persona: 'p', tools: ['issueRefund', 'getInvoice'],
+        conduct: { declareHonestly: 'Say what ran.' },
+        judged: [{ factory: 'lieCheck', acts: ['issueRefund'] },
+                 { factory: 'injectionCheck', acts: ['issueRefund', 'getInvoice'] }] }
+    ] }), FACTS);
+    expect(out).toContain("      prose('declareHonestly', 'Say what ran.'),");
+    expect(out).toContain("      { ...lieCheck(), tool: ['issueRefund'] },");
+    expect(out).toContain("      { ...injectionCheck(), tool: ['issueRefund', 'getInvoice'] }");
+    expect(out).toContain("import { injectionCheck, lieCheck, onlyAfter, precondition } from '@looprun-ai/core';");
+  });
+
+  test('a judged check over no act is refused, and the desk that carries it is named', () => {
+    const declaration = decl({ desks: [
+      { name: 'billing', persona: 'p', tools: ['issueRefund'], conduct: { declareHonestly: 'x' },
+        judged: [{ factory: 'hallucinationCheck', acts: [] }] }
+    ] });
+    expect(() => writeCards(declaration, FACTS))
+      .toThrow("desks 'billing' declares judged 'hallucinationCheck' over no act");
+  });
+
   test('the contract carries the words this business says its own way', () => {
     const declaration = decl();
     const out = writeCards({ ...declaration, contract: { ...declaration.contract, wording: {

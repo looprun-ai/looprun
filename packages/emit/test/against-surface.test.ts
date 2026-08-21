@@ -20,6 +20,20 @@ describe('checkAgainstSurface', () => {
       .toEqual([expect.stringContaining("declares no target")]);
   });
 
+  test('a judged check naming an act the surface does not declare', () => {
+    expect(checkAgainstSurface(decl({ desks: [
+      { name: 'a', persona: 'p', tools: ['issueRefund'], conduct: { declareHonestly: 'x' },
+        judged: [{ factory: 'lieCheck', acts: ['issueRefudn'] }] }] }), FACTS))
+      .toEqual([expect.stringContaining("desks[0].judged[0].acts[0] names 'issueRefudn'")]);
+  });
+
+  test('a judged check scoped to an act outside its own desk\'s lane', () => {
+    expect(checkAgainstSurface(decl({ desks: [
+      { name: 'a', persona: 'p', tools: ['issueRefund'], conduct: { declareHonestly: 'x' },
+        judged: [{ factory: 'lieCheck', acts: ['closeBooking'] }] }] }), FACTS))
+      .toEqual([expect.stringContaining("the 'a' desk's lane holds 'issueRefund'")]);
+  });
+
   test('a conduct law two desks teach and a third never reads', () => {
     expect(checkAgainstSurface(decl({ desks: [
       { name: 'a', persona: 'p', tools: ['issueRefund'], conduct: { declareHonestly: 'x', oneQuestion: 'y' } },

@@ -81,14 +81,18 @@ export function writeSeam(subjectDir: string, facts: SurfaceFacts): string {
   ].join('\n');
 }
 
-/** The guard names THIS declaration puts in the census: one prose rule per conduct law, each
- *  declared guard under the name the declaration gives it, and the consent hold the engine mints
- *  for every destructive act on the surface. The rest of the engine's always-on floor is the
- *  engine's own and is not named here — the gate reads that from the compiled desks. */
+/** The guard names THIS declaration puts in the census: one prose rule per conduct law, one row per
+ *  judged check a desk carries under the name its factory mints, each declared guard under the name
+ *  the declaration gives it, and the consent hold the engine mints for every destructive act on the
+ *  surface. The rest of the engine's always-on floor is the engine's own and is not named here —
+ *  the gate reads that from the compiled desks. */
 export function writeCensus(declaration: Declaration, facts: SurfaceFacts): readonly string[] {
   const names: string[] = [];
   const add = (name: string): void => { if (!names.includes(name)) names.push(name); };
-  for (const desk of declaration.desks) for (const law of Object.keys(desk.conduct)) add(law);
+  for (const desk of declaration.desks) {
+    for (const law of Object.keys(desk.conduct)) add(law);
+    for (const check of desk.judged ?? []) add(check.factory);
+  }
   for (const guard of declaration.contract.guards) add(guard.name);
   for (const fact of Object.values(facts.tools)) {
     if (fact.effect === 'destructive') add(`confirmFirst:${fact.name}`);

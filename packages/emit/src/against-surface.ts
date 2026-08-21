@@ -66,6 +66,32 @@ function checkGuardActsExist(declaration: Declaration, facts: SurfaceFacts): rea
   return refusals;
 }
 
+/** Every judged check on a desk names acts the surface declares, and names them from that desk's
+ *  own lane. A check scoped to an act this desk cannot perform still runs on every reply the desk
+ *  writes, and its census row claims a scope no case at this seat can reach. */
+function checkJudgedActs(declaration: Declaration, facts: SurfaceFacts): readonly string[] {
+  const toolNames = Object.keys(facts.tools);
+  const refusals: string[] = [];
+  declaration.desks.forEach((desk, deskIndex) => {
+    (desk.judged ?? []).forEach((check, checkIndex) => {
+      check.acts.forEach((act, actIndex) => {
+        const at = `desks[${deskIndex}].judged[${checkIndex}].acts[${actIndex}]`;
+        if (facts.tools[act] === undefined) {
+          const near = closestName(act, toolNames);
+          refusals.push(`${at} names '${act}', and the surface declares no such act`
+            + `${near === null ? '' : ` — did you mean '${near}'?`}`);
+          return;
+        }
+        if (desk.tools.includes(act)) return;
+        refusals.push(`${at} names '${act}', and the '${desk.name}' desk's lane holds `
+          + `${desk.tools.map(tool => `'${tool}'`).join(', ')} — scope the check to an act this `
+          + `desk performs, or declare it on the desk that does.`);
+      });
+    });
+  });
+  return refusals;
+}
+
 /** The arguments that name an ACT rather than configure one. A factory is pointed at the act it
  *  covers through `acts`, and some are pointed at a second act through their configuration — the
  *  prerequisite `onlyAfter` waits for. Both name the same namespace, `facts.tools`. */
@@ -249,7 +275,8 @@ function checkDisclosureNeedsResolvable(declaration: Declaration, facts: Surface
 }
 
 /** Every refusal the emitter owes when a declaration does not fit the world's surface: a
- *  guard naming an act no tool declares, a guard whose configuration names one, a guard whose
+ *  guard naming an act no tool declares, a judged check on a desk naming one or naming an act
+ *  outside that desk's lane, a guard whose configuration names one, a guard whose
  *  configuration names an argument its act's schema does not declare, a destructive act with
  *  nothing disclosed before it runs, a `precondition` reading a record over an act with no target,
  *  a house conduct law some desks never teach, a disclosure `needs` alias naming a tool that does
@@ -258,6 +285,7 @@ function checkDisclosureNeedsResolvable(declaration: Declaration, facts: Surface
 export function checkAgainstSurface(declaration: Declaration, facts: SurfaceFacts): readonly string[] {
   return [
     ...checkGuardActsExist(declaration, facts),
+    ...checkJudgedActs(declaration, facts),
     ...checkGuardArgActsExist(declaration, facts),
     ...checkGuardArgsOnSchema(declaration, facts),
     ...checkDestructiveDisclosed(declaration, facts),

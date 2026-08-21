@@ -4,7 +4,7 @@
  *  declaration leaves empty is emitted empty, and a rule the emitter cannot compose from declared
  *  words is an error naming what is missing — never a sentence of the emitter's own. */
 import type { SurfaceFacts } from '@looprun-ai/core';
-import type { Declaration, DeclaredCap, DeclaredDisclosure, DeclaredGuard,
+import type { Declaration, DeclaredCap, DeclaredDisclosure, DeclaredGuard, DeclaredJudged,
   DeclaredNeed, DeclaredRewrite } from './declaration.js';
 
 /** A string literal for the emitted file: single-quoted, the way a card is hand-written, with
@@ -585,11 +585,25 @@ function contractLines(declaration: Declaration, facts: SurfaceFacts): readonly 
   return ['export const CONTRACT: DomainContract = {', ...commaJoin(fields), '};'];
 }
 
+/** One judged check as the desk carries it: the factory, and the acts that scope it. A judged
+ *  guard naming no act runs on every reply this desk writes, whatever the reply was about, so the
+ *  acts are required. */
+function judgedLines(desk: Declaration['desks'][number], check: DeclaredJudged): string {
+  if (check.acts.length === 0) {
+    throw new Error(`desks '${desk.name}' declares judged '${check.factory}' over no act — a judged `
+      + `check is answered by the model on every reply it is not scoped to, so it names the acts `
+      + `it is asked about`);
+  }
+  return `{ ...${check.factory}(), tool: ${list(check.acts)} }`;
+}
+
 /** One desk as its own AgentSpec: who it is, the lane it acts in, the desks it hands work to,
- *  and the conduct laws it teaches — one `prose` call per law, in the declaration's own order. */
+ *  the conduct laws it teaches — one `prose` call per law, in the declaration's own order — and
+ *  the judged checks it earned, which live on a spec and nowhere else. */
 function deskLines(desk: Declaration['desks'][number], depth: number): readonly string[] {
   const teammates = Object.entries(desk.teammates ?? {});
   const laws = Object.entries(desk.conduct);
+  const judged = desk.judged ?? [];
   const fields = [
     [indent(depth + 1, `name: ${quote(desk.name)}`)],
     [indent(depth + 1, `persona: ${quote(desk.persona)}`)],
@@ -600,10 +614,12 @@ function deskLines(desk: Declaration['desks'][number], depth: number): readonly 
       indent(depth + 1, '}')
     ]]),
     [indent(depth + 1, 'llmParams: { temperature: 0 }')],
-    ...(laws.length === 0 ? [] : [[
+    ...(laws.length === 0 && judged.length === 0 ? [] : [[
       indent(depth + 1, 'guards: ['),
-      ...commaJoin(laws.map(([name, rule]) =>
-        [indent(depth + 2, `prose(${quote(name)}, ${quote(rule)})`)])),
+      ...commaJoin([
+        ...laws.map(([name, rule]) => [indent(depth + 2, `prose(${quote(name)}, ${quote(rule)})`)]),
+        ...judged.map(check => [indent(depth + 2, judgedLines(desk, check))])
+      ]),
       indent(depth + 1, ']')
     ]])
   ];
@@ -699,7 +715,8 @@ export function writeCards(declaration: Declaration, facts: SurfaceFacts): strin
   const imported = [
     ...declaration.contract.guards.map(guard => factoryCall(guard).imported)
       .filter((name): name is string => name !== null),
-    ...(declaration.contract.rewrites ?? []).map(rewrite => rewrite.kind)
+    ...(declaration.contract.rewrites ?? []).map(rewrite => rewrite.kind),
+    ...declaration.desks.flatMap(desk => (desk.judged ?? []).map(check => check.factory))
   ];
   const factories = [...new Set(imported)].sort();
   const wide = declaration.contract.guards
