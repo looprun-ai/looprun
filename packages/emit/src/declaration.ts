@@ -57,6 +57,14 @@ export interface DeclaredRewrite {
   readonly terms?: Readonly<Record<string, string>>;
 }
 
+/** The engine sentences and status words this business says differently. Each map is keyed by the
+ *  engine's own name for the sentence; a key the engine does not carry is refused by name, because
+ *  a word nothing reads is a word nobody ever hears. */
+export interface DeclaredWording {
+  readonly status?: Readonly<Record<string, string>>;
+  readonly sentence?: Readonly<Record<string, string>>;
+}
+
 export interface Declaration {
   readonly contract: {
     readonly name: string;
@@ -66,6 +74,7 @@ export interface Declaration {
     readonly disclosure: Readonly<Record<string, DeclaredDisclosure>>;
     readonly rewrites?: readonly DeclaredRewrite[];
     readonly secrets?: readonly string[];
+    readonly wording?: DeclaredWording;
     readonly limits?: Readonly<Record<string, number>>;
   };
   readonly desks: readonly {
@@ -315,6 +324,15 @@ function readRewrites(seq: YAMLSeq, path: string, lineCounter: LineCounter): rea
   });
 }
 
+function readWording(map: YAMLMap, path: string, lineCounter: LineCounter): DeclaredWording {
+  const status = readOptionalMap(map, 'status', path, lineCounter);
+  const sentence = readOptionalMap(map, 'sentence', path, lineCounter);
+  return {
+    ...(status === undefined ? {} : { status: asStringRecord(status, field(path, 'status'), lineCounter) }),
+    ...(sentence === undefined ? {} : { sentence: asStringRecord(sentence, field(path, 'sentence'), lineCounter) })
+  };
+}
+
 function readContract(map: YAMLMap, path: string, lineCounter: LineCounter): Declaration['contract'] {
   const name = requireString(map, 'name', path, lineCounter);
   const voice = requireString(map, 'voice', path, lineCounter);
@@ -323,6 +341,7 @@ function readContract(map: YAMLMap, path: string, lineCounter: LineCounter): Dec
   const disclosure = readDisclosure(requireMap(map, 'disclosure', path, lineCounter), field(path, 'disclosure'), lineCounter);
   const rewritesSeq = readOptionalSeq(map, 'rewrites', path, lineCounter);
   const secretsSeq = readOptionalSeq(map, 'secrets', path, lineCounter);
+  const wordingMap = readOptionalMap(map, 'wording', path, lineCounter);
   const limitsMap = readOptionalMap(map, 'limits', path, lineCounter);
   return {
     name,
@@ -332,6 +351,7 @@ function readContract(map: YAMLMap, path: string, lineCounter: LineCounter): Dec
     disclosure,
     ...(rewritesSeq === undefined ? {} : { rewrites: readRewrites(rewritesSeq, field(path, 'rewrites'), lineCounter) }),
     ...(secretsSeq === undefined ? {} : { secrets: asStringArray(secretsSeq, field(path, 'secrets'), lineCounter) }),
+    ...(wordingMap === undefined ? {} : { wording: readWording(wordingMap, field(path, 'wording'), lineCounter) }),
     ...(limitsMap === undefined ? {} : { limits: asNumberRecord(limitsMap, field(path, 'limits'), lineCounter) })
   };
 }

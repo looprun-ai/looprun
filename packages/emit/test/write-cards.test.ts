@@ -355,6 +355,33 @@ describe('writeCards', () => {
       .toThrow('contract.disclosure.issueRefund.empty still carries the template slot');
   });
 
+  test('the contract carries the words this business says its own way', () => {
+    const declaration = decl();
+    const out = writeCards({ ...declaration, contract: { ...declaration.contract, wording: {
+      status: { held: 'waiting on you', 'not-done': 'not put through' },
+      sentence: { deniedByGuard: 'A rule of this house stopped that.' }
+    } } }, FACTS);
+    expect(out).toContain('  wording: {');
+    expect(out).toContain("    status: {");
+    expect(out).toContain("      held: 'waiting on you',");
+    expect(out).toContain("      'not-done': 'not put through'");
+    expect(out).toContain("      deniedByGuard: 'A rule of this house stopped that.'");
+  });
+
+  test('a wording key the engine does not carry is refused, and the table is named', () => {
+    const declaration = decl();
+    const said = (wording: Declaration['contract']['wording']): Declaration =>
+      ({ ...declaration, contract: { ...declaration.contract, wording } });
+    expect(() => writeCards(said({ status: { finished: 'done' } }), FACTS))
+      .toThrow("contract.wording.status declares 'finished'");
+    expect(() => writeCards(said({ sentence: { deniedByRule: 'x' } }), FACTS))
+      .toThrow("contract.wording.sentence declares 'deniedByRule'");
+    expect(() => writeCards(said({}), FACTS))
+      .toThrow('contract.wording carries neither status nor sentence');
+    expect(() => writeCards(said({ status: {} }), FACTS))
+      .toThrow('contract.wording.status is empty');
+  });
+
   test('a blocked seam emits the pattern as data, the text it reads and its own sentence', () => {
     const out = writeCards(decl({ guards: [{ name: 'seam:cardNumber', acts: ['issueRefund'],
       factory: 'blockPattern', args: { pattern: '[0-9]{13,19}', on: 'reply' },

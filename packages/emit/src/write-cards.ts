@@ -169,6 +169,9 @@ function refuseUnfilledSlots(declaration: Declaration): void {
       ...(entry.cap?.refusal === undefined ? [] : [[`contract.disclosure.${act}.cap.refusal`, entry.cap.refusal] as const]),
       ...(entry.empty === undefined ? [] : [[`contract.disclosure.${act}.empty`, entry.empty] as const])
     ]),
+    ...(['status', 'sentence'] as const).flatMap(half =>
+      Object.entries(declaration.contract.wording?.[half] ?? {})
+        .map(([name, said]) => [`contract.wording.${half}.${name}`, said] as const)),
     ...declaration.desks.flatMap(desk => [
       [`desks '${desk.name}' persona`, desk.persona] as const,
       ...Object.entries(desk.conduct).map(([law, sentence]) =>
@@ -518,6 +521,48 @@ function rewriteCall(rewrite: DeclaredRewrite, at: number): string {
   return `${rewrite.kind}(${quote(rewrite.name)}, new RegExp(${quote(rewrite.pattern)}))`;
 }
 
+/** The engine's own names for what a business may say differently: the words a status is
+ *  delivered in, and the sentences the engine speaks for itself. A key outside these is a word
+ *  nothing reads, so the override never reaches an operator and the declaration is refused. */
+const WORDING_KEYS: Readonly<Record<string, readonly string[]>> = {
+  status: ['done', 'not-done', 'unknown', 'held', 'refused', 'blocked'],
+  sentence: ['approvalInstruction', 'exhaustionClosure', 'unknownStatus', 'questionExpired',
+    'questionSuperseded', 'questionDeclined', 'deniedByGuard', 'simulatedResult']
+};
+
+/** One half of the wording table as the card carries it: the engine's key, and this business's
+ *  own sentence for it. */
+function wordingHalf(half: 'status' | 'sentence', words: Readonly<Record<string, string>>,
+  depth: number): readonly string[] {
+  const lawful = WORDING_KEYS[half];
+  const pairs = Object.entries(words);
+  for (const [name] of pairs) {
+    if (lawful.includes(name)) continue;
+    throw new Error(`contract.wording.${half} declares '${name}', and the engine's ${half} table `
+      + `carries ${lawful.join(', ')} — an override on any other key reaches nobody`);
+  }
+  if (pairs.length === 0) {
+    throw new Error(`contract.wording.${half} is empty, and a wording table states the words this `
+      + `business says differently — drop the key, or state one`);
+  }
+  return [indent(depth, `${half}: {`),
+    ...commaJoin(pairs.map(([name, said]) => [indent(depth + 1, `${key(name)}: ${quote(said)}`)])),
+    indent(depth, '}')];
+}
+
+function wordingLines(wording: NonNullable<Declaration['contract']['wording']>,
+  depth: number): readonly string[] {
+  const halves = [
+    ...(wording.status === undefined ? [] : [wordingHalf('status', wording.status, depth + 1)]),
+    ...(wording.sentence === undefined ? [] : [wordingHalf('sentence', wording.sentence, depth + 1)])
+  ];
+  if (halves.length === 0) {
+    throw new Error('contract.wording carries neither status nor sentence — a wording table states '
+      + 'the status words this business delivers, the engine sentences it speaks, or both');
+  }
+  return [indent(depth, 'wording: {'), ...commaJoin(halves), indent(depth, '}')];
+}
+
 function contractLines(declaration: Declaration, facts: SurfaceFacts): readonly string[] {
   const { contract } = declaration;
   const block = (open: string, body: readonly string[], close: string): readonly string[] =>
@@ -533,6 +578,7 @@ function contractLines(declaration: Declaration, facts: SurfaceFacts): readonly 
     ...(contract.rewrites === undefined ? [] : [block('rewrites: [',
       commaJoin(contract.rewrites.map((rewrite, at) => [indent(2, rewriteCall(rewrite, at))])), ']')]),
     ...(contract.secrets === undefined ? [] : [[indent(1, `secrets: ${list(contract.secrets)}`)]]),
+    ...(contract.wording === undefined ? [] : [wordingLines(contract.wording, 1)]),
     ...(contract.limits === undefined ? [] : [[indent(1, `limits: { ${Object.entries(contract.limits)
       .map(([name, value]) => `${key(name)}: ${String(value)}`).join(', ')} }`)]])
   ];
