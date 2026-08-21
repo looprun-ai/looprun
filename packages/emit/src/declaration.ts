@@ -5,8 +5,8 @@ import type { Node, Pair, YAMLMap, YAMLSeq } from 'yaml';
 export interface DeclaredGuard {
   readonly name: string;
   readonly acts: readonly string[];
-  readonly factory: 'onlyAfter' | 'precondition' | 'valueFromUser' | 'argFormat' | 'cap' | 'prose'
-    | 'deny';
+  readonly factory: 'onlyAfter' | 'precondition' | 'role' | 'valueFromUser' | 'argFormat' | 'cap'
+    | 'prose' | 'deny';
   readonly args?: Readonly<Record<string, unknown>>;
   readonly rule?: string;
   readonly wide?: 'oneLawEveryAct' | 'sameRefusal';
@@ -62,7 +62,7 @@ export interface Declaration {
   }[];
 }
 
-const FACTORIES: ReadonlySet<DeclaredGuard['factory']> = new Set(['onlyAfter', 'precondition', 'valueFromUser', 'argFormat', 'cap', 'prose', 'deny']);
+const FACTORIES: ReadonlySet<DeclaredGuard['factory']> = new Set(['onlyAfter', 'precondition', 'role', 'valueFromUser', 'argFormat', 'cap', 'prose', 'deny']);
 const WIDE_KINDS: ReadonlySet<NonNullable<DeclaredGuard['wide']>> = new Set(['oneLawEveryAct', 'sameRefusal']);
 
 function fail(path: string, line: number, detail: string): never {

@@ -250,6 +250,41 @@ describe('writeCards', () => {
     expect(() => writeCards(declaration, FACTS)).toThrow('a deny is a check written in code');
   });
 
+  test('a role gate emits one precondition over the acting record, and the walk beside it', () => {
+    const declaration = decl({ guards: [{ name: 'tool:moneyGate',
+      acts: ['issueRefund', 'closeBooking'], factory: 'role',
+      args: { anchor: 'accounts', by: 'actingStaffId', from: 'staff', field: 'grade',
+              in: ['owner', 'billing'] },
+      wide: 'oneLawEveryAct',
+      rule: 'Moving money needs the money capability, and the acting member\'s recorded grade does not carry it.' }] });
+    const out = writeCards(declaration, FACTS);
+    expect(out).toContain("{ ...precondition(['issueRefund', 'closeBooking'], ({ state }) =>");
+    expect(out).toContain("['owner', 'billing'].includes(actingField(state, 'accounts', 'actingStaffId', 'staff', 'grade')),");
+    expect(out).toContain("name: 'tool:moneyGate' }");
+    // The factory takes every act itself, so the literal around it adds no second scope.
+    expect(out).not.toContain("tool: ['issueRefund', 'closeBooking']");
+    expect(out).toContain('const actingField = (state: StateSnapshot');
+    expect(out).toContain('StateSnapshot } from \'@looprun-ai/core\';');
+  });
+
+  test('a role gate states the values its field may carry, and refuses without them', () => {
+    const gate = (args: Readonly<Record<string, unknown>>): Declaration =>
+      decl({ guards: [{ name: 'tool:moneyGate', acts: ['issueRefund'], factory: 'role', args,
+        rule: 'Moving money needs the money capability.' }] });
+    const walk = { anchor: 'accounts', by: 'actingStaffId', from: 'staff', field: 'grade' };
+    expect(() => writeCards(gate({ ...walk, in: [] }), FACTS)).toThrow('args.in');
+    expect(() => writeCards(gate({ ...walk, in: [7] }), FACTS)).toThrow('args.in');
+    expect(() => writeCards(gate({ by: 'actingStaffId', from: 'staff', field: 'grade', in: ['owner'] }), FACTS))
+      .toThrow('args.anchor');
+  });
+
+  test('a role gate states its law in the card\'s own words, and refuses without them', () => {
+    const declaration = decl({ guards: [{ name: 'tool:moneyGate', acts: ['issueRefund'],
+      factory: 'role', args: { anchor: 'accounts', by: 'actingStaffId', from: 'staff',
+                               field: 'grade', in: ['owner'] } }] });
+    expect(() => writeCards(declaration, FACTS)).toThrow('declare the `rule` it states');
+  });
+
   test('an argument no factory reads is refused, with the factory and the keys it does read', () => {
     const declaration = decl({ guards: [{ name: 'refundReadsTheInvoice', acts: ['issueRefund'],
       factory: 'onlyAfter', args: { after: 'getInvoice', pattern: '^inv_' } }] });

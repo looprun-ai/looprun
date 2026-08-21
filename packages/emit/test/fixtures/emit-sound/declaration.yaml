@@ -13,6 +13,11 @@ contract:
       factory: precondition
       args: { reads: record }
       rule: Refund an invoice while it is still open, and never one already settled.
+    - name: closingNoteReadsTheInvoice
+      acts: [closeBooking]
+      factory: onlyAfter
+      args: { after: getInvoice }
+      rule: Write the closing note from the invoice you read this conversation, never from memory.
   disclosure:
     issueRefund:
       needs: { invoice: getInvoice }

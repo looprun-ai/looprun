@@ -67,6 +67,7 @@ function commaJoin(blocks: readonly (readonly string[])[]): readonly string[] {
 const LAWFUL_ARGS: Readonly<Record<DeclaredGuard['factory'], readonly string[]>> = {
   onlyAfter: ['after'],
   precondition: ['reads'],
+  role: ['anchor', 'by', 'from', 'field', 'in'],
   valueFromUser: ['arg'],
   argFormat: ['arg', 'pattern'],
   cap: ['calls', 'scope'],
@@ -156,6 +157,32 @@ function preconditionLines(guard: DeclaredGuard): readonly string[] {
   return [`precondition(${acts}, ({ record }) => record !== null,`, `${quote(ruleOf(guard))})`];
 }
 
+/** The values `args.in` names: the ones the acting record's field may carry for the act to run.
+ *  A gate standing on an empty list refuses every call it covers, so the list is required to
+ *  carry at least one value and every value is a word of the field's own. */
+function allowedValues(guard: DeclaredGuard): readonly string[] {
+  const declared = guard.args?.in;
+  if (!Array.isArray(declared) || declared.length === 0
+    || declared.some(value => typeof value !== 'string')) {
+    throw new Error(`contract.guards '${guard.name}' declares factory 'role', whose configuration `
+      + `is args.in — a list of one or more of the field's own values, which this declaration `
+      + `does not carry`);
+  }
+  return declared as readonly string[];
+}
+
+/** A gate on the acting member's own record: the acts it covers, the walk from the anchor row to
+ *  the field that decides, and the sentence it refuses with. The check is a `precondition` over
+ *  the state — the record the acts are about decides nothing here, the member acting does. */
+function roleLines(guard: DeclaredGuard): readonly string[] {
+  const walk = ['anchor', 'by', 'from', 'field'].map(name => quote(stringArg(guard, name)));
+  const allowed = allowedValues(guard);
+  const acts = guard.acts.length === 1 ? quote(guard.acts[0]) : list(guard.acts);
+  return [`precondition(${acts}, ({ state }) =>`,
+    `${list(allowed)}.includes(actingField(state, ${walk.join(', ')})),`,
+    `${quote(ruleOf(guard))})`];
+}
+
 /** A ceiling on how many times one act runs. The count is that act's own completed calls, so a
  *  ceiling covers exactly one act. */
 function capLines(guard: DeclaredGuard, act: string): readonly string[] {
@@ -175,7 +202,7 @@ function capLines(guard: DeclaredGuard, act: string): readonly string[] {
 
 /** The call one declared guard is emitted from: the factory it imports, and the lines of the
  *  call itself. A factory configured from one act takes the first act the guard names and the
- *  rest arrive as the guard's own `tool` scope; `precondition` takes them all itself. `prose`
+ *  rest arrive as the guard's own `tool` scope; `precondition` and `role` take them all. `prose`
  *  imports nothing — it is the card's own helper — and states the whole law in its sentence. */
 function factoryCall(guard: DeclaredGuard): { readonly imported: string | null;
                                               readonly lines: readonly string[] } {
@@ -202,6 +229,8 @@ function factoryCall(guard: DeclaredGuard): { readonly imported: string | null;
           + `${quote(stringArg(guard, 'pattern'))})`] };
     case 'precondition':
       return { imported: 'precondition', lines: preconditionLines(guard) };
+    case 'role':
+      return { imported: 'precondition', lines: roleLines(guard) };
     case 'cap':
       return { imported: 'maxCalls', lines: capLines(guard, act) };
     case 'prose':
@@ -220,8 +249,9 @@ function guardLines(guard: DeclaredGuard, depth: number): readonly string[] {
     return [indent(depth, `{ ...${call.lines[0]}, tool: ${list(guard.acts)} }`)];
   }
   const fields = [`name: ${quote(guard.name)}`];
-  if (guard.acts.length > 1 && guard.factory !== 'precondition') fields.push(`tool: ${list(guard.acts)}`);
-  const takesRule = guard.factory === 'precondition' || guard.factory === 'cap';
+  const takesActs = guard.factory === 'precondition' || guard.factory === 'role';
+  if (guard.acts.length > 1 && !takesActs) fields.push(`tool: ${list(guard.acts)}`);
+  const takesRule = takesActs || guard.factory === 'cap';
   if (guard.rule !== undefined && !takesRule) fields.push(`rule: ${quote(guard.rule)}`);
   const [head, ...rest] = call.lines;
   const lines = commaJoin([
@@ -370,8 +400,8 @@ function divider(label: string): string {
 }
 
 /** One declaration and the surface it is declared against, in; the whole text of `cards.ts`, out.
- *  The order is the order a reader needs it in: what the file is, the imports it uses, the prose
- *  helper, the licence maps, the DomainContract, and one AgentSpec per desk under the SPECS map
+ *  The order is the order a reader needs it in: what the file is, the imports it uses, the helpers
+ *  the cards call, the licence maps, the DomainContract, and one AgentSpec per desk under the SPECS map
  *  the subject door re-exports. */
 export function writeCards(declaration: Declaration, facts: SurfaceFacts): string {
   if (!isSlug(declaration.contract.name)) {
@@ -384,6 +414,31 @@ export function writeCards(declaration: Declaration, facts: SurfaceFacts): strin
   const desks = commaJoin(declaration.desks.map(desk => deskLines(desk, 1)));
   const teaches = declaration.desks.some(desk => Object.keys(desk.conduct).length > 0)
     || declaration.contract.guards.some(guard => guard.factory === 'prose');
+  const gatesOnRole = declaration.contract.guards.some(guard => guard.factory === 'role');
+  const helpers = [
+    ...(teaches ? [
+      '/** A rule the prompt states in plain words, on the desk that owes it: it renders into the',
+      ' *  system prefix of that desk, and the desk reads it before it decides anything. */',
+      'const prose = (name: string, rule: string): Guard => ({ name, rule, on: \'reply\' });'
+    ] : []),
+    ...(gatesOnRole ? [
+      ...(teaches ? [''] : []),
+      '/** The value one field of the acting record carries. The first row of the anchor entity',
+      ' *  names who is acting through a field of its own, that name keys a row of the entity the',
+      ' *  actors live in, and the field asked for is read off that row. A step the records do not',
+      ' *  answer ends the walk on the empty string, which no list of values carries. */',
+      'const actingField = (state: StateSnapshot, anchor: string, by: string, from: string,',
+      '  field: string): string => {',
+      '  const anchorRow = Object.values(state[anchor] ?? {})[0];',
+      '  const acting = anchorRow?.[by];',
+      '  const record = typeof acting === \'string\' ? state[from]?.[acting] : undefined;',
+      '  const value = record?.[field];',
+      '  return typeof value === \'string\' ? value : \'\';',
+      '};'
+    ] : [])
+  ];
+  const types = ['AgentSpec', 'DomainContract', ...(teaches ? ['Guard'] : []),
+    ...(gatesOnRole ? ['StateSnapshot'] : [])];
   const imported = declaration.contract.guards.map(guard => factoryCall(guard).imported)
     .filter((name): name is string => name !== null);
   const factories = [...new Set(imported)].sort();
@@ -396,16 +451,9 @@ export function writeCards(declaration: Declaration, facts: SurfaceFacts): strin
     ' *  Written by the looprun emitter from the declaration beside the world card, so every',
     ' *  sentence here is a sentence that declaration carries. Tool plumbing lives on the world',
     ' *  card. */',
-    `import type { AgentSpec, DomainContract${teaches ? ', Guard' : ''} } from '@looprun-ai/core';`,
+    `import type { ${types.join(', ')} } from '@looprun-ai/core';`,
     ...(factories.length === 0 ? [] : [`import { ${factories.join(', ')} } from '@looprun-ai/core';`]),
-    ...(teaches ? [
-      '',
-      divider('helpers'),
-      '',
-      '/** A rule the prompt states in plain words, on the desk that owes it: it renders into the',
-      ' *  system prefix of that desk, and the desk reads it before it decides anything. */',
-      'const prose = (name: string, rule: string): Guard => ({ name, rule, on: \'reply\' });'
-    ] : []),
+    ...(helpers.length === 0 ? [] : ['', divider('helpers'), '', ...helpers]),
     ...licenceLines('WHY', [
       '/** Why each prose rule exists. Every name prose() mints appears here, claiming one of',
       ' *  noSuchAct, aboutARead, conduct or measured:<case>. The set is closed. */'
