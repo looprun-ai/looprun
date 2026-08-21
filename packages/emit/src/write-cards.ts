@@ -66,7 +66,7 @@ function commaJoin(blocks: readonly (readonly string[])[]): readonly string[] {
  *  would drop it, and the author would read a rule on the card that the engine never enforces. */
 const LAWFUL_ARGS: Readonly<Record<DeclaredGuard['factory'], readonly string[]>> = {
   onlyAfter: ['after'],
-  precondition: ['reads'],
+  precondition: ['reads', 'field', 'is', 'in'],
   role: ['anchor', 'by', 'from', 'field', 'in'],
   valueFromUser: ['arg'],
   argFormat: ['arg', 'pattern'],
@@ -146,15 +146,79 @@ function refuseUnfilledSlots(declaration: Declaration): void {
   }
 }
 
+/** A single declared value as the card writes it: a word quoted, a figure and a flag bare. */
+function scalarLiteral(value: string | number | boolean): string {
+  return typeof value === 'string' ? quote(value) : String(value);
+}
+
+function isScalarValue(value: unknown): value is string | number | boolean {
+  return typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean';
+}
+
+/** One field of a row, as the card reads it: the plain name where the field carries one, the
+ *  bracketed literal where it does not. A row the surface never filled answers `undefined`, which
+ *  no declared value equals. */
+function fieldAccess(root: string, field: string): string {
+  return isPlainName(field) ? `${root}?.${field}` : `${root}?.[${quote(field)}]`;
+}
+
+/** A law over one field, as data: `is` names the one value the field must carry, `in` the list of
+ *  values one of which it must be. Exactly one of the two — a field tested against both states two
+ *  laws under one name, and a field tested against neither states none. */
+function fieldTest(guard: DeclaredGuard, subject: string): string {
+  const single = guard.args?.is;
+  const several = guard.args?.in;
+  if ((single === undefined) === (several === undefined)) {
+    throw new Error(`contract.guards '${guard.name}' declares args.field, and a field law tests it `
+      + `against exactly one of args.is — a single value — or args.in — a list of them; this `
+      + `declaration carries ${single === undefined ? 'neither' : 'both'}`);
+  }
+  if (single !== undefined) {
+    if (!isScalarValue(single)) {
+      throw new Error(`contract.guards '${guard.name}' declares args.is as a block of its own, and `
+        + `a field carries one value — declare args.is as a word, a figure or a flag`);
+    }
+    return `${subject} === ${scalarLiteral(single)}`;
+  }
+  if (!Array.isArray(several) || several.length === 0 || !several.every(isScalarValue)) {
+    throw new Error(`contract.guards '${guard.name}' declares args.in, whose configuration is a `
+      + `list of one or more words, figures or flags the field may carry, which this declaration `
+      + `does not carry`);
+  }
+  return `[${several.map(scalarLiteral).join(', ')}].some(value => value === ${subject})`;
+}
+
+/** The field a law tests, or null where the law is about the row itself. A value declared with no
+ *  field to read it off tests nothing, so it is refused by the key that names it. */
+function testedField(guard: DeclaredGuard): string | null {
+  const field = guard.args?.field;
+  if (field === undefined) {
+    const valueKey = guard.args?.is !== undefined ? 'args.is'
+      : guard.args?.in !== undefined ? 'args.in' : null;
+    if (valueKey === null) return null;
+    throw new Error(`contract.guards '${guard.name}' declares ${valueKey} and no args.field — the `
+      + `value tested belongs to a field, and this declaration names none`);
+  }
+  if (typeof field !== 'string') {
+    throw new Error(`contract.guards '${guard.name}' declares args.field, which names one field of `
+      + `the record — declare it as that field's own name`);
+  }
+  return field;
+}
+
 /** A `precondition` reading the record: the acts it covers, the check its declared reading
- *  compiles to, and the sentence it refuses with. */
+ *  compiles to, and the sentence it refuses with. `reads: record` alone tests that the row is
+ *  there; a `field` beside it tests what that row carries, and a row that is absent answers
+ *  `undefined` — which no declared value equals, so the act refuses either way. */
 function preconditionLines(guard: DeclaredGuard): readonly string[] {
   if (guard.args?.reads !== 'record') {
     throw new Error(`contract.guards '${guard.name}' declares factory 'precondition' with a `
       + `reading this emitter has no check for — the one it writes is \`reads: record\``);
   }
+  const field = testedField(guard);
+  const test = field === null ? 'record !== null' : fieldTest(guard, fieldAccess('record', field));
   const acts = guard.acts.length === 1 ? quote(guard.acts[0]) : list(guard.acts);
-  return [`precondition(${acts}, ({ record }) => record !== null,`, `${quote(ruleOf(guard))})`];
+  return [`precondition(${acts}, ({ record }) => ${test},`, `${quote(ruleOf(guard))})`];
 }
 
 /** The values `args.in` names: the ones the acting record's field may carry for the act to run.

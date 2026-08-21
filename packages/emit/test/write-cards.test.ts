@@ -250,6 +250,35 @@ describe('writeCards', () => {
     expect(() => writeCards(declaration, FACTS)).toThrow('a deny is a check written in code');
   });
 
+  test('a precondition over a field emits the test the field states, single value or list', () => {
+    const gate = (args: Readonly<Record<string, unknown>>): Declaration =>
+      decl({ guards: [{ name: 'refundOnlyWhileOpen', acts: ['issueRefund'], factory: 'precondition',
+        args, rule: 'A settled invoice takes no refund; read its state and say what it carries.' }] });
+    const single = writeCards(gate({ reads: 'record', field: 'settled', is: false }), FACTS);
+    expect(single).toContain("{ ...precondition('issueRefund', ({ record }) => record?.settled === false,");
+    const several = writeCards(gate({ reads: 'record', field: 'state', in: ['open', 'partial'] }), FACTS);
+    expect(several).toContain(
+      "{ ...precondition('issueRefund', ({ record }) => ['open', 'partial'].some(value => value === record?.state),");
+    const figure = writeCards(gate({ reads: 'record', field: 'balanceDue', is: 0 }), FACTS);
+    expect(figure).toContain('record?.balanceDue === 0,');
+  });
+
+  test('a field with no value, two values or a block for a value is refused by its path', () => {
+    const gate = (args: Readonly<Record<string, unknown>>): Declaration =>
+      decl({ guards: [{ name: 'refundOnlyWhileOpen', acts: ['issueRefund'], factory: 'precondition',
+        args, rule: 'A settled invoice takes no refund.' }] });
+    expect(() => writeCards(gate({ reads: 'record', field: 'state' }), FACTS))
+      .toThrow('this declaration carries neither');
+    expect(() => writeCards(gate({ reads: 'record', field: 'state', is: 'open', in: ['open'] }), FACTS))
+      .toThrow('this declaration carries both');
+    expect(() => writeCards(gate({ reads: 'record', field: 'state', is: { open: true } }), FACTS))
+      .toThrow('declares args.is as a block of its own');
+    expect(() => writeCards(gate({ reads: 'record', field: 'state', in: [] }), FACTS))
+      .toThrow('declares args.in');
+    expect(() => writeCards(gate({ reads: 'record', is: 'open' }), FACTS))
+      .toThrow('declares args.is and no args.field');
+  });
+
   test('a role gate emits one precondition over the acting record, and the walk beside it', () => {
     const declaration = decl({ guards: [{ name: 'tool:moneyGate',
       acts: ['issueRefund', 'closeBooking'], factory: 'role',
