@@ -80,6 +80,25 @@ importers:
         specifier: ^2.0.0
         version: 2.1.9(@types/node@22.20.1)
 
+  packages/emit:
+    dependencies:
+      '@looprun-ai/core':
+        specifier: workspace:^
+        version: link:../core
+      '@looprun-ai/eval':
+        specifier: workspace:^
+        version: link:../eval
+      yaml:
+        specifier: ^2.6.0
+        version: 2.9.0
+    devDependencies:
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^2.0.0
+        version: 2.1.9(@types/node@22.20.1)
+
   packages/eval:
     dependencies:
       '@looprun-ai/core':
@@ -2281,6 +2300,11 @@ packages:
 
   xxhash-wasm@1.1.0:
     resolution: {integrity: sha512-147y/6YNh+tlp6nd/2pWq38i9h6mz/EuQ6njIrmW8D1BS5nCqs0P6DG+m6zTGnNz5I+uhZ0SHxBs9BsPrwcKDA==}
+
+  yaml@2.9.0:
+    resolution: {integrity: sha512-2AvhNX3mb8zd6Zy7INTtSpl1F15HW6Wnqj0srWlkKLcpYl/gMIMJiyuGq2KeI2YFxUPjdlB+3Lc10seMLtL4cA==}
+    engines: {node: '>= 14.6'}
+    hasBin: true
 
   yocto-queue@0.1.0:
     resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
@@ -4577,6 +4601,8 @@ snapshots:
   ws@8.21.0: {}
 
   xxhash-wasm@1.1.0: {}
+
+  yaml@2.9.0: {}
 
   yocto-queue@0.1.0: {}
 

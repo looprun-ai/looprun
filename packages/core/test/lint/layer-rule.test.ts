@@ -36,6 +36,10 @@ const FACADE_LANES: Readonly<Record<string, (spec: string) => boolean>> = {
     || spec.startsWith('node:'),
   models: spec => spec.startsWith('./') || spec === '@looprun-ai/core'
     || spec.startsWith('node:'),
+  /** emit reads a declaration and writes cards from it: it may reach core and eval by
+   *  name, the yaml package for the declaration format, and node builtins for the CLI. */
+  emit: spec => spec.startsWith('./') || spec === '@looprun-ai/core'
+    || spec === '@looprun-ai/eval' || spec === 'yaml' || spec.startsWith('node:'),
   /** The umbrella is the published name of the whole: each of its modules re-exports one
    *  package by name and nothing else. It owns no source and composes nothing. */
   looprun: spec => spec === '@looprun-ai/core' || spec === '@looprun-ai/mastra'
