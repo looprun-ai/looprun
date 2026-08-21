@@ -1191,10 +1191,16 @@ export function coversResolve(cases: readonly ExamCase[],
  *  spends a model call to learn it. This is the half of the exam's promise no other verb reaches:
  *  `coversResolve` reads the guard names a case claims and never the scenario it claims them in,
  *  and `approvable` cannot see the gap at all — it walks a case's `covers` keys, and a case that
- *  declares none is walked past in silence. */
+ *  declares none is walked past in silence.
+ *
+ *  A preset is a patch over records a card declares, and only a card-carrying world is built from
+ *  one: over an MCP or live surface the runner never reaches the builder, so it neither applies a
+ *  preset nor refuses one. The sentence below states a refusal, and a refusal that cannot happen is
+ *  not a finding to state — those worlds are left to the verb that can describe what they do. */
 export function presetsDeclared(cases: readonly ExamCase[],
                                 world: DeclaredWorld | McpWorldCard | LiveWorldCard): readonly LintFinding[] {
-  const declared = new Set('card' in world ? Object.keys(world.card.presets ?? {}) : []);
+  if (!('card' in world)) return [];
+  const declared = new Set(Object.keys(world.card.presets ?? {}));
   const findings: LintFinding[] = [];
   for (const c of cases) {
     if (c.preset === undefined || declared.has(c.preset)) continue;

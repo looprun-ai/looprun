@@ -687,6 +687,12 @@ describe('presetsDeclared', () => {
     expect(presetsDeclared([{ id: 'cancel-asks-first', turns: ['Please cancel booking bk_1.'] }] as never,
                            hotelCard())).toEqual([]);
   });
+
+  test('a world with no card is walked past — nothing there builds from a preset', () => {
+    expect(presetsDeclared(CHECKED_IN_CASE,
+      { url: 'https://example.invalid/mcp', reads: {}, writes: {}, destructive: {} } as never))
+      .toEqual([]);
+  });
 });
 
 import { promptLines } from '../src/lints.js';
