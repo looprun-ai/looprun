@@ -55,20 +55,26 @@ describe('checkAgainstSurface', () => {
               conduct: { declareHonestly: 'x' } }]
   });
 
+  // `valueFromUser` finds no string where it looks and returns its deny sentence, so the act it
+  // covers is refused on every call for the whole conversation.
   test('valueFromUser pointed at an argument the act does not declare', () => {
     expect(checkAgainstSurface(hotelDecl([
       { name: 'valueFromUser:moveBooking', acts: ['moveBooking'], factory: 'valueFromUser',
         args: { arg: 'day' } }]), HOTEL))
-      .toEqual([expect.stringContaining("contract.guards[0].args.arg names 'day', and 'moveBooking' "
-        + "accepts 'id', 'set' — pointed at an argument its act does not carry, the guard refuses "
-        + "every call of it.")]);
+      .toEqual(["contract.guards[0].args.arg names 'day', and 'moveBooking' accepts 'id', 'set'. "
+        + 'Pointed at an argument its act does not carry, the guard refuses every call of it. '
+        + "Did you mean 'id'?"]);
   });
 
-  test('argFormat pointed at an argument the act does not declare names the near miss', () => {
-    const refusals = checkAgainstSurface(hotelDecl([
+  // `argFormat` returns null the moment it finds nothing to test, so the same mistake is the
+  // opposite failure: a check that is installed, counted in the census, and never decides anything.
+  test('argFormat pointed at an argument the act does not declare', () => {
+    expect(checkAgainstSurface(hotelDecl([
       { name: 'argFormat:cancelBooking', acts: ['cancelBooking'], factory: 'argFormat',
-        args: { arg: 'ids', pattern: 'bk_[0-9]+' } }]), HOTEL);
-    expect(refusals).toEqual([expect.stringContaining("Did you mean 'id'?")]);
+        args: { arg: 'ids', pattern: 'bk_[0-9]+' } }]), HOTEL))
+      .toEqual(["contract.guards[0].args.arg names 'ids', and 'cancelBooking' accepts 'id'. "
+        + 'Pointed at an argument its act does not carry, the guard never fires — it sits in the '
+        + "census as a check that decides nothing. Did you mean 'id'?"]);
   });
 
   test('a guard configured from an argument the act does declare passes', () => {

@@ -81,22 +81,28 @@ function checkGuardArgActsExist(declaration: Declaration, facts: SurfaceFacts): 
   return refusals;
 }
 
-/** The arguments that name an ARGUMENT OF THE ACT rather than a second act. Both factories that
- *  read one read it off the arriving call, so the name is spelled against that act's own schema. */
-const SCHEMA_ARGS: Readonly<Record<string, readonly string[]>> = {
-  valueFromUser: ['arg'],
-  argFormat: ['arg']
+/** The arguments that name an ARGUMENT OF THE ACT rather than a second act, and what pointing one
+ *  outside the act's schema costs. Both factories read the name off the arriving call and find
+ *  `undefined` there; they part company on what they do about it, so each states its own. */
+const SCHEMA_ARGS: Readonly<Record<string, { readonly args: readonly string[];
+                                             readonly costs: string }>> = {
+  valueFromUser: { args: ['arg'], costs: 'the guard refuses every call of it' },
+  argFormat: { args: ['arg'],
+    costs: 'the guard never fires — it sits in the census as a check that decides nothing' }
 };
 
 /** Every argument a guard's CONFIGURATION names is an argument the act itself declares. A guard
  *  pointed at an argument outside the act's schema reads `undefined` on every arriving call, and
- *  both factories that read one refuse when they find nothing there — so the guard denies its own
- *  act for the whole conversation, and no lint downstream sees it: the act does carry a check, and
- *  the check can never pass. */
+ *  the two factories that read one answer that differently: `valueFromUser` has no user word left
+ *  to match and denies its own act for the whole conversation, while `argFormat` has no value left
+ *  to test and allows every call. Neither is visible downstream — the act does carry a check, and
+ *  the check either never passes or never fires. */
 function checkGuardArgsOnSchema(declaration: Declaration, facts: SurfaceFacts): readonly string[] {
   const refusals: string[] = [];
   declaration.contract.guards.forEach((guard, guardIndex) => {
-    for (const argName of SCHEMA_ARGS[guard.factory] ?? []) {
+    const reads = SCHEMA_ARGS[guard.factory];
+    if (reads === undefined) return;
+    for (const argName of reads.args) {
       const named = guard.args?.[argName];
       if (typeof named !== 'string') continue;
       for (const act of guard.acts) {
@@ -109,8 +115,8 @@ function checkGuardArgsOnSchema(declaration: Declaration, facts: SurfaceFacts): 
         const near = closestName(named, declared);
         const suggestion = near === null ? '' : ` Did you mean '${near}'?`;
         refusals.push(`contract.guards[${guardIndex}].args.${argName} names '${named}', `
-          + `and '${act}' accepts ${accepts} — pointed at an argument its act does not carry, `
-          + `the guard refuses every call of it.${suggestion}`);
+          + `and '${act}' accepts ${accepts}. Pointed at an argument its act does not carry, `
+          + `${reads.costs}.${suggestion}`);
       }
     }
   });
