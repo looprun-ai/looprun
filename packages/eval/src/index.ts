@@ -14,6 +14,7 @@ export type { ApprovabilitySubject } from './lints.js';
 export type { ByteOrigin, CompiledDesk } from './lints.js';
 export type { CardProfile } from './lints.js';
 export type { LintFinding } from './lints.js';
+export { factsFromSource } from './world-source.js';
 export { runGate } from './gate.js';
 export type { GateSubject } from './gate.js';
 export type { SeamRow } from './lints.js';

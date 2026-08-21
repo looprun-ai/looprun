@@ -4,7 +4,7 @@
  *  declaration leaves empty is emitted empty, and a rule the emitter cannot compose from declared
  *  words is an error naming what is missing — never a sentence of the emitter's own. */
 import type { SurfaceFacts } from '@looprun-ai/core';
-import type { Declaration, DeclaredDisclosure, DeclaredGuard } from './declaration.js';
+import type { Declaration, DeclaredCap, DeclaredDisclosure, DeclaredGuard } from './declaration.js';
 
 /** A string literal for the emitted file: single-quoted, the way a card is hand-written, with
  *  the backslash, the quote and the line breaks a sentence may carry escaped. */
@@ -36,6 +36,19 @@ function isPlainName(name: string): boolean {
 
 const key = (name: string): string => isPlainName(name) ? name : quote(name);
 
+/** A name that can stand inside the file's own block comment: letters, digits and the hyphen.
+ *  The domain's name is the only declared word the emitter puts outside a string literal, and
+ *  a name carrying the two characters that close a comment would carry code in with it. */
+function isSlug(name: string): boolean {
+  if (name.length === 0) return false;
+  for (const ch of name) {
+    const letter = (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z');
+    const digit = ch >= '0' && ch <= '9';
+    if (!letter && !digit && ch !== '-') return false;
+  }
+  return true;
+}
+
 const list = (values: readonly string[]): string => `[${values.map(quote).join(', ')}]`;
 
 const indent = (depth: number, line: string): string => `${'  '.repeat(depth)}${line}`;
@@ -46,6 +59,29 @@ function commaJoin(blocks: readonly (readonly string[])[]): readonly string[] {
   return blocks.flatMap((block, at) => at === blocks.length - 1
     ? [...block]
     : [...block.slice(0, -1), `${block[block.length - 1]},`]);
+}
+
+/** What each factory is configured from. A key outside this list configures nothing: the emitter
+ *  would drop it, and the author would read a rule on the card that the engine never enforces. */
+const LAWFUL_ARGS: Readonly<Record<DeclaredGuard['factory'], readonly string[]>> = {
+  onlyAfter: ['after'],
+  precondition: ['reads'],
+  valueFromUser: ['arg'],
+  argFormat: ['arg', 'pattern'],
+  cap: ['calls', 'scope'],
+  deny: []
+};
+
+function checkArgs(guard: DeclaredGuard): void {
+  const lawful = LAWFUL_ARGS[guard.factory];
+  const spelled = lawful.length === 0 ? 'no argument at all'
+    : lawful.map(name => `args.${name}`).join(' and ');
+  for (const name of Object.keys(guard.args ?? {})) {
+    if (lawful.includes(name)) continue;
+    throw new Error(`contract.guards '${guard.name}' declares args.${name}, and factory `
+      + `'${guard.factory}' is configured from ${spelled} — drop it, or move the law it states `
+      + `onto the guard whose factory reads it`);
+  }
 }
 
 function stringArg(guard: DeclaredGuard, name: string): string {
@@ -100,6 +136,7 @@ function factoryCall(guard: DeclaredGuard): { readonly imported: string;
                                               readonly lines: readonly string[] } {
   const [act] = guard.acts;
   if (act === undefined) throw new Error(`contract.guards '${guard.name}' names no act`);
+  checkArgs(guard);
   switch (guard.factory) {
     case 'onlyAfter':
       return { imported: 'onlyAfter',
@@ -143,12 +180,33 @@ function guardLines(guard: DeclaredGuard, depth: number): readonly string[] {
  *  tenses the declaration states for them. An alias is emitted as the recipe it is — the read,
  *  and the argument of the held call it answers from — so the card states it rather than leaving
  *  it derived. */
+function capBlock(act: string, cap: DeclaredCap, depth: number): readonly string[] {
+  const { arg, at, not, refusal } = cap;
+  if (arg === undefined || refusal === undefined) {
+    const missing = [...(arg === undefined ? ['arg'] : []),
+                     ...(refusal === undefined ? ['refusal'] : [])].join(' and no ');
+    throw new Error(`contract.disclosure.${act}.cap declares no ${missing} — a ceiling refuses `
+      + `ONE argument of the held call with a sentence of its own, so it is declared as arg, at, `
+      + `not and refusal`);
+  }
+  if (not !== 'above') {
+    throw new Error(`contract.disclosure.${act}.cap declares 'not: ${not}', and the engine's `
+      + `ceiling refuses a call whose argument stands above the figure the read answered — `
+      + `declare 'not: above'`);
+  }
+  return [
+    indent(depth, 'cap: {'),
+    ...commaJoin([
+      [indent(depth + 1, `arg: ${quote(arg)}`)],
+      [indent(depth + 1, `at: ${quote(at)}`)],
+      [indent(depth + 1, `refusal: ${quote(refusal)}`)]
+    ]),
+    indent(depth, '}')
+  ];
+}
+
 function disclosureLines(act: string, entry: DeclaredDisclosure, facts: SurfaceFacts,
   depth: number): readonly string[] {
-  if (entry.cap !== undefined) {
-    throw new Error(`contract.disclosure.${act} declares a cap, and a cap refuses ONE argument of `
-      + `the held call with a sentence of its own — this declaration carries neither`);
-  }
   const target = facts.tools[act]?.target ?? null;
   const aliases = Object.entries(entry.needs ?? {});
   const recipe = (read: string): string => target === null ? quote(read)
@@ -160,7 +218,8 @@ function disclosureLines(act: string, entry: DeclaredDisclosure, facts: SurfaceF
   ]];
   const tenses = [
     ...(entry.before === undefined ? [] : [[indent(depth + 1, `before: ${quote(entry.before)}`)]]),
-    ...(entry.after === undefined ? [] : [[indent(depth + 1, `after: ${quote(entry.after)}`)]])
+    ...(entry.after === undefined ? [] : [[indent(depth + 1, `after: ${quote(entry.after)}`)]]),
+    ...(entry.cap === undefined ? [] : [capBlock(act, entry.cap, depth + 1)])
   ];
   return [
     indent(depth, `${key(act)}: {`),
@@ -245,6 +304,11 @@ function divider(label: string): string {
  *  helper, the licence maps, the DomainContract, and one AgentSpec per desk under the SPECS map
  *  the subject door re-exports. */
 export function writeCards(declaration: Declaration, facts: SurfaceFacts): string {
+  if (!isSlug(declaration.contract.name)) {
+    throw new Error(`contract.name is '${declaration.contract.name}', and the domain's name is `
+      + `written into the header comment of the file this emits — declare a name of letters, `
+      + `digits and hyphens`);
+  }
   const contract = contractLines(declaration, facts);
   const desks = commaJoin(declaration.desks.map(desk => deskLines(desk, 1)));
   const teaches = declaration.desks.some(desk => Object.keys(desk.conduct).length > 0);

@@ -1,0 +1,25 @@
+contract:
+  name: invoices
+  voice: Warm, brief, and exact about dates and money.
+  facts:
+    - A refund goes back to the card the invoice was paid with.
+  guards:
+    - name: refundReadsTheInvoice
+      acts: [issueRefund]
+      factory: onlyAfter
+      args: { after: getInvioce }
+    - name: refundFollowsTheRead
+      acts: [getInvioce]
+      factory: precondition
+      args: { reads: record }
+      rule: Read the invoice this desk was asked about before you speak for it.
+  disclosure:
+    issueRefund:
+      needs: { invoice: getInvoice }
+      before: Refunding this invoice cannot be taken back.
+desks:
+  - name: billing
+    persona: 'The billing desk: it looks invoices up and refunds them.'
+    tools: [getInvoice, issueRefund]
+    conduct:
+      declareHonestly: Say what ran and what did not, and name the condition that stopped it.

@@ -11,11 +11,25 @@ export interface DeclaredGuard {
   readonly wide?: 'oneLawEveryAct' | 'sameRefusal';
 }
 
+/** A ceiling on one argument of a held call, in the declaration's own words. The engine's cap
+ *  refuses the call when the argument is above the figure a read answered, so `not` states that
+ *  direction and `above` is the one the engine enforces. */
+export interface DeclaredCap {
+  /** The held call's own argument the ceiling tests. */
+  readonly arg?: string;
+  /** The path that answers the ceiling, rooted on an alias `needs` declares. */
+  readonly at: string;
+  /** The direction of the ceiling: `above`. */
+  readonly not: string;
+  /** The sentence the call is refused with, slots included. */
+  readonly refusal?: string;
+}
+
 export interface DeclaredDisclosure {
   readonly needs?: Readonly<Record<string, string>>;
   readonly before?: string;
   readonly after?: string;
-  readonly cap?: { readonly at: string; readonly not: string };
+  readonly cap?: DeclaredCap;
 }
 
 export interface Declaration {
@@ -161,8 +175,18 @@ function asNumberRecord(map: YAMLMap, path: string, lineCounter: LineCounter): R
   }));
 }
 
-function readCap(map: YAMLMap, path: string, lineCounter: LineCounter): { readonly at: string; readonly not: string } {
-  return { at: requireString(map, 'at', path, lineCounter), not: requireString(map, 'not', path, lineCounter) };
+/** The ceiling as the declaration states it. `at` and `not` are the shape of a ceiling and are
+ *  required here; `arg` and `refusal` are what the engine's own cap needs, and a cap missing
+ *  either of them is named by the emitter against the surface it was declared for. */
+function readCap(map: YAMLMap, path: string, lineCounter: LineCounter): DeclaredCap {
+  const arg = readOptionalString(map, 'arg', path, lineCounter);
+  const refusal = readOptionalString(map, 'refusal', path, lineCounter);
+  return {
+    at: requireString(map, 'at', path, lineCounter),
+    not: requireString(map, 'not', path, lineCounter),
+    ...(arg === undefined ? {} : { arg }),
+    ...(refusal === undefined ? {} : { refusal })
+  };
 }
 
 function readDisclosureEntry(map: YAMLMap, path: string, lineCounter: LineCounter): DeclaredDisclosure {

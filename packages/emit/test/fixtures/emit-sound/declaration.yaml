@@ -1,0 +1,38 @@
+contract:
+  name: invoices
+  voice: Warm, brief, and exact about dates and money.
+  facts:
+    - A refund goes back to the card the invoice was paid with.
+  guards:
+    - name: refundReadsTheInvoice
+      acts: [issueRefund]
+      factory: onlyAfter
+      args: { after: getInvoice }
+    - name: refundOnlyWhatIsOpen
+      acts: [issueRefund]
+      factory: precondition
+      args: { reads: record }
+      rule: Refund an invoice while it is still open, and never one already settled.
+  disclosure:
+    issueRefund:
+      needs: { invoice: getInvoice }
+      before: Refunding {invoice.total} on this invoice cannot be taken back.
+      after: The refund of {invoice.total} is recorded against this invoice.
+      cap:
+        arg: amount
+        at: invoice.total
+        not: above
+        refusal: This invoice can return at most {invoice.total}, and the amount asked is over it.
+desks:
+  - name: billing
+    persona: 'The billing desk: it looks invoices up, refunds them and closes the day.'
+    tools: [getInvoice, issueRefund, closeBooking]
+    conduct:
+      declareHonestly: Say what ran and what did not, and name the condition that stopped it.
+      oneQuestion: Put ONE thing up for agreement per turn, and wait for the answer.
+  - name: audit
+    persona: 'The audit desk: it reads invoices back and writes the closing note.'
+    tools: [getInvoice, closeBooking]
+    conduct:
+      declareHonestly: Say what ran and what did not, and name the condition that stopped it.
+      oneQuestion: Put ONE thing up for agreement per turn, and wait for the answer.

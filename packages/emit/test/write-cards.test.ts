@@ -41,7 +41,7 @@ function sentencesOf(declaration: Declaration): readonly string[] {
     declaration.contract.voice,
     ...declaration.contract.facts,
     ...declaration.contract.guards.flatMap(g => g.rule === undefined ? [] : [g.rule]),
-    ...disclosure.flatMap(entry => [entry.before, entry.after, entry.cap?.not]
+    ...disclosure.flatMap(entry => [entry.before, entry.after, entry.cap?.refusal]
       .filter((s): s is string => s !== undefined)),
     ...declaration.desks.flatMap(desk => [desk.persona, ...Object.values(desk.conduct),
       ...Object.values(desk.teammates ?? {})])
@@ -140,5 +140,53 @@ describe('writeCards', () => {
     const dir = mkdtempSync(join(tmpdir(), 'cards-'));
     writeFileSync(join(dir, 'cards.ts'), out);
     expect(typecheck(dir)).toEqual([]);
+  });
+
+  test('a declared ceiling is emitted as the ceiling the engine enforces', () => {
+    const out = writeCards(decl({ disclosure: { issueRefund: {
+      needs: { invoice: 'getInvoice' },
+      before: 'Say the invoice total before refunding it.',
+      cap: { arg: 'amount', at: 'invoice.refundable', not: 'above',
+             refusal: 'This invoice can return at most {invoice.refundable}, and that is under what was asked.' }
+    } } }), FACTS);
+    expect(out).toContain("arg: 'amount'");
+    expect(out).toContain("at: 'invoice.refundable'");
+    expect(out).toContain("refusal: 'This invoice can return at most {invoice.refundable}, and that is under what was asked.'");
+
+    const dir = mkdtempSync(join(tmpdir(), 'cards-'));
+    writeFileSync(join(dir, 'cards.ts'), out);
+    expect(typecheck(dir)).toEqual([]);
+  });
+
+  test('a ceiling missing what the engine needs names the fields and the path', () => {
+    const declaration = decl({ disclosure: { issueRefund: {
+      before: 'Say the invoice total before refunding it.',
+      cap: { at: 'invoice.refundable', not: 'above' }
+    } } });
+    expect(() => writeCards(declaration, FACTS))
+      .toThrow('contract.disclosure.issueRefund.cap declares no arg and no refusal');
+  });
+
+  test('a ceiling in a direction the engine cannot enforce is refused', () => {
+    const declaration = decl({ disclosure: { issueRefund: {
+      before: 'Say the invoice total before refunding it.',
+      cap: { arg: 'amount', at: 'invoice.refundable', not: 'below', refusal: 'Nothing under it.' }
+    } } });
+    expect(() => writeCards(declaration, FACTS)).toThrow("declares 'not: below'");
+  });
+
+  test('a domain name that is not a plain slug is refused, and the path is named', () => {
+    const sound = soundDeclaration();
+    const declaration: Declaration = { ...sound,
+      contract: { ...sound.contract, name: 'invoices */ process.exit(1); /*' } };
+    expect(() => writeCards(declaration, FACTS)).toThrow('contract.name is');
+    expect(() => writeCards(declaration, FACTS)).toThrow('letters, digits and hyphens');
+  });
+
+  test('an argument no factory reads is refused, with the factory and the keys it does read', () => {
+    const declaration = decl({ guards: [{ name: 'refundReadsTheInvoice', acts: ['issueRefund'],
+      factory: 'onlyAfter', args: { after: 'getInvoice', pattern: '^inv_' } }] });
+    expect(() => writeCards(declaration, FACTS))
+      .toThrow("declares args.pattern, and factory 'onlyAfter' is configured from args.after");
   });
 });
