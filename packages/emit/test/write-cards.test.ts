@@ -485,6 +485,28 @@ describe('writeCards', () => {
     expect(() => writeCards(declaration, FACTS)).toThrow('declare the `rule` it states');
   });
 
+  test('a secret states how it is treated, and a desk states its own ceilings', () => {
+    const declaration = decl({ desks: [
+      { name: 'billing', persona: 'p', tools: ['issueRefund'], conduct: { declareHonestly: 'x' },
+        limits: { destructive: 2 } }] });
+    const out = writeCards({ ...declaration, contract: { ...declaration.contract,
+      secrets: ['email', { path: 'card.number', mode: 'omit' }], limits: { calls: 8 } } }, FACTS);
+    expect(out).toContain("  secrets: ['email', { path: 'card.number', mode: 'omit' }],");
+    expect(out).toContain('  limits: { calls: 8 }');
+    expect(out).toContain('    limits: { destructive: 2 },');
+  });
+
+  test('a ceiling the engine does not carry is refused, and the card it sits on is named', () => {
+    const declaration = decl({ desks: [
+      { name: 'billing', persona: 'p', tools: ['issueRefund'], conduct: { declareHonestly: 'x' },
+        limits: { questions: 4 } }] });
+    expect(() => writeCards(declaration, FACTS))
+      .toThrow("desks 'billing' limits declares 'questions'");
+    expect(() => writeCards({ ...declaration, desks: [{ ...declaration.desks[0], limits: undefined }],
+      contract: { ...declaration.contract, limits: { turns: 3 } } }, FACTS))
+      .toThrow("contract.limits declares 'turns'");
+  });
+
   test('a declaration reaching every mechanism the engine offers compiles as one card', () => {
     const declaration: Declaration = {
       contract: {

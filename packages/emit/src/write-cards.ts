@@ -5,7 +5,7 @@
  *  words is an error naming what is missing — never a sentence of the emitter's own. */
 import type { SurfaceFacts } from '@looprun-ai/core';
 import type { Declaration, DeclaredCap, DeclaredDisclosure, DeclaredGuard, DeclaredJudged,
-  DeclaredNeed, DeclaredRewrite } from './declaration.js';
+  DeclaredNeed, DeclaredRewrite, DeclaredSecret } from './declaration.js';
 
 /** A string literal for the emitted file: single-quoted, the way a card is hand-written, with
  *  the backslash, the quote and the line breaks a sentence may carry escaped. */
@@ -563,6 +563,33 @@ function wordingLines(wording: NonNullable<Declaration['contract']['wording']>,
   return [indent(depth, 'wording: {'), ...commaJoin(halves), indent(depth, '}')];
 }
 
+/** The ceilings the engine carries. A ceiling on any other name is a figure nothing reads, so the
+ *  bound the author meant to set is never set at all. */
+const LIMIT_NAMES: readonly string[] = ['calls', 'destructive', 'retries', 'questionTurns'];
+
+/** The ceilings one card states, on one line. The same shape serves the whole business and one
+ *  desk — the desk's figure wins per field over the contract's. */
+function limitLines(at: string, limits: Readonly<Record<string, number>>, depth: number): string {
+  const entries = Object.entries(limits);
+  for (const [name] of entries) {
+    if (LIMIT_NAMES.includes(name)) continue;
+    throw new Error(`${at} declares '${name}', and the engine's ceilings are `
+      + `${LIMIT_NAMES.join(', ')} — a figure on any other name bounds nothing`);
+  }
+  if (entries.length === 0) {
+    throw new Error(`${at} is empty, and a ceiling states a figure — drop the key, or state one`);
+  }
+  return indent(depth, `limits: { ${entries
+    .map(([name, value]) => `${key(name)}: ${String(value)}`).join(', ')} }`);
+}
+
+/** What is never spoken, as the card carries it: a bare field name masks its value at every seam,
+ *  and the mapping form states the other treatment the engine has for it. */
+function secretLiteral(secret: DeclaredSecret): string {
+  return typeof secret === 'string' ? quote(secret)
+    : `{ path: ${quote(secret.path)}, mode: ${quote(secret.mode)} }`;
+}
+
 function contractLines(declaration: Declaration, facts: SurfaceFacts): readonly string[] {
   const { contract } = declaration;
   const block = (open: string, body: readonly string[], close: string): readonly string[] =>
@@ -577,10 +604,10 @@ function contractLines(declaration: Declaration, facts: SurfaceFacts): readonly 
       .map(([act, entry]) => disclosureLines(act, entry, facts, 2))), '}'),
     ...(contract.rewrites === undefined ? [] : [block('rewrites: [',
       commaJoin(contract.rewrites.map((rewrite, at) => [indent(2, rewriteCall(rewrite, at))])), ']')]),
-    ...(contract.secrets === undefined ? [] : [[indent(1, `secrets: ${list(contract.secrets)}`)]]),
+    ...(contract.secrets === undefined ? [] : [[indent(1,
+      `secrets: [${contract.secrets.map(secretLiteral).join(', ')}]`)]]),
     ...(contract.wording === undefined ? [] : [wordingLines(contract.wording, 1)]),
-    ...(contract.limits === undefined ? [] : [[indent(1, `limits: { ${Object.entries(contract.limits)
-      .map(([name, value]) => `${key(name)}: ${String(value)}`).join(', ')} }`)]])
+    ...(contract.limits === undefined ? [] : [[limitLines('contract.limits', contract.limits, 1)]])
   ];
   return ['export const CONTRACT: DomainContract = {', ...commaJoin(fields), '};'];
 }
@@ -614,6 +641,8 @@ function deskLines(desk: Declaration['desks'][number], depth: number): readonly 
       indent(depth + 1, '}')
     ]]),
     [indent(depth + 1, 'llmParams: { temperature: 0 }')],
+    ...(desk.limits === undefined ? []
+      : [[limitLines(`desks '${desk.name}' limits`, desk.limits, depth + 1)]]),
     ...(laws.length === 0 && judged.length === 0 ? [] : [[
       indent(depth + 1, 'guards: ['),
       ...commaJoin([

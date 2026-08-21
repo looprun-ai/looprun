@@ -60,6 +60,10 @@ export interface DeclaredRewrite {
 /** The engine sentences and status words this business says differently. Each map is keyed by the
  *  engine's own name for the sentence; a key the engine does not carry is refused by name, because
  *  a word nothing reads is a word nobody ever hears. */
+/** One thing that is never spoken: the field name or dotted path, masked at every seam. The
+ *  mapping form picks the other treatment — `omit` drops the key rather than starring its value. */
+export type DeclaredSecret = string | { readonly path: string; readonly mode: 'omit' | 'mask' };
+
 export interface DeclaredWording {
   readonly status?: Readonly<Record<string, string>>;
   readonly sentence?: Readonly<Record<string, string>>;
@@ -81,7 +85,7 @@ export interface Declaration {
     readonly guards: readonly DeclaredGuard[];
     readonly disclosure: Readonly<Record<string, DeclaredDisclosure>>;
     readonly rewrites?: readonly DeclaredRewrite[];
-    readonly secrets?: readonly string[];
+    readonly secrets?: readonly DeclaredSecret[];
     readonly wording?: DeclaredWording;
     readonly limits?: Readonly<Record<string, number>>;
   };
@@ -92,6 +96,7 @@ export interface Declaration {
     readonly teammates?: Readonly<Record<string, string>>;
     readonly conduct: Readonly<Record<string, string>>;
     readonly judged?: readonly DeclaredJudged[];
+    readonly limits?: Readonly<Record<string, number>>;
   }[];
 }
 
@@ -334,6 +339,24 @@ function readRewrites(seq: YAMLSeq, path: string, lineCounter: LineCounter): rea
   });
 }
 
+const SECRET_MODES: ReadonlySet<'omit' | 'mask'> = new Set(['omit', 'mask']);
+
+function readSecrets(seq: YAMLSeq, path: string, lineCounter: LineCounter): readonly DeclaredSecret[] {
+  const fallback = lineAt(seq, lineCounter, 1);
+  return seq.items.map((item, i) => {
+    const itemPath = `${path}[${i}]`;
+    if (isScalar(item) && typeof item.value === 'string') return item.value;
+    if (!isMap(item)) {
+      fail(itemPath, lineAt(item as Node, lineCounter, fallback),
+        'must be a field name, or a mapping of the `path` and the `mode` it is treated with');
+    }
+    return {
+      path: requireString(item, 'path', itemPath, lineCounter),
+      mode: requireEnum(item, 'mode', SECRET_MODES, itemPath, lineCounter)
+    };
+  });
+}
+
 function readWording(map: YAMLMap, path: string, lineCounter: LineCounter): DeclaredWording {
   const status = readOptionalMap(map, 'status', path, lineCounter);
   const sentence = readOptionalMap(map, 'sentence', path, lineCounter);
@@ -360,7 +383,7 @@ function readContract(map: YAMLMap, path: string, lineCounter: LineCounter): Dec
     guards,
     disclosure,
     ...(rewritesSeq === undefined ? {} : { rewrites: readRewrites(rewritesSeq, field(path, 'rewrites'), lineCounter) }),
-    ...(secretsSeq === undefined ? {} : { secrets: asStringArray(secretsSeq, field(path, 'secrets'), lineCounter) }),
+    ...(secretsSeq === undefined ? {} : { secrets: readSecrets(secretsSeq, field(path, 'secrets'), lineCounter) }),
     ...(wordingMap === undefined ? {} : { wording: readWording(wordingMap, field(path, 'wording'), lineCounter) }),
     ...(limitsMap === undefined ? {} : { limits: asNumberRecord(limitsMap, field(path, 'limits'), lineCounter) })
   };
@@ -385,13 +408,15 @@ function readDesk(map: YAMLMap, path: string, lineCounter: LineCounter): Declara
   const conduct = asStringRecord(requireMap(map, 'conduct', path, lineCounter), field(path, 'conduct'), lineCounter);
   const teammatesMap = readOptionalMap(map, 'teammates', path, lineCounter);
   const judgedSeq = readOptionalSeq(map, 'judged', path, lineCounter);
+  const limitsMap = readOptionalMap(map, 'limits', path, lineCounter);
   return {
     name,
     persona,
     tools,
     conduct,
     ...(teammatesMap === undefined ? {} : { teammates: asStringRecord(teammatesMap, field(path, 'teammates'), lineCounter) }),
-    ...(judgedSeq === undefined ? {} : { judged: readJudged(judgedSeq, field(path, 'judged'), lineCounter) })
+    ...(judgedSeq === undefined ? {} : { judged: readJudged(judgedSeq, field(path, 'judged'), lineCounter) }),
+    ...(limitsMap === undefined ? {} : { limits: asNumberRecord(limitsMap, field(path, 'limits'), lineCounter) })
   };
 }
 
