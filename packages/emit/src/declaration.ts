@@ -40,7 +40,11 @@ export interface DeclaredDisclosure {
   readonly needs?: Readonly<Record<string, DeclaredNeed>>;
   readonly before?: string;
   readonly after?: string;
+  /** The standing sentence later turns carry while the act stays relevant. */
+  readonly later?: string;
   readonly cap?: DeclaredCap;
+  /** The refusal when a declared tense finds nothing in the reads to say. */
+  readonly empty?: string;
 }
 
 /** One edit of the outgoing reply, as data. A rewrite decides nothing — it rewrites what the desk
@@ -240,12 +244,16 @@ function readDisclosureEntry(map: YAMLMap, path: string, lineCounter: LineCounte
   const needsMap = readOptionalMap(map, 'needs', path, lineCounter);
   const before = readOptionalString(map, 'before', path, lineCounter);
   const after = readOptionalString(map, 'after', path, lineCounter);
+  const later = readOptionalString(map, 'later', path, lineCounter);
   const capMap = readOptionalMap(map, 'cap', path, lineCounter);
+  const empty = readOptionalString(map, 'empty', path, lineCounter);
   return {
     ...(needsMap === undefined ? {} : { needs: asNeedsRecord(needsMap, field(path, 'needs'), lineCounter) }),
     ...(before === undefined ? {} : { before }),
     ...(after === undefined ? {} : { after }),
-    ...(capMap === undefined ? {} : { cap: readCap(capMap, field(path, 'cap'), lineCounter) })
+    ...(later === undefined ? {} : { later }),
+    ...(capMap === undefined ? {} : { cap: readCap(capMap, field(path, 'cap'), lineCounter) }),
+    ...(empty === undefined ? {} : { empty })
   };
 }
 

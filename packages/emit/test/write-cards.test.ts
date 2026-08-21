@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
 import { describe, expect, test } from 'vitest';
 import { writeCards } from '../src/index.js';
-import type { Declaration, DeclaredGuard, DeclaredRewrite } from '../src/index.js';
+import type { Declaration, DeclaredDisclosure, DeclaredGuard, DeclaredRewrite } from '../src/index.js';
 import { decl, FACTS, soundDeclaration } from './helpers.js';
 
 const TREE_ROOT = join(dirname(fileURLToPath(import.meta.url)), '../../..');
@@ -41,8 +41,8 @@ function sentencesOf(declaration: Declaration): readonly string[] {
     declaration.contract.voice,
     ...declaration.contract.facts,
     ...declaration.contract.guards.flatMap(g => g.rule === undefined ? [] : [g.rule]),
-    ...disclosure.flatMap(entry => [entry.before, entry.after, entry.cap?.refusal]
-      .filter((s): s is string => s !== undefined)),
+    ...disclosure.flatMap(entry => [entry.before, entry.after, entry.later, entry.cap?.refusal,
+      entry.empty].filter((s): s is string => s !== undefined)),
     ...declaration.desks.flatMap(desk => [desk.persona, ...Object.values(desk.conduct),
       ...Object.values(desk.teammates ?? {})])
   ];
@@ -328,6 +328,31 @@ describe('writeCards', () => {
       .toThrow('args.records');
     expect(() => writeCards(law({ records: ['inv_2201'], status: 'settled' }), FACTS))
       .toThrow('declares args.status');
+  });
+
+  test('every tense the engine speaks is emitted, in the order the card carries them', () => {
+    const out = writeCards(decl({ disclosure: { issueRefund: {
+      needs: { invoice: 'getInvoice' },
+      before: 'Refunding {invoice.invoice.total} cannot be taken back once it is put through.',
+      after: 'The refund of {result.paid} went out and {result.stillHeld} stays on the invoice.',
+      later: 'The refund on {args.invoiceId} is still the open piece of this stay.',
+      empty: 'The invoice {args.invoiceId} carries no amount to refund, so there is nothing to put up.'
+    } } }), FACTS);
+    const tenses = out.split('\n').filter(line => line.trim().startsWith('before:')
+      || line.trim().startsWith('after:') || line.trim().startsWith('later:')
+      || line.trim().startsWith('empty:')).map(line => line.trim().split(':')[0]);
+    expect(tenses).toEqual(['before', 'after', 'later', 'empty']);
+    expect(out).toContain("later: 'The refund on {args.invoiceId} is still the open piece of this stay.'");
+    expect(out).toContain("empty: 'The invoice {args.invoiceId} carries no amount to refund, so there is nothing to put up.'");
+  });
+
+  test('a tense still carrying a template slot is refused by the tense\'s own path', () => {
+    const withTense = (entry: DeclaredDisclosure): Declaration =>
+      decl({ disclosure: { issueRefund: { before: 'Say the invoice total before refunding it.', ...entry } } });
+    expect(() => writeCards(withTense({ later: 'The refund on <the record> is still open.' }), FACTS))
+      .toThrow('contract.disclosure.issueRefund.later still carries the template slot');
+    expect(() => writeCards(withTense({ empty: 'The <record> carries no amount to refund.' }), FACTS))
+      .toThrow('contract.disclosure.issueRefund.empty still carries the template slot');
   });
 
   test('a blocked seam emits the pattern as data, the text it reads and its own sentence', () => {

@@ -165,7 +165,9 @@ function refuseUnfilledSlots(declaration: Declaration): void {
     ...Object.entries(declaration.contract.disclosure).flatMap(([act, entry]) => [
       ...(entry.before === undefined ? [] : [[`contract.disclosure.${act}.before`, entry.before] as const]),
       ...(entry.after === undefined ? [] : [[`contract.disclosure.${act}.after`, entry.after] as const]),
-      ...(entry.cap?.refusal === undefined ? [] : [[`contract.disclosure.${act}.cap.refusal`, entry.cap.refusal] as const])
+      ...(entry.later === undefined ? [] : [[`contract.disclosure.${act}.later`, entry.later] as const]),
+      ...(entry.cap?.refusal === undefined ? [] : [[`contract.disclosure.${act}.cap.refusal`, entry.cap.refusal] as const]),
+      ...(entry.empty === undefined ? [] : [[`contract.disclosure.${act}.empty`, entry.empty] as const])
     ]),
     ...declaration.desks.flatMap(desk => [
       [`desks '${desk.name}' persona`, desk.persona] as const,
@@ -475,7 +477,9 @@ function disclosureLines(act: string, entry: DeclaredDisclosure, facts: SurfaceF
   const tenses = [
     ...(entry.before === undefined ? [] : [[indent(depth + 1, `before: ${quote(entry.before)}`)]]),
     ...(entry.after === undefined ? [] : [[indent(depth + 1, `after: ${quote(entry.after)}`)]]),
-    ...(entry.cap === undefined ? [] : [capBlock(act, entry.cap, depth + 1)])
+    ...(entry.later === undefined ? [] : [[indent(depth + 1, `later: ${quote(entry.later)}`)]]),
+    ...(entry.cap === undefined ? [] : [capBlock(act, entry.cap, depth + 1)]),
+    ...(entry.empty === undefined ? [] : [[indent(depth + 1, `empty: ${quote(entry.empty)}`)]])
   ];
   return [
     indent(depth, `${key(act)}: {`),
