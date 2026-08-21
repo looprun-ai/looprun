@@ -2,6 +2,11 @@ import { readFileSync } from 'node:fs';
 import { isMap, isScalar, isSeq, LineCounter, parseDocument } from 'yaml';
 import type { Node, Pair, YAMLMap, YAMLSeq } from 'yaml';
 
+/** Why a contract prose rule exists where no check decides its law, written into the emitted WHY
+ *  map as that rule's licence. The map carries a fourth — `measured:<case>` — which is earned from
+ *  a run that judged the case it names, and a declaration has judged nothing. */
+export type DeclaredWhy = 'noSuchAct' | 'aboutARead' | 'conduct';
+
 export interface DeclaredGuard {
   readonly name: string;
   readonly acts: readonly string[];

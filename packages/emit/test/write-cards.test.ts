@@ -217,7 +217,7 @@ describe('writeCards', () => {
       { name: 'confirmBeforeRefund', acts: ['issueRefund'], factory: 'onlyAfter',
         args: { after: 'getInvoice' } },
       { name: 'roleRefusalNamesWhoCan', acts: ['issueRefund', 'getInvoice'], factory: 'prose',
-        wide: 'oneLawEveryAct', rule }] }), FACTS);
+        wide: 'oneLawEveryAct', args: { why: 'conduct' }, rule }] }), FACTS);
     expect(out).toContain(`{ ...prose('roleRefusalNamesWhoCan', '${rule}'), `
       + "tool: ['issueRefund', 'getInvoice'] }");
     // `prose` is the card's own helper, so the engine import names the factories and not it.
@@ -233,7 +233,7 @@ describe('writeCards', () => {
   test('a contract prose rule brings the helper the card writes it with', () => {
     const out = writeCards(decl({
       guards: [{ name: 'roleRefusalNamesWhoCan', acts: ['issueRefund'], factory: 'prose',
-                 rule: 'Name the role the member record states.' }],
+                 args: { why: 'conduct' }, rule: 'Name the role the member record states.' }],
       desks: [{ name: 'a', persona: 'p', tools: ['issueRefund'], conduct: {} }] }), FACTS);
     expect(out).toContain("const prose = (name: string, rule: string): Guard =>");
     expect(out).toContain("import type { AgentSpec, DomainContract, Guard } from '@looprun-ai/core';");
@@ -242,7 +242,7 @@ describe('writeCards', () => {
   test('the WHY map opens on the house laws, then the contract prose, then a desk\'s own', () => {
     const out = writeCards(decl({
       guards: [{ name: 'roleRefusalNamesWhoCan', acts: ['issueRefund'], factory: 'prose',
-                 rule: 'Name the role the member record states.' }],
+                 args: { why: 'conduct' }, rule: 'Name the role the member record states.' }],
       desks: [
         { name: 'a', persona: 'p', tools: ['issueRefund'],
           conduct: { declareHonestly: 'x', registryFiguresAreGiven: 'z' } },
@@ -252,6 +252,47 @@ describe('writeCards', () => {
       "  roleRefusalNamesWhoCan: 'conduct',",
       "  registryFiguresAreGiven: 'conduct'",
       '} as const;'].join('\n'));
+  });
+
+  test('the WHY map claims what the author declared, and a desk law claims conduct', () => {
+    const out = writeCards(decl({
+      guards: [{ name: 'noWriteOffsHere', acts: ['issueRefund'], factory: 'prose',
+                 args: { why: 'noSuchAct' },
+                 rule: 'Nothing on this counter writes a charge off; say so and stop there.' },
+               { name: 'whatTheInvoiceMeans', acts: ['getInvoice'], factory: 'prose',
+                 args: { why: 'aboutARead' },
+                 rule: 'A balance the invoice shows is the balance at the moment it was read.' }],
+      desks: [{ name: 'a', persona: 'p', tools: ['issueRefund', 'getInvoice'],
+                conduct: { declareHonestly: 'x' } }] }), FACTS);
+    expect(out).toContain(['export const WHY = {',
+      "  declareHonestly: 'conduct',",
+      "  noWriteOffsHere: 'noSuchAct',",
+      "  whatTheInvoiceMeans: 'aboutARead'",
+      '} as const;'].join('\n'));
+  });
+
+  test('a prose rule claiming no licence is refused, and the guard is named', () => {
+    expect(() => writeCards(decl({ guards: [
+      { name: 'noWriteOffsHere', acts: ['issueRefund'], factory: 'prose',
+        rule: 'Nothing on this counter writes a charge off.' }] }), FACTS))
+      .toThrow("contract.guards 'noWriteOffsHere' declares factory 'prose', whose configuration "
+        + 'is args.why');
+  });
+
+  test('a prose rule claiming a licence outside the set is refused by what it claims', () => {
+    expect(() => writeCards(decl({ guards: [
+      { name: 'noWriteOffsHere', acts: ['issueRefund'], factory: 'prose',
+        args: { why: 'houseStyle' },
+        rule: 'Nothing on this counter writes a charge off.' }] }), FACTS))
+      .toThrow("carries 'houseStyle'");
+  });
+
+  test('a prose rule cannot claim a measured licence — no declaration judges a case', () => {
+    expect(() => writeCards(decl({ guards: [
+      { name: 'noWriteOffsHere', acts: ['issueRefund'], factory: 'prose',
+        args: { why: 'measured:case-14' },
+        rule: 'Nothing on this counter writes a charge off.' }] }), FACTS))
+      .toThrow("claims args.why 'measured:case-14', and a measured licence is earned from a run");
   });
 
   test('a declared ceiling is emitted as the ceiling the engine enforces', () => {
@@ -600,6 +641,7 @@ describe('writeCards', () => {
             args: { pattern: '[0-9]{13,19}', on: 'reply' },
             rule: 'A card number never goes out in a reply; say the last four the record carries.' },
           { name: 'closingIsSpokenNotAssumed', acts: ['closeBooking'], factory: 'prose',
+            args: { why: 'aboutARead' },
             rule: 'A closing note states the figures the invoice carries, never a figure from memory.' }
         ],
         disclosure: {

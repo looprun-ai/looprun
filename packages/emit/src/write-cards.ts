@@ -5,7 +5,7 @@
  *  words is an error naming what is missing — never a sentence of the emitter's own. */
 import type { SurfaceFacts } from '@looprun-ai/core';
 import type { Declaration, DeclaredCap, DeclaredDisclosure, DeclaredGuard, DeclaredJudged,
-  DeclaredNeed, DeclaredRewrite, DeclaredSecret } from './declaration.js';
+  DeclaredNeed, DeclaredRewrite, DeclaredSecret, DeclaredWhy } from './declaration.js';
 
 /** A string literal for the emitted file: single-quoted, the way a card is hand-written, with
  *  the backslash, the quote and the line breaks a sentence may carry escaped. */
@@ -76,7 +76,7 @@ const LAWFUL_ARGS: Readonly<Record<DeclaredGuard['factory'], readonly string[]>>
   checkResult: ['field', 'is', 'in'],
   mustAccountFor: ['records', 'status'],
   blockPattern: ['pattern', 'on'],
-  prose: [],
+  prose: ['why'],
   deny: []
 };
 
@@ -705,11 +705,40 @@ function licenceLines(name: string, comment: readonly string[],
     '} as const;'];
 }
 
-/** Every prose name the cards mint, each claiming the one licence a rule about conduct has: it is
- *  about how a desk answers, and no check decides it. The map is read in three runs — the house
- *  laws every desk teaches, then the contract's own prose rules, then the laws one desk teaches
- *  alone — so the map itself says which laws are the house's and which belong to one seat. */
-function conductLicences(declaration: Declaration): readonly (readonly [string, string])[] {
+/** The licences a declared prose rule may claim. The emitted map carries a fourth,
+ *  `measured:<case>`, and it is earned from a run that judged the case it names. */
+const PROSE_WHY: readonly DeclaredWhy[] = ['noSuchAct', 'aboutARead', 'conduct'];
+
+function isDeclaredWhy(value: unknown): value is DeclaredWhy {
+  return PROSE_WHY.some(claim => claim === value);
+}
+
+/** The licence one contract prose rule claims, as its author declared it. A prose rule is the
+ *  residue — what is left when no check decides the law — and the map says which kind of residue
+ *  each one is, so a rule that is none of them is a rule the declaration may not carry. */
+function proseWhy(guard: DeclaredGuard): DeclaredWhy {
+  const claim = guard.args?.why;
+  if (typeof claim === 'string' && claim.startsWith('measured:')) {
+    throw new Error(`contract.guards '${guard.name}' claims args.why '${claim}', and a measured `
+      + `licence is earned from a run that judged the case it names — a declaration judges `
+      + `nothing, so it claims one of ${PROSE_WHY.join(', ')}`);
+  }
+  if (!isDeclaredWhy(claim)) {
+    const carried = claim === undefined ? 'carries none'
+      : typeof claim === 'string' ? `carries '${claim}'` : 'carries a block of its own';
+    throw new Error(`contract.guards '${guard.name}' declares factory 'prose', whose configuration `
+      + `is args.why — why this rule stands where no check decides it, one of `
+      + `${PROSE_WHY.join(', ')} — and this declaration ${carried}`);
+  }
+  return claim;
+}
+
+/** Every prose name the cards mint, each with the licence it claims. A desk's conduct law claims
+ *  `conduct` by what it is: a law about how that desk answers, which no check decides. A prose
+ *  rule on the contract claims the licence its author declared. The map is read in three runs —
+ *  the house laws every desk teaches, then the contract's own prose rules, then the laws one desk
+ *  teaches alone — so the map itself says which laws are the house's and which belong to one seat. */
+function proseLicences(declaration: Declaration): readonly (readonly [string, string])[] {
   const desks = declaration.desks;
   const taught: string[] = [];
   for (const desk of desks) {
@@ -717,10 +746,12 @@ function conductLicences(declaration: Declaration): readonly (readonly [string, 
   }
   const house = taught.filter(law => desks.every(desk => desk.conduct[law] !== undefined));
   const stamped = declaration.contract.guards
-    .flatMap(guard => guard.factory === 'prose' ? [guard.name] : []);
-  const names: string[] = [];
-  for (const name of [...house, ...stamped, ...taught]) if (!names.includes(name)) names.push(name);
-  return names.map(name => [name, 'conduct'] as const);
+    .flatMap(guard => guard.factory === 'prose' ? [[guard.name, proseWhy(guard)] as const] : []);
+  const claimed = new Map<string, string>();
+  for (const law of house) if (!claimed.has(law)) claimed.set(law, 'conduct');
+  for (const [name, why] of stamped) if (!claimed.has(name)) claimed.set(name, why);
+  for (const law of taught) if (!claimed.has(law)) claimed.set(law, 'conduct');
+  return [...claimed];
 }
 
 /** A section rule across the file: the label, then a line out to the same column every other
@@ -803,7 +834,7 @@ export function writeCards(declaration: Declaration, facts: SurfaceFacts): strin
     ...licenceLines('WHY', [
       '/** Why each prose rule exists. Every name prose() mints appears here, claiming one of',
       ' *  noSuchAct, aboutARead, conduct or measured:<case>. The set is closed. */'
-    ], conductLicences(declaration)),
+    ], proseLicences(declaration)),
     ...licenceLines('WIDE', [
       '/** Why a rule names more than one act: its sentence is stamped on the card of every act it',
       ' *  names, so naming several costs a licence — oneLawEveryAct, or sameRefusal. */'
