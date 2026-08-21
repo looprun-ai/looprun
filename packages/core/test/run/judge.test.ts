@@ -4,9 +4,9 @@ import type { JudgedGuard } from '../../src/cards/cards.js';
 import { Judge } from '../../src/run/judge.js';
 import { ScriptedModel } from '../../src/run/scripted-model.js';
 
-function judgedRow(name: string, policy: 'passOnFails' | 'denyOnFails' = 'denyOnFails'): JudgedGuard {
+function judgedRow(name: string): JudgedGuard {
   return { name, rule: `${name} rule.`, home: 'spec', on: 'reply', tools: [], kind: 'judged',
-           judged: true, judgePolicy: policy, installedBecause: 'declared on the spec card',
+           judged: true, installedBecause: 'declared on the spec card',
            judgeQuery: `Is ${name} violated?` };
 }
 

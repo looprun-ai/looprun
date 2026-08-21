@@ -3,8 +3,8 @@
  *  exists, so no interface can carry a third-party endpoint. The composed question
  *  may quote the sealed history; guards read the user's text only as exact literals —
  *  judging MEANING happens here, on the session's own seat. The answer format is
- *  fixed tokens; UNREADABLE is a first-class verdict priced by the guard's declared
- *  judgePolicy. */
+ *  fixed tokens; UNREADABLE is a first-class verdict, and it refuses — an answer the
+ *  engine cannot read leaves the rule unmet. */
 import type { LlmParams, Msg, ReplyCtx } from '../contract/vocabulary.js';
 import { deepFreeze } from '../contract/freeze.js';
 import type { ModelPort } from '../contract/ports.js';

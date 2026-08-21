@@ -8,7 +8,7 @@ test('the four judged factories declare a reply-phase judgeQuery and no deny', (
     expect(typeof g.judgeQuery).toBe('string');
     expect(g.judgeQuery?.length).toBeGreaterThan(10);
     expect('deny' in g).toBe(false);
-    expect(g.judgePolicy ?? 'denyOnFails').toBe('denyOnFails');
+    expect('judgePolicy' in g).toBe(false);
     expect(g.rule.length).toBeGreaterThan(10);
   }
 });

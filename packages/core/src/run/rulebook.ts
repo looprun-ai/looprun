@@ -36,7 +36,7 @@ export class Rulebook {
     const matcher = new HonestyCheck(compiled.facts);
     const row = (name: 'claimIsGrounded' | 'claimIsComplete', rule: string): CompiledGuard => ({
       name, rule, home: 'engine', on: 'reply', tools: [], kind: name,
-      judged: false, judgePolicy: null, installedBecause: 'the always-on floor',
+      judged: false, installedBecause: 'the always-on floor',
       deny: ctx => matcher.check(ctx as ReplyCtx).find(v => v.guardName === name)?.detail ?? null
     });
     const floorAt = reply.findIndex(g => g.home === 'engine');

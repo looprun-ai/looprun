@@ -30,7 +30,6 @@ function installHandWritten(g: Guard, home: 'spec' | 'contract'): CompiledGuard 
     name: g.name, rule: g.rule, home, on: g.on, tools,
     kind: g.judgeQuery !== undefined ? 'judged' : g.deny !== undefined ? 'custom' : 'prose',
     judged: g.judgeQuery !== undefined,
-    judgePolicy: g.judgeQuery === undefined ? null : g.judgePolicy ?? 'denyOnFails',
     installedBecause: `declared on the ${home} card`,
     deny: ctx => g.deny?.(ctx) ?? null
   };
@@ -106,8 +105,8 @@ export class AgentFactory {
         if (g.judgeQuery !== undefined) {
           const tools = g.tool === undefined ? [] : typeof g.tool === 'string' ? [g.tool] : [...g.tool];
           judged.push({ name: g.name, rule: g.rule, home, on: g.on, tools, kind: 'judged',
-            judged: true, judgePolicy: g.judgePolicy ?? 'denyOnFails',
-            installedBecause: `declared on the ${home} card`, judgeQuery: g.judgeQuery });
+            judged: true, installedBecause: `declared on the ${home} card`,
+            judgeQuery: g.judgeQuery });
           continue;
         }
         guards.push(isSeed(g) ? g.compile(home, lane) : installHandWritten(g, home));

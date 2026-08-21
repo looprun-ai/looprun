@@ -95,10 +95,9 @@ export interface Guard {
    *  (appended to `rule` in the denial), null = allow. */
   deny?(ctx: InputCtx | CallCtx | ResultCtx | ReplyCtx): string | null;
   /** A yes/no question answered by the session's OWN model. Its phase is 'reply' —
-   *  construction validates. */
+   *  construction validates. An answer the engine cannot read decides nothing, so the
+   *  rule stands unmet and the reply is corrected. */
   judgeQuery?: string;
-  /** What an UNREADABLE judged answer does. Only beside judgeQuery. Omitted = 'denyOnFails'. */
-  judgePolicy?: 'passOnFails' | 'denyOnFails';
 }
 
 /** Named overrides for engine sentences and the user-facing status words. Omitted

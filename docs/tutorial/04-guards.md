@@ -213,8 +213,9 @@ installed without reading the card.
   judgeQuery: 'Does this reply give legal advice?' }
 ```
 
-The session's own model answers that one question — no other model is ever called. An
-unreadable answer denies by default; `judgePolicy: 'passOnFails'` chooses the other way.
+The session's own model answers that one question — no other model is ever called. The
+answer is one word, `YES` or `NO`. Anything else is unreadable, and an unreadable answer
+decides nothing: the rule stands unmet and the reply is corrected.
 
 ## A rule is a sentence and a check, together
 

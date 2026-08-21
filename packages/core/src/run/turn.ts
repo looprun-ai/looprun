@@ -216,12 +216,11 @@ export class Turn {
           violations.push({ guardName: v.guardName, detail: v.detail ?? rule });
         }
         if (v.verdict === 'unreadable') {
+          // An answer nobody can read decides nothing, so the rule stands unmet and the
+          // reply is corrected — a judged rule is never waved through on silence.
           draft.corrections.push({ kind: 'judgeUnreadable', guardName: v.guardName });
-          const policy = compiled.judged.find(g => g.name === v.guardName)?.judgePolicy;
-          if (policy !== 'passOnFails') {
-            violations.push({ guardName: v.guardName,
-              detail: 'the judge answer was unreadable — treated as a violation' });
-          }
+          violations.push({ guardName: v.guardName,
+            detail: 'the judge answer was unreadable — treated as a violation' });
         }
       }
     }

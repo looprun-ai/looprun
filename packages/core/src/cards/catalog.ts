@@ -23,7 +23,7 @@ function installed(seed: SeedGuard, home: 'spec' | 'contract' | 'engine',
   const tools = seed.tool === undefined ? [] : typeof seed.tool === 'string' ? [seed.tool] : [...seed.tool];
   return {
     name: seed.name, rule: seed.rule, home, on: seed.on, tools, kind: seed.kind,
-    judged: false, judgePolicy: null,
+    judged: false,
     installedBecause: installedBecause
       ?? (home === 'engine' ? 'the always-on floor' : `declared on the ${home} card`),
     deny: ctx => checks.deny(ctx as CallCtx),
@@ -43,7 +43,7 @@ function installedAt<C extends GuardCtx>(seed: SeedGuard, home: 'spec' | 'contra
   const tools = seed.tool === undefined ? [] : typeof seed.tool === 'string' ? [seed.tool] : [...seed.tool];
   return {
     name: seed.name, rule: seed.rule, home, on: seed.on, tools, kind: seed.kind,
-    judged: false, judgePolicy: null,
+    judged: false,
     installedBecause: installedBecause
       ?? (home === 'engine' ? 'the always-on floor' : `declared on the ${home} card`),
     deny: ctx => deny(ctx as C)
@@ -542,7 +542,7 @@ export function blockPattern(name: string, pattern: RegExp, rule: string,
 /** NOTHING JUDGED INSTALLS ITSELF — each judged factory returns a declared Guard the
  *  author places on a card; the question is answered on the session's OWN model. */
 function judgedGuard(name: string, rule: string, judgeQuery: string): Guard {
-  return { name, rule, on: 'reply', judgeQuery, judgePolicy: 'denyOnFails' };
+  return { name, rule, on: 'reply', judgeQuery };
 }
 
 /** The judged half of the honesty law; the structural floor is always on and free. */

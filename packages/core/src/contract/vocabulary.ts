@@ -147,7 +147,6 @@ export interface InstalledGuard { readonly name: string; readonly rule: string;
                                   readonly kind: string;     // the species: 'onlyAfter' · 'argRequired'
                                                              //   · 'custom' · 'judged' · 'prose' · …
                                   readonly judged: boolean;
-                                  readonly judgePolicy: 'passOnFails' | 'denyOnFails' | null;
                                   readonly installedBecause: string }
 export type RewriteKind = 'purgePattern' | 'maskPattern' | 'swapTerms';
 export interface Rewrite { readonly name: string;

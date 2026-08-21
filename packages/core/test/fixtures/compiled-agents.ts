@@ -39,7 +39,6 @@ export function install(guard: Guard, home: 'spec' | 'contract' | 'engine', kind
   return {
     name: guard.name, rule: guard.rule, home, on: guard.on, tools, kind,
     judged: guard.judgeQuery !== undefined,
-    judgePolicy: guard.judgeQuery === undefined ? null : guard.judgePolicy ?? 'denyOnFails',
     installedBecause: home === 'engine' ? 'the always-on floor' : `declared on the ${home} card`,
     deny: ctx => guard.deny?.(ctx) ?? null,
     ...extras
