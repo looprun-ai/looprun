@@ -3,9 +3,9 @@ import type { AgentSpec, DeclaredWorld, DomainContract, ExamCase, LiveWorldCard,
               McpWorldCard } from '@looprun-ai/core';
 import { AgentFactory, factsFromWorld, Rulebook } from '@looprun-ai/core';
 import { approvable, capPaths, conductComplete, coversResolve, destructiveDisclosed,
-         floorRedeclared, inertChecks, nameGate, overWide, pairing, presetsDeclared, purity,
-         readsOrdered, requiredReadsDisclosed, unlicensed, unspokenChecks,
-         type LintFinding } from './lints.js';
+         floorRedeclared, inertChecks, nameGate, noEffectDenied, overWide, pairing,
+         presetsDeclared, purity, readsOrdered, requiredReadsDisclosed, unlicensed,
+         unspokenChecks, type LintFinding } from './lints.js';
 
 /** What the gate needs beyond the directory. Every field is REQUIRED, and the two a subject
  *  directory cannot answer on its own take an explicit `null` to opt out: a caller with no census
@@ -85,6 +85,9 @@ export function runGate(subjectDir: string, subject: GateSubject): readonly Lint
     // is a read an act is ordered behind, and a read a case requires answers in figures.
     ...readsOrdered(subjectDir, cases, facts),
     ...requiredReadsDisclosed(subjectDir, cases, facts),
+    // An act the exam expects refused is an act the cards can refuse: a mechanism that decides the
+    // call, not an order that reading clears.
+    ...noEffectDenied(subjectDir, cases),
     ...(censusNames === null ? [] : coversResolve(cases, censusNames)),
     ...(presetLeavesGuardInert === null ? [] : approvable(cases, { presetLeavesGuardInert }))
   ];

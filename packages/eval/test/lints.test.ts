@@ -1023,3 +1023,51 @@ describe('requiredReadsDisclosed', () => {
     expect(requiredReadsDisclosed(dir, CASES, REFUND_FACTS)).toEqual([]);
   });
 });
+
+import { noEffectDenied } from '../src/lints.js';
+
+const REFUSED: readonly ExamCase[] = [{ id: 'refund-02', split: 'fix', rubric: 'r',
+  turns: ['refund inv_9'], invariants: { noEffectToolCalls: [{ name: 'issueRefund' }] } }];
+
+describe('noEffectDenied', () => {
+  const write = (body: string): string => {
+    const dir = mkdtempSync(join(tmpdir(), 'undeniable-'));
+    writeFileSync(join(dir, 'cards.ts'), body);
+    return dir;
+  };
+
+  test('an act the exam expects refused, with no check at all, is a finding', () => {
+    const found = noEffectDenied(write('const CONTRACT = { guards: [] };'), REFUSED);
+    expect(found.map(f => f.code)).toEqual(['ACT_UNDENIABLE']);
+    expect(found[0].sentence).toContain("case 'refund-02' expects 'issueRefund' to change nothing");
+    expect(found[0].sentence).toContain('no check at all');
+  });
+
+  test('an onlyAfter alone is cleared by reading, so it is still a finding', () => {
+    const dir = write(`const CONTRACT = { guards: [ onlyAfter('issueRefund', 'getInvoice') ] };`);
+    const found = noEffectDenied(dir, REFUSED);
+    expect(found.map(f => f.code)).toEqual(['ACT_UNDENIABLE']);
+    expect(found[0].sentence).toContain('only onlyAfter, which is cleared by reading');
+  });
+
+  test('a check that decides the call answers it', () => {
+    for (const guard of ['precondition(\'issueRefund\', h => h.record !== null)',
+                         'valueFromUser(\'issueRefund\', \'amount\')',
+                         'choiceFromUser(\'issueRefund\', { delivered: [\'deliver\'] })']) {
+      expect(noEffectDenied(write(`const CONTRACT = { guards: [ ${guard} ] };`), REFUSED)).toEqual([]);
+    }
+  });
+
+  test('a hand-written deny decides the call as much as a factory does', () => {
+    const dir = write(`const CONTRACT = { guards: [
+      { name: 'refundOnlyWhatIsOpen', tool: ['issueRefund'], deny: h => 'settled' } ] };`);
+    expect(noEffectDenied(dir, REFUSED)).toEqual([]);
+  });
+
+  test('a wrapper around a deciding factory decides too', () => {
+    const dir = write(`
+      const moneyGate = (tool) => precondition(tool, h => h.record !== null);
+      const CONTRACT = { guards: [ moneyGate('issueRefund') ] };`);
+    expect(noEffectDenied(dir, REFUSED)).toEqual([]);
+  });
+});

@@ -1401,6 +1401,79 @@ export function requiredReadsDisclosed(subjectDir: string, cases: readonly ExamC
   return findings;
 }
 
+/** Every act a case expects to change nothing, with the first case that expects it. The invariant
+ *  watches one name — `anyOf` widens which CALL a required read is answered by and has no meaning
+ *  here — so the act is the matcher's own name. */
+function noEffectActs(cases: readonly ExamCase[]): ReadonlyMap<string, string> {
+  const byAct = new Map<string, string>();
+  for (const c of cases)
+    for (const matcher of c.invariants?.noEffectToolCalls ?? [])
+      if (!byAct.has(matcher.name)) byAct.set(matcher.name, c.id);
+  return byAct;
+}
+
+/** The mechanisms that can refuse the CALL. An `onlyAfter` is not one of them: it is satisfied by
+ *  reading, so a desk that runs the prerequisite walks straight through it. A judged check reads
+ *  the reply after the call has already landed. */
+const DENYING_FACTORIES = ['precondition', 'valueFromUser', 'choiceFromUser', 'argFormat',
+  'argAbsent', 'checkResult', 'mustAccountFor', 'maxCalls', 'blockPattern'];
+
+/** The names that DECIDE a call, the wrappers around them included: a subject names a gate once
+ *  and reaches for that name on every act it covers, so a helper whose body reaches a denying
+ *  factory denies too. The set grows until it stops growing, and `deny` and `cap` join it as
+ *  themselves — a hand-written predicate and a ceiling both answer the call. */
+function denyingNames(sources: readonly Source[]): ReadonlySet<string> {
+  const known = new Set(DENYING_FACTORIES);
+  const locals: { name: string; body: ts.Node }[] = [];
+  for (const f of sources) {
+    const visit = (node: ts.Node): void => {
+      if (ts.isFunctionDeclaration(node) && node.name !== undefined && node.body !== undefined)
+        locals.push({ name: node.name.text, body: node.body });
+      if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.initializer !== undefined
+        && (ts.isArrowFunction(node.initializer) || ts.isFunctionExpression(node.initializer)))
+        locals.push({ name: node.name.text, body: node.initializer.body });
+      node.forEachChild(visit);
+    };
+    visit(parse(f));
+  }
+  for (let grew = true; grew;) {
+    grew = false;
+    for (const local of locals) {
+      if (known.has(local.name) || !callsAny(local.body, known)) continue;
+      known.add(local.name);
+      grew = true;
+    }
+  }
+  known.add('deny');
+  known.add('cap');
+  return known;
+}
+
+/** A case that lists an act under `noEffectToolCalls` measures a REFUSAL, and a refusal the cards
+ *  cannot produce is a refusal the exam is asking the model to perform out of goodwill. The act
+ *  therefore carries a mechanism that can deny the call itself — a role or state precondition, a
+ *  choice or value the operator has to have given, a format or ceiling the arriving call fails.
+ *
+ *  An `onlyAfter` on its own does not answer this: it is satisfied by running the read, and a desk
+ *  that reads first then acts has cleared it. The invariant would fail on a call the engine allowed. */
+export function noEffectDenied(subjectDir: string, cases: readonly ExamCase[]): readonly LintFinding[] {
+  const sources = subjectSources(subjectDir);
+  const checks = checksByTool(sources, factoryNames(sources));
+  const denying = denyingNames(sources);
+  const findings: LintFinding[] = [];
+  for (const [act, caseId] of noEffectActs(cases)) {
+    const carried = checks.get(act) ?? [];
+    if (carried.some(mechanism => denying.has(mechanism))) continue;
+    findings.push({ code: 'ACT_UNDENIABLE',
+      sentence: `case '${caseId}' expects '${act}' to change nothing, and nothing on this card can `
+        + `refuse that call: it carries ${carried.length === 0 ? 'no check at all'
+          : `only ${carried.join(' · ')}, which ${carried.length === 1 ? 'is' : 'are'} cleared by `
+            + `reading`}. Put a check that decides the call itself over '${act}' — a role or state `
+        + `precondition, a choice or a value the operator has to have given.` });
+  }
+  return findings;
+}
+
 /** A `cap.at` path reads as `{alias}.{...}` over the reads `needs` names — an alias the same
  *  entry declares, never the read's own tool name. A path rooted on the tool binds to nothing
  *  the engine ever produced, and the call it was meant to hold dies at the cap instead. */
