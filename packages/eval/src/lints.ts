@@ -85,16 +85,19 @@ const parse = (f: Source): ts.SourceFile =>
   ts.createSourceFile(f.rel, f.text, ts.ScriptTarget.ES2022, true);
 
 const EFFECT_BLOCKS = new Set(['reads', 'writes', 'destructive']);
+/** The two blocks that hold the ACTS: a tool in either one changes a record of the world. */
+const ACTING_BLOCKS = new Set(['writes', 'destructive']);
 
-/** The tool surface: the keys of the world card's three effect blocks. The block a tool sits
- *  in IS its effect declaration. `limits.destructive` is a number, so an object literal is
- *  required before the keys count. */
-function toolSurface(sources: readonly Source[]): ReadonlySet<string> {
+/** The keys of the world card's effect blocks, read from source. The block a tool sits in IS its
+ *  effect declaration, so the blocks asked for decide what comes back: all three name the whole
+ *  surface, the acting two name the acts. `limits.destructive` is a number, so an object literal
+ *  is required before the keys count. */
+function surfaceKeys(sources: readonly Source[], blocks: ReadonlySet<string>): ReadonlySet<string> {
   const tools = new Set<string>();
   for (const f of sources) {
     const visit = (node: ts.Node): void => {
       if (ts.isPropertyAssignment(node) && ts.isIdentifier(node.name)
-        && EFFECT_BLOCKS.has(node.name.text)
+        && blocks.has(node.name.text)
         && ts.isObjectLiteralExpression(node.initializer)) {
         for (const entry of node.initializer.properties) {
           if (!ts.isPropertyAssignment(entry)) continue;
@@ -378,16 +381,30 @@ function homeOf(node: ts.Node): 'spec' | 'contract' {
   return 'spec';
 }
 
-export function pairing(subjectDir: string, declared?: Iterable<string>): readonly LintFinding[] {
+/** Every act of a subject carries at least one deterministic check, and every rule about an act
+ *  is carried by a mechanism on that act.
+ *
+ *  The two are one walk because they answer the same question from opposite ends. A rule the card
+ *  states about a tool nothing refuses is a law written and never enforced. An ACT — a write or a
+ *  destructive effect — that nothing refuses is worse: no rule even claims it, so a reader of the
+ *  card sees nothing missing while the engine has nothing to stop the call with.
+ *
+ *  `declared` and `acting` are the surface and the acts as a CALLER holds them, off a card already
+ *  built. A world that assembles its effect blocks in code spells no tool out in its source, so a
+ *  caller with the loaded card hands both over and this reads the truth instead of the text. */
+export function pairing(subjectDir: string, declared?: Iterable<string>,
+                        acting?: Iterable<string>): readonly LintFinding[] {
   const sources = subjectSources(subjectDir);
-  const fromSource = toolSurface(sources);
-  const surface = declared === undefined ? fromSource : new Set(declared);
+  const surface = declared === undefined ? surfaceKeys(sources, EFFECT_BLOCKS) : new Set(declared);
   // An empty surface read from source means the card spells no block out, so membership is
   // unknowable here and an act a rule names stands.
   const membershipKnown = surface.size > 0;
   const lists = namedToolLists(sources);
   const checks = checksByTool(sources, factoryNames(sources));
   const findings: LintFinding[] = [];
+  // One act, one row: a rule that names an unchecked act says it at its own line, and the sweep
+  // below speaks only for the acts no rule mentions at all.
+  const spoken = new Set<string>();
 
   for (const f of sources) {
     const sf = parse(f);
@@ -405,6 +422,7 @@ export function pairing(subjectDir: string, declared?: Iterable<string>): readon
           findings.push({ code: 'PROSE_TOOL_UNKNOWN',
             sentence: `${at} — '${rule.name}' names '${tool}', which is on no effect block` });
         } else if (!checks.has(tool)) {
+          spoken.add(tool);
           findings.push({ code: 'ACT_WITHOUT_CHECK',
             sentence: `${at} — '${rule.name}' states a law about '${tool}' and nothing refuses that call. Spread the factory that enforces it and sharpen its rule, or say why no check can` });
         }
@@ -430,6 +448,19 @@ export function pairing(subjectDir: string, declared?: Iterable<string>): readon
       node.forEachChild(visit);
     };
     visit(sf);
+  }
+
+  // The acts nothing on the card speaks for. A rule naming one has already been charged above at
+  // its own line; the rest are named here, because an act with no rule and no check is the one
+  // nobody reading the card can see.
+  for (const act of acting ?? surfaceKeys(sources, ACTING_BLOCKS)) {
+    if (checks.has(act) || spoken.has(act)) continue;
+    spoken.add(act);
+    findings.push({ code: 'ACT_WITHOUT_CHECK',
+      sentence: `'${act}' changes a record and nothing refuses that call — no rule on this card `
+        + `even names it. Every act carries at least one check the engine decides: spread the `
+        + `factory that decides this one onto the contract, or declare '${act}' a read if it `
+        + `changes nothing` });
   }
   return findings;
 }

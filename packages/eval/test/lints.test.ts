@@ -55,7 +55,8 @@ test('census: an installed guard with no dump that fires it is a finding', () =>
 import { doubleStated, pairing, pairingTable, profile } from '../src/lints.js';
 
 /** A subject small enough to read: three tools in their effect blocks, a desk carrying the law
- *  that names no act, a contract carrying the law about one act, one factory and one ceiling. */
+ *  that names no act, a contract carrying the law about one act, a check over each of the two
+ *  acts, and one ceiling. */
 const CARD = `
 export const w = {
   records: {},
@@ -75,6 +76,8 @@ export const billing = {
 export const contract = {
   guards: [
     onlyAfter('payInvoice', 'getInvoice'),
+    precondition('voidInvoice', ({ record }) => record !== null,
+      'A void lands on the invoice the read returned, and on no other.'),
     prose('payFromTheRecord', 'A payment lands on the invoice the read returned.', ['payInvoice'])
   ],
   disclosure: {
@@ -273,6 +276,50 @@ export const contract = { name: 'atlas', guards: [
   prose('refundCapFromTheRecord', 'A refund is capped by the statement.', ['issueRefund'])
 ] };`);
   expect(pairing(dir).map(f => f.code)).toContain('ACT_WITHOUT_CHECK');
+});
+
+test('pairing: an act no rule even names, with nothing to refuse it, is a finding', () => {
+  const dir = subjectDirWith(`
+export const w = { records: {},
+  reads: { getStatement: { form: 'get', entity: 'accounts', label: 'Look up a statement' } },
+  writes: { issueRefund: { form: 'set', entity: 'accounts', label: 'Refund an account' } },
+  destructive: { closeAccount: { form: 'remove', entity: 'accounts', label: 'Close an account' } } };
+export const contract = { name: 'atlas', guards: [
+  { ...onlyAfter('issueRefund', 'getStatement'),
+    name: 'refundCapFromTheRecord',
+    rule: 'A refund is capped by the statement: paid minus already refunded.' }
+] };`);
+  const found = pairing(dir);
+  expect(found.map(f => f.code)).toEqual(['ACT_WITHOUT_CHECK']);
+  expect(found[0].sentence).toContain('closeAccount');
+  // The checked act is not charged, and neither is the read beside it.
+  expect(found[0].sentence).not.toContain('issueRefund');
+  expect(found[0].sentence).not.toContain('getStatement');
+});
+
+test('pairing: an act the caller declares is charged even when the card builds its blocks in code', () => {
+  const built = `
+export const w = { records: {},
+  writes: Object.fromEntries([['issueRefund', { form: 'set', entity: 'accounts', label: 'r' }]]) };
+export const contract = { name: 'atlas', guards: [] };`;
+  // Nothing is spelled out in the source, so the source-read walk knows of no act at all.
+  expect(pairing(subjectDirWith(built))).toEqual([]);
+  expect(pairing(subjectDirWith(built), ['issueRefund'], ['issueRefund']).map(f => f.code))
+    .toEqual(['ACT_WITHOUT_CHECK']);
+});
+
+test('pairing: an act a rule names is charged once, at the line the rule is written on', () => {
+  const dir = subjectDirWith(`
+export const w = { records: {},
+  writes: { issueRefund: { form: 'set', entity: 'accounts', label: 'Refund an account' } } };
+const prose = (name, rule, tool) =>
+  tool === undefined ? { name, rule, on: 'reply' } : { name, rule, on: 'reply', tool };
+export const contract = { name: 'atlas', guards: [
+  prose('refundCapFromTheRecord', 'A refund is capped by the statement.', ['issueRefund'])
+] };`);
+  const found = pairing(dir);
+  expect(found).toHaveLength(1);
+  expect(found[0].sentence).toContain('refundCapFromTheRecord');
 });
 
 test('pairing: the same law spread onto the factory that enforces it is clean', () => {

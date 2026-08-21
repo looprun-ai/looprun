@@ -60,12 +60,15 @@ export function censusFor(subject: CensusSubject): ReadonlySet<string> {
 export function runGate(subjectDir: string, subject: GateSubject): readonly LintFinding[] {
   const facts = factsFromWorld(subject.world);
   const { cases, censusNames, presetLeavesGuardInert } = subject;
+  const acting = Object.values(facts.tools)
+    .filter(fact => fact.effect !== 'read').map(fact => fact.name);
   return [
     ...purity(subjectDir),
     ...nameGate(subjectDir),
-    // The surface comes from the DERIVED facts: a world that builds its effect blocks in code
-    // spells no act out in its source, and membership is what the pairing reads first.
-    ...pairing(subjectDir, Object.keys(facts.tools)),
+    // The surface and the acts both come from the DERIVED facts: a world that builds its effect
+    // blocks in code spells no act out in its source, and membership is what the pairing reads
+    // first — then every act it holds, each of which owes a check.
+    ...pairing(subjectDir, Object.keys(facts.tools), acting),
     ...unlicensed(subjectDir),
     ...overWide(subjectDir),
     ...floorRedeclared(subjectDir),
