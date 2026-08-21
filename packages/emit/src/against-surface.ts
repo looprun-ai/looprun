@@ -26,12 +26,13 @@ function editDistance(a: string, b: string): number {
   return previous[b.length];
 }
 
-/** The declared act name closest to `name` by edit distance, or null when the surface
- *  declares no act at all. */
-function closestActName(name: string, actNames: readonly string[]): string | null {
+/** The declared tool name closest to `name` by edit distance, or null when the surface
+ *  declares no tool at all. Used for both a guard's `acts` and a disclosure's `needs` —
+ *  both point at the same namespace, `facts.tools`. */
+function closestToolName(name: string, toolNames: readonly string[]): string | null {
   let best: string | null = null;
   let bestDistance = Number.POSITIVE_INFINITY;
-  for (const candidate of actNames) {
+  for (const candidate of toolNames) {
     const distance = editDistance(name, candidate);
     if (distance < bestDistance) { bestDistance = distance; best = candidate; }
   }
@@ -41,12 +42,12 @@ function closestActName(name: string, actNames: readonly string[]): string | nul
 /** Every guard names acts the surface actually declares — a typo names no tool, and the
  *  emitter refuses to write a card that wires a call that does not exist. */
 function checkGuardActsExist(declaration: Declaration, facts: SurfaceFacts): readonly string[] {
-  const actNames = Object.keys(facts.tools);
+  const toolNames = Object.keys(facts.tools);
   const refusals: string[] = [];
   declaration.contract.guards.forEach((guard, guardIndex) => {
     guard.acts.forEach((act, actIndex) => {
       if (facts.tools[act] !== undefined) return;
-      const near = closestActName(act, actNames);
+      const near = closestToolName(act, toolNames);
       const suggestion = near === null ? '' : ` — did you mean '${near}'?`;
       refusals.push(`contract.guards[${guardIndex}].acts[${actIndex}] names '${act}', `
         + `and the surface declares no such act${suggestion}`);
@@ -103,21 +104,45 @@ function checkConductUniform(declaration: Declaration): readonly string[] {
   return refusals;
 }
 
+/** A disclosure `needs` alias names a tool the surface actually declares — checked for
+ *  every alias regardless of the held act's target, because a typo names no tool no
+ *  matter what the destructive act it discloses looks like. */
+function checkDisclosureNeedsToolExists(declaration: Declaration, facts: SurfaceFacts): readonly string[] {
+  const toolNames = Object.keys(facts.tools);
+  const refusals: string[] = [];
+  for (const [actName, entry] of Object.entries(declaration.contract.disclosure)) {
+    for (const [alias, readName] of Object.entries(entry.needs ?? {})) {
+      if (facts.tools[readName] !== undefined) continue;
+      const near = closestToolName(readName, toolNames);
+      const suggestion = near === null ? '' : ` — did you mean '${near}'?`;
+      refusals.push(`contract.disclosure.${actName}.needs.${alias} names '${readName}', `
+        + `and the surface declares no such tool${suggestion}`);
+    }
+  }
+  return refusals;
+}
+
 /** A disclosure `needs` alias points at a read whose schema can accept the destructive
  *  act's own target argument — a read that only accepts a different id can never fill in
- *  the record the destructive act is about. */
+ *  the record the destructive act is about, and an act with no target at all leaves no id
+ *  for any read to accept. Skips an alias whose tool does not exist: that gap is named by
+ *  checkDisclosureNeedsToolExists, not repeated here as a schema mismatch. */
 function checkDisclosureNeedsResolvable(declaration: Declaration, facts: SurfaceFacts): readonly string[] {
   const refusals: string[] = [];
   for (const [actName, entry] of Object.entries(declaration.contract.disclosure)) {
     const held = facts.tools[actName];
-    if (held === undefined || held.target === null) continue;
+    if (held === undefined) continue;
     for (const [alias, readName] of Object.entries(entry.needs ?? {})) {
-      const readArgs = schemaArgs(facts.tools[readName]);
-      if (readArgs.includes(held.target)) continue;
+      const read = facts.tools[readName];
+      if (read === undefined) continue;
+      const readArgs = schemaArgs(read);
+      const target = held.target;
+      if (target !== null && readArgs.includes(target)) continue;
       const accepts = readArgs.length === 0 ? 'nothing' : readArgs.map(arg => `'${arg}'`).join(', ');
       refusals.push(`contract.disclosure.${actName}.needs.${alias} names ${readName}: `
-        + `${actName} needs ${readName} to accept '${held.target}', and ${readName} only accepts ${accepts} `
-        + `— repoint needs.${alias} at a read that accepts '${held.target}'.`);
+        + `${actName} needs ${readName} to accept the held call's target '${String(target)}', `
+        + `and ${readName} only accepts ${accepts} `
+        + `— repoint needs.${alias} at a read that accepts '${String(target)}', or give ${actName} a target.`);
     }
   }
   return refusals;
@@ -126,14 +151,16 @@ function checkDisclosureNeedsResolvable(declaration: Declaration, facts: Surface
 /** Every refusal the emitter owes when a declaration does not fit the world's surface: a
  *  guard naming an act no tool declares, a destructive act with nothing disclosed before it
  *  runs, a `precondition` reading a record over an act with no target, a conduct law some
- *  desks never teach, and a disclosure alias whose read cannot answer the call it is held
- *  for. An empty array means the declaration is safe to emit against `facts`. */
+ *  desks never teach, a disclosure `needs` alias naming a tool that does not exist, and a
+ *  disclosure alias whose read cannot answer the call it is held for. An empty array means
+ *  the declaration is safe to emit against `facts`. */
 export function checkAgainstSurface(declaration: Declaration, facts: SurfaceFacts): readonly string[] {
   return [
     ...checkGuardActsExist(declaration, facts),
     ...checkDestructiveDisclosed(declaration, facts),
     ...checkPreconditionTarget(declaration, facts),
     ...checkConductUniform(declaration),
+    ...checkDisclosureNeedsToolExists(declaration, facts),
     ...checkDisclosureNeedsResolvable(declaration, facts)
   ];
 }

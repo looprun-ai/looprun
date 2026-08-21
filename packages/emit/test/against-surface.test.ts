@@ -10,9 +10,11 @@ const FACTS = { tools: {
 
 /** A guard set, disclosure map and desk pair that together fit FACTS with no gaps: the
  *  destructive act is disclosed with a `before`, its disclosure alias resolves against the
- *  read it names, every guard names a real act, and both desks teach the same conduct laws. */
+ *  read it names, every guard names a real act, a `precondition` reading a record sits over
+ *  an act that has a target, and both desks teach the same conduct laws. */
 const SOUND_GUARDS: readonly DeclaredGuard[] = [
-  { name: 'confirmBeforeRefund', acts: ['issueRefund'], factory: 'onlyAfter' }
+  { name: 'confirmBeforeRefund', acts: ['issueRefund'], factory: 'onlyAfter' },
+  { name: 'confirmInvoiceKnown', acts: ['getInvoice'], factory: 'precondition', args: { reads: 'record' } }
 ];
 const SOUND_DISCLOSURE: Readonly<Record<string, DeclaredDisclosure>> = {
   issueRefund: { needs: { invoice: 'getInvoice' }, before: 'Say the invoice total before refunding it.' }
@@ -78,5 +80,22 @@ describe('checkAgainstSurface', () => {
 
   test('a sound declaration refuses nothing', () => {
     expect(checkAgainstSurface(soundDeclaration(), FACTS)).toEqual([]);
+  });
+
+  test('a disclosure needs alias naming a tool that does not exist, held act target null', () => {
+    const facts = { tools: {
+      ...(FACTS as never as { tools: Record<string, unknown> }).tools,
+      issueRefund: { name: 'issueRefund', effect: 'destructive', target: null, entity: 'invoices', schema: {} }
+    } } as never;
+    expect(checkAgainstSurface(decl({ disclosure: { issueRefund: {
+      needs: { invoice: 'thisToolDoesNotExistAnywhere' }, before: 'x' } } }), facts))
+      .toEqual([expect.stringContaining("the surface declares no such tool")]);
+  });
+
+  test('a disclosure needs alias naming a tool that does not exist, held act target set', () => {
+    const refusals = checkAgainstSurface(decl({ disclosure: { issueRefund: {
+      needs: { invoice: 'thisToolDoesNotExistAnywhere' }, before: 'x' } } }), FACTS);
+    expect(refusals).toEqual([expect.stringContaining("the surface declares no such tool")]);
+    expect(refusals[0]).not.toContain('only accepts');
   });
 });
