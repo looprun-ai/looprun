@@ -308,9 +308,11 @@ function checkResultLines(guard: DeclaredGuard, act: string): readonly string[] 
 function blockLines(guard: DeclaredGuard): readonly string[] {
   const seam = guard.args?.on;
   if (seam !== 'input' && seam !== 'reply') {
+    const carried = seam === undefined ? 'this declaration does not carry it'
+      : `this declaration carries '${String(seam)}', which is neither`;
     throw new Error(`contract.guards '${guard.name}' declares factory 'blockPattern', whose `
       + `configuration is args.on — the text the block reads, 'input' for the message arriving or `
-      + `'reply' for the one going out, which this declaration does not carry`);
+      + `'reply' for the one going out — and ${carried}`);
   }
   return [`blockPattern(${quote(guard.name)}, new RegExp(${quote(stringArg(guard, 'pattern'))}),`,
     `${quote(ruleOf(guard))}, { on: ${quote(seam)} })`];
