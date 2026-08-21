@@ -1,4 +1,11 @@
-import type { Declaration, DeclaredDisclosure, DeclaredGuard } from '../src/index.js';
+import type { SeamRow } from '@looprun-ai/eval';
+import type { Declaration, DeclaredDisclosure, DeclaredGuard, DeclaredSeam } from '../src/index.js';
+
+/** The seam of the fixture world: one refusal the world spells out, on the destructive act. A
+ *  declaration paying any other row is paying a row this table does not carry. */
+export const SEAM: readonly SeamRow[] = [
+  { act: 'issueRefund', code: 'stateIs:status', guard: null }
+];
 
 export const FACTS = { tools: {
   issueRefund: { name: 'issueRefund', effect: 'destructive', target: 'invoiceId', entity: 'invoices', schema: {} },
@@ -28,6 +35,7 @@ export function decl(overrides: {
   readonly guards?: readonly DeclaredGuard[];
   readonly disclosure?: Readonly<Record<string, DeclaredDisclosure>>;
   readonly desks?: Declaration['desks'];
+  readonly seam?: DeclaredSeam;
 } = {}): Declaration {
   return {
     contract: {
@@ -35,7 +43,8 @@ export function decl(overrides: {
       voice: 'Warm, brief, and exact about dates and money.',
       facts: [],
       guards: overrides.guards ?? SOUND_GUARDS,
-      disclosure: overrides.disclosure ?? SOUND_DISCLOSURE
+      disclosure: overrides.disclosure ?? SOUND_DISCLOSURE,
+      ...(overrides.seam === undefined ? {} : { seam: overrides.seam })
     },
     desks: overrides.desks ?? SOUND_DESKS
   };

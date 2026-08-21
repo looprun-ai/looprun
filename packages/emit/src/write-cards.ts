@@ -7,6 +7,21 @@ import type { SurfaceFacts } from '@looprun-ai/core';
 import type { Declaration, DeclaredCap, DeclaredDisclosure, DeclaredGuard, DeclaredJudged,
   DeclaredNeed, DeclaredRewrite, DeclaredSecret, DeclaredWhy } from './declaration.js';
 
+/** One seam law's name on the card: the coordinate of the row it pays, act then code, so a reader
+ *  of the census can find that row in the seam table and a second sentence about the same refusal
+ *  cannot hide under a different name. */
+export const seamName = (act: string, code: string): string => `seam:${act}:${code}`;
+
+/** Every seam law of one declaration, in declaration order: the act, the code, the sentence, and
+ *  the name the card gives it. */
+export function seamLaws(declaration: Declaration): readonly {
+  readonly act: string; readonly code: string; readonly sentence: string; readonly name: string
+}[] {
+  return Object.entries(declaration.contract.seam ?? {}).flatMap(([act, codes]) =>
+    Object.entries(codes).map(([code, sentence]) =>
+      ({ act, code, sentence, name: seamName(act, code) })));
+}
+
 /** A string literal for the emitted file: single-quoted, the way a card is hand-written, with
  *  the backslash, the quote and the line breaks a sentence may carry escaped. */
 function quote(text: string): string {
@@ -179,6 +194,8 @@ function refuseUnfilledSlots(declaration: Declaration): void {
     ...(['status', 'sentence'] as const).flatMap(half =>
       Object.entries(declaration.contract.wording?.[half] ?? {})
         .map(([name, said]) => [`contract.wording.${half}.${name}`, said] as const)),
+    ...seamLaws(declaration).map(law =>
+      [`contract.seam.${law.act}.${law.code}`, law.sentence] as const),
     ...declaration.desks.flatMap(desk => [
       [`desks '${desk.name}' persona`, desk.persona] as const,
       ...Object.entries(desk.conduct).map(([law, sentence]) =>
@@ -665,11 +682,19 @@ function judgedLines(desk: Declaration['desks'][number], check: DeclaredJudged):
 }
 
 /** One desk as its own AgentSpec: who it is, the lane it acts in, the desks it hands work to,
- *  the conduct laws it teaches — one `prose` call per law, in the declaration's own order — and
- *  the judged checks it earned, which live on a spec and nowhere else. */
-function deskLines(desk: Declaration['desks'][number], depth: number): readonly string[] {
+ *  the conduct laws it teaches — one `prose` call per law, in the declaration's own order — the
+ *  seam laws for the acts this lane holds, and the judged checks it earned, which live on a spec
+ *  and nowhere else.
+ *
+ *  A seam law is ONE law per refusal row, never a paragraph gathering an act's codes together: a
+ *  clause at the tail of a long law is a clause the desk drops, and the operator meeting one code
+ *  is owed the sentence written for that code. */
+function deskLines(desk: Declaration['desks'][number], depth: number,
+                   seam: readonly { readonly act: string; readonly sentence: string;
+                                    readonly name: string }[]): readonly string[] {
   const teammates = Object.entries(desk.teammates ?? {});
   const laws = Object.entries(desk.conduct);
+  const held = seam.filter(law => desk.tools.includes(law.act));
   const judged = desk.judged ?? [];
   const fields = [
     [indent(depth + 1, `name: ${quote(desk.name)}`)],
@@ -683,10 +708,11 @@ function deskLines(desk: Declaration['desks'][number], depth: number): readonly 
     [indent(depth + 1, 'llmParams: { temperature: 0 }')],
     ...(desk.limits === undefined ? []
       : [[limitLines(`desks '${desk.name}' limits`, desk.limits, depth + 1)]]),
-    ...(laws.length === 0 && judged.length === 0 ? [] : [[
+    ...(laws.length === 0 && held.length === 0 && judged.length === 0 ? [] : [[
       indent(depth + 1, 'guards: ['),
       ...commaJoin([
         ...laws.map(([name, rule]) => [indent(depth + 2, `prose(${quote(name)}, ${quote(rule)})`)]),
+        ...held.map(law => [indent(depth + 2, `prose(${quote(law.name)}, ${quote(law.sentence)})`)]),
         ...judged.map(check => [indent(depth + 2, judgedLines(desk, check))])
       ]),
       indent(depth + 1, ']')
@@ -734,10 +760,13 @@ function proseWhy(guard: DeclaredGuard): DeclaredWhy {
 }
 
 /** Every prose name the cards mint, each with the licence it claims. A desk's conduct law claims
- *  `conduct` by what it is: a law about how that desk answers, which no check decides. A prose
- *  rule on the contract claims the licence its author declared. The map is read in three runs —
- *  the house laws every desk teaches, then the contract's own prose rules, then the laws one desk
- *  teaches alone — so the map itself says which laws are the house's and which belong to one seat. */
+ *  `conduct` by what it is: a law about how that desk answers, which no check decides. A seam law
+ *  claims `seam`: it stands for a refusal the WORLD spells out, so its home is the act it names
+ *  and not the house — the desks holding that act read it, and the desks that cannot perform it
+ *  owe nothing. A prose rule on the contract claims the licence its author declared. The map is
+ *  read in four runs — the house laws every desk teaches, then the contract's own prose rules,
+ *  then the laws one desk teaches alone, then the seam — so the map itself says which laws are
+ *  the house's and which belong to one seat or to one refusal. */
 function proseLicences(declaration: Declaration): readonly (readonly [string, string])[] {
   const desks = declaration.desks;
   const taught: string[] = [];
@@ -751,6 +780,7 @@ function proseLicences(declaration: Declaration): readonly (readonly [string, st
   for (const law of house) if (!claimed.has(law)) claimed.set(law, 'conduct');
   for (const [name, why] of stamped) if (!claimed.has(name)) claimed.set(name, why);
   for (const law of taught) if (!claimed.has(law)) claimed.set(law, 'conduct');
+  for (const law of seamLaws(declaration)) if (!claimed.has(law.name)) claimed.set(law.name, 'seam');
   return [...claimed];
 }
 
@@ -772,10 +802,12 @@ export function writeCards(declaration: Declaration, facts: SurfaceFacts): strin
       + `digits and hyphens`);
   }
   refuseUnfilledSlots(declaration);
+  const seam = seamLaws(declaration);
   const contract = contractLines(declaration, facts);
-  const desks = commaJoin(declaration.desks.map(desk => deskLines(desk, 1)));
+  const desks = commaJoin(declaration.desks.map(desk => deskLines(desk, 1, seam)));
   const teaches = declaration.desks.some(desk => Object.keys(desk.conduct).length > 0)
-    || declaration.contract.guards.some(guard => guard.factory === 'prose');
+    || declaration.contract.guards.some(guard => guard.factory === 'prose')
+    || seam.length > 0;
   const gatesOnRole = declaration.contract.guards.some(guard => guard.factory === 'role');
   const readsResults = declaration.contract.guards.some(guard => guard.factory === 'checkResult');
   const helperBlocks: readonly (readonly string[])[] = [
@@ -833,7 +865,7 @@ export function writeCards(declaration: Declaration, facts: SurfaceFacts): strin
     ...(helpers.length === 0 ? [] : ['', divider('helpers'), '', ...helpers]),
     ...licenceLines('WHY', [
       '/** Why each prose rule exists. Every name prose() mints appears here, claiming one of',
-      ' *  noSuchAct, aboutARead, conduct or measured:<case>. The set is closed. */'
+      ' *  noSuchAct, aboutARead, conduct, seam or measured:<case>. The set is closed. */'
     ], proseLicences(declaration)),
     ...licenceLines('WIDE', [
       '/** Why a rule names more than one act: its sentence is stamped on the card of every act it',

@@ -34,13 +34,14 @@ function typecheck(dir: string): readonly string[] {
 }
 
 /** Every sentence a declaration carries: the voice, the domain facts, each guard rule, each
- *  disclosure tense, each persona, each teammate line and each conduct law. */
+ *  disclosure tense, each seam law, each persona, each teammate line and each conduct law. */
 function sentencesOf(declaration: Declaration): readonly string[] {
   const disclosure = Object.values(declaration.contract.disclosure);
   return [
     declaration.contract.voice,
     ...declaration.contract.facts,
     ...declaration.contract.guards.flatMap(g => g.rule === undefined ? [] : [g.rule]),
+    ...Object.values(declaration.contract.seam ?? {}).flatMap(codes => Object.values(codes)),
     ...disclosure.flatMap(entry => [entry.before, entry.after, entry.later, entry.cap?.refusal,
       entry.empty].filter((s): s is string => s !== undefined)),
     ...declaration.desks.flatMap(desk => [desk.persona, ...Object.values(desk.conduct),
@@ -694,5 +695,46 @@ describe('writeCards', () => {
       factory: 'onlyAfter', args: { after: 'getInvoice', pattern: '^inv_' } }] });
     expect(() => writeCards(declaration, FACTS))
       .toThrow("declares args.pattern, and factory 'onlyAfter' is configured from args.after");
+  });
+});
+
+/** The section that pays the seam table: an act, one of the codes the world refuses it with, and
+ *  the sentence the operator meeting that code needs. */
+const SEAM_LAW = 'An invoice already settled takes no refund: say the status the read returned, '
+  + 'and what would have to change before money moves.';
+const SEAM_DECL = { issueRefund: { INVOICE_SETTLED: SEAM_LAW } };
+
+describe('the seam section', () => {
+  test('a seam law lands on the desks that hold its act, under the row it pays', () => {
+    const out = writeCards(decl({ seam: SEAM_DECL }), FACTS);
+    expect(out).toContain(`prose('seam:issueRefund:INVOICE_SETTLED', '${SEAM_LAW}')`);
+    // Desk 'a' holds issueRefund and desk 'b' does not: one copy, not two.
+    expect(out.match(/seam:issueRefund:INVOICE_SETTLED/g)).toHaveLength(2);  // the law and its licence
+    expect(out.match(/An invoice already settled takes no refund/g)).toHaveLength(1);
+  });
+
+  test('the licence map claims seam for it, and the emitter writes no sentence of its own', () => {
+    const out = writeCards(decl({ seam: SEAM_DECL }), FACTS);
+    expect(out).toContain(`'seam:issueRefund:INVOICE_SETTLED': 'seam'`);
+    const declared = new Set(sentencesOf(decl({ seam: SEAM_DECL })).map(s => s.trim()));
+    for (const run of quotedRuns(out)) {
+      expect([...declared].some(s => s.includes(run)), `unauthored run: ${run}`).toBe(true);
+    }
+  });
+
+  test('a seam sentence still carrying a template slot is refused by its own path', () => {
+    expect(() => writeCards(decl({ seam: { issueRefund: {
+      INVOICE_SETTLED: 'A <thing that cannot happen> takes no refund.' } } }), FACTS))
+      .toThrow('contract.seam.issueRefund.INVOICE_SETTLED still carries the template slot');
+  });
+
+  test('a declaration with no seam section emits exactly what it emitted before', () => {
+    expect(writeCards(decl({ seam: {} }), FACTS)).toBe(writeCards(decl(), FACTS));
+  });
+
+  test('the emitted card compiles with the seam laws on it', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'seam-cards-'));
+    writeFileSync(join(dir, 'cards.ts'), writeCards(decl({ seam: SEAM_DECL }), FACTS));
+    expect(typecheck(dir)).toEqual([]);
   });
 });

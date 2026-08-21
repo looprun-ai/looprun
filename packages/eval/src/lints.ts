@@ -740,8 +740,12 @@ export function unspokenChecks(subjectDir: string): readonly LintFinding[] {
   return findings;
 }
 
-const LICENCES = new Set(['noSuchAct', 'aboutARead', 'conduct']);
+const LICENCES = new Set(['noSuchAct', 'aboutARead', 'conduct', 'seam']);
 const WIDE_LICENCES = new Set(['oneLawEveryAct', 'sameRefusal']);
+/** The licence a law about ONE refusal the world spells out claims. Its home is the act, so the
+ *  desks holding that act read it and the desks that cannot perform it owe nothing — which is why
+ *  the house-law rule steps over it. */
+const SEAM_LICENCE = 'seam';
 
 /** A module-local map declared by NAME — `export const <name> = { ... }` — read as string keys
  *  to string values. Two closed sets are read through this one walk: `WHY` names the reason a
@@ -782,10 +786,10 @@ export function unlicensed(subjectDir: string): readonly LintFinding[] {
       const claim = why.get(rule.name);
       if (claim === undefined) {
         findings.push({ code: 'PROSE_UNLICENSED',
-          sentence: `${at} — prose rule '${rule.name}' claims no reason. WHY names one: noSuchAct, aboutARead, conduct, or measured:<case>` });
+          sentence: `${at} — prose rule '${rule.name}' claims no reason. WHY names one: noSuchAct, aboutARead, conduct, seam, or measured:<case>` });
       } else if (!LICENCES.has(claim) && !claim.startsWith('measured:')) {
         findings.push({ code: 'PROSE_LICENCE_UNKNOWN',
-          sentence: `${at} — prose rule '${rule.name}' claims '${claim}', which is not one of noSuchAct, aboutARead, conduct or measured:<case>` });
+          sentence: `${at} — prose rule '${rule.name}' claims '${claim}', which is not one of noSuchAct, aboutARead, conduct, seam or measured:<case>` });
       }
     }
   }
@@ -1412,6 +1416,52 @@ function noEffectActs(cases: readonly ExamCase[]): ReadonlyMap<string, string> {
   return byAct;
 }
 
+/** The prose laws that pay a seam row, act by act: every WHY entry claiming the seam licence,
+ *  read back through the coordinate its name carries — `seam:<act>:<CODE>`. A tool name carries no
+ *  colon and a gate's code carries one, so the act ends at the SECOND colon and everything after
+ *  it is the code. A name outside that shape pays no row, because nothing can say which row it
+ *  meant. */
+function seamLawsByAct(sources: readonly Source[]): ReadonlyMap<string, readonly string[]> {
+  const byAct = new Map<string, string[]>();
+  for (const [name, licence] of declaredMap(sources, 'WHY')) {
+    if (licence !== SEAM_LICENCE || !name.startsWith('seam:')) continue;
+    const end = name.indexOf(':', 'seam:'.length);
+    if (end === -1) continue;
+    const act = name.slice('seam:'.length, end);
+    byAct.set(act, [...(byAct.get(act) ?? []), name.slice(end + 1)]);
+  }
+  return byAct;
+}
+
+/** An act the exam expects to be REFUSED is an act the desk meets at the seam, and the operator
+ *  meets there with it. The world answers that call with a code; a card that states no law around
+ *  any of those codes leaves the desk to invent one — it refuses in words nobody wrote, or asks
+ *  for the wrong thing, or promises a route that does not exist.
+ *
+ *  The exam names the ACT and never the code, so this asks for one seam law on the act and lets
+ *  the author choose which of its refusals the operator is owed a sentence about. The rest of that
+ *  act's rows stay in the seam table, which lists every one of them. */
+export function seamSpoken(subjectDir: string, cases: readonly ExamCase[],
+                           facts: { readonly tools: Readonly<Record<string, unknown>> })
+                           : readonly LintFinding[] {
+  const sources = subjectSources(subjectDir);
+  const spoken = seamLawsByAct(sources);
+  const codesByAct = new Map<string, string[]>();
+  for (const row of seamCovered(subjectDir, facts))
+    codesByAct.set(row.act, [...(codesByAct.get(row.act) ?? []), row.code]);
+  const findings: LintFinding[] = [];
+  for (const [act, caseId] of noEffectActs(cases)) {
+    const codes = codesByAct.get(act);
+    if (codes === undefined || (spoken.get(act) ?? []).length > 0) continue;
+    findings.push({ code: 'SEAM_UNSPOKEN',
+      sentence: `case '${caseId}' expects '${act}' to change nothing, and no rule on this card `
+        + `states the law around any refusal it answers with — the world refuses that call with `
+        + `${[...codes].sort().join(', ')}. Declare a contract.seam entry on '${act}' for the `
+        + `refusal the operator actually meets.` });
+  }
+  return findings;
+}
+
 /** The mechanisms that can refuse the CALL. An `onlyAfter` is not one of them: it is satisfied by
  *  reading, so a desk that runs the prerequisite walks straight through it. A judged check reads
  *  the reply after the call has already landed. */
@@ -1567,13 +1617,20 @@ function specConduct(sources: readonly Source[]): readonly SpecLaws[] {
 /** A conduct law a `prose(...)` call teaches on MORE THAN ONE spec is the house's, and a house law
  *  every spec owes: the desks that never read it never learn it, and a caller cannot tell whether
  *  that gap was decided or forgotten. A law exactly one spec teaches is that desk's own — the fleet
- *  desk's law about the figures a registry row waits for is not a law the billing desk owes. */
+ *  desk's law about the figures a registry row waits for is not a law the billing desk owes.
+ *
+ *  A law claiming the `seam` licence is owed by the desks that hold its ACT and by no others: the
+ *  refusal it speaks for arrives on one call, and a desk whose lane cannot make that call would
+ *  read a rule about a code it never meets. */
 export function conductComplete(subjectDir: string): readonly LintFinding[] {
-  const specs = specConduct(subjectSources(subjectDir));
+  const sources = subjectSources(subjectDir);
+  const specs = specConduct(sources);
+  const why = declaredMap(sources, 'WHY');
   const allLaws = new Set<string>();
   for (const spec of specs) for (const law of spec.laws) allLaws.add(law);
   const findings: LintFinding[] = [];
   for (const law of allLaws) {
+    if (why.get(law) === SEAM_LICENCE) continue;
     const teaching = specs.filter(spec => spec.laws.has(law));
     const missing = specs.filter(spec => !spec.laws.has(law)).map(spec => spec.spec);
     if (missing.length === 0 || teaching.length < 2) continue;

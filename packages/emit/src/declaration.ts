@@ -83,6 +83,12 @@ export interface DeclaredJudged {
   readonly acts: readonly string[];
 }
 
+/** The law the operator hears AROUND one refusal the world spells out, keyed by the act and then
+ *  by the code the world answers with. The emitter knows every code — it is the seam table it
+ *  writes — and never the sentence a person meeting that code needs, so the sentence is declared
+ *  here and rendered on the desks that hold the act. */
+export type DeclaredSeam = Readonly<Record<string, Readonly<Record<string, string>>>>;
+
 export interface Declaration {
   readonly contract: {
     readonly name: string;
@@ -90,6 +96,7 @@ export interface Declaration {
     readonly facts: readonly string[];
     readonly guards: readonly DeclaredGuard[];
     readonly disclosure: Readonly<Record<string, DeclaredDisclosure>>;
+    readonly seam?: DeclaredSeam;
     readonly rewrites?: readonly DeclaredRewrite[];
     readonly secrets?: readonly DeclaredSecret[];
     readonly wording?: DeclaredWording;
@@ -297,6 +304,22 @@ function readDisclosure(map: YAMLMap, path: string, lineCounter: LineCounter): R
   }));
 }
 
+/** The seam section as the declaration states it: an act, the codes it is refused with, and one
+ *  sentence per code. The act keys are read as written — a code the computed seam does not carry
+ *  is named against the surface, where the seam table itself is in hand. */
+function readSeam(map: YAMLMap, path: string, lineCounter: LineCounter): DeclaredSeam {
+  const fallback = lineAt(map, lineCounter, 1);
+  return Object.fromEntries(map.items.map(pair => {
+    const key = keyOf(pair);
+    const value = pair.value as Node | null;
+    if (!isMap(value)) {
+      fail(field(path, key), lineAt(value, lineCounter, fallback),
+        'must be a mapping of refusal code to the sentence the operator meeting it needs');
+    }
+    return [key, asStringRecord(value, field(path, key), lineCounter)];
+  }));
+}
+
 function readGuard(map: YAMLMap, path: string, lineCounter: LineCounter): DeclaredGuard {
   const name = requireString(map, 'name', path, lineCounter);
   const acts = asStringArray(requireSeq(map, 'acts', path, lineCounter), field(path, 'acts'), lineCounter);
@@ -378,6 +401,7 @@ function readContract(map: YAMLMap, path: string, lineCounter: LineCounter): Dec
   const facts = asStringArray(requireSeq(map, 'facts', path, lineCounter), field(path, 'facts'), lineCounter);
   const guards = readGuards(requireSeq(map, 'guards', path, lineCounter), field(path, 'guards'), lineCounter);
   const disclosure = readDisclosure(requireMap(map, 'disclosure', path, lineCounter), field(path, 'disclosure'), lineCounter);
+  const seamMap = readOptionalMap(map, 'seam', path, lineCounter);
   const rewritesSeq = readOptionalSeq(map, 'rewrites', path, lineCounter);
   const secretsSeq = readOptionalSeq(map, 'secrets', path, lineCounter);
   const wordingMap = readOptionalMap(map, 'wording', path, lineCounter);
@@ -388,6 +412,7 @@ function readContract(map: YAMLMap, path: string, lineCounter: LineCounter): Dec
     facts,
     guards,
     disclosure,
+    ...(seamMap === undefined ? {} : { seam: readSeam(seamMap, field(path, 'seam'), lineCounter) }),
     ...(rewritesSeq === undefined ? {} : { rewrites: readRewrites(rewritesSeq, field(path, 'rewrites'), lineCounter) }),
     ...(secretsSeq === undefined ? {} : { secrets: readSecrets(secretsSeq, field(path, 'secrets'), lineCounter) }),
     ...(wordingMap === undefined ? {} : { wording: readWording(wordingMap, field(path, 'wording'), lineCounter) }),

@@ -56,8 +56,11 @@ export function censusFor(subject: CensusSubject): ReadonlySet<string> {
 /** The static gate: every verb, one list, one answer. It runs in under a second on a thirty-act
  *  subject, which is why nothing downstream of it is worth spending a model call on until it is
  *  empty. The two row-shaped verbs — doubleStated and echoes — are not here: they return questions
- *  an author answers, and a question is not a failure. The census verb is not here either: it reads
- *  a RUN's dumps, which a subject directory does not carry. */
+ *  an author answers, and a question is not a failure. `seamSpoken` is not here for the same
+ *  reason, and one of its own: every sentence it asks for is a sentence the prompt then carries on
+ *  every turn, so how many of an act's refusals are worth stating is a budget the author spends,
+ *  not a rule a gate decides. The census verb is not here either: it reads a RUN's dumps, which a
+ *  subject directory does not carry. */
 export function runGate(subjectDir: string, subject: GateSubject): readonly LintFinding[] {
   const facts = factsFromWorld(subject.world);
   const { cases, censusNames, presetLeavesGuardInert } = subject;

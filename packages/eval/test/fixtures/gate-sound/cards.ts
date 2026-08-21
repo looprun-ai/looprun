@@ -28,16 +28,19 @@ const onlyAfter = (tool: string, prerequisite: string): Check => ({
   deny: () => `${prerequisite} has not succeeded yet this conversation`
 });
 
-/** The reason each prose-only rule exists: one of noSuchAct, aboutARead, conduct, measured:<case>. */
+/** The reason each prose-only rule exists: one of noSuchAct, aboutARead, conduct, seam,
+ *  measured:<case>. */
 export const WHY = {
   answerFromTheRecord: 'conduct',
-  closeOnlyWhatYouRead: 'aboutARead'
+  closeOnlyWhatYouRead: 'aboutARead',
+  'seam:closeOrder:stateIs:status': 'seam'
 };
 
 export const ordersWorld = world({
   records: { orders: { ord_7: { status: 'OPEN', total: 120 } } },
   reads: { getOrder: { form: 'get', entity: 'orders', label: 'Look up an order' } },
-  writes: { closeOrder: { form: 'set', entity: 'orders', label: 'Close an order' } },
+  writes: { closeOrder: { form: 'set', entity: 'orders', label: 'Close an order',
+                          gates: [{ kind: 'stateIs', field: 'status', value: 'OPEN' }] } },
   destructive: { deleteOrder: { form: 'remove', entity: 'orders', label: 'Delete an order' } }
 });
 
@@ -46,7 +49,12 @@ export const ordersWorld = world({
 export const ordersDesk = {
   name: 'ordersDesk',
   persona: 'You are the orders desk.',
-  guards: [prose('answerFromTheRecord', 'Every figure you state comes from a read on this turn.')]
+  guards: [prose('answerFromTheRecord', 'Every figure you state comes from a read on this turn.'),
+           // The law the operator hears around the refusal the WORLD spells out on this act. It
+           // is read by the desk that can make the call, and by no other.
+           prose('seam:closeOrder:stateIs:status',
+             'An order that is not open cannot be closed: say which status the read returned, '
+             + 'and what would have to happen to it first.')]
 };
 
 export const returnsDesk = {

@@ -14,7 +14,7 @@ import { factsFromSource, seamCovered } from '@looprun-ai/eval';
 import { checkAgainstSurface } from './against-surface.js';
 import { readDeclaration } from './declaration.js';
 import type { Declaration } from './declaration.js';
-import { writeCards } from './write-cards.js';
+import { seamLaws, writeCards } from './write-cards.js';
 
 /** The subject door: the three names a loader reads, each re-exported from the file that owns
  *  it. It carries no subject's name because it carries no subject's content — the same two lines
@@ -81,16 +81,19 @@ export function writeSeam(subjectDir: string, facts: SurfaceFacts): string {
   ].join('\n');
 }
 
-/** The guard names THIS declaration puts in the census: one prose rule per conduct law, one row per
- *  judged check a desk carries under the name its factory mints, each declared guard under the name
- *  the declaration gives it, and the consent hold the engine mints for every destructive act on the
- *  surface. The rest of the engine's always-on floor is the engine's own and is not named here —
- *  the gate reads that from the compiled desks. */
+/** The guard names THIS declaration puts in the census: one prose rule per conduct law, one per
+ *  seam law on the desks holding its act, one row per judged check a desk carries under the name
+ *  its factory mints, each declared guard under the name the declaration gives it, and the consent
+ *  hold the engine mints for every destructive act on the surface. The rest of the engine's
+ *  always-on floor is the engine's own and is not named here — the gate reads that from the
+ *  compiled desks. */
 export function writeCensus(declaration: Declaration, facts: SurfaceFacts): readonly string[] {
   const names: string[] = [];
   const add = (name: string): void => { if (!names.includes(name)) names.push(name); };
+  const seam = seamLaws(declaration);
   for (const desk of declaration.desks) {
     for (const law of Object.keys(desk.conduct)) add(law);
+    for (const law of seam) if (desk.tools.includes(law.act)) add(law.name);
     for (const check of desk.judged ?? []) add(check.factory);
   }
   for (const guard of declaration.contract.guards) add(guard.name);
@@ -129,12 +132,15 @@ export function emit(subjectDir: string): readonly string[] {
   const empty = Object.keys(facts.tools).length > 0 ? []
     : [`${worldPath} states no act this emitter can read — the surface is the keys of reads, `
        + 'writes and destructive on the world card, and each entry is read as it is written'];
+  // The act and the code of every seam row come from the WORLD card, so the table a declared seam
+  // sentence is checked against is the same one whether or not a previous run left cards behind.
+  const seam = seamCovered(subjectDir, facts);
   let cards = '';
   const composed: string[] = [];
   try { cards = writeCards(declaration, facts); }
   catch (error) { composed.push(sentenceOf(error)); }
 
-  const refusals = [...empty, ...checkAgainstSurface(declaration, facts), ...composed];
+  const refusals = [...empty, ...checkAgainstSurface(declaration, facts, seam), ...composed];
   if (refusals.length > 0) throw new Error(refusals.join('\n'));
 
   const cardsPath = join(subjectDir, 'cards.ts');

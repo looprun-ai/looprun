@@ -239,3 +239,35 @@ test('the emitted subject clears every verb of the gate', async () => {
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('the census carries a seam law under the desks that hold its act', () => {
+  const names = writeCensus({ ...decl(), contract: { ...decl().contract,
+    seam: { issueRefund: { 'stateIs:status': 'An invoice already settled takes no refund.' } } } },
+    FACTS);
+  expect(names).toContain('seam:issueRefund:stateIs:status');
+});
+
+test('a seam sentence paying a row the world does not carry refuses instead of writing', () => {
+  const dir = staged('emit-sound');
+  const declaration = readFileSync(join(dir, 'declaration.yaml'), 'utf8');
+  writeFileSync(join(dir, 'declaration.yaml'), declaration.replace('desks:',
+    ['  seam:',
+     '    issueRefund:',
+     '      NO_SUCH_CODE: An invoice already settled takes no refund.',
+     'desks:'].join('\n')));
+  expect(() => emit(dir)).toThrow(/is refused with 'stateIs:status', and never with 'NO_SUCH_CODE'/);
+});
+
+test('a seam sentence paying a row the world carries reaches the desk that holds the act', () => {
+  const dir = staged('emit-sound');
+  const declaration = readFileSync(join(dir, 'declaration.yaml'), 'utf8');
+  writeFileSync(join(dir, 'declaration.yaml'), declaration.replace('desks:',
+    ['  seam:',
+     '    issueRefund:',
+     '      stateIs:status: An invoice already settled takes no refund.',
+     'desks:'].join('\n')));
+  emit(dir);
+  const cards = readFileSync(join(dir, 'cards.ts'), 'utf8');
+  expect(cards).toContain("'seam:issueRefund:stateIs:status': 'seam'");
+  expect(cards.match(/An invoice already settled takes no refund\./g)).toHaveLength(1);
+});

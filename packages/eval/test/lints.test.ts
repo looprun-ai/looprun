@@ -1024,10 +1024,58 @@ describe('requiredReadsDisclosed', () => {
   });
 });
 
-import { noEffectDenied } from '../src/lints.js';
+import { noEffectDenied, seamSpoken, unlicensed } from '../src/lints.js';
+
+/** A subject whose world REFUSES the refund with one code of its own, and whose cards are
+ *  whatever the test hands over. The two halves live in separate files exactly as a real subject
+ *  keeps them: the codes come off the world, the sentences off the cards. */
+function seamSubject(cards: string): string {
+  const dir = mkdtempSync(join(tmpdir(), 'seam-'));
+  writeFileSync(join(dir, 'world.ts'), `export const subjectWorld = { destructive: {
+    issueRefund: (w, a) => fail('INVOICE_ALREADY_SETTLED') } };`);
+  writeFileSync(join(dir, 'cards.ts'), cards);
+  return dir;
+}
 
 const REFUSED: readonly ExamCase[] = [{ id: 'refund-02', split: 'fix', rubric: 'r',
   turns: ['refund inv_9'], invariants: { noEffectToolCalls: [{ name: 'issueRefund' }] } }];
+
+describe('seamSpoken', () => {
+  test('an act the exam expects refused, with no law around any of its codes, is a finding', () => {
+    const dir = seamSubject('const WHY = {};');
+    const found = seamSpoken(dir, REFUSED, REFUND_FACTS);
+    expect(found.map(f => f.code)).toEqual(['SEAM_UNSPOKEN']);
+    expect(found[0].sentence).toContain("case 'refund-02' expects 'issueRefund' to change nothing");
+    expect(found[0].sentence).toContain('INVOICE_ALREADY_SETTLED');
+  });
+
+  test('one seam law on the act answers it — the exam names the act, never the code', () => {
+    const dir = seamSubject(`
+      const prose = (name, rule) => ({ name, rule, on: 'reply' });
+      const WHY = { 'seam:issueRefund:INVOICE_ALREADY_SETTLED': 'seam' };
+      const SPECS = { billing: { name: 'billing', persona: 'p', guards: [
+        prose('seam:issueRefund:INVOICE_ALREADY_SETTLED',
+          'An invoice already settled takes no refund: say what the read returned, and what would '
+          + 'have to change before money moves.') ] } };`);
+    expect(seamSpoken(dir, REFUSED, REFUND_FACTS)).toEqual([]);
+  });
+
+  test('a law claiming any other licence pays no row, whatever it is named', () => {
+    const dir = seamSubject(`
+      const prose = (name, rule) => ({ name, rule, on: 'reply' });
+      const WHY = { 'seam:issueRefund:INVOICE_ALREADY_SETTLED': 'conduct' };
+      const SPECS = { billing: { name: 'billing', persona: 'p', guards: [
+        prose('seam:issueRefund:INVOICE_ALREADY_SETTLED', 'Say what the read returned.') ] } };`);
+    expect(seamSpoken(dir, REFUSED, REFUND_FACTS).map(f => f.code)).toEqual(['SEAM_UNSPOKEN']);
+  });
+
+  test('an act the world spells no refusal on is left alone — no row, nothing to pay', () => {
+    const dir = seamSubject('const WHY = {};');
+    const other: readonly ExamCase[] = [{ id: 'void-01', split: 'fix', rubric: 'r',
+      turns: ['void inv_9'], invariants: { noEffectToolCalls: [{ name: 'listInvoices' }] } }];
+    expect(seamSpoken(dir, other, REFUND_FACTS)).toEqual([]);
+  });
+});
 
 describe('noEffectDenied', () => {
   const write = (body: string): string => {
@@ -1069,5 +1117,42 @@ describe('noEffectDenied', () => {
       const moneyGate = (tool) => precondition(tool, h => h.record !== null);
       const CONTRACT = { guards: [ moneyGate('issueRefund') ] };`);
     expect(noEffectDenied(dir, REFUSED)).toEqual([]);
+  });
+});
+
+describe('the seam licence', () => {
+  const write = (body: string): string => {
+    const dir = mkdtempSync(join(tmpdir(), 'seam-licence-'));
+    writeFileSync(join(dir, 'cards.ts'), body);
+    return dir;
+  };
+
+  const LAW = `prose('seam:issueRefund:INVOICE_ALREADY_SETTLED', `
+    + `'An invoice already settled takes no refund.')`;
+  const THREE_DESKS = `
+    const prose = (name, rule) => ({ name, rule, on: 'reply' });
+    const SPECS = {
+      billing: { name: 'billing', persona: 'p', guards: [${LAW}] },
+      audit:   { name: 'audit',   persona: 'p', guards: [${LAW}] },
+      floor:   { name: 'floor',   persona: 'p', guards: [] } };`;
+
+  test('a law about one act is owed by the desks holding it, not by the house', () => {
+    const dir = write(`${THREE_DESKS}
+      const WHY = { 'seam:issueRefund:INVOICE_ALREADY_SETTLED': 'seam' };`);
+    expect(conductComplete(dir)).toEqual([]);
+  });
+
+  test('the same law claiming conduct is a house law, and the third desk never reads it', () => {
+    const dir = write(`${THREE_DESKS}
+      const WHY = { 'seam:issueRefund:INVOICE_ALREADY_SETTLED': 'conduct' };`);
+    const found = conductComplete(dir);
+    expect(found.map(f => f.code)).toEqual(['CONDUCT_INCOMPLETE']);
+    expect(found[0].sentence).toContain('floor');
+  });
+
+  test('seam is a licence the WHY map may claim', () => {
+    const dir = write(`${THREE_DESKS}
+      const WHY = { 'seam:issueRefund:INVOICE_ALREADY_SETTLED': 'seam' };`);
+    expect(unlicensed(dir)).toEqual([]);
   });
 });

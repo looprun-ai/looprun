@@ -193,3 +193,44 @@ desks:
 `))).toThrow(/desks\[0\].*conduct/);
   });
 });
+
+test('the seam section reads as act, code, sentence', () => {
+  const d = readDeclaration(fixture(`
+contract:
+  name: seaside-hotel
+  voice: Warm, brief, and exact about dates and money.
+  facts: []
+  guards: []
+  disclosure: {}
+  seam:
+    issueRefund:
+      INVOICE_SETTLED: An invoice already settled takes no refund.
+      stateIs:status: The status the read returned is the one that refuses this.
+desks:
+  - name: billing
+    persona: The billing desk.
+    tools: [issueRefund]
+    conduct: { declareHonestly: Say what ran and what did not. }
+`));
+  expect(d.contract.seam).toEqual({ issueRefund: {
+    INVOICE_SETTLED: 'An invoice already settled takes no refund.',
+    'stateIs:status': 'The status the read returned is the one that refuses this.' } });
+});
+
+test('a seam act whose value is not a mapping fails at its own path and line', () => {
+  expect(() => readDeclaration(fixture(`
+contract:
+  name: seaside-hotel
+  voice: Warm, brief, and exact about dates and money.
+  facts: []
+  guards: []
+  disclosure: {}
+  seam:
+    issueRefund: a sentence with no code
+desks:
+  - name: billing
+    persona: The billing desk.
+    tools: [issueRefund]
+    conduct: { declareHonestly: Say what ran and what did not. }
+`))).toThrow(/contract\.seam\.issueRefund \(line \d+\): must be a mapping of refusal code/);
+});

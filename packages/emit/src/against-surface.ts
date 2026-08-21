@@ -1,4 +1,5 @@
 import type { Json, SurfaceFacts, ToolFact } from '@looprun-ai/core';
+import type { SeamRow } from '@looprun-ai/eval';
 import type { Declaration } from './declaration.js';
 
 /** The property names an act's JSON schema declares as arguments — a schema with no
@@ -274,15 +275,59 @@ function checkDisclosureNeedsResolvable(declaration: Declaration, facts: Surface
   return refusals;
 }
 
+/** Every seam sentence pays a row the world actually spells out, and lands on a desk that can
+ *  reach the act. The seam table is the register: an act it carries no row for is an act whose
+ *  refusals the world never names in a literal, and a code outside that act's row set is a
+ *  sentence the operator would never meet — either way the law would render as a rule about a
+ *  refusal that never arrives. A desk holding the act is where the sentence renders, so a seam
+ *  entry on an act no lane holds is a sentence no prompt carries. */
+function checkSeamRows(declaration: Declaration, facts: SurfaceFacts,
+                       seam: readonly SeamRow[]): readonly string[] {
+  const toolNames = Object.keys(facts.tools);
+  const codesByAct = new Map<string, string[]>();
+  for (const row of seam) codesByAct.set(row.act, [...(codesByAct.get(row.act) ?? []), row.code]);
+  const refusals: string[] = [];
+  for (const [act, codes] of Object.entries(declaration.contract.seam ?? {})) {
+    const spelled = codesByAct.get(act);
+    if (facts.tools[act] === undefined) {
+      const near = closestName(act, toolNames);
+      refusals.push(`contract.seam.${act} names an act the surface does not declare`
+        + `${near === null ? '' : ` — did you mean '${near}'?`}`);
+      continue;
+    }
+    if (spelled === undefined) {
+      refusals.push(`contract.seam.${act}: the world spells out no refusal on '${act}', so the `
+        + `seam table carries no row for it — read gen/SEAM.md and pay a row it lists.`);
+      continue;
+    }
+    const holders = declaration.desks.filter(desk => desk.tools.includes(act));
+    if (holders.length === 0) {
+      refusals.push(`contract.seam.${act}: no desk's lane holds '${act}', and a seam law renders `
+        + `on the desks that hold its act — put '${act}' in a desk's tools, or drop the entry.`);
+    }
+    for (const code of Object.keys(codes)) {
+      if (spelled.includes(code)) continue;
+      const near = closestName(code, spelled);
+      refusals.push(`contract.seam.${act}.${code}: '${act}' is refused with `
+        + `${[...spelled].sort().map(spelledCode => `'${spelledCode}'`).join(', ')}, and never with `
+        + `'${code}'${near === null ? '' : ` — did you mean '${near}'?`}`);
+    }
+  }
+  return refusals;
+}
+
 /** Every refusal the emitter owes when a declaration does not fit the world's surface: a
  *  guard naming an act no tool declares, a judged check on a desk naming one or naming an act
  *  outside that desk's lane, a guard whose configuration names one, a guard whose
  *  configuration names an argument its act's schema does not declare, a destructive act with
  *  nothing disclosed before it runs, a `precondition` reading a record over an act with no target,
  *  a house conduct law some desks never teach, a disclosure `needs` alias naming a tool that does
- *  not exist, and a disclosure alias whose read cannot answer the call it is held for. An empty
- *  array means the declaration is safe to emit against `facts`. */
-export function checkAgainstSurface(declaration: Declaration, facts: SurfaceFacts): readonly string[] {
+ *  not exist, a disclosure alias whose read cannot answer the call it is held for, and a seam
+ *  sentence paying a row the world does not carry. `seam` is the seam table computed off the same
+ *  subject the declaration sits in. An empty array means the declaration is safe to emit against
+ *  `facts`. */
+export function checkAgainstSurface(declaration: Declaration, facts: SurfaceFacts,
+                                    seam: readonly SeamRow[]): readonly string[] {
   return [
     ...checkGuardActsExist(declaration, facts),
     ...checkJudgedActs(declaration, facts),
@@ -292,6 +337,7 @@ export function checkAgainstSurface(declaration: Declaration, facts: SurfaceFact
     ...checkPreconditionTarget(declaration, facts),
     ...checkConductShared(declaration),
     ...checkDisclosureNeedsToolExists(declaration, facts),
-    ...checkDisclosureNeedsResolvable(declaration, facts)
+    ...checkDisclosureNeedsResolvable(declaration, facts),
+    ...checkSeamRows(declaration, facts, seam)
   ];
 }
