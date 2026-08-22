@@ -120,10 +120,34 @@ test('choiceFromUser refuses a value it carries no words for', () => {
     .toContain('carries no words for that option');
 });
 
-test('choiceFromUser passes a call the argument never arrives on', () => {
+test('choiceFromUser refuses a call the gated argument never arrives on', () => {
   const g = choiceFromUser('compRoom', 'includeDelivery', DELIVERY, RULE)
     .compile('contract', FACTS);
-  expect(g.deny(callCtx('compRoom', { id: 'bk_9' }, STATE, 'Comp room 12.'))).toBeNull();
+  expect(g.deny(callCtx('compRoom', { id: 'bk_9' }, STATE, 'Comp room 12.'))).toBe('');
+});
+
+test('choiceFromUser refuses a value the user negated, and grounds the opposite', () => {
+  const g = choiceFromUser('compRoom', 'includeDelivery',
+    { true: ['delivery', 'deliver'], false: ['collect', 'pick it up'] }, RULE)
+    .compile('contract', FACTS);
+  const said = "They're collecting it themselves, no delivery needed.";
+  expect(g.deny(callCtx('compRoom', { includeDelivery: true }, STATE, said))).toBe('');
+  expect(g.deny(callCtx('compRoom', { includeDelivery: false }, STATE, said))).toBeNull();
+});
+
+test("choiceFromUser reads a contraction as the negator it is", () => {
+  const DAMAGE = { damage: ['damage', 'damaged'], loss: ['stolen', 'lost'] };
+  const g = choiceFromUser('compRoom', 'type', DAMAGE, RULE).compile('contract', FACTS);
+  const said = "The excavator wasn't damaged — it was stolen off the site overnight.";
+  expect(g.deny(callCtx('compRoom', { type: 'damage' }, STATE, said))).toBe('');
+  expect(g.deny(callCtx('compRoom', { type: 'loss' }, STATE, said))).toBeNull();
+});
+
+test('choiceFromUser reads a negation clause by clause, never across the whole message', () => {
+  const g = choiceFromUser('compRoom', 'includeDelivery', DELIVERY, RULE)
+    .compile('contract', FACTS);
+  expect(g.deny(callCtx('compRoom', { includeDelivery: true }, STATE,
+    'There is no rush; have it delivered on Friday.'))).toBeNull();
 });
 
 test('questionAnswered demands words for a question — empty and tool roll-calls violate', () => {

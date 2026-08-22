@@ -484,12 +484,75 @@ export function valueFromUser(tool: string, arg: string): SeedGuard {
   };
 }
 
+/** The words that turn a mention into its opposite. A contraction carries its own — `wasn't`,
+ *  `don't`, `won't` — and every one of them ends the same way. */
+const NEGATORS = new Set(['no', 'not', 'never', 'without', 'nor', 'neither', 'none', 'cannot']);
+
+/** True while a clause is still running. A clause ends at the punctuation a person pauses on;
+ *  a dot inside a word — 'ws_denver02', 'ops@example.com' — is part of the word, so a dot ends
+ *  a clause only when a space or the end of the text follows it. */
+function clauseBreakAt(text: string, at: number): boolean {
+  const c = text[at];
+  if (c === ',' || c === ';' || c === ':' || c === '!' || c === '?' || c === '\n'
+    || c === '—' || c === '–') return true;
+  return c === '.' && (at + 1 === text.length || text[at + 1] === ' ' || text[at + 1] === '\n');
+}
+
+/** The clauses of one message, lower cased, in the order they were written. */
+function clausesOf(text: string): readonly string[] {
+  const said = text.toLowerCase();
+  const out: string[] = [];
+  let from = 0;
+  for (let at = 0; at < said.length; at += 1) {
+    if (!clauseBreakAt(said, at)) continue;
+    out.push(said.slice(from, at));
+    from = at + 1;
+  }
+  out.push(said.slice(from));
+  return out.filter(clause => clause.trim() !== '');
+}
+
+/** Whether a negator stands in front of a term inside its own clause. The words are read as
+ *  words: an apostrophe belongs to the word it sits in, so `wasn't` arrives whole. */
+function negatedBefore(clause: string, at: number): boolean {
+  let word = '';
+  for (const c of `${clause.slice(0, at)} `) {
+    const isWordChar = (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c === "'";
+    if (isWordChar) { word += c; continue; }
+    if (word !== '' && (NEGATORS.has(word) || word.endsWith("n't"))) return true;
+    word = '';
+  }
+  return false;
+}
+
+/** How a term was mentioned across everything the operator has said: stated in the plain, stated
+ *  under a negator, or not at all. A term mentioned both ways is stated — the operator said it
+ *  somewhere, and the guard searches, it never weighs. */
+function mentionOf(term: string, said: readonly string[]): 'stated' | 'negated' | 'unsaid' {
+  const word = term.toLowerCase();
+  let negated = false;
+  for (const message of said) {
+    for (const clause of clausesOf(message)) {
+      for (let at = clause.indexOf(word); at !== -1; at = clause.indexOf(word, at + 1)) {
+        if (!negatedBefore(clause, at)) return 'stated';
+        negated = true;
+      }
+    }
+  }
+  return negated ? 'negated' : 'unsaid';
+}
+
 /** A CHOICE the operator must have STATED: an argument carrying an option — a flag, a grade, a
  *  class — is never grounded by its own text, because nobody writes `true`. `terms` maps each
  *  value the argument may carry to the words that state it, and the check searches every message
- *  the operator has sent this conversation, case folded, for one of them as a plain substring —
- *  the choice may have been made several turns before the call. A value `terms` carries no words
- *  for refuses: it is an option this rule does not know. */
+ *  the operator has sent this conversation, case folded — the choice may have been made several
+ *  turns before the call.
+ *
+ *  A word under a negator states the OPPOSITE of itself: `no delivery needed` is the operator
+ *  choosing not to have it delivered, so it never grounds the delivered value, and where the rule
+ *  offers exactly two values it grounds the other one. A value `terms` carries no words for
+ *  refuses: it is an option this rule does not know. The argument itself has to arrive — a call
+ *  that leaves a gated choice out made that choice for the operator. */
 export function choiceFromUser(tool: string, arg: string,
   terms: Readonly<Record<string, readonly string[]>>, rule: string): SeedGuard {
   return {
@@ -501,19 +564,18 @@ export function choiceFromUser(tool: string, arg: string,
     compile(home) {
       return installedAt<CallCtx>(this, home, ctx => {
         const raw = ctx.call.args[arg];
-        if (raw === undefined) return null;
+        if (raw === undefined) return '';
         const value = typeof raw === 'string' ? raw
           : typeof raw === 'number' || typeof raw === 'boolean' ? String(raw) : null;
         if (value === null) return `'${arg}' carries a block of values, and a choice is one value`;
         if (!Object.hasOwn(terms, value)) {
           return `'${arg}' arrived as '${value}', and this rule carries no words for that option`;
         }
-        const said = ctx.userTexts.map(text => text.toLowerCase());
-        const stated = terms[value].some(term => {
-          const word = term.toLowerCase();
-          return said.some(text => text.includes(word));
-        });
-        return stated ? null : '';
+        const said = ctx.userTexts;
+        if (terms[value].some(term => mentionOf(term, said) === 'stated')) return null;
+        const values = Object.keys(terms);
+        const opposite = values.length === 2 ? terms[values.find(v => v !== value) ?? value] : [];
+        return opposite.some(term => mentionOf(term, said) === 'negated') ? null : '';
       });
     }
   };
