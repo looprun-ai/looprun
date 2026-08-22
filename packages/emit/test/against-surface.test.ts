@@ -22,16 +22,16 @@ describe('checkAgainstSurface', () => {
 
   test('a judged check naming an act the surface does not declare', () => {
     expect(checkAgainstSurface(decl({ desks: [
-      { name: 'a', persona: 'p', tools: ['issueRefund'], conduct: { declareHonestly: 'x' },
+      { name: 'a', persona: 'p', tools: ['issueRefund', 'getInvoice'], conduct: { declareHonestly: 'x' },
         judged: [{ factory: 'lieCheck', acts: ['issueRefudn'] }] }] }), FACTS, SEAM))
       .toEqual([expect.stringContaining("desks[0].judged[0].acts[0] names 'issueRefudn'")]);
   });
 
   test('a judged check scoped to an act outside its own desk\'s lane', () => {
     expect(checkAgainstSurface(decl({ desks: [
-      { name: 'a', persona: 'p', tools: ['issueRefund'], conduct: { declareHonestly: 'x' },
+      { name: 'a', persona: 'p', tools: ['issueRefund', 'getInvoice'], conduct: { declareHonestly: 'x' },
         judged: [{ factory: 'lieCheck', acts: ['closeBooking'] }] }] }), FACTS, SEAM))
-      .toEqual([expect.stringContaining("the 'a' desk's lane holds 'issueRefund'")]);
+      .toEqual([expect.stringContaining("the 'a' desk's lane holds 'issueRefund', 'getInvoice'")]);
   });
 
   test('a disclosure alias whose read cannot answer from the held call', () => {
@@ -57,7 +57,9 @@ describe('checkAgainstSurface', () => {
   test('a needs alias binding a read whose every argument is optional', () => {
     expect(checkAgainstSurface(decl({ disclosure: { issueRefund: {
       needs: { freezes: { tool: 'listHolds', args: {} } },
-      before: 'Say what stands frozen before refunding.' } } }), READS, SEAM)).toEqual([]);
+      before: 'Say what stands frozen before refunding.' } },
+      desks: [{ name: 'a', persona: 'p', tools: ['issueRefund', 'listHolds'],
+                conduct: { declareHonestly: 'x' } }] }), READS, SEAM)).toEqual([]);
   });
 
   test('a needs alias whose binding leaves a required argument of the read unfilled', () => {
@@ -71,6 +73,25 @@ describe('checkAgainstSurface', () => {
     expect(checkAgainstSurface(decl({ disclosure: { issueRefund: {
       needs: { invoice: { tool: 'getInvoice', args: { invoiceId: 'invoiceId' } } },
       before: 'Say the invoice total before refunding it.' } } }), READS, SEAM)).toEqual([]);
+  });
+
+  test('a disclosure needs alias naming a read the desk holding the act cannot run', () => {
+    const refusals = checkAgainstSurface(decl({ desks: [
+      { name: 'billing', persona: 'p', tools: ['issueRefund'], conduct: { declareHonestly: 'x' } },
+      { name: 'records', persona: 'p', tools: ['issueRefund', 'getInvoice'],
+        conduct: { declareHonestly: 'x' } }] }), FACTS, SEAM);
+    expect(refusals).toEqual([expect.stringContaining(
+      "contract.disclosure.issueRefund.needs.invoice names 'getInvoice'")]);
+    expect(refusals[0]).toContain("the 'billing' desk holds 'issueRefund'");
+    expect(refusals[0]).toContain('the empty tense would fire with a false reason');
+  });
+
+  test('a needs read every desk holding the act also holds is no refusal', () => {
+    expect(checkAgainstSurface(decl({ desks: [
+      { name: 'billing', persona: 'p', tools: ['issueRefund', 'getInvoice'],
+        conduct: { declareHonestly: 'x' } },
+      { name: 'records', persona: 'p', tools: ['getInvoice'],
+        conduct: { declareHonestly: 'x' } }] }), FACTS, SEAM)).toEqual([]);
   });
 
   test('a prose guard naming an act the surface does not declare', () => {

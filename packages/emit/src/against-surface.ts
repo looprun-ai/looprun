@@ -255,6 +255,34 @@ function checkDisclosureNeedsResolvable(declaration: Declaration, facts: Surface
   return refusals;
 }
 
+/** A disclosure `needs` alias names a read the DESK can run. The engine pays the alias by calling
+ *  that read on the turn the act is held, from the lane of the desk that holds the act — a desk
+ *  whose tools do not carry the read cannot make the call, the alias comes back empty, and the
+ *  entry's `empty` tense renders on every single call, telling the operator the record says
+ *  nothing when nothing was ever read.
+ *
+ *  Every desk that holds the act owes the read, because the entry is one entry and each of those
+ *  desks renders it. */
+function checkDisclosureNeedsInLane(declaration: Declaration, facts: SurfaceFacts): readonly string[] {
+  const refusals: string[] = [];
+  for (const [actName, entry] of Object.entries(declaration.contract.disclosure)) {
+    if (facts.tools[actName] === undefined) continue;
+    for (const [alias, need] of Object.entries(entry.needs ?? {})) {
+      const readName = typeof need === 'string' ? need : need.tool;
+      if (facts.tools[readName] === undefined) continue;
+      for (const desk of declaration.desks) {
+        if (!desk.tools.includes(actName) || desk.tools.includes(readName)) continue;
+        refusals.push(`contract.disclosure.${actName}.needs.${alias} names '${readName}', and the `
+          + `'${desk.name}' desk holds '${actName}' without it — the desk cannot run the owed `
+          + `read, and the empty tense would fire with a false reason on every call. Put `
+          + `'${readName}' in the ${desk.name} lane, or point needs.${alias} at a read that lane `
+          + `holds.`);
+      }
+    }
+  }
+  return refusals;
+}
+
 /** Every seam sentence pays a row the world actually spells out, and lands on a desk that can
  *  reach the act. The seam table is the register: an act it carries no row for is an act whose
  *  refusals the world never names in a literal, and a code outside that act's row set is a
@@ -301,9 +329,9 @@ function checkSeamRows(declaration: Declaration, facts: SurfaceFacts,
  *  outside that desk's lane, a guard whose configuration names one, a guard whose
  *  configuration names an argument its act's schema does not declare, a destructive act with
  *  nothing disclosed before it runs, a `precondition` reading a record over an act with no target,
- *  a house conduct law some desks never teach, a disclosure `needs` alias naming a tool that does
- *  not exist, a disclosure alias whose read cannot answer the call it is held for, and a seam
- *  sentence paying a row the world does not carry. `seam` is the seam table computed off the same
+ *  a disclosure `needs` alias naming a tool that does not exist, a disclosure alias whose read
+ *  cannot answer the call it is held for, a disclosure alias naming a read the lane of a desk
+ *  holding the act does not carry, and a seam sentence paying a row the world does not carry. `seam` is the seam table computed off the same
  *  subject the declaration sits in. An empty array means the declaration is safe to emit against
  *  `facts`. */
 export function checkAgainstSurface(declaration: Declaration, facts: SurfaceFacts,
@@ -317,6 +345,7 @@ export function checkAgainstSurface(declaration: Declaration, facts: SurfaceFact
     ...checkPreconditionTarget(declaration, facts),
     ...checkDisclosureNeedsToolExists(declaration, facts),
     ...checkDisclosureNeedsResolvable(declaration, facts),
+    ...checkDisclosureNeedsInLane(declaration, facts),
     ...checkSeamRows(declaration, facts, seam)
   ];
 }
