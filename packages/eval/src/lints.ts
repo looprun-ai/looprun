@@ -243,6 +243,49 @@ function namedToolLists(sources: readonly Source[]): ReadonlyMap<string, readonl
   return lists;
 }
 
+/** An author names a refusal code once and hands that name to every call that refuses with it.
+ *  The name resolves to the string it was declared as, so a code held in a constant reads exactly
+ *  as a code written at the call site does. */
+function namedStrings(sources: readonly Source[]): ReadonlyMap<string, string> {
+  const named = new Map<string, string>();
+  for (const f of sources) {
+    const visit = (node: ts.Node): void => {
+      if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name)
+        && node.initializer !== undefined) {
+        const text = literalText(unwrap(node.initializer));
+        if (text !== null) named.set(node.name.text, text);
+      }
+      node.forEachChild(visit);
+    };
+    visit(parse(f));
+  }
+  return named;
+}
+
+/** An author names a list of gate literals once and spreads it onto the acts that carry it. The
+ *  name resolves to the elements it was declared with, so a spread entry reads as the entries it
+ *  brings. */
+function namedObjectLists(sources: readonly Source[])
+  : ReadonlyMap<string, readonly ts.ObjectLiteralExpression[]> {
+  const lists = new Map<string, readonly ts.ObjectLiteralExpression[]>();
+  for (const f of sources) {
+    const visit = (node: ts.Node): void => {
+      if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name)
+        && node.initializer !== undefined) {
+        const value = unwrap(node.initializer);
+        if (ts.isArrayLiteralExpression(value)) {
+          const entries = value.elements.map(unwrap).filter(ts.isObjectLiteralExpression);
+          if (entries.length > 0 && entries.length === value.elements.length)
+            lists.set(node.name.text, entries);
+        }
+      }
+      node.forEachChild(visit);
+    };
+    visit(parse(f));
+  }
+  return lists;
+}
+
 const toolsOf = (arg: ts.Expression | undefined,
                  lists: ReadonlyMap<string, readonly string[]>): readonly string[] | null => {
   if (arg === undefined) return null;
@@ -863,11 +906,12 @@ function enclosingAct(node: ts.Node, declared: ReadonlySet<string>): string | nu
 /** The code a world hands a validator instead of naming at the emit site: `code: 'X'` on the
  *  option literal a call READS as an argument. The validator refuses with that code and the emit
  *  site passes it on, so the act the call sits under can emit it. */
-function optionCode(node: ts.PropertyAssignment): string | null {
+function optionCode(node: ts.PropertyAssignment,
+                    named: ReadonlyMap<string, string>): string | null {
   if (!ts.isIdentifier(node.name) && !ts.isStringLiteral(node.name)) return null;
   if (node.name.text !== 'code') return null;
-  const value = unwrap(node.initializer);
-  if (!ts.isStringLiteral(value)) return null;
+  const code = codeText(node.initializer, named);
+  if (code === null) return null;
   let at: ts.Node = node.parent;
   if (!ts.isObjectLiteralExpression(at)) return null;
   while (at.parent !== undefined && (ts.isAsExpression(at.parent)
@@ -875,34 +919,128 @@ function optionCode(node: ts.PropertyAssignment): string | null {
   const call = at.parent;
   if (call === undefined || !ts.isCallExpression(call)) return null;
   const held = at;
-  return call.arguments.some(argument => argument === held) ? value.text : null;
+  return call.arguments.some(argument => argument === held) ? code : null;
 }
 
 /** The code a declared gate refuses with: its kind, and the field it tests when it names one. */
-function gateCode(node: ts.ObjectLiteralExpression): string | null {
+function gateCode(node: ts.ObjectLiteralExpression,
+                  named: ReadonlyMap<string, string>): string | null {
   let kind: string | null = null, field: string | null = null;
   for (const property of node.properties) {
     if (!ts.isPropertyAssignment(property)) continue;
     if (!ts.isIdentifier(property.name) && !ts.isStringLiteral(property.name)) continue;
-    const value = unwrap(property.initializer);
-    if (!ts.isStringLiteral(value)) continue;
-    if (property.name.text === 'kind') kind = value.text;
-    if (property.name.text === 'field') field = value.text;
+    const value = codeText(property.initializer, named);
+    if (value === null) continue;
+    if (property.name.text === 'kind') kind = value;
+    if (property.name.text === 'field') field = value;
   }
   return kind === null ? null : field === null ? kind : `${kind}:${field}`;
 }
 
-/** The refusals a WORLD spells out, paired to the card guard that refuses earlier in words. Three
- *  shapes make a row: a literal code at the emit site — `fail('CODE')` or `gateFail('CODE')` — a
- *  literal `code: 'CODE'` option a validator call is handed, and a `gates` entry on an act, whose
- *  code is the gate's `kind:field`. A code the emit site computes, as `fail(id.error)` does, offers
- *  no literal to read and makes no row. The act is the nearest enclosing key the surface declares,
- *  and the row set is one row per distinct act-and-code pair. A row whose guard is null is a
- *  refusal the operator meets as a bare code. */
+/** The string an expression states, whether it states it itself or names the constant that
+ *  holds it. */
+function codeText(node: ts.Expression, named: ReadonlyMap<string, string>): string | null {
+  const value = unwrap(node);
+  if (ts.isIdentifier(value)) return named.get(value.text) ?? null;
+  return literalText(value);
+}
+
+/** The gate literals a `gates` list carries: the ones written in place, and the ones a spread
+ *  brings in from the list it names. */
+function gateLiterals(listed: ts.Expression,
+                      lists: ReadonlyMap<string, readonly ts.ObjectLiteralExpression[]>)
+                      : readonly ts.ObjectLiteralExpression[] {
+  const value = unwrap(listed);
+  if (ts.isIdentifier(value)) return lists.get(value.text) ?? [];
+  if (!ts.isArrayLiteralExpression(value)) return [];
+  const entries: ts.ObjectLiteralExpression[] = [];
+  for (const element of value.elements) {
+    if (ts.isSpreadElement(element) && ts.isIdentifier(element.expression)) {
+      entries.push(...(lists.get(element.expression.text) ?? []));
+      continue;
+    }
+    const entry = unwrap(element);
+    if (ts.isObjectLiteralExpression(entry)) entries.push(entry);
+  }
+  return entries;
+}
+
+/** The refusal codes a named helper hands back, so an act that calls it answers with every one of
+ *  them: `return { error: 'CODE' }` and `return fail('CODE')` are the two shapes a world writes a
+ *  shared refusal in. A helper reaching another helper carries that one's codes too, and the map
+ *  grows until it stops growing. */
+function helperCodes(sources: readonly Source[],
+                     named: ReadonlyMap<string, string>): ReadonlyMap<string, readonly string[]> {
+  const locals: { name: string; body: ts.Node }[] = [];
+  for (const f of sources) {
+    const visit = (node: ts.Node): void => {
+      if (ts.isFunctionDeclaration(node) && node.name !== undefined && node.body !== undefined)
+        locals.push({ name: node.name.text, body: node.body });
+      if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.initializer !== undefined
+        && (ts.isArrowFunction(node.initializer) || ts.isFunctionExpression(node.initializer)))
+        locals.push({ name: node.name.text, body: node.initializer.body });
+      node.forEachChild(visit);
+    };
+    visit(parse(f));
+  }
+  const codes = new Map<string, string[]>();
+  const note = (name: string, code: string): boolean => {
+    const at = codes.get(name);
+    if (at === undefined) { codes.set(name, [code]); return true; }
+    if (at.includes(code)) return false;
+    at.push(code);
+    return true;
+  };
+  const errorCode = (node: ts.Node): string | null => {
+    if (!ts.isObjectLiteralExpression(node)) return null;
+    for (const property of node.properties) {
+      if (!ts.isPropertyAssignment(property)) continue;
+      if (!ts.isIdentifier(property.name) && !ts.isStringLiteral(property.name)) continue;
+      if (property.name.text === 'error') return codeText(property.initializer, named);
+    }
+    return null;
+  };
+  for (let grew = true; grew;) {
+    grew = false;
+    for (const local of locals) {
+      const visit = (node: ts.Node): void => {
+        if (ts.isCallExpression(node) && ts.isIdentifier(node.expression)) {
+          const called = node.expression.text;
+          if (REFUSAL_CALLS.has(called)) {
+            const first = node.arguments[0];
+            const code = first === undefined ? null : codeText(first, named);
+            if (code !== null && note(local.name, code)) grew = true;
+          }
+          for (const code of codes.get(called) ?? [])
+            if (note(local.name, code)) grew = true;
+        }
+        const returned = ts.isReturnStatement(node) && node.expression !== undefined
+          ? unwrap(node.expression) : null;
+        const code = returned === null ? null : errorCode(returned);
+        if (code !== null && note(local.name, code)) grew = true;
+        node.forEachChild(visit);
+      };
+      visit(local.body);
+    }
+  }
+  return codes;
+}
+
+/** The refusals a WORLD spells out, paired to the card guard that refuses earlier in words. Four
+ *  shapes make a row: a code at the emit site — `fail('CODE')` or `gateFail('CODE')` — a `code:`
+ *  option a validator call is handed, a `gates` entry on an act, whose code is the gate's
+ *  `kind:field`, and a call to a helper whose own returns spell refusal codes out. A code is read
+ *  as it is written and through the constant or the named list that holds it; a code computed from
+ *  a value nothing in the source spells offers nothing to read and makes no row. The act is the
+ *  nearest enclosing key the surface declares, and the row set is one row per distinct
+ *  act-and-code pair. A row whose guard is null is a refusal the operator meets as a bare code. */
 export function seamCovered(subjectDir: string,
                             facts: { readonly tools: Readonly<Record<string, unknown>> }): readonly SeamRow[] {
   const sources = subjectSources(subjectDir);
   const lists = namedToolLists(sources);
+  const named = namedStrings(sources);
+  const gateLists = namedObjectLists(sources);
+  const helpers = helperCodes(sources, named);
   const declared = new Set(Object.keys(facts.tools));
   const speaksFor = new Map<string, string>();
   for (const f of sources)
@@ -919,13 +1057,20 @@ export function seamCovered(subjectDir: string,
       if (ts.isCallExpression(node) && ts.isIdentifier(node.expression)
         && REFUSAL_CALLS.has(node.expression.text)) {
         const first = node.arguments[0];
-        if (first !== undefined && ts.isStringLiteral(first)) {
+        const code = first === undefined ? null : codeText(first, named);
+        if (code !== null) {
           const act = enclosingAct(node, declared);
-          if (act !== null) add(act, first.text);
+          if (act !== null) add(act, code);
         }
       }
+      if (ts.isCallExpression(node) && ts.isIdentifier(node.expression)
+        && !REFUSAL_CALLS.has(node.expression.text)) {
+        const carried = helpers.get(node.expression.text) ?? [];
+        const act = carried.length === 0 ? null : enclosingAct(node, declared);
+        if (act !== null) for (const code of carried) add(act, code);
+      }
       if (ts.isPropertyAssignment(node)) {
-        const option = optionCode(node);
+        const option = optionCode(node, named);
         if (option !== null) {
           const act = enclosingAct(node, declared);
           if (act !== null) add(act, option);
@@ -934,13 +1079,10 @@ export function seamCovered(subjectDir: string,
       if (ts.isPropertyAssignment(node)
         && (ts.isIdentifier(node.name) || ts.isStringLiteral(node.name))
         && node.name.text === 'gates') {
-        const listed = unwrap(node.initializer);
         const act = enclosingAct(node, declared);
-        if (ts.isArrayLiteralExpression(listed) && act !== null)
-          for (const element of listed.elements) {
-            const value = unwrap(element);
-            if (!ts.isObjectLiteralExpression(value)) continue;
-            const code = gateCode(value);
+        if (act !== null)
+          for (const entry of gateLiterals(node.initializer, gateLists)) {
+            const code = gateCode(entry, named);
             if (code !== null) add(act, code);
           }
       }

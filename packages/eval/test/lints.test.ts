@@ -658,6 +658,53 @@ describe('seamCovered', () => {
     expect(rows).toEqual([{ act: 'cancelBooking', code: 'BOOKING_ALREADY_OUT', guard: null }]);
   });
 
+  test('a code held in a named constant is the row that constant spells', () => {
+    const dir = write(
+      `const WORKSPACE_SUSPENDED = 'WORKSPACE_SUSPENDED';
+       const H = { cancelBooking: (w, a) => fail(WORKSPACE_SUSPENDED) };`,
+      `const CONTRACT = { guards: [] };`);
+    const rows = seamCovered(dir, { tools: { cancelBooking: {} } } as never);
+    expect(rows).toEqual([{ act: 'cancelBooking', code: 'WORKSPACE_SUSPENDED', guard: null }]);
+  });
+
+  test('a validator handed a code through a constant is a row too', () => {
+    const dir = write(
+      `const INVALID = 'INVALID_BOOKING_STATUS';
+       const H = { cancelBooking: (w, a) => {
+         const st = optString(a.status, { allowed: BOOKING_STATUSES, code: INVALID });
+         if ('error' in st) return fail(st.error);
+       } };`,
+      `const CONTRACT = { guards: [] };`);
+    const rows = seamCovered(dir, { tools: { cancelBooking: {} } } as never);
+    expect(rows).toEqual([{ act: 'cancelBooking', code: 'INVALID_BOOKING_STATUS', guard: null }]);
+  });
+
+  test('gates spread from a named list are rows the act carries', () => {
+    const dir = write(
+      `const MONEY_GATES = [{ kind: 'stateIs', field: 'status', value: 'CONFIRMED' }];
+       const W = { destructive: { cancelBooking: { gates: [...MONEY_GATES,
+         { kind: 'notFrozen', field: 'workspace' }] } } };`,
+      `const CONTRACT = { guards: [] };`);
+    const rows = seamCovered(dir, { tools: { cancelBooking: {} } } as never);
+    expect(rows.map(r => r.code).sort()).toEqual(['notFrozen:workspace', 'stateIs:status']);
+  });
+
+  test('a refusal routed through a shared helper is a row on every act that calls it', () => {
+    const dir = write(
+      `function writeGate(w) {
+         if (w.workspace.status === 'suspended') return { error: 'WORKSPACE_SUSPENDED' };
+         if (w.workspace.onboarded === false) return { error: 'NOT_ONBOARDED' };
+         return null;
+       }
+       const H = { cancelBooking: (w, a) => {
+         const gate = writeGate(w);
+         if (gate) return gateFail(gate);
+       } };`,
+      `const CONTRACT = { guards: [] };`);
+    const rows = seamCovered(dir, { tools: { cancelBooking: {} } } as never);
+    expect(rows.map(r => r.code).sort()).toEqual(['NOT_ONBOARDED', 'WORKSPACE_SUSPENDED']);
+  });
+
   test('gates behind an as-const still name the act they sit under', () => {
     const dir = write(
       `const W = { destructive: { cancelBooking: { gates: [{ kind: 'stateIs', field: 'status', value: 'CONFIRMED' }] } as const } };`,
