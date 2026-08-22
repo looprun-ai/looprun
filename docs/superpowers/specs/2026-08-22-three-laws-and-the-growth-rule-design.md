@@ -86,6 +86,20 @@ The two rows that landed as examples are the two that still rotate between autho
 teaches, a machine forces. That boundary is real: content that no schema carries cannot be
 forced, only taught, and the measurement is what closes it.
 
+### The carries from the widened slice
+
+Three situations from the widened 40-case measurement earn a place, each through the rule:
+
+| measured situation | landing | the simple form |
+|---|---|---|
+| a required read of an act the exam forbids executing is left orphaned — the order verb skipped acts in `noEffectToolCalls` | machine | the existing read-order verb widens its scope: a required read paired with a noEffect acting tool also demands the order |
+| an author declares an order whose prerequisite cannot exist before the act — a get-by-id read before the first record is minted, a deadlock at run time | machine | the EMITTER refuses the declaration with the exemption the gate already computes: "this order cannot be satisfied before the act — name a list read instead"; it dies at emission, before any run |
+| a refusal by silent substitution — the ceiling proposed without saying the operator's figure was refused | example | one clause in the refusal shape already taught: name the operator's own figure, say plainly it cannot go out, then offer the ceiling |
+
+What the slice deliberately does NOT carry: retry tails that break no rubric line, and the
+judgment nuances (a routed hold-lift, an unnamed alternative) — the T loop owns those per
+subject, and the T lens forbids over-building for them.
+
 ## 3 · The collapse map — current teaching, by law
 
 Nothing below is deleted by the rewrite; it is re-homed as an instance of its law.
