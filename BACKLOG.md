@@ -3,6 +3,12 @@
 Open items. Every entry here is work that is still owed; an item leaves the table only when it is
 done — a pending item that quietly disappears is the failure this file exists to prevent.
 
+**Next in sequence** — these three entries are the queue, in order, not unordered backlog:
+
+1. **The six house laws move to the engine's mouth**
+2. **Every guard generates its own catalog text** (one spec or a sibling spec of item 1)
+3. **The guard doc outside code is one hand-written lesson** (rides item 2's spec)
+
 | item | what remains | next step |
 |---|---|---|
 | **Every published figure is void** | No looprun-measured number in the tree was produced by the engine, the guards and the process as they now stand. | Re-measure before publishing any looprun figure. |
