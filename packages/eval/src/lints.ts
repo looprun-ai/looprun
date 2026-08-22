@@ -8,7 +8,7 @@ import { join } from 'node:path';
 import ts from 'typescript';
 import type { AgentSpec, ApproveRef, CompiledAgent, DeclaredWorld, DomainContract, ExamCase,
               ExamTurn, GuardCensus, LiveWorldCard, McpWorldCard, PromptParts, SurfaceFacts,
-              TurnRecord, WorldCard } from '@looprun-ai/core';
+              ToolFact, TurnRecord, WorldCard } from '@looprun-ai/core';
 import type { Subject } from './subject-loader.js';
 import { AgentFactory, factsFromWorld, PromptWriter, RETIRED_NAMES } from '@looprun-ai/core';
 import { loadPromptBudget } from './targets.js';
@@ -1428,26 +1428,64 @@ function orderPairs(sources: readonly Source[],
   return pairs;
 }
 
+/** The entity each act MINTS. A world entry whose form is `make` creates the record and hands
+ *  back the identifier it minted, so until that call lands no identifier of that entity exists
+ *  anywhere. Only a declared world states a form: a remote surface declares none, and an act whose
+ *  minting nothing on the card states is an act this reads nothing about. */
+function mintedEntities(world: DeclaredWorld | McpWorldCard | LiveWorldCard)
+  : ReadonlyMap<string, string> {
+  const byAct = new Map<string, string>();
+  if (!('card' in world)) return byAct;
+  for (const block of [world.card.writes, world.card.destructive])
+    for (const [act, entry] of Object.entries(block ?? {}))
+      if (entry.form === 'make') byAct.set(act, entry.entity);
+  return byAct;
+}
+
+/** Whether a read cannot be CALLED until an identifier of that entity exists: it answers on that
+ *  entity, and its schema requires the argument carrying the entity's own id. A read that lists
+ *  the entity requires no identifier and runs against an empty register. */
+function keyedOnEntity(fact: ToolFact | undefined, entity: string): boolean {
+  if (fact === undefined || fact.entity !== entity) return false;
+  const schema: unknown = fact.schema;
+  if (typeof schema !== 'object' || schema === null) return false;
+  const required: unknown = (schema as { required?: unknown }).required;
+  return Array.isArray(required) && required.includes(fact.target ?? 'id');
+}
+
 /** A read the exam requires is a read the CARD owes, not a read a rubric hopes for. When a case
  *  names an act, the order between that act and the read is a `onlyAfter` the cards declare: the
  *  engine then refuses the act until the read has succeeded, and the exam measures a rule instead
  *  of a habit. A matcher's `anyOf` widens the requirement to alternative reads that ground the same
  *  fact, so an order behind ANY of them satisfies it.
  *
- *  A case that takes no act at all is left alone: the reads it requires are owed by the flow of the
- *  conversation, and there is no act for an order to sit in front of. */
-export function readsOrdered(subjectDir: string, cases: readonly ExamCase[],
-                             facts: { readonly tools: Readonly<Record<string,
-                               { readonly effect?: string }>> }): readonly LintFinding[] {
+ *  An act that MINTS what the read is keyed on owes no such order. A filing act creates the record
+ *  and returns its brand-new id; the read that answers on that id cannot be called before it,
+ *  because there is no id yet to call it with. Demanding the order there demands an impossibility,
+ *  so the act drops out of the demand — and when every act the case takes is one of those, the
+ *  case is left alone entirely.
+ *
+ *  A case that takes no act at all is left alone for its own reason: the reads it requires are owed
+ *  by the flow of the conversation, and there is no act for an order to sit in front of. */
+export function readsOrdered(subjectDir: string, cases: readonly ExamCase[], facts: SurfaceFacts,
+                             world: DeclaredWorld | McpWorldCard | LiveWorldCard)
+                             : readonly LintFinding[] {
   const sources = subjectSources(subjectDir);
   const pairs = orderPairs(sources, namedToolLists(sources));
+  const minted = mintedEntities(world);
   const findings: LintFinding[] = [];
   for (const c of cases) {
-    const acting = actingToolsOf(c, facts);
-    if (acting.length === 0) continue;
+    const taken = actingToolsOf(c, facts);
+    if (taken.length === 0) continue;
     for (const matcher of c.invariants?.requiredToolCalls ?? []) {
       if (facts.tools[matcher.name]?.effect !== 'read') continue;
       const grounds = [matcher.name, ...(matcher.anyOf ?? [])];
+      const acting = taken.filter(act => {
+        const entity = minted.get(act);
+        return entity === undefined
+          || !grounds.every(read => keyedOnEntity(facts.tools[read], entity));
+      });
+      if (acting.length === 0) continue;
       if (acting.some(act => grounds.some(read => pairs.has(`${act}|${read}`)))) continue;
       findings.push({ code: 'REQUIRED_READ_UNORDERED',
         sentence: `case '${c.id}' requires '${matcher.name}' and no card orders it: of the acts `

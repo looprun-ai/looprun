@@ -96,7 +96,7 @@ export function runGate(subjectDir: string, subject: GateSubject): readonly Lint
     ...presetsDeclared(cases, subject.world),
     // What the exam already makes derivable, enforced instead of taught: a read a case requires
     // is a read an act is ordered behind, and a read a case requires answers in figures.
-    ...readsOrdered(subjectDir, cases, facts),
+    ...readsOrdered(subjectDir, cases, facts, subject.world),
     ...requiredReadsDisclosed(subjectDir, cases, facts),
     // An act the exam expects refused is an act the cards can refuse: a mechanism that decides the
     // call, not an order that reading clears.

@@ -892,6 +892,7 @@ describe('byteOrigin', () => {
   });
 });
 
+import { factsFromWorld } from '@looprun-ai/core';
 import { readsOrdered, requiredReadsDisclosed, unspokenChecks } from '../src/lints.js';
 
 describe('unspokenChecks', () => {
@@ -943,6 +944,10 @@ const REFUND_FACTS = { tools: {
   getInvoice: { effect: 'read' }, listInvoices: { effect: 'read' },
   issueRefund: { effect: 'destructive' } } } as never;
 
+/** No act on this surface mints a record, so the minted-entity exemption reaches nothing here and
+ *  every case below is read against the order the cards declare. */
+const REFUND_WORLD = { card: { records: {}, reads: {}, writes: {}, destructive: {} } } as never;
+
 describe('readsOrdered', () => {
   const write = (body: string): string => {
     const dir = mkdtempSync(join(tmpdir(), 'ordered-'));
@@ -957,7 +962,7 @@ describe('readsOrdered', () => {
 
   test('a required read no act is ordered behind is a finding naming the case and the acts', () => {
     const dir = write(`const CONTRACT = { guards: [] };`);
-    const found = readsOrdered(dir, refundCase([{ name: 'getInvoice' }]), REFUND_FACTS);
+    const found = readsOrdered(dir, refundCase([{ name: 'getInvoice' }]), REFUND_FACTS, REFUND_WORLD);
     expect(found.map(f => f.code)).toEqual(['REQUIRED_READ_UNORDERED']);
     expect(found[0].sentence).toContain("case 'refund-01' requires 'getInvoice'");
     expect(found[0].sentence).toContain('issueRefund');
@@ -965,20 +970,20 @@ describe('readsOrdered', () => {
 
   test('the order the cards declare answers it', () => {
     const dir = write(`const CONTRACT = { guards: [ onlyAfter('issueRefund', 'getInvoice') ] };`);
-    expect(readsOrdered(dir, refundCase([{ name: 'getInvoice' }]), REFUND_FACTS)).toEqual([]);
+    expect(readsOrdered(dir, refundCase([{ name: 'getInvoice' }]), REFUND_FACTS, REFUND_WORLD)).toEqual([]);
   });
 
   test('a guard literal naming its own acts binds the prerequisite to every one of them', () => {
     const dir = write(`const CONTRACT = { guards: [
       { ...onlyAfter('voidInvoice', 'getInvoice'), name: 'moneyReadsTheInvoice',
         tool: ['voidInvoice', 'issueRefund'] } ] };`);
-    expect(readsOrdered(dir, refundCase([{ name: 'getInvoice' }]), REFUND_FACTS)).toEqual([]);
+    expect(readsOrdered(dir, refundCase([{ name: 'getInvoice' }]), REFUND_FACTS, REFUND_WORLD)).toEqual([]);
   });
 
   test('anyOf widens the requirement, so an order behind either read answers it', () => {
     const dir = write(`const CONTRACT = { guards: [ onlyAfter('issueRefund', 'listInvoices') ] };`);
     expect(readsOrdered(dir, refundCase([{ name: 'getInvoice', anyOf: ['listInvoices'] }]),
-                        REFUND_FACTS)).toEqual([]);
+                        REFUND_FACTS, REFUND_WORLD)).toEqual([]);
   });
 
   test('a case that takes no act owes its reads to the flow, and the verb skips it', () => {
@@ -986,7 +991,59 @@ describe('readsOrdered', () => {
     const reading: readonly ExamCase[] = [{ id: 'read-01', split: 'fix', rubric: 'r',
       turns: ['what does inv_9 say?'],
       invariants: { requiredToolCalls: [{ name: 'getInvoice' }] } }];
-    expect(readsOrdered(dir, reading, REFUND_FACTS)).toEqual([]);
+    expect(readsOrdered(dir, reading, REFUND_FACTS, REFUND_WORLD)).toEqual([]);
+  });
+
+  /** An INVENTED domain carrying the shape two blind authors both wrote wrong. `fileTicket` MINTS
+   *  the ticket and hands back the id it just made; `getTicket` answers on that id and cannot be
+   *  called with one that does not exist yet. `listTickets` answers on the register itself and runs
+   *  before anything has been filed; `closeTicket` acts on a ticket somebody else filed. */
+  const TICKETS = world({
+    records: { tickets: {} },
+    reads: { getTicket: { form: 'get', entity: 'tickets', label: 'Look up one ticket' },
+             listTickets: { form: 'list', entity: 'tickets', label: 'List the tickets' } },
+    writes: { fileTicket: { form: 'make', entity: 'tickets', label: 'File a ticket' },
+              closeTicket: { form: 'set', entity: 'tickets', label: 'Close a ticket' } }
+  });
+  const TICKET_FACTS = factsFromWorld(TICKETS);
+
+  const ticketCase = (act: string, required: readonly unknown[]): readonly ExamCase[] =>
+    [{ id: 'ticket-01', split: 'fix', rubric: 'r', turns: ['the machine came back broken'],
+       invariants: { requiredToolCalls: [{ name: act }, ...required] } } as ExamCase];
+
+  test('a read keyed on an id the act itself mints is never demanded in front of that act', () => {
+    const dir = write(`const CONTRACT = { guards: [] };`);
+    expect(readsOrdered(dir, ticketCase('fileTicket', [{ name: 'getTicket' }]),
+                        TICKET_FACTS, TICKETS)).toEqual([]);
+  });
+
+  test('a read that answers on the register runs before the minting act, so the order stands', () => {
+    const dir = write(`const CONTRACT = { guards: [] };`);
+    const found = readsOrdered(dir, ticketCase('fileTicket', [{ name: 'listTickets' }]),
+                               TICKET_FACTS, TICKETS);
+    expect(found.map(f => f.code)).toEqual(['REQUIRED_READ_UNORDERED']);
+    expect(found[0].sentence).toContain("case 'ticket-01' requires 'listTickets'");
+    expect(found[0].sentence).toContain('fileTicket');
+  });
+
+  test('an act that mints nothing owes the order on the same read', () => {
+    const dir = write(`const CONTRACT = { guards: [] };`);
+    const found = readsOrdered(dir, ticketCase('closeTicket', [{ name: 'getTicket' }]),
+                               TICKET_FACTS, TICKETS);
+    expect(found.map(f => f.code)).toEqual(['REQUIRED_READ_UNORDERED']);
+    expect(found[0].sentence).toContain('closeTicket');
+  });
+
+  test('the exempt act drops out of the demand and the acts left still owe it', () => {
+    const dir = write(`const CONTRACT = { guards: [] };`);
+    const both: readonly ExamCase[] = [{ id: 'ticket-02', split: 'fix', rubric: 'r',
+      turns: ['file it and close the old one'],
+      invariants: { requiredToolCalls: [{ name: 'fileTicket' }, { name: 'closeTicket' },
+                                        { name: 'getTicket' }] } }];
+    const found = readsOrdered(dir, both, TICKET_FACTS, TICKETS);
+    expect(found.map(f => f.code)).toEqual(['REQUIRED_READ_UNORDERED']);
+    expect(found[0].sentence).toContain('closeTicket');
+    expect(found[0].sentence).not.toContain('fileTicket');
   });
 });
 
@@ -1157,7 +1214,7 @@ describe('the seam licence', () => {
   });
 });
 
-import { AgentFactory, factsFromWorld, PromptWriter } from '@looprun-ai/core';
+import { AgentFactory, PromptWriter } from '@looprun-ai/core';
 import { approvedActsDisclosed, promptBudgeted, type DeskSubject } from '../src/lints.js';
 
 /** The two desks a budget is measured over, in an invented domain: the front desk sees the whole
