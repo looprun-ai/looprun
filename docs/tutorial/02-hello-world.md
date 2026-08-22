@@ -96,14 +96,14 @@ census.guards.map(g => g.name);
 On the hotel above, with the business card of lesson 3 attached:
 
 ```
-onlyAfter:cancelBooking | precondition:moveBooking | groundedIds | groundedDates |
-confirmFirst:cancelBooking | maxDestructive | noDuplicateCall | argRequired:getBooking:id |
-argRequired:getInvoice:id | argRequired:moveBooking:id | argRequired:moveBooking:set |
-argRequired:cancelBooking:id | no-promises | claimIsGrounded | claimIsComplete |
-brokenReply | questionAnswered
+onlyAfter:cancelBooking | precondition:cancelBooking | precondition:moveBooking |
+groundedIds | groundedDates | confirmFirst:cancelBooking | maxDestructive | noDuplicateCall |
+argRequired:getBooking:id | argRequired:getInvoice:id | argRequired:moveBooking:id |
+argRequired:moveBooking:set | argRequired:cancelBooking:id | no-promises | claimIsGrounded |
+claimIsComplete | brokenReply | questionAnswered
 ```
 
-Two of those rows are yours. The other fifteen arrived because a tool is destructive, an
+Three of those rows are yours. The other fifteen arrived because a tool is destructive, an
 argument is declared, or the floor is the floor. Every row carries the one sentence that is
 both what the model is told and what the person is told when it refuses.
 

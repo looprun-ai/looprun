@@ -222,11 +222,25 @@ decides nothing: the rule stands unmet and the reply is corrected.
 A guard sentence rides the prompt and a check refuses the call. Write both for the same law:
 
 ```typescript
-onlyAfter('cancelBooking', 'getBooking')
+precondition('cancelBooking',
+  ({ record }) => record !== null && record.status === 'CONFIRMED',
+  'Cancel a booking only while it is still confirmed — a guest already checked in stays.')
 ```
 
 The sentence tells the model what to do. The check makes it true whatever the model decides.
 A rule stated only as a sentence is a wish.
+
+An ORDER is a third thing, and it is not the check:
+
+```typescript
+onlyAfter('cancelBooking', 'getInvoice')
+```
+
+It owes a read and is paid by running it — the engine collects `getInvoice`, and the
+cancellation then proceeds. Nothing about the booking has been decided. So every act carries at
+least one mechanism that decides its own call, and an order beside it is the reading the sentence
+needs, never the refusal. The static gate reads an act carrying only an order as an act nothing
+refuses.
 
 ---
 

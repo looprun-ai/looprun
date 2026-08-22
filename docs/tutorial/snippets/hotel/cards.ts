@@ -48,6 +48,11 @@ export const hotelContract: DomainContract = {
   guards: [
     { ...onlyAfter('cancelBooking', 'getInvoice'),
       rule: 'Read the booking\'s invoice before cancelling, so the guest hears what stays owed.' },
+    // The order above owes a read and is paid by running it; what REFUSES the cancellation is
+    // this one. Every act carries a check that decides its call.
+    precondition('cancelBooking',
+      ({ record }) => record !== null && record.status === 'CONFIRMED',
+      'Cancel a booking only while it is still confirmed — a guest already checked in stays.'),
     precondition('moveBooking',
       ({ record }) => record !== null && record.status === 'CONFIRMED',
       'Move a booking only while it is still confirmed.')
