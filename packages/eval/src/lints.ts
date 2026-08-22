@@ -402,6 +402,10 @@ function homeOf(node: ts.Node): 'spec' | 'contract' {
  *  destructive effect — that nothing refuses is worse: no rule even claims it, so a reader of the
  *  card sees nothing missing while the engine has nothing to stop the call with.
  *
+ *  An ACT owes a mechanism that DECIDES its call. An order is not one: `onlyAfter` is paid by
+ *  running the read, and the act then proceeds. A tool that changes no record owes a mechanism of
+ *  any shape — a check over its result or its reply is the only kind there is for a read.
+ *
  *  `declared` and `acting` are the surface and the acts as a CALLER holds them, off a card already
  *  built. A world that assembles its effect blocks in code spells no tool out in its source, so a
  *  caller with the loaded card hands both over and this reads the truth instead of the text. */
@@ -414,6 +418,18 @@ export function pairing(subjectDir: string, declared?: Iterable<string>,
   const membershipKnown = surface.size > 0;
   const lists = namedToolLists(sources);
   const checks = checksByTool(sources, factoryNames(sources));
+  const denying = denyingNames(sources);
+  const acts = new Set(acting ?? surfaceKeys(sources, ACTING_BLOCKS));
+  const carriedBy = (tool: string): readonly string[] => checks.get(tool) ?? [];
+  const decided = (tool: string): boolean => acts.has(tool)
+    ? carriedBy(tool).some(mechanism => denying.has(mechanism))
+    : carriedBy(tool).length > 0;
+  /** What an act carries, when what it carries cannot refuse the call. */
+  const inertly = (tool: string): string => {
+    const carried = carriedBy(tool);
+    return carried.length === 0 ? 'nothing refuses that call'
+      : `it carries only ${carried.join(' · ')}, and ${NOTHING_DECIDES}`;
+  };
   const findings: LintFinding[] = [];
   // One act, one row: a rule that names an unchecked act says it at its own line, and the sweep
   // below speaks only for the acts no rule mentions at all.
@@ -434,10 +450,10 @@ export function pairing(subjectDir: string, declared?: Iterable<string>,
         if (membershipKnown && !surface.has(tool)) {
           findings.push({ code: 'PROSE_TOOL_UNKNOWN',
             sentence: `${at} — '${rule.name}' names '${tool}', which is on no effect block` });
-        } else if (!checks.has(tool)) {
+        } else if (!decided(tool)) {
           spoken.add(tool);
           findings.push({ code: 'ACT_WITHOUT_CHECK',
-            sentence: `${at} — '${rule.name}' states a law about '${tool}' and nothing refuses that call. Spread the factory that enforces it and sharpen its rule, or say why no check can` });
+            sentence: `${at} — '${rule.name}' states a law about '${tool}' and ${inertly(tool)}. Spread the factory that enforces it and sharpen its rule, or say why no check can` });
         }
       }
     }
@@ -466,14 +482,14 @@ export function pairing(subjectDir: string, declared?: Iterable<string>,
   // The acts nothing on the card speaks for. A rule naming one has already been charged above at
   // its own line; the rest are named here, because an act with no rule and no check is the one
   // nobody reading the card can see.
-  for (const act of acting ?? surfaceKeys(sources, ACTING_BLOCKS)) {
-    if (checks.has(act) || spoken.has(act)) continue;
+  for (const act of acts) {
+    if (decided(act) || spoken.has(act)) continue;
     spoken.add(act);
     findings.push({ code: 'ACT_WITHOUT_CHECK',
-      sentence: `'${act}' changes a record and nothing refuses that call — no rule on this card `
-        + `even names it. Every act carries at least one check the engine decides: spread the `
-        + `factory that decides this one onto the contract, or declare '${act}' a read if it `
-        + `changes nothing` });
+      sentence: `'${act}' changes a record and ${inertly(act)}; no rule on this card names it `
+        + `either. Every act carries at least one check the engine decides: spread the factory `
+        + `that decides this one onto the contract, or declare '${act}' a read if it changes `
+        + `nothing` });
   }
   return findings;
 }

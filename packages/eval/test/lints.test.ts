@@ -137,12 +137,43 @@ export const contract = { guards: [
   expect(pairing(dir)).toEqual([]);
 });
 
+test('pairing: an order alone leaves an act unchecked — reading clears it', () => {
+  const dir = subjectDirWith(`
+export const w = { records: {},
+  reads: { listClaims: { form: 'list', entity: 'claims', label: 'List claims' } },
+  writes: { addClaimEvidence: { form: 'set', entity: 'claims', label: 'Add evidence to a claim' } } };
+export const contract = { guards: [ onlyAfter('addClaimEvidence', 'listClaims') ] };`);
+  const found = pairing(dir);
+  expect(found.map(f => f.code)).toEqual(['ACT_WITHOUT_CHECK']);
+  expect(found[0].sentence).toContain("'addClaimEvidence' changes a record");
+  expect(found[0].sentence).toContain('only onlyAfter');
+});
+
+test('pairing: a rule about an act carrying only an order names what the order cannot do', () => {
+  const dir = subjectDirWith(`
+export const w = { records: {},
+  reads: { listClaims: { form: 'list', entity: 'claims', label: 'List claims' } },
+  writes: { addClaimEvidence: { form: 'set', entity: 'claims', label: 'Add evidence to a claim' } } };
+const prose = (name, rule, tool) =>
+  tool === undefined ? { name, rule, on: 'reply' } : { name, rule, on: 'reply', tool };
+export const contract = { guards: [
+  onlyAfter('addClaimEvidence', 'listClaims'),
+  prose('evidenceLandsOnAnOpenClaim', 'Evidence lands on a claim the read returned as open.',
+        ['addClaimEvidence'])
+] };`);
+  const found = pairing(dir);
+  expect(found.map(f => f.code)).toEqual(['ACT_WITHOUT_CHECK']);
+  expect(found[0].sentence).toContain('evidenceLandsOnAnOpenClaim');
+  expect(found[0].sentence).toContain('only onlyAfter');
+});
+
 test('pairing: a sharpened factory guard is a check, not a prose rule', () => {
   const dir = subjectDirWith(`
 export const w = { records: {},
   reads: { getInvoice: { form: 'get', entity: 'invoices', label: 'Look up an invoice' } },
   writes: { issueRefund: { form: 'set', entity: 'invoices', label: 'Refund an invoice' } } };
 export const contract = { guards: [
+  precondition('issueRefund', ({ record }) => record !== null, 'Refund what the read returned.'),
   { ...onlyAfter('issueRefund', 'getInvoice'),
     name: 'refundReadsTheInvoice',
     rule: 'Read the invoice before a refund: what can go back is paid minus refunded.' }
@@ -195,6 +226,7 @@ const prose = (name, rule, tool) =>
 export const billing: AgentSpec = { name: 'billing', persona: 'You are the billing desk.',
   guards: [ prose('declareHonestly', 'Say what ran, what did not, and why.') ] };
 export const contract: DomainContract = { name: 'atlas', guards: [
+  precondition('issueRefund', ({ record }) => record !== null, 'Refund what the read returned.'),
   { ...onlyAfter('issueRefund', 'getInvoice'),
     name: 'refundCapFromTheRecord',
     rule: 'A refund is capped by the statement: paid minus already refunded.' }
@@ -255,6 +287,7 @@ export const w = { records: {},
 const prose = (name, rule, tool) =>
   tool === undefined ? { name, rule, on: 'reply' } : { name, rule, on: 'reply', tool };
 export const contract = { name: 'atlas', guards: [
+  precondition('issueRefund', ({ record }) => record !== null, 'Refund what the read returned.'),
   { ...onlyAfter('issueRefund', 'getStatement'),
     name: 'refundCapFromTheRecord',
     rule: 'A refund is capped by the statement: paid minus already refunded.' }
@@ -285,6 +318,7 @@ export const w = { records: {},
   writes: { issueRefund: { form: 'set', entity: 'accounts', label: 'Refund an account' } },
   destructive: { closeAccount: { form: 'remove', entity: 'accounts', label: 'Close an account' } } };
 export const contract = { name: 'atlas', guards: [
+  precondition('issueRefund', ({ record }) => record !== null, 'Refund what the read returned.'),
   { ...onlyAfter('issueRefund', 'getStatement'),
     name: 'refundCapFromTheRecord',
     rule: 'A refund is capped by the statement: paid minus already refunded.' }
@@ -328,6 +362,7 @@ export const w = { records: {},
   reads: { getStatement: { form: 'get', entity: 'accounts', label: 'Look up a statement' } },
   writes: { issueRefund: { form: 'set', entity: 'accounts', label: 'Refund an account' } } };
 export const contract = { name: 'atlas', guards: [
+  precondition('issueRefund', ({ record }) => record !== null, 'Refund what the read returned.'),
   { ...onlyAfter('issueRefund', 'getStatement'),
     name: 'refundCapFromTheRecord',
     rule: 'A refund is capped by the statement: paid minus already refunded.' }
