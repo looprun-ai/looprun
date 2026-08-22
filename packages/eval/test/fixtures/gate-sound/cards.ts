@@ -80,6 +80,9 @@ export const ordersContract = {
     getOrder: {
       after: 'Order {result.id} is {result.status} and carries a total of {result.total}.'
     },
+    closeOrder: {
+      after: 'Order {result.id} is {result.status}: nothing more can be added to it.'
+    },
     deleteOrder: {
       before: 'You are about to delete order {order.id}, and a deletion cannot be undone.',
       after: 'Order {result.removed} is gone, and there is nothing left to reverse.',

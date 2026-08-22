@@ -1344,32 +1344,58 @@ export function destructiveDisclosed(subjectDir: string,
   return findings;
 }
 
+/** Every act whose OUTCOME an exam renders, with the case that renders it and the word for how.
+ *  Two families reach the same sentence.
+ *
+ *  An act a case APPROVES has its consent question read by that case's operator, and the after is
+ *  how that question closes. An acting tool a case REQUIRES is an act the exam counts as having
+ *  happened whether it was ever put up for agreement or not: the record moved on that turn, and the
+ *  after is the only sentence on the card that says what it moved to.
+ *
+ *  A read moves no record and is not here — `requiredReadsDisclosed` holds a read's own after. */
+function actsWithOutcome(cases: readonly ExamCase[],
+                         facts: { readonly tools: Readonly<Record<string,
+                           { readonly effect?: string }>> })
+                         : ReadonlyMap<string, { readonly caseId: string; readonly how: string }> {
+  const byAct = new Map<string, { caseId: string; how: string }>();
+  for (const [act, caseId] of approvedActs(cases))
+    if (facts.tools[act]?.effect === 'destructive') byAct.set(act, { caseId, how: 'approves' });
+  for (const c of cases)
+    for (const matcher of c.invariants?.requiredToolCalls ?? []) {
+      const effect = facts.tools[matcher.name]?.effect;
+      if (effect !== 'write' && effect !== 'destructive') continue;
+      if (!byAct.has(matcher.name)) byAct.set(matcher.name, { caseId: c.id, how: 'requires' });
+    }
+  return byAct;
+}
+
 /** A consent question has two tenses, and the exam renders both. The `before` asks — that is the
  *  sentence `destructiveDisclosed` holds to a figure. The `after` reports: the act has run, the
  *  record has moved, and what it moved to is in the answer the call returned. A `{result.…}` slot
  *  is how that figure reaches the operator; a sentence without one says the act was carried out
- *  and states nothing the operator did not already agree to, so the desk is free to name the new
- *  status or not and the exam cannot tell those two apart.
+ *  and states nothing the operator did not already know, so the desk is free to name the new status
+ *  or the id that was just minted, or not, and the exam cannot tell those two apart.
  *
- *  Only an act some case APPROVES is charged: the outcome tense of an act no exam ever consents to
- *  is a sentence nobody reads. */
+ *  The reach is every act an exam renders the outcome of: the destructive acts a case approves, and
+ *  every acting tool a case requires to run. An act nothing approves and nothing requires is left
+ *  alone — its outcome tense is a sentence nobody reads. */
 export function approvedActsDisclosed(subjectDir: string, cases: readonly ExamCase[],
                                       facts: { readonly tools: Readonly<Record<string,
                                         { readonly effect?: string }>> }): readonly LintFinding[] {
   const entries = disclosureEntries(subjectSources(subjectDir));
   const findings: LintFinding[] = [];
-  for (const [act, caseId] of approvedActs(cases)) {
-    if (facts.tools[act]?.effect !== 'destructive') continue;
+  for (const [act, { caseId, how }] of actsWithOutcome(cases, facts)) {
     const after = entries.get(act)?.after ?? null;
     if (after !== null && after.includes('{result.')) continue;
     findings.push({ code: 'ACT_RESULT_UNSPOKEN',
       sentence: after === null
-        ? `case '${caseId}' approves '${act}', and disclosure.${act} carries no 'after': the act `
+        ? `case '${caseId}' ${how} '${act}', and disclosure.${act} carries no 'after': the act `
           + `runs and what it did to the record reaches the operator only if the desk chooses to `
           + `say it. Give the entry an after sentence carrying a {result.…} slot.`
-        : `case '${caseId}' approves '${act}', and disclosure.${act}.after carries no {result.…} `
+        : `case '${caseId}' ${how} '${act}', and disclosure.${act}.after carries no {result.…} `
           + `slot: it announces the act without stating one figure the act returned. Put what `
-          + `moved — the status it landed in, the amount that went out — into that sentence.` });
+          + `moved — the status it landed in, the id it minted, the amount that went out — into `
+          + `that sentence.` });
   }
   return findings;
 }

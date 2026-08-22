@@ -1286,11 +1286,23 @@ describe('promptBudgeted', () => {
 });
 
 const APPROVAL_FACTS = { tools: {
-  issueRefund: { effect: 'destructive' }, payInvoice: { effect: 'write' } } } as never;
+  issueRefund: { effect: 'destructive' }, payInvoice: { effect: 'write' },
+  getInvoice: { effect: 'read' } } } as never;
 
 const APPROVES = (act: string): readonly ExamCase[] =>
   [{ id: 'refund-03', split: 'fix', rubric: 'r',
      turns: ['refund inv_9', { approve: { tool: act } }] }];
+
+/** An INVENTED domain with the second family's shape: a write nobody is asked to approve, that a
+ *  case counts as having run. `enrolMachine` mints the machine's id and hands it back, and the
+ *  case turns on the desk reporting that id — a figure that exists nowhere until the call lands. */
+const FLEET_FACTS = { tools: {
+  enrolMachine: { effect: 'write' }, listMachines: { effect: 'read' } } } as never;
+
+const REQUIRES = (act: string): readonly ExamCase[] =>
+  [{ id: 'fleet-07', split: 'fix', rubric: 'The reply states the machine id the register returned.',
+     turns: ['add the boom lift to the fleet'],
+     invariants: { requiredToolCalls: [{ name: act }] } }];
 
 describe('approvedActsDisclosed', () => {
   const write = (body: string): string => {
@@ -1323,15 +1335,53 @@ describe('approvedActsDisclosed', () => {
     expect(approvedActsDisclosed(dir, APPROVES('issueRefund'), APPROVAL_FACTS)).toEqual([]);
   });
 
-  test('an act no case approves renders its outcome tense to nobody, and is left alone', () => {
+  test('an act nothing approves and nothing requires is left alone', () => {
     const dir = write(`const CONTRACT = { disclosure: {} };`);
     const other: readonly ExamCase[] = [{ id: 'refund-04', split: 'fix', rubric: 'r',
       turns: ['what does inv_9 say?'] }];
     expect(approvedActsDisclosed(dir, other, APPROVAL_FACTS)).toEqual([]);
   });
 
-  test('an act that changes a record without consent asks no question, and pays no row', () => {
+  test('an approval marker over a write raises no question, so the approval family skips it', () => {
     const dir = write(`const CONTRACT = { disclosure: {} };`);
     expect(approvedActsDisclosed(dir, APPROVES('payInvoice'), APPROVAL_FACTS)).toEqual([]);
+  });
+
+  test('a write nobody approves is charged the moment a case requires it to run', () => {
+    const dir = write(`const CONTRACT = { disclosure: {} };`);
+    const found = approvedActsDisclosed(dir, REQUIRES('enrolMachine'), FLEET_FACTS);
+    expect(found.map(f => f.code)).toEqual(['ACT_RESULT_UNSPOKEN']);
+    expect(found[0].sentence).toContain("case 'fleet-07' requires 'enrolMachine'");
+    expect(found[0].sentence).toContain("disclosure.enrolMachine carries no 'after'");
+  });
+
+  test('a required write whose after names only the act is a finding', () => {
+    const dir = write(`const CONTRACT = { disclosure: {
+      enrolMachine: { after: 'The machine has been added to the fleet.' } } };`);
+    const found = approvedActsDisclosed(dir, REQUIRES('enrolMachine'), FLEET_FACTS);
+    expect(found.map(f => f.code)).toEqual(['ACT_RESULT_UNSPOKEN']);
+    expect(found[0].sentence).toContain('carries no {result.…} slot');
+    expect(found[0].sentence).toContain('the id it minted');
+  });
+
+  test('a required write that speaks the id it minted answers the verb', () => {
+    const dir = write(`const CONTRACT = { disclosure: {
+      enrolMachine: { after: 'Machine {result.machineId} is on the register at {result.dailyRate} a day.' } } };`);
+    expect(approvedActsDisclosed(dir, REQUIRES('enrolMachine'), FLEET_FACTS)).toEqual([]);
+  });
+
+  test('a required READ moves no record, and its after is another verb\'s business', () => {
+    const dir = write(`const CONTRACT = { disclosure: {} };`);
+    expect(approvedActsDisclosed(dir, REQUIRES('listMachines'), FLEET_FACTS)).toEqual([]);
+  });
+
+  test('an act that is both approved and required is charged once, as the approval', () => {
+    const dir = write(`const CONTRACT = { disclosure: {} };`);
+    const both: readonly ExamCase[] = [{ id: 'refund-05', split: 'fix', rubric: 'r',
+      turns: ['refund inv_9', { approve: { tool: 'issueRefund' } }],
+      invariants: { requiredToolCalls: [{ name: 'issueRefund' }] } }];
+    const found = approvedActsDisclosed(dir, both, APPROVAL_FACTS);
+    expect(found.map(f => f.code)).toEqual(['ACT_RESULT_UNSPOKEN']);
+    expect(found[0].sentence).toContain("case 'refund-05' approves 'issueRefund'");
   });
 });
