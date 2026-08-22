@@ -1275,13 +1275,26 @@ function approvedActs(cases: readonly ExamCase[]): ReadonlyMap<string, string> {
   return byAct;
 }
 
-/** A slot the engine fills from something other than the author's own typing: `{args.…}` over the
- *  held call's own arguments, or `{alias.…}` over a read the entry's `needs` performs. A sentence
- *  carrying neither states only what the author already knew when they wrote it. */
+/** A slot the engine fills from THE RECORD: `{alias.…}` over a read the entry's own `needs`
+ *  performs. An `{args.…}` slot is not one — it echoes the argument the model just proposed, so
+ *  the operator reads the model's own word for the call back at them and learns nothing the record
+ *  holds. */
 function carriesFigure(sentence: string, needs: ReadonlyMap<string, string>): boolean {
-  if (sentence.includes('{args.')) return true;
   for (const alias of needs.keys()) if (sentence.includes(`{${alias}.`)) return true;
   return false;
+}
+
+/** The `{args.…}` slots a sentence carries, each one once and spelled as it is written, so a
+ *  finding about them can quote the sentence's own words back to the author. */
+function argsSlots(sentence: string): readonly string[] {
+  const slots: string[] = [];
+  for (let at = sentence.indexOf('{args.'); at !== -1; at = sentence.indexOf('{args.', at + 1)) {
+    const end = sentence.indexOf('}', at);
+    if (end === -1) continue;
+    const slot = sentence.slice(at, end + 1);
+    if (!slots.includes(slot)) slots.push(slot);
+  }
+  return slots;
 }
 
 /** Every tool whose fact carries `effect: 'destructive'` must have a disclosure entry that
@@ -1289,9 +1302,10 @@ function carriesFigure(sentence: string, needs: ReadonlyMap<string, string>): bo
  *  with only the tool's own label — no amount, no record, nothing that cannot be undone named.
  *
  *  A `before` an exam actually renders owes one thing more. An act a case approves has its consent
- *  question read by the operator of that case, and a question written entirely out of the author's
- *  own words asks about nothing: the sentence has to carry a figure the engine fills — an
- *  `{args.…}` off the held call, or an `{alias.…}` off a read `needs` performs. */
+ *  question read by the operator of that case, and that question states a figure off THE RECORD:
+ *  an `{alias.…}` slot over a read the entry's own `needs` performs. The author's own words state
+ *  what they knew when they wrote them, and an `{args.…}` echo states what the model proposed —
+ *  neither is the record the operator is being asked to agree to move. */
 export function destructiveDisclosed(subjectDir: string,
                                      facts: { readonly tools: Readonly<Record<string,
                                        { readonly effect?: string }>> },
@@ -1311,13 +1325,17 @@ export function destructiveDisclosed(subjectDir: string,
     const approvedBy = approved.get(tool);
     if (approvedBy === undefined || carriesFigure(entry.before, entry.needs)) continue;
     const aliases = [...entry.needs.keys()];
+    const echoed = argsSlots(entry.before);
     findings.push({ code: 'DISCLOSURE_BEFORE_UNFIGURED',
       sentence: `case '${approvedBy}' approves '${tool}' and its disclosure 'before' carries no `
-        + `figure: every word of the question is the author's, and none of it is the record's. `
-        + `Put an {args.…} slot in it`
+        + `figure off the record: `
+        + (echoed.length > 0
+          ? `${echoed.join(', ')} echoes the argument the model proposed, which the `
+            + `operator is being asked about — it is not what the record holds. `
+          : `every word of the question is the author's, and none of it is the record's. `)
         + (aliases.length === 0
-          ? `, or declare a needs read and quote what it returns.`
-          : `, or a slot over one of this entry's needs aliases (${aliases.join(', ')}).`) });
+          ? `Declare a needs read on this entry and quote what it returns.`
+          : `Put a slot over one of this entry's needs aliases (${aliases.join(', ')}) in it.`) });
   }
   return findings;
 }

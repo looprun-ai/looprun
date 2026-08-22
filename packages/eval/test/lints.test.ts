@@ -704,14 +704,20 @@ describe('destructiveDisclosed', () => {
     expect(found[0].sentence).toContain('needs aliases (booking)');
   });
 
-  test('a figure off the held call, or off a needs alias, answers it', () => {
-    const args = write(`const CONTRACT = { disclosure: { cancelBooking: {
-      before: 'Cancelling {args.bookingId} frees the machine.' } } };`);
-    expect(destructiveDisclosed(args, DESTRUCTIVE, APPROVES)).toEqual([]);
+  test('a figure off a needs alias answers it', () => {
     const alias = write(`const CONTRACT = { disclosure: { cancelBooking: {
       needs: { booking: { tool: 'getBooking', args: { bookingId: 'bookingId' } } },
       before: 'Cancelling frees {booking.booking.assetName}.' } } };`);
     expect(destructiveDisclosed(alias, DESTRUCTIVE, APPROVES)).toEqual([]);
+  });
+
+  test('an args echo is the model\'s own word for the call, so it is still a finding', () => {
+    const args = write(`const CONTRACT = { disclosure: { cancelBooking: {
+      before: 'Cancelling {args.bookingId} cannot be undone.' } } };`);
+    const found = destructiveDisclosed(args, DESTRUCTIVE, APPROVES);
+    expect(found.map(f => f.code)).toEqual(['DISCLOSURE_BEFORE_UNFIGURED']);
+    expect(found[0].sentence).toContain('{args.bookingId}');
+    expect(found[0].sentence).toContain('Declare a needs read');
   });
 
   test('an act no case approves is asked for by nobody, so the figure is not owed', () => {
