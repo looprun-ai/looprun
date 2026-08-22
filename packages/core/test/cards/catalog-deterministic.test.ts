@@ -78,6 +78,23 @@ test('valueFromUser passes only a value the user wrote as contiguous whole token
     'reach ana@example.com'))).toContain('to');
 });
 
+test('valueFromUser reads a figure written in any format, currency mark or slip of it', () => {
+  const g = valueFromUser('issueRefund', 'amount').compile('contract', FACTS);
+  const call = (amount: number, userText: string): CallCtx =>
+    ({ ...callCtx('issueRefund', {}, STATE, userText),
+       call: { tool: 'issueRefund', args: { amount }, key: 'k' } });
+  expect(g.deny(call(2000, 'Refund R$ 2.000,00 on inv_7001'))).toBeNull();
+  expect(g.deny(call(2000, 'Refund R4 2000.00 on inv_7001'))).toBeNull();
+  expect(g.deny(call(2000, 'Refund R$2000 on inv_7001'))).toBeNull();
+  expect(g.deny(call(2000, 'Refund e2000,0 on inv_7001'))).toBeNull();
+  expect(g.deny(call(25000, 'put $25,000 back on the paid invoice'))).toBeNull();
+  expect(g.deny(call(9000, 'The repair quote came back at $9,000 — approve it'))).toBeNull();
+  expect(g.deny(call(2000, 'Refund 2.000 on inv_7001'))).toBeNull();
+  expect(g.deny(call(2000, 'Refund 2 000 on inv_7001'))).toBeNull();
+  expect(g.deny(call(2000, 'Refund 200 on inv_7001'))).toContain('amount');
+  expect(g.deny(call(1930, 'Refund 2000 on inv_7001'))).toContain('amount');
+});
+
 test('valueFromUser reads a number arg by its digits — the user must have written them', () => {
   const g = valueFromUser('registerAsset', 'requiredDeposit').compile('contract', FACTS);
   const call = (deposit: number, userText: string): CallCtx =>

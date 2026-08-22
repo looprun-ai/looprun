@@ -454,8 +454,74 @@ function tokens(text: string): readonly string[] {
   return out;
 }
 
+function isDigit(c: string): boolean {
+  return c >= '0' && c <= '9';
+}
+
+/** Whether a value is one plain figure: digits with at most one decimal point, digit
+ *  at both edges. Anything else — an id, an email, a word — has exactly one spelling. */
+function isFigure(value: string): boolean {
+  if (value === '' || !isDigit(value[0]) || !isDigit(value[value.length - 1])) return false;
+  let dots = 0;
+  for (const c of value) {
+    if (c === '.') { dots += 1; if (dots > 1) return false; }
+    else if (!isDigit(c)) return false;
+  }
+  return true;
+}
+
+/** Every run of digits in a text, read with the separators a person writes inside an
+ *  amount: '.' or ',' between digits stays in the run, and a space stays only when a
+ *  three-digit group follows it. 'R$ 2.000,00' yields '2.000,00'; 'e2000,0' yields
+ *  '2000,0'; a currency mark, mistyped or not, is never part of the run. */
+function figureRuns(text: string): readonly string[] {
+  const out: string[] = [];
+  let i = 0;
+  while (i < text.length) {
+    if (!isDigit(text[i])) { i += 1; continue; }
+    let run = '';
+    while (i < text.length) {
+      const c = text[i];
+      if (isDigit(c)) { run += c; i += 1; }
+      else if ((c === '.' || c === ',') && i + 1 < text.length && isDigit(text[i + 1])) {
+        run += c; i += 1;
+      } else if (c === ' ' && i + 3 < text.length && isDigit(text[i + 1])
+        && isDigit(text[i + 2]) && isDigit(text[i + 3]) && !isDigit(text[i + 4] ?? '')) {
+        run += ','; i += 1;
+      } else break;
+    }
+    out.push(run);
+  }
+  return out;
+}
+
+/** ONE amount, canonically: grouping separators dropped, the decimal tail kept without
+ *  its trailing zeros. The last separator carrying one or two digits is the decimal
+ *  mark; a separator carrying three is grouping. '2.000,00', '2,000', '2000.0' and
+ *  '2000' are the same amount; '200' is a different one and never becomes it. */
+function canonicalAmount(run: string): string {
+  const parts: string[] = [];
+  let current = '';
+  for (const c of run) {
+    if (isDigit(c)) current += c;
+    else { parts.push(current); current = ''; }
+  }
+  parts.push(current);
+  let decimal = '';
+  const last = parts[parts.length - 1];
+  if (parts.length > 1 && (last.length === 1 || last.length === 2)) {
+    decimal = last;
+    parts.pop();
+  }
+  while (decimal.endsWith('0')) decimal = decimal.slice(0, -1);
+  let whole = parts.join('');
+  while (whole.length > 1 && whole[0] === '0') whole = whole.slice(1);
+  return decimal === '' ? whole : `${whole}.${decimal}`;
+}
+
 /** The arg's value must appear VERBATIM in the user's own words — contiguous whole
- *  tokens, whole-value equal; the guard searches, it never interprets. */
+ *  tokens, whole-value equal; the guard searches, it never interprets. A figure arg
+ *  is searched in every standard spelling of the same amount. */
 export function valueFromUser(tool: string, arg: string): SeedGuard {
   return {
     name: `valueFromUser:${tool}`,
@@ -469,6 +535,13 @@ export function valueFromUser(tool: string, arg: string): SeedGuard {
         const value = typeof raw === 'number' ? String(raw) : raw;
         if (typeof value !== 'string' || value === '') {
           return `'${arg}' must be a value the user wrote`;
+        }
+        if (isFigure(value)) {
+          const amount = canonicalAmount(value);
+          for (const run of figureRuns(ctx.userText)) {
+            if (canonicalAmount(run) === amount) return null;
+          }
+          return `'${arg}' is not written in the user's own words`;
         }
         const need = tokens(value);
         if (need.length === 0) {
