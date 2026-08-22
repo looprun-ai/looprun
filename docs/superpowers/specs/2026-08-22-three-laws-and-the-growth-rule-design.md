@@ -135,8 +135,8 @@ lint and the fingerprint sweep hold before and after.
      of law 1's wall carrying law 2's restraint; the ladder stays the
      tool vocabulary.
   3  Every remaining named micro-law is folded into the law it
-     instantiates or into a lesson; page count and prompt cost of the
-     SKILL itself go down, not up.
+     instantiates or into a lesson; the only law names the skill
+     carries are the two laws and the six template names.
   4  The walk shrinks: every pairing row a gate check now covers
      collapses into "run the gate early — its findings are the walk for
      everything explicit." The walk keeps the judgment rows no check can
@@ -173,9 +173,8 @@ drawer question, the templates' four parts, and the repair-channel table phase T
                then runs phase T, three rounds at most, self-judged; an
                independent judgment verifies the final declaration on
                the full 40-case slice. The verified score must reach the
-               baseline's 37/40, and the skill's own page bytes must go
-               down. Pass -> merge, and the new subject becomes the
-               reference. Fail -> the branch does not merge, and the
+               baseline's. Pass -> merge, and the new subject becomes
+               the reference. Fail -> the branch does not merge, and the
                failures feed the spec, not the pages.
 ```
 
