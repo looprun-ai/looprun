@@ -122,7 +122,38 @@ the templates gate, the triangle lint and the fingerprint sweep hold before and 
      not land.
 ```
 
-## 5 · What the rule forbids
+## 5 · The T lens — what the measured loop makes removable
+
+With the T phase in the pipeline (author -> run -> self-judge -> fix), any teaching whose only
+job is ONE-SHOT perfection is over-built: the loop converges on wording by iteration, and a
+static page cannot. Three consequences for the rewrite:
+
+```
+  1  THE WALK SHRINKS. Every pairing row a gate verb now covers collapses
+     into one sentence: "run the gate early — its findings ARE the walk for
+     everything derivable." The walk keeps only the judgment rows no verb
+     can hold (which movements an ask composes, which seam rows the cases
+     make load-bearing, which shape a wall sentence takes). Eight rows
+     become about three, plus the pointer.
+
+  2  TEACH ONLY WHAT THE GATE CANNOT SAY. A page never re-teaches an
+     obligation a verb enforces — one pointer at most. The finding text is
+     the teaching, delivered at the exact moment it applies, and it cannot
+     go stale against the verb it belongs to.
+
+  3  WORDING LESSONS ARE EXAMPLES, NOT DUTIES. The clause shapes that
+     measured well (the figure restraint, the surface claim, the split
+     movement) stay as filled examples of the three laws; the T loop is
+     what guarantees them per subject, because the author who misses one
+     meets it in their own transcript and fixes it in minutes.
+```
+
+What the T lens does NOT remove: the verbs (static, free, and they run before any model call —
+a T iteration costs a run and a judgment; a gate finding costs nothing), the drawer question
+(the sorting rule between the first two laws), and the templates' four parts (the format the
+templates gate holds).
+
+## 6 · What the rule forbids
 
 - A seventh house law, an eighth, a ninth — the wall set is closed at six templates; new wall
   content enters as a clause or an example of an existing one.
