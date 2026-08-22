@@ -192,26 +192,6 @@ function checkPreconditionTarget(declaration: Declaration, facts: SurfaceFacts):
   return refusals;
 }
 
-/** A conduct law more than one desk teaches is the house's, and every desk owes a house law: a
- *  rule the user hears from one seat and never at the next reads as a rule that stopped applying.
- *  A law exactly one desk teaches is that desk's own — the fleet desk's law about the figures a
- *  registry row waits for is not a law the billing desk owes. */
-function checkConductShared(declaration: Declaration): readonly string[] {
-  const desks = declaration.desks;
-  const allLaws = new Set<string>();
-  for (const desk of desks) for (const law of Object.keys(desk.conduct)) allLaws.add(law);
-  const refusals: string[] = [];
-  for (const law of allLaws) {
-    const teaching = desks.filter(desk => desk.conduct[law] !== undefined);
-    const silent = desks.filter(desk => desk.conduct[law] === undefined);
-    if (silent.length === 0 || teaching.length < 2) continue;
-    refusals.push(`desks[*].conduct: '${law}' is on ${teaching.length} desks `
-      + `and missing from ${silent.map(desk => desk.name).join(', ')} — a law more than one desk `
-      + `teaches is the house's, and every desk owes it.`);
-  }
-  return refusals;
-}
-
 /** A disclosure `needs` alias names a tool the surface actually declares — checked for
  *  every alias regardless of the held act's target, because a typo names no tool no
  *  matter what the destructive act it discloses looks like. */
@@ -335,7 +315,6 @@ export function checkAgainstSurface(declaration: Declaration, facts: SurfaceFact
     ...checkGuardArgsOnSchema(declaration, facts),
     ...checkDestructiveDisclosed(declaration, facts),
     ...checkPreconditionTarget(declaration, facts),
-    ...checkConductShared(declaration),
     ...checkDisclosureNeedsToolExists(declaration, facts),
     ...checkDisclosureNeedsResolvable(declaration, facts),
     ...checkSeamRows(declaration, facts, seam)

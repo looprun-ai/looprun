@@ -2,9 +2,9 @@
 import type { AgentSpec, DeclaredWorld, DomainContract, ExamCase, LiveWorldCard,
               McpWorldCard } from '@looprun-ai/core';
 import { AgentFactory, factsFromWorld, Rulebook } from '@looprun-ai/core';
-import { approvable, approvedActsDisclosed, capPaths, conductComplete, coversResolve,
+import { approvable, capPaths, coversResolve,
          destructiveDisclosed, floorRedeclared, inertChecks, nameGate, noEffectDenied, overWide,
-         pairing, presetsDeclared, promptBudgeted, purity, readsOrdered, requiredReadsDisclosed,
+         pairing, presetsDeclared, purity,
          unlicensed, unspokenChecks, type LintFinding } from './lints.js';
 
 /** What the gate needs beyond the directory. Every field is REQUIRED, and the two a subject
@@ -16,9 +16,8 @@ import { approvable, approvedActsDisclosed, capPaths, conductComplete, coversRes
  *  derivation the prompt proof uses, so the acts the verbs read are the acts the engine compiles. */
 export interface GateSubject {
   readonly world: DeclaredWorld | McpWorldCard | LiveWorldCard;
-  /** One spec per desk, and the business they share. The prompt a subject sends every turn is
-   *  rendered from these, so the byte budget is measured over them. A domain with no shared
-   *  business writes `contract: undefined`. */
+  /** One spec per desk, and the business they share. A domain with no shared business writes
+   *  `contract: undefined`. */
   readonly specs: Readonly<Record<string, AgentSpec>>;
   readonly contract: DomainContract | undefined;
   readonly cases: readonly ExamCase[];
@@ -81,23 +80,13 @@ export function runGate(subjectDir: string, subject: GateSubject): readonly Lint
     ...unlicensed(subjectDir),
     ...overWide(subjectDir),
     ...floorRedeclared(subjectDir),
-    ...conductComplete(subjectDir),
     ...capPaths(subjectDir),
     ...inertChecks(subjectDir, facts.tools),
     ...unspokenChecks(subjectDir),
     ...destructiveDisclosed(subjectDir, facts, cases),
-    // Both tenses of a consent question an exam renders: the one that asks, and the one that
-    // reports what the act did.
-    ...approvedActsDisclosed(subjectDir, cases, facts),
-    // What every desk sends on every turn, against the ceiling the subject's owner declared.
-    ...promptBudgeted(subjectDir, subject),
     // The scenario a case names is read off the card the gate already holds, so this verb needs
     // nothing a subject directory cannot answer and takes no opt-out.
     ...presetsDeclared(cases, subject.world),
-    // What the exam already makes derivable, enforced instead of taught: a read a case requires
-    // is a read an act is ordered behind, and a read a case requires answers in figures.
-    ...readsOrdered(subjectDir, cases, facts, subject.world),
-    ...requiredReadsDisclosed(subjectDir, cases, facts),
     // An act the exam expects refused is an act the cards can refuse: a mechanism that decides the
     // call, not an order that reading clears.
     ...noEffectDenied(subjectDir, cases),

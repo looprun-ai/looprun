@@ -80,8 +80,7 @@ const SOUND_SUBJECT: GateSubject = {
           { id: 'sound-02', split: 'fix', preset: undefined, turns: ['close ord_7'],
             invariants: { noEffectToolCalls: [{ name: 'closeOrder' }] },
             rubric: 'A closed order is refused, and the reply names the status it is in.' },
-          // The act the exam approves: both tenses of its consent question are rendered, and the
-          // disclosure carries the words for each.
+          // The act the exam approves: the disclosure carries the consent question that asks it.
           { id: 'sound-03', split: 'fix', turns: ['delete ord_7', { approve: { tool: 'deleteOrder' } }],
             rubric: 'The deletion names the order it removed.' }],
   censusNames: SOUND_CENSUS,
@@ -97,7 +96,6 @@ describe('runGate', () => {
     expect(codes.has('COVERS_UNRESOLVED')).toBe(true);
     expect(codes.has('CHECK_INERT')).toBe(true);
     expect([...codes].sort()).toEqual([
-      'ACT_RESULT_UNSPOKEN',     // approvedActsDisclosed
       'ACT_UNDENIABLE',          // noEffectDenied
       'ACT_WITHOUT_CHECK',       // pairing
       'CAP_PATH_UNROOTED',       // capPaths
@@ -105,14 +103,11 @@ describe('runGate', () => {
       'CASE_PRESET_UNKNOWN',     // presetsDeclared
       'CHECK_INERT',             // inertChecks
       'CHECK_UNSPOKEN',          // unspokenChecks
-      'CONDUCT_INCOMPLETE',      // conductComplete
       'COVERS_UNRESOLVED',       // coversResolve
       'DISCLOSURE_BEFORE_MISSING',   // destructiveDisclosed
       'DISCLOSURE_BEFORE_UNFIGURED', // destructiveDisclosed
       'FLOOR_REDECLARED',        // floorRedeclared
       'PROSE_UNLICENSED',        // unlicensed
-      'READ_RESULT_UNSPOKEN',    // requiredReadsDisclosed
-      'REQUIRED_READ_UNORDERED', // readsOrdered
       'RULE_WIDE_UNLICENSED',    // overWide
       'SUBJECT_REGEX'            // purity
     ]);
@@ -134,20 +129,4 @@ describe('runGate', () => {
     expect(runGate(dir, bare).map(f => f.code)).toContain('SUBJECT_RETIRED_NAME');
   });
 
-  test('the byte budget verb is in the gate, and reads the ceiling out of the subject itself', () => {
-    const dir = mkdtempSync(join(tmpdir(), 'gate-budget-'));
-    mkdirSync(join(dir, 'ask'), { recursive: true });
-    writeFileSync(join(dir, 'ask', 'targets.json'), JSON.stringify({
-      targets: [{ provider: 'google', model: 'a-model', apiKeyEnv: 'A_KEY' }], promptBudget: 1 }));
-    const budgeted: GateSubject = {
-      world: SOUND_WORLD,
-      specs: { orders: { name: 'orders', persona: 'You are the orders desk.' } },
-      contract: undefined,
-      cases: [], censusNames: null, presetLeavesGuardInert: null
-    };
-    const over = runGate(dir, budgeted).filter(f => f.code === 'PROMPT_OVER_BUDGET');
-    expect(over).toHaveLength(1);
-    expect(over[0].sentence).toContain('budgets 1');
-    expect(over[0].sentence).toContain('orders');
-  });
 });

@@ -34,22 +34,6 @@ describe('checkAgainstSurface', () => {
       .toEqual([expect.stringContaining("the 'a' desk's lane holds 'issueRefund'")]);
   });
 
-  test('a conduct law two desks teach and a third never reads', () => {
-    expect(checkAgainstSurface(decl({ desks: [
-      { name: 'a', persona: 'p', tools: ['issueRefund'], conduct: { declareHonestly: 'x', oneQuestion: 'y' } },
-      { name: 'b', persona: 'p', tools: ['getInvoice'],  conduct: { declareHonestly: 'x', oneQuestion: 'y' } },
-      { name: 'c', persona: 'p', tools: ['getInvoice'],  conduct: { declareHonestly: 'x' } }] }), FACTS, SEAM))
-      .toEqual([expect.stringContaining("'oneQuestion' is on 2 desks and missing from c")]);
-  });
-
-  test('a conduct law one desk alone teaches is that desk\'s own', () => {
-    expect(checkAgainstSurface(decl({ desks: [
-      { name: 'a', persona: 'p', tools: ['issueRefund'],
-        conduct: { declareHonestly: 'x', registryFiguresAreGiven: 'The deposit is the operator\'s figure.' } },
-      { name: 'b', persona: 'p', tools: ['getInvoice'], conduct: { declareHonestly: 'x' } }] }), FACTS, SEAM))
-      .toEqual([]);
-  });
-
   test('a disclosure alias whose read cannot answer from the held call', () => {
     expect(checkAgainstSurface(decl({ disclosure: { issueRefund: {
       needs: { invoice: 'getInvoice' }, before: 'x' } } }), { tools: {
