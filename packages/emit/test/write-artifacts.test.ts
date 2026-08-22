@@ -83,7 +83,7 @@ test('the gate file runs the one gate and states why no preset oracle rides with
   // The desks ride with the world: the byte budget is measured over the prompt they render.
   expect(out).toContain('    specs,');
   expect(out).toContain('    contract,');
-  expect(out).toContain('presetLeavesGuardInert: null');
+  expect(out).toContain('presetLeavesGuardInert: () => false');
   expect(out).toContain('.toEqual([])');
   expect(out).not.toContain('it(');
 });
@@ -238,7 +238,7 @@ test('the emitted subject clears every verb of the gate', async () => {
 
     expect(runGate(dir, { world: door.subjectWorld, specs: door.specs, contract: door.contract,
                           cases: exam.cases, censusNames,
-                          presetLeavesGuardInert: null })).toEqual([]);
+                          presetLeavesGuardInert: () => false })).toEqual([]);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

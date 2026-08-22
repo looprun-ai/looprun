@@ -7,9 +7,9 @@ import { approvable, capPaths, coversResolve,
          pairing, presetsDeclared, purity,
          unlicensed, unspokenChecks, type LintFinding } from './lints.js';
 
-/** What the gate needs beyond the directory. Every field is REQUIRED, and the two a subject
- *  directory cannot answer on its own take an explicit `null` to opt out: a caller with no census
- *  in hand writes `censusNames: null` and reads in its own code that two verbs did not run. A field
+/** What the gate needs beyond the directory. Every field is REQUIRED, and the one a subject
+ *  directory cannot answer on its own takes an explicit `null` to opt out: a caller with no census
+ *  in hand writes `censusNames: null` and reads in its own code that one verb did not run. A field
  *  left out is a compile error — never a shorter, cleaner findings list.
  *
  *  The world is the declared card itself: the gate derives the surface facts from it with the same
@@ -25,9 +25,11 @@ export interface GateSubject {
    *  Rulebook injects. A case's `covers` key is spelled against these. `null` opts out. */
   readonly censusNames: ReadonlySet<string> | null;
   /** Whether a case's preset leaves the named guard unable to refuse in any state that preset
-   *  reaches. The caller builds this from the world it has already run the preset against.
-   *  `null` opts out. */
-  readonly presetLeavesGuardInert: ((preset: string | undefined, guardName: string) => boolean) | null;
+   *  reaches. The caller builds this from the world it has already run the preset against, and
+   *  answers for every case it hands over: this is the one verb that asks whether a covered guard
+   *  can fire at all, and a subject it does not run on is a subject whose covers keys are spelling
+   *  checked and nothing more. */
+  readonly presetLeavesGuardInert: (preset: string | undefined, guardName: string) => boolean;
 }
 
 /** The cards a census is read off: one desk each, the business they share, and the world whose
@@ -91,6 +93,8 @@ export function runGate(subjectDir: string, subject: GateSubject): readonly Lint
     // call, not an order that reading clears.
     ...noEffectDenied(subjectDir, cases),
     ...(censusNames === null ? [] : coversResolve(cases, censusNames)),
-    ...(presetLeavesGuardInert === null ? [] : approvable(cases, { presetLeavesGuardInert }))
+    // A case covers a guard to prove it fires; whether its scenario leaves that guard able to
+    // refuse is answered for every subject, and no subject sits this verb out.
+    ...approvable(cases, { presetLeavesGuardInert })
   ];
 }

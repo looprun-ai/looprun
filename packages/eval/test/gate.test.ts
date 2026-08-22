@@ -125,8 +125,21 @@ describe('runGate', () => {
     const dir = mkdtempSync(join(tmpdir(), 'gate-retired-'));
     writeFileSync(join(dir, 'cards.ts'), 'export const toolDefs = [];\n');
     const bare: GateSubject = { world: {}, specs: {}, contract: undefined, cases: [],
-                                censusNames: null, presetLeavesGuardInert: null };
+                                censusNames: null, presetLeavesGuardInert: () => false };
     expect(runGate(dir, bare).map(f => f.code)).toContain('SUBJECT_RETIRED_NAME');
+  });
+
+  test('the approvability verb takes no opt-out: every caller answers for its presets', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'gate-inert-'));
+    writeFileSync(join(dir, 'cards.ts'), 'export const CONTRACT = { guards: [] };\n');
+    const covered: GateSubject = {
+      world: {}, specs: {}, contract: undefined, censusNames: null,
+      cases: [{ id: 'retire-a-reserved-asset', split: 'fix', turns: ['retire ast_1'],
+                covers: ['precondition:retireAsset'],
+                rubric: 'The retirement is refused and the booking that holds it is named.' }],
+      presetLeavesGuardInert: (_preset, guardName) => guardName === 'precondition:retireAsset'
+    };
+    expect(runGate(dir, covered).map(f => f.code)).toContain('CASE_CANNOT_FIRE');
   });
 
 });
