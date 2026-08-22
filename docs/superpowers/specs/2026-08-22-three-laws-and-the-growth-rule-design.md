@@ -167,7 +167,36 @@ a T iteration costs a run and a judgment; a gate finding costs nothing), the dra
 (the sorting rule between the first two laws), and the templates' four parts (the format the
 templates gate holds).
 
-## 6 · What the rule forbids
+## 6 · The update strategy — what base, on what branch, accepted how
+
+```
+  THE BASE     the CURRENT head of the skill — the state whose subject
+               converged on the 40-case slice. The rewrite re-homes that
+               content under the three laws; every measured sentence
+               (templates, clauses, skeletons) survives verbatim wherever
+               the new structure allows. No earlier base: anything older
+               discards measured teaching.
+
+  THE BRANCH   the rewrite is built on a branch of the skill repo, with
+               the pre-rewrite commit recorded in the campaign ledger as
+               the baseline. The old skill stays addressable for the A/B.
+
+  THE SPLIT    engine carries (the two machines from the widened slice)
+               land on the engine's own branch as ordinary verb/emitter
+               commits — independently tested, not gated by the A/B.
+               Skill content (the rewrite + the example clause) rides the
+               skill branch alone.
+
+  ACCEPTANCE   one blind author reads the BRANCH skill, same scaffold,
+               same 40-case slice, phase by phase, with the independent
+               judgment on top: the score must reach the baseline
+               subject's, authoring time must not grow, and the skill's
+               own page bytes must go down. Pass -> merge, and the new
+               subject becomes the reference. Fail -> the branch does not
+               merge, and the failures feed the spec, not the pages.
+```
+
+## 7 · What the rule forbids
 
 - A seventh house law, an eighth, a ninth — the wall set is closed at six templates; new wall
   content enters as a clause or an example of an existing one.
