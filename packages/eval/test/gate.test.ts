@@ -1,16 +1,19 @@
 /** The gate over a subject written wrong on purpose. Every verb the gate composes owns one row
  *  here, so a verb dropped from the gate loses its own code from the list and this file says which
- *  one went missing. The retired-name verb is proved on a directory written at run time: a retired
+ *  one went missing. Two verbs are proved on directories written at run time instead. A retired
  *  identifier checked into the tree fails the tree-wide name gate, which walks every file under
- *  packages/, fixtures included. */
+ *  packages/, fixtures included. And the byte budget renders every desk through the engine, which
+ *  a deliberately broken card cannot survive — so it is proved on a card that compiles, held to a
+ *  ceiling of one byte. */
 import { describe, expect, test } from 'vitest';
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { ExamCase } from '@looprun-ai/core';
+import type { AgentSpec, ExamCase } from '@looprun-ai/core';
 import { runGate, type GateSubject } from '../src/gate.js';
-import { ordersWorld as BROKEN_WORLD } from './fixtures/gate-broken/cards.js';
+import { ordersDesk as brokenOrders, ordersWorld as BROKEN_WORLD, refundsDesk as brokenRefunds,
+         returnsDesk as brokenReturns } from './fixtures/gate-broken/cards.js';
 import { ordersContract, ordersDesk, ordersWorld as SOUND_WORLD,
          returnsDesk } from './fixtures/gate-sound/cards.js';
 
@@ -41,8 +44,16 @@ const BROKEN_CASES: readonly ExamCase[] = [
     rubric: 'The refund is refused, and the reply names the status that refuses it.' }
 ];
 
+/** The fixture desks are literals the verbs PARSE, not cards the engine compiles: this directory
+ *  is wrong on purpose, and a card that is wrong on purpose does not survive the factory. The gate
+ *  renders nothing here because the directory declares no budget. */
+const BROKEN_DESKS = { ordersDesk: brokenOrders, refundsDesk: brokenRefunds,
+                       returnsDesk: brokenReturns } as unknown as Readonly<Record<string, AgentSpec>>;
+
 const FIXTURE_SUBJECT: GateSubject = {
   world: BROKEN_WORLD,
+  specs: BROKEN_DESKS,
+  contract: undefined,
   cases: BROKEN_CASES,
   censusNames: new Set(['confirmFirst:deleteOrder']),
   presetLeavesGuardInert: (preset, guardName) =>
@@ -57,6 +68,8 @@ const SOUND_CENSUS = new Set([...ordersDesk.guards, ...returnsDesk.guards, ...or
 
 const SOUND_SUBJECT: GateSubject = {
   world: SOUND_WORLD,
+  specs: { ordersDesk, returnsDesk } as unknown as Readonly<Record<string, AgentSpec>>,
+  contract: ordersContract as never,
   cases: [{ id: 'sound-01', split: 'fix', turns: ['close ord_7'],
             covers: ['precondition:closeOrder'],
             invariants: { requiredToolCalls: [{ name: 'getOrder' }, { name: 'closeOrder' }] },
@@ -110,8 +123,25 @@ describe('runGate', () => {
   test('the retired-name verb is in the gate', () => {
     const dir = mkdtempSync(join(tmpdir(), 'gate-retired-'));
     writeFileSync(join(dir, 'cards.ts'), 'export const toolDefs = [];\n');
-    const bare: GateSubject = { world: {}, cases: [], censusNames: null,
-                                presetLeavesGuardInert: null };
+    const bare: GateSubject = { world: {}, specs: {}, contract: undefined, cases: [],
+                                censusNames: null, presetLeavesGuardInert: null };
     expect(runGate(dir, bare).map(f => f.code)).toContain('SUBJECT_RETIRED_NAME');
+  });
+
+  test('the byte budget verb is in the gate, and reads the ceiling out of the subject itself', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'gate-budget-'));
+    mkdirSync(join(dir, 'ask'), { recursive: true });
+    writeFileSync(join(dir, 'ask', 'targets.json'), JSON.stringify({
+      targets: [{ provider: 'google', model: 'a-model', apiKeyEnv: 'A_KEY' }], promptBudget: 1 }));
+    const budgeted: GateSubject = {
+      world: SOUND_WORLD,
+      specs: { orders: { name: 'orders', persona: 'You are the orders desk.' } },
+      contract: undefined,
+      cases: [], censusNames: null, presetLeavesGuardInert: null
+    };
+    const over = runGate(dir, budgeted).filter(f => f.code === 'PROMPT_OVER_BUDGET');
+    expect(over).toHaveLength(1);
+    expect(over[0].sentence).toContain('budgets 1');
+    expect(over[0].sentence).toContain('orders');
   });
 });

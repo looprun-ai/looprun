@@ -3,14 +3,14 @@
  *  runs it, watches it, hands the transcripts to the person judging, folds their
  *  verdicts back, certifies against a bar and freezes what was authored. The run
  *  directory is the only state between verbs. */
-export { loadTargets } from './targets.js';
+export { loadPromptBudget, loadTargets } from './targets.js';
 export type { DeclaredTarget } from './targets.js';
 export { SubjectLoader } from './subject-loader.js';
 export type { Subject } from './subject-loader.js';
 export { Validator } from './validator.js';
 export type { ValidationFinding, ValidationReport } from './validator.js';
-export { approvable, boilerplate, byteOrigin, capPaths, census, conductComplete, coversResolve, destructiveDisclosed, doubleStated, echoes, floorRedeclared, inertChecks, nameGate, noEffectDenied, overWide, pairing, pairingTable, presetsDeclared, profile, promptLines, readsOrdered, requiredReadsDisclosed, ruleCopies, purity, seamCovered, seamSpoken, surfaceOf, unlicensed, unspokenChecks } from './lints.js';
-export type { ApprovabilitySubject } from './lints.js';
+export { approvable, boilerplate, byteOrigin, capPaths, census, conductComplete, coversResolve, destructiveDisclosed, doubleStated, echoes, floorRedeclared, inertChecks, nameGate, noEffectDenied, overWide, pairing, pairingTable, presetsDeclared, profile, promptBudgeted, promptLines, readsOrdered, requiredReadsDisclosed, ruleCopies, purity, seamCovered, seamSpoken, surfaceOf, unlicensed, unspokenChecks } from './lints.js';
+export type { ApprovabilitySubject, DeskSubject } from './lints.js';
 export type { ByteOrigin, CompiledDesk } from './lints.js';
 export type { CardProfile } from './lints.js';
 export type { LintFinding } from './lints.js';

@@ -4,8 +4,8 @@ import type { AgentSpec, DeclaredWorld, DomainContract, ExamCase, LiveWorldCard,
 import { AgentFactory, factsFromWorld, Rulebook } from '@looprun-ai/core';
 import { approvable, capPaths, conductComplete, coversResolve, destructiveDisclosed,
          floorRedeclared, inertChecks, nameGate, noEffectDenied, overWide, pairing,
-         presetsDeclared, purity, readsOrdered, requiredReadsDisclosed, unlicensed,
-         unspokenChecks, type LintFinding } from './lints.js';
+         presetsDeclared, promptBudgeted, purity, readsOrdered, requiredReadsDisclosed,
+         unlicensed, unspokenChecks, type LintFinding } from './lints.js';
 
 /** What the gate needs beyond the directory. Every field is REQUIRED, and the two a subject
  *  directory cannot answer on its own take an explicit `null` to opt out: a caller with no census
@@ -16,6 +16,11 @@ import { approvable, capPaths, conductComplete, coversResolve, destructiveDisclo
  *  derivation the prompt proof uses, so the acts the verbs read are the acts the engine compiles. */
 export interface GateSubject {
   readonly world: DeclaredWorld | McpWorldCard | LiveWorldCard;
+  /** One spec per desk, and the business they share. The prompt a subject sends every turn is
+   *  rendered from these, so the byte budget is measured over them. A domain with no shared
+   *  business writes `contract: undefined`. */
+  readonly specs: Readonly<Record<string, AgentSpec>>;
+  readonly contract: DomainContract | undefined;
   readonly cases: readonly ExamCase[];
   /** The guard names `Engine.guards()` returns — the compiled rows plus the honesty rows the
    *  Rulebook injects. A case's `covers` key is spelled against these. `null` opts out. */
@@ -81,6 +86,8 @@ export function runGate(subjectDir: string, subject: GateSubject): readonly Lint
     ...inertChecks(subjectDir, facts.tools),
     ...unspokenChecks(subjectDir),
     ...destructiveDisclosed(subjectDir, facts, cases),
+    // What every desk sends on every turn, against the ceiling the subject's owner declared.
+    ...promptBudgeted(subjectDir, subject),
     // The scenario a case names is read off the card the gate already holds, so this verb needs
     // nothing a subject directory cannot answer and takes no opt-out.
     ...presetsDeclared(cases, subject.world),

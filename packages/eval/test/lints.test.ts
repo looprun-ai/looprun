@@ -1156,3 +1156,74 @@ describe('the seam licence', () => {
     expect(unlicensed(dir)).toEqual([]);
   });
 });
+
+import { AgentFactory, factsFromWorld, PromptWriter } from '@looprun-ai/core';
+import { promptBudgeted, type DeskSubject } from '../src/lints.js';
+
+/** The two desks a budget is measured over, in an invented domain: the front desk sees the whole
+ *  surface, the back desk sees one act of it, and neither one carries a guard. */
+const DESK_WORLD = world({
+  records: { tickets: {} },
+  reads: { getTicket: { form: 'get', entity: 'tickets', label: 'Look up one ticket' },
+           listTickets: { form: 'list', entity: 'tickets', label: 'List the tickets' } },
+  writes: { closeTicket: { form: 'set', entity: 'tickets', label: 'Close a ticket' } }
+});
+
+const TWO_DESKS: DeskSubject = {
+  specs: { front: { name: 'front', persona: 'You are the front desk.' },
+           back: { name: 'back', persona: 'You are the back desk.', tools: ['getTicket'] } },
+  contract: undefined,
+  world: DESK_WORLD
+};
+
+/** The same ruler, written out here: every desk's system prefix plus the bytes of its tool cards. */
+function deskTotal(subject: DeskSubject): number {
+  const facts = factsFromWorld(subject.world);
+  let total = 0;
+  for (const spec of Object.values(subject.specs)) {
+    const writer = new PromptWriter(new AgentFactory().governed(spec, subject.contract, facts));
+    total += writer.system().length
+      + writer.toolCards().reduce((n, card) => n + JSON.stringify(card).length, 0);
+  }
+  return total;
+}
+
+const TARGETS = [{ provider: 'google', model: 'a-model', apiKeyEnv: 'A_KEY' }];
+
+describe('promptBudgeted', () => {
+  const askDir = (declared: unknown): string => {
+    const dir = mkdtempSync(join(tmpdir(), 'budget-'));
+    if (declared !== null) {
+      mkdirSync(join(dir, 'ask'), { recursive: true });
+      writeFileSync(join(dir, 'ask', 'targets.json'), JSON.stringify(declared));
+    }
+    return dir;
+  };
+
+  test('a subject whose owner declared no ceiling is measured against nothing', () => {
+    expect(promptBudgeted(askDir(null), TWO_DESKS)).toEqual([]);
+    expect(promptBudgeted(askDir({ targets: TARGETS }), TWO_DESKS)).toEqual([]);
+  });
+
+  test('a prompt under the ceiling is silent', () => {
+    const dir = askDir({ targets: TARGETS, promptBudget: deskTotal(TWO_DESKS) });
+    expect(promptBudgeted(dir, TWO_DESKS)).toEqual([]);
+  });
+
+  test('over the ceiling names the total, the budget, the overrun and the carriers', () => {
+    const total = deskTotal(TWO_DESKS);
+    const found = promptBudgeted(askDir({ targets: TARGETS, promptBudget: total - 1 }), TWO_DESKS);
+    expect(found.map(f => f.code)).toEqual(['PROMPT_OVER_BUDGET']);
+    expect(found[0].sentence).toContain(`render ${String(total)} prompt bytes`);
+    expect(found[0].sentence).toContain(`budgets ${String(total - 1)}`);
+    expect(found[0].sentence).toContain('1 over');
+    expect(found[0].sentence).toContain('system');
+    expect(found[0].sentence).toContain('cards');
+  });
+
+  test('the carriers are named heaviest first, so the desk to cut is the one in front', () => {
+    const found = promptBudgeted(askDir({ targets: TARGETS, promptBudget: 1 }), TWO_DESKS);
+    const said = found[0].sentence;
+    expect(said.indexOf('front ')).toBeLessThan(said.indexOf('back '));
+  });
+});

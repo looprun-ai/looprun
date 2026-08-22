@@ -80,6 +80,9 @@ test('the subject door exports the three names a loader reads', () => {
 test('the gate file runs the one gate and states why no preset oracle rides with it', () => {
   const out = writeGateFile();
   expect(out).toContain('runGate(SUBJECT, {');
+  // The desks ride with the world: the byte budget is measured over the prompt they render.
+  expect(out).toContain('    specs,');
+  expect(out).toContain('    contract,');
   expect(out).toContain('presetLeavesGuardInert: null');
   expect(out).toContain('.toEqual([])');
   expect(out).not.toContain('it(');
@@ -233,7 +236,8 @@ test('the emitted subject clears every verb of the gate', async () => {
     expect(predicted.filter(name => !censusNames.has(name))).toEqual([]);
     expect(predicted).toContain('confirmFirst:issueRefund');
 
-    expect(runGate(dir, { world: door.subjectWorld, cases: exam.cases, censusNames,
+    expect(runGate(dir, { world: door.subjectWorld, specs: door.specs, contract: door.contract,
+                          cases: exam.cases, censusNames,
                           presetLeavesGuardInert: null })).toEqual([]);
   } finally {
     rmSync(dir, { recursive: true, force: true });

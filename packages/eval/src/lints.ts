@@ -6,11 +6,12 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import ts from 'typescript';
-import type { ApproveRef, CompiledAgent, DeclaredWorld, ExamCase, ExamTurn, GuardCensus,
-              LiveWorldCard, McpWorldCard, PromptParts, SurfaceFacts, TurnRecord,
-              WorldCard } from '@looprun-ai/core';
+import type { AgentSpec, ApproveRef, CompiledAgent, DeclaredWorld, DomainContract, ExamCase,
+              ExamTurn, GuardCensus, LiveWorldCard, McpWorldCard, PromptParts, SurfaceFacts,
+              TurnRecord, WorldCard } from '@looprun-ai/core';
 import type { Subject } from './subject-loader.js';
-import { PromptWriter, RETIRED_NAMES } from '@looprun-ai/core';
+import { AgentFactory, factsFromWorld, PromptWriter, RETIRED_NAMES } from '@looprun-ai/core';
+import { loadPromptBudget } from './targets.js';
 
 export interface LintFinding { readonly code: string; readonly sentence: string }
 
@@ -1107,6 +1108,53 @@ export function byteOrigin(desks: readonly CompiledDesk[], facts: SurfaceFacts):
     .map(r => `${String(r.does * r.cards).padStart(6)} B  ${r.act} — ${r.does} B does `
       + `× ${r.cards} lane${r.cards === 1 ? '' : 's'}`);
   return { systemPrefixes, worldSentences, schemas, contractRules, lanes };
+}
+
+/** One subject's desks: one spec each, and the business every one of them shares. It is the whole
+ *  input to the prompt a subject sends — the world supplies the acts, and these supply who carries
+ *  which of them. */
+export interface DeskSubject {
+  readonly specs: Readonly<Record<string, AgentSpec>>;
+  readonly contract: DomainContract | undefined;
+  readonly world: DeclaredWorld | McpWorldCard | LiveWorldCard;
+}
+
+/** What one desk sends every turn: its system prefix, and the tool cards behind it. */
+function deskBytes(subject: DeskSubject, facts: SurfaceFacts)
+  : readonly { readonly desk: string; readonly system: number; readonly cards: number }[] {
+  const rows: { desk: string; system: number; cards: number }[] = [];
+  for (const [desk, spec] of Object.entries(subject.specs)) {
+    const writer = new PromptWriter(new AgentFactory().governed(spec, subject.contract, facts));
+    rows.push({ desk, system: writer.system().length,
+                cards: writer.toolCards().reduce((n, card) => n + JSON.stringify(card).length, 0) });
+  }
+  return rows;
+}
+
+/** The prompt every desk of a subject renders, held to the ceiling the SUBJECT OWNER declared.
+ *  The number is theirs and it lives in their own `ask/targets.json`, beside the one model this
+ *  subject may reach — never in a verb, and never in the cards being measured. A subject that
+ *  declares no ceiling is measured against nothing and this verb says nothing about it.
+ *
+ *  What is counted is what goes out on EVERY turn: each desk's system prefix plus the tool cards
+ *  it carries. The rows name where the bytes are, heaviest desk first, because the way back under
+ *  a budget is a lane split or a shorter world sentence on the desk carrying the most. */
+export function promptBudgeted(subjectDir: string, subject: DeskSubject): readonly LintFinding[] {
+  const budget = loadPromptBudget(join(subjectDir, 'ask', 'targets.json'));
+  if (budget === null) return [];
+  const rows = [...deskBytes(subject, factsFromWorld(subject.world))]
+    .sort((a, b) => b.system + b.cards - (a.system + a.cards));
+  const total = rows.reduce((n, row) => n + row.system + row.cards, 0);
+  if (total <= budget) return [];
+  const carriers = rows
+    .map(row => `${row.desk} ${String(row.system + row.cards)} (system ${String(row.system)} `
+      + `· cards ${String(row.cards)})`).join(' · ');
+  return [{ code: 'PROMPT_OVER_BUDGET',
+    sentence: `The ${String(rows.length)} desk${rows.length === 1 ? '' : 's'} of this subject `
+      + `render ${String(total)} prompt bytes every turn and this subject's own ask/targets.json `
+      + `budgets ${String(budget)}: ${String(total - budget)} over. Heaviest first — ${carriers}. `
+      + `Take the bytes out of what the heaviest desk carries, or raise the budget in the file `
+      + `that holds it.` }];
 }
 
 /** A `precondition` whose predicate reads `record` over an act that can never carry one. The
