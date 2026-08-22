@@ -691,13 +691,13 @@ describe('seamCovered', () => {
 
   test('a refusal routed through a shared helper is a row on every act that calls it', () => {
     const dir = write(
-      `function writeGate(w) {
+      `function writeBarrier(w) {
          if (w.workspace.status === 'suspended') return { error: 'WORKSPACE_SUSPENDED' };
          if (w.workspace.onboarded === false) return { error: 'NOT_ONBOARDED' };
          return null;
        }
        const H = { cancelBooking: (w, a) => {
-         const gate = writeGate(w);
+         const gate = writeBarrier(w);
          if (gate) return gateFail(gate);
        } };`,
       `const CONTRACT = { guards: [] };`);
