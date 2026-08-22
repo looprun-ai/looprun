@@ -1344,6 +1344,36 @@ export function destructiveDisclosed(subjectDir: string,
   return findings;
 }
 
+/** A consent question has two tenses, and the exam renders both. The `before` asks — that is the
+ *  sentence `destructiveDisclosed` holds to a figure. The `after` reports: the act has run, the
+ *  record has moved, and what it moved to is in the answer the call returned. A `{result.…}` slot
+ *  is how that figure reaches the operator; a sentence without one says the act was carried out
+ *  and states nothing the operator did not already agree to, so the desk is free to name the new
+ *  status or not and the exam cannot tell those two apart.
+ *
+ *  Only an act some case APPROVES is charged: the outcome tense of an act no exam ever consents to
+ *  is a sentence nobody reads. */
+export function approvedActsDisclosed(subjectDir: string, cases: readonly ExamCase[],
+                                      facts: { readonly tools: Readonly<Record<string,
+                                        { readonly effect?: string }>> }): readonly LintFinding[] {
+  const entries = disclosureEntries(subjectSources(subjectDir));
+  const findings: LintFinding[] = [];
+  for (const [act, caseId] of approvedActs(cases)) {
+    if (facts.tools[act]?.effect !== 'destructive') continue;
+    const after = entries.get(act)?.after ?? null;
+    if (after !== null && after.includes('{result.')) continue;
+    findings.push({ code: 'ACT_RESULT_UNSPOKEN',
+      sentence: after === null
+        ? `case '${caseId}' approves '${act}', and disclosure.${act} carries no 'after': the act `
+          + `runs and what it did to the record reaches the operator only if the desk chooses to `
+          + `say it. Give the entry an after sentence carrying a {result.…} slot.`
+        : `case '${caseId}' approves '${act}', and disclosure.${act}.after carries no {result.…} `
+          + `slot: it announces the act without stating one figure the act returned. Put what `
+          + `moved — the status it landed in, the amount that went out — into that sentence.` });
+  }
+  return findings;
+}
+
 /** Every read a case's `requiredToolCalls` names, with the first case that requires it. The exam
  *  says these reads have to happen; what the card does about that is what the two verbs below ask. */
 function requiredReads(cases: readonly ExamCase[],

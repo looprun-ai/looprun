@@ -2,9 +2,9 @@
 import type { AgentSpec, DeclaredWorld, DomainContract, ExamCase, LiveWorldCard,
               McpWorldCard } from '@looprun-ai/core';
 import { AgentFactory, factsFromWorld, Rulebook } from '@looprun-ai/core';
-import { approvable, capPaths, conductComplete, coversResolve, destructiveDisclosed,
-         floorRedeclared, inertChecks, nameGate, noEffectDenied, overWide, pairing,
-         presetsDeclared, promptBudgeted, purity, readsOrdered, requiredReadsDisclosed,
+import { approvable, approvedActsDisclosed, capPaths, conductComplete, coversResolve,
+         destructiveDisclosed, floorRedeclared, inertChecks, nameGate, noEffectDenied, overWide,
+         pairing, presetsDeclared, promptBudgeted, purity, readsOrdered, requiredReadsDisclosed,
          unlicensed, unspokenChecks, type LintFinding } from './lints.js';
 
 /** What the gate needs beyond the directory. Every field is REQUIRED, and the two a subject
@@ -86,6 +86,9 @@ export function runGate(subjectDir: string, subject: GateSubject): readonly Lint
     ...inertChecks(subjectDir, facts.tools),
     ...unspokenChecks(subjectDir),
     ...destructiveDisclosed(subjectDir, facts, cases),
+    // Both tenses of a consent question an exam renders: the one that asks, and the one that
+    // reports what the act did.
+    ...approvedActsDisclosed(subjectDir, cases, facts),
     // What every desk sends on every turn, against the ceiling the subject's owner declared.
     ...promptBudgeted(subjectDir, subject),
     // The scenario a case names is read off the card the gate already holds, so this verb needs

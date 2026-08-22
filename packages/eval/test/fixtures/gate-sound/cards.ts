@@ -82,6 +82,7 @@ export const ordersContract = {
     },
     deleteOrder: {
       before: 'You are about to delete order {order.id}, and a deletion cannot be undone.',
+      after: 'Order {result.removed} is gone, and there is nothing left to reverse.',
       needs: { order: { tool: 'getOrder' } },
       cap: { at: 'order.total', ceiling: 500 }
     }

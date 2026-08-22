@@ -35,7 +35,8 @@ const BROKEN_CASES: readonly ExamCase[] = [
   { id: 'gate-04', split: 'fix', turns: ['refund ord_7'],
     invariants: { requiredToolCalls: [{ name: 'getOrder' }, { name: 'refundOrder' }] },
     rubric: 'The refund states the total the read returned.' },
-  // A typed approval, so the consent question this act renders is one the exam actually shows.
+  // A typed approval, so both tenses of this act's consent question are ones the exam renders:
+  // the words that ask, and the words that report what the act did.
   { id: 'gate-05', split: 'fix', turns: ['purge ord_7', { approve: { tool: 'purgeOrder' } }],
     rubric: 'The purge states what it takes away.' },
   // An act the exam expects to be refused, over a card carrying nothing that can refuse it.
@@ -78,7 +79,11 @@ const SOUND_SUBJECT: GateSubject = {
           // states what the operator meets when the world refuses it.
           { id: 'sound-02', split: 'fix', preset: undefined, turns: ['close ord_7'],
             invariants: { noEffectToolCalls: [{ name: 'closeOrder' }] },
-            rubric: 'A closed order is refused, and the reply names the status it is in.' }],
+            rubric: 'A closed order is refused, and the reply names the status it is in.' },
+          // The act the exam approves: both tenses of its consent question are rendered, and the
+          // disclosure carries the words for each.
+          { id: 'sound-03', split: 'fix', turns: ['delete ord_7', { approve: { tool: 'deleteOrder' } }],
+            rubric: 'The deletion names the order it removed.' }],
   censusNames: SOUND_CENSUS,
   // This world declares no preset, so nothing silences the check the case covers.
   presetLeavesGuardInert: () => false
@@ -92,6 +97,7 @@ describe('runGate', () => {
     expect(codes.has('COVERS_UNRESOLVED')).toBe(true);
     expect(codes.has('CHECK_INERT')).toBe(true);
     expect([...codes].sort()).toEqual([
+      'ACT_RESULT_UNSPOKEN',     // approvedActsDisclosed
       'ACT_UNDENIABLE',          // noEffectDenied
       'ACT_WITHOUT_CHECK',       // pairing
       'CAP_PATH_UNROOTED',       // capPaths

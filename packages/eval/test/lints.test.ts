@@ -1158,7 +1158,7 @@ describe('the seam licence', () => {
 });
 
 import { AgentFactory, factsFromWorld, PromptWriter } from '@looprun-ai/core';
-import { promptBudgeted, type DeskSubject } from '../src/lints.js';
+import { approvedActsDisclosed, promptBudgeted, type DeskSubject } from '../src/lints.js';
 
 /** The two desks a budget is measured over, in an invented domain: the front desk sees the whole
  *  surface, the back desk sees one act of it, and neither one carries a guard. */
@@ -1225,5 +1225,56 @@ describe('promptBudgeted', () => {
     const found = promptBudgeted(askDir({ targets: TARGETS, promptBudget: 1 }), TWO_DESKS);
     const said = found[0].sentence;
     expect(said.indexOf('front ')).toBeLessThan(said.indexOf('back '));
+  });
+});
+
+const APPROVAL_FACTS = { tools: {
+  issueRefund: { effect: 'destructive' }, payInvoice: { effect: 'write' } } } as never;
+
+const APPROVES = (act: string): readonly ExamCase[] =>
+  [{ id: 'refund-03', split: 'fix', rubric: 'r',
+     turns: ['refund inv_9', { approve: { tool: act } }] }];
+
+describe('approvedActsDisclosed', () => {
+  const write = (body: string): string => {
+    const dir = mkdtempSync(join(tmpdir(), 'act-after-'));
+    writeFileSync(join(dir, 'cards.ts'), body);
+    return dir;
+  };
+
+  test('an approved act with no after at all is a finding', () => {
+    const dir = write(`const CONTRACT = { disclosure: {
+      issueRefund: { before: 'Refund {args.amount}?' } } };`);
+    const found = approvedActsDisclosed(dir, APPROVES('issueRefund'), APPROVAL_FACTS);
+    expect(found.map(f => f.code)).toEqual(['ACT_RESULT_UNSPOKEN']);
+    expect(found[0].sentence).toContain("case 'refund-03' approves 'issueRefund'");
+    expect(found[0].sentence).toContain("disclosure.issueRefund carries no 'after'");
+  });
+
+  test('an after written entirely out of the author\'s own words is a finding', () => {
+    const dir = write(`const CONTRACT = { disclosure: {
+      issueRefund: { before: 'Refund {args.amount}?', after: 'The refund has been paid out.' } } };`);
+    const found = approvedActsDisclosed(dir, APPROVES('issueRefund'), APPROVAL_FACTS);
+    expect(found.map(f => f.code)).toEqual(['ACT_RESULT_UNSPOKEN']);
+    expect(found[0].sentence).toContain('carries no {result.…} slot');
+  });
+
+  test('an after carrying a result slot states what moved, and answers the verb', () => {
+    const dir = write(`const CONTRACT = { disclosure: { issueRefund: {
+      before: 'Refund {args.amount}?',
+      after: 'Invoice {result.invoiceId} is {result.status}; {result.refunded} went back.' } } };`);
+    expect(approvedActsDisclosed(dir, APPROVES('issueRefund'), APPROVAL_FACTS)).toEqual([]);
+  });
+
+  test('an act no case approves renders its outcome tense to nobody, and is left alone', () => {
+    const dir = write(`const CONTRACT = { disclosure: {} };`);
+    const other: readonly ExamCase[] = [{ id: 'refund-04', split: 'fix', rubric: 'r',
+      turns: ['what does inv_9 say?'] }];
+    expect(approvedActsDisclosed(dir, other, APPROVAL_FACTS)).toEqual([]);
+  });
+
+  test('an act that changes a record without consent asks no question, and pays no row', () => {
+    const dir = write(`const CONTRACT = { disclosure: {} };`);
+    expect(approvedActsDisclosed(dir, APPROVES('payInvoice'), APPROVAL_FACTS)).toEqual([]);
   });
 });
