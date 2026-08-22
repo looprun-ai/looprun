@@ -91,3 +91,59 @@ test('a tool with no binding owes nothing and renders nothing', () => {
   const t = desk.tenses('unknownTool', HELD, new Map());
   expect(t).toEqual({ before: null, after: null, later: null });
 });
+
+const MARINA = { tools: {
+  getReport: fact({ name: 'getReport', effect: 'read', target: 'reportId',
+    schema: { type: 'object', properties: { reportId: { type: 'string' } }, required: ['reportId'] } }),
+  getBond: fact({ name: 'getBond', effect: 'read', target: 'mooringId',
+    schema: { type: 'object', properties: { mooringId: { type: 'string' } }, required: ['mooringId'] } }),
+  settleReport: fact({ name: 'settleReport', effect: 'destructive', target: 'reportId', label: 'Settle a damage report',
+    schema: { type: 'object', properties: { reportId: { type: 'string' }, deduction: { type: 'number' } }, required: ['reportId', 'deduction'] } })
+} } as const;
+
+const chainedDesk = new DisclosureDesk(new AgentFactory().governed(
+  { name: 'a', persona: 'p' },
+  { name: 'd', disclosure: { settleReport: {
+      needs: { report: { tool: 'getReport', args: { reportId: 'reportId' } },
+               bond: { tool: 'getBond', args: { mooringId: 'report.report.mooringId' } } },
+      before: 'Settling {report.report.id} takes {args.deduction} out of the {bond.held} bond on {report.report.mooringId}.',
+      cap: { arg: 'deduction', at: 'bond.held',
+        refusal: 'A deduction of {args.deduction} cannot pass: the bond on {report.report.mooringId} holds {bond.held}, and the difference is settled outside this desk.' } } } },
+  MARINA).disclosureBindings);
+
+const HELD_SETTLE = { tool: 'settleReport', args: { reportId: 'rp_1', deduction: 900 }, key: 'k' };
+
+function chainAct(tool: string, result: Act['result']): Act {
+  return { id: 'a1', turn: 1, origin: 'engine',
+    call: { tool, args: {}, key: 'r' },
+    effect: 'read', said: 'yes', status: 'done', reason: null, evidence: 'executor',
+    sentence: `${tool}() — done`, result, questionId: null, guard: null };
+}
+
+test('a chained alias runs after the alias it reads, filled from that answer', () => {
+  const steps = chainedDesk.owedReads('settleReport', HELD_SETTLE);
+  expect(steps.map(s => s.alias)).toEqual(['report', 'bond']);
+  expect(steps[0].args).toEqual({ reportId: 'rp_1' });
+  const reads = new Map([['report', chainAct('getReport', { report: { id: 'rp_1', mooringId: 'moor_7' } })]]);
+  expect(chainedDesk.fillOwed(steps[1], reads)).toEqual({ mooringId: 'moor_7' });
+});
+
+test('the cap anchors on the chained alias and refuses with every figure rendered', () => {
+  const reads = new Map([
+    ['report', chainAct('getReport', { report: { id: 'rp_1', mooringId: 'moor_7' } })],
+    ['bond', chainAct('getBond', { held: 640 })]
+  ]);
+  const refusal = chainedDesk.overCap('settleReport', HELD_SETTLE, reads);
+  expect(refusal).toBe('A deduction of 900 cannot pass: the bond on moor_7 holds 640, '
+    + 'and the difference is settled outside this desk.');
+});
+
+test('aliases that read each other have no running order, and construction refuses them', () => {
+  expect(() => new AgentFactory().governed(
+    { name: 'a', persona: 'p' },
+    { name: 'd', disclosure: { settleReport: {
+        needs: { report: { tool: 'getReport', args: { reportId: 'bond.reportId' } },
+                 bond: { tool: 'getBond', args: { mooringId: 'report.report.mooringId' } } },
+        before: 'x' } } },
+    MARINA)).toThrow(/form a cycle/);
+});

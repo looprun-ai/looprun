@@ -146,7 +146,8 @@ export class CallRunner {
         const reads = new Map<string, Act>();
         for (const owed of this.deps.disclosure.owedReads(call.tool, ctx.call)) {
           reads.set(owed.alias,
-            await this.runChecked({ tool: owed.tool, args: owed.args }, 'engine', draft, false));
+            await this.runChecked({ tool: owed.tool,
+              args: this.deps.disclosure.fillOwed(owed, reads) }, 'engine', draft, false));
         }
         // The declared cap outranks the ask: a call whose arg exceeds what the
         // owed read answered is refused with the record's own figures — the

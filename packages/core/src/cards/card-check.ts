@@ -106,13 +106,48 @@ export class CardCheck {
               problems.push({ code: 'SLOT_UNDERIVABLE',
                 sentence: `Disclosure alias '${alias}' maps '${readArg}', and ${readName} declares no such arg.` });
             }
-            if (!heldArgs.includes(heldArg)) {
+            if (heldArg.includes('.')) {
+              const head = heldArg.slice(0, heldArg.indexOf('.'));
+              if (head === alias || !(head in (d.needs ?? {}))) {
+                problems.push({ code: 'SLOT_UNDERIVABLE',
+                  sentence: `Disclosure alias '${alias}' fills '${readArg}' with '${heldArg}', and '${head}' is no other alias of this entry — a chained value starts at an alias declared beside it.` });
+              }
+            } else if (!heldArgs.includes(heldArg)) {
               problems.push({ code: 'SLOT_UNDERIVABLE',
                 sentence: `Disclosure alias '${alias}' fills '${readArg}' using held arg '${heldArg}', and ${toolName} declares no such arg.` });
             }
           }
         }
       }
+      this.checkNeedsOrder(toolName, d, problems);
+    }
+  }
+
+  /** Aliases that read each other have no running order. The chain graph is walked the way the
+   *  engine will run it — an alias whose every reference is already placed runs next — and what
+   *  cannot be placed is a cycle, named by its members. */
+  private checkNeedsOrder(toolName: string, entry: Disclosure, problems: Problem[]): void {
+    const needs = entry.needs ?? {};
+    const refsOf = (recipe: (typeof needs)[string]): readonly string[] =>
+      typeof recipe === 'string' ? [] : Object.values(recipe.args)
+        .filter(v => v.includes('.')).map(v => v.slice(0, v.indexOf('.')))
+        .filter(head => head in needs);
+    const placed = new Set<string>();
+    const pending = new Set(Object.keys(needs));
+    let moved = true;
+    while (moved) {
+      moved = false;
+      for (const alias of [...pending]) {
+        if (refsOf(needs[alias]).every(head => placed.has(head))) {
+          placed.add(alias);
+          pending.delete(alias);
+          moved = true;
+        }
+      }
+    }
+    if (pending.size > 0) {
+      problems.push({ code: 'SLOT_UNDERIVABLE',
+        sentence: `Disclosure needs of '${toolName}' form a cycle over ${[...pending].map(a => `'${a}'`).join(', ')} — no order can run them.` });
     }
   }
 

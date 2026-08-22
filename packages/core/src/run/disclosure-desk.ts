@@ -1,13 +1,24 @@
 /** Three tenses. Owed reads are built from the disclosure needs recipes over the
- *  held call's OWN args (an args map bridges differing names — validated at compile)
+ *  held call's OWN args, or over an EARLIER alias's answer — a value carrying a dot
+ *  is a path into the alias it starts with, and the reads run in dependency order —
  *  and performed by the ENGINE — recorded, origin engine; never requested from the
  *  model, so no deny can starve them. This is the ONLY place the engine derives call
- *  arguments, and only as a declared rename of the frozen held call's own values —
- *  a call whose args would take intent is model-filled. Slots fill by alias, bound
- *  to the question's target record by construction. A slot the reads answer nothing
- *  for REFUSES the call — an ask that cannot name its object is never asked; the
- *  card's empty sentence speaks, or the engine's plain default. */
-import type { Act, CanonicalCallData, Json, OwedRead } from '../contract/vocabulary.js';
+ *  arguments, and only as a declared rename of the frozen held call's own values or
+ *  a declared path over a read the engine itself performed — a call whose args would
+ *  take intent is model-filled. Slots fill by alias, bound to the question's target
+ *  record by construction. A slot the reads answer nothing for REFUSES the call — an
+ *  ask that cannot name its object is never asked; the card's empty sentence speaks,
+ *  or the engine's plain default. */
+import type { Act, CanonicalCallData, Json } from '../contract/vocabulary.js';
+
+/** One engine-performed read of a disclosure entry: the args the held call fills
+ *  now, and the paths an earlier alias's answer fills at run time. */
+export interface OwedReadStep {
+  readonly alias: string;
+  readonly tool: string;
+  readonly args: Readonly<Record<string, Json>>;
+  readonly argPaths?: Readonly<Record<string, string>>;
+}
 import { TurnFailure } from '../contract/vocabulary.js';
 import type { CompiledAgent } from '../cards/cards.js';
 
@@ -65,15 +76,57 @@ export class DisclosureDesk {
     this.bindings = bindings;
   }
 
-  owedReads(tool: string, call: CanonicalCallData): readonly OwedRead[] {
+  owedReads(tool: string, call: CanonicalCallData): readonly OwedReadStep[] {
     const binding = this.bindings[tool];
     if (binding === undefined) return [];
-    return Object.entries(binding.needs).map(([alias, recipe]) => ({
-      alias,
-      tool: recipe.tool,
-      args: Object.fromEntries(Object.entries(recipe.args)
-        .map(([readArg, heldArg]) => [readArg, call.args[heldArg] ?? null]))
-    }));
+    const needs = binding.needs;
+    const refsOf = (alias: string): readonly string[] =>
+      Object.values(needs[alias].args)
+        .filter(v => v.includes('.')).map(v => v.slice(0, v.indexOf('.')))
+        .filter(head => head in needs);
+    const order: string[] = [];
+    const pending = new Set(Object.keys(needs));
+    let moved = true;
+    while (moved) {
+      moved = false;
+      for (const alias of [...pending]) {
+        if (refsOf(alias).every(head => order.includes(head))) {
+          order.push(alias);
+          pending.delete(alias);
+          moved = true;
+        }
+      }
+    }
+    if (pending.size > 0) {
+      throw new TurnFailure('construction',
+        `disclosure needs of '${tool}' form a cycle over ${[...pending].join(', ')} — no order can run them`);
+    }
+    return order.map(alias => {
+      const recipe = needs[alias];
+      const args: Record<string, Json> = {};
+      const argPaths: Record<string, string> = {};
+      for (const [readArg, source] of Object.entries(recipe.args)) {
+        if (source.includes('.')) argPaths[readArg] = source;
+        else args[readArg] = call.args[source] ?? null;
+      }
+      return Object.keys(argPaths).length === 0
+        ? { alias, tool: recipe.tool, args }
+        : { alias, tool: recipe.tool, args, argPaths };
+    });
+  }
+
+  /** A step's full arguments: the held-filled ones as they stand, and every declared
+   *  path answered from the alias it starts with — read off the acts already run. */
+  fillOwed(step: OwedReadStep, resolved: ReadonlyMap<string, Act>): Readonly<Record<string, Json>> {
+    const args: Record<string, Json> = { ...step.args };
+    for (const [readArg, source] of Object.entries(step.argPaths ?? {})) {
+      const head = source.slice(0, source.indexOf('.'));
+      const act = resolved.get(head);
+      const value = act === undefined ? undefined
+        : lookup({ [head]: act.result }, source.split('.'));
+      args[readArg] = value ?? null;
+    }
+    return args;
   }
 
   /** The declared cap, checked over the owed reads: when the call's named arg
