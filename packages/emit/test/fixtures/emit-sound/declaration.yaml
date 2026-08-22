@@ -18,6 +18,11 @@ contract:
       factory: onlyAfter
       args: { after: getInvoice }
       rule: Write the closing note from the invoice you read this conversation, never from memory.
+    - name: theClosingNoteIsTheAuditDesksOwn
+      acts: [closeBooking]
+      factory: role
+      args: { anchor: workspace, by: actingMemberId, from: members, field: role, in: [owner, auditor] }
+      rule: The closing note is written by a member the roster records as an owner or an auditor, and by nobody else.
   disclosure:
     issueRefund:
       needs: { invoice: getInvoice }
