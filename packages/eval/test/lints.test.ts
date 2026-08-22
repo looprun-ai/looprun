@@ -975,7 +975,16 @@ describe('noEffectDenied', () => {
     const dir = write(`const CONTRACT = { guards: [ onlyAfter('issueRefund', 'getInvoice') ] };`);
     const found = noEffectDenied(dir, REFUSED);
     expect(found.map(f => f.code)).toEqual(['ACT_UNDENIABLE']);
-    expect(found[0].sentence).toContain('only onlyAfter, which is cleared by reading');
+    expect(found[0].sentence).toContain('only onlyAfter');
+    expect(found[0].sentence).toContain('an order is cleared by reading it');
+  });
+
+  test('a check reading the result lands after the record moved, so it is still a finding', () => {
+    const dir = write(`const CONTRACT = { guards: [
+      checkResult('issueRefund', r => r.total > 0 ? null : 'nothing was refunded') ] };`);
+    const found = noEffectDenied(dir, REFUSED);
+    expect(found.map(f => f.code)).toEqual(['ACT_UNDENIABLE']);
+    expect(found[0].sentence).toContain('only checkResult');
   });
 
   test('a check that decides the call answers it', () => {

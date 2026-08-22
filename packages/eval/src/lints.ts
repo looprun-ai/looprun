@@ -1363,11 +1363,20 @@ export function seamSpoken(subjectDir: string, cases: readonly ExamCase[],
   return findings;
 }
 
-/** The mechanisms that can refuse the CALL. An `onlyAfter` is not one of them: it is satisfied by
- *  reading, so a desk that runs the prerequisite walks straight through it. A judged check reads
- *  the reply after the call has already landed. */
+/** The mechanisms that can refuse the CALL: each one judges the arriving call, and a call it
+ *  refuses never reaches the world. Three shapes that look like protection are not here.
+ *
+ *  An `onlyAfter` owes a read rather than deciding a call: a desk that runs the prerequisite walks
+ *  straight through it. A `checkResult` runs after the call returned — the record has already
+ *  moved, and the finding it raises is a correction on the reply. A reply-bound check —
+ *  `mustAccountFor`, a judged query, a `blockPattern` on the reply — reads words the desk wrote
+ *  once the act was over. */
 const DENYING_FACTORIES = ['precondition', 'valueFromUser', 'choiceFromUser', 'argFormat',
-  'argAbsent', 'checkResult', 'mustAccountFor', 'maxCalls', 'blockPattern'];
+  'argAbsent', 'maxCalls'];
+
+/** The words that say why the mechanisms an act carries cannot refuse its call. */
+const NOTHING_DECIDES = 'none of those decides the call — an order is cleared by reading it, and '
+  + 'a check over the result or over the reply lands after the record has moved';
 
 /** The names that DECIDE a call, the wrappers around them included: a subject names a gate once
  *  and reaches for that name on every act it covers, so a helper whose body reaches a denying
@@ -1405,8 +1414,10 @@ function denyingNames(sources: readonly Source[]): ReadonlySet<string> {
  *  therefore carries a mechanism that can deny the call itself — a role or state precondition, a
  *  choice or value the operator has to have given, a format or ceiling the arriving call fails.
  *
- *  An `onlyAfter` on its own does not answer this: it is satisfied by running the read, and a desk
- *  that reads first then acts has cleared it. The invariant would fail on a call the engine allowed. */
+ *  What the act carries is read for its SHAPE, never counted. An `onlyAfter` is satisfied by
+ *  running the read, and a desk that reads first then acts has cleared it. A `checkResult` or a
+ *  reply-bound check answers once the call has returned, and by then the record has moved. Either
+ *  way the invariant fails on a call the engine allowed. */
 export function noEffectDenied(subjectDir: string, cases: readonly ExamCase[]): readonly LintFinding[] {
   const sources = subjectSources(subjectDir);
   const checks = checksByTool(sources, factoryNames(sources));
@@ -1418,8 +1429,8 @@ export function noEffectDenied(subjectDir: string, cases: readonly ExamCase[]): 
     findings.push({ code: 'ACT_UNDENIABLE',
       sentence: `case '${caseId}' expects '${act}' to change nothing, and nothing on this card can `
         + `refuse that call: it carries ${carried.length === 0 ? 'no check at all'
-          : `only ${carried.join(' · ')}, which ${carried.length === 1 ? 'is' : 'are'} cleared by `
-            + `reading`}. Put a check that decides the call itself over '${act}' — a role or state `
+          : `only ${carried.join(' · ')}, and ${NOTHING_DECIDES}`}. Put a check that decides the `
+        + `call itself over '${act}' — a role or state `
         + `precondition, a choice or a value the operator has to have given.` });
   }
   return findings;
