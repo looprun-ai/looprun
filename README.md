@@ -84,6 +84,20 @@ cancelBooking(bk_1) — not-done (Read the booking's invoice before cancelling, 
   hears what stays owed. getInvoice did not succeed this conversation)
 ```
 
+## Or declare it, and emit
+
+The three cards can be written as data instead of TypeScript: one `declaration.yaml` — the
+contract and its desks — beside the world card it is declared against. The emitter writes the
+TypeScript and invents zero prose; every sentence in the cards is the declaration's own.
+
+```bash
+npx looprun-emit <subject-dir>    # writes cards.ts, subject.ts, the gate file, gen/SEAM.md
+```
+
+A declaration that does not fit its world writes nothing: every refusal the emitter can know is
+printed at once, each naming the exact YAML path to fix. The declaration is always what changes,
+never the emitter. The shape, and every refusal with its message: `packages/emit/README.md`.
+
 ## Framework-agnostic by construction
 
 `@looprun-ai/core` is the engine and knows about no framework. `@looprun-ai/mastra` binds it to
@@ -98,6 +112,7 @@ governed agent over HTTP — `@looprun-ai/server` puts it behind an OpenAI-compa
 | `@looprun-ai/core` | the engine — framework-free |
 | `@looprun-ai/mastra` | `LoopRunAgent` and its ungoverned twin |
 | `@looprun-ai/server` | governed agents behind an OpenAI-compatible endpoint |
+| `@looprun-ai/emit` | the declaration reader and the emitter — the cards, written from data |
 | `@looprun-ai/eval` | verbs over a run directory: run, watch, judge, fold, certify, seal |
 | `@looprun-ai/models` | the validated local tiers on llama.cpp |
 

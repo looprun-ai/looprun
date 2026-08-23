@@ -10,6 +10,10 @@ This file is a measurement record — the live work queues are `BACKLOG.md` in t
 
 ## 1 · A byte-by-byte reduction of the compiled prompts
 
+~~B1a~~ — the deterministic half — closed: `boilerplate` through `byteOrigin` (looprun
+`7567ee4`..`348ad62`) and the gate that calls them (`257838d`). B1b — the semantic half — stays
+open: looprun `BACKLOG.md` row 4.
+
 The largest open item, and the one with a number against it.
 
 ```
@@ -58,6 +62,8 @@ measured saving in this campaign has come from.
 
 ## 2 · `boilerplate.mjs` is written and no gate calls it
 
+~~B2~~ closed: the verb shipped (`7567ee4`) and the gate calls it (`257838d`).
+
 `packages/eval/boilerplate.mjs` finds the longest character runs shared between rendered lines and
 prices each by the number of cards it is stamped on. It found 2 728 B of one repeated instruction
 across eight rules — the single largest saving found in this campaign.
@@ -70,6 +76,8 @@ run gets more damning the more lines carry it — the inverse — which is why b
 ---
 
 ## 3 · A wide rule pays when the condition is identical
+
+~~B3~~ closed: `overWide` and the `WIDE` licences (`84d6730`).
 
 The catalog now teaches: a rule over five acts must speak in the words all five share, so split it
 and let each act keep the half about it. An author pushed back with a case the page does not cover.
@@ -96,6 +104,8 @@ returns the rules that declared nothing. This is the same shape that took `unlic
 
 ## 4 · The render gate orders a deletion the author cannot perform
 
+~~B4~~ closed: `echoes` excludes generated lines (`40fdd36`).
+
 `echoes` returns 15 to 18 rows on a finished subject, and on the last two authorings **every
 surviving row was a pair of the world card's own `does` sentences** — `listAssets` × `getAsset`,
 `chargeDeposit` × `releaseDeposit` sharing "PRIVILEGED: requires canMoveMoney".
@@ -113,6 +123,9 @@ with it. Today it does neither, and an author who follows the page literally is 
 
 ## 5 · Findings from two blind authorings that no page answers
 
+Closed: ~~A~~ (`da2dc33`) · ~~B~~ ~~C~~ (`34bdb59`) · ~~D~~ (agentspec `7abf777`) · ~~E~~
+(`40fdd36`) · ~~F~~ ~~G~~ (agentspec `5a21350`). H stays open: agentspec `BACKLOG.md` row 5.
+
 Each cost a real author real time, and each is verified against the engine source.
 
 | # | the gap | what it costs |
@@ -129,6 +142,8 @@ Each cost a real author real time, and each is verified against the engine sourc
 ---
 
 ## 6 · Speed — the twenty-fold bar
+
+~~B6~~ closed: resolved as 1.5 minutes per desk in the declaration spec §3.2.
 
 An adversarial pass is running against this. Its finding list belongs here when it lands.
 
@@ -152,7 +167,8 @@ same finding seen from the cost side.
 
 `docs/superpowers/specs/2026-08-20-declaration-and-emitter-design.md` §7.2 admits none of these.
 Each is real and verified against the engine; none moves one of that spec's four bars, and none is
-a defect where something wrong passes the gate. The next spec opens from this section.
+a defect where something wrong passes the gate. These rows live in the two work queues: looprun
+`BACKLOG.md` and the agentspec repo's `BACKLOG.md`.
 
 | id | what | why it waits |
 |---|---|---|
@@ -181,6 +197,9 @@ minutes of pure decode before any reading, deliberation or gate pass.
 
 ## 7 · Where a page told an author two things
 
+Closed: ~~V1~~ ~~V5~~ ~~V6~~ (`34bdb59`) · ~~V2~~ ~~V3~~ ~~V7~~ (agentspec `522c854`) · ~~V4~~
+(`b8e80a4`) · ~~V8~~ (`84d6730`).
+
 Reported by the three blind authorings, each verified against the engine. None is in §5, and each
 cost its author a decision it had to make alone.
 
@@ -196,6 +215,9 @@ cost its author a decision it had to make alone.
 | V8 | which card a shared gate belongs on. The closing checklist says a `deny` over a shared tool is declared once on the contract; §1 says a behaviour law goes on every spec that owes it. A tenant gate is both | on the contract it renders 29 copies (5 249 B, the top `ruleCopies` row); on six specs it would render six (~1 100 B) and raise every prefix. The arithmetic that decides it is taught nowhere |
 
 ## 8 · The prompt bytes nobody has measured
+
+Closed: ~~U1~~ ~~U2~~ ~~U3~~ — `byteOrigin` prices all four slices (`348ad62`) and the N6 snippet
+prints them (agentspec `522c854`).
 
 Every byte this campaign optimised is the **contract-rule** slice. The other 86% was never read by
 a lint, and a quarter of it is authored prose living in a directory named `generated/`.
