@@ -1,5 +1,8 @@
 # skill-requirements — the phase-6b regeneration charter
 
+> **RECORD — consumed.** Phase 6b executed and the regenerated skill shipped; this file is its
+> requirements record. Nothing here is owed.
+
 The input of phase 6b: what the regenerated agentspec skill must teach, where its
 material already exists, and how its quality is measured. Phase 5 produces this
 file; phase 6b consumes it in the same working session that starts with the swap's

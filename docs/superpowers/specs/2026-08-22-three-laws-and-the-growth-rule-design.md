@@ -1,5 +1,11 @@
 # The two laws and the growth rule — the simplification design
 
+> **CLOSED — shipped.** The rewrite is the agentspec skill's `main`; the score bar passed (39/40
+> against the 37/40 baseline, and the from-zero declaration path later measured 96/100). The byte
+> bar was ruled out by the user — acceptance is the verified score alone. The two laws and the
+> growth rule remain the standing shape of the skill: a new teaching element claims one of the
+> laws or it does not enter.
+
 The declared-path teaching is many pages carrying many named laws. Underneath them sit two
 laws a six-year-old can hold, and every page is an instance of one of them. This design names
 the two, states the growth rule that keeps the set closed, maps every current teaching element

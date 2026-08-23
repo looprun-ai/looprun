@@ -1,5 +1,10 @@
 # looprun — TO-BE Architecture Blueprint v3: Cards Carry Words, Surfaces Carry Tools
 
+> **CLOSED — implemented.** The engine on `main` is this blueprint, as amended by
+> `2026-08-17-review-to-be-resolution-design.md`: phases 1–2 merged (`4996432`, `fb0fb97`),
+> phases 3–6 built and measured (`2026-08-18-to-be-phases-3-6-build-design.md`, atlas-next
+> full100), and the 6A swap landed it as the shipped packages — no staging tree remains.
+
 The TO-BE design for the looprun engine, governed by `docs/superpowers/requirements.md` and by the rule
 that outranks every other quality:
 

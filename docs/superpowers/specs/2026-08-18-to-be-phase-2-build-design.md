@@ -300,6 +300,8 @@ model's reply:   "…card 4111111111111111…"                ← leaked into pr
 delivery:        "…card ****…"                            ← maskProse (collected literal)
 ```
 
+> **CLOSED — merged to `main` (`fb0fb97`).**
+
 **StatusClerk** gains its two remaining grade rows: a consent hold →
 `not-done / held / engine`; a simulation that mutated state → `simulationRevoked` + the
 tool falls back to plain consent for the session (the set lives in `Session`'s stores).

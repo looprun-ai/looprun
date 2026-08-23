@@ -1,5 +1,9 @@
 # Authoring lessons — what a SENIOR governed-agent skill teaches
 
+> **RECORD — consumed.** The lessons were folded into the skill's pages by the 6b regeneration
+> and the three-laws rewrite; this file is the register of what each lesson cost. Nothing here
+> is owed.
+
 The companion of `2026-08-18-skill-requirements.md`. That file says WHAT the skill
 must cover; this one says what an author has to get RIGHT, with the failing turn
 beside each law. Every row below is a lesson the Atlas port paid for: a case that

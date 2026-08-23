@@ -1,5 +1,9 @@
 # looprun — TO-BE Blueprint: Review Resolution Design
 
+> **CLOSED — applied.** The amendments are in the v3 blueprint (the apply plan
+> `docs/superpowers/plans/2026-08-17-apply-review-resolution-to-v3.md` executed,
+> documentation-only); every phase built from the amended text.
+
 The amendments the v3 blueprint (`2026-08-12-to-be-blueprint-v3.md`) receives before any
 implementation. This document resolves every row of `REVIEW-TO-BE.md` (1–17) and the
 decisions taken while resolving them. The charter `docs/superpowers/requirements.md` governs

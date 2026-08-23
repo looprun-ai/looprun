@@ -1,5 +1,7 @@
 # TO-BE Implementation — Phase 1 Build Design
 
+> **CLOSED — merged to `main` (`4996432`).** The phases after it built on this base.
+
 The TO-BE design itself is `2026-08-12-to-be-blueprint-v3.md` (amended, adversarially
 verified). The execution shape — fresh build, five phases, per-phase gates, the old engine
 alive until the final swap — is `docs/superpowers/refactoring.md`. This document designs the BUILD of
