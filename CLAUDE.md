@@ -23,3 +23,10 @@ it belongs to the person doing the work and to the agent they are working with, 
 **The one thing that is not covered:** the SUBJECT model under test. A benchmark of an agent needs an
 agent to benchmark, and that model is the object of the measurement, not a participant in it. It is
 named in `ask/targets.json` and it is the only model any run may reach.
+
+## THE ENGINE'S MAP
+
+The standing architectural reference of the engine is
+`docs/superpowers/specs/2026-08-12-to-be-blueprint-v3.md`: the engine on `main` is that
+blueprint, as amended by `2026-08-17-review-to-be-resolution-design.md`. Read it before
+proposing a structural change.
