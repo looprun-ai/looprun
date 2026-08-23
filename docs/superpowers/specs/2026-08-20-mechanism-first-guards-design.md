@@ -1,6 +1,10 @@
 # Mechanism-first guards — design
 
-Date: 2026-08-20 · Status: OPEN — measured at 69/100 against a bar of 95; the ladder is amended and not yet re-measured · Scope: the `agentspec` skill, and one lint verb in
+Date: 2026-08-20 · Status: SUPERSEDED — measured at 69/100 and never re-measured on this path;
+the authoring path it amends was replaced by `2026-08-20-render-first-authoring-design.md`
+(certified 0.95), the three-laws rewrite and the declaration + emitter (closed at 96/100). What
+survives: the pairing and licence verbs in `packages/eval` (`pairing`, `pairingTable`,
+`unlicensed`), called by the gate. · Scope: the `agentspec` skill, and one lint verb in
 `packages/eval`. The engine's authoring surface is not touched.
 
 The agentspec skill authors a subject from its own pages. Measured against the certified
