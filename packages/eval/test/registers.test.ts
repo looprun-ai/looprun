@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 const read = (p: string): string => readFileSync(`/Users/marcos/Dev/js/looprun/looprun/${p}`, 'utf8');
 const SPEC = read('docs/superpowers/specs/2026-08-20-declaration-and-emitter-design.md');
 const PLAN = read('docs/superpowers/plans/2026-08-20-declaration-and-emitter.md');
-const BACKLOG = read('docs/analysis/2026-08-20-skill-backlog.md');
+const BACKLOG = read('docs/analysis/2026-08-20-authoring-register.md');
 const TRACE = read('docs/analysis/2026-08-20-finding-trace.md');
 
 /** Ids are read from the FIRST COLUMN of a table row, never from prose: a row describing the

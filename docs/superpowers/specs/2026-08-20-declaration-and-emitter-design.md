@@ -285,7 +285,7 @@ crashes every other desk.
 | `README.md` | the emit step in the quickstart |
 | `docs/tutorial/04-guards.md` | the channel law, and that a contract rule is stamped on every card it names |
 | `docs/tutorial/**` | every lesson whose snippet hand-writes a card gains the declaration beside it |
-| `docs/analysis/2026-08-20-skill-backlog.md` | the items this spec closes, struck through |
+| `docs/analysis/2026-08-20-authoring-register.md` | the items this spec closes, struck through |
 | `docs/analysis/2026-08-20-skill-adversarial.md` | unchanged — it is the record of the audit |
 | `packages/emit/README.md` | the declaration shape, and every refusal with its message |
 
@@ -310,7 +310,7 @@ Updated in the same working session as the engine, never after.
 ## 8 · What this spec covers, and what it does not
 
 Every finding has an id: `D`/`R`/`C`/`X`/`F` from `docs/analysis/2026-08-20-skill-adversarial.md`,
-`B` from `docs/analysis/2026-08-20-skill-backlog.md`, `G` from the two blind authorings recorded
+`B` from `docs/analysis/2026-08-20-authoring-register.md`, `G` from the two blind authorings recorded
 there. **Every id appears in exactly one of the two columns below.** An id in neither is a
 tracking defect, and §8.3 says how that is caught.
 
@@ -420,7 +420,7 @@ Three registers, and an id lives in exactly one of them at a time.
                                                    that carries it. Three text heuristics
                                                    failed to recover it; it was built by hand.
 
-  docs/analysis/2026-08-20-skill-backlog.md        the OUT column, in a section named
+  docs/analysis/2026-08-20-authoring-register.md        the OUT column, in a section named
                                                    "deferred by the declaration spec",
                                                    each id with its one-line reason.
                                                    The next spec opens from that section.

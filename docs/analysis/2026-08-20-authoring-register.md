@@ -1,7 +1,10 @@
-# What the next spec owes — the register
+# The authoring-findings register
 
 Every item here was found by measuring a real authoring, not by reading the pages. Each names the
-evidence and what it costs. Nothing here is implemented; the spec decides what is.
+evidence and what it costs. The declaration spec (`docs/superpowers/specs/2026-08-20-declaration-and-emitter-design.md` §8)
+reads this file as its finding register; `packages/eval/test/registers.test.ts` pins the mapping.
+This file is a measurement record — the live work queues are `BACKLOG.md` in this repo (engine) and
+`BACKLOG.md` in the agentspec repo (skill).
 
 ---
 

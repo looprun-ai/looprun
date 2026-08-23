@@ -1775,7 +1775,7 @@ import { readFileSync } from 'node:fs';
 const read = (p: string): string => readFileSync(`/Users/marcos/Dev/js/looprun/looprun/${p}`, 'utf8');
 const SPEC = read('docs/superpowers/specs/2026-08-20-declaration-and-emitter-design.md');
 const PLAN = read('docs/superpowers/plans/2026-08-20-declaration-and-emitter.md');
-const BACKLOG = read('docs/analysis/2026-08-20-skill-backlog.md');
+const BACKLOG = read('docs/analysis/2026-08-20-authoring-register.md');
 const TRACE = read('docs/analysis/2026-08-20-finding-trace.md');
 
 /** Ids are read from the FIRST COLUMN of a table row, never from prose: a row describing the
@@ -1837,7 +1837,7 @@ git add packages/eval/test/registers.test.ts && git commit -m "test(eval): an id
 Closes: the spec's §6.
 
 **Files:**
-- Modify: `README.md`, `docs/tutorial/04-guards.md`, `docs/analysis/2026-08-20-skill-backlog.md`
+- Modify: `README.md`, `docs/tutorial/04-guards.md`, `docs/analysis/2026-08-20-authoring-register.md`
 - Create: `packages/emit/README.md`
 
 - [ ] **Step 1: The quickstart carries EMIT**
@@ -1856,7 +1856,7 @@ The declaration shape, and every refusal with its message.
 
 - [ ] **Step 4: Strike the closed backlog items**
 
-Every id this plan closed is struck through in `docs/analysis/2026-08-20-skill-backlog.md`, with the
+Every id this plan closed is struck through in `docs/analysis/2026-08-20-authoring-register.md`, with the
 commit that closed it named.
 
 - [ ] **Step 5: Verify the tutorial still compiles**
