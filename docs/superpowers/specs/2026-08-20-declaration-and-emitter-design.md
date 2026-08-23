@@ -1,7 +1,11 @@
 # The declaration and the emitter — design
 
-Date: 2026-08-20 · Status: OPEN · Scope: the `agentspec` skill's pages, one new package in
-`looprun`, and the Atlas subject that measures both.
+Date: 2026-08-20 · Status: CLOSED — shipped. The emitter is `packages/emit`, the verbs live in
+`packages/eval`, the pages in the agentspec skill. The plan executed 21 of 21
+(`docs/analysis/2026-08-23-declaration-plan-execution.md`); the acceptance measured 96/100
+against the .95 bar on a from-zero blind authoring (agentspec-bench `subjects/atlas-c17`,
+`test/2026-08-23-c17-w100`). The §8.2 rows live in the two `BACKLOG.md` queues. · Scope: the
+`agentspec` skill's pages, one new package in `looprun`, and the Atlas subject that measures both.
 
 An agent that has read only the skill's pages authors a governed subject. Three such authorings
 are now measured. This design says what they cost, what shape answers it, and what closes it.
