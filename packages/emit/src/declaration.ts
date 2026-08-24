@@ -257,7 +257,8 @@ function readCap(map: YAMLMap, path: string, lineCounter: LineCounter): Declared
 
 /** One alias of a `needs` map: a read named on its own, or the mapping that states the read and
  *  the args it is answered from. The args map is required in that form and may be empty — a read
- *  taking no argument at all is answered by `args: {}`. */
+ *  taking no argument at all is answered by `args: {}`. An optional `pick` states its three
+ *  strings — `list`, `by`, `key` — and binds the alias to one row of the read's list. */
 function readNeed(value: Node | null, path: string, lineCounter: LineCounter,
   fallback: number): DeclaredNeed {
   if (isScalar(value) && typeof value.value === 'string') return value.value;
@@ -265,9 +266,15 @@ function readNeed(value: Node | null, path: string, lineCounter: LineCounter,
     fail(path, lineAt(value, lineCounter, fallback),
       'must be a read, or a mapping of the read `tool` and the `args` it is answered from');
   }
+  const pick = readOptionalMap(value, 'pick', path, lineCounter);
   return {
     tool: requireString(value, 'tool', path, lineCounter),
-    args: asStringRecord(requireMap(value, 'args', path, lineCounter), field(path, 'args'), lineCounter)
+    args: asStringRecord(requireMap(value, 'args', path, lineCounter), field(path, 'args'), lineCounter),
+    ...(pick === undefined ? {} : { pick: {
+      list: requireString(pick, 'list', field(path, 'pick'), lineCounter),
+      by: requireString(pick, 'by', field(path, 'pick'), lineCounter),
+      key: requireString(pick, 'key', field(path, 'pick'), lineCounter)
+    } })
   };
 }
 

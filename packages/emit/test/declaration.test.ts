@@ -59,6 +59,31 @@ desks:
     });
   });
 
+  test('a needs pick rides through the reader with its three strings', () => {
+    const d = readDeclaration(fixture(`
+contract:
+  name: seaside-hotel
+  voice: Warm, brief, and exact about dates and money.
+  facts: []
+  guards: []
+  disclosure:
+    releaseHold:
+      needs:
+        hold: { tool: listHolds, args: {}, pick: { list: holds, by: id, key: holdId } }
+      before: Lifting {args.holdId}, placed for {hold.reason}, cannot be taken back.
+desks:
+  - name: front-desk
+    persona: The front desk.
+    tools: [releaseHold]
+    conduct:
+      declareHonestly: Say what ran and what did not.
+`));
+    expect(d.contract.disclosure.releaseHold.needs).toEqual({
+      hold: { tool: 'listHolds', args: {},
+              pick: { list: 'holds', by: 'id', key: 'holdId' } }
+    });
+  });
+
   test('a needs alias in the full form states the read it names', () => {
     expect(() => readDeclaration(fixture(`
 contract:
