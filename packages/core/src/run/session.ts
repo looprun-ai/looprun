@@ -27,7 +27,7 @@ export interface TurnDraft {
   readonly microTried: string[];
   /** Every model call books its cost here; zeros where the port has no numbers. */
   readonly usage: { inputTokens: number; outputTokens: number; cachedInputTokens: number;
-                    modelCalls: number };
+                    reasoningTokens: number; modelCalls: number };
 }
 
 export class Session {
@@ -61,7 +61,8 @@ export class Session {
     return { turn: this.turnIndex, userText: '', servedBy: '', acts: [], corrections: [],
              issued: [], consumed: [], closed: [], finish: null, closedBy: 'model', text: '',
              microTried: [],
-             usage: { inputTokens: 0, outputTokens: 0, cachedInputTokens: 0, modelCalls: 0 } };
+             usage: { inputTokens: 0, outputTokens: 0, cachedInputTokens: 0, reasoningTokens: 0,
+                      modelCalls: 0 } };
   }
 
   seal(draft: TurnDraft): TurnRecord {

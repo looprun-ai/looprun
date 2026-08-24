@@ -17,7 +17,8 @@ function draft(): TurnDraft {
   return { turn: 1, userText: '', servedBy: '', acts: [], corrections: [],
            issued: [], consumed: [], closed: [], finish: null, closedBy: 'model', text: '',
            microTried: [],
-           usage: { inputTokens: 0, outputTokens: 0, cachedInputTokens: 0, modelCalls: 0 } };
+           usage: { inputTokens: 0, outputTokens: 0, cachedInputTokens: 0, reasoningTokens: 0,
+                    modelCalls: 0 } };
 }
 
 const answer = (done: 'yes' | 'no' | 'unknown') => ({ answer: { result: null, done }, actId: 'a1' });

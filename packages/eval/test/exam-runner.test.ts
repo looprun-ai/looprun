@@ -69,7 +69,7 @@ test('the dump carries what each turn cost — per-turn usage totals', async () 
   const subject = await SubjectLoader.load(MINI);
   const c: ExamCase = { id: 'mini-06', split: 'fix', turns: ['cancel bk_9'], rubric: 'r' };
   const runDir = mkdtempSync(join(tmpdir(), 'run-'));
-  const usage = { inputTokens: 100, outputTokens: 10, cachedInputTokens: 40 };
+  const usage = { inputTokens: 100, outputTokens: 10, cachedInputTokens: 40, reasoningTokens: 0 };
   const dump = await new ExamRunner().runCase(subject, c, 'governed', { scripted: { steps: [
     { ...call('cancelBooking', { id: 'bk_9' }), usage },
     { ...finish('I need your approval.',

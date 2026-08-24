@@ -106,13 +106,17 @@ export class MastraModelPort {
     // own word for this step (the seat's brakes included) wins.
     const params: LlmParams = { ...this.params, ...input.llmParams };
     try {
+      // THINKING IS OFF BY DEFAULT. A governed turn is priced and measured on the
+      // tokens the record carries; thought tokens are billed as output and serve
+      // no guarantee, so the engine spends none unless the spec's llmParams says
+      // `preset: 'gemini:thinking-on'` — explicitly, per desk.
       const r = await generateText({
         model, system: input.system, messages: toMessages(input.messages, this.replay),
         tools, toolChoice,
         temperature: params.temperature, topP: params.topP,
         maxOutputTokens: params.maxOutputTokens,
-        ...(params.preset === 'gemini:thinking-off'
-          ? { providerOptions: { google: { thinkingConfig: { thinkingBudget: 0 } } } } : {})
+        ...(params.preset === 'gemini:thinking-on'
+          ? {} : { providerOptions: { google: { thinkingConfig: { thinkingBudget: 0 } } } })
       });
       const calls: RawCall[] = r.toolCalls.map(c => ({
         tool: c.toolName, args: isRecord(c.input) ? c.input : {}
@@ -123,10 +127,13 @@ export class MastraModelPort {
       }
       const tokenCount = (v: unknown): number => typeof v === 'number' ? v
         : isRecord(v) && typeof v.total === 'number' ? v.total : 0;
+      const details = (r.usage as { outputTokenDetails?: { reasoningTokens?: number } })
+        .outputTokenDetails;
       const usage = {
         inputTokens: tokenCount(r.usage.inputTokens),
         outputTokens: tokenCount(r.usage.outputTokens),
-        cachedInputTokens: tokenCount(r.usage.cachedInputTokens)
+        cachedInputTokens: tokenCount(r.usage.cachedInputTokens),
+        reasoningTokens: tokenCount(details?.reasoningTokens ?? r.usage.reasoningTokens)
       };
       usageTotals.steps += 1;
       usageTotals.inputTokens += usage.inputTokens;

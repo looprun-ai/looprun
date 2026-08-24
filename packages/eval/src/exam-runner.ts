@@ -91,7 +91,8 @@ export class ExamRunner {
     };
     const records: TurnRecord[] = [];
     const usage: { turn: number; inputTokens: number; outputTokens: number;
-      cachedInputTokens: number; wallClockMs: number; modelCalls: number }[] = [];
+      cachedInputTokens: number; reasoningTokens: number;
+      wallClockMs: number; modelCalls: number }[] = [];
     let failure: CaseDump['failure'] = null;
     const incident = (e: unknown): void => {
       // A failed case never kills the campaign: every error is an incident row.

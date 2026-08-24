@@ -226,7 +226,7 @@ export interface LlmParams {
   temperature?: number;      // delivered to the provider or the build fails its wire test (R7.4)
   topP?: number;
   maxOutputTokens?: number;  // a LOCAL-tier target arms this as a brake from the tier (R7.1)
-  preset?: ProviderPreset;   // a NAMED preset in the provider's own dialect, e.g. 'gemini:thinking-off'
+  preset?: ProviderPreset;   // a NAMED preset in the provider's own dialect, e.g. 'gemini:thinking-on'
 }
 ```
 
@@ -475,7 +475,8 @@ export interface ModelTarget { readonly id: string; readonly provider: string;
                                readonly tier: 'cloud' | { readonly local: string };   // declared, never inferred (R4·ASK)
                                readonly certified: boolean }
 export type ModelChoice = string | { readonly targets: readonly string[]; readonly strategy: RoutingStrategy };
-export type ProviderPreset = 'gemini:thinking-off';   // closed union; grows only by measured addition (R7.4)
+export type ProviderPreset = 'gemini:thinking-on';    // closed union; grows only by measured addition (R7.4);
+                                                      // thinking is OFF by default — the preset turns it on
 export interface LlmParams { readonly temperature?: number; readonly topP?: number;
                              readonly maxOutputTokens?: number; readonly preset?: ProviderPreset }
                                               // ONE home (R2.5): §3 shows it to authors, cards.ts re-exports it
@@ -1915,7 +1916,7 @@ change (— = not authoring-visible).
 | R7.1 | PASS | `ModelSeat` brakes armed from the DECLARED tier (§5.3); `targets.ts`; redrive rates measured (§13.3 row 1) | — |
 | R7.2 | PASS | §3 `Limits` (calls, destructive, retries, questionTurns); `FinishDesk.force` (§5.3) | tutorial lesson 13 |
 | R7.3 | PASS | `PromptWriter.system` frozen prefix, per-agent divergence last (§5.3); shared-prefix preserved by the channel law | — |
-| R7.4 | PASS | `MastraModelPort` (§5.5): `llmParams` wire-tested, per-field merge over target defaults (§3); named provider presets (`gemini:thinking-off`) in the provider's dialect | tutorial lesson 16 + skill llmParams doc |
+| R7.4 | PASS | `MastraModelPort` (§5.5): `llmParams` wire-tested, per-field merge over target defaults (§3); named provider presets (`gemini:thinking-on`; thinking is off by default) in the provider's dialect | tutorial lesson 16 + skill llmParams doc |
 | R7.5 | PASS | `ModelSeat` (§5.3): certified-only set (`ModelChoice`), five strategies, switch between attempts, `servedBy` recorded, Judge on the seat | skill targets doc |
 | R8.1 | PASS | §10 inversion 6: the model proposes, the engine disposes every status | — |
 | R8.2 | PASS | `CanonicalCall` (§5.1): sorted-key identity; bipartite matching (no greedy first-fit) in `HonestyCheck` | — |

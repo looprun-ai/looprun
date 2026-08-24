@@ -58,6 +58,7 @@ export class Turn {
       draft.usage.inputTokens += step.usage?.inputTokens ?? 0;
       draft.usage.outputTokens += step.usage?.outputTokens ?? 0;
       draft.usage.cachedInputTokens += step.usage?.cachedInputTokens ?? 0;
+      draft.usage.reasoningTokens += step.usage?.reasoningTokens ?? 0;
       return step;
     } };
 

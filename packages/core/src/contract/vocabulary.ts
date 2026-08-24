@@ -78,7 +78,10 @@ export interface StepInput { readonly system: string; readonly messages: readonl
                              readonly tools: readonly ToolCard[]; readonly forceFinish: boolean;
                              readonly llmParams: LlmParams }
 export interface StepUsage { readonly inputTokens: number; readonly outputTokens: number;
-                             readonly cachedInputTokens: number }
+                             readonly cachedInputTokens: number;
+                             /** Thinking tokens the provider billed as output — zero when
+                              *  thinking is off, which is the engine's default. */
+                             readonly reasoningTokens: number }
 export interface ModelStep { readonly calls: readonly RawCall[]; readonly text: string;
                              /** What the provider reported for this step; absent = the
                               *  port has no numbers. */
@@ -185,7 +188,9 @@ export interface ModelTarget { readonly id: string; readonly provider: string;
                                readonly tier: 'cloud' | { readonly local: string };   // declared, never inferred
                                readonly certified: boolean }
 export type ModelChoice = string | { readonly targets: readonly string[]; readonly strategy: RoutingStrategy };
-export type ProviderPreset = 'gemini:thinking-off';   // closed union; grows only by measured addition
+export type ProviderPreset = 'gemini:thinking-on';    // closed union; grows only by measured addition.
+                                                      // THINKING IS OFF BY DEFAULT — this preset is
+                                                      // the only way a desk spends thought tokens.
 export interface LlmParams { readonly temperature?: number; readonly topP?: number;
                              readonly maxOutputTokens?: number; readonly preset?: ProviderPreset }
                                               // ONE home: authors read it on the spec card,

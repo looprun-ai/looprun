@@ -12,7 +12,8 @@ function dumpOf(caseId: string, variant: CaseDump['variant']): CaseDump {
     records: [{ turn: 1, servedBy: 'scripted', userText: 'hi',
       acts: [], questions: { issued: [], consumed: [], closed: [] },
       finish: null, corrections: [], text: 'Hello.', closedBy: 'model',
-      usage: { inputTokens: 0, outputTokens: 0, cachedInputTokens: 0, modelCalls: 1 } }] };
+      usage: { inputTokens: 0, outputTokens: 0, cachedInputTokens: 0, reasoningTokens: 0,
+        modelCalls: 1 } }] };
 }
 
 test('a never-scanned dir is a finding; an incident blocks until ITS hash resolves', () => {

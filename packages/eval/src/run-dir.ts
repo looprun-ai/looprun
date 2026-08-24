@@ -18,6 +18,7 @@ export interface CaseDump {
    *  clock the runner measured around the turn. */
   readonly usage: readonly { readonly turn: number; readonly inputTokens: number;
     readonly outputTokens: number; readonly cachedInputTokens: number;
+    readonly reasoningTokens: number;
     readonly wallClockMs: number; readonly modelCalls: number }[];
 }
 
