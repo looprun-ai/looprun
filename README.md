@@ -29,14 +29,16 @@ console.log((await agent.generate('Please cancel booking bk_1.')).text);
 ```
 
 ```
-Nothing changed.
-cancelBooking(bk_1) — not-done (awaiting approval)
-[CONFIRM 355ec2] cancel a booking runs only after your approval.
+Cancelling booking bk_1 needs your word first: cancel a booking runs only after
+your approval. To go ahead, reply CONFIRM 355ec2.
 ```
 
 Twelve lines of code, and nothing about consent is in them. `cancelBooking` sits under
-`destructive`; that single fact installs the hold, the wording, the one-time code, and the
-rule that only a later message carrying that code releases **that one call**.
+`destructive`; that single fact installs the hold, the approval statement, the one-time code,
+and the rule that only a later message carrying that code releases **that one call**. The
+reply is the desk's own message — the engine held the call, handed the desk the statement and
+the code to weave in word for word, and would have printed the line itself had the message
+not carried them.
 
 ---
 
@@ -64,6 +66,7 @@ There is no fourth thing. No hooks, no loop, no return protocol, no tool plumbin
 | **Disclosure** | the consent question states what THIS call would do, with figures the engine read itself: *"Cancelling Blue Room on Friday is permanent, and 240 stays owed."* |
 | **The floor** | fabricated identifiers and dates, duplicate calls, half-filled arguments, a reply that claims what the acts do not show — all refused without you declaring anything |
 | **The record** | one row per act, in a closed vocabulary — `done` · `held` · `refused` · `unknown` · `not-done` — chosen by the engine from what the world answered, never from the model's prose |
+| **One voice** | the reply is the desk's own prose, in the operator's language; every id and figure a record sentence states either appears in that prose or the engine prints the sentence beneath it; a figure no record carries is refused; a message contradicting the record is never delivered |
 | **Honest closure** | a turn that ran out of room closes with what verifiably happened, never with a fabrication |
 
 ## A guard is one sentence
@@ -77,11 +80,43 @@ what `agent.guards()` prints. One string, three jobs — they cannot drift apart
 ```
 
 When the model skips the read, the engine collects it itself in one forced micro-step, and
-what comes back is that same sentence:
+the act's row on the record carries that same sentence:
 
 ```
 cancelBooking(bk_1) — not-done (Read the booking's invoice before cancelling, so the guest
   hears what stays owed. getInvoice did not succeed this conversation)
+```
+
+The operator reads the desk's prose; when that prose leaves the refusal's facts out, the
+rule inside the parentheses prints beneath it, without the tool frame.
+
+## The reply is one voice
+
+The delivered reply is the desk's own prose. Beneath it the engine prints only what that
+prose left out: a record sentence whose every id and figure the prose already carries has
+nothing to add and prints nothing. A figure the prose states that no record carries is
+refused before delivery, and a message whose report contradicts the sealed record is never
+delivered — the record's own sentences speak instead.
+
+A real exchange, delivered by a rental-operations desk (the operator writes Portuguese, so
+the desk answers in Portuguese — the consent statement and code are woven in, and no engine
+line follows, because the prose already carries every fact):
+
+```
+OPERATOR  O cliente acabou de desistir - cancele a bk_1001.
+
+AGENT     A reserva bk_1001 está pronta para ser cancelada. Cancelar a bk_1001
+          encerra a locação de 2026-07-10 a 2026-07-15 da CAT 320 Excavator e
+          devolve ast_excv01 ao pátio — e uma reserva cancelada não volta atrás.
+          Qualquer serviço de técnico vinculado a ela é anulado no mesmo ato, e
+          0 de caução segue retido no registro. Para prosseguir, responda
+          CONFIRM 042b69.
+
+OPERATOR  CONFIRM 042b69
+
+AGENT     A reserva bk_1001 foi cancelada com sucesso. O equipamento ast_excv01
+          está livre e qualquer serviço de técnico associado foi baixado. O
+          valor de 0 da caução permanece retido no registro da reserva.
 ```
 
 ## Or declare it, and emit

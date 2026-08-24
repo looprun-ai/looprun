@@ -48,12 +48,13 @@ wording: { status: { held: 'waiting for your OK' } }
 ```
 
 ```
-  default                cancelBooking(bk_1) — not-done (awaiting approval)
-  with the override      cancelBooking(bk_1) — not-done (waiting for your OK)
+  the act's record row, default                cancelBooking(bk_1) — not-done (awaiting approval)
+  the same row, with the override              cancelBooking(bk_1) — not-done (waiting for your OK)
 ```
 
 Every status word and every engine sentence has a name and a default; you override the ones
-your business says differently.
+your business says differently. The sentence is what the record seals and what the model
+re-reads — the operator meets it whenever the engine's own line has to speak.
 
 | you can rename | examples |
 |---|---|

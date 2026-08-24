@@ -73,13 +73,18 @@ whole vocabulary, and the engine — not the model — chooses which one a row c
 | `unknown` | it was sent and nothing confirmed the outcome — never treated as success |
 | `not-done` | it did not happen |
 
-A turn where nothing happened says so out loud:
+The record grades the act; the reply stays the desk's own message. On the hold above, the
+desk answers in its own words, weaving in the approval statement and the live code the
+engine handed it:
 
 ```
-Nothing changed.
-cancelBooking(bk_1) — not-done (awaiting approval)
-[CONFIRM 355ec2] cancel a booking runs only after your approval.
+Cancelling booking bk_1 needs your word first: cancel a booking runs only after
+your approval. To go ahead, reply CONFIRM 355ec2.
 ```
+
+A reply that fails to carry the statement and the code word for word gets the engine's own
+line printed beneath it — `[CONFIRM 355ec2] cancel a booking runs only after your approval.`
+— so the ask always reaches the operator.
 
 ## What installs itself
 

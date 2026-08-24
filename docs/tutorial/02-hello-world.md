@@ -20,12 +20,12 @@ const agent = new LoopRunAgent({
 console.log((await agent.generate('Please cancel booking bk_1.')).text);
 ```
 
-What comes back:
+What comes back is the desk's own message, with the approval statement and the engine's
+one-time code woven in word for word:
 
 ```
-Nothing changed.
-cancelBooking(bk_1) — not-done (awaiting approval)
-[CONFIRM 355ec2] cancel a booking runs only after your approval.
+Cancelling booking bk_1 needs your word first: cancel a booking runs only after
+your approval. To go ahead, reply CONFIRM 355ec2.
 ```
 
 The full file lives at [`snippets/hotel/world.ts`](snippets/hotel/world.ts) and
@@ -61,7 +61,9 @@ Those two fields are all a desk needs to run. The file this quotes carries one m
       │
       ├─ the engine HOLDS the call — nothing runs
       ├─ it words the question from the declared `label`
-      ├─ it prints a one-time code of its own making
+      ├─ it mints a one-time code and hands the desk the statement and the
+      │  code to weave into its reply — word for word, or the engine prints
+      │  the line itself
       └─ the act is sealed as not-done, reason `held`
 ```
 
@@ -118,8 +120,12 @@ destructive: {
 ```
 
 ```
-[CONFIRM 355ec2] cancel a booking runs only after your approval.
+cancel a booking runs only after your approval.
 ```
+
+That sentence rides inside the desk's reply, word for word, next to the live code. A reply
+that fails to carry both gets the engine's own line printed beneath it:
+`[CONFIRM 355ec2] cancel a booking runs only after your approval.`
 
 Write it as the act, in the words the business uses — "cancel a booking", "issue the refund",
 "freeze the account". Never the tool name, never a class name, never a verb only a programmer

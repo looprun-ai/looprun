@@ -1,8 +1,11 @@
 # Governance — what proves this engine behaves
 
 looprun holds every destructive call for a human's word, states what agreeing would do, and seals
-what happened into a record nobody can edit. A claim like that is worth exactly as much as the
-evidence behind it, and the evidence is code that runs on every push.
+what happened into a record nobody can edit. The delivered reply is the desk's own prose under
+deterministic honesty checks: every figure it states is one the records carry, every record fact
+it omits is printed beneath it by the engine, and a message whose report contradicts the sealed
+record is never delivered — the record's own sentences speak instead. A claim like that is worth
+exactly as much as the evidence behind it, and the evidence is code that runs on every push.
 
 **The one-line rule: a change to a governed surface ships with its suites green, or it does not
 ship.** There is no separate paperwork to file — the suites below ARE the record.
@@ -62,7 +65,7 @@ for a behavior, which is why they catch what a runtime test cannot.
 | `layer-rule` | an import pointing the wrong way in the layer picture: contract imports nothing, cards import contract, the machine reaches a world only through the ports, and only a facade imports the engine |
 | `name-gate` | any identifier on the rename register, anywhere in the packages tree |
 | `no-network` | a network primitive reached from the engine — `fetch`, an http client, a socket. The declared doors are the server package (the wire is its purpose) and the models package (loopback serving) |
-| `purity` | a regex outside the three pattern factories and `argFormat` — a guard decides by reading typed values, not by matching prose |
+| `purity` | a regex outside its declared homes — the pattern factories and `argFormat` in the catalog, and the delivery writer's sentence anatomy (`idsOf`, `unframed`) — a guard decides by reading typed values, not by matching prose |
 
 ## 3 · The seven facade gates
 

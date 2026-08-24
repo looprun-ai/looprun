@@ -160,7 +160,8 @@ the census:
 itself in one forced micro-step, and only then lets the original call continue. The rule is
 kept without the model having to remember it.
 
-When the model fills that micro-step with an identifier it never read, the floor catches it:
+When the model fills that micro-step with an identifier it never read, the floor catches it.
+The record seals both acts with the guards' own sentences:
 
 ```
 getInvoice(inv_1) — not-done (An identifier you did not read and were not given is a guess —
@@ -169,8 +170,9 @@ cancelBooking(bk_1) — not-done (Read the booking's invoice before cancelling, 
   hears what stays owed. getInvoice did not succeed this conversation)
 ```
 
-Both lines are the guards' own sentences, plus the detail for that one violation. Nothing was
-paraphrased on the way out.
+Nothing is paraphrased on the way out: the model re-reads these rows verbatim, and when the
+desk's reply leaves a refusal's facts out, the rule inside the parentheses prints beneath the
+prose, without the tool frame.
 
 ## `state`, and the check that reads records
 
