@@ -221,8 +221,8 @@ $1.50/1M output (ai.google.dev, read 2026-08-23).
 
 | | sealed baseline (main) | this run (final build) | atlas-traditional |
 |---|---|---|---|
-| letters | 96/100 (62 · 68 · 80 · 100) | **95/100** (18 · 44 · 50 · 61 · 100) | 87/100 self-judged (`runs/final/verdicts.jsonl`); 83/100 under its own report's stricter reading — four passes name fabricated colleagues |
-| invariant failures | 1 | **0** | 3 (32 · 60 · 97, its own checks) |
+| letters | 96/100 (61 · 62 · 80 · 100) | **93/100** (18 · 44 · 50 · 61 · 62 · 80 · 100) | 87/100 self-judged (`runs/final/verdicts.jsonl`); 83/100 under its own report's stricter reading — four passes name fabricated colleagues |
+| invariant failures | 3 (61 · 62 · 80) | 3 — the same three lines (61 · 62 · 80) | 3 (32 · 60 · 97, its own checks) |
 | one call, two outcomes in a reply | 5 | **0** | — |
 | empty deliveries | 0 | **0** | — |
 | successful-read lines delivered | 298 | **0** | — |
@@ -238,19 +238,24 @@ $1.50/1M output (ai.google.dev, read 2026-08-23).
 | cost, whole run | not recorded | **$0.78** | $0.61 |
 | cost per conversation / per turn | not recorded | $0.0078 / $0.0051 | $0.0061 / $0.0040 |
 
-**The two-halves bar: counters hold at zero across every row; letters miss by one (95 < 96)
-— the misses are findings, and the spec stays open on them.**
+**The two-halves bar: counters hold at zero across every row; letters land at 93 against the
+baseline's 96 — the misses are findings, and the spec stays open on them.** The three
+invariant misses (61 · 62 · 80) and the case-100 letter are byte-for-byte the same disputes
+on both builds; the delta this change owns is 18 · 44 · 50.
 
 | finding | cases | class |
 |---|---|---|
 | a critical letter names a fact only a raw read line used to carry — the hold's recorded reason, the owner-only rule — and the desk's prose does not say it | 18-r1 · 50-r2 | subject authoring: the sentence belongs in a conduct rule or a disclosure tense, now that reads are silent |
-| the delivery-choice guard stops a flow whose rubric expects the booking made | 61-r1 | subject: case and guard disagree about the waived check |
+| the delivery-choice guard stops a flow whose rubric expects the booking made | 61-r1 | subject: case and guard disagree about the waived check — the same stall fails the baseline |
 | catalogue prices stated before the delivered-or-collected question | 44-r1 | prose flap (also missed in the prototype's 12-slice) |
 | roles named where the rubric wants a named member of the workspace | 100-r3 | prose flap — the same letter fails on the baseline |
 | a read whose declared sentence has no body delivers as a bare frame (`getDepositBalance() — done`) through the ask-turn quote; a world refusal code (`SOLE_OWNER_PROTECTED`) delivers raw | 05 · 06 · 35 · 36 · 51 (no letter lost) | voice: bodyless declared sentences and code-worded world refusals are authoring gaps the delivery now exposes |
 
-Cases 62, 68 and 80 — the baseline's other misses — all pass on this build, and the run seals
-zero invariant failures against the baseline's one.
+Case 18's baseline pass was paid by the raw `listHolds` JSON line carrying the hold's reason —
+a reply this build correctly refuses to compose; the fact now belongs to an authored sentence.
+Cases 44 and 50 regress on model prose alone: the baseline reps happened to say the asking
+words ("include the delivery?", "Only an owner may move the plan tier") and these reps did not,
+on an unchanged prompt channel.
 
 ## 6 · The documentation this change touches
 
