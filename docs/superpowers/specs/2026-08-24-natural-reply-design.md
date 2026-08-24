@@ -1,10 +1,9 @@
 # The natural reply — one voice, every guarantee
 
-**Status: DESIGN, prototype measured.** Every mechanism below is implemented and test-driven on
-the branch `microtest/coherent-reply-and-bytes` (commits `7205c19 → 104bc3b`); the branch is a
-prototype — it does not pass the repo gate (the delivery-format proofs assert the old
-composition) and merging it is the implementation plan's job, not a copy. Where a mechanism is
-design-only it says so in its own row.
+**Status: CLOSED — the two-halves bar holds on `rep2` (96/100 letters, every counter zero;
+§5.3).** Every mechanism below lives on the branch `natural-reply` with the repo gate green;
+the measured evidence is §5.1–§5.3. Where a mechanism is design-only it says so in its own
+row.
 
 ## 1 · The goal
 
@@ -257,6 +256,32 @@ a reply this build correctly refuses to compose; the fact now belongs to an auth
 Cases 44 and 50 regress on model prose alone: the baseline reps happened to say the asking
 words ("include the delivery?", "Only an owner may move the plan tier") and these reps did not,
 on an unchanged prompt channel.
+
+## 5.3 · The second repetition — the repaired hundred, and the bar held
+
+Run: `agentspec-bench/subjects/atlas-c17/test/2026-08-24-natural-100/rep2` — all 100 cases,
+1 rep, on the build carrying `pick` and the subject carrying the T-loop's three repairs.
+Every letter judged in session, letter-strict, same ruler as rep1.
+
+| | rep1 | **rep2** |
+|---|---|---|
+| letters | 93/100 | **96/100** (61 · 62 · 80 · 100) |
+| one call, two outcomes · empty · read lines · raw JSON | 0 · 0 · 0 · 0 | **0 · 0 · 0 · 0** |
+| reply language = operator's | 153/153 | **153/153** |
+| invariant failures | 3 (61 · 62 · 80) | 3 — the same three lines |
+| forced closes | 6 | 6 |
+| delivered bytes (mean/turn) | 41 961 (274) | 41 454 (271) |
+| input tokens (mean/case) | 2 897 216 (28 972) | 2 884 829 (28 848) |
+| output tokens | 36 804 | 36 634 |
+| model calls (per turn) | 605 (3.95) | 595 (3.89) |
+| wall clock (mean/case) | 4 734 ms | 4 189 ms |
+| cost, whole run | $0.78 | $0.78 |
+
+**The bar: letters 96 ≥ the baseline's 96, and every deterministic counter at zero — both
+halves hold.** The three repaired cases pay in the hundred: 18 weaves the hold's reason
+through `pick`, 44 asks the delivery choice before any figure, 50 states the tier move is
+owner-only. The four standing misses are the same on every build: three exam-vs-declarable
+invariant disputes (61 · 62 · 80) and the named-member letter (100) that no run has paid.
 
 ## 6 · The documentation this change touches
 
