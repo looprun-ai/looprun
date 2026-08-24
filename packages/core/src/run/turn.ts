@@ -316,6 +316,11 @@ export class Turn {
       text = dw.compose(dw.settled(draft.acts).map(a => a.sentence).join('\n'),
         [], session.consent.open(), draft.closed, notes);
     }
+    // Still nothing — no prose, no act, no question, no note: the exhaustion closure
+    // speaks, pure over the recorded acts.
+    if (text.trim() === '') {
+      text = dw.compose(fd.closure(draft.acts), [], session.consent.open(), draft.closed, notes);
+    }
     for (const rewrite of this.deps.compiled.rewrites) text = rewrite.apply(text);
     draft.text = this.deps.masker.maskProse(text);
     return session.seal(draft);

@@ -23,7 +23,10 @@ test('exhaustion forces one finish step; a model that still will not finish is c
   expect(r.closedBy).toBe('engine');
   expect(r.finish).toBeNull();
   expect(r.corrections).toContainEqual({ kind: 'forcedFinish' });
-  expect(r.text).toContain('Completed: getBooking.');
+  // No trustworthy prose exists, so the settled record speaks: every act's own
+  // sentence, one line per call.
+  expect(r.text).toContain('getBooking(bk_1) — done');
+  expect(r.text).toContain('getBooking(bk_2) — done');
   expect(r.acts.filter(a => a.status === 'done')).toHaveLength(2);
 });
 
