@@ -474,7 +474,7 @@ function isFigure(value: string): boolean {
  *  amount: '.' or ',' between digits stays in the run, and a space stays only when a
  *  three-digit group follows it. 'R$ 2.000,00' yields '2.000,00'; 'e2000,0' yields
  *  '2000,0'; a currency mark, mistyped or not, is never part of the run. */
-function figureRuns(text: string): readonly string[] {
+export function figureRuns(text: string): readonly string[] {
   const out: string[] = [];
   let i = 0;
   while (i < text.length) {
@@ -499,7 +499,7 @@ function figureRuns(text: string): readonly string[] {
  *  its trailing zeros. The last separator carrying one or two digits is the decimal
  *  mark; a separator carrying three is grouping. '2.000,00', '2,000', '2000.0' and
  *  '2000' are the same amount; '200' is a different one and never becomes it. */
-function canonicalAmount(run: string): string {
+export function canonicalAmount(run: string): string {
   const parts: string[] = [];
   let current = '';
   for (const c of run) {
