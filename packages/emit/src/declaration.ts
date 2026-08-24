@@ -36,10 +36,12 @@ export interface DeclaredCap {
  *  short form, and the held call's own target is what it is answered from. The full form states
  *  the read and the arguments it takes — `{ tool: listHolds, args: {} }` for a read that takes
  *  none, and `{ tool: getBooking, args: { bookingId: bookingId } }` when the read's own argument
- *  names it differently from the held call's. */
+ *  names it differently from the held call's. A `pick` binds the alias to ONE row of a
+ *  list-valued read: the row of `list` whose `by` field equals the held call's `key` argument. */
 export type DeclaredNeed = string | {
   readonly tool: string;
   readonly args: Readonly<Record<string, string>>;
+  readonly pick?: { readonly list: string; readonly by: string; readonly key: string };
 };
 
 export interface DeclaredDisclosure {

@@ -53,6 +53,46 @@ test('a slot the reads answer nothing for refuses the call with the plain defaul
   expect(() => desk.tenses('cancelBooking', HELD, reads)).toThrow(TurnFailure);
 });
 
+const HOLDS_SURFACE = { tools: {
+  listHolds: fact({ name: 'listHolds', effect: 'read',
+    schema: { type: 'object', properties: {}, required: [] } }),
+  releaseHold: fact({ name: 'releaseHold', effect: 'destructive', target: 'holdId', label: 'Lift the hold',
+    schema: { type: 'object', properties: { holdId: { type: 'string' } }, required: ['holdId'] } })
+} } as const;
+
+const picked = new AgentFactory().governed(
+  { name: 'a', persona: 'p' },
+  { name: 'd', disclosure: { releaseHold: {
+      needs: { holds: { tool: 'listHolds', args: {} },
+               hold: { tool: 'listHolds', args: {}, pick: { list: 'holds', by: 'id', key: 'holdId' } } },
+      before: 'Lifting {args.holdId} — the {hold.type} freeze placed for {hold.reason} — with {holds.count} active.' } } },
+  HOLDS_SURFACE);
+const pickedDesk = new DisclosureDesk(picked.disclosureBindings);
+
+function listAct(): Act {
+  return { id: 'a2', turn: 1, origin: 'engine',
+    call: { tool: 'listHolds', args: {}, key: 'l' },
+    effect: 'read', said: 'yes', status: 'done', reason: null, evidence: 'executor',
+    sentence: 'listHolds() — done', questionId: null, guard: null,
+    result: { count: 2, holds: [
+      { id: 'hold_6002', type: 'payment', reason: 'chargeback under investigation' },
+      { id: 'hold_6003', type: 'payment', reason: 'bank recall pending' } ] } };
+}
+
+test("a pick binds the alias to the row keyed by the held call's own argument", () => {
+  const reads = new Map([['holds', listAct()], ['hold', listAct()]]);
+  const lift = { tool: 'releaseHold', args: { holdId: 'hold_6003' }, key: 'k' };
+  expect(pickedDesk.tenses('releaseHold', lift, reads).before)
+    .toBe('Lifting hold_6003 — the payment freeze placed for bank recall pending — with 2 active.');
+});
+
+test('a pick with no matching row refuses through the empty sentence', () => {
+  const reads = new Map([['holds', listAct()], ['hold', listAct()]]);
+  const lift = { tool: 'releaseHold', args: { holdId: 'hold_9999' }, key: 'k' };
+  expect(pickedDesk.emptyRefusal('releaseHold', lift, reads))
+    .toBe('the records hold nothing for this call to act on');
+});
+
 test('the card empty sentence speaks instead, rendered over the held args', () => {
   const withEmpty = new AgentFactory().governed(
     { name: 'a', persona: 'p' },

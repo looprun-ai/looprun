@@ -32,9 +32,14 @@ export interface AgentSpec {
  *  engine-performed reads. */
 export interface Disclosure {
   /** Reads the ENGINE performs itself on the held call's own args: alias → read tool
-   *  (an args map when the read's arg names differ from the held call's). Omitted = {}. */
+   *  (an args map when the read's arg names differ from the held call's). A `pick`
+   *  binds the alias to ONE row of a list-valued read — the row of `list` whose `by`
+   *  field equals the held call's `key` argument; no match refuses through the empty
+   *  sentence, as any unanswered slot does. Omitted = {}. */
   needs?: Readonly<Record<string, string | { readonly tool: string;
-    readonly args: Readonly<Record<string, string>> }>>;
+    readonly args: Readonly<Record<string, string>>;
+    readonly pick?: { readonly list: string; readonly by: string;
+                      readonly key: string } }>>;
   /** Before-tense, shown on the consent question. Omitted = engine sentence from the label. */
   before?: string;
   /** After-tense: the record line once the act ran. Omitted = engine sentence. */
@@ -154,7 +159,9 @@ export interface JudgedGuard extends InstalledGuard { readonly judgeQuery: strin
  *  owed read answered, saying the declared sentence with the record's figures. */
 export interface DisclosureBinding {
   readonly needs: Readonly<Record<string, { readonly tool: string;
-    readonly args: Readonly<Record<string, string>> }>>;
+    readonly args: Readonly<Record<string, string>>;
+    readonly pick?: { readonly list: string; readonly by: string;
+                      readonly key: string } }>>;
   readonly before: string | null;
   readonly after: string | null;
   readonly later: string | null;

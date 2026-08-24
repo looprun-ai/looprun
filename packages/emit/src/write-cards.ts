@@ -524,7 +524,10 @@ function disclosureLines(act: string, entry: DeclaredDisclosure, facts: SurfaceF
     if (typeof need !== 'string') {
       const args = Object.entries(need.args)
         .map(([name, from]) => `${key(name)}: ${quote(from)}`).join(', ');
-      return `{ tool: ${quote(need.tool)}, args: ${args.length === 0 ? '{}' : `{ ${args} }`} }`;
+      const pick = need.pick === undefined ? ''
+        : `, pick: { list: ${quote(need.pick.list)}, by: ${quote(need.pick.by)}, `
+          + `key: ${quote(need.pick.key)} }`;
+      return `{ tool: ${quote(need.tool)}, args: ${args.length === 0 ? '{}' : `{ ${args} }`}${pick} }`;
     }
     return target === null ? quote(need)
       : `{ tool: ${quote(need)}, args: { ${key(target)}: ${quote(target)} } }`;

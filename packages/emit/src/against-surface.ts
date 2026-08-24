@@ -232,6 +232,11 @@ function checkDisclosureNeedsResolvable(declaration: Declaration, facts: Surface
       const read = facts.tools[typeof need === 'string' ? need : need.tool];
       if (read === undefined) continue;
       if (typeof need !== 'string') {
+        if (need.pick !== undefined && !schemaArgs(held).includes(need.pick.key)) {
+          refusals.push(`contract.disclosure.${actName}.needs.${alias} picks by '${need.pick.key}', `
+            + `and ${actName} declares no such argument — pick.key names one of `
+            + `${actName}'s own arguments.`);
+        }
         const unfilled = requiredSchemaArgs(read).filter(arg => !(arg in need.args));
         if (unfilled.length === 0) continue;
         const stated = Object.keys(need.args);

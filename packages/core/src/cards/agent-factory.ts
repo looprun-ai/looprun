@@ -61,13 +61,15 @@ function compileDisclosure(disclosure: Readonly<Record<string, Disclosure>>,
     // The contract discloses every act the BUSINESS holds; a desk compiles only the acts in
     // its own lane. A sentence about an act this desk cannot perform binds to nothing.
     if (held === undefined) continue;
-    const needs: Record<string, { tool: string; args: Record<string, string> }> = {};
+    const needs: Record<string, { tool: string; args: Record<string, string>;
+      pick?: { list: string; by: string; key: string } }> = {};
     for (const [alias, recipe] of Object.entries(d.needs ?? {})) {
       if (typeof recipe === 'string') {
         const target = held.target ?? 'id';
         needs[alias] = { tool: recipe, args: { [target]: target } };
       } else {
-        needs[alias] = { tool: recipe.tool, args: { ...recipe.args } };
+        needs[alias] = { tool: recipe.tool, args: { ...recipe.args },
+          ...(recipe.pick === undefined ? {} : { pick: recipe.pick }) };
       }
     }
     out[tool] = { needs, before: d.before ?? null, after: d.after ?? null,

@@ -76,6 +76,21 @@ export class DisclosureDesk {
     this.bindings = bindings;
   }
 
+  /** The alias's bound value: the whole read result, or — when the recipe declares
+   *  a pick — the ONE row of the list whose declared field equals the held call's
+   *  declared argument. No match binds null, and the unanswered slot refuses
+   *  through the empty sentence, as ever. */
+  private bound(alias: string, needs: CompiledAgent['disclosureBindings'][string]['needs'],
+                result: Json, call: CanonicalCallData): Json {
+    const pick = needs[alias]?.pick;
+    if (pick === undefined) return result;
+    const rows = lookup({ r: result }, ['r', ...pick.list.split('.')]);
+    if (!Array.isArray(rows)) return null;
+    const wanted = call.args[pick.key];
+    return rows.find(r => typeof r === 'object' && r !== null && !Array.isArray(r)
+      && (r as { readonly [k: string]: Json })[pick.by] === wanted) ?? null;
+  }
+
   owedReads(tool: string, call: CanonicalCallData): readonly OwedReadStep[] {
     const binding = this.bindings[tool];
     if (binding === undefined) return [];
@@ -139,7 +154,7 @@ export class DisclosureDesk {
     const argValue = call.args[binding.cap.arg];
     if (typeof argValue !== 'number') return null;
     const values: Record<string, Json> = { args: call.args };
-    for (const [alias, act] of reads) values[alias] = act.result;
+    for (const [alias, act] of reads) values[alias] = this.bound(alias, binding.needs, act.result, call);
     const limit = lookup(values, binding.cap.at.split('.'));
     if (typeof limit !== 'number') {
       throw new TurnFailure('construction',
@@ -158,7 +173,7 @@ export class DisclosureDesk {
     const binding = this.bindings[tool];
     if (binding === undefined) return null;
     const values: Record<string, Json> = { args: call.args };
-    for (const [alias, act] of reads) values[alias] = act.result;
+    for (const [alias, act] of reads) values[alias] = this.bound(alias, binding.needs, act.result, call);
     try {
       for (const tense of [binding.before, binding.after, binding.later]) {
         if (tense !== null) render(tense, values);
@@ -194,7 +209,7 @@ export class DisclosureDesk {
     const binding = this.bindings[tool];
     if (binding === undefined) return { before: null, after: null, later: null };
     const values: Record<string, Json> = { args: call.args };
-    for (const [alias, act] of reads) values[alias] = act.result;
+    for (const [alias, act] of reads) values[alias] = this.bound(alias, binding.needs, act.result, call);
     const fill = (template: string | null): string | null =>
       template === null ? null : render(template, values);
     return { before: fill(binding.before), after: fill(binding.after), later: fill(binding.later) };
