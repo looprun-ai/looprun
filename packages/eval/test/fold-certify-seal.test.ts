@@ -10,10 +10,12 @@ import { seal, verify } from '../src/seal.js';
 function dumpOf(caseId: string, variant: CaseDump['variant'],
                 over: Partial<CaseDump> = {}): CaseDump {
   return { case: caseId, variant, split: 'fix', servedBy: 'scripted',
-    invariantFailures: [], failure: null,
+    invariantFailures: [], failure: null, usage: [],
     records: [{ turn: 1, servedBy: 'scripted', userText: 'u',
       acts: [], questions: { issued: [], consumed: [], closed: [] },
-      finish: null, corrections: [], text: 't', closedBy: 'model' }], ...over };
+      finish: null, corrections: [], text: 't', closedBy: 'model',
+      usage: { inputTokens: 0, outputTokens: 0, cachedInputTokens: 0, modelCalls: 1 } }],
+    ...over };
 }
 
 function repDir(rows: { id: string; verdict?: string; failed?: boolean }[]): string {

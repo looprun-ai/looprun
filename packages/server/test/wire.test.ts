@@ -6,7 +6,8 @@ const RECORD: TurnRecord = {
   turn: 1, servedBy: 'scripted', userText: 'is bk_9 confirmed?',
   acts: [], questions: { issued: [], consumed: [], closed: [] },
   finish: { message: 'bk_9 is confirmed for Tuesday.', report: [] },
-  corrections: [], text: 'bk_9 is confirmed for Tuesday.', closedBy: 'model'
+  corrections: [], text: 'bk_9 is confirmed for Tuesday.', closedBy: 'model',
+  usage: { inputTokens: 0, outputTokens: 0, cachedInputTokens: 0, modelCalls: 1 }
 };
 
 test('the envelope carries the delivery, estimated usage and the whole record', () => {

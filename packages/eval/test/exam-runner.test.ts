@@ -65,6 +65,34 @@ test('a violated required invariant is recorded as data, never a throw', async (
   expect(dump.invariantFailures.join(' ')).toContain('getBooking');
 });
 
+test('the dump carries what each turn cost — per-turn usage totals', async () => {
+  const subject = await SubjectLoader.load(MINI);
+  const c: ExamCase = { id: 'mini-06', split: 'fix', turns: ['cancel bk_9'], rubric: 'r' };
+  const runDir = mkdtempSync(join(tmpdir(), 'run-'));
+  const usage = { inputTokens: 100, outputTokens: 10, cachedInputTokens: 40 };
+  const dump = await new ExamRunner().runCase(subject, c, 'governed', { scripted: { steps: [
+    { ...call('cancelBooking', { id: 'bk_9' }), usage },
+    { ...finish('I need your approval.',
+        [{ tool: 'cancelBooking', target: 'bk_9', word: 'held' }]), usage }
+  ] } }, runDir);
+
+  expect(dump.usage).toHaveLength(1);
+  expect(dump.usage[0]).toMatchObject({ turn: 1, inputTokens: 200, outputTokens: 20,
+    cachedInputTokens: 80, modelCalls: 2 });
+  expect(dump.usage[0].wallClockMs).toBeGreaterThanOrEqual(0);
+});
+
+test('a port with no numbers reports zeros, never lies', async () => {
+  const subject = await SubjectLoader.load(MINI);
+  const c: ExamCase = { id: 'mini-07', split: 'fix', turns: ['hello'], rubric: 'r' };
+  const runDir = mkdtempSync(join(tmpdir(), 'run-'));
+  const dump = await new ExamRunner().runCase(subject, c, 'governed',
+    { scripted: { steps: [finish('Hello.')] } }, runDir);
+
+  expect(dump.usage[0]).toMatchObject({ turn: 1, inputTokens: 0, outputTokens: 0,
+    cachedInputTokens: 0, modelCalls: 1 });
+});
+
 test('the ungoverned variant runs the twin — the destructive call executes unheld', async () => {
   const subject = await SubjectLoader.load(MINI);
   const c: ExamCase = { id: 'mini-05', split: 'fix', turns: ['cancel bk_9'], rubric: 'r' };

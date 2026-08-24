@@ -90,6 +90,8 @@ export class ExamRunner {
       model, world: subject.world, preset: c.preset
     };
     const records: TurnRecord[] = [];
+    const usage: { turn: number; inputTokens: number; outputTokens: number;
+      cachedInputTokens: number; wallClockMs: number; modelCalls: number }[] = [];
     let failure: CaseDump['failure'] = null;
     const incident = (e: unknown): void => {
       // A failed case never kills the campaign: every error is an incident row.
@@ -119,8 +121,11 @@ export class ExamRunner {
           : 'decline' in turn ? declineText(openQuestions(records), c.id)
           : approvalText(Array.isArray(turn.approve) ? turn.approve : [turn.approve],
               openQuestions(records), records.flatMap(r => r.questions.issued), c.id);
+        const started = Date.now();
         const out = await (agent as LoopRunAgent).generate(text, { session: c.id });
         records.push(out.loopRun);
+        usage.push({ turn: out.loopRun.turn, ...out.loopRun.usage,
+          wallClockMs: Date.now() - started });
       } catch (e: unknown) {
         incident(e);
         break;
@@ -129,7 +134,7 @@ export class ExamRunner {
 
     const dump: CaseDump = { case: c.id, variant, split: c.split, records,
       servedBy: records[0]?.servedBy ?? 'none',
-      invariantFailures: failure === null ? checkInvariants(c, records) : [], failure };
+      invariantFailures: failure === null ? checkInvariants(c, records) : [], failure, usage };
     writeDump(runDir, dump);
     return dump;
   }

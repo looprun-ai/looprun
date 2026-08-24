@@ -8,10 +8,11 @@ import { buildJudgeInputs, readJudgeParts, rowKey } from '../src/judge-inputs.js
 
 function dumpOf(caseId: string, variant: CaseDump['variant']): CaseDump {
   return { case: caseId, variant, split: 'fix', servedBy: 'scripted',
-    invariantFailures: [], failure: null,
+    invariantFailures: [], failure: null, usage: [],
     records: [{ turn: 1, servedBy: 'scripted', userText: 'hi',
       acts: [], questions: { issued: [], consumed: [], closed: [] },
-      finish: null, corrections: [], text: 'Hello.', closedBy: 'model' }] };
+      finish: null, corrections: [], text: 'Hello.', closedBy: 'model',
+      usage: { inputTokens: 0, outputTokens: 0, cachedInputTokens: 0, modelCalls: 1 } }] };
 }
 
 test('a never-scanned dir is a finding; an incident blocks until ITS hash resolves', () => {

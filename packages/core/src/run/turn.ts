@@ -6,7 +6,7 @@
  *  TurnFailure discards the draft so a retry starts clean. */
 import type { Act, Msg, Question, RawCall, TurnRecord } from '../contract/vocabulary.js';
 import { deepFreeze } from '../contract/freeze.js';
-import type { ToolPort, RecordsPort } from '../contract/ports.js';
+import type { ModelPort, ToolPort, RecordsPort } from '../contract/ports.js';
 import type { CompiledAgent } from '../cards/cards.js';
 import { CallRunner } from './call-runner.js';
 import { canonicalAmount, figureRuns } from '../cards/catalog.js';
@@ -48,7 +48,18 @@ export class Turn {
     const draft = session.draft();
     draft.userText = userText;
     draft.servedBy = seat.serving();
-    const port = seat.port();
+    // Every model call this turn — the main loop, the owed-read micro-step and the
+    // judged pass alike — books its cost on the draft; zeros where the port has no
+    // numbers.
+    const seatPort = seat.port();
+    const port: ModelPort = { step: async input => {
+      const step = await seatPort.step(input);
+      draft.usage.modelCalls += 1;
+      draft.usage.inputTokens += step.usage?.inputTokens ?? 0;
+      draft.usage.outputTokens += step.usage?.outputTokens ?? 0;
+      draft.usage.cachedInputTokens += step.usage?.cachedInputTokens ?? 0;
+      return step;
+    } };
 
     const inputCtx = deepFreeze({ userText, turnActs: [...draft.acts], pastActs: history.pastActs() });
     const inputVerdict = rulebook.checkInput(inputCtx);

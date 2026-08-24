@@ -121,12 +121,17 @@ export class MastraModelPort {
         const assistant = r.response.messages.find(m => m.role === 'assistant');
         if (assistant !== undefined) this.replay.set(callsKey(calls), assistant);
       }
-      usageTotals.steps += 1;
       const tokenCount = (v: unknown): number => typeof v === 'number' ? v
         : isRecord(v) && typeof v.total === 'number' ? v.total : 0;
-      usageTotals.inputTokens += tokenCount(r.usage.inputTokens);
-      usageTotals.outputTokens += tokenCount(r.usage.outputTokens);
-      return { calls, text: r.text };
+      const usage = {
+        inputTokens: tokenCount(r.usage.inputTokens),
+        outputTokens: tokenCount(r.usage.outputTokens),
+        cachedInputTokens: tokenCount(r.usage.cachedInputTokens)
+      };
+      usageTotals.steps += 1;
+      usageTotals.inputTokens += usage.inputTokens;
+      usageTotals.outputTokens += usage.outputTokens;
+      return { calls, text: r.text, usage };
     } catch (e: unknown) {
       throw new TurnFailure('network', firstLine(e));
     }

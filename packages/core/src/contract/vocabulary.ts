@@ -77,7 +77,12 @@ export interface ToolCard { readonly name: string; readonly does: string; readon
 export interface StepInput { readonly system: string; readonly messages: readonly Msg[];
                              readonly tools: readonly ToolCard[]; readonly forceFinish: boolean;
                              readonly llmParams: LlmParams }
-export interface ModelStep { readonly calls: readonly RawCall[]; readonly text: string }
+export interface StepUsage { readonly inputTokens: number; readonly outputTokens: number;
+                             readonly cachedInputTokens: number }
+export interface ModelStep { readonly calls: readonly RawCall[]; readonly text: string;
+                             /** What the provider reported for this step; absent = the
+                              *  port has no numbers. */
+                             readonly usage?: StepUsage }
 export interface Question {
   readonly id: string;
   readonly code: string;                      // 'CONFIRM 7Q4MX' — crypto entropy + per-issuance nonce,
@@ -99,6 +104,10 @@ export interface TurnRecord {
   readonly corrections: readonly Correction[];
   readonly text: string;                      // the composed delivery
   readonly closedBy: 'model' | 'engine';
+  /** What the turn cost, summed over every model call it made — the main loop, the
+   *  owed-read micro-step and the judged pass alike; zeros where the port reports
+   *  no numbers. */
+  readonly usage: StepUsage & { readonly modelCalls: number };
 }
 export class TurnFailure extends Error {      // typed, loud; a failed turn seals NOTHING
   readonly kind: 'provider-auth' | 'provider-quota' | 'network' | 'executor' | 'construction';

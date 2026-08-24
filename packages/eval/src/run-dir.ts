@@ -14,6 +14,11 @@ export interface CaseDump {
   readonly servedBy: string;
   readonly invariantFailures: readonly string[];
   readonly failure: { readonly kind: string; readonly detail: string } | null;
+  /** What each turn cost: the sealed record's token and call totals, plus the wall
+   *  clock the runner measured around the turn. */
+  readonly usage: readonly { readonly turn: number; readonly inputTokens: number;
+    readonly outputTokens: number; readonly cachedInputTokens: number;
+    readonly wallClockMs: number; readonly modelCalls: number }[];
 }
 
 export function writeDump(runDir: string, dump: CaseDump): void {

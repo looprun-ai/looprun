@@ -25,6 +25,9 @@ export interface TurnDraft {
   /** Prerequisite tools whose micro-step yielded no call this turn — the debt is
    *  asked of the model at most once per turn. */
   readonly microTried: string[];
+  /** Every model call books its cost here; zeros where the port has no numbers. */
+  readonly usage: { inputTokens: number; outputTokens: number; cachedInputTokens: number;
+                    modelCalls: number };
 }
 
 export class Session {
@@ -57,7 +60,8 @@ export class Session {
     this.consent.beginTurn();
     return { turn: this.turnIndex, userText: '', servedBy: '', acts: [], corrections: [],
              issued: [], consumed: [], closed: [], finish: null, closedBy: 'model', text: '',
-             microTried: [] };
+             microTried: [],
+             usage: { inputTokens: 0, outputTokens: 0, cachedInputTokens: 0, modelCalls: 0 } };
   }
 
   seal(draft: TurnDraft): TurnRecord {
@@ -70,7 +74,8 @@ export class Session {
       finish: draft.finish,
       corrections: [...draft.corrections],
       text: draft.text,
-      closedBy: draft.closedBy
+      closedBy: draft.closedBy,
+      usage: { ...draft.usage }
     });
     this.history.sealTurn(record);
     this.consent.commit();

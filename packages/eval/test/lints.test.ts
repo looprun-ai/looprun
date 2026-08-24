@@ -43,7 +43,8 @@ function dump(guard: string | null): TurnRecord {
       said: null, status: 'not-done', reason: 'held', evidence: 'engine',
       sentence: 's', result: null, questionId: 'q1' }],
     questions: { issued: [], consumed: [], closed: [] },
-    finish: null, corrections: [], text: 't', closedBy: 'engine' };
+    finish: null, corrections: [], text: 't', closedBy: 'engine',
+    usage: { inputTokens: 0, outputTokens: 0, cachedInputTokens: 0, modelCalls: 1 } };
 }
 
 test('census: an installed guard with no dump that fires it is a finding', () => {
