@@ -221,8 +221,8 @@ $1.50/1M output (ai.google.dev, read 2026-08-23).
 
 | | sealed baseline (main) | this run (final build) | atlas-traditional |
 |---|---|---|---|
-| letters | 96/100 (62 · 68 · 80 · 100) | **95/100** (18 · 44 · 50 · 61 · 100) | 97/100 |
-| invariant failures | 1 | **0** | 3 |
+| letters | 96/100 (62 · 68 · 80 · 100) | **95/100** (18 · 44 · 50 · 61 · 100) | never judged on this ruler |
+| invariant failures | 1 | **0** | 3 (32 · 60 · 97, its own checks) |
 | one call, two outcomes in a reply | 5 | **0** | — |
 | empty deliveries | 0 | **0** | — |
 | successful-read lines delivered | 298 | **0** | — |
