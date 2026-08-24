@@ -177,7 +177,6 @@ bought.
 | declared vocabulary | the engine's own delivery words (`done`, `not-done`, `CONFIRM`/`NO` literals, question closures) become subject-declared data — the author writes them in the desk's language, the engine defaults to English. Declaration schema + emit + core. |
 | subject language end-to-end | authored sentences pass through byte-for-byte (proven: the case-01 clone with pt-BR declaration blocks delivered pt-BR); the atlas-c17-ptbr declaration itself is still authored in English, and world data (`confirmed`, `active`) follows the world's authoring. |
 | prose paragraphing | the woven ask-turn message is one long paragraph; splitting it needs a force-instruction change, unmeasured. |
-| the sealed hundred | the final prose-first layer is measured on case 01 ×3, case 17, the 12-key slice (11/12; the miss is 44-r1, prose variance on an unchanged channel) and offline recomposition of five cases. The full-100 letter gate on the final build has not run. |
 
 ## 5 · The bar
 

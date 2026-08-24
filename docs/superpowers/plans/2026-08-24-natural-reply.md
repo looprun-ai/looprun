@@ -1,5 +1,9 @@
 # Natural Reply Implementation Plan
 
+**Status: CLOSED.** All seven tasks complete; the spec is stamped CLOSED on the second
+repetition of the hundred (spec §5.3 — 96/100 letters, every deterministic counter zero), and
+the work is merged to `main`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Land the natural-reply engine (spec `docs/superpowers/specs/2026-08-24-natural-reply-design.md`) on `main` with a green gate, new proofs, docs and skill teaching, and grow the runner's usage capture so the closing measurement can run.
