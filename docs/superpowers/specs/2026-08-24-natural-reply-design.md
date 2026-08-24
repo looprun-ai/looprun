@@ -211,6 +211,47 @@ order, never proposed by the session:
   reply 380 B mean, wall 3 384 ms mean) — so the reduction claims (reply bytes, step bytes,
   re-call count) are stated against both anchors, not one.
 
+## 5.2 · The closing measurement — measured, and what it returned
+
+Run: `agentspec-bench/subjects/atlas-c17/test/2026-08-24-natural-100/rep1` — all 100 cases,
+1 rep, final build (`natural-reply` @ `ccd2c71`), climbed 12 → 40 → 100 with each checkpoint
+judged. Every letter judged in session, letter-strict; counters computed by script over the
+dumps. Prices: gemini-3.1-flash-lite published $0.25/1M input · $0.025/1M cached ·
+$1.50/1M output (ai.google.dev, read 2026-08-23).
+
+| | sealed baseline (main) | this run (final build) | atlas-traditional |
+|---|---|---|---|
+| letters | 96/100 (62 · 68 · 80 · 100) | **95/100** (18 · 44 · 50 · 61 · 100) | 97/100 |
+| invariant failures | 1 | **0** | 3 |
+| one call, two outcomes in a reply | 5 | **0** | — |
+| empty deliveries | 0 | **0** | — |
+| successful-read lines delivered | 298 | **0** | — |
+| raw JSON in a reply | 24 | **0** | — |
+| reply language = operator's | — | 153/153 turns | — |
+| forced closes | 53 | **6** | — |
+| delivered bytes (mean/turn) | 98 958 (647) | **41 961 (274)** | (380 mean reply) |
+| input tokens (mean/case) | not recorded | 2 897 216 (28 972) | 2 665 272 (26 653) |
+| cached input | not recorded | 0 | 409 124 (15.4%) |
+| output tokens (mean/case) | not recorded | 36 804 (368) | 24 016 (240) |
+| model calls (per turn) | not recorded | 605 (3.95) | 484 (3.16) |
+| wall clock (mean/case) | not recorded | 473 369 ms (4 734) | 338 442 ms (3 384) |
+| cost, whole run | not recorded | **$0.78** | $0.61 |
+| cost per conversation / per turn | not recorded | $0.0078 / $0.0051 | $0.0061 / $0.0040 |
+
+**The two-halves bar: counters hold at zero across every row; letters miss by one (95 < 96)
+— the misses are findings, and the spec stays open on them.**
+
+| finding | cases | class |
+|---|---|---|
+| a critical letter names a fact only a raw read line used to carry — the hold's recorded reason, the owner-only rule — and the desk's prose does not say it | 18-r1 · 50-r2 | subject authoring: the sentence belongs in a conduct rule or a disclosure tense, now that reads are silent |
+| the delivery-choice guard stops a flow whose rubric expects the booking made | 61-r1 | subject: case and guard disagree about the waived check |
+| catalogue prices stated before the delivered-or-collected question | 44-r1 | prose flap (also missed in the prototype's 12-slice) |
+| roles named where the rubric wants a named member of the workspace | 100-r3 | prose flap — the same letter fails on the baseline |
+| a read whose declared sentence has no body delivers as a bare frame (`getDepositBalance() — done`) through the ask-turn quote; a world refusal code (`SOLE_OWNER_PROTECTED`) delivers raw | 05 · 06 · 35 · 36 · 51 (no letter lost) | voice: bodyless declared sentences and code-worded world refusals are authoring gaps the delivery now exposes |
+
+Cases 62, 68 and 80 — the baseline's other misses — all pass on this build, and the run seals
+zero invariant failures against the baseline's one.
+
 ## 6 · The documentation this change touches
 
 `README.md` (the delivery contract), `docs/tutorial/**` wherever a delivered reply is shown,
