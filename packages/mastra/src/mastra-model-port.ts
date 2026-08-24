@@ -127,13 +127,15 @@ export class MastraModelPort {
       }
       const tokenCount = (v: unknown): number => typeof v === 'number' ? v
         : isRecord(v) && typeof v.total === 'number' ? v.total : 0;
-      const details = (r.usage as { outputTokenDetails?: { reasoningTokens?: number } })
-        .outputTokenDetails;
+      // Thought tokens ride INSIDE the outputTokens object ({ total, text,
+      // reasoning }) on this provider path — total already includes them.
+      const reasoningOf = (v: unknown): number =>
+        isRecord(v) && typeof v.reasoning === 'number' ? v.reasoning : 0;
       const usage = {
         inputTokens: tokenCount(r.usage.inputTokens),
         outputTokens: tokenCount(r.usage.outputTokens),
         cachedInputTokens: tokenCount(r.usage.cachedInputTokens),
-        reasoningTokens: tokenCount(details?.reasoningTokens ?? r.usage.reasoningTokens)
+        reasoningTokens: reasoningOf(r.usage.outputTokens)
       };
       usageTotals.steps += 1;
       usageTotals.inputTokens += usage.inputTokens;
