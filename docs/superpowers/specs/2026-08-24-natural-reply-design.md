@@ -282,6 +282,21 @@ through `pick`, 44 asks the delivery choice before any figure, 50 states the tie
 owner-only. The four standing misses are the same on every build: three exam-vs-declarable
 invariant disputes (61 · 62 · 80) and the named-member letter (100) that no run has paid.
 
+## 5.4 · The third repetition — thinking off, and measured off
+
+Run: `rep2`'s hundred again on the build where model thinking is OFF by default (the mastra
+port sends `thinkingBudget: 0` unless a desk's llmParams say `preset: 'gemini:thinking-on'`)
+and the meter reads thought tokens per turn (`reasoningTokens` on every step, turn and dump —
+proven sighted on a forced-thinking call that read 567).
+
+**96/100 (61 · 62 · 80 · 100 — the same four), every counter zero, and `reasoningTokens` 0
+across all 153 turns.** 28 844 input tokens/case, 36 293 output, $0.78 at the published
+prices. Two repetitions now stand at the bar, failing the same four rows.
+
+The cost rows of §5.1–§5.3 price the captured tokens; on this provider path
+`outputTokens.total` already includes thought tokens, and the sighted meter reads 0 — a
+console figure above these numbers is not thought tokens.
+
 ## 6 · The documentation this change touches
 
 `README.md` (the delivery contract), `docs/tutorial/**` wherever a delivered reply is shown,
