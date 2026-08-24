@@ -245,9 +245,10 @@ on both builds; the delta this change owns is 18 · 44 · 50.
 
 | finding | cases | class |
 |---|---|---|
-| a critical letter names a fact only a raw read line used to carry — the hold's recorded reason, the owner-only rule — and the desk's prose does not say it | 18-r1 · 50-r2 | subject authoring: the sentence belongs in a conduct rule or a disclosure tense, now that reads are silent |
+| a critical letter names a fact only a raw read line used to carry — the hold's recorded reason — and no authored sentence says it | 18-r1 | two repair rounds flat: a conduct sentence and a card rule both missed, because the reply is composed on the forced step with the cards off the table; routed to looprun `BACKLOG.md` row 3 — the `needs` declaration whose `pick` puts the reason inside the woven sentence |
+| the tier refusal names a role that cannot act | 50-r2 | repaired through the skill's own T-loop: `theTierMoveIsOwnerOnly` on the workspace desk — two passing repetitions |
 | the delivery-choice guard stops a flow whose rubric expects the booking made | 61-r1 | subject: case and guard disagree about the waived check — the same stall fails the baseline |
-| catalogue prices stated before the delivered-or-collected question | 44-r1 | prose flap (also missed in the prototype's 12-slice) |
+| catalogue prices stated before the delivered-or-collected question | 44-r1 | repaired through the skill's own T-loop: `askTheDeliveryChoiceBeforeAnyPrice` on the rentals desk — two passing repetitions |
 | roles named where the rubric wants a named member of the workspace | 100-r3 | prose flap — the same letter fails on the baseline |
 | a read whose declared sentence has no body delivers as a bare frame (`getDepositBalance() — done`) through the ask-turn quote; a world refusal code (`SOLE_OWNER_PROTECTED`) delivers raw | 05 · 06 · 35 · 36 · 51 (no letter lost) | voice: bodyless declared sentences and code-worded world refusals are authoring gaps the delivery now exposes |
 
