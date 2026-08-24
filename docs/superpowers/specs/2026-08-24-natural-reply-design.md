@@ -245,7 +245,7 @@ on both builds; the delta this change owns is 18 · 44 · 50.
 
 | finding | cases | class |
 |---|---|---|
-| a critical letter names a fact only a raw read line used to carry — the hold's recorded reason — and no authored sentence says it | 18-r1 | two repair rounds flat: a conduct sentence and a card rule both missed, because the reply is composed on the forced step with the cards off the table; routed to looprun `BACKLOG.md` row 3 — the `needs` declaration whose `pick` puts the reason inside the woven sentence |
+| a critical letter names a fact only a raw read line used to carry — the hold's recorded reason — and no authored sentence said it | 18-r1 | repaired on the third round: the engine grew `pick` (a needs alias bound to one row of a list read, keyed by the held call's own argument) and the skill's own T-loop wrote the declaration edit — the reason rides the woven sentence now; neighbours 17 and 97 verified, 97's one flapped rep classified as report-loop variance |
 | the tier refusal names a role that cannot act | 50-r2 | repaired through the skill's own T-loop: `theTierMoveIsOwnerOnly` on the workspace desk — two passing repetitions |
 | the delivery-choice guard stops a flow whose rubric expects the booking made | 61-r1 | subject: case and guard disagree about the waived check — the same stall fails the baseline |
 | catalogue prices stated before the delivered-or-collected question | 44-r1 | repaired through the skill's own T-loop: `askTheDeliveryChoiceBeforeAnyPrice` on the rentals desk — two passing repetitions |
