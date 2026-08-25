@@ -161,7 +161,7 @@ surface performs what is asked — anything outside the house's own records and
 operations — the answer is none, however close a desk's territory sounds.
 ```
 
-Messages: the last exchange of the conversation ledger (one user text + one delivered reply),
+Messages: the last exchange of the conversation history (one user text + one delivered reply),
 then the new message. Nothing else — no personas, no cards, no acts, no records.
 
 The call: one forced single-tool step through the ModelPort — the same mechanism as the
@@ -184,17 +184,17 @@ constructed.
 Per session it owns:
 
 ```
-ledger:      [{ desk, userText, replyText }]   — delivered TEXT only, in order
+history:     [{ desk, userText, replyText }]   — delivered TEXT only, in order
 currentDesk: the desk the conversation sits at (null on opening)
 ```
 
 **Three memories, three owners.** The governed sessions stay PER DESK — each desk keeps its
 own tape, its own records of its own acts, its own consent debts. The world is one and shared:
 `RoutedAgent.fromSubject` builds it once at the house's door and hands that one instance to
-every desk through `LoopRunConfig.built`; a desk-pinned path builds its own, as it always has.
-The router sees the ledger's tail; the desks see the ledger's text through `before`:
+every desk through `LoopRunConfig.built`; a desk-pinned path builds its own world from the card.
+The router sees the history's tail; the desks see the history's text through `before`:
 
-- **`before` — foreign exchanges.** When a turn is delivered to a desk, the ledger entries of
+- **`before` — foreign exchanges.** When a turn is delivered to a desk, the history entries of
   OTHER desks since that desk's last visit ride in as plain user/assistant text — delivered
   words, no acts, nothing executable. This is how billing finds `bk_91` in "now raise the
   invoice" without a dead which-booking turn: model memory is the delivered text.
