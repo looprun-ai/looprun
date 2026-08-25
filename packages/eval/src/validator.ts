@@ -51,7 +51,12 @@ export class Validator {
         && (g.tools.length === 0 || g.tools.includes(tool)));
     };
     for (const c of subject.cases) {
-      const agent = c.agent ?? Object.keys(subject.specs)[0];
+      // A routed case pins no desk: the front desk picks one per turn, so an approve
+      // ref is held when ANY desk of the house holds it. A pinned case names the one
+      // desk that serves every turn, and is judged there alone.
+      const routed = c.route !== undefined;
+      const seats = routed ? Object.keys(subject.specs)
+        : [c.agent ?? Object.keys(subject.specs)[0]];
       for (const turn of c.turns) {
         if (typeof turn === 'string' || 'decline' in turn) continue;
         const approve = turn.approve;
@@ -61,9 +66,11 @@ export class Validator {
           if (facts.tools[ref.tool] === undefined) {
             findings.push({ code: 'CASE_APPROVE_TOOL_UNKNOWN',
               sentence: `Case '${c.id}' approves '${ref.tool}', which the surface does not declare.` });
-          } else if (!holdsFor(agent, ref.tool)) {
+          } else if (!seats.some(seat => holdsFor(seat, ref.tool))) {
             findings.push({ code: 'CASE_APPROVE_NOT_HELD',
-              sentence: `Case '${c.id}' approves '${ref.tool}', but nothing on agent '${agent}' ever holds it.` });
+              sentence: `Case '${c.id}' approves '${ref.tool}', but `
+                + `${routed ? 'no desk of the house' : `nothing on agent '${seats[0]}'`} `
+                + 'ever holds it.' });
           }
         }
       }

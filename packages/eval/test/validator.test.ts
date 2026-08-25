@@ -75,6 +75,41 @@ test('route \'none\' is always a legal desk name', async () => {
   expect(codes).not.toContain('CASE_ROUTE_DESK_UNKNOWN');
 });
 
+/** A house whose second desk is the only one that can cancel — the shape a routed
+ *  approve is judged against. */
+function twoDesks(subject: Subject): Subject {
+  return { ...subject, specs: {
+    front: { name: 'front', persona: 'You greet.', tools: ['getBooking'],
+             handles: 'booking lookups' },
+    back: { name: 'back', persona: 'You cancel.', tools: ['getBooking', 'cancelBooking'],
+            handles: 'cancellations' } } };
+}
+
+test('a routed approve is judged against every desk, not the first spec alone', async () => {
+  const planted: Subject = { ...twoDesks(await mini()), cases: [{
+    id: 'routed-approve', split: 'fix',
+    turns: ['cancel bk_9', { approve: { tool: 'cancelBooking' } }],
+    route: ['back', 'back'],
+    rubric: 'r' }] };
+  const codes = new Validator().run(planted).findings.map(f => f.code);
+  expect(codes).not.toContain('CASE_APPROVE_NOT_HELD');
+});
+
+test('a routed approve on a tool no desk in the house holds still blocks', async () => {
+  const subject = twoDesks(await mini());
+  const planted: Subject = { ...subject, specs: {
+    ...subject.specs,
+    back: { ...subject.specs.back, tools: ['getBooking'] } },
+    cases: [{ id: 'routed-approve-nowhere', split: 'fix',
+      turns: ['cancel bk_9', { approve: { tool: 'cancelBooking' } }],
+      route: ['back', 'back'],
+      rubric: 'r' }] };
+  const findings = new Validator().run(planted).findings;
+  expect(findings.map(f => f.code)).toContain('CASE_APPROVE_NOT_HELD');
+  expect(findings.find(f => f.code === 'CASE_APPROVE_NOT_HELD')?.sentence)
+    .toContain('no desk of the house');
+});
+
 test('an underivable disclosure slot blocks through the compile', async () => {
   const subject = await mini();
   const planted: Subject = { ...subject,
