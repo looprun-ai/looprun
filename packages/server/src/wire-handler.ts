@@ -5,12 +5,12 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { createHash } from 'node:crypto';
 import { TurnFailure } from '@looprun-ai/core';
-import type { LoopRunAgent } from '@looprun-ai/mastra';
+import type { LoopRunAgent, RoutedAgent } from '@looprun-ai/mastra';
 import { toEnvelope, toSse } from './wire.js';
 import { WireSessions } from './wire-sessions.js';
 
 export type ServerConfig = {
-  readonly agents: Readonly<Record<string, LoopRunAgent>>;
+  readonly agents: Readonly<Record<string, LoopRunAgent | RoutedAgent>>;
   readonly auth: { readonly apiKeys: readonly string[] } | { readonly auth: 'disabled' };
   readonly port?: number;
   readonly bind?: string;
