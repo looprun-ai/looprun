@@ -12,8 +12,8 @@
  *  conversations: one session is one queue, so a second message waits for the first to
  *  seal and no ledger entry is ever written over. */
 import type { AgentSpec, DeclaredWorld, DomainContract, ForeignExchange, FrontDeskCfg,
-              LiveWorldCard, LlmParams, McpWorldCard, ModelPort, ModelStep, StepUsage,
-              TurnRecord, TurnReturned, TurnRouting } from '@looprun-ai/core';
+              LlmParams, ModelPort, ModelStep, StepUsage, TurnRecord, TurnReturned,
+              TurnRouting } from '@looprun-ai/core';
 import { CardError, ScriptedModel, TurnFailure, WorldBuilder, composeWindow,
          readDecision } from '@looprun-ai/core';
 import type { LoopRunConfig, LoopRunModel } from './agent-assembly.js';
@@ -93,11 +93,13 @@ export interface RoutedHouse {
 }
 
 /** The subject door: the emitted specs, the shared contract and world, and the model
- *  every desk and the front desk seat. */
+ *  every desk and the front desk seat. The world is DECLARED, because the house builds it
+ *  once and hands that one instance to every desk — which is possible only for records
+ *  the house holds itself. */
 export interface RoutedSubjectCfg {
   readonly specs: Readonly<Record<string, AgentSpec>>;
   readonly contract?: DomainContract;
-  readonly world: DeclaredWorld | McpWorldCard | LiveWorldCard;
+  readonly world: DeclaredWorld;
   readonly model: LoopRunModel;
 }
 
@@ -132,9 +134,8 @@ export class RoutedAgent {
     }
     const handles = handlesOf(cfg.specs);
     // The house acts on ONE world. It is built here, once, and every desk is handed the
-    // same instance, so a record one desk writes is the record the next desk reads. A
-    // live surface keeps its records on the host, which is already one.
-    const built = 'card' in cfg.world ? new WorldBuilder().build(cfg.world) : undefined;
+    // same instance, so a record one desk writes is the record the next desk reads.
+    const built = new WorldBuilder().build(cfg.world);
     const deskCfg = (name: string): LoopRunConfig => ({ spec: cfg.specs[name],
       contract: cfg.contract, model: cfg.model, world: cfg.world, built });
     const mint = portFactory ?? ((params: LlmParams) => routerPort(cfg.model, params));

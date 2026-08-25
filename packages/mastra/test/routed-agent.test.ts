@@ -1,7 +1,7 @@
 import { test, expect } from 'vitest';
 import type { AgentSpec, ChatMsg, ModelStep, ModelTarget, Msg } from '@looprun-ai/core';
-import { ModelSeat, ScriptedModel, TurnFailure, world } from '@looprun-ai/core';
-import { RoutedAgent } from '../src/routed-agent.js';
+import { ModelSeat, ScriptedModel, TurnFailure, mcpWorld, world } from '@looprun-ai/core';
+import { RoutedAgent, type RoutedSubjectCfg } from '../src/routed-agent.js';
 import { LoopRunAgent } from '../src/loop-run-agent.js';
 import { assemble } from '../src/agent-assembly.js';
 import { BOOKING, callStep, finishStep } from './fixtures/booking-world.js';
@@ -266,3 +266,13 @@ test('fromSubject refuses a desk that declares no handles line', () => {
 function spoken(messages: readonly Msg[]): readonly string[] {
   return messages.filter((m): m is ChatMsg => m.role !== 'acts').map(m => m.text);
 }
+
+test('the routed door serves declared worlds — a live card is unrepresentable', () => {
+  const live = mcpWorld({ reads: { getJob: { label: 'Look up the job' } } });
+  const cfg: RoutedSubjectCfg = { specs: DESKS,
+    // @ts-expect-error a live card carries no records for the house to share; the routed
+    // door takes the declared world it builds once and hands to every desk.
+    world: live,
+    model: { scripted: { steps: [] } } };
+  expect(cfg.specs).toBe(DESKS);          // never constructed from — the TYPE is the test
+});
