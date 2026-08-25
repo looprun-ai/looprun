@@ -235,6 +235,24 @@ test('every desk of the house acts on ONE world — what the yard writes, billin
   expect(billing.loopRun.acts[0].result).toMatchObject({ crew: 'Bruno' });
 });
 
+test('two messages on one session serialize — the second window carries the first exchange', async () => {
+  const router = new ScriptedModel([routeStep('billing'), routeStep('billing')]);
+  const billing = desk('billing', [finishStep('The invoice is paid.'),
+                                   finishStep('It settled on Tuesday.')]);
+  const agent = house(router, { yard: desk('yard', []).agent, billing: billing.agent });
+
+  const [first] = await Promise.all([
+    agent.generate('has the invoice been paid?', { session: 's1' }),
+    agent.generate('when?', { session: 's1' })]);
+
+  // Neither ledger entry is lost: the second front-desk window reads the first back.
+  expect(router.seen[1].messages).toEqual([
+    { role: 'user', text: 'has the invoice been paid?' },
+    { role: 'assistant', text: first.text },
+    { role: 'user', text: 'when?' }]);
+  expect(router.seen[1].system).toContain('The conversation so far sits at the billing desk.');
+});
+
 test('fromSubject refuses a desk that declares no handles line', () => {
   const specs: Record<string, AgentSpec> = {
     yard: { name: 'yard', persona: 'You run the yard.', handles: HANDLES.yard },

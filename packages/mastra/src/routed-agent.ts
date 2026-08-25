@@ -7,8 +7,10 @@
  *  hands a message back is re-routed once, and the re-delivery is composed without the
  *  return door — a second return is unreachable, not forbidden.
  *
- *  The house owns its world as ONE: built once at the door and handed to
- *  every desk, so a record one desk writes is the record the next desk reads. */
+ *  Two things the house owns as ONE. Its world: built once at the door and handed to
+ *  every desk, so a record one desk writes is the record the next desk reads. Its
+ *  conversations: one session is one queue, so a second message waits for the first to
+ *  seal and no ledger entry is ever written over. */
 import type { AgentSpec, DeclaredWorld, DomainContract, ForeignExchange, FrontDeskCfg,
               LiveWorldCard, LlmParams, McpWorldCard, ModelPort, ModelStep, StepUsage,
               TurnRecord, TurnReturned, TurnRouting } from '@looprun-ai/core';
@@ -108,6 +110,8 @@ export class RoutedAgent {
   private readonly handles: Readonly<Record<string, string>>;
   private readonly router: ModelPort;
   private readonly seats = new Map<string, Seat>();
+  /** One promise chain per session — the queue a turn joins, never a lock it holds. */
+  private readonly queues = new Map<string, Promise<unknown>>();
 
   constructor(house: RoutedHouse) {
     this.name = house.name;
@@ -141,8 +145,17 @@ export class RoutedAgent {
       router: mint({ temperature: 0 }) });
   }
 
-  async generate(text: string, opts?: { session?: string }): Promise<GovernedResult> {
+  /** One conversation is one queue: a second message on the same session begins only
+   *  after the first has sealed, so no turn reads a seat another turn is about to
+   *  write. Different sessions never wait on each other. */
+  generate(text: string, opts?: { session?: string }): Promise<GovernedResult> {
     const id = opts?.session ?? 'default';
+    const served = (this.queues.get(id) ?? Promise.resolve()).then(() => this.turn(id, text));
+    this.queues.set(id, served.then(() => undefined, () => undefined));
+    return served;
+  }
+
+  private async turn(id: string, text: string): Promise<GovernedResult> {
     const seat = this.seats.get(id) ?? OPENING;
     const tail = seat.ledger.at(-1);
     const front: Omit<FrontDeskCfg, 'returnedFrom'> = {
@@ -178,6 +191,7 @@ export class RoutedAgent {
   endSession(id: string): void {
     for (const agent of Object.values(this.desks)) agent.endSession(id);
     this.seats.delete(id);
+    this.queues.delete(id);
   }
 
   /** One forced single-tool step. A window the model answers unreadably is put a second
