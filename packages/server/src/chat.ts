@@ -46,12 +46,17 @@ export async function startChat(cfg: ChatCfg): Promise<void> {
 
   write(`${cfg.name} · ${cfg.deskNames.length} desks: ${cfg.deskNames.join(' ')}`);
   const rl = createInterface({ input, output, prompt: PROMPT });
+  // A piped, non-interactive input closes itself at EOF the moment every line has been
+  // read — which can land while a turn is still mid-flight on its `await`. The prompt
+  // after that turn checks this flag rather than racing the close.
+  let closed = false;
+  rl.once('close', () => { closed = true; });
   rl.prompt();
   for await (const line of rl) {
     if (line === EXIT_CMD) break;
     if (line === DESKS_CMD) {
       write(cfg.deskNames.join(' '));
-      rl.prompt();
+      if (!closed) rl.prompt();
       continue;
     }
     try {
@@ -62,7 +67,7 @@ export async function startChat(cfg: ChatCfg): Promise<void> {
       if (!(e instanceof TurnFailure)) throw e;
       write(`turn failed: ${e.kind} — ${e.detail}`);
     }
-    rl.prompt();
+    if (!closed) rl.prompt();
   }
-  rl.close();
+  if (!closed) rl.close();
 }

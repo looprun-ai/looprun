@@ -24,7 +24,8 @@ function importsOf(f: SourceFile): readonly string[] {
 /** The facade packages sit above core in the §6 picture: mastra (L5) may import the
  *  core package by NAME plus its own host framework; server (L6) may import core and
  *  the mastra facade by name and node builtins — never a framework, never a relative
- *  path escaping its own src. The umbrella sits above them all and only aggregates. */
+ *  path escaping its own src. The umbrella sits above them all: it aggregates every
+ *  facade by name, and its chat door composes across eval, mastra and server. */
 const FACADE_LANES: Readonly<Record<string, (spec: string) => boolean>> = {
   mastra: spec => spec.startsWith('./') || spec === '@looprun-ai/core'
     || spec === 'ai' || spec.startsWith('@mastra/') || spec.startsWith('@modelcontextprotocol/sdk/')
@@ -40,10 +41,12 @@ const FACADE_LANES: Readonly<Record<string, (spec: string) => boolean>> = {
    *  name, the yaml package for the declaration format, and node builtins for the CLI. */
   emit: spec => spec.startsWith('./') || spec === '@looprun-ai/core'
     || spec === '@looprun-ai/eval' || spec === 'yaml' || spec.startsWith('node:'),
-  /** The umbrella is the published name of the whole: each of its modules re-exports one
-   *  package by name and nothing else. It owns no source and composes nothing. */
+  /** The umbrella is the published name of the whole: most of its modules re-export one
+   *  package by name and nothing else. Its one composed module is the chat door
+   *  (`chat-main.ts`): it loads a subject through eval, routes it through mastra, and
+   *  hands the terminal to server — the CLI's own act, not a re-export. */
   looprun: spec => spec === '@looprun-ai/core' || spec === '@looprun-ai/mastra'
-    || spec === '@looprun-ai/models'
+    || spec === '@looprun-ai/models' || spec === '@looprun-ai/eval' || spec === '@looprun-ai/server'
 };
 
 test('every src import points downward in the layer picture', () => {

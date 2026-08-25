@@ -60,8 +60,11 @@
   },
   "dependencies": {
     "@looprun-ai/core": "workspace:^",
+    "@looprun-ai/eval": "workspace:^",
     "@looprun-ai/mastra": "workspace:^",
-    "@looprun-ai/models": "workspace:^"
+    "@looprun-ai/models": "workspace:^",
+    "@looprun-ai/server": "workspace:^",
+    "tsx": "^4.19.0"
   },
   "peerDependencies": {
     "@mastra/core": "^1.42.0",

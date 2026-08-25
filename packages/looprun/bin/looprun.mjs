@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 /**
- * looprun CLI — project init + local model management.
+ * looprun CLI — project init + local model management + the chat door.
  *
  *   looprun init [--local <alias>] [--yes]
  *   looprun models status [alias]
  *   looprun models pull <alias> [--yes]
  *   looprun models serve <alias>
+ *   looprun chat <subject-dir>
  */
 import { createInterface } from 'node:readline/promises';
 
@@ -15,6 +16,7 @@ const HELP = `looprun <command>
   models status [alias]            Binary / model file / server health per alias.
   models pull <alias> [--yes]      Download the model GGUF (asks consent — sizes are 2.5–17 GB).
   models serve <alias>             Start llama-server with the validated flags (Ctrl-C stops).
+  chat <subject-dir>               Talk to a generated subject in the terminal.
 
 Local model tiers: ram24 (default, ~11.8 GB) · ram16 (16 GB machines) ·
 ram32 (~17.2 GB) · ram8 (8 GB machines, ~2.5 GB) · qwen3.5-4b (plain fallback, ~2.9 GB)
@@ -106,6 +108,21 @@ async function main() {
       if (!alreadyRunning) await new Promise(() => {}); // foreground: the child dies with us
       return;
     }
+  }
+
+  if (cmd === 'chat') {
+    const dir = sub;
+    const { createRequire } = await import('node:module');
+    const { spawn } = await import('node:child_process');
+    const { fileURLToPath } = await import('node:url');
+    const here = createRequire(import.meta.url);
+    const loader = here.resolve('tsx');
+    const main = fileURLToPath(new URL('../dist/chat-main.js', import.meta.url));
+    const child = spawn(process.execPath,
+      ['--import', loader, main, ...(dir === undefined ? [] : [dir, ...rest])],
+      { stdio: 'inherit' });
+    child.on('exit', (code) => process.exit(code ?? 1));
+    return;
   }
 
   console.error(`unknown command: ${[cmd, sub].filter(Boolean).join(' ')}\n`);
