@@ -5,11 +5,15 @@
  *  `TurnRecord.routing` names the desk that served and the desk that handed the message
  *  back, and `usage` carries the router's own tokens on top of the desk's. A desk that
  *  hands a message back is re-routed once, and the re-delivery is composed without the
- *  return door — a second return is unreachable, not forbidden. */
+ *  return door — a second return is unreachable, not forbidden.
+ *
+ *  The house owns its world as ONE: built once at the door and handed to
+ *  every desk, so a record one desk writes is the record the next desk reads. */
 import type { AgentSpec, DeclaredWorld, DomainContract, ForeignExchange, FrontDeskCfg,
               LiveWorldCard, LlmParams, McpWorldCard, ModelPort, ModelStep, StepUsage,
               TurnRecord, TurnReturned, TurnRouting } from '@looprun-ai/core';
-import { CardError, ScriptedModel, TurnFailure, composeWindow, readDecision } from '@looprun-ai/core';
+import { CardError, ScriptedModel, TurnFailure, WorldBuilder, composeWindow,
+         readDecision } from '@looprun-ai/core';
 import type { LoopRunConfig, LoopRunModel } from './agent-assembly.js';
 import { LoopRunAgent, type GovernedResult } from './loop-run-agent.js';
 import { MastraModelPort } from './mastra-model-port.js';
@@ -118,14 +122,22 @@ export class RoutedAgent {
   static fromSubject(cfg: RoutedSubjectCfg,
                      portFactory?: (params: LlmParams) => ModelPort): RoutedAgent | LoopRunAgent {
     const names = Object.keys(cfg.specs);
+    if (names.length === 1) {
+      return new LoopRunAgent({ spec: cfg.specs[names[0]], contract: cfg.contract,
+                                model: cfg.model, world: cfg.world });
+    }
+    const handles = handlesOf(cfg.specs);
+    // The house acts on ONE world. It is built here, once, and every desk is handed the
+    // same instance, so a record one desk writes is the record the next desk reads. A
+    // live surface keeps its records on the host, which is already one.
+    const built = 'card' in cfg.world ? new WorldBuilder().build(cfg.world) : undefined;
     const deskCfg = (name: string): LoopRunConfig => ({ spec: cfg.specs[name],
-      contract: cfg.contract, model: cfg.model, world: cfg.world });
-    if (names.length === 1) return new LoopRunAgent(deskCfg(names[0]));
+      contract: cfg.contract, model: cfg.model, world: cfg.world, built });
     const mint = portFactory ?? ((params: LlmParams) => routerPort(cfg.model, params));
     return new RoutedAgent({
       name: cfg.contract?.name ?? cfg.specs[names[0]].name,
       desks: Object.fromEntries(names.map(n => [n, new LoopRunAgent(deskCfg(n))])),
-      handles: handlesOf(cfg.specs),
+      handles,
       router: mint({ temperature: 0 }) });
   }
 

@@ -1,11 +1,12 @@
 /** Construction resolution, one shot, keyed by the surface card's kind: a world card
- *  builds the local world and derives the facts; an mcpWorld card first connects
+ *  builds the local world and derives the facts, or adopts the one instance a house of
+ *  several agents already built for all of them; an mcpWorld card first connects
  *  through the host-env door; a liveWorld card takes the host's tools directly. The
  *  live kinds pass SurfaceGate (reconcile · deny-by-default · certification) and get
  *  HostToolPort. Never names a port in its public type — the scripted seat enters as
  *  DATA on the model key. */
 import type { MastraModelConfig } from '@mastra/core/llm';
-import type { AgentSpec, DeclaredWorld, DomainContract, EngineConfig, LiveTool,
+import type { AgentSpec, BuiltWorld, DeclaredWorld, DomainContract, EngineConfig, LiveTool,
               LiveWorldCard, McpWorldCard, ModelStep, ModelTarget, SurfaceFacts,
               SurfaceReport } from '@looprun-ai/core';
 import { AgentFactory, ModelSeat, ScriptedModel, SurfaceGate, TurnFailure, WorldBuilder,
@@ -21,6 +22,11 @@ export interface LoopRunConfig {
   readonly contract?: DomainContract;
   readonly model: LoopRunModel;
   readonly world: DeclaredWorld | McpWorldCard | LiveWorldCard;
+  /** The ONE world instance the agents of a house share — built once at the house's door
+   *  and handed to every desk, so a record one desk writes is the record another desk
+   *  reads. Omitted = this agent builds the declared card into a world of its own. The
+   *  live surfaces need no key: their records live on the host, which is already one. */
+  readonly built?: BuiltWorld;
   /** The MCP door — host env, never the cards. Required exactly when the world is an mcpWorld card. */
   readonly mcp?: { readonly url: string; readonly headers?: Record<string, string> };
   /** The host's own tools. Required exactly when the world is a liveWorld card. */
@@ -74,7 +80,7 @@ async function resolveSurface(cfg: LoopRunConfig): Promise<{
 }> {
   const w = cfg.world;
   if ('card' in w) {
-    const built = new WorldBuilder().build(w, cfg.preset);
+    const built = cfg.built ?? new WorldBuilder().build(w, cfg.preset);
     return { facts: factsFromWorld(w), toolPort: built, recordsPort: built, surface: null };
   }
   const live = 'host' in w

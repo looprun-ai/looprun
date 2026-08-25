@@ -1,12 +1,23 @@
 import { test, expect } from 'vitest';
 import type { AgentSpec, ChatMsg, ModelStep, ModelTarget, Msg } from '@looprun-ai/core';
-import { ModelSeat, ScriptedModel, TurnFailure } from '@looprun-ai/core';
+import { ModelSeat, ScriptedModel, TurnFailure, world } from '@looprun-ai/core';
 import { RoutedAgent } from '../src/routed-agent.js';
 import { LoopRunAgent } from '../src/loop-run-agent.js';
 import { assemble } from '../src/agent-assembly.js';
-import { BOOKING, finishStep } from './fixtures/booking-world.js';
+import { BOOKING, callStep, finishStep } from './fixtures/booking-world.js';
 
 const HANDLES = { yard: 'job schedules and hand-overs', billing: 'invoices and refunds' };
+
+/** A world with a write, so what one desk changes is a thing another desk can read. */
+const JOBS = world({
+  records: { jobs: { jb_a: { crew: 'Ana' } } },
+  reads: { getJob: { form: 'get', entity: 'jobs', label: 'Look up the job' } },
+  writes: { setCrew: { form: 'set', entity: 'jobs', label: 'Assign the crew' } }
+});
+
+const DESKS: Record<string, AgentSpec> = {
+  yard: { name: 'yard', persona: 'You run the yard.', handles: HANDLES.yard },
+  billing: { name: 'billing', persona: 'You run billing.', handles: HANDLES.billing } };
 
 /** A router decision as the port answers it, with the tokens the provider billed. */
 function routeStep(chosen: string, inputTokens = 0, outputTokens = 0): ModelStep {
@@ -204,6 +215,24 @@ test('fromSubject builds the routed house and names it after the contract', () =
   expect(agent).toBeInstanceOf(RoutedAgent);
   expect(agent.name).toBe('northgate-tool-hire');
   expect((agent as RoutedAgent).deskNames).toEqual(['yard', 'billing']);
+});
+
+test('every desk of the house acts on ONE world — what the yard writes, billing reads', async () => {
+  // Both desks run the SAME script: read the job, assign the crew, close. The yard goes
+  // first, so billing's read is the only place the two worlds could disagree.
+  const turn: readonly ModelStep[] = [
+    callStep('getJob', { id: 'jb_a' }),
+    callStep('setCrew', { id: 'jb_a', set: { crew: 'Bruno' } }),
+    finishStep('The crew is assigned.', [{ tool: 'setCrew', target: 'jb_a', word: 'done' }])];
+  const agent = RoutedAgent.fromSubject(
+    { specs: DESKS, world: JOBS, model: { scripted: { steps: turn } } },
+    () => new ScriptedModel([routeStep('yard'), routeStep('billing')]));
+
+  const yard = await agent.generate('put a crew on the job', { session: 's1' });
+  const billing = await agent.generate('who is on it for the invoice?', { session: 's1' });
+
+  expect(yard.loopRun.acts[0].result).toMatchObject({ crew: 'Ana' });
+  expect(billing.loopRun.acts[0].result).toMatchObject({ crew: 'Bruno' });
 });
 
 test('fromSubject refuses a desk that declares no handles line', () => {
