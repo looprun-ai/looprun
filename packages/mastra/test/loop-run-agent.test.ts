@@ -60,6 +60,25 @@ test('stream governs to completion, THEN the composed delivery flows', async () 
   expect(streamed).toBe(out.loopRun.text);
 });
 
+test('generateRouted resolves the engine\'s TurnReturned unchanged', async () => {
+  const agent = new LoopRunAgent({
+    spec: SPEC, world: BOOKING,
+    model: { scripted: { steps: [
+      callStep('notMine', { reason: 'wrong desk' })
+    ] } }
+  });
+  const out = await agent.generateRouted('hi', { session: 's1', returnable: true });
+  expect(out).toEqual({ returned: { reason: 'wrong desk' } });
+});
+
+test('generateRouted resolves { text, loopRun } on a sealed record', async () => {
+  const out = await readAgent().generateRouted('is bk_9 confirmed?', { session: 's1' });
+  if ('returned' in out) throw new Error('expected a sealed record, got a TurnReturned');
+  expect(out.text).toContain('Tuesday');
+  expect(out.loopRun.turn).toBe(1);
+  expect(out.loopRun.acts[0].call.tool).toBe('getBooking');
+});
+
 test('the ungoverned twin executes the destructive call with no question — by class name', async () => {
   const twin = new UngovernedAgent({
     spec: SPEC, world: BOOKING,

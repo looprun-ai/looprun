@@ -2,7 +2,7 @@
  *  Construction takes the closed two-card config; every turn runs through the governed
  *  Engine — the host base class never generates. A failed turn rejects with TurnFailure. */
 import { Agent } from '@mastra/core/agent';
-import type { GuardCensus, TurnRecord } from '@looprun-ai/core';
+import type { ForeignExchange, GuardCensus, TurnRecord, TurnReturned } from '@looprun-ai/core';
 import { Engine } from '@looprun-ai/core';
 import { assemble, type Assembled, type LoopRunConfig } from './agent-assembly.js';
 
@@ -51,6 +51,18 @@ export class LoopRunAgent extends Agent {
     const { engine } = await this.ready;
     const loopRun = await engine.chat(opts?.session ?? 'default', text);
     return { loopRun, textStream: deliver(loopRun.text) };
+  }
+
+  /** The routed door: opts.session and opts.returnable let the front desk hand a
+   *  message back instead of serving it — a TurnReturned passes straight through,
+   *  a sealed record narrows to the delivery text and the whole record. */
+  async generateRouted(text: string, opts: { session?: string;
+      before?: readonly ForeignExchange[]; returnable?: boolean }):
+      Promise<GovernedResult | TurnReturned> {
+    const { engine } = await this.ready;
+    const out = await engine.chat(opts.session ?? 'default', text,
+      { before: opts.before, returnable: opts.returnable });
+    return 'returned' in out ? out : { text: out.text, loopRun: out };
   }
 
   /** The Rulebook's own arrays — the list IS the code. Available once construction settles. */
