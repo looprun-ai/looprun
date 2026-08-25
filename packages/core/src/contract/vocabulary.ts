@@ -96,6 +96,20 @@ export interface Question {
   readonly state: QuestionState;
   readonly bornAtTurn: number;
 }
+/** One prior turn's user text and reply text, as the front desk carries it across a
+ *  desk hop — the tail of one exchange, never a whole transcript. */
+export interface ForeignExchange { readonly desk: string; readonly userText: string; readonly replyText: string }
+/** The front desk's verdict for one turn: the desk it chose, or null when the house
+ *  never routed. `returned` names the desk that declined the message and why, set
+ *  only when this turn is itself a return. */
+export interface TurnRouting { readonly desk: string | null;
+                               readonly returned: null | { readonly by: string; readonly reason: string } }
+/** A desk's own decision to hand a message back to the front desk, with the reason
+ *  the operator reads. */
+export interface TurnReturned { readonly returned: { readonly reason: string } }
+/** Chat-door options: `before` seeds prior exchanges across desks, `returnable`
+ *  lets the active desk hand a message back to the front desk. */
+export interface ChatOpts { readonly before?: readonly ForeignExchange[]; readonly returnable?: boolean }
 export interface TurnRecord {
   readonly turn: number;
   readonly servedBy: string;                  // which certified target answered
@@ -111,6 +125,8 @@ export interface TurnRecord {
    *  owed-read micro-step and the judged pass alike; zeros where the port reports
    *  no numbers. */
   readonly usage: StepUsage & { readonly modelCalls: number };
+  /** The front desk's decision when the turn arrived routed; absent on a desk-pinned path. */
+  readonly routing?: TurnRouting;
 }
 export class TurnFailure extends Error {      // typed, loud; a failed turn seals NOTHING
   readonly kind: 'provider-auth' | 'provider-quota' | 'network' | 'executor' | 'construction';
