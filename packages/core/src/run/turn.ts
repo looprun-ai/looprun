@@ -199,10 +199,15 @@ export class Turn {
       draft.corrections.push(...split.corrections);
 
       // The return, or the closed door. An opening return leaves the turn with no
-      // record at all; every later one is dropped and the loop carries on.
+      // record at all; every later one is dropped and the loop carries on. The draft
+      // must be empty of EVERY kind of work the turn can have done before the model
+      // spoke: an executed act, an approval the desk consumed, and a question the
+      // desk closed — a decline runs no call, and dropping the draft would erase the
+      // operator's own NO from every record there is.
       const returning = returnable ? split.domain.find(c => c.tool === RETURN_TOOL) : undefined;
       if (returning !== undefined) {
-        if (opening && draft.acts.length === 0) {
+        if (opening && draft.acts.length === 0
+          && draft.consumed.length === 0 && draft.closed.length === 0) {
           return { returned: { reason: String(returning.args['reason'] ?? '') } };
         }
         draft.corrections.push({ kind: 'returnRefused', detail: RETURN_CLOSED });

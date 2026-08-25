@@ -2,7 +2,15 @@ import { test, expect } from 'vitest';
 import type { TurnRecord } from '../src/contract/vocabulary.js';
 import { ScriptedModel } from '../src/run/scripted-model.js';
 import { callStep, finishStep } from './fixtures/scripted-model.js';
-import { testEngine } from './fixtures/compiled-agents.js';
+import { fact, testEngine } from './fixtures/compiled-agents.js';
+
+/** A surface whose one tool holds for consent, so a turn can carry an open question. */
+const CONSENT_FACTS = { tools: {
+  cancelBooking: fact({ name: 'cancelBooking', effect: 'destructive', target: 'id',
+    label: 'Cancel the booking',
+    schema: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'] },
+    does: 'Cancels one booking by id.' })
+} } as const;
 
 test('before exchanges ride the window as plain text between history and the new message', async () => {
   const model = new ScriptedModel([finishStep('Nothing to do here.')]);
@@ -57,6 +65,33 @@ test('notMine after an act is refused and the turn continues', async () => {
   expect(record.corrections).toContainEqual(
     { kind: 'returnRefused', detail: 'the return door closed once work began' });
   expect(record.finish?.message).toBe('Your booking is on the record.');
+});
+
+test('a decline the engine already read shuts the return door', async () => {
+  const model = new ScriptedModel([
+    callStep('cancelBooking', { id: 'bk_9' }),
+    finishStep('Approval needed.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'held' }]),
+    callStep('notMine', { reason: 'billing, not me' }),
+    finishStep('Kept as is.')
+  ]);
+  const { engine, port } = testEngine({ model, facts: CONSENT_FACTS,
+    behaviors: { cancelBooking: () => ({ result: { cancelled: true }, done: 'yes' }) } });
+
+  const asked = await engine.chat('s1', 'cancel bk_9');
+  const question = asked.questions.issued[0];
+  const decline = question.code.replace('CONFIRM', 'NO');
+
+  const result = await engine.chat('s1', `no, keep it — ${decline}`, { returnable: true });
+
+  // The turn read the operator's NO before the model spoke: work has begun, so the
+  // door is shut and the decline seals instead of vanishing with a dropped draft.
+  expect('returned' in result).toBe(false);
+  const record = result as TurnRecord;
+  expect(record.turn).toBe(2);
+  expect(record.corrections).toContainEqual(
+    { kind: 'returnRefused', detail: 'the return door closed once work began' });
+  expect(record.questions.closed).toEqual([{ id: question.id, why: 'declined' }]);
+  expect(port.log).toEqual([]);
 });
 
 test('a non-returnable turn never carries the notMine card', async () => {
