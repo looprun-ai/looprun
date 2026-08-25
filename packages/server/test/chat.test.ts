@@ -129,6 +129,28 @@ test('a TurnFailure prints kind and detail and the loop continues', async () => 
   expect(call).toBe(2);
 });
 
+test('the chat door survives its input closing mid-turn', async () => {
+  const input = new PassThrough();
+  const output = new PassThrough();
+  const out = collect(output);
+  const agent: ChatAgent = {
+    generate: async (text) => {
+      // The turn is still in flight when the piped input below reaches EOF and the
+      // readline Interface closes itself on its own — the exact race the fix guards.
+      await new Promise((r) => setTimeout(r, 0));
+      return reply(`counting: ${text}`);
+    }
+  };
+
+  const done = startChat({ agent, name: 'northgate', deskNames: ['counter'], input, output });
+  input.write('hello\n');
+  input.write('/exit\n');
+  input.end();               // a piped input, not a kept-open TTY: EOF right after the lines
+
+  await expect(done).resolves.toBeUndefined();
+  expect(out.text()).toContain('counting: hello');
+});
+
 test('a record with no routing field prints no routing line', async () => {
   const input = new PassThrough();
   const output = new PassThrough();
