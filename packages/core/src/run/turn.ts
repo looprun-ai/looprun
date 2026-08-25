@@ -4,7 +4,8 @@
  *  order, engine-enforced) → finish checks and bounded redrives → compose → seal.
  *  All mutation goes to the TurnDraft; Session.seal commits atomically; a
  *  TurnFailure discards the draft so a retry starts clean. */
-import type { Act, Msg, Question, RawCall, TurnRecord } from '../contract/vocabulary.js';
+import type { Act, ChatOpts, Msg, Question, RawCall, ToolCard, TurnRecord,
+              TurnReturned } from '../contract/vocabulary.js';
 import { deepFreeze } from '../contract/freeze.js';
 import type { ModelPort, ToolPort, RecordsPort } from '../contract/ports.js';
 import type { CompiledAgent } from '../cards/cards.js';
@@ -20,6 +21,20 @@ import type { PromptWriter } from './prompt-writer.js';
 import type { FinishDesk } from './finish-desk.js';
 import type { DeliveryWriter } from './delivery-writer.js';
 import type { Session, TurnDraft } from './session.js';
+
+/** The return door a routed delivery carries: the desk hands the message back to the
+ *  front desk instead of serving it. It is the turn's opening move or nothing — once
+ *  an act is on the record the door is closed, and a call to it is dropped with the
+ *  refusal sentence on the draft. A returning turn composes no reply and seals
+ *  nothing, so the front desk re-routes against the tape it already had. */
+const RETURN_TOOL = 'notMine';
+const RETURN_CLOSED = 'the return door closed once work began';
+const RETURN_CARD: ToolCard = {
+  name: RETURN_TOOL,
+  does: 'Return this message to the front desk: it is not this desk\'s to perform. '
+    + 'Valid only before any act.',
+  schema: { type: 'object', properties: { reason: { type: 'string' } }, required: ['reason'] }
+};
 
 export interface TurnDeps {
   readonly compiled: CompiledAgent;
@@ -41,8 +56,10 @@ export class Turn {
     this.deps = deps;
   }
 
-  async run(session: Session, userText: string): Promise<TurnRecord> {
+  async run(session: Session, userText: string, opts: ChatOpts = {}):
+    Promise<TurnRecord | TurnReturned> {
     const { compiled, seat, rulebook, masker, promptWriter: pw, finishDesk: fd, deliveryWriter: dw } = this.deps;
+    const returnable = opts.returnable === true;
     const history = session.history;
     const desk = session.consent;
     const draft = session.draft();
@@ -73,13 +90,20 @@ export class Turn {
     }
 
     // The model's memory of a past turn is the full record — its prose and every
-    // settled act sentence — never the operator's slimmed delivery.
+    // settled act sentence — never the operator's slimmed delivery. What OTHER desks
+    // said since this desk's last visit rides in as plain text: delivered words, no
+    // acts, nothing executable.
+    const foreign = (opts.before ?? []).flatMap(x => [
+      { role: 'user' as const, text: x.userText },
+      { role: 'assistant' as const, text: x.replyText }
+    ]);
     const messages: Msg[] = [
       ...history.sealed().flatMap(r => [
         { role: 'user' as const, text: r.userText },
         { role: 'assistant' as const,
           text: dw.modelView(r.finish?.message ?? '', r.acts, r.questions.issued.filter(q => q.state === 'open')) }
       ]),
+      ...foreign,
       { role: 'user', text: userText }
     ];
 
@@ -139,6 +163,8 @@ export class Turn {
     let callsUsed = 0;
     let retriesUsed = 0;
     let forced = false;
+    // The turn's opening move — the only place the return door is open.
+    let opening = true;
     // The desk's last written message: a rejected finish still spoke, and what it said
     // is what the operator reads when the engine has to close the turn.
     let lastMessage = '';
@@ -159,14 +185,31 @@ export class Turn {
         system: tail === '' ? pw.system() : `${pw.system()}\n${tail}`,
         messages: [...messages],
         // A forced turn has ONE move left. Putting the surface on the table costs the
-        // bytes of every card the step cannot use.
-        tools: forced ? [fd.toolCard()] : [...pw.toolCards(), fd.toolCard()],
+        // bytes of every card the step cannot use. The return door goes FIRST — the
+        // finish is last on every surface, and forceFinish targets the last card.
+        tools: forced ? [fd.toolCard()]
+          : returnable ? [RETURN_CARD, ...pw.toolCards(), fd.toolCard()]
+          : [...pw.toolCards(), fd.toolCard()],
         forceFinish: forced,
         llmParams: seat.llmParams({})
       });
       const step = await port.step(stepInput);
-      const { domain, finish, corrections } = fd.split(step.calls);
-      draft.corrections.push(...corrections);
+      const split = fd.split(step.calls);
+      const finish = split.finish;
+      draft.corrections.push(...split.corrections);
+
+      // The return, or the closed door. An opening return leaves the turn with no
+      // record at all; every later one is dropped and the loop carries on.
+      const returning = returnable ? split.domain.find(c => c.tool === RETURN_TOOL) : undefined;
+      if (returning !== undefined) {
+        if (opening && draft.acts.length === 0) {
+          return { returned: { reason: String(returning.args['reason'] ?? '') } };
+        }
+        draft.corrections.push({ kind: 'returnRefused', detail: RETURN_CLOSED });
+      }
+      const domain = returning === undefined ? split.domain
+        : split.domain.filter(c => c.tool !== RETURN_TOOL);
+      opening = false;
 
       const actsBefore = draft.acts.length;
       for (const call of domain) {

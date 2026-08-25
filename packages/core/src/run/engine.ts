@@ -2,7 +2,7 @@
  *  compiled agent, one chat entry, whole typed turn record out. EngineConfig is a
  *  CLOSED key set — no index signature, no options object, no field through which
  *  governance weakens. */
-import type { GuardCensus, TurnRecord } from '../contract/vocabulary.js';
+import type { ChatOpts, GuardCensus, TurnRecord, TurnReturned } from '../contract/vocabulary.js';
 import { TurnFailure } from '../contract/vocabulary.js';
 import { deepFreeze } from '../contract/freeze.js';
 import type { ToolPort, RecordsPort } from '../contract/ports.js';
@@ -54,8 +54,13 @@ export class Engine {
   }
 
   /** Rejects with TurnFailure; a failed turn seals nothing. The seat reroutes
-   *  between attempts only — the failed attempt ends before the cursor moves. */
-  chat(sessionId: string, text: string): Promise<TurnRecord> {
+   *  between attempts only — the failed attempt ends before the cursor moves.
+   *  With ChatOpts the turn arrives routed: `before` seeds what other desks said,
+   *  `returnable` opens the return door, and a turn that returns answers with the
+   *  reason instead of a record — sealing nothing either. */
+  chat(sessionId: string, text: string): Promise<TurnRecord>;
+  chat(sessionId: string, text: string, opts: ChatOpts): Promise<TurnRecord | TurnReturned>;
+  chat(sessionId: string, text: string, opts: ChatOpts = {}): Promise<TurnRecord | TurnReturned> {
     let session = this.sessions.get(sessionId);
     if (!session) {
       session = new Session(sessionId, new ActionHistory(),
@@ -63,7 +68,7 @@ export class Engine {
       this.sessions.set(sessionId, session);
     }
     const live = session;
-    return live.enter(() => new Turn(this.deps).run(live, text)).catch((failure: unknown) => {
+    return live.enter(() => new Turn(this.deps).run(live, text, opts)).catch((failure: unknown) => {
       if (failure instanceof TurnFailure) this.deps.seat.reroute(failure);
       throw failure;
     });
