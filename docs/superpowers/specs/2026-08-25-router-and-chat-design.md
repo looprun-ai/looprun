@@ -123,7 +123,9 @@ desks:
 
 **Validation (emit, against-surface style):** two or more desks ⇒ every desk carries
 `handles`; a declaration with one desk composes no router and the field is refused as
-unreachable words. The `teammates` maps stay untouched — they serve the desk's own conduct;
+unreachable words. The emitter writes `handles` into the emitted subject artifacts, so a
+loader composes the routed house from the subject door alone — no per-subject wiring exists
+anywhere. The `teammates` maps stay untouched — they serve the desk's own conduct;
 folding the two is registered out of scope (§11).
 
 **The line law** (taught by the skill, §10): a `handles` line names the ACTS the desk
@@ -215,8 +217,20 @@ instruction.
 - **`chat.ts`** — a generic, programmatic terminal REPL: `startChat({ agent })` reads lines,
   prints the reply, and prints the routing as a dim line per turn —
   `[router → billing]`, `[claims returned → billing]`, `[none]` — straight from
-  `TurnRecord.routing`. Commands: `/desks`, `/exit`. The server package knows no subject; the
-  bench gains a thin `tools/chat-c17.mjs` that composes the c17 house and calls `startChat`.
+  `TurnRecord.routing`. Commands: `/desks`, `/exit`. The server package knows no subject.
+- **The chat opens ANY subject from the standard door — no per-subject wiring.** Every
+  skill-generated subject already exports the same door (`subject.ts`: contract, specs,
+  world; `ask/targets.json`: the model), and `SubjectLoader.load(subjectDir)` already
+  composes it generically for the exam. The chat rides the same two pieces:
+  `RoutedAgent.fromSubject(subject)` (mastra) builds one `LoopRunAgent` per desk, reads
+  `handles` from the emitted artifacts, and returns the routed house — or the lone
+  `LoopRunAgent` itself when the subject declares one desk. One generic bench tool serves
+  every subject, present and future:
+
+  ```
+  SUBJECT_DIR=subjects/atlas-c17   node tools/chat.mjs
+  SUBJECT_DIR=subjects/any-new-one node tools/chat.mjs      # only the dir changes
+  ```
 
 ## 6 · Errors
 
