@@ -186,6 +186,24 @@ test('an unreadable decision retries once identically, then fails the turn', asy
       'the front desk returned no readable decision'));
 });
 
+test('every routed record counts the HOUSE\'s turns, whatever tape the desk kept', async () => {
+  const router = new ScriptedModel([routeStep('billing'), routeStep('yard'),
+                                    routeStep('billing'), routeStep('none')]);
+  const yard = desk('yard', [finishStep('The Henderson job runs on Tuesday.')]);
+  const billing = desk('billing', [finishStep('The invoice is paid.'),
+                                   finishStep('It settled on Tuesday.')]);
+  const agent = house(router, { yard: yard.agent, billing: billing.agent });
+
+  const counted: number[] = [];
+  for (const text of ['is the invoice paid?', 'when does the Henderson job run?',
+                      'when did it settle?', 'what is the weather tomorrow?']) {
+    counted.push((await agent.generate(text, { session: 's1' })).loopRun.turn);
+  }
+
+  // Two desks and a front-desk refusal, and the dump reads one conversation.
+  expect(counted).toEqual([1, 2, 3, 4]);
+});
+
 test('endSession drops the routed state and every desk\'s — the next turn is turn 1', async () => {
   const router = new ScriptedModel([routeStep('billing'), routeStep('billing')]);
   const billing = desk('billing', [finishStep('The invoice is paid.'),

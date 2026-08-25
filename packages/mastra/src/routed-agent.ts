@@ -3,7 +3,9 @@
  *  the conversation sits at, ONE prior exchange and the new message — never a persona, a
  *  card, an act or a record. What the house decided rides the governed record itself:
  *  `TurnRecord.routing` names the desk that served and the desk that handed the message
- *  back, and `usage` carries the router's own tokens on top of the desk's. A desk that
+ *  back, `turn` counts the HOUSE's own exchanges — a desk keeps its own tape, and one
+ *  routed dump reads as one conversation — and `usage` carries the router's own tokens
+ *  on top of the desk's. A desk that
  *  hands a message back is re-routed once, and the re-delivery is composed without the
  *  return door — a second return is unreachable, not forbidden.
  *
@@ -221,9 +223,9 @@ export class RoutedAgent {
       { session: id, before: foreignSince(seat.history, desk), returnable });
   }
 
-  /** The turn's one write: the record gains the routing and the router's tokens, and the
-   *  history gains the exchange the next window reads. A refusal names no desk, so the
-   *  conversation keeps the seat it had. */
+  /** The turn's one write: the record gains the routing, the house's own turn count and
+   *  the router's tokens, and the history gains the exchange the next window reads. A
+   *  refusal names no desk, so the conversation keeps the seat it had. */
   private remember(id: string, seat: Seat, userText: string, served: GovernedResult | null,
                    routing: TurnRouting, steps: readonly ModelStep[]): GovernedResult {
     const router = billed(steps);
@@ -231,7 +233,8 @@ export class RoutedAgent {
       ? { text: this.refusalText(),
           loopRun: this.refusal(seat, userText, routing, router) }
       : { text: served.text,
-          loopRun: { ...served.loopRun, routing, usage: merge(served.loopRun.usage, router) } };
+          loopRun: { ...served.loopRun, turn: seat.history.length + 1, routing,
+                     usage: merge(served.loopRun.usage, router) } };
     this.seats.set(id, {
       history: [...seat.history,
         { desk: routing.desk ?? FRONT_DESK, userText, replyText: out.text }],
