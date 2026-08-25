@@ -1,6 +1,6 @@
 /** The chat door: a readline REPL over a governed agent. Every line the operator reads
  *  comes from the turn's own record — the routing line from `loopRun.routing`, the
- *  reply from `loopRun.text` — never a side channel the REPL keeps for itself. A
+ *  reply from `out.text` — never a side channel the REPL keeps for itself. A
  *  TurnFailure ends the turn, never the conversation: its kind and detail print, and
  *  the loop reads the next line. */
 import { createInterface } from 'node:readline';
@@ -28,11 +28,14 @@ export interface ChatCfg {
 }
 
 /** The front desk's own verdict, read back as the one dim line the operator sees before
- *  the reply — `[none]` when the house routed nowhere. */
+ *  the reply. The record can carry BOTH facts at once — a desk handed the message
+ *  back AND the house's second decision was still no desk — so a return always names
+ *  who returned it, with the desk rendered as `none` when there is none. */
 function routingLine(routing: TurnRouting): string {
-  const body = routing.desk === null ? 'none'
-    : routing.returned === null ? `router → ${routing.desk}`
-    : `${routing.returned.by} returned → ${routing.desk}`;
+  const desk = routing.desk ?? 'none';
+  const body = routing.returned !== null ? `${routing.returned.by} returned → ${desk}`
+    : routing.desk === null ? 'none'
+    : `router → ${desk}`;
   return `${DIM}[${body}]${RESET}`;
 }
 

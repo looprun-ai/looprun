@@ -71,6 +71,23 @@ test('a returned routing and a null desk print their own lines', async () => {
   expect(out.text()).toContain('[none]');
 });
 
+test('a returned message that ends at no desk still names who returned it', async () => {
+  const input = new PassThrough();
+  const output = new PassThrough();
+  const out = collect(output);
+  const agent: ChatAgent = {
+    generate: () => Promise.resolve(reply('no desk performs this',
+      { desk: null, returned: { by: 'billing', reason: 'not billing\'s work' } }))
+  };
+
+  const done = startChat({ agent, name: 'northgate', deskNames: ['counter'], input, output });
+  input.write('who handles this\n');
+  input.write('/exit\n');
+  await done;
+
+  expect(out.text()).toContain('[billing returned → none]');
+});
+
 test('/desks prints the desk list; the underlying agent is never called', async () => {
   const input = new PassThrough();
   const output = new PassThrough();
