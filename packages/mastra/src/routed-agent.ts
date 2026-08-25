@@ -121,25 +121,25 @@ export class RoutedAgent {
     const deskCfg = (name: string): LoopRunConfig => ({ spec: cfg.specs[name],
       contract: cfg.contract, model: cfg.model, world: cfg.world });
     if (names.length === 1) return new LoopRunAgent(deskCfg(names[0]));
-    const seat = portFactory ?? ((params: LlmParams) => routerPort(cfg.model, params));
+    const mint = portFactory ?? ((params: LlmParams) => routerPort(cfg.model, params));
     return new RoutedAgent({
       name: cfg.contract?.name ?? cfg.specs[names[0]].name,
       desks: Object.fromEntries(names.map(n => [n, new LoopRunAgent(deskCfg(n))])),
       handles: handlesOf(cfg.specs),
-      router: seat({ temperature: 0 }) });
+      router: mint({ temperature: 0 }) });
   }
 
   async generate(text: string, opts?: { session?: string }): Promise<GovernedResult> {
     const id = opts?.session ?? 'default';
     const seat = this.seats.get(id) ?? OPENING;
     const tail = seat.ledger.at(-1);
-    const window: Omit<FrontDeskCfg, 'returnedFrom'> = {
+    const front: Omit<FrontDeskCfg, 'returnedFrom'> = {
       houseName: this.name, handles: this.handles, currentDesk: seat.currentDesk,
       lastExchange: tail === undefined ? null
         : { userText: tail.userText, replyText: tail.replyText },
       userText: text };
 
-    const opened = await this.decide({ ...window, returnedFrom: null });
+    const opened = await this.decide({ ...front, returnedFrom: null });
     if (opened.desk === NONE) {
       return this.remember(id, seat, text, null, { desk: null, returned: null }, opened.steps);
     }
@@ -150,7 +150,7 @@ export class RoutedAgent {
     }
 
     const returned = { by: opened.desk, reason: served.returned.reason };
-    const again = await this.decide({ ...window, returnedFrom: returned });
+    const again = await this.decide({ ...front, returnedFrom: returned });
     const steps = [...opened.steps, ...again.steps];
     if (again.desk === NONE) {
       return this.remember(id, seat, text, null, { desk: null, returned }, steps);
