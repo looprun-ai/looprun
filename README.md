@@ -133,6 +133,29 @@ A declaration that does not fit its world writes nothing: every refusal the emit
 printed at once, each naming the exact YAML path to fix. The declaration is always what changes,
 never the emitter. The shape, and every refusal with its message: `packages/emit/README.md`.
 
+## One door, many desks
+
+A subject with two or more desks mounts as ONE model id. A lean front desk reads every
+operator message and names the desk that will handle it — on what the operator intends, never
+on the words used — before any desk sees it. A desk handed a message outside its own ground
+can return it once; the front desk re-routes with the desk's own reason. The decision rides
+`TurnRecord.routing`, never a side channel, so the record says who served the turn and why it
+moved.
+
+Talk to any generated subject the same way, from a terminal:
+
+```bash
+npx looprun chat subjects/atlas-equipment-rentals
+```
+
+```
+atlas-equipment-rentals · 3 desks: billing claims rentals
+you > Cancel booking bk_1001, the customer backed out.
+[router → rentals]
+Booking bk_1001 is ready to cancel: cancelling ends the rental and returns the
+equipment to the yard. To go ahead, reply CONFIRM 7f3a2c.
+```
+
 ## Framework-agnostic by construction
 
 `@looprun-ai/core` is the engine and knows about no framework. `@looprun-ai/mastra` binds it to

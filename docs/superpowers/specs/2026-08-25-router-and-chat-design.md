@@ -189,9 +189,10 @@ currentDesk: the desk the conversation sits at (null on opening)
 ```
 
 **Three memories, three owners.** The governed sessions stay PER DESK — each desk keeps its
-own tape, its own records of its own acts, its own consent debts. The world is one and shared,
-as it already is. The router sees the ledger's tail; the desks see the ledger's text through
-`before`:
+own tape, its own records of its own acts, its own consent debts. The world is one and shared:
+`RoutedAgent.fromSubject` builds it once at the house's door and hands that one instance to
+every desk through `LoopRunConfig.built`; a desk-pinned path builds its own, as it always has.
+The router sees the ledger's tail; the desks see the ledger's text through `before`:
 
 - **`before` — foreign exchanges.** When a turn is delivered to a desk, the ledger entries of
   OTHER desks since that desk's last visit ride in as plain user/assistant text — delivered
@@ -216,8 +217,10 @@ instruction.
   Mounting a desk directly stays possible — the exam's desk-pinned paths do not change.
 - **`chat.ts`** — a generic, programmatic terminal REPL: `startChat({ agent })` reads lines,
   prints the reply, and prints the routing as a dim line per turn —
-  `[router → billing]`, `[claims returned → billing]`, `[none]` — straight from
-  `TurnRecord.routing`. Commands: `/desks`, `/exit`. The server package knows no subject.
+  `[router → billing]`, `[claims returned → billing]`, `[billing returned → none]`,
+  `[none]` — straight from `TurnRecord.routing`: a return always wins the line's prefix, and
+  a desk of `null` renders as `none`. Commands: `/desks`, `/exit`. The server package knows
+  no subject.
 - **The chat opens ANY subject from the standard door — no per-subject wiring.** Every
   skill-generated subject already exports the same door (`subject.ts`: contract, specs,
   world; `ask/targets.json`: the model), and `SubjectLoader.load(subjectDir)` already

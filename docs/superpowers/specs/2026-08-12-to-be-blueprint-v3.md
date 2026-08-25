@@ -370,10 +370,13 @@ export type Verdict =
 export interface OwedRead { readonly alias: string; readonly tool: string; readonly args: Readonly<Record<string, Json>> }
 export type Correction =
   | { readonly kind: 'redrive'; readonly guardName: string; readonly detail: string }
+  | { readonly kind: 'postToolFinding'; readonly guardName: string; readonly detail: string }
   | { readonly kind: 'earlyFinish' } | { readonly kind: 'staleFinish' } | { readonly kind: 'forcedFinish' }
   | { readonly kind: 'recordCorrected'; readonly actId: string; readonly said: Done }   // snapshot diff overruled the executor
   | { readonly kind: 'simulationRevoked'; readonly tool: string }
-  | { readonly kind: 'judgeUnreadable'; readonly guardName: string };
+  | { readonly kind: 'judgeUnreadable'; readonly guardName: string }
+  | { readonly kind: 'returnRefused'; readonly detail: string };   // the return door was tried
+                                                                   //   after work began
 export interface Act {
   readonly id: string;                        // engine-minted (R5.3)
   readonly turn: number;
