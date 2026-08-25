@@ -20,6 +20,9 @@ export interface AgentSpec {
   tools?: readonly string[];
   /** Other lanes, for hand-offs: agent name → what that desk handles. Omitted = single-agent domain. */
   teammates?: Readonly<Record<string, string>>;
+  /** This desk's routing line — what the front desk reads to route a message here.
+   *  Required on every desk of a multi-desk subject; never present on a single desk. */
+  handles?: string;
   /** Guards about how THIS desk works. Highest priority. Omitted = []. */
   guards?: readonly Guard[];
   /** The model's parameters, merged PER FIELD over the target's declared defaults. */

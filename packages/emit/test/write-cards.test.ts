@@ -34,7 +34,8 @@ function typecheck(dir: string): readonly string[] {
 }
 
 /** Every sentence a declaration carries: the voice, the domain facts, each guard rule, each
- *  disclosure tense, each seam law, each persona, each teammate line and each conduct law. */
+ *  disclosure tense, each seam law, each persona, each teammate line, each routing line and each
+ *  conduct law. */
 function sentencesOf(declaration: Declaration): readonly string[] {
   const disclosure = Object.values(declaration.contract.disclosure);
   return [
@@ -45,7 +46,7 @@ function sentencesOf(declaration: Declaration): readonly string[] {
     ...disclosure.flatMap(entry => [entry.before, entry.after, entry.later, entry.cap?.refusal,
       entry.empty].filter((s): s is string => s !== undefined)),
     ...declaration.desks.flatMap(desk => [desk.persona, ...Object.values(desk.conduct),
-      ...Object.values(desk.teammates ?? {})])
+      ...Object.values(desk.teammates ?? {}), ...(desk.handles === undefined ? [] : [desk.handles])])
   ];
 }
 

@@ -708,6 +708,7 @@ function deskLines(desk: Declaration['desks'][number], depth: number,
       ...commaJoin(teammates.map(([name, does]) => [indent(depth + 2, `${key(name)}: ${quote(does)}`)])),
       indent(depth + 1, '}')
     ]]),
+    ...(desk.handles === undefined ? [] : [[indent(depth + 1, `handles: ${quote(desk.handles)}`)]]),
     [indent(depth + 1, 'llmParams: { temperature: 0 }')],
     ...(desk.limits === undefined ? []
       : [[limitLines(`desks '${desk.name}' limits`, desk.limits, depth + 1)]]),

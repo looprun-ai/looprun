@@ -1,8 +1,9 @@
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { describe, expect, test } from 'vitest';
-import { readDeclaration } from '../src/index.js';
+import { describe, expect, it, test } from 'vitest';
+import { checkAgainstSurface, readDeclaration, writeCards } from '../src/index.js';
+import { FACTS, SEAM } from './helpers.js';
 
 function fixture(yaml: string): string {
   const dir = mkdtempSync(join(tmpdir(), 'emit-declaration-'));
@@ -216,6 +217,81 @@ desks:
     persona: p
     tools: [getBooking]
 `))).toThrow(/desks\[0\].*conduct/);
+  });
+});
+
+describe('handles', () => {
+  it('handles survives the round trip on a multi-desk declaration', () => {
+    const d = readDeclaration(fixture(`
+contract:
+  name: seaside-hotel
+  voice: Warm, brief, and exact about dates and money.
+  facts: []
+  guards: []
+  disclosure: {}
+desks:
+  - name: billing
+    persona: The billing desk.
+    tools: [getInvoice]
+    conduct: { declareHonestly: x }
+    handles: quotes and bookings
+  - name: audit
+    persona: The audit desk.
+    tools: [closeBooking]
+    conduct: { declareHonestly: x }
+    handles: invoices and refunds
+`));
+    expect(d.desks[0].handles).toBe('quotes and bookings');
+    expect(d.desks[1].handles).toBe('invoices and refunds');
+    const out = writeCards(d, FACTS);
+    expect(out).toContain("handles: 'quotes and bookings'");
+    expect(out).toContain("handles: 'invoices and refunds'");
+  });
+
+  it('a multi-desk declaration missing handles refuses at emit', () => {
+    const d = readDeclaration(fixture(`
+contract:
+  name: seaside-hotel
+  voice: Warm, brief, and exact about dates and money.
+  facts: []
+  guards: []
+  disclosure:
+    issueRefund:
+      before: Refunding this invoice cannot be taken back.
+desks:
+  - name: billing
+    persona: The billing desk.
+    tools: [getInvoice]
+    conduct: { declareHonestly: x }
+    handles: quotes and bookings
+  - name: audit
+    persona: The audit desk.
+    tools: [closeBooking]
+    conduct: { declareHonestly: x }
+`));
+    expect(checkAgainstSurface(d, FACTS, SEAM))
+      .toEqual([expect.stringContaining("'audit'")]);
+  });
+
+  it('a single-desk declaration carrying handles refuses as unreachable words', () => {
+    const d = readDeclaration(fixture(`
+contract:
+  name: seaside-hotel
+  voice: Warm, brief, and exact about dates and money.
+  facts: []
+  guards: []
+  disclosure:
+    issueRefund:
+      before: Refunding this invoice cannot be taken back.
+desks:
+  - name: front-desk
+    persona: The front desk.
+    tools: [getInvoice]
+    conduct: { declareHonestly: x }
+    handles: quotes and bookings
+`));
+    expect(checkAgainstSurface(d, FACTS, SEAM))
+      .toEqual([expect.stringContaining("'front-desk'")]);
   });
 });
 

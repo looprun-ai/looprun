@@ -77,9 +77,10 @@ describe('checkAgainstSurface', () => {
 
   test('a disclosure needs alias naming a read the desk holding the act cannot run', () => {
     const refusals = checkAgainstSurface(decl({ desks: [
-      { name: 'billing', persona: 'p', tools: ['issueRefund'], conduct: { declareHonestly: 'x' } },
+      { name: 'billing', persona: 'p', tools: ['issueRefund'], conduct: { declareHonestly: 'x' },
+        handles: 'refunds' },
       { name: 'records', persona: 'p', tools: ['issueRefund', 'getInvoice'],
-        conduct: { declareHonestly: 'x' } }] }), FACTS, SEAM);
+        conduct: { declareHonestly: 'x' }, handles: 'invoice lookups' }] }), FACTS, SEAM);
     expect(refusals).toEqual([expect.stringContaining(
       "contract.disclosure.issueRefund.needs.invoice names 'getInvoice'")]);
     expect(refusals[0]).toContain("the 'billing' desk holds 'issueRefund'");
@@ -89,9 +90,9 @@ describe('checkAgainstSurface', () => {
   test('a needs read every desk holding the act also holds is no refusal', () => {
     expect(checkAgainstSurface(decl({ desks: [
       { name: 'billing', persona: 'p', tools: ['issueRefund', 'getInvoice'],
-        conduct: { declareHonestly: 'x' } },
+        conduct: { declareHonestly: 'x' }, handles: 'refunds and invoice lookups' },
       { name: 'records', persona: 'p', tools: ['getInvoice'],
-        conduct: { declareHonestly: 'x' } }] }), FACTS, SEAM)).toEqual([]);
+        conduct: { declareHonestly: 'x' }, handles: 'invoice lookups' }] }), FACTS, SEAM)).toEqual([]);
   });
 
   test('a prose guard naming an act the surface does not declare', () => {

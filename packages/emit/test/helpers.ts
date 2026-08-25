@@ -27,8 +27,10 @@ export const SOUND_DISCLOSURE: Readonly<Record<string, DeclaredDisclosure>> = {
   issueRefund: { needs: { invoice: 'getInvoice' }, before: 'Say the invoice total before refunding it.' }
 };
 export const SOUND_DESKS: Declaration['desks'] = [
-  { name: 'a', persona: 'p', tools: ['issueRefund', 'getInvoice'], conduct: { declareHonestly: 'x', oneQuestion: 'y' } },
-  { name: 'b', persona: 'p', tools: ['getInvoice'], conduct: { declareHonestly: 'x', oneQuestion: 'y' } }
+  { name: 'a', persona: 'p', tools: ['issueRefund', 'getInvoice'], conduct: { declareHonestly: 'x', oneQuestion: 'y' },
+    handles: 'refunds and the invoices behind them' },
+  { name: 'b', persona: 'p', tools: ['getInvoice'], conduct: { declareHonestly: 'x', oneQuestion: 'y' },
+    handles: 'invoice lookups on their own' }
 ];
 
 export function decl(overrides: {

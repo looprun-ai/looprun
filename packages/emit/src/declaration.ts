@@ -109,6 +109,8 @@ export interface Declaration {
     readonly persona: string;
     readonly tools: readonly string[];
     readonly teammates?: Readonly<Record<string, string>>;
+    /** This desk's routing line — what the front desk reads to route a message here. */
+    readonly handles?: string;
     readonly conduct: Readonly<Record<string, string>>;
     readonly judged?: readonly DeclaredJudged[];
     readonly limits?: Readonly<Record<string, number>>;
@@ -447,6 +449,7 @@ function readDesk(map: YAMLMap, path: string, lineCounter: LineCounter): Declara
   const tools = asStringArray(requireSeq(map, 'tools', path, lineCounter), field(path, 'tools'), lineCounter);
   const conduct = asStringRecord(requireMap(map, 'conduct', path, lineCounter), field(path, 'conduct'), lineCounter);
   const teammatesMap = readOptionalMap(map, 'teammates', path, lineCounter);
+  const handles = readOptionalString(map, 'handles', path, lineCounter);
   const judgedSeq = readOptionalSeq(map, 'judged', path, lineCounter);
   const limitsMap = readOptionalMap(map, 'limits', path, lineCounter);
   return {
@@ -455,6 +458,7 @@ function readDesk(map: YAMLMap, path: string, lineCounter: LineCounter): Declara
     tools,
     conduct,
     ...(teammatesMap === undefined ? {} : { teammates: asStringRecord(teammatesMap, field(path, 'teammates'), lineCounter) }),
+    ...(handles === undefined ? {} : { handles }),
     ...(judgedSeq === undefined ? {} : { judged: readJudged(judgedSeq, field(path, 'judged'), lineCounter) }),
     ...(limitsMap === undefined ? {} : { limits: asNumberRecord(limitsMap, field(path, 'limits'), lineCounter) })
   };

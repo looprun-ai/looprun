@@ -288,6 +288,29 @@ function checkDisclosureNeedsInLane(declaration: Declaration, facts: SurfaceFact
   return refusals;
 }
 
+/** Every desk states the line that routes a message to it, exactly when a router stands in front
+ *  of more than one desk to read it. Two or more desks route by comparing each desk's own
+ *  `handles` line against the arriving message, so a desk that declares none is a desk the router
+ *  can never choose. One desk has no router in front of it at all, so a `handles` line declared
+ *  there is a sentence nothing ever reads. */
+function checkRoutingLines(declaration: Declaration): readonly string[] {
+  const { desks } = declaration;
+  if (desks.length >= 2) {
+    return desks.flatMap((desk, deskIndex) => desk.handles !== undefined ? [] : [
+      `desks[${deskIndex}].handles is missing: a house of ${desks.length} desks routes every `
+      + `message by the handles line each desk states, and '${desk.name}' declares none — add `
+      + `the routing line '${desk.name}' answers to.`
+    ]);
+  }
+  const [only] = desks;
+  if (only?.handles !== undefined) {
+    return [`desks[0].handles is set on '${only.name}': a house of one desk has no router in `
+      + `front of it to read that line, so it can never be reached — drop handles, or declare a `
+      + `second desk for the router to choose between.`];
+  }
+  return [];
+}
+
 /** Every seam sentence pays a row the world actually spells out, and lands on a desk that can
  *  reach the act. The seam table is the register: an act it carries no row for is an act whose
  *  refusals the world never names in a literal, and a code outside that act's row set is a
@@ -336,9 +359,11 @@ function checkSeamRows(declaration: Declaration, facts: SurfaceFacts,
  *  nothing disclosed before it runs, a `precondition` reading a record over an act with no target,
  *  a disclosure `needs` alias naming a tool that does not exist, a disclosure alias whose read
  *  cannot answer the call it is held for, a disclosure alias naming a read the lane of a desk
- *  holding the act does not carry, and a seam sentence paying a row the world does not carry. `seam` is the seam table computed off the same
- *  subject the declaration sits in. An empty array means the declaration is safe to emit against
- *  `facts`. */
+ *  holding the act does not carry, a seam sentence paying a row the world does not carry, and a
+ *  house whose desks disagree with the routing law — two or more desks with a desk missing its
+ *  `handles` line, or the one desk of a single-desk house carrying one. `seam` is the seam table
+ *  computed off the same subject the declaration sits in. An empty array means the declaration is
+ *  safe to emit against `facts`. */
 export function checkAgainstSurface(declaration: Declaration, facts: SurfaceFacts,
                                     seam: readonly SeamRow[]): readonly string[] {
   return [
@@ -351,6 +376,7 @@ export function checkAgainstSurface(declaration: Declaration, facts: SurfaceFact
     ...checkDisclosureNeedsToolExists(declaration, facts),
     ...checkDisclosureNeedsResolvable(declaration, facts),
     ...checkDisclosureNeedsInLane(declaration, facts),
-    ...checkSeamRows(declaration, facts, seam)
+    ...checkSeamRows(declaration, facts, seam),
+    ...checkRoutingLines(declaration)
   ];
 }
