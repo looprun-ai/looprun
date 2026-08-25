@@ -136,7 +136,7 @@ test('the chat door survives its input closing mid-turn', async () => {
   const agent: ChatAgent = {
     generate: async (text) => {
       // The turn is still in flight when the piped input below reaches EOF and the
-      // readline Interface closes itself on its own — the exact race the fix guards.
+      // readline Interface closes itself on its own — the race this flag closes.
       await new Promise((r) => setTimeout(r, 0));
       return reply(`counting: ${text}`);
     }

@@ -313,6 +313,14 @@ test('fromSubject refuses a desk that declares no handles line', () => {
     model: { scripted: { steps: [] } } })).toThrow(/billing/);
 });
 
+test('fromSubject refuses a handles line that says nothing — blank is no line', () => {
+  const specs: Record<string, AgentSpec> = {
+    yard: { name: 'yard', persona: 'You run the yard.', handles: HANDLES.yard },
+    billing: { name: 'billing', persona: 'You run billing.', handles: '   ' } };
+  expect(() => RoutedAgent.fromSubject({ specs, world: BOOKING,
+    model: { scripted: { steps: [] } } })).toThrow(/billing/);
+});
+
 /** The plain user and assistant lines of a desk's window — an acts message is the
  *  engine's own typed channel, never a spoken turn. */
 function spoken(messages: readonly Msg[]): readonly string[] {

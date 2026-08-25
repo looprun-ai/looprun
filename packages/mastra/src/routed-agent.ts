@@ -62,18 +62,19 @@ function foreignSince(history: readonly Exchange[], desk: string): readonly Fore
 }
 
 const stated = (e: readonly [string, string | undefined]): e is readonly [string, string] =>
-  e[1] !== undefined;
+  e[1] !== undefined && e[1].trim() !== '';
 
-/** Every desk of a routed house states the line that routes a message to it. A desk that
- *  states none is a desk the front desk can never choose, and the house refuses to stand. */
+/** Every desk of a routed house states the line that routes a message to it. A desk whose
+ *  line is absent or blank is a desk the front desk can never choose, and the house
+ *  refuses to stand. */
 function handlesOf(specs: Readonly<Record<string, AgentSpec>>): Readonly<Record<string, string>> {
   const lines = Object.entries(specs).map(([name, spec]) => [name, spec.handles] as const);
   const missing = lines.filter(e => !stated(e)).map(([name]) => name);
   if (missing.length > 0) {
     throw new CardError(missing.map(name => ({ code: 'HANDLES_MISSING',
       sentence: `Desk '${name}' states no handles line: a house of ${lines.length} desks `
-        + 'routes every message by the line each desk states, so a desk without one can '
-        + 'never be chosen.' })));
+        + 'routes every message by the line each desk states, and a line that is absent or '
+        + 'blank matches no message, so the desk can never be chosen.' })));
   }
   return Object.fromEntries(lines.filter(stated));
 }

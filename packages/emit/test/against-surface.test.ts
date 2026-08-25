@@ -95,6 +95,15 @@ describe('checkAgainstSurface', () => {
         conduct: { declareHonestly: 'x' }, handles: 'invoice lookups' }] }), FACTS, SEAM)).toEqual([]);
   });
 
+  test('a house of two desks where one states a blank handles line', () => {
+    expect(checkAgainstSurface(decl({ desks: [
+      { name: 'billing', persona: 'p', tools: ['issueRefund', 'getInvoice'],
+        conduct: { declareHonestly: 'x' }, handles: 'refunds and invoice lookups' },
+      { name: 'records', persona: 'p', tools: ['getInvoice'],
+        conduct: { declareHonestly: 'x' }, handles: '   ' }] }), FACTS, SEAM))
+      .toEqual([expect.stringContaining("desks[1].handles says nothing on 'records'")]);
+  });
+
   test('a prose guard naming an act the surface does not declare', () => {
     expect(checkAgainstSurface(decl({ guards: [{ name: 'roleRefusalNamesWhoCan',
       acts: ['issueRefund', 'closeBookng'], factory: 'prose',

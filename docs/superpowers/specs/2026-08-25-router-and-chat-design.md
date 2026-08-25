@@ -1,6 +1,7 @@
 # The Front Desk and the Chat Door — Design
 
-**Status: OPEN** — design approved in session; implementation not started.
+**Status: OPEN** — engine, chat door and skill shipped on branch router-chat; the closing
+measurement (§8) is the open half.
 
 A multi-desk subject becomes ONE addressable agent. A lean, neutral front desk reads every
 operator message and names the desk that will handle it — on intention, never on words — and a
