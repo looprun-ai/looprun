@@ -1,6 +1,7 @@
 import { test, expect } from 'vitest';
 import type { AgentSpec, ChatMsg, ModelStep, ModelTarget, Msg } from '@looprun-ai/core';
-import { ModelSeat, ScriptedModel, TurnFailure, mcpWorld, world } from '@looprun-ai/core';
+import { ModelSeat, ScriptedModel, TurnFailure, WorldBuilder, mcpWorld,
+         world } from '@looprun-ai/core';
 import { RoutedAgent, type RoutedSubjectCfg } from '../src/routed-agent.js';
 import { LoopRunAgent } from '../src/loop-run-agent.js';
 import { assemble } from '../src/agent-assembly.js';
@@ -12,7 +13,8 @@ const HANDLES = { yard: 'job schedules and hand-overs', billing: 'invoices and r
 const JOBS = world({
   records: { jobs: { jb_a: { crew: 'Ana' } } },
   reads: { getJob: { form: 'get', entity: 'jobs', label: 'Look up the job' } },
-  writes: { setCrew: { form: 'set', entity: 'jobs', label: 'Assign the crew' } }
+  writes: { setCrew: { form: 'set', entity: 'jobs', label: 'Assign the crew' } },
+  presets: { handover: [{ entity: 'jobs', id: 'jb_a', set: { crew: 'Cleo' } }] }
 });
 
 const DESKS: Record<string, AgentSpec> = {
@@ -275,4 +277,30 @@ test('the routed door serves declared worlds — a live card is unrepresentable'
     world: live,
     model: { scripted: { steps: [] } } };
   expect(cfg.specs).toBe(DESKS);          // never constructed from — the TYPE is the test
+});
+
+test('a pre-built world and a preset name on one config refuse — that is two answers', async () => {
+  const built = new WorldBuilder().build(JOBS);
+  await expect(assemble({ spec: DESKS.yard, world: JOBS, built, preset: 'handover',
+    model: { scripted: { steps: [] } } })).rejects.toThrow(TurnFailure);
+  await expect(assemble({ spec: DESKS.yard, world: JOBS, built, preset: 'handover',
+    model: { scripted: { steps: [] } } }))
+    .rejects.toThrow(/already carries the scenario it was built with/);
+});
+
+test('fromSubject applies the preset to the ONE world it builds', async () => {
+  const turn: readonly ModelStep[] = [callStep('getJob', { id: 'jb_a' }),
+                                      finishStep('The crew is on it.')];
+  const agent = RoutedAgent.fromSubject(
+    { specs: DESKS, world: JOBS, preset: 'handover',
+      model: { scripted: { steps: turn } } },
+    () => new ScriptedModel([routeStep('yard')]));
+
+  const out = await agent.generate('who is on the job?', { session: 's1' });
+  expect(out.loopRun.acts[0].result).toMatchObject({ crew: 'Cleo' });
+});
+
+test('fromSubject refuses a preset the world card never declared', () => {
+  expect(() => RoutedAgent.fromSubject({ specs: DESKS, world: JOBS, preset: 'nope',
+    model: { scripted: { steps: [] } } })).toThrow(/nope/);
 });

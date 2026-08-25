@@ -95,11 +95,12 @@ export interface RoutedHouse {
 /** The subject door: the emitted specs, the shared contract and world, and the model
  *  every desk and the front desk seat. The world is DECLARED, because the house builds it
  *  once and hands that one instance to every desk — which is possible only for records
- *  the house holds itself. */
+ *  the house holds itself. `preset` names the scenario that single build starts from. */
 export interface RoutedSubjectCfg {
   readonly specs: Readonly<Record<string, AgentSpec>>;
   readonly contract?: DomainContract;
   readonly world: DeclaredWorld;
+  readonly preset?: string;
   readonly model: LoopRunModel;
 }
 
@@ -130,12 +131,14 @@ export class RoutedAgent {
     const names = Object.keys(cfg.specs);
     if (names.length === 1) {
       return new LoopRunAgent({ spec: cfg.specs[names[0]], contract: cfg.contract,
-                                model: cfg.model, world: cfg.world });
+                                model: cfg.model, world: cfg.world, preset: cfg.preset });
     }
     const handles = handlesOf(cfg.specs);
-    // The house acts on ONE world. It is built here, once, and every desk is handed the
-    // same instance, so a record one desk writes is the record the next desk reads.
-    const built = new WorldBuilder().build(cfg.world);
+    // The house acts on ONE world. It is built here, once, from the scenario the subject
+    // named, and every desk is handed that same instance — so a record one desk writes is
+    // the record the next desk reads. The preset rides the build, never a desk's config:
+    // a world already built has already answered which scenario it holds.
+    const built = new WorldBuilder().build(cfg.world, cfg.preset);
     const deskCfg = (name: string): LoopRunConfig => ({ spec: cfg.specs[name],
       contract: cfg.contract, model: cfg.model, world: cfg.world, built });
     const mint = portFactory ?? ((params: LlmParams) => routerPort(cfg.model, params));

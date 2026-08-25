@@ -33,6 +33,8 @@ export interface LoopRunConfig {
   readonly live?: Readonly<Record<string, LiveTool>>;
   /** The certification seal of the live surface; omitted = not yet certified. */
   readonly seal?: string;
+  /** The scenario the world starts from. Never set beside `built`: an instance already
+   *  built has already answered which scenario it holds, and naming it twice refuses. */
   readonly preset?: string;
 }
 
@@ -80,6 +82,11 @@ async function resolveSurface(cfg: LoopRunConfig): Promise<{
 }> {
   const w = cfg.world;
   if ('card' in w) {
+    if (cfg.built !== undefined && cfg.preset !== undefined) {
+      throw new TurnFailure('construction', 'a pre-built world already carries the scenario '
+        + 'it was built with, so a preset name beside it is a second answer to one question '
+        + `— build the shared instance with '${cfg.preset}' and drop the key here`);
+    }
     const built = cfg.built ?? new WorldBuilder().build(w, cfg.preset);
     return { facts: factsFromWorld(w), toolPort: built, recordsPort: built, surface: null };
   }
