@@ -89,7 +89,7 @@ test('a continuation carries the current desk and the last exchange into the win
     { role: 'user', text: 'when?' }]);
 });
 
-test('none refuses at the front desk, touches no desk, and the ledger still grows', async () => {
+test('none refuses at the front desk, touches no desk, and the history still grows', async () => {
   const router = new ScriptedModel([routeStep('none', 300, 6), routeStep('billing')]);
   const yard = desk('yard', []);
   const billing = desk('billing', [finishStep('The invoice is paid.')]);
@@ -109,7 +109,7 @@ test('none refuses at the front desk, touches no desk, and the ledger still grow
   expect(yard.model.seen).toHaveLength(0);
   expect(billing.model.seen).toHaveLength(0);
 
-  // The house said it; the ledger carries it, so the next window reads it back.
+  // The house said it; the history carries it, so the next window reads it back.
   await agent.generate('has the invoice been paid?', { session: 's1' });
   expect(router.seen[1].messages[1]).toEqual({ role: 'assistant', text: out.text });
   expect(router.seen[1].system).toContain('The conversation is just opening.');
@@ -247,7 +247,7 @@ test('two messages on one session serialize — the second window carries the fi
     agent.generate('has the invoice been paid?', { session: 's1' }),
     agent.generate('when?', { session: 's1' })]);
 
-  // Neither ledger entry is lost: the second front-desk window reads the first back.
+  // Neither history entry is lost: the second front-desk window reads the first back.
   expect(router.seen[1].messages).toEqual([
     { role: 'user', text: 'has the invoice been paid?' },
     { role: 'assistant', text: first.text },

@@ -10,7 +10,7 @@
  *  Two things the house owns as ONE. Its world: built once at the door and handed to
  *  every desk, so a record one desk writes is the record the next desk reads. Its
  *  conversations: one session is one queue, so a second message waits for the first to
- *  seal and no ledger entry is ever written over. */
+ *  seal and no history entry is ever written over. */
 import type { AgentSpec, DeclaredWorld, DomainContract, ForeignExchange, FrontDeskCfg,
               LlmParams, ModelPort, ModelStep, StepUsage, TurnRecord, TurnReturned,
               TurnRouting } from '@looprun-ai/core';
@@ -20,16 +20,16 @@ import type { LoopRunConfig, LoopRunModel } from './agent-assembly.js';
 import { LoopRunAgent, type GovernedResult } from './loop-run-agent.js';
 import { MastraModelPort } from './mastra-model-port.js';
 
-/** The decision that names no desk, and the ledger name of the turn it refuses. */
+/** The decision that names no desk, and the name the history gives the turn it refuses. */
 const NONE = 'none';
 const FRONT_DESK = 'front-desk';
 
-/** One delivered exchange of the house's ledger: the desk that served, the operator's
+/** One delivered exchange of the house's history: the desk that served, the operator's
  *  words and the words the operator read back. Delivered TEXT only — no acts. */
 interface Exchange { readonly desk: string; readonly userText: string; readonly replyText: string }
-/** Where one conversation sits: its ledger in order, and the desk it last landed on. */
-interface Seat { readonly ledger: readonly Exchange[]; readonly currentDesk: string | null }
-const OPENING: Seat = { ledger: [], currentDesk: null };
+/** Where one conversation sits: its history in order, and the desk it last landed on. */
+interface Seat { readonly history: readonly Exchange[]; readonly currentDesk: string | null }
+const OPENING: Seat = { history: [], currentDesk: null };
 
 type Usage = StepUsage & { readonly modelCalls: number };
 const NOTHING_BILLED: Usage = { inputTokens: 0, outputTokens: 0, cachedInputTokens: 0,
@@ -52,10 +52,10 @@ function billed(steps: readonly ModelStep[]): Usage {
     reasoningTokens: s.usage?.reasoningTokens ?? 0, modelCalls: 1 }), NOTHING_BILLED);
 }
 
-/** What a desk has not seen: every ledger entry after its own last one. A desk it never
+/** What a desk has not seen: every history entry after its own last one. A desk it never
  *  served rides in as plain text — delivered words, no acts, nothing executable. */
-function foreignSince(ledger: readonly Exchange[], desk: string): readonly ForeignExchange[] {
-  return ledger.slice(ledger.map(e => e.desk).lastIndexOf(desk) + 1);
+function foreignSince(history: readonly Exchange[], desk: string): readonly ForeignExchange[] {
+  return history.slice(history.map(e => e.desk).lastIndexOf(desk) + 1);
 }
 
 const stated = (e: readonly [string, string | undefined]): e is readonly [string, string] =>
@@ -161,7 +161,7 @@ export class RoutedAgent {
 
   private async turn(id: string, text: string): Promise<GovernedResult> {
     const seat = this.seats.get(id) ?? OPENING;
-    const tail = seat.ledger.at(-1);
+    const tail = seat.history.at(-1);
     const front: Omit<FrontDeskCfg, 'returnedFrom'> = {
       houseName: this.name, handles: this.handles, currentDesk: seat.currentDesk,
       lastExchange: tail === undefined ? null
@@ -213,16 +213,16 @@ export class RoutedAgent {
     return { desk: reread, steps: [first, again] };
   }
 
-  /** What the desk has not seen rides in as `before` — the ledger since its own last
+  /** What the desk has not seen rides in as `before` — the history since its own last
    *  entry, delivered words only. */
   private deliver(desk: string, id: string, seat: Seat, text: string,
                   returnable: boolean): Promise<GovernedResult | TurnReturned> {
     return this.desks[desk].generateRouted(text,
-      { session: id, before: foreignSince(seat.ledger, desk), returnable });
+      { session: id, before: foreignSince(seat.history, desk), returnable });
   }
 
   /** The turn's one write: the record gains the routing and the router's tokens, and the
-   *  ledger gains the exchange the next window reads. A refusal names no desk, so the
+   *  history gains the exchange the next window reads. A refusal names no desk, so the
    *  conversation keeps the seat it had. */
   private remember(id: string, seat: Seat, userText: string, served: GovernedResult | null,
                    routing: TurnRouting, steps: readonly ModelStep[]): GovernedResult {
@@ -233,7 +233,7 @@ export class RoutedAgent {
       : { text: served.text,
           loopRun: { ...served.loopRun, routing, usage: merge(served.loopRun.usage, router) } };
     this.seats.set(id, {
-      ledger: [...seat.ledger,
+      history: [...seat.history,
         { desk: routing.desk ?? FRONT_DESK, userText, replyText: out.text }],
       currentDesk: routing.desk ?? seat.currentDesk });
     return out;
@@ -248,7 +248,7 @@ export class RoutedAgent {
    *  finish exists — only the words the operator reads and what the router cost. */
   private refusal(seat: Seat, userText: string, routing: TurnRouting,
                   usage: Usage): TurnRecord {
-    return { turn: seat.ledger.length + 1, servedBy: FRONT_DESK, userText,
+    return { turn: seat.history.length + 1, servedBy: FRONT_DESK, userText,
              acts: [], questions: { issued: [], consumed: [], closed: [] },
              finish: null, corrections: [], text: this.refusalText(),
              closedBy: 'engine', usage, routing };
