@@ -185,7 +185,8 @@ constructed.
 Per session it owns:
 
 ```
-history:     [{ desk, userText, replyText }]   — delivered TEXT only, in order
+history:     [{ desk, userText, replyText, minted }]   — delivered TEXT, in order, plus
+                                                         the provenance that turn's acts minted
 currentDesk: the desk the conversation sits at (null on opening)
 ```
 
@@ -210,6 +211,33 @@ guard refusal ("the return door closed once work began"). When a desk calls it, 
 composed; the front desk re-routes once with the desk's reason line added to the window, and
 the re-delivery **does not carry the door** — the one-return cap is structural, not an
 instruction.
+
+**Provenance grounding.** A desk that never ran the read cannot ground the id the last desk found,
+so the routed door mints that grounding from the conversation's own acts. When a turn seals, the
+house walks its recorded acts and mints one mark per id-shaped token the act's result or arguments
+carried — `{ id, origin }`, `origin` being `desk:tool`, and an id several acts carry keeping the
+FIRST act as its origin. A delivery hands the next desk the ids of every mark it has not seen, and
+the always-on grounding floor accepts them beside the desk's own reads and the operator's own
+words. The marks that rode INTO a turn sit on `TurnRecord.routing.grounded`; a turn nothing rode
+into carries no such key.
+
+```
+yard      getJob(jb_1) → { crew: 'Ana', invoice: 'in_7001' }   mints { id: 'in_7001',
+                                                                       origin: 'yard:getJob' }
+billing   getInvoice(in_7001)                                  done — the mark rode in
+```
+
+**Text mints nothing.** An id a reply merely states carries no mark, so a desk cannot license an
+identifier by writing it down:
+
+```
+yard      reply: 'the invoice is in_7001'  (no act carried it)   mints nothing
+billing   getInvoice(in_7001)              refused — 'in_7001' in 'id' appears in no result
+                                                     and no message
+```
+
+`needs` / `onlyAfter` is untouched by this: a card that demands a fresh read still demands it.
+Provenance grounds an identifier; it never stands in for a read.
 
 ## 5 · The wire and the chat door (server)
 
@@ -303,3 +331,4 @@ record, no side channel). This page is the standing reference for the routing co
 | router existence | only with 2+ desks; single-desk subjects unchanged |
 | router model | the subject's own model, temperature 0, thinking off (engine defaults) |
 | chat door | generic REPL in server; subject glue lives in the bench |
+| crossed-id grounding | engine-minted provenance from the conversation's own acts (option C); `needs`/`onlyAfter` stays the law for acts demanding a fresh read |
