@@ -14,9 +14,9 @@
  *  every desk, so a record one desk writes is the record the next desk reads. Its
  *  conversations: one session is one queue, so a second message waits for the first to
  *  seal and no history entry is ever written over. */
-import type { AgentSpec, DeclaredWorld, DomainContract, ForeignExchange, FrontDeskCfg,
-              LlmParams, ModelPort, ModelStep, StepUsage, TurnRecord, TurnReturned,
-              TurnRouting } from '@looprun-ai/core';
+import type { AgentSpec, DeclaredWorld, DomainContract, FrontDeskCfg,
+              LlmParams, ModelPort, ModelStep, ProvenanceMark, StepUsage, TurnRecord,
+              TurnReturned, TurnRouting } from '@looprun-ai/core';
 import { carriedIds } from '@looprun-ai/core';
 import { CardError, ScriptedModel, TurnFailure, WorldBuilder, composeWindow,
          readDecision } from '@looprun-ai/core';
@@ -29,10 +29,10 @@ const NONE = 'none';
 const FRONT_DESK = 'front-desk';
 
 /** One delivered exchange of the house's history: the desk that served, the operator's
- *  words, the words the operator read back, and the ids that turn's own recorded acts
- *  returned — engine-minted provenance, never scraped from the text. */
+ *  words, the words the operator read back, and the provenance that turn's own recorded
+ *  acts minted — `{ id, origin }` marks, never anything scraped from the text. */
 interface Exchange { readonly desk: string; readonly userText: string; readonly replyText: string;
-                     readonly resultIds: readonly string[] }
+                     readonly minted: readonly ProvenanceMark[] }
 /** Where one conversation sits: its history in order, and the desk it last landed on. */
 interface Seat { readonly history: readonly Exchange[]; readonly currentDesk: string | null }
 const OPENING: Seat = { history: [], currentDesk: null };
@@ -64,10 +64,26 @@ function foreignSince(history: readonly Exchange[], desk: string): readonly Exch
   return history.slice(history.map(e => e.desk).lastIndexOf(desk) + 1);
 }
 
-/** The ids one turn's recorded acts returned — read off the sealed record's own results
- *  and args, in the grounding floor's own shape. */
-function resultIdsOf(acts: TurnRecord['acts']): readonly string[] {
-  return carriedIds(JSON.stringify(acts.map(a => [a.result, a.call.args])));
+/** One mark per id: the FIRST act that carried it names its origin, and a later act
+ *  carrying the same id adds nothing. */
+function firstOrigins(marks: readonly ProvenanceMark[]): readonly ProvenanceMark[] {
+  const first = new Map<string, ProvenanceMark>();
+  for (const mark of marks) if (!first.has(mark.id)) first.set(mark.id, mark);
+  return [...first.values()];
+}
+
+/** The provenance one turn mints: every id-shaped token an act's result or args carried,
+ *  stamped with the act that carried it — `desk:tool`. Read off the sealed record's own
+ *  acts, in the grounding floor's own shape; the turn's words are never read. */
+function mintedBy(desk: string, acts: TurnRecord['acts']): readonly ProvenanceMark[] {
+  return firstOrigins(acts.flatMap(act =>
+    carriedIds(JSON.stringify([act.result, act.call.args]))
+      .map(id => ({ id, origin: `${desk}:${act.call.tool}` }))));
+}
+
+/** The provenance a desk inherits: the marks of every history entry it has not seen. */
+function inheritedBy(history: readonly Exchange[], desk: string): readonly ProvenanceMark[] {
+  return firstOrigins(foreignSince(history, desk).flatMap(e => e.minted));
 }
 
 const stated = (e: readonly [string, string | undefined]): e is readonly [string, string] =>
@@ -231,35 +247,39 @@ export class RoutedAgent {
   }
 
   /** What the desk has not seen rides in as `before` — the history since its own last
-   *  entry, delivered words only — and the ids those turns' own acts returned ride as
-   *  the grounding provenance the floor accepts. */
+   *  entry, delivered words only — and the marks those turns' own acts minted ride as the
+   *  grounding provenance. The floor checks ids, so the marks hand over their ids alone. */
   private deliver(desk: string, id: string, seat: Seat, text: string,
                   returnable: boolean): Promise<GovernedResult | TurnReturned> {
-    const foreign = foreignSince(seat.history, desk);
     return this.desks[desk].generateRouted(text,
-      { session: id, before: foreign, returnable,
-        grounded: [...new Set(foreign.flatMap(e => e.resultIds))] });
+      { session: id, before: foreignSince(seat.history, desk), returnable,
+        grounded: inheritedBy(seat.history, desk).map(mark => mark.id) });
   }
 
-  /** The turn's one write: the record gains the routing, the house's own turn count and
-   *  the router's tokens, and the history gains the exchange the next window reads. A
-   *  refusal names no desk, so the conversation keeps the seat it had. */
+  /** The turn's one write: the record gains the routing — the desk, the return and the
+   *  provenance that rode in — the house's own turn count and the router's tokens, and the
+   *  history gains the exchange the next window reads. A refusal names no desk, so the
+   *  conversation keeps the seat it had, and it mints nothing: no act ran. */
   private remember(id: string, seat: Seat, userText: string, served: GovernedResult | null,
-                   routing: TurnRouting, steps: readonly ModelStep[],
+                   decided: TurnRouting, steps: readonly ModelStep[],
                    handedBack: Usage = NOTHING_BILLED): GovernedResult {
     // What the turn cost outside the desk that served it: every front-desk step, and
     // the desk that read the message and handed it back.
     const beyond = merge(billed(steps), handedBack);
+    const inherited = decided.desk === null ? [] : inheritedBy(seat.history, decided.desk);
+    const routing: TurnRouting = inherited.length === 0
+      ? decided : { ...decided, grounded: inherited };
     const out: GovernedResult = served === null
       ? { text: this.refusalText(),
           loopRun: this.refusal(seat, userText, routing, beyond) }
       : { text: served.text,
           loopRun: { ...served.loopRun, turn: seat.history.length + 1, routing,
                      usage: merge(served.loopRun.usage, beyond) } };
+    const desk = routing.desk ?? FRONT_DESK;
     this.seats.set(id, {
       history: [...seat.history,
-        { desk: routing.desk ?? FRONT_DESK, userText, replyText: out.text,
-          resultIds: served === null ? [] : resultIdsOf(served.loopRun.acts) }],
+        { desk, userText, replyText: out.text,
+          minted: served === null ? [] : mintedBy(desk, served.loopRun.acts) }],
       currentDesk: routing.desk ?? seat.currentDesk });
     return out;
   }

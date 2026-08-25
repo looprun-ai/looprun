@@ -101,11 +101,17 @@ export interface Question {
 /** One prior turn's user text and reply text, as the front desk carries it across a
  *  desk hop — the tail of one exchange, never a whole transcript. */
 export interface ForeignExchange { readonly desk: string; readonly userText: string; readonly replyText: string }
+/** One id the conversation's own acts produced, and the act that produced it —
+ *  `desk:tool`. A mark is MINTED from a sealed record's acts; an id a reply merely
+ *  states carries none. */
+export interface ProvenanceMark { readonly id: string; readonly origin: string }
 /** The front desk's verdict for one turn: the desk it chose, or null when the house
  *  never routed. `returned` names the desk that declined the message and why, set
- *  only when this turn is itself a return. */
+ *  only when this turn is itself a return. `grounded` carries the marks that rode INTO
+ *  the turn — the provenance the desk was allowed to stand on; absent when none did. */
 export interface TurnRouting { readonly desk: string | null;
-                               readonly returned: null | { readonly by: string; readonly reason: string } }
+                               readonly returned: null | { readonly by: string; readonly reason: string };
+                               readonly grounded?: readonly ProvenanceMark[] }
 /** A desk's own decision to hand a message back to the front desk, with the reason the
  *  operator reads and what the desk spent reading the message. A returning turn seals no
  *  record, so `usage` is the only place those model calls are ever named — the front desk

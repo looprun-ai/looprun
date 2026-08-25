@@ -114,6 +114,29 @@ test('a decline the engine already read shuts the return door', async () => {
   expect(port.log).toEqual([]);
 });
 
+test('grounded ids the door carries pass the floor; the same call without them is refused', async () => {
+  const script = () => new ScriptedModel([
+    callStep('getBooking', { id: 'bk_9001' }),
+    finishStep('The booking is on the record.')
+  ]);
+
+  const carried = testEngine({ model: script() });
+  const withProvenance = await carried.engine.chat('s1', 'the one the other desk found',
+    { grounded: ['bk_9001'] }) as TurnRecord;
+
+  expect(withProvenance.acts[0].status).toBe('done');
+  expect(withProvenance.acts[0].guard).toBeNull();
+
+  const alone = testEngine({ model: script() });
+  const withoutProvenance = await alone.engine.chat(
+    's1', 'the one the other desk found') as TurnRecord;
+
+  expect(withoutProvenance.acts[0].status).toBe('not-done');
+  expect(withoutProvenance.acts[0].guard).toBe('groundedIds');
+  expect(withoutProvenance.acts[0].sentence).toContain(
+    "'bk_9001' in 'id' appears in no result and no message");
+});
+
 test('a non-returnable turn never carries the notMine card', async () => {
   const model = new ScriptedModel([finishStep('Nothing to do here.')]);
   const { engine } = testEngine({ model });

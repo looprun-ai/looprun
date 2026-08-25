@@ -1,13 +1,26 @@
 import { test, expect } from 'vitest';
-import type { AgentSpec, ChatMsg, ModelStep, ModelTarget, Msg } from '@looprun-ai/core';
+import type { AgentSpec, ChatMsg, DeclaredWorld, ForeignExchange, ModelStep, ModelTarget,
+              Msg, TurnReturned } from '@looprun-ai/core';
 import { ModelSeat, ScriptedModel, TurnFailure, WorldBuilder, mcpWorld,
          world } from '@looprun-ai/core';
 import { RoutedAgent, type RoutedSubjectCfg } from '../src/routed-agent.js';
-import { LoopRunAgent } from '../src/loop-run-agent.js';
+import { LoopRunAgent, type GovernedResult } from '../src/loop-run-agent.js';
 import { assemble } from '../src/agent-assembly.js';
 import { BOOKING, callStep, finishStep } from './fixtures/booking-world.js';
 
 const HANDLES = { yard: 'job schedules and hand-overs', billing: 'invoices and refunds' };
+
+/** A world where one desk's read returns the id another desk needs, and the turn head shows
+ *  no entity at all — so the only ground a second desk can stand on is what an act
+ *  returned. Job jb_2 carries a bare number where jb_1 carries an invoice id. */
+const WORKSITE = world({
+  records: { jobs: { jb_1: { crew: 'Ana', invoice: 'in_7001' },
+                     jb_2: { crew: 'Bo', ref: 7001 } },
+             invoices: { in_7001: { settled: false } } },
+  reads: { getJob: { form: 'get', entity: 'jobs', label: 'Look up the job' },
+           getInvoice: { form: 'get', entity: 'invoices', label: 'Look up the invoice' } },
+  tail: []
+});
 
 /** A world with a write, so what one desk changes is a thing another desk can read. */
 const JOBS = world({
@@ -37,14 +50,28 @@ const returns = (reason: string, inputTokens = 0, outputTokens = 0): ModelStep =
 const SCRIPTED: ModelTarget = { id: 'scripted', provider: 'scripted', keyEnv: null,
                                 tier: 'cloud', certified: true };
 
+type DeliveryOpts = { session?: string; before?: readonly ForeignExchange[];
+                      returnable?: boolean; grounded?: readonly string[] };
+
+/** A desk that keeps the ids the house delivered to it — `delivered` is the grounding
+ *  provenance seam, one entry per delivery. */
+class Desk extends LoopRunAgent {
+  readonly delivered: (readonly string[] | undefined)[] = [];
+  override generateRouted(text: string, opts: DeliveryOpts):
+      Promise<GovernedResult | TurnReturned> {
+    this.delivered.push(opts.grounded);
+    return super.generateRouted(text, opts);
+  }
+}
+
 /** One desk whose seat is a ScriptedModel the test holds — `seen` is the desk's own
  *  window, its tool cards and the foreign text it was handed. Desk replies carry no
  *  figures: a figure no record grounds redrives the turn. */
-function desk(name: string, steps: readonly ModelStep[]):
-    { agent: LoopRunAgent; model: ScriptedModel } {
+function desk(name: string, steps: readonly ModelStep[], card: DeclaredWorld = BOOKING):
+    { agent: Desk; model: ScriptedModel } {
   const model = new ScriptedModel(steps);
-  const agent = new LoopRunAgent(
-    { spec: { name, persona: 'You are the desk.' }, world: BOOKING,
+  const agent = new Desk(
+    { spec: { name, persona: 'You are the desk.' }, world: card,
       model: { scripted: { steps: [] } } },
     async cfg => {
       const built = await assemble(cfg);
@@ -200,6 +227,61 @@ test('before carries exactly the foreign entries since that desk\'s last visit',
   expect(yardAgain[2]).toBe('is the invoice paid?');
   expect(yardAgain[3]).toBe(money.text);
   expect(yardAgain[4]).toBe('who is on it?');
+});
+
+test('a desk\'s own act mints the id the next desk stands on, and the record names its origin', async () => {
+  const router = new ScriptedModel([routeStep('yard'), routeStep('billing')]);
+  const yard = desk('yard', [callStep('getJob', { id: 'jb_1' }),
+                             finishStep('Ana is on it.')], WORKSITE);
+  const billing = desk('billing', [callStep('getInvoice', { id: 'in_7001' }),
+                                   finishStep('The invoice is open.')], WORKSITE);
+  const agent = house(router, { yard: yard.agent, billing: billing.agent });
+
+  await agent.generate('who is on job jb_1?', { session: 's1' });
+  const settled = await agent.generate('settle its invoice', { session: 's1' });
+
+  // Billing never read in_7001 and the operator never typed it: the yard's own act
+  // returned it, and that is the whole of its licence to be used.
+  expect(billing.agent.delivered[0]).toContain('in_7001');
+  expect(settled.loopRun.acts[0].status).toBe('done');
+  expect(settled.loopRun.routing?.grounded)
+    .toContainEqual({ id: 'in_7001', origin: 'yard:getJob' });
+});
+
+test('an id several acts carry keeps the FIRST act that returned it as its origin', async () => {
+  const router = new ScriptedModel([routeStep('yard'), routeStep('billing')]);
+  const yard = desk('yard', [callStep('getJob', { id: 'jb_1' }),
+                             callStep('getInvoice', { id: 'in_7001' }),
+                             finishStep('Ana is on it and the invoice is open.')], WORKSITE);
+  const billing = desk('billing', [finishStep('Noted on the worksite file.')], WORKSITE);
+  const agent = house(router, { yard: yard.agent, billing: billing.agent });
+
+  await agent.generate('who is on job jb_1?', { session: 's1' });
+  const next = await agent.generate('note it on the worksite file', { session: 's1' });
+
+  // getJob returned it and getInvoice took it as an argument — one mark, the first act.
+  expect((next.loopRun.routing?.grounded ?? []).filter(m => m.id === 'in_7001'))
+    .toEqual([{ id: 'in_7001', origin: 'yard:getJob' }]);
+});
+
+test('TEXT MINTS NOTHING: an id a desk planted in its reply grounds no call at the next desk', async () => {
+  const router = new ScriptedModel([routeStep('yard'), routeStep('billing')]);
+  // Job jb_2 carries a bare number and no invoice id. The yard states one anyway — words
+  // the next desk reads back, and nothing an act ever produced.
+  const yard = desk('yard', [callStep('getJob', { id: 'jb_2' }),
+                             finishStep('Bo is on it — the invoice is in_7001.')], WORKSITE);
+  const billing = desk('billing', [callStep('getInvoice', { id: 'in_7001' }),
+                                   finishStep('I could not confirm that.')], WORKSITE);
+  const agent = house(router, { yard: yard.agent, billing: billing.agent });
+
+  const said = await agent.generate('who is on job jb_2?', { session: 's1' });
+  const settled = await agent.generate('settle its invoice', { session: 's1' });
+
+  expect(said.text).toContain('in_7001');                    // the words did carry it
+  expect(billing.agent.delivered[0]).not.toContain('in_7001');
+  expect((settled.loopRun.routing?.grounded ?? []).map(m => m.id)).not.toContain('in_7001');
+  expect(settled.loopRun.acts[0].status).toBe('not-done');
+  expect(settled.loopRun.acts[0].guard).toBe('groundedIds');
 });
 
 test('an unreadable decision retries once identically, then fails the turn', async () => {
