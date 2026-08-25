@@ -159,9 +159,38 @@ export function argFormat(tool: string, arg: string, pattern: string): SeedGuard
 
 /** The always-on floor: an id-shaped argument value the conversation never
  *  produced is a GUESS — a well-formed guess is still a fabrication. Grounded =
- *  the operator typed it (any turn) or a recorded act carried it (result or
- *  args). Id-shaped = lowercase prefix, underscore, alnum suffix with a digit —
+ *  the operator typed it (any turn), a recorded act carried it (result or
+ *  args), or the conversation's own acts returned it at another desk (the
+ *  engine-minted provenance the routed door carries — never scraped from
+ *  text). Id-shaped = lowercase prefix, underscore, alnum suffix with a digit —
  *  enum words like a policy topic carry no digit and stay untouched. */
+/** Every id-shaped token a text carries, in the grounding floor's own shape — the
+ *  walk the routed door uses to mint provenance from a sealed record's results. */
+export function carriedIds(text: string): readonly string[] {
+  const found = new Set<string>();
+  let start = -1;
+  const flush = (end: number): void => {
+    if (start === -1) return;
+    const token = text.slice(start, end);
+    const at = token.indexOf('_');
+    if (at > 0 && at < token.length - 1
+        && [...token.slice(0, at)].every(ch => ch >= 'a' && ch <= 'z')
+        && [...token.slice(at + 1)].some(ch => ch >= '0' && ch <= '9')
+        && [...token.slice(at + 1)].every(ch => (ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9'))) {
+      found.add(token);
+    }
+    start = -1;
+  };
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    const inToken = (ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9') || ch === '_';
+    if (inToken && start === -1) start = i;
+    if (!inToken) flush(i);
+  }
+  flush(text.length);
+  return [...found];
+}
+
 export function groundedIds(): SeedGuard {
   const isIdShaped = (v: string): boolean => {
     const at = v.indexOf('_');
@@ -198,6 +227,7 @@ export function groundedIds(): SeedGuard {
           const grounded = ctx.userTexts.some(t => t.includes(v))
             || [...ctx.pastActs, ...ctx.turnActs].some(a =>
               JSON.stringify(a.result).includes(v) || JSON.stringify(a.call.args).includes(v))
+            || (ctx.grounded ?? []).includes(v)
             || (ctx.state !== null && visibleState(ctx.state).includes(v))
             || note.includes(v);
           if (!grounded) return `'${v}' in '${arg}' appears in no result and no message`;

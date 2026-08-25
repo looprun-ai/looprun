@@ -57,11 +57,12 @@ export class LoopRunAgent extends Agent {
    *  message back instead of serving it — a TurnReturned passes straight through,
    *  a sealed record narrows to the delivery text and the whole record. */
   async generateRouted(text: string, opts: { session?: string;
-      before?: readonly ForeignExchange[]; returnable?: boolean }):
+      before?: readonly ForeignExchange[]; returnable?: boolean;
+      grounded?: readonly string[] }):
       Promise<GovernedResult | TurnReturned> {
     const { engine } = await this.ready;
     const out = await engine.chat(opts.session ?? 'default', text,
-      { before: opts.before, returnable: opts.returnable });
+      { before: opts.before, returnable: opts.returnable, grounded: opts.grounded });
     return 'returned' in out ? out : { text: out.text, loopRun: out };
   }
 

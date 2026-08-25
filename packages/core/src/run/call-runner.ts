@@ -323,6 +323,7 @@ export class CallRunner {
       call: call.data(mask), effect: fact.effect, consented: origin === 'licence',
       state, userText: draft.userText,
       userTexts: [draft.userText, ...this.deps.history.sealed().map(r => r.userText)],
+      grounded: [...draft.grounded],
       turnActs: [...draft.acts],
       pastActs: this.deps.history.pastActs()
     });

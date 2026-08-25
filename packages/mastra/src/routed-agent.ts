@@ -17,6 +17,7 @@
 import type { AgentSpec, DeclaredWorld, DomainContract, ForeignExchange, FrontDeskCfg,
               LlmParams, ModelPort, ModelStep, StepUsage, TurnRecord, TurnReturned,
               TurnRouting } from '@looprun-ai/core';
+import { carriedIds } from '@looprun-ai/core';
 import { CardError, ScriptedModel, TurnFailure, WorldBuilder, composeWindow,
          readDecision } from '@looprun-ai/core';
 import type { LoopRunConfig, LoopRunModel } from './agent-assembly.js';
@@ -28,8 +29,10 @@ const NONE = 'none';
 const FRONT_DESK = 'front-desk';
 
 /** One delivered exchange of the house's history: the desk that served, the operator's
- *  words and the words the operator read back. Delivered TEXT only — no acts. */
-interface Exchange { readonly desk: string; readonly userText: string; readonly replyText: string }
+ *  words, the words the operator read back, and the ids that turn's own recorded acts
+ *  returned — engine-minted provenance, never scraped from the text. */
+interface Exchange { readonly desk: string; readonly userText: string; readonly replyText: string;
+                     readonly resultIds: readonly string[] }
 /** Where one conversation sits: its history in order, and the desk it last landed on. */
 interface Seat { readonly history: readonly Exchange[]; readonly currentDesk: string | null }
 const OPENING: Seat = { history: [], currentDesk: null };
@@ -57,8 +60,14 @@ function billed(steps: readonly ModelStep[]): Usage {
 
 /** What a desk has not seen: every history entry after its own last one. A desk it never
  *  served rides in as plain text — delivered words, no acts, nothing executable. */
-function foreignSince(history: readonly Exchange[], desk: string): readonly ForeignExchange[] {
+function foreignSince(history: readonly Exchange[], desk: string): readonly Exchange[] {
   return history.slice(history.map(e => e.desk).lastIndexOf(desk) + 1);
+}
+
+/** The ids one turn's recorded acts returned — read off the sealed record's own results
+ *  and args, in the grounding floor's own shape. */
+function resultIdsOf(acts: TurnRecord['acts']): readonly string[] {
+  return carriedIds(JSON.stringify(acts.map(a => [a.result, a.call.args])));
 }
 
 const stated = (e: readonly [string, string | undefined]): e is readonly [string, string] =>
@@ -222,11 +231,14 @@ export class RoutedAgent {
   }
 
   /** What the desk has not seen rides in as `before` — the history since its own last
-   *  entry, delivered words only. */
+   *  entry, delivered words only — and the ids those turns' own acts returned ride as
+   *  the grounding provenance the floor accepts. */
   private deliver(desk: string, id: string, seat: Seat, text: string,
                   returnable: boolean): Promise<GovernedResult | TurnReturned> {
+    const foreign = foreignSince(seat.history, desk);
     return this.desks[desk].generateRouted(text,
-      { session: id, before: foreignSince(seat.history, desk), returnable });
+      { session: id, before: foreign, returnable,
+        grounded: [...new Set(foreign.flatMap(e => e.resultIds))] });
   }
 
   /** The turn's one write: the record gains the routing, the house's own turn count and
@@ -246,7 +258,8 @@ export class RoutedAgent {
                      usage: merge(served.loopRun.usage, beyond) } };
     this.seats.set(id, {
       history: [...seat.history,
-        { desk: routing.desk ?? FRONT_DESK, userText, replyText: out.text }],
+        { desk: routing.desk ?? FRONT_DESK, userText, replyText: out.text,
+          resultIds: served === null ? [] : resultIdsOf(served.loopRun.acts) }],
       currentDesk: routing.desk ?? seat.currentDesk });
     return out;
   }

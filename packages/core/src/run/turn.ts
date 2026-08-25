@@ -67,6 +67,7 @@ export class Turn {
     const draft = session.draft();
     draft.userText = userText;
     draft.servedBy = seat.serving();
+    draft.grounded.push(...(opts.grounded ?? []));
     // Every model call this turn — the main loop, the owed-read micro-step and the
     // judged pass alike — books its cost on the draft; zeros where the port has no
     // numbers.

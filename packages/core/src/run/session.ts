@@ -25,6 +25,9 @@ export interface TurnDraft {
   /** Prerequisite tools whose micro-step yielded no call this turn — the debt is
    *  asked of the model at most once per turn. */
   readonly microTried: string[];
+  /** Ids the conversation's own acts returned at other desks — engine-minted
+   *  provenance the grounding floor accepts alongside the desk's own reads. */
+  readonly grounded: string[];
   /** Every model call books its cost here; zeros where the port has no numbers. */
   readonly usage: { inputTokens: number; outputTokens: number; cachedInputTokens: number;
                     reasoningTokens: number; modelCalls: number };
@@ -60,7 +63,7 @@ export class Session {
     this.consent.beginTurn();
     return { turn: this.turnIndex, userText: '', servedBy: '', acts: [], corrections: [],
              issued: [], consumed: [], closed: [], finish: null, closedBy: 'model', text: '',
-             microTried: [],
+             microTried: [], grounded: [],
              usage: { inputTokens: 0, outputTokens: 0, cachedInputTokens: 0, reasoningTokens: 0,
                       modelCalls: 0 } };
   }

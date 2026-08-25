@@ -115,8 +115,11 @@ export interface TurnReturned {
   readonly usage: StepUsage & { readonly modelCalls: number };
 }
 /** Chat-door options: `before` seeds prior exchanges across desks, `returnable`
- *  lets the active desk hand a message back to the front desk. */
-export interface ChatOpts { readonly before?: readonly ForeignExchange[]; readonly returnable?: boolean }
+ *  lets the active desk hand a message back to the front desk, and `grounded`
+ *  carries the ids the conversation's own recorded acts returned at other
+ *  desks — engine-minted provenance, never text-scraped. */
+export interface ChatOpts { readonly before?: readonly ForeignExchange[]; readonly returnable?: boolean;
+                            readonly grounded?: readonly string[] }
 export interface TurnRecord {
   readonly turn: number;
   readonly servedBy: string;                  // which certified target answered
@@ -161,6 +164,9 @@ export interface CallCtx   { readonly call: CanonicalCallData; readonly effect: 
                              readonly userText: string;
                              // every message the operator has sent, this turn included
                              readonly userTexts: readonly string[];
+                             /** Ids the conversation's own acts returned at other desks —
+                              *  engine-minted provenance a grounding check may accept. */
+                             readonly grounded?: readonly string[];
                              readonly turnActs: readonly Act[]; readonly pastActs: readonly Act[] }
 export interface ResultCtx { readonly call: CanonicalCallData; readonly result: Json;
                              readonly state: StateSnapshot | null;
