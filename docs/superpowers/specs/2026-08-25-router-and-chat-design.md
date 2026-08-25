@@ -224,13 +224,17 @@ instruction.
   composes it generically for the exam. The chat rides the same two pieces:
   `RoutedAgent.fromSubject(subject)` (mastra) builds one `LoopRunAgent` per desk, reads
   `handles` from the emitted artifacts, and returns the routed house — or the lone
-  `LoopRunAgent` itself when the subject declares one desk. One generic bench tool serves
+  `LoopRunAgent` itself when the subject declares one desk. The command is a subcommand of
+  the `looprun` CLI that already ships (`looprun init`, `looprun models …`), and it serves
   every subject, present and future:
 
   ```
-  SUBJECT_DIR=subjects/atlas-c17   node tools/chat.mjs
-  SUBJECT_DIR=subjects/any-new-one node tools/chat.mjs      # only the dir changes
+  npx looprun chat subjects/atlas-c17
+  npx looprun chat subjects/any-new-one     # only the dir changes
   ```
+
+  The model and its key come from the subject's own `ask/targets.json` and the environment,
+  exactly as the exam runner reads them.
 
 ## 6 · Errors
 
