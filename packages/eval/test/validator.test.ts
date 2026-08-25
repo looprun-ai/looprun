@@ -110,6 +110,18 @@ test('a routed approve on a tool no desk in the house holds still blocks', async
     .toContain('no desk of the house');
 });
 
+test('a case naming both a desk and a route blocks', async () => {
+  const planted: Subject = { ...twoDesks(await mini()), cases: [{
+    id: 'pinned-and-routed', split: 'fix',
+    turns: ['is bk_9 confirmed?'],
+    agent: 'back', route: ['back'],
+    rubric: 'r' }] };
+  const findings = new Validator().run(planted).findings;
+  expect(findings.map(f => f.code)).toContain('CASE_PINNED_AND_ROUTED');
+  expect(findings.find(f => f.code === 'CASE_PINNED_AND_ROUTED')?.sentence)
+    .toContain("Case 'pinned-and-routed' names desk 'back' and a route");
+});
+
 test('an underivable disclosure slot blocks through the compile', async () => {
   const subject = await mini();
   const planted: Subject = { ...subject,

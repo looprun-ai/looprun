@@ -75,6 +75,13 @@ export class Validator {
         }
       }
       if (c.route !== undefined) {
+        if (c.agent !== undefined) {
+          findings.push({ code: 'CASE_PINNED_AND_ROUTED',
+            sentence: `Case '${c.id}' names desk '${c.agent}' and a route: a pinned case plays `
+              + `every turn at that one desk and the house never routes it, so every route row `
+              + `reads as a mismatch against a turn that named no desk. Name the desk or the `
+              + `route, not both.` });
+        }
         if (c.route.length !== c.turns.length) {
           findings.push({ code: 'CASE_ROUTE_LENGTH_MISMATCH',
             sentence: `Case '${c.id}' declares a route of ${String(c.route.length)} turns, `
