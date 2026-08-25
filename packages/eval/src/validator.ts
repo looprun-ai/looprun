@@ -67,6 +67,22 @@ export class Validator {
           }
         }
       }
+      if (c.route !== undefined) {
+        if (c.route.length !== c.turns.length) {
+          findings.push({ code: 'CASE_ROUTE_LENGTH_MISMATCH',
+            sentence: `Case '${c.id}' declares a route of ${String(c.route.length)} turns, `
+              + `but the case plays ${String(c.turns.length)}.` });
+        }
+        c.route.forEach((expected, i) => {
+          const desks = Array.isArray(expected) ? expected : [expected];
+          for (const d of desks) {
+            if (d !== 'none' && subject.specs[d] === undefined) {
+              findings.push({ code: 'CASE_ROUTE_DESK_UNKNOWN',
+                sentence: `Case '${c.id}' names desk '${d}' on turn ${String(i + 1)}, which no spec declares.` });
+            }
+          }
+        });
+      }
     }
 
     return { findings };

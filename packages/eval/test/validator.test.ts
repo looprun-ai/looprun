@@ -45,6 +45,36 @@ test('a preset whose patch names a missing record blocks with the world law', as
   expect(findings.some(f => f.sentence.includes("'broken'"))).toBe(true);
 });
 
+test('a route whose length differs from the case\'s turn count blocks', async () => {
+  const subject = await mini();
+  const planted: Subject = { ...subject, cases: [{
+    id: 'bad-route-length', split: 'fix',
+    turns: ['is bk_9 confirmed?', 'thanks'],
+    route: ['concierge'],
+    rubric: 'r' }] };
+  const codes = new Validator().run(planted).findings.map(f => f.code);
+  expect(codes).toContain('CASE_ROUTE_LENGTH_MISMATCH');
+});
+
+test('a route naming a desk no spec declares blocks — plain or inside a defensible set', async () => {
+  const subject = await mini();
+  const planted: Subject = { ...subject, cases: [{
+    id: 'bad-route-desk', split: 'fix',
+    turns: ['is bk_9 confirmed?'],
+    route: [['concierge', 'ghost-desk']],
+    rubric: 'r' }] };
+  const codes = new Validator().run(planted).findings.map(f => f.code);
+  expect(codes).toContain('CASE_ROUTE_DESK_UNKNOWN');
+});
+
+test('route \'none\' is always a legal desk name', async () => {
+  const subject = await mini();
+  const planted: Subject = { ...subject, cases: [{
+    id: 'route-none-ok', split: 'fix', turns: ['hello'], route: ['none'], rubric: 'r' }] };
+  const codes = new Validator().run(planted).findings.map(f => f.code);
+  expect(codes).not.toContain('CASE_ROUTE_DESK_UNKNOWN');
+});
+
 test('an underivable disclosure slot blocks through the compile', async () => {
   const subject = await mini();
   const planted: Subject = { ...subject,

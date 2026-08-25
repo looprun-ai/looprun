@@ -7,7 +7,7 @@ import { createHash } from 'node:crypto';
 import type { ApproveRef, ExamCase, Json, Question, ToolMatcher,
               TurnRecord } from '@looprun-ai/core';
 import { TurnFailure } from '@looprun-ai/core';
-import { LoopRunAgent, UngovernedAgent, type LoopRunConfig,
+import { LoopRunAgent, RoutedAgent, UngovernedAgent, type LoopRunConfig,
          type LoopRunModel } from '@looprun-ai/mastra';
 import type { Subject } from './subject-loader.js';
 import { appendLine, writeDump, type CaseDump } from './run-dir.js';
@@ -81,14 +81,30 @@ function checkInvariants(c: ExamCase, records: readonly TurnRecord[]): string[] 
   return failures;
 }
 
+/** The expected desk per operator turn, walked against the sealed records' own
+ *  routing — 'none' names the front desk's own refusal, and an inner array names
+ *  a defensible SET, any member of which counts. Undeclared for a desk-pinned
+ *  case, so this never runs there. */
+function checkRoute(c: ExamCase, records: readonly TurnRecord[]): string[] {
+  if (c.route === undefined) return [];
+  const failures: string[] = [];
+  c.route.forEach((expected, i) => {
+    const got = records[i]?.routing?.desk ?? 'none';
+    const wanted = Array.isArray(expected) ? expected : [expected];
+    if (!wanted.includes(got)) {
+      failures.push(`route mismatch at turn ${i + 1}: expected ${wanted.join('|')}, got ${got}`);
+    }
+  });
+  return failures;
+}
+
 export class ExamRunner {
   async runCase(subject: Subject, c: ExamCase, variant: CaseDump['variant'],
                 model: LoopRunModel, runDir: string): Promise<CaseDump> {
-    const agentName = c.agent ?? Object.keys(subject.specs)[0];
-    const cfg: LoopRunConfig = {
-      spec: subject.specs[agentName], contract: subject.contract,
-      model, world: subject.world, preset: c.preset
-    };
+    // A case with `route` and no pinned `agent` plays through the routed house — one
+    // shared declared world, every desk a certified target. A pinned case still
+    // composes the ONE agent it always did, byte-identical.
+    const routed = c.agent === undefined && c.route !== undefined;
     const records: TurnRecord[] = [];
     const usage: { turn: number; inputTokens: number; outputTokens: number;
       cachedInputTokens: number; reasoningTokens: number;
@@ -105,9 +121,23 @@ export class ExamRunner {
       appendLine(runDir, 'failures.jsonl', { case: c.id, variant, kind, detail, hash });
     };
 
-    let agent: LoopRunAgent | null = null;
+    let agent: LoopRunAgent | RoutedAgent | null = null;
     try {
-      agent = variant === 'governed' ? new LoopRunAgent(cfg) : new UngovernedAgent(cfg);
+      if (routed) {
+        if (!('card' in subject.world)) {
+          throw new TurnFailure('construction',
+            `case '${c.id}' names a route, but the subject's world is not declared — a `
+            + 'routed house builds ONE shared world at its door, and only a declared world '
+            + 'card can be built and handed to every desk.');
+        }
+        agent = RoutedAgent.fromSubject({ specs: subject.specs, contract: subject.contract,
+          world: subject.world, model, preset: c.preset });
+      } else {
+        const agentName = c.agent ?? Object.keys(subject.specs)[0];
+        const cfg: LoopRunConfig = { spec: subject.specs[agentName], contract: subject.contract,
+          model, world: subject.world, preset: c.preset };
+        agent = variant === 'governed' ? new LoopRunAgent(cfg) : new UngovernedAgent(cfg);
+      }
     } catch (e: unknown) {
       incident(e);
     }
@@ -123,7 +153,7 @@ export class ExamRunner {
           : approvalText(Array.isArray(turn.approve) ? turn.approve : [turn.approve],
               openQuestions(records), records.flatMap(r => r.questions.issued), c.id);
         const started = Date.now();
-        const out = await (agent as LoopRunAgent).generate(text, { session: c.id });
+        const out = await (agent as LoopRunAgent | RoutedAgent).generate(text, { session: c.id });
         records.push(out.loopRun);
         usage.push({ turn: out.loopRun.turn, ...out.loopRun.usage,
           wallClockMs: Date.now() - started });
@@ -135,7 +165,8 @@ export class ExamRunner {
 
     const dump: CaseDump = { case: c.id, variant, split: c.split, records,
       servedBy: records[0]?.servedBy ?? 'none',
-      invariantFailures: failure === null ? checkInvariants(c, records) : [], failure, usage };
+      invariantFailures: failure === null
+        ? [...checkInvariants(c, records), ...checkRoute(c, records)] : [], failure, usage };
     writeDump(runDir, dump);
     return dump;
   }

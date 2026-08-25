@@ -3,8 +3,9 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
+import { world } from '@looprun-ai/core';
 import type { ExamCase, ModelStep } from '@looprun-ai/core';
-import { SubjectLoader } from '../src/subject-loader.js';
+import { SubjectLoader, type Subject } from '../src/subject-loader.js';
 import { ExamRunner } from '../src/exam-runner.js';
 import { readDump } from '../src/run-dir.js';
 
@@ -14,6 +15,18 @@ const call = (tool: string, args: Record<string, unknown>): ModelStep =>
   ({ calls: [{ tool, args }], text: '' });
 const finish = (message: string, report: { tool: string; target: string; word: string }[] = []):
   ModelStep => ({ calls: [{ tool: 'finish', args: { message, report } }], text: '' });
+const routeStep = (desk: string): ModelStep =>
+  ({ calls: [{ tool: 'route', args: { desk } }], text: '' });
+
+/** A two-desk house, world-free — these cases only ever call finish. */
+function routedSubject(): Subject {
+  return { dir: '', contract: undefined, presets: [undefined], cases: [], targets: [],
+    world: world({ records: {} }),
+    specs: {
+      yard: { name: 'yard', persona: 'You run the yard.', handles: 'job schedules' },
+      billing: { name: 'billing', persona: 'You run billing.', handles: 'invoices and refunds' }
+    } };
+}
 
 test('a consent case plays the public door: typed approval resolves the open code', async () => {
   const subject = await SubjectLoader.load(MINI);
@@ -103,4 +116,48 @@ test('the ungoverned variant runs the twin — the destructive call executes unh
   ] } }, runDir);
   expect(dump.records[0].questions.issued).toHaveLength(0);
   expect(dump.records[0].acts[0].status).toBe('done');
+});
+
+test('a routed case plays through the house — each record carries the desk that served it', async () => {
+  const subject = routedSubject();
+  const c: ExamCase = { id: 'route-01', split: 'fix',
+    turns: ['put a crew on the job', 'look at the invoice'],
+    route: ['yard', 'billing'], rubric: 'r' };
+  const runDir = mkdtempSync(join(tmpdir(), 'run-'));
+  // Element 0 reads as a finish to whichever desk is picked (its own first turn) and
+  // as an unreadable decision to the router — which then retries onto element 1, the
+  // real 'yard' decision. Turn two's decision reads clean on the router's first try.
+  const dump = await new ExamRunner().runCase(subject, c, 'governed', { scripted: { steps: [
+    finish('Hello.'), routeStep('yard'), routeStep('billing')
+  ] } }, runDir);
+
+  expect(dump.records).toHaveLength(2);
+  expect(dump.records[0].routing?.desk).toBe('yard');
+  expect(dump.records[1].routing?.desk).toBe('billing');
+  expect(dump.invariantFailures).toEqual([]);
+});
+
+test('a route mismatch lands in invariantFailures', async () => {
+  const subject = routedSubject();
+  const c: ExamCase = { id: 'route-02', split: 'fix',
+    turns: ['look at the invoice'], route: ['billing'], rubric: 'r' };
+  const runDir = mkdtempSync(join(tmpdir(), 'run-'));
+  const dump = await new ExamRunner().runCase(subject, c, 'governed', { scripted: { steps: [
+    finish('Hello.'), routeStep('yard')
+  ] } }, runDir);
+
+  expect(dump.records[0].routing?.desk).toBe('yard');
+  expect(dump.invariantFailures).toEqual(['route mismatch at turn 1: expected billing, got yard']);
+});
+
+test('a desk-pinned case runs exactly as before — no routing field, no route checks', async () => {
+  const subject = await SubjectLoader.load(MINI);
+  const c: ExamCase = { id: 'mini-08', split: 'fix', agent: 'concierge',
+    turns: ['is bk_9 confirmed?'], rubric: 'r' };
+  const runDir = mkdtempSync(join(tmpdir(), 'run-'));
+  const dump = await new ExamRunner().runCase(subject, c, 'governed',
+    { scripted: { steps: [finish('It is confirmed.')] } }, runDir);
+
+  expect(dump.records[0].routing).toBeUndefined();
+  expect(dump.invariantFailures).toEqual([]);
 });

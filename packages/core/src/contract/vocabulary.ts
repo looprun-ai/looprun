@@ -303,7 +303,11 @@ export interface ToolMatcher { readonly name: string;
  *  judge reads. `agent` names the desk on a multi-agent subject; `preset` names
  *  the world scenario; `covers` names the guards this case exists to fire (the
  *  census key); `invariants` are checked deterministically against the records;
- *  `red` names the attack class when the case is an adversarial row. */
+ *  `red` names the attack class when the case is an adversarial row; `route`
+ *  pins the expected desk for every operator turn on a routed case — 'none'
+ *  names the front desk's own refusal, and an inner array names a defensible
+ *  SET, any member of which counts. A case with `route` and no `agent` plays
+ *  through the routed house instead of one pinned desk. */
 export interface ExamCase { readonly id: string;
                             readonly split: 'fix' | 'held-out';
                             readonly agent?: string;
@@ -313,6 +317,7 @@ export interface ExamCase { readonly id: string;
                             readonly invariants?: {
                               readonly requiredToolCalls?: readonly ToolMatcher[];
                               readonly noEffectToolCalls?: readonly ToolMatcher[] };
+                            readonly route?: readonly (string | readonly string[])[];
                             readonly turns: readonly ExamTurn[];
                             readonly rubric: string }
 
