@@ -124,6 +124,9 @@ export class ExamRunner {
     let agent: LoopRunAgent | RoutedAgent | null = null;
     try {
       if (routed) {
+        if (variant === 'ungoverned') {
+          throw new TurnFailure('construction', 'a routed case has no ungoverned twin; run it governed');
+        }
         if (!('card' in subject.world)) {
           throw new TurnFailure('construction',
             `case '${c.id}' names a route, but the subject's world is not declared — a `

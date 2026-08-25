@@ -161,3 +161,17 @@ test('a desk-pinned case runs exactly as before — no routing field, no route c
   expect(dump.records[0].routing).toBeUndefined();
   expect(dump.invariantFailures).toEqual([]);
 });
+
+test('a routed case dispatched ungoverned refuses — the label never lies', async () => {
+  const subject = routedSubject();
+  const c: ExamCase = { id: 'route-03', split: 'fix',
+    turns: ['look at the invoice'], route: ['billing'], rubric: 'r' };
+  const runDir = mkdtempSync(join(tmpdir(), 'run-'));
+  const dump = await new ExamRunner().runCase(subject, c, 'ungoverned', { scripted: { steps: [
+    finish('Hello.'), routeStep('billing')
+  ] } }, runDir);
+
+  expect(dump.records).toEqual([]);
+  expect(dump.failure).toEqual({ kind: 'construction',
+    detail: `a routed case has no ungoverned twin; run it governed` });
+});
