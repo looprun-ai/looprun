@@ -35,7 +35,11 @@ test('a returnable turn offers notMine and a first-call notMine returns without 
 
   const returned = await engine.chat('s1', 'raise the invoice', { returnable: true });
 
-  expect(returned).toEqual({ returned: { reason: 'not mine' } });
+  // The turn seals nothing, so the one call the desk spent reading the message rides
+  // back with the return — it is billed nowhere else.
+  expect(returned).toEqual({ returned: { reason: 'not mine' },
+    usage: { inputTokens: 0, outputTokens: 0, cachedInputTokens: 0, reasoningTokens: 0,
+             modelCalls: 1 } });
   const names = model.seen[0].tools.map(t => t.name);
   expect(names).toContain('notMine');
   // The finish stays last: forceFinish targets the last card on the surface.
@@ -47,6 +51,22 @@ test('a returnable turn offers notMine and a first-call notMine returns without 
   const next = await engine.chat('s1', 'what can you do');
   expect((next as TurnRecord).turn).toBe(1);
   expect(model.seen[1].messages).toEqual([{ role: 'user', text: 'what can you do' }]);
+});
+
+test('the return carries the tokens the desk spent, frozen like every boundary value', async () => {
+  const model = new ScriptedModel([{ calls: [{ tool: 'notMine', args: { reason: 'not mine' } }],
+    text: '', usage: { inputTokens: 120, outputTokens: 4, cachedInputTokens: 0,
+                       reasoningTokens: 0 } }]);
+  const { engine } = testEngine({ model });
+
+  const returned = await engine.chat('s1', 'raise the invoice', { returnable: true });
+
+  if (!('returned' in returned)) throw new Error('expected a return, got a sealed record');
+  expect(returned.usage).toEqual({ inputTokens: 120, outputTokens: 4, cachedInputTokens: 0,
+                                   reasoningTokens: 0, modelCalls: 1 });
+  expect(Object.isFrozen(returned)).toBe(true);
+  expect(Object.isFrozen(returned.usage)).toBe(true);
+  expect(Object.isFrozen(returned.returned)).toBe(true);
 });
 
 test('notMine after an act is refused and the turn continues', async () => {

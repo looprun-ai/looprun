@@ -26,7 +26,9 @@ import type { Session, TurnDraft } from './session.js';
  *  front desk instead of serving it. It is the turn's opening move or nothing — once
  *  an act is on the record the door is closed, and a call to it is dropped with the
  *  refusal sentence on the draft. A returning turn composes no reply and seals
- *  nothing, so the front desk re-routes against the tape it already had. */
+ *  nothing, so the front desk re-routes against the tape it already had — and the
+ *  discarded draft's model calls ride back with the return, the only place they
+ *  are ever named. */
 const RETURN_TOOL = 'notMine';
 const RETURN_CLOSED = 'the return door closed once work began';
 const RETURN_CARD: ToolCard = {
@@ -208,7 +210,8 @@ export class Turn {
       if (returning !== undefined) {
         if (opening && draft.acts.length === 0
           && draft.consumed.length === 0 && draft.closed.length === 0) {
-          return { returned: { reason: String(returning.args['reason'] ?? '') } };
+          return deepFreeze({ returned: { reason: String(returning.args['reason'] ?? '') },
+                             usage: { ...draft.usage } });
         }
         draft.corrections.push({ kind: 'returnRefused', detail: RETURN_CLOSED });
       }

@@ -68,7 +68,9 @@ test('generateRouted resolves the engine\'s TurnReturned unchanged', async () =>
     ] } }
   });
   const out = await agent.generateRouted('hi', { session: 's1', returnable: true });
-  expect(out).toEqual({ returned: { reason: 'wrong desk' } });
+  expect(out).toEqual({ returned: { reason: 'wrong desk' },
+    usage: { inputTokens: 0, outputTokens: 0, cachedInputTokens: 0, reasoningTokens: 0,
+             modelCalls: 1 } });
 });
 
 test('generateRouted resolves { text, loopRun } on a sealed record', async () => {

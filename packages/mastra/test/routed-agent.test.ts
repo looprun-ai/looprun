@@ -29,8 +29,10 @@ function routeStep(chosen: string, inputTokens = 0, outputTokens = 0): ModelStep
 
 const unreadable: ModelStep = { calls: [], text: '' };
 
-const returns = (reason: string): ModelStep =>
-  ({ calls: [{ tool: 'notMine', args: { reason } }], text: '' });
+/** A desk handing the message back, with the tokens the provider billed for reading it. */
+const returns = (reason: string, inputTokens = 0, outputTokens = 0): ModelStep =>
+  ({ calls: [{ tool: 'notMine', args: { reason } }], text: '',
+     usage: { inputTokens, outputTokens, cachedInputTokens: 0, reasoningTokens: 0 } });
 
 const SCRIPTED: ModelTarget = { id: 'scripted', provider: 'scripted', keyEnv: null,
                                 tier: 'cloud', certified: true };
@@ -129,7 +131,37 @@ test('a returned message re-routes once; the reason rides the window and the doo
     returned: { by: 'yard', reason: 'invoices are billing\'s work' } });
   expect(yard.model.seen[0].tools.map(t => t.name)).toContain('notMine');
   expect(billing.model.seen[0].tools.map(t => t.name)).not.toContain('notMine');
-  expect(out.loopRun.usage.modelCalls).toBe(3);          // two router steps, one desk step
+  // Two router steps, the yard's read that handed it back, and the desk that served.
+  expect(out.loopRun.usage.modelCalls).toBe(4);
+});
+
+test('a returned-then-served turn bills the desk call that handed the message back', async () => {
+  const router = new ScriptedModel([routeStep('yard', 300, 5), routeStep('billing', 310, 6)]);
+  const yard = desk('yard', [returns('invoices are billing\'s work', 120, 4)]);
+  const billing = desk('billing', [finishStep('The invoice is paid.')]);
+  const agent = house(router, { yard: yard.agent, billing: billing.agent });
+
+  const out = await agent.generate('has the invoice been paid?', { session: 's1' });
+
+  expect(out.loopRun.usage.modelCalls).toBe(4);
+  // 300 + 310 at the front desk, 120 at the yard; the scripted desk that served
+  // reports no numbers.
+  expect(out.loopRun.usage.inputTokens).toBe(730);
+  expect(out.loopRun.usage.outputTokens).toBe(15);
+});
+
+test('a return the front desk answers with none still bills the desk that read it', async () => {
+  const router = new ScriptedModel([routeStep('yard', 300, 5), routeStep('none', 310, 6)]);
+  const yard = desk('yard', [returns('that is nobody\'s work here', 120, 4)]);
+  const agent = house(router, { yard: yard.agent, billing: desk('billing', []).agent });
+
+  const out = await agent.generate('what is the weather tomorrow?', { session: 's1' });
+
+  expect(out.loopRun.routing).toEqual(
+    { desk: null, returned: { by: 'yard', reason: 'that is nobody\'s work here' } });
+  expect(out.loopRun.usage.modelCalls).toBe(3);
+  expect(out.loopRun.usage.inputTokens).toBe(730);
+  expect(out.loopRun.usage.outputTokens).toBe(15);
 });
 
 test('a re-route onto the SAME desk re-delivers without the return door', async () => {

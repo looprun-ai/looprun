@@ -4,8 +4,9 @@
  *  card, an act or a record. What the house decided rides the governed record itself:
  *  `TurnRecord.routing` names the desk that served and the desk that handed the message
  *  back, `turn` counts the HOUSE's own exchanges — a desk keeps its own tape, and one
- *  routed dump reads as one conversation — and `usage` carries the router's own tokens
- *  on top of the desk's. A desk that
+ *  routed dump reads as one conversation — and `usage` carries the front desk's own
+ *  tokens, and any desk that read the message and handed it back, on top of the tokens
+ *  of the desk that served. A desk that
  *  hands a message back is re-routed once, and the re-delivery is composed without the
  *  return door — a second return is unreachable, not forbidden.
  *
@@ -181,17 +182,21 @@ export class RoutedAgent {
     }
 
     const returned = { by: opened.desk, reason: served.returned.reason };
+    // The desk read the whole message before handing it back, and that read is a model
+    // call nobody else records: it rides onto the record of the turn this re-route seals.
+    const handedBack = served.usage;
     const again = await this.decide({ ...front, returnedFrom: returned });
     const steps = [...opened.steps, ...again.steps];
     if (again.desk === NONE) {
-      return this.remember(id, seat, text, null, { desk: null, returned }, steps);
+      return this.remember(id, seat, text, null, { desk: null, returned }, steps, handedBack);
     }
     const settled = await this.deliver(again.desk, id, seat, text, false);
     if ('returned' in settled) {
       throw new TurnFailure('executor',
         `the ${again.desk} desk returned a message the re-delivery never offered`);
     }
-    return this.remember(id, seat, text, settled, { desk: again.desk, returned }, steps);
+    return this.remember(id, seat, text, settled, { desk: again.desk, returned }, steps,
+      handedBack);
   }
 
   endSession(id: string): void {
@@ -227,14 +232,17 @@ export class RoutedAgent {
    *  the router's tokens, and the history gains the exchange the next window reads. A
    *  refusal names no desk, so the conversation keeps the seat it had. */
   private remember(id: string, seat: Seat, userText: string, served: GovernedResult | null,
-                   routing: TurnRouting, steps: readonly ModelStep[]): GovernedResult {
-    const router = billed(steps);
+                   routing: TurnRouting, steps: readonly ModelStep[],
+                   handedBack: Usage = NOTHING_BILLED): GovernedResult {
+    // What the turn cost outside the desk that served it: every front-desk step, and
+    // the desk that read the message and handed it back.
+    const beyond = merge(billed(steps), handedBack);
     const out: GovernedResult = served === null
       ? { text: this.refusalText(),
-          loopRun: this.refusal(seat, userText, routing, router) }
+          loopRun: this.refusal(seat, userText, routing, beyond) }
       : { text: served.text,
           loopRun: { ...served.loopRun, turn: seat.history.length + 1, routing,
-                     usage: merge(served.loopRun.usage, router) } };
+                     usage: merge(served.loopRun.usage, beyond) } };
     this.seats.set(id, {
       history: [...seat.history,
         { desk: routing.desk ?? FRONT_DESK, userText, replyText: out.text }],
@@ -247,8 +255,9 @@ export class RoutedAgent {
       + `The house covers: ${this.deskNames.join(', ')}.`;
   }
 
-  /** The front desk's own turn: no desk was touched, so no act, no question and no
-   *  finish exists — only the words the operator reads and what the router cost. */
+  /** The front desk's own turn: no desk served, so no act, no question and no finish
+   *  exists — only the words the operator reads and what the house paid to reach them,
+   *  the front desk's steps and any desk that read the message and handed it back. */
   private refusal(seat: Seat, userText: string, routing: TurnRouting,
                   usage: Usage): TurnRecord {
     return { turn: seat.history.length + 1, servedBy: FRONT_DESK, userText,

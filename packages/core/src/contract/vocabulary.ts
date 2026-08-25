@@ -106,9 +106,14 @@ export interface ForeignExchange { readonly desk: string; readonly userText: str
  *  only when this turn is itself a return. */
 export interface TurnRouting { readonly desk: string | null;
                                readonly returned: null | { readonly by: string; readonly reason: string } }
-/** A desk's own decision to hand a message back to the front desk, with the reason
- *  the operator reads. */
-export interface TurnReturned { readonly returned: { readonly reason: string } }
+/** A desk's own decision to hand a message back to the front desk, with the reason the
+ *  operator reads and what the desk spent reading the message. A returning turn seals no
+ *  record, so `usage` is the only place those model calls are ever named — the front desk
+ *  carries them onto the record of the turn it re-routes. */
+export interface TurnReturned {
+  readonly returned: { readonly reason: string };
+  readonly usage: StepUsage & { readonly modelCalls: number };
+}
 /** Chat-door options: `before` seeds prior exchanges across desks, `returnable`
  *  lets the active desk hand a message back to the front desk. */
 export interface ChatOpts { readonly before?: readonly ForeignExchange[]; readonly returnable?: boolean }
