@@ -36,7 +36,7 @@ const STATE_TAG: Readonly<Record<'ran' | 'refused' | 'held', string>> = {
 };
 
 function template(operatorText: string, facts: readonly DeliveryFact[],
-                  draftProse: string): string {
+                  draftProse: string, material: readonly string[] = []): string {
   const factLines = facts.map((f, i) => f.kind === 'code'
     ? `${i + 1}. The approval code for the ask above is: ${f.text} — the operator must send it alone.`
     : `${i + 1}. ${f.state === null ? '' : `[${STATE_TAG[f.state]}] `}${f.text}`).join('\n');
@@ -44,6 +44,9 @@ function template(operatorText: string, facts: readonly DeliveryFact[],
     + `PROVEN FACTS — the records of this turn. Every numbered fact MUST be present in your reply, `
     + `rendered faithfully in the operator's language. Identifiers and figures stay `
     + `EXACTLY as written — digits stay digits, never words.\n${factLines}\n\n`
+    + (material.length === 0 ? ''
+      : `MATERIAL — what this turn's reads returned. Use what answers the operator's message; `
+        + `leave the rest; never paste raw data.\n${material.map(m => `- ${m}`).join('\n')}\n\n`)
     + (draftProse === ''
       ? 'DESK DRAFT: (the desk wrote nothing — compose from the facts alone)'
       : `DESK DRAFT — unproven wording from the desk. Reuse phrasing that helps, but DROP any claim `
@@ -90,7 +93,7 @@ export class ReplyComposer {
   }
 
   async deliver(operatorText: string, facts: readonly DeliveryFact[], draftProse: string,
-                floor: () => string): Promise<ComposedDelivery> {
+                floor: () => string, material: readonly string[] = []): Promise<ComposedDelivery> {
     const uncomposable = facts.some(f => f.kind !== 'code' && isCodeShaped(f.text));
     if (uncomposable || (facts.length === 0 && draftProse === '')) {
       return { text: floor(), by: 'floor', retried: false };
@@ -98,12 +101,12 @@ export class ReplyComposer {
     const request = (text: string): StepInput => ({ system: SYSTEM,
       messages: [{ role: 'user', text }], tools: [], forceFinish: false,
       llmParams: this.llmParams });
-    const first = await this.port.step(request(template(operatorText, facts, draftProse)));
+    const first = await this.port.step(request(template(operatorText, facts, draftProse, material)));
     if (first.text.trim() !== '' && gateMisses(facts, first.text).length === 0) {
       return { text: first.text.trim(), by: 'composer', retried: false };
     }
     const misses = gateMisses(facts, first.text).join(', ');
-    const second = await this.port.step(request(template(operatorText, facts, draftProse)
+    const second = await this.port.step(request(template(operatorText, facts, draftProse, material)
       + `\n\nThe reply you wrote is missing: ${misses === '' ? 'its words' : misses}. `
       + `Write it again with every fact present.`));
     if (second.text.trim() !== '' && gateMisses(facts, second.text).length === 0) {

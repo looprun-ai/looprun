@@ -375,9 +375,14 @@ export class Turn {
     const facts = assembleFacts(draft.acts, open, draft.closed, notes);
     const floor = (): string => dw.compose(fd.closure(draft.acts), draft.acts, open,
       draft.closed, notes);
+    // The desk never spoke this turn, so what its reads returned has no prose to
+    // ride: the results go to the composer as material — his to use, never owed.
+    const material = [...new Set(draft.acts
+      .filter(a => a.effect === 'read' && a.status === 'done' && a.result !== null)
+      .map(a => JSON.stringify(a.result)))];
     const composed = facts.length === 0
       ? { text: floor(), by: 'floor' as const, retried: false }
-      : await this.composer.deliver(draft.userText, facts, '', floor);
+      : await this.composer.deliver(draft.userText, facts, '', floor, material);
     draft.delivery = { by: composed.by, retried: composed.retried, facts };
     let text = composed.text;
     for (const rewrite of this.deps.compiled.rewrites) text = rewrite.apply(text);
