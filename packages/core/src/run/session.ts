@@ -46,10 +46,11 @@ export class Session {
 
   constructor(id: string, history: ActionHistory,
               maskCall: (call: CanonicalCall) => CanonicalCallData
-                = call => call.data(v => (isJson(v) ? v : null))) {
+                = call => call.data(v => (isJson(v) ? v : null)),
+              now: () => number = Date.now) {
     this.id = id;
     this.history = history;
-    this.consent = new ConsentDesk(maskCall);
+    this.consent = new ConsentDesk(maskCall, now);
   }
 
   /** The serializing queue: a failed job never poisons the next entry. */

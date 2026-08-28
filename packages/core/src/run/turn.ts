@@ -154,6 +154,8 @@ export class Turn {
     // executed act supersedes every open sibling for its (tool, target). The answer
     // is read BEFORE the sweep — the user typed against the delivery where the code
     // was live, so an approval landing in the expiring turn still lands.
+    // The five-minute clock is read before the answer: a lapsed code is gone.
+    desk.expireByClock(draft);
     for (const q of desk.readAnswer(userText, draft)) {
       const held = desk.held(q.id);
       const act = await runner.run({ tool: held.tool, args: held.args }, 'licence', draft);

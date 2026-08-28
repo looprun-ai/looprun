@@ -23,16 +23,20 @@ export interface EngineConfig {
   readonly toolPort: ToolPort;
   readonly recordsPort: RecordsPort | null;
   readonly seat: ModelSeat;
+  /** The consent clock; injectable so a test can age a code. */
+  readonly now?: () => number;
 }
 
 export class Engine {
   private readonly deps: TurnDeps;
   private readonly rulebook: Rulebook;
   private readonly sessions = new Map<string, Session>();
+  private readonly now: () => number;
 
-  private constructor(deps: TurnDeps, rulebook: Rulebook) {
+  private constructor(deps: TurnDeps, rulebook: Rulebook, now: () => number) {
     this.deps = deps;
     this.rulebook = rulebook;
+    this.now = now;
   }
 
   static create(cfg: EngineConfig): Engine {
@@ -50,7 +54,7 @@ export class Engine {
       finishDesk: new FinishDesk(),
       deliveryWriter: new DeliveryWriter()
     };
-    return new Engine(deps, rulebook);
+    return new Engine(deps, rulebook, cfg.now ?? Date.now);
   }
 
   /** Rejects with TurnFailure; a failed turn seals nothing. The seat reroutes
@@ -64,7 +68,7 @@ export class Engine {
     let session = this.sessions.get(sessionId);
     if (!session) {
       session = new Session(sessionId, new ActionHistory(),
-        call => call.data(v => this.deps.masker.maskData(v)));
+        call => call.data(v => this.deps.masker.maskData(v)), this.now);
       this.sessions.set(sessionId, session);
     }
     const live = session;

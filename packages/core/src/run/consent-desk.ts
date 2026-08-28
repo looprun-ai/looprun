@@ -195,6 +195,20 @@ export class ConsentDesk {
     }
   }
 
+  /** Clock expiry runs BEFORE any answer is read: an expired code licenses
+   *  nothing, however fast the reply after the five minutes lapse. */
+  expireByClock(draft: TurnDraft): readonly Question[] {
+    const expired: Question[] = [];
+    for (const stored of [...this.working.values()]) {
+      if (stored.state !== 'open') continue;
+      if (this.now() - stored.bornAtMs >= QUESTION_TTL_MS) {
+        this.close(stored.question.id, 'expired', draft);
+        expired.push(stored.question);
+      }
+    }
+    return expired;
+  }
+
   /** Questions past the turn ttl OR the five-minute clock close 'expired' —
    *  the closure is DELIVERED. */
   sweep(turn: number, ttl: number, draft: TurnDraft): readonly Question[] {
