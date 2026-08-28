@@ -29,8 +29,9 @@ the engine assembles the composer's input:
 composed reply — one voice, the operator's language
       │
       ▼  THE DETERMINISTIC GATE (language-agnostic by construction)
-  every id of the facts present? · every digit figure present? ·
-  the code's characters present?
+  every id of the facts present? · every digit figure present,
+  matched canonically on TOKEN BOUNDARIES (a lone 0 inside a date
+  pays nothing)? · the code's characters present?
       ├─ pass → deliver
       ├─ fail → one composer retry
       └─ fail again → THE FLOOR: the 23/08 deterministic delivery
@@ -82,9 +83,31 @@ material ("the approval code for this ask: …"), never as a pre-phrased third-p
 sentence the composer copies; a draft sentence the facts support — an explicit refusal of
 an embedded instruction — may be kept.
 
+**The composer's template carries not one subject byte** — no domain identifier, no
+domain noun. Every subject word reaches the composer as data: facts, state, draft. The
+template's first draft carried `bk_1001` as its identifier example; the audit caught it,
+and the neutral template re-measured green (§6).
+
 **The composer prompt ships only A/B-measured** (one byte in a prompt channel is one case
 family): any wording change to it re-runs the §6 slice with the wording as the only
 variable.
+
+## 3b · The confirmation code (folded from program phase F4)
+
+The ask surface is rebuilt and certified once, so the ruled code contract ships inside
+this phase, as its own plan task group:
+
+- the engine mints **6 random digits** as the question's code;
+- **the exact code alone licenses**, in any language — nothing else does;
+- the code **plus any other text licenses nothing** and is answered with "type only the
+  code to confirm";
+- `NO <code>` has no effect — the same "type only the code" answer;
+- the code is valid for **5 minutes**; cancelling is letting it expire — an expired code
+  licenses nothing and the ask must be issued again.
+
+The composer weaves the code as data, so the format change touches the mint and the
+match, never the reply pipeline. Directed cases for the five behaviors ride the F1
+ladder.
 
 ## 4 · The record and the counters
 
@@ -135,7 +158,11 @@ feed them; gate run on every output; letters judged against the real rubrics.
 | E7-PT | triple weave: receipt + refusal + ask + code | PASS | one flowing reply |
 
 Spend: 13 subject calls, 6 649 input / 1 145 output tokens. The prompt v1 baseline (three
-critical-letter failures) and this green re-measurement are the A/B pair behind §3.
+critical-letter failures) and this green re-measurement are the A/B pair behind §3. The
+subject-neutral template (the `bk_1001` example removed) re-ran the same thirteen —
+13/13 on the gate, every in-scope letter green, 6 532 input / 1 172 output tokens — and
+surfaced the token-boundary rule of §1: one output dropped the "0 of deposit stays held"
+figure and the substring gate did not charge it.
 
 The reference reply every naturalness judgement reads against is the program spec's §1
 canonical example; run 01-PT is its live sibling:

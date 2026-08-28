@@ -100,10 +100,14 @@ F1  THE NATURAL REPLY, FROM ZERO (its own spec)
     (operator vs model) · the receipt and the negation reach the operator
     by design, never by patch · figureIsGrounded returns ·
     the runner EMITS the deterministic counters beside every run
-    (the design registered as agentspec BACKLOG row 1)
+    (the design registered as agentspec BACKLOG row 1) ·
+    AND the confirmation-code contract, folded here from F4: 6 random
+    digits · the exact code alone licenses, any language · code plus any
+    other text answers "type only the code" · NO <code> has no effect ·
+    5-minute validity, cancelling = letting it expire
     gate: counters all zero · natural-100 letters ≥ 95, every letter read ·
           NATURALNESS read letter by letter against §4 layer 3,
-          judged on the canonical example of §1
+          judged on the canonical example of §1 · directed code cases
     cost: replay first · 12-slice · targeted set · full ruler ONCE
 
 F2  RE-SEAL THE ROUTED HOUSE + CHAT (zero new code)
@@ -123,12 +127,8 @@ F3  THE DESK DESCRIBES ITSELF + THE GATE STAMP, CLEAN
     gate: repo tests green · emit round-trip proofs · replay
     cost: near-zero subject calls
 
-F4  THE CONFIRMATION CODE (ruled, never implemented)
-    6 random digits · 5-minute validity · the exact code alone licenses,
-    in any language · code + any other text licenses nothing and answers
-    "type only the code" · "NO <code>" has no effect · cancelling = letting
-    it expire
-    gate: directed new cases, judged in session
+F4  — folded into F1: the ask surface is rebuilt there and certified
+    once, so the code contract ships with it (the F1 spec, §3b)
 ```
 
 **The skill during the program:** untouched through F0–F3. After F1 + F3 land, ONE
