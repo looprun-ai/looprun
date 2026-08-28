@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CODE_SHAPED, ReplyComposer, gateMisses } from '../../src/run/reply-composer.js';
+import { ReplyComposer, gateMisses, isCodeShaped } from '../../src/run/reply-composer.js';
 import type { DeliveryFact } from '../../src/run/delivery-facts.js';
 
 const fact = (kind: DeliveryFact['kind'], text: string,
@@ -51,7 +51,7 @@ describe('the composer', () => {
       .deliver('remove me', [fact('refusal', 'SOLE_OWNER_PROTECTED', 'refused')], '', () => 'FLOOR');
     expect(out).toEqual({ text: 'FLOOR', by: 'floor', retried: false });
     expect(called).toBe(0);
-    expect(CODE_SHAPED.test('SOLE_OWNER_PROTECTED')).toBe(true);
+    expect(isCodeShaped('SOLE_OWNER_PROTECTED')).toBe(true);
   });
 
   it('no facts and no prose floors without composing', async () => {

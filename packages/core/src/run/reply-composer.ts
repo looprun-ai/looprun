@@ -7,7 +7,7 @@
  *  the gap stays visible. */
 import type { LlmParams, StepInput } from '../contract/vocabulary.js';
 import type { ModelPort } from '../contract/ports.js';
-import { canonicalAmount, figureRuns } from '../cards/catalog.js';
+import { canonicalAmount, carriedIds, figureRuns } from '../cards/catalog.js';
 import type { DeliveryFact } from './delivery-facts.js';
 
 export interface ComposedDelivery {
@@ -16,8 +16,14 @@ export interface ComposedDelivery {
   readonly retried: boolean;
 }
 
-/** A bare world code standing where an authored sentence should — never composed. */
-export const CODE_SHAPED = /^[A-Z][A-Z0-9_]{3,}$/;
+/** A bare world code standing where an authored sentence should — never composed:
+ *  four or more characters, the first A-Z, the rest A-Z, digits or underscore. */
+export function isCodeShaped(text: string): boolean {
+  const t = text.trim();
+  if (t.length < 4) return false;
+  if (!(t[0] >= 'A' && t[0] <= 'Z')) return false;
+  return [...t].every(c => (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c === '_');
+}
 
 const SYSTEM = 'You are the delivery desk of a governed records house. '
   + 'You write the single reply the operator reads.';
@@ -55,11 +61,15 @@ export function gateMisses(facts: readonly DeliveryFact[], output: string): read
   const misses: string[] = [];
   const said = new Set(figureRuns(output).map(canonicalAmount));
   const src = facts.filter(f => f.kind !== 'code').map(f => f.text).join(' ');
-  for (const id of new Set(src.match(/[a-z]+_[a-z0-9]*\d[a-z0-9]*/g) ?? [])) {
+  const ids = carriedIds(src);
+  for (const id of ids) {
     if (!output.includes(id)) misses.push(`id ${id}`);
   }
-  for (const figure of new Set(figureRuns(src.replace(/[a-z]+_[a-z0-9]*\d[a-z0-9]*/g, ''))
-    .map(canonicalAmount))) {
+  // The ids leave the text before the figure walk, so an id's digits never
+  // masquerade as an amount the reply owes.
+  let bare = src;
+  for (const id of ids) bare = bare.split(id).join(' ');
+  for (const figure of new Set(figureRuns(bare).map(canonicalAmount))) {
     if (!said.has(figure)) misses.push(`figure ${figure}`);
   }
   for (const f of facts) {
@@ -79,19 +89,19 @@ export class ReplyComposer {
 
   async deliver(operatorText: string, facts: readonly DeliveryFact[], draftProse: string,
                 floor: () => string): Promise<ComposedDelivery> {
-    const uncomposable = facts.some(f => f.kind !== 'code' && CODE_SHAPED.test(f.text.trim()));
+    const uncomposable = facts.some(f => f.kind !== 'code' && isCodeShaped(f.text));
     if (uncomposable || (facts.length === 0 && draftProse === '')) {
       return { text: floor(), by: 'floor', retried: false };
     }
-    const ask = (text: string): StepInput => ({ system: SYSTEM,
+    const request = (text: string): StepInput => ({ system: SYSTEM,
       messages: [{ role: 'user', text }], tools: [], forceFinish: false,
       llmParams: this.llmParams });
-    const first = await this.port.step(ask(template(operatorText, facts, draftProse)));
+    const first = await this.port.step(request(template(operatorText, facts, draftProse)));
     if (first.text.trim() !== '' && gateMisses(facts, first.text).length === 0) {
       return { text: first.text.trim(), by: 'composer', retried: false };
     }
     const misses = gateMisses(facts, first.text).join(', ');
-    const second = await this.port.step(ask(template(operatorText, facts, draftProse)
+    const second = await this.port.step(request(template(operatorText, facts, draftProse)
       + `\n\nThe reply you wrote is missing: ${misses === '' ? 'its words' : misses}. `
       + `Write it again with every fact present.`));
     if (second.text.trim() !== '' && gateMisses(facts, second.text).length === 0) {
