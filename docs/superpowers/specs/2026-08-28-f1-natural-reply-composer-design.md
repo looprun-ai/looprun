@@ -103,7 +103,9 @@ this phase, as its own plan task group:
   code to confirm";
 - `NO <code>` has no effect — the same "type only the code" answer;
 - the code is valid for **5 minutes**; cancelling is letting it expire — an expired code
-  licenses nothing and the ask must be issued again.
+  licenses nothing and the ask must be issued again. The clock is read BEFORE any answer:
+  a lapsed code presented at the very next turn is already gone, and the expiry closure
+  is delivered on that same reply.
 
 The composer weaves the code as data, so the format change touches the mint and the
 match, never the reply pipeline. Directed cases for the five behaviors ride the F1
@@ -113,9 +115,14 @@ ladder.
 
 The dump marks every delivered reply:
 
+A turn with nothing on the table — no owed fact, no open question, no closure, no
+note — delivers the desk's prose directly and spends no composer call: there is
+nothing to weave, nothing to gate, and the claim checks already ran. The marks say
+`"by": "prose"`.
+
 ```json
 "delivery": {
-  "by": "composer" | "floor",
+  "by": "composer" | "prose" | "floor",
   "retried": false,
   "prose": "…the delivered text…",
   "facts": [ { "kind": "ask" | "receipt" | "refusal" | "closure" | "code",
