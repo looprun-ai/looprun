@@ -5,6 +5,7 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { listDumps, writeLines } from './run-dir.js';
+import { writeCounters } from './counters.js';
 
 const CHUNK = 10;
 
@@ -39,6 +40,7 @@ export function buildJudgeInputs(runDir: string, rubricOf: (caseId: string) => s
     writeLines(runDir, file, rows.slice(at, at + CHUNK));
     paths.push(join(runDir, file));
   }
+  writeCounters(runDir, dumps);
   return paths;
 }
 

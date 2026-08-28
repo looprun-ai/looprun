@@ -30,4 +30,6 @@ export type { Certification } from './certifier.js';
 export { seal, verify } from './seal.js';
 export type { SealRecord } from './seal.js';
 export { writeDump, readDump, listDumps, appendLine, readLines, writeLines } from './run-dir.js';
+export { computeCounters, writeCounters } from './counters.js';
+export type { Counters } from './counters.js';
 export type { CaseDump } from './run-dir.js';
