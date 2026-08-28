@@ -54,19 +54,21 @@ export function computeCounters(dumps: readonly CaseDump[]): Counters {
   for (const dump of dumps) {
     for (const r of dump.records) {
       const text = r.text;
+      // A dump sealed before the marks existed reads as the floor it was.
+      const delivery = r.delivery ?? { by: 'floor' as const, retried: false, facts: [] };
       if (text.trim() === '') emptyDeliveries += 1;
-      if (r.delivery.by === 'floor') floorDeliveries += 1;
-      if (r.delivery.by === 'prose') proseDeliveries += 1;
-      if (r.delivery.by === 'composer') composerDeliveries += 1;
-      if (r.delivery.retried) composerRetries += 1;
+      if (delivery.by === 'floor') floorDeliveries += 1;
+      if (delivery.by === 'prose') proseDeliveries += 1;
+      if (delivery.by === 'composer') composerDeliveries += 1;
+      if (delivery.retried) composerRetries += 1;
       // A composed or prose delivery carrying an engine frame is a leak; the floor
       // prints frames lawfully and is counted by its own row instead.
-      if (r.delivery.by !== 'floor'
+      if (delivery.by !== 'floor'
         && (text.includes('— done') || text.includes('— not-done') || text.includes('— held'))) {
         framesLeaked += 1;
       }
-      if (r.delivery.by !== 'floor' && (text.includes('{"') || text.includes('[{'))) rawJson += 1;
-      if (r.delivery.by !== 'floor'
+      if (delivery.by !== 'floor' && (text.includes('{"') || text.includes('[{'))) rawJson += 1;
+      if (delivery.by !== 'floor'
         && r.acts.some(a => a.effect === 'read' && a.status === 'done'
           && a.sentence !== '' && text.includes(a.sentence))) {
         readLinesDelivered += 1;

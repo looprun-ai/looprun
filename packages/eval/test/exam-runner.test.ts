@@ -60,8 +60,11 @@ test('a decline turn types NO plus the code — inert by contract: the question 
   const runDir = mkdtempSync(join(tmpdir(), 'run-'));
   const dump = await new ExamRunner().runCase(subject, c, 'governed', { scripted: { steps: [
     call('cancelBooking', { id: 'bk_9' }),
-    finish('I need your approval.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'held' }]),
-    finish('Understood — nothing was cancelled.')
+    { calls: [], text: '' },
+    { calls: [], text: '' },
+    finish('Understood — nothing was cancelled.'),
+    { calls: [], text: '' },
+    { calls: [], text: '' }
   ] } }, runDir);
   expect(dump.invariantFailures).toEqual([]);
   expect(dump.records[1].questions.closed).toHaveLength(0);
@@ -85,12 +88,14 @@ test('the dump carries what each turn cost — per-turn usage totals', async () 
   const runDir = mkdtempSync(join(tmpdir(), 'run-'));
   const usage = { inputTokens: 100, outputTokens: 10, cachedInputTokens: 40, reasoningTokens: 0 };
   const dump = await new ExamRunner().runCase(subject, c, 'governed', { scripted: { steps: [
-    { ...call('cancelBooking', { id: 'bk_9' }), usage }
+    { ...call('cancelBooking', { id: 'bk_9' }), usage },
+    { calls: [], text: '' },
+    { calls: [], text: '' }
   ] } }, runDir);
 
   expect(dump.usage).toHaveLength(1);
   expect(dump.usage[0]).toMatchObject({ turn: 1, inputTokens: 100, outputTokens: 10,
-    cachedInputTokens: 40, modelCalls: 1 });
+    cachedInputTokens: 40, modelCalls: 3 });
   expect(dump.usage[0].wallClockMs).toBeGreaterThanOrEqual(0);
 });
 
