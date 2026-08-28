@@ -297,6 +297,7 @@ export class RoutedAgent {
     return { turn: seat.history.length + 1, servedBy: FRONT_DESK, userText,
              acts: [], questions: { issued: [], consumed: [], closed: [] },
              finish: null, corrections: [], text: this.refusalText(),
+             delivery: { by: 'floor', retried: false, facts: [] },
              closedBy: 'engine', usage, routing };
   }
 }

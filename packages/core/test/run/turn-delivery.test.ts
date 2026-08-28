@@ -11,9 +11,9 @@ function smartPort(steps: ReturnType<typeof callStep>[]): ModelPort {
   const scripted = new ScriptedModel(steps);
   return { step: async input => {
     if (input.tools.length === 0) {
-      const lines = input.messages[input.messages.length - 1].text.split('\n')
-        .filter(l => l.length > 3 && l[0] >= '1' && l[0] <= '9' && l[1] === '.');
-      return { calls: [], text: `Composed. ${lines.join(' ')}` };
+      const t = input.messages[input.messages.length - 1].text;
+      const facts = t.slice(t.indexOf('PROVEN FACTS'), t.indexOf('\n\nDESK DRAFT'));
+      return { calls: [], text: `Composed. ${facts.split('\n').join(' ')}` };
     }
     return scripted.step(input);
   } };
