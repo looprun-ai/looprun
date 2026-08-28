@@ -22,7 +22,7 @@ test('G1 — hold, approve by code, licensed execution via LoopRunAgent.generate
   const code = first.loopRun.questions.issued[0].code;
   expect(first.text).toContain(code);
 
-  const second = await agent.generate(`approve ${code}`, { session: 's1' });
+  const second = await agent.generate(code, { session: 's1' });
   expect(second.loopRun.acts[0]).toMatchObject({
     call: { tool: 'cancelBooking' }, origin: 'licence', status: 'done' });
   expect(second.loopRun.questions.consumed).toContain(first.loopRun.questions.issued[0].id);
