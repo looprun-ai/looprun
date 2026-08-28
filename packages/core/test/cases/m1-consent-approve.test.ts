@@ -10,8 +10,8 @@ import { caseRig } from '../fixtures/case-rig.js';
 test('M1 — hold, approve by code, licensed execution', async () => {
   const model = new ScriptedModel([
     callStep('cancelBooking', { id: 'bk_9' }),
-    finishStep('I need your approval to cancel bk_9.',
-      [{ tool: 'cancelBooking', target: 'bk_9', word: 'held' }]),
+    { calls: [], text: '' },
+    { calls: [], text: '' },
     { calls: [], text: '' },
     finishStep('Cancelled bk_9.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'done' }])
   ]);
@@ -36,9 +36,17 @@ test('M1 — hold, approve by code, licensed execution', async () => {
 test('M1 — an identical re-proposal returns the SAME question; a sibling call births its own; the executed act supersedes the sibling', async () => {
   const model = new ScriptedModel([
     callStep('cancelBooking', { id: 'bk_9' }),
+    { calls: [], text: '' },
+    { calls: [], text: '' },
     callStep('cancelBooking', { id: 'bk_9' }),
+    { calls: [], text: '' },
+    { calls: [], text: '' },
     callStep('cancelBooking', { id: 'bk_7' }),
-    finishStep('Cancelled bk_9.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'done' }])
+    { calls: [], text: '' },
+    { calls: [], text: '' },
+    finishStep('Cancelled bk_9.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'done' }]),
+    { calls: [], text: '' },
+    { calls: [], text: '' },
   ]);
   const { engine } = caseRig({ model });
 

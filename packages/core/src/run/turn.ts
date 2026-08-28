@@ -10,6 +10,8 @@ import { deepFreeze } from '../contract/freeze.js';
 import type { ModelPort, ToolPort, RecordsPort } from '../contract/ports.js';
 import type { CompiledAgent } from '../cards/cards.js';
 import { CallRunner } from './call-runner.js';
+import { assembleFacts } from './delivery-facts.js';
+import { ReplyComposer } from './reply-composer.js';
 import { DisclosureDesk } from './disclosure-desk.js';
 import { Judge } from './judge.js';
 import type { Masker } from './masker.js';
@@ -53,6 +55,9 @@ export interface TurnDeps {
 export class Turn {
   private readonly deps: TurnDeps;
 
+  /** Built per run() on the metered port; delivers through compose, prose or floor. */
+  private composer!: ReplyComposer;
+
   constructor(deps: TurnDeps) {
     this.deps = deps;
   }
@@ -81,11 +86,15 @@ export class Turn {
       return step;
     } };
 
+    // The composer books its calls on the same metered port as every other step.
+    this.composer = new ReplyComposer(port, seat.llmParams({}));
+
     const inputCtx = deepFreeze({ userText, turnActs: [...draft.acts], pastActs: history.pastActs() });
     const inputVerdict = rulebook.checkInput(inputCtx);
     if (inputVerdict.kind === 'refuse') {
       const rule = rulebook.guards().guards.find(g => g.name === inputVerdict.guardName)?.rule ?? '';
       draft.closedBy = 'engine';
+      draft.delivery = { by: 'floor', retried: false, facts: [] };
       draft.text = masker.maskProse(
         dw.compose(`${rule} ${inputVerdict.detail}`.trim(), draft.acts, desk.open(), draft.closed));
       return session.seal(draft);
@@ -233,7 +242,7 @@ export class Turn {
       // IS the turn's outcome, and every further model step would be spent
       // re-proposing the very call the question already carries.
       if (draft.acts.slice(actsBefore).some(a => a.reason === 'held' && a.questionId !== null)) {
-        return this.engineClose(session, draft);
+        return await this.engineClose(session, draft);
       }
 
       if (finish !== null) {
@@ -243,11 +252,11 @@ export class Turn {
             ...desk.codeNotices(userText)], judge);
         if (closed === 'sealed') return session.seal(draft);
         retriesUsed += 1;
-        if (retriesUsed > compiled.limits.retries) return this.engineClose(session, draft);
+        if (retriesUsed > compiled.limits.retries) return await this.engineClose(session, draft);
         continue;
       }
 
-      if (forced) return this.engineClose(session, draft);
+      if (forced) return await this.engineClose(session, draft);
       if (callsUsed >= compiled.limits.calls || domain.length === 0) {
         forced = true;
         messages.push({ role: 'user', text: fd.force() });
@@ -300,22 +309,37 @@ export class Turn {
     }
     draft.finish = parsed.finish;
     draft.closedBy = 'model';
-    let text = dw.compose(parsed.finish.message, draft.acts, open, draft.closed, notes);
+    // Nothing owed and no open question: the prose IS the delivery, no call spent.
+    // Anything on the table: one composer call, gated, floored on failure.
+    const facts = assembleFacts(draft.acts, open, draft.closed, notes);
+    const composed = facts.length === 0
+      ? { text: parsed.finish.message, by: 'prose' as const, retried: false }
+      : await this.composer.deliver(draft.userText, facts, parsed.finish.message,
+          () => dw.compose(parsed.finish.message, draft.acts, open, draft.closed, notes));
+    draft.delivery = { by: composed.by, retried: composed.retried, facts };
+    let text = composed.text;
     for (const rewrite of compiled.rewrites) text = rewrite.apply(text);
     draft.text = this.deps.masker.maskProse(text);
     return 'sealed';
   }
 
-  private engineClose(session: Session, draft: TurnDraft): TurnRecord {
+  private async engineClose(session: Session, draft: TurnDraft): Promise<TurnRecord> {
     const { finishDesk: fd, deliveryWriter: dw } = this.deps;
     draft.corrections.push({ kind: 'forcedFinish' });
     draft.closedBy = 'engine';
     draft.finish = null;
-    let text = dw.compose(fd.closure(draft.acts), draft.acts,
-      session.consent.open(), draft.closed,
-      [...session.consent.staleAnswers(draft.userText, draft.turn),
-        ...session.consent.laterTexts(draft.turn),
-        ...session.consent.codeNotices(draft.userText)]);
+    const open = session.consent.open();
+    const notes = [...session.consent.staleAnswers(draft.userText, draft.turn),
+      ...session.consent.laterTexts(draft.turn),
+      ...session.consent.codeNotices(draft.userText)];
+    const facts = assembleFacts(draft.acts, open, draft.closed, notes);
+    const floor = (): string => dw.compose(fd.closure(draft.acts), draft.acts, open,
+      draft.closed, notes);
+    const composed = facts.length === 0
+      ? { text: floor(), by: 'floor' as const, retried: false }
+      : await this.composer.deliver(draft.userText, facts, '', floor);
+    draft.delivery = { by: composed.by, retried: composed.retried, facts };
+    let text = composed.text;
     for (const rewrite of this.deps.compiled.rewrites) text = rewrite.apply(text);
     draft.text = this.deps.masker.maskProse(text);
     return session.seal(draft);

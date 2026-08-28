@@ -11,11 +11,16 @@ import { caseRig } from '../fixtures/case-rig.js';
 test('M4 — before with slots + simulated result, after on execution, later standing', async () => {
   const model = new ScriptedModel([
     callStep('cancelBooking', { id: 'bk_9' }),
-    finishStep('I need your approval.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'held' }]),
+    { calls: [], text: '' },
+    { calls: [], text: '' },
     { calls: [], text: '' },
     finishStep('Done as asked.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'done' }]),
     { calls: [], text: '' },
-    finishStep('Anything else?', [])
+    { calls: [], text: '' },
+    { calls: [], text: '' },
+    finishStep('Anything else?', []),
+    { calls: [], text: '' },
+    { calls: [], text: '' },
   ]);
   const { engine, world } = caseRig({ model, contract: { disclosure: { cancelBooking: {
     needs: { booking: 'getBooking' },

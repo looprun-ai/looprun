@@ -90,7 +90,8 @@ test('notMine after an act is refused and the turn continues', async () => {
 test('an answer the engine already read shuts the return door', async () => {
   const model = new ScriptedModel([
     callStep('cancelBooking', { id: 'bk_9' }),
-    finishStep('Approval needed.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'held' }]),
+    { calls: [], text: '' },
+    { calls: [], text: '' },
     callStep('notMine', { reason: 'billing, not me' }),
     finishStep('Cancelled as approved.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'done' }])
   ]);
@@ -117,7 +118,9 @@ test('an answer the engine already read shuts the return door', async () => {
 test('grounded ids the door carries pass the floor; the same call without them is refused', async () => {
   const script = () => new ScriptedModel([
     callStep('getBooking', { id: 'bk_9001' }),
-    finishStep('The booking is on the record.')
+    finishStep('The booking is on the record.'),
+    { calls: [], text: '' },
+    { calls: [], text: '' },
   ]);
 
   const carried = testEngine({ model: script() });

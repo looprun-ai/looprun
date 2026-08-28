@@ -9,6 +9,8 @@ test('two concurrent chats on one session serialize in arrival order', async () 
   const model = new ScriptedModel([
     callStep('getBooking', { id: 'bk_1001' }),
     finishStep('First done.'),
+    { calls: [], text: '' },
+    { calls: [], text: '' },
     finishStep('Second done.')
   ]);
   const { engine } = testEngine({ model });

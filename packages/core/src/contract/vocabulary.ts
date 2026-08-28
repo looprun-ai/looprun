@@ -130,6 +130,16 @@ export interface TurnReturned {
  *  desks — engine-minted provenance, never text-scraped. */
 export interface ChatOpts { readonly before?: readonly ForeignExchange[]; readonly returnable?: boolean;
                             readonly grounded?: readonly string[] }
+/** How the turn's reply reached the operator: composed by the delivery call,
+ *  the desk's prose delivered directly (nothing was owed), or the deterministic
+ *  floor — with the owed facts that were on the table either way. */
+export interface DeliveryMarks {
+  readonly by: 'composer' | 'prose' | 'floor';
+  readonly retried: boolean;
+  readonly facts: readonly { readonly kind: 'ask' | 'code' | 'receipt' | 'refusal' | 'closure' | 'note';
+                             readonly text: string;
+                             readonly state: 'ran' | 'refused' | 'held' | null }[];
+}
 export interface TurnRecord {
   readonly turn: number;
   readonly servedBy: string;                  // which certified target answered
@@ -140,6 +150,7 @@ export interface TurnRecord {
   readonly finish: FinishPayload | null;
   readonly corrections: readonly Correction[];
   readonly text: string;                      // the composed delivery
+  readonly delivery: DeliveryMarks;           // how the text reached the operator
   readonly closedBy: 'model' | 'engine';
   /** What the turn cost, summed over every model call it made — the main loop, the
    *  owed-read micro-step and the judged pass alike; zeros where the port reports

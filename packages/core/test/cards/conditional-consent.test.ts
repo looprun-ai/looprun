@@ -46,6 +46,8 @@ test('a non-matching call runs unheld — the branch is a write', async () => {
 test('a matching call holds for consent like any destructive act', async () => {
   const engine = rig([
     callStep('placeHold', { scope: 'workspace', reason: 'litigation' }),
+    { calls: [], text: '' },
+    { calls: [], text: '' },
     finishStep('I need your approval to freeze the workspace.',
       [{ tool: 'placeHold', target: '', word: 'held' }])
   ]);

@@ -31,6 +31,8 @@ test('precondition binds the tool OWN entity — two entities share the id x_1, 
     ] }, facts);
   const model = new ScriptedModel([
     callStep('cancelBooking', { id: 'x_1' }),
+    { calls: [], text: '' },
+    { calls: [], text: '' },
     finishStep('Waiting for approval.', [{ tool: 'cancelBooking', target: 'x_1', word: 'held' }])
   ]);
   const targets = scriptedTargets(1);
@@ -47,6 +49,8 @@ test('precondition binds the tool OWN entity — two entities share the id x_1, 
 test('the simulated-result wording is a contract override away', async () => {
   const model = new ScriptedModel([
     callStep('cancelBooking', { id: 'bk_9' }),
+    { calls: [], text: '' },
+    { calls: [], text: '' },
     finishStep('Approval needed.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'held' }])
   ]);
   const { engine } = caseRig({ model, contract: {

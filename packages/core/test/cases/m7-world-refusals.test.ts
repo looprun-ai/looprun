@@ -12,7 +12,9 @@ import { caseRig } from '../fixtures/case-rig.js';
 test('M7 — the world refuses a MAINTENANCE cancel at the rehearsal; the ask is never born', async () => {
   const model = new ScriptedModel([
     callStep('cancelBooking', { id: 'bk_66' }),
-    finishStep('The hotel refused it.', [{ tool: 'cancelBooking', target: 'bk_66', word: 'refused' }])
+    finishStep('The hotel refused it.', [{ tool: 'cancelBooking', target: 'bk_66', word: 'refused' }]),
+    { calls: [], text: '' },
+    { calls: [], text: '' }
   ]);
   const { engine, world } = caseRig({ model });
 
@@ -27,7 +29,9 @@ test('M7 — a contract precondition vetoes before consent even asks', async () 
   const model = new ScriptedModel([
     callStep('cancelBooking', { id: 'bk_9' }),
     finishStep('The invoice is unpaid, so I cannot cancel.',
-      [{ tool: 'cancelBooking', target: 'bk_9', word: 'refused' }])
+      [{ tool: 'cancelBooking', target: 'bk_9', word: 'refused' }]),
+    { calls: [], text: '' },
+    { calls: [], text: '' }
   ]);
   const { engine } = caseRig({ model, contract: { guards: [
     precondition('cancelBooking',

@@ -2,7 +2,7 @@
  *  history, and the promise-queue mutex that serializes EVERY entry. seal(draft)
  *  folds the TurnDraft into the stores in one move — the ONLY place session state
  *  changes; a discarded draft leaves no trace. */
-import type { Act, Correction, FinishPayload, Question, QuestionClose, TurnRecord } from '../contract/vocabulary.js';
+import type { Act, Correction, DeliveryMarks, FinishPayload, Question, QuestionClose, TurnRecord } from '../contract/vocabulary.js';
 import { deepFreeze } from '../contract/freeze.js';
 import type { CanonicalCallData } from '../contract/vocabulary.js';
 import { isJson, type CanonicalCall } from '../contract/canonical-call.js';
@@ -22,6 +22,7 @@ export interface TurnDraft {
   finish: FinishPayload | null;
   closedBy: 'model' | 'engine';
   text: string;
+  delivery: DeliveryMarks | null;
   /** Prerequisite tools whose micro-step yielded no call this turn — the debt is
    *  asked of the model at most once per turn. */
   readonly microTried: string[];
@@ -63,6 +64,7 @@ export class Session {
     this.consent.beginTurn();
     return { turn: this.turnIndex, userText: '', servedBy: '', acts: [], corrections: [],
              issued: [], consumed: [], closed: [], finish: null, closedBy: 'model', text: '',
+             delivery: null,
              microTried: [], grounded: [],
              usage: { inputTokens: 0, outputTokens: 0, cachedInputTokens: 0, reasoningTokens: 0,
                       modelCalls: 0 } };
@@ -78,6 +80,7 @@ export class Session {
       finish: draft.finish,
       corrections: [...draft.corrections],
       text: draft.text,
+      delivery: draft.delivery ?? { by: 'floor', retried: false, facts: [] },
       closedBy: draft.closedBy,
       usage: { ...draft.usage }
     });

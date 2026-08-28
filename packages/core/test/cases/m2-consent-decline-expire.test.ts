@@ -11,9 +11,12 @@ import { caseRig } from '../fixtures/case-rig.js';
 test('M2 — NO plus the code has no effect: the question stands, the notice is delivered', async () => {
   const model = new ScriptedModel([
     callStep('cancelBooking', { id: 'bk_9' }),
-    finishStep('Approval needed.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'held' }]),
     { calls: [], text: '' },
-    finishStep('Kept as is.', [])
+    { calls: [], text: '' },
+    { calls: [], text: '' },
+    finishStep('Kept as is.', []),
+    { calls: [], text: '' },
+    { calls: [], text: '' },
   ]);
   const { engine, world } = caseRig({ model });
 
@@ -32,11 +35,16 @@ test('M2 — NO plus the code has no effect: the question stands, the notice is 
 test('M2 — an ignored question expires by the sweep, delivered; a stale code consumes nothing', async () => {
   const model = new ScriptedModel([
     callStep('cancelBooking', { id: 'bk_9' }),
-    finishStep('Approval needed.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'held' }]),
+    { calls: [], text: '' },
+    { calls: [], text: '' },
     { calls: [], text: '' },
     finishStep('Noted.', []),
     { calls: [], text: '' },
+    { calls: [], text: '' },
+    { calls: [], text: '' },
     finishStep('Noted again.', []),
+    { calls: [], text: '' },
+    { calls: [], text: '' },
     { calls: [], text: '' },
     finishStep('Nothing ran.', [])
   ]);

@@ -20,8 +20,12 @@ test('M8 — a mutating simulation revokes itself; the session falls back to pla
   records.set('bookings', 'bk_9', { status: 'CONFIRMED' });
   const model = new ScriptedModel([
     callStep('cancelBooking', { id: 'bk_9' }),
+    { calls: [], text: '' },
+    { calls: [], text: '' },
     finishStep('Approval needed.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'held' }]),
     callStep('cancelBooking', { id: 'bk_9' }),
+    { calls: [], text: '' },
+    { calls: [], text: '' },
     finishStep('Still waiting.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'held' }])
   ]);
   const { engine, port } = testEngine({

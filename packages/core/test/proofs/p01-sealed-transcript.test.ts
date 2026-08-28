@@ -28,7 +28,7 @@ test('a scripted turn seals the transcript in order, complete TurnRecord', async
   expect(r.finish?.message).toBe('Booking found: room 12 on Tuesday.');
   expect(r.corrections).toEqual([]);
   expect(r.closedBy).toBe('model');
-  expect(r.text.startsWith('Booking found: room 12 on Tuesday.')).toBe(true);
-  expect(r.text).toContain('getBooking(bk_1001) — done');
+  expect(r.text).toBe('Booking found: room 12 on Tuesday.');
+  expect(r.delivery).toEqual({ by: 'prose', retried: false, facts: [] });
   expect(r.questions).toEqual({ issued: [], consumed: [], closed: [] });
 });

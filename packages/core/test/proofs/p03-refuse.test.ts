@@ -14,7 +14,9 @@ test('a refused call seals blocked with the rule in the delivery; the turn still
     finishStep('Email sent.', [{ tool: 'sendEmail', target: 'ana@example.com', word: 'done' }]),
     callStep('sendEmail', { to: 'ana@example.com' }),
     finishStep('I could not send a second email.',
-      [{ tool: 'sendEmail', target: 'ana@example.com', word: 'refused' }])
+      [{ tool: 'sendEmail', target: 'ana@example.com', word: 'refused' }]),
+    { calls: [], text: '' },
+    { calls: [], text: '' }
   ]);
   const { engine, port } = testEngine({ model, guards: [guard] });
 
