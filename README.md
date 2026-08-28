@@ -30,7 +30,7 @@ console.log((await agent.generate('Please cancel booking bk_1.')).text);
 
 ```
 Cancelling booking bk_1 needs your word first: cancel a booking runs only after
-your approval. To go ahead, reply CONFIRM 355ec2.
+your approval. To go ahead, reply with just 355602.
 ```
 
 Twelve lines of code, and nothing about consent is in them. `cancelBooking` sits under
@@ -92,11 +92,13 @@ rule inside the parentheses prints beneath it, without the tool frame.
 
 ## The reply is one voice
 
-The delivered reply is the desk's own prose. Beneath it the engine prints only what that
-prose left out: a record sentence whose every id and figure the prose already carries has
-nothing to add and prints nothing. A figure the prose states that no record carries is
-refused before delivery, and a message whose report contradicts the sealed record is never
-delivered — the record's own sentences speak instead.
+The delivered reply is COMPOSED: one light call on the subject's own seat turns the
+engine's labeled facts — the owed words with their states — and the desk's prose into one
+flowing message in the operator's language. A deterministic gate charges the composition
+for every identifier, every figure on token boundaries, and the live code; one retry, and
+then the deterministic floor delivers the facts verbatim — nothing engine-known is ever
+lost. A figure the prose states that no record carries is refused before delivery, and a
+message whose report contradicts the sealed record is never delivered.
 
 A real exchange, delivered by a rental-operations desk (the operator writes Portuguese, so
 the desk answers in Portuguese — the consent statement and code are woven in, and no engine
@@ -109,10 +111,9 @@ AGENT     A reserva bk_1001 está pronta para ser cancelada. Cancelar a bk_1001
           encerra a locação de 2026-07-10 a 2026-07-15 da CAT 320 Excavator e
           devolve ast_excv01 ao pátio — e uma reserva cancelada não volta atrás.
           Qualquer serviço de técnico vinculado a ela é anulado no mesmo ato, e
-          0 de caução segue retido no registro. Para prosseguir, responda
-          CONFIRM 042b69.
+          0 de caução segue retido no registro. Para prosseguir, responda apenas 042169.
 
-OPERATOR  CONFIRM 042b69
+OPERATOR  042169
 
 AGENT     A reserva bk_1001 foi cancelada com sucesso. O equipamento ast_excv01
           está livre e qualquer serviço de técnico associado foi baixado. O
@@ -153,7 +154,7 @@ atlas-equipment-rentals · 3 desks: billing claims rentals
 you > Cancel booking bk_1001, the customer backed out.
 [router → rentals]
 Booking bk_1001 is ready to cancel: cancelling ends the rental and returns the
-equipment to the yard. To go ahead, reply CONFIRM 7f3a2c.
+equipment to the yard. To go ahead, reply with just 733412.
 ```
 
 ## Framework-agnostic by construction

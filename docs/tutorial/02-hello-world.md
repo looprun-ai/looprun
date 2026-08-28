@@ -25,7 +25,7 @@ one-time code woven in word for word:
 
 ```
 Cancelling booking bk_1 needs your word first: cancel a booking runs only after
-your approval. To go ahead, reply CONFIRM 355ec2.
+your approval. To go ahead, reply with just 355602.
 ```
 
 The full file lives at [`snippets/hotel/world.ts`](snippets/hotel/world.ts) and
@@ -123,9 +123,9 @@ destructive: {
 cancel a booking runs only after your approval.
 ```
 
-That sentence rides inside the desk's reply, word for word, next to the live code. A reply
-that fails to carry both gets the engine's own line printed beneath it:
-`[CONFIRM 355ec2] cancel a booking runs only after your approval.`
+That sentence rides inside the desk's reply, next to the live code. When the composed
+reply cannot carry both, the deterministic floor prints the engine's own line:
+`[355602] cancel a booking runs only after your approval.`
 
 Write it as the act, in the words the business uses — "cancel a booking", "issue the refund",
 "freeze the account". Never the tool name, never a class name, never a verb only a programmer

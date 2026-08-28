@@ -79,12 +79,13 @@ engine handed it:
 
 ```
 Cancelling booking bk_1 needs your word first: cancel a booking runs only after
-your approval. To go ahead, reply CONFIRM 355ec2.
+your approval. To go ahead, reply with just 355602.
 ```
 
-A reply that fails to carry the statement and the code word for word gets the engine's own
-line printed beneath it — `[CONFIRM 355ec2] cancel a booking runs only after your approval.`
-— so the ask always reaches the operator.
+The composed reply is gated on the statement's identifiers, figures and the code; when
+composition cannot carry them, the deterministic floor prints the engine's own line —
+`[355602] cancel a booking runs only after your approval.` — so the ask always reaches
+the operator.
 
 ## What installs itself
 

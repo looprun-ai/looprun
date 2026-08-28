@@ -10,7 +10,7 @@ Cancelling Blue Room on Friday is permanent, and 240 stays owed.
 Nobody wrote code to produce that sentence. It is one line on the business card, with two
 slots the engine filled by reading the records itself. It reaches the operator inside the
 desk's reply, woven in word for word beside the live code — and when a reply fails to carry
-it, the engine prints the line itself: `[CONFIRM 29bf44] Cancelling Blue Room on Friday is
+it, the engine prints the line itself: `[291344] Cancelling Blue Room on Friday is
 permanent, and 240 stays owed.`
 
 ---
