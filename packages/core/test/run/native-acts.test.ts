@@ -38,7 +38,7 @@ test('a licensed execution arrives typed in the approval turn', async () => {
   const first = await engine.chat('s1', 'cancel booking bk_9');
   const code = first.questions.issued[0].code;
   const stepsBefore = model.seen.length;
-  await engine.chat('s1', `approve ${code}`);
+  await engine.chat('s1', code);
   const approvalInputs = model.seen.slice(stepsBefore);
   const acts = approvalInputs[0].messages.filter(m => m.role === 'acts');
   expect(JSON.stringify(acts)).toContain('cancelBooking');

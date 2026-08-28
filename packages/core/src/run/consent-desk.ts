@@ -1,13 +1,15 @@
 /** The question lifecycle as the named state machine
- *  open → consumed | closed(declined | superseded | expired | vetoed). Codes carry
- *  real crypto entropy, no tool name, and are unique among open questions; an
- *  IDENTICAL re-proposal returns the SAME question and code, never a second live
- *  code; a re-proposal differing in ANY arg births a SIBLING question. Consumption
- *  searches ONLY engine-minted literals — 'CONFIRM xxxxxx' approves, 'NO xxxxxx'
- *  declines — and matches exactly one question. The desk's map holds the EXECUTABLE
- *  call; the delivered Question.call is the masked display form. Turn work stays on
- *  a working overlay: seal commits it, a discarded draft leaves no trace. */
-import { randomBytes } from 'node:crypto';
+ *  open → consumed | closed(declined | superseded | expired | vetoed). A code is six
+ *  random digits, unique among open questions; an IDENTICAL re-proposal returns the
+ *  SAME question and code, never a second live code; a re-proposal differing in ANY
+ *  arg births a SIBLING question. ONLY the exact code, alone in the message, consumes
+ *  — in any language, because digits are. A code wrapped in any other text (a NO
+ *  before it included) consumes nothing and earns the type-only-the-code notice.
+ *  There is no decline literal: cancelling is letting the code expire — five minutes
+ *  on the clock, or the turn ttl, whichever falls first. The desk's map holds the
+ *  EXECUTABLE call; the delivered Question.call is the masked display form. Turn work
+ *  stays on a working overlay: seal commits it, a discarded draft leaves no trace. */
+import { randomBytes, randomInt } from 'node:crypto';
 import type { CanonicalCallData, Question, QuestionClose } from '../contract/vocabulary.js';
 import { deepFreeze } from '../contract/freeze.js';
 import { isJson, type CanonicalCall } from '../contract/canonical-call.js';
@@ -18,6 +20,8 @@ interface Stored {
   readonly executable: CanonicalCallData;
   readonly targetValue: string | null;
   readonly state: 'open' | 'consumed' | { readonly closed: QuestionClose };
+  /** The clock reading at mint; the five-minute validity counts from here. */
+  readonly bornAtMs: number;
   /** The rendered after/later tenses, filled at hold time from the engine reads. */
   readonly after: string | null;
   readonly later: string | null;
@@ -29,13 +33,18 @@ interface Stored {
   readonly outcome?: string | null;
 }
 
+const QUESTION_TTL_MS = 5 * 60_000;
+
 export class ConsentDesk {
   private committed = new Map<string, Stored>();
   private working = new Map<string, Stored>();
   private readonly maskArgs: (call: CanonicalCall) => CanonicalCallData;
+  private readonly now: () => number;
 
-  constructor(maskArgs: (call: CanonicalCall) => CanonicalCallData) {
+  constructor(maskArgs: (call: CanonicalCall) => CanonicalCallData,
+              now: () => number = Date.now) {
     this.maskArgs = maskArgs;
+    this.now = now;
   }
 
   /** A fresh turn attempt works on a copy; a discarded draft leaves no trace. */
@@ -86,6 +95,7 @@ export class ConsentDesk {
     });
     this.working.set(key, {
       question, executable: call.data(v => (isJson(v) ? v : null)), targetValue, state: 'open',
+      bornAtMs: this.now(),
       after: tenses.after, later: tenses.later, executedAtTurn: null, consumedAtTurn: null
     });
     draft.issued.push(question);
@@ -129,24 +139,30 @@ export class ConsentDesk {
       .map(s => s.later ?? '');
   }
 
-  /** Approve and decline literals searched EXACTLY; each match settles one question. */
+  /** ONLY the exact code, alone in the message, consumes — in any language,
+   *  because digits are. Anything else consumes nothing. */
   readAnswer(userText: string, draft: TurnDraft): readonly Question[] {
     const consumed: Question[] = [];
+    const given = userText.trim();
     for (const [key, stored] of this.working) {
       if (stored.state !== 'open') continue;
-      const declineLiteral = stored.question.code.replace('CONFIRM', 'NO');
-      if (userText.includes(declineLiteral)) {
-        this.working.set(key, { ...stored, state: { closed: 'declined' } });
-        draft.closed.push({ id: stored.question.id, why: 'declined' });
-        continue;
-      }
-      if (userText.includes(stored.question.code)) {
+      if (given === stored.question.code) {
         this.working.set(key, { ...stored, state: 'consumed', consumedAtTurn: draft.turn });
         draft.consumed.push(stored.question.id);
         consumed.push(stored.question);
       }
     }
     return consumed;
+  }
+
+  /** A live code wrapped in ANY other text — a NO before it included — licenses
+   *  nothing and earns this notice on the delivery. */
+  codeNotices(userText: string): readonly string[] {
+    const given = userText.trim();
+    return [...this.working.values()]
+      .filter(s => s.state === 'open' && userText.includes(s.question.code)
+        && given !== s.question.code)
+      .map(() => 'To confirm, reply with only the code — nothing else.');
   }
 
   /** The stored executable call — engine-internal, never delivered. */
@@ -179,12 +195,14 @@ export class ConsentDesk {
     }
   }
 
-  /** Questions past their ttl close 'expired' — the closure is DELIVERED. */
+  /** Questions past the turn ttl OR the five-minute clock close 'expired' —
+   *  the closure is DELIVERED. */
   sweep(turn: number, ttl: number, draft: TurnDraft): readonly Question[] {
     const expired: Question[] = [];
     for (const stored of [...this.working.values()]) {
       if (stored.state !== 'open') continue;
-      if (turn - stored.question.bornAtTurn >= ttl) {
+      if (turn - stored.question.bornAtTurn >= ttl
+        || this.now() - stored.bornAtMs >= QUESTION_TTL_MS) {
         this.close(stored.question.id, 'expired', draft);
         expired.push(stored.question);
       }
@@ -194,7 +212,7 @@ export class ConsentDesk {
 
   private mintCode(): string {
     for (;;) {
-      const code = `CONFIRM ${randomBytes(3).toString('hex')}`;
+      const code = String(randomInt(0, 1_000_000)).padStart(6, '0');
       const collides = [...this.working.values()]
         .some(s => s.state === 'open' && s.question.code === code);
       if (!collides) return code;

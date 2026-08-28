@@ -25,7 +25,7 @@ test('M1 — hold, approve by code, licensed execution', async () => {
   const code = r1.questions.issued[0].code;
   expect(r1.text).toContain(code);
 
-  const r2 = await engine.chat('s1', `yes — approve ${code}`);
+  const r2 = await engine.chat('s1', code);
   expect(r2.acts[0]).toMatchObject({ call: { tool: 'cancelBooking' },
     origin: 'licence', status: 'done' });
   expect(world.snapshot().bookings.bk_9).toBeUndefined();
@@ -54,7 +54,7 @@ test('M1 — an identical re-proposal returns the SAME question; a sibling call 
   const sibling = r3.questions.issued[0];
   expect(sibling.code).not.toBe(first.code);
 
-  const r4 = await engine.chat('s1', `approve ${first.code}`);
+  const r4 = await engine.chat('s1', first.code);
   expect(r4.acts[0]).toMatchObject({ origin: 'licence', status: 'done' });
   // the sibling asked for a DIFFERENT target, so it stays open — same tool, other record
   expect(r4.text).toContain(sibling.code);

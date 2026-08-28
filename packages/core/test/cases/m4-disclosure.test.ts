@@ -33,7 +33,7 @@ test('M4 — before with slots + simulated result, after on execution, later sta
   expect(world.snapshot().bookings.bk_9).toBeDefined();
 
   const code = r1.questions.issued[0].code;
-  const r2 = await engine.chat('s1', `approve ${code}`);
+  const r2 = await engine.chat('s1', code);
   expect(r2.acts[0]).toMatchObject({ origin: 'licence', status: 'done' });
   expect(r2.text).toContain('Cancelled room 12.');
   expect(world.snapshot().bookings.bk_9).toBeUndefined();

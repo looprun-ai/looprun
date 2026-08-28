@@ -239,7 +239,8 @@ export class Turn {
       if (finish !== null) {
         const judge = new Judge(port, seat.llmParams({}));
         const closed = await this.tryFinish(finish, draft, messages, history.pastActs(),
-          desk.open(), [...desk.staleAnswers(userText, draft.turn), ...desk.laterTexts(draft.turn)], judge);
+          desk.open(), [...desk.staleAnswers(userText, draft.turn), ...desk.laterTexts(draft.turn),
+            ...desk.codeNotices(userText)], judge);
         if (closed === 'sealed') return session.seal(draft);
         retriesUsed += 1;
         if (retriesUsed > compiled.limits.retries) return this.engineClose(session, draft);
@@ -312,7 +313,9 @@ export class Turn {
     draft.finish = null;
     let text = dw.compose(fd.closure(draft.acts), draft.acts,
       session.consent.open(), draft.closed,
-      [...session.consent.staleAnswers(draft.userText, draft.turn), ...session.consent.laterTexts(draft.turn)]);
+      [...session.consent.staleAnswers(draft.userText, draft.turn),
+        ...session.consent.laterTexts(draft.turn),
+        ...session.consent.codeNotices(draft.userText)]);
     for (const rewrite of this.deps.compiled.rewrites) text = rewrite.apply(text);
     draft.text = this.deps.masker.maskProse(text);
     return session.seal(draft);

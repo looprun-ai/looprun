@@ -3,11 +3,12 @@ import { ScriptedModel } from '../../src/run/scripted-model.js';
 import { callStep, finishStep } from '../fixtures/scripted-model.js';
 import { caseRig } from '../fixtures/case-rig.js';
 
-// M2 — the closed half of the lifecycle: a quoted decline literal closes 'declined';
-// a question ignored past limits.questionTurns closes 'expired' by the sweep; EVERY
-// closure is delivered; a stale code consumes nothing.
+// M2 — the closed half of the lifecycle: NO plus the code has no effect — the
+// question stands and the type-only-the-code notice is delivered; a question
+// ignored past limits.questionTurns closes 'expired' by the sweep; EVERY closure
+// is delivered; a stale code consumes nothing.
 
-test('M2 — the decline literal closes the question and the world stays untouched', async () => {
+test('M2 — NO plus the code has no effect: the question stands, the notice is delivered', async () => {
   const model = new ScriptedModel([
     callStep('cancelBooking', { id: 'bk_9' }),
     finishStep('Approval needed.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'held' }]),
@@ -18,11 +19,12 @@ test('M2 — the decline literal closes the question and the world stays untouch
 
   const r1 = await engine.chat('s1', 'cancel bk_9');
   const code = r1.questions.issued[0].code;
-  const decline = code.replace('CONFIRM', 'NO');
 
-  const r2 = await engine.chat('s1', `no, keep it — ${decline}`);
-  expect(r2.questions.closed).toEqual([{ id: r1.questions.issued[0].id, why: 'declined' }]);
-  expect(r2.text.toLowerCase()).toContain('declined');
+  const r2 = await engine.chat('s1', `no, keep it — NO ${code}`);
+  expect(r2.questions.closed).toHaveLength(0);
+  expect(r2.questions.consumed).toHaveLength(0);
+  expect(r2.text).toContain('To confirm, reply with only the code — nothing else.');
+  expect(r2.text).toContain(code);
   expect(world.snapshot().bookings.bk_9).toBeDefined();
   expect(world.audit().every(row => row.call.args.simulate === true)).toBe(true);
 });

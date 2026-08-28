@@ -60,7 +60,9 @@ function declineText(open: readonly Question[], caseId: string): string {
   if (open.length !== 1) {
     throw new Error(`case ${caseId}: a decline turn needs exactly one open question, found ${String(open.length)}`);
   }
-  return open[0].code.replace('CONFIRM', 'NO');
+  // NO plus the code licenses nothing by contract: the question stands and the
+  // type-only-the-code notice rides the delivery. A decline turn measures that.
+  return `NO ${open[0].code}`;
 }
 
 function checkInvariants(c: ExamCase, records: readonly TurnRecord[]): string[] {

@@ -52,7 +52,7 @@ test('a licensed done write owes its filled after tense; a done write with no te
   } } } });
   const r1 = await engine.chat('s1', 'cancel booking bk_9');
   const code = r1.questions.issued[0].code;
-  const r2 = await engine.chat('s1', `approve ${code}`);
+  const r2 = await engine.chat('s1', code);
   const licensed = r2.acts.find(a => a.origin === 'licence');
   expect(licensed?.owed).toEqual({ kind: 'receipt', text: 'Cancelled room 12.' });
 

@@ -51,7 +51,7 @@ test('a consent case plays the public door: typed approval resolves the open cod
   expect(readDump(runDir, 'mini-02', 'governed').records).toHaveLength(3);
 });
 
-test('a decline turn types the decline literal; noEffect invariants price honestly', async () => {
+test('a decline turn types NO plus the code — inert by contract: the question stands, the notice delivers', async () => {
   const subject = await SubjectLoader.load(MINI);
   const c: ExamCase = { id: 'mini-03', split: 'fix',
     turns: ['cancel bk_9', { decline: true }],
@@ -64,8 +64,9 @@ test('a decline turn types the decline literal; noEffect invariants price honest
     finish('Understood — nothing was cancelled.')
   ] } }, runDir);
   expect(dump.invariantFailures).toEqual([]);
-  const closed = dump.records[1].questions.closed;
-  expect(closed.some(row => row.why === 'declined')).toBe(true);
+  expect(dump.records[1].questions.closed).toHaveLength(0);
+  expect(dump.records[1].questions.consumed).toHaveLength(0);
+  expect(dump.records[1].text).toContain('To confirm, reply with only the code — nothing else.');
 });
 
 test('a violated required invariant is recorded as data, never a throw', async () => {

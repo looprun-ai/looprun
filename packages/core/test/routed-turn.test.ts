@@ -87,31 +87,31 @@ test('notMine after an act is refused and the turn continues', async () => {
   expect(record.finish?.message).toBe('Your booking is on the record.');
 });
 
-test('a decline the engine already read shuts the return door', async () => {
+test('an answer the engine already read shuts the return door', async () => {
   const model = new ScriptedModel([
     callStep('cancelBooking', { id: 'bk_9' }),
     finishStep('Approval needed.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'held' }]),
     callStep('notMine', { reason: 'billing, not me' }),
-    finishStep('Kept as is.')
+    finishStep('Cancelled as approved.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'done' }])
   ]);
   const { engine, port } = testEngine({ model, facts: CONSENT_FACTS,
     behaviors: { cancelBooking: () => ({ result: { cancelled: true }, done: 'yes' }) } });
 
   const asked = await engine.chat('s1', 'cancel bk_9');
   const question = asked.questions.issued[0];
-  const decline = question.code.replace('CONFIRM', 'NO');
 
-  const result = await engine.chat('s1', `no, keep it — ${decline}`, { returnable: true });
+  const result = await engine.chat('s1', question.code, { returnable: true });
 
-  // The turn read the operator's NO before the model spoke: work has begun, so the
-  // door is shut and the decline seals instead of vanishing with a dropped draft.
+  // The turn consumed the operator's code before the model spoke: work has begun,
+  // so the door is shut and the licensed act seals instead of vanishing with a
+  // dropped draft.
   expect('returned' in result).toBe(false);
   const record = result as TurnRecord;
   expect(record.turn).toBe(2);
   expect(record.corrections).toContainEqual(
     { kind: 'returnRefused', detail: 'the return door closed once work began' });
-  expect(record.questions.closed).toEqual([{ id: question.id, why: 'declined' }]);
-  expect(port.log).toEqual([]);
+  expect(record.questions.consumed).toContain(question.id);
+  expect(port.log.map(c => c.tool)).toContain('cancelBooking');
 });
 
 test('grounded ids the door carries pass the floor; the same call without them is refused', async () => {
