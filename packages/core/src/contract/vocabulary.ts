@@ -66,6 +66,10 @@ export interface Act {
   readonly reason: Reason | null;             // set exactly when status is 'not-done'
   readonly evidence: Evidence;
   readonly sentence: string;                  // the record line the user reads
+  readonly owed: { readonly kind: 'receipt' | 'refusal';
+                   readonly text: string } | null;
+                                              // the words the operator is owed for this
+                                              // act; null on reads and teaching frames
   readonly result: Json;                      // masked; on a held call with simulation: the simulated result
   readonly questionId: string | null;         // the consent question this act raised or served
   readonly guard: string | null;              // the guard whose verdict shaped this act; null = none

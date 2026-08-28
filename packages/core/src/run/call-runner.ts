@@ -77,7 +77,8 @@ export class CallRunner {
       return this.record(draft, {
         origin, call: deepFreeze({ tool: raw.tool, args: {}, key: `off-surface:${raw.tool}` }),
         effect: 'read', said: null, status: 'not-done', reason: 'blocked', evidence: 'engine',
-        sentence: `${raw.tool} — not-done (no tool by that name is on this surface)`, result: null
+        sentence: `${raw.tool} — not-done (no tool by that name is on this surface)`,
+        owed: null, result: null
       });
     }
     const coerced = CanonicalCall.of(raw.tool, raw.args, fact);
@@ -86,7 +87,7 @@ export class CallRunner {
         origin, call: deepFreeze({ tool: raw.tool, args: {}, key: `bad-arg:${raw.tool}` }),
         effect: fact.effect, said: null, status: 'not-done', reason: 'blocked', evidence: 'engine',
         sentence: `${raw.tool} — not-done (arg '${coerced.badArg}' is missing or not usable as declared)`,
-        result: null
+        owed: null, result: null
       });
     }
     const call = coerced;
@@ -104,6 +105,7 @@ export class CallRunner {
           origin, call: call.data(v => this.deps.masker.maskData(v)), effect: fact.effect, said: grade.said,
           status: grade.status, reason: grade.reason, evidence: grade.evidence,
           sentence: `${this.head(call, fact)} — not-done (${`${rule} ${verdict.detail}`.trim()})`,
+          owed: { kind: 'refusal', text: `${rule} ${verdict.detail}`.trim() },
           result: null
         }, undefined, null, verdict.guardName);
       }
@@ -121,7 +123,7 @@ export class CallRunner {
           status: first.status, reason: first.reason, evidence: 'engine',
           sentence: `${this.head(call, fact)} — ${first.status} (already ran; first result restated)${
             outcome === null ? '' : `. ${outcome}`}`,
-          result: first.result
+          owed: null, result: first.result
         });
       }
       case 'hold': {
@@ -138,7 +140,7 @@ export class CallRunner {
             origin, call: call.data(v => this.deps.masker.maskData(v)), effect: fact.effect,
             said: null, status: 'not-done', reason: 'held', evidence: 'engine',
             sentence: `${this.head(call, fact)} — not-done (already held; the question stands — stop retrying and close the turn)`,
-            result: null
+            owed: null, result: null
           }, undefined, heldBefore.questionId);
         }
         // The declared reads run FIRST — origin engine, recorded — so the
@@ -158,7 +160,7 @@ export class CallRunner {
             origin, call: call.data(v => this.deps.masker.maskData(v)), effect: fact.effect,
             said: null, status: 'not-done', reason: 'blocked', evidence: 'engine',
             sentence: `${this.head(call, fact)} — not-done (${capSentence})`,
-            result: null
+            owed: { kind: 'refusal', text: capSentence }, result: null
           }, undefined, null, 'cap');
         }
         // An ask that cannot name its object is never asked: when a declared
@@ -170,7 +172,7 @@ export class CallRunner {
             origin, call: call.data(v => this.deps.masker.maskData(v)), effect: fact.effect,
             said: null, status: 'not-done', reason: 'blocked', evidence: 'engine',
             sentence: `${this.head(call, fact)} — not-done (${emptySentence})`,
-            result: null
+            owed: { kind: 'refusal', text: emptySentence }, result: null
           }, undefined, null, 'empty');
         }
         // The rehearsal outranks the ask: the held call runs against a throwaway
@@ -182,7 +184,7 @@ export class CallRunner {
             origin, call: call.data(v => this.deps.masker.maskData(v)), effect: fact.effect,
             said: null, status: 'not-done', reason: 'blocked', evidence: 'engine',
             sentence: `${this.head(call, fact)} — not-done (${rehearsed.refusal})`,
-            result: null
+            owed: { kind: 'refusal', text: rehearsed.refusal }, result: null
           }, undefined, null, 'rehearsal');
         }
         const tenses = this.deps.disclosure.tenses(call.tool, ctx.call, reads);
@@ -195,7 +197,7 @@ export class CallRunner {
           origin, call: call.data(v => this.deps.masker.maskData(v)), effect: fact.effect, said: grade.said,
           status: grade.status, reason: grade.reason, evidence: grade.evidence,
           sentence: `${this.head(call, fact)} — not-done (${this.deps.compiled.wording.status.held})`,
-          result: null
+          owed: null, result: null
         }, undefined, question.id, verdict.guardName);
       }
       case 'owe': {
@@ -286,6 +288,8 @@ export class CallRunner {
       sentence: afterTense === null
         ? `${this.head(call, fact)} — ${grade.status}`
         : `${this.head(call, fact)} — ${grade.status}. ${afterTense}`,
+      owed: grade.status === 'done' && fact.effect !== 'read' && afterTense !== null
+        ? { kind: 'receipt', text: afterTense } : null,
       result: this.deps.masker.maskData(result)
     }, id);
     if ('answer' in input && grade.status === 'done') {
@@ -313,6 +317,8 @@ export class CallRunner {
       origin, call: call.data(v => this.deps.masker.maskData(v)), effect: fact.effect, said: grade.said,
       status: grade.status, reason: grade.reason, evidence: grade.evidence,
       sentence: `${this.head(call, fact)} — not-done (${owner?.rule ?? ''} The required read did not succeed this conversation.)`,
+      owed: { kind: 'refusal',
+        text: `${owner?.rule ?? ''} The required read did not succeed this conversation.`.trim() },
       result: null
     });
   }
