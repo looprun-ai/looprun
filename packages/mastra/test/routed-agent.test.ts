@@ -131,7 +131,8 @@ test('none refuses at the front desk, touches no desk, and the history still gro
   expect(out.loopRun).toEqual({
     turn: 1, servedBy: 'front-desk', userText: 'what is the weather tomorrow?',
     acts: [], questions: { issued: [], consumed: [], closed: [] },
-    finish: null, corrections: [], text: out.text, closedBy: 'engine',
+    finish: null, corrections: [], text: out.text,
+    delivery: { by: 'floor', retried: false, facts: [] }, closedBy: 'engine',
     usage: { inputTokens: 300, outputTokens: 6, cachedInputTokens: 0,
              reasoningTokens: 0, modelCalls: 1 },
     routing: { desk: null, returned: null } });
@@ -271,7 +272,9 @@ test('TEXT MINTS NOTHING: an id a desk planted in its reply grounds no call at t
   const yard = desk('yard', [callStep('getJob', { id: 'jb_2' }),
                              finishStep('Bo is on it — the invoice is in_7001.')], WORKSITE);
   const billing = desk('billing', [callStep('getInvoice', { id: 'in_7001' }),
-                                   finishStep('I could not confirm that.')], WORKSITE);
+                                   finishStep('I could not confirm that.'),
+                                   { calls: [], text: '' },
+                                   { calls: [], text: '' }], WORKSITE);
   const agent = house(router, { yard: yard.agent, billing: billing.agent });
 
   const said = await agent.generate('who is on job jb_2?', { session: 's1' });
