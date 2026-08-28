@@ -45,7 +45,7 @@ test('G2 — hold and approve over POST /v1/chat/completions', async () => {
     const code = first.meta.loopRun.questions.issued[0].code;
     expect(first.choices[0].message.content).toContain(code);
 
-    const second = await post(`approve ${code}`);
+    const second = await post(code);
     expect(second.meta.loopRun.acts[0]).toMatchObject({
       call: { tool: 'cancelBooking' }, origin: 'licence', status: 'done' });
   } finally { await server.close(); }
