@@ -10,6 +10,7 @@ import { deepFreeze } from '../contract/freeze.js';
 import type { ModelPort, ToolPort, RecordsPort } from '../contract/ports.js';
 import type { CompiledAgent } from '../cards/cards.js';
 import { CallRunner } from './call-runner.js';
+import { canonicalAmount, figureRuns } from '../cards/catalog.js';
 import { assembleFacts } from './delivery-facts.js';
 import { ReplyComposer } from './reply-composer.js';
 import { DisclosureDesk } from './disclosure-desk.js';
@@ -282,6 +283,43 @@ export class Turn {
       userText: draft.userText, turnActs: [...draft.acts], pastActs
     });
     const violations = [...rulebook.checkReply(replyCtx)];
+    // Every figure the message states is one the records carry: the user's words,
+    // the turn's and the history's args, results and sentences, the open questions
+    // and the notes. A figure worked out at the desk grounds on nothing.
+    const evidence = new Set<string>();
+    const feed = (t: string): void => {
+      for (const run of figureRuns(t)) evidence.add(canonicalAmount(run));
+    };
+    feed(draft.userText);
+    for (const m of messages) if (m.role === 'user') feed(m.text);
+    for (const a of [...draft.acts, ...pastActs]) {
+      feed(JSON.stringify(a.call.args));
+      feed(JSON.stringify(a.result ?? null));
+      feed(a.sentence);
+    }
+    for (const q of open) feed(`${q.code} ${q.sentence}`);
+    for (const n of notes) feed(n);
+    const ungrounded = [...new Set(figureRuns(parsed.finish.message).map(canonicalAmount))]
+      .filter(x => !evidence.has(x));
+    if (ungrounded.length > 0) {
+      violations.push({ guardName: 'figureIsGrounded',
+        detail: `the message states ${ungrounded.join(', ')} and no record this turn carries `
+          + `${ungrounded.length > 1 ? 'them' : 'it'} — state only figures the records show, `
+          + `written as the records write them` });
+    }
+    // A report line the settled record contradicts is known to disagree with what
+    // happened: corrected, never delivered.
+    const contradiction = parsed.finish.report.find(line => draft.acts.some(a =>
+      a.call.tool === line.tool
+      && (line.target === '' || JSON.stringify(a.call.args).includes(line.target))
+      && (a.status === 'done' ? 'done'
+        : a.status === 'unknown' ? 'unknown'
+        : a.reason === 'held' ? 'held' : 'refused') !== line.word));
+    if (contradiction !== undefined) {
+      violations.push({ guardName: 'reportContradictsRecord',
+        detail: `your report says ${contradiction.word} for ${contradiction.tool}; the record `
+          + `disagrees — write every report line from the record, not from intention` });
+    }
     if (violations.length === 0 && compiled.judged.length > 0) {
       for (const v of await judge.run(compiled.judged, replyCtx, messages)) {
         if (v.verdict === 'violation') {
