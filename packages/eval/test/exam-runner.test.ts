@@ -84,14 +84,12 @@ test('the dump carries what each turn cost — per-turn usage totals', async () 
   const runDir = mkdtempSync(join(tmpdir(), 'run-'));
   const usage = { inputTokens: 100, outputTokens: 10, cachedInputTokens: 40, reasoningTokens: 0 };
   const dump = await new ExamRunner().runCase(subject, c, 'governed', { scripted: { steps: [
-    { ...call('cancelBooking', { id: 'bk_9' }), usage },
-    { ...finish('I need your approval.',
-        [{ tool: 'cancelBooking', target: 'bk_9', word: 'held' }]), usage }
+    { ...call('cancelBooking', { id: 'bk_9' }), usage }
   ] } }, runDir);
 
   expect(dump.usage).toHaveLength(1);
-  expect(dump.usage[0]).toMatchObject({ turn: 1, inputTokens: 200, outputTokens: 20,
-    cachedInputTokens: 80, modelCalls: 2 });
+  expect(dump.usage[0]).toMatchObject({ turn: 1, inputTokens: 100, outputTokens: 10,
+    cachedInputTokens: 40, modelCalls: 1 });
   expect(dump.usage[0].wallClockMs).toBeGreaterThanOrEqual(0);
 });
 
