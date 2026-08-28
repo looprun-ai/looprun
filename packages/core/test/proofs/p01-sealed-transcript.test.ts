@@ -28,8 +28,7 @@ test('a scripted turn seals the transcript in order, complete TurnRecord', async
   expect(r.finish?.message).toBe('Booking found: room 12 on Tuesday.');
   expect(r.corrections).toEqual([]);
   expect(r.closedBy).toBe('model');
-  // The delivery is the desk's prose alone: a successful read is the model's
-  // memory, and the sealed act record — not the reply — carries it.
-  expect(r.text).toBe('Booking found: room 12 on Tuesday.');
+  expect(r.text.startsWith('Booking found: room 12 on Tuesday.')).toBe(true);
+  expect(r.text).toContain('getBooking(bk_1001) — done');
   expect(r.questions).toEqual({ issued: [], consumed: [], closed: [] });
 });

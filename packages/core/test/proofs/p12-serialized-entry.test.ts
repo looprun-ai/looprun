@@ -24,9 +24,5 @@ test('two concurrent chats on one session serialize in arrival order', async () 
   expect(r2.finish?.message).toBe('Second done.');
   const lastInput = model.seen.at(-1);
   if (!lastInput) throw new Error('the model never served turn 2');
-  // Turn 2 re-reads turn 1 as the model's OWN memory: the prose plus every settled
-  // act sentence — never the operator's slimmed delivery.
-  expect(lastInput.messages.some(m => m.role === 'assistant'
-    && m.text.startsWith('First done.')
-    && m.text.includes(r1.acts[0].sentence))).toBe(true);
+  expect(lastInput.messages.some(m => m.role === 'assistant' && m.text === r1.text)).toBe(true);
 });

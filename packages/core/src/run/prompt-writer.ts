@@ -7,22 +7,6 @@ import type { Question, StateSnapshot, ToolCard } from '../contract/vocabulary.j
 import type { CompiledAgent } from '../cards/cards.js';
 import { deepFreeze } from '../contract/freeze.js';
 
-/** The model reads a schema to fill arguments. The draft-07 url, the validator's own
- *  flag and the id patterns the guards enforce answer nothing it must decide. */
-function slim(schema: ToolCard['schema']): ToolCard['schema'] {
-  const walk = (node: unknown): unknown => {
-    if (Array.isArray(node)) return node.map(walk);
-    if (node === null || typeof node !== 'object') return node;
-    const out: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(node as Record<string, unknown>)) {
-      if (k === '$schema' || k === 'additionalProperties' || k === 'pattern') continue;
-      out[k] = walk(v);
-    }
-    return out;
-  };
-  return walk(schema) as ToolCard['schema'];
-}
-
 export class PromptWriter {
   private readonly compiled: CompiledAgent;
   private frozenSystem: string | null = null;
@@ -65,7 +49,7 @@ export class PromptWriter {
           .filter(g => g.home === 'contract' && g.tools.includes(fact.name))
           .map(g => ` ${g.rule}`)
           .join('');
-        cards.push({ name: fact.name, does: `${fact.does}${guardRules}`, schema: slim(fact.schema) });
+        cards.push({ name: fact.name, does: `${fact.does}${guardRules}`, schema: fact.schema });
       }
       this.frozenCards = deepFreeze(cards);
     }

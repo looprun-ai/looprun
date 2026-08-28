@@ -34,18 +34,10 @@ test('M1 — hold, approve by code, licensed execution', async () => {
 });
 
 test('M1 — an identical re-proposal returns the SAME question; a sibling call births its own; the executed act supersedes the sibling', async () => {
-  // A raised question forces one finish step: each asking turn spends a call step
-  // AND a closing step.
   const model = new ScriptedModel([
     callStep('cancelBooking', { id: 'bk_9' }),
-    finishStep('I need your approval to cancel bk_9.',
-      [{ tool: 'cancelBooking', target: 'bk_9', word: 'held' }]),
     callStep('cancelBooking', { id: 'bk_9' }),
-    finishStep('Still waiting on your approval for bk_9.',
-      [{ tool: 'cancelBooking', target: 'bk_9', word: 'held' }]),
     callStep('cancelBooking', { id: 'bk_7' }),
-    finishStep('The Friday one needs its own approval.',
-      [{ tool: 'cancelBooking', target: 'bk_7', word: 'held' }]),
     finishStep('Cancelled bk_9.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'done' }])
   ]);
   const { engine } = caseRig({ model });

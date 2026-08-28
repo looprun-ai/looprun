@@ -10,7 +10,6 @@ import { deepFreeze } from '../contract/freeze.js';
 import type { ModelPort, ToolPort, RecordsPort } from '../contract/ports.js';
 import type { CompiledAgent } from '../cards/cards.js';
 import { CallRunner } from './call-runner.js';
-import { canonicalAmount, figureRuns } from '../cards/catalog.js';
 import { DisclosureDesk } from './disclosure-desk.js';
 import { Judge } from './judge.js';
 import type { Masker } from './masker.js';
@@ -92,10 +91,8 @@ export class Turn {
       return session.seal(draft);
     }
 
-    // The model's memory of a past turn is the full record — its prose and every
-    // settled act sentence — never the operator's slimmed delivery. What OTHER desks
-    // said since this desk's last visit rides in as plain text: delivered words, no
-    // acts, nothing executable.
+    // What OTHER desks said since this desk's last visit rides in as plain text:
+    // delivered words, no acts, nothing executable.
     const foreign = (opts.before ?? []).flatMap(x => [
       { role: 'user' as const, text: x.userText },
       { role: 'assistant' as const, text: x.replyText }
@@ -103,8 +100,7 @@ export class Turn {
     const messages: Msg[] = [
       ...history.sealed().flatMap(r => [
         { role: 'user' as const, text: r.userText },
-        { role: 'assistant' as const,
-          text: dw.modelView(r.finish?.message ?? '', r.acts, r.questions.issued.filter(q => q.state === 'open')) }
+        { role: 'assistant' as const, text: r.text }
       ]),
       ...foreign,
       { role: 'user', text: userText }
@@ -168,9 +164,6 @@ export class Turn {
     let forced = false;
     // The turn's opening move — the only place the return door is open.
     let opening = true;
-    // The desk's last written message: a rejected finish still spoke, and what it said
-    // is what the operator reads when the engine has to close the turn.
-    let lastMessage = '';
 
     for (;;) {
       const raw = this.deps.recordsPort?.snapshot() ?? null;
@@ -187,11 +180,9 @@ export class Turn {
       const stepInput = deepFreeze({
         system: tail === '' ? pw.system() : `${pw.system()}\n${tail}`,
         messages: [...messages],
-        // A forced turn has ONE move left. Putting the surface on the table costs the
-        // bytes of every card the step cannot use. The return door goes FIRST — the
-        // finish is last on every surface, and forceFinish targets the last card.
-        tools: forced ? [fd.toolCard()]
-          : returnable ? [RETURN_CARD, ...pw.toolCards(), fd.toolCard()]
+        // The return door goes FIRST — the finish is last on every surface, and
+        // forceFinish targets the last card.
+        tools: returnable ? [RETURN_CARD, ...pw.toolCards(), fd.toolCard()]
           : [...pw.toolCards(), fd.toolCard()],
         forceFinish: forced,
         llmParams: seat.llmParams({})
@@ -242,48 +233,23 @@ export class Turn {
       // IS the turn's outcome, and every further model step would be spent
       // re-proposing the very call the question already carries.
       if (draft.acts.slice(actsBefore).some(a => a.reason === 'held' && a.questionId !== null)) {
-        if (!forced) {
-          forced = true;
-          messages.push({ role: 'acts', acts: dw.settled(draft.acts) });
-          messages.push({ role: 'user', text: fd.force(desk.open()) });
-          continue;
-        }
-        return this.engineClose(session, draft, lastMessage);
+        return this.engineClose(session, draft);
       }
 
       if (finish !== null) {
-        const attempt = fd.parse(finish.args);
-        if (attempt.ok) lastMessage = attempt.finish.message;
-        const before = draft.corrections.length;
         const judge = new Judge(port, seat.llmParams({}));
         const closed = await this.tryFinish(finish, draft, messages, history.pastActs(),
           desk.open(), [...desk.staleAnswers(userText, draft.turn), ...desk.laterTexts(draft.turn)], judge);
         if (closed === 'sealed') return session.seal(draft);
-        // A message whose REPORT contradicts the settled record is known to disagree
-        // with what happened: the engine never delivers it. A malformed or incomplete
-        // report is a different fault — the prose it came with may be true, and the
-        // redrive teaching is the answer to it.
-        if (attempt.ok) {
-          const settled = dw.settled(draft.acts);
-          const contradicted = attempt.finish.report.some(line => settled.some(a =>
-            a.call.tool === line.tool
-            && (a.status === 'done' ? 'done'
-              : a.status === 'unknown' ? 'unknown'
-              : a.reason === 'held' ? 'held' : 'refused') !== line.word));
-          if (contradicted) lastMessage = '';
-        }
         retriesUsed += 1;
-        if (retriesUsed > compiled.limits.retries) return this.engineClose(session, draft, lastMessage);
+        if (retriesUsed > compiled.limits.retries) return this.engineClose(session, draft);
         continue;
       }
 
-      if (forced) return this.engineClose(session, draft, lastMessage);
+      if (forced) return this.engineClose(session, draft);
       if (callsUsed >= compiled.limits.calls || domain.length === 0) {
         forced = true;
-        // The closing message is written against the SETTLED record — a superseded
-        // attempt is not this turn's outcome and never reads as one.
-        messages.push({ role: 'acts', acts: dw.settled(draft.acts) });
-        messages.push({ role: 'user', text: fd.force(desk.open()) });
+        messages.push({ role: 'user', text: fd.force() });
       }
     }
   }
@@ -306,30 +272,6 @@ export class Turn {
       userText: draft.userText, turnActs: [...draft.acts], pastActs
     });
     const violations = [...rulebook.checkReply(replyCtx)];
-    // Every figure the message states is one the records carry: the user's words, the
-    // turn's and the history's args, results and sentences, the open questions and the
-    // notes. A figure worked out at the desk grounds on nothing and is corrected.
-    const evidence = new Set<string>();
-    const feed = (t: string): void => {
-      for (const run of figureRuns(t)) evidence.add(canonicalAmount(run));
-    };
-    feed(draft.userText);
-    for (const m of messages) if (m.role === 'user') feed(m.text);
-    for (const a of [...draft.acts, ...pastActs]) {
-      feed(JSON.stringify(a.call.args));
-      feed(JSON.stringify(a.result ?? null));
-      feed(a.sentence);
-    }
-    for (const q of open) feed(`${q.code} ${q.sentence}`);
-    for (const n of notes) feed(n);
-    const ungrounded = [...new Set(figureRuns(parsed.finish.message).map(canonicalAmount))]
-      .filter(x => !evidence.has(x));
-    if (ungrounded.length > 0) {
-      violations.push({ guardName: 'figureIsGrounded',
-        detail: `the message states ${ungrounded.join(', ')} and no record this turn carries `
-          + `${ungrounded.length > 1 ? 'them' : 'it'} — state only figures the records show, `
-          + `written as the records write them` });
-    }
     if (violations.length === 0 && compiled.judged.length > 0) {
       for (const v of await judge.run(compiled.judged, replyCtx, messages)) {
         if (v.verdict === 'violation') {
@@ -352,7 +294,6 @@ export class Turn {
       // attempt rides back as its own words, the correction names what to change.
       messages.push({ role: 'assistant', text: `My finish attempt:\n${parsed.finish.message}\nreport: ${
         parsed.finish.report.map(r => `${r.tool} ${r.target}: ${r.word}`).join(' · ') || '(no rows)'}` });
-      messages.push({ role: 'acts', acts: this.deps.deliveryWriter.settled(draft.acts) });
       messages.push({ role: 'user', text: pw.correction(violations.map(v => v.detail)) });
       return 'redrive';
     }
@@ -364,27 +305,14 @@ export class Turn {
     return 'sealed';
   }
 
-  private engineClose(session: Session, draft: TurnDraft, lastMessage = ''): TurnRecord {
+  private engineClose(session: Session, draft: TurnDraft): TurnRecord {
     const { finishDesk: fd, deliveryWriter: dw } = this.deps;
     draft.corrections.push({ kind: 'forcedFinish' });
     draft.closedBy = 'engine';
     draft.finish = null;
-    // The desk's own words when it wrote any; the exhaustion closure only when it never did.
-    const notes = [...session.consent.staleAnswers(draft.userText, draft.turn),
-                   ...session.consent.laterTexts(draft.turn)];
-    let text = dw.compose(lastMessage, draft.acts, session.consent.open(), draft.closed,
-      notes, lastMessage === '');
-    // A delivery is never empty: with no prose to trust and nothing the record prints,
-    // every settled act speaks its own sentence.
-    if (text.trim() === '') {
-      text = dw.compose(dw.settled(draft.acts).map(a => a.sentence).join('\n'),
-        [], session.consent.open(), draft.closed, notes);
-    }
-    // Still nothing — no prose, no act, no question, no note: the exhaustion closure
-    // speaks, pure over the recorded acts.
-    if (text.trim() === '') {
-      text = dw.compose(fd.closure(draft.acts), [], session.consent.open(), draft.closed, notes);
-    }
+    let text = dw.compose(fd.closure(draft.acts), draft.acts,
+      session.consent.open(), draft.closed,
+      [...session.consent.staleAnswers(draft.userText, draft.turn), ...session.consent.laterTexts(draft.turn)]);
     for (const rewrite of this.deps.compiled.rewrites) text = rewrite.apply(text);
     draft.text = this.deps.masker.maskProse(text);
     return session.seal(draft);

@@ -5,7 +5,7 @@
  *  never empty, structurally unable to fabricate, never "nothing changed" over an
  *  unknown write. */
 import { z } from 'zod';
-import type { Act, Correction, FinishPayload, Json, Question, RawCall, ToolCard } from '../contract/vocabulary.js';
+import type { Act, Correction, FinishPayload, Json, RawCall, ToolCard } from '../contract/vocabulary.js';
 
 const REPORT_WORDS = ['done', 'held', 'refused', 'unknown', 'no_tool_called'] as const;
 
@@ -92,21 +92,14 @@ export class FinishDesk {
   }
 
   /** The forced-finish instruction, sent with StepInput.forceFinish. */
-  force(open: readonly Question[] = []): string {
-    const consent = open.length === 0 ? ''
-      : ' Weave into your message, WORD FOR WORD, each approval statement with its literal: '
-        + open.map(q => `"${q.sentence}" — the operator approves by replying ${q.code}`).join('; ')
-        + '. Open with your own short sentence answering the operator, then the statement, then '
-        + 'name the literal. One flowing message.';
-    return `Call ${FINISH_TOOL} now with your closing message and the report of what happened. `
-      + `No other call remains available. Write the message in the language the operator wrote in.`
-      + consent;
+  force(): string {
+    return `Call ${FINISH_TOOL} now with your closing message and the report of what happened. No other call remains available.`;
   }
 
   /** Pure over the acts: done names it · unknown → could not confirm · neither → nothing changed. */
   closure(acts: readonly Act[]): string {
-    const done = acts.filter(a => a.status === 'done' && a.effect !== 'read').map(a => a.call.tool);
-    const unknown = acts.filter(a => a.status === 'unknown' && a.effect !== 'read').map(a => a.call.tool);
+    const done = acts.filter(a => a.status === 'done').map(a => a.call.tool);
+    const unknown = acts.filter(a => a.status === 'unknown').map(a => a.call.tool);
     const parts: string[] = [];
     if (done.length > 0) parts.push(`Completed: ${[...new Set(done)].join(', ')}.`);
     if (unknown.length > 0) parts.push(`Could not confirm: ${[...new Set(unknown)].join(', ')}.`);

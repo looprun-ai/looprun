@@ -97,9 +97,7 @@ test('a micro-step that fills nothing refuses the gated call — the turn still 
   });
   expect(r.acts[0].sentence).toContain('Run getBooking before cancelBooking.');
   expect(r.closedBy).toBe('model');
-  // The prose carries every id and figure the refusal states, so the delivery is
-  // the prose alone; the rule lives on the act record and in the model's memory.
-  expect(r.text).toBe('I could not cancel bk_9 — I could not read it first.');
+  expect(r.text).toContain('Run getBooking before cancelBooking.');
   const finishInput = model.seen.at(-1);
   expect(finishInput?.messages.some(m => m.role === 'acts'
     ? m.acts.some(a => a.sentence.includes('Run getBooking before cancelBooking.'))
