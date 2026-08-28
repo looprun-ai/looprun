@@ -19,8 +19,8 @@ test('lesson 2 — a destructive tool is held, and the question carries a code',
     spec: concierge, world: hotel,
     model: { scripted: { steps: [
       call('cancelBooking', { id: 'bk_1' }),
-      finish('I can cancel bk_1, but that needs your OK first.',
-        [{ tool: 'cancelBooking', target: 'bk_1', word: 'held' }])
+      { calls: [], text: '' },
+      { calls: [], text: '' },
     ] } }
   });
 
@@ -38,8 +38,8 @@ test('lesson 2 — the typed approval releases exactly that call', async () => {
     spec: concierge, world: hotel,
     model: { scripted: { steps: [
       call('cancelBooking', { id: 'bk_1' }),
-      finish('That needs your OK first.',
-        [{ tool: 'cancelBooking', target: 'bk_1', word: 'held' }]),
+      { calls: [], text: '' },
+      { calls: [], text: '' },
       { calls: [], text: '' },
       finish('Cancelled the Blue Room on Friday.',
         [{ tool: 'cancelBooking', target: 'bk_1', word: 'done' }])
@@ -48,7 +48,7 @@ test('lesson 2 — the typed approval releases exactly that call', async () => {
 
   const held = await agent.generate('Please cancel booking bk_1.', { session: 'lesson2b' });
   const code = held.loopRun.questions.issued[0].code;
-  const done = await agent.generate(`approve ${code}`, { session: 'lesson2b' });
+  const done = await agent.generate(code, { session: 'lesson2b' });
 
   expect(done.loopRun.acts[0]).toMatchObject({
     call: { tool: 'cancelBooking' }, origin: 'licence', status: 'done'
@@ -63,8 +63,8 @@ test('lesson 3 — the owed read is collected by the engine, in one forced micro
       // engine stops and asks the model for THAT ONE call before anything else runs.
       call('cancelBooking', { id: 'bk_1' }),
       call('getInvoice', { id: 'bk_1' }),
-      finish('240 is still owed on bk_1. Shall I cancel it?',
-        [{ tool: 'cancelBooking', target: 'bk_1', word: 'held' }])
+      { calls: [], text: '' },
+      { calls: [], text: '' },
     ] } }
   });
 
@@ -107,7 +107,9 @@ test('lesson 6 — a world gate refuses a checked-in booking, whatever the user 
       call('cancelBooking', { id: 'bk_9' }),
       finish('I could not cancel bk_9.'),
       finish('I could not cancel bk_9.'),
-      finish('I could not cancel bk_9.')
+      finish('I could not cancel bk_9.'),
+      { calls: [], text: '' },
+      { calls: [], text: '' },
     ] } }
   });
 
