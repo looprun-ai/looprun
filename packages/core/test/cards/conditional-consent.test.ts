@@ -36,7 +36,9 @@ function rig(steps: Parameters<typeof ScriptedModel.prototype.step>[0][] | Retur
 test('a non-matching call runs unheld — the branch is a write', async () => {
   const engine = rig([
     callStep('placeHold', { scope: 'asset', reason: 'safety' }),
-    finishStep('The asset is frozen.', [{ tool: 'placeHold', target: '', word: 'done' }])
+    finishStep('The asset is frozen.', [{ tool: 'placeHold', target: '', word: 'done' }]),
+    { calls: [], text: '' },
+    { calls: [], text: '' }
   ]);
   const rec = await engine.chat('s1', 'freeze the excavator');
   expect(rec.questions.issued).toHaveLength(0);

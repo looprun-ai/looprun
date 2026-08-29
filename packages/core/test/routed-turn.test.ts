@@ -94,7 +94,9 @@ test('an answer the engine already read shuts the return door', async () => {
     { calls: [], text: '' },
     callStep('notMine', { reason: 'billing, not me' }),
     finishStep('Cancelled as approved.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'done' }])
-  ]);
+  ,
+    { calls: [], text: '' },
+    { calls: [], text: '' }]);
   const { engine, port } = testEngine({ model, facts: CONSENT_FACTS,
     behaviors: { cancelBooking: () => ({ result: { cancelled: true }, done: 'yes' }) } });
 

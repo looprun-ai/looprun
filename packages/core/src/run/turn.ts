@@ -4,7 +4,7 @@
  *  order, engine-enforced) → finish checks and bounded redrives → compose → seal.
  *  All mutation goes to the TurnDraft; Session.seal commits atomically; a
  *  TurnFailure discards the draft so a retry starts clean. */
-import type { Act, ChatOpts, Msg, Question, RawCall, ToolCard, TurnRecord,
+import type { Act, ChatOpts, Msg, Question, RawCall, ReportLine, ToolCard, TurnRecord,
               TurnReturned } from '../contract/vocabulary.js';
 import { deepFreeze } from '../contract/freeze.js';
 import type { ModelPort, ToolPort, RecordsPort } from '../contract/ports.js';
@@ -42,6 +42,22 @@ const RETURN_CARD: ToolCard = {
 
 /** What this turn's done reads returned, one JSON string per distinct result —
  *  the composer's material, his to use, never owed. */
+/** The report line the record contradicts: among the acts of that tool (and target,
+ *  where the line names one), NONE settled with the word the line claims. An act
+ *  retried into a different standing supports the word it reached — the record's
+ *  own history is not a contradiction of its outcome. */
+export function contradictedLine(report: readonly ReportLine[], acts: readonly Act[]):
+    ReportLine | undefined {
+  const wordOf = (a: Act): string => a.status === 'done' ? 'done'
+    : a.status === 'unknown' ? 'unknown'
+    : a.reason === 'held' ? 'held' : 'refused';
+  return report.find(line => {
+    const matching = acts.filter(a => a.call.tool === line.tool
+      && (line.target === '' || JSON.stringify(a.call.args).includes(line.target)));
+    return matching.length > 0 && !matching.some(a => wordOf(a) === line.word);
+  });
+}
+
 export function readMaterial(acts: readonly Act[]): readonly string[] {
   return [...new Set(acts
     .filter(a => a.effect === 'read' && a.status === 'done' && a.result !== null)
@@ -338,12 +354,7 @@ export class Turn {
     }
     // A report line the settled record contradicts is known to disagree with what
     // happened: corrected, never delivered.
-    const contradiction = parsed.finish.report.find(line => draft.acts.some(a =>
-      a.call.tool === line.tool
-      && (line.target === '' || JSON.stringify(a.call.args).includes(line.target))
-      && (a.status === 'done' ? 'done'
-        : a.status === 'unknown' ? 'unknown'
-        : a.reason === 'held' ? 'held' : 'refused') !== line.word));
+    const contradiction = contradictedLine(parsed.finish.report, draft.acts);
     if (contradiction !== undefined) {
       violations.push({ guardName: 'reportContradictsRecord',
         detail: `your report says ${contradiction.word} for ${contradiction.tool}; the record `
@@ -388,7 +399,8 @@ export class Turn {
         ? await this.composer.deliver(draft.userText, facts, parsed.finish.message,
             floor, readMaterial(draft.acts))
         : { text: parsed.finish.message, by: 'prose' as const, retried: false })
-      : await this.composer.deliver(draft.userText, facts, parsed.finish.message, floor);
+      : await this.composer.deliver(draft.userText, facts, parsed.finish.message, floor,
+        readMaterial(draft.acts));
     draft.delivery = { by: composed.by, retried: composed.retried, facts };
     let text = composed.text;
     for (const rewrite of compiled.rewrites) text = rewrite.apply(text);

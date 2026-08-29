@@ -15,9 +15,17 @@ export function assembleFacts(acts: readonly Act[], open: readonly Question[],
   notes: readonly string[]): readonly DeliveryFact[] {
   const facts: DeliveryFact[] = [];
   for (const a of acts) {
-    if (a.owed === null) continue;
-    facts.push({ kind: a.owed.kind, text: a.owed.text,
-      state: a.owed.kind === 'receipt' ? 'ran' : 'refused' });
+    if (a.owed !== null) {
+      facts.push({ kind: a.owed.kind, text: a.owed.text,
+        state: a.owed.kind === 'receipt' ? 'ran' : 'refused' });
+      continue;
+    }
+    // A done act that changed the world is never silent: with no authored after,
+    // the act's own record line is the receipt — the reply may say less than the
+    // record, never the opposite of it.
+    if (a.status === 'done' && a.effect !== 'read') {
+      facts.push({ kind: 'receipt', text: a.sentence, state: 'ran' });
+    }
   }
   for (const q of open) {
     facts.push({ kind: 'ask', text: q.sentence, state: 'held' });

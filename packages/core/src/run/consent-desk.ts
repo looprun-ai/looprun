@@ -136,7 +136,10 @@ export class ConsentDesk {
     return rows
       .filter(s => s.state === 'consumed' && s.later !== null
         && s.executedAtTurn !== null && s.executedAtTurn < turn && !superseded(s))
-      .map(s => s.later ?? '');
+      .map(s => s.later ?? '')
+      // A standing sentence still carrying a slot has nothing true to say yet:
+      // it is dropped whole — a placeholder never reaches the operator.
+      .filter(s => !s.includes('{'));
   }
 
   /** ONLY the exact code, alone in the message, consumes — in any language,

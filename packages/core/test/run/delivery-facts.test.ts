@@ -19,8 +19,14 @@ describe('assembleFacts', () => {
     ]);
   });
 
-  it('an act with owed null contributes nothing — reads and teaching frames stay out', () => {
-    expect(assembleFacts([act({ owed: null })], [], [], [])).toEqual([]);
+  it('a done read with owed null stays out — its material is the composer\'s, never owed', () => {
+    expect(assembleFacts([act({ owed: null, effect: 'read' })], [], [], [])).toEqual([]);
+  });
+
+  it('a done write with owed null still owes its record line — the world changed', () => {
+    expect(assembleFacts([act({ owed: null })], [], [], [])).toEqual([
+      { kind: 'receipt', text: 't() — done. x', state: 'ran' }
+    ]);
   });
 
   it('an open question is an ask fact plus a code fact, the ask held', () => {

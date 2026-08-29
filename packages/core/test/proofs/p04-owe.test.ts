@@ -39,7 +39,9 @@ test('the micro-step pays the debt: single-tool surface, model-filled args, engi
     callStep('cancelBooking', { id: 'bk_9' }),
     callStep('getBooking', { bookingRef: 'bk_9' }),
     finishStep('Cancelled bk_9.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'done' }])
-  ]);
+  ,
+    { calls: [], text: '' },
+    { calls: [], text: '' }]);
   const { engine, port } = testEngine({
     model, guards: [guard], facts: MISMATCHED, behaviors: MISMATCHED_BEHAVIORS, records
   });
@@ -67,7 +69,9 @@ test('a satisfied prerequisite owes nothing — the read is not repeated', async
   const model = new ScriptedModel([
     { calls: [{ tool: 'getBooking', args: { id: 'bk_9' } }, { tool: 'cancelBooking', args: { id: 'bk_9' } }], text: '' },
     finishStep('Cancelled bk_9.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'done' }])
-  ]);
+  ,
+    { calls: [], text: '' },
+    { calls: [], text: '' }]);
   const { engine, port } = testEngine({ model, guards: [guard] });
 
   const r = await engine.chat('s1', 'check then cancel bk_9');

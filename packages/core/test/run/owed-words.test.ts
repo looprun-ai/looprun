@@ -51,7 +51,9 @@ test('a licensed done write owes its filled after tense; a done write with no te
     { calls: [], text: '' },
     callStep('compRoom', { id: 'bk_7' }),
     finishStep('Comped.', [{ tool: 'compRoom', target: 'bk_7', word: 'done' }])
-  ]);
+  ,
+    { calls: [], text: '' },
+    { calls: [], text: '' }]);
   const { engine } = caseRig({ model, contract: { disclosure: { cancelBooking: {
     needs: { booking: 'getBooking' },
     before: 'Cancelling room {booking.room} is permanent.',

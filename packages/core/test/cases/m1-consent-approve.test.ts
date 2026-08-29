@@ -14,7 +14,9 @@ test('M1 — hold, approve by code, licensed execution', async () => {
     { calls: [], text: '' },
     { calls: [], text: '' },
     finishStep('Cancelled bk_9.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'done' }])
-  ]);
+  ,
+    { calls: [], text: '' },
+    { calls: [], text: '' }]);
   const { engine, world } = caseRig({ model });
 
   const r1 = await engine.chat('s1', 'cancel booking bk_9');

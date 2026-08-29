@@ -33,7 +33,9 @@ test('a licensed execution arrives typed in the approval turn', async () => {
       [{ tool: 'cancelBooking', target: 'bk_9', word: 'held' }]),
     { calls: [], text: '' },
     finishStep('Cancelled bk_9.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'done' }])
-  ]);
+  ,
+    { calls: [], text: '' },
+    { calls: [], text: '' }]);
   const { engine } = caseRig({ model });
   const first = await engine.chat('s1', 'cancel booking bk_9');
   const code = first.questions.issued[0].code;

@@ -74,7 +74,9 @@ test('the sealed act carries the diff correction end to end', async () => {
   const model = new ScriptedModel([
     callStep('cancelBooking', { id: 'bk_1' }),
     finishStep('Cancelled.', [{ tool: 'cancelBooking', target: 'bk_1', word: 'done' }])
-  ]);
+  ,
+    { calls: [], text: '' },
+    { calls: [], text: '' }]);
   const { engine } = testEngine({
     model, records,
     behaviors: {

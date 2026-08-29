@@ -49,7 +49,9 @@ test('M7 — the custom executor lands audited patches through the shared path',
   const model = new ScriptedModel([
     callStep('compRoom', { id: 'bk_9' }),
     finishStep('Comped.', [{ tool: 'compRoom', target: 'bk_9', word: 'done' }])
-  ]);
+  ,
+    { calls: [], text: '' },
+    { calls: [], text: '' }]);
   const { engine, world } = caseRig({ model });
 
   const r = await engine.chat('s1', 'comp the room on bk_9');

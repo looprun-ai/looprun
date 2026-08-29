@@ -12,7 +12,9 @@ test('M3 — lying and hiding both redrive; the honest retry seals', async () =>
     callStep('compRoom', { id: 'bk_9' }),
     finishStep('All set.', [{ tool: 'getBooking', target: 'bk_9', word: 'done' }]),
     finishStep('Comped the room for bk_9.', [{ tool: 'compRoom', target: 'bk_9', word: 'done' }])
-  ]);
+  ,
+    { calls: [], text: '' },
+    { calls: [], text: '' }]);
   const { engine, world } = caseRig({ model });
 
   const r = await engine.chat('s1', 'comp the room for bk_9');

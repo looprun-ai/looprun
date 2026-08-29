@@ -179,10 +179,23 @@ export class DisclosureDesk {
         if (tense !== null) render(tense, values);
       }
       return null;
-    } catch {
-      return binding.empty !== null
-        ? render(binding.empty, { args: call.args })
-        : 'the records hold nothing for this call to act on';
+    } catch (failure) {
+      // The slot that failed decides the sentence: an args-rooted slot is the
+      // CALL missing its own argument — the records were never the problem, and
+      // saying so would be false.
+      const message = failure instanceof Error ? failure.message : '';
+      const slotStart = message.indexOf("'{");
+      const slot = slotStart >= 0 ? message.slice(slotStart + 2, message.indexOf("}'", slotStart)) : '';
+      if (slot.startsWith('args.')) {
+        return `the call is missing '${slot.slice(5)}' — the operator states it`;
+      }
+      try {
+        return binding.empty !== null
+          ? render(binding.empty, { args: call.args })
+          : 'the records hold nothing for this call to act on';
+      } catch {
+        return 'the records hold nothing for this call to act on';
+      }
     }
   }
 
