@@ -9,14 +9,14 @@ export { SubjectLoader } from './subject-loader.js';
 export type { Subject } from './subject-loader.js';
 export { Validator } from './validator.js';
 export type { ValidationFinding, ValidationReport } from './validator.js';
-export { approvable, boilerplate, byteOrigin, capPaths, cardWeight, census, conductComplete, coversResolve, destructiveDisclosed, doubleStated, echoes, floorRedeclared, inertChecks, laneWidth, nameGate, noEffectDenied, overWide, pairing, pairingTable, presetsDeclared, profile, promptLines, ruleCopies, purity, seamCovered, seamSpoken, surfaceOf, unlicensed, unspokenChecks } from './lints.js';
+export { approvable, boilerplate, byteOrigin, capPaths, cardWeight, census, conductComplete, coversResolve, destructiveDisclosed, doubleStated, echoes, floorRedeclared, inertChecks, laneWidth, nameGate, noEffectDenied, overWide, pairing, pairingTable, presetsDeclared, profile, promptLines, ruleCopies, purity, seamCovered, seamSpoken, seamUnreached, surfaceOf, unlicensed, unspokenChecks } from './lints.js';
 export type { ApprovabilitySubject, DeskSubject } from './lints.js';
 export type { ByteOrigin, CompiledDesk } from './lints.js';
 export type { CardProfile } from './lints.js';
 export type { LintFinding } from './lints.js';
 export { factsFromSource } from './world-source.js';
 export { censusFor, runGate } from './gate.js';
-export type { CensusSubject, GateSubject } from './gate.js';
+export type { CensusSubject, GateReport, GateSubject } from './gate.js';
 export type { SeamRow } from './lints.js';
 
 export { ExamRunner } from './exam-runner.js';

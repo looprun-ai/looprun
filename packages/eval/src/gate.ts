@@ -4,7 +4,7 @@ import type { AgentSpec, DeclaredWorld, DomainContract, ExamCase, LiveWorldCard,
 import { AgentFactory, factsFromWorld, Rulebook } from '@looprun-ai/core';
 import { approvable, capPaths, cardWeight, conductComplete, coversResolve,
          destructiveDisclosed, floorRedeclared, inertChecks, laneWidth, nameGate, noEffectDenied,
-         overWide, pairing, presetsDeclared, purity,
+         overWide, pairing, presetsDeclared, purity, seamSpoken, seamUnreached,
          unlicensed, unspokenChecks, type LintFinding } from './lints.js';
 
 /** What the gate needs beyond the directory. Every field is REQUIRED, and the one a subject
@@ -59,18 +59,30 @@ export function censusFor(subject: CensusSubject): ReadonlySet<string> {
   return names;
 }
 
-/** The static gate: every verb, one list, one answer. It runs in under a second on a thirty-act
- *  subject, which is why nothing downstream of it is worth spending a model call on until it is
+/** What the gate answers: the failing rows, and the seam budget lines beside them. The gate is
+ *  red exactly when `findings` is non-empty. `seams` fails nothing — each line is a refusal row
+ *  no case reaches, printed with the run so the author sees the unspoken seam without paying a
+ *  prompt sentence for it. */
+export interface GateReport {
+  readonly findings: readonly LintFinding[];
+  readonly seams: readonly LintFinding[];
+}
+
+/** The static gate: every verb, one answer. It runs in under a second on a thirty-act subject,
+ *  which is why nothing downstream of it is worth spending a model call on until its findings are
  *  empty. The two row-shaped verbs — doubleStated and echoes — are not here: they return questions
- *  an author answers, and a question is not a failure. `seamSpoken` is not here for the same
- *  reason, and one of its own: every sentence it asks for is a sentence the prompt then carries on
- *  every turn, so how many of an act's refusals are worth stating is a budget the author spends,
- *  not a rule a gate decides. The census verb is not here either: it reads a RUN's dumps, which a
- *  subject directory does not carry.
+ *  an author answers, and a question is not a failure. The census verb is not here either: it
+ *  reads a RUN's dumps, which a subject directory does not carry.
+ *
+ *  The seam rides as a budget. Every seam sentence is a sentence the prompt then carries on every
+ *  turn, so how many of an act's refusals are worth stating is the author's spend — until the
+ *  exam drives into one. A refusal a case's scenario reaches puts an operator in front of it, and
+ *  that row unspoken is a failing finding; the rows no case reaches ride back under `seams`,
+ *  warnings that print with the run and fail nothing.
  *
  *  One problem, one row: two verbs reading the same refused card answer with the same sentence,
  *  and a list that prints it twice teaches nothing the first row did not. */
-export function runGate(subjectDir: string, subject: GateSubject): readonly LintFinding[] {
+export function runGate(subjectDir: string, subject: GateSubject): GateReport {
   const facts = factsFromWorld(subject.world);
   const { cases, censusNames, presetLeavesGuardInert } = subject;
   const acting = Object.values(facts.tools)
@@ -102,11 +114,15 @@ export function runGate(subjectDir: string, subject: GateSubject): readonly Lint
     // An act the exam expects refused is an act the cards can refuse: a mechanism that decides the
     // call, not an order that reading clears.
     ...noEffectDenied(subjectDir, cases),
+    // The same act meets the operator at the seam: the refusal the exam drives it into is spoken
+    // on the cards, or the gate is red.
+    ...seamSpoken(subjectDir, cases, facts),
     ...(censusNames === null ? [] : coversResolve(cases, censusNames)),
     // A case covers a guard to prove it fires; whether its scenario leaves that guard able to
     // refuse is answered for every subject, and no subject sits this verb out.
     ...approvable(cases, { presetLeavesGuardInert })
   ];
-  return answered.filter((finding, at) => answered
+  const findings = answered.filter((finding, at) => answered
     .findIndex(other => other.code === finding.code && other.sentence === finding.sentence) === at);
+  return { findings, seams: seamUnreached(subjectDir, cases, facts) };
 }

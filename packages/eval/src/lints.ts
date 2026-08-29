@@ -1595,6 +1595,20 @@ function seamLawsByAct(sources: readonly Source[]): ReadonlyMap<string, readonly
   return byAct;
 }
 
+/** The seam table folded act by act: every code the world can refuse the act's call with. */
+function seamRowsByAct(subjectDir: string,
+                       facts: { readonly tools: Readonly<Record<string, unknown>> })
+                       : ReadonlyMap<string, readonly string[]> {
+  const byAct = new Map<string, string[]>();
+  for (const row of seamCovered(subjectDir, facts))
+    byAct.set(row.act, [...(byAct.get(row.act) ?? []), row.code]);
+  return byAct;
+}
+
+/** The rows of one act's seam, each in the words a finding names a row by: `'act · code'`. */
+const seamRowNames = (act: string, codes: readonly string[]): string =>
+  [...codes].sort().map(code => `'${act} · ${code}'`).join(', ');
+
 /** An act the exam expects to be REFUSED is an act the desk meets at the seam, and the operator
  *  meets there with it. The world answers that call with a code; a card that states no law around
  *  any of those codes leaves the desk to invent one — it refuses in words nobody wrote, or asks
@@ -1606,20 +1620,40 @@ function seamLawsByAct(sources: readonly Source[]): ReadonlyMap<string, readonly
 export function seamSpoken(subjectDir: string, cases: readonly ExamCase[],
                            facts: { readonly tools: Readonly<Record<string, unknown>> })
                            : readonly LintFinding[] {
-  const sources = subjectSources(subjectDir);
-  const spoken = seamLawsByAct(sources);
-  const codesByAct = new Map<string, string[]>();
-  for (const row of seamCovered(subjectDir, facts))
-    codesByAct.set(row.act, [...(codesByAct.get(row.act) ?? []), row.code]);
+  const spoken = seamLawsByAct(subjectSources(subjectDir));
+  const rows = seamRowsByAct(subjectDir, facts);
   const findings: LintFinding[] = [];
   for (const [act, caseId] of noEffectActs(cases)) {
-    const codes = codesByAct.get(act);
+    const codes = rows.get(act);
     if (codes === undefined || (spoken.get(act) ?? []).length > 0) continue;
     findings.push({ code: 'SEAM_UNSPOKEN',
       sentence: `case '${caseId}' expects '${act}' to change nothing, and no rule on this card `
-        + `states the law around any refusal it answers with — the world refuses that call with `
-        + `${[...codes].sort().join(', ')}. Declare a contract.seam entry on '${act}' for the `
+        + `states the law around any refusal it answers with — the world refuses that call at `
+        + `${seamRowNames(act, codes)}. Declare a contract.seam entry on '${act}' for the `
         + `refusal the operator actually meets.` });
+  }
+  return findings;
+}
+
+/** The seam rows the exam leaves alone: the world can refuse the act's call, no case drives it
+ *  into a refusal, and no seam law on the cards speaks for the act. Each row is a budget line,
+ *  never a failure — the sentence it asks for is one the prompt would carry on every turn, and no
+ *  case has put an operator in front of the refusal. The gate prints these with the run, so the
+ *  unspoken seam stays visible while the sentence stays unspent. */
+export function seamUnreached(subjectDir: string, cases: readonly ExamCase[],
+                              facts: { readonly tools: Readonly<Record<string, unknown>> })
+                              : readonly LintFinding[] {
+  const spoken = seamLawsByAct(subjectSources(subjectDir));
+  const reached = noEffectActs(cases);
+  const findings: LintFinding[] = [];
+  for (const [act, codes] of [...seamRowsByAct(subjectDir, facts)]
+      .sort(([a], [b]) => a.localeCompare(b))) {
+    if (reached.has(act) || (spoken.get(act) ?? []).length > 0) continue;
+    findings.push({ code: 'SEAM_UNREACHED',
+      sentence: `no case drives '${act}' into a refusal, and no seam law on this card speaks for `
+        + `it — the world can refuse that call at ${seamRowNames(act, codes)}, and an operator `
+        + `who meets one of those codes meets it bare. A contract.seam entry on '${act}' pays the `
+        + `sentence the day a case reaches this seam.` });
   }
   return findings;
 }

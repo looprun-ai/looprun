@@ -33,14 +33,16 @@ export function writeSubject(): string {
 /** The static gate, as a test that runs beside the subject. Every answer in it comes from the
  *  engine: the verbs from `runGate`, and the census a case's `covers` key is spelled against from
  *  `censusFor`, which walks the compiled desks and the honesty rows the Rulebook injects. This
- *  file names no guard of its own, so a row the engine adds or renames arrives here with it. */
+ *  file names no guard of its own, so a row the engine adds or renames arrives here with it.
+ *  The gate's findings fail the run; its seam warnings print beside it and fail nothing. */
 export function writeGateFile(stamp: string): string {
   return [
-    '/** THE STATIC GATE of this subject: every verb, one list, one answer. Run it from this',
+    '/** THE STATIC GATE of this subject: every verb, one answer. Run it from this',
     ' *  directory with `npx vitest run check-subject.test.ts`. Every check belongs to the ENGINE',
     ' *  and this file only calls it — a check re-written beside a subject is a second truth, and',
     ' *  the first time the engine tightens a rule the copy keeps blessing what the engine now',
-    ' *  refuses. Nothing here spends anything: no key, no model, no network. */',
+    ' *  refuses. A finding fails this gate; a seam warning prints beside a green run and fails',
+    ' *  nothing. Nothing here spends anything: no key, no model, no network. */',
     'import { createHash } from \'node:crypto\';',
     'import { readFileSync } from \'node:fs\';',
     'import { join } from \'node:path\';',
@@ -65,7 +67,7 @@ export function writeGateFile(stamp: string): string {
     '});',
     '',
     'test(\'the subject passes every verb of the static gate\', () => {',
-    '  expect(runGate(SUBJECT, {',
+    '  const gate = runGate(SUBJECT, {',
     '    world: subjectWorld,',
     '    // The desks the prompt is rendered from: what every turn sends is measured over them,',
     '    // against the byte ceiling this subject\'s own ask/targets.json declares.',
@@ -78,7 +80,11 @@ export function writeGateFile(stamp: string): string {
     '    // covered guard that the scenario it runs in leaves it able to fire — the one line of',
     '    // this gate that is a claim rather than a reading.',
     '    presetLeavesGuardInert: () => false',
-    '  })).toEqual([]);',
+    '  });',
+    '  // A seam no case reaches is a budget line, never a failure: each warning prints with the',
+    '  // run, so the author sees every unspoken refusal without paying a prompt sentence for it.',
+    '  for (const seam of gate.seams) console.warn(`seam warning — ${seam.sentence}`);',
+    '  expect(gate.findings).toEqual([]);',
     '});',
     ''
   ].join('\n');

@@ -84,7 +84,9 @@ test('the gate file runs the one gate and states why no preset oracle rides with
   expect(out).toContain('    specs,');
   expect(out).toContain('    contract,');
   expect(out).toContain('presetLeavesGuardInert: () => false');
-  expect(out).toContain('.toEqual([])');
+  // The findings are the answer, and the seam budget prints beside it without failing anything.
+  expect(out).toContain('expect(gate.findings).toEqual([])');
+  expect(out).toContain('for (const seam of gate.seams) console.warn(');
   expect(out).not.toContain('it(');
 });
 
@@ -236,9 +238,13 @@ test('the emitted subject clears every verb of the gate', async () => {
     expect(predicted.filter(name => !censusNames.has(name))).toEqual([]);
     expect(predicted).toContain('confirmFirst:issueRefund');
 
-    expect(runGate(dir, { world: door.subjectWorld, specs: door.specs, contract: door.contract,
-                          cases: exam.cases, censusNames,
-                          presetLeavesGuardInert: () => false })).toEqual([]);
+    const gate = runGate(dir, { world: door.subjectWorld, specs: door.specs,
+                                contract: door.contract, cases: exam.cases, censusNames,
+                                presetLeavesGuardInert: () => false });
+    expect(gate.findings).toEqual([]);
+    // The world spells one refusal no case drives into and no seam sentence pays for, so the
+    // budget prints it beside the green run instead of failing it.
+    expect(gate.seams.map(s => s.code)).toEqual(['SEAM_UNREACHED']);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

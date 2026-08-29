@@ -2,8 +2,10 @@
  *  here, so a verb dropped from the gate loses its own code from the list and this file says which
  *  one went missing. The verbs this directory cannot trip are proved on directories written at run
  *  time instead: a retired identifier checked in here would fail the tree-wide name gate, which
- *  walks every file under packages/, fixtures included; and the two caps need a desk given more
- *  acts than a lane holds, carrying cards heavier than the prefix behind them. */
+ *  walks every file under packages/, fixtures included; the two caps need a desk given more
+ *  acts than a lane holds, carrying cards heavier than the prefix behind them; and the seam verbs
+ *  need a world that spells refusal codes in its own source, which this card does not carry —
+ *  they are proved on the seam fixtures beside this directory. */
 import { describe, expect, test } from 'vitest';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -90,7 +92,7 @@ const SOUND_SUBJECT: GateSubject = {
 
 describe('runGate', () => {
   test('it runs every verb that returns findings, and names each in its own row', () => {
-    const findings = runGate(FIXTURE_DIR, FIXTURE_SUBJECT);
+    const { findings } = runGate(FIXTURE_DIR, FIXTURE_SUBJECT);
     const codes = new Set(findings.map(f => f.code));
     expect(codes.has('SUBJECT_REGEX')).toBe(true);
     expect(codes.has('COVERS_UNRESOLVED')).toBe(true);
@@ -119,7 +121,8 @@ describe('runGate', () => {
     // act, a live precondition, a disclosed destructive act, a rooted cap — so the empty list is
     // every verb clearing a populated walk, not every verb finding nothing to walk.
     expect(SOUND_CENSUS.has('precondition:closeOrder')).toBe(true);
-    expect(runGate(SOUND_DIR, SOUND_SUBJECT)).toEqual([]);
+    // The one seam row this world spells out is spoken, so the budget prints nothing either.
+    expect(runGate(SOUND_DIR, SOUND_SUBJECT)).toEqual({ findings: [], seams: [] });
   });
 
   test('the retired-name verb is in the gate', () => {
@@ -127,7 +130,7 @@ describe('runGate', () => {
     writeFileSync(join(dir, 'cards.ts'), 'export const toolDefs = [];\n');
     const bare: GateSubject = { world: {}, specs: {}, contract: undefined, cases: [],
                                 censusNames: null, presetLeavesGuardInert: () => false };
-    expect(runGate(dir, bare).map(f => f.code)).toContain('SUBJECT_RETIRED_NAME');
+    expect(runGate(dir, bare).findings.map(f => f.code)).toContain('SUBJECT_RETIRED_NAME');
   });
 
   test('the approvability verb takes no opt-out: every caller answers for its presets', () => {
@@ -140,7 +143,7 @@ describe('runGate', () => {
                 rubric: 'The retirement is refused and the booking that holds it is named.' }],
       presetLeavesGuardInert: (_preset, guardName) => guardName === 'precondition:retireAsset'
     };
-    expect(runGate(dir, covered).map(f => f.code)).toContain('CASE_CANNOT_FIRE');
+    expect(runGate(dir, covered).findings.map(f => f.code)).toContain('CASE_CANNOT_FIRE');
   });
 
   test('the two caps are in the gate, measured on the desk the engine compiles', () => {
@@ -154,7 +157,7 @@ describe('runGate', () => {
       specs: { orders: { name: 'orders', persona: 'You are the orders desk.' } },
       contract: undefined, cases: [], censusNames: null, presetLeavesGuardInert: () => false
     };
-    const codes = runGate(dir, wide).map(f => f.code);
+    const codes = runGate(dir, wide).findings.map(f => f.code);
     expect(codes).toContain('LANE_TOO_WIDE');
     expect(codes).toContain('CARD_OVER_WEIGHT');
   });
@@ -172,7 +175,7 @@ describe('runGate', () => {
       specs: { orders: phaseless } as unknown as Readonly<Record<string, AgentSpec>>,
       contract: undefined, cases: [], censusNames: null, presetLeavesGuardInert: () => false
     };
-    const findings = runGate(dir, refused);
+    const { findings } = runGate(dir, refused);
     const codes = findings.map(f => f.code);
     expect(codes).toContain('GUARD_PHASE_MISSING');
     expect(codes).toContain('SUBJECT_REGEX');
