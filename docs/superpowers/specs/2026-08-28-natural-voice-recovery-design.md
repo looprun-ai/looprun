@@ -110,8 +110,15 @@ F1  THE NATURAL REPLY, FROM ZERO (its own spec)
           judged on the canonical example of §1 · directed code cases
     cost: replay first · 12-slice · targeted set · full ruler ONCE
 
-F2  RE-SEAL THE ROUTED HOUSE + CHAT (zero new code; runs AFTER F3
-    by the owner's ruling — one campaign seals the final build)
+F5  THE SKILL'S CORRECTIONS AND THE EXAM'S REPAIRS (owner's ruling,
+    2026-08-29, between F3 and F2): backlog-da-skill rows 2, 4, 5, 6, 7
+    — the five missing teachings, the four c12 findings, and the exam
+    cases 76, 61/62/68 and 48 — each fix validated by directed cases;
+    spec: 2026-08-29-f5-skill-and-exam-repairs-design.md
+
+F2  RE-SEAL THE ROUTED HOUSE + CHAT (zero new code; runs LAST, after
+    F3 and F5 — one campaign measures the final build against the
+    repaired ruler and pays both seals)
     the router, the chat door and the routed eval stand as they are on
     main; their 97/100 seal was paid on the 24/08 delivery and is re-paid
     on the new one
