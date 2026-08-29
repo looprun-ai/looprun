@@ -107,10 +107,18 @@ export class Turn {
       { role: 'user' as const, text: x.userText },
       { role: 'assistant' as const, text: x.replyText }
     ]);
+    // The model's memory of a past turn is its delivered text; the LAST TWO turns
+    // also carry their own record lines — what just ran and what did not, frames
+    // the operator never sees. A delivered wording can drift; the record cannot,
+    // and bounding it to two turns keeps the window's cost flat.
+    const sealed = history.sealed();
+    const recorded = new Set(sealed.slice(-2));
     const messages: Msg[] = [
-      ...history.sealed().flatMap(r => [
+      ...sealed.flatMap(r => [
         { role: 'user' as const, text: r.userText },
-        { role: 'assistant' as const, text: r.text }
+        { role: 'assistant' as const, text: !recorded.has(r) || r.acts.length === 0
+          ? r.text
+          : `${r.text}\n${r.acts.map(a => a.sentence).join('\n')}` }
       ]),
       ...foreign,
       { role: 'user', text: userText }
