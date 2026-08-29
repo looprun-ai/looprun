@@ -1,6 +1,6 @@
 # F1 — The Natural Reply: the Composer Design
 
-**Status:** DRAFT — pending owner review
+**Status:** CLOSED — certified on the recorded runs; the next full ruler rides the F2 seal (§9)
 **Program:** `2026-08-28-natural-voice-recovery-design.md`, phase F1
 **Floor:** branch `natural-voice` (the 23/08 delivery: record verbatim)
 **Scope:** engine only — the skill stays locked; the subject model is the only model reached
