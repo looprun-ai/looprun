@@ -229,6 +229,33 @@ function checkDestructiveDisclosed(declaration: Declaration, facts: SurfaceFacts
   return refusals;
 }
 
+/** Every act the surface's birth register marks carries the asked-for law and an `after`. A
+ *  record-opening act is how a booking, a claim or a hold comes to exist at all, and two
+ *  declared sentences stand around that birth: a prose guard licensed `conduct` naming the
+ *  act — the law that opens a record only on the operator's own ask — and a
+ *  `disclosure.<act>.after`, the sentence that states which record now exists once the call
+ *  has run. Without the law the desk opens records nobody asked for; without the after a
+ *  record is born and the operator is never told which one. */
+function checkCreatesLawAndAfter(declaration: Declaration, facts: SurfaceFacts): readonly string[] {
+  const refusals: string[] = [];
+  for (const act of facts.creates ?? []) {
+    if (facts.tools[act] === undefined) continue;
+    const lawed = declaration.contract.guards.some(guard => guard.factory === 'prose'
+      && guard.args?.why === 'conduct' && guard.acts.includes(act));
+    if (!lawed) {
+      refusals.push(`contract.guards: the act '${act}' opens a new record and carries no prose `
+        + `law licensed conduct — declare the asked-for law: a prose guard claiming `
+        + `args.why: conduct, whose acts name '${act}'.`);
+    }
+    if (declaration.contract.disclosure[act]?.after === undefined) {
+      refusals.push(`contract.disclosure.${act}.after is missing: '${act}' opens a new record, `
+        + `and the after is the sentence the operator reads once it exists — add one naming `
+        + `what the call came back with, as {result.<field>}.`);
+    }
+  }
+  return refusals;
+}
+
 /** A `precondition` guard reading `args.reads: 'record'` names an act with a target record
  *  to read — an act with no target has no record for the guard to read. */
 function checkPreconditionTarget(declaration: Declaration, facts: SurfaceFacts): readonly string[] {
@@ -532,6 +559,7 @@ function checkSeamRows(declaration: Declaration, facts: SurfaceFacts,
  *  outside that desk's lane, a guard whose configuration names one, a guard whose
  *  configuration names an argument its act's schema does not declare, a `valueFromUser` bound to
  *  an argument its act does not require, a destructive act with nothing disclosed before it runs,
+ *  a record-opening act with no prose law licensed conduct or with no `after`,
  *  a `precondition` reading a record over an act with no target, a disclosure `needs` alias naming
  *  a tool that does not exist, a disclosure alias whose read cannot answer the call it is held
  *  for, a disclosure alias naming a read the lane of a desk holding the act does not carry, an
@@ -551,6 +579,7 @@ export function checkAgainstSurface(declaration: Declaration, facts: SurfaceFact
     ...checkGuardArgsOnSchema(declaration, facts),
     ...checkValueFromUserRequired(declaration, facts),
     ...checkDestructiveDisclosed(declaration, facts),
+    ...checkCreatesLawAndAfter(declaration, facts),
     ...checkPreconditionTarget(declaration, facts),
     ...checkDisclosureNeedsToolExists(declaration, facts),
     ...checkDisclosureNeedsResolvable(declaration, facts),
