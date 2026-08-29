@@ -1,9 +1,12 @@
 /** The tool surface a world card declares, read from the FILE rather than from a loaded module.
  *  A subject's world is TypeScript that imports TypeScript, so a plain `node` process cannot
  *  import it; the emitter still has to know the acts, their effects and their targets before it
- *  writes a card. This reads the three effect blocks of the `world({ ... })` card as literals and
- *  hands them to the engine's own derivation, so the target, the schema and the effect of every
- *  act are decided in one place — `factsFromWorld` — and never spelled a second time here.
+ *  writes a card. This reads the three effect blocks and the `creates` register of the
+ *  `world({ ... })` card as literals and hands them to the engine's own derivation, so the
+ *  target, the schema, the effect and the birth register of every act are decided in one
+ *  place — `factsFromWorld` — and never spelled a second time here. A `creates` key may name a
+ *  top-level `const` of this same file instead of spelling the list inline, and the reader
+ *  resolves that one name; a list imported from another file offers nothing to read here.
  *
  *  A world that builds an effect block in code offers no literal to read, and the acts of that
  *  block are absent from the facts this returns. The caller names the empty surface. */
@@ -70,6 +73,36 @@ function blockEntries(node: ts.ObjectLiteralExpression): Readonly<Record<string,
   return out;
 }
 
+/** The literal a top-level `const` of this file binds the named identifier to, or undefined
+ *  when the expression is no identifier or the file binds it to none. An identifier imported
+ *  from another file is declared nowhere in this one, and resolves to nothing. */
+function resolvedLiteral(source: ts.SourceFile, expression: ts.Expression): Json | undefined {
+  const at = unwrap(expression);
+  if (!ts.isIdentifier(at)) return undefined;
+  for (const statement of source.statements) {
+    if (!ts.isVariableStatement(statement)) continue;
+    for (const declared of statement.declarationList.declarations) {
+      if (ts.isIdentifier(declared.name) && declared.name.text === at.text
+        && declared.initializer !== undefined) return literal(declared.initializer);
+    }
+  }
+  return undefined;
+}
+
+/** The birth register the card states under `creates`: the act names, read from the inline list
+ *  or through the one top-level `const` the key names. A key stating neither is no register. */
+function createsOf(source: ts.SourceFile, card: ts.ObjectLiteralExpression): readonly string[] | undefined {
+  for (const property of card.properties) {
+    if (!ts.isPropertyAssignment(property)) continue;
+    if (!ts.isIdentifier(property.name) && !ts.isStringLiteral(property.name)) continue;
+    if (property.name.text !== 'creates') continue;
+    const value = literal(property.initializer) ?? resolvedLiteral(source, property.initializer);
+    if (!Array.isArray(value)) return undefined;
+    return value.filter((name): name is string => typeof name === 'string');
+  }
+  return undefined;
+}
+
 /** The name a world card is declared under, for a sentence an author can act on: the variable it
  *  is assigned to, or the position of the call when it is assigned to nothing. */
 function cardName(call: ts.CallExpression, at: number): string {
@@ -112,15 +145,18 @@ export function factsFromSource(worldPath: string): SurfaceFacts {
 
   const card: Record<string, Readonly<Record<string, Json>>> = {};
   const [spec] = calls;
-  const literal = spec === undefined ? undefined : unwrap(spec.arguments[0] ?? spec);
-  if (literal !== undefined && ts.isObjectLiteralExpression(literal)) {
-    for (const property of literal.properties) {
+  const cardNode = spec === undefined ? undefined : unwrap(spec.arguments[0] ?? spec);
+  let creates: readonly string[] | undefined;
+  if (cardNode !== undefined && ts.isObjectLiteralExpression(cardNode)) {
+    for (const property of cardNode.properties) {
       if (!ts.isPropertyAssignment(property)) continue;
       if (!ts.isIdentifier(property.name) && !ts.isStringLiteral(property.name)) continue;
       if (!EFFECT_BLOCKS.has(property.name.text)) continue;
       const block = unwrap(property.initializer);
       if (ts.isObjectLiteralExpression(block)) card[property.name.text] = blockEntries(block);
     }
+    creates = createsOf(source, cardNode);
   }
-  return factsFromWorld({ card: { records: {}, ...card } as unknown as WorldCard, executors: {} });
+  return factsFromWorld({ card: { records: {}, ...card,
+    ...(creates === undefined ? {} : { creates }) } as unknown as WorldCard, executors: {} });
 }

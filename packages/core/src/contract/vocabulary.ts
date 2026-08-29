@@ -266,9 +266,9 @@ export interface ToolFact { readonly name: string; readonly label: string | null
                             readonly proxy: string | { readonly compose: readonly string[] } | null }
 /** The whole declared surface as facts, keyed by tool name. */
 export interface SurfaceFacts { readonly tools: Readonly<Record<string, ToolFact>>;
-                                /** The birth register: the write acts that mint a
-                                 *  record that did not exist; null = the card
-                                 *  names none. */
+                                /** The birth register: the acts that mint a record
+                                 *  that did not exist, whatever effect block they
+                                 *  sit in; null = the card names none. */
                                 readonly creates?: readonly string[] | null;
                                 /** null = the whole snapshot rides the tail. */
                                 readonly tail?: readonly string[] | null;
@@ -308,9 +308,10 @@ export interface WorldCard { readonly records: StateSnapshot;
                              readonly reads?: Readonly<Record<string, WorldToolEntry>>;
                              readonly writes?: Readonly<Record<string, WorldToolEntry>>;
                              readonly destructive?: Readonly<Record<string, WorldToolEntry>>;
-                             /** The birth register: the write acts that mint a record
-                              *  that did not exist. The block a tool sits in is its
-                              *  effect; this list is its birth register. */
+                             /** The birth register: the acts that mint a record that
+                              *  did not exist. The block a tool sits in is its effect;
+                              *  this list is its birth register, and a consented act
+                              *  that mints on every call belongs on it too. */
                              readonly creates?: readonly string[];
                              /** Entities the STATE TAIL shows the model every turn —
                               *  what disqualifies whole turns and no read answers.

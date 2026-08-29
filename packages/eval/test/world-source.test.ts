@@ -69,4 +69,34 @@ describe('factsFromSource', () => {
     }`));
     expect(Object.keys(facts.tools)).toEqual(['cancelBooking']);
   });
+
+  test('the creates key on the card is the birth register the facts carry', () => {
+    const facts = factsFromSource(worldFile(`{
+      records: {},
+      writes: { logNote: { form: 'make', entity: 'notes', label: 'Write a note' } },
+      creates: ['logNote']
+    }`));
+    expect(facts.creates).toEqual(['logNote']);
+  });
+
+  test('a creates key naming a top-level const is read through it', () => {
+    const path = join(mkdtempSync(join(tmpdir(), 'world-')), 'world.ts');
+    writeFileSync(path, [
+      'import { world } from \'@looprun-ai/core\';',
+      'export const CREATES: readonly string[] = [\'logNote\'] as const;',
+      'export const w = world({ records: {},',
+      '  writes: { logNote: { form: \'make\', entity: \'notes\', label: \'Write a note\' } },',
+      '  creates: CREATES });',
+      ''
+    ].join('\n'));
+    expect(factsFromSource(path).creates).toEqual(['logNote']);
+  });
+
+  test('a card naming no creates carries none', () => {
+    const facts = factsFromSource(worldFile(`{
+      records: {},
+      writes: { logNote: { form: 'make', entity: 'notes', label: 'Write a note' } }
+    }`));
+    expect(facts.creates).toBe(null);
+  });
 });
