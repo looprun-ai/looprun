@@ -78,7 +78,7 @@ hole in it.
 ## Step 6 — `after` and `later`
 
 ```typescript
-after: 'Cancelled {booking.room} on {booking.day}.',
+after: 'Booking {result.removed} is cancelled — {booking.room} on {booking.day}.',
 later: 'The {booking.room} booking is cancelled.'
 ```
 

@@ -40,7 +40,7 @@ contract:
         booking: getBooking              # short form: answered from the held call's own target
         holds: { tool: listHolds, args: {} }   # full form: the read, and the args it is handed
       before: "Cancelling {booking.room} on {booking.day} is permanent."
-      after: "The booking is gone; {holds.count} holds remain."
+      after: "Booking {result.removed} is cancelled; {holds.count} holds remain."
       later: "A standing sentence while the act stays relevant."
       cap: { arg: amount, at: booking.deposit, not: above, refusal: "…" }
       empty: "When a declared tense finds nothing in the reads to say."
