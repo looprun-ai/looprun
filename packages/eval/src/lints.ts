@@ -10,7 +10,7 @@ import type { AgentSpec, ApproveRef, CompiledAgent, DeclaredWorld, DomainContrac
               ExamTurn, GuardCensus, LiveWorldCard, McpWorldCard, PromptParts, SurfaceFacts,
               ToolFact, TurnRecord, WorldCard } from '@looprun-ai/core';
 import type { Subject } from './subject-loader.js';
-import { PromptWriter, RETIRED_NAMES } from '@looprun-ai/core';
+import { AgentFactory, factsFromWorld, PromptWriter, RETIRED_NAMES } from '@looprun-ai/core';
 
 export interface LintFinding { readonly code: string; readonly sentence: string }
 
@@ -1274,6 +1274,65 @@ export interface DeskSubject {
   readonly specs: Readonly<Record<string, AgentSpec>>;
   readonly contract: DomainContract | undefined;
   readonly world: DeclaredWorld | McpWorldCard | LiveWorldCard;
+}
+
+/** What one desk renders, read off the card the ENGINE compiles: the acts the factory put in its
+ *  lane, the bytes of its system prefix, and the DOES bytes of the tool cards behind it. A card's
+ *  schema is not weighed here — it is argument structure the model fills, and `byteOrigin` counts
+ *  it as its own slice. */
+function renderedDesks(subject: DeskSubject): readonly {
+  readonly desk: string; readonly lane: number;
+  readonly system: number; readonly cards: number }[] {
+  const facts = factsFromWorld(subject.world);
+  const factory = new AgentFactory();
+  return Object.entries(subject.specs).map(([desk, spec]) => {
+    const writer = new PromptWriter(factory.governed(spec, subject.contract, facts));
+    return { desk,
+      lane: writer.toolCards().length,
+      system: writer.system().length,
+      cards: writer.toolCards().reduce((n, card) => n + card.does.length, 0) };
+  });
+}
+
+/** The most acts one desk carries, reads counted. */
+const LANE_CEILING = 15;
+
+/** How much heavier than its system prefix a desk's cards may be. */
+const CARD_WEIGHT_MULTIPLE = 2;
+
+/** A desk carries at most fifteen acts. Past that the model stops choosing the act the operator
+ *  asked for and starts choosing one that reads like it, and no sentence on any card recovers what
+ *  the width costs — the split does.
+ *
+ *  The lane is the one the FACTORY built, not the list the spec typed: a spec naming no tools is
+ *  handed every act the surface declares, and a name the surface does not hold is handed to no
+ *  desk at all. */
+export function laneWidth(subject: DeskSubject): readonly LintFinding[] {
+  return renderedDesks(subject)
+    .filter(row => row.lane > LANE_CEILING)
+    .map(row => ({ code: 'LANE_TOO_WIDE',
+      sentence: `desk '${row.desk}' carries ${row.lane} acts, and a desk carries at most `
+        + `${LANE_CEILING}, reads counted: past that the act it picks is the one that reads like `
+        + `what was asked for. Split the lane into desks that each hold the acts one operator asks `
+        + `for together.` }));
+}
+
+/** A desk's tool cards weigh at most twice its system prefix. The prefix is who the desk is and
+ *  how it must behave; the cards are its acts and the rules riding on them — and a desk reading
+ *  three times more about its acts than about its conduct answers the way the cards read.
+ *
+ *  Only the DOES bytes are weighed: the schema beside them is the shape of the arguments, which
+ *  the model fills rather than obeys. Both counts come off the render the engine itself sends. */
+export function cardWeight(subject: DeskSubject): readonly LintFinding[] {
+  return renderedDesks(subject)
+    .filter(row => row.cards > row.system * CARD_WEIGHT_MULTIPLE)
+    .map(row => ({ code: 'CARD_OVER_WEIGHT',
+      sentence: `desk '${row.desk}' renders ${row.cards} B of tool cards behind a ${row.system} B `
+        + `system prefix, and the cards weigh at most ${CARD_WEIGHT_MULTIPLE}× the prefix — `
+        + `${row.system * CARD_WEIGHT_MULTIPLE} B here, so they are `
+        + `${row.cards - row.system * CARD_WEIGHT_MULTIPLE} B over. The bytes sit in the sentence `
+        + `each act carries and in every contract rule copied onto its card: split a rule that `
+        + `names many acts so each act carries only its own, or split the lane.` }));
 }
 
 

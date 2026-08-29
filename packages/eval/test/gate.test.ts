@@ -1,15 +1,15 @@
 /** The gate over a subject written wrong on purpose. Every verb the gate composes owns one row
  *  here, so a verb dropped from the gate loses its own code from the list and this file says which
- *  one went missing. Two verbs are proved on directories written at run time instead. A retired
- *  identifier checked into the tree fails the tree-wide name gate, which walks every file under
- *  packages/, fixtures included. And the byte budget renders every desk through the engine, which
- *  a deliberately broken card cannot survive — so it is proved on a card that compiles, held to a
- *  ceiling of one byte. */
+ *  one went missing. The verbs this directory cannot trip are proved on directories written at run
+ *  time instead: a retired identifier checked in here would fail the tree-wide name gate, which
+ *  walks every file under packages/, fixtures included; and the two caps need a desk given more
+ *  acts than a lane holds, carrying cards heavier than the prefix behind them. */
 import { describe, expect, test } from 'vitest';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { world } from '@looprun-ai/core';
 import type { AgentSpec, ExamCase } from '@looprun-ai/core';
 import { runGate, type GateSubject } from '../src/gate.js';
 import { ordersDesk as brokenOrders, ordersWorld as BROKEN_WORLD, refundsDesk as brokenRefunds,
@@ -45,9 +45,9 @@ const BROKEN_CASES: readonly ExamCase[] = [
     rubric: 'The refund is refused, and the reply names the status that refuses it.' }
 ];
 
-/** The fixture desks are literals the verbs PARSE, not cards the engine compiles: this directory
- *  is wrong on purpose, and a card that is wrong on purpose does not survive the factory. The gate
- *  renders nothing here because the directory declares no budget. */
+/** The fixture desks are the literals the source-walking verbs PARSE, and the cards the two caps
+ *  RENDER: the factory takes all three, and each is narrow enough and light enough to clear both
+ *  numbers, so the codes below are the ones this directory is wrong about. */
 const BROKEN_DESKS = { ordersDesk: brokenOrders, refundsDesk: brokenRefunds,
                        returnsDesk: brokenReturns } as unknown as Readonly<Record<string, AgentSpec>>;
 
@@ -143,4 +143,19 @@ describe('runGate', () => {
     expect(runGate(dir, covered).map(f => f.code)).toContain('CASE_CANNOT_FIRE');
   });
 
+  test('the two caps are in the gate, measured on the desk the engine compiles', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'gate-caps-'));
+    writeFileSync(join(dir, 'cards.ts'), 'export const CONTRACT = { guards: [] };\n');
+    const wide: GateSubject = {
+      world: world({ records: { orders: { ord_7: { status: 'OPEN' } } },
+        reads: Object.fromEntries(Array.from({ length: 16 }, (_, at) => [`getOrder${at}`,
+          { form: 'get' as const, entity: 'orders', label: `Look up order ${at}`,
+            does: 'Look up one order and say what the read returned.' }])) }),
+      specs: { orders: { name: 'orders', persona: 'You are the orders desk.' } },
+      contract: undefined, cases: [], censusNames: null, presetLeavesGuardInert: () => false
+    };
+    const codes = runGate(dir, wide).map(f => f.code);
+    expect(codes).toContain('LANE_TOO_WIDE');
+    expect(codes).toContain('CARD_OVER_WEIGHT');
+  });
 });

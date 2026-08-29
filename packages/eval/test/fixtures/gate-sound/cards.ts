@@ -10,21 +10,25 @@ interface Held { readonly record: { readonly status: string } | null }
 interface Rule { readonly name: string; readonly rule: string; readonly on: string;
                  readonly tool?: readonly string[] }
 
-interface Check { readonly name: string; readonly tool: readonly string[];
-                  readonly deny: (held: Held) => string | null }
+/** A check decides the call, so it types the phase it decides in and states the law it decides by:
+ *  the engine refuses a hand-written guard that carries neither. */
+interface Check { readonly name: string; readonly tool: readonly string[]; readonly on: string;
+                  readonly rule: string; readonly deny: (held: Held) => string | null }
 
 const prose = (name: string, rule: string, tool?: readonly string[]): Rule =>
   tool === undefined ? { name, rule, on: 'reply' } : { name, rule, on: 'reply', tool };
 
 const precondition = (tool: string, holds: (held: Held) => boolean): Check => ({
-  name: `precondition:${tool}`, tool: [tool],
+  name: `precondition:${tool}`, tool: [tool], on: 'preTool',
+  rule: 'An order is closed only while the read shows it open.',
   deny: held => holds(held) ? null : 'the order is not open, so it cannot be closed'
 });
 
 /** The gated act runs only after the prerequisite succeeded — the shape the engine's own factory
  *  mints, so the order a case requires is one the cards declare. */
 const onlyAfter = (tool: string, prerequisite: string): Check => ({
-  name: `onlyAfter:${tool}`, tool: [tool],
+  name: `onlyAfter:${tool}`, tool: [tool], on: 'preTool',
+  rule: `A close runs once ${prerequisite} has returned the order it names.`,
   deny: () => `${prerequisite} has not succeeded yet this conversation`
 });
 
@@ -96,7 +100,7 @@ export const ordersContract = {
     deleteOrder: {
       before: 'You are about to delete order {order.id}, and a deletion cannot be undone.',
       after: 'Order {result.removed} is gone, and there is nothing left to reverse.',
-      needs: { order: { tool: 'getOrder' } },
+      needs: { order: 'getOrder' },
       cap: { at: 'order.total', ceiling: 500 }
     }
   }

@@ -2,9 +2,9 @@
 import type { AgentSpec, DeclaredWorld, DomainContract, ExamCase, LiveWorldCard,
               McpWorldCard } from '@looprun-ai/core';
 import { AgentFactory, factsFromWorld, Rulebook } from '@looprun-ai/core';
-import { approvable, capPaths, conductComplete, coversResolve,
-         destructiveDisclosed, floorRedeclared, inertChecks, nameGate, noEffectDenied, overWide,
-         pairing, presetsDeclared, purity,
+import { approvable, capPaths, cardWeight, conductComplete, coversResolve,
+         destructiveDisclosed, floorRedeclared, inertChecks, laneWidth, nameGate, noEffectDenied,
+         overWide, pairing, presetsDeclared, purity,
          unlicensed, unspokenChecks, type LintFinding } from './lints.js';
 
 /** What the gate needs beyond the directory. Every field is REQUIRED, and the one a subject
@@ -85,6 +85,10 @@ export function runGate(subjectDir: string, subject: GateSubject): readonly Lint
     // The desks as the caller holds them, not as the source spells them: a conduct law is a guard
     // on the compiled spec, and the six voices are read off every desk of the house at once.
     ...conductComplete(subject.specs),
+    // The two stated numbers, measured on the desks the engine compiles: the acts one lane holds,
+    // and what the cards behind that lane weigh against the prefix that teaches the desk.
+    ...laneWidth(subject),
+    ...cardWeight(subject),
     ...capPaths(subjectDir),
     ...inertChecks(subjectDir, facts.tools),
     ...unspokenChecks(subjectDir),
