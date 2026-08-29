@@ -81,5 +81,6 @@ export function factsFromWorld(w: DeclaredWorld | McpWorldCard | LiveWorldCard):
   // sentences, never records, so the grounding floor sees no visible entities
   // unless the card also names them.
   const tail = 'card' in w ? w.card.tail ?? (w.card.note ? [] : null) : null;
-  return deepFreeze({ tools, tail, note: 'card' in w ? w.card.note ?? null : null });
+  return deepFreeze({ tools, tail, note: 'card' in w ? w.card.note ?? null : null,
+    creates: 'card' in w ? w.card.creates ?? null : null });
 }
