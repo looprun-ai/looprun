@@ -220,8 +220,8 @@ desks:
   });
 });
 
-describe('handles', () => {
-  it('handles survives the round trip on a multi-desk declaration', () => {
+describe('description', () => {
+  it('description survives the round trip on a multi-desk declaration', () => {
     const d = readDeclaration(fixture(`
 contract:
   name: seaside-hotel
@@ -234,21 +234,24 @@ desks:
     persona: The billing desk.
     tools: [getInvoice]
     conduct: { declareHonestly: x }
-    handles: quotes and bookings
+    description: quotes and bookings
+    summary: the desk
   - name: audit
     persona: The audit desk.
     tools: [closeBooking]
     conduct: { declareHonestly: x }
-    handles: invoices and refunds
+    description: invoices and refunds
+    summary: the desk
 `));
-    expect(d.desks[0].handles).toBe('quotes and bookings');
-    expect(d.desks[1].handles).toBe('invoices and refunds');
+    expect(d.desks[0].description).toBe('quotes and bookings');
+    expect(d.desks[1].description).toBe('invoices and refunds');
     const out = writeCards(d, FACTS);
-    expect(out).toContain("handles: 'quotes and bookings'");
-    expect(out).toContain("handles: 'invoices and refunds'");
+    expect(out).toContain("description: 'quotes and bookings',");
+    expect(out).toContain("summary: 'the desk',");
+    expect(out).toContain("description: 'invoices and refunds',");
   });
 
-  it('a multi-desk declaration missing handles refuses at emit', () => {
+  it('a multi-desk declaration missing description refuses at emit', () => {
     const d = readDeclaration(fixture(`
 contract:
   name: seaside-hotel
@@ -263,7 +266,8 @@ desks:
     persona: The billing desk.
     tools: [getInvoice]
     conduct: { declareHonestly: x }
-    handles: quotes and bookings
+    description: quotes and bookings
+    summary: the desk
   - name: audit
     persona: The audit desk.
     tools: [closeBooking]
@@ -273,7 +277,7 @@ desks:
       .toEqual([expect.stringContaining("'audit'")]);
   });
 
-  it('a single-desk declaration carrying handles refuses as unreachable words', () => {
+  it('a single-desk declaration carrying description refuses as unreachable words', () => {
     const d = readDeclaration(fixture(`
 contract:
   name: seaside-hotel
@@ -288,7 +292,8 @@ desks:
     persona: The front desk.
     tools: [getInvoice]
     conduct: { declareHonestly: x }
-    handles: quotes and bookings
+    description: quotes and bookings
+    summary: the desk
 `));
     expect(checkAgainstSurface(d, FACTS, SEAM))
       .toEqual([expect.stringContaining("'front-desk'")]);
@@ -334,4 +339,55 @@ desks:
     tools: [issueRefund]
     conduct: { declareHonestly: Say what ran and what did not. }
 `))).toThrow(/contract\.seam\.issueRefund \(line \d+\): must be a mapping of refusal code/);
+});
+
+describe('the old desk fields and the summary comma', () => {
+  it('a summary carrying a comma is refused quoting the separator rule', () => {
+    const d = readDeclaration(fixture(`
+contract:
+  name: seaside-hotel
+  voice: v
+  facts: []
+  guards: []
+  disclosure:
+    issueRefund:
+      before: Refunding this invoice cannot be taken back.
+desks:
+  - name: billing
+    persona: p
+    tools: [getInvoice]
+    conduct: { declareHonestly: x }
+    description: quotes and bookings
+    summary: the desk, and the counter
+  - name: audit
+    persona: p
+    tools: [closeBooking]
+    conduct: { declareHonestly: x }
+    description: invoices and refunds
+    summary: the desk
+`));
+    expect(checkAgainstSurface(d, FACTS, SEAM))
+      .toEqual([expect.stringContaining('comma')]);
+  });
+
+  it('handles and teammates are unknown desk keys, refused by name and line', () => {
+    expect(() => readDeclaration(fixture(`
+contract: { name: x, voice: v, facts: [], guards: [], disclosure: {} }
+desks:
+  - name: front-desk
+    persona: p
+    tools: [getInvoice]
+    conduct: { declareHonestly: x }
+    handles: quotes and bookings
+`))).toThrow(/handles/);
+    expect(() => readDeclaration(fixture(`
+contract: { name: x, voice: v, facts: [], guards: [], disclosure: {} }
+desks:
+  - name: front-desk
+    persona: p
+    tools: [getInvoice]
+    conduct: { declareHonestly: x }
+    teammates: { audit: the other desk }
+`))).toThrow(/teammates/);
+  });
 });

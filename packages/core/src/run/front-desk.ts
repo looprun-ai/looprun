@@ -4,7 +4,7 @@
 import type { ModelStep, StepInput } from '../contract/vocabulary.js';
 
 export interface FrontDeskCfg { readonly houseName: string;
-  readonly handles: Readonly<Record<string, string>>;
+  readonly description: Readonly<Record<string, string>>;
   readonly currentDesk: string | null;
   readonly lastExchange: { readonly userText: string; readonly replyText: string } | null;
   readonly returnedFrom: { readonly by: string; readonly reason: string } | null;
@@ -16,7 +16,7 @@ surface performs what is asked — anything outside the house's own records and
 operations — the answer is none, however close a desk's territory sounds.`;
 
 export function composeWindow(cfg: FrontDeskCfg): StepInput {
-  const deskLines = Object.entries(cfg.handles).map(([n, d]) => `- ${n}: ${d}`).join('\n');
+  const deskLines = Object.entries(cfg.description).map(([n, d]) => `- ${n}: ${d}`).join('\n');
   const seat = cfg.currentDesk === null ? 'The conversation is just opening.'
     : `The conversation so far sits at the ${cfg.currentDesk} desk. A message
 continuing that desk's work stays there; a message whose intent
@@ -41,7 +41,7 @@ ${returned}${RULES}`;
     tools: [{ name: 'route',
       does: 'Route the new message to the desk that will handle it.',
       schema: { type: 'object', properties: {
-        desk: { type: 'string', enum: [...Object.keys(cfg.handles), 'none'] } },
+        desk: { type: 'string', enum: [...Object.keys(cfg.description), 'none'] } },
         required: ['desk'] } }],
     forceFinish: true, llmParams: { temperature: 0 } };
 }

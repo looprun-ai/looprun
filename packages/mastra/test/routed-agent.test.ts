@@ -8,7 +8,7 @@ import { LoopRunAgent, type GovernedResult } from '../src/loop-run-agent.js';
 import { assemble } from '../src/agent-assembly.js';
 import { BOOKING, callStep, finishStep } from './fixtures/booking-world.js';
 
-const HANDLES = { yard: 'job schedules and hand-overs', billing: 'invoices and refunds' };
+const DESCRIPTIONS = { yard: 'job schedules and hand-overs', billing: 'invoices and refunds' };
 
 /** A world where one desk's read returns the id another desk needs, and the turn head shows
  *  no entity at all — so the only ground a second desk can stand on is what an act
@@ -31,8 +31,8 @@ const JOBS = world({
 });
 
 const DESKS: Record<string, AgentSpec> = {
-  yard: { name: 'yard', persona: 'You run the yard.', handles: HANDLES.yard },
-  billing: { name: 'billing', persona: 'You run billing.', handles: HANDLES.billing } };
+  yard: { name: 'yard', persona: 'You run the yard.', description: DESCRIPTIONS.yard, summary: 'the yard' },
+  billing: { name: 'billing', persona: 'You run billing.', description: DESCRIPTIONS.billing, summary: 'the billing' } };
 
 /** A router decision as the port answers it, with the tokens the provider billed. */
 function routeStep(chosen: string, inputTokens = 0, outputTokens = 0): ModelStep {
@@ -82,7 +82,8 @@ function desk(name: string, steps: readonly ModelStep[], card: DeclaredWorld = B
 }
 
 function house(router: ScriptedModel, desks: Record<string, LoopRunAgent>): RoutedAgent {
-  return new RoutedAgent({ name: 'northgate', desks, handles: HANDLES, router });
+  return new RoutedAgent({ name: 'northgate', desks, description: DESCRIPTIONS,
+    summaries: ['the yard', 'the billing'], router });
 }
 
 test('a message routes to a desk; the record carries the routing and the router\'s tokens', async () => {
@@ -127,7 +128,7 @@ test('none refuses at the front desk, touches no desk, and the history still gro
   const out = await agent.generate('what is the weather tomorrow?', { session: 's1' });
 
   expect(out.text).toBe(
-    'No desk at northgate performs this. The house covers: yard, billing.');
+    'No desk at northgate performs this. The house covers: the yard and the billing.');
   expect(out.loopRun).toEqual({
     turn: 1, servedBy: 'front-desk', userText: 'what is the weather tomorrow?',
     acts: [], questions: { issued: [], consumed: [], closed: [] },
@@ -344,8 +345,8 @@ test('fromSubject hands back the lone LoopRunAgent when the subject declares one
 
 test('fromSubject builds the routed house and names it after the contract', () => {
   const specs: Record<string, AgentSpec> = {
-    yard: { name: 'yard', persona: 'You run the yard.', handles: HANDLES.yard },
-    billing: { name: 'billing', persona: 'You run billing.', handles: HANDLES.billing } };
+    yard: { name: 'yard', persona: 'You run the yard.', description: DESCRIPTIONS.yard, summary: 'the yard' },
+    billing: { name: 'billing', persona: 'You run billing.', description: DESCRIPTIONS.billing, summary: 'the billing' } };
   const agent = RoutedAgent.fromSubject({ specs, world: BOOKING,
     contract: { name: 'northgate-tool-hire' },
     model: { scripted: { steps: [finishStep('Hello.')] } } });
@@ -390,18 +391,18 @@ test('two messages on one session serialize — the second window carries the fi
   expect(router.seen[1].system).toContain('The conversation so far sits at the billing desk.');
 });
 
-test('fromSubject refuses a desk that declares no handles line', () => {
+test('fromSubject refuses a desk that declares no description line', () => {
   const specs: Record<string, AgentSpec> = {
-    yard: { name: 'yard', persona: 'You run the yard.', handles: HANDLES.yard },
+    yard: { name: 'yard', persona: 'You run the yard.', description: DESCRIPTIONS.yard, summary: 'the yard' },
     billing: { name: 'billing', persona: 'You run billing.' } };
   expect(() => RoutedAgent.fromSubject({ specs, world: BOOKING,
     model: { scripted: { steps: [] } } })).toThrow(/billing/);
 });
 
-test('fromSubject refuses a handles line that says nothing — blank is no line', () => {
+test('fromSubject refuses a description line that says nothing — blank is no line', () => {
   const specs: Record<string, AgentSpec> = {
-    yard: { name: 'yard', persona: 'You run the yard.', handles: HANDLES.yard },
-    billing: { name: 'billing', persona: 'You run billing.', handles: '   ' } };
+    yard: { name: 'yard', persona: 'You run the yard.', description: DESCRIPTIONS.yard, summary: 'the yard' },
+    billing: { name: 'billing', persona: 'You run billing.', description: '   ', summary: 'the desk' } };
   expect(() => RoutedAgent.fromSubject({ specs, world: BOOKING,
     model: { scripted: { steps: [] } } })).toThrow(/billing/);
 });

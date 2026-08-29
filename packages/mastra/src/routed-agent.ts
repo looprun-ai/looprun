@@ -1,5 +1,5 @@
 /** One house, many desks: every message reaches the front desk first, and the desk it
- *  names serves the turn. The router's window carries the desks' handles lines, the desk
+ *  names serves the turn. The router's window carries the desks' description lines, the desk
  *  the conversation sits at, ONE prior exchange and the new message — never a persona, a
  *  card, an act or a record. What the house decided rides the governed record itself:
  *  `TurnRecord.routing` names the desk that served and the desk that handed the message
@@ -92,16 +92,30 @@ const stated = (e: readonly [string, string | undefined]): e is readonly [string
 /** Every desk of a routed house states the line that routes a message to it. A desk whose
  *  line is absent or blank is a desk the front desk can never choose, and the house
  *  refuses to stand. */
-function handlesOf(specs: Readonly<Record<string, AgentSpec>>): Readonly<Record<string, string>> {
-  const lines = Object.entries(specs).map(([name, spec]) => [name, spec.handles] as const);
+function descriptionsOf(specs: Readonly<Record<string, AgentSpec>>): Readonly<Record<string, string>> {
+  const lines = Object.entries(specs).map(([name, spec]) => [name, spec.description] as const);
   const missing = lines.filter(e => !stated(e)).map(([name]) => name);
   if (missing.length > 0) {
-    throw new CardError(missing.map(name => ({ code: 'HANDLES_MISSING',
-      sentence: `Desk '${name}' states no handles line: a house of ${lines.length} desks `
+    throw new CardError(missing.map(name => ({ code: 'DESCRIPTION_MISSING',
+      sentence: `Desk '${name}' states no description line: a house of ${lines.length} desks `
         + 'routes every message by the line each desk states, and a line that is absent or '
         + 'blank matches no message, so the desk can never be chosen.' })));
   }
   return Object.fromEntries(lines.filter(stated));
+}
+
+/** What a person at the counter calls each desk. The house's own refusal is built from
+ *  these, so an operator whose message no desk performs hears what the house does cover. */
+function summariesOf(specs: Readonly<Record<string, AgentSpec>>): readonly string[] {
+  const lines = Object.entries(specs).map(([name, spec]) => [name, spec.summary] as const);
+  const missing = lines.filter(e => !stated(e)).map(([name]) => name);
+  if (missing.length > 0) {
+    throw new CardError(missing.map(name => ({ code: 'SUMMARY_MISSING',
+      sentence: `Desk '${name}' states no summary: the house refuses a message no desk `
+        + 'performs by naming what it does cover, and a desk with no summary would be named '
+        + 'to the operator by its label instead.' })));
+  }
+  return lines.filter(stated).map(([, line]) => line);
 }
 
 /** The front desk's own seat: the subject's model, or the subject's script when a script
@@ -117,7 +131,9 @@ function routerPort(model: LoopRunModel, params: LlmParams): ModelPort {
 export interface RoutedHouse {
   readonly name: string;
   readonly desks: Readonly<Record<string, LoopRunAgent>>;
-  readonly handles: Readonly<Record<string, string>>;
+  readonly description: Readonly<Record<string, string>>;
+  /** What a person at the counter calls each desk, in the order they are covered. */
+  readonly summaries: readonly string[];
   readonly router: ModelPort;
 }
 
@@ -139,7 +155,8 @@ export class RoutedAgent {
   readonly name: string;
   readonly deskNames: readonly string[];
   private readonly desks: Readonly<Record<string, LoopRunAgent>>;
-  private readonly handles: Readonly<Record<string, string>>;
+  private readonly description: Readonly<Record<string, string>>;
+  private readonly summaries: readonly string[];
   private readonly router: ModelPort;
   private readonly seats = new Map<string, Seat>();
   /** One promise chain per session — the queue a turn joins, never a lock it holds. */
@@ -148,7 +165,8 @@ export class RoutedAgent {
   constructor(house: RoutedHouse) {
     this.name = house.name;
     this.desks = house.desks;
-    this.handles = house.handles;
+    this.description = house.description;
+    this.summaries = house.summaries;
     this.router = house.router;
     this.deskNames = Object.keys(house.desks);
   }
@@ -162,19 +180,27 @@ export class RoutedAgent {
       return new LoopRunAgent({ spec: cfg.specs[names[0]], contract: cfg.contract,
                                 model: cfg.model, world: cfg.world, preset: cfg.preset });
     }
-    const handles = handlesOf(cfg.specs);
+    const description = descriptionsOf(cfg.specs);
+    const summaries = summariesOf(cfg.specs);
     // The house acts on ONE world. It is built here, once, from the scenario the subject
     // named, and every desk is handed that same instance — so a record one desk writes is
     // the record the next desk reads. The preset rides the build, never a desk's config:
     // a world already built has already answered which scenario it holds.
     const built = new WorldBuilder().build(cfg.world, cfg.preset);
-    const deskCfg = (name: string): LoopRunConfig => ({ spec: cfg.specs[name],
+    // Each desk learns its colleagues from what those colleagues say about themselves: the
+    // house composes the map from their own descriptions, so the same sentence is never
+    // written twice and can never drift between the two places it was written.
+    const others = (name: string): Readonly<Record<string, string>> =>
+      Object.fromEntries(names.filter(n => n !== name).map(n => [n, cfg.specs[n].description ?? '']));
+    const deskCfg = (name: string): LoopRunConfig => ({
+      spec: { ...cfg.specs[name], teammates: others(name) },
       contract: cfg.contract, model: cfg.model, world: cfg.world, built });
     const mint = portFactory ?? ((params: LlmParams) => routerPort(cfg.model, params));
     return new RoutedAgent({
       name: cfg.contract?.name ?? cfg.specs[names[0]].name,
       desks: Object.fromEntries(names.map(n => [n, new LoopRunAgent(deskCfg(n))])),
-      handles,
+      description,
+      summaries,
       router: mint({ temperature: 0 }) });
   }
 
@@ -192,7 +218,7 @@ export class RoutedAgent {
     const seat = this.seats.get(id) ?? OPENING;
     const tail = seat.history.at(-1);
     const front: Omit<FrontDeskCfg, 'returnedFrom'> = {
-      houseName: this.name, handles: this.handles, currentDesk: seat.currentDesk,
+      houseName: this.name, description: this.description, currentDesk: seat.currentDesk,
       lastExchange: tail === undefined ? null
         : { userText: tail.userText, replyText: tail.replyText },
       userText: text };
@@ -300,8 +326,10 @@ export class RoutedAgent {
   }
 
   private refusalText(): string {
-    return `No desk at ${this.name} performs this. `
-      + `The house covers: ${this.deskNames.join(', ')}.`;
+    const covered = this.summaries.length > 1
+      ? `${this.summaries.slice(0, -1).join(', ')} and ${this.summaries[this.summaries.length - 1]}`
+      : this.summaries.join('');
+    return `No desk at ${this.name} performs this. The house covers: ${covered}.`;
   }
 
   /** The front desk's own turn: no desk served, so no act, no question and no finish

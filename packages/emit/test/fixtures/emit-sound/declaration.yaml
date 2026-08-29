@@ -40,11 +40,13 @@ desks:
     conduct:
       declareHonestly: Say what ran and what did not, and name the condition that stopped it.
       oneQuestion: Put ONE thing up for agreement per turn, and wait for the answer.
-    handles: invoices, refunds and closing the day
+    description: invoices, refunds and closing the day
+    summary: the desk
   - name: audit
     persona: 'The audit desk: it reads invoices back and writes the closing note.'
     tools: [getInvoice, closeBooking]
     conduct:
       declareHonestly: Say what ran and what did not, and name the condition that stopped it.
       oneQuestion: Put ONE thing up for agreement per turn, and wait for the answer.
-    handles: the closing note on an invoice already read
+    description: the closing note on an invoice already read
+    summary: the desk

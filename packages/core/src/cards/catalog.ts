@@ -386,11 +386,13 @@ export function argAbsent(tool: string, arg: string): SeedGuard {
 /** The declared predicate over { record, state } must hold before the call runs.
  *  The record is the call's target row in the tool's OWN entity — the effect-block
  *  declaration names the entity, so a same-valued id in another entity can never be
- *  read by mistake. A state predicate on a stateless surface is loud, never a
- *  silent pass. */
+ *  read by mistake. A predicate that answers with WORDS instead of false refuses in
+ *  those words: the gate already holds the records, so what it found there reaches
+ *  the operator beside the rule. A state predicate on a stateless surface is loud,
+ *  never a silent pass. */
 export function precondition(tool: string | readonly string[],
   check: (ctx: { readonly record: Readonly<Record<string, Json>> | null;
-                 readonly state: StateSnapshot }) => boolean,
+                 readonly state: StateSnapshot }) => boolean | string,
   reason: string): SeedGuard {
   const tools = typeof tool === 'string' ? [tool] : [...tool];
   return {
@@ -410,7 +412,10 @@ export function precondition(tool: string | readonly string[],
         const idValue = f?.target !== null && f?.target !== undefined ? ctx.call.args[f.target] : undefined;
         const record = f?.entity !== null && f?.entity !== undefined && typeof idValue === 'string'
           ? state[f.entity]?.[idValue] ?? null : null;
-        return check({ record, state }) ? null : '';
+        // A check that answers with words refuses in them: the gate reads the records
+        // and the refusal carries what it found there, beside the rule.
+        const verdict = check({ record, state });
+        return verdict === true ? null : typeof verdict === 'string' ? verdict : '';
       });
     }
   };

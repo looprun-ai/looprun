@@ -290,28 +290,42 @@ function checkDisclosureNeedsInLane(declaration: Declaration, facts: SurfaceFact
 
 /** Every desk states the line that routes a message to it, exactly when a router stands in front
  *  of more than one desk to read it. Two or more desks route by comparing each desk's own
- *  `handles` line against the arriving message, so a desk that declares none — or writes one that
+ *  `description` line against the arriving message, so a desk that declares none — or writes one that
  *  says nothing — is a desk the router can never choose. One desk has no router in front of it at
- *  all, so a `handles` line declared there is a sentence nothing ever reads. */
+ *  all, so a `description` line declared there is a sentence nothing ever reads. */
 function checkRoutingLines(declaration: Declaration): readonly string[] {
   const { desks } = declaration;
   if (desks.length >= 2) {
     return desks.flatMap((desk, deskIndex) => {
-      if (desk.handles === undefined) {
-        return [`desks[${deskIndex}].handles is missing: a house of ${desks.length} desks routes `
-          + `every message by the handles line each desk states, and '${desk.name}' declares none `
+      if (desk.description === undefined) {
+        return [`desks[${deskIndex}].description is missing: a house of ${desks.length} desks routes `
+          + `every message by the description line each desk states, and '${desk.name}' declares none `
           + `— add the routing line '${desk.name}' answers to.`];
       }
-      if (desk.handles.trim() !== '') return [];
-      return [`desks[${deskIndex}].handles says nothing on '${desk.name}': a house of `
-        + `${desks.length} desks routes every message by the handles line each desk states, and a `
-        + `blank line matches no message — write the routing line '${desk.name}' answers to.`];
+      if (desk.description.trim() === '') {
+        return [`desks[${deskIndex}].description says nothing on '${desk.name}': a house of `
+          + `${desks.length} desks routes every message by the description line each desk states, and a `
+          + `blank line matches no message — write the routing line '${desk.name}' answers to.`];
+      }
+      // The house refuses a message no desk performs by naming what it DOES cover. Without a
+      // summary the operator would be handed the desk's label, which is a name for the author.
+      if (desk.summary !== undefined && desk.summary.includes(',')) {
+        return [`desks[${deskIndex}].summary on '${desk.name}' carries a comma: the comma is the `
+          + 'house\'s own list separator when it names what it covers, so a summary carrying one '
+          + 'dissolves the boundary between two desks.'];
+      }
+      if (desk.summary === undefined || desk.summary.trim() === '') {
+        return [`desks[${deskIndex}].summary is missing on '${desk.name}': the house refuses a `
+          + 'message no desk performs by naming what it does cover, in the words a person at the '
+          + `counter would use — write what somebody would call '${desk.name}'.`];
+      }
+      return [];
     });
   }
   const [only] = desks;
-  if (only?.handles !== undefined) {
-    return [`desks[0].handles is set on '${only.name}': a house of one desk has no router in `
-      + `front of it to read that line, so it can never be reached — drop handles, or declare a `
+  if (only?.description !== undefined) {
+    return [`desks[0].description is set on '${only.name}': a house of one desk has no router in `
+      + `front of it to read that line, so it can never be reached — drop description, or declare a `
       + `second desk for the router to choose between.`];
   }
   return [];
@@ -366,7 +380,7 @@ function checkSeamRows(declaration: Declaration, facts: SurfaceFacts,
  *  a disclosure `needs` alias naming a tool that does not exist, a disclosure alias whose read
  *  cannot answer the call it is held for, a disclosure alias naming a read the lane of a desk
  *  holding the act does not carry, a seam sentence paying a row the world does not carry, and a
- *  house whose desks disagree with the routing law — two or more desks with a desk whose `handles`
+ *  house whose desks disagree with the routing law — two or more desks with a desk whose `description`
  *  line is missing or blank, or the one desk of a single-desk house carrying one. `seam` is the seam table
  *  computed off the same subject the declaration sits in. An empty array means the declaration is
  *  safe to emit against `facts`. */

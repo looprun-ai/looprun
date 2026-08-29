@@ -3,7 +3,7 @@ import { composeWindow, readDecision } from '../src/run/front-desk.js';
 
 const cfg = {
   houseName: 'northgate-tool-hire',
-  handles: { counter: 'quotes and bookings', money: 'invoices and refunds' },
+  description: { counter: 'quotes and bookings', money: 'invoices and refunds' },
   currentDesk: null, lastExchange: null, returnedFrom: null,
   userText: 'Has the invoice been paid?'
 };

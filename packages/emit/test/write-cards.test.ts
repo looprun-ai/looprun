@@ -46,7 +46,7 @@ function sentencesOf(declaration: Declaration): readonly string[] {
     ...disclosure.flatMap(entry => [entry.before, entry.after, entry.later, entry.cap?.refusal,
       entry.empty].filter((s): s is string => s !== undefined)),
     ...declaration.desks.flatMap(desk => [desk.persona, ...Object.values(desk.conduct),
-      ...Object.values(desk.teammates ?? {}), ...(desk.handles === undefined ? [] : [desk.handles])])
+      ...Object.values(desk.teammates ?? {}), ...(desk.description === undefined ? [] : [desk.description])])
   ];
 }
 
@@ -553,7 +553,11 @@ describe('writeCards', () => {
       rule: 'Moving money needs the money capability, and the acting member\'s recorded grade does not carry it.' }] });
     const out = writeCards(declaration, FACTS);
     expect(out).toContain("{ ...precondition(['issueRefund', 'closeBooking'], ({ state }) =>");
-    expect(out).toContain("['owner', 'billing'].includes(actingField(state, 'accounts', 'actingStaffId', 'staff', 'grade')),");
+    expect(out).toContain("['owner', 'billing'].includes(actingField(state, 'accounts', 'actingStaffId', 'staff', 'grade'))");
+    // The gate holds the records it decides on, so its refusal names who else carries a
+    // value it allows — a permission is not somebody the operator can go to.
+    expect(out).toContain("|| whoCan(state, 'staff', 'grade', ['owner', 'billing']),");
+    expect(out).toContain('const whoCan = (state: StateSnapshot, from: string, field: string,');
     expect(out).toContain("name: 'tool:moneyGate' }");
     // The factory takes every act itself, so the literal around it adds no second scope.
     expect(out).not.toContain("tool: ['issueRefund', 'closeBooking']");

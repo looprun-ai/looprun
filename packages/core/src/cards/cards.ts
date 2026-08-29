@@ -18,11 +18,20 @@ export interface AgentSpec {
   persona: string;
   /** This agent's lane: tool NAMES from the surface. Omitted = every surface tool. */
   tools?: readonly string[];
-  /** Other lanes, for hand-offs: agent name → what that desk handles. Omitted = single-agent domain. */
+  /** The other desks by name, each with its own description. The HOUSE fills this when it
+   *  builds the desks — it is never authored, because it would be a second copy of what those
+   *  desks already say about themselves. */
   teammates?: Readonly<Record<string, string>>;
-  /** This desk's routing line — what the front desk reads to route a message here.
-   *  Required on every desk of a multi-desk subject; never present on a single desk. */
-  handles?: string;
+  /** What this desk does, in the operator's words — every act it performs, as verbs. The
+   *  front desk routes on it and every other desk reads it to know who to hand off to, so
+   *  it is written long: each verb is one more message the desk can be chosen for.
+   *  Required on every desk of a multi-desk subject; never on a single desk. */
+  description?: string;
+  /** The same desk in a handful of words — what a person at the counter would call it.
+   *  The house's own refusal is built from these, so an operator asking for something no
+   *  desk performs hears what the house does cover, and never a label like 'fieldops'.
+   *  Required on every desk of a multi-desk subject; never on a single desk. */
+  summary?: string;
   /** Guards about how THIS desk works. Highest priority. Omitted = []. */
   guards?: readonly Guard[];
   /** The model's parameters, merged PER FIELD over the target's declared defaults. */
@@ -147,7 +156,8 @@ export interface CompiledGuard extends InstalledGuard {
 export interface PromptParts { readonly persona: string;
                                readonly voice: string | null;
                                readonly facts: readonly string[];
-                               /** Other desks by name: label → what that desk handles. */
+                               /** The other desks by name, each with its own description —
+                                *  composed by the house, never authored twice. */
                                readonly teammates: Readonly<Record<string, string>> | null }
 
 /** One compiled secret path; 'mask' replaces the value with ****, 'omit' drops the key. */

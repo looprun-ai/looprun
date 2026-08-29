@@ -307,8 +307,11 @@ function roleLines(guard: DeclaredGuard): readonly string[] {
   const walk = ['anchor', 'by', 'from', 'field'].map(name => quote(stringArg(guard, name)));
   const allowed = allowedValues(guard);
   const acts = guard.acts.length === 1 ? quote(guard.acts[0]) : list(guard.acts);
+  const from = quote(stringArg(guard, 'from'));
+  const field = quote(stringArg(guard, 'field'));
   return [`precondition(${acts}, ({ state }) =>`,
-    `${list(allowed)}.includes(actingField(state, ${walk.join(', ')})),`,
+    `${list(allowed)}.includes(actingField(state, ${walk.join(', ')}))`,
+    `  || whoCan(state, ${from}, ${field}, ${list(allowed)}),`,
     `${quote(ruleOf(guard))})`];
 }
 
@@ -695,7 +698,6 @@ function judgedLines(desk: Declaration['desks'][number], check: DeclaredJudged):
 function deskLines(desk: Declaration['desks'][number], depth: number,
                    seam: readonly { readonly act: string; readonly sentence: string;
                                     readonly name: string }[]): readonly string[] {
-  const teammates = Object.entries(desk.teammates ?? {});
   const laws = Object.entries(desk.conduct);
   const held = seam.filter(law => desk.tools.includes(law.act));
   const judged = desk.judged ?? [];
@@ -703,12 +705,8 @@ function deskLines(desk: Declaration['desks'][number], depth: number,
     [indent(depth + 1, `name: ${quote(desk.name)}`)],
     [indent(depth + 1, `persona: ${quote(desk.persona)}`)],
     [indent(depth + 1, `tools: ${list(desk.tools)}`)],
-    ...(teammates.length === 0 ? [] : [[
-      indent(depth + 1, 'teammates: {'),
-      ...commaJoin(teammates.map(([name, does]) => [indent(depth + 2, `${key(name)}: ${quote(does)}`)])),
-      indent(depth + 1, '}')
-    ]]),
-    ...(desk.handles === undefined ? [] : [[indent(depth + 1, `handles: ${quote(desk.handles)}`)]]),
+    ...(desk.description === undefined ? [] : [[indent(depth + 1, `description: ${quote(desk.description)}`)]]),
+    ...(desk.summary === undefined ? [] : [[indent(depth + 1, `summary: ${quote(desk.summary)}`)]]),
     [indent(depth + 1, 'llmParams: { temperature: 0 }')],
     ...(desk.limits === undefined ? []
       : [[limitLines(`desks '${desk.name}' limits`, desk.limits, depth + 1)]]),
@@ -832,6 +830,21 @@ export function writeCards(declaration: Declaration, facts: SurfaceFacts): strin
       '  const record = typeof acting === \'string\' ? state[from]?.[acting] : undefined;',
       '  const value = record?.[field];',
       '  return typeof value === \'string\' ? value : \'\';',
+      '};',
+      '',
+      '/** Who else may act, read off the same records the gate decides on: every row of the',
+      ' *  actors entity whose deciding field carries a value the gate allows, named by its own',
+      ' *  key and, where the row carries one, its name. The refusal names people, because a',
+      ' *  permission is not somebody the operator can go to. */',
+      'const whoCan = (state: StateSnapshot, from: string, field: string,',
+      '  allowed: readonly string[]): string => {',
+      '  const named = Object.entries(state[from] ?? {})',
+      '    .filter(([, row]) => allowed.includes(String(row?.[field])))',
+      '    .map(([key, row]) => (typeof row?.[\'name\'] === \'string\'',
+      '      ? `${String(row[\'name\'])} (${key})` : key));',
+      '  return named.length === 0',
+      '    ? \'No record here carries a value that can.\'',
+      '    : `${named.join(\', \')} can.`;',
       '};'
     ]] : []),
     ...(readsResults ? [[

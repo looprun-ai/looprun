@@ -23,8 +23,8 @@ function routedSubject(): Subject {
   return { dir: '', contract: undefined, presets: [undefined], cases: [], targets: [],
     world: world({ records: {} }),
     specs: {
-      yard: { name: 'yard', persona: 'You run the yard.', handles: 'job schedules' },
-      billing: { name: 'billing', persona: 'You run billing.', handles: 'invoices and refunds' }
+      yard: { name: 'yard', persona: 'You run the yard.', description: 'job schedules', summary: 'the yard' },
+      billing: { name: 'billing', persona: 'You run billing.', description: 'invoices and refunds', summary: 'the billing' }
     } };
 }
 

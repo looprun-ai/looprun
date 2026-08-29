@@ -108,9 +108,9 @@ export interface Declaration {
     readonly name: string;
     readonly persona: string;
     readonly tools: readonly string[];
-    readonly teammates?: Readonly<Record<string, string>>;
     /** This desk's routing line — what the front desk reads to route a message here. */
-    readonly handles?: string;
+    readonly description?: string;
+    readonly summary?: string;
     readonly conduct: Readonly<Record<string, string>>;
     readonly judged?: readonly DeclaredJudged[];
     readonly limits?: Readonly<Record<string, number>>;
@@ -443,13 +443,29 @@ function readJudged(seq: YAMLSeq, path: string, lineCounter: LineCounter): reado
   });
 }
 
+/** Every field a desk may carry. A key outside this set is refused rather than dropped: a
+ *  misspelling and a field that has been renamed both read as silence otherwise, and the
+ *  declaration would emit clean having lost exactly the sentence the author meant to write. */
+const DESK_FIELDS: ReadonlySet<string> = new Set(['name', 'persona', 'tools', 'conduct',
+  'description', 'summary', 'judged', 'limits']);
+
 function readDesk(map: YAMLMap, path: string, lineCounter: LineCounter): Declaration['desks'][number] {
+  const strays = map.items
+    .map(item => (typeof item.key === 'object' && item.key !== null && 'value' in item.key
+      ? String((item.key as { value: unknown }).value) : String(item.key)))
+    .filter(key => !DESK_FIELDS.has(key));
+  if (strays.length > 0) {
+    fail(path, lineCounter.linePos(map.range?.[0] ?? 0).line,
+      `carries ${strays.map(k => `'${k}'`).join(', ')}, which a desk does not declare. A desk `
+      + `carries: ${[...DESK_FIELDS].join(', ')}. Remove what is not one of those, or correct its `
+      + 'spelling — a field nothing reads is a sentence you wrote that never reaches a prompt.');
+  }
   const name = requireString(map, 'name', path, lineCounter);
   const persona = requireString(map, 'persona', path, lineCounter);
   const tools = asStringArray(requireSeq(map, 'tools', path, lineCounter), field(path, 'tools'), lineCounter);
   const conduct = asStringRecord(requireMap(map, 'conduct', path, lineCounter), field(path, 'conduct'), lineCounter);
-  const teammatesMap = readOptionalMap(map, 'teammates', path, lineCounter);
-  const handles = readOptionalString(map, 'handles', path, lineCounter);
+  const description = readOptionalString(map, 'description', path, lineCounter);
+  const summary = readOptionalString(map, 'summary', path, lineCounter);
   const judgedSeq = readOptionalSeq(map, 'judged', path, lineCounter);
   const limitsMap = readOptionalMap(map, 'limits', path, lineCounter);
   return {
@@ -457,8 +473,8 @@ function readDesk(map: YAMLMap, path: string, lineCounter: LineCounter): Declara
     persona,
     tools,
     conduct,
-    ...(teammatesMap === undefined ? {} : { teammates: asStringRecord(teammatesMap, field(path, 'teammates'), lineCounter) }),
-    ...(handles === undefined ? {} : { handles }),
+    ...(description === undefined ? {} : { description }),
+    ...(summary === undefined ? {} : { summary }),
     ...(judgedSeq === undefined ? {} : { judged: readJudged(judgedSeq, field(path, 'judged'), lineCounter) }),
     ...(limitsMap === undefined ? {} : { limits: asNumberRecord(limitsMap, field(path, 'limits'), lineCounter) })
   };

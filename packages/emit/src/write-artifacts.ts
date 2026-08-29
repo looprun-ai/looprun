@@ -7,7 +7,8 @@
  *  A refusal writes nothing. Every refusal the emitter can know is collected first — the ones the
  *  surface answers and the ones composing the cards raises — and the whole list comes back at
  *  once, so an author fixes a declaration in one pass instead of one line per run. */
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { SurfaceFacts } from '@looprun-ai/core';
 import { factsFromSource, seamCovered } from '@looprun-ai/eval';
@@ -33,19 +34,35 @@ export function writeSubject(): string {
  *  engine: the verbs from `runGate`, and the census a case's `covers` key is spelled against from
  *  `censusFor`, which walks the compiled desks and the honesty rows the Rulebook injects. This
  *  file names no guard of its own, so a row the engine adds or renames arrives here with it. */
-export function writeGateFile(): string {
+export function writeGateFile(stamp: string): string {
   return [
     '/** THE STATIC GATE of this subject: every verb, one list, one answer. Run it from this',
     ' *  directory with `npx vitest run check-subject.test.ts`. Every check belongs to the ENGINE',
     ' *  and this file only calls it — a check re-written beside a subject is a second truth, and',
     ' *  the first time the engine tightens a rule the copy keeps blessing what the engine now',
     ' *  refuses. Nothing here spends anything: no key, no model, no network. */',
+    'import { createHash } from \'node:crypto\';',
+    'import { readFileSync } from \'node:fs\';',
+    'import { join } from \'node:path\';',
     'import { expect, test } from \'vitest\';',
     'import { censusFor, runGate } from \'@looprun-ai/eval\';',
     'import { cases } from \'./cases.js\';',
     'import { contract, specs, subjectWorld } from \'./subject.js\';',
     '',
     'const SUBJECT = new URL(\'.\', import.meta.url).pathname;',
+    '',
+    '/** The declaration these cards were written from. A refused emit leaves the previous',
+    ' *  cards in place, and a gate reading them would answer for a build that does not',
+    ' *  exist — so the first thing it checks is which declaration it is holding. */',
+    `const STAMP = '${stamp}';`,
+    '',
+    'test(\'the cards beside this gate were written from the declaration beside them\', () => {',
+    '  const declared = createHash(\'sha256\')',
+    '    .update(readFileSync(join(SUBJECT, \'declaration.yaml\'))).digest(\'hex\').slice(0, 16);',
+    '  expect(declared, \'these cards were written from another declaration: the last emit was \'',
+    '    + \'refused, or the declaration changed after it — emit again before reading this gate\')',
+    '    .toBe(STAMP);',
+    '});',
     '',
     'test(\'the subject passes every verb of the static gate\', () => {',
     '  expect(runGate(SUBJECT, {',
@@ -149,13 +166,14 @@ export function emit(subjectDir: string): readonly string[] {
   const refusals = [...empty, ...checkAgainstSurface(declaration, facts, seam), ...composed];
   if (refusals.length > 0) throw new Error(refusals.join('\n'));
 
+  const stamp = createHash('sha256').update(readFileSync(declarationPath)).digest('hex').slice(0, 16);
   const cardsPath = join(subjectDir, 'cards.ts');
   const subjectPath = join(subjectDir, 'subject.ts');
   const gatePath = join(subjectDir, 'check-subject.test.ts');
   const seamPath = join(subjectDir, 'gen', 'SEAM.md');
   writeFileSync(cardsPath, cards);
   writeFileSync(subjectPath, writeSubject());
-  writeFileSync(gatePath, writeGateFile());
+  writeFileSync(gatePath, writeGateFile(stamp));
   mkdirSync(join(subjectDir, 'gen'), { recursive: true });
   writeFileSync(seamPath, writeSeam(subjectDir, facts));
   return [cardsPath, subjectPath, gatePath, seamPath];

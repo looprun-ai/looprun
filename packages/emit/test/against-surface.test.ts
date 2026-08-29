@@ -78,9 +78,9 @@ describe('checkAgainstSurface', () => {
   test('a disclosure needs alias naming a read the desk holding the act cannot run', () => {
     const refusals = checkAgainstSurface(decl({ desks: [
       { name: 'billing', persona: 'p', tools: ['issueRefund'], conduct: { declareHonestly: 'x' },
-        handles: 'refunds' },
+        description: 'refunds', summary: 'the desk', },
       { name: 'records', persona: 'p', tools: ['issueRefund', 'getInvoice'],
-        conduct: { declareHonestly: 'x' }, handles: 'invoice lookups' }] }), FACTS, SEAM);
+        conduct: { declareHonestly: 'x' }, description: 'invoice lookups', summary: 'the desk', }] }), FACTS, SEAM);
     expect(refusals).toEqual([expect.stringContaining(
       "contract.disclosure.issueRefund.needs.invoice names 'getInvoice'")]);
     expect(refusals[0]).toContain("the 'billing' desk holds 'issueRefund'");
@@ -90,18 +90,18 @@ describe('checkAgainstSurface', () => {
   test('a needs read every desk holding the act also holds is no refusal', () => {
     expect(checkAgainstSurface(decl({ desks: [
       { name: 'billing', persona: 'p', tools: ['issueRefund', 'getInvoice'],
-        conduct: { declareHonestly: 'x' }, handles: 'refunds and invoice lookups' },
+        conduct: { declareHonestly: 'x' }, description: 'refunds and invoice lookups', summary: 'the desk', },
       { name: 'records', persona: 'p', tools: ['getInvoice'],
-        conduct: { declareHonestly: 'x' }, handles: 'invoice lookups' }] }), FACTS, SEAM)).toEqual([]);
+        conduct: { declareHonestly: 'x' }, description: 'invoice lookups', summary: 'the desk', }] }), FACTS, SEAM)).toEqual([]);
   });
 
-  test('a house of two desks where one states a blank handles line', () => {
+  test('a house of two desks where one states a blank description line', () => {
     expect(checkAgainstSurface(decl({ desks: [
       { name: 'billing', persona: 'p', tools: ['issueRefund', 'getInvoice'],
-        conduct: { declareHonestly: 'x' }, handles: 'refunds and invoice lookups' },
+        conduct: { declareHonestly: 'x' }, description: 'refunds and invoice lookups', summary: 'the desk', },
       { name: 'records', persona: 'p', tools: ['getInvoice'],
-        conduct: { declareHonestly: 'x' }, handles: '   ' }] }), FACTS, SEAM))
-      .toEqual([expect.stringContaining("desks[1].handles says nothing on 'records'")]);
+        conduct: { declareHonestly: 'x' }, description: '   ', summary: 'the desk', }] }), FACTS, SEAM))
+      .toEqual([expect.stringContaining("desks[1].description says nothing on 'records'")]);
   });
 
   test('a prose guard naming an act the surface does not declare', () => {

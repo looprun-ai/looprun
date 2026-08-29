@@ -28,9 +28,9 @@ export const SOUND_DISCLOSURE: Readonly<Record<string, DeclaredDisclosure>> = {
 };
 export const SOUND_DESKS: Declaration['desks'] = [
   { name: 'a', persona: 'p', tools: ['issueRefund', 'getInvoice'], conduct: { declareHonestly: 'x', oneQuestion: 'y' },
-    handles: 'refunds and the invoices behind them' },
+    description: 'refunds and the invoices behind them', summary: 'the desk', },
   { name: 'b', persona: 'p', tools: ['getInvoice'], conduct: { declareHonestly: 'x', oneQuestion: 'y' },
-    handles: 'invoice lookups on their own' }
+    description: 'invoice lookups on their own', summary: 'the desk', }
 ];
 
 export function decl(overrides: {
