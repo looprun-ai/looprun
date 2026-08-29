@@ -31,8 +31,9 @@ const SYSTEM = 'You are the delivery desk of a governed records house. '
 const STATE_TAG: Readonly<Record<'ran' | 'refused' | 'held', string>> = {
   ran: 'THIS RAN and took effect this turn',
   refused: 'this did NOT run — the records refuse it',
-  held: 'this has NOT run — it stands held awaiting the operator\'s code; '
-    + 'never report it as done, processed, started or initiated'
+  held: 'this has NOT run — it stands held awaiting the operator\'s code. '
+    + 'Use NO past tense about this act in any wording: not done, not processed, '
+    + 'not recorded, not started, not "as requested" — it is waiting, nothing more'
 };
 
 function template(operatorText: string, facts: readonly DeliveryFact[],
