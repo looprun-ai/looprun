@@ -53,16 +53,21 @@ export function writeGateFile(stamp: string): string {
     '',
     'const SUBJECT = new URL(\'.\', import.meta.url).pathname;',
     '',
-    '/** The declaration these cards were written from. A refused emit leaves the previous',
-    ' *  cards in place, and a gate reading them would answer for a build that does not',
-    ' *  exist — so the first thing it checks is which declaration it is holding. */',
+    '/** The build this gate answers for: one digest over the declaration\'s bytes, then the',
+    ' *  bytes of the cards written from it. A refused emit leaves the previous cards in place,',
+    ' *  and a hand edit leaves cards no declaration wrote — either way this gate would answer',
+    ' *  for a build that does not exist, so the first thing it checks is which build it is',
+    ' *  holding. The gate file itself never enters the digest: a file cannot carry its own',
+    ' *  fingerprint. */',
     `const STAMP = '${stamp}';`,
     '',
     'test(\'the cards beside this gate were written from the declaration beside them\', () => {',
-    '  const declared = createHash(\'sha256\')',
-    '    .update(readFileSync(join(SUBJECT, \'declaration.yaml\'))).digest(\'hex\').slice(0, 16);',
-    '  expect(declared, \'these cards were written from another declaration: the last emit was \'',
-    '    + \'refused, or the declaration changed after it — emit again before reading this gate\')',
+    '  const emitted = createHash(\'sha256\')',
+    '    .update(readFileSync(join(SUBJECT, \'declaration.yaml\')))',
+    '    .update(readFileSync(join(SUBJECT, \'cards.ts\'))).digest(\'hex\').slice(0, 16);',
+    '  expect(emitted, \'this is not the build the emit stamped: the last emit was refused, the \'',
+    '    + \'declaration changed after it, or cards.ts was edited by hand — emit again before \'',
+    '    + \'reading this gate\')',
     '    .toBe(STAMP);',
     '});',
     '',
@@ -172,7 +177,11 @@ export function emit(subjectDir: string): readonly string[] {
   const refusals = [...empty, ...checkAgainstSurface(declaration, facts, seam), ...composed];
   if (refusals.length > 0) throw new Error(refusals.join('\n'));
 
-  const stamp = createHash('sha256').update(readFileSync(declarationPath)).digest('hex').slice(0, 16);
+  // The stamp: one digest over the declaration's bytes, then the cards' bytes — exactly the two
+  // files the gate reads back. The gate file itself never enters the digest, because it carries
+  // the stamp: a file cannot carry its own fingerprint.
+  const stamp = createHash('sha256')
+    .update(readFileSync(declarationPath)).update(cards).digest('hex').slice(0, 16);
   const cardsPath = join(subjectDir, 'cards.ts');
   const subjectPath = join(subjectDir, 'subject.ts');
   const gatePath = join(subjectDir, 'check-subject.test.ts');
