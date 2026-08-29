@@ -100,5 +100,14 @@ verb before the verb exists.
 Every lint: one fixture that is WRONG in exactly the taught way → the lint goes red →
 the fix goes green; the trial blind product (archived beside the c19 sweep) is the
 standing corpus — Wave B's lints run against it must flag the two teachings it
-dropped. The program closes with the skill gate + both repos' suites green and the
-107-row table fully verdicted.
+dropped.
+
+**The final validator is F5b itself: the from-zero c20 round.** After the waves land,
+a fresh blind author runs the declared path over the birth scaffold with every lint
+live, against an expectation list sealed before the run. Three error classes, all
+fatal to the round and all OWED A FIX by the owner's ruling — a lint that refuses
+lawful authoring, a taught defect that reaches the sweep with no lint having fired,
+and any emit or gate breakage. After a fix the round repeats from zero until one
+passes clean; that round's product is c20, the subject F2 measures. The program
+closes only there — with the skill gate + both repos' suites green and the 107-row
+table fully verdicted.

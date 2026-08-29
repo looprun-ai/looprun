@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Every feasible check behind every teaching — the spec's four waves built, and all 107 GAP rows verdicted BUILT or WONTFIX.
+**Goal:** Every feasible check behind every teaching — the spec's four waves built, all 107 GAP rows verdicted BUILT or WONTFIX, and the from-zero c20 round (Task 17) passing as the program's final validator with zero lint errors.
 
 **Architecture:** Engine lints land in `packages/emit` (declaration content) and `packages/eval` (gate verbs, certify); process instruments land in the agentspec skill gate (`vitest run subjects`); pages are rewritten in the same session as the verbs they describe. Every lint is born RED on a fixture carrying the exact defect it exists to refuse.
 
@@ -174,3 +174,23 @@
 - [ ] **Step 1:** Walk all 107 GAP rows against Tasks 1–15; stamp each. The three families the inventory rolls up (panel rows, thinking-log rows, artifact-existence rows) close under Task 15's instruments.
 - [ ] **Step 2:** Full suites: looprun `vitest run` all packages · agentspec `pnpm gate` · bench stamped gates. All green.
 - [ ] **Step 3:** Re-run the corpus assertion (Task 8 Step 3) one last time in the full suite. **Step 4: Commit** — `docs(analysis): 107 rows verdicted — built or refused with its reason, none silent`
+
+### Task 17: F5b — the from-zero c20 round is the program's FINAL VALIDATOR
+
+**Precondition:** Tasks 1–16 committed, every suite green. This round MINTS `c20` (a
+from-zero round generates the cX; the owner's ruling). No eval, no subject-model call
+anywhere in it — the validator is authored artifacts plus machines plus the sweep.
+
+**The validator's law (the owner's, verbatim in force):** any error in the pointed
+lints that this round surfaces MUST be fixed — none is registered, deferred or
+accepted as residue.
+
+- [ ] **Step 1 — seal the expectations FIRST:** write `subjects/atlas-c17/test/<date>-c20-sweep/EXPECTATIONS.md` and commit it BEFORE the author runs. It extends the c19 list with the program's promotion: every Wave B guarantee is now the MACHINE's to hold — a point the sweep finds missing with no lint having refused it is a lint bug, not merely an authoring miss.
+- [ ] **Step 2 — scaffold:** `subjects/atlas-c20` from the same birth inputs the c19 trial used (`ask/`, `gen/`, `generated/`, `world.ts`, `world-kit.ts`, `subject.ts` from `atlas-c17`; `cases.ts` from `git show 8491f9f:subjects/atlas-c17/cases.ts`), with Task 7's `CREATES` list in the world surface.
+- [ ] **Step 3 — the blind author:** a fresh agent carrying zero session context — only the skill path and the scaffold path; the declared path (phase N, emit, gate) with all new lints live; no other `subjects/` directory; no git; N-REPORT and timing.log per the skill's own recipe. Its report must name every emit refusal it met and how the declaration answered it.
+- [ ] **Step 4 — the sweep, three error classes, all fatal to the round:**
+  - FALSE POSITIVE — a lint refused lawful authoring (the author's report shows a refusal only contortion could satisfy): the lint is wrong; fix it, red-first, with the c20 evidence as the fixture;
+  - FALSE NEGATIVE — a sweep point fails and NO lint fired on the way: the lint is missing or blind; build or fix it, red-first, the c20 product joins the trial product as corpus;
+  - BREAKAGE — an emit or gate crash: fix it.
+- [ ] **Step 5 — the loop:** after ANY fix from Step 4, the round repeats FROM ZERO — a fresh blind author over a fresh scaffold — until one round completes with zero validator errors. That round's product IS `c20`.
+- [ ] **Step 6:** Commit the accepted round (scaffold, product, sweep, reports). `c20` stands as the subject F2's campaign measures. **The lint program closes only here.**
