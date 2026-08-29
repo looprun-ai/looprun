@@ -359,6 +359,63 @@ function checkAfterSpeaksResult(declaration: Declaration): readonly string[] {
   return refusals;
 }
 
+/** The `empty` sentence is written from the held call's own args and nothing else. It is the
+ *  refusal spoken at exactly the moment a declared tense found no value in the owed reads, so a
+ *  slot rooted anywhere but `args` reaches for a read that has just come back with nothing — and
+ *  the refusal that was supposed to explain the gap cannot itself be written. */
+function checkEmptyFillable(declaration: Declaration): readonly string[] {
+  const refusals: string[] = [];
+  for (const [actName, entry] of Object.entries(declaration.contract.disclosure)) {
+    if (entry.empty === undefined) continue;
+    for (const slot of slotsOf(entry.empty)) {
+      const root = slotRoot(slot);
+      if (root === 'args') continue;
+      const owed = entry.needs?.[root] === undefined ? ''
+        : ` — '${root}' is a read this entry owes, and it is a read that answered nothing`;
+      refusals.push(`contract.disclosure.${actName}.empty carries '{${slot}}', rooted on `
+        + `'${root}'${owed}. The empty sentence speaks when the owed reads answered nothing, and it `
+        + `renders over the held call's own args alone — write it from {args.*} slots only.`);
+    }
+  }
+  return refusals;
+}
+
+/** The words one value of a choice is stated in stand apart from every other value's. The check
+ *  searches everything the operator has said for a term as written, so a term spelled inside
+ *  another value's term is found whenever that longer one is: one message grounds both values, and
+ *  the gate passes the value the operator never chose. */
+function checkChoiceTermsDisjoint(declaration: Declaration): readonly string[] {
+  const refusals: string[] = [];
+  declaration.contract.guards.forEach((guard, guardIndex) => {
+    if (guard.factory !== 'choiceFromUser') return;
+    const declared = guard.args?.terms;
+    if (typeof declared !== 'object' || declared === null || Array.isArray(declared)) return;
+    const values = Object.entries(declared as Readonly<Record<string, unknown>>).map(
+      ([value, words]) => ({ value, words: (Array.isArray(words) ? words : [])
+        .filter((word): word is string => typeof word === 'string') }));
+    const collision = (inner: string, innerValue: string,
+                       outer: string, outerValue: string): string =>
+      `contract.guards[${guardIndex}].args.terms: '${inner}' states '${innerValue}' and is spelled `
+      + `inside '${outer}', which states '${outerValue}'. The check searches the operator's own `
+      + `messages for these words as written, so a message saying '${outer}' states '${outerValue}' `
+      + `and states '${innerValue}' with it — the gate passes the value nobody chose. Give `
+      + `'${innerValue}' and '${outerValue}' words neither one contains.`;
+    for (let i = 0; i < values.length; i += 1) {
+      for (let j = i + 1; j < values.length; j += 1) {
+        for (const one of values[i].words) {
+          for (const other of values[j].words) {
+            const a = one.toLowerCase();
+            const b = other.toLowerCase();
+            if (b.includes(a)) refusals.push(collision(one, values[i].value, other, values[j].value));
+            else if (a.includes(b)) refusals.push(collision(other, values[j].value, one, values[i].value));
+          }
+        }
+      }
+    }
+  });
+  return refusals;
+}
+
 /** Every desk states the line that routes a message to it, exactly when a router stands in front
  *  of more than one desk to read it. Two or more desks route by comparing each desk's own
  *  `description` line against the arriving message, so a desk that declares none — or writes one that
@@ -477,7 +534,9 @@ function checkSeamRows(declaration: Declaration, facts: SurfaceFacts,
  *  nothing disclosed before it runs, a `precondition` reading a record over an act with no target,
  *  a disclosure `needs` alias naming a tool that does not exist, a disclosure alias whose read
  *  cannot answer the call it is held for, a disclosure alias naming a read the lane of a desk
- *  holding the act does not carry, an `after` that names nothing the call returned, a seam
+ *  holding the act does not carry, an `after` that names nothing the call returned, an `empty`
+ *  sentence rooted outside the held call's own args, a choice whose terms for one value are
+ *  spelled inside another value's, a seam
  *  sentence paying a row the world does not carry, and a
  *  house whose desks disagree with the routing law — two or more desks with a desk whose `description`
  *  line is missing or blank, or the one desk of a single-desk house carrying one — and a desk of a
@@ -498,6 +557,8 @@ export function checkAgainstSurface(declaration: Declaration, facts: SurfaceFact
     ...checkDisclosureNeedsResolvable(declaration, facts),
     ...checkDisclosureNeedsInLane(declaration, facts),
     ...checkAfterSpeaksResult(declaration),
+    ...checkEmptyFillable(declaration),
+    ...checkChoiceTermsDisjoint(declaration),
     ...checkSeamRows(declaration, facts, seam),
     ...checkRoutingLines(declaration),
     ...checkConductVoices(declaration)

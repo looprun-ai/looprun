@@ -817,6 +817,13 @@ describe('floorRedeclared', () => {
     expect(floorRedeclared(dir).map(f => f.code)).toEqual(['FLOOR_REDECLARED']);
   });
 
+  test('a card declaring the grounding floor the turn itself raises is a finding', () => {
+    const dir = write(`const CONTRACT = { guards: [{ name: 'figureIsGrounded', on: 'preTool', deny: () => null }] };`);
+    const found = floorRedeclared(dir);
+    expect(found.map(f => f.code)).toEqual(['FLOOR_REDECLARED']);
+    expect(found[0].sentence).toContain('figureIsGrounded');
+  });
+
   test('an authored name the engine does not install asks nothing', () => {
     const dir = write(`const CONTRACT = { guards: [{ name: 'refundReadsTheInvoice', on: 'preTool', deny: () => null }] };`);
     expect(floorRedeclared(dir)).toEqual([]);

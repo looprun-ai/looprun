@@ -1637,12 +1637,15 @@ export function capPaths(subjectDir: string): readonly LintFinding[] {
 /** The floor: the guard names the engine installs on its own, never authored on a card. Eight —
  *  confirmFirst, groundedIds, groundedDates, noDuplicateCall, argRequired, maxDestructive,
  *  brokenReply, questionAnswered — are pushed by AgentFactory's compile() in
- *  packages/core/src/cards/agent-factory.ts; the remaining two — claimIsGrounded and
+ *  packages/core/src/cards/agent-factory.ts; two more — claimIsGrounded and
  *  claimIsComplete, the honesty floor — are installed by Rulebook in
- *  packages/core/src/run/rulebook.ts. A card that authors any of these, bare or prefixed with a
- *  colon, shadows a guard the engine installs itself. */
+ *  packages/core/src/run/rulebook.ts; and figureIsGrounded is raised by the turn itself in
+ *  packages/core/src/run/turn.ts, over every figure the outgoing message states. A card that
+ *  authors any of these, bare or prefixed with a colon, shadows a guard the engine installs
+ *  itself. */
 const FLOOR_NAMES = new Set(['confirmFirst', 'groundedIds', 'groundedDates', 'noDuplicateCall',
-  'argRequired', 'maxDestructive', 'brokenReply', 'questionAnswered', 'claimIsGrounded', 'claimIsComplete']);
+  'argRequired', 'maxDestructive', 'brokenReply', 'questionAnswered', 'claimIsGrounded',
+  'claimIsComplete', 'figureIsGrounded']);
 
 export function floorRedeclared(subjectDir: string): readonly LintFinding[] {
   const sources = subjectSources(subjectDir);

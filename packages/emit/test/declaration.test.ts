@@ -510,6 +510,84 @@ desks:
   });
 });
 
+describe('the empty sentence stays fillable', () => {
+  const withEmpty = (empty: string): string => `
+contract:
+  name: seaside-hotel
+  voice: Warm, brief, and exact about dates and money.
+  facts: []
+  guards: []
+  disclosure:
+    issueRefund:
+      needs: { invoice: getInvoice }
+      before: Refunding this invoice cannot be taken back.
+      empty: ${empty}
+desks:
+  - name: front-desk
+    persona: The front desk.
+    tools: [issueRefund, getInvoice]
+    conduct: { declareHonestly: Say what ran and what did not. }
+`;
+
+  it('an empty sentence rooted on a read the entry owes is refused, naming the alias', () => {
+    const d = readDeclaration(fixture(withEmpty('This invoice carries no {invoice.total} to refund.')));
+    const refusals = checkAgainstSurface(d, FACTS, SEAM);
+    expect(refusals).toEqual([expect.stringContaining('contract.disclosure.issueRefund.empty')]);
+    expect(refusals[0]).toContain('{invoice.total}');
+    expect(refusals[0]).toContain("'invoice'");
+  });
+
+  it('an empty sentence written from the held call\'s own args is accepted', () => {
+    const d = readDeclaration(fixture(withEmpty('The invoice {args.invoiceId} carries nothing to refund.')));
+    expect(checkAgainstSurface(d, FACTS, SEAM)).toEqual([]);
+  });
+});
+
+describe('choice terms stay disjoint', () => {
+  const withTerms = (terms: string): string => `
+contract:
+  name: seaside-hotel
+  voice: Warm, brief, and exact about dates and money.
+  facts: []
+  guards:
+    - name: refundRouteAsTheGuestChoseIt
+      acts: [issueRefund]
+      factory: choiceFromUser
+      args: { arg: invoiceId, terms: ${terms} }
+      rule: Send the refund back only the way the guest asked for it.
+  disclosure:
+    issueRefund:
+      before: Refunding this invoice cannot be taken back.
+desks:
+  - name: front-desk
+    persona: The front desk.
+    tools: [issueRefund, getInvoice]
+    conduct: { declareHonestly: Say what ran and what did not. }
+`;
+
+  it('a term spelled inside another value\'s term is refused, naming both values', () => {
+    const d = readDeclaration(fixture(withTerms(
+      "{ card: ['card'], storeCredit: ['credit on the card'] }")));
+    const refusals = checkAgainstSurface(d, FACTS, SEAM);
+    expect(refusals).toEqual([expect.stringContaining('contract.guards[0].args.terms')]);
+    expect(refusals[0]).toContain("'card'");
+    expect(refusals[0]).toContain("'storeCredit'");
+  });
+
+  it('one word carried by two values is refused as the same collision', () => {
+    const d = readDeclaration(fixture(withTerms(
+      "{ card: ['same card'], storeCredit: ['same card'] }")));
+    expect(checkAgainstSurface(d, FACTS, SEAM))
+      .toEqual([expect.stringContaining('contract.guards[0].args.terms')]);
+  });
+
+  it('terms neither of which contains the other are accepted', () => {
+    const d = readDeclaration(fixture(withTerms(
+      "{ card: ['back to the card'], storeCredit: ['as store credit'] }")));
+    expect(checkAgainstSurface(d, FACTS, SEAM)).toEqual([]);
+  });
+});
+
 describe('a guard name is unique', () => {
   it('two guards under one name are refused by that name and both lines', () => {
     expect(() => readDeclaration(fixture(`
