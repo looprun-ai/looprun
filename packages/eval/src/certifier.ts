@@ -21,13 +21,16 @@ export interface Certification {
 }
 
 /** What the person watching the machine wrote down: every line of the run's own MONITOR.md that
- *  opens with ALERT. A run dir carrying no monitor page raises none — the page is written by
- *  whoever watched the host, and a run nobody watched is not a run somebody reported a fault in. */
+ *  opens with `ALERT:` — the colon is the whole signal. A monitor raising a fault writes
+ *  `ALERT: rolling decode 28.4 tok/s …`; a monitor with nothing to report writes prose about
+ *  alerts, `ALERTS: none — the host was idle`, and prose about alerts is not an alert. A run dir
+ *  carrying no monitor page raises none — the page is written by whoever watched the host, and a
+ *  run nobody watched is not a run somebody reported a fault in. */
 function alertsIn(runDir: string): readonly string[] {
   const page = join(runDir, 'MONITOR.md');
   if (!existsSync(page)) return [];
   return readFileSync(page, 'utf8').split('\n').map(line => line.trim())
-    .filter(line => line.startsWith('ALERT'));
+    .filter(line => line.startsWith('ALERT:'));
 }
 
 export function certify(runDirs: readonly string[], bar: number): Certification {

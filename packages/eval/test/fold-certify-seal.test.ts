@@ -84,7 +84,7 @@ test('certify: a monitor alert voids its run and takes it out of the evidence', 
 test('certify: a quiet monitor, and no monitor at all, leave the run in the evidence', () => {
   const quiet = repDir([{ id: 'c1', verdict: 'pass' }]);
   writeFileSync(join(quiet, 'MONITOR.md'),
-    '# what was watched\nEvery rep ran on an idle host.\n');
+    '# what was watched\nEvery rep ran on an idle host.\nALERTS: none — the host was idle\n');
   expect(certify([quiet], 0.9).voided).toEqual([]);
   expect(certify([quiet], 0.9).pass).toBe(true);
 
