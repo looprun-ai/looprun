@@ -44,7 +44,9 @@ export type Verdict =
   | { readonly kind: 'hold'; readonly guardName: string;    // consent: hold-and-ask; a declared
       readonly sentence: string }                           //   simulation rides the hold route
   | { readonly kind: 'restate'; readonly actId: string }      // duplicate call: the first result restated
-  | { readonly kind: 'owe'; readonly reads: readonly OwedRead[] };   // rule-owed reads the ENGINE performs
+  | { readonly kind: 'owe'; readonly guardName: string;       // rule-owed reads the ENGINE performs,
+      readonly rule: string;                                  //   refused in the owing guard's own
+      readonly reads: readonly OwedRead[] };                  //   words when the debt goes unpaid
 export interface OwedRead { readonly alias: string; readonly tool: string; readonly args: Readonly<Record<string, Json>> }
 export type Correction =
   | { readonly kind: 'redrive'; readonly guardName: string; readonly detail: string }

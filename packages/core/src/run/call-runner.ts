@@ -66,11 +66,18 @@ export class CallRunner {
   }
 
   async run(raw: RawCall, origin: Act['origin'], draft: TurnDraft): Promise<Act> {
-    return this.runChecked(raw, origin, draft, true);
+    return this.runChecked(raw, origin, draft, this.oweBudget(raw.tool));
+  }
+
+  /** One micro-step round per guard that can owe on this tool — every debt gets its
+   *  turn to be paid, and the walk still terminates. */
+  private oweBudget(tool: string): number {
+    return this.deps.rulebook.guards().guards.filter(g =>
+      g.on === 'preTool' && (g.tools.length === 0 || g.tools.includes(tool)) && 'owe' in g).length;
   }
 
   private async runChecked(raw: RawCall, origin: Act['origin'], draft: TurnDraft,
-                           mayOwe: boolean): Promise<Act> {
+                           oweRounds: number): Promise<Act> {
     const { rulebook, clerk, history, recordsPort, compiled } = this.deps;
     const fact = compiled.facts.tools[raw.tool];
     if (!fact) {
@@ -149,7 +156,7 @@ export class CallRunner {
         for (const owed of this.deps.disclosure.owedReads(call.tool, ctx.call)) {
           reads.set(owed.alias,
             await this.runChecked({ tool: owed.tool,
-              args: this.deps.disclosure.fillOwed(owed, reads) }, 'engine', draft, false));
+              args: this.deps.disclosure.fillOwed(owed, reads) }, 'engine', draft, 0));
         }
         // The declared cap outranks the ask: a call whose arg exceeds what the
         // owed read answered is refused with the record's own figures — the
@@ -201,7 +208,10 @@ export class CallRunner {
         }, undefined, question.id, verdict.guardName);
       }
       case 'owe': {
-        if (!mayOwe) return this.refuseUnpaidDebt(call, fact, origin, state, draft);
+        if (oweRounds <= 0) {
+          return this.refuseUnpaidDebt(call, fact, origin, state, draft, verdict);
+        }
+        let paid = false;
         for (const read of verdict.reads) {
           if (draft.microTried.includes(read.tool)) continue;
           const filled = await this.deps.microStep(read, ctx.call);
@@ -209,9 +219,13 @@ export class CallRunner {
             draft.microTried.push(read.tool);
             continue;
           }
-          await this.runChecked(filled, 'engine', draft, false);
+          await this.runChecked(filled, 'engine', draft, 0);
+          paid = true;
         }
-        return this.runChecked(raw, origin, draft, false);
+        // A round that paid nothing can never pay anything: refuse now, in the
+        // words of the guard whose debt stands.
+        if (!paid) return this.refuseUnpaidDebt(call, fact, origin, state, draft, verdict);
+        return this.runChecked(raw, origin, draft, oweRounds - 1);
       }
     }
   }
@@ -304,21 +318,21 @@ export class CallRunner {
     return act;
   }
 
-  /** The debt could not be paid this turn: the act refuses with the owning rule —
-   *  the turn goes on and the delivery carries the sentence; never a dead turn. */
+  /** The debt could not be paid this turn: the act refuses with the rule of the
+   *  guard that raised it — the turn goes on and the delivery carries the sentence;
+   *  never a dead turn. */
   private refuseUnpaidDebt(call: CanonicalCall, fact: ToolFact, origin: Act['origin'],
-                           state: StateSnapshot | null, draft: TurnDraft): Act {
-    const owner = this.deps.rulebook.guards().guards.find(g =>
-      g.on === 'preTool' && (g.tools.length === 0 || g.tools.includes(call.tool)) && 'owe' in g);
+                           state: StateSnapshot | null, draft: TurnDraft,
+                           debt: { readonly guardName: string; readonly rule: string }): Act {
     const grade = this.deps.clerk.grade(
-      { verdict: { kind: 'refuse', guardName: owner?.name ?? 'onlyAfter', detail: '' }, actId: '' },
+      { verdict: { kind: 'refuse', guardName: debt.guardName, detail: '' }, actId: '' },
       fact.effect, state, state, draft);
     return this.record(draft, {
       origin, call: call.data(v => this.deps.masker.maskData(v)), effect: fact.effect, said: grade.said,
       status: grade.status, reason: grade.reason, evidence: grade.evidence,
-      sentence: `${this.head(call, fact)} — not-done (${owner?.rule ?? ''} The required read did not succeed this conversation.)`,
+      sentence: `${this.head(call, fact)} — not-done (${debt.rule} The required read did not succeed this conversation.)`,
       owed: { kind: 'refusal',
-        text: `${owner?.rule ?? ''} The required read did not succeed this conversation.`.trim() },
+        text: `${debt.rule} The required read did not succeed this conversation.`.trim() },
       result: null
     });
   }

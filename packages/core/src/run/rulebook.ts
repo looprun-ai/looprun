@@ -71,7 +71,7 @@ export class Rulebook {
       }
       if (guard.owe) {
         const reads = guard.owe(ctx);
-        if (reads !== null) return { kind: 'owe', reads };
+        if (reads !== null) return { kind: 'owe', guardName: guard.name, rule: guard.rule, reads };
       }
       if (guard.hold) {
         const sentence = guard.hold(ctx);

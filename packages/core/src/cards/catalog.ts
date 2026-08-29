@@ -298,7 +298,7 @@ export function questionAnswered(): SeedGuard {
  *  engine-taught literals leaking as prose, tool markup, foreign chat-template
  *  tokens. Structural, never linguistic. */
 export function brokenReply(): SeedGuard {
-  const LEAKS = ['<tool_call>', '</tool_call>', '<|'];
+  const LEAKS = ['<tool_call>', '</tool_call>', '<|', '{result.', '{args.'];
   return {
     name: 'brokenReply',
     rule: 'The reply is plain prose — no tool markup, no repeated lines, no engine literals.',
@@ -554,10 +554,17 @@ export function canonicalAmount(run: string): string {
   return decimal === '' ? whole : `${whole}.${decimal}`;
 }
 
-/** The arg's value must appear VERBATIM in the user's own words — contiguous whole
- *  tokens, whole-value equal; the guard searches, it never interprets. A figure arg
- *  is searched in every standard spelling of the same amount. */
+/** The arg's value must appear VERBATIM in the user's own words, on ANY turn of the
+ *  conversation — contiguous whole tokens, whole-value equal; the guard searches, it
+ *  never interprets. A figure arg is searched in every standard spelling of the same
+ *  amount. A value stated on turn one and acted on later was still stated. A dotted
+ *  arg walks into the call's blocks — 'set.day' reads the day a set-form write
+ *  carries inside its 'set' argument. */
 export function valueFromUser(tool: string, arg: string): SeedGuard {
+  const dig = (args: Readonly<Record<string, Json>>): Json | undefined =>
+    arg.split('.').reduce<Json | undefined>((at, step) =>
+      typeof at === 'object' && at !== null && !Array.isArray(at)
+        ? (at as Readonly<Record<string, Json>>)[step] : undefined, args);
   return {
     name: `valueFromUser:${tool}`,
     rule: `Send ${tool}'s '${arg}' only as the user wrote it.`,
@@ -566,15 +573,17 @@ export function valueFromUser(tool: string, arg: string): SeedGuard {
     kind: 'valueFromUser',
     compile(home) {
       return installedAt<CallCtx>(this, home, ctx => {
-        const raw = ctx.call.args[arg];
+        const raw = dig(ctx.call.args);
         const value = typeof raw === 'number' ? String(raw) : raw;
         if (typeof value !== 'string' || value === '') {
           return `'${arg}' must be a value the user wrote`;
         }
         if (isFigure(value)) {
           const amount = canonicalAmount(value);
-          for (const run of figureRuns(ctx.userText)) {
-            if (canonicalAmount(run) === amount) return null;
+          for (const text of ctx.userTexts) {
+            for (const run of figureRuns(text)) {
+              if (canonicalAmount(run) === amount) return null;
+            }
           }
           return `'${arg}' is not written in the user's own words`;
         }
@@ -582,9 +591,11 @@ export function valueFromUser(tool: string, arg: string): SeedGuard {
         if (need.length === 0) {
           return `'${arg}' carries no word the user could have written`;
         }
-        const have = tokens(ctx.userText);
-        for (let i = 0; i + need.length <= have.length; i += 1) {
-          if (need.every((t, j) => have[i + j] === t)) return null;
+        for (const text of ctx.userTexts) {
+          const have = tokens(text);
+          for (let i = 0; i + need.length <= have.length; i += 1) {
+            if (need.every((t, j) => have[i + j] === t)) return null;
+          }
         }
         return `'${arg}' is not written in the user's own words`;
       });

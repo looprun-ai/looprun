@@ -1,8 +1,8 @@
 import { test, expect } from 'vitest';
 import type { CallCtx, InputCtx, Json, ReplyCtx, ResultCtx, StateSnapshot } from '../../src/contract/vocabulary.js';
 import { TurnFailure } from '../../src/contract/vocabulary.js';
-import { argAbsent, blockPattern, checkResult, choiceFromUser, mustAccountFor, precondition,
-         questionAnswered, valueFromUser } from '../../src/cards/catalog.js';
+import { argAbsent, blockPattern, brokenReply, checkResult, choiceFromUser, mustAccountFor,
+         precondition, questionAnswered, valueFromUser } from '../../src/cards/catalog.js';
 import { factsFromWorld } from '../../src/cards/facts.js';
 import { HOSTILE } from '../fixtures/hostile-world.js';
 
@@ -76,6 +76,32 @@ test('valueFromUser passes only a value the user wrote as contiguous whole token
     'send it to ana@example.com please'))).toContain('to');
   expect(g.deny(callCtx('sendEmail', { to: 'ana' }, STATE,
     'reach ana@example.com'))).toContain('to');
+});
+
+test('brokenReply denies an unrendered result slot — a template never reaches the operator', () => {
+  const g = brokenReply().compile('engine', FACTS);
+  expect(g.deny(replyCtx('Hold {result.holdId} is standing.'))).toContain('{result.');
+  expect(g.deny(replyCtx('The hold hd_1 is standing.'))).toBeNull();
+});
+
+test('valueFromUser reads the whole conversation — a value stated on an earlier turn counts', () => {
+  const g = valueFromUser('sendEmail', 'to').compile('contract', FACTS);
+  expect(g.deny(callCtx('sendEmail', { to: 'ana@example.com' }, STATE,
+    'go ahead and send it', ['send it to ana@example.com please', 'go ahead and send it'])))
+    .toBeNull();
+  const gf = valueFromUser('issueRefund', 'amount').compile('contract', FACTS);
+  expect(gf.deny({ ...callCtx('issueRefund', {}, STATE,
+    'yes, do it', ['Refund R$ 2.000,00 on inv_7001', 'yes, do it']),
+    call: { tool: 'issueRefund', args: { amount: 2000 }, key: 'k' } })).toBeNull();
+});
+
+test("valueFromUser reads a dotted path — a set-form write's field is still the user's word", () => {
+  const g = valueFromUser('moveBooking', 'set.day').compile('contract', FACTS);
+  const call = (day: string, userText: string): CallCtx =>
+    ({ ...callCtx('moveBooking', {}, STATE, userText),
+       call: { tool: 'moveBooking', args: { id: 'bk_1', set: { day } }, key: 'k' } });
+  expect(g.deny(call('Saturday', 'move bk_1 to Saturday please'))).toBeNull();
+  expect(g.deny(call('Sunday', 'move bk_1 to Saturday please'))).toContain('set.day');
 });
 
 test('valueFromUser reads a figure written in any format, currency mark or slip of it', () => {
