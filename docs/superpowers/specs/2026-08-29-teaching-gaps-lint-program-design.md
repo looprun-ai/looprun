@@ -1,6 +1,6 @@
 # The Lint Program — Every Feasible Check Behind Every Teaching
 
-**Status:** DRAFT — pending owner review
+**Status:** CLOSED — all four waves built; the 107 GAP rows verdicted (49 BUILT · 59 WONTFIX, 30 of those registered as BACKLOG rows); both repos' suites, the skill gate and the bench stamped gates green; the F5b validator passed CLEAN AT ROUND ONE and its product stands as `agentspec-bench/subjects/atlas-c20`
 **Position in the program:** by the owner's ruling, the recovery program advances only
 after this spec's gaps are resolved — F5's remaining rows, F5b (the from-zero c20) and
 F2 run behind it.
