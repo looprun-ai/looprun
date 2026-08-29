@@ -68,6 +68,31 @@ test('certify: the floor holds over every rep; an incident voids; failing cases 
   expect(certify([incident], 0.9).voided.length).toBeGreaterThan(0);
 });
 
+test('certify: a monitor alert voids its run and takes it out of the evidence', () => {
+  const good = repDir([{ id: 'c1', verdict: 'pass' }]);
+  const degraded = repDir([{ id: 'c1', verdict: 'fail' }]);
+  writeFileSync(join(degraded, 'MONITOR.md'),
+    '# what was watched\nALERT: cpu contended\n');
+  const certified = certify([good, degraded], 0.9);
+  expect(certified.scores).toEqual([1]);
+  expect(certified.voided).toHaveLength(1);
+  expect(certified.voided[0]).toContain('ALERT: cpu contended');
+  expect(certified.failingCases).toEqual([]);
+  expect(certified.pass).toBe(false);
+});
+
+test('certify: a quiet monitor, and no monitor at all, leave the run in the evidence', () => {
+  const quiet = repDir([{ id: 'c1', verdict: 'pass' }]);
+  writeFileSync(join(quiet, 'MONITOR.md'),
+    '# what was watched\nEvery rep ran on an idle host.\n');
+  expect(certify([quiet], 0.9).voided).toEqual([]);
+  expect(certify([quiet], 0.9).pass).toBe(true);
+
+  const unwatched = repDir([{ id: 'c1', verdict: 'pass' }]);
+  expect(certify([unwatched], 0.9).voided).toEqual([]);
+  expect(certify([unwatched], 0.9).pass).toBe(true);
+});
+
 test('seal walks the whole dir; one changed byte voids verify', () => {
   const dir = mkdtempSync(join(tmpdir(), 'subject-'));
   mkdirSync(join(dir, 'ask'));
