@@ -5,8 +5,8 @@ walks their 59 distinct recommendations and gives each one a disposition. An ite
 is a forgotten item; this table is the proof there is none.
 
 ```
-59 items ──┬── 7  SHIPPED          (engine code, red-first tests, commits named)
-           ├── 12 REGISTERED NOW   (new rows: looprun BACKLOG 40–47 · agentspec BACKLOG 13–16)
+59 items ──┬── 12 SHIPPED          (engine code, red-first tests, commits named)
+           ├── 7  REGISTERED       (open rows: looprun BACKLOG 42/43/45/46 + routed (d) · agentspec 13–16)
            ├── 6  ALREADY HELD     (pre-existing BACKLOG rows / rulings)
            ├── 3  IN FLIGHT        (the c20 T-loop owns them, running)
            ├── 9  OWNER-SEQUENCED  (experiments and measurements awaiting the owner's order)
@@ -24,19 +24,20 @@ is a forgotten item; this table is the proof there is none.
 | 9a | A consumed later shipped `{result.holdId}` raw to the operator | slot-carrying later dropped whole, `8bcf4c9` (residue → row 43) |
 | 4 | A re-proposed executed call refused by `maxDestructive` instead of restated | guard-order swap + two-way test, commit `1e88dda` |
 | 38 | "Ship the silent-done floor first" | the shipped package's own sequencing |
+| 6 | The unpaid-debt refusal spoke the first owe guard's rule, not the raiser's | the owe verdict carries its own rule |
+| 7 | One debt per call, ever — several prerequisites could never all be paid | one micro-step round per owing guard, progress-bounded |
+| 10 + 21a | `valueFromUser` read one turn while `choiceFromUser` read the conversation | both scan `ctx.userTexts`; dotted paths reach a set-form write's fields |
+| 9b (belt) | `{result.` absent from `brokenReply`'s LEAKS | `{result.` and `{args.` refuse as engine literals |
+| 46 + 47 | The tutorial's hotel snippets could not serve their own exam | world split, `set.day` binding, the missing `moveBooking` proof |
 
 ## REGISTERED NOW — new register rows written this session
 
 | Items | Folded into | Row |
 |---|---|---|
-| 6 + 16 | unpaid debt refused with another guard's sentence; wall text delivered as fact (case 82) | looprun 40 |
-| 7 | one debt per call, ever | looprun 41 |
 | 8 | `proseDropsReads` passes one-id replies (17/37/71) | looprun 42 |
-| 9b | refuse unrendered slots anywhere; `{result.` in LEAKS; later learns its result | looprun 43 |
-| 10 + 21a | `valueFromUser` reads one turn, `choiceFromUser` reads the conversation (case 44) | looprun 44 |
-| 11 + 12 + 17 + 23 | the delivered prose has no reader (63/67/71/92; guards run on the draft) | looprun 45 |
+| 9b (rest) | the consumed later learns its result; refuse `{...}` at assembly | looprun 43 |
+| 11 + 12 + 16 + 17 + 23 | the delivered prose has no reader (63/67/71/82/92; guards run on the draft) | looprun 45 |
 | 13 + 14 + 29a | the emit lint demands an `after` only at the birth register | looprun 46 |
-| 46 + 47 | the tutorial's hotel snippets cannot serve their own exam | looprun 47 |
 | 22 | a read on one desk unreachable from the routed desk (case 52) | looprun routed-residue (d) |
 | 28 + 29b | GAP #6 stamped BUILT beyond the covered scope; the sweep scored HELD over the hole | agentspec 13 |
 | 24 | the F5 declaration laws live only in one hand-landed declaration | agentspec 14 |
