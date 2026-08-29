@@ -2,7 +2,7 @@
 
 The 21-task plan `docs/superpowers/plans/2026-08-20-declaration-and-emitter.md`, task by task:
 what each one set out to do, what it actually produced, and whether the objective was met.
-Evidence: the campaign ledger, the commits named per row, and the run directories in
+Evidence: the campaign register, the commits named per row, and the run directories in
 `agentspec-bench`. The register mapping (second section) is pinned by
 `packages/eval/test/registers.test.ts` (5/5 green).
 
@@ -30,7 +30,7 @@ Evidence: the campaign ledger, the commits named per row, and the run directorie
 | 18 | TIER 1 — the hotel | The tutorial subject end-to-end through the declared path, certified | Certified **1.0 pass:true** on the merged card; r2 judgement independently confirmed (bench 6ab9415+2f8807e+37d9347, looprun ×4, agentspec 3adb1ca) | ✅ |
 | 19 | TIER 2 — the Atlas, four bars | The emitted Atlas passes §3.2: judged ≥ 0.95 · prompt ≤ 109 492 B · ≥ 58 checks with 31/31 acts · ≤ 1.5 min/desk | First emitted measurement: 0.79/0.79 FAIL (prompt 100 388 PASS; checks 60 + 31/31 PASS; wall 45m08 FAIL) → REOPENED by ruling → declaration path + blind campaign (c1..c17) + the 6B skill rewrite → **c17, blind from zero: 96/100 letter-strict, gate ≥ .95 PASSED** (held-out 57/60; 12-key 11/12). Bytes on the blind path: ~134 KB render, ABOVE the 109 492 reference (backlog rows 1–4 attack this); phase-N wall 30m10s from zero (declared-path authoring reached 3m35s on c11). CLOSED by user ruling 2026-08-23. | ✅ score bar, by ruling · byte/wall bars not met on the blind path |
 | 20 | The register check | Every id lives in exactly one register column, every finding mapped — mechanically | `registers.test.ts`, 5/5; set sizes 68 IN / 12 OUT / 42 trace headings / 80 findings (d0fd3c5) | ✅ |
-| 21 | The documentation | README gains EMIT; tutorial 04-guards gains the channel law; `packages/emit/README.md`; strikethroughs in the register | README EMIT section + `@looprun-ai/emit` table row; `packages/emit/README.md` (the shape, and every refusal with its message); per-section closure lines with commits in the register. The channel law was already stated at `04-guards.md:18-30` ("Where a rule is read") — verified, no edit. Ledger-carried skill half (SKILL.md EMIT row + panel + declare.md pointer) paid by the 6B rewrite. Gates: snippets 6/6, tsc clean, registers 5/5 (commit 1b6dd73). | ✅ |
+| 21 | The documentation | README gains EMIT; tutorial 04-guards gains the channel law; `packages/emit/README.md`; strikethroughs in the register | README EMIT section + `@looprun-ai/emit` table row; `packages/emit/README.md` (the shape, and every refusal with its message); per-section closure lines with commits in the register. The channel law was already stated at `04-guards.md:18-30` ("Where a rule is read") — verified, no edit. Register-carried skill half (SKILL.md EMIT row + panel + declare.md pointer) paid by the 6B rewrite. Gates: snippets 6/6, tsc clean, registers 5/5 (commit 1b6dd73). | ✅ |
 
 Score: 21 of 21 tasks complete — the plan is closed.
 

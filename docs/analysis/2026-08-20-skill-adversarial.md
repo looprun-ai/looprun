@@ -445,7 +445,7 @@ Stone rule 1 covers prompt text an engine composes and the option labels a quest
 
 | line | out | in |
 |---|---|---|
-| `:15` | `the tier (ram8/16/24)` | `the tier (the RAM bands in [models.md](models.md))` |
+| `:15` | `the tier (ram8/16/24)` | `the tier (the RAM tiers in [models.md](models.md))` |
 | `:29` | `"Cole aqui o caminho do tools.json"` | `"Paste the path to tools.json here"` |
 | `:30` | `"Cole aqui a chave de API"` | `"Paste your API key here"` |
 | `:61` | `other (digite o endpoint). Pode marcar vários."` | `other (type the endpoint). You can pick several."` |
