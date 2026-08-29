@@ -25,7 +25,8 @@ export const frontDesk: AgentSpec = {
   name: 'front-desk',
   persona: 'The front desk: it looks bookings up and moves them, and it never cancels.',
   tools: ['listBookings', 'getBooking', 'moveBooking'],
-  teammates: { billing: 'invoices, payments and refunds' },
+  description: 'looking bookings up and moving them to new days',
+  summary: 'the front desk',
   guards: [
     // The factory writes the rule from the same parameters its check uses. Spread it
     // and override `rule` when the desk needs to say more than the default sentence.

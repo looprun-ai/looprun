@@ -72,14 +72,15 @@ over the target's declared defaults, so naming one field overrides only that one
 
 ## Step 13 — a second desk on the same contract
 
-Two desks, one business. `tools` draws the lane; `teammates` says who owns the rest.
+Two desks, one business. `tools` draws the lane; `description` says, in verbs, what this desk does — and the house hands every desk its colleagues' descriptions, so nobody describes another.
 
 ```typescript
 export const frontDesk: AgentSpec = {
   name: 'front-desk',
   persona: 'The front desk: it looks bookings up and moves them, and it never cancels.',
   tools: ['listBookings', 'getBooking', 'moveBooking'],
-  teammates: { billing: 'invoices, payments and refunds' },
+  description: 'looking bookings up and moving them to new days',
+  summary: 'the front desk',
   guards: [
     { ...valueFromUser('moveBooking', 'day'),
       rule: 'Send moveBooking\'s day only as the guest wrote it — never pick a day yourself.' }
@@ -94,8 +95,9 @@ Two consequences follow from `tools` alone:
 ```
   the lane          cancelBooking is not in this desk's list, so it is not on its surface
                     and no prompt of this desk mentions it
-  the hand-off      `teammates` tells the desk what billing handles, so it says
-                    "billing issues the refund" instead of inventing a refund it cannot make
+  the hand-off      the house hands this desk billing's own description line, so it
+                    says "billing issues the refund" from what billing says about
+                    itself — one sentence, one home, nothing to drift
 ```
 
 Both desks share the contract: the same voice, the same facts, the same tool guards, the same
@@ -109,7 +111,8 @@ disclosure sentences, the same secrets. Nothing is copied between them.
   name          required              name          required
   persona       required              voice         one sentence, never a persona
   tools         the lane              facts         truths every desk states
-  teammates     hand-offs             guards        what ANY lane owes
+  description   what it does, in verbs guards        what ANY lane owes
+  summary       the house's own words
   guards        this desk's rules     disclosure    per tool, three tenses
   llmParams     per-field merge       secrets       masked at every seam
   limits        per-field merge       rewrites      edit the reply, decide nothing

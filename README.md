@@ -49,7 +49,7 @@ not carried them.
                      records · reads · writes · destructive
 
   the AGENT SPEC     how ONE desk behaves
-                     name · persona · tools · teammates · guards · llmParams · limits
+                     name · persona · tools · description · summary · guards · llmParams · limits
 
   the DOMAIN         what the BUSINESS is — every desk answers to it
   CONTRACT           voice · facts · guards · disclosure · secrets · rewrites ·

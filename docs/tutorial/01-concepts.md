@@ -9,7 +9,7 @@ or a piece of engine vocabulary.
   │                    records · reads · writes · destructive                │
   ├──────────────────────────────────────────────────────────────────────────┤
   │  the AGENT SPEC    how ONE desk behaves                                  │
-  │                    name · persona · tools · teammates · guards · limits  │
+  │             name · persona · tools · description · summary · guards      │
   ├──────────────────────────────────────────────────────────────────────────┤
   │  the DOMAIN        what the BUSINESS is — shared by every desk           │
   │  CONTRACT          voice · facts · guards · disclosure · secrets ·       │
