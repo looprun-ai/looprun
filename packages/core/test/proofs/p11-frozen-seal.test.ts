@@ -9,7 +9,7 @@ import { install, testEngine } from '../fixtures/compiled-agents.js';
 test('the sealed record is deep-frozen and mutation throws', async () => {
   const model = new ScriptedModel([
     callStep('getBooking', { id: 'bk_1001' }),
-    finishStep('Found it.')
+    finishStep('Found bk_1001.')
   ]);
   const { engine } = testEngine({ model });
 
@@ -30,7 +30,7 @@ test('the guard ctx is frozen and carries the prior turn acts by reference', asy
     'spec', 'custom');
   const model = new ScriptedModel([
     callStep('getBooking', { id: 'bk_1001' }),
-    finishStep('Found it.'),
+    finishStep('Found bk_1001.'),
     finishStep('Nothing more to do.')
   ]);
   const { engine } = testEngine({ model, guards: [capture] });

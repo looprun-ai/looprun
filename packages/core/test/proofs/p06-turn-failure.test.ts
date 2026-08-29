@@ -12,7 +12,7 @@ test('a mid-turn failure seals nothing; the retry starts clean on the next targe
     callStep('getBooking', { id: 'bk_1' }),
     new TurnFailure('network', 'connection reset mid-turn'),
     callStep('getBooking', { id: 'bk_1' }),
-    finishStep('Booking found.')
+    finishStep('Booking bk_1 found.')
   ]);
   const { engine } = testEngine({
     model,
@@ -26,7 +26,7 @@ test('a mid-turn failure seals nothing; the retry starts clean on the next targe
   expect(r.turn).toBe(1);
   expect(r.servedBy).toBe('scripted-2');
   expect(r.acts).toHaveLength(1);
-  expect(r.finish?.message).toBe('Booking found.');
+  expect(r.finish?.message).toBe('Booking bk_1 found.');
 });
 
 test('an uncertified target cannot enter the seat', () => {

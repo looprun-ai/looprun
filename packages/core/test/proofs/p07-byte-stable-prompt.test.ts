@@ -13,7 +13,7 @@ test('every step of every turn shares one byte-identical system prefix; only the
   records.set('bookings', 'bk_1', { status: 'CONFIRMED' });
   const model = new ScriptedModel([
     callStep('getBooking', { id: 'bk_1' }),
-    finishStep('Found.'),
+    finishStep('Found bk_1.'),
     finishStep('Nothing more.'),
     finishStep('Still nothing.')
   ]);

@@ -234,9 +234,9 @@ test('before carries exactly the foreign entries since that desk\'s last visit',
 test('a desk\'s own act mints the id the next desk stands on, and the record names its origin', async () => {
   const router = new ScriptedModel([routeStep('yard'), routeStep('billing')]);
   const yard = desk('yard', [callStep('getJob', { id: 'jb_1' }),
-                             finishStep('Ana is on it.')], WORKSITE);
+                             finishStep('Ana is on jb_1; the invoice is in_7001.')], WORKSITE);
   const billing = desk('billing', [callStep('getInvoice', { id: 'in_7001' }),
-                                   finishStep('The invoice is open.')], WORKSITE);
+                                   finishStep('Invoice in_7001 is open.')], WORKSITE);
   const agent = house(router, { yard: yard.agent, billing: billing.agent });
 
   await agent.generate('who is on job jb_1?', { session: 's1' });
@@ -254,7 +254,7 @@ test('an id several acts carry keeps the FIRST act that returned it as its origi
   const router = new ScriptedModel([routeStep('yard'), routeStep('billing')]);
   const yard = desk('yard', [callStep('getJob', { id: 'jb_1' }),
                              callStep('getInvoice', { id: 'in_7001' }),
-                             finishStep('Ana is on it and the invoice is open.')], WORKSITE);
+                             finishStep('Ana is on jb_1 and in_7001 is open.')], WORKSITE);
   const billing = desk('billing', [finishStep('Noted on the worksite file.')], WORKSITE);
   const agent = house(router, { yard: yard.agent, billing: billing.agent });
 

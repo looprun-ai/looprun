@@ -33,7 +33,7 @@ test('a finish beside domain calls defers with earlyFinish — the call runs, th
       { tool: 'getBooking', args: { id: 'bk_1' } },
       { tool: 'finish', args: { message: 'Done early.', report: [] } }
     ], text: '' },
-    finishStep('Now truly done.')
+    finishStep('bk_1 read — now truly done.')
   ]);
   const { engine, port } = testEngine({ model });
 
@@ -41,7 +41,7 @@ test('a finish beside domain calls defers with earlyFinish — the call runs, th
 
   expect(port.log.map(c => c.tool)).toEqual(['getBooking']);
   expect(r.corrections).toContainEqual({ kind: 'earlyFinish' });
-  expect(r.finish?.message).toBe('Now truly done.');
+  expect(r.finish?.message).toBe('bk_1 read — now truly done.');
   expect(r.closedBy).toBe('model');
 });
 

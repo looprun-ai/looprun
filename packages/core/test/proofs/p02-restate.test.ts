@@ -13,7 +13,7 @@ test('the duplicate call restates the first result without re-execution', async 
     ], text: '' },
     finishStep('Booking bk_1001 is room 12 on Tuesday.'),
     callStep('getBooking', { id: 'bk_1001' }),
-    finishStep('Still room 12 on Tuesday.')
+    finishStep('Still bk_1001: room 12 on Tuesday.')
   ]);
   const { engine, port } = testEngine({ model });
 

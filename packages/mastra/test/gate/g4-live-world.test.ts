@@ -37,7 +37,7 @@ test('G4 — compose proxy merges; a clean write is honestly unknown in the reco
     model: { scripted: { steps: [
       callStep('guestFile', { id: 'g_1' }),
       callStep('noteGuest', { id: 'g_1', note: 'gold guest' }),
-      finishStep('Noted.', [{ tool: 'noteGuest', target: 'g_1', word: 'unknown' }])
+      finishStep('Noted on g_1.', [{ tool: 'noteGuest', target: 'g_1', word: 'unknown' }])
     ] } }
   });
   const out = await agent.generate('note that g_1 is gold', { session: 's1' });

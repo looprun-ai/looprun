@@ -73,7 +73,7 @@ test('notMine after an act is refused and the turn continues', async () => {
   const model = new ScriptedModel([
     callStep('getBooking', { id: 'bk_1001' }),
     callStep('notMine', { reason: 'wrong desk' }),
-    finishStep('Your booking is on the record.')
+    finishStep('Your booking bk_1001 is on the record.')
   ]);
   const { engine } = testEngine({ model });
 
@@ -84,7 +84,7 @@ test('notMine after an act is refused and the turn continues', async () => {
   expect(record.acts.map(a => a.call.tool)).toEqual(['getBooking']);
   expect(record.corrections).toContainEqual(
     { kind: 'returnRefused', detail: 'the return door closed once work began' });
-  expect(record.finish?.message).toBe('Your booking is on the record.');
+  expect(record.finish?.message).toBe('Your booking bk_1001 is on the record.');
 });
 
 test('an answer the engine already read shuts the return door', async () => {

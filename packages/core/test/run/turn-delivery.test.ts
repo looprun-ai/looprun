@@ -47,3 +47,22 @@ test('a composition that fails the gate twice floors — nothing is ever lost', 
   expect(r.delivery.retried).toBe(true);
   expect(r.text).toContain(code);            // the floor reprints the ask and its code
 });
+
+import { proseDropsReads } from '../../src/run/turn.js';
+
+const readAct = (result: unknown): never => ({ id: 'a1', turn: 1, origin: 'model',
+  effect: 'read', call: { tool: 'getLog', args: {}, key: 'k' }, said: 'yes',
+  status: 'done', reason: null, evidence: 'executor', sentence: 'getLog() — done.',
+  owed: null, result, questionId: null, guard: null }) as never;
+
+test('prose that carries none of a read\'s identifiers drops the read', () => {
+  const acts = [readAct({ entries: [{ actor: 'mem_1004', detail: 'inv_7001 issued' }] })];
+  expect(proseDropsReads(acts, 'The log shows the recent activity.')).toBe(true);
+  expect(proseDropsReads(acts, 'mem_1004 issued inv_7001.')).toBe(false);
+});
+
+test('a read returning no identifiers demands nothing of the prose', () => {
+  expect(proseDropsReads([readAct({ holds: [], count: 0 })],
+    'No freeze stands on the machine.')).toBe(false);
+  expect(proseDropsReads([], 'Nothing was read this turn.')).toBe(false);
+});

@@ -10,7 +10,7 @@ import { deepFreeze } from '../contract/freeze.js';
 import type { ModelPort, ToolPort, RecordsPort } from '../contract/ports.js';
 import type { CompiledAgent } from '../cards/cards.js';
 import { CallRunner } from './call-runner.js';
-import { canonicalAmount, figureRuns } from '../cards/catalog.js';
+import { canonicalAmount, carriedIds, figureRuns } from '../cards/catalog.js';
 import { assembleFacts } from './delivery-facts.js';
 import { ReplyComposer } from './reply-composer.js';
 import { DisclosureDesk } from './disclosure-desk.js';
@@ -39,6 +39,25 @@ const RETURN_CARD: ToolCard = {
     + 'Valid only before any act.',
   schema: { type: 'object', properties: { reason: { type: 'string' } }, required: ['reason'] }
 };
+
+/** What this turn's done reads returned, one JSON string per distinct result —
+ *  the composer's material, his to use, never owed. */
+export function readMaterial(acts: readonly Act[]): readonly string[] {
+  return [...new Set(acts
+    .filter(a => a.effect === 'read' && a.status === 'done' && a.result !== null)
+    .map(a => JSON.stringify(a.result)))];
+}
+
+/** A done read's identifiers are the record's answer. Prose that carries not one
+ *  of them delivered nothing the reads returned — it pays a composer call with
+ *  the material instead of shipping bare. Reads that return no identifiers (an
+ *  empty log, a not-found) demand nothing. */
+export function proseDropsReads(acts: readonly Act[], prose: string): boolean {
+  const returned = new Set(readMaterial(acts).flatMap(m => carriedIds(m)));
+  if (returned.size === 0) return false;
+  const said = new Set(carriedIds(prose));
+  return ![...returned].some(id => said.has(id));
+}
 
 export interface TurnDeps {
   readonly compiled: CompiledAgent;
@@ -357,13 +376,19 @@ export class Turn {
     }
     draft.finish = parsed.finish;
     draft.closedBy = 'model';
-    // Nothing owed and no open question: the prose IS the delivery, no call spent.
-    // Anything on the table: one composer call, gated, floored on failure.
+    // Nothing owed and no open question: the prose IS the delivery, no call spent —
+    // unless it dropped every identifier its reads returned, which pays one
+    // composer call with the material. Anything on the table: one composer call,
+    // gated, floored on failure.
     const facts = assembleFacts(draft.acts, open, draft.closed, notes);
+    const floor = (): string => dw.compose(parsed.finish.message, draft.acts, open,
+      draft.closed, notes);
     const composed = facts.length === 0
-      ? { text: parsed.finish.message, by: 'prose' as const, retried: false }
-      : await this.composer.deliver(draft.userText, facts, parsed.finish.message,
-          () => dw.compose(parsed.finish.message, draft.acts, open, draft.closed, notes));
+      ? (proseDropsReads(draft.acts, parsed.finish.message)
+        ? await this.composer.deliver(draft.userText, facts, parsed.finish.message,
+            floor, readMaterial(draft.acts))
+        : { text: parsed.finish.message, by: 'prose' as const, retried: false })
+      : await this.composer.deliver(draft.userText, facts, parsed.finish.message, floor);
     draft.delivery = { by: composed.by, retried: composed.retried, facts };
     let text = composed.text;
     for (const rewrite of compiled.rewrites) text = rewrite.apply(text);
@@ -385,9 +410,7 @@ export class Turn {
       draft.closed, notes);
     // The desk never spoke this turn, so what its reads returned has no prose to
     // ride: the results go to the composer as material — his to use, never owed.
-    const material = [...new Set(draft.acts
-      .filter(a => a.effect === 'read' && a.status === 'done' && a.result !== null)
-      .map(a => JSON.stringify(a.result)))];
+    const material = readMaterial(draft.acts);
     const composed = facts.length === 0
       ? { text: floor(), by: 'floor' as const, retried: false }
       : await this.composer.deliver(draft.userText, facts, '', floor, material);

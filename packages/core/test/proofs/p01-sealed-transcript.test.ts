@@ -8,7 +8,7 @@ import { testEngine } from '../fixtures/compiled-agents.js';
 test('a scripted turn seals the transcript in order, complete TurnRecord', async () => {
   const model = new ScriptedModel([
     callStep('getBooking', { id: 'bk_1001' }),
-    finishStep('Booking found: room 12 on Tuesday.')
+    finishStep('Booking bk_1001 found: room 12 on Tuesday.')
   ]);
   const { engine, port } = testEngine({ model });
 
@@ -25,10 +25,10 @@ test('a scripted turn seals the transcript in order, complete TurnRecord', async
     call: { tool: 'getBooking', args: { id: 'bk_1001' } }
   });
   expect(r.acts[0].result).toEqual({ id: 'bk_1001', room: '12', day: 'Tuesday' });
-  expect(r.finish?.message).toBe('Booking found: room 12 on Tuesday.');
+  expect(r.finish?.message).toBe('Booking bk_1001 found: room 12 on Tuesday.');
   expect(r.corrections).toEqual([]);
   expect(r.closedBy).toBe('model');
-  expect(r.text).toBe('Booking found: room 12 on Tuesday.');
+  expect(r.text).toBe('Booking bk_1001 found: room 12 on Tuesday.');
   expect(r.delivery).toEqual({ by: 'prose', retried: false, facts: [] });
   expect(r.questions).toEqual({ issued: [], consumed: [], closed: [] });
 });
