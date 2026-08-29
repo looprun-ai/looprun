@@ -115,13 +115,14 @@ describe('checkAgainstSurface', () => {
     expect(checkAgainstSurface(soundDeclaration(), FACTS, SEAM)).toEqual([]);
   });
 
-  // The hotel's own shape: `moveBooking` is `form: 'set'`, whose derived schema is `{ id, set }`,
-  // and a law about the day the guest chose has no argument on that act to hold on to.
+  // The hotel's own shape: `moveBooking` is `form: 'set'`, whose derived schema is `{ id, set }`
+  // and requires both, and a law about the day the guest chose has no argument on that act to
+  // hold on to.
   const HOTEL = { tools: {
     moveBooking: { name: 'moveBooking', effect: 'write', target: 'id', entity: 'bookings',
-      schema: { properties: { id: {}, set: {} } } },
+      schema: { properties: { id: {}, set: {} }, required: ['id', 'set'] } },
     cancelBooking: { name: 'cancelBooking', effect: 'destructive', target: 'id', entity: 'bookings',
-      schema: { properties: { id: {} } } }
+      schema: { properties: { id: {} }, required: ['id'] } }
   } } as never;
   const hotelDecl = (guards: readonly DeclaredGuard[]): Declaration => decl({
     guards,

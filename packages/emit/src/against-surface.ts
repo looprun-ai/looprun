@@ -22,6 +22,27 @@ function requiredSchemaArgs(fact: ToolFact | undefined): readonly string[] {
   return required.filter((name): name is string => typeof name === 'string');
 }
 
+/** The slots one declared sentence carries, in the order they are written: whatever stands
+ *  between a `{` and the `}` that closes it. The engine fills a sentence by walking it exactly
+ *  this way, so a slot named here is a slot it looks up there. */
+function slotsOf(sentence: string): readonly string[] {
+  const slots: string[] = [];
+  let open: string | null = null;
+  for (const character of sentence) {
+    if (character === '{') { open = ''; continue; }
+    if (character === '}' && open !== null) { slots.push(open); open = null; continue; }
+    if (open !== null) open += character;
+  }
+  return slots;
+}
+
+/** The name a slot is answered from: everything before its first dot. `{invoice.total}` is
+ *  answered from the alias `invoice`, `{args.invoiceId}` from the held call's own args. */
+function slotRoot(slot: string): string {
+  const dot = slot.indexOf('.');
+  return dot === -1 ? slot : slot.slice(0, dot);
+}
+
 /** The smallest number of single-character edits — insert, delete, substitute — that turns
  *  `a` into `b`, used only to name a near miss in a refusal sentence. */
 function editDistance(a: string, b: string): number {
@@ -163,6 +184,38 @@ function checkGuardArgsOnSchema(declaration: Declaration, facts: SurfaceFacts): 
   return refusals;
 }
 
+/** A `valueFromUser` binds an argument its act REQUIRES. The guard reads the named argument off
+ *  the arriving call and refuses a call carrying no string there, so pointed at an argument the
+ *  schema leaves optional it refuses the very calls the schema allows: a call that leaves the
+ *  argument out is answered `must be a value the user wrote`, about a value the act never asked
+ *  for. A schema with no `required` list requires nothing, so every argument it declares is one a
+ *  call may leave out.
+ *
+ *  Skips an argument the schema does not declare at all: that gap is named by
+ *  checkGuardArgsOnSchema, and it is the same guard's same key. */
+function checkValueFromUserRequired(declaration: Declaration,
+                                    facts: SurfaceFacts): readonly string[] {
+  const refusals: string[] = [];
+  declaration.contract.guards.forEach((guard, guardIndex) => {
+    if (guard.factory !== 'valueFromUser') return;
+    const named = guard.args?.arg;
+    if (typeof named !== 'string') return;
+    for (const act of guard.acts) {
+      const fact = facts.tools[act];
+      if (fact === undefined || !schemaArgs(fact).includes(named)) continue;
+      const required = requiredSchemaArgs(fact);
+      if (required.includes(named)) continue;
+      const requires = required.length === 0 ? 'no argument at all'
+        : required.map(arg => `'${arg}'`).join(', ');
+      refusals.push(`contract.guards[${guardIndex}].args.arg names '${named}', and '${act}' `
+        + `requires ${requires} — a call of '${act}' may leave '${named}' out, and valueFromUser `
+        + `refuses a call that carries no value there. Point the guard at an argument '${act}' `
+        + `requires, or list '${named}' in that act's required arguments on the world card.`);
+    }
+  });
+  return refusals;
+}
+
 /** Every destructive act carries a disclosure with a `before` sentence — a destructive act
  *  with nothing declared before it runs is not disclosed, it is silent. */
 function checkDestructiveDisclosed(declaration: Declaration, facts: SurfaceFacts): readonly string[] {
@@ -288,6 +341,24 @@ function checkDisclosureNeedsInLane(declaration: Declaration, facts: SurfaceFact
   return refusals;
 }
 
+/** Every `after` states something the call itself came back with. The after-tense is the sentence
+ *  the operator reads once the act has run, and it is filled from the held call's own args, the
+ *  owed reads and the executed result — the first two were in hand before the call, so an `after`
+ *  reaching for no `{result.` slot says word for word what the desk could have said without
+ *  running anything. */
+function checkAfterSpeaksResult(declaration: Declaration): readonly string[] {
+  const refusals: string[] = [];
+  for (const [actName, entry] of Object.entries(declaration.contract.disclosure)) {
+    if (entry.after === undefined) continue;
+    if (slotsOf(entry.after).some(slot => slotRoot(slot) === 'result')) continue;
+    refusals.push(`contract.disclosure.${actName}.after carries no '{result.}' slot: an after is `
+      + `read once '${actName}' has run, and this one is written from the held call's args and the `
+      + `owed reads alone — it says the same words whether the act ran or not. Name a field the `
+      + `result carries, as {result.<field>}.`);
+  }
+  return refusals;
+}
+
 /** Every desk states the line that routes a message to it, exactly when a router stands in front
  *  of more than one desk to read it. Two or more desks route by comparing each desk's own
  *  `description` line against the arriving message, so a desk that declares none — or writes one that
@@ -401,11 +472,13 @@ function checkSeamRows(declaration: Declaration, facts: SurfaceFacts,
 /** Every refusal the emitter owes when a declaration does not fit the world's surface: a
  *  guard naming an act no tool declares, a judged check on a desk naming one or naming an act
  *  outside that desk's lane, a guard whose configuration names one, a guard whose
- *  configuration names an argument its act's schema does not declare, a destructive act with
+ *  configuration names an argument its act's schema does not declare, a `valueFromUser` bound to
+ *  an argument its act does not require, a destructive act with
  *  nothing disclosed before it runs, a `precondition` reading a record over an act with no target,
  *  a disclosure `needs` alias naming a tool that does not exist, a disclosure alias whose read
  *  cannot answer the call it is held for, a disclosure alias naming a read the lane of a desk
- *  holding the act does not carry, a seam sentence paying a row the world does not carry, and a
+ *  holding the act does not carry, an `after` that names nothing the call returned, a seam
+ *  sentence paying a row the world does not carry, and a
  *  house whose desks disagree with the routing law — two or more desks with a desk whose `description`
  *  line is missing or blank, or the one desk of a single-desk house carrying one — and a desk of a
  *  house of two or more that teaches fewer than the six voices. `seam` is the seam table
@@ -418,11 +491,13 @@ export function checkAgainstSurface(declaration: Declaration, facts: SurfaceFact
     ...checkJudgedActs(declaration, facts),
     ...checkGuardArgActsExist(declaration, facts),
     ...checkGuardArgsOnSchema(declaration, facts),
+    ...checkValueFromUserRequired(declaration, facts),
     ...checkDestructiveDisclosed(declaration, facts),
     ...checkPreconditionTarget(declaration, facts),
     ...checkDisclosureNeedsToolExists(declaration, facts),
     ...checkDisclosureNeedsResolvable(declaration, facts),
     ...checkDisclosureNeedsInLane(declaration, facts),
+    ...checkAfterSpeaksResult(declaration),
     ...checkSeamRows(declaration, facts, seam),
     ...checkRoutingLines(declaration),
     ...checkConductVoices(declaration)

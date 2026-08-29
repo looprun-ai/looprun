@@ -348,12 +348,27 @@ function readGuard(map: YAMLMap, path: string, lineCounter: LineCounter): Declar
   };
 }
 
+/** Every guard carries a name of its own. The name is the row the guard mints in the census, the
+ *  key a case's `covers` pays, and the key of the emitted WHY and WIDE maps — so two guards under
+ *  one name are one row that two different laws answer to, and the second silently takes the key
+ *  from the first. */
 function readGuards(seq: YAMLSeq, path: string, lineCounter: LineCounter): readonly DeclaredGuard[] {
   const fallback = lineAt(seq, lineCounter, 1);
+  const lineByName = new Map<string, number>();
   return seq.items.map((item, i) => {
     const itemPath = `${path}[${i}]`;
     if (!isMap(item)) fail(itemPath, lineAt(item as Node, lineCounter, fallback), 'must be a mapping');
-    return readGuard(item, itemPath, lineCounter);
+    const guard = readGuard(item, itemPath, lineCounter);
+    const line = lineAt(item, lineCounter, fallback);
+    const first = lineByName.get(guard.name);
+    if (first !== undefined) {
+      fail(field(itemPath, 'name'), line,
+        `is '${guard.name}', which the guard at line ${String(first)} already carries. A guard's `
+        + 'name is the row it mints in the census and the key a case covers, so two guards under '
+        + 'one name are one row nothing can tell apart — name each guard for the law it carries.');
+    }
+    lineByName.set(guard.name, line);
+    return guard;
   });
 }
 

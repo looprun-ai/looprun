@@ -428,6 +428,140 @@ desks:
 `))).toThrow(/contract\.seam\.issueRefund \(line \d+\): must be a mapping of refusal code/);
 });
 
+describe('the after tense speaks the result', () => {
+  const withAfter = (after: string): string => `
+contract:
+  name: seaside-hotel
+  voice: Warm, brief, and exact about dates and money.
+  facts: []
+  guards: []
+  disclosure:
+    issueRefund:
+      needs: { invoice: getInvoice }
+      before: Refunding this invoice cannot be taken back.
+      after: ${after}
+desks:
+  - name: front-desk
+    persona: The front desk.
+    tools: [issueRefund, getInvoice]
+    conduct: { declareHonestly: Say what ran and what did not. }
+`;
+
+  it('an after with no result slot is refused by its own path', () => {
+    const d = readDeclaration(fixture(withAfter('The refund is recorded against this invoice.')));
+    const refusals = checkAgainstSurface(d, FACTS, SEAM);
+    expect(refusals).toEqual([expect.stringContaining('contract.disclosure.issueRefund.after')]);
+    expect(refusals[0]).toContain('{result.');
+  });
+
+  it('an after built only from the reads and the held args is refused too', () => {
+    const d = readDeclaration(fixture(withAfter('The refund of {invoice.invoiceId} is recorded.')));
+    expect(checkAgainstSurface(d, FACTS, SEAM))
+      .toEqual([expect.stringContaining('contract.disclosure.issueRefund.after')]);
+  });
+
+  it('an after naming a field the result carries is accepted', () => {
+    const d = readDeclaration(fixture(withAfter('The refund on {result.removed} is recorded.')));
+    expect(checkAgainstSurface(d, FACTS, SEAM)).toEqual([]);
+  });
+});
+
+describe('a value check binds a required argument', () => {
+  /** A surface whose destructive act declares two arguments and requires one of them: a call may
+   *  arrive with `note` left out, and may never arrive without `invoiceId`. */
+  const REQUIRING = { tools: {
+    ...(FACTS as never as { tools: Record<string, unknown> }).tools,
+    issueRefund: { name: 'issueRefund', effect: 'destructive', target: 'invoiceId',
+                   entity: 'invoices',
+                   schema: { properties: { invoiceId: {}, note: {} }, required: ['invoiceId'] } }
+  } } as never;
+
+  const withValueCheck = (arg: string): string => `
+contract:
+  name: seaside-hotel
+  voice: Warm, brief, and exact about dates and money.
+  facts: []
+  guards:
+    - name: refundAsTheGuestWroteIt
+      acts: [issueRefund]
+      factory: valueFromUser
+      args: { arg: ${arg} }
+  disclosure:
+    issueRefund:
+      before: Refunding this invoice cannot be taken back.
+desks:
+  - name: front-desk
+    persona: The front desk.
+    tools: [issueRefund, getInvoice]
+    conduct: { declareHonestly: Say what ran and what did not. }
+`;
+
+  it('a value check on an argument the act leaves optional is refused, naming both', () => {
+    const d = readDeclaration(fixture(withValueCheck('note')));
+    const refusals = checkAgainstSurface(d, REQUIRING, SEAM);
+    expect(refusals).toEqual([expect.stringContaining('contract.guards[0].args.arg')]);
+    expect(refusals[0]).toContain("'note'");
+    expect(refusals[0]).toContain("'issueRefund'");
+  });
+
+  it('a value check on an argument the act requires is accepted', () => {
+    const d = readDeclaration(fixture(withValueCheck('invoiceId')));
+    expect(checkAgainstSurface(d, REQUIRING, SEAM)).toEqual([]);
+  });
+});
+
+describe('a guard name is unique', () => {
+  it('two guards under one name are refused by that name and both lines', () => {
+    expect(() => readDeclaration(fixture(`
+contract:
+  name: seaside-hotel
+  voice: Warm, brief, and exact about dates and money.
+  facts: []
+  guards:
+    - name: refundReadsTheInvoice
+      acts: [issueRefund]
+      factory: onlyAfter
+      args: { after: getInvoice }
+    - name: refundReadsTheInvoice
+      acts: [closeBooking]
+      factory: onlyAfter
+      args: { after: getInvoice }
+  disclosure: {}
+desks:
+  - name: front-desk
+    persona: The front desk.
+    tools: [issueRefund, getInvoice]
+    conduct: { declareHonestly: Say what ran and what did not. }
+`))).toThrow(/contract\.guards\[1\]\.name \(line 11\).*'refundReadsTheInvoice'.*line 7/s);
+  });
+
+  it('two guards named apart are read as two guards', () => {
+    const d = readDeclaration(fixture(`
+contract:
+  name: seaside-hotel
+  voice: Warm, brief, and exact about dates and money.
+  facts: []
+  guards:
+    - name: refundReadsTheInvoice
+      acts: [issueRefund]
+      factory: onlyAfter
+      args: { after: getInvoice }
+    - name: closingNoteReadsTheInvoice
+      acts: [closeBooking]
+      factory: onlyAfter
+      args: { after: getInvoice }
+  disclosure: {}
+desks:
+  - name: front-desk
+    persona: The front desk.
+    tools: [issueRefund, getInvoice]
+    conduct: { declareHonestly: Say what ran and what did not. }
+`));
+    expect(d.contract.guards.map(guard => guard.name))
+      .toEqual(['refundReadsTheInvoice', 'closingNoteReadsTheInvoice']);
+  });
+});
+
 describe('the old desk fields and the summary comma', () => {
   it('a summary carrying a comma is refused quoting the separator rule', () => {
     const d = readDeclaration(fixture(`

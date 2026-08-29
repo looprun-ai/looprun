@@ -27,7 +27,7 @@ contract:
     issueRefund:
       needs: { invoice: getInvoice }
       before: Refunding {invoice.total} on this invoice cannot be taken back.
-      after: The refund of {invoice.total} is recorded against this invoice.
+      after: The refund on {result.removed} is recorded against this invoice.
       cap:
         arg: amount
         at: invoice.total
