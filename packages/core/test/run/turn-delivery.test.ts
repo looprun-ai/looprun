@@ -11,7 +11,8 @@ function smartPort(steps: ReturnType<typeof callStep>[]): ModelPort {
   const scripted = new ScriptedModel(steps);
   return { step: async input => {
     if (input.tools.length === 0) {
-      const t = input.messages[input.messages.length - 1].text;
+      const last = input.messages[input.messages.length - 1];
+      const t = 'text' in last ? last.text : '';
       const facts = t.slice(t.indexOf('PROVEN FACTS'), t.indexOf('\n\nDESK DRAFT'));
       return { calls: [], text: `Composed. ${facts.split('\n').join(' ')}` };
     }

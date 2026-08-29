@@ -11,7 +11,7 @@ function act(tool: string, id: string, status: Act['status'], reason: Act['reaso
   return { id: `a_${tool}_${id}`, turn: 1, origin: 'model',
     call: { tool, args: { id }, key: `${tool}:${id}` }, effect, said: null,
     status, reason, evidence: 'engine', sentence: `${tool}(${id}) — ${status}`,
-    result: null, questionId: null, guard: null };
+    owed: null, result: null, questionId: null, guard: null };
 }
 
 function ctx(report: ReplyCtx['report'], turnActs: readonly Act[], message = 'ok'): ReplyCtx {

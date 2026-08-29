@@ -80,9 +80,9 @@ test('route \'none\' is always a legal desk name', async () => {
 function twoDesks(subject: Subject): Subject {
   return { ...subject, specs: {
     front: { name: 'front', persona: 'You greet.', tools: ['getBooking'],
-             handles: 'booking lookups' },
+             summary: 'booking lookups' },
     back: { name: 'back', persona: 'You cancel.', tools: ['getBooking', 'cancelBooking'],
-            handles: 'cancellations' } } };
+            summary: 'cancellations' } } };
 }
 
 test('a routed approve is judged against every desk, not the first spec alone', async () => {

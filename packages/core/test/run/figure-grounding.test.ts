@@ -29,7 +29,7 @@ test('a canonical form of a recorded figure does not fire', async () => {
   const { engine } = caseRig({ model });
 
   const r = await engine.chat('s1', 'check booking bk_9');
-  expect(r.corrections.filter(c => c.guardName === 'figureIsGrounded')).toEqual([]);
+  expect(r.corrections.filter(c => 'guardName' in c && c.guardName === 'figureIsGrounded')).toEqual([]);
   expect(r.text).toBe('Room 12.0 on Tuesday.');
 });
 

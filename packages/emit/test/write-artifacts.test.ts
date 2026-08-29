@@ -78,7 +78,7 @@ test('the subject door exports the three names a loader reads', () => {
 });
 
 test('the gate file runs the one gate and states why no preset oracle rides with it', () => {
-  const out = writeGateFile();
+  const out = writeGateFile('0000000000000000');
   expect(out).toContain('runGate(SUBJECT, {');
   // The desks ride with the world: the byte budget is measured over the prompt they render.
   expect(out).toContain('    specs,');
@@ -91,7 +91,7 @@ test('the gate file runs the one gate and states why no preset oracle rides with
 });
 
 test('the gate file names no guard of its own — the engine answers the census', () => {
-  const out = writeGateFile();
+  const out = writeGateFile('0000000000000000');
   expect(out).toContain('censusFor');
   expect(out).not.toContain('claimIsGrounded');
   expect(out).not.toContain('claimIsComplete');
@@ -230,7 +230,7 @@ test('the emitted subject clears every verb of the gate', async () => {
     const censusNames = censusFor({ specs: door.specs, contract: door.contract,
                                     world: door.subjectWorld });
     expect([...censusNames].sort()).toEqual([...censusFromEngine(door)].sort());
-    expect(writeGateFile()).toContain('censusFor({ specs, contract, world: subjectWorld })');
+    expect(writeGateFile('0000000000000000')).toContain('censusFor({ specs, contract, world: subjectWorld })');
 
     // Every name the emitter predicts before the cards exist is a name the engine then carries.
     const facts = factsFromWorld(door.subjectWorld);

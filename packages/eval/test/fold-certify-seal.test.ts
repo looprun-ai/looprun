@@ -14,6 +14,7 @@ function dumpOf(caseId: string, variant: CaseDump['variant'],
     records: [{ turn: 1, servedBy: 'scripted', userText: 'u',
       acts: [], questions: { issued: [], consumed: [], closed: [] },
       finish: null, corrections: [], text: 't', closedBy: 'model',
+      delivery: { by: 'floor' as const, retried: false, facts: [] },
       usage: { inputTokens: 0, outputTokens: 0, cachedInputTokens: 0, reasoningTokens: 0,
         modelCalls: 1 } }],
     ...over };

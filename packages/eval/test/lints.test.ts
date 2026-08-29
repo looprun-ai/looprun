@@ -41,9 +41,10 @@ function dump(guard: string | null): TurnRecord {
     acts: [{ id: 'a1', turn: 1, origin: 'model', guard,
       call: { tool: 'cancelBooking', args: {}, key: 'k' }, effect: 'destructive',
       said: null, status: 'not-done', reason: 'held', evidence: 'engine',
-      sentence: 's', result: null, questionId: 'q1' }],
+      sentence: 's', owed: null, result: null, questionId: 'q1' }],
     questions: { issued: [], consumed: [], closed: [] },
     finish: null, corrections: [], text: 't', closedBy: 'engine',
+    delivery: { by: 'floor' as const, retried: false, facts: [] },
     usage: { inputTokens: 0, outputTokens: 0, cachedInputTokens: 0, reasoningTokens: 0,
       modelCalls: 1 } };
 }
@@ -997,7 +998,6 @@ describe('unspokenChecks', () => {
   });
 });
 
-import { world } from '@looprun-ai/core';
 import { noEffectDenied, seamSpoken, seamUnreached, unlicensed } from '../src/lints.js';
 
 const REFUND_FACTS = { tools: {
@@ -1006,7 +1006,7 @@ const REFUND_FACTS = { tools: {
 
 /** A world with no records and no presets: nothing in it can drive a refusal, so what these
  *  tests measure is the source-level half of the seam — the table, the licences, the rows. */
-const STILL_WORLD = world({});
+const STILL_WORLD = world({ records: {} });
 
 /** A subject whose world REFUSES the refund with one code of its own, and whose cards are
  *  whatever the test hands over. The two halves live in separate files exactly as a real subject

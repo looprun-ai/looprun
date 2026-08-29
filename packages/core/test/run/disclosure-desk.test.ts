@@ -28,7 +28,7 @@ function readAct(result: Act['result']): Act {
   return { id: 'a1', turn: 1, origin: 'engine',
     call: { tool: 'getBooking', args: { bookingRef: 'bk_9' }, key: 'r' },
     effect: 'read', said: 'yes', status: 'done', reason: null, evidence: 'executor',
-    sentence: 'getBooking(bk_9) — done', result, questionId: null, guard: null };
+    sentence: 'getBooking(bk_9) — done', owed: null, result, questionId: null, guard: null };
 }
 
 test('owedReads is the declared rename of the frozen held call — nothing else', () => {
@@ -73,7 +73,7 @@ function listAct(): Act {
   return { id: 'a2', turn: 1, origin: 'engine',
     call: { tool: 'listHolds', args: {}, key: 'l' },
     effect: 'read', said: 'yes', status: 'done', reason: null, evidence: 'executor',
-    sentence: 'listHolds() — done', questionId: null, guard: null,
+    sentence: 'listHolds() — done', owed: null, questionId: null, guard: null,
     result: { count: 2, holds: [
       { id: 'hold_6002', type: 'payment', reason: 'chargeback under investigation' },
       { id: 'hold_6003', type: 'payment', reason: 'bank recall pending' } ] } };
@@ -157,7 +157,7 @@ function chainAct(tool: string, result: Act['result']): Act {
   return { id: 'a1', turn: 1, origin: 'engine',
     call: { tool, args: {}, key: 'r' },
     effect: 'read', said: 'yes', status: 'done', reason: null, evidence: 'executor',
-    sentence: `${tool}() — done`, result, questionId: null, guard: null };
+    sentence: `${tool}() — done`, owed: null, result, questionId: null, guard: null };
 }
 
 test('a chained alias runs after the alias it reads, filled from that answer', () => {

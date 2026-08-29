@@ -46,7 +46,8 @@ function sentencesOf(declaration: Declaration): readonly string[] {
     ...disclosure.flatMap(entry => [entry.before, entry.after, entry.later, entry.cap?.refusal,
       entry.empty].filter((s): s is string => s !== undefined)),
     ...declaration.desks.flatMap(desk => [desk.persona, ...Object.values(desk.conduct),
-      ...Object.values(desk.teammates ?? {}), ...(desk.description === undefined ? [] : [desk.description])])
+      ...(desk.summary === undefined ? [] : [desk.summary]),
+      ...(desk.description === undefined ? [] : [desk.description])])
   ];
 }
 
@@ -122,10 +123,11 @@ describe('writeCards', () => {
       },
       desks: [
         { name: 'front-desk', persona: 'You are the front desk: arrivals, departures and the room a guest is put in.',
-          tools: ['getInvoice'], teammates: { billing: 'invoices, payments and refunds on a stay already closed' },
+          tools: ['getInvoice'],
           conduct: { declareHonestly: 'Say what ran and what did not, and name the condition that stopped it.',
                      oneQuestion: 'Put ONE thing up for agreement per turn; the second is owed and takes another turn.' } },
         { name: 'billing', persona: 'You are the billing desk: the invoice for a stay, its payment, and a refund on it.',
+          summary: 'invoices, payments and refunds on a stay already closed',
           tools: ['issueRefund', 'getInvoice', 'closeBooking'],
           conduct: { declareHonestly: 'Say what ran and what did not, and name the condition that stopped it.',
                      oneQuestion: 'Put ONE thing up for agreement per turn; the second is owed and takes another turn.' } }

@@ -10,6 +10,7 @@ function reply(text: string, routing?: TurnRouting): GovernedResult {
     turn: 1, servedBy: 'counter', userText: 'hello', acts: [],
     questions: { issued: [], consumed: [], closed: [] },
     finish: null, corrections: [], text, closedBy: 'model',
+  delivery: { by: 'floor' as const, retried: false, facts: [] },
     usage: { inputTokens: 0, outputTokens: 0, cachedInputTokens: 0, reasoningTokens: 0, modelCalls: 1 },
     ...(routing !== undefined ? { routing } : {}) } };
 }
