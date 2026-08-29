@@ -29,7 +29,7 @@ export interface AgentSpec {
   description?: string;
   /** The same desk in a handful of words — what a person at the counter would call it.
    *  The house's own refusal is built from these, so an operator asking for something no
-   *  desk performs hears what the house does cover, and never a label like 'fieldops'.
+   *  desk performs hears what the house does cover, and never a label like 'desk2'.
    *  Required on every desk of a multi-desk subject; never on a single desk. */
   summary?: string;
   /** Guards about how THIS desk works. Highest priority. Omitted = []. */

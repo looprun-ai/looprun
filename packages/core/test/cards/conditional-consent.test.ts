@@ -11,23 +11,23 @@ import { scriptedTargets } from '../fixtures/compiled-agents.js';
 
 // A tool destructive ONLY on some of its calls declares the branch as DATA on its
 // entry: a call matching `when` holds for consent; any other call runs as a write.
-const FREEZES = world({
-  records: { holds: { hold_1: { scope: 'asset', active: true } },
-             counters: { counters: { hold: 1 } } },
+const LOCKS = world({
+  records: { locks: { lock_1: { scope: 'room', active: true } },
+             counters: { counters: { lock: 1 } } },
   destructive: {
-    placeHold: { form: 'run', entity: 'holds', label: 'Freezing the entire workspace',
-                 when: { arg: 'scope', oneOf: ['workspace'] },
-                 schema: { type: 'object', properties: {
-                   scope: { type: 'string' }, reason: { type: 'string' } },
-                   required: ['scope', 'reason'] } }
+    lockArea: { form: 'run', entity: 'locks', label: 'Locking down the entire building',
+                when: { arg: 'scope', oneOf: ['building'] },
+                schema: { type: 'object', properties: {
+                  scope: { type: 'string' }, reason: { type: 'string' } },
+                  required: ['scope', 'reason'] } }
   }
-}, { placeHold: ctx => ({ result: { placed: ctx.args.scope }, patches: [] }) });
+}, { lockArea: ctx => ({ result: { locked: ctx.args.scope }, patches: [] }) });
 
 function rig(steps: Parameters<typeof ScriptedModel.prototype.step>[0][] | ReturnType<typeof callStep>[]) {
-  const built = new WorldBuilder().build(FREEZES);
+  const built = new WorldBuilder().build(LOCKS);
   const compiled = new AgentFactory().governed(
-    { name: 'compliance', persona: 'You are the compliance desk.' }, undefined,
-    factsFromWorld(FREEZES));
+    { name: 'frontdesk', persona: 'You are the front desk.' }, undefined,
+    factsFromWorld(LOCKS));
   const targets = scriptedTargets(1);
   const seat = ModelSeat.create(targets, targets[0].id, () => new ScriptedModel(steps as never));
   return Engine.create({ compiled, toolPort: built, recordsPort: built, seat });
@@ -35,26 +35,26 @@ function rig(steps: Parameters<typeof ScriptedModel.prototype.step>[0][] | Retur
 
 test('a non-matching call runs unheld — the branch is a write', async () => {
   const engine = rig([
-    callStep('placeHold', { scope: 'asset', reason: 'safety' }),
-    finishStep('The asset is frozen.', [{ tool: 'placeHold', target: '', word: 'done' }]),
+    callStep('lockArea', { scope: 'room', reason: 'safety' }),
+    finishStep('The room is locked.', [{ tool: 'lockArea', target: '', word: 'done' }]),
     { calls: [], text: '' },
     { calls: [], text: '' }
   ]);
-  const rec = await engine.chat('s1', 'freeze the excavator');
+  const rec = await engine.chat('s1', 'lock the room');
   expect(rec.questions.issued).toHaveLength(0);
-  expect(rec.acts[0]).toMatchObject({ call: { tool: 'placeHold' }, status: 'done' });
+  expect(rec.acts[0]).toMatchObject({ call: { tool: 'lockArea' }, status: 'done' });
 });
 
 test('a matching call holds for consent like any destructive act', async () => {
   const engine = rig([
-    callStep('placeHold', { scope: 'workspace', reason: 'litigation' }),
+    callStep('lockArea', { scope: 'building', reason: 'evacuation drill' }),
     { calls: [], text: '' },
     { calls: [], text: '' },
-    finishStep('I need your approval to freeze the workspace.',
-      [{ tool: 'placeHold', target: '', word: 'held' }])
+    finishStep('I need your approval to lock down the building.',
+      [{ tool: 'lockArea', target: '', word: 'held' }])
   ]);
-  const rec = await engine.chat('s1', 'freeze everything');
+  const rec = await engine.chat('s1', 'lock everything down');
   expect(rec.questions.issued).toHaveLength(1);
-  expect(rec.acts[0]).toMatchObject({ call: { tool: 'placeHold' },
+  expect(rec.acts[0]).toMatchObject({ call: { tool: 'lockArea' },
     status: 'not-done', reason: 'held' });
 });

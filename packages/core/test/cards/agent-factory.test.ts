@@ -1,7 +1,9 @@
 import { test, expect } from 'vitest';
+import type { Act } from '../../src/contract/vocabulary.js';
 import { AgentFactory } from '../../src/cards/agent-factory.js';
 import { lieCheck, maskPattern, onlyAfter } from '../../src/cards/catalog.js';
 import { factsFromWorld } from '../../src/cards/facts.js';
+import { Rulebook } from '../../src/run/rulebook.js';
 import { HOSTILE } from '../fixtures/hostile-world.js';
 
 const FACTS = factsFromWorld(HOSTILE);
@@ -25,6 +27,27 @@ test('the guard walk prints spec → contract → consent → floor, each row wi
     .toEqual(['cancelBooking', 'compRoom', 'getBooking']);
   expect(c.guards.some(g => g.kind === 'maxDestructive')).toBe(true);
   expect(c.guards.some(g => g.kind === 'brokenReply')).toBe(true);
+});
+
+test('a re-proposed destructive call restates its first result; the budget refuses only fresh acts', () => {
+  const c = f.governed({ name: 'a', persona: 'p' }, undefined, FACTS);
+  const rulebook = new Rulebook(c);
+  const first = { id: 'a_1', call: { tool: 'cancelBooking', args: { id: 'bk_9' }, key: 'cancel:bk_9' },
+    effect: 'destructive', status: 'done', result: { id: 'bk_9' },
+    sentence: 'cancelBooking(bk_9) — done' } as unknown as Act;
+  const rerun = rulebook.checkPreTool({
+    call: { tool: 'cancelBooking', args: { id: 'bk_9' }, key: 'cancel:bk_9' },
+    effect: 'destructive', consented: false, state: null,
+    userText: 'cancel bk_9', userTexts: ['cancel bk_9'],
+    turnActs: [first], pastActs: [] });
+  expect(rerun).toEqual({ kind: 'restate', actId: 'a_1' });
+
+  const fresh = rulebook.checkPreTool({
+    call: { tool: 'cancelBooking', args: { id: 'bk_2' }, key: 'cancel:bk_2' },
+    effect: 'destructive', consented: true, state: null,
+    userText: 'cancel bk_2 too', userTexts: ['cancel bk_9', 'cancel bk_2 too'],
+    turnActs: [first], pastActs: [] });
+  expect(fresh).toMatchObject({ kind: 'refuse', guardName: 'maxDestructive' });
 });
 
 test('limits merge per field — the spec wins over the contract over the defaults', () => {

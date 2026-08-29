@@ -30,12 +30,12 @@ function act(tool: string, status: Act['status'], reason: Act['reason'],
 
 describe('a done act never vanishes from the delivery facts', () => {
   test('a blocked attempt then a done write: the facts carry BOTH — the refusal and the receipt', () => {
-    const blocked = act('rescheduleBooking', 'not-done', 'blocked',
+    const blocked = act('moveBooking', 'not-done', 'blocked',
       { kind: 'refusal', text: 'the availability read has not run this conversation' });
-    const done = act('rescheduleBooking', 'done', null, null);
+    const done = act('moveBooking', 'done', null, null);
     const facts = assembleFacts([blocked, done], [], [], []);
     expect(facts.some(f => f.kind === 'receipt' && f.state === 'ran'
-      && f.text.includes('rescheduleBooking'))).toBe(true);
+      && f.text.includes('moveBooking'))).toBe(true);
   });
 
   test('a done read stays composer material, not an owed fact', () => {
@@ -46,17 +46,17 @@ describe('a done act never vanishes from the delivery facts', () => {
 
 describe('a report line is contradicted only when NO act supports it', () => {
   const pair = [
-    act('rescheduleBooking', 'not-done', 'blocked',
+    act('moveBooking', 'not-done', 'blocked',
       { kind: 'refusal', text: 'the read has not run' }),
-    act('rescheduleBooking', 'done', null, null),
+    act('moveBooking', 'done', null, null),
   ];
   test('the truthful word over a blocked-then-done pair stands', () => {
-    expect(contradictedLine([{ tool: 'rescheduleBooking', target: 'bk_1', word: 'done' }], pair))
+    expect(contradictedLine([{ tool: 'moveBooking', target: 'bk_1', word: 'done' }], pair))
       .toBeUndefined();
   });
   test('a word no act of the tool carries is the contradiction', () => {
-    expect(contradictedLine([{ tool: 'rescheduleBooking', target: 'bk_1', word: 'unknown' }], pair))
-      .toEqual({ tool: 'rescheduleBooking', target: 'bk_1', word: 'unknown' });
+    expect(contradictedLine([{ tool: 'moveBooking', target: 'bk_1', word: 'unknown' }], pair))
+      .toEqual({ tool: 'moveBooking', target: 'bk_1', word: 'unknown' });
   });
 });
 
@@ -65,13 +65,13 @@ describe('a standing sentence never reaches the operator with an unfilled slot',
     const desk = new ConsentDesk(c => c.data(v => JSON.parse(JSON.stringify(v)) as Json));
     desk.beginTurn();
     const decl = { schema: { properties: { scope: { type: 'string' } } } } as unknown as ToolFact;
-    const call = CanonicalCall.of('placeHold', { scope: 'workspace' }, decl);
+    const call = CanonicalCall.of('holdRoom', { scope: 'suite' }, decl);
     if ('badArg' in call) throw new Error('bad call');
     const draft1 = { ...blankDraft(), turn: 1 };
-    const q = desk.hold(call, null, 'Freeze the workspace?', draft1,
-      { after: null, later: 'Hold {result.holdId} is standing at {result.scope} scope.' });
+    const q = desk.hold(call, null, 'Hold the room?', draft1,
+      { after: null, later: 'Hold {result.holdId} is standing at {result.scope} level.' });
     desk.readAnswer(q.code, { ...blankDraft(), turn: 2 });
-    desk.markExecuted(q.id, 2, 'placeHold() — done');
+    desk.markExecuted(q.id, 2, 'holdRoom() — done');
     expect(desk.laterTexts(3).some(s => s.includes('{'))).toBe(false);
     desk.commit();
   });

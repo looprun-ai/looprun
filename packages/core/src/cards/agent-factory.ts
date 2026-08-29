@@ -127,8 +127,11 @@ export class AgentFactory {
           fact.destructiveWhen ?? undefined).compile('engine', lane));
       }
     }
-    guards.push(maxDestructive(limits.destructive).compile('engine', lane));
+    // A re-proposed call restates its first result before any budget counts it:
+    // the duplicate floor walks ahead of the destructive cap, so re-saying an act
+    // that already ran is never narrated as a second act being blocked.
     guards.push(noDuplicateCall().compile('engine', lane));
+    guards.push(maxDestructive(limits.destructive).compile('engine', lane));
     for (const fact of Object.values(lane.tools)) {
       const { properties, required } = schemaOf(fact);
       for (const arg of required) {
