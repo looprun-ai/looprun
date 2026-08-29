@@ -197,6 +197,21 @@ export class RoutedAgent {
         : { userText: tail.userText, replyText: tail.replyText },
       userText: text };
 
+    // A message that is exactly a live code routes to the desk holding that
+    // question — deterministically, before the router is ever asked. Digits carry
+    // no language and no topic; the question's desk is a fact the house owns.
+    const given = text.trim();
+    const holder = this.deskNames.find(d =>
+      this.desks[d].openQuestions(id).some(q => q.code === given));
+    if (holder !== undefined) {
+      const answered = await this.deliver(holder, id, seat, text, false);
+      if ('returned' in answered) {
+        throw new TurnFailure('executor',
+          `the ${holder} desk returned the answer to its own code`);
+      }
+      return this.remember(id, seat, text, answered, { desk: holder, returned: null }, []);
+    }
+
     const opened = await this.decide({ ...front, returnedFrom: null });
     if (opened.desk === NONE) {
       return this.remember(id, seat, text, null, { desk: null, returned: null }, opened.steps);

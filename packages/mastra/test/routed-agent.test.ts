@@ -447,3 +447,27 @@ test('fromSubject refuses a preset the world card never declared', () => {
   expect(() => RoutedAgent.fromSubject({ specs: DESKS, world: JOBS, preset: 'nope',
     model: { scripted: { steps: [] } } })).toThrow(/nope/);
 });
+
+test('a message that is exactly a live code routes to the desk holding the question — the router is never asked', async () => {
+  const router = new ScriptedModel([routeStep('yard')]);
+  const yard = desk('yard', [
+    callStep('cancelBooking', { id: 'bk_9' }),
+    { calls: [], text: '' },
+    { calls: [], text: '' },
+    { calls: [], text: '' },
+    finishStep('Cancelled as approved.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'done' }])
+  ]);
+  const billing = desk('billing', [finishStep('Never reached.')]);
+  const agent = house(router, { yard: yard.agent, billing: billing.agent });
+
+  const asked = await agent.generate('cancel bk_9', { session: 's1' });
+  expect(asked.loopRun.routing?.desk).toBe('yard');
+  const question = asked.loopRun.questions.issued[0];
+
+  const done = await agent.generate(question.code, { session: 's1' });
+  expect(done.loopRun.routing).toEqual({ desk: 'yard', returned: null });
+  expect(done.loopRun.questions.consumed).toContain(question.id);
+  // The router slept through the code: one decision on the tape, from turn one.
+  expect(router.seen).toHaveLength(1);
+  expect(billing.model.seen).toHaveLength(0);
+});

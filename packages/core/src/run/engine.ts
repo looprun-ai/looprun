@@ -2,7 +2,7 @@
  *  compiled agent, one chat entry, whole typed turn record out. EngineConfig is a
  *  CLOSED key set — no index signature, no options object, no field through which
  *  governance weakens. */
-import type { ChatOpts, GuardCensus, TurnRecord, TurnReturned } from '../contract/vocabulary.js';
+import type { ChatOpts, GuardCensus, Question, TurnRecord, TurnReturned } from '../contract/vocabulary.js';
 import { TurnFailure } from '../contract/vocabulary.js';
 import { deepFreeze } from '../contract/freeze.js';
 import type { ToolPort, RecordsPort } from '../contract/ports.js';
@@ -86,6 +86,12 @@ export class Engine {
   /** Deny-by-default exclusions; SurfaceGate is their producer. */
   excluded(): readonly string[] {
     return deepFreeze([]);
+  }
+
+  /** The open consent questions of one session — what a bare code arriving as a
+   *  whole message may be answering. Empty for a session that never spoke. */
+  openQuestions(sessionId: string): readonly Question[] {
+    return this.sessions.get(sessionId)?.consent.open() ?? [];
   }
 
   endSession(sessionId: string): void {
