@@ -107,10 +107,14 @@ export class Turn {
       { role: 'user' as const, text: x.userText },
       { role: 'assistant' as const, text: x.replyText }
     ]);
+    // The model's memory of a past turn is the delivered text PLUS that turn's own
+    // record lines — what ran and what did not, frames the operator never sees. A
+    // delivered wording can drift; the record beside it cannot.
     const messages: Msg[] = [
       ...history.sealed().flatMap(r => [
         { role: 'user' as const, text: r.userText },
-        { role: 'assistant' as const, text: r.text }
+        { role: 'assistant' as const, text: r.acts.length === 0 ? r.text
+          : `${r.text}\n${r.acts.map(a => a.sentence).join('\n')}` }
       ]),
       ...foreign,
       { role: 'user', text: userText }

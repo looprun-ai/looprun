@@ -26,5 +26,5 @@ test('two concurrent chats on one session serialize in arrival order', async () 
   expect(r2.finish?.message).toBe('Second done.');
   const lastInput = model.seen.at(-1);
   if (!lastInput) throw new Error('the model never served turn 2');
-  expect(lastInput.messages.some(m => m.role === 'assistant' && m.text === r1.text)).toBe(true);
+  expect(lastInput.messages.some(m => m.role === 'assistant' && m.text.startsWith(r1.text))).toBe(true);
 });
