@@ -30,7 +30,8 @@ export const frontDesk: AgentSpec = {
   guards: [
     // The factory writes the rule from the same parameters its check uses. Spread it
     // and override `rule` when the desk needs to say more than the default sentence.
-    { ...valueFromUser('moveBooking', 'day'),
+    // A set-form write carries its fields inside `set`, so the dotted path reads them.
+    { ...valueFromUser('moveBooking', 'set.day'),
       rule: 'Send moveBooking\'s day only as the guest wrote it — never pick a day yourself.' }
   ],
   limits: { calls: 6 },

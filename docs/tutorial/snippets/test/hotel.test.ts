@@ -5,8 +5,9 @@ import { test, expect } from 'vitest';
 import { LoopRunAgent } from 'looprun';
 import type { ModelStep } from 'looprun';
 import { pairing } from '@looprun-ai/eval';
-import { hotel, gatedHotel } from '../hotel/world.js';
-import { concierge, hotelContract } from '../hotel/cards.js';
+import { hotel } from '../hotel/world.js';
+import { gatedHotel } from '../hotel/gated-world.js';
+import { concierge, frontDesk, hotelContract } from '../hotel/cards.js';
 
 const call = (tool: string, args: Record<string, unknown>): ModelStep =>
   ({ calls: [{ tool, args }], text: '' });
@@ -42,7 +43,10 @@ test('lesson 2 — the typed approval releases exactly that call', async () => {
       { calls: [], text: '' },
       { calls: [], text: '' },
       finish('Cancelled the Blue Room on Friday.',
-        [{ tool: 'cancelBooking', target: 'bk_1', word: 'done' }])
+        [{ tool: 'cancelBooking', target: 'bk_1', word: 'done' }]),
+      // The done write mints its receipt, and the composer's delivery pass reads it.
+      { calls: [], text: '' },
+      { calls: [], text: '' }
     ] } }
   });
 
@@ -117,6 +121,32 @@ test('lesson 6 — a world gate refuses a checked-in booking, whatever the user 
 
   const act = reply.loopRun.acts.find(a => a.call.tool === 'cancelBooking');
   expect(act?.status).not.toBe('done');
+});
+
+test("lesson 5 — the day the guest wrote passes the front desk's guard; an invented day is denied", async () => {
+  const steps = (day: string): ModelStep[] => [
+    call('moveBooking', { id: 'bk_1', set: { day } }),
+    finish(`Moved bk_1 to ${day}.`, [{ tool: 'moveBooking', target: 'bk_1', word: 'done' }]),
+    { calls: [], text: '' },
+    { calls: [], text: '' },
+    finish('I could not move bk_1.', [{ tool: 'moveBooking', target: 'bk_1', word: 'refused' }]),
+    { calls: [], text: '' },
+    { calls: [], text: '' }
+  ];
+
+  const stated = new LoopRunAgent({
+    spec: frontDesk, contract: hotelContract, world: hotel,
+    model: { scripted: { steps: steps('Saturday') } }
+  });
+  const moved = await stated.generate('Move booking bk_1 to Saturday.', { session: 'lesson5' });
+  expect(moved.loopRun.acts.find(a => a.call.tool === 'moveBooking')?.status).toBe('done');
+
+  const invented = new LoopRunAgent({
+    spec: frontDesk, contract: hotelContract, world: hotel,
+    model: { scripted: { steps: steps('Sunday') } }
+  });
+  const denied = await invented.generate('Move booking bk_1 to Saturday.', { session: 'lesson5b' });
+  expect(denied.loopRun.acts.find(a => a.call.tool === 'moveBooking')?.status).toBe('not-done');
 });
 
 test('the hotel snippet passes the pairing lint the lesson teaches', () => {

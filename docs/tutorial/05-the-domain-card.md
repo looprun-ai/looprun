@@ -82,7 +82,7 @@ export const frontDesk: AgentSpec = {
   description: 'looking bookings up and moving them to new days',
   summary: 'the front desk',
   guards: [
-    { ...valueFromUser('moveBooking', 'day'),
+    { ...valueFromUser('moveBooking', 'set.day'),
       rule: 'Send moveBooking\'s day only as the guest wrote it — never pick a day yourself.' }
   ],
   limits: { calls: 6 },

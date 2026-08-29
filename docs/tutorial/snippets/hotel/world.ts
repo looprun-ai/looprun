@@ -1,6 +1,7 @@
 /** The hotel's world card: the records, and the three blocks that say what a tool
  *  DOES to them. The block a tool sits in IS its effect declaration — a tool under
- *  `destructive` needs no other setup for the engine to hold it for consent. */
+ *  `destructive` needs no other setup for the engine to hold it for consent.
+ *  One file states one surface — the gated variant lives in gated-world.ts. */
 import { world } from 'looprun';
 
 export const hotel = world({
@@ -27,30 +28,5 @@ export const hotel = world({
   },
   destructive: {
     cancelBooking: { form: 'remove', entity: 'bookings', label: 'cancel a booking' }
-  }
-});
-
-/** The same hotel with a gate and a scenario. A gate is a condition the WORLD
- *  enforces: it refuses the call whatever the model or the user says, and its
- *  refusal is a sentence a person can act on. */
-export const gatedHotel = world({
-  records: {
-    bookings: {
-      bk_1: { room: 'Blue Room', day: 'Friday', guest: 'M. Silva', status: 'CONFIRMED' },
-      bk_9: { room: 'Red Room', day: 'Sunday', guest: 'C. Dias', status: 'CHECKED_IN' }
-    }
-  },
-  reads: {
-    getBooking: { form: 'get', entity: 'bookings', label: 'Look up one booking' }
-  },
-  destructive: {
-    cancelBooking: {
-      form: 'remove', entity: 'bookings', label: 'cancel a booking',
-      gates: [{ kind: 'stateIs', field: 'status', value: 'CONFIRMED' }]
-    }
-  },
-  presets: {
-    // A scenario the exam can name: the Friday guest has already checked in.
-    everyoneCheckedIn: [{ entity: 'bookings', id: 'bk_1', set: { status: 'CHECKED_IN' } }]
   }
 });
