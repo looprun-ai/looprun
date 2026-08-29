@@ -210,7 +210,7 @@ function checkValueFromUserRequired(declaration: Declaration,
       refusals.push(`contract.guards[${guardIndex}].args.arg names '${named}', and '${act}' `
         + `requires ${requires} — a call of '${act}' may leave '${named}' out, and valueFromUser `
         + `refuses a call that carries no value there. Point the guard at an argument '${act}' `
-        + `requires, or list '${named}' in that act's required arguments on the world card.`);
+        + `requires, or make '${named}' one of them.`);
     }
   });
   return refusals;
@@ -361,8 +361,9 @@ function checkAfterSpeaksResult(declaration: Declaration): readonly string[] {
 
 /** The `empty` sentence is written from the held call's own args and nothing else. It is the
  *  refusal spoken at exactly the moment a declared tense found no value in the owed reads, so a
- *  slot rooted anywhere but `args` reaches for a read that has just come back with nothing — and
- *  the refusal that was supposed to explain the gap cannot itself be written. */
+ *  slot rooted on an alias reaches for the read that just came back with nothing, and the refusal
+ *  meant to explain the gap cannot itself be written. A slot rooted on the result reaches for a
+ *  call that never ran, and goes out to the operator as the braces themselves. */
 function checkEmptyFillable(declaration: Declaration): readonly string[] {
   const refusals: string[] = [];
   for (const [actName, entry] of Object.entries(declaration.contract.disclosure)) {
@@ -530,19 +531,17 @@ function checkSeamRows(declaration: Declaration, facts: SurfaceFacts,
  *  guard naming an act no tool declares, a judged check on a desk naming one or naming an act
  *  outside that desk's lane, a guard whose configuration names one, a guard whose
  *  configuration names an argument its act's schema does not declare, a `valueFromUser` bound to
- *  an argument its act does not require, a destructive act with
- *  nothing disclosed before it runs, a `precondition` reading a record over an act with no target,
- *  a disclosure `needs` alias naming a tool that does not exist, a disclosure alias whose read
- *  cannot answer the call it is held for, a disclosure alias naming a read the lane of a desk
- *  holding the act does not carry, an `after` that names nothing the call returned, an `empty`
- *  sentence rooted outside the held call's own args, a choice whose terms for one value are
- *  spelled inside another value's, a seam
- *  sentence paying a row the world does not carry, and a
- *  house whose desks disagree with the routing law — two or more desks with a desk whose `description`
- *  line is missing or blank, or the one desk of a single-desk house carrying one — and a desk of a
- *  house of two or more that teaches fewer than the six voices. `seam` is the seam table
- *  computed off the same subject the declaration sits in. An empty array means the declaration is
- *  safe to emit against `facts`. */
+ *  an argument its act does not require, a destructive act with nothing disclosed before it runs,
+ *  a `precondition` reading a record over an act with no target, a disclosure `needs` alias naming
+ *  a tool that does not exist, a disclosure alias whose read cannot answer the call it is held
+ *  for, a disclosure alias naming a read the lane of a desk holding the act does not carry, an
+ *  `after` that names nothing the call returned, an `empty` sentence rooted outside the held
+ *  call's own args, a choice whose words for one value are spelled inside another value's, a seam
+ *  sentence paying a row the world does not carry, and a house whose desks disagree with the
+ *  routing law — two or more desks with a desk whose `description` line is missing or blank, or
+ *  the one desk of a single-desk house carrying one — and a desk of a house of two or more that
+ *  teaches fewer than the six voices. `seam` is the seam table computed off the same subject the
+ *  declaration sits in. An empty array means the declaration is safe to emit against `facts`. */
 export function checkAgainstSurface(declaration: Declaration, facts: SurfaceFacts,
                                     seam: readonly SeamRow[]): readonly string[] {
   return [
