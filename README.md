@@ -57,8 +57,8 @@ not carried them.
 ```
 
 `creates` is the birth register: the acts that mint a record that did not exist, each owing a
-prose law licensed `conduct` naming it and a `disclosure.<act>.after` saying which record now
-stands.
+prose law licensed `conduct` naming it and no act off the register, and a
+`disclosure.<act>.after` saying which record now stands.
 
 There is no fourth thing. No hooks, no loop, no return protocol, no tool plumbing.
 
