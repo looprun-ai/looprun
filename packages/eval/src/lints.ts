@@ -1664,8 +1664,9 @@ export function floorRedeclared(subjectDir: string): readonly LintFinding[] {
 
 
 /** The six voices a house teaches, one conduct law each. A conduct law is a prose guard on the
- *  desk that carries it, and a spec guard's rule renders into that desk's system prefix — so a
- *  voice a desk does not carry is a law that desk never reads. */
+ *  desk that carries it, and a spec guard's RULE renders into that desk's system prefix — so a
+ *  voice a desk does not carry, and a voice whose rule says nothing, are the same law that desk
+ *  never reads. */
 const VOICES = ['declareHonestly', 'oneQuestion', 'yourLaneYourReads', 'recordsOverAssertions',
   'askBeforeYouChoose', 'nameItDoNotPassItOn'];
 
@@ -1682,12 +1683,13 @@ export function conductComplete(specs: Readonly<Record<string, AgentSpec>>): rea
   if (desks.length < 2) return [];
   const findings: LintFinding[] = [];
   for (const [desk, spec] of desks) {
-    const taught = new Set((spec.guards ?? []).map(guard => guard.name));
+    const taught = new Set((spec.guards ?? [])
+      .filter(guard => guard.rule.trim() !== '').map(guard => guard.name));
     for (const voice of VOICES) {
       if (taught.has(voice)) continue;
       findings.push({ code: 'CONDUCT_INCOMPLETE',
-        sentence: `desk '${desk}' carries no '${voice}' conduct law, so its system prefix never `
-          + `states it: the desks of this house answer one operator by different laws depending on `
+        sentence: `desk '${desk}' says nothing under '${voice}', so its system prefix never states `
+          + `that law: the desks of this house answer one operator by different laws depending on `
           + `which counter the conversation reached. Teach '${voice}' on this desk too.` });
     }
   }

@@ -341,13 +341,16 @@ const VOICES: readonly string[] = ['declareHonestly', 'oneQuestion', 'yourLaneYo
  *  and the next leaves out answers that person by two different laws: the desk carrying
  *  `recordsOverAssertions` says what the read returned, and the desk beside it — reading a prefix
  *  that never names the law — says what it remembers. One desk is one counter with no second way to
- *  answer, so the six bind nothing in a house of one. */
+ *  answer, so the six bind nothing in a house of one.
+ *
+ *  A voice named with a blank sentence under it is a voice unspoken: what renders into the prefix
+ *  is the sentence, and a name with nothing after it renders as a law that states nothing. */
 function checkConductVoices(declaration: Declaration): readonly string[] {
   const { desks } = declaration;
   if (desks.length < 2) return [];
   return desks.flatMap((desk, deskIndex) => VOICES
-    .filter(voice => desk.conduct[voice] === undefined)
-    .map(voice => `desks[${deskIndex}].conduct states no '${voice}' on '${desk.name}': a house of `
+    .filter(voice => (desk.conduct[voice] ?? '').trim() === '')
+    .map(voice => `desks[${deskIndex}].conduct says nothing under '${voice}' on '${desk.name}': a house of `
       + `${desks.length} desks hands one operator from counter to counter, and a voice this desk `
       + `never states is a law its prompt never carries — one message reaches '${desk.name}' and is `
       + `answered by a different law than the desk beside it. Write '${voice}' here too, in the `

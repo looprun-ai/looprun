@@ -351,6 +351,17 @@ ${secondConduct}
     expect(refusals[0]).toContain("'recordsOverAssertions'");
   });
 
+  it('a voice named with nothing said under it is refused as a voice unspoken', () => {
+    const blankRecords = SIX_VOICES.split('\n')
+      .map(line => line.includes('recordsOverAssertions')
+        ? '      recordsOverAssertions: \'   \'' : line).join('\n');
+    const d = readDeclaration(fixture(house(blankRecords)));
+    const refusals = checkAgainstSurface(d, FACTS, SEAM);
+    expect(refusals).toEqual([expect.stringContaining('desks[1].conduct')]);
+    expect(refusals[0]).toContain("'audit'");
+    expect(refusals[0]).toContain("'recordsOverAssertions'");
+  });
+
   it('a single-desk declaration missing five voices is refused none of them', () => {
     const d = readDeclaration(fixture(`
 contract:

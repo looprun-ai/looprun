@@ -27,6 +27,16 @@ describe('conductComplete', () => {
     expect(found[0].sentence).toContain("'oneQuestion'");
   });
 
+  test('a voice whose rule says nothing is a voice the desk does not speak', () => {
+    const blank: AgentSpec = { ...desk('billing', VOICES),
+      guards: VOICES.map(voice => ({ name: voice, on: 'reply' as const,
+        rule: voice === 'oneQuestion' ? '   ' : `The ${voice} law.` })) };
+    const found = conductComplete({ billing: blank, claims: desk('claims', VOICES) });
+    expect(found.map(f => f.code)).toEqual(['CONDUCT_INCOMPLETE']);
+    expect(found[0].sentence).toContain("'billing'");
+    expect(found[0].sentence).toContain("'oneQuestion'");
+  });
+
   test('every desk teaching all six asks nothing', () => {
     expect(conductComplete({ billing: desk('billing', VOICES), claims: desk('claims', VOICES) }))
       .toEqual([]);
