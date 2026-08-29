@@ -48,7 +48,7 @@ function template(operatorText: string, facts: readonly DeliveryFact[],
     + `The facts above are the COMPLETE record of what this turn DID: nothing else ran, `
     + `was charged, booked, held or changed. If the operator asked for anything beyond what `
     + `these facts answer, it was NOT done and NOT started this turn — say that plainly, `
-    + `speaking only of actions. NEVER say a record, booking or entry does not exist or is `
+    + `speaking only of actions. NEVER say a record or an entry does not exist or is `
     + `absent: only a read's own result may say that.\n\n`
     + (material.length === 0 ? ''
       : `MATERIAL — what this turn's reads returned. Use what answers the operator's message; `

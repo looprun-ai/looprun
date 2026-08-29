@@ -4,7 +4,8 @@
 **Program:** `2026-08-28-natural-voice-recovery-design.md` — this plan REPLACES the
 bare "F5 then F2" tail with a de-risked sequence: R1 (engine repairs, each
 micro-tested) → F5 (declaration laws + exam repairs + pages, each with its slice) →
-F2 (certification, not discovery).
+F5b (the skill runs whole from zero, no evals, against a pre-written expectation
+sweep) → F2 (certification, not discovery, on the from-zero subject).
 **The rule that shapes it:** no step scales until its mechanism is proven on a cheap
 micro-test, and no full run happens while any known class is unrepaired. F2 is the
 LAST run, and it certifies — it does not discover.
@@ -76,9 +77,28 @@ members + neighbors that must not regress):
 Then Task 2 (exam redesigns 61/62/68/48 — rubric edits, model cost only the 7-case
 slice) and Tasks 3–4 (pages + fixtures, zero model cost) exactly as written.
 
+## 4b · F5b — the skill proves itself from zero before anything is measured
+
+After F5's rows close and before F2 spends a single subject call, the skill runs
+WHOLE from zero — a fresh scaffold and a fresh subject number, per the standing law
+that a blind round never resumes an existing author — through every phase EXCEPT the
+evals. Subject-model cost: none (the author's work is agent work).
+
+The sweep is written BEFORE the output is read: a manual expectation list naming
+every point the skill must produce — the declaration.yaml shape (description and
+summary on every desk, the conduct laws, no retired keys), the cards regenerated
+through the emit, the gate stamp green against the declaration beside it, the world,
+the exam wiring, and every teaching F5 added landing in the produced subject. Then
+the sweep walks the output against the list point by point. A missing point repairs
+the SKILL (or its inputs), never the output by hand, and the run repeats from zero
+until the sweep is clean.
+
+F2 then runs its campaign on the subject this from-zero run produced — the skill
+proving itself is part of what the seal certifies.
+
 ## 5 · F2 — the certification
 
-Runs ONLY when every row above has a green slice. Ladder 12 → 40 → 100 on each exam,
+Runs ONLY when every row above has a green slice and F5b's sweep is clean. Ladder 12 → 40 → 100 on each exam,
 one campaign, every letter read. The dump-gate script runs over every checkpoint's
 dumps as a standing regression tripwire.
 

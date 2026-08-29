@@ -56,9 +56,9 @@ const readAct = (result: unknown): never => ({ id: 'a1', turn: 1, origin: 'model
   owed: null, result, questionId: null, guard: null }) as never;
 
 test('prose that carries none of a read\'s identifiers drops the read', () => {
-  const acts = [readAct({ entries: [{ actor: 'mem_1004', detail: 'inv_7001 issued' }] })];
+  const acts = [readAct({ entries: [{ actor: 'mb_1', detail: 'in_9 issued' }] })];
   expect(proseDropsReads(acts, 'The log shows the recent activity.')).toBe(true);
-  expect(proseDropsReads(acts, 'mem_1004 issued inv_7001.')).toBe(false);
+  expect(proseDropsReads(acts, 'mb_1 issued in_9.')).toBe(false);
 });
 
 test('a read returning no identifiers demands nothing of the prose', () => {
