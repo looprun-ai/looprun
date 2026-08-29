@@ -44,6 +44,9 @@ function template(operatorText: string, facts: readonly DeliveryFact[],
     + `PROVEN FACTS — the records of this turn. Every numbered fact MUST be present in your reply, `
     + `rendered faithfully in the operator's language. Identifiers and figures stay `
     + `EXACTLY as written — digits stay digits, never words.\n${factLines}\n\n`
+    + `The facts above are the COMPLETE record of this turn: nothing else ran, was `
+    + `charged, booked, held or changed. If the operator asked for anything beyond what `
+    + `these facts answer, it has NOT been done and was NOT started — say that plainly.\n\n`
     + (material.length === 0 ? ''
       : `MATERIAL — what this turn's reads returned. Use what answers the operator's message; `
         + `leave the rest; never paste raw data.\n${material.map(m => `- ${m}`).join('\n')}\n\n`)
