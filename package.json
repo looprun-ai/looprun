@@ -22,7 +22,7 @@
     "typecheck": "pnpm -r --if-present typecheck",
     "lint": "pnpm -r --if-present lint",
     "test": "pnpm -r --if-present test && pnpm gates",
-    "gates": "node tests/plain-names.test.mjs && node tests/guard-priority.test.mjs && node tests/no-bench-drift.test.mjs",
+    "gates": "node tests/plain-names.test.mjs && node tests/guard-priority.test.mjs && node tests/no-bench-drift.test.mjs && node tests/no-external-model.test.mjs && node tests/no-secrets.test.mjs",
     "changeset": "changeset",
     "release": "node scripts/release.mjs --bump=patch",
     "release-minor": "node scripts/release.mjs --bump=minor",
