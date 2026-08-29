@@ -194,3 +194,29 @@ No skill edit. No router change. No confirmation-code change (F4 owns the code's
 and validity). No `covers()`, no bare-frame filter, no `rich`. `figureIsGrounded` and the
 report-contradiction check return on the desk's finish exactly as measured before the
 floor revert; the composer's gate is additional, on the composed output.
+
+## 9 · The phase's close — certified and ruled
+
+The conduct hundred ran once, whole, through the front desk on the branch build
+(`agentspec-bench/subjects/atlas-c17/test/2026-08-29-f1-cert100`, every letter read in
+session): **94/100 on the 25/08 fold, with every quality counter at zero across all
+100** — frames leaked 0 · raw JSON 0 · read lines 0 · two-outcomes 0 · empty 0 ·
+language 0; 97 composed, 53 prose-direct, 2 floor, 6 retries.
+
+After the ruler, three zero-call repairs landed and were measured on directed slices:
+
+- **route-by-open-code** — a message that is exactly a live code goes to the desk
+  holding that question before the router is asked; case 27's four invariant failures
+  fell to zero (`…/2026-08-29-f1-codefix`);
+- **the closed-world line** — the composer is told the facts are the whole turn; case
+  35's invented completion became "I have NOT charged it" (`…/2026-08-29-f1-closedworld`);
+- **slim(schema)** — restored from `324f016`; fewer prompt bytes, window parity
+  (`…/2026-08-29-f1-slim`). The two-turn record memory shipped by the owner's ruling
+  (`…/2026-08-29-f1-recordmem2`), flat-cost, neighbors clean.
+
+With the repairs, the open set is 61, 68, 76 and the flap-class 96 — 96-equivalent,
+parity with the baseline's 96. Cases 61, 62, 68 and 76 are registered in the exam's own
+queue (`agentspec/BACKLOG.md` rows 6b–6c) with their owners; 17-r1 stands registered by
+the owner's ruling. The owner closed the phase on the recorded runs; the next full
+ruler rides the F2 seal, where the routed hundred and the conduct hundred run on one
+build and pay both seals.
