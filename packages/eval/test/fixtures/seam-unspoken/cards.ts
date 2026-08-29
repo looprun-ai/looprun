@@ -1,7 +1,8 @@
-/** A subject whose world spells two refusals at the seam and whose cards speak for neither.
- *  One act a case drives into with a preset, one act no case reaches; everything else on the
- *  card — voices, licences, checks — clears its own verb, so what the gate says about this
- *  directory is what it says about the seam budget. */
+/** A subject whose world spells three refusal rows at the seam and whose cards speak for none.
+ *  The settle refuses with two codes — one a preset drives the world into, one nothing reaches —
+ *  and the archive refuses with its own code no case goes near. Everything else on the card —
+ *  voices, licences, checks — clears its own verb, so what the gate says about this directory is
+ *  what it says about the seam budget. */
 import type { Json } from '@looprun-ai/core';
 import { world } from '@looprun-ai/core';
 
@@ -40,11 +41,15 @@ export const claimsWorld = world({
   reads: { getClaim: { form: 'get', entity: 'claims', label: 'Look up a claim' } },
   writes: { settleClaim: { form: 'run', entity: 'claims', label: 'Settle a claim' },
             archiveClaim: { form: 'run', entity: 'claims', label: 'Archive a claim' } },
-  presets: { blocked: [{ entity: 'claims', id: 'clm_1', set: { status: 'BLOCKED' } }] }
+  presets: { blocked: [{ entity: 'claims', id: 'clm_1', set: { status: 'BLOCKED' } }],
+             escrowed: [{ entity: 'claims', id: 'clm_1', set: { status: 'ESCROW' } }] }
 }, {
-  settleClaim: ({ records }) => records.claims?.clm_1?.status === 'OPEN'
-    ? { result: { settled: true }, patches: [] }
-    : fail('BLOCKED_Y'),
+  settleClaim: ({ records }) => {
+    const status = records.claims?.clm_1?.status;
+    if (status === 'BLOCKED') return fail('BLOCKED_Y');
+    if (status === 'ESCROW') return fail('CLAIM_ESCROWED');
+    return { result: { settled: true }, patches: [] };
+  },
   archiveClaim: ({ records }) => records.claims?.clm_1?.status === 'CLOSED'
     ? { result: { archived: true }, patches: [] }
     : fail('CLAIM_STILL_OPEN')

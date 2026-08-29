@@ -997,11 +997,16 @@ describe('unspokenChecks', () => {
   });
 });
 
-import { noEffectDenied, seamSpoken, unlicensed } from '../src/lints.js';
+import { world } from '@looprun-ai/core';
+import { noEffectDenied, seamSpoken, seamUnreached, unlicensed } from '../src/lints.js';
 
 const REFUND_FACTS = { tools: {
   getInvoice: { effect: 'read' }, listInvoices: { effect: 'read' },
   issueRefund: { effect: 'destructive' } } } as never;
+
+/** A world with no records and no presets: nothing in it can drive a refusal, so what these
+ *  tests measure is the source-level half of the seam — the table, the licences, the rows. */
+const STILL_WORLD = world({});
 
 /** A subject whose world REFUSES the refund with one code of its own, and whose cards are
  *  whatever the test hands over. The two halves live in separate files exactly as a real subject
@@ -1018,15 +1023,23 @@ const REFUSED: readonly ExamCase[] = [{ id: 'refund-02', split: 'fix', rubric: '
   turns: ['refund inv_9'], invariants: { noEffectToolCalls: [{ name: 'issueRefund' }] } }];
 
 describe('seamSpoken', () => {
-  test('an act the exam expects refused, with no law around any of its codes, is a finding', () => {
+  test('a case with no preset drives into nothing, whatever the world can refuse with', () => {
+    // The no-effect this exam expects is the consent hold refusing the unapproved call: the
+    // world never refuses, so no row fails — the unspoken table rides the budget instead.
     const dir = seamSubject('const WHY = {};');
-    const found = seamSpoken(dir, REFUSED, REFUND_FACTS);
-    expect(found.map(f => f.code)).toEqual(['SEAM_UNSPOKEN']);
-    expect(found[0].sentence).toContain("case 'refund-02' expects 'issueRefund' to change nothing");
-    expect(found[0].sentence).toContain('INVOICE_ALREADY_SETTLED');
+    expect(seamSpoken(dir, REFUSED, STILL_WORLD)).toEqual([]);
+  });
+});
+
+describe('seamUnreached', () => {
+  test('an unspoken row no case reaches is its own warning naming act and code', () => {
+    const dir = seamSubject('const WHY = {};');
+    const found = seamUnreached(dir, REFUSED, REFUND_FACTS, STILL_WORLD);
+    expect(found.map(f => f.code)).toEqual(['SEAM_UNREACHED']);
+    expect(found[0].sentence).toContain('issueRefund · INVOICE_ALREADY_SETTLED');
   });
 
-  test('one seam law on the act answers it — the exam names the act, never the code', () => {
+  test('a seam law naming the row\'s own code silences its line', () => {
     const dir = seamSubject(`
       const prose = (name, rule) => ({ name, rule, on: 'reply' });
       const WHY = { 'seam:issueRefund:INVOICE_ALREADY_SETTLED': 'seam' };
@@ -1034,7 +1047,7 @@ describe('seamSpoken', () => {
         prose('seam:issueRefund:INVOICE_ALREADY_SETTLED',
           'An invoice already settled takes no refund: say what the read returned, and what would '
           + 'have to change before money moves.') ] } };`);
-    expect(seamSpoken(dir, REFUSED, REFUND_FACTS)).toEqual([]);
+    expect(seamUnreached(dir, REFUSED, REFUND_FACTS, STILL_WORLD)).toEqual([]);
   });
 
   test('a law claiming any other licence pays no row, whatever it is named', () => {
@@ -1043,14 +1056,20 @@ describe('seamSpoken', () => {
       const WHY = { 'seam:issueRefund:INVOICE_ALREADY_SETTLED': 'conduct' };
       const SPECS = { billing: { name: 'billing', persona: 'p', guards: [
         prose('seam:issueRefund:INVOICE_ALREADY_SETTLED', 'Say what the read returned.') ] } };`);
-    expect(seamSpoken(dir, REFUSED, REFUND_FACTS).map(f => f.code)).toEqual(['SEAM_UNSPOKEN']);
+    expect(seamUnreached(dir, REFUSED, REFUND_FACTS, STILL_WORLD).map(f => f.code))
+      .toEqual(['SEAM_UNREACHED']);
   });
 
-  test('an act the world spells no refusal on is left alone — no row, nothing to pay', () => {
-    const dir = seamSubject('const WHY = {};');
-    const other: readonly ExamCase[] = [{ id: 'void-01', split: 'fix', rubric: 'r',
-      turns: ['void inv_9'], invariants: { noEffectToolCalls: [{ name: 'listInvoices' }] } }];
-    expect(seamSpoken(dir, other, REFUND_FACTS)).toEqual([]);
+  test('a law on another code of the same act leaves this row listed', () => {
+    const dir = seamSubject(`
+      const prose = (name, rule) => ({ name, rule, on: 'reply' });
+      const WHY = { 'seam:issueRefund:ACCOUNT_ON_HOLD': 'seam' };
+      const SPECS = { billing: { name: 'billing', persona: 'p', guards: [
+        prose('seam:issueRefund:ACCOUNT_ON_HOLD',
+          'A frozen account moves no money: name the hold and its reason.') ] } };`);
+    const found = seamUnreached(dir, REFUSED, REFUND_FACTS, STILL_WORLD);
+    expect(found.map(f => f.code)).toEqual(['SEAM_UNREACHED']);
+    expect(found[0].sentence).toContain('issueRefund · INVOICE_ALREADY_SETTLED');
   });
 });
 

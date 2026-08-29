@@ -7,11 +7,11 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import ts from 'typescript';
 import type { AgentSpec, ApproveRef, CompiledAgent, DeclaredWorld, DomainContract, ExamCase,
-              ExamTurn, GuardCensus, LiveWorldCard, McpWorldCard, PromptParts, SurfaceFacts,
+              ExamTurn, GuardCensus, Json, LiveWorldCard, McpWorldCard, PromptParts, SurfaceFacts,
               ToolFact, TurnRecord, WorldCard } from '@looprun-ai/core';
 import type { Subject } from './subject-loader.js';
 import { AgentFactory, CardError, factsFromWorld, PromptWriter,
-         RETIRED_NAMES } from '@looprun-ai/core';
+         RETIRED_NAMES, WorldBuilder } from '@looprun-ai/core';
 
 export interface LintFinding { readonly code: string; readonly sentence: string }
 
@@ -1605,55 +1605,109 @@ function seamRowsByAct(subjectDir: string,
   return byAct;
 }
 
-/** The rows of one act's seam, each in the words a finding names a row by: `'act · code'`. */
-const seamRowNames = (act: string, codes: readonly string[]): string =>
-  [...codes].sort().map(code => `'${act} · ${code}'`).join(', ');
+/** The code a custom executor's refusal spells: the refuse payload itself when it is the bare
+ *  code, or its `error` field when detail rides along. Any other payload spells no code. */
+function refusalCode(refuse: Json): string | null {
+  if (typeof refuse === 'string') return refuse;
+  if (typeof refuse === 'object' && refuse !== null && !Array.isArray(refuse)) {
+    const error = (refuse as { readonly error?: Json }).error;
+    if (typeof error === 'string') return error;
+  }
+  return null;
+}
 
-/** An act the exam expects to be REFUSED is an act the desk meets at the seam, and the operator
- *  meets there with it. The world answers that call with a code; a card that states no law around
- *  any of those codes leaves the desk to invent one — it refuses in words nobody wrote, or asks
- *  for the wrong thing, or promises a route that does not exist.
- *
- *  The exam names the ACT and never the code, so this asks for one seam law on the act and lets
- *  the author choose which of its refusals the operator is owed a sentence about. The rest of that
- *  act's rows stay in the seam table, which lists every one of them. */
+/** The code the world answers one call with: the act's own executor, run over the declared
+ *  records — under a preset when one is named — with the same frozen snapshot a live call hands
+ *  it. A successful call, a payload that spells no code, an executor that throws, or a preset the
+ *  store refuses all answer null: nothing there is a refusal an operator can be owed a sentence
+ *  about. */
+function worldAnswerCode(world: DeclaredWorld, preset: string | undefined, act: string,
+                         args: Readonly<Record<string, Json>>): string | null {
+  const executor = world.executors[act];
+  if (executor === undefined) return null;
+  try {
+    const records = new WorldBuilder().build(world, preset).snapshot();
+    const out = executor({ args, records, mintId: entity => `${entity}_rehearsal` });
+    return 'refuse' in out ? refusalCode(out.refuse) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** The rows the exam drives the world into. For every case that carries a preset and expects an
+ *  act to change nothing, the act is run twice with the arguments the case's matcher supplies —
+ *  once over the records as the card declares them, once under the case's preset. The row is
+ *  driven when the preset run refuses with a code the base run does not answer: the preset, not
+ *  the argument shape, is what put the world in front of that refusal. A case with no preset
+ *  drives into nothing — the no-effect it expects is the consent hold's work, and the world never
+ *  refuses. Only a declared world can be run here; a remote card drives nothing. */
+function drivenRows(cases: readonly ExamCase[],
+                    world: DeclaredWorld | McpWorldCard | LiveWorldCard)
+                    : ReadonlyMap<string, ReadonlyMap<string, string>> {
+  const out = new Map<string, Map<string, string>>();
+  if (!('card' in world)) return out;
+  const presets = world.card.presets ?? {};
+  for (const c of cases) {
+    if (c.preset === undefined || presets[c.preset] === undefined) continue;
+    for (const matcher of c.invariants?.noEffectToolCalls ?? []) {
+      const args = matcher.anyArgs ?? {};
+      const driven = worldAnswerCode(world, c.preset, matcher.name, args);
+      if (driven === null) continue;
+      if (worldAnswerCode(world, undefined, matcher.name, args) === driven) continue;
+      const rows = out.get(matcher.name) ?? new Map<string, string>();
+      if (!rows.has(driven)) rows.set(driven, c.id);
+      out.set(matcher.name, rows);
+    }
+  }
+  return out;
+}
+
+/** A seam row a case drives into is one its operator stands in front of: the case's preset
+ *  leaves the world refusing the act with that code, and the reply the operator reads is composed
+ *  around that refusal. The row is spoken only when a seam law names ITS code —
+ *  `seam:<act>:<CODE>` — because a sentence on one of the act's other rows is a sentence about a
+ *  refusal this operator never meets. A case with no preset drives into nothing: the no-effect it
+ *  expects is the consent hold refusing the unapproved call, and the world never answers. The
+ *  rows nobody drives into are the budget, not failures. */
 export function seamSpoken(subjectDir: string, cases: readonly ExamCase[],
-                           facts: { readonly tools: Readonly<Record<string, unknown>> })
+                           world: DeclaredWorld | McpWorldCard | LiveWorldCard)
                            : readonly LintFinding[] {
   const spoken = seamLawsByAct(subjectSources(subjectDir));
-  const rows = seamRowsByAct(subjectDir, facts);
   const findings: LintFinding[] = [];
-  for (const [act, caseId] of noEffectActs(cases)) {
-    const codes = rows.get(act);
-    if (codes === undefined || (spoken.get(act) ?? []).length > 0) continue;
-    findings.push({ code: 'SEAM_UNSPOKEN',
-      sentence: `case '${caseId}' expects '${act}' to change nothing, and no rule on this card `
-        + `states the law around any refusal it answers with — the world refuses that call at `
-        + `${seamRowNames(act, codes)}. Declare a contract.seam entry on '${act}' for the `
-        + `refusal the operator actually meets.` });
+  for (const [act, rows] of [...drivenRows(cases, world)].sort(([a], [b]) => a.localeCompare(b))) {
+    for (const [code, caseId] of [...rows].sort(([a], [b]) => a.localeCompare(b))) {
+      if ((spoken.get(act) ?? []).includes(code)) continue;
+      findings.push({ code: 'SEAM_UNSPOKEN',
+        sentence: `case '${caseId}' drives '${act}' into '${act} · ${code}': its preset leaves `
+          + `the world refusing that call with this code, and no rule on this card states the `
+          + `law around it. Declare a contract.seam entry on '${act}' for '${code}' — the `
+          + `refusal this case's operator actually meets.` });
+    }
   }
   return findings;
 }
 
-/** The seam rows the exam leaves alone: the world can refuse the act's call, no case drives it
- *  into a refusal, and no seam law on the cards speaks for the act. Each row is a budget line,
- *  never a failure — the sentence it asks for is one the prompt would carry on every turn, and no
- *  case has put an operator in front of the refusal. The gate prints these with the run, so the
- *  unspoken seam stays visible while the sentence stays unspent. */
+/** Every row of the seam table the exam leaves alone: no case drives the world into it, and no
+ *  seam law names its code. Each row is its own warning line — a budget line, never a failure:
+ *  the sentence it asks for is one the prompt would carry on every turn, and nobody has put an
+ *  operator in front of the refusal. The gate prints every one of these with the run, so the
+ *  whole unspoken table stays visible while the sentences stay unspent. */
 export function seamUnreached(subjectDir: string, cases: readonly ExamCase[],
-                              facts: { readonly tools: Readonly<Record<string, unknown>> })
+                              facts: { readonly tools: Readonly<Record<string, unknown>> },
+                              world: DeclaredWorld | McpWorldCard | LiveWorldCard)
                               : readonly LintFinding[] {
   const spoken = seamLawsByAct(subjectSources(subjectDir));
-  const reached = noEffectActs(cases);
+  const driven = drivenRows(cases, world);
   const findings: LintFinding[] = [];
   for (const [act, codes] of [...seamRowsByAct(subjectDir, facts)]
       .sort(([a], [b]) => a.localeCompare(b))) {
-    if (reached.has(act) || (spoken.get(act) ?? []).length > 0) continue;
-    findings.push({ code: 'SEAM_UNREACHED',
-      sentence: `no case drives '${act}' into a refusal, and no seam law on this card speaks for `
-        + `it — the world can refuse that call at ${seamRowNames(act, codes)}, and an operator `
-        + `who meets one of those codes meets it bare. A contract.seam entry on '${act}' pays the `
-        + `sentence the day a case reaches this seam.` });
+    for (const code of [...codes].sort()) {
+      if (driven.get(act)?.has(code) === true || (spoken.get(act) ?? []).includes(code)) continue;
+      findings.push({ code: 'SEAM_UNREACHED',
+        sentence: `no case drives into '${act} · ${code}', and no seam law names it — an operator `
+          + `who meets that code meets it bare. A contract.seam entry on '${act}' for '${code}' `
+          + `pays the sentence the day a case reaches this row.` });
+    }
   }
   return findings;
 }

@@ -25,10 +25,15 @@ house-law rule steps over it — a desk whose lane cannot make the call would be
 about a code it never meets. Slot rules cover the sentences, and a code the computed seam does not
 carry is refused by its own path, naming the codes the act IS refused with.
 
-`seamSpoken` reads that debt back scoped to the exam: an act a case lists under
-`noEffectToolCalls`, with no law on the card around any refusal it answers with. It is exported
-and not folded into `runGate` — every sentence it asks for is a sentence the prompt carries on
-every turn, so which of an act's refusals are worth stating is a budget the author spends.
+`seamSpoken` reads that debt back row by row, inside `runGate`. A case that carries a preset and
+lists an act under `noEffectToolCalls` drives the world into one row: the act's executor is run
+over the declared records, base and preset, with the arguments the case's matcher supplies, and
+the row is driven when the preset run refuses with a code the base run does not answer. A driven
+row whose code no seam law names fails the gate; a case with no preset drives into nothing — the
+no-effect it expects is the consent hold's work, and the world never refuses. Every other
+unspoken row comes back under the gate's `seams` budget, one warning line per row, printed with
+the run and failing nothing — which refusals are worth a sentence the prompt then carries on
+every turn stays the author's spend.
 
 `noEffectDenied` joins `runGate`. A case that lists an act under `noEffectToolCalls` measures a
 refusal, and an act standing behind `onlyAfter` alone produces none: the order is satisfied by

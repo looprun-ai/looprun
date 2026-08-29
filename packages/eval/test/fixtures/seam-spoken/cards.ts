@@ -1,7 +1,7 @@
-/** The spoken sibling of seam-unspoken: the same world, and a seam law on the one act a case
- *  drives into, so the operator who meets that refusal meets it in words the card wrote. The act
- *  no case reaches stays unspoken on purpose — its row is the budget line the gate prints and
- *  never fails. */
+/** The spoken sibling of seam-unspoken: the same world, and a seam law on the one ROW a case
+ *  drives into, so the operator who meets that refusal meets it in words the card wrote. The
+ *  settle's second code and the archive's only code stay unspoken on purpose — each is its own
+ *  budget line, printed by the gate and failed only when a case drives into it. */
 import type { Json } from '@looprun-ai/core';
 import { world } from '@looprun-ai/core';
 
@@ -28,8 +28,8 @@ const VOICES = ['declareHonestly', 'oneQuestion', 'yourLaneYourReads', 'recordsO
 const conduct = (taught: readonly string[]): readonly Rule[] =>
   taught.map(voice => prose(voice, `The ${voice} law, in this house's own words.`));
 
-/** The reason each prose-only rule exists: the settle's refusal is the one seam this card pays
- *  a sentence for. */
+/** The reason each prose-only rule exists: the settle's BLOCKED_Y row is the one seam row this
+ *  card pays a sentence for. */
 export const WHY = { 'seam:settleClaim:BLOCKED_Y': 'seam' };
 
 /** The world's own refusal channel: a refused call moves nothing and answers with its code. */
@@ -40,11 +40,15 @@ export const claimsWorld = world({
   reads: { getClaim: { form: 'get', entity: 'claims', label: 'Look up a claim' } },
   writes: { settleClaim: { form: 'run', entity: 'claims', label: 'Settle a claim' },
             archiveClaim: { form: 'run', entity: 'claims', label: 'Archive a claim' } },
-  presets: { blocked: [{ entity: 'claims', id: 'clm_1', set: { status: 'BLOCKED' } }] }
+  presets: { blocked: [{ entity: 'claims', id: 'clm_1', set: { status: 'BLOCKED' } }],
+             escrowed: [{ entity: 'claims', id: 'clm_1', set: { status: 'ESCROW' } }] }
 }, {
-  settleClaim: ({ records }) => records.claims?.clm_1?.status === 'OPEN'
-    ? { result: { settled: true }, patches: [] }
-    : fail('BLOCKED_Y'),
+  settleClaim: ({ records }) => {
+    const status = records.claims?.clm_1?.status;
+    if (status === 'BLOCKED') return fail('BLOCKED_Y');
+    if (status === 'ESCROW') return fail('CLAIM_ESCROWED');
+    return { result: { settled: true }, patches: [] };
+  },
   archiveClaim: ({ records }) => records.claims?.clm_1?.status === 'CLOSED'
     ? { result: { archived: true }, patches: [] }
     : fail('CLAIM_STILL_OPEN')

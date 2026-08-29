@@ -68,10 +68,10 @@ export function censusFor(subject: CensusSubject): ReadonlySet<string> {
   return names;
 }
 
-/** What the gate answers: the failing rows, and the seam budget lines beside them. The gate is
- *  red exactly when `findings` is non-empty. `seams` fails nothing — each line is a refusal row
- *  no case reaches, printed with the run so the author sees the unspoken seam without paying a
- *  prompt sentence for it. */
+/** What the gate answers: the failing rows, and the seam budget beside them. The gate is red
+ *  exactly when `findings` is non-empty. `seams` fails nothing — one line per row of the seam
+ *  table that no case drives into and no seam law names, printed with the run so the whole
+ *  unspoken table stays visible without a prompt sentence paid for any of it. */
 export interface GateReport {
   readonly findings: readonly LintFinding[];
   readonly seams: readonly LintFinding[];
@@ -83,11 +83,13 @@ export interface GateReport {
  *  an author answers, and a question is not a failure. The census verb is not here either: it
  *  reads a RUN's dumps, which a subject directory does not carry.
  *
- *  The seam rides as a budget. Every seam sentence is a sentence the prompt then carries on every
- *  turn, so how many of an act's refusals are worth stating is the author's spend — until the
- *  exam drives into one. A refusal a case's scenario reaches puts an operator in front of it, and
- *  that row unspoken is a failing finding; the rows no case reaches ride back under `seams`,
- *  warnings that print with the run and fail nothing.
+ *  The seam rides as a budget, row by row. A case's preset can leave the world refusing an act
+ *  with one code — the case drives into that row, its operator stands in front of that refusal,
+ *  and the row unspoken is a failing finding; a seam law on one of the act's other codes pays
+ *  nothing for it. A case with no preset drives into nothing: the no-effect it expects is the
+ *  consent hold's work. Every other unspoken row rides back under `seams`, one warning line per
+ *  row, printed with the run and failing nothing — which refusals are worth a sentence the prompt
+ *  then carries on every turn stays the author's spend.
  *
  *  One problem, one row: two verbs reading the same refused card answer with the same sentence,
  *  and a list that prints it twice teaches nothing the first row did not. */
@@ -123,9 +125,9 @@ export function runGate(subjectDir: string, subject: GateSubject): GateReport {
     // An act the exam expects refused is an act the cards can refuse: a mechanism that decides the
     // call, not an order that reading clears.
     ...noEffectDenied(subjectDir, cases),
-    // The same act meets the operator at the seam: the refusal the exam drives it into is spoken
-    // on the cards, or the gate is red.
-    ...seamSpoken(subjectDir, cases, facts),
+    // The same act meets the operator at the seam: every row a case's preset drives the world
+    // into is spoken on the cards under its own code, or the gate is red.
+    ...seamSpoken(subjectDir, cases, subject.world),
     ...(censusNames === null ? [] : coversResolve(cases, censusNames)),
     // A case covers a guard to prove it fires; whether its scenario leaves that guard able to
     // refuse is answered for every subject, and no subject sits this verb out.
@@ -133,5 +135,5 @@ export function runGate(subjectDir: string, subject: GateSubject): GateReport {
   ];
   const findings = answered.filter((finding, at) => answered
     .findIndex(other => other.code === finding.code && other.sentence === finding.sentence) === at);
-  return { findings, seams: seamUnreached(subjectDir, cases, facts) };
+  return { findings, seams: seamUnreached(subjectDir, cases, facts, subject.world) };
 }
