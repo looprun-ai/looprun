@@ -472,3 +472,19 @@ test('a message that is exactly a live code routes to the desk holding the quest
   expect(router.seen).toHaveLength(1);
   expect(billing.model.seen).toHaveLength(0);
 });
+
+test('a desk of the house is handed each colleague\'s own description line', async () => {
+  const specs: Record<string, AgentSpec> = {
+    yard: { name: 'yard', persona: 'You run the yard.', description: DESCRIPTIONS.yard, summary: 'the yard' },
+    billing: { name: 'billing', persona: 'You run billing.', description: DESCRIPTIONS.billing, summary: 'the billing' } };
+  const agent = RoutedAgent.fromSubject({ specs, world: BOOKING,
+    model: { scripted: { steps: [] } } }) as RoutedAgent;
+
+  const desks = (agent as never as { desks: Record<string, { ready: Promise<{ assembled:
+    { config: { compiled: unknown } } }> }> }).desks;
+  const yard = JSON.stringify((await desks.yard.ready).assembled.config.compiled);
+  const billing = JSON.stringify((await desks.billing.ready).assembled.config.compiled);
+
+  expect(yard).toContain(DESCRIPTIONS.billing);     // the colleague's own line, injected
+  expect(billing).toContain(DESCRIPTIONS.yard);
+});
