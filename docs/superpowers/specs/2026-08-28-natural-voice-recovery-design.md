@@ -44,7 +44,7 @@ not a count.
 
 ## 2 · The strategy: a new branch, a surgical revert floor
 
-A new branch off `main`. `main` stays untouched until the program's final merge.
+A new branch off `main`. A phase merges into `main` when it certifies and closes — F0 and F1 landed together after F1's close.
 
 The floor is `git revert` of the three delivery commits (`324f016` the natural reply,
 `3fc9554` + `7555943` its proofs) on top of current `main` — not a branch rooted before
