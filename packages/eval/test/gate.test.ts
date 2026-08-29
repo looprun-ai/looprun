@@ -13,7 +13,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { world } from '@looprun-ai/core';
 import type { AgentSpec, ExamCase } from '@looprun-ai/core';
-import { runGate, type GateSubject } from '../src/gate.js';
+import { censusFor, runGate, type GateSubject } from '../src/gate.js';
 import { ordersDesk as brokenOrders, ordersWorld as BROKEN_WORLD, refundsDesk as brokenRefunds,
          returnsDesk as brokenReturns } from './fixtures/gate-broken/cards.js';
 import { ordersContract, ordersDesk, ordersWorld as SOUND_WORLD,
@@ -182,5 +182,29 @@ describe('runGate', () => {
     expect(findings.find(f => f.code === 'GUARD_PHASE_MISSING')?.sentence).toContain("'orders'");
     // Both caps read the same refused card, and the list carries what it says once.
     expect(codes.filter(code => code === 'GUARD_PHASE_MISSING')).toHaveLength(1);
+  });
+
+  test('the census walks past a card that does not compile, and the gate reports it', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'gate-census-'));
+    writeFileSync(join(dir, 'cards.ts'), 'export const CONTRACT = { guards: [] };\n');
+    // A guard that types no phase: the factory refuses this desk, so the census carries none of
+    // its names — and the gate, called exactly as the emitted gate calls it, still answers with
+    // findings: the card's own problem, and the covers key that now resolves nowhere. Both are
+    // true at once, and neither suppresses the other.
+    const phaseless = { name: 'orders', persona: 'You are the orders desk.',
+      guards: [{ name: 'readBeforeYouAnswer', rule: 'State what the read returned.' }] };
+    const specs = { orders: phaseless } as unknown as Readonly<Record<string, AgentSpec>>;
+    const subjectWorld = world({ records: { orders: { ord_7: { status: 'OPEN' } } },
+      reads: { getOrder: { form: 'get', entity: 'orders', label: 'Look up an order' } } });
+    const gate = runGate(dir, {
+      world: subjectWorld, specs, contract: undefined,
+      cases: [{ id: 'census-01', split: 'fix', turns: ['read ord_7'],
+                covers: ['readBeforeYouAnswer'],
+                rubric: 'The reply states what the read returned.' }],
+      censusNames: censusFor({ specs, contract: undefined, world: subjectWorld }),
+      presetLeavesGuardInert: () => false });
+    const codes = gate.findings.map(f => f.code);
+    expect(codes).toContain('GUARD_PHASE_MISSING');
+    expect(codes).toContain('COVERS_UNRESOLVED');
   });
 });

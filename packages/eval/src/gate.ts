@@ -1,7 +1,7 @@
 /** The one gate over a subject: every verb that answers with findings, one list, one answer. */
 import type { AgentSpec, DeclaredWorld, DomainContract, ExamCase, LiveWorldCard,
               McpWorldCard } from '@looprun-ai/core';
-import { AgentFactory, factsFromWorld, Rulebook } from '@looprun-ai/core';
+import { AgentFactory, CardError, factsFromWorld, Rulebook } from '@looprun-ai/core';
 import { approvable, capPaths, cardWeight, conductComplete, coversResolve,
          destructiveDisclosed, floorRedeclared, inertChecks, laneWidth, nameGate, noEffectDenied,
          overWide, pairing, presetsDeclared, purity, seamSpoken, seamUnreached,
@@ -46,14 +46,23 @@ export interface CensusSubject {
  *  here keeps a list of guard names, so a row the engine adds arrives here the day it is added.
  *
  *  The union across desks is the answer because a case names the guard it means to trip and the
- *  desk it runs on is the case's own business. */
+ *  desk it runs on is the case's own business.
+ *
+ *  A desk whose card does not compile installs no guards, so it puts no names in the census and
+ *  the census still answers: the gate's own verbs report that card's problems as findings, and a
+ *  covers key spelled against the refused desk resolves nowhere — both statements reach the
+ *  author in the same list. */
 export function censusFor(subject: CensusSubject): ReadonlySet<string> {
   const facts = factsFromWorld(subject.world);
   const factory = new AgentFactory();
   const names = new Set<string>();
   for (const desk of Object.values(subject.specs)) {
-    for (const guard of new Rulebook(factory.governed(desk, subject.contract, facts)).guards().guards) {
-      names.add(guard.name);
+    try {
+      for (const guard of new Rulebook(factory.governed(desk, subject.contract, facts)).guards().guards) {
+        names.add(guard.name);
+      }
+    } catch (error) {
+      if (!(error instanceof CardError)) throw error;
     }
   }
   return names;
