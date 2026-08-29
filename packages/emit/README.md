@@ -55,18 +55,21 @@ contract:
     - { path: customer.taxId, mode: omit }    # omit drops the key; mask stars the value
   wording:                               # optional: the engine sentences this business says
     status: { held: "awaiting your word" }    # differently, keyed by the engine's own names
-  limits: { }                            # optional, numbers only
+  limits: { calls: 8, destructive: 1 }    # optional; calls · destructive · retries ·
+                                         # questionTurns — an empty map states no ceiling
 desks:                                   # required, a sequence
   - name: frontdesk
     persona: "One desk's own voice."
     tools: [getBooking, listHolds, cancelBooking]
-    teammates: { billing: "what billing does" }    # optional
+    summary: "what a person at the counter calls this desk."   # required once a second desk stands
+                                                               # beside this one, with description
+                                                               # — a lone desk must carry no description
     conduct:                             # required: law name → this desk's wording of it
       declareHonestly: "…"
     judged:                              # optional: the session's own model answers, per reply
       - { factory: lieCheck, acts: [cancelBooking] }   # lieCheck · impossibilityCheck ·
                                                        # injectionCheck · hallucinationCheck
-    limits: { }                          # optional, numbers only
+    limits: { calls: 6 }                 # optional; the desk's figure wins per field
 ```
 
 ## Every refusal, with its message
@@ -85,6 +88,7 @@ of them printed together, so one run shows everything.
 | a `needs` alias is neither form | ``must be a read, or a mapping of the read `tool` and the `args` it is answered from`` |
 | a `secrets` entry is neither form | ``must be a field name, or a mapping of the `path` and the `mode` it is treated with`` |
 | a `seam` act is not a mapping | `must be a mapping of refusal code to the sentence the operator meeting it needs` |
+| two guards carry the same `name` | `is 'X', which the guard at line N already carries. A guard's name is the row it mints in the census and the key a case covers, so two guards under one name are one row nothing can tell apart — name each guard for the law it carries.` |
 | the document root is not a mapping | `the document root must be a mapping` |
 | the YAML itself does not parse | the parser's own message, at its line |
 
@@ -96,13 +100,19 @@ of them printed together, so one run shows everything.
 | a judged act does not exist, or sits outside the desk's lane | `…names 'X', and the '<desk>' desk's lane holds '<tools>' — scope the check to an act this desk performs, or declare it on the desk that does.` |
 | a guard's configuration names a missing act (`onlyAfter`'s `after`) | `contract.guards[i].args.after names 'X', and the surface declares no such act — did you mean 'Y'?` |
 | a guard's configuration names an argument outside its act's schema | `contract.guards[i].args.arg names 'X', and '<act>' accepts '<args>'. Pointed at an argument its act does not carry, <the cost>.` — the cost is the factory's own: `valueFromUser` *refuses every call of it*; `argFormat` / `argAbsent` *never fires* |
+| `valueFromUser` binds an argument its act does not require | `contract.guards[i].args.arg names 'X', and '<act>' requires '<required>' — a call of '<act>' may leave 'X' out, and valueFromUser refuses a call that carries no value there. Point the guard at an argument '<act>' requires, or make 'X' one of them.` |
 | a destructive act discloses nothing | ``contract.disclosure.<act> is missing: <act> is destructive and declares no `before` — add one naming what must be confirmed first.`` |
 | `precondition` reads a record over a targetless act | `contract.guards[i] reads args.reads: 'record' over 'X', and X declares no target — point the guard at an act with a target, or drop the record read.` |
 | a `needs` alias names a missing tool | `contract.disclosure.<act>.needs.<alias> names 'Y', and the surface declares no such tool — did you mean 'Z'?` |
 | a full-form `needs` leaves a required argument unfilled | `…hands <read> '<stated>', and <read> requires '<missing>' — state '<missing>' in args, or point needs.<alias> at a read whose every argument is optional.` |
 | a short-form `needs` read cannot accept the held call's target | `…needs <read> to accept the held call's target '<id>', and <read> only accepts '<args>' — repoint needs.<alias> at a read that accepts '<id>', or give <act> a target.` |
 | a desk holds the act without the owed read in its lane | `…names '<read>', and the '<desk>' desk holds '<act>' without it — the desk cannot run the owed read, and the empty tense would fire with a false reason on every call. Put '<read>' in the <desk> lane, or point needs.<alias> at a read that lane holds.` |
+| an `after` names nothing the call returned | ``contract.disclosure.<act>.after carries no '{result.}' slot: an after is read once '<act>' has run, and this one is written from the held call's args and the owed reads alone — it says the same words whether the act ran or not. Name a field the result carries, as {result.<field>}.`` |
+| an `empty` sentence is rooted outside the held call's args | `contract.disclosure.<act>.empty carries '{<slot>}', rooted on '<root>' — '<root>' is a read this entry owes, and it is a read that answered nothing. The empty sentence speaks when the owed reads answered nothing, and it renders over the held call's own args alone — write it from {args.*} slots only.` |
+| a `choiceFromUser` term is spelled inside another value's term | `contract.guards[i].args.terms: '<inner>' states '<value>' and is spelled inside '<outer>', which states '<other>'. The check searches the operator's own messages for these words as written, so a message saying '<outer>' states '<other>' and states '<value>' with it — the gate passes the value nobody chose. Give '<value>' and '<other>' words neither one contains.` |
 | a seam act does not exist · has no spelled refusal · sits in no lane · names a code never answered | `contract.seam.<act> names an act the surface does not declare` · `the world spells out no refusal on '<act>', so the seam table carries no row for it — read gen/SEAM.md and pay a row it lists.` · `no desk's lane holds '<act>', and a seam law renders on the desks that hold its act — put '<act>' in a desk's tools, or drop the entry.` · `'<act>' is refused with '<codes>', and never with '<code>' — did you mean 'Y'?` |
+| a desk of a house of two or more states no routing line, a blank one, no summary or a summary carrying a comma · a lone desk states a routing line | `desks[i].description is missing: a house of N desks routes every message by the description line each desk states, and '<desk>' declares none — add the routing line '<desk>' answers to.` · `desks[i].description says nothing on '<desk>': … a blank line matches no message — write the routing line '<desk>' answers to.` · `desks[i].summary is missing on '<desk>': the house refuses a message no desk performs by naming what it does cover, in the words a person at the counter would use — write what somebody would call '<desk>'.` · `desks[i].summary on '<desk>' carries a comma: the comma is the house's own list separator when it names what it covers, so a summary carrying one dissolves the boundary between two desks.` · `desks[0].description is set on '<desk>': a house of one desk has no router in front of it to read that line, so it can never be reached — drop description, or declare a second desk for the router to choose between.` |
+| a desk of a house of two or more teaches fewer than the six voices | `desks[i].conduct says nothing under '<voice>' on '<desk>': a house of N desks hands one operator from counter to counter, and a voice this desk never states is a law its prompt never carries — one message reaches '<desk>' and is answered by a different law than the desk beside it. Write '<voice>' here too, in the words '<desk>' uses.` |
 
 ### Composing the cards — the declaration does not say enough, or says too much
 
