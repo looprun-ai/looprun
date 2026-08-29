@@ -240,26 +240,39 @@ function checkDestructiveDisclosed(declaration: Declaration, facts: SurfaceFacts
  *  The asked-for law is the register's own: a guard counts for an act only when every act it
  *  names is on the register. A conduct rule that also spans non-minting acts is a wider law —
  *  reading the standing freezes before any change, say — that touches a minting act without
- *  licensing its birth. */
+ *  licensing its birth.
+ *
+ *  Every entry on the register names an act the world card declares. An entry spelled one letter
+ *  off marks no birth at all: the act it was written for is emitted with neither the asked-for law
+ *  nor the after, and the register reads as though that record opens itself. */
 function checkCreatesLawAndAfter(declaration: Declaration, facts: SurfaceFacts): readonly string[] {
   const refusals: string[] = [];
   const register = new Set(facts.creates ?? []);
-  for (const act of facts.creates ?? []) {
-    if (facts.tools[act] === undefined) continue;
+  const toolNames = Object.keys(facts.tools);
+  (facts.creates ?? []).forEach((act, index) => {
+    if (facts.tools[act] === undefined) {
+      const near = closestName(act, toolNames);
+      refusals.push(`world.creates[${index}] names '${act}', and the world card declares no such `
+        + `act — the entry marks no birth, and the act it was written for opens a record with `
+        + `neither the asked-for law nor the after.`
+        + `${near === null ? '' : ` Did you mean '${near}'?`}`);
+      return;
+    }
     const lawed = declaration.contract.guards.some(guard => guard.factory === 'prose'
       && guard.args?.why === 'conduct' && guard.acts.includes(act)
       && guard.acts.every(named => register.has(named)));
     if (!lawed) {
       refusals.push(`contract.guards: the act '${act}' opens a new record and carries no prose `
         + `law licensed conduct — declare the asked-for law: a prose guard claiming `
-        + `args.why: conduct, whose acts name '${act}'.`);
+        + `args.why: conduct, whose acts name '${act}' and no act off the register — a law `
+        + `shared with non-register acts is a different law.`);
     }
     if (declaration.contract.disclosure[act]?.after === undefined) {
       refusals.push(`contract.disclosure.${act}.after is missing: '${act}' opens a new record, `
         + `and the after is the sentence the operator reads once it exists — add one naming `
         + `what the call came back with, as {result.<field>}.`);
     }
-  }
+  });
   return refusals;
 }
 
@@ -566,7 +579,8 @@ function checkSeamRows(declaration: Declaration, facts: SurfaceFacts,
  *  outside that desk's lane, a guard whose configuration names one, a guard whose
  *  configuration names an argument its act's schema does not declare, a `valueFromUser` bound to
  *  an argument its act does not require, a destructive act with nothing disclosed before it runs,
- *  a record-opening act with no prose law licensed conduct or with no `after`,
+ *  a birth register entry naming no declared act, a record-opening act with no prose law licensed
+ *  conduct or with no `after`,
  *  a `precondition` reading a record over an act with no target, a disclosure `needs` alias naming
  *  a tool that does not exist, a disclosure alias whose read cannot answer the call it is held
  *  for, a disclosure alias naming a read the lane of a desk holding the act does not carry, an

@@ -46,7 +46,7 @@ not carried them.
 
 ```
   the WORLD CARD     what exists, and what a tool DOES to it
-                     records · reads · writes · destructive
+                     records · reads · writes · destructive · creates
 
   the AGENT SPEC     how ONE desk behaves
                      name · persona · tools · description · summary · guards · llmParams · limits
@@ -55,6 +55,10 @@ not carried them.
   CONTRACT           voice · facts · guards · disclosure · secrets · rewrites ·
                      wording · limits
 ```
+
+`creates` is the birth register: the acts that mint a record that did not exist, each owing a
+prose law licensed `conduct` naming it and a `disclosure.<act>.after` saying which record now
+stands.
 
 There is no fourth thing. No hooks, no loop, no return protocol, no tool plumbing.
 

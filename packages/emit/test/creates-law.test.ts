@@ -13,14 +13,22 @@ import { decl } from './helpers.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
-/** A school's surface: one act that mints a student record, one read beside it. The register
- *  marks the minting act alone. */
-const SCHOOL = { tools: {
+/** A school's acts: one that mints a student record, one that mints a quote, one read beside
+ *  them. */
+const TOOLS = {
   enrollStudent: { name: 'enrollStudent', effect: 'write', target: null, entity: 'students',
+    schema: { properties: { fields: {} }, required: ['fields'] } },
+  generateQuote: { name: 'generateQuote', effect: 'write', target: null, entity: 'quotes',
     schema: { properties: { fields: {} }, required: ['fields'] } },
   getStudent: { name: 'getStudent', effect: 'read', target: 'id', entity: 'students',
     schema: { properties: { id: {} }, required: ['id'] } }
-}, creates: ['enrollStudent'] } as never;
+};
+
+/** The school's surface, whose register marks the enrolment alone. */
+const SCHOOL = { tools: TOOLS, creates: ['enrollStudent'] } as never;
+
+/** The same surface whose register misspells the quote act: a name no act on the card carries. */
+const TYPO = { tools: TOOLS, creates: ['generateQuot'] } as never;
 
 const ASKED_FOR: DeclaredGuard = {
   name: 'tool:studentsEnrollOnlyWhenAsked', acts: ['enrollStudent'],
@@ -72,9 +80,17 @@ describe('the birth register demands the asked-for law and the after', () => {
   });
 
   test('an act outside the birth register owes neither', () => {
-    const unmarked = { ...(SCHOOL as { tools: unknown }), creates: [] } as never;
+    const unmarked = { tools: TOOLS, creates: [] } as never;
     expect(checkAgainstSurface(decl({ guards: [], disclosure: {}, desks: DESKS }), unmarked, []))
       .toEqual([]);
+  });
+
+  test('a register entry naming an act the surface lacks is refused, near miss named', () => {
+    const refusals = checkAgainstSurface(
+      decl({ guards: [ASKED_FOR], disclosure: AFTER, desks: DESKS }), TYPO, []);
+    expect(refusals).toEqual([expect.stringContaining(
+      "world.creates[0] names 'generateQuot', and the world card declares no such act")]);
+    expect(refusals[0]).toContain("Did you mean 'generateQuote'?");
   });
 });
 

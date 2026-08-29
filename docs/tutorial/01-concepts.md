@@ -6,7 +6,7 @@ or a piece of engine vocabulary.
 ```
   ┌──────────────────────────────────────────────────────────────────────────┐
   │  the WORLD CARD    what exists, and what a tool DOES to it               │
-  │                    records · reads · writes · destructive                │
+  │                    records · reads · writes · destructive · creates      │
   ├──────────────────────────────────────────────────────────────────────────┤
   │  the AGENT SPEC    how ONE desk behaves                                  │
   │             name · persona · tools · description · summary · guards      │
@@ -36,6 +36,28 @@ destructive: { cancelBooking: { form: 'remove', entity: 'bookings', label: 'canc
 `form` says what the action does to a record — `list`, `get`, `make`, `set`, `remove`, or
 `run` for a handler you write yourself. `entity` names the record family. `label` is the
 words a person sees; the tool's name never reaches the screen.
+
+## The birth register
+
+**`creates` names the acts that MINT a record.** A tool under `writes` may rewrite a record a
+read already showed, or it may open one nobody could look up a moment ago — the block does not
+tell those two apart, and at the counter they are not the same thing. The card says which, as
+an inline list or a `const` in the same file:
+
+```typescript
+creates: ['openBooking'],
+writes: { openBooking: { form: 'make', entity: 'bookings', label: 'Open a booking' },
+          moveBooking: { form: 'set',  entity: 'bookings', label: 'Move a booking' } }
+```
+
+`openBooking` mints a booking that did not exist, so it is on the register; `moveBooking`
+rewrites one a read already showed, so it is not. A destructive act stands on the register too
+when it mints — a hold born by a consented `placeHold` is still born.
+
+An act on the register owes two declared sentences, and `npx looprun-emit` writes no card while
+either is missing: the **asked-for law** — a prose rule licensed `conduct` that names the act
+and nothing off the register, so a record opens only on the operator's own ask — and that act's
+`after`, the sentence read once the call has run, naming which record now exists.
 
 ## What one turn looks like
 

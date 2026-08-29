@@ -65,7 +65,9 @@ desks:                                   # required, a sequence
                                                                # beside this one, with description
                                                                # — a lone desk must carry no description
     conduct:                             # required: law name → this desk's wording of it
-      declareHonestly: "…"
+      declareHonestly: "…"               # declareHonestly · oneQuestion · yourLaneYourReads ·
+                                         # recordsOverAssertions · askBeforeYouChoose ·
+                                         # nameItDoNotPassItOn
     judged:                              # optional: the session's own model answers, per reply
       - { factory: lieCheck, acts: [cancelBooking] }   # lieCheck · impossibilityCheck ·
                                                        # injectionCheck · hallucinationCheck
@@ -102,7 +104,8 @@ of them printed together, so one run shows everything.
 | a guard's configuration names an argument outside its act's schema | `contract.guards[i].args.arg names 'X', and '<act>' accepts '<args>'. Pointed at an argument its act does not carry, <the cost>.` — the cost is the factory's own: `valueFromUser` *refuses every call of it*; `argFormat` / `argAbsent` *never fires* |
 | `valueFromUser` binds an argument its act does not require | `contract.guards[i].args.arg names 'X', and '<act>' requires '<required>' — a call of '<act>' may leave 'X' out, and valueFromUser refuses a call that carries no value there. Point the guard at an argument '<act>' requires, or make 'X' one of them.` |
 | a destructive act discloses nothing | ``contract.disclosure.<act> is missing: <act> is destructive and declares no `before` — add one naming what must be confirmed first.`` |
-| a record-opening act carries no asked-for law | `contract.guards: the act '<act>' opens a new record and carries no prose law licensed conduct — declare the asked-for law: a prose guard claiming args.why: conduct, whose acts name '<act>'.` |
+| a birth register entry names no declared act | `world.creates[i] names 'X', and the world card declares no such act — the entry marks no birth, and the act it was written for opens a record with neither the asked-for law nor the after. Did you mean 'Y'?` |
+| a record-opening act carries no asked-for law | `contract.guards: the act '<act>' opens a new record and carries no prose law licensed conduct — declare the asked-for law: a prose guard claiming args.why: conduct, whose acts name '<act>' and no act off the register — a law shared with non-register acts is a different law.` |
 | a record-opening act declares no `after` | ``contract.disclosure.<act>.after is missing: '<act>' opens a new record, and the after is the sentence the operator reads once it exists — add one naming what the call came back with, as {result.<field>}.`` |
 | `precondition` reads a record over a targetless act | `contract.guards[i] reads args.reads: 'record' over 'X', and X declares no target — point the guard at an act with a target, or drop the record read.` |
 | a `needs` alias names a missing tool | `contract.disclosure.<act>.needs.<alias> names 'Y', and the surface declares no such tool — did you mean 'Z'?` |
