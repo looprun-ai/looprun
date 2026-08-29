@@ -2,7 +2,7 @@
 import type { AgentSpec, DeclaredWorld, DomainContract, ExamCase, LiveWorldCard,
               McpWorldCard } from '@looprun-ai/core';
 import { AgentFactory, factsFromWorld, Rulebook } from '@looprun-ai/core';
-import { approvable, capPaths, coversResolve,
+import { approvable, capPaths, conductComplete, coversResolve,
          destructiveDisclosed, floorRedeclared, inertChecks, nameGate, noEffectDenied, overWide,
          pairing, presetsDeclared, purity,
          unlicensed, unspokenChecks, type LintFinding } from './lints.js';
@@ -82,6 +82,9 @@ export function runGate(subjectDir: string, subject: GateSubject): readonly Lint
     ...unlicensed(subjectDir),
     ...overWide(subjectDir),
     ...floorRedeclared(subjectDir),
+    // The desks as the caller holds them, not as the source spells them: a conduct law is a guard
+    // on the compiled spec, and the six voices are read off every desk of the house at once.
+    ...conductComplete(subject.specs),
     ...capPaths(subjectDir),
     ...inertChecks(subjectDir, facts.tools),
     ...unspokenChecks(subjectDir),

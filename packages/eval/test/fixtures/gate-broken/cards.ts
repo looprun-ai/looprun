@@ -24,6 +24,14 @@ const precondition = (tool: string, holds: (held: Held) => boolean): Check => ({
   deny: held => holds(held) ? null : 'the order is not in a state this act reads'
 });
 
+/** The six voices a house teaches at every one of its counters, each carried by the conduct law
+ *  named after it. */
+const VOICES = ['declareHonestly', 'oneQuestion', 'yourLaneYourReads', 'recordsOverAssertions',
+                'askBeforeYouChoose', 'nameItDoNotPassItOn'];
+
+const conduct = (taught: readonly string[]): readonly Rule[] =>
+  taught.map(voice => prose(voice, `The ${voice} law, in this house's own words.`));
+
 /** purity: a subject carries no regex — patterns live in the engine catalog. */
 export const orderIdShape = /^ord_[0-9]+$/;
 
@@ -38,25 +46,29 @@ export const ordersWorld = world({
   presets: { quiet: [{ entity: 'orders', id: 'ord_7', set: { status: 'CLOSED' } }] }
 });
 
-/** conductComplete: two desks teach a law the third never reads.
- *  unlicensed: neither rule claims a reason, and no WHY map names one. */
+/** unlicensed: this rule claims no reason, and no WHY map names one. */
 export const ordersDesk = {
   name: 'ordersDesk',
   persona: 'You are the orders desk.',
-  guards: [prose('answerFromTheRecord', 'Every figure you state comes from a read on this turn.')]
+  guards: [...conduct(VOICES),
+           prose('answerFromTheRecord', 'Every figure you state comes from a read on this turn.')]
 };
 
 export const refundsDesk = {
   name: 'refundsDesk',
   persona: 'You are the refunds desk.',
-  guards: [prose('answerFromTheRecord', 'Every figure you state comes from a read on this turn.')]
+  guards: [...conduct(VOICES),
+           prose('answerFromTheRecord', 'Every figure you state comes from a read on this turn.')]
 };
 
-/** floorRedeclared: 'confirmFirst' is a guard the engine installs itself. */
+/** conductComplete: the two desks above teach all six voices and this one teaches five, so the
+ *  operator handed here meets a house that stops asking one question at a time.
+ *  floorRedeclared: 'confirmFirst' is a guard the engine installs itself. */
 export const returnsDesk = {
   name: 'returnsDesk',
   persona: 'You are the returns desk.',
-  guards: [prose('confirmFirst', 'Ask before you act.')]
+  guards: [...conduct(VOICES.filter(voice => voice !== 'oneQuestion')),
+           prose('confirmFirst', 'Ask before you act.')]
 };
 
 export const ordersContract = {

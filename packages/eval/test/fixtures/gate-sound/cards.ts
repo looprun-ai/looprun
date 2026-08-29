@@ -28,6 +28,14 @@ const onlyAfter = (tool: string, prerequisite: string): Check => ({
   deny: () => `${prerequisite} has not succeeded yet this conversation`
 });
 
+/** The six voices a house teaches at every one of its counters, each carried by the conduct law
+ *  named after it. Both desks below teach all six. */
+const VOICES = ['declareHonestly', 'oneQuestion', 'yourLaneYourReads', 'recordsOverAssertions',
+                'askBeforeYouChoose', 'nameItDoNotPassItOn'];
+
+const conduct = (taught: readonly string[]): readonly Rule[] =>
+  taught.map(voice => prose(voice, `The ${voice} law, in this house's own words.`));
+
 /** The reason each prose-only rule exists: one of noSuchAct, aboutARead, conduct, seam,
  *  measured:<case>. */
 export const WHY = {
@@ -44,12 +52,13 @@ export const ordersWorld = world({
   destructive: { deleteOrder: { form: 'remove', entity: 'orders', label: 'Delete an order' } }
 });
 
-/** Both desks teach the same conduct law, in the same words: a law on one desk and not the other
+/** Both desks teach the same conduct laws, in the same words: a law on one desk and not the other
  *  is a desk that never learns it. */
 export const ordersDesk = {
   name: 'ordersDesk',
   persona: 'You are the orders desk.',
-  guards: [prose('answerFromTheRecord', 'Every figure you state comes from a read on this turn.'),
+  guards: [...conduct(VOICES),
+           prose('answerFromTheRecord', 'Every figure you state comes from a read on this turn.'),
            // The law the operator hears around the refusal the WORLD spells out on this act. It
            // is read by the desk that can make the call, and by no other.
            prose('seam:closeOrder:stateIs:status',
@@ -60,7 +69,8 @@ export const ordersDesk = {
 export const returnsDesk = {
   name: 'returnsDesk',
   persona: 'You are the returns desk.',
-  guards: [prose('answerFromTheRecord', 'Every figure you state comes from a read on this turn.')]
+  guards: [...conduct(VOICES),
+           prose('answerFromTheRecord', 'Every figure you state comes from a read on this turn.')]
 };
 
 export const ordersContract = {

@@ -103,6 +103,7 @@ describe('runGate', () => {
       'CASE_PRESET_UNKNOWN',     // presetsDeclared
       'CHECK_INERT',             // inertChecks
       'CHECK_UNSPOKEN',          // unspokenChecks
+      'CONDUCT_INCOMPLETE',      // conductComplete
       'COVERS_UNRESOLVED',       // coversResolve
       'DISCLOSURE_BEFORE_MISSING',   // destructiveDisclosed
       'DISCLOSURE_BEFORE_UNFIGURED', // destructiveDisclosed

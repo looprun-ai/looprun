@@ -1663,6 +1663,37 @@ export function floorRedeclared(subjectDir: string): readonly LintFinding[] {
 }
 
 
+/** The six voices a house teaches, one conduct law each. A conduct law is a prose guard on the
+ *  desk that carries it, and a spec guard's rule renders into that desk's system prefix — so a
+ *  voice a desk does not carry is a law that desk never reads. */
+const VOICES = ['declareHonestly', 'oneQuestion', 'yourLaneYourReads', 'recordsOverAssertions',
+  'askBeforeYouChoose', 'nameItDoNotPassItOn'];
+
+/** Every desk of a multi-desk house teaches all six voices. The operator is handed from one
+ *  counter to the next inside a single conversation, and a voice taught at the first and missing
+ *  at the second answers the same person two different ways: the desk that carries
+ *  `recordsOverAssertions` states what the read returned, and the desk beside it — reading a
+ *  prefix that never names the law — states what it remembers.
+ *
+ *  One desk is one counter, and there is no second way for it to answer, so the six bind nothing
+ *  on a single-spec subject. */
+export function conductComplete(specs: Readonly<Record<string, AgentSpec>>): readonly LintFinding[] {
+  const desks = Object.entries(specs);
+  if (desks.length < 2) return [];
+  const findings: LintFinding[] = [];
+  for (const [desk, spec] of desks) {
+    const taught = new Set((spec.guards ?? []).map(guard => guard.name));
+    for (const voice of VOICES) {
+      if (taught.has(voice)) continue;
+      findings.push({ code: 'CONDUCT_INCOMPLETE',
+        sentence: `desk '${desk}' carries no '${voice}' conduct law, so its system prefix never `
+          + `states it: the desks of this house answer one operator by different laws depending on `
+          + `which counter the conversation reached. Teach '${voice}' on this desk too.` });
+    }
+  }
+  return findings;
+}
+
 /** The smallest number of single-character edits — insert, delete, substitute — that turns `a`
  *  into `b`. Classic two-row dynamic programming: a `covers` key is compared to a census name
  *  character by character, never pattern-matched. */
