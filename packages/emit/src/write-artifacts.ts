@@ -34,15 +34,16 @@ export function writeSubject(): string {
  *  engine: the verbs from `runGate`, and the census a case's `covers` key is spelled against from
  *  `censusFor`, which walks the compiled desks and the honesty rows the Rulebook injects. This
  *  file names no guard of its own, so a row the engine adds or renames arrives here with it.
- *  The gate's findings fail the run; its seam warnings print beside it and fail nothing. */
+ *  The gate's findings fail the run; its seam warnings and its lane advisories print beside it and
+ *  fail nothing. */
 export function writeGateFile(stamp: string): string {
   return [
     '/** THE STATIC GATE of this subject: every verb, one answer. Run it from this',
     ' *  directory with `npx vitest run check-subject.test.ts`. Every check belongs to the ENGINE',
     ' *  and this file only calls it — a check re-written beside a subject is a second truth, and',
     ' *  the first time the engine tightens a rule the copy keeps blessing what the engine now',
-    ' *  refuses. A finding fails this gate; a seam warning prints beside a green run and fails',
-    ' *  nothing. Nothing here spends anything: no key, no model, no network. */',
+    ' *  refuses. A finding fails this gate; a seam warning and a lane advisory print beside a',
+    ' *  green run and fail nothing. Nothing here spends anything: no key, no model, no network. */',
     'import { createHash } from \'node:crypto\';',
     'import { readFileSync } from \'node:fs\';',
     'import { join } from \'node:path\';',
@@ -89,6 +90,9 @@ export function writeGateFile(stamp: string): string {
     '  // The seam budget, one line per row: every seam-table row no case drives into and no',
     '  // seam law names prints here with the run, and none of them fails it.',
     '  for (const seam of gate.seams) console.warn(`seam warning — ${seam.sentence}`);',
+    '  // The numbers the skill teaches as targets, printed on the desk that passes one. The lane',
+    '  // is the ask\'s to spend: a desk carrying fifty acts prints here and the run stays green.',
+    '  for (const advisory of gate.advisories) console.warn(`advisory — ${advisory.sentence}`);',
     '  expect(gate.findings).toEqual([]);',
     '});',
     ''

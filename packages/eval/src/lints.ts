@@ -1316,15 +1316,17 @@ function renderedDesks(subject: DeskSubject): {
   return { rows, refused };
 }
 
-/** The most acts one desk carries, reads counted. */
-const LANE_CEILING = 15;
+/** The acts one desk aims to carry, reads counted. */
+const LANE_TARGET = 15;
 
 /** How much heavier than its system prefix a desk's cards may be. */
 const CARD_WEIGHT_MULTIPLE = 2;
 
-/** A desk carries at most fifteen acts. Past that the model stops choosing the act the operator
- *  asked for and starts choosing one that reads like it, and no sentence on any card recovers what
- *  the width costs — the split does.
+/** A desk aims at fifteen acts. Past that the model starts choosing the act that READS LIKE what
+ *  the operator asked for instead of the one they asked for, and no sentence on any card recovers
+ *  what the width costs — the split does. The number is the aim, not the law: an ask that puts
+ *  fifty acts on one agent gets them, and this row rides back beside the run to say what that
+ *  width buys.
  *
  *  The lane is the one the FACTORY built, not the list the spec typed: a spec naming no tools is
  *  handed every act the surface declares, and a name the surface does not hold is handed to no
@@ -1333,12 +1335,12 @@ const CARD_WEIGHT_MULTIPLE = 2;
 export function laneWidth(subject: DeskSubject): readonly LintFinding[] {
   const { rows, refused } = renderedDesks(subject);
   return [...refused, ...rows
-    .filter(row => row.lane > LANE_CEILING)
+    .filter(row => row.lane > LANE_TARGET)
     .map(row => ({ code: 'LANE_TOO_WIDE',
-      sentence: `desk '${row.desk}' carries ${row.lane} acts, and a desk carries at most `
-        + `${LANE_CEILING}, reads counted: past that the act it picks is the one that reads like `
+      sentence: `desk '${row.desk}' carries ${row.lane} acts, and a desk aims at `
+        + `${LANE_TARGET}, reads counted: past that the act it picks is the one that reads like `
         + `what was asked for. Split the lane into desks that each hold the acts one operator asks `
-        + `for together.` }))];
+        + `for together, or carry the width knowing what it costs.` }))];
 }
 
 /** A desk's tool cards weigh at most twice its system prefix. The prefix is who the desk is and

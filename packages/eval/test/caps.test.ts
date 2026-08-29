@@ -1,7 +1,8 @@
-/** The two numbers the pipeline states as hard limits, measured on what the engine compiles. A
- *  desk carries at most fifteen acts — the lane the factory hands it, reads counted — and the tool
- *  cards behind that lane weigh at most twice its system prefix. Both are read off the compiled
- *  desk: the lane is the one the factory built, and the bytes are the ones PromptWriter sends. */
+/** The two numbers the pipeline states, measured on what the engine compiles. A desk aims at
+ *  fifteen acts — the lane the factory hands it, reads counted — and the tool cards behind that
+ *  lane weigh at most twice its system prefix. Both are read off the compiled desk: the lane is the
+ *  one the factory built, and the bytes are the ones PromptWriter sends. The gate answers with the
+ *  weight and advises with the lane; both verbs answer here in rows. */
 import { describe, expect, test } from 'vitest';
 import { AgentFactory, factsFromWorld, PromptWriter, world } from '@looprun-ai/core';
 import type { AgentSpec, DeclaredWorld } from '@looprun-ai/core';
@@ -30,7 +31,7 @@ const PREFIX_BYTES = new PromptWriter(
   new AgentFactory().governed(ordersDesk, undefined, factsFromWorld(surfaceOf(1)))).system().length;
 
 describe('laneWidth', () => {
-  test('a desk given sixteen acts is one finding, naming the desk and the count', () => {
+  test('a desk given sixteen acts is one row, naming the desk and the count', () => {
     const found = laneWidth({ specs: { ordersDesk }, contract: undefined, world: surfaceOf(16) });
     expect(found.map(f => f.code)).toEqual(['LANE_TOO_WIDE']);
     expect(found[0].sentence).toContain("'ordersDesk'");
@@ -38,7 +39,7 @@ describe('laneWidth', () => {
     expect(found[0].sentence).toContain('15');
   });
 
-  test('fifteen acts is the ceiling, not the finding', () => {
+  test('fifteen acts is the target, and the target itself says nothing', () => {
     expect(laneWidth({ specs: { ordersDesk }, contract: undefined, world: surfaceOf(15) }))
       .toEqual([]);
   });

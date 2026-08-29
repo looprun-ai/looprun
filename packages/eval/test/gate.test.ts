@@ -90,6 +90,21 @@ const SOUND_SUBJECT: GateSubject = {
   presetLeavesGuardInert: () => false
 };
 
+/** One desk handed `count` reads that each carry the same sentence. The persona is the system
+ *  prefix the weight cap measures against, and it is long enough that `does` alone decides which
+ *  side of that number the cards land on — so the lane and the weight move one at a time. */
+function deskOver(count: number, does: string): GateSubject {
+  return {
+    world: world({ records: { orders: { ord_7: { status: 'OPEN' } } },
+      reads: Object.fromEntries(Array.from({ length: count }, (_, at) => [`getOrder${at}`,
+        { form: 'get' as const, entity: 'orders', label: `Look up order ${at}`, does }])) }),
+    specs: { orders: { name: 'orders',
+      persona: 'You are the orders desk. You answer one operator at a time, you read before you '
+        + 'act, and you state what the read returned in the words the operator asked in.' } },
+    contract: undefined, cases: [], censusNames: null, presetLeavesGuardInert: () => false
+  };
+}
+
 describe('runGate', () => {
   test('it runs every verb that returns findings, and names each in its own row', () => {
     const { findings } = runGate(FIXTURE_DIR, FIXTURE_SUBJECT);
@@ -122,7 +137,8 @@ describe('runGate', () => {
     // every verb clearing a populated walk, not every verb finding nothing to walk.
     expect(SOUND_CENSUS.has('precondition:closeOrder')).toBe(true);
     // The one seam row this world spells out is spoken, so the budget prints nothing either.
-    expect(runGate(SOUND_DIR, SOUND_SUBJECT)).toEqual({ findings: [], seams: [] });
+    expect(runGate(SOUND_DIR, SOUND_SUBJECT))
+      .toEqual({ findings: [], seams: [], advisories: [] });
   });
 
   test('the retired-name verb is in the gate', () => {
@@ -146,20 +162,19 @@ describe('runGate', () => {
     expect(runGate(dir, covered).findings.map(f => f.code)).toContain('CASE_CANNOT_FIRE');
   });
 
-  test('the two caps are in the gate, measured on the desk the engine compiles', () => {
+  test('the lane number rides as an advisory: a desk past it fails nothing', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'gate-lane-'));
+    writeFileSync(join(dir, 'cards.ts'), 'export const CONTRACT = { guards: [] };\n');
+    const gate = runGate(dir, deskOver(16, 'Look up one order.'));
+    expect(gate.findings).toEqual([]);
+    expect(gate.advisories.map(f => f.code)).toEqual(['LANE_TOO_WIDE']);
+  });
+
+  test('the weight cap is in the gate, measured on the desk the engine compiles', () => {
     const dir = mkdtempSync(join(tmpdir(), 'gate-caps-'));
     writeFileSync(join(dir, 'cards.ts'), 'export const CONTRACT = { guards: [] };\n');
-    const wide: GateSubject = {
-      world: world({ records: { orders: { ord_7: { status: 'OPEN' } } },
-        reads: Object.fromEntries(Array.from({ length: 16 }, (_, at) => [`getOrder${at}`,
-          { form: 'get' as const, entity: 'orders', label: `Look up order ${at}`,
-            does: 'Look up one order and say what the read returned.' }])) }),
-      specs: { orders: { name: 'orders', persona: 'You are the orders desk.' } },
-      contract: undefined, cases: [], censusNames: null, presetLeavesGuardInert: () => false
-    };
-    const codes = runGate(dir, wide).findings.map(f => f.code);
-    expect(codes).toContain('LANE_TOO_WIDE');
-    expect(codes).toContain('CARD_OVER_WEIGHT');
+    const gate = runGate(dir, deskOver(16, 'Look up one order and say what the read returned.'));
+    expect(gate.findings.map(f => f.code)).toEqual(['CARD_OVER_WEIGHT']);
   });
 
   test('a card the factory refuses is findings, and every other verb still answers', () => {

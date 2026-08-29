@@ -84,9 +84,11 @@ test('the gate file runs the one gate and states why no preset oracle rides with
   expect(out).toContain('    specs,');
   expect(out).toContain('    contract,');
   expect(out).toContain('presetLeavesGuardInert: () => false');
-  // The findings are the answer, and the seam budget prints beside it without failing anything.
+  // The findings are the answer; the seam budget and the lane advisories print beside it without
+  // failing anything.
   expect(out).toContain('expect(gate.findings).toEqual([])');
   expect(out).toContain('for (const seam of gate.seams) console.warn(');
+  expect(out).toContain('for (const advisory of gate.advisories) console.warn(');
   expect(out).not.toContain('it(');
 });
 

@@ -68,14 +68,23 @@ export function censusFor(subject: CensusSubject): ReadonlySet<string> {
   return names;
 }
 
-/** What the gate answers: the failing rows, and the seam budget beside them. The gate is red
- *  exactly when `findings` is non-empty. `seams` fails nothing — one line per row of the seam
- *  table that no case drives into and no seam law names, printed with the run so the whole
- *  unspoken table stays visible without a prompt sentence paid for any of it. */
+/** What the gate answers, in three channels. The gate is red exactly when `findings` is non-empty.
+ *
+ *  `seams` fails nothing — one line per row of the seam table that no case drives into and no seam
+ *  law names, printed with the run so the whole unspoken table stays visible without a prompt
+ *  sentence paid for any of it.
+ *
+ *  `advisories` fails nothing either: a number the skill teaches as a TARGET, printed on the desk
+ *  that passes it. The lane is one — fifteen acts is what a desk aims at, and an ask that wants
+ *  fifty acts on one agent gets them, with the row printed beside the green run. */
 export interface GateReport {
   readonly findings: readonly LintFinding[];
   readonly seams: readonly LintFinding[];
+  readonly advisories: readonly LintFinding[];
 }
+
+/** The one row the lane verb answers with that advises rather than fails. */
+const LANE_ADVISORY = 'LANE_TOO_WIDE';
 
 /** The static gate: every verb, one answer. It runs in under a second on a thirty-act subject,
  *  which is why nothing downstream of it is worth spending a model call on until its findings are
@@ -91,11 +100,18 @@ export interface GateReport {
  *  row, printed with the run and failing nothing — which refusals are worth a sentence the prompt
  *  then carries on every turn stays the author's spend.
  *
+ *  The lane rides back the same way, under `advisories`: fifteen acts is the width a desk aims at,
+ *  and the ask decides how many acts one agent holds — a desk past that number is printed, not
+ *  failed. What the lane's card is REFUSED for is a different statement, and it stays a finding.
+ *
  *  One problem, one row: two verbs reading the same refused card answer with the same sentence,
  *  and a list that prints it twice teaches nothing the first row did not. */
 export function runGate(subjectDir: string, subject: GateSubject): GateReport {
   const facts = factsFromWorld(subject.world);
   const { cases, censusNames, presetLeavesGuardInert } = subject;
+  // The lane, split where the two statements it makes part: the width is the advisory, and the
+  // card the factory refuses is the finding that verb owes whatever the width turned out to be.
+  const lane = laneWidth(subject);
   const acting = Object.values(facts.tools)
     .filter(fact => fact.effect !== 'read').map(fact => fact.name);
   const answered = [
@@ -111,9 +127,9 @@ export function runGate(subjectDir: string, subject: GateSubject): GateReport {
     // The desks as the caller holds them, not as the source spells them: a conduct law is a guard
     // on the compiled spec, and the six voices are read off every desk of the house at once.
     ...conductComplete(subject.specs),
-    // The two stated numbers, measured on the desks the engine compiles: the acts one lane holds,
-    // and what the cards behind that lane weigh against the prefix that teaches the desk.
-    ...laneWidth(subject),
+    // What the cards behind a lane weigh against the prefix that teaches the desk, measured on the
+    // desks the engine compiles.
+    ...lane.filter(row => row.code !== LANE_ADVISORY),
     ...cardWeight(subject),
     ...capPaths(subjectDir),
     ...inertChecks(subjectDir, facts.tools),
@@ -135,5 +151,7 @@ export function runGate(subjectDir: string, subject: GateSubject): GateReport {
   ];
   const findings = answered.filter((finding, at) => answered
     .findIndex(other => other.code === finding.code && other.sentence === finding.sentence) === at);
-  return { findings, seams: seamUnreached(subjectDir, cases, facts, subject.world) };
+  return { findings,
+           seams: seamUnreached(subjectDir, cases, facts, subject.world),
+           advisories: lane.filter(row => row.code === LANE_ADVISORY) };
 }
