@@ -110,7 +110,8 @@ F1  THE NATURAL REPLY, FROM ZERO (its own spec)
           judged on the canonical example of §1 · directed code cases
     cost: replay first · 12-slice · targeted set · full ruler ONCE
 
-F2  RE-SEAL THE ROUTED HOUSE + CHAT (zero new code)
+F2  RE-SEAL THE ROUTED HOUSE + CHAT (zero new code; runs AFTER F3
+    by the owner's ruling — one campaign seals the final build)
     the router, the chat door and the routed eval stand as they are on
     main; their 97/100 seal was paid on the 24/08 delivery and is re-paid
     on the new one
