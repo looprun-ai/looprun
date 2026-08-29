@@ -1,6 +1,6 @@
 # F3 — The Desk Describes Itself, and the Gate Knows Its Declaration
 
-**Status:** DRAFT — pending owner review
+**Status:** CLOSED — implemented, every validation case green, the four-case routed smoke clean (16/16 lanes), the sync break closed: blind rounds unlock
 **Program:** `2026-08-28-natural-voice-recovery-design.md`, phase F3 (runs before F5 and F2)
 **Scope:** engine only (emit, core front desk, mastra house). The skill already teaches
 this shape — for once the engine follows the skill, and the skill section of this spec
