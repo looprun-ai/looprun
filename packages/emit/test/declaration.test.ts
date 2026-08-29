@@ -12,6 +12,18 @@ function fixture(yaml: string): string {
   return path;
 }
 
+/** The six voices as the lines of a desk's `conduct` map, indented for a desk of the `desks`
+ *  sequence. Every desk of a house of two or more states all six, so a fixture pairing two desks
+ *  writes these lines under each of them. */
+const SIX_VOICES = [
+  'declareHonestly: Say what ran and what did not.',
+  'oneQuestion: Put ONE thing up for agreement per turn.',
+  'yourLaneYourReads: Answer from the reads this desk can run.',
+  'recordsOverAssertions: Say what the read returned, never what you recall.',
+  'askBeforeYouChoose: Ask before you choose on the operator\'s behalf.',
+  'nameItDoNotPassItOn: Name what this desk cannot do, and never hand it on in silence.'
+].map(line => `      ${line}`).join('\n');
+
 describe('readDeclaration', () => {
   test('it reads a desk and its conduct laws', () => {
     const d = readDeclaration(fixture(`
@@ -265,13 +277,15 @@ desks:
   - name: billing
     persona: The billing desk.
     tools: [getInvoice]
-    conduct: { declareHonestly: x }
+    conduct:
+${SIX_VOICES}
     description: quotes and bookings
     summary: the desk
   - name: audit
     persona: The audit desk.
     tools: [closeBooking]
-    conduct: { declareHonestly: x }
+    conduct:
+${SIX_VOICES}
 `));
     expect(checkAgainstSurface(d, FACTS, SEAM))
       .toEqual([expect.stringContaining("'audit'")]);
@@ -297,6 +311,68 @@ desks:
 `));
     expect(checkAgainstSurface(d, FACTS, SEAM))
       .toEqual([expect.stringContaining("'front-desk'")]);
+  });
+});
+
+describe('the six voices', () => {
+  const house = (secondConduct: string): string => `
+contract:
+  name: seaside-hotel
+  voice: Warm, brief, and exact about dates and money.
+  facts: []
+  guards: []
+  disclosure:
+    issueRefund:
+      before: Refunding this invoice cannot be taken back.
+desks:
+  - name: billing
+    persona: The billing desk.
+    tools: [getInvoice]
+    conduct:
+${SIX_VOICES}
+    description: quotes and bookings
+    summary: the desk
+  - name: audit
+    persona: The audit desk.
+    tools: [closeBooking]
+    conduct:
+${secondConduct}
+    description: invoices and refunds
+    summary: the desk
+`;
+
+  it('a desk of a two-desk house missing a voice refuses naming the desk and the voice', () => {
+    const withoutRecords = SIX_VOICES.split('\n')
+      .filter(line => !line.includes('recordsOverAssertions')).join('\n');
+    const d = readDeclaration(fixture(house(withoutRecords)));
+    const refusals = checkAgainstSurface(d, FACTS, SEAM);
+    expect(refusals).toEqual([expect.stringContaining("desks[1].conduct")]);
+    expect(refusals[0]).toContain("'audit'");
+    expect(refusals[0]).toContain("'recordsOverAssertions'");
+  });
+
+  it('a single-desk declaration missing five voices is refused none of them', () => {
+    const d = readDeclaration(fixture(`
+contract:
+  name: seaside-hotel
+  voice: Warm, brief, and exact about dates and money.
+  facts: []
+  guards: []
+  disclosure:
+    issueRefund:
+      before: Refunding this invoice cannot be taken back.
+desks:
+  - name: front-desk
+    persona: The front desk.
+    tools: [getInvoice]
+    conduct: { declareHonestly: Say what ran and what did not. }
+`));
+    expect(checkAgainstSurface(d, FACTS, SEAM)).toEqual([]);
+  });
+
+  it('a two-desk house where every desk teaches all six is accepted', () => {
+    const d = readDeclaration(fixture(house(SIX_VOICES)));
+    expect(checkAgainstSurface(d, FACTS, SEAM)).toEqual([]);
   });
 });
 
@@ -356,13 +432,15 @@ desks:
   - name: billing
     persona: p
     tools: [getInvoice]
-    conduct: { declareHonestly: x }
+    conduct:
+${SIX_VOICES}
     description: quotes and bookings
     summary: the desk, and the counter
   - name: audit
     persona: p
     tools: [closeBooking]
-    conduct: { declareHonestly: x }
+    conduct:
+${SIX_VOICES}
     description: invoices and refunds
     summary: the desk
 `));

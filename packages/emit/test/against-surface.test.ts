@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import { checkAgainstSurface } from '../src/index.js';
 import type { Declaration, DeclaredGuard } from '../src/index.js';
-import { decl, FACTS, SEAM, soundDeclaration } from './helpers.js';
+import { decl, FACTS, SEAM, SIX_VOICES, soundDeclaration } from './helpers.js';
 
 describe('checkAgainstSurface', () => {
   test('an act the surface does not declare', () => {
@@ -77,10 +77,10 @@ describe('checkAgainstSurface', () => {
 
   test('a disclosure needs alias naming a read the desk holding the act cannot run', () => {
     const refusals = checkAgainstSurface(decl({ desks: [
-      { name: 'billing', persona: 'p', tools: ['issueRefund'], conduct: { declareHonestly: 'x' },
+      { name: 'billing', persona: 'p', tools: ['issueRefund'], conduct: SIX_VOICES,
         description: 'refunds', summary: 'the desk', },
       { name: 'records', persona: 'p', tools: ['issueRefund', 'getInvoice'],
-        conduct: { declareHonestly: 'x' }, description: 'invoice lookups', summary: 'the desk', }] }), FACTS, SEAM);
+        conduct: SIX_VOICES, description: 'invoice lookups', summary: 'the desk', }] }), FACTS, SEAM);
     expect(refusals).toEqual([expect.stringContaining(
       "contract.disclosure.issueRefund.needs.invoice names 'getInvoice'")]);
     expect(refusals[0]).toContain("the 'billing' desk holds 'issueRefund'");
@@ -90,17 +90,17 @@ describe('checkAgainstSurface', () => {
   test('a needs read every desk holding the act also holds is no refusal', () => {
     expect(checkAgainstSurface(decl({ desks: [
       { name: 'billing', persona: 'p', tools: ['issueRefund', 'getInvoice'],
-        conduct: { declareHonestly: 'x' }, description: 'refunds and invoice lookups', summary: 'the desk', },
+        conduct: SIX_VOICES, description: 'refunds and invoice lookups', summary: 'the desk', },
       { name: 'records', persona: 'p', tools: ['getInvoice'],
-        conduct: { declareHonestly: 'x' }, description: 'invoice lookups', summary: 'the desk', }] }), FACTS, SEAM)).toEqual([]);
+        conduct: SIX_VOICES, description: 'invoice lookups', summary: 'the desk', }] }), FACTS, SEAM)).toEqual([]);
   });
 
   test('a house of two desks where one states a blank description line', () => {
     expect(checkAgainstSurface(decl({ desks: [
       { name: 'billing', persona: 'p', tools: ['issueRefund', 'getInvoice'],
-        conduct: { declareHonestly: 'x' }, description: 'refunds and invoice lookups', summary: 'the desk', },
+        conduct: SIX_VOICES, description: 'refunds and invoice lookups', summary: 'the desk', },
       { name: 'records', persona: 'p', tools: ['getInvoice'],
-        conduct: { declareHonestly: 'x' }, description: '   ', summary: 'the desk', }] }), FACTS, SEAM))
+        conduct: SIX_VOICES, description: '   ', summary: 'the desk', }] }), FACTS, SEAM))
       .toEqual([expect.stringContaining("desks[1].description says nothing on 'records'")]);
   });
 

@@ -13,11 +13,22 @@ export const FACTS = { tools: {
   closeBooking:{ name: 'closeBooking',effect: 'write', target: null, entity: 'auditLog', schema: {} }
 } } as never;
 
+/** The six voices, in one desk's words. Every desk of a house of two or more states all six, so a
+ *  fixture pairing two desks hands each of them this map. */
+export const SIX_VOICES: Readonly<Record<string, string>> = {
+  declareHonestly: 'Say what ran and what did not.',
+  oneQuestion: 'Put ONE thing up for agreement per turn.',
+  yourLaneYourReads: 'Answer from the reads this desk can run.',
+  recordsOverAssertions: 'Say what the read returned, never what you recall.',
+  askBeforeYouChoose: 'Ask before you choose on the operator\'s behalf.',
+  nameItDoNotPassItOn: 'Name what this desk cannot do, and never hand it on in silence.'
+};
+
 /** A guard set, disclosure map and desk pair that together fit FACTS with no gaps: the
  *  destructive act is disclosed with a `before`, its disclosure alias resolves against the
  *  read it names, every guard names a real act and carries what its factory is configured
  *  from, a `precondition` reading a record sits over an act that has a target, and both
- *  desks teach the same conduct laws. */
+ *  desks teach all six voices. */
 export const SOUND_GUARDS: readonly DeclaredGuard[] = [
   { name: 'confirmBeforeRefund', acts: ['issueRefund'], factory: 'onlyAfter', args: { after: 'getInvoice' } },
   { name: 'confirmInvoiceKnown', acts: ['getInvoice'], factory: 'precondition', args: { reads: 'record' },
@@ -27,9 +38,9 @@ export const SOUND_DISCLOSURE: Readonly<Record<string, DeclaredDisclosure>> = {
   issueRefund: { needs: { invoice: 'getInvoice' }, before: 'Say the invoice total before refunding it.' }
 };
 export const SOUND_DESKS: Declaration['desks'] = [
-  { name: 'a', persona: 'p', tools: ['issueRefund', 'getInvoice'], conduct: { declareHonestly: 'x', oneQuestion: 'y' },
+  { name: 'a', persona: 'p', tools: ['issueRefund', 'getInvoice'], conduct: SIX_VOICES,
     description: 'refunds and the invoices behind them', summary: 'the desk', },
-  { name: 'b', persona: 'p', tools: ['getInvoice'], conduct: { declareHonestly: 'x', oneQuestion: 'y' },
+  { name: 'b', persona: 'p', tools: ['getInvoice'], conduct: SIX_VOICES,
     description: 'invoice lookups on their own', summary: 'the desk', }
 ];
 

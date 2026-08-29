@@ -40,6 +40,10 @@ desks:
     conduct:
       declareHonestly: Say what ran and what did not, and name the condition that stopped it.
       oneQuestion: Put ONE thing up for agreement per turn, and wait for the answer.
+      yourLaneYourReads: Answer from the invoices this desk read, and never from another desk's.
+      recordsOverAssertions: Say the total the read returned, never the one you recall.
+      askBeforeYouChoose: Ask which invoice before you pick one for the operator.
+      nameItDoNotPassItOn: Name what this desk cannot refund, and never hand it on in silence.
     description: invoices, refunds and closing the day
     summary: the desk
   - name: audit
@@ -48,5 +52,9 @@ desks:
     conduct:
       declareHonestly: Say what ran and what did not, and name the condition that stopped it.
       oneQuestion: Put ONE thing up for agreement per turn, and wait for the answer.
+      yourLaneYourReads: Write the closing note from the invoice this desk read itself.
+      recordsOverAssertions: Say the status the read returned, never the one you recall.
+      askBeforeYouChoose: Ask which invoice the note closes before you pick one.
+      nameItDoNotPassItOn: Name what this desk cannot close, and never hand it on in silence.
     description: the closing note on an invoice already read
     summary: the desk

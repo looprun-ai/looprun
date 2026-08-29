@@ -331,6 +331,29 @@ function checkRoutingLines(declaration: Declaration): readonly string[] {
   return [];
 }
 
+/** The six voices a house teaches, one conduct law each. A conduct law renders as a prose rule in
+ *  its desk's own system prefix, so a voice a desk does not carry is a law that desk never reads. */
+const VOICES: readonly string[] = ['declareHonestly', 'oneQuestion', 'yourLaneYourReads',
+  'recordsOverAssertions', 'askBeforeYouChoose', 'nameItDoNotPassItOn'];
+
+/** Every desk states all six voices, exactly when a second counter stands beside the first. One
+ *  operator is handed from desk to desk inside a single conversation, and a voice one desk teaches
+ *  and the next leaves out answers that person by two different laws: the desk carrying
+ *  `recordsOverAssertions` says what the read returned, and the desk beside it — reading a prefix
+ *  that never names the law — says what it remembers. One desk is one counter with no second way to
+ *  answer, so the six bind nothing in a house of one. */
+function checkConductVoices(declaration: Declaration): readonly string[] {
+  const { desks } = declaration;
+  if (desks.length < 2) return [];
+  return desks.flatMap((desk, deskIndex) => VOICES
+    .filter(voice => desk.conduct[voice] === undefined)
+    .map(voice => `desks[${deskIndex}].conduct states no '${voice}' on '${desk.name}': a house of `
+      + `${desks.length} desks hands one operator from counter to counter, and a voice this desk `
+      + `never states is a law its prompt never carries — one message reaches '${desk.name}' and is `
+      + `answered by a different law than the desk beside it. Write '${voice}' here too, in the `
+      + `words '${desk.name}' uses.`));
+}
+
 /** Every seam sentence pays a row the world actually spells out, and lands on a desk that can
  *  reach the act. The seam table is the register: an act it carries no row for is an act whose
  *  refusals the world never names in a literal, and a code outside that act's row set is a
@@ -381,7 +404,8 @@ function checkSeamRows(declaration: Declaration, facts: SurfaceFacts,
  *  cannot answer the call it is held for, a disclosure alias naming a read the lane of a desk
  *  holding the act does not carry, a seam sentence paying a row the world does not carry, and a
  *  house whose desks disagree with the routing law — two or more desks with a desk whose `description`
- *  line is missing or blank, or the one desk of a single-desk house carrying one. `seam` is the seam table
+ *  line is missing or blank, or the one desk of a single-desk house carrying one — and a desk of a
+ *  house of two or more that teaches fewer than the six voices. `seam` is the seam table
  *  computed off the same subject the declaration sits in. An empty array means the declaration is
  *  safe to emit against `facts`. */
 export function checkAgainstSurface(declaration: Declaration, facts: SurfaceFacts,
@@ -397,6 +421,7 @@ export function checkAgainstSurface(declaration: Declaration, facts: SurfaceFact
     ...checkDisclosureNeedsResolvable(declaration, facts),
     ...checkDisclosureNeedsInLane(declaration, facts),
     ...checkSeamRows(declaration, facts, seam),
-    ...checkRoutingLines(declaration)
+    ...checkRoutingLines(declaration),
+    ...checkConductVoices(declaration)
   ];
 }
