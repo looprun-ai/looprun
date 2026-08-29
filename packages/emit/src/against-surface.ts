@@ -235,13 +235,20 @@ function checkDestructiveDisclosed(declaration: Declaration, facts: SurfaceFacts
  *  act — the law that opens a record only on the operator's own ask — and a
  *  `disclosure.<act>.after`, the sentence that states which record now exists once the call
  *  has run. Without the law the desk opens records nobody asked for; without the after a
- *  record is born and the operator is never told which one. */
+ *  record is born and the operator is never told which one.
+ *
+ *  The asked-for law is the register's own: a guard counts for an act only when every act it
+ *  names is on the register. A conduct rule that also spans non-minting acts is a wider law —
+ *  reading the standing freezes before any change, say — that touches a minting act without
+ *  licensing its birth. */
 function checkCreatesLawAndAfter(declaration: Declaration, facts: SurfaceFacts): readonly string[] {
   const refusals: string[] = [];
+  const register = new Set(facts.creates ?? []);
   for (const act of facts.creates ?? []) {
     if (facts.tools[act] === undefined) continue;
     const lawed = declaration.contract.guards.some(guard => guard.factory === 'prose'
-      && guard.args?.why === 'conduct' && guard.acts.includes(act));
+      && guard.args?.why === 'conduct' && guard.acts.includes(act)
+      && guard.acts.every(named => register.has(named)));
     if (!lawed) {
       refusals.push(`contract.guards: the act '${act}' opens a new record and carries no prose `
         + `law licensed conduct — declare the asked-for law: a prose guard claiming `

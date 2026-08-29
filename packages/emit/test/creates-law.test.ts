@@ -50,6 +50,14 @@ describe('the birth register demands the asked-for law and the after', () => {
         "the act 'enrollStudent' opens a new record and carries no prose law licensed conduct")]);
   });
 
+  test('a conduct law naming the act among acts outside the register does not stand in for it', () => {
+    const wide: DeclaredGuard = { ...ASKED_FOR, acts: ['enrollStudent', 'getStudent'] };
+    expect(checkAgainstSurface(decl({ guards: [wide], disclosure: AFTER, desks: DESKS }),
+      SCHOOL, []))
+      .toEqual([expect.stringContaining(
+        "the act 'enrollStudent' opens a new record and carries no prose law licensed conduct")]);
+  });
+
   test('a record-opening act with the law but no after is refused naming the missing after', () => {
     const refusals = checkAgainstSurface(
       decl({ guards: [ASKED_FOR], disclosure: {}, desks: DESKS }), SCHOOL, []);
@@ -71,11 +79,12 @@ describe('the birth register demands the asked-for law and the after', () => {
 });
 
 /** The proof over a whole authored declaration: a 54-act surface whose register marks nine
- *  record-opening acts, beside a declaration that states an after for every one of them and the
- *  asked-for law for only two. The emit refuses the seven unlawed acts by name and nothing
- *  else — the two acts under a conduct prose law pass, and every after is already paid. */
+ *  record-opening acts, beside a declaration that states an after for every one of them and no
+ *  asked-for law at all. Its one conduct-licensed prose rule is a freeze-reading law that names
+ *  two register acts among three the register does not carry, and a law that wide licenses no
+ *  birth — so all nine acts are refused by name, and nothing else is: every after is paid. */
 describe('a full declaration against the register', () => {
-  test('seven record-opening acts with no asked-for law are refused act by act', () => {
+  test('nine record-opening acts with no asked-for law are refused act by act', () => {
     const fixture = join(HERE, 'fixtures', 'asked-for-law-dropped');
     const declaration = readDeclaration(join(fixture, 'declaration.yaml'));
     const facts = factsFromSource(join(fixture, 'world.ts'));
@@ -83,8 +92,9 @@ describe('a full declaration against the register', () => {
     const refusals = checkAgainstSurface(declaration, facts, seamCovered(fixture, facts));
     const law = /^contract\.guards: the act '(\w+)' opens a new record and carries no prose law licensed conduct/;
     const unlawed = refusals.flatMap(refusal => law.exec(refusal)?.[1] ?? []);
-    expect([...unlawed].sort()).toEqual(['createCustomer', 'fileClaim', 'generateInvoice',
-      'generateQuote', 'placeHold', 'registerAsset', 'scheduleMaintenance']);
+    expect([...unlawed].sort()).toEqual(['createBooking', 'createCustomer', 'fileClaim',
+      'generateInvoice', 'generateQuote', 'inviteMember', 'placeHold', 'registerAsset',
+      'scheduleMaintenance']);
     expect(refusals).toHaveLength(unlawed.length);
   });
 });
