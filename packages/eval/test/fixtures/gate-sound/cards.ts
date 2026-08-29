@@ -10,8 +10,10 @@ interface Held { readonly record: { readonly status: string } | null }
 interface Rule { readonly name: string; readonly rule: string; readonly on: string;
                  readonly tool?: readonly string[] }
 
-/** A check decides the call, so it types the phase it decides in and states the law it decides by:
- *  the engine refuses a hand-written guard that carries neither. */
+/** A check decides the call, so it types the phase it decides in — the engine refuses a
+ *  hand-written guard that types none. The rule beside it is the sentence the desk reads and the
+ *  refusal quotes; nothing refuses its absence, and a check written without one renders the word
+ *  undefined where its law belongs. */
 interface Check { readonly name: string; readonly tool: readonly string[]; readonly on: string;
                   readonly rule: string; readonly deny: (held: Held) => string | null }
 

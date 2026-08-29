@@ -158,4 +158,26 @@ describe('runGate', () => {
     expect(codes).toContain('LANE_TOO_WIDE');
     expect(codes).toContain('CARD_OVER_WEIGHT');
   });
+
+  test('a card the factory refuses is findings, and every other verb still answers', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'gate-refused-'));
+    writeFileSync(join(dir, 'cards.ts'), 'export const orderIdShape = /^ord_[0-9]+$/;\n');
+    // A guard that types no phase: the factory refuses this desk, and the regex checked into the
+    // directory beside it is a finding another verb owes whatever the factory said.
+    const phaseless = { name: 'orders', persona: 'You are the orders desk.',
+      guards: [{ name: 'readBeforeYouAnswer', rule: 'State what the read returned.' }] };
+    const refused: GateSubject = {
+      world: world({ records: { orders: { ord_7: { status: 'OPEN' } } },
+        reads: { getOrder: { form: 'get', entity: 'orders', label: 'Look up an order' } } }),
+      specs: { orders: phaseless } as unknown as Readonly<Record<string, AgentSpec>>,
+      contract: undefined, cases: [], censusNames: null, presetLeavesGuardInert: () => false
+    };
+    const findings = runGate(dir, refused);
+    const codes = findings.map(f => f.code);
+    expect(codes).toContain('GUARD_PHASE_MISSING');
+    expect(codes).toContain('SUBJECT_REGEX');
+    expect(findings.find(f => f.code === 'GUARD_PHASE_MISSING')?.sentence).toContain("'orders'");
+    // Both caps read the same refused card, and the list carries what it says once.
+    expect(codes.filter(code => code === 'GUARD_PHASE_MISSING')).toHaveLength(1);
+  });
 });

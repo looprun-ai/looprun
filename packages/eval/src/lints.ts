@@ -10,7 +10,8 @@ import type { AgentSpec, ApproveRef, CompiledAgent, DeclaredWorld, DomainContrac
               ExamTurn, GuardCensus, LiveWorldCard, McpWorldCard, PromptParts, SurfaceFacts,
               ToolFact, TurnRecord, WorldCard } from '@looprun-ai/core';
 import type { Subject } from './subject-loader.js';
-import { AgentFactory, factsFromWorld, PromptWriter, RETIRED_NAMES } from '@looprun-ai/core';
+import { AgentFactory, CardError, factsFromWorld, PromptWriter,
+         RETIRED_NAMES } from '@looprun-ai/core';
 
 export interface LintFinding { readonly code: string; readonly sentence: string }
 
@@ -1276,22 +1277,43 @@ export interface DeskSubject {
   readonly world: DeclaredWorld | McpWorldCard | LiveWorldCard;
 }
 
+/** Every problem the factory refused a desk's card for, as findings the caller reads in the one
+ *  list it asked for. The desk is named in front of each, because the problem's own sentence
+ *  speaks about a guard or a slot and not about which counter carries it. */
+function refusedCard(desk: string, error: unknown): readonly LintFinding[] {
+  if (!(error instanceof CardError)) throw error;
+  return error.problems.map(problem => ({ code: problem.code,
+    sentence: `desk '${desk}' — ${problem.sentence}` }));
+}
+
 /** What one desk renders, read off the card the ENGINE compiles: the acts the factory put in its
  *  lane, the bytes of its system prefix, and the DOES bytes of the tool cards behind it. A card's
  *  schema is not weighed here — it is argument structure the model fills, and `byteOrigin` counts
- *  it as its own slice. */
-function renderedDesks(subject: DeskSubject): readonly {
-  readonly desk: string; readonly lane: number;
-  readonly system: number; readonly cards: number }[] {
+ *  it as its own slice.
+ *
+ *  A card the factory refuses renders nothing, so that desk has no row and its problems ride back
+ *  as findings: a verb answers with a list, and a subject whose cards do not compile is owed the
+ *  answers of every other verb in the same breath. */
+function renderedDesks(subject: DeskSubject): {
+  readonly rows: readonly { readonly desk: string; readonly lane: number;
+                            readonly system: number; readonly cards: number }[];
+  readonly refused: readonly LintFinding[] } {
   const facts = factsFromWorld(subject.world);
   const factory = new AgentFactory();
-  return Object.entries(subject.specs).map(([desk, spec]) => {
-    const writer = new PromptWriter(factory.governed(spec, subject.contract, facts));
-    return { desk,
-      lane: writer.toolCards().length,
-      system: writer.system().length,
-      cards: writer.toolCards().reduce((n, card) => n + card.does.length, 0) };
-  });
+  const rows: { desk: string; lane: number; system: number; cards: number }[] = [];
+  const refused: LintFinding[] = [];
+  for (const [desk, spec] of Object.entries(subject.specs)) {
+    try {
+      const writer = new PromptWriter(factory.governed(spec, subject.contract, facts));
+      rows.push({ desk,
+        lane: writer.toolCards().length,
+        system: writer.system().length,
+        cards: writer.toolCards().reduce((n, card) => n + card.does.length, 0) });
+    } catch (error) {
+      refused.push(...refusedCard(desk, error));
+    }
+  }
+  return { rows, refused };
 }
 
 /** The most acts one desk carries, reads counted. */
@@ -1306,15 +1328,17 @@ const CARD_WEIGHT_MULTIPLE = 2;
  *
  *  The lane is the one the FACTORY built, not the list the spec typed: a spec naming no tools is
  *  handed every act the surface declares, and a name the surface does not hold is handed to no
- *  desk at all. */
+ *  desk at all. A desk whose card the factory refuses has no lane to count, and what it is
+ *  refused for is the finding it returns instead. */
 export function laneWidth(subject: DeskSubject): readonly LintFinding[] {
-  return renderedDesks(subject)
+  const { rows, refused } = renderedDesks(subject);
+  return [...refused, ...rows
     .filter(row => row.lane > LANE_CEILING)
     .map(row => ({ code: 'LANE_TOO_WIDE',
       sentence: `desk '${row.desk}' carries ${row.lane} acts, and a desk carries at most `
         + `${LANE_CEILING}, reads counted: past that the act it picks is the one that reads like `
         + `what was asked for. Split the lane into desks that each hold the acts one operator asks `
-        + `for together.` }));
+        + `for together.` }))];
 }
 
 /** A desk's tool cards weigh at most twice its system prefix. The prefix is who the desk is and
@@ -1322,9 +1346,11 @@ export function laneWidth(subject: DeskSubject): readonly LintFinding[] {
  *  three times more about its acts than about its conduct answers the way the cards read.
  *
  *  Only the DOES bytes are weighed: the schema beside them is the shape of the arguments, which
- *  the model fills rather than obeys. Both counts come off the render the engine itself sends. */
+ *  the model fills rather than obeys. Both counts come off the render the engine itself sends, so
+ *  a desk whose card the factory refuses weighs nothing and returns that refusal instead. */
 export function cardWeight(subject: DeskSubject): readonly LintFinding[] {
-  return renderedDesks(subject)
+  const { rows, refused } = renderedDesks(subject);
+  return [...refused, ...rows
     .filter(row => row.cards > row.system * CARD_WEIGHT_MULTIPLE)
     .map(row => ({ code: 'CARD_OVER_WEIGHT',
       sentence: `desk '${row.desk}' renders ${row.cards} B of tool cards behind a ${row.system} B `
@@ -1332,7 +1358,7 @@ export function cardWeight(subject: DeskSubject): readonly LintFinding[] {
         + `${row.system * CARD_WEIGHT_MULTIPLE} B here, so they are `
         + `${row.cards - row.system * CARD_WEIGHT_MULTIPLE} B over. The bytes sit in the sentence `
         + `each act carries and in every contract rule copied onto its card: split a rule that `
-        + `names many acts so each act carries only its own, or split the lane.` }));
+        + `names many acts so each act carries only its own, or split the lane.` }))];
 }
 
 

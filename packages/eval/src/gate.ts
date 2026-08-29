@@ -66,13 +66,16 @@ export function censusFor(subject: CensusSubject): ReadonlySet<string> {
  *  reason, and one of its own: every sentence it asks for is a sentence the prompt then carries on
  *  every turn, so how many of an act's refusals are worth stating is a budget the author spends,
  *  not a rule a gate decides. The census verb is not here either: it reads a RUN's dumps, which a
- *  subject directory does not carry. */
+ *  subject directory does not carry.
+ *
+ *  One problem, one row: two verbs reading the same refused card answer with the same sentence,
+ *  and a list that prints it twice teaches nothing the first row did not. */
 export function runGate(subjectDir: string, subject: GateSubject): readonly LintFinding[] {
   const facts = factsFromWorld(subject.world);
   const { cases, censusNames, presetLeavesGuardInert } = subject;
   const acting = Object.values(facts.tools)
     .filter(fact => fact.effect !== 'read').map(fact => fact.name);
-  return [
+  const answered = [
     ...purity(subjectDir),
     ...nameGate(subjectDir),
     // The surface and the acts both come from the DERIVED facts: a world that builds its effect
@@ -104,4 +107,6 @@ export function runGate(subjectDir: string, subject: GateSubject): readonly Lint
     // refuse is answered for every subject, and no subject sits this verb out.
     ...approvable(cases, { presetLeavesGuardInert })
   ];
+  return answered.filter((finding, at) => answered
+    .findIndex(other => other.code === finding.code && other.sentence === finding.sentence) === at);
 }
