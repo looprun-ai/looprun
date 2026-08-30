@@ -108,6 +108,17 @@ The harborpoint r12 slice (`~/Dev/js/harborpoint/subjects/harborpoint/test/`) is
   not answer: PARK IT — never widen the step, never guess a ruling. Unattended protocol
   below.
 
+## How to execute — controller + Opus subagents
+
+You (the pasted session) are the CONTROLLER: you never write engine code inline. Per
+step: dispatch a FRESH implementer subagent (model: **opus**, always — never a smaller
+tier) with only that step's brief, then a FRESH reviewer subagent (opus) gating the
+step's diff against its acceptance before the commit lands. Parallelize only where the
+law allows: within a step, docs + skill edits + fixture porting run beside the
+acceptance; step 7's three subject re-runs go as three parallel opus agents; step 8's
+blind author is its own fresh opus agent. Steps 1→6 stay strictly sequential. Keep your
+own context for coordination — briefs and reports ride files, not pasted history.
+
 ## Unattended mode — the run's standing assumption (the owner returns in ~10h)
 
 Nobody answers questions mid-run. The run must END WELL on its own:
