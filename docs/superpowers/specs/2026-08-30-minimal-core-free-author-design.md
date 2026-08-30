@@ -4,259 +4,148 @@
 > (Status PROPOSED). Nothing here is implemented.** Every AS-IS figure below was read
 > off the sources in session; file and line anchors name where.
 
-How to read this page: §A is the machine as it stands, §B is the machine after the
-proposal, §C is each design item with its own before/after picture, §D is the schedule.
+How to read this page: §AB puts the machine as it stands and the machine after the
+proposal SIDE BY SIDE — same rows, two columns, so every difference sits on one line.
+§C is each design item with its own before/after picture, §D is the schedule.
 Plain words throughout — every mechanism is named once and then drawn.
 
 ---
 
-## A · AS-IS — the engine and the skill today
+## AB · AS-IS ⇄ TO-BE, side by side
 
-### A1 · The packages and who depends on whom
-
-```
-                        ┌──────────────────────────────────────────┐
-                        │  core  (the engine — depends on zod only)│
-                        │  contract/vocabulary.ts imports NOTHING  │
-                        └───────┬──────────────────────────────────┘
-        ┌───────────┬───────────┼────────────┬──────────────┐
-        ▼           ▼           ▼            ▼              ▼
-   ┌────────┐ ┌──────────┐ ┌─────────┐ ┌──────────┐  ┌───────────┐
-   │ models │ │  mastra  │ │  eval   │ │  server  │  │   emit    │
-   │ local  │ │ host +   │ │ verbs + │ │ OpenAI   │  │ YAML →    │
-   │ tiers  │ │ MCP door │ │ lints   │ │ facade   │  │ cards.ts  │
-   └────────┘ └────┬─────┘ └────┬────┘ └──────────┘  └─────┬─────┘
-                   │            │        (eval also uses    │ (emit uses
-                   └────────────┴──────── mastra)           │  core + eval)
-                                ▼                           ▼
-                    ┌───────────────────────────────────────────────┐
-                    │ THE SUBJECT: declaration.yaml → emitted       │
-                    │ cards.ts · subject.ts · check-subject.test.ts │
-                    │ cards import @looprun-ai/core factories only  │
-                    └───────────────────────────────────────────────┘
-```
-
-Sizes that matter later: `core/src` ≈ 5,100 lines, `eval/src` ≈ 3,200 (of which
-`lints.ts` alone is 1,979), `emit/src` = 2,286, `mastra/src` ≈ 860.
-
-### A2 · The engine components, grouped by duty
+### AB1 · The packages
 
 ```
-┌─ THE TURN MACHINE ─────────────────┐  ┌─ THE GUARD LAYER ──────────────────────┐
-│ turn.ts (475)     sequences all    │  │ cards/catalog.ts (808)                 │
-│ session.ts (93)   seal = commit    │  │   18 deterministic factories           │
-│ engine.ts (100)   composition root │  │   4 judged (lie/impossibility/         │
-│ model-seat.ts     certified targets│  │      injection/hallucinationCheck)     │
-│ front-desk.ts     routing window   │  │   3 rewrites (purge/mask/swapTerms)    │
-└────────────────────────────────────┘  │ rulebook.ts (117)  ordered guard pipe  │
-┌─ THE CALL PATH ────────────────────┐  │ agent-factory.ts   cards → frozen agent│
-│ call-runner.ts (365)               │  │ honesty-check.ts   report vs acts      │
-│   coerce → identity → verdict →    │  └────────────────────────────────────────┘
-│   route → grade → mask-on-record   │  ┌─ THE WORLD ────────────────────────────┐
-│ consent-desk.ts (244)              │  │ world.ts / world-builder.ts /          │
-│   question lifecycle, 6-digit code │  │ world-gates.ts / patch-desk.ts         │
-│ disclosure-desk.ts (240) 3 tenses  │  │ one validating door, gates on          │
-│ masker.ts (68) masks once,on record│  │ every kind, simulate ≡ execute         │
-└────────────────────────────────────┘  └────────────────────────────────────────┘
-┌─ THE DELIVERY CHAIN (the seam §C measures) ────────────────────────────────────┐
-│ finish-desk.ts     the one structured closing channel                          │
-│ delivery-facts.ts  the turn's owed words, as labeled facts                     │
-│ reply-composer.ts  (131)  A SECOND MODEL CALL that rewrites the draft          │
-│ prose-reader.ts    (112)  wallEcho + language, zero vocabulary                 │
-│ delivery-writer.ts (20)   the literal floor: record lines                      │
-│ judge.ts           (64)   A THIRD MODEL CALL: one YES/NO per judged rule       │
-│ prompt-writer.ts   (87)   single producer of prompt bytes                      │
-└────────────────────────────────────────────────────────────────────────────────┘
-┌─ EVAL: verbs over a run dir ───────┐  ┌─ EMIT: the authoring gate ─────────────┐
-│ subject-loader · validator · gate  │  │ declaration.ts (526)  YAML → typed     │
-│ lints.ts: 27+ verbs, 1,979 lines   │  │ write-cards.ts (903)  the WHOLE text   │
-│ exam-runner · judge-inputs · fold  │  │   of cards.ts, never a sentence of its │
-│ counters · certify · seal · scan   │  │   own                                  │
-└────────────────────────────────────┘  │ against-surface.ts (633) every refusal │
-                                        │   answerable from the surface          │
-                                        └────────────────────────────────────────┘
+ AS-IS                                            │ TO-BE
+ ─────────────────────────────────────────────────┼──────────────────────────────────────────────────
+ core (the leaf; zod only)                        │ core   − composer as 2nd writer on the model path
+  │  contract/vocabulary.ts imports NOTHING       │        − NEGATORS (8 English words, catalog:608)
+  ├── models   local tiers, llama.cpp             │ models + cache_prompt / -np 1 wiring (D3 prereq)
+  ├── mastra   host agents + MCP door             │ mastra   unchanged
+  ├── eval     verbs + 27+ lints (1,979 ln);      │ eval   + NO_LANGUAGE_WORDS + world-id-literal
+  │            judge rows stripped to `kind`      │          lints; judge rows carry the FULL
+  ├── server   OpenAI facade                      │          correction (D5)
+  ├── emit     YAML → cards.ts (2,286 ln)         │ server   unchanged
+  └── looprun  facade barrels                     │ emit     RETIRED — run ONCE more; its output is
+                                                  │          byte-diffed and adopted as the
+                                                  │          hand-owned cards.ts source (D4)
+ sizes: core ≈5,100 · eval ≈3,200 · emit 2,286    │ net: −2,286 authored lines, −1 model call/turn
 ```
 
-### A3 · One governed turn, AS-IS — where the three prompts fire
+### AB2 · One governed turn — same stages, two machines
 
-Three different system prompts exist per turn: `[P1]` the main loop
+AS-IS runs up to THREE different system prompts per turn: `[P1]` the main loop
 (`PromptWriter.system()` + a mutating STATE tail), `[P2]` the composer's own
-("You are the delivery desk…", reply-composer.ts:28), `[P3]` the judge's own
-("You are checking ONE rule…", judge.ts:17).
+(reply-composer.ts:28), `[P3]` the judge's own (judge.ts:17). TO-BE runs ONE on the
+model path.
 
 ```
- operator message
-      │
-      ▼
- 1 · checkInput guards ──deny──► floor sentence, seal. ZERO model calls.
-      │
- 2 · consent desk runs FIRST, engine-side (turn.ts:204-218)
-      │   typed approval → held call EXECUTES before the model speaks
-      ▼
- 3 · MAIN LOOP  [P1]  system = frozen head + MUTATING STATE tail  ◄── §D3's target
-      │   tool calls, serial, each through call-runner
-      │   ├─ first held question ─────────────► engineClose  (path B)
-      │   ├─ finish call ─────────────────────► tryFinish    (path A)
-      │   └─ retries exhausted ───────────────► engineClose
-      ▼
- 4 · tryFinish (path A, turn.ts:319-418)
-      │   reply guards → figureIsGrounded → contradiction → judged [P3]
-      │   │                                  (judged only if deterministic clean)
-      │   ├─ violation → redrive: attempt + correction ride back into [P1]
-      │   └─ clean ▼
-      │   assembleFacts (AFTER the redrive loop — §D1's target)
-      │   ├─ facts empty & prose keeps reads → prose IS the delivery (no call)
-      │   └─ else → ReplyComposer.deliver  [P2]  ◄── a 2nd writer; §D2's target
-      │             gate = gateMisses: PRESENCE-only; facts:[] = vacuous
-      ▼
- 5 · engineClose (path B, turn.ts:452-473)
-      │   NO reply guards, NO judged walk  ◄── the hole §D2 closes
-      │   floor = record lines; composer only if facts exist
-      ▼
- 6 · readDelivery (both paths): prose reader (wallEcho·language)
-      │   refusal → ONE composer redrive → second refusal → literal floor
-      ▼
- 7 · mask → seal
+ stage                │ AS-IS                                    │ TO-BE
+ ─────────────────────┼──────────────────────────────────────────┼─────────────────────────────────────────
+ 1 input guards       │ deny → floor sentence, seal;             │ unchanged
+                      │ zero model calls                         │
+ ─────────────────────┼──────────────────────────────────────────┼─────────────────────────────────────────
+ 2 consent desk       │ typed approval EXECUTES engine-side      │ unchanged — the mechanism neither
+                      │ before the model speaks (turn:204-218)   │ traditional build matched
+ ─────────────────────┼──────────────────────────────────────────┼─────────────────────────────────────────
+ 3 main loop [P1]     │ system = frozen head + MUTATING STATE    │ system = pw.system() ALONE, frozen
+                      │ tail, rebuilt EVERY step (turn:239) —    │ forever; STATE + open questions move to
+                      │ voids the KV cache on every write;       │ the LAST user message; tool array
+                      │ tool array has TWO shapes (returnable)   │ pinned, ONE shape           ◄ D3
+ ─────────────────────┼──────────────────────────────────────────┼─────────────────────────────────────────
+ 4 tryFinish          │ reply guards → figureIsGrounded →        │ same walk, PLUS:
+   (path A — the desk │ contradiction → judged [P3: own system   │ gateMisses(facts, finish.message) runs
+   wrote a message)   │ + full history];                         │ as a VIOLATION → redrive on the SAME
+                      │ owed facts NOT checked here —            │ [P1] prefix                 ◄ D1
+                      │ assembleFacts only at turn:402, AFTER    │ clean message SHIPS AS-IS — no
+                      │ the redrive loop closes at :387;         │ composer, no second writer  ◄ D2
+                      │ clean draft → composer [P2] REWRITES it; │ judged guards: opt-in per desk, riding
+                      │ its gate is PRESENCE-only and vacuous    │ the SAME [P1] prefix as the last user
+                      │ on facts:[] (invented 364; deleted the   │ message                     ◄ D5
+                      │ required sentences of c20 95/37)         │
+ ─────────────────────┼──────────────────────────────────────────┼─────────────────────────────────────────
+ 5 engineClose        │ composer is the ONLY writer here;        │ composer KEPT here (without it, consent
+   (path B — consent  │ NO reply guards, NO judged walk          │ turns ship raw record dumps) + the
+   question or        │ (turn:452-473)                           │ reply-guard walk and the delivered-text
+   retries exhausted) │                                          │ figure walk ADDED           ◄ D2
+ ─────────────────────┼──────────────────────────────────────────┼─────────────────────────────────────────
+ 6 prose reader       │ wallEcho + language over the composed    │ unchanged — redrive writer is the desk
+                      │ text, both paths; one redrive → floor    │ on path A, the composer on path B
+ ─────────────────────┼──────────────────────────────────────────┼─────────────────────────────────────────
+ 7 mask → seal        │ the one commit point                     │ unchanged
+ ─────────────────────┼──────────────────────────────────────────┼─────────────────────────────────────────
+ prefixes per turn    │ up to THREE (P1 · P2 · P3)               │ ONE on the model path
 ```
 
-The measured cost of this shape (from the certified runs): the composer wrote 30 of 39
-delivered replies in harborpoint's final round; on the turns that close by path B it is
-the ONLY writer; and its presence-only gate let one invented figure (364) and two deleted
-required sentences (c20 cases 95/37) through. Attribution: the engine owns 5 of the 13
-unpaid governed points, 4 of them on this seam.
+The measured cost of the AS-IS shape (certified runs): the composer wrote 30 of 39
+delivered replies in harborpoint's final round; on path B it is the only writer; its
+presence-only gate let one invented figure and two deleted required sentences through.
+Attribution: the engine owns 5 of the 13 unpaid governed points, 4 of them on this seam.
 
-### A4 · Authoring, AS-IS — the declared path
-
-```
- declaration.yaml ──► emit
-      │ readDeclaration    every failure names path + line
-      │ factsFromSource    the tool surface, read from the world FILE
-      │ writeCards         the whole cards.ts text
-      │ checkAgainstSurface every refusal must be answerable
-      ▼
- 4 files: cards.ts · subject.ts · check-subject.test.ts (digest-stamped) · gen/SEAM.md
-      ▼
- gate: runGate + censusFor (27+ lint verbs)
-```
-
-The closed vocabularies an author lives inside: 8 desk fields · 13 declarable guard
-factories (of the engine's 18 — `deny` is refused, `role`/`cap` are renames) · 4 judged
-factories · 3 rewrite kinds · 4 disclosure tenses + 3 minted consent skeletons ·
-6 conduct voices demanded by the `conductComplete` lint on multi-desk houses (the
-ENGINE's conduct keys are open — the closure lives in the lint, not in core).
-Repairs: ALWAYS `declaration.yaml`, never `cards.ts`, never the engine.
-
-### A5 · The skill, AS-IS
+### AB3 · Authoring
 
 ```
- phase   A ──────► G ──────► E ──────► N/declare ─────► T ──────► S
- file    ask.md    gen.md    evals.md  norms.md (570)   test.md   ship.md
-         models.md debate.md           declare.md (411) judge-    (70)
-         (126+72)  (224+29)  (160)     guard-catalog.md ruler.md
-                                       (994) + lessons  local-perf
-                                       + contexts +     (206+75+46)
-                                       template (~780)
+ AS-IS — the declared path                        │ TO-BE — the freed author, inside four laws
+ ─────────────────────────────────────────────────┼──────────────────────────────────────────────────
+ declaration.yaml is the ONLY authoring surface;  │ free prompt per desk (walls are prose, the six
+ emit writes the WHOLE cards.ts text              │ voices demote to advisory)
+                                                  │
+ closed vocabularies: 8 desk fields · 13          │ free guard code behind one signature — the
+ declarable factories (the ENGINE holds 18;       │ engine's 18 factories remain available as a
+ `deny` refused, `role`/`cap` renames) · 4        │ LIBRARY, no longer a ceiling
+ judged · 3 rewrites · 4 disclosure tenses +      │
+ 3 minted consent skeletons · 6 conduct voices    │ declaration SURVIVES as data: terms,
+ demanded by the conductComplete LINT (core's     │ disclosures, consent skeletons, limits — the
+ conduct keys are open; the closure is the lint)  │ translatable per-subject vocabulary
+                                                  │
+ repair = ALWAYS declaration.yaml, never          │ repair = any authored file, held by the lints:
+ cards.ts, never the engine                       │   purity        regex stays AST-caught
+                                                  │   NO_LANGUAGE_WORDS  word lists refused;
+ gate: runGate + censusFor (27+ verbs)            │                 vocabulary only as declared data
+                                                  │   world-id-literal   ZERO exam/world record ids
+ the author's blind spot: "composer" is not a     │                 in authored text (trad leaked 14)
+ word the skill knows; judge rows show            │   certify()     refuses a run whose repair
+ ["redrive"] where the dump shows guardName ·     │                 touched a held-out id
+ detail · finish.message · delivery.by            │ covers: dropped from every new exam
 ```
 
-≈ 3,970 reference lines. The word "composer" appears in NONE of them — the author is
-taught a machine whose second writer has no name. `buildJudgeInputs` strips corrections
-to their `kind` string (judge-inputs.ts:33), so the judge row shows `["redrive"]` where
-the dump shows `guardName · detail · finish.message · delivery.by`.
-
----
-
-## B · TO-BE — the same machine, minimal and honest about itself
-
-### B1 · Packages after
+### AB4 · The skill
 
 ```
-        core (minus reply-composer-as-2nd-writer, minus NEGATORS)
-         ├── models   (unchanged + cache_prompt/-np 1 wiring)
-         ├── mastra   (unchanged)
-         ├── eval     (lints gain NO_LANGUAGE_WORDS + world-id-literal;
-         │            judge rows carry the full correction)
-         ├── server   (unchanged)
-         └── emit ────► RETIRED (2,286 lines) — run ONCE more; its output
-                        becomes the hand-owned cards.ts source
+ AS-IS                                            │ TO-BE
+ ─────────────────────────────────────────────────┼──────────────────────────────────────────────────
+ A → G → E → N/declare → T → S                    │ A → G → E → AUTHOR → T → S
+                                                  │
+ norms.md 570 · declare.md 411 ·                  │ author.md — declare.md + the ladder chapters of
+ guard-catalog.md 994 (+ lessons 256,             │ guard-catalog.md MERGED: write the desk, the
+ contexts 170, template 181) · test.md 206 ·      │ rungs as a library, what the lints refuse
+ evals.md 160 · gen.md 224 · ship.md 70 …         │
+ ≈ 3,970 reference lines                          │ engine-seams.md — NEW: the delivery, correction
+                                                  │ and judged stages, BY NAME (grep "composer"
+ "composer" appears in NONE of them — the         │ stops returning zero)
+ author is taught a machine whose second          │
+ writer has no name                               │ test.md — failure-reading table points at the
+                                                  │ ENRICHED judge rows: guardName · detail ·
+ judge rows: corrections stripped to their        │ finish.message · delivery.by
+ kind string (judge-inputs.ts:33)                 │ A/G/E/ship pages: unchanged
 ```
 
-### B2 · One governed turn, TO-BE — one prefix on the model path
+### AB5 · Component by component — the delta table
 
-```
- operator message
-      ▼
- 1 · checkInput guards ── unchanged
- 2 · consent desk ─────── unchanged (the mechanism neither trad build matched)
-      ▼
- 3 · MAIN LOOP  [P1]  system = pw.system() ALONE, frozen forever      ◄ D3
-      │               STATE + open questions = LAST user message      ◄ D3
-      │               tool card array pinned, one shape               ◄ D3
-      ▼
- 4 · tryFinish (path A)
-      │   reply guards → figureIsGrounded → contradiction → judged*
-      │   → gateMisses(facts, finish.message) AS A VIOLATION          ◄ D1
-      │     (owed facts now gate the DESK'S OWN message)
-      │   ├─ violation → redrive on the SAME [P1] prefix
-      │   └─ clean → the desk's message IS the delivery. NO COMPOSER. ◄ D2
-      ▼
- 5 · engineClose (path B — consent questions, retry exhaustion)
-      │   composer KEPT here (it is the only writer: no desk message  ◄ D2
-      │   exists) + reply-guard walk and delivered-text figure walk
-      │   ADDED on this path
-      ▼
- 6 · prose reader — unchanged on both paths (redrive writer: the desk
-      on path A, the composer on path B)
-      ▼
- 7 · mask → seal — unchanged
-
- * judged guards: opt-in per desk, and the judge question rides the SAME
-   [P1] prefix as the last user message (today: own system + full history)
-```
-
-What died: `[P2]` on the model path (the second writer that invented 364 and deleted
-95/37's sentences), `[P3]` as a third prefix. What appeared: the owed-content check one
-stage earlier — the traditional build's highest-yield mechanism (`must_state`), wired to
-the stage where the desk itself answers for it.
-
-### B3 · Authoring, TO-BE — the freed author inside four laws
-
-```
- the author writes            the machine enforces
- ─────────────────            ────────────────────
- free prompt per desk    ◄──  world-id-literal lint: ZERO exam/world record
- (walls are prose,            ids in authored text (the trad leak: 14 ids)
-  voices advisory)
- free guard code         ◄──  purity (regex stays AST-caught) +
- behind one signature         NO_LANGUAGE_WORDS: vocabulary is DECLARED DATA
- (18 factories remain         (terms: blocks in the subject), never literals
-  available as a library)     in guard code
- owed-content directives ◄──  D1: gateMisses as a violation, redriven
- declaration survives as ◄──  data: terms, disclosures, consent skeletons,
- DATA, not as a licence       limits — the translatable per-subject vocabulary
- held-out discipline     ◄──  certify() refuses a run whose repair touched a
-                              split:'held-out' id; covers: dropped from new exams
-```
-
-### B4 · The skill, TO-BE
-
-```
- A ──────► G ──────► E ──────► AUTHOR ─────────► T ──────► S
- unchanged unchanged unchanged author.md         test.md   unchanged
-                               (declare.md +     + judge
-                               ladder chapters   rows now
-                               merged: the       carrying
-                               desk, the rungs   guardName·
-                               as a LIBRARY,     detail·
-                               what lints        finish.
-                               refuse)           message·
-                               engine-seams.md   delivery.by
-                               (NEW: delivery,
-                               correction and
-                               judged stages,
-                               BY NAME)
-```
-
-The author can finally name the stage that eats their fix — and the judge row shows it.
+| component | AS-IS | TO-BE |
+|---|---|---|
+| `reply-composer.ts` (131) | second writer on BOTH close paths; `gateMisses` presence-only | writer on engineClose ONLY; tryFinish ships the desk's own gated message |
+| `turn.ts` owed-facts check | `assembleFacts` at :402, after the redrive loop (:387) — facts gate only the rewrite | `gateMisses(facts, message)` inside tryFinish, as a violation, redriven |
+| `turn.ts:239` prompt | frozen head + mutating STATE concatenated per step | `pw.system()` alone; STATE = last user message; tool array pinned |
+| `judge.ts` (64) | own prefix + full history; compiled for every declared judged guard | opt-in per desk; question rides the main prefix as the last user message |
+| `catalog.ts` NEGATORS (:608) | 8 English negators decide negation ("não passou" ALLOWED for 'passed') | deleted — no word of any language in runtime matching |
+| `call-runner.ts` mask seam (:305) | masks declared fields | + untrusted-field wrapper — field NAMES only, never words |
+| `packages/emit` (2,286) | the only authoring door | retired; final output adopted as hand-owned source |
+| `eval/lints.ts` (1,979) | 27+ verbs; `conductComplete` RED on multi-desk houses | + NO_LANGUAGE_WORDS + world-id-literal; conduct voices advisory |
+| `eval/judge-inputs.ts` (:33) | corrections → `kind` only | full correction fields reach the judge row |
+| `eval/certifier.ts` | held-out excluded from the fix loop | + refuses a run whose repair touched a held-out id |
+| `packages/models` | no `cache_prompt`, tiers request `slots: 2` | `cache_prompt: true` + `-np 1` per local-performance.md laws 1/5 |
+| consent-desk · world/ · masker · floor · prose-reader · counters · honesty-check | — | UNCHANGED — the keep list, each with a measured win behind it |
 
 ---
 
@@ -274,9 +163,8 @@ The author can finally name the stage that eats their fix — and the judge row 
 ```
 
 Already in the engine: `call-runner.ts:115` mints the owed text; `Act.sentence` reaches
-the model. Missing only the check at the right stage — `assembleFacts` runs at
-turn.ts:402, AFTER the redrive loop closes at :387. Micro-tested on the real dumps: the
-existing figure walk over the DELIVERED text catches the 364 case.
+the model. Missing only the check at the right stage. Micro-tested on the real dumps:
+the existing figure walk over the DELIVERED text catches the 364 case.
 
 ### C2 = D2 · The composer narrowed, not deleted
 
@@ -319,7 +207,7 @@ owed-read micro-step (single tool card) stays as a documented one-step fork.
 Prerequisite the red-team caught: `cache_prompt: true` and `-np 1` must land in
 `packages/models` first, or the llama.cpp measurement times the box, not the layout.
 
-### C4 = D4 · The freed author (see §B3)
+### C4 = D4 · The freed author (see §AB3)
 
 The emitter retires after ONE last run whose output is byte-diffed and adopted as the
 hand-owned source. The declaration file survives as data (terms, disclosures, skeletons,
