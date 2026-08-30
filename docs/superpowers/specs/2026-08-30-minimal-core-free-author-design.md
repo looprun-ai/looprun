@@ -139,6 +139,7 @@ Attribution: the engine owns 5 of the 13 unpaid governed points, 4 of them on th
 | `turn.ts:239` prompt | frozen head + mutating STATE concatenated per step | `pw.system()` alone; STATE = last user message; tool array pinned |
 | `judge.ts` (64) | own prefix + full history; compiled for every declared judged guard | opt-in per desk; question rides the main prefix as the last user message |
 | `catalog.ts` NEGATORS (:608) | 8 English negators decide negation ("não passou" ALLOWED for 'passed') | deleted — no word of any language in runtime matching |
+| `choiceFromUser` | licenses a coded value by matching declared terms in the operator's prose — language-bound: only the declaration's language works | same name, new behavior: the desk asks, options in the operator's language; the value is licensed only by an exact-alone echo (the ConsentDesk mechanic, generalized) |
 | `call-runner.ts` mask seam (:305) | masks declared fields | + untrusted-field wrapper — field NAMES only, never words |
 | `packages/emit` (2,286) | the only authoring door | retired; final output adopted as hand-owned source |
 | `eval/lints.ts` (1,979) | 27+ verbs; `conductComplete` RED on multi-desk houses | + NO_LANGUAGE_WORDS + world-id-literal; conduct voices advisory |

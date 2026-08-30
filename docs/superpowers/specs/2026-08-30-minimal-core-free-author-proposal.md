@@ -136,6 +136,7 @@ skeletons and limits — data, not the only licence.
 | repair | why |
 |---|---|
 | delete `NEGATORS` (`catalog.ts:608`) — remove the list, never multiply it per language | live standing-law breach, measured wrong verdict on PT; FIRST if anything slips |
+| `choiceFromUser` keeps its NAME and loses its behavior: a coded value is licensed only by an exact-alone echo against an open question the desk raised — the ConsentDesk mechanic generalized to choices. The desk presents the options in the OPERATOR'S language (its own prose, prose-reader-guarded); the engine matches only the echoed token. No guard ever matches a word — declared or not — against the operator's prose | term-matching is language-bound by construction: an English-declared agent refuses lawful acts in every other language ("a triagem passou" carries no declared term). Digits and echoed literals carry no language |
 | judge rows carry `guardName`, `detail`, `finish.message`, `delivery.by` | the direct fix to the T-loop author's blindness (Q2.1) — one mapping line |
 | `references/engine-seams.md` in the skill, NAMING delivery/correction/judged stages | `grep composer skill/` = 0 today; the author cannot diagnose a stage that has no name |
 | judge becomes opt-in per desk and reuses the main prefix (question as last user message) | zero judged guards are declared in any of the three subjects; its own system+full-history shape is the most cache-hostile in the engine |
