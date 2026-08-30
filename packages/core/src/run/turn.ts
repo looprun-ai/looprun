@@ -192,8 +192,14 @@ export class Turn {
     };
     const runner = new CallRunner({ compiled, rulebook, clerk: this.deps.clerk, history,
       toolPort: this.deps.toolPort, recordsPort: this.deps.recordsPort,
-      consent: desk, masker, disclosure: new DisclosureDesk(compiled.disclosureBindings),
+      consent: desk, choices: session.choices, masker,
+      disclosure: new DisclosureDesk(compiled.disclosureBindings),
       revoked: session.revokedSimulations, microStep });
+
+    // The operator's message is read against every OPEN choice question before any call
+    // runs: the answer names an option on the question that asked for it, and nothing else
+    // in the message is read. A message answering nothing leaves every question as it was.
+    session.choices.readAnswer(userText);
 
     // A consumed approval executes ENGINE-side, before the model speaks: the desk
     // holds the executable call, so a paraphrase can never drift the args. The

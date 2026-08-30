@@ -90,7 +90,7 @@ the rest.
 | requires a read to have happened first | `onlyAfter` | a school registrar: `issueTranscript` only after `getFeeBalance`, and the rule carries the subtraction — 1,250 charged, 900 paid, 350 standing |
 | holds a number under a figure a read returned | `cap` (disclosure) | a pharmacy counter: `dispense(rx_4471, quantity)` capped at `getPrescription.rx.remaining` — 30 authorised, 20 collected, a request for 30 refused at 10 |
 | requires an argument to be the user's own words | `valueFromUser` | a card-operations desk: the cardholder wrote *"84.90 at a petrol station"* and the model sent `amount: 89.40` |
-| requires a CHOICE to be grounded in the operator's words | `choiceFromUser` | a printworks counter: the customer asked for *"the matt stock"* and the model sent `finish: gloss` — nobody writes a flag, so the words the option is stated in are what the check searches for |
+| requires a CHOICE the operator ANSWERED | `choiceFromUser` | a printworks counter: the customer asked for *"the matt stock"* and the model sent `finish: gloss` — nobody writes a flag, so the desk puts the finishes to the customer and the answer is the licence |
 | requires an argument to match a declared shape | `argFormat` | an insurer: `policyId` is `POL-` and eight digits, so `POL-2291` is a well-formed guess, not an identifier |
 | forbids an argument from arriving at all | `argAbsent` | a clinic: `bookAppointment` declares `overrideCapacity`, and no desk may send it |
 | checks the RESULT after the call ran | `checkResult` | a statements desk: `sendStatement` returns `delivered: false, bounce: 'mailbox_full'`, and the reply corrects itself instead of reporting success |
@@ -120,7 +120,7 @@ machine can never disagree. Use one instead of hand-writing a `deny` wherever it
 | `onlyAfter(tool, prerequisite)` | two tool names | the act until the prerequisite SUCCEEDED this conversation | acting on a figure nobody read |
 | `precondition(tool, check, rule)` | `({ record, state }) => boolean` | while the records fail the check | asking about an act the records already rule out |
 | `valueFromUser(tool, arg)` | tool + arg name | a value the user never wrote, matched as whole tokens | the model inventing an amount, an address, a date |
-| `choiceFromUser(tool, arg, terms, rule)` | each value the argument may carry → the words it is stated in | a choice no message of the conversation states in any of its words | the model picking an option the operator never chose |
+| `choiceFromUser(tool, arg, options, rule)` | the two or more values the argument may carry | the call until the operator's own answer names the value it carries | the model picking an option the operator never chose |
 | `argFormat(tool, arg, pattern)` | a pattern string | a value the declared shape rejects | a well-formed guess passing as an identifier |
 | `argAbsent(tool, arg)` | tool + arg name | the call when the forbidden argument arrives | a banned field being used anyway |
 | `checkResult(tool, check)` | `(ctx) => string \| null` over the RESULT | after execution, into the reply's corrections | reporting a success the result does not show |
@@ -131,6 +131,60 @@ machine can never disagree. Use one instead of hand-writing a `deny` wherever it
 
 Regexes live in exactly three places — `blockPattern`, `purgePattern`, `maskPattern` — and the
 build fails on a regex anywhere else in the engine. A guard decides by reading typed values.
+
+### A choice costs a turn, and buys every language
+
+`choiceFromUser` is the one factory that asks. The refusal OPENS a question: the engine mints
+six digits for it and hands the desk the declared options beside them. The desk puts that
+question to the operator in the operator's own language, and the licence is the reply carrying
+one option and that question's code, those two and nothing else:
+
+```
+OPERATOR   A triagem da pt_4133 não passou. Registre isso no prontuário.
+DESK       recordScreeningOutcome({ caseId: 'pt_4133', outcome: 'failed' })
+ENGINE     refused — 'outcome' is a choice, and no answer of the operator licenses a value
+           for it. Ask the operator … to choose one of [1] passed · [2] failed … <option> 917997
+DESK       Qual foi o desfecho da triagem?
+           [1] `passed` (Aprovado)  ·  [2] `failed` (Reprovado)
+           Responda com a opção e o código: <opção> 917997
+OPERATOR   2 917997
+DESK       recordScreeningOutcome({ caseId: 'pt_4133', outcome: 'failed' })   → runs
+```
+
+The desk read `não passou` correctly on its first call and was refused anyway. That is the
+point: the model's reading of the prose is never the licence, so a desk cannot talk itself into
+an option, and an operator writing Portuguese or Japanese is served exactly as an English one
+is — the engine matches the declared options, the code it minted and the shape of the message,
+never a word of any language.
+
+The code is what tells two open questions apart. A bare `2` answers anything — the choice, or
+the "how many days?" beside it — so a reply without the code licenses nothing, and the desk asks
+again. That costs one turn; a `2` credited to the wrong question costs the operator an act they
+never approved.
+
+**A question is answered once.** The act that runs on the answer spends it, so the next record
+is a fresh question under a code the operator has not seen:
+
+```
+OPERATOR   2 917997
+DESK       recordScreeningOutcome({ caseId: 'pt_4133', outcome: 'failed' })   → runs
+OPERATOR   Faça o mesmo para a pt_9000.
+DESK       recordScreeningOutcome({ caseId: 'pt_9000', outcome: 'failed' })
+ENGINE     refused — … <option> 550123        ← a new question, a new code
+```
+
+Without that, one answer would license every later call of the same act, and "the operator
+answered once" would quietly become "the operator answered for every record in the
+conversation". The same rule refuses an echo that arrives against no open question at all: a
+code nobody minted, or one already spent, licenses nothing.
+
+An act whose outcome is **unclear** spends the answer too. When the tool throws, or answers
+neither yes nor no, the write may well have landed — so the engine treats the answer as used
+rather than leaving it live for the next record to pick up.
+
+One question stands per act and argument at a time — asking twice restates the standing
+question rather than minting a second live code, so the operator is never holding two codes for
+one choice.
 
 ### Using one
 

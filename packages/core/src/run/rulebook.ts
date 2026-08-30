@@ -77,6 +77,13 @@ export class Rulebook {
         const sentence = guard.hold(ctx);
         if (sentence !== null) return { kind: 'hold', guardName: guard.name, sentence };
       }
+      if (guard.choose) {
+        const choice = guard.choose(ctx);
+        if (choice !== null) {
+          return { kind: 'choose', guardName: guard.name,
+                   arg: choice.arg, options: choice.options };
+        }
+      }
       const detail = guard.deny(ctx);
       if (detail !== null) return { kind: 'refuse', guardName: guard.name, detail };
     }

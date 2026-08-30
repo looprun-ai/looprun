@@ -445,37 +445,26 @@ function checkEmptyFillable(declaration: Declaration): readonly string[] {
   return refusals;
 }
 
-/** The words one value of a choice is stated in stand apart from every other value's. The check
- *  searches everything the operator has said for a term as written, so a term spelled inside
- *  another value's term is found whenever that longer one is: one message grounds both values, and
- *  the gate passes the value the operator never chose. */
-function checkChoiceTermsDisjoint(declaration: Declaration): readonly string[] {
+/** Every option of a choice stands apart from every other. The desk puts the options to the
+ *  operator by name and the operator answers with one of them, so two options carrying the same
+ *  name are one line the operator can never choose between. */
+function checkChoiceOptionsDistinct(declaration: Declaration): readonly string[] {
   const refusals: string[] = [];
   declaration.contract.guards.forEach((guard, guardIndex) => {
     if (guard.factory !== 'choiceFromUser') return;
-    const declared = guard.args?.terms;
-    if (typeof declared !== 'object' || declared === null || Array.isArray(declared)) return;
-    const values = Object.entries(declared as Readonly<Record<string, unknown>>).map(
-      ([value, words]) => ({ value, words: (Array.isArray(words) ? words : [])
-        .filter((word): word is string => typeof word === 'string') }));
-    const collision = (inner: string, innerValue: string,
-                       outer: string, outerValue: string): string =>
-      `contract.guards[${guardIndex}].args.terms: '${inner}' states '${innerValue}' and is spelled `
-      + `inside '${outer}', which states '${outerValue}'. The check searches the operator's own `
-      + `messages for these words as written, so a message saying '${outer}' states '${outerValue}' `
-      + `and states '${innerValue}' with it — the gate passes the value nobody chose. Give `
-      + `'${innerValue}' and '${outerValue}' words neither one contains.`;
-    for (let i = 0; i < values.length; i += 1) {
-      for (let j = i + 1; j < values.length; j += 1) {
-        for (const one of values[i].words) {
-          for (const other of values[j].words) {
-            const a = one.toLowerCase();
-            const b = other.toLowerCase();
-            if (b.includes(a)) refusals.push(collision(one, values[i].value, other, values[j].value));
-            else if (a.includes(b)) refusals.push(collision(other, values[j].value, one, values[i].value));
-          }
-        }
+    const declared = guard.args?.options;
+    if (!Array.isArray(declared)) return;
+    const seen = new Set<string>();
+    for (const option of declared as readonly unknown[]) {
+      if (typeof option !== 'string') continue;
+      const folded = option.toLowerCase();
+      if (seen.has(folded)) {
+        refusals.push(`contract.guards[${guardIndex}].args.options carries '${option}' twice. The `
+          + `desk lists the options for the operator to choose between, and an option spelled the `
+          + `same as another is a line the answer can never tell apart — give each value the `
+          + `argument may carry its own name.`);
       }
+      seen.add(folded);
     }
   });
   return refusals;
@@ -625,7 +614,7 @@ export function checkAgainstSurface(declaration: Declaration, facts: SurfaceFact
     ...checkDisclosureNeedsInLane(declaration, facts),
     ...checkAfterSpeaksResult(declaration),
     ...checkEmptyFillable(declaration),
-    ...checkChoiceTermsDisjoint(declaration),
+    ...checkChoiceOptionsDistinct(declaration),
     ...checkSeamRows(declaration, facts, seam),
     ...checkRoutingLines(declaration),
     ...checkConductVoices(declaration)

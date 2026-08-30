@@ -13,10 +13,12 @@ export type {
   AgentSpec, DomainContract, CompiledAgent, CompiledGuard, Guard, GuardCtx,
   JudgedGuard, Limits, Disclosure, DisclosureBinding, MaskKey, Wording, PromptParts
 } from './cards/cards.js';
-export { onlyAfter, precondition, valueFromUser, choiceFromUser, checkResult, mustAccountFor,
-         argFormat, argAbsent, blockPattern, purgePattern, maskPattern, swapTerms, maxCalls,
-         lieCheck, impossibilityCheck, injectionCheck, hallucinationCheck, carriedIds }
+export { onlyAfter, precondition, valueFromUser, choiceFromUser, checkResult,
+         mustAccountFor, argFormat, argAbsent, blockPattern, purgePattern, maskPattern,
+         swapTerms, maxCalls, lieCheck, impossibilityCheck, injectionCheck, hallucinationCheck,
+         carriedIds }
   from './cards/catalog.js';
+export { ChoiceDesk, answeredOption } from './run/choice-desk.js';
 export { Engine } from './run/engine.js';
 export type { EngineConfig } from './run/engine.js';
 export { Rulebook } from './run/rulebook.js';

@@ -307,9 +307,7 @@ contract:
       factory: choiceFromUser
       args:
         arg: includeDelivery
-        terms:
-          'true': [delivered, delivery, deliver, drop it off]
-          'false': [collect, collecting, collection, picking it up, themselves]
+        options: ['true', 'false']
       rule: >-
         Whether the machine is delivered or collected is the customer's to choose, and nothing in
         the records chooses it for them. Send includeDelivery only once they have said the hire is
@@ -321,12 +319,7 @@ contract:
       factory: choiceFromUser
       args:
         arg: condition
-        terms:
-          excellent: [excellent, as new]
-          good: [good]
-          fair: [fair]
-          poor: [poor]
-          damaged: [damaged, damage]
+        options: [excellent, good, fair, poor, damaged]
       rule: >-
         The grade a machine is recorded at is the operator's to state, and nothing in the records
         states it for them. Send condition only once they have said excellent, good, fair, poor or
@@ -338,12 +331,7 @@ contract:
       factory: choiceFromUser
       args:
         arg: condition
-        terms:
-          excellent: [excellent, as new]
-          good: [good]
-          fair: [fair]
-          poor: [poor]
-          damaged: [damaged, damage]
+        options: [excellent, good, fair, poor, damaged]
       rule: >-
         The condition a machine comes out of the workshop in is the operator's to state, and a job
         finishing says nothing about it. Send condition only once they have said excellent, good,
@@ -355,12 +343,7 @@ contract:
       factory: choiceFromUser
       args:
         arg: conditionIn
-        terms:
-          excellent: [excellent, as new]
-          good: [good]
-          fair: [fair]
-          poor: [poor]
-          damaged: [damaged, damage]
+        options: [excellent, good, fair, poor, damaged]
       rule: >-
         The condition a machine comes back in is the operator's to state, and nothing in the
         records states it for them. Send conditionIn only once they have said excellent, good,
@@ -372,10 +355,7 @@ contract:
       factory: choiceFromUser
       args:
         arg: resolution
-        terms:
-          approve: [approve, approved, approving]
-          deny: [deny, denied, denying, reject]
-          settle: [settle, settled, settling, settlement]
+        options: [approve, deny, settle]
       rule: >-
         How a claim ends is the operator's to decide, and nothing in the records decides it for
         them. Send resolution only once they have said approve, deny or settle, and until then ask

@@ -159,11 +159,13 @@ operator-figure check at all — exactly the 9 the exam never probes.
 | discrimination proof | no ungoverned twin, ever | governed measured 25/30 vs 14/30 and 100 vs 69 |
 | consent that binds | `?`-fallback with `args: null`; trialworks executes the held act in the HARNESS | held EXECUTABLE act + 6-digit code + TTL + exact-alone |
 
-**Correction the comparison forced into the open:** the governed engine is language-agnostic
-*by law, not yet by state* — `catalog.ts:608` holds eight English negators, and the probe
-“A triagem da pt_4133 **não passou**” is ALLOWED for `outcome: 'passed'` — the opposite of
-what the operator said. A live breach of the no-language-words law, measured (BACKLOG row 3;
-its repair REMOVES the list).
+**Correction the comparison forced into the open:** reading a choice out of the operator's prose
+is language-bound whatever the reader does. “A triagem da pt_4133 **não passou**” carries no
+English term, so an English-declared gate refuses the lawful call; take the negator list away and
+the same sentence ALLOWS `outcome: 'passed'` — the opposite of what the operator said. No amount
+of extra vocabulary repairs either side: the words belong to a language, and the engine owns none.
+A choice is licensed by an ANSWER: the desk asks in the operator's language, and the licence is
+the reply carrying the option and the ask's own code.
 
 Second correction: the audit advantage is currently unexercised — none of the four subject
 trees is under git, and neither governed subject carries a seal file. The verbs exist

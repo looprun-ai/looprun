@@ -84,7 +84,7 @@ const LAWFUL_ARGS: Readonly<Record<DeclaredGuard['factory'], readonly string[]>>
   precondition: ['reads', 'field', 'is', 'in'],
   role: ['anchor', 'by', 'from', 'field', 'in'],
   valueFromUser: ['arg'],
-  choiceFromUser: ['arg', 'terms'],
+  choiceFromUser: ['arg', 'options'],
   argFormat: ['arg', 'pattern'],
   argAbsent: ['arg'],
   cap: ['calls', 'scope'],
@@ -315,30 +315,25 @@ function roleLines(guard: DeclaredGuard): readonly string[] {
     `${quote(ruleOf(guard))})`];
 }
 
-/** The words each value of a choice is stated in, as the card carries them: every value the
- *  argument may carry, mapped to one or more words the operator's own message would say it with.
- *  A value with an empty list — or a word that is blank — can never be grounded, so it is refused
- *  by the key that carries it: the act it covers would refuse every call for the whole
- *  conversation. */
-function choiceTerms(guard: DeclaredGuard): string {
-  const declared = guard.args?.terms;
-  if (typeof declared !== 'object' || declared === null || Array.isArray(declared)
-    || Object.keys(declared).length === 0) {
+/** The options a choice puts to the operator, as the card carries them: every value the argument
+ *  may carry, in the order the desk lists them in. Two options are the fewest a choice can be
+ *  made from, and a blank one can never be answered — the desk would put an empty line to the
+ *  operator, and the act it covers would refuse every call for the whole conversation. */
+function choiceOptions(guard: DeclaredGuard): string {
+  const declared = guard.args?.options;
+  if (!Array.isArray(declared) || declared.length < 2) {
     throw new Error(`contract.guards '${guard.name}' declares factory 'choiceFromUser', whose `
-      + `configuration is args.terms — each value the argument may carry, mapped to one or more `
-      + `words the operator states it in, which this declaration does not carry`);
+      + `configuration is args.options — the two or more values the argument may carry, which `
+      + `the desk puts to the operator to choose between, and which this declaration does not `
+      + `carry`);
   }
-  const pairs = Object.entries(declared as Readonly<Record<string, unknown>>);
-  for (const [value, words] of pairs) {
-    const stated = Array.isArray(words) && words.length > 0
-      && words.every(word => typeof word === 'string' && word.trim() !== '');
-    if (stated) continue;
-    throw new Error(`contract.guards '${guard.name}' declares args.terms.${value}, and a value is `
-      + `grounded by the words the operator writes for it — declare a list of one or more words, `
-      + `each one a word a message can carry`);
+  for (const option of declared as readonly unknown[]) {
+    if (typeof option === 'string' && option.trim() !== '') continue;
+    throw new Error(`contract.guards '${guard.name}' declares an option that says nothing in `
+      + `args.options, and the desk puts every option to the operator by name — declare each one `
+      + `as the value the argument carries for it`);
   }
-  return `{ ${pairs.map(([value, words]) =>
-    `${key(value)}: ${list(words as readonly string[])}`).join(', ')} }`;
+  return list(declared as readonly string[]);
 }
 
 /** A check over the result the act came back with: the field the declaration reads off it and the
@@ -437,7 +432,7 @@ function factoryCall(guard: DeclaredGuard): { readonly imported: string | null;
     case 'choiceFromUser':
       return { imported: 'choiceFromUser',
         lines: [`choiceFromUser(${quote(act)}, ${quote(stringArg(guard, 'arg'))},`,
-          `${choiceTerms(guard)},`, `${quote(ruleOf(guard))})`] };
+          `${choiceOptions(guard)},`, `${quote(ruleOf(guard))})`] };
     case 'argFormat':
       return { imported: 'argFormat',
         lines: [`argFormat(${quote(act)}, ${quote(stringArg(guard, 'arg'))}, `

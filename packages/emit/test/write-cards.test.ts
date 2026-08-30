@@ -164,16 +164,14 @@ describe('writeCards', () => {
     expect(out).toContain("after: 'The invoice carries {result.total}, and {result.balanceDue} is still due.'");
   });
 
-  test('a choice gate is emitted with its terms and refuses with the declared rule', () => {
+  test('a choice gate is emitted with its options and refuses with the declared rule', () => {
     const rule = 'Send whether the refund goes back to the card only as the customer chose it.';
     const out = writeCards(decl({ guards: [
       { name: 'refundRouteAsTheCustomerChoseIt', acts: ['issueRefund'], factory: 'choiceFromUser',
-        args: { arg: 'invoiceId', terms: { true: ['back to the card', 'same card'],
-                                           false: ['as store credit', 'credit note'] } },
+        args: { arg: 'invoiceId', options: ['toTheCard', 'asStoreCredit'] },
         rule }] }), FACTS);
     expect(out).toContain("{ ...choiceFromUser('issueRefund', 'invoiceId',");
-    expect(out).toContain("{ true: ['back to the card', 'same card'], "
-      + "false: ['as store credit', 'credit note'] },");
+    expect(out).toContain("['toTheCard', 'asStoreCredit'],");
     expect(out).toContain(`'${rule}')`);
     // The sentence rides inside the call, so the literal around it never restates it.
     expect(out).not.toContain(`rule: '${rule}'`);
@@ -188,30 +186,30 @@ describe('writeCards', () => {
     const out = writeCards(decl({ guards: [
       { name: 'routeAsTheCustomerChoseIt', acts: ['issueRefund', 'closeBooking'],
         factory: 'choiceFromUser', wide: 'oneLawEveryAct',
-        args: { arg: 'invoiceId', terms: { true: ['same card'] } },
+        args: { arg: 'invoiceId', options: ['toTheCard', 'asStoreCredit'] },
         rule: 'Send the route only as the customer chose it.' }] }), FACTS);
     expect(out).toContain("tool: ['issueRefund', 'closeBooking']");
     expect(out).toContain("routeAsTheCustomerChoseIt: 'oneLawEveryAct'");
   });
 
-  test('a choice with no terms for a value it may carry is refused by that key', () => {
-    const guard = (terms: unknown): readonly DeclaredGuard[] => [
+  test('a choice of fewer than two options, or of one that says nothing, is refused', () => {
+    const guard = (options: unknown): readonly DeclaredGuard[] => [
       { name: 'routeAsTheCustomerChoseIt', acts: ['issueRefund'], factory: 'choiceFromUser',
-        args: { arg: 'invoiceId', terms }, rule: 'Send the route as the customer chose it.' }];
-    expect(() => writeCards(decl({ guards: guard({ true: [] }) }), FACTS))
-      .toThrow('declares args.terms.true, and a value is grounded by the words the operator writes');
-    expect(() => writeCards(decl({ guards: guard({ true: ['same card'], false: [' '] }) }), FACTS))
-      .toThrow('declares args.terms.false');
-    expect(() => writeCards(decl({ guards: guard({}) }), FACTS))
-      .toThrow("declares factory 'choiceFromUser', whose configuration is args.terms");
+        args: { arg: 'invoiceId', options }, rule: 'Send the route as the customer chose it.' }];
+    expect(() => writeCards(decl({ guards: guard(['toTheCard', ' ']) }), FACTS))
+      .toThrow('declares an option that says nothing in args.options');
+    expect(() => writeCards(decl({ guards: guard(['toTheCard']) }), FACTS))
+      .toThrow("declares factory 'choiceFromUser', whose configuration is args.options");
+    expect(() => writeCards(decl({ guards: guard([]) }), FACTS))
+      .toThrow("declares factory 'choiceFromUser', whose configuration is args.options");
     expect(() => writeCards(decl({ guards: guard(undefined) }), FACTS))
-      .toThrow("declares factory 'choiceFromUser', whose configuration is args.terms");
+      .toThrow("declares factory 'choiceFromUser', whose configuration is args.options");
   });
 
   test('a choice gate with no rule is refused — the sentence is the whole refusal', () => {
     expect(() => writeCards(decl({ guards: [
       { name: 'routeAsTheCustomerChoseIt', acts: ['issueRefund'], factory: 'choiceFromUser',
-        args: { arg: 'invoiceId', terms: { true: ['same card'] } } }] }), FACTS))
+        args: { arg: 'invoiceId', options: ['toTheCard', 'asStoreCredit'] } }] }), FACTS))
       .toThrow("declares factory 'choiceFromUser', which states its law in the card's own words");
   });
 
@@ -630,8 +628,7 @@ describe('writeCards', () => {
           { name: 'amountAsTheCustomerSaidIt', acts: ['issueRefund'], factory: 'valueFromUser',
             args: { arg: 'invoiceId' } },
           { name: 'routeAsTheCustomerChoseIt', acts: ['issueRefund'], factory: 'choiceFromUser',
-            args: { arg: 'invoiceId', terms: { true: ['back to the card', 'same card'],
-                                               false: ['store credit', 'credit note'] } },
+            args: { arg: 'invoiceId', options: ['toTheCard', 'asStoreCredit'] },
             rule: 'Where the money goes back is the customer\'s choice; send it only as they said it.' },
           { name: 'invoiceIdInItsShape', acts: ['getInvoice'], factory: 'argFormat',
             args: { arg: 'invoiceId', pattern: 'inv_[0-9]{4}' } },

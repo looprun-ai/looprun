@@ -6,7 +6,7 @@
  *  schema's own declared pattern. */
 import type { Act, CallCtx, ConsentWhen, InputCtx, Json, OwedRead, ReplyCtx, ReportWord, ResultCtx,
               Rewrite, StateSnapshot, SurfaceFacts } from '../contract/vocabulary.js';
-import { TurnFailure } from '../contract/vocabulary.js';
+import { choiceKey, TurnFailure } from '../contract/vocabulary.js';
 import type { CompiledGuard, Guard, GuardCtx } from './cards.js';
 
 /** An authored guard that carries its own AgentFactory derivation. */
@@ -603,77 +603,32 @@ export function valueFromUser(tool: string, arg: string): SeedGuard {
   };
 }
 
-/** The words that turn a mention into its opposite. A contraction carries its own — `wasn't`,
- *  `don't`, `won't` — and every one of them ends the same way. */
-const NEGATORS = new Set(['no', 'not', 'never', 'without', 'nor', 'neither', 'none', 'cannot']);
-
-/** True while a clause is still running. A clause ends at the punctuation a person pauses on;
- *  a dot inside a word — 'ws_denver02', 'ops@example.com' — is part of the word, so a dot ends
- *  a clause only when a space or the end of the text follows it. */
-function clauseBreakAt(text: string, at: number): boolean {
-  const c = text[at];
-  if (c === ',' || c === ';' || c === ':' || c === '!' || c === '?' || c === '\n'
-    || c === '—' || c === '–') return true;
-  return c === '.' && (at + 1 === text.length || text[at + 1] === ' ' || text[at + 1] === '\n');
-}
-
-/** The clauses of one message, lower cased, in the order they were written. */
-function clausesOf(text: string): readonly string[] {
-  const said = text.toLowerCase();
-  const out: string[] = [];
-  let from = 0;
-  for (let at = 0; at < said.length; at += 1) {
-    if (!clauseBreakAt(said, at)) continue;
-    out.push(said.slice(from, at));
-    from = at + 1;
-  }
-  out.push(said.slice(from));
-  return out.filter(clause => clause.trim() !== '');
-}
-
-/** Whether a negator stands in front of a term inside its own clause. The words are read as
- *  words: an apostrophe belongs to the word it sits in, so `wasn't` arrives whole. */
-function negatedBefore(clause: string, at: number): boolean {
-  let word = '';
-  for (const c of `${clause.slice(0, at)} `) {
-    const isWordChar = (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c === "'";
-    if (isWordChar) { word += c; continue; }
-    if (word !== '' && (NEGATORS.has(word) || word.endsWith("n't"))) return true;
-    word = '';
-  }
-  return false;
-}
-
-/** How a term was mentioned across everything the operator has said: stated in the plain, stated
- *  under a negator, or not at all. A term mentioned both ways is stated — the operator said it
- *  somewhere, and the guard searches, it never weighs. */
-function mentionOf(term: string, said: readonly string[]): 'stated' | 'negated' | 'unsaid' {
-  const word = term.toLowerCase();
-  let negated = false;
-  for (const message of said) {
-    for (const clause of clausesOf(message)) {
-      for (let at = clause.indexOf(word); at !== -1; at = clause.indexOf(word, at + 1)) {
-        if (!negatedBefore(clause, at)) return 'stated';
-        negated = true;
-      }
-    }
-  }
-  return negated ? 'negated' : 'unsaid';
-}
-
-/** A CHOICE the operator must have STATED: an argument carrying an option — a flag, a grade, a
- *  class — is never grounded by its own text, because nobody writes `true`. `terms` maps each
- *  value the argument may carry to the words that state it, and the check searches every message
- *  the operator has sent this conversation, case folded — the choice may have been made several
- *  turns before the call.
+/** A CHOICE the operator must have ANSWERED: an argument carrying an option — a flag, a grade, a
+ *  class — is never grounded by its own text, because nobody writes `true`, and it is never
+ *  grounded by a reading of the operator's prose either. The engine opens a QUESTION and mints
+ *  its code; the desk puts the declared options to the operator in the language of the
+ *  operator's own latest message. The licence is the operator's reply carrying one option token
+ *  and THAT question's code, those two and nothing else.
  *
- *  A word under a negator states the OPPOSITE of itself: `no delivery needed` is the operator
- *  choosing not to have it delivered, so it never grounds the delivered value, and where the rule
- *  offers exactly two values it grounds the other one. A value `terms` carries no words for
- *  refuses: it is an option this rule does not know. The argument itself has to arrive — a call
- *  that leaves a gated choice out made that choice for the operator. */
+ *  The licence is the open question's answer, so it is spent when the act runs: a later call on
+ *  the same argument finds nothing open, asks again, and the operator answers under a code they
+ *  have not seen before. An echo arriving against no open question licenses nothing.
+ *
+ *  What the engine matches is the declared options, the code it minted and the shape of the
+ *  message — never a word of any language, so an operator writing Portuguese or Japanese is
+ *  served exactly as an operator writing English is. The model's own reading of the prose is
+ *  never the licence. A value outside the declared options refuses, and the argument itself has
+ *  to arrive — a call that leaves a gated choice out made that choice for the operator. */
 export function choiceFromUser(tool: string, arg: string,
-  terms: Readonly<Record<string, readonly string[]>>, rule: string): SeedGuard {
+  options: readonly string[], rule: string): SeedGuard {
+  const key = choiceKey(tool, arg);
+  /** The value the call carries for the gated argument; null for a block of values. */
+  const carried = (ctx: CallCtx): string | null | undefined => {
+    const raw = ctx.call.args[arg];
+    if (raw === undefined) return undefined;
+    return typeof raw === 'string' ? raw
+      : typeof raw === 'number' || typeof raw === 'boolean' ? String(raw) : null;
+  };
   return {
     name: `choiceFromUser:${tool}`,
     rule,
@@ -681,21 +636,27 @@ export function choiceFromUser(tool: string, arg: string,
     on: 'preTool',
     kind: 'choiceFromUser',
     compile(home) {
-      return installedAt<CallCtx>(this, home, ctx => {
-        const raw = ctx.call.args[arg];
-        if (raw === undefined) return '';
-        const value = typeof raw === 'string' ? raw
-          : typeof raw === 'number' || typeof raw === 'boolean' ? String(raw) : null;
+      const row = installedAt<CallCtx>(this, home, ctx => {
+        const value = carried(ctx);
+        if (value === undefined) return '';
         if (value === null) return `'${arg}' carries a block of values, and a choice is one value`;
-        if (!Object.hasOwn(terms, value)) {
-          return `'${arg}' arrived as '${value}', and this rule carries no words for that option`;
+        if (!options.includes(value)) {
+          return `'${arg}' arrived as '${value}', and this rule carries no such option`;
         }
-        const said = ctx.userTexts;
-        if (terms[value].some(term => mentionOf(term, said) === 'stated')) return null;
-        const values = Object.keys(terms);
-        const opposite = values.length === 2 ? terms[values.find(v => v !== value) ?? value] : [];
-        return opposite.some(term => mentionOf(term, said) === 'negated') ? null : '';
+        const answer = ctx.choices?.[key]?.answer ?? null;
+        if (answer === value) return null;
+        if (answer !== null) {
+          return `'${arg}' arrived as '${value}', and the operator's answer chose '${answer}'`;
+        }
+        return `'${arg}' is a choice, and no answer of the operator licenses a value for it`;
       });
+      // The ask outranks the refusal: a declared option with no answer standing opens the
+      // question, and the desk puts it to the operator in the operator's own language.
+      return { ...row, choose: (ctx: CallCtx) => {
+        const value = carried(ctx);
+        if (value === undefined || value === null || !options.includes(value)) return null;
+        return ctx.choices?.[key]?.answer == null ? { arg, options } : null;
+      } };
     }
   };
 }

@@ -563,8 +563,8 @@ desks:
   });
 });
 
-describe('choice terms stay disjoint', () => {
-  const withTerms = (terms: string): string => `
+describe('choice options stay distinct', () => {
+  const withOptions = (options: string): string => `
 contract:
   name: seaside-hotel
   voice: Warm, brief, and exact about dates and money.
@@ -573,7 +573,7 @@ contract:
     - name: refundRouteAsTheGuestChoseIt
       acts: [issueRefund]
       factory: choiceFromUser
-      args: { arg: invoiceId, terms: ${terms} }
+      args: { arg: invoiceId, options: ${options} }
       rule: Send the refund back only the way the guest asked for it.
   disclosure:
     issueRefund:
@@ -588,25 +588,21 @@ desks:
     conduct: { declareHonestly: Say what ran and what did not. }
 `;
 
-  it('a term spelled inside another value\'s term is refused, naming both values', () => {
-    const d = readDeclaration(fixture(withTerms(
-      "{ card: ['card'], storeCredit: ['credit on the card'] }")));
+  it('one option spelled twice is refused, naming the option', () => {
+    const d = readDeclaration(fixture(withOptions("[card, storeCredit, card]")));
     const refusals = checkAgainstSurface(d, FACTS, SEAM);
-    expect(refusals).toEqual([expect.stringContaining('contract.guards[0].args.terms')]);
+    expect(refusals).toEqual([expect.stringContaining('contract.guards[0].args.options')]);
     expect(refusals[0]).toContain("'card'");
-    expect(refusals[0]).toContain("'storeCredit'");
   });
 
-  it('one word carried by two values is refused as the same collision', () => {
-    const d = readDeclaration(fixture(withTerms(
-      "{ card: ['same card'], storeCredit: ['same card'] }")));
+  it('two options differing only in case are the same option', () => {
+    const d = readDeclaration(fixture(withOptions("[card, CARD]")));
     expect(checkAgainstSurface(d, FACTS, SEAM))
-      .toEqual([expect.stringContaining('contract.guards[0].args.terms')]);
+      .toEqual([expect.stringContaining('contract.guards[0].args.options')]);
   });
 
-  it('terms neither of which contains the other are accepted', () => {
-    const d = readDeclaration(fixture(withTerms(
-      "{ card: ['back to the card'], storeCredit: ['as store credit'] }")));
+  it('options that name different values are accepted', () => {
+    const d = readDeclaration(fixture(withOptions("[card, storeCredit]")));
     expect(checkAgainstSurface(d, FACTS, SEAM)).toEqual([]);
   });
 });

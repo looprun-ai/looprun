@@ -153,7 +153,8 @@ export class AgentFactory {
       deny: () => null,
       ...(g.owe !== undefined ? { owe: () => null } : {}),
       ...(g.restate !== undefined ? { restate: () => null } : {}),
-      ...(g.hold !== undefined ? { hold: () => null } : {})
+      ...(g.hold !== undefined ? { hold: () => null } : {}),
+      ...(g.choose !== undefined ? { choose: () => null } : {})
     }));
 
     return {
