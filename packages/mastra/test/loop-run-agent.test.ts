@@ -86,7 +86,9 @@ test('the ungoverned twin executes the destructive call with no question — by 
     spec: SPEC, world: BOOKING,
     model: { scripted: { steps: [
       callStep('cancelBooking', { id: 'bk_9' }),
-      finishStep('Cancelled.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'done' }])
+      finishStep('Cancelled.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'done' }]),
+      { calls: [], text: '' },
+      { calls: [], text: '' }
     ] } }
   });
   const out = await twin.generate('cancel bk_9', { session: 's1' });

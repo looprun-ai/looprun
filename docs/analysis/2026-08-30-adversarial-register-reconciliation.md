@@ -77,7 +77,7 @@ is a forgotten item; this table is the proof there is none.
 
 Items 19, 20, 25, 31, 32, 33, 39, 43, 44, 51, 52, 53, 54, 55, 56, 59 and the briefs'
 adjudication frames (the probability forecasts, the gap arithmetic, the 13-case flapping
-population, the route-78 tense sensitivity, the conceded ±2–4 variance band, the program-promise
+population, the route-78 tense sensitivity, the conceded ±2–4 run-to-run variance, the program-promise
 verdict) are ruler discipline, not build items: five rulers never mixed, the bar declared before
 the run, three folded repetitions, a mechanical count is not evidence, an R5 self-judged score
 answers no ANY-subject question, and no repair is credited before it is named and measured.

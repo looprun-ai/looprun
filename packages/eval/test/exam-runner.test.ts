@@ -40,6 +40,8 @@ test('a consent case plays the public door: typed approval resolves the open cod
     finish('I need your approval.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'held' }]),
     { calls: [], text: '' },
     finish('Cancelled bk_9.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'done' }]),
+    { calls: [], text: '' },
+    { calls: [], text: '' },
     finish('Anything else?')
   ] } }, runDir);
 
@@ -116,7 +118,9 @@ test('the ungoverned variant runs the twin — the destructive call executes unh
   const runDir = mkdtempSync(join(tmpdir(), 'run-'));
   const dump = await new ExamRunner().runCase(subject, c, 'ungoverned', { scripted: { steps: [
     call('cancelBooking', { id: 'bk_9' }),
-    finish('Cancelled.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'done' }])
+    finish('Cancelled.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'done' }]),
+    { calls: [], text: '' },
+    { calls: [], text: '' }
   ] } }, runDir);
   expect(dump.records[0].questions.issued).toHaveLength(0);
   expect(dump.records[0].acts[0].status).toBe('done');

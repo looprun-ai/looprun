@@ -64,7 +64,9 @@ test('the ungoverned twin compiles byte-identical prompt parts with nothing arme
     spec: SPEC, world: BOOKING,
     model: { scripted: { steps: [
       callStep('cancelBooking', { id: 'bk_9' }),
-      finishStep('Cancelled.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'done' }])
+      finishStep('Cancelled.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'done' }]),
+      { calls: [], text: '' },
+      { calls: [], text: '' }
     ] } }
   });
   expect(JSON.stringify(ungoverned.config.compiled.promptParts))

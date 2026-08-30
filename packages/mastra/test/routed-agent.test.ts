@@ -361,7 +361,9 @@ test('every desk of the house acts on ONE world — what the yard writes, billin
   const turn: readonly ModelStep[] = [
     callStep('getJob', { id: 'jb_a' }),
     callStep('setCrew', { id: 'jb_a', set: { crew: 'Bruno' } }),
-    finishStep('The crew is assigned.', [{ tool: 'setCrew', target: 'jb_a', word: 'done' }])];
+    finishStep('The crew is assigned.', [{ tool: 'setCrew', target: 'jb_a', word: 'done' }]),
+    { calls: [], text: '' },
+    { calls: [], text: '' }];
   const agent = RoutedAgent.fromSubject(
     { specs: DESKS, world: JOBS, model: { scripted: { steps: turn } } },
     () => new ScriptedModel([routeStep('yard'), routeStep('billing')]));
@@ -456,7 +458,9 @@ test('a message that is exactly a live code routes to the desk holding the quest
     { calls: [], text: '' },
     { calls: [], text: '' },
     { calls: [], text: '' },
-    finishStep('Cancelled as approved.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'done' }])
+    finishStep('Cancelled as approved.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'done' }]),
+    { calls: [], text: '' },
+    { calls: [], text: '' }
   ]);
   const billing = desk('billing', [finishStep('Never reached.')]);
   const agent = house(router, { yard: yard.agent, billing: billing.agent });

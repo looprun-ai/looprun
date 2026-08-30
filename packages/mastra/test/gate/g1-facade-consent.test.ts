@@ -12,7 +12,10 @@ test('G1 — hold, approve by code, licensed execution via LoopRunAgent.generate
       finishStep('I need your approval to cancel bk_9.',
         [{ tool: 'cancelBooking', target: 'bk_9', word: 'held' }]),
       { calls: [], text: '' },
-      finishStep('Cancelled bk_9.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'done' }])
+      finishStep('Cancelled bk_9.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'done' }]),
+      // The done write mints its receipt, and the composer's delivery pass reads it.
+      { calls: [], text: '' },
+      { calls: [], text: '' }
     ] } }
   });
 

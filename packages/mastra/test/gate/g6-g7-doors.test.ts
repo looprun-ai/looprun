@@ -16,7 +16,9 @@ test('G6 — UngovernedAgent: same prompt bytes, nothing held', async () => {
     spec: SPEC, world: BOOKING,
     model: { scripted: { steps: [
       callStep('cancelBooking', { id: 'bk_9' }),
-      finishStep('Cancelled.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'done' }])
+      finishStep('Cancelled.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'done' }]),
+      { calls: [], text: '' },
+      { calls: [], text: '' }
     ] } }
   });
   const out = await agent.generate('cancel bk_9', { session: 's1' });
