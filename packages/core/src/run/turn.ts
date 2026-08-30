@@ -360,8 +360,13 @@ export class Turn {
         detail: `your report says ${contradiction.word} for ${contradiction.tool}; the record `
           + `disagrees — write every report line from the record, not from intention` });
     }
-    if (violations.length === 0 && compiled.judged.length > 0) {
-      for (const v of await judge.run(compiled.judged, replyCtx, messages)) {
+    // A judged guard declaring tools binds the same way the deterministic reply
+    // walk does: it is asked only on a turn whose acts touched one of them.
+    const acted = new Set(draft.acts.map(a => a.call.tool));
+    const judgedBound = compiled.judged.filter(g => g.tools.length === 0
+      || g.tools.some(t => acted.has(t)));
+    if (violations.length === 0 && judgedBound.length > 0) {
+      for (const v of await judge.run(judgedBound, replyCtx, messages)) {
         if (v.verdict === 'violation') {
           // The redrive must TEACH: the guard's own rule is the correction.
           const rule = compiled.judged.find(g => g.name === v.guardName)?.rule ?? '';

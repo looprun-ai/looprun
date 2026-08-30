@@ -88,7 +88,12 @@ export class Rulebook {
   }
 
   checkReply(ctx: ReplyCtx): readonly Violation[] {
-    return this.collect(this.reply, ctx, null);
+    // A reply guard declaring tools binds to them: it runs only on a turn whose
+    // acts touched one — the desk's other replies are not its jurisdiction.
+    const acted = new Set(ctx.turnActs.map(a => a.call.tool));
+    const bound = this.reply.filter(g => g.tools.length === 0
+      || g.tools.some(t => acted.has(t)));
+    return this.collect(bound, ctx, null);
   }
 
   private collect(guards: readonly CompiledGuard[], ctx: ResultCtx | ReplyCtx, tool: string | null): readonly Violation[] {
