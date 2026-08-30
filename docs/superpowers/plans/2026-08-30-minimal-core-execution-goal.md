@@ -71,18 +71,11 @@ The harborpoint r12 slice (`~/Dev/js/harborpoint/subjects/harborpoint/test/`) is
   `GOOGLE_GENERATIVE_AI_API_KEY`, loaded from a repo-local `.env.local`
   (e.g. `/Users/marcos/Dev/js/atlas-trad/.env.local`) — never printed, never committed.
   `unset GEMINI_API_KEY` first: a stale global key shadows the right one.
-- **Local llama.cpp (steps 4/4b measurements)**: binary
-  `/Users/marcos/Dev/github-clones/llama.cpp/build/bin/llama-server` (rebuild:
-  `cmake -B build -DGGML_METAL=ON && cmake --build build --target llama-server -j 8`).
-  The ram24 tier: model `~/models/qwen36-mtp-gguf/Qwen3.6-35B-A3B-UD-IQ2_XXS.gguf`,
-  flags `--jinja -fa on -c 65536 -ngl 99 -ctk f16 -ctv f16 --mlock --no-mmap -np 1
-  --slot-save-path /tmp/llama-slots --cache-ram 16384 -ctxcp 64 --spec-type draft-mtp
-  --chat-template-kwargs '{"enable_thinking":false}' --host 127.0.0.1 --port 8081`.
-  Measured healthy: prefill ~600 tok/s, decode ~35, RSS ≤16 GB. To kill it, match the
-  BINARY PATH (`pkill -f "build/bin/llama-server"`) — a bare `llama-server` pattern also
-  kills cmake builds whose target carries the name. Ruler = `/completion` with
-  `cache_prompt: true`, reading `timings.prompt_n`; verify it first (identical prompt
-  twice → prompt_n collapses to ~4).
+- **NO LOCAL SERVING IN THIS RUN (ruled)**: steps 4/4b ship their CODE with unit-level
+  acceptance only (flags present and passed; byte rulers with no model). The local
+  llama.cpp measurement (prefill/turn, tokens/s, RAM, the microtest-7 ruler against the
+  engine's own client) is DEFERRED to looprun BACKLOG row 8 — do not start a local
+  server in this run.
 
 ## Anti-stall laws — the run ends, it never spins
 

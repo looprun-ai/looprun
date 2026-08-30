@@ -210,17 +210,18 @@ Pre-1.0, compatibility is never a constraint.
    reply-composer.ts removed                     ~flat; the close instruction bans
                                                  bracketed codes; tool cards stay in
                                                  the close call
-4  D3 (as measured): cache_prompt + -np 1        the microtest-7 ruler re-run against
-   wired in packages/models; the LAYOUT          the engine's own client: identical
-   STAYS AS-IS (microtest-7 refuted the          call twice → prompt_n collapses;
-   freeze: AS-IS 1.00× · append-only 1.74× ·     tool-array pinning measured at
-   STATE-last 6.50×); pinned tool array          implementation time
-   tested here (small, owed)
-4b prompt bytes −50% (looprun BACKLOG row 1      prefill tokens/turn re-measured after
-   enters the program HERE) — content            step 4's layout figure; the regression
-   reduction only after the layout is            slice re-runs (content moves the score;
-   measured, NEVER in the same commit            layout must not) — a cut that costs a
-                                                 point is not a cut
+4  D3 (as measured): cache_prompt + -np 1        unit-level ONLY in this run: the flags
+   wired in packages/models; the LAYOUT          present in llamacpp.ts args and passed
+   STAYS AS-IS (microtest-7 refuted the          on every /completion. The LOCAL
+   freeze: AS-IS 1.00× · append-only 1.74× ·     measurement (prefill ruler, tokens/s,
+   STATE-last 6.50×)                             RAM, tool-array pinning) is DEFERRED
+                                                 to BACKLOG row 8 — no local server in
+                                                 the execution run (ruled)
+4b prompt bytes −50% (looprun BACKLOG row 1      the byte rulers (bench _step/_anat/_dup
+   enters the program HERE) — content            tests, no model, no key) + the judged
+   reduction, NEVER in the same commit           regression slice on gemini — a cut that
+   as step 4                                     costs a point is not a cut. Local
+                                                 prefill re-measure: BACKLOG row 8
 5  D5 judge-row enrichment + engine-seams.md     re-run one governed T2 round; the author
    in the skill (split PREPARED)                 can now NAME a composer failure
 6  D4 emitter SHRUNK (prose skeletons, the       gate green; word-list + world-id lints
