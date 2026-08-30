@@ -104,8 +104,38 @@ The harborpoint r12 slice (`~/Dev/js/harborpoint/subjects/harborpoint/test/`) is
 - Subjects are re-run, never re-authored (step 7); the ONE new subject is step 8's blind
   atlas c21 in agentspec-bench, whole pipeline from zero under the new author.md. Engine
   pin updates per subject are deliberate and recorded.
-- An acceptance red twice in a row on the same step: STOP and report — do not widen the
-  step. A scope question the spec does not answer: STOP and ask the owner.
+- An acceptance red twice in a row on the same step, or a scope question the spec does
+  not answer: PARK IT — never widen the step, never guess a ruling. Unattended protocol
+  below.
+
+## Unattended mode — the run's standing assumption (the owner returns in ~10h)
+
+Nobody answers questions mid-run. The run must END WELL on its own:
+
+- **Work on branch `minimal-core`**, never on main. One commit per step. Push the branch
+  after every landed step (backup); main is merged by the owner after review.
+- **Park, don't ask**: a blocked step (twice-red acceptance, scope question) gets a full
+  entry in `docs/superpowers/plans/minimal-core-DECISIONS.md` — what blocked, what was
+  tried, the exact question the owner must answer — and the run moves to the next step
+  the dependency map allows. Never sit waiting; never force a gate.
+- **Dependency map for skipping**: step 1 (choiceFromUser+NEGATORS) is independent ·
+  steps 2→3 chain (D1 then D2′) · step 4 (models wiring) is independent · step 4b needs
+  4 landed conceptually but not 2/3 · step 5 (judge rows + engine-seams.md) is
+  independent · step 6 needs 5. Step 7 runs on WHATEVER landed, reporting against both
+  the new targets and the pre-minimal-core baseline — a parked step makes its target
+  line "n/a (parked)", not a failure.
+- **Step 8 (blind c21) does NOT auto-run.** The blind law demands a fresh, clean-context
+  author; it is a separate dispatch after the owner reviews steps 1-7. Park it by
+  default.
+- **Time boxes**: a step exceeding ~2h of wall clock is parked with its entry, whatever
+  its state. The gemini spend ladder (12→40→full) is never skipped to save time.
+- **The ledger**: append one line per event to
+  `docs/superpowers/plans/minimal-core-LEDGER.md` (step started/landed/parked, commit
+  hash, acceptance output summary) — the owner reads the whole run's state from this
+  one file plus DECISIONS.md.
+- **The final act** of the run, always reached: a FINAL-REPORT section appended to the
+  LEDGER — steps landed with hashes, steps parked with their questions, the step-7
+  table as far as it ran, and the exact command the owner runs to resume.
 
 ## The report, per step
 
