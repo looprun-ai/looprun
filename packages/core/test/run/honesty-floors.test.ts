@@ -61,6 +61,26 @@ describe('a report line is contradicted only when NO act supports it', () => {
 });
 
 describe('a standing sentence never reaches the operator with an unfilled slot', () => {
+  test('a consumed later learns its result at execution and stands FILLED', () => {
+    const desk = new ConsentDesk(c => c.data(v => JSON.parse(JSON.stringify(v)) as Json));
+    desk.beginTurn();
+    const decl = { schema: { properties: { scope: { type: 'string' } } } } as unknown as ToolFact;
+    const call = CanonicalCall.of('holdRoom', { scope: 'suite' }, decl);
+    if ('badArg' in call) throw new Error('bad call');
+    const q = desk.hold(call, null, 'Hold the room?', { ...blankDraft(), turn: 1 },
+      { after: null, later: 'Hold {result.holdId} is standing at {result.scope} level.' });
+    desk.readAnswer(q.code, { ...blankDraft(), turn: 2 });
+    desk.markExecuted(q.id, 2, 'holdRoom() — done', { holdId: 'hd_9', scope: 'suite' });
+    expect(desk.laterTexts(3)).toContain('Hold hd_9 is standing at suite level.');
+    desk.commit();
+  });
+
+  test('an owed text still carrying a slot never becomes a delivery fact', () => {
+    const slotted = act('moveBooking', 'not-done', 'blocked',
+      { kind: 'refusal', text: 'the window {args.endDate} is not readable' });
+    expect(assembleFacts([slotted], [], [], [])).toEqual([]);
+  });
+
   test('a consumed later carrying {result.holdId} is dropped, not delivered raw', () => {
     const desk = new ConsentDesk(c => c.data(v => JSON.parse(JSON.stringify(v)) as Json));
     desk.beginTurn();

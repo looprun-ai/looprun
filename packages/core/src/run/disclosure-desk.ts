@@ -41,6 +41,16 @@ function lookup(values: Readonly<Record<string, Json>>, path: readonly string[])
   return current;
 }
 
+/** Fills a rendered tense's remaining {result.*} slots from an executed call's
+ *  result; a slot the result cannot fill leaves the text as it came. */
+export function fillResultSlots(text: string, result: Json): string {
+  try {
+    return render(text, { result });
+  } catch {
+    return text;
+  }
+}
+
 function render(template: string, values: Readonly<Record<string, Json>>): string {
   let out = '';
   let slot: string | null = null;

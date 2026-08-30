@@ -10,9 +10,10 @@
  *  EXECUTABLE call; the delivered Question.call is the masked display form. Turn work
  *  stays on a working overlay: seal commits it, a discarded draft leaves no trace. */
 import { randomBytes, randomInt } from 'node:crypto';
-import type { CanonicalCallData, Question, QuestionClose } from '../contract/vocabulary.js';
+import type { CanonicalCallData, Json, Question, QuestionClose } from '../contract/vocabulary.js';
 import { deepFreeze } from '../contract/freeze.js';
 import { isJson, type CanonicalCall } from '../contract/canonical-call.js';
+import { fillResultSlots } from './disclosure-desk.js';
 import type { TurnDraft } from './session.js';
 
 interface Stored {
@@ -108,10 +109,15 @@ export class ConsentDesk {
     return stored !== undefined && stored.state === 'consumed' ? stored.after : null;
   }
 
-  markExecuted(id: string, turn: number, outcome: string | null = null): void {
+  markExecuted(id: string, turn: number, outcome: string | null = null,
+               result: Json = null): void {
     for (const [key, stored] of this.working) {
       if (stored.question.id === id) {
-        this.working.set(key, { ...stored, executedAtTurn: turn, outcome });
+        // The standing sentence learns the executed call's result the moment it
+        // exists — a later authored around {result.*} stands filled, not dropped.
+        const later = stored.later !== null && stored.later.includes('{')
+          ? fillResultSlots(stored.later, result) : stored.later;
+        this.working.set(key, { ...stored, executedAtTurn: turn, outcome, later });
       }
     }
   }

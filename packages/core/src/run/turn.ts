@@ -203,7 +203,7 @@ export class Turn {
       const held = desk.held(q.id);
       const act = await runner.run({ tool: held.tool, args: held.args }, 'licence', draft);
       if (act.status === 'done' || act.status === 'unknown') {
-        desk.markExecuted(q.id, draft.turn, act.sentence);
+        desk.markExecuted(q.id, draft.turn, act.sentence, act.result);
         const fact = compiled.facts.tools[held.tool];
         const targetRaw = fact?.target != null ? held.args[fact.target] : undefined;
         desk.closeSiblings(held.tool, typeof targetRaw === 'string' ? targetRaw : null, q.id, draft);

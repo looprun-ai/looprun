@@ -15,6 +15,9 @@ export function assembleFacts(acts: readonly Act[], open: readonly Question[],
   notes: readonly string[]): readonly DeliveryFact[] {
   const facts: DeliveryFact[] = [];
   for (const a of acts) {
+    // An owed text still carrying a slot has nothing true to say: it never
+    // becomes a fact — a placeholder never reaches the operator.
+    if (a.owed !== null && a.owed.text.includes('{')) continue;
     if (a.owed !== null) {
       facts.push({ kind: a.owed.kind, text: a.owed.text,
         state: a.owed.kind === 'receipt' ? 'ran' : 'refused' });
