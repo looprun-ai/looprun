@@ -245,8 +245,15 @@ Pre-1.0, compatibility is never a constraint.
 ```
 
 The three subjects: harborpoint is the acceptance test (re-run, never re-authored);
-trialworks and atlas re-run once each as regression + certification. No re-authoring, no
-new subject until the ladder above is green.
+trialworks and atlas re-run as the step-7 regression tier. No re-authoring, no new
+subject until the ladder above is green — the one new subject is step 8's blind c21.
+
+ISOLATION (ruled): everything stays where it lives. atlas c20 (regression) and c21
+(blind) in `agentspec-bench/subjects/` — c21 in its own new folder, runs under
+`test/<date>-<name>/` as always; harborpoint and trialworks in their own trees, with
+`git init` + `seal()` (D5's order). Each subject pins its engine copy; a pin update to
+the new build is DELIBERATE and recorded per subject, never implicit. The whole
+program's rollback is the `pre-minimal-core-2026-08-30` tag on all three repos.
 
 ## Risks (red-team verdicts, post-amendment)
 
