@@ -228,8 +228,20 @@ Pre-1.0, compatibility is never a constraint.
    lints + subject tsconfig + author.md, ONE     teaches free prose + factory-only
    commit (split COMPLETE — declare.md and       checks — exactly what this step creates
    the ladder chapters merge into it)
-7  Re-certifications: trialworks once after      29/29 holds (any drop is a defect, not
-   step 4; atlas full hundred once after 4       variance); 92 does not drop
+7  REGRESSION tier (validates the engine,        harborpoint: the 5 rotating failures
+   steps 1-4b) — the three sealed subjects       are the target — final ≥ 28 with the
+   re-run AS AUTHORED, in their existing         5 paid; trialworks 29/29 HOLDS (any
+   homes, on the new engine build (each          drop is a defect, not variance);
+   subject's pin updated deliberately, the       atlas-c20 routed hundred ≥ 92 — and
+   update recorded; rollback = the               3× on BOTH columns before any
+   pre-minimal-core-2026-08-30 tag)              92-vs-78 claim is repeated
+8  BLIND tier (validates the skill, after        the whole pipeline from zero per the
+   step 6): ONE from-zero atlas author           standing law (blind = new scaffold,
+   (c21) under author.md — new subject           new cX), ladder 12→40→100 judged at
+   folder in agentspec-bench, no reuse of        each checkpoint, T-loop to close,
+   c20's declaration                             then T3 ungoverned + certification:
+                                                 strict score ≥ 92 and the
+                                                 governed-vs-ungoverned gap holds
 ```
 
 The three subjects: harborpoint is the acceptance test (re-run, never re-authored);

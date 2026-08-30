@@ -18,7 +18,7 @@ Plain words throughout — every mechanism is named once and then drawn.
 ```
  AS-IS                                            │ TO-BE
  ─────────────────────────────────────────────────┼──────────────────────────────────────────────────
- core (the leaf; zod only)                        │ core   − composer as 2nd writer on the model path
+ core (the leaf; zod only)                        │ core   − the composer, entirely (reply-composer.ts)
   │  contract/vocabulary.ts imports NOTHING       │        − NEGATORS (8 English words, catalog:608)
   ├── models   local tiers, llama.cpp             │ models + cache_prompt / -np 1 wiring (D3 prereq)
   ├── mastra   host agents + MCP door             │ mastra   unchanged
@@ -72,8 +72,8 @@ model path.
    retries exhausted) │                                          │ reply"), charged through the FULL funnel
                       │                                          │ (measured 15/15 vs composer 11/15) ◄ D2′
  ─────────────────────┼──────────────────────────────────────────┼─────────────────────────────────────────
- 6 prose reader       │ wallEcho + language over the composed    │ unchanged — redrive writer is the desk
-                      │ text, both paths; one redrive → floor    │ on path A, the composer on path B
+ 6 prose reader       │ wallEcho + language over the composed    │ unchanged rulers — the redrive writer is
+                      │ text, both paths; one redrive → floor    │ the DESK on both paths (composer gone)
  ─────────────────────┼──────────────────────────────────────────┼─────────────────────────────────────────
  7 mask → seal        │ the one commit point                     │ unchanged
  ─────────────────────┼──────────────────────────────────────────┼─────────────────────────────────────────
@@ -268,9 +268,15 @@ Sequential steps; each ends green on its acceptance test before the next begins.
    ◄━━ SPLIT COMPLETE: declare.md and                  M09/M10 fixtures; "did you
        the ladder chapters merge into                  mean" still refuses)
        author.md
- 7 re-certifications                    B            ░░░░░░░░░░░░░░░░░░░░░░░███
-   trialworks 29/29 holds ·                           (any drop is a defect,
-   atlas full-100 ≥ 92                                 not variance)
+ 7 REGRESSION tier (engine): the 3      B            ░░░░░░░░░░░░░░░░░░░░░░░███
+   sealed subjects re-run as authored                 (harborpoint ≥28 w/ the 5
+   on the new build, pins updated                      paid · trialworks 29/29 ·
+   deliberately, in their existing                     atlas ≥92, 3× both columns)
+   homes
+ 8 BLIND tier (skill): one from-zero    B            ░░░░░░░░░░░░░░░░░░░░░░░░░░███
+   atlas author (c21) under author.md,                (ladder 12→40→100 judged ·
+   new folder in agentspec-bench,                      T-loop to close · T3 +
+   whole pipeline                                      cert ≥92, gap holds)
 ```
 
 The split, precisely: step 5 puts the engine's truth INTO the skill (`engine-seams.md`,
