@@ -246,12 +246,12 @@ Sequential steps; each ends green on its acceptance test before the next begins.
  2 D1 gateMisses into tryFinish         L            ░█████
    + delivered-text figure walk                       (acceptance: the 5 rotating
                                                        harborpoint failures)
- 3 D2 composer narrowed to engineClose  L            ░░░░░█████
-   + reply guards on that path                        (consent turns still prose;
-                                                       watch floorDeliveries)
- 4 D3 frozen-prefix layout              L            ░░░░░░░░░░█████
-   (OWN commit, never bundled w/ 2-3)                 (promptProof cross-step +
-                                                       llama.cpp prefill run)
+ 3 D2′ composer DELETED everywhere;     L            ░░░░░█████
+   desk close-step, full funnel;                      (microtest-6: 15/15 vs 11/15;
+   reply-composer.ts out                               watch floorDeliveries)
+ 4 D3 as measured: cache_prompt +       L            ░░░░░░░░░░█████
+   -np 1 wiring; layout STAYS AS-IS                   (microtest-7 ruler re-run
+   (freeze refuted 1.00×/1.74×/6.50×)                  against the engine's client)
  5 D5 judge rows + engine-seams.md      L A          ░░░░░░░░░░░░░░░███
    ◄━━ SPLIT PREPARED: the skill                      (one governed T2 round:
        learns the engine's seams                       author NAMES a composer
