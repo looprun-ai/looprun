@@ -66,7 +66,7 @@ governed − ungoverned = the deterministic-enforcement premium. The honest numb
 
 ## Skill (agentspec repo)
 
-- `references/test.md`: T2 range table + fail class 9 — *discriminates* now means "the
+- `references/test.md`: T3 range table + fail class 9 — *discriminates* now means "the
   prose alone does not hold; the check holds". ALARM keeps its shape (ungov passes,
   governed fails) with the sharper reading: enforcement itself cost the product.
 - `references/evals.md`: the per-case prediction sentence now predicts a WELL-PROMPTED

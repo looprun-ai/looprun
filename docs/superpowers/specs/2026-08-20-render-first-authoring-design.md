@@ -152,7 +152,7 @@ is inverted, and one phase becomes a loop.
 | the measurement | §1–§4: three subjects, the channel law, the gate's anti-correlation, the deleted replies |
 | the implementation | `pairing()` stops charging for a tool-less prose rule; its question becomes "does this rule render in some prompt", which a spec guard satisfies by construction. A gate check fails any `judgeQuery` on the contract or without `tool` |
 | the documentation | `docs/tutorial/04-guards.md` carries the channel law: where a rule is written decides whether it is read |
-| the skill | the ladder inverted, the three phases added, T3 made a loop, the bar written down, and four teaching errors corrected — `temperature`, `valueFromUser`'s turn scope, `checkResult`'s context, the render channels |
+| the skill | the ladder inverted, the three phases added, T2 made a loop, the bar written down, and four teaching errors corrected — `temperature`, `valueFromUser`'s turn scope, `checkResult`'s context, the render channels |
 
 ## 8 · Four teaching errors, each verified in the engine
 

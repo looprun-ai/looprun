@@ -38,7 +38,7 @@
 | `skill/references/norms.md` | agentspec | N2–N5 doctrine inverted; the SEAM and RENDER phases; `temperature` on every spec |
 | `skill/references/gen.md` | agentspec | G2 closes with the SEAM table |
 | `skill/references/evals.md` | agentspec | the rubric rows move in front of NORMS; the exam machinery stays after the guards compile |
-| `skill/references/test.md` | agentspec | T3 becomes a loop and states the bar |
+| `skill/references/test.md` | agentspec | T2 becomes a loop and states the bar |
 | `skill/references/spec-template.ts` | agentspec | two worked desks, each carrying the four conduct rules and `temperature: 0` |
 | `skill/SKILL.md` | agentspec | the pipeline table gains SEAM, RUBRIC and RENDER; the bar is written down |
 | `docs/tutorial/04-guards.md` | looprun | the channel law, so an engine user reads the same truth |
@@ -653,7 +653,7 @@ git commit -m "docs(skill): conduct on every spec, and a phase that reads the as
 
 ---
 
-### Task 7: The rubric moves in front of NORMS, and T3 becomes a loop
+### Task 7: The rubric moves in front of NORMS, and T2 becomes a loop
 
 **Files:**
 - Modify: `agentspec/skill/references/evals.md`, `agentspec/skill/references/test.md`, `agentspec/skill/SKILL.md`
@@ -680,9 +680,9 @@ the rows afterwards is how a subject ends up with sentences nobody asked for.
 names, and copy them.
 ```
 
-- [ ] **Step 2: T3 becomes a loop and states the bar**
+- [ ] **Step 2: T2 becomes a loop and states the bar**
 
-In `test.md`, replace T3's seven-step list's last line with:
+In `test.md`, replace T2's seven-step list's last line with:
 
 ```
  7 │ fix ONE class of defect      then RE-RUN — this is a loop, not a list
@@ -710,7 +710,7 @@ Replace the pipeline table's rows with:
 | **E1a** | RUBRIC | the rubric rows, from the business, before any sentence exists | [references/evals.md](references/evals.md) |
 | **N** | NORMS | N1 split · N2 contract · N3 specs · N4 guards · N5 disclosure · N6 render | [references/norms.md](references/norms.md) |
 | **E1b** | EXAM | covers · approve · invariants · presets, on the minted guard names | [references/evals.md](references/evals.md) |
-| **T** | TEST | T1 review · T2 discriminate · T3 improve — a LOOP to the bar | [references/test.md](references/test.md) |
+| **T** | TEST | T1 review · T3 discriminate · T2 improve — a LOOP to the bar | [references/test.md](references/test.md) |
 | **S** | SHIP | S1 certify + seal · S2 docs | [references/ship.md](references/ship.md) |
 
 **The bar is 95 of 100, every row judged, holding across two runs.**

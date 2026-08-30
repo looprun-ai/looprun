@@ -129,7 +129,7 @@ The scales are identical — `certifier.ts:47` pushes `passed / governed.length`
 
 ```
 out   ship.md:12   const certification = certify(runDirs, 0.85);
-in    ship.md:12   const certification = certify(runDirs, 0.95);   // the bar T3 exits on — test.md T3
+in    ship.md:12   const certification = certify(runDirs, 0.95);   // the bar T2 exits on — test.md T2
 
 out   ship.md:33     certified = true at the 0.85 bar        the same five cases fail every repetition
 in    ship.md:33     certified = true at the 0.95 bar        the same five cases fail every repetition
@@ -143,7 +143,7 @@ Leave `SKILL.md:47` and `test.md:73` exactly as they are, and **leave `ship.md:3
 
 Also fix `atlas-certify.test.ts:35`'s default to `0.95`, or the next campaign re-imports 0.85 from the driver.
 
-One residual honesty note for `ship.md`: `test.md:98-99` gives a second, legitimate exit — "or when what remains is signed as accepted by the person who owns the business". `SKILL.md:47`'s "and nowhere else" contradicts its own reference page. Soften `SKILL.md:48` to `T3 is a loop that exits there, or on a signed residual list — nowhere else.`
+One residual honesty note for `ship.md`: `test.md:98-99` gives a second, legitimate exit — "or when what remains is signed as accepted by the person who owns the business". `SKILL.md:47`'s "and nowhere else" contradicts its own reference page. Soften `SKILL.md:48` to `T2 is a loop that exits there, or on a signed residual list — nowhere else.`
 
 ### R2 · Conduct laws — SIX wins
 
@@ -332,7 +332,7 @@ in    ask.md:110-112
       the row.
 ```
 
-Two failure shapes, not one: an unknown key, **and** `"tier": "ram24"` as a bare string — the union is `'cloud' | { local: string }`. Omitting `tier` altogether is the silent one: `targets.ts:47` defaults to `'cloud'`, so a local target loses `temperature: 0` and the output cap (`model-seat.ts:69-77`) and every T3 number on it is taken at the provider's own decoding.
+Two failure shapes, not one: an unknown key, **and** `"tier": "ram24"` as a bare string — the union is `'cloud' | { local: string }`. Omitting `tier` altogether is the silent one: `targets.ts:47` defaults to `'cloud'`, so a local target loses `temperature: 0` and the output cap (`model-seat.ts:69-77`) and every T2 number on it is taken at the provider's own decoding.
 
 Repair `coworking-front-desk/ask/targets.json` in the same commit.
 
@@ -401,8 +401,8 @@ Fixing only the count would harden an unkept promise: an author who translates a
 
 | `resume.md` | pointer | status | in |
 |---|---|---|---|
-| `:23` | `docs/pipeline.md` | outside `skill/`; unresolvable from `references/`; and its content is the pre-rewrite pipeline (no G3, no N6, no E1a/E1b, `T1 … reviewers R1–R5`, `T2 … ranges re-checked inside T3`) | "take each recipe's declared inputs and outputs — SKILL.md's pipeline table names the stages, each recipe names what it reads and writes — and follow the consumers of the changed artifact" |
-| `:31,:32` | `T2 ranges` | `test.md:56` is `## T2 — discriminate`; "range" appears nowhere in `test.md`. `:33` already writes `T2 discriminate` — the file contradicts itself three rows apart | `T2 discriminate` |
+| `:23` | `docs/pipeline.md` | outside `skill/`; unresolvable from `references/`; and its content is the pre-rewrite pipeline (no G3, no N6, no E1a/E1b, `T1 … reviewers R1–R5`, `T3 … ranges re-checked inside T2`) | "take each recipe's declared inputs and outputs — SKILL.md's pipeline table names the stages, each recipe names what it reads and writes — and follow the consumers of the changed artifact" |
+| `:31,:32` | `T3 ranges` | `test.md:56` is `## T3 — discriminate`; "range" appears nowhere in `test.md`. `:33` already writes `T3 discriminate` — the file contradicts itself three rows apart | `T3 discriminate` |
 | `:32` | `lint-world.mjs` | deleted in `46592a5`; zero files on disk anywhere under `~/Dev/js/looprun` | delete |
 | `:32` | "G2 world test (all seven obligations)" | the seven obligations are `agentspec-bench/subjects/atlas/gen/world.test.ts:10`, a pre-card artifact the current skill never asks anyone to write | `the G2 checklist in [gen.md](gen.md) + the static gate` |
 | `:10,:31` | "world test" | same dead term, two more places the fix must touch | `the static gate` |
@@ -410,10 +410,10 @@ Fixing only the count would harden an unkept promise: an author who translates a
 ```
 in    resume.md:32   | world edited (state, presets, result shapes) | the G2 checklist
                        ([gen.md](gen.md)) + G3 seam re-walk + `npx vitest run
-                       subjects/<slug>/check-subject.test.ts` | … · T2 discriminate · … |
+                       subjects/<slug>/check-subject.test.ts` | … · T3 discriminate · … |
 ```
 
-Same rewrite kills the `T2 ranges` at `:31`. `docs/pipeline.md` is the source of the wrong word (`:23` of that file: "ranges re-checked inside T3"), which is why copying it wholesale is not the fix.
+Same rewrite kills the `T3 ranges` at `:31`. `docs/pipeline.md` is the source of the wrong word (`:23` of that file: "ranges re-checked inside T2"), which is why copying it wholesale is not the fix.
 
 ### R13 · `norms.md:57`'s N1 input — the world card wins
 
@@ -679,7 +679,7 @@ Work that changes no output.
 | X1 | `S2` as a phase | `SKILL.md:45`, `:80-81`; `ship.md:1`, `:62-64` | Its entire content is "never run it". Four mentions, a table column, a section heading and a panel instruction for a step defined only by its own prohibition. The design already lives in `agentspec/docs/pipeline.md:61-64` under an explicitly-labelled planned section, and that file's as-is table gives SHIP no sub-stages at all. Four deletions; `docs/pipeline.md` untouched. If R10's panel ships first, `S2 ⏸` stays as one cell and this cut is optional. |
 | X2 | `references/debate.md` — wire it or delete it | `debate.md:4`; `resume.md:31`, `:33` | `debate.md:4` states its own trigger: *A recipe that needs it says "validate via [debate.md](debate.md)"*. `grep "validate via"` returns exactly one hit — that sentence. `46592a5` deleted both invocation sites (from `gen.md` G1.3 and `evals.md`) and left the callee plus two `resume.md` cells that order a re-run of a validation no recipe ever prescribed. **Wire it**: `gen.md:19` gains `Every derived tool and every intake finding is validated via [debate.md](debate.md) before G1 closes.`, and `evals.md` E1a gains one line collecting the debate's recycled scenarios as case candidates. Deleting instead means five edits, because `README.md:34`, `BACKLOG.md:8` (a backlog item trigger-armed on "the first debate miss") and `docs/pipeline.md:80` all still promise it. |
 | X3 | `references/local-performance.md` + `references/judge-ruler.md` — link them or delete them | zero inbound links from `SKILL.md` or any `references/*.md` | `judge-ruler.md:6` says "this page is part of what a certification means", and `test.md:93` is the entire judging instruction a reader gets. Nine grading rules — including *"Ambiguous or insufficient evidence is a FAIL"* and the turn-boundary rule that a confirm-before-act row passes only when the question and the report sit in **different** turns — are reachable from nowhere. Link at `test.md:93` and add a clause to `SKILL.md:73`. For `local-performance.md`: link from `models.md:63`, and fix `monitor.mjs:21`'s false sentence — *"The SHIP gate reads it — a degraded run never certifies"* — because `certify`'s only incident source is `scan(runDir)`, which reads `failures.jsonl` and `resolutions.jsonl` and never `MONITOR.md`. `grep -rn "MONITOR.md"` returns the script itself and one CLOSED spec. |
-| X4 | `skill/scripts/extract-fork.mjs`, `synth-fork.mjs` | named by no page, in either repo | `margin-probe.mjs` at least has its instrument named (`models.md:56`, `serve-local.sh:10`) even though its path is not. The two fork producers have zero mentions of any kind. Either give `test.md`'s T3 loop step 7 the three-command recipe (`extract-fork` or `synth-fork` → serve `NOSPEC=1` → `margin-probe pair`), or move all three under `docs/` where the unnamed-tool cost is zero. |
+| X4 | `skill/scripts/extract-fork.mjs`, `synth-fork.mjs` | named by no page, in either repo | `margin-probe.mjs` at least has its instrument named (`models.md:56`, `serve-local.sh:10`) even though its path is not. The two fork producers have zero mentions of any kind. Either give `test.md`'s T2 loop step 7 the three-command recipe (`extract-fork` or `synth-fork` → serve `NOSPEC=1` → `margin-probe pair`), or move all three under `docs/` where the unnamed-tool cost is zero. |
 | X5 | `local-performance.md:1`'s parenthetical | `# Local serving & simulating — the performance laws (operative, not history)` | "operative" is redundant with line 3, which already states the operative force; "not history" says nothing about local serving. `grep -rni "\bhistory\b"` over all 2 443 lines of the skill returns exactly one hit — this title. There is no history page for it to distinguish against. Same shape at `:19` ("the two laws coexist by design"), which argues with a hypothetical reviewer instead of stating the rule. |
 | X6 | `norms.md:352`'s two byte totals, as a *hand* record | `norms.md:352`, `:402` | Keep the numbers; stop asking the author to count them. `pw.system().length` and the sum over `pw.toolCards()` are two lines in the snippet already on the page. The proposal an auditor made — use `profile().bytes` — answers a different question: `lints.ts:437` sums the byte length of `cards.ts` **source files**, imports and comments included, once for the whole subject. It is neither per-desk nor rendered bytes, and wiring it would have the author sign `RENDER.md` with a number answering neither of the two the page asked for. |
 

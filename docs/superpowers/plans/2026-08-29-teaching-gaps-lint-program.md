@@ -79,7 +79,7 @@
 - Create: `agentspec/subjects/skill-graph.test.ts`
 
 - [ ] **Step 1:** Failing test: every `references/*.md` is reachable from `SKILL.md`'s link graph (read hrefs, walk transitively) — expect FAIL naming `judge-ruler.md` and `local-performance.md`; lesson numbers in `guard-catalog-lessons.md` are contiguous — expect FAIL naming the gap at 17.
-- [ ] **Step 2:** Fix the pages: the pipeline table (SHIP row) links `judge-ruler.md`; `test.md`'s T2 links `local-performance.md`; renumber the lessons contiguously.
+- [ ] **Step 2:** Fix the pages: the pipeline table (SHIP row) links `judge-ruler.md`; `test.md`'s T3 links `local-performance.md`; renumber the lessons contiguously.
 - [ ] **Step 3:** Green. **Step 4: Commit** — `docs(skill): no orphan page, no missing lesson number — and the gate keeps it so`
 
 ### Task 7: the world card names the acts that CREATE a record

@@ -227,7 +227,7 @@ git commit -m "docs(tutorial): §5.6 A/B — ungoverned variant is prose-only (s
 - Consumes: nothing from Tasks 1–2 (docs describe the released engine behavior; the skill is engine-version-agnostic — cite the semantics, not a version).
 - Produces: nothing downstream.
 
-- [x] **Step 1: Update the T2 range table in `skill/references/test.md`**
+- [x] **Step 1: Update the T3 range table in `skill/references/test.md`**
 
 The three range rows (lines 123–125) currently define *discriminates*/*floor*/*alarm* against an ungoverned variant. Update the row DESCRIPTIONS so the meaning reads against the prose-only baseline. Exact replacement rows:
 

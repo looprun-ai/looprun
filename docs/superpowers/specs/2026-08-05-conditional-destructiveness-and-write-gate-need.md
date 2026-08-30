@@ -189,7 +189,7 @@ Two neighbours from the same review, both decidable and both cheap once this mac
 
 - **an `addGuard` with no explicit `{ id }`.** The engine mints `${layer}:${kind}#${++seq}`, a
   positional counter. Two cases in one bundle target `agent:requiresBefore#1`; inserting one
-  id-less guard above silently re-points both, and a T3 profile keyed on it breaks the same way.
+  id-less guard above silently re-points both, and a T2 profile keyed on it breaks the same way.
 - **the guard-target diff keyed on `(agent, guardId)`, not `guardId`.** A guard id shared across
   lanes is satisfied by any lane targeting it, so a copy that no case on ITS lane can reach reads
   as covered. One bundle had two such guards, both inert, both passing in either variant.
