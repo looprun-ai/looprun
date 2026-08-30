@@ -164,6 +164,11 @@ Pre-1.0, compatibility is never a constraint.
 4  D3 prompt layout (own commit, never bundled   promptProof extended to cross-step
    with 2/3 — attribution dies otherwise)        byte-identity; llama.cpp prefill run
                                                  after cache_prompt + -np 1 land
+4b prompt bytes −50% (looprun BACKLOG row 1      prefill tokens/turn re-measured after
+   enters the program HERE) — content            step 4's layout figure; the regression
+   reduction only after the layout is            slice re-runs (content moves the score;
+   measured, NEVER in the same commit            layout must not) — a cut that costs a
+                                                 point is not a cut
 5  D5 judge-row enrichment + engine-seams.md     re-run one governed T2 round; the author
    in the skill (split PREPARED)                 can now NAME a composer failure
 6  D4 emitter retired, freedoms + lints +        gate green; word-list lint red on a
