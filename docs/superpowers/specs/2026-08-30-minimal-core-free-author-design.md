@@ -50,10 +50,11 @@ model path.
  2 consent desk       │ typed approval EXECUTES engine-side      │ unchanged — the mechanism neither
                       │ before the model speaks (turn:204-218)   │ traditional build matched
  ─────────────────────┼──────────────────────────────────────────┼─────────────────────────────────────────
- 3 main loop [P1]     │ system = frozen head + MUTATING STATE    │ system = pw.system() ALONE, frozen
-                      │ tail, rebuilt EVERY step (turn:239) —    │ forever; STATE + open questions move to
-                      │ voids the KV cache on every write;       │ the LAST user message; tool array
-                      │ tool array has TWO shapes (returnable)   │ pinned, ONE shape           ◄ D3
+ 3 main loop [P1]     │ system = frozen head + MUTATING STATE    │ LAYOUT STAYS AS-IS — measured cache-
+                      │ tail, rebuilt EVERY step (turn:239);     │ optimal (microtest-7: 1.00× vs 1.74×
+                      │ tool array has TWO shapes (returnable)   │ append-only, 6.50× STATE-last); what
+                      │                                          │ ships: cache_prompt + -np 1 wiring;
+                      │                                          │ tool-array pinning owed        ◄ D3
  ─────────────────────┼──────────────────────────────────────────┼─────────────────────────────────────────
  4 tryFinish          │ reply guards → figureIsGrounded →        │ same walk, PLUS:
    (path A — the desk │ contradiction → judged [P3: own system   │ gateMisses(facts, finish.message) runs
@@ -190,31 +191,24 @@ truth about acts 11/12 vs 6/12, and cost less (18 calls · 445 warm tokens vs 23
 cold). The composer's act report is a claim about a conversation it was never in — the
 defect is structural. The second model prefix leaves the engine entirely.
 
-### C3 = D3 · The frozen-prefix prompt (the local-SLM cache layout)
+### C3 = D3 · The prompt layout — the freeze is REFUTED by measurement
 
 ```
- AS-IS  per model step:                       TO-BE  per model step:
- ┌──────────────────────────────┐             ┌──────────────────────────────┐
- │ system = frozen head         │             │ [A-D] FROZEN PREFIX          │
- │        + STATE tail  ◄─ MUTATES            │  identity·laws / other desks │
- │          every write, every  │             │  desk rules / tool cards     │
- │          step (turn.ts:239)  │             │  (one string per desk, ever) │
- ├──────────────────────────────┤             ├──────────────────────────────┤
- │ tools = TWO shapes           │             │ [E] history, append-only     │
- │  (returnable branch)         │             │ [F] operator message         │
- │ 3 prefixes/turn: P1·P2·P3    │             │ [G] STATE+questions = LAST   │
- └──────────────────────────────┘             │     user message             │
-                                              │ [H] corrections, after [G]   │
- KV cache: void on every                      └──────────────────────────────┘
- write act                                    re-prefill starts at [G]
+ microtest-7 (llama.cpp ram24, ruler verified 4,069 → 4):
+                                 total prefill, 8 turns
+ AS-IS  (STATE inside system)         7,481   1.00×  ← today's shape WINS
+ append-only (stale STATEs stay)     13,042   1.74×  + unbounded growth
+ STATE-last (the original D3)        48,641   6.50×  ← the designed layout, refuted
 ```
 
-Three edits produce it: `system: pw.system()` alone (the freeze already exists and is
-defeated at the call site) · `pw.tail()` moves to the last user message · the tool block
-stops changing shape (`RETURN_CLOSED` already refuses when the door is shut). The
-owed-read micro-step (single tool card) stays as a documented one-step fork.
-Prerequisite the red-team caught: `cache_prompt: true` and `-np 1` must land in
-`packages/models` first, or the llama.cpp measurement times the box, not the layout.
+The server's cache-reuse window cliffs a few hundred tokens from the prompt's END: a
+776-token STATE parked last pushes every appended token past it, while STATE at a fixed
+mid-prompt position re-prefills only when it actually changes (writes ~1k, reads ~50).
+What survives: the `cache_prompt`/`-np 1` wiring (load-bearing — nothing caches without
+it), the micro-step fork (measured survivable: main-loop cache returns at 1,232 vs 4,380
+cold). What dies: moving STATE, and the shared-[A] cross-desk ordering (bought ZERO).
+The real cache lever moves to step 4b: shrink STATE and the write-turn re-prefill
+shrinks with it.
 
 ### C4 = D4 · Free prose under a shrunken emitter (see §AB3)
 

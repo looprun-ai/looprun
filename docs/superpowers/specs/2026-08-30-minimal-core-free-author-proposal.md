@@ -93,46 +93,43 @@ the tool cards in the request — dropping them shortens the prompt but moves th
 prefix the warm arm exists to reuse. The seeded fact-id redrive (microtest-3's untested
 arm) fired 6/6 and fixed 6/6 on both writers — the D1 repair arm is proven.
 
-### D3 · The frozen-prefix prompt layout (question 3.2)
+### D3 · The prompt layout — MEASURED, and the freeze is REFUTED
+
+Microtest-7 (llama.cpp, ram24 tier, ruler verified 4,069 → 4 tokens on an identical
+prompt) measured the three layouts over the same 8-turn conversation:
 
 ```
-+============================================ FROZEN PREFIX (one string per desk, forever)
-| [A] identity + standing laws        persona, house laws
-| [B] other desks                     one line per teammate, sorted
-| [C] desk rules                      every guard rule, sorted by guard name
-| [D] tool cards                      ALWAYS the same shape: [return, ...tools, finish]
-+============================================ nothing below ever moves above this line
-| [E] turn history                    append-only, never rewritten, never reordered
-| [F] this turn's operator message
-| [G] STATE + open questions          the LAST user message, rebuilt each step
-| [H] correction / must-state         appended AFTER [G], never spliced into the prefix
-+============================================
+                                total prefill    vs AS-IS
+ AS-IS (STATE inside system)         7,481         1.00×   ← WINS
+ append-only (stale STATEs stay)    13,042         1.74×   + unbounded growth
+ STATE-last (the original D3)       48,641         6.50×   ← refuted
 ```
 
-The three edits that produce it:
+Why: the server's cache-reuse window has a cliff a few hundred tokens from the END of
+the prompt. A 776-token STATE parked last puts every newly appended token on the wrong
+side of it; STATE at a FIXED position inside the system head diverges only when STATE
+actually changes (writes: ~900-1,250 re-prefilled; reads: ~50). Today's `turn.ts:239`
+is already the cache-optimal shape of the three.
 
-1. `turn.ts:239` becomes `system: pw.system()` — `PromptWriter.frozenSystem` already
-   exists; the concatenation at the call site defeats it.
-2. `pw.tail(...)` (STATE + open questions) moves into the LAST user message — same bytes,
-   different position: re-prefill starts at [G] instead of [A].
-3. The tool block stops changing shape: always emit the return card and let `RETURN_CLOSED`
-   refuse when the door is shut (the `returnable` branch today makes two prefixes for one
-   desk).
+What survives of D3, each measured or still owed:
 
-Never injected mid-prefix: the world snapshot, minted question codes, turn counters,
-timestamps, case ids, retry counters, masked-literal renderings, a tool card added or
-removed mid-session, a must-state list (it goes in [H]).
+```
+ KEEPS    cache_prompt: true + -np 1 wiring in packages/models — load-bearing
+          (without them NOTHING caches); the owed-read micro-step fork is
+          survivable (costs ~one prefill; the main loop's cache survives it:
+          returns at 1,232 vs 4,380 cold)
+ DROPS    moving STATE out of the system block; the shared-[A] cross-desk
+          ordering (measured: bought exactly ZERO on a desk switch — the cache
+          is per-sequence, not per-block)
+ OWED     the pinned tool array (the returnable two-shapes fix) — unmeasured;
+          small, test at implementation
+ THE REAL cache lever is now step 4b: a smaller STATE shrinks the write-turn
+          re-prefill linearly — prompt −50% pays where the layout could not
+```
 
-Known seam the acceptance test must carve out explicitly: the owed-read micro-step presents
-a single tool (`turn.ts:187 tools:[card]`) — it is a deliberate one-step fork and is
-documented as such, not silently exempted.
-
-Acceptance: extend `promptProof` to assert the system string AND tool-card array are
-byte-identical across every step of every turn; then one local llama.cpp run measuring
-prefill tokens per turn. **Prerequisite the red-team caught: `cache_prompt` appears nowhere
-in `packages/` and the only tier sets `slots: 2` — the client must first pass
-`cache_prompt: true` and `-np 1` per `local-performance.md` laws 1 and 5, or the
-measurement times the box, not the layout.**
+Unmeasured caveat carried from the report: the append-only arm's CORRECTNESS (the
+model ignoring stale STATE blocks) was never judged; irrelevant now that the arm lost
+on cost too.
 
 ### D4 · Free prose under a shrunken emitter — RULED
 
@@ -211,9 +208,12 @@ Pre-1.0, compatibility is never a constraint.
    reply-composer.ts removed                     ~flat; the close instruction bans
                                                  bracketed codes; tool cards stay in
                                                  the close call
-4  D3 prompt layout (own commit, never bundled   promptProof extended to cross-step
-   with 2/3 — attribution dies otherwise)        byte-identity; llama.cpp prefill run
-                                                 after cache_prompt + -np 1 land
+4  D3 (as measured): cache_prompt + -np 1        the microtest-7 ruler re-run against
+   wired in packages/models; the LAYOUT          the engine's own client: identical
+   STAYS AS-IS (microtest-7 refuted the          call twice → prompt_n collapses;
+   freeze: AS-IS 1.00× · append-only 1.74× ·     tool-array pinning measured at
+   STATE-last 6.50×); pinned tool array          implementation time
+   tested here (small, owed)
 4b prompt bytes −50% (looprun BACKLOG row 1      prefill tokens/turn re-measured after
    enters the program HERE) — content            step 4's layout figure; the regression
    reduction only after the layout is            slice re-runs (content moves the score;
