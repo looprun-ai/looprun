@@ -184,6 +184,7 @@ new subject until the ladder above is green.
 | held-out tripwire unbindable on free prose | HELD by the world-id lint + separate held-out scoring; residual real |
 | D1 redrives spend the same `retries` budget that already exhausts into engineClose | OPEN — measure on the r12 slice; raise `limits.retries` only if the slice shows starvation |
 | the whole case rests on one run per side | OPEN — re-run both sides of atlas 3× before calling 92-v-78 settled |
+| the omitted-sentence class: the composer PAYS it today by pasting owed facts; the desk DROPS it (microtest-d1 case 08: composer stated "no damage claim was opened" 2/2, desk 0/2, every byte-ruler clean — the fact's only literal was already carried by another sentence) | OPEN — D1/D2 do not ship for path A until this class has a channel: candidate = a distinct minted literal per owed fact (byte-checkable presence per FACT, not per literal); else the judged channel |
 
 ## The four sections (stone rule), mapped
 
