@@ -66,10 +66,11 @@ model path.
                       │ on facts:[] (invented 364; deleted the   │ message                     ◄ D5
                       │ required sentences of c20 95/37)         │
  ─────────────────────┼──────────────────────────────────────────┼─────────────────────────────────────────
- 5 engineClose        │ composer is the ONLY writer here;        │ composer KEPT here (without it, consent
-   (path B — consent  │ NO reply guards, NO judged walk          │ turns ship raw record dumps) + the
-   question or        │ (turn:452-473)                           │ reply-guard walk and the delivered-text
-   retries exhausted) │                                          │ figure walk ADDED           ◄ D2
+ 5 engineClose        │ composer is the ONLY writer here;        │ composer DELETED here too: the DESK gets
+   (path B — consent  │ NO reply guards, NO judged walk          │ one close-step in its own conversation
+   question or        │ (turn:452-473)                           │ ("the desk holds: […]; write the closing
+   retries exhausted) │                                          │ reply"), charged through the FULL funnel
+                      │                                          │ (measured 15/15 vs composer 11/15) ◄ D2′
  ─────────────────────┼──────────────────────────────────────────┼─────────────────────────────────────────
  6 prose reader       │ wallEcho + language over the composed    │ unchanged — redrive writer is the desk
                       │ text, both paths; one redrive → floor    │ on path A, the composer on path B
@@ -137,7 +138,7 @@ Attribution: the engine owns 5 of the 13 unpaid governed points, 4 of them on th
 
 | component | AS-IS | TO-BE |
 |---|---|---|
-| `reply-composer.ts` (131) | second writer on BOTH close paths; `gateMisses` presence-only | writer on engineClose ONLY; tryFinish ships the desk's own gated message |
+| `reply-composer.ts` (131) | second writer on BOTH close paths; `gateMisses` presence-only | DELETED — tryFinish ships the desk's own gated message; engineClose becomes a desk close-step in the same conversation (measured 15/15 vs 11/15) |
 | `turn.ts` owed-facts check | `assembleFacts` at :402, after the redrive loop (:387) — facts gate only the rewrite | `gateMisses(facts, message)` inside tryFinish, as a violation, redriven |
 | `turn.ts:239` prompt | frozen head + mutating STATE concatenated per step | `pw.system()` alone; STATE = last user message; tool array pinned |
 | `judge.ts` (64) | own prefix + full history; compiled for every declared judged guard | opt-in per desk; question rides the main prefix as the last user message |
@@ -170,20 +171,24 @@ Already in the engine: `call-runner.ts:115` mints the owed text; `Act.sentence` 
 the model. Missing only the check at the right stage. Micro-tested on the real dumps:
 the existing figure walk over the DELIVERED text catches the 364 case.
 
-### C2 = D2 · The composer narrowed, not deleted
+### C2 = D2′ · The composer deleted everywhere — the desk writes the close
 
 ```
               path A (desk message exists)      path B (no desk message:
                                                 consent question, retries out)
  AS-IS        composer rewrites the draft       composer is the only writer;
                                                 NO reply guards run here
- TO-BE        NO composer — D1-gated desk       composer KEPT + reply-guard walk
-              message ships as-is               + delivered-text figure walk ADDED
+ TO-BE        NO composer — D1-gated desk       NO composer — the desk gets ONE
+              message ships as-is               close-step in the SAME conversation,
+                                                and the full funnel charges it
 ```
 
-Why not delete: 12 of 25 fact-owing harborpoint turns (53/107 on atlas) have NO desk
-message at all — all 8 consent questions among them. Deleting ships the floor's record
-dump to the operator on every consent turn (the red-team's FATAL, accepted).
+Measured head-to-head on 15 path-B turns (microtest-6): the desk's close-step delivered
+15/15 where the composer floored 4 (each floor an English record line to a Portuguese
+operator), invented nothing where the composer derived 2940 on 3/3 first tries, told the
+truth about acts 11/12 vs 6/12, and cost less (18 calls · 445 warm tokens vs 23 · 851
+cold). The composer's act report is a claim about a conversation it was never in — the
+defect is structural. The second model prefix leaves the engine entirely.
 
 ### C3 = D3 · The frozen-prefix prompt (the local-SLM cache layout)
 

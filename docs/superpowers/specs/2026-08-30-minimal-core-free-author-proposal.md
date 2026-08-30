@@ -60,21 +60,38 @@ Micro-tested against the real dumps: the existing figure walk applied to the DEL
 catches the 364 case (`finish.message` CLEAN · delivered UNGROUNDED). The walk uses
 `figureRuns`/`canonicalAmount` already in `catalog.ts` — no new vocabulary, no regex.
 
-### D2 · The composer is NARROWED, not deleted (red-team FATAL, accepted)
+### D2′ · The composer is DELETED — the desk writes the close too (measured)
 
 12 of 25 fact-owing harborpoint turns (53/107 on atlas) have `finish.message === ''` —
-consent questions and retry exhaustion close engine-side, where the composer is the ONLY
-writer. Deleting it ships the floor's record dump to the operator on every consent turn.
+consent questions and retry exhaustion close engine-side. The first design kept the
+composer there ("no desk message exists, someone must write"). Microtest-6 measured the
+alternative the owner asked for: give the DESK one more turn in its OWN conversation —
+"the desk holds: [act sentences + numbered facts + the held code line]; write the
+closing reply" — and charge that output through the FULL ruler funnel. Head to head on
+15 path-B turns (consent · retry-exhaustion · the 364 replay · the deletion replay ·
+the seeded fact-id redrive):
 
 ```
-KEEP the composer on   engineClose (no desk message exists)
-DELETE it from         tryFinish (the desk's own message, once D1 gates it, IS the reply)
-ADD on both paths      the delivered-text figure walk + the reply-guard walk that
-                       engineClose today skips entirely
+                          composer (cold own prefix)     desk close-step (warm prefix)
+ delivered as prose            11/15 — FLOORED 4          15/15 — floors 0
+                               (an ENGLISH record line
+                               to a Portuguese operator)
+ invented figures              2940 invented 3/3 first    0/3
+                               tries (walk caught, 1
+                               still floored)
+ truthful act report            6/12                      11/12
+ cost per close                23 calls · 851 COLD tok    18 calls · 445 NEW tok
 ```
 
-`readDelivery`'s one redrive keeps its writer on the engine-close path; on the tryFinish
-path the redrive goes to the desk itself.
+The composer's defect is structural, not tunable: its act report is a claim about a
+conversation it was never in. So it dies EVERYWHERE — tryFinish (D1 gates the desk's own
+message) and engineClose (the desk's close-step, same conversation, full funnel, redrive
+to itself). The second model prefix leaves the engine entirely. Two implementation notes
+the measurement wrote: the close instruction FORBIDS bracketed codes in prose (the desk
+stapled `[F1]` tags into the operator's sentence and floored), and the close call KEEPS
+the tool cards in the request — dropping them shortens the prompt but moves the very
+prefix the warm arm exists to reuse. The seeded fact-id redrive (microtest-3's untested
+arm) fired 6/6 and fixed 6/6 on both writers — the D1 repair arm is proven.
 
 ### D3 · The frozen-prefix prompt layout (question 3.2)
 
@@ -188,9 +205,12 @@ Pre-1.0, compatibility is never a constraint.
    licensed value                                strict exact-alone echo, never relaxed)
 2  D1 gateMisses into tryFinish + delivered-     harborpoint r12 slice: the 5 rotating
    text figure walk on both paths                failures ARE the test
-3  D2 composer narrowed to engineClose;          consent turns still deliver prose;
-   reply-guard walk added there                  floorDeliveries stays ~flat (watch it,
-                                                 not framesLeaked — floor is exempt there)
+3  D2′ composer DELETED everywhere;              consent turns deliver prose (microtest-6:
+   engineClose becomes a desk close-step         15/15 vs the composer's 11/15 with 4
+   in the same conversation, full funnel;        English floors); floorDeliveries stays
+   reply-composer.ts removed                     ~flat; the close instruction bans
+                                                 bracketed codes; tool cards stay in
+                                                 the close call
 4  D3 prompt layout (own commit, never bundled   promptProof extended to cross-step
    with 2/3 — attribution dies otherwise)        byte-identity; llama.cpp prefill run
                                                  after cache_prompt + -np 1 land
@@ -220,7 +240,7 @@ new subject until the ladder above is green.
 
 | risk | verdict after amendment |
 |---|---|
-| composer deletion ships record dumps on consent turns | CLOSED by D2 (narrowing) |
+| composer deletion ships record dumps on consent turns | CLOSED by D2′ (measured, superseding the narrowing): the desk's close-step delivered 15/15 path-B turns where the composer itself floored 4 — the record-dump harm belonged to the composer's arm, not the deletion's |
 | llama.cpp acceptance unrunnable as first written | CLOSED by the D3 prerequisite |
 | free guard code re-opens the word-list door | HELD by declared-data-only vocabulary + the lint fixture; residual: a determined author can still hide a list — review catches what lints cannot |
 | held-out tripwire unbindable on free prose | HELD by the world-id lint + separate held-out scoring; residual real |
