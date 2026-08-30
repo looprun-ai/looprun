@@ -124,9 +124,16 @@ Nobody answers questions mid-run. The run must END WELL on its own:
   independent · step 6 needs 5. Step 7 runs on WHATEVER landed, reporting against both
   the new targets and the pre-minimal-core baseline — a parked step makes its target
   line "n/a (parked)", not a failure.
-- **Step 8 (blind c21) does NOT auto-run.** The blind law demands a fresh, clean-context
-  author; it is a separate dispatch after the owner reviews steps 1-7. Park it by
-  default.
+- **Step 8 (blind c21) AUTO-RUNS after step 7, when step 6 landed.** The blind law
+  (fresh scaffold, clean context) is satisfied by HOW it runs, not by waiting: spawn a
+  FRESH agent whose dispatch carries ONLY what a blind author may see — the shipped
+  agentspec skill and the atlas ask — never this program's history, specs, or the c20
+  declaration. It scaffolds `agentspec-bench/subjects/atlas-c21` from zero, runs the
+  WHOLE pipeline to T-loop close (ladder 12→40→100, every slice judged; the T-loop
+  stops at 100% or at 3 rounds without progress, per the standing law), then T3
+  ungoverned + certification. Its time box is the rest of the run, not 2h. Only if
+  step 6 is PARKED does step 8 park with it (a blind run under the old skill would
+  certify the wrong program) — that is the one dependency, recorded in DECISIONS.md.
 - **Time boxes**: a step exceeding ~2h of wall clock is parked with its entry, whatever
   its state. The gemini spend ladder (12→40→full) is never skipped to save time.
 - **The ledger**: append one line per event to
