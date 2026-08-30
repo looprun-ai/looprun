@@ -157,6 +157,16 @@ if (!RESUME) {
   writeFileSync(join(ROOT, 'package.json'), JSON.stringify(rootPkg, null, 2) + '\n');
   run('pnpm install --lockfile-only');
   if (sh(`git tag -l ${TAG}`, { quiet: true })) die(`tag ${TAG} already exists.`);
+  // A version already on the registry publishes nothing: the run would end green
+  // over zero uploads — a ghost release. Refuse loudly instead.
+  let onRegistry = '';
+  try {
+    onRegistry = sh(`npm view ${umbrella.name}@${VERSION} version`, { quiet: true });
+  } catch {
+    onRegistry = '';
+  }
+  if (onRegistry) die(`${umbrella.name}@${VERSION} is already on the registry — `
+    + `a re-publish uploads nothing. Bump the version first.`);
   console.log(`  releasing ${TAG}`);
 
   // ---------- 3. gates ----------
