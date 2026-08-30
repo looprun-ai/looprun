@@ -26,10 +26,12 @@ Plain words throughout — every mechanism is named once and then drawn.
   │            judge rows stripped to `kind`      │          lints; judge rows carry the FULL
   ├── server   OpenAI facade                      │          correction (D5)
   ├── emit     YAML → cards.ts (2,286 ln)         │ server   unchanged
-  └── looprun  facade barrels                     │ emit     RETIRED — run ONCE more; its output is
-                                                  │          byte-diffed and adopted as the
-                                                  │          hand-owned cards.ts source (D4)
- sizes: core ≈5,100 · eval ≈3,200 · emit 2,286    │ net: −2,286 authored lines, −1 model call/turn
+  └── looprun  facade barrels                     │ emit     SHRUNK — sentence-shape policing
+                                                  │          (skeletons, selector, six-voice
+                                                  │          mandate) leaves; factories, pairing,
+                                                  │          slots, against-surface STAY; cards.ts
+                                                  │          stays generated, never hand-edited (D4)
+ sizes: core ≈5,100 · eval ≈3,200 · emit 2,286    │ net: freer sentences, −1 model call/turn
 ```
 
 ### AB2 · One governed turn — same stages, two machines
@@ -85,28 +87,29 @@ Attribution: the engine owns 5 of the 13 unpaid governed points, 4 of them on th
 ### AB3 · Authoring
 
 ```
- AS-IS — the declared path                        │ TO-BE — the freed author, inside four laws
+ AS-IS — the declared path                        │ TO-BE — free prose under a shrunken emitter
  ─────────────────────────────────────────────────┼──────────────────────────────────────────────────
- declaration.yaml is the ONLY authoring surface;  │ free prompt per desk (walls are prose, the six
- emit writes the WHOLE cards.ts text              │ voices demote to advisory)
-                                                  │
- closed vocabularies: 8 desk fields · 13          │ free guard code behind one signature — the
- declarable factories (the ENGINE holds 18;       │ engine's 18 factories remain available as a
- `deny` refused, `role`/`cap` renames) · 4        │ LIBRARY, no longer a ceiling
- judged · 3 rewrites · 4 disclosure tenses +      │
- 3 minted consent skeletons · 6 conduct voices    │ declaration SURVIVES as data: terms,
- demanded by the conductComplete LINT (core's     │ disclosures, consent skeletons, limits — the
- conduct keys are open; the closure is the lint)  │ translatable per-subject vocabulary
-                                                  │
- repair = ALWAYS declaration.yaml, never          │ repair = any authored file, held by the lints:
- cards.ts, never the engine                       │   purity        regex stays AST-caught
-                                                  │   NO_LANGUAGE_WORDS  word lists refused;
- gate: runGate + censusFor (27+ verbs)            │                 vocabulary only as declared data
-                                                  │   world-id-literal   ZERO exam/world record ids
- the author's blind spot: "composer" is not a     │                 in authored text (trad leaked 14)
- word the skill knows; judge rows show            │   certify()     refuses a run whose repair
- ["redrive"] where the dump shows guardName ·     │                 touched a held-out id
- detail · finish.message · delivery.by            │ covers: dropped from every new exam
+ declaration.yaml is the ONLY authoring surface;  │ SAME WORKFLOW: the author edits
+ emit writes the WHOLE cards.ts text              │ declaration.yaml, runs emit, cards.ts stays
+                                                  │ generated — hand-editing measured unsafe
+ closed vocabularies: 8 desk fields · 13          │ (microtest-5: 16/28 mutations silent)
+ declarable factories (the ENGINE holds 18;       │
+ `deny` refused, `role`/`cap` renames) · 4        │ CHECKS stay closed, factory-only (rule+deny
+ judged · 3 rewrites · 4 disclosure tenses +      │ minted from the same params) + FOUR new
+ 3 minted consent skeletons · 6 conduct voices    │ factories close the no-rung shapes
+ demanded by the conductComplete LINT (core's     │
+ conduct keys are open; the closure is the lint)  │ PROSE goes FREE: walls, refusals, questions,
+                                                  │ persona, disclosure sentences — the author's
+ repair = ALWAYS declaration.yaml, never          │ own words; skeletons, selector and the
+ cards.ts, never the engine                       │ six-voice mandate leave; emit carries the
+                                                  │ sentences verbatim
+ gate: runGate + censusFor (27+ verbs)            │
+                                                  │ the line is held by: unfilled-slot refusal ·
+ the author's blind spot: "composer" is not a     │ word-list lint (M09 red) · world-id lint
+ word the skill knows; judge rows show            │ (M10 red) · against-surface "did you mean" ·
+ ["redrive"] where the dump shows guardName ·     │ covers: KEPT on governed subjects (the only
+ detail · finish.message · delivery.by            │ deletion tripwire) · strict subject tsconfig ·
+                                                  │ certify() refusing held-out repairs
 ```
 
 ### AB4 · The skill
@@ -141,7 +144,7 @@ Attribution: the engine owns 5 of the 13 unpaid governed points, 4 of them on th
 | `catalog.ts` NEGATORS (:608) | 8 English negators decide negation ("não passou" ALLOWED for 'passed') | deleted — no word of any language in runtime matching |
 | `choiceFromUser` | licenses a coded value by matching declared terms in the operator's prose — language-bound: only the declaration's language works | same name, new behavior: the desk asks, options in the operator's language; the value is licensed only by an exact-alone echo (the ConsentDesk mechanic, generalized) |
 | `call-runner.ts` mask seam (:305) | masks declared fields | + untrusted-field wrapper — field NAMES only, never words |
-| `packages/emit` (2,286) | the only authoring door | retired; final output adopted as hand-owned source |
+| `packages/emit` (2,286) | the only authoring door; polices sentence SHAPE (skeletons, selector, six voices) AND structure | SHRUNK: sentence-shape policing leaves (prose goes free in the declaration); factories, pairing, slots, against-surface stay; cards.ts stays generated |
 | `eval/lints.ts` (1,979) | 27+ verbs; `conductComplete` RED on multi-desk houses | + NO_LANGUAGE_WORDS + world-id-literal; conduct voices advisory |
 | `eval/judge-inputs.ts` (:33) | corrections → `kind` only | full correction fields reach the judge row |
 | `eval/certifier.ts` | held-out excluded from the fix loop | + refuses a run whose repair touched a held-out id |
@@ -208,12 +211,14 @@ owed-read micro-step (single tool card) stays as a documented one-step fork.
 Prerequisite the red-team caught: `cache_prompt: true` and `-np 1` must land in
 `packages/models` first, or the llama.cpp measurement times the box, not the layout.
 
-### C4 = D4 · The freed author (see §AB3)
+### C4 = D4 · Free prose under a shrunken emitter (see §AB3)
 
-The emitter retires after ONE last run whose output is byte-diffed and adopted as the
-hand-owned source. The declaration file survives as data (terms, disclosures, skeletons,
-limits). Freedoms and the two new lints land in the SAME commit — a freedom without its
-lint is a law breach on day one.
+The workflow keeps its shape — edit `declaration.yaml`, run emit, `cards.ts` generated —
+and the emitter loses only its sentence-shape half: skeletons, the selector and the
+six-voice mandate leave; the author owns every sentence. Checks stay factory-only, with
+four new factories for the no-rung shapes. The freedom and its lints (word-list,
+world-id) land in the SAME commit — a freedom without its lint is a law breach on day
+one, and microtest-5 measured both lints as currently missing (M09/M10 green).
 
 ### C5 = D5 · The small repairs that ride along
 
@@ -252,10 +257,11 @@ Sequential steps; each ends green on its acceptance test before the next begins.
    ◄━━ SPLIT PREPARED: the skill                      (one governed T2 round:
        learns the engine's seams                       author NAMES a composer
                                                        failure)
- 6 D4 emitter retired + freedoms        L A          ░░░░░░░░░░░░░░░░░░█████
-   + lints + author.md, ONE commit                    (gate green; word-list lint
-   ◄━━ SPLIT COMPLETE: declare.md and                  red on a planted SYNONYMS
-       the ladder chapters merge into                  fixture)
+ 6 D4 emitter SHRUNK (prose free) +     L A          ░░░░░░░░░░░░░░░░░░█████
+   4 new factories + lints +                          (gate green; word-list +
+   tsconfig + author.md, ONE commit                    world-id lints red on the
+   ◄━━ SPLIT COMPLETE: declare.md and                  M09/M10 fixtures; "did you
+       the ladder chapters merge into                  mean" still refuses)
        author.md
  7 re-certifications                    B            ░░░░░░░░░░░░░░░░░░░░░░░███
    trialworks 29/29 holds ·                           (any drop is a defect,
@@ -263,9 +269,9 @@ Sequential steps; each ends green on its acceptance test before the next begins.
 ```
 
 The split, precisely: step 5 puts the engine's truth INTO the skill (`engine-seams.md`,
-enriched judge rows) while `declare.md` still governs authoring; step 6 retires the
-emitter and, in the same commit, replaces `declare.md` + the ladder chapters of
-`guard-catalog.md` with `author.md` — the page that teaches exactly the freedoms that
-commit creates. The subjects are never re-authored in this program: harborpoint is
+enriched judge rows) while `declare.md` still governs authoring; step 6 shrinks the
+emitter to its structural half and, in the same commit, replaces `declare.md` + the
+ladder chapters of `guard-catalog.md` with `author.md` — the page that teaches exactly
+the freedoms that commit creates: free sentences, factory-only checks. The subjects are never re-authored in this program: harborpoint is
 step 2-3's acceptance test, trialworks and atlas are step 7's regression and
 certification.

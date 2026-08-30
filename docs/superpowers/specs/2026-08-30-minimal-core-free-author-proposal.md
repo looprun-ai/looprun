@@ -117,19 +117,48 @@ in `packages/` and the only tier sets `slots: 2` — the client must first pass
 `cache_prompt: true` and `-np 1` per `local-performance.md` laws 1 and 5, or the
 measurement times the box, not the layout.**
 
-### D4 · The freed author, with the laws kept enforceable
+### D4 · Free prose under a shrunken emitter — RULED
 
-| freedom (from traditional) | the guard that keeps it lawful |
-|---|---|
-| free hand-written prompt per desk (the wall stops being six mandatory voices — they demote to advisory) | the world-id-literal lint: ZERO exam/world record ids in authored text (the governed declaration already passes at zero; the trad leak was 14 ids) |
-| free guard code behind one signature (releases the 13-factory ceiling and its four published no-rung shapes) | `purity` (regex stays AST-caught) + **vocabulary stays DECLARED DATA in the subject** (`terms:` blocks), never inline literals in guard code — the only writable line between a declared, translatable term and a hidden word list |
-| checked must-state redrives on the same prefix | D1 — this IS the mechanism |
-| tool-result annotation (`label()` wrapping untrusted fields) | field NAMES only, never words; at the mask seam (`call-runner.ts:305`) |
-| net-positive round rule | `certify()` refuses a run whose repair touched a `split:'held-out'` id; held-out scored separately, always; the exam drops the `covers:` field for every NEW subject (it is the answer key) |
+The measurement drew the line for us (microtest-5: 16 of 28 hand-edit mutations pass the
+net silently, and everything made of WORDS passes on both paths). So the split is not
+"author edits TypeScript" — it is: **structure stays closed where erring is silent;
+sentences go free where no defence ever existed.** The workflow does not change shape:
+the author edits `declaration.yaml`, runs the emitter, and `cards.ts` stays GENERATED —
+never hand-edited.
 
-The emitter retires (run once more; its output becomes the hand-owned source, byte-diffed
-identical). The declaration survives as the home of `terms:`, disclosures, consent
-skeletons and limits — data, not the only licence.
+```
+ declaration.yaml (the one authoring surface)
+ ┌────────────────────────────────────────────┐
+ │ CHECKS — closed, factory-only              │──► emit ──► cards.ts, generated,
+ │   pairing · slots · against-surface        │  (smaller)  never touched by hand
+ │   ("did you mean") · rule+deny minted      │
+ │   from the same params · FOUR NEW          │
+ │   factories for the no-rung shapes:        │
+ │   argument-reading precondition ·          │
+ │   operator-OR-record disjunction ·         │
+ │   argument-vs-record compare ·             │
+ │   precondition∘onlyAfter composition       │
+ ├────────────────────────────────────────────┤
+ │ PROSE — FREE (the change)                  │
+ │   walls, refusal sentences, questions,     │
+ │   persona, disclosure sentences: the       │
+ │   author's own words, no minted skeleton,  │
+ │   no selector, the six voices demoted to   │
+ │   advisory. The emitter carries the        │
+ │   sentences verbatim; it stops policing    │
+ │   sentence SHAPE                           │
+ └────────────────────────────────────────────┘
+```
+
+What still holds the free prose (each proven necessary by a measured escape): the
+unfilled-`<slot>` refusal and `needs` wiring stay as-is; the word-list lint (M09 fixture
+red) and the world-id-literal lint (M10 fixture red) land BEFORE the freedom; `covers:`
+STAYS on governed subjects — it is the only guard-deletion tripwire — and is stripped
+only from exams handed to traditional builders; the subject ships a strict tsconfig;
+`certify()` refuses a run whose repair touched a `split:'held-out'` id. The other two
+freedoms ride unchanged: checked must-state redrives are D1 itself, and the
+tool-result annotation (`label()`, field NAMES only) lands at the mask seam
+(`call-runner.ts:305`).
 
 ### D5 · The small, load-bearing repairs that ride along
 
@@ -145,8 +174,9 @@ skeletons and limits — data, not the only licence.
 ## The strategy (question 3.3)
 
 **Evolve `looprun` + split `agentspec`. No new repo.** What survives is ~8,300 lines of
-tested engine (`core` + `eval`); what dies is 2,286 lines of `emit` and the authoring half
-of the skill. Deleting inside a repo is a commit; recreating the survivors is a campaign.
+tested engine (`core` + `eval`) plus a SMALLER `emit` (the sentence-shape policing leaves;
+factories, pairing, slots and `checkAgainstSurface` stay — microtest-5 proved that half is
+the emitter's irreplaceable value). What dies is the skill's skeleton-teaching half.
 Pre-1.0, compatibility is never a constraint.
 
 ```
@@ -171,10 +201,13 @@ Pre-1.0, compatibility is never a constraint.
                                                  point is not a cut
 5  D5 judge-row enrichment + engine-seams.md     re-run one governed T2 round; the author
    in the skill (split PREPARED)                 can now NAME a composer failure
-6  D4 emitter retired, freedoms + lints +        gate green; word-list lint red on a
-   author.md in the SAME commit (split           planted SYNONYMS fixture; author.md
-   COMPLETE — declare.md and the ladder          teaches exactly the freedoms this step
-   chapters merge into it)                       creates
+6  D4 emitter SHRUNK (prose skeletons, the       gate green; word-list + world-id lints
+   selector and the six-voice mandate leave;     red on the M09/M10 fixtures; the M03
+   free sentences in the declaration) + the      "did you mean" refusal still fires;
+   4 new factories + word-list/world-id          subject tsconfig strict; author.md
+   lints + subject tsconfig + author.md, ONE     teaches free prose + factory-only
+   commit (split COMPLETE — declare.md and       checks — exactly what this step creates
+   the ladder chapters merge into it)
 7  Re-certifications: trialworks once after      29/29 holds (any drop is a defect, not
    step 4; atlas full hundred once after 4       variance); 92 does not drop
 ```
@@ -194,7 +227,7 @@ new subject until the ladder above is green.
 | D1 redrives spend the same `retries` budget that already exhausts into engineClose | OPEN — measure on the r12 slice; raise `limits.retries` only if the slice shows starvation |
 | the whole case rests on one run per side | OPEN — re-run both sides of atlas 3× before calling 92-v-78 settled |
 | an unannounced flip between two LATIN-script languages mid-case: the re-ask can follow the old language (microtest-4: the ask-in-latest-language prompt line buys 16/20 right questions at zero cost, but "the second one, please" after a Portuguese case still re-asks in Portuguese; script flips and announced flips all hold) | ACCEPTED as a documented limit — the licence itself is never wrong (12/12), only the question's language; the engine's own trigram check shares the blind spot (cannot split fr/pt or zh/ja), so no mechanical escalation exists inside the standing laws |
-| hand-written cards.ts is the format the emitter was CREATED to take away from the author — the declared path exists because agents erred it | MEASURED (microtest-5, 28 mutations): the net catches 12/28 — and only 9/28 in the subject's real environment, which ships NO tsconfig. Silent-green classes: words-vs-code divergence (a check flipped to its opposite under an intact sentence), guards that bind nothing (a one-letter tool-name typo in `onlyAfter`), every guard deletion no case covers, an inline word LIST (the regex sibling IS caught), a world id in a rule sentence, `destructive: 1→3`. Step 6 does NOT ship as written; it gains four preconditions: (a) `checkAgainstSurface` survives the emitter as a gate lint (it alone refuses the typo'd tool with "did you mean"); (b) `covers:` STAYS on governed subjects — it is the only deletion tripwire; it is stripped only from exams handed to traditional builders; (c) the two promised lints (word-list, world-id-literal) exist BEFORE the freedom, proven red on the M09/M10 fixtures; (d) the subject ships a strict tsconfig (3 of the 12 catches exist only if one is present). OPEN DECISION for the owner: free guard CODE reopens words-vs-code divergence that factories structurally prevent (rule+deny minted from the same params) — candidate middle: prose free, checks only through factories, and the four no-rung shapes get new factories instead of raw code |
+| hand-written cards.ts is the format the emitter was CREATED to take away from the author — the declared path exists because agents erred it | MEASURED (microtest-5, 28 mutations): the net catches 12/28 — and only 9/28 in the subject's real environment, which ships NO tsconfig. Silent-green classes: words-vs-code divergence (a check flipped to its opposite under an intact sentence), guards that bind nothing (a one-letter tool-name typo in `onlyAfter`), every guard deletion no case covers, an inline word LIST (the regex sibling IS caught), a world id in a rule sentence, `destructive: 1→3`. RESOLVED BY RULING (2026-08-30): the emitter is NOT retired — it SHRINKS (D4 as now written): cards.ts stays generated and never hand-edited; sentences go free in the declaration; checks stay factory-only with four new factories for the no-rung shapes; `checkAgainstSurface`, `covers:` on governed subjects, the word-list + world-id lints and a strict subject tsconfig all hold the line the measurement drew. The four preconditions are folded into step 6's acceptance |
 | the omitted-sentence class: the composer PAYS it today by pasting owed facts; the desk DROPS it (microtest-d1 case 08: composer stated "no damage claim was opened" 2/2, desk 0/2, every byte-ruler clean — the fact's only literal was already carried by another sentence) | CLOSED by measurement (microtest-3): owed facts are NUMBERED and the structured report enumerates the fact ids it expressed — 0/5 → 5/5 on both omission shapes, zero extra calls, zero cheats over ten runs; a sampled judged question audits marked facts (17/20, 0 false accepts). Verbatim append REJECTED: it pasted a fact about an act that never ran (2/5) and the language ruler cannot see it. Residual: the fact-id redrive never fired in the sample — proven at step 2's slice |
 
 ## The four sections (stone rule), mapped
