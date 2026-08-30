@@ -33,6 +33,8 @@ contract:
         at: invoice.total
         not: above
         refusal: This invoice can return at most {invoice.total}, and the amount asked is over it.
+    closeBooking:
+      after: The closing note {result.id} is written against this invoice.
 desks:
   - name: billing
     persona: 'The billing desk: it looks invoices up, refunds them and closes the day.'

@@ -273,6 +273,9 @@ contract:
   disclosure:
     issueRefund:
       before: Refunding this invoice cannot be taken back.
+      after: The refund of {result.refunded} is on this invoice.
+    closeBooking:
+      after: The closing note reads {result.status}.
 desks:
   - name: billing
     persona: The billing desk.
@@ -301,6 +304,9 @@ contract:
   disclosure:
     issueRefund:
       before: Refunding this invoice cannot be taken back.
+      after: The refund of {result.refunded} is on this invoice.
+    closeBooking:
+      after: The closing note reads {result.status}.
 desks:
   - name: front-desk
     persona: The front desk.
@@ -324,6 +330,9 @@ contract:
   disclosure:
     issueRefund:
       before: Refunding this invoice cannot be taken back.
+      after: The refund of {result.refunded} is on this invoice.
+    closeBooking:
+      after: The closing note reads {result.status}.
 desks:
   - name: billing
     persona: The billing desk.
@@ -372,6 +381,9 @@ contract:
   disclosure:
     issueRefund:
       before: Refunding this invoice cannot be taken back.
+      after: The refund of {result.refunded} is on this invoice.
+    closeBooking:
+      after: The closing note reads {result.status}.
 desks:
   - name: front-desk
     persona: The front desk.
@@ -440,6 +452,8 @@ contract:
       needs: { invoice: getInvoice }
       before: Refunding this invoice cannot be taken back.
       after: ${after}
+    closeBooking:
+      after: The closing note reads {result.status}.
 desks:
   - name: front-desk
     persona: The front desk.
@@ -489,6 +503,9 @@ contract:
   disclosure:
     issueRefund:
       before: Refunding this invoice cannot be taken back.
+      after: The refund of {result.refunded} is on this invoice.
+    closeBooking:
+      after: The closing note reads {result.status}.
 desks:
   - name: front-desk
     persona: The front desk.
@@ -521,7 +538,10 @@ contract:
     issueRefund:
       needs: { invoice: getInvoice }
       before: Refunding this invoice cannot be taken back.
+      after: The refund of {result.refunded} is on this invoice.
       empty: ${empty}
+    closeBooking:
+      after: The closing note reads {result.status}.
 desks:
   - name: front-desk
     persona: The front desk.
@@ -558,6 +578,9 @@ contract:
   disclosure:
     issueRefund:
       before: Refunding this invoice cannot be taken back.
+      after: The refund of {result.refunded} is on this invoice.
+    closeBooking:
+      after: The closing note reads {result.status}.
 desks:
   - name: front-desk
     persona: The front desk.
@@ -651,6 +674,9 @@ contract:
   disclosure:
     issueRefund:
       before: Refunding this invoice cannot be taken back.
+      after: The refund of {result.refunded} is on this invoice.
+    closeBooking:
+      after: The closing note reads {result.status}.
 desks:
   - name: billing
     persona: p

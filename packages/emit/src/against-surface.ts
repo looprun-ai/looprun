@@ -276,6 +276,23 @@ function checkCreatesLawAndAfter(declaration: Declaration, facts: SurfaceFacts):
   return refusals;
 }
 
+/** Every act that changes the world owes the operator its after-tense: the sentence read once
+ *  the change exists. A read owes none. The birth register's own check demands the after of
+ *  record-opening acts; this one reaches every other mutating tool. */
+function checkMutatingAfter(declaration: Declaration, facts: SurfaceFacts): readonly string[] {
+  const refusals: string[] = [];
+  const register = new Set(facts.creates ?? []);
+  for (const fact of Object.values(facts.tools)) {
+    if (fact.effect === 'read' || register.has(fact.name)) continue;
+    if (declaration.contract.disclosure[fact.name]?.after === undefined) {
+      refusals.push(`contract.disclosure.${fact.name}.after is missing: '${fact.name}' changes `
+        + `the world, and the after is the sentence the operator reads once the change exists — `
+        + `add one naming what the call came back with, as {result.<field>}.`);
+    }
+  }
+  return refusals;
+}
+
 /** A `precondition` guard reading `args.reads: 'record'` names an act with a target record
  *  to read — an act with no target has no record for the guard to read. */
 function checkPreconditionTarget(declaration: Declaration, facts: SurfaceFacts): readonly string[] {
@@ -601,6 +618,7 @@ export function checkAgainstSurface(declaration: Declaration, facts: SurfaceFact
     ...checkValueFromUserRequired(declaration, facts),
     ...checkDestructiveDisclosed(declaration, facts),
     ...checkCreatesLawAndAfter(declaration, facts),
+    ...checkMutatingAfter(declaration, facts),
     ...checkPreconditionTarget(declaration, facts),
     ...checkDisclosureNeedsToolExists(declaration, facts),
     ...checkDisclosureNeedsResolvable(declaration, facts),

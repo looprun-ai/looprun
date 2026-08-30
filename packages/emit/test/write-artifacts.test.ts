@@ -147,6 +147,7 @@ const TWO_FAULTS = [
   '    issueRefund:',
   '      needs: { invoice: getInvoice }',
   '      before: Refunding this invoice cannot be taken back.',
+  '      after: The refund of {result.refunded} is on this invoice.',
   'desks:',
   '  - name: billing',
   '    persona: The billing desk.',

@@ -25,17 +25,30 @@ export const SIX_VOICES: Readonly<Record<string, string>> = {
 };
 
 /** A guard set, disclosure map and desk pair that together fit FACTS with no gaps: the
- *  destructive act is disclosed with a `before`, its disclosure alias resolves against the
- *  read it names, every guard names a real act and carries what its factory is configured
- *  from, a `precondition` reading a record sits over an act that has a target, and both
- *  desks teach all six voices. */
+ *  destructive act is disclosed with a `before` and every act that changes the world with an
+ *  `after`, its disclosure alias resolves against the read it names, every guard names a real act
+ *  and carries what its factory is configured from, a `precondition` reading a record sits over an
+ *  act that has a target, and both desks teach all six voices. */
 export const SOUND_GUARDS: readonly DeclaredGuard[] = [
   { name: 'confirmBeforeRefund', acts: ['issueRefund'], factory: 'onlyAfter', args: { after: 'getInvoice' } },
   { name: 'confirmInvoiceKnown', acts: ['getInvoice'], factory: 'precondition', args: { reads: 'record' },
     rule: 'Read the invoice this desk was asked about before you speak for it.' }
 ];
+
+/** The after-tense of every act of FACTS that changes the world: the sentence the operator reads
+ *  once the change exists, written from what the call itself came back with. A declaration that
+ *  leaves one of these out is refused by the act's own name, so every fixture handing FACTS to the
+ *  surface check states them — the ones testing a gap elsewhere spread this map and write their
+ *  own gap over it. */
+export const AFTERS: Readonly<Record<string, DeclaredDisclosure>> = {
+  issueRefund: { after: 'The refund of {result.refunded} is on the invoice.' },
+  closeBooking: { after: 'The closing note reads {result.status}.' }
+};
+
 export const SOUND_DISCLOSURE: Readonly<Record<string, DeclaredDisclosure>> = {
-  issueRefund: { needs: { invoice: 'getInvoice' }, before: 'Say the invoice total before refunding it.' }
+  ...AFTERS,
+  issueRefund: { ...AFTERS.issueRefund, needs: { invoice: 'getInvoice' },
+    before: 'Say the invoice total before refunding it.' }
 };
 export const SOUND_DESKS: Declaration['desks'] = [
   { name: 'a', persona: 'p', tools: ['issueRefund', 'getInvoice'], conduct: SIX_VOICES,

@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import { checkAgainstSurface } from '../src/index.js';
 import type { Declaration, DeclaredGuard } from '../src/index.js';
-import { decl, FACTS, SEAM, SIX_VOICES, soundDeclaration } from './helpers.js';
+import { AFTERS, decl, FACTS, SEAM, SIX_VOICES, soundDeclaration } from './helpers.js';
 
 describe('checkAgainstSurface', () => {
   test('an act the surface does not declare', () => {
@@ -10,7 +10,7 @@ describe('checkAgainstSurface', () => {
   });
 
   test('a destructive act with no before', () => {
-    expect(checkAgainstSurface(decl({ disclosure: {} }), FACTS, SEAM))
+    expect(checkAgainstSurface(decl({ disclosure: AFTERS }), FACTS, SEAM))
       .toEqual([expect.stringContaining("issueRefund is destructive and declares no `before`")]);
   });
 
@@ -35,8 +35,8 @@ describe('checkAgainstSurface', () => {
   });
 
   test('a disclosure alias whose read cannot answer from the held call', () => {
-    expect(checkAgainstSurface(decl({ disclosure: { issueRefund: {
-      needs: { invoice: 'getInvoice' }, before: 'x' } } }), { tools: {
+    expect(checkAgainstSurface(decl({ disclosure: { ...AFTERS, issueRefund: {
+      ...AFTERS.issueRefund, needs: { invoice: 'getInvoice' }, before: 'x' } } }), { tools: {
         ...(FACTS as never as { tools: Record<string, unknown> }).tools,
         getInvoice: { name: 'getInvoice', effect: 'read', target: 'holdId', entity: 'holds', schema: { properties: { holdId: {} } } }
       } } as never, SEAM))
@@ -55,23 +55,23 @@ describe('checkAgainstSurface', () => {
   } } as never;
 
   test('a needs alias binding a read whose every argument is optional', () => {
-    expect(checkAgainstSurface(decl({ disclosure: { issueRefund: {
-      needs: { freezes: { tool: 'listHolds', args: {} } },
+    expect(checkAgainstSurface(decl({ disclosure: { ...AFTERS, issueRefund: {
+      ...AFTERS.issueRefund, needs: { freezes: { tool: 'listHolds', args: {} } },
       before: 'Say what stands frozen before refunding.' } },
       desks: [{ name: 'a', persona: 'p', tools: ['issueRefund', 'listHolds'],
                 conduct: { declareHonestly: 'x' } }] }), READS, SEAM)).toEqual([]);
   });
 
   test('a needs alias whose binding leaves a required argument of the read unfilled', () => {
-    expect(checkAgainstSurface(decl({ disclosure: { issueRefund: {
-      needs: { invoice: { tool: 'getInvoice', args: {} } },
+    expect(checkAgainstSurface(decl({ disclosure: { ...AFTERS, issueRefund: {
+      ...AFTERS.issueRefund, needs: { invoice: { tool: 'getInvoice', args: {} } },
       before: 'Say the invoice total before refunding it.' } } }), READS, SEAM))
       .toEqual([expect.stringContaining("getInvoice requires 'invoiceId'")]);
   });
 
   test('a needs alias whose binding fills the argument the read requires', () => {
-    expect(checkAgainstSurface(decl({ disclosure: { issueRefund: {
-      needs: { invoice: { tool: 'getInvoice', args: { invoiceId: 'invoiceId' } } },
+    expect(checkAgainstSurface(decl({ disclosure: { ...AFTERS, issueRefund: {
+      ...AFTERS.issueRefund, needs: { invoice: { tool: 'getInvoice', args: { invoiceId: 'invoiceId' } } },
       before: 'Say the invoice total before refunding it.' } } }), READS, SEAM)).toEqual([]);
   });
 
@@ -126,7 +126,10 @@ describe('checkAgainstSurface', () => {
   } } as never;
   const hotelDecl = (guards: readonly DeclaredGuard[]): Declaration => decl({
     guards,
-    disclosure: { cancelBooking: { before: 'Cancelling this booking cannot be taken back.' } },
+    disclosure: {
+      moveBooking: { after: 'The booking now runs {result.startDate} to {result.endDate}.' },
+      cancelBooking: { before: 'Cancelling this booking cannot be taken back.',
+                       after: 'The booking reads {result.status}.' } },
     desks: [{ name: 'concierge', persona: 'p', tools: ['moveBooking', 'cancelBooking'],
               conduct: { declareHonestly: 'x' } }]
   });
@@ -164,14 +167,14 @@ describe('checkAgainstSurface', () => {
       ...(FACTS as never as { tools: Record<string, unknown> }).tools,
       issueRefund: { name: 'issueRefund', effect: 'destructive', target: null, entity: 'invoices', schema: {} }
     } } as never;
-    expect(checkAgainstSurface(decl({ disclosure: { issueRefund: {
-      needs: { invoice: 'thisToolDoesNotExistAnywhere' }, before: 'x' } } }), facts, SEAM))
+    expect(checkAgainstSurface(decl({ disclosure: { ...AFTERS, issueRefund: {
+      ...AFTERS.issueRefund, needs: { invoice: 'thisToolDoesNotExistAnywhere' }, before: 'x' } } }), facts, SEAM))
       .toEqual([expect.stringContaining("the surface declares no such tool")]);
   });
 
   test('a disclosure needs alias naming a tool that does not exist, held act target set', () => {
-    const refusals = checkAgainstSurface(decl({ disclosure: { issueRefund: {
-      needs: { invoice: 'thisToolDoesNotExistAnywhere' }, before: 'x' } } }), FACTS, SEAM);
+    const refusals = checkAgainstSurface(decl({ disclosure: { ...AFTERS, issueRefund: {
+      ...AFTERS.issueRefund, needs: { invoice: 'thisToolDoesNotExistAnywhere' }, before: 'x' } } }), FACTS, SEAM);
     expect(refusals).toEqual([expect.stringContaining("the surface declares no such tool")]);
     expect(refusals[0]).not.toContain('only accepts');
   });

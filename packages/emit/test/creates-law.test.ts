@@ -2,7 +2,8 @@
  *  record that did not exist, and the declaration states two things about it or the emit refuses.
  *  The asked-for law — a prose guard licensed `conduct` naming the act — is what keeps the desk
  *  from opening records nobody asked for, and the `after` is the sentence that tells the operator
- *  which record now exists. An act outside the register owes neither. */
+ *  which record now exists. An act outside the register owes no asked-for law, and owes its after
+ *  the way every act that changes the world owes one. */
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, test } from 'vitest';
@@ -36,7 +37,16 @@ const ASKED_FOR: DeclaredGuard = {
   rule: 'Enroll a student only when the operator asked for that in this conversation.'
 };
 
+/** The quote act's after-tense. It opens a record the register does not mark, and an act that
+ *  changes the world owes the operator that sentence whether the register marks it or not — so
+ *  every fixture here states it, and the ones testing the register's own gap leave only the
+ *  enrolment's after out. */
+const QUOTE_AFTER: Readonly<Record<string, DeclaredDisclosure>> = {
+  generateQuote: { after: 'Quote {result.quoteId} totals {result.total}.' }
+};
+
 const AFTER: Readonly<Record<string, DeclaredDisclosure>> = {
+  ...QUOTE_AFTER,
   enrollStudent: { after: 'Student {result.id} is on the register.' }
 };
 
@@ -44,6 +54,13 @@ const DESKS = [{ name: 'registrar', persona: 'The registrar desk.',
   tools: ['enrollStudent', 'getStudent'], conduct: { declareHonestly: 'Say what ran.' } }];
 
 describe('the birth register demands the asked-for law and the after', () => {
+  test('a mutating act off the register with no after is refused naming it', () => {
+    expect(checkAgainstSurface(decl({ guards: [ASKED_FOR],
+      disclosure: { enrollStudent: AFTER.enrollStudent }, desks: DESKS }), SCHOOL, []))
+      .toEqual([expect.stringContaining(
+        "contract.disclosure.generateQuote.after is missing")]);
+  });
+
   test('a record-opening act with no prose law licensed conduct is refused by name', () => {
     expect(checkAgainstSurface(decl({ guards: [], disclosure: AFTER, desks: DESKS }), SCHOOL, []))
       .toEqual([expect.stringContaining(
@@ -68,7 +85,7 @@ describe('the birth register demands the asked-for law and the after', () => {
 
   test('a record-opening act with the law but no after is refused naming the missing after', () => {
     const refusals = checkAgainstSurface(
-      decl({ guards: [ASKED_FOR], disclosure: {}, desks: DESKS }), SCHOOL, []);
+      decl({ guards: [ASKED_FOR], disclosure: QUOTE_AFTER, desks: DESKS }), SCHOOL, []);
     expect(refusals).toEqual([expect.stringContaining(
       'contract.disclosure.enrollStudent.after is missing')]);
     expect(refusals[0]).toContain('opens a new record');
@@ -79,9 +96,9 @@ describe('the birth register demands the asked-for law and the after', () => {
       SCHOOL, [])).toEqual([]);
   });
 
-  test('an act outside the birth register owes neither', () => {
+  test('an act outside the birth register owes no asked-for law', () => {
     const unmarked = { tools: TOOLS, creates: [] } as never;
-    expect(checkAgainstSurface(decl({ guards: [], disclosure: {}, desks: DESKS }), unmarked, []))
+    expect(checkAgainstSurface(decl({ guards: [], disclosure: AFTER, desks: DESKS }), unmarked, []))
       .toEqual([]);
   });
 
