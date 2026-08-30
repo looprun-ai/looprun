@@ -151,7 +151,11 @@ Pre-1.0, compatibility is never a constraint.
 
 ```
 #  STEP                                          ACCEPTANCE
-1  NEGATORS deleted                              existing guard tests + the PT probe
+1  NEGATORS deleted TOGETHER WITH the            existing guard tests + the PT probe +
+   choiceFromUser ask-then-echo swap — ONE       the microtest-choice scenario table
+   commit; deleting the list alone turns an      (ask-then-echo 14/14 right across
+   English negation into the OPPOSITE            pt/en/jp vs 1/7 for term-matching;
+   licensed value                                strict exact-alone echo, never relaxed)
 2  D1 gateMisses into tryFinish + delivered-     harborpoint r12 slice: the 5 rotating
    text figure walk on both paths                failures ARE the test
 3  D2 composer narrowed to engineClose;          consent turns still deliver prose;
