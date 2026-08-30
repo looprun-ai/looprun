@@ -184,6 +184,7 @@ tool-result annotation (`label()`, field NAMES only) lands at the mask seam
 | `references/engine-seams.md` in the skill, NAMING delivery/correction/judged stages | `grep composer skill/` = 0 today; the author cannot diagnose a stage that has no name |
 | judge becomes opt-in per desk and reuses the main prefix (question as last user message) | zero judged guards are declared in any of the three subjects; its own system+full-history shape is the most cache-hostile in the engine |
 | `git init` + `seal()` on both governed subject trees | the audit advantage exists as verbs and is currently unexercised |
+| the TAPE LAW (measured, microtest-9): the window-2 rewrite (`turn.ts:152-159`) dies — it costs 2.02× the prefill of append-only and bought nothing; the tape is APPEND-ONLY (decide at seal time whether act sentences are carried; never delete written bytes). Compaction is BUDGET-triggered, never fixed-count (8/4 spacing cost 5.8% MORE than nothing at 24 turns: the saving tracks tape length through write acts — compact when the next write would cost more than a checkpoint). A summary preserves every tool-returned id VERBATIM and never upgrades a refused proposal into a fact — the dropped-facts arm answered a memory probe with a DIFFERENT REAL booking id and staged a wrong act on it | BACKLOG row 1's pruning addendum now has its measured shape; caveat: teeth rest on one probe in one arm — the full ruler is step 4b's |
 
 ## The strategy (question 3.3)
 
