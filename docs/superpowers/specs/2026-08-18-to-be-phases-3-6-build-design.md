@@ -1,5 +1,7 @@
 # TO-BE Implementation — Phases 3–6 Build Design
 
+> **Status: OPEN — phases 3–6 unbuilt; parked behind the current program.**
+
 The TO-BE design is `2026-08-12-to-be-blueprint-v3.md`. The cross-phase frame (parallel
 tree at `packages/next/*`, one branch per phase, name gate scoped until the swap) is
 `2026-08-17-to-be-phase-1-implementation-design.md` §1. Phases 1 and 2 are merged to main

@@ -1,5 +1,7 @@
 # The Declaration and the Emitter — Implementation Plan
 
+> **Status: DONE — declared subjects are the shipped path.**
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** An agent authoring a governed subject writes one YAML declaration of business sentences; an emitter writes every line of TypeScript, and one gate of eleven verbs answers whether it is sound.

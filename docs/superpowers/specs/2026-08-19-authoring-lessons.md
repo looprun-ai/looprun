@@ -1,5 +1,7 @@
 # Authoring lessons — what a SENIOR governed-agent skill teaches
 
+> **Status: REFERENCE — lessons, not obligations.**
+
 > **RECORD — consumed.** The lessons were folded into the skill's pages by the 6b regeneration
 > and the three-laws rewrite; this file is the register of what each lesson cost. Nothing here
 > is owed.

@@ -1,5 +1,7 @@
 # Migration notes — the simplification release
 
+> **Status: REFERENCE — a register, not a spec; nothing owed.**
+
 > **RECORD, not a spec.** Nothing here is owed. It states what the release changes for a consumer
 > outside this repo, and §4 carries the two decisions the user owned, settled.
 

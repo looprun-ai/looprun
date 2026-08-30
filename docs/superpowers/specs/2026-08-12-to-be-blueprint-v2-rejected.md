@@ -1,5 +1,7 @@
 # looprun — TO-BE Architecture Blueprint: The Two-Card Engine
 
+> **Status: REJECTED — authoring complexity; v3 is the standing map.**
+
 The TO-BE design for the looprun engine, governed by one rule that outranks every other
 quality:
 

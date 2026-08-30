@@ -1,5 +1,7 @@
 # TO-BE Phase 2 Build Design — consent · honesty · disclosure · masking, the compile, the world
 
+> **Status: CLOSED — phase 2 merged; the 132-proof gate held.**
+
 The second phase of the fresh build (`packages/next/core`): the four run/ desks plus the
 Judge, the full cards/ compile (catalog · CardCheck · SurfaceGate · AgentFactory ·
 Wordings), and the declarative `world/`. One spec, one plan, one branch

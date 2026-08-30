@@ -1,5 +1,7 @@
 # TO-BE Phase 4a Implementation Plan — eval's static half + the Atlas subject port
 
+> **Status: OPEN — unexecuted; parked with the phases 3–6 design.**
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** `packages/next/eval`'s static half (targets · SubjectLoader · Validator · lints) and the Atlas subject ported to the TO-BE vocabulary in `agentspec-bench/subjects/atlas-next`, gated by validate + static lints green — zero spend, no model touched.

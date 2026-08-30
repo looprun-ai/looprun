@@ -1,5 +1,7 @@
 # skill-requirements — the phase-6b regeneration charter
 
+> **Status: REFERENCE — the skill itself is the living form of these requirements.**
+
 > **RECORD — consumed.** Phase 6b executed and the regenerated skill shipped; this file is its
 > requirements record. Nothing here is owed.
 

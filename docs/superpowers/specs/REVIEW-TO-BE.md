@@ -1,5 +1,7 @@
 # TO-BE Blueprint v3 — User Review Notes
 
+> **Status: REFERENCE — the review register of the TO-BE blueprint.**
+
 Observations collected while the user reviews
 `docs/superpowers/specs/2026-08-12-to-be-blueprint-v3.md`. No changes are applied during
 the review; each note is a candidate edit to resolve after the walkthrough ends.

@@ -1,5 +1,7 @@
 # TO-BE Phase 4b Implementation Plan — eval's execution half + models
 
+> **Status: OPEN — unexecuted; parked with the phases 3–6 design.**
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** The measurement machinery as VERBS over a run dir — ExamRunner · monitor · judge-inputs · fold · sync · certify · seal — plus `packages/next/models`, gated by unit proofs per desk and 1–2 scripted E2E threads. No pausable campaign, no resume: the run dir is the only state.

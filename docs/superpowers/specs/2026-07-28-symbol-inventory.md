@@ -1,5 +1,7 @@
 # Symbol usage inventory — looprun simplification (Phase 0)
 
+> **Status: REFERENCE — a register, not a spec; nothing owed.**
+
 > **RECORD, not a spec.** Nothing here is owed. This is the scan every cut in the simplification
 > cited, kept so an audit can retrace which symbol went where.
 

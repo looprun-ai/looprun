@@ -1,5 +1,7 @@
 # Phase 6B — the skill, regenerated and measured
 
+> **Status: DONE — the rewritten skill authors blind subjects end to end.**
+
 **Design:** `docs/superpowers/specs/2026-08-18-to-be-phases-3-6-build-design.md` §7.
 **Charter:** `docs/superpowers/specs/2026-08-18-skill-requirements.md` (18 lesson rows).
 **Senior material:** `docs/superpowers/specs/2026-08-19-authoring-lessons.md`.

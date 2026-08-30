@@ -1,5 +1,7 @@
 # Mechanism-First Guards Implementation Plan
 
+> **Status: DONE — the declaration carries mechanism-first guards.**
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** A prose guard names the acts it reaches in `Guard.tool`, a deterministic check stands on each of those acts, and a static lint refuses a subject where it does not.

@@ -1,5 +1,7 @@
 # F1 — The Composed Reply Implementation Plan
 
+> **Status: DONE — the composer is the delivery.**
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** The delivered reply is composed by one call to the subject model from engine-labeled facts, gated deterministically, floored on failure — and the confirmation code becomes six digits that license only alone.

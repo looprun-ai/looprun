@@ -1,5 +1,7 @@
 # The consent licence, the derived act list, and the disclosure that speaks three times
 
+> **Status: CLOSED — shipped on main; the licence executes engine-side on the typed code.**
+
 **Date** 2026-08-10 · **Scope** `looprun`, `agentspec`, `agentspec-bench/subjects/atlas` ·
 **Status** RECORD, not a spec — nothing here is owed.
 

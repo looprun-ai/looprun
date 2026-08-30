@@ -1,5 +1,7 @@
 # TO-BE Phase 3 Implementation Plan — facade, adapters, server, native tool-result
 
+> **Status: OPEN — unexecuted; parked with the phases 3–6 design.**
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** The public doors over the phase-1/2 engine: the native tool-result seam in core, `packages/next/mastra` (MastraModelPort · HostToolPort · McpConnect · AgentAssembly · LoopRunAgent · UngovernedAgent) and `packages/next/server` (wire · WireSessions · WireHandler · Server), gated by a scripted E2E battery with zero network.

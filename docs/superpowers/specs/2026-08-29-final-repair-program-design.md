@@ -1,5 +1,7 @@
 # The Final Repair Program — Every Known Class to Zero, Then One Certification
 
+> **Status: CLOSED — executed; the surviving classes live in BACKLOG rows 42–46.**
+
 **Status:** DRAFT — pending owner review
 **Program:** `2026-08-28-natural-voice-recovery-design.md` — this plan REPLACES the
 bare "F5 then F2" tail with a de-risked sequence: R1 (engine repairs, each

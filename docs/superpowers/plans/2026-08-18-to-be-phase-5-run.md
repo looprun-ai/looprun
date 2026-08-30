@@ -1,5 +1,7 @@
 # TO-BE Phase 5 Plan — the measurement
 
+> **Status: OPEN — unexecuted; parked with the phases 3–6 design.**
+
 > **For agentic workers:** REQUIRED SUB-SKILL: superpowers:executing-plans, inline. This phase builds ~no code: it RUNS.
 
 **Goal:** The full Atlas on the new engine, `gemini-3.1-flash-lite` only, K=3 reps, judged in session, certified at bar 0.9 — score ≥ 85/100 AND every case the frozen baseline passes (100 minus the fifteen: 43 47 48 49 50 51 52 62 63 72 80 82 87 92 100) also passes here.

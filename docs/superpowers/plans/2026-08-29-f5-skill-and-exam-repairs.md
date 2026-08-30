@@ -1,5 +1,7 @@
 # F5 — The Skill's Corrections and the Exam's Repairs Implementation Plan
 
+> **Status: DONE — residue registered, not owed here.**
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Close backlog-da-skill rows 2, 4, 5, 6 and 7 — the exam repaired first, then the pages — every fix validated by directed cases before F2's campaign.

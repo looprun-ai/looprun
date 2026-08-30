@@ -1,5 +1,7 @@
 # The Front Desk and the Chat Door — Implementation Plan
 
+> **Status: DONE — the router is the default door; c17/c18 sealed it.**
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** A multi-desk subject becomes one addressable agent: a lean neutral front desk routes

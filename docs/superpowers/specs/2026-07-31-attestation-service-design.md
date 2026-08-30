@@ -1,5 +1,7 @@
 # Attestation service — design
 
+> **Status: PARKED — an idea, not scheduled; BACKLOG row 35 is its register.**
+
 > **NOT SCHEDULED.** An idea, kept for the day it is wanted. No code implements it: there is no
 > `attest` command, no service, no keys. `BACKLOG.md` carries the one line that points here; nothing
 > else in the tree depends on this document.

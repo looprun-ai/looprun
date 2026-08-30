@@ -1,5 +1,7 @@
 # The Natural-Voice Recovery Program — Design
 
+> **Status: CLOSED — every phase landed: floor, composed reply, router default, desks describe themselves, skill and exam repairs.**
+
 **Status:** DRAFT — pending owner review
 **Repos bound:** `looprun` (engine — the preferred path) · `agentspec` (skill — **LOCKED**, edited only as a last resort and only with the owner's express authorization) · `agentspec-bench` (the exam)
 

@@ -1,5 +1,7 @@
 # The Lint Program Implementation Plan
 
+> **Status: DONE — 17 tasks, spec stamped closed.**
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Every feasible check behind every teaching — the spec's four waves built, all 107 GAP rows verdicted BUILT or WONTFIX, and the from-zero c20 round (Task 17) passing as the program's final validator with zero lint errors.

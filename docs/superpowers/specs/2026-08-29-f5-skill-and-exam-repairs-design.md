@@ -1,5 +1,7 @@
 # F5 — The Skill's Corrections and the Exam's Repairs
 
+> **Status: CLOSED — the skill half landed whole; the exam residue lives in agentspec BACKLOG rows 3–5.**
+
 **Status:** DRAFT — pending owner review
 **Program:** `2026-08-28-natural-voice-recovery-design.md` — inserted by the owner's
 ruling between F3 and F2, so F2's single campaign measures a clean ruler on the final

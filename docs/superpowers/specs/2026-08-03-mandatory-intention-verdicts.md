@@ -1,5 +1,7 @@
 # MANDATORY INTENTION — PER-GUARD VERDICTS
 
+> **Status: CLOSED — shipped; every act carries its declared word in `said`.**
+
 > **RECORD, not a spec.** Nothing here is owed. One verdict per guard, kept as the acceptance
 > artifact of the mandatory-intention design.
 

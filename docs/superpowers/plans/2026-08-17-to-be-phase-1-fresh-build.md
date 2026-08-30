@@ -1,5 +1,7 @@
 # TO-BE Phase 1 — Fresh Build Implementation Plan
 
+> **Status: DONE — packages/next core merged to main.**
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Build `packages/next/core` (`@looprun-ai/next-core`): the contract leaf, the L1 card/fact types, the 4-species catalog seed, and THE one turn machine — gated by twelve scripted-model proofs, no network.

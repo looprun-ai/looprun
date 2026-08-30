@@ -1,5 +1,7 @@
 # TO-BE Phase 2 — Consent · Honesty · Disclosure · Masking Implementation Plan
 
+> **Status: DONE — merged; gate green.**
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Complete `packages/next/core` phase 2: the declarative `world/`, the full cards

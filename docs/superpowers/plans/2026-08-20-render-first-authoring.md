@@ -1,5 +1,7 @@
 # Render-First Authoring Implementation Plan
 
+> **Status: DONE — RENDER.md rides every authored subject.**
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** An agent that has read only the agentspec skill authors the Atlas and scores 95 of 100, every row judged.

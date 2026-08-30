@@ -1,5 +1,7 @@
 # Apply the Review Resolution to Blueprint v3 — Implementation Plan
 
+> **Status: DONE — the v3 blueprint carries every resolution.**
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Amend `docs/superpowers/specs/2026-08-12-to-be-blueprint-v3.md` so it states the
