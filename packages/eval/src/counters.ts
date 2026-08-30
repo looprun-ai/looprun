@@ -1,7 +1,8 @@
 /** The deterministic second half of the bar, computed over a run's dumps and written
  *  beside the judge inputs. Letters ask whether a fact reached the operator; these
  *  counters ask whether the replies stayed whole — and both halves must hold. The
- *  language row is an informative heuristic (tiny stopword families), never a gate. */
+ *  language row counts the engine's own prose-reader refusals: the check runs at the
+ *  seam where the delivered words exist, and the dump carries its verdicts. */
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { CaseDump } from './run-dir.js';
@@ -16,41 +17,14 @@ export interface Counters {
   readonly proseDeliveries: number;
   readonly composerDeliveries: number;
   readonly composerRetries: number;
+  readonly proseReaderRedrives: number;
   readonly languageMismatches: number;
-}
-
-const STOPWORDS: readonly { readonly family: string; readonly words: readonly string[] }[] = [
-  { family: 'en', words: ['the', 'of', 'and', 'is', 'to', 'a'] },
-  { family: 'pt', words: ['o', 'a', 'de', 'que', 'e', 'não', 'para'] },
-  { family: 'es', words: ['el', 'la', 'de', 'que', 'y', 'no', 'para'] }
-];
-
-function tokensOf(text: string): readonly string[] {
-  const tokens: string[] = [];
-  let current = '';
-  for (const ch of text.toLowerCase()) {
-    if (ch >= 'a' && ch <= 'z' || ch >= '\u00e0' && ch <= '\u00ff') current += ch;
-    else { if (current !== '') tokens.push(current); current = ''; }
-  }
-  if (current !== '') tokens.push(current);
-  return tokens;
-}
-
-function familyOf(text: string): string | null {
-  const tokens = tokensOf(text);
-  let best: string | null = null;
-  let bestHits = 0;
-  for (const { family, words } of STOPWORDS) {
-    const hits = tokens.filter(t => words.includes(t)).length;
-    if (hits > bestHits) { best = family; bestHits = hits; }
-  }
-  return bestHits >= 2 ? best : null;
 }
 
 export function computeCounters(dumps: readonly CaseDump[]): Counters {
   let emptyDeliveries = 0, framesLeaked = 0, rawJson = 0, readLinesDelivered = 0,
     twoOutcomes = 0, floorDeliveries = 0, proseDeliveries = 0, composerDeliveries = 0,
-    composerRetries = 0, languageMismatches = 0;
+    composerRetries = 0, proseReaderRedrives = 0, languageMismatches = 0;
   for (const dump of dumps) {
     for (const r of dump.records) {
       const text = r.text;
@@ -79,16 +53,18 @@ export function computeCounters(dumps: readonly CaseDump[]): Counters {
           .map(a => (a.status === 'done' ? 'done' : 'not-done')));
         if (words.size > 1 && text.includes(tool)) twoOutcomes += 1;
       }
-      const userFamily = familyOf(r.userText);
-      const replyFamily = familyOf(text);
-      if (userFamily !== null && replyFamily !== null && userFamily !== replyFamily) {
-        languageMismatches += 1;
+      // The prose reader's own verdicts, read off the record: every refusal is a
+      // redrive it demanded, and a language refusal is a mismatch it caught.
+      for (const c of r.corrections) {
+        if (c.kind !== 'proseReader') continue;
+        proseReaderRedrives += 1;
+        if (c.check === 'language') languageMismatches += 1;
       }
     }
   }
   return { emptyDeliveries, framesLeaked, rawJson, readLinesDelivered, twoOutcomes,
     floorDeliveries, proseDeliveries, composerDeliveries, composerRetries,
-    languageMismatches };
+    proseReaderRedrives, languageMismatches };
 }
 
 export function writeCounters(runDir: string, dumps: readonly CaseDump[]): Counters {

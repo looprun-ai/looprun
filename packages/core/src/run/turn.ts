@@ -1,9 +1,10 @@
 /** THE one turn machine. Sequences only, decides nothing. The phase-1 walk: input
  *  guards over the arrived text (a deny answers the turn with the guard's own
  *  sentence — no model call) → model loop (serial per-call execution in emission
- *  order, engine-enforced) → finish checks and bounded redrives → compose → seal.
- *  All mutation goes to the TurnDraft; Session.seal commits atomically; a
- *  TurnFailure discards the draft so a retry starts clean. */
+ *  order, engine-enforced) → finish checks and bounded redrives → compose → the
+ *  prose reader over the COMPOSED words (both close paths; the floor is literal
+ *  and exempt) → seal. All mutation goes to the TurnDraft; Session.seal commits
+ *  atomically; a TurnFailure discards the draft so a retry starts clean. */
 import type { Act, ChatOpts, Msg, Question, RawCall, ReportLine, ToolCard, TurnRecord,
               TurnReturned } from '../contract/vocabulary.js';
 import { deepFreeze } from '../contract/freeze.js';
@@ -12,6 +13,8 @@ import type { CompiledAgent } from '../cards/cards.js';
 import { CallRunner } from './call-runner.js';
 import { canonicalAmount, carriedIds, figureRuns } from '../cards/catalog.js';
 import { assembleFacts } from './delivery-facts.js';
+import type { DeliveryFact } from './delivery-facts.js';
+import { readProse } from './prose-reader.js';
 import { ReplyComposer } from './reply-composer.js';
 import { DisclosureDesk } from './disclosure-desk.js';
 import { Judge } from './judge.js';
@@ -399,18 +402,51 @@ export class Turn {
     const facts = assembleFacts(draft.acts, open, draft.closed, notes);
     const floor = (): string => dw.compose(parsed.finish.message, draft.acts, open,
       draft.closed, notes);
+    const material = readMaterial(draft.acts);
     const composed = facts.length === 0
       ? (proseDropsReads(draft.acts, parsed.finish.message)
         ? await this.composer.deliver(draft.userText, facts, parsed.finish.message,
-            floor, readMaterial(draft.acts))
+            floor, material)
         : { text: parsed.finish.message, by: 'prose' as const, retried: false })
       : await this.composer.deliver(draft.userText, facts, parsed.finish.message, floor,
-        readMaterial(draft.acts));
-    draft.delivery = { by: composed.by, retried: composed.retried, facts };
-    let text = composed.text;
-    for (const rewrite of compiled.rewrites) text = rewrite.apply(text);
-    draft.text = this.deps.masker.maskProse(text);
+        material);
+    const delivered = await this.readDelivery(composed, draft, facts,
+      parsed.finish.message, floor, material);
+    draft.delivery = { by: delivered.by, retried: delivered.retried, facts };
+    draft.text = this.deps.masker.maskProse(delivered.text);
     return 'sealed';
+  }
+
+  /** The prose reader at the seal, on every path that composes prose: the floor's
+   *  record lines are literal and are never read. A refusal pays ONE redrive
+   *  through the composer with the reader's sentence as the correction; a second
+   *  refusal delivers the floor. Rewrites apply to every candidate the operator
+   *  could receive. */
+  private async readDelivery(
+    composed: { text: string; by: 'composer' | 'prose' | 'floor'; retried: boolean },
+    draft: TurnDraft, facts: readonly DeliveryFact[], draftProse: string,
+    floor: () => string, material: readonly string[]):
+    Promise<{ text: string; by: 'composer' | 'prose' | 'floor'; retried: boolean }> {
+    const rewrite = (t: string): string => {
+      let out = t;
+      for (const r of this.deps.compiled.rewrites) out = r.apply(out);
+      return out;
+    };
+    let text = rewrite(composed.text);
+    if (composed.by === 'floor') return { ...composed, text };
+    const rules = [...this.deps.rulebook.guards().guards.map(g => g.rule),
+      ...this.deps.compiled.judged.map(g => g.rule)];
+    const first = readProse({ text, userText: draft.userText, acts: draft.acts, rules });
+    if (first === null) return { ...composed, text };
+    draft.corrections.push({ kind: 'proseReader', check: first.check, detail: first.sentence });
+    const again = await this.composer.deliver(draft.userText, facts, draftProse, floor,
+      material, first.sentence);
+    text = rewrite(again.text);
+    if (again.by === 'floor') return { text, by: 'floor', retried: true };
+    const second = readProse({ text, userText: draft.userText, acts: draft.acts, rules });
+    if (second === null) return { text, by: again.by, retried: true };
+    draft.corrections.push({ kind: 'proseReader', check: second.check, detail: second.sentence });
+    return { text: rewrite(floor()), by: 'floor', retried: true };
   }
 
   private async engineClose(session: Session, draft: TurnDraft): Promise<TurnRecord> {
@@ -431,10 +467,9 @@ export class Turn {
     const composed = facts.length === 0
       ? { text: floor(), by: 'floor' as const, retried: false }
       : await this.composer.deliver(draft.userText, facts, '', floor, material);
-    draft.delivery = { by: composed.by, retried: composed.retried, facts };
-    let text = composed.text;
-    for (const rewrite of this.deps.compiled.rewrites) text = rewrite.apply(text);
-    draft.text = this.deps.masker.maskProse(text);
+    const delivered = await this.readDelivery(composed, draft, facts, '', floor, material);
+    draft.delivery = { by: delivered.by, retried: delivered.retried, facts };
+    draft.text = this.deps.masker.maskProse(delivered.text);
     return session.seal(draft);
   }
 }

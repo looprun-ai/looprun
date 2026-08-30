@@ -55,6 +55,9 @@ export type Correction =
   | { readonly kind: 'recordCorrected'; readonly actId: string; readonly said: Done }   // snapshot diff overruled the executor
   | { readonly kind: 'simulationRevoked'; readonly tool: string }
   | { readonly kind: 'judgeUnreadable'; readonly guardName: string }
+  | { readonly kind: 'proseReader';                                // the composed words failed the
+      readonly check: 'wallEcho' | 'language';                     // reader at the seal
+      readonly detail: string }
   | { readonly kind: 'returnRefused'; readonly detail: string };   // the return door was tried
                                                                    //   after work began
 export interface Act {

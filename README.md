@@ -104,6 +104,14 @@ then the deterministic floor delivers the facts verbatim — nothing engine-know
 lost. A figure the prose states that no record carries is refused before delivery, and a
 message whose report contradicts the sealed record is never delivered.
 
+The COMPOSED words themselves get a reader before the seal, on both close paths — and the
+reader carries not one word of any language: a reply that delivers a guard's standing rule
+as if it described the current record (a byte-match against the declared rule, whatever
+language the declaration speaks), or that wholesale abandons the operator's own language
+(the operator's message is the only reference — a character-profile comparison, no word
+tables), is refused — one recomposition with the refusal as the correction, then the
+literal floor. The floor's record lines are exempt: they are the record, verbatim.
+
 A real exchange, delivered by a rental-operations desk (the operator writes Portuguese, so
 the desk answers in Portuguese — the consent statement and code are woven in, and no engine
 line follows, because the prose already carries every fact):

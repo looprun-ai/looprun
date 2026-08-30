@@ -174,6 +174,26 @@ Nothing is paraphrased on the way out: the model re-reads these rows verbatim, a
 desk's reply leaves a refusal's facts out, the rule inside the parentheses prints beneath the
 prose, without the tool frame.
 
+## The delivered words get a reader
+
+The words the operator actually receives are read back against the turn's own record before
+the seal, on both close paths. The reader is mechanical and carries no vocabulary — not one
+word of any language lives in the engine; the declared rule text and the operator's own
+message are its only reference material. It refuses two things:
+
+| the reply | the record | verdict |
+|---|---|---|
+| delivers a guard's rule text bare | nothing refused or held this turn | refused — a rule states a condition, not the world; the byte-match reads the declaration in whatever language it was written |
+| abandons the operator's language wholesale | the operator wrote in their own | refused — a character-profile comparison against the operator's message; sibling languages and short texts abstain |
+
+A refusal pays one recomposition with the reader's sentence as the correction; a second
+refusal delivers the literal floor. A refused or held act is the frame that licenses quoting
+the rule — the reader refuses nothing the record supports. What it deliberately does not
+read: a claim of a read or an act the record lacks, a required sentence omitted, a tense lie
+beside a true fact, a refusal for the wrong reason. Detecting a claim takes words, words
+belong to a language, and the engine owns none — that whole class is `lieCheck()` territory,
+the judged channel.
+
 ## `state`, and the check that reads records
 
 `precondition` receives the record the call targets and the whole frozen snapshot:

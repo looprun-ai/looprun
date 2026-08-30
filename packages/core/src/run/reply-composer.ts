@@ -100,7 +100,8 @@ export class ReplyComposer {
   }
 
   async deliver(operatorText: string, facts: readonly DeliveryFact[], draftProse: string,
-                floor: () => string, material: readonly string[] = []): Promise<ComposedDelivery> {
+                floor: () => string, material: readonly string[] = [],
+                correction = ''): Promise<ComposedDelivery> {
     const uncomposable = facts.some(f => f.kind !== 'code' && isCodeShaped(f.text));
     if (uncomposable || (facts.length === 0 && draftProse === '')) {
       return { text: floor(), by: 'floor', retried: false };
@@ -108,12 +109,18 @@ export class ReplyComposer {
     const request = (text: string): StepInput => ({ system: SYSTEM,
       messages: [{ role: 'user', text }], tools: [], forceFinish: false,
       llmParams: this.llmParams });
-    const first = await this.port.step(request(template(operatorText, facts, draftProse, material)));
+    // The reader's refusal rides the same template as a desk check: the rules above
+    // still bind, and the refused wording is named so the rewrite obeys it.
+    const brief = template(operatorText, facts, draftProse, material)
+      + (correction === '' ? ''
+        : `\n\nDESK CHECK — the previous reply was refused: ${correction}. `
+          + `Write the reply again obeying this; every rule above still binds.`);
+    const first = await this.port.step(request(brief));
     if (first.text.trim() !== '' && gateMisses(facts, first.text).length === 0) {
       return { text: first.text.trim(), by: 'composer', retried: false };
     }
     const misses = gateMisses(facts, first.text).join(', ');
-    const second = await this.port.step(request(template(operatorText, facts, draftProse, material)
+    const second = await this.port.step(request(brief
       + `\n\nThe reply you wrote is missing: ${misses === '' ? 'its words' : misses}. `
       + `Write it again with every fact present.`));
     if (second.text.trim() !== '' && gateMisses(facts, second.text).length === 0) {

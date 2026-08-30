@@ -1,6 +1,8 @@
 # The delivered prose gets a reader
 
-> **Status: DRAFT — awaiting the owner's review; BACKLOG row 45 is its register.**
+> **Status: CLOSED — shipped on main; BACKLOG row 45 is its register. The engine, the
+> docs (README · tutorial 04 · source headers) and the skill (guard-catalog.md floor
+> table · test.md failure-reading row) landed in one working session.**
 
 ## The measurement
 
@@ -17,42 +19,60 @@ written them. Four seams share that hole, each with a run in hand:
 The class recurs in every domain measured (atlas, harborpoint, trialworks) and cost the
 c20 certification 3 points net.
 
-## The design — one reader, at the seal, on both paths
+## The design — one reader, at the seal, on both paths, owning no words
 
 A `ProseReader` runs over the COMPOSED text — after the composer, before the seal — on
 the model-finish path and the engine-close path alike. It is mechanical, reads only the
-turn's own record, and refuses four things:
+turn's own record, and is bound by the house law that the engine carries no vocabulary
+of any language — the declaration's own rule text and the operator's own message are
+its only reference material. It refuses two things:
 
-1. **A reading-claim with no read.** A sentence claiming the desk consulted a record
-   ("checked", "found no record", "the log shows") on a turn whose acts carry no done
-   read of a tool over that ground. The claim's evidence is the acts, nothing else.
-2. **An act-claim with no act.** A sentence claiming a change landed (registered,
-   cancelled, filed, paid) on a turn with no done non-read act of a matching tool —
-   the inverse of the silent-done receipt floor.
-3. **A wall echo as world fact.** A delivered sentence byte-matching a guard's rule
+1. **A wall echo as world fact.** A delivered sentence byte-matching a guard's rule
    text outside a refusal frame: a rule describes a CONDITION, and delivering it bare
-   asserts the condition holds.
-4. **The wrong language.** The reply's dominant script/language differs from the
-   operator's turn — the check that `languageMismatches` was built for, moved to the
-   seam where the delivered words exist.
+   asserts the condition holds. The byte-match reads the declared rule in whatever
+   language the declaration is written — the check owns no words of its own.
+2. **The wrong language.** The reply wholesale departs from the language of the
+   operator's turn — measured as character-trigram profile similarity between the two
+   texts, the conversation itself being the language sample. Same-language pairs
+   profile far above the cut, sibling languages sit above it too, and texts too short
+   to profile abstain: only a wholesale departure is refused. This is the check
+   `languageMismatches` was built for, moved to the seam where the delivered words
+   exist — and freed of stopword tables.
 
 On a refusal the turn takes ONE redrive with the reader's sentence as the correction;
 a second failure delivers the floor form (record lines), which is always literal. A
 new counter `proseReaderRedrives` rides the runner's emission.
 
-**What this reader does NOT close** — stated so nobody sells it wider: a required
-sentence OMITTED (c20 68/95's class), a tense lie beside a true fact, a refusal for
-the wrong reason. Those need a judge's read; they stay rubric territory.
+**What this reader does NOT close** — stated so nobody sells it wider: a claim of a
+read or an act the record lacks, a required sentence OMITTED (c20 68/95's class), a
+tense lie beside a true fact, a refusal for the wrong reason. Detecting a claim takes
+words, words belong to a language, and the engine carries none — that whole class is
+the judged channel's (`lieCheck`); it stays rubric territory, never a word list in
+the engine.
 
-## The implementation (sketch, for review)
+## The implementation (as built)
 
-- `packages/core/src/run/prose-reader.ts` — the four checks, pure, over
-  `{ text, acts, userText, guards }`.
-- `turn.ts`: the seal pipe calls the reader after the composer on BOTH paths; the
-  redrive reuses the existing correction channel; the floor fallback exists already.
-- `runner` counters: `proseReaderRedrives` beside the existing quality counters, and
-  `languageMismatches` re-pointed at the reader's language check (its current seam
-  measured 0 on a French reply).
+- `packages/core/src/run/prose-reader.ts` — `readProse({ text, userText, acts, rules })`,
+  pure, regex-free (charter R6.6) and word-free: `foldedLetters` keeps any cased
+  character (the letter test that needs no alphabet table; caseless scripts fold away
+  and abstain by length), the wall echo is a folded byte-match against each declared
+  rule of 24+ letters, and the language check is cosine similarity over character
+  trigrams with a 0.15 cut and a 40-letter profile floor. Measured on the calibration
+  probes: same-language pairs 0.45–0.57, wrong-language pairs 0.03–0.05, the pt/es
+  sibling pair 0.29 — the cut refuses only the wholesale departure, with 3× margin.
+- `turn.ts` — `readDelivery()` runs after the composer on BOTH close paths; a floor
+  delivery is exempt (record lines are literal). One redrive through
+  `ReplyComposer.deliver(…, correction)` — a new optional parameter that appends the
+  refusal as a DESK CHECK to the same template — then the literal floor. Each refusal
+  lands on the record as a `proseReader` correction carrying its check and sentence.
+- `packages/eval/src/counters.ts` — `proseReaderRedrives` counts the reader's refusals
+  off the record; `languageMismatches` counts the language refusals among them. The
+  post-hoc stopword comparison is gone: the check runs where the delivered words
+  exist, and no stopword table exists anywhere.
+- `packages/core/test/run/prose-reader.test.ts` — ten letters over the two refusals:
+  the refusal frame, a Portuguese-declared rule echoing the same, the en↔fr and pt↔en
+  departures, the pt/pt pass, the pt/es sibling abstention, and the short-text
+  abstention.
 
 ## The documentation
 
