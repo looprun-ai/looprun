@@ -43,13 +43,63 @@ step that changes the engine (the stone rule).
 
 ## Regression fixtures — port, do not rediscover
 
-Eleven branches in this repo hold the scenario sets and transcripts; port their scenarios
-into engine tests as each step lands: `microtest-d1` · `microtest-choice` ·
-`microtest-3-omission` · `microtest-4-reask-language` · `microtest-5-handcards` ·
-`microtest-6-close-path` · `microtest-7-prefill` · `microtest-9-tape` ·
-`microtest-10-injection` · `microtest-11-judge-prefix`. The harborpoint r12 slice
-(`~/Dev/js/harborpoint/subjects/harborpoint/test/`) is step 2-3's acceptance: its 5
-rotating failures are the target.
+Ten branches IN THIS REPO hold the scenario sets, harnesses and verbatim transcripts.
+The worktrees that made them are disposable; the BRANCHES are the access path. To open
+one: `git worktree add /tmp/mt <branch>` (read, port, then `git worktree remove /tmp/mt`).
+Never merge a microtest branch into main — port scenarios into engine tests instead.
+
+| branch | report file | proves |
+|---|---|---|
+| `microtest-d1` | `microtests/d1-desk-writer/REPORT.md` | D1 rulers + redrive |
+| `microtest-choice` | `microtests/choice-from-question/REPORT.md` | ask-then-echo 14/14 |
+| `microtest-3-omission` | `microtests/03-omission-channel/REPORT.md` | numbered facts; echo+code |
+| `microtest-4-reask-language` | `microtests/04-reask-language/REPORT.md` | latest-language line |
+| `microtest-5-handcards` | `microtests/05-handcards/catch-table.md` | the 28-mutation net audit |
+| `microtest-6-close-path` | `microtests/06-close-path/CLOSE-REPORT.md` | D2′ 15/15; seeded redrive |
+| `microtest-7-prefill` | `microtests/07-prefill/PREFILL-REPORT.md` | layout refutation 1/1.74/6.5× |
+| `microtest-9-tape` | `microtests/09-tape/TAPE-REPORT.md` | the tape law |
+| `microtest-10-injection` | `microtests/10-injection/INJECTION-REPORT.md` | label() ships; judge skipped |
+| `microtest-11-judge-prefix` | `microtests/11-judge-prefix/JUDGE-REPORT.md` | dedicated judge prefix |
+
+The harborpoint r12 slice (`~/Dev/js/harborpoint/subjects/harborpoint/test/`) is step
+2-3's acceptance: its 5 rotating failures are the target.
+
+## Serving and keys — the exact recipes (do not rediscover these either)
+
+- **Gemini (the subject model)**: `google/gemini-3.1-flash-lite`, temperature 0,
+  `providerOptions.google.thinkingConfig.thinkingBudget: 0`. The key is
+  `GOOGLE_GENERATIVE_AI_API_KEY`, loaded from a repo-local `.env.local`
+  (e.g. `/Users/marcos/Dev/js/atlas-trad/.env.local`) — never printed, never committed.
+  `unset GEMINI_API_KEY` first: a stale global key shadows the right one.
+- **Local llama.cpp (steps 4/4b measurements)**: binary
+  `/Users/marcos/Dev/github-clones/llama.cpp/build/bin/llama-server` (rebuild:
+  `cmake -B build -DGGML_METAL=ON && cmake --build build --target llama-server -j 8`).
+  The ram24 tier: model `~/models/qwen36-mtp-gguf/Qwen3.6-35B-A3B-UD-IQ2_XXS.gguf`,
+  flags `--jinja -fa on -c 65536 -ngl 99 -ctk f16 -ctv f16 --mlock --no-mmap -np 1
+  --slot-save-path /tmp/llama-slots --cache-ram 16384 -ctxcp 64 --spec-type draft-mtp
+  --chat-template-kwargs '{"enable_thinking":false}' --host 127.0.0.1 --port 8081`.
+  Measured healthy: prefill ~600 tok/s, decode ~35, RSS ≤16 GB. To kill it, match the
+  BINARY PATH (`pkill -f "build/bin/llama-server"`) — a bare `llama-server` pattern also
+  kills cmake builds whose target carries the name. Ruler = `/completion` with
+  `cache_prompt: true`, reading `timings.prompt_n`; verify it first (identical prompt
+  twice → prompt_n collapses to ~4).
+
+## Anti-stall laws — the run ends, it never spins
+
+- **Model-call retries**: any gemini call that fails (429/5xx/timeout) retries at most 3
+  times with backoff; still failing → STOP the step and report the error verbatim. Never
+  wrap a model call in an unbounded loop.
+- **One run is the score**: a case's verdict comes from the round's single run; never
+  re-roll a flaky case to chase a pass (variance mining).
+- **Round caps**: any fix-and-re-run loop inside a step dries after 3 consecutive rounds
+  that pay nothing — stop and report, exactly like the T-loop law.
+- **Spend ladder** on every judged run (steps 7-8): slice first (12 → 40 → full), each
+  slice judged and shown before the next; never launch the full hundred cold.
+- **Build order**: the gate and typecheck read `packages/core/dist` — rebuild core (and
+  eval) before running any gate, or a source edit is invisible and you will chase a
+  ghost.
+- **Report filenames**: harness hooks on this machine refuse writes to files named
+  exactly `REPORT.md` from subagents — name reports `<TOPIC>-REPORT.md`.
 
 ## Process laws
 
