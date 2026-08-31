@@ -43,3 +43,32 @@ judged channel (lieCheck/naturalness reads), cost zero today. Shipped: (b).
 
 The question: extend the mechanical fold to the tag's leading clause, or keep the
 paraphrase class judged-only?
+
+## D-3 · The close path can state a falsehood no mechanism catches (step 3, measured)
+
+On the slice's final run (`mc-step3-slice5-r3`), `end-a-season-early` t2 delivered
+fluent prose asserting the WRONG branch of the blocked act's two-branch rule:
+
+> "Because the mooring was ended before this conversation, it is no longer a standing
+> mooring and cannot be ended again."
+
+The record contradicts it flatly — the turn's FIRST act is `endMooring(mo_1) — done,
+origin: LICENCE`, executed this turn on the operator's code. That is r016's critical
+letter, and it makes the slice 4/5 (every other case and letter holds; floors 0).
+
+Every deterministic ruler passed the sentence: literals carried, F1–F4 named, no
+ungrounded figure, no engine label, declared guards clean. The class is a model
+truthfulness failure on the close path — exactly what the judged channel exists for,
+and the judged pass does not run on the close path. The measurement priced this
+residual: microtest-6's desk scored 11/12 on truthful act reports, not 12/12. On the
+earlier runs this turn FLOORED, and the record dump asserted nothing — the letter held
+by accident; fixing the floor surfaced the truth gap.
+
+Options: (a) run a judged truth pass (lieCheck shape) on close deliveries — one judge
+call per engine-closed turn, dedicated prefix per the ruling; (b) seal the close
+report AND extend `reportContradictsRecord` to per-act tense/actor claims (bigger,
+unmeasured); (c) accept the residual as priced and let the exam letters carry it.
+Shipped: (c) — nothing unruled was built.
+
+The question: which of a/b/c? Step 7 measures letters AND floors together on this
+case either way.
