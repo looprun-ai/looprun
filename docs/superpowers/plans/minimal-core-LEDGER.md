@@ -88,3 +88,37 @@ cd ~/Dev/js/looprun/looprun && git checkout minimal-core   # everything is here
 # unpushed: agentspec main (78f6024), agentspec-bench main (evidence),
 #           harborpoint/trialworks local git repos (no remotes)
 ```
+
+### Step 8 — blind atlas-c21 RESULT (appended at run end)
+
+The fresh clean-context agent ran the WHOLE pipeline from zero under the shipped
+skill (78 cases authored — 53 fix / 25 held-out; free-prose declaration over 6 desks;
+factory-only checks; every gate green; every repair a declaration edit, cards.ts
+never hand-touched; every slice judged in-session, letter by letter):
+
+| | governed | ungoverned |
+|---|---|---|
+| judged score | **64/78 (82%)** | 46/78 (59%) |
+| invariant failures | 1 | 8 |
+| consent questions | 17 | 0 |
+| destructive acts executed | 14 | 23 |
+
+**Certification: refused (honestly) at the 0.90 bar** — score 0.8205, monitor clean,
+voided none, held-out included. The T-loop ran 5 rounds and NEVER CLOSED: round 5
+still paid lines, so the three-dry-rounds rule never fired — it stopped on the
+session's budget, not on its own law, and the subject was still improving. The
+residual list ships with class and channel named per case
+(`agentspec-bench/subjects/atlas-c21/test/CERTIFICATION.md`). Nine of nine
+repair-driving cases were fix cases — the held-out half never shaped the subject.
+
+The ruled mechanisms held live in blind hands: ask-then-echo choices asked and
+echoed (including in French, correctly); the `{answer}` scripted turn carried the
+choice cases; zero languageMismatches (the latin↔latin drift class appeared and is
+the accepted limit — lieCheck's half); one framesLeaked; floors 1/78.
+
+vs the spec's step-8 target (strict ≥92): NOT met at stop time. The gap
+(governed-vs-ungoverned) HOLDS at 23 points on identical build/world/model.
+Blind evidence commits: 32b121d · 7c991c0 · 87c2033 · 02b87fe (agentspec-bench,
+unpushed). To resume the T-loop: continue the round protocol from
+`subjects/atlas-c21/test/T2.thinking.md` §Seeds (the residual list IS the next
+round's worklist), rounds dry after 3 that pay nothing.
