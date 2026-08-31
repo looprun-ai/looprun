@@ -10,10 +10,11 @@ argument-family guards to their own laws; delete the three judged checks the eng
 rows replace.
 
 **Architecture:** One deletion, no shim. The gate's replacement is the source pair the catalog
-already carries — `valueFromUser` and `valueFromUserOrRecord`. Where an argument's declared tokens
-are words a person types, the argument moves to `valueFromUser` and the refuse→ask→echo cycle the
-engine already has serves it. Where they are not — a boolean, a scope word nobody speaks — the
-argument carries no source guard at all.
+already carries — `valueFromUser` and `valueFromUserOrRecord`. That pair carries no option list and
+matches no language: it compares the value a call sends against the text the operator wrote, on any
+turn of the conversation. Where the operator has stated the value it allows; where they have not it
+refuses, the desk asks in its own words, and the operator's answer lands in the same text the guard
+searches. The one argument it cannot serve is one whose value space is not something people write.
 
 **Tech Stack:** pnpm monorepo · TypeScript · vitest · YAML declarations compiled by
 `packages/emit` · the bench subjects under `~/Dev/js/looprun/agentspec-bench`.
@@ -63,24 +64,27 @@ Zero added lines. The five choice guards were **deleted and not replaced** — t
 run UNGUARDED in the arm that scored 13/19. A build where they carry `valueFromUser` instead is a
 third build, and no run has scored it.
 
-This matters most on one argument. `valueFromUser` refuses a value that is not in the operator's
-own words:
+Running the guard over the real case data closes most of that gap — Task 6 carries the full run,
+and fifteen of the sixteen arguments come back as the guard working as designed. **One does not.**
+Here it is, with the case's own operator text:
 
 ```
-CASE 44 · the operator types:  "quote her the 3-tonne for a fortnight, she's collecting it"
-the model sends:               generateQuote{ includeDelivery: false }
+CASE 44-n · the operator types:
+  "Customer wants ast_excv01 from 2026-07-20 to 2026-07-24. Give me a price."
 
-  gate removed (13/19 arm)  →  RUNS.   Nothing checks includeDelivery at all.
-  valueFromUser             →  REFUSED. 'false' is not a word in that message.
-                               The desk asks. The operator has to type `false`
-                               to license it — which is exactly the trap the
-                               spec's own authoring note names.
+the model sends:  generateQuote{ includeDelivery: false }
+
+  gate removed (the 13/19 arm)  →  RUNS.     Nothing checks includeDelivery at all.
+  valueFromUser                 →  REFUSED.  Verified by running the guard:
+        g.deny({ call:{args:{includeDelivery:'false'}}, userTexts:[…that turn…] })
+        → "'includeDelivery' is not written in the user's own words"
 ```
 
-The spec's authoring note already rules this: *"a boolean (`includeDelivery: true`) is not one a
-person types naturally; the author declares vocabulary a person can echo, or does not gate the
-argument."* Task 6 applies the note per argument, which means some of the ten migrate to
-`valueFromUser` and some carry **no guard**, matching the measured arm.
+The refusal itself is correct — the operator has stated nothing about delivery. What has no exit is
+what comes next: the schema declares `includeDelivery` as `"type": "boolean"`, so the only two
+values are `true` and `false`, and licensing one means the operator writing that literal. **This is
+a fact about the argument's value space, not about any language.** Task 6 carries the two ways out
+and the ruling they need.
 
 ### 2 · The subjects live in FOUR repositories, and trialworks does declare the gate
 
@@ -769,12 +773,15 @@ note the spec ruled goes here:
 
 ```markdown
 | which figure, date, grade or range end the operator owes as an ARGUMENT of the act |
-`valueFromUser` on that argument — the minted value is refused by the engine and the desk is
-left asking. Where a record may answer it too, `valueFromUserOrRecord`. **Gate only an
-argument whose values a person types.** A grade (`good`, `fair`, `poor`) is echoable and takes
-the guard; a boolean (`includeDelivery: true`) is not — nobody writes `true`, so gating it
-traps an operator who is speaking plainly. Where the tokens are not echoable, declare no
-source guard and let the act's own prose carry the law. |
+`valueFromUser` on that argument. The guard carries no list and matches no language: it
+compares the value the call sends against the text the operator wrote, on any turn of the
+conversation. A value the operator has not written is refused, the desk asks in its own
+words, and the operator's answer becomes text the guard searches on the next turn. Where a
+record may answer it too, `valueFromUserOrRecord`. **The one argument this cannot serve is one
+whose declared VALUE SPACE is not something a person writes** — a boolean has two values,
+`true` and `false`, and licensing one means the operator typing that literal. That is a fact
+about the schema, not about any language: change the argument's declared values, or leave it
+ungated and let the act's own prose carry the law. |
 ```
 
 - [ ] **Step 3: `guard-catalog.md` — the rows and the lesson**
@@ -843,83 +850,92 @@ Each subject's `cards.ts` is regenerated from its `declaration.yaml`, never hand
 - Consumes: the emitter from Tasks 1 and 3 — every regenerated `cards.ts` must compile against the
   new `@looprun-ai/core`, which no longer exports `choiceFromUser` and carries the four new names.
 
-### The per-argument decision, decided by a run
+### The per-argument decision, decided by running the guard
 
-The spec ruled *"the author choosing per argument."* Here is that choice made, and the test that
-decided each row is not judgement — it is a grep over the subject's own exam:
+The spec ruled *"the author choosing per argument."* That choice is not a judgement about which
+words sound natural — **`valueFromUser` carries no vocabulary and the engine matches no language.**
+Its signature is two arguments and no option list:
 
-> **Does the operator, in their own turn text, ever type that token?**
-> If yes, `valueFromUser` serves the argument. If no, the guard would refuse a case that should
-> run, and the argument carries **no source guard** — the act's prose carries the law instead.
-
-Every row below was decided by running that grep. The evidence is quoted on the rows where the
-answer was not obvious.
-
-**atlas-c20 — 5 declarations:**
-
-| guard | act.arg | declared tokens | becomes | why |
-|---|---|---|---|---|
-| `tool:deliveryChoiceIsTheOperatorsWord` | `generateQuote.includeDelivery` | `true` `false` | **no guard** | nobody types `false`. Case 44's operator says *"she's collecting it"* — `valueFromUser` refuses that and the case cannot pass. This matches the measured arm exactly. |
-| `tool:gradeIsTheOperatorsWord` | `updateAssetCondition.condition` | excellent good fair poor damaged | `valueFromUser` | a grade is a word the operator speaks |
-| `tool:serviceGradeIsTheOperatorsWord` | `completeMaintenance.condition` | same five | `valueFromUser` | same |
-| `tool:returnGradeIsTheOperatorsWord` | `checkInAsset.conditionIn` | same five | `valueFromUser` | same |
-| `tool:roleIsTheOperatorsWord` | `updateMemberRole.role` | owner admin dispatcher billing viewer | `valueFromUser` | a role is a word the operator speaks |
-
-**The delivery guard's second paragraph is safe to delete with it.** Its rule text carries a
-paragraph about the security deposit, and that paragraph is a word-for-word copy of a guard that
-already stands on its own:
-
-```yaml
-# declaration.yaml:350 — tool:assetDepositIsTheOperatorsFigure, factory valueFromUser, arg requiredDeposit
-      rule: >-
-        Send the security deposit exactly as the operator gave it. It is not derived from the
-        daily rate and it is not carried over from a similar machine — where the request does not
-        carry a deposit, ask for it and register nothing.
+```ts
+export function valueFromUser(tool: string, arg: string): SeedGuard
 ```
 
-Diff the two blocks before deleting to confirm they are still identical. If they have drifted,
-carry the delivery copy's wording into the deposit guard first.
+It compares exactly two things: the value the call carries, and the text the operator wrote, on any
+turn of the conversation. So the deciding test is the guard itself, run over each subject's real
+case text:
 
-**atlas-c21 — 5 declarations:**
-
-| guard | act.arg | declared tokens | becomes | why |
-|---|---|---|---|---|
-| `tool:theReturnConditionIsTheOperatorsCall` | `checkInAsset.conditionIn` | 5 grades | `valueFromUser` | echoable |
-| `tool:theCorrectedConditionIsTheOperatorsCall` | `updateAssetCondition.condition` | 5 grades | `valueFromUser` | echoable |
-| `tool:theServiceConditionIsTheOperatorsCall` | `completeMaintenance.condition` | 5 grades | `valueFromUser` | echoable |
-| `tool:whatAFreezeCoversIsTheOperatorsCall` | `placeHold.scope` | asset account workspace | **no guard** | `subjects/atlas-c18/N-REPORT.md:401` records the failure on the same argument: case 31 says *"put a compliance hold on it"* and never the word *asset*, so the check refuses every asset-scope hold |
-| `tool:theClaimTypeIsTheOperatorsCall` | `fileClaim.type` | damage loss injury late_return | **no guard** | `late_return` is an identifier, not a word anyone types; one unechoable token in the list makes the whole argument unsafe to gate |
-
-**harborpoint — 4 declarations, shared by both arms:**
-
-| guard | act.arg | declared tokens | becomes | why |
-|---|---|---|---|---|
-| `tool:fuelTypeIsTheOwnersChoice` | `sellFuel.fuelType` | diesel petrol | `valueFromUser` | the operator types it: *"…pumped 200 litres of diesel. She is ves_1."* |
-| `tool:jobKindIsTheOperatorsChoice` | `openWorkOrder.kind` | haul-out repair | `valueFromUser` | the operator types it: *"Ada Whitlock has asked for a haul-out on Bright Petrel"*. `repair` appears in no case in any form, so no case turns on it either |
-| `tool:severityIsTheOperatorsGrade` | `fileIncident.severity` | minor serious major | `valueFromUser` | a grade is a word the operator speaks, and case `an-incident-with-no-grade` is the refuse→ask→echo cycle working exactly as intended |
-| `tool:freezeScopeIsTheOperatorsChoice` | `placeHold.scope` | harbor vessel | **no guard** | the operator says *"Put a freeze on the whole marina until it blows through"* — **marina**, not `harbor`. The guard refuses that case. Same failure class as atlas-c21's `placeHold.scope` |
-
-**trialworks — 2 declarations:**
-
-| guard | act.arg | declared tokens | becomes | why |
-|---|---|---|---|---|
-| `tool:theScreeningOutcomeIsTheClinicsWord` | `recordScreening.outcome` | passed failed | `valueFromUser` | the operator types it: *"Record pt_4127 as having **passed** screening"*, and the sibling case *"Record the screening for pt_4118"* names no outcome — which is the refusal, and the desk asking, working as intended |
-| `tool:theWithdrawalReasonIsTheSitesOwn` | `withdrawParticipant.reason` | consent-withdrawn lost-to-follow-up investigator-decision | **no guard** | the operator says *"Withdraw pt_4102 — she withdrew consent"*. `consent` is in their words; `consent-withdrawn` is not. The other two tokens appear in no case at all |
-
-**The migration counted:**
-
-```
-                     total   → valueFromUser   deleted
-  atlas-c20            5           4              1     includeDelivery
-  atlas-c21            5           3              2     scope · type
-  harborpoint          4           3              1     scope
-  trialworks           2           1              1     reason
-  ─────────────────────────────────────────────────────
-                      16          11              5
+```js
+const g = valueFromUser('t', arg).compile('contract');
+g.deny({ call: { tool: 't', args: { [arg]: value } }, userTexts: theOperatorsOwnTurns })
+//  null = allows      a sentence = refuses
 ```
 
-The five deleted are two `scope` arguments, one boolean and two hyphenated-identifier lists —
-every one of them a token no operator types.
+Run over all sixteen, taking each case's own intended value and each case's own operator turns:
+
+```
+  ALLOWS   29-promote-owner-confirm            updateMemberRole.role     = "owner"
+  ALLOWS   30-promote-owner-preapproved        updateMemberRole.role     = "owner"
+  ALLOWS   32-role-change-one-step             updateMemberRole.role     = "dispatcher"
+  ALLOWS   37-late-fee-exact                   checkInAsset.conditionIn  = "good"
+  ALLOWS   68-condition-is-not-a-claim         updateAssetCondition.cond = "damaged"
+  ALLOWS   72-maintenance-lifecycle            completeMaintenance.cond  = "good"
+  ALLOWS   93-suspended-workspace-blocks…      updateAssetCondition.cond = "fair"
+  ALLOWS   fuel-asked-for-by-the-litre         sellFuel.fuelType         = "diesel"
+  ALLOWS   fuel-the-tank-cannot-cover          sellFuel.fuelType         = "diesel"
+
+  REFUSES  damage-flow-check-in-then-claim     checkInAsset.conditionIn  = "damaged"
+  REFUSES  maintenance-out-and-back            completeMaintenance.cond  = "good"
+  REFUSES  correct-condition-is-asked          updateAssetCondition.cond = "fair"
+  REFUSES  freeze-scope-is-asked               placeHold.scope           = "asset"
+  REFUSES  file-claim-type-is-asked            fileClaim.type            = "damage"
+  REFUSES  withdrawal-asks-first               withdrawParticipant.reason= "consent-withdrawn"
+
+  REFUSES  44-quote-delivery-choice            generateQuote.includeDelivery = "false"
+```
+
+**Fifteen of the sixteen are the guard working exactly as designed.** Nine allow outright — the
+operator already wrote the value, so the guard is free and costs no turn. Six refuse — and every
+one of those six is a case whose own id says the value was never stated (`…-is-asked`,
+`…-asks-first`). Refusing there is the point: the desk asks, the operator answers, and the answer
+lands in `userTexts`, which the guard searches on every later turn of the same conversation.
+
+**So every one of the sixteen takes `valueFromUser` — except one.**
+
+### The one argument that cannot take it
+
+`generateQuote.includeDelivery` is declared in the tool schema as:
+
+```json
+    "includeDelivery": { "type": "boolean",
+      "description": "REQUIRED. Whether the delivery fee applies. It is never assumed…" }
+```
+
+A boolean's value space is `true` and `false`. To license it, the operator has to write the literal
+string `false` in their own message. Case 44's operator writes *"Customer wants ast_excv01 from
+2026-07-20 to 2026-07-24. Give me a price."* — and no question a desk can ask makes typing `false`
+the natural next thing a person does.
+
+This is not a vocabulary problem and there is no vocabulary fix. It is the argument's value space:
+booleans are not values people write. Two ways out, and **the choice is the owner's**:
+
+| option | what it costs |
+|---|---|
+| **A · the argument carries no source guard** | matches the arm that was measured at 13/19. The model picks the delivery itself — which is exactly the one purchase the gate demonstrably made (*"case 44 priced a 350 delivery on a turn that never mentions delivery"*). The act's own prose carries the law alone |
+| **B · the schema stops being a boolean** | `includeDelivery` becomes a string argument whose values are written the way the act is spoken about. `valueFromUser` then works with no change to the engine. The cost is a subject redesign — the tool schema, the world's fee arithmetic and every case's expected args move together, which is bigger than a guard migration |
+
+**Until that is ruled, Task 6 implements option A** and Task 7's run watches case 44 specifically.
+
+### The migration counted
+
+```
+                    total   → valueFromUser    no guard
+  atlas-c20           5            4              1      includeDelivery — pending the ruling
+  atlas-c21           5            5              0
+  harborpoint         4            4              0
+  trialworks          2            2              0
+  ───────────────────────────────────────────────────
+                     16           15              1
+```
 
 - [ ] **Step 1: Migrate atlas-c20's four grade-and-role guards**
 
@@ -973,10 +989,13 @@ export const cases: readonly ExamCase[] = [...PORTED_AS_RULED, ...ROUTED];
 
 The eight scripts — `29, 30, 32, 37, 44, 68, 72, 93` — return to the turns their authors wrote.
 
-- [ ] **Step 4: Migrate atlas-c21 — three to `valueFromUser`, two deleted, five answer turns out**
+- [ ] **Step 4: Migrate atlas-c21 — all five to `valueFromUser`, five answer turns out**
 
-Same YAML shape change as Step 1 for the three grade guards; delete the `placeHold.scope` and
-`fileClaim.type` guards whole. Then remove the five inline answer turns:
+Same YAML shape change as Step 1 for all five guards, `placeHold.scope` and `fileClaim.type`
+included. All five refuse on their cases' first attempt, and all five should: every one of those
+cases is named for the value never being stated (`freeze-scope-is-asked`, `file-claim-type-is-asked`,
+`correct-condition-is-asked`). The refusal is the desk being sent to ask. Then remove the five
+inline answer turns:
 
 ```bash
 rg -n '\{ answer:' subjects/atlas-c21/cases.ts
@@ -1007,26 +1026,22 @@ Leave every one of them exactly as it is.
 git add -A
 git commit -m "refactor(subjects): the grades and the role take valueFromUser
 
-The unechoable arguments carry no source guard, and the scripts that
-carried an echo turn run their authors' turns again.
+The value a call sends is checked against the words the operator wrote,
+and the scripts that carried an echo turn run their authors' turns again.
 
 Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 ```
 
-- [ ] **Step 6: Migrate harborpoint — three to `valueFromUser`, one deleted, two answer turns out**
+- [ ] **Step 6: Migrate harborpoint — all four to `valueFromUser`, two answer turns out**
 
 ```bash
 cd /Users/marcos/Dev/js/harborpoint
 ```
 
-`subjects/harborpoint/declaration.yaml:263-306` carries all four guards in one block. Three change
-`factory` and lose their `options:` line; `tool:freezeScopeIsTheOperatorsChoice` (`:299-306`) is
-deleted whole.
-
-**Before deleting the freeze guard, read its rule.** If it teaches anything beyond "the scope is
-the operator's to choose" — what a harbor-wide freeze does that a vessel freeze does not, for
-instance — that teaching has no other home once the guard is gone. Move it into `placeHold`'s own
-prose on the card before deleting.
+`subjects/harborpoint/declaration.yaml:263-306` carries all four guards in one block. Each changes
+`factory` to `valueFromUser` and loses its `options:` line; the `rule` prose stays exactly as
+written, because it is the only place the acceptable values are now stated and it is a sentence,
+not a matcher.
 
 Then the two inline answer turns:
 
@@ -1056,18 +1071,20 @@ git apply --check /Users/marcos/Dev/js/looprun/looprun/scratch/arms/hp-armon.pat
 If it does not apply, the patch's context lines moved with the regeneration. Refresh the patch
 from the regenerated `cards.ts` — do not edit `cards.ts` by hand to make a patch fit.
 
-- [ ] **Step 7: Migrate trialworks — one to `valueFromUser`, one deleted, one answer turn out**
+- [ ] **Step 7: Migrate trialworks — both to `valueFromUser`, one answer turn out**
 
 ```bash
 cd /Users/marcos/Dev/js/trialworks
 ```
 
-`subjects/trialworks/declaration.yaml:40-46` — `tool:theScreeningOutcomeIsTheClinicsWord` changes
-`factory` to `valueFromUser` and loses its `options:` line.
+`subjects/trialworks/declaration.yaml:40-46` — `tool:theScreeningOutcomeIsTheClinicsWord` — and
+`:96-102` — `tool:theWithdrawalReasonIsTheSitesOwn` — each change `factory` to `valueFromUser` and
+lose their `options:` line. Their `rule` prose stays as written.
 
-`:96-102` — `tool:theWithdrawalReasonIsTheSitesOwn` is deleted whole. Read its rule first: a
-withdrawal reason goes on a regulated record, so if the rule states anything about which reason
-belongs on which record, move it into `withdrawParticipant`'s own prose before deleting.
+The withdrawal guard refuses on case `withdrawal-asks-first`, where the operator writes *"Withdraw
+pt_4102 — she withdrew consent."* and the record's value is `consent-withdrawn`. That is the guard
+working: a withdrawal reason goes on a regulated record, and the desk asking which one before
+writing it is what the rule is for.
 
 `subjects/trialworks/cases.ts:87-89` — delete the `{ answer: … }` element. The operator's turn
 above it, *"Withdraw pt_4102 — she withdrew consent."*, stays exactly as written.
