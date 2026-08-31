@@ -41,9 +41,8 @@ test('a consent case plays the public door: typed approval resolves the open cod
     call('cancelBooking', { id: 'bk_9' }),
     finish('I need your approval.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'held' }]),
     { calls: [], text: '' },
+    { calls: [], text: '' },
     finish('Cancelled bk_9.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'done' }], ['F1']),
-    { calls: [], text: '' },
-    { calls: [], text: '' },
     finish('Anything else?')
   ] } }, runDir);
 
@@ -66,8 +65,10 @@ test('a decline turn types NO plus the code — inert by contract: the question 
     call('cancelBooking', { id: 'bk_9' }),
     { calls: [], text: '' },
     { calls: [], text: '' },
+    { calls: [], text: '' },
     // The desk says nothing on the decline turn: the standing ask and its code are
     // owed words no static script can spell, so the engine closes the turn.
+    { calls: [], text: '' },
     { calls: [], text: '' },
     { calls: [], text: '' },
     { calls: [], text: '' },
@@ -97,12 +98,13 @@ test('the dump carries what each turn cost — per-turn usage totals', async () 
   const dump = await new ExamRunner().runCase(subject, c, 'governed', { scripted: { steps: [
     { ...call('cancelBooking', { id: 'bk_9' }), usage },
     { calls: [], text: '' },
+    { calls: [], text: '' },
     { calls: [], text: '' }
   ] } }, runDir);
 
   expect(dump.usage).toHaveLength(1);
   expect(dump.usage[0]).toMatchObject({ turn: 1, inputTokens: 100, outputTokens: 10,
-    cachedInputTokens: 40, modelCalls: 3 });
+    cachedInputTokens: 40, modelCalls: 4 });
   expect(dump.usage[0].wallClockMs).toBeGreaterThanOrEqual(0);
 });
 

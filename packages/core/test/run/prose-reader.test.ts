@@ -19,7 +19,8 @@ function act(tool: string, effect: Act['effect'], status: Act['status'],
 }
 
 const reading = (text: string, acts: readonly Act[] = [], userText = 'Cancel booking bk_1.',
-                 rules: readonly string[] = []) => readProse({ text, userText, acts, rules });
+                 rules: readonly string[] = [], owed: readonly string[] = []) =>
+  readProse({ text, userText, acts, owed, rules });
 
 describe('a rule delivered outside a refusal frame asserts its condition', () => {
   const rule = 'a workspace under a payment hold takes no booking of any kind';
@@ -27,6 +28,19 @@ describe('a rule delivered outside a refusal frame asserts its condition', () =>
   test('refuses the rule text delivered bare on a turn that refused nothing', () => {
     const r = reading('I am sorry — a workspace under a payment hold takes no booking of any kind.',
       [act('getWorkspace', 'read', 'done')], 'Book the room.', [rule]);
+    expect(r?.check).toBe('wallEcho');
+  });
+
+  test('passes the rule the turn\'s OWED FACTS carry — the engine demanded that sentence', () => {
+    expect(reading('a workspace under a payment hold takes no booking of any kind.',
+      [], 'Book the room.', [rule],
+      ['a workspace under a payment hold takes no booking of any kind'])).toBeNull();
+  });
+
+  test('refuses ANOTHER rule on the same turn — the exemption reaches one sentence', () => {
+    const other = 'a refund runs only after a manager approves it in person';
+    const r = reading(`I am sorry — ${other}.`, [], 'Book the room.', [rule, other],
+      ['a workspace under a payment hold takes no booking of any kind']);
     expect(r?.check).toBe('wallEcho');
   });
 

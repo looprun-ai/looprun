@@ -38,7 +38,7 @@ describe('a done act never vanishes from the delivery facts', () => {
       && f.text.includes('moveBooking'))).toBe(true);
   });
 
-  test('a done read stays composer material, not an owed fact', () => {
+  test('a done read is never an owed fact', () => {
     const read: Act = { ...act('getBooking', 'done', null, null), effect: 'read' };
     expect(assembleFacts([read], [], [], [])).toEqual([]);
   });

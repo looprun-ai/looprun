@@ -16,18 +16,18 @@ const dump = (...records: never[]): CaseDump => ({ case: 'c', variant: 'governed
 test('a clean run counts zeros, with the delivery mix stated', () => {
   const counters = computeCounters([dump(
     record({}),
-    record({ delivery: { by: 'composer', retried: false, facts: [] } })
+    record({ delivery: { by: 'desk', retried: false, facts: [] } })
   )]);
   expect(counters).toEqual({ emptyDeliveries: 0, framesLeaked: 0, rawJson: 0,
     readLinesDelivered: 0, twoOutcomes: 0, floorDeliveries: 0, proseDeliveries: 1,
-    composerDeliveries: 1, composerRetries: 0, proseReaderRedrives: 0,
+    deskDeliveries: 1, deskRetries: 0, proseReaderRedrives: 0,
     languageMismatches: 0 });
 });
 
 test('a leaked frame, a floor delivery, a retry and the reader\'s refusals are each charged', () => {
   const counters = computeCounters([dump(
     record({ text: 'Done. cancelBooking(bk_9) — not-done (held)',
-      delivery: { by: 'composer', retried: true, facts: [] } }),
+      delivery: { by: 'desk', retried: true, facts: [] } }),
     record({ text: 'On the record. cancelBooking(bk_9) — done',
       delivery: { by: 'floor', retried: false, facts: [] } }),
     record({ userText: 'cancele a reserva bk_9 para o cliente que pediu',
@@ -39,16 +39,16 @@ test('a leaked frame, a floor delivery, a retry and the reader\'s refusals are e
   )]);
   expect(counters.framesLeaked).toBe(1);          // the floor's frames are lawful
   expect(counters.floorDeliveries).toBe(1);
-  expect(counters.composerRetries).toBe(1);
+  expect(counters.deskRetries).toBe(1);
   expect(counters.proseReaderRedrives).toBe(2);   // every reader refusal on the record
   expect(counters.languageMismatches).toBe(1);    // the language refusals among them
 });
 
-test('an empty delivery and a read line in a composed reply are charged', () => {
+test('an empty delivery and a read line in the desk\'s reply are charged', () => {
   const counters = computeCounters([dump(
     record({ text: '' }),
     record({ text: 'Here: getBooking(bk_9) result line.',
-      delivery: { by: 'composer', retried: false, facts: [] },
+      delivery: { by: 'desk', retried: false, facts: [] },
       acts: [{ id: 'a1', turn: 1, origin: 'model', effect: 'read', said: 'yes',
         status: 'done', reason: null, evidence: 'executor',
         sentence: 'getBooking(bk_9) result line.', owed: null,

@@ -23,6 +23,7 @@ test('lesson 2 — a destructive tool is held, and the question carries a code',
       call('cancelBooking', { id: 'bk_1' }),
       { calls: [], text: '' },
       { calls: [], text: '' },
+      { calls: [], text: '' },
     ] } }
   });
 
@@ -45,7 +46,7 @@ test('lesson 2 — the typed approval releases exactly that call', async () => {
       { calls: [], text: '' },
       finish('Cancelled booking bk_1 — the Blue Room on Friday.',
         [{ tool: 'cancelBooking', target: 'bk_1', word: 'done' }], ['F1']),
-      // The done write mints its receipt, and the composer's delivery pass reads it.
+      // The done write mints its receipt, and the desk's own message must carry it.
       { calls: [], text: '' },
       { calls: [], text: '' }
     ] } }
@@ -68,6 +69,7 @@ test('lesson 3 — the owed read is collected by the engine, in one forced micro
       // engine stops and asks the model for THAT ONE call before anything else runs.
       call('cancelBooking', { id: 'bk_1' }),
       call('getInvoice', { id: 'bk_1' }),
+      { calls: [], text: '' },
       { calls: [], text: '' },
       { calls: [], text: '' },
     ] } }
@@ -113,6 +115,7 @@ test('lesson 6 — a world gate refuses a checked-in booking, whatever the user 
       finish('I could not cancel bk_9.'),
       finish('I could not cancel bk_9.'),
       finish('I could not cancel bk_9.'),
+      { calls: [], text: '' },
       { calls: [], text: '' },
       { calls: [], text: '' },
     ] } }

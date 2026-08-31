@@ -7,7 +7,7 @@
  *  routed dump reads as one conversation — and `usage` carries the front desk's own
  *  tokens, and any desk that read the message and handed it back, on top of the tokens
  *  of the desk that served. A desk that
- *  hands a message back is re-routed once, and the re-delivery is composed without the
+ *  hands a message back is re-routed once, and the re-delivery is written without the
  *  return door — a second return is unreachable, not forbidden.
  *
  *  Two things the house owns as ONE. Its world: built once at the door and handed to

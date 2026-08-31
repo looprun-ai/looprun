@@ -24,6 +24,6 @@ export type { EngineConfig } from './run/engine.js';
 export { Rulebook } from './run/rulebook.js';
 export { ModelSeat } from './run/model-seat.js';
 export { PromptWriter } from './run/prompt-writer.js';
-export { ScriptedModel } from './run/scripted-model.js';
+export { ScriptedModel, payingDesk } from './run/scripted-model.js';
 export { composeWindow, readDecision } from './run/front-desk.js';
 export type { FrontDeskCfg } from './run/front-desk.js';

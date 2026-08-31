@@ -52,7 +52,7 @@ test('endSession drops the state — the next turn is turn 1 again', async () =>
   expect(fresh.loopRun.turn).toBe(1);
 });
 
-test('stream governs to completion, THEN the composed delivery flows', async () => {
+test('stream governs to completion, THEN the delivered reply flows', async () => {
   const out = await readAgent().stream('is bk_9 confirmed?', { session: 's1' });
   expect(out.loopRun.turn).toBe(1);           // sealed before the first chunk is read
   let streamed = '';

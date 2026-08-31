@@ -58,11 +58,14 @@ export type Correction =
   | { readonly kind: 'recordCorrected'; readonly actId: string; readonly said: Done }   // snapshot diff overruled the executor
   | { readonly kind: 'simulationRevoked'; readonly tool: string }
   | { readonly kind: 'judgeUnreadable'; readonly guardName: string }
-  | { readonly kind: 'proseReader';                                // the composed words failed the
+  | { readonly kind: 'proseReader';                                // the delivered words failed the
       readonly check: 'wallEcho' | 'language';                     // reader at the seal
       readonly detail: string }
   | { readonly kind: 'deliveryFigure'; readonly detail: string }   // the words the operator would read
                                                                    //   stated a figure no record carries
+  | { readonly kind: 'closeRefused';                               // what the desk wrote when the ENGINE
+      readonly attempt: number;                                    //   closed the turn, on the record
+      readonly text: string }                                      //   beside the rulers that refused it
   | { readonly kind: 'returnRefused'; readonly detail: string };   // the return door was tried
                                                                    //   after work began
 export interface Act {
@@ -143,11 +146,11 @@ export interface TurnReturned {
  *  desks — engine-minted provenance, never text-scraped. */
 export interface ChatOpts { readonly before?: readonly ForeignExchange[]; readonly returnable?: boolean;
                             readonly grounded?: readonly string[] }
-/** How the turn's reply reached the operator: composed by the delivery call,
- *  the desk's prose delivered directly (nothing was owed), or the deterministic
- *  floor — with the owed facts that were on the table either way. */
+/** How the turn's reply reached the operator: the desk's own finish delivered as it
+ *  was written, the desk's close-step when the engine ended the turn, or the
+ *  deterministic floor — with the owed facts that were on the table either way. */
 export interface DeliveryMarks {
-  readonly by: 'composer' | 'prose' | 'floor';
+  readonly by: 'desk' | 'prose' | 'floor';
   readonly retried: boolean;
   readonly facts: readonly { readonly kind: 'ask' | 'code' | 'receipt' | 'refusal' | 'closure' | 'note';
                              readonly text: string;
@@ -162,7 +165,7 @@ export interface TurnRecord {
                         readonly closed: readonly { readonly id: string; readonly why: QuestionClose }[] };
   readonly finish: FinishPayload | null;
   readonly corrections: readonly Correction[];
-  readonly text: string;                      // the composed delivery
+  readonly text: string;                      // the words the operator reads
   readonly delivery: DeliveryMarks;           // how the text reached the operator
   readonly closedBy: 'model' | 'engine';
   /** What the turn cost, summed over every model call it made — the main loop, the

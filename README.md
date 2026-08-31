@@ -96,21 +96,26 @@ rule inside the parentheses prints beneath it, without the tool frame.
 
 ## The reply is one voice
 
-The delivered reply is COMPOSED: one light call on the subject's own seat turns the
-engine's labeled facts — the owed words with their states — and the desk's prose into one
-flowing message in the operator's language. A deterministic gate charges the composition
-for every identifier, every figure on token boundaries, and the live code; one retry, and
-then the deterministic floor delivers the facts verbatim — nothing engine-known is ever
-lost. A figure the prose states that no record carries is refused before delivery, and a
-message whose report contradicts the sealed record is never delivered.
+ONE writer answers the operator: the desk, in the conversation it has been reading. The
+turn's OWED FACTS — the engine's labeled record lines with their states — ride numbered in
+its prompt, and its own closing message is what the operator receives. A deterministic gate
+charges that message for every identifier, every figure on token boundaries, and the live
+code; a miss sends the desk back on the same prefix with the record's own sentence quoted.
+A figure the message states that no record carries is refused before delivery, and a message
+whose report contradicts the sealed record is never delivered.
 
-The COMPOSED words themselves get a reader before the seal, on both close paths — and the
-reader carries not one word of any language: a reply that delivers a guard's standing rule
-as if it described the current record (a byte-match against the declared rule, whatever
-language the declaration speaks), or that wholesale abandons the operator's own language
-(the operator's message is the only reference — a character-profile comparison, no word
-tables), is refused — one recomposition with the refusal as the correction, then the
-literal floor. The floor's record lines are exempt: they are the record, verbatim.
+When the ENGINE closes the turn — a consent question raised, the turn's retries spent — the
+desk writes the close too: one more step in that same conversation, same system, same tool
+cards, carrying the numbered facts and the order to write the closing reply. The same funnel
+charges it, two rewrites are paid, and then the deterministic floor delivers the facts verbatim
+— nothing engine-known is ever lost.
+
+The delivered words get a reader before the seal, on both close paths — and the reader
+carries not one word of any language: a reply that delivers a guard's standing rule as if it
+described the current record (a byte-match against the declared rule, whatever language the
+declaration speaks), or that wholesale abandons the operator's own language (the operator's
+message is the only reference — a character-profile comparison, no word tables), is refused.
+The floor's record lines are exempt: they are the record, verbatim.
 
 A real exchange, delivered by a rental-operations desk (the operator writes Portuguese, so
 the desk answers in Portuguese — the consent statement and code are woven in, and no engine

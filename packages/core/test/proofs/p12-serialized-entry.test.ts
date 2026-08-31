@@ -8,8 +8,6 @@ test('two concurrent chats on one session serialize in arrival order', async () 
   const model = payingDesk([
     callStep('getBooking', { id: 'bk_1001' }),
     finishStep('First done.'),
-    { calls: [], text: '' },
-    { calls: [], text: '' },
     finishStep('Second done.')
   ]);
   const { engine } = testEngine({ model });

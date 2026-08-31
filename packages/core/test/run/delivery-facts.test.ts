@@ -19,7 +19,7 @@ describe('assembleFacts', () => {
     ]);
   });
 
-  it('a done read with owed null stays out — its material is the composer\'s, never owed', () => {
+  it('a done read with owed null stays out — what it returned is never owed', () => {
     expect(assembleFacts([act({ owed: null, effect: 'read' })], [], [], [])).toEqual([]);
   });
 

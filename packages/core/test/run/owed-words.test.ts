@@ -12,6 +12,7 @@ test('a read owes nothing, and a held act owes nothing — the ask lives on the 
     callStep('cancelBooking', { id: 'bk_9' }),
     { calls: [], text: '' },
     { calls: [], text: '' },
+    { calls: [], text: '' },
   ]);
   const { engine } = caseRig({ model });
   const r1 = await engine.chat('s1', 'cancel booking bk_9');
@@ -27,8 +28,6 @@ test('a world-refused hold owes the refusal in words, frame-free', async () => {
     callStep('cancelBooking', { id: 'bk_66' }),
     finishStep('That booking is under maintenance and cannot be cancelled.',
       [{ tool: 'cancelBooking', target: 'bk_66', word: 'refused' }]),
-    { calls: [], text: '' },
-    { calls: [], text: '' },
   ]);
   const { engine } = caseRig({ model });
   const r1 = await engine.chat('s1', 'cancel bk_66');
@@ -46,13 +45,9 @@ test('a licensed done write owes its filled after tense; a done write with no te
     { calls: [], text: '' },
     { calls: [], text: '' },
     finishStep('Done.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'done' }]),
-    { calls: [], text: '' },
-    { calls: [], text: '' },
     callStep('compRoom', { id: 'bk_7' }),
     finishStep('Comped.', [{ tool: 'compRoom', target: 'bk_7', word: 'done' }])
-  ,
-    { calls: [], text: '' },
-    { calls: [], text: '' }]);
+  ]);
   const { engine } = caseRig({ model, contract: { disclosure: { cancelBooking: {
     needs: { booking: 'getBooking' },
     before: 'Cancelling room {booking.room} is permanent.',

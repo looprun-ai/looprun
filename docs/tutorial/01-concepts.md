@@ -104,8 +104,8 @@ Cancelling booking bk_1 needs your word first: cancel a booking runs only after
 your approval. To go ahead, reply with just 355602.
 ```
 
-The composed reply is gated on the statement's identifiers, figures and the code; when
-composition cannot carry them, the deterministic floor prints the engine's own line —
+The desk's own reply is gated on the statement's identifiers, figures and the code; when
+the desk cannot carry them, the deterministic floor prints the engine's own line —
 `[355602] cancel a booking runs only after your approval.` — so the ask always reaches
 the operator.
 

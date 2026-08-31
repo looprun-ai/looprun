@@ -31,10 +31,9 @@ test('a licensed execution arrives typed in the approval turn', async () => {
     finishStep('I need your approval to cancel bk_9.',
       [{ tool: 'cancelBooking', target: 'bk_9', word: 'held' }]),
     { calls: [], text: '' },
-    finishStep('Cancelled bk_9.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'done' }])
-  ,
     { calls: [], text: '' },
-    { calls: [], text: '' }]);
+    finishStep('Cancelled bk_9.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'done' }])
+  ]);
   const { engine } = caseRig({ model });
   const first = await engine.chat('s1', 'cancel booking bk_9');
   const code = first.questions.issued[0].code;

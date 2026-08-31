@@ -157,29 +157,38 @@ export function argFormat(tool: string, arg: string, pattern: string): SeedGuard
   };
 }
 
-/** The always-on floor: an id-shaped argument value the conversation never
- *  produced is a GUESS — a well-formed guess is still a fabrication. Grounded =
- *  the operator typed it (any turn), a recorded act carried it (result or
- *  args), or the conversation's own acts returned it at another desk (the
- *  engine-minted provenance the routed door carries — never scraped from
- *  text). Id-shaped = lowercase prefix, underscore, alnum suffix with a digit —
- *  enum words like a policy topic carry no digit and stay untouched. */
-/** Every id-shaped token a text carries — the walk the routed door uses to mint
- *  provenance from a sealed record's results, and the walk that takes identifiers out
- *  of a text before its digit runs are read as amounts.
- *
- *  ID-SHAPED = a stem of letters, ONE separator, a tail of letters and digits holding
- *  at least one digit. The case of the letters does not matter and the separator is an
- *  underscore or a hyphen, so `bk_9`, `ast_excv01`, `A-05` and `BK-4402` are all one
- *  identifier: a berth painted on a finger is a record's name for a thing, and the
- *  digits inside it are no more an amount than the digits inside `mo_1`.
+/** THE ONE SHAPE OF AN IDENTIFIER, read everywhere a record's name for a thing must be
+ *  told apart from an amount: a stem of letters, ONE separator, and a tail of letters
+ *  and digits holding at least one digit. The case of the letters does not matter and
+ *  the separator is an underscore or a hyphen, so `bk_9`, `ast_excv01`, `A-05` and
+ *  `BK-4402` are all one identifier.
  *
  *  What stays outside: an amount wearing a unit or a currency mark (`364m`, `R$364`)
  *  has no separator, a hyphenated word (`out-of-service`) has no digit in its tail,
- *  and a date (`2026-09-05`) has no letters in its stem — each keeps its digit runs
- *  and is walked. */
+ *  and a date (`2026-09-05`) has no letters in its stem.
+ *
+ *  The shape says a token COULD name a record. Whether it does is a question about the
+ *  records, and every caller that strips identifiers out of prose asks the records
+ *  themselves: `USD-500` wears the shape and names nothing, so its digits are walked. */
 const ID_SEPARATORS = ['_', '-'] as const;
 
+export function isIdShaped(token: string): boolean {
+  const isDigit = (ch: string): boolean => ch >= '0' && ch <= '9';
+  const isLetter = (ch: string): boolean => (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z');
+  let at = -1;
+  for (const separator of ID_SEPARATORS) {
+    const seen = token.indexOf(separator);
+    if (seen >= 0 && (at === -1 || seen < at)) at = seen;
+  }
+  return at > 0 && at < token.length - 1
+    && [...token.slice(0, at)].every(isLetter)
+    && [...token.slice(at + 1)].some(isDigit)
+    && [...token.slice(at + 1)].every(ch => isLetter(ch) || isDigit(ch));
+}
+
+/** Every id-shaped token a text carries — the walk the routed door uses to mint
+ *  provenance from a sealed record's results, and the candidates the figure walks put
+ *  to the records before letting an identifier leave a text. */
 export function carriedIds(text: string): readonly string[] {
   const isDigit = (ch: string): boolean => ch >= '0' && ch <= '9';
   const isLetter = (ch: string): boolean => (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z');
@@ -188,17 +197,7 @@ export function carriedIds(text: string): readonly string[] {
   const flush = (end: number): void => {
     if (start === -1) return;
     const token = text.slice(start, end);
-    let at = -1;
-    for (const separator of ID_SEPARATORS) {
-      const seen = token.indexOf(separator);
-      if (seen >= 0 && (at === -1 || seen < at)) at = seen;
-    }
-    if (at > 0 && at < token.length - 1
-        && [...token.slice(0, at)].every(isLetter)
-        && [...token.slice(at + 1)].some(isDigit)
-        && [...token.slice(at + 1)].every(ch => isLetter(ch) || isDigit(ch))) {
-      found.add(token);
-    }
+    if (isIdShaped(token)) found.add(token);
     start = -1;
   };
   for (let i = 0; i < text.length; i++) {
@@ -211,22 +210,13 @@ export function carriedIds(text: string): readonly string[] {
   return [...found];
 }
 
+/** The always-on floor: an id-shaped argument value the conversation never produced is
+ *  a GUESS — a well-formed guess is still a fabrication. Grounded = the operator typed
+ *  it (any turn), a recorded act carried it (result or args), the state the model was
+ *  shown carries it, or the conversation's own acts returned it at another desk (the
+ *  engine-minted provenance the routed door carries — never scraped from text). Enum
+ *  words like a policy topic carry no digit and stay untouched. */
 export function groundedIds(): SeedGuard {
-  const isIdShaped = (v: string): boolean => {
-    const at = v.indexOf('_');
-    if (at <= 0 || at >= v.length - 1) return false;
-    for (const ch of v.slice(0, at)) {
-      if (ch < 'a' || ch > 'z') return false;
-    }
-    let digit = false;
-    for (const ch of v.slice(at + 1)) {
-      const alpha = ch >= 'a' && ch <= 'z';
-      const num = ch >= '0' && ch <= '9';
-      if (!alpha && !num) return false;
-      if (num) digit = true;
-    }
-    return digit;
-  };
   return {
     name: 'groundedIds',
     rule: 'An identifier you did not read and were not given is a guess — look it up or ask for it.',

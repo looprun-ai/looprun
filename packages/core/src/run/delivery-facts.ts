@@ -5,8 +5,14 @@
  *
  *  A fact is NUMBERED by its position: F1, F2, F3 … The desk reads the numbered
  *  block before it writes, and its finish names the ids its message expresses. The
- *  ids are the engine's own labels — they never reach the operator. */
+ *  ids are the engine's own labels — they never reach the operator.
+ *
+ *  The same facts charge what the desk wrote: every literal they mint must ride in the
+ *  message, every id must be named, and no label of this prompt may survive into the
+ *  words the operator reads. */
 import type { Act, Question, QuestionClose } from '../contract/vocabulary.js';
+import { canonicalAmount, carriedIds, figureRuns } from '../cards/catalog.js';
+import { FINISH_TOOL } from './finish-desk.js';
 
 export interface DeliveryFact {
   readonly kind: 'ask' | 'code' | 'receipt' | 'refusal' | 'closure' | 'note';
@@ -55,6 +61,76 @@ export function unowedFactIds(claimed: readonly string[], facts: readonly Delive
   readonly string[] {
   const owed = facts.map((_, i) => factId(i));
   return claimedIds(claimed).filter(id => !owed.includes(id));
+}
+
+/** What a message fails to carry of the literals the records mint: every identifier,
+ *  every canonical figure (token-boundary by construction — figureRuns yields whole
+ *  digit runs only), every code. The identifiers leave the source before its figures
+ *  are counted, so an id's digits never masquerade as an amount the reply owes. */
+export function gateMisses(facts: readonly DeliveryFact[], message: string): readonly string[] {
+  const misses: string[] = [];
+  const said = new Set(figureRuns(message).map(canonicalAmount));
+  const src = facts.filter(f => f.kind !== 'code').map(f => f.text).join(' ');
+  const ids = carriedIds(src);
+  for (const id of ids) {
+    if (!message.includes(id)) misses.push(`id ${id}`);
+  }
+  let bare = src;
+  for (const id of ids) bare = bare.split(id).join(' ');
+  for (const figure of new Set(figureRuns(bare).map(canonicalAmount))) {
+    if (!said.has(figure)) misses.push(`figure ${figure}`);
+  }
+  for (const f of facts) {
+    if (f.kind === 'code' && !message.includes(f.text)) misses.push(`code ${f.text}`);
+  }
+  return misses;
+}
+
+/** The engine's own labels a text carries: any bracketed fact tag — `[F1]`, `[F7]`,
+ *  whatever the number and whether or not this turn numbered it — and the state tags
+ *  the prompt stamps beside them. They are this prompt's bookkeeping, and a reply
+ *  printing one has bolted an internal token onto the operator's words. The count of
+ *  the turn's facts decides nothing: a tag is unspeakable by its shape. */
+export function engineLabels(text: string): readonly string[] {
+  const found = new Set<string>();
+  for (let i = 0; i + 3 < text.length + 1; i++) {
+    if (text[i] !== '[' || text[i + 1] !== 'F') continue;
+    let at = i + 2;
+    while (at < text.length && text[at] >= '0' && text[at] <= '9') at += 1;
+    if (at > i + 2 && text[at] === ']') found.add(text.slice(i, at + 1));
+  }
+  for (const tag of Object.values(STATE_TAG)) {
+    if (text.includes(tag)) found.add(tag);
+  }
+  return [...found];
+}
+
+/** A bare world code standing where an authored sentence should: four or more
+ *  characters, the first A-Z, the rest A-Z, digits or underscore. A turn whose owed
+ *  word is one of these has no sentence to render — the floor delivers it literally
+ *  and the gap stays visible. */
+export function isCodeShaped(text: string): boolean {
+  const t = text.trim();
+  if (t.length < 4) return false;
+  if (!(t[0] >= 'A' && t[0] <= 'Z')) return false;
+  return [...t].every(c => (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c === '_');
+}
+
+/** The one user-role message that turns the desk into the closer of its own turn. It
+ *  rides below the prefix the desk has been reading all turn — same system, same tool
+ *  cards, same acts — and carries the numbered owed facts and the order to write. The
+ *  ban on bracketed codes is part of the order: a numbered brief teaches a model to
+ *  echo the numbers, and the walk that would catch them cannot say why. */
+export function closeInstruction(facts: readonly DeliveryFact[]): string {
+  return ['THE DESK HOLDS — the complete record of what this turn did. Nothing else ran, '
+    + 'was charged, booked, held or changed.',
+  numberedFactLines(facts),
+  '',
+  `Call ${FINISH_TOOL} now with the closing reply to the operator, in their own language, `
+    + 'as one flowing reply — the words a person at a counter would say. No lists, no '
+    + 'headings, no bracketed codes, nothing bolted on: the fact ids above are the engine\'s '
+    + 'own labels and never appear in the reply. Carry every numbered fact, and name the id '
+    + 'of every one your message expresses.'].join('\n');
 }
 
 export function assembleFacts(acts: readonly Act[], open: readonly Question[],

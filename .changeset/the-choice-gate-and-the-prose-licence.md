@@ -34,3 +34,26 @@ declared. A prose rule that claims nothing is refused by name, and `measured:<ca
 with it: that licence is bought by a run that judged the case it names, and a declaration judges
 nothing. A desk's conduct law still claims `conduct` on its own, being a law about how that desk
 answers.
+
+ONE writer answers the operator. The turn's OWED FACTS ride numbered in the desk's own
+prompt and its closing message is what the operator receives: a deterministic funnel charges
+that message for every literal the records mint, every fact id it must express, every figure
+no record carries, every label of the prompt it must not print, and a report line the record
+contradicts — a miss sends the desk back on the same prefix with the record's own sentence
+quoted. There is no second writer and no second conversation.
+
+When the ENGINE closes the turn — a consent question raised, the turn's retries spent — the
+DESK writes the close as well: one more step in the conversation it has been reading, same
+system prefix, same tool cards, one user message carrying the numbered facts and the order to
+write the closing reply. The same funnel charges what comes back, two rewrites are paid, and
+then the deterministic floor delivers the record lines verbatim. The close instruction forbids
+bracketed codes in the words the operator reads, because a numbered brief teaches a model to
+echo the numbers.
+
+An identifier leaves a text before its digits are read as amounts only when THE RECORDS
+CARRY it. `A-05` and `BK-4402` are record names and their digits are not amounts; `USD-500`
+and `A-364` wear the same shape, name nothing on the record, and answer for their digits.
+One definition of id-shaped serves the walk and the always-on grounding floor.
+
+`DeliveryMarks.by` reads `desk`, `prose` or `floor`, and the run counters read
+`deskDeliveries` and `deskRetries`.

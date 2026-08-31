@@ -1,56 +1,10 @@
 import { test, expect } from 'vitest';
-import type { ModelPort } from '../../src/contract/ports.js';
-import { ScriptedModel } from '../../src/run/scripted-model.js';
-import { callStep } from '../fixtures/scripted-model.js';
-import { caseRig } from '../fixtures/case-rig.js';
-
-/** The main-loop steps come from the script; a composer request (empty surface) is
- *  answered by echoing the prompt's numbered fact lines — so the gate's ids, figures
- *  and code are always carried and the composed path is exercised for real. */
-function smartPort(steps: ReturnType<typeof callStep>[]): ModelPort {
-  const scripted = new ScriptedModel(steps);
-  return { step: async input => {
-    if (input.tools.length === 0) {
-      const last = input.messages[input.messages.length - 1];
-      const t = 'text' in last ? last.text : '';
-      const facts = t.slice(t.indexOf('PROVEN FACTS'), t.indexOf('\n\nDESK DRAFT'));
-      return { calls: [], text: `Composed. ${
-        facts.split('\n').map(l => l.replace(/^\d+\. /u, '')).join(' ')}` };
-    }
-    return scripted.step(input);
-  } };
-}
-
-test('a held turn delivers through the composer — the marks say so', async () => {
-  const model = smartPort([callStep('cancelBooking', { id: 'bk_9' })]);
-  const { engine } = caseRig({ model: model as never });
-
-  const r = await engine.chat('s1', 'cancel booking bk_9');
-  const code = r.questions.issued[0].code;
-  expect(r.delivery.by).toBe('composer');
-  expect(r.delivery.retried).toBe(false);
-  expect(r.delivery.facts.map(f => f.kind)).toEqual(['ask', 'code']);
-  expect(r.text.startsWith('Composed.')).toBe(true);
-  expect(r.text).toContain(code);
-  expect(r.text).not.toContain('— not-done');
-});
-
-test('a composition that fails the gate twice floors — nothing is ever lost', async () => {
-  const model = new ScriptedModel([
-    callStep('cancelBooking', { id: 'bk_9' }),
-    { calls: [], text: 'no code here' },
-    { calls: [], text: 'still none' }
-  ]);
-  const { engine } = caseRig({ model });
-
-  const r = await engine.chat('s1', 'cancel booking bk_9');
-  const code = r.questions.issued[0].code;
-  expect(r.delivery.by).toBe('floor');
-  expect(r.delivery.retried).toBe(true);
-  expect(r.text).toContain(code);            // the floor reprints the ask and its code
-});
-
 import { proseDropsReads } from '../../src/run/turn.js';
+import { callStep, finishStep, payingDesk } from '../fixtures/scripted-model.js';
+import { testEngine, OK_BEHAVIORS } from '../fixtures/compiled-agents.js';
+
+// A done read's identifiers are the record's answer: a message carrying not one of
+// them delivered nothing the reads returned, and the desk is sent back for it.
 
 const readAct = (result: unknown): never => ({ id: 'a1', turn: 1, origin: 'model',
   effect: 'read', call: { tool: 'getLog', args: {}, key: 'k' }, said: 'yes',
@@ -67,4 +21,21 @@ test('a read returning no identifiers demands nothing of the prose', () => {
   expect(proseDropsReads([readAct({ holds: [], count: 0 })],
     'No freeze stands on the machine.')).toBe(false);
   expect(proseDropsReads([], 'Nothing was read this turn.')).toBe(false);
+});
+
+test('a message that names none of a read\'s identifiers is sent back, then seals', async () => {
+  const model = payingDesk([
+    callStep('getBooking', { id: 'bk_9' }),
+    finishStep('The room is free that day.', []),
+    finishStep('Booking bk_9 has room 12 on Tuesday.', [])
+  ]);
+  const { engine } = testEngine({ model, behaviors: OK_BEHAVIORS });
+
+  const r = await engine.chat('s1', 'check booking bk_9');
+
+  const sentBack = r.corrections.flatMap(c =>
+    c.kind === 'redrive' && c.guardName === 'readIsSpoken' ? [c.detail] : []);
+  expect(sentBack).toHaveLength(1);
+  expect(r.finish?.message).toBe('Booking bk_9 has room 12 on Tuesday.');
+  expect(r.delivery.by).toBe('prose');
 });

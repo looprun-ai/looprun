@@ -27,7 +27,7 @@ test('G6 — UngovernedAgent: same prompt bytes, nothing held', async () => {
   expect(out.loopRun.acts[0].status).toBe('done');
 });
 
-// G7 — stream(): the turn governs to completion FIRST; the composed delivery then
+// G7 — stream(): the turn governs to completion FIRST; the delivered reply then
 // streams and reassembles byte-identical.
 test('G7 — stream governs to completion, then the delivery flows', async () => {
   const agent = new LoopRunAgent({

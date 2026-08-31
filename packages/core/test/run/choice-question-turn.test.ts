@@ -38,11 +38,9 @@ test('the engine asks, the operator answers, and only then does the act run', as
     callStep('refund', { id: 'bk_1', route: 'toTheCard' }),
     finishStep('Which refund route should I use?',
       [{ tool: 'refund', target: 'bk_1', word: 'refused' }]),
-    { calls: [], text: '' }, { calls: [], text: '' },
     callStep('refund', { id: 'bk_1', route: 'asStoreCredit' }),
     finishStep('The refund went out as store credit.',
       [{ tool: 'refund', target: 'bk_1', word: 'done' }]),
-    { calls: [], text: '' }, { calls: [], text: '' }
   ]);
   const { engine, port } = rig(model);
 
@@ -65,14 +63,11 @@ test('the answer licenses the act ONCE — the next record is asked again, under
   const model = payingDesk([
     callStep('refund', { id: 'bk_1', route: 'toTheCard' }),
     finishStep('Which route?', [{ tool: 'refund', target: 'bk_1', word: 'refused' }]),
-    { calls: [], text: '' }, { calls: [], text: '' },
     callStep('refund', { id: 'bk_1', route: 'toTheCard' }),
     finishStep('Refunded to the card.', [{ tool: 'refund', target: 'bk_1', word: 'done' }]),
-    { calls: [], text: '' }, { calls: [], text: '' },
     callStep('refund', { id: 'bk_2', route: 'toTheCard' }),
     finishStep('Which route for bk_2?',
       [{ tool: 'refund', target: 'bk_2', word: 'refused' }]),
-    { calls: [], text: '' }, { calls: [], text: '' }
   ]);
   const { engine, port } = rig(model);
 
@@ -94,14 +89,12 @@ test('an act that comes back UNKNOWN spends the answer too — the next record i
   const model = payingDesk([
     callStep('refund', { id: 'bk_1', route: 'toTheCard' }),
     finishStep('Which route?', [{ tool: 'refund', target: 'bk_1', word: 'refused' }]),
-    { calls: [], text: '' }, { calls: [], text: '' },
     callStep('refund', { id: 'bk_1', route: 'toTheCard' }),
     finishStep('I could not confirm the refund.',
       [{ tool: 'refund', target: 'bk_1', word: 'unknown' }]),
     callStep('refund', { id: 'bk_2', route: 'toTheCard' }),
     finishStep('Which route for bk_2?',
       [{ tool: 'refund', target: 'bk_2', word: 'refused' }]),
-    { calls: [], text: '' }, { calls: [], text: '' }
   ]);
   const { engine, port } = rig(model, 'unknown');
 
@@ -121,7 +114,6 @@ test('an echo arriving before the engine ever asked licenses nothing', async () 
   const model = payingDesk([
     callStep('refund', { id: 'bk_1', route: 'toTheCard' }),
     finishStep('Which route?', [{ tool: 'refund', target: 'bk_1', word: 'refused' }]),
-    { calls: [], text: '' }, { calls: [], text: '' }
   ]);
   const { engine, port } = rig(model);
 

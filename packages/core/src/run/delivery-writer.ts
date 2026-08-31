@@ -1,8 +1,8 @@
 /** The deterministic FLOOR of delivery: the prose, one record line per act (reads
  *  included — the result decides what prints), every open question with its code,
- *  every denial, every question closure. The composed path delivers above this;
- *  when composition cannot carry every fact, this floor does — nothing engine-known
- *  is ever lost. */
+ *  every denial, every question closure. The desk's own words deliver above this;
+ *  when the desk cannot carry every fact, this floor does — nothing engine-known is
+ *  ever lost. */
 import type { Act, Question, QuestionClose } from '../contract/vocabulary.js';
 
 export class DeliveryWriter {

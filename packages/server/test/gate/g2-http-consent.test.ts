@@ -27,10 +27,9 @@ test('G2 — hold and approve over POST /v1/chat/completions', async () => {
       finish('I need your approval to cancel bk_9.',
         [{ tool: 'cancelBooking', target: 'bk_9', word: 'held' }]),
       step([]),
-      finish('Cancelled bk_9.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'done' }], ['F1']),
-      // The done write mints its receipt, and the composer's delivery pass reads it.
       step([]),
-      step([])
+      finish('Cancelled bk_9.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'done' }], ['F1'])
+      // The done write mints its receipt, and the desk's own message must carry it.
     ] } }
   });
   const server = await Server.start({ agents: { hotel: agent }, auth: { apiKeys: ['k1'] } });

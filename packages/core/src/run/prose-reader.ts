@@ -5,10 +5,13 @@
  *  the declaration's own rule text and the operator's own message are the only
  *  reference material.
  *
- *    1. a guard's rule text delivered on a turn that refused and held nothing —
- *       a rule states a CONDITION, and delivering it bare asserts the condition
- *       holds of the world (a byte-match against the declared rule, whatever
- *       language the declaration is written in);
+ *    1. a guard's rule text delivered on a turn that refused nothing — a rule states
+ *       a CONDITION, and delivering it bare asserts the condition holds of the world
+ *       (a byte-match against the declared rule, whatever language the declaration is
+ *       written in). Two things stand outside it: a turn whose record carries a
+ *       refusal is stating the condition it is actually in, and a rule the turn's own
+ *       OWED FACTS carry is a sentence the engine demanded the reply express — the
+ *       exemption reaches that rule and no other;
  *    2. a reply that abandons the operator's language — measured as character-trigram
  *       profile similarity between the operator's message and the reply, the
  *       conversation itself being the language sample; texts too short to profile
@@ -34,6 +37,9 @@ export interface ProseReading {
   readonly text: string;
   readonly userText: string;
   readonly acts: readonly Act[];
+  /** The text of every fact this turn owes — what the engine itself demands the
+   *  reply state. */
+  readonly owed: readonly string[];
   /** Every compiled guard rule, deterministic and judged alike. */
   readonly rules: readonly string[];
 }
@@ -83,19 +89,22 @@ const LANGUAGE_CUT = 0.15;
 const RULE_ECHO_FLOOR = 24;
 
 export function readProse(reading: ProseReading): ProseRefusal | null {
-  const { text, userText, acts, rules } = reading;
+  const { text, userText, acts, owed, rules } = reading;
   if (text.trim() === '') return null;
 
   const refusalFrame = acts.some(a => a.status === 'not-done');
   if (!refusalFrame) {
     const prose = foldedLetters(text);
+    const demanded = owed.map(foldedLetters);
     for (const rule of rules) {
       const bare = foldedLetters(rule);
-      if (bare.length >= RULE_ECHO_FLOOR && prose.includes(bare)) {
-        return { check: 'wallEcho', sentence:
-          'the reply delivers a standing rule as if it described the current record — '
-          + 'a rule states a condition; state only what the records of this turn show' };
-      }
+      if (bare.length < RULE_ECHO_FLOOR || !prose.includes(bare)) continue;
+      // The engine owes the desk this very sentence — an ask fact IS a guard's rule
+      // text — so carrying it is obedience, not an assertion about the world.
+      if (demanded.some(fact => fact.includes(bare))) continue;
+      return { check: 'wallEcho', sentence:
+        'the reply delivers a standing rule as if it described the current record — '
+        + 'a rule states a condition; state only what the records of this turn show' };
     }
   }
 

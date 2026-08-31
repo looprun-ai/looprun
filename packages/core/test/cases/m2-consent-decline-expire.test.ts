@@ -14,8 +14,6 @@ test('M2 — NO plus the code has no effect: the question stands, the notice is 
     { calls: [], text: '' },
     { calls: [], text: '' },
     finishStep('Kept as is.', []),
-    { calls: [], text: '' },
-    { calls: [], text: '' },
   ]);
   const { engine, world } = caseRig({ model });
 
@@ -38,13 +36,7 @@ test('M2 — an ignored question expires by the sweep, delivered; a stale code c
     { calls: [], text: '' },
     { calls: [], text: '' },
     finishStep('Noted.', []),
-    { calls: [], text: '' },
-    { calls: [], text: '' },
-    { calls: [], text: '' },
     finishStep('Noted again.', []),
-    { calls: [], text: '' },
-    { calls: [], text: '' },
-    { calls: [], text: '' },
     finishStep('Nothing ran.', [])
   ]);
   const { engine, world } = caseRig({ model, spec: { limits: { questionTurns: 1 } } });

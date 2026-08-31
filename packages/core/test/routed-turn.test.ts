@@ -92,6 +92,7 @@ test('an answer the engine already read shuts the return door', async () => {
     callStep('cancelBooking', { id: 'bk_9' }),
     { calls: [], text: '' },
     { calls: [], text: '' },
+    { calls: [], text: '' },
     callStep('notMine', { reason: 'billing, not me' }),
     finishStep('Cancelled as approved.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'done' }])
   ,

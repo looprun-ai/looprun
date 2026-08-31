@@ -13,9 +13,7 @@ test('M1 — hold, approve by code, licensed execution', async () => {
     { calls: [], text: '' },
     { calls: [], text: '' },
     finishStep('Cancelled bk_9.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'done' }])
-  ,
-    { calls: [], text: '' },
-    { calls: [], text: '' }]);
+  ]);
   const { engine, world } = caseRig({ model });
 
   const r1 = await engine.chat('s1', 'cancel booking bk_9');
@@ -39,15 +37,16 @@ test('M1 — an identical re-proposal returns the SAME question; a sibling call 
     callStep('cancelBooking', { id: 'bk_9' }),
     { calls: [], text: '' },
     { calls: [], text: '' },
+    { calls: [], text: '' },
     callStep('cancelBooking', { id: 'bk_9' }),
+    { calls: [], text: '' },
     { calls: [], text: '' },
     { calls: [], text: '' },
     callStep('cancelBooking', { id: 'bk_7' }),
     { calls: [], text: '' },
     { calls: [], text: '' },
+    { calls: [], text: '' },
     finishStep('Cancelled bk_9.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'done' }]),
-    { calls: [], text: '' },
-    { calls: [], text: '' },
   ]);
   const { engine } = caseRig({ model });
 

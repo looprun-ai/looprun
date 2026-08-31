@@ -15,16 +15,16 @@ export interface Counters {
   readonly twoOutcomes: number;
   readonly floorDeliveries: number;
   readonly proseDeliveries: number;
-  readonly composerDeliveries: number;
-  readonly composerRetries: number;
+  readonly deskDeliveries: number;
+  readonly deskRetries: number;
   readonly proseReaderRedrives: number;
   readonly languageMismatches: number;
 }
 
 export function computeCounters(dumps: readonly CaseDump[]): Counters {
   let emptyDeliveries = 0, framesLeaked = 0, rawJson = 0, readLinesDelivered = 0,
-    twoOutcomes = 0, floorDeliveries = 0, proseDeliveries = 0, composerDeliveries = 0,
-    composerRetries = 0, proseReaderRedrives = 0, languageMismatches = 0;
+    twoOutcomes = 0, floorDeliveries = 0, proseDeliveries = 0, deskDeliveries = 0,
+    deskRetries = 0, proseReaderRedrives = 0, languageMismatches = 0;
   for (const dump of dumps) {
     for (const r of dump.records) {
       const text = r.text;
@@ -33,9 +33,9 @@ export function computeCounters(dumps: readonly CaseDump[]): Counters {
       if (text.trim() === '') emptyDeliveries += 1;
       if (delivery.by === 'floor') floorDeliveries += 1;
       if (delivery.by === 'prose') proseDeliveries += 1;
-      if (delivery.by === 'composer') composerDeliveries += 1;
-      if (delivery.retried) composerRetries += 1;
-      // A composed or prose delivery carrying an engine frame is a leak; the floor
+      if (delivery.by === 'desk') deskDeliveries += 1;
+      if (delivery.retried) deskRetries += 1;
+      // A delivery the desk wrote carrying an engine frame is a leak; the floor
       // prints frames lawfully and is counted by its own row instead.
       if (delivery.by !== 'floor'
         && (text.includes('— done') || text.includes('— not-done') || text.includes('— held'))) {
@@ -63,7 +63,7 @@ export function computeCounters(dumps: readonly CaseDump[]): Counters {
     }
   }
   return { emptyDeliveries, framesLeaked, rawJson, readLinesDelivered, twoOutcomes,
-    floorDeliveries, proseDeliveries, composerDeliveries, composerRetries,
+    floorDeliveries, proseDeliveries, deskDeliveries, deskRetries,
     proseReaderRedrives, languageMismatches };
 }
 

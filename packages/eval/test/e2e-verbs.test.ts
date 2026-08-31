@@ -34,9 +34,8 @@ const SCRIPT = { scripted: { steps: [
   call('cancelBooking', { id: 'bk_9' }),
   finish('I need your approval.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'held' }]),
   { calls: [], text: '' },
-  finish('Cancelled bk_9.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'done' }], ['F1']),
   { calls: [], text: '' },
-  { calls: [], text: '' }
+  finish('Cancelled bk_9.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'done' }], ['F1'])
 ] } };
 const UNGOV_SCRIPT = { scripted: { steps: [
   call('cancelBooking', { id: 'bk_9' }),

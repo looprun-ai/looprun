@@ -94,13 +94,28 @@ export class Rulebook {
     return this.collect(this.postTool, ctx, ctx.call.tool);
   }
 
+  /** The honesty floor reads `ReplyCtx.report` and never the message: its verdict is
+   *  about the machine-readable line, not about the words the operator receives. */
+  private static readonly REPORT_ONLY: readonly string[] = ['claimIsGrounded', 'claimIsComplete'];
+
   checkReply(ctx: ReplyCtx): readonly Violation[] {
-    // A reply guard declaring tools binds to them: it runs only on a turn whose
-    // acts touched one — the desk's other replies are not its jurisdiction.
+    return this.collect(this.bound(ctx), ctx, null);
+  }
+
+  /** The rows that charge the WORDS the operator will read — every declared reply
+   *  guard, and none of the report-only floor. A turn the engine closes keeps no
+   *  report of its own, so a refusal earned there would cost the operator the
+   *  deterministic floor in exchange for a line nothing on the record ever holds. */
+  checkDeliveredReply(ctx: ReplyCtx): readonly Violation[] {
+    return this.collect(
+      this.bound(ctx).filter(g => !Rulebook.REPORT_ONLY.includes(g.name)), ctx, null);
+  }
+
+  /** A reply guard declaring tools binds to them: it runs only on a turn whose acts
+   *  touched one — the desk's other replies are not its jurisdiction. */
+  private bound(ctx: ReplyCtx): readonly CompiledGuard[] {
     const acted = new Set(ctx.turnActs.map(a => a.call.tool));
-    const bound = this.reply.filter(g => g.tools.length === 0
-      || g.tools.some(t => acted.has(t)));
-    return this.collect(bound, ctx, null);
+    return this.reply.filter(g => g.tools.length === 0 || g.tools.some(t => acted.has(t)));
   }
 
   private collect(guards: readonly CompiledGuard[], ctx: ResultCtx | ReplyCtx, tool: string | null): readonly Violation[] {

@@ -240,7 +240,7 @@ message are its only reference material. It refuses two things:
 | delivers a guard's rule text bare | nothing refused or held this turn | refused — a rule states a condition, not the world; the byte-match reads the declaration in whatever language it was written |
 | abandons the operator's language wholesale | the operator wrote in their own | refused — a character-profile comparison against the operator's message; sibling languages and short texts abstain |
 
-A refusal pays one recomposition with the reader's sentence as the correction; a second
+A refusal sends the desk back with the reader's sentence as the correction; a second
 refusal delivers the literal floor. A refused or held act is the frame that licenses quoting
 the rule — the reader refuses nothing the record supports. What it deliberately does not
 read: a claim of a read or an act the record lacks, a required sentence omitted, a tense lie

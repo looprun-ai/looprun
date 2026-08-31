@@ -123,8 +123,8 @@ destructive: {
 cancel a booking runs only after your approval.
 ```
 
-That sentence rides inside the desk's reply, next to the live code. When the composed
-reply cannot carry both, the deterministic floor prints the engine's own line:
+That sentence rides inside the desk's reply, next to the live code. When the desk's reply
+cannot carry both, the deterministic floor prints the engine's own line:
 `[355602] cancel a booking runs only after your approval.`
 
 Write it as the act, in the words the business uses — "cancel a booking", "issue the refund",
