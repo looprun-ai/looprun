@@ -642,18 +642,18 @@ function argText(ctx: CallCtx, arg: string): string | null {
  *  read the argument against the row the call is about — but the argument is what it decides
  *  on, and an argument that never arrived is a law with nothing to decide, so the guard
  *  stands aside. A check that answers with WORDS refuses in those words. */
-export function argCondition(tool: string | readonly string[], arg: string,
+export function argSatisfiesCondition(tool: string | readonly string[], arg: string,
   check: (ctx: { readonly value: Json;
                  readonly record: Readonly<Record<string, Json>> | null;
                  readonly state: StateSnapshot | null }) => boolean | string,
   reason: string): SeedGuard {
   const tools = typeof tool === 'string' ? [tool] : [...tool];
   return {
-    name: `argCondition:${tools.join('+')}:${arg}`,
+    name: `argSatisfiesCondition:${tools.join('+')}:${arg}`,
     rule: reason,
     tool: tools,
     on: 'preTool',
-    kind: 'argCondition',
+    kind: 'argSatisfiesCondition',
     compile(home, facts) {
       return installedAt<CallCtx>(this, home, ctx => {
         const value = ctx.call.args[arg];

@@ -150,7 +150,7 @@ const SCHEMA_ARGS: Readonly<Record<string, { readonly args: readonly string[];
   argMatchesRecord: { args: ['arg'], costs: 'the guard refuses every call of it' },
   argMatchesFormat: { args: ['arg'],
     costs: 'the guard never fires — it sits in the census as a check that decides nothing' },
-  argCondition: { args: ['arg'],
+  argSatisfiesCondition: { args: ['arg'],
     costs: 'the guard never fires — it sits in the census as a check that decides nothing' },
   argForbidden: { args: ['arg'],
     costs: 'the guard never fires — no call carries an argument the act does not declare' }

@@ -91,7 +91,7 @@ the rest.
 | requires a read to have happened first | `onlyAfter` | a school registrar: `issueTranscript` only after `getFeeBalance`, and the rule carries the subtraction — 1,250 charged, 900 paid, 350 standing |
 | holds a number under a figure a read returned | `cap` (disclosure) | a pharmacy counter: `dispense(rx_4471, quantity)` capped at `getPrescription.rx.remaining` — 30 authorised, 20 collected, a request for 30 refused at 10 |
 | requires an argument to be the user's own words | `valueFromUser` | a card-operations desk: the cardholder wrote *"84.90 at a petrol station"* and the model sent `amount: 89.40` |
-| holds the CALL's own argument to a law | `argCondition` | a returns counter: `refund(reason)` where the reasons this shop refunds under are `damaged` and `wrong-item`, and nothing else |
+| holds the CALL's own argument to a law | `argSatisfiesCondition` | a returns counter: `refund(reason)` where the reasons this shop refunds under are `damaged` and `wrong-item`, and nothing else |
 | takes the operator's word OR the records' | `valueFromUserOrRecord` | a lettings desk: the rent on a renewal is the figure the tenant quoted or the figure the tenancy already carries — never one the desk worked out |
 | holds an argument to the row on file | `argMatchesRecord` | a garage: `collectVehicle(reg)` where the plate typed must be the plate the job card carries, so a neighbouring job is never released |
 | requires a read only WHERE the record says so | `onlyAfterWhen` | a bank: `closeAccount` reads the balance first only when the account is overdrawn; a clear account closes with no order to obey |
@@ -124,7 +124,7 @@ machine can never disagree. Use one instead of hand-writing a `deny` wherever it
 |---|---|---|---|
 | `onlyAfter(tool, prerequisite)` | two tool names | the act until the prerequisite SUCCEEDED this conversation | acting on a figure nobody read |
 | `precondition(tool, check, rule)` | `({ record, state }) => boolean` | while the records fail the check | asking about an act the records already rule out |
-| `argCondition(tool, arg, check, rule)` | `({ value, record, state }) => boolean` over the call's OWN argument | the value the call arrived with; an argument that never arrived is left alone | a law about an argument written as a law about a record |
+| `argSatisfiesCondition(tool, arg, check, rule)` | `({ value, record, state }) => boolean` over the call's OWN argument | the value the call arrived with; an argument that never arrived is left alone | a law about an argument written as a law about a record |
 | `valueFromUserOrRecord(tool, arg, from, field, rule)` | the entity and the field that may also carry it | a value neither the operator wrote nor any row of that entity holds | the desk's own arithmetic passing as a figure somebody gave it |
 | `argMatchesRecord(tool, arg, field, rule)` | the field of the call's own target row | an argument that differs from the one on file, naming both figures | acting on a value the record already contradicts |
 | `onlyAfterWhen(tool, prerequisite, when, rule)` | the read, and a reading of the call's own row | the act until the read succeeded — but only where the condition holds | demanding a read on every call to catch the few that need it |

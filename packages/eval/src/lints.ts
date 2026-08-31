@@ -153,7 +153,7 @@ const SENTENCE_KEYS = new Set(['rule', 'voice', 'persona', 'description', 'summa
 /** Where each factory takes the sentence its law is stated in. */
 const SENTENCE_ARG: ReadonlyMap<string, number> = new Map([
   ['prose', 1], ['precondition', 2], ['maxCalls', 2], ['blockPattern', 2],
-  ['argCondition', 3], ['valueFromUserOrRecord', 4], ['argMatchesRecord', 3], ['onlyAfterWhen', 3]
+  ['argSatisfiesCondition', 3], ['valueFromUserOrRecord', 4], ['argMatchesRecord', 3], ['onlyAfterWhen', 3]
 ]);
 
 /** Every sentence a card states, with the node it is written at. */

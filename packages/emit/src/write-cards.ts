@@ -90,7 +90,7 @@ const LAWFUL_ARGS: Readonly<Record<DeclaredGuard['factory'], readonly string[]>>
   checkResult: ['field', 'is', 'in'],
   mustAccountFor: ['records', 'status'],
   blockPattern: ['pattern', 'on'],
-  argCondition: ['arg', 'is', 'in'],
+  argSatisfiesCondition: ['arg', 'is', 'in'],
   valueFromUserOrRecord: ['arg', 'from', 'field'],
   argMatchesRecord: ['arg', 'field'],
   onlyAfterWhen: ['after', 'field', 'is', 'in'],
@@ -120,7 +120,7 @@ const ACT_SHAPE: Readonly<Record<DeclaredGuard['factory'], 'all' | 'first' | 'no
   checkResult: 'first',
   mustAccountFor: 'none',
   blockPattern: 'none',
-  argCondition: 'all',
+  argSatisfiesCondition: 'all',
   valueFromUserOrRecord: 'first',
   argMatchesRecord: 'first',
   onlyAfterWhen: 'first',
@@ -132,13 +132,13 @@ const ACT_SHAPE: Readonly<Record<DeclaredGuard['factory'], 'all' | 'first' | 'no
  *  states the correction the reply owes. A factory that mints its sentence from its own
  *  configuration is not here — a `rule` beside it overrides that sentence and is optional. */
 const OWES_RULE: ReadonlySet<DeclaredGuard['factory']> = new Set(['precondition', 'role', 'cap', 'checkResult', 'blockPattern', 'prose',
-  'argCondition', 'valueFromUserOrRecord', 'argMatchesRecord', 'onlyAfterWhen']);
+  'argSatisfiesCondition', 'valueFromUserOrRecord', 'argMatchesRecord', 'onlyAfterWhen']);
 
 /** The factories handed the declared sentence inside the call itself. Every other factory mints
  *  its own, and a `rule` declared beside one of those is emitted as a field of the literal. */
 const TAKES_RULE: ReadonlySet<DeclaredGuard['factory']> = new Set(['precondition', 'role',
   'cap', 'blockPattern',
-  'argCondition', 'valueFromUserOrRecord', 'argMatchesRecord', 'onlyAfterWhen']);
+  'argSatisfiesCondition', 'valueFromUserOrRecord', 'argMatchesRecord', 'onlyAfterWhen']);
 
 function checkArgs(guard: DeclaredGuard): void {
   const lawful = LAWFUL_ARGS[guard.factory];
@@ -258,7 +258,7 @@ function fieldTest(guard: DeclaredGuard, subject: string, named = 'args.field'):
       + `list of one or more words, figures or flags the field may carry, which this declaration `
       + `does not carry`);
   }
-  // The walk's own name for one declared value never shadows the subject: `argCondition` tests
+  // The walk's own name for one declared value never shadows the subject: `argSatisfiesCondition` tests
   // the argument the call arrived with, which is itself named `value`.
   return `[${several.map(scalarLiteral).join(', ')}].some(declared => declared === ${subject})`;
 }
@@ -399,7 +399,7 @@ function capLines(guard: DeclaredGuard, act: string): readonly string[] {
  *  records decide nothing here — an act on a surface holding no records states this law too. */
 function argConditionLines(guard: DeclaredGuard): readonly string[] {
   const acts = guard.acts.length === 1 ? quote(guard.acts[0]) : list(guard.acts);
-  return [`argCondition(${acts}, ${quote(stringArg(guard, 'arg'))}, ({ value }) => `
+  return [`argSatisfiesCondition(${acts}, ${quote(stringArg(guard, 'arg'))}, ({ value }) => `
     + `${fieldTest(guard, 'value', 'args.arg')},`, `${quote(ruleOf(guard))})`];
 }
 
@@ -477,8 +477,8 @@ function factoryCall(guard: DeclaredGuard): { readonly imported: string | null;
       return { imported: 'mustAccountFor', lines: accountLines(guard) };
     case 'blockPattern':
       return { imported: 'blockPattern', lines: blockLines(guard) };
-    case 'argCondition':
-      return { imported: 'argCondition', lines: argConditionLines(guard) };
+    case 'argSatisfiesCondition':
+      return { imported: 'argSatisfiesCondition', lines: argConditionLines(guard) };
     case 'valueFromUserOrRecord':
       return { imported: 'valueFromUserOrRecord',
         lines: valueFromUserOrRecordLines(guard, act) };

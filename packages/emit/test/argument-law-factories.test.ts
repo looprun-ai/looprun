@@ -9,14 +9,14 @@ import { decl, FACTS, SEAM } from './helpers.js';
 
 const cards = (guard: DeclaredGuard): string => writeCards(decl({ guards: [guard] }), FACTS);
 
-test('argCondition is emitted as a law over the value the call carries', () => {
+test('argSatisfiesCondition is emitted as a law over the value the call carries', () => {
   const text = cards({ name: 'refundReasonIsOnTheList', acts: ['issueRefund'],
-    factory: 'argCondition', args: { arg: 'reason', in: ['duplicate', 'overcharge'] },
+    factory: 'argSatisfiesCondition', args: { arg: 'reason', in: ['duplicate', 'overcharge'] },
     rule: 'A refund carries the reason it was raised under.' });
-  expect(text).toContain('argCondition(\'issueRefund\', \'reason\', ({ value }) =>');
+  expect(text).toContain('argSatisfiesCondition(\'issueRefund\', \'reason\', ({ value }) =>');
   expect(text).toContain('[\'duplicate\', \'overcharge\'].some(declared => declared === value)');
   expect(text).toContain('A refund carries the reason it was raised under.');
-  expect(text).toContain('import { argCondition } from \'@looprun-ai/core\';');
+  expect(text).toContain('import { argSatisfiesCondition } from \'@looprun-ai/core\';');
 });
 
 test('valueFromUserOrRecord is emitted with the entity and the field it reads', () => {
@@ -43,9 +43,9 @@ test('onlyAfterWhen is emitted as the order and the condition together', () => {
   expect(text).toContain('({ record }) => record?.status === \'disputed\'');
 });
 
-test('argCondition declared with neither is nor in is refused by the keys it is missing', () => {
+test('argSatisfiesCondition declared with neither is nor in is refused by the keys it is missing', () => {
   expect(() => cards({ name: 'refundReasonIsOnTheList', acts: ['issueRefund'],
-    factory: 'argCondition', args: { arg: 'reason' }, rule: 'r' }))
+    factory: 'argSatisfiesCondition', args: { arg: 'reason' }, rule: 'r' }))
     .toThrow(/args.is|args.in/);
 });
 

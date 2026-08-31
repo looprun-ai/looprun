@@ -4,7 +4,7 @@
 import { test, expect } from 'vitest';
 import type { CallCtx, Json, StateSnapshot } from '../../src/contract/vocabulary.js';
 import { TurnFailure } from '../../src/contract/vocabulary.js';
-import { argCondition, argMatchesRecord, onlyAfterWhen,
+import { argSatisfiesCondition, argMatchesRecord, onlyAfterWhen,
          valueFromUserOrRecord } from '../../src/cards/catalog.js';
 import { factsFromWorld } from '../../src/cards/facts.js';
 import { HOSTILE } from '../fixtures/hostile-world.js';
@@ -22,16 +22,16 @@ function callCtx(tool: string, args: Record<string, Json>,
 
 const done = (tool: string) => ({ call: { tool, args: {}, key: tool }, status: 'done' } as never);
 
-test('argCondition decides on the value the call itself carries', () => {
-  const g = argCondition('cancelBooking', 'reason',
+test('argSatisfiesCondition decides on the value the call itself carries', () => {
+  const g = argSatisfiesCondition('cancelBooking', 'reason',
     ({ value }) => value === 'duplicate', 'Cancel only a booking taken twice.')
     .compile('contract', FACTS);
   expect(g.deny(callCtx('cancelBooking', { id: 'bk_9', reason: 'duplicate' }))).toBeNull();
   expect(g.deny(callCtx('cancelBooking', { id: 'bk_9', reason: 'no longer wanted' }))).toBe('');
 });
 
-test('argCondition reads the call OWN record beside the argument, and refuses in words', () => {
-  const g = argCondition('cancelBooking', 'day',
+test('argSatisfiesCondition reads the call OWN record beside the argument, and refuses in words', () => {
+  const g = argSatisfiesCondition('cancelBooking', 'day',
     ({ value, record }) => value === record?.day || 'the booking is not on that day',
     'Cancel the booking on the day the register carries.').compile('contract', FACTS);
   expect(g.deny(callCtx('cancelBooking', { id: 'bk_9', day: 'Tuesday' }))).toBeNull();
@@ -39,13 +39,13 @@ test('argCondition reads the call OWN record beside the argument, and refuses in
     .toBe('the booking is not on that day');
 });
 
-test('argCondition stands aside where the argument never arrived', () => {
-  const g = argCondition('cancelBooking', 'reason', () => false, 'r').compile('contract', FACTS);
+test('argSatisfiesCondition stands aside where the argument never arrived', () => {
+  const g = argSatisfiesCondition('cancelBooking', 'reason', () => false, 'r').compile('contract', FACTS);
   expect(g.deny(callCtx('cancelBooking', { id: 'bk_9' }))).toBeNull();
 });
 
-test('argCondition decides on a stateless surface — the argument needs no records', () => {
-  const g = argCondition('cancelBooking', 'reason', ({ value }) => value === 'duplicate', 'r')
+test('argSatisfiesCondition decides on a stateless surface — the argument needs no records', () => {
+  const g = argSatisfiesCondition('cancelBooking', 'reason', ({ value }) => value === 'duplicate', 'r')
     .compile('contract', FACTS);
   expect(g.deny(callCtx('cancelBooking', { reason: 'duplicate' }, null))).toBeNull();
 });
@@ -121,8 +121,8 @@ test('onlyAfterWhen is satisfied once the prerequisite has succeeded', () => {
 
 /** The predicate the emitter writes for `in: [duplicate, overcharge]`. The list is the values the
  *  argument may carry; the argument is what the law decides on. */
-test('argCondition over a declared list refuses a value outside it', () => {
-  const g = argCondition('cancelBooking', 'reason',
+test('argSatisfiesCondition over a declared list refuses a value outside it', () => {
+  const g = argSatisfiesCondition('cancelBooking', 'reason',
     ({ value }) => ['duplicate', 'overcharge'].some(declared => declared === value),
     'Cancel only under a reason this house cancels for.').compile('contract', FACTS);
   expect(g.deny(callCtx('cancelBooking', { id: 'bk_9', reason: 'duplicate' }))).toBeNull();

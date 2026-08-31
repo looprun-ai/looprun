@@ -14,8 +14,8 @@ const guard = (factory: DeclaredGuard['factory'], args: Record<string, unknown>,
                acts: readonly string[] = ['issueRefund']): DeclaredGuard =>
   ({ name: 'theLaw', acts, factory, args, rule: 'The law this guard states.' });
 
-test('argCondition pointed at an argument the act does not carry is named back', () => {
-  const [refusal, ...rest] = surface(guard('argCondition', { arg: 'resaon', is: 'duplicate' }));
+test('argSatisfiesCondition pointed at an argument the act does not carry is named back', () => {
+  const [refusal, ...rest] = surface(guard('argSatisfiesCondition', { arg: 'resaon', is: 'duplicate' }));
   expect(rest).toEqual([]);
   expect(refusal).toContain('args.arg names \'resaon\'');
   expect(refusal).toContain('Did you mean \'reason\'?');
@@ -67,10 +67,10 @@ test('a row-walking rung over an act with no target row is named back', () => {
 });
 
 /** The whole point of `in:`: the values the argument may carry, and no others. */
-test('argCondition with in: tests the CALL\'s argument, never itself', () => {
-  const text = writeCards(decl({ guards: [guard('argCondition',
+test('argSatisfiesCondition with in: tests the CALL\'s argument, never itself', () => {
+  const text = writeCards(decl({ guards: [guard('argSatisfiesCondition',
     { arg: 'reason', in: ['duplicate', 'overcharge'] })] }), FACTS);
-  expect(text).toContain('argCondition(\'issueRefund\', \'reason\', ({ value }) =>');
+  expect(text).toContain('argSatisfiesCondition(\'issueRefund\', \'reason\', ({ value }) =>');
   expect(text).not.toContain('value === value');
   expect(text).toContain('.some(declared => declared === value)');
 });

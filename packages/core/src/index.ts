@@ -16,7 +16,7 @@ export type {
 export { onlyAfter, precondition, valueFromUser, checkResult,
          mustAccountFor, argMatchesFormat, argForbidden, blockPattern, purgePattern, maskPattern,
          swapTerms, maxCalls, injectionCheck,
-         carriedIds, isIdShaped, argCondition, valueFromUserOrRecord, argMatchesRecord,
+         carriedIds, isIdShaped, argSatisfiesCondition, valueFromUserOrRecord, argMatchesRecord,
          onlyAfterWhen }
   from './cards/catalog.js';
 export { label } from './run/label.js';

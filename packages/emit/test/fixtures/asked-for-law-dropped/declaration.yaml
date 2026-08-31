@@ -304,7 +304,7 @@ contract:
     # ── the arguments only the operator can settle ────────────────────────────
     - name: deliveryIsTheCustomersChoice
       acts: [generateQuote]
-      factory: argCondition
+      factory: argSatisfiesCondition
       args:
         arg: includeDelivery
         is: false
