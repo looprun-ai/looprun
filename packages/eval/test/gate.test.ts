@@ -120,15 +120,21 @@ describe('runGate', () => {
       'CASE_PRESET_UNKNOWN',     // presetsDeclared
       'CHECK_INERT',             // inertChecks
       'CHECK_UNSPOKEN',          // unspokenChecks
-      'CONDUCT_INCOMPLETE',      // conductComplete
       'COVERS_UNRESOLVED',       // coversResolve
       'DISCLOSURE_BEFORE_MISSING',   // destructiveDisclosed
       'DISCLOSURE_BEFORE_UNFIGURED', // destructiveDisclosed
       'FLOOR_REDECLARED',        // floorRedeclared
       'PROSE_UNLICENSED',        // unlicensed
       'RULE_WIDE_UNLICENSED',    // overWide
-      'SUBJECT_REGEX'            // purity
+      'SUBJECT_REGEX',           // purity
+      'SUBJECT_WORD_LIST'        // wordLists
     ]);
+  });
+
+  test('the six voices ride as an advisory, and fail nothing', () => {
+    const gate = runGate(FIXTURE_DIR, FIXTURE_SUBJECT);
+    expect(gate.findings.map(f => f.code)).not.toContain('CONDUCT_INCOMPLETE');
+    expect(gate.advisories.map(f => f.code)).toContain('CONDUCT_INCOMPLETE');
   });
 
   test('a sound subject returns an empty list', () => {

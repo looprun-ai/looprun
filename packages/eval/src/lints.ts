@@ -10,7 +10,7 @@ import type { AgentSpec, ApproveRef, CompiledAgent, DeclaredWorld, DomainContrac
               ExamTurn, GuardCensus, Json, LiveWorldCard, McpWorldCard, PromptParts, SurfaceFacts,
               ToolFact, TurnRecord, WorldCard } from '@looprun-ai/core';
 import type { Subject } from './subject-loader.js';
-import { AgentFactory, CardError, factsFromWorld, PromptWriter,
+import { AgentFactory, CardError, carriedIds, factsFromWorld, isIdShaped, PromptWriter,
          RETIRED_NAMES, WorldBuilder } from '@looprun-ai/core';
 
 export interface LintFinding { readonly code: string; readonly sentence: string }
@@ -59,6 +59,171 @@ export function purity(subjectDir: string): readonly LintFinding[] {
       node.forEachChild(visit);
     };
     visit(sf);
+  }
+  return findings;
+}
+
+/** The methods that walk a list and hand each element to a check. */
+const WALKING_METHODS = new Set(['some', 'every', 'find', 'findIndex', 'filter', 'forEach']);
+
+/** The methods that look for one text INSIDE another. A check that reaches one of these is
+ *  reading words, not comparing a declared value with a recorded one. */
+const TEXT_SEARCHES = new Set(['includes', 'indexOf', 'startsWith', 'endsWith', 'search', 'match']);
+
+/** The methods that make a comparison forgiving about how a word is spelled. Nothing a guard
+ *  decides needs them: an id, a figure and a declared value each have exactly one spelling. */
+const CASE_FOLDS = new Set(['toLowerCase', 'toUpperCase', 'normalize']);
+
+/** The name of the method a call invokes, or null where the call is not a method call. */
+function methodName(node: ts.CallExpression): string | null {
+  return ts.isPropertyAccessExpression(node.expression) ? node.expression.name.text : null;
+}
+
+/** Whether a body reaches a call that searches one text inside another. */
+function searchesText(body: ts.Node): boolean {
+  let found = false;
+  const visit = (at: ts.Node): void => {
+    if (found) return;
+    if (ts.isCallExpression(at)) {
+      const called = methodName(at);
+      if (called !== null && TEXT_SEARCHES.has(called)) { found = true; return; }
+    }
+    at.forEachChild(visit);
+  };
+  visit(body);
+  return found;
+}
+
+/** A list of two or more words written in place, which the walk hands to a check one at a time. */
+function isWordList(node: ts.Expression): boolean {
+  const value = unwrap(node);
+  if (!ts.isArrayLiteralExpression(value) || value.elements.length < 2) return false;
+  return value.elements.every(element => ts.isStringLiteral(unwrap(element)));
+}
+
+/** THE VOCABULARY LAW over a subject's cards: a guard decides from DECLARED DATA — a choice's
+ *  option list, a value a record's field is compared with whole — and never from a list of words
+ *  it searches inside a text. Four words in an array deciding whether an act is licensed is a
+ *  language written into a check, and the same act refuses in one language and passes in another.
+ *
+ *  Two shapes say it. A list of words walked by a check that searches text is the law written out
+ *  in full. Case folding is the same law with the list left implicit: a comparison is made
+ *  forgiving about spelling only when what it compares is a word somebody typed, because an
+ *  identifier, a figure and a declared value each have exactly one spelling.
+ *
+ *  The cards are where guards live, so the cards are what this reads. */
+export function wordLists(subjectDir: string): readonly LintFinding[] {
+  const findings: LintFinding[] = [];
+  for (const f of subjectSources(subjectDir).filter(s => s.rel.endsWith('cards.ts'))) {
+    const sf = parse(f);
+    const at = (node: ts.Node): string =>
+      `${f.rel}:${sf.getLineAndCharacterOfPosition(node.getStart(sf)).line + 1}`;
+    const visit = (node: ts.Node): void => {
+      if (ts.isCallExpression(node)) {
+        const called = methodName(node);
+        const walked = called !== null && WALKING_METHODS.has(called)
+          && ts.isPropertyAccessExpression(node.expression)
+          && isWordList(node.expression.expression);
+        if (walked && node.arguments.some(searchesText)) {
+          findings.push({ code: 'SUBJECT_WORD_LIST',
+            sentence: `${at(node.expression)} — a list of words decides this check by searching `
+              + `them inside a text; a guard decides from declared data, and a word list is a `
+              + `language written into the check` });
+        }
+        if (called !== null && CASE_FOLDS.has(called)) {
+          findings.push({ code: 'SUBJECT_WORD_LIST',
+            sentence: `${at(node)} — '${called}' makes a comparison forgiving about how a word is `
+              + `spelled, and nothing a guard decides is spelled more than one way; compare the `
+              + `declared value with the recorded one` });
+        }
+      }
+      node.forEachChild(visit);
+    };
+    visit(sf);
+  }
+  return findings;
+}
+
+/** The keys whose value is a sentence somebody reads: a rule, the voice of the house, a desk's
+ *  persona and its routing lines, the tenses of a disclosure, the refusal a ceiling carries, and
+ *  the reason a ceiling states. */
+const SENTENCE_KEYS = new Set(['rule', 'voice', 'persona', 'description', 'summary',
+  'before', 'after', 'later', 'empty', 'refusal', 'reason']);
+
+/** Where each factory takes the sentence its law is stated in. */
+const SENTENCE_ARG: ReadonlyMap<string, number> = new Map([
+  ['prose', 1], ['precondition', 2], ['choiceFromUser', 3], ['maxCalls', 2], ['blockPattern', 2],
+  ['argCondition', 3], ['valueFromUserOrRecord', 4], ['argMatchesRecord', 3], ['onlyAfterWhen', 3]
+]);
+
+/** Every sentence a card states, with the node it is written at. */
+function cardSentences(sf: ts.SourceFile): readonly { text: string; node: ts.Node }[] {
+  const out: { text: string; node: ts.Node }[] = [];
+  const take = (node: ts.Expression): void => {
+    const text = literalText(unwrap(node));
+    if (text !== null) out.push({ text, node });
+  };
+  const visit = (node: ts.Node): void => {
+    if (ts.isCallExpression(node) && ts.isIdentifier(node.expression)) {
+      const index = SENTENCE_ARG.get(node.expression.text);
+      const argument = index === undefined ? undefined : node.arguments[index];
+      if (argument !== undefined) take(argument);
+    }
+    if (ts.isPropertyAssignment(node)
+      && (ts.isIdentifier(node.name) || ts.isStringLiteral(node.name))) {
+      if (SENTENCE_KEYS.has(node.name.text)) take(node.initializer);
+      if (node.name.text === 'facts') {
+        const listed = unwrap(node.initializer);
+        if (ts.isArrayLiteralExpression(listed)) for (const fact of listed.elements) take(fact);
+      }
+    }
+    node.forEachChild(visit);
+  };
+  visit(sf);
+  return out;
+}
+
+/** Every identifier the WORLD carries for a row of its records: the keys the rows are filed
+ *  under, and the values the card spells out. The shape says a token could name a record — a
+ *  stem of letters, one separator, a tail holding a digit — so a field name and a tool name are
+ *  never mistaken for one. */
+function worldIds(sources: readonly Source[]): ReadonlySet<string> {
+  const ids = new Set<string>();
+  for (const f of sources) {
+    if (f.rel.endsWith('cards.ts')) continue;
+    const visit = (node: ts.Node): void => {
+      if (ts.isStringLiteral(node) && isIdShaped(node.text)) ids.add(node.text);
+      if ((ts.isPropertyAssignment(node) || ts.isMethodDeclaration(node))
+        && (ts.isIdentifier(node.name) || ts.isStringLiteral(node.name))
+        && isIdShaped(node.name.text)) ids.add(node.name.text);
+      node.forEachChild(visit);
+    };
+    visit(parse(f));
+  }
+  return ids;
+}
+
+/** No sentence a prompt carries names a row of this world. A rule that reads 'ves_1 is the worked
+ *  example' ships one exam's record into every turn of every conversation: the desk is taught an
+ *  identifier it did not read, the guard that refuses an ungrounded id has been handed one for
+ *  free, and the sentence is false in every world where that row does not exist. The records are
+ *  read at the seam; the sentence states the law. */
+export function worldIdsInSentences(subjectDir: string): readonly LintFinding[] {
+  const sources = subjectSources(subjectDir);
+  const ids = worldIds(sources);
+  const findings: LintFinding[] = [];
+  if (ids.size === 0) return findings;
+  for (const f of sources.filter(s => s.rel.endsWith('cards.ts'))) {
+    const sf = parse(f);
+    for (const sentence of cardSentences(sf)) {
+      for (const carried of carriedIds(sentence.text)) {
+        if (!ids.has(carried)) continue;
+        const line = sf.getLineAndCharacterOfPosition(sentence.node.getStart(sf)).line + 1;
+        findings.push({ code: 'SENTENCE_CARRIES_WORLD_ID',
+          sentence: `${f.rel}:${line} — this sentence names '${carried}', which is a row of the `
+            + `world; a prompt states the law and reads the records at the seam` });
+      }
+    }
   }
   return findings;
 }
@@ -1851,13 +2016,15 @@ export function floorRedeclared(subjectDir: string): readonly LintFinding[] {
 const VOICES = ['declareHonestly', 'oneQuestion', 'yourLaneYourReads', 'recordsOverAssertions',
   'askBeforeYouChoose', 'nameItDoNotPassItOn'];
 
-/** Every desk of a multi-desk house teaches all six voices. The operator is handed from one
- *  counter to the next inside a single conversation, and a voice taught at the first and missing
- *  at the second answers the same person two different ways: the desk that carries
- *  `recordsOverAssertions` states what the read returned, and the desk beside it — reading a
- *  prefix that never names the law — states what it remembers.
+/** An ADVISORY over a multi-desk house: which of the six voices each desk states. The operator is
+ *  handed from one counter to the next inside a single conversation, and a voice taught at the
+ *  first and missing at the second answers the same person two different ways — the desk that
+ *  carries `recordsOverAssertions` states what the read returned, and the desk beside it, reading
+ *  a prefix that never names the law, states what it remembers. That is worth a line beside the
+ *  run; it is not a refusal, because the sentences a desk teaches are the author's own and no set
+ *  of them is demanded.
  *
- *  One desk is one counter, and there is no second way for it to answer, so the six bind nothing
+ *  One desk is one counter, and there is no second way for it to answer, so the six say nothing
  *  on a single-spec subject. */
 export function conductComplete(specs: Readonly<Record<string, AgentSpec>>): readonly LintFinding[] {
   const desks = Object.entries(specs);

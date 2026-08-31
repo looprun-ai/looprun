@@ -9,7 +9,7 @@ import { resolveModelConfig } from '@mastra/core/llm';
 import type { MastraModelConfig } from '@mastra/core/llm';
 import type { Act, Json, LlmParams, ModelStep, ProviderOptions, RawCall,
   StepInput } from '@looprun-ai/core';
-import { TurnFailure } from '@looprun-ai/core';
+import { label, TurnFailure } from '@looprun-ai/core';
 
 const isRecord = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -38,9 +38,13 @@ function callsKey(calls: readonly { tool: string; args: unknown }[]): string {
 
 interface ToolCallPartLike { type: string; toolCallId: string; toolName: string }
 
+/** What the model is shown of an act's result: the stored value with every top-level field
+ *  name marked by the tool that returned it, so world data reaches the model named as data. */
+const shown = (a: Act): Json => label(a.call.tool, a.result);
+
 function resultValue(a: Act): JSONValue {
   return { sentence: a.sentence, status: a.status,
-           result: a.result } as unknown as JSONValue;
+           result: shown(a) } as unknown as JSONValue;
 }
 
 /** Acts render in the provider's own dialect. A step the MODEL made replays the
@@ -48,14 +52,14 @@ function resultValue(a: Act): JSONValue {
  *  signatures ride along, which providers demanding a thought signature require.
  *  An engine-origin act (a licensed execution) has no model call to replay, so
  *  it rides as a compact user-visible record line. */
-function actMessages(acts: readonly Act[], base: number,
+export function actMessages(acts: readonly Act[], base: number,
                      replay: ReadonlyMap<string, ModelMessage>): ModelMessage[] {
   const modelActs = acts.filter(a => a.origin === 'model');
   const engineActs = acts.filter(a => a.origin !== 'model');
   const out: ModelMessage[] = [];
   if (engineActs.length > 0) {
     out.push({ role: 'user', content: engineActs.map(a =>
-      `[record] ${a.sentence}\n${JSON.stringify(a.result)}`).join('\n') });
+      `[record] ${a.sentence}\n${JSON.stringify(shown(a))}`).join('\n') });
   }
   void base;
   if (modelActs.length === 0) return out;
@@ -75,7 +79,7 @@ function actMessages(acts: readonly Act[], base: number,
   // arrive without its reasoning signature, which strict providers reject. The
   // acts ride as record lines instead.
   out.push({ role: 'user', content: modelActs.map(a =>
-    `[record] ${a.sentence}\n${JSON.stringify(a.result)}`).join('\n') });
+    `[record] ${a.sentence}\n${JSON.stringify(shown(a))}`).join('\n') });
   return out;
 }
 

@@ -16,8 +16,10 @@ export type {
 export { onlyAfter, precondition, valueFromUser, choiceFromUser, checkResult,
          mustAccountFor, argFormat, argAbsent, blockPattern, purgePattern, maskPattern,
          swapTerms, maxCalls, lieCheck, impossibilityCheck, injectionCheck, hallucinationCheck,
-         carriedIds }
+         carriedIds, isIdShaped, argCondition, valueFromUserOrRecord, argMatchesRecord,
+         onlyAfterWhen }
   from './cards/catalog.js';
+export { label } from './run/label.js';
 export { ChoiceDesk, answeredOption } from './run/choice-desk.js';
 export { Engine } from './run/engine.js';
 export type { EngineConfig } from './run/engine.js';

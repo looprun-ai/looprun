@@ -17,7 +17,7 @@ describe('checkAgainstSurface', () => {
   test('a precondition reading the record over an act with no target', () => {
     expect(checkAgainstSurface(decl({ guards: [{ name: 'g', acts: ['closeBooking'], factory: 'precondition',
                                                  args: { reads: 'record' } }] }), FACTS, SEAM))
-      .toEqual([expect.stringContaining("declares no target")]);
+      .toEqual([expect.stringContaining("names no target")]);
   });
 
   test('a judged check naming an act the surface does not declare', () => {

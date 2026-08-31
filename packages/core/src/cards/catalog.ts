@@ -393,6 +393,19 @@ export function argAbsent(tool: string, arg: string): SeedGuard {
   };
 }
 
+/** The row a call is about: the value of the tool's declared target argument, read out of
+ *  the tool's OWN entity — so a same-valued id living in another entity is never picked up
+ *  by mistake. A tool that names no target, or records that hold no such row, answer null. */
+function recordOf(ctx: CallCtx, facts: SurfaceFacts):
+  Readonly<Record<string, Json>> | null {
+  const state = ctx.state;
+  if (state === null) return null;
+  const fact = facts.tools[ctx.call.tool];
+  const idValue = fact?.target != null ? ctx.call.args[fact.target] : undefined;
+  return fact?.entity != null && typeof idValue === 'string'
+    ? state[fact.entity]?.[idValue] ?? null : null;
+}
+
 /** The declared predicate over { record, state } must hold before the call runs.
  *  The record is the call's target row in the tool's OWN entity — the effect-block
  *  declaration names the entity, so a same-valued id in another entity can never be
@@ -418,13 +431,9 @@ export function precondition(tool: string | readonly string[],
           throw new TurnFailure('construction',
             `precondition on ${ctx.call.tool} needs a records snapshot, and this surface has none`);
         }
-        const f = facts.tools[ctx.call.tool];
-        const idValue = f?.target !== null && f?.target !== undefined ? ctx.call.args[f.target] : undefined;
-        const record = f?.entity !== null && f?.entity !== undefined && typeof idValue === 'string'
-          ? state[f.entity]?.[idValue] ?? null : null;
         // A check that answers with words refuses in them: the gate reads the records
         // and the refusal carries what it found there, beside the rule.
-        const verdict = check({ record, state });
+        const verdict = check({ record: recordOf(ctx, facts), state });
         return verdict === true ? null : typeof verdict === 'string' ? verdict : '';
       });
     }
@@ -588,26 +597,184 @@ export function valueFromUser(tool: string, arg: string): SeedGuard {
         if (typeof value !== 'string' || value === '') {
           return `'${arg}' must be a value the user wrote`;
         }
-        if (isFigure(value)) {
-          const amount = canonicalAmount(value);
-          for (const text of ctx.userTexts) {
-            for (const run of figureRuns(text)) {
-              if (canonicalAmount(run) === amount) return null;
-            }
-          }
-          return `'${arg}' is not written in the user's own words`;
-        }
-        const need = tokens(value);
-        if (need.length === 0) {
+        if (!isFigure(value) && tokens(value).length === 0) {
           return `'${arg}' carries no word the user could have written`;
         }
-        for (const text of ctx.userTexts) {
-          const have = tokens(text);
-          for (let i = 0; i + need.length <= have.length; i += 1) {
-            if (need.every((t, j) => have[i + j] === t)) return null;
-          }
+        return writtenByUser(value, ctx.userTexts) ? null
+          : `'${arg}' is not written in the user's own words`;
+      });
+    }
+  };
+}
+
+/** Whether the operator wrote this value themselves, on ANY turn of the conversation:
+ *  contiguous whole tokens, whole-value equal. A figure is searched in every standard
+ *  spelling of the same amount. The walk searches; it never interprets. */
+function writtenByUser(value: string, userTexts: readonly string[]): boolean {
+  if (isFigure(value)) {
+    const amount = canonicalAmount(value);
+    for (const text of userTexts) {
+      for (const run of figureRuns(text)) if (canonicalAmount(run) === amount) return true;
+    }
+    return false;
+  }
+  const need = tokens(value);
+  if (need.length === 0) return false;
+  for (const text of userTexts) {
+    const have = tokens(text);
+    for (let i = 0; i + need.length <= have.length; i += 1) {
+      if (need.every((t, j) => have[i + j] === t)) return true;
+    }
+  }
+  return false;
+}
+
+/** The value a call carries under one argument, as a string. A figure arrives as a number
+ *  and is read as the digits it is; a block of values is one thing no single law decides. */
+function argText(ctx: CallCtx, arg: string): string | null {
+  const raw = ctx.call.args[arg];
+  if (typeof raw === 'string') return raw;
+  return typeof raw === 'number' || typeof raw === 'boolean' ? String(raw) : null;
+}
+
+/** A law over ONE argument the CALL itself carries: the value arriving under that name must
+ *  satisfy the declared check. The call's own record and the state ride along, so a law may
+ *  read the argument against the row the call is about — but the argument is what it decides
+ *  on, and an argument that never arrived is a law with nothing to decide, so the guard
+ *  stands aside. A check that answers with WORDS refuses in those words. */
+export function argCondition(tool: string | readonly string[], arg: string,
+  check: (ctx: { readonly value: Json;
+                 readonly record: Readonly<Record<string, Json>> | null;
+                 readonly state: StateSnapshot | null }) => boolean | string,
+  reason: string): SeedGuard {
+  const tools = typeof tool === 'string' ? [tool] : [...tool];
+  return {
+    name: `argCondition:${tools.join('+')}:${arg}`,
+    rule: reason,
+    tool: tools,
+    on: 'preTool',
+    kind: 'argCondition',
+    compile(home, facts) {
+      return installedAt<CallCtx>(this, home, ctx => {
+        const value = ctx.call.args[arg];
+        if (value === undefined) return null;
+        const verdict = check({ value, record: recordOf(ctx, facts), state: ctx.state });
+        return verdict === true ? null : typeof verdict === 'string' ? verdict : '';
+      });
+    }
+  };
+}
+
+/** Two grounds, one law: the argument is licensed when the OPERATOR wrote it verbatim on any
+ *  turn, or when a row of the named entity carries it in the named field. A figure the
+ *  operator typed and a figure already on file are both somebody's; a figure that is neither
+ *  is the desk's own arithmetic, and the refusal names the value it could not place. */
+export function valueFromUserOrRecord(tool: string, arg: string, from: string, field: string,
+  reason: string): SeedGuard {
+  return {
+    name: `valueFromUserOrRecord:${tool}:${arg}`,
+    rule: reason,
+    tool,
+    on: 'preTool',
+    kind: 'valueFromUserOrRecord',
+    compile(home) {
+      return installedAt<CallCtx>(this, home, ctx => {
+        const value = argText(ctx, arg);
+        if (value === null || value === '') {
+          return `'${arg}' must be a value the operator wrote or the records carry`;
         }
-        return `'${arg}' is not written in the user's own words`;
+        if (writtenByUser(value, ctx.userTexts)) return null;
+        const rows = ctx.state?.[from] ?? {};
+        for (const row of Object.values(rows)) {
+          const held = row?.[field];
+          if (held !== undefined && held !== null && String(held) === value) return null;
+        }
+        return `'${arg}' arrived as '${value}', which the operator never wrote and no `
+          + `${from} row carries under '${field}'`;
+      });
+    }
+  };
+}
+
+/** The argument must be what the record already says: the value arriving under that name is
+ *  compared, whole-value, with the field the call's OWN target row carries. A row the records
+ *  do not hold fixes nothing, so the call is refused by the id it named; a value that differs
+ *  from the one on file is refused with both figures in the sentence. */
+export function argMatchesRecord(tool: string, arg: string, field: string,
+  reason: string): SeedGuard {
+  return {
+    name: `argMatchesRecord:${tool}:${arg}`,
+    rule: reason,
+    tool,
+    on: 'preTool',
+    kind: 'argMatchesRecord',
+    compile(home, facts) {
+      const target = facts.tools[tool]?.target ?? null;
+      return installedAt<CallCtx>(this, home, ctx => {
+        const value = argText(ctx, arg);
+        if (value === null) return `'${arg}' must be one value the record can be read against`;
+        const record = recordOf(ctx, facts);
+        if (record === null) {
+          const named = target === null ? undefined : ctx.call.args[target];
+          return typeof named === 'string' && named !== ''
+            ? `the records hold no row named '${named}', so nothing fixes '${arg}'`
+            : `this call names no row of the records, so nothing fixes '${arg}'`;
+        }
+        const held = record[field];
+        if (held !== undefined && held !== null && String(held) === value) return null;
+        return held === undefined || held === null
+          ? `'${arg}' arrived as '${value}', and the record carries no '${field}' to match it`
+          : `'${arg}' arrived as '${value}', and the record carries '${String(held)}' under '${field}'`;
+      });
+    }
+  };
+}
+
+/** The order, demanded exactly where the record says so: ONE guard carrying both conditions.
+ *  The prerequisite must have succeeded this conversation when the declared reading of the
+ *  call's own row answers true, and where it answers false the act runs with no order to obey.
+ *  A READ prerequisite raises the owe verdict on the same terms onlyAfter does — the engine
+ *  pays the debt with one forced micro-step — so the condition decides whether a debt exists
+ *  at all. A read already attempted this turn without success denies instead. */
+export function onlyAfterWhen(tool: string, prerequisite: string,
+  when: (ctx: { readonly record: Readonly<Record<string, Json>> | null;
+                readonly state: StateSnapshot | null }) => boolean,
+  reason: string): SeedGuard {
+  const satisfied = (ctx: CallCtx): boolean =>
+    [...ctx.pastActs, ...ctx.turnActs].some(a => a.call.tool === prerequisite && a.status === 'done');
+  const attemptedThisTurn = (ctx: CallCtx): boolean =>
+    ctx.turnActs.some(a => a.call.tool === prerequisite && a.status !== 'done');
+  return {
+    name: `onlyAfterWhen:${tool}`,
+    rule: reason,
+    tool,
+    on: 'preTool',
+    kind: 'onlyAfterWhen',
+    compile(home, facts) {
+      const prereqFact = facts.tools[prerequisite];
+      const isRead = prereqFact?.effect === 'read';
+      // The condition reads the records, so a surface with none is loud rather than a silent
+      // stand-aside: an order nobody demands is exactly what this guard exists to prevent.
+      const demanded = (ctx: CallCtx): boolean => {
+        if (ctx.state === null) {
+          throw new TurnFailure('construction',
+            `onlyAfterWhen on ${ctx.call.tool} needs a records snapshot, and this surface has none`);
+        }
+        return when({ record: recordOf(ctx, facts), state: ctx.state });
+      };
+      return installed(this, home, {
+        owe: ctx => {
+          if (!isRead || satisfied(ctx) || attemptedThisTurn(ctx) || !demanded(ctx)) return null;
+          return [{ alias: prerequisite, tool: prerequisite, args: {} }];
+        },
+        deny: ctx => {
+          if (satisfied(ctx) || !demanded(ctx)) return null;
+          if (isRead) {
+            return attemptedThisTurn(ctx)
+              ? `${prerequisite} did not succeed this conversation` : null;
+          }
+          return `${prerequisite} has not succeeded yet this conversation`;
+        }
       });
     }
   };

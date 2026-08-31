@@ -350,25 +350,11 @@ ${secondConduct}
     summary: the desk
 `;
 
-  it('a desk of a two-desk house missing a voice refuses naming the desk and the voice', () => {
+  it('a desk of a two-desk house teaching five voices emits — the sentences are the author\'s', () => {
     const withoutRecords = SIX_VOICES.split('\n')
       .filter(line => !line.includes('recordsOverAssertions')).join('\n');
     const d = readDeclaration(fixture(house(withoutRecords)));
-    const refusals = checkAgainstSurface(d, FACTS, SEAM);
-    expect(refusals).toEqual([expect.stringContaining("desks[1].conduct")]);
-    expect(refusals[0]).toContain("'audit'");
-    expect(refusals[0]).toContain("'recordsOverAssertions'");
-  });
-
-  it('a voice named with nothing said under it is refused as a voice unspoken', () => {
-    const blankRecords = SIX_VOICES.split('\n')
-      .map(line => line.includes('recordsOverAssertions')
-        ? '      recordsOverAssertions: \'   \'' : line).join('\n');
-    const d = readDeclaration(fixture(house(blankRecords)));
-    const refusals = checkAgainstSurface(d, FACTS, SEAM);
-    expect(refusals).toEqual([expect.stringContaining('desks[1].conduct')]);
-    expect(refusals[0]).toContain("'audit'");
-    expect(refusals[0]).toContain("'recordsOverAssertions'");
+    expect(checkAgainstSurface(d, FACTS, SEAM)).toEqual([]);
   });
 
   it('a single-desk declaration missing five voices is refused none of them', () => {

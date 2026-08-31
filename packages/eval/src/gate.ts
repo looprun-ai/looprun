@@ -5,7 +5,8 @@ import { AgentFactory, CardError, factsFromWorld, Rulebook } from '@looprun-ai/c
 import { approvable, capPaths, cardWeight, conductComplete, coversResolve,
          destructiveDisclosed, floorRedeclared, inertChecks, laneWidth, nameGate, noEffectDenied,
          overWide, pairing, presetsDeclared, purity, seamSpoken, seamUnreached,
-         unlicensed, unspokenChecks, type LintFinding } from './lints.js';
+         unlicensed, unspokenChecks, wordLists, worldIdsInSentences,
+         type LintFinding } from './lints.js';
 
 /** What the gate needs beyond the directory. Every field is REQUIRED, and the one a subject
  *  directory cannot answer on its own takes an explicit `null` to opt out: a caller with no census
@@ -74,9 +75,12 @@ export function censusFor(subject: CensusSubject): ReadonlySet<string> {
  *  law names, printed with the run so the whole unspoken table stays visible without a prompt
  *  sentence paid for any of it.
  *
- *  `advisories` fails nothing either: a number the skill teaches as a TARGET, printed on the desk
- *  that passes it. The lane is one — fifteen acts is what a desk aims at, and an ask that wants
- *  fifty acts on one agent gets them, with the row printed beside the green run. */
+ *  `advisories` fails nothing either: a target the skill teaches, printed on the desk that passes
+ *  it. Two ride here. The lane — fifteen acts is what a desk aims at, and an ask that wants fifty
+ *  acts on one agent gets them, with the row printed beside the green run. And the six conduct
+ *  voices — a house teaching one of them at one counter and not at the next answers one operator
+ *  by two different laws, which is worth reading; the sentences on a desk are the author's own,
+ *  and no set of them is demanded. */
 export interface GateReport {
   readonly findings: readonly LintFinding[];
   readonly seams: readonly LintFinding[];
@@ -116,6 +120,8 @@ export function runGate(subjectDir: string, subject: GateSubject): GateReport {
     .filter(fact => fact.effect !== 'read').map(fact => fact.name);
   const answered = [
     ...purity(subjectDir),
+    ...wordLists(subjectDir),
+    ...worldIdsInSentences(subjectDir),
     ...nameGate(subjectDir),
     // The surface and the acts both come from the DERIVED facts: a world that builds its effect
     // blocks in code spells no act out in its source, and membership is what the pairing reads
@@ -124,9 +130,6 @@ export function runGate(subjectDir: string, subject: GateSubject): GateReport {
     ...unlicensed(subjectDir),
     ...overWide(subjectDir),
     ...floorRedeclared(subjectDir),
-    // The desks as the caller holds them, not as the source spells them: a conduct law is a guard
-    // on the compiled spec, and the six voices are read off every desk of the house at once.
-    ...conductComplete(subject.specs),
     // What the cards behind a lane weigh against the prefix that teaches the desk, measured on the
     // desks the engine compiles.
     ...lane.filter(row => row.code !== LANE_ADVISORY),
@@ -153,5 +156,9 @@ export function runGate(subjectDir: string, subject: GateSubject): GateReport {
     .findIndex(other => other.code === finding.code && other.sentence === finding.sentence) === at);
   return { findings,
            seams: seamUnreached(subjectDir, cases, facts, subject.world),
-           advisories: lane.filter(row => row.code === LANE_ADVISORY) };
+           // The six voices ride here: a house that teaches one of them at one counter and not at
+           // the next is worth a line beside the run, and which laws a desk states is the author's
+           // own spend — the sentences are theirs to write.
+           advisories: [...lane.filter(row => row.code === LANE_ADVISORY),
+                        ...conductComplete(subject.specs)] };
 }

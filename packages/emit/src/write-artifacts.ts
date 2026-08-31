@@ -30,6 +30,30 @@ export function writeSubject(): string {
   ].join('\n');
 }
 
+/** The type check the cards answer to. `cards.ts` is the one emitted file that states types, and
+ *  it states them against the engine's own: a field `Guard` does not carry, a factory handed the
+ *  wrong shape, a ceiling under a name `Limits` does not declare. A subject tree whose tests
+ *  transpile without checking a type reads every one of those as a clean file, so the config is
+ *  strict — the looser settings agree with a card the engine would refuse.
+ *
+ *  The cards alone are in it. They import from `@looprun-ai/core` and from nothing else, so this
+ *  answers for exactly what the emit wrote. Modules resolve the way the subject's own test runner
+ *  resolves them, so a directory that declares no package of its own is checked exactly as it
+ *  runs: `npx tsc -p tsconfig.json`, from the subject directory. */
+export function writeTsconfig(): string {
+  return `${JSON.stringify({
+    compilerOptions: {
+      target: 'ES2022',
+      module: 'ESNext',
+      moduleResolution: 'Bundler',
+      strict: true,
+      noEmit: true,
+      skipLibCheck: true
+    },
+    include: ['cards.ts']
+  }, null, 2)}\n`;
+}
+
 /** The static gate, as a test that runs beside the subject. Every answer in it comes from the
  *  engine: the verbs from `runGate`, and the census a case's `covers` key is spelled against from
  *  `censusFor`, which walks the compiled desks and the honesty rows the Rulebook injects. This
@@ -42,8 +66,9 @@ export function writeGateFile(stamp: string): string {
     ' *  directory with `npx vitest run check-subject.test.ts`. Every check belongs to the ENGINE',
     ' *  and this file only calls it — a check re-written beside a subject is a second truth, and',
     ' *  the first time the engine tightens a rule the copy keeps blessing what the engine now',
-    ' *  refuses. A finding fails this gate; a seam warning and a lane advisory print beside a',
-    ' *  green run and fail nothing. Nothing here spends anything: no key, no model, no network. */',
+    ' *  refuses. A finding fails this gate, and so does a type error in the cards; a seam warning',
+    ' *  and a lane advisory print beside a green run and fail nothing. Nothing here spends',
+    ' *  anything: no key, no model, no network. */',
     'import { createHash } from \'node:crypto\';',
     'import { readFileSync } from \'node:fs\';',
     'import { join } from \'node:path\';',
@@ -94,6 +119,23 @@ export function writeGateFile(stamp: string): string {
     '  // is the ask\'s to spend: a desk carrying fifty acts prints here and the run stays green.',
     '  for (const advisory of gate.advisories) console.warn(`advisory — ${advisory.sentence}`);',
     '  expect(gate.findings).toEqual([]);',
+    '});',
+    '',
+    'test(\'the cards type-check against the engine\\\'s own types\', async () => {',
+    '  // The gate runs the type check rather than leaving it beside itself: a card carrying a',
+    '  // field the engine does not declare transpiles clean through a test runner, and the desk',
+    '  // then teaches a law the engine never installs. tsconfig.json states the settings; this',
+    '  // reads them and answers with the diagnostics.',
+    '  const ts = (await import(\'typescript\')).default;',
+    '  const configPath = join(SUBJECT, \'tsconfig.json\');',
+    '  const read = ts.readConfigFile(configPath, path => readFileSync(path, \'utf8\'));',
+    '  expect(read.error, \'tsconfig.json beside these cards does not parse\').toBeUndefined();',
+    '  const parsed = ts.parseJsonConfigFileContent(read.config, ts.sys, SUBJECT);',
+    '  const program = ts.createProgram(parsed.fileNames, parsed.options);',
+    '  const found = [...program.getSemanticDiagnostics(), ...program.getSyntacticDiagnostics()]',
+    '    .map(d => `${d.file === undefined ? \'\' : `${d.file.fileName}: `}${',
+    '      ts.flattenDiagnosticMessageText(d.messageText, \' \')}`);',
+    '  expect(found).toEqual([]);',
     '});',
     ''
   ].join('\n');
@@ -153,9 +195,9 @@ function sentenceOf(error: unknown): string {
 }
 
 /** One subject directory in, the paths of every file written out. The directory carries the two
- *  authored artifacts — `declaration.yaml` and the world card `world.ts` — and receives four:
- *  `cards.ts`, `subject.ts`, `check-subject.test.ts` and `gen/SEAM.md`. The seam is read after
- *  the cards land, so its guard column names the rules this run wrote. */
+ *  authored artifacts — `declaration.yaml` and the world card `world.ts` — and receives five:
+ *  `cards.ts`, `subject.ts`, `check-subject.test.ts`, `tsconfig.json` and `gen/SEAM.md`. The seam
+ *  is read after the cards land, so its guard column names the rules this run wrote. */
 export function emit(subjectDir: string): readonly string[] {
   const declarationPath = join(subjectDir, 'declaration.yaml');
   const worldPath = join(subjectDir, 'world.ts');
@@ -189,11 +231,13 @@ export function emit(subjectDir: string): readonly string[] {
   const cardsPath = join(subjectDir, 'cards.ts');
   const subjectPath = join(subjectDir, 'subject.ts');
   const gatePath = join(subjectDir, 'check-subject.test.ts');
+  const tsconfigPath = join(subjectDir, 'tsconfig.json');
   const seamPath = join(subjectDir, 'gen', 'SEAM.md');
   writeFileSync(cardsPath, cards);
   writeFileSync(subjectPath, writeSubject());
   writeFileSync(gatePath, writeGateFile(stamp));
+  writeFileSync(tsconfigPath, writeTsconfig());
   mkdirSync(join(subjectDir, 'gen'), { recursive: true });
   writeFileSync(seamPath, writeSeam(subjectDir, facts));
-  return [cardsPath, subjectPath, gatePath, seamPath];
+  return [cardsPath, subjectPath, gatePath, tsconfigPath, seamPath];
 }

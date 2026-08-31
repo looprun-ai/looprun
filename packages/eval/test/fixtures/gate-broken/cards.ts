@@ -99,3 +99,8 @@ export const ordersContract = {
     // it returned.
   }
 };
+
+/** SUBJECT_WORD_LIST: four words in an array decide a check by searching them inside a text, so
+ *  this act is licensed in one language and refused in every other. */
+export const readsAsUrgent = (row: unknown): boolean =>
+  ['urgent', 'emergency'].some(word => JSON.stringify(row).includes(word));

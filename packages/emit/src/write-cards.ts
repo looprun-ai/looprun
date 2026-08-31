@@ -91,6 +91,10 @@ const LAWFUL_ARGS: Readonly<Record<DeclaredGuard['factory'], readonly string[]>>
   checkResult: ['field', 'is', 'in'],
   mustAccountFor: ['records', 'status'],
   blockPattern: ['pattern', 'on'],
+  argCondition: ['arg', 'is', 'in'],
+  valueFromUserOrRecord: ['arg', 'from', 'field'],
+  argMatchesRecord: ['arg', 'field'],
+  onlyAfterWhen: ['after', 'field', 'is', 'in'],
   prose: ['why'],
   deny: []
 };
@@ -118,6 +122,10 @@ const ACT_SHAPE: Readonly<Record<DeclaredGuard['factory'], 'all' | 'first' | 'no
   checkResult: 'first',
   mustAccountFor: 'none',
   blockPattern: 'none',
+  argCondition: 'all',
+  valueFromUserOrRecord: 'first',
+  argMatchesRecord: 'first',
+  onlyAfterWhen: 'first',
   prose: 'none',
   deny: 'none'
 };
@@ -126,12 +134,14 @@ const ACT_SHAPE: Readonly<Record<DeclaredGuard['factory'], 'all' | 'first' | 'no
  *  states the correction the reply owes. A factory that mints its sentence from its own
  *  configuration is not here — a `rule` beside it overrides that sentence and is optional. */
 const OWES_RULE: ReadonlySet<DeclaredGuard['factory']> = new Set(['precondition', 'role',
-  'choiceFromUser', 'cap', 'checkResult', 'blockPattern', 'prose']);
+  'choiceFromUser', 'cap', 'checkResult', 'blockPattern', 'prose',
+  'argCondition', 'valueFromUserOrRecord', 'argMatchesRecord', 'onlyAfterWhen']);
 
 /** The factories handed the declared sentence inside the call itself. Every other factory mints
  *  its own, and a `rule` declared beside one of those is emitted as a field of the literal. */
 const TAKES_RULE: ReadonlySet<DeclaredGuard['factory']> = new Set(['precondition', 'role',
-  'choiceFromUser', 'cap', 'blockPattern']);
+  'choiceFromUser', 'cap', 'blockPattern',
+  'argCondition', 'valueFromUserOrRecord', 'argMatchesRecord', 'onlyAfterWhen']);
 
 function checkArgs(guard: DeclaredGuard): void {
   const lawful = LAWFUL_ARGS[guard.factory];
@@ -163,8 +173,8 @@ function ruleOf(guard: DeclaredGuard): string {
 }
 
 /** The first template slot a sentence still carries, or null. A slot is `<` followed by a
- *  letter and a closing `>` — the shape the skill's conduct TEMPLATEs use for the parts an
- *  author must replace with the domain's own nouns. */
+ *  letter and a closing `>` — the shape a sentence marks for the parts an author must replace
+ *  with the domain's own nouns. */
 function unfilledSlot(sentence: string): string | null {
   for (let at = sentence.indexOf('<'); at !== -1; at = sentence.indexOf('<', at + 1)) {
     const close = sentence.indexOf('>', at + 1);
@@ -227,21 +237,22 @@ function fieldAccess(root: string, field: string): string {
   return isPlainName(field) ? `${root}?.${field}` : `${root}?.[${quote(field)}]`;
 }
 
-/** A law over one field, as data: `is` names the one value the field must carry, `in` the list of
- *  values one of which it must be. Exactly one of the two — a field tested against both states two
- *  laws under one name, and a field tested against neither states none. */
-function fieldTest(guard: DeclaredGuard, subject: string): string {
+/** A law over one value, as data: `is` names the one value it must carry, `in` the list of values
+ *  one of which it must be. Exactly one of the two — a value tested against both states two laws
+ *  under one name, and a value tested against neither states none. `named` is the key the tested
+ *  value arrives under, so the refusal points at the row the author wrote. */
+function fieldTest(guard: DeclaredGuard, subject: string, named = 'args.field'): string {
   const single = guard.args?.is;
   const several = guard.args?.in;
   if ((single === undefined) === (several === undefined)) {
-    throw new Error(`contract.guards '${guard.name}' declares args.field, and a field law tests it `
+    throw new Error(`contract.guards '${guard.name}' declares ${named}, and its law tests the value `
       + `against exactly one of args.is — a single value — or args.in — a list of them; this `
       + `declaration carries ${single === undefined ? 'neither' : 'both'}`);
   }
   if (single !== undefined) {
     if (!isScalarValue(single)) {
       throw new Error(`contract.guards '${guard.name}' declares args.is as a block of its own, and `
-        + `a field carries one value — declare args.is as a word, a figure or a flag`);
+        + `a value tested is one value — declare args.is as a word, a figure or a flag`);
     }
     return `${subject} === ${scalarLiteral(single)}`;
   }
@@ -250,7 +261,9 @@ function fieldTest(guard: DeclaredGuard, subject: string): string {
       + `list of one or more words, figures or flags the field may carry, which this declaration `
       + `does not carry`);
   }
-  return `[${several.map(scalarLiteral).join(', ')}].some(value => value === ${subject})`;
+  // The walk's own name for one declared value never shadows the subject: `argCondition` tests
+  // the argument the call arrived with, which is itself named `value`.
+  return `[${several.map(scalarLiteral).join(', ')}].some(declared => declared === ${subject})`;
 }
 
 /** The field a law tests, or null where the law is about the row itself. A value declared with no
@@ -405,6 +418,46 @@ function capLines(guard: DeclaredGuard, act: string): readonly string[] {
     `reason: ${quote(ruleOf(guard))} })`];
 }
 
+/** A law over the CALL's own argument: the acts it covers, the values that argument may carry,
+ *  and the sentence it refuses with. The value tested is the one the call arrived with, so the
+ *  records decide nothing here — an act on a surface holding no records states this law too. */
+function argConditionLines(guard: DeclaredGuard): readonly string[] {
+  const acts = guard.acts.length === 1 ? quote(guard.acts[0]) : list(guard.acts);
+  return [`argCondition(${acts}, ${quote(stringArg(guard, 'arg'))}, ({ value }) => `
+    + `${fieldTest(guard, 'value', 'args.arg')},`, `${quote(ruleOf(guard))})`];
+}
+
+/** Two grounds under one law: the entity whose rows may carry the value, and the field of those
+ *  rows it is read off. The operator's own words are the other ground and are the engine's to
+ *  search, so the declaration states only where the records answer. */
+function valueFromUserOrRecordLines(guard: DeclaredGuard, act: string): readonly string[] {
+  return [`valueFromUserOrRecord(${quote(act)}, ${quote(stringArg(guard, 'arg'))}, `
+    + `${quote(stringArg(guard, 'from'))}, ${quote(stringArg(guard, 'field'))},`,
+    `${quote(ruleOf(guard))})`];
+}
+
+/** The argument the record already fixes: the field of the call's OWN target row the value must
+ *  equal. The walk to that row is the engine's, so the declaration names the field and nothing
+ *  else. */
+function argMatchesRecordLines(guard: DeclaredGuard, act: string): readonly string[] {
+  return [`argMatchesRecord(${quote(act)}, ${quote(stringArg(guard, 'arg'))}, `
+    + `${quote(stringArg(guard, 'field'))},`, `${quote(ruleOf(guard))})`];
+}
+
+/** The order and the condition as one guard: the read the act waits for, and the reading of the
+ *  call's own row that decides whether it waits at all. */
+function onlyAfterWhenLines(guard: DeclaredGuard, act: string): readonly string[] {
+  const field = testedField(guard);
+  if (field === null) {
+    throw new Error(`contract.guards '${guard.name}' declares factory 'onlyAfterWhen', which `
+      + `demands the read exactly where the record says so — declare args.field, and the value `
+      + `that field carries where the read is owed`);
+  }
+  return [`onlyAfterWhen(${quote(act)}, ${quote(stringArg(guard, 'after'))},`,
+    `({ record }) => ${fieldTest(guard, fieldAccess('record', field))},`,
+    `${quote(ruleOf(guard))})`];
+}
+
 /** The call one declared guard is emitted from: the factory it imports, and the lines of the
  *  call itself. A factory configured from one act takes the first act the guard names and the
  *  rest arrive as the guard's own `tool` scope; `precondition` and `role` take them all. `prose`
@@ -452,6 +505,15 @@ function factoryCall(guard: DeclaredGuard): { readonly imported: string | null;
       return { imported: 'mustAccountFor', lines: accountLines(guard) };
     case 'blockPattern':
       return { imported: 'blockPattern', lines: blockLines(guard) };
+    case 'argCondition':
+      return { imported: 'argCondition', lines: argConditionLines(guard) };
+    case 'valueFromUserOrRecord':
+      return { imported: 'valueFromUserOrRecord',
+        lines: valueFromUserOrRecordLines(guard, act) };
+    case 'argMatchesRecord':
+      return { imported: 'argMatchesRecord', lines: argMatchesRecordLines(guard, act) };
+    case 'onlyAfterWhen':
+      return { imported: 'onlyAfterWhen', lines: onlyAfterWhenLines(guard, act) };
     case 'prose':
       return { imported: null, lines: [`prose(${quote(guard.name)}, ${quote(ruleOf(guard))})`] };
   }

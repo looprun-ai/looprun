@@ -6,6 +6,7 @@ import { cpSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmSync,
 import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import ts from 'typescript';
 import { expect, test } from 'vitest';
 import type { AgentSpec, DeclaredWorld, DomainContract, ExamCase } from '@looprun-ai/core';
 import { AgentFactory, Engine, factsFromWorld } from '@looprun-ai/core';
@@ -15,6 +16,7 @@ import { emit, readDeclaration, writeCensus, writeCovers, writeGateFile, writeSe
 import { decl, FACTS } from './helpers.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
+const TREE_ROOT = join(HERE, '../../..');
 
 function staged(name: string): string {
   const dir = mkdtempSync(join(tmpdir(), 'emit-'));
@@ -40,7 +42,16 @@ test('the expected census names every guard the declaration mints', () => {
 test('emit writes every artifact and returns their paths', () => {
   const written = emit(FIXTURE_DIR);
   expect(written.map(p => basename(p)).sort())
-    .toEqual(['SEAM.md', 'cards.ts', 'check-subject.test.ts', 'subject.ts']);
+    .toEqual(['SEAM.md', 'cards.ts', 'check-subject.test.ts', 'subject.ts', 'tsconfig.json']);
+});
+
+test('the cards it wrote are type-checked strictly, and by a config that reads them alone', () => {
+  const dir = staged('emit-sound');
+  emit(dir);
+  const config = JSON.parse(readFileSync(join(dir, 'tsconfig.json'), 'utf8')) as {
+    compilerOptions: Record<string, unknown>; include: readonly string[] };
+  expect(config.compilerOptions.strict).toBe(true);
+  expect(config.include).toEqual(['cards.ts']);
 });
 
 test('emit refuses rather than writing, when the surface refuses', () => {
@@ -283,4 +294,25 @@ test('a seam sentence paying a row the world carries reaches the desk that holds
   const cards = readFileSync(join(dir, 'cards.ts'), 'utf8');
   expect(cards).toContain("'seam:issueRefund:stateIs:status': 'seam'");
   expect(cards.match(/An invoice already settled takes no refund\./g)).toHaveLength(1);
+});
+
+/** The tsconfig is not decoration: run under it, a field the engine's Guard does not carry is a
+ *  refusal with a line number. Without it the same card transpiles clean and the desk teaches a
+ *  law the engine never installs. */
+test('the emitted config refuses a card carrying a field the engine does not declare', () => {
+  const dir = staged('emit-sound');
+  emit(dir);
+  const config = JSON.parse(readFileSync(join(dir, 'tsconfig.json'), 'utf8')) as {
+    compilerOptions: Record<string, unknown> };
+  const options = ts.convertCompilerOptionsFromJson(config.compilerOptions, dir).options;
+  const cards = join(dir, 'cards.ts');
+  const clean = readFileSync(cards, 'utf8');
+  const check = (): readonly string[] => ts.createProgram([cards], {
+    ...options, baseUrl: TREE_ROOT,
+    paths: { '@looprun-ai/core': [join(TREE_ROOT, 'packages/core/dist/index.d.ts')] }
+  }).getSemanticDiagnostics().map(d => ts.flattenDiagnosticMessageText(d.messageText, ' '));
+
+  expect(check()).toEqual([]);
+  writeFileSync(cards, clean.replace('guards: [', 'guards: [\n    { note: \'a field nothing reads\' },'));
+  expect(check().join(' ')).toContain('note');
 });

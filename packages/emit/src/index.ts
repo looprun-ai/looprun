@@ -4,4 +4,4 @@ export type { Declaration, DeclaredCap, DeclaredDisclosure, DeclaredGuard, Decla
   DeclaredWording } from './declaration.js';
 export { checkAgainstSurface } from './against-surface.js';
 export { seamLaws, seamName, writeCards } from './write-cards.js';
-export { emit, writeCensus, writeCovers, writeGateFile, writeSeam, writeSubject } from './write-artifacts.js';
+export { emit, writeCensus, writeCovers, writeGateFile, writeSeam, writeSubject, writeTsconfig } from './write-artifacts.js';

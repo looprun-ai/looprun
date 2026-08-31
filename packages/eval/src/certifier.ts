@@ -6,7 +6,7 @@
  *  counted in nothing: what a degraded machine measures is itself. */
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { listDumps } from './run-dir.js';
+import { listDumps, readLines, type Repair } from './run-dir.js';
 import { fold } from './folder.js';
 import { scan } from './monitor.js';
 
@@ -58,6 +58,18 @@ export function certify(runDirs: readonly string[], bar: number): Certification 
     if (governed.length === 0) {
       voided.push(`${runDir}: no governed dumps`);
       continue;
+    }
+    // The fix loop reads the fix split and nothing else. A repair a HELD-OUT case drove is the
+    // subject fitted to the half of the exam that answers for it, so the score this run earns
+    // afterwards is a measurement of the fitting and certifies nothing.
+    const heldOut = new Set(listDumps(runDir)
+      .filter(d => d.split === 'held-out').map(d => d.case));
+    const fitted = readLines<Repair>(runDir, 'repairs.jsonl')
+      .filter(repair => heldOut.has(repair.case));
+    for (const repair of fitted) {
+      voided.push(`${runDir}: the repair '${repair.detail}' was driven by held-out case `
+        + `'${repair.case}' — the subject was fitted to the half of the exam that answers for it, `
+        + `and a score taken afterwards measures the fitting.`);
     }
     let passed = 0;
     for (const dump of governed) {

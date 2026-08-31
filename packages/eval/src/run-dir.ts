@@ -22,6 +22,12 @@ export interface CaseDump {
     readonly wallClockMs: number; readonly modelCalls: number }[];
 }
 
+/** One repair the fix loop made, and the case that drove it, appended to `repairs.jsonl` as the
+ *  repair is made. The case id is what certification reads: the fix loop's own half of the exam
+ *  is the fix split, and a repair traced to a held-out case is a subject fitted to the answer
+ *  key. */
+export interface Repair { readonly case: string; readonly detail: string }
+
 export function writeDump(runDir: string, dump: CaseDump): void {
   mkdirSync(join(runDir, 'dumps'), { recursive: true });
   writeFileSync(join(runDir, 'dumps', `${dump.case}.${dump.variant}.json`),

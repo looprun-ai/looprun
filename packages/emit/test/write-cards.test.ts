@@ -352,7 +352,7 @@ describe('writeCards', () => {
     expect(single).toContain("{ ...precondition('issueRefund', ({ record }) => record?.settled === false,");
     const several = writeCards(gate({ reads: 'record', field: 'state', in: ['open', 'partial'] }), FACTS);
     expect(several).toContain(
-      "{ ...precondition('issueRefund', ({ record }) => ['open', 'partial'].some(value => value === record?.state),");
+      "{ ...precondition('issueRefund', ({ record }) => ['open', 'partial'].some(declared => declared === record?.state),");
     const figure = writeCards(gate({ reads: 'record', field: 'balanceDue', is: 0 }), FACTS);
     expect(figure).toContain('record?.balanceDue === 0,');
   });

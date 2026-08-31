@@ -8,7 +8,10 @@ export const SEAM: readonly SeamRow[] = [
 ];
 
 export const FACTS = { tools: {
-  issueRefund: { name: 'issueRefund', effect: 'destructive', target: 'invoiceId', entity: 'invoices', schema: {} },
+  issueRefund: { name: 'issueRefund', effect: 'destructive', target: 'invoiceId', entity: 'invoices',
+    schema: { type: 'object',
+              properties: { invoiceId: {}, amount: {}, currency: {}, reason: {}, note: {} },
+              required: ['invoiceId', 'amount', 'currency', 'reason'] } },
   getInvoice:  { name: 'getInvoice',  effect: 'read', target: 'invoiceId', entity: 'invoices', schema: { properties: { invoiceId: {} } } },
   closeBooking:{ name: 'closeBooking',effect: 'write', target: null, entity: 'auditLog', schema: {} }
 } } as never;

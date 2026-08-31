@@ -1,6 +1,6 @@
 import type { Json, SurfaceFacts, ToolFact } from '@looprun-ai/core';
 import type { SeamRow } from '@looprun-ai/eval';
-import type { Declaration } from './declaration.js';
+import type { Declaration, DeclaredGuard } from './declaration.js';
 
 /** The property names an act's JSON schema declares as arguments — a schema with no
  *  `properties` block accepts nothing. */
@@ -117,7 +117,8 @@ function checkJudgedActs(declaration: Declaration, facts: SurfaceFacts): readonl
 /** The arguments that name an ACT rather than configure one. A factory is pointed at the act it
  *  covers through `acts`, and some are pointed at a second act through their configuration — the
  *  prerequisite `onlyAfter` waits for. Both name the same namespace, `facts.tools`. */
-const ACT_ARGS: Readonly<Record<string, readonly string[]>> = { onlyAfter: ['after'] };
+const ACT_ARGS: Readonly<Record<string, readonly string[]>> = {
+  onlyAfter: ['after'], onlyAfterWhen: ['after'] };
 
 /** Every act a guard's CONFIGURATION names exists on the surface. A prerequisite spelled one
  *  letter off is never a call anyone can make, so the guard it configures denies the act it
@@ -145,7 +146,11 @@ function checkGuardArgActsExist(declaration: Declaration, facts: SurfaceFacts): 
 const SCHEMA_ARGS: Readonly<Record<string, { readonly args: readonly string[];
                                              readonly costs: string }>> = {
   valueFromUser: { args: ['arg'], costs: 'the guard refuses every call of it' },
+  valueFromUserOrRecord: { args: ['arg'], costs: 'the guard refuses every call of it' },
+  argMatchesRecord: { args: ['arg'], costs: 'the guard refuses every call of it' },
   argFormat: { args: ['arg'],
+    costs: 'the guard never fires — it sits in the census as a check that decides nothing' },
+  argCondition: { args: ['arg'],
     costs: 'the guard never fires — it sits in the census as a check that decides nothing' },
   argAbsent: { args: ['arg'],
     costs: 'the guard never fires — no call carries an argument the act does not declare' }
@@ -184,12 +189,16 @@ function checkGuardArgsOnSchema(declaration: Declaration, facts: SurfaceFacts): 
   return refusals;
 }
 
-/** A `valueFromUser` binds an argument its act REQUIRES. The guard reads the named argument off
- *  the arriving call and refuses a call carrying no string there, so pointed at an argument the
- *  schema leaves optional it refuses the very calls the schema allows: a call that leaves the
- *  argument out is answered `must be a value the user wrote`, about a value the act never asked
- *  for. A schema with no `required` list requires nothing, so every argument it declares is one a
- *  call may leave out.
+/** The factories that read one argument off the arriving call and REFUSE when it is not there:
+ *  each of them demands a value under that name, so each binds an argument its act requires. */
+const DEMANDS_ITS_ARG: ReadonlySet<string> = new Set(['valueFromUser', 'valueFromUserOrRecord',
+  'argMatchesRecord']);
+
+/** A guard that demands its argument binds an argument its act REQUIRES. It reads the named
+ *  argument off the arriving call and refuses a call carrying no value there, so pointed at an
+ *  argument the schema leaves optional it refuses the very calls the schema allows: a call that
+ *  leaves the argument out is refused about a value the act never asked for. A schema with no
+ *  `required` list requires nothing, so every argument it declares is one a call may leave out.
  *
  *  Skips an argument the schema does not declare at all: that gap is named by
  *  checkGuardArgsOnSchema, and it is the same guard's same key. */
@@ -197,7 +206,7 @@ function checkValueFromUserRequired(declaration: Declaration,
                                     facts: SurfaceFacts): readonly string[] {
   const refusals: string[] = [];
   declaration.contract.guards.forEach((guard, guardIndex) => {
-    if (guard.factory !== 'valueFromUser') return;
+    if (!DEMANDS_ITS_ARG.has(guard.factory)) return;
     const named = guard.args?.arg;
     if (typeof named !== 'string') return;
     for (const act of guard.acts) {
@@ -208,9 +217,9 @@ function checkValueFromUserRequired(declaration: Declaration,
       const requires = required.length === 0 ? 'no argument at all'
         : required.map(arg => `'${arg}'`).join(', ');
       refusals.push(`contract.guards[${guardIndex}].args.arg names '${named}', and '${act}' `
-        + `requires ${requires} — a call of '${act}' may leave '${named}' out, and valueFromUser `
-        + `refuses a call that carries no value there. Point the guard at an argument '${act}' `
-        + `requires, or make '${named}' one of them.`);
+        + `requires ${requires} — a call of '${act}' may leave '${named}' out, and `
+        + `${guard.factory} refuses a call that carries no value there. Point the guard at an `
+        + `argument '${act}' requires, or make '${named}' one of them.`);
     }
   });
   return refusals;
@@ -293,17 +302,35 @@ function checkMutatingAfter(declaration: Declaration, facts: SurfaceFacts): read
   return refusals;
 }
 
-/** A `precondition` guard reading `args.reads: 'record'` names an act with a target record
- *  to read — an act with no target has no record for the guard to read. */
+/** Whether a guard's law walks to the row the CALL is about: the target argument names the row,
+ *  and an act that names no target hands the walk nothing to find. */
+function walksTheCallsRow(guard: DeclaredGuard): boolean {
+  if (guard.factory === 'precondition') return guard.args?.reads === 'record';
+  if (guard.factory === 'argMatchesRecord') return true;
+  return guard.factory === 'onlyAfterWhen' && guard.args?.field !== undefined;
+}
+
+/** A guard whose law reads the call's own row names an act that can HAND IT ONE. The walk takes
+ *  two facts of the act and needs both: the target names the row, and the entity names the family
+ *  the row is filed in — a target with no entity points at a row in no family at all. Either one
+ *  missing and the law reads `null` on every call: `precondition` decides against nothing,
+ *  `argMatchesRecord` refuses every call by an id the records DO carry, and `onlyAfterWhen` stops
+ *  demanding its read. Nothing downstream sees it — the act carries a check, and the check simply
+ *  never reaches a record. */
 function checkPreconditionTarget(declaration: Declaration, facts: SurfaceFacts): readonly string[] {
   const refusals: string[] = [];
   declaration.contract.guards.forEach((guard, guardIndex) => {
-    if (guard.factory !== 'precondition' || guard.args?.reads !== 'record') return;
+    if (!walksTheCallsRow(guard)) return;
     for (const act of guard.acts) {
       const fact = facts.tools[act];
-      if (fact === undefined || fact.target !== null) continue;
-      refusals.push(`contract.guards[${guardIndex}] reads args.reads: 'record' over '${act}', `
-        + `and ${act} declares no target — point the guard at an act with a target, or drop the record read.`);
+      if (fact === undefined) continue;
+      const missing = fact.target === null || fact.target === undefined ? 'no target'
+        : fact.entity === null || fact.entity === undefined ? 'no entity' : null;
+      if (missing === null) continue;
+      refusals.push(`contract.guards[${guardIndex}] reads the row '${act}' is about, and ${act} `
+        + `names ${missing} — the walk to that row takes the target that names it and the entity `
+        + `it is filed under, and an act missing either hands the law no record on any call. `
+        + `Declare what '${act}' is missing on the world card, or drop the record read.`);
     }
   });
   return refusals;
@@ -513,32 +540,6 @@ function checkRoutingLines(declaration: Declaration): readonly string[] {
   return [];
 }
 
-/** The six voices a house teaches, one conduct law each. A conduct law renders as a prose rule in
- *  its desk's own system prefix, so a voice a desk does not carry is a law that desk never reads. */
-const VOICES: readonly string[] = ['declareHonestly', 'oneQuestion', 'yourLaneYourReads',
-  'recordsOverAssertions', 'askBeforeYouChoose', 'nameItDoNotPassItOn'];
-
-/** Every desk states all six voices, exactly when a second counter stands beside the first. One
- *  operator is handed from desk to desk inside a single conversation, and a voice one desk teaches
- *  and the next leaves out answers that person by two different laws: the desk carrying
- *  `recordsOverAssertions` says what the read returned, and the desk beside it — reading a prefix
- *  that never names the law — says what it remembers. One desk is one counter with no second way to
- *  answer, so the six bind nothing in a house of one.
- *
- *  A voice named with a blank sentence under it is a voice unspoken: what renders into the prefix
- *  is the sentence, and a name with nothing after it renders as a law that states nothing. */
-function checkConductVoices(declaration: Declaration): readonly string[] {
-  const { desks } = declaration;
-  if (desks.length < 2) return [];
-  return desks.flatMap((desk, deskIndex) => VOICES
-    .filter(voice => (desk.conduct[voice] ?? '').trim() === '')
-    .map(voice => `desks[${deskIndex}].conduct says nothing under '${voice}' on '${desk.name}': a house of `
-      + `${desks.length} desks hands one operator from counter to counter, and a voice this desk `
-      + `never states is a law its prompt never carries — one message reaches '${desk.name}' and is `
-      + `answered by a different law than the desk beside it. Write '${voice}' here too, in the `
-      + `words '${desk.name}' uses.`));
-}
-
 /** Every seam sentence pays a row the world actually spells out, and lands on a desk that can
  *  reach the act. The seam table is the register: an act it carries no row for is an act whose
  *  refusals the world never names in a literal, and a code outside that act's row set is a
@@ -594,9 +595,9 @@ function checkSeamRows(declaration: Declaration, facts: SurfaceFacts,
  *  call's own args, a choice whose words for one value are spelled inside another value's, a seam
  *  sentence paying a row the world does not carry, and a house whose desks disagree with the
  *  routing law — two or more desks with a desk whose `description` line is missing or blank, or
- *  the one desk of a single-desk house carrying one — and a desk of a house of two or more that
- *  teaches fewer than the six voices. `seam` is the seam table computed off the same subject the
- *  declaration sits in. An empty array means the declaration is safe to emit against `facts`. */
+ *  the one desk of a single-desk house carrying one. Which laws a desk teaches, and in what words,
+ *  is the author's own: the sentences on a card are theirs to write, and none of them is demanded
+ *  here. `seam` is the seam table computed off the same subject the declaration sits in. An empty array means the declaration is safe to emit against `facts`. */
 export function checkAgainstSurface(declaration: Declaration, facts: SurfaceFacts,
                                     seam: readonly SeamRow[]): readonly string[] {
   return [
@@ -616,7 +617,6 @@ export function checkAgainstSurface(declaration: Declaration, facts: SurfaceFact
     ...checkEmptyFillable(declaration),
     ...checkChoiceOptionsDistinct(declaration),
     ...checkSeamRows(declaration, facts, seam),
-    ...checkRoutingLines(declaration),
-    ...checkConductVoices(declaration)
+    ...checkRoutingLines(declaration)
   ];
 }
