@@ -279,7 +279,9 @@ function surfaceKeys(sources: readonly Source[], blocks: ReadonlySet<string>): R
 }
 
 const DETERMINISTIC_FACTORIES = ['onlyAfter', 'precondition', 'valueFromUser',
-  'argMatchesFormat', 'argForbidden', 'resultSatisfiesCondition', 'mustAccountFor', 'maxCalls', 'blockPattern'];
+  'argMatchesFormat', 'argForbidden', 'resultSatisfiesCondition', 'mustAccountFor', 'maxCalls',
+  'blockPattern', 'argSatisfiesCondition', 'valueFromUserOrRecord', 'argMatchesRecord',
+  'onlyAfterWhen'];
 
 function callsAny(node: ts.Node, names: ReadonlySet<string>): boolean {
   let found = false;
@@ -867,10 +869,13 @@ const SELF_STATING_FACTORIES = new Set(['onlyAfter', 'valueFromUser', 'argForbid
   'mustAccountFor']);
 
 /** The factories that take the law as an ARGUMENT — `precondition`'s reason, `maxCalls`'s
- *  reason, `blockPattern`'s rule. The words are the author's, so an act one of these names is
- *  an act somebody has written a sentence about. */
+ *  reason, `blockPattern`'s rule, and the four whose law is the last thing written into the
+ *  call. The words are the author's, so an act one of these names is an act somebody has
+ *  written a sentence about. */
 const AUTHORED_RULE_ARG: ReadonlyMap<string, number> = new Map([
-  ['precondition', 2], ['maxCalls', 2], ['blockPattern', 2]]);
+  ['precondition', 2], ['maxCalls', 2], ['blockPattern', 2],
+  ['argSatisfiesCondition', 3], ['valueFromUserOrRecord', 4], ['argMatchesRecord', 3],
+  ['onlyAfterWhen', 3]]);
 
 /** What is left of the deterministic catalog once the self-stating factories and the ones handed
  *  their law are taken out: a factory that refuses on an act and mints a sentence naming no law. */
